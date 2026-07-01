@@ -543,8 +543,32 @@ describe("ScoreAnalyticsRepository", () => {
       const aggA = aggs.find((a) => (a.signalId as string) === signalA)
       expect(aggA).toBeDefined()
       expect(aggA?.totalOccurrences).toBe(3)
+      // Fixture rows carry no session_id, so distinct affected sessions is 0.
+      expect(aggA?.affectedSessions).toBe(0)
       expect(aggA?.firstSeenAt.toISOString()).toBe("2026-03-10T10:00:00.000Z")
       expect(aggA?.lastSeenAt.toISOString()).toBe("2026-03-25T10:00:00.000Z")
+    })
+
+    it("counts distinct non-empty session ids as affectedSessions", async () => {
+      const signalC = "issue_cccccccccccccccccc"
+      await fixture.insertScores([
+        makeScoreRow({ signal_id: signalC, session_id: "session_c1", created_at: "2026-03-25 10:00:00.000" }),
+        makeScoreRow({ signal_id: signalC, session_id: "session_c1", created_at: "2026-03-24 10:00:00.000" }),
+        makeScoreRow({ signal_id: signalC, session_id: "session_c2", created_at: "2026-03-23 10:00:00.000" }),
+        makeScoreRow({ signal_id: signalC, session_id: "", created_at: "2026-03-22 10:00:00.000" }),
+      ])
+
+      const aggs = await fixture.runCh(
+        fixture.repo.aggregateBySignals({
+          organizationId: ORG_ID,
+          projectId: PROJECT_ID,
+          signalIds: [SignalId(signalC)],
+        }),
+      )
+
+      const aggC = aggs.find((a) => (a.signalId as string) === signalC)
+      expect(aggC?.totalOccurrences).toBe(4)
+      expect(aggC?.affectedSessions).toBe(2)
     })
 
     it("returns empty for no issue ids", async () => {

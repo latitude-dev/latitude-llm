@@ -26,6 +26,7 @@ import {
   fillBuckets,
   getEscalationOccurrenceThreshold,
   getRelatedSignalsUseCase,
+  getSignalImpactUseCase,
   type ListSignalsResult,
   listSignalsUseCase,
   type OrgSignalSearchItem,
@@ -43,7 +44,7 @@ import {
   TAG_AGGREGATION_FALLBACK_DAYS,
   updateSignalTriageUseCase,
 } from "@domain/signals"
-import { SessionRepository, TraceRepository } from "@domain/spans"
+import { SessionRepository } from "@domain/spans"
 import { AIEmbedLive, withAi } from "@platform/ai"
 import {
   ScoreAnalyticsRepositoryLive,
@@ -213,6 +214,8 @@ export interface SignalImpactRecord {
   readonly tokens: number
   readonly totalProjectTraces: number
   readonly affectedTracesPercent: number
+  readonly totalProjectSessions: number
+  readonly affectedSessionsPercent: number
 }
 
 const updateSignalTriageInputSchema = z.object({
@@ -851,30 +854,12 @@ export const getSignalImpact = createServerFn({ method: "GET" })
     const signalId = SignalId(data.signalId)
 
     return Effect.runPromise(
-      Effect.gen(function* () {
-        const scoreAnalyticsRepository = yield* ScoreAnalyticsRepository
-        const traceRepository = yield* TraceRepository
-
-        const [impact, totalProjectTraces] = yield* Effect.all([
-          scoreAnalyticsRepository.aggregateImpactBySignal({ organizationId: orgId, projectId, signalId }),
-          traceRepository.countByProjectId({ organizationId: orgId, projectId }),
-        ])
-
-        const affectedTracesPercent =
-          totalProjectTraces === 0 ? 0 : Math.min(impact.affectedTraces / totalProjectTraces, 1)
-
-        return {
-          occurrences: impact.occurrences,
-          affectedTraces: impact.affectedTraces,
-          affectedSessions: impact.affectedSessions,
-          affectedUsers: impact.affectedUsers,
-          costMicrocents: impact.costMicrocents,
-          tokens: impact.tokens,
-          totalProjectTraces,
-          affectedTracesPercent,
-        } satisfies SignalImpactRecord
-      }).pipe(
-        withClickHouse(Layer.mergeAll(ScoreAnalyticsRepositoryLive, TraceRepositoryLive), chClient, orgId),
+      getSignalImpactUseCase({ organizationId: orgId, projectId, signalId }).pipe(
+        withClickHouse(
+          Layer.mergeAll(ScoreAnalyticsRepositoryLive, TraceRepositoryLive, SessionRepositoryLive),
+          chClient,
+          orgId,
+        ),
         withTracing,
       ),
     )

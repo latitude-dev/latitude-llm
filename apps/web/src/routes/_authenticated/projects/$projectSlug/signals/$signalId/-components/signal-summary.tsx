@@ -100,6 +100,26 @@ export function SignalSummary({ projectId, signalId }: { readonly projectId: str
             </>
           )}
 
+          <Tile label="Affected sessions">
+            {impactLoading ? (
+              <Skeleton className="h-5 w-16" />
+            ) : impact ? (
+              <Tooltip
+                asChild
+                trigger={
+                  <div className="flex cursor-default flex-row items-baseline gap-1">
+                    <Text.H5 color="foreground">{formatCount(impact.affectedSessions)}</Text.H5>
+                    <Text.H6 color="foregroundMuted">· {formatPercent(impact.affectedSessionsPercent)}</Text.H6>
+                  </div>
+                }
+              >
+                {formatPercent(impact.affectedSessionsPercent)} of all project sessions are affected by this signal.
+              </Tooltip>
+            ) : (
+              <Text.H5 color="foreground">-</Text.H5>
+            )}
+          </Tile>
+
           <Tile label="Affected traces">
             {impactLoading ? (
               <Skeleton className="h-5 w-16" />
@@ -118,14 +138,6 @@ export function SignalSummary({ projectId, signalId }: { readonly projectId: str
               </Tooltip>
             ) : (
               <Text.H5 color="foreground">-</Text.H5>
-            )}
-          </Tile>
-
-          <Tile label="Affected sessions">
-            {impactLoading ? (
-              <Skeleton className="h-5 w-16" />
-            ) : (
-              <Text.H5 color="foreground">{impact ? formatCount(impact.affectedSessions) : "-"}</Text.H5>
             )}
           </Tile>
 

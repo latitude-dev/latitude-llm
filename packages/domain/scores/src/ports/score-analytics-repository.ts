@@ -69,6 +69,8 @@ export interface SessionScoreRollup {
 export interface SignalOccurrenceAggregate {
   readonly signalId: SignalId
   readonly totalOccurrences: number
+  /** Distinct non-empty `session_id`s the issue's occurrences belong to, over its lifetime. */
+  readonly affectedSessions: number
   readonly recentOccurrences: number // last 1 day
   readonly baselineAvgOccurrences: number // average daily occurrences in previous 7-day baseline
   readonly firstSeenAt: Date

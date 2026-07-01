@@ -73,6 +73,7 @@ const makeWindowMetric = (overrides: Partial<SignalWindowMetric> = {}): SignalWi
 const makeOccurrence = (overrides: Partial<SignalOccurrenceAggregate> = {}): SignalOccurrenceAggregate => ({
   signalId: SignalId("i".repeat(24)),
   totalOccurrences: 10,
+  affectedSessions: 5,
   recentOccurrences: 2,
   baselineAvgOccurrences: 1,
   firstSeenAt: new Date("2026-03-01T00:00:00.000Z"),

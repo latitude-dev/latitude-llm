@@ -108,7 +108,7 @@ function createTau2LlmSpan(opts: {
   return {
     organization_id: opts.scope.organizationId,
     project_id: opts.scope.projectId,
-    session_id: "",
+    session_id: opts.traceId,
     user_id: opts.user?.id ?? "",
     user_email: opts.user?.email ?? "",
     trace_id: opts.traceId,
@@ -183,7 +183,7 @@ function createTau2ToolSpan(opts: {
   return {
     organization_id: opts.scope.organizationId,
     project_id: opts.scope.projectId,
-    session_id: "",
+    session_id: opts.traceId,
     user_id: opts.user?.id ?? "",
     user_email: opts.user?.email ?? "",
     trace_id: opts.traceId,
@@ -266,7 +266,7 @@ function createCompatibilityChatSpan(opts: {
   return {
     organization_id: opts.scope.organizationId,
     project_id: opts.scope.projectId,
-    session_id: "",
+    session_id: traceId,
     user_id: opts.user?.id ?? "",
     user_email: opts.user?.email ?? "",
     trace_id: traceId,
@@ -640,7 +640,7 @@ export function buildTau2TrajectorySpans(scope: SeedScope, maxTrajectories = TAU
     const root: SpanRow = {
       organization_id: scope.organizationId,
       project_id: scope.projectId,
-      session_id: "",
+      session_id: traceId,
       user_id: user?.id ?? "",
       user_email: user?.email ?? "",
       trace_id: traceId,

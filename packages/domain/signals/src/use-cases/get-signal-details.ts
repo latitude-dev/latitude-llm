@@ -16,7 +16,7 @@ import type {
   SignalId,
   SqlClient,
 } from "@domain/shared"
-import { TraceRepository } from "@domain/spans"
+import { SessionRepository } from "@domain/spans"
 import { Effect } from "effect"
 import type { SignalState } from "../entities/signal.ts"
 import { deriveSignalLifecycleStates } from "../helpers.ts"
@@ -41,8 +41,8 @@ export interface SignalDetails {
   readonly lastSeenAt: Date | null
   /** Lifetime occurrence count. */
   readonly occurrences: number
-  /** Fraction of project traces affected by this issue over its lifetime, in `[0, 1]`. */
-  readonly affectedTracesPercent: number
+  /** Fraction of project sessions affected by this issue over its lifetime, in `[0, 1]`. */
+  readonly affectedSessionsPercent: number
   /** Tags seen on the issue's occurrences over its lifetime. */
   readonly tags: readonly string[]
   /** Last 14 days of daily occurrence buckets, UTC-aligned. */
@@ -58,7 +58,7 @@ export type GetSignalDetailsError = NotFoundError | RepositoryError
 /**
  * Loads the full-detail view of one issue: lifecycle states, lifetime
  * occurrence stats (`occurrences`, `firstSeenAt`, `lastSeenAt`,
- * `affectedTracesPercent`, `tags`), a 14-day trend, the active evaluations
+ * `affectedSessionsPercent`, `tags`), a 14-day trend, the active evaluations
  * monitoring it, and the real-time `alignmentState` derived from running
  * Temporal workflows.
  *
@@ -76,7 +76,7 @@ export const getSignalDetailsUseCase = (
   | SignalRepository
   | ScoreAnalyticsRepository
   | SqlClient
-  | TraceRepository
+  | SessionRepository
   | WorkflowQuerier
 > =>
   Effect.gen(function* () {
@@ -87,11 +87,11 @@ export const getSignalDetailsUseCase = (
     const signalRepository = yield* SignalRepository
     const scoreAnalyticsRepository = yield* ScoreAnalyticsRepository
     const evaluationRepository = yield* EvaluationRepository
-    const traceRepository = yield* TraceRepository
+    const sessionRepository = yield* SessionRepository
 
     const issue = yield* signalRepository.findById(input.signalId)
 
-    const [occurrenceAggregates, trend, evaluationsPage, totalTraces] = yield* Effect.all([
+    const [occurrenceAggregates, trend, evaluationsPage, sessionCount] = yield* Effect.all([
       scoreAnalyticsRepository.aggregateBySignals({
         organizationId: input.organizationId,
         projectId: input.projectId,
@@ -109,7 +109,7 @@ export const getSignalDetailsUseCase = (
         signalId: input.signalId,
         options: { lifecycle: "active" },
       }),
-      traceRepository.countByProjectId({
+      sessionRepository.countByProjectId({
         organizationId: input.organizationId,
         projectId: input.projectId,
       }),
@@ -131,7 +131,9 @@ export const getSignalDetailsUseCase = (
     })
 
     const occurrences = aggregate?.totalOccurrences ?? 0
-    const affectedTracesPercent = totalTraces === 0 ? 0 : Math.min(occurrences / totalTraces, 1)
+    const affectedSessions = aggregate?.affectedSessions ?? 0
+    const totalSessions = sessionCount.totalCount
+    const affectedSessionsPercent = totalSessions === 0 ? 0 : Math.min(affectedSessions / totalSessions, 1)
     const tags = tagsAggregates[0]?.tags ?? []
     const activeEvaluations = evaluationsPage.items.filter(isActiveEvaluation)
 
@@ -147,7 +149,7 @@ export const getSignalDetailsUseCase = (
       firstSeenAt: aggregate?.firstSeenAt ?? null,
       lastSeenAt: aggregate?.lastSeenAt ?? null,
       occurrences,
-      affectedTracesPercent,
+      affectedSessionsPercent,
       tags,
       trend,
       evaluations: activeEvaluations,

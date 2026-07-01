@@ -198,6 +198,12 @@ export {
   type SignalDetails,
 } from "./use-cases/get-signal-details.ts"
 export {
+  type GetSignalImpactError,
+  type GetSignalImpactInput,
+  getSignalImpactUseCase,
+  type SignalImpact,
+} from "./use-cases/get-signal-impact.ts"
+export {
   type GetSignalTrendError,
   type GetSignalTrendInput,
   type GetSignalTrendResult,

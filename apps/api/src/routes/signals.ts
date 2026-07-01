@@ -287,7 +287,7 @@ const listSignals = signalEndpoint({
     ...signalsFernGroup("list"),
     summary: "List project signals",
     description:
-      "Returns a cursor-paginated page of signals in the project. Each item includes lifecycle `states` plus time-window stats: `firstSeenAt`, `lastSeenAt`, `occurrences`, `affectedTracesPercent`, `trend`, and `tags`.",
+      "Returns a cursor-paginated page of signals in the project. Each item includes lifecycle `states` plus time-window stats: `firstSeenAt`, `lastSeenAt`, `occurrences`, `affectedSessionsPercent`, `trend`, and `tags`.",
     security: PROTECTED_SECURITY,
     request: { params: ProjectParamsSchema, query: ListSignalsQuerySchema },
     responses: openApiResponses({ status: 200, schema: PaginatedSignalsSchema, description: "Page of signals" }),
@@ -434,7 +434,7 @@ const getSignal = signalEndpoint({
     ...signalsFernGroup("get"),
     summary: "Get project signal",
     description:
-      "Returns the full-history detail view of one signal: lifecycle `states`, lifetime activity stats (`firstSeenAt`, `lastSeenAt`, `occurrences`, `affectedTracesPercent`, `tags`), a 14-day occurrence `trend`, the active `evaluations` monitoring it, and the current `monitoringState`.",
+      "Returns the full-history detail view of one signal: lifecycle `states`, lifetime activity stats (`firstSeenAt`, `lastSeenAt`, `occurrences`, `affectedSessionsPercent`, `tags`), a 14-day occurrence `trend`, the active `evaluations` monitoring it, and the current `monitoringState`.",
     security: PROTECTED_SECURITY,
     request: { params: SignalSlugParamsSchema },
     responses: openApiResponses({ status: 200, schema: SignalDetailSchema, description: "Signal" }),
@@ -463,7 +463,7 @@ const getSignal = signalEndpoint({
           organizationId,
         ),
         withClickHouse(
-          Layer.mergeAll(ScoreAnalyticsRepositoryLive, TraceRepositoryLive),
+          Layer.mergeAll(ScoreAnalyticsRepositoryLive, SessionRepositoryLive),
           c.var.clickhouse,
           organizationId,
         ),

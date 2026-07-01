@@ -54,6 +54,16 @@ const provideAtomicReservation = Effect.provideService(
   createFakeBillingSpendReservation("atomic").reservation,
 )
 
+// `billing_usage_events` is range-partitioned by `billing_period_start`, and the
+// migration only provisions partitions for `[now - 2 months, now + 3 months]`. A
+// fixed calendar date eventually falls outside that window as the clock advances
+// (insert then fails with "no partition of relation found for row"), so anchor
+// test periods to the current UTC month. Evaluated at module load, before any
+// `vi.useFakeTimers()`, so it uses the real clock the migration also saw.
+const NOW = new Date()
+const BILLING_PERIOD_START = new Date(Date.UTC(NOW.getUTCFullYear(), NOW.getUTCMonth(), 1))
+const BILLING_PERIOD_END = new Date(Date.UTC(NOW.getUTCFullYear(), NOW.getUTCMonth() + 1, 1))
+
 describe("billing runtime integration", () => {
   it("prefers a manual override over an active Stripe subscription", async () => {
     vi.useFakeTimers()
@@ -189,8 +199,8 @@ describe("billing runtime integration", () => {
       stripeCustomerId: "cus_retry",
       stripeSubscriptionId: "sub_retry",
       status: "active",
-      periodStart: new Date("2026-04-01T00:00:00.000Z"),
-      periodEnd: new Date("2026-05-01T00:00:00.000Z"),
+      periodStart: BILLING_PERIOD_START,
+      periodEnd: BILLING_PERIOD_END,
     })
 
     const run = async (action: "live-eval-scan" | "eval-generation", idempotencyKey: string) => {
@@ -244,8 +254,8 @@ describe("billing runtime integration", () => {
     const context = {
       planSlug: "free" as const,
       planSource: "free-fallback" as const,
-      periodStart: new Date("2026-04-01T00:00:00.000Z"),
-      periodEnd: new Date("2026-05-01T00:00:00.000Z"),
+      periodStart: BILLING_PERIOD_START,
+      periodEnd: BILLING_PERIOD_END,
       includedCredits: PLAN_CONFIGS.free.includedCredits,
       overageAllowed: false,
     }
@@ -346,8 +356,8 @@ describe("billing runtime integration", () => {
   it("records trace usage batches idempotently across queue retries", async () => {
     const organizationId = generateId()
     const projectId = generateId()
-    const periodStart = new Date("2026-04-01T00:00:00.000Z")
-    const periodEnd = new Date("2026-05-01T00:00:00.000Z")
+    const periodStart = BILLING_PERIOD_START
+    const periodEnd = BILLING_PERIOD_END
 
     await pg.db.insert(organizations).values({
       id: organizationId,
@@ -418,8 +428,8 @@ describe("billing runtime integration", () => {
       traceIds: ["aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa1"],
       planSlug: "free" as const,
       planSource: "free-fallback" as const,
-      periodStart: new Date("2026-04-01T00:00:00.000Z").toISOString(),
-      periodEnd: new Date("2026-05-01T00:00:00.000Z").toISOString(),
+      periodStart: BILLING_PERIOD_START.toISOString(),
+      periodEnd: BILLING_PERIOD_END.toISOString(),
       includedCredits: PLAN_CONFIGS.free.includedCredits,
       overageAllowed: false,
       isSandbox: true,
@@ -443,8 +453,8 @@ describe("billing runtime integration", () => {
     const organizationId = generateId()
     const firstProjectId = generateId()
     const secondProjectId = generateId()
-    const periodStart = new Date("2026-04-01T00:00:00.000Z")
-    const periodEnd = new Date("2026-05-01T00:00:00.000Z")
+    const periodStart = BILLING_PERIOD_START
+    const periodEnd = BILLING_PERIOD_END
 
     await pg.db.insert(organizations).values({
       id: organizationId,
