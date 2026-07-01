@@ -1,8 +1,7 @@
-// import { showNewMessage } from "@intercom/messenger-js-sdk"
-import { Alert, Icon, Skeleton, Text, useToast } from "@repo/ui"
-import { Check, Headset } from "lucide-react"
-import { useSupportEnabled } from "../../../../../-route-data.ts" 
 import { showNewMessage } from "@intercom/messenger-js-sdk"
+import { Alert, Button, Icon, Skeleton, Text, useToast } from "@repo/ui"
+import { Check, Headset, RefreshCcw } from "lucide-react"
+import { useSupportEnabled } from "../../../../../-route-data.ts"
 
 const TOTAL_ROWS = 4
 
@@ -28,6 +27,13 @@ export function TraceTail({ traceReceived }: { readonly traceReceived: boolean }
           <SkeletonTraceRow key={i} />
         ))}
       </div>
+
+      {!traceReceived ? (
+        <Button variant="muted" size="sm" className="w-fit" onClick={() => window.location.reload()}>
+          <Icon icon={RefreshCcw} size="sm" />
+          Refresh
+        </Button>
+      ) : null}
     </div>
   )
 }
@@ -57,13 +63,15 @@ export function TelemetryHelpAlert() {
       }
       description={
         <>
-          <button
+          <Button
             type="button"
-            className="font-semibold underline underline-offset-2 hover:opacity-80"
+            variant="link"
+            size="default"
+            className="inline-flex h-auto min-h-0 w-auto p-0 font-semibold underline underline-offset-2"
             onClick={openSupportChat}
           >
             Click here
-          </button>{" "}
+          </Button>{" "}
           and we'll come back to you to help you install Latitude in your project
         </>
       }
