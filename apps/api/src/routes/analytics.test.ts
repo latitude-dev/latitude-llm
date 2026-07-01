@@ -69,11 +69,12 @@ describe("Analytics Routes Integration", () => {
       },
     ]
 
+    // Body validation runs before the project lookup, so these need auth but no
+    // project record — which also avoids a projects_pkey clash across cases.
     for (const { name, body } of cases) {
       it<ApiTestContext>(`rejects ${name} with 400`, async ({ app, database }) => {
         const tenant = await createTenantSetup(database)
-        const slug = await createProjectRecord(database, tenant.organizationId, "bbbbbbbbbbbbbbbbbbbbbbbb")
-        const res = await post(app, slug, body, tenant.apiKeyToken)
+        const res = await post(app, "any-project", body, tenant.apiKeyToken)
         expect(res.status).toBe(400)
       })
     }
