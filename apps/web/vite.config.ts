@@ -45,12 +45,7 @@ const temporalExternal: (string | RegExp)[] = [
   "long",
 ]
 
-// quickjs-emscripten's default variant (@jitl/quickjs-wasmfile-release-sync)
-// loads its WASM binary as a sibling file via `new URL("emscripten-module.wasm",
-// import.meta.url)`. Bundling the glue into `_ssr/` moves import.meta.url away
-// from the .wasm, so getQuickJS() aborts with ENOENT at runtime. Keep the whole
-// quickjs tree external so the module (and its sibling .wasm) resolves from
-// node_modules — mirrors the apps/workers tsdown `neverBundle` entry.
+// quickjs-emscripten's glue loads its .wasm via `new URL(…, import.meta.url)`, so it must stay external to resolve from node_modules, not the bundled `_ssr/` chunk.
 const quickjsExternal: (string | RegExp)[] = [/^quickjs-emscripten(-core)?$/, /^@jitl\/quickjs-/]
 
 // @effect/opentelemetry ships a WebSdk.js entry that imports from
