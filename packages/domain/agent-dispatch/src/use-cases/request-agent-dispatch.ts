@@ -2,7 +2,7 @@ import { hasFeatureFlagUseCase } from "@domain/feature-flags"
 import { IncidentRepository } from "@domain/incidents"
 import { IncidentMonitorReader } from "@domain/notifications"
 import { isSandbox, OrganizationRepository } from "@domain/organizations"
-import { type OrganizationId, type ProjectId, SignalId, type SqlClient } from "@domain/shared"
+import { AlertIncidentId, type OrganizationId, type ProjectId, SignalId, type SqlClient } from "@domain/shared"
 import { SignalRepository } from "@domain/signals"
 import { Effect } from "effect"
 import { AGENT_DISPATCH_FLAG } from "../constants.ts"
@@ -58,17 +58,22 @@ const passesGuardrails = (
   return null
 }
 
+const dispatchWindow = (date: Date): string => date.toISOString().slice(0, 10)
+
 const buildSendRequest = (input: {
   readonly config: AgentDispatchConfig
   readonly trigger: AgentDispatchTrigger
   readonly sourceType: "signal" | "monitor"
   readonly sourceId: string
   readonly context: AgentDispatchContext
+  readonly requestedAt: Date
 }): AgentDispatchSendRequest => {
   const idempotencyKey = buildDispatchIdempotencyKey({
     vendor: input.config.kind,
+    configId: input.config.id,
     trigger: input.trigger,
     sourceId: input.sourceId,
+    dispatchWindow: dispatchWindow(input.requestedAt),
   })
   return {
     organizationId: input.config.organizationId,
@@ -94,9 +99,7 @@ export const requestAgentDispatchUseCase = (input: {
     if (!enabled) return { status: "skipped", reason: "feature-disabled" } as const
 
     const organizations = yield* OrganizationRepository
-    const organization = yield* organizations.findById(
-      input.source.type === "signal" ? input.source.organizationId : input.source.organizationId,
-    )
+    const organization = yield* organizations.findById(input.source.organizationId)
     if (isSandbox(organization)) return { status: "skipped", reason: "sandbox" } as const
 
     const configRepo = yield* AgentDispatchConfigRepository
@@ -104,7 +107,7 @@ export const requestAgentDispatchUseCase = (input: {
     const projectId =
       input.source.type === "signal"
         ? input.source.projectId
-        : (yield* incidents.findById(input.source.alertIncidentId as never)).projectId
+        : (yield* incidents.findById(AlertIncidentId(input.source.alertIncidentId))).projectId
     const configs = yield* configRepo.listEnabledByProject(projectId)
     if (configs.length === 0) return { status: "skipped", reason: "no-config" } as const
 
@@ -125,6 +128,7 @@ export const requestAgentDispatchUseCase = (input: {
         webAppUrl: input.webAppUrl,
       })
 
+      const requestedAt = new Date()
       const requests: AgentDispatchSendRequest[] = []
       for (const config of configs) {
         if (!passesTriggerGate(config, "signal.discovered")) continue
@@ -137,6 +141,7 @@ export const requestAgentDispatchUseCase = (input: {
             sourceType: "signal",
             sourceId: signal.id,
             context,
+            requestedAt,
           }),
         )
       }
@@ -144,7 +149,7 @@ export const requestAgentDispatchUseCase = (input: {
       return { status: "ok", requests } as const
     }
 
-    const incident = yield* incidents.findById(input.source.alertIncidentId as never)
+    const incident = yield* incidents.findById(AlertIncidentId(input.source.alertIncidentId))
     const trigger = resolveIncidentTrigger(incident)
     if (trigger === null) return { status: "skipped", reason: "unsupported-source" } as const
 
@@ -169,6 +174,7 @@ export const requestAgentDispatchUseCase = (input: {
     const sourceId = incidentSourceId(incident)
     const sourceType = incidentSourceType(incident)
 
+    const requestedAt = new Date()
     const requests: AgentDispatchSendRequest[] = []
     for (const config of configs) {
       if (!passesTriggerGate(config, trigger)) continue
@@ -181,6 +187,7 @@ export const requestAgentDispatchUseCase = (input: {
           sourceType,
           sourceId,
           context,
+          requestedAt,
         }),
       )
     }

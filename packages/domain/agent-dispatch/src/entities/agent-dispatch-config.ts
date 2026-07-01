@@ -29,7 +29,7 @@ export const linearDispatchTargetSchema = z.object({
 })
 
 export const webhookDispatchTargetSchema = z.object({
-  webhookUrl: z.string().url(),
+  webhookUrl: z.string().url().startsWith("https://", "Webhook URL must use HTTPS"),
 })
 
 export const agentDispatchTargetSchema = z.union([

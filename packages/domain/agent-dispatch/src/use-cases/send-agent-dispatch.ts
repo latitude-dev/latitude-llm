@@ -1,4 +1,4 @@
-import type { SqlClient } from "@domain/shared"
+import type { RepositoryError, SqlClient } from "@domain/shared"
 import { Effect } from "effect"
 import type { DispatchErrorCategory } from "../entities/agent-dispatch.ts"
 import type { ResolvedDispatchTarget } from "../entities/agent-dispatch-config.ts"
@@ -24,6 +24,7 @@ export interface SendAgentDispatchInput {
 export type SendAgentDispatchOutcome =
   | { readonly status: "dispatched"; readonly externalUrl?: string }
   | { readonly status: "skipped-already-dispatched" }
+  | { readonly status: "failed"; readonly reason: DispatchErrorCategory }
 
 const isAckError = (error: DispatchAdapterError): boolean => error.reason === "auth" || error.reason === "config"
 
@@ -95,7 +96,7 @@ export const sendAgentDispatchUseCase = (input: SendAgentDispatchInput) =>
           errorCategory: error.reason as DispatchErrorCategory,
           errorDetail: errorDetail(error),
         })
-        return { status: "skipped-already-dispatched" as const }
+        return { status: "failed" as const, reason: error.reason as DispatchErrorCategory }
       }
       return yield* Effect.fail(error)
     }
@@ -114,6 +115,6 @@ export const sendAgentDispatchUseCase = (input: SendAgentDispatchInput) =>
     }
   }).pipe(Effect.withSpan("agentDispatch.send")) as Effect.Effect<
     SendAgentDispatchOutcome,
-    DispatchAdapterError,
+    DispatchAdapterError | RepositoryError,
     AgentDispatchRepository | AgentDispatchCredentialRepository | AgentDispatchAdapters | SqlClient
   >

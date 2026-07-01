@@ -3,6 +3,7 @@ import {
   type AgentDispatchKind,
   AgentDispatchTraceReader,
   type AgentDispatchTrigger,
+  agentDispatchContextSchema,
   requestAgentDispatchUseCase,
   sendAgentDispatchUseCase,
 } from "@domain/agent-dispatch"
@@ -145,6 +146,7 @@ export const createAgentDispatchWorker = ({
       return Effect.gen(function* () {
         const configRepo = yield* AgentDispatchConfigRepository
         const config = yield* configRepo.findById(payload.configId)
+        const context = agentDispatchContextSchema.parse(payload.context)
 
         const outcome = yield* sendAgentDispatchUseCase({
           configId: payload.configId,
@@ -156,7 +158,7 @@ export const createAgentDispatchWorker = ({
           sourceType: payload.sourceType,
           sourceId: payload.sourceId,
           prompt: payload.prompt,
-          context: payload.context as never,
+          context,
           target: { ...config.target, kind: config.kind },
         }).pipe(
           Effect.catchTag("DispatchAdapterError", (error) => {
@@ -164,7 +166,7 @@ export const createAgentDispatchWorker = ({
               return Effect.fail(error)
             }
             logger.warn(`agent-dispatch.send acknowledged error reason=${error.reason}`, error)
-            return Effect.succeed({ status: "skipped-already-dispatched" as const })
+            return Effect.succeed({ status: "failed" as const, reason: error.reason })
           }),
         )
 

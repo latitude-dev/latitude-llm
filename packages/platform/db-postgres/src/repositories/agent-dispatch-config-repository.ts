@@ -7,7 +7,7 @@ import {
   type SqlClientShape,
   toRepositoryError,
 } from "@domain/shared"
-import { and, eq, gte, sql } from "drizzle-orm"
+import { and, eq, gte, inArray, sql } from "drizzle-orm"
 import { Effect, Layer } from "effect"
 import type { Operator } from "../client.ts"
 import { agentDispatchConfigs } from "../schema/agent-dispatch-configs.ts"
@@ -150,7 +150,9 @@ export const AgentDispatchConfigRepositoryLive = Layer.succeed(AgentDispatchConf
             .returning(),
         )
         .pipe(Effect.mapError((e) => toRepositoryError(e, "upsertAgentDispatchConfig")))
-      return toDomainConfig(rows[0]!)
+      const row = rows[0]
+      if (!row) return yield* Effect.fail(toRepositoryError(new Error("empty returning"), "upsertAgentDispatchConfig"))
+      return toDomainConfig(row)
     }),
 
   delete: (id) =>
@@ -196,7 +198,7 @@ export const AgentDispatchConfigRepositoryLive = Layer.succeed(AgentDispatchConf
                 eq(agentDispatches.configId, configId),
                 eq(agentDispatches.organizationId, organizationId),
                 gte(agentDispatches.claimedAt, since),
-                eq(agentDispatches.status, "dispatched"),
+                inArray(agentDispatches.status, ["claimed", "dispatched"]),
               ),
             ),
         )
@@ -220,6 +222,7 @@ export const AgentDispatchConfigRepositoryLive = Layer.succeed(AgentDispatchConf
                 eq(agentDispatches.sourceId, sourceId),
                 eq(agentDispatches.organizationId, organizationId),
                 gte(agentDispatches.claimedAt, since),
+                inArray(agentDispatches.status, ["claimed", "dispatched"]),
               ),
             )
             .limit(1),

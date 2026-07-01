@@ -3,14 +3,16 @@ import { buildDispatchIdempotencyKey } from "./idempotency-key.ts"
 import { renderDispatchPrompt } from "./render-prompt.ts"
 
 describe("buildDispatchIdempotencyKey", () => {
-  it("keys by vendor, trigger, and source id", () => {
+  it("keys by vendor, config, trigger, source id, and dispatch window", () => {
     expect(
       buildDispatchIdempotencyKey({
         vendor: "webhook",
+        configId: "cfg123",
         trigger: "incident.opened",
         sourceId: "clinc456",
+        dispatchWindow: "2026-07-01",
       }),
-    ).toBe("webhook:incident.opened:clinc456")
+    ).toBe("webhook:cfg123:incident.opened:clinc456:2026-07-01")
   })
 })
 
