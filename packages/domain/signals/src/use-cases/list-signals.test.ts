@@ -7,14 +7,7 @@ import {
 } from "@domain/evaluations"
 import { ScoreAnalyticsRepository, type SignalOccurrenceAggregate, type SignalWindowMetric } from "@domain/scores"
 import { createFakeScoreAnalyticsRepository } from "@domain/scores/testing"
-import {
-  ChSqlClient,
-  EvaluationId,
-  OrganizationId,
-  ProjectId,
-  SignalId,
-  SqlClient,
-} from "@domain/shared"
+import { ChSqlClient, EvaluationId, OrganizationId, ProjectId, SignalId, SqlClient } from "@domain/shared"
 import { createFakeChSqlClient, createFakeSqlClient } from "@domain/shared/testing"
 import { SessionRepository } from "@domain/spans"
 import { createFakeSessionRepository } from "@domain/spans/testing"
