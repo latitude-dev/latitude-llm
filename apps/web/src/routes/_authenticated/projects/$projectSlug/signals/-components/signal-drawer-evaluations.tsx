@@ -701,7 +701,7 @@ export function SignalDrawerEvaluations({
           initial={{
             signalId,
             filters: signalDetail?.filters ?? null,
-            settings: editableSettings,
+            detector: { kind: "settings", settings: editableSettings },
             sampling: primaryEvaluation?.trigger.sampling ?? DEFAULT_EVALUATION_SAMPLING,
           }}
           onClose={() => setBuilderOpen(false)}

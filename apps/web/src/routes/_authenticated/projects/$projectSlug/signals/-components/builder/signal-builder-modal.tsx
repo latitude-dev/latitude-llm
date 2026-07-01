@@ -11,6 +11,7 @@ import {
   useUpdateSignalEvaluation,
 } from "../../../../../../../domains/signals/signals.collection.ts"
 import { toUserMessage } from "../../../../../../../lib/errors.ts"
+import { AdvancedDetectorEditor } from "./advanced-detector-editor.tsx"
 import { isConditionValid } from "./condition-meta.tsx"
 import { ConditionEditor, type ConditionEditState, RuleConditionList, type RuleDraft } from "./rule-detector-editor.tsx"
 import { SignalPreviewStep } from "./signal-preview-step.tsx"
@@ -34,18 +35,26 @@ const emptyRuleDraft: RuleDraft = { match: "all", conditions: [] }
 
 const filterSetOrNull = (filter: FilterSet): FilterSet | null => (Object.keys(filter).length === 0 ? null : filter)
 
+/** How the signal's active evaluation was authored: a declarative settings form, or a raw Advanced script. */
+export type SignalBuilderDetector =
+  | { readonly kind: "settings"; readonly settings: EvaluationSettings }
+  | { readonly kind: "script"; readonly script: string }
+
 export interface SignalBuilderInitial {
   readonly signalId: string
   readonly filters: FilterSet | null
-  readonly settings: EvaluationSettings
+  readonly detector: SignalBuilderDetector
   readonly sampling: number
 }
+
+type DetectorPayload = { settings: EvaluationSettings } | { script: string }
 
 function detectorPayload(
   tab: DetectorTab,
   ruleDraft: RuleDraft,
   criteria: string,
-): { settings: EvaluationSettings } | null {
+  scriptDraft: string,
+): DetectorPayload | null {
   if (tab === "rules") {
     if (ruleDraft.conditions.length === 0) return null
     return { settings: { kind: "rule", match: ruleDraft.match, conditions: [...ruleDraft.conditions] } }
@@ -54,7 +63,8 @@ function detectorPayload(
     if (criteria.trim().length === 0) return null
     return { settings: { kind: "judge", criteria: criteria.trim() } }
   }
-  return null
+  const script = scriptDraft.trim()
+  return script.length === 0 ? null : { script }
 }
 
 /**
@@ -88,14 +98,20 @@ export function SignalBuilderModal({
   const [stepIndex, setStepIndex] = useState(0)
   const step = steps[stepIndex] ?? "scope"
 
+  const initialSettings = initial?.detector.kind === "settings" ? initial.detector.settings : null
+  const initialScript = initial?.detector.kind === "script" ? initial.detector.script : ""
+
   const [filters, setFilters] = useState<FilterSet>(initial?.filters ?? initialFilters ?? {})
-  const [tab, setTab] = useState<DetectorTab>(() => (initial?.settings?.kind === "judge" ? "llm" : "rules"))
+  const [tab, setTab] = useState<DetectorTab>(() =>
+    initial?.detector.kind === "script" ? "advanced" : initialSettings?.kind === "judge" ? "llm" : "rules",
+  )
   const [ruleDraft, setRuleDraft] = useState<RuleDraft>(() =>
-    initial?.settings?.kind === "rule"
-      ? { match: initial.settings.match, conditions: initial.settings.conditions }
+    initialSettings?.kind === "rule"
+      ? { match: initialSettings.match, conditions: initialSettings.conditions }
       : emptyRuleDraft,
   )
-  const [criteria, setCriteria] = useState(() => (initial?.settings?.kind === "judge" ? initial.settings.criteria : ""))
+  const [criteria, setCriteria] = useState(() => (initialSettings?.kind === "judge" ? initialSettings.criteria : ""))
+  const [scriptDraft, setScriptDraft] = useState(() => initialScript)
   const [sampling, setSampling] = useState<number>(initial?.sampling ?? DEFAULT_EVALUATION_SAMPLING)
   const [conditionEdit, setConditionEdit] = useState<ConditionEditState>(null)
   const [draftCondition, setDraftCondition] = useState<EvaluationRuleCondition | null>(null)
@@ -113,11 +129,11 @@ export function SignalBuilderModal({
   // polling and can't resolve onto an unmounted component.
   useMountEffect(() => () => previewAbortRef.current?.abort())
 
-  const evaluation = detectorPayload(tab, ruleDraft, criteria)
+  const evaluation = detectorPayload(tab, ruleDraft, criteria, scriptDraft)
   const detectorValid = evaluation !== null
 
   const runPreview = (): void => {
-    const payload = detectorPayload(tab, ruleDraft, criteria)
+    const payload = detectorPayload(tab, ruleDraft, criteria, scriptDraft)
     if (payload === null) {
       setPreviewResult({ status: "error", error: "Add a valid evaluation before running a preview." })
       return
@@ -216,7 +232,11 @@ export function SignalBuilderModal({
       toast({ variant: "destructive", description: "Add a valid evaluation before saving." })
       return
     }
-    const detectorChanged = JSON.stringify(evaluation.settings) !== JSON.stringify(initial.settings)
+    const initialPayload: DetectorPayload =
+      initial.detector.kind === "settings"
+        ? { settings: initial.detector.settings }
+        : { script: initial.detector.script }
+    const detectorChanged = JSON.stringify(evaluation) !== JSON.stringify(initialPayload)
     const samplingChanged = sampling !== initial.sampling
     const filtersChanged = JSON.stringify(filterSetOrNull(filters)) !== JSON.stringify(initial.filters ?? null)
     setIsSaving(true)
@@ -239,11 +259,21 @@ export function SignalBuilderModal({
   const isLastStep = stepIndex === steps.length - 1
   const inConditionSubStep = step === "detector" && conditionEdit !== null
 
-  const advancedTabOption = {
-    id: "advanced" as const,
-    label: "Advanced",
-    tooltip: <Text.H6>Coming soon</Text.H6>,
-  }
+  // Editing is locked to how the evaluation was authored — settings signals stay on Rules/LLM, raw-script
+  // signals stay on Advanced — because there is no settings↔script conversion. Creation offers all three.
+  const detectorTabOptions: { readonly id: DetectorTab; readonly label: string }[] =
+    mode === "edit"
+      ? initial?.detector.kind === "script"
+        ? [{ id: "advanced", label: "Advanced" }]
+        : [
+            { id: "rules", label: "Rules" },
+            { id: "llm", label: "LLM" },
+          ]
+      : [
+          { id: "rules", label: "Rules" },
+          { id: "llm", label: "LLM" },
+          { id: "advanced", label: "Advanced" },
+        ]
 
   const footer = inConditionSubStep ? (
     <>
@@ -315,12 +345,9 @@ export function SignalBuilderModal({
             <Tabs<DetectorTab>
               variant="bordered"
               size="sm"
-              options={[{ id: "rules", label: "Rules" }, { id: "llm", label: "LLM" }, advancedTabOption]}
+              options={detectorTabOptions}
               active={tab}
-              onSelect={(next) => {
-                if (next === "advanced") return
-                setTab(next)
-              }}
+              onSelect={setTab}
             />
             {tab === "rules" ? (
               <RuleConditionList draft={ruleDraft} onChange={setRuleDraft} onEditCondition={openConditionEditor} />
@@ -340,6 +367,14 @@ export function SignalBuilderModal({
                   Describe the behavior to detect. A trace joins this signal when the behavior is present.
                 </Text.H6>
               </div>
+            ) : null}
+            {tab === "advanced" ? (
+              <AdvancedDetectorEditor
+                projectId={projectId}
+                filters={filterSetOrNull(filters)}
+                script={scriptDraft}
+                onScriptChange={setScriptDraft}
+              />
             ) : null}
           </div>
         ) : null}

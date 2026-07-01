@@ -1,4 +1,4 @@
-import type { SignalPreviewResult } from "@domain/evaluations"
+import type { ScriptGenerationResult, SignalPreviewResult } from "@domain/evaluations"
 import type { SignalDimension } from "@domain/scores"
 import type { InfiniteTableInfiniteScroll } from "@repo/ui"
 import { keepPreviousData, useInfiniteQuery, useMutation, useQueries, useQuery } from "@tanstack/react-query"
@@ -23,7 +23,9 @@ import {
   countSignalSessions,
   createSignal,
   deleteSignal,
+  generateEvaluationScript,
   getRelatedSignals,
+  getScriptGenerationResult,
   getSignal,
   getSignalDetail,
   getSignalDimensions,
@@ -568,6 +570,40 @@ export async function runSignalPreview(input: {
     await new Promise((resolve) => setTimeout(resolve, PREVIEW_POLL_INTERVAL_MS))
   }
   return { status: "error", error: "Preview timed out" }
+}
+
+// Generation runs up to 3 generate→sandbox-run cycles (each may make several LLM calls), so it polls
+// longer and less often than preview.
+const GENERATION_POLL_INTERVAL_MS = 1200
+const GENERATION_POLL_TIMEOUT_MS = 150_000
+
+/**
+ * Enqueues an AI script-generation run and polls until the worker writes a result (or the timeout
+ * elapses). Used by the Advanced tab's "Generate" action — not a reactive query.
+ */
+export async function runScriptGeneration(input: {
+  readonly projectId: string
+  readonly prompt: string
+  readonly filters?: SignalFilters | null
+  /** Stops polling early when the caller (e.g. a closing modal) is no longer interested. */
+  readonly signal?: AbortSignal
+}): Promise<ScriptGenerationResult> {
+  const { generationId } = await generateEvaluationScript({
+    data: {
+      projectId: input.projectId,
+      prompt: input.prompt,
+      ...(input.filters != null ? { filters: input.filters } : {}),
+    },
+  })
+
+  const deadline = Date.now() + GENERATION_POLL_TIMEOUT_MS
+  while (Date.now() < deadline) {
+    if (input.signal?.aborted) return { status: "error", error: "Generation cancelled" }
+    const result = await getScriptGenerationResult({ data: { generationId } })
+    if (result.status !== "pending") return result
+    await new Promise((resolve) => setTimeout(resolve, GENERATION_POLL_INTERVAL_MS))
+  }
+  return { status: "error", error: "Generation timed out" }
 }
 
 export function useSignalSessionsCount({

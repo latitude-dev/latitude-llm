@@ -1,6 +1,9 @@
 import {
+  buildScriptGenerationResultKey,
   buildSignalPreviewResultKey,
   EvaluationRepository,
+  SCRIPT_GENERATION_RESULT_TTL_SECONDS,
+  type ScriptGenerationResult,
   SIGNAL_PREVIEW_RESULT_TTL_SECONDS,
   type SignalPreviewResult,
 } from "@domain/evaluations"
@@ -1507,4 +1510,56 @@ export const getSignalPreviewResult = createServerFn({ method: "GET" })
     const redis = getRedisClient()
     const raw = await redis.get(buildSignalPreviewResultKey(organizationId, data.previewId))
     return raw === null ? { status: "pending" } : (JSON.parse(raw) as SignalPreviewResult)
+  })
+
+const generateEvaluationScriptInputSchema = z.object({
+  projectId: z.string(),
+  prompt: z.string().min(1),
+  filters: filterSetSchema.nullish(),
+})
+
+/**
+ * Enqueues an AI generation of a raw evaluation script from a freeform prompt and returns a
+ * `generationId` to poll via `getScriptGenerationResult`. It runs in the `signals-generate-script`
+ * worker (AI + sandbox + ClickHouse — never inline), which smoke-tests the candidate against a
+ * scoped session before writing the result to Redis.
+ */
+export const generateEvaluationScript = createServerFn({ method: "POST" })
+  .inputValidator(generateEvaluationScriptInputSchema)
+  .handler(async ({ data }): Promise<{ readonly generationId: string }> => {
+    const { organizationId } = await requireSession()
+    const generationId = generateId<"ScriptGeneration">()
+    const redis = getRedisClient()
+
+    await redis.set(
+      buildScriptGenerationResultKey(organizationId, generationId),
+      JSON.stringify({ status: "pending" } satisfies ScriptGenerationResult),
+      "EX",
+      SCRIPT_GENERATION_RESULT_TTL_SECONDS,
+    )
+
+    const publisher = await getQueuePublisher()
+    await Effect.runPromise(
+      publisher.publish("signals-generate-script", "run", {
+        generationId,
+        organizationId,
+        projectId: data.projectId,
+        prompt: data.prompt,
+        ...(data.filters != null ? { filters: data.filters } : {}),
+      }),
+    )
+
+    return { generationId }
+  })
+
+const getScriptGenerationResultInputSchema = z.object({ generationId: z.string() })
+
+/** Polls a script-generation run's result. Returns `pending` while the worker is still running (or the key expired). */
+export const getScriptGenerationResult = createServerFn({ method: "GET" })
+  .inputValidator(getScriptGenerationResultInputSchema)
+  .handler(async ({ data }): Promise<ScriptGenerationResult> => {
+    const { organizationId } = await requireSession()
+    const redis = getRedisClient()
+    const raw = await redis.get(buildScriptGenerationResultKey(organizationId, data.generationId))
+    return raw === null ? { status: "pending" } : (JSON.parse(raw) as ScriptGenerationResult)
   })
