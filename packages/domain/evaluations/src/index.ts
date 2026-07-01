@@ -149,6 +149,11 @@ export {
 export { loadScriptSessionContext } from "./runtime/load-session-context.ts"
 export { executeEvaluationScriptSandboxed } from "./runtime/sandbox-execution.ts"
 export {
+  buildScriptGenerationResultKey,
+  SCRIPT_GENERATION_RESULT_TTL_SECONDS,
+  type ScriptGenerationResult,
+} from "./runtime/script-generation-result.ts"
+export {
   buildSignalPreviewResultKey,
   SIGNAL_PREVIEW_RESULT_TTL_SECONDS,
   type SignalPreviewResult,

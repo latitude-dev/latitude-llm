@@ -401,6 +401,19 @@ const _registry = {
     }
   }>(),
 
+  // On-demand AI authoring of a raw evaluation script from a freeform prompt. Runs in a worker
+  // (AI + sandbox + ClickHouse), smoke-tests the candidate against a scoped session, and writes the
+  // result to Redis for the web client to poll. `filters` is JSON-shaped and re-validated downstream.
+  "signals-generate-script": payloads<{
+    run: {
+      readonly generationId: string
+      readonly organizationId: string
+      readonly projectId: string
+      readonly prompt: string
+      readonly filters?: unknown
+    }
+  }>(),
+
   // Runs the deterministic portion of every registered flagger strategy against
   // a trace. Matched strategies write a SYSTEM-authored score directly; strategies
   // that return `no-match` are sampled and, if selected, routed to the LLM
