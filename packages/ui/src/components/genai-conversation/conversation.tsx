@@ -105,7 +105,7 @@ function normalizeMessage(message: GenAIMessage): GenAIMessage {
     return { ...message, parts: [{ type: "text" as const, content }] }
   }
 
-  return message
+  return { ...message, parts: [] }
 }
 
 function hasSelectionInContainer(container: HTMLElement | null): boolean {
