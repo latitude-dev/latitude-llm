@@ -1404,11 +1404,11 @@ export const updateSignal = createServerFn({ method: "POST" })
 const updateSignalEvaluationInputSchema = z.object({
   projectId: z.string(),
   signalId: z.string(),
-  settings: evaluationSettingsSchema,
+  evaluation: evaluationDraftSchema,
   sampling: z.number().int().min(0).max(100).optional(),
 })
 
-/** Recompiles a user signal's settings-defined evaluation in place. */
+/** Recompiles a user signal's evaluation in place — from a settings form, or a raw script (Advanced tab). */
 export const updateSignalEvaluation = createServerFn({ method: "POST" })
   .inputValidator(updateSignalEvaluationInputSchema)
   .handler(
@@ -1422,7 +1422,7 @@ export const updateSignalEvaluation = createServerFn({ method: "POST" })
         updateSignalEvaluationUseCase({
           projectId: data.projectId,
           signalId: data.signalId,
-          settings: data.settings,
+          evaluation: data.evaluation,
           ...(data.sampling !== undefined ? { sampling: data.sampling } : {}),
         }).pipe(
           withPostgres(

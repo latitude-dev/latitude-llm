@@ -518,15 +518,12 @@ export function useUpdateSignal(projectId: string, signalId: string) {
 
 export function useUpdateSignalEvaluation(projectId: string, signalId: string) {
   return useMutation({
-    mutationFn: (input: {
-      readonly settings: Extract<EvaluationDraft, { settings: unknown }>["settings"]
-      readonly sampling?: number
-    }) =>
+    mutationFn: (input: { readonly evaluation: EvaluationDraft; readonly sampling?: number }) =>
       updateSignalEvaluation({
         data: {
           projectId,
           signalId,
-          settings: input.settings,
+          evaluation: input.evaluation,
           ...(input.sampling !== undefined ? { sampling: input.sampling } : {}),
         },
       }),

@@ -225,7 +225,7 @@ export function SignalBuilderModal({
         await updateSignal.mutateAsync({ filters: filterSetOrNull(filters) })
       }
       if (detectorChanged || samplingChanged) {
-        await updateSignalEvaluation.mutateAsync({ settings: evaluation.settings, sampling })
+        await updateSignalEvaluation.mutateAsync({ evaluation, sampling })
       }
       await invalidateSignalQueries(projectId, initial.signalId)
       toast({ description: "Signal updated." })

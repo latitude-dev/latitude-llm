@@ -119,9 +119,11 @@ describe("updateSignalEvaluationUseCase", () => {
     const { layer, saved } = provide(makeSignal(), [makeEvaluation()])
 
     const result = await Effect.runPromise(
-      updateSignalEvaluationUseCase({ projectId, signalId: SignalId(signalId), settings: nextSettings }).pipe(
-        Effect.provide(layer),
-      ),
+      updateSignalEvaluationUseCase({
+        projectId,
+        signalId: SignalId(signalId),
+        evaluation: { settings: nextSettings },
+      }).pipe(Effect.provide(layer)),
     )
 
     expect(result).toMatchObject({ signalId, evaluationId, changed: true })
@@ -136,9 +138,11 @@ describe("updateSignalEvaluationUseCase", () => {
     const { layer, saved } = provide(makeSignal(), [makeEvaluation()])
 
     const result = await Effect.runPromise(
-      updateSignalEvaluationUseCase({ projectId, signalId: SignalId(signalId), settings: ruleSettings }).pipe(
-        Effect.provide(layer),
-      ),
+      updateSignalEvaluationUseCase({
+        projectId,
+        signalId: SignalId(signalId),
+        evaluation: { settings: ruleSettings },
+      }).pipe(Effect.provide(layer)),
     )
 
     expect(result.changed).toBe(false)
@@ -149,21 +153,57 @@ describe("updateSignalEvaluationUseCase", () => {
     const { layer } = provide(makeSignal({ origin: "system" }), [makeEvaluation()])
 
     const result = await Effect.runPromiseExit(
-      updateSignalEvaluationUseCase({ projectId, signalId: SignalId(signalId), settings: nextSettings }).pipe(
-        Effect.provide(layer),
-      ),
+      updateSignalEvaluationUseCase({
+        projectId,
+        signalId: SignalId(signalId),
+        evaluation: { settings: nextSettings },
+      }).pipe(Effect.provide(layer)),
     )
 
     expect(result._tag).toBe("Failure")
   })
 
-  it("rejects raw-script (settings-null) evaluations", async () => {
+  it("rejects a settings payload for a raw-script evaluation (no conversion)", async () => {
     const { layer } = provide(makeSignal(), [makeEvaluation({ settings: null, script: "return Passed()" })])
 
     const result = await Effect.runPromiseExit(
-      updateSignalEvaluationUseCase({ projectId, signalId: SignalId(signalId), settings: nextSettings }).pipe(
-        Effect.provide(layer),
-      ),
+      updateSignalEvaluationUseCase({
+        projectId,
+        signalId: SignalId(signalId),
+        evaluation: { settings: nextSettings },
+      }).pipe(Effect.provide(layer)),
+    )
+
+    expect(result._tag).toBe("Failure")
+  })
+
+  it("updates a raw-script evaluation in place from a new script", async () => {
+    const { layer, saved } = provide(makeSignal(), [makeEvaluation({ settings: null, script: "return Passed(1)" })])
+
+    const result = await Effect.runPromise(
+      updateSignalEvaluationUseCase({
+        projectId,
+        signalId: SignalId(signalId),
+        evaluation: { script: "return Failed(0)" },
+      }).pipe(Effect.provide(layer)),
+    )
+
+    expect(result).toMatchObject({ signalId, evaluationId, changed: true })
+    expect(saved).toHaveLength(1)
+    expect(saved[0]?.settings).toBeNull()
+    expect(saved[0]?.script).toBe("return Failed(0)")
+    expect(saved[0]?.alignment).toBeNull()
+  })
+
+  it("rejects a script payload for a settings-defined evaluation (no conversion)", async () => {
+    const { layer } = provide(makeSignal(), [makeEvaluation()])
+
+    const result = await Effect.runPromiseExit(
+      updateSignalEvaluationUseCase({
+        projectId,
+        signalId: SignalId(signalId),
+        evaluation: { script: "return Passed(1)" },
+      }).pipe(Effect.provide(layer)),
     )
 
     expect(result._tag).toBe("Failure")
@@ -173,9 +213,11 @@ describe("updateSignalEvaluationUseCase", () => {
     const { layer } = provide(makeSignal(), [])
 
     const result = await Effect.runPromiseExit(
-      updateSignalEvaluationUseCase({ projectId, signalId: SignalId(signalId), settings: nextSettings }).pipe(
-        Effect.provide(layer),
-      ),
+      updateSignalEvaluationUseCase({
+        projectId,
+        signalId: SignalId(signalId),
+        evaluation: { settings: nextSettings },
+      }).pipe(Effect.provide(layer)),
     )
 
     expect(result._tag).toBe("Failure")

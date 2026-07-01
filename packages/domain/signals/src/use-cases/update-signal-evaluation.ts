@@ -20,10 +20,16 @@ import { Effect } from "effect"
 import { z } from "zod"
 import { SignalRepository } from "../ports/signal-repository.ts"
 
+// Exactly one of a declarative `settings` form or a raw `script`, mirroring createSignal.
+const evaluationDraftSchema = z.union([
+  z.object({ settings: evaluationSettingsSchema }),
+  z.object({ script: z.string().min(1) }),
+])
+
 const updateSignalEvaluationInputSchema = z.object({
   projectId: cuidSchema.transform(ProjectId),
   signalId: signalIdSchema,
-  settings: evaluationSettingsSchema,
+  evaluation: evaluationDraftSchema,
   sampling: z.number().int().min(0).max(100).optional(),
   now: z.date().optional(),
 })
@@ -44,13 +50,14 @@ export type UpdateSignalEvaluationError =
   | RepositoryError
 
 /**
- * Recompiles a user signal's active evaluation from a new `settings` form, **in place** (same
- * evaluation id). Updating in place — rather than archiving and minting a new row — matches the
- * shipped realign path (`persistAlignmentResult`) and avoids a lineage/naming scheme for the
- * replacement row. Only `origin = 'user'` signals whose active evaluation is settings-defined are
- * editable here: raw-script and system signals are rejected.
- * Edits apply forward-only; existing scores keep their frozen membership. The signal's `filters`
- * (the live pre-gate) are untouched and continue to gate the same evaluation.
+ * Recompiles a user signal's active evaluation from a new `settings` form or replaces its raw
+ * `script`, **in place** (same evaluation id). Updating in place — rather than archiving and minting
+ * a new row — matches the shipped realign path (`persistAlignmentResult`) and avoids a lineage/naming
+ * scheme for the replacement row. Only `origin = 'user'` signals are editable here, and the incoming
+ * kind must match the active evaluation's: a settings-defined evaluation takes `settings`, a raw-script
+ * evaluation (Advanced tab) takes `script` — there is no settings↔script conversion, and system signals
+ * are rejected. Edits apply forward-only; existing scores keep their frozen membership. The signal's
+ * `filters` (the live pre-gate) are untouched and continue to gate the same evaluation.
  */
 export const updateSignalEvaluationUseCase = (input: UpdateSignalEvaluationInput) =>
   Effect.gen(function* () {
@@ -59,7 +66,9 @@ export const updateSignalEvaluationUseCase = (input: UpdateSignalEvaluationInput
     const sqlClient = yield* SqlClient
     const now = parsed.now ?? new Date()
 
-    const script = compileSettingsToScript(parsed.settings)
+    const settings = "settings" in parsed.evaluation ? parsed.evaluation.settings : null
+    const script =
+      "settings" in parsed.evaluation ? compileSettingsToScript(parsed.evaluation.settings) : parsed.evaluation.script
     const scriptHash = yield* validateAndHashEvaluationScript(script)
 
     return yield* sqlClient.transaction(
@@ -87,9 +96,16 @@ export const updateSignalEvaluationUseCase = (input: UpdateSignalEvaluationInput
             message: `Signal ${signal.id} has no active evaluation to edit`,
           })
         }
-        if (evaluation.settings == null) {
+        // No settings↔script conversion: the incoming kind must match how the evaluation was authored.
+        const isRawScriptEvaluation = evaluation.settings == null
+        if (isRawScriptEvaluation && settings !== null) {
           return yield* new BadRequestError({
-            message: "This signal's evaluation was defined from a raw script and is not settings-editable",
+            message: "This signal's evaluation is a raw script; edit it from the Advanced tab",
+          })
+        }
+        if (!isRawScriptEvaluation && settings === null) {
+          return yield* new BadRequestError({
+            message: "This signal's evaluation is settings-defined; edit it from the Rules or Judge tab",
           })
         }
 
@@ -105,7 +121,7 @@ export const updateSignalEvaluationUseCase = (input: UpdateSignalEvaluationInput
 
         yield* evaluationRepository.save({
           ...evaluation,
-          settings: parsed.settings,
+          settings,
           script,
           scriptHash,
           // Only a definition change invalidates alignment; a sampling-only change keeps it.
