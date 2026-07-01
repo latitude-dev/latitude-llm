@@ -26,11 +26,23 @@ import { outboxEvents } from "@platform/db-postgres/schema/outbox-events"
 import { setupTestPostgres } from "@platform/testkit"
 import { withTracing } from "@repo/observability"
 import { Effect, Layer } from "effect"
-import { describe, expect, it, vi } from "vitest"
+import { beforeAll, describe, expect, it, vi } from "vitest"
 import { TestQueueConsumer } from "../testing/index.ts"
 import { createBillingWorker, TRACE_USAGE_BATCH_FLUSH_MS } from "./billing.ts"
 
 const pg = setupTestPostgres()
+
+// `billing_usage_events` is range-partitioned by month; the migration's bootstrap only provisions
+// partitions around the real wall-clock month (`now()`), which the fake timers below can't move.
+// These tests freeze the clock to fixed 2026 dates and seed usage periods to match, so provision
+// the 2026 month partitions up front — otherwise an insert into an unprovisioned month fails with
+// "no partition of relation billing_usage_events found for row".
+beforeAll(async () => {
+  for (let month = 1; month <= 12; month++) {
+    const partitionStart = `2026-${String(month).padStart(2, "0")}-01`
+    await pg.client.exec(`SELECT latitude.create_billing_usage_events_partition('${partitionStart}'::date)`)
+  }
+})
 
 const billingLayers = Layer.mergeAll(
   BillingOverrideRepositoryLive,
