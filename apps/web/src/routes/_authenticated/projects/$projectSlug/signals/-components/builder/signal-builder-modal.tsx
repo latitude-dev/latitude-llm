@@ -1,8 +1,8 @@
 import { DEFAULT_EVALUATION_SAMPLING, type SignalPreviewResult } from "@domain/evaluations"
 import type { EvaluationRuleCondition, EvaluationSettings, FilterSet } from "@domain/shared"
-import { Button, Input, Modal, Tabs, Text, Textarea, useToast } from "@repo/ui"
+import { Button, Input, Modal, Tabs, Text, Textarea, useMountEffect, useToast } from "@repo/ui"
 import { useNavigate } from "@tanstack/react-router"
-import { useState } from "react"
+import { useRef, useState } from "react"
 import {
   invalidateSignalQueries,
   runSignalPreview,
@@ -103,10 +103,15 @@ export function SignalBuilderModal({
   const [name, setName] = useState("")
   const [nameError, setNameError] = useState<string | undefined>(undefined)
   const [description, setDescription] = useState("")
+  const [descriptionError, setDescriptionError] = useState<string | undefined>(undefined)
 
   const [previewResult, setPreviewResult] = useState<SignalPreviewResult | null>(null)
   const [previewRunning, setPreviewRunning] = useState(false)
   const [isSaving, setIsSaving] = useState(false)
+  const previewAbortRef = useRef<AbortController | null>(null)
+  // Cancel any in-flight preview poll when the modal unmounts (close) so it stops
+  // polling and can't resolve onto an unmounted component.
+  useMountEffect(() => () => previewAbortRef.current?.abort())
 
   const evaluation = detectorPayload(tab, ruleDraft, criteria)
   const detectorValid = evaluation !== null
@@ -117,11 +122,26 @@ export function SignalBuilderModal({
       setPreviewResult({ status: "error", error: "Add a valid evaluation before running a preview." })
       return
     }
+    // A re-run supersedes any in-flight poll so the stale result can't overwrite the new one.
+    previewAbortRef.current?.abort()
+    const controller = new AbortController()
+    previewAbortRef.current = controller
     setPreviewRunning(true)
-    void runSignalPreview({ projectId, evaluation: payload, filters: filterSetOrNull(filters) })
-      .then((result) => setPreviewResult(result))
-      .catch((error) => setPreviewResult({ status: "error", error: toUserMessage(error) }))
-      .finally(() => setPreviewRunning(false))
+    void runSignalPreview({
+      projectId,
+      evaluation: payload,
+      filters: filterSetOrNull(filters),
+      signal: controller.signal,
+    })
+      .then((result) => {
+        if (!controller.signal.aborted) setPreviewResult(result)
+      })
+      .catch((error) => {
+        if (!controller.signal.aborted) setPreviewResult({ status: "error", error: toUserMessage(error) })
+      })
+      .finally(() => {
+        if (!controller.signal.aborted) setPreviewRunning(false)
+      })
   }
 
   const goToStep = (nextIndex: number) => {
@@ -156,8 +176,13 @@ export function SignalBuilderModal({
 
   const handleCreate = async () => {
     const trimmedName = name.trim()
+    const trimmedDescription = description.trim()
     if (trimmedName.length === 0) {
       setNameError("Name is required")
+      return
+    }
+    if (trimmedDescription.length === 0) {
+      setDescriptionError("Description is required")
       return
     }
     if (evaluation === null) {
@@ -168,7 +193,7 @@ export function SignalBuilderModal({
     try {
       const result = await createSignal.mutateAsync({
         name: trimmedName,
-        description: description.trim(),
+        description: trimmedDescription,
         filters: filterSetOrNull(filters),
         sampling,
         evaluation,
@@ -193,9 +218,12 @@ export function SignalBuilderModal({
     }
     const detectorChanged = JSON.stringify(evaluation.settings) !== JSON.stringify(initial.settings)
     const samplingChanged = sampling !== initial.sampling
+    const filtersChanged = JSON.stringify(filterSetOrNull(filters)) !== JSON.stringify(initial.filters ?? null)
     setIsSaving(true)
     try {
-      await updateSignal.mutateAsync({ filters: filterSetOrNull(filters) })
+      if (filtersChanged) {
+        await updateSignal.mutateAsync({ filters: filterSetOrNull(filters) })
+      }
       if (detectorChanged || samplingChanged) {
         await updateSignalEvaluation.mutateAsync({ settings: evaluation.settings, sampling })
       }
@@ -355,7 +383,11 @@ export function SignalBuilderModal({
               placeholder="What does this signal detect?"
               minRows={2}
               value={description}
-              onChange={(event) => setDescription(event.target.value)}
+              onChange={(event) => {
+                setDescription(event.target.value)
+                if (descriptionError) setDescriptionError(undefined)
+              }}
+              {...(descriptionError ? { errors: [descriptionError] } : {})}
             />
           </div>
         ) : null}

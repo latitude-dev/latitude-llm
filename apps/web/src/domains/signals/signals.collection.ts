@@ -552,6 +552,8 @@ export async function runSignalPreview(input: {
   readonly projectId: string
   readonly evaluation: EvaluationDraft
   readonly filters?: SignalFilters | null
+  /** Stops polling early when the caller (e.g. a closing modal) is no longer interested. */
+  readonly signal?: AbortSignal
 }): Promise<SignalPreviewResult> {
   const { previewId } = await previewEvaluation({
     data: {
@@ -563,6 +565,7 @@ export async function runSignalPreview(input: {
 
   const deadline = Date.now() + PREVIEW_POLL_TIMEOUT_MS
   while (Date.now() < deadline) {
+    if (input.signal?.aborted) return { status: "error", error: "Preview cancelled" }
     const result = await getSignalPreviewResult({ data: { previewId } })
     if (result.status !== "pending") return result
     await new Promise((resolve) => setTimeout(resolve, PREVIEW_POLL_INTERVAL_MS))
