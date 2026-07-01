@@ -36,6 +36,11 @@ interface FiltersSidebarProps {
   readonly onClose: () => void
 }
 
+function getInValues(filters: FilterSet, field: string): readonly string[] {
+  const cond = filters[field]?.find((c) => c.op === "in")
+  return Array.isArray(cond?.value) ? cond.value.map(String) : []
+}
+
 function getTextFilterValue(filters: FilterSet, field: string): string {
   const cond = filters[field]?.find((c) => c.op === "contains")
   return typeof cond?.value === "string" ? cond.value : ""
