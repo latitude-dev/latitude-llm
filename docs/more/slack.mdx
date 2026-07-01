@@ -1,0 +1,39 @@
+---
+title: Slack integration
+description: Send Latitude notifications to Slack channels.
+---
+
+The Slack integration sends Latitude notifications to channels in your Slack workspace. Use it to route incidents and other team-level updates where your team already triages work.
+
+## Connect Slack
+
+1. In Latitude, open a project and go to **Settings → Integrations**.
+2. Find **Slack** and click **Connect**.
+3. Review the Slack install screen and choose the workspace Latitude should notify.
+4. Approve the installation.
+5. After Slack redirects back to Latitude, configure notification routes for the channels that should receive updates.
+
+Latitude connects one Slack workspace per organization. If Slack reports that the workspace is already connected to another Latitude organization, disconnect it there before installing it again.
+
+## Configure notification routes
+
+After Slack is connected, the integration card shows a **Notifications** section. Each notification group can be routed to a Slack channel.
+
+- Choose a channel for each notification group you want Slack to receive.
+- Leave a notification group unconfigured to keep those notifications out of Slack.
+- Update routes any time from **Settings → Integrations**.
+
+Latitude sends Slack notifications at the organization level. Slack routing is independent from each user's in-app and email preferences.
+
+## Reconnect or disconnect
+
+Slack tokens can expire or be revoked from Slack. If Latitude cannot refresh the token, the integration shows **Slack connection expired**. Click **Reconnect** and approve the Slack installation again to restore delivery.
+
+To stop Slack delivery, click **Disconnect** on the Slack integration card. Disconnecting revokes the bot token, stops all Slack notifications for the workspace, and resets channel routing if you reconnect later.
+
+## Troubleshooting
+
+- **No channels appear**: confirm the Slack install completed and that the Latitude Slack app can access the workspace.
+- **Notifications are not posted**: verify the notification group has a channel route configured.
+- **Connection expired**: reconnect Slack from the integration card.
+- **Workspace already connected**: disconnect the Slack workspace from the other Latitude organization before reconnecting it here.

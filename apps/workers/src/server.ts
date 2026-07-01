@@ -44,6 +44,7 @@ import {
   getStorageDisk,
   getWorkflowStarter,
 } from "./clients.ts"
+import { createAgentDispatchWorker } from "./workers/agent-dispatch.ts"
 import { createAnnotationQueuesWorker } from "./workers/annotation-queues.ts"
 import { createAnnotationScoresWorker } from "./workers/annotation-scores.ts"
 import { createApiKeysWorker } from "./workers/api-keys.ts"
@@ -195,6 +196,7 @@ const bootstrap = async () => {
     createNotificationsWorker(ctx)
     createNotificationEmailerWorker(ctx)
     createNotificationSlackWorker(ctx)
+    createAgentDispatchWorker(ctx)
     createDestinationsWorker({
       consumer: ctx.consumer,
       publisher: ctx.publisher,

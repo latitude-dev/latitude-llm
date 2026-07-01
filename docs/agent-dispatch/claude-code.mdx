@@ -1,0 +1,65 @@
+---
+title: Claude Code agent dispatch
+description: Trigger Claude Code routines from Latitude signals.
+---
+
+Claude Code agent dispatch lets Latitude fire a Claude Code routine when a signal needs engineering follow-up. Latitude sends the routine a prompt with signal context, sample traces, and a link back to Latitude.
+
+## Prerequisites
+
+- Agent dispatch enabled for your Latitude workspace
+- Access to Claude Code routines
+- A Claude Code routine that is allowed to work in the repository you want it to modify
+- The routine trigger token from Claude Code
+
+## Prepare a routine
+
+1. Open [Claude Code routines](https://claude.ai/code/routines).
+2. Create or select the routine Latitude should trigger.
+3. Use a routine description that tells Claude Code to investigate Latitude signals, implement fixes, run relevant checks, and report what changed.
+4. Copy the routine trigger token from the routine API section.
+5. Copy the routine page URL from your browser. Latitude extracts the routine trigger ID from this URL.
+
+A good routine description is:
+
+```text
+Inspect the Latitude signal, identify the regression or newly discovered issue, implement the fix, run the relevant checks, and report what changed.
+```
+
+## Connect Claude Code
+
+1. In Latitude, open your project and go to **Settings → Integrations**.
+2. Open **Claude Code** and click **Connect**.
+3. Paste the routine token.
+4. Paste the routine URL, for example `https://claude.ai/code/routines/trig_...`.
+5. Click **Connect**.
+
+Latitude stores the routine token encrypted and uses it only to fire the configured routine.
+
+## Configure dispatches
+
+After Claude Code is connected, open the Claude Code integration detail page in Latitude.
+
+- **Triggers** choose which Latitude events can fire the routine.
+- **Routine trigger ID** is extracted from the routine URL during setup and can be edited if you rotate routines.
+- **Max dispatches per day** limits how many routine runs Latitude can create.
+- **Cooldown** prevents repeated dispatches for the same source during a short period.
+
+The default prompt asks Claude Code to inspect the signal, use Latitude context and MCP tools when available, identify the likely root cause, implement the smallest correct fix, add a regression test if appropriate, and open a pull request or report the result according to the routine's environment.
+
+## What Latitude sends to Claude Code
+
+Latitude calls the Claude Code routines API with:
+
+- The configured routine trigger ID
+- The encrypted routine token
+- The rendered dispatch prompt as the routine input text
+
+Dispatch history records whether Claude Code accepted the request and links to the Claude Code session when Claude returns a URL.
+
+## Troubleshooting
+
+- **Paste the routine page URL, not just the ID**: the connection form validates URLs and extracts `trig_...` from the path.
+- **Authentication error**: rotate the routine token in Claude Code and reconnect the integration.
+- **Dispatch request rejected**: confirm the routine still exists and the trigger ID matches the routine you want Latitude to fire.
+- **Routine runs but cannot fix code**: review the routine's repository access and instructions in Claude Code.

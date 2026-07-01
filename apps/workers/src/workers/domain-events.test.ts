@@ -331,17 +331,27 @@ describe("domain-events dispatcher", () => {
 
     await consumer.dispatchTask("domain-events", "dispatch", envelopeToDispatchPayload(envelope))
 
-    expect(published).toHaveLength(1)
-    const job = published[0]
-    expect(job?.queue).toBe("notifications")
-    expect(job?.task).toBe("request-signal-discovered-notifications")
-    expect(job?.payload).toEqual({
+    expect(published).toHaveLength(2)
+
+    const notifications = published.find((p) => p.queue === "notifications")
+    expect(notifications?.task).toBe("request-signal-discovered-notifications")
+    expect(notifications?.payload).toEqual({
       organizationId: "org-1",
       projectId: "proj-1",
       signalId: "signal-1",
       discoveredAt: "2026-05-07T10:00:00.000Z",
     })
-    expect(job?.options?.dedupeKey).toBe("notifications:request-signal-discovered:signal-1")
+    expect(notifications?.options?.dedupeKey).toBe("notifications:request-signal-discovered:signal-1")
+
+    const agentDispatch = published.find((p) => p.queue === "agent-dispatch")
+    expect(agentDispatch?.task).toBe("request")
+    expect(agentDispatch?.payload).toEqual({
+      organizationId: "org-1",
+      projectId: "proj-1",
+      signalId: "signal-1",
+      source: "signal",
+    })
+    expect(agentDispatch?.options?.dedupeKey).toBe("agent-dispatch:request-signal:signal-1")
   })
 
   it("routes IncidentCreated to notifications:request-incident-notifications with stable dedupe key", async () => {
@@ -358,12 +368,21 @@ describe("domain-events dispatcher", () => {
 
     await consumer.dispatchTask("domain-events", "dispatch", envelopeToDispatchPayload(envelope))
 
-    expect(published).toHaveLength(1)
-    const job = published[0]
-    expect(job?.queue).toBe("notifications")
-    expect(job?.task).toBe("request-incident-notifications")
-    expect(job?.payload).toEqual({ organizationId: "org-1", alertIncidentId: "ai-1", transition: "created" })
-    expect(job?.options?.dedupeKey).toBe("notifications:request-incident-created:ai-1")
+    expect(published).toHaveLength(2)
+
+    const notifications = published.find((p) => p.queue === "notifications")
+    expect(notifications?.task).toBe("request-incident-notifications")
+    expect(notifications?.payload).toEqual({ organizationId: "org-1", alertIncidentId: "ai-1", transition: "created" })
+    expect(notifications?.options?.dedupeKey).toBe("notifications:request-incident-created:ai-1")
+
+    const agentDispatch = published.find((p) => p.queue === "agent-dispatch")
+    expect(agentDispatch?.task).toBe("request")
+    expect(agentDispatch?.payload).toEqual({
+      organizationId: "org-1",
+      alertIncidentId: "ai-1",
+      source: "incident",
+    })
+    expect(agentDispatch?.options?.dedupeKey).toBe("agent-dispatch:request-incident:ai-1")
   })
 
   it("routes IncidentClosed to notifications:request-incident-notifications with stable dedupe key", async () => {
