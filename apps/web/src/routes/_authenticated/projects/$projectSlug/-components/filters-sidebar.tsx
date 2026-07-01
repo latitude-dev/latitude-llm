@@ -95,19 +95,9 @@ function getStatusValues(filters: FilterSet, field: string): readonly StatusFilt
   return raw.filter((v): v is StatusFilterValue => (STATUS_VALUES as readonly string[]).includes(v))
 }
 
-/**
- * Tri-state for the "Has LLM activity" toggle:
- * - URL key absent → treated as on (the default chip applies at the call site).
- * - `[{op: "eq", value: false}]` → off (user explicitly opted out).
- * - `[{op: "eq", value: true}]` → on (explicit; equivalent to absent).
- *
- * Returning a plain boolean lets the Switch render the right state regardless
- * of which representation lives in the URL.
- */
 function getHasLlmActivityOn(filters: FilterSet): boolean {
   const cond = filters.hasLlmActivity?.find((c) => c.op === "eq")
-  if (cond === undefined) return true
-  return cond.value !== false && cond.value !== "false"
+  return cond?.value === true || cond?.value === "true"
 }
 
 function setFieldConditions(filters: FilterSet, field: string, conditions: FilterCondition[]): FilterSet {
@@ -481,7 +471,7 @@ export function FiltersSidebar({ mode, projectId, filters, onFiltersChange, onCl
 
   const setHasLlmActivity = useCallback(
     (on: boolean) => {
-      setField("hasLlmActivity", on ? [] : [{ op: "eq", value: false }])
+      setField("hasLlmActivity", on ? [{ op: "eq", value: true }] : [])
     },
     [setField],
   )
@@ -672,7 +662,7 @@ export function FiltersSidebar({ mode, projectId, filters, onFiltersChange, onCl
         {mode === "sessions" && (
           <CollapsibleSection
             label="Has LLM activity"
-            defaultOpen={filters.hasLlmActivity !== undefined && !getHasLlmActivityOn(filters)}
+            defaultOpen={getHasLlmActivityOn(filters)}
           >
             <div className="flex items-center justify-between gap-2">
               <Text.H7 color="foregroundMuted">

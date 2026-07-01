@@ -238,13 +238,11 @@ export function ProjectExplorer({ projectSlug }: { readonly projectSlug: string 
       startTime: [{ op: "gte" as const, value: new Date(fromMs).toISOString() }],
     }
   }, [filters, isSessions])
-  // The Sessions surface's hooks (useSessionsInfiniteScroll / useSessionsCount)
-  // apply `withSessionDefaults` internally to hide orphan-fragment sessions
-  // by default. The trace-side surfaces here (count, export, add-to-dataset)
-  // need the same default applied in Sessions mode so a Select-All export
-  // doesn't sweep traces the user never saw. In Traces mode `hasLlmActivity`
-  // is a session-only synthetic and isn't part of the trace filter registry,
-  // so we keep the raw filter set there.
+  // The Sessions surface hooks apply `withSessionDefaults` internally so an
+  // explicit `hasLlmActivity` toggle is honored consistently. Trace-side
+  // surfaces here (count, export, add-to-dataset) need the same normalization
+  // in Sessions mode. In Traces mode `hasLlmActivity` is session-only and is
+  // not part of the trace filter registry, so we keep the raw filter set.
   const effectiveFilters = useMemo(() => (isSessions ? withSessionDefaults(filters) : filters), [filters, isSessions])
   const traceColumnSettings = useTableColumnSettings<TraceColumnId>({
     storageKey: "projects.traces.columns.v1",

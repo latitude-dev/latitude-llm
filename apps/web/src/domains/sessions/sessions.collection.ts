@@ -37,35 +37,27 @@ export function deriveSessionStatus(endTime: string | Date, now: number = Date.n
 }
 
 /**
- * Default-on session filter: hide "orphan fragment" rows that carry no LLM
- * activity (sessions whose every span produced 0 tokens and no model name —
- * typically OTel-direct customers with mixed span/session-id propagation where
- * framework spans split off into their own session).
+ * Normalizes the optional `hasLlmActivity` session filter before it reaches
+ * the repo. Hides "orphan fragment" rows (sessions with 0 tokens and no model)
+ * only when the user explicitly turns the sidebar toggle on.
  *
  * URL representation of the sidebar toggle:
- *   - key absent          → default ON; this helper injects the filter.
- *   - `{op:"eq",value:true}`  → explicit ON; equivalent to absent, filter is kept.
- *   - `{op:"eq",value:false}` → sentinel meaning "user opted out of the default";
- *                                this helper STRIPS the field so the repo applies
- *                                no `hasLlmActivity` clause at all (i.e. shows
- *                                both LLM-active sessions and orphan fragments).
- *
- * The `false` sentinel lives in the URL so the toggle state is shareable, but
- * never reaches the repo as a filter condition — sending `false` to the
- * synthetic clause would otherwise narrow the list to *only* orphans, which is
- * not what "Including orphan fragments" means.
+ *   - key absent → off; no `hasLlmActivity` clause is applied.
+ *   - `{op:"eq",value:true}` → on; filter is kept.
+ *   - `{op:"eq",value:false}` → legacy off sentinel from the old default-on
+ *     toggle; stripped so the repo sees no clause (same as absent).
  */
 export function withSessionDefaults(filters: FilterSet | undefined): FilterSet {
-  if (filters?.hasLlmActivity !== undefined) {
-    const explicit = filters.hasLlmActivity
-    const optedOut = explicit.some((c) => c.op === "eq" && (c.value === false || c.value === "false"))
-    if (optedOut) {
-      const { hasLlmActivity: _drop, ...rest } = filters as Record<string, readonly FilterCondition[]>
-      return rest as FilterSet
-    }
-    return filters
+  if (filters?.hasLlmActivity === undefined) {
+    return filters ?? {}
   }
-  return { ...(filters ?? {}), hasLlmActivity: [{ op: "eq", value: true }] }
+  const explicit = filters.hasLlmActivity
+  const legacyOff = explicit.some((c) => c.op === "eq" && (c.value === false || c.value === "false"))
+  if (legacyOff) {
+    const { hasLlmActivity: _drop, ...rest } = filters as Record<string, readonly FilterCondition[]>
+    return rest as FilterSet
+  }
+  return filters
 }
 
 export function useSessionsInfiniteScroll({
