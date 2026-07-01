@@ -55,10 +55,7 @@ function wrapToolExecute(toolName: string, tool: Tool, tracer: Tracer, toolCallI
   }
 }
 
-export function instrumentCodemodeTools<T extends ToolSet>(
-  tools: T,
-  options: InstrumentCodemodeToolsOptions,
-): T {
+export function instrumentCodemodeTools<T extends ToolSet>(tools: T, options: InstrumentCodemodeToolsOptions): T {
   const prefix = options.toolCallIdPrefix ?? "codemode-inner"
   const wrapped = {} as Record<string, Tool>
 

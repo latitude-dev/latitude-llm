@@ -37,10 +37,13 @@ describe("instrumentCodemodeTools", () => {
       { tracer },
     )
 
-    await tools.getWeather.execute!({ city: "Barcelona" }, {
-      toolCallId: "ignored",
-      messages: [],
-    })
+    await tools.getWeather.execute!(
+      { city: "Barcelona" },
+      {
+        toolCallId: "ignored",
+        messages: [],
+      },
+    )
 
     await hostProvider.forceFlush()
 
