@@ -13,12 +13,14 @@ import type { ScriptRuntime, ScriptSessionContext } from "@domain/sandbox"
 import {
   BadRequestError,
   type ChSqlClient,
+  type FilterSet,
   LATITUDE_TELEMETRY_PROJECT_SLUGS,
   OrganizationId,
   ProjectId,
   type RepositoryError,
+  TraceId,
 } from "@domain/shared"
-import { type SessionRepository, type SpanRepository, TraceRepository } from "@domain/spans"
+import { SessionRepository, type SpanRepository, TraceRepository } from "@domain/spans"
 import { Effect } from "effect"
 import { z } from "zod"
 import { EVALUATION_SCRIPT_GENERATION_DEFAULT_MODEL, EVALUATION_SCRIPT_GENERATION_MAX_ATTEMPTS } from "../constants.ts"
@@ -31,6 +33,8 @@ export interface CreateScriptFromPromptInput {
   readonly organizationId: string
   readonly projectId: string
   readonly prompt: string
+  /** Signal scope; the smoke-test session is picked from within it so validation matches what the signal will run against. */
+  readonly filters?: FilterSet
 }
 
 export interface CreateScriptFromPromptResult {
@@ -124,24 +128,30 @@ export const createScriptFromPromptUseCase = (input: CreateScriptFromPromptInput
     }
 
     const traceRepository = yield* TraceRepository
+    const sessionRepository = yield* SessionRepository
     const organizationId = OrganizationId(input.organizationId)
     const projectId = ProjectId(input.projectId)
 
     const noSession = () =>
-      new BadRequestError({ message: "No sessions available in this project to validate the generated script" })
+      new BadRequestError({ message: "No sessions in the selected scope to validate the generated script against" })
 
-    const traces = yield* traceRepository.listByProjectId({
+    const sessions = yield* sessionRepository.listByProjectId({
       organizationId,
       projectId,
-      options: { limit: 1, sortBy: "startTime", sortDirection: "desc" },
+      options: {
+        limit: 1,
+        sortBy: "startTime",
+        sortDirection: "desc",
+        ...(input.filters ? { filters: input.filters } : {}),
+      },
     })
-    const latestTrace = traces.items[0]
-    if (!latestTrace) {
+    const anchorTraceId = sessions.items[0]?.traceIds[0]
+    if (anchorTraceId === undefined) {
       return yield* noSession()
     }
 
     const traceDetail = yield* traceRepository
-      .findByTraceId({ organizationId, projectId, traceId: latestTrace.traceId })
+      .findByTraceId({ organizationId, projectId, traceId: TraceId(anchorTraceId) })
       .pipe(Effect.catchTag("NotFoundError", () => Effect.fail(noSession())))
 
     const session = yield* loadScriptSessionContext({ organizationId, projectId, traceDetail })
