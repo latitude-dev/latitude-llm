@@ -173,7 +173,8 @@
               "observability/features/token-cost-tracking",
               "observability/features/trace-ids",
               "observability/features/trace-urls",
-              "observability/features/user-tracking"
+              "observability/features/user-tracking",
+              "more/sandbox"
             ]
           },
           {
@@ -220,6 +221,15 @@
         "group": "Refine",
         "pages": [
           "monitors/overview",
+          {
+            "group": "Agent dispatch",
+            "pages": [
+              "more/agent-dispatch-cursor",
+              "more/agent-dispatch-claude-code",
+              "more/agent-dispatch-linear",
+              "more/agent-dispatch-webhooks"
+            ]
+          },
           {
             "group": "Datasets",
             "pages": [
@@ -269,16 +279,7 @@
         "pages": [
           "getting-started/concepts",
           "getting-started/mcp",
-          "more/sandbox",
-          {
-            "group": "Agent dispatch",
-            "pages": [
-              "more/agent-dispatch-cursor",
-              "more/agent-dispatch-claude-code",
-              "more/agent-dispatch-linear",
-              "more/agent-dispatch-webhooks"
-            ]
-          },
+          "more/slack",
           {
             "group": "Data destinations",
             "pages": [
