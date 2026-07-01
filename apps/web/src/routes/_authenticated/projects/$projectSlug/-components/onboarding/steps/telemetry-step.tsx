@@ -1,6 +1,6 @@
 import { Button, Text } from "@repo/ui"
 import { lazy, Suspense } from "react"
-import { TraceTail, TelemetryHelpAlert } from "../mocks/trace-tail.tsx"
+import { TelemetryHelpAlert, TraceTail } from "../mocks/trace-tail.tsx"
 import { TelemetryInstructions } from "./telemetry-instructions.tsx"
 
 const OnboardingWaitingLottie = lazy(() => import("../../onboarding-waiting-lottie.tsx"))

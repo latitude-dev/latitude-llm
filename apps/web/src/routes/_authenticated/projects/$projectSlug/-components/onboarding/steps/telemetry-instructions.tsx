@@ -6,6 +6,7 @@ import {
   ProviderIcon,
   PythonIcon,
   Tabs,
+  TagBadge,
   Text,
   TypescriptIcon,
 } from "@repo/ui"
@@ -442,7 +443,10 @@ export function TelemetryInstructions({ projectSlug }: { readonly projectSlug: s
 
       {telemetrySetupMode === "coding-agent" ? (
         <div className="flex flex-col gap-2">
-          <Text.H5M>Prompt</Text.H5M>
+          <span className="inline-flex items-center gap-1.5">
+            <Text.H5M>Prompt</Text.H5M>
+            <TagBadge tag="Recommended" variant="accent" />
+          </span>
           <Text.H5 color="foregroundMuted">
             Paste this into the chat with your coding agent — Cursor, Claude Code, Codex, or any other — to set up
             Latitude telemetry in your project.

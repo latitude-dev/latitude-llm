@@ -337,8 +337,14 @@ export function Tabs<T extends string>({
             ) : (
               <>
                 {option.icon}
-                <Text.H5 color={isActive ? "foreground" : "foregroundMuted"}>{option.label}</Text.H5>
-                {option.suffix}
+                {option.suffix ? (
+                  <span className="inline-flex items-baseline gap-1">
+                    <Text.H5 color={isActive ? "foreground" : "foregroundMuted"}>{option.label}</Text.H5>
+                    {option.suffix}
+                  </span>
+                ) : (
+                  <Text.H5 color={isActive ? "foreground" : "foregroundMuted"}>{option.label}</Text.H5>
+                )}
               </>
             )}
           </button>

@@ -1,7 +1,11 @@
-import { Alert, Icon, Skeleton, Text } from "@repo/ui"
+import { showNewMessage } from "@intercom/messenger-js-sdk"
+import { Alert, Icon, Skeleton, Text, useToast } from "@repo/ui"
 import { Check, Headset } from "lucide-react"
+import { useSupportEnabled } from "../../../../../-route-data.ts"
 
 const TOTAL_ROWS = 4
+
+const ONBOARDING_SETUP_HELP_MESSAGE = "Hi, I need help with setting up Latitude in my project ASAP!"
 
 export function TraceTail({ traceReceived }: { readonly traceReceived: boolean }) {
   const skeletonCount = traceReceived ? TOTAL_ROWS - 1 : TOTAL_ROWS
@@ -28,6 +32,17 @@ export function TraceTail({ traceReceived }: { readonly traceReceived: boolean }
 }
 
 export function TelemetryHelpAlert() {
+  const supportEnabled = useSupportEnabled()
+  const { toast } = useToast()
+
+  const openSupportChat = () => {
+    if (!supportEnabled) {
+      toast({ variant: "destructive", description: "Support chat isn't available in this environment." })
+      return
+    }
+    showNewMessage(ONBOARDING_SETUP_HELP_MESSAGE)
+  }
+
   return (
     <Alert
       showIcon={false}
@@ -41,7 +56,11 @@ export function TelemetryHelpAlert() {
       }
       description={
         <>
-          <button type="button" className="font-semibold underline underline-offset-2 hover:opacity-80">
+          <button
+            type="button"
+            className="font-semibold underline underline-offset-2 hover:opacity-80"
+            onClick={openSupportChat}
+          >
             Click here
           </button>{" "}
           and we'll come back to you to help you install Latitude in your project

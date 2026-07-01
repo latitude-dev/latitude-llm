@@ -292,6 +292,7 @@ export {
   TagBadgeList,
   type TagBadgeListProps,
   type TagBadgeProps,
+  type TagBadgeVariant,
 } from "./components/tag-badge/tag-badge.tsx"
 export {
   TagList,
