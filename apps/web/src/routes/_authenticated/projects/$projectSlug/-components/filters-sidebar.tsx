@@ -11,12 +11,12 @@ import {
   STATUS_FIELDS,
 } from "../../../../../components/filters-builder/constants.ts"
 import { MetadataFilter } from "../../../../../components/filters-builder/metadata-filter/metadata-filter.tsx"
-import { MultiSelectFilterSection } from "../../../../../components/filters-builder/multi-select-filter-section.tsx"
 import {
   type FilterMode,
   MultiSelectFilter,
   type StaticFilterItem,
 } from "../../../../../components/filters-builder/multi-select-filter.tsx"
+import { MultiSelectFilterSection } from "../../../../../components/filters-builder/multi-select-filter-section.tsx"
 import { PercentileFilter } from "../../../../../components/filters-builder/percentile-filter.tsx"
 import { StatusFilter, type StatusFilterValue } from "../../../../../components/filters-builder/status-filter.tsx"
 import type { DistinctColumn } from "../../../../../components/filters-builder/types.ts"

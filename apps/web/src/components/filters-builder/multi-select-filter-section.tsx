@@ -3,17 +3,13 @@ import {
   type FilterSet,
   getMultiSelectArrayFilter,
   MULTI_SELECT_ARRAY_OP_LABELS,
-  MULTI_SELECT_ARRAY_OPS,
   MULTI_SELECT_ARRAY_OP_TAB_LABELS,
+  MULTI_SELECT_ARRAY_OPS,
   type MultiSelectArrayOp,
 } from "@domain/shared"
 import { Tabs } from "@repo/ui"
 import type { RefObject } from "react"
-import {
-  type FilterMode,
-  MultiSelectFilter,
-  type StaticFilterItem,
-} from "./multi-select-filter.tsx"
+import { type FilterMode, MultiSelectFilter, type StaticFilterItem } from "./multi-select-filter.tsx"
 import type { DistinctColumn } from "./types.ts"
 
 interface MultiSelectFilterSectionProps {
