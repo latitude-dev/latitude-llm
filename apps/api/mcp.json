@@ -30971,6 +30971,275 @@
                   "limit"
                 ],
                 "additionalProperties": false
+              },
+              {
+                "type": "object",
+                "properties": {
+                  "stream": {
+                    "type": "string",
+                    "const": "behaviors",
+                    "description": "Taxonomy observations — behavior instances clustered from session moments."
+                  },
+                  "breakdown": {
+                    "description": "Dimension to group by: `cluster`, `session`, or `method`.",
+                    "type": "string",
+                    "enum": [
+                      "cluster",
+                      "session",
+                      "method"
+                    ]
+                  },
+                  "metric": {
+                    "oneOf": [
+                      {
+                        "type": "object",
+                        "properties": {
+                          "kind": {
+                            "type": "string",
+                            "const": "count"
+                          }
+                        },
+                        "required": [
+                          "kind"
+                        ],
+                        "additionalProperties": false
+                      },
+                      {
+                        "type": "object",
+                        "properties": {
+                          "kind": {
+                            "type": "string",
+                            "const": "avg"
+                          },
+                          "field": {
+                            "type": "string",
+                            "const": "confidence"
+                          }
+                        },
+                        "required": [
+                          "kind",
+                          "field"
+                        ],
+                        "additionalProperties": false
+                      },
+                      {
+                        "type": "object",
+                        "properties": {
+                          "kind": {
+                            "type": "string",
+                            "const": "min"
+                          },
+                          "field": {
+                            "type": "string",
+                            "const": "confidence"
+                          }
+                        },
+                        "required": [
+                          "kind",
+                          "field"
+                        ],
+                        "additionalProperties": false
+                      },
+                      {
+                        "type": "object",
+                        "properties": {
+                          "kind": {
+                            "type": "string",
+                            "const": "max"
+                          },
+                          "field": {
+                            "type": "string",
+                            "const": "confidence"
+                          }
+                        },
+                        "required": [
+                          "kind",
+                          "field"
+                        ],
+                        "additionalProperties": false
+                      },
+                      {
+                        "type": "object",
+                        "properties": {
+                          "kind": {
+                            "type": "string",
+                            "const": "median"
+                          },
+                          "field": {
+                            "type": "string",
+                            "const": "confidence"
+                          }
+                        },
+                        "required": [
+                          "kind",
+                          "field"
+                        ],
+                        "additionalProperties": false
+                      }
+                    ],
+                    "description": "The metric: `count`, or `{avg|min|max|median}` of the 0–1 assignment `confidence`."
+                  },
+                  "filters": {
+                    "description": "Structured filter set applied to the stream (same DSL as `listTraces`).",
+                    "type": "object",
+                    "propertyNames": {
+                      "type": "string"
+                    },
+                    "additionalProperties": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "op": {
+                            "type": "string",
+                            "enum": [
+                              "eq",
+                              "neq",
+                              "gt",
+                              "gte",
+                              "lt",
+                              "lte",
+                              "in",
+                              "notIn",
+                              "contains",
+                              "notContains",
+                              "gtePercentile"
+                            ],
+                            "description": "Comparison operator applied to the field's value (e.g. `eq`, `neq`, `in`). The full operator list lives in the API reference."
+                          },
+                          "value": {
+                            "anyOf": [
+                              {
+                                "type": "string"
+                              },
+                              {
+                                "type": "number"
+                              },
+                              {
+                                "type": "boolean"
+                              },
+                              {
+                                "type": "array",
+                                "items": {
+                                  "anyOf": [
+                                    {
+                                      "type": "string"
+                                    },
+                                    {
+                                      "type": "number"
+                                    }
+                                  ]
+                                }
+                              }
+                            ],
+                            "description": "Right-hand value compared against the field. Arrays are required for `in` / `notIn`-style operators."
+                          }
+                        },
+                        "required": [
+                          "op",
+                          "value"
+                        ],
+                        "additionalProperties": false
+                      }
+                    }
+                  },
+                  "timeBucket": {
+                    "description": "Bucket the metric over time. Omit for a single aggregate.",
+                    "type": "object",
+                    "properties": {
+                      "unit": {
+                        "type": "string",
+                        "enum": [
+                          "hour",
+                          "day",
+                          "week"
+                        ],
+                        "description": "Bucket granularity."
+                      },
+                      "size": {
+                        "default": 1,
+                        "description": "Number of units per bucket (e.g. `2` weeks).",
+                        "type": "integer",
+                        "exclusiveMinimum": 0,
+                        "maximum": 365
+                      }
+                    },
+                    "required": [
+                      "unit",
+                      "size"
+                    ],
+                    "additionalProperties": false
+                  },
+                  "range": {
+                    "type": "object",
+                    "properties": {
+                      "fromIso": {
+                        "type": "string",
+                        "format": "date-time",
+                        "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d(?::[0-5]\\d(?:\\.\\d+)?)?(?:Z))$",
+                        "description": "Inclusive lower bound (ISO-8601)."
+                      },
+                      "toIso": {
+                        "type": "string",
+                        "format": "date-time",
+                        "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d(?::[0-5]\\d(?:\\.\\d+)?)?(?:Z))$",
+                        "description": "Exclusive upper bound (ISO-8601). Must be after `fromIso`."
+                      }
+                    },
+                    "required": [
+                      "fromIso",
+                      "toIso"
+                    ],
+                    "additionalProperties": false,
+                    "description": "The time window."
+                  },
+                  "orderBy": {
+                    "default": {
+                      "by": "value",
+                      "direction": "desc"
+                    },
+                    "description": "Sort for breakdown results. Defaults to value-desc.",
+                    "type": "object",
+                    "properties": {
+                      "by": {
+                        "default": "value",
+                        "type": "string",
+                        "enum": [
+                          "value",
+                          "key"
+                        ]
+                      },
+                      "direction": {
+                        "default": "desc",
+                        "type": "string",
+                        "enum": [
+                          "asc",
+                          "desc"
+                        ]
+                      }
+                    },
+                    "required": [
+                      "by",
+                      "direction"
+                    ],
+                    "additionalProperties": false
+                  },
+                  "limit": {
+                    "default": 50,
+                    "description": "Maximum rows returned. Defaults to 50; max 500.",
+                    "type": "integer",
+                    "exclusiveMinimum": 0,
+                    "maximum": 500
+                  }
+                },
+                "required": [
+                  "stream",
+                  "metric",
+                  "range",
+                  "orderBy",
+                  "limit"
+                ],
+                "additionalProperties": false
               }
             ]
           }

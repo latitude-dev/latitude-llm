@@ -107,6 +107,33 @@ describe("analyticsQuerySchema", () => {
     ).toBe(false)
   })
 
+  it("accepts behaviors metrics + cluster/session/method breakdowns", () => {
+    expect(
+      analyticsQuerySchema.safeParse({ stream: "behaviors", metric: { kind: "count" }, breakdown: "cluster", range })
+        .success,
+    ).toBe(true)
+    expect(
+      analyticsQuerySchema.safeParse({ stream: "behaviors", metric: { kind: "avg", field: "confidence" }, range })
+        .success,
+    ).toBe(true)
+  })
+
+  it("rejects trace-family / scores shapes on the behaviors stream", () => {
+    expect(analyticsQuerySchema.safeParse({ stream: "behaviors", metric: { kind: "errorRate" }, range }).success).toBe(
+      false,
+    )
+    expect(
+      analyticsQuerySchema.safeParse({ stream: "behaviors", metric: { kind: "avg", field: "value" }, range }).success,
+    ).toBe(false)
+    expect(
+      analyticsQuerySchema.safeParse({ stream: "behaviors", metric: { kind: "count" }, query: "x", range }).success,
+    ).toBe(false)
+    expect(
+      analyticsQuerySchema.safeParse({ stream: "behaviors", metric: { kind: "count" }, breakdown: "model", range })
+        .success,
+    ).toBe(false)
+  })
+
   it("caps the limit", () => {
     const result = analyticsQuerySchema.safeParse({
       stream: "traces",

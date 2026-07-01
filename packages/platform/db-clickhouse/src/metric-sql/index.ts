@@ -1,4 +1,5 @@
 import type { AnalyticsStream } from "@domain/shared"
+import { behaviorsDescriptor } from "./streams/behaviors.ts"
 import { scoresDescriptor } from "./streams/scores.ts"
 import { sessionsDescriptor } from "./streams/sessions.ts"
 import { spansDescriptor } from "./streams/spans.ts"
@@ -10,6 +11,7 @@ const STREAMS: { [S in AnalyticsStream]: StreamDescriptor<S> } = {
   sessions: sessionsDescriptor,
   spans: spansDescriptor,
   scores: scoresDescriptor,
+  behaviors: behaviorsDescriptor,
 }
 
 /** The descriptor for a stream — its inner query, aggregate, breakdowns, and time column. */

@@ -35,6 +35,10 @@ export type SpanBreakdownField = (typeof SPAN_BREAKDOWN_FIELDS)[number]
 export const SCORE_BREAKDOWN_FIELDS = ["signalId", "source", "model", "provider", "service", "tool", "tag"] as const
 export type ScoreBreakdownField = (typeof SCORE_BREAKDOWN_FIELDS)[number]
 
+// Behaviors are taxonomy observations (a behavior instance within a session).
+export const BEHAVIOR_BREAKDOWN_FIELDS = ["cluster", "session", "method"] as const
+export type BehaviorBreakdownField = (typeof BEHAVIOR_BREAKDOWN_FIELDS)[number]
+
 export const ANALYTICS_TIME_BUCKET_UNITS = ["hour", "day", "week"] as const
 export const analyticsTimeBucketSchema = z.object({
   unit: z.enum(ANALYTICS_TIME_BUCKET_UNITS).describe("Bucket granularity."),
@@ -67,8 +71,21 @@ export const scoreMetricSchema = z.discriminatedUnion("kind", [
 ])
 export type ScoreMetric = z.infer<typeof scoreMetricSchema>
 
+/**
+ * Metric vocabulary for the `behaviors` stream (taxonomy observations): occurrence
+ * `count` and stats over the 0–1 `confidence` of the cluster assignment.
+ */
+export const behaviorMetricSchema = z.discriminatedUnion("kind", [
+  z.object({ kind: z.literal("count") }),
+  z.object({ kind: z.literal("avg"), field: z.literal("confidence") }),
+  z.object({ kind: z.literal("min"), field: z.literal("confidence") }),
+  z.object({ kind: z.literal("max"), field: z.literal("confidence") }),
+  z.object({ kind: z.literal("median"), field: z.literal("confidence") }),
+])
+export type BehaviorMetric = z.infer<typeof behaviorMetricSchema>
+
 /** The metric union across every analytics stream. */
-export type AnalyticsMetric = MonitorMetric | ScoreMetric
+export type AnalyticsMetric = MonitorMetric | ScoreMetric | BehaviorMetric
 
 const rangeSchema = z
   .object({
@@ -159,6 +176,21 @@ export const analyticsQuerySchema = z.discriminatedUnion("stream", [
         ),
       metric: scoreMetricSchema.describe(
         "The metric: `count`, `passRate`, `errorRate` (over the pass/error flags), or `{avg|min|max|median}` of the 0–1 score `value`.",
+      ),
+      ...commonFields,
+    })
+    .strict(),
+  z
+    .object({
+      stream: z
+        .literal("behaviors")
+        .describe("Taxonomy observations — behavior instances clustered from session moments."),
+      breakdown: z
+        .enum(BEHAVIOR_BREAKDOWN_FIELDS)
+        .optional()
+        .describe("Dimension to group by: `cluster` (the behavior cluster), `session`, or `method`."),
+      metric: behaviorMetricSchema.describe(
+        "The metric: `count`, or `{avg|min|max|median}` of the 0–1 assignment `confidence`.",
       ),
       ...commonFields,
     })

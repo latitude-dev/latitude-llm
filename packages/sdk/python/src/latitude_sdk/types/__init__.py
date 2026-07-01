@@ -35,11 +35,33 @@ if typing.TYPE_CHECKING:
     from .alert_threshold_condition_direction import AlertThresholdConditionDirection
     from .analytics_query import (
         AnalyticsQuery,
+        AnalyticsQuery_Behaviors,
         AnalyticsQuery_Scores,
         AnalyticsQuery_Sessions,
         AnalyticsQuery_Spans,
         AnalyticsQuery_Traces,
     )
+    from .analytics_query_behaviors import AnalyticsQueryBehaviors
+    from .analytics_query_behaviors_breakdown import AnalyticsQueryBehaviorsBreakdown
+    from .analytics_query_behaviors_metric import (
+        AnalyticsQueryBehaviorsMetric,
+        AnalyticsQueryBehaviorsMetric_Avg,
+        AnalyticsQueryBehaviorsMetric_Count,
+        AnalyticsQueryBehaviorsMetric_Max,
+        AnalyticsQueryBehaviorsMetric_Median,
+        AnalyticsQueryBehaviorsMetric_Min,
+    )
+    from .analytics_query_behaviors_metric_avg import AnalyticsQueryBehaviorsMetricAvg
+    from .analytics_query_behaviors_metric_count import AnalyticsQueryBehaviorsMetricCount
+    from .analytics_query_behaviors_metric_max import AnalyticsQueryBehaviorsMetricMax
+    from .analytics_query_behaviors_metric_median import AnalyticsQueryBehaviorsMetricMedian
+    from .analytics_query_behaviors_metric_min import AnalyticsQueryBehaviorsMetricMin
+    from .analytics_query_behaviors_order_by import AnalyticsQueryBehaviorsOrderBy
+    from .analytics_query_behaviors_order_by_by import AnalyticsQueryBehaviorsOrderByBy
+    from .analytics_query_behaviors_order_by_direction import AnalyticsQueryBehaviorsOrderByDirection
+    from .analytics_query_behaviors_range import AnalyticsQueryBehaviorsRange
+    from .analytics_query_behaviors_time_bucket import AnalyticsQueryBehaviorsTimeBucket
+    from .analytics_query_behaviors_time_bucket_unit import AnalyticsQueryBehaviorsTimeBucketUnit
     from .analytics_query_scores import AnalyticsQueryScores
     from .analytics_query_scores_breakdown import AnalyticsQueryScoresBreakdown
     from .analytics_query_scores_metric import (
@@ -414,6 +436,25 @@ _dynamic_imports: typing.Dict[str, str] = {
     "AlertThresholdCondition": ".alert_threshold_condition",
     "AlertThresholdConditionDirection": ".alert_threshold_condition_direction",
     "AnalyticsQuery": ".analytics_query",
+    "AnalyticsQueryBehaviors": ".analytics_query_behaviors",
+    "AnalyticsQueryBehaviorsBreakdown": ".analytics_query_behaviors_breakdown",
+    "AnalyticsQueryBehaviorsMetric": ".analytics_query_behaviors_metric",
+    "AnalyticsQueryBehaviorsMetricAvg": ".analytics_query_behaviors_metric_avg",
+    "AnalyticsQueryBehaviorsMetricCount": ".analytics_query_behaviors_metric_count",
+    "AnalyticsQueryBehaviorsMetricMax": ".analytics_query_behaviors_metric_max",
+    "AnalyticsQueryBehaviorsMetricMedian": ".analytics_query_behaviors_metric_median",
+    "AnalyticsQueryBehaviorsMetricMin": ".analytics_query_behaviors_metric_min",
+    "AnalyticsQueryBehaviorsMetric_Avg": ".analytics_query_behaviors_metric",
+    "AnalyticsQueryBehaviorsMetric_Count": ".analytics_query_behaviors_metric",
+    "AnalyticsQueryBehaviorsMetric_Max": ".analytics_query_behaviors_metric",
+    "AnalyticsQueryBehaviorsMetric_Median": ".analytics_query_behaviors_metric",
+    "AnalyticsQueryBehaviorsMetric_Min": ".analytics_query_behaviors_metric",
+    "AnalyticsQueryBehaviorsOrderBy": ".analytics_query_behaviors_order_by",
+    "AnalyticsQueryBehaviorsOrderByBy": ".analytics_query_behaviors_order_by_by",
+    "AnalyticsQueryBehaviorsOrderByDirection": ".analytics_query_behaviors_order_by_direction",
+    "AnalyticsQueryBehaviorsRange": ".analytics_query_behaviors_range",
+    "AnalyticsQueryBehaviorsTimeBucket": ".analytics_query_behaviors_time_bucket",
+    "AnalyticsQueryBehaviorsTimeBucketUnit": ".analytics_query_behaviors_time_bucket_unit",
     "AnalyticsQueryScores": ".analytics_query_scores",
     "AnalyticsQueryScoresBreakdown": ".analytics_query_scores_breakdown",
     "AnalyticsQueryScoresMetric": ".analytics_query_scores_metric",
@@ -527,6 +568,7 @@ _dynamic_imports: typing.Dict[str, str] = {
     "AnalyticsQueryTracesRange": ".analytics_query_traces_range",
     "AnalyticsQueryTracesTimeBucket": ".analytics_query_traces_time_bucket",
     "AnalyticsQueryTracesTimeBucketUnit": ".analytics_query_traces_time_bucket_unit",
+    "AnalyticsQuery_Behaviors": ".analytics_query",
     "AnalyticsQuery_Scores": ".analytics_query",
     "AnalyticsQuery_Sessions": ".analytics_query",
     "AnalyticsQuery_Spans": ".analytics_query",
@@ -812,6 +854,25 @@ __all__ = [
     "AlertThresholdCondition",
     "AlertThresholdConditionDirection",
     "AnalyticsQuery",
+    "AnalyticsQueryBehaviors",
+    "AnalyticsQueryBehaviorsBreakdown",
+    "AnalyticsQueryBehaviorsMetric",
+    "AnalyticsQueryBehaviorsMetricAvg",
+    "AnalyticsQueryBehaviorsMetricCount",
+    "AnalyticsQueryBehaviorsMetricMax",
+    "AnalyticsQueryBehaviorsMetricMedian",
+    "AnalyticsQueryBehaviorsMetricMin",
+    "AnalyticsQueryBehaviorsMetric_Avg",
+    "AnalyticsQueryBehaviorsMetric_Count",
+    "AnalyticsQueryBehaviorsMetric_Max",
+    "AnalyticsQueryBehaviorsMetric_Median",
+    "AnalyticsQueryBehaviorsMetric_Min",
+    "AnalyticsQueryBehaviorsOrderBy",
+    "AnalyticsQueryBehaviorsOrderByBy",
+    "AnalyticsQueryBehaviorsOrderByDirection",
+    "AnalyticsQueryBehaviorsRange",
+    "AnalyticsQueryBehaviorsTimeBucket",
+    "AnalyticsQueryBehaviorsTimeBucketUnit",
     "AnalyticsQueryScores",
     "AnalyticsQueryScoresBreakdown",
     "AnalyticsQueryScoresMetric",
@@ -925,6 +986,7 @@ __all__ = [
     "AnalyticsQueryTracesRange",
     "AnalyticsQueryTracesTimeBucket",
     "AnalyticsQueryTracesTimeBucketUnit",
+    "AnalyticsQuery_Behaviors",
     "AnalyticsQuery_Scores",
     "AnalyticsQuery_Sessions",
     "AnalyticsQuery_Spans",

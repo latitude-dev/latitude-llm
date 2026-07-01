@@ -92,6 +92,27 @@ const day3To = new Date("2026-06-04T00:00:00.000Z")
 const day5From = new Date("2026-06-05T00:00:00.000Z")
 const day5To = new Date("2026-06-06T00:00:00.000Z")
 const toCh3 = (value: Date): string => value.toISOString().replace("T", " ").replace("Z", "")
+// Day 7 holds the behavior fixtures (taxonomy observations).
+const DAY7 = new Date("2026-06-07T10:00:00.000Z")
+const day7From = new Date("2026-06-07T00:00:00.000Z")
+const day7To = new Date("2026-06-08T00:00:00.000Z")
+
+const behavior = (n: number, opts: { cluster: string; confidence: number; method?: string }) => ({
+  organization_id: ORG_ID as string,
+  project_id: PROJECT_ID as string,
+  observation_id: `aqobs${n}`.padEnd(24, "0"),
+  session_id: "aq-behavior-session",
+  analysis_hash: "a".repeat(64),
+  moment_id: `m${n}`,
+  projection_method: "umap",
+  projection_hash: "b".repeat(64),
+  embedding: [],
+  assigned_cluster_id: opts.cluster,
+  assignment_confidence: opts.confidence,
+  assignment_method: opts.method ?? "auto",
+  start_time: toCh(DAY7),
+  end_time: toCh(DAY7),
+})
 
 const score = (
   n: number,
@@ -165,6 +186,14 @@ describe("AnalyticsQueryReaderLive (traces)", () => {
         score(2, { signalId: "sig-a", value: 0.4, passed: true, traceId: traceId(2) }),
         score(3, { signalId: "sig-b", value: 0.6, passed: true, traceId: traceId(4) }),
         score(4, { signalId: "sig-b", value: 0.0, passed: false, errored: true }),
+      ]),
+    )
+    // Behaviors (taxonomy observations): clA×2 (conf 0.8/0.6), clB×1 (0.4) → avg 0.6.
+    await Effect.runPromise(
+      insertJsonEachRow(ch.client, "taxonomy_observations", [
+        behavior(1, { cluster: "clA", confidence: 0.8 }),
+        behavior(2, { cluster: "clA", confidence: 0.6 }),
+        behavior(3, { cluster: "clB", confidence: 0.4 }),
       ]),
     )
   })
@@ -305,5 +334,24 @@ describe("AnalyticsQueryReaderLive (traces)", () => {
     // sig-a scores on two gpt-4o-mini traces, one sig-b score on a gpt-4o trace;
     // the trace-less score drops out of the trace-dim breakdown.
     expect(byKey).toEqual({ "gpt-4o-mini": 2, "gpt-4o": 1 })
+  })
+
+  const behaviorsInput = (extra: Partial<AnalyticsQueryInput>): AnalyticsQueryInput => ({
+    ...baseInput,
+    stream: "behaviors",
+    metric: { kind: "count" },
+    from: day7From,
+    to: day7To,
+    ...extra,
+  })
+
+  it("counts behaviors and breaks them down by cluster", async () => {
+    expect(await run(behaviorsInput({}))).toEqual([{ value: 3 }])
+    const byKey = Object.fromEntries((await run(behaviorsInput({ breakdown: "cluster" }))).map((p) => [p.key, p.value]))
+    expect(byKey).toEqual({ clA: 2, clB: 1 })
+  })
+
+  it("computes avg(confidence) over behaviors (0–1, unscaled)", async () => {
+    expect((await run(behaviorsInput({ metric: { kind: "avg", field: "confidence" } })))[0]?.value).toBeCloseTo(0.6, 5)
   })
 })
