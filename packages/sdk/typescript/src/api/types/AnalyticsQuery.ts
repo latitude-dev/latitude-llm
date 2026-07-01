@@ -17,7 +17,7 @@ export namespace AnalyticsQuery {
         query?: string | undefined;
         /** Dimension to group by, one row per value. */
         breakdown?: AnalyticsQueryTraces.Breakdown | undefined;
-        /** The metric: `count`, `errorRate`, `cacheHitRate`, or `{sum|min|max|avg|median}` over `duration`/`cost`/`tokens`. */
+        /** The metric: `count`, `errorRate`, `cacheHitRate`, or `{sum|min|max|avg|median|p95}` over `duration`/`cost`/`tokens`. */
         metric: LatitudeApi.AnalyticsQueryTracesMetric;
         filters?: LatitudeApi.FilterSet | undefined;
         /** Bucket the metric over time. Omit for a single aggregate. */
@@ -102,7 +102,7 @@ export namespace AnalyticsQuery {
         query?: string | undefined;
         /** Dimension to group by, one row per value. */
         breakdown?: AnalyticsQuerySessions.Breakdown | undefined;
-        /** The metric: `count`, `errorRate`, `cacheHitRate`, or `{sum|min|max|avg|median}` over `duration`/`cost`/`tokens`. */
+        /** The metric: `count`, `errorRate`, `cacheHitRate`, or `{sum|min|max|avg|median|p95}` over `duration`/`cost`/`tokens`. */
         metric: LatitudeApi.AnalyticsQuerySessionsMetric;
         filters?: LatitudeApi.FilterSet | undefined;
         /** Bucket the metric over time. Omit for a single aggregate. */
@@ -184,7 +184,7 @@ export namespace AnalyticsQuery {
         stream: "spans";
         /** Dimension to group by, one row per value. */
         breakdown?: AnalyticsQuerySpans.Breakdown | undefined;
-        /** The metric: `count`, `errorRate`, `cacheHitRate`, or `{sum|min|max|avg|median}` over `duration`/`cost`/`tokens`. */
+        /** The metric: `count`, `errorRate`, `cacheHitRate`, or `{sum|min|max|avg|median|p95}` over `duration`/`cost`/`tokens`. */
         metric: LatitudeApi.AnalyticsQuerySpansMetric;
         filters?: LatitudeApi.FilterSet | undefined;
         /** Bucket the metric over time. Omit for a single aggregate. */

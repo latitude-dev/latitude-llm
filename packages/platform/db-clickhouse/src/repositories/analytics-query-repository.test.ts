@@ -299,15 +299,16 @@ describe("AnalyticsQueryReaderLive (traces)", () => {
     expect(series[0]?.value).toBeCloseTo(1, 5)
   })
 
-  it("computes min/max/median/avg over duration (in seconds)", async () => {
+  it("computes min/max/median/avg/p95 over duration (in seconds)", async () => {
     // Day 3 has three traces of 1s / 2s / 3s.
     const base = { ...baseInput, stream: "traces" as const, from: day3From, to: day3To }
-    const value = async (kind: "min" | "max" | "median" | "avg") =>
+    const value = async (kind: "min" | "max" | "median" | "avg" | "p95") =>
       (await run({ ...base, metric: { kind, field: "duration" } }))[0]?.value
     expect(await value("min")).toBeCloseTo(1, 5)
     expect(await value("max")).toBeCloseTo(3, 5)
     expect(await value("median")).toBeCloseTo(2, 5)
     expect(await value("avg")).toBeCloseTo(2, 5)
+    expect(await value("p95")).toBeCloseTo(3, 5)
   })
 
   it("honors the row limit on a breakdown", async () => {

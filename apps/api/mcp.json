@@ -29829,9 +29829,31 @@
                           "field"
                         ],
                         "additionalProperties": false
+                      },
+                      {
+                        "type": "object",
+                        "properties": {
+                          "kind": {
+                            "type": "string",
+                            "const": "p95"
+                          },
+                          "field": {
+                            "type": "string",
+                            "enum": [
+                              "duration",
+                              "cost",
+                              "tokens"
+                            ]
+                          }
+                        },
+                        "required": [
+                          "kind",
+                          "field"
+                        ],
+                        "additionalProperties": false
                       }
                     ],
-                    "description": "The metric: `count`, `errorRate`, `cacheHitRate`, or `{sum|min|max|avg|median}` over `duration`/`cost`/`tokens`."
+                    "description": "The metric: `count`, `errorRate`, `cacheHitRate`, or `{sum|min|max|avg|median|p95}` over `duration`/`cost`/`tokens`."
                   },
                   "filters": {
                     "description": "Structured filter set applied to the stream (same DSL as `listTraces`).",
@@ -30171,9 +30193,31 @@
                           "field"
                         ],
                         "additionalProperties": false
+                      },
+                      {
+                        "type": "object",
+                        "properties": {
+                          "kind": {
+                            "type": "string",
+                            "const": "p95"
+                          },
+                          "field": {
+                            "type": "string",
+                            "enum": [
+                              "duration",
+                              "cost",
+                              "tokens"
+                            ]
+                          }
+                        },
+                        "required": [
+                          "kind",
+                          "field"
+                        ],
+                        "additionalProperties": false
                       }
                     ],
-                    "description": "The metric: `count`, `errorRate`, `cacheHitRate`, or `{sum|min|max|avg|median}` over `duration`/`cost`/`tokens`."
+                    "description": "The metric: `count`, `errorRate`, `cacheHitRate`, or `{sum|min|max|avg|median|p95}` over `duration`/`cost`/`tokens`."
                   },
                   "filters": {
                     "description": "Structured filter set applied to the stream (same DSL as `listTraces`).",
@@ -30507,9 +30551,31 @@
                           "field"
                         ],
                         "additionalProperties": false
+                      },
+                      {
+                        "type": "object",
+                        "properties": {
+                          "kind": {
+                            "type": "string",
+                            "const": "p95"
+                          },
+                          "field": {
+                            "type": "string",
+                            "enum": [
+                              "duration",
+                              "cost",
+                              "tokens"
+                            ]
+                          }
+                        },
+                        "required": [
+                          "kind",
+                          "field"
+                        ],
+                        "additionalProperties": false
                       }
                     ],
-                    "description": "The metric: `count`, `errorRate`, `cacheHitRate`, or `{sum|min|max|avg|median}` over `duration`/`cost`/`tokens`."
+                    "description": "The metric: `count`, `errorRate`, `cacheHitRate`, or `{sum|min|max|avg|median|p95}` over `duration`/`cost`/`tokens`."
                   },
                   "filters": {
                     "description": "Structured filter set applied to the stream (same DSL as `listTraces`).",

@@ -8283,9 +8283,32 @@
                       "kind",
                       "field"
                     ]
+                  },
+                  {
+                    "type": "object",
+                    "properties": {
+                      "kind": {
+                        "type": "string",
+                        "enum": [
+                          "p95"
+                        ]
+                      },
+                      "field": {
+                        "type": "string",
+                        "enum": [
+                          "duration",
+                          "cost",
+                          "tokens"
+                        ]
+                      }
+                    },
+                    "required": [
+                      "kind",
+                      "field"
+                    ]
                   }
                 ],
-                "description": "The metric: `count`, `errorRate`, `cacheHitRate`, or `{sum|min|max|avg|median}` over `duration`/`cost`/`tokens`."
+                "description": "The metric: `count`, `errorRate`, `cacheHitRate`, or `{sum|min|max|avg|median|p95}` over `duration`/`cost`/`tokens`."
               },
               "filters": {
                 "allOf": [
@@ -8571,9 +8594,32 @@
                       "kind",
                       "field"
                     ]
+                  },
+                  {
+                    "type": "object",
+                    "properties": {
+                      "kind": {
+                        "type": "string",
+                        "enum": [
+                          "p95"
+                        ]
+                      },
+                      "field": {
+                        "type": "string",
+                        "enum": [
+                          "duration",
+                          "cost",
+                          "tokens"
+                        ]
+                      }
+                    },
+                    "required": [
+                      "kind",
+                      "field"
+                    ]
                   }
                 ],
-                "description": "The metric: `count`, `errorRate`, `cacheHitRate`, or `{sum|min|max|avg|median}` over `duration`/`cost`/`tokens`."
+                "description": "The metric: `count`, `errorRate`, `cacheHitRate`, or `{sum|min|max|avg|median|p95}` over `duration`/`cost`/`tokens`."
               },
               "filters": {
                 "allOf": [
@@ -8853,9 +8899,32 @@
                       "kind",
                       "field"
                     ]
+                  },
+                  {
+                    "type": "object",
+                    "properties": {
+                      "kind": {
+                        "type": "string",
+                        "enum": [
+                          "p95"
+                        ]
+                      },
+                      "field": {
+                        "type": "string",
+                        "enum": [
+                          "duration",
+                          "cost",
+                          "tokens"
+                        ]
+                      }
+                    },
+                    "required": [
+                      "kind",
+                      "field"
+                    ]
                   }
                 ],
-                "description": "The metric: `count`, `errorRate`, `cacheHitRate`, or `{sum|min|max|avg|median}` over `duration`/`cost`/`tokens`."
+                "description": "The metric: `count`, `errorRate`, `cacheHitRate`, or `{sum|min|max|avg|median|p95}` over `duration`/`cost`/`tokens`."
               },
               "filters": {
                 "allOf": [

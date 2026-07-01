@@ -21,6 +21,18 @@ describe("analyticsQuerySchema", () => {
     expect(parsed).toMatchObject({ stream: "traces", breakdown: "model", timeBucket: { unit: "week", size: 1 } })
   })
 
+  it("accepts p95 over a trace-family field, but not on scores (its own vocabulary)", () => {
+    expect(
+      analyticsQuerySchema.safeParse({ stream: "traces", metric: { kind: "p95", field: "duration" }, range }).success,
+    ).toBe(true)
+    // p95 requires a field, like the other stat metrics.
+    expect(analyticsQuerySchema.safeParse({ stream: "traces", metric: { kind: "p95" }, range }).success).toBe(false)
+    // scores/behaviors/moments have their own metric schemas without p95.
+    expect(
+      analyticsQuerySchema.safeParse({ stream: "scores", metric: { kind: "p95", field: "value" }, range }).success,
+    ).toBe(false)
+  })
+
   it("rejects an unknown breakdown for traces", () => {
     const result = analyticsQuerySchema.safeParse({
       stream: "traces",

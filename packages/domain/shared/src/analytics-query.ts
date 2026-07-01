@@ -134,7 +134,7 @@ const commonFields = {
 } as const
 
 const traceFamilyMetric = monitorMetricSchema.describe(
-  "The metric: `count`, `errorRate`, `cacheHitRate`, or `{sum|min|max|avg|median}` over `duration`/`cost`/`tokens`.",
+  "The metric: `count`, `errorRate`, `cacheHitRate`, or `{sum|min|max|avg|median|p95}` over `duration`/`cost`/`tokens`.",
 )
 
 const semanticQuery = z
