@@ -8,10 +8,10 @@ import { IdentifiersSection } from "./identifiers-section.tsx"
 import { LlmSections } from "./llm-sections.tsx"
 import { OperationalMetadataSection } from "./operational-metadata-section.tsx"
 import { RawTelemetrySections } from "./raw-telemetry-sections.tsx"
+import { SubagentSection } from "./subagent-section.tsx"
 import { isToolExecutionSpan, ToolExecutionSection } from "./tool-execution-section.tsx"
 import { hasAnyUsage, UsageSummary } from "./usage-summary.tsx"
 import { UserContextSection } from "./user-context-section.tsx"
-import { SubagentSection } from "./subagent-section.tsx"
 
 type ExceptionInfo = {
   type?: string

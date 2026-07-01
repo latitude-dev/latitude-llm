@@ -1,10 +1,5 @@
 import { describe, expect, it } from "vitest"
-import {
-  formatSpanDisplayLabel,
-  isSubagentSpan,
-  resolveAgentLabel,
-  resolveSpanLabels,
-} from "./span-display.ts"
+import { formatSpanDisplayLabel, isSubagentSpan, resolveAgentLabel, resolveSpanLabels } from "./span-display.ts"
 
 describe("span-display", () => {
   it("resolves agent labels from OTel and framework-specific attributes", () => {

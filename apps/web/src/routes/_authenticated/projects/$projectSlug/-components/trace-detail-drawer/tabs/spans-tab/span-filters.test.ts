@@ -53,9 +53,16 @@ describe("span filters", () => {
       makeSpan({ spanId: "other", parentSpanId: "root", model: "claude-fable-5" }),
     ]
 
-    const filtered = filterSpansWithAncestors(spans, { errors: false, tools: false, subagents: false, model: "claude-opus-4-8" })
+    const filtered = filterSpansWithAncestors(spans, {
+      errors: false,
+      tools: false,
+      subagents: false,
+      model: "claude-opus-4-8",
+    })
     expect(filtered.map((span) => span.spanId)).toEqual(["root", "child"])
-    expect(countMatchingSpans(spans, { errors: false, tools: false, subagents: false, model: "claude-opus-4-8" })).toBe(1)
+    expect(countMatchingSpans(spans, { errors: false, tools: false, subagents: false, model: "claude-opus-4-8" })).toBe(
+      1,
+    )
   })
 
   it("filters by errors and tools together", () => {

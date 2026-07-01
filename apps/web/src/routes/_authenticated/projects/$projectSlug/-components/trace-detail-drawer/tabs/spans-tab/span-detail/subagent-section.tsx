@@ -1,5 +1,5 @@
-import { DetailSection, DetailSummary } from "@repo/ui"
 import { resolveAgentLabel } from "@domain/spans"
+import { DetailSection, DetailSummary } from "@repo/ui"
 import { BotIcon } from "lucide-react"
 import type { SpanDetailRecord } from "../../../../../../../../../domains/spans/spans.functions.ts"
 
