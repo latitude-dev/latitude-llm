@@ -40,9 +40,10 @@ describe("cloudflare-codemode telemetry", () => {
       doStream: async () => {
         calls += 1
 
-        const chunks =
-          calls === 1
-            ? [
+        if (calls === 1) {
+          return {
+            stream: simulateReadableStream({
+              chunks: [
                 { type: "stream-start", warnings: [] },
                 {
                   type: "response-metadata",
@@ -63,28 +64,34 @@ describe("cloudflare-codemode telemetry", () => {
                   finishReason: "tool-calls",
                   usage: { inputTokens: 12, outputTokens: 3, totalTokens: 15 },
                 },
-              ]
-            : [
-                { type: "stream-start", warnings: [] },
-                {
-                  type: "response-metadata",
-                  id: `resp_${randomUUID()}`,
-                  modelId: "@cf/meta/llama-4-scout-17b-16e-instruct",
-                  timestamp: new Date(),
-                },
-                { type: "text-start", id: "text-1" },
-                { type: "text-delta", id: "text-1", delta: "Barcelona is sunny." },
-                { type: "text-end", id: "text-1" },
-                {
-                  type: "finish",
-                  finishReason: "stop",
-                  usage: { inputTokens: 20, outputTokens: 7, totalTokens: 27 },
-                },
-              ]
+              ],
+            }),
+          }
+        }
 
-        return { stream: simulateReadableStream({ chunks }) }
+        return {
+          stream: simulateReadableStream({
+            chunks: [
+              { type: "stream-start", warnings: [] },
+              {
+                type: "response-metadata",
+                id: `resp_${randomUUID()}`,
+                modelId: "@cf/meta/llama-4-scout-17b-16e-instruct",
+                timestamp: new Date(),
+              },
+              { type: "text-start", id: "text-1" },
+              { type: "text-delta", id: "text-1", delta: "Barcelona is sunny." },
+              { type: "text-end", id: "text-1" },
+              {
+                type: "finish",
+                finishReason: "stop",
+                usage: { inputTokens: 20, outputTokens: 7, totalTokens: 27 },
+              },
+            ],
+          }),
+        }
       },
-    })
+    } as ConstructorParameters<typeof MockLanguageModelV3>[0])
   }
 
   it("records model turns and the outer codemode tool call via AI SDK telemetry", async () => {
