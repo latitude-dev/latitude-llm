@@ -10,6 +10,7 @@ from .environment import LatitudeApiClientEnvironment
 
 if typing.TYPE_CHECKING:
     from .account.client import AccountClient, AsyncAccountClient
+    from .analytics.client import AnalyticsClient, AsyncAnalyticsClient
     from .annotations.client import AnnotationsClient, AsyncAnnotationsClient
     from .api_keys.client import ApiKeysClient, AsyncApiKeysClient
     from .datasets.client import AsyncDatasetsClient, DatasetsClient
@@ -106,6 +107,7 @@ class LatitudeApiClient:
         self._account: typing.Optional[AccountClient] = None
         self._members: typing.Optional[MembersClient] = None
         self._monitors: typing.Optional[MonitorsClient] = None
+        self._analytics: typing.Optional[AnalyticsClient] = None
 
     @property
     def projects(self):
@@ -227,6 +229,14 @@ class LatitudeApiClient:
             self._monitors = MonitorsClient(client_wrapper=self._client_wrapper)
         return self._monitors
 
+    @property
+    def analytics(self):
+        if self._analytics is None:
+            from .analytics.client import AnalyticsClient  # noqa: E402
+
+            self._analytics = AnalyticsClient(client_wrapper=self._client_wrapper)
+        return self._analytics
+
 
 class AsyncLatitudeApiClient:
     """
@@ -308,6 +318,7 @@ class AsyncLatitudeApiClient:
         self._account: typing.Optional[AsyncAccountClient] = None
         self._members: typing.Optional[AsyncMembersClient] = None
         self._monitors: typing.Optional[AsyncMonitorsClient] = None
+        self._analytics: typing.Optional[AsyncAnalyticsClient] = None
 
     @property
     def projects(self):
@@ -428,6 +439,14 @@ class AsyncLatitudeApiClient:
 
             self._monitors = AsyncMonitorsClient(client_wrapper=self._client_wrapper)
         return self._monitors
+
+    @property
+    def analytics(self):
+        if self._analytics is None:
+            from .analytics.client import AsyncAnalyticsClient  # noqa: E402
+
+            self._analytics = AsyncAnalyticsClient(client_wrapper=self._client_wrapper)
+        return self._analytics
 
 
 def _get_base_url(*, base_url: typing.Optional[str] = None, environment: LatitudeApiClientEnvironment) -> str:

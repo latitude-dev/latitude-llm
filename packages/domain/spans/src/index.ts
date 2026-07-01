@@ -88,6 +88,8 @@ export {
   pickTraceHistogramBucketSeconds,
   resolveTraceHistogramRangeIso,
 } from "./helpers.ts"
+export type { AnalyticsQueryInput, AnalyticsQueryReaderShape } from "./ports/analytics-query-reader.ts"
+export { AnalyticsQueryReader } from "./ports/analytics-query-reader.ts"
 export type { EmbedBudgetLimits, EmbedBudgetResolverShape } from "./ports/embed-budget-resolver.ts"
 export { EmbedBudgetResolver } from "./ports/embed-budget-resolver.ts"
 export type {
@@ -240,6 +242,8 @@ export type { ParsedSearchQuery } from "./use-cases/parse-search-query.ts"
 export { parseSearchQuery } from "./use-cases/parse-search-query.ts"
 export type { ProcessIngestedSpansDeps, ProcessIngestedSpansInput } from "./use-cases/process-ingested-spans.ts"
 export { processIngestedSpansUseCase } from "./use-cases/process-ingested-spans.ts"
+export type { QueryAnalyticsInput } from "./use-cases/query-analytics.ts"
+export { queryAnalyticsUseCase } from "./use-cases/query-analytics.ts"
 export type {
   SelectTraceEndItemsError,
   TraceEndSelectionDecision,

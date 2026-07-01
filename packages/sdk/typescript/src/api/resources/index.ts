@@ -1,4 +1,5 @@
 export * as account from "./account/index.js";
+export * as analytics from "./analytics/index.js";
 export * from "./annotations/client/requests/index.js";
 export * as annotations from "./annotations/index.js";
 export * from "./apiKeys/client/requests/index.js";
