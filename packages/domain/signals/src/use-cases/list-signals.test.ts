@@ -177,16 +177,13 @@ describe("listSignalsUseCase", () => {
   })
 
   it("rejects a limit above its cap with BadRequestError instead of an unhandled ZodError", async () => {
-    // The route's `PaginatedQueryParamsSchema` allows `limit` up to 200, wider
-    // than this use-case's own cap of 100 — a request that is valid at the
-    // HTTP layer must still fail cleanly here, not crash with a raw ZodError.
     const { repository: signalRepository } = createFakeSignalRepository([])
     const { repository: evaluationRepository } = createEvaluationRepository()
     const { repository: scoreAnalyticsRepository } = createFakeScoreAnalyticsRepository()
     const { repository: sessionRepository } = createFakeSessionRepository()
 
     const error = await Effect.runPromise(
-      listSignalsUseCase({ organizationId, projectId, limit: 150 }).pipe(
+      listSignalsUseCase({ organizationId, projectId, limit: 201 }).pipe(
         Effect.flip,
         Effect.provide(
           Layer.mergeAll(

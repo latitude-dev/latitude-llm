@@ -83,7 +83,7 @@ const listSignalsInputSchema = z.object({
       field: "lastSeen",
       direction: "desc",
     }),
-  limit: z.number().int().min(1).max(100).default(50),
+  limit: z.number().int().min(1).max(200).default(50),
   offset: z.number().int().min(0).default(0),
   includeAnalytics: z.boolean().default(true),
   includeItems: z.boolean().default(true),
@@ -95,9 +95,6 @@ export type ListSignalsError = RepositoryError | BadRequestError
 
 const formatValidationError = (error: z.ZodError): string => error.issues.map((issue) => issue.message).join(", ")
 
-// The route's `PaginatedQueryParamsSchema` allows `limit` up to 200, wider than
-// this use-case's own cap, so an in-range client request can still fail here —
-// that must surface as a `BadRequestError`, not an unhandled `ZodError`.
 const parseOrBadRequest = <T>(schema: z.ZodType<T>, input: unknown) =>
   Effect.try({
     try: () => schema.parse(input),
