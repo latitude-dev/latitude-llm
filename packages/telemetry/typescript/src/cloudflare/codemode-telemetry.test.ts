@@ -4,7 +4,8 @@ import { stepCountIs, streamText, tool } from "ai"
 import { MockLanguageModelV3, simulateReadableStream } from "ai/test"
 import { afterEach, describe, expect, it } from "vitest"
 import { z } from "zod"
-import { Latitude } from "./init.ts"
+import { Latitude } from "../sdk/init.ts"
+import { instrumentCodemodeTools } from "./codemode.ts"
 
 describe("cloudflare-codemode telemetry", () => {
   afterEach(async () => {
@@ -14,10 +15,11 @@ describe("cloudflare-codemode telemetry", () => {
 
   let latitude: Latitude | undefined
   let exporter: InMemorySpanExporter
+  let hostProvider: NodeTracerProvider
 
   function setupLatitude() {
     exporter = new InMemorySpanExporter()
-    const hostProvider = new NodeTracerProvider({
+    hostProvider = new NodeTracerProvider({
       spanProcessors: [new SimpleSpanProcessor(exporter)],
     })
 
@@ -25,6 +27,7 @@ describe("cloudflare-codemode telemetry", () => {
       apiKey: "test-key",
       project: "test-project",
       tracerProvider: hostProvider,
+      exporter,
       disableBatch: true,
     })
 
@@ -94,8 +97,13 @@ describe("cloudflare-codemode telemetry", () => {
     } as ConstructorParameters<typeof MockLanguageModelV3>[0])
   }
 
-  it("records model turns and the outer codemode tool call via AI SDK telemetry", async () => {
+  it("records model turns, the outer codemode tool call, and inner sandbox tools", async () => {
     const sdk = setupLatitude()
+    const tracer = sdk.getTracer("cloudflare-codemode", {
+      userId: "codemode-user",
+      sessionId: "codemode-session",
+      tags: ["cloudflare-codemode"],
+    })
 
     const getWeather = tool({
       description: "Get the current weather for a city.",
@@ -103,12 +111,24 @@ describe("cloudflare-codemode telemetry", () => {
       execute: async ({ city }) => ({ city, conditions: "sunny" }),
     })
 
+    const sandboxTools = instrumentCodemodeTools({ getWeather }, { tracer })
+
     const codemode = tool({
       description: "Execute generated code.",
       inputSchema: z.object({ code: z.string() }),
       execute: async ({ code }) => {
         const runner = new Function("codemode", `return (${code})()`)
-        return runner({ getWeather: getWeather.execute })
+        const toolFns = Object.fromEntries(
+          Object.entries(sandboxTools).map(([name, sandboxTool]) => [
+            name,
+            (input: { city: string }) =>
+              sandboxTool.execute!(input, {
+                toolCallId: `test-${name}`,
+                messages: [],
+              }),
+          ]),
+        )
+        return runner(toolFns)
       },
     })
 
@@ -119,11 +139,7 @@ describe("cloudflare-codemode telemetry", () => {
       stopWhen: stepCountIs(2),
       experimental_telemetry: {
         isEnabled: true,
-        tracer: sdk.getTracer("cloudflare-codemode", {
-          userId: "codemode-user",
-          sessionId: "codemode-session",
-          tags: ["cloudflare-codemode"],
-        }),
+        tracer,
         functionId: "codemode-turn",
       },
     })
@@ -132,19 +148,27 @@ describe("cloudflare-codemode telemetry", () => {
       // drain
     }
 
-    await sdk.flush()
+    await hostProvider.forceFlush()
 
     const spans = exporter.getFinishedSpans()
-    const toolNames = spans
-      .map((span) => span.attributes["gen_ai.tool.name"])
-      .filter((name): name is string => typeof name === "string")
+    const toolNames = [
+      ...new Set(
+        spans
+          .map((span) => span.attributes["gen_ai.tool.name"])
+          .filter((name): name is string => typeof name === "string"),
+      ),
+    ]
     const spanNames = spans.map((span) => span.name)
 
     expect(spans.length).toBeGreaterThan(0)
     expect(
-      spanNames.some((name) => name.includes("tool") || name.includes("codemode")) || toolNames.includes("codemode"),
+      spanNames.some((name) => name.includes("tool") || name.includes("codemode")) ||
+        spans.some((span) => span.attributes["ai.toolCall.name"] === "codemode"),
     ).toBe(true)
-    expect(toolNames).not.toContain("getWeather")
+    expect(toolNames).toContain("getWeather")
+    expect(
+      toolNames.includes("codemode") || spans.some((span) => span.attributes["ai.toolCall.name"] === "codemode"),
+    ).toBe(true)
     expect(spans.some((span) => span.attributes["user.id"] === "codemode-user")).toBe(true)
     expect(spans.some((span) => span.attributes["session.id"] === "codemode-session")).toBe(true)
   })

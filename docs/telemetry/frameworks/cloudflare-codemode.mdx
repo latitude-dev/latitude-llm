@@ -198,22 +198,45 @@ Latitude still captures:
 - The outer `codemode` tool call and its generated code input
 - Tool output returned from the `codemode` execution
 
-To observe individual inner tools, instrument their `execute` functions manually
-with `capture()` or `tracer.startActiveSpan()`:
+To observe individual inner tools, wrap the sandbox tool set with
+`instrumentCodemodeTools()` before passing it to `createCodeTool()`:
+
+```ts
+import { instrumentCodemodeTools } from "@latitude-data/telemetry/cloudflare"
+
+async onChatMessage(onFinish, options) {
+  const tracer = getLatitude(this.env).getTracer("cloudflare-codemode", {
+    userId: stringFromBody(options?.body, "userId"),
+    sessionId: stringFromBody(options?.body, "sessionId"),
+    tags: ["cloudflare-codemode"],
+  })
+
+  const codemode = createCodeTool({
+    tools: instrumentCodemodeTools({ getWeather }, { tracer }),
+    executor: new DynamicWorkerExecutor({ loader: this.env.LOADER }),
+  })
+
+  return streamText({
+    // ...
+    tools: { codemode },
+    experimental_telemetry: { isEnabled: true, tracer },
+  }).toUIMessageStreamResponse()
+}
+```
+
+Each wrapped tool emits an `ai.toolCall` span with the same attributes the AI SDK
+uses (`ai.toolCall.name`, `ai.toolCall.args`, `ai.toolCall.result`, etc.), so inner
+calls show up alongside model turns and the outer `codemode` tool in Latitude.
+
+For one-off spans outside Code Mode, you can still use `capture()`:
 
 ```ts
 import { capture } from "@latitude-data/telemetry"
 
-const getWeather = tool({
-  description: "Get the current weather for a city.",
-  inputSchema: z.object({ city: z.string() }),
-  execute: async ({ city }) =>
-    capture(
-      "codemode.getWeather",
-      async () => ({ city, conditions: "sunny" }),
-      { tags: ["cloudflare-codemode", "inner-tool"] },
-    ),
-})
+execute: async ({ city }) =>
+  capture("codemode.getWeather", async () => ({ city, conditions: "sunny" }), {
+    tags: ["cloudflare-codemode", "inner-tool"],
+  }),
 ```
 
 ---

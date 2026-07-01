@@ -33,6 +33,17 @@
         "types": "./dist/index.d.cts",
         "default": "./dist/index.cjs"
       }
+    },
+    "./cloudflare": {
+      "source": "./src/cloudflare/index.ts",
+      "import": {
+        "types": "./dist/cloudflare/index.d.ts",
+        "default": "./dist/cloudflare/index.js"
+      },
+      "require": {
+        "types": "./dist/cloudflare/index.d.cts",
+        "default": "./dist/cloudflare/index.cjs"
+      }
     }
   },
   "scripts": {

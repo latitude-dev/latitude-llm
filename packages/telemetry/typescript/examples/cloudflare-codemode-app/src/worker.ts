@@ -2,6 +2,7 @@ import { AIChatAgent } from "@cloudflare/ai-chat"
 import { DynamicWorkerExecutor } from "@cloudflare/codemode"
 import { createCodeTool } from "@cloudflare/codemode/ai"
 import { Latitude } from "@latitude-data/telemetry"
+import { instrumentCodemodeTools } from "@latitude-data/telemetry/cloudflare"
 import { routeAgentRequest } from "agents"
 import { convertToModelMessages, stepCountIs, streamText, tool } from "ai"
 import { createWorkersAI } from "workers-ai-provider"
@@ -50,31 +51,35 @@ const getWeather = tool({
 })
 
 export class MyAgent extends AIChatAgent<Env> {
-  codemodeTool() {
+  codemodeTool(tracer: ReturnType<Latitude["getTracer"]>) {
+    const sandboxTools = instrumentCodemodeTools({ getWeather }, { tracer })
+
     return createCodeTool({
-      tools: { getWeather },
+      tools: sandboxTools,
       executor: new DynamicWorkerExecutor({ loader: this.env.LOADER }),
     })
   }
 
   async onChatMessage(onFinish, options) {
+    const tracer = getLatitude(this.env).getTracer("cloudflare-codemode", {
+      userId: stringFromBody(options?.body, "userId"),
+      sessionId: stringFromBody(options?.body, "sessionId"),
+      tags: ["cloudflare-codemode"],
+      metadata: {
+        framework: "cloudflare-codemode",
+        continuation: options?.continuation ?? false,
+      },
+    })
+
     const result = streamText({
       model: createWorkersAI({ binding: this.env.AI })("@cf/meta/llama-4-scout-17b-16e-instruct"),
       messages: await convertToModelMessages(this.messages),
-      tools: { codemode: this.codemodeTool() },
+      tools: { codemode: this.codemodeTool(tracer) },
       stopWhen: stepCountIs(5),
       abortSignal: options?.abortSignal,
       experimental_telemetry: {
         isEnabled: true,
-        tracer: getLatitude(this.env).getTracer("cloudflare-codemode", {
-          userId: stringFromBody(options?.body, "userId"),
-          sessionId: stringFromBody(options?.body, "sessionId"),
-          tags: ["cloudflare-codemode"],
-          metadata: {
-            framework: "cloudflare-codemode",
-            continuation: options?.continuation ?? false,
-          },
-        }),
+        tracer,
         functionId: "codemode-turn",
       },
       onFinish,

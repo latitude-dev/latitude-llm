@@ -12,7 +12,7 @@ import {
 } from "@opentelemetry/sdk-trace-node"
 import { ATTR_SERVICE_NAME } from "@opentelemetry/semantic-conventions"
 import { ATTRIBUTES } from "../constants/index.ts"
-import { env } from "../env/index.ts"
+import { getExporterUrl } from "../env/index.ts"
 import { getLatitudeContext } from "./context.ts"
 import { DEFAULT_REDACT_SPAN_PROCESSOR, RedactSpanProcessor } from "./redact.ts"
 import {
@@ -77,7 +77,7 @@ export class LatitudeSpanProcessor implements SpanProcessor {
     const baseExporter =
       options?.exporter ??
       new OTLPTraceExporter({
-        url: `${env.EXPORTER_URL}/v1/traces`,
+        url: `${getExporterUrl()}/v1/traces`,
         headers,
         timeoutMillis: 30_000,
       })

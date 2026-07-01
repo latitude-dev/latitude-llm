@@ -1,10 +1,8 @@
 import { randomUUID } from "node:crypto"
 import { setTimeout as sleep } from "node:timers/promises"
-import { createCodeTool, resolveProvider } from "@cloudflare/codemode/ai"
 import { stepCountIs, streamText, tool } from "ai"
 import { MockLanguageModelV3, simulateReadableStream } from "ai/test"
 import { z } from "zod"
-import { Latitude } from "../../../dist/index.js"
 
 const ingestUrl = process.env.LATITUDE_TELEMETRY_URL ?? "http://localhost:3002"
 const apiKey = process.env.LATITUDE_API_KEY ?? "lat_seed_default_api_key_token"
@@ -16,6 +14,9 @@ const clickhouseDatabase = process.env.CLICKHOUSE_DB ?? "latitude_development"
 
 process.env.LATITUDE_TELEMETRY_URL = ingestUrl
 
+const { Latitude } = await import("../../../dist/index.js")
+const { instrumentCodemodeTools } = await import("../../../dist/cloudflare/index.js")
+
 const latitude = new Latitude({
   apiKey,
   project,
@@ -24,17 +25,12 @@ const latitude = new Latitude({
 })
 
 const localExecutor = {
-  async execute(code, providersOrFns) {
-    const providers = Array.isArray(providersOrFns)
-      ? providersOrFns
-      : [resolveProvider({ tools: providersOrFns })]
-
-    const scope = Object.fromEntries(providers.map((provider) => [provider.name, provider.fns]))
+  async execute(code, toolFns) {
     const AsyncFunction = Object.getPrototypeOf(async function () {}).constructor
-    const runner = new AsyncFunction(...Object.keys(scope), `return (${code})()`)
+    const runner = new AsyncFunction("codemode", `return (${code})()`)
 
     try {
-      const result = await runner(...Object.values(scope))
+      const result = await runner(toolFns)
       return { result }
     } catch (error) {
       return { result: null, error: error instanceof Error ? error.message : String(error) }
@@ -95,7 +91,7 @@ function makeCodemodeModel() {
 const getWeather = tool({
   description: "Get the current weather for a city.",
   inputSchema: z.object({
-    city: z.string(),
+    city: z.string().describe("City to look up."),
   }),
   execute: async ({ city }) => ({
     city,
@@ -104,13 +100,38 @@ const getWeather = tool({
   }),
 })
 
-const codemode = createCodeTool({
-  tools: { getWeather },
-  executor: localExecutor,
-})
+function codemodeToolFns(sandboxTools) {
+  return Object.fromEntries(
+    Object.entries(sandboxTools).map(([name, sandboxTool]) => [
+      name,
+      (input) =>
+        sandboxTool.execute(input, {
+          toolCallId: `local-${name}`,
+          messages: [],
+        }),
+    ]),
+  )
+}
 
 async function runCodemodeTurn() {
   const sessionId = `cloudflare-codemode-local-${randomUUID()}`
+  const tracer = latitude.getTracer("cloudflare-codemode", {
+    userId: "local-codemode-user",
+    sessionId,
+    tags: ["cloudflare-codemode", "local-e2e"],
+    metadata: {
+      verifier: "cloudflare-codemode-app",
+      continuation: false,
+    },
+  })
+  const sandboxTools = instrumentCodemodeTools({ getWeather }, { tracer })
+  const codemode = tool({
+    description: "Execute generated code that orchestrates tools.",
+    inputSchema: z.object({
+      code: z.string(),
+    }),
+    execute: async ({ code }) => localExecutor.execute(code, codemodeToolFns(sandboxTools)),
+  })
 
   try {
     const result = streamText({
@@ -120,15 +141,7 @@ async function runCodemodeTurn() {
       stopWhen: stepCountIs(2),
       experimental_telemetry: {
         isEnabled: true,
-        tracer: latitude.getTracer("cloudflare-codemode", {
-          userId: "local-codemode-user",
-          sessionId,
-          tags: ["cloudflare-codemode", "local-e2e"],
-          metadata: {
-            verifier: "cloudflare-codemode-app",
-            continuation: false,
-          },
-        }),
+        tracer,
         functionId: "codemode-turn",
         metadata: { framework: "cloudflare-codemode", verifier: "local-e2e" },
       },
@@ -167,10 +180,10 @@ async function waitForSpans(sessionId) {
   const sql = `
     SELECT
       count(),
-      countIf(name ILIKE '%tool%'),
+      countIf(name ILIKE '%tool%' OR operation = 'execute_tool'),
       countIf(name = 'ai.toolCall'),
-      countIf(attributes['gen_ai.tool.name'] = 'codemode'),
-      countIf(attributes['gen_ai.tool.name'] = 'getWeather'),
+      countIf(tool_name = 'codemode'),
+      countIf(tool_name = 'getWeather'),
       countIf(user_id = 'local-codemode-user'),
       countIf(provider != '')
     FROM spans
@@ -203,6 +216,7 @@ async function waitForSpans(sessionId) {
       toolSpanCount > 0 &&
       aiToolCallCount > 0 &&
       codemodeToolCount > 0 &&
+      innerToolCount > 0 &&
       identifiedSpanCount === spanCount &&
       providerSpanCount > 0
     ) {
@@ -222,8 +236,48 @@ async function waitForSpans(sessionId) {
   throw new Error(`Expected codemode model and tool spans in ClickHouse for session ${sessionId}`)
 }
 
+async function fetchSessionSpans(sessionId) {
+  const escaped = sessionId.replaceAll("'", "''")
+  const sql = `
+    SELECT
+      name,
+      operation,
+      provider,
+      model,
+      user_id,
+      session_id,
+      tags,
+      tool_name,
+      tool_call_id,
+      substring(tool_input, 1, 200) AS tool_input_preview,
+      substring(tool_output, 1, 200) AS tool_output_preview,
+      tokens_input,
+      tokens_output,
+      finish_reasons,
+      substring(input_messages, 1, 160) AS input_messages_preview,
+      substring(output_messages, 1, 160) AS output_messages_preview,
+      start_time,
+      end_time
+    FROM spans
+    WHERE session_id = '${escaped}'
+      AND has(tags, 'cloudflare-codemode')
+      AND has(tags, 'local-e2e')
+    ORDER BY start_time ASC
+    FORMAT JSONEachRow
+  `
+
+  const body = await queryClickHouse(sql)
+  if (!body) return []
+
+  return body
+    .split("\n")
+    .filter(Boolean)
+    .map((line) => JSON.parse(line))
+}
+
 const { sessionId, text } = await runCodemodeTurn()
 const metrics = await waitForSpans(sessionId)
+const spans = await fetchSessionSpans(sessionId)
 
 console.log(
   JSON.stringify(
@@ -233,6 +287,7 @@ console.log(
       text,
       ...metrics,
       innerToolsVisibleToAiSdkTelemetry: metrics.innerToolCount > 0,
+      spans,
     },
     null,
     2,
