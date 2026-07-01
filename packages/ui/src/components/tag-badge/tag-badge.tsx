@@ -2,16 +2,13 @@ import { memo } from "react"
 import { useHashColor } from "../../hooks/use-hash-color.ts"
 import { cn } from "../../utils/cn.ts"
 
-export type TagBadgeVariant = "hash" | "accent"
-
 export interface TagBadgeProps {
   readonly tag: string
-  readonly variant?: TagBadgeVariant
 }
 
 const tagBadgeClassName = "inline-flex items-center rounded-md px-1.5 py-0.5 text-xs font-medium"
 
-function HashTagBadge({ tag }: { readonly tag: string }) {
+export const TagBadge = memo(function TagBadge({ tag }: TagBadgeProps) {
   const { style, className } = useHashColor(tag)
 
   return (
@@ -19,14 +16,6 @@ function HashTagBadge({ tag }: { readonly tag: string }) {
       {tag}
     </span>
   )
-}
-
-export const TagBadge = memo(function TagBadge({ tag, variant = "hash" }: TagBadgeProps) {
-  if (variant === "accent") {
-    return <span className={cn(tagBadgeClassName, "bg-accent text-accent-foreground")}>{tag}</span>
-  }
-
-  return <HashTagBadge tag={tag} />
 })
 
 export interface TagBadgeListProps {

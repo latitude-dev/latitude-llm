@@ -1,12 +1,12 @@
 import { DEFAULT_API_KEY_NAME } from "@domain/api-keys"
 import {
+  Badge,
   CodeBlock,
   CopyButton,
   OpentelemetryIcon,
   ProviderIcon,
   PythonIcon,
   Tabs,
-  TagBadge,
   Text,
   TypescriptIcon,
 } from "@repo/ui"
@@ -445,7 +445,7 @@ export function TelemetryInstructions({ projectSlug }: { readonly projectSlug: s
         <div className="flex flex-col gap-2">
           <span className="inline-flex items-center gap-1.5">
             <Text.H5M>Prompt</Text.H5M>
-            <TagBadge tag="Recommended" variant="accent" />
+            <Badge variant="accent">Recommended</Badge>
           </span>
           <Text.H5 color="foregroundMuted">
             Paste this into the chat with your coding agent — Cursor, Claude Code, Codex, or any other — to set up
