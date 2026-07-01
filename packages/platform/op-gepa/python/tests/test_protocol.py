@@ -9,7 +9,7 @@ from op_gepa_engine.rpc.protocol import (
 )
 
 
-def test_first_remote_message_reads_nested_cause() -> None:
+def test_first_remote_message_returns_first_matching_key() -> None:
     assert (
         _first_remote_message(
             {

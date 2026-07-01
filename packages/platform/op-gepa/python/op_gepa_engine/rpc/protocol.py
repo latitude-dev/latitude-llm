@@ -85,12 +85,6 @@ def _exception_message(error: Exception) -> str:
     if message:
         return message
 
-    if isinstance(error, RpcRemoteError):
-        remote = _first_remote_message(error.data)
-        if remote:
-            return remote
-        return "Remote RPC failed"
-
     error_name = error.__class__.__name__
     if error_name and error_name != "Exception":
         return error_name
