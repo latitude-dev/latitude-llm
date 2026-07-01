@@ -1,5 +1,6 @@
 import type {
   AnalyticsStream,
+  BehaviorMetric,
   ChSqlClient,
   FilterSet,
   MonitorMetric,
@@ -10,8 +11,12 @@ import type {
 } from "@domain/shared"
 import type { Effect } from "effect"
 
-/** The metric vocabulary a given stream accepts — scores have their own, the rest are trace-family. */
-export type MetricForStream<S extends AnalyticsStream> = S extends "scores" ? ScoreMetric : MonitorMetric
+/** The metric vocabulary a given stream accepts — each non-trace stream has its own; the rest are trace-family. */
+export type MetricForStream<S extends AnalyticsStream> = S extends "scores"
+  ? ScoreMetric
+  : S extends "behaviors"
+    ? BehaviorMetric
+    : MonitorMetric
 
 /**
  * The minimal window input the SQL builders need: a resolved stream + predicate

@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [6.9.0] - 2026-07-01
+
+### Added
+
+- `client.analytics.query` gains the `behaviors` stream — taxonomy observations (behavior instances clustered from session moments). Metrics: `count`, or `{avg|min|max|median}` of the 0–1 assignment `confidence`. Breakdown by `cluster`, `session`, or `method`.
+
 ## [6.8.0] - 2026-07-01
 
 ### Added

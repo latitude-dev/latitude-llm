@@ -8,6 +8,11 @@ import pydantic
 import typing_extensions
 from ..core.pydantic_utilities import UniversalBaseModel
 from ..core.serialization import FieldMetadata
+from .analytics_query_behaviors_breakdown import AnalyticsQueryBehaviorsBreakdown
+from .analytics_query_behaviors_metric import AnalyticsQueryBehaviorsMetric
+from .analytics_query_behaviors_order_by import AnalyticsQueryBehaviorsOrderBy
+from .analytics_query_behaviors_range import AnalyticsQueryBehaviorsRange
+from .analytics_query_behaviors_time_bucket import AnalyticsQueryBehaviorsTimeBucket
 from .analytics_query_scores_breakdown import AnalyticsQueryScoresBreakdown
 from .analytics_query_scores_metric import AnalyticsQueryScoresMetric
 from .analytics_query_scores_order_by import AnalyticsQueryScoresOrderBy
@@ -101,6 +106,27 @@ class AnalyticsQuery_Scores(UniversalBaseModel):
     model_config: typing.ClassVar[pydantic.ConfigDict] = pydantic.ConfigDict(extra="allow", frozen=True)
 
 
+class AnalyticsQuery_Behaviors(UniversalBaseModel):
+    stream: typing.Literal["behaviors"] = "behaviors"
+    breakdown: typing.Optional[AnalyticsQueryBehaviorsBreakdown] = None
+    metric: AnalyticsQueryBehaviorsMetric
+    filters: typing.Optional[FilterSet] = None
+    time_bucket: typing_extensions.Annotated[
+        typing.Optional[AnalyticsQueryBehaviorsTimeBucket], FieldMetadata(alias="timeBucket")
+    ] = None
+    range: AnalyticsQueryBehaviorsRange
+    order_by: typing_extensions.Annotated[
+        typing.Optional[AnalyticsQueryBehaviorsOrderBy], FieldMetadata(alias="orderBy")
+    ] = None
+    limit: typing.Optional[int] = None
+
+    model_config: typing.ClassVar[pydantic.ConfigDict] = pydantic.ConfigDict(extra="allow", frozen=True)
+
+
 AnalyticsQuery = typing.Union[
-    AnalyticsQuery_Traces, AnalyticsQuery_Sessions, AnalyticsQuery_Spans, AnalyticsQuery_Scores
+    AnalyticsQuery_Traces,
+    AnalyticsQuery_Sessions,
+    AnalyticsQuery_Spans,
+    AnalyticsQuery_Scores,
+    AnalyticsQuery_Behaviors,
 ]

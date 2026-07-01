@@ -1,4 +1,4 @@
-import type { MonitorMetric, ScoreMetric } from "@domain/shared"
+import type { BehaviorMetric, MonitorMetric, ScoreMetric } from "@domain/shared"
 
 /** ClickHouse `DateTime64` params take a space-separated, zone-naive string (UTC). */
 const toClickHouseDateTime64 = (value: Date): string => value.toISOString().replace("T", " ").replace("Z", "")
@@ -32,6 +32,25 @@ export const scoreAggregate = (metric: ScoreMetric): string => {
       return "if(count() = 0, 0, max(value))"
     case "median":
       return "if(count() = 0, 0, quantileTDigest(0.5)(value))"
+  }
+}
+
+/**
+ * Metric → SQL aggregate for the `behaviors` stream (taxonomy observations).
+ * `count` is observations; the stats read the 0–1 `assignment_confidence`.
+ */
+export const behaviorAggregate = (metric: BehaviorMetric): string => {
+  switch (metric.kind) {
+    case "count":
+      return "count()"
+    case "avg":
+      return "if(count() = 0, 0, avg(assignment_confidence))"
+    case "min":
+      return "if(count() = 0, 0, min(assignment_confidence))"
+    case "max":
+      return "if(count() = 0, 0, max(assignment_confidence))"
+    case "median":
+      return "if(count() = 0, 0, quantileTDigest(0.5)(assignment_confidence))"
   }
 }
 

@@ -4,6 +4,8 @@ import {
   type AnalyticsSeriesPoint,
   analyticsOrderBySchema,
   analyticsTimeBucketSchema,
+  BEHAVIOR_BREAKDOWN_FIELDS,
+  behaviorMetricSchema,
   monitorMetricSchema,
   SCORE_BREAKDOWN_FIELDS,
   SESSION_BREAKDOWN_FIELDS,
@@ -102,6 +104,21 @@ export const AnalyticsQueryBodySchema = z
           .describe("Dimension to group by: `signalId`/`source` (direct) or a trace dim (`model`…`tag`)."),
         metric: scoreMetricSchema.describe(
           "The metric: `count`, `passRate`, `errorRate`, or `{avg|min|max|median}` of the 0–1 score `value`.",
+        ),
+        ...commonFields,
+      })
+      .strict(),
+    z
+      .object({
+        stream: z
+          .literal("behaviors")
+          .describe("Taxonomy observations — behavior instances clustered from session moments."),
+        breakdown: z
+          .enum(BEHAVIOR_BREAKDOWN_FIELDS)
+          .optional()
+          .describe("Dimension to group by: `cluster`, `session`, or `method`."),
+        metric: behaviorMetricSchema.describe(
+          "The metric: `count`, or `{avg|min|max|median}` of the 0–1 assignment `confidence`.",
         ),
         ...commonFields,
       })
