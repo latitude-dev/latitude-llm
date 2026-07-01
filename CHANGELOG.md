@@ -2,6 +2,20 @@
 
 ## Unreleased
 
+## v0.3.27 - 2026-07-01
+
+### Sandbox
+
+- Renamed the sandbox nav section from "Traces" to "Sessions" to match the live project navigation, fixed score filters so they work in the sandbox (reading the current user from a route-independent session hook), and scoped render errors so a filter crash no longer takes down the whole app (ref: #3769).
+
+### Onboarding
+
+- Updated the onboarding flow: deprecated the stack-selection step, refreshed setup instructions, and widened backoffice ActionRow to accept React 19 provider icon components (ref: #3743).
+
+### Signals
+
+- Stopped the signals list priority sections (Urgent → … → No priority) from fragmenting across paginated scroll: sections are now grouped contiguously in a fixed order, the virtualizer keys rows stably across page growth, and loaded pages are deduped by signal id (ref: #3740).
+
 ## v0.3.26 - 2026-06-30
 
 ### API and MCP
