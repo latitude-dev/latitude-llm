@@ -5,7 +5,7 @@ import {
   type BadRequestError,
   type ConcurrentSqlTransactionError,
   cuidSchema,
-  evaluationSettingsSchema,
+  evaluationDraftSchema,
   filterSetSchema,
   generateId,
   generateSlug,
@@ -27,10 +27,7 @@ const createSignalInputSchema = z.object({
   priority: signalPrioritySchema.nullish(),
   filters: filterSetSchema.nullish(),
   // A user signal MUST have an evaluation: exactly one of a declarative `settings` form or a raw `script`.
-  evaluation: z.union([
-    z.object({ settings: evaluationSettingsSchema }).strict(),
-    z.object({ script: z.string().min(1) }).strict(),
-  ]),
+  evaluation: evaluationDraftSchema,
   sampling: z.number().int().min(0).max(100).optional(),
   now: z.date().optional(),
 })

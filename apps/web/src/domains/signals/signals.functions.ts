@@ -15,7 +15,7 @@ import {
   type SignalEscalationThresholdBucket,
 } from "@domain/scores"
 import {
-  evaluationSettingsSchema,
+  evaluationDraftSchema,
   type FilterCondition,
   type FilterSet,
   filterSetSchema,
@@ -1320,11 +1320,6 @@ export const enqueueSignalsExport = createServerFn({ method: "POST" })
   })
 
 // --- Builder: create / edit / delete / preview (web leads; no REST/SDK regen) ---
-
-const evaluationDraftSchema = z.union([
-  z.object({ settings: evaluationSettingsSchema }).strict(),
-  z.object({ script: z.string().min(1) }).strict(),
-])
 
 const createSignalInputSchema = z.object({
   projectId: z.string(),

@@ -6,7 +6,7 @@ import {
   type ScriptGenerationResult,
 } from "@domain/evaluations"
 import type { QueueConsumer } from "@domain/queue"
-import { type FilterSet, filterSetSchema, OrganizationId } from "@domain/shared"
+import { describeError, type FilterSet, filterSetSchema, OrganizationId } from "@domain/shared"
 import { AIGenerateLive, withAi } from "@platform/ai"
 import type { RedisClient } from "@platform/cache-redis"
 import {
@@ -42,11 +42,6 @@ interface SignalsGenerateScriptDeps {
   redisClient?: RedisClient
   logger?: SignalsGenerateScriptLogger
 }
-
-const describeError = (error: unknown): string =>
-  typeof error === "object" && error !== null && "message" in error
-    ? String((error as { message: unknown }).message)
-    : String(error)
 
 const writeResult = (redisClient: RedisClient, payload: SignalsGenerateScriptPayload, result: ScriptGenerationResult) =>
   Effect.tryPromise(() =>

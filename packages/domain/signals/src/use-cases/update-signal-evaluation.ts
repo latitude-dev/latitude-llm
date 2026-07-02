@@ -9,7 +9,7 @@ import {
   BadRequestError,
   type ConcurrentSqlTransactionError,
   cuidSchema,
-  evaluationSettingsSchema,
+  evaluationDraftSchema,
   type NotFoundError,
   ProjectId,
   type RepositoryError,
@@ -19,12 +19,6 @@ import {
 import { Effect } from "effect"
 import { z } from "zod"
 import { SignalRepository } from "../ports/signal-repository.ts"
-
-// Exactly one of a declarative `settings` form or a raw `script`, mirroring createSignal.
-const evaluationDraftSchema = z.union([
-  z.object({ settings: evaluationSettingsSchema }).strict(),
-  z.object({ script: z.string().min(1) }).strict(),
-])
 
 const updateSignalEvaluationInputSchema = z.object({
   projectId: cuidSchema.transform(ProjectId),
@@ -90,6 +84,7 @@ export const updateSignalEvaluationUseCase = (input: UpdateSignalEvaluationInput
         const active = yield* evaluationRepository
           .listBySignalId({ projectId: parsed.projectId, signalId: parsed.signalId, options: { lifecycle: "active" } })
           .pipe(Effect.map((page) => page.items.filter(isActiveEvaluation)))
+        // The active-detector partial unique index guarantees at most one active evaluation per signal.
         const evaluation = active[0]
         if (evaluation === undefined) {
           return yield* new BadRequestError({

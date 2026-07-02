@@ -99,3 +99,13 @@ export const evaluationSettingsSchema = z.discriminatedUnion("kind", [
   }),
 ])
 export type EvaluationSettings = z.infer<typeof evaluationSettingsSchema>
+
+/**
+ * A signal evaluation draft: exactly one of a declarative `settings` form or a raw `script`.
+ * Members are strict so an ambiguous `{ settings, script }` payload is rejected, never silently
+ * stripped to one side. Single source for create/update/preview and the web boundary.
+ */
+export const evaluationDraftSchema = z.union([
+  z.object({ settings: evaluationSettingsSchema }).strict(),
+  z.object({ script: z.string().min(1) }).strict(),
+])

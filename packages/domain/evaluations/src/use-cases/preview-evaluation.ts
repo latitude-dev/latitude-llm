@@ -2,7 +2,8 @@ import type { AI } from "@domain/ai"
 import type { ScriptCompileError, ScriptRuntime, ScriptSessionContext } from "@domain/sandbox"
 import {
   cuidSchema,
-  evaluationSettingsSchema,
+  describeError,
+  evaluationDraftSchema,
   type FilterSet,
   filterSetSchema,
   OrganizationId,
@@ -24,11 +25,7 @@ const previewEvaluationInputSchema = z.object({
   organizationId: cuidSchema.transform(OrganizationId),
   projectId: cuidSchema.transform(ProjectId),
   filters: filterSetSchema.nullish(),
-  // Exactly one of a declarative `settings` form or a raw `script`, mirroring createSignal.
-  evaluation: z.union([
-    z.object({ settings: evaluationSettingsSchema }).strict(),
-    z.object({ script: z.string().min(1) }).strict(),
-  ]),
+  evaluation: evaluationDraftSchema,
 })
 
 export type PreviewEvaluationInput = z.input<typeof previewEvaluationInputSchema>
@@ -63,11 +60,6 @@ export interface PreviewEvaluationResult {
 }
 
 export type PreviewEvaluationError = ScriptCompileError | RepositoryError
-
-const describeError = (error: unknown): string =>
-  typeof error === "object" && error !== null && "message" in error
-    ? String((error as { message: unknown }).message)
-    : String(error)
 
 const SUMMARY_MESSAGE_MAX = 280
 

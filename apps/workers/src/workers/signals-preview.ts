@@ -6,7 +6,7 @@ import {
   type SignalPreviewResult,
 } from "@domain/evaluations"
 import type { QueueConsumer } from "@domain/queue"
-import { type FilterSet, OrganizationId } from "@domain/shared"
+import { describeError, type FilterSet, OrganizationId } from "@domain/shared"
 import { AIGenerateLive, withAi } from "@platform/ai"
 import type { RedisClient } from "@platform/cache-redis"
 import {
@@ -42,11 +42,6 @@ interface SignalsPreviewDeps {
   redisClient?: RedisClient
   logger?: SignalsPreviewLogger
 }
-
-const describeError = (error: unknown): string =>
-  typeof error === "object" && error !== null && "message" in error
-    ? String((error as { message: unknown }).message)
-    : String(error)
 
 const writeResult = (redisClient: RedisClient, payload: SignalsPreviewPayload, result: SignalPreviewResult) =>
   Effect.tryPromise(() =>
