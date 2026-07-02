@@ -14,8 +14,8 @@ import { OutboxEventWriter } from "@domain/events"
 import { type QueuePublishError, QueuePublisher } from "@domain/queue"
 import {
   DETECTOR_HEALTH_WINDOW_SECONDS,
-  detectScriptCapabilities,
   DetectorHealthTracker,
+  detectScriptCapabilities,
   hasEmbeddingCapability,
   type ScriptRuntime,
 } from "@domain/sandbox"
