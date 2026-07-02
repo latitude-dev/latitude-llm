@@ -20,6 +20,7 @@ import { PercentileFilter } from "../../../../../components/filters-builder/perc
 import { StatusFilter, type StatusFilterValue } from "../../../../../components/filters-builder/status-filter.tsx"
 import type { DistinctColumn } from "../../../../../components/filters-builder/types.ts"
 import { useMembersCollection } from "../../../../../domains/members/members.collection.ts"
+import { isHasLlmActivityFilterOn } from "../../../../../domains/sessions/sessions.collection.ts"
 import { useTopicFilterOptions } from "../../../../../domains/taxonomy/taxonomy.collection.ts"
 import { ListingLayout as Layout } from "../../../../../layouts/ListingLayout/index.tsx"
 import { authClient } from "../../../../../lib/auth-client.ts"
@@ -93,21 +94,6 @@ function getStatusValues(filters: FilterSet, field: string): readonly StatusFilt
   const cond = filters[field]?.find((c) => c.op === "in")
   const raw = Array.isArray(cond?.value) ? cond.value.map(String) : []
   return raw.filter((v): v is StatusFilterValue => (STATUS_VALUES as readonly string[]).includes(v))
-}
-
-/**
- * Tri-state for the "Has LLM activity" toggle:
- * - URL key absent → treated as on (the default chip applies at the call site).
- * - `[{op: "eq", value: false}]` → off (user explicitly opted out).
- * - `[{op: "eq", value: true}]` → on (explicit; equivalent to absent).
- *
- * Returning a plain boolean lets the Switch render the right state regardless
- * of which representation lives in the URL.
- */
-function getHasLlmActivityOn(filters: FilterSet): boolean {
-  const cond = filters.hasLlmActivity?.find((c) => c.op === "eq")
-  if (cond === undefined) return true
-  return cond.value !== false && cond.value !== "false"
 }
 
 function setFieldConditions(filters: FilterSet, field: string, conditions: FilterCondition[]): FilterSet {
@@ -672,14 +658,16 @@ export function FiltersSidebar({ mode, projectId, filters, onFiltersChange, onCl
         {mode === "sessions" && (
           <CollapsibleSection
             label="Has LLM activity"
-            defaultOpen={filters.hasLlmActivity !== undefined && !getHasLlmActivityOn(filters)}
+            defaultOpen={filters.hasLlmActivity !== undefined && !isHasLlmActivityFilterOn(filters)}
           >
             <div className="flex items-center justify-between gap-2">
               <Text.H7 color="foregroundMuted">
-                {getHasLlmActivityOn(filters) ? "Hiding sessions without any LLM call." : "Including orphan fragments."}
+                {isHasLlmActivityFilterOn(filters)
+                  ? "Hiding sessions without any LLM call."
+                  : "Including orphan fragments."}
               </Text.H7>
               <Switch
-                checked={getHasLlmActivityOn(filters)}
+                checked={isHasLlmActivityFilterOn(filters)}
                 onCheckedChange={(next) => setHasLlmActivity(next === true)}
               />
             </div>

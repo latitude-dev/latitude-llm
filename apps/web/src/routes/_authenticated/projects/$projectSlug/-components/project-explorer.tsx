@@ -238,13 +238,11 @@ export function ProjectExplorer({ projectSlug }: { readonly projectSlug: string 
       startTime: [{ op: "gte" as const, value: new Date(fromMs).toISOString() }],
     }
   }, [filters, isSessions])
-  // The Sessions surface's hooks (useSessionsInfiniteScroll / useSessionsCount)
-  // apply `withSessionDefaults` internally to hide orphan-fragment sessions
-  // by default. The trace-side surfaces here (count, export, add-to-dataset)
-  // need the same default applied in Sessions mode so a Select-All export
-  // doesn't sweep traces the user never saw. In Traces mode `hasLlmActivity`
-  // is a session-only synthetic and isn't part of the trace filter registry,
-  // so we keep the raw filter set there.
+  // Sessions hooks apply `withSessionDefaults` internally so orphan-fragment
+  // sessions stay hidden unless the user opts out. Trace-side surfaces here
+  // (count, export, add-to-dataset) need the same default in Sessions mode.
+  // In Traces mode `hasLlmActivity` is session-only and isn't in the trace
+  // filter registry, so we keep the raw filter set there.
   const effectiveFilters = useMemo(() => (isSessions ? withSessionDefaults(filters) : filters), [filters, isSessions])
   const traceColumnSettings = useTableColumnSettings<TraceColumnId>({
     storageKey: "projects.traces.columns.v1",
@@ -308,6 +306,10 @@ export function ProjectExplorer({ projectSlug }: { readonly projectSlug: string 
     setFiltersOpen(true)
     setRawFilters(serializeFilters(next) ?? "")
   }
+
+  const onShowAllSessions = useCallback(() => {
+    setRawFilters(serializeFilters({ ...filters, hasLlmActivity: [{ op: "eq", value: false as const }] }) ?? "")
+  }, [filters, setRawFilters])
 
   const onTimeRangeSelect = useCallback((range: { from: string; to: string } | null) => {
     setRawFilters((prev) => {
@@ -699,11 +701,13 @@ export function ProjectExplorer({ projectSlug }: { readonly projectSlug: string 
           onSelectionChange={setSelectionState}
           totalTraceCount={totalTraceCount}
           onFiltersChange={onFiltersChange}
+          onShowAllSessions={onShowAllSessions}
           onFiltersClose={() => setFiltersOpen(false)}
           onOpenSession={onOpenSession}
           onCloseSession={closeSessionPanel}
           visibleColumnIds={sessionColumnSettings.visibleColumnIds}
           isSearching={hasSearchQuery}
+          hasUserAppliedFilters={hasActiveFilters}
           {...(hasSearchQuery ? { searchQuery: query } : {})}
         />
       ) : (
