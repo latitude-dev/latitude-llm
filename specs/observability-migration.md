@@ -8,21 +8,20 @@
 
 ## Contents
 
-1. [A. Critique of current spec](#a-critique-of-current-spec)
-2. [B. Revised architecture (keep it simple)](#b-revised-architecture-keep-it-simple)
-3. [C. Limits and defaults (concrete numbers)](#c-limits-and-defaults-concrete-numbers)
-4. [D. UI flow (step-by-step for users)](#d-ui-flow-step-by-step-for-users)
-5. [E. Implementation phases (step-by-step for engineers)](#e-implementation-phases-step-by-step-for-engineers)
-6. [F. Source adapter interface](#f-source-adapter-interface)
-7. [G. What to remove/simplify from current spec](#g-what-to-removesimplify-from-current-spec)
-8. [H. Full markdown patch](#h-full-markdown-patch)
-9. [Appendix: source mapping notes](#appendix-source-mapping-notes)
+1. [Design decisions](#design-decisions)
+2. [Architecture](#architecture)
+3. [Limits and defaults](#limits-and-defaults)
+4. [UI flow](#ui-flow)
+5. [Implementation phases](#implementation-phases)
+6. [Source adapter interface](#source-adapter-interface)
+7. [MVP scope cuts](#mvp-scope-cuts)
+8. [Appendix: source mapping notes](#appendix-source-mapping-notes)
 
 ---
 
-## A. Critique of current spec
+## Design decisions
 
-The previous spec has useful source-platform research and mapping notes, but it does not yet describe the product Latitude should build first.
+The first draft of this spec prioritized CLI/backoffice and deferred the UI. This revision reflects the product requirement: a **self-serve project settings wizard** with bounded, scalable imports from **all three** source platforms through **one engine**.
 
 ### Misaligned with UI-first requirement
 
@@ -67,7 +66,7 @@ The previous spec has useful source-platform research and mapping notes, but it 
 
 ---
 
-## B. Revised architecture (keep it simple)
+## Architecture
 
 ### Recommendation
 
@@ -248,7 +247,7 @@ Billing/live automation:
 
 ---
 
-## C. Limits and defaults (concrete numbers)
+## Limits and defaults
 
 All limits are enforced server-side in domain use-cases and snapshotted onto the import job at confirmation. UI controls may expose narrower values, but the backend owns the cap.
 
@@ -289,7 +288,7 @@ If a user asks for more than the hard cap:
 
 ---
 
-## D. UI flow (step-by-step for users)
+## UI flow
 
 Surface: project settings, not CLI and not backoffice.
 
@@ -395,7 +394,7 @@ Route files:
 
 ---
 
-## E. Implementation phases (step-by-step for engineers)
+## Implementation phases
 
 Each phase is PR-sized. The MVP is complete after Phase 4: UI wizard, queue engine, and all three source adapters.
 
@@ -425,7 +424,7 @@ Each phase is PR-sized. The MVP is complete after Phase 4: UI wizard, queue engi
     - `ObservabilityImportJobRepository`
     - `ObservabilityImportRunRepository`
     - `ObservabilityImportSourceAdapters`
-  - Constants from [Limits and defaults](#c-limits-and-defaults-concrete-numbers).
+  - Constants from [Limits and defaults](#limits-and-defaults).
 - [ ] Add Postgres schema files:
   - `packages/platform/db-postgres/src/schema/observability-import-jobs.ts`
   - `packages/platform/db-postgres/src/schema/observability-import-runs.ts`
@@ -582,7 +581,7 @@ Each phase is PR-sized. The MVP is complete after Phase 4: UI wizard, queue engi
 
 ---
 
-## F. Source adapter interface
+## Source adapter interface
 
 The engine owns scheduling, cursor persistence, limits, retries, idempotency, stats, and ClickHouse writes. Adapters own source-specific API calls and normalization.
 
@@ -702,7 +701,7 @@ Adapter constraints:
 
 ---
 
-## G. What to remove/simplify from current spec
+## MVP scope cuts
 
 Cut these from the MVP:
 
@@ -745,21 +744,6 @@ Cut these from the MVP:
 10. **Publishing normal live-ingest fan-out for every imported trace**
     - Avoid billing and live evaluation/flagger scans for historical imports.
     - Add import-specific downstream refresh only if product requires it.
-
----
-
-## H. Full markdown patch
-
-This file is the full replacement patch for `specs/observability-migration.md`.
-
-The important implementation decisions are:
-
-- ship a **self-serve project settings wizard** first;
-- support **Langfuse, LangSmith, and Braintrust** through one adapter interface;
-- enforce concrete, server-side limits before any import starts;
-- process imports through a **BullMQ page chain** with bounded platform concurrency;
-- write normalized spans through `SpanRepository.insert`;
-- defer CLI, backoffice, blob/Parquet, scores, datasets, prompt registry, and continuous sync.
 
 ---
 
