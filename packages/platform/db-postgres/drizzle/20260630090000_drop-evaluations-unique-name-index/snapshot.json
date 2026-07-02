@@ -8,12 +8,6 @@
   "ddl": [
     {
       "isRlsEnabled": true,
-      "name": "alert_incidents",
-      "entityType": "tables",
-      "schema": "latitude"
-    },
-    {
-      "isRlsEnabled": true,
       "name": "annotation_queue_items",
       "entityType": "tables",
       "schema": "latitude"
@@ -182,12 +176,6 @@
     },
     {
       "isRlsEnabled": true,
-      "name": "monitor_alerts",
-      "entityType": "tables",
-      "schema": "latitude"
-    },
-    {
-      "isRlsEnabled": true,
       "name": "monitors",
       "entityType": "tables",
       "schema": "latitude"
@@ -275,188 +263,6 @@
       "name": "wrapped_reports",
       "entityType": "tables",
       "schema": "latitude"
-    },
-    {
-      "type": "varchar(24)",
-      "typeSchema": null,
-      "notNull": true,
-      "dimensions": 0,
-      "default": null,
-      "generated": null,
-      "identity": null,
-      "name": "id",
-      "entityType": "columns",
-      "schema": "latitude",
-      "table": "alert_incidents"
-    },
-    {
-      "type": "varchar(24)",
-      "typeSchema": null,
-      "notNull": true,
-      "dimensions": 0,
-      "default": null,
-      "generated": null,
-      "identity": null,
-      "name": "organization_id",
-      "entityType": "columns",
-      "schema": "latitude",
-      "table": "alert_incidents"
-    },
-    {
-      "type": "varchar(24)",
-      "typeSchema": null,
-      "notNull": true,
-      "dimensions": 0,
-      "default": null,
-      "generated": null,
-      "identity": null,
-      "name": "project_id",
-      "entityType": "columns",
-      "schema": "latitude",
-      "table": "alert_incidents"
-    },
-    {
-      "type": "varchar(32)",
-      "typeSchema": null,
-      "notNull": false,
-      "dimensions": 0,
-      "default": null,
-      "generated": null,
-      "identity": null,
-      "name": "source_type",
-      "entityType": "columns",
-      "schema": "latitude",
-      "table": "alert_incidents"
-    },
-    {
-      "type": "varchar(24)",
-      "typeSchema": null,
-      "notNull": false,
-      "dimensions": 0,
-      "default": null,
-      "generated": null,
-      "identity": null,
-      "name": "source_id",
-      "entityType": "columns",
-      "schema": "latitude",
-      "table": "alert_incidents"
-    },
-    {
-      "type": "varchar(64)",
-      "typeSchema": null,
-      "notNull": true,
-      "dimensions": 0,
-      "default": null,
-      "generated": null,
-      "identity": null,
-      "name": "kind",
-      "entityType": "columns",
-      "schema": "latitude",
-      "table": "alert_incidents"
-    },
-    {
-      "type": "varchar(16)",
-      "typeSchema": null,
-      "notNull": true,
-      "dimensions": 0,
-      "default": null,
-      "generated": null,
-      "identity": null,
-      "name": "severity",
-      "entityType": "columns",
-      "schema": "latitude",
-      "table": "alert_incidents"
-    },
-    {
-      "type": "timestamp with time zone",
-      "typeSchema": null,
-      "notNull": true,
-      "dimensions": 0,
-      "default": null,
-      "generated": null,
-      "identity": null,
-      "name": "started_at",
-      "entityType": "columns",
-      "schema": "latitude",
-      "table": "alert_incidents"
-    },
-    {
-      "type": "timestamp with time zone",
-      "typeSchema": null,
-      "notNull": false,
-      "dimensions": 0,
-      "default": null,
-      "generated": null,
-      "identity": null,
-      "name": "ended_at",
-      "entityType": "columns",
-      "schema": "latitude",
-      "table": "alert_incidents"
-    },
-    {
-      "type": "timestamp with time zone",
-      "typeSchema": null,
-      "notNull": true,
-      "dimensions": 0,
-      "default": "now()",
-      "generated": null,
-      "identity": null,
-      "name": "created_at",
-      "entityType": "columns",
-      "schema": "latitude",
-      "table": "alert_incidents"
-    },
-    {
-      "type": "jsonb",
-      "typeSchema": null,
-      "notNull": false,
-      "dimensions": 0,
-      "default": null,
-      "generated": null,
-      "identity": null,
-      "name": "entry_signals",
-      "entityType": "columns",
-      "schema": "latitude",
-      "table": "alert_incidents"
-    },
-    {
-      "type": "timestamp with time zone",
-      "typeSchema": null,
-      "notNull": false,
-      "dimensions": 0,
-      "default": null,
-      "generated": null,
-      "identity": null,
-      "name": "exit_eligible_since",
-      "entityType": "columns",
-      "schema": "latitude",
-      "table": "alert_incidents"
-    },
-    {
-      "type": "varchar(24)",
-      "typeSchema": null,
-      "notNull": false,
-      "dimensions": 0,
-      "default": null,
-      "generated": null,
-      "identity": null,
-      "name": "monitor_alert_id",
-      "entityType": "columns",
-      "schema": "latitude",
-      "table": "alert_incidents"
-    },
-    {
-      "type": "jsonb",
-      "typeSchema": null,
-      "notNull": false,
-      "dimensions": 0,
-      "default": null,
-      "generated": null,
-      "identity": null,
-      "name": "condition",
-      "entityType": "columns",
-      "schema": "latitude",
-      "table": "alert_incidents"
     },
     {
       "type": "varchar(24)",
@@ -3919,7 +3725,7 @@
     {
       "type": "jsonb",
       "typeSchema": null,
-      "notNull": true,
+      "notNull": false,
       "dimensions": 0,
       "default": null,
       "generated": null,
@@ -3932,7 +3738,7 @@
     {
       "type": "timestamp with time zone",
       "typeSchema": null,
-      "notNull": true,
+      "notNull": false,
       "dimensions": 0,
       "default": null,
       "generated": null,
@@ -4356,149 +4162,6 @@
       "name": "id",
       "entityType": "columns",
       "schema": "latitude",
-      "table": "monitor_alerts"
-    },
-    {
-      "type": "varchar(24)",
-      "typeSchema": null,
-      "notNull": true,
-      "dimensions": 0,
-      "default": null,
-      "generated": null,
-      "identity": null,
-      "name": "organization_id",
-      "entityType": "columns",
-      "schema": "latitude",
-      "table": "monitor_alerts"
-    },
-    {
-      "type": "varchar(24)",
-      "typeSchema": null,
-      "notNull": true,
-      "dimensions": 0,
-      "default": null,
-      "generated": null,
-      "identity": null,
-      "name": "monitor_id",
-      "entityType": "columns",
-      "schema": "latitude",
-      "table": "monitor_alerts"
-    },
-    {
-      "type": "varchar(64)",
-      "typeSchema": null,
-      "notNull": true,
-      "dimensions": 0,
-      "default": null,
-      "generated": null,
-      "identity": null,
-      "name": "kind",
-      "entityType": "columns",
-      "schema": "latitude",
-      "table": "monitor_alerts"
-    },
-    {
-      "type": "varchar(32)",
-      "typeSchema": null,
-      "notNull": false,
-      "dimensions": 0,
-      "default": null,
-      "generated": null,
-      "identity": null,
-      "name": "source_type",
-      "entityType": "columns",
-      "schema": "latitude",
-      "table": "monitor_alerts"
-    },
-    {
-      "type": "varchar(24)",
-      "typeSchema": null,
-      "notNull": false,
-      "dimensions": 0,
-      "default": null,
-      "generated": null,
-      "identity": null,
-      "name": "source_id",
-      "entityType": "columns",
-      "schema": "latitude",
-      "table": "monitor_alerts"
-    },
-    {
-      "type": "jsonb",
-      "typeSchema": null,
-      "notNull": false,
-      "dimensions": 0,
-      "default": null,
-      "generated": null,
-      "identity": null,
-      "name": "condition",
-      "entityType": "columns",
-      "schema": "latitude",
-      "table": "monitor_alerts"
-    },
-    {
-      "type": "varchar(16)",
-      "typeSchema": null,
-      "notNull": true,
-      "dimensions": 0,
-      "default": null,
-      "generated": null,
-      "identity": null,
-      "name": "severity",
-      "entityType": "columns",
-      "schema": "latitude",
-      "table": "monitor_alerts"
-    },
-    {
-      "type": "timestamp with time zone",
-      "typeSchema": null,
-      "notNull": false,
-      "dimensions": 0,
-      "default": null,
-      "generated": null,
-      "identity": null,
-      "name": "deleted_at",
-      "entityType": "columns",
-      "schema": "latitude",
-      "table": "monitor_alerts"
-    },
-    {
-      "type": "timestamp with time zone",
-      "typeSchema": null,
-      "notNull": true,
-      "dimensions": 0,
-      "default": "now()",
-      "generated": null,
-      "identity": null,
-      "name": "created_at",
-      "entityType": "columns",
-      "schema": "latitude",
-      "table": "monitor_alerts"
-    },
-    {
-      "type": "timestamp with time zone",
-      "typeSchema": null,
-      "notNull": true,
-      "dimensions": 0,
-      "default": "now()",
-      "generated": null,
-      "identity": null,
-      "name": "updated_at",
-      "entityType": "columns",
-      "schema": "latitude",
-      "table": "monitor_alerts"
-    },
-    {
-      "type": "varchar(24)",
-      "typeSchema": null,
-      "notNull": true,
-      "dimensions": 0,
-      "default": null,
-      "generated": null,
-      "identity": null,
-      "name": "id",
-      "entityType": "columns",
-      "schema": "latitude",
       "table": "monitors"
     },
     {
@@ -4575,71 +4238,6 @@
       "generated": null,
       "identity": null,
       "name": "system",
-      "entityType": "columns",
-      "schema": "latitude",
-      "table": "monitors"
-    },
-    {
-      "type": "varchar(32)",
-      "typeSchema": null,
-      "notNull": false,
-      "dimensions": 0,
-      "default": null,
-      "generated": null,
-      "identity": null,
-      "name": "target_stream",
-      "entityType": "columns",
-      "schema": "latitude",
-      "table": "monitors"
-    },
-    {
-      "type": "jsonb",
-      "typeSchema": null,
-      "notNull": false,
-      "dimensions": 0,
-      "default": null,
-      "generated": null,
-      "identity": null,
-      "name": "target_filter_set",
-      "entityType": "columns",
-      "schema": "latitude",
-      "table": "monitors"
-    },
-    {
-      "type": "text",
-      "typeSchema": null,
-      "notNull": false,
-      "dimensions": 0,
-      "default": null,
-      "generated": null,
-      "identity": null,
-      "name": "target_query",
-      "entityType": "columns",
-      "schema": "latitude",
-      "table": "monitors"
-    },
-    {
-      "type": "varchar(24)",
-      "typeSchema": null,
-      "notNull": false,
-      "dimensions": 0,
-      "default": null,
-      "generated": null,
-      "identity": null,
-      "name": "target_saved_search_id",
-      "entityType": "columns",
-      "schema": "latitude",
-      "table": "monitors"
-    },
-    {
-      "type": "jsonb",
-      "typeSchema": null,
-      "notNull": false,
-      "dimensions": 0,
-      "default": null,
-      "generated": null,
-      "identity": null,
-      "name": "metric",
       "entityType": "columns",
       "schema": "latitude",
       "table": "monitors"
@@ -5752,7 +5350,7 @@
     {
       "type": "jsonb",
       "typeSchema": null,
-      "notNull": true,
+      "notNull": false,
       "dimensions": 0,
       "default": null,
       "generated": null,
@@ -5794,51 +5392,12 @@
     {
       "type": "timestamp with time zone",
       "typeSchema": null,
-      "notNull": true,
+      "notNull": false,
       "dimensions": 0,
       "default": null,
       "generated": null,
       "identity": null,
       "name": "clustered_at",
-      "entityType": "columns",
-      "schema": "latitude",
-      "table": "signals"
-    },
-    {
-      "type": "timestamp with time zone",
-      "typeSchema": null,
-      "notNull": false,
-      "dimensions": 0,
-      "default": null,
-      "generated": null,
-      "identity": null,
-      "name": "escalated_at",
-      "entityType": "columns",
-      "schema": "latitude",
-      "table": "signals"
-    },
-    {
-      "type": "timestamp with time zone",
-      "typeSchema": null,
-      "notNull": false,
-      "dimensions": 0,
-      "default": null,
-      "generated": null,
-      "identity": null,
-      "name": "resolved_at",
-      "entityType": "columns",
-      "schema": "latitude",
-      "table": "signals"
-    },
-    {
-      "type": "timestamp with time zone",
-      "typeSchema": null,
-      "notNull": false,
-      "dimensions": 0,
-      "default": null,
-      "generated": null,
-      "identity": null,
-      "name": "ignored_at",
       "entityType": "columns",
       "schema": "latitude",
       "table": "signals"
@@ -7086,132 +6645,6 @@
           "opclass": null
         },
         {
-          "value": "started_at",
-          "isExpression": false,
-          "asc": true,
-          "nullsFirst": false,
-          "opclass": null
-        }
-      ],
-      "isUnique": false,
-      "where": null,
-      "with": "",
-      "method": "btree",
-      "concurrently": false,
-      "name": "alert_incidents_project_started_at_idx",
-      "entityType": "indexes",
-      "schema": "latitude",
-      "table": "alert_incidents"
-    },
-    {
-      "nameExplicit": true,
-      "columns": [
-        {
-          "value": "source_type",
-          "isExpression": false,
-          "asc": true,
-          "nullsFirst": false,
-          "opclass": null
-        },
-        {
-          "value": "source_id",
-          "isExpression": false,
-          "asc": true,
-          "nullsFirst": false,
-          "opclass": null
-        },
-        {
-          "value": "started_at",
-          "isExpression": false,
-          "asc": true,
-          "nullsFirst": false,
-          "opclass": null
-        }
-      ],
-      "isUnique": false,
-      "where": null,
-      "with": "",
-      "method": "btree",
-      "concurrently": false,
-      "name": "alert_incidents_source_idx",
-      "entityType": "indexes",
-      "schema": "latitude",
-      "table": "alert_incidents"
-    },
-    {
-      "nameExplicit": true,
-      "columns": [
-        {
-          "value": "kind",
-          "isExpression": false,
-          "asc": true,
-          "nullsFirst": false,
-          "opclass": null
-        }
-      ],
-      "isUnique": false,
-      "where": "ended_at IS NULL",
-      "with": "",
-      "method": "btree",
-      "concurrently": false,
-      "name": "alert_incidents_open_by_kind_idx",
-      "entityType": "indexes",
-      "schema": "latitude",
-      "table": "alert_incidents"
-    },
-    {
-      "nameExplicit": true,
-      "columns": [
-        {
-          "value": "monitor_alert_id",
-          "isExpression": false,
-          "asc": true,
-          "nullsFirst": false,
-          "opclass": null
-        },
-        {
-          "value": "started_at",
-          "isExpression": false,
-          "asc": false,
-          "nullsFirst": false,
-          "opclass": null
-        },
-        {
-          "value": "id",
-          "isExpression": false,
-          "asc": false,
-          "nullsFirst": false,
-          "opclass": null
-        }
-      ],
-      "isUnique": false,
-      "where": "monitor_alert_id IS NOT NULL",
-      "with": "",
-      "method": "btree",
-      "concurrently": false,
-      "name": "alert_incidents_monitor_alert_idx",
-      "entityType": "indexes",
-      "schema": "latitude",
-      "table": "alert_incidents"
-    },
-    {
-      "nameExplicit": true,
-      "columns": [
-        {
-          "value": "organization_id",
-          "isExpression": false,
-          "asc": true,
-          "nullsFirst": false,
-          "opclass": null
-        },
-        {
-          "value": "project_id",
-          "isExpression": false,
-          "asc": true,
-          "nullsFirst": false,
-          "opclass": null
-        },
-        {
           "value": "queue_id",
           "isExpression": false,
           "asc": true,
@@ -8374,62 +7807,6 @@
       "nameExplicit": true,
       "columns": [
         {
-          "value": "monitor_id",
-          "isExpression": false,
-          "asc": true,
-          "nullsFirst": false,
-          "opclass": null
-        }
-      ],
-      "isUnique": false,
-      "where": null,
-      "with": "",
-      "method": "btree",
-      "concurrently": false,
-      "name": "monitor_alerts_monitor_idx",
-      "entityType": "indexes",
-      "schema": "latitude",
-      "table": "monitor_alerts"
-    },
-    {
-      "nameExplicit": true,
-      "columns": [
-        {
-          "value": "organization_id",
-          "isExpression": false,
-          "asc": true,
-          "nullsFirst": false,
-          "opclass": null
-        },
-        {
-          "value": "source_type",
-          "isExpression": false,
-          "asc": true,
-          "nullsFirst": false,
-          "opclass": null
-        },
-        {
-          "value": "source_id",
-          "isExpression": false,
-          "asc": true,
-          "nullsFirst": false,
-          "opclass": null
-        }
-      ],
-      "isUnique": false,
-      "where": "deleted_at IS NULL",
-      "with": "",
-      "method": "btree",
-      "concurrently": false,
-      "name": "monitor_alerts_source_idx",
-      "entityType": "indexes",
-      "schema": "latitude",
-      "table": "monitor_alerts"
-    },
-    {
-      "nameExplicit": true,
-      "columns": [
-        {
           "value": "project_id",
           "isExpression": false,
           "asc": true,
@@ -9249,14 +8626,7 @@
           "opclass": null
         },
         {
-          "value": "ignored_at",
-          "isExpression": false,
-          "asc": true,
-          "nullsFirst": false,
-          "opclass": null
-        },
-        {
-          "value": "resolved_at",
+          "value": "muted_at",
           "isExpression": false,
           "asc": true,
           "nullsFirst": false,
@@ -9860,16 +9230,6 @@
         "id"
       ],
       "nameExplicit": false,
-      "name": "alert_incidents_pkey",
-      "schema": "latitude",
-      "table": "alert_incidents",
-      "entityType": "pks"
-    },
-    {
-      "columns": [
-        "id"
-      ],
-      "nameExplicit": false,
       "name": "annotation_queue_items_pkey",
       "schema": "latitude",
       "table": "annotation_queue_items",
@@ -10123,16 +9483,6 @@
       "name": "integrations_pkey",
       "schema": "latitude",
       "table": "integrations",
-      "entityType": "pks"
-    },
-    {
-      "columns": [
-        "id"
-      ],
-      "nameExplicit": false,
-      "name": "monitor_alerts_pkey",
-      "schema": "latitude",
-      "table": "monitor_alerts",
       "entityType": "pks"
     },
     {
@@ -10408,19 +9758,6 @@
       "table": "saved_searches"
     },
     {
-      "nameExplicit": true,
-      "columns": [
-        "organization_id",
-        "project_id",
-        "slug"
-      ],
-      "nullsNotDistinct": false,
-      "name": "signals_unique_slug_per_project_idx",
-      "entityType": "uniques",
-      "schema": "latitude",
-      "table": "signals"
-    },
-    {
       "nameExplicit": false,
       "columns": [
         "token_hash"
@@ -10540,19 +9877,6 @@
       "schema": "latitude",
       "table": "signals",
       "entityType": "uniques"
-    },
-    {
-      "as": "PERMISSIVE",
-      "for": "ALL",
-      "roles": [
-        "public"
-      ],
-      "using": "organization_id = get_current_organization_id()",
-      "withCheck": "organization_id = get_current_organization_id()",
-      "name": "alert_incidents_organization_policy",
-      "entityType": "policies",
-      "schema": "latitude",
-      "table": "alert_incidents"
     },
     {
       "as": "PERMISSIVE",
@@ -10822,19 +10146,6 @@
       ],
       "using": "organization_id = get_current_organization_id()",
       "withCheck": "organization_id = get_current_organization_id()",
-      "name": "monitor_alerts_organization_policy",
-      "entityType": "policies",
-      "schema": "latitude",
-      "table": "monitor_alerts"
-    },
-    {
-      "as": "PERMISSIVE",
-      "for": "ALL",
-      "roles": [
-        "public"
-      ],
-      "using": "organization_id = get_current_organization_id()",
-      "withCheck": "organization_id = get_current_organization_id()",
       "name": "monitors_organization_policy",
       "entityType": "policies",
       "schema": "latitude",
@@ -11008,6 +10319,551 @@
       "entityType": "policies",
       "schema": "latitude",
       "table": "wrapped_reports"
+    },
+    {
+      "type": "jsonb",
+      "typeSchema": null,
+      "notNull": false,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "name": "settings",
+      "entityType": "columns",
+      "schema": "latitude",
+      "table": "evaluations"
+    },
+    {
+      "type": "text",
+      "typeSchema": null,
+      "notNull": false,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "name": "script_hash",
+      "entityType": "columns",
+      "schema": "latitude",
+      "table": "evaluations"
+    },
+    {
+      "type": "varchar(16)",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": "'system'",
+      "generated": null,
+      "identity": null,
+      "name": "origin",
+      "entityType": "columns",
+      "schema": "latitude",
+      "table": "signals"
+    },
+    {
+      "type": "jsonb",
+      "typeSchema": null,
+      "notNull": false,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "name": "filters",
+      "entityType": "columns",
+      "schema": "latitude",
+      "table": "signals"
+    },
+    {
+      "type": "timestamp with time zone",
+      "typeSchema": null,
+      "notNull": false,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "name": "deleted_at",
+      "entityType": "columns",
+      "schema": "latitude",
+      "table": "signals"
+    },
+    {
+      "nameExplicit": true,
+      "columns": [
+        {
+          "value": "signal_id",
+          "isExpression": false,
+          "asc": true,
+          "nullsFirst": false,
+          "opclass": null
+        }
+      ],
+      "isUnique": true,
+      "where": "\"deleted_at\" IS NULL AND \"archived_at\" IS NULL",
+      "with": "",
+      "method": "btree",
+      "concurrently": false,
+      "name": "evaluations_active_detector_idx",
+      "entityType": "indexes",
+      "schema": "latitude",
+      "table": "evaluations"
+    },
+    {
+      "nameExplicit": true,
+      "columns": [
+        {
+          "value": "organization_id",
+          "isExpression": false,
+          "asc": true,
+          "nullsFirst": false,
+          "opclass": null
+        },
+        {
+          "value": "project_id",
+          "isExpression": false,
+          "asc": true,
+          "nullsFirst": false,
+          "opclass": null
+        },
+        {
+          "value": "signal_id",
+          "isExpression": false,
+          "asc": true,
+          "nullsFirst": false,
+          "opclass": null
+        }
+      ],
+      "isUnique": false,
+      "where": "\"deleted_at\" IS NULL AND \"archived_at\" IS NULL",
+      "with": "",
+      "method": "btree",
+      "concurrently": false,
+      "name": "evaluations_active_detector_lookup_idx",
+      "entityType": "indexes",
+      "schema": "latitude",
+      "table": "evaluations"
+    },
+    {
+      "nameExplicit": true,
+      "columns": [
+        {
+          "value": "organization_id",
+          "isExpression": false,
+          "asc": true,
+          "nullsFirst": false,
+          "opclass": null
+        },
+        {
+          "value": "project_id",
+          "isExpression": false,
+          "asc": true,
+          "nullsFirst": false,
+          "opclass": null
+        },
+        {
+          "value": "slug",
+          "isExpression": false,
+          "asc": true,
+          "nullsFirst": false,
+          "opclass": null
+        }
+      ],
+      "isUnique": true,
+      "where": "\"deleted_at\" IS NULL",
+      "with": "",
+      "method": "btree",
+      "concurrently": false,
+      "name": "signals_unique_slug_per_project_idx",
+      "entityType": "indexes",
+      "schema": "latitude",
+      "table": "signals"
+    },
+    {
+      "isRlsEnabled": true,
+      "name": "incidents",
+      "entityType": "tables",
+      "schema": "latitude"
+    },
+    {
+      "type": "varchar(24)",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "name": "id",
+      "entityType": "columns",
+      "schema": "latitude",
+      "table": "incidents"
+    },
+    {
+      "type": "varchar(24)",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "name": "organization_id",
+      "entityType": "columns",
+      "schema": "latitude",
+      "table": "incidents"
+    },
+    {
+      "type": "varchar(24)",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "name": "project_id",
+      "entityType": "columns",
+      "schema": "latitude",
+      "table": "incidents"
+    },
+    {
+      "type": "varchar(32)",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "name": "source_type",
+      "entityType": "columns",
+      "schema": "latitude",
+      "table": "incidents"
+    },
+    {
+      "type": "varchar(24)",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "name": "source_id",
+      "entityType": "columns",
+      "schema": "latitude",
+      "table": "incidents"
+    },
+    {
+      "type": "varchar(16)",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "name": "severity",
+      "entityType": "columns",
+      "schema": "latitude",
+      "table": "incidents"
+    },
+    {
+      "type": "jsonb",
+      "typeSchema": null,
+      "notNull": false,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "name": "condition",
+      "entityType": "columns",
+      "schema": "latitude",
+      "table": "incidents"
+    },
+    {
+      "type": "jsonb",
+      "typeSchema": null,
+      "notNull": false,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "name": "entry_signals",
+      "entityType": "columns",
+      "schema": "latitude",
+      "table": "incidents"
+    },
+    {
+      "type": "timestamp with time zone",
+      "typeSchema": null,
+      "notNull": false,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "name": "exit_eligible_since",
+      "entityType": "columns",
+      "schema": "latitude",
+      "table": "incidents"
+    },
+    {
+      "type": "timestamp with time zone",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "name": "started_at",
+      "entityType": "columns",
+      "schema": "latitude",
+      "table": "incidents"
+    },
+    {
+      "type": "timestamp with time zone",
+      "typeSchema": null,
+      "notNull": false,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "name": "ended_at",
+      "entityType": "columns",
+      "schema": "latitude",
+      "table": "incidents"
+    },
+    {
+      "type": "timestamp with time zone",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": "now()",
+      "generated": null,
+      "identity": null,
+      "name": "created_at",
+      "entityType": "columns",
+      "schema": "latitude",
+      "table": "incidents"
+    },
+    {
+      "type": "varchar(32)",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "name": "target_type",
+      "entityType": "columns",
+      "schema": "latitude",
+      "table": "monitors"
+    },
+    {
+      "type": "varchar(24)",
+      "typeSchema": null,
+      "notNull": false,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "name": "target_id",
+      "entityType": "columns",
+      "schema": "latitude",
+      "table": "monitors"
+    },
+    {
+      "type": "varchar(32)",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "name": "trigger",
+      "entityType": "columns",
+      "schema": "latitude",
+      "table": "monitors"
+    },
+    {
+      "type": "jsonb",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "name": "config",
+      "entityType": "columns",
+      "schema": "latitude",
+      "table": "monitors"
+    },
+    {
+      "type": "varchar(16)",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "name": "severity",
+      "entityType": "columns",
+      "schema": "latitude",
+      "table": "monitors"
+    },
+    {
+      "type": "timestamp with time zone",
+      "typeSchema": null,
+      "notNull": false,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "name": "muted_at",
+      "entityType": "columns",
+      "schema": "latitude",
+      "table": "signals"
+    },
+    {
+      "nameExplicit": true,
+      "columns": [
+        {
+          "value": "organization_id",
+          "isExpression": false,
+          "asc": true,
+          "nullsFirst": false,
+          "opclass": null
+        },
+        {
+          "value": "project_id",
+          "isExpression": false,
+          "asc": true,
+          "nullsFirst": false,
+          "opclass": null
+        },
+        {
+          "value": "started_at",
+          "isExpression": false,
+          "asc": true,
+          "nullsFirst": false,
+          "opclass": null
+        }
+      ],
+      "isUnique": false,
+      "where": null,
+      "with": "",
+      "method": "btree",
+      "concurrently": false,
+      "name": "incidents_project_started_at_idx",
+      "entityType": "indexes",
+      "schema": "latitude",
+      "table": "incidents"
+    },
+    {
+      "nameExplicit": true,
+      "columns": [
+        {
+          "value": "source_type",
+          "isExpression": false,
+          "asc": true,
+          "nullsFirst": false,
+          "opclass": null
+        },
+        {
+          "value": "source_id",
+          "isExpression": false,
+          "asc": true,
+          "nullsFirst": false,
+          "opclass": null
+        },
+        {
+          "value": "started_at",
+          "isExpression": false,
+          "asc": true,
+          "nullsFirst": false,
+          "opclass": null
+        }
+      ],
+      "isUnique": false,
+      "where": null,
+      "with": "",
+      "method": "btree",
+      "concurrently": false,
+      "name": "incidents_source_idx",
+      "entityType": "indexes",
+      "schema": "latitude",
+      "table": "incidents"
+    },
+    {
+      "nameExplicit": true,
+      "columns": [
+        {
+          "value": "organization_id",
+          "isExpression": false,
+          "asc": true,
+          "nullsFirst": false,
+          "opclass": null
+        },
+        {
+          "value": "source_type",
+          "isExpression": false,
+          "asc": true,
+          "nullsFirst": false,
+          "opclass": null
+        },
+        {
+          "value": "source_id",
+          "isExpression": false,
+          "asc": true,
+          "nullsFirst": false,
+          "opclass": null
+        }
+      ],
+      "isUnique": true,
+      "where": "ended_at IS NULL",
+      "with": "",
+      "method": "btree",
+      "concurrently": false,
+      "name": "incidents_open_source_idx",
+      "entityType": "indexes",
+      "schema": "latitude",
+      "table": "incidents"
+    },
+    {
+      "nameExplicit": true,
+      "columns": [
+        {
+          "value": "\"config\"->'filterSet'",
+          "isExpression": true,
+          "asc": true,
+          "nullsFirst": false,
+          "opclass": null
+        }
+      ],
+      "isUnique": false,
+      "where": "deleted_at IS NULL",
+      "with": "",
+      "method": "gin",
+      "concurrently": false,
+      "name": "monitors_config_filter_set_idx",
+      "entityType": "indexes",
+      "schema": "latitude",
+      "table": "monitors"
+    },
+    {
+      "columns": [
+        "id"
+      ],
+      "nameExplicit": false,
+      "name": "incidents_pkey",
+      "schema": "latitude",
+      "table": "incidents",
+      "entityType": "pks"
+    },
+    {
+      "as": "PERMISSIVE",
+      "for": "ALL",
+      "roles": [
+        "public"
+      ],
+      "using": "organization_id = get_current_organization_id()",
+      "withCheck": "organization_id = get_current_organization_id()",
+      "name": "incidents_organization_policy",
+      "entityType": "policies",
+      "schema": "latitude",
+      "table": "incidents"
     }
   ],
   "renames": []
