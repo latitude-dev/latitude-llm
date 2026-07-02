@@ -71,12 +71,14 @@ export function SignalScopeEditor({
   onChange,
   sampling,
   onSamplingChange,
+  detectorKind,
 }: {
   readonly projectId: string
   readonly value: FilterSet
   readonly onChange: (next: FilterSet) => void
   readonly sampling: number
   readonly onSamplingChange: (next: number) => void
+  readonly detectorKind: "rule" | "judge" | "script"
 }) {
   const [popoverContainerEl, setPopoverContainerEl] = useState<HTMLDivElement | null>(null)
   const popoverContainerRef = useMemo<RefObject<HTMLElement | null>>(
@@ -124,13 +126,11 @@ export function SignalScopeEditor({
       <div ref={setPopoverContainerEl} aria-hidden className="absolute left-0 top-0" />
       <div className="flex flex-col gap-4 pb-4">
         <div className="flex flex-col gap-1">
-          <Text.H5>
-            {hasActiveFilters
-              ? "This signal evaluates traces matching the filters below."
-              : "This signal evaluates every trace in your project."}
-          </Text.H5>
+          <Text.H5>Which sessions should be checked?</Text.H5>
           <Text.H6 color="foregroundMuted">
-            Add a filter to limit the evaluation to a subset — for example, only the `checkout` service.
+            {hasActiveFilters
+              ? "Only sessions matching these filters run through the evaluation. Everything else is ignored."
+              : "Right now, every session in your project runs through this evaluation. Add a filter to narrow it down — for example, only the `checkout` service, or a specific model."}
           </Text.H6>
         </div>
 
@@ -188,7 +188,7 @@ export function SignalScopeEditor({
 
         <div className="flex flex-col gap-2 border-t border-border pt-4">
           <div className="flex items-baseline justify-between">
-            <Text.H6 color="foregroundMuted">Sampling</Text.H6>
+            <Text.H5>How many of them?</Text.H5>
             <Text.H5M>{sampling}%</Text.H5M>
           </div>
           <Slider
@@ -200,8 +200,10 @@ export function SignalScopeEditor({
           />
           <Text.H6 color="foregroundMuted">
             {sampling === 0
-              ? "0% pauses this signal — no matching traces are evaluated."
-              : `Evaluates ${sampling}% of matching traces.`}
+              ? "0% pauses this signal — no sessions are checked."
+              : detectorKind === "rule"
+                ? "Conditions are free and instant, so checking 100% of matching sessions is usually right."
+                : "Each check sends the session to an LLM, which costs money and time. If you have a lot of traffic, sampling a share still surfaces the pattern at a fraction of the cost."}
           </Text.H6>
         </div>
       </div>
