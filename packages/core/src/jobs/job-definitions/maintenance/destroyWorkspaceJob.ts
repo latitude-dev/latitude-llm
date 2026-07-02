@@ -1,7 +1,6 @@
 import { Job } from 'bullmq'
 
 import { unsafelyFindWorkspace } from '../../../data-access/workspaces'
-import { Result } from '../../../lib/Result'
 import { destroyWorkspace } from '../../../services/workspaces/destroy'
 import { queues } from '../../queues'
 
@@ -32,6 +31,11 @@ export async function enqueueDestroyWorkspaceJob(workspaceId: number) {
 /**
  * Background job that permanently destroys a workspace and all associated data.
  * Delegates to the destroyWorkspace service for the actual deletion logic.
+ *
+ * Throws when the deletion fails so BullMQ retries the job and the failure is
+ * visible, instead of silently reporting a completed job with a swallowed
+ * `Result.error`. The deletion is idempotent, so retries resume where the
+ * previous attempt left off.
  */
 export const destroyWorkspaceJob = async (
   job: Job<DestroyWorkspaceJobData>,
@@ -39,9 +43,7 @@ export const destroyWorkspaceJob = async (
   const { workspaceId } = job.data
 
   const workspace = await unsafelyFindWorkspace(workspaceId)
-  if (!workspace) {
-    return Result.nil()
-  }
+  if (!workspace) return
 
-  return destroyWorkspace(workspace)
+  await destroyWorkspace(workspace).then((r) => r.unwrap())
 }

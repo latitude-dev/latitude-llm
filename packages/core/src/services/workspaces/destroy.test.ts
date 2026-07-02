@@ -1,10 +1,13 @@
 import { beforeEach, describe, expect, it } from 'vitest'
 
 import { faker } from '@faker-js/faker'
+import { eq } from 'drizzle-orm'
 import { LogSources, Providers } from '@latitude-data/constants'
 import { database } from '../../client'
 import { unsafelyFindWorkspace } from '../../data-access/workspaces'
+import Transaction from '../../lib/Transaction'
 import { events } from '../../schema/models/events'
+import { spans } from '../../schema/models/spans'
 import { documentLogs } from '../../schema/legacyModels/documentLogs'
 import { evaluationResults } from '../../schema/legacyModels/evaluationResults'
 import {
@@ -124,5 +127,125 @@ describe('destroyWorkspace', () => {
 
     expect(result.ok).toBe(true)
     expect(await unsafelyFindWorkspace(workspace.id)).toBeUndefined()
+  })
+
+  it('destroys a workspace whose data exceeds a single delete batch', async () => {
+    const provider = await createProviderApiKey({
+      workspace,
+      user,
+      name: 'provider',
+      type: Providers.OpenAI,
+    })
+    const { apiKey } = await createApiKey({
+      workspace,
+      name: faker.string.alpha(),
+    })
+
+    for (let i = 0; i < 5; i++) {
+      await createSpan({ workspaceId: workspace.id, apiKeyId: apiKey.id })
+
+      await database.insert(providerLogs).values({
+        uuid: faker.string.uuid(),
+        workspaceId: workspace.id,
+        providerId: provider.id,
+        apiKeyId: apiKey.id,
+        source: LogSources.API,
+      })
+
+      await database.insert(documentLogs).values({
+        uuid: faker.string.uuid(),
+        workspaceId: workspace.id,
+        documentUuid: faker.string.uuid(),
+        commitId: commit.id,
+        resolvedContent: 'content',
+        contentHash: 'hash',
+        parameters: {},
+        source: LogSources.API,
+      })
+
+      await database.insert(events).values({
+        workspaceId: workspace.id,
+        type: 'workspaceCreated',
+        data: {},
+      })
+    }
+
+    const result = await destroyWorkspace(workspace, new Transaction(), 2)
+
+    expect(result.ok).toBe(true)
+    expect(await unsafelyFindWorkspace(workspace.id)).toBeUndefined()
+    expect(
+      await database
+        .select()
+        .from(spans)
+        .where(eq(spans.workspaceId, workspace.id)),
+    ).toHaveLength(0)
+    expect(
+      await database
+        .select()
+        .from(providerLogs)
+        .where(eq(providerLogs.workspaceId, workspace.id)),
+    ).toHaveLength(0)
+  })
+
+  it('destroys a workspace with legacy logs missing workspace_id', async () => {
+    const provider = await createProviderApiKey({
+      workspace,
+      user,
+      name: 'provider',
+      type: Providers.OpenAI,
+    })
+    const { apiKey } = await createApiKey({
+      workspace,
+      name: faker.string.alpha(),
+    })
+
+    // Legacy provider_logs rows predate the workspace_id column, but still
+    // block deleting the workspace's provider/API keys (onDelete: 'restrict').
+    // They are only reachable through their provider.
+    const [orphanProviderLog] = await database
+      .insert(providerLogs)
+      .values({
+        uuid: faker.string.uuid(),
+        workspaceId: null,
+        providerId: provider.id,
+        apiKeyId: apiKey.id,
+        source: LogSources.API,
+      })
+      .returning()
+
+    // Legacy document_logs rows predate the workspace_id column, but still
+    // block the workspace cascade through commits (onDelete: 'restrict').
+    // They are only reachable through their commit.
+    const [orphanDocumentLog] = await database
+      .insert(documentLogs)
+      .values({
+        uuid: faker.string.uuid(),
+        workspaceId: null,
+        documentUuid: faker.string.uuid(),
+        commitId: commit.id,
+        resolvedContent: 'content',
+        contentHash: 'hash',
+        parameters: {},
+        source: LogSources.API,
+      })
+      .returning()
+
+    const result = await destroyWorkspace(workspace)
+
+    expect(result.ok).toBe(true)
+    expect(await unsafelyFindWorkspace(workspace.id)).toBeUndefined()
+    expect(
+      await database
+        .select()
+        .from(providerLogs)
+        .where(eq(providerLogs.id, orphanProviderLog!.id)),
+    ).toHaveLength(0)
+    expect(
+      await database
+        .select()
+        .from(documentLogs)
+        .where(eq(documentLogs.id, orphanDocumentLog!.id)),
+    ).toHaveLength(0)
   })
 })
