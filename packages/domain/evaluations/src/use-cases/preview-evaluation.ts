@@ -11,12 +11,19 @@ import {
   type RepositoryError,
   TraceId,
 } from "@domain/shared"
-import { SessionRepository, type SpanRepository, TraceRepository } from "@domain/spans"
+import {
+  type MessageEmbeddingRepository,
+  SessionRepository,
+  type SpanRepository,
+  TraceRepository,
+  type TraceSearchRepository,
+} from "@domain/spans"
 import { Effect } from "effect"
 import { z } from "zod"
 import { compileSettingsToScript, validateEvaluationScriptCompiles } from "../codegen/compile-settings-to-script.ts"
 import { loadScriptSessionContext } from "../runtime/load-session-context.ts"
 import { executeEvaluationScriptSandboxed } from "../runtime/sandbox-execution.ts"
+import { buildSemanticSimilarityHost } from "../runtime/semantic-similarity.ts"
 
 const PREVIEW_SAMPLE_LIMIT = 10
 const PREVIEW_CONCURRENCY = 5
@@ -126,7 +133,12 @@ export const previewEvaluationUseCase = (input: PreviewEvaluationInput) =>
             projectId: parsed.projectId,
             traceDetail,
           })
-          const execution = yield* executeEvaluationScriptSandboxed({ script, session: scriptSession })
+          const similarity = yield* buildSemanticSimilarityHost({
+            organizationId: parsed.organizationId,
+            projectId: parsed.projectId,
+            traceIds: scriptSession.traces.map((trace) => trace.id),
+          })
+          const execution = yield* executeEvaluationScriptSandboxed({ script, session: scriptSession, similarity })
           return {
             sessionId: session.sessionId,
             traceId,
@@ -158,5 +170,11 @@ export const previewEvaluationUseCase = (input: PreviewEvaluationInput) =>
   }).pipe(Effect.withSpan("evaluations.previewEvaluation")) as Effect.Effect<
     PreviewEvaluationResult,
     PreviewEvaluationError,
-    AI | ScriptRuntime | SessionRepository | SpanRepository | TraceRepository
+    | AI
+    | MessageEmbeddingRepository
+    | ScriptRuntime
+    | SessionRepository
+    | SpanRepository
+    | TraceRepository
+    | TraceSearchRepository
   >

@@ -29,7 +29,14 @@ import {
   type SqlClient,
   TraceId,
 } from "@domain/shared"
-import { type SessionRepository, type SpanRepository, type TraceDetail, TraceRepository } from "@domain/spans"
+import {
+  type MessageEmbeddingRepository,
+  type SessionRepository,
+  type SpanRepository,
+  type TraceDetail,
+  TraceRepository,
+  type TraceSearchRepository,
+} from "@domain/spans"
 import { Cause, Effect, Exit } from "effect"
 import type { Evaluation } from "../../entities/evaluation.ts"
 import { getLiveEvaluationEligibility } from "../../helpers.ts"
@@ -248,6 +255,8 @@ export const runLiveEvaluationUseCase = (input: RunLiveEvaluationInput) =>
 
     const executionStartedAt = performance.now()
     const execution = yield* executeLiveEvaluationUseCase({
+      organizationId: input.organizationId,
+      projectId: input.projectId,
       evaluationId: evaluation.id,
       script: evaluation.script,
       session,
@@ -412,6 +421,7 @@ export const runLiveEvaluationUseCase = (input: RunLiveEvaluationInput) =>
     | DetectorHealthTracker
     | EvaluationSignalRepository
     | EvaluationRepository
+    | MessageEmbeddingRepository
     | OutboxEventWriter
     | ScoreAnalyticsRepository
     | ScoreRepository
@@ -422,6 +432,7 @@ export const runLiveEvaluationUseCase = (input: RunLiveEvaluationInput) =>
     | SqlClient
     | StripeSubscriptionLookup
     | TraceRepository
+    | TraceSearchRepository
     | BillingOverrideRepository
     | BillingSpendReservation
   >

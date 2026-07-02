@@ -11,8 +11,22 @@ import {
   SpanId,
   TraceId,
 } from "@domain/shared"
-import { type Session, SessionRepository, SpanRepository, type TraceDetail, TraceRepository } from "@domain/spans"
-import { createFakeSessionRepository, createFakeSpanRepository, createFakeTraceRepository } from "@domain/spans/testing"
+import {
+  MessageEmbeddingRepository,
+  type Session,
+  SessionRepository,
+  SpanRepository,
+  type TraceDetail,
+  TraceRepository,
+  TraceSearchRepository,
+} from "@domain/spans"
+import {
+  createFakeMessageEmbeddingRepository,
+  createFakeSessionRepository,
+  createFakeSpanRepository,
+  createFakeTraceRepository,
+  createFakeTraceSearchRepository,
+} from "@domain/spans/testing"
 import { Effect, Layer } from "effect"
 import { describe, expect, it } from "vitest"
 import { previewEvaluationUseCase } from "./preview-evaluation.ts"
@@ -116,6 +130,8 @@ const buildLayer = (input: {
         findByTraceId: ({ traceId }) => Effect.succeed(makeTraceDetail(traceId as string, "session")),
       }).repository,
     ),
+    Layer.succeed(MessageEmbeddingRepository, createFakeMessageEmbeddingRepository().repository),
+    Layer.succeed(TraceSearchRepository, createFakeTraceSearchRepository().repository),
     createFakeAI().layer,
     input.scriptRuntimeLayer ?? createFakeScriptRuntime().layer,
   )

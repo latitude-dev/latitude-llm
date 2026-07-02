@@ -2,7 +2,7 @@ import { type RunLiveEvaluationResult, runLiveEvaluationUseCase } from "@domain/
 import type { QueueConsumer } from "@domain/queue"
 import type { EvaluationScore } from "@domain/scores"
 import { OrganizationId } from "@domain/shared"
-import { AIGenerateLive, withAi } from "@platform/ai"
+import { AIEmbedLive, AIGenerateLive, withAi } from "@platform/ai"
 import {
   RedisBillingSpendReservationLive,
   type RedisClient,
@@ -10,10 +10,12 @@ import {
 } from "@platform/cache-redis"
 import {
   type ClickHouseClient,
+  MessageEmbeddingRepositoryLive,
   ScoreAnalyticsRepositoryLive,
   SessionRepositoryLive,
   SpanRepositoryLive,
   TraceRepositoryLive,
+  TraceSearchRepositoryLive,
   withClickHouse,
 } from "@platform/db-clickhouse"
 import {
@@ -139,7 +141,8 @@ export const createLiveEvaluationsWorker = ({
   const chClient = clickhouseClient
   const rdClient = redisClient
   const liveEvaluationsLogger = injectedLogger ?? logger
-  const withDefaultAi = <A, E, R>(effect: Effect.Effect<A, E, R>) => effect.pipe(withAi(AIGenerateLive, rdClient))
+  const withDefaultAi = <A, E, R>(effect: Effect.Effect<A, E, R>) =>
+    effect.pipe(withAi(Layer.mergeAll(AIGenerateLive, AIEmbedLive), rdClient))
   const executeLiveEvaluation = runLiveEvaluation ?? runLiveEvaluationUseCase
   const executeEffect = (payload: ExecutePayload) => {
     const baseEffect = executeLiveEvaluation(payload).pipe(
@@ -163,7 +166,14 @@ export const createLiveEvaluationsWorker = ({
       Effect.provide(RedisBillingSpendReservationLive(rdClient)),
       Effect.provide(RedisDetectorHealthTrackerLive(rdClient)),
       withClickHouse(
-        Layer.mergeAll(ScoreAnalyticsRepositoryLive, TraceRepositoryLive, SessionRepositoryLive, SpanRepositoryLive),
+        Layer.mergeAll(
+          ScoreAnalyticsRepositoryLive,
+          TraceRepositoryLive,
+          SessionRepositoryLive,
+          SpanRepositoryLive,
+          MessageEmbeddingRepositoryLive,
+          TraceSearchRepositoryLive,
+        ),
         chClient,
         OrganizationId(payload.organizationId),
       ),

@@ -48,6 +48,12 @@ export interface TraceMessageOccurrenceRow {
   readonly retentionDays?: number
 }
 
+/** The latest content hash + role at a trace message position (deduped by `indexed_at`). */
+export interface TraceMessageOccurrenceContent {
+  readonly contentHash: string
+  readonly role: MessageEmbeddingRole
+}
+
 /**
  * Repository port for trace search indexing operations.
  *
@@ -76,6 +82,18 @@ export interface TraceSearchRepositoryShape {
    * later content at the same trace_id + message_index replaces older hashes.
    */
   upsertMessageOccurrences(rows: readonly TraceMessageOccurrenceRow[]): Effect.Effect<void, RepositoryError>
+
+  /**
+   * List the (deduped) content hashes + roles for a session's traces. Filtered
+   * by `trace_id` to hit the occurrences sort key. Backs the semantic-similarity
+   * host (mapping session messages → shared embeddings) and the readiness signal
+   * that embeddings have been indexed; an empty result means "not yet indexed".
+   */
+  listMessageOccurrencesForTraces(args: {
+    readonly organizationId: OrganizationId
+    readonly projectId: ProjectId
+    readonly traceIds: readonly TraceId[]
+  }): Effect.Effect<readonly TraceMessageOccurrenceContent[], RepositoryError>
 
   /**
    * Check if a chunk row exists for this trace at this chunk_index with the

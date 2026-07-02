@@ -36,8 +36,21 @@ import {
   TraceId,
 } from "@domain/shared"
 import { createFakeSqlClient } from "@domain/shared/testing"
-import { SessionRepository, SpanRepository, type TraceDetail, TraceRepository } from "@domain/spans"
-import { createFakeSessionRepository, createFakeSpanRepository, createFakeTraceRepository } from "@domain/spans/testing"
+import {
+  MessageEmbeddingRepository,
+  SessionRepository,
+  SpanRepository,
+  type TraceDetail,
+  TraceRepository,
+  TraceSearchRepository,
+} from "@domain/spans"
+import {
+  createFakeMessageEmbeddingRepository,
+  createFakeSessionRepository,
+  createFakeSpanRepository,
+  createFakeTraceRepository,
+  createFakeTraceSearchRepository,
+} from "@domain/spans/testing"
 import { Effect, Layer } from "effect"
 import { describe, expect, it } from "vitest"
 import {
@@ -256,6 +269,7 @@ function createUseCaseLayer(input: {
   | DetectorHealthTracker
   | EvaluationSignalRepository
   | EvaluationRepository
+  | MessageEmbeddingRepository
   | ScoreAnalyticsRepository
   | OutboxEventWriter
   | ScoreRepository
@@ -265,7 +279,8 @@ function createUseCaseLayer(input: {
   | SpanRepository
   | SqlClient
   | StripeSubscriptionLookup
-  | TraceRepository,
+  | TraceRepository
+  | TraceSearchRepository,
   never,
   never
 > {
@@ -273,6 +288,8 @@ function createUseCaseLayer(input: {
     Layer.succeed(TraceRepository, input.traceRepository),
     Layer.succeed(SessionRepository, createFakeSessionRepository().repository),
     Layer.succeed(SpanRepository, createFakeSpanRepository().repository),
+    Layer.succeed(MessageEmbeddingRepository, createFakeMessageEmbeddingRepository().repository),
+    Layer.succeed(TraceSearchRepository, createFakeTraceSearchRepository().repository),
     Layer.succeed(EvaluationRepository, input.evaluationRepository),
     input.scoreWriteLayer ?? createScoreWriteLayer({ scoreRepository: input.scoreRepository }),
     Layer.succeed(
