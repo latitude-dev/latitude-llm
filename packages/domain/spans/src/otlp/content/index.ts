@@ -10,6 +10,7 @@ import { parseJsonValue } from "./json-value.ts"
 import { parseLiveKit } from "./livekit.ts"
 import { parseOpenInference } from "./openinference.ts"
 import { parseVercel } from "./vercel.ts"
+import { parseVoice } from "./voice.ts"
 
 export interface ParsedContent {
   readonly inputMessages: readonly GenAIMessage[]
@@ -83,6 +84,19 @@ const PARSERS: readonly ContentParser[] = [
   {
     canHandle: (attrs) => hasKey(attrs, "input.value") || hasKey(attrs, "output.value"),
     parse: parseJsonValue,
+  },
+  {
+    canHandle: (attrs) =>
+      hasKey(attrs, "gen_ai.input.text") ||
+      hasKey(attrs, "gen_ai.output.text") ||
+      hasKey(attrs, "lk.user_transcript") ||
+      hasKey(attrs, "lk.input_text") ||
+      hasKeyPrefix(attrs, "gen_ai.input.audio") ||
+      hasKeyPrefix(attrs, "gen_ai.output.audio") ||
+      hasKeyPrefix(attrs, "voice.input.") ||
+      hasKeyPrefix(attrs, "voice.output.") ||
+      hasKeyPrefix(attrs, "latitude.audio."),
+    parse: parseVoice,
   },
 ]
 

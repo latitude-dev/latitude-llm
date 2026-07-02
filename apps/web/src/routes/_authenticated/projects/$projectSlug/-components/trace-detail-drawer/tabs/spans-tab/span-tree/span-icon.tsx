@@ -15,6 +15,8 @@ import {
   SearchIcon,
   ShieldCheckIcon,
   SparklesIcon,
+  MicIcon,
+  Volume2Icon,
   WorkflowIcon,
   WrenchIcon,
 } from "lucide-react"
@@ -37,6 +39,8 @@ const OPERATION_ICON: Record<string, React.ComponentType<LucideProps>> = {
   retrieval: SearchIcon,
   guardrail: ShieldCheckIcon,
   evaluator: ScaleIcon,
+  transcribe: MicIcon,
+  speech: Volume2Icon,
 } satisfies Record<Exclude<Operation, "unspecified" | (string & {})>, React.ComponentType<LucideProps>>
 
 export function SpanIcon({ span }: { readonly span: SpanRecord }) {

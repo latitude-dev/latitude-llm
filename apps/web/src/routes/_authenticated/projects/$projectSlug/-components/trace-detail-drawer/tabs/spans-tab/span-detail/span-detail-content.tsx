@@ -6,6 +6,7 @@ import { formatDuration } from "../span-tree/tree-utils.ts"
 import { mergeAttributes, StatusBadge } from "./helpers.tsx"
 import { IdentifiersSection } from "./identifiers-section.tsx"
 import { LlmSections } from "./llm-sections.tsx"
+import { isVoiceSpan, VoiceSpanSection } from "./voice-span-section.tsx"
 import { OperationalMetadataSection } from "./operational-metadata-section.tsx"
 import { RawTelemetrySections } from "./raw-telemetry-sections.tsx"
 import { isToolExecutionSpan, ToolExecutionSection } from "./tool-execution-section.tsx"
@@ -88,14 +89,16 @@ export function SpanDetailContent({ span }: { readonly span: SpanDetailRecord })
   )
   const mergedAttrs = useMemo(() => mergeAttributes(span), [span])
 
+  const isVoiceSpanDetail = useMemo(() => isVoiceSpan(span), [span])
   const isLlmSpan = useMemo(
     () =>
-      span.systemInstructions.length > 0 ||
-      span.inputMessages.length > 0 ||
-      span.outputMessages.length > 0 ||
-      span.toolDefinitions.length > 0 ||
-      hasAnyUsage(span),
-    [span],
+      !isVoiceSpanDetail &&
+      (span.systemInstructions.length > 0 ||
+        span.inputMessages.length > 0 ||
+        span.outputMessages.length > 0 ||
+        span.toolDefinitions.length > 0 ||
+        hasAnyUsage(span)),
+    [span, isVoiceSpanDetail],
   )
   const isToolSpan = useMemo(() => isToolExecutionSpan(span), [span])
 
@@ -136,6 +139,9 @@ export function SpanDetailContent({ span }: { readonly span: SpanDetailRecord })
 
       {/* ── User context: tags + metadata ── */}
       <UserContextSection span={span} />
+
+      {/* ── Voice (STT/TTS) ── */}
+      {isVoiceSpanDetail && <VoiceSpanSection span={span} />}
 
       {/* ── LLM content ── */}
       {isLlmSpan && <LlmSections span={span} />}
