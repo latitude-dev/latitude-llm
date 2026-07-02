@@ -23,6 +23,7 @@ The contract should stay aligned with the proposal:
 - `Passed(score?, feedback)` and `Failed(score?, feedback)` always require feedback
 - if present, the score value is passed before the feedback
 - `llm(prompt, { schema })` requires a schema on every call; remaining options are host-approved only
+- `semanticSimilarity(query)` returns `Promise<number>` in `[0,1]` — the max cosine between `query` and any embedded message in the current session (0 when the session has no embeddings). It reuses ingest-time `message_embeddings` (never re-embeds the session) and embeds the query at most once per distinct string; org/project/session come from the host closure, never the argument
 - `parse(value, schema)` validates an unknown value against a schema
 - the stored script body evaluates a conversation and returns a `Score`
 - `z` is available inside the host-controlled runtime for building schemas
@@ -112,9 +113,9 @@ type EvaluationSettings =
     }
 ```
 
-`rule` conditions are deterministic checks over the `session` object. Supported condition types include `text_match`, `empty_output`, `output_length`, `json_output`, `metric` (with `session` / `anyTrace` / `allTraces` aggregation), `tool_used`, `tool_failed`, `tool_call_count`, `error`, and `finish_reason`. Metric values use base units (`duration` ns, `cost` microcents, counts otherwise). Invalid regex patterns are rejected at settings parse time so codegen does not emit scripts that throw on every trace.
+`rule` conditions are deterministic checks over the `session` object. Supported condition types include `text_match`, `empty_output`, `output_length`, `json_output`, `metric` (with `session` / `anyTrace` / `allTraces` aggregation), `tool_used`, `tool_failed`, `tool_call_count`, `error`, `finish_reason`, and `semantic_similarity`. Metric values use base units (`duration` ns, `cost` microcents, counts otherwise). Invalid regex patterns are rejected at settings parse time so codegen does not emit scripts that throw on every trace.
 
-Semantic-similarity rule conditions remain a future extension.
+`semantic_similarity` (`{ query, operator, threshold }`) is the one non-pure rule condition: it compiles to `(await semanticSimilarity(query)) OP threshold`, which makes the compiled script an `embedding`-capability run routed through the `semanticSimilarity()` host verb (see the sandbox contract above). The builder exposes named presets (Broad/Balanced/Strict → `SEMANTIC_SIMILARITY_PRESETS`) mapped to the stored `threshold`. Because embeddings land after the `signals:match` trigger fires, embedding-capability live evaluations pass through a bounded readiness gate (a delayed re-publish that waits for the trace's message occurrences to be indexed; on the final attempt the run proceeds and the host returns 0 for whatever's still missing).
 
 `compileSettingsToScript` (in `@domain/evaluations`, not `@domain/sandbox` — sandbox is the lower-level runtime contract and must not depend on the judge template) turns settings into a script. The judge form reuses the single-sourced baseline judge wrapper (`generateJudgePromptText` + `wrapPromptAsEvaluationScript`), so a settings-authored judge is the same shape as a discovered one and `llm()` capability detection holds. `validateEvaluationScriptCompiles` compiles the result in the QuickJS sandbox and surfaces a `ScriptCompileError` (HTTP 422) for an invalid script. `createEvaluationUseCase` ties these together: compile/validate → stamp `script_hash` → detect capability → persist unaligned.
 

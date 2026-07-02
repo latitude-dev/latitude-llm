@@ -286,8 +286,8 @@ type Condition =
   | { type: "tool_call_count"; operator: "gt" | "gte" | "lt" | "lte"; value: number }
   | { type: "error" }
   | { type: "finish_reason"; value: string }   // provider-specific free string ("stop", "tool_calls", "length", …)
-// R3 adds: { type: "semantic_similarity"; scope: MessageScope; anchor: string; threshold: number }
-// — the condition + its sandbox execution model (open design). Moments/flagger consolidation is out of scope.
+  | { type: "semantic_similarity"; query: string; operator: ComparisonOperator; threshold: number }  // R3 — max cosine vs `query` over the session, via the `semanticSimilarity()` host verb reusing ingest embeddings
+// Moments/flagger consolidation is out of scope.
 
 // CHANGED (@domain/scores): renames SCORE_SOURCES `source`→`source_type` and splits annotation→flagger/user.
 // `evaluation` is KEPT (a signal's detector is an evaluation), so existing evaluation-sourced scores need
@@ -663,18 +663,22 @@ The builder UI shipped (and expanded — it absorbs the former judge-builder pha
 
 **Exit gate:** ✅ a user describes an eval and gets a working raw script (shipped); ⏳ GEPA can produce and improve deterministic, judge, and hybrid scripts that read the `session` payload, each validated by compile + alignment scoring (open).
 
-### R3 — Semantic similarity for rule evals `[FUTURE]`
+### R3 — Semantic similarity for rule evals `[IN PROGRESS]`
 
-A `semantic_similarity` rule condition (`{ scope, anchor, threshold }`) plus the runtime mechanism to evaluate it on the QuickJS sandbox, surfaced in the builder's Rules tab. **Deps:** R1.
+A `semantic_similarity` rule condition (`{ query, operator, threshold }`) plus a `semanticSimilarity(query)` sandbox verb, surfaced in the builder's Rules tab. **Deps:** R1.
 
-**The execution mechanism is open design** — the previously-sketched approaches are candidates, *not* decisions, and likely need rethinking:
-- *On-demand `similarity(a, b)` host fn* (embed both strings per run, metered like `llm()`): simplest, but an embedding call per evaluation per trace — likely too costly at volume.
-- *Native batch-runner* (one pass over a trace's precomputed chunk embeddings against all anchors): cheaper, but those embeddings exist only at the later `trace_search_embeddings` hop, so it needs an embeddings-ready execution lane and a `specs/sandbox-runtime.md` change.
+**The execution model is decided** — it reuses ingest-time embeddings and embeds *only the query*, at most once per distinct string:
+- **Never re-embed the session.** Trace messages are already embedded at ingest (`trace-search` → `message_embeddings`, voyage-4-large, content-addressed and deduped project-wide). The runtime reads those vectors via `trace_message_occurrences` (`trace → content_hash`) → `MessageEmbeddingRepository.findByHashes`. When a session has no embeddings, `semanticSimilarity` returns **0** (the lowest score) — never a skip.
+- **Query embedded once, ever.** The query is content-addressed in `message_embeddings` (embedded as `document`, like the stored messages, so cosine is apples-to-apples). Embed-on-miss only for a never-seen string; every later run reuses it.
+- **Host verb, not a DB handle.** One narrow, parameterized, host-scoped `semanticSimilarity(query)` verb (`Promise<number>` = max cosine over the session), on the same trust model as `llm()`. It composes with `Passed`/`Failed`/`Score`; the `rule` condition compiles to a binary `Passed(1)`/`Failed(0)` via `(await semanticSimilarity(query)) OP threshold`.
+- **Readiness gate.** Embedding-capable evals run after embedding: a bounded delayed re-publish waits for occurrences to appear; on the last attempt the run proceeds and the host returns 0 for whatever's still missing.
+- **Threshold UX.** Named presets (Broad/Balanced/Strict → calibrated cosines) are the primary knob; raw slider/operator sit behind "advanced". Calibration is the builder's live Test-step preview.
 
-- [ ] **Design** the sandbox execution model for semantic similarity (host fn vs. batch lane vs. other) — cost, latency, and where in the pipeline it runs.
-- [ ] **Implement** the chosen mechanism + the `semantic_similarity` rule condition (contract, codegen, capability detection) and surface it in the builder's Rules tab.
+- [x] **Design** the sandbox execution model (reuse ingest embeddings; `semanticSimilarity(query)` host verb; embed the query once).
+- [x] **Implement** the `semantic_similarity` rule condition (contract, codegen, capability detection), the host verb + read path, the readiness gate, and the builder Rules-tab surface.
+- [ ] **Calibrate** `SEMANTIC_SIMILARITY_PRESETS` against voyage-4-large.
 
-**Exit gate:** a rule can match on semantic similarity to an anchor, with an execution model that holds at production volume.
+**Exit gate:** a rule can match on semantic similarity to a query, embedding zero session messages and the query at most once, at production volume.
 
 ### R4 — Agentic signal creation `[FUTURE]`
 

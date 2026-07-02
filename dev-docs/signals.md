@@ -138,6 +138,8 @@ Tell auto-generated from hand-built by `origin`, never by the presence of an eva
 
 A `user` signal **must** have an evaluation. `createSignal` accepts `evaluation.settings` (a declarative form, compiled to a script — `kind: "judge"` is the first) **or** `evaluation.script` (raw, advanced). The script is validated in the QuickJS sandbox at save time (`ScriptCompileError` → HTTP 422). The evaluation collects forward only: from creation onward it scores new incoming traces through the normal `signals:match` → `live-evaluations:execute` path — there is no historical backfill. See [`dev-docs/evaluations.md`](evaluations.md) for `settings`/`script_hash`/active-detector details.
 
+`rule` settings support a `semantic_similarity` condition ("is this conversation about frustration?") backed by the `semanticSimilarity(query)` sandbox verb, which reuses the trace's ingest-time `message_embeddings` and embeds only the query (once per distinct string). Such evaluations pass through a readiness gate on the `live-evaluations:execute` path so they run after embeddings are indexed; see [`dev-docs/evaluations.md`](evaluations.md).
+
 Lifecycle:
 
 - **Update** (`updateSignalUseCase`) edits `name`/`description`/`filters`; filter changes apply forward-only and the slug is stable. Triage (priority/assignee) and resolve/ignore keep their own use-cases.

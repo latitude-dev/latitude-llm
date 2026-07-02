@@ -8347,6 +8347,41 @@
                                     "value"
                                   ],
                                   "additionalProperties": false
+                                },
+                                {
+                                  "type": "object",
+                                  "properties": {
+                                    "type": {
+                                      "type": "string",
+                                      "const": "semantic_similarity"
+                                    },
+                                    "query": {
+                                      "type": "string",
+                                      "minLength": 1
+                                    },
+                                    "operator": {
+                                      "default": "gte",
+                                      "type": "string",
+                                      "enum": [
+                                        "gt",
+                                        "gte",
+                                        "lt",
+                                        "lte"
+                                      ]
+                                    },
+                                    "threshold": {
+                                      "type": "number",
+                                      "minimum": 0,
+                                      "maximum": 1
+                                    }
+                                  },
+                                  "required": [
+                                    "type",
+                                    "query",
+                                    "operator",
+                                    "threshold"
+                                  ],
+                                  "additionalProperties": false
                                 }
                               ]
                             }
