@@ -8,71 +8,51 @@
 
 ## Contents
 
-1. [Design decisions](#design-decisions)
-2. [Architecture](#architecture)
-3. [Limits and defaults](#limits-and-defaults)
-4. [UI flow](#ui-flow)
-5. [Implementation phases](#implementation-phases)
-6. [Source adapter interface](#source-adapter-interface)
-7. [MVP scope cuts](#mvp-scope-cuts)
-8. [Appendix: source mapping notes](#appendix-source-mapping-notes)
+1. [Purpose](#purpose)
+2. [Summary](#summary)
+3. [Architecture](#architecture)
+4. [Limits and defaults](#limits-and-defaults)
+5. [UI flow](#ui-flow)
+6. [Implementation phases](#implementation-phases)
+7. [Source adapter interface](#source-adapter-interface)
+8. [Non-goals](#non-goals)
+9. [Appendix: source mapping notes](#appendix-source-mapping-notes)
 
 ---
 
-## Design decisions
+## Purpose
 
-The first draft of this spec prioritized CLI/backoffice and deferred the UI. This revision reflects the product requirement: a **self-serve project settings wizard** with bounded, scalable imports from **all three** source platforms through **one engine**.
+Customers evaluating or leaving Langfuse, LangSmith, or Braintrust need to migrate **historical** observability data into Latitude. Forward ingestion already works: Latitude's OTLP pipeline resolves vendor session/user/tag/metadata attributes on live spans. This spec defines a self-serve **Observability imports** feature in project settings that backfills traces and spans from those platforms.
 
-### Misaligned with UI-first requirement
+Constraints:
 
-- It makes the MVP **CLI-first** (`latitude migrate import ...`) and **staff/backoffice assisted**, with the self-serve UI deferred to Phase 4.
-- It treats credentials as local CLI inputs or staff-operated secrets instead of defining a project-settings flow with encrypted credentials, dry-run preview, confirmation, progress, cancellation, and completion.
-- It does not reference the current project settings structure:
-  - settings nav lives in `apps/web/src/domains/projects/project-sections.ts`;
-  - settings pages use `SettingsPage` under `apps/web/src/routes/_authenticated/projects/$projectSlug/settings/-components/`;
-  - project settings server functions live under `apps/web/src/domains/*/*.functions.ts`.
+- Historical imports respect org/project tenancy, retention, and billing.
+- Imports are **idempotent** and **resumable**.
+- Some vendor fields have no Latitude equivalent; degraded import behavior is defined explicitly.
+- Latitude has **no prompt registry** entity; prompt references land in span metadata only.
 
-### Too many ingestion paths
+---
 
-- It recommends a hybrid of API pull, vendor blob export, self-host DB access, CLI, and backoffice. That is too much for a self-serve MVP.
-- It implies three source-specific migration tracks. The simpler shape is **one import engine** with source adapters for Langfuse, LangSmith, and Braintrust.
-- It discusses OTLP HTTP as an optional write path. Historical imports should not round-trip through public OTLP HTTP; they should normalize to Latitude span rows and write through the same ClickHouse repository boundary used after ingestion transforms.
+## Summary
 
-### Limits are not concrete enough
-
-- It warns that large backfills are dangerous, but does not define user-visible defaults or hard caps.
-- It does not define:
-  - default lookback window;
-  - hard self-serve lookback cap;
-  - max spans per import;
-  - max active imports per org;
-  - worker concurrency;
-  - source API rate limits;
-  - dry-run preview cap;
-  - cancellation and credential retention behavior.
-- It risks a user selecting "all history" against years of data and tying up workers or source APIs for days.
-
-### Scale and tenancy are under-specified
-
-- It says imports must be idempotent/resumable, but does not define the queue granularity. A single BullMQ job must not run for hours. The engine should process one bounded page/window per job, persist cursor/stats, then re-enqueue the next page.
-- It does not define an org-level concurrency guard. Multi-tenant imports need a hard **one active import per organization** default.
-- It does not specify how progress is stored for the UI. Users need stable PG-backed state, not worker logs.
-- It does not distinguish imported historical telemetry from live ingest for billing and live-evaluation fan-out.
-
-### Scope is too broad for a minimal MVP
-
-- Scores, datasets, prompt registries, media attachments, source DB access, Parquet/blob paths, and continuous sync are valuable later but distract from the user requirement: self-serve historical span import.
-- The previous phase order ships Langfuse first and LangSmith/Braintrust later. The user requirement is to support **all three source platforms** behind one UX and one engine.
+| Decision | Choice |
+| --- | --- |
+| Product surface | Self-serve wizard in project settings (`/projects/$slug/settings/imports`) |
+| Source platforms | Langfuse, LangSmith, Braintrust — one engine, three adapters |
+| MVP entities | Traces, spans, session identity, user identity, tags, metadata, messages, usage, cost |
+| Write path | Internal `SpanRepository.insert` — not OTLP HTTP |
+| Queue model | BullMQ page chain: one bounded source page per job, cursor in Postgres |
+| Session boundaries | Import as-is — preserve source `session_id` |
+| Id mapping | Deterministic `trace_id` / `span_id` from source ids; re-runs dedupe via ReplacingMergeTree |
+| Billing | Imported spans are not billable by default; no live evaluation fan-out |
 
 ---
 
 ## Architecture
 
-### Recommendation
-
 Build one self-serve **Observability imports** feature in project settings.
 
-The MVP imports **traces/spans/sessions identity, user identity, tags, metadata, messages, usage, and cost** from Langfuse, LangSmith, and Braintrust. It does not import scores, datasets, prompts, media, or continuous sync.
+The MVP imports **traces/spans/sessions identity, user identity, tags, metadata, messages, usage, and cost** from Langfuse, LangSmith, and Braintrust. Scores, datasets, prompts, media, and continuous sync are out of scope (see [Non-goals](#non-goals)).
 
 The implementation is one queue-driven import engine:
 
@@ -116,16 +96,15 @@ flowchart TD
   DONE --> W
 ```
 
-### Why this is the simplest architecture
+### Existing patterns to reuse
 
-It reuses existing Latitude rails instead of adding a migration subsystem:
-
-- **Project settings UI:** follow the data-destinations settings shape under `apps/web/src/routes/_authenticated/projects/$projectSlug/settings/`.
-- **Server functions:** follow `apps/web/src/domains/destinations/destinations.functions.ts` for org-scoped `createServerFn`, Zod validation, RLS-backed Postgres access, and queue publication.
-- **Queue registry:** add one topic to `packages/domain/queue/src/topic-registry.ts`, then subscribe in `apps/workers/src/workers/observability-imports.ts`.
-- **Worker shape:** mirror `apps/workers/src/workers/span-ingestion.ts` for Effect layers, tracing, ClickHouse/Postgres clients, and bounded concurrency.
-- **Bounded historical processing:** mirror the data-destinations backfill idea from `dev-docs/data-destinations.md`: one low-priority lane, one page/window at a time, cursor advances only after the page writes.
-- **ClickHouse writes:** reuse `SpanRepository.insert` and the existing `spans` table. Do not write `traces` or `sessions`; materialized views rebuild from spans.
+- **Project settings UI:** data-destinations settings shape under `apps/web/src/routes/_authenticated/projects/$projectSlug/settings/`.
+- **Server functions:** `apps/web/src/domains/destinations/destinations.functions.ts` — org-scoped `createServerFn`, Zod validation, RLS-backed Postgres, queue publication.
+- **Settings nav:** `apps/web/src/domains/projects/project-sections.ts`; page shell via `SettingsPage` in `settings/-components/`.
+- **Queue registry:** one topic in `packages/domain/queue/src/topic-registry.ts`, worker in `apps/workers/src/workers/observability-imports.ts`.
+- **Worker shape:** mirror `apps/workers/src/workers/span-ingestion.ts` for Effect layers, tracing, and bounded concurrency.
+- **Bounded backfill:** mirror data-destinations backfill from `dev-docs/data-destinations.md` — one page at a time, cursor advances only after the page writes.
+- **ClickHouse writes:** `SpanRepository.insert` on the `spans` table; do not write `traces` or `sessions` directly.
 
 ### Data model
 
@@ -217,7 +196,7 @@ Worker:
   8. Re-enqueues `fetchPage` when the adapter reports more data and caps are not reached.
   9. Marks terminal state when done/capped/cancelled/failed.
 
-No Temporal workflow is needed. A self-advancing BullMQ page chain is enough and matches data-destinations backfill.
+No Temporal workflow — a self-advancing BullMQ page chain matches the data-destinations backfill model.
 
 ### Imported span policy
 
@@ -289,8 +268,6 @@ If a user asks for more than the hard cap:
 ---
 
 ## UI flow
-
-Surface: project settings, not CLI and not backoffice.
 
 Add a settings item in `apps/web/src/domains/projects/project-sections.ts`:
 
@@ -400,18 +377,13 @@ Each phase is PR-sized. The MVP is complete after Phase 4: UI wizard, queue engi
 
 > **Status legend:** `[ ] pending`, `[~] in progress`, `[x] complete`
 
-### Phase 0 - Spec refinement
+### Phase 0 — Spec (LAT-721)
 
-- [x] Replace the old CLI/backoffice-first plan with a UI-first, bounded, queue-based import plan.
-- [x] Define concrete limits/defaults.
-- [x] Define one adapter interface for Langfuse, LangSmith, and Braintrust.
-- [x] Define PR-sized implementation phases.
+- [x] `specs/observability-migration.md`
 
-**Exit gate:**
+**Exit gate:** Spec merged; implementation follows phases below.
 
-- This spec is merged and becomes the implementation reference for LAT-721.
-
-### Phase 1 - Domain model, schemas, and settings route shell
+### Phase 1 — Domain model, schemas, and settings route shell
 
 - [ ] Create `packages/domain/observability-imports/`.
   - Entities:
@@ -701,55 +673,35 @@ Adapter constraints:
 
 ---
 
-## MVP scope cuts
+## Non-goals
 
-Cut these from the MVP:
+MVP excludes:
 
-1. **CLI-first implementation**
-   - No `latitude migrate import ...` in MVP.
-   - CLI can be a post-MVP wrapper around the same server-side APIs if needed.
+1. **CLI import command** — no `latitude migrate import …`; a CLI wrapper over the same APIs may follow post-MVP.
 
-2. **Staff-only backoffice migration**
-   - No backoffice trigger/status UI in MVP.
-   - Operators can inspect PG rows, worker logs, and metrics.
+2. **Backoffice migration UI** — operators use PG rows, worker logs, and metrics.
 
-3. **Separate pipelines per source**
-   - Do not build Langfuse/LangSmith/Braintrust-specific engines.
-   - Build one engine and three adapters.
+3. **Separate pipelines per source** — one engine, three adapters.
 
-4. **Vendor blob/Parquet/self-host DB import**
-   - Defer to post-MVP enterprise scale.
-   - The self-serve MVP uses source APIs with hard caps.
+4. **Vendor blob/Parquet/self-host DB import** — post-MVP enterprise scale; self-serve MVP uses source APIs with hard caps.
 
-5. **Scores, annotations, datasets, prompt registries**
-   - Import spans/traces/sessions identity first.
-   - Vendor scores and datasets require separate domain decisions and should not block historical observability import.
+5. **Scores, annotations, datasets, prompt registries** — span import first; vendor scores and datasets need separate domain work.
 
-6. **Binary media/attachments**
-   - Store source URLs/metadata only if already present in span metadata.
-   - Do not pull media files in MVP.
+6. **Binary media/attachments** — store source URLs in metadata only if already present; no binary pull.
 
-7. **Continuous sync / dual-write**
-   - This feature is a historical backfill job, not an ongoing integration.
-   - Live data should keep flowing through OTLP instrumentation.
+7. **Continuous sync / dual-write** — historical backfill only; live data flows through OTLP.
 
-8. **Temporal workflow**
-   - BullMQ page-chain is sufficient and simpler.
-   - No durable multi-step workflow versioning burden.
+8. **Temporal workflow** — BullMQ page chain is sufficient.
 
-9. **Unbounded "all history"**
-   - UI may say "as far back as selected limits allow", never "all history".
-   - The backend enforces 365 days and 1M spans hard caps.
+9. **Unbounded history** — UI never offers "all history"; backend enforces 365-day and 1M-span caps.
 
-10. **Publishing normal live-ingest fan-out for every imported trace**
-    - Avoid billing and live evaluation/flagger scans for historical imports.
-    - Add import-specific downstream refresh only if product requires it.
+10. **Live-ingest fan-out for imported traces** — no billing or evaluation/flagger scans on historical imports unless a dedicated refresh task is added later.
 
 ---
 
 ## Appendix: source mapping notes
 
-The prior spec's source research remains useful as adapter implementation guidance. Keep these details in adapter tests and docs, but do not let them expand the MVP surface.
+Adapter implementation reference for Langfuse, LangSmith, and Braintrust normalizers.
 
 ### Latitude target model
 
