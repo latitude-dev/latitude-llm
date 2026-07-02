@@ -11,41 +11,58 @@ import {
   useUpdateSignalEvaluation,
 } from "../../../../../../../domains/signals/signals.collection.ts"
 import { toUserMessage } from "../../../../../../../lib/errors.ts"
+import { AdvancedDetectorEditor } from "./advanced-detector-editor.tsx"
 import { isConditionValid } from "./condition-meta.tsx"
+import { DETECTOR_METHODS, DetectorMethodPicker } from "./detector-method-picker.tsx"
+import { JudgeDetectorEditor } from "./judge-detector-editor.tsx"
 import { ConditionEditor, type ConditionEditState, RuleConditionList, type RuleDraft } from "./rule-detector-editor.tsx"
 import { SignalPreviewStep } from "./signal-preview-step.tsx"
 import { SignalScopeEditor } from "./signal-scope-editor.tsx"
 import { StepIndicator } from "./step-indicator.tsx"
 
 type DetectorTab = "rules" | "llm" | "advanced"
-type StepId = "scope" | "detector" | "test" | "details"
+type StepId = "detector" | "scope" | "test" | "details"
+type EditTab = "detector" | "scope" | "test"
 
-const CREATE_STEPS: readonly StepId[] = ["scope", "detector", "test", "details"]
-const EDIT_STEPS: readonly StepId[] = ["scope", "detector", "test"]
+const CREATE_STEPS: readonly StepId[] = ["detector", "scope", "test", "details"]
 
 const STEP_TITLE: Record<StepId, string> = {
-  scope: "Scope",
   detector: "Evaluation",
+  scope: "Scope",
   test: "Test",
   details: "Details",
 }
+
+const EDIT_TAB_OPTIONS: { readonly id: EditTab; readonly label: string }[] = [
+  { id: "detector", label: "Evaluation" },
+  { id: "scope", label: "Scope" },
+  { id: "test", label: "Test" },
+]
 
 const emptyRuleDraft: RuleDraft = { match: "all", conditions: [] }
 
 const filterSetOrNull = (filter: FilterSet): FilterSet | null => (Object.keys(filter).length === 0 ? null : filter)
 
+/** How the signal's active evaluation was authored: a declarative settings form, or a raw Advanced script. */
+export type SignalBuilderDetector =
+  | { readonly kind: "settings"; readonly settings: EvaluationSettings }
+  | { readonly kind: "script"; readonly script: string }
+
 export interface SignalBuilderInitial {
   readonly signalId: string
   readonly filters: FilterSet | null
-  readonly settings: EvaluationSettings
+  readonly detector: SignalBuilderDetector
   readonly sampling: number
 }
+
+type DetectorPayload = { settings: EvaluationSettings } | { script: string }
 
 function detectorPayload(
   tab: DetectorTab,
   ruleDraft: RuleDraft,
   criteria: string,
-): { settings: EvaluationSettings } | null {
+  scriptDraft: string,
+): DetectorPayload | null {
   if (tab === "rules") {
     if (ruleDraft.conditions.length === 0) return null
     return { settings: { kind: "rule", match: ruleDraft.match, conditions: [...ruleDraft.conditions] } }
@@ -54,13 +71,27 @@ function detectorPayload(
     if (criteria.trim().length === 0) return null
     return { settings: { kind: "judge", criteria: criteria.trim() } }
   }
-  return null
+  const script = scriptDraft.trim()
+  return script.length === 0 ? null : { script }
+}
+
+function StepHeading({ title, hint }: { readonly title: string; readonly hint: string }) {
+  return (
+    <div className="flex flex-col gap-1">
+      <Text.H5>{title}</Text.H5>
+      <Text.H6 color="foregroundMuted">{hint}</Text.H6>
+    </div>
+  )
 }
 
 /**
- * The Signal Builder wizard. Create mode runs four steps (scope → detector →
- * test → details); edit mode runs the first three and saves filters + settings.
- * Mount only while open; reset via `key`.
+ * The Signal Builder. Create mode opens on a method-picker screen (a shortcut,
+ * not a wizard step), then runs the wizard (evaluation → scope → test →
+ * details) with the picked kind's tab active; Back on the first step returns
+ * to the picker.
+ * Edit mode is tabbed (Evaluation | Scope | Test) so users can jump straight to
+ * what they're changing, and saves only what changed. Mount only while open;
+ * reset via `key`.
  */
 export function SignalBuilderModal({
   projectId,
@@ -84,18 +115,27 @@ export function SignalBuilderModal({
   const updateSignal = useUpdateSignal(projectId, initial?.signalId ?? "")
   const updateSignalEvaluation = useUpdateSignalEvaluation(projectId, initial?.signalId ?? "")
 
-  const steps = mode === "edit" ? EDIT_STEPS : CREATE_STEPS
   const [stepIndex, setStepIndex] = useState(0)
-  const step = steps[stepIndex] ?? "scope"
+  const step = CREATE_STEPS[stepIndex] ?? "detector"
+  const [editTab, setEditTab] = useState<EditTab>("detector")
+  // The method screen is a shortcut into the wizard, not a step: it never appears
+  // in the step indicator, and is only reachable again via Back on the first step.
+  const [methodChosen, setMethodChosen] = useState(mode === "edit")
+
+  const initialSettings = initial?.detector.kind === "settings" ? initial.detector.settings : null
+  const initialScript = initial?.detector.kind === "script" ? initial.detector.script : ""
 
   const [filters, setFilters] = useState<FilterSet>(initial?.filters ?? initialFilters ?? {})
-  const [tab, setTab] = useState<DetectorTab>(() => (initial?.settings?.kind === "judge" ? "llm" : "rules"))
+  const [tab, setTab] = useState<DetectorTab>(() =>
+    initial?.detector.kind === "script" ? "advanced" : initialSettings?.kind === "judge" ? "llm" : "rules",
+  )
   const [ruleDraft, setRuleDraft] = useState<RuleDraft>(() =>
-    initial?.settings?.kind === "rule"
-      ? { match: initial.settings.match, conditions: initial.settings.conditions }
+    initialSettings?.kind === "rule"
+      ? { match: initialSettings.match, conditions: initialSettings.conditions }
       : emptyRuleDraft,
   )
-  const [criteria, setCriteria] = useState(() => (initial?.settings?.kind === "judge" ? initial.settings.criteria : ""))
+  const [criteria, setCriteria] = useState(() => (initialSettings?.kind === "judge" ? initialSettings.criteria : ""))
+  const [scriptDraft, setScriptDraft] = useState(() => initialScript)
   const [sampling, setSampling] = useState<number>(initial?.sampling ?? DEFAULT_EVALUATION_SAMPLING)
   const [conditionEdit, setConditionEdit] = useState<ConditionEditState>(null)
   const [draftCondition, setDraftCondition] = useState<EvaluationRuleCondition | null>(null)
@@ -113,11 +153,11 @@ export function SignalBuilderModal({
   // polling and can't resolve onto an unmounted component.
   useMountEffect(() => () => previewAbortRef.current?.abort())
 
-  const evaluation = detectorPayload(tab, ruleDraft, criteria)
+  const evaluation = detectorPayload(tab, ruleDraft, criteria, scriptDraft)
   const detectorValid = evaluation !== null
 
   const runPreview = (): void => {
-    const payload = detectorPayload(tab, ruleDraft, criteria)
+    const payload = detectorPayload(tab, ruleDraft, criteria, scriptDraft)
     if (payload === null) {
       setPreviewResult({ status: "error", error: "Add a valid evaluation before running a preview." })
       return
@@ -145,10 +185,20 @@ export function SignalBuilderModal({
   }
 
   const goToStep = (nextIndex: number) => {
-    const next = steps[nextIndex]
+    const next = CREATE_STEPS[nextIndex]
     if (!next) return
     setStepIndex(nextIndex)
     if (next === "test") runPreview()
+  }
+
+  const selectEditTab = (next: EditTab) => {
+    setEditTab(next)
+    if (next === "test") runPreview()
+  }
+
+  const chooseMethod = (method: DetectorTab) => {
+    setTab(method)
+    setMethodChosen(true)
   }
 
   const openConditionEditor = (state: ConditionEditState) => {
@@ -216,16 +266,24 @@ export function SignalBuilderModal({
       toast({ variant: "destructive", description: "Add a valid evaluation before saving." })
       return
     }
-    const detectorChanged = JSON.stringify(evaluation.settings) !== JSON.stringify(initial.settings)
+    const initialPayload: DetectorPayload =
+      initial.detector.kind === "settings"
+        ? { settings: initial.detector.settings }
+        : { script: initial.detector.script }
+    const detectorChanged = JSON.stringify(evaluation) !== JSON.stringify(initialPayload)
     const samplingChanged = sampling !== initial.sampling
     const filtersChanged = JSON.stringify(filterSetOrNull(filters)) !== JSON.stringify(initial.filters ?? null)
+    if (!filtersChanged && !detectorChanged && !samplingChanged) {
+      onClose()
+      return
+    }
     setIsSaving(true)
     try {
       if (filtersChanged) {
         await updateSignal.mutateAsync({ filters: filterSetOrNull(filters) })
       }
       if (detectorChanged || samplingChanged) {
-        await updateSignalEvaluation.mutateAsync({ settings: evaluation.settings, sampling })
+        await updateSignalEvaluation.mutateAsync({ evaluation, sampling })
       }
       await invalidateSignalQueries(projectId, initial.signalId)
       toast({ description: "Signal updated." })
@@ -236,14 +294,14 @@ export function SignalBuilderModal({
     }
   }
 
-  const isLastStep = stepIndex === steps.length - 1
-  const inConditionSubStep = step === "detector" && conditionEdit !== null
+  const view: StepId | EditTab = mode === "edit" ? editTab : step
+  const isLastStep = stepIndex === CREATE_STEPS.length - 1
+  const inConditionSubStep = view === "detector" && conditionEdit !== null
 
-  const advancedTabOption = {
-    id: "advanced" as const,
-    label: "Advanced",
-    tooltip: <Text.H6>Coming soon</Text.H6>,
-  }
+  // All three tabs are available in create and edit alike: an evaluation can be re-authored across kinds
+  // (settings ⇄ raw script), and the update use-case persists whichever kind the user lands on.
+  const detectorTabOptions = DETECTOR_METHODS.map(({ id, title }) => ({ id, label: title }))
+  const activeMethod = DETECTOR_METHODS.find((method) => method.id === tab)
 
   const footer = inConditionSubStep ? (
     <>
@@ -254,21 +312,32 @@ export function SignalBuilderModal({
         {conditionEdit?.index === "new" ? "Add condition" : "Save condition"}
       </Button>
     </>
+  ) : mode === "edit" ? (
+    <>
+      <Button variant="outline" disabled={isSaving} onClick={onClose}>
+        Cancel
+      </Button>
+      <Button onClick={() => void handleSaveEdit()} disabled={!detectorValid || isSaving} isLoading={isSaving}>
+        Save changes
+      </Button>
+    </>
+  ) : !methodChosen ? (
+    <Button variant="outline" onClick={onClose}>
+      Cancel
+    </Button>
   ) : (
     <>
-      <Button variant="outline" disabled={stepIndex === 0 || isSaving} onClick={() => goToStep(stepIndex - 1)}>
+      <Button
+        variant="outline"
+        disabled={isSaving}
+        onClick={() => (stepIndex === 0 ? setMethodChosen(false) : goToStep(stepIndex - 1))}
+      >
         Back
       </Button>
       {isLastStep ? (
-        mode === "create" ? (
-          <Button onClick={() => void handleCreate()} disabled={isSaving} isLoading={isSaving}>
-            Create signal
-          </Button>
-        ) : (
-          <Button onClick={() => void handleSaveEdit()} disabled={isSaving} isLoading={isSaving}>
-            Save changes
-          </Button>
-        )
+        <Button onClick={() => void handleCreate()} disabled={isSaving} isLoading={isSaving}>
+          Create signal
+        </Button>
       ) : (
         <Button disabled={(step === "detector" && !detectorValid) || isSaving} onClick={() => goToStep(stepIndex + 1)}>
           Next
@@ -286,65 +355,64 @@ export function SignalBuilderModal({
       onOpenChange={(next) => {
         if (!next) onClose()
       }}
-      title={mode === "create" ? "New signal" : "Edit signal evaluation"}
+      title={mode === "create" ? "New signal" : "Edit signal"}
       description={
-        <StepIndicator
-          steps={steps.map((id) => ({ id, label: STEP_TITLE[id] }))}
-          activeIndex={stepIndex}
-          onStepClick={goToStep}
-        />
+        !methodChosen ? undefined : mode === "create" ? (
+          <StepIndicator
+            steps={CREATE_STEPS.map((id) => ({ id, label: STEP_TITLE[id] }))}
+            activeIndex={stepIndex}
+            onStepClick={goToStep}
+          />
+        ) : (
+          <Tabs<EditTab>
+            variant="bordered"
+            size="sm"
+            options={EDIT_TAB_OPTIONS}
+            active={editTab}
+            onSelect={selectEditTab}
+          />
+        )
       }
       footer={footer}
     >
       {/* Fixed-height body so the modal does not resize between steps; content scrolls internally.
           `overflow-y-auto` also clips horizontally, so `-mx-2 px-2` (absorbed by the modal's px-6)
           gives focus rings and popover offsets a few px of clip headroom without insetting content. */}
-      <div className="-mx-2 flex h-[28rem] flex-col gap-4 overflow-y-auto px-2 pb-6">
-        {step === "scope" ? (
-          <SignalScopeEditor
-            projectId={projectId}
-            value={filters}
-            onChange={setFilters}
-            sampling={sampling}
-            onSamplingChange={setSampling}
-          />
-        ) : null}
+      <div className="-mx-2 flex h-[min(60vh,36rem)] flex-col gap-4 overflow-y-auto px-2 pb-6">
+        {!methodChosen ? <DetectorMethodPicker onSelect={chooseMethod} /> : null}
 
-        {step === "detector" && !inConditionSubStep ? (
+        {methodChosen && view === "detector" && !inConditionSubStep ? (
           <div className="flex flex-col gap-4">
-            <Tabs<DetectorTab>
-              variant="bordered"
-              size="sm"
-              options={[{ id: "rules", label: "Rules" }, { id: "llm", label: "LLM" }, advancedTabOption]}
-              active={tab}
-              onSelect={(next) => {
-                if (next === "advanced") return
-                setTab(next)
-              }}
+            <StepHeading
+              title="How should Latitude decide whether a session matches?"
+              hint="This check runs automatically on your incoming sessions. A session that passes joins the signal."
             />
+            <div className="flex flex-col gap-1.5">
+              <Tabs<DetectorTab>
+                variant="bordered"
+                size="sm"
+                options={detectorTabOptions}
+                active={tab}
+                onSelect={setTab}
+              />
+              {activeMethod ? <Text.H6 color="foregroundMuted">{activeMethod.summary}</Text.H6> : null}
+            </div>
             {tab === "rules" ? (
               <RuleConditionList draft={ruleDraft} onChange={setRuleDraft} onEditCondition={openConditionEditor} />
             ) : null}
-            {tab === "llm" ? (
-              <div className="flex flex-col gap-1.5">
-                <Textarea
-                  label="Criteria"
-                  minRows={3}
-                  value={criteria}
-                  onChange={(event) => setCriteria(event.target.value)}
-                  placeholder={
-                    'e.g. "The user grew frustrated — repeating themselves, complaining, or giving up before getting a useful answer."'
-                  }
-                />
-                <Text.H6 color="foregroundMuted">
-                  Describe the behavior to detect. A trace joins this signal when the behavior is present.
-                </Text.H6>
-              </div>
+            {tab === "llm" ? <JudgeDetectorEditor criteria={criteria} onCriteriaChange={setCriteria} /> : null}
+            {tab === "advanced" ? (
+              <AdvancedDetectorEditor
+                projectId={projectId}
+                filters={filterSetOrNull(filters)}
+                script={scriptDraft}
+                onScriptChange={setScriptDraft}
+              />
             ) : null}
           </div>
         ) : null}
 
-        {step === "detector" && inConditionSubStep ? (
+        {view === "detector" && inConditionSubStep ? (
           <ConditionEditor
             draftCondition={draftCondition}
             onDraftConditionChange={setDraftCondition}
@@ -355,17 +423,38 @@ export function SignalBuilderModal({
           />
         ) : null}
 
-        {step === "test" ? (
-          <SignalPreviewStep
-            result={previewResult}
-            isRunning={previewRunning}
-            onRun={runPreview}
+        {view === "scope" ? (
+          <SignalScopeEditor
             projectId={projectId}
+            value={filters}
+            onChange={setFilters}
+            sampling={sampling}
+            onSamplingChange={setSampling}
+            detectorKind={tab === "rules" ? "rule" : tab === "llm" ? "judge" : "script"}
           />
         ) : null}
 
-        {step === "details" ? (
+        {view === "test" ? (
           <div className="flex flex-col gap-4">
+            <StepHeading
+              title="Try it on your real traffic"
+              hint="We run your evaluation against recent sessions from this project — nothing is saved. If the verdicts look wrong, go back and adjust."
+            />
+            <SignalPreviewStep
+              result={previewResult}
+              isRunning={previewRunning}
+              onRun={runPreview}
+              projectId={projectId}
+            />
+          </div>
+        ) : null}
+
+        {view === "details" ? (
+          <div className="flex flex-col gap-4">
+            <StepHeading
+              title="Name your signal"
+              hint="Shown in the signals list — pick a name your team will recognize."
+            />
             <Input
               required
               autoFocus

@@ -9,7 +9,7 @@ import {
   BadRequestError,
   type ConcurrentSqlTransactionError,
   cuidSchema,
-  evaluationSettingsSchema,
+  evaluationDraftSchema,
   type NotFoundError,
   ProjectId,
   type RepositoryError,
@@ -23,7 +23,7 @@ import { SignalRepository } from "../ports/signal-repository.ts"
 const updateSignalEvaluationInputSchema = z.object({
   projectId: cuidSchema.transform(ProjectId),
   signalId: signalIdSchema,
-  settings: evaluationSettingsSchema,
+  evaluation: evaluationDraftSchema,
   sampling: z.number().int().min(0).max(100).optional(),
   now: z.date().optional(),
 })
@@ -44,13 +44,14 @@ export type UpdateSignalEvaluationError =
   | RepositoryError
 
 /**
- * Recompiles a user signal's active evaluation from a new `settings` form, **in place** (same
- * evaluation id). Updating in place — rather than archiving and minting a new row — matches the
- * shipped realign path (`persistAlignmentResult`) and avoids a lineage/naming scheme for the
- * replacement row. Only `origin = 'user'` signals whose active evaluation is settings-defined are
- * editable here: raw-script and system signals are rejected.
- * Edits apply forward-only; existing scores keep their frozen membership. The signal's `filters`
- * (the live pre-gate) are untouched and continue to gate the same evaluation.
+ * Recompiles a user signal's active evaluation from a new `settings` form or replaces its raw
+ * `script`, **in place** (same evaluation id). Updating in place — rather than archiving and minting
+ * a new row — matches the shipped realign path (`persistAlignmentResult`) and avoids a lineage/naming
+ * scheme for the replacement row. Only `origin = 'user'` signals are editable here (system signals are
+ * rejected); the evaluation can be freely re-authored across kinds — settings ⇄ raw script — with
+ * `settings` set to the new form or nulled when a raw script is supplied. Edits apply forward-only;
+ * existing scores keep their frozen membership. The signal's `filters` (the live pre-gate) are
+ * untouched and continue to gate the same evaluation.
  */
 export const updateSignalEvaluationUseCase = (input: UpdateSignalEvaluationInput) =>
   Effect.gen(function* () {
@@ -59,7 +60,9 @@ export const updateSignalEvaluationUseCase = (input: UpdateSignalEvaluationInput
     const sqlClient = yield* SqlClient
     const now = parsed.now ?? new Date()
 
-    const script = compileSettingsToScript(parsed.settings)
+    const settings = "settings" in parsed.evaluation ? parsed.evaluation.settings : null
+    const script =
+      "settings" in parsed.evaluation ? compileSettingsToScript(parsed.evaluation.settings) : parsed.evaluation.script
     const scriptHash = yield* validateAndHashEvaluationScript(script)
 
     return yield* sqlClient.transaction(
@@ -81,15 +84,11 @@ export const updateSignalEvaluationUseCase = (input: UpdateSignalEvaluationInput
         const active = yield* evaluationRepository
           .listBySignalId({ projectId: parsed.projectId, signalId: parsed.signalId, options: { lifecycle: "active" } })
           .pipe(Effect.map((page) => page.items.filter(isActiveEvaluation)))
+        // The active-detector partial unique index guarantees at most one active evaluation per signal.
         const evaluation = active[0]
         if (evaluation === undefined) {
           return yield* new BadRequestError({
             message: `Signal ${signal.id} has no active evaluation to edit`,
-          })
-        }
-        if (evaluation.settings == null) {
-          return yield* new BadRequestError({
-            message: "This signal's evaluation was defined from a raw script and is not settings-editable",
           })
         }
 
@@ -105,7 +104,7 @@ export const updateSignalEvaluationUseCase = (input: UpdateSignalEvaluationInput
 
         yield* evaluationRepository.save({
           ...evaluation,
-          settings: parsed.settings,
+          settings,
           script,
           scriptHash,
           // Only a definition change invalidates alignment; a sampling-only change keeps it.

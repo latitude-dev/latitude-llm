@@ -17,8 +17,8 @@ export const EVALUATION_NAME_MAX_LENGTH = 128
 
 /** Default model for generating an evaluation script from a freeform user prompt. Overridable via `LAT_AI_EVALUATION_SCRIPT_GENERATOR_*`. */
 export const EVALUATION_SCRIPT_GENERATION_DEFAULT_MODEL = {
-  provider: "anthropic",
-  model: "claude-3-5-sonnet-20241022",
+  provider: "amazon-bedrock",
+  model: "anthropic.claude-sonnet-4-6",
   reasoning: "medium",
 } as const
 

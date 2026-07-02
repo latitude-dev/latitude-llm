@@ -5,6 +5,7 @@ import { createFakeScriptRuntime } from "@domain/sandbox/testing"
 import {
   ChSqlClient,
   ExternalUserId,
+  type FilterSet,
   NotFoundError,
   OrganizationId,
   ProjectId,
@@ -13,7 +14,7 @@ import {
   TraceId,
 } from "@domain/shared"
 import { createFakeChSqlClient } from "@domain/shared/testing"
-import { SessionRepository, SpanRepository, type Trace, type TraceDetail, TraceRepository } from "@domain/spans"
+import { type Session, SessionRepository, SpanRepository, type TraceDetail, TraceRepository } from "@domain/spans"
 import { createFakeSessionRepository, createFakeSpanRepository, createFakeTraceRepository } from "@domain/spans/testing"
 import { Effect, Layer } from "effect"
 import { describe, expect, it } from "vitest"
@@ -87,16 +88,19 @@ const buildLayer = (options: { readonly runFailures: number; readonly hasTrace?:
   })
 
   const { repository: traceRepository } = createFakeTraceRepository({
-    listByProjectId: () =>
-      Effect.succeed({
-        items: options.hasTrace === false ? [] : [{ traceId } as Trace],
-        hasMore: false,
-      }),
     findByTraceId: () => Effect.succeed(traceDetail),
   })
 
+  const sessionListFilters: (FilterSet | undefined)[] = []
   const { repository: sessionRepository } = createFakeSessionRepository({
     findBySessionId: () => Effect.fail(new NotFoundError({ entity: "Session", id: String(sessionId) })),
+    listByProjectId: (input) => {
+      sessionListFilters.push(input.options.filters)
+      return Effect.succeed({
+        items: options.hasTrace === false ? [] : [{ sessionId, traceIds: [traceId] } as unknown as Session],
+        hasMore: false,
+      })
+    },
   })
   const { repository: spanRepository } = createFakeSpanRepository({
     listBySessionId: () => Effect.succeed([]),
@@ -106,6 +110,7 @@ const buildLayer = (options: { readonly runFailures: number; readonly hasTrace?:
   return {
     aiCalls: fakeAI.calls,
     runtimeCalls: fakeRuntime.calls,
+    sessionListFilters,
     layer: Layer.mergeAll(
       fakeAI.layer,
       fakeRuntime.layer,
@@ -119,9 +124,14 @@ const buildLayer = (options: { readonly runFailures: number; readonly hasTrace?:
 
 type UseCaseServices = AI | ScriptRuntime | TraceRepository | SessionRepository | SpanRepository | ChSqlClient
 
-const runUseCase = (input: { prompt: string }, layer: Layer.Layer<UseCaseServices>) =>
+const runUseCase = (input: { prompt: string; filters?: FilterSet }, layer: Layer.Layer<UseCaseServices>) =>
   Effect.runPromise(
-    createScriptFromPromptUseCase({ organizationId, projectId, prompt: input.prompt }).pipe(
+    createScriptFromPromptUseCase({
+      organizationId,
+      projectId,
+      prompt: input.prompt,
+      ...(input.filters ? { filters: input.filters } : {}),
+    }).pipe(
       Effect.match({
         onSuccess: (result) => ({ ok: true as const, result }),
         onFailure: (error) => ({ ok: false as const, error }),
@@ -168,6 +178,16 @@ describe("createScriptFromPromptUseCase", () => {
       expect((outcome.error as { attempts: number }).attempts).toBe(3)
     }
     expect(aiCalls.generate).toHaveLength(3)
+  })
+
+  it("selects the smoke-test session from the provided scope", async () => {
+    const { layer, sessionListFilters } = buildLayer({ runFailures: 0 })
+    const filters = { services: ["checkout"] } as unknown as FilterSet
+
+    const outcome = await runUseCase({ prompt: "Flag refusals", filters }, layer)
+
+    expect(outcome.ok).toBe(true)
+    expect(sessionListFilters[0]).toEqual(filters)
   })
 
   it("rejects an empty prompt", async () => {

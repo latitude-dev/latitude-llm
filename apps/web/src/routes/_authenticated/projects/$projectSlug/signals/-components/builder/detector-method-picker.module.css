@@ -1,0 +1,99 @@
+/* Animations for the method picker's flow diagram. CSS modules hash the class and keyframe
+   names, so nothing registers in the global animation namespace. */
+
+@keyframes session-phase {
+  0%,
+  100% {
+    background-color: hsl(var(--foreground) / 0.15);
+  }
+  12%,
+  30% {
+    background-color: hsl(var(--primary) / 0.55);
+  }
+  42% {
+    background-color: hsl(var(--foreground) / 0.15);
+  }
+}
+
+@keyframes flow-inflow {
+  0% {
+    transform: translateY(0);
+    opacity: 0;
+  }
+  20% {
+    opacity: 1;
+  }
+  70% {
+    opacity: 1;
+  }
+  85%,
+  100% {
+    transform: translateY(10px);
+    opacity: 0;
+  }
+}
+
+@keyframes flow-packet {
+  0%,
+  10% {
+    transform: translateY(0);
+    opacity: 0;
+  }
+  14% {
+    opacity: 1;
+  }
+  26% {
+    opacity: 1;
+  }
+  30%,
+  100% {
+    transform: translateY(10px);
+    opacity: 0;
+  }
+}
+
+@keyframes join {
+  0%,
+  30% {
+    transform: scale(0);
+    opacity: 0;
+  }
+  37% {
+    transform: scale(1.15);
+    opacity: 1;
+  }
+  40%,
+  90% {
+    transform: scale(1);
+    opacity: 1;
+  }
+  100% {
+    transform: scale(0);
+    opacity: 0;
+  }
+}
+
+.sessionDot {
+  animation: session-phase 4s ease-in-out infinite;
+}
+
+.inflowPacket {
+  animation: flow-inflow 1.2s linear infinite;
+}
+
+.outflowPacket {
+  animation: flow-packet 7s ease-in-out infinite;
+}
+
+.joinDot {
+  animation: join 7s ease-in-out infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .sessionDot,
+  .inflowPacket,
+  .outflowPacket,
+  .joinDot {
+    animation: none;
+  }
+}

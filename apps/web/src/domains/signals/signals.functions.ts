@@ -1,6 +1,9 @@
 import {
+  buildScriptGenerationResultKey,
   buildSignalPreviewResultKey,
   EvaluationRepository,
+  SCRIPT_GENERATION_RESULT_TTL_SECONDS,
+  type ScriptGenerationResult,
   SIGNAL_PREVIEW_RESULT_TTL_SECONDS,
   type SignalPreviewResult,
 } from "@domain/evaluations"
@@ -12,7 +15,7 @@ import {
   type SignalEscalationThresholdBucket,
 } from "@domain/scores"
 import {
-  evaluationSettingsSchema,
+  evaluationDraftSchema,
   type FilterCondition,
   type FilterSet,
   filterSetSchema,
@@ -1318,11 +1321,6 @@ export const enqueueSignalsExport = createServerFn({ method: "POST" })
 
 // --- Builder: create / edit / delete / preview (web leads; no REST/SDK regen) ---
 
-const evaluationDraftSchema = z.union([
-  z.object({ settings: evaluationSettingsSchema }),
-  z.object({ script: z.string().min(1) }),
-])
-
 const createSignalInputSchema = z.object({
   projectId: z.string(),
   name: z.string().min(1),
@@ -1404,11 +1402,11 @@ export const updateSignal = createServerFn({ method: "POST" })
 const updateSignalEvaluationInputSchema = z.object({
   projectId: z.string(),
   signalId: z.string(),
-  settings: evaluationSettingsSchema,
+  evaluation: evaluationDraftSchema,
   sampling: z.number().int().min(0).max(100).optional(),
 })
 
-/** Recompiles a user signal's settings-defined evaluation in place. */
+/** Recompiles a user signal's evaluation in place — from a settings form, or a raw script (Advanced tab). */
 export const updateSignalEvaluation = createServerFn({ method: "POST" })
   .inputValidator(updateSignalEvaluationInputSchema)
   .handler(
@@ -1422,7 +1420,7 @@ export const updateSignalEvaluation = createServerFn({ method: "POST" })
         updateSignalEvaluationUseCase({
           projectId: data.projectId,
           signalId: data.signalId,
-          settings: data.settings,
+          evaluation: data.evaluation,
           ...(data.sampling !== undefined ? { sampling: data.sampling } : {}),
         }).pipe(
           withPostgres(
@@ -1507,4 +1505,56 @@ export const getSignalPreviewResult = createServerFn({ method: "GET" })
     const redis = getRedisClient()
     const raw = await redis.get(buildSignalPreviewResultKey(organizationId, data.previewId))
     return raw === null ? { status: "pending" } : (JSON.parse(raw) as SignalPreviewResult)
+  })
+
+const generateEvaluationScriptInputSchema = z.object({
+  projectId: z.string(),
+  prompt: z.string().min(1),
+  filters: filterSetSchema.nullish(),
+})
+
+/**
+ * Enqueues an AI generation of a raw evaluation script from a freeform prompt and returns a
+ * `generationId` to poll via `getScriptGenerationResult`. It runs in the `signals-generate-script`
+ * worker (AI + sandbox + ClickHouse — never inline), which smoke-tests the candidate against a
+ * scoped session before writing the result to Redis.
+ */
+export const generateEvaluationScript = createServerFn({ method: "POST" })
+  .inputValidator(generateEvaluationScriptInputSchema)
+  .handler(async ({ data }): Promise<{ readonly generationId: string }> => {
+    const { organizationId } = await requireSession()
+    const generationId = generateId<"ScriptGeneration">()
+    const redis = getRedisClient()
+
+    await redis.set(
+      buildScriptGenerationResultKey(organizationId, generationId),
+      JSON.stringify({ status: "pending" } satisfies ScriptGenerationResult),
+      "EX",
+      SCRIPT_GENERATION_RESULT_TTL_SECONDS,
+    )
+
+    const publisher = await getQueuePublisher()
+    await Effect.runPromise(
+      publisher.publish("signals-generate-script", "run", {
+        generationId,
+        organizationId,
+        projectId: data.projectId,
+        prompt: data.prompt,
+        ...(data.filters != null ? { filters: data.filters } : {}),
+      }),
+    )
+
+    return { generationId }
+  })
+
+const getScriptGenerationResultInputSchema = z.object({ generationId: z.string() })
+
+/** Polls a script-generation run's result. Returns `pending` while the worker is still running (or the key expired). */
+export const getScriptGenerationResult = createServerFn({ method: "GET" })
+  .inputValidator(getScriptGenerationResultInputSchema)
+  .handler(async ({ data }): Promise<ScriptGenerationResult> => {
+    const { organizationId } = await requireSession()
+    const redis = getRedisClient()
+    const raw = await redis.get(buildScriptGenerationResultKey(organizationId, data.generationId))
+    return raw === null ? { status: "pending" } : (JSON.parse(raw) as ScriptGenerationResult)
   })

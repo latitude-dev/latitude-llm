@@ -326,3 +326,9 @@ export class StorageError extends Data.TaggedError("StorageError")<{
   readonly httpStatus = 500
   readonly httpMessage = "Storage operation failed"
 }
+
+/** Best-effort human-readable message from an unknown error, for transport-level result payloads. */
+export const describeError = (error: unknown): string =>
+  typeof error === "object" && error !== null && "message" in error
+    ? String((error as { message: unknown }).message)
+    : String(error)

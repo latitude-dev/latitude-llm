@@ -1,5 +1,4 @@
 import { DEFAULT_EVALUATION_SAMPLING } from "@domain/evaluations"
-import type { EvaluationSettings } from "@domain/shared"
 import {
   Button,
   CloseTrigger,
@@ -34,7 +33,7 @@ import { toUserMessage } from "../../../../../../lib/errors.ts"
 import { createFormSubmitHandler } from "../../../../../../lib/form-server-action.ts"
 import { FlaggerBadge } from "../../-components/flaggers/flagger-badge.tsx"
 import { AlignmentStatsModal } from "./alignment-stats-modal.tsx"
-import { SignalBuilderModal } from "./builder/signal-builder-modal.tsx"
+import { type SignalBuilderDetector, SignalBuilderModal } from "./builder/signal-builder-modal.tsx"
 import { formatPercent, getAlignmentVariant } from "./signal-formatters.ts"
 
 const POLL_INTERVAL_MS = 5000
@@ -399,14 +398,14 @@ export function SignalDrawerEvaluations({
   // User-origin evaluations come from a raw API/MCP script or declarative settings
   // and cannot be realigned (no annotations) — the signal owns its evaluation.
   const isUserOriginEvaluation = signalOrigin === "user"
-  const editableSettings: EvaluationSettings | null =
-    isUserOriginEvaluation && primaryEvaluation?.settings ? primaryEvaluation.settings : null
-  // Raw API/MCP scripts (settings === null) stay read-only; settings-defined
-  // user evaluations are editable via the builder.
-  const userEvaluationNote =
-    primaryEvaluation === null || !isUserOriginEvaluation || editableSettings !== null
-      ? null
-      : "Custom script defined via the API or MCP. It is not editable here."
+  // User-origin evaluations are editable in the builder either as a settings form (Rules/LLM) or, when
+  // they have no settings, as the raw script (Advanced tab). System-origin evaluations are not edited here.
+  const editableDetector: SignalBuilderDetector | null =
+    isUserOriginEvaluation && primaryEvaluation
+      ? primaryEvaluation.settings
+        ? { kind: "settings", settings: primaryEvaluation.settings }
+        : { kind: "script", script: primaryEvaluation.script }
+      : null
   const isActionPending = isBusy || isStartingGenerate || isStartingRealign || isDeleting
   const monitorBlockedByLifecycle = !canMonitorSignal
   const isGenerating = isStartingGenerate || tracked?.kind === "initial"
@@ -523,7 +522,6 @@ export function SignalDrawerEvaluations({
       <div className="flex w-full flex-col gap-2 px-1 pt-2">
         {primaryEvaluation ? (
           <>
-            {userEvaluationNote ? <Text.H6 color="foregroundMuted">{userEvaluationNote}</Text.H6> : null}
             <div className="flex flex-row flex-wrap items-end gap-8">
               <SummaryField
                 label="Alignment"
@@ -611,7 +609,7 @@ export function SignalDrawerEvaluations({
                     {isPrimaryEvaluationRealigning ? "Realigning" : "Realign"}
                   </Button>
                 </div>
-              ) : editableSettings !== null ? (
+              ) : editableDetector !== null ? (
                 <div className="flex min-w-0 flex-1 items-end justify-end gap-x-1">
                   <Tooltip
                     asChild
@@ -693,7 +691,7 @@ export function SignalDrawerEvaluations({
         onClose={() => setSamplingEvaluation(null)}
       />
 
-      {builderOpen && editableSettings !== null ? (
+      {builderOpen && editableDetector !== null ? (
         <SignalBuilderModal
           projectId={projectId}
           projectSlug={projectSlug ?? ""}
@@ -701,7 +699,7 @@ export function SignalDrawerEvaluations({
           initial={{
             signalId,
             filters: signalDetail?.filters ?? null,
-            settings: editableSettings,
+            detector: editableDetector,
             sampling: primaryEvaluation?.trigger.sampling ?? DEFAULT_EVALUATION_SAMPLING,
           }}
           onClose={() => setBuilderOpen(false)}
