@@ -203,7 +203,9 @@ export function SignalScopeEditor({
               ? "0% pauses this signal — no sessions are checked."
               : detectorKind === "rule"
                 ? "Conditions are free and instant, so checking 100% of matching sessions is usually right."
-                : "Each check sends the session to an LLM, which costs money and time. If you have a lot of traffic, sampling a share still surfaces the pattern at a fraction of the cost."}
+                : detectorKind === "judge"
+                  ? "Each check sends the session to an LLM, which costs money and time. If you have a lot of traffic, sampling a share still surfaces the pattern at a fraction of the cost."
+                  : "A custom script may call an LLM depending on what it does. If yours does, sampling a share keeps cost down while still surfacing the pattern."}
           </Text.H6>
         </div>
       </div>
