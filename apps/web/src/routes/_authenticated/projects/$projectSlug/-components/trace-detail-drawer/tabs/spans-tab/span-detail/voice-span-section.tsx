@@ -1,7 +1,7 @@
-import type { GenAIMessage, GenAIPart } from "rosetta-ai"
 import { DetailSection, Part, Text } from "@repo/ui"
 import { ArrowDownRightIcon, ArrowUpRightIcon, MicIcon, Volume2Icon } from "lucide-react"
 import type { ReactNode } from "react"
+import type { GenAIMessage, GenAIPart } from "rosetta-ai"
 import type { SpanDetailRecord } from "../../../../../../../../../domains/spans/spans.functions.ts"
 
 const VOICE_OPERATIONS = new Set(["transcribe", "speech"])

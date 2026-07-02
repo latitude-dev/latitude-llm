@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest"
-import { parseContent } from "./index.ts"
 import type { OtlpKeyValue } from "../types.ts"
+import { parseContent } from "./index.ts"
 
 function str(key: string, value: string): OtlpKeyValue {
   return { key, value: { stringValue: value } }
@@ -8,26 +8,16 @@ function str(key: string, value: string): OtlpKeyValue {
 
 describe("parseContent (voice)", () => {
   it("maps transcribe output text to an assistant message", () => {
-    const result = parseContent([
-      str("gen_ai.operation.name", "transcribe"),
-      str("gen_ai.output.text", "hello world"),
-    ])
+    const result = parseContent([str("gen_ai.operation.name", "transcribe"), str("gen_ai.output.text", "hello world")])
 
-    expect(result.outputMessages).toEqual([
-      { role: "assistant", parts: [{ type: "text", content: "hello world" }] },
-    ])
+    expect(result.outputMessages).toEqual([{ role: "assistant", parts: [{ type: "text", content: "hello world" }] }])
     expect(result.inputMessages).toEqual([])
   })
 
   it("maps speech input text to a user message", () => {
-    const result = parseContent([
-      str("gen_ai.operation.name", "speech"),
-      str("gen_ai.input.text", "It's sunny today."),
-    ])
+    const result = parseContent([str("gen_ai.operation.name", "speech"), str("gen_ai.input.text", "It's sunny today.")])
 
-    expect(result.inputMessages).toEqual([
-      { role: "user", parts: [{ type: "text", content: "It's sunny today." }] },
-    ])
+    expect(result.inputMessages).toEqual([{ role: "user", parts: [{ type: "text", content: "It's sunny today." }] }])
     expect(result.outputMessages).toEqual([])
   })
 
@@ -44,9 +34,7 @@ describe("parseContent (voice)", () => {
         parts: [{ type: "uri", modality: "audio", uri: "https://example.com/input.wav" }],
       },
     ])
-    expect(result.outputMessages).toEqual([
-      { role: "assistant", parts: [{ type: "text", content: "hello" }] },
-    ])
+    expect(result.outputMessages).toEqual([{ role: "assistant", parts: [{ type: "text", content: "hello" }] }])
   })
 
   it("attaches output audio blob on speech spans with mime from output format", () => {
@@ -67,13 +55,8 @@ describe("parseContent (voice)", () => {
   })
 
   it("maps LiveKit lk.user_transcript and lk.input_text", () => {
-    const stt = parseContent([
-      str("gen_ai.operation.name", "transcribe"),
-      str("lk.user_transcript", "spoken question"),
-    ])
-    expect(stt.outputMessages).toEqual([
-      { role: "assistant", parts: [{ type: "text", content: "spoken question" }] },
-    ])
+    const stt = parseContent([str("gen_ai.operation.name", "transcribe"), str("lk.user_transcript", "spoken question")])
+    expect(stt.outputMessages).toEqual([{ role: "assistant", parts: [{ type: "text", content: "spoken question" }] }])
 
     const tts = parseContent([str("gen_ai.operation.name", "speech"), str("lk.input_text", "reply text")])
     expect(tts.inputMessages).toEqual([{ role: "user", parts: [{ type: "text", content: "reply text" }] }])
