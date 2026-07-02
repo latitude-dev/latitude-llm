@@ -2,6 +2,35 @@
 
 ## Unreleased
 
+## v0.3.30 - 2026-07-02
+
+### API and SDKs
+
+- Added the `querySpans` API/MCP surface for listing spans across traces, with matching TypeScript and Python SDK support (ref: #3789).
+
+### Traces and spans
+
+- Recovered Vercel AI SDK v6 output when `gen_ai.input.messages` shadowed the Vercel span parser (ref: #3816).
+
+### Web
+
+- Fixed session conversations to scroll to semantic search highlights (ref: #3800).
+- Fixed the orphan-session blankslate so it shows when the LLM activity filter hides all rows (ref: #3801).
+- Externalized `quickjs-emscripten` so its WASM resolves correctly at runtime (ref: #3785).
+
+### Onboarding
+
+- Optimized onboarding and added in-app support chat help (ref: #3779).
+
+### Docs and tooling
+
+- Added the Latitude CLI reference and made SDK/CLI generation deterministic (ref: #3809).
+- Marked SOC 2 as certified across the security compliance pages (ref: #3792).
+
+### Internal
+
+- Repaired the Drizzle snapshot chain after the incidents consolidation (ref: #3811).
+
 ## v0.3.29 - 2026-07-01
 
 ### Analytics
