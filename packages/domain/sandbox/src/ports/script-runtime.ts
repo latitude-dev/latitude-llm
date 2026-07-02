@@ -100,6 +100,26 @@ export interface HostLlmResult {
  */
 export type HostLlmFunction = (call: HostLlmCall) => Promise<HostLlmResult>
 
+/** The sandbox passes only the query string; the host closure holds session/org/project. */
+export interface HostSimilarityCall {
+  readonly query: string
+}
+
+/** Metering units match score rows: `duration` ns, `cost` microcents. `similarity` is in [0,1]. */
+export interface HostSimilarityResult {
+  readonly similarity: number
+  readonly tokens: number
+  readonly duration: number
+  readonly cost: number
+}
+
+/**
+ * Host implementation behind the script's `semanticSimilarity()` global. Reads
+ * ingest-time message embeddings for the current session and embeds the query
+ * at most once per distinct string; org/project/session stay host-managed.
+ */
+export type HostSimilarityFunction = (call: HostSimilarityCall) => Promise<HostSimilarityResult>
+
 export interface CompileScriptInput {
   readonly source: string
   /** Explicit capability declaration; defaults to static detection. */
@@ -116,10 +136,12 @@ export interface CompiledScript {
 export interface ScriptRunInput {
   readonly script: CompiledScript
   readonly context: ScriptRunContext
-  /** Defaults derive from the script's capabilities (pure vs llm lane). */
+  /** Defaults derive from the script's capabilities (pure vs embedding vs llm lane). */
   readonly limits?: ScriptRunLimits
   /** Required for `llm`-capability scripts; omitted for pure runs. */
   readonly llm?: HostLlmFunction
+  /** Required for `embedding`-capability scripts; omitted otherwise. */
+  readonly similarity?: HostSimilarityFunction
 }
 
 export interface ScriptRuntimeShape {

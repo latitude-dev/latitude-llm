@@ -1,11 +1,13 @@
 export {
   detectScriptCapabilities,
+  hasEmbeddingCapability,
   hasLlmCapability,
   resolveScriptCapabilities,
   SCRIPT_CAPABILITIES,
   type ScriptCapability,
 } from "./capabilities.ts"
 export {
+  DEFAULT_EMBEDDING_SCRIPT_LIMITS,
   DEFAULT_LLM_SCRIPT_LIMITS,
   DEFAULT_PURE_SCRIPT_LIMITS,
   DEFAULT_SCRIPT_MEMORY_BYTES,
@@ -40,6 +42,9 @@ export {
   type HostLlmCall,
   type HostLlmFunction,
   type HostLlmResult,
+  type HostSimilarityCall,
+  type HostSimilarityFunction,
+  type HostSimilarityResult,
   type ScriptConversationMessage,
   type ScriptCostBreakdown,
   type ScriptRunContext,

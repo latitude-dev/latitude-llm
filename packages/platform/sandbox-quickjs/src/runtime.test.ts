@@ -3,6 +3,7 @@ import {
   DEFAULT_SCRIPT_STACK_SIZE_BYTES,
   type HostLlmCall,
   type HostLlmFunction,
+  type HostSimilarityFunction,
   minimalScriptSession,
   type RunResult,
   type ScriptRunError,
@@ -30,13 +31,14 @@ const runError = async (input: ScriptRunInput): Promise<ScriptRunError> => {
 
 const compileAndRun = async (
   source: string,
-  options?: { llm?: HostLlmFunction; limits?: ScriptRunLimits },
+  options?: { llm?: HostLlmFunction; similarity?: HostSimilarityFunction; limits?: ScriptRunLimits },
 ): Promise<RunResult> => {
   const script = await compile(source)
   return run({
     script,
     context: { session: minimalScriptSession([{ role: "user", content: "hello" }]) },
     ...(options?.llm ? { llm: options.llm } : {}),
+    ...(options?.similarity ? { similarity: options.similarity } : {}),
     ...(options?.limits ? { limits: options.limits } : {}),
   })
 }
@@ -57,6 +59,12 @@ describe("compile", () => {
 
     const judge = await compile("const r = await llm(`x`); return Score(1)")
     expect(judge.capabilities).toEqual(["llm"])
+
+    const semantic = await compile("const s = await semanticSimilarity('frustration'); return Score(s)")
+    expect(semantic.capabilities).toEqual(["embedding"])
+
+    const both = await compile("await llm(`x`); const s = await semanticSimilarity('y'); return Score(s)")
+    expect(both.capabilities).toEqual(["llm", "embedding"])
   })
 
   it("is deterministic per source (bytecode-cache key correctness)", async () => {
@@ -429,5 +437,68 @@ if (result.passed) {
       expect(error.message).toContain("llm() requires a schema")
     }
     expect(calls).toHaveLength(0)
+  })
+})
+
+describe("semanticSimilarity host verb", () => {
+  it("suspends the script while the host resolves the query similarity and meters usage", async () => {
+    const calls: string[] = []
+    const result = await compileAndRun(
+      "const s = await semanticSimilarity('frustration'); return Score(s > 0.5 ? 1 : 0, String(s))",
+      {
+        similarity: async (call) => {
+          calls.push(call.query)
+          await new Promise((resolve) => setTimeout(resolve, 10))
+          return { similarity: 0.8, tokens: 11, duration: 1_000, cost: 4 }
+        },
+      },
+    )
+
+    expect(result).toMatchObject({ value: 1, feedback: "0.8", tokens: 11, cost: 4 })
+    expect(calls).toEqual(["frustration"])
+  })
+
+  it("aggregates metering across several semanticSimilarity calls", async () => {
+    const result = await compileAndRun(
+      `
+      const a = await semanticSimilarity("one")
+      const b = await semanticSimilarity("two")
+      return Score(Math.max(a, b))
+      `,
+      { similarity: async () => ({ similarity: 0.5, tokens: 6, duration: 200, cost: 2 }) },
+    )
+    expect(result).toMatchObject({ value: 0.5, tokens: 12, cost: 4 })
+  })
+
+  it("fails fast when an embedding-capability script runs without a host implementation", async () => {
+    const script = await compile("const s = await semanticSimilarity('x'); return Score(s)")
+    expect(script.capabilities).toEqual(["embedding"])
+    const error = await runError({ script, context: { session: minimalScriptSession() }, limits: tightLimits() })
+    expect(error._tag).toBe("ScriptRuntimeError")
+    expect(error.message).toContain("without a host similarity implementation")
+  })
+
+  it("does not inject semanticSimilarity for pure-capability scripts", async () => {
+    const script = await compile("return Score(typeof semanticSimilarity === 'undefined' ? 1 : 0)")
+    expect(script.capabilities).toEqual([])
+    const result = await run({
+      script,
+      context: { session: minimalScriptSession() },
+      similarity: async () => ({ similarity: 0, tokens: 0, duration: 0, cost: 0 }),
+    })
+    expect(result.value).toBe(1)
+  })
+
+  it("surfaces host failures as a transient HostCallError", async () => {
+    const script = await compile("const s = await semanticSimilarity('x'); return Score(s)")
+    const error = await runError({
+      script,
+      context: { session: minimalScriptSession() },
+      similarity: async () => {
+        throw new Error("embedding upstream timeout")
+      },
+    })
+    expect(error._tag).toBe("HostCallError")
+    expect(error.message).toContain("embedding upstream timeout")
   })
 })
