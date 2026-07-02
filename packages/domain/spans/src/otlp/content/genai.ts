@@ -9,6 +9,7 @@ import type { OtlpAnyValue, OtlpKeyValue } from "../types.ts"
 import { parseGenAIDeprecated } from "./genai_deprecated.ts"
 import type { ParsedContent } from "./index.ts"
 import { toToolDefinition } from "./utils.ts"
+import { parseVercelOutput } from "./vercel.ts"
 
 function messagesHaveContent(messages: readonly GenAIMessage[]): boolean {
   return messages.some((m) => Array.isArray(m.parts) && m.parts.length > 0)
@@ -154,6 +155,14 @@ export function parseGenAICurrent(attrs: readonly OtlpKeyValue[]): ParsedContent
     if (toolDefinitions.length === 0 && deprecated.toolDefinitions.length > 0) {
       toolDefinitions = [...deprecated.toolDefinitions]
     }
+  }
+
+  // Vercel AI SDK v6's GenAI compat layer emits gen_ai.input.messages but keeps the
+  // model's turn only in ai.response.* (no gen_ai.output.messages). This parser wins
+  // dispatch on the input key, so recover the output from the Vercel attributes.
+  if (!messagesHaveContent(outputMessages)) {
+    const vercelOutput = parseVercelOutput(attrs)
+    if (vercelOutput.length > 0) outputMessages = [...vercelOutput]
   }
 
   // Reconcile inline role:"system" turns with any separated gen_ai.system_instructions into
