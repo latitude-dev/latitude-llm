@@ -2,6 +2,21 @@
 
 ## Unreleased
 
+## v0.3.31 - 2026-07-02
+
+### Signals
+
+- Added AI-authored custom evaluation scripts to the signal builder, including worker-backed generation, sandbox validation against scoped sessions, and polling-based progress in the Advanced detector tab (ref: #3813).
+- Refreshed the signal creation flow with detector method selection, clearer explanations of rule, LLM-judge, and custom-script detectors, and more direct edit/test paths (ref: #3813).
+
+### Docs and planning
+
+- Added the LAT-721 observability migration tool spec for self-serve historical imports from Langfuse, LangSmith, and Braintrust (ref: #3805).
+
+### Web
+
+- Declared the web app's `quickjs-emscripten` runtime dependency so QuickJS-backed evaluation script paths resolve reliably in production (ref: 2a89754).
+
 ## v0.3.30 - 2026-07-02
 
 ### API and SDKs
