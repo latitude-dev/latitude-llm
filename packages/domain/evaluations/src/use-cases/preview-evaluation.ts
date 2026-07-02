@@ -25,7 +25,10 @@ const previewEvaluationInputSchema = z.object({
   projectId: cuidSchema.transform(ProjectId),
   filters: filterSetSchema.nullish(),
   // Exactly one of a declarative `settings` form or a raw `script`, mirroring createSignal.
-  evaluation: z.union([z.object({ settings: evaluationSettingsSchema }), z.object({ script: z.string().min(1) })]),
+  evaluation: z.union([
+    z.object({ settings: evaluationSettingsSchema }).strict(),
+    z.object({ script: z.string().min(1) }).strict(),
+  ]),
 })
 
 export type PreviewEvaluationInput = z.input<typeof previewEvaluationInputSchema>

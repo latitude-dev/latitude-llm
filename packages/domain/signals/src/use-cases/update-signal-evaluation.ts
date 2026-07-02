@@ -22,8 +22,8 @@ import { SignalRepository } from "../ports/signal-repository.ts"
 
 // Exactly one of a declarative `settings` form or a raw `script`, mirroring createSignal.
 const evaluationDraftSchema = z.union([
-  z.object({ settings: evaluationSettingsSchema }),
-  z.object({ script: z.string().min(1) }),
+  z.object({ settings: evaluationSettingsSchema }).strict(),
+  z.object({ script: z.string().min(1) }).strict(),
 ])
 
 const updateSignalEvaluationInputSchema = z.object({

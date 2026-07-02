@@ -1322,8 +1322,8 @@ export const enqueueSignalsExport = createServerFn({ method: "POST" })
 // --- Builder: create / edit / delete / preview (web leads; no REST/SDK regen) ---
 
 const evaluationDraftSchema = z.union([
-  z.object({ settings: evaluationSettingsSchema }),
-  z.object({ script: z.string().min(1) }),
+  z.object({ settings: evaluationSettingsSchema }).strict(),
+  z.object({ script: z.string().min(1) }).strict(),
 ])
 
 const createSignalInputSchema = z.object({
