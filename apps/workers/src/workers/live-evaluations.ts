@@ -1,5 +1,5 @@
 import { type RunLiveEvaluationResult, runLiveEvaluationUseCase } from "@domain/evaluations"
-import type { QueueConsumer } from "@domain/queue"
+import { type QueueConsumer, QueuePublisher, type QueuePublisherShape } from "@domain/queue"
 import type { EvaluationScore } from "@domain/scores"
 import { OrganizationId } from "@domain/shared"
 import { AIEmbedLive, AIGenerateLive, withAi } from "@platform/ai"
@@ -45,12 +45,14 @@ interface ExecutePayload {
   readonly projectId: string
   readonly evaluationId: string
   readonly traceId: string
+  readonly embeddingWaitAttempt?: number
 }
 
 type LiveEvaluationsLogger = Pick<ReturnType<typeof createLogger>, "info" | "error">
 
 interface LiveEvaluationsDeps {
   consumer: QueueConsumer
+  publisher: QueuePublisherShape
   postgresClient: PostgresClient
   clickhouseClient: ClickHouseClient
   redisClient: RedisClient
@@ -131,6 +133,7 @@ const logExecuteFailure = (liveEvaluationsLogger: LiveEvaluationsLogger, payload
 
 export const createLiveEvaluationsWorker = ({
   consumer,
+  publisher,
   postgresClient,
   clickhouseClient,
   redisClient,
@@ -163,6 +166,7 @@ export const createLiveEvaluationsWorker = ({
         OrganizationId(payload.organizationId),
       ),
       Effect.provide(QuickJsScriptRuntimeLive),
+      Effect.provide(Layer.succeed(QueuePublisher, publisher)),
       Effect.provide(RedisBillingSpendReservationLive(rdClient)),
       Effect.provide(RedisDetectorHealthTrackerLive(rdClient)),
       withClickHouse(

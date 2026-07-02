@@ -1,4 +1,5 @@
 import type { RunLiveEvaluationResult } from "@domain/evaluations"
+import type { QueuePublisherShape } from "@domain/queue"
 import type { RedisClient } from "@platform/cache-redis"
 import { setupTestClickHouse, setupTestPostgres } from "@platform/testkit"
 import { Effect } from "effect"
@@ -10,6 +11,11 @@ import { createLiveEvaluationsWorker } from "./live-evaluations.ts"
 const pg = setupTestPostgres()
 const ch = setupTestClickHouse()
 const DUMMY_REDIS = {} as RedisClient
+const DUMMY_PUBLISHER: QueuePublisherShape = {
+  publish: () => Effect.void,
+  scheduleRepeatable: () => Effect.void,
+  close: () => Effect.void,
+}
 
 const PAYLOAD = {
   organizationId: "o".repeat(24),
@@ -24,6 +30,7 @@ describe("createLiveEvaluationsWorker execute path", () => {
 
     createLiveEvaluationsWorker({
       consumer,
+      publisher: DUMMY_PUBLISHER,
       postgresClient: pg.appPostgresClient,
       clickhouseClient: ch.client,
       redisClient: DUMMY_REDIS,
@@ -47,6 +54,7 @@ describe("createLiveEvaluationsWorker execute path", () => {
 
     createLiveEvaluationsWorker({
       consumer,
+      publisher: DUMMY_PUBLISHER,
       postgresClient: pg.appPostgresClient,
       clickhouseClient: ch.client,
       redisClient: DUMMY_REDIS,

@@ -11,7 +11,14 @@ import {
   type UnknownStripePlanError,
 } from "@domain/billing"
 import { OutboxEventWriter } from "@domain/events"
-import { DETECTOR_HEALTH_WINDOW_SECONDS, DetectorHealthTracker, type ScriptRuntime } from "@domain/sandbox"
+import { type QueuePublishError, QueuePublisher } from "@domain/queue"
+import {
+  DETECTOR_HEALTH_WINDOW_SECONDS,
+  detectScriptCapabilities,
+  DetectorHealthTracker,
+  hasEmbeddingCapability,
+  type ScriptRuntime,
+} from "@domain/sandbox"
 import {
   type EvaluationScore,
   type ScoreAnalyticsRepository,
@@ -35,7 +42,7 @@ import {
   type SpanRepository,
   type TraceDetail,
   TraceRepository,
-  type TraceSearchRepository,
+  TraceSearchRepository,
 } from "@domain/spans"
 import { Cause, Effect, Exit } from "effect"
 import type { Evaluation } from "../../entities/evaluation.ts"
@@ -50,11 +57,22 @@ import {
   type LiveEvaluationSignalContext,
 } from "./execute-live-evaluation.ts"
 
+/**
+ * Readiness gate for embedding-capability evaluations: `signals:match` and `trace-end` are siblings off
+ * `TracesIngested`, and `trace-search` (which writes `message_embeddings`) runs after `trace-end`, so
+ * embeddings usually aren't indexed when the eval first fires. Defer with a bounded delayed re-publish;
+ * on the final attempt run anyway (the host returns 0 for whatever's still missing).
+ */
+const MAX_EMBEDDING_WAIT_ATTEMPTS = 6
+const EMBEDDING_WAIT_DELAY_MS = 5_000
+
 export interface RunLiveEvaluationInput {
   readonly organizationId: string
   readonly projectId: string
   readonly evaluationId: string
   readonly traceId: string
+  /** Re-publish counter set by the embedding-readiness gate; absent on the initial publish. */
+  readonly embeddingWaitAttempt?: number
 }
 
 export interface RunLiveEvaluationPersistedSummary {
@@ -106,6 +124,7 @@ export type RunLiveEvaluationResult =
         | "paused"
         | "result-already-exists"
         | "billing-blocked"
+        | "awaiting-embeddings"
       readonly evaluationId: string
       readonly traceId: string
     }
@@ -115,7 +134,7 @@ export type RunLiveEvaluationResult =
       readonly context: RunLiveEvaluationPersistedContext
     }
 
-export type RunLiveEvaluationError = RepositoryError | WriteScoreError | UnknownStripePlanError
+export type RunLiveEvaluationError = RepositoryError | WriteScoreError | UnknownStripePlanError | QueuePublishError
 
 const isRecord = (value: unknown): value is Record<string, unknown> => typeof value === "object" && value !== null
 const isRepositoryError = (error: unknown): error is RepositoryError =>
@@ -204,6 +223,46 @@ export const runLiveEvaluationUseCase = (input: RunLiveEvaluationInput) =>
         evaluationId: input.evaluationId,
         traceId: input.traceId,
       } satisfies RunLiveEvaluationResult
+    }
+
+    // Readiness gate — only for embedding-capability scripts, before any billing or execution work.
+    if (hasEmbeddingCapability(detectScriptCapabilities(evaluation.script))) {
+      const traceSearchRepository = yield* TraceSearchRepository
+      const occurrences = yield* traceSearchRepository.listMessageOccurrencesForTraces({
+        organizationId: OrganizationId(input.organizationId),
+        projectId,
+        traceIds: [TraceId(input.traceId)],
+      })
+      if (occurrences.length === 0) {
+        const attempt = input.embeddingWaitAttempt ?? 0
+        if (attempt < MAX_EMBEDDING_WAIT_ATTEMPTS) {
+          const nextAttempt = attempt + 1
+          const publisher = yield* QueuePublisher
+          yield* publisher.publish(
+            "live-evaluations",
+            "execute",
+            {
+              organizationId: input.organizationId,
+              projectId: input.projectId,
+              evaluationId: input.evaluationId,
+              traceId: input.traceId,
+              embeddingWaitAttempt: nextAttempt,
+            },
+            {
+              dedupeKey: `org:${input.organizationId}:live-eval-embedding-wait:${input.evaluationId}:${input.traceId}:${nextAttempt}`,
+              debounceMs: EMBEDDING_WAIT_DELAY_MS,
+            },
+          )
+          return {
+            action: "skipped",
+            reason: "awaiting-embeddings",
+            evaluationId: input.evaluationId,
+            traceId: input.traceId,
+          } satisfies RunLiveEvaluationResult
+        }
+        // Out of attempts: run anyway (host returns 0 for the missing vectors). Metric proxy for "never arrived".
+        yield* Effect.annotateCurrentSpan("evaluation.embeddingsMissingAtRun", true)
+      }
     }
 
     const signalRepository = yield* EvaluationSignalRepository
@@ -423,6 +482,7 @@ export const runLiveEvaluationUseCase = (input: RunLiveEvaluationInput) =>
     | EvaluationRepository
     | MessageEmbeddingRepository
     | OutboxEventWriter
+    | QueuePublisher
     | ScoreAnalyticsRepository
     | ScoreRepository
     | ScriptRuntime
