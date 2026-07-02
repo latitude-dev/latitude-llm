@@ -6,10 +6,11 @@ import pydantic
 import typing_extensions
 from ..core.pydantic_utilities import UniversalBaseModel
 from ..core.serialization import FieldMetadata
+from .export_dataset_rows_queued_response_status import ExportDatasetRowsQueuedResponseStatus
 
 
 class ExportDatasetRowsQueuedResponse(UniversalBaseModel):
-    status: typing.Literal["queued"] = pydantic.Field(default="queued")
+    status: ExportDatasetRowsQueuedResponseStatus = pydantic.Field()
     """
     Always `"queued"`. The CSV is emailed to `recipient` when ready.
     """
@@ -19,9 +20,10 @@ class ExportDatasetRowsQueuedResponse(UniversalBaseModel):
     Email address the export download link will be sent to.
     """
 
-    row_count: typing_extensions.Annotated[int, FieldMetadata(alias="rowCount")] = pydantic.Field()
-    """
-    Number of rows the export will produce.
-    """
+    row_count: typing_extensions.Annotated[
+        int,
+        FieldMetadata(alias="rowCount"),
+        pydantic.Field(alias="rowCount", description="Number of rows the export will produce."),
+    ]
 
     model_config: typing.ClassVar[pydantic.ConfigDict] = pydantic.ConfigDict(extra="allow", frozen=True)

@@ -1,0 +1,228 @@
+import { SLACK_ROUTABLE_NOTIFICATION_GROUPS } from "@domain/shared"
+import { Alert, Button, Icon, Modal, SlackIcon, Text, useMountEffect, useToast } from "@repo/ui"
+import { relativeTime } from "@repo/utils"
+import { eq } from "@tanstack/react-db"
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
+import { createFileRoute, useRouter } from "@tanstack/react-router"
+import { Plus, Trash2 } from "lucide-react"
+import { useState } from "react"
+import { z } from "zod"
+import {
+  disconnectSlackIntegration,
+  getActiveSlackIntegration,
+  type SlackIntegrationRecord,
+} from "../../../../../../domains/integrations/integrations.functions.ts"
+import { useProjectsCollection } from "../../../../../../domains/projects/projects.collection.ts"
+import { toUserMessage } from "../../../../../../lib/errors.ts"
+import { useRouteProject } from "../../-route-data.ts"
+import { AgentDispatchSection } from "../-components/agent-dispatch-section.tsx"
+import { IntegrationCard } from "../-components/integration-card.tsx"
+import { SettingsPage } from "../-components/settings-page.tsx"
+import { SLACK_INTEGRATION_QUERY_KEY, SlackRouteRow } from "../-components/slack-route-row.tsx"
+
+const searchSchema = z.object({
+  installed: z.literal("ok").optional(),
+  error: z.string().optional(),
+})
+
+export const Route = createFileRoute("/_authenticated/projects/$projectSlug/settings/integrations/")({
+  validateSearch: searchSchema,
+  component: IntegrationsSettingsPage,
+})
+
+function IntegrationsSettingsPage() {
+  const { toast } = useToast()
+  const router = useRouter()
+  const search = Route.useSearch()
+  const { projectSlug } = Route.useParams()
+  const routeProject = useRouteProject()
+  const { data: project } = useProjectsCollection(
+    (projects) => projects.where(({ project }) => eq(project.slug, projectSlug)).findOne(),
+    [projectSlug],
+  )
+  const currentProject = project ?? routeProject
+
+  useMountEffect(() => {
+    if (search.installed === "ok") {
+      toast({ description: "Slack connected" })
+    } else if (search.error === "workspace_taken") {
+      toast({
+        variant: "destructive",
+        description: "This Slack workspace is already connected to another Latitude organization.",
+      })
+    } else if (search.error === "oauth_failed") {
+      toast({
+        variant: "destructive",
+        description: "Couldn't complete the Slack install. Please try again.",
+      })
+    }
+    if (search.installed || search.error) {
+      void router.navigate({ to: Route.fullPath, search: {}, replace: true })
+    }
+  })
+
+  return (
+    <SettingsPage title="Integrations" description="Connect Latitude to the tools your team already uses.">
+      <div className="flex flex-col gap-3">
+        <SlackIntegrationSection />
+        {currentProject ? (
+          <AgentDispatchSection projectId={currentProject.id} projectSlug={currentProject.slug} />
+        ) : null}
+      </div>
+    </SettingsPage>
+  )
+}
+
+function SlackIntegrationSection() {
+  const { data, isLoading } = useQuery({
+    queryKey: SLACK_INTEGRATION_QUERY_KEY,
+    queryFn: () => getActiveSlackIntegration(),
+  })
+  const [disconnectOpen, setDisconnectOpen] = useState(false)
+
+  if (isLoading) return null
+
+  return (
+    <>
+      {data ? (
+        <ConnectedSlackCard integration={data} onDisconnect={() => setDisconnectOpen(true)} />
+      ) : (
+        <DisconnectedSlackCard />
+      )}
+      {data ? <DisconnectSlackModal open={disconnectOpen} onClose={() => setDisconnectOpen(false)} /> : null}
+    </>
+  )
+}
+
+function DisconnectedSlackCard() {
+  return (
+    <IntegrationCard
+      icon={SlackIcon}
+      title="Slack"
+      subtitle="Send Latitude notifications to your Slack workspace."
+      actions={
+        // `/integrations/slack/install` is a server-handler-only route
+        // that 302s the browser to Slack — needs a full-page GET, not
+        // client-side routing. Plain `<a>` (inside a `Button asChild`)
+        // gives cmd/middle-click + copy-link affordances while keeping
+        // the full-page nav.
+        <Button asChild>
+          <a href="/integrations/slack/install">
+            <Icon icon={Plus} size="sm" />
+            Connect
+          </a>
+        </Button>
+      }
+    />
+  )
+}
+
+function ConnectedSlackCard({
+  integration,
+  onDisconnect,
+}: {
+  integration: SlackIntegrationRecord
+  onDisconnect: () => void
+}) {
+  return (
+    <div className="rounded-lg border border-border">
+      {/* Reconnect banner. Should never appear while on-use refresh is
+          healthy; when it does, the rotation chain is broken (refresh
+          token revoked) and the workspace must be reconnected. */}
+      {integration.needsReconnect && (
+        <div className="border-b border-border p-4">
+          <Alert
+            variant="destructive"
+            showIcon
+            title="Slack connection expired"
+            description="We couldn't refresh the Slack token. Reconnect to restore notifications."
+            cta={
+              <Button asChild variant="destructive">
+                <a href="/integrations/slack/install">Reconnect</a>
+              </Button>
+            }
+          />
+        </div>
+      )}
+
+      {/* Identity row */}
+      <div className="flex flex-row flex-wrap items-center justify-between gap-x-4 gap-y-2 p-4">
+        <div className="flex min-w-0 flex-row items-center gap-3">
+          <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-md bg-muted">
+            <Icon icon={SlackIcon} />
+          </div>
+          <div className="flex min-w-0 flex-col gap-0.5">
+            <Text.H5 weight="semibold">{integration.teamName}</Text.H5>
+            <Text.H6 color="foregroundMuted">Connected {relativeTime(new Date(integration.installedAt))}</Text.H6>
+          </div>
+        </div>
+        <div className="shrink-0">
+          <Button variant="destructive" onClick={onDisconnect}>
+            Disconnect
+          </Button>
+        </div>
+      </div>
+
+      {/* Notification routing */}
+      <div className="flex flex-col gap-3 border-t border-border p-4">
+        <Text.H5 weight="semibold">Notifications</Text.H5>
+        <div className="flex w-full flex-col gap-1">
+          {SLACK_ROUTABLE_NOTIFICATION_GROUPS.map((group) => (
+            <SlackRouteRow key={group} group={group} integration={integration} />
+          ))}
+        </div>
+      </div>
+    </div>
+  )
+}
+
+function DisconnectSlackModal({ open, onClose }: { open: boolean; onClose: () => void }) {
+  const { toast } = useToast()
+  const queryClient = useQueryClient()
+  const [disconnecting, setDisconnecting] = useState(false)
+
+  const mutation = useMutation({
+    mutationFn: () => disconnectSlackIntegration(),
+  })
+
+  const handleConfirm = async () => {
+    setDisconnecting(true)
+    try {
+      await mutation.mutateAsync()
+      await queryClient.invalidateQueries({ queryKey: SLACK_INTEGRATION_QUERY_KEY })
+      toast({ description: "Slack disconnected" })
+      onClose()
+    } catch (error) {
+      setDisconnecting(false)
+      toast({ variant: "destructive", description: toUserMessage(error) })
+    }
+  }
+
+  return (
+    <Modal
+      open={open}
+      onOpenChange={(value) => {
+        if (!value && !disconnecting) onClose()
+      }}
+      title="Disconnect Slack"
+      description="Disconnecting will stop all Latitude notifications to this Slack workspace and revoke the bot token. Channel routing will be reset if you reconnect."
+      dismissible
+      footer={
+        <div className="flex flex-row items-center gap-2">
+          <Button variant="outline" onClick={onClose} disabled={disconnecting}>
+            Cancel
+          </Button>
+          <Button
+            variant="destructive"
+            onClick={() => void handleConfirm()}
+            disabled={disconnecting}
+            isLoading={disconnecting}
+          >
+            <Trash2 className="h-4 w-4" />
+            {disconnecting ? "Disconnecting…" : "Disconnect Slack"}
+          </Button>
+        </div>
+      }
+    />
+  )
+}

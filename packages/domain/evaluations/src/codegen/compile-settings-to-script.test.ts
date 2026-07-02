@@ -28,9 +28,12 @@ describe("compileSettingsToScript", () => {
   })
 
   it("interpolates session.conversation, not the legacy bare conversation global", () => {
+    // biome-ignore lint/suspicious/noTemplateCurlyInString: literal placeholder the generated script interpolates, not a TS template
     expect(EVALUATION_CONVERSATION_PLACEHOLDER).toBe("${session.conversation}")
     const script = compileSettingsToScript({ kind: "judge", criteria: "x" })
+    // biome-ignore lint/suspicious/noTemplateCurlyInString: literal placeholder the generated script interpolates, not a TS template
     expect(script).toContain("${session.conversation}")
+    // biome-ignore lint/suspicious/noTemplateCurlyInString: legacy literal placeholder that must be absent, not a TS template
     expect(script).not.toContain("${conversation}")
   })
 })

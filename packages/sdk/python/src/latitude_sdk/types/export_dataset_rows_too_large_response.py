@@ -6,27 +6,32 @@ import pydantic
 import typing_extensions
 from ..core.pydantic_utilities import UniversalBaseModel
 from ..core.serialization import FieldMetadata
+from .export_dataset_rows_too_large_response_status import ExportDatasetRowsTooLargeResponseStatus
 
 
 class ExportDatasetRowsTooLargeResponse(UniversalBaseModel):
-    status: typing.Literal["too_large"] = pydantic.Field(default="too_large")
+    status: ExportDatasetRowsTooLargeResponseStatus = pydantic.Field()
     """
     Always `"too_large"`. The export exceeds the synchronous threshold.
     """
 
-    row_count: typing_extensions.Annotated[int, FieldMetadata(alias="rowCount")] = pydantic.Field()
-    """
-    Number of rows the export would have produced.
-    """
-
+    row_count: typing_extensions.Annotated[
+        int,
+        FieldMetadata(alias="rowCount"),
+        pydantic.Field(alias="rowCount", description="Number of rows the export would have produced."),
+    ]
     threshold: int = pydantic.Field()
     """
     Maximum row count this endpoint will generate synchronously.
     """
 
-    recommended_action: typing_extensions.Annotated[str, FieldMetadata(alias="recommendedAction")] = pydantic.Field()
-    """
-    Instructions for the caller — typically an LLM — on how to recover: ask the end user for an email address and retry the same call with `recipient` set to it.
-    """
+    recommended_action: typing_extensions.Annotated[
+        str,
+        FieldMetadata(alias="recommendedAction"),
+        pydantic.Field(
+            alias="recommendedAction",
+            description="Instructions for the caller — typically an LLM — on how to recover: ask the end user for an email address and retry the same call with `recipient` set to it.",
+        ),
+    ]
 
     model_config: typing.ClassVar[pydantic.ConfigDict] = pydantic.ConfigDict(extra="allow", frozen=True)

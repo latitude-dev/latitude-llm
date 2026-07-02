@@ -48,9 +48,9 @@ if typing.TYPE_CHECKING:
         CreateSignalBodyEvaluationSettingsSettings_Rule,
         CreateSignalBodyPriority,
         ExportSignalsBodyLifecycleGroup,
-        SignalsListRequestLifecycleGroup,
-        SignalsListRequestSortBy,
-        SignalsListRequestSortDirection,
+        ListSignalsRequestLifecycleGroup,
+        ListSignalsRequestSortBy,
+        ListSignalsRequestSortDirection,
     )
 _dynamic_imports: typing.Dict[str, str] = {
     "CreateSignalBodyEvaluation": ".types",
@@ -94,9 +94,9 @@ _dynamic_imports: typing.Dict[str, str] = {
     "CreateSignalBodyEvaluationSettingsSettings_Rule": ".types",
     "CreateSignalBodyPriority": ".types",
     "ExportSignalsBodyLifecycleGroup": ".types",
-    "SignalsListRequestLifecycleGroup": ".types",
-    "SignalsListRequestSortBy": ".types",
-    "SignalsListRequestSortDirection": ".types",
+    "ListSignalsRequestLifecycleGroup": ".types",
+    "ListSignalsRequestSortBy": ".types",
+    "ListSignalsRequestSortDirection": ".types",
 }
 
 
@@ -163,7 +163,7 @@ __all__ = [
     "CreateSignalBodyEvaluationSettingsSettings_Rule",
     "CreateSignalBodyPriority",
     "ExportSignalsBodyLifecycleGroup",
-    "SignalsListRequestLifecycleGroup",
-    "SignalsListRequestSortBy",
-    "SignalsListRequestSortDirection",
+    "ListSignalsRequestLifecycleGroup",
+    "ListSignalsRequestSortBy",
+    "ListSignalsRequestSortDirection",
 ]

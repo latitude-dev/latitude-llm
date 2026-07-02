@@ -11,7 +11,7 @@ from .analytics_query_spans_metric import AnalyticsQuerySpansMetric
 from .analytics_query_spans_order_by import AnalyticsQuerySpansOrderBy
 from .analytics_query_spans_range import AnalyticsQuerySpansRange
 from .analytics_query_spans_time_bucket import AnalyticsQuerySpansTimeBucket
-from .filter_set import FilterSet
+from .filter_condition import FilterCondition
 
 
 class AnalyticsQuerySpans(UniversalBaseModel):
@@ -22,29 +22,33 @@ class AnalyticsQuerySpans(UniversalBaseModel):
 
     metric: AnalyticsQuerySpansMetric = pydantic.Field()
     """
-    The metric: `count`, `errorRate`, `cacheHitRate`, or `{sum|min|max|avg|median}` over `duration`/`cost`/`tokens`.
+    The metric: `count`, `errorRate`, `cacheHitRate`, or `{sum|min|max|avg|median|p95}` over `duration`/`cost`/`tokens`.
     """
 
-    filters: typing.Optional[FilterSet] = None
+    filters: typing.Optional[typing.Dict[str, typing.List[FilterCondition]]] = pydantic.Field(default=None)
+    """
+    Structured filter set applied to the stream (same DSL as `listTraces`).
+    """
+
     time_bucket: typing_extensions.Annotated[
-        typing.Optional[AnalyticsQuerySpansTimeBucket], FieldMetadata(alias="timeBucket")
-    ] = pydantic.Field(default=None)
-    """
-    Bucket the metric over time. Omit for a single aggregate.
-    """
-
+        typing.Optional[AnalyticsQuerySpansTimeBucket],
+        FieldMetadata(alias="timeBucket"),
+        pydantic.Field(
+            alias="timeBucket", default=None, description="Bucket the metric over time. Omit for a single aggregate."
+        ),
+    ]
     range: AnalyticsQuerySpansRange = pydantic.Field()
     """
     The time window.
     """
 
     order_by: typing_extensions.Annotated[
-        typing.Optional[AnalyticsQuerySpansOrderBy], FieldMetadata(alias="orderBy")
-    ] = pydantic.Field(default=None)
-    """
-    Sort for breakdown results. Defaults to value-desc.
-    """
-
+        typing.Optional[AnalyticsQuerySpansOrderBy],
+        FieldMetadata(alias="orderBy"),
+        pydantic.Field(
+            alias="orderBy", default=None, description="Sort for breakdown results. Defaults to value-desc."
+        ),
+    ]
     limit: typing.Optional[int] = pydantic.Field(default=None)
     """
     Maximum rows returned. Defaults to 50; max 500.

@@ -7,7 +7,7 @@ import * as core from "../../../../core/index.js";
 import * as environments from "../../../../environments.js";
 import { handleNonStatusCodeError } from "../../../../errors/handleNonStatusCodeError.js";
 import * as errors from "../../../../errors/index.js";
-import * as LatitudeApi from "../../../index.js";
+import * as Latitude from "../../../index.js";
 
 export declare namespace AnalyticsClient {
     export type Options = BaseClientOptions;
@@ -18,7 +18,7 @@ export declare namespace AnalyticsClient {
 export class AnalyticsClient {
     protected readonly _options: NormalizedClientOptionsWithAuth<AnalyticsClient.Options>;
 
-    constructor(options: AnalyticsClient.Options) {
+    constructor(options: AnalyticsClient.Options = {}) {
         this._options = normalizeClientOptionsWithAuth(options);
     }
 
@@ -26,38 +26,41 @@ export class AnalyticsClient {
      * Compute a metric over a filtered stream (`traces`/`sessions`/`spans`), optionally broken down by a dimension and/or bucketed over time. Returns a tidy series — one point per breakdown value and/or time bucket — suitable for charts and dashboards.
      *
      * @param {string} projectSlug - Project slug (human-readable identifier)
-     * @param {LatitudeApi.AnalyticsQuery} request
+     * @param {Latitude.QueryAnalyticsRequest} request
      * @param {AnalyticsClient.RequestOptions} requestOptions - Request-specific configuration.
      *
-     * @throws {@link LatitudeApi.BadRequestError}
-     * @throws {@link LatitudeApi.UnauthorizedError}
-     * @throws {@link LatitudeApi.NotFoundError}
+     * @throws {@link Latitude.BadRequestError}
+     * @throws {@link Latitude.UnauthorizedError}
+     * @throws {@link Latitude.NotFoundError}
      *
      * @example
      *     await client.analytics.query("projectSlug", {
-     *         stream: "traces",
-     *         metric: {
-     *             kind: "count"
-     *         },
-     *         range: {
-     *             fromIso: "2026-06-23T00:00:00Z",
-     *             toIso: "2026-06-30T00:00:00Z"
+     *         body: {
+     *             stream: "traces",
+     *             metric: {
+     *                 kind: "count"
+     *             },
+     *             range: {
+     *                 fromIso: "2026-06-23T00:00:00Z",
+     *                 toIso: "2026-06-30T00:00:00Z"
+     *             }
      *         }
      *     })
      */
     public query(
         projectSlug: string,
-        request: LatitudeApi.AnalyticsQuery,
+        request: Latitude.QueryAnalyticsRequest,
         requestOptions?: AnalyticsClient.RequestOptions,
-    ): core.HttpResponsePromise<LatitudeApi.AnalyticsSeries> {
+    ): core.HttpResponsePromise<Latitude.AnalyticsSeries> {
         return core.HttpResponsePromise.fromPromise(this.__query(projectSlug, request, requestOptions));
     }
 
     private async __query(
         projectSlug: string,
-        request: LatitudeApi.AnalyticsQuery,
+        request: Latitude.QueryAnalyticsRequest,
         requestOptions?: AnalyticsClient.RequestOptions,
-    ): Promise<core.WithRawResponse<LatitudeApi.AnalyticsSeries>> {
+    ): Promise<core.WithRawResponse<Latitude.AnalyticsSeries>> {
+        const { body: _body } = request;
         const _authRequest: core.AuthRequest = await this._options.authProvider.getAuthRequest();
         const _headers: core.Fetcher.Args["headers"] = mergeHeaders(
             _authRequest.headers,
@@ -68,15 +71,15 @@ export class AnalyticsClient {
             url: core.url.join(
                 (await core.Supplier.get(this._options.baseUrl)) ??
                     (await core.Supplier.get(this._options.environment)) ??
-                    environments.LatitudeApiEnvironment.Production,
+                    environments.LatitudeEnvironment.Production,
                 `v1/projects/${core.url.encodePathParam(projectSlug)}/analytics/query`,
             ),
             method: "POST",
             headers: _headers,
             contentType: "application/json",
-            queryParameters: requestOptions?.queryParams,
+            queryString: core.url.queryBuilder().mergeAdditional(requestOptions?.queryParams).build(),
             requestType: "json",
-            body: request,
+            body: _body,
             timeoutMs: (requestOptions?.timeoutInSeconds ?? this._options?.timeoutInSeconds ?? 60) * 1000,
             maxRetries: requestOptions?.maxRetries ?? this._options?.maxRetries,
             abortSignal: requestOptions?.abortSignal,
@@ -84,28 +87,22 @@ export class AnalyticsClient {
             logging: this._options.logging,
         });
         if (_response.ok) {
-            return { data: _response.body as LatitudeApi.AnalyticsSeries, rawResponse: _response.rawResponse };
+            return { data: _response.body as Latitude.AnalyticsSeries, rawResponse: _response.rawResponse };
         }
 
         if (_response.error.reason === "status-code") {
             switch (_response.error.statusCode) {
                 case 400:
-                    throw new LatitudeApi.BadRequestError(
-                        _response.error.body as LatitudeApi.Error_,
-                        _response.rawResponse,
-                    );
+                    throw new Latitude.BadRequestError(_response.error.body as Latitude.Error_, _response.rawResponse);
                 case 401:
-                    throw new LatitudeApi.UnauthorizedError(
-                        _response.error.body as LatitudeApi.Error_,
+                    throw new Latitude.UnauthorizedError(
+                        _response.error.body as Latitude.Error_,
                         _response.rawResponse,
                     );
                 case 404:
-                    throw new LatitudeApi.NotFoundError(
-                        _response.error.body as LatitudeApi.Error_,
-                        _response.rawResponse,
-                    );
+                    throw new Latitude.NotFoundError(_response.error.body as Latitude.Error_, _response.rawResponse);
                 default:
-                    throw new errors.LatitudeApiError({
+                    throw new errors.LatitudeError({
                         statusCode: _response.error.statusCode,
                         body: _response.error.body,
                         rawResponse: _response.rawResponse,

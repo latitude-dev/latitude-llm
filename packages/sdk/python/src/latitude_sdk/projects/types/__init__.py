@@ -7,7 +7,11 @@ from importlib import import_module
 
 if typing.TYPE_CHECKING:
     from .update_project_body_flaggers import UpdateProjectBodyFlaggers
-_dynamic_imports: typing.Dict[str, str] = {"UpdateProjectBodyFlaggers": ".update_project_body_flaggers"}
+    from .update_project_body_settings import UpdateProjectBodySettings
+_dynamic_imports: typing.Dict[str, str] = {
+    "UpdateProjectBodyFlaggers": ".update_project_body_flaggers",
+    "UpdateProjectBodySettings": ".update_project_body_settings",
+}
 
 
 def __getattr__(attr_name: str) -> typing.Any:
@@ -31,4 +35,4 @@ def __dir__():
     return sorted(lazy_attrs)
 
 
-__all__ = ["UpdateProjectBodyFlaggers"]
+__all__ = ["UpdateProjectBodyFlaggers", "UpdateProjectBodySettings"]

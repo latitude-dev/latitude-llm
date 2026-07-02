@@ -15,16 +15,16 @@ class Dataset(UniversalBaseModel):
     Stable dataset identifier.
     """
 
-    organization_id: typing_extensions.Annotated[str, FieldMetadata(alias="organizationId")] = pydantic.Field()
-    """
-    Organization that owns this dataset.
-    """
-
-    project_id: typing_extensions.Annotated[str, FieldMetadata(alias="projectId")] = pydantic.Field()
-    """
-    Project this dataset belongs to.
-    """
-
+    organization_id: typing_extensions.Annotated[
+        str,
+        FieldMetadata(alias="organizationId"),
+        pydantic.Field(alias="organizationId", description="Organization that owns this dataset."),
+    ]
+    project_id: typing_extensions.Annotated[
+        str,
+        FieldMetadata(alias="projectId"),
+        pydantic.Field(alias="projectId", description="Project this dataset belongs to."),
+    ]
     slug: str = pydantic.Field()
     """
     URL-safe slug derived from `name`. Unique within the project.
@@ -50,14 +50,15 @@ class Dataset(UniversalBaseModel):
     Current dataset version.
     """
 
-    created_at: typing_extensions.Annotated[str, FieldMetadata(alias="createdAt")] = pydantic.Field()
-    """
-    ISO-8601 timestamp of creation.
-    """
-
-    updated_at: typing_extensions.Annotated[str, FieldMetadata(alias="updatedAt")] = pydantic.Field()
-    """
-    ISO-8601 timestamp of the last update.
-    """
+    created_at: typing_extensions.Annotated[
+        str,
+        FieldMetadata(alias="createdAt"),
+        pydantic.Field(alias="createdAt", description="ISO-8601 timestamp of creation."),
+    ]
+    updated_at: typing_extensions.Annotated[
+        str,
+        FieldMetadata(alias="updatedAt"),
+        pydantic.Field(alias="updatedAt", description="ISO-8601 timestamp of the last update."),
+    ]
 
     model_config: typing.ClassVar[pydantic.ConfigDict] = pydantic.ConfigDict(extra="allow", frozen=True)

@@ -2,5 +2,13 @@
 
 export interface ExportSignalsResponse {
     /** Always `"queued"`. The CSV is emailed to `recipient` when ready. */
-    status: "queued";
+    status: ExportSignalsResponse.Status;
+}
+
+export namespace ExportSignalsResponse {
+    /** Always `"queued"`. The CSV is emailed to `recipient` when ready. */
+    export const Status = {
+        Queued: "queued",
+    } as const;
+    export type Status = (typeof Status)[keyof typeof Status];
 }

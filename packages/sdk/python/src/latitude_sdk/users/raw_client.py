@@ -8,7 +8,8 @@ from ..core.api_error import ApiError
 from ..core.client_wrapper import AsyncClientWrapper, SyncClientWrapper
 from ..core.datetime_utils import serialize_datetime
 from ..core.http_response import AsyncHttpResponse, HttpResponse
-from ..core.jsonable_encoder import jsonable_encoder
+from ..core.jsonable_encoder import encode_path_param
+from ..core.parse_error import ParsingError
 from ..core.pydantic_utilities import parse_obj_as
 from ..core.request_options import RequestOptions
 from ..errors.bad_request_error import BadRequestError
@@ -22,12 +23,13 @@ from ..types.user_profile_response import UserProfileResponse
 from ..types.user_signals_response import UserSignalsResponse
 from ..types.user_usage_response import UserUsageResponse
 from ..types.users_overview_response import UsersOverviewResponse
-from .types.users_activity_request_errors_only import UsersActivityRequestErrorsOnly
-from .types.users_get_request_errors_only import UsersGetRequestErrorsOnly
-from .types.users_list_request_sort_by import UsersListRequestSortBy
-from .types.users_list_request_sort_direction import UsersListRequestSortDirection
-from .types.users_usage_request_dimension import UsersUsageRequestDimension
-from .types.users_usage_request_errors_only import UsersUsageRequestErrorsOnly
+from .types.activity_users_request_errors_only import ActivityUsersRequestErrorsOnly
+from .types.get_users_request_errors_only import GetUsersRequestErrorsOnly
+from .types.list_users_request_sort_by import ListUsersRequestSortBy
+from .types.list_users_request_sort_direction import ListUsersRequestSortDirection
+from .types.usage_users_request_dimension import UsageUsersRequestDimension
+from .types.usage_users_request_errors_only import UsageUsersRequestErrorsOnly
+from pydantic import ValidationError
 
 
 class RawUsersClient:
@@ -42,8 +44,8 @@ class RawUsersClient:
         to_iso: typing.Optional[dt.datetime] = None,
         limit: typing.Optional[int] = None,
         offset: typing.Optional[int] = None,
-        sort_by: typing.Optional[UsersListRequestSortBy] = None,
-        sort_direction: typing.Optional[UsersListRequestSortDirection] = None,
+        sort_by: typing.Optional[ListUsersRequestSortBy] = None,
+        sort_direction: typing.Optional[ListUsersRequestSortDirection] = None,
         search_query: typing.Optional[str] = None,
         request_options: typing.Optional[RequestOptions] = None,
     ) -> HttpResponse[UserListResponse]:
@@ -67,10 +69,10 @@ class RawUsersClient:
         offset : typing.Optional[int]
             Zero-based offset of the first user to return.
 
-        sort_by : typing.Optional[UsersListRequestSortBy]
+        sort_by : typing.Optional[ListUsersRequestSortBy]
             Field to sort by. Defaults to most recently seen.
 
-        sort_direction : typing.Optional[UsersListRequestSortDirection]
+        sort_direction : typing.Optional[ListUsersRequestSortDirection]
             Sort direction. Defaults to descending.
 
         search_query : typing.Optional[str]
@@ -85,7 +87,7 @@ class RawUsersClient:
             Page of end-users
         """
         _response = self._client_wrapper.httpx_client.request(
-            f"v1/projects/{jsonable_encoder(project_slug)}/users",
+            f"v1/projects/{encode_path_param(project_slug)}/users",
             method="GET",
             params={
                 "fromIso": serialize_datetime(from_iso) if from_iso is not None else None,
@@ -144,6 +146,10 @@ class RawUsersClient:
             _response_json = _response.json()
         except JSONDecodeError:
             raise ApiError(status_code=_response.status_code, headers=dict(_response.headers), body=_response.text)
+        except ValidationError as e:
+            raise ParsingError(
+                status_code=_response.status_code, headers=dict(_response.headers), body=_response.json(), cause=e
+            )
         raise ApiError(status_code=_response.status_code, headers=dict(_response.headers), body=_response_json)
 
     def overview(
@@ -177,7 +183,7 @@ class RawUsersClient:
             Users overview
         """
         _response = self._client_wrapper.httpx_client.request(
-            f"v1/projects/{jsonable_encoder(project_slug)}/users/overview",
+            f"v1/projects/{encode_path_param(project_slug)}/users/overview",
             method="GET",
             params={
                 "fromIso": serialize_datetime(from_iso) if from_iso is not None else None,
@@ -231,6 +237,10 @@ class RawUsersClient:
             _response_json = _response.json()
         except JSONDecodeError:
             raise ApiError(status_code=_response.status_code, headers=dict(_response.headers), body=_response.text)
+        except ValidationError as e:
+            raise ParsingError(
+                status_code=_response.status_code, headers=dict(_response.headers), body=_response.json(), cause=e
+            )
         raise ApiError(status_code=_response.status_code, headers=dict(_response.headers), body=_response_json)
 
     def activity(
@@ -240,7 +250,7 @@ class RawUsersClient:
         *,
         from_iso: typing.Optional[dt.datetime] = None,
         to_iso: typing.Optional[dt.datetime] = None,
-        errors_only: typing.Optional[UsersActivityRequestErrorsOnly] = None,
+        errors_only: typing.Optional[ActivityUsersRequestErrorsOnly] = None,
         request_options: typing.Optional[RequestOptions] = None,
     ) -> HttpResponse[UserActivityResponse]:
         """
@@ -260,7 +270,7 @@ class RawUsersClient:
         to_iso : typing.Optional[dt.datetime]
             Upper bound (inclusive) of the time range. Defaults to now.
 
-        errors_only : typing.Optional[UsersActivityRequestErrorsOnly]
+        errors_only : typing.Optional[ActivityUsersRequestErrorsOnly]
             When `true`, scope every aggregate to errored traces only.
 
         request_options : typing.Optional[RequestOptions]
@@ -272,7 +282,7 @@ class RawUsersClient:
             Activity histogram
         """
         _response = self._client_wrapper.httpx_client.request(
-            f"v1/projects/{jsonable_encoder(project_slug)}/users/{jsonable_encoder(user_id)}/activity",
+            f"v1/projects/{encode_path_param(project_slug)}/users/{encode_path_param(user_id)}/activity",
             method="GET",
             params={
                 "fromIso": serialize_datetime(from_iso) if from_iso is not None else None,
@@ -327,6 +337,10 @@ class RawUsersClient:
             _response_json = _response.json()
         except JSONDecodeError:
             raise ApiError(status_code=_response.status_code, headers=dict(_response.headers), body=_response.text)
+        except ValidationError as e:
+            raise ParsingError(
+                status_code=_response.status_code, headers=dict(_response.headers), body=_response.json(), cause=e
+            )
         raise ApiError(status_code=_response.status_code, headers=dict(_response.headers), body=_response_json)
 
     def usage(
@@ -334,9 +348,9 @@ class RawUsersClient:
         project_slug: str,
         user_id: str,
         *,
-        dimension: UsersUsageRequestDimension,
+        dimension: UsageUsersRequestDimension,
         limit: typing.Optional[int] = None,
-        errors_only: typing.Optional[UsersUsageRequestErrorsOnly] = None,
+        errors_only: typing.Optional[UsageUsersRequestErrorsOnly] = None,
         request_options: typing.Optional[RequestOptions] = None,
     ) -> HttpResponse[UserUsageResponse]:
         """
@@ -350,13 +364,13 @@ class RawUsersClient:
         user_id : str
             End-user identifier. URL-encode values containing special characters.
 
-        dimension : UsersUsageRequestDimension
+        dimension : UsageUsersRequestDimension
             Dimension to break the usage down by.
 
         limit : typing.Optional[int]
             Maximum number of values to return.
 
-        errors_only : typing.Optional[UsersUsageRequestErrorsOnly]
+        errors_only : typing.Optional[UsageUsersRequestErrorsOnly]
             When `true`, scope every aggregate to errored traces only.
 
         request_options : typing.Optional[RequestOptions]
@@ -368,7 +382,7 @@ class RawUsersClient:
             Usage breakdown
         """
         _response = self._client_wrapper.httpx_client.request(
-            f"v1/projects/{jsonable_encoder(project_slug)}/users/{jsonable_encoder(user_id)}/usage",
+            f"v1/projects/{encode_path_param(project_slug)}/users/{encode_path_param(user_id)}/usage",
             method="GET",
             params={
                 "dimension": dimension,
@@ -423,6 +437,10 @@ class RawUsersClient:
             _response_json = _response.json()
         except JSONDecodeError:
             raise ApiError(status_code=_response.status_code, headers=dict(_response.headers), body=_response.text)
+        except ValidationError as e:
+            raise ParsingError(
+                status_code=_response.status_code, headers=dict(_response.headers), body=_response.json(), cause=e
+            )
         raise ApiError(status_code=_response.status_code, headers=dict(_response.headers), body=_response_json)
 
     def signals(
@@ -456,7 +474,7 @@ class RawUsersClient:
             User signals
         """
         _response = self._client_wrapper.httpx_client.request(
-            f"v1/projects/{jsonable_encoder(project_slug)}/users/{jsonable_encoder(user_id)}/signals",
+            f"v1/projects/{encode_path_param(project_slug)}/users/{encode_path_param(user_id)}/signals",
             method="GET",
             params={
                 "limit": limit,
@@ -509,6 +527,10 @@ class RawUsersClient:
             _response_json = _response.json()
         except JSONDecodeError:
             raise ApiError(status_code=_response.status_code, headers=dict(_response.headers), body=_response.text)
+        except ValidationError as e:
+            raise ParsingError(
+                status_code=_response.status_code, headers=dict(_response.headers), body=_response.json(), cause=e
+            )
         raise ApiError(status_code=_response.status_code, headers=dict(_response.headers), body=_response_json)
 
     def behaviours(
@@ -542,7 +564,7 @@ class RawUsersClient:
             User behaviours
         """
         _response = self._client_wrapper.httpx_client.request(
-            f"v1/projects/{jsonable_encoder(project_slug)}/users/{jsonable_encoder(user_id)}/behaviours",
+            f"v1/projects/{encode_path_param(project_slug)}/users/{encode_path_param(user_id)}/behaviours",
             method="GET",
             params={
                 "limit": limit,
@@ -595,6 +617,10 @@ class RawUsersClient:
             _response_json = _response.json()
         except JSONDecodeError:
             raise ApiError(status_code=_response.status_code, headers=dict(_response.headers), body=_response.text)
+        except ValidationError as e:
+            raise ParsingError(
+                status_code=_response.status_code, headers=dict(_response.headers), body=_response.json(), cause=e
+            )
         raise ApiError(status_code=_response.status_code, headers=dict(_response.headers), body=_response_json)
 
     def get(
@@ -602,7 +628,7 @@ class RawUsersClient:
         project_slug: str,
         user_id: str,
         *,
-        errors_only: typing.Optional[UsersGetRequestErrorsOnly] = None,
+        errors_only: typing.Optional[GetUsersRequestErrorsOnly] = None,
         request_options: typing.Optional[RequestOptions] = None,
     ) -> HttpResponse[UserProfileResponse]:
         """
@@ -616,7 +642,7 @@ class RawUsersClient:
         user_id : str
             End-user identifier. URL-encode values containing special characters.
 
-        errors_only : typing.Optional[UsersGetRequestErrorsOnly]
+        errors_only : typing.Optional[GetUsersRequestErrorsOnly]
             When `true`, scope every aggregate to errored traces only.
 
         request_options : typing.Optional[RequestOptions]
@@ -628,7 +654,7 @@ class RawUsersClient:
             User profile
         """
         _response = self._client_wrapper.httpx_client.request(
-            f"v1/projects/{jsonable_encoder(project_slug)}/users/{jsonable_encoder(user_id)}",
+            f"v1/projects/{encode_path_param(project_slug)}/users/{encode_path_param(user_id)}",
             method="GET",
             params={
                 "errorsOnly": errors_only,
@@ -681,6 +707,10 @@ class RawUsersClient:
             _response_json = _response.json()
         except JSONDecodeError:
             raise ApiError(status_code=_response.status_code, headers=dict(_response.headers), body=_response.text)
+        except ValidationError as e:
+            raise ParsingError(
+                status_code=_response.status_code, headers=dict(_response.headers), body=_response.json(), cause=e
+            )
         raise ApiError(status_code=_response.status_code, headers=dict(_response.headers), body=_response_json)
 
 
@@ -696,8 +726,8 @@ class AsyncRawUsersClient:
         to_iso: typing.Optional[dt.datetime] = None,
         limit: typing.Optional[int] = None,
         offset: typing.Optional[int] = None,
-        sort_by: typing.Optional[UsersListRequestSortBy] = None,
-        sort_direction: typing.Optional[UsersListRequestSortDirection] = None,
+        sort_by: typing.Optional[ListUsersRequestSortBy] = None,
+        sort_direction: typing.Optional[ListUsersRequestSortDirection] = None,
         search_query: typing.Optional[str] = None,
         request_options: typing.Optional[RequestOptions] = None,
     ) -> AsyncHttpResponse[UserListResponse]:
@@ -721,10 +751,10 @@ class AsyncRawUsersClient:
         offset : typing.Optional[int]
             Zero-based offset of the first user to return.
 
-        sort_by : typing.Optional[UsersListRequestSortBy]
+        sort_by : typing.Optional[ListUsersRequestSortBy]
             Field to sort by. Defaults to most recently seen.
 
-        sort_direction : typing.Optional[UsersListRequestSortDirection]
+        sort_direction : typing.Optional[ListUsersRequestSortDirection]
             Sort direction. Defaults to descending.
 
         search_query : typing.Optional[str]
@@ -739,7 +769,7 @@ class AsyncRawUsersClient:
             Page of end-users
         """
         _response = await self._client_wrapper.httpx_client.request(
-            f"v1/projects/{jsonable_encoder(project_slug)}/users",
+            f"v1/projects/{encode_path_param(project_slug)}/users",
             method="GET",
             params={
                 "fromIso": serialize_datetime(from_iso) if from_iso is not None else None,
@@ -798,6 +828,10 @@ class AsyncRawUsersClient:
             _response_json = _response.json()
         except JSONDecodeError:
             raise ApiError(status_code=_response.status_code, headers=dict(_response.headers), body=_response.text)
+        except ValidationError as e:
+            raise ParsingError(
+                status_code=_response.status_code, headers=dict(_response.headers), body=_response.json(), cause=e
+            )
         raise ApiError(status_code=_response.status_code, headers=dict(_response.headers), body=_response_json)
 
     async def overview(
@@ -831,7 +865,7 @@ class AsyncRawUsersClient:
             Users overview
         """
         _response = await self._client_wrapper.httpx_client.request(
-            f"v1/projects/{jsonable_encoder(project_slug)}/users/overview",
+            f"v1/projects/{encode_path_param(project_slug)}/users/overview",
             method="GET",
             params={
                 "fromIso": serialize_datetime(from_iso) if from_iso is not None else None,
@@ -885,6 +919,10 @@ class AsyncRawUsersClient:
             _response_json = _response.json()
         except JSONDecodeError:
             raise ApiError(status_code=_response.status_code, headers=dict(_response.headers), body=_response.text)
+        except ValidationError as e:
+            raise ParsingError(
+                status_code=_response.status_code, headers=dict(_response.headers), body=_response.json(), cause=e
+            )
         raise ApiError(status_code=_response.status_code, headers=dict(_response.headers), body=_response_json)
 
     async def activity(
@@ -894,7 +932,7 @@ class AsyncRawUsersClient:
         *,
         from_iso: typing.Optional[dt.datetime] = None,
         to_iso: typing.Optional[dt.datetime] = None,
-        errors_only: typing.Optional[UsersActivityRequestErrorsOnly] = None,
+        errors_only: typing.Optional[ActivityUsersRequestErrorsOnly] = None,
         request_options: typing.Optional[RequestOptions] = None,
     ) -> AsyncHttpResponse[UserActivityResponse]:
         """
@@ -914,7 +952,7 @@ class AsyncRawUsersClient:
         to_iso : typing.Optional[dt.datetime]
             Upper bound (inclusive) of the time range. Defaults to now.
 
-        errors_only : typing.Optional[UsersActivityRequestErrorsOnly]
+        errors_only : typing.Optional[ActivityUsersRequestErrorsOnly]
             When `true`, scope every aggregate to errored traces only.
 
         request_options : typing.Optional[RequestOptions]
@@ -926,7 +964,7 @@ class AsyncRawUsersClient:
             Activity histogram
         """
         _response = await self._client_wrapper.httpx_client.request(
-            f"v1/projects/{jsonable_encoder(project_slug)}/users/{jsonable_encoder(user_id)}/activity",
+            f"v1/projects/{encode_path_param(project_slug)}/users/{encode_path_param(user_id)}/activity",
             method="GET",
             params={
                 "fromIso": serialize_datetime(from_iso) if from_iso is not None else None,
@@ -981,6 +1019,10 @@ class AsyncRawUsersClient:
             _response_json = _response.json()
         except JSONDecodeError:
             raise ApiError(status_code=_response.status_code, headers=dict(_response.headers), body=_response.text)
+        except ValidationError as e:
+            raise ParsingError(
+                status_code=_response.status_code, headers=dict(_response.headers), body=_response.json(), cause=e
+            )
         raise ApiError(status_code=_response.status_code, headers=dict(_response.headers), body=_response_json)
 
     async def usage(
@@ -988,9 +1030,9 @@ class AsyncRawUsersClient:
         project_slug: str,
         user_id: str,
         *,
-        dimension: UsersUsageRequestDimension,
+        dimension: UsageUsersRequestDimension,
         limit: typing.Optional[int] = None,
-        errors_only: typing.Optional[UsersUsageRequestErrorsOnly] = None,
+        errors_only: typing.Optional[UsageUsersRequestErrorsOnly] = None,
         request_options: typing.Optional[RequestOptions] = None,
     ) -> AsyncHttpResponse[UserUsageResponse]:
         """
@@ -1004,13 +1046,13 @@ class AsyncRawUsersClient:
         user_id : str
             End-user identifier. URL-encode values containing special characters.
 
-        dimension : UsersUsageRequestDimension
+        dimension : UsageUsersRequestDimension
             Dimension to break the usage down by.
 
         limit : typing.Optional[int]
             Maximum number of values to return.
 
-        errors_only : typing.Optional[UsersUsageRequestErrorsOnly]
+        errors_only : typing.Optional[UsageUsersRequestErrorsOnly]
             When `true`, scope every aggregate to errored traces only.
 
         request_options : typing.Optional[RequestOptions]
@@ -1022,7 +1064,7 @@ class AsyncRawUsersClient:
             Usage breakdown
         """
         _response = await self._client_wrapper.httpx_client.request(
-            f"v1/projects/{jsonable_encoder(project_slug)}/users/{jsonable_encoder(user_id)}/usage",
+            f"v1/projects/{encode_path_param(project_slug)}/users/{encode_path_param(user_id)}/usage",
             method="GET",
             params={
                 "dimension": dimension,
@@ -1077,6 +1119,10 @@ class AsyncRawUsersClient:
             _response_json = _response.json()
         except JSONDecodeError:
             raise ApiError(status_code=_response.status_code, headers=dict(_response.headers), body=_response.text)
+        except ValidationError as e:
+            raise ParsingError(
+                status_code=_response.status_code, headers=dict(_response.headers), body=_response.json(), cause=e
+            )
         raise ApiError(status_code=_response.status_code, headers=dict(_response.headers), body=_response_json)
 
     async def signals(
@@ -1110,7 +1156,7 @@ class AsyncRawUsersClient:
             User signals
         """
         _response = await self._client_wrapper.httpx_client.request(
-            f"v1/projects/{jsonable_encoder(project_slug)}/users/{jsonable_encoder(user_id)}/signals",
+            f"v1/projects/{encode_path_param(project_slug)}/users/{encode_path_param(user_id)}/signals",
             method="GET",
             params={
                 "limit": limit,
@@ -1163,6 +1209,10 @@ class AsyncRawUsersClient:
             _response_json = _response.json()
         except JSONDecodeError:
             raise ApiError(status_code=_response.status_code, headers=dict(_response.headers), body=_response.text)
+        except ValidationError as e:
+            raise ParsingError(
+                status_code=_response.status_code, headers=dict(_response.headers), body=_response.json(), cause=e
+            )
         raise ApiError(status_code=_response.status_code, headers=dict(_response.headers), body=_response_json)
 
     async def behaviours(
@@ -1196,7 +1246,7 @@ class AsyncRawUsersClient:
             User behaviours
         """
         _response = await self._client_wrapper.httpx_client.request(
-            f"v1/projects/{jsonable_encoder(project_slug)}/users/{jsonable_encoder(user_id)}/behaviours",
+            f"v1/projects/{encode_path_param(project_slug)}/users/{encode_path_param(user_id)}/behaviours",
             method="GET",
             params={
                 "limit": limit,
@@ -1249,6 +1299,10 @@ class AsyncRawUsersClient:
             _response_json = _response.json()
         except JSONDecodeError:
             raise ApiError(status_code=_response.status_code, headers=dict(_response.headers), body=_response.text)
+        except ValidationError as e:
+            raise ParsingError(
+                status_code=_response.status_code, headers=dict(_response.headers), body=_response.json(), cause=e
+            )
         raise ApiError(status_code=_response.status_code, headers=dict(_response.headers), body=_response_json)
 
     async def get(
@@ -1256,7 +1310,7 @@ class AsyncRawUsersClient:
         project_slug: str,
         user_id: str,
         *,
-        errors_only: typing.Optional[UsersGetRequestErrorsOnly] = None,
+        errors_only: typing.Optional[GetUsersRequestErrorsOnly] = None,
         request_options: typing.Optional[RequestOptions] = None,
     ) -> AsyncHttpResponse[UserProfileResponse]:
         """
@@ -1270,7 +1324,7 @@ class AsyncRawUsersClient:
         user_id : str
             End-user identifier. URL-encode values containing special characters.
 
-        errors_only : typing.Optional[UsersGetRequestErrorsOnly]
+        errors_only : typing.Optional[GetUsersRequestErrorsOnly]
             When `true`, scope every aggregate to errored traces only.
 
         request_options : typing.Optional[RequestOptions]
@@ -1282,7 +1336,7 @@ class AsyncRawUsersClient:
             User profile
         """
         _response = await self._client_wrapper.httpx_client.request(
-            f"v1/projects/{jsonable_encoder(project_slug)}/users/{jsonable_encoder(user_id)}",
+            f"v1/projects/{encode_path_param(project_slug)}/users/{encode_path_param(user_id)}",
             method="GET",
             params={
                 "errorsOnly": errors_only,
@@ -1335,4 +1389,8 @@ class AsyncRawUsersClient:
             _response_json = _response.json()
         except JSONDecodeError:
             raise ApiError(status_code=_response.status_code, headers=dict(_response.headers), body=_response.text)
+        except ValidationError as e:
+            raise ParsingError(
+                status_code=_response.status_code, headers=dict(_response.headers), body=_response.json(), cause=e
+            )
         raise ApiError(status_code=_response.status_code, headers=dict(_response.headers), body=_response_json)

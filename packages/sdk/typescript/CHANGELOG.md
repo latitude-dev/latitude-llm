@@ -7,6 +7,37 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [7.1.0] - 2026-07-01
+
+### Added
+
+- `client.spans.query` — a cursor-paginated list of spans across all traces in a project, filtered by a span-field `FilterSet` (`operation`, `toolName`, `model`, `provider`, `sessionId`, `traceId`, `tags`, `duration`, `cost`, `tokensInput`/`tokensOutput`) and an optional time `range`. The row-level, span-grain complement to `client.analytics.query` with `stream: "spans"` (aggregates) — use it to drill from an aggregate into the individual spans behind it.
+
+## [7.0.0] - 2026-06-30
+
+Regenerated on the latest Fern toolchain — Fern CLI `0.83.0` → `5.58.0` and the `fern-typescript-node-sdk` generator `3.64.1` → `3.73.4`. The HTTP API surface (endpoints, request/response schemas) is unchanged; `openapi.json` changes are limited to `info` metadata and the auth security scheme (now modeled as an API key).
+
+### Renamed (breaking)
+
+- The root client and its companion exports drop the `Api` infix (via the generator's `naming.namespace` config): `LatitudeApiClient` → `LatitudeClient`, `LatitudeApiError` → `LatitudeError`, `LatitudeApiTimeoutError` → `LatitudeTimeoutError`, `LatitudeApiEnvironment` → `LatitudeEnvironment`, and the wildcard namespace export `LatitudeApi` → `Latitude` (`import * as LatitudeApi` → `import * as Latitude`). Update imports and `new LatitudeApiClient(...)` to `new LatitudeClient(...)`.
+- The client auth option is renamed `token` → `apiKey` (the credential is an organization-scoped API key, sent as `Authorization: Bearer <key>`). Update `new LatitudeClient({ token })` to `new LatitudeClient({ apiKey })`.
+
+### Removed (breaking)
+
+- Some standalone query-parameter enum types are no longer exported as named types — they're now inlined as literal unions. Affected names include `DatasetsListRequestSortBy`/`SortDirection`, `DatasetsListColumnsRequestIncludeRemoved`, `DatasetsListRowsRequestSortDirection`, `IncidentsListRequestSeveritiesItem`/`SourceType`, `SavedSearchesListTracesRequestSortBy`/`SortDirection`, `SignalsListRequestLifecycleGroup`/`SortBy`/`SortDirection`, the `Tools*Request*` and `Users*Request*` parameter enums, and `FilterConditionValueItem`. If you imported any by name, use the literal value inline instead.
+
+### Added
+
+- The `apiKey` option now falls back to the `LATITUDE_API_KEY` environment variable when omitted (via the OpenAPI spec's `x-fern-bearer` extension), so `new LatitudeClient()` works when that env var is set. An explicitly passed `apiKey` takes precedence.
+- The generator emits additional fine-grained union-member/enum types and some internal module restructuring. No new endpoints or methods.
+
+## [6.10.0] - 2026-07-01
+
+### Added
+
+- `client.analytics.query` gains the `moments` stream — semantic-moment labels (kind/actor-tagged moments detected within a session). Metrics: `count`, or `{avg|min|max|median}` of the 0–1 label `confidence` or moment `coherence`. Breakdown by `kind`, `actor`, or `session`. Values are returned raw (0–1).
+- The `traces`/`sessions`/`spans` streams gain a `p95` metric — the 95th-percentile of `duration`/`cost`/`tokens` (seconds/dollars/raw), the tail-latency complement to `median`.
+
 ## [6.9.0] - 2026-07-01
 
 ### Added

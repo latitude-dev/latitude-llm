@@ -1,2 +1,2 @@
-export * from "./IncidentsListRequestSeveritiesItem.js";
-export * from "./IncidentsListRequestSourceType.js";
+export * from "./ListIncidentsRequestSeveritiesItem.js";
+export * from "./ListIncidentsRequestSourceType.js";

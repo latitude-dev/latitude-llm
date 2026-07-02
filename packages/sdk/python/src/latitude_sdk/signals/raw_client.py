@@ -8,7 +8,8 @@ from ..core.api_error import ApiError
 from ..core.client_wrapper import AsyncClientWrapper, SyncClientWrapper
 from ..core.datetime_utils import serialize_datetime
 from ..core.http_response import AsyncHttpResponse, HttpResponse
-from ..core.jsonable_encoder import jsonable_encoder
+from ..core.jsonable_encoder import encode_path_param
+from ..core.parse_error import ParsingError
 from ..core.pydantic_utilities import parse_obj_as
 from ..core.request_options import RequestOptions
 from ..core.serialization import convert_and_respect_annotation_metadata
@@ -30,9 +31,10 @@ from ..types.update_signal_response import UpdateSignalResponse
 from .types.create_signal_body_evaluation import CreateSignalBodyEvaluation
 from .types.create_signal_body_priority import CreateSignalBodyPriority
 from .types.export_signals_body_lifecycle_group import ExportSignalsBodyLifecycleGroup
-from .types.signals_list_request_lifecycle_group import SignalsListRequestLifecycleGroup
-from .types.signals_list_request_sort_by import SignalsListRequestSortBy
-from .types.signals_list_request_sort_direction import SignalsListRequestSortDirection
+from .types.list_signals_request_lifecycle_group import ListSignalsRequestLifecycleGroup
+from .types.list_signals_request_sort_by import ListSignalsRequestSortBy
+from .types.list_signals_request_sort_direction import ListSignalsRequestSortDirection
+from pydantic import ValidationError
 
 # this is used as the default value for optional parameters
 OMIT = typing.cast(typing.Any, ...)
@@ -49,9 +51,9 @@ class RawSignalsClient:
         cursor: typing.Optional[str] = None,
         limit: typing.Optional[int] = None,
         query: typing.Optional[str] = None,
-        lifecycle_group: typing.Optional[SignalsListRequestLifecycleGroup] = None,
-        sort_by: typing.Optional[SignalsListRequestSortBy] = None,
-        sort_direction: typing.Optional[SignalsListRequestSortDirection] = None,
+        lifecycle_group: typing.Optional[ListSignalsRequestLifecycleGroup] = None,
+        sort_by: typing.Optional[ListSignalsRequestSortBy] = None,
+        sort_direction: typing.Optional[ListSignalsRequestSortDirection] = None,
         from_iso: typing.Optional[dt.datetime] = None,
         to_iso: typing.Optional[dt.datetime] = None,
         request_options: typing.Optional[RequestOptions] = None,
@@ -73,13 +75,13 @@ class RawSignalsClient:
         query : typing.Optional[str]
             Free-text semantic search across the signals' names and descriptions.
 
-        lifecycle_group : typing.Optional[SignalsListRequestLifecycleGroup]
+        lifecycle_group : typing.Optional[ListSignalsRequestLifecycleGroup]
             `"active"` for unmuted signals; `"archived"` for muted signals. Omit to include both.
 
-        sort_by : typing.Optional[SignalsListRequestSortBy]
+        sort_by : typing.Optional[ListSignalsRequestSortBy]
             Sort field. `lastSeen` orders by most recent occurrence; `occurrences` by total count in the time window; `state` by lifecycle priority.
 
-        sort_direction : typing.Optional[SignalsListRequestSortDirection]
+        sort_direction : typing.Optional[ListSignalsRequestSortDirection]
             Sort direction. Defaults to `desc`.
 
         from_iso : typing.Optional[dt.datetime]
@@ -97,7 +99,7 @@ class RawSignalsClient:
             Page of signals
         """
         _response = self._client_wrapper.httpx_client.request(
-            f"v1/projects/{jsonable_encoder(project_slug)}/signals",
+            f"v1/projects/{encode_path_param(project_slug)}/signals",
             method="GET",
             params={
                 "cursor": cursor,
@@ -157,6 +159,10 @@ class RawSignalsClient:
             _response_json = _response.json()
         except JSONDecodeError:
             raise ApiError(status_code=_response.status_code, headers=dict(_response.headers), body=_response.text)
+        except ValidationError as e:
+            raise ParsingError(
+                status_code=_response.status_code, headers=dict(_response.headers), body=_response.json(), cause=e
+            )
         raise ApiError(status_code=_response.status_code, headers=dict(_response.headers), body=_response_json)
 
     def create(
@@ -202,7 +208,7 @@ class RawSignalsClient:
             Signal created
         """
         _response = self._client_wrapper.httpx_client.request(
-            f"v1/projects/{jsonable_encoder(project_slug)}/signals",
+            f"v1/projects/{encode_path_param(project_slug)}/signals",
             method="POST",
             json={
                 "name": name,
@@ -210,7 +216,7 @@ class RawSignalsClient:
                 "priority": priority,
                 "filters": convert_and_respect_annotation_metadata(
                     object_=filters,
-                    annotation=typing.Dict[str, typing.Optional[typing.Sequence[FilterCondition]]],
+                    annotation=typing.Optional[typing.Dict[str, typing.Optional[typing.Sequence[FilterCondition]]]],
                     direction="write",
                 ),
                 "evaluation": convert_and_respect_annotation_metadata(
@@ -269,6 +275,10 @@ class RawSignalsClient:
             _response_json = _response.json()
         except JSONDecodeError:
             raise ApiError(status_code=_response.status_code, headers=dict(_response.headers), body=_response.text)
+        except ValidationError as e:
+            raise ParsingError(
+                status_code=_response.status_code, headers=dict(_response.headers), body=_response.json(), cause=e
+            )
         raise ApiError(status_code=_response.status_code, headers=dict(_response.headers), body=_response_json)
 
     def get(
@@ -294,7 +304,7 @@ class RawSignalsClient:
             Signal
         """
         _response = self._client_wrapper.httpx_client.request(
-            f"v1/projects/{jsonable_encoder(project_slug)}/signals/{jsonable_encoder(signal_slug)}",
+            f"v1/projects/{encode_path_param(project_slug)}/signals/{encode_path_param(signal_slug)}",
             method="GET",
             request_options=request_options,
         )
@@ -344,6 +354,10 @@ class RawSignalsClient:
             _response_json = _response.json()
         except JSONDecodeError:
             raise ApiError(status_code=_response.status_code, headers=dict(_response.headers), body=_response.text)
+        except ValidationError as e:
+            raise ParsingError(
+                status_code=_response.status_code, headers=dict(_response.headers), body=_response.json(), cause=e
+            )
         raise ApiError(status_code=_response.status_code, headers=dict(_response.headers), body=_response_json)
 
     def delete(
@@ -368,7 +382,7 @@ class RawSignalsClient:
         HttpResponse[None]
         """
         _response = self._client_wrapper.httpx_client.request(
-            f"v1/projects/{jsonable_encoder(project_slug)}/signals/{jsonable_encoder(signal_slug)}",
+            f"v1/projects/{encode_path_param(project_slug)}/signals/{encode_path_param(signal_slug)}",
             method="DELETE",
             request_options=request_options,
         )
@@ -378,6 +392,10 @@ class RawSignalsClient:
             _response_json = _response.json()
         except JSONDecodeError:
             raise ApiError(status_code=_response.status_code, headers=dict(_response.headers), body=_response.text)
+        except ValidationError as e:
+            raise ParsingError(
+                status_code=_response.status_code, headers=dict(_response.headers), body=_response.json(), cause=e
+            )
         raise ApiError(status_code=_response.status_code, headers=dict(_response.headers), body=_response_json)
 
     def update(
@@ -419,14 +437,14 @@ class RawSignalsClient:
             Signal updated
         """
         _response = self._client_wrapper.httpx_client.request(
-            f"v1/projects/{jsonable_encoder(project_slug)}/signals/{jsonable_encoder(signal_slug)}",
+            f"v1/projects/{encode_path_param(project_slug)}/signals/{encode_path_param(signal_slug)}",
             method="PATCH",
             json={
                 "name": name,
                 "description": description,
                 "filters": convert_and_respect_annotation_metadata(
                     object_=filters,
-                    annotation=typing.Dict[str, typing.Optional[typing.Sequence[FilterCondition]]],
+                    annotation=typing.Optional[typing.Dict[str, typing.Optional[typing.Sequence[FilterCondition]]]],
                     direction="write",
                 ),
             },
@@ -482,6 +500,10 @@ class RawSignalsClient:
             _response_json = _response.json()
         except JSONDecodeError:
             raise ApiError(status_code=_response.status_code, headers=dict(_response.headers), body=_response.text)
+        except ValidationError as e:
+            raise ParsingError(
+                status_code=_response.status_code, headers=dict(_response.headers), body=_response.json(), cause=e
+            )
         raise ApiError(status_code=_response.status_code, headers=dict(_response.headers), body=_response_json)
 
     def analytics(
@@ -515,7 +537,7 @@ class RawSignalsClient:
             Signal analytics
         """
         _response = self._client_wrapper.httpx_client.request(
-            f"v1/projects/{jsonable_encoder(project_slug)}/signals/analytics",
+            f"v1/projects/{encode_path_param(project_slug)}/signals/analytics",
             method="GET",
             params={
                 "fromIso": serialize_datetime(from_iso) if from_iso is not None else None,
@@ -569,6 +591,10 @@ class RawSignalsClient:
             _response_json = _response.json()
         except JSONDecodeError:
             raise ApiError(status_code=_response.status_code, headers=dict(_response.headers), body=_response.text)
+        except ValidationError as e:
+            raise ParsingError(
+                status_code=_response.status_code, headers=dict(_response.headers), body=_response.json(), cause=e
+            )
         raise ApiError(status_code=_response.status_code, headers=dict(_response.headers), body=_response_json)
 
     def trend(
@@ -606,7 +632,7 @@ class RawSignalsClient:
             Occurrence histogram
         """
         _response = self._client_wrapper.httpx_client.request(
-            f"v1/projects/{jsonable_encoder(project_slug)}/signals/{jsonable_encoder(signal_slug)}/trend",
+            f"v1/projects/{encode_path_param(project_slug)}/signals/{encode_path_param(signal_slug)}/trend",
             method="GET",
             params={
                 "fromIso": serialize_datetime(from_iso) if from_iso is not None else None,
@@ -660,6 +686,10 @@ class RawSignalsClient:
             _response_json = _response.json()
         except JSONDecodeError:
             raise ApiError(status_code=_response.status_code, headers=dict(_response.headers), body=_response.text)
+        except ValidationError as e:
+            raise ParsingError(
+                status_code=_response.status_code, headers=dict(_response.headers), body=_response.json(), cause=e
+            )
         raise ApiError(status_code=_response.status_code, headers=dict(_response.headers), body=_response_json)
 
     def list_traces(
@@ -697,7 +727,7 @@ class RawSignalsClient:
             Page of traces
         """
         _response = self._client_wrapper.httpx_client.request(
-            f"v1/projects/{jsonable_encoder(project_slug)}/signals/{jsonable_encoder(signal_slug)}/traces",
+            f"v1/projects/{encode_path_param(project_slug)}/signals/{encode_path_param(signal_slug)}/traces",
             method="GET",
             params={
                 "cursor": cursor,
@@ -751,6 +781,10 @@ class RawSignalsClient:
             _response_json = _response.json()
         except JSONDecodeError:
             raise ApiError(status_code=_response.status_code, headers=dict(_response.headers), body=_response.text)
+        except ValidationError as e:
+            raise ParsingError(
+                status_code=_response.status_code, headers=dict(_response.headers), body=_response.json(), cause=e
+            )
         raise ApiError(status_code=_response.status_code, headers=dict(_response.headers), body=_response_json)
 
     def mute(
@@ -780,7 +814,7 @@ class RawSignalsClient:
             Per-signal result
         """
         _response = self._client_wrapper.httpx_client.request(
-            f"v1/projects/{jsonable_encoder(project_slug)}/signals/mute",
+            f"v1/projects/{encode_path_param(project_slug)}/signals/mute",
             method="POST",
             json={
                 "signalIds": signal_ids,
@@ -837,6 +871,10 @@ class RawSignalsClient:
             _response_json = _response.json()
         except JSONDecodeError:
             raise ApiError(status_code=_response.status_code, headers=dict(_response.headers), body=_response.text)
+        except ValidationError as e:
+            raise ParsingError(
+                status_code=_response.status_code, headers=dict(_response.headers), body=_response.json(), cause=e
+            )
         raise ApiError(status_code=_response.status_code, headers=dict(_response.headers), body=_response_json)
 
     def unmute(
@@ -866,7 +904,7 @@ class RawSignalsClient:
             Per-signal result
         """
         _response = self._client_wrapper.httpx_client.request(
-            f"v1/projects/{jsonable_encoder(project_slug)}/signals/unmute",
+            f"v1/projects/{encode_path_param(project_slug)}/signals/unmute",
             method="POST",
             json={
                 "signalIds": signal_ids,
@@ -923,6 +961,10 @@ class RawSignalsClient:
             _response_json = _response.json()
         except JSONDecodeError:
             raise ApiError(status_code=_response.status_code, headers=dict(_response.headers), body=_response.text)
+        except ValidationError as e:
+            raise ParsingError(
+                status_code=_response.status_code, headers=dict(_response.headers), body=_response.json(), cause=e
+            )
         raise ApiError(status_code=_response.status_code, headers=dict(_response.headers), body=_response_json)
 
     def monitor(
@@ -948,7 +990,7 @@ class RawSignalsClient:
             Monitor job enqueued
         """
         _response = self._client_wrapper.httpx_client.request(
-            f"v1/projects/{jsonable_encoder(project_slug)}/signals/{jsonable_encoder(signal_slug)}/monitor",
+            f"v1/projects/{encode_path_param(project_slug)}/signals/{encode_path_param(signal_slug)}/monitor",
             method="POST",
             request_options=request_options,
         )
@@ -998,6 +1040,10 @@ class RawSignalsClient:
             _response_json = _response.json()
         except JSONDecodeError:
             raise ApiError(status_code=_response.status_code, headers=dict(_response.headers), body=_response.text)
+        except ValidationError as e:
+            raise ParsingError(
+                status_code=_response.status_code, headers=dict(_response.headers), body=_response.json(), cause=e
+            )
         raise ApiError(status_code=_response.status_code, headers=dict(_response.headers), body=_response_json)
 
     def unmonitor(
@@ -1022,7 +1068,7 @@ class RawSignalsClient:
         HttpResponse[None]
         """
         _response = self._client_wrapper.httpx_client.request(
-            f"v1/projects/{jsonable_encoder(project_slug)}/signals/{jsonable_encoder(signal_slug)}/unmonitor",
+            f"v1/projects/{encode_path_param(project_slug)}/signals/{encode_path_param(signal_slug)}/unmonitor",
             method="POST",
             request_options=request_options,
         )
@@ -1032,6 +1078,10 @@ class RawSignalsClient:
             _response_json = _response.json()
         except JSONDecodeError:
             raise ApiError(status_code=_response.status_code, headers=dict(_response.headers), body=_response.text)
+        except ValidationError as e:
+            raise ParsingError(
+                status_code=_response.status_code, headers=dict(_response.headers), body=_response.json(), cause=e
+            )
         raise ApiError(status_code=_response.status_code, headers=dict(_response.headers), body=_response_json)
 
     def export(
@@ -1069,7 +1119,7 @@ class RawSignalsClient:
             Export enqueued
         """
         _response = self._client_wrapper.httpx_client.request(
-            f"v1/projects/{jsonable_encoder(project_slug)}/signals/export",
+            f"v1/projects/{encode_path_param(project_slug)}/signals/export",
             method="POST",
             json={
                 "recipient": recipient,
@@ -1128,6 +1178,10 @@ class RawSignalsClient:
             _response_json = _response.json()
         except JSONDecodeError:
             raise ApiError(status_code=_response.status_code, headers=dict(_response.headers), body=_response.text)
+        except ValidationError as e:
+            raise ParsingError(
+                status_code=_response.status_code, headers=dict(_response.headers), body=_response.json(), cause=e
+            )
         raise ApiError(status_code=_response.status_code, headers=dict(_response.headers), body=_response_json)
 
 
@@ -1142,9 +1196,9 @@ class AsyncRawSignalsClient:
         cursor: typing.Optional[str] = None,
         limit: typing.Optional[int] = None,
         query: typing.Optional[str] = None,
-        lifecycle_group: typing.Optional[SignalsListRequestLifecycleGroup] = None,
-        sort_by: typing.Optional[SignalsListRequestSortBy] = None,
-        sort_direction: typing.Optional[SignalsListRequestSortDirection] = None,
+        lifecycle_group: typing.Optional[ListSignalsRequestLifecycleGroup] = None,
+        sort_by: typing.Optional[ListSignalsRequestSortBy] = None,
+        sort_direction: typing.Optional[ListSignalsRequestSortDirection] = None,
         from_iso: typing.Optional[dt.datetime] = None,
         to_iso: typing.Optional[dt.datetime] = None,
         request_options: typing.Optional[RequestOptions] = None,
@@ -1166,13 +1220,13 @@ class AsyncRawSignalsClient:
         query : typing.Optional[str]
             Free-text semantic search across the signals' names and descriptions.
 
-        lifecycle_group : typing.Optional[SignalsListRequestLifecycleGroup]
+        lifecycle_group : typing.Optional[ListSignalsRequestLifecycleGroup]
             `"active"` for unmuted signals; `"archived"` for muted signals. Omit to include both.
 
-        sort_by : typing.Optional[SignalsListRequestSortBy]
+        sort_by : typing.Optional[ListSignalsRequestSortBy]
             Sort field. `lastSeen` orders by most recent occurrence; `occurrences` by total count in the time window; `state` by lifecycle priority.
 
-        sort_direction : typing.Optional[SignalsListRequestSortDirection]
+        sort_direction : typing.Optional[ListSignalsRequestSortDirection]
             Sort direction. Defaults to `desc`.
 
         from_iso : typing.Optional[dt.datetime]
@@ -1190,7 +1244,7 @@ class AsyncRawSignalsClient:
             Page of signals
         """
         _response = await self._client_wrapper.httpx_client.request(
-            f"v1/projects/{jsonable_encoder(project_slug)}/signals",
+            f"v1/projects/{encode_path_param(project_slug)}/signals",
             method="GET",
             params={
                 "cursor": cursor,
@@ -1250,6 +1304,10 @@ class AsyncRawSignalsClient:
             _response_json = _response.json()
         except JSONDecodeError:
             raise ApiError(status_code=_response.status_code, headers=dict(_response.headers), body=_response.text)
+        except ValidationError as e:
+            raise ParsingError(
+                status_code=_response.status_code, headers=dict(_response.headers), body=_response.json(), cause=e
+            )
         raise ApiError(status_code=_response.status_code, headers=dict(_response.headers), body=_response_json)
 
     async def create(
@@ -1295,7 +1353,7 @@ class AsyncRawSignalsClient:
             Signal created
         """
         _response = await self._client_wrapper.httpx_client.request(
-            f"v1/projects/{jsonable_encoder(project_slug)}/signals",
+            f"v1/projects/{encode_path_param(project_slug)}/signals",
             method="POST",
             json={
                 "name": name,
@@ -1303,7 +1361,7 @@ class AsyncRawSignalsClient:
                 "priority": priority,
                 "filters": convert_and_respect_annotation_metadata(
                     object_=filters,
-                    annotation=typing.Dict[str, typing.Optional[typing.Sequence[FilterCondition]]],
+                    annotation=typing.Optional[typing.Dict[str, typing.Optional[typing.Sequence[FilterCondition]]]],
                     direction="write",
                 ),
                 "evaluation": convert_and_respect_annotation_metadata(
@@ -1362,6 +1420,10 @@ class AsyncRawSignalsClient:
             _response_json = _response.json()
         except JSONDecodeError:
             raise ApiError(status_code=_response.status_code, headers=dict(_response.headers), body=_response.text)
+        except ValidationError as e:
+            raise ParsingError(
+                status_code=_response.status_code, headers=dict(_response.headers), body=_response.json(), cause=e
+            )
         raise ApiError(status_code=_response.status_code, headers=dict(_response.headers), body=_response_json)
 
     async def get(
@@ -1387,7 +1449,7 @@ class AsyncRawSignalsClient:
             Signal
         """
         _response = await self._client_wrapper.httpx_client.request(
-            f"v1/projects/{jsonable_encoder(project_slug)}/signals/{jsonable_encoder(signal_slug)}",
+            f"v1/projects/{encode_path_param(project_slug)}/signals/{encode_path_param(signal_slug)}",
             method="GET",
             request_options=request_options,
         )
@@ -1437,6 +1499,10 @@ class AsyncRawSignalsClient:
             _response_json = _response.json()
         except JSONDecodeError:
             raise ApiError(status_code=_response.status_code, headers=dict(_response.headers), body=_response.text)
+        except ValidationError as e:
+            raise ParsingError(
+                status_code=_response.status_code, headers=dict(_response.headers), body=_response.json(), cause=e
+            )
         raise ApiError(status_code=_response.status_code, headers=dict(_response.headers), body=_response_json)
 
     async def delete(
@@ -1461,7 +1527,7 @@ class AsyncRawSignalsClient:
         AsyncHttpResponse[None]
         """
         _response = await self._client_wrapper.httpx_client.request(
-            f"v1/projects/{jsonable_encoder(project_slug)}/signals/{jsonable_encoder(signal_slug)}",
+            f"v1/projects/{encode_path_param(project_slug)}/signals/{encode_path_param(signal_slug)}",
             method="DELETE",
             request_options=request_options,
         )
@@ -1471,6 +1537,10 @@ class AsyncRawSignalsClient:
             _response_json = _response.json()
         except JSONDecodeError:
             raise ApiError(status_code=_response.status_code, headers=dict(_response.headers), body=_response.text)
+        except ValidationError as e:
+            raise ParsingError(
+                status_code=_response.status_code, headers=dict(_response.headers), body=_response.json(), cause=e
+            )
         raise ApiError(status_code=_response.status_code, headers=dict(_response.headers), body=_response_json)
 
     async def update(
@@ -1512,14 +1582,14 @@ class AsyncRawSignalsClient:
             Signal updated
         """
         _response = await self._client_wrapper.httpx_client.request(
-            f"v1/projects/{jsonable_encoder(project_slug)}/signals/{jsonable_encoder(signal_slug)}",
+            f"v1/projects/{encode_path_param(project_slug)}/signals/{encode_path_param(signal_slug)}",
             method="PATCH",
             json={
                 "name": name,
                 "description": description,
                 "filters": convert_and_respect_annotation_metadata(
                     object_=filters,
-                    annotation=typing.Dict[str, typing.Optional[typing.Sequence[FilterCondition]]],
+                    annotation=typing.Optional[typing.Dict[str, typing.Optional[typing.Sequence[FilterCondition]]]],
                     direction="write",
                 ),
             },
@@ -1575,6 +1645,10 @@ class AsyncRawSignalsClient:
             _response_json = _response.json()
         except JSONDecodeError:
             raise ApiError(status_code=_response.status_code, headers=dict(_response.headers), body=_response.text)
+        except ValidationError as e:
+            raise ParsingError(
+                status_code=_response.status_code, headers=dict(_response.headers), body=_response.json(), cause=e
+            )
         raise ApiError(status_code=_response.status_code, headers=dict(_response.headers), body=_response_json)
 
     async def analytics(
@@ -1608,7 +1682,7 @@ class AsyncRawSignalsClient:
             Signal analytics
         """
         _response = await self._client_wrapper.httpx_client.request(
-            f"v1/projects/{jsonable_encoder(project_slug)}/signals/analytics",
+            f"v1/projects/{encode_path_param(project_slug)}/signals/analytics",
             method="GET",
             params={
                 "fromIso": serialize_datetime(from_iso) if from_iso is not None else None,
@@ -1662,6 +1736,10 @@ class AsyncRawSignalsClient:
             _response_json = _response.json()
         except JSONDecodeError:
             raise ApiError(status_code=_response.status_code, headers=dict(_response.headers), body=_response.text)
+        except ValidationError as e:
+            raise ParsingError(
+                status_code=_response.status_code, headers=dict(_response.headers), body=_response.json(), cause=e
+            )
         raise ApiError(status_code=_response.status_code, headers=dict(_response.headers), body=_response_json)
 
     async def trend(
@@ -1699,7 +1777,7 @@ class AsyncRawSignalsClient:
             Occurrence histogram
         """
         _response = await self._client_wrapper.httpx_client.request(
-            f"v1/projects/{jsonable_encoder(project_slug)}/signals/{jsonable_encoder(signal_slug)}/trend",
+            f"v1/projects/{encode_path_param(project_slug)}/signals/{encode_path_param(signal_slug)}/trend",
             method="GET",
             params={
                 "fromIso": serialize_datetime(from_iso) if from_iso is not None else None,
@@ -1753,6 +1831,10 @@ class AsyncRawSignalsClient:
             _response_json = _response.json()
         except JSONDecodeError:
             raise ApiError(status_code=_response.status_code, headers=dict(_response.headers), body=_response.text)
+        except ValidationError as e:
+            raise ParsingError(
+                status_code=_response.status_code, headers=dict(_response.headers), body=_response.json(), cause=e
+            )
         raise ApiError(status_code=_response.status_code, headers=dict(_response.headers), body=_response_json)
 
     async def list_traces(
@@ -1790,7 +1872,7 @@ class AsyncRawSignalsClient:
             Page of traces
         """
         _response = await self._client_wrapper.httpx_client.request(
-            f"v1/projects/{jsonable_encoder(project_slug)}/signals/{jsonable_encoder(signal_slug)}/traces",
+            f"v1/projects/{encode_path_param(project_slug)}/signals/{encode_path_param(signal_slug)}/traces",
             method="GET",
             params={
                 "cursor": cursor,
@@ -1844,6 +1926,10 @@ class AsyncRawSignalsClient:
             _response_json = _response.json()
         except JSONDecodeError:
             raise ApiError(status_code=_response.status_code, headers=dict(_response.headers), body=_response.text)
+        except ValidationError as e:
+            raise ParsingError(
+                status_code=_response.status_code, headers=dict(_response.headers), body=_response.json(), cause=e
+            )
         raise ApiError(status_code=_response.status_code, headers=dict(_response.headers), body=_response_json)
 
     async def mute(
@@ -1873,7 +1959,7 @@ class AsyncRawSignalsClient:
             Per-signal result
         """
         _response = await self._client_wrapper.httpx_client.request(
-            f"v1/projects/{jsonable_encoder(project_slug)}/signals/mute",
+            f"v1/projects/{encode_path_param(project_slug)}/signals/mute",
             method="POST",
             json={
                 "signalIds": signal_ids,
@@ -1930,6 +2016,10 @@ class AsyncRawSignalsClient:
             _response_json = _response.json()
         except JSONDecodeError:
             raise ApiError(status_code=_response.status_code, headers=dict(_response.headers), body=_response.text)
+        except ValidationError as e:
+            raise ParsingError(
+                status_code=_response.status_code, headers=dict(_response.headers), body=_response.json(), cause=e
+            )
         raise ApiError(status_code=_response.status_code, headers=dict(_response.headers), body=_response_json)
 
     async def unmute(
@@ -1959,7 +2049,7 @@ class AsyncRawSignalsClient:
             Per-signal result
         """
         _response = await self._client_wrapper.httpx_client.request(
-            f"v1/projects/{jsonable_encoder(project_slug)}/signals/unmute",
+            f"v1/projects/{encode_path_param(project_slug)}/signals/unmute",
             method="POST",
             json={
                 "signalIds": signal_ids,
@@ -2016,6 +2106,10 @@ class AsyncRawSignalsClient:
             _response_json = _response.json()
         except JSONDecodeError:
             raise ApiError(status_code=_response.status_code, headers=dict(_response.headers), body=_response.text)
+        except ValidationError as e:
+            raise ParsingError(
+                status_code=_response.status_code, headers=dict(_response.headers), body=_response.json(), cause=e
+            )
         raise ApiError(status_code=_response.status_code, headers=dict(_response.headers), body=_response_json)
 
     async def monitor(
@@ -2041,7 +2135,7 @@ class AsyncRawSignalsClient:
             Monitor job enqueued
         """
         _response = await self._client_wrapper.httpx_client.request(
-            f"v1/projects/{jsonable_encoder(project_slug)}/signals/{jsonable_encoder(signal_slug)}/monitor",
+            f"v1/projects/{encode_path_param(project_slug)}/signals/{encode_path_param(signal_slug)}/monitor",
             method="POST",
             request_options=request_options,
         )
@@ -2091,6 +2185,10 @@ class AsyncRawSignalsClient:
             _response_json = _response.json()
         except JSONDecodeError:
             raise ApiError(status_code=_response.status_code, headers=dict(_response.headers), body=_response.text)
+        except ValidationError as e:
+            raise ParsingError(
+                status_code=_response.status_code, headers=dict(_response.headers), body=_response.json(), cause=e
+            )
         raise ApiError(status_code=_response.status_code, headers=dict(_response.headers), body=_response_json)
 
     async def unmonitor(
@@ -2115,7 +2213,7 @@ class AsyncRawSignalsClient:
         AsyncHttpResponse[None]
         """
         _response = await self._client_wrapper.httpx_client.request(
-            f"v1/projects/{jsonable_encoder(project_slug)}/signals/{jsonable_encoder(signal_slug)}/unmonitor",
+            f"v1/projects/{encode_path_param(project_slug)}/signals/{encode_path_param(signal_slug)}/unmonitor",
             method="POST",
             request_options=request_options,
         )
@@ -2125,6 +2223,10 @@ class AsyncRawSignalsClient:
             _response_json = _response.json()
         except JSONDecodeError:
             raise ApiError(status_code=_response.status_code, headers=dict(_response.headers), body=_response.text)
+        except ValidationError as e:
+            raise ParsingError(
+                status_code=_response.status_code, headers=dict(_response.headers), body=_response.json(), cause=e
+            )
         raise ApiError(status_code=_response.status_code, headers=dict(_response.headers), body=_response_json)
 
     async def export(
@@ -2162,7 +2264,7 @@ class AsyncRawSignalsClient:
             Export enqueued
         """
         _response = await self._client_wrapper.httpx_client.request(
-            f"v1/projects/{jsonable_encoder(project_slug)}/signals/export",
+            f"v1/projects/{encode_path_param(project_slug)}/signals/export",
             method="POST",
             json={
                 "recipient": recipient,
@@ -2221,4 +2323,8 @@ class AsyncRawSignalsClient:
             _response_json = _response.json()
         except JSONDecodeError:
             raise ApiError(status_code=_response.status_code, headers=dict(_response.headers), body=_response.text)
+        except ValidationError as e:
+            raise ParsingError(
+                status_code=_response.status_code, headers=dict(_response.headers), body=_response.json(), cause=e
+            )
         raise ApiError(status_code=_response.status_code, headers=dict(_response.headers), body=_response_json)

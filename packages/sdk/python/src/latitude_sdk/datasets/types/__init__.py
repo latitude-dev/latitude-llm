@@ -6,10 +6,6 @@ import typing
 from importlib import import_module
 
 if typing.TYPE_CHECKING:
-    from .datasets_list_columns_request_include_removed import DatasetsListColumnsRequestIncludeRemoved
-    from .datasets_list_request_sort_by import DatasetsListRequestSortBy
-    from .datasets_list_request_sort_direction import DatasetsListRequestSortDirection
-    from .datasets_list_rows_request_sort_direction import DatasetsListRowsRequestSortDirection
     from .delete_dataset_rows_body_selection import (
         DeleteDatasetRowsBodySelection,
         DeleteDatasetRowsBodySelection_All,
@@ -28,22 +24,29 @@ if typing.TYPE_CHECKING:
     from .export_dataset_rows_body_selection_all import ExportDatasetRowsBodySelectionAll
     from .export_dataset_rows_body_selection_all_except import ExportDatasetRowsBodySelectionAllExcept
     from .export_dataset_rows_body_selection_selected import ExportDatasetRowsBodySelectionSelected
+    from .import_rows_from_traces_body_traces import (
+        ImportRowsFromTracesBodyTraces,
+        ImportRowsFromTracesBodyTraces_Filters,
+        ImportRowsFromTracesBodyTraces_Ids,
+    )
+    from .import_rows_from_traces_body_traces_filters import ImportRowsFromTracesBodyTracesFilters
+    from .import_rows_from_traces_body_traces_ids import ImportRowsFromTracesBodyTracesIds
     from .insert_dataset_rows_body_rows_item import InsertDatasetRowsBodyRowsItem
     from .insert_dataset_rows_body_rows_item_custom_value import InsertDatasetRowsBodyRowsItemCustomValue
     from .insert_dataset_rows_body_rows_item_expected_output import InsertDatasetRowsBodyRowsItemExpectedOutput
     from .insert_dataset_rows_body_rows_item_input import InsertDatasetRowsBodyRowsItemInput
     from .insert_dataset_rows_body_rows_item_metadata import InsertDatasetRowsBodyRowsItemMetadata
     from .insert_dataset_rows_body_rows_item_output import InsertDatasetRowsBodyRowsItemOutput
+    from .list_columns_datasets_request_include_removed import ListColumnsDatasetsRequestIncludeRemoved
+    from .list_datasets_request_sort_by import ListDatasetsRequestSortBy
+    from .list_datasets_request_sort_direction import ListDatasetsRequestSortDirection
+    from .list_rows_datasets_request_sort_direction import ListRowsDatasetsRequestSortDirection
     from .update_dataset_row_body_custom_value import UpdateDatasetRowBodyCustomValue
     from .update_dataset_row_body_expected_output import UpdateDatasetRowBodyExpectedOutput
     from .update_dataset_row_body_input import UpdateDatasetRowBodyInput
     from .update_dataset_row_body_metadata import UpdateDatasetRowBodyMetadata
     from .update_dataset_row_body_output import UpdateDatasetRowBodyOutput
 _dynamic_imports: typing.Dict[str, str] = {
-    "DatasetsListColumnsRequestIncludeRemoved": ".datasets_list_columns_request_include_removed",
-    "DatasetsListRequestSortBy": ".datasets_list_request_sort_by",
-    "DatasetsListRequestSortDirection": ".datasets_list_request_sort_direction",
-    "DatasetsListRowsRequestSortDirection": ".datasets_list_rows_request_sort_direction",
     "DeleteDatasetRowsBodySelection": ".delete_dataset_rows_body_selection",
     "DeleteDatasetRowsBodySelectionAll": ".delete_dataset_rows_body_selection_all",
     "DeleteDatasetRowsBodySelectionAllExcept": ".delete_dataset_rows_body_selection_all_except",
@@ -58,12 +61,21 @@ _dynamic_imports: typing.Dict[str, str] = {
     "ExportDatasetRowsBodySelection_All": ".export_dataset_rows_body_selection",
     "ExportDatasetRowsBodySelection_AllExcept": ".export_dataset_rows_body_selection",
     "ExportDatasetRowsBodySelection_Selected": ".export_dataset_rows_body_selection",
+    "ImportRowsFromTracesBodyTraces": ".import_rows_from_traces_body_traces",
+    "ImportRowsFromTracesBodyTracesFilters": ".import_rows_from_traces_body_traces_filters",
+    "ImportRowsFromTracesBodyTracesIds": ".import_rows_from_traces_body_traces_ids",
+    "ImportRowsFromTracesBodyTraces_Filters": ".import_rows_from_traces_body_traces",
+    "ImportRowsFromTracesBodyTraces_Ids": ".import_rows_from_traces_body_traces",
     "InsertDatasetRowsBodyRowsItem": ".insert_dataset_rows_body_rows_item",
     "InsertDatasetRowsBodyRowsItemCustomValue": ".insert_dataset_rows_body_rows_item_custom_value",
     "InsertDatasetRowsBodyRowsItemExpectedOutput": ".insert_dataset_rows_body_rows_item_expected_output",
     "InsertDatasetRowsBodyRowsItemInput": ".insert_dataset_rows_body_rows_item_input",
     "InsertDatasetRowsBodyRowsItemMetadata": ".insert_dataset_rows_body_rows_item_metadata",
     "InsertDatasetRowsBodyRowsItemOutput": ".insert_dataset_rows_body_rows_item_output",
+    "ListColumnsDatasetsRequestIncludeRemoved": ".list_columns_datasets_request_include_removed",
+    "ListDatasetsRequestSortBy": ".list_datasets_request_sort_by",
+    "ListDatasetsRequestSortDirection": ".list_datasets_request_sort_direction",
+    "ListRowsDatasetsRequestSortDirection": ".list_rows_datasets_request_sort_direction",
     "UpdateDatasetRowBodyCustomValue": ".update_dataset_row_body_custom_value",
     "UpdateDatasetRowBodyExpectedOutput": ".update_dataset_row_body_expected_output",
     "UpdateDatasetRowBodyInput": ".update_dataset_row_body_input",
@@ -94,10 +106,6 @@ def __dir__():
 
 
 __all__ = [
-    "DatasetsListColumnsRequestIncludeRemoved",
-    "DatasetsListRequestSortBy",
-    "DatasetsListRequestSortDirection",
-    "DatasetsListRowsRequestSortDirection",
     "DeleteDatasetRowsBodySelection",
     "DeleteDatasetRowsBodySelectionAll",
     "DeleteDatasetRowsBodySelectionAllExcept",
@@ -112,12 +120,21 @@ __all__ = [
     "ExportDatasetRowsBodySelection_All",
     "ExportDatasetRowsBodySelection_AllExcept",
     "ExportDatasetRowsBodySelection_Selected",
+    "ImportRowsFromTracesBodyTraces",
+    "ImportRowsFromTracesBodyTracesFilters",
+    "ImportRowsFromTracesBodyTracesIds",
+    "ImportRowsFromTracesBodyTraces_Filters",
+    "ImportRowsFromTracesBodyTraces_Ids",
     "InsertDatasetRowsBodyRowsItem",
     "InsertDatasetRowsBodyRowsItemCustomValue",
     "InsertDatasetRowsBodyRowsItemExpectedOutput",
     "InsertDatasetRowsBodyRowsItemInput",
     "InsertDatasetRowsBodyRowsItemMetadata",
     "InsertDatasetRowsBodyRowsItemOutput",
+    "ListColumnsDatasetsRequestIncludeRemoved",
+    "ListDatasetsRequestSortBy",
+    "ListDatasetsRequestSortDirection",
+    "ListRowsDatasetsRequestSortDirection",
     "UpdateDatasetRowBodyCustomValue",
     "UpdateDatasetRowBodyExpectedOutput",
     "UpdateDatasetRowBodyInput",

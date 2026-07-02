@@ -13,6 +13,7 @@ import { ProjectsClient } from "./api/resources/projects/client/Client.js";
 import { SavedSearchesClient } from "./api/resources/savedSearches/client/Client.js";
 import { ScoresClient } from "./api/resources/scores/client/Client.js";
 import { SignalsClient } from "./api/resources/signals/client/Client.js";
+import { SpansClient } from "./api/resources/spans/client/Client.js";
 import { ToolsClient } from "./api/resources/tools/client/Client.js";
 import { TracesClient } from "./api/resources/traces/client/Client.js";
 import { UsersClient } from "./api/resources/users/client/Client.js";
@@ -20,14 +21,14 @@ import type { BaseClientOptions, BaseRequestOptions } from "./BaseClient.js";
 import { type NormalizedClientOptionsWithAuth, normalizeClientOptionsWithAuth } from "./BaseClient.js";
 import * as core from "./core/index.js";
 
-export declare namespace LatitudeApiClient {
+export declare namespace LatitudeClient {
     export type Options = BaseClientOptions;
 
     export interface RequestOptions extends BaseRequestOptions {}
 }
 
-export class LatitudeApiClient {
-    protected readonly _options: NormalizedClientOptionsWithAuth<LatitudeApiClient.Options>;
+export class LatitudeClient {
+    protected readonly _options: NormalizedClientOptionsWithAuth<LatitudeClient.Options>;
     protected _projects: ProjectsClient | undefined;
     protected _scores: ScoresClient | undefined;
     protected _annotations: AnnotationsClient | undefined;
@@ -44,8 +45,9 @@ export class LatitudeApiClient {
     protected _members: MembersClient | undefined;
     protected _monitors: MonitorsClient | undefined;
     protected _analytics: AnalyticsClient | undefined;
+    protected _spans: SpansClient | undefined;
 
-    constructor(options: LatitudeApiClient.Options) {
+    constructor(options: LatitudeClient.Options = {}) {
         this._options = normalizeClientOptionsWithAuth(options);
     }
 
@@ -111,6 +113,10 @@ export class LatitudeApiClient {
 
     public get analytics(): AnalyticsClient {
         return (this._analytics ??= new AnalyticsClient(this._options));
+    }
+
+    public get spans(): SpansClient {
+        return (this._spans ??= new SpansClient(this._options));
     }
 
     /**

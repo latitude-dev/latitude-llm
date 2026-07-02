@@ -1,9 +1,9 @@
 {
   "openapi": "3.1.0",
   "info": {
-    "title": "Latitude API",
-    "version": "1.0.0",
-    "description": "The Latitude public API. Authenticate using an API key via the `Authorization: Bearer` header."
+    "title": "Latitude",
+    "version": "v1",
+    "description": "Open-source AI agent monitoring platform. Full observability into what's failing in production. Discover underlying issues, get alerts when something breaks and verify your fix worked."
   },
   "servers": [
     {
@@ -16,7 +16,12 @@
       "ApiKeyAuth": {
         "type": "http",
         "scheme": "bearer",
-        "description": "Organization-scoped API key"
+        "bearerFormat": "API key",
+        "description": "Organization-scoped API key, sent as `Authorization: Bearer <key>`.",
+        "x-fern-bearer": {
+          "name": "apiKey",
+          "env": "LATITUDE_API_KEY"
+        }
       }
     },
     "schemas": {
@@ -8283,9 +8288,32 @@
                       "kind",
                       "field"
                     ]
+                  },
+                  {
+                    "type": "object",
+                    "properties": {
+                      "kind": {
+                        "type": "string",
+                        "enum": [
+                          "p95"
+                        ]
+                      },
+                      "field": {
+                        "type": "string",
+                        "enum": [
+                          "duration",
+                          "cost",
+                          "tokens"
+                        ]
+                      }
+                    },
+                    "required": [
+                      "kind",
+                      "field"
+                    ]
                   }
                 ],
-                "description": "The metric: `count`, `errorRate`, `cacheHitRate`, or `{sum|min|max|avg|median}` over `duration`/`cost`/`tokens`."
+                "description": "The metric: `count`, `errorRate`, `cacheHitRate`, or `{sum|min|max|avg|median|p95}` over `duration`/`cost`/`tokens`."
               },
               "filters": {
                 "allOf": [
@@ -8571,9 +8599,32 @@
                       "kind",
                       "field"
                     ]
+                  },
+                  {
+                    "type": "object",
+                    "properties": {
+                      "kind": {
+                        "type": "string",
+                        "enum": [
+                          "p95"
+                        ]
+                      },
+                      "field": {
+                        "type": "string",
+                        "enum": [
+                          "duration",
+                          "cost",
+                          "tokens"
+                        ]
+                      }
+                    },
+                    "required": [
+                      "kind",
+                      "field"
+                    ]
                   }
                 ],
-                "description": "The metric: `count`, `errorRate`, `cacheHitRate`, or `{sum|min|max|avg|median}` over `duration`/`cost`/`tokens`."
+                "description": "The metric: `count`, `errorRate`, `cacheHitRate`, or `{sum|min|max|avg|median|p95}` over `duration`/`cost`/`tokens`."
               },
               "filters": {
                 "allOf": [
@@ -8853,9 +8904,32 @@
                       "kind",
                       "field"
                     ]
+                  },
+                  {
+                    "type": "object",
+                    "properties": {
+                      "kind": {
+                        "type": "string",
+                        "enum": [
+                          "p95"
+                        ]
+                      },
+                      "field": {
+                        "type": "string",
+                        "enum": [
+                          "duration",
+                          "cost",
+                          "tokens"
+                        ]
+                      }
+                    },
+                    "required": [
+                      "kind",
+                      "field"
+                    ]
                   }
                 ],
-                "description": "The metric: `count`, `errorRate`, `cacheHitRate`, or `{sum|min|max|avg|median}` over `duration`/`cost`/`tokens`."
+                "description": "The metric: `count`, `errorRate`, `cacheHitRate`, or `{sum|min|max|avg|median|p95}` over `duration`/`cost`/`tokens`."
               },
               "filters": {
                 "allOf": [
@@ -9426,8 +9500,308 @@
               "range"
             ],
             "additionalProperties": false
+          },
+          {
+            "type": "object",
+            "properties": {
+              "stream": {
+                "type": "string",
+                "enum": [
+                  "moments"
+                ],
+                "description": "Semantic-moment labels — kind/actor-tagged moments detected within a session."
+              },
+              "breakdown": {
+                "type": "string",
+                "enum": [
+                  "kind",
+                  "actor",
+                  "session"
+                ],
+                "description": "Dimension to group by: `kind`, `actor`, or `session`."
+              },
+              "metric": {
+                "oneOf": [
+                  {
+                    "type": "object",
+                    "properties": {
+                      "kind": {
+                        "type": "string",
+                        "enum": [
+                          "count"
+                        ]
+                      }
+                    },
+                    "required": [
+                      "kind"
+                    ]
+                  },
+                  {
+                    "type": "object",
+                    "properties": {
+                      "kind": {
+                        "type": "string",
+                        "enum": [
+                          "avg"
+                        ]
+                      },
+                      "field": {
+                        "type": "string",
+                        "enum": [
+                          "confidence",
+                          "coherence"
+                        ]
+                      }
+                    },
+                    "required": [
+                      "kind",
+                      "field"
+                    ]
+                  },
+                  {
+                    "type": "object",
+                    "properties": {
+                      "kind": {
+                        "type": "string",
+                        "enum": [
+                          "min"
+                        ]
+                      },
+                      "field": {
+                        "type": "string",
+                        "enum": [
+                          "confidence",
+                          "coherence"
+                        ]
+                      }
+                    },
+                    "required": [
+                      "kind",
+                      "field"
+                    ]
+                  },
+                  {
+                    "type": "object",
+                    "properties": {
+                      "kind": {
+                        "type": "string",
+                        "enum": [
+                          "max"
+                        ]
+                      },
+                      "field": {
+                        "type": "string",
+                        "enum": [
+                          "confidence",
+                          "coherence"
+                        ]
+                      }
+                    },
+                    "required": [
+                      "kind",
+                      "field"
+                    ]
+                  },
+                  {
+                    "type": "object",
+                    "properties": {
+                      "kind": {
+                        "type": "string",
+                        "enum": [
+                          "median"
+                        ]
+                      },
+                      "field": {
+                        "type": "string",
+                        "enum": [
+                          "confidence",
+                          "coherence"
+                        ]
+                      }
+                    },
+                    "required": [
+                      "kind",
+                      "field"
+                    ]
+                  }
+                ],
+                "description": "The metric: `count`, or `{avg|min|max|median}` of the 0–1 label `confidence` or moment `coherence`."
+              },
+              "filters": {
+                "allOf": [
+                  {
+                    "$ref": "#/components/schemas/FilterSet"
+                  },
+                  {
+                    "description": "Structured filter set applied to the stream (same DSL as `listTraces`)."
+                  }
+                ]
+              },
+              "timeBucket": {
+                "type": "object",
+                "properties": {
+                  "unit": {
+                    "type": "string",
+                    "enum": [
+                      "hour",
+                      "day",
+                      "week"
+                    ],
+                    "description": "Bucket granularity."
+                  },
+                  "size": {
+                    "type": "integer",
+                    "exclusiveMinimum": 0,
+                    "maximum": 365,
+                    "default": 1,
+                    "description": "Number of units per bucket (e.g. `2` weeks)."
+                  }
+                },
+                "required": [
+                  "unit"
+                ],
+                "description": "Bucket the metric over time. Omit for a single aggregate."
+              },
+              "range": {
+                "type": "object",
+                "properties": {
+                  "fromIso": {
+                    "type": "string",
+                    "format": "date-time",
+                    "example": "2026-06-23T00:00:00Z",
+                    "description": "Inclusive lower bound (ISO-8601)."
+                  },
+                  "toIso": {
+                    "type": "string",
+                    "format": "date-time",
+                    "example": "2026-06-30T00:00:00Z",
+                    "description": "Exclusive upper bound (ISO-8601). Must be after `fromIso`."
+                  }
+                },
+                "required": [
+                  "fromIso",
+                  "toIso"
+                ],
+                "description": "The time window."
+              },
+              "orderBy": {
+                "type": "object",
+                "properties": {
+                  "by": {
+                    "type": "string",
+                    "enum": [
+                      "value",
+                      "key"
+                    ],
+                    "default": "value"
+                  },
+                  "direction": {
+                    "type": "string",
+                    "enum": [
+                      "asc",
+                      "desc"
+                    ],
+                    "default": "desc"
+                  }
+                },
+                "default": {
+                  "by": "value",
+                  "direction": "desc"
+                },
+                "description": "Sort for breakdown results. Defaults to value-desc."
+              },
+              "limit": {
+                "type": "integer",
+                "exclusiveMinimum": 0,
+                "maximum": 500,
+                "default": 50,
+                "description": "Maximum rows returned. Defaults to 50; max 500."
+              }
+            },
+            "required": [
+              "stream",
+              "metric",
+              "range"
+            ],
+            "additionalProperties": false
           }
         ]
+      },
+      "QuerySpans": {
+        "type": "object",
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Span"
+            },
+            "description": "Matching spans across traces, newest first. Rows exclude per-message LLM content — use a span point-lookup for the payload."
+          },
+          "nextCursor": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "Cursor for the next page, or `null` when there are no more spans."
+          },
+          "hasMore": {
+            "type": "boolean",
+            "description": "Whether more spans match beyond this page."
+          }
+        },
+        "required": [
+          "items",
+          "nextCursor",
+          "hasMore"
+        ]
+      },
+      "QuerySpansBody": {
+        "type": "object",
+        "properties": {
+          "filters": {
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/FilterSet"
+              },
+              {
+                "description": "Row-local span filter set (same DSL as `listTraces`) over span fields — `operation`, `toolName`, `model`, `provider`, `sessionId`, `traceId`, `tags`, `duration`, `cost`, `tokensInput`/`tokensOutput`."
+              }
+            ]
+          },
+          "range": {
+            "type": "object",
+            "properties": {
+              "fromIso": {
+                "type": "string",
+                "format": "date-time",
+                "example": "2026-06-23T00:00:00Z",
+                "description": "Inclusive lower bound (ISO-8601)."
+              },
+              "toIso": {
+                "type": "string",
+                "format": "date-time",
+                "example": "2026-06-30T00:00:00Z",
+                "description": "Upper bound (ISO-8601). Must be after `fromIso`."
+              }
+            },
+            "required": [
+              "fromIso",
+              "toIso"
+            ],
+            "description": "Restrict to spans whose `startTime` falls in this window."
+          },
+          "cursor": {
+            "type": "string",
+            "description": "Opaque cursor from a previous response's `nextCursor`. Omit on the first page."
+          },
+          "limit": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 200,
+            "default": 50,
+            "description": "Page size. Defaults to 50; max 200."
+          }
+        }
       }
     },
     "parameters": {}
@@ -17628,6 +18002,87 @@
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/AnalyticsSeries"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Validation error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/projects/{projectSlug}/spans/query": {
+      "post": {
+        "tags": [
+          "Spans"
+        ],
+        "x-fern-sdk-group-name": "spans",
+        "x-fern-sdk-method-name": "query",
+        "summary": "Query spans across traces",
+        "description": "Returns a cursor-paginated page of spans across all traces in the project matching `filters` (and an optional time `range`). The span-grain, row-level complement to `queryAnalytics` with `stream: \"spans\"` (which returns aggregates): use this to drill from an aggregate into the individual spans behind it — e.g. every failing `search_docs` tool span, or the slowest embedding calls.",
+        "security": [
+          {
+            "ApiKeyAuth": []
+          }
+        ],
+        "operationId": "querySpans",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "description": "Project slug (human-readable identifier)"
+            },
+            "required": true,
+            "description": "Project slug (human-readable identifier)",
+            "name": "projectSlug",
+            "in": "path"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/QuerySpansBody"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Page of spans",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/QuerySpans"
                 }
               }
             }

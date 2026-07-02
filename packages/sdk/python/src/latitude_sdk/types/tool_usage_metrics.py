@@ -23,59 +23,62 @@ class ToolUsageMetrics(UniversalBaseModel):
     Number of calls that ended in an error.
     """
 
-    error_rate: typing_extensions.Annotated[float, FieldMetadata(alias="errorRate")] = pydantic.Field()
-    """
-    Fraction of calls that errored, 0..1.
-    """
-
-    avg_duration_ns: typing_extensions.Annotated[float, FieldMetadata(alias="avgDurationNs")] = pydantic.Field()
-    """
-    Mean call duration, in nanoseconds.
-    """
-
-    p_50_duration_ns: typing_extensions.Annotated[float, FieldMetadata(alias="p50DurationNs")] = pydantic.Field()
-    """
-    Median (p50) call duration, in nanoseconds.
-    """
-
-    p_95_duration_ns: typing_extensions.Annotated[float, FieldMetadata(alias="p95DurationNs")] = pydantic.Field()
-    """
-    95th-percentile call duration, in nanoseconds.
-    """
-
-    p_99_duration_ns: typing_extensions.Annotated[float, FieldMetadata(alias="p99DurationNs")] = pydantic.Field()
-    """
-    99th-percentile call duration, in nanoseconds.
-    """
-
-    traces_used: typing_extensions.Annotated[int, FieldMetadata(alias="tracesUsed")] = pydantic.Field()
-    """
-    Distinct traces with at least one call of this tool.
-    """
-
-    sessions_used: typing_extensions.Annotated[int, FieldMetadata(alias="sessionsUsed")] = pydantic.Field()
-    """
-    Distinct sessions with at least one call of this tool.
-    """
-
-    trace_usage_rate: typing_extensions.Annotated[float, FieldMetadata(alias="traceUsageRate")] = pydantic.Field()
-    """
-    `tracesUsed` divided by total traces in the range, 0..1.
-    """
-
-    session_usage_rate: typing_extensions.Annotated[float, FieldMetadata(alias="sessionUsageRate")] = pydantic.Field()
-    """
-    `sessionsUsed` divided by total sessions in the range, 0..1.
-    """
-
-    first_seen: typing_extensions.Annotated[str, FieldMetadata(alias="firstSeen")] = pydantic.Field()
-    """
-    ISO-8601 timestamp of the first call in the range.
-    """
-
-    last_used: typing_extensions.Annotated[str, FieldMetadata(alias="lastUsed")] = pydantic.Field()
-    """
-    ISO-8601 timestamp of the most recent call in the range.
-    """
+    error_rate: typing_extensions.Annotated[
+        float,
+        FieldMetadata(alias="errorRate"),
+        pydantic.Field(alias="errorRate", description="Fraction of calls that errored, 0..1."),
+    ]
+    avg_duration_ns: typing_extensions.Annotated[
+        float,
+        FieldMetadata(alias="avgDurationNs"),
+        pydantic.Field(alias="avgDurationNs", description="Mean call duration, in nanoseconds."),
+    ]
+    p50duration_ns: typing_extensions.Annotated[
+        float,
+        FieldMetadata(alias="p50DurationNs"),
+        pydantic.Field(alias="p50DurationNs", description="Median (p50) call duration, in nanoseconds."),
+    ]
+    p95duration_ns: typing_extensions.Annotated[
+        float,
+        FieldMetadata(alias="p95DurationNs"),
+        pydantic.Field(alias="p95DurationNs", description="95th-percentile call duration, in nanoseconds."),
+    ]
+    p99duration_ns: typing_extensions.Annotated[
+        float,
+        FieldMetadata(alias="p99DurationNs"),
+        pydantic.Field(alias="p99DurationNs", description="99th-percentile call duration, in nanoseconds."),
+    ]
+    traces_used: typing_extensions.Annotated[
+        int,
+        FieldMetadata(alias="tracesUsed"),
+        pydantic.Field(alias="tracesUsed", description="Distinct traces with at least one call of this tool."),
+    ]
+    sessions_used: typing_extensions.Annotated[
+        int,
+        FieldMetadata(alias="sessionsUsed"),
+        pydantic.Field(alias="sessionsUsed", description="Distinct sessions with at least one call of this tool."),
+    ]
+    trace_usage_rate: typing_extensions.Annotated[
+        float,
+        FieldMetadata(alias="traceUsageRate"),
+        pydantic.Field(alias="traceUsageRate", description="`tracesUsed` divided by total traces in the range, 0..1."),
+    ]
+    session_usage_rate: typing_extensions.Annotated[
+        float,
+        FieldMetadata(alias="sessionUsageRate"),
+        pydantic.Field(
+            alias="sessionUsageRate", description="`sessionsUsed` divided by total sessions in the range, 0..1."
+        ),
+    ]
+    first_seen: typing_extensions.Annotated[
+        str,
+        FieldMetadata(alias="firstSeen"),
+        pydantic.Field(alias="firstSeen", description="ISO-8601 timestamp of the first call in the range."),
+    ]
+    last_used: typing_extensions.Annotated[
+        str,
+        FieldMetadata(alias="lastUsed"),
+        pydantic.Field(alias="lastUsed", description="ISO-8601 timestamp of the most recent call in the range."),
+    ]
 
     model_config: typing.ClassVar[pydantic.ConfigDict] = pydantic.ConfigDict(extra="allow", frozen=True)

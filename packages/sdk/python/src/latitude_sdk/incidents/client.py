@@ -8,8 +8,8 @@ from ..core.request_options import RequestOptions
 from ..types.incident import Incident
 from ..types.list_incidents_response import ListIncidentsResponse
 from .raw_client import AsyncRawIncidentsClient, RawIncidentsClient
-from .types.incidents_list_request_severities_item import IncidentsListRequestSeveritiesItem
-from .types.incidents_list_request_source_type import IncidentsListRequestSourceType
+from .types.list_incidents_request_severities_item import ListIncidentsRequestSeveritiesItem
+from .types.list_incidents_request_source_type import ListIncidentsRequestSourceType
 
 
 class IncidentsClient:
@@ -33,10 +33,10 @@ class IncidentsClient:
         *,
         from_iso: typing.Optional[dt.datetime] = None,
         to_iso: typing.Optional[dt.datetime] = None,
-        source_type: typing.Optional[IncidentsListRequestSourceType] = None,
+        source_type: typing.Optional[ListIncidentsRequestSourceType] = None,
         source_id: typing.Optional[str] = None,
         severities: typing.Optional[
-            typing.Union[IncidentsListRequestSeveritiesItem, typing.Sequence[IncidentsListRequestSeveritiesItem]]
+            typing.Union[ListIncidentsRequestSeveritiesItem, typing.Sequence[ListIncidentsRequestSeveritiesItem]]
         ] = None,
         request_options: typing.Optional[RequestOptions] = None,
     ) -> ListIncidentsResponse:
@@ -54,13 +54,13 @@ class IncidentsClient:
         to_iso : typing.Optional[dt.datetime]
             Upper bound (inclusive) of the time window. Defaults to now.
 
-        source_type : typing.Optional[IncidentsListRequestSourceType]
+        source_type : typing.Optional[ListIncidentsRequestSourceType]
             Restrict to incidents triggered by this source type: `monitor` or `signal`.
 
         source_id : typing.Optional[str]
             Restrict to incidents tied to one source entity id.
 
-        severities : typing.Optional[typing.Union[IncidentsListRequestSeveritiesItem, typing.Sequence[IncidentsListRequestSeveritiesItem]]]
+        severities : typing.Optional[typing.Union[ListIncidentsRequestSeveritiesItem, typing.Sequence[ListIncidentsRequestSeveritiesItem]]]
             Restrict to incidents whose severity matches any value in this list.
 
         request_options : typing.Optional[RequestOptions]
@@ -73,23 +73,13 @@ class IncidentsClient:
 
         Examples
         --------
-        import datetime
+        from latitude_sdk import LatitudeClient
 
-        from latitude import LatitudeApiClient
-
-        client = LatitudeApiClient(
-            token="YOUR_TOKEN",
+        client = LatitudeClient(
+            api_key="YOUR_API_KEY",
         )
         client.incidents.list(
             project_slug="projectSlug",
-            from_iso=datetime.datetime.fromisoformat(
-                "2024-01-15 09:30:00+00:00",
-            ),
-            to_iso=datetime.datetime.fromisoformat(
-                "2024-01-15 09:30:00+00:00",
-            ),
-            source_type="monitor",
-            source_id="source_id",
         )
         """
         _response = self._raw_client.list(
@@ -127,10 +117,10 @@ class IncidentsClient:
 
         Examples
         --------
-        from latitude import LatitudeApiClient
+        from latitude_sdk import LatitudeClient
 
-        client = LatitudeApiClient(
-            token="YOUR_TOKEN",
+        client = LatitudeClient(
+            api_key="YOUR_API_KEY",
         )
         client.incidents.resolve(
             project_slug="projectSlug",
@@ -162,10 +152,10 @@ class AsyncIncidentsClient:
         *,
         from_iso: typing.Optional[dt.datetime] = None,
         to_iso: typing.Optional[dt.datetime] = None,
-        source_type: typing.Optional[IncidentsListRequestSourceType] = None,
+        source_type: typing.Optional[ListIncidentsRequestSourceType] = None,
         source_id: typing.Optional[str] = None,
         severities: typing.Optional[
-            typing.Union[IncidentsListRequestSeveritiesItem, typing.Sequence[IncidentsListRequestSeveritiesItem]]
+            typing.Union[ListIncidentsRequestSeveritiesItem, typing.Sequence[ListIncidentsRequestSeveritiesItem]]
         ] = None,
         request_options: typing.Optional[RequestOptions] = None,
     ) -> ListIncidentsResponse:
@@ -183,13 +173,13 @@ class AsyncIncidentsClient:
         to_iso : typing.Optional[dt.datetime]
             Upper bound (inclusive) of the time window. Defaults to now.
 
-        source_type : typing.Optional[IncidentsListRequestSourceType]
+        source_type : typing.Optional[ListIncidentsRequestSourceType]
             Restrict to incidents triggered by this source type: `monitor` or `signal`.
 
         source_id : typing.Optional[str]
             Restrict to incidents tied to one source entity id.
 
-        severities : typing.Optional[typing.Union[IncidentsListRequestSeveritiesItem, typing.Sequence[IncidentsListRequestSeveritiesItem]]]
+        severities : typing.Optional[typing.Union[ListIncidentsRequestSeveritiesItem, typing.Sequence[ListIncidentsRequestSeveritiesItem]]]
             Restrict to incidents whose severity matches any value in this list.
 
         request_options : typing.Optional[RequestOptions]
@@ -203,26 +193,17 @@ class AsyncIncidentsClient:
         Examples
         --------
         import asyncio
-        import datetime
 
-        from latitude import AsyncLatitudeApiClient
+        from latitude_sdk import AsyncLatitudeClient
 
-        client = AsyncLatitudeApiClient(
-            token="YOUR_TOKEN",
+        client = AsyncLatitudeClient(
+            api_key="YOUR_API_KEY",
         )
 
 
         async def main() -> None:
             await client.incidents.list(
                 project_slug="projectSlug",
-                from_iso=datetime.datetime.fromisoformat(
-                    "2024-01-15 09:30:00+00:00",
-                ),
-                to_iso=datetime.datetime.fromisoformat(
-                    "2024-01-15 09:30:00+00:00",
-                ),
-                source_type="monitor",
-                source_id="source_id",
             )
 
 
@@ -265,10 +246,10 @@ class AsyncIncidentsClient:
         --------
         import asyncio
 
-        from latitude import AsyncLatitudeApiClient
+        from latitude_sdk import AsyncLatitudeClient
 
-        client = AsyncLatitudeApiClient(
-            token="YOUR_TOKEN",
+        client = AsyncLatitudeClient(
+            api_key="YOUR_API_KEY",
         )
 
 

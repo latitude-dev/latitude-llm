@@ -15,13 +15,15 @@ class CreateEvaluationScoreBody(UniversalBaseModel):
     Internal, don't use
     """
 
-    simulation_id: typing_extensions.Annotated[typing.Optional[str], FieldMetadata(alias="simulationId")] = (
-        pydantic.Field(default=None)
-    )
-    """
-    Simulation this score is tied to, if any. `null` (default) when not part of a simulation.
-    """
-
+    simulation_id: typing_extensions.Annotated[
+        typing.Optional[str],
+        FieldMetadata(alias="simulationId"),
+        pydantic.Field(
+            alias="simulationId",
+            default=None,
+            description="Simulation this score is tied to, if any. `null` (default) when not part of a simulation.",
+        ),
+    ]
     value: float = pydantic.Field()
     """
     Normalized score value in [0, 1]. Higher = better.
@@ -58,16 +60,19 @@ class CreateEvaluationScoreBody(UniversalBaseModel):
     """
 
     trace: TraceRef
-    evaluation: typing_extensions.Annotated[bool, FieldMetadata(alias="_evaluation")] = pydantic.Field()
-    """
-    Discriminator: `true` flags the body as an evaluation score (internal); `false`/omit for custom.
-    """
-
-    source_id: typing_extensions.Annotated[str, FieldMetadata(alias="sourceId")] = pydantic.Field()
-    """
-    CUID of the evaluation that produced this score.
-    """
-
+    evaluation: typing_extensions.Annotated[
+        bool,
+        FieldMetadata(alias="_evaluation"),
+        pydantic.Field(
+            alias="_evaluation",
+            description="Discriminator: `true` flags the body as an evaluation score (internal); `false`/omit for custom.",
+        ),
+    ]
+    source_id: typing_extensions.Annotated[
+        str,
+        FieldMetadata(alias="sourceId"),
+        pydantic.Field(alias="sourceId", description="CUID of the evaluation that produced this score."),
+    ]
     metadata: EvaluationScoreMetadata
 
     model_config: typing.ClassVar[pydantic.ConfigDict] = pydantic.ConfigDict(extra="allow", frozen=True)

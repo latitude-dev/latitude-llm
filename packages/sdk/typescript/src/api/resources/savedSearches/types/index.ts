@@ -1,2 +1,2 @@
-export * from "./SavedSearchesListTracesRequestSortBy.js";
-export * from "./SavedSearchesListTracesRequestSortDirection.js";
+export * from "./ListTracesSavedSearchesRequestSortBy.js";
+export * from "./ListTracesSavedSearchesRequestSortDirection.js";

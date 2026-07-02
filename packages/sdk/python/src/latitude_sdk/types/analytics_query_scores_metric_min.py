@@ -4,9 +4,10 @@ import typing
 
 import pydantic
 from ..core.pydantic_utilities import UniversalBaseModel
+from .analytics_query_scores_metric_min_field import AnalyticsQueryScoresMetricMinField
 
 
 class AnalyticsQueryScoresMetricMin(UniversalBaseModel):
-    field: typing.Literal["value"] = "value"
+    field: AnalyticsQueryScoresMetricMinField
 
     model_config: typing.ClassVar[pydantic.ConfigDict] = pydantic.ConfigDict(extra="allow", frozen=True)

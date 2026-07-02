@@ -2,4 +2,7 @@
 
 import typing
 
-GenAiSpanSystem = typing.List[typing.Dict[str, typing.Optional[typing.Any]]]
+GenAiSpanSystem = typing.List[typing.Dict[str, typing.Any]]
+"""
+System instructions in OpenTelemetry GenAI format — an array of part objects.
+"""

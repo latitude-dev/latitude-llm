@@ -1,5 +1,6 @@
 import type {
   ChSqlClient,
+  FilterSet,
   NotFoundError,
   OrganizationId,
   ProjectId,
@@ -194,6 +195,8 @@ export interface SpanListOptions {
   readonly startTimeTo?: Date
   readonly limit?: number
   readonly offset?: number
+  /** Row-local span predicate (`SPAN_FIELD_REGISTRY` DSL); AND-combined with the window. */
+  readonly filters?: FilterSet
 }
 
 export class SpanRepository extends Context.Service<SpanRepository, SpanRepositoryShape>()(

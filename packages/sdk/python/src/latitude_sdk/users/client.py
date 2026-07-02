@@ -13,12 +13,12 @@ from ..types.user_signals_response import UserSignalsResponse
 from ..types.user_usage_response import UserUsageResponse
 from ..types.users_overview_response import UsersOverviewResponse
 from .raw_client import AsyncRawUsersClient, RawUsersClient
-from .types.users_activity_request_errors_only import UsersActivityRequestErrorsOnly
-from .types.users_get_request_errors_only import UsersGetRequestErrorsOnly
-from .types.users_list_request_sort_by import UsersListRequestSortBy
-from .types.users_list_request_sort_direction import UsersListRequestSortDirection
-from .types.users_usage_request_dimension import UsersUsageRequestDimension
-from .types.users_usage_request_errors_only import UsersUsageRequestErrorsOnly
+from .types.activity_users_request_errors_only import ActivityUsersRequestErrorsOnly
+from .types.get_users_request_errors_only import GetUsersRequestErrorsOnly
+from .types.list_users_request_sort_by import ListUsersRequestSortBy
+from .types.list_users_request_sort_direction import ListUsersRequestSortDirection
+from .types.usage_users_request_dimension import UsageUsersRequestDimension
+from .types.usage_users_request_errors_only import UsageUsersRequestErrorsOnly
 
 
 class UsersClient:
@@ -44,8 +44,8 @@ class UsersClient:
         to_iso: typing.Optional[dt.datetime] = None,
         limit: typing.Optional[int] = None,
         offset: typing.Optional[int] = None,
-        sort_by: typing.Optional[UsersListRequestSortBy] = None,
-        sort_direction: typing.Optional[UsersListRequestSortDirection] = None,
+        sort_by: typing.Optional[ListUsersRequestSortBy] = None,
+        sort_direction: typing.Optional[ListUsersRequestSortDirection] = None,
         search_query: typing.Optional[str] = None,
         request_options: typing.Optional[RequestOptions] = None,
     ) -> UserListResponse:
@@ -69,10 +69,10 @@ class UsersClient:
         offset : typing.Optional[int]
             Zero-based offset of the first user to return.
 
-        sort_by : typing.Optional[UsersListRequestSortBy]
+        sort_by : typing.Optional[ListUsersRequestSortBy]
             Field to sort by. Defaults to most recently seen.
 
-        sort_direction : typing.Optional[UsersListRequestSortDirection]
+        sort_direction : typing.Optional[ListUsersRequestSortDirection]
             Sort direction. Defaults to descending.
 
         search_query : typing.Optional[str]
@@ -88,26 +88,13 @@ class UsersClient:
 
         Examples
         --------
-        import datetime
+        from latitude_sdk import LatitudeClient
 
-        from latitude import LatitudeApiClient
-
-        client = LatitudeApiClient(
-            token="YOUR_TOKEN",
+        client = LatitudeClient(
+            api_key="YOUR_API_KEY",
         )
         client.users.list(
             project_slug="projectSlug",
-            from_iso=datetime.datetime.fromisoformat(
-                "2024-01-15 09:30:00+00:00",
-            ),
-            to_iso=datetime.datetime.fromisoformat(
-                "2024-01-15 09:30:00+00:00",
-            ),
-            limit=1,
-            offset=1,
-            sort_by="lastSeen",
-            sort_direction="asc",
-            search_query="searchQuery",
         )
         """
         _response = self._raw_client.list(
@@ -155,21 +142,13 @@ class UsersClient:
 
         Examples
         --------
-        import datetime
+        from latitude_sdk import LatitudeClient
 
-        from latitude import LatitudeApiClient
-
-        client = LatitudeApiClient(
-            token="YOUR_TOKEN",
+        client = LatitudeClient(
+            api_key="YOUR_API_KEY",
         )
         client.users.overview(
             project_slug="projectSlug",
-            from_iso=datetime.datetime.fromisoformat(
-                "2024-01-15 09:30:00+00:00",
-            ),
-            to_iso=datetime.datetime.fromisoformat(
-                "2024-01-15 09:30:00+00:00",
-            ),
         )
         """
         _response = self._raw_client.overview(
@@ -184,7 +163,7 @@ class UsersClient:
         *,
         from_iso: typing.Optional[dt.datetime] = None,
         to_iso: typing.Optional[dt.datetime] = None,
-        errors_only: typing.Optional[UsersActivityRequestErrorsOnly] = None,
+        errors_only: typing.Optional[ActivityUsersRequestErrorsOnly] = None,
         request_options: typing.Optional[RequestOptions] = None,
     ) -> UserActivityResponse:
         """
@@ -204,7 +183,7 @@ class UsersClient:
         to_iso : typing.Optional[dt.datetime]
             Upper bound (inclusive) of the time range. Defaults to now.
 
-        errors_only : typing.Optional[UsersActivityRequestErrorsOnly]
+        errors_only : typing.Optional[ActivityUsersRequestErrorsOnly]
             When `true`, scope every aggregate to errored traces only.
 
         request_options : typing.Optional[RequestOptions]
@@ -217,23 +196,14 @@ class UsersClient:
 
         Examples
         --------
-        import datetime
+        from latitude_sdk import LatitudeClient
 
-        from latitude import LatitudeApiClient
-
-        client = LatitudeApiClient(
-            token="YOUR_TOKEN",
+        client = LatitudeClient(
+            api_key="YOUR_API_KEY",
         )
         client.users.activity(
             project_slug="projectSlug",
             user_id="userId",
-            from_iso=datetime.datetime.fromisoformat(
-                "2024-01-15 09:30:00+00:00",
-            ),
-            to_iso=datetime.datetime.fromisoformat(
-                "2024-01-15 09:30:00+00:00",
-            ),
-            errors_only="true",
         )
         """
         _response = self._raw_client.activity(
@@ -251,9 +221,9 @@ class UsersClient:
         project_slug: str,
         user_id: str,
         *,
-        dimension: UsersUsageRequestDimension,
+        dimension: UsageUsersRequestDimension,
         limit: typing.Optional[int] = None,
-        errors_only: typing.Optional[UsersUsageRequestErrorsOnly] = None,
+        errors_only: typing.Optional[UsageUsersRequestErrorsOnly] = None,
         request_options: typing.Optional[RequestOptions] = None,
     ) -> UserUsageResponse:
         """
@@ -267,13 +237,13 @@ class UsersClient:
         user_id : str
             End-user identifier. URL-encode values containing special characters.
 
-        dimension : UsersUsageRequestDimension
+        dimension : UsageUsersRequestDimension
             Dimension to break the usage down by.
 
         limit : typing.Optional[int]
             Maximum number of values to return.
 
-        errors_only : typing.Optional[UsersUsageRequestErrorsOnly]
+        errors_only : typing.Optional[UsageUsersRequestErrorsOnly]
             When `true`, scope every aggregate to errored traces only.
 
         request_options : typing.Optional[RequestOptions]
@@ -286,17 +256,15 @@ class UsersClient:
 
         Examples
         --------
-        from latitude import LatitudeApiClient
+        from latitude_sdk import LatitudeClient
 
-        client = LatitudeApiClient(
-            token="YOUR_TOKEN",
+        client = LatitudeClient(
+            api_key="YOUR_API_KEY",
         )
         client.users.usage(
             project_slug="projectSlug",
             user_id="userId",
             dimension="model",
-            limit=1,
-            errors_only="true",
         )
         """
         _response = self._raw_client.usage(
@@ -341,15 +309,14 @@ class UsersClient:
 
         Examples
         --------
-        from latitude import LatitudeApiClient
+        from latitude_sdk import LatitudeClient
 
-        client = LatitudeApiClient(
-            token="YOUR_TOKEN",
+        client = LatitudeClient(
+            api_key="YOUR_API_KEY",
         )
         client.users.signals(
             project_slug="projectSlug",
             user_id="userId",
-            limit=1,
         )
         """
         _response = self._raw_client.signals(project_slug, user_id, limit=limit, request_options=request_options)
@@ -387,15 +354,14 @@ class UsersClient:
 
         Examples
         --------
-        from latitude import LatitudeApiClient
+        from latitude_sdk import LatitudeClient
 
-        client = LatitudeApiClient(
-            token="YOUR_TOKEN",
+        client = LatitudeClient(
+            api_key="YOUR_API_KEY",
         )
         client.users.behaviours(
             project_slug="projectSlug",
             user_id="userId",
-            limit=1,
         )
         """
         _response = self._raw_client.behaviours(project_slug, user_id, limit=limit, request_options=request_options)
@@ -406,7 +372,7 @@ class UsersClient:
         project_slug: str,
         user_id: str,
         *,
-        errors_only: typing.Optional[UsersGetRequestErrorsOnly] = None,
+        errors_only: typing.Optional[GetUsersRequestErrorsOnly] = None,
         request_options: typing.Optional[RequestOptions] = None,
     ) -> UserProfileResponse:
         """
@@ -420,7 +386,7 @@ class UsersClient:
         user_id : str
             End-user identifier. URL-encode values containing special characters.
 
-        errors_only : typing.Optional[UsersGetRequestErrorsOnly]
+        errors_only : typing.Optional[GetUsersRequestErrorsOnly]
             When `true`, scope every aggregate to errored traces only.
 
         request_options : typing.Optional[RequestOptions]
@@ -433,15 +399,14 @@ class UsersClient:
 
         Examples
         --------
-        from latitude import LatitudeApiClient
+        from latitude_sdk import LatitudeClient
 
-        client = LatitudeApiClient(
-            token="YOUR_TOKEN",
+        client = LatitudeClient(
+            api_key="YOUR_API_KEY",
         )
         client.users.get(
             project_slug="projectSlug",
             user_id="userId",
-            errors_only="true",
         )
         """
         _response = self._raw_client.get(
@@ -473,8 +438,8 @@ class AsyncUsersClient:
         to_iso: typing.Optional[dt.datetime] = None,
         limit: typing.Optional[int] = None,
         offset: typing.Optional[int] = None,
-        sort_by: typing.Optional[UsersListRequestSortBy] = None,
-        sort_direction: typing.Optional[UsersListRequestSortDirection] = None,
+        sort_by: typing.Optional[ListUsersRequestSortBy] = None,
+        sort_direction: typing.Optional[ListUsersRequestSortDirection] = None,
         search_query: typing.Optional[str] = None,
         request_options: typing.Optional[RequestOptions] = None,
     ) -> UserListResponse:
@@ -498,10 +463,10 @@ class AsyncUsersClient:
         offset : typing.Optional[int]
             Zero-based offset of the first user to return.
 
-        sort_by : typing.Optional[UsersListRequestSortBy]
+        sort_by : typing.Optional[ListUsersRequestSortBy]
             Field to sort by. Defaults to most recently seen.
 
-        sort_direction : typing.Optional[UsersListRequestSortDirection]
+        sort_direction : typing.Optional[ListUsersRequestSortDirection]
             Sort direction. Defaults to descending.
 
         search_query : typing.Optional[str]
@@ -518,29 +483,17 @@ class AsyncUsersClient:
         Examples
         --------
         import asyncio
-        import datetime
 
-        from latitude import AsyncLatitudeApiClient
+        from latitude_sdk import AsyncLatitudeClient
 
-        client = AsyncLatitudeApiClient(
-            token="YOUR_TOKEN",
+        client = AsyncLatitudeClient(
+            api_key="YOUR_API_KEY",
         )
 
 
         async def main() -> None:
             await client.users.list(
                 project_slug="projectSlug",
-                from_iso=datetime.datetime.fromisoformat(
-                    "2024-01-15 09:30:00+00:00",
-                ),
-                to_iso=datetime.datetime.fromisoformat(
-                    "2024-01-15 09:30:00+00:00",
-                ),
-                limit=1,
-                offset=1,
-                sort_by="lastSeen",
-                sort_direction="asc",
-                search_query="searchQuery",
             )
 
 
@@ -592,24 +545,17 @@ class AsyncUsersClient:
         Examples
         --------
         import asyncio
-        import datetime
 
-        from latitude import AsyncLatitudeApiClient
+        from latitude_sdk import AsyncLatitudeClient
 
-        client = AsyncLatitudeApiClient(
-            token="YOUR_TOKEN",
+        client = AsyncLatitudeClient(
+            api_key="YOUR_API_KEY",
         )
 
 
         async def main() -> None:
             await client.users.overview(
                 project_slug="projectSlug",
-                from_iso=datetime.datetime.fromisoformat(
-                    "2024-01-15 09:30:00+00:00",
-                ),
-                to_iso=datetime.datetime.fromisoformat(
-                    "2024-01-15 09:30:00+00:00",
-                ),
             )
 
 
@@ -627,7 +573,7 @@ class AsyncUsersClient:
         *,
         from_iso: typing.Optional[dt.datetime] = None,
         to_iso: typing.Optional[dt.datetime] = None,
-        errors_only: typing.Optional[UsersActivityRequestErrorsOnly] = None,
+        errors_only: typing.Optional[ActivityUsersRequestErrorsOnly] = None,
         request_options: typing.Optional[RequestOptions] = None,
     ) -> UserActivityResponse:
         """
@@ -647,7 +593,7 @@ class AsyncUsersClient:
         to_iso : typing.Optional[dt.datetime]
             Upper bound (inclusive) of the time range. Defaults to now.
 
-        errors_only : typing.Optional[UsersActivityRequestErrorsOnly]
+        errors_only : typing.Optional[ActivityUsersRequestErrorsOnly]
             When `true`, scope every aggregate to errored traces only.
 
         request_options : typing.Optional[RequestOptions]
@@ -661,12 +607,11 @@ class AsyncUsersClient:
         Examples
         --------
         import asyncio
-        import datetime
 
-        from latitude import AsyncLatitudeApiClient
+        from latitude_sdk import AsyncLatitudeClient
 
-        client = AsyncLatitudeApiClient(
-            token="YOUR_TOKEN",
+        client = AsyncLatitudeClient(
+            api_key="YOUR_API_KEY",
         )
 
 
@@ -674,13 +619,6 @@ class AsyncUsersClient:
             await client.users.activity(
                 project_slug="projectSlug",
                 user_id="userId",
-                from_iso=datetime.datetime.fromisoformat(
-                    "2024-01-15 09:30:00+00:00",
-                ),
-                to_iso=datetime.datetime.fromisoformat(
-                    "2024-01-15 09:30:00+00:00",
-                ),
-                errors_only="true",
             )
 
 
@@ -701,9 +639,9 @@ class AsyncUsersClient:
         project_slug: str,
         user_id: str,
         *,
-        dimension: UsersUsageRequestDimension,
+        dimension: UsageUsersRequestDimension,
         limit: typing.Optional[int] = None,
-        errors_only: typing.Optional[UsersUsageRequestErrorsOnly] = None,
+        errors_only: typing.Optional[UsageUsersRequestErrorsOnly] = None,
         request_options: typing.Optional[RequestOptions] = None,
     ) -> UserUsageResponse:
         """
@@ -717,13 +655,13 @@ class AsyncUsersClient:
         user_id : str
             End-user identifier. URL-encode values containing special characters.
 
-        dimension : UsersUsageRequestDimension
+        dimension : UsageUsersRequestDimension
             Dimension to break the usage down by.
 
         limit : typing.Optional[int]
             Maximum number of values to return.
 
-        errors_only : typing.Optional[UsersUsageRequestErrorsOnly]
+        errors_only : typing.Optional[UsageUsersRequestErrorsOnly]
             When `true`, scope every aggregate to errored traces only.
 
         request_options : typing.Optional[RequestOptions]
@@ -738,10 +676,10 @@ class AsyncUsersClient:
         --------
         import asyncio
 
-        from latitude import AsyncLatitudeApiClient
+        from latitude_sdk import AsyncLatitudeClient
 
-        client = AsyncLatitudeApiClient(
-            token="YOUR_TOKEN",
+        client = AsyncLatitudeClient(
+            api_key="YOUR_API_KEY",
         )
 
 
@@ -750,8 +688,6 @@ class AsyncUsersClient:
                 project_slug="projectSlug",
                 user_id="userId",
                 dimension="model",
-                limit=1,
-                errors_only="true",
             )
 
 
@@ -801,10 +737,10 @@ class AsyncUsersClient:
         --------
         import asyncio
 
-        from latitude import AsyncLatitudeApiClient
+        from latitude_sdk import AsyncLatitudeClient
 
-        client = AsyncLatitudeApiClient(
-            token="YOUR_TOKEN",
+        client = AsyncLatitudeClient(
+            api_key="YOUR_API_KEY",
         )
 
 
@@ -812,7 +748,6 @@ class AsyncUsersClient:
             await client.users.signals(
                 project_slug="projectSlug",
                 user_id="userId",
-                limit=1,
             )
 
 
@@ -855,10 +790,10 @@ class AsyncUsersClient:
         --------
         import asyncio
 
-        from latitude import AsyncLatitudeApiClient
+        from latitude_sdk import AsyncLatitudeClient
 
-        client = AsyncLatitudeApiClient(
-            token="YOUR_TOKEN",
+        client = AsyncLatitudeClient(
+            api_key="YOUR_API_KEY",
         )
 
 
@@ -866,7 +801,6 @@ class AsyncUsersClient:
             await client.users.behaviours(
                 project_slug="projectSlug",
                 user_id="userId",
-                limit=1,
             )
 
 
@@ -882,7 +816,7 @@ class AsyncUsersClient:
         project_slug: str,
         user_id: str,
         *,
-        errors_only: typing.Optional[UsersGetRequestErrorsOnly] = None,
+        errors_only: typing.Optional[GetUsersRequestErrorsOnly] = None,
         request_options: typing.Optional[RequestOptions] = None,
     ) -> UserProfileResponse:
         """
@@ -896,7 +830,7 @@ class AsyncUsersClient:
         user_id : str
             End-user identifier. URL-encode values containing special characters.
 
-        errors_only : typing.Optional[UsersGetRequestErrorsOnly]
+        errors_only : typing.Optional[GetUsersRequestErrorsOnly]
             When `true`, scope every aggregate to errored traces only.
 
         request_options : typing.Optional[RequestOptions]
@@ -911,10 +845,10 @@ class AsyncUsersClient:
         --------
         import asyncio
 
-        from latitude import AsyncLatitudeApiClient
+        from latitude_sdk import AsyncLatitudeClient
 
-        client = AsyncLatitudeApiClient(
-            token="YOUR_TOKEN",
+        client = AsyncLatitudeClient(
+            api_key="YOUR_API_KEY",
         )
 
 
@@ -922,7 +856,6 @@ class AsyncUsersClient:
             await client.users.get(
                 project_slug="projectSlug",
                 user_id="userId",
-                errors_only="true",
             )
 
 

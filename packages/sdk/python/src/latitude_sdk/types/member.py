@@ -15,13 +15,15 @@ from .invited_member_role import InvitedMemberRole
 class Member_Active(UniversalBaseModel):
     status: typing.Literal["active"] = "active"
     id: str
-    organization_id: typing_extensions.Annotated[str, FieldMetadata(alias="organizationId")]
-    user_id: typing_extensions.Annotated[str, FieldMetadata(alias="userId")]
+    organization_id: typing_extensions.Annotated[
+        str, FieldMetadata(alias="organizationId"), pydantic.Field(alias="organizationId")
+    ]
+    user_id: typing_extensions.Annotated[str, FieldMetadata(alias="userId"), pydantic.Field(alias="userId")]
     role: ActiveMemberRole
     name: typing.Optional[str] = None
     email: str
     image: typing.Optional[str] = None
-    joined_at: typing_extensions.Annotated[str, FieldMetadata(alias="joinedAt")]
+    joined_at: typing_extensions.Annotated[str, FieldMetadata(alias="joinedAt"), pydantic.Field(alias="joinedAt")]
 
     model_config: typing.ClassVar[pydantic.ConfigDict] = pydantic.ConfigDict(extra="allow", frozen=True)
 
@@ -29,14 +31,23 @@ class Member_Active(UniversalBaseModel):
 class Member_Invited(UniversalBaseModel):
     status: typing.Literal["invited"] = "invited"
     id: str
-    organization_id: typing_extensions.Annotated[str, FieldMetadata(alias="organizationId")]
+    organization_id: typing_extensions.Annotated[
+        str, FieldMetadata(alias="organizationId"), pydantic.Field(alias="organizationId")
+    ]
+    user_id: typing_extensions.Annotated[
+        typing.Optional[typing.Any], FieldMetadata(alias="userId"), pydantic.Field(alias="userId", default=None)
+    ]
     role: typing.Optional[InvitedMemberRole] = None
+    name: typing.Optional[typing.Any] = None
     email: str
-    invited_at: typing_extensions.Annotated[str, FieldMetadata(alias="invitedAt")]
-    expires_at: typing_extensions.Annotated[str, FieldMetadata(alias="expiresAt")]
-    inviter_id: typing_extensions.Annotated[str, FieldMetadata(alias="inviterId")]
+    image: typing.Optional[typing.Any] = None
+    invited_at: typing_extensions.Annotated[str, FieldMetadata(alias="invitedAt"), pydantic.Field(alias="invitedAt")]
+    expires_at: typing_extensions.Annotated[str, FieldMetadata(alias="expiresAt"), pydantic.Field(alias="expiresAt")]
+    inviter_id: typing_extensions.Annotated[str, FieldMetadata(alias="inviterId"), pydantic.Field(alias="inviterId")]
 
     model_config: typing.ClassVar[pydantic.ConfigDict] = pydantic.ConfigDict(extra="allow", frozen=True)
 
 
-Member = typing.Union[Member_Active, Member_Invited]
+Member = typing_extensions.Annotated[
+    typing.Union[Member_Active, Member_Invited], pydantic.Field(discriminator="status")
+]

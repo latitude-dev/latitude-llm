@@ -7,7 +7,7 @@ import * as core from "../../../../core/index.js";
 import * as environments from "../../../../environments.js";
 import { handleNonStatusCodeError } from "../../../../errors/handleNonStatusCodeError.js";
 import * as errors from "../../../../errors/index.js";
-import * as LatitudeApi from "../../../index.js";
+import * as Latitude from "../../../index.js";
 
 export declare namespace OauthKeysClient {
     export type Options = BaseClientOptions;
@@ -18,7 +18,7 @@ export declare namespace OauthKeysClient {
 export class OauthKeysClient {
     protected readonly _options: NormalizedClientOptionsWithAuth<OauthKeysClient.Options>;
 
-    constructor(options: OauthKeysClient.Options) {
+    constructor(options: OauthKeysClient.Options = {}) {
         this._options = normalizeClientOptionsWithAuth(options);
     }
 
@@ -30,13 +30,13 @@ export class OauthKeysClient {
      * @example
      *     await client.oauthKeys.list()
      */
-    public list(requestOptions?: OauthKeysClient.RequestOptions): core.HttpResponsePromise<LatitudeApi.OAuthKeyList> {
+    public list(requestOptions?: OauthKeysClient.RequestOptions): core.HttpResponsePromise<Latitude.OAuthKeyList> {
         return core.HttpResponsePromise.fromPromise(this.__list(requestOptions));
     }
 
     private async __list(
         requestOptions?: OauthKeysClient.RequestOptions,
-    ): Promise<core.WithRawResponse<LatitudeApi.OAuthKeyList>> {
+    ): Promise<core.WithRawResponse<Latitude.OAuthKeyList>> {
         const _authRequest: core.AuthRequest = await this._options.authProvider.getAuthRequest();
         const _headers: core.Fetcher.Args["headers"] = mergeHeaders(
             _authRequest.headers,
@@ -47,12 +47,12 @@ export class OauthKeysClient {
             url: core.url.join(
                 (await core.Supplier.get(this._options.baseUrl)) ??
                     (await core.Supplier.get(this._options.environment)) ??
-                    environments.LatitudeApiEnvironment.Production,
+                    environments.LatitudeEnvironment.Production,
                 "v1/oauth-keys",
             ),
             method: "GET",
             headers: _headers,
-            queryParameters: requestOptions?.queryParams,
+            queryString: core.url.queryBuilder().mergeAdditional(requestOptions?.queryParams).build(),
             timeoutMs: (requestOptions?.timeoutInSeconds ?? this._options?.timeoutInSeconds ?? 60) * 1000,
             maxRetries: requestOptions?.maxRetries ?? this._options?.maxRetries,
             abortSignal: requestOptions?.abortSignal,
@@ -60,11 +60,11 @@ export class OauthKeysClient {
             logging: this._options.logging,
         });
         if (_response.ok) {
-            return { data: _response.body as LatitudeApi.OAuthKeyList, rawResponse: _response.rawResponse };
+            return { data: _response.body as Latitude.OAuthKeyList, rawResponse: _response.rawResponse };
         }
 
         if (_response.error.reason === "status-code") {
-            throw new errors.LatitudeApiError({
+            throw new errors.LatitudeError({
                 statusCode: _response.error.statusCode,
                 body: _response.error.body,
                 rawResponse: _response.rawResponse,
@@ -78,26 +78,29 @@ export class OauthKeysClient {
      * Returns a single OAuth key (like MCP clients) by id.
      *
      * @param {string} oauthKeyId - OAuth key identifier.
+     * @param {Latitude.GetOauthKeysRequest} request
      * @param {OauthKeysClient.RequestOptions} requestOptions - Request-specific configuration.
      *
-     * @throws {@link LatitudeApi.BadRequestError}
-     * @throws {@link LatitudeApi.UnauthorizedError}
-     * @throws {@link LatitudeApi.NotFoundError}
+     * @throws {@link Latitude.BadRequestError}
+     * @throws {@link Latitude.UnauthorizedError}
+     * @throws {@link Latitude.NotFoundError}
      *
      * @example
      *     await client.oauthKeys.get("oauthKeyId")
      */
     public get(
         oauthKeyId: string,
+        request: Latitude.GetOauthKeysRequest = {},
         requestOptions?: OauthKeysClient.RequestOptions,
-    ): core.HttpResponsePromise<LatitudeApi.OAuthKey> {
-        return core.HttpResponsePromise.fromPromise(this.__get(oauthKeyId, requestOptions));
+    ): core.HttpResponsePromise<Latitude.OAuthKey> {
+        return core.HttpResponsePromise.fromPromise(this.__get(oauthKeyId, request, requestOptions));
     }
 
     private async __get(
         oauthKeyId: string,
+        _request: Latitude.GetOauthKeysRequest = {},
         requestOptions?: OauthKeysClient.RequestOptions,
-    ): Promise<core.WithRawResponse<LatitudeApi.OAuthKey>> {
+    ): Promise<core.WithRawResponse<Latitude.OAuthKey>> {
         const _authRequest: core.AuthRequest = await this._options.authProvider.getAuthRequest();
         const _headers: core.Fetcher.Args["headers"] = mergeHeaders(
             _authRequest.headers,
@@ -108,12 +111,12 @@ export class OauthKeysClient {
             url: core.url.join(
                 (await core.Supplier.get(this._options.baseUrl)) ??
                     (await core.Supplier.get(this._options.environment)) ??
-                    environments.LatitudeApiEnvironment.Production,
+                    environments.LatitudeEnvironment.Production,
                 `v1/oauth-keys/${core.url.encodePathParam(oauthKeyId)}`,
             ),
             method: "GET",
             headers: _headers,
-            queryParameters: requestOptions?.queryParams,
+            queryString: core.url.queryBuilder().mergeAdditional(requestOptions?.queryParams).build(),
             timeoutMs: (requestOptions?.timeoutInSeconds ?? this._options?.timeoutInSeconds ?? 60) * 1000,
             maxRetries: requestOptions?.maxRetries ?? this._options?.maxRetries,
             abortSignal: requestOptions?.abortSignal,
@@ -121,28 +124,22 @@ export class OauthKeysClient {
             logging: this._options.logging,
         });
         if (_response.ok) {
-            return { data: _response.body as LatitudeApi.OAuthKey, rawResponse: _response.rawResponse };
+            return { data: _response.body as Latitude.OAuthKey, rawResponse: _response.rawResponse };
         }
 
         if (_response.error.reason === "status-code") {
             switch (_response.error.statusCode) {
                 case 400:
-                    throw new LatitudeApi.BadRequestError(
-                        _response.error.body as LatitudeApi.Error_,
-                        _response.rawResponse,
-                    );
+                    throw new Latitude.BadRequestError(_response.error.body as Latitude.Error_, _response.rawResponse);
                 case 401:
-                    throw new LatitudeApi.UnauthorizedError(
-                        _response.error.body as LatitudeApi.Error_,
+                    throw new Latitude.UnauthorizedError(
+                        _response.error.body as Latitude.Error_,
                         _response.rawResponse,
                     );
                 case 404:
-                    throw new LatitudeApi.NotFoundError(
-                        _response.error.body as LatitudeApi.Error_,
-                        _response.rawResponse,
-                    );
+                    throw new Latitude.NotFoundError(_response.error.body as Latitude.Error_, _response.rawResponse);
                 default:
-                    throw new errors.LatitudeApiError({
+                    throw new errors.LatitudeError({
                         statusCode: _response.error.statusCode,
                         body: _response.error.body,
                         rawResponse: _response.rawResponse,
@@ -157,20 +154,26 @@ export class OauthKeysClient {
      * Revokes an OAuth key (like MCP clients). The connected client immediately loses access.
      *
      * @param {string} oauthKeyId - OAuth key identifier.
+     * @param {Latitude.RevokeOauthKeysRequest} request
      * @param {OauthKeysClient.RequestOptions} requestOptions - Request-specific configuration.
      *
-     * @throws {@link LatitudeApi.UnauthorizedError}
-     * @throws {@link LatitudeApi.NotFoundError}
+     * @throws {@link Latitude.UnauthorizedError}
+     * @throws {@link Latitude.NotFoundError}
      *
      * @example
      *     await client.oauthKeys.revoke("oauthKeyId")
      */
-    public revoke(oauthKeyId: string, requestOptions?: OauthKeysClient.RequestOptions): core.HttpResponsePromise<void> {
-        return core.HttpResponsePromise.fromPromise(this.__revoke(oauthKeyId, requestOptions));
+    public revoke(
+        oauthKeyId: string,
+        request: Latitude.RevokeOauthKeysRequest = {},
+        requestOptions?: OauthKeysClient.RequestOptions,
+    ): core.HttpResponsePromise<void> {
+        return core.HttpResponsePromise.fromPromise(this.__revoke(oauthKeyId, request, requestOptions));
     }
 
     private async __revoke(
         oauthKeyId: string,
+        _request: Latitude.RevokeOauthKeysRequest = {},
         requestOptions?: OauthKeysClient.RequestOptions,
     ): Promise<core.WithRawResponse<void>> {
         const _authRequest: core.AuthRequest = await this._options.authProvider.getAuthRequest();
@@ -183,12 +186,12 @@ export class OauthKeysClient {
             url: core.url.join(
                 (await core.Supplier.get(this._options.baseUrl)) ??
                     (await core.Supplier.get(this._options.environment)) ??
-                    environments.LatitudeApiEnvironment.Production,
+                    environments.LatitudeEnvironment.Production,
                 `v1/oauth-keys/${core.url.encodePathParam(oauthKeyId)}`,
             ),
             method: "DELETE",
             headers: _headers,
-            queryParameters: requestOptions?.queryParams,
+            queryString: core.url.queryBuilder().mergeAdditional(requestOptions?.queryParams).build(),
             timeoutMs: (requestOptions?.timeoutInSeconds ?? this._options?.timeoutInSeconds ?? 60) * 1000,
             maxRetries: requestOptions?.maxRetries ?? this._options?.maxRetries,
             abortSignal: requestOptions?.abortSignal,
@@ -202,17 +205,14 @@ export class OauthKeysClient {
         if (_response.error.reason === "status-code") {
             switch (_response.error.statusCode) {
                 case 401:
-                    throw new LatitudeApi.UnauthorizedError(
-                        _response.error.body as LatitudeApi.Error_,
+                    throw new Latitude.UnauthorizedError(
+                        _response.error.body as Latitude.Error_,
                         _response.rawResponse,
                     );
                 case 404:
-                    throw new LatitudeApi.NotFoundError(
-                        _response.error.body as LatitudeApi.Error_,
-                        _response.rawResponse,
-                    );
+                    throw new Latitude.NotFoundError(_response.error.body as Latitude.Error_, _response.rawResponse);
                 default:
-                    throw new errors.LatitudeApiError({
+                    throw new errors.LatitudeError({
                         statusCode: _response.error.statusCode,
                         body: _response.error.body,
                         rawResponse: _response.rawResponse,

@@ -166,7 +166,8 @@
     "tsx",
     "tsdown",
     "mcp-inspector",
-    "email"
+    "email",
+    "packages/cli/target/release/latitude"
   ],
   "ignoreDependencies": [
     "@pulumi/awsx",

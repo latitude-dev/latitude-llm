@@ -7,24 +7,30 @@ import typing_extensions
 from ..core.pydantic_utilities import UniversalBaseModel
 from ..core.serialization import FieldMetadata
 from .active_member_role import ActiveMemberRole
+from .active_member_status import ActiveMemberStatus
 
 
 class ActiveMember(UniversalBaseModel):
+    status: ActiveMemberStatus = pydantic.Field()
+    """
+    Discriminator for confirmed members — the user has accepted their invitation and joined the org.
+    """
+
     id: str = pydantic.Field()
     """
     Stable membership identifier. Use this to address the row in update/remove endpoints.
     """
 
-    organization_id: typing_extensions.Annotated[str, FieldMetadata(alias="organizationId")] = pydantic.Field()
-    """
-    Organization this membership belongs to.
-    """
-
-    user_id: typing_extensions.Annotated[str, FieldMetadata(alias="userId")] = pydantic.Field()
-    """
-    Identifier of the user the membership represents.
-    """
-
+    organization_id: typing_extensions.Annotated[
+        str,
+        FieldMetadata(alias="organizationId"),
+        pydantic.Field(alias="organizationId", description="Organization this membership belongs to."),
+    ]
+    user_id: typing_extensions.Annotated[
+        str,
+        FieldMetadata(alias="userId"),
+        pydantic.Field(alias="userId", description="Identifier of the user the membership represents."),
+    ]
     role: ActiveMemberRole = pydantic.Field()
     """
     Member's role within the organization.
@@ -45,9 +51,10 @@ class ActiveMember(UniversalBaseModel):
     User's profile image URL, when set.
     """
 
-    joined_at: typing_extensions.Annotated[str, FieldMetadata(alias="joinedAt")] = pydantic.Field()
-    """
-    ISO-8601 timestamp at which the user joined the organization.
-    """
+    joined_at: typing_extensions.Annotated[
+        str,
+        FieldMetadata(alias="joinedAt"),
+        pydantic.Field(alias="joinedAt", description="ISO-8601 timestamp at which the user joined the organization."),
+    ]
 
     model_config: typing.ClassVar[pydantic.ConfigDict] = pydantic.ConfigDict(extra="allow", frozen=True)

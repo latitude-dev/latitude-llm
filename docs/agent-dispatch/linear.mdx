@@ -1,0 +1,56 @@
+---
+title: Linear agent dispatch
+description: Create Linear issues automatically from Latitude signals.
+---
+
+Linear agent dispatch creates a Linear issue when a Latitude signal needs follow-up. The issue contains the rendered Latitude prompt, signal context, sample trace evidence, and a link back to Latitude.
+
+## Prerequisites
+
+- Agent dispatch enabled for your Latitude workspace
+- A Linear workspace where Latitude should create issues
+- A Linear personal API key with access to the target workspace
+- A Linear team where Latitude can create issues
+
+## Connect Linear
+
+1. In Latitude, open your project and go to **Settings → Integrations**.
+2. Open **Linear** and click **Connect**.
+3. Open Linear API settings for the workspace where Latitude should create issues.
+4. Create a personal API key for Latitude and copy it before leaving Linear.
+5. Paste the API key in Latitude.
+6. Choose the Linear team where new issues should be created.
+7. Click **Connect**.
+
+Latitude stores the API key encrypted and uses it only to list teams, list members, and create issues.
+
+## Configure dispatches
+
+After Linear is connected, open the Linear integration detail page in Latitude.
+
+- **Triggers** choose which Latitude events can create Linear issues. Linear currently supports the **New signal** trigger.
+- **Linear team** is the team where Latitude creates issues.
+- **Assignee** is optional. Leave it empty to create unassigned issues.
+- **Max dispatches per day** limits how many issues Latitude can create.
+- **Cooldown** prevents repeated issue creation for the same source during a short period.
+
+## What Latitude sends to Linear
+
+Latitude creates issues through Linear's GraphQL API.
+
+The issue title uses the signal name and trigger, for example:
+
+```text
+[Latitude] Payment timeout spike — signal.discovered
+```
+
+The issue description contains the rendered dispatch prompt and the Latitude deep link. The prompt includes the project, signal, trend metrics, sample trace IDs, sample conversation excerpts when available, and instructions for investigating the issue.
+
+Dispatch history records whether Linear accepted the request and links to the created issue.
+
+## Troubleshooting
+
+- **Teams do not load**: verify the API key belongs to the expected Linear workspace and can access teams.
+- **Authentication error**: revoke the old key in Linear, create a new key, and reconnect the integration.
+- **Dispatch request rejected**: confirm the selected team still exists and that the optional assignee is a member Linear can assign issues to.
+- **Duplicate issues**: reduce the max dispatches per day or increase the cooldown in the integration settings.

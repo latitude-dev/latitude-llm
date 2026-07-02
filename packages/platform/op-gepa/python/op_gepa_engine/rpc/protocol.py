@@ -80,6 +80,18 @@ def create_remote_error_exception(error: JsonRpcError) -> RpcRemoteError:
     )
 
 
+def _exception_message(error: Exception) -> str:
+    message = str(error).strip()
+    if message:
+        return message
+
+    error_name = error.__class__.__name__
+    if error_name and error_name != "Exception":
+        return error_name
+
+    return "Internal engine error"
+
+
 def create_exception_error(error: Exception, error_traceback: str | None = None) -> JsonRpcError:
     traceback_text = error_traceback or traceback.format_exc()
     error_data: dict[str, Any] = {"traceback": traceback_text}
@@ -89,7 +101,7 @@ def create_exception_error(error: Exception, error_traceback: str | None = None)
 
     return JsonRpcError(
         code=error.code if isinstance(error, RpcRemoteError) else RpcErrorCode.INTERNAL_ERROR,
-        message=str(error),
+        message=_exception_message(error),
         data=error_data,
     )
 

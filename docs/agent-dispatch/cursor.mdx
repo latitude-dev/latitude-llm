@@ -1,0 +1,55 @@
+---
+title: Cursor agent dispatch
+description: Send Latitude signals to Cursor agents so they can investigate issues and open pull requests.
+---
+
+Cursor agent dispatch lets Latitude start a Cursor agent when a signal needs engineering follow-up. Latitude sends a prompt with the signal context, sample traces, and a link back to Latitude. Cursor runs in the repository you configure and can open a pull request with the fix.
+
+## Prerequisites
+
+- Agent dispatch enabled for your Latitude workspace
+- A Cursor workspace with API access
+- A Cursor API key from the workspace that should run the agent
+- Repository access in Cursor for the repo where fixes should be proposed
+
+## Connect Cursor
+
+1. In Latitude, open your project and go to **Settings → Integrations**.
+2. Open **Cursor** and click **Connect**.
+3. Open [Cursor API keys](https://cursor.com/dashboard/api), sign in to the right workspace, and create a new API key for Latitude.
+4. Paste the API key in Latitude.
+5. Choose the repository Cursor should work in, or paste the repository URL if it is not listed.
+6. Optionally set a branch or ref. Latitude sends this as Cursor's starting ref.
+7. Click **Connect**.
+
+Latitude stores the API key encrypted and uses it only to list repositories and create Cursor agents for dispatches.
+
+## Configure dispatches
+
+After Cursor is connected, open the Cursor integration detail page in Latitude.
+
+- **Triggers** choose which Latitude events can start a Cursor agent.
+- **Repository** is the Git repository Cursor receives in the dispatch request.
+- **Branch** is optional. Leave it empty to let Cursor use the repository default.
+- **Max dispatches per day** limits how many runs Latitude can create for this integration.
+- **Cooldown** prevents repeated dispatches for the same source during a short period.
+
+The default prompt asks Cursor to inspect the signal, use Latitude context and MCP tools when available, identify the likely root cause, implement the smallest correct fix, add a regression test if appropriate, and open a pull request.
+
+## What Latitude sends to Cursor
+
+Latitude creates a Cursor agent through Cursor's API with:
+
+- The rendered dispatch prompt
+- The repository URL
+- The optional starting ref
+- `autoCreatePr` enabled by default
+
+Dispatch history records whether Cursor accepted the request and links to the Cursor run when Cursor returns a URL.
+
+## Troubleshooting
+
+- **Repository list does not load**: verify the API key belongs to the expected Cursor workspace and still has access.
+- **Authentication error**: revoke the old key in Cursor, create a new key, and reconnect the integration.
+- **Dispatch request rejected**: check that the repository URL and branch/ref are valid for the Cursor workspace.
+- **No pull request appears**: open the run from the dispatch history and review the agent result in Cursor.

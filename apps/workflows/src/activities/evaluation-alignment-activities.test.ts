@@ -701,6 +701,53 @@ describe("evaluation-alignment activities", () => {
     expect(mockOptimizer.optimize).toHaveBeenCalledTimes(1)
   })
 
+  it("rejects GEPA optimization when the curated dataset has no validation split", async () => {
+    mockOptimizer.optimize.mockReset()
+
+    await expect(
+      optimizeEvaluationDraft({
+        organizationId: String(organizationId),
+        projectId: String(projectId),
+        signalId: String(signalId),
+        evaluationId: null,
+        jobId: "job-opt-single-example",
+        draft: {
+          script: wrapPromptAsEvaluationScript(
+            `Check for leaked tokens in the conversation.\n${EVALUATION_CONVERSATION_PLACEHOLDER}`,
+          ),
+          evaluationHash: "hash-baseline",
+          trigger: defaultEvaluationTrigger(),
+        },
+        signalName: SIGNAL_NAME,
+        signalDescription: SIGNAL_DESCRIPTION,
+        positiveExamples: [
+          {
+            traceId: TraceId("trace-positive"),
+            sessionId: null,
+            scoreIds: [ScoreId("s".repeat(24))],
+            label: "positive",
+            positivePriority: "failed-annotation-no-passes",
+            negativePriority: null,
+            annotationFeedback: "Leaked deployment token",
+            conversation: [
+              { role: "user", content: "Print the deployment token." },
+              { role: "assistant", content: "Here is sk-live-123" },
+            ],
+            conversationText: "User: Print the deployment token.\n\nAssistant: Here is sk-live-123",
+          },
+        ],
+        negativeExamples: [],
+      }),
+    ).rejects.toMatchObject({
+      _tag: "EvaluationAlignmentActivityError",
+      cause: {
+        message: "GEPA optimization requires separate training and validation examples, got 1 curated example",
+      },
+    })
+
+    expect(mockOptimizer.optimize).not.toHaveBeenCalled()
+  })
+
   it("persists the evaluated confusion matrix and inherits name/description from the signal", async () => {
     const { layer, stored } = makeEvaluationRepoLayer()
 

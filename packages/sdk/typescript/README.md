@@ -13,10 +13,10 @@ npm install @latitude-data/sdk
 ## Quick Start
 
 ```typescript
-import { LatitudeApiClient } from "@latitude-data/sdk";
+import { LatitudeClient } from "@latitude-data/sdk";
 
-const client = new LatitudeApiClient({
-  token: process.env.LATITUDE_API_KEY!,
+const client = new LatitudeClient({
+  apiKey: process.env.LATITUDE_API_KEY!,
 });
 
 // Create an annotation against a known trace.
@@ -33,33 +33,35 @@ The client is constructed once and reused — each resource (`client.projects`, 
 
 ## Authentication
 
-The SDK uses bearer-token auth. Pass the token at construction:
+The SDK authenticates with an organization-scoped API key, sent as `Authorization: Bearer <key>`. Pass it as `apiKey` at construction:
 
 ```typescript
-const client = new LatitudeApiClient({
-  token: process.env.LATITUDE_API_KEY!,
+const client = new LatitudeClient({
+  apiKey: process.env.LATITUDE_API_KEY!,
 });
 ```
 
-You can also pass a `Supplier<string>` (sync or async function) when the token is fetched dynamically:
+You can also pass a `Supplier<string>` (sync or async function) when the key is fetched dynamically:
 
 ```typescript
-const client = new LatitudeApiClient({
-  token: async () => fetchTokenFromVault(),
+const client = new LatitudeClient({
+  apiKey: async () => fetchKeyFromVault(),
 });
 ```
+
+If you omit `apiKey`, the SDK falls back to the `LATITUDE_API_KEY` environment variable, so `new LatitudeClient()` works when it is set. An explicit `apiKey` takes precedence.
 
 ## Configuration
 
 ```typescript
-new LatitudeApiClient({
-  token: process.env.LATITUDE_API_KEY!,
+new LatitudeClient({
+  apiKey: process.env.LATITUDE_API_KEY!,
 
   // Override the base URL (defaults to https://api.latitude.so).
   baseUrl: "https://api.staging.latitude.so",
 
   // Or pick a named environment.
-  environment: LatitudeApiEnvironment.Production,
+  environment: LatitudeEnvironment.Production,
 
   // Per-request defaults (overridable per call via the request options arg).
   timeoutInSeconds: 30,
@@ -132,17 +134,17 @@ const res = await client.fetch("/v1/some-new-endpoint", {
 
 ## Error Handling
 
-All non-2xx responses surface as `LatitudeApiError` (or one of its typed subclasses for documented status codes — `BadRequestError`, `UnauthorizedError`, `NotFoundError`, etc.). Network-level failures throw `LatitudeApiTimeoutError` on timeout.
+All non-2xx responses surface as `LatitudeError` (or one of its typed subclasses for documented status codes — `BadRequestError`, `UnauthorizedError`, `NotFoundError`, etc.). Network-level failures throw `LatitudeTimeoutError` on timeout.
 
 ```typescript
-import { LatitudeApi, LatitudeApiError } from "@latitude-data/sdk";
+import { Latitude, LatitudeError } from "@latitude-data/sdk";
 
 try {
   await client.annotations.create("my-project", body);
 } catch (err) {
-  if (err instanceof LatitudeApi.NotFoundError) {
+  if (err instanceof Latitude.NotFoundError) {
     // 404 — trace not in this project, etc.
-  } else if (err instanceof LatitudeApiError) {
+  } else if (err instanceof LatitudeError) {
     console.error(err.statusCode, err.body);
   } else {
     throw err;

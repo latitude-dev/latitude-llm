@@ -38,11 +38,11 @@ export interface Trace {
     /** Total cost in microcents (1/1,000,000 USD). */
     costTotalMicrocents: number;
     /** Conversation/session identifier set by the SDK. `null` when absent. */
-    sessionId?: string | undefined;
+    sessionId: string | null;
     /** End-user identifier set by the SDK. `null` when absent. */
-    userId?: string | undefined;
+    userId: string | null;
     /** CUID of the simulation that produced this trace. `null` when not a simulation. */
-    simulationId?: string | undefined;
+    simulationId: string | null;
     /** Free-form tags attached at ingest time. */
     tags: string[];
     /** Model identifiers seen across the trace's LLM spans. */
@@ -52,9 +52,9 @@ export interface Trace {
     /** OpenTelemetry `service.name` values seen in the trace. */
     serviceNames: string[];
     /** Identifier of the trace's root span. `null` when no root span has been ingested. */
-    rootSpanId?: string | undefined;
+    rootSpanId: string | null;
     /** `name` attribute of the root span. `null` when no root span has been ingested. */
-    rootSpanName?: string | undefined;
+    rootSpanName: string | null;
     /** Number of `passed = true` annotations attached to this trace. */
     positiveAnnotationCount: number;
     /** Number of `passed = false` annotations attached to this trace. */

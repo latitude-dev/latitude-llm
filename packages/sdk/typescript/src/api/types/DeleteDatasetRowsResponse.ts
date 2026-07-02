@@ -2,7 +2,7 @@
 
 export interface DeleteDatasetRowsResponse {
     /** New dataset version id, or `null` when nothing was deleted. */
-    versionId?: string | undefined;
+    versionId: string | null;
     /** New dataset version number. */
     version: number;
     /** Number of rows removed. */

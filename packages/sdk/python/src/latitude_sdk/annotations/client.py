@@ -78,10 +78,10 @@ class AnnotationsClient:
 
         Examples
         --------
-        from latitude import LatitudeApiClient, TraceRef_Id
+        from latitude_sdk import LatitudeClient, TraceRef_Id
 
-        client = LatitudeApiClient(
-            token="YOUR_TOKEN",
+        client = LatitudeClient(
+            api_key="YOUR_API_KEY",
         )
         client.annotations.create(
             project_slug="projectSlug",
@@ -174,10 +174,10 @@ class AsyncAnnotationsClient:
         --------
         import asyncio
 
-        from latitude import AsyncLatitudeApiClient, TraceRef_Id
+        from latitude_sdk import AsyncLatitudeClient, TraceRef_Id
 
-        client = AsyncLatitudeApiClient(
-            token="YOUR_TOKEN",
+        client = AsyncLatitudeClient(
+            api_key="YOUR_API_KEY",
         )
 
 

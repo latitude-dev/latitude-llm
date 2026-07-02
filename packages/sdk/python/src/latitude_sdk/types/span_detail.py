@@ -14,113 +14,124 @@ from .tool_definition import ToolDefinition
 
 
 class SpanDetail(UniversalBaseModel):
-    organization_id: typing_extensions.Annotated[str, FieldMetadata(alias="organizationId")] = pydantic.Field()
-    """
-    Organization that owns this span.
-    """
-
-    project_id: typing_extensions.Annotated[str, FieldMetadata(alias="projectId")] = pydantic.Field()
-    """
-    Project this span belongs to.
-    """
-
-    trace_id: typing_extensions.Annotated[str, FieldMetadata(alias="traceId")] = pydantic.Field()
-    """
-    Identifier of the trace this span belongs to.
-    """
-
-    span_id: typing_extensions.Annotated[str, FieldMetadata(alias="spanId")] = pydantic.Field()
-    """
-    Stable span identifier within the trace.
-    """
-
-    parent_span_id: typing_extensions.Annotated[typing.Optional[str], FieldMetadata(alias="parentSpanId")] = (
-        pydantic.Field(default=None)
-    )
-    """
-    Identifier of the parent span. `null` for root spans.
-    """
-
-    session_id: typing_extensions.Annotated[typing.Optional[str], FieldMetadata(alias="sessionId")] = pydantic.Field(
-        default=None
-    )
-    """
-    Conversation/session identifier set by the SDK. `null` when absent.
-    """
-
-    user_id: typing_extensions.Annotated[typing.Optional[str], FieldMetadata(alias="userId")] = pydantic.Field(
-        default=None
-    )
-    """
-    End-user identifier set by the SDK. `null` when absent.
-    """
-
-    simulation_id: typing_extensions.Annotated[typing.Optional[str], FieldMetadata(alias="simulationId")] = (
-        pydantic.Field(default=None)
-    )
-    """
-    CUID of the simulation that produced this span. `null` when not a simulation.
-    """
-
-    api_key_id: typing_extensions.Annotated[typing.Optional[str], FieldMetadata(alias="apiKeyId")] = pydantic.Field(
-        default=None
-    )
-    """
-    Latitude API key used to ingest the span. `null` when ingested without an API key.
-    """
-
-    start_time: typing_extensions.Annotated[str, FieldMetadata(alias="startTime")] = pydantic.Field()
-    """
-    ISO-8601 timestamp at which the span started.
-    """
-
-    end_time: typing_extensions.Annotated[str, FieldMetadata(alias="endTime")] = pydantic.Field()
-    """
-    ISO-8601 timestamp at which the span ended.
-    """
-
+    organization_id: typing_extensions.Annotated[
+        str,
+        FieldMetadata(alias="organizationId"),
+        pydantic.Field(alias="organizationId", description="Organization that owns this span."),
+    ]
+    project_id: typing_extensions.Annotated[
+        str,
+        FieldMetadata(alias="projectId"),
+        pydantic.Field(alias="projectId", description="Project this span belongs to."),
+    ]
+    trace_id: typing_extensions.Annotated[
+        str,
+        FieldMetadata(alias="traceId"),
+        pydantic.Field(alias="traceId", description="Identifier of the trace this span belongs to."),
+    ]
+    span_id: typing_extensions.Annotated[
+        str,
+        FieldMetadata(alias="spanId"),
+        pydantic.Field(alias="spanId", description="Stable span identifier within the trace."),
+    ]
+    parent_span_id: typing_extensions.Annotated[
+        typing.Optional[str],
+        FieldMetadata(alias="parentSpanId"),
+        pydantic.Field(
+            alias="parentSpanId", default=None, description="Identifier of the parent span. `null` for root spans."
+        ),
+    ]
+    session_id: typing_extensions.Annotated[
+        typing.Optional[str],
+        FieldMetadata(alias="sessionId"),
+        pydantic.Field(
+            alias="sessionId",
+            default=None,
+            description="Conversation/session identifier set by the SDK. `null` when absent.",
+        ),
+    ]
+    user_id: typing_extensions.Annotated[
+        typing.Optional[str],
+        FieldMetadata(alias="userId"),
+        pydantic.Field(
+            alias="userId", default=None, description="End-user identifier set by the SDK. `null` when absent."
+        ),
+    ]
+    simulation_id: typing_extensions.Annotated[
+        typing.Optional[str],
+        FieldMetadata(alias="simulationId"),
+        pydantic.Field(
+            alias="simulationId",
+            default=None,
+            description="CUID of the simulation that produced this span. `null` when not a simulation.",
+        ),
+    ]
+    api_key_id: typing_extensions.Annotated[
+        typing.Optional[str],
+        FieldMetadata(alias="apiKeyId"),
+        pydantic.Field(
+            alias="apiKeyId",
+            default=None,
+            description="Latitude API key used to ingest the span. `null` when ingested without an API key.",
+        ),
+    ]
+    start_time: typing_extensions.Annotated[
+        str,
+        FieldMetadata(alias="startTime"),
+        pydantic.Field(alias="startTime", description="ISO-8601 timestamp at which the span started."),
+    ]
+    end_time: typing_extensions.Annotated[
+        str,
+        FieldMetadata(alias="endTime"),
+        pydantic.Field(alias="endTime", description="ISO-8601 timestamp at which the span ended."),
+    ]
     name: str = pydantic.Field()
     """
     Span name (e.g. the entry-point function or route).
     """
 
-    service_name: typing_extensions.Annotated[str, FieldMetadata(alias="serviceName")] = pydantic.Field()
-    """
-    OpenTelemetry `service.name` of the emitting service.
-    """
-
+    service_name: typing_extensions.Annotated[
+        str,
+        FieldMetadata(alias="serviceName"),
+        pydantic.Field(alias="serviceName", description="OpenTelemetry `service.name` of the emitting service."),
+    ]
     kind: SpanDetailKind = pydantic.Field()
     """
     OpenTelemetry span kind.
     """
 
-    status_code: typing_extensions.Annotated[SpanDetailStatusCode, FieldMetadata(alias="statusCode")] = pydantic.Field()
-    """
-    OpenTelemetry span status code.
-    """
-
-    status_message: typing_extensions.Annotated[str, FieldMetadata(alias="statusMessage")] = pydantic.Field()
-    """
-    OpenTelemetry status message. Empty when not set.
-    """
-
-    trace_flags: typing_extensions.Annotated[float, FieldMetadata(alias="traceFlags")] = pydantic.Field()
-    """
-    OpenTelemetry trace flags bitfield.
-    """
-
-    trace_state: typing_extensions.Annotated[str, FieldMetadata(alias="traceState")] = pydantic.Field()
-    """
-    OpenTelemetry trace state (vendor-specific propagation). Empty when not set.
-    """
-
-    error_type: typing_extensions.Annotated[typing.Optional[str], FieldMetadata(alias="errorType")] = pydantic.Field(
-        default=None
-    )
-    """
-    Error class/type label when the span errored. `null` for successful spans.
-    """
-
+    status_code: typing_extensions.Annotated[
+        SpanDetailStatusCode,
+        FieldMetadata(alias="statusCode"),
+        pydantic.Field(alias="statusCode", description="OpenTelemetry span status code."),
+    ]
+    status_message: typing_extensions.Annotated[
+        str,
+        FieldMetadata(alias="statusMessage"),
+        pydantic.Field(alias="statusMessage", description="OpenTelemetry status message. Empty when not set."),
+    ]
+    trace_flags: typing_extensions.Annotated[
+        float,
+        FieldMetadata(alias="traceFlags"),
+        pydantic.Field(alias="traceFlags", description="OpenTelemetry trace flags bitfield."),
+    ]
+    trace_state: typing_extensions.Annotated[
+        str,
+        FieldMetadata(alias="traceState"),
+        pydantic.Field(
+            alias="traceState",
+            description="OpenTelemetry trace state (vendor-specific propagation). Empty when not set.",
+        ),
+    ]
+    error_type: typing_extensions.Annotated[
+        typing.Optional[str],
+        FieldMetadata(alias="errorType"),
+        pydantic.Field(
+            alias="errorType",
+            default=None,
+            description="Error class/type label when the span errored. `null` for successful spans.",
+        ),
+    ]
     tags: typing.List[str] = pydantic.Field()
     """
     Free-form tags attached at ingest time.
@@ -141,198 +152,220 @@ class SpanDetail(UniversalBaseModel):
     Model id as requested. `null` for non-LLM spans.
     """
 
-    response_model: typing_extensions.Annotated[typing.Optional[str], FieldMetadata(alias="responseModel")] = (
-        pydantic.Field(default=None)
-    )
-    """
-    Model id reported by the provider's response. `null` for non-LLM spans.
-    """
-
-    tokens_input: typing_extensions.Annotated[float, FieldMetadata(alias="tokensInput")] = pydantic.Field()
-    """
-    Input tokens consumed by this span.
-    """
-
-    tokens_output: typing_extensions.Annotated[float, FieldMetadata(alias="tokensOutput")] = pydantic.Field()
-    """
-    Output tokens produced by this span.
-    """
-
-    tokens_cache_read: typing_extensions.Annotated[float, FieldMetadata(alias="tokensCacheRead")] = pydantic.Field()
-    """
-    Tokens served from the provider's prompt cache.
-    """
-
-    tokens_cache_create: typing_extensions.Annotated[float, FieldMetadata(alias="tokensCacheCreate")] = pydantic.Field()
-    """
-    Tokens written to the provider's prompt cache.
-    """
-
-    tokens_reasoning: typing_extensions.Annotated[float, FieldMetadata(alias="tokensReasoning")] = pydantic.Field()
-    """
-    Reasoning tokens reported by the model.
-    """
-
-    cost_input_microcents: typing_extensions.Annotated[float, FieldMetadata(alias="costInputMicrocents")] = (
-        pydantic.Field()
-    )
-    """
-    Cost of input tokens in microcents (1/1,000,000 USD).
-    """
-
-    cost_output_microcents: typing_extensions.Annotated[float, FieldMetadata(alias="costOutputMicrocents")] = (
-        pydantic.Field()
-    )
-    """
-    Cost of output tokens in microcents (1/1,000,000 USD).
-    """
-
-    cost_total_microcents: typing_extensions.Annotated[float, FieldMetadata(alias="costTotalMicrocents")] = (
-        pydantic.Field()
-    )
-    """
-    Total cost in microcents (1/1,000,000 USD).
-    """
-
-    cost_is_estimated: typing_extensions.Annotated[bool, FieldMetadata(alias="costIsEstimated")] = pydantic.Field()
-    """
-    `true` when the cost was derived from public pricing tables instead of the provider's bill.
-    """
-
-    time_to_first_token_ns: typing_extensions.Annotated[float, FieldMetadata(alias="timeToFirstTokenNs")] = (
-        pydantic.Field()
-    )
-    """
-    Nanoseconds from the start of the span to its first emitted token. `0` if not measured.
-    """
-
-    is_streaming: typing_extensions.Annotated[bool, FieldMetadata(alias="isStreaming")] = pydantic.Field()
-    """
-    `true` when the span was produced by a streaming LLM call.
-    """
-
-    response_id: typing_extensions.Annotated[typing.Optional[str], FieldMetadata(alias="responseId")] = pydantic.Field(
-        default=None
-    )
-    """
-    Response identifier returned by the LLM. `null` when the provider didn't return one.
-    """
-
-    finish_reasons: typing_extensions.Annotated[typing.List[str], FieldMetadata(alias="finishReasons")] = (
-        pydantic.Field()
-    )
-    """
-    Per-choice finish reasons reported by the LLM provider.
-    """
-
-    scope_name: typing_extensions.Annotated[str, FieldMetadata(alias="scopeName")] = pydantic.Field()
-    """
-    OpenTelemetry instrumentation scope name. Empty when not set.
-    """
-
-    scope_version: typing_extensions.Annotated[str, FieldMetadata(alias="scopeVersion")] = pydantic.Field()
-    """
-    OpenTelemetry instrumentation scope version. Empty when not set.
-    """
-
-    retention_days: typing_extensions.Annotated[typing.Optional[int], FieldMetadata(alias="retentionDays")] = (
-        pydantic.Field(default=None)
-    )
-    """
-    Per-span retention override in days. Omitted when the project default applies.
-    """
-
-    ingested_at: typing_extensions.Annotated[str, FieldMetadata(alias="ingestedAt")] = pydantic.Field()
-    """
-    ISO-8601 timestamp at which Latitude received this span.
-    """
-
+    response_model: typing_extensions.Annotated[
+        typing.Optional[str],
+        FieldMetadata(alias="responseModel"),
+        pydantic.Field(
+            alias="responseModel",
+            default=None,
+            description="Model id reported by the provider's response. `null` for non-LLM spans.",
+        ),
+    ]
+    tokens_input: typing_extensions.Annotated[
+        float,
+        FieldMetadata(alias="tokensInput"),
+        pydantic.Field(alias="tokensInput", description="Input tokens consumed by this span."),
+    ]
+    tokens_output: typing_extensions.Annotated[
+        float,
+        FieldMetadata(alias="tokensOutput"),
+        pydantic.Field(alias="tokensOutput", description="Output tokens produced by this span."),
+    ]
+    tokens_cache_read: typing_extensions.Annotated[
+        float,
+        FieldMetadata(alias="tokensCacheRead"),
+        pydantic.Field(alias="tokensCacheRead", description="Tokens served from the provider's prompt cache."),
+    ]
+    tokens_cache_create: typing_extensions.Annotated[
+        float,
+        FieldMetadata(alias="tokensCacheCreate"),
+        pydantic.Field(alias="tokensCacheCreate", description="Tokens written to the provider's prompt cache."),
+    ]
+    tokens_reasoning: typing_extensions.Annotated[
+        float,
+        FieldMetadata(alias="tokensReasoning"),
+        pydantic.Field(alias="tokensReasoning", description="Reasoning tokens reported by the model."),
+    ]
+    cost_input_microcents: typing_extensions.Annotated[
+        float,
+        FieldMetadata(alias="costInputMicrocents"),
+        pydantic.Field(
+            alias="costInputMicrocents", description="Cost of input tokens in microcents (1/1,000,000 USD)."
+        ),
+    ]
+    cost_output_microcents: typing_extensions.Annotated[
+        float,
+        FieldMetadata(alias="costOutputMicrocents"),
+        pydantic.Field(
+            alias="costOutputMicrocents", description="Cost of output tokens in microcents (1/1,000,000 USD)."
+        ),
+    ]
+    cost_total_microcents: typing_extensions.Annotated[
+        float,
+        FieldMetadata(alias="costTotalMicrocents"),
+        pydantic.Field(alias="costTotalMicrocents", description="Total cost in microcents (1/1,000,000 USD)."),
+    ]
+    cost_is_estimated: typing_extensions.Annotated[
+        bool,
+        FieldMetadata(alias="costIsEstimated"),
+        pydantic.Field(
+            alias="costIsEstimated",
+            description="`true` when the cost was derived from public pricing tables instead of the provider's bill.",
+        ),
+    ]
+    time_to_first_token_ns: typing_extensions.Annotated[
+        float,
+        FieldMetadata(alias="timeToFirstTokenNs"),
+        pydantic.Field(
+            alias="timeToFirstTokenNs",
+            description="Nanoseconds from the start of the span to its first emitted token. `0` if not measured.",
+        ),
+    ]
+    is_streaming: typing_extensions.Annotated[
+        bool,
+        FieldMetadata(alias="isStreaming"),
+        pydantic.Field(alias="isStreaming", description="`true` when the span was produced by a streaming LLM call."),
+    ]
+    response_id: typing_extensions.Annotated[
+        typing.Optional[str],
+        FieldMetadata(alias="responseId"),
+        pydantic.Field(
+            alias="responseId",
+            default=None,
+            description="Response identifier returned by the LLM. `null` when the provider didn't return one.",
+        ),
+    ]
+    finish_reasons: typing_extensions.Annotated[
+        typing.List[str],
+        FieldMetadata(alias="finishReasons"),
+        pydantic.Field(alias="finishReasons", description="Per-choice finish reasons reported by the LLM provider."),
+    ]
+    scope_name: typing_extensions.Annotated[
+        str,
+        FieldMetadata(alias="scopeName"),
+        pydantic.Field(alias="scopeName", description="OpenTelemetry instrumentation scope name. Empty when not set."),
+    ]
+    scope_version: typing_extensions.Annotated[
+        str,
+        FieldMetadata(alias="scopeVersion"),
+        pydantic.Field(
+            alias="scopeVersion", description="OpenTelemetry instrumentation scope version. Empty when not set."
+        ),
+    ]
+    retention_days: typing_extensions.Annotated[
+        typing.Optional[int],
+        FieldMetadata(alias="retentionDays"),
+        pydantic.Field(
+            alias="retentionDays",
+            default=None,
+            description="Per-span retention override in days. Omitted when the project default applies.",
+        ),
+    ]
+    ingested_at: typing_extensions.Annotated[
+        str,
+        FieldMetadata(alias="ingestedAt"),
+        pydantic.Field(alias="ingestedAt", description="ISO-8601 timestamp at which Latitude received this span."),
+    ]
     metadata: typing.Dict[str, str] = pydantic.Field()
     """
     Free-form metadata attached at ingest time.
     """
 
-    system_instructions: typing_extensions.Annotated[GenAiSpanSystem, FieldMetadata(alias="systemInstructions")]
-    input_messages: typing_extensions.Annotated[typing.List[GenAiSpanMessage], FieldMetadata(alias="inputMessages")] = (
-        pydantic.Field()
-    )
-    """
-    Input messages sent into this LLM span, in OpenTelemetry GenAI format.
-    """
-
+    system_instructions: typing_extensions.Annotated[
+        GenAiSpanSystem, FieldMetadata(alias="systemInstructions"), pydantic.Field(alias="systemInstructions")
+    ]
+    input_messages: typing_extensions.Annotated[
+        typing.List[GenAiSpanMessage],
+        FieldMetadata(alias="inputMessages"),
+        pydantic.Field(
+            alias="inputMessages", description="Input messages sent into this LLM span, in OpenTelemetry GenAI format."
+        ),
+    ]
     output_messages: typing_extensions.Annotated[
-        typing.List[GenAiSpanMessage], FieldMetadata(alias="outputMessages")
-    ] = pydantic.Field()
-    """
-    Output messages returned by this LLM span, in OpenTelemetry GenAI format.
-    """
-
+        typing.List[GenAiSpanMessage],
+        FieldMetadata(alias="outputMessages"),
+        pydantic.Field(
+            alias="outputMessages",
+            description="Output messages returned by this LLM span, in OpenTelemetry GenAI format.",
+        ),
+    ]
     tool_definitions: typing_extensions.Annotated[
-        typing.List[ToolDefinition], FieldMetadata(alias="toolDefinitions")
-    ] = pydantic.Field()
-    """
-    Tool/function definitions made available to the LLM for this span.
-    """
-
-    tool_call_id: typing_extensions.Annotated[str, FieldMetadata(alias="toolCallId")] = pydantic.Field()
-    """
-    Tool-call id this span answers. Empty when the span isn't an `execute_tool` span.
-    """
-
-    tool_name: typing_extensions.Annotated[str, FieldMetadata(alias="toolName")] = pydantic.Field()
-    """
-    Name of the executed tool. Empty when the span isn't an `execute_tool` span.
-    """
-
-    tool_input: typing_extensions.Annotated[str, FieldMetadata(alias="toolInput")] = pydantic.Field()
-    """
-    Stringified arguments passed to the tool. Empty when the span isn't an `execute_tool` span.
-    """
-
-    tool_output: typing_extensions.Annotated[str, FieldMetadata(alias="toolOutput")] = pydantic.Field()
-    """
-    Stringified tool output. Empty when the span isn't an `execute_tool` span.
-    """
-
-    attr_string: typing_extensions.Annotated[typing.Dict[str, str], FieldMetadata(alias="attrString")] = (
-        pydantic.Field()
-    )
-    """
-    OpenTelemetry attributes with string values.
-    """
-
-    attr_int: typing_extensions.Annotated[typing.Dict[str, float], FieldMetadata(alias="attrInt")] = pydantic.Field()
-    """
-    OpenTelemetry attributes with integer values.
-    """
-
-    attr_float: typing_extensions.Annotated[typing.Dict[str, float], FieldMetadata(alias="attrFloat")] = (
-        pydantic.Field()
-    )
-    """
-    OpenTelemetry attributes with floating-point values.
-    """
-
-    attr_bool: typing_extensions.Annotated[typing.Dict[str, bool], FieldMetadata(alias="attrBool")] = pydantic.Field()
-    """
-    OpenTelemetry attributes with boolean values.
-    """
-
-    resource_string: typing_extensions.Annotated[typing.Dict[str, str], FieldMetadata(alias="resourceString")] = (
-        pydantic.Field()
-    )
-    """
-    OpenTelemetry resource attributes captured at ingest.
-    """
-
-    events_json: typing_extensions.Annotated[str, FieldMetadata(alias="eventsJson")] = pydantic.Field()
-    """
-    JSON-encoded OpenTelemetry events array. Empty when the span has no events.
-    """
-
-    links_json: typing_extensions.Annotated[str, FieldMetadata(alias="linksJson")] = pydantic.Field()
-    """
-    JSON-encoded OpenTelemetry span-links array. Empty when the span has no links.
-    """
+        typing.List[ToolDefinition],
+        FieldMetadata(alias="toolDefinitions"),
+        pydantic.Field(
+            alias="toolDefinitions", description="Tool/function definitions made available to the LLM for this span."
+        ),
+    ]
+    tool_call_id: typing_extensions.Annotated[
+        str,
+        FieldMetadata(alias="toolCallId"),
+        pydantic.Field(
+            alias="toolCallId",
+            description="Tool-call id this span answers. Empty when the span isn't an `execute_tool` span.",
+        ),
+    ]
+    tool_name: typing_extensions.Annotated[
+        str,
+        FieldMetadata(alias="toolName"),
+        pydantic.Field(
+            alias="toolName", description="Name of the executed tool. Empty when the span isn't an `execute_tool` span."
+        ),
+    ]
+    tool_input: typing_extensions.Annotated[
+        str,
+        FieldMetadata(alias="toolInput"),
+        pydantic.Field(
+            alias="toolInput",
+            description="Stringified arguments passed to the tool. Empty when the span isn't an `execute_tool` span.",
+        ),
+    ]
+    tool_output: typing_extensions.Annotated[
+        str,
+        FieldMetadata(alias="toolOutput"),
+        pydantic.Field(
+            alias="toolOutput", description="Stringified tool output. Empty when the span isn't an `execute_tool` span."
+        ),
+    ]
+    attr_string: typing_extensions.Annotated[
+        typing.Dict[str, str],
+        FieldMetadata(alias="attrString"),
+        pydantic.Field(alias="attrString", description="OpenTelemetry attributes with string values."),
+    ]
+    attr_int: typing_extensions.Annotated[
+        typing.Dict[str, float],
+        FieldMetadata(alias="attrInt"),
+        pydantic.Field(alias="attrInt", description="OpenTelemetry attributes with integer values."),
+    ]
+    attr_float: typing_extensions.Annotated[
+        typing.Dict[str, float],
+        FieldMetadata(alias="attrFloat"),
+        pydantic.Field(alias="attrFloat", description="OpenTelemetry attributes with floating-point values."),
+    ]
+    attr_bool: typing_extensions.Annotated[
+        typing.Dict[str, bool],
+        FieldMetadata(alias="attrBool"),
+        pydantic.Field(alias="attrBool", description="OpenTelemetry attributes with boolean values."),
+    ]
+    resource_string: typing_extensions.Annotated[
+        typing.Dict[str, str],
+        FieldMetadata(alias="resourceString"),
+        pydantic.Field(alias="resourceString", description="OpenTelemetry resource attributes captured at ingest."),
+    ]
+    events_json: typing_extensions.Annotated[
+        str,
+        FieldMetadata(alias="eventsJson"),
+        pydantic.Field(
+            alias="eventsJson",
+            description="JSON-encoded OpenTelemetry events array. Empty when the span has no events.",
+        ),
+    ]
+    links_json: typing_extensions.Annotated[
+        str,
+        FieldMetadata(alias="linksJson"),
+        pydantic.Field(
+            alias="linksJson",
+            description="JSON-encoded OpenTelemetry span-links array. Empty when the span has no links.",
+        ),
+    ]
 
     model_config: typing.ClassVar[pydantic.ConfigDict] = pydantic.ConfigDict(extra="allow", frozen=True)

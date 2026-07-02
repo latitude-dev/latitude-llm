@@ -96,6 +96,11 @@ const toCh3 = (value: Date): string => value.toISOString().replace("T", " ").rep
 const DAY7 = new Date("2026-06-07T10:00:00.000Z")
 const day7From = new Date("2026-06-07T00:00:00.000Z")
 const day7To = new Date("2026-06-08T00:00:00.000Z")
+// Day 9 holds the moment fixtures (semantic-moment labels joined to their moment).
+const DAY9 = new Date("2026-06-09T10:00:00.000Z")
+const day9From = new Date("2026-06-09T00:00:00.000Z")
+const day9To = new Date("2026-06-10T00:00:00.000Z")
+const MOMENT_HASH = "c".repeat(64)
 
 const behavior = (n: number, opts: { cluster: string; confidence: number; method?: string }) => ({
   organization_id: ORG_ID as string,
@@ -112,6 +117,40 @@ const behavior = (n: number, opts: { cluster: string; confidence: number; method
   assignment_method: opts.method ?? "auto",
   start_time: toCh(DAY7),
   end_time: toCh(DAY7),
+})
+
+// A semantic moment (carries start_time + coherence_score, joined by the label).
+const semanticMoment = (n: number, opts: { coherence: number }) => ({
+  organization_id: ORG_ID as string,
+  project_id: PROJECT_ID as string,
+  session_id: "aq-moment-session",
+  analysis_hash: MOMENT_HASH,
+  moment_id: `mom${n}`,
+  trace_id: traceId(n),
+  start_time: toCh(DAY9),
+  end_time: toCh(DAY9),
+  first_message_index: 0,
+  last_message_index: 1,
+  boundary_reason: "topic_shift",
+  embedding: [],
+  coherence_score: opts.coherence,
+})
+
+// A moment label (kind/actor-tagged), joined to its moment on (session, hash, moment).
+const momentLabel = (n: number, opts: { kind: string; actor: string; confidence: number }) => ({
+  organization_id: ORG_ID as string,
+  project_id: PROJECT_ID as string,
+  session_id: "aq-moment-session",
+  analysis_hash: MOMENT_HASH,
+  label_id: `lbl${n}`,
+  moment_id: `mom${n}`,
+  kind: opts.kind,
+  actor: opts.actor,
+  first_message_index: 0,
+  last_message_index: 1,
+  summary: "",
+  evidence: "",
+  confidence: opts.confidence,
 })
 
 const score = (
@@ -196,6 +235,22 @@ describe("AnalyticsQueryReaderLive (traces)", () => {
         behavior(3, { cluster: "clB", confidence: 0.4 }),
       ]),
     )
+    // Moments: 3 labels, one per moment. kind frequency×2 / escalation×1;
+    // confidence 0.8/0.6/0.4 → avg 0.6; coherence 0.9/0.7/0.5 → avg 0.7.
+    await Effect.runPromise(
+      insertJsonEachRow(ch.client, "session_semantic_moments", [
+        semanticMoment(1, { coherence: 0.9 }),
+        semanticMoment(2, { coherence: 0.7 }),
+        semanticMoment(3, { coherence: 0.5 }),
+      ]),
+    )
+    await Effect.runPromise(
+      insertJsonEachRow(ch.client, "session_moment_labels", [
+        momentLabel(1, { kind: "frequency", actor: "user", confidence: 0.8 }),
+        momentLabel(2, { kind: "frequency", actor: "assistant", confidence: 0.6 }),
+        momentLabel(3, { kind: "escalation", actor: "user", confidence: 0.4 }),
+      ]),
+    )
   })
 
   const tracesInput = (extra: Partial<AnalyticsQueryInput>): AnalyticsQueryInput => ({
@@ -244,15 +299,16 @@ describe("AnalyticsQueryReaderLive (traces)", () => {
     expect(series[0]?.value).toBeCloseTo(1, 5)
   })
 
-  it("computes min/max/median/avg over duration (in seconds)", async () => {
+  it("computes min/max/median/avg/p95 over duration (in seconds)", async () => {
     // Day 3 has three traces of 1s / 2s / 3s.
     const base = { ...baseInput, stream: "traces" as const, from: day3From, to: day3To }
-    const value = async (kind: "min" | "max" | "median" | "avg") =>
+    const value = async (kind: "min" | "max" | "median" | "avg" | "p95") =>
       (await run({ ...base, metric: { kind, field: "duration" } }))[0]?.value
     expect(await value("min")).toBeCloseTo(1, 5)
     expect(await value("max")).toBeCloseTo(3, 5)
     expect(await value("median")).toBeCloseTo(2, 5)
     expect(await value("avg")).toBeCloseTo(2, 5)
+    expect(await value("p95")).toBeCloseTo(3, 5)
   })
 
   it("honors the row limit on a breakdown", async () => {
@@ -353,5 +409,25 @@ describe("AnalyticsQueryReaderLive (traces)", () => {
 
   it("computes avg(confidence) over behaviors (0–1, unscaled)", async () => {
     expect((await run(behaviorsInput({ metric: { kind: "avg", field: "confidence" } })))[0]?.value).toBeCloseTo(0.6, 5)
+  })
+
+  const momentsInput = (extra: Partial<AnalyticsQueryInput>): AnalyticsQueryInput => ({
+    ...baseInput,
+    stream: "moments",
+    metric: { kind: "count" },
+    from: day9From,
+    to: day9To,
+    ...extra,
+  })
+
+  it("counts moment labels and breaks them down by kind", async () => {
+    expect(await run(momentsInput({}))).toEqual([{ value: 3 }])
+    const byKey = Object.fromEntries((await run(momentsInput({ breakdown: "kind" }))).map((p) => [p.key, p.value]))
+    expect(byKey).toEqual({ frequency: 2, escalation: 1 })
+  })
+
+  it("computes avg(confidence) from the label and avg(coherence) from the joined moment (0–1, unscaled)", async () => {
+    expect((await run(momentsInput({ metric: { kind: "avg", field: "confidence" } })))[0]?.value).toBeCloseTo(0.6, 5)
+    expect((await run(momentsInput({ metric: { kind: "avg", field: "coherence" } })))[0]?.value).toBeCloseTo(0.7, 5)
   })
 })

@@ -6,7 +6,8 @@ from json.decoder import JSONDecodeError
 from ..core.api_error import ApiError
 from ..core.client_wrapper import AsyncClientWrapper, SyncClientWrapper
 from ..core.http_response import AsyncHttpResponse, HttpResponse
-from ..core.jsonable_encoder import jsonable_encoder
+from ..core.jsonable_encoder import encode_path_param
+from ..core.parse_error import ParsingError
 from ..core.pydantic_utilities import parse_obj_as
 from ..core.request_options import RequestOptions
 from ..core.serialization import convert_and_respect_annotation_metadata
@@ -14,19 +15,20 @@ from ..errors.bad_request_error import BadRequestError
 from ..errors.forbidden_error import ForbiddenError
 from ..errors.not_found_error import NotFoundError
 from ..errors.unauthorized_error import UnauthorizedError
-from ..types.alert_condition import AlertCondition
 from ..types.create_monitor_body import CreateMonitorBody
 from ..types.error import Error
+from ..types.filter_condition import FilterCondition
 from ..types.monitor import Monitor
-from ..types.monitor_filter_set import MonitorFilterSet
 from ..types.monitor_list import MonitorList
-from ..types.monitor_metric import MonitorMetric
-from ..types.monitor_target import MonitorTarget
 from ..types.paginated_monitor_incidents import PaginatedMonitorIncidents
 from ..types.paginated_monitors import PaginatedMonitors
 from .types.list_monitors_for_target_body_target_type import ListMonitorsForTargetBodyTargetType
+from .types.update_monitor_body_condition import UpdateMonitorBodyCondition
+from .types.update_monitor_body_metric import UpdateMonitorBodyMetric
 from .types.update_monitor_body_severity import UpdateMonitorBodySeverity
+from .types.update_monitor_body_target import UpdateMonitorBodyTarget
 from .types.update_monitor_body_trigger import UpdateMonitorBodyTrigger
+from pydantic import ValidationError
 
 # this is used as the default value for optional parameters
 OMIT = typing.cast(typing.Any, ...)
@@ -71,7 +73,7 @@ class RawMonitorsClient:
             Page of monitors
         """
         _response = self._client_wrapper.httpx_client.request(
-            f"v1/projects/{jsonable_encoder(project_slug)}/monitors",
+            f"v1/projects/{encode_path_param(project_slug)}/monitors",
             method="GET",
             params={
                 "cursor": cursor,
@@ -126,6 +128,10 @@ class RawMonitorsClient:
             _response_json = _response.json()
         except JSONDecodeError:
             raise ApiError(status_code=_response.status_code, headers=dict(_response.headers), body=_response.text)
+        except ValidationError as e:
+            raise ParsingError(
+                status_code=_response.status_code, headers=dict(_response.headers), body=_response.json(), cause=e
+            )
         raise ApiError(status_code=_response.status_code, headers=dict(_response.headers), body=_response_json)
 
     def create(
@@ -150,7 +156,7 @@ class RawMonitorsClient:
             Monitor created
         """
         _response = self._client_wrapper.httpx_client.request(
-            f"v1/projects/{jsonable_encoder(project_slug)}/monitors",
+            f"v1/projects/{encode_path_param(project_slug)}/monitors",
             method="POST",
             json=convert_and_respect_annotation_metadata(
                 object_=request, annotation=CreateMonitorBody, direction="write"
@@ -207,13 +213,17 @@ class RawMonitorsClient:
             _response_json = _response.json()
         except JSONDecodeError:
             raise ApiError(status_code=_response.status_code, headers=dict(_response.headers), body=_response.text)
+        except ValidationError as e:
+            raise ParsingError(
+                status_code=_response.status_code, headers=dict(_response.headers), body=_response.json(), cause=e
+            )
         raise ApiError(status_code=_response.status_code, headers=dict(_response.headers), body=_response_json)
 
     def list_for_target(
         self,
         project_slug: str,
         *,
-        filter_set_contains: MonitorFilterSet,
+        filter_set_contains: typing.Dict[str, typing.Sequence[FilterCondition]],
         target_type: typing.Optional[ListMonitorsForTargetBodyTargetType] = OMIT,
         request_options: typing.Optional[RequestOptions] = None,
     ) -> HttpResponse[MonitorList]:
@@ -225,7 +235,8 @@ class RawMonitorsClient:
         project_slug : str
             Project slug (human-readable identifier)
 
-        filter_set_contains : MonitorFilterSet
+        filter_set_contains : typing.Dict[str, typing.Sequence[FilterCondition]]
+            Filter subset to match against monitor targets. For one user use `userId`; for one tool use `operation = execute_tool` and `toolName`.
 
         target_type : typing.Optional[ListMonitorsForTargetBodyTargetType]
             Optional target type to match.
@@ -239,12 +250,14 @@ class RawMonitorsClient:
             Matching monitors
         """
         _response = self._client_wrapper.httpx_client.request(
-            f"v1/projects/{jsonable_encoder(project_slug)}/monitors/for-target",
+            f"v1/projects/{encode_path_param(project_slug)}/monitors/for-target",
             method="POST",
             json={
                 "targetType": target_type,
                 "filterSetContains": convert_and_respect_annotation_metadata(
-                    object_=filter_set_contains, annotation=MonitorFilterSet, direction="write"
+                    object_=filter_set_contains,
+                    annotation=typing.Dict[str, typing.Sequence[FilterCondition]],
+                    direction="write",
                 ),
             },
             headers={
@@ -299,6 +312,10 @@ class RawMonitorsClient:
             _response_json = _response.json()
         except JSONDecodeError:
             raise ApiError(status_code=_response.status_code, headers=dict(_response.headers), body=_response.text)
+        except ValidationError as e:
+            raise ParsingError(
+                status_code=_response.status_code, headers=dict(_response.headers), body=_response.json(), cause=e
+            )
         raise ApiError(status_code=_response.status_code, headers=dict(_response.headers), body=_response_json)
 
     def get(
@@ -324,7 +341,7 @@ class RawMonitorsClient:
             Monitor
         """
         _response = self._client_wrapper.httpx_client.request(
-            f"v1/projects/{jsonable_encoder(project_slug)}/monitors/{jsonable_encoder(monitor_slug)}",
+            f"v1/projects/{encode_path_param(project_slug)}/monitors/{encode_path_param(monitor_slug)}",
             method="GET",
             request_options=request_options,
         )
@@ -374,6 +391,10 @@ class RawMonitorsClient:
             _response_json = _response.json()
         except JSONDecodeError:
             raise ApiError(status_code=_response.status_code, headers=dict(_response.headers), body=_response.text)
+        except ValidationError as e:
+            raise ParsingError(
+                status_code=_response.status_code, headers=dict(_response.headers), body=_response.json(), cause=e
+            )
         raise ApiError(status_code=_response.status_code, headers=dict(_response.headers), body=_response_json)
 
     def delete(
@@ -398,7 +419,7 @@ class RawMonitorsClient:
         HttpResponse[None]
         """
         _response = self._client_wrapper.httpx_client.request(
-            f"v1/projects/{jsonable_encoder(project_slug)}/monitors/{jsonable_encoder(monitor_slug)}",
+            f"v1/projects/{encode_path_param(project_slug)}/monitors/{encode_path_param(monitor_slug)}",
             method="DELETE",
             request_options=request_options,
         )
@@ -430,6 +451,10 @@ class RawMonitorsClient:
             _response_json = _response.json()
         except JSONDecodeError:
             raise ApiError(status_code=_response.status_code, headers=dict(_response.headers), body=_response.text)
+        except ValidationError as e:
+            raise ParsingError(
+                status_code=_response.status_code, headers=dict(_response.headers), body=_response.json(), cause=e
+            )
         raise ApiError(status_code=_response.status_code, headers=dict(_response.headers), body=_response_json)
 
     def update(
@@ -439,10 +464,10 @@ class RawMonitorsClient:
         *,
         name: typing.Optional[str] = OMIT,
         description: typing.Optional[str] = OMIT,
-        target: typing.Optional[MonitorTarget] = OMIT,
+        target: typing.Optional[UpdateMonitorBodyTarget] = OMIT,
         trigger: typing.Optional[UpdateMonitorBodyTrigger] = OMIT,
-        metric: typing.Optional[MonitorMetric] = OMIT,
-        condition: typing.Optional[AlertCondition] = OMIT,
+        metric: typing.Optional[UpdateMonitorBodyMetric] = OMIT,
+        condition: typing.Optional[UpdateMonitorBodyCondition] = OMIT,
         severity: typing.Optional[UpdateMonitorBodySeverity] = OMIT,
         request_options: typing.Optional[RequestOptions] = None,
     ) -> HttpResponse[Monitor]:
@@ -463,14 +488,17 @@ class RawMonitorsClient:
         description : typing.Optional[str]
             New description.
 
-        target : typing.Optional[MonitorTarget]
+        target : typing.Optional[UpdateMonitorBodyTarget]
+            Replacement target watched by the monitor.
 
         trigger : typing.Optional[UpdateMonitorBodyTrigger]
             Replacement incident trigger for the monitor rule.
 
-        metric : typing.Optional[MonitorMetric]
+        metric : typing.Optional[UpdateMonitorBodyMetric]
+            Replacement metric evaluated by the monitor.
 
-        condition : typing.Optional[AlertCondition]
+        condition : typing.Optional[UpdateMonitorBodyCondition]
+            Replacement condition for threshold or escalating monitors.
 
         severity : typing.Optional[UpdateMonitorBodySeverity]
             Replacement incident severity.
@@ -484,20 +512,20 @@ class RawMonitorsClient:
             Updated monitor
         """
         _response = self._client_wrapper.httpx_client.request(
-            f"v1/projects/{jsonable_encoder(project_slug)}/monitors/{jsonable_encoder(monitor_slug)}",
+            f"v1/projects/{encode_path_param(project_slug)}/monitors/{encode_path_param(monitor_slug)}",
             method="PATCH",
             json={
                 "name": name,
                 "description": description,
                 "target": convert_and_respect_annotation_metadata(
-                    object_=target, annotation=MonitorTarget, direction="write"
+                    object_=target, annotation=UpdateMonitorBodyTarget, direction="write"
                 ),
                 "trigger": trigger,
                 "metric": convert_and_respect_annotation_metadata(
-                    object_=metric, annotation=MonitorMetric, direction="write"
+                    object_=metric, annotation=UpdateMonitorBodyMetric, direction="write"
                 ),
                 "condition": convert_and_respect_annotation_metadata(
-                    object_=condition, annotation=AlertCondition, direction="write"
+                    object_=condition, annotation=UpdateMonitorBodyCondition, direction="write"
                 ),
                 "severity": severity,
             },
@@ -564,6 +592,10 @@ class RawMonitorsClient:
             _response_json = _response.json()
         except JSONDecodeError:
             raise ApiError(status_code=_response.status_code, headers=dict(_response.headers), body=_response.text)
+        except ValidationError as e:
+            raise ParsingError(
+                status_code=_response.status_code, headers=dict(_response.headers), body=_response.json(), cause=e
+            )
         raise ApiError(status_code=_response.status_code, headers=dict(_response.headers), body=_response_json)
 
     def list_incidents(
@@ -601,7 +633,7 @@ class RawMonitorsClient:
             Page of incidents
         """
         _response = self._client_wrapper.httpx_client.request(
-            f"v1/projects/{jsonable_encoder(project_slug)}/monitors/{jsonable_encoder(monitor_slug)}/incidents",
+            f"v1/projects/{encode_path_param(project_slug)}/monitors/{encode_path_param(monitor_slug)}/incidents",
             method="GET",
             params={
                 "cursor": cursor,
@@ -655,6 +687,10 @@ class RawMonitorsClient:
             _response_json = _response.json()
         except JSONDecodeError:
             raise ApiError(status_code=_response.status_code, headers=dict(_response.headers), body=_response.text)
+        except ValidationError as e:
+            raise ParsingError(
+                status_code=_response.status_code, headers=dict(_response.headers), body=_response.json(), cause=e
+            )
         raise ApiError(status_code=_response.status_code, headers=dict(_response.headers), body=_response_json)
 
     def mute(
@@ -680,7 +716,7 @@ class RawMonitorsClient:
             Muted monitor
         """
         _response = self._client_wrapper.httpx_client.request(
-            f"v1/projects/{jsonable_encoder(project_slug)}/monitors/{jsonable_encoder(monitor_slug)}/mute",
+            f"v1/projects/{encode_path_param(project_slug)}/monitors/{encode_path_param(monitor_slug)}/mute",
             method="POST",
             request_options=request_options,
         )
@@ -730,6 +766,10 @@ class RawMonitorsClient:
             _response_json = _response.json()
         except JSONDecodeError:
             raise ApiError(status_code=_response.status_code, headers=dict(_response.headers), body=_response.text)
+        except ValidationError as e:
+            raise ParsingError(
+                status_code=_response.status_code, headers=dict(_response.headers), body=_response.json(), cause=e
+            )
         raise ApiError(status_code=_response.status_code, headers=dict(_response.headers), body=_response_json)
 
     def unmute(
@@ -755,7 +795,7 @@ class RawMonitorsClient:
             Unmuted monitor
         """
         _response = self._client_wrapper.httpx_client.request(
-            f"v1/projects/{jsonable_encoder(project_slug)}/monitors/{jsonable_encoder(monitor_slug)}/unmute",
+            f"v1/projects/{encode_path_param(project_slug)}/monitors/{encode_path_param(monitor_slug)}/unmute",
             method="POST",
             request_options=request_options,
         )
@@ -805,6 +845,10 @@ class RawMonitorsClient:
             _response_json = _response.json()
         except JSONDecodeError:
             raise ApiError(status_code=_response.status_code, headers=dict(_response.headers), body=_response.text)
+        except ValidationError as e:
+            raise ParsingError(
+                status_code=_response.status_code, headers=dict(_response.headers), body=_response.json(), cause=e
+            )
         raise ApiError(status_code=_response.status_code, headers=dict(_response.headers), body=_response_json)
 
 
@@ -847,7 +891,7 @@ class AsyncRawMonitorsClient:
             Page of monitors
         """
         _response = await self._client_wrapper.httpx_client.request(
-            f"v1/projects/{jsonable_encoder(project_slug)}/monitors",
+            f"v1/projects/{encode_path_param(project_slug)}/monitors",
             method="GET",
             params={
                 "cursor": cursor,
@@ -902,6 +946,10 @@ class AsyncRawMonitorsClient:
             _response_json = _response.json()
         except JSONDecodeError:
             raise ApiError(status_code=_response.status_code, headers=dict(_response.headers), body=_response.text)
+        except ValidationError as e:
+            raise ParsingError(
+                status_code=_response.status_code, headers=dict(_response.headers), body=_response.json(), cause=e
+            )
         raise ApiError(status_code=_response.status_code, headers=dict(_response.headers), body=_response_json)
 
     async def create(
@@ -926,7 +974,7 @@ class AsyncRawMonitorsClient:
             Monitor created
         """
         _response = await self._client_wrapper.httpx_client.request(
-            f"v1/projects/{jsonable_encoder(project_slug)}/monitors",
+            f"v1/projects/{encode_path_param(project_slug)}/monitors",
             method="POST",
             json=convert_and_respect_annotation_metadata(
                 object_=request, annotation=CreateMonitorBody, direction="write"
@@ -983,13 +1031,17 @@ class AsyncRawMonitorsClient:
             _response_json = _response.json()
         except JSONDecodeError:
             raise ApiError(status_code=_response.status_code, headers=dict(_response.headers), body=_response.text)
+        except ValidationError as e:
+            raise ParsingError(
+                status_code=_response.status_code, headers=dict(_response.headers), body=_response.json(), cause=e
+            )
         raise ApiError(status_code=_response.status_code, headers=dict(_response.headers), body=_response_json)
 
     async def list_for_target(
         self,
         project_slug: str,
         *,
-        filter_set_contains: MonitorFilterSet,
+        filter_set_contains: typing.Dict[str, typing.Sequence[FilterCondition]],
         target_type: typing.Optional[ListMonitorsForTargetBodyTargetType] = OMIT,
         request_options: typing.Optional[RequestOptions] = None,
     ) -> AsyncHttpResponse[MonitorList]:
@@ -1001,7 +1053,8 @@ class AsyncRawMonitorsClient:
         project_slug : str
             Project slug (human-readable identifier)
 
-        filter_set_contains : MonitorFilterSet
+        filter_set_contains : typing.Dict[str, typing.Sequence[FilterCondition]]
+            Filter subset to match against monitor targets. For one user use `userId`; for one tool use `operation = execute_tool` and `toolName`.
 
         target_type : typing.Optional[ListMonitorsForTargetBodyTargetType]
             Optional target type to match.
@@ -1015,12 +1068,14 @@ class AsyncRawMonitorsClient:
             Matching monitors
         """
         _response = await self._client_wrapper.httpx_client.request(
-            f"v1/projects/{jsonable_encoder(project_slug)}/monitors/for-target",
+            f"v1/projects/{encode_path_param(project_slug)}/monitors/for-target",
             method="POST",
             json={
                 "targetType": target_type,
                 "filterSetContains": convert_and_respect_annotation_metadata(
-                    object_=filter_set_contains, annotation=MonitorFilterSet, direction="write"
+                    object_=filter_set_contains,
+                    annotation=typing.Dict[str, typing.Sequence[FilterCondition]],
+                    direction="write",
                 ),
             },
             headers={
@@ -1075,6 +1130,10 @@ class AsyncRawMonitorsClient:
             _response_json = _response.json()
         except JSONDecodeError:
             raise ApiError(status_code=_response.status_code, headers=dict(_response.headers), body=_response.text)
+        except ValidationError as e:
+            raise ParsingError(
+                status_code=_response.status_code, headers=dict(_response.headers), body=_response.json(), cause=e
+            )
         raise ApiError(status_code=_response.status_code, headers=dict(_response.headers), body=_response_json)
 
     async def get(
@@ -1100,7 +1159,7 @@ class AsyncRawMonitorsClient:
             Monitor
         """
         _response = await self._client_wrapper.httpx_client.request(
-            f"v1/projects/{jsonable_encoder(project_slug)}/monitors/{jsonable_encoder(monitor_slug)}",
+            f"v1/projects/{encode_path_param(project_slug)}/monitors/{encode_path_param(monitor_slug)}",
             method="GET",
             request_options=request_options,
         )
@@ -1150,6 +1209,10 @@ class AsyncRawMonitorsClient:
             _response_json = _response.json()
         except JSONDecodeError:
             raise ApiError(status_code=_response.status_code, headers=dict(_response.headers), body=_response.text)
+        except ValidationError as e:
+            raise ParsingError(
+                status_code=_response.status_code, headers=dict(_response.headers), body=_response.json(), cause=e
+            )
         raise ApiError(status_code=_response.status_code, headers=dict(_response.headers), body=_response_json)
 
     async def delete(
@@ -1174,7 +1237,7 @@ class AsyncRawMonitorsClient:
         AsyncHttpResponse[None]
         """
         _response = await self._client_wrapper.httpx_client.request(
-            f"v1/projects/{jsonable_encoder(project_slug)}/monitors/{jsonable_encoder(monitor_slug)}",
+            f"v1/projects/{encode_path_param(project_slug)}/monitors/{encode_path_param(monitor_slug)}",
             method="DELETE",
             request_options=request_options,
         )
@@ -1206,6 +1269,10 @@ class AsyncRawMonitorsClient:
             _response_json = _response.json()
         except JSONDecodeError:
             raise ApiError(status_code=_response.status_code, headers=dict(_response.headers), body=_response.text)
+        except ValidationError as e:
+            raise ParsingError(
+                status_code=_response.status_code, headers=dict(_response.headers), body=_response.json(), cause=e
+            )
         raise ApiError(status_code=_response.status_code, headers=dict(_response.headers), body=_response_json)
 
     async def update(
@@ -1215,10 +1282,10 @@ class AsyncRawMonitorsClient:
         *,
         name: typing.Optional[str] = OMIT,
         description: typing.Optional[str] = OMIT,
-        target: typing.Optional[MonitorTarget] = OMIT,
+        target: typing.Optional[UpdateMonitorBodyTarget] = OMIT,
         trigger: typing.Optional[UpdateMonitorBodyTrigger] = OMIT,
-        metric: typing.Optional[MonitorMetric] = OMIT,
-        condition: typing.Optional[AlertCondition] = OMIT,
+        metric: typing.Optional[UpdateMonitorBodyMetric] = OMIT,
+        condition: typing.Optional[UpdateMonitorBodyCondition] = OMIT,
         severity: typing.Optional[UpdateMonitorBodySeverity] = OMIT,
         request_options: typing.Optional[RequestOptions] = None,
     ) -> AsyncHttpResponse[Monitor]:
@@ -1239,14 +1306,17 @@ class AsyncRawMonitorsClient:
         description : typing.Optional[str]
             New description.
 
-        target : typing.Optional[MonitorTarget]
+        target : typing.Optional[UpdateMonitorBodyTarget]
+            Replacement target watched by the monitor.
 
         trigger : typing.Optional[UpdateMonitorBodyTrigger]
             Replacement incident trigger for the monitor rule.
 
-        metric : typing.Optional[MonitorMetric]
+        metric : typing.Optional[UpdateMonitorBodyMetric]
+            Replacement metric evaluated by the monitor.
 
-        condition : typing.Optional[AlertCondition]
+        condition : typing.Optional[UpdateMonitorBodyCondition]
+            Replacement condition for threshold or escalating monitors.
 
         severity : typing.Optional[UpdateMonitorBodySeverity]
             Replacement incident severity.
@@ -1260,20 +1330,20 @@ class AsyncRawMonitorsClient:
             Updated monitor
         """
         _response = await self._client_wrapper.httpx_client.request(
-            f"v1/projects/{jsonable_encoder(project_slug)}/monitors/{jsonable_encoder(monitor_slug)}",
+            f"v1/projects/{encode_path_param(project_slug)}/monitors/{encode_path_param(monitor_slug)}",
             method="PATCH",
             json={
                 "name": name,
                 "description": description,
                 "target": convert_and_respect_annotation_metadata(
-                    object_=target, annotation=MonitorTarget, direction="write"
+                    object_=target, annotation=UpdateMonitorBodyTarget, direction="write"
                 ),
                 "trigger": trigger,
                 "metric": convert_and_respect_annotation_metadata(
-                    object_=metric, annotation=MonitorMetric, direction="write"
+                    object_=metric, annotation=UpdateMonitorBodyMetric, direction="write"
                 ),
                 "condition": convert_and_respect_annotation_metadata(
-                    object_=condition, annotation=AlertCondition, direction="write"
+                    object_=condition, annotation=UpdateMonitorBodyCondition, direction="write"
                 ),
                 "severity": severity,
             },
@@ -1340,6 +1410,10 @@ class AsyncRawMonitorsClient:
             _response_json = _response.json()
         except JSONDecodeError:
             raise ApiError(status_code=_response.status_code, headers=dict(_response.headers), body=_response.text)
+        except ValidationError as e:
+            raise ParsingError(
+                status_code=_response.status_code, headers=dict(_response.headers), body=_response.json(), cause=e
+            )
         raise ApiError(status_code=_response.status_code, headers=dict(_response.headers), body=_response_json)
 
     async def list_incidents(
@@ -1377,7 +1451,7 @@ class AsyncRawMonitorsClient:
             Page of incidents
         """
         _response = await self._client_wrapper.httpx_client.request(
-            f"v1/projects/{jsonable_encoder(project_slug)}/monitors/{jsonable_encoder(monitor_slug)}/incidents",
+            f"v1/projects/{encode_path_param(project_slug)}/monitors/{encode_path_param(monitor_slug)}/incidents",
             method="GET",
             params={
                 "cursor": cursor,
@@ -1431,6 +1505,10 @@ class AsyncRawMonitorsClient:
             _response_json = _response.json()
         except JSONDecodeError:
             raise ApiError(status_code=_response.status_code, headers=dict(_response.headers), body=_response.text)
+        except ValidationError as e:
+            raise ParsingError(
+                status_code=_response.status_code, headers=dict(_response.headers), body=_response.json(), cause=e
+            )
         raise ApiError(status_code=_response.status_code, headers=dict(_response.headers), body=_response_json)
 
     async def mute(
@@ -1456,7 +1534,7 @@ class AsyncRawMonitorsClient:
             Muted monitor
         """
         _response = await self._client_wrapper.httpx_client.request(
-            f"v1/projects/{jsonable_encoder(project_slug)}/monitors/{jsonable_encoder(monitor_slug)}/mute",
+            f"v1/projects/{encode_path_param(project_slug)}/monitors/{encode_path_param(monitor_slug)}/mute",
             method="POST",
             request_options=request_options,
         )
@@ -1506,6 +1584,10 @@ class AsyncRawMonitorsClient:
             _response_json = _response.json()
         except JSONDecodeError:
             raise ApiError(status_code=_response.status_code, headers=dict(_response.headers), body=_response.text)
+        except ValidationError as e:
+            raise ParsingError(
+                status_code=_response.status_code, headers=dict(_response.headers), body=_response.json(), cause=e
+            )
         raise ApiError(status_code=_response.status_code, headers=dict(_response.headers), body=_response_json)
 
     async def unmute(
@@ -1531,7 +1613,7 @@ class AsyncRawMonitorsClient:
             Unmuted monitor
         """
         _response = await self._client_wrapper.httpx_client.request(
-            f"v1/projects/{jsonable_encoder(project_slug)}/monitors/{jsonable_encoder(monitor_slug)}/unmute",
+            f"v1/projects/{encode_path_param(project_slug)}/monitors/{encode_path_param(monitor_slug)}/unmute",
             method="POST",
             request_options=request_options,
         )
@@ -1581,4 +1663,8 @@ class AsyncRawMonitorsClient:
             _response_json = _response.json()
         except JSONDecodeError:
             raise ApiError(status_code=_response.status_code, headers=dict(_response.headers), body=_response.text)
+        except ValidationError as e:
+            raise ParsingError(
+                status_code=_response.status_code, headers=dict(_response.headers), body=_response.json(), cause=e
+            )
         raise ApiError(status_code=_response.status_code, headers=dict(_response.headers), body=_response_json)

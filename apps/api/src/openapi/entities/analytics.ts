@@ -6,6 +6,8 @@ import {
   analyticsTimeBucketSchema,
   BEHAVIOR_BREAKDOWN_FIELDS,
   behaviorMetricSchema,
+  MOMENT_BREAKDOWN_FIELDS,
+  momentMetricSchema,
   monitorMetricSchema,
   SCORE_BREAKDOWN_FIELDS,
   SESSION_BREAKDOWN_FIELDS,
@@ -54,7 +56,7 @@ const commonFields = {
 } as const
 
 const traceFamilyMetric = monitorMetricSchema.describe(
-  "The metric: `count`, `errorRate`, `cacheHitRate`, or `{sum|min|max|avg|median}` over `duration`/`cost`/`tokens`.",
+  "The metric: `count`, `errorRate`, `cacheHitRate`, or `{sum|min|max|avg|median|p95}` over `duration`/`cost`/`tokens`.",
 )
 
 const semanticQuery = z
@@ -119,6 +121,21 @@ export const AnalyticsQueryBodySchema = z
           .describe("Dimension to group by: `cluster`, `session`, or `method`."),
         metric: behaviorMetricSchema.describe(
           "The metric: `count`, or `{avg|min|max|median}` of the 0–1 assignment `confidence`.",
+        ),
+        ...commonFields,
+      })
+      .strict(),
+    z
+      .object({
+        stream: z
+          .literal("moments")
+          .describe("Semantic-moment labels — kind/actor-tagged moments detected within a session."),
+        breakdown: z
+          .enum(MOMENT_BREAKDOWN_FIELDS)
+          .optional()
+          .describe("Dimension to group by: `kind`, `actor`, or `session`."),
+        metric: momentMetricSchema.describe(
+          "The metric: `count`, or `{avg|min|max|median}` of the 0–1 label `confidence` or moment `coherence`.",
         ),
         ...commonFields,
       })

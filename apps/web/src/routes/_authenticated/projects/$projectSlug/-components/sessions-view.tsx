@@ -15,7 +15,12 @@ import { useQueries } from "@tanstack/react-query"
 import { ChevronsDownUpIcon, ChevronsUpDownIcon } from "lucide-react"
 import { use, useCallback, useMemo, useState } from "react"
 import { useAnnotationCountsByTraceIds } from "../../../../../domains/annotations/annotations.collection.ts"
-import { useSessionMetrics, useSessionsInfiniteScroll } from "../../../../../domains/sessions/sessions.collection.ts"
+import {
+  isHasLlmActivityFilterOn,
+  useSessionMetrics,
+  useSessionsCountWithoutLlmActivityFilter,
+  useSessionsInfiniteScroll,
+} from "../../../../../domains/sessions/sessions.collection.ts"
 import type { SessionRecord } from "../../../../../domains/sessions/sessions.functions.ts"
 import { TraceScopeContext } from "../../../../../domains/traces/trace-scope.tsx"
 import type { TraceRecord } from "../../../../../domains/traces/traces.functions.ts"
@@ -25,6 +30,7 @@ import type { SelectionState } from "../../../../../lib/hooks/useSelectableRows.
 import { FiltersSidebar } from "./filters-sidebar.tsx"
 import { sessionTracesQueryOptions } from "./session-detail-drawer/use-session-traces.ts"
 import { SessionOutlierBadge } from "./session-outlier-badge.tsx"
+import { SessionsOrphanFragmentsBlankSlate } from "./sessions-orphan-fragments-blank-slate.tsx"
 import { CacheHitRateSubheader } from "./table/cache-hit-rate-subheader.tsx"
 import { IndicatorsCell } from "./table/indicators-cell.tsx"
 import { TableMetricSubheader } from "./table/metric-subheader.tsx"
@@ -111,11 +117,13 @@ interface SessionsViewProps {
   readonly onSelectionChange: (state: SelectionState<string>) => void
   readonly totalTraceCount: number
   readonly onFiltersChange: (filters: FilterSet) => void
+  readonly onShowAllSessions: () => void
   readonly onFiltersClose: () => void
   readonly onOpenSession: (sessionId: string, traceId?: string) => void
   readonly onCloseSession: () => void
   readonly visibleColumnIds: readonly SessionColumnId[]
   readonly isSearching: boolean
+  readonly hasUserAppliedFilters: boolean
   readonly selectable?: boolean
   readonly searchQuery?: string
 }
@@ -132,11 +140,13 @@ export function SessionsView({
   onSelectionChange,
   totalTraceCount,
   onFiltersChange,
+  onShowAllSessions,
   onFiltersClose,
   onOpenSession,
   onCloseSession,
   visibleColumnIds,
   isSearching,
+  hasUserAppliedFilters,
   searchQuery,
   selectable = true,
 }: SessionsViewProps) {
@@ -201,7 +211,6 @@ export function SessionsView({
     })
   }, [])
 
-  const hasActiveFilters = Object.keys(filters).length > 0
   const isRelevanceSort = sorting.column === RELEVANCE_SORT_COLUMN
 
   const {
@@ -212,14 +221,34 @@ export function SessionsView({
   } = useSessionsInfiniteScroll({
     projectId,
     sorting,
-    ...(hasActiveFilters ? { filters } : {}),
+    filters,
     ...(searchQuery ? { searchQuery } : {}),
   })
 
   const { data: sessionMetrics, isLoading: sessionMetricsLoading } = useSessionMetrics({
     projectId,
-    ...(hasActiveFilters ? { filters } : {}),
+    filters,
   })
+
+  const shouldCheckOrphanFragmentSessions =
+    !isLoading && sessions.length === 0 && isHasLlmActivityFilterOn(filters) && !searchQuery
+  const { totalCount: sessionsWithoutLlmActivityCount, isLoading: isOrphanFragmentCountLoading } =
+    useSessionsCountWithoutLlmActivityFilter({
+      projectId,
+      filters,
+      enabled: shouldCheckOrphanFragmentSessions,
+    })
+  const hasOrphanFragmentSessions =
+    shouldCheckOrphanFragmentSessions && !isOrphanFragmentCountLoading && sessionsWithoutLlmActivityCount > 0
+
+  const blankSlate = useMemo(() => {
+    if (searchQuery) return "No sessions match the current search"
+    if (hasOrphanFragmentSessions) {
+      return <SessionsOrphanFragmentsBlankSlate onShowAllSessions={onShowAllSessions} />
+    }
+    if (hasUserAppliedFilters) return "No sessions match the current filters"
+    return "No sessions found"
+  }, [hasOrphanFragmentSessions, hasUserAppliedFilters, onShowAllSessions, searchQuery])
 
   // Fetch annotation counts for every trace that could show in the visible
   // session rows (trace_ids on each session) so the Indicators column can
@@ -692,7 +721,7 @@ export function SessionsView({
           sorting={sorting}
           defaultSorting={searchQuery ? DEFAULT_SEARCH_SORTING : DEFAULT_SESSION_SORTING}
           onSortChange={onSortingChange}
-          blankSlate={hasActiveFilters || searchQuery ? "No sessions match the current search" : "No sessions found"}
+          blankSlate={blankSlate}
           expandedRowKeys={expandedIds}
           getExpandedRows={getExpandedRows}
           isRowExpandable={isSessionExpandable}

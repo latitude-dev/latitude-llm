@@ -28,6 +28,7 @@ export interface ScoreRecord {
   readonly value: number
   readonly passed: boolean
   readonly feedback: string
+  // biome-ignore lint/complexity/noBannedTypes: TanStack createServerFn needs a serializable return; `unknown` isn't assignable and collapses the client-inferred type
   readonly metadata: { readonly [key: string]: {} }
   readonly error: string | null
   readonly errored: boolean
@@ -54,6 +55,7 @@ const toRecord = (score: Score): ScoreRecord => ({
   value: score.value,
   passed: score.passed,
   feedback: score.feedback,
+  // biome-ignore lint/complexity/noBannedTypes: matches the serializable `ScoreRecord.metadata` shape above
   metadata: score.metadata as { [key: string]: {} },
   error: score.error,
   errored: score.errored,

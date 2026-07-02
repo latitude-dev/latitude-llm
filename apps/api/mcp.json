@@ -1,6 +1,6 @@
 {
-  "name": "Latitude MCP",
-  "title": "Latitude MCP",
+  "name": "Latitude",
+  "title": "Latitude",
   "description": "Open-source AI agent monitoring platform. Full observability into what's failing in production. Discover underlying issues, get alerts when something breaks and verify your fix worked.",
   "version": "v1",
   "websiteUrl": "https://latitude.so",
@@ -29829,9 +29829,31 @@
                           "field"
                         ],
                         "additionalProperties": false
+                      },
+                      {
+                        "type": "object",
+                        "properties": {
+                          "kind": {
+                            "type": "string",
+                            "const": "p95"
+                          },
+                          "field": {
+                            "type": "string",
+                            "enum": [
+                              "duration",
+                              "cost",
+                              "tokens"
+                            ]
+                          }
+                        },
+                        "required": [
+                          "kind",
+                          "field"
+                        ],
+                        "additionalProperties": false
                       }
                     ],
-                    "description": "The metric: `count`, `errorRate`, `cacheHitRate`, or `{sum|min|max|avg|median}` over `duration`/`cost`/`tokens`."
+                    "description": "The metric: `count`, `errorRate`, `cacheHitRate`, or `{sum|min|max|avg|median|p95}` over `duration`/`cost`/`tokens`."
                   },
                   "filters": {
                     "description": "Structured filter set applied to the stream (same DSL as `listTraces`).",
@@ -30171,9 +30193,31 @@
                           "field"
                         ],
                         "additionalProperties": false
+                      },
+                      {
+                        "type": "object",
+                        "properties": {
+                          "kind": {
+                            "type": "string",
+                            "const": "p95"
+                          },
+                          "field": {
+                            "type": "string",
+                            "enum": [
+                              "duration",
+                              "cost",
+                              "tokens"
+                            ]
+                          }
+                        },
+                        "required": [
+                          "kind",
+                          "field"
+                        ],
+                        "additionalProperties": false
                       }
                     ],
-                    "description": "The metric: `count`, `errorRate`, `cacheHitRate`, or `{sum|min|max|avg|median}` over `duration`/`cost`/`tokens`."
+                    "description": "The metric: `count`, `errorRate`, `cacheHitRate`, or `{sum|min|max|avg|median|p95}` over `duration`/`cost`/`tokens`."
                   },
                   "filters": {
                     "description": "Structured filter set applied to the stream (same DSL as `listTraces`).",
@@ -30507,9 +30551,31 @@
                           "field"
                         ],
                         "additionalProperties": false
+                      },
+                      {
+                        "type": "object",
+                        "properties": {
+                          "kind": {
+                            "type": "string",
+                            "const": "p95"
+                          },
+                          "field": {
+                            "type": "string",
+                            "enum": [
+                              "duration",
+                              "cost",
+                              "tokens"
+                            ]
+                          }
+                        },
+                        "required": [
+                          "kind",
+                          "field"
+                        ],
+                        "additionalProperties": false
                       }
                     ],
-                    "description": "The metric: `count`, `errorRate`, `cacheHitRate`, or `{sum|min|max|avg|median}` over `duration`/`cost`/`tokens`."
+                    "description": "The metric: `count`, `errorRate`, `cacheHitRate`, or `{sum|min|max|avg|median|p95}` over `duration`/`cost`/`tokens`."
                   },
                   "filters": {
                     "description": "Structured filter set applied to the stream (same DSL as `listTraces`).",
@@ -31240,6 +31306,287 @@
                   "limit"
                 ],
                 "additionalProperties": false
+              },
+              {
+                "type": "object",
+                "properties": {
+                  "stream": {
+                    "type": "string",
+                    "const": "moments",
+                    "description": "Semantic-moment labels — kind/actor-tagged moments detected within a session."
+                  },
+                  "breakdown": {
+                    "description": "Dimension to group by: `kind`, `actor`, or `session`.",
+                    "type": "string",
+                    "enum": [
+                      "kind",
+                      "actor",
+                      "session"
+                    ]
+                  },
+                  "metric": {
+                    "oneOf": [
+                      {
+                        "type": "object",
+                        "properties": {
+                          "kind": {
+                            "type": "string",
+                            "const": "count"
+                          }
+                        },
+                        "required": [
+                          "kind"
+                        ],
+                        "additionalProperties": false
+                      },
+                      {
+                        "type": "object",
+                        "properties": {
+                          "kind": {
+                            "type": "string",
+                            "const": "avg"
+                          },
+                          "field": {
+                            "type": "string",
+                            "enum": [
+                              "confidence",
+                              "coherence"
+                            ]
+                          }
+                        },
+                        "required": [
+                          "kind",
+                          "field"
+                        ],
+                        "additionalProperties": false
+                      },
+                      {
+                        "type": "object",
+                        "properties": {
+                          "kind": {
+                            "type": "string",
+                            "const": "min"
+                          },
+                          "field": {
+                            "type": "string",
+                            "enum": [
+                              "confidence",
+                              "coherence"
+                            ]
+                          }
+                        },
+                        "required": [
+                          "kind",
+                          "field"
+                        ],
+                        "additionalProperties": false
+                      },
+                      {
+                        "type": "object",
+                        "properties": {
+                          "kind": {
+                            "type": "string",
+                            "const": "max"
+                          },
+                          "field": {
+                            "type": "string",
+                            "enum": [
+                              "confidence",
+                              "coherence"
+                            ]
+                          }
+                        },
+                        "required": [
+                          "kind",
+                          "field"
+                        ],
+                        "additionalProperties": false
+                      },
+                      {
+                        "type": "object",
+                        "properties": {
+                          "kind": {
+                            "type": "string",
+                            "const": "median"
+                          },
+                          "field": {
+                            "type": "string",
+                            "enum": [
+                              "confidence",
+                              "coherence"
+                            ]
+                          }
+                        },
+                        "required": [
+                          "kind",
+                          "field"
+                        ],
+                        "additionalProperties": false
+                      }
+                    ],
+                    "description": "The metric: `count`, or `{avg|min|max|median}` of the 0–1 label `confidence` or moment `coherence`."
+                  },
+                  "filters": {
+                    "description": "Structured filter set applied to the stream (same DSL as `listTraces`).",
+                    "type": "object",
+                    "propertyNames": {
+                      "type": "string"
+                    },
+                    "additionalProperties": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "op": {
+                            "type": "string",
+                            "enum": [
+                              "eq",
+                              "neq",
+                              "gt",
+                              "gte",
+                              "lt",
+                              "lte",
+                              "in",
+                              "notIn",
+                              "contains",
+                              "notContains",
+                              "gtePercentile"
+                            ],
+                            "description": "Comparison operator applied to the field's value (e.g. `eq`, `neq`, `in`). The full operator list lives in the API reference."
+                          },
+                          "value": {
+                            "anyOf": [
+                              {
+                                "type": "string"
+                              },
+                              {
+                                "type": "number"
+                              },
+                              {
+                                "type": "boolean"
+                              },
+                              {
+                                "type": "array",
+                                "items": {
+                                  "anyOf": [
+                                    {
+                                      "type": "string"
+                                    },
+                                    {
+                                      "type": "number"
+                                    }
+                                  ]
+                                }
+                              }
+                            ],
+                            "description": "Right-hand value compared against the field. Arrays are required for `in` / `notIn`-style operators."
+                          }
+                        },
+                        "required": [
+                          "op",
+                          "value"
+                        ],
+                        "additionalProperties": false
+                      }
+                    }
+                  },
+                  "timeBucket": {
+                    "description": "Bucket the metric over time. Omit for a single aggregate.",
+                    "type": "object",
+                    "properties": {
+                      "unit": {
+                        "type": "string",
+                        "enum": [
+                          "hour",
+                          "day",
+                          "week"
+                        ],
+                        "description": "Bucket granularity."
+                      },
+                      "size": {
+                        "default": 1,
+                        "description": "Number of units per bucket (e.g. `2` weeks).",
+                        "type": "integer",
+                        "exclusiveMinimum": 0,
+                        "maximum": 365
+                      }
+                    },
+                    "required": [
+                      "unit",
+                      "size"
+                    ],
+                    "additionalProperties": false
+                  },
+                  "range": {
+                    "type": "object",
+                    "properties": {
+                      "fromIso": {
+                        "type": "string",
+                        "format": "date-time",
+                        "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d(?::[0-5]\\d(?:\\.\\d+)?)?(?:Z))$",
+                        "description": "Inclusive lower bound (ISO-8601)."
+                      },
+                      "toIso": {
+                        "type": "string",
+                        "format": "date-time",
+                        "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d(?::[0-5]\\d(?:\\.\\d+)?)?(?:Z))$",
+                        "description": "Exclusive upper bound (ISO-8601). Must be after `fromIso`."
+                      }
+                    },
+                    "required": [
+                      "fromIso",
+                      "toIso"
+                    ],
+                    "additionalProperties": false,
+                    "description": "The time window."
+                  },
+                  "orderBy": {
+                    "default": {
+                      "by": "value",
+                      "direction": "desc"
+                    },
+                    "description": "Sort for breakdown results. Defaults to value-desc.",
+                    "type": "object",
+                    "properties": {
+                      "by": {
+                        "default": "value",
+                        "type": "string",
+                        "enum": [
+                          "value",
+                          "key"
+                        ]
+                      },
+                      "direction": {
+                        "default": "desc",
+                        "type": "string",
+                        "enum": [
+                          "asc",
+                          "desc"
+                        ]
+                      }
+                    },
+                    "required": [
+                      "by",
+                      "direction"
+                    ],
+                    "additionalProperties": false
+                  },
+                  "limit": {
+                    "default": 50,
+                    "description": "Maximum rows returned. Defaults to 50; max 500.",
+                    "type": "integer",
+                    "exclusiveMinimum": 0,
+                    "maximum": 500
+                  }
+                },
+                "required": [
+                  "stream",
+                  "metric",
+                  "range",
+                  "orderBy",
+                  "limit"
+                ],
+                "additionalProperties": false
               }
             ]
           }
@@ -31282,6 +31629,462 @@
         },
         "required": [
           "series"
+        ],
+        "additionalProperties": false
+      },
+      "annotations": {
+        "readOnlyHint": true,
+        "destructiveHint": false
+      }
+    },
+    {
+      "name": "querySpans",
+      "title": "Query spans across traces",
+      "description": "Returns a cursor-paginated page of spans across all traces in the project matching `filters` (and an optional time `range`). The span-grain, row-level complement to `queryAnalytics` with `stream: \"spans\"` (which returns aggregates): use this to drill from an aggregate into the individual spans behind it — e.g. every failing `search_docs` tool span, or the slowest embedding calls.",
+      "inputSchema": {
+        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "type": "object",
+        "properties": {
+          "projectSlug": {
+            "type": "string",
+            "description": "Project slug (human-readable identifier)"
+          },
+          "filters": {
+            "description": "Row-local span filter set (same DSL as `listTraces`) over span fields — `operation`, `toolName`, `model`, `provider`, `sessionId`, `traceId`, `tags`, `duration`, `cost`, `tokensInput`/`tokensOutput`.",
+            "type": "object",
+            "propertyNames": {
+              "type": "string"
+            },
+            "additionalProperties": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "properties": {
+                  "op": {
+                    "type": "string",
+                    "enum": [
+                      "eq",
+                      "neq",
+                      "gt",
+                      "gte",
+                      "lt",
+                      "lte",
+                      "in",
+                      "notIn",
+                      "contains",
+                      "notContains",
+                      "gtePercentile"
+                    ],
+                    "description": "Comparison operator applied to the field's value (e.g. `eq`, `neq`, `in`). The full operator list lives in the API reference."
+                  },
+                  "value": {
+                    "anyOf": [
+                      {
+                        "type": "string"
+                      },
+                      {
+                        "type": "number"
+                      },
+                      {
+                        "type": "boolean"
+                      },
+                      {
+                        "type": "array",
+                        "items": {
+                          "anyOf": [
+                            {
+                              "type": "string"
+                            },
+                            {
+                              "type": "number"
+                            }
+                          ]
+                        }
+                      }
+                    ],
+                    "description": "Right-hand value compared against the field. Arrays are required for `in` / `notIn`-style operators."
+                  }
+                },
+                "required": [
+                  "op",
+                  "value"
+                ],
+                "additionalProperties": false
+              }
+            }
+          },
+          "range": {
+            "description": "Restrict to spans whose `startTime` falls in this window.",
+            "type": "object",
+            "properties": {
+              "fromIso": {
+                "type": "string",
+                "format": "date-time",
+                "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d(?::[0-5]\\d(?:\\.\\d+)?)?(?:Z))$",
+                "description": "Inclusive lower bound (ISO-8601)."
+              },
+              "toIso": {
+                "type": "string",
+                "format": "date-time",
+                "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d(?::[0-5]\\d(?:\\.\\d+)?)?(?:Z))$",
+                "description": "Upper bound (ISO-8601). Must be after `fromIso`."
+              }
+            },
+            "required": [
+              "fromIso",
+              "toIso"
+            ],
+            "additionalProperties": false
+          },
+          "cursor": {
+            "description": "Opaque cursor from a previous response's `nextCursor`. Omit on the first page.",
+            "type": "string"
+          },
+          "limit": {
+            "default": 50,
+            "description": "Page size. Defaults to 50; max 200.",
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 200
+          }
+        },
+        "required": [
+          "projectSlug",
+          "limit"
+        ],
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "type": "object",
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "organizationId": {
+                  "type": "string",
+                  "description": "Organization that owns this span."
+                },
+                "projectId": {
+                  "type": "string",
+                  "description": "Project this span belongs to."
+                },
+                "traceId": {
+                  "type": "string",
+                  "description": "Identifier of the trace this span belongs to."
+                },
+                "spanId": {
+                  "type": "string",
+                  "description": "Stable span identifier within the trace."
+                },
+                "parentSpanId": {
+                  "anyOf": [
+                    {
+                      "type": "string"
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ],
+                  "description": "Identifier of the parent span. `null` for root spans."
+                },
+                "sessionId": {
+                  "anyOf": [
+                    {
+                      "type": "string"
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ],
+                  "description": "Conversation/session identifier set by the SDK. `null` when absent."
+                },
+                "userId": {
+                  "anyOf": [
+                    {
+                      "type": "string"
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ],
+                  "description": "End-user identifier set by the SDK. `null` when absent."
+                },
+                "simulationId": {
+                  "anyOf": [
+                    {
+                      "type": "string"
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ],
+                  "description": "CUID of the simulation that produced this span. `null` when not a simulation."
+                },
+                "apiKeyId": {
+                  "anyOf": [
+                    {
+                      "type": "string"
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ],
+                  "description": "Latitude API key used to ingest the span. `null` when ingested without an API key."
+                },
+                "startTime": {
+                  "type": "string",
+                  "description": "ISO-8601 timestamp at which the span started."
+                },
+                "endTime": {
+                  "type": "string",
+                  "description": "ISO-8601 timestamp at which the span ended."
+                },
+                "name": {
+                  "type": "string",
+                  "description": "Span name (e.g. the entry-point function or route)."
+                },
+                "serviceName": {
+                  "type": "string",
+                  "description": "OpenTelemetry `service.name` of the emitting service."
+                },
+                "kind": {
+                  "type": "string",
+                  "enum": [
+                    "unspecified",
+                    "internal",
+                    "server",
+                    "client",
+                    "producer",
+                    "consumer"
+                  ],
+                  "description": "OpenTelemetry span kind."
+                },
+                "statusCode": {
+                  "type": "string",
+                  "enum": [
+                    "unset",
+                    "ok",
+                    "error"
+                  ],
+                  "description": "OpenTelemetry span status code."
+                },
+                "statusMessage": {
+                  "type": "string",
+                  "description": "OpenTelemetry status message. Empty when not set."
+                },
+                "traceFlags": {
+                  "type": "number",
+                  "description": "OpenTelemetry trace flags bitfield."
+                },
+                "traceState": {
+                  "type": "string",
+                  "description": "OpenTelemetry trace state (vendor-specific propagation). Empty when not set."
+                },
+                "errorType": {
+                  "anyOf": [
+                    {
+                      "type": "string"
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ],
+                  "description": "Error class/type label when the span errored. `null` for successful spans."
+                },
+                "tags": {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  },
+                  "description": "Free-form tags attached at ingest time."
+                },
+                "operation": {
+                  "type": "string",
+                  "description": "GenAI operation category (e.g. `\"chat\"`, `\"embeddings\"`, `\"execute_tool\"`, `\"invoke_agent\"`) or a custom string for non-GenAI spans."
+                },
+                "provider": {
+                  "anyOf": [
+                    {
+                      "type": "string"
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ],
+                  "description": "LLM provider id. `null` for non-LLM spans."
+                },
+                "model": {
+                  "anyOf": [
+                    {
+                      "type": "string"
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ],
+                  "description": "Model id as requested. `null` for non-LLM spans."
+                },
+                "responseModel": {
+                  "anyOf": [
+                    {
+                      "type": "string"
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ],
+                  "description": "Model id reported by the provider's response. `null` for non-LLM spans."
+                },
+                "tokensInput": {
+                  "type": "number",
+                  "description": "Input tokens consumed by this span."
+                },
+                "tokensOutput": {
+                  "type": "number",
+                  "description": "Output tokens produced by this span."
+                },
+                "tokensCacheRead": {
+                  "type": "number",
+                  "description": "Tokens served from the provider's prompt cache."
+                },
+                "tokensCacheCreate": {
+                  "type": "number",
+                  "description": "Tokens written to the provider's prompt cache."
+                },
+                "tokensReasoning": {
+                  "type": "number",
+                  "description": "Reasoning tokens reported by the model."
+                },
+                "costInputMicrocents": {
+                  "type": "number",
+                  "description": "Cost of input tokens in microcents (1/1,000,000 USD)."
+                },
+                "costOutputMicrocents": {
+                  "type": "number",
+                  "description": "Cost of output tokens in microcents (1/1,000,000 USD)."
+                },
+                "costTotalMicrocents": {
+                  "type": "number",
+                  "description": "Total cost in microcents (1/1,000,000 USD)."
+                },
+                "costIsEstimated": {
+                  "type": "boolean",
+                  "description": "`true` when the cost was derived from public pricing tables instead of the provider's bill."
+                },
+                "timeToFirstTokenNs": {
+                  "type": "number",
+                  "description": "Nanoseconds from the start of the span to its first emitted token. `0` if not measured."
+                },
+                "isStreaming": {
+                  "type": "boolean",
+                  "description": "`true` when the span was produced by a streaming LLM call."
+                },
+                "responseId": {
+                  "anyOf": [
+                    {
+                      "type": "string"
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ],
+                  "description": "Response identifier returned by the LLM. `null` when the provider didn't return one."
+                },
+                "finishReasons": {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  },
+                  "description": "Per-choice finish reasons reported by the LLM provider."
+                },
+                "scopeName": {
+                  "type": "string",
+                  "description": "OpenTelemetry instrumentation scope name. Empty when not set."
+                },
+                "scopeVersion": {
+                  "type": "string",
+                  "description": "OpenTelemetry instrumentation scope version. Empty when not set."
+                },
+                "retentionDays": {
+                  "description": "Per-span retention override in days. Omitted when the project default applies.",
+                  "type": "integer",
+                  "exclusiveMinimum": 0,
+                  "maximum": 9007199254740991
+                },
+                "ingestedAt": {
+                  "type": "string",
+                  "description": "ISO-8601 timestamp at which Latitude received this span."
+                }
+              },
+              "required": [
+                "organizationId",
+                "projectId",
+                "traceId",
+                "spanId",
+                "parentSpanId",
+                "sessionId",
+                "userId",
+                "simulationId",
+                "apiKeyId",
+                "startTime",
+                "endTime",
+                "name",
+                "serviceName",
+                "kind",
+                "statusCode",
+                "statusMessage",
+                "traceFlags",
+                "traceState",
+                "errorType",
+                "tags",
+                "operation",
+                "provider",
+                "model",
+                "responseModel",
+                "tokensInput",
+                "tokensOutput",
+                "tokensCacheRead",
+                "tokensCacheCreate",
+                "tokensReasoning",
+                "costInputMicrocents",
+                "costOutputMicrocents",
+                "costTotalMicrocents",
+                "costIsEstimated",
+                "timeToFirstTokenNs",
+                "isStreaming",
+                "responseId",
+                "finishReasons",
+                "scopeName",
+                "scopeVersion",
+                "ingestedAt"
+              ],
+              "additionalProperties": false
+            },
+            "description": "Matching spans across traces, newest first. Rows exclude per-message LLM content — use a span point-lookup for the payload."
+          },
+          "nextCursor": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Cursor for the next page, or `null` when there are no more spans."
+          },
+          "hasMore": {
+            "type": "boolean",
+            "description": "Whether more spans match beyond this page."
+          }
+        },
+        "required": [
+          "items",
+          "nextCursor",
+          "hasMore"
         ],
         "additionalProperties": false
       },

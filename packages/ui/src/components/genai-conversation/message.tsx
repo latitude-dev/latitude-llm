@@ -12,12 +12,12 @@ export type ToolCallActions = ReadonlyMap<string, () => void>
 
 type PartType = GenAIMessage["parts"][number]
 
-function isAlreadyCollapsible(parts: readonly PartType[]): boolean {
-  return parts[0]?.type === "tool_call" || parts[0]?.type === "tool_call_response"
+function isAlreadyCollapsible(parts: readonly PartType[] | undefined): boolean {
+  return parts?.[0]?.type === "tool_call" || parts?.[0]?.type === "tool_call_response"
 }
 
-function getFirstLinePreview(parts: readonly PartType[]): string {
-  const content = ((parts[0]?.content ?? "") as string).trim()
+function getFirstLinePreview(parts: readonly PartType[] | undefined): string {
+  const content = ((parts?.[0]?.content ?? "") as string).trim()
 
   if (!content) return "..."
 
@@ -37,7 +37,7 @@ function getFirstLinePreview(parts: readonly PartType[]): string {
   )
 }
 
-function CollapsedPreview({ parts }: { readonly parts: readonly PartType[] }) {
+function CollapsedPreview({ parts }: { readonly parts: readonly PartType[] | undefined }) {
   return (
     <div className="min-w-0 max-w-full truncate pr-6 text-sm select-none text-muted-foreground">
       {getFirstLinePreview(parts)}
@@ -120,7 +120,7 @@ function PartsRenderer({
   failedToolCallIds,
   messageIndex,
 }: {
-  readonly parts: readonly PartType[]
+  readonly parts: readonly PartType[] | undefined
   readonly toolResults?: ReadonlyMap<string, ToolCallResult> | undefined
   readonly toolCallActions?: ToolCallActions
   readonly failedToolCallIds?: ReadonlySet<string> | undefined
@@ -128,7 +128,7 @@ function PartsRenderer({
 }) {
   return (
     <div className="flex min-w-0 flex-col gap-2">
-      {parts.map((part, partIndex) => {
+      {(parts ?? []).map((part, partIndex) => {
         if (!part) return null
 
         const partId = part.type === "tool_call" ? ((part as { id?: string }).id ?? "") : ""

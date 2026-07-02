@@ -6,14 +6,13 @@ export interface TagBadgeProps {
   readonly tag: string
 }
 
+const tagBadgeClassName = "inline-flex items-center rounded-md px-1.5 py-0.5 text-xs font-medium"
+
 export const TagBadge = memo(function TagBadge({ tag }: TagBadgeProps) {
   const { style, className } = useHashColor(tag)
 
   return (
-    <span
-      className={cn("inline-flex items-center rounded-md px-1.5 py-0.5 text-xs font-medium", className)}
-      style={style}
-    >
+    <span className={cn(tagBadgeClassName, className)} style={style}>
       {tag}
     </span>
   )

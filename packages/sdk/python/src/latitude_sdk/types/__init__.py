@@ -12,6 +12,7 @@ if typing.TYPE_CHECKING:
     from .account_user import AccountUser
     from .active_member import ActiveMember
     from .active_member_role import ActiveMemberRole
+    from .active_member_status import ActiveMemberStatus
     from .alert_baseline import AlertBaseline
     from .alert_baseline_kind import AlertBaselineKind
     from .alert_condition import AlertCondition, AlertCondition_Escalating, AlertCondition_Threshold
@@ -21,6 +22,16 @@ if typing.TYPE_CHECKING:
     from .alert_duration_minutes import AlertDurationMinutes
     from .alert_escalating_condition import AlertEscalatingCondition
     from .alert_escalating_condition_direction import AlertEscalatingConditionDirection
+    from .alert_escalating_condition_threshold import (
+        AlertEscalatingConditionThreshold,
+        AlertEscalatingConditionThreshold_Absolute,
+        AlertEscalatingConditionThreshold_Expected,
+        AlertEscalatingConditionThreshold_Multiplier,
+    )
+    from .alert_escalating_condition_threshold_absolute import AlertEscalatingConditionThresholdAbsolute
+    from .alert_escalating_condition_threshold_expected import AlertEscalatingConditionThresholdExpected
+    from .alert_escalating_condition_threshold_multiplier import AlertEscalatingConditionThresholdMultiplier
+    from .alert_escalating_condition_trigger import AlertEscalatingConditionTrigger
     from .alert_escalating_condition_window import AlertEscalatingConditionWindow
     from .alert_metric_threshold import (
         AlertMetricThreshold,
@@ -33,9 +44,11 @@ if typing.TYPE_CHECKING:
     from .alert_metric_threshold_multiplier import AlertMetricThresholdMultiplier
     from .alert_threshold_condition import AlertThresholdCondition
     from .alert_threshold_condition_direction import AlertThresholdConditionDirection
+    from .alert_threshold_condition_trigger import AlertThresholdConditionTrigger
     from .analytics_query import (
         AnalyticsQuery,
         AnalyticsQuery_Behaviors,
+        AnalyticsQuery_Moments,
         AnalyticsQuery_Scores,
         AnalyticsQuery_Sessions,
         AnalyticsQuery_Spans,
@@ -52,16 +65,45 @@ if typing.TYPE_CHECKING:
         AnalyticsQueryBehaviorsMetric_Min,
     )
     from .analytics_query_behaviors_metric_avg import AnalyticsQueryBehaviorsMetricAvg
+    from .analytics_query_behaviors_metric_avg_field import AnalyticsQueryBehaviorsMetricAvgField
     from .analytics_query_behaviors_metric_count import AnalyticsQueryBehaviorsMetricCount
     from .analytics_query_behaviors_metric_max import AnalyticsQueryBehaviorsMetricMax
+    from .analytics_query_behaviors_metric_max_field import AnalyticsQueryBehaviorsMetricMaxField
     from .analytics_query_behaviors_metric_median import AnalyticsQueryBehaviorsMetricMedian
+    from .analytics_query_behaviors_metric_median_field import AnalyticsQueryBehaviorsMetricMedianField
     from .analytics_query_behaviors_metric_min import AnalyticsQueryBehaviorsMetricMin
+    from .analytics_query_behaviors_metric_min_field import AnalyticsQueryBehaviorsMetricMinField
     from .analytics_query_behaviors_order_by import AnalyticsQueryBehaviorsOrderBy
     from .analytics_query_behaviors_order_by_by import AnalyticsQueryBehaviorsOrderByBy
     from .analytics_query_behaviors_order_by_direction import AnalyticsQueryBehaviorsOrderByDirection
     from .analytics_query_behaviors_range import AnalyticsQueryBehaviorsRange
     from .analytics_query_behaviors_time_bucket import AnalyticsQueryBehaviorsTimeBucket
     from .analytics_query_behaviors_time_bucket_unit import AnalyticsQueryBehaviorsTimeBucketUnit
+    from .analytics_query_moments import AnalyticsQueryMoments
+    from .analytics_query_moments_breakdown import AnalyticsQueryMomentsBreakdown
+    from .analytics_query_moments_metric import (
+        AnalyticsQueryMomentsMetric,
+        AnalyticsQueryMomentsMetric_Avg,
+        AnalyticsQueryMomentsMetric_Count,
+        AnalyticsQueryMomentsMetric_Max,
+        AnalyticsQueryMomentsMetric_Median,
+        AnalyticsQueryMomentsMetric_Min,
+    )
+    from .analytics_query_moments_metric_avg import AnalyticsQueryMomentsMetricAvg
+    from .analytics_query_moments_metric_avg_field import AnalyticsQueryMomentsMetricAvgField
+    from .analytics_query_moments_metric_count import AnalyticsQueryMomentsMetricCount
+    from .analytics_query_moments_metric_max import AnalyticsQueryMomentsMetricMax
+    from .analytics_query_moments_metric_max_field import AnalyticsQueryMomentsMetricMaxField
+    from .analytics_query_moments_metric_median import AnalyticsQueryMomentsMetricMedian
+    from .analytics_query_moments_metric_median_field import AnalyticsQueryMomentsMetricMedianField
+    from .analytics_query_moments_metric_min import AnalyticsQueryMomentsMetricMin
+    from .analytics_query_moments_metric_min_field import AnalyticsQueryMomentsMetricMinField
+    from .analytics_query_moments_order_by import AnalyticsQueryMomentsOrderBy
+    from .analytics_query_moments_order_by_by import AnalyticsQueryMomentsOrderByBy
+    from .analytics_query_moments_order_by_direction import AnalyticsQueryMomentsOrderByDirection
+    from .analytics_query_moments_range import AnalyticsQueryMomentsRange
+    from .analytics_query_moments_time_bucket import AnalyticsQueryMomentsTimeBucket
+    from .analytics_query_moments_time_bucket_unit import AnalyticsQueryMomentsTimeBucketUnit
     from .analytics_query_scores import AnalyticsQueryScores
     from .analytics_query_scores_breakdown import AnalyticsQueryScoresBreakdown
     from .analytics_query_scores_metric import (
@@ -75,11 +117,15 @@ if typing.TYPE_CHECKING:
         AnalyticsQueryScoresMetric_PassRate,
     )
     from .analytics_query_scores_metric_avg import AnalyticsQueryScoresMetricAvg
+    from .analytics_query_scores_metric_avg_field import AnalyticsQueryScoresMetricAvgField
     from .analytics_query_scores_metric_count import AnalyticsQueryScoresMetricCount
     from .analytics_query_scores_metric_error_rate import AnalyticsQueryScoresMetricErrorRate
     from .analytics_query_scores_metric_max import AnalyticsQueryScoresMetricMax
+    from .analytics_query_scores_metric_max_field import AnalyticsQueryScoresMetricMaxField
     from .analytics_query_scores_metric_median import AnalyticsQueryScoresMetricMedian
+    from .analytics_query_scores_metric_median_field import AnalyticsQueryScoresMetricMedianField
     from .analytics_query_scores_metric_min import AnalyticsQueryScoresMetricMin
+    from .analytics_query_scores_metric_min_field import AnalyticsQueryScoresMetricMinField
     from .analytics_query_scores_metric_pass_rate import AnalyticsQueryScoresMetricPassRate
     from .analytics_query_scores_order_by import AnalyticsQueryScoresOrderBy
     from .analytics_query_scores_order_by_by import AnalyticsQueryScoresOrderByBy
@@ -98,6 +144,7 @@ if typing.TYPE_CHECKING:
         AnalyticsQuerySessionsMetric_Max,
         AnalyticsQuerySessionsMetric_Median,
         AnalyticsQuerySessionsMetric_Min,
+        AnalyticsQuerySessionsMetric_P95,
         AnalyticsQuerySessionsMetric_Sum,
     )
     from .analytics_query_sessions_metric_avg import AnalyticsQuerySessionsMetricAvg
@@ -111,6 +158,8 @@ if typing.TYPE_CHECKING:
     from .analytics_query_sessions_metric_median_field import AnalyticsQuerySessionsMetricMedianField
     from .analytics_query_sessions_metric_min import AnalyticsQuerySessionsMetricMin
     from .analytics_query_sessions_metric_min_field import AnalyticsQuerySessionsMetricMinField
+    from .analytics_query_sessions_metric_p95 import AnalyticsQuerySessionsMetricP95
+    from .analytics_query_sessions_metric_p95field import AnalyticsQuerySessionsMetricP95Field
     from .analytics_query_sessions_metric_sum import AnalyticsQuerySessionsMetricSum
     from .analytics_query_sessions_metric_sum_field import AnalyticsQuerySessionsMetricSumField
     from .analytics_query_sessions_order_by import AnalyticsQuerySessionsOrderBy
@@ -130,6 +179,7 @@ if typing.TYPE_CHECKING:
         AnalyticsQuerySpansMetric_Max,
         AnalyticsQuerySpansMetric_Median,
         AnalyticsQuerySpansMetric_Min,
+        AnalyticsQuerySpansMetric_P95,
         AnalyticsQuerySpansMetric_Sum,
     )
     from .analytics_query_spans_metric_avg import AnalyticsQuerySpansMetricAvg
@@ -143,6 +193,8 @@ if typing.TYPE_CHECKING:
     from .analytics_query_spans_metric_median_field import AnalyticsQuerySpansMetricMedianField
     from .analytics_query_spans_metric_min import AnalyticsQuerySpansMetricMin
     from .analytics_query_spans_metric_min_field import AnalyticsQuerySpansMetricMinField
+    from .analytics_query_spans_metric_p95 import AnalyticsQuerySpansMetricP95
+    from .analytics_query_spans_metric_p95field import AnalyticsQuerySpansMetricP95Field
     from .analytics_query_spans_metric_sum import AnalyticsQuerySpansMetricSum
     from .analytics_query_spans_metric_sum_field import AnalyticsQuerySpansMetricSumField
     from .analytics_query_spans_order_by import AnalyticsQuerySpansOrderBy
@@ -162,6 +214,7 @@ if typing.TYPE_CHECKING:
         AnalyticsQueryTracesMetric_Max,
         AnalyticsQueryTracesMetric_Median,
         AnalyticsQueryTracesMetric_Min,
+        AnalyticsQueryTracesMetric_P95,
         AnalyticsQueryTracesMetric_Sum,
     )
     from .analytics_query_traces_metric_avg import AnalyticsQueryTracesMetricAvg
@@ -175,6 +228,8 @@ if typing.TYPE_CHECKING:
     from .analytics_query_traces_metric_median_field import AnalyticsQueryTracesMetricMedianField
     from .analytics_query_traces_metric_min import AnalyticsQueryTracesMetricMin
     from .analytics_query_traces_metric_min_field import AnalyticsQueryTracesMetricMinField
+    from .analytics_query_traces_metric_p95 import AnalyticsQueryTracesMetricP95
+    from .analytics_query_traces_metric_p95field import AnalyticsQueryTracesMetricP95Field
     from .analytics_query_traces_metric_sum import AnalyticsQueryTracesMetricSum
     from .analytics_query_traces_metric_sum_field import AnalyticsQueryTracesMetricSumField
     from .analytics_query_traces_order_by import AnalyticsQueryTracesOrderBy
@@ -187,8 +242,12 @@ if typing.TYPE_CHECKING:
     from .analytics_series_series_item import AnalyticsSeriesSeriesItem
     from .annotation import Annotation
     from .annotation_anchor import AnnotationAnchor
+    from .annotation_anchor_text_format import AnnotationAnchorTextFormat
     from .annotation_metadata import AnnotationMetadata
+    from .annotation_metadata_text_format import AnnotationMetadataTextFormat
+    from .annotation_source import AnnotationSource
     from .annotation_source_id import AnnotationSourceId
+    from .annotation_source_id_zero import AnnotationSourceIdZero
     from .api_key import ApiKey
     from .api_key_list import ApiKeyList
     from .api_key_list_item import ApiKeyListItem
@@ -201,11 +260,199 @@ if typing.TYPE_CHECKING:
         CreateMonitorBody_Threshold,
     )
     from .create_monitor_body_escalating import CreateMonitorBodyEscalating
+    from .create_monitor_body_escalating_condition import CreateMonitorBodyEscalatingCondition
+    from .create_monitor_body_escalating_condition_direction import CreateMonitorBodyEscalatingConditionDirection
+    from .create_monitor_body_escalating_condition_threshold import (
+        CreateMonitorBodyEscalatingConditionThreshold,
+        CreateMonitorBodyEscalatingConditionThreshold_Absolute,
+        CreateMonitorBodyEscalatingConditionThreshold_Expected,
+        CreateMonitorBodyEscalatingConditionThreshold_Multiplier,
+    )
+    from .create_monitor_body_escalating_condition_threshold_absolute import (
+        CreateMonitorBodyEscalatingConditionThresholdAbsolute,
+    )
+    from .create_monitor_body_escalating_condition_threshold_expected import (
+        CreateMonitorBodyEscalatingConditionThresholdExpected,
+    )
+    from .create_monitor_body_escalating_condition_threshold_multiplier import (
+        CreateMonitorBodyEscalatingConditionThresholdMultiplier,
+    )
+    from .create_monitor_body_escalating_condition_trigger import CreateMonitorBodyEscalatingConditionTrigger
+    from .create_monitor_body_escalating_condition_window import CreateMonitorBodyEscalatingConditionWindow
+    from .create_monitor_body_escalating_metric import (
+        CreateMonitorBodyEscalatingMetric,
+        CreateMonitorBodyEscalatingMetric_Avg,
+        CreateMonitorBodyEscalatingMetric_CacheHitRate,
+        CreateMonitorBodyEscalatingMetric_Count,
+        CreateMonitorBodyEscalatingMetric_ErrorRate,
+        CreateMonitorBodyEscalatingMetric_Max,
+        CreateMonitorBodyEscalatingMetric_Median,
+        CreateMonitorBodyEscalatingMetric_Min,
+        CreateMonitorBodyEscalatingMetric_Sum,
+    )
+    from .create_monitor_body_escalating_metric_avg import CreateMonitorBodyEscalatingMetricAvg
+    from .create_monitor_body_escalating_metric_avg_field import CreateMonitorBodyEscalatingMetricAvgField
+    from .create_monitor_body_escalating_metric_cache_hit_rate import CreateMonitorBodyEscalatingMetricCacheHitRate
+    from .create_monitor_body_escalating_metric_count import CreateMonitorBodyEscalatingMetricCount
+    from .create_monitor_body_escalating_metric_error_rate import CreateMonitorBodyEscalatingMetricErrorRate
+    from .create_monitor_body_escalating_metric_max import CreateMonitorBodyEscalatingMetricMax
+    from .create_monitor_body_escalating_metric_max_field import CreateMonitorBodyEscalatingMetricMaxField
+    from .create_monitor_body_escalating_metric_median import CreateMonitorBodyEscalatingMetricMedian
+    from .create_monitor_body_escalating_metric_median_field import CreateMonitorBodyEscalatingMetricMedianField
+    from .create_monitor_body_escalating_metric_min import CreateMonitorBodyEscalatingMetricMin
+    from .create_monitor_body_escalating_metric_min_field import CreateMonitorBodyEscalatingMetricMinField
+    from .create_monitor_body_escalating_metric_sum import CreateMonitorBodyEscalatingMetricSum
+    from .create_monitor_body_escalating_metric_sum_field import CreateMonitorBodyEscalatingMetricSumField
     from .create_monitor_body_escalating_severity import CreateMonitorBodyEscalatingSeverity
+    from .create_monitor_body_escalating_target import CreateMonitorBodyEscalatingTarget
+    from .create_monitor_body_escalating_target_kind import CreateMonitorBodyEscalatingTargetKind
+    from .create_monitor_body_escalating_target_metric import (
+        CreateMonitorBodyEscalatingTargetMetric,
+        CreateMonitorBodyEscalatingTargetMetric_Avg,
+        CreateMonitorBodyEscalatingTargetMetric_CacheHitRate,
+        CreateMonitorBodyEscalatingTargetMetric_Count,
+        CreateMonitorBodyEscalatingTargetMetric_ErrorRate,
+        CreateMonitorBodyEscalatingTargetMetric_Max,
+        CreateMonitorBodyEscalatingTargetMetric_Median,
+        CreateMonitorBodyEscalatingTargetMetric_Min,
+        CreateMonitorBodyEscalatingTargetMetric_Sum,
+    )
+    from .create_monitor_body_escalating_target_metric_avg import CreateMonitorBodyEscalatingTargetMetricAvg
+    from .create_monitor_body_escalating_target_metric_avg_field import CreateMonitorBodyEscalatingTargetMetricAvgField
+    from .create_monitor_body_escalating_target_metric_cache_hit_rate import (
+        CreateMonitorBodyEscalatingTargetMetricCacheHitRate,
+    )
+    from .create_monitor_body_escalating_target_metric_count import CreateMonitorBodyEscalatingTargetMetricCount
+    from .create_monitor_body_escalating_target_metric_error_rate import (
+        CreateMonitorBodyEscalatingTargetMetricErrorRate,
+    )
+    from .create_monitor_body_escalating_target_metric_max import CreateMonitorBodyEscalatingTargetMetricMax
+    from .create_monitor_body_escalating_target_metric_max_field import CreateMonitorBodyEscalatingTargetMetricMaxField
+    from .create_monitor_body_escalating_target_metric_median import CreateMonitorBodyEscalatingTargetMetricMedian
+    from .create_monitor_body_escalating_target_metric_median_field import (
+        CreateMonitorBodyEscalatingTargetMetricMedianField,
+    )
+    from .create_monitor_body_escalating_target_metric_min import CreateMonitorBodyEscalatingTargetMetricMin
+    from .create_monitor_body_escalating_target_metric_min_field import CreateMonitorBodyEscalatingTargetMetricMinField
+    from .create_monitor_body_escalating_target_metric_sum import CreateMonitorBodyEscalatingTargetMetricSum
+    from .create_monitor_body_escalating_target_metric_sum_field import CreateMonitorBodyEscalatingTargetMetricSumField
+    from .create_monitor_body_escalating_target_stream import CreateMonitorBodyEscalatingTargetStream
+    from .create_monitor_body_escalating_target_type import CreateMonitorBodyEscalatingTargetType
     from .create_monitor_body_match import CreateMonitorBodyMatch
+    from .create_monitor_body_match_metric import (
+        CreateMonitorBodyMatchMetric,
+        CreateMonitorBodyMatchMetric_Avg,
+        CreateMonitorBodyMatchMetric_CacheHitRate,
+        CreateMonitorBodyMatchMetric_Count,
+        CreateMonitorBodyMatchMetric_ErrorRate,
+        CreateMonitorBodyMatchMetric_Max,
+        CreateMonitorBodyMatchMetric_Median,
+        CreateMonitorBodyMatchMetric_Min,
+        CreateMonitorBodyMatchMetric_Sum,
+    )
+    from .create_monitor_body_match_metric_avg import CreateMonitorBodyMatchMetricAvg
+    from .create_monitor_body_match_metric_avg_field import CreateMonitorBodyMatchMetricAvgField
+    from .create_monitor_body_match_metric_cache_hit_rate import CreateMonitorBodyMatchMetricCacheHitRate
+    from .create_monitor_body_match_metric_count import CreateMonitorBodyMatchMetricCount
+    from .create_monitor_body_match_metric_error_rate import CreateMonitorBodyMatchMetricErrorRate
+    from .create_monitor_body_match_metric_max import CreateMonitorBodyMatchMetricMax
+    from .create_monitor_body_match_metric_max_field import CreateMonitorBodyMatchMetricMaxField
+    from .create_monitor_body_match_metric_median import CreateMonitorBodyMatchMetricMedian
+    from .create_monitor_body_match_metric_median_field import CreateMonitorBodyMatchMetricMedianField
+    from .create_monitor_body_match_metric_min import CreateMonitorBodyMatchMetricMin
+    from .create_monitor_body_match_metric_min_field import CreateMonitorBodyMatchMetricMinField
+    from .create_monitor_body_match_metric_sum import CreateMonitorBodyMatchMetricSum
+    from .create_monitor_body_match_metric_sum_field import CreateMonitorBodyMatchMetricSumField
     from .create_monitor_body_match_severity import CreateMonitorBodyMatchSeverity
+    from .create_monitor_body_match_target import CreateMonitorBodyMatchTarget
+    from .create_monitor_body_match_target_kind import CreateMonitorBodyMatchTargetKind
+    from .create_monitor_body_match_target_metric import (
+        CreateMonitorBodyMatchTargetMetric,
+        CreateMonitorBodyMatchTargetMetric_Avg,
+        CreateMonitorBodyMatchTargetMetric_CacheHitRate,
+        CreateMonitorBodyMatchTargetMetric_Count,
+        CreateMonitorBodyMatchTargetMetric_ErrorRate,
+        CreateMonitorBodyMatchTargetMetric_Max,
+        CreateMonitorBodyMatchTargetMetric_Median,
+        CreateMonitorBodyMatchTargetMetric_Min,
+        CreateMonitorBodyMatchTargetMetric_Sum,
+    )
+    from .create_monitor_body_match_target_metric_avg import CreateMonitorBodyMatchTargetMetricAvg
+    from .create_monitor_body_match_target_metric_avg_field import CreateMonitorBodyMatchTargetMetricAvgField
+    from .create_monitor_body_match_target_metric_cache_hit_rate import CreateMonitorBodyMatchTargetMetricCacheHitRate
+    from .create_monitor_body_match_target_metric_count import CreateMonitorBodyMatchTargetMetricCount
+    from .create_monitor_body_match_target_metric_error_rate import CreateMonitorBodyMatchTargetMetricErrorRate
+    from .create_monitor_body_match_target_metric_max import CreateMonitorBodyMatchTargetMetricMax
+    from .create_monitor_body_match_target_metric_max_field import CreateMonitorBodyMatchTargetMetricMaxField
+    from .create_monitor_body_match_target_metric_median import CreateMonitorBodyMatchTargetMetricMedian
+    from .create_monitor_body_match_target_metric_median_field import CreateMonitorBodyMatchTargetMetricMedianField
+    from .create_monitor_body_match_target_metric_min import CreateMonitorBodyMatchTargetMetricMin
+    from .create_monitor_body_match_target_metric_min_field import CreateMonitorBodyMatchTargetMetricMinField
+    from .create_monitor_body_match_target_metric_sum import CreateMonitorBodyMatchTargetMetricSum
+    from .create_monitor_body_match_target_metric_sum_field import CreateMonitorBodyMatchTargetMetricSumField
+    from .create_monitor_body_match_target_stream import CreateMonitorBodyMatchTargetStream
+    from .create_monitor_body_match_target_type import CreateMonitorBodyMatchTargetType
     from .create_monitor_body_threshold import CreateMonitorBodyThreshold
+    from .create_monitor_body_threshold_condition import CreateMonitorBodyThresholdCondition
+    from .create_monitor_body_threshold_condition_direction import CreateMonitorBodyThresholdConditionDirection
+    from .create_monitor_body_threshold_condition_trigger import CreateMonitorBodyThresholdConditionTrigger
+    from .create_monitor_body_threshold_metric import (
+        CreateMonitorBodyThresholdMetric,
+        CreateMonitorBodyThresholdMetric_Avg,
+        CreateMonitorBodyThresholdMetric_CacheHitRate,
+        CreateMonitorBodyThresholdMetric_Count,
+        CreateMonitorBodyThresholdMetric_ErrorRate,
+        CreateMonitorBodyThresholdMetric_Max,
+        CreateMonitorBodyThresholdMetric_Median,
+        CreateMonitorBodyThresholdMetric_Min,
+        CreateMonitorBodyThresholdMetric_Sum,
+    )
+    from .create_monitor_body_threshold_metric_avg import CreateMonitorBodyThresholdMetricAvg
+    from .create_monitor_body_threshold_metric_avg_field import CreateMonitorBodyThresholdMetricAvgField
+    from .create_monitor_body_threshold_metric_cache_hit_rate import CreateMonitorBodyThresholdMetricCacheHitRate
+    from .create_monitor_body_threshold_metric_count import CreateMonitorBodyThresholdMetricCount
+    from .create_monitor_body_threshold_metric_error_rate import CreateMonitorBodyThresholdMetricErrorRate
+    from .create_monitor_body_threshold_metric_max import CreateMonitorBodyThresholdMetricMax
+    from .create_monitor_body_threshold_metric_max_field import CreateMonitorBodyThresholdMetricMaxField
+    from .create_monitor_body_threshold_metric_median import CreateMonitorBodyThresholdMetricMedian
+    from .create_monitor_body_threshold_metric_median_field import CreateMonitorBodyThresholdMetricMedianField
+    from .create_monitor_body_threshold_metric_min import CreateMonitorBodyThresholdMetricMin
+    from .create_monitor_body_threshold_metric_min_field import CreateMonitorBodyThresholdMetricMinField
+    from .create_monitor_body_threshold_metric_sum import CreateMonitorBodyThresholdMetricSum
+    from .create_monitor_body_threshold_metric_sum_field import CreateMonitorBodyThresholdMetricSumField
     from .create_monitor_body_threshold_severity import CreateMonitorBodyThresholdSeverity
+    from .create_monitor_body_threshold_target import CreateMonitorBodyThresholdTarget
+    from .create_monitor_body_threshold_target_kind import CreateMonitorBodyThresholdTargetKind
+    from .create_monitor_body_threshold_target_metric import (
+        CreateMonitorBodyThresholdTargetMetric,
+        CreateMonitorBodyThresholdTargetMetric_Avg,
+        CreateMonitorBodyThresholdTargetMetric_CacheHitRate,
+        CreateMonitorBodyThresholdTargetMetric_Count,
+        CreateMonitorBodyThresholdTargetMetric_ErrorRate,
+        CreateMonitorBodyThresholdTargetMetric_Max,
+        CreateMonitorBodyThresholdTargetMetric_Median,
+        CreateMonitorBodyThresholdTargetMetric_Min,
+        CreateMonitorBodyThresholdTargetMetric_Sum,
+    )
+    from .create_monitor_body_threshold_target_metric_avg import CreateMonitorBodyThresholdTargetMetricAvg
+    from .create_monitor_body_threshold_target_metric_avg_field import CreateMonitorBodyThresholdTargetMetricAvgField
+    from .create_monitor_body_threshold_target_metric_cache_hit_rate import (
+        CreateMonitorBodyThresholdTargetMetricCacheHitRate,
+    )
+    from .create_monitor_body_threshold_target_metric_count import CreateMonitorBodyThresholdTargetMetricCount
+    from .create_monitor_body_threshold_target_metric_error_rate import CreateMonitorBodyThresholdTargetMetricErrorRate
+    from .create_monitor_body_threshold_target_metric_max import CreateMonitorBodyThresholdTargetMetricMax
+    from .create_monitor_body_threshold_target_metric_max_field import CreateMonitorBodyThresholdTargetMetricMaxField
+    from .create_monitor_body_threshold_target_metric_median import CreateMonitorBodyThresholdTargetMetricMedian
+    from .create_monitor_body_threshold_target_metric_median_field import (
+        CreateMonitorBodyThresholdTargetMetricMedianField,
+    )
+    from .create_monitor_body_threshold_target_metric_min import CreateMonitorBodyThresholdTargetMetricMin
+    from .create_monitor_body_threshold_target_metric_min_field import CreateMonitorBodyThresholdTargetMetricMinField
+    from .create_monitor_body_threshold_target_metric_sum import CreateMonitorBodyThresholdTargetMetricSum
+    from .create_monitor_body_threshold_target_metric_sum_field import CreateMonitorBodyThresholdTargetMetricSumField
+    from .create_monitor_body_threshold_target_stream import CreateMonitorBodyThresholdTargetStream
+    from .create_monitor_body_threshold_target_type import CreateMonitorBodyThresholdTargetType
     from .create_score_body import CreateScoreBody
     from .create_signal_response import CreateSignalResponse
     from .custom_score_response import CustomScoreResponse
@@ -231,20 +478,27 @@ if typing.TYPE_CHECKING:
     from .evaluation_score_metadata import EvaluationScoreMetadata
     from .evaluation_score_response import EvaluationScoreResponse
     from .export_dataset_rows_queued_response import ExportDatasetRowsQueuedResponse
+    from .export_dataset_rows_queued_response_status import ExportDatasetRowsQueuedResponseStatus
     from .export_dataset_rows_ready_response import ExportDatasetRowsReadyResponse
+    from .export_dataset_rows_ready_response_status import ExportDatasetRowsReadyResponseStatus
     from .export_dataset_rows_too_large_response import ExportDatasetRowsTooLargeResponse
+    from .export_dataset_rows_too_large_response_status import ExportDatasetRowsTooLargeResponseStatus
     from .export_signals_response import ExportSignalsResponse
+    from .export_signals_response_status import ExportSignalsResponseStatus
     from .export_traces_response import ExportTracesResponse
+    from .export_traces_response_status import ExportTracesResponseStatus
     from .filter_condition import FilterCondition
     from .filter_condition_op import FilterConditionOp
     from .filter_condition_value import FilterConditionValue
-    from .filter_condition_value_item import FilterConditionValueItem
+    from .filter_condition_value_three_item import FilterConditionValueThreeItem
     from .filter_set import FilterSet
     from .gen_ai_message import GenAiMessage
     from .gen_ai_span_message import GenAiSpanMessage
     from .gen_ai_span_system import GenAiSpanSystem
     from .gen_ai_system import GenAiSystem
     from .health_response import HealthResponse
+    from .health_response_service import HealthResponseService
+    from .health_response_status import HealthResponseStatus
     from .import_rows_from_traces_response import ImportRowsFromTracesResponse
     from .incident import Incident
     from .incident_condition import IncidentCondition
@@ -254,11 +508,36 @@ if typing.TYPE_CHECKING:
     from .insert_dataset_rows_response import InsertDatasetRowsResponse
     from .invited_member import InvitedMember
     from .invited_member_role import InvitedMemberRole
+    from .invited_member_status import InvitedMemberStatus
     from .list_incidents_response import ListIncidentsResponse
     from .member import Member, Member_Active, Member_Invited
     from .member_list import MemberList
     from .monitor import Monitor
     from .monitor_config import MonitorConfig
+    from .monitor_config_metric import (
+        MonitorConfigMetric,
+        MonitorConfigMetric_Avg,
+        MonitorConfigMetric_CacheHitRate,
+        MonitorConfigMetric_Count,
+        MonitorConfigMetric_ErrorRate,
+        MonitorConfigMetric_Max,
+        MonitorConfigMetric_Median,
+        MonitorConfigMetric_Min,
+        MonitorConfigMetric_Sum,
+    )
+    from .monitor_config_metric_avg import MonitorConfigMetricAvg
+    from .monitor_config_metric_avg_field import MonitorConfigMetricAvgField
+    from .monitor_config_metric_cache_hit_rate import MonitorConfigMetricCacheHitRate
+    from .monitor_config_metric_count import MonitorConfigMetricCount
+    from .monitor_config_metric_error_rate import MonitorConfigMetricErrorRate
+    from .monitor_config_metric_max import MonitorConfigMetricMax
+    from .monitor_config_metric_max_field import MonitorConfigMetricMaxField
+    from .monitor_config_metric_median import MonitorConfigMetricMedian
+    from .monitor_config_metric_median_field import MonitorConfigMetricMedianField
+    from .monitor_config_metric_min import MonitorConfigMetricMin
+    from .monitor_config_metric_min_field import MonitorConfigMetricMinField
+    from .monitor_config_metric_sum import MonitorConfigMetricSum
+    from .monitor_config_metric_sum_field import MonitorConfigMetricSumField
     from .monitor_filter_set import MonitorFilterSet
     from .monitor_incident import MonitorIncident
     from .monitor_incident_condition import MonitorIncidentCondition
@@ -295,6 +574,30 @@ if typing.TYPE_CHECKING:
     from .monitor_signal_response import MonitorSignalResponse
     from .monitor_target import MonitorTarget
     from .monitor_target_kind import MonitorTargetKind
+    from .monitor_target_metric import (
+        MonitorTargetMetric,
+        MonitorTargetMetric_Avg,
+        MonitorTargetMetric_CacheHitRate,
+        MonitorTargetMetric_Count,
+        MonitorTargetMetric_ErrorRate,
+        MonitorTargetMetric_Max,
+        MonitorTargetMetric_Median,
+        MonitorTargetMetric_Min,
+        MonitorTargetMetric_Sum,
+    )
+    from .monitor_target_metric_avg import MonitorTargetMetricAvg
+    from .monitor_target_metric_avg_field import MonitorTargetMetricAvgField
+    from .monitor_target_metric_cache_hit_rate import MonitorTargetMetricCacheHitRate
+    from .monitor_target_metric_count import MonitorTargetMetricCount
+    from .monitor_target_metric_error_rate import MonitorTargetMetricErrorRate
+    from .monitor_target_metric_max import MonitorTargetMetricMax
+    from .monitor_target_metric_max_field import MonitorTargetMetricMaxField
+    from .monitor_target_metric_median import MonitorTargetMetricMedian
+    from .monitor_target_metric_median_field import MonitorTargetMetricMedianField
+    from .monitor_target_metric_min import MonitorTargetMetricMin
+    from .monitor_target_metric_min_field import MonitorTargetMetricMinField
+    from .monitor_target_metric_sum import MonitorTargetMetricSum
+    from .monitor_target_metric_sum_field import MonitorTargetMetricSumField
     from .monitor_target_stream import MonitorTargetStream
     from .monitor_target_type import MonitorTargetType
     from .notifications_setting import NotificationsSetting
@@ -314,6 +617,7 @@ if typing.TYPE_CHECKING:
     from .project import Project
     from .project_settings import ProjectSettings
     from .project_user import ProjectUser
+    from .query_spans import QuerySpans
     from .recent_tool_call import RecentToolCall
     from .recent_tool_call_status_code import RecentToolCallStatusCode
     from .saved_search import SavedSearch
@@ -362,6 +666,8 @@ if typing.TYPE_CHECKING:
     from .tool_definition_detail import ToolDefinitionDetail
     from .tool_definition_detail_definition import ToolDefinitionDetailDefinition
     from .tool_detail_response import ToolDetailResponse
+    from .tool_detail_response_errors_usage import ToolDetailResponseErrorsUsage
+    from .tool_detail_response_usage import ToolDetailResponseUsage
     from .tool_error_breakdown_response import ToolErrorBreakdownResponse
     from .tool_error_breakdown_row import ToolErrorBreakdownRow
     from .tool_histogram_response import ToolHistogramResponse
@@ -411,6 +717,7 @@ _dynamic_imports: typing.Dict[str, str] = {
     "AccountUser": ".account_user",
     "ActiveMember": ".active_member",
     "ActiveMemberRole": ".active_member_role",
+    "ActiveMemberStatus": ".active_member_status",
     "AlertBaseline": ".alert_baseline",
     "AlertBaselineKind": ".alert_baseline_kind",
     "AlertCondition": ".alert_condition",
@@ -425,6 +732,14 @@ _dynamic_imports: typing.Dict[str, str] = {
     "AlertDuration_Minutes": ".alert_duration",
     "AlertEscalatingCondition": ".alert_escalating_condition",
     "AlertEscalatingConditionDirection": ".alert_escalating_condition_direction",
+    "AlertEscalatingConditionThreshold": ".alert_escalating_condition_threshold",
+    "AlertEscalatingConditionThresholdAbsolute": ".alert_escalating_condition_threshold_absolute",
+    "AlertEscalatingConditionThresholdExpected": ".alert_escalating_condition_threshold_expected",
+    "AlertEscalatingConditionThresholdMultiplier": ".alert_escalating_condition_threshold_multiplier",
+    "AlertEscalatingConditionThreshold_Absolute": ".alert_escalating_condition_threshold",
+    "AlertEscalatingConditionThreshold_Expected": ".alert_escalating_condition_threshold",
+    "AlertEscalatingConditionThreshold_Multiplier": ".alert_escalating_condition_threshold",
+    "AlertEscalatingConditionTrigger": ".alert_escalating_condition_trigger",
     "AlertEscalatingConditionWindow": ".alert_escalating_condition_window",
     "AlertMetricThreshold": ".alert_metric_threshold",
     "AlertMetricThresholdAbsolute": ".alert_metric_threshold_absolute",
@@ -435,15 +750,20 @@ _dynamic_imports: typing.Dict[str, str] = {
     "AlertMetricThreshold_Multiplier": ".alert_metric_threshold",
     "AlertThresholdCondition": ".alert_threshold_condition",
     "AlertThresholdConditionDirection": ".alert_threshold_condition_direction",
+    "AlertThresholdConditionTrigger": ".alert_threshold_condition_trigger",
     "AnalyticsQuery": ".analytics_query",
     "AnalyticsQueryBehaviors": ".analytics_query_behaviors",
     "AnalyticsQueryBehaviorsBreakdown": ".analytics_query_behaviors_breakdown",
     "AnalyticsQueryBehaviorsMetric": ".analytics_query_behaviors_metric",
     "AnalyticsQueryBehaviorsMetricAvg": ".analytics_query_behaviors_metric_avg",
+    "AnalyticsQueryBehaviorsMetricAvgField": ".analytics_query_behaviors_metric_avg_field",
     "AnalyticsQueryBehaviorsMetricCount": ".analytics_query_behaviors_metric_count",
     "AnalyticsQueryBehaviorsMetricMax": ".analytics_query_behaviors_metric_max",
+    "AnalyticsQueryBehaviorsMetricMaxField": ".analytics_query_behaviors_metric_max_field",
     "AnalyticsQueryBehaviorsMetricMedian": ".analytics_query_behaviors_metric_median",
+    "AnalyticsQueryBehaviorsMetricMedianField": ".analytics_query_behaviors_metric_median_field",
     "AnalyticsQueryBehaviorsMetricMin": ".analytics_query_behaviors_metric_min",
+    "AnalyticsQueryBehaviorsMetricMinField": ".analytics_query_behaviors_metric_min_field",
     "AnalyticsQueryBehaviorsMetric_Avg": ".analytics_query_behaviors_metric",
     "AnalyticsQueryBehaviorsMetric_Count": ".analytics_query_behaviors_metric",
     "AnalyticsQueryBehaviorsMetric_Max": ".analytics_query_behaviors_metric",
@@ -455,15 +775,42 @@ _dynamic_imports: typing.Dict[str, str] = {
     "AnalyticsQueryBehaviorsRange": ".analytics_query_behaviors_range",
     "AnalyticsQueryBehaviorsTimeBucket": ".analytics_query_behaviors_time_bucket",
     "AnalyticsQueryBehaviorsTimeBucketUnit": ".analytics_query_behaviors_time_bucket_unit",
+    "AnalyticsQueryMoments": ".analytics_query_moments",
+    "AnalyticsQueryMomentsBreakdown": ".analytics_query_moments_breakdown",
+    "AnalyticsQueryMomentsMetric": ".analytics_query_moments_metric",
+    "AnalyticsQueryMomentsMetricAvg": ".analytics_query_moments_metric_avg",
+    "AnalyticsQueryMomentsMetricAvgField": ".analytics_query_moments_metric_avg_field",
+    "AnalyticsQueryMomentsMetricCount": ".analytics_query_moments_metric_count",
+    "AnalyticsQueryMomentsMetricMax": ".analytics_query_moments_metric_max",
+    "AnalyticsQueryMomentsMetricMaxField": ".analytics_query_moments_metric_max_field",
+    "AnalyticsQueryMomentsMetricMedian": ".analytics_query_moments_metric_median",
+    "AnalyticsQueryMomentsMetricMedianField": ".analytics_query_moments_metric_median_field",
+    "AnalyticsQueryMomentsMetricMin": ".analytics_query_moments_metric_min",
+    "AnalyticsQueryMomentsMetricMinField": ".analytics_query_moments_metric_min_field",
+    "AnalyticsQueryMomentsMetric_Avg": ".analytics_query_moments_metric",
+    "AnalyticsQueryMomentsMetric_Count": ".analytics_query_moments_metric",
+    "AnalyticsQueryMomentsMetric_Max": ".analytics_query_moments_metric",
+    "AnalyticsQueryMomentsMetric_Median": ".analytics_query_moments_metric",
+    "AnalyticsQueryMomentsMetric_Min": ".analytics_query_moments_metric",
+    "AnalyticsQueryMomentsOrderBy": ".analytics_query_moments_order_by",
+    "AnalyticsQueryMomentsOrderByBy": ".analytics_query_moments_order_by_by",
+    "AnalyticsQueryMomentsOrderByDirection": ".analytics_query_moments_order_by_direction",
+    "AnalyticsQueryMomentsRange": ".analytics_query_moments_range",
+    "AnalyticsQueryMomentsTimeBucket": ".analytics_query_moments_time_bucket",
+    "AnalyticsQueryMomentsTimeBucketUnit": ".analytics_query_moments_time_bucket_unit",
     "AnalyticsQueryScores": ".analytics_query_scores",
     "AnalyticsQueryScoresBreakdown": ".analytics_query_scores_breakdown",
     "AnalyticsQueryScoresMetric": ".analytics_query_scores_metric",
     "AnalyticsQueryScoresMetricAvg": ".analytics_query_scores_metric_avg",
+    "AnalyticsQueryScoresMetricAvgField": ".analytics_query_scores_metric_avg_field",
     "AnalyticsQueryScoresMetricCount": ".analytics_query_scores_metric_count",
     "AnalyticsQueryScoresMetricErrorRate": ".analytics_query_scores_metric_error_rate",
     "AnalyticsQueryScoresMetricMax": ".analytics_query_scores_metric_max",
+    "AnalyticsQueryScoresMetricMaxField": ".analytics_query_scores_metric_max_field",
     "AnalyticsQueryScoresMetricMedian": ".analytics_query_scores_metric_median",
+    "AnalyticsQueryScoresMetricMedianField": ".analytics_query_scores_metric_median_field",
     "AnalyticsQueryScoresMetricMin": ".analytics_query_scores_metric_min",
+    "AnalyticsQueryScoresMetricMinField": ".analytics_query_scores_metric_min_field",
     "AnalyticsQueryScoresMetricPassRate": ".analytics_query_scores_metric_pass_rate",
     "AnalyticsQueryScoresMetric_Avg": ".analytics_query_scores_metric",
     "AnalyticsQueryScoresMetric_Count": ".analytics_query_scores_metric",
@@ -492,6 +839,8 @@ _dynamic_imports: typing.Dict[str, str] = {
     "AnalyticsQuerySessionsMetricMedianField": ".analytics_query_sessions_metric_median_field",
     "AnalyticsQuerySessionsMetricMin": ".analytics_query_sessions_metric_min",
     "AnalyticsQuerySessionsMetricMinField": ".analytics_query_sessions_metric_min_field",
+    "AnalyticsQuerySessionsMetricP95": ".analytics_query_sessions_metric_p95",
+    "AnalyticsQuerySessionsMetricP95Field": ".analytics_query_sessions_metric_p95field",
     "AnalyticsQuerySessionsMetricSum": ".analytics_query_sessions_metric_sum",
     "AnalyticsQuerySessionsMetricSumField": ".analytics_query_sessions_metric_sum_field",
     "AnalyticsQuerySessionsMetric_Avg": ".analytics_query_sessions_metric",
@@ -501,6 +850,7 @@ _dynamic_imports: typing.Dict[str, str] = {
     "AnalyticsQuerySessionsMetric_Max": ".analytics_query_sessions_metric",
     "AnalyticsQuerySessionsMetric_Median": ".analytics_query_sessions_metric",
     "AnalyticsQuerySessionsMetric_Min": ".analytics_query_sessions_metric",
+    "AnalyticsQuerySessionsMetric_P95": ".analytics_query_sessions_metric",
     "AnalyticsQuerySessionsMetric_Sum": ".analytics_query_sessions_metric",
     "AnalyticsQuerySessionsOrderBy": ".analytics_query_sessions_order_by",
     "AnalyticsQuerySessionsOrderByBy": ".analytics_query_sessions_order_by_by",
@@ -522,6 +872,8 @@ _dynamic_imports: typing.Dict[str, str] = {
     "AnalyticsQuerySpansMetricMedianField": ".analytics_query_spans_metric_median_field",
     "AnalyticsQuerySpansMetricMin": ".analytics_query_spans_metric_min",
     "AnalyticsQuerySpansMetricMinField": ".analytics_query_spans_metric_min_field",
+    "AnalyticsQuerySpansMetricP95": ".analytics_query_spans_metric_p95",
+    "AnalyticsQuerySpansMetricP95Field": ".analytics_query_spans_metric_p95field",
     "AnalyticsQuerySpansMetricSum": ".analytics_query_spans_metric_sum",
     "AnalyticsQuerySpansMetricSumField": ".analytics_query_spans_metric_sum_field",
     "AnalyticsQuerySpansMetric_Avg": ".analytics_query_spans_metric",
@@ -531,6 +883,7 @@ _dynamic_imports: typing.Dict[str, str] = {
     "AnalyticsQuerySpansMetric_Max": ".analytics_query_spans_metric",
     "AnalyticsQuerySpansMetric_Median": ".analytics_query_spans_metric",
     "AnalyticsQuerySpansMetric_Min": ".analytics_query_spans_metric",
+    "AnalyticsQuerySpansMetric_P95": ".analytics_query_spans_metric",
     "AnalyticsQuerySpansMetric_Sum": ".analytics_query_spans_metric",
     "AnalyticsQuerySpansOrderBy": ".analytics_query_spans_order_by",
     "AnalyticsQuerySpansOrderByBy": ".analytics_query_spans_order_by_by",
@@ -552,6 +905,8 @@ _dynamic_imports: typing.Dict[str, str] = {
     "AnalyticsQueryTracesMetricMedianField": ".analytics_query_traces_metric_median_field",
     "AnalyticsQueryTracesMetricMin": ".analytics_query_traces_metric_min",
     "AnalyticsQueryTracesMetricMinField": ".analytics_query_traces_metric_min_field",
+    "AnalyticsQueryTracesMetricP95": ".analytics_query_traces_metric_p95",
+    "AnalyticsQueryTracesMetricP95Field": ".analytics_query_traces_metric_p95field",
     "AnalyticsQueryTracesMetricSum": ".analytics_query_traces_metric_sum",
     "AnalyticsQueryTracesMetricSumField": ".analytics_query_traces_metric_sum_field",
     "AnalyticsQueryTracesMetric_Avg": ".analytics_query_traces_metric",
@@ -561,6 +916,7 @@ _dynamic_imports: typing.Dict[str, str] = {
     "AnalyticsQueryTracesMetric_Max": ".analytics_query_traces_metric",
     "AnalyticsQueryTracesMetric_Median": ".analytics_query_traces_metric",
     "AnalyticsQueryTracesMetric_Min": ".analytics_query_traces_metric",
+    "AnalyticsQueryTracesMetric_P95": ".analytics_query_traces_metric",
     "AnalyticsQueryTracesMetric_Sum": ".analytics_query_traces_metric",
     "AnalyticsQueryTracesOrderBy": ".analytics_query_traces_order_by",
     "AnalyticsQueryTracesOrderByBy": ".analytics_query_traces_order_by_by",
@@ -569,6 +925,7 @@ _dynamic_imports: typing.Dict[str, str] = {
     "AnalyticsQueryTracesTimeBucket": ".analytics_query_traces_time_bucket",
     "AnalyticsQueryTracesTimeBucketUnit": ".analytics_query_traces_time_bucket_unit",
     "AnalyticsQuery_Behaviors": ".analytics_query",
+    "AnalyticsQuery_Moments": ".analytics_query",
     "AnalyticsQuery_Scores": ".analytics_query",
     "AnalyticsQuery_Sessions": ".analytics_query",
     "AnalyticsQuery_Spans": ".analytics_query",
@@ -577,8 +934,12 @@ _dynamic_imports: typing.Dict[str, str] = {
     "AnalyticsSeriesSeriesItem": ".analytics_series_series_item",
     "Annotation": ".annotation",
     "AnnotationAnchor": ".annotation_anchor",
+    "AnnotationAnchorTextFormat": ".annotation_anchor_text_format",
     "AnnotationMetadata": ".annotation_metadata",
+    "AnnotationMetadataTextFormat": ".annotation_metadata_text_format",
+    "AnnotationSource": ".annotation_source",
     "AnnotationSourceId": ".annotation_source_id",
+    "AnnotationSourceIdZero": ".annotation_source_id_zero",
     "ApiKey": ".api_key",
     "ApiKeyList": ".api_key_list",
     "ApiKeyListItem": ".api_key_list_item",
@@ -586,11 +947,169 @@ _dynamic_imports: typing.Dict[str, str] = {
     "CreateEvaluationScoreBody": ".create_evaluation_score_body",
     "CreateMonitorBody": ".create_monitor_body",
     "CreateMonitorBodyEscalating": ".create_monitor_body_escalating",
+    "CreateMonitorBodyEscalatingCondition": ".create_monitor_body_escalating_condition",
+    "CreateMonitorBodyEscalatingConditionDirection": ".create_monitor_body_escalating_condition_direction",
+    "CreateMonitorBodyEscalatingConditionThreshold": ".create_monitor_body_escalating_condition_threshold",
+    "CreateMonitorBodyEscalatingConditionThresholdAbsolute": ".create_monitor_body_escalating_condition_threshold_absolute",
+    "CreateMonitorBodyEscalatingConditionThresholdExpected": ".create_monitor_body_escalating_condition_threshold_expected",
+    "CreateMonitorBodyEscalatingConditionThresholdMultiplier": ".create_monitor_body_escalating_condition_threshold_multiplier",
+    "CreateMonitorBodyEscalatingConditionThreshold_Absolute": ".create_monitor_body_escalating_condition_threshold",
+    "CreateMonitorBodyEscalatingConditionThreshold_Expected": ".create_monitor_body_escalating_condition_threshold",
+    "CreateMonitorBodyEscalatingConditionThreshold_Multiplier": ".create_monitor_body_escalating_condition_threshold",
+    "CreateMonitorBodyEscalatingConditionTrigger": ".create_monitor_body_escalating_condition_trigger",
+    "CreateMonitorBodyEscalatingConditionWindow": ".create_monitor_body_escalating_condition_window",
+    "CreateMonitorBodyEscalatingMetric": ".create_monitor_body_escalating_metric",
+    "CreateMonitorBodyEscalatingMetricAvg": ".create_monitor_body_escalating_metric_avg",
+    "CreateMonitorBodyEscalatingMetricAvgField": ".create_monitor_body_escalating_metric_avg_field",
+    "CreateMonitorBodyEscalatingMetricCacheHitRate": ".create_monitor_body_escalating_metric_cache_hit_rate",
+    "CreateMonitorBodyEscalatingMetricCount": ".create_monitor_body_escalating_metric_count",
+    "CreateMonitorBodyEscalatingMetricErrorRate": ".create_monitor_body_escalating_metric_error_rate",
+    "CreateMonitorBodyEscalatingMetricMax": ".create_monitor_body_escalating_metric_max",
+    "CreateMonitorBodyEscalatingMetricMaxField": ".create_monitor_body_escalating_metric_max_field",
+    "CreateMonitorBodyEscalatingMetricMedian": ".create_monitor_body_escalating_metric_median",
+    "CreateMonitorBodyEscalatingMetricMedianField": ".create_monitor_body_escalating_metric_median_field",
+    "CreateMonitorBodyEscalatingMetricMin": ".create_monitor_body_escalating_metric_min",
+    "CreateMonitorBodyEscalatingMetricMinField": ".create_monitor_body_escalating_metric_min_field",
+    "CreateMonitorBodyEscalatingMetricSum": ".create_monitor_body_escalating_metric_sum",
+    "CreateMonitorBodyEscalatingMetricSumField": ".create_monitor_body_escalating_metric_sum_field",
+    "CreateMonitorBodyEscalatingMetric_Avg": ".create_monitor_body_escalating_metric",
+    "CreateMonitorBodyEscalatingMetric_CacheHitRate": ".create_monitor_body_escalating_metric",
+    "CreateMonitorBodyEscalatingMetric_Count": ".create_monitor_body_escalating_metric",
+    "CreateMonitorBodyEscalatingMetric_ErrorRate": ".create_monitor_body_escalating_metric",
+    "CreateMonitorBodyEscalatingMetric_Max": ".create_monitor_body_escalating_metric",
+    "CreateMonitorBodyEscalatingMetric_Median": ".create_monitor_body_escalating_metric",
+    "CreateMonitorBodyEscalatingMetric_Min": ".create_monitor_body_escalating_metric",
+    "CreateMonitorBodyEscalatingMetric_Sum": ".create_monitor_body_escalating_metric",
     "CreateMonitorBodyEscalatingSeverity": ".create_monitor_body_escalating_severity",
+    "CreateMonitorBodyEscalatingTarget": ".create_monitor_body_escalating_target",
+    "CreateMonitorBodyEscalatingTargetKind": ".create_monitor_body_escalating_target_kind",
+    "CreateMonitorBodyEscalatingTargetMetric": ".create_monitor_body_escalating_target_metric",
+    "CreateMonitorBodyEscalatingTargetMetricAvg": ".create_monitor_body_escalating_target_metric_avg",
+    "CreateMonitorBodyEscalatingTargetMetricAvgField": ".create_monitor_body_escalating_target_metric_avg_field",
+    "CreateMonitorBodyEscalatingTargetMetricCacheHitRate": ".create_monitor_body_escalating_target_metric_cache_hit_rate",
+    "CreateMonitorBodyEscalatingTargetMetricCount": ".create_monitor_body_escalating_target_metric_count",
+    "CreateMonitorBodyEscalatingTargetMetricErrorRate": ".create_monitor_body_escalating_target_metric_error_rate",
+    "CreateMonitorBodyEscalatingTargetMetricMax": ".create_monitor_body_escalating_target_metric_max",
+    "CreateMonitorBodyEscalatingTargetMetricMaxField": ".create_monitor_body_escalating_target_metric_max_field",
+    "CreateMonitorBodyEscalatingTargetMetricMedian": ".create_monitor_body_escalating_target_metric_median",
+    "CreateMonitorBodyEscalatingTargetMetricMedianField": ".create_monitor_body_escalating_target_metric_median_field",
+    "CreateMonitorBodyEscalatingTargetMetricMin": ".create_monitor_body_escalating_target_metric_min",
+    "CreateMonitorBodyEscalatingTargetMetricMinField": ".create_monitor_body_escalating_target_metric_min_field",
+    "CreateMonitorBodyEscalatingTargetMetricSum": ".create_monitor_body_escalating_target_metric_sum",
+    "CreateMonitorBodyEscalatingTargetMetricSumField": ".create_monitor_body_escalating_target_metric_sum_field",
+    "CreateMonitorBodyEscalatingTargetMetric_Avg": ".create_monitor_body_escalating_target_metric",
+    "CreateMonitorBodyEscalatingTargetMetric_CacheHitRate": ".create_monitor_body_escalating_target_metric",
+    "CreateMonitorBodyEscalatingTargetMetric_Count": ".create_monitor_body_escalating_target_metric",
+    "CreateMonitorBodyEscalatingTargetMetric_ErrorRate": ".create_monitor_body_escalating_target_metric",
+    "CreateMonitorBodyEscalatingTargetMetric_Max": ".create_monitor_body_escalating_target_metric",
+    "CreateMonitorBodyEscalatingTargetMetric_Median": ".create_monitor_body_escalating_target_metric",
+    "CreateMonitorBodyEscalatingTargetMetric_Min": ".create_monitor_body_escalating_target_metric",
+    "CreateMonitorBodyEscalatingTargetMetric_Sum": ".create_monitor_body_escalating_target_metric",
+    "CreateMonitorBodyEscalatingTargetStream": ".create_monitor_body_escalating_target_stream",
+    "CreateMonitorBodyEscalatingTargetType": ".create_monitor_body_escalating_target_type",
     "CreateMonitorBodyMatch": ".create_monitor_body_match",
+    "CreateMonitorBodyMatchMetric": ".create_monitor_body_match_metric",
+    "CreateMonitorBodyMatchMetricAvg": ".create_monitor_body_match_metric_avg",
+    "CreateMonitorBodyMatchMetricAvgField": ".create_monitor_body_match_metric_avg_field",
+    "CreateMonitorBodyMatchMetricCacheHitRate": ".create_monitor_body_match_metric_cache_hit_rate",
+    "CreateMonitorBodyMatchMetricCount": ".create_monitor_body_match_metric_count",
+    "CreateMonitorBodyMatchMetricErrorRate": ".create_monitor_body_match_metric_error_rate",
+    "CreateMonitorBodyMatchMetricMax": ".create_monitor_body_match_metric_max",
+    "CreateMonitorBodyMatchMetricMaxField": ".create_monitor_body_match_metric_max_field",
+    "CreateMonitorBodyMatchMetricMedian": ".create_monitor_body_match_metric_median",
+    "CreateMonitorBodyMatchMetricMedianField": ".create_monitor_body_match_metric_median_field",
+    "CreateMonitorBodyMatchMetricMin": ".create_monitor_body_match_metric_min",
+    "CreateMonitorBodyMatchMetricMinField": ".create_monitor_body_match_metric_min_field",
+    "CreateMonitorBodyMatchMetricSum": ".create_monitor_body_match_metric_sum",
+    "CreateMonitorBodyMatchMetricSumField": ".create_monitor_body_match_metric_sum_field",
+    "CreateMonitorBodyMatchMetric_Avg": ".create_monitor_body_match_metric",
+    "CreateMonitorBodyMatchMetric_CacheHitRate": ".create_monitor_body_match_metric",
+    "CreateMonitorBodyMatchMetric_Count": ".create_monitor_body_match_metric",
+    "CreateMonitorBodyMatchMetric_ErrorRate": ".create_monitor_body_match_metric",
+    "CreateMonitorBodyMatchMetric_Max": ".create_monitor_body_match_metric",
+    "CreateMonitorBodyMatchMetric_Median": ".create_monitor_body_match_metric",
+    "CreateMonitorBodyMatchMetric_Min": ".create_monitor_body_match_metric",
+    "CreateMonitorBodyMatchMetric_Sum": ".create_monitor_body_match_metric",
     "CreateMonitorBodyMatchSeverity": ".create_monitor_body_match_severity",
+    "CreateMonitorBodyMatchTarget": ".create_monitor_body_match_target",
+    "CreateMonitorBodyMatchTargetKind": ".create_monitor_body_match_target_kind",
+    "CreateMonitorBodyMatchTargetMetric": ".create_monitor_body_match_target_metric",
+    "CreateMonitorBodyMatchTargetMetricAvg": ".create_monitor_body_match_target_metric_avg",
+    "CreateMonitorBodyMatchTargetMetricAvgField": ".create_monitor_body_match_target_metric_avg_field",
+    "CreateMonitorBodyMatchTargetMetricCacheHitRate": ".create_monitor_body_match_target_metric_cache_hit_rate",
+    "CreateMonitorBodyMatchTargetMetricCount": ".create_monitor_body_match_target_metric_count",
+    "CreateMonitorBodyMatchTargetMetricErrorRate": ".create_monitor_body_match_target_metric_error_rate",
+    "CreateMonitorBodyMatchTargetMetricMax": ".create_monitor_body_match_target_metric_max",
+    "CreateMonitorBodyMatchTargetMetricMaxField": ".create_monitor_body_match_target_metric_max_field",
+    "CreateMonitorBodyMatchTargetMetricMedian": ".create_monitor_body_match_target_metric_median",
+    "CreateMonitorBodyMatchTargetMetricMedianField": ".create_monitor_body_match_target_metric_median_field",
+    "CreateMonitorBodyMatchTargetMetricMin": ".create_monitor_body_match_target_metric_min",
+    "CreateMonitorBodyMatchTargetMetricMinField": ".create_monitor_body_match_target_metric_min_field",
+    "CreateMonitorBodyMatchTargetMetricSum": ".create_monitor_body_match_target_metric_sum",
+    "CreateMonitorBodyMatchTargetMetricSumField": ".create_monitor_body_match_target_metric_sum_field",
+    "CreateMonitorBodyMatchTargetMetric_Avg": ".create_monitor_body_match_target_metric",
+    "CreateMonitorBodyMatchTargetMetric_CacheHitRate": ".create_monitor_body_match_target_metric",
+    "CreateMonitorBodyMatchTargetMetric_Count": ".create_monitor_body_match_target_metric",
+    "CreateMonitorBodyMatchTargetMetric_ErrorRate": ".create_monitor_body_match_target_metric",
+    "CreateMonitorBodyMatchTargetMetric_Max": ".create_monitor_body_match_target_metric",
+    "CreateMonitorBodyMatchTargetMetric_Median": ".create_monitor_body_match_target_metric",
+    "CreateMonitorBodyMatchTargetMetric_Min": ".create_monitor_body_match_target_metric",
+    "CreateMonitorBodyMatchTargetMetric_Sum": ".create_monitor_body_match_target_metric",
+    "CreateMonitorBodyMatchTargetStream": ".create_monitor_body_match_target_stream",
+    "CreateMonitorBodyMatchTargetType": ".create_monitor_body_match_target_type",
     "CreateMonitorBodyThreshold": ".create_monitor_body_threshold",
+    "CreateMonitorBodyThresholdCondition": ".create_monitor_body_threshold_condition",
+    "CreateMonitorBodyThresholdConditionDirection": ".create_monitor_body_threshold_condition_direction",
+    "CreateMonitorBodyThresholdConditionTrigger": ".create_monitor_body_threshold_condition_trigger",
+    "CreateMonitorBodyThresholdMetric": ".create_monitor_body_threshold_metric",
+    "CreateMonitorBodyThresholdMetricAvg": ".create_monitor_body_threshold_metric_avg",
+    "CreateMonitorBodyThresholdMetricAvgField": ".create_monitor_body_threshold_metric_avg_field",
+    "CreateMonitorBodyThresholdMetricCacheHitRate": ".create_monitor_body_threshold_metric_cache_hit_rate",
+    "CreateMonitorBodyThresholdMetricCount": ".create_monitor_body_threshold_metric_count",
+    "CreateMonitorBodyThresholdMetricErrorRate": ".create_monitor_body_threshold_metric_error_rate",
+    "CreateMonitorBodyThresholdMetricMax": ".create_monitor_body_threshold_metric_max",
+    "CreateMonitorBodyThresholdMetricMaxField": ".create_monitor_body_threshold_metric_max_field",
+    "CreateMonitorBodyThresholdMetricMedian": ".create_monitor_body_threshold_metric_median",
+    "CreateMonitorBodyThresholdMetricMedianField": ".create_monitor_body_threshold_metric_median_field",
+    "CreateMonitorBodyThresholdMetricMin": ".create_monitor_body_threshold_metric_min",
+    "CreateMonitorBodyThresholdMetricMinField": ".create_monitor_body_threshold_metric_min_field",
+    "CreateMonitorBodyThresholdMetricSum": ".create_monitor_body_threshold_metric_sum",
+    "CreateMonitorBodyThresholdMetricSumField": ".create_monitor_body_threshold_metric_sum_field",
+    "CreateMonitorBodyThresholdMetric_Avg": ".create_monitor_body_threshold_metric",
+    "CreateMonitorBodyThresholdMetric_CacheHitRate": ".create_monitor_body_threshold_metric",
+    "CreateMonitorBodyThresholdMetric_Count": ".create_monitor_body_threshold_metric",
+    "CreateMonitorBodyThresholdMetric_ErrorRate": ".create_monitor_body_threshold_metric",
+    "CreateMonitorBodyThresholdMetric_Max": ".create_monitor_body_threshold_metric",
+    "CreateMonitorBodyThresholdMetric_Median": ".create_monitor_body_threshold_metric",
+    "CreateMonitorBodyThresholdMetric_Min": ".create_monitor_body_threshold_metric",
+    "CreateMonitorBodyThresholdMetric_Sum": ".create_monitor_body_threshold_metric",
     "CreateMonitorBodyThresholdSeverity": ".create_monitor_body_threshold_severity",
+    "CreateMonitorBodyThresholdTarget": ".create_monitor_body_threshold_target",
+    "CreateMonitorBodyThresholdTargetKind": ".create_monitor_body_threshold_target_kind",
+    "CreateMonitorBodyThresholdTargetMetric": ".create_monitor_body_threshold_target_metric",
+    "CreateMonitorBodyThresholdTargetMetricAvg": ".create_monitor_body_threshold_target_metric_avg",
+    "CreateMonitorBodyThresholdTargetMetricAvgField": ".create_monitor_body_threshold_target_metric_avg_field",
+    "CreateMonitorBodyThresholdTargetMetricCacheHitRate": ".create_monitor_body_threshold_target_metric_cache_hit_rate",
+    "CreateMonitorBodyThresholdTargetMetricCount": ".create_monitor_body_threshold_target_metric_count",
+    "CreateMonitorBodyThresholdTargetMetricErrorRate": ".create_monitor_body_threshold_target_metric_error_rate",
+    "CreateMonitorBodyThresholdTargetMetricMax": ".create_monitor_body_threshold_target_metric_max",
+    "CreateMonitorBodyThresholdTargetMetricMaxField": ".create_monitor_body_threshold_target_metric_max_field",
+    "CreateMonitorBodyThresholdTargetMetricMedian": ".create_monitor_body_threshold_target_metric_median",
+    "CreateMonitorBodyThresholdTargetMetricMedianField": ".create_monitor_body_threshold_target_metric_median_field",
+    "CreateMonitorBodyThresholdTargetMetricMin": ".create_monitor_body_threshold_target_metric_min",
+    "CreateMonitorBodyThresholdTargetMetricMinField": ".create_monitor_body_threshold_target_metric_min_field",
+    "CreateMonitorBodyThresholdTargetMetricSum": ".create_monitor_body_threshold_target_metric_sum",
+    "CreateMonitorBodyThresholdTargetMetricSumField": ".create_monitor_body_threshold_target_metric_sum_field",
+    "CreateMonitorBodyThresholdTargetMetric_Avg": ".create_monitor_body_threshold_target_metric",
+    "CreateMonitorBodyThresholdTargetMetric_CacheHitRate": ".create_monitor_body_threshold_target_metric",
+    "CreateMonitorBodyThresholdTargetMetric_Count": ".create_monitor_body_threshold_target_metric",
+    "CreateMonitorBodyThresholdTargetMetric_ErrorRate": ".create_monitor_body_threshold_target_metric",
+    "CreateMonitorBodyThresholdTargetMetric_Max": ".create_monitor_body_threshold_target_metric",
+    "CreateMonitorBodyThresholdTargetMetric_Median": ".create_monitor_body_threshold_target_metric",
+    "CreateMonitorBodyThresholdTargetMetric_Min": ".create_monitor_body_threshold_target_metric",
+    "CreateMonitorBodyThresholdTargetMetric_Sum": ".create_monitor_body_threshold_target_metric",
+    "CreateMonitorBodyThresholdTargetStream": ".create_monitor_body_threshold_target_stream",
+    "CreateMonitorBodyThresholdTargetType": ".create_monitor_body_threshold_target_type",
     "CreateMonitorBody_Escalating": ".create_monitor_body",
     "CreateMonitorBody_Match": ".create_monitor_body",
     "CreateMonitorBody_Threshold": ".create_monitor_body",
@@ -621,20 +1140,27 @@ _dynamic_imports: typing.Dict[str, str] = {
     "EvaluationScoreMetadata": ".evaluation_score_metadata",
     "EvaluationScoreResponse": ".evaluation_score_response",
     "ExportDatasetRowsQueuedResponse": ".export_dataset_rows_queued_response",
+    "ExportDatasetRowsQueuedResponseStatus": ".export_dataset_rows_queued_response_status",
     "ExportDatasetRowsReadyResponse": ".export_dataset_rows_ready_response",
+    "ExportDatasetRowsReadyResponseStatus": ".export_dataset_rows_ready_response_status",
     "ExportDatasetRowsTooLargeResponse": ".export_dataset_rows_too_large_response",
+    "ExportDatasetRowsTooLargeResponseStatus": ".export_dataset_rows_too_large_response_status",
     "ExportSignalsResponse": ".export_signals_response",
+    "ExportSignalsResponseStatus": ".export_signals_response_status",
     "ExportTracesResponse": ".export_traces_response",
+    "ExportTracesResponseStatus": ".export_traces_response_status",
     "FilterCondition": ".filter_condition",
     "FilterConditionOp": ".filter_condition_op",
     "FilterConditionValue": ".filter_condition_value",
-    "FilterConditionValueItem": ".filter_condition_value_item",
+    "FilterConditionValueThreeItem": ".filter_condition_value_three_item",
     "FilterSet": ".filter_set",
     "GenAiMessage": ".gen_ai_message",
     "GenAiSpanMessage": ".gen_ai_span_message",
     "GenAiSpanSystem": ".gen_ai_span_system",
     "GenAiSystem": ".gen_ai_system",
     "HealthResponse": ".health_response",
+    "HealthResponseService": ".health_response_service",
+    "HealthResponseStatus": ".health_response_status",
     "ImportRowsFromTracesResponse": ".import_rows_from_traces_response",
     "Incident": ".incident",
     "IncidentCondition": ".incident_condition",
@@ -644,6 +1170,7 @@ _dynamic_imports: typing.Dict[str, str] = {
     "InsertDatasetRowsResponse": ".insert_dataset_rows_response",
     "InvitedMember": ".invited_member",
     "InvitedMemberRole": ".invited_member_role",
+    "InvitedMemberStatus": ".invited_member_status",
     "ListIncidentsResponse": ".list_incidents_response",
     "Member": ".member",
     "MemberList": ".member_list",
@@ -651,6 +1178,28 @@ _dynamic_imports: typing.Dict[str, str] = {
     "Member_Invited": ".member",
     "Monitor": ".monitor",
     "MonitorConfig": ".monitor_config",
+    "MonitorConfigMetric": ".monitor_config_metric",
+    "MonitorConfigMetricAvg": ".monitor_config_metric_avg",
+    "MonitorConfigMetricAvgField": ".monitor_config_metric_avg_field",
+    "MonitorConfigMetricCacheHitRate": ".monitor_config_metric_cache_hit_rate",
+    "MonitorConfigMetricCount": ".monitor_config_metric_count",
+    "MonitorConfigMetricErrorRate": ".monitor_config_metric_error_rate",
+    "MonitorConfigMetricMax": ".monitor_config_metric_max",
+    "MonitorConfigMetricMaxField": ".monitor_config_metric_max_field",
+    "MonitorConfigMetricMedian": ".monitor_config_metric_median",
+    "MonitorConfigMetricMedianField": ".monitor_config_metric_median_field",
+    "MonitorConfigMetricMin": ".monitor_config_metric_min",
+    "MonitorConfigMetricMinField": ".monitor_config_metric_min_field",
+    "MonitorConfigMetricSum": ".monitor_config_metric_sum",
+    "MonitorConfigMetricSumField": ".monitor_config_metric_sum_field",
+    "MonitorConfigMetric_Avg": ".monitor_config_metric",
+    "MonitorConfigMetric_CacheHitRate": ".monitor_config_metric",
+    "MonitorConfigMetric_Count": ".monitor_config_metric",
+    "MonitorConfigMetric_ErrorRate": ".monitor_config_metric",
+    "MonitorConfigMetric_Max": ".monitor_config_metric",
+    "MonitorConfigMetric_Median": ".monitor_config_metric",
+    "MonitorConfigMetric_Min": ".monitor_config_metric",
+    "MonitorConfigMetric_Sum": ".monitor_config_metric",
     "MonitorFilterSet": ".monitor_filter_set",
     "MonitorIncident": ".monitor_incident",
     "MonitorIncidentCondition": ".monitor_incident_condition",
@@ -685,6 +1234,28 @@ _dynamic_imports: typing.Dict[str, str] = {
     "MonitorSignalResponse": ".monitor_signal_response",
     "MonitorTarget": ".monitor_target",
     "MonitorTargetKind": ".monitor_target_kind",
+    "MonitorTargetMetric": ".monitor_target_metric",
+    "MonitorTargetMetricAvg": ".monitor_target_metric_avg",
+    "MonitorTargetMetricAvgField": ".monitor_target_metric_avg_field",
+    "MonitorTargetMetricCacheHitRate": ".monitor_target_metric_cache_hit_rate",
+    "MonitorTargetMetricCount": ".monitor_target_metric_count",
+    "MonitorTargetMetricErrorRate": ".monitor_target_metric_error_rate",
+    "MonitorTargetMetricMax": ".monitor_target_metric_max",
+    "MonitorTargetMetricMaxField": ".monitor_target_metric_max_field",
+    "MonitorTargetMetricMedian": ".monitor_target_metric_median",
+    "MonitorTargetMetricMedianField": ".monitor_target_metric_median_field",
+    "MonitorTargetMetricMin": ".monitor_target_metric_min",
+    "MonitorTargetMetricMinField": ".monitor_target_metric_min_field",
+    "MonitorTargetMetricSum": ".monitor_target_metric_sum",
+    "MonitorTargetMetricSumField": ".monitor_target_metric_sum_field",
+    "MonitorTargetMetric_Avg": ".monitor_target_metric",
+    "MonitorTargetMetric_CacheHitRate": ".monitor_target_metric",
+    "MonitorTargetMetric_Count": ".monitor_target_metric",
+    "MonitorTargetMetric_ErrorRate": ".monitor_target_metric",
+    "MonitorTargetMetric_Max": ".monitor_target_metric",
+    "MonitorTargetMetric_Median": ".monitor_target_metric",
+    "MonitorTargetMetric_Min": ".monitor_target_metric",
+    "MonitorTargetMetric_Sum": ".monitor_target_metric",
     "MonitorTargetStream": ".monitor_target_stream",
     "MonitorTargetType": ".monitor_target_type",
     "NotificationsSetting": ".notifications_setting",
@@ -704,6 +1275,7 @@ _dynamic_imports: typing.Dict[str, str] = {
     "Project": ".project",
     "ProjectSettings": ".project_settings",
     "ProjectUser": ".project_user",
+    "QuerySpans": ".query_spans",
     "RecentToolCall": ".recent_tool_call",
     "RecentToolCallStatusCode": ".recent_tool_call_status_code",
     "SavedSearch": ".saved_search",
@@ -752,6 +1324,8 @@ _dynamic_imports: typing.Dict[str, str] = {
     "ToolDefinitionDetail": ".tool_definition_detail",
     "ToolDefinitionDetailDefinition": ".tool_definition_detail_definition",
     "ToolDetailResponse": ".tool_detail_response",
+    "ToolDetailResponseErrorsUsage": ".tool_detail_response_errors_usage",
+    "ToolDetailResponseUsage": ".tool_detail_response_usage",
     "ToolErrorBreakdownResponse": ".tool_error_breakdown_response",
     "ToolErrorBreakdownRow": ".tool_error_breakdown_row",
     "ToolHistogramResponse": ".tool_histogram_response",
@@ -829,6 +1403,7 @@ __all__ = [
     "AccountUser",
     "ActiveMember",
     "ActiveMemberRole",
+    "ActiveMemberStatus",
     "AlertBaseline",
     "AlertBaselineKind",
     "AlertCondition",
@@ -843,6 +1418,14 @@ __all__ = [
     "AlertDuration_Minutes",
     "AlertEscalatingCondition",
     "AlertEscalatingConditionDirection",
+    "AlertEscalatingConditionThreshold",
+    "AlertEscalatingConditionThresholdAbsolute",
+    "AlertEscalatingConditionThresholdExpected",
+    "AlertEscalatingConditionThresholdMultiplier",
+    "AlertEscalatingConditionThreshold_Absolute",
+    "AlertEscalatingConditionThreshold_Expected",
+    "AlertEscalatingConditionThreshold_Multiplier",
+    "AlertEscalatingConditionTrigger",
     "AlertEscalatingConditionWindow",
     "AlertMetricThreshold",
     "AlertMetricThresholdAbsolute",
@@ -853,15 +1436,20 @@ __all__ = [
     "AlertMetricThreshold_Multiplier",
     "AlertThresholdCondition",
     "AlertThresholdConditionDirection",
+    "AlertThresholdConditionTrigger",
     "AnalyticsQuery",
     "AnalyticsQueryBehaviors",
     "AnalyticsQueryBehaviorsBreakdown",
     "AnalyticsQueryBehaviorsMetric",
     "AnalyticsQueryBehaviorsMetricAvg",
+    "AnalyticsQueryBehaviorsMetricAvgField",
     "AnalyticsQueryBehaviorsMetricCount",
     "AnalyticsQueryBehaviorsMetricMax",
+    "AnalyticsQueryBehaviorsMetricMaxField",
     "AnalyticsQueryBehaviorsMetricMedian",
+    "AnalyticsQueryBehaviorsMetricMedianField",
     "AnalyticsQueryBehaviorsMetricMin",
+    "AnalyticsQueryBehaviorsMetricMinField",
     "AnalyticsQueryBehaviorsMetric_Avg",
     "AnalyticsQueryBehaviorsMetric_Count",
     "AnalyticsQueryBehaviorsMetric_Max",
@@ -873,15 +1461,42 @@ __all__ = [
     "AnalyticsQueryBehaviorsRange",
     "AnalyticsQueryBehaviorsTimeBucket",
     "AnalyticsQueryBehaviorsTimeBucketUnit",
+    "AnalyticsQueryMoments",
+    "AnalyticsQueryMomentsBreakdown",
+    "AnalyticsQueryMomentsMetric",
+    "AnalyticsQueryMomentsMetricAvg",
+    "AnalyticsQueryMomentsMetricAvgField",
+    "AnalyticsQueryMomentsMetricCount",
+    "AnalyticsQueryMomentsMetricMax",
+    "AnalyticsQueryMomentsMetricMaxField",
+    "AnalyticsQueryMomentsMetricMedian",
+    "AnalyticsQueryMomentsMetricMedianField",
+    "AnalyticsQueryMomentsMetricMin",
+    "AnalyticsQueryMomentsMetricMinField",
+    "AnalyticsQueryMomentsMetric_Avg",
+    "AnalyticsQueryMomentsMetric_Count",
+    "AnalyticsQueryMomentsMetric_Max",
+    "AnalyticsQueryMomentsMetric_Median",
+    "AnalyticsQueryMomentsMetric_Min",
+    "AnalyticsQueryMomentsOrderBy",
+    "AnalyticsQueryMomentsOrderByBy",
+    "AnalyticsQueryMomentsOrderByDirection",
+    "AnalyticsQueryMomentsRange",
+    "AnalyticsQueryMomentsTimeBucket",
+    "AnalyticsQueryMomentsTimeBucketUnit",
     "AnalyticsQueryScores",
     "AnalyticsQueryScoresBreakdown",
     "AnalyticsQueryScoresMetric",
     "AnalyticsQueryScoresMetricAvg",
+    "AnalyticsQueryScoresMetricAvgField",
     "AnalyticsQueryScoresMetricCount",
     "AnalyticsQueryScoresMetricErrorRate",
     "AnalyticsQueryScoresMetricMax",
+    "AnalyticsQueryScoresMetricMaxField",
     "AnalyticsQueryScoresMetricMedian",
+    "AnalyticsQueryScoresMetricMedianField",
     "AnalyticsQueryScoresMetricMin",
+    "AnalyticsQueryScoresMetricMinField",
     "AnalyticsQueryScoresMetricPassRate",
     "AnalyticsQueryScoresMetric_Avg",
     "AnalyticsQueryScoresMetric_Count",
@@ -910,6 +1525,8 @@ __all__ = [
     "AnalyticsQuerySessionsMetricMedianField",
     "AnalyticsQuerySessionsMetricMin",
     "AnalyticsQuerySessionsMetricMinField",
+    "AnalyticsQuerySessionsMetricP95",
+    "AnalyticsQuerySessionsMetricP95Field",
     "AnalyticsQuerySessionsMetricSum",
     "AnalyticsQuerySessionsMetricSumField",
     "AnalyticsQuerySessionsMetric_Avg",
@@ -919,6 +1536,7 @@ __all__ = [
     "AnalyticsQuerySessionsMetric_Max",
     "AnalyticsQuerySessionsMetric_Median",
     "AnalyticsQuerySessionsMetric_Min",
+    "AnalyticsQuerySessionsMetric_P95",
     "AnalyticsQuerySessionsMetric_Sum",
     "AnalyticsQuerySessionsOrderBy",
     "AnalyticsQuerySessionsOrderByBy",
@@ -940,6 +1558,8 @@ __all__ = [
     "AnalyticsQuerySpansMetricMedianField",
     "AnalyticsQuerySpansMetricMin",
     "AnalyticsQuerySpansMetricMinField",
+    "AnalyticsQuerySpansMetricP95",
+    "AnalyticsQuerySpansMetricP95Field",
     "AnalyticsQuerySpansMetricSum",
     "AnalyticsQuerySpansMetricSumField",
     "AnalyticsQuerySpansMetric_Avg",
@@ -949,6 +1569,7 @@ __all__ = [
     "AnalyticsQuerySpansMetric_Max",
     "AnalyticsQuerySpansMetric_Median",
     "AnalyticsQuerySpansMetric_Min",
+    "AnalyticsQuerySpansMetric_P95",
     "AnalyticsQuerySpansMetric_Sum",
     "AnalyticsQuerySpansOrderBy",
     "AnalyticsQuerySpansOrderByBy",
@@ -970,6 +1591,8 @@ __all__ = [
     "AnalyticsQueryTracesMetricMedianField",
     "AnalyticsQueryTracesMetricMin",
     "AnalyticsQueryTracesMetricMinField",
+    "AnalyticsQueryTracesMetricP95",
+    "AnalyticsQueryTracesMetricP95Field",
     "AnalyticsQueryTracesMetricSum",
     "AnalyticsQueryTracesMetricSumField",
     "AnalyticsQueryTracesMetric_Avg",
@@ -979,6 +1602,7 @@ __all__ = [
     "AnalyticsQueryTracesMetric_Max",
     "AnalyticsQueryTracesMetric_Median",
     "AnalyticsQueryTracesMetric_Min",
+    "AnalyticsQueryTracesMetric_P95",
     "AnalyticsQueryTracesMetric_Sum",
     "AnalyticsQueryTracesOrderBy",
     "AnalyticsQueryTracesOrderByBy",
@@ -987,6 +1611,7 @@ __all__ = [
     "AnalyticsQueryTracesTimeBucket",
     "AnalyticsQueryTracesTimeBucketUnit",
     "AnalyticsQuery_Behaviors",
+    "AnalyticsQuery_Moments",
     "AnalyticsQuery_Scores",
     "AnalyticsQuery_Sessions",
     "AnalyticsQuery_Spans",
@@ -995,8 +1620,12 @@ __all__ = [
     "AnalyticsSeriesSeriesItem",
     "Annotation",
     "AnnotationAnchor",
+    "AnnotationAnchorTextFormat",
     "AnnotationMetadata",
+    "AnnotationMetadataTextFormat",
+    "AnnotationSource",
     "AnnotationSourceId",
+    "AnnotationSourceIdZero",
     "ApiKey",
     "ApiKeyList",
     "ApiKeyListItem",
@@ -1004,11 +1633,169 @@ __all__ = [
     "CreateEvaluationScoreBody",
     "CreateMonitorBody",
     "CreateMonitorBodyEscalating",
+    "CreateMonitorBodyEscalatingCondition",
+    "CreateMonitorBodyEscalatingConditionDirection",
+    "CreateMonitorBodyEscalatingConditionThreshold",
+    "CreateMonitorBodyEscalatingConditionThresholdAbsolute",
+    "CreateMonitorBodyEscalatingConditionThresholdExpected",
+    "CreateMonitorBodyEscalatingConditionThresholdMultiplier",
+    "CreateMonitorBodyEscalatingConditionThreshold_Absolute",
+    "CreateMonitorBodyEscalatingConditionThreshold_Expected",
+    "CreateMonitorBodyEscalatingConditionThreshold_Multiplier",
+    "CreateMonitorBodyEscalatingConditionTrigger",
+    "CreateMonitorBodyEscalatingConditionWindow",
+    "CreateMonitorBodyEscalatingMetric",
+    "CreateMonitorBodyEscalatingMetricAvg",
+    "CreateMonitorBodyEscalatingMetricAvgField",
+    "CreateMonitorBodyEscalatingMetricCacheHitRate",
+    "CreateMonitorBodyEscalatingMetricCount",
+    "CreateMonitorBodyEscalatingMetricErrorRate",
+    "CreateMonitorBodyEscalatingMetricMax",
+    "CreateMonitorBodyEscalatingMetricMaxField",
+    "CreateMonitorBodyEscalatingMetricMedian",
+    "CreateMonitorBodyEscalatingMetricMedianField",
+    "CreateMonitorBodyEscalatingMetricMin",
+    "CreateMonitorBodyEscalatingMetricMinField",
+    "CreateMonitorBodyEscalatingMetricSum",
+    "CreateMonitorBodyEscalatingMetricSumField",
+    "CreateMonitorBodyEscalatingMetric_Avg",
+    "CreateMonitorBodyEscalatingMetric_CacheHitRate",
+    "CreateMonitorBodyEscalatingMetric_Count",
+    "CreateMonitorBodyEscalatingMetric_ErrorRate",
+    "CreateMonitorBodyEscalatingMetric_Max",
+    "CreateMonitorBodyEscalatingMetric_Median",
+    "CreateMonitorBodyEscalatingMetric_Min",
+    "CreateMonitorBodyEscalatingMetric_Sum",
     "CreateMonitorBodyEscalatingSeverity",
+    "CreateMonitorBodyEscalatingTarget",
+    "CreateMonitorBodyEscalatingTargetKind",
+    "CreateMonitorBodyEscalatingTargetMetric",
+    "CreateMonitorBodyEscalatingTargetMetricAvg",
+    "CreateMonitorBodyEscalatingTargetMetricAvgField",
+    "CreateMonitorBodyEscalatingTargetMetricCacheHitRate",
+    "CreateMonitorBodyEscalatingTargetMetricCount",
+    "CreateMonitorBodyEscalatingTargetMetricErrorRate",
+    "CreateMonitorBodyEscalatingTargetMetricMax",
+    "CreateMonitorBodyEscalatingTargetMetricMaxField",
+    "CreateMonitorBodyEscalatingTargetMetricMedian",
+    "CreateMonitorBodyEscalatingTargetMetricMedianField",
+    "CreateMonitorBodyEscalatingTargetMetricMin",
+    "CreateMonitorBodyEscalatingTargetMetricMinField",
+    "CreateMonitorBodyEscalatingTargetMetricSum",
+    "CreateMonitorBodyEscalatingTargetMetricSumField",
+    "CreateMonitorBodyEscalatingTargetMetric_Avg",
+    "CreateMonitorBodyEscalatingTargetMetric_CacheHitRate",
+    "CreateMonitorBodyEscalatingTargetMetric_Count",
+    "CreateMonitorBodyEscalatingTargetMetric_ErrorRate",
+    "CreateMonitorBodyEscalatingTargetMetric_Max",
+    "CreateMonitorBodyEscalatingTargetMetric_Median",
+    "CreateMonitorBodyEscalatingTargetMetric_Min",
+    "CreateMonitorBodyEscalatingTargetMetric_Sum",
+    "CreateMonitorBodyEscalatingTargetStream",
+    "CreateMonitorBodyEscalatingTargetType",
     "CreateMonitorBodyMatch",
+    "CreateMonitorBodyMatchMetric",
+    "CreateMonitorBodyMatchMetricAvg",
+    "CreateMonitorBodyMatchMetricAvgField",
+    "CreateMonitorBodyMatchMetricCacheHitRate",
+    "CreateMonitorBodyMatchMetricCount",
+    "CreateMonitorBodyMatchMetricErrorRate",
+    "CreateMonitorBodyMatchMetricMax",
+    "CreateMonitorBodyMatchMetricMaxField",
+    "CreateMonitorBodyMatchMetricMedian",
+    "CreateMonitorBodyMatchMetricMedianField",
+    "CreateMonitorBodyMatchMetricMin",
+    "CreateMonitorBodyMatchMetricMinField",
+    "CreateMonitorBodyMatchMetricSum",
+    "CreateMonitorBodyMatchMetricSumField",
+    "CreateMonitorBodyMatchMetric_Avg",
+    "CreateMonitorBodyMatchMetric_CacheHitRate",
+    "CreateMonitorBodyMatchMetric_Count",
+    "CreateMonitorBodyMatchMetric_ErrorRate",
+    "CreateMonitorBodyMatchMetric_Max",
+    "CreateMonitorBodyMatchMetric_Median",
+    "CreateMonitorBodyMatchMetric_Min",
+    "CreateMonitorBodyMatchMetric_Sum",
     "CreateMonitorBodyMatchSeverity",
+    "CreateMonitorBodyMatchTarget",
+    "CreateMonitorBodyMatchTargetKind",
+    "CreateMonitorBodyMatchTargetMetric",
+    "CreateMonitorBodyMatchTargetMetricAvg",
+    "CreateMonitorBodyMatchTargetMetricAvgField",
+    "CreateMonitorBodyMatchTargetMetricCacheHitRate",
+    "CreateMonitorBodyMatchTargetMetricCount",
+    "CreateMonitorBodyMatchTargetMetricErrorRate",
+    "CreateMonitorBodyMatchTargetMetricMax",
+    "CreateMonitorBodyMatchTargetMetricMaxField",
+    "CreateMonitorBodyMatchTargetMetricMedian",
+    "CreateMonitorBodyMatchTargetMetricMedianField",
+    "CreateMonitorBodyMatchTargetMetricMin",
+    "CreateMonitorBodyMatchTargetMetricMinField",
+    "CreateMonitorBodyMatchTargetMetricSum",
+    "CreateMonitorBodyMatchTargetMetricSumField",
+    "CreateMonitorBodyMatchTargetMetric_Avg",
+    "CreateMonitorBodyMatchTargetMetric_CacheHitRate",
+    "CreateMonitorBodyMatchTargetMetric_Count",
+    "CreateMonitorBodyMatchTargetMetric_ErrorRate",
+    "CreateMonitorBodyMatchTargetMetric_Max",
+    "CreateMonitorBodyMatchTargetMetric_Median",
+    "CreateMonitorBodyMatchTargetMetric_Min",
+    "CreateMonitorBodyMatchTargetMetric_Sum",
+    "CreateMonitorBodyMatchTargetStream",
+    "CreateMonitorBodyMatchTargetType",
     "CreateMonitorBodyThreshold",
+    "CreateMonitorBodyThresholdCondition",
+    "CreateMonitorBodyThresholdConditionDirection",
+    "CreateMonitorBodyThresholdConditionTrigger",
+    "CreateMonitorBodyThresholdMetric",
+    "CreateMonitorBodyThresholdMetricAvg",
+    "CreateMonitorBodyThresholdMetricAvgField",
+    "CreateMonitorBodyThresholdMetricCacheHitRate",
+    "CreateMonitorBodyThresholdMetricCount",
+    "CreateMonitorBodyThresholdMetricErrorRate",
+    "CreateMonitorBodyThresholdMetricMax",
+    "CreateMonitorBodyThresholdMetricMaxField",
+    "CreateMonitorBodyThresholdMetricMedian",
+    "CreateMonitorBodyThresholdMetricMedianField",
+    "CreateMonitorBodyThresholdMetricMin",
+    "CreateMonitorBodyThresholdMetricMinField",
+    "CreateMonitorBodyThresholdMetricSum",
+    "CreateMonitorBodyThresholdMetricSumField",
+    "CreateMonitorBodyThresholdMetric_Avg",
+    "CreateMonitorBodyThresholdMetric_CacheHitRate",
+    "CreateMonitorBodyThresholdMetric_Count",
+    "CreateMonitorBodyThresholdMetric_ErrorRate",
+    "CreateMonitorBodyThresholdMetric_Max",
+    "CreateMonitorBodyThresholdMetric_Median",
+    "CreateMonitorBodyThresholdMetric_Min",
+    "CreateMonitorBodyThresholdMetric_Sum",
     "CreateMonitorBodyThresholdSeverity",
+    "CreateMonitorBodyThresholdTarget",
+    "CreateMonitorBodyThresholdTargetKind",
+    "CreateMonitorBodyThresholdTargetMetric",
+    "CreateMonitorBodyThresholdTargetMetricAvg",
+    "CreateMonitorBodyThresholdTargetMetricAvgField",
+    "CreateMonitorBodyThresholdTargetMetricCacheHitRate",
+    "CreateMonitorBodyThresholdTargetMetricCount",
+    "CreateMonitorBodyThresholdTargetMetricErrorRate",
+    "CreateMonitorBodyThresholdTargetMetricMax",
+    "CreateMonitorBodyThresholdTargetMetricMaxField",
+    "CreateMonitorBodyThresholdTargetMetricMedian",
+    "CreateMonitorBodyThresholdTargetMetricMedianField",
+    "CreateMonitorBodyThresholdTargetMetricMin",
+    "CreateMonitorBodyThresholdTargetMetricMinField",
+    "CreateMonitorBodyThresholdTargetMetricSum",
+    "CreateMonitorBodyThresholdTargetMetricSumField",
+    "CreateMonitorBodyThresholdTargetMetric_Avg",
+    "CreateMonitorBodyThresholdTargetMetric_CacheHitRate",
+    "CreateMonitorBodyThresholdTargetMetric_Count",
+    "CreateMonitorBodyThresholdTargetMetric_ErrorRate",
+    "CreateMonitorBodyThresholdTargetMetric_Max",
+    "CreateMonitorBodyThresholdTargetMetric_Median",
+    "CreateMonitorBodyThresholdTargetMetric_Min",
+    "CreateMonitorBodyThresholdTargetMetric_Sum",
+    "CreateMonitorBodyThresholdTargetStream",
+    "CreateMonitorBodyThresholdTargetType",
     "CreateMonitorBody_Escalating",
     "CreateMonitorBody_Match",
     "CreateMonitorBody_Threshold",
@@ -1039,20 +1826,27 @@ __all__ = [
     "EvaluationScoreMetadata",
     "EvaluationScoreResponse",
     "ExportDatasetRowsQueuedResponse",
+    "ExportDatasetRowsQueuedResponseStatus",
     "ExportDatasetRowsReadyResponse",
+    "ExportDatasetRowsReadyResponseStatus",
     "ExportDatasetRowsTooLargeResponse",
+    "ExportDatasetRowsTooLargeResponseStatus",
     "ExportSignalsResponse",
+    "ExportSignalsResponseStatus",
     "ExportTracesResponse",
+    "ExportTracesResponseStatus",
     "FilterCondition",
     "FilterConditionOp",
     "FilterConditionValue",
-    "FilterConditionValueItem",
+    "FilterConditionValueThreeItem",
     "FilterSet",
     "GenAiMessage",
     "GenAiSpanMessage",
     "GenAiSpanSystem",
     "GenAiSystem",
     "HealthResponse",
+    "HealthResponseService",
+    "HealthResponseStatus",
     "ImportRowsFromTracesResponse",
     "Incident",
     "IncidentCondition",
@@ -1062,6 +1856,7 @@ __all__ = [
     "InsertDatasetRowsResponse",
     "InvitedMember",
     "InvitedMemberRole",
+    "InvitedMemberStatus",
     "ListIncidentsResponse",
     "Member",
     "MemberList",
@@ -1069,6 +1864,28 @@ __all__ = [
     "Member_Invited",
     "Monitor",
     "MonitorConfig",
+    "MonitorConfigMetric",
+    "MonitorConfigMetricAvg",
+    "MonitorConfigMetricAvgField",
+    "MonitorConfigMetricCacheHitRate",
+    "MonitorConfigMetricCount",
+    "MonitorConfigMetricErrorRate",
+    "MonitorConfigMetricMax",
+    "MonitorConfigMetricMaxField",
+    "MonitorConfigMetricMedian",
+    "MonitorConfigMetricMedianField",
+    "MonitorConfigMetricMin",
+    "MonitorConfigMetricMinField",
+    "MonitorConfigMetricSum",
+    "MonitorConfigMetricSumField",
+    "MonitorConfigMetric_Avg",
+    "MonitorConfigMetric_CacheHitRate",
+    "MonitorConfigMetric_Count",
+    "MonitorConfigMetric_ErrorRate",
+    "MonitorConfigMetric_Max",
+    "MonitorConfigMetric_Median",
+    "MonitorConfigMetric_Min",
+    "MonitorConfigMetric_Sum",
     "MonitorFilterSet",
     "MonitorIncident",
     "MonitorIncidentCondition",
@@ -1103,6 +1920,28 @@ __all__ = [
     "MonitorSignalResponse",
     "MonitorTarget",
     "MonitorTargetKind",
+    "MonitorTargetMetric",
+    "MonitorTargetMetricAvg",
+    "MonitorTargetMetricAvgField",
+    "MonitorTargetMetricCacheHitRate",
+    "MonitorTargetMetricCount",
+    "MonitorTargetMetricErrorRate",
+    "MonitorTargetMetricMax",
+    "MonitorTargetMetricMaxField",
+    "MonitorTargetMetricMedian",
+    "MonitorTargetMetricMedianField",
+    "MonitorTargetMetricMin",
+    "MonitorTargetMetricMinField",
+    "MonitorTargetMetricSum",
+    "MonitorTargetMetricSumField",
+    "MonitorTargetMetric_Avg",
+    "MonitorTargetMetric_CacheHitRate",
+    "MonitorTargetMetric_Count",
+    "MonitorTargetMetric_ErrorRate",
+    "MonitorTargetMetric_Max",
+    "MonitorTargetMetric_Median",
+    "MonitorTargetMetric_Min",
+    "MonitorTargetMetric_Sum",
     "MonitorTargetStream",
     "MonitorTargetType",
     "NotificationsSetting",
@@ -1122,6 +1961,7 @@ __all__ = [
     "Project",
     "ProjectSettings",
     "ProjectUser",
+    "QuerySpans",
     "RecentToolCall",
     "RecentToolCallStatusCode",
     "SavedSearch",
@@ -1170,6 +2010,8 @@ __all__ = [
     "ToolDefinitionDetail",
     "ToolDefinitionDetailDefinition",
     "ToolDetailResponse",
+    "ToolDetailResponseErrorsUsage",
+    "ToolDetailResponseUsage",
     "ToolErrorBreakdownResponse",
     "ToolErrorBreakdownRow",
     "ToolHistogramResponse",

@@ -7,7 +7,7 @@ the documented resources exist on both the sync and async clients.
 
 import pytest
 
-from latitude_sdk import AsyncLatitudeApiClient, LatitudeApiClient
+from latitude_sdk import AsyncLatitudeClient, LatitudeClient
 
 RESOURCES = [
     "account",
@@ -26,18 +26,18 @@ RESOURCES = [
 ]
 
 
-@pytest.mark.parametrize("client_class", [LatitudeApiClient, AsyncLatitudeApiClient])
+@pytest.mark.parametrize("client_class", [LatitudeClient, AsyncLatitudeClient])
 def test_client_exposes_documented_resources(client_class):
-    client = client_class(token="test-token")
+    client = client_class(api_key="test-token")
     for resource in RESOURCES:
         assert getattr(client, resource) is not None
 
 
 def test_default_base_url_is_production():
-    client = LatitudeApiClient(token="test-token")
+    client = LatitudeClient(api_key="test-token")
     assert client._client_wrapper.get_base_url() == "https://api.latitude.so"
 
 
 def test_base_url_override():
-    client = LatitudeApiClient(token="test-token", base_url="http://localhost:8787")
+    client = LatitudeClient(api_key="test-token", base_url="http://localhost:8787")
     assert client._client_wrapper.get_base_url() == "http://localhost:8787"

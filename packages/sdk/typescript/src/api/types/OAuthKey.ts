@@ -6,17 +6,17 @@ export interface OAuthKey {
     /** Identifier of the OAuth client the key was issued to. */
     clientId: string;
     /** Display name of the OAuth client. */
-    clientName?: string | undefined;
+    clientName: string | null;
     /** Icon URL of the OAuth client. */
-    clientIcon?: string | undefined;
+    clientIcon: string | null;
     /** Identifier of the user the key belongs to. */
     userId: string;
     /** Display name of the user. `null` until the user completes onboarding. */
-    userName?: string | undefined;
+    userName: string | null;
     /** Email of the user. */
     userEmail: string;
     /** ISO-8601 timestamp of the last refresh on the key. `null` if the key has never been used. */
-    lastActivityAt?: string | undefined;
+    lastActivityAt: string | null;
     /** ISO-8601 timestamp at which the key was connected. */
     connectedAt: string;
     /** Whether the key has been disabled. */

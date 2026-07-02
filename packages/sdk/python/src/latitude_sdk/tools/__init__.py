@@ -7,22 +7,22 @@ from importlib import import_module
 
 if typing.TYPE_CHECKING:
     from .types import (
-        ToolsCoOccurrenceRequestErrorsOnly,
-        ToolsContextRequestDimension,
-        ToolsContextRequestErrorsOnly,
-        ToolsGetRequestErrorsOnly,
-        ToolsHistogramRequestErrorsOnly,
-        ToolsListCallsRequestErrorsOnly,
-        ToolsParametersRequestErrorsOnly,
+        CoOccurrenceToolsRequestErrorsOnly,
+        ContextToolsRequestDimension,
+        ContextToolsRequestErrorsOnly,
+        GetToolsRequestErrorsOnly,
+        HistogramToolsRequestErrorsOnly,
+        ListCallsToolsRequestErrorsOnly,
+        ParametersToolsRequestErrorsOnly,
     )
 _dynamic_imports: typing.Dict[str, str] = {
-    "ToolsCoOccurrenceRequestErrorsOnly": ".types",
-    "ToolsContextRequestDimension": ".types",
-    "ToolsContextRequestErrorsOnly": ".types",
-    "ToolsGetRequestErrorsOnly": ".types",
-    "ToolsHistogramRequestErrorsOnly": ".types",
-    "ToolsListCallsRequestErrorsOnly": ".types",
-    "ToolsParametersRequestErrorsOnly": ".types",
+    "CoOccurrenceToolsRequestErrorsOnly": ".types",
+    "ContextToolsRequestDimension": ".types",
+    "ContextToolsRequestErrorsOnly": ".types",
+    "GetToolsRequestErrorsOnly": ".types",
+    "HistogramToolsRequestErrorsOnly": ".types",
+    "ListCallsToolsRequestErrorsOnly": ".types",
+    "ParametersToolsRequestErrorsOnly": ".types",
 }
 
 
@@ -48,11 +48,11 @@ def __dir__():
 
 
 __all__ = [
-    "ToolsCoOccurrenceRequestErrorsOnly",
-    "ToolsContextRequestDimension",
-    "ToolsContextRequestErrorsOnly",
-    "ToolsGetRequestErrorsOnly",
-    "ToolsHistogramRequestErrorsOnly",
-    "ToolsListCallsRequestErrorsOnly",
-    "ToolsParametersRequestErrorsOnly",
+    "CoOccurrenceToolsRequestErrorsOnly",
+    "ContextToolsRequestDimension",
+    "ContextToolsRequestErrorsOnly",
+    "GetToolsRequestErrorsOnly",
+    "HistogramToolsRequestErrorsOnly",
+    "ListCallsToolsRequestErrorsOnly",
+    "ParametersToolsRequestErrorsOnly",
 ]

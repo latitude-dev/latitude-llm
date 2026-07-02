@@ -13,9 +13,13 @@ class EvaluationScoreMetadata(UniversalBaseModel):
     Evaluation-specific metadata.
     """
 
-    evaluation_hash: typing_extensions.Annotated[str, FieldMetadata(alias="evaluationHash")] = pydantic.Field()
-    """
-    Hash of the evaluation script that produced this score; lets the platform track which version generated it.
-    """
+    evaluation_hash: typing_extensions.Annotated[
+        str,
+        FieldMetadata(alias="evaluationHash"),
+        pydantic.Field(
+            alias="evaluationHash",
+            description="Hash of the evaluation script that produced this score; lets the platform track which version generated it.",
+        ),
+    ]
 
     model_config: typing.ClassVar[pydantic.ConfigDict] = pydantic.ConfigDict(extra="allow", frozen=True)

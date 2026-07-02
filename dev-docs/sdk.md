@@ -51,7 +51,7 @@ pnpm generate:sdk
 The repo-root script does three things:
 
 1. `pnpm openapi:emit` — refreshes `apps/api/openapi.json` from the live route schemas.
-2. `pnpm sdk:check` — runs `fern check` to surface OpenAPI validation issues.
+2. `pnpm fern:check` — runs `fern check` to surface OpenAPI validation issues.
 3. `./fern/invoke.sh generate --group local --local --force` — invokes the Fern generator container (`fernapi/fern-typescript-node-sdk`) and writes the result into `packages/sdk/typescript/src/`.
 
 Fern runs the generator inside Docker. The `fern/invoke.sh` wrapper handles two host-environment quirks before delegating to `fern`:

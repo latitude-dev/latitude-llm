@@ -5,17 +5,19 @@ from __future__ import annotations
 import typing
 
 import pydantic
+import typing_extensions
 from ..core.pydantic_utilities import UniversalBaseModel
 from .analytics_query_sessions_metric_avg_field import AnalyticsQuerySessionsMetricAvgField
 from .analytics_query_sessions_metric_max_field import AnalyticsQuerySessionsMetricMaxField
 from .analytics_query_sessions_metric_median_field import AnalyticsQuerySessionsMetricMedianField
 from .analytics_query_sessions_metric_min_field import AnalyticsQuerySessionsMetricMinField
+from .analytics_query_sessions_metric_p95field import AnalyticsQuerySessionsMetricP95Field
 from .analytics_query_sessions_metric_sum_field import AnalyticsQuerySessionsMetricSumField
 
 
 class AnalyticsQuerySessionsMetric_Count(UniversalBaseModel):
     """
-    The metric: `count`, `errorRate`, `cacheHitRate`, or `{sum|min|max|avg|median}` over `duration`/`cost`/`tokens`.
+    The metric: `count`, `errorRate`, `cacheHitRate`, or `{sum|min|max|avg|median|p95}` over `duration`/`cost`/`tokens`.
     """
 
     kind: typing.Literal["count"] = "count"
@@ -25,7 +27,7 @@ class AnalyticsQuerySessionsMetric_Count(UniversalBaseModel):
 
 class AnalyticsQuerySessionsMetric_ErrorRate(UniversalBaseModel):
     """
-    The metric: `count`, `errorRate`, `cacheHitRate`, or `{sum|min|max|avg|median}` over `duration`/`cost`/`tokens`.
+    The metric: `count`, `errorRate`, `cacheHitRate`, or `{sum|min|max|avg|median|p95}` over `duration`/`cost`/`tokens`.
     """
 
     kind: typing.Literal["errorRate"] = "errorRate"
@@ -35,7 +37,7 @@ class AnalyticsQuerySessionsMetric_ErrorRate(UniversalBaseModel):
 
 class AnalyticsQuerySessionsMetric_CacheHitRate(UniversalBaseModel):
     """
-    The metric: `count`, `errorRate`, `cacheHitRate`, or `{sum|min|max|avg|median}` over `duration`/`cost`/`tokens`.
+    The metric: `count`, `errorRate`, `cacheHitRate`, or `{sum|min|max|avg|median|p95}` over `duration`/`cost`/`tokens`.
     """
 
     kind: typing.Literal["cacheHitRate"] = "cacheHitRate"
@@ -45,7 +47,7 @@ class AnalyticsQuerySessionsMetric_CacheHitRate(UniversalBaseModel):
 
 class AnalyticsQuerySessionsMetric_Sum(UniversalBaseModel):
     """
-    The metric: `count`, `errorRate`, `cacheHitRate`, or `{sum|min|max|avg|median}` over `duration`/`cost`/`tokens`.
+    The metric: `count`, `errorRate`, `cacheHitRate`, or `{sum|min|max|avg|median|p95}` over `duration`/`cost`/`tokens`.
     """
 
     kind: typing.Literal["sum"] = "sum"
@@ -56,7 +58,7 @@ class AnalyticsQuerySessionsMetric_Sum(UniversalBaseModel):
 
 class AnalyticsQuerySessionsMetric_Min(UniversalBaseModel):
     """
-    The metric: `count`, `errorRate`, `cacheHitRate`, or `{sum|min|max|avg|median}` over `duration`/`cost`/`tokens`.
+    The metric: `count`, `errorRate`, `cacheHitRate`, or `{sum|min|max|avg|median|p95}` over `duration`/`cost`/`tokens`.
     """
 
     kind: typing.Literal["min"] = "min"
@@ -67,7 +69,7 @@ class AnalyticsQuerySessionsMetric_Min(UniversalBaseModel):
 
 class AnalyticsQuerySessionsMetric_Max(UniversalBaseModel):
     """
-    The metric: `count`, `errorRate`, `cacheHitRate`, or `{sum|min|max|avg|median}` over `duration`/`cost`/`tokens`.
+    The metric: `count`, `errorRate`, `cacheHitRate`, or `{sum|min|max|avg|median|p95}` over `duration`/`cost`/`tokens`.
     """
 
     kind: typing.Literal["max"] = "max"
@@ -78,7 +80,7 @@ class AnalyticsQuerySessionsMetric_Max(UniversalBaseModel):
 
 class AnalyticsQuerySessionsMetric_Avg(UniversalBaseModel):
     """
-    The metric: `count`, `errorRate`, `cacheHitRate`, or `{sum|min|max|avg|median}` over `duration`/`cost`/`tokens`.
+    The metric: `count`, `errorRate`, `cacheHitRate`, or `{sum|min|max|avg|median|p95}` over `duration`/`cost`/`tokens`.
     """
 
     kind: typing.Literal["avg"] = "avg"
@@ -89,7 +91,7 @@ class AnalyticsQuerySessionsMetric_Avg(UniversalBaseModel):
 
 class AnalyticsQuerySessionsMetric_Median(UniversalBaseModel):
     """
-    The metric: `count`, `errorRate`, `cacheHitRate`, or `{sum|min|max|avg|median}` over `duration`/`cost`/`tokens`.
+    The metric: `count`, `errorRate`, `cacheHitRate`, or `{sum|min|max|avg|median|p95}` over `duration`/`cost`/`tokens`.
     """
 
     kind: typing.Literal["median"] = "median"
@@ -98,13 +100,28 @@ class AnalyticsQuerySessionsMetric_Median(UniversalBaseModel):
     model_config: typing.ClassVar[pydantic.ConfigDict] = pydantic.ConfigDict(extra="allow", frozen=True)
 
 
-AnalyticsQuerySessionsMetric = typing.Union[
-    AnalyticsQuerySessionsMetric_Count,
-    AnalyticsQuerySessionsMetric_ErrorRate,
-    AnalyticsQuerySessionsMetric_CacheHitRate,
-    AnalyticsQuerySessionsMetric_Sum,
-    AnalyticsQuerySessionsMetric_Min,
-    AnalyticsQuerySessionsMetric_Max,
-    AnalyticsQuerySessionsMetric_Avg,
-    AnalyticsQuerySessionsMetric_Median,
+class AnalyticsQuerySessionsMetric_P95(UniversalBaseModel):
+    """
+    The metric: `count`, `errorRate`, `cacheHitRate`, or `{sum|min|max|avg|median|p95}` over `duration`/`cost`/`tokens`.
+    """
+
+    kind: typing.Literal["p95"] = "p95"
+    field: AnalyticsQuerySessionsMetricP95Field
+
+    model_config: typing.ClassVar[pydantic.ConfigDict] = pydantic.ConfigDict(extra="allow", frozen=True)
+
+
+AnalyticsQuerySessionsMetric = typing_extensions.Annotated[
+    typing.Union[
+        AnalyticsQuerySessionsMetric_Count,
+        AnalyticsQuerySessionsMetric_ErrorRate,
+        AnalyticsQuerySessionsMetric_CacheHitRate,
+        AnalyticsQuerySessionsMetric_Sum,
+        AnalyticsQuerySessionsMetric_Min,
+        AnalyticsQuerySessionsMetric_Max,
+        AnalyticsQuerySessionsMetric_Avg,
+        AnalyticsQuerySessionsMetric_Median,
+        AnalyticsQuerySessionsMetric_P95,
+    ],
+    pydantic.Field(discriminator="kind"),
 ]

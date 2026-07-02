@@ -1,5 +1,6 @@
 import { DEFAULT_API_KEY_NAME } from "@domain/api-keys"
 import {
+  Badge,
   CodeBlock,
   CopyButton,
   OpentelemetryIcon,
@@ -442,7 +443,10 @@ export function TelemetryInstructions({ projectSlug }: { readonly projectSlug: s
 
       {telemetrySetupMode === "coding-agent" ? (
         <div className="flex flex-col gap-2">
-          <Text.H5M>Prompt</Text.H5M>
+          <span className="inline-flex items-center gap-1.5">
+            <Text.H5M>Prompt</Text.H5M>
+            <Badge variant="accent">Recommended</Badge>
+          </span>
           <Text.H5 color="foregroundMuted">
             Paste this into the chat with your coding agent — Cursor, Claude Code, Codex, or any other — to set up
             Latitude telemetry in your project.

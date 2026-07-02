@@ -4,9 +4,10 @@ import typing
 
 import pydantic
 from ..core.pydantic_utilities import UniversalBaseModel
+from .analytics_query_scores_metric_max_field import AnalyticsQueryScoresMetricMaxField
 
 
 class AnalyticsQueryScoresMetricMax(UniversalBaseModel):
-    field: typing.Literal["value"] = "value"
+    field: AnalyticsQueryScoresMetricMaxField
 
     model_config: typing.ClassVar[pydantic.ConfigDict] = pydantic.ConfigDict(extra="allow", frozen=True)

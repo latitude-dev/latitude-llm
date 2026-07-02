@@ -35,6 +35,7 @@ import { revokeOAuthKeyMutation, useOAuthKeysCollection } from "../../../../../d
 import type { OAuthKeyRecord } from "../../../../../domains/oauth/oauth-keys.functions.ts"
 import { toUserMessage } from "../../../../../lib/errors.ts"
 import { createFormSubmitHandler, fieldErrorsAsStrings } from "../../../../../lib/form-server-action.ts"
+import { maskSensitiveValue } from "../../../../../lib/mask-sensitive-value.ts"
 import { SettingsPage } from "./-components/settings-page.tsx"
 
 export const Route = createFileRoute("/_authenticated/projects/$projectSlug/settings/keys")({
@@ -235,11 +236,7 @@ function ApiKeysTable({ apiKeys }: { apiKeys: ApiKeyRecord[] }) {
               <TableCell>
                 <CopyableText
                   value={apiKey.token}
-                  displayValue={
-                    apiKey.token.length > 7
-                      ? `${apiKey.token.slice(0, 3)}********${apiKey.token.slice(-4)}`
-                      : "********"
-                  }
+                  displayValue={maskSensitiveValue(apiKey.token)}
                   tooltip="Copy API Key"
                 />
               </TableCell>

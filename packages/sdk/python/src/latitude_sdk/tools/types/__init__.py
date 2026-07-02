@@ -6,21 +6,21 @@ import typing
 from importlib import import_module
 
 if typing.TYPE_CHECKING:
-    from .tools_co_occurrence_request_errors_only import ToolsCoOccurrenceRequestErrorsOnly
-    from .tools_context_request_dimension import ToolsContextRequestDimension
-    from .tools_context_request_errors_only import ToolsContextRequestErrorsOnly
-    from .tools_get_request_errors_only import ToolsGetRequestErrorsOnly
-    from .tools_histogram_request_errors_only import ToolsHistogramRequestErrorsOnly
-    from .tools_list_calls_request_errors_only import ToolsListCallsRequestErrorsOnly
-    from .tools_parameters_request_errors_only import ToolsParametersRequestErrorsOnly
+    from .co_occurrence_tools_request_errors_only import CoOccurrenceToolsRequestErrorsOnly
+    from .context_tools_request_dimension import ContextToolsRequestDimension
+    from .context_tools_request_errors_only import ContextToolsRequestErrorsOnly
+    from .get_tools_request_errors_only import GetToolsRequestErrorsOnly
+    from .histogram_tools_request_errors_only import HistogramToolsRequestErrorsOnly
+    from .list_calls_tools_request_errors_only import ListCallsToolsRequestErrorsOnly
+    from .parameters_tools_request_errors_only import ParametersToolsRequestErrorsOnly
 _dynamic_imports: typing.Dict[str, str] = {
-    "ToolsCoOccurrenceRequestErrorsOnly": ".tools_co_occurrence_request_errors_only",
-    "ToolsContextRequestDimension": ".tools_context_request_dimension",
-    "ToolsContextRequestErrorsOnly": ".tools_context_request_errors_only",
-    "ToolsGetRequestErrorsOnly": ".tools_get_request_errors_only",
-    "ToolsHistogramRequestErrorsOnly": ".tools_histogram_request_errors_only",
-    "ToolsListCallsRequestErrorsOnly": ".tools_list_calls_request_errors_only",
-    "ToolsParametersRequestErrorsOnly": ".tools_parameters_request_errors_only",
+    "CoOccurrenceToolsRequestErrorsOnly": ".co_occurrence_tools_request_errors_only",
+    "ContextToolsRequestDimension": ".context_tools_request_dimension",
+    "ContextToolsRequestErrorsOnly": ".context_tools_request_errors_only",
+    "GetToolsRequestErrorsOnly": ".get_tools_request_errors_only",
+    "HistogramToolsRequestErrorsOnly": ".histogram_tools_request_errors_only",
+    "ListCallsToolsRequestErrorsOnly": ".list_calls_tools_request_errors_only",
+    "ParametersToolsRequestErrorsOnly": ".parameters_tools_request_errors_only",
 }
 
 
@@ -46,11 +46,11 @@ def __dir__():
 
 
 __all__ = [
-    "ToolsCoOccurrenceRequestErrorsOnly",
-    "ToolsContextRequestDimension",
-    "ToolsContextRequestErrorsOnly",
-    "ToolsGetRequestErrorsOnly",
-    "ToolsHistogramRequestErrorsOnly",
-    "ToolsListCallsRequestErrorsOnly",
-    "ToolsParametersRequestErrorsOnly",
+    "CoOccurrenceToolsRequestErrorsOnly",
+    "ContextToolsRequestDimension",
+    "ContextToolsRequestErrorsOnly",
+    "GetToolsRequestErrorsOnly",
+    "HistogramToolsRequestErrorsOnly",
+    "ListCallsToolsRequestErrorsOnly",
+    "ParametersToolsRequestErrorsOnly",
 ]

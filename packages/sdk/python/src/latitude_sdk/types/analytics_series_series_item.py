@@ -14,13 +14,15 @@ class AnalyticsSeriesSeriesItem(UniversalBaseModel):
     The breakdown value, present when `breakdown` was set.
     """
 
-    bucket_start: typing_extensions.Annotated[typing.Optional[str], FieldMetadata(alias="bucketStart")] = (
-        pydantic.Field(default=None)
-    )
-    """
-    ISO-8601 start of the time bucket, present when `timeBucket` was set.
-    """
-
+    bucket_start: typing_extensions.Annotated[
+        typing.Optional[str],
+        FieldMetadata(alias="bucketStart"),
+        pydantic.Field(
+            alias="bucketStart",
+            default=None,
+            description="ISO-8601 start of the time bucket, present when `timeBucket` was set.",
+        ),
+    ]
     value: float = pydantic.Field()
     """
     The metric value: seconds for `duration`, dollars for `cost`, a 0–1 ratio for `errorRate`/`cacheHitRate`, otherwise a raw count/token total.

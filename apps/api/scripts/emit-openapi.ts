@@ -11,6 +11,7 @@ import { writeFile } from "node:fs/promises"
 import { dirname, resolve } from "node:path"
 import { fileURLToPath } from "node:url"
 import { OpenAPIHono } from "@hono/zod-openapi"
+import { API_INFO, API_SECURITY_SCHEME } from "../src/constants.ts"
 import { registerRoutes } from "../src/routes/index.ts"
 import type { AppEnv } from "../src/types.ts"
 
@@ -29,20 +30,13 @@ registerRoutes(app, {
   logTouchBuffer: false,
 })
 
-app.openAPIRegistry.registerComponent("securitySchemes", "ApiKeyAuth", {
-  type: "http",
-  scheme: "bearer",
-  description: "Organization-scoped API key",
-})
+app.openAPIRegistry.registerComponent("securitySchemes", "ApiKeyAuth", API_SECURITY_SCHEME)
 
+const { servers, ...info } = API_INFO
 const spec = app.getOpenAPI31Document({
   openapi: "3.1.0",
-  info: {
-    title: "Latitude API",
-    version: "1.0.0",
-    description: "The Latitude public API. Authenticate using an API key via the `Authorization: Bearer` header.",
-  },
-  servers: [{ url: "https://api.latitude.so", description: "Production" }],
+  info,
+  servers,
 })
 
 const here = dirname(fileURLToPath(import.meta.url))

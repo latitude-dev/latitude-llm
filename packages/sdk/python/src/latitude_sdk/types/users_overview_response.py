@@ -10,54 +10,59 @@ from .users_overview_bucket import UsersOverviewBucket
 
 
 class UsersOverviewResponse(UniversalBaseModel):
-    unique_users: typing_extensions.Annotated[int, FieldMetadata(alias="uniqueUsers")] = pydantic.Field()
-    """
-    Distinct identified users with at least one trace in the range.
-    """
-
-    new_users: typing_extensions.Annotated[int, FieldMetadata(alias="newUsers")] = pydantic.Field()
-    """
-    Users whose first trace ever falls inside the range.
-    """
-
-    identified_traces: typing_extensions.Annotated[int, FieldMetadata(alias="identifiedTraces")] = pydantic.Field()
-    """
-    Traces in the range carrying a non-empty `user_id`.
-    """
-
-    total_traces: typing_extensions.Annotated[int, FieldMetadata(alias="totalTraces")] = pydantic.Field()
-    """
-    All traces in the range, identified or not.
-    """
-
-    identified_sessions: typing_extensions.Annotated[int, FieldMetadata(alias="identifiedSessions")] = pydantic.Field()
-    """
-    Distinct sessions in the range carrying a non-empty `user_id`.
-    """
-
-    total_sessions: typing_extensions.Annotated[int, FieldMetadata(alias="totalSessions")] = pydantic.Field()
-    """
-    All distinct sessions in the range, identified or not.
-    """
-
+    unique_users: typing_extensions.Annotated[
+        int,
+        FieldMetadata(alias="uniqueUsers"),
+        pydantic.Field(
+            alias="uniqueUsers", description="Distinct identified users with at least one trace in the range."
+        ),
+    ]
+    new_users: typing_extensions.Annotated[
+        int,
+        FieldMetadata(alias="newUsers"),
+        pydantic.Field(alias="newUsers", description="Users whose first trace ever falls inside the range."),
+    ]
+    identified_traces: typing_extensions.Annotated[
+        int,
+        FieldMetadata(alias="identifiedTraces"),
+        pydantic.Field(alias="identifiedTraces", description="Traces in the range carrying a non-empty `user_id`."),
+    ]
+    total_traces: typing_extensions.Annotated[
+        int,
+        FieldMetadata(alias="totalTraces"),
+        pydantic.Field(alias="totalTraces", description="All traces in the range, identified or not."),
+    ]
+    identified_sessions: typing_extensions.Annotated[
+        int,
+        FieldMetadata(alias="identifiedSessions"),
+        pydantic.Field(
+            alias="identifiedSessions", description="Distinct sessions in the range carrying a non-empty `user_id`."
+        ),
+    ]
+    total_sessions: typing_extensions.Annotated[
+        int,
+        FieldMetadata(alias="totalSessions"),
+        pydantic.Field(alias="totalSessions", description="All distinct sessions in the range, identified or not."),
+    ]
     histogram: typing.List[UsersOverviewBucket] = pydantic.Field()
     """
     Per-bucket activity across the range, oldest first.
     """
 
-    bucket_seconds: typing_extensions.Annotated[int, FieldMetadata(alias="bucketSeconds")] = pydantic.Field()
-    """
-    Bucket width the histogram was computed with, in seconds.
-    """
-
-    from_iso: typing_extensions.Annotated[str, FieldMetadata(alias="fromIso")] = pydantic.Field()
-    """
-    ISO-8601 lower bound of the resolved range.
-    """
-
-    to_iso: typing_extensions.Annotated[str, FieldMetadata(alias="toIso")] = pydantic.Field()
-    """
-    ISO-8601 upper bound of the resolved range.
-    """
+    bucket_seconds: typing_extensions.Annotated[
+        int,
+        FieldMetadata(alias="bucketSeconds"),
+        pydantic.Field(alias="bucketSeconds", description="Bucket width the histogram was computed with, in seconds."),
+    ]
+    from_iso: typing_extensions.Annotated[
+        str,
+        FieldMetadata(alias="fromIso"),
+        pydantic.Field(alias="fromIso", description="ISO-8601 lower bound of the resolved range."),
+    ]
+    to_iso: typing_extensions.Annotated[
+        str,
+        FieldMetadata(alias="toIso"),
+        pydantic.Field(alias="toIso", description="ISO-8601 upper bound of the resolved range."),
+    ]
 
     model_config: typing.ClassVar[pydantic.ConfigDict] = pydantic.ConfigDict(extra="allow", frozen=True)

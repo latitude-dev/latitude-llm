@@ -6,10 +6,16 @@ import pydantic
 from ..core.pydantic_utilities import UniversalBaseModel
 from .alert_metric_threshold import AlertMetricThreshold
 from .alert_threshold_condition_direction import AlertThresholdConditionDirection
+from .alert_threshold_condition_trigger import AlertThresholdConditionTrigger
 from .monitor_metric import MonitorMetric
 
 
 class AlertThresholdCondition(UniversalBaseModel):
+    trigger: AlertThresholdConditionTrigger = pydantic.Field()
+    """
+    Opens once the measured value crosses the threshold.
+    """
+
     metric: MonitorMetric
     threshold: AlertMetricThreshold
     direction: typing.Optional[AlertThresholdConditionDirection] = pydantic.Field(default=None)

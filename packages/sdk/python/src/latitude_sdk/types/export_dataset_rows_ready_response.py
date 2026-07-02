@@ -6,32 +6,37 @@ import pydantic
 import typing_extensions
 from ..core.pydantic_utilities import UniversalBaseModel
 from ..core.serialization import FieldMetadata
+from .export_dataset_rows_ready_response_status import ExportDatasetRowsReadyResponseStatus
 
 
 class ExportDatasetRowsReadyResponse(UniversalBaseModel):
-    status: typing.Literal["ready"] = pydantic.Field(default="ready")
+    status: ExportDatasetRowsReadyResponseStatus = pydantic.Field()
     """
     Always `"ready"`. The CSV is available at `downloadUrl`.
     """
 
-    download_url: typing_extensions.Annotated[str, FieldMetadata(alias="downloadUrl")] = pydantic.Field()
-    """
-    Short-lived signed URL pointing to the CSV in object storage. Follow it with a plain HTTP GET.
-    """
-
+    download_url: typing_extensions.Annotated[
+        str,
+        FieldMetadata(alias="downloadUrl"),
+        pydantic.Field(
+            alias="downloadUrl",
+            description="Short-lived signed URL pointing to the CSV in object storage. Follow it with a plain HTTP GET.",
+        ),
+    ]
     filename: str = pydantic.Field()
     """
     Suggested filename for the downloaded CSV.
     """
 
-    expires_at: typing_extensions.Annotated[str, FieldMetadata(alias="expiresAt")] = pydantic.Field()
-    """
-    ISO-8601 timestamp at which `downloadUrl` stops working.
-    """
-
-    row_count: typing_extensions.Annotated[int, FieldMetadata(alias="rowCount")] = pydantic.Field()
-    """
-    Number of rows included in the export.
-    """
+    expires_at: typing_extensions.Annotated[
+        str,
+        FieldMetadata(alias="expiresAt"),
+        pydantic.Field(alias="expiresAt", description="ISO-8601 timestamp at which `downloadUrl` stops working."),
+    ]
+    row_count: typing_extensions.Annotated[
+        int,
+        FieldMetadata(alias="rowCount"),
+        pydantic.Field(alias="rowCount", description="Number of rows included in the export."),
+    ]
 
     model_config: typing.ClassVar[pydantic.ConfigDict] = pydantic.ConfigDict(extra="allow", frozen=True)

@@ -41,6 +41,7 @@ catalog:
   "@temporalio/worker": 1.17.0
   "@temporalio/workflow": 1.17.2
   "@types/node": 22.14.1
+  "@types/mustache": 4.2.6
   "@types/pg": 8.16.0
   "@types/react": 19.2.14
   "@types/react-dom": 19.2.3
@@ -61,6 +62,7 @@ catalog:
   effect: 4.0.0-beta.57
   hono: 4.12.21
   ioredis: 5.10.1
+  mustache: 4.2.0
   pg: 8.16.0
   quickjs-emscripten: 0.32.0
   react: 19.2.5

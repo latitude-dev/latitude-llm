@@ -10,15 +10,15 @@ export interface Span {
     /** Stable span identifier within the trace. */
     spanId: string;
     /** Identifier of the parent span. `null` for root spans. */
-    parentSpanId?: string | undefined;
+    parentSpanId: string | null;
     /** Conversation/session identifier set by the SDK. `null` when absent. */
-    sessionId?: string | undefined;
+    sessionId: string | null;
     /** End-user identifier set by the SDK. `null` when absent. */
-    userId?: string | undefined;
+    userId: string | null;
     /** CUID of the simulation that produced this span. `null` when not a simulation. */
-    simulationId?: string | undefined;
+    simulationId: string | null;
     /** Latitude API key used to ingest the span. `null` when ingested without an API key. */
-    apiKeyId?: string | undefined;
+    apiKeyId: string | null;
     /** ISO-8601 timestamp at which the span started. */
     startTime: string;
     /** ISO-8601 timestamp at which the span ended. */
@@ -38,17 +38,17 @@ export interface Span {
     /** OpenTelemetry trace state (vendor-specific propagation). Empty when not set. */
     traceState: string;
     /** Error class/type label when the span errored. `null` for successful spans. */
-    errorType?: string | undefined;
+    errorType: string | null;
     /** Free-form tags attached at ingest time. */
     tags: string[];
     /** GenAI operation category (e.g. `"chat"`, `"embeddings"`, `"execute_tool"`, `"invoke_agent"`) or a custom string for non-GenAI spans. */
     operation: string;
     /** LLM provider id. `null` for non-LLM spans. */
-    provider?: string | undefined;
+    provider: string | null;
     /** Model id as requested. `null` for non-LLM spans. */
-    model?: string | undefined;
+    model: string | null;
     /** Model id reported by the provider's response. `null` for non-LLM spans. */
-    responseModel?: string | undefined;
+    responseModel: string | null;
     /** Input tokens consumed by this span. */
     tokensInput: number;
     /** Output tokens produced by this span. */
@@ -72,7 +72,7 @@ export interface Span {
     /** `true` when the span was produced by a streaming LLM call. */
     isStreaming: boolean;
     /** Response identifier returned by the LLM. `null` when the provider didn't return one. */
-    responseId?: string | undefined;
+    responseId: string | null;
     /** Per-choice finish reasons reported by the LLM provider. */
     finishReasons: string[];
     /** OpenTelemetry instrumentation scope name. Empty when not set. */

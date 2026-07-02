@@ -9,23 +9,23 @@ from ..core.serialization import FieldMetadata
 
 
 class SignalLifecycleItem(UniversalBaseModel):
-    signal_id: typing_extensions.Annotated[str, FieldMetadata(alias="signalId")] = pydantic.Field()
-    """
-    Signal this entry applies to.
-    """
-
-    muted_at: typing_extensions.Annotated[typing.Optional[str], FieldMetadata(alias="mutedAt")] = pydantic.Field(
-        default=None
-    )
-    """
-    ISO-8601 timestamp at which the signal was muted, or `null`.
-    """
-
-    updated_at: typing_extensions.Annotated[str, FieldMetadata(alias="updatedAt")] = pydantic.Field()
-    """
-    ISO-8601 timestamp of the last update.
-    """
-
+    signal_id: typing_extensions.Annotated[
+        str,
+        FieldMetadata(alias="signalId"),
+        pydantic.Field(alias="signalId", description="Signal this entry applies to."),
+    ]
+    muted_at: typing_extensions.Annotated[
+        typing.Optional[str],
+        FieldMetadata(alias="mutedAt"),
+        pydantic.Field(
+            alias="mutedAt", default=None, description="ISO-8601 timestamp at which the signal was muted, or `null`."
+        ),
+    ]
+    updated_at: typing_extensions.Annotated[
+        str,
+        FieldMetadata(alias="updatedAt"),
+        pydantic.Field(alias="updatedAt", description="ISO-8601 timestamp of the last update."),
+    ]
     changed: bool = pydantic.Field()
     """
     `true` when this call changed the signal, `false` when it was already in that state.

@@ -6,6 +6,7 @@ import pydantic
 import typing_extensions
 from ..core.pydantic_utilities import UniversalBaseModel
 from ..core.serialization import FieldMetadata
+from .annotation_anchor_text_format import AnnotationAnchorTextFormat
 
 
 class AnnotationAnchor(UniversalBaseModel):
@@ -13,39 +14,50 @@ class AnnotationAnchor(UniversalBaseModel):
     Optional anchor pinning the annotation to a specific message / part / offset range inside the trace.
     """
 
-    message_index: typing_extensions.Annotated[typing.Optional[int], FieldMetadata(alias="messageIndex")] = (
-        pydantic.Field(default=None)
-    )
-    """
-    0-based message index inside the conversation. Omit for conversation-level annotations.
-    """
-
-    part_index: typing_extensions.Annotated[typing.Optional[int], FieldMetadata(alias="partIndex")] = pydantic.Field(
-        default=None
-    )
-    """
-    0-based index into the target message's `parts[]`. Requires `messageIndex`.
-    """
-
-    start_offset: typing_extensions.Annotated[typing.Optional[int], FieldMetadata(alias="startOffset")] = (
-        pydantic.Field(default=None)
-    )
-    """
-    Inclusive start offset for substring annotations. Must be paired with `endOffset` and `partIndex`.
-    """
-
-    end_offset: typing_extensions.Annotated[typing.Optional[int], FieldMetadata(alias="endOffset")] = pydantic.Field(
-        default=None
-    )
-    """
-    Exclusive end offset for substring annotations. Must be paired with `startOffset` and `partIndex`, and `>= startOffset`.
-    """
-
+    message_index: typing_extensions.Annotated[
+        typing.Optional[int],
+        FieldMetadata(alias="messageIndex"),
+        pydantic.Field(
+            alias="messageIndex",
+            default=None,
+            description="0-based message index inside the conversation. Omit for conversation-level annotations.",
+        ),
+    ]
+    part_index: typing_extensions.Annotated[
+        typing.Optional[int],
+        FieldMetadata(alias="partIndex"),
+        pydantic.Field(
+            alias="partIndex",
+            default=None,
+            description="0-based index into the target message's `parts[]`. Requires `messageIndex`.",
+        ),
+    ]
+    start_offset: typing_extensions.Annotated[
+        typing.Optional[int],
+        FieldMetadata(alias="startOffset"),
+        pydantic.Field(
+            alias="startOffset",
+            default=None,
+            description="Inclusive start offset for substring annotations. Must be paired with `endOffset` and `partIndex`.",
+        ),
+    ]
+    end_offset: typing_extensions.Annotated[
+        typing.Optional[int],
+        FieldMetadata(alias="endOffset"),
+        pydantic.Field(
+            alias="endOffset",
+            default=None,
+            description="Exclusive end offset for substring annotations. Must be paired with `startOffset` and `partIndex`, and `>= startOffset`.",
+        ),
+    ]
     text_format: typing_extensions.Annotated[
-        typing.Optional[typing.Literal["pretty-json"]], FieldMetadata(alias="textFormat")
-    ] = pydantic.Field(default=None)
-    """
-    UI-side text transform applied before the offsets were captured (e.g. `"pretty-json"`). Resolvers must apply the same transform before slicing.
-    """
+        typing.Optional[AnnotationAnchorTextFormat],
+        FieldMetadata(alias="textFormat"),
+        pydantic.Field(
+            alias="textFormat",
+            default=None,
+            description='UI-side text transform applied before the offsets were captured (e.g. `"pretty-json"`). Resolvers must apply the same transform before slicing.',
+        ),
+    ]
 
     model_config: typing.ClassVar[pydantic.ConfigDict] = pydantic.ConfigDict(extra="allow", frozen=True)

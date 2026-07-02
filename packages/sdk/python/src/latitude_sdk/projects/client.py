@@ -6,9 +6,9 @@ from ..core.client_wrapper import AsyncClientWrapper, SyncClientWrapper
 from ..core.request_options import RequestOptions
 from ..types.paginated_projects import PaginatedProjects
 from ..types.project import Project
-from ..types.project_settings import ProjectSettings
 from .raw_client import AsyncRawProjectsClient, RawProjectsClient
 from .types.update_project_body_flaggers import UpdateProjectBodyFlaggers
+from .types.update_project_body_settings import UpdateProjectBodySettings
 
 # this is used as the default value for optional parameters
 OMIT = typing.cast(typing.Any, ...)
@@ -45,10 +45,10 @@ class ProjectsClient:
 
         Examples
         --------
-        from latitude import LatitudeApiClient
+        from latitude_sdk import LatitudeClient
 
-        client = LatitudeApiClient(
-            token="YOUR_TOKEN",
+        client = LatitudeClient(
+            api_key="YOUR_API_KEY",
         )
         client.projects.list()
         """
@@ -74,10 +74,10 @@ class ProjectsClient:
 
         Examples
         --------
-        from latitude import LatitudeApiClient
+        from latitude_sdk import LatitudeClient
 
-        client = LatitudeApiClient(
-            token="YOUR_TOKEN",
+        client = LatitudeClient(
+            api_key="YOUR_API_KEY",
         )
         client.projects.create(
             name="name",
@@ -105,10 +105,10 @@ class ProjectsClient:
 
         Examples
         --------
-        from latitude import LatitudeApiClient
+        from latitude_sdk import LatitudeClient
 
-        client = LatitudeApiClient(
-            token="YOUR_TOKEN",
+        client = LatitudeClient(
+            api_key="YOUR_API_KEY",
         )
         client.projects.get(
             project_slug="projectSlug",
@@ -135,10 +135,10 @@ class ProjectsClient:
 
         Examples
         --------
-        from latitude import LatitudeApiClient
+        from latitude_sdk import LatitudeClient
 
-        client = LatitudeApiClient(
-            token="YOUR_TOKEN",
+        client = LatitudeClient(
+            api_key="YOUR_API_KEY",
         )
         client.projects.delete(
             project_slug="projectSlug",
@@ -152,7 +152,7 @@ class ProjectsClient:
         project_slug: str,
         *,
         name: typing.Optional[str] = OMIT,
-        settings: typing.Optional[ProjectSettings] = OMIT,
+        settings: typing.Optional[UpdateProjectBodySettings] = OMIT,
         flaggers: typing.Optional[UpdateProjectBodyFlaggers] = OMIT,
         request_options: typing.Optional[RequestOptions] = None,
     ) -> Project:
@@ -167,7 +167,8 @@ class ProjectsClient:
         name : typing.Optional[str]
             New human-readable name. Renaming never changes the slug.
 
-        settings : typing.Optional[ProjectSettings]
+        settings : typing.Optional[UpdateProjectBodySettings]
+            Replace the project's settings overrides. Omit to leave settings untouched. To clear overrides entirely, edit via the web UI.
 
         flaggers : typing.Optional[UpdateProjectBodyFlaggers]
             Enable or disable specific flaggers for the project. Keys are flagger slugs; values are the new `enabled` state. Omitted slugs are left untouched.
@@ -182,10 +183,10 @@ class ProjectsClient:
 
         Examples
         --------
-        from latitude import LatitudeApiClient
+        from latitude_sdk import LatitudeClient
 
-        client = LatitudeApiClient(
-            token="YOUR_TOKEN",
+        client = LatitudeClient(
+            api_key="YOUR_API_KEY",
         )
         client.projects.update(
             project_slug="projectSlug",
@@ -230,10 +231,10 @@ class AsyncProjectsClient:
         --------
         import asyncio
 
-        from latitude import AsyncLatitudeApiClient
+        from latitude_sdk import AsyncLatitudeClient
 
-        client = AsyncLatitudeApiClient(
-            token="YOUR_TOKEN",
+        client = AsyncLatitudeClient(
+            api_key="YOUR_API_KEY",
         )
 
 
@@ -267,10 +268,10 @@ class AsyncProjectsClient:
         --------
         import asyncio
 
-        from latitude import AsyncLatitudeApiClient
+        from latitude_sdk import AsyncLatitudeClient
 
-        client = AsyncLatitudeApiClient(
-            token="YOUR_TOKEN",
+        client = AsyncLatitudeClient(
+            api_key="YOUR_API_KEY",
         )
 
 
@@ -306,10 +307,10 @@ class AsyncProjectsClient:
         --------
         import asyncio
 
-        from latitude import AsyncLatitudeApiClient
+        from latitude_sdk import AsyncLatitudeClient
 
-        client = AsyncLatitudeApiClient(
-            token="YOUR_TOKEN",
+        client = AsyncLatitudeClient(
+            api_key="YOUR_API_KEY",
         )
 
 
@@ -344,10 +345,10 @@ class AsyncProjectsClient:
         --------
         import asyncio
 
-        from latitude import AsyncLatitudeApiClient
+        from latitude_sdk import AsyncLatitudeClient
 
-        client = AsyncLatitudeApiClient(
-            token="YOUR_TOKEN",
+        client = AsyncLatitudeClient(
+            api_key="YOUR_API_KEY",
         )
 
 
@@ -367,7 +368,7 @@ class AsyncProjectsClient:
         project_slug: str,
         *,
         name: typing.Optional[str] = OMIT,
-        settings: typing.Optional[ProjectSettings] = OMIT,
+        settings: typing.Optional[UpdateProjectBodySettings] = OMIT,
         flaggers: typing.Optional[UpdateProjectBodyFlaggers] = OMIT,
         request_options: typing.Optional[RequestOptions] = None,
     ) -> Project:
@@ -382,7 +383,8 @@ class AsyncProjectsClient:
         name : typing.Optional[str]
             New human-readable name. Renaming never changes the slug.
 
-        settings : typing.Optional[ProjectSettings]
+        settings : typing.Optional[UpdateProjectBodySettings]
+            Replace the project's settings overrides. Omit to leave settings untouched. To clear overrides entirely, edit via the web UI.
 
         flaggers : typing.Optional[UpdateProjectBodyFlaggers]
             Enable or disable specific flaggers for the project. Keys are flagger slugs; values are the new `enabled` state. Omitted slugs are left untouched.
@@ -399,10 +401,10 @@ class AsyncProjectsClient:
         --------
         import asyncio
 
-        from latitude import AsyncLatitudeApiClient
+        from latitude_sdk import AsyncLatitudeClient
 
-        client = AsyncLatitudeApiClient(
-            token="YOUR_TOKEN",
+        client = AsyncLatitudeClient(
+            api_key="YOUR_API_KEY",
         )
 
 

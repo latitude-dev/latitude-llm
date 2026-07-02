@@ -8,11 +8,11 @@
 
 from _env import optional_env, require_env
 
-from latitude_sdk import FilterCondition, LatitudeApiClient, TraceRef_Filters
+from latitude_sdk import FilterCondition, LatitudeClient, TraceRef_Filters
 
-client = LatitudeApiClient(
+client = LatitudeClient(
     base_url=optional_env("LATITUDE_API_BASE_URL"),
-    token=require_env("LATITUDE_API_KEY"),
+    api_key=require_env("LATITUDE_API_KEY"),
 )
 
 annotation = client.annotations.create(

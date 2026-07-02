@@ -33,6 +33,7 @@
     "@better-auth/sso": "catalog:",
     "@better-auth/stripe": "catalog:",
     "@domain/admin": "workspace:*",
+    "@domain/agent-dispatch": "workspace:*",
     "@domain/ai": "workspace:*",
     "@domain/incidents": "workspace:*",
     "@domain/annotation-queues": "workspace:*",

@@ -7,11 +7,119 @@ from importlib import import_module
 
 if typing.TYPE_CHECKING:
     from .list_monitors_for_target_body_target_type import ListMonitorsForTargetBodyTargetType
+    from .update_monitor_body_condition import (
+        UpdateMonitorBodyCondition,
+        UpdateMonitorBodyCondition_Escalating,
+        UpdateMonitorBodyCondition_Threshold,
+    )
+    from .update_monitor_body_metric import (
+        UpdateMonitorBodyMetric,
+        UpdateMonitorBodyMetric_Avg,
+        UpdateMonitorBodyMetric_CacheHitRate,
+        UpdateMonitorBodyMetric_Count,
+        UpdateMonitorBodyMetric_ErrorRate,
+        UpdateMonitorBodyMetric_Max,
+        UpdateMonitorBodyMetric_Median,
+        UpdateMonitorBodyMetric_Min,
+        UpdateMonitorBodyMetric_Sum,
+    )
+    from .update_monitor_body_metric_avg import UpdateMonitorBodyMetricAvg
+    from .update_monitor_body_metric_avg_field import UpdateMonitorBodyMetricAvgField
+    from .update_monitor_body_metric_cache_hit_rate import UpdateMonitorBodyMetricCacheHitRate
+    from .update_monitor_body_metric_count import UpdateMonitorBodyMetricCount
+    from .update_monitor_body_metric_error_rate import UpdateMonitorBodyMetricErrorRate
+    from .update_monitor_body_metric_max import UpdateMonitorBodyMetricMax
+    from .update_monitor_body_metric_max_field import UpdateMonitorBodyMetricMaxField
+    from .update_monitor_body_metric_median import UpdateMonitorBodyMetricMedian
+    from .update_monitor_body_metric_median_field import UpdateMonitorBodyMetricMedianField
+    from .update_monitor_body_metric_min import UpdateMonitorBodyMetricMin
+    from .update_monitor_body_metric_min_field import UpdateMonitorBodyMetricMinField
+    from .update_monitor_body_metric_sum import UpdateMonitorBodyMetricSum
+    from .update_monitor_body_metric_sum_field import UpdateMonitorBodyMetricSumField
     from .update_monitor_body_severity import UpdateMonitorBodySeverity
+    from .update_monitor_body_target import UpdateMonitorBodyTarget
+    from .update_monitor_body_target_kind import UpdateMonitorBodyTargetKind
+    from .update_monitor_body_target_metric import (
+        UpdateMonitorBodyTargetMetric,
+        UpdateMonitorBodyTargetMetric_Avg,
+        UpdateMonitorBodyTargetMetric_CacheHitRate,
+        UpdateMonitorBodyTargetMetric_Count,
+        UpdateMonitorBodyTargetMetric_ErrorRate,
+        UpdateMonitorBodyTargetMetric_Max,
+        UpdateMonitorBodyTargetMetric_Median,
+        UpdateMonitorBodyTargetMetric_Min,
+        UpdateMonitorBodyTargetMetric_Sum,
+    )
+    from .update_monitor_body_target_metric_avg import UpdateMonitorBodyTargetMetricAvg
+    from .update_monitor_body_target_metric_avg_field import UpdateMonitorBodyTargetMetricAvgField
+    from .update_monitor_body_target_metric_cache_hit_rate import UpdateMonitorBodyTargetMetricCacheHitRate
+    from .update_monitor_body_target_metric_count import UpdateMonitorBodyTargetMetricCount
+    from .update_monitor_body_target_metric_error_rate import UpdateMonitorBodyTargetMetricErrorRate
+    from .update_monitor_body_target_metric_max import UpdateMonitorBodyTargetMetricMax
+    from .update_monitor_body_target_metric_max_field import UpdateMonitorBodyTargetMetricMaxField
+    from .update_monitor_body_target_metric_median import UpdateMonitorBodyTargetMetricMedian
+    from .update_monitor_body_target_metric_median_field import UpdateMonitorBodyTargetMetricMedianField
+    from .update_monitor_body_target_metric_min import UpdateMonitorBodyTargetMetricMin
+    from .update_monitor_body_target_metric_min_field import UpdateMonitorBodyTargetMetricMinField
+    from .update_monitor_body_target_metric_sum import UpdateMonitorBodyTargetMetricSum
+    from .update_monitor_body_target_metric_sum_field import UpdateMonitorBodyTargetMetricSumField
+    from .update_monitor_body_target_stream import UpdateMonitorBodyTargetStream
+    from .update_monitor_body_target_type import UpdateMonitorBodyTargetType
     from .update_monitor_body_trigger import UpdateMonitorBodyTrigger
 _dynamic_imports: typing.Dict[str, str] = {
     "ListMonitorsForTargetBodyTargetType": ".list_monitors_for_target_body_target_type",
+    "UpdateMonitorBodyCondition": ".update_monitor_body_condition",
+    "UpdateMonitorBodyCondition_Escalating": ".update_monitor_body_condition",
+    "UpdateMonitorBodyCondition_Threshold": ".update_monitor_body_condition",
+    "UpdateMonitorBodyMetric": ".update_monitor_body_metric",
+    "UpdateMonitorBodyMetricAvg": ".update_monitor_body_metric_avg",
+    "UpdateMonitorBodyMetricAvgField": ".update_monitor_body_metric_avg_field",
+    "UpdateMonitorBodyMetricCacheHitRate": ".update_monitor_body_metric_cache_hit_rate",
+    "UpdateMonitorBodyMetricCount": ".update_monitor_body_metric_count",
+    "UpdateMonitorBodyMetricErrorRate": ".update_monitor_body_metric_error_rate",
+    "UpdateMonitorBodyMetricMax": ".update_monitor_body_metric_max",
+    "UpdateMonitorBodyMetricMaxField": ".update_monitor_body_metric_max_field",
+    "UpdateMonitorBodyMetricMedian": ".update_monitor_body_metric_median",
+    "UpdateMonitorBodyMetricMedianField": ".update_monitor_body_metric_median_field",
+    "UpdateMonitorBodyMetricMin": ".update_monitor_body_metric_min",
+    "UpdateMonitorBodyMetricMinField": ".update_monitor_body_metric_min_field",
+    "UpdateMonitorBodyMetricSum": ".update_monitor_body_metric_sum",
+    "UpdateMonitorBodyMetricSumField": ".update_monitor_body_metric_sum_field",
+    "UpdateMonitorBodyMetric_Avg": ".update_monitor_body_metric",
+    "UpdateMonitorBodyMetric_CacheHitRate": ".update_monitor_body_metric",
+    "UpdateMonitorBodyMetric_Count": ".update_monitor_body_metric",
+    "UpdateMonitorBodyMetric_ErrorRate": ".update_monitor_body_metric",
+    "UpdateMonitorBodyMetric_Max": ".update_monitor_body_metric",
+    "UpdateMonitorBodyMetric_Median": ".update_monitor_body_metric",
+    "UpdateMonitorBodyMetric_Min": ".update_monitor_body_metric",
+    "UpdateMonitorBodyMetric_Sum": ".update_monitor_body_metric",
     "UpdateMonitorBodySeverity": ".update_monitor_body_severity",
+    "UpdateMonitorBodyTarget": ".update_monitor_body_target",
+    "UpdateMonitorBodyTargetKind": ".update_monitor_body_target_kind",
+    "UpdateMonitorBodyTargetMetric": ".update_monitor_body_target_metric",
+    "UpdateMonitorBodyTargetMetricAvg": ".update_monitor_body_target_metric_avg",
+    "UpdateMonitorBodyTargetMetricAvgField": ".update_monitor_body_target_metric_avg_field",
+    "UpdateMonitorBodyTargetMetricCacheHitRate": ".update_monitor_body_target_metric_cache_hit_rate",
+    "UpdateMonitorBodyTargetMetricCount": ".update_monitor_body_target_metric_count",
+    "UpdateMonitorBodyTargetMetricErrorRate": ".update_monitor_body_target_metric_error_rate",
+    "UpdateMonitorBodyTargetMetricMax": ".update_monitor_body_target_metric_max",
+    "UpdateMonitorBodyTargetMetricMaxField": ".update_monitor_body_target_metric_max_field",
+    "UpdateMonitorBodyTargetMetricMedian": ".update_monitor_body_target_metric_median",
+    "UpdateMonitorBodyTargetMetricMedianField": ".update_monitor_body_target_metric_median_field",
+    "UpdateMonitorBodyTargetMetricMin": ".update_monitor_body_target_metric_min",
+    "UpdateMonitorBodyTargetMetricMinField": ".update_monitor_body_target_metric_min_field",
+    "UpdateMonitorBodyTargetMetricSum": ".update_monitor_body_target_metric_sum",
+    "UpdateMonitorBodyTargetMetricSumField": ".update_monitor_body_target_metric_sum_field",
+    "UpdateMonitorBodyTargetMetric_Avg": ".update_monitor_body_target_metric",
+    "UpdateMonitorBodyTargetMetric_CacheHitRate": ".update_monitor_body_target_metric",
+    "UpdateMonitorBodyTargetMetric_Count": ".update_monitor_body_target_metric",
+    "UpdateMonitorBodyTargetMetric_ErrorRate": ".update_monitor_body_target_metric",
+    "UpdateMonitorBodyTargetMetric_Max": ".update_monitor_body_target_metric",
+    "UpdateMonitorBodyTargetMetric_Median": ".update_monitor_body_target_metric",
+    "UpdateMonitorBodyTargetMetric_Min": ".update_monitor_body_target_metric",
+    "UpdateMonitorBodyTargetMetric_Sum": ".update_monitor_body_target_metric",
+    "UpdateMonitorBodyTargetStream": ".update_monitor_body_target_stream",
+    "UpdateMonitorBodyTargetType": ".update_monitor_body_target_type",
     "UpdateMonitorBodyTrigger": ".update_monitor_body_trigger",
 }
 
@@ -37,4 +145,59 @@ def __dir__():
     return sorted(lazy_attrs)
 
 
-__all__ = ["ListMonitorsForTargetBodyTargetType", "UpdateMonitorBodySeverity", "UpdateMonitorBodyTrigger"]
+__all__ = [
+    "ListMonitorsForTargetBodyTargetType",
+    "UpdateMonitorBodyCondition",
+    "UpdateMonitorBodyCondition_Escalating",
+    "UpdateMonitorBodyCondition_Threshold",
+    "UpdateMonitorBodyMetric",
+    "UpdateMonitorBodyMetricAvg",
+    "UpdateMonitorBodyMetricAvgField",
+    "UpdateMonitorBodyMetricCacheHitRate",
+    "UpdateMonitorBodyMetricCount",
+    "UpdateMonitorBodyMetricErrorRate",
+    "UpdateMonitorBodyMetricMax",
+    "UpdateMonitorBodyMetricMaxField",
+    "UpdateMonitorBodyMetricMedian",
+    "UpdateMonitorBodyMetricMedianField",
+    "UpdateMonitorBodyMetricMin",
+    "UpdateMonitorBodyMetricMinField",
+    "UpdateMonitorBodyMetricSum",
+    "UpdateMonitorBodyMetricSumField",
+    "UpdateMonitorBodyMetric_Avg",
+    "UpdateMonitorBodyMetric_CacheHitRate",
+    "UpdateMonitorBodyMetric_Count",
+    "UpdateMonitorBodyMetric_ErrorRate",
+    "UpdateMonitorBodyMetric_Max",
+    "UpdateMonitorBodyMetric_Median",
+    "UpdateMonitorBodyMetric_Min",
+    "UpdateMonitorBodyMetric_Sum",
+    "UpdateMonitorBodySeverity",
+    "UpdateMonitorBodyTarget",
+    "UpdateMonitorBodyTargetKind",
+    "UpdateMonitorBodyTargetMetric",
+    "UpdateMonitorBodyTargetMetricAvg",
+    "UpdateMonitorBodyTargetMetricAvgField",
+    "UpdateMonitorBodyTargetMetricCacheHitRate",
+    "UpdateMonitorBodyTargetMetricCount",
+    "UpdateMonitorBodyTargetMetricErrorRate",
+    "UpdateMonitorBodyTargetMetricMax",
+    "UpdateMonitorBodyTargetMetricMaxField",
+    "UpdateMonitorBodyTargetMetricMedian",
+    "UpdateMonitorBodyTargetMetricMedianField",
+    "UpdateMonitorBodyTargetMetricMin",
+    "UpdateMonitorBodyTargetMetricMinField",
+    "UpdateMonitorBodyTargetMetricSum",
+    "UpdateMonitorBodyTargetMetricSumField",
+    "UpdateMonitorBodyTargetMetric_Avg",
+    "UpdateMonitorBodyTargetMetric_CacheHitRate",
+    "UpdateMonitorBodyTargetMetric_Count",
+    "UpdateMonitorBodyTargetMetric_ErrorRate",
+    "UpdateMonitorBodyTargetMetric_Max",
+    "UpdateMonitorBodyTargetMetric_Median",
+    "UpdateMonitorBodyTargetMetric_Min",
+    "UpdateMonitorBodyTargetMetric_Sum",
+    "UpdateMonitorBodyTargetStream",
+    "UpdateMonitorBodyTargetType",
+    "UpdateMonitorBodyTrigger",
+]

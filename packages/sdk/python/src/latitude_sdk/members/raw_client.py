@@ -6,7 +6,8 @@ from json.decoder import JSONDecodeError
 from ..core.api_error import ApiError
 from ..core.client_wrapper import AsyncClientWrapper, SyncClientWrapper
 from ..core.http_response import AsyncHttpResponse, HttpResponse
-from ..core.jsonable_encoder import jsonable_encoder
+from ..core.jsonable_encoder import encode_path_param
+from ..core.parse_error import ParsingError
 from ..core.pydantic_utilities import parse_obj_as
 from ..core.request_options import RequestOptions
 from ..errors.bad_request_error import BadRequestError
@@ -18,6 +19,7 @@ from ..types.invited_member import InvitedMember
 from ..types.member_list import MemberList
 from .types.invite_member_body_role import InviteMemberBodyRole
 from .types.update_member_role_body_role import UpdateMemberRoleBodyRole
+from pydantic import ValidationError
 
 # this is used as the default value for optional parameters
 OMIT = typing.cast(typing.Any, ...)
@@ -92,6 +94,10 @@ class RawMembersClient:
             _response_json = _response.json()
         except JSONDecodeError:
             raise ApiError(status_code=_response.status_code, headers=dict(_response.headers), body=_response.text)
+        except ValidationError as e:
+            raise ParsingError(
+                status_code=_response.status_code, headers=dict(_response.headers), body=_response.json(), cause=e
+            )
         raise ApiError(status_code=_response.status_code, headers=dict(_response.headers), body=_response_json)
 
     def invite(
@@ -179,6 +185,10 @@ class RawMembersClient:
             _response_json = _response.json()
         except JSONDecodeError:
             raise ApiError(status_code=_response.status_code, headers=dict(_response.headers), body=_response.text)
+        except ValidationError as e:
+            raise ParsingError(
+                status_code=_response.status_code, headers=dict(_response.headers), body=_response.json(), cause=e
+            )
         raise ApiError(status_code=_response.status_code, headers=dict(_response.headers), body=_response_json)
 
     def get(
@@ -201,7 +211,7 @@ class RawMembersClient:
             Member
         """
         _response = self._client_wrapper.httpx_client.request(
-            f"v1/members/{jsonable_encoder(member_id)}",
+            f"v1/members/{encode_path_param(member_id)}",
             method="GET",
             request_options=request_options,
         )
@@ -251,6 +261,10 @@ class RawMembersClient:
             _response_json = _response.json()
         except JSONDecodeError:
             raise ApiError(status_code=_response.status_code, headers=dict(_response.headers), body=_response.text)
+        except ValidationError as e:
+            raise ParsingError(
+                status_code=_response.status_code, headers=dict(_response.headers), body=_response.json(), cause=e
+            )
         raise ApiError(status_code=_response.status_code, headers=dict(_response.headers), body=_response_json)
 
     def remove(self, member_id: str, *, request_options: typing.Optional[RequestOptions] = None) -> HttpResponse[None]:
@@ -270,7 +284,7 @@ class RawMembersClient:
         HttpResponse[None]
         """
         _response = self._client_wrapper.httpx_client.request(
-            f"v1/members/{jsonable_encoder(member_id)}",
+            f"v1/members/{encode_path_param(member_id)}",
             method="DELETE",
             request_options=request_options,
         )
@@ -302,6 +316,10 @@ class RawMembersClient:
             _response_json = _response.json()
         except JSONDecodeError:
             raise ApiError(status_code=_response.status_code, headers=dict(_response.headers), body=_response.text)
+        except ValidationError as e:
+            raise ParsingError(
+                status_code=_response.status_code, headers=dict(_response.headers), body=_response.json(), cause=e
+            )
         raise ApiError(status_code=_response.status_code, headers=dict(_response.headers), body=_response_json)
 
     def update(
@@ -327,7 +345,7 @@ class RawMembersClient:
             Member with the updated role
         """
         _response = self._client_wrapper.httpx_client.request(
-            f"v1/members/{jsonable_encoder(member_id)}",
+            f"v1/members/{encode_path_param(member_id)}",
             method="PATCH",
             json={
                 "role": role,
@@ -384,6 +402,10 @@ class RawMembersClient:
             _response_json = _response.json()
         except JSONDecodeError:
             raise ApiError(status_code=_response.status_code, headers=dict(_response.headers), body=_response.text)
+        except ValidationError as e:
+            raise ParsingError(
+                status_code=_response.status_code, headers=dict(_response.headers), body=_response.json(), cause=e
+            )
         raise ApiError(status_code=_response.status_code, headers=dict(_response.headers), body=_response_json)
 
 
@@ -456,6 +478,10 @@ class AsyncRawMembersClient:
             _response_json = _response.json()
         except JSONDecodeError:
             raise ApiError(status_code=_response.status_code, headers=dict(_response.headers), body=_response.text)
+        except ValidationError as e:
+            raise ParsingError(
+                status_code=_response.status_code, headers=dict(_response.headers), body=_response.json(), cause=e
+            )
         raise ApiError(status_code=_response.status_code, headers=dict(_response.headers), body=_response_json)
 
     async def invite(
@@ -543,6 +569,10 @@ class AsyncRawMembersClient:
             _response_json = _response.json()
         except JSONDecodeError:
             raise ApiError(status_code=_response.status_code, headers=dict(_response.headers), body=_response.text)
+        except ValidationError as e:
+            raise ParsingError(
+                status_code=_response.status_code, headers=dict(_response.headers), body=_response.json(), cause=e
+            )
         raise ApiError(status_code=_response.status_code, headers=dict(_response.headers), body=_response_json)
 
     async def get(
@@ -565,7 +595,7 @@ class AsyncRawMembersClient:
             Member
         """
         _response = await self._client_wrapper.httpx_client.request(
-            f"v1/members/{jsonable_encoder(member_id)}",
+            f"v1/members/{encode_path_param(member_id)}",
             method="GET",
             request_options=request_options,
         )
@@ -615,6 +645,10 @@ class AsyncRawMembersClient:
             _response_json = _response.json()
         except JSONDecodeError:
             raise ApiError(status_code=_response.status_code, headers=dict(_response.headers), body=_response.text)
+        except ValidationError as e:
+            raise ParsingError(
+                status_code=_response.status_code, headers=dict(_response.headers), body=_response.json(), cause=e
+            )
         raise ApiError(status_code=_response.status_code, headers=dict(_response.headers), body=_response_json)
 
     async def remove(
@@ -636,7 +670,7 @@ class AsyncRawMembersClient:
         AsyncHttpResponse[None]
         """
         _response = await self._client_wrapper.httpx_client.request(
-            f"v1/members/{jsonable_encoder(member_id)}",
+            f"v1/members/{encode_path_param(member_id)}",
             method="DELETE",
             request_options=request_options,
         )
@@ -668,6 +702,10 @@ class AsyncRawMembersClient:
             _response_json = _response.json()
         except JSONDecodeError:
             raise ApiError(status_code=_response.status_code, headers=dict(_response.headers), body=_response.text)
+        except ValidationError as e:
+            raise ParsingError(
+                status_code=_response.status_code, headers=dict(_response.headers), body=_response.json(), cause=e
+            )
         raise ApiError(status_code=_response.status_code, headers=dict(_response.headers), body=_response_json)
 
     async def update(
@@ -693,7 +731,7 @@ class AsyncRawMembersClient:
             Member with the updated role
         """
         _response = await self._client_wrapper.httpx_client.request(
-            f"v1/members/{jsonable_encoder(member_id)}",
+            f"v1/members/{encode_path_param(member_id)}",
             method="PATCH",
             json={
                 "role": role,
@@ -750,4 +788,8 @@ class AsyncRawMembersClient:
             _response_json = _response.json()
         except JSONDecodeError:
             raise ApiError(status_code=_response.status_code, headers=dict(_response.headers), body=_response.text)
+        except ValidationError as e:
+            raise ParsingError(
+                status_code=_response.status_code, headers=dict(_response.headers), body=_response.json(), cause=e
+            )
         raise ApiError(status_code=_response.status_code, headers=dict(_response.headers), body=_response_json)

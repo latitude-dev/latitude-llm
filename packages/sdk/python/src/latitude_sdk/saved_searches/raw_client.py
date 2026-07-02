@@ -6,7 +6,8 @@ from json.decoder import JSONDecodeError
 from ..core.api_error import ApiError
 from ..core.client_wrapper import AsyncClientWrapper, SyncClientWrapper
 from ..core.http_response import AsyncHttpResponse, HttpResponse
-from ..core.jsonable_encoder import jsonable_encoder
+from ..core.jsonable_encoder import encode_path_param
+from ..core.parse_error import ParsingError
 from ..core.pydantic_utilities import parse_obj_as
 from ..core.request_options import RequestOptions
 from ..core.serialization import convert_and_respect_annotation_metadata
@@ -14,12 +15,13 @@ from ..errors.bad_request_error import BadRequestError
 from ..errors.not_found_error import NotFoundError
 from ..errors.unauthorized_error import UnauthorizedError
 from ..types.error import Error
-from ..types.filter_set import FilterSet
+from ..types.filter_condition import FilterCondition
 from ..types.paginated_saved_searches import PaginatedSavedSearches
 from ..types.paginated_traces import PaginatedTraces
 from ..types.saved_search import SavedSearch
-from .types.saved_searches_list_traces_request_sort_by import SavedSearchesListTracesRequestSortBy
-from .types.saved_searches_list_traces_request_sort_direction import SavedSearchesListTracesRequestSortDirection
+from .types.list_traces_saved_searches_request_sort_by import ListTracesSavedSearchesRequestSortBy
+from .types.list_traces_saved_searches_request_sort_direction import ListTracesSavedSearchesRequestSortDirection
+from pydantic import ValidationError
 
 # this is used as the default value for optional parameters
 OMIT = typing.cast(typing.Any, ...)
@@ -49,7 +51,7 @@ class RawSavedSearchesClient:
             List of saved searches
         """
         _response = self._client_wrapper.httpx_client.request(
-            f"v1/projects/{jsonable_encoder(project_slug)}/searches",
+            f"v1/projects/{encode_path_param(project_slug)}/searches",
             method="GET",
             request_options=request_options,
         )
@@ -99,6 +101,10 @@ class RawSavedSearchesClient:
             _response_json = _response.json()
         except JSONDecodeError:
             raise ApiError(status_code=_response.status_code, headers=dict(_response.headers), body=_response.text)
+        except ValidationError as e:
+            raise ParsingError(
+                status_code=_response.status_code, headers=dict(_response.headers), body=_response.json(), cause=e
+            )
         raise ApiError(status_code=_response.status_code, headers=dict(_response.headers), body=_response_json)
 
     def create(
@@ -107,7 +113,7 @@ class RawSavedSearchesClient:
         *,
         name: str,
         query: typing.Optional[str] = OMIT,
-        filters: typing.Optional[FilterSet] = OMIT,
+        filters: typing.Optional[typing.Dict[str, typing.Sequence[FilterCondition]]] = OMIT,
         request_options: typing.Optional[RequestOptions] = None,
     ) -> HttpResponse[SavedSearch]:
         """
@@ -124,7 +130,8 @@ class RawSavedSearchesClient:
         query : typing.Optional[str]
             Free-text semantic query. `null` (default) when the search is filter-only. At least one of `query` or `filters` must be set.
 
-        filters : typing.Optional[FilterSet]
+        filters : typing.Optional[typing.Dict[str, typing.Sequence[FilterCondition]]]
+            Structured filter set. Defaults to `{}` (no filters). At least one of `query` or `filters` must be set.
 
         request_options : typing.Optional[RequestOptions]
             Request-specific configuration.
@@ -135,13 +142,13 @@ class RawSavedSearchesClient:
             Saved search created
         """
         _response = self._client_wrapper.httpx_client.request(
-            f"v1/projects/{jsonable_encoder(project_slug)}/searches",
+            f"v1/projects/{encode_path_param(project_slug)}/searches",
             method="POST",
             json={
                 "name": name,
                 "query": query,
                 "filters": convert_and_respect_annotation_metadata(
-                    object_=filters, annotation=FilterSet, direction="write"
+                    object_=filters, annotation=typing.Dict[str, typing.Sequence[FilterCondition]], direction="write"
                 ),
             },
             headers={
@@ -196,6 +203,10 @@ class RawSavedSearchesClient:
             _response_json = _response.json()
         except JSONDecodeError:
             raise ApiError(status_code=_response.status_code, headers=dict(_response.headers), body=_response.text)
+        except ValidationError as e:
+            raise ParsingError(
+                status_code=_response.status_code, headers=dict(_response.headers), body=_response.json(), cause=e
+            )
         raise ApiError(status_code=_response.status_code, headers=dict(_response.headers), body=_response_json)
 
     def get(
@@ -221,7 +232,7 @@ class RawSavedSearchesClient:
             Saved search
         """
         _response = self._client_wrapper.httpx_client.request(
-            f"v1/projects/{jsonable_encoder(project_slug)}/searches/{jsonable_encoder(search_slug)}",
+            f"v1/projects/{encode_path_param(project_slug)}/searches/{encode_path_param(search_slug)}",
             method="GET",
             request_options=request_options,
         )
@@ -271,6 +282,10 @@ class RawSavedSearchesClient:
             _response_json = _response.json()
         except JSONDecodeError:
             raise ApiError(status_code=_response.status_code, headers=dict(_response.headers), body=_response.text)
+        except ValidationError as e:
+            raise ParsingError(
+                status_code=_response.status_code, headers=dict(_response.headers), body=_response.json(), cause=e
+            )
         raise ApiError(status_code=_response.status_code, headers=dict(_response.headers), body=_response_json)
 
     def delete(
@@ -295,7 +310,7 @@ class RawSavedSearchesClient:
         HttpResponse[None]
         """
         _response = self._client_wrapper.httpx_client.request(
-            f"v1/projects/{jsonable_encoder(project_slug)}/searches/{jsonable_encoder(search_slug)}",
+            f"v1/projects/{encode_path_param(project_slug)}/searches/{encode_path_param(search_slug)}",
             method="DELETE",
             request_options=request_options,
         )
@@ -327,6 +342,10 @@ class RawSavedSearchesClient:
             _response_json = _response.json()
         except JSONDecodeError:
             raise ApiError(status_code=_response.status_code, headers=dict(_response.headers), body=_response.text)
+        except ValidationError as e:
+            raise ParsingError(
+                status_code=_response.status_code, headers=dict(_response.headers), body=_response.json(), cause=e
+            )
         raise ApiError(status_code=_response.status_code, headers=dict(_response.headers), body=_response_json)
 
     def update(
@@ -336,7 +355,7 @@ class RawSavedSearchesClient:
         *,
         name: typing.Optional[str] = OMIT,
         query: typing.Optional[str] = OMIT,
-        filters: typing.Optional[FilterSet] = OMIT,
+        filters: typing.Optional[typing.Dict[str, typing.Sequence[FilterCondition]]] = OMIT,
         request_options: typing.Optional[RequestOptions] = None,
     ) -> HttpResponse[SavedSearch]:
         """
@@ -356,7 +375,8 @@ class RawSavedSearchesClient:
         query : typing.Optional[str]
             Replace the free-text query. Pass `null` to clear it.
 
-        filters : typing.Optional[FilterSet]
+        filters : typing.Optional[typing.Dict[str, typing.Sequence[FilterCondition]]]
+            Replace the structured filter set.
 
         request_options : typing.Optional[RequestOptions]
             Request-specific configuration.
@@ -367,13 +387,13 @@ class RawSavedSearchesClient:
             Updated saved search
         """
         _response = self._client_wrapper.httpx_client.request(
-            f"v1/projects/{jsonable_encoder(project_slug)}/searches/{jsonable_encoder(search_slug)}",
+            f"v1/projects/{encode_path_param(project_slug)}/searches/{encode_path_param(search_slug)}",
             method="PATCH",
             json={
                 "name": name,
                 "query": query,
                 "filters": convert_and_respect_annotation_metadata(
-                    object_=filters, annotation=FilterSet, direction="write"
+                    object_=filters, annotation=typing.Dict[str, typing.Sequence[FilterCondition]], direction="write"
                 ),
             },
             headers={
@@ -428,6 +448,10 @@ class RawSavedSearchesClient:
             _response_json = _response.json()
         except JSONDecodeError:
             raise ApiError(status_code=_response.status_code, headers=dict(_response.headers), body=_response.text)
+        except ValidationError as e:
+            raise ParsingError(
+                status_code=_response.status_code, headers=dict(_response.headers), body=_response.json(), cause=e
+            )
         raise ApiError(status_code=_response.status_code, headers=dict(_response.headers), body=_response_json)
 
     def list_traces(
@@ -437,8 +461,8 @@ class RawSavedSearchesClient:
         *,
         cursor: typing.Optional[str] = None,
         limit: typing.Optional[int] = None,
-        sort_by: typing.Optional[SavedSearchesListTracesRequestSortBy] = None,
-        sort_direction: typing.Optional[SavedSearchesListTracesRequestSortDirection] = None,
+        sort_by: typing.Optional[ListTracesSavedSearchesRequestSortBy] = None,
+        sort_direction: typing.Optional[ListTracesSavedSearchesRequestSortDirection] = None,
         request_options: typing.Optional[RequestOptions] = None,
     ) -> HttpResponse[PaginatedTraces]:
         """
@@ -458,10 +482,10 @@ class RawSavedSearchesClient:
         limit : typing.Optional[int]
             Page size. Defaults to 50; max 200.
 
-        sort_by : typing.Optional[SavedSearchesListTracesRequestSortBy]
+        sort_by : typing.Optional[ListTracesSavedSearchesRequestSortBy]
             Field to sort by. Defaults to `startTime`. Pass `relevance` to rank by semantic match against the saved search's query (best match first, then most recent).
 
-        sort_direction : typing.Optional[SavedSearchesListTracesRequestSortDirection]
+        sort_direction : typing.Optional[ListTracesSavedSearchesRequestSortDirection]
             Sort direction. Defaults to `desc` (most recent first).
 
         request_options : typing.Optional[RequestOptions]
@@ -473,7 +497,7 @@ class RawSavedSearchesClient:
             Page of traces
         """
         _response = self._client_wrapper.httpx_client.request(
-            f"v1/projects/{jsonable_encoder(project_slug)}/searches/{jsonable_encoder(search_slug)}/traces",
+            f"v1/projects/{encode_path_param(project_slug)}/searches/{encode_path_param(search_slug)}/traces",
             method="GET",
             params={
                 "cursor": cursor,
@@ -529,6 +553,10 @@ class RawSavedSearchesClient:
             _response_json = _response.json()
         except JSONDecodeError:
             raise ApiError(status_code=_response.status_code, headers=dict(_response.headers), body=_response.text)
+        except ValidationError as e:
+            raise ParsingError(
+                status_code=_response.status_code, headers=dict(_response.headers), body=_response.json(), cause=e
+            )
         raise ApiError(status_code=_response.status_code, headers=dict(_response.headers), body=_response_json)
 
 
@@ -556,7 +584,7 @@ class AsyncRawSavedSearchesClient:
             List of saved searches
         """
         _response = await self._client_wrapper.httpx_client.request(
-            f"v1/projects/{jsonable_encoder(project_slug)}/searches",
+            f"v1/projects/{encode_path_param(project_slug)}/searches",
             method="GET",
             request_options=request_options,
         )
@@ -606,6 +634,10 @@ class AsyncRawSavedSearchesClient:
             _response_json = _response.json()
         except JSONDecodeError:
             raise ApiError(status_code=_response.status_code, headers=dict(_response.headers), body=_response.text)
+        except ValidationError as e:
+            raise ParsingError(
+                status_code=_response.status_code, headers=dict(_response.headers), body=_response.json(), cause=e
+            )
         raise ApiError(status_code=_response.status_code, headers=dict(_response.headers), body=_response_json)
 
     async def create(
@@ -614,7 +646,7 @@ class AsyncRawSavedSearchesClient:
         *,
         name: str,
         query: typing.Optional[str] = OMIT,
-        filters: typing.Optional[FilterSet] = OMIT,
+        filters: typing.Optional[typing.Dict[str, typing.Sequence[FilterCondition]]] = OMIT,
         request_options: typing.Optional[RequestOptions] = None,
     ) -> AsyncHttpResponse[SavedSearch]:
         """
@@ -631,7 +663,8 @@ class AsyncRawSavedSearchesClient:
         query : typing.Optional[str]
             Free-text semantic query. `null` (default) when the search is filter-only. At least one of `query` or `filters` must be set.
 
-        filters : typing.Optional[FilterSet]
+        filters : typing.Optional[typing.Dict[str, typing.Sequence[FilterCondition]]]
+            Structured filter set. Defaults to `{}` (no filters). At least one of `query` or `filters` must be set.
 
         request_options : typing.Optional[RequestOptions]
             Request-specific configuration.
@@ -642,13 +675,13 @@ class AsyncRawSavedSearchesClient:
             Saved search created
         """
         _response = await self._client_wrapper.httpx_client.request(
-            f"v1/projects/{jsonable_encoder(project_slug)}/searches",
+            f"v1/projects/{encode_path_param(project_slug)}/searches",
             method="POST",
             json={
                 "name": name,
                 "query": query,
                 "filters": convert_and_respect_annotation_metadata(
-                    object_=filters, annotation=FilterSet, direction="write"
+                    object_=filters, annotation=typing.Dict[str, typing.Sequence[FilterCondition]], direction="write"
                 ),
             },
             headers={
@@ -703,6 +736,10 @@ class AsyncRawSavedSearchesClient:
             _response_json = _response.json()
         except JSONDecodeError:
             raise ApiError(status_code=_response.status_code, headers=dict(_response.headers), body=_response.text)
+        except ValidationError as e:
+            raise ParsingError(
+                status_code=_response.status_code, headers=dict(_response.headers), body=_response.json(), cause=e
+            )
         raise ApiError(status_code=_response.status_code, headers=dict(_response.headers), body=_response_json)
 
     async def get(
@@ -728,7 +765,7 @@ class AsyncRawSavedSearchesClient:
             Saved search
         """
         _response = await self._client_wrapper.httpx_client.request(
-            f"v1/projects/{jsonable_encoder(project_slug)}/searches/{jsonable_encoder(search_slug)}",
+            f"v1/projects/{encode_path_param(project_slug)}/searches/{encode_path_param(search_slug)}",
             method="GET",
             request_options=request_options,
         )
@@ -778,6 +815,10 @@ class AsyncRawSavedSearchesClient:
             _response_json = _response.json()
         except JSONDecodeError:
             raise ApiError(status_code=_response.status_code, headers=dict(_response.headers), body=_response.text)
+        except ValidationError as e:
+            raise ParsingError(
+                status_code=_response.status_code, headers=dict(_response.headers), body=_response.json(), cause=e
+            )
         raise ApiError(status_code=_response.status_code, headers=dict(_response.headers), body=_response_json)
 
     async def delete(
@@ -802,7 +843,7 @@ class AsyncRawSavedSearchesClient:
         AsyncHttpResponse[None]
         """
         _response = await self._client_wrapper.httpx_client.request(
-            f"v1/projects/{jsonable_encoder(project_slug)}/searches/{jsonable_encoder(search_slug)}",
+            f"v1/projects/{encode_path_param(project_slug)}/searches/{encode_path_param(search_slug)}",
             method="DELETE",
             request_options=request_options,
         )
@@ -834,6 +875,10 @@ class AsyncRawSavedSearchesClient:
             _response_json = _response.json()
         except JSONDecodeError:
             raise ApiError(status_code=_response.status_code, headers=dict(_response.headers), body=_response.text)
+        except ValidationError as e:
+            raise ParsingError(
+                status_code=_response.status_code, headers=dict(_response.headers), body=_response.json(), cause=e
+            )
         raise ApiError(status_code=_response.status_code, headers=dict(_response.headers), body=_response_json)
 
     async def update(
@@ -843,7 +888,7 @@ class AsyncRawSavedSearchesClient:
         *,
         name: typing.Optional[str] = OMIT,
         query: typing.Optional[str] = OMIT,
-        filters: typing.Optional[FilterSet] = OMIT,
+        filters: typing.Optional[typing.Dict[str, typing.Sequence[FilterCondition]]] = OMIT,
         request_options: typing.Optional[RequestOptions] = None,
     ) -> AsyncHttpResponse[SavedSearch]:
         """
@@ -863,7 +908,8 @@ class AsyncRawSavedSearchesClient:
         query : typing.Optional[str]
             Replace the free-text query. Pass `null` to clear it.
 
-        filters : typing.Optional[FilterSet]
+        filters : typing.Optional[typing.Dict[str, typing.Sequence[FilterCondition]]]
+            Replace the structured filter set.
 
         request_options : typing.Optional[RequestOptions]
             Request-specific configuration.
@@ -874,13 +920,13 @@ class AsyncRawSavedSearchesClient:
             Updated saved search
         """
         _response = await self._client_wrapper.httpx_client.request(
-            f"v1/projects/{jsonable_encoder(project_slug)}/searches/{jsonable_encoder(search_slug)}",
+            f"v1/projects/{encode_path_param(project_slug)}/searches/{encode_path_param(search_slug)}",
             method="PATCH",
             json={
                 "name": name,
                 "query": query,
                 "filters": convert_and_respect_annotation_metadata(
-                    object_=filters, annotation=FilterSet, direction="write"
+                    object_=filters, annotation=typing.Dict[str, typing.Sequence[FilterCondition]], direction="write"
                 ),
             },
             headers={
@@ -935,6 +981,10 @@ class AsyncRawSavedSearchesClient:
             _response_json = _response.json()
         except JSONDecodeError:
             raise ApiError(status_code=_response.status_code, headers=dict(_response.headers), body=_response.text)
+        except ValidationError as e:
+            raise ParsingError(
+                status_code=_response.status_code, headers=dict(_response.headers), body=_response.json(), cause=e
+            )
         raise ApiError(status_code=_response.status_code, headers=dict(_response.headers), body=_response_json)
 
     async def list_traces(
@@ -944,8 +994,8 @@ class AsyncRawSavedSearchesClient:
         *,
         cursor: typing.Optional[str] = None,
         limit: typing.Optional[int] = None,
-        sort_by: typing.Optional[SavedSearchesListTracesRequestSortBy] = None,
-        sort_direction: typing.Optional[SavedSearchesListTracesRequestSortDirection] = None,
+        sort_by: typing.Optional[ListTracesSavedSearchesRequestSortBy] = None,
+        sort_direction: typing.Optional[ListTracesSavedSearchesRequestSortDirection] = None,
         request_options: typing.Optional[RequestOptions] = None,
     ) -> AsyncHttpResponse[PaginatedTraces]:
         """
@@ -965,10 +1015,10 @@ class AsyncRawSavedSearchesClient:
         limit : typing.Optional[int]
             Page size. Defaults to 50; max 200.
 
-        sort_by : typing.Optional[SavedSearchesListTracesRequestSortBy]
+        sort_by : typing.Optional[ListTracesSavedSearchesRequestSortBy]
             Field to sort by. Defaults to `startTime`. Pass `relevance` to rank by semantic match against the saved search's query (best match first, then most recent).
 
-        sort_direction : typing.Optional[SavedSearchesListTracesRequestSortDirection]
+        sort_direction : typing.Optional[ListTracesSavedSearchesRequestSortDirection]
             Sort direction. Defaults to `desc` (most recent first).
 
         request_options : typing.Optional[RequestOptions]
@@ -980,7 +1030,7 @@ class AsyncRawSavedSearchesClient:
             Page of traces
         """
         _response = await self._client_wrapper.httpx_client.request(
-            f"v1/projects/{jsonable_encoder(project_slug)}/searches/{jsonable_encoder(search_slug)}/traces",
+            f"v1/projects/{encode_path_param(project_slug)}/searches/{encode_path_param(search_slug)}/traces",
             method="GET",
             params={
                 "cursor": cursor,
@@ -1036,4 +1086,8 @@ class AsyncRawSavedSearchesClient:
             _response_json = _response.json()
         except JSONDecodeError:
             raise ApiError(status_code=_response.status_code, headers=dict(_response.headers), body=_response.text)
+        except ValidationError as e:
+            raise ParsingError(
+                status_code=_response.status_code, headers=dict(_response.headers), body=_response.json(), cause=e
+            )
         raise ApiError(status_code=_response.status_code, headers=dict(_response.headers), body=_response_json)

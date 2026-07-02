@@ -9,11 +9,11 @@ from ..core.serialization import FieldMetadata
 
 
 class UserBehaviour(UniversalBaseModel):
-    cluster_id: typing_extensions.Annotated[str, FieldMetadata(alias="clusterId")] = pydantic.Field()
-    """
-    Stable identifier of the behaviour cluster.
-    """
-
+    cluster_id: typing_extensions.Annotated[
+        str,
+        FieldMetadata(alias="clusterId"),
+        pydantic.Field(alias="clusterId", description="Stable identifier of the behaviour cluster."),
+    ]
     name: str = pydantic.Field()
     """
     Human-readable behaviour name.
@@ -24,19 +24,24 @@ class UserBehaviour(UniversalBaseModel):
     Behaviour description.
     """
 
-    observation_count: typing_extensions.Annotated[int, FieldMetadata(alias="observationCount")] = pydantic.Field()
-    """
-    Observations of this behaviour on the user's sessions.
-    """
-
-    first_observed_at: typing_extensions.Annotated[str, FieldMetadata(alias="firstObservedAt")] = pydantic.Field()
-    """
-    ISO-8601 timestamp the behaviour was first observed for the user.
-    """
-
-    last_observed_at: typing_extensions.Annotated[str, FieldMetadata(alias="lastObservedAt")] = pydantic.Field()
-    """
-    ISO-8601 timestamp the behaviour was last observed for the user.
-    """
+    observation_count: typing_extensions.Annotated[
+        int,
+        FieldMetadata(alias="observationCount"),
+        pydantic.Field(alias="observationCount", description="Observations of this behaviour on the user's sessions."),
+    ]
+    first_observed_at: typing_extensions.Annotated[
+        str,
+        FieldMetadata(alias="firstObservedAt"),
+        pydantic.Field(
+            alias="firstObservedAt", description="ISO-8601 timestamp the behaviour was first observed for the user."
+        ),
+    ]
+    last_observed_at: typing_extensions.Annotated[
+        str,
+        FieldMetadata(alias="lastObservedAt"),
+        pydantic.Field(
+            alias="lastObservedAt", description="ISO-8601 timestamp the behaviour was last observed for the user."
+        ),
+    ]
 
     model_config: typing.ClassVar[pydantic.ConfigDict] = pydantic.ConfigDict(extra="allow", frozen=True)

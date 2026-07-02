@@ -21,6 +21,11 @@ export declare namespace Fetcher {
         method: string;
         contentType?: string;
         headers?: Record<string, unknown>;
+        /**
+         * @deprecated Prefer `queryString` (produced by `core.url.queryBuilder()`).
+         * Retained for backwards compatibility with custom fetchers and callers that
+         * still construct request args with a query-parameter object.
+         */
         queryParameters?: Record<string, unknown>;
         queryString?: string;
         body?: unknown;
@@ -119,17 +124,15 @@ const SENSITIVE_QUERY_PARAMS = new Set([
     "session-id",
 ]);
 
-function redactQueryParameters(queryParameters?: Record<string, unknown>): Record<string, unknown> | undefined {
+function redactQueryParameters(
+    queryParameters: Record<string, unknown> | undefined,
+): Record<string, unknown> | undefined {
     if (queryParameters == null) {
-        return queryParameters;
+        return undefined;
     }
     const redacted: Record<string, unknown> = {};
     for (const [key, value] of Object.entries(queryParameters)) {
-        if (SENSITIVE_QUERY_PARAMS.has(key.toLowerCase())) {
-            redacted[key] = "[REDACTED]";
-        } else {
-            redacted[key] = value;
-        }
+        redacted[key] = SENSITIVE_QUERY_PARAMS.has(key.toLowerCase()) ? "[REDACTED]" : value;
     }
     return redacted;
 }

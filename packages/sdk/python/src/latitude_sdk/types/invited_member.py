@@ -7,22 +7,42 @@ import typing_extensions
 from ..core.pydantic_utilities import UniversalBaseModel
 from ..core.serialization import FieldMetadata
 from .invited_member_role import InvitedMemberRole
+from .invited_member_status import InvitedMemberStatus
 
 
 class InvitedMember(UniversalBaseModel):
+    status: InvitedMemberStatus = pydantic.Field()
+    """
+    Discriminator for pending invitations — the invitee hasn't accepted yet, so no user record exists.
+    """
+
     id: str = pydantic.Field()
     """
     Stable invitation identifier. Distinct from membership ids.
     """
 
-    organization_id: typing_extensions.Annotated[str, FieldMetadata(alias="organizationId")] = pydantic.Field()
-    """
-    Organization the invitation grants access to.
-    """
-
+    organization_id: typing_extensions.Annotated[
+        str,
+        FieldMetadata(alias="organizationId"),
+        pydantic.Field(alias="organizationId", description="Organization the invitation grants access to."),
+    ]
+    user_id: typing_extensions.Annotated[
+        typing.Optional[typing.Any],
+        FieldMetadata(alias="userId"),
+        pydantic.Field(
+            alias="userId",
+            default=None,
+            description="Always `null` — no user record exists until the invitation is accepted.",
+        ),
+    ]
     role: typing.Optional[InvitedMemberRole] = pydantic.Field(default=None)
     """
     Role the invitee will get once they accept. `null` means the default (`member`).
+    """
+
+    name: typing.Optional[typing.Any] = pydantic.Field(default=None)
+    """
+    Always `null` — no user record exists yet.
     """
 
     email: str = pydantic.Field()
@@ -30,19 +50,25 @@ class InvitedMember(UniversalBaseModel):
     Email address the invitation was sent to.
     """
 
-    invited_at: typing_extensions.Annotated[str, FieldMetadata(alias="invitedAt")] = pydantic.Field()
+    image: typing.Optional[typing.Any] = pydantic.Field(default=None)
     """
-    ISO-8601 timestamp at which the invitation was created.
-    """
-
-    expires_at: typing_extensions.Annotated[str, FieldMetadata(alias="expiresAt")] = pydantic.Field()
-    """
-    ISO-8601 timestamp at which the invitation expires.
+    Always `null` — no user record exists yet.
     """
 
-    inviter_id: typing_extensions.Annotated[str, FieldMetadata(alias="inviterId")] = pydantic.Field()
-    """
-    User id of the member who issued the invitation.
-    """
+    invited_at: typing_extensions.Annotated[
+        str,
+        FieldMetadata(alias="invitedAt"),
+        pydantic.Field(alias="invitedAt", description="ISO-8601 timestamp at which the invitation was created."),
+    ]
+    expires_at: typing_extensions.Annotated[
+        str,
+        FieldMetadata(alias="expiresAt"),
+        pydantic.Field(alias="expiresAt", description="ISO-8601 timestamp at which the invitation expires."),
+    ]
+    inviter_id: typing_extensions.Annotated[
+        str,
+        FieldMetadata(alias="inviterId"),
+        pydantic.Field(alias="inviterId", description="User id of the member who issued the invitation."),
+    ]
 
     model_config: typing.ClassVar[pydantic.ConfigDict] = pydantic.ConfigDict(extra="allow", frozen=True)

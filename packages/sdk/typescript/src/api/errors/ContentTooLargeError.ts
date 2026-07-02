@@ -2,10 +2,10 @@
 
 import type * as core from "../../core/index.js";
 import * as errors from "../../errors/index.js";
-import type * as LatitudeApi from "../index.js";
+import type * as Latitude from "../index.js";
 
-export class ContentTooLargeError extends errors.LatitudeApiError {
-    constructor(body: LatitudeApi.ExportDatasetRowsTooLargeResponse, rawResponse?: core.RawResponse) {
+export class ContentTooLargeError extends errors.LatitudeError {
+    constructor(body: Latitude.ExportDatasetRowsTooLargeResponse, rawResponse?: core.RawResponse) {
         super({
             message: "ContentTooLargeError",
             statusCode: 413,
@@ -17,6 +17,6 @@ export class ContentTooLargeError extends errors.LatitudeApiError {
             Error.captureStackTrace(this, this.constructor);
         }
 
-        this.name = this.constructor.name;
+        this.name = "ContentTooLargeError";
     }
 }

@@ -119,10 +119,6 @@ const TIER_LIMITS: Record<RateLimitTier, { readonly maxRequests: number; readonl
  * this runs, otherwise the limiter falls back to a single shared `unknown`
  * bucket — fine for unauthenticated requests because the auth middleware will
  * reject them anyway.
- *
- * @public Public API surface for the API expansion plan; consumed by route
- * mounts in subsequent PRs. Marked `@public` so knip doesn't flag it as
- * unused while it's waiting for its first consumer.
  */
 export const createTierRateLimiter = (tier: RateLimitTier) => {
   const { maxRequests, windowSeconds } = TIER_LIMITS[tier]

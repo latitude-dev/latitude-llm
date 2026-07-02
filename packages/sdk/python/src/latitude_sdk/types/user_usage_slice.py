@@ -14,9 +14,10 @@ class UserUsageSlice(UniversalBaseModel):
     A value of the requested dimension (a model, provider, or tool name).
     """
 
-    trace_count: typing_extensions.Annotated[int, FieldMetadata(alias="traceCount")] = pydantic.Field()
-    """
-    Distinct traces of the user carrying this value.
-    """
+    trace_count: typing_extensions.Annotated[
+        int,
+        FieldMetadata(alias="traceCount"),
+        pydantic.Field(alias="traceCount", description="Distinct traces of the user carrying this value."),
+    ]
 
     model_config: typing.ClassVar[pydantic.ConfigDict] = pydantic.ConfigDict(extra="allow", frozen=True)

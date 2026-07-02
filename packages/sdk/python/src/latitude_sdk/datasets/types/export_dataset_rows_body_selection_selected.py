@@ -9,6 +9,8 @@ from ...core.serialization import FieldMetadata
 
 
 class ExportDatasetRowsBodySelectionSelected(UniversalBaseModel):
-    row_ids: typing_extensions.Annotated[typing.List[str], FieldMetadata(alias="rowIds")]
+    row_ids: typing_extensions.Annotated[
+        typing.List[str], FieldMetadata(alias="rowIds"), pydantic.Field(alias="rowIds")
+    ]
 
     model_config: typing.ClassVar[pydantic.ConfigDict] = pydantic.ConfigDict(extra="allow", frozen=True)

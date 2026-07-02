@@ -7,7 +7,7 @@ import * as core from "../../../../core/index.js";
 import * as environments from "../../../../environments.js";
 import { handleNonStatusCodeError } from "../../../../errors/handleNonStatusCodeError.js";
 import * as errors from "../../../../errors/index.js";
-import * as LatitudeApi from "../../../index.js";
+import * as Latitude from "../../../index.js";
 
 export declare namespace UsersClient {
     export type Options = BaseClientOptions;
@@ -18,7 +18,7 @@ export declare namespace UsersClient {
 export class UsersClient {
     protected readonly _options: NormalizedClientOptionsWithAuth<UsersClient.Options>;
 
-    constructor(options: UsersClient.Options) {
+    constructor(options: UsersClient.Options = {}) {
         this._options = normalizeClientOptionsWithAuth(options);
     }
 
@@ -26,37 +26,29 @@ export class UsersClient {
      * Returns a page of the project's identified end-users over the range, each with trace, session, token, and cost metrics, plus cost aggregates across every matching user. The range defaults to the trailing 30 days.
      *
      * @param {string} projectSlug - Project slug (human-readable identifier)
-     * @param {LatitudeApi.UsersListRequest} request
+     * @param {Latitude.ListUsersRequest} request
      * @param {UsersClient.RequestOptions} requestOptions - Request-specific configuration.
      *
-     * @throws {@link LatitudeApi.BadRequestError}
-     * @throws {@link LatitudeApi.UnauthorizedError}
-     * @throws {@link LatitudeApi.NotFoundError}
+     * @throws {@link Latitude.BadRequestError}
+     * @throws {@link Latitude.UnauthorizedError}
+     * @throws {@link Latitude.NotFoundError}
      *
      * @example
-     *     await client.users.list("projectSlug", {
-     *         fromIso: "2024-01-15T09:30:00Z",
-     *         toIso: "2024-01-15T09:30:00Z",
-     *         limit: 1,
-     *         offset: 1,
-     *         sortBy: "lastSeen",
-     *         sortDirection: "asc",
-     *         searchQuery: "searchQuery"
-     *     })
+     *     await client.users.list("projectSlug")
      */
     public list(
         projectSlug: string,
-        request: LatitudeApi.UsersListRequest = {},
+        request: Latitude.ListUsersRequest = {},
         requestOptions?: UsersClient.RequestOptions,
-    ): core.HttpResponsePromise<LatitudeApi.UserListResponse> {
+    ): core.HttpResponsePromise<Latitude.UserListResponse> {
         return core.HttpResponsePromise.fromPromise(this.__list(projectSlug, request, requestOptions));
     }
 
     private async __list(
         projectSlug: string,
-        request: LatitudeApi.UsersListRequest = {},
+        request: Latitude.ListUsersRequest = {},
         requestOptions?: UsersClient.RequestOptions,
-    ): Promise<core.WithRawResponse<LatitudeApi.UserListResponse>> {
+    ): Promise<core.WithRawResponse<Latitude.UserListResponse>> {
         const { fromIso, toIso, limit, offset, sortBy, sortDirection, searchQuery } = request;
         const _queryParams: Record<string, unknown> = {
             fromIso: fromIso != null ? fromIso : undefined,
@@ -77,12 +69,11 @@ export class UsersClient {
             url: core.url.join(
                 (await core.Supplier.get(this._options.baseUrl)) ??
                     (await core.Supplier.get(this._options.environment)) ??
-                    environments.LatitudeApiEnvironment.Production,
+                    environments.LatitudeEnvironment.Production,
                 `v1/projects/${core.url.encodePathParam(projectSlug)}/users`,
             ),
             method: "GET",
             headers: _headers,
-            queryParameters: { ..._queryParams, ...requestOptions?.queryParams },
             queryString: core.url
                 .queryBuilder()
                 .addMany(_queryParams)
@@ -95,28 +86,22 @@ export class UsersClient {
             logging: this._options.logging,
         });
         if (_response.ok) {
-            return { data: _response.body as LatitudeApi.UserListResponse, rawResponse: _response.rawResponse };
+            return { data: _response.body as Latitude.UserListResponse, rawResponse: _response.rawResponse };
         }
 
         if (_response.error.reason === "status-code") {
             switch (_response.error.statusCode) {
                 case 400:
-                    throw new LatitudeApi.BadRequestError(
-                        _response.error.body as LatitudeApi.Error_,
-                        _response.rawResponse,
-                    );
+                    throw new Latitude.BadRequestError(_response.error.body as Latitude.Error_, _response.rawResponse);
                 case 401:
-                    throw new LatitudeApi.UnauthorizedError(
-                        _response.error.body as LatitudeApi.Error_,
+                    throw new Latitude.UnauthorizedError(
+                        _response.error.body as Latitude.Error_,
                         _response.rawResponse,
                     );
                 case 404:
-                    throw new LatitudeApi.NotFoundError(
-                        _response.error.body as LatitudeApi.Error_,
-                        _response.rawResponse,
-                    );
+                    throw new Latitude.NotFoundError(_response.error.body as Latitude.Error_, _response.rawResponse);
                 default:
-                    throw new errors.LatitudeApiError({
+                    throw new errors.LatitudeError({
                         statusCode: _response.error.statusCode,
                         body: _response.error.body,
                         rawResponse: _response.rawResponse,
@@ -136,32 +121,29 @@ export class UsersClient {
      * Returns project-wide end-user aggregates over the range — unique and new users, identified vs total traces and sessions — plus a per-bucket activity histogram. The range defaults to the trailing 30 days.
      *
      * @param {string} projectSlug - Project slug (human-readable identifier)
-     * @param {LatitudeApi.UsersOverviewRequest} request
+     * @param {Latitude.OverviewUsersRequest} request
      * @param {UsersClient.RequestOptions} requestOptions - Request-specific configuration.
      *
-     * @throws {@link LatitudeApi.BadRequestError}
-     * @throws {@link LatitudeApi.UnauthorizedError}
-     * @throws {@link LatitudeApi.NotFoundError}
+     * @throws {@link Latitude.BadRequestError}
+     * @throws {@link Latitude.UnauthorizedError}
+     * @throws {@link Latitude.NotFoundError}
      *
      * @example
-     *     await client.users.overview("projectSlug", {
-     *         fromIso: "2024-01-15T09:30:00Z",
-     *         toIso: "2024-01-15T09:30:00Z"
-     *     })
+     *     await client.users.overview("projectSlug")
      */
     public overview(
         projectSlug: string,
-        request: LatitudeApi.UsersOverviewRequest = {},
+        request: Latitude.OverviewUsersRequest = {},
         requestOptions?: UsersClient.RequestOptions,
-    ): core.HttpResponsePromise<LatitudeApi.UsersOverviewResponse> {
+    ): core.HttpResponsePromise<Latitude.UsersOverviewResponse> {
         return core.HttpResponsePromise.fromPromise(this.__overview(projectSlug, request, requestOptions));
     }
 
     private async __overview(
         projectSlug: string,
-        request: LatitudeApi.UsersOverviewRequest = {},
+        request: Latitude.OverviewUsersRequest = {},
         requestOptions?: UsersClient.RequestOptions,
-    ): Promise<core.WithRawResponse<LatitudeApi.UsersOverviewResponse>> {
+    ): Promise<core.WithRawResponse<Latitude.UsersOverviewResponse>> {
         const { fromIso, toIso } = request;
         const _queryParams: Record<string, unknown> = {
             fromIso: fromIso != null ? fromIso : undefined,
@@ -177,12 +159,11 @@ export class UsersClient {
             url: core.url.join(
                 (await core.Supplier.get(this._options.baseUrl)) ??
                     (await core.Supplier.get(this._options.environment)) ??
-                    environments.LatitudeApiEnvironment.Production,
+                    environments.LatitudeEnvironment.Production,
                 `v1/projects/${core.url.encodePathParam(projectSlug)}/users/overview`,
             ),
             method: "GET",
             headers: _headers,
-            queryParameters: { ..._queryParams, ...requestOptions?.queryParams },
             queryString: core.url
                 .queryBuilder()
                 .addMany(_queryParams)
@@ -195,28 +176,22 @@ export class UsersClient {
             logging: this._options.logging,
         });
         if (_response.ok) {
-            return { data: _response.body as LatitudeApi.UsersOverviewResponse, rawResponse: _response.rawResponse };
+            return { data: _response.body as Latitude.UsersOverviewResponse, rawResponse: _response.rawResponse };
         }
 
         if (_response.error.reason === "status-code") {
             switch (_response.error.statusCode) {
                 case 400:
-                    throw new LatitudeApi.BadRequestError(
-                        _response.error.body as LatitudeApi.Error_,
-                        _response.rawResponse,
-                    );
+                    throw new Latitude.BadRequestError(_response.error.body as Latitude.Error_, _response.rawResponse);
                 case 401:
-                    throw new LatitudeApi.UnauthorizedError(
-                        _response.error.body as LatitudeApi.Error_,
+                    throw new Latitude.UnauthorizedError(
+                        _response.error.body as Latitude.Error_,
                         _response.rawResponse,
                     );
                 case 404:
-                    throw new LatitudeApi.NotFoundError(
-                        _response.error.body as LatitudeApi.Error_,
-                        _response.rawResponse,
-                    );
+                    throw new Latitude.NotFoundError(_response.error.body as Latitude.Error_, _response.rawResponse);
                 default:
-                    throw new errors.LatitudeApiError({
+                    throw new errors.LatitudeError({
                         statusCode: _response.error.statusCode,
                         body: _response.error.body,
                         rawResponse: _response.rawResponse,
@@ -237,35 +212,31 @@ export class UsersClient {
      *
      * @param {string} projectSlug - Project slug (human-readable identifier)
      * @param {string} userId - End-user identifier. URL-encode values containing special characters.
-     * @param {LatitudeApi.UsersActivityRequest} request
+     * @param {Latitude.ActivityUsersRequest} request
      * @param {UsersClient.RequestOptions} requestOptions - Request-specific configuration.
      *
-     * @throws {@link LatitudeApi.BadRequestError}
-     * @throws {@link LatitudeApi.UnauthorizedError}
-     * @throws {@link LatitudeApi.NotFoundError}
+     * @throws {@link Latitude.BadRequestError}
+     * @throws {@link Latitude.UnauthorizedError}
+     * @throws {@link Latitude.NotFoundError}
      *
      * @example
-     *     await client.users.activity("projectSlug", "userId", {
-     *         fromIso: "2024-01-15T09:30:00Z",
-     *         toIso: "2024-01-15T09:30:00Z",
-     *         errorsOnly: "true"
-     *     })
+     *     await client.users.activity("projectSlug", "userId")
      */
     public activity(
         projectSlug: string,
         userId: string,
-        request: LatitudeApi.UsersActivityRequest = {},
+        request: Latitude.ActivityUsersRequest = {},
         requestOptions?: UsersClient.RequestOptions,
-    ): core.HttpResponsePromise<LatitudeApi.UserActivityResponse> {
+    ): core.HttpResponsePromise<Latitude.UserActivityResponse> {
         return core.HttpResponsePromise.fromPromise(this.__activity(projectSlug, userId, request, requestOptions));
     }
 
     private async __activity(
         projectSlug: string,
         userId: string,
-        request: LatitudeApi.UsersActivityRequest = {},
+        request: Latitude.ActivityUsersRequest = {},
         requestOptions?: UsersClient.RequestOptions,
-    ): Promise<core.WithRawResponse<LatitudeApi.UserActivityResponse>> {
+    ): Promise<core.WithRawResponse<Latitude.UserActivityResponse>> {
         const { fromIso, toIso, errorsOnly } = request;
         const _queryParams: Record<string, unknown> = {
             fromIso: fromIso != null ? fromIso : undefined,
@@ -282,12 +253,11 @@ export class UsersClient {
             url: core.url.join(
                 (await core.Supplier.get(this._options.baseUrl)) ??
                     (await core.Supplier.get(this._options.environment)) ??
-                    environments.LatitudeApiEnvironment.Production,
+                    environments.LatitudeEnvironment.Production,
                 `v1/projects/${core.url.encodePathParam(projectSlug)}/users/${core.url.encodePathParam(userId)}/activity`,
             ),
             method: "GET",
             headers: _headers,
-            queryParameters: { ..._queryParams, ...requestOptions?.queryParams },
             queryString: core.url
                 .queryBuilder()
                 .addMany(_queryParams)
@@ -300,28 +270,22 @@ export class UsersClient {
             logging: this._options.logging,
         });
         if (_response.ok) {
-            return { data: _response.body as LatitudeApi.UserActivityResponse, rawResponse: _response.rawResponse };
+            return { data: _response.body as Latitude.UserActivityResponse, rawResponse: _response.rawResponse };
         }
 
         if (_response.error.reason === "status-code") {
             switch (_response.error.statusCode) {
                 case 400:
-                    throw new LatitudeApi.BadRequestError(
-                        _response.error.body as LatitudeApi.Error_,
-                        _response.rawResponse,
-                    );
+                    throw new Latitude.BadRequestError(_response.error.body as Latitude.Error_, _response.rawResponse);
                 case 401:
-                    throw new LatitudeApi.UnauthorizedError(
-                        _response.error.body as LatitudeApi.Error_,
+                    throw new Latitude.UnauthorizedError(
+                        _response.error.body as Latitude.Error_,
                         _response.rawResponse,
                     );
                 case 404:
-                    throw new LatitudeApi.NotFoundError(
-                        _response.error.body as LatitudeApi.Error_,
-                        _response.rawResponse,
-                    );
+                    throw new Latitude.NotFoundError(_response.error.body as Latitude.Error_, _response.rawResponse);
                 default:
-                    throw new errors.LatitudeApiError({
+                    throw new errors.LatitudeError({
                         statusCode: _response.error.statusCode,
                         body: _response.error.body,
                         rawResponse: _response.rawResponse,
@@ -342,35 +306,33 @@ export class UsersClient {
      *
      * @param {string} projectSlug - Project slug (human-readable identifier)
      * @param {string} userId - End-user identifier. URL-encode values containing special characters.
-     * @param {LatitudeApi.UsersUsageRequest} request
+     * @param {Latitude.UsageUsersRequest} request
      * @param {UsersClient.RequestOptions} requestOptions - Request-specific configuration.
      *
-     * @throws {@link LatitudeApi.BadRequestError}
-     * @throws {@link LatitudeApi.UnauthorizedError}
-     * @throws {@link LatitudeApi.NotFoundError}
+     * @throws {@link Latitude.BadRequestError}
+     * @throws {@link Latitude.UnauthorizedError}
+     * @throws {@link Latitude.NotFoundError}
      *
      * @example
      *     await client.users.usage("projectSlug", "userId", {
-     *         dimension: "model",
-     *         limit: 1,
-     *         errorsOnly: "true"
+     *         dimension: "model"
      *     })
      */
     public usage(
         projectSlug: string,
         userId: string,
-        request: LatitudeApi.UsersUsageRequest,
+        request: Latitude.UsageUsersRequest,
         requestOptions?: UsersClient.RequestOptions,
-    ): core.HttpResponsePromise<LatitudeApi.UserUsageResponse> {
+    ): core.HttpResponsePromise<Latitude.UserUsageResponse> {
         return core.HttpResponsePromise.fromPromise(this.__usage(projectSlug, userId, request, requestOptions));
     }
 
     private async __usage(
         projectSlug: string,
         userId: string,
-        request: LatitudeApi.UsersUsageRequest,
+        request: Latitude.UsageUsersRequest,
         requestOptions?: UsersClient.RequestOptions,
-    ): Promise<core.WithRawResponse<LatitudeApi.UserUsageResponse>> {
+    ): Promise<core.WithRawResponse<Latitude.UserUsageResponse>> {
         const { dimension, limit, errorsOnly } = request;
         const _queryParams: Record<string, unknown> = {
             dimension,
@@ -387,12 +349,11 @@ export class UsersClient {
             url: core.url.join(
                 (await core.Supplier.get(this._options.baseUrl)) ??
                     (await core.Supplier.get(this._options.environment)) ??
-                    environments.LatitudeApiEnvironment.Production,
+                    environments.LatitudeEnvironment.Production,
                 `v1/projects/${core.url.encodePathParam(projectSlug)}/users/${core.url.encodePathParam(userId)}/usage`,
             ),
             method: "GET",
             headers: _headers,
-            queryParameters: { ..._queryParams, ...requestOptions?.queryParams },
             queryString: core.url
                 .queryBuilder()
                 .addMany(_queryParams)
@@ -405,28 +366,22 @@ export class UsersClient {
             logging: this._options.logging,
         });
         if (_response.ok) {
-            return { data: _response.body as LatitudeApi.UserUsageResponse, rawResponse: _response.rawResponse };
+            return { data: _response.body as Latitude.UserUsageResponse, rawResponse: _response.rawResponse };
         }
 
         if (_response.error.reason === "status-code") {
             switch (_response.error.statusCode) {
                 case 400:
-                    throw new LatitudeApi.BadRequestError(
-                        _response.error.body as LatitudeApi.Error_,
-                        _response.rawResponse,
-                    );
+                    throw new Latitude.BadRequestError(_response.error.body as Latitude.Error_, _response.rawResponse);
                 case 401:
-                    throw new LatitudeApi.UnauthorizedError(
-                        _response.error.body as LatitudeApi.Error_,
+                    throw new Latitude.UnauthorizedError(
+                        _response.error.body as Latitude.Error_,
                         _response.rawResponse,
                     );
                 case 404:
-                    throw new LatitudeApi.NotFoundError(
-                        _response.error.body as LatitudeApi.Error_,
-                        _response.rawResponse,
-                    );
+                    throw new Latitude.NotFoundError(_response.error.body as Latitude.Error_, _response.rawResponse);
                 default:
-                    throw new errors.LatitudeApiError({
+                    throw new errors.LatitudeError({
                         statusCode: _response.error.statusCode,
                         body: _response.error.body,
                         rawResponse: _response.rawResponse,
@@ -447,33 +402,31 @@ export class UsersClient {
      *
      * @param {string} projectSlug - Project slug (human-readable identifier)
      * @param {string} userId - End-user identifier. URL-encode values containing special characters.
-     * @param {LatitudeApi.UsersSignalsRequest} request
+     * @param {Latitude.SignalsUsersRequest} request
      * @param {UsersClient.RequestOptions} requestOptions - Request-specific configuration.
      *
-     * @throws {@link LatitudeApi.BadRequestError}
-     * @throws {@link LatitudeApi.UnauthorizedError}
-     * @throws {@link LatitudeApi.NotFoundError}
+     * @throws {@link Latitude.BadRequestError}
+     * @throws {@link Latitude.UnauthorizedError}
+     * @throws {@link Latitude.NotFoundError}
      *
      * @example
-     *     await client.users.signals("projectSlug", "userId", {
-     *         limit: 1
-     *     })
+     *     await client.users.signals("projectSlug", "userId")
      */
     public signals(
         projectSlug: string,
         userId: string,
-        request: LatitudeApi.UsersSignalsRequest = {},
+        request: Latitude.SignalsUsersRequest = {},
         requestOptions?: UsersClient.RequestOptions,
-    ): core.HttpResponsePromise<LatitudeApi.UserSignalsResponse> {
+    ): core.HttpResponsePromise<Latitude.UserSignalsResponse> {
         return core.HttpResponsePromise.fromPromise(this.__signals(projectSlug, userId, request, requestOptions));
     }
 
     private async __signals(
         projectSlug: string,
         userId: string,
-        request: LatitudeApi.UsersSignalsRequest = {},
+        request: Latitude.SignalsUsersRequest = {},
         requestOptions?: UsersClient.RequestOptions,
-    ): Promise<core.WithRawResponse<LatitudeApi.UserSignalsResponse>> {
+    ): Promise<core.WithRawResponse<Latitude.UserSignalsResponse>> {
         const { limit } = request;
         const _queryParams: Record<string, unknown> = {
             limit,
@@ -488,12 +441,11 @@ export class UsersClient {
             url: core.url.join(
                 (await core.Supplier.get(this._options.baseUrl)) ??
                     (await core.Supplier.get(this._options.environment)) ??
-                    environments.LatitudeApiEnvironment.Production,
+                    environments.LatitudeEnvironment.Production,
                 `v1/projects/${core.url.encodePathParam(projectSlug)}/users/${core.url.encodePathParam(userId)}/signals`,
             ),
             method: "GET",
             headers: _headers,
-            queryParameters: { ..._queryParams, ...requestOptions?.queryParams },
             queryString: core.url
                 .queryBuilder()
                 .addMany(_queryParams)
@@ -506,28 +458,22 @@ export class UsersClient {
             logging: this._options.logging,
         });
         if (_response.ok) {
-            return { data: _response.body as LatitudeApi.UserSignalsResponse, rawResponse: _response.rawResponse };
+            return { data: _response.body as Latitude.UserSignalsResponse, rawResponse: _response.rawResponse };
         }
 
         if (_response.error.reason === "status-code") {
             switch (_response.error.statusCode) {
                 case 400:
-                    throw new LatitudeApi.BadRequestError(
-                        _response.error.body as LatitudeApi.Error_,
-                        _response.rawResponse,
-                    );
+                    throw new Latitude.BadRequestError(_response.error.body as Latitude.Error_, _response.rawResponse);
                 case 401:
-                    throw new LatitudeApi.UnauthorizedError(
-                        _response.error.body as LatitudeApi.Error_,
+                    throw new Latitude.UnauthorizedError(
+                        _response.error.body as Latitude.Error_,
                         _response.rawResponse,
                     );
                 case 404:
-                    throw new LatitudeApi.NotFoundError(
-                        _response.error.body as LatitudeApi.Error_,
-                        _response.rawResponse,
-                    );
+                    throw new Latitude.NotFoundError(_response.error.body as Latitude.Error_, _response.rawResponse);
                 default:
-                    throw new errors.LatitudeApiError({
+                    throw new errors.LatitudeError({
                         statusCode: _response.error.statusCode,
                         body: _response.error.body,
                         rawResponse: _response.rawResponse,
@@ -548,33 +494,31 @@ export class UsersClient {
      *
      * @param {string} projectSlug - Project slug (human-readable identifier)
      * @param {string} userId - End-user identifier. URL-encode values containing special characters.
-     * @param {LatitudeApi.UsersBehavioursRequest} request
+     * @param {Latitude.BehavioursUsersRequest} request
      * @param {UsersClient.RequestOptions} requestOptions - Request-specific configuration.
      *
-     * @throws {@link LatitudeApi.BadRequestError}
-     * @throws {@link LatitudeApi.UnauthorizedError}
-     * @throws {@link LatitudeApi.NotFoundError}
+     * @throws {@link Latitude.BadRequestError}
+     * @throws {@link Latitude.UnauthorizedError}
+     * @throws {@link Latitude.NotFoundError}
      *
      * @example
-     *     await client.users.behaviours("projectSlug", "userId", {
-     *         limit: 1
-     *     })
+     *     await client.users.behaviours("projectSlug", "userId")
      */
     public behaviours(
         projectSlug: string,
         userId: string,
-        request: LatitudeApi.UsersBehavioursRequest = {},
+        request: Latitude.BehavioursUsersRequest = {},
         requestOptions?: UsersClient.RequestOptions,
-    ): core.HttpResponsePromise<LatitudeApi.UserBehavioursResponse> {
+    ): core.HttpResponsePromise<Latitude.UserBehavioursResponse> {
         return core.HttpResponsePromise.fromPromise(this.__behaviours(projectSlug, userId, request, requestOptions));
     }
 
     private async __behaviours(
         projectSlug: string,
         userId: string,
-        request: LatitudeApi.UsersBehavioursRequest = {},
+        request: Latitude.BehavioursUsersRequest = {},
         requestOptions?: UsersClient.RequestOptions,
-    ): Promise<core.WithRawResponse<LatitudeApi.UserBehavioursResponse>> {
+    ): Promise<core.WithRawResponse<Latitude.UserBehavioursResponse>> {
         const { limit } = request;
         const _queryParams: Record<string, unknown> = {
             limit,
@@ -589,12 +533,11 @@ export class UsersClient {
             url: core.url.join(
                 (await core.Supplier.get(this._options.baseUrl)) ??
                     (await core.Supplier.get(this._options.environment)) ??
-                    environments.LatitudeApiEnvironment.Production,
+                    environments.LatitudeEnvironment.Production,
                 `v1/projects/${core.url.encodePathParam(projectSlug)}/users/${core.url.encodePathParam(userId)}/behaviours`,
             ),
             method: "GET",
             headers: _headers,
-            queryParameters: { ..._queryParams, ...requestOptions?.queryParams },
             queryString: core.url
                 .queryBuilder()
                 .addMany(_queryParams)
@@ -607,28 +550,22 @@ export class UsersClient {
             logging: this._options.logging,
         });
         if (_response.ok) {
-            return { data: _response.body as LatitudeApi.UserBehavioursResponse, rawResponse: _response.rawResponse };
+            return { data: _response.body as Latitude.UserBehavioursResponse, rawResponse: _response.rawResponse };
         }
 
         if (_response.error.reason === "status-code") {
             switch (_response.error.statusCode) {
                 case 400:
-                    throw new LatitudeApi.BadRequestError(
-                        _response.error.body as LatitudeApi.Error_,
-                        _response.rawResponse,
-                    );
+                    throw new Latitude.BadRequestError(_response.error.body as Latitude.Error_, _response.rawResponse);
                 case 401:
-                    throw new LatitudeApi.UnauthorizedError(
-                        _response.error.body as LatitudeApi.Error_,
+                    throw new Latitude.UnauthorizedError(
+                        _response.error.body as Latitude.Error_,
                         _response.rawResponse,
                     );
                 case 404:
-                    throw new LatitudeApi.NotFoundError(
-                        _response.error.body as LatitudeApi.Error_,
-                        _response.rawResponse,
-                    );
+                    throw new Latitude.NotFoundError(_response.error.body as Latitude.Error_, _response.rawResponse);
                 default:
-                    throw new errors.LatitudeApiError({
+                    throw new errors.LatitudeError({
                         statusCode: _response.error.statusCode,
                         body: _response.error.body,
                         rawResponse: _response.rawResponse,
@@ -649,33 +586,31 @@ export class UsersClient {
      *
      * @param {string} projectSlug - Project slug (human-readable identifier)
      * @param {string} userId - End-user identifier. URL-encode values containing special characters.
-     * @param {LatitudeApi.UsersGetRequest} request
+     * @param {Latitude.GetUsersRequest} request
      * @param {UsersClient.RequestOptions} requestOptions - Request-specific configuration.
      *
-     * @throws {@link LatitudeApi.BadRequestError}
-     * @throws {@link LatitudeApi.UnauthorizedError}
-     * @throws {@link LatitudeApi.NotFoundError}
+     * @throws {@link Latitude.BadRequestError}
+     * @throws {@link Latitude.UnauthorizedError}
+     * @throws {@link Latitude.NotFoundError}
      *
      * @example
-     *     await client.users.get("projectSlug", "userId", {
-     *         errorsOnly: "true"
-     *     })
+     *     await client.users.get("projectSlug", "userId")
      */
     public get(
         projectSlug: string,
         userId: string,
-        request: LatitudeApi.UsersGetRequest = {},
+        request: Latitude.GetUsersRequest = {},
         requestOptions?: UsersClient.RequestOptions,
-    ): core.HttpResponsePromise<LatitudeApi.UserProfileResponse> {
+    ): core.HttpResponsePromise<Latitude.UserProfileResponse> {
         return core.HttpResponsePromise.fromPromise(this.__get(projectSlug, userId, request, requestOptions));
     }
 
     private async __get(
         projectSlug: string,
         userId: string,
-        request: LatitudeApi.UsersGetRequest = {},
+        request: Latitude.GetUsersRequest = {},
         requestOptions?: UsersClient.RequestOptions,
-    ): Promise<core.WithRawResponse<LatitudeApi.UserProfileResponse>> {
+    ): Promise<core.WithRawResponse<Latitude.UserProfileResponse>> {
         const { errorsOnly } = request;
         const _queryParams: Record<string, unknown> = {
             errorsOnly: errorsOnly != null ? errorsOnly : undefined,
@@ -690,12 +625,11 @@ export class UsersClient {
             url: core.url.join(
                 (await core.Supplier.get(this._options.baseUrl)) ??
                     (await core.Supplier.get(this._options.environment)) ??
-                    environments.LatitudeApiEnvironment.Production,
+                    environments.LatitudeEnvironment.Production,
                 `v1/projects/${core.url.encodePathParam(projectSlug)}/users/${core.url.encodePathParam(userId)}`,
             ),
             method: "GET",
             headers: _headers,
-            queryParameters: { ..._queryParams, ...requestOptions?.queryParams },
             queryString: core.url
                 .queryBuilder()
                 .addMany(_queryParams)
@@ -708,28 +642,22 @@ export class UsersClient {
             logging: this._options.logging,
         });
         if (_response.ok) {
-            return { data: _response.body as LatitudeApi.UserProfileResponse, rawResponse: _response.rawResponse };
+            return { data: _response.body as Latitude.UserProfileResponse, rawResponse: _response.rawResponse };
         }
 
         if (_response.error.reason === "status-code") {
             switch (_response.error.statusCode) {
                 case 400:
-                    throw new LatitudeApi.BadRequestError(
-                        _response.error.body as LatitudeApi.Error_,
-                        _response.rawResponse,
-                    );
+                    throw new Latitude.BadRequestError(_response.error.body as Latitude.Error_, _response.rawResponse);
                 case 401:
-                    throw new LatitudeApi.UnauthorizedError(
-                        _response.error.body as LatitudeApi.Error_,
+                    throw new Latitude.UnauthorizedError(
+                        _response.error.body as Latitude.Error_,
                         _response.rawResponse,
                     );
                 case 404:
-                    throw new LatitudeApi.NotFoundError(
-                        _response.error.body as LatitudeApi.Error_,
-                        _response.rawResponse,
-                    );
+                    throw new Latitude.NotFoundError(_response.error.body as Latitude.Error_, _response.rawResponse);
                 default:
-                    throw new errors.LatitudeApiError({
+                    throw new errors.LatitudeError({
                         statusCode: _response.error.statusCode,
                         body: _response.error.body,
                         rawResponse: _response.rawResponse,

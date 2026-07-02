@@ -9,6 +9,8 @@ from ...core.serialization import FieldMetadata
 
 
 class CreateSignalBodyEvaluationSettingsSettingsRuleConditionsItemToolFailed(UniversalBaseModel):
-    tool_name: typing_extensions.Annotated[typing.Optional[str], FieldMetadata(alias="toolName")] = None
+    tool_name: typing_extensions.Annotated[
+        typing.Optional[str], FieldMetadata(alias="toolName"), pydantic.Field(alias="toolName", default=None)
+    ]
 
     model_config: typing.ClassVar[pydantic.ConfigDict] = pydantic.ConfigDict(extra="allow", frozen=True)

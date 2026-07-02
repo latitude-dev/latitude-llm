@@ -3,6 +3,7 @@ import type {
   BehaviorMetric,
   ChSqlClient,
   FilterSet,
+  MomentMetric,
   MonitorMetric,
   OrganizationId,
   ProjectId,
@@ -16,7 +17,9 @@ export type MetricForStream<S extends AnalyticsStream> = S extends "scores"
   ? ScoreMetric
   : S extends "behaviors"
     ? BehaviorMetric
-    : MonitorMetric
+    : S extends "moments"
+      ? MomentMetric
+      : MonitorMetric
 
 /**
  * The minimal window input the SQL builders need: a resolved stream + predicate

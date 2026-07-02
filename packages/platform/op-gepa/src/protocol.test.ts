@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest"
 import {
   createInternalErrorResponse,
+  createJsonRpcResponseError,
   createRequest,
   createResponse,
   JsonRpcErrorCode,
@@ -99,6 +100,47 @@ describe("op-gepa protocol", () => {
     expect(error.remoteCause).toEqual({
       message: "Bedrock is unable to process your request.",
     })
+  })
+
+  it("extracts nested remote error messages when the RPC error message is empty", () => {
+    const error = createJsonRpcResponseError({
+      error: {
+        code: JsonRpcErrorCode.internalError,
+        message: "",
+        data: {
+          remoteError: {
+            type: "EvaluationOptimizationActivityError",
+            httpMessage: 'Evaluation alignment activity "optimizeEvaluationDraft" failed',
+            cause: {
+              type: "AIError",
+              message: "Bedrock is unable to process your request.",
+            },
+          },
+        },
+      },
+      method: "gepa_optimize",
+      requestId: 1,
+    })
+
+    expect(error.strippedMessage).toBe(
+      'Evaluation alignment activity "optimizeEvaluationDraft" failed: Bedrock is unable to process your request.',
+    )
+  })
+
+  it("falls back to the exception type when the RPC error message is empty and no nested message exists", () => {
+    const error = createJsonRpcResponseError({
+      error: {
+        code: JsonRpcErrorCode.internalError,
+        message: "   ",
+        data: {
+          type: "CancelledError",
+        },
+      },
+      method: "gepa_optimize",
+      requestId: 2,
+    })
+
+    expect(error.strippedMessage).toBe("CancelledError")
   })
 
   it("ignores invalid JSON-RPC lines", () => {

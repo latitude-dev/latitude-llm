@@ -4,12 +4,12 @@ import {
   ProductFeedbackRequestError,
   ProductFeedbackTransportError,
 } from "@domain/product-feedback"
-import { LatitudeApiClient, LatitudeApiError, LatitudeApiTimeoutError } from "@latitude-data/sdk"
+import { LatitudeClient, LatitudeError, LatitudeTimeoutError } from "@latitude-data/sdk"
 import { Effect } from "effect"
 import type { LatitudeApiConfig } from "./config.ts"
 
 /**
- * `fetch` shape the SDK accepts via `LatitudeApiClient.Options.fetch`. Tests
+ * `fetch` shape the SDK accepts via `LatitudeClient.Options.fetch`. Tests
  * pass a fake here to assert outbound request shape (URL, headers, body)
  * without touching the network.
  */
@@ -32,7 +32,7 @@ const NOOP_CLIENT: ProductFeedbackClientShape = {
 const RETRIABLE_CLIENT_ERROR_STATUSES = new Set<number>([408, 429])
 
 const classifySdkError = (error: unknown) => {
-  if (error instanceof LatitudeApiError && typeof error.statusCode === "number") {
+  if (error instanceof LatitudeError && typeof error.statusCode === "number") {
     const message =
       typeof error.body === "object" && error.body !== null && "error" in error.body
         ? String((error.body as { error: unknown }).error)
@@ -46,7 +46,7 @@ const classifySdkError = (error: unknown) => {
     return new ProductFeedbackTransportError({ cause: error })
   }
 
-  if (error instanceof LatitudeApiTimeoutError) {
+  if (error instanceof LatitudeTimeoutError) {
     return new ProductFeedbackTransportError({ cause: error })
   }
 
@@ -59,8 +59,8 @@ const classifySdkError = (error: unknown) => {
  *
  * - Returns a no-op client when `config` is undefined (see `loadLatitudeApiConfig`
  *   — missing envs cleanly skip dogfood rather than erroring the worker).
- * - Otherwise wraps `@latitude-data/sdk`'s `LatitudeApiClient`: auth via
- *   `token` (Bearer), `baseUrl` from env, and translates `upstreamScoreId` into
+ * - Otherwise wraps `@latitude-data/sdk`'s `LatitudeClient`: auth via
+ *   `apiKey` (Bearer), `baseUrl` from env, and translates `upstreamScoreId` into
  *   the `trace.by = "filters"` body the public API expects. See PRD §Identity
  *   strategy.
  *
@@ -81,8 +81,8 @@ export const createLatitudeApiClient = (
 ): ProductFeedbackClientShape => {
   if (!config) return NOOP_CLIENT
 
-  const sdk = new LatitudeApiClient({
-    token: config.apiKey,
+  const sdk = new LatitudeClient({
+    apiKey: config.apiKey,
     baseUrl: config.baseUrl,
     ...(options?.maxRetries !== undefined ? { maxRetries: options.maxRetries } : {}),
     ...(options?.fetch !== undefined ? { fetch: options.fetch } : {}),

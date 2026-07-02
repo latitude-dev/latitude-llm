@@ -15,16 +15,19 @@ class PaginatedMonitors(UniversalBaseModel):
     Page of items, in the requested sort order.
     """
 
-    next_cursor: typing_extensions.Annotated[typing.Optional[str], FieldMetadata(alias="nextCursor")] = pydantic.Field(
-        default=None
-    )
-    """
-    Opaque cursor for fetching the next page. `null` when there are no more pages. Pass it back in `cursor` to continue.
-    """
-
-    has_more: typing_extensions.Annotated[bool, FieldMetadata(alias="hasMore")] = pydantic.Field()
-    """
-    `true` when there is at least one more page after this one.
-    """
+    next_cursor: typing_extensions.Annotated[
+        typing.Optional[str],
+        FieldMetadata(alias="nextCursor"),
+        pydantic.Field(
+            alias="nextCursor",
+            default=None,
+            description="Opaque cursor for fetching the next page. `null` when there are no more pages. Pass it back in `cursor` to continue.",
+        ),
+    ]
+    has_more: typing_extensions.Annotated[
+        bool,
+        FieldMetadata(alias="hasMore"),
+        pydantic.Field(alias="hasMore", description="`true` when there is at least one more page after this one."),
+    ]
 
     model_config: typing.ClassVar[pydantic.ConfigDict] = pydantic.ConfigDict(extra="allow", frozen=True)

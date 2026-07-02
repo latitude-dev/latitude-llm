@@ -5,5 +5,6 @@ export interface ToolDefinition {
     name: string;
     /** Tool description as exposed to the LLM. */
     description: string;
+    /** JSON Schema for the tool's parameters, as provided by the caller. */
     parameters?: unknown | undefined;
 }

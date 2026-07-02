@@ -111,7 +111,7 @@ describe("/v1/mcp", () => {
     const payload = (await readSseJsonRpc(res)) as {
       result?: { serverInfo?: { name?: string; version?: string }; capabilities?: { tools?: object } }
     }
-    expect(payload.result?.serverInfo?.name).toBe("Latitude MCP")
+    expect(payload.result?.serverInfo?.name).toBe("Latitude")
     expect(payload.result?.capabilities?.tools).toBeDefined()
   })
 

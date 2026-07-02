@@ -8,15 +8,15 @@ export interface CustomScoreResponse {
     /** Project this score lives in. */
     projectId: string;
     /** Session id lifted from the trace, when set. `null` when the trace has no session. */
-    sessionId?: string | undefined;
+    sessionId: string | null;
     /** Identifier of the scored trace. */
-    traceId?: string | undefined;
+    traceId: string | null;
     /** Span the score pins to. Defaults to the trace's last LLM-completion span. */
-    spanId?: string | undefined;
+    spanId: string | null;
     /** Simulation reference, if any. */
-    simulationId?: string | undefined;
+    simulationId: string | null;
     /** Signal this score contributes to, if any. */
-    signalId?: string | undefined;
+    signalId: string | null;
     /** Normalized score value in [0, 1]. */
     value: number;
     /** Whether the score marks the output as passing. */
@@ -24,7 +24,7 @@ export interface CustomScoreResponse {
     /** Free-text feedback explaining the score. */
     feedback: string;
     /** Generation error text, when score generation itself errored. `null` for successful scores. */
-    error?: string | undefined;
+    error: string | null;
     /** `true` when the score could not be generated successfully. */
     errored: boolean;
     /** Score generation duration in nanoseconds. */
@@ -34,9 +34,9 @@ export interface CustomScoreResponse {
     /** Score cost in microcents (1/1,000,000 of a USD). */
     cost: number;
     /** ISO-8601 timestamp while the score is awaiting human confirmation. `null` for published / system scores. */
-    draftedAt?: string | undefined;
+    draftedAt: string | null;
     /** User who authored the score, if any. */
-    annotatorId?: string | undefined;
+    annotatorId: string | null;
     /** ISO-8601 timestamp at which the score was created. */
     createdAt: string;
     /** ISO-8601 timestamp of the last metadata update. */
