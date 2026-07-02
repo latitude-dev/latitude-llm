@@ -1,6 +1,7 @@
 import {
   AgentDispatchConfigRepository,
   type AgentDispatchKind,
+  AgentDispatchRepository,
   AgentDispatchTraceReader,
   type AgentDispatchTrigger,
   agentDispatchContextSchema,
@@ -31,6 +32,9 @@ import { Effect, Layer } from "effect"
 import { getClickhouseClient, getPostgresClient } from "../clients.ts"
 
 const logger = createLogger("agent-dispatch")
+
+const SEND_JOB_ATTEMPTS = 4
+const SEND_JOB_BACKOFF = { type: "exponential" as const, delayMs: 30_000 }
 
 const resolveWebAppUrl = (): string => {
   const webUrl = Effect.runSync(parseEnv("LAT_WEB_URL", "string", "http://localhost:3000"))
@@ -117,7 +121,11 @@ export const createAgentDispatchWorker = ({
                 context: request.context as Record<string, unknown>,
                 target: {},
               },
-              { dedupeKey: `agent-dispatch:send:${request.idempotencyKey}` },
+              {
+                dedupeKey: `agent-dispatch:send:${request.idempotencyKey}`,
+                attempts: SEND_JOB_ATTEMPTS,
+                backoff: SEND_JOB_BACKOFF,
+              },
             ),
           )
         }),
@@ -179,5 +187,30 @@ export const createAgentDispatchWorker = ({
         withTracing,
       )
     },
-  })
+  },
+  {
+    onFinalFailure: {
+      send: (payload, error) => {
+        const orgId = OrganizationId(payload.organizationId)
+        return Effect.gen(function* () {
+          const repo = yield* AgentDispatchRepository
+          yield* repo.markFailedByIdempotencyKey({
+            idempotencyKey: payload.idempotencyKey,
+            errorCategory: "transport",
+            errorDetail: error.message,
+          })
+        }).pipe(
+          Effect.tapError((failure) =>
+            Effect.sync(() =>
+              logger.error(`agent-dispatch.send final failure orgId=${orgId} key=${payload.idempotencyKey}`, failure),
+            ),
+          ),
+          withPostgres(AgentDispatchRepositoryLive, pgClient, orgId),
+          Effect.asVoid,
+          withTracing,
+        )
+      },
+    },
+  },
+)
 }

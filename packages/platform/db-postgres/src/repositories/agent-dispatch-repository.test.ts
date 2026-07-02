@@ -64,4 +64,43 @@ describe("AgentDispatchRepositoryLive", () => {
     )
     expect(afterDispatch.claimed).toBe(false)
   })
+
+  it("marks claimed rows failed by idempotency key", async () => {
+    const input = {
+      configId: CONFIG,
+      projectId: PROJECT,
+      idempotencyKey: "cursor:incident.opened:src2",
+      trigger: "incident.opened" as const,
+      sourceType: "signal" as const,
+      sourceId: "sig2",
+    }
+
+    const claim = await run(
+      Effect.gen(function* () {
+        const repo = yield* AgentDispatchRepository
+        return yield* repo.claim(input)
+      }),
+    )
+    expect(claim.claimed).toBe(true)
+
+    const marked = await run(
+      Effect.gen(function* () {
+        const repo = yield* AgentDispatchRepository
+        return yield* repo.markFailedByIdempotencyKey({
+          idempotencyKey: input.idempotencyKey,
+          errorCategory: "transport",
+          errorDetail: "upstream 503",
+        })
+      }),
+    )
+    expect(marked).toBe(true)
+
+    const retry = await run(
+      Effect.gen(function* () {
+        const repo = yield* AgentDispatchRepository
+        return yield* repo.claim(input)
+      }),
+    )
+    expect(retry.claimed).toBe(false)
+  })
 })

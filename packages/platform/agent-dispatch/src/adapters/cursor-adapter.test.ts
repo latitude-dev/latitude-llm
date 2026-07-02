@@ -40,6 +40,7 @@ describe("createCursorAdapter", () => {
     expect(result.externalAgentId).toBe("bc_abc123")
     expect(result.deepLinkUrl).toBe("https://cursor.com/agents?id=bc_abc123")
     expect(JSON.parse(calls[0]!.body)).toMatchObject({
+      agentId: "cursor:incident.opened:src1",
       prompt: { text: "fix it" },
       source: { repository: "https://github.com/acme/app", ref: "main" },
       target: { autoCreatePr: true },

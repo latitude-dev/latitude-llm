@@ -13,6 +13,7 @@ export const createCursorAdapter = (): AgentDispatchAdapter => ({
 
       const target = config as { repoUrl: string; startingRef?: string; autoCreatePR?: boolean }
       const body = {
+        agentId: idempotencyKey,
         prompt: { text: prompt },
         source: {
           repository: target.repoUrl,
