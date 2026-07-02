@@ -3,7 +3,7 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "dev": "vite dev --host 127.0.0.1 --port 8788",
+    "dev": "pnpm --dir ../.. build && vite dev --host 127.0.0.1 --port 8788",
     "verify:local": "node scripts/verify-local.mjs"
   },
   "dependencies": {
