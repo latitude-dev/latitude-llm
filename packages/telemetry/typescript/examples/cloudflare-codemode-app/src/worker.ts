@@ -20,14 +20,11 @@ type Env = {
 let latitude: Latitude | undefined
 
 function getLatitude(env: Env) {
-  if (env.LATITUDE_TELEMETRY_URL) {
-    process.env.LATITUDE_TELEMETRY_URL = env.LATITUDE_TELEMETRY_URL
-  }
-
   latitude ??= new Latitude({
     apiKey: env.LATITUDE_API_KEY,
     project: env.LATITUDE_PROJECT_SLUG,
     serviceName: "cloudflare-codemode-agent",
+    ...(env.LATITUDE_TELEMETRY_URL ? { telemetryUrl: env.LATITUDE_TELEMETRY_URL } : {}),
   })
 
   return latitude
@@ -88,7 +85,7 @@ export class MyAgent extends AIChatAgent<Env> {
     return result.toUIMessageStreamResponse()
   }
 
-  protected async onChatResponse() {
+  override protected async onChatResponse() {
     await getLatitude(this.env).flush()
   }
 }

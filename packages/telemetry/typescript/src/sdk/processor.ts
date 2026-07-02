@@ -74,10 +74,12 @@ export class LatitudeSpanProcessor implements SpanProcessor {
     }
     if (normalizedProject) headers["X-Latitude-Project"] = normalizedProject
 
+    const exporterOrigin = options?.telemetryUrl ?? getExporterUrl()
+
     const baseExporter =
       options?.exporter ??
       new OTLPTraceExporter({
-        url: `${getExporterUrl()}/v1/traces`,
+        url: `${exporterOrigin}/v1/traces`,
         headers,
         timeoutMillis: 30_000,
       })

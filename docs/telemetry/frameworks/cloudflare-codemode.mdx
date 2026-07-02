@@ -77,9 +77,11 @@ generated code in tool input).
     import { createCodeTool } from "@cloudflare/codemode/ai"
     import { Latitude } from "@latitude-data/telemetry"
     import { convertToModelMessages, stepCountIs, streamText, tool } from "ai"
+    import { createWorkersAI } from "workers-ai-provider"
     import { z } from "zod"
 
     type Env = {
+      AI: Ai
       LOADER: WorkerLoader
       LATITUDE_API_KEY: string
       LATITUDE_PROJECT_SLUG: string
@@ -113,7 +115,9 @@ generated code in tool input).
 
       async onChatMessage(onFinish, options) {
         const result = streamText({
-          model,
+          model: createWorkersAI({ binding: this.env.AI })(
+            "@cf/meta/llama-4-scout-17b-16e-instruct",
+          ),
           messages: await convertToModelMessages(this.messages),
           tools: { codemode: this.codemodeTool() },
           stopWhen: stepCountIs(5),
@@ -166,6 +170,7 @@ Read that context in `onChatMessage()` and pass it to `getTracer()`:
 import type { ContextOptions } from "@latitude-data/telemetry"
 
 async onChatMessage(onFinish, options) {
+  // Validate or narrow options.body in production — the WebSocket payload is client-controlled.
   const context = (options?.body ?? {}) as ContextOptions
 
   const result = streamText({

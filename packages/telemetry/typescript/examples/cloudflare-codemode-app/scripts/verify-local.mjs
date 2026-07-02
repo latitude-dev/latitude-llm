@@ -181,7 +181,7 @@ async function waitForSpans(sessionId) {
     SELECT
       count(),
       countIf(name ILIKE '%tool%' OR operation = 'execute_tool'),
-      countIf(name = 'ai.toolCall'),
+      countIf(startsWith(name, 'ai.toolCall')),
       countIf(tool_name = 'codemode'),
       countIf(tool_name = 'getWeather'),
       countIf(user_id = 'local-codemode-user'),

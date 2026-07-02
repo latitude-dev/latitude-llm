@@ -158,17 +158,11 @@ describe("cloudflare-codemode telemetry", () => {
           .filter((name): name is string => typeof name === "string"),
       ),
     ]
-    const spanNames = spans.map((span) => span.name)
 
     expect(spans.length).toBeGreaterThan(0)
-    expect(
-      spanNames.some((name) => name.includes("tool") || name.includes("codemode")) ||
-        spans.some((span) => span.attributes["ai.toolCall.name"] === "codemode"),
-    ).toBe(true)
+    expect(spans.some((span) => span.attributes["ai.toolCall.name"] === "codemode")).toBe(true)
+    expect(spans.some((span) => span.attributes["ai.toolCall.name"] === "getWeather")).toBe(true)
     expect(toolNames).toContain("getWeather")
-    expect(
-      toolNames.includes("codemode") || spans.some((span) => span.attributes["ai.toolCall.name"] === "codemode"),
-    ).toBe(true)
     expect(spans.some((span) => span.attributes["user.id"] === "codemode-user")).toBe(true)
     expect(spans.some((span) => span.attributes["session.id"] === "codemode-session")).toBe(true)
   })

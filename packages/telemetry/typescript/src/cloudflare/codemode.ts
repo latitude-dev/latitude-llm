@@ -6,8 +6,10 @@ export type InstrumentCodemodeToolsOptions = {
   toolCallIdPrefix?: string
 }
 
+let toolCallIdCounter = 0
+
 function newToolCallId(prefix: string, toolName: string) {
-  const suffix = globalThis.crypto?.randomUUID?.() ?? `${Date.now()}`
+  const suffix = globalThis.crypto?.randomUUID?.() ?? String(++toolCallIdCounter)
   return `${prefix}-${toolName}-${suffix}`
 }
 

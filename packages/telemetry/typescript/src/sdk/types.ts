@@ -54,6 +54,10 @@ export type LatitudeOptions = SmartFilterOptions & {
   disableBatch?: boolean
   exporter?: SpanExporter
   /**
+   * OTLP ingest origin override. When omitted, uses `LATITUDE_TELEMETRY_URL` or production ingest.
+   */
+  telemetryUrl?: string
+  /**
    * Existing OpenTelemetry tracer provider to attach Latitude to.
    * Usually omitted because `new Latitude()` detects the global provider installed by Sentry,
    * Datadog, New Relic, Honeycomb, or a custom OTel SDK setup.
@@ -79,6 +83,7 @@ export type LatitudeSpanProcessorOptions = SmartFilterOptions & {
   redact?: RedactSpanProcessorOptions
   disableBatch?: boolean
   exporter?: SpanExporter
+  telemetryUrl?: string
   /**
    * Overrides the `service.name` resource attribute on spans exported through this processor.
    * Applied via an exporter wrapper, so other span processors on the host provider continue
