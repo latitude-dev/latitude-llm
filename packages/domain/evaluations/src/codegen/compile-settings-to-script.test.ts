@@ -309,3 +309,65 @@ describe("compileSettingsToScript — rule", () => {
     expect(result.passed).toBe(passed)
   })
 })
+
+// semantic_similarity is the only rule condition that emits `await`, so it runs on an AsyncFunction
+// harness with an injected `semanticSimilarity` stub standing in for the host verb.
+const AsyncFunction = Object.getPrototypeOf(async () => {}).constructor as FunctionConstructor
+
+const runRuleAsync = async (
+  settings: EvaluationSettings,
+  session: unknown,
+  semanticSimilarity: (query: string) => Promise<number>,
+): Promise<{ passed: boolean; feedback: string }> => {
+  const script = compileSettingsToScript(settings)
+  const Passed = (_value?: number, feedback?: string) => ({ passed: true, feedback })
+  const Failed = (_value?: number, feedback?: string) => ({ passed: false, feedback })
+  const fn = new AsyncFunction("session", "Passed", "Failed", "semanticSimilarity", script)
+  return fn(session, Passed, Failed, semanticSimilarity)
+}
+
+describe("compileSettingsToScript — semantic_similarity", () => {
+  it("emits an await semanticSimilarity(query) comparison and detects the embedding capability", () => {
+    const script = compileSettingsToScript(
+      rule("all", [{ type: "semantic_similarity", query: "frustration", operator: "gte", threshold: 0.5 }]),
+    )
+    expect(script).toContain('(await semanticSimilarity("frustration")) >= 0.5')
+    expect(detectScriptCapabilities(script)).toEqual(["embedding"])
+  })
+
+  it("match:any passes when the query similarity clears the threshold", async () => {
+    const result = await runRuleAsync(
+      rule("any", [{ type: "semantic_similarity", query: "frustration", operator: "gte", threshold: 0.5 }]),
+      makeSession(),
+      async () => 0.8,
+    )
+    expect(result).toEqual({ passed: true, feedback: 'Semantically similar to "frustration" (at least 0.5)' })
+  })
+
+  it("match:all fails with negated feedback when the similarity is below the threshold", async () => {
+    const result = await runRuleAsync(
+      rule("all", [{ type: "semantic_similarity", query: "frustration", operator: "gte", threshold: 0.5 }]),
+      makeSession(),
+      async () => 0.2,
+    )
+    expect(result).toEqual({ passed: false, feedback: 'Not semantically similar to "frustration" (at least 0.5)' })
+  })
+
+  it("composes with a deterministic condition under match:all", async () => {
+    const settings = rule("all", [
+      { type: "tool_used", toolName: "search" },
+      { type: "semantic_similarity", query: "refund", operator: "gte", threshold: 0.6 },
+    ])
+    const queries: string[] = []
+    const record = async (query: string) => {
+      queries.push(query)
+      return 0.9
+    }
+    const passed = await runRuleAsync(settings, makeSession(), record)
+    expect(passed).toEqual({ passed: true, feedback: "All conditions matched" })
+    expect(queries).toEqual(["refund"])
+
+    const failed = await runRuleAsync(settings, makeSession(), async () => 0.1)
+    expect(failed).toEqual({ passed: false, feedback: 'Not semantically similar to "refund" (at least 0.6)' })
+  })
+})
