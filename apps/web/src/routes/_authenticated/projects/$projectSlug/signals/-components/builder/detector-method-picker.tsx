@@ -7,6 +7,7 @@ import {
   SearchCheckIcon,
   WandSparklesIcon,
 } from "lucide-react"
+import styles from "./detector-method-picker.module.css"
 
 type DetectorMethod = "rules" | "llm" | "advanced"
 
@@ -51,14 +52,18 @@ function FlowConnector({ kind }: { readonly kind: "inflow" | "outflow" }) {
     <div className="relative ml-8 h-3.5 w-px bg-border">
       {kind === "inflow" ? (
         <>
-          <span className="-left-[1.5px] absolute top-0 h-1 w-1 animate-signal-inflow rounded-full bg-foreground/30 opacity-0 motion-reduce:hidden" />
+          <span
+            className={`-left-[1.5px] absolute top-0 h-1 w-1 rounded-full bg-foreground/30 opacity-0 ${styles.inflowPacket}`}
+          />
           <span
             style={{ animationDelay: "600ms" }}
-            className="-left-[1.5px] absolute top-0 h-1 w-1 animate-signal-inflow rounded-full bg-foreground/30 opacity-0 motion-reduce:hidden"
+            className={`-left-[1.5px] absolute top-0 h-1 w-1 rounded-full bg-foreground/30 opacity-0 ${styles.inflowPacket}`}
           />
         </>
       ) : (
-        <span className="-left-[1.5px] absolute top-0 h-1 w-1 animate-signal-packet rounded-full bg-primary/60 opacity-0 motion-reduce:hidden" />
+        <span
+          className={`-left-[1.5px] absolute top-0 h-1 w-1 rounded-full bg-primary/60 opacity-0 ${styles.outflowPacket}`}
+        />
       )}
     </div>
   )
@@ -81,7 +86,7 @@ function SignalFlowDiagram() {
             <span
               key={index}
               style={{ animationDelay: `${delayMs}ms` }}
-              className="h-2 w-2 shrink-0 animate-signal-session rounded-full bg-foreground/15 motion-reduce:animate-none"
+              className={`h-2 w-2 shrink-0 rounded-full bg-foreground/15 ${styles.sessionDot}`}
             />
           ))}
         </div>
@@ -101,7 +106,7 @@ function SignalFlowDiagram() {
         <div className="flex w-16 shrink-0 justify-center">
           <span className="flex items-center gap-1.5 rounded-md bg-primary/10 px-2 py-1.5">
             <span className="h-2 w-2 shrink-0 rounded-full bg-primary/50" />
-            <span className="h-2 w-2 shrink-0 animate-signal-join rounded-full bg-primary/50 motion-reduce:animate-none" />
+            <span className={`h-2 w-2 shrink-0 rounded-full bg-primary/50 ${styles.joinDot}`} />
           </span>
         </div>
         <Text.H6 color="foregroundMuted">Matches make up the signal</Text.H6>
