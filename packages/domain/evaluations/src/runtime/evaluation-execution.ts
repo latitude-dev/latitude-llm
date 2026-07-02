@@ -27,7 +27,8 @@ Score globals (use these, never construct the object by hand):
 
 Available globals:
 - session — the frozen session being evaluated (shape below). The only data input.
-- llm(prompt, { schema }) — async; asks an LLM to judge text. \`prompt\` is a string, \`schema\` MUST be a \`z\` schema (almost always \`z.object({ ... })\`). Returns the parsed object. Use this for subjective/semantic judgments; prefer deterministic checks on \`session\` when the rule is mechanical.
+- llm(prompt, { schema }) — async; asks an LLM to judge text. \`prompt\` is a string, \`schema\` MUST be a \`z\` schema (almost always \`z.object({ ... })\`). Returns the parsed object. Use this for nuanced judgments that need reasoning; prefer deterministic checks on \`session\` when the rule is mechanical.
+- semanticSimilarity(query) — async; returns a number in [0, 1], the highest cosine similarity between \`query\` and any message in this session (0 if the session has no messages). \`query\` is a short phrase describing the concept (e.g. "user is frustrated", "asking for a refund"). Cheap: it reuses precomputed message embeddings and embeds the query once. Prefer it over llm() for "is the conversation about X?" topic/theme checks; use llm() when the judgment needs reasoning beyond similarity. Typical thresholds: ~0.4 broad, ~0.55 balanced, ~0.7 strict.
 - parse(value, schema) — validates \`value\` against a \`z\` schema and returns it.
 - z — schema builder: z.string(), z.number(), z.boolean(), z.literal(v), z.enum([...]), z.array(el), z.object({...}), z.union([...]); chainable .optional(), .nullable(), .describe(s); strings/numbers support .min/.max, numbers also .int().
 

@@ -45,7 +45,9 @@ class CreateSignalBodyEvaluationSettingsSettingsRuleConditionsItem_TextMatch(Uni
     scope: typing.Optional[CreateSignalBodyEvaluationSettingsSettingsRuleConditionsItemTextMatchScope] = None
     operator: CreateSignalBodyEvaluationSettingsSettingsRuleConditionsItemTextMatchOperator
     value: str
-    case_sensitive: typing_extensions.Annotated[typing.Optional[bool], FieldMetadata(alias="caseSensitive")] = None
+    case_sensitive: typing_extensions.Annotated[
+        typing.Optional[bool], FieldMetadata(alias="caseSensitive"), pydantic.Field(alias="caseSensitive", default=None)
+    ]
 
     model_config: typing.ClassVar[pydantic.ConfigDict] = pydantic.ConfigDict(extra="allow", frozen=True)
 
@@ -84,14 +86,16 @@ class CreateSignalBodyEvaluationSettingsSettingsRuleConditionsItem_Metric(Univer
 
 class CreateSignalBodyEvaluationSettingsSettingsRuleConditionsItem_ToolUsed(UniversalBaseModel):
     type: typing.Literal["tool_used"] = "tool_used"
-    tool_name: typing_extensions.Annotated[str, FieldMetadata(alias="toolName")]
+    tool_name: typing_extensions.Annotated[str, FieldMetadata(alias="toolName"), pydantic.Field(alias="toolName")]
 
     model_config: typing.ClassVar[pydantic.ConfigDict] = pydantic.ConfigDict(extra="allow", frozen=True)
 
 
 class CreateSignalBodyEvaluationSettingsSettingsRuleConditionsItem_ToolFailed(UniversalBaseModel):
     type: typing.Literal["tool_failed"] = "tool_failed"
-    tool_name: typing_extensions.Annotated[typing.Optional[str], FieldMetadata(alias="toolName")] = None
+    tool_name: typing_extensions.Annotated[
+        typing.Optional[str], FieldMetadata(alias="toolName"), pydantic.Field(alias="toolName", default=None)
+    ]
 
     model_config: typing.ClassVar[pydantic.ConfigDict] = pydantic.ConfigDict(extra="allow", frozen=True)
 
@@ -128,16 +132,19 @@ class CreateSignalBodyEvaluationSettingsSettingsRuleConditionsItem_SemanticSimil
     model_config: typing.ClassVar[pydantic.ConfigDict] = pydantic.ConfigDict(extra="allow", frozen=True)
 
 
-CreateSignalBodyEvaluationSettingsSettingsRuleConditionsItem = typing.Union[
-    CreateSignalBodyEvaluationSettingsSettingsRuleConditionsItem_TextMatch,
-    CreateSignalBodyEvaluationSettingsSettingsRuleConditionsItem_EmptyOutput,
-    CreateSignalBodyEvaluationSettingsSettingsRuleConditionsItem_OutputLength,
-    CreateSignalBodyEvaluationSettingsSettingsRuleConditionsItem_JsonOutput,
-    CreateSignalBodyEvaluationSettingsSettingsRuleConditionsItem_Metric,
-    CreateSignalBodyEvaluationSettingsSettingsRuleConditionsItem_ToolUsed,
-    CreateSignalBodyEvaluationSettingsSettingsRuleConditionsItem_ToolFailed,
-    CreateSignalBodyEvaluationSettingsSettingsRuleConditionsItem_ToolCallCount,
-    CreateSignalBodyEvaluationSettingsSettingsRuleConditionsItem_Error,
-    CreateSignalBodyEvaluationSettingsSettingsRuleConditionsItem_FinishReason,
-    CreateSignalBodyEvaluationSettingsSettingsRuleConditionsItem_SemanticSimilarity,
+CreateSignalBodyEvaluationSettingsSettingsRuleConditionsItem = typing_extensions.Annotated[
+    typing.Union[
+        CreateSignalBodyEvaluationSettingsSettingsRuleConditionsItem_TextMatch,
+        CreateSignalBodyEvaluationSettingsSettingsRuleConditionsItem_EmptyOutput,
+        CreateSignalBodyEvaluationSettingsSettingsRuleConditionsItem_OutputLength,
+        CreateSignalBodyEvaluationSettingsSettingsRuleConditionsItem_JsonOutput,
+        CreateSignalBodyEvaluationSettingsSettingsRuleConditionsItem_Metric,
+        CreateSignalBodyEvaluationSettingsSettingsRuleConditionsItem_ToolUsed,
+        CreateSignalBodyEvaluationSettingsSettingsRuleConditionsItem_ToolFailed,
+        CreateSignalBodyEvaluationSettingsSettingsRuleConditionsItem_ToolCallCount,
+        CreateSignalBodyEvaluationSettingsSettingsRuleConditionsItem_Error,
+        CreateSignalBodyEvaluationSettingsSettingsRuleConditionsItem_FinishReason,
+        CreateSignalBodyEvaluationSettingsSettingsRuleConditionsItem_SemanticSimilarity,
+    ],
+    pydantic.Field(discriminator="type"),
 ]
