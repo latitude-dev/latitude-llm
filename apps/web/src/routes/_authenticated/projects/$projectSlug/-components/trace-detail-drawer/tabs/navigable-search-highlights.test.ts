@@ -84,9 +84,7 @@ describe("getFirstMatchHint", () => {
   })
 
   it("falls back to the first highlight when firstMatchIndex is out of bounds", () => {
-    const highlights = [
-      highlight({ type: "search-semantic-region", startOffset: 0, endOffset: 0, messageIndex: 5 }),
-    ]
+    const highlights = [highlight({ type: "search-semantic-region", startOffset: 0, endOffset: 0, messageIndex: 5 })]
 
     expect(getFirstMatchHint({ highlights, firstMatchIndex: 99 })).toEqual({
       messageIndex: 5,
