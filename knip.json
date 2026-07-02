@@ -54,6 +54,7 @@
       "project": ["src/**/*.ts", "src/**/*.tsx"],
       "ignoreDependencies": [
         "@temporalio/client",
+        "quickjs-emscripten",
         "voyageai"
       ]
     },

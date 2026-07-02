@@ -588,6 +588,9 @@ importers:
       posthog-js:
         specifier: 1.371.3
         version: 1.371.3
+      quickjs-emscripten:
+        specifier: 'catalog:'
+        version: 0.32.0
       react:
         specifier: 'catalog:'
         version: 19.2.5
