@@ -138,6 +138,7 @@ function ConversationContent({
   const navItemRefs = useRef<(HTMLDivElement | null)[]>([])
   const clearSelectionRef = useRef<(() => void) | null>(null)
   const autoLoadingMoreRef = useRef(false)
+  const hasScrolledToSearchRef = useRef<string | null>(null)
 
   const { data: spanMaps } = useConversationSpanMaps({
     projectId,
@@ -441,10 +442,22 @@ function ConversationContent({
   // TODO(frontend-use-effect-policy): scrolls to the active search match after highlight DOM mounts.
   useEffect(() => {
     const container = scrollRef.current
-    if (!container || !searchScrollTarget) return
+    if (!container || !searchScrollTarget) {
+      hasScrolledToSearchRef.current = null
+      return
+    }
     if (searchScrollTarget.messageIndex >= messages.length) return
+
+    const scrollKey = JSON.stringify({
+      query: activeSearchQuery,
+      matchIndex: activeMatchIndex,
+      target: searchScrollTarget,
+    })
+    if (hasScrolledToSearchRef.current === scrollKey) return
+    hasScrolledToSearchRef.current = scrollKey
+
     return scrollToSearchMatch(container, searchScrollTarget)
-  }, [messages.length, scrollRef, searchScrollTarget])
+  }, [activeMatchIndex, activeSearchQuery, messages.length, scrollRef, searchScrollTarget])
 
   if (textSelectionPopoverControlsRef) {
     textSelectionPopoverControlsRef.current = {

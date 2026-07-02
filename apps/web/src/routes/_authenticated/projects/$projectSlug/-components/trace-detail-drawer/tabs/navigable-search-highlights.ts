@@ -16,6 +16,12 @@ function isInlineNavigableHighlight(highlight: TraceHighlight): boolean {
   )
 }
 
+function getFirstOrderedHighlight(result: TraceSearchHighlightsResult): TraceHighlight | null {
+  if (result.highlights.length === 0) return null
+  const index = result.firstMatchIndex >= 0 ? result.firstMatchIndex : 0
+  return result.highlights[index] ?? result.highlights[0] ?? null
+}
+
 export function getSearchScrollTarget(highlight: TraceHighlight): SearchScrollTarget {
   if (isInlineNavigableHighlight(highlight)) {
     return {
@@ -28,9 +34,8 @@ export function getSearchScrollTarget(highlight: TraceHighlight): SearchScrollTa
 }
 
 export function getFirstMatchHint(result: TraceSearchHighlightsResult | undefined): FirstMatchHint | null {
-  if (!result || result.highlights.length === 0) return null
-  const index = result.firstMatchIndex >= 0 ? result.firstMatchIndex : 0
-  const first = result.highlights[index] ?? result.highlights[0]
+  if (!result) return null
+  const first = getFirstOrderedHighlight(result)
   if (!first) return null
   return { messageIndex: first.messageIndex, partIndex: first.partIndex }
 }
@@ -46,8 +51,7 @@ export function resolveSearchScrollTarget(args: {
   const activeNavigable = navigableMatches[activeNavigableIndex]
   if (activeNavigable) return getSearchScrollTarget(activeNavigable)
 
-  const index = result.firstMatchIndex >= 0 ? result.firstMatchIndex : 0
-  const first = result.highlights[index] ?? result.highlights[0]
+  const first = getFirstOrderedHighlight(result)
   if (!first) return null
   return getSearchScrollTarget(first)
 }
