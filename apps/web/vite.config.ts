@@ -45,6 +45,9 @@ const temporalExternal: (string | RegExp)[] = [
   "long",
 ]
 
+// quickjs-emscripten's glue loads its .wasm via `new URL(…, import.meta.url)`, so it must stay external to resolve from node_modules, not the bundled `_ssr/` chunk.
+const quickjsExternal: (string | RegExp)[] = [/^quickjs-emscripten(-core)?$/, /^@jitl\/quickjs-/]
+
 // @effect/opentelemetry ships a WebSdk.js entry that imports from
 // @opentelemetry/sdk-trace-web (an optional peer, browser-only). The SSR
 // bundle never reaches the web SDK path, but Rolldown's resolver scans it.
@@ -55,6 +58,7 @@ const temporalExternal: (string | RegExp)[] = [
 // both the Vite SSR pass and the Nitro production bundle.
 const ssrExternal: (string | RegExp)[] = [
   ...temporalExternal,
+  ...quickjsExternal,
   "@opentelemetry/sdk-trace-web",
   "@resvg/resvg-js",
 ]
@@ -87,6 +91,10 @@ export default defineConfig({
       "long",
       "@opentelemetry/sdk-trace-web",
       "@resvg/resvg-js",
+      "quickjs-emscripten",
+      "quickjs-emscripten-core",
+      "@jitl/quickjs-ffi-types",
+      "@jitl/quickjs-wasmfile-release-sync",
     ],
   },
   optimizeDeps: {
