@@ -1,0 +1,195 @@
+---
+title: CLI
+description: Install and use the Latitude CLI to manage your Latitude organization right from the terminal
+---
+
+## Overview
+
+The **`latitude` CLI** is a single, self-contained binary that exposes your Latitude organization on the command line. Like the [MCP server](/getting-started/mcp), its commands are **generated directly from the Latitude API**, so the command surface automatically stays in sync with the platform. For the live list of commands and their input/output schemas, check the [API reference](https://api.latitude.so/docs).
+
+It's built for two audiences:
+
+- **Humans**, a fast, scriptable way to inspect and manage projects, traces, datasets, members, keys, and more without leaving the terminal.
+- **Agents**, a zero-dependency way for an agent (Claude Code, Cursor, Codex, …) to act on Latitude without wiring up an MCP connection, using `--format json` for machine-readable output and `--schema` for machine-readable help.
+
+<Info>
+  Prefer a network connection? The [MCP server](/getting-started/mcp) exposes the same capabilities over OAuth.
+</Info>
+
+## Installation
+
+The CLI ships as a pre-built binary on our [GitHub Releases](https://github.com/latitude-dev/latitude-llm/releases) — grab the latest `cli-vX.Y.Z` release. Download the archive for your platform, extract it, and put the `latitude` binary somewhere on your `PATH`.
+
+| OS | Architecture |
+| --- | --- |
+| Linux | x86-64 (`amd64`) |
+| Linux | ARM64 (`aarch64`) |
+| macOS | Intel (`amd64`) |
+| macOS | Apple Silicon (`arm64`) |
+| Windows | x86-64 (`amd64`) |
+
+<Tabs>
+  <Tab title="MacOS / Linux">
+    ```bash
+    # Set <version> and pick the asset for your OS/arch: latitude-<os>-<arch>.tar.gz
+    curl -fsSL -o latitude.tar.gz \
+      https://github.com/latitude-dev/latitude-llm/releases/download/cli-<version>/latitude-macos-arm64.tar.gz
+
+    tar -xzf latitude.tar.gz
+    chmod +x latitude
+    sudo mv latitude /usr/local/bin/latitude   # or any directory on your PATH
+
+    latitude --version
+    ```
+
+    <Info>
+      On MacOS the first run may be blocked by Gatekeeper. Allow it with `xattr -d com.apple.quarantine /usr/local/bin/latitude`, or via **System Settings → Privacy & Security**.
+    </Info>
+  </Tab>
+  <Tab title="Windows">
+    Download `latitude-windows-amd64.zip`, extract `latitude.exe`, and move it to a directory on your `PATH` (or add its folder to `PATH`). Then:
+
+    ```powershell
+    latitude --version
+    ```
+  </Tab>
+</Tabs>
+
+Then verify it works and, optionally, set up [shell completion](#shell-completion) and the [man page](#man-page).
+
+## Authentication
+
+The CLI authenticates with an **organization-scoped API key**. Create one in the Latitude UI under **Settings → Keys → API Keys**. There are two ways to give the key to the CLI:
+
+<Tabs>
+  <Tab title="Keyring (recommended)">
+    Store the key once in your operating system's secret store (Keychain on MacOS, Secret Service on Linux, Credential Manager on Windows):
+
+    ```bash
+    latitude auth login
+    ```
+
+    You'll be prompted to paste your API key; it's saved to the keyring under `latitude:ApiKeyAuth` and reused on every subsequent command. Manage it with:
+
+    ```bash
+    latitude auth status    # show which credential sources are set, for each scheme
+    latitude auth logout    # remove the stored key from the keyring
+    ```
+  </Tab>
+  <Tab title="Environment variable">
+    Export the key in your shell — handy for CI or ephemeral environments:
+
+    ```bash
+    export LATITUDE_API_KEY="lat_..."
+    latitude projects list
+    ```
+
+    `LATITUDE_API_KEY` takes precedence over the keyring, so it's easy to override the stored credential per-session. `latitude auth status` shows every source the CLI can see and which one wins.
+  </Tab>
+</Tabs>
+
+## Usage
+
+The general shape is `latitude <resource> <command> [flags]`, where each resource mirrors an area of the Latitude API:
+
+```bash
+latitude --help                 # list every resource
+latitude projects --help        # list the commands for a resource
+latitude projects list          # run one
+
+latitude projects create --help # discover a command's flags/arguments
+```
+
+Resources include `projects`, `traces`, `datasets`, and more — run `latitude --help` for the full list. Common examples:
+
+```bash
+latitude account get                       # the current org + your role
+latitude projects list                     # every project in the org
+latitude projects create --name "My App"   # create a project
+latitude traces list --help                # inspect traces (project-scoped — see --help for the flags)
+latitude api-keys list
+```
+
+A few global flags worth knowing (run `latitude --help` for the full list):
+
+- `--query <JMESPath>` — project/filter the response before it's formatted, e.g. `--query "items[].slug"`.
+- `--dry-run` — validate the request locally without sending it to the API.
+- `--quiet` / `-q` — suppress success output (errors still print to stderr).
+- `--debug` — dump the raw HTTP request and response to stderr.
+
+## Output formats
+
+Every command accepts `--format` to control how results are rendered. This makes the CLI equally good for humans reading a terminal and for scripts or agents parsing output.
+
+| Format | Description |
+| --- | --- |
+| `table` | Human-readable table. **Default when stdout is a TTY.** |
+| `json` | Pretty JSON. **Default when the output is piped.** |
+| `jsonl` | Newline-delimited JSON (NDJSON) — one compact value per line; arrays are flattened. Ideal for streaming into other tools. |
+| `yaml` | YAML. |
+| `csv` | CSV — convenient for spreadsheets. |
+| `raw` | The unmodified server response bytes. |
+| `http` | The full HTTP response (status line + headers + body), like `curl -i`. |
+
+```bash
+latitude projects list --format json
+latitude projects list --format csv > projects.csv
+latitude traces list --format jsonl | jq .   # stream trace-by-trace
+
+# Combine with --query to reshape before formatting
+latitude projects list --query "items[].{slug: slug, name: name}" --format yaml
+```
+
+You can also set a default format for a session with the `LATITUDE_OUTPUT` environment variable (e.g. `export LATITUDE_OUTPUT=json`); the `--format` flag always overrides it.
+
+## Environment variables
+
+| Variable | Purpose |
+| --- | --- |
+| `LATITUDE_API_KEY` | API key used to authenticate (alternative to the keyring). |
+| `LATITUDE_OUTPUT` | Default output format when `--format` is omitted. |
+| `LATITUDE_BASE_URL` | Override the API base URL (e.g. self-hosted or a mock server). |
+| `LATITUDE_TIMEOUT_SECS` | Total request timeout, in seconds. |
+| `LATITUDE_PROXY` | HTTP(S) proxy URL. |
+| `LATITUDE_CA_BUNDLE` | Path to a PEM file with extra trust roots. |
+| `LATITUDE_INSECURE=1` | Skip TLS verification (debugging only). |
+
+The standard `HTTPS_PROXY` / `HTTP_PROXY` / `NO_PROXY` / `SSL_CERT_FILE` variables are honored as well.
+
+## Shell completion
+
+Generate a completion script for your shell — `bash`, `zsh`, `fish`, `powershell`, or `elvish` — and load it to get tab-completion for every resource, command, and flag:
+
+<Tabs>
+  <Tab title="zsh">
+    ```bash
+    latitude completion zsh > ~/.latitude-completion.zsh
+    echo 'source ~/.latitude-completion.zsh' >> ~/.zshrc
+    ```
+  </Tab>
+  <Tab title="bash">
+    ```bash
+    latitude completion bash | sudo tee /etc/bash_completion.d/latitude > /dev/null
+    ```
+  </Tab>
+  <Tab title="fish">
+    ```bash
+    latitude completion fish > ~/.config/fish/completions/latitude.fish
+    ```
+  </Tab>
+</Tabs>
+
+## Man page
+
+The CLI can emit its own manual page in roff format, so `man latitude` works like any native tool:
+
+```bash
+latitude man > latitude.1
+man ./latitude.1
+# or install it system-wide:
+sudo mv latitude.1 /usr/local/share/man/man1/ && man latitude
+```
+
+## For Agents
+
+The CLI pairs naturally with agents: `--format json`/`jsonl` for structured output, `--schema` for machine-readable help, and `latitude generate-skills` to teach an agent the command surface — everything it needs to drive Latitude locally with no MCP connection. Prefer the [MCP server](/getting-started/mcp) when you'd rather connect the agent over the network with OAuth.

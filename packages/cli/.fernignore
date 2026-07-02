@@ -1,1 +1,3 @@
 CHANGELOG.md
+# cargo-dist scaffolding; we release via .github/workflows/publish-cli.yml
+dist-workspace.toml

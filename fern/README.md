@@ -121,11 +121,23 @@ pnpm generate:cli    # Rust CLI
 `generate:sdk` runs four steps (also available individually):
 
 ```bash
-pnpm openapi:emit    # 1. Emit a fresh OpenAPI spec from the live routes.
-pnpm fern:check      # 2. Validate the Fern config against the spec. (No Docker needed.)
-                     # 3. `./fern/invoke.sh generate --group local-typescript --local --force`
-                     # 4. `./fern/invoke.sh generate --group local-python --local --force`
+pnpm openapi:emit             # 1. Emit a fresh OpenAPI spec from the live routes.
+pnpm fern:check               # 2. Validate the Fern config against the spec. (No Docker needed.)
+pnpm generate:sdk:typescript  # 3. Generate the TypeScript SDK (pins --version — see warning below).
+pnpm generate:sdk:python      # 4. Generate the Python SDK (pins --version — see warning below).
 ```
+
+> **Always regenerate through these `pnpm` scripts — never run `fern generate`
+> by hand.** `generate:sdk:typescript` / `generate:sdk:python` pass `--version`
+> (read from the SDK's own `package.json` / `pyproject.toml`) so the version
+> Fern bakes into the generated source is **deterministic**. Without it, Fern
+> derives the version from its registry ("last published + a patch"), which
+> moves every time an SDK is published and re-stamps the Python
+> `client_wrapper.py` `User-Agent` (e.g. `latitude_sdk/7.0.1`) — silently
+> breaking the `api-manifests` drift check until someone re-commits the number.
+> Pinning `--version` ties it to the real package version and keeps CI green.
+> (The TypeScript generator embeds no version literal, so `--version` is a
+> no-op there today; it's passed anyway for consistency and future-proofing.)
 
 `generate:cli` runs the same emit + `fern:check` (which validates every
 group, CLI included) and then `./fern/invoke.sh generate --group local-cli
@@ -183,18 +195,36 @@ Drift is guarded by `.github/workflows/api-manifests.yml`. On every PR
 targeting `development`, the workflow regenerates `apps/api/openapi.json`,
 `apps/api/mcp.json`, the Fern-emitted SDKs under `packages/sdk/typescript/src/`
 and `packages/sdk/python/src/`, and the CLI crate under `packages/cli/`, and
-fails if any of them differ from what's checked in. Forgetting to run `pnpm
+fails if any of them differ from what's checked in. The SDK steps invoke the
+same `pnpm generate:sdk:typescript` / `pnpm generate:sdk:python` scripts (not
+raw `fern generate`), so the `--version` pin applies in CI too — that's what
+keeps the Python `User-Agent` from drifting the check. Forgetting to run `pnpm
 openapi:emit && pnpm mcp:emit && pnpm generate:sdk && pnpm generate:cli` after
 touching `apps/api/src/routes/*` will fail the **Fail if … drifted** steps, so
 the manifests, SDKs, and CLI can't fall out of sync with the route
 declarations.
 
 Publishing happens on every push to `development` via
-`.github/workflows/publish-packages.yml`, which fans out to
-`publish-typescript-sdk.yml` (npm, `@latitude-data/sdk`) and
-`publish-python-sdk.yml` (PyPI, `latitude-sdk`). Both no-op unless the
-version in the package shell was bumped and a matching changelog entry
-exists.
+`.github/workflows/publish-packages.yml`, which fans out to three publishers,
+each **version-gated** and each reading its version from a **different** place:
+
+- `publish-typescript-sdk.yml` (npm, `@latitude-data/sdk`) — version from
+  `packages/sdk/typescript/package.json`; publishes when it differs from
+  `npm view`.
+- `publish-python-sdk.yml` (PyPI, `latitude-sdk`) — version from
+  `packages/sdk/python/pyproject.toml`; publishes when it isn't on PyPI.
+- `publish-cli.yml` (GitHub Releases, `latitude`) — version from the **top
+  `## [X.Y.Z]` entry in `packages/cli/CHANGELOG.md`** (the crate `Cargo.toml`
+  ships `0.0.0`, patched at build via `cargo set-version`); publishes when no
+  `cli-<version>` release exists yet.
+
+So regenerating is not enough to ship — you must advance the version. New API
+endpoints add SDK methods **and** CLI commands, so when you bump the SDK
+manifests for new surface, **also add a new `## [X.Y.Z]` entry to
+`packages/cli/CHANGELOG.md`** in the same change; otherwise the CLI regenerates
+with the new commands but `publish-cli.yml` no-ops (no new version) and they
+never reach users. (The SDK CHANGELOGs are human-facing — the publishers gate on
+the manifest version, not the changelog — but keep them in sync anyway.)
 
 ## Troubleshooting
 
