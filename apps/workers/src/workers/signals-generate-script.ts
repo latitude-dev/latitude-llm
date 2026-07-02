@@ -6,7 +6,7 @@ import {
   type ScriptGenerationResult,
 } from "@domain/evaluations"
 import type { QueueConsumer } from "@domain/queue"
-import { type FilterSet, OrganizationId } from "@domain/shared"
+import { type FilterSet, filterSetSchema, OrganizationId } from "@domain/shared"
 import { AIGenerateLive, withAi } from "@platform/ai"
 import type { RedisClient } from "@platform/cache-redis"
 import {
@@ -61,11 +61,23 @@ const writeResult = (redisClient: RedisClient, payload: SignalsGenerateScriptPay
 const runGenerateScriptJob =
   (deps: { readonly clickhouseClient: ClickHouseClient; readonly redisClient: RedisClient }) =>
   (payload: SignalsGenerateScriptPayload) => {
+    let filters: FilterSet | undefined
+    if (payload.filters != null) {
+      const parsed = filterSetSchema.safeParse(payload.filters)
+      if (!parsed.success) {
+        return writeResult(deps.redisClient, payload, {
+          status: "error",
+          error: "Invalid filters in the generation request.",
+        }).pipe(Effect.asVoid)
+      }
+      filters = parsed.data
+    }
+
     const input: CreateScriptFromPromptInput = {
       organizationId: payload.organizationId,
       projectId: payload.projectId,
       prompt: payload.prompt,
-      ...(payload.filters != null ? { filters: payload.filters as FilterSet } : {}),
+      ...(filters !== undefined ? { filters } : {}),
     }
 
     return createScriptFromPromptUseCase(input).pipe(
