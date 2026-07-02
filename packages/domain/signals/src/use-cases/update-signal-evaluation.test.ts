@@ -163,10 +163,10 @@ describe("updateSignalEvaluationUseCase", () => {
     expect(result._tag).toBe("Failure")
   })
 
-  it("rejects a settings payload for a raw-script evaluation (no conversion)", async () => {
-    const { layer } = provide(makeSignal(), [makeEvaluation({ settings: null, script: "return Passed()" })])
+  it("converts a raw-script evaluation to settings", async () => {
+    const { layer, saved } = provide(makeSignal(), [makeEvaluation({ settings: null, script: "return Passed()" })])
 
-    const result = await Effect.runPromiseExit(
+    const result = await Effect.runPromise(
       updateSignalEvaluationUseCase({
         projectId,
         signalId: SignalId(signalId),
@@ -174,7 +174,10 @@ describe("updateSignalEvaluationUseCase", () => {
       }).pipe(Effect.provide(layer)),
     )
 
-    expect(result._tag).toBe("Failure")
+    expect(result).toMatchObject({ signalId, evaluationId, changed: true })
+    expect(saved).toHaveLength(1)
+    expect(saved[0]?.settings).toEqual(nextSettings)
+    expect(saved[0]?.script).toBe(compileSettingsToScript(nextSettings))
   })
 
   it("updates a raw-script evaluation in place from a new script", async () => {
@@ -195,10 +198,10 @@ describe("updateSignalEvaluationUseCase", () => {
     expect(saved[0]?.alignment).toBeNull()
   })
 
-  it("rejects a script payload for a settings-defined evaluation (no conversion)", async () => {
-    const { layer } = provide(makeSignal(), [makeEvaluation()])
+  it("converts a settings-defined evaluation to a raw script", async () => {
+    const { layer, saved } = provide(makeSignal(), [makeEvaluation()])
 
-    const result = await Effect.runPromiseExit(
+    const result = await Effect.runPromise(
       updateSignalEvaluationUseCase({
         projectId,
         signalId: SignalId(signalId),
@@ -206,7 +209,11 @@ describe("updateSignalEvaluationUseCase", () => {
       }).pipe(Effect.provide(layer)),
     )
 
-    expect(result._tag).toBe("Failure")
+    expect(result).toMatchObject({ signalId, evaluationId, changed: true })
+    expect(saved).toHaveLength(1)
+    expect(saved[0]?.settings).toBeNull()
+    expect(saved[0]?.script).toBe("return Passed(1)")
+    expect(saved[0]?.alignment).toBeNull()
   })
 
   it("rejects when the signal has no active evaluation", async () => {

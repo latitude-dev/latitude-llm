@@ -259,21 +259,13 @@ export function SignalBuilderModal({
   const isLastStep = stepIndex === steps.length - 1
   const inConditionSubStep = step === "detector" && conditionEdit !== null
 
-  // Editing is locked to how the evaluation was authored — settings signals stay on Rules/LLM, raw-script
-  // signals stay on Advanced — because there is no settings↔script conversion. Creation offers all three.
-  const detectorTabOptions: { readonly id: DetectorTab; readonly label: string }[] =
-    mode === "edit"
-      ? initial?.detector.kind === "script"
-        ? [{ id: "advanced", label: "Advanced" }]
-        : [
-            { id: "rules", label: "Rules" },
-            { id: "llm", label: "LLM" },
-          ]
-      : [
-          { id: "rules", label: "Rules" },
-          { id: "llm", label: "LLM" },
-          { id: "advanced", label: "Advanced" },
-        ]
+  // All three tabs are available in create and edit alike: an evaluation can be re-authored across kinds
+  // (settings ⇄ raw script), and the update use-case persists whichever kind the user lands on.
+  const detectorTabOptions: { readonly id: DetectorTab; readonly label: string }[] = [
+    { id: "rules", label: "Rules" },
+    { id: "llm", label: "LLM" },
+    { id: "advanced", label: "Advanced" },
+  ]
 
   const footer = inConditionSubStep ? (
     <>

@@ -53,11 +53,11 @@ export type UpdateSignalEvaluationError =
  * Recompiles a user signal's active evaluation from a new `settings` form or replaces its raw
  * `script`, **in place** (same evaluation id). Updating in place — rather than archiving and minting
  * a new row — matches the shipped realign path (`persistAlignmentResult`) and avoids a lineage/naming
- * scheme for the replacement row. Only `origin = 'user'` signals are editable here, and the incoming
- * kind must match the active evaluation's: a settings-defined evaluation takes `settings`, a raw-script
- * evaluation (Advanced tab) takes `script` — there is no settings↔script conversion, and system signals
- * are rejected. Edits apply forward-only; existing scores keep their frozen membership. The signal's
- * `filters` (the live pre-gate) are untouched and continue to gate the same evaluation.
+ * scheme for the replacement row. Only `origin = 'user'` signals are editable here (system signals are
+ * rejected); the evaluation can be freely re-authored across kinds — settings ⇄ raw script — with
+ * `settings` set to the new form or nulled when a raw script is supplied. Edits apply forward-only;
+ * existing scores keep their frozen membership. The signal's `filters` (the live pre-gate) are
+ * untouched and continue to gate the same evaluation.
  */
 export const updateSignalEvaluationUseCase = (input: UpdateSignalEvaluationInput) =>
   Effect.gen(function* () {
@@ -94,18 +94,6 @@ export const updateSignalEvaluationUseCase = (input: UpdateSignalEvaluationInput
         if (evaluation === undefined) {
           return yield* new BadRequestError({
             message: `Signal ${signal.id} has no active evaluation to edit`,
-          })
-        }
-        // No settings↔script conversion: the incoming kind must match how the evaluation was authored.
-        const isRawScriptEvaluation = evaluation.settings == null
-        if (isRawScriptEvaluation && settings !== null) {
-          return yield* new BadRequestError({
-            message: "This signal's evaluation is a raw script; edit it from the Advanced tab",
-          })
-        }
-        if (!isRawScriptEvaluation && settings === null) {
-          return yield* new BadRequestError({
-            message: "This signal's evaluation is settings-defined; edit it from the Rules or Judge tab",
           })
         }
 
