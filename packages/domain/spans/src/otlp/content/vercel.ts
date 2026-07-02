@@ -91,7 +91,7 @@ function parseInputFromCallLevel(attrs: readonly OtlpKeyValue[]): {
   return { messages: result.messages as GenAIMessage[], system: result.system ?? [] }
 }
 
-function parseOutput(attrs: readonly OtlpKeyValue[]): GenAIMessage[] {
+export function parseVercelOutput(attrs: readonly OtlpKeyValue[]): GenAIMessage[] {
   const text = rawStringAttr(attrs, "ai.response.text")
   const objectJson = rawStringAttr(attrs, "ai.response.object")
   const toolCallsJson = rawStringAttr(attrs, "ai.response.toolCalls")
@@ -140,7 +140,7 @@ export function parseVercel(attrs: readonly OtlpKeyValue[]): ParsedContent {
     }
   }
 
-  const outputMessages = parseOutput(attrs)
+  const outputMessages = parseVercelOutput(attrs)
   const toolDefinitions = parseToolDefinitions(attrs)
 
   return {
