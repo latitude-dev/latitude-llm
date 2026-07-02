@@ -32,13 +32,13 @@ import { scores } from "../schema/scores.ts"
 import { signals } from "../schema/signals.ts"
 import { preferProjectFirst } from "./org-search.ts"
 
-// Lifecycle flags derived from `alert_incidents` are joined onto every
+// Lifecycle flags derived from `incidents` are joined onto every
 // non-locking issue read. The EXISTS subquery is the system of record for
 // "is this signal currently escalating" — see `deriveSignalLifecycleStates`.
 //
 // `signals.id` is qualified via raw SQL because Drizzle's template renders
 // the bare column inside the EXISTS subquery as `"id"` (unqualified), which
-// collides with `alert_incidents.id` (the inner scope's PK) and silently
+// collides with `incidents.id` (the inner scope's PK) and silently
 // resolves to the wrong column. The fully qualified outer reference avoids
 // the shadowing.
 const outerSignalId = sql.raw(`"latitude"."signals"."id"`)
