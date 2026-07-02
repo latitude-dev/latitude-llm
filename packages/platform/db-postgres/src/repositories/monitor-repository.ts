@@ -35,7 +35,7 @@ import {
 } from "drizzle-orm"
 import { Effect, Layer } from "effect"
 import type { Operator } from "../client.ts"
-import { alertIncidents } from "../schema/alert-incidents.ts"
+import { incidents } from "../schema/alert-incidents.ts"
 import { monitors } from "../schema/monitors.ts"
 import { projects } from "../schema/projects.ts"
 import { nameMatchScore, preferProjectFirst } from "./org-search.ts"
@@ -164,12 +164,12 @@ export const MonitorRepositoryLive = Layer.effect(
           const [rows, totals] = yield* sqlClient.query((db) => {
             const lastIncident = db
               .select({
-                monitorId: alertIncidents.sourceId,
-                lastStartedAt: max(alertIncidents.startedAt).as("last_started_at"),
+                monitorId: incidents.sourceId,
+                lastStartedAt: max(incidents.startedAt).as("last_started_at"),
               })
-              .from(alertIncidents)
-              .where(and(eq(alertIncidents.sourceType, "monitor"), eq(alertIncidents.organizationId, organizationId)))
-              .groupBy(alertIncidents.sourceId)
+              .from(incidents)
+              .where(and(eq(incidents.sourceType, "monitor"), eq(incidents.organizationId, organizationId)))
+              .groupBy(incidents.sourceId)
               .as("last_incident")
 
             const itemsPromise = db
@@ -193,20 +193,20 @@ export const MonitorRepositoryLive = Layer.effect(
           const incidentRows = yield* sqlClient.query((db) =>
             db
               .select({
-                monitorId: alertIncidents.sourceId,
-                incidentId: alertIncidents.id,
-                startedAt: alertIncidents.startedAt,
-                endedAt: alertIncidents.endedAt,
+                monitorId: incidents.sourceId,
+                incidentId: incidents.id,
+                startedAt: incidents.startedAt,
+                endedAt: incidents.endedAt,
               })
-              .from(alertIncidents)
+              .from(incidents)
               .where(
                 and(
-                  eq(alertIncidents.organizationId, organizationId),
-                  eq(alertIncidents.sourceType, "monitor"),
-                  inArray(alertIncidents.sourceId, ids),
+                  eq(incidents.organizationId, organizationId),
+                  eq(incidents.sourceType, "monitor"),
+                  inArray(incidents.sourceId, ids),
                 ),
               )
-              .orderBy(asc(alertIncidents.sourceId), desc(alertIncidents.endedAt), desc(alertIncidents.id)),
+              .orderBy(asc(incidents.sourceId), desc(incidents.endedAt), desc(incidents.id)),
           )
           const lastIncidentByMonitorId = new Map<string, MonitorLastIncident>()
           for (const row of incidentRows) {

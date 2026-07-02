@@ -29,5 +29,3 @@ export const incidents = latitudeSchema.table(
       .where(sql`ended_at IS NULL`),
   ],
 )
-
-export const alertIncidents = incidents
