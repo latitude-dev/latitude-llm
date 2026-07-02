@@ -51,7 +51,7 @@ export function ChangelogBanner({ title, description, coverUrl, onCollapse, clas
       <div className="absolute top-2 right-2 z-20">
         <Button
           type="button"
-          variant="ghost"
+          variant="outline"
           size="icon"
           className="h-8 w-8 shrink-0"
           onClick={onCollapse}
