@@ -9726,6 +9726,82 @@
             "additionalProperties": false
           }
         ]
+      },
+      "QuerySpans": {
+        "type": "object",
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Span"
+            },
+            "description": "Matching spans across traces, newest first. Rows exclude per-message LLM content — use a span point-lookup for the payload."
+          },
+          "nextCursor": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "Cursor for the next page, or `null` when there are no more spans."
+          },
+          "hasMore": {
+            "type": "boolean",
+            "description": "Whether more spans match beyond this page."
+          }
+        },
+        "required": [
+          "items",
+          "nextCursor",
+          "hasMore"
+        ]
+      },
+      "QuerySpansBody": {
+        "type": "object",
+        "properties": {
+          "filters": {
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/FilterSet"
+              },
+              {
+                "description": "Row-local span filter set (same DSL as `listTraces`) over span fields — `operation`, `toolName`, `model`, `provider`, `sessionId`, `traceId`, `tags`, `duration`, `cost`, `tokensInput`/`tokensOutput`."
+              }
+            ]
+          },
+          "range": {
+            "type": "object",
+            "properties": {
+              "fromIso": {
+                "type": "string",
+                "format": "date-time",
+                "example": "2026-06-23T00:00:00Z",
+                "description": "Inclusive lower bound (ISO-8601)."
+              },
+              "toIso": {
+                "type": "string",
+                "format": "date-time",
+                "example": "2026-06-30T00:00:00Z",
+                "description": "Upper bound (ISO-8601). Must be after `fromIso`."
+              }
+            },
+            "required": [
+              "fromIso",
+              "toIso"
+            ],
+            "description": "Restrict to spans whose `startTime` falls in this window."
+          },
+          "cursor": {
+            "type": "string",
+            "description": "Opaque cursor from a previous response's `nextCursor`. Omit on the first page."
+          },
+          "limit": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 200,
+            "default": 50,
+            "description": "Page size. Defaults to 50; max 200."
+          }
+        }
       }
     },
     "parameters": {}
@@ -17926,6 +18002,87 @@
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/AnalyticsSeries"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Validation error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/projects/{projectSlug}/spans/query": {
+      "post": {
+        "tags": [
+          "Spans"
+        ],
+        "x-fern-sdk-group-name": "spans",
+        "x-fern-sdk-method-name": "query",
+        "summary": "Query spans across traces",
+        "description": "Returns a cursor-paginated page of spans across all traces in the project matching `filters` (and an optional time `range`). The span-grain, row-level complement to `queryAnalytics` with `stream: \"spans\"` (which returns aggregates): use this to drill from an aggregate into the individual spans behind it — e.g. every failing `search_docs` tool span, or the slowest embedding calls.",
+        "security": [
+          {
+            "ApiKeyAuth": []
+          }
+        ],
+        "operationId": "querySpans",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "description": "Project slug (human-readable identifier)"
+            },
+            "required": true,
+            "description": "Project slug (human-readable identifier)",
+            "name": "projectSlug",
+            "in": "path"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/QuerySpansBody"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Page of spans",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/QuerySpans"
                 }
               }
             }

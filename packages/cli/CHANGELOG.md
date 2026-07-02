@@ -9,6 +9,10 @@ The CLI is versioned independently of the TypeScript and Python SDKs.
 
 ## [Unreleased]
 
+### Added
+
+- `latitude spans query` — list spans across all traces in a project, filtered by a span-field filter set and an optional time range. The row-level, span-grain complement to `latitude analytics query` with `stream=spans`.
+
 ## [0.1.0] - 2026-07-01
 
 Initial release of the `latitude` CLI — a single, statically linked binary generated from the Latitude OpenAPI spec by [Fern](https://buildwithfern.com/).

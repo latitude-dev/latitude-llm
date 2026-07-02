@@ -17,6 +17,7 @@ Full command reference for `latitude`.
 - [`latitude saved-searches`](#latitude-saved-searches)
 - [`latitude scores`](#latitude-scores)
 - [`latitude signals`](#latitude-signals)
+- [`latitude spans`](#latitude-spans)
 - [`latitude tools`](#latitude-tools)
 - [`latitude traces`](#latitude-traces)
 - [`latitude users`](#latitude-users)
@@ -845,6 +846,21 @@ Updates a signal's name, description, and evaluation pre-gate `filters`. Filter 
 |------|------|----------|-------------|
 | `--project-slug` | `string` | Yes | Project slug (human-readable identifier) |
 | `--signal-slug` | `string` | Yes | Signal slug. |
+| `--json` | `JSON` | Yes | Request body as JSON (or use individual body-field flags) |
+
+---
+
+### `latitude spans`
+
+#### `latitude spans query`
+
+Returns a cursor-paginated page of spans across all traces in the project matching `filters` (and an optional time `range`). The span-grain, row-level complement to `queryAnalytics` with `stream: "spans"` (which returns aggregates): use this to drill from an aggregate into the individual spans behind it — e.g. every failing `search_docs` tool span, or the slowest embedding calls.
+
+`POST /v1/projects/{projectSlug}/spans/query`
+
+| Flag | Type | Required | Description |
+|------|------|----------|-------------|
+| `--project-slug` | `string` | Yes | Project slug (human-readable identifier) |
 | `--json` | `JSON` | Yes | Request body as JSON (or use individual body-field flags) |
 
 ---

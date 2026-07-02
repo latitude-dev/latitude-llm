@@ -25,6 +25,7 @@ if typing.TYPE_CHECKING:
     from .saved_searches.client import AsyncSavedSearchesClient, SavedSearchesClient
     from .scores.client import AsyncScoresClient, ScoresClient
     from .signals.client import AsyncSignalsClient, SignalsClient
+    from .spans.client import AsyncSpansClient, SpansClient
     from .tools.client import AsyncToolsClient, ToolsClient
     from .traces.client import AsyncTracesClient, TracesClient
     from .users.client import AsyncUsersClient, UsersClient
@@ -136,6 +137,7 @@ class LatitudeClient:
         self._members: typing.Optional[MembersClient] = None
         self._monitors: typing.Optional[MonitorsClient] = None
         self._analytics: typing.Optional[AnalyticsClient] = None
+        self._spans: typing.Optional[SpansClient] = None
 
     @property
     def projects(self):
@@ -265,6 +267,14 @@ class LatitudeClient:
             self._analytics = AnalyticsClient(client_wrapper=self._client_wrapper)
         return self._analytics
 
+    @property
+    def spans(self):
+        if self._spans is None:
+            from .spans.client import SpansClient  # noqa: E402
+
+            self._spans = SpansClient(client_wrapper=self._client_wrapper)
+        return self._spans
+
 
 def _make_default_async_client(
     timeout: typing.Optional[float],
@@ -393,6 +403,7 @@ class AsyncLatitudeClient:
         self._members: typing.Optional[AsyncMembersClient] = None
         self._monitors: typing.Optional[AsyncMonitorsClient] = None
         self._analytics: typing.Optional[AsyncAnalyticsClient] = None
+        self._spans: typing.Optional[AsyncSpansClient] = None
 
     @property
     def projects(self):
@@ -521,6 +532,14 @@ class AsyncLatitudeClient:
 
             self._analytics = AsyncAnalyticsClient(client_wrapper=self._client_wrapper)
         return self._analytics
+
+    @property
+    def spans(self):
+        if self._spans is None:
+            from .spans.client import AsyncSpansClient  # noqa: E402
+
+            self._spans = AsyncSpansClient(client_wrapper=self._client_wrapper)
+        return self._spans
 
 
 def _get_base_url(*, base_url: typing.Optional[str] = None, environment: LatitudeEnvironment) -> str:

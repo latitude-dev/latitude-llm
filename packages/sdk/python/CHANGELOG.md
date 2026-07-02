@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [7.1.0] - 2026-07-01
+
+### Added
+
+- `client.spans.query` — a cursor-paginated list of spans across all traces in a project, filtered by a span-field `FilterSet` (`operation`, `toolName`, `model`, `provider`, `sessionId`, `traceId`, `tags`, `duration`, `cost`, `tokensInput`/`tokensOutput` — the DSL keys are camelCase regardless of SDK language) and an optional time `range`. The row-level, span-grain complement to `client.analytics.query` with `stream="spans"` (aggregates) — use it to drill from an aggregate into the individual spans behind it.
+
 ## [7.0.0] - 2026-06-30
 
 Major regeneration on the latest Fern toolchain — Fern CLI `0.83.0` → `5.58.0` and the `fern-python-sdk` generator `4.32.2` → `5.15.0` (a major generator upgrade). The HTTP API surface (endpoints, request/response schemas) is unchanged; `openapi.json` changes are limited to `info` metadata and the auth security scheme (now modeled as an API key).

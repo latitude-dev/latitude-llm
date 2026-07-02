@@ -8546,3 +8546,109 @@ client.analytics.query(
 </dl>
 </details>
 
+## Spans
+<details><summary><code>client.spans.<a href="src/latitude_sdk/spans/client.py">query</a>(...) -> QuerySpans</code></summary>
+<dl>
+<dd>
+
+#### 📝 Description
+
+<dl>
+<dd>
+
+<dl>
+<dd>
+
+Returns a cursor-paginated page of spans across all traces in the project matching `filters` (and an optional time `range`). The span-grain, row-level complement to `queryAnalytics` with `stream: "spans"` (which returns aggregates): use this to drill from an aggregate into the individual spans behind it — e.g. every failing `search_docs` tool span, or the slowest embedding calls.
+</dd>
+</dl>
+</dd>
+</dl>
+
+#### 🔌 Usage
+
+<dl>
+<dd>
+
+<dl>
+<dd>
+
+```python
+from latitude_sdk import LatitudeClient
+from latitude_sdk.environment import LatitudeClientEnvironment
+
+client = LatitudeClient(
+    api_key="<token>",
+    environment=LatitudeClientEnvironment.PRODUCTION,
+)
+
+client.spans.query(
+    project_slug="projectSlug",
+)
+
+```
+</dd>
+</dl>
+</dd>
+</dl>
+
+#### ⚙️ Parameters
+
+<dl>
+<dd>
+
+<dl>
+<dd>
+
+**project_slug:** `str` — Project slug (human-readable identifier)
+    
+</dd>
+</dl>
+
+<dl>
+<dd>
+
+**filters:** `typing.Optional[typing.Dict[str, typing.List[FilterCondition]]]` — Row-local span filter set (same DSL as `listTraces`) over span fields — `operation`, `toolName`, `model`, `provider`, `sessionId`, `traceId`, `tags`, `duration`, `cost`, `tokensInput`/`tokensOutput`.
+    
+</dd>
+</dl>
+
+<dl>
+<dd>
+
+**range:** `typing.Optional[QuerySpansBodyRange]` — Restrict to spans whose `startTime` falls in this window.
+    
+</dd>
+</dl>
+
+<dl>
+<dd>
+
+**cursor:** `typing.Optional[str]` — Opaque cursor from a previous response's `nextCursor`. Omit on the first page.
+    
+</dd>
+</dl>
+
+<dl>
+<dd>
+
+**limit:** `typing.Optional[int]` — Page size. Defaults to 50; max 200.
+    
+</dd>
+</dl>
+
+<dl>
+<dd>
+
+**request_options:** `typing.Optional[RequestOptions]` — Request-specific configuration.
+    
+</dd>
+</dl>
+</dd>
+</dl>
+
+
+</dd>
+</dl>
+</details>
+

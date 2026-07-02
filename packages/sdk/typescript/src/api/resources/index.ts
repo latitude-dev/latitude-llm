@@ -28,6 +28,8 @@ export * as scores from "./scores/index.js";
 export * from "./signals/client/requests/index.js";
 export * as signals from "./signals/index.js";
 export * from "./signals/types/index.js";
+export * from "./spans/client/requests/index.js";
+export * as spans from "./spans/index.js";
 export * from "./tools/client/requests/index.js";
 export * as tools from "./tools/index.js";
 export * from "./tools/types/index.js";
