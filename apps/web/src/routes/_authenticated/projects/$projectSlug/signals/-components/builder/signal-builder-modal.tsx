@@ -273,6 +273,10 @@ export function SignalBuilderModal({
     const detectorChanged = JSON.stringify(evaluation) !== JSON.stringify(initialPayload)
     const samplingChanged = sampling !== initial.sampling
     const filtersChanged = JSON.stringify(filterSetOrNull(filters)) !== JSON.stringify(initial.filters ?? null)
+    if (!filtersChanged && !detectorChanged && !samplingChanged) {
+      onClose()
+      return
+    }
     setIsSaving(true)
     try {
       if (filtersChanged) {
