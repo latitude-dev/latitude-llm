@@ -1,6 +1,6 @@
 import { ProjectRepository } from "@domain/projects"
 import { OrganizationId, ProjectId, SpanId } from "@domain/shared"
-import { SpanRepository, type SpanListCursor } from "@domain/spans"
+import { type SpanListCursor, SpanRepository } from "@domain/spans"
 import { createRoute, OpenAPIHono, z } from "@hono/zod-openapi"
 import { SpanRepositoryLive, withClickHouse } from "@platform/db-clickhouse"
 import { ProjectRepositoryLive, withPostgres } from "@platform/db-postgres"
@@ -29,10 +29,9 @@ const spansFernGroup = (methodName: string) =>
 const spanEndpoint = defineApiEndpoint<OrganizationScopedEnv>(spansPath)
 
 const encodeSpanListCursor = (cursor: SpanListCursor): string =>
-  Buffer.from(
-    JSON.stringify({ startTime: cursor.startTime.toISOString(), spanId: cursor.spanId }),
-    "utf8",
-  ).toString("base64url")
+  Buffer.from(JSON.stringify({ startTime: cursor.startTime.toISOString(), spanId: cursor.spanId }), "utf8").toString(
+    "base64url",
+  )
 
 const decodeSpanListCursor = (raw: string): SpanListCursor | null => {
   try {
@@ -151,9 +150,7 @@ const querySpans = spanEndpoint({
       {
         items: items.map(toSpanResponse),
         nextCursor:
-          last !== undefined
-            ? encodeSpanListCursor({ startTime: last.startTime, spanId: last.spanId })
-            : null,
+          last !== undefined ? encodeSpanListCursor({ startTime: last.startTime, spanId: last.spanId }) : null,
         hasMore,
       },
       200,
