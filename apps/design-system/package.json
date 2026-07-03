@@ -1,0 +1,30 @@
+{
+  "name": "@app/design-system",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview",
+    "check": "biome check src",
+    "format": "biome format --write src && biome check --fix src",
+    "typecheck": "tsgo -p tsconfig.json --noEmit"
+  },
+  "dependencies": {
+    "@repo/ui": "workspace:*",
+    "@tanstack/react-router": "1.168.10",
+    "lucide-react": "1.9.0",
+    "react": "catalog:",
+    "react-dom": "catalog:",
+    "rosetta-ai": "catalog:"
+  },
+  "devDependencies": {
+    "@tailwindcss/vite": "4.2.4",
+    "@tanstack/router-plugin": "1.167.12",
+    "@types/react": "catalog:",
+    "@types/react-dom": "catalog:",
+    "@vitejs/plugin-react": "catalog:",
+    "vite": "catalog:"
+  }
+}

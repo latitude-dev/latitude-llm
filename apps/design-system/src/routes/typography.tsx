@@ -5,7 +5,7 @@ import { DesignSystemPage } from "./-components/design-system-page.tsx"
 import { TypeSample, TypographyRow, TypographySection, TypographyTable } from "./-components/typography-table.tsx"
 import { UsageCode, UsageSection } from "./-components/usage-section.tsx"
 
-export const Route = createFileRoute("/design-system/typography")({
+export const Route = createFileRoute("/typography")({
   component: TypographyPage,
 })
 

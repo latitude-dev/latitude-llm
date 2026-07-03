@@ -18,7 +18,7 @@ import {
   Status,
   Text,
 } from "@repo/ui"
-import { createFileRoute, notFound } from "@tanstack/react-router"
+import { createFileRoute, notFound, useParams } from "@tanstack/react-router"
 import type { ReactNode } from "react"
 import { useState } from "react"
 import { ComponentDemoSection } from "./-components/demo-frame.tsx"
@@ -26,7 +26,7 @@ import { DesignSystemPage } from "./-components/design-system-page.tsx"
 import { useDesignSystemTheme } from "./-components/design-system-theme.tsx"
 import { UsageCode, UsageSection } from "./-components/usage-section.tsx"
 
-export const Route = createFileRoute("/design-system/$component")({
+export const Route = createFileRoute("/$component")({
   component: ComponentPage,
 })
 
@@ -171,7 +171,7 @@ const COMPONENT_REGISTRY: Record<string, ComponentEntry> = {
 }
 
 function ComponentPage() {
-  const { component } = Route.useParams()
+  const { component } = useParams({ strict: false })
   const entry = COMPONENT_REGISTRY[component]
 
   if (!entry) {

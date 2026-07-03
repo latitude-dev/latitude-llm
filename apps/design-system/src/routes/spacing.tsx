@@ -4,7 +4,7 @@ import { DesignSystemPage } from "./-components/design-system-page.tsx"
 import { TypographySection } from "./-components/typography-table.tsx"
 import { UsageCode, UsageSection } from "./-components/usage-section.tsx"
 
-export const Route = createFileRoute("/design-system/spacing")({
+export const Route = createFileRoute("/spacing")({
   component: SpacingPage,
 })
 

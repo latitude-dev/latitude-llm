@@ -4,11 +4,11 @@ import { DesignSystemThemeToggle } from "./design-system-theme.tsx"
 import { DESIGN_SYSTEM_NAV } from "./nav-config.ts"
 
 function isNavItemActive(pathname: string, to: string) {
-  const normalized = pathname.replace(/\/$/, "")
-  const target = to.replace(/\/$/, "")
+  const normalized = pathname.replace(/\/$/, "") || "/"
+  const target = to.replace(/\/$/, "") || "/"
 
-  if (target === "/design-system") {
-    return normalized === "/design-system"
+  if (target === "/") {
+    return normalized === "/"
   }
 
   return normalized === target || normalized.startsWith(`${target}/`)
@@ -21,7 +21,7 @@ export function DesignSystemSidebar() {
     <aside className="flex h-full w-[280px] shrink-0 flex-col border-r border-border">
       <div className="shrink-0 border-b border-border p-4">
         <div className="flex w-full items-center justify-between gap-3">
-          <Link to="/design-system" className="flex min-w-0 flex-1 items-center gap-2">
+          <Link to="/" className="flex min-w-0 flex-1 items-center gap-2">
             <LatitudeLogo className="h-5 w-5 shrink-0" />
             <Text.H5M ellipsis className="min-w-0 flex-1">
               Latitude Design

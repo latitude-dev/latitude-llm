@@ -5,7 +5,7 @@ import { DesignSystemPage } from "./-components/design-system-page.tsx"
 import { DESIGN_SYSTEM_NAV } from "./-components/nav-config.ts"
 import { TypographySection } from "./-components/typography-table.tsx"
 
-export const Route = createFileRoute("/design-system/")({
+export const Route = createFileRoute("/")({
   component: AboutPage,
 })
 
@@ -13,31 +13,31 @@ const PRODUCT_CARDS = [
   {
     title: "Colors",
     description: "Semantic color tokens for light and dark themes.",
-    to: "/design-system/colors",
+    to: "/colors",
     icon: Palette,
   },
   {
     title: "Typography",
     description: "Type scale, weights, and font families.",
-    to: "/design-system/typography",
+    to: "/typography",
     icon: Type,
   },
   {
     title: "Spacing",
     description: "Layout spacing scale used across the product.",
-    to: "/design-system/spacing",
+    to: "/spacing",
     icon: Layers,
   },
   {
     title: "Shadows",
     description: "Elevation tokens for cards and overlays.",
-    to: "/design-system/shadows",
+    to: "/shadows",
     icon: SunMoon,
   },
   {
     title: "Icons",
     description: "Lucide wrapper, brand icons, and provider logos.",
-    to: "/design-system/icons",
+    to: "/icons",
     icon: Boxes,
   },
 ] as const

@@ -5,7 +5,7 @@ import { DesignSystemPage } from "./-components/design-system-page.tsx"
 import { TypographySection } from "./-components/typography-table.tsx"
 import { UsageCode, UsageSection } from "./-components/usage-section.tsx"
 
-export const Route = createFileRoute("/design-system/infinite-table")({
+export const Route = createFileRoute("/infinite-table")({
   component: InfiniteTablePage,
 })
 

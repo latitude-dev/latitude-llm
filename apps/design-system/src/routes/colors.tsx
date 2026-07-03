@@ -122,7 +122,7 @@ const COLOR_GROUPS: { title: string; colors: { token: string; label: string; fgT
   },
 ]
 
-export const Route = createFileRoute("/design-system/colors")({
+export const Route = createFileRoute("/colors")({
   component: ColorsPage,
 })
 

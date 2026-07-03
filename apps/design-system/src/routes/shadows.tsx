@@ -4,7 +4,7 @@ import { ComponentDemoSection } from "./-components/demo-frame.tsx"
 import { DesignSystemPage } from "./-components/design-system-page.tsx"
 import { UsageCode, UsageSection } from "./-components/usage-section.tsx"
 
-export const Route = createFileRoute("/design-system/shadows")({
+export const Route = createFileRoute("/shadows")({
   component: ShadowsPage,
 })
 

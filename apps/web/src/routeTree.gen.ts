@@ -11,24 +11,12 @@
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as LoginRouteImport } from './routes/login'
 import { Route as AuthenticatedRouteImport } from './routes/_authenticated'
-import { Route as DesignSystemRouteRouteImport } from './routes/design-system/route'
 import { Route as BackofficeRouteRouteImport } from './routes/backoffice/route'
 import { Route as WelcomeIndexRouteImport } from './routes/welcome/index'
-import { Route as DesignSystemIndexRouteImport } from './routes/design-system/index'
 import { Route as BackofficeIndexRouteImport } from './routes/backoffice/index'
 import { Route as AuthenticatedIndexRouteImport } from './routes/_authenticated/index'
 import { Route as WrappedIdRouteImport } from './routes/wrapped/$id'
 import { Route as DownloadsExportRouteImport } from './routes/downloads/export'
-import { Route as DesignSystemTypographyRouteImport } from './routes/design-system/typography'
-import { Route as DesignSystemSpacingRouteImport } from './routes/design-system/spacing'
-import { Route as DesignSystemShadowsRouteImport } from './routes/design-system/shadows'
-import { Route as DesignSystemInfiniteTableRouteImport } from './routes/design-system/infinite-table'
-import { Route as DesignSystemIconsRouteImport } from './routes/design-system/icons'
-import { Route as DesignSystemColorsRouteImport } from './routes/design-system/colors'
-import { Route as DesignSystemChatRouteImport } from './routes/design-system/chat'
-import { Route as DesignSystemButtonRouteImport } from './routes/design-system/button'
-import { Route as DesignSystemBrandRouteImport } from './routes/design-system/brand'
-import { Route as DesignSystemComponentRouteImport } from './routes/design-system/$component'
 import { Route as ClaimTokenRouteImport } from './routes/claim.$token'
 import { Route as CcWrappedIdRouteImport } from './routes/cc-wrapped/$id'
 import { Route as BackofficeWrappedRouteImport } from './routes/backoffice/wrapped'
@@ -104,11 +92,6 @@ const AuthenticatedRoute = AuthenticatedRouteImport.update({
   id: '/_authenticated',
   getParentRoute: () => rootRouteImport,
 } as any)
-const DesignSystemRouteRoute = DesignSystemRouteRouteImport.update({
-  id: '/design-system',
-  path: '/design-system',
-  getParentRoute: () => rootRouteImport,
-} as any)
 const BackofficeRouteRoute = BackofficeRouteRouteImport.update({
   id: '/backoffice',
   path: '/backoffice',
@@ -118,11 +101,6 @@ const WelcomeIndexRoute = WelcomeIndexRouteImport.update({
   id: '/welcome/',
   path: '/welcome/',
   getParentRoute: () => rootRouteImport,
-} as any)
-const DesignSystemIndexRoute = DesignSystemIndexRouteImport.update({
-  id: '/',
-  path: '/',
-  getParentRoute: () => DesignSystemRouteRoute,
 } as any)
 const BackofficeIndexRoute = BackofficeIndexRouteImport.update({
   id: '/',
@@ -143,57 +121,6 @@ const DownloadsExportRoute = DownloadsExportRouteImport.update({
   id: '/downloads/export',
   path: '/downloads/export',
   getParentRoute: () => rootRouteImport,
-} as any)
-const DesignSystemTypographyRoute = DesignSystemTypographyRouteImport.update({
-  id: '/typography',
-  path: '/typography',
-  getParentRoute: () => DesignSystemRouteRoute,
-} as any)
-const DesignSystemSpacingRoute = DesignSystemSpacingRouteImport.update({
-  id: '/spacing',
-  path: '/spacing',
-  getParentRoute: () => DesignSystemRouteRoute,
-} as any)
-const DesignSystemShadowsRoute = DesignSystemShadowsRouteImport.update({
-  id: '/shadows',
-  path: '/shadows',
-  getParentRoute: () => DesignSystemRouteRoute,
-} as any)
-const DesignSystemInfiniteTableRoute =
-  DesignSystemInfiniteTableRouteImport.update({
-    id: '/infinite-table',
-    path: '/infinite-table',
-    getParentRoute: () => DesignSystemRouteRoute,
-  } as any)
-const DesignSystemIconsRoute = DesignSystemIconsRouteImport.update({
-  id: '/icons',
-  path: '/icons',
-  getParentRoute: () => DesignSystemRouteRoute,
-} as any)
-const DesignSystemColorsRoute = DesignSystemColorsRouteImport.update({
-  id: '/colors',
-  path: '/colors',
-  getParentRoute: () => DesignSystemRouteRoute,
-} as any)
-const DesignSystemChatRoute = DesignSystemChatRouteImport.update({
-  id: '/chat',
-  path: '/chat',
-  getParentRoute: () => DesignSystemRouteRoute,
-} as any)
-const DesignSystemButtonRoute = DesignSystemButtonRouteImport.update({
-  id: '/button',
-  path: '/button',
-  getParentRoute: () => DesignSystemRouteRoute,
-} as any)
-const DesignSystemBrandRoute = DesignSystemBrandRouteImport.update({
-  id: '/brand',
-  path: '/brand',
-  getParentRoute: () => DesignSystemRouteRoute,
-} as any)
-const DesignSystemComponentRoute = DesignSystemComponentRouteImport.update({
-  id: '/$component',
-  path: '/$component',
-  getParentRoute: () => DesignSystemRouteRoute,
 } as any)
 const ClaimTokenRoute = ClaimTokenRouteImport.update({
   id: '/claim/$token',
@@ -581,7 +508,6 @@ const AuthenticatedProjectsProjectSlugSettingsDataDestinationsDestinationIdRoute
 
 export interface FileRoutesByFullPath {
   '/backoffice': typeof BackofficeRouteRouteWithChildren
-  '/design-system': typeof DesignSystemRouteRouteWithChildren
   '/': typeof AuthenticatedIndexRoute
   '/login': typeof LoginRoute
   '/sandbox/$sandboxOrgId': typeof SandboxSandboxOrgIdRouteRouteWithChildren
@@ -594,20 +520,9 @@ export interface FileRoutesByFullPath {
   '/backoffice/wrapped': typeof BackofficeWrappedRoute
   '/cc-wrapped/$id': typeof CcWrappedIdRouteWithChildren
   '/claim/$token': typeof ClaimTokenRoute
-  '/design-system/$component': typeof DesignSystemComponentRoute
-  '/design-system/brand': typeof DesignSystemBrandRoute
-  '/design-system/button': typeof DesignSystemButtonRoute
-  '/design-system/chat': typeof DesignSystemChatRoute
-  '/design-system/colors': typeof DesignSystemColorsRoute
-  '/design-system/icons': typeof DesignSystemIconsRoute
-  '/design-system/infinite-table': typeof DesignSystemInfiniteTableRoute
-  '/design-system/shadows': typeof DesignSystemShadowsRoute
-  '/design-system/spacing': typeof DesignSystemSpacingRoute
-  '/design-system/typography': typeof DesignSystemTypographyRoute
   '/downloads/export': typeof DownloadsExportRoute
   '/wrapped/$id': typeof WrappedIdRouteWithChildren
   '/backoffice/': typeof BackofficeIndexRoute
-  '/design-system/': typeof DesignSystemIndexRoute
   '/welcome/': typeof WelcomeIndexRoute
   '/.well-known/oauth-authorization-server/$': typeof Char91DotwellKnownChar93OauthAuthorizationServerSplatRoute
   '/.well-known/openid-configuration/$': typeof Char91DotwellKnownChar93OpenidConfigurationSplatRoute
@@ -676,21 +591,10 @@ export interface FileRoutesByTo {
   '/backoffice/wrapped': typeof BackofficeWrappedRoute
   '/cc-wrapped/$id': typeof CcWrappedIdRouteWithChildren
   '/claim/$token': typeof ClaimTokenRoute
-  '/design-system/$component': typeof DesignSystemComponentRoute
-  '/design-system/brand': typeof DesignSystemBrandRoute
-  '/design-system/button': typeof DesignSystemButtonRoute
-  '/design-system/chat': typeof DesignSystemChatRoute
-  '/design-system/colors': typeof DesignSystemColorsRoute
-  '/design-system/icons': typeof DesignSystemIconsRoute
-  '/design-system/infinite-table': typeof DesignSystemInfiniteTableRoute
-  '/design-system/shadows': typeof DesignSystemShadowsRoute
-  '/design-system/spacing': typeof DesignSystemSpacingRoute
-  '/design-system/typography': typeof DesignSystemTypographyRoute
   '/downloads/export': typeof DownloadsExportRoute
   '/wrapped/$id': typeof WrappedIdRouteWithChildren
   '/': typeof AuthenticatedIndexRoute
   '/backoffice': typeof BackofficeIndexRoute
-  '/design-system': typeof DesignSystemIndexRoute
   '/welcome': typeof WelcomeIndexRoute
   '/.well-known/oauth-authorization-server/$': typeof Char91DotwellKnownChar93OauthAuthorizationServerSplatRoute
   '/.well-known/openid-configuration/$': typeof Char91DotwellKnownChar93OpenidConfigurationSplatRoute
@@ -749,7 +653,6 @@ export interface FileRoutesByTo {
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/backoffice': typeof BackofficeRouteRouteWithChildren
-  '/design-system': typeof DesignSystemRouteRouteWithChildren
   '/_authenticated': typeof AuthenticatedRouteWithChildren
   '/login': typeof LoginRoute
   '/sandbox/$sandboxOrgId': typeof SandboxSandboxOrgIdRouteRouteWithChildren
@@ -762,21 +665,10 @@ export interface FileRoutesById {
   '/backoffice/wrapped': typeof BackofficeWrappedRoute
   '/cc-wrapped/$id': typeof CcWrappedIdRouteWithChildren
   '/claim/$token': typeof ClaimTokenRoute
-  '/design-system/$component': typeof DesignSystemComponentRoute
-  '/design-system/brand': typeof DesignSystemBrandRoute
-  '/design-system/button': typeof DesignSystemButtonRoute
-  '/design-system/chat': typeof DesignSystemChatRoute
-  '/design-system/colors': typeof DesignSystemColorsRoute
-  '/design-system/icons': typeof DesignSystemIconsRoute
-  '/design-system/infinite-table': typeof DesignSystemInfiniteTableRoute
-  '/design-system/shadows': typeof DesignSystemShadowsRoute
-  '/design-system/spacing': typeof DesignSystemSpacingRoute
-  '/design-system/typography': typeof DesignSystemTypographyRoute
   '/downloads/export': typeof DownloadsExportRoute
   '/wrapped/$id': typeof WrappedIdRouteWithChildren
   '/_authenticated/': typeof AuthenticatedIndexRoute
   '/backoffice/': typeof BackofficeIndexRoute
-  '/design-system/': typeof DesignSystemIndexRoute
   '/welcome/': typeof WelcomeIndexRoute
   '/.well-known/oauth-authorization-server/$': typeof Char91DotwellKnownChar93OauthAuthorizationServerSplatRoute
   '/.well-known/openid-configuration/$': typeof Char91DotwellKnownChar93OpenidConfigurationSplatRoute
@@ -838,7 +730,6 @@ export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
   fullPaths:
     | '/backoffice'
-    | '/design-system'
     | '/'
     | '/login'
     | '/sandbox/$sandboxOrgId'
@@ -851,20 +742,9 @@ export interface FileRouteTypes {
     | '/backoffice/wrapped'
     | '/cc-wrapped/$id'
     | '/claim/$token'
-    | '/design-system/$component'
-    | '/design-system/brand'
-    | '/design-system/button'
-    | '/design-system/chat'
-    | '/design-system/colors'
-    | '/design-system/icons'
-    | '/design-system/infinite-table'
-    | '/design-system/shadows'
-    | '/design-system/spacing'
-    | '/design-system/typography'
     | '/downloads/export'
     | '/wrapped/$id'
     | '/backoffice/'
-    | '/design-system/'
     | '/welcome/'
     | '/.well-known/oauth-authorization-server/$'
     | '/.well-known/openid-configuration/$'
@@ -933,21 +813,10 @@ export interface FileRouteTypes {
     | '/backoffice/wrapped'
     | '/cc-wrapped/$id'
     | '/claim/$token'
-    | '/design-system/$component'
-    | '/design-system/brand'
-    | '/design-system/button'
-    | '/design-system/chat'
-    | '/design-system/colors'
-    | '/design-system/icons'
-    | '/design-system/infinite-table'
-    | '/design-system/shadows'
-    | '/design-system/spacing'
-    | '/design-system/typography'
     | '/downloads/export'
     | '/wrapped/$id'
     | '/'
     | '/backoffice'
-    | '/design-system'
     | '/welcome'
     | '/.well-known/oauth-authorization-server/$'
     | '/.well-known/openid-configuration/$'
@@ -1005,7 +874,6 @@ export interface FileRouteTypes {
   id:
     | '__root__'
     | '/backoffice'
-    | '/design-system'
     | '/_authenticated'
     | '/login'
     | '/sandbox/$sandboxOrgId'
@@ -1018,21 +886,10 @@ export interface FileRouteTypes {
     | '/backoffice/wrapped'
     | '/cc-wrapped/$id'
     | '/claim/$token'
-    | '/design-system/$component'
-    | '/design-system/brand'
-    | '/design-system/button'
-    | '/design-system/chat'
-    | '/design-system/colors'
-    | '/design-system/icons'
-    | '/design-system/infinite-table'
-    | '/design-system/shadows'
-    | '/design-system/spacing'
-    | '/design-system/typography'
     | '/downloads/export'
     | '/wrapped/$id'
     | '/_authenticated/'
     | '/backoffice/'
-    | '/design-system/'
     | '/welcome/'
     | '/.well-known/oauth-authorization-server/$'
     | '/.well-known/openid-configuration/$'
@@ -1093,7 +950,6 @@ export interface FileRouteTypes {
 }
 export interface RootRouteChildren {
   BackofficeRouteRoute: typeof BackofficeRouteRouteWithChildren
-  DesignSystemRouteRoute: typeof DesignSystemRouteRouteWithChildren
   AuthenticatedRoute: typeof AuthenticatedRouteWithChildren
   LoginRoute: typeof LoginRoute
   SandboxSandboxOrgIdRouteRoute: typeof SandboxSandboxOrgIdRouteRouteWithChildren
@@ -1133,13 +989,6 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/design-system': {
-      id: '/design-system'
-      path: '/design-system'
-      fullPath: '/design-system'
-      preLoaderRoute: typeof DesignSystemRouteRouteImport
-      parentRoute: typeof rootRouteImport
-    }
     '/backoffice': {
       id: '/backoffice'
       path: '/backoffice'
@@ -1153,13 +1002,6 @@ declare module '@tanstack/react-router' {
       fullPath: '/welcome/'
       preLoaderRoute: typeof WelcomeIndexRouteImport
       parentRoute: typeof rootRouteImport
-    }
-    '/design-system/': {
-      id: '/design-system/'
-      path: '/'
-      fullPath: '/design-system/'
-      preLoaderRoute: typeof DesignSystemIndexRouteImport
-      parentRoute: typeof DesignSystemRouteRoute
     }
     '/backoffice/': {
       id: '/backoffice/'
@@ -1188,76 +1030,6 @@ declare module '@tanstack/react-router' {
       fullPath: '/downloads/export'
       preLoaderRoute: typeof DownloadsExportRouteImport
       parentRoute: typeof rootRouteImport
-    }
-    '/design-system/typography': {
-      id: '/design-system/typography'
-      path: '/typography'
-      fullPath: '/design-system/typography'
-      preLoaderRoute: typeof DesignSystemTypographyRouteImport
-      parentRoute: typeof DesignSystemRouteRoute
-    }
-    '/design-system/spacing': {
-      id: '/design-system/spacing'
-      path: '/spacing'
-      fullPath: '/design-system/spacing'
-      preLoaderRoute: typeof DesignSystemSpacingRouteImport
-      parentRoute: typeof DesignSystemRouteRoute
-    }
-    '/design-system/shadows': {
-      id: '/design-system/shadows'
-      path: '/shadows'
-      fullPath: '/design-system/shadows'
-      preLoaderRoute: typeof DesignSystemShadowsRouteImport
-      parentRoute: typeof DesignSystemRouteRoute
-    }
-    '/design-system/infinite-table': {
-      id: '/design-system/infinite-table'
-      path: '/infinite-table'
-      fullPath: '/design-system/infinite-table'
-      preLoaderRoute: typeof DesignSystemInfiniteTableRouteImport
-      parentRoute: typeof DesignSystemRouteRoute
-    }
-    '/design-system/icons': {
-      id: '/design-system/icons'
-      path: '/icons'
-      fullPath: '/design-system/icons'
-      preLoaderRoute: typeof DesignSystemIconsRouteImport
-      parentRoute: typeof DesignSystemRouteRoute
-    }
-    '/design-system/colors': {
-      id: '/design-system/colors'
-      path: '/colors'
-      fullPath: '/design-system/colors'
-      preLoaderRoute: typeof DesignSystemColorsRouteImport
-      parentRoute: typeof DesignSystemRouteRoute
-    }
-    '/design-system/chat': {
-      id: '/design-system/chat'
-      path: '/chat'
-      fullPath: '/design-system/chat'
-      preLoaderRoute: typeof DesignSystemChatRouteImport
-      parentRoute: typeof DesignSystemRouteRoute
-    }
-    '/design-system/button': {
-      id: '/design-system/button'
-      path: '/button'
-      fullPath: '/design-system/button'
-      preLoaderRoute: typeof DesignSystemButtonRouteImport
-      parentRoute: typeof DesignSystemRouteRoute
-    }
-    '/design-system/brand': {
-      id: '/design-system/brand'
-      path: '/brand'
-      fullPath: '/design-system/brand'
-      preLoaderRoute: typeof DesignSystemBrandRouteImport
-      parentRoute: typeof DesignSystemRouteRoute
-    }
-    '/design-system/$component': {
-      id: '/design-system/$component'
-      path: '/$component'
-      fullPath: '/design-system/$component'
-      preLoaderRoute: typeof DesignSystemComponentRouteImport
-      parentRoute: typeof DesignSystemRouteRoute
     }
     '/claim/$token': {
       id: '/claim/$token'
@@ -1744,37 +1516,6 @@ const BackofficeRouteRouteWithChildren = BackofficeRouteRoute._addFileChildren(
   BackofficeRouteRouteChildren,
 )
 
-interface DesignSystemRouteRouteChildren {
-  DesignSystemComponentRoute: typeof DesignSystemComponentRoute
-  DesignSystemBrandRoute: typeof DesignSystemBrandRoute
-  DesignSystemButtonRoute: typeof DesignSystemButtonRoute
-  DesignSystemChatRoute: typeof DesignSystemChatRoute
-  DesignSystemColorsRoute: typeof DesignSystemColorsRoute
-  DesignSystemIconsRoute: typeof DesignSystemIconsRoute
-  DesignSystemInfiniteTableRoute: typeof DesignSystemInfiniteTableRoute
-  DesignSystemShadowsRoute: typeof DesignSystemShadowsRoute
-  DesignSystemSpacingRoute: typeof DesignSystemSpacingRoute
-  DesignSystemTypographyRoute: typeof DesignSystemTypographyRoute
-  DesignSystemIndexRoute: typeof DesignSystemIndexRoute
-}
-
-const DesignSystemRouteRouteChildren: DesignSystemRouteRouteChildren = {
-  DesignSystemComponentRoute: DesignSystemComponentRoute,
-  DesignSystemBrandRoute: DesignSystemBrandRoute,
-  DesignSystemButtonRoute: DesignSystemButtonRoute,
-  DesignSystemChatRoute: DesignSystemChatRoute,
-  DesignSystemColorsRoute: DesignSystemColorsRoute,
-  DesignSystemIconsRoute: DesignSystemIconsRoute,
-  DesignSystemInfiniteTableRoute: DesignSystemInfiniteTableRoute,
-  DesignSystemShadowsRoute: DesignSystemShadowsRoute,
-  DesignSystemSpacingRoute: DesignSystemSpacingRoute,
-  DesignSystemTypographyRoute: DesignSystemTypographyRoute,
-  DesignSystemIndexRoute: DesignSystemIndexRoute,
-}
-
-const DesignSystemRouteRouteWithChildren =
-  DesignSystemRouteRoute._addFileChildren(DesignSystemRouteRouteChildren)
-
 interface AuthenticatedProjectsProjectSlugSettingsRouteChildren {
   AuthenticatedProjectsProjectSlugSettingsAccountRoute: typeof AuthenticatedProjectsProjectSlugSettingsAccountRoute
   AuthenticatedProjectsProjectSlugSettingsBillingRoute: typeof AuthenticatedProjectsProjectSlugSettingsBillingRoute
@@ -1990,7 +1731,6 @@ const WrappedIdRouteWithChildren = WrappedIdRoute._addFileChildren(
 
 const rootRouteChildren: RootRouteChildren = {
   BackofficeRouteRoute: BackofficeRouteRouteWithChildren,
-  DesignSystemRouteRoute: DesignSystemRouteRouteWithChildren,
   AuthenticatedRoute: AuthenticatedRouteWithChildren,
   LoginRoute: LoginRoute,
   SandboxSandboxOrgIdRouteRoute: SandboxSandboxOrgIdRouteRouteWithChildren,
