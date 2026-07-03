@@ -1,6 +1,6 @@
 import { ProjectRepository } from "@domain/projects"
-import { OrganizationId, ProjectId } from "@domain/shared"
-import { SpanRepository } from "@domain/spans"
+import { OrganizationId, ProjectId, SpanId } from "@domain/shared"
+import { SpanRepository, type SpanListCursor } from "@domain/spans"
 import { createRoute, OpenAPIHono, z } from "@hono/zod-openapi"
 import { SpanRepositoryLive, withClickHouse } from "@platform/db-clickhouse"
 import { ProjectRepositoryLive, withPostgres } from "@platform/db-postgres"
@@ -28,18 +28,21 @@ const spansFernGroup = (methodName: string) =>
 
 const spanEndpoint = defineApiEndpoint<OrganizationScopedEnv>(spansPath)
 
-// Opaque offset cursor — the underlying span read is offset-based; encoding the
-// offset keeps the public shape (`{ items, nextCursor, hasMore }`) consistent
-// with the rest of the surface.
-const encodeOffsetCursor = (offset: number): string =>
-  Buffer.from(JSON.stringify({ offset }), "utf8").toString("base64url")
+const encodeSpanListCursor = (cursor: SpanListCursor): string =>
+  Buffer.from(
+    JSON.stringify({ startTime: cursor.startTime.toISOString(), spanId: cursor.spanId }),
+    "utf8",
+  ).toString("base64url")
 
-const decodeOffsetCursor = (raw: string): number | null => {
+const decodeSpanListCursor = (raw: string): SpanListCursor | null => {
   try {
     const parsed = JSON.parse(Buffer.from(raw, "base64url").toString("utf8")) as unknown
-    const offset = (parsed as { offset?: unknown })?.offset
-    if (typeof offset !== "number" || !Number.isInteger(offset) || offset < 0) return null
-    return offset
+    const startTime = (parsed as { startTime?: unknown })?.startTime
+    const spanId = (parsed as { spanId?: unknown })?.spanId
+    if (typeof startTime !== "string" || typeof spanId !== "string") return null
+    const parsedStartTime = new Date(startTime)
+    if (Number.isNaN(parsedStartTime.getTime())) return null
+    return { startTime: parsedStartTime, spanId: SpanId(spanId) }
   } catch {
     return null
   }
@@ -105,11 +108,11 @@ const querySpans = spanEndpoint({
     const body = c.req.valid("json")
     const organizationId = c.var.organization.id
 
-    let offset = 0
+    let cursor: SpanListCursor | undefined
     if (body.cursor) {
-      const decoded = decodeOffsetCursor(body.cursor)
+      const decoded = decodeSpanListCursor(body.cursor)
       if (decoded === null) return c.json({ error: "Invalid `cursor` value." }, 400)
-      offset = decoded
+      cursor = decoded
     }
     if (body.range && new Date(body.range.fromIso).getTime() >= new Date(body.range.toIso).getTime()) {
       return c.json({ error: "`range.fromIso` must be strictly before `range.toIso`." }, 400)
@@ -127,7 +130,7 @@ const querySpans = spanEndpoint({
           projectId: ProjectId(project.id as string),
           options: {
             limit: body.limit + 1,
-            offset,
+            ...(cursor ? { cursor } : {}),
             ...(body.filters ? { filters: body.filters } : {}),
             ...(body.range
               ? { startTimeFrom: new Date(body.range.fromIso), startTimeTo: new Date(body.range.toIso) }
@@ -143,10 +146,14 @@ const querySpans = spanEndpoint({
 
     const hasMore = spans.length > body.limit
     const items = hasMore ? spans.slice(0, body.limit) : spans
+    const last = hasMore ? items[items.length - 1] : undefined
     return c.json(
       {
         items: items.map(toSpanResponse),
-        nextCursor: hasMore ? encodeOffsetCursor(offset + body.limit) : null,
+        nextCursor:
+          last !== undefined
+            ? encodeSpanListCursor({ startTime: last.startTime, spanId: last.spanId })
+            : null,
         hasMore,
       },
       200,

@@ -194,6 +194,38 @@ describe("SpanRepository", () => {
       expect(spans.map((span) => span.name)).toEqual(["second", "newer"])
     })
 
+    it("paginates deterministically when spans share the same start_time", async () => {
+      const sharedStartTime = "2026-01-01 00:00:00.000000000"
+      await runCh(
+        insertJsonEachRow(ch.client, "spans", [
+          makeSpanRow({ span_id: "aaaaaaaaaaaaaaaa", name: "first", start_time: sharedStartTime }),
+          makeSpanRow({ span_id: "bbbbbbbbbbbbbbbb", name: "second", start_time: sharedStartTime }),
+          makeSpanRow({ span_id: "cccccccccccccccc", name: "third", start_time: sharedStartTime }),
+        ]),
+      )
+
+      const first = await runCh(
+        repo.listByProjectId({
+          organizationId: ORG_ID,
+          projectId: PROJECT_ID,
+          options: { limit: 2 },
+        }),
+      )
+      expect(first.map((span) => span.name)).toEqual(["third", "second"])
+
+      const second = await runCh(
+        repo.listByProjectId({
+          organizationId: ORG_ID,
+          projectId: PROJECT_ID,
+          options: {
+            limit: 2,
+            cursor: { startTime: first[1]!.startTime, spanId: first[1]!.spanId },
+          },
+        }),
+      )
+      expect(second.map((span) => span.name)).toEqual(["first"])
+    })
+
     it("applies a span-field FilterSet across traces", async () => {
       await runCh(
         insertJsonEachRow(ch.client, "spans", [

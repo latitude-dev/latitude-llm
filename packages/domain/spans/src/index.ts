@@ -112,6 +112,7 @@ export type {
   SessionToolSpan,
   SpanIngestedAtWindow,
   SpanIngestionCursor,
+  SpanListCursor,
   SpanListOptions,
   SpanMessagesData,
   SpanRepositoryShape,

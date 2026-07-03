@@ -429,6 +429,9 @@ export const SpanRepositoryLive = Layer.effect(
           ? buildSpanFilterClauses(options.filters)
           : { whereClauses: [], params: {} }
         const filterClause = filterClauses.length > 0 ? `AND ${filterClauses.join(" AND ")}` : ""
+        const cursorClause = options.cursor
+          ? "AND (start_time, span_id) < ({cursorStartTime:DateTime64(9, 'UTC')}, {cursorSpanId:FixedString(16)})"
+          : ""
         return yield* chSqlClient
           .query(async (client) => {
             const result = await client.query({
@@ -444,9 +447,10 @@ export const SpanRepositoryLive = Layer.effect(
                       ORDER BY span_id, ingested_at DESC
                       LIMIT 1 BY span_id
                     )
-                    ORDER BY start_time DESC
-                    LIMIT {limit:UInt32}
-                    OFFSET {offset:UInt32}`,
+                    WHERE 1=1
+                      ${cursorClause}
+                    ORDER BY start_time DESC, span_id DESC
+                    LIMIT {limit:UInt32}`,
               query_params: {
                 organizationId: organizationId as string,
                 projectId: projectId as string,
@@ -454,7 +458,12 @@ export const SpanRepositoryLive = Layer.effect(
                 ...(options.startTimeTo ? { startTimeTo: toClickhouseDateTime(options.startTimeTo) } : {}),
                 ...filterParams,
                 limit: options.limit ?? 50,
-                offset: options.offset ?? 0,
+                ...(options.cursor
+                  ? {
+                      cursorStartTime: toClickhouseDateTime(options.cursor.startTime),
+                      cursorSpanId: options.cursor.spanId as string,
+                    }
+                  : {}),
               },
               format: "JSONEachRow",
             })

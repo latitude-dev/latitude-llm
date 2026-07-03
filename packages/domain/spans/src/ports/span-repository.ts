@@ -190,11 +190,16 @@ export interface SpanRepositoryShape {
   }): Effect.Effect<Date | null, RepositoryError, ChSqlClient>
 }
 
+export interface SpanListCursor {
+  readonly startTime: Date
+  readonly spanId: SpanId
+}
+
 export interface SpanListOptions {
   readonly startTimeFrom?: Date
   readonly startTimeTo?: Date
   readonly limit?: number
-  readonly offset?: number
+  readonly cursor?: SpanListCursor
   /** Row-local span predicate (`SPAN_FIELD_REGISTRY` DSL); AND-combined with the window. */
   readonly filters?: FilterSet
 }
