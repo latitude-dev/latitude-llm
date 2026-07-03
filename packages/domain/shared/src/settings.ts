@@ -12,6 +12,7 @@ export const organizationSettingsSchema = z.object({
       spendingLimitCents: z.number().int().positive().optional(),
     })
     .optional(),
+  wantsShowcase: z.boolean().optional(),
 })
 
 const incidentNotificationsKindShape = Object.fromEntries(
@@ -123,5 +124,8 @@ export const resolveSettings = (input?: { projectId?: ProjectId }) =>
       projectSettings = yield* reader.getProjectSettings(input.projectId)
     }
 
-    return resolveSettingsCascade({ organization: orgSettings, project: projectSettings })
+    return resolveSettingsCascade({
+      organization: orgSettings,
+      project: projectSettings,
+    })
   })
