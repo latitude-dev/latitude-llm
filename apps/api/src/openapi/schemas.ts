@@ -103,6 +103,9 @@ export const ProjectParamsSchema = z.object({
 /** Security scheme applied to protected endpoints. */
 export const PROTECTED_SECURITY = [{ ApiKeyAuth: [] }]
 
+/** Security scheme override applied to public endpoints. */
+export const PUBLIC_SECURITY = []
+
 /** Single error response entry for OpenAPI spec. */
 export const errorResponse = (description?: string) => ({
   content: { "application/json": { schema: ErrorSchema } },

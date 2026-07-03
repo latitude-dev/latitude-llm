@@ -5,7 +5,11 @@ import typing
 from ..core.client_wrapper import AsyncClientWrapper, SyncClientWrapper
 from ..core.request_options import RequestOptions
 from ..types.account_response import AccountResponse
+from ..types.bootstrap_account_response import BootstrapAccountResponse
 from .raw_client import AsyncRawAccountClient, RawAccountClient
+
+# this is used as the default value for optional parameters
+OMIT = typing.cast(typing.Any, ...)
 
 
 class AccountClient:
@@ -22,6 +26,53 @@ class AccountClient:
         RawAccountClient
         """
         return self._raw_client
+
+    def bootstrap(
+        self,
+        *,
+        organization_name: typing.Optional[str] = OMIT,
+        project_name: typing.Optional[str] = OMIT,
+        user_email: typing.Optional[str] = OMIT,
+        request_options: typing.Optional[RequestOptions] = None,
+    ) -> BootstrapAccountResponse:
+        """
+        Creates a temporary organization with an API key and a project, and returns a link to claim ownership of it. Requires no authentication.
+
+        Parameters
+        ----------
+        organization_name : typing.Optional[str]
+            Name for the temporary organization. If not provided, defaults to "My Organization".
+
+        project_name : typing.Optional[str]
+            Name for the project created in the organization. If not provided, defaults to "My Project".
+
+        user_email : typing.Optional[str]
+            Email address to send the claim link to.
+
+        request_options : typing.Optional[RequestOptions]
+            Request-specific configuration.
+
+        Returns
+        -------
+        BootstrapAccountResponse
+            Temporary account created
+
+        Examples
+        --------
+        from latitude_sdk import LatitudeClient
+
+        client = LatitudeClient(
+            api_key="YOUR_API_KEY",
+        )
+        client.account.bootstrap()
+        """
+        _response = self._raw_client.bootstrap(
+            organization_name=organization_name,
+            project_name=project_name,
+            user_email=user_email,
+            request_options=request_options,
+        )
+        return _response.data
 
     def get(self, *, request_options: typing.Optional[RequestOptions] = None) -> AccountResponse:
         """
@@ -64,6 +115,61 @@ class AsyncAccountClient:
         AsyncRawAccountClient
         """
         return self._raw_client
+
+    async def bootstrap(
+        self,
+        *,
+        organization_name: typing.Optional[str] = OMIT,
+        project_name: typing.Optional[str] = OMIT,
+        user_email: typing.Optional[str] = OMIT,
+        request_options: typing.Optional[RequestOptions] = None,
+    ) -> BootstrapAccountResponse:
+        """
+        Creates a temporary organization with an API key and a project, and returns a link to claim ownership of it. Requires no authentication.
+
+        Parameters
+        ----------
+        organization_name : typing.Optional[str]
+            Name for the temporary organization. If not provided, defaults to "My Organization".
+
+        project_name : typing.Optional[str]
+            Name for the project created in the organization. If not provided, defaults to "My Project".
+
+        user_email : typing.Optional[str]
+            Email address to send the claim link to.
+
+        request_options : typing.Optional[RequestOptions]
+            Request-specific configuration.
+
+        Returns
+        -------
+        BootstrapAccountResponse
+            Temporary account created
+
+        Examples
+        --------
+        import asyncio
+
+        from latitude_sdk import AsyncLatitudeClient
+
+        client = AsyncLatitudeClient(
+            api_key="YOUR_API_KEY",
+        )
+
+
+        async def main() -> None:
+            await client.account.bootstrap()
+
+
+        asyncio.run(main())
+        """
+        _response = await self._raw_client.bootstrap(
+            organization_name=organization_name,
+            project_name=project_name,
+            user_email=user_email,
+            request_options=request_options,
+        )
+        return _response.data
 
     async def get(self, *, request_options: typing.Optional[RequestOptions] = None) -> AccountResponse:
         """

@@ -26,6 +26,16 @@ Full command reference for `latitude`.
 
 ### `latitude account`
 
+#### `latitude account bootstrap`
+
+Creates a temporary organization with an API key and a project, and returns a link to claim ownership of it. Requires no authentication.
+
+`POST /v1/account/bootstrap`
+
+| Flag | Type | Required | Description |
+|------|------|----------|-------------|
+| `--json` | `JSON` | Yes | Request body as JSON (or use individual body-field flags) |
+
 #### `latitude account get`
 
 Returns the caller's account snapshot: the organization the request is scoped to, plus the user record and their role when the request was made by a real user (OAuth). API-key callers receive `user: null` and `role: null` because API keys aren't tied to a specific user.

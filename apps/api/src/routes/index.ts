@@ -5,7 +5,7 @@ import { createAuthMiddleware } from "../middleware/auth.ts"
 import { createOrganizationContextMiddleware } from "../middleware/organization-context.ts"
 import { validationErrorMiddleware } from "../middleware/validation.ts"
 import type { ApiOptions, AppEnv, ProtectedEnv } from "../types.ts"
-import { accountPath, createAccountRoutes } from "./account.ts"
+import { accountPath, createAccountRoutes, registerBootstrapRoute } from "./account.ts"
 import { analyticsPath, createAnalyticsRoutes } from "./analytics.ts"
 import { annotationsPath, createAnnotationsRoutes } from "./annotations.ts"
 import { apiKeysPath, createApiKeysRoutes } from "./api-keys.ts"
@@ -46,6 +46,8 @@ export const registerRoutes = (app: OpenAPIHono<AppEnv>, options: ApiOptions) =>
     c.set("storageDisk", options.storageDisk)
     await next()
   })
+
+  registerBootstrapRoute({ app: v1, adminDatabase: options.adminDatabase })
 
   routes.use("*", validationErrorMiddleware)
   routes.use(

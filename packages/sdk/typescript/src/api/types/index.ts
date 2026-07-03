@@ -23,6 +23,7 @@ export * from "./AnnotationMetadata.js";
 export * from "./ApiKey.js";
 export * from "./ApiKeyList.js";
 export * from "./ApiKeyListItem.js";
+export * from "./BootstrapAccountResponse.js";
 export * from "./CreateCustomScoreBody.js";
 export * from "./CreateEvaluationScoreBody.js";
 export * from "./CreateMonitorBody.js";

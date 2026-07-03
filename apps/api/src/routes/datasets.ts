@@ -1311,7 +1311,7 @@ export const createDatasetsRoutes = () => {
   updateDatasetRowEndpoint.mountHttp(app, createTierRateLimiter("medium"))
   deleteDatasetRowsEndpoint.mountHttp(app, createTierRateLimiter("medium"))
   importRowsFromTracesEndpoint.mountHttp(app, createTierRateLimiter("high"))
-  exportDatasetRowsEndpoint.mountHttp(app, createTierRateLimiter("critical"))
+  exportDatasetRowsEndpoint.mountHttp(app, createTierRateLimiter("ultra"))
   listDatasetColumnsEndpoint.mountHttp(app, createTierRateLimiter("low"))
   addDatasetColumnEndpoint.mountHttp(app, createTierRateLimiter("low"))
   updateDatasetColumnEndpoint.mountHttp(app, createTierRateLimiter("low"))

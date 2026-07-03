@@ -251,6 +251,7 @@ if typing.TYPE_CHECKING:
     from .api_key import ApiKey
     from .api_key_list import ApiKeyList
     from .api_key_list_item import ApiKeyListItem
+    from .bootstrap_account_response import BootstrapAccountResponse
     from .create_custom_score_body import CreateCustomScoreBody
     from .create_evaluation_score_body import CreateEvaluationScoreBody
     from .create_monitor_body import (
@@ -943,6 +944,7 @@ _dynamic_imports: typing.Dict[str, str] = {
     "ApiKey": ".api_key",
     "ApiKeyList": ".api_key_list",
     "ApiKeyListItem": ".api_key_list_item",
+    "BootstrapAccountResponse": ".bootstrap_account_response",
     "CreateCustomScoreBody": ".create_custom_score_body",
     "CreateEvaluationScoreBody": ".create_evaluation_score_body",
     "CreateMonitorBody": ".create_monitor_body",
@@ -1629,6 +1631,7 @@ __all__ = [
     "ApiKey",
     "ApiKeyList",
     "ApiKeyListItem",
+    "BootstrapAccountResponse",
     "CreateCustomScoreBody",
     "CreateEvaluationScoreBody",
     "CreateMonitorBody",

@@ -1,5 +1,6 @@
 import { createRoute, type OpenAPIHono, z } from "@hono/zod-openapi"
 import { LatitudeObservabilityTestError } from "@repo/utils"
+import { PUBLIC_SECURITY } from "../openapi/schemas.ts"
 import type { AppEnv } from "../types.ts"
 
 const HealthResponseSchema = z
@@ -15,6 +16,7 @@ const healthRoute = createRoute({
   operationId: "health.get",
   tags: ["Health"],
   summary: "Health check",
+  security: PUBLIC_SECURITY,
   // Operational endpoint — not part of the product surface. Fern skips it
   // when generating the SDK so it stays out of `client.health`.
   "x-fern-ignore": true,

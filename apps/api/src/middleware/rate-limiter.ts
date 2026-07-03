@@ -7,7 +7,7 @@ import type { Context, Next } from "hono"
  * Supports distributed deployments across multiple API instances.
  *
  * Used by {@link createTierRateLimiter} as an organization-keyed quota tier
- * applied per route group (low / medium / high / critical), giving cheap
+ * applied per route group (low / medium / high / ultra / max), giving cheap
  * endpoints more headroom and expensive ones tighter limits.
  */
 
@@ -94,39 +94,51 @@ const createRedisRateLimiter = (config: RateLimitConfig) => {
   }
 }
 
-type RateLimitTier = "low" | "medium" | "high" | "critical"
+type RateLimitTier = "low" | "medium" | "high" | "ultra" | "max"
 
 const TIER_LIMITS: Record<RateLimitTier, { readonly maxRequests: number; readonly windowSeconds: number }> = {
   low: { maxRequests: 100, windowSeconds: 60 },
   medium: { maxRequests: 60, windowSeconds: 60 },
   high: { maxRequests: 15, windowSeconds: 60 },
-  critical: { maxRequests: 3, windowSeconds: 60 },
+  ultra: { maxRequests: 3, windowSeconds: 60 },
+  max: { maxRequests: 1, windowSeconds: 60 },
+}
+
+// Bucket key: org id when authenticated, else client IP (first `X-Forwarded-For` hop), else `unknown`.
+// Org routes still yield the pre-existing `org:<id>` key, so existing keyspaces are unchanged.
+const rateLimitScope = (c: Context): string => {
+  const organizationId = c.get("organization")?.id
+  if (organizationId) return `org:${organizationId}`
+
+  const clientIp = c.req.header("x-forwarded-for")?.split(",")[0]?.trim()
+  if (clientIp) return `ip:${clientIp}`
+
+  return "unknown"
 }
 
 /**
- * Per-route rate-limit tiers, keyed by the authenticated organization id.
+ * Per-route rate-limit tiers, keyed by organization → client IP → `unknown`.
  *
  * Tiers are sized so that one greedy tenant can't starve another's quota:
  * - `low` ............ 100 req / min — list/get reads, the cheap stuff
  * - `medium` (default) 60 req / min — most mutations and single-row writes
  * - `high` ............ 15 req / min — bulk reads with filter/search/semantic load
- * - `critical` ......... 3 req / min — bulk imports, exports, monitor-signal (workflow-kicking)
+ * - `ultra` ............ 3 req / min — bulk imports, exports, monitor-signal (workflow-kicking)
+ * - `max` ............... 1 req / min — the unauthenticated bootstrap surface (IP-keyed)
  *
  * Apply at the routing site, before the matching subrouter is mounted, e.g.
  * `routes.use("/projects/:projectSlug/traces", createTierRateLimiter("high"))`.
  *
- * The auth middleware must have already populated `c.var.organization` before
- * this runs, otherwise the limiter falls back to a single shared `unknown`
- * bucket — fine for unauthenticated requests because the auth middleware will
- * reject them anyway.
+ * Authenticated routes are keyed by `c.var.organization`; the unauthenticated
+ * `max` tier keys by client IP because no org context exists there.
  */
 export const createTierRateLimiter = (tier: RateLimitTier) => {
   const { maxRequests, windowSeconds } = TIER_LIMITS[tier]
   return createRedisRateLimiter({
     maxRequests,
     windowSeconds,
-    keyPrefix: `ratelimit:tier:${tier}:org`,
-    keyGenerator: (c: Context) => c.get("organization")?.id ?? "unknown",
+    keyPrefix: `ratelimit:tier:${tier}`,
+    keyGenerator: rateLimitScope,
     errorMessage: `Rate limit exceeded for ${tier}-tier endpoints. Please slow down.`,
   })
 }
