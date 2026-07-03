@@ -269,5 +269,7 @@ export const cosineSimilarity = (a: readonly number[], b: readonly number[]): nu
     normB += bv * bv
   }
   if (normA === 0 || normB === 0) return 0
-  return dot / Math.sqrt(normA * normB)
+  // Clamp to [-1, 1]: floating-point error can push an otherwise-unit cosine just past the bound,
+  // which would leak into callers that assume a strict range (e.g. the [0,1] semantic-similarity score).
+  return Math.max(-1, Math.min(1, dot / Math.sqrt(normA * normB)))
 }
