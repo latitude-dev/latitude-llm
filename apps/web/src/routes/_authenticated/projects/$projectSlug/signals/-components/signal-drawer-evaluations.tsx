@@ -381,7 +381,10 @@ export function SignalDrawerEvaluations({
       await deleteSignal.mutateAsync(signalId)
       toast({ description: "Signal deleted." })
       setDeleteSignalOpen(false)
-      void navigate({ to: "/projects/$projectSlug/signals", params: { projectSlug: projectSlug ?? "" } })
+      void navigate({
+        to: "/projects/$projectSlug/signals",
+        params: { projectSlug: projectSlug ?? "" },
+      })
     } catch (error) {
       toast({ variant: "destructive", description: toUserMessage(error) })
       setIsDeleting(false)
@@ -521,120 +524,116 @@ export function SignalDrawerEvaluations({
     <>
       <div className="flex w-full flex-col gap-2 px-1 pt-2">
         {primaryEvaluation ? (
-          <>
-            <div className="flex flex-row flex-wrap items-end gap-8">
-              <SummaryField
-                label="Alignment"
-                value={
-                  primaryEvaluation.alignment ? (
-                    <Tooltip
-                      asChild
-                      trigger={
-                        <span className="inline-flex">
-                          <Status
-                            variant={getAlignmentVariant(primaryEvaluation.alignment.metrics.alignmentMetric)}
-                            label={formatPercent(primaryEvaluation.alignment.metrics.alignmentMetric)}
-                          />
-                        </span>
-                      }
-                    >
-                      <AlignmentTooltipContent
-                        evaluation={primaryEvaluation}
-                        onOpenStats={() => setStatsEvaluation(primaryEvaluation)}
-                      />
-                    </Tooltip>
-                  ) : (
-                    <Text.H6 color="foregroundMuted">Not aligned</Text.H6>
-                  )
-                }
-              />
-              <SummaryField
-                label="Sampling"
-                value={
-                  // User signals edit sampling in the builder, so the detail page shows it read-only;
-                  // system signals (no builder) keep the inline click-to-change control.
-                  isUserOriginEvaluation ? (
-                    <Text.H5 color="foreground">{formatPercent(primaryEvaluation.trigger.sampling / 100)}</Text.H5>
-                  ) : (
-                    <Tooltip
-                      asChild
-                      trigger={
-                        <button
-                          type="button"
-                          onClick={() => setSamplingEvaluation(primaryEvaluation)}
-                          disabled={isActionPending}
-                          className="inline-flex h-5 cursor-pointer items-center gap-1 bg-transparent p-0 disabled:cursor-not-allowed disabled:opacity-50"
-                        >
-                          <Text.H5 color="foreground">
-                            {formatPercent(primaryEvaluation.trigger.sampling / 100)}
-                          </Text.H5>
-                          <Icon icon={PencilIcon} size="xs" color="foregroundMuted" />
-                        </button>
-                      }
-                    >
-                      <Text.H6 color="foregroundMuted">
-                        Click to change. We evaluate this signal on{" "}
-                        {formatPercent(primaryEvaluation.trigger.sampling / 100)} of the incoming traces.
-                      </Text.H6>
-                    </Tooltip>
-                  )
-                }
-              />
-              {!isUserOriginEvaluation ? (
-                <div className="flex min-w-0 flex-1 items-end justify-end gap-x-1">
+          <div className="flex flex-row flex-wrap items-end gap-8">
+            <SummaryField
+              label="Alignment"
+              value={
+                primaryEvaluation.alignment ? (
                   <Tooltip
                     asChild
                     trigger={
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        className="text-foreground group-hover:text-secondary-foreground/80"
-                        onClick={() => setDeleteEvaluationId(primaryEvaluation.id)}
-                        disabled={isActionPending}
-                        aria-label="Remove evaluation"
-                      >
-                        <Icon icon={XIcon} size="sm" />
-                      </Button>
+                      <span className="inline-flex">
+                        <Status
+                          variant={getAlignmentVariant(primaryEvaluation.alignment.metrics.alignmentMetric)}
+                          label={formatPercent(primaryEvaluation.alignment.metrics.alignmentMetric)}
+                        />
+                      </span>
                     }
                   >
-                    <Text.H6 color="foregroundMuted">Remove evaluation</Text.H6>
+                    <AlignmentTooltipContent
+                      evaluation={primaryEvaluation}
+                      onOpenStats={() => setStatsEvaluation(primaryEvaluation)}
+                    />
                   </Tooltip>
-                  <Button
-                    variant="outline"
-                    onClick={() => setRealignEvaluationId(primaryEvaluation.id)}
-                    disabled={isActionPending}
-                    isLoading={isPrimaryEvaluationRealigning}
-                  >
-                    <Icon icon={RotateCwIcon} size="sm" />
-                    {isPrimaryEvaluationRealigning ? "Realigning" : "Realign"}
-                  </Button>
-                </div>
-              ) : editableDetector !== null ? (
-                <div className="flex min-w-0 flex-1 items-end justify-end gap-x-1">
+                ) : (
+                  <Text.H6 color="foregroundMuted">Not aligned</Text.H6>
+                )
+              }
+            />
+            <SummaryField
+              label="Sampling"
+              value={
+                // User signals edit sampling in the builder, so the detail page shows it read-only;
+                // system signals (no builder) keep the inline click-to-change control.
+                isUserOriginEvaluation ? (
+                  <Text.H5 color="foreground">{formatPercent(primaryEvaluation.trigger.sampling / 100)}</Text.H5>
+                ) : (
                   <Tooltip
                     asChild
                     trigger={
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        onClick={() => setDeleteSignalOpen(true)}
+                      <button
+                        type="button"
+                        onClick={() => setSamplingEvaluation(primaryEvaluation)}
                         disabled={isActionPending}
-                        aria-label="Delete signal"
+                        className="inline-flex h-5 cursor-pointer items-center gap-1 bg-transparent p-0 disabled:cursor-not-allowed disabled:opacity-50"
                       >
-                        <Icon icon={Trash2Icon} size="sm" />
-                      </Button>
+                        <Text.H5 color="foreground">{formatPercent(primaryEvaluation.trigger.sampling / 100)}</Text.H5>
+                        <Icon icon={PencilIcon} size="xs" color="foregroundMuted" />
+                      </button>
                     }
                   >
-                    <Text.H6 color="foregroundMuted">Delete signal</Text.H6>
+                    <Text.H6 color="foregroundMuted">
+                      Click to change. We evaluate this signal on{" "}
+                      {formatPercent(primaryEvaluation.trigger.sampling / 100)} of the incoming traces.
+                    </Text.H6>
                   </Tooltip>
-                  <Button variant="outline" onClick={() => setBuilderOpen(true)} disabled={isActionPending}>
-                    <Icon icon={PencilIcon} size="sm" />
-                    Edit
-                  </Button>
-                </div>
-              ) : null}
-            </div>
-          </>
+                )
+              }
+            />
+            {!isUserOriginEvaluation ? (
+              <div className="flex min-w-0 flex-1 items-end justify-end gap-x-1">
+                <Tooltip
+                  asChild
+                  trigger={
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="text-foreground group-hover:text-secondary-foreground/80"
+                      onClick={() => setDeleteEvaluationId(primaryEvaluation.id)}
+                      disabled={isActionPending}
+                      aria-label="Remove evaluation"
+                    >
+                      <Icon icon={XIcon} size="sm" />
+                    </Button>
+                  }
+                >
+                  <Text.H6 color="foregroundMuted">Remove evaluation</Text.H6>
+                </Tooltip>
+                <Button
+                  variant="outline"
+                  onClick={() => setRealignEvaluationId(primaryEvaluation.id)}
+                  disabled={isActionPending}
+                  isLoading={isPrimaryEvaluationRealigning}
+                >
+                  <Icon icon={RotateCwIcon} size="sm" />
+                  {isPrimaryEvaluationRealigning ? "Realigning" : "Realign"}
+                </Button>
+              </div>
+            ) : editableDetector !== null ? (
+              <div className="flex min-w-0 flex-1 items-end justify-end gap-x-1">
+                <Tooltip
+                  asChild
+                  trigger={
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      onClick={() => setDeleteSignalOpen(true)}
+                      disabled={isActionPending}
+                      aria-label="Delete signal"
+                    >
+                      <Icon icon={Trash2Icon} size="sm" />
+                    </Button>
+                  }
+                >
+                  <Text.H6 color="foregroundMuted">Delete signal</Text.H6>
+                </Tooltip>
+                <Button variant="outline" onClick={() => setBuilderOpen(true)} disabled={isActionPending}>
+                  <Icon icon={PencilIcon} size="sm" />
+                  Edit
+                </Button>
+              </div>
+            ) : null}
+          </div>
         ) : null}
         {hiddenEvaluationCount > 0 ? (
           <Text.H6 className="self-center text-center" color="foregroundMuted">
