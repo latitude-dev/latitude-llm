@@ -127,8 +127,23 @@ describe("buildSemanticSimilarityHost", () => {
     expect(upserted[0]?.[0]?.embeddingModel).toBe("voyage-4-large")
   })
 
-  it("returns 0 (never a skip) and does not embed when the session has no embeddings", async () => {
+  it("returns 0 (never a skip) and does not embed when the session has no occurrences", async () => {
     const { host, embedCalls } = buildHost({ occurrences: [] })
+    const result = await host({ query: "frustration" })
+    expect(result.similarity).toBe(0)
+    expect(embedCalls).toHaveLength(0)
+  })
+
+  it("returns 0 without embedding the query when occurrences exist but no vectors are stored yet", async () => {
+    // The state that hung the preview: trace_message_occurrences written at ingest, but message_embeddings
+    // empty (embeddings disabled/unreachable). Nothing to compare against → 0, and crucially no query embed.
+    const { host, embedCalls } = buildHost({
+      occurrences: [
+        { contentHash: "hash-a", role: "user" },
+        { contentHash: "hash-b", role: "assistant" },
+      ],
+      stored: {},
+    })
     const result = await host({ query: "frustration" })
     expect(result.similarity).toBe(0)
     expect(embedCalls).toHaveLength(0)

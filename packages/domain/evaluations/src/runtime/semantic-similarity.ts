@@ -96,8 +96,16 @@ export const buildSemanticSimilarityHost = ({
         const queryHash = yield* hash(query)
         const session = yield* ensureLoaded([queryHash])
 
-        // Nothing to compare against — return the lowest score without embedding the query.
-        if (session.sessionHashes.length === 0) return { similarity: 0, tokens: 0 }
+        // Collect the session vectors actually present. If none are embedded yet — a session with no
+        // occurrences, or occurrences whose `message_embeddings` haven't been written (embeddings disabled
+        // or the ingest embed hasn't caught up) — there is nothing to compare against, so return the lowest
+        // score WITHOUT embedding the query. This is both correct (max over an empty set is 0, the decided
+        // "return 0, never skip" behavior) and avoids a pointless query embed that would otherwise stall on
+        // an unreachable embedding provider.
+        const sessionVectors = session.sessionHashes
+          .map((contentHash) => session.hashToVector.get(contentHash))
+          .filter((vector): vector is readonly number[] => vector !== undefined)
+        if (sessionVectors.length === 0) return { similarity: 0, tokens: 0 }
 
         let queryVector = session.hashToVector.get(queryHash)
         let tokens = 0
@@ -118,12 +126,10 @@ export const buildSemanticSimilarityHost = ({
           ])
         }
 
-        // Start at 0: negative cosines never lower the score, so the result stays in [0,1] and a session
-        // with no (matching) vectors returns 0 — the lowest score, never a skip.
+        // Start at 0: negative cosines never lower the score, so the result stays in [0,1].
         let maxSimilarity = 0
-        for (const contentHash of session.sessionHashes) {
-          const vector = session.hashToVector.get(contentHash)
-          if (vector !== undefined) maxSimilarity = Math.max(maxSimilarity, cosineSimilarity(queryVector, vector))
+        for (const vector of sessionVectors) {
+          maxSimilarity = Math.max(maxSimilarity, cosineSimilarity(queryVector, vector))
         }
         return { similarity: maxSimilarity, tokens }
       })
