@@ -33,6 +33,7 @@ import {
   type MessageEmbeddingRepository,
   SessionRepository,
   type SpanRepository,
+  type TraceDistinctColumn,
   TraceRepository,
   type TraceSearchRepository,
 } from "@domain/spans"
@@ -94,8 +95,6 @@ const formatSampleSession = (session: ScriptSessionContext): string => {
   ].join("\n")
 }
 
-const DISTINCT_COLUMNS = ["tags", "serviceNames", "models", "providers", "tools", "definedTools"] as const
-
 const assembleGrounding = (params: {
   readonly organizationId: OrganizationId
   readonly projectId: ProjectId
@@ -105,16 +104,24 @@ const assembleGrounding = (params: {
     const traceRepository = yield* TraceRepository
     const sessionRepository = yield* SessionRepository
 
-    const [tags, serviceNames, models, providers, tools, definedTools] = yield* Effect.all(
-      DISTINCT_COLUMNS.map((column) =>
-        traceRepository.distinctFilterValues({
-          organizationId: params.organizationId,
-          projectId: params.projectId,
-          column,
-          limit: SIGNAL_GENERATION_DISTINCT_VALUES_LIMIT,
-        }),
-      ),
-      { concurrency: 4 },
+    const distinctValues = (column: TraceDistinctColumn) =>
+      traceRepository.distinctFilterValues({
+        organizationId: params.organizationId,
+        projectId: params.projectId,
+        column,
+        limit: SIGNAL_GENERATION_DISTINCT_VALUES_LIMIT,
+      })
+
+    const { tags, serviceNames, models, providers, tools, definedTools } = yield* Effect.all(
+      {
+        tags: distinctValues("tags"),
+        serviceNames: distinctValues("serviceNames"),
+        models: distinctValues("models"),
+        providers: distinctValues("providers"),
+        tools: distinctValues("tools"),
+        definedTools: distinctValues("definedTools"),
+      },
+      { concurrency: "unbounded" },
     )
 
     const histogram = yield* sessionRepository.histogramByProjectId({
