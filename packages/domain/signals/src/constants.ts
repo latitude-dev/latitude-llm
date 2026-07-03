@@ -300,6 +300,9 @@ export const SIGNAL_GENERATION_DEFAULT_MODEL = {
 /** Hard cap on `ai.generate` calls per generation: first draft + repair turns + one review turn. */
 export const SIGNAL_GENERATION_MAX_GENERATE_CALLS = 4
 
+/** Maximum length of the user's describe prompt, enforced at the endpoint and the intro textarea. */
+export const SIGNAL_GENERATION_PROMPT_MAX_LENGTH = 2000
+
 /** Distinct values fetched per filter dimension for the generation grounding context. */
 export const SIGNAL_GENERATION_DISTINCT_VALUES_LIMIT = 50
 

@@ -42,6 +42,7 @@ import {
   listSignalsUseCase,
   type OrgSignalSearchItem,
   rankDimensionValues,
+  SIGNAL_GENERATION_PROMPT_MAX_LENGTH,
   SIGNAL_GENERATION_RESULT_TTL_SECONDS,
   type Signal,
   type SignalGenerationResult,
@@ -90,6 +91,7 @@ import {
   toEvaluationSummaryRecord,
 } from "../evaluations/evaluation-alignment.functions.ts"
 import { type SessionRecord, serializeSession } from "../sessions/sessions.functions.ts"
+import { enforceSignalGenerationRateLimit } from "./signal-generation-rate-limit.ts"
 
 const listSignalsInputSchema = z.object({
   projectId: z.string(),
@@ -1509,7 +1511,7 @@ export const getSignalPreviewResult = createServerFn({ method: "GET" })
 
 const generateSignalInputSchema = z.object({
   projectId: z.string(),
-  prompt: z.string().min(1),
+  prompt: z.string().min(1).max(SIGNAL_GENERATION_PROMPT_MAX_LENGTH),
   filters: filterSetSchema.nullish(),
 })
 
@@ -1525,6 +1527,8 @@ export const generateSignal = createServerFn({ method: "POST" })
     const { organizationId } = await requireSession()
     const generationId = generateId<"SignalGeneration">()
     const redis = getRedisClient()
+
+    await enforceSignalGenerationRateLimit({ redis, organizationId, projectId: data.projectId })
 
     await redis.set(
       buildSignalGenerationResultKey(organizationId, generationId),

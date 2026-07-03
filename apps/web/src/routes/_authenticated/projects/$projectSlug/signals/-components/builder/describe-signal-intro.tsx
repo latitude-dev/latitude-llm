@@ -1,4 +1,5 @@
 import type { FilterSet } from "@domain/shared"
+import { SIGNAL_GENERATION_PROMPT_MAX_LENGTH } from "@domain/signals"
 import { Button, Icon, Text, Textarea, useMountEffect } from "@repo/ui"
 import { Loader2Icon, SearchCheckIcon, WandSparklesIcon } from "lucide-react"
 import { useRef, useState } from "react"
@@ -155,6 +156,7 @@ export function DescribeSignalIntro({
         <Textarea
           label="What do you want to track?"
           minRows={4}
+          maxLength={SIGNAL_GENERATION_PROMPT_MAX_LENGTH}
           value={prompt}
           disabled={generating}
           onChange={(event) => setPrompt(event.target.value)}
