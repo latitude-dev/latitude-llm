@@ -2,7 +2,7 @@ import { NotFoundError, RepositoryError, UnauthorizedError } from "@domain/share
 import type { Span } from "@repo/observability"
 import { isHttpError } from "@repo/utils"
 import { describe, expect, it, vi } from "vitest"
-import { recordRequestError, recordServerFnError } from "./start.ts"
+import { recordRequestError, recordServerFnError } from "./server-fn-error.ts"
 
 const fakeSpan = () => {
   const span = {

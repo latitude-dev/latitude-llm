@@ -200,6 +200,16 @@ export class PermissionError extends Data.TaggedError("PermissionError")<{
   }
 }
 
+export class ReadOnlyProjectError extends Data.TaggedError("ReadOnlyProjectError")<{
+  readonly serverFnName?: string
+  readonly message?: string
+}> {
+  readonly httpStatus = 403
+  get httpMessage() {
+    return this.message ?? "This project is read-only"
+  }
+}
+
 export type DomainError =
   | RepositoryError
   | ConcurrentSqlTransactionError
@@ -207,8 +217,11 @@ export type DomainError =
   | NotFoundError
   | ConflictError
   | UnauthorizedError
+  | ForbiddenError
+  | RateLimitError
   | BadRequestError
   | PermissionError
+  | ReadOnlyProjectError
 
 export const toRepositoryError = (cause: unknown, operation: string): RepositoryError =>
   new RepositoryError({ cause, operation })
