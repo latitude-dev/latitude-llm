@@ -130,7 +130,13 @@ export const createPollingOutboxConsumer = <TPublishError>(
       Effect.gen(function* () {
         if (fiber !== null) return
 
-        const pollingEffect = Effect.repeat(pollEffect(config, publisher), schedule).pipe(Effect.asVoid)
+        // Effect.repeat stops at the first failure — without the retry, one transient DB error kills the loop forever.
+        const pollingEffect = pollEffect(config, publisher).pipe(
+          Effect.tapError((error) => Effect.logError(`Outbox poll failed: ${error}`)),
+          Effect.retry(schedule),
+          Effect.repeat(schedule),
+          Effect.asVoid,
+        )
 
         fiber = yield* Effect.forkDetach(pollingEffect)
 
