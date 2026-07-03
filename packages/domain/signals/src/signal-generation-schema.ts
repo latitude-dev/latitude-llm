@@ -30,7 +30,7 @@ const generatedRuleConditionSchema = z.union([
     type: z.literal("output_length"),
     unit: z.enum(["chars", "words"]),
     operator: comparisonOperatorSchema,
-    value: z.number().int().nonnegative(),
+    value: z.number(),
   }),
   z.object({ type: z.literal("json_output"), expectation: z.enum(["valid", "invalid"]) }),
   z.object({
@@ -47,14 +47,14 @@ const generatedRuleConditionSchema = z.union([
     ]),
     aggregation: z.enum(["session", "anyTrace", "allTraces"]),
     operator: comparisonOperatorSchema,
-    value: z.number().nonnegative(),
+    value: z.number(),
   }),
   z.object({ type: z.literal("tool_used"), toolName: z.string().min(1) }),
   z.object({ type: z.literal("tool_failed"), toolName: z.string().min(1).nullable() }),
   z.object({
     type: z.literal("tool_call_count"),
     operator: comparisonOperatorSchema,
-    value: z.number().int().nonnegative(),
+    value: z.number(),
   }),
   z.object({ type: z.literal("error") }),
   z.object({ type: z.literal("finish_reason"), value: z.string().min(1) }),
@@ -99,7 +99,7 @@ export const generatedSignalDraftSchema = z.object({
   filters: generatedFiltersSchema
     .nullable()
     .describe("null unless a filter discards sessions that surely cannot match"),
-  sampling: z.number().int().describe("Percentage (1 to 100) of in-scope sessions the evaluation runs on"),
+  sampling: z.number().describe("Whole percentage (1 to 100) of in-scope sessions the evaluation runs on"),
 })
 
 export type GeneratedSignalDraft = z.infer<typeof generatedSignalDraftSchema>
@@ -155,11 +155,19 @@ export const mapGeneratedSignalDraft = (generated: GeneratedSignalDraft): MapGen
       if (generated.ruleConditions === null || generated.ruleConditions.length === 0) {
         return invalid("evaluationKind is rule but ruleConditions is empty")
       }
-      const conditions = generated.ruleConditions.map((condition) =>
-        condition.type === "tool_failed"
-          ? { type: condition.type, ...(condition.toolName === null ? {} : { toolName: condition.toolName }) }
-          : condition,
-      )
+      const conditions = generated.ruleConditions.map((condition) => {
+        switch (condition.type) {
+          case "tool_failed":
+            return { type: condition.type, ...(condition.toolName === null ? {} : { toolName: condition.toolName }) }
+          // The generation schema carries no numeric keywords (Bedrock rejects them), so integer
+          // fields are rounded here before the shared schema's `.int()` re-validation.
+          case "output_length":
+          case "tool_call_count":
+            return { ...condition, value: Math.round(condition.value) }
+          default:
+            return condition
+        }
+      })
       const settings = evaluationSettingsSchema.safeParse({
         kind: "rule",
         match: generated.ruleMatch ?? "all",
