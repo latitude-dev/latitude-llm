@@ -1,9 +1,9 @@
 import type { MomentKind } from "@domain/conversation-intelligence"
 import { Button, Icon, Popover, PopoverClose, PopoverContent, PopoverTrigger, Text } from "@repo/ui"
 import { XIcon } from "lucide-react"
-import { type RefObject, use, useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore } from "react"
+import { type RefObject, useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore } from "react"
+import { useProjectScope } from "../../../../../../domains/projects/project-scope.tsx"
 import type { SessionDetailRecord } from "../../../../../../domains/sessions/sessions.functions.ts"
-import { TraceScopeContext } from "../../../../../../domains/traces/trace-scope.tsx"
 import { useSessionMomentIntelligence } from "../../../../../../domains/traces/traces.collection.ts"
 import type { SessionMomentIntelligenceRecord, TraceRecord } from "../../../../../../domains/traces/traces.functions.ts"
 import { useParamState } from "../../../../../../lib/hooks/useParamState.ts"
@@ -291,7 +291,7 @@ export function ConversationTab({
 }) {
   const sessionId = session.sessionId
   // Annotations are an LLM-feedback feature — off under a sandbox scope.
-  const annotationsEnabled = !use(TraceScopeContext)
+  const annotationsEnabled = useProjectScope().kind === "live"
   const { data: moments } = useSessionMomentIntelligence({ projectId, sessionId })
 
   const timelineMoments = useMemo(

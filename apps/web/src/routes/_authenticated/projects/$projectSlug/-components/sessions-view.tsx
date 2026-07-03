@@ -13,8 +13,9 @@ import { formatCount, formatDuration, formatPercentage, formatPrice, relativeTim
 import { useHotkeys } from "@tanstack/react-hotkeys"
 import { useQueries } from "@tanstack/react-query"
 import { ChevronsDownUpIcon, ChevronsUpDownIcon } from "lucide-react"
-import { use, useCallback, useMemo, useState } from "react"
+import { useCallback, useMemo, useState } from "react"
 import { useAnnotationCountsByTraceIds } from "../../../../../domains/annotations/annotations.collection.ts"
+import { sandboxOrgIdForScope, useProjectScope } from "../../../../../domains/projects/project-scope.tsx"
 import {
   isHasLlmActivityFilterOn,
   useSessionMetrics,
@@ -22,7 +23,6 @@ import {
   useSessionsInfiniteScroll,
 } from "../../../../../domains/sessions/sessions.collection.ts"
 import type { SessionRecord } from "../../../../../domains/sessions/sessions.functions.ts"
-import { TraceScopeContext } from "../../../../../domains/traces/trace-scope.tsx"
 import type { TraceRecord } from "../../../../../domains/traces/traces.functions.ts"
 import { ListingLayout as Layout, listingLayoutIntrinsicScroll } from "../../../../../layouts/ListingLayout/index.tsx"
 import { useParamState } from "../../../../../lib/hooks/useParamState.ts"
@@ -80,7 +80,7 @@ function useExpandedSessionTraces(
   expandedIds: ReadonlySet<string>,
   sessions: readonly SessionRecord[],
 ) {
-  const scope = use(TraceScopeContext)
+  const scope = useProjectScope()
   const expandedSessions = useMemo(() => sessions.filter((s) => expandedIds.has(s.sessionId)), [sessions, expandedIds])
 
   // Shared cache with the session panel's `useSessionTraces` — same key, same
@@ -88,7 +88,7 @@ function useExpandedSessionTraces(
   // runs once and both surfaces read from it.
   const results = useQueries({
     queries: expandedSessions.map((s) =>
-      sessionTracesQueryOptions(scope?.sandboxOrgId, projectId, s.sessionId, s.traceIds),
+      sessionTracesQueryOptions(sandboxOrgIdForScope(scope), projectId, s.sessionId, s.traceIds),
     ),
   })
 
@@ -153,7 +153,7 @@ export function SessionsView({
   // Annotations are an LLM-feedback feature — off under a sandbox scope. Skip
   // the counts fetch so the Indicators column shows errors only (mirrors the
   // Traces table's `annotationsEnabled` gate).
-  const annotationsEnabled = !use(TraceScopeContext)
+  const annotationsEnabled = useProjectScope().kind === "live"
   const effectiveVisibleColumnIds = useMemo(
     () => (isSearching ? visibleColumnIds : visibleColumnIds.filter((id) => id !== "searchMatches")),
     [visibleColumnIds, isSearching],

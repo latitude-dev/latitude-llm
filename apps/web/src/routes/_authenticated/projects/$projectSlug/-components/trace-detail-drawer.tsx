@@ -16,13 +16,13 @@ import {
 import { formatCount } from "@repo/utils"
 import { useHotkeys } from "@tanstack/react-hotkeys"
 import { ArrowDownIcon, ArrowUpIcon, GaugeIcon, GroupIcon, ListTreeIcon, MessagesSquareIcon } from "lucide-react"
-import { type ReactNode, use, useCallback, useEffect, useMemo, useState } from "react"
+import { type ReactNode, useCallback, useEffect, useMemo, useState } from "react"
 import { HotkeyBadge } from "../../../../../components/hotkey-badge.tsx"
 import type { AnnotationRecord } from "../../../../../domains/annotations/annotations.functions.ts"
+import { useProjectScope } from "../../../../../domains/projects/project-scope.tsx"
 import { useScoresByTrace } from "../../../../../domains/scores/scores.collection.ts"
 import type { ScoreRecord } from "../../../../../domains/scores/scores.functions.ts"
 import { useSpansByTraceCollection } from "../../../../../domains/spans/spans.collection.ts"
-import { TraceScopeContext } from "../../../../../domains/traces/trace-scope.tsx"
 import { useTraceDetail } from "../../../../../domains/traces/traces.collection.ts"
 import type { TraceRecord } from "../../../../../domains/traces/traces.functions.ts"
 import { useParamState } from "../../../../../lib/hooks/useParamState.ts"
@@ -234,7 +234,7 @@ export function TraceDetailBody({
   focusAnnotationId,
   searchQuery,
 }: TraceDetailBodyProps) {
-  const isSandbox = !!use(TraceScopeContext)
+  const isSandbox = useProjectScope().kind === "sandbox"
   const scoresEnabled = !isSandbox
   const commandPaletteEnabled = !isSandbox
   const { data: traceDetail, isLoading: isDetailLoading } = useTraceDetail({

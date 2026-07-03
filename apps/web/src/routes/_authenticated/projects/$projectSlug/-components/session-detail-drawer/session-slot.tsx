@@ -4,11 +4,11 @@ import { CopyableText, Icon, ProviderIcon, Status, type TabOption, Tabs, Text, T
 import { formatCount, relativeTime } from "@repo/utils"
 import { useHotkeys } from "@tanstack/react-hotkeys"
 import { GaugeIcon, GroupIcon, ListTreeIcon, MessagesSquareIcon, ShieldAlertIcon } from "lucide-react"
-import { use, useEffect, useMemo, useState } from "react"
+import { useEffect, useMemo, useState } from "react"
+import { useProjectScope } from "../../../../../../domains/projects/project-scope.tsx"
 import { useScoresBySession } from "../../../../../../domains/scores/scores.collection.ts"
 import { deriveSessionStatus, useSessionSignals } from "../../../../../../domains/sessions/sessions.collection.ts"
 import type { SessionDetailRecord } from "../../../../../../domains/sessions/sessions.functions.ts"
-import { TraceScopeContext } from "../../../../../../domains/traces/trace-scope.tsx"
 import type { TraceRecord } from "../../../../../../domains/traces/traces.functions.ts"
 import { useParamState } from "../../../../../../lib/hooks/useParamState.ts"
 import { AddTraceToDatasetAction } from "../add-trace-to-dataset-action.tsx"
@@ -83,7 +83,7 @@ export function SessionSlot({
 
   // Annotations and issues are analysis/feedback features the sandbox doesn't
   // produce — both off under a sandbox scope: hide the tabs and skip the fetches.
-  const isSandbox = !!use(TraceScopeContext)
+  const isSandbox = useProjectScope().kind === "sandbox"
   const scoresEnabled = !isSandbox
   const signalsEnabled = !isSandbox
   // A single-trace session can surface its spans inline

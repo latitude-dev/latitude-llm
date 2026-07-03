@@ -3,8 +3,8 @@ import type { CohortSummary, TraceDistribution, TraceTimeHistogramBucket } from 
 import { pickTraceHistogramBucketSeconds, resolveTraceHistogramRangeIso } from "@domain/spans"
 import type { InfiniteTableInfiniteScroll, InfiniteTableSorting } from "@repo/ui"
 import { keepPreviousData, useInfiniteQuery, useQuery } from "@tanstack/react-query"
-import { use, useMemo } from "react"
-import { TraceScopeContext, traceScopeData, traceScopeKey } from "../traces/trace-scope.tsx"
+import { useMemo } from "react"
+import { projectScopeData, projectScopeKey, useProjectScope } from "../projects/project-scope.tsx"
 import {
   countSessionsByProject,
   getSessionCohortSummary,
@@ -82,7 +82,7 @@ export function useSessionsInfiniteScroll({
   readonly filters?: FilterSet
   readonly searchQuery?: string
 }) {
-  const scope = use(TraceScopeContext)
+  const scope = useProjectScope()
   const effectiveFilters = useMemo(() => withSessionDefaults(filters), [filters])
 
   const {
@@ -92,11 +92,11 @@ export function useSessionsInfiniteScroll({
     hasNextPage,
     isFetchingNextPage,
   } = useInfiniteQuery({
-    queryKey: [...traceScopeKey(scope), "sessionsInfiniteScroll", projectId, sorting, effectiveFilters, searchQuery],
+    queryKey: [...projectScopeKey(scope), "sessionsInfiniteScroll", projectId, sorting, effectiveFilters, searchQuery],
     queryFn: async ({ pageParam }) => {
       const result = await listSessionsByProject({
         data: {
-          ...traceScopeData(scope),
+          ...projectScopeData(scope),
           projectId,
           limit: BATCH_SIZE,
           cursor: pageParam,
@@ -162,15 +162,15 @@ export function useSessionsCount({
   readonly filters?: FilterSet
   readonly searchQuery?: string
 }) {
-  const scope = use(TraceScopeContext)
+  const scope = useProjectScope()
   const effectiveFilters = useMemo(() => withSessionDefaults(filters), [filters])
 
   const { data, isLoading } = useQuery({
-    queryKey: [...traceScopeKey(scope), "sessionsCount", projectId, effectiveFilters, searchQuery],
+    queryKey: [...projectScopeKey(scope), "sessionsCount", projectId, effectiveFilters, searchQuery],
     queryFn: () =>
       countSessionsByProject({
         data: {
-          ...traceScopeData(scope),
+          ...projectScopeData(scope),
           projectId,
           filters: effectiveFilters,
           ...(searchQuery ? { searchQuery } : {}),
@@ -198,12 +198,12 @@ export function useSessionsCountWithoutLlmActivityFilter({
   readonly searchQuery?: string
   readonly enabled?: boolean
 }) {
-  const scope = use(TraceScopeContext)
+  const scope = useProjectScope()
   const filtersWithoutLlmActivity = useMemo(() => withoutHasLlmActivityFilter(withSessionDefaults(filters)), [filters])
 
   const { data, isLoading } = useQuery({
     queryKey: [
-      ...traceScopeKey(scope),
+      ...projectScopeKey(scope),
       "sessionsCountWithoutLlmActivity",
       projectId,
       filtersWithoutLlmActivity,
@@ -212,7 +212,7 @@ export function useSessionsCountWithoutLlmActivityFilter({
     queryFn: () =>
       countSessionsByProject({
         data: {
-          ...traceScopeData(scope),
+          ...projectScopeData(scope),
           projectId,
           filters: filtersWithoutLlmActivity,
           ...(searchQuery ? { searchQuery } : {}),
@@ -242,11 +242,11 @@ export function useSessionDetail({
   readonly sessionId: string
   readonly enabled?: boolean
 }) {
-  const scope = use(TraceScopeContext)
+  const scope = useProjectScope()
   return useQuery({
-    queryKey: [...traceScopeKey(scope), "session-detail", projectId, sessionId],
+    queryKey: [...projectScopeKey(scope), "session-detail", projectId, sessionId],
     queryFn: async () => {
-      const result = await getSessionDetail({ data: { ...traceScopeData(scope), projectId, sessionId } })
+      const result = await getSessionDetail({ data: { ...projectScopeData(scope), projectId, sessionId } })
       return result as SessionDetailRecord | null
     },
     enabled: enabled && projectId.length > 0 && sessionId.length > 0,
@@ -272,22 +272,22 @@ export function useSessionSignals({
   readonly traceIds: readonly string[]
   readonly enabled?: boolean
 }) {
-  const scope = use(TraceScopeContext)
+  const scope = useProjectScope()
   return useQuery({
-    queryKey: [...traceScopeKey(scope), "session-issues", projectId, [...traceIds].sort()],
-    queryFn: () => listSessionSignals({ data: { ...traceScopeData(scope), projectId, traceIds: [...traceIds] } }),
+    queryKey: [...projectScopeKey(scope), "session-issues", projectId, [...traceIds].sort()],
+    queryFn: () => listSessionSignals({ data: { ...projectScopeData(scope), projectId, traceIds: [...traceIds] } }),
     enabled: enabled && projectId.length > 0 && traceIds.length > 0,
     staleTime: 30_000,
   })
 }
 
 export function useSessionCohortSummary({ projectId }: { readonly projectId: string }) {
-  const scope = use(TraceScopeContext)
+  const scope = useProjectScope()
   return useQuery<CohortSummary>({
-    queryKey: [...traceScopeKey(scope), "sessions-cohort-summary", projectId],
+    queryKey: [...projectScopeKey(scope), "sessions-cohort-summary", projectId],
     queryFn: () =>
       getSessionCohortSummary({
-        data: { ...traceScopeData(scope), projectId },
+        data: { ...projectScopeData(scope), projectId },
       }),
     staleTime: 30_000,
     enabled: projectId.length > 0,
@@ -301,15 +301,15 @@ export function useSessionMetrics({
   readonly projectId: string
   readonly filters?: FilterSet
 }) {
-  const scope = use(TraceScopeContext)
+  const scope = useProjectScope()
   const effectiveFilters = useMemo(() => withSessionDefaults(filters), [filters])
 
   return useQuery({
-    queryKey: [...traceScopeKey(scope), "sessions-metrics", projectId, effectiveFilters],
+    queryKey: [...projectScopeKey(scope), "sessions-metrics", projectId, effectiveFilters],
     queryFn: () =>
       getSessionMetricsByProject({
         data: {
-          ...traceScopeData(scope),
+          ...projectScopeData(scope),
           projectId,
           filters: effectiveFilters,
         },
@@ -330,7 +330,7 @@ export function useSessionTimeHistogram({
   readonly rangeStartIso?: string
   readonly rangeEndIso?: string
 }) {
-  const scope = use(TraceScopeContext)
+  const scope = useProjectScope()
   const effectiveFilters = useMemo(() => withSessionDefaults(filters), [filters])
 
   const { rangeStartIso, rangeEndIso, bucketSeconds, queryKey } = useMemo(() => {
@@ -349,7 +349,7 @@ export function useSessionTimeHistogram({
       rangeEndIso: effectiveRangeEndIso,
       bucketSeconds: bs,
       queryKey: [
-        ...traceScopeKey(scope),
+        ...projectScopeKey(scope),
         "sessions-histogram",
         projectId,
         effectiveFilters,
@@ -365,7 +365,7 @@ export function useSessionTimeHistogram({
     queryFn: (): Promise<readonly TraceTimeHistogramBucket[]> =>
       getSessionTimeHistogramByProject({
         data: {
-          ...traceScopeData(scope),
+          ...projectScopeData(scope),
           projectId,
           rangeStartIso,
           rangeEndIso,
@@ -394,10 +394,10 @@ export function useSessionDistribution({
   readonly field: PercentileSessionFilterField
   readonly enabled?: boolean
 }) {
-  const scope = use(TraceScopeContext)
+  const scope = useProjectScope()
   return useQuery<TraceDistribution>({
-    queryKey: [...traceScopeKey(scope), "session-distribution", projectId, field],
-    queryFn: () => getSessionDistribution({ data: { ...traceScopeData(scope), projectId, field } }),
+    queryKey: [...projectScopeKey(scope), "session-distribution", projectId, field],
+    queryFn: () => getSessionDistribution({ data: { ...projectScopeData(scope), projectId, field } }),
     // Distribution is intentionally insensitive to other filters and changes
     // slowly relative to a user's interaction window — long stale time keeps
     // the chart steady while picking a threshold.
@@ -417,12 +417,12 @@ export function useSessionDistinctValues({
   readonly search?: string
   readonly enabled?: boolean
 }) {
-  const scope = use(TraceScopeContext)
+  const scope = useProjectScope()
   return useQuery({
-    queryKey: [...traceScopeKey(scope), "session-distinct", projectId, column, search],
+    queryKey: [...projectScopeKey(scope), "session-distinct", projectId, column, search],
     queryFn: () =>
       getSessionDistinctValues({
-        data: { ...traceScopeData(scope), projectId, column, limit: 50, ...(search ? { search } : {}) },
+        data: { ...projectScopeData(scope), projectId, column, limit: 50, ...(search ? { search } : {}) },
       }),
     staleTime: 60_000,
     enabled: enabled && projectId.length > 0,

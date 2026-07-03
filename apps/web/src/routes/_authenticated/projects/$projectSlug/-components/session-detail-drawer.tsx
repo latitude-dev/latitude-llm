@@ -3,10 +3,9 @@ import type { FilterSet } from "@domain/shared"
 import { Button, DetailDrawer, Icon, Skeleton, Tooltip } from "@repo/ui"
 import { useHotkeys } from "@tanstack/react-hotkeys"
 import { ChevronLeftIcon } from "lucide-react"
-import { use } from "react"
 import { HotkeyBadge } from "../../../../../components/hotkey-badge.tsx"
+import { useProjectScope } from "../../../../../domains/projects/project-scope.tsx"
 import { useSessionDetail } from "../../../../../domains/sessions/sessions.collection.ts"
-import { TraceScopeContext } from "../../../../../domains/traces/trace-scope.tsx"
 import { useParamState } from "../../../../../lib/hooks/useParamState.ts"
 import { SignalLifecycleActions } from "../signals/-components/signal-lifecycle-actions.tsx"
 import {
@@ -104,7 +103,7 @@ export function SessionDetailDrawer({
   // the issue slot under a sandbox scope, even from a deep-linked `?signalId=`
   // (its `SignalLifecycleActions` registers command-palette commands, and the
   // sandbox tree has no provider).
-  const isSandbox = !!use(TraceScopeContext)
+  const isSandbox = useProjectScope().kind === "sandbox"
   const signalsEnabled = !isSandbox
   const detailKind: DetailSlotKind | null =
     traceId.length > 0 ? "trace" : signalId.length > 0 && signalsEnabled ? "issue" : null

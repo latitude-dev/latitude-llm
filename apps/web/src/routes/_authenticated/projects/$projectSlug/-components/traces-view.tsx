@@ -1,9 +1,9 @@
 import type { FilterSet } from "@domain/shared"
 import type { InfiniteTableSorting } from "@repo/ui"
 import { useHotkeys } from "@tanstack/react-hotkeys"
-import { type RefObject, use, useCallback, useMemo } from "react"
+import { type RefObject, useCallback, useMemo } from "react"
 import { useAnnotationCountsByTraceIds } from "../../../../../domains/annotations/annotations.collection.ts"
-import { TraceScopeContext } from "../../../../../domains/traces/trace-scope.tsx"
+import { useProjectScope } from "../../../../../domains/projects/project-scope.tsx"
 import { useTraceMetrics, useTracesInfiniteScroll } from "../../../../../domains/traces/traces.collection.ts"
 import type { TraceRecord } from "../../../../../domains/traces/traces.functions.ts"
 import { ListingLayout as Layout, listingLayoutIntrinsicScroll } from "../../../../../layouts/ListingLayout/index.tsx"
@@ -56,7 +56,7 @@ export function TracesView({
   const hasSearchQuery = !!searchQuery && searchQuery.length > 0
   // Annotations are an LLM-feedback feature — off in a sandbox. Skip the fetch
   // and hide the badges/click affordance when reading under a sandbox scope.
-  const annotationsEnabled = !use(TraceScopeContext)
+  const annotationsEnabled = useProjectScope().kind === "live"
 
   const {
     data: traces,

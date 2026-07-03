@@ -1,6 +1,5 @@
 import { useQuery } from "@tanstack/react-query"
-import { use } from "react"
-import { TraceScopeContext } from "../../../../../../domains/traces/trace-scope.tsx"
+import { sandboxOrgIdForScope, useProjectScope } from "../../../../../../domains/projects/project-scope.tsx"
 import { listTracesByProject, type TraceRecord } from "../../../../../../domains/traces/traces.functions.ts"
 
 const EMPTY: readonly TraceRecord[] = []
@@ -84,9 +83,9 @@ export function useSessionTraces({
   readonly traceIds: readonly string[]
   readonly enabled?: boolean
 }) {
-  const scope = use(TraceScopeContext)
+  const scope = useProjectScope()
   const query = useQuery({
-    ...sessionTracesQueryOptions(scope?.sandboxOrgId, projectId, sessionId, traceIds),
+    ...sessionTracesQueryOptions(sandboxOrgIdForScope(scope), projectId, sessionId, traceIds),
     enabled: enabled && projectId.length > 0 && sessionId.length > 0 && traceIds.length > 0,
   })
 
