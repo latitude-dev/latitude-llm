@@ -1,5 +1,5 @@
 import "@repo/ui/styles/globals.css"
-import { RouterProvider, createRouter } from "@tanstack/react-router"
+import { createRouter, RouterProvider } from "@tanstack/react-router"
 import { StrictMode } from "react"
 import { createRoot } from "react-dom/client"
 import { routeTree } from "./routeTree.gen.ts"
