@@ -16,6 +16,7 @@ import { AppSidebar, NavItem } from "../../../layouts/AppSidebar/index.tsx"
 import { ContentErrorBoundary } from "../../../lib/client-error-reporting.tsx"
 import { requireSession } from "../../../server/auth.ts"
 import { getPostgresClient } from "../../../server/clients.ts"
+import { CHANGELOG_UI_ENABLED } from "../../../domains/changelog/changelog.collection.ts"
 import { ChangelogSidebarEntry } from "../-components/changelog/changelog-sidebar-entry.tsx"
 import { ProjectBreadcrumbSegment } from "../-components/project-breadcrumb-segment.tsx"
 import { SandboxSwitcher } from "../-components/sandbox-switcher.tsx"
@@ -87,7 +88,7 @@ function ProjectSidebar({ project, projectSlug }: { project: ProjectRecord; proj
       subtitle={<CopyableText value={project.slug} size="sm" tooltip="Copy project slug" ellipsis />}
       footer={({ collapsed }) => (
         <>
-          <ChangelogSidebarEntry collapsed={collapsed} />
+          {CHANGELOG_UI_ENABLED ? <ChangelogSidebarEntry collapsed={collapsed} /> : null}
           {latestWrapped ? (
             <NavItem
               icon={ClaudeCodeIcon}
