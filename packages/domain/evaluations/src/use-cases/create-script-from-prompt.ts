@@ -9,7 +9,7 @@ import {
   type GenerationModelConfig,
   resolveGenerationConfig,
 } from "@domain/ai"
-import type { ScriptRuntime, ScriptSessionContext } from "@domain/sandbox"
+import type { HostSimilarityFunction, ScriptRuntime, ScriptSessionContext } from "@domain/sandbox"
 import {
   BadRequestError,
   type ChSqlClient,
@@ -20,7 +20,13 @@ import {
   type RepositoryError,
   TraceId,
 } from "@domain/shared"
-import { SessionRepository, type SpanRepository, TraceRepository } from "@domain/spans"
+import {
+  type MessageEmbeddingRepository,
+  SessionRepository,
+  type SpanRepository,
+  TraceRepository,
+  type TraceSearchRepository,
+} from "@domain/spans"
 import { Effect } from "effect"
 import { z } from "zod"
 import { EVALUATION_SCRIPT_GENERATION_DEFAULT_MODEL, EVALUATION_SCRIPT_GENERATION_MAX_ATTEMPTS } from "../constants.ts"
@@ -28,6 +34,7 @@ import { type EvaluationExecutionError, EvaluationScriptGenerationError } from "
 import { EVALUATION_SCRIPT_GENERATION_SYSTEM_PROMPT } from "../runtime/evaluation-execution.ts"
 import { loadScriptSessionContext } from "../runtime/load-session-context.ts"
 import { executeEvaluationScriptSandboxed } from "../runtime/sandbox-execution.ts"
+import { buildSemanticSimilarityHost } from "../runtime/semantic-similarity.ts"
 
 export interface CreateScriptFromPromptInput {
   readonly organizationId: string
@@ -103,6 +110,7 @@ const generateCandidate = (params: {
 const runCandidate = (params: {
   readonly script: string
   readonly session: ScriptSessionContext
+  readonly similarity: HostSimilarityFunction
 }): Effect.Effect<AttemptOutcome, never, AI | ScriptRuntime> =>
   executeEvaluationScriptSandboxed(params).pipe(
     Effect.match({
@@ -156,6 +164,14 @@ export const createScriptFromPromptUseCase = (input: CreateScriptFromPromptInput
 
     const session = yield* loadScriptSessionContext({ organizationId, projectId, traceDetail })
 
+    // A generated script may call semanticSimilarity(); the smoke test needs the host or the run would
+    // trip the runtime's embedding-host guard. Built against the smoke-test session, like live/preview.
+    const similarity = yield* buildSemanticSimilarityHost({
+      organizationId,
+      projectId,
+      traceIds: session.traces.map((trace) => trace.id),
+    })
+
     const modelConfig = yield* resolveGenerationConfig(
       "EVALUATION_SCRIPT_GENERATOR",
       EVALUATION_SCRIPT_GENERATION_DEFAULT_MODEL,
@@ -177,7 +193,7 @@ export const createScriptFromPromptUseCase = (input: CreateScriptFromPromptInput
         previous,
         telemetry,
       })
-      const outcome: AttemptOutcome = yield* runCandidate({ script: candidate.script, session })
+      const outcome: AttemptOutcome = yield* runCandidate({ script: candidate.script, session, similarity })
 
       if (outcome.ok) {
         return { script: candidate.script, reasoning: candidate.reasoning } satisfies CreateScriptFromPromptResult
@@ -197,5 +213,12 @@ export const createScriptFromPromptUseCase = (input: CreateScriptFromPromptInput
   }).pipe(Effect.withSpan("evaluations.createScriptFromPrompt")) as Effect.Effect<
     CreateScriptFromPromptResult,
     CreateScriptFromPromptError,
-    AI | ScriptRuntime | TraceRepository | SessionRepository | SpanRepository | ChSqlClient
+    | AI
+    | ScriptRuntime
+    | TraceRepository
+    | SessionRepository
+    | SpanRepository
+    | ChSqlClient
+    | MessageEmbeddingRepository
+    | TraceSearchRepository
   >

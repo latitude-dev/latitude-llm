@@ -16,6 +16,7 @@ import {
   seedBillingUsagePeriod,
 } from "@domain/billing/testing"
 import { OutboxEventWriter, type OutboxEventWriterShape } from "@domain/events"
+import { QueuePublisher, type QueuePublisherShape } from "@domain/queue"
 import { type DetectorHealthTracker, type ScriptRuntime, ScriptRuntimeError } from "@domain/sandbox"
 import { createFakeDetectorHealthTracker, createFakeScriptRuntime } from "@domain/sandbox/testing"
 import { ScoreAnalyticsRepository, ScoreRepository } from "@domain/scores"
@@ -36,8 +37,21 @@ import {
   TraceId,
 } from "@domain/shared"
 import { createFakeSqlClient } from "@domain/shared/testing"
-import { SessionRepository, SpanRepository, type TraceDetail, TraceRepository } from "@domain/spans"
-import { createFakeSessionRepository, createFakeSpanRepository, createFakeTraceRepository } from "@domain/spans/testing"
+import {
+  MessageEmbeddingRepository,
+  SessionRepository,
+  SpanRepository,
+  type TraceDetail,
+  TraceRepository,
+  TraceSearchRepository,
+} from "@domain/spans"
+import {
+  createFakeMessageEmbeddingRepository,
+  createFakeSessionRepository,
+  createFakeSpanRepository,
+  createFakeTraceRepository,
+  createFakeTraceSearchRepository,
+} from "@domain/spans/testing"
 import { Effect, Layer } from "effect"
 import { describe, expect, it } from "vitest"
 import {
@@ -179,6 +193,13 @@ function createSignalRepository(
   }
 }
 
+const createNoopPublisher = (overrides?: Partial<QueuePublisherShape>): QueuePublisherShape => ({
+  publish: () => Effect.void,
+  scheduleRepeatable: () => Effect.void,
+  close: () => Effect.void,
+  ...overrides,
+})
+
 function createScoreWriteLayer(input?: {
   readonly scoreRepository?: ReturnType<typeof createFakeScoreRepository>["repository"] | undefined
   readonly scoreAnalyticsRepository?: ReturnType<typeof createFakeScoreAnalyticsRepository>["repository"] | undefined
@@ -247,6 +268,8 @@ function createUseCaseLayer(input: {
   readonly billingLayer?: ReturnType<typeof createBillingLayer> | undefined
   readonly scriptRuntimeLayer?: ReturnType<typeof createFakeScriptRuntime>["layer"] | undefined
   readonly detectorHealthLayer?: ReturnType<typeof createFakeDetectorHealthTracker>["layer"] | undefined
+  readonly traceSearchRepository?: ReturnType<typeof createFakeTraceSearchRepository>["repository"] | undefined
+  readonly publisher?: QueuePublisherShape | undefined
 }): Layer.Layer<
   | AI
   | BillingOverrideRepository
@@ -256,8 +279,10 @@ function createUseCaseLayer(input: {
   | DetectorHealthTracker
   | EvaluationSignalRepository
   | EvaluationRepository
-  | ScoreAnalyticsRepository
+  | MessageEmbeddingRepository
   | OutboxEventWriter
+  | QueuePublisher
+  | ScoreAnalyticsRepository
   | ScoreRepository
   | ScriptRuntime
   | SessionRepository
@@ -265,7 +290,8 @@ function createUseCaseLayer(input: {
   | SpanRepository
   | SqlClient
   | StripeSubscriptionLookup
-  | TraceRepository,
+  | TraceRepository
+  | TraceSearchRepository,
   never,
   never
 > {
@@ -273,6 +299,9 @@ function createUseCaseLayer(input: {
     Layer.succeed(TraceRepository, input.traceRepository),
     Layer.succeed(SessionRepository, createFakeSessionRepository().repository),
     Layer.succeed(SpanRepository, createFakeSpanRepository().repository),
+    Layer.succeed(MessageEmbeddingRepository, createFakeMessageEmbeddingRepository().repository),
+    Layer.succeed(TraceSearchRepository, input.traceSearchRepository ?? createFakeTraceSearchRepository().repository),
+    Layer.succeed(QueuePublisher, input.publisher ?? createNoopPublisher()),
     Layer.succeed(EvaluationRepository, input.evaluationRepository),
     input.scoreWriteLayer ?? createScoreWriteLayer({ scoreRepository: input.scoreRepository }),
     Layer.succeed(
@@ -897,6 +926,100 @@ describe("runLiveEvaluationUseCase", () => {
 
     expect(result.action).toBe("persisted")
     expect(operations).toEqual(["script-run", "billing-outbox-write", "score-outbox-write"])
+    expect(scriptRuntime.calls.run).toHaveLength(1)
+  })
+
+  const EMBEDDING_SCRIPT = "return Passed((await semanticSimilarity('frustration')) >= 0.5 ? 1 : 0)"
+
+  it("defers an embedding-capability evaluation and re-publishes when the session's embeddings are not indexed yet", async () => {
+    const evaluation = makeEvaluation({ script: EMBEDDING_SCRIPT })
+    const traceDetail = makeTraceDetail()
+    const { repository: traceRepository } = createFakeTraceRepository({
+      findByTraceId: () => Effect.succeed(traceDetail),
+    })
+    const evaluationRepository = createEvaluationRepository(() => Effect.succeed(evaluation))
+    const signalRepository = createSignalRepository(() =>
+      Effect.die("Signal should not be loaded while deferring for embeddings"),
+    )
+    const scriptRuntime = createFakeScriptRuntime({
+      run: () => Effect.die("Script should not run while deferring for embeddings"),
+    })
+    const published: Array<{ payload: unknown; options: unknown }> = []
+    const publisher = createNoopPublisher({
+      publish: (_queue, _task, payload, options) =>
+        Effect.sync(() => {
+          published.push({ payload, options })
+        }),
+    })
+
+    const result = await Effect.runPromise(
+      runLiveEvaluationUseCase(INPUT).pipe(
+        Effect.provide(
+          createUseCaseLayer({
+            traceRepository,
+            evaluationRepository,
+            signalRepository,
+            publisher,
+            scriptRuntimeLayer: scriptRuntime.layer,
+            // Default fake returns no occurrences → embeddings not indexed yet.
+          }),
+        ),
+      ),
+    )
+
+    expect(result).toEqual({
+      action: "skipped",
+      reason: "awaiting-embeddings",
+      evaluationId: INPUT.evaluationId,
+      traceId: INPUT.traceId,
+    })
+    expect(published).toHaveLength(1)
+    expect(published[0]?.payload).toMatchObject({
+      evaluationId: INPUT.evaluationId,
+      traceId: INPUT.traceId,
+      embeddingWaitAttempt: 1,
+    })
+    expect(published[0]?.options).toMatchObject({ debounceMs: expect.any(Number) })
+    expect(scriptRuntime.calls.run).toHaveLength(0)
+  })
+
+  it("runs an embedding-capability evaluation anyway once the wait attempts are exhausted", async () => {
+    const evaluation = makeEvaluation({ script: EMBEDDING_SCRIPT })
+    const issue = makeSignal({ id: SignalId(evaluation.signalId) })
+    const traceDetail = makeTraceDetail()
+    const { repository: traceRepository } = createFakeTraceRepository({
+      findByTraceId: () => Effect.succeed(traceDetail),
+    })
+    const evaluationRepository = createEvaluationRepository(() => Effect.succeed(evaluation))
+    const signalRepository = createSignalRepository(() => Effect.succeed(issue))
+    const scriptRuntime = createFakeScriptRuntime({
+      run: () => Effect.succeed({ value: 1, feedback: "ok", duration: 1, tokens: 0, cost: 0 }),
+    })
+    const published: unknown[] = []
+    const publisher = createNoopPublisher({
+      publish: (_queue, _task, payload) =>
+        Effect.sync(() => {
+          published.push(payload)
+        }),
+    })
+
+    const result = await Effect.runPromise(
+      runLiveEvaluationUseCase({ ...INPUT, embeddingWaitAttempt: 99 }).pipe(
+        Effect.provide(
+          createUseCaseLayer({
+            traceRepository,
+            evaluationRepository,
+            signalRepository,
+            publisher,
+            billingLayer: createBillingLayer(),
+            scriptRuntimeLayer: scriptRuntime.layer,
+          }),
+        ),
+      ),
+    )
+
+    expect(result.action).toBe("persisted")
+    expect(published).toHaveLength(0)
     expect(scriptRuntime.calls.run).toHaveLength(1)
   })
 

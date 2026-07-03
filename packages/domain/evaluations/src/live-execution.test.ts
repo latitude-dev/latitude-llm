@@ -1,6 +1,8 @@
 import { createFakeAI } from "@domain/ai/testing"
 import { minimalScriptSession, ScriptRuntimeError } from "@domain/sandbox"
 import { createFakeScriptRuntime } from "@domain/sandbox/testing"
+import { MessageEmbeddingRepository, TraceSearchRepository } from "@domain/spans"
+import { createFakeMessageEmbeddingRepository, createFakeTraceSearchRepository } from "@domain/spans/testing"
 import { Effect, Layer } from "effect"
 import { describe, expect, it } from "vitest"
 import type { LiveEvaluationExecutionError } from "./errors.ts"
@@ -30,10 +32,19 @@ const validScript = wrapPromptAsEvaluationScript(
 )
 
 const validInput = liveEvaluationExecutionInputSchema.parse({
+  organizationId: "oooooooooooooooooooooooo",
+  projectId: "pppppppppppppppppppppppp",
   evaluationId,
   script: validScript,
   session,
 })
+
+// The similarity host builder needs these services in context even though these judge/rule scripts
+// never call semanticSimilarity(); the fakes are never invoked.
+const semanticLayer = Layer.mergeAll(
+  Layer.succeed(MessageEmbeddingRepository, createFakeMessageEmbeddingRepository().repository),
+  Layer.succeed(TraceSearchRepository, createFakeTraceSearchRepository().repository),
+)
 
 describe("executeLiveEvaluationUseCase", () => {
   it("validates the canonical live execution input shape", () => {
@@ -106,7 +117,7 @@ describe("executeLiveEvaluationUseCase", () => {
         ...validInput,
         // A deterministic (non-template) script — only executable by the sandbox runtime.
         script: "return Failed(0.2, 'exhibits the issue')",
-      }).pipe(Effect.provide(Layer.mergeAll(aiLayer, fakeRuntime.layer))),
+      }).pipe(Effect.provide(Layer.mergeAll(aiLayer, fakeRuntime.layer, semanticLayer))),
     )
 
     expect(result).toEqual(
@@ -133,7 +144,7 @@ describe("executeLiveEvaluationUseCase", () => {
       Effect.runPromise(
         executeLiveEvaluationUseCase({
           ...validInput,
-        }).pipe(Effect.provide(Layer.mergeAll(aiLayer, fakeRuntime.layer))),
+        }).pipe(Effect.provide(Layer.mergeAll(aiLayer, fakeRuntime.layer, semanticLayer))),
       ),
     ).rejects.toMatchObject({
       _tag: "LiveEvaluationExecutionError",

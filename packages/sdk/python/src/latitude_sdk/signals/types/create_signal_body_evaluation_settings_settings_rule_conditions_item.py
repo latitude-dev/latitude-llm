@@ -26,6 +26,9 @@ from .create_signal_body_evaluation_settings_settings_rule_conditions_item_outpu
 from .create_signal_body_evaluation_settings_settings_rule_conditions_item_output_length_unit import (
     CreateSignalBodyEvaluationSettingsSettingsRuleConditionsItemOutputLengthUnit,
 )
+from .create_signal_body_evaluation_settings_settings_rule_conditions_item_semantic_similarity_operator import (
+    CreateSignalBodyEvaluationSettingsSettingsRuleConditionsItemSemanticSimilarityOperator,
+)
 from .create_signal_body_evaluation_settings_settings_rule_conditions_item_text_match_operator import (
     CreateSignalBodyEvaluationSettingsSettingsRuleConditionsItemTextMatchOperator,
 )
@@ -118,6 +121,17 @@ class CreateSignalBodyEvaluationSettingsSettingsRuleConditionsItem_FinishReason(
     model_config: typing.ClassVar[pydantic.ConfigDict] = pydantic.ConfigDict(extra="allow", frozen=True)
 
 
+class CreateSignalBodyEvaluationSettingsSettingsRuleConditionsItem_SemanticSimilarity(UniversalBaseModel):
+    type: typing.Literal["semantic_similarity"] = "semantic_similarity"
+    query: str
+    operator: typing.Optional[
+        CreateSignalBodyEvaluationSettingsSettingsRuleConditionsItemSemanticSimilarityOperator
+    ] = None
+    threshold: float
+
+    model_config: typing.ClassVar[pydantic.ConfigDict] = pydantic.ConfigDict(extra="allow", frozen=True)
+
+
 CreateSignalBodyEvaluationSettingsSettingsRuleConditionsItem = typing_extensions.Annotated[
     typing.Union[
         CreateSignalBodyEvaluationSettingsSettingsRuleConditionsItem_TextMatch,
@@ -130,6 +144,7 @@ CreateSignalBodyEvaluationSettingsSettingsRuleConditionsItem = typing_extensions
         CreateSignalBodyEvaluationSettingsSettingsRuleConditionsItem_ToolCallCount,
         CreateSignalBodyEvaluationSettingsSettingsRuleConditionsItem_Error,
         CreateSignalBodyEvaluationSettingsSettingsRuleConditionsItem_FinishReason,
+        CreateSignalBodyEvaluationSettingsSettingsRuleConditionsItem_SemanticSimilarity,
     ],
     pydantic.Field(discriminator="type"),
 ]

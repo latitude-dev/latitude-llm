@@ -237,6 +237,14 @@ const compileCondition = (c: EvaluationRuleCondition, helpers: Set<HelperName>):
         positive: `A response finished with ${lit(c.value)}`,
         negative: `No response finished with ${lit(c.value)}`,
       }
+    // The only condition that emits `await`: it makes an otherwise-pure rule an `embedding`-capability
+    // script (detected via the `semanticSimilarity(` pattern), routing it through the host verb + lane.
+    case "semantic_similarity":
+      return {
+        expr: `(await semanticSimilarity(${lit(c.query)})) ${OP[c.operator]} ${lit(c.threshold)}`,
+        positive: `Semantically similar to ${lit(c.query)} (${OP_PHRASE[c.operator]} ${c.threshold})`,
+        negative: `Not semantically similar to ${lit(c.query)} (${OP_PHRASE[c.operator]} ${c.threshold})`,
+      }
   }
 }
 

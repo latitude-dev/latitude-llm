@@ -1,7 +1,7 @@
 import type { ClickHouseClient } from "@clickhouse/client"
 import { DEFAULT_EMBEDDING_CONFIG, resolveEmbeddingConfig } from "@domain/ai"
 import { ChSqlClient, type ChSqlClientShape, toRepositoryError } from "@domain/shared"
-import { TraceSearchRepository, type TraceSearchRepositoryShape } from "@domain/spans"
+import { type MessageEmbeddingRole, TraceSearchRepository, type TraceSearchRepositoryShape } from "@domain/spans"
 import { parseEnv } from "@platform/env"
 import { Effect, Layer } from "effect"
 import { BOILERPLATE_FILTER_PARAMS, BOILERPLATE_HASH_FILTER } from "./search-plan.ts"
@@ -92,6 +92,32 @@ export const TraceSearchRepositoryLive = Layer.effect(
           })
         })
         .pipe(Effect.mapError((error) => toRepositoryError(error, "upsertMessageOccurrences")))
+    }
+
+    const listMessageOccurrencesForTraces: TraceSearchRepositoryShape["listMessageOccurrencesForTraces"] = (args) => {
+      if (args.traceIds.length === 0) return Effect.succeed([])
+      return chSqlClient
+        .query(async (client) => {
+          const result = await client.query({
+            query: `SELECT
+                      argMax(content_hash, indexed_at) AS content_hash,
+                      argMax(role, indexed_at) AS role
+                    FROM trace_message_occurrences
+                    WHERE organization_id = {organizationId:String}
+                      AND project_id = {projectId:String}
+                      AND trace_id IN {traceIds:Array(FixedString(32))}
+                    GROUP BY organization_id, project_id, trace_id, message_index`,
+            query_params: {
+              organizationId: args.organizationId as string,
+              projectId: args.projectId as string,
+              traceIds: args.traceIds.map((traceId) => traceId as string),
+            },
+            format: "JSONEachRow",
+          })
+          const rows = await result.json<{ content_hash: string; role: string }>()
+          return rows.map((row) => ({ contentHash: row.content_hash, role: row.role as MessageEmbeddingRole }))
+        })
+        .pipe(Effect.mapError((error) => toRepositoryError(error, "listMessageOccurrencesForTraces")))
     }
 
     const hasEmbeddingWithHash: TraceSearchRepositoryShape["hasEmbeddingWithHash"] = (
@@ -259,6 +285,7 @@ export const TraceSearchRepositoryLive = Layer.effect(
       upsertDocument,
       upsertEmbedding,
       upsertMessageOccurrences,
+      listMessageOccurrencesForTraces,
       hasEmbeddingWithHash,
       findSemanticHighlightForTrace,
     } satisfies TraceSearchRepositoryShape

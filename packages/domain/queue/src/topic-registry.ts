@@ -388,6 +388,11 @@ const _registry = {
       readonly projectId: string
       readonly evaluationId: string
       readonly traceId: string
+      /**
+       * Readiness-gate re-publish counter for embedding-capability evaluations. Absent on the initial
+       * publish; incremented each time the run defers because ingest-time embeddings aren't indexed yet.
+       */
+      readonly embeddingWaitAttempt?: number
     }
   }>(),
 

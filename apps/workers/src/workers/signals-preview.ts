@@ -7,13 +7,15 @@ import {
 } from "@domain/evaluations"
 import type { QueueConsumer } from "@domain/queue"
 import { describeError, type FilterSet, OrganizationId } from "@domain/shared"
-import { AIGenerateLive, withAi } from "@platform/ai"
+import { AIEmbedLive, AIGenerateLive, withAi } from "@platform/ai"
 import type { RedisClient } from "@platform/cache-redis"
 import {
   type ClickHouseClient,
+  MessageEmbeddingRepositoryLive,
   SessionRepositoryLive,
   SpanRepositoryLive,
   TraceRepositoryLive,
+  TraceSearchRepositoryLive,
   withClickHouse,
 } from "@platform/db-clickhouse"
 import { QuickJsScriptRuntimeLive } from "@platform/sandbox-quickjs"
@@ -65,12 +67,18 @@ const runSignalsPreviewJob =
 
     return previewEvaluationUseCase(input).pipe(
       withClickHouse(
-        Layer.mergeAll(SessionRepositoryLive, SpanRepositoryLive, TraceRepositoryLive),
+        Layer.mergeAll(
+          SessionRepositoryLive,
+          SpanRepositoryLive,
+          TraceRepositoryLive,
+          MessageEmbeddingRepositoryLive,
+          TraceSearchRepositoryLive,
+        ),
         deps.clickhouseClient,
         OrganizationId(payload.organizationId),
       ),
       Effect.provide(QuickJsScriptRuntimeLive),
-      withAi(AIGenerateLive, deps.redisClient),
+      withAi(Layer.mergeAll(AIGenerateLive, AIEmbedLive), deps.redisClient),
       withTracing,
       Effect.matchEffect({
         onSuccess: (result) => writeResult(deps.redisClient, payload, { status: "done", items: result.items }),
