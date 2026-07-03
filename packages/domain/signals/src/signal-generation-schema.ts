@@ -8,57 +8,96 @@ import {
 import { z } from "zod"
 import { SIGNAL_NAME_MAX_LENGTH } from "./constants.ts"
 
-const messageScopeSchema = z.enum(["last_assistant", "any_assistant", "any_user", "any_tool", "conversation"])
-const comparisonOperatorSchema = z.enum(["gt", "gte", "lt", "lte"])
+// Generation-side mirror of `evaluationRuleConditionSchema`, deliberately dumbed down for Bedrock
+// structured output: one FLAT object (a union of per-type objects compiles to a grammar Bedrock
+// rejects as too large), no `.default()`/`.optional()` (every property present, `.nullable()` for
+// the ones a given `type` does not use), and no constraint keywords beyond `minLength`.
+// `mapGeneratedSignalDraft` reassembles real conditions and re-parses through the shared schema,
+// which enforces per-type required fields and refinements (regex validity, traceCount aggregation).
+const generatedRuleConditionSchema = z.object({
+  type: z.enum([
+    "text_match",
+    "empty_output",
+    "output_length",
+    "json_output",
+    "metric",
+    "tool_used",
+    "tool_failed",
+    "tool_call_count",
+    "error",
+    "finish_reason",
+  ]),
+  scope: z
+    .enum(["last_assistant", "any_assistant", "any_user", "any_tool", "conversation"])
+    .nullable()
+    .describe("text_match only"),
+  textOperator: z
+    .enum(["contains", "not_contains", "matches_regex", "not_matches_regex"])
+    .nullable()
+    .describe("text_match only"),
+  text: z.string().min(1).nullable().describe("text_match: the text or regex; finish_reason: the reason string"),
+  caseSensitive: z.boolean().nullable().describe("text_match only"),
+  unit: z.enum(["chars", "words"]).nullable().describe("output_length only"),
+  comparison: z.enum(["gt", "gte", "lt", "lte"]).nullable().describe("output_length, metric, tool_call_count"),
+  numberValue: z.number().nullable().describe("output_length, metric, tool_call_count; base units (ns, microcents)"),
+  expectation: z.enum(["valid", "invalid"]).nullable().describe("json_output only"),
+  metricField: z
+    .enum(["duration", "cost", "tokensTotal", "tokensInput", "tokensOutput", "errorCount", "traceCount", "spanCount"])
+    .nullable()
+    .describe("metric only"),
+  aggregation: z.enum(["session", "anyTrace", "allTraces"]).nullable().describe("metric only"),
+  toolName: z.string().min(1).nullable().describe("tool_used (required), tool_failed (optional)"),
+})
 
-// Generation-side mirror of `evaluationRuleConditionSchema`: no `.default()`/`.optional()` (every
-// property present, `.nullable()` where the shared schema is optional) so it converts cleanly to
-// provider structured-output JSON schema. `mapGeneratedSignalDraft` re-parses through the shared
-// schema, which re-applies the refinements omitted here (regex validity, traceCount aggregation).
-// A plain union, not discriminatedUnion: zod emits `anyOf` for unions but `oneOf` for discriminated
-// unions, and Bedrock structured output rejects `oneOf`.
-const generatedRuleConditionSchema = z.union([
-  z.object({
-    type: z.literal("text_match"),
-    scope: messageScopeSchema,
-    operator: z.enum(["contains", "not_contains", "matches_regex", "not_matches_regex"]),
-    value: z.string().min(1),
-    caseSensitive: z.boolean(),
-  }),
-  z.object({ type: z.literal("empty_output") }),
-  z.object({
-    type: z.literal("output_length"),
-    unit: z.enum(["chars", "words"]),
-    operator: comparisonOperatorSchema,
-    value: z.number(),
-  }),
-  z.object({ type: z.literal("json_output"), expectation: z.enum(["valid", "invalid"]) }),
-  z.object({
-    type: z.literal("metric"),
-    field: z.enum([
-      "duration",
-      "cost",
-      "tokensTotal",
-      "tokensInput",
-      "tokensOutput",
-      "errorCount",
-      "traceCount",
-      "spanCount",
-    ]),
-    aggregation: z.enum(["session", "anyTrace", "allTraces"]),
-    operator: comparisonOperatorSchema,
-    value: z.number(),
-  }),
-  z.object({ type: z.literal("tool_used"), toolName: z.string().min(1) }),
-  z.object({ type: z.literal("tool_failed"), toolName: z.string().min(1).nullable() }),
-  z.object({
-    type: z.literal("tool_call_count"),
-    operator: comparisonOperatorSchema,
-    value: z.number(),
-  }),
-  z.object({ type: z.literal("error") }),
-  z.object({ type: z.literal("finish_reason"), value: z.string().min(1) }),
-])
+type GeneratedRuleCondition = z.infer<typeof generatedRuleConditionSchema>
+
+// Reassembles a shared-schema-shaped condition from the flat generation fields. Fields the type
+// does not use are dropped; missing required ones surface as zod issues from the shared re-parse
+// (repair-turn feedback). Integer-typed values are rounded here since the generation schema
+// cannot carry `.int()` (it emits `minimum`/`maximum`, which Bedrock rejects).
+const toSharedCondition = (c: GeneratedRuleCondition): Record<string, unknown> => {
+  switch (c.type) {
+    case "text_match":
+      return {
+        type: c.type,
+        ...(c.scope === null ? {} : { scope: c.scope }),
+        ...(c.textOperator === null ? {} : { operator: c.textOperator }),
+        ...(c.text === null ? {} : { value: c.text }),
+        ...(c.caseSensitive === null ? {} : { caseSensitive: c.caseSensitive }),
+      }
+    case "output_length":
+      return {
+        type: c.type,
+        ...(c.unit === null ? {} : { unit: c.unit }),
+        ...(c.comparison === null ? {} : { operator: c.comparison }),
+        ...(c.numberValue === null ? {} : { value: Math.round(c.numberValue) }),
+      }
+    case "json_output":
+      return { type: c.type, ...(c.expectation === null ? {} : { expectation: c.expectation }) }
+    case "metric":
+      return {
+        type: c.type,
+        ...(c.metricField === null ? {} : { field: c.metricField }),
+        ...(c.aggregation === null ? {} : { aggregation: c.aggregation }),
+        ...(c.comparison === null ? {} : { operator: c.comparison }),
+        ...(c.numberValue === null ? {} : { value: c.numberValue }),
+      }
+    case "tool_used":
+    case "tool_failed":
+      return { type: c.type, ...(c.toolName === null ? {} : { toolName: c.toolName }) }
+    case "tool_call_count":
+      return {
+        type: c.type,
+        ...(c.comparison === null ? {} : { operator: c.comparison }),
+        ...(c.numberValue === null ? {} : { value: Math.round(c.numberValue) }),
+      }
+    case "finish_reason":
+      return { type: c.type, ...(c.text === null ? {} : { value: c.text }) }
+    case "empty_output":
+    case "error":
+      return { type: c.type }
+  }
+}
 
 // The four multi-select dimensions the builder's scope editor offers, plus metadata key/value
 // pairs — exactly what a created signal's filters can round-trip through the UI.
@@ -155,23 +194,10 @@ export const mapGeneratedSignalDraft = (generated: GeneratedSignalDraft): MapGen
       if (generated.ruleConditions === null || generated.ruleConditions.length === 0) {
         return invalid("evaluationKind is rule but ruleConditions is empty")
       }
-      const conditions = generated.ruleConditions.map((condition) => {
-        switch (condition.type) {
-          case "tool_failed":
-            return { type: condition.type, ...(condition.toolName === null ? {} : { toolName: condition.toolName }) }
-          // The generation schema carries no numeric keywords (Bedrock rejects them), so integer
-          // fields are rounded here before the shared schema's `.int()` re-validation.
-          case "output_length":
-          case "tool_call_count":
-            return { ...condition, value: Math.round(condition.value) }
-          default:
-            return condition
-        }
-      })
       const settings = evaluationSettingsSchema.safeParse({
         kind: "rule",
         match: generated.ruleMatch ?? "all",
-        conditions,
+        conditions: generated.ruleConditions.map(toSharedCondition),
       })
       if (!settings.success) return invalid(formatZodIssues(settings.error))
       evaluation = { settings: settings.data }

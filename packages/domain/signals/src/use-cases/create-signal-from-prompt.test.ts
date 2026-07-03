@@ -92,6 +92,24 @@ const histogramBucket: TraceTimeHistogramBucket = {
   tokensCacheCreateSum: 0,
 }
 
+type GeneratedRuleCondition = NonNullable<GeneratedSignalDraft["ruleConditions"]>[number]
+
+const condition = (partial: Partial<GeneratedRuleCondition> & Pick<GeneratedRuleCondition, "type">) =>
+  ({
+    scope: null,
+    textOperator: null,
+    text: null,
+    caseSensitive: null,
+    unit: null,
+    comparison: null,
+    numberValue: null,
+    expectation: null,
+    metricField: null,
+    aggregation: null,
+    toolName: null,
+    ...partial,
+  }) as GeneratedRuleCondition
+
 const baseDraft: GeneratedSignalDraft = {
   reasoning: "matches the observed cancel_ticket tool",
   confirm: false,
@@ -99,7 +117,7 @@ const baseDraft: GeneratedSignalDraft = {
   description: "Sessions where the cancel_ticket tool fails",
   evaluationKind: "rule",
   ruleMatch: "all",
-  ruleConditions: [{ type: "tool_failed", toolName: "cancel_ticket" }],
+  ruleConditions: [condition({ type: "tool_failed", toolName: "cancel_ticket" })],
   judgeCriteria: null,
   script: null,
   filters: null,
