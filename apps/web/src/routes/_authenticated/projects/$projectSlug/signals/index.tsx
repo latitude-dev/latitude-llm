@@ -1,6 +1,5 @@
 import type { FilterSet } from "@domain/shared"
 import {
-  Badge,
   Button,
   CloseTrigger,
   DotIndicator,
@@ -48,16 +47,7 @@ function SignalsBreadcrumb() {
   )
 }
 
-import {
-  ActivityIcon,
-  ArchiveIcon,
-  CircleUserRoundIcon,
-  DownloadIcon,
-  PauseIcon,
-  PlayIcon,
-  PlusIcon,
-  SearchIcon,
-} from "lucide-react"
+import { ActivityIcon, ArchiveIcon, DownloadIcon, PauseIcon, PlayIcon, PlusIcon, SearchIcon } from "lucide-react"
 import { useCallback, useMemo, useState } from "react"
 import { invalidateSignalQueries, useSignals } from "../../../../../domains/signals/signals.collection.ts"
 import {
@@ -70,10 +60,7 @@ import { toUserMessage } from "../../../../../lib/errors.ts"
 import { useDebounce } from "../../../../../lib/hooks/useDebounce.ts"
 import { useParamState } from "../../../../../lib/hooks/useParamState.ts"
 import { EMPTY_SELECTION, type SelectionState, useSelectableRows } from "../../../../../lib/hooks/useSelectableRows.ts"
-import { useAuthenticatedUser } from "../../../-route-data.ts"
-import { ColumnsSelector } from "../-components/columns-selector.tsx"
 import { ExportConfirmationModal } from "../-components/export-confirmation-modal.tsx"
-import { useTableColumnSettings } from "../-components/table-column-settings.ts"
 import { TimeFilterDropdown } from "../-components/time-filter-dropdown.tsx"
 import { parseFilters } from "../-components/trace-page-state.ts"
 import { useRouteProject } from "../-route-data.ts"
@@ -81,12 +68,7 @@ import { AssigneeFilter, UNASSIGNED_FILTER_TOKEN } from "./-components/assignee-
 import { SignalBuilderModal } from "./-components/builder/signal-builder-modal.tsx"
 import { SignalsAnalyticsPanel } from "./-components/signals-analytics-panel.tsx"
 import { SignalsEmptyState } from "./-components/signals-empty-state.tsx"
-import {
-  ISSUES_COLUMN_OPTIONS,
-  type SignalsColumnId,
-  type SignalsTableSorting,
-  SignalsView,
-} from "./-components/signals-view.tsx"
+import { type SignalsTableSorting, SignalsView } from "./-components/signals-view.tsx"
 
 const DEFAULT_SORTING: SignalsTableSorting = { column: "lastSeen", direction: "desc" }
 const SIGNAL_SEARCH_DEBOUNCE_MS = 300
@@ -162,7 +144,6 @@ export const Route = createFileRoute("/_authenticated/projects/$projectSlug/sign
 
 function SignalsPage() {
   const project = useRouteProject()
-  const me = useAuthenticatedUser()
   const [lifecycleGroup, setLifecycleGroup] = useParamState("signalsLifecycle", "active", {
     validate: (value): value is "active" | "archived" => value === "active" || value === "archived",
   })
@@ -212,10 +193,6 @@ function SignalsPage() {
     [searchInput, searchQuery, setSearchQuery],
   )
 
-  const columnSettings = useTableColumnSettings<SignalsColumnId>({
-    storageKey: "projects.issues.columns.v1",
-    columns: ISSUES_COLUMN_OPTIONS,
-  })
   const timeRange = useMemo(() => {
     const toMs = timeTo ? Date.parse(timeTo) : Date.now()
     const fromMs = timeFrom ? Date.parse(timeFrom) : toMs - DEFAULT_SIGNALS_RANGE_SECONDS * 1000
@@ -230,11 +207,6 @@ function SignalsPage() {
     (next: readonly string[]) => setAssigneesParam(serializeAssignees(next)),
     [setAssigneesParam],
   )
-  const isMySignalsActive = assigneeIds.length === 1 && assigneeIds[0] === me.id
-  const toggleMySignals = useCallback(
-    () => setAssigneeIds(isMySignalsActive ? [] : [me.id]),
-    [isMySignalsActive, me.id, setAssigneeIds],
-  )
 
   const {
     data: signalsData,
@@ -242,7 +214,6 @@ function SignalsPage() {
     analytics,
     occurrencesSum,
     priorityCounts,
-    mySignalsCount,
     totalCount,
     hasAnySignals,
     isLoading,
@@ -405,12 +376,6 @@ function SignalsPage() {
               />
             </Layout.ActionRowItem>
             <Layout.ActionRowItem>
-              <ColumnsSelector
-                columns={columnSettings.columns}
-                selectedColumnIds={columnSettings.visibleColumnIds}
-                onChange={(nextColumnIds) => columnSettings.setVisibleColumnIds(nextColumnIds as SignalsColumnId[])}
-                onOrderChange={(nextColumnIds) => columnSettings.setColumnIds(nextColumnIds as SignalsColumnId[])}
-              />
               <div className="relative">
                 <Input
                   value={searchInput}
@@ -422,18 +387,6 @@ function SignalsPage() {
                 <SearchIcon className="pointer-events-none absolute left-2.5 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
               </div>
               <AssigneeFilter value={assigneeIds} onChange={setAssigneeIds} />
-              <Button
-                variant={isMySignalsActive ? "secondary" : "outline"}
-                size="sm"
-                onClick={toggleMySignals}
-                aria-pressed={isMySignalsActive}
-              >
-                <Icon icon={CircleUserRoundIcon} size="sm" />
-                My signals
-                <Badge variant={isMySignalsActive ? "default" : "muted"} size="small">
-                  {mySignalsCount.toLocaleString()}
-                </Badge>
-              </Button>
               <Tabs
                 variant="bordered"
                 size="sm"
@@ -491,7 +444,6 @@ function SignalsPage() {
           sorting={sorting}
           occurrencesSum={occurrencesSum}
           priorityCounts={priorityCounts}
-          visibleColumnIds={columnSettings.visibleColumnIds}
           selection={selection}
           onSortChange={setSorting}
           projectSlug={project.slug}
