@@ -50,7 +50,7 @@ function parseArgs(argv) {
 }
 function required(value, name) { if (!value) throw new Error(`Missing required ${name}`); return value; }
 function usage(code = 1) {
-  console.log(`Portable Artifact skill helper\n\nUsage:\n  node scripts/artifact.mjs create --title "Title" [--instructions "..."] [--kind report] [--id slug] [--format html|md]\n  node scripts/artifact.mjs validate --id slug [--strict]\n  node scripts/artifact.mjs preview --id slug [--open]\n  node scripts/artifact.mjs publish --id slug [--target temporary|permanent] [--domain example.com] [--noindex false]\n  node scripts/artifact.mjs list\n  node scripts/artifact.mjs import-url --url https://... [--title "Title"] [--id slug]\n`);
+  console.log(`Portable Artifact skill helper\n\nUsage:\n  node scripts/artifact.mjs create --title "Title" [--instructions "..."] [--kind report] [--id slug] [--format html|md]\n  node scripts/artifact.mjs validate --id slug [--strict]\n  node scripts/artifact.mjs validate --file path/to/page.html [--strict]\n  node scripts/artifact.mjs preview --id slug [--open]\n  node scripts/artifact.mjs preview --file path/to/page.html [--open]\n  node scripts/artifact.mjs publish --id slug [--target temporary|permanent] [--domain example.com] [--noindex false]\n  node scripts/artifact.mjs publish --file path/to/page.html [--target temporary|permanent] [--domain example.com] [--name worker-name] [--noindex false]\n  node scripts/artifact.mjs list\n  node scripts/artifact.mjs import-url --url https://... [--title "Title"] [--id slug]\n`);
   process.exit(code);
 }
 
@@ -177,9 +177,14 @@ async function readMetadata(cwd, id) { return JSON.parse(await readFile(join(art
 async function writeMetadata(cwd, meta) { meta.updatedAt = new Date().toISOString(); await writeFile(join(artifactDir(cwd, meta.id), 'artifact.json'), JSON.stringify(meta, null, 2) + '\n', 'utf8'); }
 
 async function validateCommand(args) {
-  const id = required(args.id, '--id');
-  await buildDist(cwd, id, args.noindex !== 'false');
-  const result = await validateArtifact(cwd, id, Boolean(args.strict));
+  let result;
+  if (args.file) {
+    result = await validateHtmlFile(resolve(cwd, args.file), Boolean(args.strict));
+  } else {
+    const id = required(args.id, '--id or --file');
+    await buildDist(cwd, id, args.noindex !== 'false');
+    result = await validateArtifact(cwd, id, Boolean(args.strict));
+  }
   console.log(formatValidation(result));
   process.exit(result.ok ? 0 : 2);
 }
@@ -214,6 +219,25 @@ async function validateArtifact(cwd, id, strict = false) {
   }
   return { ok: !issues.some(i => i.severity === 'error'), issues, fileCount: files.length, totalBytes };
 }
+async function validateHtmlFile(filePath, strict = false) {
+  if (!existsSync(filePath)) return { ok: false, issues: [{ severity: 'error', code: 'missing_file', file: filePath, message: `Missing file: ${filePath}` }], fileCount: 0, totalBytes: 0 };
+  const s = await stat(filePath);
+  const issues = [];
+  if (s.size > MAX_TEMP_ASSET_BYTES) issues.push({ severity: 'error', code: 'file_too_large', file: filePath, message: `${filePath} is ${(s.size / 1024 / 1024).toFixed(2)} MiB; limit is 5 MiB per file.` });
+  if (s.size > TARGET_TOTAL_BYTES) issues.push({ severity: strict ? 'error' : 'warning', code: 'total_size_large', file: filePath, message: `File is ${(s.size / 1024 / 1024).toFixed(2)} MiB; target is <= 16 MiB.` });
+  const content = await readFile(filePath, 'utf8');
+  const checks = [
+    [/<script\s+[^>]*src\s*=\s*["']https?:\/\//i, 'external_script', 'External script source detected.'],
+    [/<link\s+[^>]*href\s*=\s*["']https?:\/\//i, 'external_stylesheet', 'External stylesheet/font link detected.'],
+    [/<img\s+[^>]*src\s*=\s*["']https?:\/\//i, 'external_image', 'External image detected; embed as data URI or inline SVG for a self-contained artifact.'],
+    [/@import\s+url\(\s*["']?https?:\/\//i, 'external_css_import', 'External CSS import detected.'],
+    [/\bfetch\s*\(/i, 'fetch', 'fetch() detected; published artifacts should not call APIs at view time unless explicitly intended.'],
+    [/\bXMLHttpRequest\b/i, 'xhr', 'XMLHttpRequest detected; published artifacts should not call APIs at view time unless explicitly intended.'],
+    [/\bWebSocket\b/i, 'websocket', 'WebSocket detected; published artifacts should not call APIs at view time unless explicitly intended.'],
+  ];
+  for (const [re, code, message] of checks) if (re.test(content)) issues.push({ severity: strict ? 'error' : 'warning', code, message, file: filePath });
+  return { ok: !issues.some(i => i.severity === 'error'), issues, fileCount: 1, totalBytes: s.size };
+}
 function formatValidation(result) {
   const lines = [`${result.ok ? 'OK' : 'FAILED'}: ${result.fileCount} files, ${(result.totalBytes / 1024).toFixed(1)} KiB`];
   for (const issue of result.issues) lines.push(`${issue.severity.toUpperCase()} ${issue.code}${issue.file ? ` (${issue.file})` : ''}: ${issue.message}`);
@@ -233,14 +257,22 @@ async function listArtifactsCommand() {
 
 const mime = { '.html': 'text/html; charset=utf-8', '.htm': 'text/html; charset=utf-8', '.md': 'text/markdown; charset=utf-8', '.css': 'text/css; charset=utf-8', '.js': 'text/javascript; charset=utf-8', '.json': 'application/json; charset=utf-8', '.svg': 'image/svg+xml', '.png': 'image/png', '.jpg': 'image/jpeg', '.jpeg': 'image/jpeg', '.webp': 'image/webp' };
 async function previewCommand(args) {
-  const id = required(args.id, '--id');
-  await buildDist(cwd, id);
-  const distDir = join(artifactDir(cwd, id), 'dist');
+  let distDir;
+  if (args.file) {
+    const filePath = resolve(cwd, args.file);
+    if (!existsSync(filePath)) throw new Error(`Missing file: ${filePath}`);
+    distDir = dirname(filePath);
+  } else {
+    const id = required(args.id, '--id or --file');
+    await buildDist(cwd, id);
+    distDir = join(artifactDir(cwd, id), 'dist');
+  }
+  const entryFile = args.file ? resolve(cwd, args.file) : undefined;
   const server = createServer((req, res) => {
     const url = new URL(req.url || '/', 'http://localhost');
     const safeRel = url.pathname.replace(/^\/+/, '').replace(/\.\.+/g, '');
-    let p = join(distDir, safeRel);
-    if (!safeRel || safeRel.endsWith('/')) for (const idx of ['index.html', 'index.md', 'index.htm', 'README.md']) if (existsSync(join(distDir, idx))) { p = join(distDir, idx); break; }
+    let p = entryFile && (!safeRel || safeRel.endsWith('/')) ? entryFile : join(distDir, safeRel);
+    if (!entryFile && (!safeRel || safeRel.endsWith('/'))) for (const idx of ['index.html', 'index.md', 'index.htm', 'README.md']) if (existsSync(join(distDir, idx))) { p = join(distDir, idx); break; }
     if (!resolve(p).startsWith(resolve(distDir)) || !existsSync(p)) { res.writeHead(404); res.end('Not found'); return; }
     res.writeHead(200, { 'content-type': mime[extname(p)] || 'application/octet-stream' });
     createReadStream(p).pipe(res);
@@ -276,12 +308,23 @@ async function importUrlCommand(args) {
 }
 
 async function publishCommand(args) {
-  const id = required(args.id, '--id');
   const target = args.target === 'permanent' || args.target === 'cloudflare-permanent' ? 'permanent' : 'temporary';
-  await buildDist(cwd, id, args.noindex !== 'false');
-  const validation = await validateArtifact(cwd, id, true);
-  if (!validation.ok) throw new Error(`Publish blocked by validation errors:\n${formatValidation(validation)}`);
-  const { deployDir, configPath } = await writeWranglerProject(cwd, id);
+  let deployDir, configPath, id, updateMetadata = false, cleanupDeployDir = false;
+  if (args.file) {
+    const filePath = resolve(cwd, args.file);
+    const validation = await validateHtmlFile(filePath, true);
+    if (!validation.ok) throw new Error(`Publish blocked by validation errors:\n${formatValidation(validation)}`);
+    id = args.name || slugify(filePath.replace(/\.[^.]+$/, '').split(/[\\/]/).pop());
+    ({ deployDir, configPath } = await writeFileWranglerProject(filePath, id, args.noindex !== 'false'));
+    cleanupDeployDir = true;
+  } else {
+    id = required(args.id, '--id or --file');
+    await buildDist(cwd, id, args.noindex !== 'false');
+    const validation = await validateArtifact(cwd, id, true);
+    if (!validation.ok) throw new Error(`Publish blocked by validation errors:\n${formatValidation(validation)}`);
+    ({ deployDir, configPath } = await writeWranglerProject(cwd, id));
+    updateMetadata = true;
+  }
   const npxArgs = ['--yes', 'wrangler@latest', 'deploy', '--config', configPath];
   if (target === 'temporary') npxArgs.push('--temporary');
   if (target === 'permanent' && args.domain) npxArgs.push('--domain', args.domain);
@@ -292,13 +335,18 @@ async function publishCommand(args) {
     const url = result.output.match(/https:\/\/[^\s]+\.workers\.dev[^\s]*/)?.[0];
     const claimUrl = result.output.match(/https:\/\/dash\.cloudflare\.com\/workers-and-pages\/claim\?[^\s]+/)?.[0];
     if (!url) throw new Error(`Could not find workers.dev URL in wrangler output\n${result.output}`);
-    const meta = await readMetadata(cwd, id);
-    meta.latestPublishedUrl = url;
-    meta.versions ||= [];
-    meta.versions.push({ version: (meta.versions.at(-1)?.version || 0) + 1, createdAt: new Date().toISOString(), path: 'dist/index.html', published: { target, url, claimUrl } });
-    await writeMetadata(cwd, meta);
-    console.log(`Published artifact:\n${url}${claimUrl ? `\nClaim within 60 minutes: ${claimUrl}` : ''}`);
-  } finally { if (tempHome) await rm(tempHome, { recursive: true, force: true }); }
+    if (updateMetadata) {
+      const meta = await readMetadata(cwd, id);
+      meta.latestPublishedUrl = url;
+      meta.versions ||= [];
+      meta.versions.push({ version: (meta.versions.at(-1)?.version || 0) + 1, createdAt: new Date().toISOString(), path: 'dist/index.html', published: { target, url, claimUrl } });
+      await writeMetadata(cwd, meta);
+    }
+    console.log(`Published ${args.file ? 'HTML file' : 'artifact'}:\n${url}${claimUrl ? `\nClaim within 60 minutes: ${claimUrl}` : ''}`);
+  } finally {
+    if (tempHome) await rm(tempHome, { recursive: true, force: true });
+    if (cleanupDeployDir) await rm(deployDir, { recursive: true, force: true });
+  }
 }
 async function writeWranglerProject(cwd, id) {
   const dir = artifactDir(cwd, id);
@@ -306,6 +354,17 @@ async function writeWranglerProject(cwd, id) {
   await mkdir(deployDir, { recursive: true });
   const configPath = join(deployDir, 'wrangler.jsonc');
   await writeFile(configPath, JSON.stringify({ name: `artifact-${slugify(id)}`, compatibility_date: '2026-01-01', assets: { directory: '../dist' } }, null, 2) + '\n', 'utf8');
+  return { deployDir, configPath };
+}
+async function writeFileWranglerProject(filePath, id, noindex = true) {
+  const deployDir = await mkdtemp(join(tmpdir(), 'artifact-skill-file-deploy-'));
+  const assetsDir = join(deployDir, 'assets');
+  await mkdir(assetsDir, { recursive: true });
+  await cp(filePath, join(assetsDir, 'index.html'));
+  const headers = ['/*', noindex ? '  X-Robots-Tag: noindex' : undefined, '  Referrer-Policy: no-referrer', '  X-Content-Type-Options: nosniff'].filter(Boolean).join('\n') + '\n';
+  await writeFile(join(assetsDir, '_headers'), headers, 'utf8');
+  const configPath = join(deployDir, 'wrangler.jsonc');
+  await writeFile(configPath, JSON.stringify({ name: `artifact-${slugify(id)}`, compatibility_date: '2026-01-01', assets: { directory: './assets' } }, null, 2) + '\n', 'utf8');
   return { deployDir, configPath };
 }
 function isolatedCloudflareEnv(home) {

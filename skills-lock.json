@@ -5,7 +5,7 @@
       "source": "geclos/artifact-designer-skill",
       "sourceType": "github",
       "skillPath": "artifact-designer/SKILL.md",
-      "computedHash": "67f4744055078149fd6466cd5e83c08e4e97f7076821f1740cf005d434729660"
+      "computedHash": "cc8b81dbd798fac6a2c076b5183096bbf16a124aec43f8f6b4dc4fb40d213db8"
     },
     "explain-diff-html": {
       "source": "geclos/explain-diff-html",
