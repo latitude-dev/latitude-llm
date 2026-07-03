@@ -64,6 +64,75 @@
           "authorization_servers"
         ]
       },
+      "BootstrapAccountResponse": {
+        "type": "object",
+        "properties": {
+          "organizationSlug": {
+            "type": "string",
+            "description": "Slug of the temporary organization."
+          },
+          "projectSlug": {
+            "type": "string",
+            "description": "Slug of the created project."
+          },
+          "apiKey": {
+            "type": "string",
+            "description": "Organization-scoped API key."
+          },
+          "claimUrl": {
+            "type": "string",
+            "description": "URL to open in a browser to claim ownership of the organization."
+          },
+          "claimEmail": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "Email address the claim link will be sent to, or `null` if none was provided."
+          },
+          "claimExpiresAt": {
+            "type": "string",
+            "description": "ISO-8601 timestamp when the claim link expires. The organization is deleted if not claimed by then."
+          }
+        },
+        "required": [
+          "organizationSlug",
+          "projectSlug",
+          "apiKey",
+          "claimUrl",
+          "claimEmail",
+          "claimExpiresAt"
+        ]
+      },
+      "Error": {
+        "type": "object",
+        "properties": {
+          "error": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "error"
+        ]
+      },
+      "BootstrapAccountBody": {
+        "type": "object",
+        "properties": {
+          "organizationName": {
+            "type": "string",
+            "description": "Name for the temporary organization. If not provided, defaults to \"My Organization\"."
+          },
+          "projectName": {
+            "type": "string",
+            "description": "Name for the project created in the organization. If not provided, defaults to \"My Project\"."
+          },
+          "userEmail": {
+            "type": "string",
+            "format": "email",
+            "description": "Email address to send the claim link to."
+          }
+        }
+      },
       "Project": {
         "type": "object",
         "properties": {
@@ -200,17 +269,6 @@
           }
         },
         "description": "Tuning parameters for the escalation detector. Affects detector behaviour regardless of whether notifications are enabled."
-      },
-      "Error": {
-        "type": "object",
-        "properties": {
-          "error": {
-            "type": "string"
-          }
-        },
-        "required": [
-          "error"
-        ]
       },
       "CreateProjectBody": {
         "type": "object",
@@ -9849,6 +9907,7 @@
           "Health"
         ],
         "summary": "Health check",
+        "security": [],
         "x-fern-ignore": true,
         "responses": {
           "200": {
@@ -9872,6 +9931,7 @@
         ],
         "summary": "OAuth protected resource metadata",
         "description": "RFC 9728 metadata document advertising the authorization server(s) trusted to issue access tokens for this API.",
+        "security": [],
         "x-fern-ignore": true,
         "responses": {
           "200": {
@@ -9880,6 +9940,61 @@
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/OAuthProtectedResourceMetadata"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/account/bootstrap": {
+      "post": {
+        "operationId": "bootstrapAccount",
+        "tags": [
+          "Account"
+        ],
+        "x-fern-sdk-group-name": "account",
+        "x-fern-sdk-method-name": "bootstrap",
+        "summary": "Bootstrap a temporary account",
+        "description": "Creates a temporary organization with an API key and a project, and returns a link to claim ownership of it. Requires no authentication.",
+        "security": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/BootstrapAccountBody"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Temporary account created",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BootstrapAccountResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Validation error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Rate limit exceeded",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
                 }
               }
             }

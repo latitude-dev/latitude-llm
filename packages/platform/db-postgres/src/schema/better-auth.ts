@@ -1,4 +1,5 @@
 import type { NotificationPreferences, OrganizationSettings } from "@domain/shared"
+import { sql } from "drizzle-orm"
 import { boolean, index, integer, jsonb, text, uniqueIndex, varchar } from "drizzle-orm/pg-core"
 import {
   cuid,
@@ -138,9 +139,13 @@ export const organizations = latitudeSchema.table(
     /** App extension (not in BA reference). */
     settings: jsonb("settings").$type<OrganizationSettings>(),
     parentOrgId: cuid("parent_org_id", { default: false }),
+    expiresAt: tzTimestamp("expires_at"),
     ...timestamps(),
   },
-  (t) => [index("organizations_parent_org_id_idx").on(t.parentOrgId)],
+  (t) => [
+    index("organizations_parent_org_id_idx").on(t.parentOrgId),
+    index("organizations_expires_at_idx").on(t.expiresAt).where(sql`${t.expiresAt} is not null`),
+  ],
 )
 
 export const members = latitudeSchema.table(

@@ -36,6 +36,20 @@ const _registry = {
     }
   }>(),
 
+  "organization-claim-email": payloads<{
+    send: {
+      readonly email: string
+      readonly claimUrl: string
+      readonly organizationName: string
+      readonly expiresAt: string
+    }
+  }>(),
+
+  "organization-cleanup": payloads<{
+    /** Fired by a daily cron — hard-deletes temporary orgs past their claim deadline. */
+    reapExpired: Record<string, never>
+  }>(),
+
   "user-deletion": payloads<{
     delete: {
       readonly organizationId: string
@@ -488,6 +502,10 @@ const _registry = {
       readonly queueAssigneeUserIds: readonly string[]
       readonly apiKeyId: string
       readonly timelineAnchorIso: string
+    }
+    createDemo: {
+      readonly organizationId: string
+      readonly ownerUserId: string
     }
   }>(),
 

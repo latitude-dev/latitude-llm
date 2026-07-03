@@ -21,6 +21,7 @@ export const organizationSchema = z.object({
   metadata: z.string().nullable(), // Better auth needs it
   settings: organizationSettingsSchema.nullable(),
   parentOrgId: organizationIdSchema.nullable(),
+  expiresAt: z.date().nullable(),
   createdAt: z.date(),
   updatedAt: z.date(),
 })
@@ -38,6 +39,7 @@ export const createOrganization = (params: {
   metadata?: string | null
   settings?: OrganizationSettings | null
   parentOrgId?: OrganizationId | null
+  expiresAt?: Date | null
   createdAt?: Date
   updatedAt?: Date
 }): Organization => {
@@ -50,6 +52,7 @@ export const createOrganization = (params: {
     metadata: params.metadata ?? null,
     settings: params.settings ?? null,
     parentOrgId: params.parentOrgId ?? null,
+    expiresAt: params.expiresAt ?? null,
     createdAt: params.createdAt ?? now,
     updatedAt: params.updatedAt ?? now,
   })

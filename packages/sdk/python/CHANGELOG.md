@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [7.3.0] - 2026-07-03
+
+### Added
+
+- `client.account.bootstrap` — create a temporary organization (with an API key and a project) and get a link to claim ownership of it. Unauthenticated; powers the agentic zero-account onboarding flow.
+
 ## [7.2.0] - 2026-07-03
 
 ### Added

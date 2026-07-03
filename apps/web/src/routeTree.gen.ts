@@ -22,6 +22,7 @@ import { Route as DownloadsExportRouteImport } from './routes/downloads/export'
 import { Route as DesignSystemColorsRouteImport } from './routes/design-system/colors'
 import { Route as DesignSystemChatRouteImport } from './routes/design-system/chat'
 import { Route as DesignSystemButtonRouteImport } from './routes/design-system/button'
+import { Route as ClaimTokenRouteImport } from './routes/claim.$token'
 import { Route as CcWrappedIdRouteImport } from './routes/cc-wrapped/$id'
 import { Route as BackofficeWrappedRouteImport } from './routes/backoffice/wrapped'
 import { Route as BackofficeSearchRouteImport } from './routes/backoffice/search'
@@ -150,6 +151,11 @@ const DesignSystemButtonRoute = DesignSystemButtonRouteImport.update({
   id: '/button',
   path: '/button',
   getParentRoute: () => DesignSystemRouteRoute,
+} as any)
+const ClaimTokenRoute = ClaimTokenRouteImport.update({
+  id: '/claim/$token',
+  path: '/claim/$token',
+  getParentRoute: () => rootRouteImport,
 } as any)
 const CcWrappedIdRoute = CcWrappedIdRouteImport.update({
   id: '/cc-wrapped/$id',
@@ -544,6 +550,7 @@ export interface FileRoutesByFullPath {
   '/backoffice/search': typeof BackofficeSearchRoute
   '/backoffice/wrapped': typeof BackofficeWrappedRoute
   '/cc-wrapped/$id': typeof CcWrappedIdRouteWithChildren
+  '/claim/$token': typeof ClaimTokenRoute
   '/design-system/button': typeof DesignSystemButtonRoute
   '/design-system/chat': typeof DesignSystemChatRoute
   '/design-system/colors': typeof DesignSystemColorsRoute
@@ -618,6 +625,7 @@ export interface FileRoutesByTo {
   '/backoffice/search': typeof BackofficeSearchRoute
   '/backoffice/wrapped': typeof BackofficeWrappedRoute
   '/cc-wrapped/$id': typeof CcWrappedIdRouteWithChildren
+  '/claim/$token': typeof ClaimTokenRoute
   '/design-system/button': typeof DesignSystemButtonRoute
   '/design-system/chat': typeof DesignSystemChatRoute
   '/design-system/colors': typeof DesignSystemColorsRoute
@@ -696,6 +704,7 @@ export interface FileRoutesById {
   '/backoffice/search': typeof BackofficeSearchRoute
   '/backoffice/wrapped': typeof BackofficeWrappedRoute
   '/cc-wrapped/$id': typeof CcWrappedIdRouteWithChildren
+  '/claim/$token': typeof ClaimTokenRoute
   '/design-system/button': typeof DesignSystemButtonRoute
   '/design-system/chat': typeof DesignSystemChatRoute
   '/design-system/colors': typeof DesignSystemColorsRoute
@@ -777,6 +786,7 @@ export interface FileRouteTypes {
     | '/backoffice/search'
     | '/backoffice/wrapped'
     | '/cc-wrapped/$id'
+    | '/claim/$token'
     | '/design-system/button'
     | '/design-system/chat'
     | '/design-system/colors'
@@ -851,6 +861,7 @@ export interface FileRouteTypes {
     | '/backoffice/search'
     | '/backoffice/wrapped'
     | '/cc-wrapped/$id'
+    | '/claim/$token'
     | '/design-system/button'
     | '/design-system/chat'
     | '/design-system/colors'
@@ -928,6 +939,7 @@ export interface FileRouteTypes {
     | '/backoffice/search'
     | '/backoffice/wrapped'
     | '/cc-wrapped/$id'
+    | '/claim/$token'
     | '/design-system/button'
     | '/design-system/chat'
     | '/design-system/colors'
@@ -1006,6 +1018,7 @@ export interface RootRouteChildren {
   AuthConsentRoute: typeof AuthConsentRoute
   AuthInviteRoute: typeof AuthInviteRoute
   CcWrappedIdRoute: typeof CcWrappedIdRouteWithChildren
+  ClaimTokenRoute: typeof ClaimTokenRoute
   DownloadsExportRoute: typeof DownloadsExportRoute
   WrappedIdRoute: typeof WrappedIdRouteWithChildren
   WelcomeIndexRoute: typeof WelcomeIndexRoute
@@ -1111,6 +1124,13 @@ declare module '@tanstack/react-router' {
       fullPath: '/design-system/button'
       preLoaderRoute: typeof DesignSystemButtonRouteImport
       parentRoute: typeof DesignSystemRouteRoute
+    }
+    '/claim/$token': {
+      id: '/claim/$token'
+      path: '/claim/$token'
+      fullPath: '/claim/$token'
+      preLoaderRoute: typeof ClaimTokenRouteImport
+      parentRoute: typeof rootRouteImport
     }
     '/cc-wrapped/$id': {
       id: '/cc-wrapped/$id'
@@ -1834,6 +1854,7 @@ const rootRouteChildren: RootRouteChildren = {
   AuthConsentRoute: AuthConsentRoute,
   AuthInviteRoute: AuthInviteRoute,
   CcWrappedIdRoute: CcWrappedIdRouteWithChildren,
+  ClaimTokenRoute: ClaimTokenRoute,
   DownloadsExportRoute: DownloadsExportRoute,
   WrappedIdRoute: WrappedIdRouteWithChildren,
   WelcomeIndexRoute: WelcomeIndexRoute,

@@ -1,3 +1,4 @@
+export * from "./account/client/requests/index.js";
 export * as account from "./account/index.js";
 export * from "./analytics/client/requests/index.js";
 export * as analytics from "./analytics/index.js";

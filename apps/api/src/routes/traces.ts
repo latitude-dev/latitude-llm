@@ -594,6 +594,6 @@ export const createTracesRoutes = () => {
   getTraceSpan.mountHttp(app, createTierRateLimiter("low"))
   listTraceAnnotations.mountHttp(app, createTierRateLimiter("low"))
   getTraceAnnotation.mountHttp(app, createTierRateLimiter("low"))
-  exportTraces.mountHttp(app, createTierRateLimiter("critical"))
+  exportTraces.mountHttp(app, createTierRateLimiter("ultra"))
   return app
 }

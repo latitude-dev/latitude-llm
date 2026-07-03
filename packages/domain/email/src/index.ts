@@ -18,6 +18,7 @@ export type {
   NotificationEmailRenderer,
   NotificationEmailRendererRegistry,
 } from "./templates/notifications/types.ts"
+export { type OrganizationClaimEmailData, organizationClaimTemplate } from "./templates/organization-claim/index.tsx"
 export {
   type SignupExistingAccountMagicLinkEmailData,
   signupExistingAccountMagicLinkTemplate,

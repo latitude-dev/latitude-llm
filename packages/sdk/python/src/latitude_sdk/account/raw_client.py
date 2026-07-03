@@ -11,15 +11,105 @@ from ..core.pydantic_utilities import parse_obj_as
 from ..core.request_options import RequestOptions
 from ..errors.bad_request_error import BadRequestError
 from ..errors.not_found_error import NotFoundError
+from ..errors.too_many_requests_error import TooManyRequestsError
 from ..errors.unauthorized_error import UnauthorizedError
 from ..types.account_response import AccountResponse
+from ..types.bootstrap_account_response import BootstrapAccountResponse
 from ..types.error import Error
 from pydantic import ValidationError
+
+# this is used as the default value for optional parameters
+OMIT = typing.cast(typing.Any, ...)
 
 
 class RawAccountClient:
     def __init__(self, *, client_wrapper: SyncClientWrapper):
         self._client_wrapper = client_wrapper
+
+    def bootstrap(
+        self,
+        *,
+        organization_name: typing.Optional[str] = OMIT,
+        project_name: typing.Optional[str] = OMIT,
+        user_email: typing.Optional[str] = OMIT,
+        request_options: typing.Optional[RequestOptions] = None,
+    ) -> HttpResponse[BootstrapAccountResponse]:
+        """
+        Creates a temporary organization with an API key and a project, and returns a link to claim ownership of it. Requires no authentication.
+
+        Parameters
+        ----------
+        organization_name : typing.Optional[str]
+            Name for the temporary organization. If not provided, defaults to "My Organization".
+
+        project_name : typing.Optional[str]
+            Name for the project created in the organization. If not provided, defaults to "My Project".
+
+        user_email : typing.Optional[str]
+            Email address to send the claim link to.
+
+        request_options : typing.Optional[RequestOptions]
+            Request-specific configuration.
+
+        Returns
+        -------
+        HttpResponse[BootstrapAccountResponse]
+            Temporary account created
+        """
+        _response = self._client_wrapper.httpx_client.request(
+            "v1/account/bootstrap",
+            method="POST",
+            json={
+                "organizationName": organization_name,
+                "projectName": project_name,
+                "userEmail": user_email,
+            },
+            headers={
+                "content-type": "application/json",
+            },
+            request_options=request_options,
+            omit=OMIT,
+        )
+        try:
+            if 200 <= _response.status_code < 300:
+                _data = typing.cast(
+                    BootstrapAccountResponse,
+                    parse_obj_as(
+                        type_=BootstrapAccountResponse,  # type: ignore
+                        object_=_response.json(),
+                    ),
+                )
+                return HttpResponse(response=_response, data=_data)
+            if _response.status_code == 400:
+                raise BadRequestError(
+                    headers=dict(_response.headers),
+                    body=typing.cast(
+                        Error,
+                        parse_obj_as(
+                            type_=Error,  # type: ignore
+                            object_=_response.json(),
+                        ),
+                    ),
+                )
+            if _response.status_code == 429:
+                raise TooManyRequestsError(
+                    headers=dict(_response.headers),
+                    body=typing.cast(
+                        Error,
+                        parse_obj_as(
+                            type_=Error,  # type: ignore
+                            object_=_response.json(),
+                        ),
+                    ),
+                )
+            _response_json = _response.json()
+        except JSONDecodeError:
+            raise ApiError(status_code=_response.status_code, headers=dict(_response.headers), body=_response.text)
+        except ValidationError as e:
+            raise ParsingError(
+                status_code=_response.status_code, headers=dict(_response.headers), body=_response.json(), cause=e
+            )
+        raise ApiError(status_code=_response.status_code, headers=dict(_response.headers), body=_response_json)
 
     def get(self, *, request_options: typing.Optional[RequestOptions] = None) -> HttpResponse[AccountResponse]:
         """
@@ -96,6 +186,91 @@ class RawAccountClient:
 class AsyncRawAccountClient:
     def __init__(self, *, client_wrapper: AsyncClientWrapper):
         self._client_wrapper = client_wrapper
+
+    async def bootstrap(
+        self,
+        *,
+        organization_name: typing.Optional[str] = OMIT,
+        project_name: typing.Optional[str] = OMIT,
+        user_email: typing.Optional[str] = OMIT,
+        request_options: typing.Optional[RequestOptions] = None,
+    ) -> AsyncHttpResponse[BootstrapAccountResponse]:
+        """
+        Creates a temporary organization with an API key and a project, and returns a link to claim ownership of it. Requires no authentication.
+
+        Parameters
+        ----------
+        organization_name : typing.Optional[str]
+            Name for the temporary organization. If not provided, defaults to "My Organization".
+
+        project_name : typing.Optional[str]
+            Name for the project created in the organization. If not provided, defaults to "My Project".
+
+        user_email : typing.Optional[str]
+            Email address to send the claim link to.
+
+        request_options : typing.Optional[RequestOptions]
+            Request-specific configuration.
+
+        Returns
+        -------
+        AsyncHttpResponse[BootstrapAccountResponse]
+            Temporary account created
+        """
+        _response = await self._client_wrapper.httpx_client.request(
+            "v1/account/bootstrap",
+            method="POST",
+            json={
+                "organizationName": organization_name,
+                "projectName": project_name,
+                "userEmail": user_email,
+            },
+            headers={
+                "content-type": "application/json",
+            },
+            request_options=request_options,
+            omit=OMIT,
+        )
+        try:
+            if 200 <= _response.status_code < 300:
+                _data = typing.cast(
+                    BootstrapAccountResponse,
+                    parse_obj_as(
+                        type_=BootstrapAccountResponse,  # type: ignore
+                        object_=_response.json(),
+                    ),
+                )
+                return AsyncHttpResponse(response=_response, data=_data)
+            if _response.status_code == 400:
+                raise BadRequestError(
+                    headers=dict(_response.headers),
+                    body=typing.cast(
+                        Error,
+                        parse_obj_as(
+                            type_=Error,  # type: ignore
+                            object_=_response.json(),
+                        ),
+                    ),
+                )
+            if _response.status_code == 429:
+                raise TooManyRequestsError(
+                    headers=dict(_response.headers),
+                    body=typing.cast(
+                        Error,
+                        parse_obj_as(
+                            type_=Error,  # type: ignore
+                            object_=_response.json(),
+                        ),
+                    ),
+                )
+            _response_json = _response.json()
+        except JSONDecodeError:
+            raise ApiError(status_code=_response.status_code, headers=dict(_response.headers), body=_response.text)
+        except ValidationError as e:
+            raise ParsingError(
+                status_code=_response.status_code, headers=dict(_response.headers), body=_response.json(), cause=e
+            )
+        raise ApiError(status_code=_response.status_code, headers=dict(_response.headers), body=_response_json)
 
     async def get(
         self, *, request_options: typing.Optional[RequestOptions] = None

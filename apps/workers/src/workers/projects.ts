@@ -1,8 +1,15 @@
 import { OutboxEventWriter } from "@domain/events"
+import { createSampleProjectUseCase } from "@domain/organizations"
 import { ProjectRepository } from "@domain/projects"
 import type { QueueConsumer } from "@domain/queue"
 import { OrganizationId, ProjectId } from "@domain/shared"
-import { OutboxEventWriterLive, type PostgresClient, ProjectRepositoryLive, withPostgres } from "@platform/db-postgres"
+import {
+  ApiKeyRepositoryLive,
+  OutboxEventWriterLive,
+  type PostgresClient,
+  ProjectRepositoryLive,
+  withPostgres,
+} from "@platform/db-postgres"
 import { createLogger, withTracing } from "@repo/observability"
 import { Data, Effect, Layer } from "effect"
 import { getPostgresClient, getWorkflowStarter } from "../clients.ts"
@@ -115,6 +122,19 @@ export const createProjectsWorker = ({ consumer, postgresClient }: ProjectsDeps)
         ),
         withTracing,
         Effect.ignore,
+      ),
+
+    createDemo: (payload) =>
+      createSampleProjectUseCase({
+        organizationId: OrganizationId(payload.organizationId),
+        actorUserId: payload.ownerUserId,
+      }).pipe(
+        withPostgres(
+          Layer.mergeAll(ProjectRepositoryLive, ApiKeyRepositoryLive, OutboxEventWriterLive),
+          pgClient,
+          OrganizationId(payload.organizationId),
+        ),
+        withTracing,
       ),
   })
 }

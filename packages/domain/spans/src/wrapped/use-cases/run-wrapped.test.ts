@@ -119,6 +119,7 @@ const makeOrganization = (): Organization => ({
   metadata: null,
   settings: null,
   parentOrgId: null,
+  expiresAt: null,
   createdAt: new Date("2026-01-01T00:00:00.000Z"),
   updatedAt: new Date("2026-01-01T00:00:00.000Z"),
 })
@@ -132,6 +133,7 @@ const makeOrganizationRepository = (organization: Organization): (typeof Organiz
   save: () => Effect.die("save not used"),
   delete: () => Effect.die("delete not used"),
   countBySlug: () => Effect.die("countBySlug not used"),
+  listExpiredUnclaimed: () => Effect.die("listExpiredUnclaimed not used"),
 })
 
 const makeProjectRepository = (project: Project): (typeof ProjectRepository)["Service"] => ({

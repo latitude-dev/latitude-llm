@@ -60,6 +60,7 @@ const orgRepoLayer = (parentOrgId: OrganizationId | null) =>
               metadata: null,
               settings: null,
               parentOrgId,
+              expiresAt: null,
               createdAt: new Date(),
               updatedAt: new Date(),
             } satisfies Organization)
@@ -68,6 +69,7 @@ const orgRepoLayer = (parentOrgId: OrganizationId | null) =>
       save: () => Effect.die("not used"),
       delete: () => Effect.die("not used"),
       countBySlug: () => Effect.die("not used"),
+      listExpiredUnclaimed: () => Effect.die("not used"),
     }),
   )
 

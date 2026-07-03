@@ -56,6 +56,7 @@ import { createIncidentsWorker } from "./workers/domain-events/incidents.ts"
 import { createInvitationEmailWorker } from "./workers/domain-events/invitation-email.ts"
 import { createMagicLinkEmailWorker } from "./workers/domain-events/magic-link-email.ts"
 import { createMarketingContactsWorker } from "./workers/domain-events/marketing-contacts.ts"
+import { createOrganizationClaimEmailWorker } from "./workers/domain-events/organization-claim-email.ts"
 import { createUserDeletionWorker } from "./workers/domain-events/user-deletion.ts"
 import { createDomainEventsWorker } from "./workers/domain-events.ts"
 import { createEvaluationsWorker } from "./workers/evaluations.ts"
@@ -65,6 +66,7 @@ import { createMonitorsWorker } from "./workers/monitors.ts"
 import { createNotificationEmailerWorker } from "./workers/notification-emailer.ts"
 import { createNotificationSlackWorker } from "./workers/notification-slack.ts"
 import { createNotificationsWorker } from "./workers/notifications.ts"
+import { createOrganizationCleanupWorker } from "./workers/organization-cleanup.ts"
 import { createPostHogAnalyticsWorker } from "./workers/posthog-analytics.ts"
 import { createProductFeedbackWorker } from "./workers/product-feedback.ts"
 import { createProjectsWorker } from "./workers/projects.ts"
@@ -191,6 +193,8 @@ const bootstrap = async () => {
     createDomainEventsWorker(ctx)
     createMagicLinkEmailWorker(ctx)
     createInvitationEmailWorker(ctx)
+    createOrganizationClaimEmailWorker(ctx)
+    createOrganizationCleanupWorker(ctx)
     createUserDeletionWorker(ctx)
     createMarketingContactsWorker(ctx)
     createIncidentsWorker(ctx)
@@ -271,6 +275,17 @@ const bootstrap = async () => {
           "triggerWeeklyRun",
           {},
           { key: "wrapped:weekly", pattern: "0 9 * * 5", tz: "UTC" },
+        )
+        .pipe(withTracing),
+    )
+
+    await Effect.runPromise(
+      queuePublisher
+        .scheduleRepeatable(
+          "organization-cleanup",
+          "reapExpired",
+          {},
+          { key: "organization-cleanup:daily", pattern: "0 3 * * *", tz: "UTC" },
         )
         .pipe(withTracing),
     )

@@ -41,9 +41,7 @@ client = LatitudeClient(
     api_key="<token>",
 )
 
-client.projects.create(
-    name="name",
-)
+client.account.bootstrap()
 ```
 
 ## Environments
@@ -74,9 +72,7 @@ client = AsyncLatitudeClient(
 
 
 async def main() -> None:
-    await client.projects.create(
-        name="name",
-    )
+    await client.account.bootstrap()
 
 
 asyncio.run(main())
@@ -91,7 +87,7 @@ will be thrown.
 from latitude_sdk.core.api_error import ApiError
 
 try:
-    client.projects.create(...)
+    client.account.bootstrap(...)
 except ApiError as e:
     print(e.status_code)
     print(e.body)
@@ -108,7 +104,7 @@ The `.with_raw_response` property returns a "raw" client that can be used to acc
 from latitude_sdk import LatitudeClient
 
 client = LatitudeClient(...)
-response = client.projects.with_raw_response.create(...)
+response = client.account.with_raw_response.bootstrap(...)
 print(response.headers)  # access the response headers
 print(response.status_code)  # access the response status code
 print(response.data)  # access the underlying object
@@ -139,7 +135,7 @@ Which status codes are retried depends on the `retryStatusCodes` generator confi
 Use the `max_retries` request option to configure this behavior.
 
 ```python
-client.projects.create(..., request_options={
+client.account.bootstrap(..., request_options={
     "max_retries": 1
 })
 ```
@@ -154,7 +150,7 @@ from latitude_sdk import LatitudeClient
 client = LatitudeClient(..., timeout=20.0)
 
 # Override timeout for a specific method
-client.projects.create(..., request_options={
+client.account.bootstrap(..., request_options={
     "timeout_in_seconds": 1
 })
 ```

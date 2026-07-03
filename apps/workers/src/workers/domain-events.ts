@@ -386,6 +386,20 @@ export const createDomainEventsWorker = ({
         backoff: { type: "exponential", delayMs: 1_000 },
       }),
 
+    OrganizationClaimed: (event) =>
+      pub.publish("projects", "createDemo", event.payload, {
+        dedupeKey: `projects:create-demo:${event.payload.organizationId}`,
+      }),
+
+    ClaimEmailRequested: (event) =>
+      hash(event.payload.claimUrl).pipe(
+        Effect.flatMap((claimHash) =>
+          pub.publish("organization-claim-email", "send", event.payload, {
+            dedupeKey: `emails:organization-claim:${claimHash}`,
+          }),
+        ),
+      ),
+
     ProjectCreated: (event) =>
       pub.publish("projects", "provision", event.payload, {
         dedupeKey: `projects:provision:${event.payload.projectId}`,

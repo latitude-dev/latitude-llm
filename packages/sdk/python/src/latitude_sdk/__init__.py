@@ -239,6 +239,7 @@ if typing.TYPE_CHECKING:
         ApiKey,
         ApiKeyList,
         ApiKeyListItem,
+        BootstrapAccountResponse,
         CreateCustomScoreBody,
         CreateEvaluationScoreBody,
         CreateMonitorBody,
@@ -669,7 +670,14 @@ if typing.TYPE_CHECKING:
         UsersOverviewBucket,
         UsersOverviewResponse,
     )
-    from .errors import BadRequestError, ContentTooLargeError, ForbiddenError, NotFoundError, UnauthorizedError
+    from .errors import (
+        BadRequestError,
+        ContentTooLargeError,
+        ForbiddenError,
+        NotFoundError,
+        TooManyRequestsError,
+        UnauthorizedError,
+    )
     from . import (
         account,
         analytics,
@@ -1092,6 +1100,7 @@ _dynamic_imports: typing.Dict[str, str] = {
     "ApiKeyListItem": ".types",
     "AsyncLatitudeClient": ".client",
     "BadRequestError": ".errors",
+    "BootstrapAccountResponse": ".types",
     "CoOccurrenceToolsRequestErrorsOnly": ".tools",
     "ContentTooLargeError": ".errors",
     "ContextToolsRequestDimension": ".tools",
@@ -1566,6 +1575,7 @@ _dynamic_imports: typing.Dict[str, str] = {
     "SpanDetailStatusCode": ".types",
     "SpanKind": ".types",
     "SpanStatusCode": ".types",
+    "TooManyRequestsError": ".errors",
     "ToolCallHistogramBucket": ".types",
     "ToolCoOccurrenceResponse": ".types",
     "ToolCoOccurrenceRow": ".types",
@@ -1964,6 +1974,7 @@ __all__ = [
     "ApiKeyListItem",
     "AsyncLatitudeClient",
     "BadRequestError",
+    "BootstrapAccountResponse",
     "CoOccurrenceToolsRequestErrorsOnly",
     "ContentTooLargeError",
     "ContextToolsRequestDimension",
@@ -2438,6 +2449,7 @@ __all__ = [
     "SpanDetailStatusCode",
     "SpanKind",
     "SpanStatusCode",
+    "TooManyRequestsError",
     "ToolCallHistogramBucket",
     "ToolCoOccurrenceResponse",
     "ToolCoOccurrenceRow",

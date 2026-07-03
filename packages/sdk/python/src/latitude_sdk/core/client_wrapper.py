@@ -11,7 +11,7 @@ class BaseClientWrapper:
     def __init__(
         self,
         *,
-        api_key: typing.Union[str, typing.Callable[[], str]],
+        api_key: typing.Optional[typing.Union[str, typing.Callable[[], str]]] = None,
         headers: typing.Optional[typing.Dict[str, str]] = None,
         base_url: str,
         timeout: typing.Optional[float] = None,
@@ -33,17 +33,19 @@ class BaseClientWrapper:
         import platform
 
         headers: typing.Dict[str, str] = {
-            "User-Agent": "latitude_sdk/7.2.0",
+            "User-Agent": "latitude_sdk/7.3.0",
             "X-Fern-Language": "Python",
             "X-Fern-Runtime": f"python/{platform.python_version()}",
             "X-Fern-Platform": f"{platform.system().lower()}/{platform.release()}",
             **(self.get_custom_headers() or {}),
         }
-        headers["Authorization"] = f"Bearer {self._get_api_key()}"
+        api_key = self._get_api_key()
+        if api_key is not None:
+            headers["Authorization"] = f"Bearer {api_key}"
         return headers
 
-    def _get_api_key(self) -> str:
-        if isinstance(self._api_key, str):
+    def _get_api_key(self) -> typing.Optional[str]:
+        if isinstance(self._api_key, str) or self._api_key is None:
             return self._api_key
         else:
             return self._api_key()
@@ -71,7 +73,7 @@ class SyncClientWrapper(BaseClientWrapper):
     def __init__(
         self,
         *,
-        api_key: typing.Union[str, typing.Callable[[], str]],
+        api_key: typing.Optional[typing.Union[str, typing.Callable[[], str]]] = None,
         headers: typing.Optional[typing.Dict[str, str]] = None,
         base_url: str,
         timeout: typing.Optional[float] = None,
@@ -105,7 +107,7 @@ class AsyncClientWrapper(BaseClientWrapper):
     def __init__(
         self,
         *,
-        api_key: typing.Union[str, typing.Callable[[], str]],
+        api_key: typing.Optional[typing.Union[str, typing.Callable[[], str]]] = None,
         headers: typing.Optional[typing.Dict[str, str]] = None,
         base_url: str,
         timeout: typing.Optional[float] = None,
