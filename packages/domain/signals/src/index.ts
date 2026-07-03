@@ -11,6 +11,11 @@ export {
   createSignalUseCase,
 } from "./use-cases/create-signal.ts"
 export {
+  type CreateSignalFromPromptError,
+  type CreateSignalFromPromptInput,
+  createSignalFromPromptUseCase,
+} from "./use-cases/create-signal-from-prompt.ts"
+export {
   type DeleteSignalError,
   type DeleteSignalInput,
   type DeleteSignalResult,

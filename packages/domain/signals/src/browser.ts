@@ -113,6 +113,11 @@ export {
   semanticRelatednessScore,
 } from "./related-signals.ts"
 export {
+  buildSignalGenerationResultKey,
+  SIGNAL_GENERATION_RESULT_TTL_SECONDS,
+  type SignalGenerationResult,
+} from "./signal-generation-result.ts"
+export {
   type ApplySignalLifecycleCommandError,
   type ApplySignalLifecycleCommandInput,
   type ApplySignalLifecycleCommandResult,

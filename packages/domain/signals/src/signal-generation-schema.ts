@@ -1,0 +1,199 @@
+import {
+  type EvaluationSettings,
+  evaluationSettingsSchema,
+  type FilterCondition,
+  type FilterSet,
+  filterSetSchema,
+} from "@domain/shared"
+import { z } from "zod"
+import { SIGNAL_NAME_MAX_LENGTH } from "./constants.ts"
+
+const messageScopeSchema = z.enum(["last_assistant", "any_assistant", "any_user", "any_tool", "conversation"])
+const comparisonOperatorSchema = z.enum(["gt", "gte", "lt", "lte"])
+
+// Generation-side mirror of `evaluationRuleConditionSchema`: no `.default()`/`.optional()` (every
+// property present, `.nullable()` where the shared schema is optional) so it converts cleanly to
+// provider structured-output JSON schema. `mapGeneratedSignalDraft` re-parses through the shared
+// schema, which re-applies the refinements omitted here (regex validity, traceCount aggregation).
+const generatedRuleConditionSchema = z.discriminatedUnion("type", [
+  z.object({
+    type: z.literal("text_match"),
+    scope: messageScopeSchema,
+    operator: z.enum(["contains", "not_contains", "matches_regex", "not_matches_regex"]),
+    value: z.string().min(1),
+    caseSensitive: z.boolean(),
+  }),
+  z.object({ type: z.literal("empty_output") }),
+  z.object({
+    type: z.literal("output_length"),
+    unit: z.enum(["chars", "words"]),
+    operator: comparisonOperatorSchema,
+    value: z.number().int().nonnegative(),
+  }),
+  z.object({ type: z.literal("json_output"), expectation: z.enum(["valid", "invalid"]) }),
+  z.object({
+    type: z.literal("metric"),
+    field: z.enum([
+      "duration",
+      "cost",
+      "tokensTotal",
+      "tokensInput",
+      "tokensOutput",
+      "errorCount",
+      "traceCount",
+      "spanCount",
+    ]),
+    aggregation: z.enum(["session", "anyTrace", "allTraces"]),
+    operator: comparisonOperatorSchema,
+    value: z.number().nonnegative(),
+  }),
+  z.object({ type: z.literal("tool_used"), toolName: z.string().min(1) }),
+  z.object({ type: z.literal("tool_failed"), toolName: z.string().min(1).nullable() }),
+  z.object({
+    type: z.literal("tool_call_count"),
+    operator: comparisonOperatorSchema,
+    value: z.number().int().nonnegative(),
+  }),
+  z.object({ type: z.literal("error") }),
+  z.object({ type: z.literal("finish_reason"), value: z.string().min(1) }),
+])
+
+// The four multi-select dimensions the builder's scope editor offers, plus metadata key/value
+// pairs — exactly what a created signal's filters can round-trip through the UI.
+const generatedFiltersSchema = z.object({
+  tags: z.array(z.string().min(1)).nullable(),
+  serviceNames: z.array(z.string().min(1)).nullable(),
+  models: z.array(z.string().min(1)).nullable(),
+  providers: z.array(z.string().min(1)).nullable(),
+  metadata: z
+    .array(z.object({ key: z.string().min(1), value: z.string().min(1) }))
+    .nullable()
+    .describe("Only when the user explicitly names a metadata key and value"),
+})
+
+export const generatedSignalDraftSchema = z.object({
+  reasoning: z.string().min(1).describe("How the draft maps to the ask and which observed project values you matched"),
+  confirm: z
+    .boolean()
+    .describe("true ONLY on a review turn when the previewed verdicts match the ask and no changes are needed"),
+  name: z.string().min(1).max(SIGNAL_NAME_MAX_LENGTH),
+  description: z
+    .string()
+    .min(1)
+    .describe("One or two sentences a teammate would recognize; record the interpretation you took"),
+  evaluationKind: z.enum(["rule", "judge", "script"]).describe("Prefer rule, then judge, then script"),
+  ruleMatch: z.enum(["all", "any"]).nullable().describe("Required when evaluationKind is rule"),
+  ruleConditions: z
+    .array(generatedRuleConditionSchema)
+    .max(10)
+    .nullable()
+    .describe("Required when evaluationKind is rule"),
+  judgeCriteria: z
+    .string()
+    .nullable()
+    .describe('Required when evaluationKind is judge; phrased as "A session matches when …"'),
+  script: z.string().nullable().describe("Required when evaluationKind is script; raw sandbox script body"),
+  filters: generatedFiltersSchema
+    .nullable()
+    .describe("null unless a filter discards sessions that surely cannot match"),
+  sampling: z.number().int().min(1).max(100).describe("Percentage of in-scope sessions the evaluation runs on"),
+})
+
+export type GeneratedSignalDraft = z.infer<typeof generatedSignalDraftSchema>
+
+export interface MappedSignalDraft {
+  readonly name: string
+  readonly description: string
+  readonly filters: FilterSet | undefined
+  readonly sampling: number
+  readonly evaluation: { readonly settings: EvaluationSettings } | { readonly script: string }
+}
+
+type MapGeneratedSignalDraftResult =
+  | { readonly ok: true; readonly draft: MappedSignalDraft }
+  | { readonly ok: false; readonly issues: string }
+
+const invalid = (issues: string): MapGeneratedSignalDraftResult => ({ ok: false, issues })
+
+const formatZodIssues = (error: z.ZodError): string =>
+  error.issues.map((issue) => `${issue.path.join(".")}: ${issue.message}`).join("; ")
+
+const IN_DIMENSIONS = ["tags", "serviceNames", "models", "providers"] as const
+
+const mapFilters = (
+  filters: GeneratedSignalDraft["filters"],
+): { readonly ok: true; readonly filters: FilterSet | undefined } | { readonly ok: false; readonly issues: string } => {
+  if (filters === null) return { ok: true, filters: undefined }
+  const mapped: Record<string, FilterCondition[]> = {}
+  for (const field of IN_DIMENSIONS) {
+    const values = filters[field]
+    if (values !== null && values.length > 0) {
+      mapped[field] = [{ op: "in", value: values }]
+    }
+  }
+  for (const entry of filters.metadata ?? []) {
+    mapped[`metadata.${entry.key}`] = [{ op: "eq", value: entry.value }]
+  }
+  if (Object.keys(mapped).length === 0) return { ok: true, filters: undefined }
+  const parsed = filterSetSchema.safeParse(mapped)
+  if (!parsed.success) return { ok: false, issues: `filters: ${formatZodIssues(parsed.error)}` }
+  return { ok: true, filters: parsed.data }
+}
+
+/**
+ * Maps a model-emitted draft onto `createSignalUseCase`'s input shape, re-validating the evaluation
+ * through the shared `evaluationSettingsSchema` so its refinements apply. A failure returns the
+ * issues as text — repair-turn feedback for the model, never an exception.
+ */
+export const mapGeneratedSignalDraft = (generated: GeneratedSignalDraft): MapGeneratedSignalDraftResult => {
+  let evaluation: MappedSignalDraft["evaluation"]
+  switch (generated.evaluationKind) {
+    case "rule": {
+      if (generated.ruleConditions === null || generated.ruleConditions.length === 0) {
+        return invalid("evaluationKind is rule but ruleConditions is empty")
+      }
+      const conditions = generated.ruleConditions.map((condition) =>
+        condition.type === "tool_failed"
+          ? { type: condition.type, ...(condition.toolName === null ? {} : { toolName: condition.toolName }) }
+          : condition,
+      )
+      const settings = evaluationSettingsSchema.safeParse({
+        kind: "rule",
+        match: generated.ruleMatch ?? "all",
+        conditions,
+      })
+      if (!settings.success) return invalid(formatZodIssues(settings.error))
+      evaluation = { settings: settings.data }
+      break
+    }
+    case "judge": {
+      const criteria = generated.judgeCriteria?.trim()
+      if (criteria === undefined || criteria.length === 0) {
+        return invalid("evaluationKind is judge but judgeCriteria is empty")
+      }
+      evaluation = { settings: { kind: "judge", criteria } }
+      break
+    }
+    case "script": {
+      const script = generated.script?.trim()
+      if (script === undefined || script.length === 0) {
+        return invalid("evaluationKind is script but script is empty")
+      }
+      evaluation = { script }
+      break
+    }
+  }
+
+  const filters = mapFilters(generated.filters)
+  if (!filters.ok) return invalid(filters.issues)
+
+  const name = generated.name.trim()
+  const description = generated.description.trim()
+  if (name.length === 0) return invalid("name is empty")
+  if (description.length === 0) return invalid("description is empty")
+
+  return {
+    ok: true,
+    draft: { name, description, filters: filters.filters, sampling: generated.sampling, evaluation },
+  }
+}

@@ -287,6 +287,23 @@ export const SIGNAL_DETAILS_DEFAULT_GENERATION_MODEL = {
 export const SIGNAL_DETAILS_MAX_OCCURRENCES = 25
 
 // ---------------------------------------------------------------------------
+// Agentic signal generation (describe-first builder)
+// ---------------------------------------------------------------------------
+
+/** Language model that drafts complete signals from a natural-language description. Overridable via `LAT_AI_SIGNAL_GENERATOR_*`. */
+export const SIGNAL_GENERATION_DEFAULT_MODEL = {
+  provider: "amazon-bedrock",
+  model: "anthropic.claude-sonnet-4-6",
+  reasoning: "medium",
+} as const
+
+/** Hard cap on `ai.generate` calls per generation: first draft + repair turns + one review turn. */
+export const SIGNAL_GENERATION_MAX_GENERATE_CALLS = 4
+
+/** Distinct values fetched per filter dimension for the generation grounding context. */
+export const SIGNAL_GENERATION_DISTINCT_VALUES_LIMIT = 50
+
+// ---------------------------------------------------------------------------
 // Signal refresh throttle
 // ---------------------------------------------------------------------------
 

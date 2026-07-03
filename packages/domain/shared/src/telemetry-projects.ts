@@ -16,7 +16,7 @@ export const LATITUDE_TELEMETRY_PROJECT_SLUGS = {
   annotationEnrichment: "latitude-annotation-enrichment",
   flaggers: "latitude-flaggers",
   evaluations: "latitude-evaluations",
-  evaluationScriptGeneration: "latitude-evaluation-script-generation",
+  signalGeneration: "latitude-signal-generation",
   optimizations: "latitude-optimizations",
   taxonomy: "latitude-taxonomy",
 } as const satisfies Record<string, string>

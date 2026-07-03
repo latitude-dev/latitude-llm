@@ -12,20 +12,6 @@ export const DEFAULT_EVALUATION_SAMPLING = 10
 export const EVALUATION_NAME_MAX_LENGTH = 128
 
 // ---------------------------------------------------------------------------
-// Evaluation script generation (prompt → arbitrary sandbox script)
-// ---------------------------------------------------------------------------
-
-/** Default model for generating an evaluation script from a freeform user prompt. Overridable via `LAT_AI_EVALUATION_SCRIPT_GENERATOR_*`. */
-export const EVALUATION_SCRIPT_GENERATION_DEFAULT_MODEL = {
-  provider: "amazon-bedrock",
-  model: "anthropic.claude-sonnet-4-6",
-  reasoning: "medium",
-} as const
-
-/** Number of generate → run attempts before aborting with an `EvaluationScriptGenerationError`. */
-export const EVALUATION_SCRIPT_GENERATION_MAX_ATTEMPTS = 3
-
-// ---------------------------------------------------------------------------
 // Evaluation turn options
 // ---------------------------------------------------------------------------
 
