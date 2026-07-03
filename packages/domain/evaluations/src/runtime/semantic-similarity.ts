@@ -1,4 +1,4 @@
-import { AI, type AIProviderModelConfig, resolveEmbeddingConfig } from "@domain/ai"
+import { AI, AIError, type AIProviderModelConfig, resolveEmbeddingConfig } from "@domain/ai"
 import type { HostSimilarityFunction } from "@domain/sandbox"
 import { cosineSimilarity, type OrganizationId, type ProjectId, TraceId } from "@domain/shared"
 import { MessageEmbeddingRepository, TraceSearchRepository } from "@domain/spans"
@@ -11,6 +11,13 @@ import { Effect } from "effect"
  * guard; this caps the number of host round-trips per run as a secondary one.
  */
 const MAX_SIMILARITY_CALLS_PER_RUN = 50
+
+/**
+ * The embedding provider SDK has no request timeout, so an unreachable/slow provider would stall the
+ * query embed up to the sandbox wall-clock — which across a preview's session fan-out reads to the user
+ * as "Preview timed out". Bound it so a broken provider surfaces as a fast, explicit error instead.
+ */
+const QUERY_EMBED_TIMEOUT_MS = 8_000
 
 /** Rough token estimate for embedding metering — `AI.embed` does not report usage. */
 const estimateEmbeddingTokens = (text: string): number => Math.ceil(text.length / 4)
@@ -112,12 +119,24 @@ export const buildSemanticSimilarityHost = ({
         if (queryVector === undefined) {
           // Embed as "document" (like the stored messages) so cosine is apples-to-apples; content-address
           // it so the same query string is never embedded twice across runs.
-          const { embedding } = yield* ai.embed({
-            text: query,
-            provider: session.config.provider,
-            model: session.config.model,
-            inputType: "document",
-          })
+          const { embedding } = yield* ai
+            .embed({
+              text: query,
+              provider: session.config.provider,
+              model: session.config.model,
+              inputType: "document",
+            })
+            .pipe(
+              Effect.timeoutOrElse({
+                duration: QUERY_EMBED_TIMEOUT_MS,
+                orElse: () =>
+                  Effect.fail(
+                    new AIError({
+                      message: `Timed out embedding the query after ${QUERY_EMBED_TIMEOUT_MS}ms — is the embedding provider (${session.config.provider}) reachable?`,
+                    }),
+                  ),
+              }),
+            )
           queryVector = embedding
           tokens = estimateEmbeddingTokens(query)
           session.hashToVector.set(queryHash, embedding)
