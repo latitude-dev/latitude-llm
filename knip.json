@@ -3,6 +3,7 @@
   "workspaces": {
     ".": {
       "ignore": [
+        ".agents/skills/**/scripts/**",
         "scripts/taxonomy/*.ts"
       ]
     },

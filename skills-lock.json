@@ -1,6 +1,18 @@
 {
   "version": 1,
   "skills": {
+    "artifact-designer": {
+      "source": "geclos/artifact-designer-skill",
+      "sourceType": "github",
+      "skillPath": "artifact-designer/SKILL.md",
+      "computedHash": "67f4744055078149fd6466cd5e83c08e4e97f7076821f1740cf005d434729660"
+    },
+    "explain-diff-html": {
+      "source": "geclos/explain-diff-html",
+      "sourceType": "github",
+      "skillPath": "SKILL.md",
+      "computedHash": "e7a8d9af4156745edbe7f5efbe3dba87c08b55da5b89a752aa00b6d9e252ba88"
+    },
     "temporal-developer": {
       "source": "temporalio/skill-temporal-developer",
       "sourceType": "github",
