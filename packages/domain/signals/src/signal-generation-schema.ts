@@ -100,15 +100,16 @@ const toSharedCondition = (c: GeneratedRuleCondition): Record<string, unknown> =
 }
 
 // The four multi-select dimensions the builder's scope editor offers, plus metadata key/value
-// pairs — exactly what a created signal's filters can round-trip through the UI.
+// pairs — exactly what a created signal's filters can round-trip through the UI. Required fields
+// with empty-array sentinels, not `.nullable()`: Bedrock caps union-typed parameters at 16 per
+// schema, so unions are reserved for the condition object where null carries real meaning.
 const generatedFiltersSchema = z.object({
-  tags: z.array(z.string().min(1)).nullable(),
-  serviceNames: z.array(z.string().min(1)).nullable(),
-  models: z.array(z.string().min(1)).nullable(),
-  providers: z.array(z.string().min(1)).nullable(),
+  tags: z.array(z.string().min(1)),
+  serviceNames: z.array(z.string().min(1)),
+  models: z.array(z.string().min(1)),
+  providers: z.array(z.string().min(1)),
   metadata: z
     .array(z.object({ key: z.string().min(1), value: z.string().min(1) }))
-    .nullable()
     .describe("Only when the user explicitly names a metadata key and value"),
 })
 
@@ -125,19 +126,17 @@ export const generatedSignalDraftSchema = z.object({
     .min(1)
     .describe("One or two sentences a teammate would recognize; record the interpretation you took"),
   evaluationKind: z.enum(["rule", "judge", "script"]).describe("Prefer rule, then judge, then script"),
-  ruleMatch: z.enum(["all", "any"]).nullable().describe("Required when evaluationKind is rule"),
+  ruleMatch: z.enum(["all", "any"]).describe('Used when evaluationKind is rule; "all" otherwise'),
   ruleConditions: z
     .array(generatedRuleConditionSchema)
-    .nullable()
-    .describe("Required when evaluationKind is rule; 1 to 10 conditions"),
+    .describe("1 to 10 conditions when evaluationKind is rule; [] otherwise"),
   judgeCriteria: z
     .string()
-    .nullable()
-    .describe('Required when evaluationKind is judge; phrased as "A session matches when …"'),
-  script: z.string().nullable().describe("Required when evaluationKind is script; raw sandbox script body"),
-  filters: generatedFiltersSchema
-    .nullable()
-    .describe("null unless a filter discards sessions that surely cannot match"),
+    .describe('When evaluationKind is judge, phrased as "A session matches when …"; "" otherwise'),
+  script: z.string().describe('When evaluationKind is script, the raw sandbox script body; "" otherwise'),
+  filters: generatedFiltersSchema.describe(
+    "All arrays empty unless a filter discards sessions that surely cannot match",
+  ),
   sampling: z.number().describe("Whole percentage (1 to 100) of in-scope sessions the evaluation runs on"),
 })
 
@@ -165,15 +164,14 @@ const IN_DIMENSIONS = ["tags", "serviceNames", "models", "providers"] as const
 const mapFilters = (
   filters: GeneratedSignalDraft["filters"],
 ): { readonly ok: true; readonly filters: FilterSet | undefined } | { readonly ok: false; readonly issues: string } => {
-  if (filters === null) return { ok: true, filters: undefined }
   const mapped: Record<string, FilterCondition[]> = {}
   for (const field of IN_DIMENSIONS) {
     const values = filters[field]
-    if (values !== null && values.length > 0) {
+    if (values.length > 0) {
       mapped[field] = [{ op: "in", value: values }]
     }
   }
-  for (const entry of filters.metadata ?? []) {
+  for (const entry of filters.metadata) {
     mapped[`metadata.${entry.key}`] = [{ op: "eq", value: entry.value }]
   }
   if (Object.keys(mapped).length === 0) return { ok: true, filters: undefined }
@@ -191,12 +189,12 @@ export const mapGeneratedSignalDraft = (generated: GeneratedSignalDraft): MapGen
   let evaluation: MappedSignalDraft["evaluation"]
   switch (generated.evaluationKind) {
     case "rule": {
-      if (generated.ruleConditions === null || generated.ruleConditions.length === 0) {
+      if (generated.ruleConditions.length === 0) {
         return invalid("evaluationKind is rule but ruleConditions is empty")
       }
       const settings = evaluationSettingsSchema.safeParse({
         kind: "rule",
-        match: generated.ruleMatch ?? "all",
+        match: generated.ruleMatch,
         conditions: generated.ruleConditions.map(toSharedCondition),
       })
       if (!settings.success) return invalid(formatZodIssues(settings.error))
@@ -204,16 +202,16 @@ export const mapGeneratedSignalDraft = (generated: GeneratedSignalDraft): MapGen
       break
     }
     case "judge": {
-      const criteria = generated.judgeCriteria?.trim()
-      if (criteria === undefined || criteria.length === 0) {
+      const criteria = generated.judgeCriteria.trim()
+      if (criteria.length === 0) {
         return invalid("evaluationKind is judge but judgeCriteria is empty")
       }
       evaluation = { settings: { kind: "judge", criteria } }
       break
     }
     case "script": {
-      const script = generated.script?.trim()
-      if (script === undefined || script.length === 0) {
+      const script = generated.script.trim()
+      if (script.length === 0) {
         return invalid("evaluationKind is script but script is empty")
       }
       evaluation = { script }

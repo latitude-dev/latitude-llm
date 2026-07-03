@@ -110,6 +110,14 @@ const condition = (partial: Partial<GeneratedRuleCondition> & Pick<GeneratedRule
     ...partial,
   }) as GeneratedRuleCondition
 
+const emptyFilters: GeneratedSignalDraft["filters"] = {
+  tags: [],
+  serviceNames: [],
+  models: [],
+  providers: [],
+  metadata: [],
+}
+
 const baseDraft: GeneratedSignalDraft = {
   reasoning: "matches the observed cancel_ticket tool",
   confirm: false,
@@ -118,9 +126,9 @@ const baseDraft: GeneratedSignalDraft = {
   evaluationKind: "rule",
   ruleMatch: "all",
   ruleConditions: [condition({ type: "tool_failed", toolName: "cancel_ticket" })],
-  judgeCriteria: null,
-  script: null,
-  filters: null,
+  judgeCriteria: "",
+  script: "",
+  filters: emptyFilters,
   sampling: 100,
 }
 
@@ -295,16 +303,9 @@ describe("createSignalFromPromptUseCase", () => {
       ...baseDraft,
       name: "Frustrated users",
       evaluationKind: "judge",
-      ruleMatch: null,
-      ruleConditions: null,
+      ruleConditions: [],
       judgeCriteria: "A session matches when the user expresses frustration",
-      filters: {
-        tags: ["urgent"],
-        serviceNames: null,
-        models: null,
-        providers: null,
-        metadata: [{ key: "env", value: "prod" }],
-      },
+      filters: { ...emptyFilters, tags: ["urgent"], metadata: [{ key: "env", value: "prod" }] },
       sampling: 25,
     }
     const { layer, signals, evaluations, sessionListInputs } = buildLayer({
@@ -335,8 +336,7 @@ describe("createSignalFromPromptUseCase", () => {
     const scriptDraft: GeneratedSignalDraft = {
       ...baseDraft,
       evaluationKind: "script",
-      ruleMatch: null,
-      ruleConditions: null,
+      ruleConditions: [],
       script: "return Passed(1, 'ok')",
       sampling: 250,
     }
@@ -353,7 +353,7 @@ describe("createSignalFromPromptUseCase", () => {
   })
 
   it("feeds mapping issues back as a repair turn", async () => {
-    const invalidDraft: GeneratedSignalDraft = { ...baseDraft, ruleConditions: null }
+    const invalidDraft: GeneratedSignalDraft = { ...baseDraft, ruleConditions: [] }
     const { layer, aiCalls } = buildLayer({
       turns: [invalidDraft, baseDraft, { ...baseDraft, confirm: true }],
     })
@@ -418,7 +418,7 @@ describe("createSignalFromPromptUseCase", () => {
   })
 
   it("fails with SignalGenerationError when no draft ever validates", async () => {
-    const invalidDraft: GeneratedSignalDraft = { ...baseDraft, ruleConditions: null }
+    const invalidDraft: GeneratedSignalDraft = { ...baseDraft, ruleConditions: [] }
     const { layer, aiCalls, signals } = buildLayer({
       turns: [invalidDraft, invalidDraft, invalidDraft, invalidDraft],
     })

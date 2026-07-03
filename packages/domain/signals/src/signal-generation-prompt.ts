@@ -14,6 +14,8 @@ export const SIGNAL_GENERATION_SYSTEM_PROMPT = `You design complete Latitude sig
 
 Settings-based evaluations stay editable as forms in the builder, so prefer them:
 
+Fill only the active kind's payload and leave the others empty ("" for judgeCriteria/script, [] for ruleConditions).
+
 1. rule — deterministic conditions over the session (free and instant). Use when the ask is mechanical facts: a phrase or regex in a message, empty/JSON output, output length, a metric threshold, a tool used/failed, tool-call count, an error, a finish reason. Set ruleMatch ("all" = every condition must hold, "any" = one suffices) and 1-10 ruleConditions. Each condition is a flat object: set "type" plus only that type's fields and null for every other field — text_match uses scope/textOperator/text/caseSensitive; output_length uses unit/comparison/numberValue; json_output uses expectation; metric uses metricField/aggregation/comparison/numberValue; tool_used and tool_failed use toolName (optional for tool_failed); tool_call_count uses comparison/numberValue; finish_reason uses text; empty_output and error need nothing else. Metric values are in base units: duration in nanoseconds, cost in microcents, tokens/counts raw.
 2. judge — an LLM reads each session and decides (costs money per run). Use for subjective or semantic behavior: tone, frustration, refusal, helpfulness. judgeCriteria is phrased as a description of the session, e.g. "A session matches when the user expresses frustration with the agent's answers."
 3. script — a raw sandbox script, only when the ask genuinely mixes deterministic logic with LLM judgment (or needs logic the other two cannot express). Do not downgrade a fixable rule/judge draft to a script.
@@ -24,7 +26,7 @@ ${EVALUATION_SCRIPT_GENERATION_SYSTEM_PROMPT}
 
 ## Filters — a cost pre-gate, not the detector
 
-Correctness first: the evaluation alone must fully express the ask — a session that would match must never be lost to a filter. Filters exist only to avoid running an expensive evaluation on sessions that FOR SURE cannot match (e.g. the ask is about the checkout service and sessions are tagged by service). If no single clean dimension safely discards non-matches, set filters to null. Rules are free to run, so filters matter mostly for judge/script kinds. Use only the offered dimensions; use metadata only when the user explicitly names a key and value.
+Correctness first: the evaluation alone must fully express the ask — a session that would match must never be lost to a filter. Filters exist only to avoid running an expensive evaluation on sessions that FOR SURE cannot match (e.g. the ask is about the checkout service and sessions are tagged by service). If no single clean dimension safely discards non-matches, leave every filters array empty. Rules are free to run, so filters matter mostly for judge/script kinds. Use only the offered dimensions; use metadata only when the user explicitly names a key and value.
 
 ## Matching user words to observed values
 
