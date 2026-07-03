@@ -526,8 +526,11 @@ function SemanticSimilarityEditor({ condition, onChange }: EditorProps<"semantic
         value={preset}
         onChange={(value) => {
           if (value === "custom") return
-          // Presets imply the default `gte` comparison, so normalize the operator too — otherwise a
-          // leftover `lt`/`gt` from the advanced editor would keep the preset's threshold but invert its meaning.
+          // Picking a preset resets to a clean gte comparison, so collapse the advanced panel too —
+          // otherwise the operator/slider stay visible after the user chose a preset. Presets imply
+          // the default `gte`, so normalize the operator (a leftover `lt`/`gt` would keep the preset's
+          // threshold but invert its meaning).
+          setAdvanced(false)
           onChange({ ...condition, operator: "gte", threshold: SEMANTIC_SIMILARITY_PRESETS[value] })
         }}
       />
