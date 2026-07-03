@@ -1,6 +1,5 @@
 import type { FilterSet } from "@domain/shared"
 import {
-  Badge,
   Button,
   CloseTrigger,
   DotIndicator,
@@ -51,7 +50,6 @@ function SignalsBreadcrumb() {
 import {
   ActivityIcon,
   ArchiveIcon,
-  CircleUserRoundIcon,
   DownloadIcon,
   PauseIcon,
   PlayIcon,
@@ -70,7 +68,6 @@ import { toUserMessage } from "../../../../../lib/errors.ts"
 import { useDebounce } from "../../../../../lib/hooks/useDebounce.ts"
 import { useParamState } from "../../../../../lib/hooks/useParamState.ts"
 import { EMPTY_SELECTION, type SelectionState, useSelectableRows } from "../../../../../lib/hooks/useSelectableRows.ts"
-import { useAuthenticatedUser } from "../../../-route-data.ts"
 import { ExportConfirmationModal } from "../-components/export-confirmation-modal.tsx"
 import { TimeFilterDropdown } from "../-components/time-filter-dropdown.tsx"
 import { parseFilters } from "../-components/trace-page-state.ts"
@@ -155,7 +152,6 @@ export const Route = createFileRoute("/_authenticated/projects/$projectSlug/sign
 
 function SignalsPage() {
   const project = useRouteProject()
-  const me = useAuthenticatedUser()
   const [lifecycleGroup, setLifecycleGroup] = useParamState("signalsLifecycle", "active", {
     validate: (value): value is "active" | "archived" => value === "active" || value === "archived",
   })
@@ -219,11 +215,6 @@ function SignalsPage() {
     (next: readonly string[]) => setAssigneesParam(serializeAssignees(next)),
     [setAssigneesParam],
   )
-  const isMySignalsActive = assigneeIds.length === 1 && assigneeIds[0] === me.id
-  const toggleMySignals = useCallback(
-    () => setAssigneeIds(isMySignalsActive ? [] : [me.id]),
-    [isMySignalsActive, me.id, setAssigneeIds],
-  )
 
   const {
     data: signalsData,
@@ -231,7 +222,6 @@ function SignalsPage() {
     analytics,
     occurrencesSum,
     priorityCounts,
-    mySignalsCount,
     totalCount,
     hasAnySignals,
     isLoading,
@@ -405,18 +395,6 @@ function SignalsPage() {
                 <SearchIcon className="pointer-events-none absolute left-2.5 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
               </div>
               <AssigneeFilter value={assigneeIds} onChange={setAssigneeIds} />
-              <Button
-                variant={isMySignalsActive ? "secondary" : "outline"}
-                size="sm"
-                onClick={toggleMySignals}
-                aria-pressed={isMySignalsActive}
-              >
-                <Icon icon={CircleUserRoundIcon} size="sm" />
-                My signals
-                <Badge variant={isMySignalsActive ? "default" : "muted"} size="small">
-                  {mySignalsCount.toLocaleString()}
-                </Badge>
-              </Button>
               <Tabs
                 variant="bordered"
                 size="sm"
