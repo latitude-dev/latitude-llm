@@ -60,10 +60,16 @@ const SEMANTIC_PRESET_OPTIONS: ReadonlyArray<{ label: string; value: SemanticSim
   { label: "Balanced", value: "balanced" },
   { label: "Strict", value: "strict" },
 ]
-const presetForThreshold = (threshold: number): SemanticSimilarityPreset | "custom" =>
-  SEMANTIC_PRESET_OPTIONS.find(
-    (option) => SEMANTIC_SIMILARITY_PRESETS[option.value as SemanticSimilarityPreset] === threshold,
-  )?.value ?? "custom"
+// Presets are calibrated for the default `gte` comparison ("at least this similar"); under any other
+// operator the same threshold means something different, so a non-`gte` condition is always "custom".
+const presetForThreshold = (threshold: number, operator: ComparisonOp): SemanticSimilarityPreset | "custom" => {
+  if (operator !== "gte") return "custom"
+  return (
+    SEMANTIC_PRESET_OPTIONS.find(
+      (option) => SEMANTIC_SIMILARITY_PRESETS[option.value as SemanticSimilarityPreset] === threshold,
+    )?.value ?? "custom"
+  )
+}
 
 const JSON_EXPECTATION_OPTIONS: ReadonlyArray<{ label: string; value: ConditionOf<"json_output">["expectation"] }> = [
   { label: "Valid JSON", value: "valid" },
@@ -498,7 +504,7 @@ const finish_reason: ConditionTypeMeta<"finish_reason"> = {
 }
 
 function SemanticSimilarityEditor({ condition, onChange }: EditorProps<"semantic_similarity">) {
-  const preset = presetForThreshold(condition.threshold)
+  const preset = presetForThreshold(condition.threshold, condition.operator)
   const [advanced, setAdvanced] = useState(preset === "custom")
   const presetOptions =
     preset === "custom"
@@ -520,7 +526,9 @@ function SemanticSimilarityEditor({ condition, onChange }: EditorProps<"semantic
         value={preset}
         onChange={(value) => {
           if (value === "custom") return
-          onChange({ ...condition, threshold: SEMANTIC_SIMILARITY_PRESETS[value] })
+          // Presets imply the default `gte` comparison, so normalize the operator too — otherwise a
+          // leftover `lt`/`gt` from the advanced editor would keep the preset's threshold but invert its meaning.
+          onChange({ ...condition, operator: "gte", threshold: SEMANTIC_SIMILARITY_PRESETS[value] })
         }}
       />
       <SwitchInput label="Advanced" checked={advanced} onCheckedChange={setAdvanced} />
@@ -562,7 +570,7 @@ const semantic_similarity: ConditionTypeMeta<"semantic_similarity"> = {
     threshold: SEMANTIC_SIMILARITY_PRESETS.balanced,
   }),
   summarize: (c) => {
-    const preset = presetForThreshold(c.threshold)
+    const preset = presetForThreshold(c.threshold, c.operator)
     const sensitivity =
       preset === "custom"
         ? `${COMPARISON_SYMBOL[c.operator]} ${c.threshold}`
