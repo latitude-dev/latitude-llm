@@ -57,7 +57,10 @@ const make = (): AnalyticsQueryReaderShape => ({
       const inner = yield* descriptor.buildInner({
         organizationId: input.organizationId,
         projectId: input.projectId,
-        target: { stream: input.stream, filterSet: input.filterSet, query: input.query, metric: input.metric },
+        filterSet: input.filterSet,
+        query: input.query,
+        metric: input.metric,
+        ...(input.breakdown !== undefined ? { breakdown: input.breakdown } : {}),
         from: input.from,
         to: input.to,
       })

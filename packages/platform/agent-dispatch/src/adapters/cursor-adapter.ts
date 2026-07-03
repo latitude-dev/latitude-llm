@@ -4,14 +4,23 @@ import { Effect } from "effect"
 
 export const createCursorAdapter = (): AgentDispatchAdapter => ({
   kind: "cursor",
-  dispatch: ({ idempotencyKey, prompt, config, credential }) =>
+  dispatch: ({ prompt, config, credential }) =>
     Effect.gen(function* () {
       const apiKey = credential.cursorApiKey
       if (!apiKey) {
-        return yield* Effect.fail(new DispatchAdapterError({ reason: "config", cause: "missing cursor api key" }))
+        return yield* Effect.fail(
+          new DispatchAdapterError({
+            reason: "config",
+            cause: "missing cursor api key",
+          }),
+        )
       }
 
-      const target = config as { repoUrl: string; startingRef?: string; autoCreatePR?: boolean }
+      const target = config as {
+        repoUrl: string
+        startingRef?: string
+        autoCreatePR?: boolean
+      }
       const body = {
         prompt: { text: prompt },
         source: {
@@ -64,14 +73,29 @@ export const createCursorAdapter = (): AgentDispatchAdapter => ({
         return yield* Effect.fail(new DispatchAdapterError({ reason: "auth", cause: response.status }))
       }
       if (response.status === 429) {
-        return yield* Effect.fail(new DispatchAdapterError({ reason: "rate_limited", cause: response.status }))
+        return yield* Effect.fail(
+          new DispatchAdapterError({
+            reason: "rate_limited",
+            cause: response.status,
+          }),
+        )
       }
       if (response.status >= 500) {
-        return yield* Effect.fail(new DispatchAdapterError({ reason: "transport", cause: response.status }))
+        return yield* Effect.fail(
+          new DispatchAdapterError({
+            reason: "transport",
+            cause: response.status,
+          }),
+        )
       }
       if (response.status >= 400) {
         const detail = yield* Effect.tryPromise(() => response.text()).pipe(Effect.orElseSucceed(() => ""))
-        return yield* Effect.fail(new DispatchAdapterError({ reason: "config", cause: detail || response.status }))
+        return yield* Effect.fail(
+          new DispatchAdapterError({
+            reason: "config",
+            cause: detail || response.status,
+          }),
+        )
       }
 
       const json = yield* Effect.tryPromise({

@@ -12,6 +12,8 @@ export namespace AnalyticsSeries {
         export interface Item {
             /** The breakdown value, present when `breakdown` was set. */
             key?: string | undefined;
+            /** Human-readable name for `key` when the breakdown value is an opaque id — the signal name for `signalId`, the cluster name for `cluster`. Absent for already-readable breakdowns. */
+            label?: string | undefined;
             /** ISO-8601 start of the time bucket, present when `timeBucket` was set. */
             bucketStart?: string | undefined;
             /** The metric value: seconds for `duration`, dollars for `cost`, a 0–1 ratio for `errorRate`/`cacheHitRate`, otherwise a raw count/token total. */

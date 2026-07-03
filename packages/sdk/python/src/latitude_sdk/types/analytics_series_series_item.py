@@ -14,6 +14,11 @@ class AnalyticsSeriesSeriesItem(UniversalBaseModel):
     The breakdown value, present when `breakdown` was set.
     """
 
+    label: typing.Optional[str] = pydantic.Field(default=None)
+    """
+    Human-readable name for `key` when the breakdown value is an opaque id — the signal name for `signalId`, the cluster name for `cluster`. Absent for already-readable breakdowns.
+    """
+
     bucket_start: typing_extensions.Annotated[
         typing.Optional[str],
         FieldMetadata(alias="bucketStart"),

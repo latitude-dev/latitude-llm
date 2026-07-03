@@ -29,7 +29,7 @@ const BREAKDOWN = {
  */
 const buildInner = (input: MetricSqlInput<"moments">): Effect.Effect<InnerQuery, never, never> =>
   Effect.sync(() => {
-    const { clauses, params: filterParams } = buildClickHouseWhere(input.target.filterSet, MOMENT_FIELD_REGISTRY)
+    const { clauses, params: filterParams } = buildClickHouseWhere(input.filterSet, MOMENT_FIELD_REGISTRY)
     const extraWhere = clauses.length > 0 ? `AND ${clauses.join(" AND ")}` : ""
     return {
       sql: `SELECT

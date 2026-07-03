@@ -43,10 +43,10 @@ const BREAKDOWN = {
  */
 const buildInner = (input: MetricSqlInput): Effect.Effect<InnerQuery, RepositoryError, ChSqlClient> =>
   Effect.gen(function* () {
-    const filterSet = yield* resolvePercentileFilters(input.organizationId, input.projectId, input.target.filterSet)
+    const filterSet = yield* resolvePercentileFilters(input.organizationId, input.projectId, input.filterSet)
     const { havingClauses, whereClauses, params: filterParams } = buildSessionFilterClauses(filterSet)
 
-    const parsed = input.target.query ? parseSearchQuery(input.target.query) : undefined
+    const parsed = input.query ? parseSearchQuery(input.query) : undefined
     let searchCondition = ""
     let searchParams: Record<string, unknown> = {}
     let clickhouseSettings: Record<string, string | number | boolean> | undefined

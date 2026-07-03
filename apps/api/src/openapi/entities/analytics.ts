@@ -56,7 +56,7 @@ const commonFields = {
 } as const
 
 const traceFamilyMetric = monitorMetricSchema.describe(
-  "The metric: `count`, `errorRate`, `cacheHitRate`, or `{sum|min|max|avg|median|p95}` over `duration`/`cost`/`tokens`.",
+  "The metric: `count`, `errorRate`, `cacheHitRate`, `{sum|min|max|avg|median}` over `duration`/`cost`/`tokens`, or `{kind:'percentile',field,p}` for an arbitrary percentile (`p` in [1,99]; e.g. `p:95`).",
 )
 
 const semanticQuery = z
@@ -149,6 +149,12 @@ export const AnalyticsSeriesResponseSchema = z
       .array(
         z.object({
           key: z.string().optional().describe("The breakdown value, present when `breakdown` was set."),
+          label: z
+            .string()
+            .optional()
+            .describe(
+              "Human-readable name for `key` when the breakdown value is an opaque id — the signal name for `signalId`, the cluster name for `cluster`. Absent for already-readable breakdowns.",
+            ),
           bucketStart: z
             .string()
             .optional()
@@ -164,9 +170,10 @@ export const AnalyticsSeriesResponseSchema = z
   })
   .openapi("AnalyticsSeries")
 
-export const toAnalyticsResponse = (series: readonly AnalyticsSeriesPoint[]) => ({
+export const toAnalyticsResponse = (series: readonly AnalyticsSeriesPoint[], labels?: ReadonlyMap<string, string>) => ({
   series: series.map((point) => ({
     ...(point.key !== undefined ? { key: point.key } : {}),
+    ...(point.key !== undefined && labels?.get(point.key) ? { label: labels.get(point.key) } : {}),
     ...(point.bucketStart !== undefined ? { bucketStart: point.bucketStart } : {}),
     value: point.value,
   })),

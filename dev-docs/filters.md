@@ -2,6 +2,8 @@
 
 Universal filter representation used across the Latitude platform to serialize, transport, and translate filters into SQL.
 
+The structured analytics query surface (`queryAnalytics` / `querySpans`) reuses this DSL and the field registries below verbatim — see [`agent-data-access.md`](./agent-data-access.md).
+
 ## Core Types
 
 Defined in `packages/domain/shared/src/filter.ts`, exported from `@domain/shared`.

@@ -7,6 +7,7 @@ from ..core.request_options import RequestOptions
 from ..types.filter_condition import FilterCondition
 from ..types.query_spans import QuerySpans
 from .raw_client import AsyncRawSpansClient, RawSpansClient
+from .types.query_spans_body_order_by import QuerySpansBodyOrderBy
 from .types.query_spans_body_range import QuerySpansBodyRange
 
 # this is used as the default value for optional parameters
@@ -33,6 +34,7 @@ class SpansClient:
         project_slug: str,
         *,
         filters: typing.Optional[typing.Dict[str, typing.Sequence[FilterCondition]]] = OMIT,
+        order_by: typing.Optional[QuerySpansBodyOrderBy] = OMIT,
         range: typing.Optional[QuerySpansBodyRange] = OMIT,
         cursor: typing.Optional[str] = OMIT,
         limit: typing.Optional[int] = OMIT,
@@ -47,7 +49,10 @@ class SpansClient:
             Project slug (human-readable identifier)
 
         filters : typing.Optional[typing.Dict[str, typing.Sequence[FilterCondition]]]
-            Row-local span filter set (same DSL as `listTraces`) over span fields — `operation`, `toolName`, `model`, `provider`, `sessionId`, `traceId`, `tags`, `duration`, `cost`, `tokensInput`/`tokensOutput`.
+            Row-local span filter set (same DSL as `listTraces`) over span fields — `operation`, `toolName`, `model`, `provider`, `sessionId`, `traceId`, `tags`, `status` (`error`/`ok`/`unset`), `duration`, `cost`, `tokensInput`/`tokensOutput`.
+
+        order_by : typing.Optional[QuerySpansBodyOrderBy]
+            Sort order. Defaults to newest first (`startTime` desc); use `duration`/`cost` desc for top-N slowest/costliest.
 
         range : typing.Optional[QuerySpansBodyRange]
             Restrict to spans whose `startTime` falls in this window.
@@ -78,7 +83,13 @@ class SpansClient:
         )
         """
         _response = self._raw_client.query(
-            project_slug, filters=filters, range=range, cursor=cursor, limit=limit, request_options=request_options
+            project_slug,
+            filters=filters,
+            order_by=order_by,
+            range=range,
+            cursor=cursor,
+            limit=limit,
+            request_options=request_options,
         )
         return _response.data
 
@@ -103,6 +114,7 @@ class AsyncSpansClient:
         project_slug: str,
         *,
         filters: typing.Optional[typing.Dict[str, typing.Sequence[FilterCondition]]] = OMIT,
+        order_by: typing.Optional[QuerySpansBodyOrderBy] = OMIT,
         range: typing.Optional[QuerySpansBodyRange] = OMIT,
         cursor: typing.Optional[str] = OMIT,
         limit: typing.Optional[int] = OMIT,
@@ -117,7 +129,10 @@ class AsyncSpansClient:
             Project slug (human-readable identifier)
 
         filters : typing.Optional[typing.Dict[str, typing.Sequence[FilterCondition]]]
-            Row-local span filter set (same DSL as `listTraces`) over span fields — `operation`, `toolName`, `model`, `provider`, `sessionId`, `traceId`, `tags`, `duration`, `cost`, `tokensInput`/`tokensOutput`.
+            Row-local span filter set (same DSL as `listTraces`) over span fields — `operation`, `toolName`, `model`, `provider`, `sessionId`, `traceId`, `tags`, `status` (`error`/`ok`/`unset`), `duration`, `cost`, `tokensInput`/`tokensOutput`.
+
+        order_by : typing.Optional[QuerySpansBodyOrderBy]
+            Sort order. Defaults to newest first (`startTime` desc); use `duration`/`cost` desc for top-N slowest/costliest.
 
         range : typing.Optional[QuerySpansBodyRange]
             Restrict to spans whose `startTime` falls in this window.
@@ -156,6 +171,12 @@ class AsyncSpansClient:
         asyncio.run(main())
         """
         _response = await self._raw_client.query(
-            project_slug, filters=filters, range=range, cursor=cursor, limit=limit, request_options=request_options
+            project_slug,
+            filters=filters,
+            order_by=order_by,
+            range=range,
+            cursor=cursor,
+            limit=limit,
+            request_options=request_options,
         )
         return _response.data

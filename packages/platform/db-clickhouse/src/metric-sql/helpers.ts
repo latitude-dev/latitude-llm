@@ -123,8 +123,9 @@ export const traceFamilyAggregate = (metric: MonitorMetric, c: TraceFamilyColumn
       return `if(count() = 0, 0, avg(${c[metric.field]}))`
     case "median":
       return `if(count() = 0, 0, quantileTDigest(0.5)(${c[metric.field]}))`
-    case "p95":
-      return `if(count() = 0, 0, quantileTDigest(0.95)(${c[metric.field]}))`
+    case "percentile":
+      // `metric.p` is Zod-bounded to [1, 99]; safe to interpolate as the level.
+      return `if(count() = 0, 0, quantileTDigest(${metric.p / 100})(${c[metric.field]}))`
   }
 }
 

@@ -78,7 +78,11 @@ export type {
   SessionToolSpan,
   SpanIngestedAtWindow,
   SpanIngestionCursor,
+  SpanListCursor,
   SpanListOptions,
+  SpanListOrderDirection,
+  SpanListOrderField,
+  SpanListPage,
   SpanMessagesData,
   SpanRepositoryShape,
 } from "./ports/span-repository.ts"

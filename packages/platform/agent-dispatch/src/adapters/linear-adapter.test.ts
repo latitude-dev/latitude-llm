@@ -10,7 +10,15 @@ describe("createLinearAdapter", () => {
         calls.push({ body: init?.body as string })
         return new Response(
           JSON.stringify({
-            data: { issueCreate: { success: true, issue: { id: "iss1", url: "https://linear.app/acme/issue/AC-1" } } },
+            data: {
+              issueCreate: {
+                success: true,
+                issue: {
+                  id: "iss1",
+                  url: "https://linear.app/acme/issue/AC-1",
+                },
+              },
+            },
           }),
           { status: 200 },
         )
@@ -44,9 +52,11 @@ describe("createLinearAdapter", () => {
 
     expect(result.status).toBe("accepted")
     expect(result.deepLinkUrl).toBe("https://linear.app/acme/issue/AC-1")
-    const payload = JSON.parse(calls[0]!.body) as {
+    const payload = JSON.parse(calls[0]?.body) as {
       query: string
-      variables: { input: { title: string; description: string; teamId: string } }
+      variables: {
+        input: { title: string; description: string; teamId: string }
+      }
     }
     expect(payload.query).toContain("issueCreate")
     expect(payload.variables.input.title).toContain("Timeout errors")

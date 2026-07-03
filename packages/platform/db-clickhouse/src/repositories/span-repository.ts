@@ -18,6 +18,8 @@ import type {
   Span,
   SpanDetail,
   SpanKind,
+  SpanListCursor,
+  SpanListOrderField,
   SpanMessagesData,
   SpanStatusCode,
   ToolDefinition,
@@ -139,6 +141,7 @@ type SpanListRow = {
   cost_input_microcents: string
   cost_output_microcents: string
   cost_total_microcents: string
+  duration_ns: string
   cost_is_estimated: number
   time_to_first_token_ns: string
   is_streaming: number
@@ -360,6 +363,26 @@ const toInsertRow = (span: SpanDetail) => ({
   ingested_at: toClickhouseDateTime(span.ingestedAt),
 })
 
+// `listByProjectId` keyset pagination. The sort column is an enum → fixed column
+// (never user-interpolated raw SQL); the cursor param is typed to match it so the
+// tuple comparison is valid. Only `start_time` is in the table's primary key
+// `(organization_id, project_id, start_time)`, so a `startTime` sort prunes
+// granules via the index; `duration`/`cost` sorts scan the window and sort.
+const SPAN_LIST_ORDER_COLUMN: Record<SpanListOrderField, string> = {
+  startTime: "start_time",
+  duration: "duration_ns",
+  cost: "cost_total_microcents",
+}
+const SPAN_LIST_CURSOR_TYPE: Record<SpanListOrderField, string> = {
+  startTime: "DateTime64(9, 'UTC')",
+  duration: "Int64",
+  cost: "UInt64",
+}
+// Raw sort-column value carried in the cursor at full fidelity — nanosecond
+// datetime for `startTime`, the exact integer for `duration`/`cost`.
+const spanListCursorSortValue = (row: SpanListRow, field: SpanListOrderField): string =>
+  field === "startTime" ? row.start_time : field === "duration" ? row.duration_ns : row.cost_total_microcents
+
 export const SpanRepositoryLive = Layer.effect(
   SpanRepository,
   Effect.gen(function* () {
@@ -429,39 +452,66 @@ export const SpanRepositoryLive = Layer.effect(
           ? buildSpanFilterClauses(options.filters)
           : { whereClauses: [], params: {} }
         const filterClause = filterClauses.length > 0 ? `AND ${filterClauses.join(" AND ")}` : ""
+        const field = options.orderBy?.field ?? "startTime"
+        const direction = options.orderBy?.direction ?? "desc"
+        const orderColumn = SPAN_LIST_ORDER_COLUMN[field]
+        const orderDirection = direction === "asc" ? "ASC" : "DESC"
+        // Keyset: resume strictly after the cursor's `(sortValue, spanId)`. The
+        // tuple lives in the inner scan so a `startTime` sort prunes granules via
+        // the primary key. `<` for DESC, `>` for ASC — the direction of "after".
+        const cursorComparator = direction === "asc" ? ">" : "<"
+        const cursorClause = options.cursor
+          ? `AND (${orderColumn}, span_id) ${cursorComparator} ({cursorSort:${SPAN_LIST_CURSOR_TYPE[field]}}, {cursorSpanId:FixedString(16)})`
+          : ""
+        const limit = options.limit ?? 50
         return yield* chSqlClient
           .query(async (client) => {
             const result = await client.query({
-              query: `SELECT ${LIST_COLUMNS}
+              // Over-fetch one row to detect a next page without a count.
+              query: `SELECT ${LIST_COLUMNS}, duration_ns
                     FROM (
-                      SELECT ${LIST_COLUMNS}
+                      -- expose duration_ns (an ALIAS column) so the outer ORDER BY / cursor can sort on it
+                      SELECT ${LIST_COLUMNS}, duration_ns
                       FROM spans
                       WHERE organization_id = {organizationId:String}
                         AND project_id = {projectId:String}
                         ${startFromClause}
                         ${startToClause}
                         ${filterClause}
+                        ${cursorClause}
                       ORDER BY span_id, ingested_at DESC
                       LIMIT 1 BY span_id
                     )
-                    ORDER BY start_time DESC
-                    LIMIT {limit:UInt32}
-                    OFFSET {offset:UInt32}`,
+                    ORDER BY ${orderColumn} ${orderDirection}, span_id ${orderDirection}
+                    LIMIT {limitPlusOne:UInt32}`,
               query_params: {
                 organizationId: organizationId as string,
                 projectId: projectId as string,
                 ...(options.startTimeFrom ? { startTimeFrom: toClickhouseDateTime(options.startTimeFrom) } : {}),
                 ...(options.startTimeTo ? { startTimeTo: toClickhouseDateTime(options.startTimeTo) } : {}),
                 ...filterParams,
-                limit: options.limit ?? 50,
-                offset: options.offset ?? 0,
+                limitPlusOne: limit + 1,
+                ...(options.cursor
+                  ? { cursorSort: options.cursor.sortValue, cursorSpanId: options.cursor.spanId as string }
+                  : {}),
               },
               format: "JSONEachRow",
             })
             return result.json<SpanListRow>()
           })
           .pipe(
-            Effect.map((rows) => rows.map(toDomainSpan)),
+            Effect.map((rows) => {
+              const hasMore = rows.length > limit
+              const pageRows = hasMore ? rows.slice(0, limit) : rows
+              const items = pageRows.map(toDomainSpan)
+              const lastRow = pageRows[pageRows.length - 1]
+              const lastItem = items[items.length - 1]
+              const nextCursor: SpanListCursor | null =
+                hasMore && lastRow && lastItem
+                  ? { field, direction, sortValue: spanListCursorSortValue(lastRow, field), spanId: lastItem.spanId }
+                  : null
+              return { items, nextCursor }
+            }),
             Effect.mapError((error) => toRepositoryError(error, "listByProjectId")),
           )
       })

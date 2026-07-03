@@ -17,7 +17,7 @@ export namespace AnalyticsQuery {
         query?: string | undefined;
         /** Dimension to group by, one row per value. */
         breakdown?: AnalyticsQueryTraces.Breakdown | undefined;
-        /** The metric: `count`, `errorRate`, `cacheHitRate`, or `{sum|min|max|avg|median|p95}` over `duration`/`cost`/`tokens`. */
+        /** The metric: `count`, `errorRate`, `cacheHitRate`, `{sum|min|max|avg|median}` over `duration`/`cost`/`tokens`, or `{kind:'percentile',field,p}` for an arbitrary percentile (`p` in [1,99]; e.g. `p:95`). */
         metric: Latitude.AnalyticsQueryTracesMetric;
         /** Structured filter set applied to the stream (same DSL as `listTraces`). */
         filters?: Record<string, Latitude.FilterCondition[]> | undefined;
@@ -103,7 +103,7 @@ export namespace AnalyticsQuery {
         query?: string | undefined;
         /** Dimension to group by, one row per value. */
         breakdown?: AnalyticsQuerySessions.Breakdown | undefined;
-        /** The metric: `count`, `errorRate`, `cacheHitRate`, or `{sum|min|max|avg|median|p95}` over `duration`/`cost`/`tokens`. */
+        /** The metric: `count`, `errorRate`, `cacheHitRate`, `{sum|min|max|avg|median}` over `duration`/`cost`/`tokens`, or `{kind:'percentile',field,p}` for an arbitrary percentile (`p` in [1,99]; e.g. `p:95`). */
         metric: Latitude.AnalyticsQuerySessionsMetric;
         /** Structured filter set applied to the stream (same DSL as `listTraces`). */
         filters?: Record<string, Latitude.FilterCondition[]> | undefined;
@@ -186,7 +186,7 @@ export namespace AnalyticsQuery {
         stream: "spans";
         /** Dimension to group by, one row per value. */
         breakdown?: AnalyticsQuerySpans.Breakdown | undefined;
-        /** The metric: `count`, `errorRate`, `cacheHitRate`, or `{sum|min|max|avg|median|p95}` over `duration`/`cost`/`tokens`. */
+        /** The metric: `count`, `errorRate`, `cacheHitRate`, `{sum|min|max|avg|median}` over `duration`/`cost`/`tokens`, or `{kind:'percentile',field,p}` for an arbitrary percentile (`p` in [1,99]; e.g. `p:95`). */
         metric: Latitude.AnalyticsQuerySpansMetric;
         /** Structured filter set applied to the stream (same DSL as `listTraces`). */
         filters?: Record<string, Latitude.FilterCondition[]> | undefined;

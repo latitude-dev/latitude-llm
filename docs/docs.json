@@ -200,7 +200,8 @@
           {
             "group": "Guides",
             "pages": [
-              "observability/guides/group-traces-by-project"
+              "observability/guides/group-traces-by-project",
+              "observability/guides/build-a-dashboard"
             ]
           }
         ]
@@ -244,10 +245,16 @@
           {
             "group": "Agent dispatch",
             "pages": [
-              "agent-dispatch/cursor",
-              "agent-dispatch/claude-code",
-              "agent-dispatch/linear",
-              "agent-dispatch/webhooks"
+              "agent-dispatch/overview",
+              {
+                "group": "Integrations",
+                "pages": [
+                  "agent-dispatch/cursor",
+                  "agent-dispatch/claude-code",
+                  "agent-dispatch/linear",
+                  "agent-dispatch/webhooks"
+                ]
+              }
             ]
           },
           {

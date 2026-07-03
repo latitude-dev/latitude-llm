@@ -20,6 +20,7 @@ export {
   monitorSchema,
   monitorStreamForTargetType,
   monitorTargetSchema,
+  normalizeLegacyMetricConfig,
 } from "./entities/monitor.ts"
 export { SystemMonitorForbiddenError } from "./errors.ts"
 export {

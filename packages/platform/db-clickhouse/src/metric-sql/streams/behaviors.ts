@@ -15,7 +15,7 @@ const BREAKDOWN = {
 /** One row per taxonomy observation, windowed on `start_time` (DateTime64(9)). */
 const buildInner = (input: MetricSqlInput<"behaviors">): Effect.Effect<InnerQuery, never, never> =>
   Effect.sync(() => {
-    const { clauses, params: filterParams } = buildClickHouseWhere(input.target.filterSet, BEHAVIOR_FIELD_REGISTRY)
+    const { clauses, params: filterParams } = buildClickHouseWhere(input.filterSet, BEHAVIOR_FIELD_REGISTRY)
     const extraWhere = clauses.length > 0 ? `AND ${clauses.join(" AND ")}` : ""
     return {
       sql: `SELECT assigned_cluster_id, assignment_confidence, assignment_method, session_id, start_time

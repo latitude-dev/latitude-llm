@@ -11,13 +11,13 @@ from .analytics_query_traces_metric_avg_field import AnalyticsQueryTracesMetricA
 from .analytics_query_traces_metric_max_field import AnalyticsQueryTracesMetricMaxField
 from .analytics_query_traces_metric_median_field import AnalyticsQueryTracesMetricMedianField
 from .analytics_query_traces_metric_min_field import AnalyticsQueryTracesMetricMinField
-from .analytics_query_traces_metric_p95field import AnalyticsQueryTracesMetricP95Field
+from .analytics_query_traces_metric_percentile_field import AnalyticsQueryTracesMetricPercentileField
 from .analytics_query_traces_metric_sum_field import AnalyticsQueryTracesMetricSumField
 
 
 class AnalyticsQueryTracesMetric_Count(UniversalBaseModel):
     """
-    The metric: `count`, `errorRate`, `cacheHitRate`, or `{sum|min|max|avg|median|p95}` over `duration`/`cost`/`tokens`.
+    The metric: `count`, `errorRate`, `cacheHitRate`, `{sum|min|max|avg|median}` over `duration`/`cost`/`tokens`, or `{kind:'percentile',field,p}` for an arbitrary percentile (`p` in [1,99]; e.g. `p:95`).
     """
 
     kind: typing.Literal["count"] = "count"
@@ -27,7 +27,7 @@ class AnalyticsQueryTracesMetric_Count(UniversalBaseModel):
 
 class AnalyticsQueryTracesMetric_ErrorRate(UniversalBaseModel):
     """
-    The metric: `count`, `errorRate`, `cacheHitRate`, or `{sum|min|max|avg|median|p95}` over `duration`/`cost`/`tokens`.
+    The metric: `count`, `errorRate`, `cacheHitRate`, `{sum|min|max|avg|median}` over `duration`/`cost`/`tokens`, or `{kind:'percentile',field,p}` for an arbitrary percentile (`p` in [1,99]; e.g. `p:95`).
     """
 
     kind: typing.Literal["errorRate"] = "errorRate"
@@ -37,7 +37,7 @@ class AnalyticsQueryTracesMetric_ErrorRate(UniversalBaseModel):
 
 class AnalyticsQueryTracesMetric_CacheHitRate(UniversalBaseModel):
     """
-    The metric: `count`, `errorRate`, `cacheHitRate`, or `{sum|min|max|avg|median|p95}` over `duration`/`cost`/`tokens`.
+    The metric: `count`, `errorRate`, `cacheHitRate`, `{sum|min|max|avg|median}` over `duration`/`cost`/`tokens`, or `{kind:'percentile',field,p}` for an arbitrary percentile (`p` in [1,99]; e.g. `p:95`).
     """
 
     kind: typing.Literal["cacheHitRate"] = "cacheHitRate"
@@ -47,7 +47,7 @@ class AnalyticsQueryTracesMetric_CacheHitRate(UniversalBaseModel):
 
 class AnalyticsQueryTracesMetric_Sum(UniversalBaseModel):
     """
-    The metric: `count`, `errorRate`, `cacheHitRate`, or `{sum|min|max|avg|median|p95}` over `duration`/`cost`/`tokens`.
+    The metric: `count`, `errorRate`, `cacheHitRate`, `{sum|min|max|avg|median}` over `duration`/`cost`/`tokens`, or `{kind:'percentile',field,p}` for an arbitrary percentile (`p` in [1,99]; e.g. `p:95`).
     """
 
     kind: typing.Literal["sum"] = "sum"
@@ -58,7 +58,7 @@ class AnalyticsQueryTracesMetric_Sum(UniversalBaseModel):
 
 class AnalyticsQueryTracesMetric_Min(UniversalBaseModel):
     """
-    The metric: `count`, `errorRate`, `cacheHitRate`, or `{sum|min|max|avg|median|p95}` over `duration`/`cost`/`tokens`.
+    The metric: `count`, `errorRate`, `cacheHitRate`, `{sum|min|max|avg|median}` over `duration`/`cost`/`tokens`, or `{kind:'percentile',field,p}` for an arbitrary percentile (`p` in [1,99]; e.g. `p:95`).
     """
 
     kind: typing.Literal["min"] = "min"
@@ -69,7 +69,7 @@ class AnalyticsQueryTracesMetric_Min(UniversalBaseModel):
 
 class AnalyticsQueryTracesMetric_Max(UniversalBaseModel):
     """
-    The metric: `count`, `errorRate`, `cacheHitRate`, or `{sum|min|max|avg|median|p95}` over `duration`/`cost`/`tokens`.
+    The metric: `count`, `errorRate`, `cacheHitRate`, `{sum|min|max|avg|median}` over `duration`/`cost`/`tokens`, or `{kind:'percentile',field,p}` for an arbitrary percentile (`p` in [1,99]; e.g. `p:95`).
     """
 
     kind: typing.Literal["max"] = "max"
@@ -80,7 +80,7 @@ class AnalyticsQueryTracesMetric_Max(UniversalBaseModel):
 
 class AnalyticsQueryTracesMetric_Avg(UniversalBaseModel):
     """
-    The metric: `count`, `errorRate`, `cacheHitRate`, or `{sum|min|max|avg|median|p95}` over `duration`/`cost`/`tokens`.
+    The metric: `count`, `errorRate`, `cacheHitRate`, `{sum|min|max|avg|median}` over `duration`/`cost`/`tokens`, or `{kind:'percentile',field,p}` for an arbitrary percentile (`p` in [1,99]; e.g. `p:95`).
     """
 
     kind: typing.Literal["avg"] = "avg"
@@ -91,7 +91,7 @@ class AnalyticsQueryTracesMetric_Avg(UniversalBaseModel):
 
 class AnalyticsQueryTracesMetric_Median(UniversalBaseModel):
     """
-    The metric: `count`, `errorRate`, `cacheHitRate`, or `{sum|min|max|avg|median|p95}` over `duration`/`cost`/`tokens`.
+    The metric: `count`, `errorRate`, `cacheHitRate`, `{sum|min|max|avg|median}` over `duration`/`cost`/`tokens`, or `{kind:'percentile',field,p}` for an arbitrary percentile (`p` in [1,99]; e.g. `p:95`).
     """
 
     kind: typing.Literal["median"] = "median"
@@ -100,13 +100,14 @@ class AnalyticsQueryTracesMetric_Median(UniversalBaseModel):
     model_config: typing.ClassVar[pydantic.ConfigDict] = pydantic.ConfigDict(extra="allow", frozen=True)
 
 
-class AnalyticsQueryTracesMetric_P95(UniversalBaseModel):
+class AnalyticsQueryTracesMetric_Percentile(UniversalBaseModel):
     """
-    The metric: `count`, `errorRate`, `cacheHitRate`, or `{sum|min|max|avg|median|p95}` over `duration`/`cost`/`tokens`.
+    The metric: `count`, `errorRate`, `cacheHitRate`, `{sum|min|max|avg|median}` over `duration`/`cost`/`tokens`, or `{kind:'percentile',field,p}` for an arbitrary percentile (`p` in [1,99]; e.g. `p:95`).
     """
 
-    kind: typing.Literal["p95"] = "p95"
-    field: AnalyticsQueryTracesMetricP95Field
+    kind: typing.Literal["percentile"] = "percentile"
+    field: AnalyticsQueryTracesMetricPercentileField
+    p: float
 
     model_config: typing.ClassVar[pydantic.ConfigDict] = pydantic.ConfigDict(extra="allow", frozen=True)
 
@@ -121,7 +122,7 @@ AnalyticsQueryTracesMetric = typing_extensions.Annotated[
         AnalyticsQueryTracesMetric_Max,
         AnalyticsQueryTracesMetric_Avg,
         AnalyticsQueryTracesMetric_Median,
-        AnalyticsQueryTracesMetric_P95,
+        AnalyticsQueryTracesMetric_Percentile,
     ],
     pydantic.Field(discriminator="kind"),
 ]

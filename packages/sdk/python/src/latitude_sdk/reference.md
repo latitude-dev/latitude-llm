@@ -8695,7 +8695,15 @@ client.spans.query(
 <dl>
 <dd>
 
-**filters:** `typing.Optional[typing.Dict[str, typing.List[FilterCondition]]]` — Row-local span filter set (same DSL as `listTraces`) over span fields — `operation`, `toolName`, `model`, `provider`, `sessionId`, `traceId`, `tags`, `duration`, `cost`, `tokensInput`/`tokensOutput`.
+**filters:** `typing.Optional[typing.Dict[str, typing.List[FilterCondition]]]` — Row-local span filter set (same DSL as `listTraces`) over span fields — `operation`, `toolName`, `model`, `provider`, `sessionId`, `traceId`, `tags`, `status` (`error`/`ok`/`unset`), `duration`, `cost`, `tokensInput`/`tokensOutput`.
+    
+</dd>
+</dl>
+
+<dl>
+<dd>
+
+**order_by:** `typing.Optional[QuerySpansBodyOrderBy]` — Sort order. Defaults to newest first (`startTime` desc); use `duration`/`cost` desc for top-N slowest/costliest.
     
 </dd>
 </dl>

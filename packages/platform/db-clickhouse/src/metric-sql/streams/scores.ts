@@ -18,20 +18,34 @@ const BREAKDOWN = {
   tag: { expr: "tags", isArray: true },
 } satisfies Record<ScoreBreakdownField, BreakdownExpr>
 
+// The trace dimensions are exactly the array breakdowns; scalar breakdowns
+// (`signalId`/`source`) and filters are all score-native, so only these need the
+// traces join. Derived from BREAKDOWN so it can't drift from the breakdown set.
+const needsTraceJoin = (breakdown: string | undefined): boolean =>
+  breakdown !== undefined && BREAKDOWN[breakdown as ScoreBreakdownField]?.isArray === true
+
 /**
  * One row per score (the signal grain), windowed on `created_at` (a
- * `DateTime64(3)` column — note the scale). Each score is left-joined to its
- * trace's rollup so a breakdown can group by a trace dimension; scores without a
- * trace keep NULL/empty dims and drop out of trace-dim breakdowns.
+ * `DateTime64(3)` column — note the scale). When the breakdown is a trace
+ * dimension the score is left-joined to its trace's rollup (arrays for ARRAY
+ * JOIN; traceless scores keep empty dims and drop out). For scalar breakdowns
+ * (`signalId`/`source`) or none, the join is skipped entirely — those columns
+ * are never referenced downstream, and filters are all score-native.
  */
 const buildInner = (input: MetricSqlInput): Effect.Effect<InnerQuery, never, never> =>
   Effect.sync(() => {
-    const { clauses, params: filterParams } = buildClickHouseWhere(input.target.filterSet, SCORE_FIELD_REGISTRY)
+    const { clauses, params: filterParams } = buildClickHouseWhere(input.filterSet, SCORE_FIELD_REGISTRY)
     const extraWhere = clauses.length > 0 ? `AND ${clauses.join(" AND ")}` : ""
-    return {
-      sql: `SELECT
-              sc.signal_id AS signal_id, sc.source AS source, sc.value AS value,
-              sc.passed AS passed, sc.errored AS errored, sc.created_at AS created_at,
+    const scoreWhere = `sc.organization_id = {organizationId:String}
+              AND sc.project_id = {projectId:String}
+              AND sc.created_at >= toDateTime64({windowFrom:String}, 3, 'UTC')
+              AND sc.created_at < toDateTime64({windowTo:String}, 3, 'UTC')
+              ${extraWhere}`
+    const scoreColumns = `sc.signal_id AS signal_id, sc.source AS source, sc.value AS value,
+              sc.passed AS passed, sc.errored AS errored, sc.created_at AS created_at`
+
+    const sql = needsTraceJoin(input.breakdown)
+      ? `SELECT ${scoreColumns},
               tr.models AS models, tr.providers AS providers, tr.service_names AS service_names,
               tr.tools AS tools, tr.tags AS tags
             FROM scores sc
@@ -57,11 +71,13 @@ const buildInner = (input: MetricSqlInput): Effect.Effect<InnerQuery, never, nev
                 )
               GROUP BY organization_id, project_id, trace_id
             ) tr ON sc.trace_id = tr.trace_id
-            WHERE sc.organization_id = {organizationId:String}
-              AND sc.project_id = {projectId:String}
-              AND sc.created_at >= toDateTime64({windowFrom:String}, 3, 'UTC')
-              AND sc.created_at < toDateTime64({windowTo:String}, 3, 'UTC')
-              ${extraWhere}`,
+            WHERE ${scoreWhere}`
+      : `SELECT ${scoreColumns}
+            FROM scores sc
+            WHERE ${scoreWhere}`
+
+    return {
+      sql,
       params: {
         ...windowParams({
           organizationId: input.organizationId as string,

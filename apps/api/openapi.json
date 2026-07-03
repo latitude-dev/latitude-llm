@@ -8172,6 +8172,10 @@
                   "type": "string",
                   "description": "The breakdown value, present when `breakdown` was set."
                 },
+                "label": {
+                  "type": "string",
+                  "description": "Human-readable name for `key` when the breakdown value is an opaque id — the signal name for `signalId`, the cluster name for `cluster`. Absent for already-readable breakdowns."
+                },
                 "bucketStart": {
                   "type": "string",
                   "description": "ISO-8601 start of the time bucket, present when `timeBucket` was set."
@@ -8388,7 +8392,7 @@
                       "kind": {
                         "type": "string",
                         "enum": [
-                          "p95"
+                          "percentile"
                         ]
                       },
                       "field": {
@@ -8398,15 +8402,21 @@
                           "cost",
                           "tokens"
                         ]
+                      },
+                      "p": {
+                        "type": "number",
+                        "minimum": 1,
+                        "maximum": 99
                       }
                     },
                     "required": [
                       "kind",
-                      "field"
+                      "field",
+                      "p"
                     ]
                   }
                 ],
-                "description": "The metric: `count`, `errorRate`, `cacheHitRate`, or `{sum|min|max|avg|median|p95}` over `duration`/`cost`/`tokens`."
+                "description": "The metric: `count`, `errorRate`, `cacheHitRate`, `{sum|min|max|avg|median}` over `duration`/`cost`/`tokens`, or `{kind:'percentile',field,p}` for an arbitrary percentile (`p` in [1,99]; e.g. `p:95`)."
               },
               "filters": {
                 "allOf": [
@@ -8699,7 +8709,7 @@
                       "kind": {
                         "type": "string",
                         "enum": [
-                          "p95"
+                          "percentile"
                         ]
                       },
                       "field": {
@@ -8709,15 +8719,21 @@
                           "cost",
                           "tokens"
                         ]
+                      },
+                      "p": {
+                        "type": "number",
+                        "minimum": 1,
+                        "maximum": 99
                       }
                     },
                     "required": [
                       "kind",
-                      "field"
+                      "field",
+                      "p"
                     ]
                   }
                 ],
-                "description": "The metric: `count`, `errorRate`, `cacheHitRate`, or `{sum|min|max|avg|median|p95}` over `duration`/`cost`/`tokens`."
+                "description": "The metric: `count`, `errorRate`, `cacheHitRate`, `{sum|min|max|avg|median}` over `duration`/`cost`/`tokens`, or `{kind:'percentile',field,p}` for an arbitrary percentile (`p` in [1,99]; e.g. `p:95`)."
               },
               "filters": {
                 "allOf": [
@@ -9004,7 +9020,7 @@
                       "kind": {
                         "type": "string",
                         "enum": [
-                          "p95"
+                          "percentile"
                         ]
                       },
                       "field": {
@@ -9014,15 +9030,21 @@
                           "cost",
                           "tokens"
                         ]
+                      },
+                      "p": {
+                        "type": "number",
+                        "minimum": 1,
+                        "maximum": 99
                       }
                     },
                     "required": [
                       "kind",
-                      "field"
+                      "field",
+                      "p"
                     ]
                   }
                 ],
-                "description": "The metric: `count`, `errorRate`, `cacheHitRate`, or `{sum|min|max|avg|median|p95}` over `duration`/`cost`/`tokens`."
+                "description": "The metric: `count`, `errorRate`, `cacheHitRate`, `{sum|min|max|avg|median}` over `duration`/`cost`/`tokens`, or `{kind:'percentile',field,p}` for an arbitrary percentile (`p` in [1,99]; e.g. `p:95`)."
               },
               "filters": {
                 "allOf": [
@@ -9857,9 +9879,34 @@
                 "$ref": "#/components/schemas/FilterSet"
               },
               {
-                "description": "Row-local span filter set (same DSL as `listTraces`) over span fields — `operation`, `toolName`, `model`, `provider`, `sessionId`, `traceId`, `tags`, `duration`, `cost`, `tokensInput`/`tokensOutput`."
+                "description": "Row-local span filter set (same DSL as `listTraces`) over span fields — `operation`, `toolName`, `model`, `provider`, `sessionId`, `traceId`, `tags`, `status` (`error`/`ok`/`unset`), `duration`, `cost`, `tokensInput`/`tokensOutput`."
               }
             ]
+          },
+          "orderBy": {
+            "type": "object",
+            "properties": {
+              "field": {
+                "type": "string",
+                "enum": [
+                  "startTime",
+                  "duration",
+                  "cost"
+                ],
+                "default": "startTime",
+                "description": "Sort key."
+              },
+              "direction": {
+                "type": "string",
+                "enum": [
+                  "asc",
+                  "desc"
+                ],
+                "default": "desc",
+                "description": "Sort direction."
+              }
+            },
+            "description": "Sort order. Defaults to newest first (`startTime` desc); use `duration`/`cost` desc for top-N slowest/costliest."
           },
           "range": {
             "type": "object",

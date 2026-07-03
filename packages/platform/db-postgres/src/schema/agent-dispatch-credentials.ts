@@ -12,5 +12,5 @@ export const agentDispatchCredentials = latitudeSchema.table(
     webhookSecret: text("webhook_secret"),
     ...timestamps(),
   },
-  (t) => [organizationRLSPolicy("agent_dispatch_credentials")],
+  (_t) => [organizationRLSPolicy("agent_dispatch_credentials")],
 )

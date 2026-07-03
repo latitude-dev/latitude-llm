@@ -72,8 +72,8 @@ const formatMetric = (metric: MonitorMetric): string => {
       return `the average ${metricFieldNoun(metric.field)}`
     case "median":
       return `the median ${metricFieldNoun(metric.field)}`
-    case "p95":
-      return `the 95th-percentile ${metricFieldNoun(metric.field)}`
+    case "percentile":
+      return `the ${metric.p}th-percentile ${metricFieldNoun(metric.field)}`
   }
 }
 

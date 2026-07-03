@@ -4,10 +4,11 @@ import typing
 
 import pydantic
 from ..core.pydantic_utilities import UniversalBaseModel
-from .analytics_query_spans_metric_p95field import AnalyticsQuerySpansMetricP95Field
+from .analytics_query_spans_metric_percentile_field import AnalyticsQuerySpansMetricPercentileField
 
 
-class AnalyticsQuerySpansMetricP95(UniversalBaseModel):
-    field: AnalyticsQuerySpansMetricP95Field
+class AnalyticsQuerySpansMetricPercentile(UniversalBaseModel):
+    field: AnalyticsQuerySpansMetricPercentileField
+    p: float
 
     model_config: typing.ClassVar[pydantic.ConfigDict] = pydantic.ConfigDict(extra="allow", frozen=True)
