@@ -269,21 +269,21 @@ function CheckboxDemo() {
       title="Checkbox"
       description="Selection control with checked, unchecked, and indeterminate states."
     >
-      <Checkbox checked={checked} onCheckedChange={setChecked} />
+      <div className="flex items-center gap-2">
+        <Checkbox id="checkbox-demo" checked={checked} onCheckedChange={setChecked} />
+        <Label htmlFor="checkbox-demo">
+          <Text.H6>Checkbox</Text.H6>
+        </Label>
+      </div>
     </ComponentDemoSection>
   )
 }
 
 function CopyButtonDemo() {
   return (
-    <>
-      <ComponentDemoSection title="Plain text" description="Copies a short string to the clipboard.">
-        <CopyButton value="Hello, world!" />
-      </ComponentDemoSection>
-      <ComponentDemoSection title="Identifier" description="Copies a longer identifier value.">
-        <CopyButton value="cuid_abc123def456" />
-      </ComponentDemoSection>
-    </>
+    <ComponentDemoSection title="Copy button" description="Copies a value to the clipboard with feedback.">
+      <CopyButton value="Hello, world!" />
+    </ComponentDemoSection>
   )
 }
 
@@ -340,32 +340,15 @@ function FormsDemo() {
 
 function StatusDemo() {
   return (
-    <>
-      <ComponentDemoSection title="Neutral" description="Default status without semantic color.">
+    <ComponentDemoSection title="Variants" description="Semantic status variants.">
+      <div className="flex flex-wrap gap-4">
         <Status label="Neutral" variant="neutral" />
-      </ComponentDemoSection>
-      <ComponentDemoSection title="Info" description="Informational status.">
         <Status label="Info" variant="info" />
-      </ComponentDemoSection>
-      <ComponentDemoSection title="Success" description="Positive or healthy status.">
         <Status label="Success" variant="success" />
-      </ComponentDemoSection>
-      <ComponentDemoSection title="Warning" description="Attention-needed status.">
         <Status label="Warning" variant="warning" />
-      </ComponentDemoSection>
-      <ComponentDemoSection title="Destructive" description="Error or critical status.">
         <Status label="Destructive" variant="destructive" />
-      </ComponentDemoSection>
-      <ComponentDemoSection
-        title="Truncation"
-        description="Long labels truncate cleanly in constrained layouts."
-        frameClassName="block"
-      >
-        <div className="mx-auto w-full max-w-64">
-          <Status label="This is a longer status label that truncates cleanly in constrained layouts" variant="info" />
-        </div>
-      </ComponentDemoSection>
-    </>
+      </div>
+    </ComponentDemoSection>
   )
 }
 

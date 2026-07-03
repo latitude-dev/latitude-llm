@@ -51,8 +51,8 @@ const JSON_SAMPLE = JSON.stringify(
 // Long enough (> ~3000 chars) to trigger the large-markdown "show more" split.
 const LONG_TEXT = Array.from(
   { length: 14 },
-  (_, i) =>
-    `Paragraph ${i + 1}. This is a long assistant response used to demonstrate how the renderer collapses oversized content behind a "show more" affordance, snapping to paragraph boundaries so the head and tail stay readable while the middle is hidden until expanded.`,
+  () =>
+    `This is a long assistant response used to demonstrate how the renderer collapses oversized content behind a "show more" affordance, snapping to paragraph boundaries so the head and tail stay readable while the middle is hidden until expanded.`,
 ).join("\n\n")
 
 // `as GenAIMessage[]` — the schema is permissive (z.core.$loose) and we want to exercise
