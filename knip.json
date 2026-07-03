@@ -43,6 +43,7 @@
       ],
       "ignoreDependencies": [
         "@temporalio/worker",
+        "quickjs-emscripten",
         "voyageai"
       ]
     },
