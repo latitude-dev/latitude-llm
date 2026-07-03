@@ -71,9 +71,7 @@ import { useDebounce } from "../../../../../lib/hooks/useDebounce.ts"
 import { useParamState } from "../../../../../lib/hooks/useParamState.ts"
 import { EMPTY_SELECTION, type SelectionState, useSelectableRows } from "../../../../../lib/hooks/useSelectableRows.ts"
 import { useAuthenticatedUser } from "../../../-route-data.ts"
-import { ColumnsSelector } from "../-components/columns-selector.tsx"
 import { ExportConfirmationModal } from "../-components/export-confirmation-modal.tsx"
-import { useTableColumnSettings } from "../-components/table-column-settings.ts"
 import { TimeFilterDropdown } from "../-components/time-filter-dropdown.tsx"
 import { parseFilters } from "../-components/trace-page-state.ts"
 import { useRouteProject } from "../-route-data.ts"
@@ -81,12 +79,7 @@ import { AssigneeFilter, UNASSIGNED_FILTER_TOKEN } from "./-components/assignee-
 import { SignalBuilderModal } from "./-components/builder/signal-builder-modal.tsx"
 import { SignalsAnalyticsPanel } from "./-components/signals-analytics-panel.tsx"
 import { SignalsEmptyState } from "./-components/signals-empty-state.tsx"
-import {
-  ISSUES_COLUMN_OPTIONS,
-  type SignalsColumnId,
-  type SignalsTableSorting,
-  SignalsView,
-} from "./-components/signals-view.tsx"
+import { type SignalsTableSorting, SignalsView } from "./-components/signals-view.tsx"
 
 const DEFAULT_SORTING: SignalsTableSorting = { column: "lastSeen", direction: "desc" }
 const SIGNAL_SEARCH_DEBOUNCE_MS = 300
@@ -212,10 +205,6 @@ function SignalsPage() {
     [searchInput, searchQuery, setSearchQuery],
   )
 
-  const columnSettings = useTableColumnSettings<SignalsColumnId>({
-    storageKey: "projects.issues.columns.v1",
-    columns: ISSUES_COLUMN_OPTIONS,
-  })
   const timeRange = useMemo(() => {
     const toMs = timeTo ? Date.parse(timeTo) : Date.now()
     const fromMs = timeFrom ? Date.parse(timeFrom) : toMs - DEFAULT_SIGNALS_RANGE_SECONDS * 1000
@@ -405,12 +394,6 @@ function SignalsPage() {
               />
             </Layout.ActionRowItem>
             <Layout.ActionRowItem>
-              <ColumnsSelector
-                columns={columnSettings.columns}
-                selectedColumnIds={columnSettings.visibleColumnIds}
-                onChange={(nextColumnIds) => columnSettings.setVisibleColumnIds(nextColumnIds as SignalsColumnId[])}
-                onOrderChange={(nextColumnIds) => columnSettings.setColumnIds(nextColumnIds as SignalsColumnId[])}
-              />
               <div className="relative">
                 <Input
                   value={searchInput}
@@ -491,7 +474,6 @@ function SignalsPage() {
           sorting={sorting}
           occurrencesSum={occurrencesSum}
           priorityCounts={priorityCounts}
-          visibleColumnIds={columnSettings.visibleColumnIds}
           selection={selection}
           onSortChange={setSorting}
           projectSlug={project.slug}
