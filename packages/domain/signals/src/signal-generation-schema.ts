@@ -26,6 +26,7 @@ const generatedRuleConditionSchema = z.object({
     "tool_call_count",
     "error",
     "finish_reason",
+    "semantic_similarity",
   ]),
   scope: z
     .enum(["last_assistant", "any_assistant", "any_user", "any_tool", "conversation"])
@@ -35,7 +36,11 @@ const generatedRuleConditionSchema = z.object({
     .enum(["contains", "not_contains", "matches_regex", "not_matches_regex"])
     .nullable()
     .describe("text_match only"),
-  text: z.string().min(1).nullable().describe("text_match: the text or regex; finish_reason: the reason string"),
+  text: z
+    .string()
+    .min(1)
+    .nullable()
+    .describe("text_match: the text or regex; finish_reason: the reason string; semantic_similarity: the query"),
   caseSensitive: z.boolean().nullable().describe("text_match only"),
   unit: z.enum(["chars", "words"]).nullable().describe("output_length only"),
   comparison: z.enum(["gt", "gte", "lt", "lte"]).nullable().describe("output_length, metric, tool_call_count"),
@@ -47,6 +52,10 @@ const generatedRuleConditionSchema = z.object({
     .describe("metric only"),
   aggregation: z.enum(["session", "anyTrace", "allTraces"]).nullable().describe("metric only"),
   toolName: z.string().min(1).nullable().describe("tool_used (required), tool_failed (optional)"),
+  threshold: z
+    .number()
+    .nullable()
+    .describe("semantic_similarity only; cosine similarity 0 to 1 (0.4 broad, 0.55 balanced, 0.7 strict)"),
 })
 
 type GeneratedRuleCondition = z.infer<typeof generatedRuleConditionSchema>
@@ -93,6 +102,13 @@ const toSharedCondition = (c: GeneratedRuleCondition): Record<string, unknown> =
       }
     case "finish_reason":
       return { type: c.type, ...(c.text === null ? {} : { value: c.text }) }
+    case "semantic_similarity":
+      return {
+        type: c.type,
+        ...(c.text === null ? {} : { query: c.text }),
+        ...(c.comparison === null ? {} : { operator: c.comparison }),
+        ...(c.threshold === null ? {} : { threshold: c.threshold }),
+      }
     case "empty_output":
     case "error":
       return { type: c.type }

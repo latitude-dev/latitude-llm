@@ -19,14 +19,22 @@ import {
 } from "@domain/shared"
 import { createFakeChSqlClient } from "@domain/shared/testing"
 import {
+  MessageEmbeddingRepository,
   type Session,
   SessionRepository,
   SpanRepository,
   type TraceDetail,
   TraceRepository,
+  TraceSearchRepository,
   type TraceTimeHistogramBucket,
 } from "@domain/spans"
-import { createFakeSessionRepository, createFakeSpanRepository, createFakeTraceRepository } from "@domain/spans/testing"
+import {
+  createFakeMessageEmbeddingRepository,
+  createFakeSessionRepository,
+  createFakeSpanRepository,
+  createFakeTraceRepository,
+  createFakeTraceSearchRepository,
+} from "@domain/spans/testing"
 import { Effect, Layer } from "effect"
 import { describe, expect, it } from "vitest"
 import { SignalRepository } from "../ports/signal-repository.ts"
@@ -107,6 +115,7 @@ const condition = (partial: Partial<GeneratedRuleCondition> & Pick<GeneratedRule
     metricField: null,
     aggregation: null,
     toolName: null,
+    threshold: null,
     ...partial,
   }) as GeneratedRuleCondition
 
@@ -247,6 +256,8 @@ const buildLayer = (options: {
       Layer.succeed(TraceRepository, traceRepository),
       Layer.succeed(SessionRepository, sessionRepository),
       Layer.succeed(SpanRepository, spanRepository),
+      Layer.succeed(MessageEmbeddingRepository, createFakeMessageEmbeddingRepository().repository),
+      Layer.succeed(TraceSearchRepository, createFakeTraceSearchRepository().repository),
       Layer.succeed(ChSqlClient, createFakeChSqlClient()),
       Layer.succeed(SignalRepository, signalRepository),
       Layer.succeed(EvaluationRepository, evaluationRepo.service),

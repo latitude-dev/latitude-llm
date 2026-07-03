@@ -7,13 +7,15 @@ import {
   SIGNAL_GENERATION_RESULT_TTL_SECONDS,
   type SignalGenerationResult,
 } from "@domain/signals"
-import { AIGenerateLive, withAi } from "@platform/ai"
+import { AIEmbedLive, AIGenerateLive, withAi } from "@platform/ai"
 import type { RedisClient } from "@platform/cache-redis"
 import {
   type ClickHouseClient,
+  MessageEmbeddingRepositoryLive,
   SessionRepositoryLive,
   SpanRepositoryLive,
   TraceRepositoryLive,
+  TraceSearchRepositoryLive,
   withClickHouse,
 } from "@platform/db-clickhouse"
 import {
@@ -114,12 +116,18 @@ const runGenerateSignalJob =
             OrganizationId(payload.organizationId),
           ),
           withClickHouse(
-            Layer.mergeAll(SessionRepositoryLive, SpanRepositoryLive, TraceRepositoryLive),
+            Layer.mergeAll(
+              SessionRepositoryLive,
+              SpanRepositoryLive,
+              TraceRepositoryLive,
+              MessageEmbeddingRepositoryLive,
+              TraceSearchRepositoryLive,
+            ),
             deps.clickhouseClient,
             OrganizationId(payload.organizationId),
           ),
           Effect.provide(QuickJsScriptRuntimeLive),
-          withAi(AIGenerateLive, deps.redisClient),
+          withAi(Layer.mergeAll(AIGenerateLive, AIEmbedLive), deps.redisClient),
           withTracing,
           Effect.matchEffect({
             onSuccess: (result) =>

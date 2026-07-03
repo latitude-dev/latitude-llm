@@ -29,7 +29,13 @@ import {
   type SqlClient,
   TraceId,
 } from "@domain/shared"
-import { SessionRepository, type SpanRepository, TraceRepository } from "@domain/spans"
+import {
+  type MessageEmbeddingRepository,
+  SessionRepository,
+  type SpanRepository,
+  TraceRepository,
+  type TraceSearchRepository,
+} from "@domain/spans"
 import { Effect } from "effect"
 import {
   SIGNAL_GENERATION_DEFAULT_MODEL,
@@ -296,6 +302,8 @@ export const createSignalFromPromptUseCase = (input: CreateSignalFromPromptInput
     | TraceRepository
     | SessionRepository
     | SpanRepository
+    | MessageEmbeddingRepository
+    | TraceSearchRepository
     | ChSqlClient
     | SignalRepository
     | EvaluationRepository
