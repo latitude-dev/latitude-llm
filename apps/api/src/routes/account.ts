@@ -18,7 +18,7 @@ import { withTracing } from "@repo/observability"
 import { Effect, Layer } from "effect"
 import { getAdminPostgresClient } from "../clients.ts"
 import { defineApiEndpoint } from "../mcp/index.ts"
-import { createTierRateLimiter } from "../middleware/rate-limiter.ts"
+import { createGlobalRateLimiter, createTierRateLimiter } from "../middleware/rate-limiter.ts"
 import {
   errorResponse,
   jsonBody,
@@ -190,7 +190,15 @@ export const registerBootstrapRoute = ({
 }) => {
   const adminClient = adminDatabase ?? getAdminPostgresClient()
 
+  // The unauthenticated bootstrap surface has no CAPTCHA/Turnstile, so a botnet
+  // spread across many IPs slips past the per-IP `max` tier. The per-IP limiter
+  // runs first (cheaply rejecting a single greedy IP), then a global cap on the
+  // total creation rate acts as a second line of defense against distributed abuse.
   app.use("/account/bootstrap", createTierRateLimiter("max"))
+  app.use(
+    "/account/bootstrap",
+    createGlobalRateLimiter({ key: "account-bootstrap", maxRequests: 1000, windowSeconds: 60 }),
+  )
 
   app.openapi(bootstrapRoute, async (c) => {
     const body = c.req.valid("json")

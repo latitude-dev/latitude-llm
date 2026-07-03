@@ -142,3 +142,28 @@ export const createTierRateLimiter = (tier: RateLimitTier) => {
     errorMessage: `Rate limit exceeded for ${tier}-tier endpoints. Please slow down.`,
   })
 }
+
+/**
+ * Global (tenant-agnostic) rate limiter: one shared counter across every
+ * caller, keyed only by `key`. It bounds the *total* request rate instead of
+ * partitioning per org/IP like {@link createTierRateLimiter} — use it to shield
+ * an unauthenticated surface from bulk abuse when there's no per-caller
+ * identity or CAPTCHA to key on (e.g. account bootstrap). Stack it after a
+ * per-IP tier so a single greedy IP is rejected before it burns global budget.
+ */
+export const createGlobalRateLimiter = ({
+  key,
+  maxRequests,
+  windowSeconds,
+}: {
+  key: string
+  maxRequests: number
+  windowSeconds: number
+}) =>
+  createRedisRateLimiter({
+    maxRequests,
+    windowSeconds,
+    keyPrefix: `ratelimit:global:${key}`,
+    keyGenerator: () => "all",
+    errorMessage: "Too many requests to this endpoint right now. Please retry shortly.",
+  })
