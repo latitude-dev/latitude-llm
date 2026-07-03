@@ -70,4 +70,5 @@ jobs:
             - After publishing, leave exactly one PR comment that links to both the Cloudflare temporary artifact URL and the permanent-claim URL. If no claim URL is printed, say that no claim URL was returned.
             - Do not commit, push, or edit the PR branch.
           claude_args: |
+            --dangerously-skip-permissions
             --allowedTools Bash,Read,Write,Edit,Glob,Grep
