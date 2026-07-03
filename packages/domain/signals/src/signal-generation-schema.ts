@@ -76,7 +76,9 @@ export const generatedSignalDraftSchema = z.object({
   confirm: z
     .boolean()
     .describe("true ONLY on a review turn when the previewed verdicts match the ask and no changes are needed"),
-  name: z.string().min(1).max(SIGNAL_NAME_MAX_LENGTH),
+  // Constraint keywords Bedrock structured output rejects (maxLength, maxItems, maximum) stay out
+  // of this schema; `mapGeneratedSignalDraft` clamps or re-validates instead.
+  name: z.string().min(1).describe(`At most ${SIGNAL_NAME_MAX_LENGTH} characters, recognizable in a list`),
   description: z
     .string()
     .min(1)
@@ -85,9 +87,8 @@ export const generatedSignalDraftSchema = z.object({
   ruleMatch: z.enum(["all", "any"]).nullable().describe("Required when evaluationKind is rule"),
   ruleConditions: z
     .array(generatedRuleConditionSchema)
-    .max(10)
     .nullable()
-    .describe("Required when evaluationKind is rule"),
+    .describe("Required when evaluationKind is rule; 1 to 10 conditions"),
   judgeCriteria: z
     .string()
     .nullable()
@@ -96,7 +97,7 @@ export const generatedSignalDraftSchema = z.object({
   filters: generatedFiltersSchema
     .nullable()
     .describe("null unless a filter discards sessions that surely cannot match"),
-  sampling: z.number().int().min(1).max(100).describe("Percentage of in-scope sessions the evaluation runs on"),
+  sampling: z.number().int().describe("Percentage (1 to 100) of in-scope sessions the evaluation runs on"),
 })
 
 export type GeneratedSignalDraft = z.infer<typeof generatedSignalDraftSchema>
@@ -187,13 +188,14 @@ export const mapGeneratedSignalDraft = (generated: GeneratedSignalDraft): MapGen
   const filters = mapFilters(generated.filters)
   if (!filters.ok) return invalid(filters.issues)
 
-  const name = generated.name.trim()
+  const name = generated.name.trim().slice(0, SIGNAL_NAME_MAX_LENGTH).trim()
   const description = generated.description.trim()
   if (name.length === 0) return invalid("name is empty")
   if (description.length === 0) return invalid("description is empty")
+  const sampling = Math.min(100, Math.max(1, Math.round(generated.sampling)))
 
   return {
     ok: true,
-    draft: { name, description, filters: filters.filters, sampling: generated.sampling, evaluation },
+    draft: { name, description, filters: filters.filters, sampling, evaluation },
   }
 }

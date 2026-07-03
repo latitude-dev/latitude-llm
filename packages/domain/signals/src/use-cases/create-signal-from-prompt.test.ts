@@ -313,13 +313,14 @@ describe("createSignalFromPromptUseCase", () => {
     expect(sessionListInputs.some((filters) => filters !== undefined && "tags" in filters)).toBe(true)
   })
 
-  it("creates a raw-script signal", async () => {
+  it("creates a raw-script signal and clamps out-of-range sampling", async () => {
     const scriptDraft: GeneratedSignalDraft = {
       ...baseDraft,
       evaluationKind: "script",
       ruleMatch: null,
       ruleConditions: null,
       script: "return Passed(1, 'ok')",
+      sampling: 250,
     }
     const { layer, evaluations } = buildLayer({ turns: [scriptDraft, { ...scriptDraft, confirm: true }] })
 
@@ -330,6 +331,7 @@ describe("createSignalFromPromptUseCase", () => {
     const evaluation = evaluations.get(outcome.result.evaluationId)
     expect(evaluation?.settings ?? null).toBeNull()
     expect(evaluation?.script).toBe("return Passed(1, 'ok')")
+    expect(evaluation?.trigger.sampling).toBe(100)
   })
 
   it("feeds mapping issues back as a repair turn", async () => {
