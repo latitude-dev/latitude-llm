@@ -226,6 +226,10 @@ export const runLiveEvaluationUseCase = (input: RunLiveEvaluationInput) =>
     }
 
     // Readiness gate — only for embedding-capability scripts, before any billing or execution work.
+    // We only check the triggering trace: it's the one whose embeddings race this run, and older traces
+    // in the session were embedded on their own ingest cycles. If an older trace's vectors happen to be
+    // missing anyway, the host degrades gracefully (returns 0 for the absent vectors), so single-trace
+    // readiness is sufficient here.
     if (hasEmbeddingCapability(detectScriptCapabilities(evaluation.script))) {
       const traceSearchRepository = yield* TraceSearchRepository
       const occurrences = yield* traceSearchRepository.listMessageOccurrencesForTraces({
