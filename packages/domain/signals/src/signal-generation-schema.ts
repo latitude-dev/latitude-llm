@@ -15,7 +15,9 @@ const comparisonOperatorSchema = z.enum(["gt", "gte", "lt", "lte"])
 // property present, `.nullable()` where the shared schema is optional) so it converts cleanly to
 // provider structured-output JSON schema. `mapGeneratedSignalDraft` re-parses through the shared
 // schema, which re-applies the refinements omitted here (regex validity, traceCount aggregation).
-const generatedRuleConditionSchema = z.discriminatedUnion("type", [
+// A plain union, not discriminatedUnion: zod emits `anyOf` for unions but `oneOf` for discriminated
+// unions, and Bedrock structured output rejects `oneOf`.
+const generatedRuleConditionSchema = z.union([
   z.object({
     type: z.literal("text_match"),
     scope: messageScopeSchema,
