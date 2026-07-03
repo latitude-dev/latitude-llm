@@ -47,15 +47,7 @@ function SignalsBreadcrumb() {
   )
 }
 
-import {
-  ActivityIcon,
-  ArchiveIcon,
-  DownloadIcon,
-  PauseIcon,
-  PlayIcon,
-  PlusIcon,
-  SearchIcon,
-} from "lucide-react"
+import { ActivityIcon, ArchiveIcon, DownloadIcon, PauseIcon, PlayIcon, PlusIcon, SearchIcon } from "lucide-react"
 import { useCallback, useMemo, useState } from "react"
 import { invalidateSignalQueries, useSignals } from "../../../../../domains/signals/signals.collection.ts"
 import {
