@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [7.2.0] - 2026-07-03
+
+### Added
+
+- `semantic_similarity` rule condition for signal evaluations. `client.signals.create` (and `update`) now accept a `{ "type": "semantic_similarity", "query": ..., "operator": ..., "threshold": ... }` item in a `rule` evaluation's `conditions`, which matches a session's messages against `query` by embedding similarity. `operator` defaults to `gte`; `threshold` is in `[0, 1]`.
+
 ## [7.1.0] - 2026-07-01
 
 ### Added
