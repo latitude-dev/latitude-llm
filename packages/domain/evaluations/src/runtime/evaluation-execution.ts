@@ -59,21 +59,6 @@ Rules:
 - Keep it focused on the behavior the user described. Use llm() only when a deterministic check over session cannot express it.
 - When you call llm(), always pass a z.object schema and read fields off the returned object.`
 
-const MVP_SCRIPT_PREFIX = `const result = await llm(
-  \``
-
-const MVP_SCRIPT_SUFFIX = `\`,
-  { schema: z.object({ passed: z.boolean(), feedback: z.string() }) }
-)
-
-if (result.passed) {
-  return Passed(1, result.feedback)
-} else {
-  return Failed(0, result.feedback)
-}`
-
-export const EVALUATION_CONVERSATION_PLACEHOLDER = ["${", "session.conversation}"].join("")
-
 export interface EvaluationConversationMessage {
   readonly role: string
   readonly content: string
@@ -106,10 +91,6 @@ export const evaluationExecutionResultSchema = z.object({
   cost: z.number().int().nonnegative(),
 })
 export type EvaluationExecutionResult = z.infer<typeof evaluationExecutionResultSchema>
-
-// Wraps a judge prompt into the MVP sandbox script (one `llm()` call returning the present-verdict
-// Passed/Failed). The single source of the judge wrapper, shared by baseline + settings codegen.
-export const wrapPromptAsEvaluationScript = (prompt: string): string => MVP_SCRIPT_PREFIX + prompt + MVP_SCRIPT_SUFFIX
 
 export const toEvaluationConversationMessages = (
   allMessages: Parameters<typeof formatGenAIConversation>[0],

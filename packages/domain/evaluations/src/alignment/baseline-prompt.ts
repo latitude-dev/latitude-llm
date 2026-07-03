@@ -1,4 +1,4 @@
-import { EVALUATION_CONVERSATION_PLACEHOLDER } from "../runtime/evaluation-execution.ts"
+import { EVALUATION_CONVERSATION_PLACEHOLDER } from "../codegen/judge-script-template.ts"
 
 // Single source of the present-verdict convention: passed = true when the behavior is present.
 const PRESENT_VERDICT_INSTRUCTION = [

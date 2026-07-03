@@ -9,11 +9,15 @@ export type {
   LoadedEvaluationAlignmentState,
   PersistEvaluationAlignmentResult,
 } from "./alignment/types.ts"
+export { compileSettingsToScript } from "./codegen/compile-settings-to-script.ts"
 export {
-  compileSettingsToScript,
+  EVALUATION_CONVERSATION_PLACEHOLDER,
+  wrapPromptAsEvaluationScript,
+} from "./codegen/judge-script-template.ts"
+export {
   validateAndHashEvaluationScript,
   validateEvaluationScriptCompiles,
-} from "./codegen/compile-settings-to-script.ts"
+} from "./codegen/validate-evaluation-script.ts"
 export {
   ALIGNMENT_CURATED_DATASET_MAX_ROWS,
   ALIGNMENT_CURATED_DATASET_MIN_ROWS,
@@ -130,7 +134,6 @@ export {
   type EvaluationOptimizationJudgeTelemetryScope,
 } from "./runtime/ai-telemetry.ts"
 export {
-  EVALUATION_CONVERSATION_PLACEHOLDER,
   EVALUATION_DEFAULT_SCRIPT_RUNTIME_MODEL,
   EVALUATION_SCRIPT_RUNTIME_SYSTEM_PROMPT,
   type EvaluationConversationMessage,
@@ -144,7 +147,6 @@ export {
   evaluationSignalContextSchema,
   toEvaluationConversationMessages,
   toEvaluationExecutionResult,
-  wrapPromptAsEvaluationScript,
 } from "./runtime/evaluation-execution.ts"
 export { loadScriptSessionContext } from "./runtime/load-session-context.ts"
 export { executeEvaluationScriptSandboxed } from "./runtime/sandbox-execution.ts"

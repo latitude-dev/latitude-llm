@@ -7,7 +7,8 @@ import {
   type SqlClient,
 } from "@domain/shared"
 import { Effect } from "effect"
-import { compileSettingsToScript, validateAndHashEvaluationScript } from "../codegen/compile-settings-to-script.ts"
+import { compileSettingsToScript } from "../codegen/compile-settings-to-script.ts"
+import { validateAndHashEvaluationScript } from "../codegen/validate-evaluation-script.ts"
 import { defaultEvaluationTrigger, evaluationSchema } from "../entities/evaluation.ts"
 import { EvaluationRepository } from "../ports/evaluation-repository.ts"
 

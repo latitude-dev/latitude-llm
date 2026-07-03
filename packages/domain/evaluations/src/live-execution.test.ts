@@ -5,8 +5,8 @@ import { MessageEmbeddingRepository, TraceSearchRepository } from "@domain/spans
 import { createFakeMessageEmbeddingRepository, createFakeTraceSearchRepository } from "@domain/spans/testing"
 import { Effect, Layer } from "effect"
 import { describe, expect, it } from "vitest"
+import { EVALUATION_CONVERSATION_PLACEHOLDER, wrapPromptAsEvaluationScript } from "./codegen/judge-script-template.ts"
 import type { LiveEvaluationExecutionError } from "./errors.ts"
-import { EVALUATION_CONVERSATION_PLACEHOLDER, wrapPromptAsEvaluationScript } from "./runtime/evaluation-execution.ts"
 import {
   executeLiveEvaluationUseCase,
   liveEvaluationExecutionInputSchema,
