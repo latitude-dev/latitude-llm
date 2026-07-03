@@ -113,6 +113,25 @@ describe("buildSemanticSimilarityHost", () => {
     expect(embedCalls).toHaveLength(2)
   })
 
+  it("fetches only the new hash on a second distinct query, without re-reading the session", async () => {
+    const { host, occurrenceCalls, findByHashesCalls, embedCalls } = buildHost({
+      occurrences: [{ contentHash: "hash-a", role: "user" }],
+      stored: { "hash-a": [1, 0, 0] },
+    })
+
+    await host({ query: "one" })
+    await host({ query: "two" })
+
+    // Occurrences read once for the whole run (session read is memoized).
+    expect(occurrenceCalls).toHaveLength(1)
+    // First call batches the query hash + session hashes; the second fetches only the new query hash.
+    expect(findByHashesCalls).toHaveLength(2)
+    expect(findByHashesCalls[0]).toContain("hash-a")
+    expect(findByHashesCalls[1]).toHaveLength(1)
+    expect(findByHashesCalls[1]).not.toContain("hash-a")
+    expect(embedCalls).toHaveLength(2)
+  })
+
   it("embeds the query as a document on a miss and persists it content-addressed", async () => {
     const { host, upserted, embedCalls } = buildHost({
       occurrences: [{ contentHash: "hash-a", role: "user" }],

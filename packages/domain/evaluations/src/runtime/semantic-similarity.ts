@@ -137,12 +137,14 @@ export const buildSemanticSimilarityHost = ({
                   ),
               }),
             )
-          queryVector = embedding
-          tokens = estimateEmbeddingTokens(query)
-          session.hashToVector.set(queryHash, embedding)
+          // Persist before caching in-run: if the upsert fails we don't want a vector cached in the
+          // memoized map that never reached the store, which would let a later run skip re-embedding it.
           yield* embeddingRepo.upsertMany([
             { organizationId, projectId, contentHash: queryHash, embedding, embeddingModel: session.config.model },
           ])
+          queryVector = embedding
+          tokens = estimateEmbeddingTokens(query)
+          session.hashToVector.set(queryHash, embedding)
         }
 
         // Start at 0: negative cosines never lower the score, so the result stays in [0,1].
