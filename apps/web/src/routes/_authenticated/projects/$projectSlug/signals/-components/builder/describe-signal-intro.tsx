@@ -144,8 +144,8 @@ export function DescribeSignalIntro({
         <div className="flex min-w-64 flex-1 basis-80 flex-col gap-1.5">
           <Text.H4M>What's a signal?</Text.H4M>
           <Text.H5 color="foregroundMuted">
-            A collection of sessions that share a behavior you care about — frustrated users, failed tool calls, slow
-            runs. Latitude checks every incoming session and adds the ones that match.
+            A collection of sessions that share a behavior you care about: frustrated users, failed tool calls, slow
+            runs. Latitude checks every session as it comes in and adds the ones that match.
           </Text.H5>
         </div>
         <SignalFlowDiagram />

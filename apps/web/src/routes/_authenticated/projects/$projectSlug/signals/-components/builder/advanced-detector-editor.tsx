@@ -25,7 +25,7 @@ export function AdvancedDetectorEditor({
       <div className="flex flex-col gap-3">
         <div className="flex items-center justify-between gap-3">
           <Text.H6 color="foregroundMuted">
-            Compiled from your {compiled.kind === "rule" ? "conditions" : "judge criteria"} — this is the exact script
+            Compiled from your {compiled.kind === "rule" ? "conditions" : "judge criteria"}. This is the exact script
             Latitude runs.
           </Text.H6>
           <Button variant="outline" size="sm" onClick={onDetach}>
@@ -34,7 +34,7 @@ export function AdvancedDetectorEditor({
         </div>
         <RichTextEditor value={compiled.script} readOnly minHeight="200px" />
         <Text.H6 color="foregroundMuted">
-          Editing re-authors the evaluation as a custom script; the settings forms are cleared.
+          Editing turns this into a custom script and clears the settings forms.
         </Text.H6>
       </div>
     )

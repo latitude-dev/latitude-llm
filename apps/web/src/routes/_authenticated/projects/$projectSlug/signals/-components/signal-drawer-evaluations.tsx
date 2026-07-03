@@ -503,7 +503,7 @@ export function SignalDrawerEvaluations({
           onOpenChange={setMonitorModalOpen}
           dismissible
           title="Generate evaluation"
-          description="We will use the latest traces and related human annotations to generate an evaluation aligned with this signal. This may take some time"
+          description="We'll use the latest traces and any related human annotations to build an evaluation that matches this signal. This can take a moment."
           footer={
             <>
               <CloseTrigger />
@@ -649,7 +649,7 @@ export function SignalDrawerEvaluations({
         onOpenChange={(open) => (!open ? setRealignEvaluationId(null) : undefined)}
         dismissible
         title="Realign evaluation"
-        description="We realign evaluations to the latest traces periodically to ensure they are up to date. You can realign this evaluation on demand. This may take some time"
+        description="We periodically realign evaluations to the latest traces to keep them current. You can also realign on demand. This can take a moment."
         footer={
           <>
             <CloseTrigger />
@@ -670,7 +670,7 @@ export function SignalDrawerEvaluations({
         onOpenChange={(open) => (!open ? setDeleteEvaluationId(null) : undefined)}
         dismissible
         title="Remove evaluation"
-        description="Are you sure you want to remove this signal's evaluation? You can generate a new evaluation at any time"
+        description="Are you sure you want to remove this signal's evaluation? You can generate a new one anytime."
         footer={
           <>
             <CloseTrigger />

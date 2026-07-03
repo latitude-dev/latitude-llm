@@ -29,19 +29,19 @@ const DETECTOR_TABS: ReadonlyArray<{ readonly id: DetectorTab; readonly title: s
     id: "rules",
     title: "Set of conditions",
     summary:
-      "Match concrete facts about a session — a phrase in the reply, a failed tool, latency or cost over a limit. Free and instant to run.",
+      "Match concrete facts about a session: a phrase in the reply, a failed tool, latency or cost over a limit. It's free and runs instantly.",
   },
   {
     id: "llm",
     title: "LLM as judge",
     summary:
-      "Describe the behavior in plain English and an LLM reads each session and decides. Best for fuzzy things like tone or frustration.",
+      "Describe the behavior in your own words and an LLM reads each session and decides. Good for fuzzy things like tone or frustration.",
   },
   {
     id: "advanced",
     title: "Custom script",
     summary:
-      "The evaluation as the exact script Latitude runs — compiled from your settings, or fully hand-written for anything the other two can't express.",
+      "The evaluation as the exact script Latitude runs. Compiled from your settings, or written by hand for anything the other two can't express.",
   },
 ]
 
@@ -445,7 +445,7 @@ export function SignalBuilderModal({
           <div className="flex flex-col gap-4">
             <StepHeading
               title="How should Latitude decide whether a session matches?"
-              hint="This check runs automatically on your incoming sessions. A session that passes joins the signal."
+              hint="This check runs automatically on every new session. When one passes, it joins the signal."
             />
             <div className="flex flex-col gap-1.5">
               <Tabs<DetectorTab>
@@ -498,7 +498,7 @@ export function SignalBuilderModal({
           <div className="flex flex-col gap-4">
             <StepHeading
               title="Try it on your real traffic"
-              hint="We run your evaluation against recent sessions from this project — nothing is saved. If the verdicts look wrong, go back and adjust."
+              hint="We run your evaluation against recent sessions from this project. Nothing is saved. If the verdicts look off, go back and adjust."
             />
             <SignalPreviewStep
               result={previewResult}
@@ -513,7 +513,7 @@ export function SignalBuilderModal({
           <div className="flex flex-col gap-4">
             <StepHeading
               title="Name your signal"
-              hint="Shown in the signals list — pick a name your team will recognize."
+              hint="This shows up in the signals list, so pick a name your team will recognize."
             />
             <Input
               required

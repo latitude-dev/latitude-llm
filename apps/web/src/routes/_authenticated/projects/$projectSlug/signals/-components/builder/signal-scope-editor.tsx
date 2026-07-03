@@ -130,7 +130,7 @@ export function SignalScopeEditor({
           <Text.H6 color="foregroundMuted">
             {hasActiveFilters
               ? "Only sessions matching these filters run through the evaluation. Everything else is ignored."
-              : "Right now, every session in your project runs through this evaluation. Add a filter to narrow it down — for example, only the `checkout` service, or a specific model."}
+              : "Right now every session in your project runs through this evaluation. Add a filter to narrow it down, say only the `checkout` service or a specific model."}
           </Text.H6>
         </div>
 
@@ -200,12 +200,12 @@ export function SignalScopeEditor({
           />
           <Text.H6 color="foregroundMuted">
             {sampling === 0
-              ? "0% pauses this signal — no sessions are checked."
+              ? "0% pauses this signal, so no sessions are checked."
               : detectorKind === "rule"
                 ? "Conditions are free and instant, so checking 100% of matching sessions is usually right."
                 : detectorKind === "judge"
-                  ? "Each check sends the session to an LLM, which costs money and time. If you have a lot of traffic, sampling a share still surfaces the pattern at a fraction of the cost."
-                  : "A custom script may call an LLM depending on what it does. If yours does, sampling a share keeps cost down while still surfacing the pattern."}
+                  ? "Each check sends the session to an LLM, which costs money and time. If you get a lot of traffic, checking a slice of it still catches the pattern for much less."
+                  : "A custom script might call an LLM, depending on what it does. If yours does, checking a slice keeps costs down and still catches the pattern."}
           </Text.H6>
         </div>
       </div>

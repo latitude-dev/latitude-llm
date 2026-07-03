@@ -178,7 +178,7 @@ function ExampleConversation({
   if (conversation.totalMessages === 0) {
     return (
       <div className="flex items-center justify-center p-6">
-        <Text.H6 color="foregroundMuted">This example's conversation could not be loaded.</Text.H6>
+        <Text.H6 color="foregroundMuted">We couldn't load this example's conversation.</Text.H6>
       </div>
     )
   }

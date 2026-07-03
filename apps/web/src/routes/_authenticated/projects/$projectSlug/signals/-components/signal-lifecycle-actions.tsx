@@ -15,8 +15,7 @@ function getLifecycleConfirmation(action: LifecycleConfirmationAction) {
     case "mute":
       return {
         title: "Mute signal",
-        description:
-          "Mute this signal. New occurrences will still start incidents, but they will not trigger signal notifications.",
+        description: "Mute this signal. New occurrences still start incidents, but they won't send notifications.",
         confirmLabel: "Mute",
         confirmIcon: BellOffIcon,
         confirmVariant: "destructive" as const,
