@@ -65,13 +65,17 @@ const writeResult = (redisClient: RedisClient, payload: SignalsGenerateSignalPay
 
 // The generation creates a signal at the end, so a stall-recovery redelivery of the same job must
 // not run it twice; the first delivery takes the claim, any later one exits without side effects.
+// The claim outlives the result TTL by a wide margin so a slow run (several extended-reasoning
+// calls plus judge previews) cannot see its claim expire while still executing.
+const CLAIM_TTL_SECONDS = 1800
+
 const claimJob = (redisClient: RedisClient, payload: SignalsGenerateSignalPayload) =>
   Effect.tryPromise(() =>
     redisClient.set(
       `${buildSignalGenerationResultKey(payload.organizationId, payload.generationId)}:claim`,
       "1",
       "EX",
-      SIGNAL_GENERATION_RESULT_TTL_SECONDS,
+      CLAIM_TTL_SECONDS,
       "NX",
     ),
   ).pipe(Effect.map((result) => result === "OK"))
