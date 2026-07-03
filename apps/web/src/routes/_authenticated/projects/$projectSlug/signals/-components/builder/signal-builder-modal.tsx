@@ -1,4 +1,4 @@
-import { DEFAULT_EVALUATION_SAMPLING, type SignalPreviewResult } from "@domain/evaluations"
+import { compileSettingsToScript, DEFAULT_EVALUATION_SAMPLING, type SignalPreviewResult } from "@domain/evaluations"
 import type { EvaluationRuleCondition, EvaluationSettings, FilterSet } from "@domain/shared"
 import { Button, Input, Modal, Tabs, Text, Textarea, useMountEffect, useToast } from "@repo/ui"
 import { useNavigate } from "@tanstack/react-router"
@@ -13,7 +13,7 @@ import {
 import { toUserMessage } from "../../../../../../../lib/errors.ts"
 import { AdvancedDetectorEditor } from "./advanced-detector-editor.tsx"
 import { isConditionValid } from "./condition-meta.tsx"
-import { DETECTOR_METHODS, DetectorMethodPicker } from "./detector-method-picker.tsx"
+import { DescribeSignalIntro } from "./describe-signal-intro.tsx"
 import { JudgeDetectorEditor } from "./judge-detector-editor.tsx"
 import { ConditionEditor, type ConditionEditState, RuleConditionList, type RuleDraft } from "./rule-detector-editor.tsx"
 import { SignalPreviewStep } from "./signal-preview-step.tsx"
@@ -23,6 +23,27 @@ import { StepIndicator } from "./step-indicator.tsx"
 type DetectorTab = "rules" | "llm" | "advanced"
 type StepId = "detector" | "scope" | "test" | "details"
 type EditTab = "detector" | "scope" | "test"
+
+const DETECTOR_TABS: ReadonlyArray<{ readonly id: DetectorTab; readonly title: string; readonly summary: string }> = [
+  {
+    id: "rules",
+    title: "Set of conditions",
+    summary:
+      "Match concrete facts about a session: a phrase in the reply, a failed tool, latency or cost over a limit. It's free and runs instantly.",
+  },
+  {
+    id: "llm",
+    title: "LLM as judge",
+    summary:
+      "Describe the behavior in your own words and an LLM reads each session and decides. Good for fuzzy things like tone or frustration.",
+  },
+  {
+    id: "advanced",
+    title: "Custom script",
+    summary:
+      "The evaluation as the exact script Latitude runs. Compiled from your settings, or written by hand for anything the other two can't express.",
+  },
+]
 
 const CREATE_STEPS: readonly StepId[] = ["detector", "scope", "test", "details"]
 
@@ -85,10 +106,10 @@ function StepHeading({ title, hint }: { readonly title: string; readonly hint: s
 }
 
 /**
- * The Signal Builder. Create mode opens on a method-picker screen (a shortcut,
- * not a wizard step), then runs the wizard (evaluation → scope → test →
- * details) with the picked kind's tab active; Back on the first step returns
- * to the picker.
+ * The Signal Builder. Create mode opens on the describe-first intro (a shortcut,
+ * not a wizard step) where one prompt generates and creates the whole signal;
+ * "Configure manually" runs the wizard (evaluation → scope → test → details)
+ * instead, and Back on the first step returns to the intro.
  * Edit mode is tabbed (Evaluation | Scope | Test) so users can jump straight to
  * what they're changing, and saves only what changed. Mount only while open;
  * reset via `key`.
@@ -118,7 +139,7 @@ export function SignalBuilderModal({
   const [stepIndex, setStepIndex] = useState(0)
   const step = CREATE_STEPS[stepIndex] ?? "detector"
   const [editTab, setEditTab] = useState<EditTab>("detector")
-  // The method screen is a shortcut into the wizard, not a step: it never appears
+  // The describe-first intro is a shortcut into the wizard, not a step: it never appears
   // in the step indicator, and is only reachable again via Back on the first step.
   const [methodChosen, setMethodChosen] = useState(mode === "edit")
 
@@ -128,6 +149,10 @@ export function SignalBuilderModal({
   const [filters, setFilters] = useState<FilterSet>(initial?.filters ?? initialFilters ?? {})
   const [tab, setTab] = useState<DetectorTab>(() =>
     initial?.detector.kind === "script" ? "advanced" : initialSettings?.kind === "judge" ? "llm" : "rules",
+  )
+  // The settings tab whose draft the Custom script tab renders as compiled code.
+  const [lastSettingsTab, setLastSettingsTab] = useState<"rules" | "llm">(() =>
+    initialSettings?.kind === "judge" ? "llm" : "rules",
   )
   const [ruleDraft, setRuleDraft] = useState<RuleDraft>(() =>
     initialSettings?.kind === "rule"
@@ -153,11 +178,22 @@ export function SignalBuilderModal({
   // polling and can't resolve onto an unmounted component.
   useMountEffect(() => () => previewAbortRef.current?.abort())
 
-  const evaluation = detectorPayload(tab, ruleDraft, criteria, scriptDraft)
+  // The Custom script tab without a raw script is a *view* of the active settings draft: preview
+  // and save keep using the settings payload, so merely looking at the compiled code never
+  // re-authors the evaluation. Only "Edit as custom script" (detach) flips it to a raw script.
+  const settingsPayload = detectorPayload(lastSettingsTab, ruleDraft, criteria, "")
+  const compiledView =
+    settingsPayload !== null && "settings" in settingsPayload
+      ? { kind: settingsPayload.settings.kind, script: compileSettingsToScript(settingsPayload.settings) }
+      : null
+  const evaluation =
+    tab === "advanced" && scriptDraft.trim().length === 0 && settingsPayload !== null
+      ? settingsPayload
+      : detectorPayload(tab, ruleDraft, criteria, scriptDraft)
   const detectorValid = evaluation !== null
 
   const runPreview = (): void => {
-    const payload = detectorPayload(tab, ruleDraft, criteria, scriptDraft)
+    const payload = evaluation
     if (payload === null) {
       setPreviewResult({ status: "error", error: "Add a valid evaluation before running a preview." })
       return
@@ -196,9 +232,26 @@ export function SignalBuilderModal({
     if (next === "test") runPreview()
   }
 
-  const chooseMethod = (method: DetectorTab) => {
-    setTab(method)
-    setMethodChosen(true)
+  const selectDetectorTab = (next: DetectorTab) => {
+    setTab(next)
+    if (next !== "advanced") setLastSettingsTab(next)
+  }
+
+  const detachToScript = () => {
+    if (compiledView === null) return
+    setScriptDraft(compiledView.script)
+    setRuleDraft(emptyRuleDraft)
+    setCriteria("")
+  }
+
+  const handleGenerated = ({ signalId }: { readonly signalId: string }) => {
+    toast({ description: "Signal created." })
+    void invalidateSignalQueries(projectId)
+    onClose()
+    void navigate({
+      to: "/projects/$projectSlug/signals/$signalId",
+      params: { projectSlug, signalId },
+    })
   }
 
   const openConditionEditor = (state: ConditionEditState) => {
@@ -300,8 +353,8 @@ export function SignalBuilderModal({
 
   // All three tabs are available in create and edit alike: an evaluation can be re-authored across kinds
   // (settings ⇄ raw script), and the update use-case persists whichever kind the user lands on.
-  const detectorTabOptions = DETECTOR_METHODS.map(({ id, title }) => ({ id, label: title }))
-  const activeMethod = DETECTOR_METHODS.find((method) => method.id === tab)
+  const detectorTabOptions = DETECTOR_TABS.map(({ id, title }) => ({ id, label: title }))
+  const activeMethod = DETECTOR_TABS.find((method) => method.id === tab)
 
   const footer = inConditionSubStep ? (
     <>
@@ -379,13 +432,20 @@ export function SignalBuilderModal({
           `overflow-y-auto` also clips horizontally, so `-mx-2 px-2` (absorbed by the modal's px-6)
           gives focus rings and popover offsets a few px of clip headroom without insetting content. */}
       <div className="-mx-2 flex h-[min(60vh,36rem)] flex-col gap-4 overflow-y-auto px-2 pb-6">
-        {!methodChosen ? <DetectorMethodPicker onSelect={chooseMethod} /> : null}
+        {!methodChosen ? (
+          <DescribeSignalIntro
+            projectId={projectId}
+            filters={filterSetOrNull(filters)}
+            onManual={() => setMethodChosen(true)}
+            onCreated={handleGenerated}
+          />
+        ) : null}
 
         {methodChosen && view === "detector" && !inConditionSubStep ? (
           <div className="flex flex-col gap-4">
             <StepHeading
               title="How should Latitude decide whether a session matches?"
-              hint="This check runs automatically on your incoming sessions. A session that passes joins the signal."
+              hint="This check runs automatically on every new session. When one passes, it joins the signal."
             />
             <div className="flex flex-col gap-1.5">
               <Tabs<DetectorTab>
@@ -393,7 +453,7 @@ export function SignalBuilderModal({
                 size="sm"
                 options={detectorTabOptions}
                 active={tab}
-                onSelect={setTab}
+                onSelect={selectDetectorTab}
               />
               {activeMethod ? <Text.H6 color="foregroundMuted">{activeMethod.summary}</Text.H6> : null}
             </div>
@@ -403,10 +463,10 @@ export function SignalBuilderModal({
             {tab === "llm" ? <JudgeDetectorEditor criteria={criteria} onCriteriaChange={setCriteria} /> : null}
             {tab === "advanced" ? (
               <AdvancedDetectorEditor
-                projectId={projectId}
-                filters={filterSetOrNull(filters)}
+                compiled={compiledView}
                 script={scriptDraft}
                 onScriptChange={setScriptDraft}
+                onDetach={detachToScript}
               />
             ) : null}
           </div>
@@ -438,7 +498,7 @@ export function SignalBuilderModal({
           <div className="flex flex-col gap-4">
             <StepHeading
               title="Try it on your real traffic"
-              hint="We run your evaluation against recent sessions from this project — nothing is saved. If the verdicts look wrong, go back and adjust."
+              hint="We run your evaluation against recent sessions from this project. Nothing is saved. If the verdicts look off, go back and adjust."
             />
             <SignalPreviewStep
               result={previewResult}
@@ -453,7 +513,7 @@ export function SignalBuilderModal({
           <div className="flex flex-col gap-4">
             <StepHeading
               title="Name your signal"
-              hint="Shown in the signals list — pick a name your team will recognize."
+              hint="This shows up in the signals list, so pick a name your team will recognize."
             />
             <Input
               required

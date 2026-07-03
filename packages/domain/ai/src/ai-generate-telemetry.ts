@@ -19,7 +19,7 @@ export const AI_GENERATE_TELEMETRY_TAGS = {
   evaluationJudgeLive: ["eval:execute", "live"],
   evaluationJudgeAlignment: ["eval:execute", "alignment"],
   evaluationJudgeOptimization: ["eval:execute", "optimization"],
-  evaluationScriptGeneration: ["eval:script-generation"],
+  signalGeneration: ["signal:generation"],
   evaluationProposeOptimization: ["gepa:propose"],
   // First taxonomy-naming LLM call: proposes candidate topic themes for a cluster.
   taxonomyProposeThemes: ["taxonomy:propose-themes"],
@@ -36,7 +36,7 @@ export const AI_GENERATE_TELEMETRY_SPAN_NAMES = {
   evaluationJudgeLive: "evaluation.judge.live",
   evaluationJudgeAlignment: "evaluation.judge.alignment",
   evaluationJudgeOptimization: "evaluation.judge.optimization",
-  evaluationScriptGeneration: "evaluation.script.generation",
+  signalGeneration: "signal.generation",
   evaluationProposeOptimization: "evaluation.propose.optimization",
   taxonomyProposeThemes: "taxonomy.propose-themes",
   taxonomyNameCluster: "taxonomy.name-cluster",

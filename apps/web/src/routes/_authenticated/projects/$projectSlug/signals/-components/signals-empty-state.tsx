@@ -19,7 +19,7 @@ export function SignalsEmptyState({
           <Text.H5 color="foregroundMuted" centered>
             {isLoading
               ? "Preparing your signals view."
-              : "Signals are discovered automatically by grouping failed annotations left on your traces. Start annotating traces to surface recurring problems here."}
+              : "Latitude finds signals automatically by grouping failed annotations on your traces. Start annotating traces and recurring problems will show up here."}
           </Text.H5>
         </div>
         {!isLoading ? (

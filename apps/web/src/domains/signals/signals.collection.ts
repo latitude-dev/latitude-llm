@@ -1,5 +1,6 @@
-import type { ScriptGenerationResult, SignalPreviewResult } from "@domain/evaluations"
+import type { SignalPreviewResult } from "@domain/evaluations"
 import type { SignalDimension } from "@domain/scores"
+import type { SignalGenerationResult } from "@domain/signals"
 import type { InfiniteTableInfiniteScroll } from "@repo/ui"
 import { keepPreviousData, useInfiniteQuery, useMutation, useQueries, useQuery } from "@tanstack/react-query"
 import { useMemo } from "react"
@@ -23,12 +24,12 @@ import {
   countSignalSessions,
   createSignal,
   deleteSignal,
-  generateEvaluationScript,
+  generateSignal,
   getRelatedSignals,
-  getScriptGenerationResult,
   getSignal,
   getSignalDetail,
   getSignalDimensions,
+  getSignalGenerationResult,
   getSignalImpact,
   getSignalOccurrences,
   getSignalPreviewResult,
@@ -572,23 +573,26 @@ export async function runSignalPreview(input: {
   return { status: "error", error: "Preview timed out" }
 }
 
-// Generation runs up to 3 generate→sandbox-run cycles (each may make several LLM calls), so it polls
-// longer and less often than preview.
-const GENERATION_POLL_INTERVAL_MS = 1200
-const GENERATION_POLL_TIMEOUT_MS = 150_000
+// Generation runs up to 4 draft/repair/review cycles plus sandbox previews (judge previews make
+// LLM calls per session), so it polls much longer and less often than preview.
+const GENERATION_POLL_INTERVAL_MS = 1500
+const GENERATION_POLL_TIMEOUT_MS = 300_000
 
 /**
- * Enqueues an AI script-generation run and polls until the worker writes a result (or the timeout
- * elapses). Used by the Advanced tab's "Generate" action — not a reactive query.
+ * Enqueues a describe-first signal generation and polls until the worker writes a result (or the
+ * timeout elapses). The worker creates the signal itself; aborting only stops polling — a run in
+ * flight still creates the signal. Used by the builder intro's "Generate signal" action.
  */
-export async function runScriptGeneration(input: {
+export async function runSignalGeneration(input: {
   readonly projectId: string
   readonly prompt: string
   readonly filters?: SignalFilters | null
   /** Stops polling early when the caller (e.g. a closing modal) is no longer interested. */
   readonly signal?: AbortSignal
-}): Promise<ScriptGenerationResult> {
-  const { generationId } = await generateEvaluationScript({
+  /** Receives the worker's progress line while the run is pending. */
+  readonly onStep?: (step: string) => void
+}): Promise<SignalGenerationResult> {
+  const { generationId } = await generateSignal({
     data: {
       projectId: input.projectId,
       prompt: input.prompt,
@@ -599,8 +603,9 @@ export async function runScriptGeneration(input: {
   const deadline = Date.now() + GENERATION_POLL_TIMEOUT_MS
   while (Date.now() < deadline) {
     if (input.signal?.aborted) return { status: "error", error: "Generation cancelled" }
-    const result = await getScriptGenerationResult({ data: { generationId } })
+    const result = await getSignalGenerationResult({ data: { generationId } })
     if (result.status !== "pending") return result
+    if (result.step !== undefined) input.onStep?.(result.step)
     await new Promise((resolve) => setTimeout(resolve, GENERATION_POLL_INTERVAL_MS))
   }
   return { status: "error", error: "Generation timed out" }

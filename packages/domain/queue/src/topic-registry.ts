@@ -444,10 +444,11 @@ const _registry = {
     }
   }>(),
 
-  // On-demand AI authoring of a raw evaluation script from a freeform prompt. Runs in a worker
-  // (AI + sandbox + ClickHouse), smoke-tests the candidate against a scoped session, and writes the
-  // result to Redis for the web client to poll. `filters` is JSON-shaped and re-validated downstream.
-  "signals-generate-script": payloads<{
+  // Describe-first signal creation: AI drafts the complete signal (name, description, filters,
+  // sampling, evaluation) from a freeform prompt, previews it against recent sessions, and creates
+  // it. Runs in a worker (AI + sandbox + ClickHouse + Postgres); progress and the final result are
+  // written to Redis for the web client to poll. `filters` is JSON-shaped and re-validated downstream.
+  "signals-generate-signal": payloads<{
     run: {
       readonly generationId: string
       readonly organizationId: string

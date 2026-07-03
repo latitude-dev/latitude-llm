@@ -55,6 +55,10 @@ import {
 import { Effect, Layer } from "effect"
 import { describe, expect, it } from "vitest"
 import {
+  EVALUATION_CONVERSATION_PLACEHOLDER,
+  wrapPromptAsEvaluationScript,
+} from "../../codegen/judge-script-template.ts"
+import {
   defaultEvaluationTrigger,
   type Evaluation,
   emptyEvaluationAlignment,
@@ -62,11 +66,7 @@ import {
 } from "../../entities/evaluation.ts"
 import { EvaluationRepository, type EvaluationRepositoryShape } from "../../ports/evaluation-repository.ts"
 import { type EvaluationSignal, EvaluationSignalRepository } from "../../ports/evaluation-signal-repository.ts"
-import {
-  EVALUATION_CONVERSATION_PLACEHOLDER,
-  estimateEvaluationScriptCostMicrocents,
-  wrapPromptAsEvaluationScript,
-} from "../../runtime/evaluation-execution.ts"
+import { estimateEvaluationScriptCostMicrocents } from "../../runtime/evaluation-execution.ts"
 import { runLiveEvaluationUseCase } from "./run-live-evaluation.ts"
 
 const INPUT = {

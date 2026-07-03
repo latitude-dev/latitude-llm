@@ -42,8 +42,7 @@ function ReasonChips({ row }: { readonly row: RelatedSignalRecord }) {
             </span>
           }
         >
-          The two issues describe semantically similar failures — their occurrences' feedback points at the same kind of
-          problem.
+          Both issues describe similar failures. Their occurrences' feedback points at the same kind of problem.
         </Tooltip>
       ) : null}
       {row.coOccurrence ? (
@@ -60,7 +59,7 @@ function ReasonChips({ row }: { readonly row: RelatedSignalRecord }) {
           }
         >
           Both issues occur in {formatCount(row.coOccurrence.sharedSessions)} of the same conversations over the last 30
-          days ({formatPercent(row.coOccurrence.sharedSessionsPercent)} of this issue's sessions) — more overlap than
+          days ({formatPercent(row.coOccurrence.sharedSessionsPercent)} of this issue's sessions), more overlap than
           chance would predict.
         </Tooltip>
       ) : null}
@@ -129,7 +128,7 @@ export function SignalRelated({
         </div>
       ) : !related || related.length === 0 ? (
         <Text.H6 color="foregroundMuted">
-          No related issues found — nothing with a similar topic and nothing occurring in the same conversations.
+          No related issues found. Nothing with a similar topic, and nothing showing up in the same conversations.
         </Text.H6>
       ) : (
         <div className="grid grid-cols-1 gap-2 lg:grid-cols-2 2xl:grid-cols-3">

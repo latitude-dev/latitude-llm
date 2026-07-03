@@ -1,3 +1,4 @@
+export { compileSettingsToScript } from "./codegen/compile-settings-to-script.ts"
 export {
   ALIGNMENT_CURATED_DATASET_MAX_ROWS,
   ALIGNMENT_CURATED_DATASET_MIN_ROWS,

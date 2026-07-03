@@ -6,7 +6,7 @@ const JUDGE_EXAMPLES: ReadonlyArray<{ readonly label: string; readonly criteria:
   {
     label: "Frustrated user",
     criteria:
-      "the user grew frustrated — repeating themselves, complaining, or giving up before getting a useful answer.",
+      "the user got frustrated, repeating themselves, complaining, or giving up before getting a useful answer.",
   },
   {
     label: "Made-up information",
@@ -37,7 +37,7 @@ export function JudgeDetectorEditor({
         minRows={3}
         value={criteria}
         onChange={(event) => onCriteriaChange(event.target.value)}
-        placeholder='"the user grew frustrated — repeating themselves, complaining, or giving up before getting a useful answer."'
+        placeholder='"the user got frustrated, repeating themselves, complaining, or giving up before getting a useful answer."'
       />
       <div className="flex flex-wrap items-center gap-2">
         <Text.H6 color="foregroundMuted">Try an example:</Text.H6>

@@ -26,6 +26,7 @@ export {
   SIGNAL_DISCOVERY_RERANK_CANDIDATES,
   SIGNAL_DISCOVERY_SEARCH_CANDIDATES,
   SIGNAL_DISCOVERY_SEARCH_RATIO,
+  SIGNAL_GENERATION_PROMPT_MAX_LENGTH,
   SIGNAL_PRIORITIES,
   SIGNAL_PRIORITY_GROUPS,
   SIGNAL_PRIORITY_ORDER,
@@ -112,6 +113,11 @@ export {
   rankRelatedSignals,
   semanticRelatednessScore,
 } from "./related-signals.ts"
+export {
+  buildSignalGenerationResultKey,
+  SIGNAL_GENERATION_RESULT_TTL_SECONDS,
+  type SignalGenerationResult,
+} from "./signal-generation-result.ts"
 export {
   type ApplySignalLifecycleCommandError,
   type ApplySignalLifecycleCommandInput,
