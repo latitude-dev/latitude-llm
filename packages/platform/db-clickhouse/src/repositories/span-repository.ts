@@ -3,8 +3,15 @@ import {
   ChSqlClient,
   type ChSqlClientShape,
   ExternalUserId,
+  type FilterCondition,
+  type FilterSet,
   isNotFoundError,
+  isPercentileSpanFilterField,
   NotFoundError,
+  type OrganizationId,
+  type PercentileSpanFilterField,
+  type ProjectId,
+  type RepositoryError,
   SessionId,
   SimulationId,
   SpanId,
@@ -383,6 +390,123 @@ const SPAN_LIST_CURSOR_TYPE: Record<SpanListOrderField, string> = {
 const spanListCursorSortValue = (row: SpanListRow, field: SpanListOrderField): string =>
   field === "startTime" ? row.start_time : field === "duration" ? row.duration_ns : row.cost_total_microcents
 
+interface PercentileColumnSpec {
+  readonly column: string
+  readonly ignoreZeros: boolean
+}
+
+const PERCENTILE_FIELD_SPECS: Readonly<Record<PercentileSpanFilterField, PercentileColumnSpec>> = {
+  duration: { column: "duration_ns", ignoreZeros: false },
+  cost: { column: "cost_total_microcents", ignoreZeros: false },
+}
+
+function quantileExpr(spec: PercentileColumnSpec, levelParam: string): string {
+  return spec.ignoreZeros
+    ? `quantileTDigestIf({${levelParam}:Float64})(${spec.column}, ${spec.column} > 0)`
+    : `quantileTDigest({${levelParam}:Float64})(${spec.column})`
+}
+
+const PERCENTILE_NO_MATCH_SENTINEL = Number.MAX_SAFE_INTEGER
+
+interface PercentileRequestEntry {
+  readonly field: PercentileSpanFilterField
+  readonly percentile: number
+  readonly conditionIndex: number
+  readonly conditions: FilterCondition[]
+}
+
+function collectPercentileRequests(filters: FilterSet | undefined): {
+  readonly requests: readonly PercentileRequestEntry[]
+  readonly cloned: Record<string, FilterCondition[]> | undefined
+} {
+  if (!filters) return { requests: [], cloned: undefined }
+
+  let cloned: Record<string, FilterCondition[]> | undefined
+  const requests: PercentileRequestEntry[] = []
+
+  for (const [field, conds] of Object.entries(filters)) {
+    if (!conds) continue
+    const hasPct = conds.some((c) => c.op === "gtePercentile")
+    if (!hasPct) continue
+
+    if (!isPercentileSpanFilterField(field)) continue
+
+    if (!cloned) cloned = {}
+    const arr = [...conds] as FilterCondition[]
+    cloned[field] = arr
+    arr.forEach((c, idx) => {
+      if (c.op === "gtePercentile" && typeof c.value === "number") {
+        requests.push({ field, percentile: c.value, conditionIndex: idx, conditions: arr })
+      }
+    })
+  }
+
+  if (!cloned) return { requests: [], cloned: undefined }
+
+  for (const [field, conds] of Object.entries(filters)) {
+    if (!conds) continue
+    if (cloned[field]) continue
+    cloned[field] = conds as FilterCondition[]
+  }
+
+  return { requests, cloned }
+}
+
+export const resolvePercentileFilters = (
+  organizationId: OrganizationId,
+  projectId: ProjectId,
+  filters: FilterSet | undefined,
+): Effect.Effect<FilterSet | undefined, RepositoryError, ChSqlClient> => {
+  const { requests, cloned } = collectPercentileRequests(filters)
+  if (requests.length === 0 || !cloned) return Effect.succeed(filters)
+
+  return Effect.gen(function* () {
+    const chSqlClient = (yield* ChSqlClient) as ChSqlClientShape<ClickHouseClient>
+
+    const params: Record<string, unknown> = {
+      organizationId: organizationId as string,
+      projectId: projectId as string,
+    }
+    const aliases: string[] = []
+    requests.forEach((req, idx) => {
+      const spec = PERCENTILE_FIELD_SPECS[req.field]
+      const levelParam = `pct_lvl_${idx}`
+      params[levelParam] = Math.max(0, Math.min(1, req.percentile / 100))
+      aliases.push(`${quantileExpr(spec, levelParam)} AS pct_${idx}`)
+    })
+
+    const rows = yield* chSqlClient
+      .query(async (client) => {
+        const result = await client.query({
+          query: `SELECT ${aliases.join(", ")}
+                  FROM (
+                    SELECT duration_ns, cost_total_microcents
+                    FROM spans
+                    WHERE organization_id = {organizationId:String}
+                      AND project_id = {projectId:String}
+                    ORDER BY span_id, ingested_at DESC
+                    LIMIT 1 BY span_id
+                  )`,
+          query_params: params,
+          format: "JSONEachRow",
+        })
+        return result.json<Record<string, number | string | null>>()
+      })
+      .pipe(Effect.mapError((error) => toRepositoryError(error, "resolvePercentileFilters")))
+
+    const row = rows[0] ?? {}
+    requests.forEach((req, idx) => {
+      const raw = row[`pct_${idx}`]
+      const numeric =
+        typeof raw === "number" ? raw : raw != null && raw !== "" && !Number.isNaN(Number(raw)) ? Number(raw) : NaN
+      const threshold = Number.isFinite(numeric) && numeric > 0 ? Math.floor(numeric) : PERCENTILE_NO_MATCH_SENTINEL
+      req.conditions[req.conditionIndex] = { op: "gte", value: threshold }
+    })
+
+    return cloned as FilterSet
+  })
+}
+
 export const SpanRepositoryLive = Layer.effect(
   SpanRepository,
   Effect.gen(function* () {
@@ -448,8 +572,9 @@ export const SpanRepositoryLive = Layer.effect(
         const startToClause = options.startTimeTo
           ? "AND start_time <= parseDateTime64BestEffort({startTimeTo:String}, 9, 'UTC')"
           : ""
-        const { whereClauses: filterClauses, params: filterParams } = options.filters
-          ? buildSpanFilterClauses(options.filters)
+        const resolvedFilters = yield* resolvePercentileFilters(organizationId, projectId, options.filters)
+        const { whereClauses: filterClauses, params: filterParams } = resolvedFilters
+          ? buildSpanFilterClauses(resolvedFilters)
           : { whereClauses: [], params: {} }
         const filterClause = filterClauses.length > 0 ? `AND ${filterClauses.join(" AND ")}` : ""
         const field = options.orderBy?.field ?? "startTime"

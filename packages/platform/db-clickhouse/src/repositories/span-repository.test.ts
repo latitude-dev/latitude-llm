@@ -332,6 +332,52 @@ describe("SpanRepository", () => {
       const page2 = await runCh(repo.listByProjectId({ ...base, options: { ...opts, cursor: page1.nextCursor! } }))
       expect(page2.items.map((span) => span.name)).toEqual(["d1"])
     })
+
+    it("resolves gtePercentile filters against the project span distribution", async () => {
+      await runCh(
+        insertJsonEachRow(ch.client, "spans", [
+          makeSpanRow({
+            span_id: "pct000000000001",
+            name: "fast",
+            operation: "pcttest",
+            start_time: "2026-05-01 00:00:00.000000000",
+            end_time: "2026-05-01 00:00:01.000000000",
+          }),
+          makeSpanRow({
+            span_id: "pct000000000002",
+            name: "mid",
+            operation: "pcttest",
+            start_time: "2026-05-01 00:00:00.000000000",
+            end_time: "2026-05-01 00:00:02.000000000",
+          }),
+          makeSpanRow({
+            span_id: "pct000000000003",
+            name: "slow",
+            operation: "pcttest",
+            start_time: "2026-05-01 00:00:00.000000000",
+            end_time: "2026-05-01 00:01:40.000000000",
+          }),
+        ]),
+      )
+
+      const spans = await runCh(
+        repo.listByProjectId({
+          organizationId: ORG_ID,
+          projectId: PROJECT_ID,
+          options: {
+            limit: 10,
+            filters: {
+              operation: [{ op: "eq", value: "pcttest" }],
+              duration: [{ op: "gtePercentile", value: 50 }],
+            },
+          },
+        }),
+      )
+
+      expect(spans.items.length).toBeGreaterThan(0)
+      expect(spans.items.length).toBeLessThan(3)
+      expect(spans.items.every((span) => span.name !== "fast")).toBe(true)
+    })
   })
 
   describe("listByIngestedAtWindow", () => {

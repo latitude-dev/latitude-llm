@@ -6,8 +6,7 @@ import { buildClickHouseWhere, type ChFieldRegistry } from "../filter-builder.ts
  * trace/session registries but maps to raw `spans` columns — `operation` +
  * `tool_name` let a tool monitor scope to `execute_tool` spans of one tool.
  * `duration_ns` is an alias column (read-time `end − start`). `gtePercentile` is
- * intentionally unsupported here (no per-span distribution resolution); it fails
- * loud (the builder throws) rather than silently mis-filtering.
+ * resolved in `SpanRepository.resolvePercentileFilters` before these clauses run.
  */
 const SPAN_FIELD_REGISTRY: ChFieldRegistry = {
   operation: { column: "operation", chType: "String" },

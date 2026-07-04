@@ -1,6 +1,7 @@
-import type { SpanBreakdownField } from "@domain/shared"
+import type { ChSqlClient, RepositoryError, SpanBreakdownField } from "@domain/shared"
 import { Effect } from "effect"
 import { buildSpanFilterClauses } from "../../registries/span-fields.ts"
+import { resolvePercentileFilters } from "../../repositories/span-repository.ts"
 import { type TraceFamilyColumns, traceFamilyAggregate, usageGated, windowParams } from "../helpers.ts"
 import type { BreakdownExpr, InnerQuery, MetricSqlInput, StreamDescriptor } from "../types.ts"
 
@@ -36,31 +37,33 @@ const BREAKDOWN = {
  * outer metric then aggregates these rows (no dedup — same convention as
  * tool-analytics over `execute_tool` spans).
  */
-const buildInner = (input: MetricSqlInput): InnerQuery => {
-  const { whereClauses, params: filterParams } = buildSpanFilterClauses(input.filterSet)
-  const extraWhere = whereClauses.length > 0 ? `AND ${whereClauses.join(" AND ")}` : ""
-  return {
-    sql: `SELECT span_id, start_time, status_code, operation, model, provider, service_name, tool_name, tags, duration_ns, cost_total_microcents, tokens_input, tokens_output, tokens_cache_read, tokens_cache_create
+const buildInner = (input: MetricSqlInput): Effect.Effect<InnerQuery, RepositoryError, ChSqlClient> =>
+  Effect.gen(function* () {
+    const filterSet = yield* resolvePercentileFilters(input.organizationId, input.projectId, input.filterSet)
+    const { whereClauses, params: filterParams } = buildSpanFilterClauses(filterSet ?? {})
+    const extraWhere = whereClauses.length > 0 ? `AND ${whereClauses.join(" AND ")}` : ""
+    return {
+      sql: `SELECT span_id, start_time, status_code, operation, model, provider, service_name, tool_name, tags, duration_ns, cost_total_microcents, tokens_input, tokens_output, tokens_cache_read, tokens_cache_create
           FROM spans
           WHERE organization_id = {organizationId:String}
             AND project_id = {projectId:String}
             AND start_time >= toDateTime64({windowFrom:String}, 9, 'UTC')
             AND start_time < toDateTime64({windowTo:String}, 9, 'UTC')
             ${extraWhere}`,
-    params: {
-      ...windowParams({
-        organizationId: input.organizationId as string,
-        projectId: input.projectId as string,
-        from: input.from,
-        to: input.to,
-      }),
-      ...filterParams,
-    },
-  }
-}
+      params: {
+        ...windowParams({
+          organizationId: input.organizationId as string,
+          projectId: input.projectId as string,
+          from: input.from,
+          to: input.to,
+        }),
+        ...filterParams,
+      },
+    }
+  })
 
 export const spansDescriptor: StreamDescriptor<"spans"> = {
-  buildInner: (input) => Effect.succeed(buildInner(input)),
+  buildInner,
   aggregate: (metric) => traceFamilyAggregate(metric, COLUMNS),
   breakdowns: BREAKDOWN,
   timeColumn: "start_time",
