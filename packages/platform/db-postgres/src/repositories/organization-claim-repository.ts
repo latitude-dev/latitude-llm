@@ -49,6 +49,20 @@ export const OrganizationClaimRepositoryLive = Layer.effect(
           return rows.length > 0 ? toDomainClaim(rows[0] as typeof organizationClaims.$inferSelect) : null
         }),
 
+      findByTokenHashForUpdate: (tokenHash: string) =>
+        Effect.gen(function* () {
+          const sqlClient = (yield* SqlClient) as SqlClientShape<Operator>
+          const rows = yield* sqlClient.query((db) =>
+            db
+              .select()
+              .from(organizationClaims)
+              .where(eq(organizationClaims.tokenHash, tokenHash))
+              .limit(1)
+              .for("update"),
+          )
+          return rows.length > 0 ? toDomainClaim(rows[0] as typeof organizationClaims.$inferSelect) : null
+        }),
+
       markClaimed: (id: string, claimedAt: Date) =>
         Effect.gen(function* () {
           const sqlClient = (yield* SqlClient) as SqlClientShape<Operator>

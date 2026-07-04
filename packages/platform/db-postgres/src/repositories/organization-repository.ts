@@ -84,6 +84,24 @@ export const OrganizationRepositoryLive = Layer.effect(
             )
         }),
 
+      findByIdForUpdate: (id: OrganizationIdType) =>
+        Effect.gen(function* () {
+          const sqlClient = (yield* SqlClient) as SqlClientShape<Operator>
+          return yield* sqlClient
+            .query((db) =>
+              db.select().from(organizations).where(eq(organizations.id, id)).limit(1).for("update"),
+            )
+            .pipe(
+              Effect.flatMap((results) => {
+                const [result] = results
+                if (!result) {
+                  return Effect.fail(new NotFoundError({ entity: "Organization", id }))
+                }
+                return Effect.succeed(toDomainOrganization(result))
+              }),
+            )
+        }),
+
       listByUserId,
 
       save: (org: {
@@ -113,6 +131,7 @@ export const OrganizationRepositoryLive = Layer.effect(
                   metadata: row.metadata,
                   settings: row.settings,
                   parentOrgId: row.parentOrgId,
+                  expiresAt: row.expiresAt,
                   updatedAt: new Date(),
                 },
               }),
@@ -123,6 +142,19 @@ export const OrganizationRepositoryLive = Layer.effect(
         Effect.gen(function* () {
           const sqlClient = (yield* SqlClient) as SqlClientShape<Operator>
           yield* sqlClient.query((db) => db.delete(organizations).where(eq(organizations.id, id)))
+        }),
+
+      deleteIfExpiredUnclaimed: (id: OrganizationIdType) =>
+        Effect.gen(function* () {
+          const sqlClient = (yield* SqlClient) as SqlClientShape<Operator>
+          return yield* sqlClient
+            .query((db) =>
+              db
+                .delete(organizations)
+                .where(and(eq(organizations.id, id), isNotNull(organizations.expiresAt)))
+                .returning({ id: organizations.id }),
+            )
+            .pipe(Effect.map((rows) => rows.length > 0))
         }),
 
       countBySlug: (slug: string) =>

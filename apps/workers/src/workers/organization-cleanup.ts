@@ -34,9 +34,15 @@ export const createOrganizationCleanupWorker = ({ consumer, postgresClient }: Or
 
         for (const org of expired) {
           yield* Effect.gen(function* () {
-            yield* purgeOrganizationProjectsUseCase({ actorUserId: "system" })
             const orgRepo = yield* OrganizationRepository
-            yield* orgRepo.delete(org.id)
+            const current = yield* orgRepo
+              .findByIdForUpdate(org.id)
+              .pipe(Effect.catchTag("NotFoundError", () => Effect.succeed(null)))
+            if (current === null || current.expiresAt === null) return
+
+            yield* purgeOrganizationProjectsUseCase({ actorUserId: "system" })
+            const deleted = yield* orgRepo.deleteIfExpiredUnclaimed(org.id)
+            if (!deleted) return
           }).pipe(
             withPostgres(
               Layer.mergeAll(ProjectRepositoryLive, OrganizationRepositoryLive, OutboxEventWriterLive),

@@ -53,7 +53,7 @@ export const claimOrganizationUseCase = Effect.fn("organizations.claimOrganizati
       const membershipRepo = yield* MembershipRepository
       const outboxEventWriter = yield* OutboxEventWriter
 
-      const claim = yield* claimRepo.findByTokenHash(tokenHash)
+      const claim = yield* claimRepo.findByTokenHashForUpdate(tokenHash)
       if (!claim) return yield* new ClaimTokenInvalidError()
       if (claim.claimedAt !== null) return yield* new ClaimAlreadyUsedError()
       if (claim.expiresAt.getTime() <= Date.now()) return yield* new ClaimExpiredError()

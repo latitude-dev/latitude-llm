@@ -129,9 +129,14 @@ const makeOrganizationRepository = (organization: Organization): (typeof Organiz
     id === organization.id
       ? Effect.succeed(organization)
       : Effect.fail(new NotFoundError({ entity: "Organization", id })),
+  findByIdForUpdate: (id) =>
+    id === organization.id
+      ? Effect.succeed(organization)
+      : Effect.fail(new NotFoundError({ entity: "Organization", id })),
   listByUserId: () => Effect.die("listByUserId not used"),
   save: () => Effect.die("save not used"),
   delete: () => Effect.die("delete not used"),
+  deleteIfExpiredUnclaimed: () => Effect.die("deleteIfExpiredUnclaimed not used"),
   countBySlug: () => Effect.die("countBySlug not used"),
   listExpiredUnclaimed: () => Effect.die("listExpiredUnclaimed not used"),
 })

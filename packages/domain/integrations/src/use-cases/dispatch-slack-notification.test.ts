@@ -65,9 +65,25 @@ const orgRepoLayer = (parentOrgId: OrganizationId | null) =>
               updatedAt: new Date(),
             } satisfies Organization)
           : Effect.fail(new NotFoundError({ entity: "Organization", id })),
+      findByIdForUpdate: (id) =>
+        id === ORG
+          ? Effect.succeed({
+              id: ORG,
+              name: "Acme",
+              slug: "acme",
+              logo: null,
+              metadata: null,
+              settings: null,
+              parentOrgId,
+              expiresAt: null,
+              createdAt: new Date(),
+              updatedAt: new Date(),
+            } satisfies Organization)
+          : Effect.fail(new NotFoundError({ entity: "Organization", id })),
       listByUserId: () => Effect.die("not used"),
       save: () => Effect.die("not used"),
       delete: () => Effect.die("not used"),
+      deleteIfExpiredUnclaimed: () => Effect.die("not used"),
       countBySlug: () => Effect.die("not used"),
       listExpiredUnclaimed: () => Effect.die("not used"),
     }),
