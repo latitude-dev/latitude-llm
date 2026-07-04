@@ -9,31 +9,43 @@ import {
   AgentDispatchIntegrationRepository,
   type AgentDispatchKind,
   AgentDispatchRepository,
+  AgentDispatchTraceReader,
   agentDispatchGuardrailsSchema,
   agentDispatchKindSchema,
   agentDispatchTargetSchema,
+  buildDispatchContextFromSignal,
+  buildManualDispatchIdempotencyKey,
   connectAgentDispatchIntegrationUseCase,
   disconnectAgentDispatchIntegrationUseCase,
+  renderDispatchPrompt,
+  sendAgentDispatchUseCase,
   upsertAgentDispatchConfigUseCase,
 } from "@domain/agent-dispatch"
 import { hasFeatureFlagUseCase } from "@domain/feature-flags"
 import { OrganizationId, ProjectId, SignalId } from "@domain/shared"
 import { SignalRepository } from "@domain/signals"
+import { TraceRepository } from "@domain/spans"
+import { AgentDispatchAdaptersLive } from "@platform/agent-dispatch"
+import { ScoreAnalyticsRepositoryLive, TraceRepositoryLive, withClickHouse } from "@platform/db-clickhouse"
 import {
   AgentDispatchConfigRepositoryLive,
   AgentDispatchCredentialRepositoryLive,
   AgentDispatchIntegrationRepositoryLive,
   AgentDispatchRepositoryLive,
   FeatureFlagRepositoryLive,
+  OrganizationRepositoryLive,
+  ProjectRepositoryLive,
+  ScoreRepositoryLive,
   SignalRepositoryLive,
   withPostgres,
 } from "@platform/db-postgres"
+import { parseEnv } from "@platform/env"
 import { withTracing } from "@repo/observability"
 import { createServerFn } from "@tanstack/react-start"
 import { Effect, Layer } from "effect"
 import { z } from "zod"
 import { requireSession } from "../../server/auth.ts"
-import { getPostgresClient } from "../../server/clients.ts"
+import { getClickhouseClient, getPostgresClient } from "../../server/clients.ts"
 
 export interface AgentDispatchRecord {
   readonly id: string
@@ -596,6 +608,168 @@ const upsertConfigSchema = z.object({
   promptTemplate: z.string().nullable().optional(),
   guardrails: agentDispatchGuardrailsSchema.optional(),
 })
+
+export interface SendToDestinationRecord {
+  readonly configId: string
+  readonly kind: AgentDispatchKind
+}
+
+type SendSignalToIntegrationResult =
+  | { readonly status: "dispatched"; readonly externalUrl: string | null }
+  | { readonly status: "skipped-already-dispatched" }
+  | { readonly status: "failed"; readonly reason: string }
+
+const resolveWebAppUrl = (): string =>
+  Effect.runSync(parseEnv("LAT_WEB_URL", "string", "http://localhost:3000")).replace(/\/$/, "")
+
+const AgentDispatchTraceReaderLive = Layer.effect(
+  AgentDispatchTraceReader,
+  Effect.gen(function* () {
+    const traces = yield* TraceRepository
+    return AgentDispatchTraceReader.of({
+      findMessagesByTraceId: (input) =>
+        traces.findByTraceId(input).pipe(Effect.map((trace) => trace.allMessages as readonly unknown[])),
+    })
+  }),
+)
+
+const manualContextPgLayer = Layer.mergeAll(
+  OrganizationRepositoryLive,
+  ProjectRepositoryLive,
+  SignalRepositoryLive,
+  ScoreRepositoryLive,
+)
+
+const manualContextChLayer = Layer.mergeAll(
+  ScoreAnalyticsRepositoryLive,
+  TraceRepositoryLive,
+  AgentDispatchTraceReaderLive.pipe(Layer.provide(TraceRepositoryLive)),
+)
+
+const buildManualSignalContext = (input: {
+  readonly organizationId: OrganizationId
+  readonly projectId: ProjectId
+  readonly signalId: SignalId
+}) =>
+  Effect.gen(function* () {
+    const signals = yield* SignalRepository
+    const signal = yield* signals
+      .findById(input.signalId)
+      .pipe(Effect.catchTag("NotFoundError", () => Effect.succeed(null)))
+    if (signal === null || signal.projectId !== input.projectId) {
+      return yield* Effect.fail(new Error("Signal not found in this project"))
+    }
+    const context = yield* buildDispatchContextFromSignal({ ...input, webAppUrl: resolveWebAppUrl() })
+    return { ...context, trigger: "manual" as const }
+  })
+
+export const listSendToDestinations = createServerFn({ method: "GET" })
+  .inputValidator(z.object({ projectId: z.string() }))
+  .handler(async ({ data }): Promise<readonly SendToDestinationRecord[]> => {
+    const { organizationId } = await requireSession()
+
+    const configs = await Effect.runPromise(
+      Effect.gen(function* () {
+        const configRepo = yield* AgentDispatchConfigRepository
+        return yield* configRepo.listEnabledByProject(ProjectId(data.projectId))
+      }).pipe(withPostgres(AgentDispatchConfigRepositoryLive, getPostgresClient(), organizationId), withTracing),
+    )
+
+    return configs.map((config) => ({ configId: config.id, kind: config.kind }))
+  })
+
+export const getSignalDispatchPrompt = createServerFn({ method: "GET" })
+  .inputValidator(z.object({ projectId: z.string(), signalId: z.string() }))
+  .handler(async ({ data }): Promise<{ prompt: string }> => {
+    const { organizationId } = await requireSession()
+    const orgId = OrganizationId(organizationId)
+    const projectId = ProjectId(data.projectId)
+    const signalId = SignalId(data.signalId)
+
+    const prompt = await Effect.runPromise(
+      buildManualSignalContext({ organizationId: orgId, projectId, signalId }).pipe(
+        Effect.map((context) => renderDispatchPrompt({ context })),
+        withPostgres(manualContextPgLayer, getPostgresClient(), organizationId),
+        withClickHouse(manualContextChLayer, getClickhouseClient(), orgId),
+        withTracing,
+      ),
+    )
+
+    return { prompt }
+  })
+
+const manualSendPgLayer = Layer.mergeAll(
+  manualContextPgLayer,
+  AgentDispatchConfigRepositoryLive,
+  AgentDispatchRepositoryLive,
+  AgentDispatchCredentialRepositoryLive,
+  FeatureFlagRepositoryLive,
+)
+
+export const sendSignalToIntegration = createServerFn({ method: "POST" })
+  .inputValidator(
+    z.object({
+      projectId: z.string(),
+      signalId: z.string(),
+      configId: z.string(),
+      sendId: z.string().min(1),
+    }),
+  )
+  .handler(async ({ data }): Promise<SendSignalToIntegrationResult> => {
+    const { organizationId } = await requireSession()
+    const orgId = OrganizationId(organizationId)
+    const projectId = ProjectId(data.projectId)
+    const signalId = SignalId(data.signalId)
+
+    return Effect.runPromise(
+      Effect.gen(function* () {
+        const enabled = yield* hasFeatureFlagUseCase({ identifier: AGENT_DISPATCH_FLAG })
+        if (!enabled) return yield* Effect.fail(new Error("Agent dispatch is not enabled for this organization"))
+
+        const configRepo = yield* AgentDispatchConfigRepository
+        const config = yield* configRepo.findById(data.configId)
+        if (config.projectId !== projectId || !config.enabled) {
+          return yield* Effect.fail(new Error("This integration is not available for this project"))
+        }
+
+        const context = yield* buildManualSignalContext({ organizationId: orgId, projectId, signalId })
+        const prompt = renderDispatchPrompt({ context, template: config.promptTemplate })
+
+        const outcome = yield* sendAgentDispatchUseCase({
+          configId: config.id,
+          projectId,
+          integrationId: config.integrationId,
+          kind: config.kind,
+          idempotencyKey: buildManualDispatchIdempotencyKey({
+            vendor: config.kind,
+            configId: config.id,
+            sourceId: data.signalId,
+            sendId: data.sendId,
+          }),
+          trigger: "manual",
+          sourceType: "signal",
+          sourceId: data.signalId,
+          prompt,
+          context,
+          target: { ...config.target, kind: config.kind },
+        }).pipe(
+          Effect.catchTag("DispatchAdapterError", (error) =>
+            Effect.succeed({ status: "failed" as const, reason: error.reason }),
+          ),
+        )
+
+        if (outcome.status === "dispatched") {
+          return { status: "dispatched", externalUrl: outcome.externalUrl ?? null } as const
+        }
+        return outcome
+      }).pipe(
+        withPostgres(manualSendPgLayer, getPostgresClient(), organizationId),
+        withClickHouse(manualContextChLayer, getClickhouseClient(), orgId),
+        Effect.provide(AgentDispatchAdaptersLive),
+        withTracing,
+      ),
+    )
+  })
 
 export const upsertAgentDispatchConfig = createServerFn({ method: "POST" })
   .inputValidator((data: unknown) => upsertConfigSchema.parse(data))

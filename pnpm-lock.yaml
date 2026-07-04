@@ -495,6 +495,9 @@ importers:
       '@lottiefiles/dotlottie-wc':
         specifier: 0.9.12
         version: 0.9.12
+      '@platform/agent-dispatch':
+        specifier: workspace:*
+        version: link:../../packages/platform/agent-dispatch
       '@platform/ai':
         specifier: workspace:*
         version: link:../../packages/platform/ai
