@@ -2,6 +2,12 @@
 
 ## Unreleased
 
+## v0.3.33 - 2026-07-04
+
+### Web
+
+- Disabled the changelog sidebar UI while the API-backed changelog collection is being updated, preventing the web app from querying or showing the incomplete feature (ref: #3833).
+
 ## v0.3.32 - 2026-07-04
 
 ### Signals
@@ -1114,4 +1120,3 @@
 - Fixed SqlClient transaction isolation so concurrent Effect fibers use separate Postgres transactions while nested calls reuse the current transaction (ref: #3294).
 - Added Framer secrets to infrastructure and web runtime configuration (ref: 6782d44).
 - Updated bundled models.dev data and removed MCP plugin docs for now (refs: #3293, #3298).
-
