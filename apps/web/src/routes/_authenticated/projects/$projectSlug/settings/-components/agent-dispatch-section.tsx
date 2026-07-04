@@ -157,7 +157,7 @@ const CLAUDE_ROUTINE_TEMPLATE =
 
 function IntegrationDocsButton({ kind }: { readonly kind: AgentDispatchKindKey }) {
   return (
-    <Button asChild variant="outline" size="sm">
+    <Button asChild variant="outline" size="sm" className="w-auto shrink-0">
       <a href={INTEGRATION_DOC_URLS[kind]} target="_blank" rel="noreferrer">
         <Icon icon={BookOpen} size="sm" />
         Setup guide
@@ -337,7 +337,7 @@ export function AgentDispatchIntegrationDetails({
   return (
     <div className="flex flex-col gap-8">
       <div className="flex max-w-3xl flex-col gap-3 rounded-lg border border-border bg-muted/30 p-4 sm:flex-row sm:items-center sm:justify-between">
-        <div className="flex flex-col gap-1">
+        <div className="flex min-w-0 flex-col gap-1">
           <Text.H5 display="block" weight="semibold">
             {KIND_LABELS[kind]} setup guide
           </Text.H5>
