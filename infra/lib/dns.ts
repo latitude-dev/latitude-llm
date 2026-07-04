@@ -269,6 +269,26 @@ export function createDnsRecords(
       allowOverwrite: true,
     })
 
+    // A record for latitude.so apex -> Vercel
+    records.landingApex = new aws.route53.Record(`${name}-landing-apex`, {
+      zoneId: hostedZoneId,
+      name: "latitude.so",
+      type: "A",
+      records: ["216.150.1.1"],
+      ttl: 300,
+      allowOverwrite: true,
+    })
+
+    // CNAME for www.latitude.so -> Vercel
+    records.wwwCname = new aws.route53.Record(`${name}-www-cname`, {
+      zoneId: hostedZoneId,
+      name: "www.latitude.so",
+      type: "CNAME",
+      records: ["0509d3a779a2765c.vercel-dns-017.com."],
+      ttl: 300,
+      allowOverwrite: true,
+    })
+
     // CNAME for 41st.latitude.so -> Vercel
     records.fortyFirstCname = new aws.route53.Record(`${name}-41st-cname`, {
       zoneId: hostedZoneId,
