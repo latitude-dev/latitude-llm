@@ -6,9 +6,7 @@ export class OrganizationRepository extends Context.Service<
   OrganizationRepository,
   {
     findById: (id: OrganizationId) => Effect.Effect<Organization, NotFoundError | RepositoryError, SqlClient>
-    findByIdForUpdate: (
-      id: OrganizationId,
-    ) => Effect.Effect<Organization, NotFoundError | RepositoryError, SqlClient>
+    findByIdForUpdate: (id: OrganizationId) => Effect.Effect<Organization, NotFoundError | RepositoryError, SqlClient>
     listByUserId: (userId: UserId) => Effect.Effect<Organization[], RepositoryError, SqlClient>
     save: (org: Organization) => Effect.Effect<void, RepositoryError, SqlClient>
     delete: (id: OrganizationId) => Effect.Effect<void, RepositoryError, SqlClient>

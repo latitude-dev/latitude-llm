@@ -15,8 +15,7 @@ export const createFakeOrganizationClaimRepository = (overrides?: Partial<Organi
 
     findByTokenHash: (tokenHash) => Effect.sync(() => claims.find((c) => c.tokenHash === tokenHash) ?? null),
 
-    findByTokenHashForUpdate: (tokenHash) =>
-      Effect.sync(() => claims.find((c) => c.tokenHash === tokenHash) ?? null),
+    findByTokenHashForUpdate: (tokenHash) => Effect.sync(() => claims.find((c) => c.tokenHash === tokenHash) ?? null),
 
     markClaimed: (id, claimedAt) =>
       Effect.sync(() => {

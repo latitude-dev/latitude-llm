@@ -10,8 +10,10 @@ import { OrganizationRepositoryLive } from "./organization-repository.ts"
 
 const pg = setupTestPostgres()
 
-const runWithRepo = <A, E>(organizationId: OrganizationId, effect: Effect.Effect<A, E, OrganizationRepository | SqlClient>) =>
-  Effect.runPromise(effect.pipe(withPostgres(OrganizationRepositoryLive, pg.adminPostgresClient, organizationId)))
+const runWithRepo = <A, E>(
+  organizationId: OrganizationId,
+  effect: Effect.Effect<A, E, OrganizationRepository | SqlClient>,
+) => Effect.runPromise(effect.pipe(withPostgres(OrganizationRepositoryLive, pg.adminPostgresClient, organizationId)))
 
 describe("OrganizationRepositoryLive", () => {
   beforeEach(async () => {

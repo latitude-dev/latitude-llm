@@ -8,9 +8,7 @@ export class OrganizationClaimRepository extends Context.Service<
     save: (claim: OrganizationClaim) => Effect.Effect<void, RepositoryError, SqlClient>
     /** Look up a claim by token hash. Cross-org (admin client) — the org isn't known until found. */
     findByTokenHash: (tokenHash: string) => Effect.Effect<OrganizationClaim | null, RepositoryError, SqlClient>
-    findByTokenHashForUpdate: (
-      tokenHash: string,
-    ) => Effect.Effect<OrganizationClaim | null, RepositoryError, SqlClient>
+    findByTokenHashForUpdate: (tokenHash: string) => Effect.Effect<OrganizationClaim | null, RepositoryError, SqlClient>
     /** Stamp `claimed_at` by id (admin/cross-org). */
     markClaimed: (id: string, claimedAt: Date) => Effect.Effect<void, RepositoryError, SqlClient>
   }

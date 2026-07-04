@@ -88,9 +88,7 @@ export const OrganizationRepositoryLive = Layer.effect(
         Effect.gen(function* () {
           const sqlClient = (yield* SqlClient) as SqlClientShape<Operator>
           return yield* sqlClient
-            .query((db) =>
-              db.select().from(organizations).where(eq(organizations.id, id)).limit(1).for("update"),
-            )
+            .query((db) => db.select().from(organizations).where(eq(organizations.id, id)).limit(1).for("update"))
             .pipe(
               Effect.flatMap((results) => {
                 const [result] = results
