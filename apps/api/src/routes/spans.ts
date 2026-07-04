@@ -1,5 +1,5 @@
 import { ProjectRepository } from "@domain/projects"
-import { OrganizationId, ProjectId, SpanId } from "@domain/shared"
+import { OrganizationId, ProjectId, SpanId, spanRowFilterSetSchema } from "@domain/shared"
 import {
   type SpanListCursor,
   type SpanListOrderDirection,
@@ -151,6 +151,12 @@ const querySpans = spanEndpoint({
     }
     if (body.range && new Date(body.range.fromIso).getTime() >= new Date(body.range.toIso).getTime()) {
       return c.json({ error: "`range.fromIso` must be strictly before `range.toIso`." }, 400)
+    }
+    if (body.filters) {
+      const parsedFilters = spanRowFilterSetSchema.safeParse(body.filters)
+      if (!parsedFilters.success) {
+        return c.json({ error: parsedFilters.error.issues[0]?.message ?? "Invalid filters." }, 400)
+      }
     }
 
     const page = await Effect.runPromise(

@@ -87,6 +87,10 @@ describe("Spans Routes Integration", () => {
       { name: "inverted range", body: { range: { fromIso: RANGE.toIso, toIso: RANGE.fromIso } } },
       { name: "empty range (fromIso === toIso)", body: { range: { fromIso: RANGE.fromIso, toIso: RANGE.fromIso } } },
       { name: "limit over the cap", body: { limit: 100_000 } },
+      {
+        name: "gtePercentile on span row filters",
+        body: { filters: { duration: [{ op: "gtePercentile", value: 90 }] } },
+      },
     ]
 
     for (const { name, body } of cases) {

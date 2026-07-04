@@ -56,6 +56,15 @@ describe("Analytics Routes Integration", () => {
         body: { stream: "spans", metric: { kind: "count" }, query: "refund", range: RANGE },
       },
       {
+        name: "gtePercentile on spans stream row filters",
+        body: {
+          stream: "spans",
+          metric: { kind: "count" },
+          filters: { duration: [{ op: "gtePercentile", value: 90 }] },
+          range: RANGE,
+        },
+      },
+      {
         name: "inverted range",
         body: { stream: "traces", metric: { kind: "count" }, range: { fromIso: RANGE.toIso, toIso: RANGE.fromIso } },
       },
