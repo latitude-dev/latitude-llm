@@ -55,6 +55,7 @@
     "@repo/utils": "workspace:*",
     "effect": "catalog:",
     "hono": "catalog:",
+    "quickjs-emscripten": "catalog:",
     "tsx": "catalog:",
     "voyageai": "catalog:",
     "zod": "catalog:"
