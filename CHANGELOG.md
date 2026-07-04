@@ -2,6 +2,32 @@
 
 ## Unreleased
 
+## v0.3.32 - 2026-07-04
+
+### Signals
+
+- Added describe-first agentic signal creation: users describe a behavior in plain language and a worker-backed generator drafts a full signal (detector, judge script, scope) with sandbox validation, preview, and polling-based progress in the Advanced detector tab (ref: #3826).
+- Added semantic-similarity conditions to rule detectors so signals can match meaning, not just exact strings; generated evaluation scripts now embed against scoped sessions and score by cosine similarity (ref: #3818).
+- Removed the columns toggle and "My signals" controls from the signals list (ref: #3820).
+
+### Onboarding
+
+- Added temporary onboarding accounts: a bootstrap endpoint mints a short-lived account and a `/claim/:token` flow lets users claim it into a permanent org (LAT-704) (ref: #3823).
+- Added a global rate limit on the account bootstrap endpoint to guard against abuse (ref: #3825).
+
+### API and MCP
+
+- Improved the MCP query system for dashboard building: span listing gained ordering fields, trace/session/span `p95` metrics became configurable percentile metrics, and agent-dispatch docs and tooling cover building dashboards from agents (ref: #3765).
+
+### Web
+
+- Fixed the setup guide button stretching out of its container in the integration detail section (ref: #3838).
+
+### Reliability
+
+- Retried failed outbox polls so the consumer survives transient DB errors instead of stalling (ref: #3836).
+- Externalized `quickjs-emscripten` in the API and workflows bundles so the WASM loader resolves at runtime instead of breaking the build (ref: #3837, #3819).
+
 ## v0.3.31 - 2026-07-02
 
 ### Signals
