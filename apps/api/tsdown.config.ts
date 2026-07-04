@@ -8,7 +8,7 @@ export default defineConfig({
   platform: "node",
   deps: {
     alwaysBundle: [/@(platform|domain|repo)\/.*/],
-    neverBundle: [/^@traceloop\//, /^@langchain\//, /^langchain($|\/)/],
+    neverBundle: ["quickjs-emscripten", /^@traceloop\//, /^@langchain\//, /^langchain($|\/)/],
   },
   sourcemap: true,
   shims: true,
