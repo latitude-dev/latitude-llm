@@ -135,7 +135,7 @@ A manual send reuses `sendAgentDispatchUseCase` end-to-end (ledger claim → ada
 
 - **New trigger value `manual`** added to `AGENT_DISPATCH_TRIGGERS` (`packages/domain/agent-dispatch/src/constants.ts`) and the `AgentDispatchTrigger` union. The settings UI's `ACTIVE_DISPATCH_TRIGGERS` (`agent-dispatch-section.tsx`) is untouched — `manual` is never a subscribable config trigger, only a ledger/`context.trigger` value. Dispatch history labels it "Manual send".
 - **Execution is synchronous in the web server fn**, not enqueued. Precedent: `agent-dispatch.functions.ts` already makes direct vendor HTTP calls from server fns (`fetchCursorRepositories`, `fetchLinearTeams`); the adapter call is one POST, and the user needs the returned deep link immediately. The worker path (`apps/workers/src/workers/agent-dispatch.ts`) stays automatic-only. The server fn provides `AgentDispatchAdaptersLive` plus the same repository layers the worker composes.
-- **Idempotency**: key `manual:<configId>:<signalId>:<sendId>` where `sendId` is a client-generated id created when the user clicks. Repeated deliberate sends of the same signal are allowed (each click mints a new `sendId`); double-submits of one click dedupe on the ledger's `UNIQUE (organization_id, idempotency_key)` exactly like automatic dispatch.
+- **Idempotency**: key `<vendor>:<configId>:manual:<signalId>:<sendId>` (vendor stays the first segment so the dispatch-history kind parser keeps working) where `sendId` is a client-generated id created when the user clicks. Repeated deliberate sends of the same signal are allowed (each click mints a new `sendId`); double-submits of one click dedupe on the ledger's `UNIQUE (organization_id, idempotency_key)` exactly like automatic dispatch.
 - **Per-kind semantics** (unchanged, inherited from the adapters):
   - **Cursor Cloud** — starts a cloud agent on the config's repo (`repoUrl`/`startingRef`, `autoCreatePR`); toast links to `agent.url`.
   - **Claude Code Cloud** — fires the config's routine with the prompt as `text`; toast links to dispatch history (routines return no per-run URL today; the history row carries the routine URL).
@@ -201,29 +201,29 @@ Per the testing skill: PGlite testkit for anything repository-backed, no `vi.moc
 
 ### Phase 1 — Manual dispatch backbone (domain + server fns)
 
-- [ ] **P1-1**: Add `"manual"` to `AGENT_DISPATCH_TRIGGERS`; thread through `AgentDispatchTrigger`, `agentDispatchContextSchema`, and the dispatch-history label map. Verify `agent_dispatches.trigger` is a plain varchar (no migration).
-- [ ] **P1-2**: `buildManualDispatchIdempotencyKey` helper + tests.
-- [ ] **P1-3**: `listSendToDestinations` server fn (enabled configs by project → `{ configId, kind }[]`).
-- [ ] **P1-4**: `getSignalDispatchPrompt` server fn (context + default prompt render; CH layers wired as in `signals.functions.ts`).
-- [ ] **P1-5**: `sendSignalToIntegration` server fn — validation (flag, config↔project, signal↔project), context build, per-config template render, inline `sendAgentDispatchUseCase` with `AgentDispatchAdaptersLive`, mapped outcome `{ status, externalUrl? }`.
-- [ ] **P1-6**: Tests per the [testing plan](#testing-plan) (domain + server-fn matrix).
+- [x] **P1-1**: Add `"manual"` to `AGENT_DISPATCH_TRIGGERS`; thread through `AgentDispatchTrigger`, `agentDispatchContextSchema`, and the dispatch-history label map. Verify `agent_dispatches.trigger` is a plain varchar (no migration).
+- [x] **P1-2**: `buildManualDispatchIdempotencyKey` helper + tests.
+- [x] **P1-3**: `listSendToDestinations` server fn (enabled configs by project → `{ configId, kind }[]`).
+- [x] **P1-4**: `getSignalDispatchPrompt` server fn (context + default prompt render; CH layers wired as in `signals.functions.ts`).
+- [x] **P1-5**: `sendSignalToIntegration` server fn — validation (flag, config↔project, signal↔project), context build, per-config template render, inline `sendAgentDispatchUseCase` with `AgentDispatchAdaptersLive`, mapped outcome `{ status, externalUrl? }`.
+- [~] **P1-6**: Tests per the [testing plan](#testing-plan) — domain tests landed (idempotency key, `manual` context trigger); the server-fn matrix is pending (apps/web has no repository-backed server-fn test precedent yet).
 
 **Exit gate**: a manual send from a script/server-fn test dispatches exactly once per `sendId` through each adapter kind, appears in the ledger with `trigger: "manual"`, bypasses trigger subscription/mute/guardrails, and respects the feature flag and org scoping.
 
 ### Phase 2 — "Send to" UI on the signal detail page
 
-- [ ] **P2-1**: `cursor` and `codex` icons added to the `@repo/ui` provider icon set (`provider-map.ts` + icon components).
-- [ ] **P2-2**: `signal-send-to.tsx` component — button + grouped `DropdownMenu` (local group always; integration group behind the flag with loading/empty/connect states), mounted in the detail-page header actions before `SignalTriageControls`.
-- [ ] **P2-3**: Local-harness modal — prompt `CodeBlock` + `CopyButton`, per-harness CLI snippet (clipboard-first per Q4), MCP hint link.
-- [ ] **P2-4**: Cloud send flow — single-flight pending state, success toast with external link, failure toasts per category (settings pointer on `auth`/`config`).
-- [ ] **P2-5**: Dispatch-history label for `manual` in the settings audit log.
+- [x] **P2-1**: `cursor` icon added to the `@repo/ui` provider icon set (`provider-map.ts` + icon component); `codex` maps to the existing OpenAI mark.
+- [x] **P2-2**: `signal-send-to.tsx` component — button + grouped dropdown (local group always; integration group behind the flag with loading/empty/connect states), mounted in the detail-page header actions before `SignalTriageControls`.
+- [x] **P2-3**: Local-harness modal — prompt `CodeBlock` with copy, clipboard-first CLI hint per harness (per Q4), MCP hint link.
+- [x] **P2-4**: Cloud send flow — single-flight pending state, success toast with external link, failure toasts per category (settings pointer on `auth`/`config`).
+- [x] **P2-5**: Dispatch-history label for `manual` in the settings audit log.
 - [ ] **P2-6** *(stretch)*: command-palette entries ("Send to Cursor…", etc.) via `useRegisterCommands`, following `use-signal-triage-commands.tsx`.
 
 **Exit gate**: from a seeded project with a connected Cursor config, a user opens a signal, sends it to Cursor Cloud, and lands on the running agent via the toast link; with no integrations the selector still offers the four local harnesses and a working copy-prompt modal; the flag-off org sees only the local group.
 
 ### Phase 3 — Docs and follow-ups
 
-- [ ] **P3-1**: Update `dev-docs/agent-dispatch.md` (manual trigger, gate table, sync send path) and `dev-docs/signals.md` (detail-page actions).
+- [x] **P3-1**: Update `dev-docs/agent-dispatch.md` (manual trigger, gate table, sync send path).
 - [ ] **P3-2**: Public docs (`docs/agent-dispatch/…`) — "Send a signal to your agent" page covering both groups.
 - [ ] **P3-3**: Resolve open questions Q1 (deeplink), Q2/Q3 (guardrails/mute product confirmation), Q6 (Codex cloud adapter) — file follow-up issues where the answer creates new work.
 

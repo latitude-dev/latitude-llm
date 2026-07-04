@@ -46,6 +46,15 @@ Settings → Integrations (feature flag `agent-dispatch`):
 
 The settings UI currently exposes `signal.discovered` (new signal) and `incident.opened` (escalating signal) for hosted agent/webhook targets. Linear only exposes `signal.discovered` so it creates follow-up issues for new signals rather than every escalation. `monitor.incident` remains in the domain trigger enum for future expansion but is not exposed in the current UI. Muted signals/monitors suppress dispatch (same as notifications).
 
+## Manual sends ("Send to")
+
+The signal detail page has a **Send to** button (`signal-send-to.tsx`) with two groups:
+
+- **Open in your agent** (Cursor, Claude Code, Codex, OpenCode) — always available; renders the default dispatch prompt in a copy modal (`getSignalDispatchPrompt`). Nothing is written to the ledger — a copy is not a dispatch.
+- **Send to integration** — behind the `agent-dispatch` flag; lists kinds with an enabled config for the project (`listSendToDestinations`) and runs `sendAgentDispatchUseCase` synchronously in the `sendSignalToIntegration` server fn with trigger `manual`.
+
+Manual sends keep the feature flag, config-enabled check, org RLS, and ledger idempotency (`<vendor>:<configId>:manual:<signalId>:<sendId>`; each click mints a new `sendId`), but deliberately bypass trigger subscription, signal mute, and guardrails — an explicit human click is its own approval. Transport failures are returned to the user without background retry.
+
 Guardrails: `maxDispatchesPerDay`, `cooldownMinutes` per config. The current UI uses defaults and does not expose these controls.
 
 ## Data model
@@ -55,7 +64,7 @@ Guardrails: `maxDispatchesPerDay`, `cooldownMinutes` per config. The current UI 
 - `agent_dispatch_configs` — per-project enabled config + target JSON + triggers + guardrails
 - `agent_dispatches` — idempotency ledger + audit (`UNIQUE (organization_id, idempotency_key)`)
 
-Idempotency key: `<vendor>:<trigger>:<sourceId>`.
+Idempotency key: `<vendor>:<configId>:<trigger>:<sourceId>:<window>` (automatic) or `<vendor>:<configId>:manual:<sourceId>:<sendId>` (manual sends).
 
 ## Failure policy
 
