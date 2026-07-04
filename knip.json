@@ -15,6 +15,7 @@
         "src/**/*.ts"
       ],
       "ignoreDependencies": [
+        "quickjs-emscripten",
         "voyageai"
       ]
     },
