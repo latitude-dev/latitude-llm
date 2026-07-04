@@ -12,6 +12,7 @@ export const emailDesignTokens = {
     foreground: "#030712",
     mutedForeground: "#545E69",
     primary: "#0080FF",
+    primaryDark: "#0064CC",
     primaryForeground: "#F8FAFB",
     input: "#D8D8D8",
     accent: "#EFF7FF",
@@ -101,6 +102,7 @@ export const emailTailwindConfig = {
         },
         primary: {
           DEFAULT: emailDesignTokens.colors.primary,
+          "dark-1": emailDesignTokens.colors.primaryDark,
           foreground: emailDesignTokens.colors.primaryForeground,
         },
         input: emailDesignTokens.colors.input,
