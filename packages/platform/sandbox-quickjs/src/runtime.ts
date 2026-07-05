@@ -1,14 +1,18 @@
 import {
   buildSchemaFromDescriptor,
   type CompiledScript,
+  DEFAULT_EMBEDDING_SCRIPT_LIMITS,
   DEFAULT_LLM_SCRIPT_LIMITS,
   DEFAULT_PURE_SCRIPT_LIMITS,
   HostCallError,
   type HostLlmFunction,
+  type HostSimilarityFunction,
+  hasEmbeddingCapability,
   hasLlmCapability,
   type RunResult,
   resolveScriptCapabilities,
   runResultSchema,
+  type ScriptCapability,
   ScriptCompileError,
   ScriptLimitExceededError,
   type ScriptLimitKind,
@@ -173,6 +177,58 @@ const installHostLlm = (
   fn.dispose()
 }
 
+const installHostSimilarity = (
+  context: QuickJSContext,
+  runtime: QuickJSRuntime,
+  state: RunState,
+  hostSimilarity: HostSimilarityFunction,
+): void => {
+  const fn = context.newFunction("__hostSimilarity", (callHandle) => {
+    const rawCall: unknown = callHandle === undefined ? undefined : context.dump(callHandle)
+    const call = rawCall as { query?: unknown }
+
+    // A non-string query is a deterministic script bug — surface it as a
+    // script-side throw before any host work, never a transient HostCallError.
+    if (typeof call.query !== "string") {
+      throw new Error("semanticSimilarity() requires a string query")
+    }
+    const query = call.query
+
+    const deferred = context.newPromise()
+
+    hostSimilarity({ query }).then(
+      (result) => {
+        if (state.disposed) return
+        state.tokens += result.tokens
+        state.cost += result.cost
+        const handle = jsonToHandle(context, result.similarity)
+        deferred.resolve(handle)
+        handle.dispose()
+      },
+      (cause: unknown) => {
+        if (state.disposed) return
+        const message = cause instanceof Error ? cause.message : String(cause)
+        state.hostCallError = new HostCallError({
+          message: `semanticSimilarity() host call failed: ${message}`,
+          cause,
+        })
+        const errorHandle = context.newError(message)
+        context.setProp(errorHandle, "name", context.newString(HOST_CALL_ERROR_NAME))
+        deferred.reject(errorHandle)
+        errorHandle.dispose()
+      },
+    )
+    deferred.settled.then(() => {
+      if (state.disposed) return
+      runtime.executePendingJobs()
+    })
+
+    return deferred.handle
+  })
+  context.setProp(context.global, "__hostSimilarity", fn)
+  fn.dispose()
+}
+
 const WALL_CLOCK_TIMEOUT = Symbol("wall-clock-timeout")
 
 const raceWallClock = async <T>(work: Promise<T>, remainingMs: number): Promise<T | typeof WALL_CLOCK_TIMEOUT> => {
@@ -202,7 +258,7 @@ const disposeQuietly = (disposable: { dispose(): void }): void => {
 export const createQuickJsScriptRuntime = (): ScriptRuntimeShape => {
   const validatedSourceHashes = new Set<string>()
 
-  const compileScript = async (input: { source: string; capabilities?: readonly "llm"[] }) => {
+  const compileScript = async (input: { source: string; capabilities?: readonly ScriptCapability[] }) => {
     const QuickJS = await getQuickJS()
     const contentHash = await sha256Hex(input.source)
 
@@ -240,9 +296,21 @@ export const createQuickJsScriptRuntime = (): ScriptRuntimeShape => {
         message: "llm-capability script was run without a host llm implementation",
       })
     }
+    const scriptHasEmbedding = hasEmbeddingCapability(input.script.capabilities)
+    if (scriptHasEmbedding && input.similarity === undefined) {
+      throw new ScriptRuntimeError({
+        message: "embedding-capability script was run without a host similarity implementation",
+      })
+    }
 
     const QuickJS = await getQuickJS()
-    const limits = input.limits ?? (scriptHasLlm ? DEFAULT_LLM_SCRIPT_LIMITS : DEFAULT_PURE_SCRIPT_LIMITS)
+    const limits =
+      input.limits ??
+      (scriptHasLlm
+        ? DEFAULT_LLM_SCRIPT_LIMITS
+        : scriptHasEmbedding
+          ? DEFAULT_EMBEDDING_SCRIPT_LIMITS
+          : DEFAULT_PURE_SCRIPT_LIMITS)
 
     const state: RunState = {
       disposed: false,
@@ -276,6 +344,9 @@ export const createQuickJsScriptRuntime = (): ScriptRuntimeShape => {
     try {
       if (input.llm !== undefined && scriptHasLlm) {
         installHostLlm(context, runtime, state, input.llm)
+      }
+      if (input.similarity !== undefined && scriptHasEmbedding) {
+        installHostSimilarity(context, runtime, state, input.similarity)
       }
       installHostParse(context)
 

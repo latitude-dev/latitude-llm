@@ -72,6 +72,7 @@ function setup(
     metadata: null,
     settings: null,
     parentOrgId: opts.sandbox ? OrganizationId(cuid("parent")) : null,
+    expiresAt: null,
     createdAt: new Date("2026-05-01T00:00:00Z"),
     updatedAt: new Date("2026-05-01T00:00:00Z"),
   }
@@ -82,6 +83,7 @@ function setup(
     save: () => Effect.die("not used"),
     delete: () => Effect.die("not used"),
     countBySlug: () => Effect.die("not used"),
+    listExpiredUnclaimed: () => Effect.die("not used"),
   })
 
   const projectRepo = ProjectRepository.of({

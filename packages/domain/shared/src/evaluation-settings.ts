@@ -58,6 +58,14 @@ export const evaluationRuleConditionSchema = z
     // Finish reasons are provider-specific raw strings (e.g. "stop", "tool_calls", "length", "end_turn"),
     // so this is a free string rather than a fixed enum.
     z.object({ type: z.literal("finish_reason"), value: z.string().min(1) }),
+    // Max cosine similarity between `query` and any embedded message in the session, in [0,1].
+    // Compiles to an `await semanticSimilarity(query)` call resolved by the host verb (see codegen).
+    z.object({
+      type: z.literal("semantic_similarity"),
+      query: z.string().min(1),
+      operator: comparisonOperatorSchema.default("gte"),
+      threshold: z.number().min(0).max(1),
+    }),
   ])
   .superRefine((condition, ctx) => {
     // Reject a malformed regex at parse time (400) — codegen would otherwise compile fine and throw on
@@ -90,6 +98,14 @@ export type EvaluationRuleCondition = z.infer<typeof evaluationRuleConditionSche
  *   - judge — a script that calls `llm(`${session.conversation}` …)`, generated + aligned via optimize-evaluation.
  *   - rule  — deterministic conditions combined with `all`/`any`, compiled to a pure script over `session`.
  */
+/**
+ * Named cosine thresholds for the `semantic_similarity` condition — the primary knob the builder
+ * exposes (raw slider/operator sits behind "advanced"). Seed values calibrated against
+ * voyage-4-large; the builder maps a preset to the stored `threshold`.
+ */
+export const SEMANTIC_SIMILARITY_PRESETS = { broad: 0.4, balanced: 0.55, strict: 0.7 } as const
+export type SemanticSimilarityPreset = keyof typeof SEMANTIC_SIMILARITY_PRESETS
+
 export const evaluationSettingsSchema = z.discriminatedUnion("kind", [
   z.object({ kind: z.literal("judge"), criteria: z.string().min(1) }),
   z.object({
@@ -99,3 +115,13 @@ export const evaluationSettingsSchema = z.discriminatedUnion("kind", [
   }),
 ])
 export type EvaluationSettings = z.infer<typeof evaluationSettingsSchema>
+
+/**
+ * A signal evaluation draft: exactly one of a declarative `settings` form or a raw `script`.
+ * Members are strict so an ambiguous `{ settings, script }` payload is rejected, never silently
+ * stripped to one side. Single source for create/update/preview and the web boundary.
+ */
+export const evaluationDraftSchema = z.union([
+  z.object({ settings: evaluationSettingsSchema }).strict(),
+  z.object({ script: z.string().min(1) }).strict(),
+])

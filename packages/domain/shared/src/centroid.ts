@@ -248,3 +248,28 @@ export const normalizeEmbedding = (embedding: readonly number[]): number[] => {
   normalizeTo(normalized, embedding)
   return Array.from(normalized)
 }
+
+/**
+ * Cosine similarity of two equally-sized vectors. Caller guarantees the inputs
+ * come from the same embedding model so dimensions match; mismatched or empty
+ * inputs return 0.
+ */
+export const cosineSimilarity = (a: readonly number[], b: readonly number[]): number => {
+  if (a.length === 0 || b.length === 0 || a.length !== b.length) {
+    return 0
+  }
+  let dot = 0
+  let normA = 0
+  let normB = 0
+  for (let index = 0; index < a.length; index++) {
+    const av = a[index] ?? 0
+    const bv = b[index] ?? 0
+    dot += av * bv
+    normA += av * av
+    normB += bv * bv
+  }
+  if (normA === 0 || normB === 0) return 0
+  // Clamp to [-1, 1]: floating-point error can push an otherwise-unit cosine just past the bound,
+  // which would leak into callers that assume a strict range (e.g. the [0,1] semantic-similarity score).
+  return Math.max(-1, Math.min(1, dot / Math.sqrt(normA * normB)))
+}

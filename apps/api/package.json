@@ -54,6 +54,7 @@
     "@repo/observability": "workspace:*",
     "@repo/utils": "workspace:*",
     "effect": "catalog:",
+    "quickjs-emscripten": "catalog:",
     "hono": "catalog:",
     "tsx": "catalog:",
     "voyageai": "catalog:",

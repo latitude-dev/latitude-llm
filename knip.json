@@ -3,6 +3,7 @@
   "workspaces": {
     ".": {
       "ignore": [
+        ".agents/skills/**/scripts/**",
         "scripts/taxonomy/*.ts"
       ]
     },
@@ -14,6 +15,7 @@
         "src/**/*.ts"
       ],
       "ignoreDependencies": [
+        "quickjs-emscripten",
         "voyageai"
       ]
     },
@@ -42,6 +44,7 @@
       ],
       "ignoreDependencies": [
         "@temporalio/worker",
+        "quickjs-emscripten",
         "voyageai"
       ]
     },
@@ -54,6 +57,7 @@
       "project": ["src/**/*.ts", "src/**/*.tsx"],
       "ignoreDependencies": [
         "@temporalio/client",
+        "quickjs-emscripten",
         "voyageai"
       ]
     },

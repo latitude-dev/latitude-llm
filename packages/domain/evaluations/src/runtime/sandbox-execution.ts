@@ -2,6 +2,7 @@ import { AI, AICredentialError, AIError, type GenerateTelemetryCapture, resolveG
 import {
   buildSchemaFromDescriptor,
   type HostLlmFunction,
+  type HostSimilarityFunction,
   isScoreMatch,
   ScriptRuntime,
   type ScriptSessionContext,
@@ -31,6 +32,13 @@ export const executeEvaluationScriptSandboxed = Effect.fn("evaluations.executeEv
     readonly script: string
     readonly session: ScriptSessionContext
     readonly telemetry?: GenerateTelemetryCapture
+    /**
+     * Host verb backing `semanticSimilarity()`. Built by the live/preview callers (which own the
+     * session/org/project); installed only for embedding-capability scripts. Omitted where semantic
+     * similarity is not supported (e.g. optimization candidates), so the runtime guard rejects an
+     * embedding script that arrives without it.
+     */
+    readonly similarity?: HostSimilarityFunction
   }) {
     yield* Effect.annotateCurrentSpan("evaluation.conversationMessageCount", input.session.conversation.length)
 
@@ -68,6 +76,7 @@ export const executeEvaluationScriptSandboxed = Effect.fn("evaluations.executeEv
         script: compiled,
         context: { session: input.session },
         llm,
+        ...(input.similarity ? { similarity: input.similarity } : {}),
       })
       .pipe(
         Effect.catchTags({

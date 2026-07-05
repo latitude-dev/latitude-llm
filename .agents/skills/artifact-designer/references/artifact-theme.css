@@ -1,0 +1,123 @@
+/* Artifact UI, grounded in Vercel Geist design tokens (https://vercel.com/design.md). */
+:root {
+  --artifact-background-100: #ffffff;
+  --artifact-background-200: #fafafa;
+  --artifact-gray-100: #f2f2f2;
+  --artifact-gray-200: #ebebeb;
+  --artifact-gray-300: #e6e6e6;
+  --artifact-gray-400: #eaeaea;
+  --artifact-gray-500: #c9c9c9;
+  --artifact-gray-600: #a8a8a8;
+  --artifact-gray-700: #8f8f8f;
+  --artifact-gray-800: #7d7d7d;
+  --artifact-gray-900: #4d4d4d;
+  --artifact-gray-1000: #171717;
+  --artifact-gray-alpha-100: #0000000d;
+  --artifact-gray-alpha-200: #00000015;
+  --artifact-gray-alpha-300: #0000001a;
+  --artifact-gray-alpha-400: #00000014;
+  --artifact-gray-alpha-500: #00000036;
+  --artifact-gray-alpha-600: #0000003d;
+  --artifact-blue-100: #f0f7ff;
+  --artifact-blue-700: #006bff;
+  --artifact-blue-800: #0059ec;
+  --artifact-red-100: #ffeeef;
+  --artifact-red-800: #ea001d;
+  --artifact-amber-100: #fff6de;
+  --artifact-amber-700: #ffae00;
+  --artifact-green-100: #ecfdec;
+  --artifact-green-700: #28a948;
+  --artifact-font-sans: "Geist Sans", -apple-system, BlinkMacSystemFont, "Segoe UI", Arial, sans-serif;
+  --artifact-font-mono: "Geist Mono", "SFMono-Regular", Consolas, "Liberation Mono", monospace;
+  --artifact-radius-sm: 6px;
+  --artifact-radius-md: 12px;
+  --artifact-radius-lg: 16px;
+  --artifact-radius-full: 9999px;
+  --artifact-space-1: 4px;
+  --artifact-space-2: 8px;
+  --artifact-space-3: 12px;
+  --artifact-space-4: 16px;
+  --artifact-space-6: 24px;
+  --artifact-space-8: 32px;
+  --artifact-space-10: 40px;
+  --artifact-space-16: 64px;
+  --artifact-shadow-card: 0 2px 2px rgba(0, 0, 0, 0.04);
+  --artifact-focus-ring: 0 0 0 2px var(--artifact-background-100), 0 0 0 4px var(--artifact-blue-700);
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --artifact-background-100: #000000;
+    --artifact-background-200: #000000;
+    --artifact-gray-100: #1a1a1a;
+    --artifact-gray-200: #1f1f1f;
+    --artifact-gray-300: #292929;
+    --artifact-gray-400: #2e2e2e;
+    --artifact-gray-500: #454545;
+    --artifact-gray-600: #878787;
+    --artifact-gray-700: #8f8f8f;
+    --artifact-gray-800: #7d7d7d;
+    --artifact-gray-900: #a0a0a0;
+    --artifact-gray-1000: #ededed;
+    --artifact-gray-alpha-100: #ffffff12;
+    --artifact-gray-alpha-200: #ffffff17;
+    --artifact-gray-alpha-300: #ffffff21;
+    --artifact-gray-alpha-400: #ffffff24;
+    --artifact-gray-alpha-500: #ffffff3d;
+    --artifact-gray-alpha-600: #ffffff82;
+    --artifact-blue-100: #06193a;
+    --artifact-blue-700: #006efe;
+    --artifact-blue-800: #005be7;
+    --artifact-red-100: #330a11;
+    --artifact-red-800: #e2162a;
+    --artifact-amber-100: #2a1700;
+    --artifact-amber-700: #ffae00;
+    --artifact-green-100: #002608;
+    --artifact-green-700: #51d56a;
+    --artifact-shadow-card: none;
+    --artifact-focus-ring: 0 0 0 2px var(--artifact-background-100), 0 0 0 4px var(--artifact-blue-700);
+  }
+}
+
+* { box-sizing: border-box; }
+html { background: var(--artifact-background-200); color: var(--artifact-gray-1000); font-family: var(--artifact-font-sans); }
+body.artifact-page, body { margin: 0; min-height: 100vh; background: var(--artifact-background-200); color: var(--artifact-gray-1000); }
+a { color: var(--artifact-blue-700); text-decoration: none; }
+a:hover { text-decoration: underline; }
+:focus-visible { outline: none; box-shadow: var(--artifact-focus-ring); }
+
+.artifact-shell { max-width: 1120px; margin: 0 auto; padding: var(--artifact-space-8) var(--artifact-space-6); }
+.artifact-header { display: flex; align-items: flex-start; justify-content: space-between; gap: var(--artifact-space-4); margin-bottom: var(--artifact-space-8); }
+.artifact-title { margin: 0; font-size: clamp(32px, 5vw, 56px); line-height: 1; letter-spacing: -0.06em; font-weight: 600; }
+.artifact-subtitle { margin: var(--artifact-space-3) 0 0; color: var(--artifact-gray-900); font-size: 16px; line-height: 24px; max-width: 720px; }
+.artifact-card { background: var(--artifact-background-100); border: 1px solid var(--artifact-gray-alpha-400); border-radius: var(--artifact-radius-md); box-shadow: var(--artifact-shadow-card); padding: var(--artifact-space-6); }
+.artifact-grid { display: grid; gap: var(--artifact-space-4); grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); }
+.artifact-stack { display: grid; gap: var(--artifact-space-4); }
+.artifact-row { display: flex; align-items: center; gap: var(--artifact-space-3); flex-wrap: wrap; }
+.artifact-button { display: inline-flex; align-items: center; justify-content: center; height: 40px; padding: 0 10px; border-radius: var(--artifact-radius-sm); border: 1px solid transparent; font: 500 14px/20px var(--artifact-font-sans); cursor: pointer; transition: background-color 150ms cubic-bezier(0.175,0.885,0.32,1.1), border-color 150ms cubic-bezier(0.175,0.885,0.32,1.1); }
+.artifact-button-primary { background: var(--artifact-gray-1000); color: var(--artifact-background-100); }
+.artifact-button-primary:hover { background: var(--artifact-gray-900); text-decoration: none; }
+.artifact-button-secondary { background: var(--artifact-background-100); color: var(--artifact-gray-1000); border-color: var(--artifact-gray-alpha-400); }
+.artifact-button-secondary:hover { border-color: var(--artifact-gray-alpha-600); text-decoration: none; }
+.artifact-badge { display: inline-flex; align-items: center; height: 24px; padding: 0 8px; border-radius: var(--artifact-radius-full); background: var(--artifact-gray-100); color: var(--artifact-gray-900); font: 400 12px/16px var(--artifact-font-sans); border: 1px solid var(--artifact-gray-alpha-300); }
+.artifact-badge-blue { background: var(--artifact-blue-100); color: var(--artifact-blue-700); }
+.artifact-badge-red { background: var(--artifact-red-100); color: var(--artifact-red-800); }
+.artifact-badge-amber { background: var(--artifact-amber-100); color: #8a4b00; }
+.artifact-badge-green { background: var(--artifact-green-100); color: var(--artifact-green-700); }
+.artifact-callout { border: 1px solid var(--artifact-gray-alpha-400); border-left: 3px solid var(--artifact-blue-700); background: var(--artifact-background-100); border-radius: var(--artifact-radius-sm); padding: var(--artifact-space-4); color: var(--artifact-gray-900); }
+.artifact-callout-warning { border-left-color: var(--artifact-amber-700); }
+.artifact-callout-error { border-left-color: var(--artifact-red-800); }
+.artifact-metric { display: grid; gap: var(--artifact-space-1); }
+.artifact-metric-label { color: var(--artifact-gray-900); font: 400 13px/18px var(--artifact-font-sans); }
+.artifact-metric-value { color: var(--artifact-gray-1000); font: 600 32px/40px var(--artifact-font-sans); letter-spacing: -0.04em; }
+.artifact-table { width: 100%; border-collapse: collapse; font: 400 14px/20px var(--artifact-font-sans); }
+.artifact-table th, .artifact-table td { text-align: left; padding: 10px 12px; border-bottom: 1px solid var(--artifact-gray-alpha-300); }
+.artifact-table th { color: var(--artifact-gray-900); font-weight: 500; background: var(--artifact-background-200); }
+.artifact-code, code, pre { font-family: var(--artifact-font-mono); }
+.artifact-code, pre { background: var(--artifact-gray-100); border: 1px solid var(--artifact-gray-alpha-300); border-radius: var(--artifact-radius-sm); padding: var(--artifact-space-4); overflow: auto; font-size: 13px; line-height: 20px; }
+.artifact-tabs { display: flex; gap: var(--artifact-space-1); border-bottom: 1px solid var(--artifact-gray-alpha-300); }
+.artifact-tab { border: 0; background: transparent; color: var(--artifact-gray-900); padding: 10px 12px; font: 500 14px/20px var(--artifact-font-sans); cursor: pointer; }
+.artifact-tab[aria-selected="true"] { color: var(--artifact-gray-1000); box-shadow: inset 0 -2px 0 var(--artifact-gray-1000); }
+.artifact-input { height: 40px; padding: 0 12px; border: 1px solid var(--artifact-gray-alpha-400); border-radius: var(--artifact-radius-sm); background: var(--artifact-background-100); color: var(--artifact-gray-1000); font: 400 14px/20px var(--artifact-font-sans); }
+@media (prefers-reduced-motion: reduce) { * { animation-duration: 0.001ms !important; transition-duration: 0.001ms !important; } }
+@media (max-width: 700px) { .artifact-shell { padding: var(--artifact-space-6) var(--artifact-space-4); } .artifact-header { display: grid; } }

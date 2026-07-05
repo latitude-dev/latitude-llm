@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest"
+import { wrapPromptAsEvaluationScript } from "./codegen/judge-script-template.ts"
 import { type ConfusionMatrix, evaluationSchema, evaluationTriggerSchema } from "./entities/evaluation.ts"
 import { EvaluationDeletedError } from "./errors.ts"
 import {
@@ -36,7 +37,6 @@ import {
   updateEvaluationSampling,
   updateEvaluationTriggerFilter,
 } from "./helpers.ts"
-import { wrapPromptAsEvaluationScript } from "./runtime/evaluation-execution.ts"
 
 const makeEvaluation = (overrides: Partial<ReturnType<typeof evaluationSchema.parse>> = {}) =>
   evaluationSchema.parse({

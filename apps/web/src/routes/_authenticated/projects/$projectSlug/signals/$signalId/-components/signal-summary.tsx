@@ -133,7 +133,7 @@ export function SignalSummary({ projectId, signalId }: { readonly projectId: str
                   </div>
                 }
               >
-                {formatPercent(impact.affectedTracesPercent)} of all project traces are part of this signal — the
+                {formatPercent(impact.affectedTracesPercent)} of all project traces are part of this signal. This is the
                 baseline the Patterns section compares against.
               </Tooltip>
             ) : (

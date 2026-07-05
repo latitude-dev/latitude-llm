@@ -7,6 +7,29 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [7.4.0] - 2026-07-03
+
+### Added
+
+- `client.spans.query` gains `orderBy` (`startTime`/`duration`/`cost`, asc/desc) and a `status` span filter (`error`/`ok`/`unset`) — enabling "top-N slowest/costliest spans" and error-only drill-downs.
+- `client.analytics.query` breakdown results now include a `label` — the human name for opaque `signalId`/`cluster` keys (the signal name / behavior-cluster name), so by-signal and by-behavior series are self-describing.
+
+### Changed
+
+- `client.analytics.query` percentile metric is now `{ kind: "percentile", field, p }` (`p` in [1,99]) instead of the fixed `p95`. Use `p: 95` for the previous `p95` behavior.
+
+## [7.3.0] - 2026-07-03
+
+### Added
+
+- `client.account.bootstrap` — create a temporary organization (with an API key and a project) and get a link to claim ownership of it. Unauthenticated; powers the agentic zero-account onboarding flow.
+
+## [7.2.0] - 2026-07-03
+
+### Added
+
+- `semantic_similarity` rule condition for signal evaluations. `client.signals.create` (and `update`) now accept a `{ type: "semantic_similarity", query, operator?, threshold }` item in a `rule` evaluation's `conditions`, which matches a session's messages against `query` by embedding similarity. `operator` defaults to `gte`; `threshold` is in `[0, 1]`.
+
 ## [7.1.0] - 2026-07-01
 
 ### Added

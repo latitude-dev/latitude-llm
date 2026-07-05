@@ -286,8 +286,8 @@ type Condition =
   | { type: "tool_call_count"; operator: "gt" | "gte" | "lt" | "lte"; value: number }
   | { type: "error" }
   | { type: "finish_reason"; value: string }   // provider-specific free string ("stop", "tool_calls", "length", …)
-// R3 adds: { type: "semantic_similarity"; scope: MessageScope; anchor: string; threshold: number }
-// — the condition + its sandbox execution model (open design). Moments/flagger consolidation is out of scope.
+  | { type: "semantic_similarity"; query: string; operator: ComparisonOperator; threshold: number }  // R3 — max cosine vs `query` over the session, via the `semanticSimilarity()` host verb reusing ingest embeddings
+// Moments/flagger consolidation is out of scope.
 
 // CHANGED (@domain/scores): renames SCORE_SOURCES `source`→`source_type` and splits annotation→flagger/user.
 // `evaluation` is KEPT (a signal's detector is an evaluation), so existing evaluation-sourced scores need
@@ -458,8 +458,7 @@ Definition (evaluation + filters), signal trend, escalation incidents, mute stat
 
 ### Creating a signal
 
-One builder ([R1](#r1--builder-ui-mvp)), three entry points (Signals list, "Create signal from this search", annotation flow), one rule: **never let users define membership blind** — the builder always shows a live preview (`previewEvaluationUseCase`: compile + run against recent sample sessions, no persist). It edits a declarative `settings` form via three tabs — **Rules** (deterministic conditions over the `session` object; `semantic_similarity` is an [R3](#r3--semantic-similarity-for-rule-evals-future) addition), **Judge** (`criteria` → a script that calls `llm(\`${session.conversation}\` …)`), and **Advanced** (raw `script`, with AI "describe your eval" generation in [R2](#r2--ai-authored-evaluations-the-advanced-tab-post-mvp)) — plus a `filters` scope editor (which writes through to `evaluation.trigger.filter`). Editing a settings-defined signal recompiles its detector (archive active + create new); raw-script and `origin=system` signals are not settings-editable.
-
+One builder ([R1](#r1--builder-ui-mvp), shipped #3773), three entry points (Signals list "New signal", "Create signal from this search", and **Edit** on the signal detail page), one rule: **never let users define membership blind** — the builder always shows a live preview (`previewEvaluationUseCase`: compile + run against recent sample sessions, no persist). Creation opens on a **describe-first intro** (what a signal is + an animated session→evaluation→signal flow diagram + a single textarea, [R4](#r4--agentic-signal-creation-shipped)): the user describes what to track and an AI-driven use case generates and creates the whole signal, or clicks **Configure manually** to enter the wizard, which runs **Evaluation → Scope → Test → Details** (the intro is a shortcut, not a wizard step — Back from the first step returns to it; there is no method-cards screen, the first step's tabs pick the kind). The evaluation tabs are **Set of conditions** (deterministic conditions over the `session` object, including the `semantic_similarity` condition from [R3](#r3--semantic-similarity-for-rule-evals-in-progress)), **LLM as judge** (`criteria` → a script that calls `llm(\`${session.conversation}\` …)`; the label is a sentence scaffold — "A session matches when…" — so the input reads as a description of the session, not instructions), and **Custom script** (the compiled view of the current evaluation — settings render as the exact script that runs, read-only until "Edit as custom script" detaches to a raw `script`; the R2 in-tab "describe your eval" affordance was retired into [R4](#r4--agentic-signal-creation-shipped)). The Scope step frames `filters` ("which sessions should be checked?") and `sampling` ("how many of them?") as two questions, with cost copy that adapts to the evaluation kind. Conditions/judge compile a declarative `settings` form; Custom script stores a raw `script` (`settings = null`). Editing opens a tabbed shell instead of the wizard (**Evaluation | Scope | Test** — jump straight to what you're changing; only what changed is saved) and updates the active evaluation **in place** (same evaluation id; forward-only — existing scores keep their frozen membership); a user signal can be freely re-authored across kinds (settings ⇄ raw script). `origin=system` signals are not editable in the builder.
 ### Monitoring
 
 Signal escalation is built into the signal detail flow and notification pipeline. User-created monitors remain the project-level monitor surface for saved-search/tool/user/session targets.
@@ -536,7 +535,7 @@ Signals are exposed as a public REST surface under `/v1/projects/{projectSlug}/s
 
 ### Phase 2 — Evaluation substrate + script evaluations `[MVP]`
 
-> **Delivered as self-contained PRs (big-bang cutover, no feature flag).** **PR1 — engine cutover** (membership = `signal_id`, `signals:match`, `source_type` rename, sandbox `value` contract), **PR2 — present-verdict convention** (present ⇒ `passed = true`, #3661), and **PR3 — user-created signals over the API + MCP** (#3690) are **shipped**. The remaining builder work expanded into three PRs: **PR4a — session runtime context** (#3734, evaluations run against a rich `session` object) and **PR4b — conditions contract + codegen** (#3739, settings-defined deterministic conditions, all pure) are **shipped**; the builder UI is the one remaining Phase 2 piece, tracked (and expanded) as **R1** in the [roadmap](#roadmap--remaining-work) below. Phase 5 (unify judge execution onto the matching pipeline) is **folded into PR1**.
+> **Delivered as self-contained PRs (big-bang cutover, no feature flag).** **PR1 — engine cutover** (membership = `signal_id`, `signals:match`, `source_type` rename, sandbox `value` contract), **PR2 — present-verdict convention** (present ⇒ `passed = true`, #3661), and **PR3 — user-created signals over the API + MCP** (#3690) are **shipped**. The remaining builder work expanded into three PRs: **PR4a — session runtime context** (#3734, evaluations run against a rich `session` object) and **PR4b — conditions contract + codegen** (#3739, settings-defined deterministic conditions, all pure) are **shipped**; the builder UI shipped as **R1** (#3773) in the [roadmap](#roadmap--remaining-work) below. Phase 5 (unify judge execution onto the matching pipeline) is **folded into PR1**.
 
 **Deps:** P1.
 
@@ -595,11 +594,11 @@ Settings-defined deterministic conditions that compile to a pure script over the
 - [x] **API surface**: the `create-signal` route schema references the shared `evaluationSettingsSchema` so `kind:"rule"` is accepted; OpenAPI/MCP manifests + Fern TS/Python SDKs regenerated. (CodeQL flagged the `JSON.stringify`-into-script pattern; dismissed as false positive — the script is fully sandboxed and the same endpoint already accepts an arbitrary raw `{ script }`.)
 - [x] **Tests**: zod contract (every condition, defaults, bounds, the two refinements) + codegen executed against crafted sessions (verdict + deciding-condition feedback + pureness, all operators incl. negations, the empty-session guard) + the rule path through `createSignalUseCase`.
 
-#### PR4c — Builder UI → moved to the roadmap
+#### PR4c — Builder UI → shipped as R1
 
-The builder UI is the only remaining Phase 2 work. It is tracked (and expanded — it absorbs the former judge-builder phase) as [R1 — Builder UI](#r1--builder-ui-mvp) in the roadmap below.
+The builder UI shipped (and expanded — it absorbs the former judge-builder phase) as [R1 — Builder UI](#r1--builder-ui-mvp) (#3773) in the roadmap below.
 
-**Exit gate (PR4a–b):** evaluations run against the `session` object; rule + judge detectors compile and run; the `rule` kind is accepted on the create-signal API/SDK. (The UI exit gate moves to R1.)
+**Exit gate (PR4a–b):** evaluations run against the `session` object; rule + judge detectors compile and run; the `rule` kind is accepted on the create-signal API/SDK. (The UI exit gate moved to R1, now met.)
 
 ### Phase 3 — User-created LLM-as-judge signals `[FOLDED INTO R1]`
 
@@ -617,7 +616,7 @@ The builder UI is the only remaining Phase 2 work. It is tracked (and expanded �
 
 **Exit gate:** a signal escalation opens/closes a `signal` incident, respects signal mute, and fans out under the `signal.escalating` gate.
 
-> **— MVP line: Phases 1–4 + roadmap R1 (builder UI) —**
+> **— MVP line: Phases 1–4 + R1 (builder UI, shipped #3773) — MVP COMPLETE —**
 
 ### Phase 5 — Unify judge execution onto the evaluation matching pipeline `[FOLDED INTO PR1 · complete]`
 
@@ -639,40 +638,72 @@ The builder UI is the only remaining Phase 2 work. It is tracked (and expanded �
 
 ## Roadmap — remaining work
 
-> Phases 1–6 above are shipped. **R1–R3 + Cleanup below are the only open work.** Status legend as above. Out of scope for this roadmap: moments→evaluations + flagger consolidation, and the pure-similarity batch-runner *optimization* (the similarity execution question itself lives in R3).
+> Phases 1–6 above are shipped. **R1 (builder UI, #3773), R2's describe→script generation (since retired into R4), R3's semantic-similarity condition (#3818), and R4 (agentic signal creation) are shipped; R2's GEPA-over-scripts and Cleanup are the remaining open work.** Status legend as above. Out of scope for this roadmap: moments→evaluations + flagger consolidation, and the pure-similarity batch-runner *optimization* (the similarity execution question itself lives in R3).
 
 ### R1 — Builder UI `[MVP]`
 
-The one builder that completes the MVP: create and edit signals from the UI with a live preview, across three tabs. Absorbs the former judge-builder phase — authoring a judge is just the Judge tab, and the generation/alignment/execution stack it needs already ships. **Deps:** PR4a/PR4b.
+**Shipped (#3773).** The one builder that completes the MVP: create and edit signals from the UI with a live preview, across three tabs. Absorbs the former judge-builder phase — authoring a judge is just the Judge tab, and the generation/alignment/execution stack it needs already ships. **Deps:** PR4a/PR4b.
 
-- [ ] **Backend for web**: `previewEvaluationUseCase` (compile + run against recent sample sessions, **no persist**); `updateSignalEvaluationUseCase` (user-origin, `settings IS NOT NULL` only — archive active + create new in one tx); **filters-gate fix** — propagate the signal's `filters` into `evaluation.trigger.filter` (today `createSignal` leaves it `{}`, so signal filters don't actually gate). Web `createServerFn` handlers + `signals.collection.ts` hooks (no REST/SDK regen — UI leads).
-- [ ] **UI** (`apps/web`): create/edit signal builder modal with three tabs — **Rules** (deterministic conditions editor over `session`), **Judge** (`criteria` → generated `llm()` script; reuse the example-trace picker + `getSignalAlignmentState` polling), and **Advanced** (raw `script` editor, with a "describe your eval" affordance **present but disabled** — wired in R2) — plus a `filters` (scope) editor and a **live preview** (deterministic runs live; judge on-demand). Entry points: "New signal" (signals list), "Create signal from this search" (saved-search surface), and **Edit** on the signal detail page (replace the "Editing its settings is coming soon" note for `origin=user` & `settings≠null`); delete action.
-- [ ] **Judge wiring** (mostly pre-existing, from the former Phase 3): drive `optimize-evaluation` from the builder (`evaluations:generate:${signalId}`; with example traces → aligned via `collectAlignmentExamples`/`evaluateDraftAgainstExamples`, without → unaligned start); verify the `EvaluationTrigger` path writes `signal_id`-bearing scores for a non-discovered user signal.
-- [ ] **Cleanup**: drop the dead `QueuePublisher` layer on `createSignal`; fix the stale "backfilled over recent history" prose in `apps/api/src/routes/signals.ts` (backfill was dropped in PR3 — collect forward only).
+> **Reconciled shipped model:** `updateSignalEvaluationUseCase` updates the active evaluation **in place** (same evaluation id) rather than archive-active-plus-create-new — matching the realign path and avoiding a lineage/naming scheme. The Advanced tab shipped with the "describe your eval" affordance **wired**, not disabled ([R2](#r2--ai-authored-evaluations-the-advanced-tab-post-mvp) below, delivered together).
 
-**Exit gate:** users create/edit rule, judge & raw-script signals from the UI with a live preview; settings edits recompile the detector; new in-scope traces produce evaluation scores on the signal page. **Completes the MVP.**
+- [x] **Backend for web**: `previewEvaluationUseCase` (compile + run against recent sample sessions, **no persist**); `updateSignalEvaluationUseCase` (user-origin; updates the active evaluation **in place**, same id); signal `filters` gate evaluation execution. Web `createServerFn` handlers + `signals.collection.ts` hooks (no REST/SDK regen — UI leads).
+- [x] **UI** (`apps/web`): create/edit signal builder modal with three tabs — **Rules** (deterministic conditions editor over `session`), **Judge** (`criteria` → generated `llm()` script; reuse the example-trace picker + `getSignalAlignmentState` polling), and **Advanced** (raw `script` editor + AI "describe your eval" generation — see R2) — plus a `filters` (scope) editor and a **live preview** (deterministic runs live; judge on-demand). Entry points: "New signal" (signals list), "Create signal from this search" (saved-search surface), and **Edit** on the signal detail page (replaces the "Editing its settings is coming soon" note); delete action.
+- [x] **Judge wiring** (mostly pre-existing, from the former Phase 3): drive `optimize-evaluation` from the builder (`evaluations:generate:${signalId}`; with example traces → aligned via `collectAlignmentExamples`/`evaluateDraftAgainstExamples`, without → unaligned start); the `EvaluationTrigger` path writes `signal_id`-bearing scores for a non-discovered user signal.
+- [x] **Cleanup**: dropped the dead `QueuePublisher` layer on `createSignal`; fixed the stale "backfilled over recent history" prose in `apps/api/src/routes/signals.ts` (backfill was dropped in PR3 — collect forward only).
+
+**Exit gate (met):** users create/edit rule, judge & raw-script signals from the UI with a live preview; settings edits recompile the detector; new in-scope traces produce evaluation scores on the signal page. **Completed the MVP.**
 
 ### R2 — AI-authored evaluations (the Advanced tab) `[POST-MVP]`
 
-Enable the Advanced tab's "describe your eval": the user describes a behavior in natural language and Latitude's own AI authors a raw sandbox `script` over the `session` object — any mix of deterministic checks + `llm()`, not just a judge prompt or a declarative rule. The same muscle then powers optimization: GEPA, today locked to rewriting only the judge prompt, learns to author and tune the whole script. **Deps:** R1; PR4b (`rule` codegen + `session` payload).
+**Status: describe→script shipped; GEPA-over-scripts open.** Enable the Advanced tab's "describe your eval": the user describes a behavior in natural language and Latitude's own AI authors a raw sandbox `script` over the `session` object — any mix of deterministic checks + `llm()`, not just a judge prompt or a declarative rule. The same muscle then powers optimization: GEPA, today locked to rewriting only the judge prompt, learns to author and tune the whole script. **Deps:** R1; PR4b (`rule` codegen + `session` payload).
 
-- [ ] **Describe → script generation**: from the Advanced tab, a generation pass that emits a compiling raw `script` from an NL description; teach the generator the `session` payload surface (conversation + per-trace metrics/models/providers/finishReasons/tools) and the sandbox host API (`Passed()`/`Failed()`/`Score()`, `llm()`). Validate every candidate via `validateEvaluationScriptCompiles` (reject non-compiling output, 422).
+- [x] **Describe → script generation** (shipped #3763, then **retired into [R4](#r4--agentic-signal-creation-shipped)**): `createScriptFromPromptUseCase` emitted a raw `script` from an NL description, smoke-tested in the sandbox against a scoped session with error-feedback retries (≤3), wired async via the `signals-generate-script` queue + Redis polling. R4 generalized the whole mechanism — its system-prompt sandbox contract (`EVALUATION_SCRIPT_GENERATION_SYSTEM_PROMPT`) survives inside the R4 signal-generation prompt; the in-tab affordance, use case, queue topic, and worker were deleted with R4's landing.
 - [ ] **GEPA over arbitrary scripts**: relax the proposer contract (`GEPA_PROPOSER_SYSTEM_PROMPT`, the `TODO(eval-sandbox)` in `packages/platform/op-gepa/src/prompts/proposer.ts`) to emit/rewrite the whole script body — deterministic, judge, and hybrid — not just the `llm()` prompt; score each candidate through the sandbox against the alignment set; capability-aware cost/lane accounting; decide the search space (seed from `rule` codegen vs. free-form) and how alignment scoring applies to deterministic candidates (which never call `llm()`).
 
-**Exit gate:** a user describes an eval and gets a working raw script; GEPA can produce and improve deterministic, judge, and hybrid scripts that read the `session` payload, each validated by compile + alignment scoring.
+**Exit gate:** ✅ a user describes an eval and gets a working raw script (shipped); ⏳ GEPA can produce and improve deterministic, judge, and hybrid scripts that read the `session` payload, each validated by compile + alignment scoring (open).
 
-### R3 — Semantic similarity for rule evals `[FUTURE]`
+### R3 — Semantic similarity for rule evals `[IN PROGRESS]`
 
-A `semantic_similarity` rule condition (`{ scope, anchor, threshold }`) plus the runtime mechanism to evaluate it on the QuickJS sandbox, surfaced in the builder's Rules tab. **Deps:** R1.
+A `semantic_similarity` rule condition (`{ query, operator, threshold }`) plus a `semanticSimilarity(query)` sandbox verb, surfaced in the builder's Rules tab. **Deps:** R1.
 
-**The execution mechanism is open design** — the previously-sketched approaches are candidates, *not* decisions, and likely need rethinking:
-- *On-demand `similarity(a, b)` host fn* (embed both strings per run, metered like `llm()`): simplest, but an embedding call per evaluation per trace — likely too costly at volume.
-- *Native batch-runner* (one pass over a trace's precomputed chunk embeddings against all anchors): cheaper, but those embeddings exist only at the later `trace_search_embeddings` hop, so it needs an embeddings-ready execution lane and a `specs/sandbox-runtime.md` change.
+**The execution model is decided** — it reuses ingest-time embeddings and embeds *only the query*, at most once per distinct string:
+- **Never re-embed the session.** Trace messages are already embedded at ingest (`trace-search` → `message_embeddings`, voyage-4-large, content-addressed and deduped project-wide). The runtime reads those vectors via `trace_message_occurrences` (`trace → content_hash`) → `MessageEmbeddingRepository.findByHashes`. When a session has no embeddings, `semanticSimilarity` returns **0** (the lowest score) — never a skip.
+- **Query embedded once, ever.** The query is content-addressed in `message_embeddings` (embedded as `document`, like the stored messages, so cosine is apples-to-apples). Embed-on-miss only for a never-seen string; every later run reuses it.
+- **Host verb, not a DB handle.** One narrow, parameterized, host-scoped `semanticSimilarity(query)` verb (`Promise<number>` = max cosine over the session), on the same trust model as `llm()`. It composes with `Passed`/`Failed`/`Score`; the `rule` condition compiles to a binary `Passed(1)`/`Failed(0)` via `(await semanticSimilarity(query)) OP threshold`.
+- **Readiness gate.** Embedding-capable evals run after embedding: a bounded delayed re-publish waits for occurrences to appear; on the last attempt the run proceeds and the host returns 0 for whatever's still missing.
+- **Threshold UX.** Named presets (Broad/Balanced/Strict → calibrated cosines) are the primary knob; raw slider/operator sit behind "advanced". Calibration is the builder's live Test-step preview.
 
-- [ ] **Design** the sandbox execution model for semantic similarity (host fn vs. batch lane vs. other) — cost, latency, and where in the pipeline it runs.
-- [ ] **Implement** the chosen mechanism + the `semantic_similarity` rule condition (contract, codegen, capability detection) and surface it in the builder's Rules tab.
+- [x] **Design** the sandbox execution model (reuse ingest embeddings; `semanticSimilarity(query)` host verb; embed the query once).
+- [x] **Implement** the `semantic_similarity` rule condition (contract, codegen, capability detection), the host verb + read path, the readiness gate, and the builder Rules-tab surface.
+- [ ] **Calibrate** `SEMANTIC_SIMILARITY_PRESETS` against voyage-4-large.
 
-**Exit gate:** a rule can match on semantic similarity to an anchor, with an execution model that holds at production volume.
+**Exit gate:** a rule can match on semantic similarity to a query, embedding zero session messages and the query at most once, at production volume.
+
+### R4 — Agentic signal creation `[SHIPPED]`
+
+**Describe-first creation: one prompt → the complete signal.** The builder's intro screen swaps its method cards for a single textarea: the user describes what they want to track and Latitude's AI creates the whole signal — `name`, `description`, `filters`, `sampling`, and the evaluation — then the UI navigates to the new signal's detail page. "Configure manually" sits beside it as the path into the step-by-step wizard (straight to the tabbed Evaluation step — the method cards are gone), so natural language is the default and manual configuration the escape hatch. **Deps:** R1 (builder); R2's describe→script machinery (retired into this); the sandbox preview.
+
+> **Reconciled shipped model:** the generator shipped as **one AI-driven use case with a bounded draft → repair → review loop** (`createSignalFromPromptUseCase`, `@domain/signals`), not an open tool-use loop — the grounding the tool loop would have queried is prefetched inside the use case and injected into the prompt (distinct filter-dimension values incl. tool names via `TraceRepository.distinctFilterValues`, traffic volume via the session histogram, one sample session), and self-validation runs `previewEvaluationUseCase` in-process. ≤ 4 `ai.generate` calls per run (structured output against a flat generation schema, host-mapped through the shared `evaluationSettingsSchema`/`filterSetSchema`, including R3's `semantic_similarity` condition); feature `SIGNAL_GENERATOR`, telemetry project `latitude-signal-generation`. The user's prompt is **not persisted**. User-named filter values reconcile against observed values in the prompt (observed match > naming-pattern inference > user-quoted literal verbatim); filters are generated only as a for-sure-discard cost pre-gate.
+
+The grounded decisions, as specced:
+
+- **evaluation content** — which `session` fields/functions the script or conditions should use, checked against what the project's sessions actually contain (does the ask map to a real tool name?);
+- **kind** — prefer `rule` settings > `judge` settings > raw script; settings keep the result editable as forms in the builder;
+- **filters** — only real dimensions/values (tags, services, models, providers; metadata only when the user names it), and none when the ask implies no scoping;
+- **sampling** — from actual traffic volume and evaluation cost (rule → 100%; judge/script → a cost-aware fraction);
+- **self-validation** — preview the candidate evaluation against recent sessions and iterate until the verdicts look right: the "never define membership blind" rule, applied to the generator itself.
+
+Locked product decisions (from the builder-UX design round):
+
+- **Creates immediately** — no wizard-prefill review step; the user reviews on the detail page and iterates via Edit. Closing the modal mid-run only stops polling; the created signal still appears in the list (a Redis `:claim` key makes stall-recovery redeliveries no-ops, so a run never double-creates).
+- **Waiting UX stays minimal** — a spinner plus one muted status line (the worker streams its current step into the pending Redis value).
+- **The Custom script tab becomes the compiled view** (shipped in this phase): the tab is only the code editor, always showing the current evaluation as a script — `compileSettingsToScript(settings)` when conditions/judge settings are configured (client-side via the `@domain/evaluations` browser entry; the compiler is pure), the raw script otherwise. The compiled view is read-only with an explicit **"Edit as custom script"** detach (so a stray keystroke can't silently destroy a settings form); detaching re-authors as a raw script (`settings = null`, settings forms cleared). The in-tab describe→generate affordance from R2 is gone.
+
+- [x] **Generation use case (workers)**: `createSignalFromPromptUseCase` — grounding prefetch + draft/repair/review loop + `previewEvaluationUseCase` self-validation; draft contract host-validated onto `{name, description, filters (filterSetSchema), sampling, evaluation: {settings} | {script}}`; composes `createSignalUseCase`; enqueue+poll plumbing (`signals-generate-signal` task + `org:${organizationId}:signalGeneration:${generationId}`) replacing the retired `signals-generate-script` path.
+- [x] **Intro screen**: method cards replaced by the describe textarea + "Generate signal" + "Configure manually" (→ wizard step 0); minimal waiting line fed by worker steps; navigates to the detail page on completion; generation errors show inline with manual configuration always available.
+- [x] **Custom script tab = compiled view**: `compileSettingsToScript` exposed through the `@domain/evaluations` browser entry (pure codegen split from the sandbox-backed validators); the editor shows compiled settings read-only or the raw script; explicit detach flips to raw and clears settings.
+
+**Exit gate (met):** a one-sentence description yields a created signal grounded in the project's real data — valid filters over existing dimensions, sampling that fits traffic, an evaluation that previews correctly — reviewable on its detail page; manual configuration stays fully available; the Custom script tab always shows the current evaluation as code.
 
 ### Cleanup — legacy storage retirement `[POST-MVP]`
 

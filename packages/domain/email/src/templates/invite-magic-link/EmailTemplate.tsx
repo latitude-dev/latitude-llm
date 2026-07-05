@@ -17,17 +17,17 @@ export function InviteMagicLinkEmail({ inviterName, organizationName, magicLinkU
   return (
     <ContainerLayout previewText={`${inviterName} wants you to join ${organizationName} on Latitude`}>
       <EmailText variant="heading" className={emailDesignTokens.spacing.headingGap}>
-        {`You're invited to ${organizationName}`}
+        {`You have been invited to ${organizationName}`}
       </EmailText>
       <EmailText variant="body" className={emailDesignTokens.spacing.contentGap}>
-        {`${inviterName} would like you to collaborate in the ${organizationName} workspace on Latitude — a platform for monitoring and evaluating LLM-powered applications.`}
+        {`${inviterName} would like you to collaborate in the ${organizationName} organization on Latitude — the open-source AI Agent Monitoring platform.`}
       </EmailText>
       <EmailText variant="body" className={emailDesignTokens.spacing.contentGap}>
         Tap the button below to join the team and start exploring.
       </EmailText>
 
       <Section className={emailDesignTokens.spacing.buttonTop}>
-        <EmailButton href={magicLinkUrl} label="Join the Workspace" />
+        <EmailButton href={magicLinkUrl} label="Join the Organization" />
       </Section>
 
       <EmailText variant="bodySmall" className={`text-muted-foreground ${emailDesignTokens.spacing.footnoteTop}`}>

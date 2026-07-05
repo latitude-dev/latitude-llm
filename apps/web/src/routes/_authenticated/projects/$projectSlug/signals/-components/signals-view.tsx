@@ -33,19 +33,6 @@ import { formatPercent, formatSeenAgeParts, getPrimaryLifecycleState } from "./s
 import { SignalLifecycleStatuses } from "./signal-lifecycle-statuses.tsx"
 import { SignalTrendBar } from "./signal-trend-bar.tsx"
 
-export const ISSUES_COLUMN_OPTIONS = [
-  { id: "issue", label: "Signal", required: true },
-  { id: "tags", label: "Tags" },
-  { id: "status", label: "Status" },
-  { id: "assignee", label: "Assignee" },
-  { id: "trend", label: "Trend" },
-  { id: "seenAt", label: "Seen at" },
-  { id: "occurrences", label: "Occurrences" },
-  { id: "affectedTraces", label: "Affected sessions" },
-] as const
-
-export type SignalsColumnId = (typeof ISSUES_COLUMN_OPTIONS)[number]["id"]
-
 function SeenAtCell({
   lastSeenAtIso,
   firstSeenAtIso,
@@ -151,7 +138,6 @@ export function SignalsView({
   sorting,
   occurrencesSum,
   priorityCounts,
-  visibleColumnIds,
   selection,
   onSortChange,
   projectSlug,
@@ -163,14 +149,13 @@ export function SignalsView({
   readonly sorting: SignalsTableSorting
   readonly occurrencesSum: number
   readonly priorityCounts: SignalsListResultRecord["priorityCounts"]
-  readonly visibleColumnIds: readonly SignalsColumnId[]
   readonly selection: InfiniteTableSelection
   readonly onSortChange: (sorting: SignalsTableSorting) => void
   readonly projectSlug: string
 }) {
   const memberByUserId = useMemberByUserIdMap()
 
-  const allColumns: readonly InfiniteTableColumn<SignalRecord>[] = [
+  const columns: InfiniteTableColumn<SignalRecord>[] = [
     {
       key: "issue",
       header: "Signal",
@@ -308,12 +293,6 @@ export function SignalsView({
       },
     },
   ]
-
-  const columnsById = new Map(allColumns.map((column) => [column.key, column]))
-  const columns = visibleColumnIds.flatMap((columnId) => {
-    const column = columnsById.get(columnId)
-    return column ? [column] : []
-  })
 
   return (
     <Layout.Body>

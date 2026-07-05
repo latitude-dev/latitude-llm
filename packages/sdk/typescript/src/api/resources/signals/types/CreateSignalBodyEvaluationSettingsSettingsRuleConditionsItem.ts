@@ -12,7 +12,8 @@ export type CreateSignalBodyEvaluationSettingsSettingsRuleConditionsItem =
     | Latitude.CreateSignalBodyEvaluationSettingsSettingsRuleConditionsItem.ToolFailed
     | Latitude.CreateSignalBodyEvaluationSettingsSettingsRuleConditionsItem.ToolCallCount
     | Latitude.CreateSignalBodyEvaluationSettingsSettingsRuleConditionsItem.Error
-    | Latitude.CreateSignalBodyEvaluationSettingsSettingsRuleConditionsItem.FinishReason;
+    | Latitude.CreateSignalBodyEvaluationSettingsSettingsRuleConditionsItem.FinishReason
+    | Latitude.CreateSignalBodyEvaluationSettingsSettingsRuleConditionsItem.SemanticSimilarity;
 
 export namespace CreateSignalBodyEvaluationSettingsSettingsRuleConditionsItem {
     export interface TextMatch {
@@ -148,5 +149,22 @@ export namespace CreateSignalBodyEvaluationSettingsSettingsRuleConditionsItem {
     export interface FinishReason {
         type: "finish_reason";
         value: string;
+    }
+
+    export interface SemanticSimilarity {
+        type: "semantic_similarity";
+        query: string;
+        operator?: CreateSignalBodyEvaluationSettingsSettingsRuleConditionsItemSemanticSimilarity.Operator | undefined;
+        threshold: number;
+    }
+
+    export namespace CreateSignalBodyEvaluationSettingsSettingsRuleConditionsItemSemanticSimilarity {
+        export const Operator = {
+            Gt: "gt",
+            Gte: "gte",
+            Lt: "lt",
+            Lte: "lte",
+        } as const;
+        export type Operator = (typeof Operator)[keyof typeof Operator];
     }
 }

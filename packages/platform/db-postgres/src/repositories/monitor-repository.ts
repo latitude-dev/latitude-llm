@@ -6,6 +6,7 @@ import {
   monitorConfigFilterSet,
   monitorSchema,
   monitorStreamForTargetType,
+  normalizeLegacyMetricConfig,
   type SavedSearchMonitorSummary,
 } from "@domain/monitors"
 import {
@@ -35,13 +36,16 @@ import {
 } from "drizzle-orm"
 import { Effect, Layer } from "effect"
 import type { Operator } from "../client.ts"
-import { alertIncidents } from "../schema/alert-incidents.ts"
+import { incidents } from "../schema/alert-incidents.ts"
 import { monitors } from "../schema/monitors.ts"
 import { projects } from "../schema/projects.ts"
 import { nameMatchScore, preferProjectFirst } from "./org-search.ts"
 
 const toMonitor = (row: typeof monitors.$inferSelect): Monitor => {
-  const filterSet = monitorConfigFilterSet(row.config) ?? undefined
+  // Normalize legacy `{kind:"p95"}` metrics before schema validation (the fixed
+  // `p95` kind was removed in favor of `percentile`); no-op for all current rows.
+  const config = normalizeLegacyMetricConfig(row.config)
+  const filterSet = monitorConfigFilterSet(config) ?? undefined
   return monitorSchema.parse({
     id: row.id,
     organizationId: row.organizationId,
@@ -56,13 +60,13 @@ const toMonitor = (row: typeof monitors.$inferSelect): Monitor => {
       ...(filterSet === undefined ? {} : { filterSet }),
       kind: row.targetType,
       stream: monitorStreamForTargetType(row.targetType),
-      query: row.config.query ?? null,
+      query: config.query ?? null,
       savedSearchId: row.targetType === "savedSearch" ? row.targetId : null,
-      ...(row.config.metric === undefined ? {} : { metric: row.config.metric }),
+      ...(config.metric === undefined ? {} : { metric: config.metric }),
     },
     rule: {
       trigger: row.trigger,
-      config: row.config,
+      config,
       severity: row.severity,
     },
     mutedAt: row.mutedAt,
@@ -164,12 +168,12 @@ export const MonitorRepositoryLive = Layer.effect(
           const [rows, totals] = yield* sqlClient.query((db) => {
             const lastIncident = db
               .select({
-                monitorId: alertIncidents.sourceId,
-                lastStartedAt: max(alertIncidents.startedAt).as("last_started_at"),
+                monitorId: incidents.sourceId,
+                lastStartedAt: max(incidents.startedAt).as("last_started_at"),
               })
-              .from(alertIncidents)
-              .where(and(eq(alertIncidents.sourceType, "monitor"), eq(alertIncidents.organizationId, organizationId)))
-              .groupBy(alertIncidents.sourceId)
+              .from(incidents)
+              .where(and(eq(incidents.sourceType, "monitor"), eq(incidents.organizationId, organizationId)))
+              .groupBy(incidents.sourceId)
               .as("last_incident")
 
             const itemsPromise = db
@@ -193,20 +197,20 @@ export const MonitorRepositoryLive = Layer.effect(
           const incidentRows = yield* sqlClient.query((db) =>
             db
               .select({
-                monitorId: alertIncidents.sourceId,
-                incidentId: alertIncidents.id,
-                startedAt: alertIncidents.startedAt,
-                endedAt: alertIncidents.endedAt,
+                monitorId: incidents.sourceId,
+                incidentId: incidents.id,
+                startedAt: incidents.startedAt,
+                endedAt: incidents.endedAt,
               })
-              .from(alertIncidents)
+              .from(incidents)
               .where(
                 and(
-                  eq(alertIncidents.organizationId, organizationId),
-                  eq(alertIncidents.sourceType, "monitor"),
-                  inArray(alertIncidents.sourceId, ids),
+                  eq(incidents.organizationId, organizationId),
+                  eq(incidents.sourceType, "monitor"),
+                  inArray(incidents.sourceId, ids),
                 ),
               )
-              .orderBy(asc(alertIncidents.sourceId), desc(alertIncidents.endedAt), desc(alertIncidents.id)),
+              .orderBy(asc(incidents.sourceId), desc(incidents.endedAt), desc(incidents.id)),
           )
           const lastIncidentByMonitorId = new Map<string, MonitorLastIncident>()
           for (const row of incidentRows) {

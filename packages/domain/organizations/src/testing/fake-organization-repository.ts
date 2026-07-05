@@ -29,6 +29,11 @@ export const createFakeOrganizationRepository = (overrides?: Partial<Organizatio
 
     countBySlug: (slug) => Effect.succeed([...organizations.values()].filter((o) => o.slug === slug).length),
 
+    listExpiredUnclaimed: (cutoff) =>
+      Effect.succeed(
+        [...organizations.values()].filter((o) => o.expiresAt !== null && o.expiresAt.getTime() < cutoff.getTime()),
+      ),
+
     ...overrides,
   }
 

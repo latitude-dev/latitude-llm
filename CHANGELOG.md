@@ -2,6 +2,82 @@
 
 ## Unreleased
 
+## v0.3.33 - 2026-07-04
+
+### Web
+
+- Disabled the changelog sidebar UI while the API-backed changelog collection is being updated, preventing the web app from querying or showing the incomplete feature (ref: #3833).
+
+## v0.3.32 - 2026-07-04
+
+### Signals
+
+- Added describe-first agentic signal creation: users describe a behavior in plain language and a worker-backed generator drafts a full signal (detector, judge script, scope) with sandbox validation, preview, and polling-based progress in the Advanced detector tab (ref: #3826).
+- Added semantic-similarity conditions to rule detectors so signals can match meaning, not just exact strings; generated evaluation scripts now embed against scoped sessions and score by cosine similarity (ref: #3818).
+- Removed the columns toggle and "My signals" controls from the signals list (ref: #3820).
+
+### Onboarding
+
+- Added temporary onboarding accounts: a bootstrap endpoint mints a short-lived account and a `/claim/:token` flow lets users claim it into a permanent org (LAT-704) (ref: #3823).
+- Added a global rate limit on the account bootstrap endpoint to guard against abuse (ref: #3825).
+
+### API and MCP
+
+- Improved the MCP query system for dashboard building: span listing gained ordering fields, trace/session/span `p95` metrics became configurable percentile metrics, and agent-dispatch docs and tooling cover building dashboards from agents (ref: #3765).
+
+### Web
+
+- Fixed the setup guide button stretching out of its container in the integration detail section (ref: #3838).
+
+### Reliability
+
+- Retried failed outbox polls so the consumer survives transient DB errors instead of stalling (ref: #3836).
+- Externalized `quickjs-emscripten` in the API and workflows bundles so the WASM loader resolves at runtime instead of breaking the build (ref: #3837, #3819).
+
+## v0.3.31 - 2026-07-02
+
+### Signals
+
+- Added AI-authored custom evaluation scripts to the signal builder, including worker-backed generation, sandbox validation against scoped sessions, and polling-based progress in the Advanced detector tab (ref: #3813).
+- Refreshed the signal creation flow with detector method selection, clearer explanations of rule, LLM-judge, and custom-script detectors, and more direct edit/test paths (ref: #3813).
+
+### Docs and planning
+
+- Added the LAT-721 observability migration tool spec for self-serve historical imports from Langfuse, LangSmith, and Braintrust (ref: #3805).
+
+### Web
+
+- Declared the web app's `quickjs-emscripten` runtime dependency so QuickJS-backed evaluation script paths resolve reliably in production (ref: 2a89754).
+
+## v0.3.30 - 2026-07-02
+
+### API and SDKs
+
+- Added the `querySpans` API/MCP surface for listing spans across traces, with matching TypeScript and Python SDK support (ref: #3789).
+
+### Traces and spans
+
+- Recovered Vercel AI SDK v6 output when `gen_ai.input.messages` shadowed the Vercel span parser (ref: #3816).
+
+### Web
+
+- Fixed session conversations to scroll to semantic search highlights (ref: #3800).
+- Fixed the orphan-session blankslate so it shows when the LLM activity filter hides all rows (ref: #3801).
+- Externalized `quickjs-emscripten` so its WASM resolves correctly at runtime (ref: #3785).
+
+### Onboarding
+
+- Optimized onboarding and added in-app support chat help (ref: #3779).
+
+### Docs and tooling
+
+- Added the Latitude CLI reference and made SDK/CLI generation deterministic (ref: #3809).
+- Marked SOC 2 as certified across the security compliance pages (ref: #3792).
+
+### Internal
+
+- Repaired the Drizzle snapshot chain after the incidents consolidation (ref: #3811).
+
 ## v0.3.29 - 2026-07-01
 
 ### Analytics
@@ -1044,4 +1120,3 @@
 - Fixed SqlClient transaction isolation so concurrent Effect fibers use separate Postgres transactions while nested calls reuse the current transaction (ref: #3294).
 - Added Framer secrets to infrastructure and web runtime configuration (ref: 6782d44).
 - Updated bundled models.dev data and removed MCP plugin docs for now (refs: #3293, #3298).
-

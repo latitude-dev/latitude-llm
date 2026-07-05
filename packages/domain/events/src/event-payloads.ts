@@ -455,4 +455,19 @@ export interface EventPayloads {
     readonly apiKeyId: string
     readonly timelineAnchorIso: string
   }
+  /** Emitted by `claimOrganizationUseCase` after claim; drives background sample-project seeding. */
+  OrganizationClaimed: {
+    readonly organizationId: string
+    readonly ownerUserId: string
+  }
+  /**
+   * Emitted by `bootstrapOrganizationUseCase` when an email is supplied; drives the claim email.
+   * Outbox `organizationId: "system"` like `InvitationEmailRequested` — an auth-boundary email.
+   */
+  ClaimEmailRequested: {
+    readonly email: string
+    readonly claimUrl: string
+    readonly organizationName: string
+    readonly expiresAt: string
+  }
 }

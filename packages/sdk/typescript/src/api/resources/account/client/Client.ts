@@ -23,6 +23,74 @@ export class AccountClient {
     }
 
     /**
+     * Creates a temporary organization with an API key and a project, and returns a link to claim ownership of it. Requires no authentication.
+     *
+     * @param {Latitude.BootstrapAccountBody} request
+     * @param {AccountClient.RequestOptions} requestOptions - Request-specific configuration.
+     *
+     * @throws {@link Latitude.BadRequestError}
+     * @throws {@link Latitude.TooManyRequestsError}
+     *
+     * @example
+     *     await client.account.bootstrap()
+     */
+    public bootstrap(
+        request: Latitude.BootstrapAccountBody = {},
+        requestOptions?: AccountClient.RequestOptions,
+    ): core.HttpResponsePromise<Latitude.BootstrapAccountResponse> {
+        return core.HttpResponsePromise.fromPromise(this.__bootstrap(request, requestOptions));
+    }
+
+    private async __bootstrap(
+        request: Latitude.BootstrapAccountBody = {},
+        requestOptions?: AccountClient.RequestOptions,
+    ): Promise<core.WithRawResponse<Latitude.BootstrapAccountResponse>> {
+        const _headers: core.Fetcher.Args["headers"] = mergeHeaders(this._options?.headers, requestOptions?.headers);
+        const _response = await core.fetcher({
+            url: core.url.join(
+                (await core.Supplier.get(this._options.baseUrl)) ??
+                    (await core.Supplier.get(this._options.environment)) ??
+                    environments.LatitudeEnvironment.Production,
+                "v1/account/bootstrap",
+            ),
+            method: "POST",
+            headers: _headers,
+            contentType: "application/json",
+            queryString: core.url.queryBuilder().mergeAdditional(requestOptions?.queryParams).build(),
+            requestType: "json",
+            body: request,
+            timeoutMs: (requestOptions?.timeoutInSeconds ?? this._options?.timeoutInSeconds ?? 60) * 1000,
+            maxRetries: requestOptions?.maxRetries ?? this._options?.maxRetries,
+            abortSignal: requestOptions?.abortSignal,
+            fetchFn: this._options?.fetch,
+            logging: this._options.logging,
+        });
+        if (_response.ok) {
+            return { data: _response.body as Latitude.BootstrapAccountResponse, rawResponse: _response.rawResponse };
+        }
+
+        if (_response.error.reason === "status-code") {
+            switch (_response.error.statusCode) {
+                case 400:
+                    throw new Latitude.BadRequestError(_response.error.body as Latitude.Error_, _response.rawResponse);
+                case 429:
+                    throw new Latitude.TooManyRequestsError(
+                        _response.error.body as Latitude.Error_,
+                        _response.rawResponse,
+                    );
+                default:
+                    throw new errors.LatitudeError({
+                        statusCode: _response.error.statusCode,
+                        body: _response.error.body,
+                        rawResponse: _response.rawResponse,
+                    });
+            }
+        }
+
+        return handleNonStatusCodeError(_response.error, _response.rawResponse, "POST", "/v1/account/bootstrap");
+    }
+
+    /**
      * Returns the caller's account snapshot: the organization the request is scoped to, plus the user record and their role when the request was made by a real user (OAuth). API-key callers receive `user: null` and `role: null` because API keys aren't tied to a specific user.
      *
      * @param {AccountClient.RequestOptions} requestOptions - Request-specific configuration.

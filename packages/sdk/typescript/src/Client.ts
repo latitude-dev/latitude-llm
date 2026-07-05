@@ -29,6 +29,7 @@ export declare namespace LatitudeClient {
 
 export class LatitudeClient {
     protected readonly _options: NormalizedClientOptionsWithAuth<LatitudeClient.Options>;
+    protected _account: AccountClient | undefined;
     protected _projects: ProjectsClient | undefined;
     protected _scores: ScoresClient | undefined;
     protected _annotations: AnnotationsClient | undefined;
@@ -41,7 +42,6 @@ export class LatitudeClient {
     protected _datasets: DatasetsClient | undefined;
     protected _apiKeys: ApiKeysClient | undefined;
     protected _oauthKeys: OauthKeysClient | undefined;
-    protected _account: AccountClient | undefined;
     protected _members: MembersClient | undefined;
     protected _monitors: MonitorsClient | undefined;
     protected _analytics: AnalyticsClient | undefined;
@@ -49,6 +49,10 @@ export class LatitudeClient {
 
     constructor(options: LatitudeClient.Options = {}) {
         this._options = normalizeClientOptionsWithAuth(options);
+    }
+
+    public get account(): AccountClient {
+        return (this._account ??= new AccountClient(this._options));
     }
 
     public get projects(): ProjectsClient {
@@ -97,10 +101,6 @@ export class LatitudeClient {
 
     public get oauthKeys(): OauthKeysClient {
         return (this._oauthKeys ??= new OauthKeysClient(this._options));
-    }
-
-    public get account(): AccountClient {
-        return (this._account ??= new AccountClient(this._options));
     }
 
     public get members(): MembersClient {

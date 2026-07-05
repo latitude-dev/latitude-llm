@@ -6,14 +6,16 @@ import {
   type SignalPreviewResult,
 } from "@domain/evaluations"
 import type { QueueConsumer } from "@domain/queue"
-import { type FilterSet, OrganizationId } from "@domain/shared"
-import { AIGenerateLive, withAi } from "@platform/ai"
+import { describeError, type FilterSet, OrganizationId } from "@domain/shared"
+import { AIEmbedLive, AIGenerateLive, withAi } from "@platform/ai"
 import type { RedisClient } from "@platform/cache-redis"
 import {
   type ClickHouseClient,
+  MessageEmbeddingRepositoryLive,
   SessionRepositoryLive,
   SpanRepositoryLive,
   TraceRepositoryLive,
+  TraceSearchRepositoryLive,
   withClickHouse,
 } from "@platform/db-clickhouse"
 import { QuickJsScriptRuntimeLive } from "@platform/sandbox-quickjs"
@@ -43,11 +45,6 @@ interface SignalsPreviewDeps {
   logger?: SignalsPreviewLogger
 }
 
-const describeError = (error: unknown): string =>
-  typeof error === "object" && error !== null && "message" in error
-    ? String((error as { message: unknown }).message)
-    : String(error)
-
 const writeResult = (redisClient: RedisClient, payload: SignalsPreviewPayload, result: SignalPreviewResult) =>
   Effect.tryPromise(() =>
     redisClient.set(
@@ -70,12 +67,18 @@ const runSignalsPreviewJob =
 
     return previewEvaluationUseCase(input).pipe(
       withClickHouse(
-        Layer.mergeAll(SessionRepositoryLive, SpanRepositoryLive, TraceRepositoryLive),
+        Layer.mergeAll(
+          SessionRepositoryLive,
+          SpanRepositoryLive,
+          TraceRepositoryLive,
+          MessageEmbeddingRepositoryLive,
+          TraceSearchRepositoryLive,
+        ),
         deps.clickhouseClient,
         OrganizationId(payload.organizationId),
       ),
       Effect.provide(QuickJsScriptRuntimeLive),
-      withAi(AIGenerateLive, deps.redisClient),
+      withAi(Layer.mergeAll(AIGenerateLive, AIEmbedLive), deps.redisClient),
       withTracing,
       Effect.matchEffect({
         onSuccess: (result) => writeResult(deps.redisClient, payload, { status: "done", items: result.items }),

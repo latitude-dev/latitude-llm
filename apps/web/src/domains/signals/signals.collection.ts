@@ -1,5 +1,6 @@
 import type { SignalPreviewResult } from "@domain/evaluations"
 import type { SignalDimension } from "@domain/scores"
+import type { SignalGenerationResult } from "@domain/signals"
 import type { InfiniteTableInfiniteScroll } from "@repo/ui"
 import { keepPreviousData, useInfiniteQuery, useMutation, useQueries, useQuery } from "@tanstack/react-query"
 import { useMemo } from "react"
@@ -23,10 +24,12 @@ import {
   countSignalSessions,
   createSignal,
   deleteSignal,
+  generateSignal,
   getRelatedSignals,
   getSignal,
   getSignalDetail,
   getSignalDimensions,
+  getSignalGenerationResult,
   getSignalImpact,
   getSignalOccurrences,
   getSignalPreviewResult,
@@ -518,15 +521,12 @@ export function useUpdateSignal(projectId: string, signalId: string) {
 
 export function useUpdateSignalEvaluation(projectId: string, signalId: string) {
   return useMutation({
-    mutationFn: (input: {
-      readonly settings: Extract<EvaluationDraft, { settings: unknown }>["settings"]
-      readonly sampling?: number
-    }) =>
+    mutationFn: (input: { readonly evaluation: EvaluationDraft; readonly sampling?: number }) =>
       updateSignalEvaluation({
         data: {
           projectId,
           signalId,
-          settings: input.settings,
+          evaluation: input.evaluation,
           ...(input.sampling !== undefined ? { sampling: input.sampling } : {}),
         },
       }),
@@ -571,6 +571,44 @@ export async function runSignalPreview(input: {
     await new Promise((resolve) => setTimeout(resolve, PREVIEW_POLL_INTERVAL_MS))
   }
   return { status: "error", error: "Preview timed out" }
+}
+
+// Generation runs up to 4 draft/repair/review cycles plus sandbox previews (judge previews make
+// LLM calls per session), so it polls much longer and less often than preview.
+const GENERATION_POLL_INTERVAL_MS = 1500
+const GENERATION_POLL_TIMEOUT_MS = 300_000
+
+/**
+ * Enqueues a describe-first signal generation and polls until the worker writes a result (or the
+ * timeout elapses). The worker creates the signal itself; aborting only stops polling — a run in
+ * flight still creates the signal. Used by the builder intro's "Generate signal" action.
+ */
+export async function runSignalGeneration(input: {
+  readonly projectId: string
+  readonly prompt: string
+  readonly filters?: SignalFilters | null
+  /** Stops polling early when the caller (e.g. a closing modal) is no longer interested. */
+  readonly signal?: AbortSignal
+  /** Receives the worker's progress line while the run is pending. */
+  readonly onStep?: (step: string) => void
+}): Promise<SignalGenerationResult> {
+  const { generationId } = await generateSignal({
+    data: {
+      projectId: input.projectId,
+      prompt: input.prompt,
+      ...(input.filters != null ? { filters: input.filters } : {}),
+    },
+  })
+
+  const deadline = Date.now() + GENERATION_POLL_TIMEOUT_MS
+  while (Date.now() < deadline) {
+    if (input.signal?.aborted) return { status: "error", error: "Generation cancelled" }
+    const result = await getSignalGenerationResult({ data: { generationId } })
+    if (result.status !== "pending") return result
+    if (result.step !== undefined) input.onStep?.(result.step)
+    await new Promise((resolve) => setTimeout(resolve, GENERATION_POLL_INTERVAL_MS))
+  }
+  return { status: "error", error: "Generation timed out" }
 }
 
 export function useSignalSessionsCount({

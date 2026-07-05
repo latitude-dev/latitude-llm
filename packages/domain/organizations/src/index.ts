@@ -21,6 +21,11 @@ export {
   organizationSchema,
 } from "./entities/organization.ts"
 export {
+  createOrganizationClaim,
+  type OrganizationClaim,
+  organizationClaimSchema,
+} from "./entities/organization-claim.ts"
+export {
   type PublicInvitationPreview,
   publicInvitationPreviewSchema,
 } from "./entities/public-invitation-preview.ts"
@@ -34,11 +39,15 @@ export {
   CannotRemoveSelfError,
   CannotTransferToNonMemberError,
   CannotTransferToSelfError,
+  ClaimAlreadyUsedError,
+  ClaimExpiredError,
+  ClaimTokenInvalidError,
   InvitationLimitReachedError,
   InvitationNotFoundError,
   MembershipNotFoundError,
   NotAdminError,
   NotOwnerError,
+  OrganizationNotClaimableError,
   SlugGenerationError,
   TargetMembershipNotFoundError,
 } from "./errors.ts"
@@ -47,13 +56,41 @@ export {
   MembershipRepository,
   type MemberWithUser,
 } from "./ports/membership-repository.ts"
+export { OrganizationClaimRepository } from "./ports/organization-claim-repository.ts"
 export { OrganizationRepository } from "./ports/organization-repository.ts"
+export {
+  type BootstrapOrganizationError,
+  type BootstrapOrganizationInput,
+  type BootstrapOrganizationResult,
+  bootstrapOrganizationUseCase,
+  DEFAULT_TEMPORARY_ORGANIZATION_NAME,
+  DEFAULT_TEMPORARY_PROJECT_NAME,
+  TEMPORARY_ACCOUNT_TTL_MS,
+} from "./use-cases/bootstrap-organization.ts"
 export { type CancelInvitationInput, cancelInvitationUseCase } from "./use-cases/cancel-invitation.ts"
+export {
+  type ClaimOrganizationError,
+  type ClaimOrganizationInput,
+  type ClaimOrganizationResult,
+  claimOrganizationUseCase,
+} from "./use-cases/claim-organization.ts"
 // Use cases
 export {
   type CleanupUserMembershipsInput,
   cleanupUserMembershipsUseCase,
 } from "./use-cases/cleanup-user-memberships.ts"
+export {
+  type CreateSampleProjectError,
+  type CreateSampleProjectInput,
+  type CreateSampleProjectResult,
+  createSampleProjectUseCase,
+} from "./use-cases/create-sample-project.ts"
+export {
+  type GenerateOrganizationClaimError,
+  type GenerateOrganizationClaimInput,
+  type GenerateOrganizationClaimResult,
+  generateOrganizationClaimUseCase,
+} from "./use-cases/generate-organization-claim.ts"
 export { generateUniqueOrganizationSlugUseCase } from "./use-cases/generate-unique-organization-slug.ts"
 export { type GetMemberInput, getMemberUseCase } from "./use-cases/get-member.ts"
 export { type InviteMemberInput, inviteMemberUseCase, PENDING_INVITATION_LIMIT } from "./use-cases/invite-member.ts"

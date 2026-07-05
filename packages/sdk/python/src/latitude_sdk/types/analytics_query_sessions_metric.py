@@ -11,13 +11,13 @@ from .analytics_query_sessions_metric_avg_field import AnalyticsQuerySessionsMet
 from .analytics_query_sessions_metric_max_field import AnalyticsQuerySessionsMetricMaxField
 from .analytics_query_sessions_metric_median_field import AnalyticsQuerySessionsMetricMedianField
 from .analytics_query_sessions_metric_min_field import AnalyticsQuerySessionsMetricMinField
-from .analytics_query_sessions_metric_p95field import AnalyticsQuerySessionsMetricP95Field
+from .analytics_query_sessions_metric_percentile_field import AnalyticsQuerySessionsMetricPercentileField
 from .analytics_query_sessions_metric_sum_field import AnalyticsQuerySessionsMetricSumField
 
 
 class AnalyticsQuerySessionsMetric_Count(UniversalBaseModel):
     """
-    The metric: `count`, `errorRate`, `cacheHitRate`, or `{sum|min|max|avg|median|p95}` over `duration`/`cost`/`tokens`.
+    The metric: `count`, `errorRate`, `cacheHitRate`, `{sum|min|max|avg|median}` over `duration`/`cost`/`tokens`, or `{kind:'percentile',field,p}` for an arbitrary percentile (`p` in [1,99]; e.g. `p:95`).
     """
 
     kind: typing.Literal["count"] = "count"
@@ -27,7 +27,7 @@ class AnalyticsQuerySessionsMetric_Count(UniversalBaseModel):
 
 class AnalyticsQuerySessionsMetric_ErrorRate(UniversalBaseModel):
     """
-    The metric: `count`, `errorRate`, `cacheHitRate`, or `{sum|min|max|avg|median|p95}` over `duration`/`cost`/`tokens`.
+    The metric: `count`, `errorRate`, `cacheHitRate`, `{sum|min|max|avg|median}` over `duration`/`cost`/`tokens`, or `{kind:'percentile',field,p}` for an arbitrary percentile (`p` in [1,99]; e.g. `p:95`).
     """
 
     kind: typing.Literal["errorRate"] = "errorRate"
@@ -37,7 +37,7 @@ class AnalyticsQuerySessionsMetric_ErrorRate(UniversalBaseModel):
 
 class AnalyticsQuerySessionsMetric_CacheHitRate(UniversalBaseModel):
     """
-    The metric: `count`, `errorRate`, `cacheHitRate`, or `{sum|min|max|avg|median|p95}` over `duration`/`cost`/`tokens`.
+    The metric: `count`, `errorRate`, `cacheHitRate`, `{sum|min|max|avg|median}` over `duration`/`cost`/`tokens`, or `{kind:'percentile',field,p}` for an arbitrary percentile (`p` in [1,99]; e.g. `p:95`).
     """
 
     kind: typing.Literal["cacheHitRate"] = "cacheHitRate"
@@ -47,7 +47,7 @@ class AnalyticsQuerySessionsMetric_CacheHitRate(UniversalBaseModel):
 
 class AnalyticsQuerySessionsMetric_Sum(UniversalBaseModel):
     """
-    The metric: `count`, `errorRate`, `cacheHitRate`, or `{sum|min|max|avg|median|p95}` over `duration`/`cost`/`tokens`.
+    The metric: `count`, `errorRate`, `cacheHitRate`, `{sum|min|max|avg|median}` over `duration`/`cost`/`tokens`, or `{kind:'percentile',field,p}` for an arbitrary percentile (`p` in [1,99]; e.g. `p:95`).
     """
 
     kind: typing.Literal["sum"] = "sum"
@@ -58,7 +58,7 @@ class AnalyticsQuerySessionsMetric_Sum(UniversalBaseModel):
 
 class AnalyticsQuerySessionsMetric_Min(UniversalBaseModel):
     """
-    The metric: `count`, `errorRate`, `cacheHitRate`, or `{sum|min|max|avg|median|p95}` over `duration`/`cost`/`tokens`.
+    The metric: `count`, `errorRate`, `cacheHitRate`, `{sum|min|max|avg|median}` over `duration`/`cost`/`tokens`, or `{kind:'percentile',field,p}` for an arbitrary percentile (`p` in [1,99]; e.g. `p:95`).
     """
 
     kind: typing.Literal["min"] = "min"
@@ -69,7 +69,7 @@ class AnalyticsQuerySessionsMetric_Min(UniversalBaseModel):
 
 class AnalyticsQuerySessionsMetric_Max(UniversalBaseModel):
     """
-    The metric: `count`, `errorRate`, `cacheHitRate`, or `{sum|min|max|avg|median|p95}` over `duration`/`cost`/`tokens`.
+    The metric: `count`, `errorRate`, `cacheHitRate`, `{sum|min|max|avg|median}` over `duration`/`cost`/`tokens`, or `{kind:'percentile',field,p}` for an arbitrary percentile (`p` in [1,99]; e.g. `p:95`).
     """
 
     kind: typing.Literal["max"] = "max"
@@ -80,7 +80,7 @@ class AnalyticsQuerySessionsMetric_Max(UniversalBaseModel):
 
 class AnalyticsQuerySessionsMetric_Avg(UniversalBaseModel):
     """
-    The metric: `count`, `errorRate`, `cacheHitRate`, or `{sum|min|max|avg|median|p95}` over `duration`/`cost`/`tokens`.
+    The metric: `count`, `errorRate`, `cacheHitRate`, `{sum|min|max|avg|median}` over `duration`/`cost`/`tokens`, or `{kind:'percentile',field,p}` for an arbitrary percentile (`p` in [1,99]; e.g. `p:95`).
     """
 
     kind: typing.Literal["avg"] = "avg"
@@ -91,7 +91,7 @@ class AnalyticsQuerySessionsMetric_Avg(UniversalBaseModel):
 
 class AnalyticsQuerySessionsMetric_Median(UniversalBaseModel):
     """
-    The metric: `count`, `errorRate`, `cacheHitRate`, or `{sum|min|max|avg|median|p95}` over `duration`/`cost`/`tokens`.
+    The metric: `count`, `errorRate`, `cacheHitRate`, `{sum|min|max|avg|median}` over `duration`/`cost`/`tokens`, or `{kind:'percentile',field,p}` for an arbitrary percentile (`p` in [1,99]; e.g. `p:95`).
     """
 
     kind: typing.Literal["median"] = "median"
@@ -100,13 +100,14 @@ class AnalyticsQuerySessionsMetric_Median(UniversalBaseModel):
     model_config: typing.ClassVar[pydantic.ConfigDict] = pydantic.ConfigDict(extra="allow", frozen=True)
 
 
-class AnalyticsQuerySessionsMetric_P95(UniversalBaseModel):
+class AnalyticsQuerySessionsMetric_Percentile(UniversalBaseModel):
     """
-    The metric: `count`, `errorRate`, `cacheHitRate`, or `{sum|min|max|avg|median|p95}` over `duration`/`cost`/`tokens`.
+    The metric: `count`, `errorRate`, `cacheHitRate`, `{sum|min|max|avg|median}` over `duration`/`cost`/`tokens`, or `{kind:'percentile',field,p}` for an arbitrary percentile (`p` in [1,99]; e.g. `p:95`).
     """
 
-    kind: typing.Literal["p95"] = "p95"
-    field: AnalyticsQuerySessionsMetricP95Field
+    kind: typing.Literal["percentile"] = "percentile"
+    field: AnalyticsQuerySessionsMetricPercentileField
+    p: float
 
     model_config: typing.ClassVar[pydantic.ConfigDict] = pydantic.ConfigDict(extra="allow", frozen=True)
 
@@ -121,7 +122,7 @@ AnalyticsQuerySessionsMetric = typing_extensions.Annotated[
         AnalyticsQuerySessionsMetric_Max,
         AnalyticsQuerySessionsMetric_Avg,
         AnalyticsQuerySessionsMetric_Median,
-        AnalyticsQuerySessionsMetric_P95,
+        AnalyticsQuerySessionsMetric_Percentile,
     ],
     pydantic.Field(discriminator="kind"),
 ]

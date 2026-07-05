@@ -3,9 +3,10 @@
  * script body runs. The prelude consumes (and deletes) three bootstrap
  * globals installed by the runtime:
  *
- * - `__hostLlm(call)`   — async host bridge behind `llm()` (only for llm-capability runs)
- * - `__hostParse(v, d)` — sync host bridge behind `parse()` (real Zod runs host-side)
- * - `__contextData`     — `{ session }` plain data (the only runtime context)
+ * - `__hostLlm(call)`        — async host bridge behind `llm()` (only for llm-capability runs)
+ * - `__hostSimilarity(call)` — async host bridge behind `semanticSimilarity()` (embedding-capability runs)
+ * - `__hostParse(v, d)`      — sync host bridge behind `parse()` (real Zod runs host-side)
+ * - `__contextData`          — `{ session }` plain data (the only runtime context)
  *
  * The `z` builders produce serializable schema descriptors (see
  * `@domain/sandbox` `schema-descriptor.ts`), not real Zod schemas: schemas
@@ -16,9 +17,11 @@
 export const SANDBOX_PRELUDE = `;(() => {
   "use strict"
   const hostLlm = globalThis.__hostLlm
+  const hostSimilarity = globalThis.__hostSimilarity
   const hostParse = globalThis.__hostParse
   const bootstrap = globalThis.__contextData
   delete globalThis.__hostLlm
+  delete globalThis.__hostSimilarity
   delete globalThis.__hostParse
   delete globalThis.__contextData
 
@@ -86,6 +89,14 @@ export const SANDBOX_PRELUDE = `;(() => {
         throw new TypeError("llm() requires a schema: llm(prompt, { schema: z.object({ ... }) })")
       }
       return hostLlm({ prompt: String(prompt), schema: strip(options.schema) })
+    }
+  }
+  if (hostSimilarity) {
+    globalThis.semanticSimilarity = (query) => {
+      if (typeof query !== "string") {
+        throw new TypeError("semanticSimilarity() requires a string query")
+      }
+      return hostSimilarity({ query: String(query) })
     }
   }
 

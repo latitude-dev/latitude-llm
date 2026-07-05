@@ -130,4 +130,5 @@ The test harness (`apps/api/src/test-utils/create-test-app.ts`) boots the full a
 - [`mcp.md`](./mcp.md) — MCP server architecture and the OAuth discovery flow.
 - [`sdk.md`](./sdk.md) — TypeScript SDK pipeline (Fern config, versioning, exclusions).
 - [`authentication.md`](./authentication.md) — web-side Better Auth, sessions, OAuth consent page.
+- [`agent-data-access.md`](./agent-data-access.md) — the `queryAnalytics` / `querySpans` analytics read surface exposed through these routes.
 - [`api-endpoints` skill](../.agents/skills/api-endpoints/SKILL.md) — concrete recipe for adding routes.

@@ -2,7 +2,8 @@ import type { AI } from "@domain/ai"
 import type { ScriptCompileError, ScriptRuntime, ScriptSessionContext } from "@domain/sandbox"
 import {
   cuidSchema,
-  evaluationSettingsSchema,
+  describeError,
+  evaluationDraftSchema,
   type FilterSet,
   filterSetSchema,
   OrganizationId,
@@ -10,12 +11,20 @@ import {
   type RepositoryError,
   TraceId,
 } from "@domain/shared"
-import { SessionRepository, type SpanRepository, TraceRepository } from "@domain/spans"
+import {
+  type MessageEmbeddingRepository,
+  SessionRepository,
+  type SpanRepository,
+  TraceRepository,
+  type TraceSearchRepository,
+} from "@domain/spans"
 import { Effect } from "effect"
 import { z } from "zod"
-import { compileSettingsToScript, validateEvaluationScriptCompiles } from "../codegen/compile-settings-to-script.ts"
+import { compileSettingsToScript } from "../codegen/compile-settings-to-script.ts"
+import { validateEvaluationScriptCompiles } from "../codegen/validate-evaluation-script.ts"
 import { loadScriptSessionContext } from "../runtime/load-session-context.ts"
 import { executeEvaluationScriptSandboxed } from "../runtime/sandbox-execution.ts"
+import { buildSemanticSimilarityHost } from "../runtime/semantic-similarity.ts"
 
 const PREVIEW_SAMPLE_LIMIT = 10
 const PREVIEW_CONCURRENCY = 5
@@ -24,8 +33,7 @@ const previewEvaluationInputSchema = z.object({
   organizationId: cuidSchema.transform(OrganizationId),
   projectId: cuidSchema.transform(ProjectId),
   filters: filterSetSchema.nullish(),
-  // Exactly one of a declarative `settings` form or a raw `script`, mirroring createSignal.
-  evaluation: z.union([z.object({ settings: evaluationSettingsSchema }), z.object({ script: z.string().min(1) })]),
+  evaluation: evaluationDraftSchema,
 })
 
 export type PreviewEvaluationInput = z.input<typeof previewEvaluationInputSchema>
@@ -60,11 +68,6 @@ export interface PreviewEvaluationResult {
 }
 
 export type PreviewEvaluationError = ScriptCompileError | RepositoryError
-
-const describeError = (error: unknown): string =>
-  typeof error === "object" && error !== null && "message" in error
-    ? String((error as { message: unknown }).message)
-    : String(error)
 
 const SUMMARY_MESSAGE_MAX = 280
 
@@ -131,7 +134,12 @@ export const previewEvaluationUseCase = (input: PreviewEvaluationInput) =>
             projectId: parsed.projectId,
             traceDetail,
           })
-          const execution = yield* executeEvaluationScriptSandboxed({ script, session: scriptSession })
+          const similarity = yield* buildSemanticSimilarityHost({
+            organizationId: parsed.organizationId,
+            projectId: parsed.projectId,
+            traceIds: scriptSession.traces.map((trace) => trace.id),
+          })
+          const execution = yield* executeEvaluationScriptSandboxed({ script, session: scriptSession, similarity })
           return {
             sessionId: session.sessionId,
             traceId,
@@ -163,5 +171,11 @@ export const previewEvaluationUseCase = (input: PreviewEvaluationInput) =>
   }).pipe(Effect.withSpan("evaluations.previewEvaluation")) as Effect.Effect<
     PreviewEvaluationResult,
     PreviewEvaluationError,
-    AI | ScriptRuntime | SessionRepository | SpanRepository | TraceRepository
+    | AI
+    | MessageEmbeddingRepository
+    | ScriptRuntime
+    | SessionRepository
+    | SpanRepository
+    | TraceRepository
+    | TraceSearchRepository
   >

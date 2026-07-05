@@ -41,6 +41,7 @@
     "@temporalio/workflow": "catalog:",
     "@temporalio/worker": "catalog:",
     "effect": "catalog:",
+    "quickjs-emscripten": "catalog:",
     "tsx": "catalog:",
     "voyageai": "catalog:"
   },

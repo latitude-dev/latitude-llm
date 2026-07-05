@@ -1,0 +1,87 @@
+---
+title: Agent dispatch
+description: Wake a coding agent when a signal needs engineering follow-up, and let it investigate over Latitude's MCP.
+---
+
+Agent dispatch fires a hosted coding agent when a Latitude signal needs engineering follow-up.
+Latitude sends the agent a context-rich prompt — the signal, a link back to Latitude, and a few
+sample traces — and the agent reads Latitude back over the [MCP connection](/getting-started/mcp) to
+root-cause the issue and implement a fix.
+
+## How it works
+
+1. A signal escalates (or an incident opens) on a monitored project.
+2. Latitude assembles a prompt with the `signalId`, a deep link, and sample trace ids, and fires the
+   configured dispatch target.
+3. The agent — already connected to the Latitude MCP — investigates the signal (below), implements a
+   fix, runs the project's checks, and reports what changed.
+
+Latitude is the **trigger and context provider**, not the agent runtime: it wakes the agent and hands
+it the data, but does not run the fix or wait on a completion loop.
+
+## Supported targets
+
+Configure a target per project under **Settings → Integrations**:
+
+- [Cursor](/agent-dispatch/cursor)
+- [Claude Code](/agent-dispatch/claude-code)
+- [Linear](/agent-dispatch/linear)
+- [Webhooks](/agent-dispatch/webhooks) — for any other destination
+
+## Investigate a signal
+
+Once woken, the agent walks the signal end to end over MCP — the curated tools for orientation, then
+`queryAnalytics` and `querySpans` for the questions no single endpoint answers.
+
+**1. Orient with the signal tools.** These encode Latitude's semantics (baselines, escalation,
+co-occurrence) so the agent doesn't reconstruct them.
+
+```jsonc
+getSignal({ projectSlug, signalSlug })         // lifecycle, source, priority, evaluation
+getSignalTrend({ projectSlug, signalSlug })    // occurrence trend — the escalation shape
+listSignalTraces({ projectSlug, signalSlug })  // the member traces
+getTrace({ projectSlug, traceId })             // → listTraceSpans → getTraceSpan to read the failure
+```
+
+**2. Slice it — "is this concentrated in one model?"** A signal's occurrences are *scores* carrying
+its `signalId`, so the `scores` stream of `queryAnalytics` answers breakdowns that have no dedicated
+endpoint:
+
+```jsonc
+queryAnalytics({
+  stream: "scores",
+  filters: { "score.signalId": [{ op: "eq", value: "sig_9f2…" }] },
+  metric: { kind: "count" },
+  breakdown: "model",
+  range: { fromIso: "2026-06-23T00:00:00Z", toIso: "2026-06-30T00:00:00Z" },
+  orderBy: { by: "value", direction: "desc" }
+})
+// → [ { key: "gpt-4o-mini", value: 412 }, { key: "gpt-4o", value: 38 }, … ]
+```
+
+90% of occurrences on one model points at a model-specific root cause. Switch `stream`, `metric`, or
+`breakdown` to confirm impact from another angle (e.g. `stream: "traces", metric: "errorRate",
+timeBucket: { unit: "week" }`). Values come back in human units — `duration` in seconds, `cost` in
+dollars, rates as a 0–1 fraction.
+
+**3. Drill to the evidence.** `queryAnalytics` says *where* the problem is; `querySpans` hands you the
+actual spans to read — including failures buried inside traces that otherwise succeeded (which a
+trace-level error filter would miss):
+
+```jsonc
+querySpans({
+  filters: { toolName: [{ op: "eq", value: "search_docs" }], operation: [{ op: "eq", value: "execute_tool" }] },
+  range: { fromIso: "2026-06-23T00:00:00Z", toIso: "2026-06-30T00:00:00Z" },
+  limit: 20
+})
+// → { items: [ …the individual failing search_docs spans with their args + errors… ], hasMore: false }
+```
+
+The agent reads the spans, identifies the pattern, and implements the fix — closing the loop the
+dispatch opened.
+
+<Tip>
+The same query tools power dashboards. See
+[Build a dashboard from Latitude data](/observability/guides/build-a-dashboard) to turn these queries
+into a self-contained HTML report.
+</Tip>

@@ -10,7 +10,14 @@ export default defineConfig({
   platform: "node",
   deps: {
     alwaysBundle: [/@(platform|domain|repo)\/.*/],
-    neverBundle: ["@temporalio/worker", "voyageai", /^@traceloop\//, /^@langchain\//, /^langchain($|\/)/],
+    neverBundle: [
+      "@temporalio/worker",
+      "voyageai",
+      "quickjs-emscripten",
+      /^@traceloop\//,
+      /^@langchain\//,
+      /^langchain($|\/)/,
+    ],
   },
   sourcemap: true,
   shims: true,

@@ -1,8 +1,8 @@
 import { type RunLiveEvaluationResult, runLiveEvaluationUseCase } from "@domain/evaluations"
-import type { QueueConsumer } from "@domain/queue"
+import { type QueueConsumer, QueuePublisher, type QueuePublisherShape } from "@domain/queue"
 import type { EvaluationScore } from "@domain/scores"
 import { OrganizationId } from "@domain/shared"
-import { AIGenerateLive, withAi } from "@platform/ai"
+import { AIEmbedLive, AIGenerateLive, withAi } from "@platform/ai"
 import {
   RedisBillingSpendReservationLive,
   type RedisClient,
@@ -10,10 +10,12 @@ import {
 } from "@platform/cache-redis"
 import {
   type ClickHouseClient,
+  MessageEmbeddingRepositoryLive,
   ScoreAnalyticsRepositoryLive,
   SessionRepositoryLive,
   SpanRepositoryLive,
   TraceRepositoryLive,
+  TraceSearchRepositoryLive,
   withClickHouse,
 } from "@platform/db-clickhouse"
 import {
@@ -43,12 +45,14 @@ interface ExecutePayload {
   readonly projectId: string
   readonly evaluationId: string
   readonly traceId: string
+  readonly embeddingWaitAttempt?: number
 }
 
 type LiveEvaluationsLogger = Pick<ReturnType<typeof createLogger>, "info" | "error">
 
 interface LiveEvaluationsDeps {
   consumer: QueueConsumer
+  publisher: QueuePublisherShape
   postgresClient: PostgresClient
   clickhouseClient: ClickHouseClient
   redisClient: RedisClient
@@ -129,6 +133,7 @@ const logExecuteFailure = (liveEvaluationsLogger: LiveEvaluationsLogger, payload
 
 export const createLiveEvaluationsWorker = ({
   consumer,
+  publisher,
   postgresClient,
   clickhouseClient,
   redisClient,
@@ -139,7 +144,8 @@ export const createLiveEvaluationsWorker = ({
   const chClient = clickhouseClient
   const rdClient = redisClient
   const liveEvaluationsLogger = injectedLogger ?? logger
-  const withDefaultAi = <A, E, R>(effect: Effect.Effect<A, E, R>) => effect.pipe(withAi(AIGenerateLive, rdClient))
+  const withDefaultAi = <A, E, R>(effect: Effect.Effect<A, E, R>) =>
+    effect.pipe(withAi(Layer.mergeAll(AIGenerateLive, AIEmbedLive), rdClient))
   const executeLiveEvaluation = runLiveEvaluation ?? runLiveEvaluationUseCase
   const executeEffect = (payload: ExecutePayload) => {
     const baseEffect = executeLiveEvaluation(payload).pipe(
@@ -160,10 +166,18 @@ export const createLiveEvaluationsWorker = ({
         OrganizationId(payload.organizationId),
       ),
       Effect.provide(QuickJsScriptRuntimeLive),
+      Effect.provide(Layer.succeed(QueuePublisher, publisher)),
       Effect.provide(RedisBillingSpendReservationLive(rdClient)),
       Effect.provide(RedisDetectorHealthTrackerLive(rdClient)),
       withClickHouse(
-        Layer.mergeAll(ScoreAnalyticsRepositoryLive, TraceRepositoryLive, SessionRepositoryLive, SpanRepositoryLive),
+        Layer.mergeAll(
+          ScoreAnalyticsRepositoryLive,
+          TraceRepositoryLive,
+          SessionRepositoryLive,
+          SpanRepositoryLive,
+          MessageEmbeddingRepositoryLive,
+          TraceSearchRepositoryLive,
+        ),
         chClient,
         OrganizationId(payload.organizationId),
       ),

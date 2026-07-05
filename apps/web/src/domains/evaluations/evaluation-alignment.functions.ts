@@ -57,6 +57,8 @@ export const toEvaluationSummaryRecord = (evaluation: Evaluation) => ({
   updatedAt: evaluation.updatedAt.toISOString(),
   trigger: evaluation.trigger,
   settings: evaluation.settings ?? null,
+  // The raw script backs the Advanced tab's editor when a signal has no `settings` (settings === null).
+  script: evaluation.script,
   alignment: evaluation.alignment
     ? {
         evaluationHash: evaluation.alignment.evaluationHash,

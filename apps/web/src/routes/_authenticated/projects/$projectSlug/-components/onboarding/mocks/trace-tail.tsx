@@ -1,13 +1,17 @@
-import { Skeleton, Text } from "@repo/ui"
-import { Check } from "lucide-react"
+import { showNewMessage } from "@intercom/messenger-js-sdk"
+import { Alert, Button, Icon, Skeleton, Text, useToast } from "@repo/ui"
+import { Check, Headset, RefreshCcw } from "lucide-react"
+import { useSupportEnabled } from "../../../../../-route-data.ts"
 
 const TOTAL_ROWS = 4
+
+const ONBOARDING_SETUP_HELP_MESSAGE = "Hi, I need help with setting up Latitude in my project ASAP!"
 
 export function TraceTail({ traceReceived }: { readonly traceReceived: boolean }) {
   const skeletonCount = traceReceived ? TOTAL_ROWS - 1 : TOTAL_ROWS
 
   return (
-    <div className="flex h-fit w-full max-w-[440px] flex-col gap-4 self-center">
+    <div className="flex w-full flex-col gap-4">
       <div className="flex flex-col gap-1">
         <Text.H5M>{traceReceived ? "Your first trace just arrived" : "Waiting for your first trace…"}</Text.H5M>
         <Text.H6 color="foregroundMuted">
@@ -23,7 +27,55 @@ export function TraceTail({ traceReceived }: { readonly traceReceived: boolean }
           <SkeletonTraceRow key={i} />
         ))}
       </div>
+
+      {!traceReceived ? (
+        <Button variant="outline" size="sm" className="w-fit" onClick={() => window.location.reload()}>
+          <Icon icon={RefreshCcw} size="sm" />
+          Refresh
+        </Button>
+      ) : null}
     </div>
+  )
+}
+
+export function TelemetryHelpAlert() {
+  const supportEnabled = useSupportEnabled()
+  const { toast } = useToast()
+
+  const openSupportChat = () => {
+    if (!supportEnabled) {
+      toast({ variant: "destructive", description: "Support chat isn't available in this environment." })
+      return
+    }
+    showNewMessage(ONBOARDING_SETUP_HELP_MESSAGE)
+  }
+
+  return (
+    <Alert
+      showIcon={false}
+      spacing="xsmall"
+      className="rounded-lg shadow-none"
+      title={
+        <span className="flex items-center gap-2">
+          <Icon icon={Headset} size="sm" color="accentForeground" weight="L" />
+          Need help with setting up?
+        </span>
+      }
+      description={
+        <>
+          <Button
+            type="button"
+            variant="link"
+            size="default"
+            className="inline-flex h-auto min-h-0 w-auto p-0 font-semibold underline underline-offset-2"
+            onClick={openSupportChat}
+          >
+            Click here
+          </Button>{" "}
+          and we'll come back to you to help you install Latitude in your project
+        </>
+      }
+    />
   )
 }
 

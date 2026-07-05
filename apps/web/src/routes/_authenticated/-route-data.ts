@@ -14,6 +14,13 @@ export function useAuthenticatedUser() {
   return authenticatedRoute.useLoaderData({ select: (data) => data.user })
 }
 
+/** True when Intercom identity verification credentials are configured. */
+export function useSupportEnabled() {
+  return authenticatedRoute.useLoaderData({
+    select: (data) => data.supportIdentity !== null,
+  })
+}
+
 /** Reads the active organization id from the parent route's cached loader data. */
 export function useAuthenticatedOrganizationId() {
   return authenticatedRoute.useLoaderData({

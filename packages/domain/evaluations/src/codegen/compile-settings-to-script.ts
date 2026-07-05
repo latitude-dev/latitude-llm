@@ -1,15 +1,6 @@
-import { hashOptimizationCandidateText } from "@domain/optimizations"
-import { type ScriptCompileError, ScriptRuntime } from "@domain/sandbox"
-import {
-  BadRequestError,
-  type EvaluationRuleCondition,
-  type EvaluationSettings,
-  type MessageScope,
-  type MetricField,
-} from "@domain/shared"
-import { Effect } from "effect"
+import type { EvaluationRuleCondition, EvaluationSettings, MessageScope, MetricField } from "@domain/shared"
 import { generateJudgePromptText } from "../alignment/baseline-prompt.ts"
-import { wrapPromptAsEvaluationScript } from "../runtime/evaluation-execution.ts"
+import { wrapPromptAsEvaluationScript } from "./judge-script-template.ts"
 
 /**
  * Deterministically compiles a declarative `EvaluationSettings` into the sandbox `script` that
@@ -25,34 +16,6 @@ export const compileSettingsToScript = (settings: EvaluationSettings): string =>
       return compileRuleToScript(settings)
   }
 }
-
-/**
- * Compile-on-save validation: compiles the script in the QuickJS sandbox and surfaces a
- * `ScriptCompileError` (HTTP 422) when it is not valid — e.g. a raw script with a syntax error,
- * or settings whose `criteria` injected an unescaped backtick into the generated template.
- */
-export const validateEvaluationScriptCompiles = (
-  script: string,
-): Effect.Effect<void, ScriptCompileError, ScriptRuntime> =>
-  Effect.gen(function* () {
-    const runtime = yield* ScriptRuntime
-    yield* runtime.compile({ source: script })
-  })
-
-/**
- * Validates that `script` compiles in the sandbox and returns its content hash (stamped onto each
- * score's `metadata.evaluationHash`). Shared by evaluation creation and signal-settings recompile.
- */
-export const validateAndHashEvaluationScript = (
-  script: string,
-): Effect.Effect<string, ScriptCompileError | BadRequestError, ScriptRuntime> =>
-  Effect.gen(function* () {
-    yield* validateEvaluationScriptCompiles(script)
-    return yield* Effect.tryPromise({
-      try: () => hashOptimizationCandidateText(script),
-      catch: () => new BadRequestError({ message: "Failed to hash evaluation script" }),
-    })
-  })
 
 // ---------------------------------------------------------------------------
 // Rule codegen
@@ -236,6 +199,14 @@ const compileCondition = (c: EvaluationRuleCondition, helpers: Set<HelperName>):
         expr: `session.traces.some((t) => t.finishReasons.includes(${lit(c.value)}))`,
         positive: `A response finished with ${lit(c.value)}`,
         negative: `No response finished with ${lit(c.value)}`,
+      }
+    // The only condition that emits `await`: it makes an otherwise-pure rule an `embedding`-capability
+    // script (detected via the `semanticSimilarity(` pattern), routing it through the host verb + lane.
+    case "semantic_similarity":
+      return {
+        expr: `(await semanticSimilarity(${lit(c.query)})) ${OP[c.operator]} ${lit(c.threshold)}`,
+        positive: `Semantically similar to ${lit(c.query)} (${OP_PHRASE[c.operator]} ${c.threshold})`,
+        negative: `Not semantically similar to ${lit(c.query)} (${OP_PHRASE[c.operator]} ${c.threshold})`,
       }
   }
 }

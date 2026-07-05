@@ -144,7 +144,7 @@ if typing.TYPE_CHECKING:
         AnalyticsQuerySessionsMetric_Max,
         AnalyticsQuerySessionsMetric_Median,
         AnalyticsQuerySessionsMetric_Min,
-        AnalyticsQuerySessionsMetric_P95,
+        AnalyticsQuerySessionsMetric_Percentile,
         AnalyticsQuerySessionsMetric_Sum,
     )
     from .analytics_query_sessions_metric_avg import AnalyticsQuerySessionsMetricAvg
@@ -158,8 +158,8 @@ if typing.TYPE_CHECKING:
     from .analytics_query_sessions_metric_median_field import AnalyticsQuerySessionsMetricMedianField
     from .analytics_query_sessions_metric_min import AnalyticsQuerySessionsMetricMin
     from .analytics_query_sessions_metric_min_field import AnalyticsQuerySessionsMetricMinField
-    from .analytics_query_sessions_metric_p95 import AnalyticsQuerySessionsMetricP95
-    from .analytics_query_sessions_metric_p95field import AnalyticsQuerySessionsMetricP95Field
+    from .analytics_query_sessions_metric_percentile import AnalyticsQuerySessionsMetricPercentile
+    from .analytics_query_sessions_metric_percentile_field import AnalyticsQuerySessionsMetricPercentileField
     from .analytics_query_sessions_metric_sum import AnalyticsQuerySessionsMetricSum
     from .analytics_query_sessions_metric_sum_field import AnalyticsQuerySessionsMetricSumField
     from .analytics_query_sessions_order_by import AnalyticsQuerySessionsOrderBy
@@ -179,7 +179,7 @@ if typing.TYPE_CHECKING:
         AnalyticsQuerySpansMetric_Max,
         AnalyticsQuerySpansMetric_Median,
         AnalyticsQuerySpansMetric_Min,
-        AnalyticsQuerySpansMetric_P95,
+        AnalyticsQuerySpansMetric_Percentile,
         AnalyticsQuerySpansMetric_Sum,
     )
     from .analytics_query_spans_metric_avg import AnalyticsQuerySpansMetricAvg
@@ -193,8 +193,8 @@ if typing.TYPE_CHECKING:
     from .analytics_query_spans_metric_median_field import AnalyticsQuerySpansMetricMedianField
     from .analytics_query_spans_metric_min import AnalyticsQuerySpansMetricMin
     from .analytics_query_spans_metric_min_field import AnalyticsQuerySpansMetricMinField
-    from .analytics_query_spans_metric_p95 import AnalyticsQuerySpansMetricP95
-    from .analytics_query_spans_metric_p95field import AnalyticsQuerySpansMetricP95Field
+    from .analytics_query_spans_metric_percentile import AnalyticsQuerySpansMetricPercentile
+    from .analytics_query_spans_metric_percentile_field import AnalyticsQuerySpansMetricPercentileField
     from .analytics_query_spans_metric_sum import AnalyticsQuerySpansMetricSum
     from .analytics_query_spans_metric_sum_field import AnalyticsQuerySpansMetricSumField
     from .analytics_query_spans_order_by import AnalyticsQuerySpansOrderBy
@@ -214,7 +214,7 @@ if typing.TYPE_CHECKING:
         AnalyticsQueryTracesMetric_Max,
         AnalyticsQueryTracesMetric_Median,
         AnalyticsQueryTracesMetric_Min,
-        AnalyticsQueryTracesMetric_P95,
+        AnalyticsQueryTracesMetric_Percentile,
         AnalyticsQueryTracesMetric_Sum,
     )
     from .analytics_query_traces_metric_avg import AnalyticsQueryTracesMetricAvg
@@ -228,8 +228,8 @@ if typing.TYPE_CHECKING:
     from .analytics_query_traces_metric_median_field import AnalyticsQueryTracesMetricMedianField
     from .analytics_query_traces_metric_min import AnalyticsQueryTracesMetricMin
     from .analytics_query_traces_metric_min_field import AnalyticsQueryTracesMetricMinField
-    from .analytics_query_traces_metric_p95 import AnalyticsQueryTracesMetricP95
-    from .analytics_query_traces_metric_p95field import AnalyticsQueryTracesMetricP95Field
+    from .analytics_query_traces_metric_percentile import AnalyticsQueryTracesMetricPercentile
+    from .analytics_query_traces_metric_percentile_field import AnalyticsQueryTracesMetricPercentileField
     from .analytics_query_traces_metric_sum import AnalyticsQueryTracesMetricSum
     from .analytics_query_traces_metric_sum_field import AnalyticsQueryTracesMetricSumField
     from .analytics_query_traces_order_by import AnalyticsQueryTracesOrderBy
@@ -251,6 +251,7 @@ if typing.TYPE_CHECKING:
     from .api_key import ApiKey
     from .api_key_list import ApiKeyList
     from .api_key_list_item import ApiKeyListItem
+    from .bootstrap_account_response import BootstrapAccountResponse
     from .create_custom_score_body import CreateCustomScoreBody
     from .create_evaluation_score_body import CreateEvaluationScoreBody
     from .create_monitor_body import (
@@ -839,8 +840,8 @@ _dynamic_imports: typing.Dict[str, str] = {
     "AnalyticsQuerySessionsMetricMedianField": ".analytics_query_sessions_metric_median_field",
     "AnalyticsQuerySessionsMetricMin": ".analytics_query_sessions_metric_min",
     "AnalyticsQuerySessionsMetricMinField": ".analytics_query_sessions_metric_min_field",
-    "AnalyticsQuerySessionsMetricP95": ".analytics_query_sessions_metric_p95",
-    "AnalyticsQuerySessionsMetricP95Field": ".analytics_query_sessions_metric_p95field",
+    "AnalyticsQuerySessionsMetricPercentile": ".analytics_query_sessions_metric_percentile",
+    "AnalyticsQuerySessionsMetricPercentileField": ".analytics_query_sessions_metric_percentile_field",
     "AnalyticsQuerySessionsMetricSum": ".analytics_query_sessions_metric_sum",
     "AnalyticsQuerySessionsMetricSumField": ".analytics_query_sessions_metric_sum_field",
     "AnalyticsQuerySessionsMetric_Avg": ".analytics_query_sessions_metric",
@@ -850,7 +851,7 @@ _dynamic_imports: typing.Dict[str, str] = {
     "AnalyticsQuerySessionsMetric_Max": ".analytics_query_sessions_metric",
     "AnalyticsQuerySessionsMetric_Median": ".analytics_query_sessions_metric",
     "AnalyticsQuerySessionsMetric_Min": ".analytics_query_sessions_metric",
-    "AnalyticsQuerySessionsMetric_P95": ".analytics_query_sessions_metric",
+    "AnalyticsQuerySessionsMetric_Percentile": ".analytics_query_sessions_metric",
     "AnalyticsQuerySessionsMetric_Sum": ".analytics_query_sessions_metric",
     "AnalyticsQuerySessionsOrderBy": ".analytics_query_sessions_order_by",
     "AnalyticsQuerySessionsOrderByBy": ".analytics_query_sessions_order_by_by",
@@ -872,8 +873,8 @@ _dynamic_imports: typing.Dict[str, str] = {
     "AnalyticsQuerySpansMetricMedianField": ".analytics_query_spans_metric_median_field",
     "AnalyticsQuerySpansMetricMin": ".analytics_query_spans_metric_min",
     "AnalyticsQuerySpansMetricMinField": ".analytics_query_spans_metric_min_field",
-    "AnalyticsQuerySpansMetricP95": ".analytics_query_spans_metric_p95",
-    "AnalyticsQuerySpansMetricP95Field": ".analytics_query_spans_metric_p95field",
+    "AnalyticsQuerySpansMetricPercentile": ".analytics_query_spans_metric_percentile",
+    "AnalyticsQuerySpansMetricPercentileField": ".analytics_query_spans_metric_percentile_field",
     "AnalyticsQuerySpansMetricSum": ".analytics_query_spans_metric_sum",
     "AnalyticsQuerySpansMetricSumField": ".analytics_query_spans_metric_sum_field",
     "AnalyticsQuerySpansMetric_Avg": ".analytics_query_spans_metric",
@@ -883,7 +884,7 @@ _dynamic_imports: typing.Dict[str, str] = {
     "AnalyticsQuerySpansMetric_Max": ".analytics_query_spans_metric",
     "AnalyticsQuerySpansMetric_Median": ".analytics_query_spans_metric",
     "AnalyticsQuerySpansMetric_Min": ".analytics_query_spans_metric",
-    "AnalyticsQuerySpansMetric_P95": ".analytics_query_spans_metric",
+    "AnalyticsQuerySpansMetric_Percentile": ".analytics_query_spans_metric",
     "AnalyticsQuerySpansMetric_Sum": ".analytics_query_spans_metric",
     "AnalyticsQuerySpansOrderBy": ".analytics_query_spans_order_by",
     "AnalyticsQuerySpansOrderByBy": ".analytics_query_spans_order_by_by",
@@ -905,8 +906,8 @@ _dynamic_imports: typing.Dict[str, str] = {
     "AnalyticsQueryTracesMetricMedianField": ".analytics_query_traces_metric_median_field",
     "AnalyticsQueryTracesMetricMin": ".analytics_query_traces_metric_min",
     "AnalyticsQueryTracesMetricMinField": ".analytics_query_traces_metric_min_field",
-    "AnalyticsQueryTracesMetricP95": ".analytics_query_traces_metric_p95",
-    "AnalyticsQueryTracesMetricP95Field": ".analytics_query_traces_metric_p95field",
+    "AnalyticsQueryTracesMetricPercentile": ".analytics_query_traces_metric_percentile",
+    "AnalyticsQueryTracesMetricPercentileField": ".analytics_query_traces_metric_percentile_field",
     "AnalyticsQueryTracesMetricSum": ".analytics_query_traces_metric_sum",
     "AnalyticsQueryTracesMetricSumField": ".analytics_query_traces_metric_sum_field",
     "AnalyticsQueryTracesMetric_Avg": ".analytics_query_traces_metric",
@@ -916,7 +917,7 @@ _dynamic_imports: typing.Dict[str, str] = {
     "AnalyticsQueryTracesMetric_Max": ".analytics_query_traces_metric",
     "AnalyticsQueryTracesMetric_Median": ".analytics_query_traces_metric",
     "AnalyticsQueryTracesMetric_Min": ".analytics_query_traces_metric",
-    "AnalyticsQueryTracesMetric_P95": ".analytics_query_traces_metric",
+    "AnalyticsQueryTracesMetric_Percentile": ".analytics_query_traces_metric",
     "AnalyticsQueryTracesMetric_Sum": ".analytics_query_traces_metric",
     "AnalyticsQueryTracesOrderBy": ".analytics_query_traces_order_by",
     "AnalyticsQueryTracesOrderByBy": ".analytics_query_traces_order_by_by",
@@ -943,6 +944,7 @@ _dynamic_imports: typing.Dict[str, str] = {
     "ApiKey": ".api_key",
     "ApiKeyList": ".api_key_list",
     "ApiKeyListItem": ".api_key_list_item",
+    "BootstrapAccountResponse": ".bootstrap_account_response",
     "CreateCustomScoreBody": ".create_custom_score_body",
     "CreateEvaluationScoreBody": ".create_evaluation_score_body",
     "CreateMonitorBody": ".create_monitor_body",
@@ -1525,8 +1527,8 @@ __all__ = [
     "AnalyticsQuerySessionsMetricMedianField",
     "AnalyticsQuerySessionsMetricMin",
     "AnalyticsQuerySessionsMetricMinField",
-    "AnalyticsQuerySessionsMetricP95",
-    "AnalyticsQuerySessionsMetricP95Field",
+    "AnalyticsQuerySessionsMetricPercentile",
+    "AnalyticsQuerySessionsMetricPercentileField",
     "AnalyticsQuerySessionsMetricSum",
     "AnalyticsQuerySessionsMetricSumField",
     "AnalyticsQuerySessionsMetric_Avg",
@@ -1536,7 +1538,7 @@ __all__ = [
     "AnalyticsQuerySessionsMetric_Max",
     "AnalyticsQuerySessionsMetric_Median",
     "AnalyticsQuerySessionsMetric_Min",
-    "AnalyticsQuerySessionsMetric_P95",
+    "AnalyticsQuerySessionsMetric_Percentile",
     "AnalyticsQuerySessionsMetric_Sum",
     "AnalyticsQuerySessionsOrderBy",
     "AnalyticsQuerySessionsOrderByBy",
@@ -1558,8 +1560,8 @@ __all__ = [
     "AnalyticsQuerySpansMetricMedianField",
     "AnalyticsQuerySpansMetricMin",
     "AnalyticsQuerySpansMetricMinField",
-    "AnalyticsQuerySpansMetricP95",
-    "AnalyticsQuerySpansMetricP95Field",
+    "AnalyticsQuerySpansMetricPercentile",
+    "AnalyticsQuerySpansMetricPercentileField",
     "AnalyticsQuerySpansMetricSum",
     "AnalyticsQuerySpansMetricSumField",
     "AnalyticsQuerySpansMetric_Avg",
@@ -1569,7 +1571,7 @@ __all__ = [
     "AnalyticsQuerySpansMetric_Max",
     "AnalyticsQuerySpansMetric_Median",
     "AnalyticsQuerySpansMetric_Min",
-    "AnalyticsQuerySpansMetric_P95",
+    "AnalyticsQuerySpansMetric_Percentile",
     "AnalyticsQuerySpansMetric_Sum",
     "AnalyticsQuerySpansOrderBy",
     "AnalyticsQuerySpansOrderByBy",
@@ -1591,8 +1593,8 @@ __all__ = [
     "AnalyticsQueryTracesMetricMedianField",
     "AnalyticsQueryTracesMetricMin",
     "AnalyticsQueryTracesMetricMinField",
-    "AnalyticsQueryTracesMetricP95",
-    "AnalyticsQueryTracesMetricP95Field",
+    "AnalyticsQueryTracesMetricPercentile",
+    "AnalyticsQueryTracesMetricPercentileField",
     "AnalyticsQueryTracesMetricSum",
     "AnalyticsQueryTracesMetricSumField",
     "AnalyticsQueryTracesMetric_Avg",
@@ -1602,7 +1604,7 @@ __all__ = [
     "AnalyticsQueryTracesMetric_Max",
     "AnalyticsQueryTracesMetric_Median",
     "AnalyticsQueryTracesMetric_Min",
-    "AnalyticsQueryTracesMetric_P95",
+    "AnalyticsQueryTracesMetric_Percentile",
     "AnalyticsQueryTracesMetric_Sum",
     "AnalyticsQueryTracesOrderBy",
     "AnalyticsQueryTracesOrderByBy",
@@ -1629,6 +1631,7 @@ __all__ = [
     "ApiKey",
     "ApiKeyList",
     "ApiKeyListItem",
+    "BootstrapAccountResponse",
     "CreateCustomScoreBody",
     "CreateEvaluationScoreBody",
     "CreateMonitorBody",

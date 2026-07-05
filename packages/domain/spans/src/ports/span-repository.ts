@@ -91,7 +91,7 @@ export interface SpanRepositoryShape {
     readonly organizationId: OrganizationId
     readonly projectId: ProjectId
     readonly options: SpanListOptions
-  }): Effect.Effect<readonly Span[], RepositoryError, ChSqlClient>
+  }): Effect.Effect<SpanListPage, RepositoryError, ChSqlClient>
 
   findBySpanId(input: {
     readonly organizationId: OrganizationId
@@ -190,13 +190,40 @@ export interface SpanRepositoryShape {
   }): Effect.Effect<Date | null, RepositoryError, ChSqlClient>
 }
 
+export type SpanListOrderField = "startTime" | "duration" | "cost"
+export type SpanListOrderDirection = "asc" | "desc"
+
+/**
+ * Keyset cursor for `listByProjectId` — points at the last returned row's
+ * `(sortValue, spanId)` in the active ordering. Stable across concurrent inserts
+ * (unlike an offset, which shifts when rows land mid-pagination). `sortValue` is
+ * the raw sort-column value carried at full fidelity: a nanosecond ClickHouse
+ * datetime for `startTime`, a base-10 integer for `duration`/`cost`. `field` and
+ * `direction` pin the cursor to its ordering so it can't be replayed under a
+ * different `orderBy`.
+ */
+export interface SpanListCursor {
+  readonly field: SpanListOrderField
+  readonly direction: SpanListOrderDirection
+  readonly sortValue: string
+  readonly spanId: SpanId
+}
+
+export interface SpanListPage {
+  readonly items: readonly Span[]
+  readonly nextCursor: SpanListCursor | null
+}
+
 export interface SpanListOptions {
   readonly startTimeFrom?: Date
   readonly startTimeTo?: Date
   readonly limit?: number
-  readonly offset?: number
+  /** Keyset cursor from a prior page's `nextCursor`; omit for the first page. */
+  readonly cursor?: SpanListCursor
   /** Row-local span predicate (`SPAN_FIELD_REGISTRY` DSL); AND-combined with the window. */
   readonly filters?: FilterSet
+  /** Sort key + direction. Defaults to `startTime` desc (newest first). */
+  readonly orderBy?: { readonly field: SpanListOrderField; readonly direction: SpanListOrderDirection }
 }
 
 export class SpanRepository extends Context.Service<SpanRepository, SpanRepositoryShape>()(

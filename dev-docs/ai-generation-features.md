@@ -14,7 +14,7 @@ Each feature is dogfooded into its own Latitude project (one project per AI feat
 | Annotation Enrichment | `latitude-annotation-enrichment` |
 | Flagger Instruction Extraction / Classification / Drafting | `latitude-flaggers` |
 | Evaluation Judge (live / alignment / optimization) | `latitude-evaluations` |
-| Evaluation Script Generation | `latitude-evaluation-script-generation` |
+| Signal Generation | `latitude-signal-generation` |
 | Optimization Proposal (GEPA) | `latitude-optimizations` |
 | Taxonomy Naming (propose themes / name cluster) | `latitude-taxonomy` |
 
@@ -192,9 +192,9 @@ Each feature is dogfooded into its own Latitude project (one project per AI feat
 > - `packages/domain/evaluations/src/use-cases/optimization/evaluate-optimization-candidate.ts`
 > - `apps/workflows/src/activities/evaluation-optimization-activities.ts`
 
-> **Evaluation Script Generation**
-> Generates an arbitrary sandbox evaluation script from a freeform user prompt, teaching the model the frozen `session` schema. Each candidate is smoke-tested in the sandbox against one representative project session; on failure the sandbox error is fed back and the script is regenerated (up to 3 attempts). Model resolves under feature `EVALUATION_SCRIPT_GENERATOR`.
-> **Tags:** `eval:script-generation`
+> **Signal Generation**
+> Drafts a complete signal (name, description, filters, sampling, and a rule/judge/script evaluation) from a freeform user description, grounded in observed project data (distinct filter-dimension values, tool names, traffic, one sample session). Each draft is schema-mapped, compile-checked, and previewed against recent sessions; failures feed a repair turn and one verdict-review turn lets the model confirm or revise (up to 4 generate calls) before the signal is created. Model resolves under feature `SIGNAL_GENERATOR`.
+> **Tags:** `signal:generation`
 > **Metadata:**
 >
 > ```json
@@ -206,7 +206,7 @@ Each feature is dogfooded into its own Latitude project (one project per AI feat
 >
 > **Called from:**
 >
-> - `packages/domain/evaluations/src/use-cases/create-script-from-prompt.ts`
+> - `packages/domain/signals/src/use-cases/create-signal-from-prompt.ts`
 
 ## GEPA / optimization
 

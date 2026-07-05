@@ -191,7 +191,7 @@ describe("SpanRepository", () => {
         }),
       )
 
-      expect(spans.map((span) => span.name)).toEqual(["second", "newer"])
+      expect(spans.items.map((span) => span.name)).toEqual(["second", "newer"])
     })
 
     it("applies a span-field FilterSet across traces", async () => {
@@ -215,7 +215,122 @@ describe("SpanRepository", () => {
         }),
       )
 
-      expect(spans.map((span) => span.name)).toEqual(["tool-span"])
+      expect(spans.items.map((span) => span.name)).toEqual(["tool-span"])
+    })
+
+    it("sorts by a chosen field and filters by status", async () => {
+      await runCh(
+        insertJsonEachRow(ch.client, "spans", [
+          makeSpanRow({
+            span_id: "0rd0000000000001",
+            name: "slow-err",
+            operation: "ordtest",
+            status_code: 2,
+            start_time: "2026-03-01 00:00:00.000000000",
+            end_time: "2026-03-01 00:00:03.000000000",
+          }),
+          makeSpanRow({
+            span_id: "0rd0000000000002",
+            name: "fast-err",
+            operation: "ordtest",
+            status_code: 2,
+            start_time: "2026-03-01 00:00:00.000000000",
+            end_time: "2026-03-01 00:00:01.000000000",
+          }),
+          makeSpanRow({
+            span_id: "0rd0000000000003",
+            name: "mid-ok",
+            operation: "ordtest",
+            status_code: 0,
+            start_time: "2026-03-01 00:00:00.000000000",
+            end_time: "2026-03-01 00:00:02.000000000",
+          }),
+        ]),
+      )
+      const base = { organizationId: ORG_ID, projectId: PROJECT_ID }
+      const ordtest = { operation: [{ op: "eq" as const, value: "ordtest" }] }
+
+      const byDuration = await runCh(
+        repo.listByProjectId({
+          ...base,
+          options: { limit: 10, filters: ordtest, orderBy: { field: "duration", direction: "desc" } },
+        }),
+      )
+      expect(byDuration.items.map((span) => span.name)).toEqual(["slow-err", "mid-ok", "fast-err"])
+
+      const errorsOnly = await runCh(
+        repo.listByProjectId({
+          ...base,
+          options: {
+            limit: 10,
+            filters: { ...ordtest, status: [{ op: "eq", value: "error" }] },
+            orderBy: { field: "duration", direction: "desc" },
+          },
+        }),
+      )
+      expect(errorsOnly.items.map((span) => span.name)).toEqual(["slow-err", "fast-err"])
+    })
+
+    it("keyset-paginates deterministically when spans share start_time", async () => {
+      const shared = "2026-04-01 00:00:00.000000000"
+      await runCh(
+        insertJsonEachRow(ch.client, "spans", [
+          makeSpanRow({ span_id: "pg00000000000001", name: "first", operation: "keyset", start_time: shared }),
+          makeSpanRow({ span_id: "pg00000000000002", name: "second", operation: "keyset", start_time: shared }),
+          makeSpanRow({ span_id: "pg00000000000003", name: "third", operation: "keyset", start_time: shared }),
+        ]),
+      )
+      const base = { organizationId: ORG_ID, projectId: PROJECT_ID }
+      const opts = { limit: 2, filters: { operation: [{ op: "eq" as const, value: "keyset" }] } }
+
+      // Equal start_time → span_id DESC tiebreaker gives a total order.
+      const page1 = await runCh(repo.listByProjectId({ ...base, options: opts }))
+      expect(page1.items.map((span) => span.name)).toEqual(["third", "second"])
+      expect(page1.nextCursor).not.toBeNull()
+
+      const page2 = await runCh(repo.listByProjectId({ ...base, options: { ...opts, cursor: page1.nextCursor! } }))
+      expect(page2.items.map((span) => span.name)).toEqual(["first"])
+      expect(page2.nextCursor).toBeNull()
+    })
+
+    it("keyset-paginates by a non-startTime sort (duration)", async () => {
+      await runCh(
+        insertJsonEachRow(ch.client, "spans", [
+          makeSpanRow({
+            span_id: "dur0000000000001",
+            name: "d3",
+            operation: "durkey",
+            start_time: "2026-05-01 00:00:00.000000000",
+            end_time: "2026-05-01 00:00:03.000000000",
+          }),
+          makeSpanRow({
+            span_id: "dur0000000000002",
+            name: "d2",
+            operation: "durkey",
+            start_time: "2026-05-01 00:00:00.000000000",
+            end_time: "2026-05-01 00:00:02.000000000",
+          }),
+          makeSpanRow({
+            span_id: "dur0000000000003",
+            name: "d1",
+            operation: "durkey",
+            start_time: "2026-05-01 00:00:00.000000000",
+            end_time: "2026-05-01 00:00:01.000000000",
+          }),
+        ]),
+      )
+      const base = { organizationId: ORG_ID, projectId: PROJECT_ID }
+      const opts = {
+        limit: 2,
+        filters: { operation: [{ op: "eq" as const, value: "durkey" }] },
+        orderBy: { field: "duration" as const, direction: "desc" as const },
+      }
+
+      const page1 = await runCh(repo.listByProjectId({ ...base, options: opts }))
+      expect(page1.items.map((span) => span.name)).toEqual(["d3", "d2"])
+
+      const page2 = await runCh(repo.listByProjectId({ ...base, options: { ...opts, cursor: page1.nextCursor! } }))
+      expect(page2.items.map((span) => span.name)).toEqual(["d1"])
     })
   })
 

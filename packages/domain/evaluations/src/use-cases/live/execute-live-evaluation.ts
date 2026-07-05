@@ -1,5 +1,7 @@
 import type { AI, AICredentialError, AIError, GenerateTelemetryCapture } from "@domain/ai"
 import type { ScriptRuntime, ScriptSessionContext } from "@domain/sandbox"
+import { OrganizationId, ProjectId } from "@domain/shared"
+import type { MessageEmbeddingRepository, TraceSearchRepository } from "@domain/spans"
 import { Effect } from "effect"
 import { z } from "zod"
 import { evaluationSchema } from "../../entities/evaluation.ts"
@@ -14,6 +16,7 @@ import {
   toEvaluationExecutionResult,
 } from "../../runtime/evaluation-execution.ts"
 import { executeEvaluationScriptSandboxed } from "../../runtime/sandbox-execution.ts"
+import { buildSemanticSimilarityHost } from "../../runtime/semantic-similarity.ts"
 
 export type ExecuteLiveEvaluationError = AIError | AICredentialError | LiveEvaluationExecutionError
 
@@ -30,6 +33,8 @@ const liveEvaluationExecutionTelemetrySchema = z.object({
 })
 
 export const liveEvaluationExecutionInputSchema = z.object({
+  organizationId: z.string().min(1),
+  projectId: z.string().min(1),
   evaluationId: evaluationSchema.shape.id,
   script: evaluationSchema.shape.script,
   session: z.custom<ScriptSessionContext>((value) => value !== null && typeof value === "object"),
@@ -58,9 +63,16 @@ export const executeLiveEvaluationUseCase = (input: LiveEvaluationExecutionInput
 
     const telemetry = toGenerateTelemetryCapture(input.telemetry)
 
+    const similarity = yield* buildSemanticSimilarityHost({
+      organizationId: OrganizationId(input.organizationId),
+      projectId: ProjectId(input.projectId),
+      traceIds: input.session.traces.map((trace) => trace.id),
+    })
+
     const execution = yield* executeEvaluationScriptSandboxed({
       script: input.script,
       session: input.session,
+      similarity,
       ...(telemetry ? { telemetry } : {}),
     }).pipe(
       Effect.catchTag("EvaluationExecutionError", (error) =>
@@ -86,5 +98,5 @@ export const executeLiveEvaluationUseCase = (input: LiveEvaluationExecutionInput
   }).pipe(Effect.withSpan("evaluations.executeLiveEvaluation")) as Effect.Effect<
     LiveEvaluationExecutionResult,
     ExecuteLiveEvaluationError,
-    AI | ScriptRuntime
+    AI | MessageEmbeddingRepository | ScriptRuntime | TraceSearchRepository
   >

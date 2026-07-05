@@ -7,8 +7,10 @@ import type * as Latitude from "../../../../index.js";
  *     {}
  */
 export interface QuerySpansBody {
-    /** Row-local span filter set (same DSL as `listTraces`) over span fields — `operation`, `toolName`, `model`, `provider`, `sessionId`, `traceId`, `tags`, `duration`, `cost`, `tokensInput`/`tokensOutput`. */
+    /** Row-local span filter set (same DSL as `listTraces`) over span fields — `operation`, `toolName`, `model`, `provider`, `sessionId`, `traceId`, `tags`, `status` (`error`/`ok`/`unset`), `duration`, `cost`, `tokensInput`/`tokensOutput`. */
     filters?: Record<string, Latitude.FilterCondition[]>;
+    /** Sort order. Defaults to newest first (`startTime` desc); use `duration`/`cost` desc for top-N slowest/costliest. */
+    orderBy?: QuerySpansBody.OrderBy;
     /** Restrict to spans whose `startTime` falls in this window. */
     range?: QuerySpansBody.Range;
     /** Opaque cursor from a previous response's `nextCursor`. Omit on the first page. */
@@ -18,6 +20,32 @@ export interface QuerySpansBody {
 }
 
 export namespace QuerySpansBody {
+    /**
+     * Sort order. Defaults to newest first (`startTime` desc); use `duration`/`cost` desc for top-N slowest/costliest.
+     */
+    export interface OrderBy {
+        /** Sort key. */
+        field?: OrderBy.Field | undefined;
+        /** Sort direction. */
+        direction?: OrderBy.Direction | undefined;
+    }
+
+    export namespace OrderBy {
+        /** Sort key. */
+        export const Field = {
+            StartTime: "startTime",
+            Duration: "duration",
+            Cost: "cost",
+        } as const;
+        export type Field = (typeof Field)[keyof typeof Field];
+        /** Sort direction. */
+        export const Direction = {
+            Asc: "asc",
+            Desc: "desc",
+        } as const;
+        export type Direction = (typeof Direction)[keyof typeof Direction];
+    }
+
     /**
      * Restrict to spans whose `startTime` falls in this window.
      */

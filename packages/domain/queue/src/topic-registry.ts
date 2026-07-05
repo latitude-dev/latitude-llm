@@ -36,6 +36,20 @@ const _registry = {
     }
   }>(),
 
+  "organization-claim-email": payloads<{
+    send: {
+      readonly email: string
+      readonly claimUrl: string
+      readonly organizationName: string
+      readonly expiresAt: string
+    }
+  }>(),
+
+  "organization-cleanup": payloads<{
+    /** Fired by a daily cron — hard-deletes temporary orgs past their claim deadline. */
+    reapExpired: Record<string, never>
+  }>(),
+
   "user-deletion": payloads<{
     delete: {
       readonly organizationId: string
@@ -388,6 +402,11 @@ const _registry = {
       readonly projectId: string
       readonly evaluationId: string
       readonly traceId: string
+      /**
+       * Readiness-gate re-publish counter for embedding-capability evaluations. Absent on the initial
+       * publish; incremented each time the run defers because ingest-time embeddings aren't indexed yet.
+       */
+      readonly embeddingWaitAttempt?: number
     }
   }>(),
 
@@ -421,6 +440,20 @@ const _registry = {
       readonly organizationId: string
       readonly projectId: string
       readonly evaluation: { readonly settings: unknown } | { readonly script: string }
+      readonly filters?: unknown
+    }
+  }>(),
+
+  // Describe-first signal creation: AI drafts the complete signal (name, description, filters,
+  // sampling, evaluation) from a freeform prompt, previews it against recent sessions, and creates
+  // it. Runs in a worker (AI + sandbox + ClickHouse + Postgres); progress and the final result are
+  // written to Redis for the web client to poll. `filters` is JSON-shaped and re-validated downstream.
+  "signals-generate-signal": payloads<{
+    run: {
+      readonly generationId: string
+      readonly organizationId: string
+      readonly projectId: string
+      readonly prompt: string
       readonly filters?: unknown
     }
   }>(),
@@ -470,6 +503,10 @@ const _registry = {
       readonly queueAssigneeUserIds: readonly string[]
       readonly apiKeyId: string
       readonly timelineAnchorIso: string
+    }
+    createDemo: {
+      readonly organizationId: string
+      readonly ownerUserId: string
     }
   }>(),
 

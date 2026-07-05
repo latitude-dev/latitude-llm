@@ -12,7 +12,7 @@ import {
   type SignalEscalationThresholdBucket,
 } from "@domain/scores"
 import {
-  evaluationSettingsSchema,
+  evaluationDraftSchema,
   type FilterCondition,
   type FilterSet,
   filterSetSchema,
@@ -27,6 +27,7 @@ import {
   type ApplySignalLifecycleCommandResult,
   applySignalLifecycleCommandUseCase,
   buildHistogramBucketScaffold,
+  buildSignalGenerationResultKey,
   createSignalUseCase,
   DEFAULT_ESCALATION_SENSITIVITY_K,
   type DimensionPattern,
@@ -41,7 +42,10 @@ import {
   listSignalsUseCase,
   type OrgSignalSearchItem,
   rankDimensionValues,
+  SIGNAL_GENERATION_PROMPT_MAX_LENGTH,
+  SIGNAL_GENERATION_RESULT_TTL_SECONDS,
   type Signal,
+  type SignalGenerationResult,
   type SignalListItem,
   SignalRepository,
   searchOrgSignalsUseCase,
@@ -87,6 +91,7 @@ import {
   toEvaluationSummaryRecord,
 } from "../evaluations/evaluation-alignment.functions.ts"
 import { type SessionRecord, serializeSession } from "../sessions/sessions.functions.ts"
+import { enforceSignalGenerationRateLimit } from "./signal-generation-rate-limit.ts"
 
 const listSignalsInputSchema = z.object({
   projectId: z.string(),
@@ -1318,11 +1323,6 @@ export const enqueueSignalsExport = createServerFn({ method: "POST" })
 
 // --- Builder: create / edit / delete / preview (web leads; no REST/SDK regen) ---
 
-const evaluationDraftSchema = z.union([
-  z.object({ settings: evaluationSettingsSchema }),
-  z.object({ script: z.string().min(1) }),
-])
-
 const createSignalInputSchema = z.object({
   projectId: z.string(),
   name: z.string().min(1),
@@ -1404,11 +1404,11 @@ export const updateSignal = createServerFn({ method: "POST" })
 const updateSignalEvaluationInputSchema = z.object({
   projectId: z.string(),
   signalId: z.string(),
-  settings: evaluationSettingsSchema,
+  evaluation: evaluationDraftSchema,
   sampling: z.number().int().min(0).max(100).optional(),
 })
 
-/** Recompiles a user signal's settings-defined evaluation in place. */
+/** Recompiles a user signal's evaluation in place — from a settings form, or a raw script (Advanced tab). */
 export const updateSignalEvaluation = createServerFn({ method: "POST" })
   .inputValidator(updateSignalEvaluationInputSchema)
   .handler(
@@ -1422,7 +1422,7 @@ export const updateSignalEvaluation = createServerFn({ method: "POST" })
         updateSignalEvaluationUseCase({
           projectId: data.projectId,
           signalId: data.signalId,
-          settings: data.settings,
+          evaluation: data.evaluation,
           ...(data.sampling !== undefined ? { sampling: data.sampling } : {}),
         }).pipe(
           withPostgres(
@@ -1507,4 +1507,58 @@ export const getSignalPreviewResult = createServerFn({ method: "GET" })
     const redis = getRedisClient()
     const raw = await redis.get(buildSignalPreviewResultKey(organizationId, data.previewId))
     return raw === null ? { status: "pending" } : (JSON.parse(raw) as SignalPreviewResult)
+  })
+
+const generateSignalInputSchema = z.object({
+  projectId: z.string(),
+  prompt: z.string().min(1).max(SIGNAL_GENERATION_PROMPT_MAX_LENGTH),
+  filters: filterSetSchema.nullish(),
+})
+
+/**
+ * Enqueues a describe-first signal generation and returns a `generationId` to poll via
+ * `getSignalGenerationResult`. It runs in the `signals-generate-signal` worker (AI + sandbox +
+ * ClickHouse + Postgres — never inline), which drafts the complete signal grounded in observed
+ * project data, previews it against recent sessions, and creates it. The prompt is not persisted.
+ */
+export const generateSignal = createServerFn({ method: "POST" })
+  .inputValidator(generateSignalInputSchema)
+  .handler(async ({ data }): Promise<{ readonly generationId: string }> => {
+    const { organizationId } = await requireSession()
+    const generationId = generateId<"SignalGeneration">()
+    const redis = getRedisClient()
+
+    await enforceSignalGenerationRateLimit({ redis, organizationId, projectId: data.projectId })
+
+    await redis.set(
+      buildSignalGenerationResultKey(organizationId, generationId),
+      JSON.stringify({ status: "pending" } satisfies SignalGenerationResult),
+      "EX",
+      SIGNAL_GENERATION_RESULT_TTL_SECONDS,
+    )
+
+    const publisher = await getQueuePublisher()
+    await Effect.runPromise(
+      publisher.publish("signals-generate-signal", "run", {
+        generationId,
+        organizationId,
+        projectId: data.projectId,
+        prompt: data.prompt,
+        ...(data.filters != null ? { filters: data.filters } : {}),
+      }),
+    )
+
+    return { generationId }
+  })
+
+const getSignalGenerationResultInputSchema = z.object({ generationId: z.string() })
+
+/** Polls a signal-generation run's result. Returns `pending` while the worker is still running (or the key expired). */
+export const getSignalGenerationResult = createServerFn({ method: "GET" })
+  .inputValidator(getSignalGenerationResultInputSchema)
+  .handler(async ({ data }): Promise<SignalGenerationResult> => {
+    const { organizationId } = await requireSession()
+    const redis = getRedisClient()
+    const raw = await redis.get(buildSignalGenerationResultKey(organizationId, data.generationId))
+    return raw === null ? { status: "pending" } : (JSON.parse(raw) as SignalGenerationResult)
   })

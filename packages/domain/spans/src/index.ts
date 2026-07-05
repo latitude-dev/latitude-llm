@@ -112,7 +112,11 @@ export type {
   SessionToolSpan,
   SpanIngestedAtWindow,
   SpanIngestionCursor,
+  SpanListCursor,
   SpanListOptions,
+  SpanListOrderDirection,
+  SpanListOrderField,
+  SpanListPage,
   SpanMessagesData,
   SpanRepositoryShape,
 } from "./ports/span-repository.ts"
@@ -165,6 +169,7 @@ export {
 export type { TraceSearchBudgetShape } from "./ports/trace-search-budget.ts"
 export { TraceSearchBudget } from "./ports/trace-search-budget.ts"
 export type {
+  TraceMessageOccurrenceContent,
   TraceMessageOccurrenceRow,
   TraceSearchDocumentRow,
   TraceSearchEmbeddingRow,

@@ -24,6 +24,7 @@ if typing.TYPE_CHECKING:
         CreateSignalBodyEvaluationSettingsSettingsRuleConditionsItem_JsonOutput,
         CreateSignalBodyEvaluationSettingsSettingsRuleConditionsItem_Metric,
         CreateSignalBodyEvaluationSettingsSettingsRuleConditionsItem_OutputLength,
+        CreateSignalBodyEvaluationSettingsSettingsRuleConditionsItem_SemanticSimilarity,
         CreateSignalBodyEvaluationSettingsSettingsRuleConditionsItem_TextMatch,
         CreateSignalBodyEvaluationSettingsSettingsRuleConditionsItem_ToolCallCount,
         CreateSignalBodyEvaluationSettingsSettingsRuleConditionsItem_ToolFailed,
@@ -64,6 +65,12 @@ if typing.TYPE_CHECKING:
     )
     from .create_signal_body_evaluation_settings_settings_rule_conditions_item_output_length_unit import (
         CreateSignalBodyEvaluationSettingsSettingsRuleConditionsItemOutputLengthUnit,
+    )
+    from .create_signal_body_evaluation_settings_settings_rule_conditions_item_semantic_similarity import (
+        CreateSignalBodyEvaluationSettingsSettingsRuleConditionsItemSemanticSimilarity,
+    )
+    from .create_signal_body_evaluation_settings_settings_rule_conditions_item_semantic_similarity_operator import (
+        CreateSignalBodyEvaluationSettingsSettingsRuleConditionsItemSemanticSimilarityOperator,
     )
     from .create_signal_body_evaluation_settings_settings_rule_conditions_item_text_match import (
         CreateSignalBodyEvaluationSettingsSettingsRuleConditionsItemTextMatch,
@@ -114,6 +121,8 @@ _dynamic_imports: typing.Dict[str, str] = {
     "CreateSignalBodyEvaluationSettingsSettingsRuleConditionsItemOutputLength": ".create_signal_body_evaluation_settings_settings_rule_conditions_item_output_length",
     "CreateSignalBodyEvaluationSettingsSettingsRuleConditionsItemOutputLengthOperator": ".create_signal_body_evaluation_settings_settings_rule_conditions_item_output_length_operator",
     "CreateSignalBodyEvaluationSettingsSettingsRuleConditionsItemOutputLengthUnit": ".create_signal_body_evaluation_settings_settings_rule_conditions_item_output_length_unit",
+    "CreateSignalBodyEvaluationSettingsSettingsRuleConditionsItemSemanticSimilarity": ".create_signal_body_evaluation_settings_settings_rule_conditions_item_semantic_similarity",
+    "CreateSignalBodyEvaluationSettingsSettingsRuleConditionsItemSemanticSimilarityOperator": ".create_signal_body_evaluation_settings_settings_rule_conditions_item_semantic_similarity_operator",
     "CreateSignalBodyEvaluationSettingsSettingsRuleConditionsItemTextMatch": ".create_signal_body_evaluation_settings_settings_rule_conditions_item_text_match",
     "CreateSignalBodyEvaluationSettingsSettingsRuleConditionsItemTextMatchOperator": ".create_signal_body_evaluation_settings_settings_rule_conditions_item_text_match_operator",
     "CreateSignalBodyEvaluationSettingsSettingsRuleConditionsItemTextMatchScope": ".create_signal_body_evaluation_settings_settings_rule_conditions_item_text_match_scope",
@@ -127,6 +136,7 @@ _dynamic_imports: typing.Dict[str, str] = {
     "CreateSignalBodyEvaluationSettingsSettingsRuleConditionsItem_JsonOutput": ".create_signal_body_evaluation_settings_settings_rule_conditions_item",
     "CreateSignalBodyEvaluationSettingsSettingsRuleConditionsItem_Metric": ".create_signal_body_evaluation_settings_settings_rule_conditions_item",
     "CreateSignalBodyEvaluationSettingsSettingsRuleConditionsItem_OutputLength": ".create_signal_body_evaluation_settings_settings_rule_conditions_item",
+    "CreateSignalBodyEvaluationSettingsSettingsRuleConditionsItem_SemanticSimilarity": ".create_signal_body_evaluation_settings_settings_rule_conditions_item",
     "CreateSignalBodyEvaluationSettingsSettingsRuleConditionsItem_TextMatch": ".create_signal_body_evaluation_settings_settings_rule_conditions_item",
     "CreateSignalBodyEvaluationSettingsSettingsRuleConditionsItem_ToolCallCount": ".create_signal_body_evaluation_settings_settings_rule_conditions_item",
     "CreateSignalBodyEvaluationSettingsSettingsRuleConditionsItem_ToolFailed": ".create_signal_body_evaluation_settings_settings_rule_conditions_item",
@@ -183,6 +193,8 @@ __all__ = [
     "CreateSignalBodyEvaluationSettingsSettingsRuleConditionsItemOutputLength",
     "CreateSignalBodyEvaluationSettingsSettingsRuleConditionsItemOutputLengthOperator",
     "CreateSignalBodyEvaluationSettingsSettingsRuleConditionsItemOutputLengthUnit",
+    "CreateSignalBodyEvaluationSettingsSettingsRuleConditionsItemSemanticSimilarity",
+    "CreateSignalBodyEvaluationSettingsSettingsRuleConditionsItemSemanticSimilarityOperator",
     "CreateSignalBodyEvaluationSettingsSettingsRuleConditionsItemTextMatch",
     "CreateSignalBodyEvaluationSettingsSettingsRuleConditionsItemTextMatchOperator",
     "CreateSignalBodyEvaluationSettingsSettingsRuleConditionsItemTextMatchScope",
@@ -196,6 +208,7 @@ __all__ = [
     "CreateSignalBodyEvaluationSettingsSettingsRuleConditionsItem_JsonOutput",
     "CreateSignalBodyEvaluationSettingsSettingsRuleConditionsItem_Metric",
     "CreateSignalBodyEvaluationSettingsSettingsRuleConditionsItem_OutputLength",
+    "CreateSignalBodyEvaluationSettingsSettingsRuleConditionsItem_SemanticSimilarity",
     "CreateSignalBodyEvaluationSettingsSettingsRuleConditionsItem_TextMatch",
     "CreateSignalBodyEvaluationSettingsSettingsRuleConditionsItem_ToolCallCount",
     "CreateSignalBodyEvaluationSettingsSettingsRuleConditionsItem_ToolFailed",

@@ -56,6 +56,7 @@ export { MembershipRepositoryLive } from "./repositories/membership-repository.t
 export { MonitorRepositoryLive } from "./repositories/monitor-repository.ts"
 export { NotificationRepositoryLive } from "./repositories/notification-repository.ts"
 export { OAuthKeyRepositoryLive } from "./repositories/oauth-key-repository.ts"
+export { OrganizationClaimRepositoryLive } from "./repositories/organization-claim-repository.ts"
 export { OrganizationRepositoryLive } from "./repositories/organization-repository.ts"
 export { ProjectRepositoryLive } from "./repositories/project-repository.ts"
 export { SandboxRepositoryLive } from "./repositories/sandbox-repository.ts"

@@ -1,0 +1,74 @@
+name: PR Diff Artifact
+
+on:
+  pull_request:
+    types: [opened, ready_for_review]
+  workflow_dispatch:
+    inputs:
+      pr_number:
+        description: PR number to generate a diff artifact for
+        required: true
+      base_ref:
+        description: Base branch to compare against
+        required: false
+        default: development
+
+jobs:
+  generate-diff-artifact:
+    if: github.repository == 'latitude-dev/latitude-llm' && (github.event_name != 'pull_request' || github.event.pull_request.draft == false)
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pull-requests: read
+      issues: write
+      id-token: write
+    env:
+      GH_TOKEN: ${{ github.token }}
+      PR_BASE_REF: ${{ github.event.pull_request.base.ref || inputs.base_ref }}
+      PR_NUMBER: ${{ github.event.pull_request.number || inputs.pr_number }}
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v7.0.0
+        with:
+          fetch-depth: 0
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v6
+        with:
+          node-version: 25
+
+      - name: Verify artifact publish dependencies
+        run: |
+          node --version
+          npm --version
+          npx --version
+          npx --yes wrangler@latest --version
+          gh --version
+          gh auth status
+
+      - name: Run Claude Code
+        id: claude
+        uses: anthropics/claude-code-action@v1.0.154
+        with:
+          claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
+          show_full_output: true
+          prompt: |
+            Generate a rich HTML explanation artifact for pull request #${{ env.PR_NUMBER }} in ${{ github.repository }}.
+
+            Use these repository skills explicitly:
+            - `.agents/skills/explain-diff-html/SKILL.md` to decide the review-diff content and structure.
+            - `.agents/skills/artifact-designer/SKILL.md` to create, validate, and package the result as a local artifact.
+
+            Requirements:
+            - Compare this PR against its base branch `${{ env.PR_BASE_REF }}` and explain the full PR diff.
+            - Create exactly one artifact under `.artifacts/pr-${{ env.PR_NUMBER }}-diff-review/`.
+            - The final HTML must be at `.artifacts/pr-${{ env.PR_NUMBER }}-diff-review/dist/index.html`.
+            - Keep the artifact self-contained. Do not fetch remote scripts, fonts, stylesheets, images, or APIs.
+            - Validate it with `node .agents/skills/artifact-designer/scripts/artifact.mjs validate --id pr-${{ env.PR_NUMBER }}-diff-review --strict`.
+            - Publish it with `node .agents/skills/artifact-designer/scripts/artifact.mjs publish --id pr-${{ env.PR_NUMBER }}-diff-review --target temporary`.
+            - Read the publish output. It prints `Published artifact:` followed by the Cloudflare temporary URL, and may print `Claim within 60 minutes:` followed by the permanent-claim URL.
+            - After publishing, leave exactly one PR comment that links to both the Cloudflare temporary artifact URL and the permanent-claim URL. If no claim URL is printed, say that no claim URL was returned.
+            - Do not commit, push, or edit the PR branch.
+          claude_args: |
+            --dangerously-skip-permissions
+            --allowedTools Bash,Read,Write,Edit,Glob,Grep

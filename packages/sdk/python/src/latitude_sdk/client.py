@@ -6,7 +6,6 @@ import os
 import typing
 
 import httpx
-from .core.api_error import ApiError
 from .core.client_wrapper import AsyncClientWrapper, SyncClientWrapper
 from .core.logging import LogConfig, Logger
 from .environment import LatitudeEnvironment
@@ -102,10 +101,6 @@ class LatitudeClient:
             timeout if timeout is not None else 60 if httpx_client is None else httpx_client.timeout.read
         )
         _defaulted_max_retries = max_retries if max_retries is not None else 2
-        if api_key is None:
-            raise ApiError(
-                body="The client must be instantiated be either passing in api_key or setting LATITUDE_API_KEY"
-            )
         self._client_wrapper = SyncClientWrapper(
             base_url=_get_base_url(base_url=base_url, environment=environment),
             api_key=api_key,
@@ -121,6 +116,7 @@ class LatitudeClient:
             max_stream_reconnection_attempts=max_stream_reconnection_attempts,
             logging=logging,
         )
+        self._account: typing.Optional[AccountClient] = None
         self._projects: typing.Optional[ProjectsClient] = None
         self._scores: typing.Optional[ScoresClient] = None
         self._annotations: typing.Optional[AnnotationsClient] = None
@@ -133,11 +129,18 @@ class LatitudeClient:
         self._datasets: typing.Optional[DatasetsClient] = None
         self._api_keys: typing.Optional[ApiKeysClient] = None
         self._oauth_keys: typing.Optional[OauthKeysClient] = None
-        self._account: typing.Optional[AccountClient] = None
         self._members: typing.Optional[MembersClient] = None
         self._monitors: typing.Optional[MonitorsClient] = None
         self._analytics: typing.Optional[AnalyticsClient] = None
         self._spans: typing.Optional[SpansClient] = None
+
+    @property
+    def account(self):
+        if self._account is None:
+            from .account.client import AccountClient  # noqa: E402
+
+            self._account = AccountClient(client_wrapper=self._client_wrapper)
+        return self._account
 
     @property
     def projects(self):
@@ -234,14 +237,6 @@ class LatitudeClient:
 
             self._oauth_keys = OauthKeysClient(client_wrapper=self._client_wrapper)
         return self._oauth_keys
-
-    @property
-    def account(self):
-        if self._account is None:
-            from .account.client import AccountClient  # noqa: E402
-
-            self._account = AccountClient(client_wrapper=self._client_wrapper)
-        return self._account
 
     @property
     def members(self):
@@ -369,10 +364,6 @@ class AsyncLatitudeClient:
             timeout if timeout is not None else 60 if httpx_client is None else httpx_client.timeout.read
         )
         _defaulted_max_retries = max_retries if max_retries is not None else 2
-        if api_key is None:
-            raise ApiError(
-                body="The client must be instantiated be either passing in api_key or setting LATITUDE_API_KEY"
-            )
         self._client_wrapper = AsyncClientWrapper(
             base_url=_get_base_url(base_url=base_url, environment=environment),
             api_key=api_key,
@@ -387,6 +378,7 @@ class AsyncLatitudeClient:
             max_stream_reconnection_attempts=max_stream_reconnection_attempts,
             logging=logging,
         )
+        self._account: typing.Optional[AsyncAccountClient] = None
         self._projects: typing.Optional[AsyncProjectsClient] = None
         self._scores: typing.Optional[AsyncScoresClient] = None
         self._annotations: typing.Optional[AsyncAnnotationsClient] = None
@@ -399,11 +391,18 @@ class AsyncLatitudeClient:
         self._datasets: typing.Optional[AsyncDatasetsClient] = None
         self._api_keys: typing.Optional[AsyncApiKeysClient] = None
         self._oauth_keys: typing.Optional[AsyncOauthKeysClient] = None
-        self._account: typing.Optional[AsyncAccountClient] = None
         self._members: typing.Optional[AsyncMembersClient] = None
         self._monitors: typing.Optional[AsyncMonitorsClient] = None
         self._analytics: typing.Optional[AsyncAnalyticsClient] = None
         self._spans: typing.Optional[AsyncSpansClient] = None
+
+    @property
+    def account(self):
+        if self._account is None:
+            from .account.client import AsyncAccountClient  # noqa: E402
+
+            self._account = AsyncAccountClient(client_wrapper=self._client_wrapper)
+        return self._account
 
     @property
     def projects(self):
@@ -500,14 +499,6 @@ class AsyncLatitudeClient:
 
             self._oauth_keys = AsyncOauthKeysClient(client_wrapper=self._client_wrapper)
         return self._oauth_keys
-
-    @property
-    def account(self):
-        if self._account is None:
-            from .account.client import AsyncAccountClient  # noqa: E402
-
-            self._account = AsyncAccountClient(client_wrapper=self._client_wrapper)
-        return self._account
 
     @property
     def members(self):

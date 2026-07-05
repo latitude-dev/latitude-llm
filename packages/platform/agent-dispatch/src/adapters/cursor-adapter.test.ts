@@ -12,7 +12,10 @@ describe("createCursorAdapter", () => {
           auth: new Headers(init?.headers).get("Authorization") ?? "",
         })
         return new Response(
-          JSON.stringify({ id: "bc_abc123", target: { url: "https://cursor.com/agents?id=bc_abc123" } }),
+          JSON.stringify({
+            id: "bc_abc123",
+            target: { url: "https://cursor.com/agents?id=bc_abc123" },
+          }),
           { status: 200 },
         )
       }),
@@ -31,7 +34,11 @@ describe("createCursorAdapter", () => {
           projectSlug: "app",
           deepLinkUrl: "https://example.com",
         },
-        config: { kind: "cursor", repoUrl: "https://github.com/acme/app", startingRef: "main" },
+        config: {
+          kind: "cursor",
+          repoUrl: "https://github.com/acme/app",
+          startingRef: "main",
+        },
         credential: { cursorApiKey: "key123" },
       }),
     )
@@ -39,13 +46,14 @@ describe("createCursorAdapter", () => {
     expect(result.status).toBe("accepted")
     expect(result.externalAgentId).toBe("bc_abc123")
     expect(result.deepLinkUrl).toBe("https://cursor.com/agents?id=bc_abc123")
-    expect(JSON.parse(calls[0]!.body)).toMatchObject({
+    const payload = calls[0]!
+    expect(JSON.parse(payload.body)).toMatchObject({
       agentId: "cursor:incident.opened:src1",
       prompt: { text: "fix it" },
       source: { repository: "https://github.com/acme/app", ref: "main" },
       target: { autoCreatePr: true },
     })
-    expect(calls[0]!.auth.startsWith("Basic ")).toBe(true)
+    expect(payload.auth.startsWith("Basic ")).toBe(true)
 
     vi.unstubAllGlobals()
   })
@@ -69,7 +77,11 @@ describe("createCursorAdapter", () => {
             projectSlug: "app",
             deepLinkUrl: "https://example.com",
           },
-          config: { kind: "cursor", repoUrl: "https://github.com/acme/app", startingRef: "main" },
+          config: {
+            kind: "cursor",
+            repoUrl: "https://github.com/acme/app",
+            startingRef: "main",
+          },
           credential: { cursorApiKey: "key123" },
         }),
       ),

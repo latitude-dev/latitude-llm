@@ -23,6 +23,12 @@ const SPAN_FIELD_REGISTRY: ChFieldRegistry = {
   cost: { column: "cost_total_microcents", chType: "UInt64" },
   tokensInput: { column: "tokens_input", chType: "UInt64" },
   tokensOutput: { column: "tokens_output", chType: "UInt64" },
+  // OTel status_code: 0 unset, 1 ok, 2 error. Accept the human words and map to the code.
+  status: {
+    column: "status_code",
+    chType: "UInt8",
+    mapValue: (v) => (v === "error" ? 2 : v === "ok" ? 1 : v === "unset" ? 0 : v),
+  },
 }
 
 /** Span filters are row-local — all WHERE clauses, no HAVING (the spans stream doesn't aggregate). */

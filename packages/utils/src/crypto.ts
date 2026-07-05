@@ -36,6 +36,10 @@ export const hash = (value: unknown): Effect.Effect<string, CryptoError> =>
     catch: (cause) => new CryptoError({ operation: "hash", cause }),
   })
 
+/** Cryptographically-secure random token of exactly `length` hex chars. Persist only its {@link hash}. */
+export const randomToken = (length: number): string =>
+  hexEncode(crypto.getRandomValues(new Uint8Array(Math.ceil(length / 2)))).slice(0, length)
+
 const ALGORITHM = "AES-GCM"
 const IV_LENGTH = 12
 const AUTH_TAG_LENGTH = 16

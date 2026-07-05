@@ -64,6 +64,75 @@
           "authorization_servers"
         ]
       },
+      "BootstrapAccountResponse": {
+        "type": "object",
+        "properties": {
+          "organizationSlug": {
+            "type": "string",
+            "description": "Slug of the temporary organization."
+          },
+          "projectSlug": {
+            "type": "string",
+            "description": "Slug of the created project."
+          },
+          "apiKey": {
+            "type": "string",
+            "description": "Organization-scoped API key."
+          },
+          "claimUrl": {
+            "type": "string",
+            "description": "URL to open in a browser to claim ownership of the organization."
+          },
+          "claimEmail": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "Email address the claim link will be sent to, or `null` if none was provided."
+          },
+          "claimExpiresAt": {
+            "type": "string",
+            "description": "ISO-8601 timestamp when the claim link expires. The organization is deleted if not claimed by then."
+          }
+        },
+        "required": [
+          "organizationSlug",
+          "projectSlug",
+          "apiKey",
+          "claimUrl",
+          "claimEmail",
+          "claimExpiresAt"
+        ]
+      },
+      "Error": {
+        "type": "object",
+        "properties": {
+          "error": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "error"
+        ]
+      },
+      "BootstrapAccountBody": {
+        "type": "object",
+        "properties": {
+          "organizationName": {
+            "type": "string",
+            "description": "Name for the temporary organization. If not provided, defaults to \"My Organization\"."
+          },
+          "projectName": {
+            "type": "string",
+            "description": "Name for the project created in the organization. If not provided, defaults to \"My Project\"."
+          },
+          "userEmail": {
+            "type": "string",
+            "format": "email",
+            "description": "Email address to send the claim link to."
+          }
+        }
+      },
       "Project": {
         "type": "object",
         "properties": {
@@ -200,17 +269,6 @@
           }
         },
         "description": "Tuning parameters for the escalation detector. Affects detector behaviour regardless of whether notifications are enabled."
-      },
-      "Error": {
-        "type": "object",
-        "properties": {
-          "error": {
-            "type": "string"
-          }
-        },
-        "required": [
-          "error"
-        ]
       },
       "CreateProjectBody": {
         "type": "object",
@@ -4527,6 +4585,41 @@
                                     "type",
                                     "value"
                                   ]
+                                },
+                                {
+                                  "type": "object",
+                                  "properties": {
+                                    "type": {
+                                      "type": "string",
+                                      "enum": [
+                                        "semantic_similarity"
+                                      ]
+                                    },
+                                    "query": {
+                                      "type": "string",
+                                      "minLength": 1
+                                    },
+                                    "operator": {
+                                      "type": "string",
+                                      "enum": [
+                                        "gt",
+                                        "gte",
+                                        "lt",
+                                        "lte"
+                                      ],
+                                      "default": "gte"
+                                    },
+                                    "threshold": {
+                                      "type": "number",
+                                      "minimum": 0,
+                                      "maximum": 1
+                                    }
+                                  },
+                                  "required": [
+                                    "type",
+                                    "query",
+                                    "threshold"
+                                  ]
                                 }
                               ]
                             },
@@ -8079,6 +8172,10 @@
                   "type": "string",
                   "description": "The breakdown value, present when `breakdown` was set."
                 },
+                "label": {
+                  "type": "string",
+                  "description": "Human-readable name for `key` when the breakdown value is an opaque id — the signal name for `signalId`, the cluster name for `cluster`. Absent for already-readable breakdowns."
+                },
                 "bucketStart": {
                   "type": "string",
                   "description": "ISO-8601 start of the time bucket, present when `timeBucket` was set."
@@ -8295,7 +8392,7 @@
                       "kind": {
                         "type": "string",
                         "enum": [
-                          "p95"
+                          "percentile"
                         ]
                       },
                       "field": {
@@ -8305,15 +8402,21 @@
                           "cost",
                           "tokens"
                         ]
+                      },
+                      "p": {
+                        "type": "number",
+                        "minimum": 1,
+                        "maximum": 99
                       }
                     },
                     "required": [
                       "kind",
-                      "field"
+                      "field",
+                      "p"
                     ]
                   }
                 ],
-                "description": "The metric: `count`, `errorRate`, `cacheHitRate`, or `{sum|min|max|avg|median|p95}` over `duration`/`cost`/`tokens`."
+                "description": "The metric: `count`, `errorRate`, `cacheHitRate`, `{sum|min|max|avg|median}` over `duration`/`cost`/`tokens`, or `{kind:'percentile',field,p}` for an arbitrary percentile (`p` in [1,99]; e.g. `p:95`)."
               },
               "filters": {
                 "allOf": [
@@ -8606,7 +8709,7 @@
                       "kind": {
                         "type": "string",
                         "enum": [
-                          "p95"
+                          "percentile"
                         ]
                       },
                       "field": {
@@ -8616,15 +8719,21 @@
                           "cost",
                           "tokens"
                         ]
+                      },
+                      "p": {
+                        "type": "number",
+                        "minimum": 1,
+                        "maximum": 99
                       }
                     },
                     "required": [
                       "kind",
-                      "field"
+                      "field",
+                      "p"
                     ]
                   }
                 ],
-                "description": "The metric: `count`, `errorRate`, `cacheHitRate`, or `{sum|min|max|avg|median|p95}` over `duration`/`cost`/`tokens`."
+                "description": "The metric: `count`, `errorRate`, `cacheHitRate`, `{sum|min|max|avg|median}` over `duration`/`cost`/`tokens`, or `{kind:'percentile',field,p}` for an arbitrary percentile (`p` in [1,99]; e.g. `p:95`)."
               },
               "filters": {
                 "allOf": [
@@ -8911,7 +9020,7 @@
                       "kind": {
                         "type": "string",
                         "enum": [
-                          "p95"
+                          "percentile"
                         ]
                       },
                       "field": {
@@ -8921,15 +9030,21 @@
                           "cost",
                           "tokens"
                         ]
+                      },
+                      "p": {
+                        "type": "number",
+                        "minimum": 1,
+                        "maximum": 99
                       }
                     },
                     "required": [
                       "kind",
-                      "field"
+                      "field",
+                      "p"
                     ]
                   }
                 ],
-                "description": "The metric: `count`, `errorRate`, `cacheHitRate`, or `{sum|min|max|avg|median|p95}` over `duration`/`cost`/`tokens`."
+                "description": "The metric: `count`, `errorRate`, `cacheHitRate`, `{sum|min|max|avg|median}` over `duration`/`cost`/`tokens`, or `{kind:'percentile',field,p}` for an arbitrary percentile (`p` in [1,99]; e.g. `p:95`)."
               },
               "filters": {
                 "allOf": [
@@ -9764,9 +9879,34 @@
                 "$ref": "#/components/schemas/FilterSet"
               },
               {
-                "description": "Row-local span filter set (same DSL as `listTraces`) over span fields — `operation`, `toolName`, `model`, `provider`, `sessionId`, `traceId`, `tags`, `duration`, `cost`, `tokensInput`/`tokensOutput`."
+                "description": "Row-local span filter set (same DSL as `listTraces`) over span fields — `operation`, `toolName`, `model`, `provider`, `sessionId`, `traceId`, `tags`, `status` (`error`/`ok`/`unset`), `duration`, `cost`, `tokensInput`/`tokensOutput`."
               }
             ]
+          },
+          "orderBy": {
+            "type": "object",
+            "properties": {
+              "field": {
+                "type": "string",
+                "enum": [
+                  "startTime",
+                  "duration",
+                  "cost"
+                ],
+                "default": "startTime",
+                "description": "Sort key."
+              },
+              "direction": {
+                "type": "string",
+                "enum": [
+                  "asc",
+                  "desc"
+                ],
+                "default": "desc",
+                "description": "Sort direction."
+              }
+            },
+            "description": "Sort order. Defaults to newest first (`startTime` desc); use `duration`/`cost` desc for top-N slowest/costliest."
           },
           "range": {
             "type": "object",
@@ -9814,6 +9954,7 @@
           "Health"
         ],
         "summary": "Health check",
+        "security": [],
         "x-fern-ignore": true,
         "responses": {
           "200": {
@@ -9837,6 +9978,7 @@
         ],
         "summary": "OAuth protected resource metadata",
         "description": "RFC 9728 metadata document advertising the authorization server(s) trusted to issue access tokens for this API.",
+        "security": [],
         "x-fern-ignore": true,
         "responses": {
           "200": {
@@ -9845,6 +9987,61 @@
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/OAuthProtectedResourceMetadata"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/account/bootstrap": {
+      "post": {
+        "operationId": "bootstrapAccount",
+        "tags": [
+          "Account"
+        ],
+        "x-fern-sdk-group-name": "account",
+        "x-fern-sdk-method-name": "bootstrap",
+        "summary": "Bootstrap a temporary account",
+        "description": "Creates a temporary organization with an API key and a project, and returns a link to claim ownership of it. Requires no authentication.",
+        "security": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/BootstrapAccountBody"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Temporary account created",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BootstrapAccountResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Validation error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Rate limit exceeded",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
                 }
               }
             }

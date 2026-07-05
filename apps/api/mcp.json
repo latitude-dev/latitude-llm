@@ -8347,6 +8347,41 @@
                                     "value"
                                   ],
                                   "additionalProperties": false
+                                },
+                                {
+                                  "type": "object",
+                                  "properties": {
+                                    "type": {
+                                      "type": "string",
+                                      "const": "semantic_similarity"
+                                    },
+                                    "query": {
+                                      "type": "string",
+                                      "minLength": 1
+                                    },
+                                    "operator": {
+                                      "default": "gte",
+                                      "type": "string",
+                                      "enum": [
+                                        "gt",
+                                        "gte",
+                                        "lt",
+                                        "lte"
+                                      ]
+                                    },
+                                    "threshold": {
+                                      "type": "number",
+                                      "minimum": 0,
+                                      "maximum": 1
+                                    }
+                                  },
+                                  "required": [
+                                    "type",
+                                    "query",
+                                    "operator",
+                                    "threshold"
+                                  ],
+                                  "additionalProperties": false
                                 }
                               ]
                             }
@@ -29835,7 +29870,7 @@
                         "properties": {
                           "kind": {
                             "type": "string",
-                            "const": "p95"
+                            "const": "percentile"
                           },
                           "field": {
                             "type": "string",
@@ -29844,16 +29879,22 @@
                               "cost",
                               "tokens"
                             ]
+                          },
+                          "p": {
+                            "type": "number",
+                            "minimum": 1,
+                            "maximum": 99
                           }
                         },
                         "required": [
                           "kind",
-                          "field"
+                          "field",
+                          "p"
                         ],
                         "additionalProperties": false
                       }
                     ],
-                    "description": "The metric: `count`, `errorRate`, `cacheHitRate`, or `{sum|min|max|avg|median|p95}` over `duration`/`cost`/`tokens`."
+                    "description": "The metric: `count`, `errorRate`, `cacheHitRate`, `{sum|min|max|avg|median}` over `duration`/`cost`/`tokens`, or `{kind:'percentile',field,p}` for an arbitrary percentile (`p` in [1,99]; e.g. `p:95`)."
                   },
                   "filters": {
                     "description": "Structured filter set applied to the stream (same DSL as `listTraces`).",
@@ -30199,7 +30240,7 @@
                         "properties": {
                           "kind": {
                             "type": "string",
-                            "const": "p95"
+                            "const": "percentile"
                           },
                           "field": {
                             "type": "string",
@@ -30208,16 +30249,22 @@
                               "cost",
                               "tokens"
                             ]
+                          },
+                          "p": {
+                            "type": "number",
+                            "minimum": 1,
+                            "maximum": 99
                           }
                         },
                         "required": [
                           "kind",
-                          "field"
+                          "field",
+                          "p"
                         ],
                         "additionalProperties": false
                       }
                     ],
-                    "description": "The metric: `count`, `errorRate`, `cacheHitRate`, or `{sum|min|max|avg|median|p95}` over `duration`/`cost`/`tokens`."
+                    "description": "The metric: `count`, `errorRate`, `cacheHitRate`, `{sum|min|max|avg|median}` over `duration`/`cost`/`tokens`, or `{kind:'percentile',field,p}` for an arbitrary percentile (`p` in [1,99]; e.g. `p:95`)."
                   },
                   "filters": {
                     "description": "Structured filter set applied to the stream (same DSL as `listTraces`).",
@@ -30557,7 +30604,7 @@
                         "properties": {
                           "kind": {
                             "type": "string",
-                            "const": "p95"
+                            "const": "percentile"
                           },
                           "field": {
                             "type": "string",
@@ -30566,16 +30613,22 @@
                               "cost",
                               "tokens"
                             ]
+                          },
+                          "p": {
+                            "type": "number",
+                            "minimum": 1,
+                            "maximum": 99
                           }
                         },
                         "required": [
                           "kind",
-                          "field"
+                          "field",
+                          "p"
                         ],
                         "additionalProperties": false
                       }
                     ],
-                    "description": "The metric: `count`, `errorRate`, `cacheHitRate`, or `{sum|min|max|avg|median|p95}` over `duration`/`cost`/`tokens`."
+                    "description": "The metric: `count`, `errorRate`, `cacheHitRate`, `{sum|min|max|avg|median}` over `duration`/`cost`/`tokens`, or `{kind:'percentile',field,p}` for an arbitrary percentile (`p` in [1,99]; e.g. `p:95`)."
                   },
                   "filters": {
                     "description": "Structured filter set applied to the stream (same DSL as `listTraces`).",
@@ -31610,6 +31663,10 @@
                   "description": "The breakdown value, present when `breakdown` was set.",
                   "type": "string"
                 },
+                "label": {
+                  "description": "Human-readable name for `key` when the breakdown value is an opaque id — the signal name for `signalId`, the cluster name for `cluster`. Absent for already-readable breakdowns.",
+                  "type": "string"
+                },
                 "bucketStart": {
                   "description": "ISO-8601 start of the time bucket, present when `timeBucket` was set.",
                   "type": "string"
@@ -31650,7 +31707,7 @@
             "description": "Project slug (human-readable identifier)"
           },
           "filters": {
-            "description": "Row-local span filter set (same DSL as `listTraces`) over span fields — `operation`, `toolName`, `model`, `provider`, `sessionId`, `traceId`, `tags`, `duration`, `cost`, `tokensInput`/`tokensOutput`.",
+            "description": "Row-local span filter set (same DSL as `listTraces`) over span fields — `operation`, `toolName`, `model`, `provider`, `sessionId`, `traceId`, `tags`, `status` (`error`/`ok`/`unset`), `duration`, `cost`, `tokensInput`/`tokensOutput`.",
             "type": "object",
             "propertyNames": {
               "type": "string"
@@ -31712,6 +31769,36 @@
                 "additionalProperties": false
               }
             }
+          },
+          "orderBy": {
+            "description": "Sort order. Defaults to newest first (`startTime` desc); use `duration`/`cost` desc for top-N slowest/costliest.",
+            "type": "object",
+            "properties": {
+              "field": {
+                "default": "startTime",
+                "description": "Sort key.",
+                "type": "string",
+                "enum": [
+                  "startTime",
+                  "duration",
+                  "cost"
+                ]
+              },
+              "direction": {
+                "default": "desc",
+                "description": "Sort direction.",
+                "type": "string",
+                "enum": [
+                  "asc",
+                  "desc"
+                ]
+              }
+            },
+            "required": [
+              "field",
+              "direction"
+            ],
+            "additionalProperties": false
           },
           "range": {
             "description": "Restrict to spans whose `startTime` falls in this window.",

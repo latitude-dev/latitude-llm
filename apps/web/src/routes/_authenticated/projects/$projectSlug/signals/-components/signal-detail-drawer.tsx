@@ -310,7 +310,7 @@ export function SignalDetailBody({
                 {isLoading ? (
                   <Skeleton className="h-5 w-full" />
                 ) : (
-                  <Text.H5 color="foregroundMuted">{issue?.description ?? "This issue could not be loaded."}</Text.H5>
+                  <Text.H5 color="foregroundMuted">{issue?.description ?? "We couldn't load this issue."}</Text.H5>
                 )}
               </div>
               {!isLoading && issue && (
@@ -469,7 +469,7 @@ export function SignalDetailBody({
               onRowClick={(session) => openSessionSheet(session.sessionId)}
               getRowAriaLabel={(session) => `Open session ${session.sessionId}`}
               infiniteScroll={infiniteScroll}
-              blankSlate="This issue has not been seen on any sessions yet."
+              blankSlate="This issue hasn't shown up on any sessions yet."
               scrollAreaLayout="intrinsic"
               className="max-h-[min(28rem,50vh)]"
             />

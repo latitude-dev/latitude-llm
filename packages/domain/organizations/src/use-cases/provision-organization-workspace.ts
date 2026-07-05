@@ -1,21 +1,15 @@
 import { DEFAULT_API_KEY_NAME, type GenerateApiKeyError, generateApiKeyUseCase } from "@domain/api-keys"
 import { OutboxEventWriter } from "@domain/events"
-import {
-  type CreateProjectError,
-  createProject,
-  createProjectUseCase,
-  InvalidProjectNameError,
-  ProjectRepository,
-} from "@domain/projects"
+import { type CreateProjectError, createProjectUseCase } from "@domain/projects"
 import {
   type ConcurrentSqlTransactionError,
-  generateSlug,
   type OrganizationId,
   type RepositoryError,
   SqlClient,
   toRepositoryError,
 } from "@domain/shared"
 import { Effect } from "effect"
+import { createSampleProjectUseCase } from "./create-sample-project.ts"
 
 export interface ProvisionOrganizationWorkspaceInput {
   readonly organizationId: OrganizationId
@@ -24,8 +18,6 @@ export interface ProvisionOrganizationWorkspaceInput {
   readonly slug: string
   readonly defaultProjectName: string
 }
-
-const DEFAULT_SAMPLE_PROJECT_NAME = "Sample project"
 
 export interface ProvisionOrganizationWorkspaceResult {
   readonly defaultApiKey: {
@@ -72,24 +64,6 @@ export const provisionOrganizationWorkspaceUseCase = Effect.fn("organizations.pr
           actorUserId: input.actorUserId,
         })
 
-        const projectRepo = yield* ProjectRepository
-        const sampleProjectSlug = yield* generateSlug({
-          name: DEFAULT_SAMPLE_PROJECT_NAME,
-          count: (slug) => projectRepo.countBySlug(slug),
-        }).pipe(
-          Effect.catchTag("InvalidSlugInputError", (error) =>
-            Effect.fail(new InvalidProjectNameError({ field: DEFAULT_SAMPLE_PROJECT_NAME, message: error.reason })),
-          ),
-        )
-        const sampleProject = createProject({
-          organizationId: input.organizationId,
-          name: DEFAULT_SAMPLE_PROJECT_NAME,
-          slug: sampleProjectSlug,
-          settings: { isSample: true },
-        })
-        // Skip createProjectUseCase so sample data seeding is the only side effect for this project.
-        yield* projectRepo.save(sampleProject)
-
         yield* outboxEventWriter
           .write({
             eventName: "OrganizationCreated",
@@ -105,21 +79,11 @@ export const provisionOrganizationWorkspaceUseCase = Effect.fn("organizations.pr
           })
           .pipe(Effect.mapError((error) => toRepositoryError(error, "write")))
 
-        yield* outboxEventWriter
-          .write({
-            eventName: "SampleProjectCreated",
-            aggregateType: "project",
-            aggregateId: sampleProject.id,
-            organizationId: input.organizationId,
-            payload: {
-              organizationId: input.organizationId,
-              projectId: sampleProject.id,
-              queueAssigneeUserIds: [input.actorUserId],
-              apiKeyId: defaultApiKey.id,
-              timelineAnchorIso: new Date().toISOString(),
-            },
-          })
-          .pipe(Effect.mapError((error) => toRepositoryError(error, "write")))
+        // Shared with the claim flow; seeding uses the org's first API key (here the just-created default).
+        const sampleProject = yield* createSampleProjectUseCase({
+          organizationId: input.organizationId,
+          actorUserId: input.actorUserId,
+        })
 
         return {
           defaultApiKey: {

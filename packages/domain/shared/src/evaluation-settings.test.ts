@@ -1,5 +1,10 @@
 import { describe, expect, it } from "vitest"
-import { type EvaluationRuleCondition, evaluationSettingsSchema } from "./evaluation-settings.ts"
+import {
+  type EvaluationRuleCondition,
+  evaluationRuleConditionSchema,
+  evaluationSettingsSchema,
+  SEMANTIC_SIMILARITY_PRESETS,
+} from "./evaluation-settings.ts"
 
 describe("evaluationSettingsSchema", () => {
   it("parses a judge", () => {
@@ -46,8 +51,39 @@ describe("evaluationSettingsSchema", () => {
       { type: "tool_call_count", operator: "gt", value: 0 },
       { type: "error" },
       { type: "finish_reason", value: "stop" },
+      { type: "semantic_similarity", query: "frustration", operator: "gte", threshold: 0.5 },
     ]
-    expect(evaluationSettingsSchema.safeParse({ kind: "rule", match: "any", conditions }).success).toBe(true)
+    // More condition types than a rule's max(10), so validate each against the condition schema directly.
+    for (const condition of conditions) {
+      expect(evaluationRuleConditionSchema.safeParse(condition).success).toBe(true)
+    }
+  })
+
+  it("defaults semantic_similarity operator to gte and enforces threshold bounds", () => {
+    const parsed = evaluationSettingsSchema.parse({
+      kind: "rule",
+      conditions: [
+        { type: "semantic_similarity", query: "frustration", threshold: SEMANTIC_SIMILARITY_PRESETS.balanced },
+      ],
+    })
+    if (parsed.kind !== "rule") throw new Error("expected rule")
+    const condition = parsed.conditions[0]
+    if (condition?.type !== "semantic_similarity") throw new Error("expected semantic_similarity")
+    expect(condition.operator).toBe("gte")
+    expect(condition.threshold).toBe(SEMANTIC_SIMILARITY_PRESETS.balanced)
+
+    expect(
+      evaluationSettingsSchema.safeParse({
+        kind: "rule",
+        conditions: [{ type: "semantic_similarity", query: "x", threshold: 1.5 }],
+      }).success,
+    ).toBe(false)
+    expect(
+      evaluationSettingsSchema.safeParse({
+        kind: "rule",
+        conditions: [{ type: "semantic_similarity", query: "", threshold: 0.5 }],
+      }).success,
+    ).toBe(false)
   })
 
   it("rejects invalid rules", () => {

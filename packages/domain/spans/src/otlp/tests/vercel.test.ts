@@ -1160,3 +1160,84 @@ describe("Vercel AI SDK v7 — LegacyOpenTelemetry ai.* spans (v7 ModelMessage s
     expect(userParts.some((p) => p.type === "uri" || p.type === "blob" || p.type === "file")).toBe(true)
   })
 })
+
+// Recent Vercel AI SDK v6 builds emit a GenAI compat layer *alongside* the native ai.*
+// attributes: the turn's input arrives as gen_ai.input.messages but the model's reply stays
+// only in ai.response.text — there is NO gen_ai.output.messages. The gen_ai parser wins
+// dispatch on the input key, so before the fix input rendered while output went blank
+// (tokens/cost/model still resolved). This locks the end-to-end recovery of output from the
+// Vercel attributes.
+describe("Vercel AI SDK v6 hybrid — gen_ai.input.messages + ai.response.text (no gen_ai.output.messages)", () => {
+  const SYSTEM = "You are a helpful assistant. Be concise."
+  const USER = "Summarize the key points."
+  const ANSWER = "Here is a concise summary of the key points."
+
+  function buildHybridTrace(): OtlpExportTraceServiceRequest {
+    return {
+      resourceSpans: [
+        {
+          resource: { attributes: [str("service.name", SERVICE_NAME)] },
+          scopeSpans: [
+            {
+              scope: { name: "ai", version: "6.0.0" },
+              spans: [
+                {
+                  traceId: TRACE_ID,
+                  spanId: "ab11ab11ab11ab11",
+                  name: "generate_content claude-sonnet-4-6",
+                  kind: 1,
+                  startTimeUnixNano: "1710590600000000000",
+                  endTimeUnixNano: "1710590601000000000",
+                  attributes: [
+                    str("ai.operationId", "ai.generateText.doGenerate"),
+                    str("ai.model.provider", "anthropic.messages"),
+                    str("ai.model.id", "claude-sonnet-4-6"),
+                    int("ai.usage.promptTokens", 3026),
+                    int("ai.usage.completionTokens", 139),
+                    // Native Vercel input, also present as the GenAI compat attribute.
+                    str("ai.prompt.messages", JSON.stringify([{ role: "user", content: USER }])),
+                    str("gen_ai.system_instructions", JSON.stringify([{ type: "text", content: SYSTEM }])),
+                    str(
+                      "gen_ai.input.messages",
+                      JSON.stringify([{ role: "user", parts: [{ type: "text", content: USER }] }]),
+                    ),
+                    // Output lives ONLY here — no gen_ai.output.messages is emitted.
+                    str("ai.response.text", ANSWER),
+                    str("ai.response.finishReason", "stop"),
+                    str("ai.response.id", "msg_hybrid_001"),
+                  ],
+                  status: { code: 1 },
+                },
+              ],
+            },
+          ],
+        },
+      ],
+    }
+  }
+
+  it("recovers assistant output from ai.response.text while keeping gen_ai input + usage", () => {
+    const { spans } = transformOtlpToSpans(buildHybridTrace(), CONTEXT)
+    const span = spans[0]
+    expect(span).toBeDefined()
+
+    // Envelope resolves regardless (this is why the trace looked populated but empty).
+    expect(span?.model).toBe("claude-sonnet-4-6")
+    expect(span?.provider).toBe("anthropic")
+    expect(span?.tokensInput).toBe(3026)
+    expect(span?.tokensOutput).toBe(139)
+
+    // Input parsed from gen_ai.input.messages.
+    const userMsg = span?.inputMessages.find((m) => m.role === "user")
+    expect(userMsg).toBeDefined()
+    expect((userMsg as { parts: { type: string; content?: string }[] }).parts[0]?.content).toBe(USER)
+    expect(span?.systemInstructions.some((p) => (p.content as string).includes("helpful assistant"))).toBe(true)
+
+    // Output recovered from ai.response.text (the fix).
+    expect(span?.outputMessages).toHaveLength(1)
+    const assistant = span?.outputMessages[0]
+    expect(assistant?.role).toBe("assistant")
+    const parts = (assistant as { parts: { type: string; content?: string }[] }).parts
+    expect((parts.find((p) => p.type === "text") as { content: string }).content).toBe(ANSWER)
+  })
+})

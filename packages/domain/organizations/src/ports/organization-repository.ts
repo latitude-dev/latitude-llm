@@ -16,5 +16,7 @@ export class OrganizationRepository extends Context.Service<
      * other entities.
      */
     countBySlug: (slug: string) => Effect.Effect<number, RepositoryError, SqlClient>
+    /** Temporary orgs past their claim deadline (`expires_at < cutoff`). Cross-org — cleanup reaper, admin client. */
+    listExpiredUnclaimed: (cutoff: Date) => Effect.Effect<Organization[], RepositoryError, SqlClient>
   }
 >()("@domain/organizations/OrganizationRepository") {}

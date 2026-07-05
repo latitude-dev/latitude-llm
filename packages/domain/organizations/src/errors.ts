@@ -114,3 +114,25 @@ export class CannotRemoveOwnerError extends Data.TaggedError("CannotRemoveOwnerE
   readonly httpStatus = 400
   readonly httpMessage = "Cannot remove the organization owner. Transfer ownership first."
 }
+
+export class ClaimTokenInvalidError extends Data.TaggedError("ClaimTokenInvalidError")<Record<never, never>> {
+  readonly httpStatus = 404
+  readonly httpMessage = "This claim link is invalid."
+}
+
+export class ClaimExpiredError extends Data.TaggedError("ClaimExpiredError")<Record<never, never>> {
+  readonly httpStatus = 410
+  readonly httpMessage = "This claim link has expired."
+}
+
+export class ClaimAlreadyUsedError extends Data.TaggedError("ClaimAlreadyUsedError")<Record<never, never>> {
+  readonly httpStatus = 409
+  readonly httpMessage = "This organization has already been claimed."
+}
+
+export class OrganizationNotClaimableError extends Data.TaggedError("OrganizationNotClaimableError")<
+  Record<never, never>
+> {
+  readonly httpStatus = 409
+  readonly httpMessage = "This organization can no longer be claimed."
+}

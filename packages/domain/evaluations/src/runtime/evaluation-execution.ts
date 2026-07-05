@@ -27,7 +27,8 @@ Score globals (use these, never construct the object by hand):
 
 Available globals:
 - session — the frozen session being evaluated (shape below). The only data input.
-- llm(prompt, { schema }) — async; asks an LLM to judge text. \`prompt\` is a string, \`schema\` MUST be a \`z\` schema (almost always \`z.object({ ... })\`). Returns the parsed object. Use this for subjective/semantic judgments; prefer deterministic checks on \`session\` when the rule is mechanical.
+- llm(prompt, { schema }) — async; asks an LLM to judge text. \`prompt\` is a string, \`schema\` MUST be a \`z\` schema (almost always \`z.object({ ... })\`). Returns the parsed object. Use this for nuanced judgments that need reasoning; prefer deterministic checks on \`session\` when the rule is mechanical.
+- semanticSimilarity(query) — async; returns a number in [0, 1], the highest cosine similarity between \`query\` and any message in this session (0 if the session has no messages). \`query\` is a short phrase describing the concept (e.g. "user is frustrated", "asking for a refund"). Cheap: it reuses precomputed message embeddings and embeds the query once. Prefer it over llm() for "is the conversation about X?" topic/theme checks; use llm() when the judgment needs reasoning beyond similarity. Typical thresholds: ~0.4 broad, ~0.55 balanced, ~0.7 strict.
 - parse(value, schema) — validates \`value\` against a \`z\` schema and returns it.
 - z — schema builder: z.string(), z.number(), z.boolean(), z.literal(v), z.enum([...]), z.array(el), z.object({...}), z.union([...]); chainable .optional(), .nullable(), .describe(s); strings/numbers support .min/.max, numbers also .int().
 
@@ -57,21 +58,6 @@ Rules:
 - Always end every reachable path with Score/Passed/Failed.
 - Keep it focused on the behavior the user described. Use llm() only when a deterministic check over session cannot express it.
 - When you call llm(), always pass a z.object schema and read fields off the returned object.`
-
-const MVP_SCRIPT_PREFIX = `const result = await llm(
-  \``
-
-const MVP_SCRIPT_SUFFIX = `\`,
-  { schema: z.object({ passed: z.boolean(), feedback: z.string() }) }
-)
-
-if (result.passed) {
-  return Passed(1, result.feedback)
-} else {
-  return Failed(0, result.feedback)
-}`
-
-export const EVALUATION_CONVERSATION_PLACEHOLDER = ["${", "session.conversation}"].join("")
 
 export interface EvaluationConversationMessage {
   readonly role: string
@@ -105,10 +91,6 @@ export const evaluationExecutionResultSchema = z.object({
   cost: z.number().int().nonnegative(),
 })
 export type EvaluationExecutionResult = z.infer<typeof evaluationExecutionResultSchema>
-
-// Wraps a judge prompt into the MVP sandbox script (one `llm()` call returning the present-verdict
-// Passed/Failed). The single source of the judge wrapper, shared by baseline + settings codegen.
-export const wrapPromptAsEvaluationScript = (prompt: string): string => MVP_SCRIPT_PREFIX + prompt + MVP_SCRIPT_SUFFIX
 
 export const toEvaluationConversationMessages = (
   allMessages: Parameters<typeof formatGenAIConversation>[0],

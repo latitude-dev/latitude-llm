@@ -44,6 +44,18 @@ export const DEFAULT_LLM_SCRIPT_LIMITS: ScriptRunLimits = {
 }
 
 /**
+ * Intermediate lane: `embedding`-capability runs read cached vectors and embed
+ * only the query on a miss — fast but network-bound, so well above the 1s pure
+ * lane yet far below the 120s `llm` lane.
+ */
+export const DEFAULT_EMBEDDING_SCRIPT_LIMITS: ScriptRunLimits = {
+  wallTimeMs: 15_000,
+  cpuTicks: 10_000,
+  memoryBytes: DEFAULT_SCRIPT_MEMORY_BYTES,
+  stackSizeBytes: DEFAULT_SCRIPT_STACK_SIZE_BYTES,
+}
+
+/**
  * Default membership threshold: `matched = result.value >= threshold`.
  * Per-signal rows override it (`signals.threshold`); evaluations use the
  * default until the signals rollout introduces per-owner knobs.

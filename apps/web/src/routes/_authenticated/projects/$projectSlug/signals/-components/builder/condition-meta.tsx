@@ -1,4 +1,9 @@
-import type { EvaluationRuleCondition, MetricField } from "@domain/shared"
+import {
+  type EvaluationRuleCondition,
+  type MetricField,
+  SEMANTIC_SIMILARITY_PRESETS,
+  type SemanticSimilarityPreset,
+} from "@domain/shared"
 import {
   Button,
   Combobox,
@@ -11,6 +16,7 @@ import {
   FormField,
   Input,
   Select,
+  Slider,
   SwitchInput,
   Text,
 } from "@repo/ui"
@@ -48,6 +54,22 @@ const LENGTH_UNIT_OPTIONS: ReadonlyArray<{ label: string; value: ConditionOf<"ou
   { label: "Characters", value: "chars" },
   { label: "Words", value: "words" },
 ]
+
+const SEMANTIC_PRESET_OPTIONS: ReadonlyArray<{ label: string; value: SemanticSimilarityPreset | "custom" }> = [
+  { label: "Broad", value: "broad" },
+  { label: "Balanced", value: "balanced" },
+  { label: "Strict", value: "strict" },
+]
+// Presets are calibrated for the default `gte` comparison ("at least this similar"); under any other
+// operator the same threshold means something different, so a non-`gte` condition is always "custom".
+const presetForThreshold = (threshold: number, operator: ComparisonOp): SemanticSimilarityPreset | "custom" => {
+  if (operator !== "gte") return "custom"
+  return (
+    SEMANTIC_PRESET_OPTIONS.find(
+      (option) => SEMANTIC_SIMILARITY_PRESETS[option.value as SemanticSimilarityPreset] === threshold,
+    )?.value ?? "custom"
+  )
+}
 
 const JSON_EXPECTATION_OPTIONS: ReadonlyArray<{ label: string; value: ConditionOf<"json_output">["expectation"] }> = [
   { label: "Valid JSON", value: "valid" },
@@ -481,6 +503,86 @@ const finish_reason: ConditionTypeMeta<"finish_reason"> = {
   ),
 }
 
+function SemanticSimilarityEditor({ condition, onChange }: EditorProps<"semantic_similarity">) {
+  const preset = presetForThreshold(condition.threshold, condition.operator)
+  const [advanced, setAdvanced] = useState(preset === "custom")
+  const presetOptions =
+    preset === "custom"
+      ? [...SEMANTIC_PRESET_OPTIONS, { label: "Custom", value: "custom" as const }]
+      : SEMANTIC_PRESET_OPTIONS
+
+  return (
+    <div className="flex flex-col gap-3">
+      <Input
+        label="Query"
+        placeholder="e.g. frustration"
+        value={condition.query}
+        onChange={(event) => onChange({ ...condition, query: event.target.value })}
+      />
+      <Select
+        name="semantic-similarity-preset"
+        label="Sensitivity"
+        options={[...presetOptions]}
+        value={preset}
+        onChange={(value) => {
+          if (value === "custom") return
+          // Picking a preset resets to a clean gte comparison, so collapse the advanced panel too —
+          // otherwise the operator/slider stay visible after the user chose a preset. Presets imply
+          // the default `gte`, so normalize the operator (a leftover `lt`/`gt` would keep the preset's
+          // threshold but invert its meaning).
+          setAdvanced(false)
+          onChange({ ...condition, operator: "gte", threshold: SEMANTIC_SIMILARITY_PRESETS[value] })
+        }}
+      />
+      <SwitchInput label="Advanced" checked={advanced} onCheckedChange={setAdvanced} />
+      {advanced ? (
+        <div className="flex flex-col gap-3">
+          <Select
+            name="semantic-similarity-operator"
+            label="Operator"
+            options={[...COMPARISON_OPTIONS]}
+            value={condition.operator}
+            onChange={(operator) => onChange({ ...condition, operator })}
+          />
+          <div className="flex flex-col gap-2">
+            <div className="flex items-baseline justify-between">
+              <Text.H6 color="foregroundMuted">Threshold</Text.H6>
+              <Text.H5M>{condition.threshold.toFixed(2)}</Text.H5M>
+            </div>
+            <Slider
+              min={0}
+              max={1}
+              step={0.01}
+              value={[condition.threshold]}
+              onValueChange={(values) => onChange({ ...condition, threshold: values[0] ?? 0 })}
+            />
+          </div>
+        </div>
+      ) : null}
+    </div>
+  )
+}
+
+const semantic_similarity: ConditionTypeMeta<"semantic_similarity"> = {
+  label: "Semantic similarity",
+  description: "Match when a message is semantically close to a query (uses existing embeddings).",
+  create: () => ({
+    type: "semantic_similarity",
+    query: "",
+    operator: "gte",
+    threshold: SEMANTIC_SIMILARITY_PRESETS.balanced,
+  }),
+  summarize: (c) => {
+    const preset = presetForThreshold(c.threshold, c.operator)
+    const sensitivity =
+      preset === "custom"
+        ? `${COMPARISON_SYMBOL[c.operator]} ${c.threshold}`
+        : (SEMANTIC_PRESET_OPTIONS.find((option) => option.value === preset)?.label ?? preset)
+    return `Similar to "${c.query}" (${sensitivity})`
+  },
+  Editor: SemanticSimilarityEditor,
+}
+
 export const CONDITION_META: { readonly [K in ConditionType]: ConditionTypeMeta<K> } = {
   text_match,
   empty_output,
@@ -492,10 +594,12 @@ export const CONDITION_META: { readonly [K in ConditionType]: ConditionTypeMeta<
   tool_call_count,
   error,
   finish_reason,
+  semantic_similarity,
 }
 
 export const CONDITION_TYPE_ORDER: readonly ConditionType[] = [
   "text_match",
+  "semantic_similarity",
   "empty_output",
   "output_length",
   "json_output",
@@ -526,6 +630,8 @@ export const isConditionValid = (c: EvaluationRuleCondition): boolean => {
       return c.toolName.trim().length > 0
     case "finish_reason":
       return c.value.trim().length > 0
+    case "semantic_similarity":
+      return c.query.trim().length > 0 && c.threshold >= 0 && c.threshold <= 1
     case "empty_output":
     case "json_output":
     case "tool_failed":

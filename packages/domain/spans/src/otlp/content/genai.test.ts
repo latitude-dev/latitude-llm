@@ -547,4 +547,61 @@ describe("parseContent (GenAI current — gen_ai.{input,output}.messages)", () =
       expect((parts.find((p) => p.type === "text") as { content: string }).content).toBe("It is sunny.")
     })
   })
+
+  // Vercel AI SDK v6 emits gen_ai.input.messages (so this parser wins dispatch) but keeps the
+  // model's turn only in ai.response.* — no gen_ai.output.messages. Regression for output going
+  // blank while input still rendered.
+  describe("Vercel AI SDK v6 hybrid — gen_ai input + ai.response output", () => {
+    it("recovers output from ai.response.text when gen_ai.output.messages is absent", () => {
+      const result = parseContent([
+        str(
+          "gen_ai.input.messages",
+          JSON.stringify([{ role: "user", parts: [{ type: "text", content: "Summarize this lead." }] }]),
+        ),
+        str("ai.prompt.messages", JSON.stringify([{ role: "user", content: "Summarize this lead." }])),
+        str("ai.response.text", "Here is the summary."),
+      ])
+
+      expect(result.inputMessages).toEqual([
+        { role: "user", parts: [{ type: "text", content: "Summarize this lead." }] },
+      ])
+      expect(result.outputMessages).toEqual([
+        { role: "assistant", parts: [{ type: "text", content: "Here is the summary." }] },
+      ])
+    })
+
+    it("recovers tool-call output from ai.response.toolCalls when gen_ai.output.messages is absent", () => {
+      const result = parseContent([
+        str(
+          "gen_ai.input.messages",
+          JSON.stringify([{ role: "user", parts: [{ type: "text", content: "weather in SF?" }] }]),
+        ),
+        str(
+          "ai.response.toolCalls",
+          JSON.stringify([{ toolCallId: "call_1", toolName: "get_weather", input: { city: "SF" } }]),
+        ),
+      ])
+
+      const assistant = result.outputMessages.find((m) => m.role === "assistant")
+      expect(assistant).toBeDefined()
+      const parts = (assistant as { parts: { type: string; name?: string }[] }).parts
+      const toolCall = parts.find((p) => p.type === "tool_call")
+      expect((toolCall as { name: string }).name).toBe("get_weather")
+    })
+
+    it("prefers a content-bearing gen_ai.output.messages over the Vercel fallback", () => {
+      const result = parseContent([
+        str("gen_ai.input.messages", JSON.stringify([{ role: "user", parts: [{ type: "text", content: "hi" }] }])),
+        str(
+          "gen_ai.output.messages",
+          JSON.stringify([{ role: "assistant", parts: [{ type: "text", content: "canonical output" }] }]),
+        ),
+        str("ai.response.text", "stale vercel output"),
+      ])
+
+      expect(result.outputMessages).toEqual([
+        { role: "assistant", parts: [{ type: "text", content: "canonical output" }] },
+      ])
+    })
+  })
 })

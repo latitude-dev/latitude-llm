@@ -6,8 +6,16 @@ import typing
 from importlib import import_module
 
 if typing.TYPE_CHECKING:
+    from .query_spans_body_order_by import QuerySpansBodyOrderBy
+    from .query_spans_body_order_by_direction import QuerySpansBodyOrderByDirection
+    from .query_spans_body_order_by_field import QuerySpansBodyOrderByField
     from .query_spans_body_range import QuerySpansBodyRange
-_dynamic_imports: typing.Dict[str, str] = {"QuerySpansBodyRange": ".query_spans_body_range"}
+_dynamic_imports: typing.Dict[str, str] = {
+    "QuerySpansBodyOrderBy": ".query_spans_body_order_by",
+    "QuerySpansBodyOrderByDirection": ".query_spans_body_order_by_direction",
+    "QuerySpansBodyOrderByField": ".query_spans_body_order_by_field",
+    "QuerySpansBodyRange": ".query_spans_body_range",
+}
 
 
 def __getattr__(attr_name: str) -> typing.Any:
@@ -31,4 +39,9 @@ def __dir__():
     return sorted(lazy_attrs)
 
 
-__all__ = ["QuerySpansBodyRange"]
+__all__ = [
+    "QuerySpansBodyOrderBy",
+    "QuerySpansBodyOrderByDirection",
+    "QuerySpansBodyOrderByField",
+    "QuerySpansBodyRange",
+]

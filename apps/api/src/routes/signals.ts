@@ -962,7 +962,7 @@ const deleteSignal = signalEndpoint({
 export const createSignalsRoutes = () => {
   const app = new OpenAPIHono<OrganizationScopedEnv>()
   listSignals.mountHttp(app, createTierRateLimiter("low"))
-  createSignal.mountHttp(app, createTierRateLimiter("critical"))
+  createSignal.mountHttp(app, createTierRateLimiter("ultra"))
   updateSignal.mountHttp(app, createTierRateLimiter("medium"))
   deleteSignal.mountHttp(app, createTierRateLimiter("medium"))
   getSignalAnalytics.mountHttp(app, createTierRateLimiter("medium"))
@@ -971,8 +971,8 @@ export const createSignalsRoutes = () => {
   listSignalTraces.mountHttp(app, createTierRateLimiter("medium"))
   muteSignals.mountHttp(app, createTierRateLimiter("medium"))
   unmuteSignals.mountHttp(app, createTierRateLimiter("medium"))
-  monitorSignal.mountHttp(app, createTierRateLimiter("critical"))
+  monitorSignal.mountHttp(app, createTierRateLimiter("ultra"))
   unmonitorSignal.mountHttp(app, createTierRateLimiter("medium"))
-  exportSignals.mountHttp(app, createTierRateLimiter("critical"))
+  exportSignals.mountHttp(app, createTierRateLimiter("ultra"))
   return app
 }

@@ -1,4 +1,6 @@
+export { createFakeMessageEmbeddingRepository } from "./fake-message-embedding-repository.ts"
 export { createFakeSessionRepository } from "./fake-session-repository.ts"
 export { createFakeSpanRepository } from "./fake-span-repository.ts"
 export { createFakeTraceRepository } from "./fake-trace-repository.ts"
+export { createFakeTraceSearchRepository } from "./fake-trace-search-repository.ts"
 export { stubListSpan } from "./stub-list-span.ts"
