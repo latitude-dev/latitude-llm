@@ -2,6 +2,22 @@
 
 ## Unreleased
 
+## v0.3.34 - 2026-07-05
+
+### Reliability
+
+- Resolved `quickjs-emscripten` at API runtime instead of bundling it, so tsdown no longer inlines the emscripten glue and signals script runs no longer die with "require is not a function" (ref: #3840).
+- Made Cursor agent-dispatch jobs idempotent and retryable: the Cursor adapter now sends the `agentId` as an idempotency key so retries and 409 conflicts dedupe instead of spawning duplicate agents/PRs, send jobs gained attempts/backoff, and claimed ledger rows are marked failed on final transport exhaustion (ref: #3808).
+- Bounded session span-list reads to stop ClickHouse OOMs: `listBySessionId` no longer returns the dynamic attribute maps, the membership coalesce uses bare column equalities so the session/trace bloom-filter skip indexes prune granules, and a 4 GB single-threaded formatting cap is applied to all multi-span reads (ref: #3850).
+
+### Models
+
+- Updated the bundled `models.dev` data snapshot (ref: #3772).
+
+### Infrastructure
+
+- Pointed the `latitude.so` apex and `www` at Vercel and added DNS records for public pages (ref: 26ee482, bd01561).
+
 ## v0.3.33 - 2026-07-04
 
 ### Web
