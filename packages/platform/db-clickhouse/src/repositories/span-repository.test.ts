@@ -158,6 +158,140 @@ describe("SpanRepository", () => {
     })
   })
 
+  describe("listBySessionId", () => {
+    const SESSION_ID = SessionId("session-list")
+    const HEX32_SESSION_ID = SessionId("99999999999999999999999999999999")
+    const ORPHAN_TRACE = TraceId("bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb")
+
+    const insertListFixture = () =>
+      runCh(
+        insertJsonEachRow(ch.client, "spans", [
+          makeSpanRow({
+            session_id: SESSION_ID,
+            span_id: "aaaa000000000001",
+            name: "older",
+            attr_string: { "ai.prompt": "huge-blob" },
+            attr_int: { retries: 2 },
+            resource_string: { host: "h1" },
+            ingested_at: "2026-01-01 00:00:00.000",
+          }),
+          makeSpanRow({
+            session_id: SESSION_ID,
+            span_id: "aaaa000000000001",
+            name: "newer",
+            attr_string: { "ai.prompt": "huge-blob" },
+            ingested_at: "2026-01-01 00:00:01.000",
+          }),
+          makeSpanRow({
+            session_id: "session-other",
+            trace_id: TraceId("cccccccccccccccccccccccccccccccc"),
+            span_id: "cccc000000000001",
+            name: "other-session",
+          }),
+          // Orphan span whose trace id doubles as its session id.
+          makeSpanRow({
+            session_id: "",
+            trace_id: ORPHAN_TRACE,
+            span_id: "dddd000000000001",
+            name: "orphan",
+          }),
+          // Conversation session whose id happens to be 32 chars long.
+          makeSpanRow({
+            session_id: HEX32_SESSION_ID,
+            trace_id: TraceId("eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee"),
+            span_id: "eeee000000000001",
+            name: "hex32-named-session",
+          }),
+        ]),
+      )
+
+    it("returns the session's deduped spans with empty attribute maps", async () => {
+      await insertListFixture()
+
+      const spans = await runCh(
+        repo.listBySessionId({ organizationId: ORG_ID, projectId: PROJECT_ID, sessionId: SESSION_ID }),
+      )
+
+      expect(spans.map((span) => span.name)).toEqual(["newer"])
+      expect(spans[0]?.attrString).toEqual({})
+      expect(spans[0]?.attrInt).toEqual({})
+      expect(spans[0]?.attrFloat).toEqual({})
+      expect(spans[0]?.attrBool).toEqual({})
+      expect(spans[0]?.resourceString).toEqual({})
+
+      const detail = await runCh(
+        repo.findBySpanId({
+          organizationId: ORG_ID,
+          projectId: PROJECT_ID,
+          traceId: TRACE_ID,
+          spanId: SpanId("aaaa000000000001"),
+        }),
+      )
+      expect(detail.attrString).toEqual({ "ai.prompt": "huge-blob" })
+    })
+
+    it("matches orphan single-trace sessions keyed by trace id", async () => {
+      await insertListFixture()
+
+      const spans = await runCh(
+        repo.listBySessionId({
+          organizationId: ORG_ID,
+          projectId: PROJECT_ID,
+          sessionId: SessionId(ORPHAN_TRACE as string),
+        }),
+      )
+
+      expect(spans.map((span) => span.name)).toEqual(["orphan"])
+    })
+
+    it("matches a conversation session whose id is 32 chars long", async () => {
+      await insertListFixture()
+
+      const spans = await runCh(
+        repo.listBySessionId({ organizationId: ORG_ID, projectId: PROJECT_ID, sessionId: HEX32_SESSION_ID }),
+      )
+
+      expect(spans.map((span) => span.name)).toEqual(["hex32-named-session"])
+    })
+
+    it("matches nothing for an empty session id (never the orphan spans)", async () => {
+      await insertListFixture()
+
+      const spans = await runCh(
+        repo.listBySessionId({ organizationId: ORG_ID, projectId: PROJECT_ID, sessionId: SessionId("") }),
+      )
+
+      expect(spans).toEqual([])
+    })
+
+    it("scopes by the optional start-time window", async () => {
+      await insertListFixture()
+      await runCh(
+        insertJsonEachRow(ch.client, "spans", [
+          makeSpanRow({
+            session_id: SESSION_ID,
+            span_id: "aaaa000000000002",
+            name: "outside-window",
+            start_time: "2026-02-01 00:00:00.000000000",
+            end_time: "2026-02-01 00:00:01.000000000",
+          }),
+        ]),
+      )
+
+      const spans = await runCh(
+        repo.listBySessionId({
+          organizationId: ORG_ID,
+          projectId: PROJECT_ID,
+          sessionId: SESSION_ID,
+          startTimeFrom: new Date("2026-01-01T00:00:00.000Z"),
+          startTimeTo: new Date("2026-01-01T00:00:01.000Z"),
+        }),
+      )
+
+      expect(spans.map((span) => span.name)).toEqual(["newer"])
+    })
+  })
+
   describe("listByProjectId", () => {
     it("uses direct time predicates and dedupes before pagination", async () => {
       await runCh(
