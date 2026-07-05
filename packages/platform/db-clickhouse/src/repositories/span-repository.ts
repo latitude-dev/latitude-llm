@@ -64,8 +64,9 @@ const INT_TO_STATUS_CODE: Record<number, SpanStatusCode> = {
   2: "error",
 }
 
-// Columns selected for list/trace queries (excludes large blob payloads).
-const LIST_COLUMNS = `
+// Columns selected for list/trace queries, minus the dynamic attribute maps
+// (excludes large blob payloads).
+const LIST_COLUMNS_LEAN = `
   organization_id, project_id, session_id, user_id, user_email, trace_id, span_id,
   parent_span_id, api_key_id, simulation_id, start_time, end_time,
   name, service_name, kind, status_code, status_message,
@@ -79,10 +80,30 @@ const LIST_COLUMNS = `
   cost_total_microcents, cost_is_estimated,
   time_to_first_token_ns, is_streaming,
   response_id, finish_reasons,
-  attr_string, attr_int, attr_float, attr_bool,
-  resource_string, scope_name, scope_version,
+  scope_name, scope_version,
   ingested_at
 `
+
+// Dynamic attribute maps are unbounded user data — instrumentors like the
+// Vercel AI SDK put the full conversation into `ai.prompt*` attributes, so
+// `attr_string` alone can reach GiBs per session. Only reads whose consumers
+// render attributes may select these.
+const ATTR_MAP_COLUMNS = `
+  attr_string, attr_int, attr_float, attr_bool, resource_string
+`
+
+// Same row shape with the maps as empty literals — ClickHouse never reads
+// them from storage.
+const EMPTY_ATTR_MAP_COLUMNS = `
+  CAST(map(), 'Map(String, String)') AS attr_string,
+  CAST(map(), 'Map(String, Int64)') AS attr_int,
+  CAST(map(), 'Map(String, Float64)') AS attr_float,
+  CAST(map(), 'Map(String, UInt8)') AS attr_bool,
+  CAST(map(), 'Map(String, String)') AS resource_string
+`
+
+// Columns selected for list/trace queries (excludes large blob payloads).
+const LIST_COLUMNS = `${LIST_COLUMNS_LEAN}, ${ATTR_MAP_COLUMNS}`
 
 // `LIST_COLUMNS` plus the large payload columns a `SpanDetail` needs. Selected
 // explicitly (never `SELECT *`) so reads project exactly the typed row and skip
@@ -363,6 +384,35 @@ const toInsertRow = (span: SpanDetail) => ({
   ingested_at: toClickhouseDateTime(span.ingestedAt),
 })
 
+// Session membership mirrors the sessions_mv grouping key
+// (`coalesce(nullIf(session_id, ''), toString(trace_id))`): conversation-id
+// sessions match on session_id, orphan single-trace sessions (empty
+// session_id) match on their trace_id. Split into bare column equalities —
+// the coalesce form wraps both columns in functions, defeating the
+// idx_session_id / idx_trace_id bloom-filter skip indexes, so it scanned
+// every granule of the org/project. Orphan session ids are 32-hex trace ids;
+// any other length cannot match a FixedString(32) trace_id, so the trace arm
+// is dropped (toFixedString on a longer value would throw).
+const sessionMembership = (sessionId: string): { clause: string; params: Record<string, string> } => {
+  if (sessionId.length === 0) return { clause: "1 = 0", params: {} }
+  if (sessionId.length === 32) {
+    return {
+      clause: "(session_id = {sessionId:String} OR (session_id = '' AND trace_id = {sessionTraceId:FixedString(32)}))",
+      params: { sessionId, sessionTraceId: sessionId },
+    }
+  }
+  return { clause: "session_id = {sessionId:String}", params: { sessionId } }
+}
+
+// Defense-in-depth for multi-span reads: single-threaded formatting + a
+// per-query memory cap so a pathological query fails its own request
+// (retryable RepositoryError) rather than tripping the server-wide
+// OvercommitTracker and killing unrelated tenants' queries.
+const BOUNDED_READ_SETTINGS = {
+  output_format_parallel_formatting: 0,
+  max_memory_usage: "4000000000",
+} as const
+
 // `listByProjectId` keyset pagination. The sort column is an enum → fixed column
 // (never user-interpolated raw SQL); the cursor param is typed to match it so the
 // tuple comparison is valid. Only `start_time` is in the table's primary key
@@ -430,6 +480,7 @@ export const SpanRepositoryLive = Layer.effect(
                 ...(startTimeTo ? { startTimeTo: toClickhouseDateTime(startTimeTo) } : {}),
               },
               format: "JSONEachRow",
+              clickhouse_settings: BOUNDED_READ_SETTINGS,
             })
             return result.json<SpanListRow>()
           })
@@ -496,6 +547,7 @@ export const SpanRepositoryLive = Layer.effect(
                   : {}),
               },
               format: "JSONEachRow",
+              clickhouse_settings: BOUNDED_READ_SETTINGS,
             })
             return result.json<SpanListRow>()
           })
@@ -531,20 +583,23 @@ export const SpanRepositoryLive = Layer.effect(
         const startToClause = startTimeTo
           ? "AND start_time <= parseDateTime64BestEffort({startTimeTo:String}, 9, 'UTC')"
           : ""
+        const membership = sessionMembership(sessionId as string)
         return yield* chSqlClient
           .query(async (client) => {
             const result = await client.query({
-              // Session membership mirrors the sessions_mv grouping key exactly:
-              // conversation-id sessions match on session_id, orphan single-trace
-              // sessions (empty session_id) match on toString(trace_id). Same
-              // `LIMIT 1 BY span_id` dedupe as listByTraceId.
-              query: `SELECT ${LIST_COLUMNS}
+              // Same `LIMIT 1 BY span_id` dedupe as listByTraceId. The attr maps
+              // come back as empty literals: a session is unbounded in span count
+              // and `attr_string` alone can hold the full conversation per span
+              // (Vercel AI SDK `ai.prompt*`), so reading them here has OOMed the
+              // server on long agent sessions. No session-level consumer renders
+              // attributes — the span detail view reads them via findBySpanId.
+              query: `SELECT ${LIST_COLUMNS_LEAN}, ${EMPTY_ATTR_MAP_COLUMNS}
                     FROM (
-                      SELECT ${LIST_COLUMNS}
+                      SELECT ${LIST_COLUMNS_LEAN}
                       FROM spans
                       WHERE organization_id = {organizationId:String}
                         AND project_id = {projectId:String}
-                        AND coalesce(nullIf(session_id, ''), toString(trace_id)) = {sessionId:String}
+                        AND ${membership.clause}
                         ${startFromClause}
                         ${startToClause}
                       ORDER BY span_id, ingested_at DESC
@@ -554,11 +609,12 @@ export const SpanRepositoryLive = Layer.effect(
               query_params: {
                 organizationId: organizationId as string,
                 projectId: projectId as string,
-                sessionId: sessionId as string,
+                ...membership.params,
                 ...(startTimeFrom ? { startTimeFrom: toClickhouseDateTime(startTimeFrom) } : {}),
                 ...(startTimeTo ? { startTimeTo: toClickhouseDateTime(startTimeTo) } : {}),
               },
               format: "JSONEachRow",
+              clickhouse_settings: BOUNDED_READ_SETTINGS,
             })
             return result.json<SpanListRow>()
           })
@@ -575,17 +631,18 @@ export const SpanRepositoryLive = Layer.effect(
     }) =>
       Effect.gen(function* () {
         const chSqlClient = (yield* ChSqlClient) as ChSqlClientShape<ClickHouseClient>
+        const membership = sessionMembership(sessionId as string)
         return yield* chSqlClient
           .query(async (client) => {
             const result = await client.query({
-              // Session membership mirrors sessions_mv (see listBySessionId); only execute_tool spans.
+              // Session membership mirrors sessions_mv (see sessionMembership); only execute_tool spans.
               query: `SELECT trace_id, tool_name, tool_input, tool_output, status_code, error_type, duration_ns
                     FROM (
                       SELECT span_id, trace_id, tool_name, tool_input, tool_output, status_code, error_type, duration_ns, start_time, ingested_at
                       FROM spans
                       WHERE organization_id = {organizationId:String}
                         AND project_id = {projectId:String}
-                        AND coalesce(nullIf(session_id, ''), toString(trace_id)) = {sessionId:String}
+                        AND ${membership.clause}
                         AND operation = 'execute_tool'
                       ORDER BY span_id, ingested_at DESC
                       LIMIT 1 BY span_id
@@ -594,9 +651,10 @@ export const SpanRepositoryLive = Layer.effect(
               query_params: {
                 organizationId: organizationId as string,
                 projectId: projectId as string,
-                sessionId: sessionId as string,
+                ...membership.params,
               },
               format: "JSONEachRow",
+              clickhouse_settings: BOUNDED_READ_SETTINGS,
             })
             return result.json<SessionToolSpanRow>()
           })
@@ -670,15 +728,10 @@ export const SpanRepositoryLive = Layer.effect(
                 limit,
               },
               format: "JSONEachRow",
-              // Defense-in-depth: single-threaded formatting + a per-query memory cap so a
-              // pathological page fails its own job (retryable RepositoryError → BullMQ retry
-              // → recorded failed run) rather than tripping the server-wide OvercommitTracker
-              // and killing unrelated tenants' queries. With late materialization a window
-              // peaks well under this, so it should never fire.
-              clickhouse_settings: {
-                output_format_parallel_formatting: 0,
-                max_memory_usage: "4000000000",
-              },
+              // With late materialization a window peaks well under the cap, so it
+              // should never fire; a pathological page becomes a BullMQ retry →
+              // recorded failed run.
+              clickhouse_settings: BOUNDED_READ_SETTINGS,
             })
             return result.json<SpanDetailRow>()
           })
@@ -751,6 +804,7 @@ export const SpanRepositoryLive = Layer.effect(
                   limit,
                 },
                 format: "JSONEachRow",
+                clickhouse_settings: BOUNDED_READ_SETTINGS,
               })
               return result.json<SpanDetailRow>()
             })
@@ -880,6 +934,7 @@ export const SpanRepositoryLive = Layer.effect(
                   traceId,
                 },
                 format: "JSONEachRow",
+                clickhouse_settings: BOUNDED_READ_SETTINGS,
               })
               return result.json<SpanMessagesRow>()
             })
@@ -892,6 +947,7 @@ export const SpanRepositoryLive = Layer.effect(
       findMessagesForSession: ({ organizationId, projectId, sessionId, startTimeFrom, startTimeTo }) =>
         Effect.gen(function* () {
           const chSqlClient = (yield* ChSqlClient) as ChSqlClientShape<ClickHouseClient>
+          const membership = sessionMembership(sessionId as string)
           return yield* chSqlClient
             .query(async (client) => {
               const result = await client.query({
@@ -903,7 +959,7 @@ export const SpanRepositoryLive = Layer.effect(
                           AND project_id = {projectId:String}
                           AND start_time >= {startTimeFrom:DateTime64(9, 'UTC')}
                           AND start_time <= {startTimeTo:DateTime64(9, 'UTC')}
-                          AND coalesce(nullIf(session_id, ''), toString(trace_id)) = {sessionId:String}
+                          AND ${membership.clause}
                           AND operation IN ('chat', 'text_completion', 'generate_content', 'execute_tool')
                         ORDER BY span_id, ingested_at DESC
                         LIMIT 1 BY span_id
@@ -914,9 +970,10 @@ export const SpanRepositoryLive = Layer.effect(
                   projectId: projectId as string,
                   startTimeFrom: toClickhouseDateTime(startTimeFrom),
                   startTimeTo: toClickhouseDateTime(startTimeTo),
-                  sessionId: sessionId as string,
+                  ...membership.params,
                 },
                 format: "JSONEachRow",
+                clickhouse_settings: BOUNDED_READ_SETTINGS,
               })
               return result.json<SpanMessagesRow>()
             })
