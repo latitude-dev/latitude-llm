@@ -305,3 +305,59 @@ describe("transformOtlpToSpans trace ID normalization", () => {
     expect(spans[0]?.traceId).toBe("0af7651916cd43dd8448eb211c80319c")
   })
 })
+
+describe("transformOtlpToSpans oversized ID rejection", () => {
+  const ctx = {
+    ...baseContext,
+    defaultProjectId: "proj-default",
+    projectIdBySlug: new Map<string, string>(),
+  }
+
+  const buildOneSpan = (traceId: string, spanId: string): OtlpExportTraceServiceRequest => ({
+    resourceSpans: [
+      {
+        resource: { attributes: [str("service.name", "test")] },
+        scopeSpans: [
+          {
+            scope: { name: "scope", version: "1" },
+            spans: [
+              {
+                traceId,
+                spanId,
+                name: "n1",
+                startTimeUnixNano: "1710590400000000000",
+                endTimeUnixNano: "1710590401000000000",
+                attributes: [],
+                status: { code: 1 },
+              },
+            ],
+          },
+        ],
+      },
+    ],
+  })
+
+  it("rejects a span whose trace ID exceeds the ClickHouse FixedString(32) bound", () => {
+    const { spans, rejectedSpans } = transformOtlpToSpans(buildOneSpan("a".repeat(33), "n1"), ctx)
+    expect(spans).toHaveLength(0)
+    expect(rejectedSpans).toBe(1)
+  })
+
+  it("rejects a span whose span ID exceeds the ClickHouse FixedString(16) bound", () => {
+    const { spans, rejectedSpans } = transformOtlpToSpans(buildOneSpan(TRACE, "a".repeat(17)), ctx)
+    expect(spans).toHaveLength(0)
+    expect(rejectedSpans).toBe(1)
+  })
+
+  it("keeps a short, arbitrary span ID unaffected (ClickHouse zero-pads short FixedString values)", () => {
+    const { spans, rejectedSpans } = transformOtlpToSpans(buildOneSpan(TRACE, "n1"), ctx)
+    expect(spans).toHaveLength(1)
+    expect(rejectedSpans).toBe(0)
+  })
+
+  it("rejects a 40-char hex trace ID (e.g. a non-conformant SHA-1-style exporter)", () => {
+    const { spans, rejectedSpans } = transformOtlpToSpans(buildOneSpan("a".repeat(40), "n1"), ctx)
+    expect(spans).toHaveLength(0)
+    expect(rejectedSpans).toBe(1)
+  })
+})

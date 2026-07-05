@@ -1,4 +1,14 @@
-import { ExternalUserId, OrganizationId, ProjectId, SessionId, SimulationId, SpanId, TraceId } from "@domain/shared"
+import {
+  ExternalUserId,
+  OrganizationId,
+  ProjectId,
+  SessionId,
+  SimulationId,
+  SPAN_ID_LENGTH,
+  SpanId,
+  TRACE_ID_LENGTH,
+  TraceId,
+} from "@domain/shared"
 import type { SpanDetail, SpanKind, SpanStatusCode } from "../entities/span.ts"
 import { stringAttr } from "./attributes.ts"
 import { parseContent } from "./content/index.ts"
@@ -247,6 +257,13 @@ export function transformOtlpToSpans(
         if (isDroppedSpan(scopeName, span.name ?? "")) continue
         const projectId = resolveSpanProjectId(span.attributes ?? [], resourceAttrs, context)
         if (!projectId) {
+          rejectedSpans++
+          continue
+        }
+        // ClickHouse stores these as FixedString(32)/FixedString(16); an oversized value (a
+        // non-conformant exporter, or a bytes-typed protobuf field wider than 16/8 bytes) fails
+        // the whole batch insert, not just this row.
+        if (span.traceId.replace(/-/g, "").length > TRACE_ID_LENGTH || span.spanId.length > SPAN_ID_LENGTH) {
           rejectedSpans++
           continue
         }
