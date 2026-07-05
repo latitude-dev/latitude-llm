@@ -56,7 +56,6 @@
     "effect": "catalog:",
     "quickjs-emscripten": "catalog:",
     "hono": "catalog:",
-    "quickjs-emscripten": "catalog:",
     "tsx": "catalog:",
     "voyageai": "catalog:",
     "zod": "catalog:"
