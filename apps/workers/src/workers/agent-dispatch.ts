@@ -5,6 +5,8 @@ import {
   AgentDispatchTraceReader,
   type AgentDispatchTrigger,
   agentDispatchContextSchema,
+  DISPATCH_ERROR_CATEGORIES,
+  type DispatchErrorCategory,
   requestAgentDispatchUseCase,
   sendAgentDispatchUseCase,
 } from "@domain/agent-dispatch"
@@ -35,6 +37,12 @@ const logger = createLogger("agent-dispatch")
 
 const SEND_JOB_ATTEMPTS = 4
 const SEND_JOB_BACKOFF = { type: "exponential" as const, delayMs: 30_000 }
+
+// BullMQ flattens failures to a plain Error, so the adapter reason is recovered
+// from DispatchAdapterError's "(reason)" message; anything else falls back to
+// "transport" with the real cause preserved in errorDetail.
+export const finalFailureCategory = (error: Error): DispatchErrorCategory =>
+  DISPATCH_ERROR_CATEGORIES.find((category) => error.message.includes(`(${category})`)) ?? "transport"
 
 const resolveWebAppUrl = (): string => {
   const webUrl = Effect.runSync(parseEnv("LAT_WEB_URL", "string", "http://localhost:3000"))
@@ -200,7 +208,7 @@ export const createAgentDispatchWorker = ({
             const repo = yield* AgentDispatchRepository
             yield* repo.markFailedByIdempotencyKey({
               idempotencyKey: payload.idempotencyKey,
-              errorCategory: "transport",
+              errorCategory: finalFailureCategory(error),
               errorDetail: error.message,
             })
           }).pipe(

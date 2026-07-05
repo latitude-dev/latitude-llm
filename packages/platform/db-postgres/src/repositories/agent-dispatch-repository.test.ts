@@ -103,5 +103,6 @@ describe("AgentDispatchRepositoryLive", () => {
       }),
     )
     expect(retry.claimed).toBe(false)
+    expect(retry.dispatchId).toBe(null)
   })
 })
