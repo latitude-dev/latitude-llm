@@ -28,6 +28,7 @@ import {
   OrganizationId,
   ProjectId,
   RepositoryError,
+  ScoreId,
   SessionId,
   SettingsReader,
   SignalId,
@@ -665,7 +666,7 @@ describe("runLiveEvaluationUseCase", () => {
         sampling: 100,
       },
     })
-    const traceDetail = makeTraceDetail({ traceId: INPUT.traceId, sessionId: SessionId("session-abc") })
+    const traceDetail = makeTraceDetail({ traceId: TraceId(INPUT.traceId), sessionId: SessionId("session-abc") })
     const { repository: traceRepository } = createFakeTraceRepository({
       findByTraceId: () => Effect.succeed(traceDetail),
     })
@@ -684,7 +685,7 @@ describe("runLiveEvaluationUseCase", () => {
       existsByEvaluationIdAndTraceId: () => Effect.die("turn = first should not check trace-scoped existence"),
     })
     duplicateFixture.scores.set("existing-score", {
-      id: "existing-score",
+      id: ScoreId("existing-score"),
       organizationId: OrganizationId(INPUT.organizationId),
       projectId: ProjectId(INPUT.projectId),
       sessionId: SessionId("session-abc"),
