@@ -4,7 +4,7 @@ import { Effect } from "effect"
 
 export const createCursorAdapter = (): AgentDispatchAdapter => ({
   kind: "cursor",
-  dispatch: ({ prompt, config, credential }) =>
+  dispatch: ({ idempotencyKey, prompt, config, credential }) =>
     Effect.gen(function* () {
       const apiKey = credential.cursorApiKey
       if (!apiKey) {
@@ -22,6 +22,7 @@ export const createCursorAdapter = (): AgentDispatchAdapter => ({
         autoCreatePR?: boolean
       }
       const body = {
+        agentId: idempotencyKey,
         prompt: { text: prompt },
         source: {
           repository: target.repoUrl,
