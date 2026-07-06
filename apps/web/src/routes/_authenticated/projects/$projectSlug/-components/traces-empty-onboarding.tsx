@@ -2,9 +2,9 @@ import { DEFAULT_API_KEY_NAME } from "@domain/api-keys"
 import { Button, CopyableText, HistogramSkeleton, Icon, Sheet, Skeleton, Text, useMountEffect } from "@repo/ui"
 import { useQueryClient } from "@tanstack/react-query"
 import { ArrowRightIcon, CheckIcon, Loader2Icon, TelescopeIcon, XIcon } from "lucide-react"
-import { use, useMemo, useRef, useState } from "react"
+import { useMemo, useRef, useState } from "react"
 import { useApiKeysCollection } from "../../../../../domains/api-keys/api-keys.collection.ts"
-import { TraceScopeContext, traceScopeData, traceScopeKey } from "../../../../../domains/traces/trace-scope.tsx"
+import { projectScopeData, projectScopeKey, useProjectScope } from "../../../../../domains/projects/project-scope.tsx"
 import { countTracesByProject } from "../../../../../domains/traces/traces.functions.ts"
 import { TelemetryInstructions } from "./onboarding/steps/telemetry-instructions.tsx"
 
@@ -38,7 +38,7 @@ export function TracesEmptyOnboarding({
   // When mounted under a sandbox scope, the poll + cache invalidation target the
   // sandbox org (not the session's live org), so the empty state correctly waits
   // for the *sandbox's* first trace and transitions when it lands.
-  const scope = use(TraceScopeContext)
+  const scope = useProjectScope()
 
   const [traceReceived, setTraceReceived] = useState(false)
   const [setupOpen, setSetupOpen] = useState(false)
@@ -68,7 +68,7 @@ export function TracesEmptyOnboarding({
       if (cancelled) return
       try {
         const count = await countTracesByProject({
-          data: { ...traceScopeData(scope), projectId: projectIdRef.current },
+          data: { ...projectScopeData(scope), projectId: projectIdRef.current },
         })
         if (cancelled) return
         if (count > 0) {
@@ -76,9 +76,9 @@ export function TracesEmptyOnboarding({
           transitionTimeoutRef.current = window.setTimeout(() => {
             if (cancelled) return
             void queryClient.invalidateQueries({
-              queryKey: scope ? ["sandbox-projects", scope.sandboxOrgId] : ["projects"],
+              queryKey: scope.kind === "sandbox" ? ["sandbox-projects", scope.orgId] : ["projects"],
             })
-            void queryClient.invalidateQueries({ queryKey: [...traceScopeKey(scope), "traces-count"] })
+            void queryClient.invalidateQueries({ queryKey: [...projectScopeKey(scope), "traces-count"] })
           }, 1500)
           return
         }
@@ -188,7 +188,7 @@ function ConnectCard({
   readonly onOpenSetup: () => void
   readonly apiKeyToken?: string | null | undefined
 }) {
-  const scope = use(TraceScopeContext)
+  const scope = useProjectScope()
   const { data: apiKeysList } = useApiKeysCollection()
   const defaultApiKeyToken = useMemo(() => {
     // An explicit token (sandbox passes its own `lat_sandbox_` key) wins. The
