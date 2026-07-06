@@ -43,6 +43,7 @@ import {
   listLinearMembers,
   listLinearTeams,
   listLinearTeamsForApiKey,
+  sendToDestinationsQueryKey,
   upsertAgentDispatchConfig,
 } from "../../../../../../domains/agent-dispatch/agent-dispatch.functions.ts"
 import { toUserMessage } from "../../../../../../lib/errors.ts"
@@ -225,6 +226,7 @@ function AgentDispatchKindCard({
     onSuccess: async () => {
       await queryClient.invalidateQueries({ queryKey: AGENT_DISPATCH_INTEGRATIONS_QUERY_KEY })
       await queryClient.invalidateQueries({ queryKey: ["agent-dispatch-config", projectId, kind] })
+      await queryClient.invalidateQueries({ queryKey: sendToDestinationsQueryKey(projectId) })
       toast({ description: `${KIND_LABELS[kind]} disconnected` })
     },
     onError: (error) => toast({ variant: "destructive", description: toUserMessage(error) }),
@@ -391,6 +393,7 @@ function AgentDispatchConfigForm({
       webhookSecret={webhookSecret}
       onSaved={async () => {
         await queryClient.invalidateQueries({ queryKey: ["agent-dispatch-config", projectId, kind] })
+        await queryClient.invalidateQueries({ queryKey: sendToDestinationsQueryKey(projectId) })
         toast({ description: "Dispatch settings saved" })
       }}
     />
@@ -866,10 +869,13 @@ function ConnectAgentDispatchModal({
           onWebhookSecret(result.webhookSecret)
           await queryClient.invalidateQueries({ queryKey: AGENT_DISPATCH_INTEGRATIONS_QUERY_KEY })
           await queryClient.invalidateQueries({ queryKey: ["agent-dispatch-config", projectId, kind] })
+          await queryClient.invalidateQueries({ queryKey: sendToDestinationsQueryKey(projectId) })
           toast({ description: `${KIND_LABELS[kind]} connected` })
           return
         }
         await queryClient.invalidateQueries({ queryKey: AGENT_DISPATCH_INTEGRATIONS_QUERY_KEY })
+        await queryClient.invalidateQueries({ queryKey: ["agent-dispatch-config", projectId, kind] })
+        await queryClient.invalidateQueries({ queryKey: sendToDestinationsQueryKey(projectId) })
         toast({ description: `${KIND_LABELS[kind]} connected` })
         onClose()
       },

@@ -657,6 +657,8 @@ const buildManualSignalContext = (input: {
     trigger: "manual",
   })
 
+export const sendToDestinationsQueryKey = (projectId: string) => ["send-to-destinations", projectId] as const
+
 export const listSendToDestinations = createServerFn({ method: "GET" })
   .inputValidator(z.object({ projectId: z.string() }))
   .handler(async ({ data }): Promise<readonly SendToDestinationRecord[]> => {

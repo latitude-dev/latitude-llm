@@ -1,4 +1,3 @@
-import type { AgentDispatchKind } from "@domain/agent-dispatch"
 import {
   Button,
   CloseTrigger,
@@ -27,18 +26,15 @@ import {
   listSendToDestinations,
   type SendToDestinationRecord,
   sendSignalToIntegration,
+  sendToDestinationsQueryKey,
 } from "../../../../../../../domains/agent-dispatch/agent-dispatch.functions.ts"
 import { toUserMessage } from "../../../../../../../lib/errors.ts"
-import { AGENT_DISPATCH_KIND_ICONS } from "../../../settings/-components/agent-dispatch-section.tsx"
+import {
+  AGENT_DISPATCH_KIND_ICONS,
+  AGENT_DISPATCH_KIND_LABELS,
+} from "../../../settings/-components/agent-dispatch-section.tsx"
 
 const MCP_DOCS_URL = "https://docs.latitude.so/getting-started/mcp"
-
-const CLOUD_KIND_LABELS: Record<AgentDispatchKind, string> = {
-  cursor: "Cursor Cloud",
-  claude_code: "Claude Code Cloud",
-  linear: "Linear",
-  webhook: "Webhook",
-}
 
 const failureDescription = (label: string, reason: string): string =>
   reason === "auth" || reason === "config"
@@ -64,7 +60,7 @@ export function SignalSendTo({
     queryFn: () => isAgentDispatchEnabled(),
   })
   const { data: destinations, isLoading: destinationsLoading } = useQuery({
-    queryKey: ["send-to-destinations", projectId],
+    queryKey: sendToDestinationsQueryKey(projectId),
     queryFn: () => listSendToDestinations({ data: { projectId } }),
     enabled: dispatchEnabled?.enabled === true,
   })
@@ -75,7 +71,7 @@ export function SignalSendTo({
         data: { projectId, signalId, configId: destination.configId, sendId: crypto.randomUUID() },
       }),
     onSuccess: (result, destination) => {
-      const label = CLOUD_KIND_LABELS[destination.kind]
+      const label = AGENT_DISPATCH_KIND_LABELS[destination.kind]
       if (result.status === "dispatched") {
         toast({
           description: `Sent to ${label}`,
@@ -133,7 +129,7 @@ export function SignalSendTo({
                       }}
                     >
                       <Icon icon={AGENT_DISPATCH_KIND_ICONS[destination.kind]} size="sm" />
-                      <Text.H5>{CLOUD_KIND_LABELS[destination.kind]}</Text.H5>
+                      <Text.H5>{AGENT_DISPATCH_KIND_LABELS[destination.kind]}</Text.H5>
                     </DropdownMenuItem>
                   ))
                 ) : (
