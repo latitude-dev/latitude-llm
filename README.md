@@ -50,6 +50,7 @@ Latitude shows you **what will break next** in your AI Agent and helps you fix i
 - **[Semantic search](https://docs.latitude.so/search/overview#search)**: find any trace by meaning, exact matches, or roughly similar sentences. No sampling, 100% of traces are searchable.
 - **[Issue alerts](https://latitude.so/changelog)**: get notified the moment a new issue is detected or an existing one escalates. Connect Slack, email, or webhooks.
 - **[MCP server](https://docs.latitude.so/getting-started/mcp)**: everything you can do in the Latitude UI, now available from your coding agent via MCP.
+- **[CLI](https://docs.latitude.so/getting-started/cli)**: the same Latitude organization on the command line — a single, self-contained binary for humans and agents.
 
 ## 📚 Table of contents
 
@@ -74,7 +75,7 @@ Sign up at [latitude.so](https://latitude.so) and grab your API key and project 
 Paste this prompt into Claude Code, Cursor, Windsurf, Codex, OpenCode, or another coding agent:
 
 ```text
-Read the Latitude Telemetry AI skill from https://raw.githubusercontent.com/latitude-dev/skills/refs/heads/main/skills/latitude-telemetry/SKILL.md and add tracing to this application.
+Install the `latitude-setup` skill from `github.com/latitude-dev/skills`, and use it to add Latitude tracing to this app following best practices.
 ```
 
 ### Manual TypeScript setup
