@@ -122,6 +122,7 @@ pnpm --filter @app/api dev &
 pnpm --filter @app/ingest dev &
 pnpm --filter @app/workers dev &
 pnpm --filter @app/workflows dev &
+pnpm --filter @app/design-system dev &
 ```
 
 | Service    | Port | Health check |
@@ -131,6 +132,7 @@ pnpm --filter @app/workflows dev &
 | Ingest     | 3002 | `curl http://localhost:3002/health` |
 | Workers    | 9090 | `curl http://localhost:9090/health` |
 | Workflows  | 9091 | `curl http://localhost:9091/health` |
+| Design system | 5173 (Vite default) | `pnpm --filter @app/design-system dev` |
 | Mailpit UI | 8025 | `curl http://localhost:8025` |
 | Temporal UI | 8233 | `curl http://localhost:8233` |
 

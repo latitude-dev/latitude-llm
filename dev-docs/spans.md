@@ -124,6 +124,14 @@ Semantic search scans distinct rows in `message_embeddings`, joins matching hash
 
 The UI editor mirrors these semantics: regular text remains semantic, `"..."` renders as a literal pill, and `` `...` `` renders as an ordered token-phrase pill. Pasted mixed syntax is parsed into the same segments before serialization back to `searchQuery`.
 
+## Public API trace detail
+
+`GET /v1/projects/{projectId}/traces/{traceId}` returns `TraceDetail` with a single `conversation` array — the canonical message sequence in OpenTelemetry GenAI format (`role` + content parts + optional tool calls). The field maps from domain `TraceDetail.allMessages`: system instructions, then the running history sent into the trace's last LLM-completion span, followed by that span's generated output.
+
+List endpoints and span list shapes still exclude per-message LLM content for size; only the trace detail (and span point-lookup) carry conversation payloads. Span detail continues to expose separate `inputMessages` / `outputMessages` for the individual span envelope.
+
+Trace search, conversation intelligence, and evaluation session loading all read the same canonical sequence — they must not rebuild conversation text by concatenating every span's raw `input_messages` / `output_messages`, because span inputs repeat prior context and would duplicate turns. See the trace-search section above.
+
 ## Billing And Retention Stamping
 
 Span ingestion is the canonical trace-billing boundary.
