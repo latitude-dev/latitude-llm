@@ -87,6 +87,13 @@ const _registry = {
     readonly apiKeyId: string
     readonly timelineAnchorIso: string
   }>(),
+  regenerateShowcaseWorkflow: input<{
+    readonly organizationId: string
+    readonly projectId: string
+    readonly queueAssigneeUserIds: readonly string[]
+    readonly apiKeyId: string
+    readonly timelineAnchorIso: string
+  }>(),
   gardenTaxonomyWorkflow: input<{
     readonly organizationId: string
     readonly projectId: string

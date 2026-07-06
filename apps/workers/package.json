@@ -50,6 +50,7 @@
     "@domain/sandbox": "workspace:*",
     "@domain/sandboxes": "workspace:*",
     "@domain/shared": "workspace:*",
+    "@domain/showcase": "workspace:*",
     "@domain/spans": "workspace:*",
     "@domain/taxonomy": "workspace:*",
     "@domain/users": "workspace:*",

@@ -72,6 +72,7 @@ import { createProductFeedbackWorker } from "./workers/product-feedback.ts"
 import { createProjectsWorker } from "./workers/projects.ts"
 import { createSandboxesWorker } from "./workers/sandboxes.ts"
 import { createScoresWorker } from "./workers/scores.ts"
+import { createShowcaseWorker } from "./workers/showcase.ts"
 import { createSignalsWorker } from "./workers/signals.ts"
 import { createSignalsGenerateSignalWorker } from "./workers/signals-generate-signal.ts"
 import { createSignalsMatchWorker } from "./workers/signals-match.ts"
@@ -236,6 +237,7 @@ const bootstrap = async () => {
     createStartFlaggerWorkflowWorker(ctx)
     createProjectsWorker(ctx)
     createScoresWorker(ctx)
+    createShowcaseWorker(ctx)
     createPostHogAnalyticsWorker(ctx)
     createProductFeedbackWorker(ctx)
     createTraceSearchWorker({
@@ -287,6 +289,20 @@ const bootstrap = async () => {
           "reapExpired",
           {},
           { key: "organization-cleanup:daily", pattern: "0 3 * * *", tz: "UTC" },
+        )
+        .pipe(withTracing),
+    )
+
+    // Daily off-peak Showcase regeneration (S4): build a fresh `next`, gate it,
+    // and auto-swap the pointer. The handler no-ops when no showcase exists / a
+    // build is already in flight, so this is safe to register on every boot.
+    await Effect.runPromise(
+      queuePublisher
+        .scheduleRepeatable(
+          "showcase",
+          "regenerate",
+          {},
+          { key: "showcase:regenerate:daily", pattern: "0 4 * * *", tz: "UTC" },
         )
         .pipe(withTracing),
     )

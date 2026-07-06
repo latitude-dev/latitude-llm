@@ -50,6 +50,15 @@ const _registry = {
     reapExpired: Record<string, never>
   }>(),
 
+  showcase: payloads<{
+    /**
+     * Fired by a daily off-peak cron — builds a fresh `next` showcase project,
+     * gates it, and auto-swaps the pointer (S4). No payload: the handler reads
+     * the pointer to resolve the showcase org and re-anchors to "now".
+     */
+    regenerate: Record<string, never>
+  }>(),
+
   "user-deletion": payloads<{
     delete: {
       readonly organizationId: string

@@ -9,6 +9,14 @@ import { z } from "zod"
 export const SHOWCASE_SINGLETON_ID = 1
 
 /**
+ * Redis key holding the resolved live showcase (`{ organizationId, projectId }`)
+ * so steady-state resolution is O(1) with the pointer table as source of truth.
+ * The cache client auto-prefixes `latitude:`, so on the wire this is
+ * `latitude:showcase:current`. The swap invalidates it after flipping.
+ */
+export const SHOWCASE_CURRENT_CACHE_KEY = "showcase:current"
+
+/**
  * `next_state` is only meaningful while `nextProjectId` is set: `building`
  * (seed running) → `ready` (built + gated, swap may proceed). Idle is simply
  * `nextProjectId === null`. Failure is not a state (loud error + reclaim).
