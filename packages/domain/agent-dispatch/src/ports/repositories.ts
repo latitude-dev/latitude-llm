@@ -94,6 +94,11 @@ export interface AgentDispatchRepositoryShape {
     readonly errorCategory: string
     readonly errorDetail: string
   }) => Effect.Effect<boolean, RepositoryError, SqlClient>
+  readonly markFailedByIdempotencyKey: (input: {
+    readonly idempotencyKey: string
+    readonly errorCategory: string
+    readonly errorDetail: string
+  }) => Effect.Effect<boolean, RepositoryError, SqlClient>
   readonly listByProject: (projectId: ProjectId) => Effect.Effect<readonly AgentDispatch[], RepositoryError, SqlClient>
 }
 

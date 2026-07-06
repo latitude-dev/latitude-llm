@@ -1,12 +1,13 @@
 import { queryCollectionOptions } from "@tanstack/query-db-collection"
-import { createCollection, useLiveQuery } from "@tanstack/react-db"
+import { useLiveQuery } from "@tanstack/react-db"
+import { createAppCollection } from "../../lib/data/create-app-collection.ts"
 import { getQueryClient } from "../../lib/data/query-client.tsx"
 import type { ApiKeyRecord } from "./api-keys.functions.ts"
 import { createApiKey, deleteApiKey, listApiKeys, updateApiKey } from "./api-keys.functions.ts"
 
 const queryClient = getQueryClient()
 
-const apiKeysCollection = createCollection(
+const apiKeysCollection = createAppCollection(
   queryCollectionOptions({
     queryClient,
     queryKey: ["apiKeys"],

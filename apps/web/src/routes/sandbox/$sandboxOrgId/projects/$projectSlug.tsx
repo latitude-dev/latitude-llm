@@ -13,10 +13,10 @@ import { useHotkeys } from "@tanstack/react-hotkeys"
 import { createFileRoute } from "@tanstack/react-router"
 import { FilterIcon, MessagesSquareIcon, TextIcon, XIcon } from "lucide-react"
 import { useCallback, useMemo, useRef, useState } from "react"
+import { ProjectScopeProvider } from "../../../../domains/projects/project-scope.tsx"
 import { useSandboxDefaultApiKey } from "../../../../domains/sandbox/sandbox.collection.ts"
 import { rememberLastSandboxProjectSlug } from "../../../../domains/sandbox/sandbox-navigation.functions.ts"
 import { useSandboxProjects } from "../../../../domains/sandbox/sandbox-projects.collection.ts"
-import { TraceScopeProvider } from "../../../../domains/traces/trace-scope.tsx"
 import { useTracesCount } from "../../../../domains/traces/traces.collection.ts"
 import { ListingLayout as Layout } from "../../../../layouts/ListingLayout/index.tsx"
 import { useParamState } from "../../../../lib/hooks/useParamState.ts"
@@ -46,7 +46,7 @@ import { TracesView } from "../../../_authenticated/projects/$projectSlug/-compo
 /**
  * Sandbox traces — the *production* Traces/Sessions surface (tables, filters,
  * and the trace + session detail drawers), mounted in the sandbox namespace and
- * scoped to the sandbox org via {@link TraceScopeProvider} (the collections read
+ * scoped to the sandbox org via {@link ProjectScopeProvider} (the collections read
  * the scope from context; no forked data layer). Per AGE-128 we drop the search
  * bar and the aggregations panel; annotations are off under a sandbox scope, so
  * the tables hide their annotation columns and the drawers hide their
@@ -59,9 +59,9 @@ export const Route = createFileRoute("/sandbox/$sandboxOrgId/projects/$projectSl
 function SandboxTracesPage() {
   const { sandboxOrgId, projectSlug } = Route.useParams()
   return (
-    <TraceScopeProvider scope={{ sandboxOrgId }}>
+    <ProjectScopeProvider scope={{ kind: "sandbox", orgId: sandboxOrgId }}>
       <SandboxTracesContent sandboxOrgId={sandboxOrgId} projectSlug={projectSlug} />
-    </TraceScopeProvider>
+    </ProjectScopeProvider>
   )
 }
 

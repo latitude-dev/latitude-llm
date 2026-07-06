@@ -8,6 +8,7 @@ import { createFileRoute, Outlet, redirect, useRouterState } from "@tanstack/rea
 import { createServerFn } from "@tanstack/react-start"
 import { Effect } from "effect"
 import { z } from "zod"
+import { CHANGELOG_UI_ENABLED } from "../../../domains/changelog/changelog.collection.ts"
 import { PROJECT_SETTINGS_SECTION, useVisibleProjectSectionGroups } from "../../../domains/projects/project-sections.ts"
 import { useProjectsCollection } from "../../../domains/projects/projects.collection.ts"
 import { type ProjectRecord, rememberLastProjectSlug, toRecord } from "../../../domains/projects/projects.functions.ts"
@@ -87,7 +88,7 @@ function ProjectSidebar({ project, projectSlug }: { project: ProjectRecord; proj
       subtitle={<CopyableText value={project.slug} size="sm" tooltip="Copy project slug" ellipsis />}
       footer={({ collapsed }) => (
         <>
-          <ChangelogSidebarEntry collapsed={collapsed} />
+          {CHANGELOG_UI_ENABLED ? <ChangelogSidebarEntry collapsed={collapsed} /> : null}
           {latestWrapped ? (
             <NavItem
               icon={ClaudeCodeIcon}
