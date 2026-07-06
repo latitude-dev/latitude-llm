@@ -5,12 +5,13 @@ import { useState } from "react"
 import { useTraceConversationMessages } from "../../../../../../../domains/traces/traces.collection.ts"
 
 type PreviewRow = Extract<SignalPreviewResult, { status: "done" }>["items"][number]
-type Verdict = "match" | "no-match" | "errored"
+type Verdict = "match" | "no-match" | "skipped" | "errored"
 
+// `skipped` is checked first: a skipped row has `passed: null`, which would otherwise read as "no match".
 const verdictOf = (row: PreviewRow): Verdict =>
-  row.error !== null ? "errored" : row.passed === true ? "match" : "no-match"
-// Matches first (the signal of interest), then non-matches, then errors.
-const verdictRank: Record<Verdict, number> = { match: 0, "no-match": 1, errored: 2 }
+  row.skipped ? "skipped" : row.error !== null ? "errored" : row.passed === true ? "match" : "no-match"
+// Matches first (the signal of interest), then non-matches, then skipped, then errors.
+const verdictRank: Record<Verdict, number> = { match: 0, "no-match": 1, skipped: 2, errored: 3 }
 
 const formatDuration = (ns: number): string => {
   const ms = ns / 1_000_000
@@ -28,6 +29,7 @@ const formatTokens = (tokens: number): string => (tokens >= 1000 ? `${(tokens / 
 
 function VerdictBadge({ verdict }: { readonly verdict: Verdict }) {
   if (verdict === "errored") return <Badge variant="warningMuted">errored</Badge>
+  if (verdict === "skipped") return <Badge variant="outlineMuted">skipped</Badge>
   if (verdict === "match") return <Badge variant="accent">match</Badge>
   return <Badge variant="muted">no match</Badge>
 }
@@ -92,7 +94,10 @@ function PreviewResultCard({
 }) {
   const verdict = verdictOf(row)
   const prompt = row.summary?.firstUserMessage?.trim()
-  const reason = row.error ?? (row.feedback.trim().length > 0 ? row.feedback : null)
+  const reason =
+    verdict === "skipped"
+      ? "Session not embedded yet — it'll be scored once embeddings are ready"
+      : (row.error ?? (row.feedback.trim().length > 0 ? row.feedback : null))
 
   return (
     <div

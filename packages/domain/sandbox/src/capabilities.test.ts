@@ -3,6 +3,7 @@ import {
   detectScriptCapabilities,
   hasEmbeddingCapability,
   hasLlmCapability,
+  requiresEmbedding,
   resolveScriptCapabilities,
 } from "./capabilities.ts"
 
@@ -38,5 +39,11 @@ describe("detectScriptCapabilities", () => {
     expect(hasLlmCapability([])).toBe(false)
     expect(hasEmbeddingCapability(["embedding"])).toBe(true)
     expect(hasEmbeddingCapability(["llm"])).toBe(false)
+  })
+
+  it("requiresEmbedding is true only when the source calls semanticSimilarity()", () => {
+    expect(requiresEmbedding("const s = await semanticSimilarity('frustration'); return Score(s)")).toBe(true)
+    expect(requiresEmbedding("await llm(`x`); return Score(1)")).toBe(false)
+    expect(requiresEmbedding("return Score(1)")).toBe(false)
   })
 })

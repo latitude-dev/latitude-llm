@@ -15,6 +15,7 @@ import {
   MessageEmbeddingRepository,
   type Session,
   SessionRepository,
+  type Span,
   SpanRepository,
   type TraceDetail,
   TraceRepository,
@@ -26,6 +27,7 @@ import {
   createFakeSpanRepository,
   createFakeTraceRepository,
   createFakeTraceSearchRepository,
+  stubListSpan,
 } from "@domain/spans/testing"
 import { Effect, Layer } from "effect"
 import { describe, expect, it } from "vitest"
@@ -108,10 +110,26 @@ const makeTraceDetail = (traceId: string, sessionId: string): TraceDetail => ({
   allMessages: [{ role: "assistant", parts: [{ type: "text", content: "done" }] }],
 })
 
+const makeSpan = (traceId: string): Span =>
+  stubListSpan({
+    organizationId: OrganizationId(organizationId),
+    projectId: ProjectId(projectId),
+    traceId: TraceId(traceId),
+    sessionId: SessionId("session"),
+    spanId: SpanId("s".repeat(16)),
+    operation: "chat",
+    startTime: new Date("2026-01-01T00:00:00.000Z"),
+    endTime: new Date("2026-01-01T00:00:01.000Z"),
+  })
+
 const buildLayer = (input: {
   readonly sessions: readonly Session[]
   readonly listSpy?: (filters: FilterSet | undefined) => void
   readonly scriptRuntimeLayer?: ReturnType<typeof createFakeScriptRuntime>["layer"]
+  /** When true, the session has both occurrences and vectors, so a semantic eval runs instead of skipping. */
+  readonly withEmbeddings?: boolean
+  /** Spans backing the loaded session; needed so a semantic eval sees non-empty session traces. */
+  readonly spans?: readonly Span[]
 }) =>
   Layer.mergeAll(
     Layer.succeed(
@@ -123,15 +141,41 @@ const buildLayer = (input: {
         },
       }).repository,
     ),
-    Layer.succeed(SpanRepository, createFakeSpanRepository().repository),
+    Layer.succeed(
+      SpanRepository,
+      createFakeSpanRepository({ listBySessionId: () => Effect.succeed(input.spans ?? []) }).repository,
+    ),
     Layer.succeed(
       TraceRepository,
       createFakeTraceRepository({
         findByTraceId: ({ traceId }) => Effect.succeed(makeTraceDetail(traceId as string, "session")),
       }).repository,
     ),
-    Layer.succeed(MessageEmbeddingRepository, createFakeMessageEmbeddingRepository().repository),
-    Layer.succeed(TraceSearchRepository, createFakeTraceSearchRepository().repository),
+    Layer.succeed(
+      MessageEmbeddingRepository,
+      createFakeMessageEmbeddingRepository({
+        findByHashes: ({ contentHashes, embeddingModel }) =>
+          Effect.succeed(
+            input.withEmbeddings
+              ? contentHashes.map((contentHash) => ({
+                  organizationId: OrganizationId(organizationId),
+                  projectId: ProjectId(projectId),
+                  contentHash,
+                  embedding: [1, 0, 0],
+                  embeddingModel: embeddingModel ?? "voyage-4-large",
+                  insertedAt: new Date(0),
+                }))
+              : [],
+          ),
+      }).repository,
+    ),
+    Layer.succeed(
+      TraceSearchRepository,
+      createFakeTraceSearchRepository({
+        listMessageOccurrencesForTraces: () =>
+          Effect.succeed(input.withEmbeddings ? [{ contentHash: "hash-a", role: "user" as const }] : []),
+      }).repository,
+    ),
     createFakeAI().layer,
     input.scriptRuntimeLayer ?? createFakeScriptRuntime().layer,
   )
@@ -188,6 +232,41 @@ describe("previewEvaluationUseCase", () => {
     expect(result.items).toHaveLength(2)
     expect(result.items.filter((r) => r.error !== null)).toHaveLength(1)
     expect(result.items.filter((r) => r.passed === true)).toHaveLength(1)
+  })
+
+  const semanticEvaluation = { script: "return Passed((await semanticSimilarity('frustration')) >= 0.5 ? 1 : 0)" }
+
+  it("skips a semantic eval (never runs it) when the session has no embeddings", async () => {
+    const traceId = "t1".padEnd(32, "1")
+    const sessions = [makeSession("s1", [traceId])]
+    const runtime = createFakeScriptRuntime({
+      run: () => Effect.die("Script must not run when the session has no embeddings"),
+    })
+
+    const result = await Effect.runPromise(
+      previewEvaluationUseCase({ organizationId, projectId, evaluation: semanticEvaluation }).pipe(
+        Effect.provide(buildLayer({ sessions, scriptRuntimeLayer: runtime.layer, spans: [makeSpan(traceId)] })),
+      ),
+    )
+
+    expect(result.items).toHaveLength(1)
+    expect(result.items[0]).toMatchObject({ sessionId: "s1", skipped: true, passed: null, value: null, error: null })
+    // The row still carries the session summary so it's recognizable in the preview.
+    expect(result.items[0]?.summary).not.toBeNull()
+  })
+
+  it("runs a semantic eval when the session's embeddings are present", async () => {
+    const traceId = "t1".padEnd(32, "1")
+    const sessions = [makeSession("s1", [traceId])]
+
+    const result = await Effect.runPromise(
+      previewEvaluationUseCase({ organizationId, projectId, evaluation: semanticEvaluation }).pipe(
+        Effect.provide(buildLayer({ sessions, withEmbeddings: true, spans: [makeSpan(traceId)] })),
+      ),
+    )
+
+    expect(result.items).toHaveLength(1)
+    expect(result.items[0]).toMatchObject({ sessionId: "s1", skipped: false, passed: true })
   })
 
   it("passes the supplied filters through to the session query", async () => {

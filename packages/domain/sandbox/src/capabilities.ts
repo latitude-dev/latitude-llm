@@ -17,6 +17,9 @@ export const detectScriptCapabilities = (source: string): readonly ScriptCapabil
   return capabilities
 }
 
+/** Whether a raw script source calls `semanticSimilarity()` and therefore needs message embeddings. */
+export const requiresEmbedding = (source: string): boolean => EMBEDDING_REFERENCE_PATTERN.test(source)
+
 export const resolveScriptCapabilities = (input: {
   readonly source: string
   readonly declared?: readonly ScriptCapability[] | undefined

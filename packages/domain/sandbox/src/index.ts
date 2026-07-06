@@ -2,6 +2,7 @@ export {
   detectScriptCapabilities,
   hasEmbeddingCapability,
   hasLlmCapability,
+  requiresEmbedding,
   resolveScriptCapabilities,
   SCRIPT_CAPABILITIES,
   type ScriptCapability,

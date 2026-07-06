@@ -428,6 +428,8 @@ const _registry = {
       readonly projectId: string
       readonly traceId: string
       readonly isSandbox?: boolean
+      /** "embeddings-ready" re-triggers are filtered to semantic evals; absent/"ingest" is the trace-end pass. */
+      readonly reason?: "ingest" | "embeddings-ready"
     }
   }>(),
 
