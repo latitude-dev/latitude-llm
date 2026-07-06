@@ -105,30 +105,14 @@ const GenAIMessageSchema = z
   .openapi("GenAIMessage")
   .describe("Message in OpenTelemetry GenAI format (`role` + content parts + optional tool calls).")
 
-// `GenAISystem` from `rosetta-ai` is an *array* of part objects (`text`, `tool_definition`, …),
-// not a single record. The previous record-shaped schema rejected real responses inside MCP
-// clients with `expected: "record", received: "array"`. The array shape now matches the runtime
-// value emitted by `toTraceDetailResponse` / `toSpanDetailResponse`.
-const GenAISystemSchema = z
-  .array(z.record(z.string(), z.unknown()))
-  .openapi("GenAISystem")
-  .describe("System instructions in OpenTelemetry GenAI format — an array of part objects.")
-
 export const TraceDetailSchema = z
   .object({
     ...traceFields,
     metadata: z.record(z.string(), z.string()).describe("Free-form metadata attached at ingest time."),
-    systemInstructions: GenAISystemSchema,
-    inputMessages: z
-      .array(GenAIMessageSchema)
-      .describe("Input messages sent into the first LLM span of the trace, in OpenTelemetry GenAI format."),
-    outputMessages: z
-      .array(GenAIMessageSchema)
-      .describe("Output messages from the last LLM span of the trace, in OpenTelemetry GenAI format."),
-    allMessages: z
+    conversation: z
       .array(GenAIMessageSchema)
       .describe(
-        "Full conversation view for the trace's final turn — the last span's input messages followed by its output messages, in OpenTelemetry GenAI format.",
+        "Full conversation for the trace, in OpenTelemetry GenAI format: the system instructions, then the messages sent into the trace's last LLM-completion span (the running history at that point), followed by that span's generated output.",
       ),
   })
   .openapi("TraceDetail")
@@ -193,16 +177,13 @@ export const toTraceResponse = (trace: Trace, indicators?: TraceIndicators | Tra
   }
 }
 
-// rosetta-ai's `GenAIMessage` / `GenAISystem` types declare more specific
-// shapes than `Record<string, unknown>` and TS rejects the direct cast as
-// non-overlapping. Going through `unknown` is the documented escape hatch —
-// the payload IS a JSON object at runtime, the cast is purely a type-level
-// bridge for the response schema.
+// rosetta-ai's `GenAIMessage` type declares a more specific shape than
+// `Record<string, unknown>` and TS rejects the direct cast as non-overlapping.
+// Going through `unknown` is the documented escape hatch — the payload IS a
+// JSON object at runtime, the cast is purely a type-level bridge for the
+// response schema.
 export const toTraceDetailResponse = (trace: TraceDetail, indicators?: TraceIndicators | TraceAnnotationCounts) => ({
   ...toTraceResponse(trace, indicators),
   metadata: { ...trace.metadata },
-  systemInstructions: trace.systemInstructions.map((part) => part as unknown as Record<string, unknown>),
-  inputMessages: trace.inputMessages.map((m) => m as unknown as Record<string, unknown>),
-  outputMessages: trace.outputMessages.map((m) => m as unknown as Record<string, unknown>),
-  allMessages: trace.allMessages.map((m) => m as unknown as Record<string, unknown>),
+  conversation: trace.allMessages.map((m) => m as unknown as Record<string, unknown>),
 })

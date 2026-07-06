@@ -250,7 +250,7 @@ class RawTracesClient:
         self, project_slug: str, trace_id: str, *, request_options: typing.Optional[RequestOptions] = None
     ) -> HttpResponse[TraceDetail]:
         """
-        Returns a single trace by id, including the captured system instructions and the conversation messages from the trace's last LLM-completion span.
+        Returns a single trace by id, including its `conversation`: the system instructions and the messages of the trace's last LLM-completion span, in OpenTelemetry GenAI format.
 
         Parameters
         ----------
@@ -980,7 +980,7 @@ class AsyncRawTracesClient:
         self, project_slug: str, trace_id: str, *, request_options: typing.Optional[RequestOptions] = None
     ) -> AsyncHttpResponse[TraceDetail]:
         """
-        Returns a single trace by id, including the captured system instructions and the conversation messages from the trace's last LLM-completion span.
+        Returns a single trace by id, including its `conversation`: the system instructions and the messages of the trace's last LLM-completion span, in OpenTelemetry GenAI format.
 
         Parameters
         ----------

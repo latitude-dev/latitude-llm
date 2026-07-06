@@ -300,6 +300,16 @@ export function createDnsRecords(
       allowOverwrite: true,
     })
 
+    // CNAME for design.latitude.so -> Vercel
+    records.designCname = new aws.route53.Record(`${name}-design-cname`, {
+      zoneId: hostedZoneId,
+      name: "design.latitude.so",
+      type: "CNAME",
+      records: ["6ac0d6b5a212d2a5.vercel-dns-016.com."],
+      ttl: 300,
+      allowOverwrite: true,
+    })
+
     // CNAME for go.latitude.so -> customers.withbaker.com
     records.goCname = new aws.route53.Record(`${name}-go-cname`, {
       zoneId: hostedZoneId,

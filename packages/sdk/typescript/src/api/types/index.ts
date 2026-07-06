@@ -60,7 +60,6 @@ export * from "./FilterSet.js";
 export * from "./GenAiMessage.js";
 export * from "./GenAiSpanMessage.js";
 export * from "./GenAiSpanSystem.js";
-export * from "./GenAiSystem.js";
 export * from "./HealthResponse.js";
 export * from "./ImportRowsFromTracesResponse.js";
 export * from "./Incident.js";

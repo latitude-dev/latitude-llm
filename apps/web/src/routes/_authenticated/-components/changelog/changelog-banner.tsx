@@ -1,14 +1,14 @@
-import { FULL_CHANGELOG_URL } from "@domain/changelog"
 import { Button, cn, Icon, Text, type TextColor } from "@repo/ui"
 import { Minus } from "lucide-react"
 
-/** Default cover when a Framer entry has no image (Figma `type=no-cover`). */
+/** Default cover when an entry has no image (Figma `type=no-cover`). */
 export const CHANGELOG_FALLBACK_COVER_URL = "/changelog/fallback-cover.png"
 
 export interface ChangelogBannerProps {
   readonly title: string
   readonly description: string | null
   readonly coverUrl: string | null
+  readonly entryUrl: string
   readonly onCollapse: () => void
   readonly className?: string
 }
@@ -18,16 +18,23 @@ const hasCover = (coverUrl: string | null): coverUrl is string =>
 
 /**
  * Sidebar changelog promo card. Shows the latest entry title, summary (2 lines),
- * optional cover image, and links to the full marketing changelog when clicked.
+ * optional cover image, and links to the entry on the marketing site when clicked.
  */
-export function ChangelogBanner({ title, description, coverUrl, onCollapse, className }: ChangelogBannerProps) {
+export function ChangelogBanner({
+  title,
+  description,
+  coverUrl,
+  entryUrl,
+  onCollapse,
+  className,
+}: ChangelogBannerProps) {
   const coverSrc = hasCover(coverUrl) ? coverUrl : CHANGELOG_FALLBACK_COVER_URL
   const collapseIconColor: TextColor = hasCover(coverUrl) ? "foreground" : "white"
 
   return (
     <article className={cn("relative flex w-full flex-col overflow-hidden rounded-2xl bg-secondary", className)}>
       <a
-        href={FULL_CHANGELOG_URL}
+        href={entryUrl}
         target="_blank"
         rel="noopener noreferrer"
         className="flex w-full flex-col transition-colors hover:bg-muted/50"

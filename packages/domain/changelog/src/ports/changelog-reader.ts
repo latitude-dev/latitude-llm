@@ -9,7 +9,7 @@ export interface ChangelogReaderShape {
 /**
  * Port for reading changelog entries from the upstream CMS.
  *
- * The live adapter lives in `@platform/changelog-framer`. Entries are returned
+ * The live adapter lives in `@platform/changelog-api`. Entries are returned
  * in no guaranteed order — the use-case sorts by `publishedAt`.
  */
 export class ChangelogReader extends Context.Service<ChangelogReader, ChangelogReaderShape>()(
