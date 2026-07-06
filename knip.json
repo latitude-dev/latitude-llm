@@ -55,7 +55,11 @@
         "src/routes/**/*.tsx"
       ],
       "project": ["src/**/*.ts", "src/**/*.tsx"],
+      "ignore": [
+        "src/server/resolve-showcase-access.ts"
+      ],
       "ignoreDependencies": [
+        "@domain/showcase",
         "@temporalio/client",
         "quickjs-emscripten",
         "voyageai"
