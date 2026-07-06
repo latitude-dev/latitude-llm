@@ -31,10 +31,10 @@ function languageSupport(language: string | undefined, isJsonContent: boolean): 
   if (!language) return null
 
   const lang = language.toLowerCase()
-  if (lang === "tsx" || lang === "typescript") {
+  if (lang === "tsx") {
     return javascript({ jsx: true, typescript: true })
   }
-  if (lang === "ts") {
+  if (lang === "ts" || lang === "typescript") {
     return javascript({ typescript: true })
   }
   if (lang === "jsx") {
