@@ -8,8 +8,13 @@ interface StagedStatusStage {
 }
 
 export function selectStage(stages: ReadonlyArray<StagedStatusStage>, elapsedSeconds: number): string | null {
-  const reached = stages.filter((stage) => elapsedSeconds >= stage.atSeconds).length
-  return stages[Math.max(reached - 1, 0)]?.label ?? null
+  let current: StagedStatusStage | null = null
+  let earliest: StagedStatusStage | null = null
+  for (const stage of stages) {
+    if (earliest === null || stage.atSeconds < earliest.atSeconds) earliest = stage
+    if (stage.atSeconds <= elapsedSeconds && (current === null || stage.atSeconds > current.atSeconds)) current = stage
+  }
+  return (current ?? earliest)?.label ?? null
 }
 
 export function useStagedStatus(stages: ReadonlyArray<StagedStatusStage>, active: boolean): string | null {

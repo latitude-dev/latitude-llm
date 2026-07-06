@@ -30,4 +30,24 @@ describe("selectStage", () => {
   it("returns null for empty stages", () => {
     expect(selectStage([], 12)).toBeNull()
   })
+
+  it("does not depend on stage order", () => {
+    const unsorted = [
+      { atSeconds: 14, label: "Refining" },
+      { atSeconds: 0, label: "Reading" },
+      { atSeconds: 3, label: "Writing" },
+    ]
+    expect(selectStage(unsorted, 5)).toBe("Writing")
+    expect(selectStage(unsorted, 1)).toBe("Reading")
+    expect(selectStage(unsorted, 20)).toBe("Refining")
+    expect(
+      selectStage(
+        [
+          { atSeconds: 5, label: "Later" },
+          { atSeconds: 9, label: "Latest" },
+        ],
+        0,
+      ),
+    ).toBe("Later")
+  })
 })
