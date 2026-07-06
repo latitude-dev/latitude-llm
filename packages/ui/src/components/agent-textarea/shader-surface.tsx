@@ -50,32 +50,58 @@ function compileShader(gl: WebGLRenderingContext, type: number, source: string):
   if (!gl.getShaderParameter(shader, gl.COMPILE_STATUS)) {
     const info = gl.getShaderInfoLog(shader)
     if (info !== null && info.length > 0) console.warn(`AgentTextarea shader compile error: ${info}`)
+    gl.deleteShader(shader)
     return null
   }
   return shader
 }
 
-function setupProgram(gl: WebGLRenderingContext, fragmentSource: string): Uniforms | null {
+interface ProgramHandles {
+  uniforms: Uniforms
+  program: WebGLProgram
+  vertex: WebGLShader
+  fragment: WebGLShader
+  buffer: WebGLBuffer
+}
+
+function setupProgram(gl: WebGLRenderingContext, fragmentSource: string): ProgramHandles | null {
   const vertex = compileShader(gl, gl.VERTEX_SHADER, VERTEX_SHADER)
+  if (vertex === null) return null
   const fragment = compileShader(gl, gl.FRAGMENT_SHADER, fragmentSource)
-  if (vertex === null || fragment === null) return null
+  if (fragment === null) {
+    gl.deleteShader(vertex)
+    return null
+  }
   const program = gl.createProgram()
-  if (program === null) return null
+  const buffer = gl.createBuffer()
+  const dispose = () => {
+    if (program !== null) gl.deleteProgram(program)
+    if (buffer !== null) gl.deleteBuffer(buffer)
+    gl.deleteShader(vertex)
+    gl.deleteShader(fragment)
+  }
+  if (program === null || buffer === null) {
+    dispose()
+    return null
+  }
   gl.attachShader(program, vertex)
   gl.attachShader(program, fragment)
   gl.linkProgram(program)
-  if (!gl.getProgramParameter(program, gl.LINK_STATUS)) return null
+  if (!gl.getProgramParameter(program, gl.LINK_STATUS)) {
+    dispose()
+    return null
+  }
 
   gl.useProgram(program)
-  gl.bindBuffer(gl.ARRAY_BUFFER, gl.createBuffer())
+  gl.bindBuffer(gl.ARRAY_BUFFER, buffer)
   gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([-1, -1, 3, -1, -1, 3]), gl.STATIC_DRAW)
   const positionLocation = gl.getAttribLocation(program, "a_position")
   gl.enableVertexAttribArray(positionLocation)
   gl.vertexAttribPointer(positionLocation, 2, gl.FLOAT, false, 0, 0)
 
-  const uniforms = {} as Record<(typeof UNIFORM_NAMES)[number], WebGLUniformLocation | null>
+  const uniforms = {} as Uniforms
   for (const name of UNIFORM_NAMES) uniforms[name] = gl.getUniformLocation(program, name)
-  return uniforms
+  return { uniforms, program, vertex, fragment, buffer }
 }
 
 function smoothToward(value: number, target: number, rate: number, dt: number): number {
@@ -108,7 +134,7 @@ export function ShaderSurface({ fragmentSource, targetsRef, loading }: ShaderSur
       disable("WebGL unavailable")
       return
     }
-    let uniforms: Uniforms | null = null
+    let handles: ProgramHandles | null = null
 
     const readLightTarget = () => (document.documentElement.classList.contains("dark") ? 0 : 1)
     let lightTarget = readLightTarget()
@@ -138,8 +164,8 @@ export function ShaderSurface({ fragmentSource, targetsRef, loading }: ShaderSur
     let contextLost = false
 
     const frame = (timestamp: number) => {
-      const locations = uniforms
-      if (locations === null) return
+      if (handles === null) return
+      const locations = handles.uniforms
       // Cap near 60fps: on 120Hz displays rAF would otherwise double the GPU cost.
       if (lastTimestamp !== null && timestamp - lastTimestamp < MIN_FRAME_MS) {
         rafId = requestAnimationFrame(frame)
@@ -190,9 +216,19 @@ export function ShaderSurface({ fragmentSource, targetsRef, loading }: ShaderSur
     })
     intersectionObserver.observe(canvas)
 
+    const releaseProgram = () => {
+      if (handles === null) return
+      gl.deleteBuffer(handles.buffer)
+      gl.deleteProgram(handles.program)
+      gl.deleteShader(handles.vertex)
+      gl.deleteShader(handles.fragment)
+      handles = null
+    }
+
     const initialize = () => {
-      uniforms = setupProgram(gl, fragmentSource)
-      if (uniforms === null) {
+      releaseProgram()
+      handles = setupProgram(gl, fragmentSource)
+      if (handles === null) {
         disable("shader compile failed")
         return
       }
@@ -251,6 +287,7 @@ export function ShaderSurface({ fragmentSource, targetsRef, loading }: ShaderSur
 
     return () => {
       teardown()
+      releaseProgram()
       // No loseContext here: Suspense/Activity re-runs this effect and a context we lost ourselves
       // is unrestorable (its lost event fires after our listeners are gone, so nothing can
       // preventDefault it). Shrink the backing store instead; resize() restores it on re-run.
