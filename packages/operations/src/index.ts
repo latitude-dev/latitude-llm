@@ -10,4 +10,5 @@ export type { ExecuteFn, OperationInput, OperationOutput } from "./core/execute.
 export { splitFlatInput } from "./core/flatten-input.ts"
 export { mountOperationModules, type OperationModule } from "./core/mount.ts"
 export { collectToolDescriptors, resetOperationRegistry } from "./core/registry.ts"
+export { toolsModule } from "./operations/tools.ts"
 export type { AppEnv, AuthContext, OrganizationScopedEnv, ProtectedEnv } from "./types.ts"

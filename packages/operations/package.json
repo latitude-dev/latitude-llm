@@ -24,6 +24,7 @@
     "@domain/incidents": "workspace:*",
     "@domain/monitors": "workspace:*",
     "@domain/organizations": "workspace:*",
+    "@domain/projects": "workspace:*",
     "@domain/queue": "workspace:*",
     "@domain/saved-searches": "workspace:*",
     "@domain/scores": "workspace:*",
@@ -33,7 +34,9 @@
     "@domain/taxonomy": "workspace:*",
     "@hono/zod-openapi": "1.3.0",
     "@platform/cache-redis": "workspace:*",
+    "@platform/db-clickhouse": "workspace:*",
     "@platform/db-postgres": "workspace:*",
+    "@repo/observability": "workspace:*",
     "effect": "catalog:",
     "hono": "catalog:",
     "zod": "catalog:"

@@ -2016,6 +2016,9 @@ importers:
       '@domain/organizations':
         specifier: workspace:*
         version: link:../domain/organizations
+      '@domain/projects':
+        specifier: workspace:*
+        version: link:../domain/projects
       '@domain/queue':
         specifier: workspace:*
         version: link:../domain/queue
@@ -2043,9 +2046,15 @@ importers:
       '@platform/cache-redis':
         specifier: workspace:*
         version: link:../platform/cache-redis
+      '@platform/db-clickhouse':
+        specifier: workspace:*
+        version: link:../platform/db-clickhouse
       '@platform/db-postgres':
         specifier: workspace:*
         version: link:../platform/db-postgres
+      '@repo/observability':
+        specifier: workspace:*
+        version: link:../observability
       effect:
         specifier: 'catalog:'
         version: 4.0.0-beta.57

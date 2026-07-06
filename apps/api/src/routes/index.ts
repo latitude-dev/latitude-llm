@@ -1,8 +1,10 @@
 import { OpenAPIHono } from "@hono/zod-openapi"
+import { mountOperationModules, toolsModule } from "@repo/operations"
 import { API_VERSION } from "../constants.ts"
 import { registerMcpRoute } from "../mcp/index.ts"
 import { createAuthMiddleware } from "../middleware/auth.ts"
 import { createOrganizationContextMiddleware } from "../middleware/organization-context.ts"
+import { createTierRateLimiter } from "../middleware/rate-limiter.ts"
 import { validationErrorMiddleware } from "../middleware/validation.ts"
 import type { ApiOptions, AppEnv, ProtectedEnv } from "../types.ts"
 import { accountPath, createAccountRoutes, registerBootstrapRoute } from "./account.ts"
@@ -20,7 +22,6 @@ import { createSavedSearchesRoutes, savedSearchesPath } from "./saved-searches.t
 import { createScoresRoutes, scoresPath } from "./scores.ts"
 import { createSignalsRoutes, signalsPath } from "./signals.ts"
 import { createSpansRoutes, spansPath } from "./spans.ts"
-import { createToolsRoutes, toolsPath } from "./tools.ts"
 import { createTracesRoutes, tracesPath } from "./traces.ts"
 import { createUsersRoutes, usersPath } from "./users.ts"
 import { registerWellKnownRoutes } from "./well-known.ts"
@@ -63,7 +64,7 @@ export const registerRoutes = (app: OpenAPIHono<AppEnv>, options: ApiOptions) =>
   routes.route(scoresPath, createScoresRoutes())
   routes.route(annotationsPath, createAnnotationsRoutes())
   routes.route(tracesPath, createTracesRoutes())
-  routes.route(toolsPath, createToolsRoutes())
+  mountOperationModules(routes, [toolsModule], { middlewareForTier: createTierRateLimiter })
   routes.route(usersPath, createUsersRoutes())
   routes.route(savedSearchesPath, createSavedSearchesRoutes())
   routes.route(signalsPath, createSignalsRoutes())

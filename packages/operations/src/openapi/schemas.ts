@@ -165,3 +165,29 @@ export const openApiNoContentResponses = ({ description }: { description: string
   401: errorResponse("Unauthorized"),
   404: errorResponse("Not found"),
 })
+
+type ErrorEntry = { content: { "application/json": { schema: typeof ErrorSchema } }; description: string }
+
+/**
+ * Literal-typed twin of {@link openApiResponses} with identical runtime output.
+ * Execute-form operations need literal response keys so `OperationOutput` can
+ * infer the status/body union; retyping `openApiResponses` itself would
+ * suddenly strict-check every legacy handler, so the typed shape lives in this
+ * separate helper and handler-form routes migrate to it with their conversion.
+ */
+export const typedResponses = <S extends 200 | 201 | 202, T extends z.ZodType>(args: {
+  status: S
+  schema: T
+  description: string
+  extraErrors?: Record<number, { description?: string }>
+}) =>
+  // Flat mapped type over literal keys on purpose — deriving keys from a
+  // generic (an `extraErrors` type param, or an intersection of mapped types)
+  // makes `OperationOutput`'s key extraction collapse to a number index under
+  // tsgo. `extraErrors` statuses land in the spec but not in the typed union;
+  // extend this helper if an execute-form route ever needs to return one.
+  openApiResponses(args) as {
+    [K in S | 400 | 401 | 404]: K extends S
+      ? { content: { "application/json": { schema: T } }; description: string }
+      : ErrorEntry
+  }
