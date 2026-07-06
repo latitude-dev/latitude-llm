@@ -15,3 +15,10 @@ export {
   SHOWCASE_ORG_NAME,
   SHOWCASE_ORG_SLUG,
 } from "./use-cases/create-showcase.ts"
+export {
+  type ResolvedShowcase,
+  type ResolveShowcaseError,
+  type ResolveShowcaseInput,
+  resolveShowcaseUseCase,
+  SHOWCASE_POINTER_CACHE_KEY,
+} from "./use-cases/resolve-showcase.ts"
