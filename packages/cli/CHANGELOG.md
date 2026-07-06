@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [5.0.0] - 2026-07-06
+
+### Changed
+
+- **Version realigned to `5.0.0`** (from `0.4.0`), a deliberate jump with no functional change. A retired, unrelated 2025 CLI published `cli-*` GitHub releases up to `cli-4.0.0` under this same name; those tags carry no platform binaries. Leaping past them makes this crate the unambiguous newest `cli-*` release by semver, so agents and release-discovery tooling that pick the highest/newest tag resolve to a real, asset-bearing release. **Only `cli-5.0.0` and later are the real Latitude CLI; `cli-4.0.0` and below must be ignored.**
+
 ## [0.4.0] - 2026-07-03
 
 ### Added
