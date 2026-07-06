@@ -87,7 +87,7 @@
     "react": "catalog:",
     "react-dom": "catalog:",
     "rosetta-ai": "catalog:",
-    "satori": "0.18.4",
+    "satori": "0.26.0",
     "voyageai": "catalog:",
     "zod": "catalog:"
   },
