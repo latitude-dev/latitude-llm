@@ -6,6 +6,7 @@ import {
   AvatarGroup,
   Badge,
   BarChart,
+  Button,
   ChartSkeleton,
   Checkbox,
   CopyButton,
@@ -16,7 +17,6 @@ import {
   Input,
   Label,
   RichTextEditor,
-  Button,
   Status,
   Text,
   useMountEffect,
@@ -49,7 +49,8 @@ type ComponentEntry = {
 const COMPONENT_REGISTRY: Record<string, ComponentEntry> = {
   "agent-textarea": {
     title: "Agent textarea",
-    description: "Textarea for prompts that trigger an AI agent: shader border while idle, loading fill while it works.",
+    description:
+      "Textarea for prompts that trigger an AI agent: shader border while idle, loading fill while it works.",
     usage: {
       description:
         "Pass a status string while the agent works — the field locks and the loading fill takes over. useStagedStatus maps elapsed time to stage labels.",
