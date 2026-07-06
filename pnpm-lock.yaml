@@ -535,6 +535,9 @@ importers:
       '@lottiefiles/dotlottie-wc':
         specifier: 0.9.12
         version: 0.9.12
+      '@platform/agent-dispatch':
+        specifier: workspace:*
+        version: link:../../packages/platform/agent-dispatch
       '@platform/ai':
         specifier: workspace:*
         version: link:../../packages/platform/ai
@@ -3079,6 +3082,9 @@ importers:
       '@radix-ui/react-dialog':
         specifier: 1.1.17
         version: 1.1.17(@types/react-dom@19.2.3(@types/react@19.2.14))(@types/react@19.2.14)(react-dom@19.2.5(react@19.2.5))(react@19.2.5)
+      '@radix-ui/react-dismissable-layer':
+        specifier: 1.1.11
+        version: 1.1.11(@types/react-dom@19.2.3(@types/react@19.2.14))(@types/react@19.2.14)(react-dom@19.2.5(react@19.2.5))(react@19.2.5)
       '@radix-ui/react-dropdown-menu':
         specifier: 2.1.16
         version: 2.1.16(@types/react-dom@19.2.3(@types/react@19.2.14))(@types/react@19.2.14)(react-dom@19.2.5(react@19.2.5))(react@19.2.5)

@@ -65,6 +65,13 @@
         "voyageai"
       ]
     },
+    "apps/design-system": {
+      "entry": [
+        "src/main.tsx",
+        "src/routes/**/*.tsx"
+      ],
+      "project": ["src/**/*.{ts,tsx}"]
+    },
     "infra": {
       "entry": [],
       "project": []

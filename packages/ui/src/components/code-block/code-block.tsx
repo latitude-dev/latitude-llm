@@ -10,6 +10,7 @@ export interface CodeBlockProps {
   readonly language?: string
   readonly className?: string
   readonly wrapLines?: boolean
+  readonly onReady?: () => void
 }
 
 const CodeMirrorReadonly = lazy(() =>
@@ -31,6 +32,7 @@ export function CodeBlock({
   language,
   className,
   wrapLines = true,
+  onReady,
 }: CodeBlockProps) {
   const [mounted, setMounted] = useState(false)
 
@@ -39,17 +41,18 @@ export function CodeBlock({
   })
 
   if (!mounted) {
-    return <CodeBlockFallback {...(className != null && { className })} />
+    return onReady ? null : <CodeBlockFallback {...(className != null && { className })} />
   }
 
   return (
     <div className="group relative">
-      <Suspense fallback={<CodeBlockFallback {...(className != null && { className })} />}>
+      <Suspense fallback={onReady ? null : <CodeBlockFallback {...(className != null && { className })} />}>
         <CodeMirrorReadonly
           value={value}
           wrapLines={wrapLines}
           {...(language != null && { language })}
           {...(className != null && { className })}
+          {...(onReady ? { onReady } : {})}
         />
       </Suspense>
       <CodeBlockControls

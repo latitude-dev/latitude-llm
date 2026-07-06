@@ -37,7 +37,8 @@ export {
   AgentDispatchIntegrationConflictError,
   DispatchAdapterError,
 } from "./errors.ts"
-export { buildDispatchIdempotencyKey } from "./helpers/idempotency-key.ts"
+export { buildDispatchContextFromSignal } from "./helpers/build-dispatch-context.ts"
+export { buildDispatchIdempotencyKey, buildManualDispatchIdempotencyKey } from "./helpers/idempotency-key.ts"
 export { defaultDispatchPromptTemplate, renderDispatchPrompt } from "./helpers/render-prompt.ts"
 export type { AgentDispatchAdapter, DecryptedCredential, DispatchResult } from "./ports/agent-dispatch-adapter.ts"
 export { AgentDispatchAdapters } from "./ports/agent-dispatch-adapter.ts"
