@@ -7720,66 +7720,6 @@
     "name": "STACKIT",
     "doc": "https://docs.stackit.cloud/products/data-and-ai/ai-model-serving/basics/available-shared-models",
     "models": {
-      "neuralmagic/Meta-Llama-3.1-8B-Instruct-FP8": {
-        "id": "neuralmagic/Meta-Llama-3.1-8B-Instruct-FP8",
-        "name": "Llama 3.1 8B",
-        "description": "Open Llama instruction model for multilingual chat, reasoning, and coding",
-        "family": "llama",
-        "attachment": false,
-        "reasoning": false,
-        "tool_call": true,
-        "structured_output": true,
-        "temperature": true,
-        "release_date": "2024-07-23",
-        "last_updated": "2024-07-23",
-        "modalities": {
-          "input": [
-            "text"
-          ],
-          "output": [
-            "text"
-          ]
-        },
-        "open_weights": true,
-        "limit": {
-          "context": 128000,
-          "output": 8192
-        },
-        "cost": {
-          "input": 0.16,
-          "output": 0.27
-        }
-      },
-      "neuralmagic/Mistral-Nemo-Instruct-2407-FP8": {
-        "id": "neuralmagic/Mistral-Nemo-Instruct-2407-FP8",
-        "name": "Mistral Nemo",
-        "description": "Mistral model for multilingual chat, reasoning, and tool-assisted workflows",
-        "family": "mistral",
-        "attachment": false,
-        "reasoning": false,
-        "tool_call": true,
-        "structured_output": false,
-        "temperature": true,
-        "release_date": "2024-07-01",
-        "last_updated": "2024-07-01",
-        "modalities": {
-          "input": [
-            "text"
-          ],
-          "output": [
-            "text"
-          ]
-        },
-        "open_weights": true,
-        "limit": {
-          "context": 128000,
-          "output": 8192
-        },
-        "cost": {
-          "input": 0.49,
-          "output": 0.71
-        }
-      },
       "cortecs/Llama-3.3-70B-Instruct-FP8-Dynamic": {
         "id": "cortecs/Llama-3.3-70B-Instruct-FP8-Dynamic",
         "name": "Llama 3.3 70B",
@@ -7803,11 +7743,11 @@
         "open_weights": true,
         "limit": {
           "context": 128000,
-          "output": 8192
+          "output": 4096
         },
         "cost": {
-          "input": 0.49,
-          "output": 0.71
+          "input": 0.53,
+          "output": 0.76
         }
       },
       "google/gemma-3-27b-it": {
@@ -7834,11 +7774,41 @@
         "open_weights": true,
         "limit": {
           "context": 37000,
-          "output": 8192
+          "output": 4096
         },
         "cost": {
-          "input": 0.49,
-          "output": 0.71
+          "input": 0.53,
+          "output": 0.76
+        }
+      },
+      "Qwen/Qwen3.6-27B": {
+        "id": "Qwen/Qwen3.6-27B",
+        "name": "Qwen3.6 27B",
+        "description": "Qwen vision-language model for visual reasoning, documents, and agent tasks",
+        "family": "qwen",
+        "attachment": false,
+        "reasoning": false,
+        "tool_call": true,
+        "structured_output": false,
+        "temperature": true,
+        "release_date": "2026-04-22",
+        "last_updated": "2026-04-22",
+        "modalities": {
+          "input": [
+            "text"
+          ],
+          "output": [
+            "text"
+          ]
+        },
+        "open_weights": true,
+        "limit": {
+          "context": 262144,
+          "output": 16384
+        },
+        "cost": {
+          "input": 0.53,
+          "output": 0.76
         }
       },
       "Qwen/Qwen3-VL-Embedding-8B": {
@@ -7896,18 +7866,18 @@
         "open_weights": true,
         "limit": {
           "context": 218000,
-          "output": 8192
+          "output": 16384
         },
         "cost": {
-          "input": 1.64,
-          "output": 1.91
+          "input": 1.76,
+          "output": 2.05
         }
       },
       "openai/gpt-oss-120b": {
         "id": "openai/gpt-oss-120b",
-        "name": "GPT-OSS 120B",
-        "description": "Open-weight GPT model for self-hosted reasoning and instruction-following workloads",
-        "family": "gpt",
+        "name": "GPT OSS 120B",
+        "description": "Open GPT reasoning model for self-hosted agents and controllable deployments",
+        "family": "gpt-oss",
         "attachment": false,
         "reasoning": true,
         "reasoning_options": [
@@ -7939,8 +7909,39 @@
           "output": 8192
         },
         "cost": {
-          "input": 0.49,
-          "output": 0.71
+          "input": 0.53,
+          "output": 0.76
+        }
+      },
+      "openai/gpt-oss-20b": {
+        "id": "openai/gpt-oss-20b",
+        "name": "GPT OSS 20B",
+        "description": "Open GPT reasoning model for self-hosted agents and controllable deployments",
+        "family": "gpt-oss",
+        "attachment": false,
+        "reasoning": true,
+        "reasoning_options": [],
+        "tool_call": true,
+        "structured_output": false,
+        "temperature": true,
+        "release_date": "2025-08-05",
+        "last_updated": "2025-08-05",
+        "modalities": {
+          "input": [
+            "text"
+          ],
+          "output": [
+            "text"
+          ]
+        },
+        "open_weights": true,
+        "limit": {
+          "context": 131072,
+          "output": 8192
+        },
+        "cost": {
+          "input": 0.18,
+          "output": 0.29
         }
       },
       "intfloat/e5-mistral-7b-instruct": {
@@ -12131,6 +12132,7 @@
           }
         ],
         "tool_call": true,
+        "structured_output": true,
         "temperature": true,
         "knowledge": "2024-10",
         "release_date": "2025-08-05",
@@ -14245,6 +14247,41 @@
           "cache_write": 1
         }
       },
+      "anthropic/claude-sonnet-4": {
+        "id": "anthropic/claude-sonnet-4",
+        "name": "Claude Sonnet 4",
+        "description": "Balanced Claude model for coding, analysis, agent workflows, and cost control",
+        "family": "claude-sonnet",
+        "attachment": true,
+        "reasoning": true,
+        "reasoning_options": [],
+        "tool_call": true,
+        "temperature": true,
+        "knowledge": "2025-03-31",
+        "release_date": "2025-05-22",
+        "last_updated": "2025-05-22",
+        "modalities": {
+          "input": [
+            "text",
+            "image",
+            "pdf"
+          ],
+          "output": [
+            "text"
+          ]
+        },
+        "open_weights": false,
+        "limit": {
+          "context": 1000000,
+          "output": 64000
+        },
+        "cost": {
+          "input": 3,
+          "output": 15,
+          "cache_read": 0.3,
+          "cache_write": 3.75
+        }
+      },
       "anthropic/claude-haiku-4.5": {
         "id": "anthropic/claude-haiku-4.5",
         "name": "Claude Haiku 4.5",
@@ -14594,6 +14631,74 @@
           }
         }
       },
+      "anthropic/claude-3-haiku": {
+        "id": "anthropic/claude-3-haiku",
+        "name": "Claude Haiku 3",
+        "description": "Legacy model retained for compatibility with older integrations",
+        "family": "claude-haiku",
+        "attachment": true,
+        "reasoning": false,
+        "tool_call": true,
+        "temperature": true,
+        "knowledge": "2023-08-31",
+        "release_date": "2024-03-13",
+        "last_updated": "2024-03-13",
+        "modalities": {
+          "input": [
+            "text",
+            "image"
+          ],
+          "output": [
+            "text"
+          ]
+        },
+        "open_weights": false,
+        "limit": {
+          "context": 200000,
+          "output": 4096
+        },
+        "cost": {
+          "input": 0.25,
+          "output": 1.25,
+          "cache_read": 0.03,
+          "cache_write": 0.3
+        }
+      },
+      "anthropic/claude-opus-4": {
+        "id": "anthropic/claude-opus-4",
+        "name": "Claude Opus 4",
+        "description": "Flagship Claude model for deep reasoning, coding, and long-horizon agents",
+        "family": "claude-opus",
+        "attachment": true,
+        "reasoning": true,
+        "reasoning_options": [],
+        "tool_call": true,
+        "temperature": true,
+        "knowledge": "2025-03-31",
+        "release_date": "2025-05-22",
+        "last_updated": "2025-05-22",
+        "modalities": {
+          "input": [
+            "text",
+            "image",
+            "pdf"
+          ],
+          "output": [
+            "text"
+          ]
+        },
+        "open_weights": false,
+        "limit": {
+          "context": 200000,
+          "output": 32000
+        },
+        "cost": {
+          "input": 15,
+          "output": 75,
+          "cache_read": 1.5,
+          "cache_write": 18.75
+        }
+      },
       "anthropic/claude-opus-4.6": {
         "id": "anthropic/claude-opus-4.6",
         "name": "Claude Opus 4.6",
@@ -14646,81 +14751,6 @@
           "cache_write": 6.25
         }
       },
-      "anthropic/claude-opus-4": {
-        "id": "anthropic/claude-opus-4",
-        "name": "Claude Opus 4",
-        "description": "Flagship Claude model for deep reasoning, coding, and long-horizon agents",
-        "family": "claude-opus",
-        "attachment": true,
-        "reasoning": true,
-        "reasoning_options": [
-          {
-            "type": "budget_tokens",
-            "min": 1024
-          }
-        ],
-        "tool_call": true,
-        "temperature": true,
-        "knowledge": "2025-03-31",
-        "release_date": "2025-05-22",
-        "last_updated": "2025-05-22",
-        "modalities": {
-          "input": [
-            "text",
-            "image",
-            "pdf"
-          ],
-          "output": [
-            "text"
-          ]
-        },
-        "open_weights": false,
-        "limit": {
-          "context": 200000,
-          "output": 32000
-        },
-        "cost": {
-          "input": 15,
-          "output": 75,
-          "cache_read": 1.5,
-          "cache_write": 18.75
-        }
-      },
-      "anthropic/claude-3-haiku": {
-        "id": "anthropic/claude-3-haiku",
-        "name": "Claude Haiku 3",
-        "description": "Legacy model retained for compatibility with older integrations",
-        "family": "claude-haiku",
-        "attachment": true,
-        "reasoning": false,
-        "tool_call": true,
-        "temperature": true,
-        "knowledge": "2023-08-31",
-        "release_date": "2024-03-13",
-        "last_updated": "2024-03-13",
-        "modalities": {
-          "input": [
-            "text",
-            "image",
-            "pdf"
-          ],
-          "output": [
-            "text"
-          ]
-        },
-        "open_weights": false,
-        "limit": {
-          "context": 200000,
-          "output": 4096
-        },
-        "status": "deprecated",
-        "cost": {
-          "input": 0.25,
-          "output": 1.25,
-          "cache_read": 0.03,
-          "cache_write": 0.3
-        }
-      },
       "anthropic/claude-opus-4.1": {
         "id": "anthropic/claude-opus-4.1",
         "name": "Claude Opus 4.1",
@@ -14735,6 +14765,7 @@
           }
         ],
         "tool_call": true,
+        "structured_output": true,
         "temperature": true,
         "knowledge": "2025-03-31",
         "release_date": "2025-08-05",
@@ -14754,51 +14785,12 @@
           "context": 200000,
           "output": 32000
         },
+        "status": "deprecated",
         "cost": {
           "input": 15,
           "output": 75,
           "cache_read": 1.5,
           "cache_write": 18.75
-        }
-      },
-      "anthropic/claude-sonnet-4": {
-        "id": "anthropic/claude-sonnet-4",
-        "name": "Claude Sonnet 4",
-        "description": "Balanced Claude model for coding, analysis, agent workflows, and cost control",
-        "family": "claude-sonnet",
-        "attachment": true,
-        "reasoning": true,
-        "reasoning_options": [
-          {
-            "type": "budget_tokens",
-            "min": 1024
-          }
-        ],
-        "tool_call": true,
-        "temperature": true,
-        "knowledge": "2025-03-31",
-        "release_date": "2025-05-22",
-        "last_updated": "2025-05-22",
-        "modalities": {
-          "input": [
-            "text",
-            "image",
-            "pdf"
-          ],
-          "output": [
-            "text"
-          ]
-        },
-        "open_weights": false,
-        "limit": {
-          "context": 200000,
-          "output": 64000
-        },
-        "cost": {
-          "input": 3,
-          "output": 15,
-          "cache_read": 0.3,
-          "cache_write": 3.75
         }
       },
       "anthropic/claude-sonnet-4.5": {
@@ -14815,6 +14807,7 @@
           }
         ],
         "tool_call": true,
+        "structured_output": true,
         "temperature": true,
         "knowledge": "2025-07-31",
         "release_date": "2025-09-29",
@@ -14831,7 +14824,7 @@
         },
         "open_weights": false,
         "limit": {
-          "context": 200000,
+          "context": 1000000,
           "output": 64000
         },
         "cost": {
@@ -97193,6 +97186,7 @@
           }
         ],
         "tool_call": true,
+        "structured_output": true,
         "temperature": true,
         "knowledge": "2025-03-31",
         "release_date": "2025-11-24",
@@ -97233,6 +97227,7 @@
           }
         ],
         "tool_call": true,
+        "structured_output": true,
         "temperature": true,
         "knowledge": "2025-02-28",
         "release_date": "2025-10-15",
@@ -97259,81 +97254,6 @@
           "cache_write": 1.25
         }
       },
-      "claude-opus-4-0": {
-        "id": "claude-opus-4-0",
-        "name": "Claude Opus 4 (latest)",
-        "description": "Flagship Claude model for deep reasoning, coding, and long-horizon agents",
-        "family": "claude-opus",
-        "attachment": true,
-        "reasoning": true,
-        "reasoning_options": [
-          {
-            "type": "budget_tokens",
-            "min": 1024
-          }
-        ],
-        "tool_call": true,
-        "temperature": true,
-        "knowledge": "2025-03-31",
-        "release_date": "2025-05-22",
-        "last_updated": "2025-05-22",
-        "modalities": {
-          "input": [
-            "text",
-            "image",
-            "pdf"
-          ],
-          "output": [
-            "text"
-          ]
-        },
-        "open_weights": false,
-        "limit": {
-          "context": 200000,
-          "output": 32000
-        },
-        "cost": {
-          "input": 15,
-          "output": 75,
-          "cache_read": 1.5,
-          "cache_write": 18.75
-        }
-      },
-      "claude-3-opus-20240229": {
-        "id": "claude-3-opus-20240229",
-        "name": "Claude Opus 3",
-        "description": "Legacy model retained for compatibility with older integrations",
-        "family": "claude-opus",
-        "attachment": true,
-        "reasoning": false,
-        "tool_call": true,
-        "temperature": true,
-        "knowledge": "2023-08-31",
-        "release_date": "2024-02-29",
-        "last_updated": "2024-02-29",
-        "modalities": {
-          "input": [
-            "text",
-            "image",
-            "pdf"
-          ],
-          "output": [
-            "text"
-          ]
-        },
-        "open_weights": false,
-        "limit": {
-          "context": 200000,
-          "output": 4096
-        },
-        "status": "deprecated",
-        "cost": {
-          "input": 15,
-          "output": 75,
-          "cache_read": 1.5,
-          "cache_write": 18.75
-        }
-      },
       "claude-opus-4-1-20250805": {
         "id": "claude-opus-4-1-20250805",
         "name": "Claude Opus 4.1",
@@ -97348,6 +97268,7 @@
           }
         ],
         "tool_call": true,
+        "structured_output": true,
         "temperature": true,
         "knowledge": "2025-03-31",
         "release_date": "2025-08-05",
@@ -97367,6 +97288,7 @@
           "context": 200000,
           "output": 32000
         },
+        "status": "deprecated",
         "cost": {
           "input": 15,
           "output": 75,
@@ -97388,6 +97310,7 @@
           }
         ],
         "tool_call": true,
+        "structured_output": true,
         "temperature": true,
         "knowledge": "2025-07-31",
         "release_date": "2025-09-29",
@@ -97404,7 +97327,7 @@
         },
         "open_weights": false,
         "limit": {
-          "context": 200000,
+          "context": 1000000,
           "output": 64000
         },
         "cost": {
@@ -97434,9 +97357,10 @@
           }
         ],
         "tool_call": true,
+        "structured_output": true,
         "temperature": false,
         "knowledge": "2026-01-31",
-        "release_date": "2026-04-16",
+        "release_date": "2026-04-14",
         "last_updated": "2026-04-16",
         "modalities": {
           "input": [
@@ -97503,9 +97427,10 @@
           }
         ],
         "tool_call": true,
+        "structured_output": true,
         "temperature": false,
         "knowledge": "2026-01-31",
-        "release_date": "2026-06-30",
+        "release_date": "2026-06-29",
         "last_updated": "2026-06-30",
         "modalities": {
           "input": [
@@ -97551,9 +97476,10 @@
           }
         ],
         "tool_call": true,
+        "structured_output": true,
         "temperature": true,
         "knowledge": "2025-03-31",
-        "release_date": "2025-11-01",
+        "release_date": "2025-11-24",
         "last_updated": "2025-11-01",
         "modalities": {
           "input": [
@@ -97577,41 +97503,6 @@
           "cache_write": 6.25
         }
       },
-      "claude-3-5-sonnet-20241022": {
-        "id": "claude-3-5-sonnet-20241022",
-        "name": "Claude Sonnet 3.5 v2",
-        "description": "Legacy model retained for compatibility with older integrations",
-        "family": "claude-sonnet",
-        "attachment": true,
-        "reasoning": false,
-        "tool_call": true,
-        "temperature": true,
-        "knowledge": "2024-04-30",
-        "release_date": "2024-10-22",
-        "last_updated": "2024-10-22",
-        "modalities": {
-          "input": [
-            "text",
-            "image",
-            "pdf"
-          ],
-          "output": [
-            "text"
-          ]
-        },
-        "open_weights": false,
-        "limit": {
-          "context": 200000,
-          "output": 8192
-        },
-        "status": "deprecated",
-        "cost": {
-          "input": 3,
-          "output": 15,
-          "cache_read": 0.3,
-          "cache_write": 3.75
-        }
-      },
       "claude-opus-4-8": {
         "id": "claude-opus-4-8",
         "name": "Claude Opus 4.8",
@@ -97632,6 +97523,7 @@
           }
         ],
         "tool_call": true,
+        "structured_output": true,
         "temperature": false,
         "release_date": "2026-05-28",
         "last_updated": "2026-05-28",
@@ -97677,121 +97569,6 @@
           "cache_write": 6.25
         }
       },
-      "claude-opus-4-20250514": {
-        "id": "claude-opus-4-20250514",
-        "name": "Claude Opus 4",
-        "description": "Flagship Claude model for deep reasoning, coding, and long-horizon agents",
-        "family": "claude-opus",
-        "attachment": true,
-        "reasoning": true,
-        "reasoning_options": [
-          {
-            "type": "budget_tokens",
-            "min": 1024
-          }
-        ],
-        "tool_call": true,
-        "temperature": true,
-        "knowledge": "2025-03-31",
-        "release_date": "2025-05-22",
-        "last_updated": "2025-05-22",
-        "modalities": {
-          "input": [
-            "text",
-            "image",
-            "pdf"
-          ],
-          "output": [
-            "text"
-          ]
-        },
-        "open_weights": false,
-        "limit": {
-          "context": 200000,
-          "output": 32000
-        },
-        "cost": {
-          "input": 15,
-          "output": 75,
-          "cache_read": 1.5,
-          "cache_write": 18.75
-        }
-      },
-      "claude-3-5-sonnet-20240620": {
-        "id": "claude-3-5-sonnet-20240620",
-        "name": "Claude Sonnet 3.5",
-        "description": "Legacy model retained for compatibility with older integrations",
-        "family": "claude-sonnet",
-        "attachment": true,
-        "reasoning": false,
-        "tool_call": true,
-        "temperature": true,
-        "knowledge": "2024-04-30",
-        "release_date": "2024-06-20",
-        "last_updated": "2024-06-20",
-        "modalities": {
-          "input": [
-            "text",
-            "image",
-            "pdf"
-          ],
-          "output": [
-            "text"
-          ]
-        },
-        "open_weights": false,
-        "limit": {
-          "context": 200000,
-          "output": 8192
-        },
-        "status": "deprecated",
-        "cost": {
-          "input": 3,
-          "output": 15,
-          "cache_read": 0.3,
-          "cache_write": 3.75
-        }
-      },
-      "claude-sonnet-4-20250514": {
-        "id": "claude-sonnet-4-20250514",
-        "name": "Claude Sonnet 4",
-        "description": "Balanced Claude model for coding, analysis, agent workflows, and cost control",
-        "family": "claude-sonnet",
-        "attachment": true,
-        "reasoning": true,
-        "reasoning_options": [
-          {
-            "type": "budget_tokens",
-            "min": 1024
-          }
-        ],
-        "tool_call": true,
-        "temperature": true,
-        "knowledge": "2025-03-31",
-        "release_date": "2025-05-22",
-        "last_updated": "2025-05-22",
-        "modalities": {
-          "input": [
-            "text",
-            "image",
-            "pdf"
-          ],
-          "output": [
-            "text"
-          ]
-        },
-        "open_weights": false,
-        "limit": {
-          "context": 200000,
-          "output": 64000
-        },
-        "cost": {
-          "input": 3,
-          "output": 15,
-          "cache_read": 0.3,
-          "cache_write": 3.75
-        }
-      },
       "claude-opus-4-1": {
         "id": "claude-opus-4-1",
         "name": "Claude Opus 4.1 (latest)",
@@ -97806,6 +97583,7 @@
           }
         ],
         "tool_call": true,
+        "structured_output": true,
         "temperature": true,
         "knowledge": "2025-03-31",
         "release_date": "2025-08-05",
@@ -97825,46 +97603,12 @@
           "context": 200000,
           "output": 32000
         },
+        "status": "deprecated",
         "cost": {
           "input": 15,
           "output": 75,
           "cache_read": 1.5,
           "cache_write": 18.75
-        }
-      },
-      "claude-3-haiku-20240307": {
-        "id": "claude-3-haiku-20240307",
-        "name": "Claude Haiku 3",
-        "description": "Legacy model retained for compatibility with older integrations",
-        "family": "claude-haiku",
-        "attachment": true,
-        "reasoning": false,
-        "tool_call": true,
-        "temperature": true,
-        "knowledge": "2023-08-31",
-        "release_date": "2024-03-13",
-        "last_updated": "2024-03-13",
-        "modalities": {
-          "input": [
-            "text",
-            "image",
-            "pdf"
-          ],
-          "output": [
-            "text"
-          ]
-        },
-        "open_weights": false,
-        "limit": {
-          "context": 200000,
-          "output": 4096
-        },
-        "status": "deprecated",
-        "cost": {
-          "input": 0.25,
-          "output": 1.25,
-          "cache_read": 0.03,
-          "cache_write": 0.3
         }
       },
       "claude-fable-5": {
@@ -97887,8 +97631,9 @@
           }
         ],
         "tool_call": true,
+        "structured_output": true,
         "temperature": false,
-        "release_date": "2026-06-09",
+        "release_date": "2026-06-07",
         "last_updated": "2026-06-09",
         "modalities": {
           "input": [
@@ -97912,87 +97657,6 @@
           "cache_write": 12.5
         }
       },
-      "claude-sonnet-4-0": {
-        "id": "claude-sonnet-4-0",
-        "name": "Claude Sonnet 4 (latest)",
-        "description": "Balanced Claude model for coding, analysis, agent workflows, and cost control",
-        "family": "claude-sonnet",
-        "attachment": true,
-        "reasoning": true,
-        "reasoning_options": [
-          {
-            "type": "budget_tokens",
-            "min": 1024
-          }
-        ],
-        "tool_call": true,
-        "temperature": true,
-        "knowledge": "2025-03-31",
-        "release_date": "2025-05-22",
-        "last_updated": "2025-05-22",
-        "modalities": {
-          "input": [
-            "text",
-            "image",
-            "pdf"
-          ],
-          "output": [
-            "text"
-          ]
-        },
-        "open_weights": false,
-        "limit": {
-          "context": 200000,
-          "output": 64000
-        },
-        "cost": {
-          "input": 3,
-          "output": 15,
-          "cache_read": 0.3,
-          "cache_write": 3.75
-        }
-      },
-      "claude-3-7-sonnet-20250219": {
-        "id": "claude-3-7-sonnet-20250219",
-        "name": "Claude Sonnet 3.7",
-        "description": "Legacy model retained for compatibility with older integrations",
-        "family": "claude-sonnet",
-        "attachment": true,
-        "reasoning": true,
-        "reasoning_options": [
-          {
-            "type": "budget_tokens",
-            "min": 1024
-          }
-        ],
-        "tool_call": true,
-        "temperature": true,
-        "knowledge": "2024-10-31",
-        "release_date": "2025-02-19",
-        "last_updated": "2025-02-19",
-        "modalities": {
-          "input": [
-            "text",
-            "image",
-            "pdf"
-          ],
-          "output": [
-            "text"
-          ]
-        },
-        "open_weights": false,
-        "limit": {
-          "context": 200000,
-          "output": 64000
-        },
-        "status": "deprecated",
-        "cost": {
-          "input": 3,
-          "output": 15,
-          "cache_read": 0.3,
-          "cache_write": 3.75
-        }
-      },
       "claude-haiku-4-5": {
         "id": "claude-haiku-4-5",
         "name": "Claude Haiku 4.5 (latest)",
@@ -98007,6 +97671,7 @@
           }
         ],
         "tool_call": true,
+        "structured_output": true,
         "temperature": true,
         "knowledge": "2025-02-28",
         "release_date": "2025-10-15",
@@ -98056,9 +97721,10 @@
           }
         ],
         "tool_call": true,
+        "structured_output": true,
         "temperature": true,
         "knowledge": "2025-05-31",
-        "release_date": "2026-02-05",
+        "release_date": "2026-02-04",
         "last_updated": "2026-03-13",
         "modalities": {
           "input": [
@@ -98116,6 +97782,7 @@
           }
         ],
         "tool_call": true,
+        "structured_output": true,
         "temperature": true,
         "knowledge": "2025-07-31",
         "release_date": "2025-09-29",
@@ -98132,7 +97799,7 @@
         },
         "open_weights": false,
         "limit": {
-          "context": 200000,
+          "context": 1000000,
           "output": 64000
         },
         "cost": {
@@ -98140,41 +97807,6 @@
           "output": 15,
           "cache_read": 0.3,
           "cache_write": 3.75
-        }
-      },
-      "claude-3-sonnet-20240229": {
-        "id": "claude-3-sonnet-20240229",
-        "name": "Claude Sonnet 3",
-        "description": "Legacy model retained for compatibility with older integrations",
-        "family": "claude-sonnet",
-        "attachment": true,
-        "reasoning": false,
-        "tool_call": true,
-        "temperature": true,
-        "knowledge": "2023-08-31",
-        "release_date": "2024-03-04",
-        "last_updated": "2024-03-04",
-        "modalities": {
-          "input": [
-            "text",
-            "image",
-            "pdf"
-          ],
-          "output": [
-            "text"
-          ]
-        },
-        "open_weights": false,
-        "limit": {
-          "context": 200000,
-          "output": 4096
-        },
-        "status": "deprecated",
-        "cost": {
-          "input": 3,
-          "output": 15,
-          "cache_read": 0.3,
-          "cache_write": 0.3
         }
       },
       "claude-sonnet-4-6": {
@@ -98200,6 +97832,7 @@
           }
         ],
         "tool_call": true,
+        "structured_output": true,
         "temperature": true,
         "knowledge": "2025-08-31",
         "release_date": "2026-02-17",
@@ -98217,7 +97850,7 @@
         "open_weights": false,
         "limit": {
           "context": 1000000,
-          "output": 64000
+          "output": 128000
         },
         "cost": {
           "input": 3,
@@ -139911,13 +139544,13 @@
         },
         "open_weights": true,
         "limit": {
-          "context": 1024000,
-          "output": 128000
+          "context": 1048576,
+          "output": 131072
         },
         "cost": {
-          "input": 0.77,
-          "output": 2.42,
-          "cache_read": 0.143
+          "input": 0.686,
+          "output": 2.156,
+          "cache_read": 0.1274
         }
       },
       "z-ai/glm-4.6v": {
@@ -142272,7 +141905,7 @@
       },
       "openai/gpt-oss-20b": {
         "id": "openai/gpt-oss-20b",
-        "name": "gpt-oss-20b",
+        "name": "GPT OSS 20B",
         "description": "Open-weight GPT model for self-hosted reasoning and instruction-following workloads",
         "family": "gpt-oss",
         "attachment": false,
@@ -142290,7 +141923,6 @@
         "tool_call": true,
         "structured_output": true,
         "temperature": true,
-        "knowledge": "2024-06-30",
         "release_date": "2025-08-05",
         "last_updated": "2025-08-05",
         "modalities": {
@@ -142420,7 +142052,6 @@
         "tool_call": true,
         "structured_output": true,
         "temperature": true,
-        "knowledge": "2024-06-30",
         "release_date": "2025-08-05",
         "last_updated": "2025-08-05",
         "modalities": {
