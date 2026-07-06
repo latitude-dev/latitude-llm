@@ -2,6 +2,20 @@
 
 ## Unreleased
 
+## v0.3.38 - 2026-07-06
+
+### Signals
+
+- Added a "Send to agent" action on the signal detail page, letting users copy an investigation prompt for local coding agents or manually dispatch the signal to configured cloud integrations such as Cursor Cloud, Claude Code Cloud, Linear, and webhooks (ref: #3845).
+
+### Agent Dispatch
+
+- Added the manual dispatch trigger path for signals, including prompt generation, per-send idempotency keys, dispatch-history labeling, project/config validation, and typed failure results for manual cloud sends (ref: #3845).
+
+### Web
+
+- Polished the integration settings and shared select/modal primitives used by agent-dispatch flows, including searchable selects inside modals, keyboard navigation helpers, provider icons for Cursor/Codex, and copyable dispatch-history errors (ref: #3845).
+
 ## v0.3.37 - 2026-07-06
 
 ### API and SDK
