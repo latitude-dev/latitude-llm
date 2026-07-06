@@ -641,8 +641,8 @@ importers:
         specifier: 'catalog:'
         version: 2.2.0
       satori:
-        specifier: 0.18.4
-        version: 0.18.4
+        specifier: 0.26.0
+        version: 0.26.0
       voyageai:
         specifier: 'catalog:'
         version: 0.2.1
@@ -12581,8 +12581,8 @@ packages:
   samlify@2.10.2:
     resolution: {integrity: sha512-y5s1cHwclqwP8h7K2Wj9SfP1q+1S9+jrs5OAegYTLAiuFi7nDvuKqbiXLmUTvYPMpzHcX94wTY2+D604jgTKvA==}
 
-  satori@0.18.4:
-    resolution: {integrity: sha512-HanEzgXHlX3fzpGgxPoR3qI7FDpc/B+uE/KplzA6BkZGlWMaH98B/1Amq+OBF1pYPlGNzAXPYNHlrEVBvRBnHQ==}
+  satori@0.26.0:
+    resolution: {integrity: sha512-tkMFrfIs3l2mQ2JEcyW0ADTy3zGggFRFzi6Ef8YozQSFsFKEqaSO1Y8F9wJg4//PJGQauMalHGTUEkPrFwhVPA==}
     engines: {node: '>=16'}
 
   saxes@6.0.0:
@@ -25250,7 +25250,7 @@ snapshots:
       xml-escape: 1.1.0
       xpath: 0.0.32
 
-  satori@0.18.4:
+  satori@0.26.0:
     dependencies:
       '@shuding/opentype.js': 1.4.0-beta.0
       css-background-parser: 0.1.0
