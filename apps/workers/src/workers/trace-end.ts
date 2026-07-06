@@ -178,6 +178,29 @@ export const runTraceEndJob =
         isSandbox: payload.isSandbox ?? false,
       })
 
+      // "Trace ends → match signals": run every active evaluation against the now-settled trace.
+      // The sandbox early-return above means this never fires for sandbox traces.
+      yield* publisher
+        .publish(
+          "signals",
+          "match",
+          {
+            organizationId: payload.organizationId,
+            projectId: payload.projectId,
+            traceId: payload.traceId,
+            isSandbox: payload.isSandbox ?? false,
+            reason: "ingest",
+          },
+          {
+            dedupeKey: `org:${payload.organizationId}:signals-match:${payload.projectId}:${payload.traceId}`,
+          },
+        )
+        .pipe(
+          Effect.catch((error) =>
+            Effect.logError("Failed to enqueue signals match", { ...buildRunLogContext(payload), error }),
+          ),
+        )
+
       // Saved-search firing check, throttled to one run per project per 5 min.
       // Leading-edge: runs immediately so its trailing evaluation window covers
       // the traces that triggered it, instead of sliding 5 min past them.

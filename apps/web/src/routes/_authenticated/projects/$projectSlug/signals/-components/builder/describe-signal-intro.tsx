@@ -1,10 +1,6 @@
-import type { FilterSet } from "@domain/shared"
 import { SIGNAL_GENERATION_PROMPT_MAX_LENGTH } from "@domain/signals"
-import { Button, Icon, Text, Textarea, useMountEffect } from "@repo/ui"
-import { Loader2Icon, SearchCheckIcon, WandSparklesIcon } from "lucide-react"
-import { useRef, useState } from "react"
-import { runSignalGeneration } from "../../../../../../../domains/signals/signals.collection.ts"
-import { toUserMessage } from "../../../../../../../lib/errors.ts"
+import { AgentTextarea, Icon, Text } from "@repo/ui"
+import { SearchCheckIcon } from "lucide-react"
 import styles from "./describe-signal-intro.module.css"
 
 // Non-uniform delays so the arrivals feel organic rather than a marching wave.
@@ -83,64 +79,24 @@ function SignalFlowDiagram() {
 
 /**
  * The create flow's opening screen: describe what to track and Latitude's agent builds the whole
- * signal (evaluation, scope, sampling, name) and creates it — the modal then navigates to the new
- * signal's page. "Configure manually" drops into the step-by-step wizard instead. Generation runs
- * in a worker; closing the modal mid-run only stops polling, the signal is still created.
+ * signal. Presentational — the modal footer owns the Generate/Configure-manually actions and the
+ * generation run itself.
  */
 export function DescribeSignalIntro({
-  projectId,
-  filters,
-  onManual,
-  onCreated,
+  prompt,
+  onPromptChange,
+  generating,
+  step,
+  error,
 }: {
-  readonly projectId: string
-  readonly filters: FilterSet | null
-  readonly onManual: () => void
-  readonly onCreated: (result: { readonly signalId: string }) => void
+  readonly prompt: string
+  readonly onPromptChange: (prompt: string) => void
+  readonly generating: boolean
+  readonly step: string | null
+  readonly error: string | null
 }) {
-  const [prompt, setPrompt] = useState("")
-  const [generating, setGenerating] = useState(false)
-  const [step, setStep] = useState<string | null>(null)
-  const [error, setError] = useState<string | null>(null)
-  const abortRef = useRef<AbortController | null>(null)
-  useMountEffect(() => () => abortRef.current?.abort())
-
-  const generate = (): void => {
-    const trimmed = prompt.trim()
-    if (trimmed.length === 0 || generating) return
-    abortRef.current?.abort()
-    const controller = new AbortController()
-    abortRef.current = controller
-    setGenerating(true)
-    setError(null)
-    setStep(null)
-    void runSignalGeneration({
-      projectId,
-      prompt: trimmed,
-      filters,
-      signal: controller.signal,
-      onStep: (next) => {
-        if (!controller.signal.aborted) setStep(next)
-      },
-    })
-      .then((result) => {
-        if (controller.signal.aborted) return
-        if (result.status === "done") {
-          onCreated({ signalId: result.signalId })
-          return
-        }
-        if (result.status === "error") setError(result.error)
-        setGenerating(false)
-      })
-      .catch((err) => {
-        if (controller.signal.aborted) return
-        setError(toUserMessage(err))
-        setGenerating(false)
-      })
-  }
-
   return (
-    <div className="flex flex-col gap-6">
+    <div className="flex min-h-0 flex-1 flex-col gap-6">
       <div className="flex flex-wrap items-center gap-x-8 gap-y-4">
         <div className="flex min-w-64 flex-1 basis-80 flex-col gap-1.5">
           <Text.H4M>What's a signal?</Text.H4M>
@@ -152,35 +108,18 @@ export function DescribeSignalIntro({
         <SignalFlowDiagram />
       </div>
 
-      <div className="flex flex-col gap-3">
-        <Textarea
+      <div className="flex min-h-40 flex-1 flex-col gap-3">
+        <AgentTextarea
+          fill
           label="What do you want to track?"
-          minRows={4}
           maxLength={SIGNAL_GENERATION_PROMPT_MAX_LENGTH}
           value={prompt}
-          disabled={generating}
-          onChange={(event) => setPrompt(event.target.value)}
+          status={generating ? `${step ?? "Starting up"}…` : null}
+          onChange={(event) => onPromptChange(event.target.value)}
           placeholder='"Sessions where the ticket-cancellation tool fails and the user gets frustrated."'
         />
 
         {error !== null && !generating ? <Text.H6 color="destructive">{error}</Text.H6> : null}
-
-        <div className="flex items-center gap-3">
-          <Button onClick={generate} disabled={generating || prompt.trim().length === 0} isLoading={generating}>
-            <Icon icon={WandSparklesIcon} size="sm" />
-            Generate signal
-          </Button>
-          <Button variant="link" disabled={generating} onClick={onManual}>
-            Configure manually
-          </Button>
-        </div>
-
-        {generating ? (
-          <div className="flex items-center gap-2">
-            <Loader2Icon className="h-4 w-4 animate-spin text-primary" />
-            <Text.H6 color="foregroundMuted">{step ?? "Starting up"}…</Text.H6>
-          </div>
-        ) : null}
       </div>
     </div>
   )

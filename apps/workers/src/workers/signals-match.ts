@@ -4,6 +4,7 @@ import {
   orchestrateTraceEndLiveEvaluationExecutesUseCase,
 } from "@domain/evaluations"
 import type { QueueConsumer, QueuePublisherShape } from "@domain/queue"
+import { requiresEmbedding } from "@domain/sandbox"
 import { type FilterSet, OrganizationId, ProjectId, SignalId } from "@domain/shared"
 import { SignalRepository } from "@domain/signals"
 import {
@@ -41,6 +42,7 @@ interface SignalsMatchPayload {
   readonly projectId: string
   readonly traceId: string
   readonly isSandbox?: boolean
+  readonly reason?: "ingest" | "embeddings-ready"
 }
 
 type SignalsMatchLogger = Pick<ReturnType<typeof createLogger>, "info" | "error">
@@ -87,6 +89,7 @@ const buildRunLogContext = (payload: SignalsMatchPayload) => ({
   organizationId: payload.organizationId,
   projectId: payload.projectId,
   traceId: payload.traceId,
+  reason: payload.reason ?? "ingest",
 })
 
 /**
@@ -144,6 +147,13 @@ export const runSignalsMatchJob =
         .filter(([key]) => decisions[key]?.selected === true)
         .map(([, evaluation]) => evaluation)
 
+      // An embeddings-ready re-trigger from trace-search concerns only semantic evals — the ones that
+      // deferred waiting for vectors. Non-semantic evals already ran on the ingest pass.
+      const isEmbeddingsReady = payload.reason === "embeddings-ready"
+      const evaluationsToPublish = isEmbeddingsReady
+        ? selectedEvaluations.filter((evaluation) => requiresEmbedding(evaluation.script))
+        : selectedEvaluations
+
       const { skippedTurnCount, publishedExecuteCount } = yield* orchestrateTraceEndLiveEvaluationExecutesUseCase({
         publishExecute: (pubInput) =>
           publisher.publish(
@@ -156,7 +166,12 @@ export const runSignalsMatchJob =
               traceId: pubInput.traceId,
             },
             {
-              ...(pubInput.dedupeKey !== undefined ? { dedupeKey: pubInput.dedupeKey } : {}),
+              // A bare execute dedupeKey rides a jobId that removeOnComplete retains, so a re-trigger
+              // with the same key is shadowed. Suffix embeddings-ready so recovery is never dropped;
+              // existsByEvaluationIdAndTraceId guards against a double run against the ingest pass.
+              ...(pubInput.dedupeKey !== undefined
+                ? { dedupeKey: isEmbeddingsReady ? `${pubInput.dedupeKey}:embeddings-ready` : pubInput.dedupeKey }
+                : {}),
               ...(pubInput.debounceMs !== undefined ? { debounceMs: pubInput.debounceMs } : {}),
             },
           ),
@@ -167,7 +182,7 @@ export const runSignalsMatchJob =
         traceProjectId: traceDetail.projectId,
         traceRowId: traceDetail.traceId,
         sessionId: traceDetail.sessionId ?? null,
-        selectedEvaluations,
+        selectedEvaluations: evaluationsToPublish,
       })
 
       return {

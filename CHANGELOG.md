@@ -2,6 +2,80 @@
 
 ## Unreleased
 
+## v0.3.38 - 2026-07-06
+
+### Signals
+
+- Added a "Send to agent" action on the signal detail page, letting users copy an investigation prompt for local coding agents or manually dispatch the signal to configured cloud integrations such as Cursor Cloud, Claude Code Cloud, Linear, and webhooks (ref: #3845).
+
+### Agent Dispatch
+
+- Added the manual dispatch trigger path for signals, including prompt generation, per-send idempotency keys, dispatch-history labeling, project/config validation, and typed failure results for manual cloud sends (ref: #3845).
+
+### Web
+
+- Polished the integration settings and shared select/modal primitives used by agent-dispatch flows, including searchable selects inside modals, keyboard navigation helpers, provider icons for Cursor/Codex, and copyable dispatch-history errors (ref: #3845).
+
+## v0.3.37 - 2026-07-06
+
+### API and SDK
+
+- **Breaking:** collapsed the four lossy `TraceDetail` message fields (`systemInstructions`, `inputMessages`, `outputMessages`, `allMessages`) into a single `conversation` field on the `getTrace` endpoint. Real multi-turn agent traces showed `inputMessages` only captured the first turn and `outputMessages` only the last, dropping every intermediate turn and tool call, while `allMessages` was already a strict superset; it is now renamed `conversation`. Per-span message fields are unchanged. `openapi.json`, `mcp.json`, the TypeScript SDK (8.0.0), Python SDK (8.0.0), and CLI (6.0.0) were regenerated and bumped as breaking (ref: #3884).
+
+### Signals
+
+- Stopped semantic-similarity live and preview evaluations from persisting permanent false negatives: they now gate on real session embeddings for the active model and skip cleanly (without recording a failure) when vectors are missing, instead of scoring against absent message occurrences (ref: #3872).
+- Reworked the describe-signal generation UX around a new WebGL shader-animated `AgentTextarea` — a pulsing brand-color border with a pools-and-tide loading fill that keeps the textarea's own background in both themes, tuned for typing latency. "Generate signal" and "Configure manually" moved to the modal footer, the prompt stretches to full body height, and staged progress is mocked across the ~30s run until the worker streams real step events (ref: #3882).
+
+### Web
+
+- Re-enabled the in-app changelog sidebar and banner, now backed by a static JSON changelog API served from the marketing site; the old `@platform/changelog-framer` was replaced by a new `@platform/changelog-api` reader (ref: #3875).
+
+### Showcase
+
+- Added the showcase resolver chokepoint (S2): a `resolveShowcaseUseCase` and `resolveShowcaseAccess` server helper resolve the pinned showcase org/project from the `latitude.showcase` pointer (Redis-cached) with authz gating on the org's `wantsShowcase` flag. Behavior-neutral — nothing wires it yet (ref: #3881).
+
+### Design system
+
+- Reused the main app's favicon on the public design-system site, which previously served none (ref: #3883).
+
+### Infrastructure
+
+- Added the `design.latitude.so` Vercel CNAME to production DNS (ref: #3888).
+
+## v0.3.36 - 2026-07-06
+
+### Web
+
+- Showed the onboarding illustrations in the account-claim flow by extracting the onboarding right-pane into a shared component reused by both the onboarding and claim screens (ref: #3879).
+
+### Showcase
+
+- Landed the first backend slice of the showcase demo project: a new `@domain/showcase` package with a pointer table, repository, and a guarded create-showcase use-case, plus the Postgres migration. Backend-only groundwork with no user-facing behavior yet (ref: #3830).
+
+## v0.3.35 - 2026-07-06
+
+### Design system
+
+- Launched a standalone public design system site at `design.latitude.so`, extracted from the web app into its own Vite + TanStack Router SPA (`apps/design-system`); the in-app design-system routes were removed (ref: #3834).
+
+### Docs and onboarding
+
+- Published agentic onboarding docs: a new getting-started coding-agent guide covering zero-account and existing-account paths plus the claim flow, a README CLI mention, and in-app coding-agent onboarding copy; the `agentic-experience` spec was retired into `dev-docs/agentic-onboarding.md` (ref: #3876).
+
+### Web
+
+- Showed the billing usage counter in red when a free plan reaches its included credit limit, not only on metered overage (ref: #3878).
+- Laid groundwork for the showcase demo project: central mutation-error handling, a read-only write-gate middleware, a `ProjectScope` context, a globally reserved `lat-demo` project slug, and a per-org `wantsShowcase` flag set at org creation. Behavior-neutral today — no new toasts or blocked writes until the showcase scope is enabled (ref: #3822, #3829, #3831, #3828, #3827).
+
+### Reliability
+
+- Guarded trace search formatting against spans whose message parts are missing, preventing formatter crashes (ref: #3873).
+
+### Models
+
+- Updated the bundled `models.dev` data snapshot (ref: #3852).
+
 ## v0.3.34 - 2026-07-05
 
 ### Reliability

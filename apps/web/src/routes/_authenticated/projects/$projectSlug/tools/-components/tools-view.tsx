@@ -1,12 +1,14 @@
 import { InfiniteTable, type InfiniteTableColumn, Text, Tooltip } from "@repo/ui"
 import { formatCount, formatDuration, relativeTime } from "@repo/utils"
-import { Link } from "@tanstack/react-router"
+import { Link, useNavigate } from "@tanstack/react-router"
 import { WrenchIcon } from "lucide-react"
+import { useCallback, useMemo } from "react"
 import type { ToolSummaryRecord } from "../../../../../../domains/tools/tools.functions.ts"
 import {
   ListingLayout as Layout,
   listingLayoutIntrinsicScroll,
 } from "../../../../../../layouts/ListingLayout/index.tsx"
+import { useListRowKeyboardNav } from "../../../../../../lib/hooks/useListRowKeyboardNav.ts"
 import { formatPercent, TOOL_FAILING_ERROR_RATE } from "./tool-formatters.ts"
 import { ToolStatusBadges } from "./tool-status-badges.tsx"
 import { ToolTrendBar } from "./tool-trend-bar.tsx"
@@ -71,6 +73,9 @@ export function ToolsView({
   rangeFromIso,
   rangeToIso,
   trendBucketSeconds,
+  focusedToolName,
+  onFocusedToolChange,
+  keyboardNavEnabled = true,
 }: {
   readonly tools: readonly ToolSummaryRecord[]
   readonly isLoading: boolean
@@ -82,7 +87,27 @@ export function ToolsView({
   readonly rangeFromIso: string
   readonly rangeToIso: string
   readonly trendBucketSeconds: number
+  readonly focusedToolName?: string | undefined
+  readonly onFocusedToolChange?: (toolName: string | undefined) => void
+  readonly keyboardNavEnabled?: boolean
 }) {
+  const navigate = useNavigate()
+  const toolNames = useMemo(() => tools.map((tool) => tool.name), [tools])
+
+  const openTool = useCallback(
+    (toolName: string) => {
+      void navigate({ to: "/projects/$projectSlug/tools/$toolName", params: { projectSlug, toolName } })
+    },
+    [navigate, projectSlug],
+  )
+
+  useListRowKeyboardNav({
+    rowIds: toolNames,
+    focusedRowId: focusedToolName,
+    onFocusedRowChange: (toolName) => onFocusedToolChange?.(toolName),
+    onOpenRow: openTool,
+    enabled: keyboardNavEnabled,
+  })
   const allColumns: readonly InfiniteTableColumn<ToolSummaryRecord>[] = [
     {
       key: "tool",
@@ -304,6 +329,7 @@ export function ToolsView({
           isLoading={isLoading}
           columns={columns}
           getRowKey={(tool) => tool.name}
+          {...(focusedToolName ? { activeRowKey: focusedToolName, activeRowAutoScroll: true } : {})}
           renderRowLink={(tool, props) => (
             <Link
               to="/projects/$projectSlug/tools/$toolName"

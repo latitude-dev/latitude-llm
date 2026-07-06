@@ -1,7 +1,7 @@
 import { useQuery } from "@tanstack/react-query"
 import { type ChangelogEntryRecord, listChangelogEntries } from "./changelog.functions.ts"
 
-export const CHANGELOG_UI_ENABLED = false
+export const CHANGELOG_UI_ENABLED = true
 
 const CHANGELOG_QUERY_KEY = ["changelog", "entries"] as const
 

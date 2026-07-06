@@ -329,17 +329,25 @@ export const buildDispatchContextFromSignal = (input: {
   readonly projectId: ProjectId
   readonly signalId: SignalId
   readonly webAppUrl: string
+  readonly trigger?: AgentDispatchTrigger
 }) =>
   Effect.gen(function* () {
     const orgRepo = yield* OrganizationRepository
     const projectRepo = yield* ProjectRepository
     const signalRepo = yield* SignalRepository
 
-    const [organization, project, signal] = yield* Effect.all([
+    const [organization, project] = yield* Effect.all([
       orgRepo.findById(input.organizationId),
       projectRepo.findById(input.projectId),
-      signalRepo.findById(input.signalId),
     ])
+
+    const signal = yield* signalRepo
+      .findById(input.signalId)
+      .pipe(Effect.catchTag("NotFoundError", () => Effect.fail(new Error("Signal not found in this project"))))
+
+    if (signal.projectId !== input.projectId) {
+      return yield* Effect.fail(new Error("Signal not found in this project"))
+    }
 
     const [tags, sampleExcerpt, sampleTraceIds, sampleConversations] = yield* Effect.all([
       snapshotTags({
@@ -357,7 +365,7 @@ export const buildDispatchContextFromSignal = (input: {
     ])
 
     return {
-      trigger: "signal.discovered" as const,
+      trigger: input.trigger ?? "signal.discovered",
       organizationName: organization.name,
       projectName: project.name,
       projectSlug: project.slug,

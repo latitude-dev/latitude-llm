@@ -5,6 +5,8 @@ import { type Project, ProjectRepository } from "@domain/projects"
 import { OrganizationId, SqlClient, type SqlClientShape } from "@domain/shared"
 import { Effect } from "effect"
 import { describe, expect, it } from "vitest"
+import { OrganizationRepository } from "../ports/organization-repository.ts"
+import { createFakeOrganizationRepository } from "../testing/index.ts"
 import { provisionOrganizationWorkspaceUseCase } from "./provision-organization-workspace.ts"
 
 const ORG_ID = OrganizationId("oooooooooooooooooooooooo")
@@ -16,6 +18,19 @@ describe("provisionOrganizationWorkspaceUseCase", () => {
     const writtenEvents: OutboxWriteEvent[] = []
     const { repository: apiKeyRepo, apiKeys: savedApiKeys } = createFakeApiKeyRepository()
     const savedProjects: Project[] = []
+    const { repository: organizationRepo, organizations: savedOrganizations } = createFakeOrganizationRepository()
+    savedOrganizations.set(ORG_ID, {
+      id: ORG_ID,
+      name: "Acme",
+      slug: "acme",
+      logo: null,
+      metadata: null,
+      settings: null,
+      parentOrgId: null,
+      expiresAt: null,
+      createdAt: new Date(0),
+      updatedAt: new Date(0),
+    })
 
     const sqlClient: SqlClientShape = {
       organizationId: ORG_ID,
@@ -50,6 +65,7 @@ describe("provisionOrganizationWorkspaceUseCase", () => {
             }),
         }),
         Effect.provideService(ApiKeyRepository, apiKeyRepo),
+        Effect.provideService(OrganizationRepository, organizationRepo),
         Effect.provideService(ProjectRepository, {
           findById: () => Effect.die(new Error("unused")),
           findBySlug: () => Effect.die(new Error("unused")),
@@ -119,6 +135,7 @@ describe("provisionOrganizationWorkspaceUseCase", () => {
       organizationId: ORG_ID,
       settings: { isSample: true },
     })
+    expect(savedOrganizations.get(ORG_ID)).toMatchObject({ id: ORG_ID, settings: { wantsShowcase: true } })
     expect(result.defaultApiKey).toMatchObject({ name: DEFAULT_API_KEY_NAME })
     expect(result.defaultProject).toMatchObject({ name: "My project", slug: "my-project" })
     expect(result.sampleProject).toMatchObject({ name: "Sample project", slug: "sample-project" })

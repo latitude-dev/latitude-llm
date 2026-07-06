@@ -17,7 +17,7 @@ const DISMISSED_ENTRY_STORAGE_KEY = "changelog-banner-dismissed-entry-id"
  * sidebar is collapsed.
  *
  * Dismiss is scoped to the current latest entry (id + publishedAt). Publishing a
- * new Framer item or changing the latest entry's date re-expands the banner once
+ * new entry or changing the latest entry's date re-expands the banner once
  * the changelog query picks up the update.
  */
 export function ChangelogSidebarEntry({ collapsed = false }: { collapsed?: boolean }) {
@@ -48,6 +48,7 @@ export function ChangelogSidebarEntry({ collapsed = false }: { collapsed?: boole
       title={latestEntry.title}
       description={latestEntry.summary}
       coverUrl={latestEntry.coverUrl}
+      entryUrl={latestEntry.url}
       onCollapse={() => setDismissed(toDismissedBannerState(latestEntry))}
     />
   )

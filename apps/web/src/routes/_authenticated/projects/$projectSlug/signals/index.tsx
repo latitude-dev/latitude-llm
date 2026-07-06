@@ -48,7 +48,7 @@ function SignalsBreadcrumb() {
 }
 
 import { ActivityIcon, ArchiveIcon, DownloadIcon, PauseIcon, PlayIcon, PlusIcon, SearchIcon } from "lucide-react"
-import { useCallback, useMemo, useState } from "react"
+import { useCallback, useEffect, useMemo, useState } from "react"
 import { invalidateSignalQueries, useSignals } from "../../../../../domains/signals/signals.collection.ts"
 import {
   applyBulkSignalLifecycleAction,
@@ -165,6 +165,7 @@ function SignalsPage() {
   const [bulkActionLoading, setBulkActionLoading] = useState(false)
   const [builderOpen, setBuilderOpen] = useState(false)
   const [builderInitialFilters, setBuilderInitialFilters] = useState<FilterSet | null>(null)
+  const [focusedSignalId, setFocusedSignalId] = useState<string | undefined>()
   const [newSignalParam, setNewSignalParam] = useParamState("newSignal", "")
   const [newSignalFiltersParam, setNewSignalFiltersParam] = useParamState("newSignalFilters", "")
 
@@ -201,6 +202,10 @@ function SignalsPage() {
       toIso: new Date(toMs).toISOString(),
     }
   }, [timeFrom, timeTo])
+
+  useEffect(() => {
+    setFocusedSignalId(undefined)
+  }, [lifecycleGroup, searchQuery, rawSorting, assigneesParam, timeFrom, timeTo])
 
   const assigneeIds = useMemo(() => parseAssignees(assigneesParam), [assigneesParam])
   const setAssigneeIds = useCallback(
@@ -447,6 +452,9 @@ function SignalsPage() {
           selection={selection}
           onSortChange={setSorting}
           projectSlug={project.slug}
+          focusedSignalId={focusedSignalId}
+          onFocusedSignalChange={setFocusedSignalId}
+          keyboardNavEnabled={!builderOpen && !exportModalOpen && !bulkMuteModalOpen}
         />
         {selection.bulkSelection && (
           <ExportConfirmationModal

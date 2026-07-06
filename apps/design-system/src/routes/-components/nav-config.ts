@@ -30,6 +30,7 @@ export const DESIGN_SYSTEM_NAV: DesignSystemNavSection[] = [
   {
     label: "Components",
     items: [
+      { label: "Agent textarea", to: "/agent-textarea" },
       { label: "Alert", to: "/alert" },
       { label: "Avatar", to: "/avatar" },
       { label: "Badge", to: "/badge" },

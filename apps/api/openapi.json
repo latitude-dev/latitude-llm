@@ -1932,29 +1932,12 @@
             },
             "description": "Free-form metadata attached at ingest time."
           },
-          "systemInstructions": {
-            "$ref": "#/components/schemas/GenAISystem"
-          },
-          "inputMessages": {
+          "conversation": {
             "type": "array",
             "items": {
               "$ref": "#/components/schemas/GenAIMessage"
             },
-            "description": "Input messages sent into the first LLM span of the trace, in OpenTelemetry GenAI format."
-          },
-          "outputMessages": {
-            "type": "array",
-            "items": {
-              "$ref": "#/components/schemas/GenAIMessage"
-            },
-            "description": "Output messages from the last LLM span of the trace, in OpenTelemetry GenAI format."
-          },
-          "allMessages": {
-            "type": "array",
-            "items": {
-              "$ref": "#/components/schemas/GenAIMessage"
-            },
-            "description": "Full conversation view for the trace's final turn — the last span's input messages followed by its output messages, in OpenTelemetry GenAI format."
+            "description": "Full conversation for the trace, in OpenTelemetry GenAI format: the system instructions, then the messages sent into the trace's last LLM-completion span (the running history at that point), followed by that span's generated output."
           }
         },
         "required": [
@@ -1988,19 +1971,8 @@
           "positiveAnnotationCount",
           "negativeAnnotationCount",
           "metadata",
-          "systemInstructions",
-          "inputMessages",
-          "outputMessages",
-          "allMessages"
+          "conversation"
         ]
-      },
-      "GenAISystem": {
-        "type": "array",
-        "items": {
-          "type": "object",
-          "additionalProperties": {}
-        },
-        "description": "System instructions in OpenTelemetry GenAI format — an array of part objects."
       },
       "GenAIMessage": {
         "type": "object",
@@ -10721,7 +10693,7 @@
         "x-fern-sdk-group-name": "traces",
         "x-fern-sdk-method-name": "get",
         "summary": "Get project trace",
-        "description": "Returns a single trace by id, including the captured system instructions and the conversation messages from the trace's last LLM-completion span.",
+        "description": "Returns a single trace by id, including its `conversation`: the system instructions and the messages of the trace's last LLM-completion span, in OpenTelemetry GenAI format.",
         "security": [
           {
             "ApiKeyAuth": []
