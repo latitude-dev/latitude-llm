@@ -2,6 +2,29 @@
 
 ## Unreleased
 
+## v0.3.35 - 2026-07-06
+
+### Design system
+
+- Launched a standalone public design system site at `design.latitude.so`, extracted from the web app into its own Vite + TanStack Router SPA (`apps/design-system`); the in-app design-system routes were removed (ref: #3834).
+
+### Docs and onboarding
+
+- Published agentic onboarding docs: a new getting-started coding-agent guide covering zero-account and existing-account paths plus the claim flow, a README CLI mention, and in-app coding-agent onboarding copy; the `agentic-experience` spec was retired into `dev-docs/agentic-onboarding.md` (ref: #3876).
+
+### Web
+
+- Showed the billing usage counter in red when a free plan reaches its included credit limit, not only on metered overage (ref: #3878).
+- Laid groundwork for the showcase demo project: central mutation-error handling, a read-only write-gate middleware, a `ProjectScope` context, a globally reserved `lat-demo` project slug, and a per-org `wantsShowcase` flag set at org creation. Behavior-neutral today — no new toasts or blocked writes until the showcase scope is enabled (ref: #3822, #3829, #3831, #3828, #3827).
+
+### Reliability
+
+- Guarded trace search formatting against spans whose message parts are missing, preventing formatter crashes (ref: #3873).
+
+### Models
+
+- Updated the bundled `models.dev` data snapshot (ref: #3852).
+
 ## v0.3.34 - 2026-07-05
 
 ### Reliability
