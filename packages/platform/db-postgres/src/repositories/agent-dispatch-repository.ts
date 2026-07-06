@@ -123,6 +123,31 @@ export const AgentDispatchRepositoryLive = Layer.succeed(AgentDispatchRepository
       return rows.length > 0
     }),
 
+  markFailedByIdempotencyKey: ({ idempotencyKey, errorCategory, errorDetail }) =>
+    Effect.gen(function* () {
+      const sqlClient = (yield* SqlClient) as SqlClientShape<Operator>
+      const rows = yield* sqlClient
+        .query((db, organizationId) =>
+          db
+            .update(agentDispatches)
+            .set({
+              status: "failed",
+              errorCategory,
+              errorDetail,
+            })
+            .where(
+              and(
+                eq(agentDispatches.organizationId, organizationId),
+                eq(agentDispatches.idempotencyKey, idempotencyKey),
+                eq(agentDispatches.status, "claimed"),
+              ),
+            )
+            .returning({ id: agentDispatches.id }),
+        )
+        .pipe(Effect.mapError((e) => toRepositoryError(e, "markAgentDispatchFailedByKey")))
+      return rows.length > 0
+    }),
+
   listByProject: (projectId) =>
     Effect.gen(function* () {
       const sqlClient = (yield* SqlClient) as SqlClientShape<Operator>

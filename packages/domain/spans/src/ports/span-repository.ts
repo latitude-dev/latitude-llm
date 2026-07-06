@@ -77,7 +77,11 @@ export interface SpanRepositoryShape {
    * Every span in a session. Membership mirrors the `sessions_mv` grouping key
    * (`coalesce(nullIf(session_id, ''), toString(trace_id))`), so it covers both
    * conversation-id sessions and orphan single-trace sessions (whose spans carry
-   * no `session_id` and are keyed on their `trace_id`).
+   * no `session_id` and are keyed on their `trace_id`). The dynamic attribute
+   * maps (`attrString`/`attrInt`/`attrFloat`/`attrBool`/`resourceString`) come
+   * back empty: a session's span count is unbounded and instrumentors can put
+   * whole conversations into attributes, so reading them here is a memory
+   * hazard — fetch a span's attributes via `findBySpanId`.
    */
   listBySessionId(input: {
     readonly organizationId: OrganizationId

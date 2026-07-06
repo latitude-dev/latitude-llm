@@ -45,15 +45,12 @@ export const emailDesignTokens = {
     card: "rounded-2xl",
     button: "rounded-lg",
   },
-  shadows: {
-    button: "0 1px 2px 0 rgb(0 0 0 / 0.05), inset 0 3px 8px 0 rgb(255 255 255 / 0.48)",
-  },
   button: {
     borderRadius: "0.5rem",
     fontSize: "0.875rem",
     lineHeight: "1.25rem",
     fontWeight: 500,
-    padding: "5px 12px",
+    padding: "10px 32px",
   },
 } as const
 
@@ -83,7 +80,6 @@ export function emailButtonStyle(variant: "default" | "outline" = "default") {
     ...base,
     backgroundColor: emailDesignTokens.colors.primary,
     color: emailDesignTokens.colors.primaryForeground,
-    boxShadow: emailDesignTokens.shadows.button,
   }
 }
 

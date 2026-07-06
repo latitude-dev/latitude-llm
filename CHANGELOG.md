@@ -2,6 +2,87 @@
 
 ## Unreleased
 
+## v0.3.36 - 2026-07-06
+
+### Web
+
+- Showed the onboarding illustrations in the account-claim flow by extracting the onboarding right-pane into a shared component reused by both the onboarding and claim screens (ref: #3879).
+
+### Showcase
+
+- Landed the first backend slice of the showcase demo project: a new `@domain/showcase` package with a pointer table, repository, and a guarded create-showcase use-case, plus the Postgres migration. Backend-only groundwork with no user-facing behavior yet (ref: #3830).
+
+## v0.3.35 - 2026-07-06
+
+### Design system
+
+- Launched a standalone public design system site at `design.latitude.so`, extracted from the web app into its own Vite + TanStack Router SPA (`apps/design-system`); the in-app design-system routes were removed (ref: #3834).
+
+### Docs and onboarding
+
+- Published agentic onboarding docs: a new getting-started coding-agent guide covering zero-account and existing-account paths plus the claim flow, a README CLI mention, and in-app coding-agent onboarding copy; the `agentic-experience` spec was retired into `dev-docs/agentic-onboarding.md` (ref: #3876).
+
+### Web
+
+- Showed the billing usage counter in red when a free plan reaches its included credit limit, not only on metered overage (ref: #3878).
+- Laid groundwork for the showcase demo project: central mutation-error handling, a read-only write-gate middleware, a `ProjectScope` context, a globally reserved `lat-demo` project slug, and a per-org `wantsShowcase` flag set at org creation. Behavior-neutral today — no new toasts or blocked writes until the showcase scope is enabled (ref: #3822, #3829, #3831, #3828, #3827).
+
+### Reliability
+
+- Guarded trace search formatting against spans whose message parts are missing, preventing formatter crashes (ref: #3873).
+
+### Models
+
+- Updated the bundled `models.dev` data snapshot (ref: #3852).
+
+## v0.3.34 - 2026-07-05
+
+### Reliability
+
+- Resolved `quickjs-emscripten` at API runtime instead of bundling it, so tsdown no longer inlines the emscripten glue and signals script runs no longer die with "require is not a function" (ref: #3840).
+- Made Cursor agent-dispatch jobs idempotent and retryable: the Cursor adapter now sends the `agentId` as an idempotency key so retries and 409 conflicts dedupe instead of spawning duplicate agents/PRs, send jobs gained attempts/backoff, and claimed ledger rows are marked failed on final transport exhaustion (ref: #3808).
+- Bounded session span-list reads to stop ClickHouse OOMs: `listBySessionId` no longer returns the dynamic attribute maps, the membership coalesce uses bare column equalities so the session/trace bloom-filter skip indexes prune granules, and a 4 GB single-threaded formatting cap is applied to all multi-span reads (ref: #3850).
+
+### Models
+
+- Updated the bundled `models.dev` data snapshot (ref: #3772).
+
+### Infrastructure
+
+- Pointed the `latitude.so` apex and `www` at Vercel and added DNS records for public pages (ref: 26ee482, bd01561).
+
+## v0.3.33 - 2026-07-04
+
+### Web
+
+- Disabled the changelog sidebar UI while the API-backed changelog collection is being updated, preventing the web app from querying or showing the incomplete feature (ref: #3833).
+
+## v0.3.32 - 2026-07-04
+
+### Signals
+
+- Added describe-first agentic signal creation: users describe a behavior in plain language and a worker-backed generator drafts a full signal (detector, judge script, scope) with sandbox validation, preview, and polling-based progress in the Advanced detector tab (ref: #3826).
+- Added semantic-similarity conditions to rule detectors so signals can match meaning, not just exact strings; generated evaluation scripts now embed against scoped sessions and score by cosine similarity (ref: #3818).
+- Removed the columns toggle and "My signals" controls from the signals list (ref: #3820).
+
+### Onboarding
+
+- Added temporary onboarding accounts: a bootstrap endpoint mints a short-lived account and a `/claim/:token` flow lets users claim it into a permanent org (LAT-704) (ref: #3823).
+- Added a global rate limit on the account bootstrap endpoint to guard against abuse (ref: #3825).
+
+### API and MCP
+
+- Improved the MCP query system for dashboard building: span listing gained ordering fields, trace/session/span `p95` metrics became configurable percentile metrics, and agent-dispatch docs and tooling cover building dashboards from agents (ref: #3765).
+
+### Web
+
+- Fixed the setup guide button stretching out of its container in the integration detail section (ref: #3838).
+
+### Reliability
+
+- Retried failed outbox polls so the consumer survives transient DB errors instead of stalling (ref: #3836).
+- Externalized `quickjs-emscripten` in the API and workflows bundles so the WASM loader resolves at runtime instead of breaking the build (ref: #3837, #3819).
+
 ## v0.3.31 - 2026-07-02
 
 ### Signals
@@ -1088,4 +1169,3 @@
 - Fixed SqlClient transaction isolation so concurrent Effect fibers use separate Postgres transactions while nested calls reuse the current transaction (ref: #3294).
 - Added Framer secrets to infrastructure and web runtime configuration (ref: 6782d44).
 - Updated bundled models.dev data and removed MCP plugin docs for now (refs: #3293, #3298).
-

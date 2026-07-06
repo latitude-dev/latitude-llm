@@ -1,13 +1,14 @@
 import type { Organization } from "@domain/organizations"
 import { queryCollectionOptions } from "@tanstack/query-db-collection"
 import type { Context, QueryBuilder, SchemaFromSource } from "@tanstack/react-db"
-import { createCollection, useLiveQuery } from "@tanstack/react-db"
+import { useLiveQuery } from "@tanstack/react-db"
+import { createAppCollection } from "../../lib/data/create-app-collection.ts"
 import { getQueryClient } from "../../lib/data/query-client.tsx"
 import { listOrganizations, updateOrganization } from "./organizations.functions.ts"
 
 const queryClient = getQueryClient()
 
-const organizationsCollection = createCollection(
+const organizationsCollection = createAppCollection(
   queryCollectionOptions({
     queryClient,
     queryKey: ["organizations"],

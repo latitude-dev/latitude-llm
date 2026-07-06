@@ -1,5 +1,6 @@
 import {
   type ConflictError,
+  isReservedProjectSlug,
   type NotFoundError,
   type ProjectId,
   type ProjectSettings,
@@ -84,6 +85,12 @@ export const updateProjectUseCase = Effect.fn("projects.updateProject")(function
           return yield* new InvalidProjectSlugError({
             slug: input.slug,
             reason: "Slug must contain at least one URL-safe character",
+          })
+        }
+        if (isReservedProjectSlug(desiredSlug)) {
+          return yield* new InvalidProjectSlugError({
+            slug: desiredSlug,
+            reason: "This slug is reserved",
           })
         }
         if (desiredSlug !== existingProject.slug) {

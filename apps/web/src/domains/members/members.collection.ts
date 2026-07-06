@@ -1,6 +1,7 @@
 import { queryCollectionOptions } from "@tanstack/query-db-collection"
-import { createCollection, createOptimisticAction, useLiveQuery } from "@tanstack/react-db"
+import { createOptimisticAction, useLiveQuery } from "@tanstack/react-db"
 import { useQuery, useQueryClient } from "@tanstack/react-query"
+import { createAppCollection } from "../../lib/data/create-app-collection.ts"
 import { getQueryClient } from "../../lib/data/query-client.tsx"
 import type { MemberRecord } from "./members.functions.ts"
 import {
@@ -20,7 +21,7 @@ const MEMBERS_QUERY_KEY = ["members"] as const
 
 const EMPTY_MEMBER_BY_USER_ID_MAP: ReadonlyMap<string, MemberRecord> = new Map()
 
-const membersCollection = createCollection(
+const membersCollection = createAppCollection(
   queryCollectionOptions({
     queryClient,
     queryKey: MEMBERS_QUERY_KEY,

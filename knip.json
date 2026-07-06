@@ -15,6 +15,7 @@
         "src/**/*.ts"
       ],
       "ignoreDependencies": [
+        "quickjs-emscripten",
         "voyageai"
       ]
     },
@@ -54,7 +55,11 @@
         "src/routes/**/*.tsx"
       ],
       "project": ["src/**/*.ts", "src/**/*.tsx"],
+      "ignore": [
+        "src/server/resolve-showcase-access.ts"
+      ],
       "ignoreDependencies": [
+        "@domain/showcase",
         "@temporalio/client",
         "quickjs-emscripten",
         "voyageai"
@@ -166,10 +171,6 @@
   "ignoreBinaries": [
     "tmuxinator",
     "pulumi",
-    "tsx",
-    "tsdown",
-    "mcp-inspector",
-    "email",
     "packages/cli/target/release/latitude"
   ],
   "ignoreDependencies": [
@@ -179,11 +180,7 @@
     "@pulumi/datadog",
     "@pulumi/random",
     "fern-api",
-    "chdb",
-    "tsx",
-    "zod",
-    "@modelcontextprotocol/inspector",
-    "react-email"
+    "chdb"
   ],
   "tags": [
     "-knipignore"

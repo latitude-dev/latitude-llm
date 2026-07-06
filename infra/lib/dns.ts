@@ -1,4 +1,5 @@
 import * as aws from "@pulumi/aws"
+import * as pulumi from "@pulumi/pulumi"
 import type { EnvironmentConfig } from "../config.ts"
 import type { AcmCertificate, AcmCertificateValidation, LbLoadBalancer, Route53Record } from "./types.ts"
 
@@ -269,6 +270,26 @@ export function createDnsRecords(
       allowOverwrite: true,
     })
 
+    // A record for latitude.so apex -> Vercel
+    records.landingApex = new aws.route53.Record(`${name}-landing-apex`, {
+      zoneId: hostedZoneId,
+      name: "latitude.so",
+      type: "A",
+      records: ["216.150.1.1"],
+      ttl: 300,
+      allowOverwrite: true,
+    })
+
+    // CNAME for www.latitude.so -> Vercel
+    records.wwwCname = new aws.route53.Record(`${name}-www-cname`, {
+      zoneId: hostedZoneId,
+      name: "www.latitude.so",
+      type: "CNAME",
+      records: ["0509d3a779a2765c.vercel-dns-017.com."],
+      ttl: 300,
+      allowOverwrite: true,
+    })
+
     // CNAME for 41st.latitude.so -> Vercel
     records.fortyFirstCname = new aws.route53.Record(`${name}-41st-cname`, {
       zoneId: hostedZoneId,
@@ -298,9 +319,113 @@ export function createDnsRecords(
       ttl: 86400,
       allowOverwrite: true,
     })
+
+    // DNS for AI Discovery (DNS-AID) — draft-mozleywilliams-dnsop-dnsaid.
+    // Publishes Latitude's MCP agent endpoint under the _agents namespace so
+    // AI agents can discover it via SVCB records (RFC 9460). The _mcp label
+    // advertises the MCP protocol endpoint; _index is the well-known
+    // organizational entry point. Both point at the production API which hosts
+    // the MCP transport at /v1/mcp.
+    records.dnsAidMcp = new aws.route53.Record(`${name}-dns-aid-mcp`, {
+      zoneId: hostedZoneId,
+      name: "_mcp._agents.latitude.so",
+      type: "SVCB",
+      records: ["1 api.latitude.so. alpn=mcp,h2 port=443 mandatory=alpn,port"],
+      ttl: 3600,
+      allowOverwrite: true,
+    })
+
+    records.dnsAidIndex = new aws.route53.Record(`${name}-dns-aid-index`, {
+      zoneId: hostedZoneId,
+      name: "_index._agents.latitude.so",
+      type: "SVCB",
+      records: ["1 api.latitude.so. alpn=mcp,h2 port=443 mandatory=alpn,port"],
+      ttl: 3600,
+      allowOverwrite: true,
+    })
   }
 
   return {
     records,
+  }
+}
+
+export interface DnssecOutput {
+  keySigningKey: aws.route53.KeySigningKey
+  dsRecord: pulumi.Output<string>
+}
+
+// Enables DNSSEC signing on the latitude.so hosted zone so that validating
+// resolvers return authenticated data for DNS-AID records (RFC 9364). Route 53
+// DNSSEC requires the KMS key to live in us-east-1, so a provider alias is
+// created for that region regardless of the stack's home region. The DS record
+// emitted by the KSK must be published in the parent zone (.so) to complete the
+// chain of trust. latitude.so is registered at Namecheap (.so TLD is not
+// supported by AWS Route 53 Domains), so the DS record goes into Namecheap's
+// DNSSEC panel — see Pulumi.production.yaml for instructions.
+export function createDnssecSigning(name: string, hostedZoneId: string): DnssecOutput {
+  const usEast1 = new aws.Provider(`${name}-us-east-1`, { region: "us-east-1" })
+
+  const callerIdentity = aws.getCallerIdentityOutput({}, { provider: usEast1 })
+
+  const kmsKey = new aws.kms.Key(
+    `${name}-dnssec-ksk`,
+    {
+      customerMasterKeySpec: "ECC_NIST_P256",
+      deletionWindowInDays: 7,
+      keyUsage: "SIGN_VERIFY",
+      policy: pulumi.jsonStringify({
+        Statement: [
+          {
+            Sid: "Allow Route 53 DNSSEC Service",
+            Action: ["kms:DescribeKey", "kms:GetPublicKey", "kms:Sign"],
+            Effect: "Allow",
+            Principal: { Service: "dnssec-route53.amazonaws.com" },
+            Resource: "*",
+            Condition: {
+              StringEquals: { "aws:SourceAccount": callerIdentity.accountId },
+              ArnLike: { "aws:SourceArn": "arn:aws:route53:::hostedzone/*" },
+            },
+          },
+          {
+            Sid: "Allow Route 53 DNSSEC Service to CreateGrant",
+            Action: "kms:CreateGrant",
+            Effect: "Allow",
+            Principal: { Service: "dnssec-route53.amazonaws.com" },
+            Resource: "*",
+            Condition: { Bool: { "kms:GrantIsForAWSResource": "true" } },
+          },
+          {
+            Sid: "Enable IAM User Permissions",
+            Action: "kms:*",
+            Effect: "Allow",
+            Principal: { AWS: pulumi.interpolate`arn:aws:iam::${callerIdentity.accountId}:root` },
+            Resource: "*",
+          },
+        ],
+        Version: "2012-10-17",
+      }),
+    },
+    { provider: usEast1 },
+  )
+
+  const keySigningKey = new aws.route53.KeySigningKey(`${name}-dnssec-ksk`, {
+    hostedZoneId,
+    keyManagementServiceArn: kmsKey.arn,
+    name: "latitude-dnssec",
+  })
+
+  new aws.route53.HostedZoneDnsSec(
+    `${name}-dnssec-signing`,
+    {
+      hostedZoneId,
+      signingStatus: "SIGNING",
+    },
+    { dependsOn: [keySigningKey] },
+  )
+
+  return {
+    keySigningKey,
+    dsRecord: keySigningKey.dsRecord,
   }
 }

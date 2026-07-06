@@ -1,11 +1,12 @@
 import { queryCollectionOptions } from "@tanstack/query-db-collection"
-import { createCollection, useLiveQuery } from "@tanstack/react-db"
+import { useLiveQuery } from "@tanstack/react-db"
+import { createAppCollection } from "../../lib/data/create-app-collection.ts"
 import { getQueryClient } from "../../lib/data/query-client.tsx"
 import { listOAuthKeys, type OAuthKeyRecord, revokeOAuthKey } from "./oauth-keys.functions.ts"
 
 const queryClient = getQueryClient()
 
-const oauthKeysCollection = createCollection(
+const oauthKeysCollection = createAppCollection(
   queryCollectionOptions({
     queryClient,
     queryKey: ["oauthKeys"],

@@ -1,5 +1,6 @@
 // Tokens
 
+export type { GenAIMessage } from "rosetta-ai"
 export {
   AgentTextarea,
   type AgentTextareaProps,

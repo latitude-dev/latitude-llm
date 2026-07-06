@@ -54,6 +54,12 @@ const MAX_ATTEMPTS = 100
 const RANDOM_SUFFIX_CHARS = "abcdefghijklmnopqrstuvwxyz0123456789"
 const RANDOM_SUFFIX_LENGTH = 4
 
+/** Slug bases reserved for the product; enforced app-layer for every {@link generateSlug} caller. */
+export const RESERVED_PROJECT_SLUGS = ["lat-demo"] as const
+
+export const isReservedProjectSlug = (slug: string): boolean =>
+  (RESERVED_PROJECT_SLUGS as readonly string[]).includes(slug)
+
 export class InvalidSlugInputError extends Data.TaggedError("InvalidSlugInputError")<{
   readonly name: string
   readonly reason: string
@@ -103,8 +109,11 @@ export interface GenerateSlugInput<E, R> {
  *
  * 1. Normalize `name` to a base slug via {@link toSlug}, trim trailing hyphens
  *    after slicing to {@link SLUG_MAX_LENGTH}.
- * 2. If no `count` callback is provided, return the base slug.
- * 3. Call `count(base)`. If it reports `0`, return the base slug.
+ * 2. If no `count` callback is provided, return the base slug (a reserved base
+ *    is auto-suffixed with a random 4-char string since there is nothing to
+ *    count against).
+ * 3. Call `count(base)` — or treat a base in {@link RESERVED_PROJECT_SLUGS} as
+ *    already taken. If free, return the base slug.
  * 4. Append `-{4 random url-safe lowercase chars}` to the base. Truncate the
  *    base further if needed so the joined string still fits.
  * 5. Call `count(candidate)`. If `0`, return it.
@@ -127,9 +136,15 @@ export const generateSlug = Effect.fn("shared.generateSlug")(function* <E, R>(ar
     })
   }
 
-  if (!args.count) return baseSlug
+  const baseReserved = isReservedProjectSlug(baseSlug)
 
-  const baseCount = yield* args.count(baseSlug)
+  if (!args.count) {
+    // No uniqueness check to lean on. A reserved base still must not be handed
+    // out, so append a random suffix — a suffixed slug is never itself reserved.
+    return baseReserved ? truncateAndJoin(baseSlug, `-${randomSuffix()}`) : baseSlug
+  }
+
+  const baseCount = baseReserved ? 1 : yield* args.count(baseSlug)
   if (baseCount === 0) return baseSlug
 
   // First retry: append a random 4-char url-safe suffix. With 36^4 ≈ 1.7M

@@ -152,3 +152,4 @@ workflow-test-output.txt
 packages/platform/db-postgres/better-auth.schema.reference.ts
 __pycache__/
 .conductor/
+.vercel
