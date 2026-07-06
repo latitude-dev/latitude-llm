@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [8.0.0] - 2026-07-06
+
+### Changed (breaking)
+
+- `client.traces.get` (`TraceDetail`) now returns a single `conversation` field — the full trace conversation in OpenTelemetry GenAI format: the system instructions, then the running message history sent into the trace's last LLM-completion span, followed by that span's generated output. The previous `systemInstructions`, `inputMessages`, and `outputMessages` fields are removed. They only captured the first turn's input and the last turn's output, silently dropping every intermediate turn and tool call — all of which `conversation` includes.
+
 ## [7.4.0] - 2026-07-03
 
 ### Added
