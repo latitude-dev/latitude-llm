@@ -1,4 +1,4 @@
-import { useRef, useState } from "react"
+import { type FocusEvent, useRef, useState } from "react"
 import TextareaAutosize from "react-textarea-autosize"
 
 import { font } from "../../tokens/font.ts"
@@ -18,11 +18,14 @@ const LOADING_TIME_SCALE = 2
 
 export interface AgentTextareaProps extends Omit<TextareaProps, "unstyled"> {
   status?: string | null
+  /** Stretch to the parent's height instead of autosizing to content; ignores minRows/maxRows. */
+  fill?: boolean
 }
 
 export function AgentTextarea({
   ref,
   status = null,
+  fill = false,
   label,
   description,
   info,
@@ -66,43 +69,65 @@ export function AgentTextarea({
         : IDLE_INTENSITY
   targets.timeScale = loading ? LOADING_TIME_SCALE : focused ? FOCUS_TIME_SCALE : IDLE_TIME_SCALE
 
+  const handleFocus = (event: FocusEvent<HTMLTextAreaElement>) => {
+    setFocused(true)
+    onFocus?.(event)
+  }
+  const handleBlur = (event: FocusEvent<HTMLTextAreaElement>) => {
+    setFocused(false)
+    onBlur?.(event)
+  }
+  const textareaClassName = cn(
+    font.size.h5,
+    // transform-gpu isolates the text on its own compositor layer, so keystroke
+    // repaints don't contend with the animating canvas underneath.
+    "relative z-10 block w-full transform-gpu resize-none outline-none",
+    "rounded-md border bg-background px-3 py-2 placeholder:text-muted-foreground",
+    "transition-opacity duration-500 focus-visible:ring-1 focus-visible:ring-ring",
+    {
+      "border-destructive": showDestructiveBorder,
+      "border-transparent": !showDestructiveBorder,
+      "opacity-0": loading,
+      "disabled:cursor-not-allowed disabled:opacity-50": !loading,
+    },
+    className,
+  )
+
   return (
-    <FormField label={label} description={description} info={info} errors={errors} inline={inline}>
-      <div className="relative">
+    <FormField
+      label={label}
+      description={description}
+      info={info}
+      errors={errors}
+      inline={inline}
+      className={fill ? "h-full min-h-0" : undefined}
+    >
+      <div className={cn("relative", { "min-h-0 flex-1": fill })}>
         {/* Sits under the canvas so the fill's backdrop is the textarea's own background
             once the textarea fades out while loading. */}
         <div className="absolute inset-0 rounded-md bg-background" />
         <ShaderSurface fragmentSource={FRAGMENT_SHADER} targetsRef={targetsRef} loading={loading} />
-        <TextareaAutosize
-          ref={ref}
-          minRows={minRows}
-          {...(maxRows !== undefined ? { maxRows } : {})}
-          disabled={disabled || loading}
-          onFocus={(event) => {
-            setFocused(true)
-            onFocus?.(event)
-          }}
-          onBlur={(event) => {
-            setFocused(false)
-            onBlur?.(event)
-          }}
-          className={cn(
-            font.size.h5,
-            // transform-gpu isolates the text on its own compositor layer, so keystroke
-            // repaints don't contend with the animating canvas underneath.
-            "relative z-10 block w-full transform-gpu resize-none outline-none",
-            "rounded-md border bg-background px-3 py-2 placeholder:text-muted-foreground",
-            "transition-opacity duration-500 focus-visible:ring-1 focus-visible:ring-ring",
-            {
-              "border-destructive": showDestructiveBorder,
-              "border-transparent": !showDestructiveBorder,
-              "opacity-0": loading,
-              "disabled:cursor-not-allowed disabled:opacity-50": !loading,
-            },
-            className,
-          )}
-          {...props}
-        />
+        {fill ? (
+          <textarea
+            ref={ref}
+            disabled={disabled || loading}
+            onFocus={handleFocus}
+            onBlur={handleBlur}
+            className={cn(textareaClassName, "h-full")}
+            {...props}
+          />
+        ) : (
+          <TextareaAutosize
+            ref={ref}
+            minRows={minRows}
+            {...(maxRows !== undefined ? { maxRows } : {})}
+            disabled={disabled || loading}
+            onFocus={handleFocus}
+            onBlur={handleBlur}
+            className={textareaClassName}
+            {...props}
+          />
+        )}
         {loading ? (
           <div className="pointer-events-none absolute inset-0 z-20 flex items-center justify-center px-6">
             <div className="relative flex w-full items-center justify-center">

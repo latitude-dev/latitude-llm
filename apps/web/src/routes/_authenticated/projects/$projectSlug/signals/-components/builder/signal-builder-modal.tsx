@@ -5,6 +5,7 @@ import { useNavigate } from "@tanstack/react-router"
 import { useRef, useState } from "react"
 import {
   invalidateSignalQueries,
+  runSignalGeneration,
   runSignalPreview,
   useCreateSignal,
   useUpdateSignal,
@@ -173,10 +174,19 @@ export function SignalBuilderModal({
   const [previewResult, setPreviewResult] = useState<SignalPreviewResult | null>(null)
   const [previewRunning, setPreviewRunning] = useState(false)
   const [isSaving, setIsSaving] = useState(false)
+  const [prompt, setPrompt] = useState("")
+  const [generating, setGenerating] = useState(false)
+  const [generationStep, setGenerationStep] = useState<string | null>(null)
+  const [generationError, setGenerationError] = useState<string | null>(null)
   const previewAbortRef = useRef<AbortController | null>(null)
-  // Cancel any in-flight preview poll when the modal unmounts (close) so it stops
-  // polling and can't resolve onto an unmounted component.
-  useMountEffect(() => () => previewAbortRef.current?.abort())
+  const generationAbortRef = useRef<AbortController | null>(null)
+  // Cancel any in-flight preview or generation poll when the modal unmounts (close) so it
+  // stops polling and can't resolve onto an unmounted component. Generation runs in a
+  // worker: aborting only stops polling, the signal is still created.
+  useMountEffect(() => () => {
+    previewAbortRef.current?.abort()
+    generationAbortRef.current?.abort()
+  })
 
   // The Custom script tab without a raw script is a *view* of the active settings draft: preview
   // and save keep using the settings payload, so merely looking at the compiled code never
@@ -252,6 +262,40 @@ export function SignalBuilderModal({
       to: "/projects/$projectSlug/signals/$signalId",
       params: { projectSlug, signalId },
     })
+  }
+
+  const generate = (): void => {
+    const trimmed = prompt.trim()
+    if (trimmed.length === 0 || generating) return
+    generationAbortRef.current?.abort()
+    const controller = new AbortController()
+    generationAbortRef.current = controller
+    setGenerating(true)
+    setGenerationError(null)
+    setGenerationStep(null)
+    void runSignalGeneration({
+      projectId,
+      prompt: trimmed,
+      filters: filterSetOrNull(filters),
+      signal: controller.signal,
+      onStep: (next) => {
+        if (!controller.signal.aborted) setGenerationStep(next)
+      },
+    })
+      .then((result) => {
+        if (controller.signal.aborted) return
+        if (result.status === "done") {
+          handleGenerated({ signalId: result.signalId })
+          return
+        }
+        if (result.status === "error") setGenerationError(result.error)
+        setGenerating(false)
+      })
+      .catch((error) => {
+        if (controller.signal.aborted) return
+        setGenerationError(toUserMessage(error))
+        setGenerating(false)
+      })
   }
 
   const openConditionEditor = (state: ConditionEditState) => {
@@ -375,9 +419,14 @@ export function SignalBuilderModal({
       </Button>
     </>
   ) : !methodChosen ? (
-    <Button variant="outline" onClick={onClose}>
-      Cancel
-    </Button>
+    <>
+      <Button variant="link" disabled={generating} onClick={() => setMethodChosen(true)}>
+        Configure manually
+      </Button>
+      <Button onClick={generate} disabled={generating || prompt.trim().length === 0} isLoading={generating}>
+        Generate signal
+      </Button>
+    </>
   ) : (
     <>
       <Button
@@ -402,9 +451,10 @@ export function SignalBuilderModal({
   return (
     <Modal
       open
-      dismissible
+      dismissible={!generating}
       size="large"
       scrollable={false}
+      footerAlign={mode === "create" && !methodChosen ? "justify" : "right"}
       onOpenChange={(next) => {
         if (!next) onClose()
       }}
@@ -434,10 +484,11 @@ export function SignalBuilderModal({
       <div className="-mx-2 flex h-[min(60vh,36rem)] flex-col gap-4 overflow-y-auto px-2 pb-6">
         {!methodChosen ? (
           <DescribeSignalIntro
-            projectId={projectId}
-            filters={filterSetOrNull(filters)}
-            onManual={() => setMethodChosen(true)}
-            onCreated={handleGenerated}
+            prompt={prompt}
+            onPromptChange={setPrompt}
+            generating={generating}
+            step={generationStep}
+            error={generationError}
           />
         ) : null}
 
