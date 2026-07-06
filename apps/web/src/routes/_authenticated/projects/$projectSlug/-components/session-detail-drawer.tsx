@@ -25,6 +25,8 @@ export type OpenTraceOptions = {
   readonly focusAnnotationId?: string
   /** Overrides which tab the trace slot lands on. Defaults: `conversation` with focus, otherwise `trace`. */
   readonly targetTab?: TraceDetailTabId
+  /** Selects a span in the trace slot's Spans tab (Run-tab span-detail navigation). Implies `spans` as the default tab. */
+  readonly spanId?: string
 }
 
 export function SessionDetailDrawer({
@@ -53,7 +55,11 @@ export function SessionDetailDrawer({
 }) {
   const [traceId, setTraceId] = useParamState("traceId", "")
   const [signalId, setSignalId] = useParamState("signalId", "")
+  const [, setSelectedSpanId] = useParamState("spanId", "")
   const [, setFocusAnnotationId] = useParamState("annotationId", "")
+  const [, setSpanErrors] = useParamState("spanErrors", false)
+  const [, setSpanTools] = useParamState("spanTools", false)
+  const [, setSpanModel] = useParamState("spanModel", "")
   const [q] = useParamState("q", "")
   // Land on the conversation tab when arriving from an active search, so the
   // conversation tab's search-match autoscroll/highlight has something to scroll to.
@@ -110,10 +116,18 @@ export function SessionDetailDrawer({
     traceId.length > 0 ? "trace" : signalId.length > 0 && signalsEnabled ? "issue" : null
   const showDetail = detailKind !== null && !isSessionMissing
 
+  const clearSpanFilters = () => {
+    setSpanErrors(false)
+    setSpanTools(false)
+    setSpanModel("")
+  }
+
   const openTrace = (nextTraceId: string, options: OpenTraceOptions = {}) => {
-    const { focusAnnotationId, targetTab } = options
+    const { focusAnnotationId, targetTab, spanId } = options
     setFocusAnnotationId(focusAnnotationId ?? "")
-    setTraceTab(targetTab ?? (focusAnnotationId ? "conversation" : "trace"))
+    if (spanId) clearSpanFilters()
+    setSelectedSpanId(spanId ?? "")
+    setTraceTab(targetTab ?? (spanId ? "spans" : focusAnnotationId ? "conversation" : "trace"))
     setTraceId(nextTraceId)
   }
 
@@ -130,12 +144,18 @@ export function SessionDetailDrawer({
 
   const backToSession = () => {
     setFocusAnnotationId("")
+    setSelectedSpanId("")
+    setTraceTab("trace")
+    clearSpanFilters()
     setTraceId("")
     setSignalId("")
   }
 
   const handleClose = () => {
     setFocusAnnotationId("")
+    setSelectedSpanId("")
+    setTraceTab("trace")
+    clearSpanFilters()
     setTraceId("")
     setSignalId("")
     onClose()

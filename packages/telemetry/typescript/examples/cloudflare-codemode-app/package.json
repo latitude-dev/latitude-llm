@@ -8,10 +8,10 @@
   },
   "dependencies": {
     "@ai-sdk/react": "^3.0.216",
-    "@cloudflare/ai-chat": "^0.4.2",
+    "@cloudflare/ai-chat": "^0.9.3",
     "@cloudflare/codemode": "^0.4.2",
     "@latitude-data/telemetry": "file:../..",
-    "agents": "^0.17.1",
+    "agents": "^0.17.3",
     "ai": "^6.0.214",
     "react": "^19.2.7",
     "react-dom": "^19.2.7",

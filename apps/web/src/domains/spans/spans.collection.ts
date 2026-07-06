@@ -258,3 +258,32 @@ export function useConversationSpanMaps({
       enabled && projectId.length > 0 && traceId.length > 0 && startTime !== undefined && allMessages !== undefined,
   })
 }
+
+export function useConversationMessageSpans({
+  projectId,
+  traceId,
+  startTime,
+  enabled = true,
+}: {
+  readonly projectId: string
+  readonly traceId: string
+  readonly startTime: string | undefined
+  readonly enabled?: boolean
+}) {
+  const scope = use(TraceScopeContext)
+  return useQuery({
+    queryKey: ["conversationMessageSpans", scope?.sandboxOrgId, projectId, traceId],
+    queryFn: async () => {
+      return listConversationMessageSpans({
+        data: {
+          ...(scope ? { sandboxOrgId: scope.sandboxOrgId } : {}),
+          projectId,
+          traceId,
+          startTime: startTime ?? "",
+        },
+      })
+    },
+    enabled: enabled && projectId.length > 0 && traceId.length > 0 && startTime !== undefined,
+    staleTime: 30_000,
+  })
+}

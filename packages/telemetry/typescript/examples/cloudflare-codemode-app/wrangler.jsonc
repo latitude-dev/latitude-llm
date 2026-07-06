@@ -9,7 +9,8 @@
     "run_worker_first": ["/agents/*"]
   },
   "ai": {
-    "binding": "AI"
+    "binding": "AI",
+    "remote": true
   },
   "worker_loaders": [
     {
@@ -21,6 +22,10 @@
       {
         "name": "MyAgent",
         "class_name": "MyAgent"
+      },
+      {
+        "name": "WeatherResearchAgent",
+        "class_name": "WeatherResearchAgent"
       }
     ]
   },
@@ -28,6 +33,10 @@
     {
       "tag": "v1",
       "new_sqlite_classes": ["MyAgent"]
+    },
+    {
+      "tag": "v2",
+      "new_sqlite_classes": ["WeatherResearchAgent"]
     }
   ],
   "vars": {

@@ -233,6 +233,11 @@ Each wrapped tool emits an `ai.toolCall` span with the same attributes the AI SD
 uses (`ai.toolCall.name`, `ai.toolCall.args`, `ai.toolCall.result`, etc.), so inner
 calls show up alongside model turns and the outer `codemode` tool in Latitude.
 
+`instrumentCodemodeTools()` starts each inner tool span as a **child of the active
+OpenTelemetry span**. When the sandbox executes generated code inside the
+`ai.toolCall codemode` span, the inner tool spans nest under it in the same trace
+instead of appearing as detached siblings.
+
 For one-off spans outside Code Mode, you can still use `capture()`:
 
 ```ts
@@ -245,6 +250,77 @@ execute: async ({ city }) =>
 ```
 
 ---
+
+## Telemetry Contract
+
+A single Code Mode turn spans several traces — a plan model call, the `codemode`
+tool execution with its inner sandbox tools, optional sub-agent runs, and a
+user-facing summary. Latitude ties these together with a small set of optional
+span attributes. They are backward compatible (absent on legacy data) and emitted
+by the runnable example after wiring the tracers below.
+
+| Attribute | Values | Set on |
+|---|---|---|
+| `latitude.codemode.phase` | `plan` \| `execute` \| `summarize` | Root model/tool span of each orchestration phase |
+| `latitude.codemode.inner_tool` | `true` | Inner sandbox tool spans (set by `instrumentCodemodeTools`) |
+| `latitude.codemode.turn_id` | string (`{sessionId}:{turnIndex}`) | Every span in one user turn |
+| `latitude.agent_tool.parent_tool_call_id` | string | Delegate tool span that launched a sub-agent |
+| `latitude.agent_tool.run_id` | string | Delegate tool span and the sub-agent run it links to |
+
+Stamp `phase` and `turn_id` with `withLatitudeAttributes`, which wraps a tracer so
+every span it starts carries the given attributes:
+
+```ts
+import { withLatitudeAttributes } from "@latitude-data/telemetry"
+
+const turnTracer = withLatitudeAttributes(
+  getLatitude(this.env).getTracer("cloudflare-codemode", context),
+  { "latitude.codemode.turn_id": `${sessionId}:0` },
+)
+
+// Plan model call
+experimental_telemetry: {
+  isEnabled: true,
+  tracer: withLatitudeAttributes(turnTracer, { "latitude.codemode.phase": "plan" }),
+  functionId: "codemode-plan",
+}
+
+// Summary model call
+experimental_telemetry: {
+  isEnabled: true,
+  tracer: withLatitudeAttributes(turnTracer, { "latitude.codemode.phase": "summarize" }),
+  functionId: "codemode-summary",
+}
+```
+
+<Note>
+  Because the plan model call also emits the `ai.toolCall codemode` span, that span
+  inherits `latitude.codemode.phase=plan` from the shared tracer. Treat a span named
+  `ai.toolCall codemode` (or the parent of `inner_tool` spans) as the **execute**
+  phase regardless of the `phase` attribute — there is no `phase=execute` on it.
+</Note>
+
+For sub-agent delegation, set the link attributes on the delegate tool span (the
+inner tool that calls `runAgentTool`) so the sub-agent's traces can be reached from
+the delegate step:
+
+```ts
+import { trace } from "@opentelemetry/api"
+
+execute: async (input, options) => {
+  const toolCallId = options?.toolCallId ?? crypto.randomUUID()
+  const span = trace.getActiveSpan()
+  span?.setAttribute("latitude.agent_tool.parent_tool_call_id", toolCallId)
+
+  const result = await agent.runAgentTool(SubAgent, { parentToolCallId: toolCallId, /* ... */ })
+  span?.setAttribute("latitude.agent_tool.run_id", result.runId)
+  // ...
+}
+```
+
+Mirror `latitude.agent_tool.run_id` (and `latitude.codemode.turn_id`) onto the
+sub-agent's own tracer so its traces share the same `run_id` and turn as the
+delegate step.
 
 ## Cloudflare Think
 

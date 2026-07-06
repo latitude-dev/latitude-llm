@@ -1,4 +1,4 @@
-import { SpanStatusCode, type Tracer } from "@opentelemetry/api"
+import { context, SpanStatusCode, type Tracer, trace } from "@opentelemetry/api"
 import type { Tool, ToolSet } from "ai"
 
 export type InstrumentCodemodeToolsOptions = {
@@ -20,9 +20,15 @@ function wrapToolExecute(toolName: string, tool: Tool, tracer: Tracer, toolCallI
   return {
     ...tool,
     execute: async (input, options) => {
-      const toolCallId = newToolCallId(toolCallIdPrefix, toolName)
+      const toolCallId = options?.toolCallId ?? newToolCallId(toolCallIdPrefix, toolName)
+      const resolvedOptions = {
+        toolCallId,
+        messages: options?.messages ?? [],
+        ...(options?.abortSignal ? { abortSignal: options.abortSignal } : {}),
+      }
       const argsJson = JSON.stringify(input)
-      const span = tracer.startSpan(`ai.toolCall ${toolName}`)
+      const parentContext = context.active()
+      const span = tracer.startSpan(`ai.toolCall ${toolName}`, undefined, parentContext)
 
       span.setAttributes({
         "ai.operationId": "ai.toolCall",
@@ -36,8 +42,10 @@ function wrapToolExecute(toolName: string, tool: Tool, tracer: Tracer, toolCallI
         "latitude.codemode.inner_tool": true,
       })
 
+      const spanContext = trace.setSpan(parentContext, span)
+
       try {
-        const result = await execute(input, options)
+        const result = await context.with(spanContext, () => execute(input, resolvedOptions))
         const resultJson = JSON.stringify(result)
         span.setAttributes({
           "ai.toolCall.result": resultJson,

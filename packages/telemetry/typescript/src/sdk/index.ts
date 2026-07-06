@@ -17,5 +17,5 @@ export {
   isLatitudeInstrumentationSpan,
   RedactThenExportSpanProcessor,
 } from "./span-filter.ts"
-export { getLatitudeTracer } from "./tracer.ts"
+export { getLatitudeTracer, withLatitudeAttributes } from "./tracer.ts"
 export type { ContextOptions, InitLatitudeOptions, LatitudeOptions, LatitudeSpanProcessorOptions } from "./types.ts"

@@ -131,6 +131,7 @@ export type {
   TraceSearchHighlightsResult,
 } from "./use-cases/compute-trace-search-highlights.ts"
 export { computeTraceSearchHighlights } from "./use-cases/compute-trace-search-highlights.ts"
+export { enrichConversationToolCalls } from "./use-cases/enrich-conversation-tool-calls.ts"
 export type { GetSessionCohortSummaryInput } from "./use-cases/get-session-cohort-summary.ts"
 export { getSessionCohortSummaryUseCase } from "./use-cases/get-session-cohort-summary.ts"
 export type { GetTraceCohortSummaryInput } from "./use-cases/get-trace-cohort-summary.ts"

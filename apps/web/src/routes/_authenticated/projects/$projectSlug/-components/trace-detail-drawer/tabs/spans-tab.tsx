@@ -34,10 +34,10 @@ export function SpansTab({
   // TODO(frontend-use-effect-policy): clear selection when the active filter set
   // hides the currently selected span.
   useEffect(() => {
-    if (!selectedSpanId || filteredSpans.length === 0) return
+    if (!selectedSpanId || isLoading || filteredSpans.length === 0) return
     const isVisible = filteredSpans.some((span) => span.spanId === selectedSpanId)
     if (!isVisible) onSelectSpan("")
-  }, [filteredSpans, onSelectSpan, selectedSpanId])
+  }, [filteredSpans, isLoading, onSelectSpan, selectedSpanId])
 
   // TODO(frontend-use-effect-policy): scrollSpanIntoView is an imperative DOM
   // operation that cannot be derived during render. It must fire both when
@@ -105,7 +105,7 @@ export function SpansTab({
   }
 
   return (
-    <div ref={treeContainerRef} className="flex flex-col flex-1 overflow-hidden">
+    <div ref={treeContainerRef} className="flex min-h-0 flex-col flex-1 overflow-hidden">
       <SpanFiltersBar
         spans={spans}
         filters={filters}

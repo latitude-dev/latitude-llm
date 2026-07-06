@@ -273,6 +273,7 @@ type SpanMessagesRow = {
   tool_call_id: string
   tool_name: string
   tool_input: string
+  tool_output: string
   input_messages: string
   output_messages: string
 }
@@ -283,6 +284,7 @@ const toDomainSpanMessages = (row: SpanMessagesRow): SpanMessagesData => ({
   toolCallId: row.tool_call_id,
   toolName: normalizeCHString(row.tool_name),
   toolInput: row.tool_input,
+  toolOutput: row.tool_output,
   inputMessages: parseMessages(row.input_messages),
   outputMessages: parseMessages(row.output_messages),
 })
@@ -801,9 +803,9 @@ export const SpanRepositoryLive = Layer.effect(
                 // merges all matching parts at query time and is the
                 // dominant memory cost for traces with heavy
                 // input/output_messages payloads.
-                query: `SELECT span_id, operation, tool_call_id, tool_name, tool_input, input_messages, output_messages
+                query: `SELECT span_id, operation, tool_call_id, tool_name, tool_input, tool_output, input_messages, output_messages
                       FROM (
-                        SELECT span_id, operation, tool_call_id, tool_name, tool_input, input_messages, output_messages, start_time
+                        SELECT span_id, operation, tool_call_id, tool_name, tool_input, tool_output, input_messages, output_messages, start_time
                         FROM spans
                         WHERE organization_id = {organizationId:String}
                           AND project_id = {projectId:String}
@@ -838,9 +840,9 @@ export const SpanRepositoryLive = Layer.effect(
           return yield* chSqlClient
             .query(async (client) => {
               const result = await client.query({
-                query: `SELECT span_id, operation, tool_call_id, tool_name, tool_input, input_messages, output_messages
+                query: `SELECT span_id, operation, tool_call_id, tool_name, tool_input, tool_output, input_messages, output_messages
                       FROM (
-                        SELECT span_id, operation, tool_call_id, tool_name, tool_input, input_messages, output_messages, start_time
+                        SELECT span_id, operation, tool_call_id, tool_name, tool_input, tool_output, input_messages, output_messages, start_time
                         FROM spans
                         WHERE organization_id = {organizationId:String}
                           AND project_id = {projectId:String}

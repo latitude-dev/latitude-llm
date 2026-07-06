@@ -3,7 +3,7 @@ import type { FilterSet } from "@domain/shared"
 import { CopyableText, Icon, ProviderIcon, Status, type TabOption, Tabs, Text, Tooltip } from "@repo/ui"
 import { formatCount, relativeTime } from "@repo/utils"
 import { useHotkeys } from "@tanstack/react-hotkeys"
-import { GaugeIcon, GroupIcon, ListTreeIcon, MessagesSquareIcon, ShieldAlertIcon } from "lucide-react"
+import { GaugeIcon, GroupIcon, ListTreeIcon, MessagesSquareIcon, ShieldAlertIcon, WorkflowIcon } from "lucide-react"
 import { use, useEffect, useMemo, useState } from "react"
 import { useScoresBySession } from "../../../../../../domains/scores/scores.collection.ts"
 import { deriveSessionStatus, useSessionSignals } from "../../../../../../domains/sessions/sessions.collection.ts"
@@ -17,16 +17,22 @@ import { useSpanFilters } from "../trace-detail-drawer/tabs/spans-tab/use-span-f
 import { SpansTab } from "../trace-detail-drawer/tabs/spans-tab.tsx"
 import { ConversationTab } from "./conversation-tab.tsx"
 import { MetadataTab } from "./metadata-tab.tsx"
+import { RunTab } from "./run-tab.tsx"
 import { ScoresTab } from "./scores-tab.tsx"
 import { SessionStatusPill } from "./session-status-pill.tsx"
 import { SignalsTab } from "./signals-tab.tsx"
 
-export type SessionTabId = "session" | "conversation" | "spans" | "scores" | "issues"
+export type SessionTabId = "session" | "conversation" | "run" | "spans" | "scores" | "issues"
 
 export function isSessionTab(value: string): value is SessionTabId {
   if (value === "annotations") return true
   return (
-    value === "session" || value === "conversation" || value === "spans" || value === "scores" || value === "issues"
+    value === "session" ||
+    value === "conversation" ||
+    value === "run" ||
+    value === "spans" ||
+    value === "scores" ||
+    value === "issues"
   )
 }
 
@@ -88,9 +94,14 @@ export function SessionSlot({
   const signalsEnabled = !isSandbox
   // A single-trace session can surface its spans inline
   const singleTrace = traces.length === 1 ? traces[0] : undefined
+  // Multi-trace sessions get the chronological Run tab (the session-scoped span/trace navigator).
+  const multiTrace = traceIds.length > 1
   const [selectedSpanId, setSelectedSpanId] = useParamState("spanId", "")
   const { openWithErrors, openWithModel } = useSpanFilters()
-  const requestedTab: SessionTabId = activeTab === "spans" && !singleTrace ? "session" : normalizeSessionTab(activeTab)
+  const requestedTab: SessionTabId =
+    (activeTab === "spans" && !singleTrace) || (activeTab === "run" && !multiTrace)
+      ? "session"
+      : normalizeSessionTab(activeTab)
   // A deep-linked tab for a feature that's off (sandbox) falls back to Session.
   const effectiveActiveTab: SessionTabId =
     (requestedTab === "scores" && !scoresEnabled) || (requestedTab === "issues" && !signalsEnabled)
@@ -163,6 +174,14 @@ export function SessionSlot({
         icon: <Icon icon={MessagesSquareIcon} size="sm" />,
       },
     ]
+    if (multiTrace) {
+      all.push({
+        id: "run",
+        label: "Run",
+        icon: <Icon icon={WorkflowIcon} size="sm" />,
+        suffix: countSuffix(traceIds.length),
+      })
+    }
     if (singleTrace) {
       all.push({
         id: "spans",
@@ -188,7 +207,7 @@ export function SessionSlot({
       })
     }
     return all
-  }, [scoresEnabled, signalsEnabled, scoreCount, signalCount, singleTrace])
+  }, [scoresEnabled, signalsEnabled, scoreCount, signalCount, singleTrace, multiTrace, traceIds.length])
 
   // H/L cycle the session tabs (wrapping), matching the trace drawer. Disabled
   // while a trace/issue slot is shown so they don't collide with the trace slot.
@@ -311,6 +330,17 @@ export function SessionSlot({
               focusMomentId={focusMomentId}
               {...(singleTrace ? { navigateToSpan } : {})}
               {...(searchQuery ? { searchQuery } : {})}
+            />
+          </div>
+        )}
+        {multiTrace && visitedTabs.has("run") && (
+          <div className={effectiveActiveTab === "run" ? "flex min-h-0 flex-1 flex-col" : "hidden"}>
+            <RunTab
+              projectId={projectId}
+              session={session}
+              traces={traces}
+              latestTraceId={latestTraceId}
+              onOpenTrace={onOpenTrace}
             />
           </div>
         )}

@@ -2,9 +2,14 @@
 
 Minimal Cloudflare Code Mode project for validating Latitude telemetry.
 
-The agent exposes a single `codemode` tool via `createCodeTool()`. The React page
-uses `useAgentChat({ body })` so `onChatMessage()` can pass user/session context
+The orchestrator agent exposes a single `codemode` tool that can chain several host
+tools — including `delegateWeatherResearch`, which spins up a `WeatherResearchAgent`
+sub-agent with its own tool loop (`getWeatherDetail`, `scoreComfort`). Agent tools
+require `@cloudflare/ai-chat` ≥ 0.9 (for `startAgentToolRun` RPC on sub-agents).
+The React page uses `useAgentChat({ body })` so `onChatMessage()` can pass user/session context
 to `latitude.getTracer("cloudflare-codemode", context)`.
+
+Try: *Plan a weekend trip: compare Barcelona vs Paris weather and recommend one.*
 
 ## Run as a Worker
 
@@ -30,7 +35,7 @@ Code Mode requires a Worker Loader binding (`LOADER` in `wrangler.jsonc`) for
 `DynamicWorkerExecutor`. Dynamic Worker loading is available in local Wrangler
 development; production use may require Cloudflare's Dynamic Worker Loader beta.
 
-The agent uses the `@cf/meta/llama-4-scout-17b-16e-instruct` Workers AI model.
+The agent uses the `@cf/moonshotai/kimi-k2.7-code` Workers AI model. Casual messages get a normal reply; travel/weather comparison prompts run codemode server-side (the worker executes generated code even when the model leaks it as text, then streams a plain-language summary).
 
 ## Verify Against Local Latitude
 

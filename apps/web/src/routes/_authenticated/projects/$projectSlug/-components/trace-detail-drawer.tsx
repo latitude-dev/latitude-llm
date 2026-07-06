@@ -475,7 +475,7 @@ export function TraceDetailBody({
             startTimeFrom={traceRecord?.startTime}
             startTimeTo={traceRecord?.endTime}
             selectedSpanId={selectedSpanId}
-            onSelectSpan={navigateToSpan}
+            onSelectSpan={onSelectedSpanIdChange}
             isActive={activeTab === "spans"}
           />
         )}

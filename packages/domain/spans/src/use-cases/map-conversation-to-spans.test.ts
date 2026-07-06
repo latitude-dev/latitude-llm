@@ -20,6 +20,7 @@ function makeSpan(
     toolCallId,
     toolName: "",
     toolInput: "",
+    toolOutput: "",
     inputMessages: inputs,
     outputMessages: [output],
   }
@@ -32,6 +33,7 @@ function makeExecuteToolSpan(spanId: string, toolName: string, toolInput: string
     toolCallId,
     toolName,
     toolInput,
+    toolOutput: "",
     inputMessages: [],
     outputMessages: [],
   }

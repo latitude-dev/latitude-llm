@@ -39,6 +39,42 @@ export interface SpanRecord {
   readonly startTime: string
   readonly endTime: string
   readonly ingestedAt: string
+  readonly attrString?: Readonly<Record<string, string>>
+  readonly attrBool?: Readonly<Record<string, boolean>>
+}
+
+const CODEMODE_TIMELINE_ATTR_STRING_KEYS = [
+  "latitude.codemode.phase",
+  "latitude.codemode.turn_id",
+  "latitude.agent_tool.parent_tool_call_id",
+  "latitude.agent_tool.run_id",
+  "ai.telemetry.functionId",
+] as const
+
+const pickCodemodeTimelineAttrs = (span: Span): Pick<SpanRecord, "attrString" | "attrBool"> => {
+  const attrString: Record<string, string> = {}
+  for (const key of CODEMODE_TIMELINE_ATTR_STRING_KEYS) {
+    const value = span.attrString[key]
+    if (value !== undefined) attrString[key] = value
+  }
+  const attrBool: Record<string, boolean> = {}
+  const innerTool = span.attrBool["latitude.codemode.inner_tool"]
+  if (innerTool !== undefined) attrBool["latitude.codemode.inner_tool"] = innerTool
+  return {
+    ...(Object.keys(attrString).length > 0 ? { attrString } : {}),
+    ...(Object.keys(attrBool).length > 0 ? { attrBool } : {}),
+  }
+}
+
+const SPAN_TREE_TOOL_NAME_ATTRS = ["ai.toolCall.name", "gen_ai.tool.name"] as const
+
+const pickSpanTreeToolAttrs = (span: Span): Pick<SpanRecord, "attrString"> => {
+  const attrString: Record<string, string> = {}
+  for (const key of SPAN_TREE_TOOL_NAME_ATTRS) {
+    const value = span.attrString[key]
+    if (value !== undefined) attrString[key] = value
+  }
+  return Object.keys(attrString).length > 0 ? { attrString } : {}
 }
 
 export interface SpanDetailRecord extends SpanRecord {
@@ -103,6 +139,7 @@ const serializeSpan = (span: Span): SpanRecord => ({
   startTime: span.startTime.toISOString(),
   endTime: span.endTime.toISOString(),
   ingestedAt: span.ingestedAt.toISOString(),
+  ...pickSpanTreeToolAttrs(span),
 })
 
 const serializeSpanDetail = (span: SpanDetail): SpanDetailRecord => ({
@@ -194,7 +231,7 @@ export const listSpansBySession = createServerFn({ method: "GET" })
         })
       }).pipe(withClickHouse(SpanRepositoryLive, getClickhouseClient(), orgId), withTracing),
     )
-    return spans.map(serializeSpan)
+    return spans.map((span) => ({ ...serializeSpan(span), ...pickCodemodeTimelineAttrs(span) }))
   })
 
 export interface SpanMessagesRecord {
@@ -203,6 +240,7 @@ export interface SpanMessagesRecord {
   readonly toolCallId: string
   readonly toolName: string
   readonly toolInput: string
+  readonly toolOutput: string
   readonly inputMessages: readonly object[]
   readonly outputMessages: readonly object[]
 }
@@ -213,6 +251,7 @@ const serializeSpanMessages = (span: SpanMessagesData): SpanMessagesRecord => ({
   toolCallId: span.toolCallId,
   toolName: span.toolName,
   toolInput: span.toolInput,
+  toolOutput: span.toolOutput,
   inputMessages: span.inputMessages,
   outputMessages: span.outputMessages,
 })

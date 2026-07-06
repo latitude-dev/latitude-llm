@@ -15,6 +15,7 @@ import { ArrowDownRightIcon, ArrowUpRightIcon, BrainIcon, FingerprintIcon, TextI
 import { useMemo } from "react"
 import type { SpanRecord } from "../../../../../../../domains/spans/spans.functions.ts"
 import type { TraceDetailRecord, TraceRecord } from "../../../../../../../domains/traces/traces.functions.ts"
+import { useEnrichedConversationMessages } from "../../../../../../../lib/conversation/use-enriched-conversation-messages.ts"
 import { aggregateToolPills, ToolPillList } from "../../tool-pills.tsx"
 import { TraceOutlierBadge, type TraceOutlierMetric } from "../../trace-outlier-badge.tsx"
 import { DurationBar } from "../duration-bar.tsx"
@@ -94,6 +95,19 @@ export function TraceTab({
   const fallbackDurationMs = traceRecord ? traceRecord.durationNs / 1_000_000 : 0
   const durationWallClockMs = durationBreakdown.wallClockMs > 0 ? durationBreakdown.wallClockMs : fallbackDurationMs
   const durationBadge = traceRecord ? renderBadge("durationNs", traceRecord.durationNs) : undefined
+
+  const enrichedInputMessages = useEnrichedConversationMessages(traceDetail?.inputMessages ?? [], {
+    projectId,
+    traceId,
+    startTime: traceRecord?.startTime,
+    enabled: Boolean(traceDetail?.inputMessages.length),
+  })
+  const enrichedOutputMessages = useEnrichedConversationMessages(traceDetail?.outputMessages ?? [], {
+    projectId,
+    traceId,
+    startTime: traceRecord?.startTime,
+    enabled: Boolean(traceDetail?.outputMessages.length),
+  })
 
   const ttftValue = traceRecord ? (
     <span className="flex items-center gap-1">
@@ -245,7 +259,7 @@ export function TraceTab({
             <Skeleton className="h-20 w-full" />
           ) : traceDetail?.inputMessages.length ? (
             <div className="flex flex-col rounded-lg bg-secondary p-4">
-              <Conversation messages={traceDetail.inputMessages} />
+              <Conversation messages={enrichedInputMessages} />
             </div>
           ) : (
             <Text.H6 color="foregroundMuted" italic>
@@ -261,7 +275,7 @@ export function TraceTab({
             <Skeleton className="h-20 w-full" />
           ) : traceDetail?.outputMessages.length ? (
             <div className="flex flex-col rounded-lg bg-secondary p-4">
-              <Conversation messages={traceDetail.outputMessages} />
+              <Conversation messages={enrichedOutputMessages} />
             </div>
           ) : (
             <Text.H6 color="foregroundMuted" italic>

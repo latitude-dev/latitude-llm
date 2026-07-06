@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest"
 import type { SpanRecord } from "../../../../../../../../../domains/spans/spans.functions.ts"
-import { buildSpanTree, flattenTree } from "./tree-utils.ts"
+import { buildSpanTree, flattenTree, spanTreeLabel } from "./tree-utils.ts"
 
 function makeSpan(spanId: string, parentSpanId: string, startTime = "2024-01-01T00:00:00Z"): SpanRecord {
   return {
@@ -165,5 +165,25 @@ describe("flattenTree", () => {
   it("handles empty tree", () => {
     const flat = flattenTree([], new Set())
     expect(flat).toHaveLength(0)
+  })
+})
+
+describe("spanTreeLabel", () => {
+  it("appends toolName when span name is a generic ai.toolCall", () => {
+    const span = {
+      ...makeSpan("tool", "root"),
+      name: "ai.toolCall",
+      toolName: "getWeatherDetail",
+    }
+    expect(spanTreeLabel(span)).toBe("ai.toolCall getWeatherDetail")
+  })
+
+  it("reads tool name from ai.toolCall.name attribute when toolName column is empty", () => {
+    const span = {
+      ...makeSpan("tool", "root"),
+      name: "ai.toolCall",
+      attrString: { "ai.toolCall.name": "codemode" },
+    }
+    expect(spanTreeLabel(span)).toBe("ai.toolCall codemode")
   })
 })

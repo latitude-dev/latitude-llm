@@ -14,6 +14,16 @@ export interface TraceTimeRange {
 
 const MAX_TREE_DEPTH = 1000
 
+export function spanTreeLabel(span: Pick<SpanRecord, "name" | "toolName" | "toolNames" | "attrString">): string {
+  const name = span.name.trim()
+  const attrToolName = span.attrString?.["ai.toolCall.name"] ?? span.attrString?.["gen_ai.tool.name"] ?? ""
+  const resolvedTool = span.toolName || attrToolName || (span.toolNames.length === 1 ? span.toolNames[0] : "")
+  if (resolvedTool && (name === "ai.toolCall" || name === "execute_tool")) {
+    return `ai.toolCall ${resolvedTool}`
+  }
+  return span.name
+}
+
 export function buildSpanTree(spans: readonly SpanRecord[]): SpanTreeNode[] {
   const byId = new Map<string, SpanTreeNode>()
   const roots: SpanTreeNode[] = []

@@ -22,6 +22,7 @@ export interface SpanMessagesData {
   readonly toolCallId: string
   readonly toolName: string
   readonly toolInput: string
+  readonly toolOutput: string
   readonly inputMessages: readonly GenAIMessage[]
   readonly outputMessages: readonly GenAIMessage[]
 }

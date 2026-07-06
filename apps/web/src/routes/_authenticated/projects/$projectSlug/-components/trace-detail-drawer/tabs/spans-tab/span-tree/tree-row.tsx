@@ -4,7 +4,7 @@ import { memo } from "react"
 import { INDENT_PX, ROW_HEIGHT, statusTextColor, WATERFALL_H_INSET_PX } from "./helpers.ts"
 import { SpanIcon } from "./span-icon.tsx"
 import type { FlattenedNode, TraceTimeRange } from "./tree-utils.ts"
-import { formatDuration } from "./tree-utils.ts"
+import { formatDuration, spanTreeLabel } from "./tree-utils.ts"
 import { WaterfallBar } from "./waterfall.tsx"
 
 function TreeConnectors({
@@ -106,7 +106,7 @@ export const TreeRow = memo(function TreeRow({
           color={node.span.statusCode === "error" ? "destructive" : "foreground"}
           className="flex-1 min-w-0"
         >
-          {node.span.name}
+          {spanTreeLabel(node.span)}
         </Text.H6>
 
         <Text.H6 color={statusTextColor(node.span.statusCode)} className="shrink-0">
