@@ -1,11 +1,10 @@
-import { Button, Conversation, Icon, Text, useMountEffect } from "@repo/ui"
-import { createFileRoute, Link } from "@tanstack/react-router"
-import { Moon, Sun } from "lucide-react"
-import type { ReactNode } from "react"
-import { useState } from "react"
-import type { GenAIMessage } from "rosetta-ai"
+import { Conversation, type GenAIMessage } from "@repo/ui"
+import { createFileRoute } from "@tanstack/react-router"
+import { ComponentDemoSection } from "./-components/demo-frame.tsx"
+import { DesignSystemPage } from "./-components/design-system-page.tsx"
+import { UsageCode, UsageSection } from "./-components/usage-section.tsx"
 
-export const Route = createFileRoute("/design-system/chat")({
+export const Route = createFileRoute("/chat")({
   component: ChatPage,
 })
 
@@ -51,8 +50,8 @@ const JSON_SAMPLE = JSON.stringify(
 // Long enough (> ~3000 chars) to trigger the large-markdown "show more" split.
 const LONG_TEXT = Array.from(
   { length: 14 },
-  (_, i) =>
-    `Paragraph ${i + 1}. This is a long assistant response used to demonstrate how the renderer collapses oversized content behind a "show more" affordance, snapping to paragraph boundaries so the head and tail stay readable while the middle is hidden until expanded.`,
+  () =>
+    `This is a long assistant response used to demonstrate how the renderer collapses oversized content behind a "show more" affordance, snapping to paragraph boundaries so the head and tail stay readable while the middle is hidden until expanded.`,
 ).join("\n\n")
 
 // `as GenAIMessage[]` — the schema is permissive (z.core.$loose) and we want to exercise
@@ -249,107 +248,30 @@ const SECTIONS: { title: string; description: string; messages: GenAIMessage[] }
   },
 ]
 
-function Section({
-  title,
-  description,
-  surfaceClass,
-  children,
-}: {
-  title: string
-  description: string
-  surfaceClass: string
-  children: ReactNode
-}) {
-  return (
-    <section className={`flex flex-col gap-4 rounded-2xl border border-border/70 p-5 shadow-xl sm:p-6 ${surfaceClass}`}>
-      <div className="flex flex-col gap-1">
-        <Text.H4>{title}</Text.H4>
-        <Text.H6 color="foregroundMuted">{description}</Text.H6>
-      </div>
-      {children}
-    </section>
-  )
-}
-
 function ChatPage() {
-  const [theme, setTheme] = useState<"light" | "dark">("light")
-  const pageSurfaceClass = theme === "dark" ? "bg-black" : "bg-white"
-
-  const applyTheme = (nextTheme: "light" | "dark") => {
-    const root = document.documentElement
-    root.classList.toggle("dark", nextTheme === "dark")
-    root.style.colorScheme = nextTheme
-  }
-
-  const restoreHostTheme = () => {
-    const root = document.documentElement
-    const hostTheme = window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light"
-    root.classList.toggle("dark", hostTheme === "dark")
-    root.style.colorScheme = hostTheme
-  }
-
-  useMountEffect(() => {
-    applyTheme(theme)
-    return () => {
-      restoreHostTheme()
-    }
-  })
-
   return (
-    <main className={`flex min-h-screen flex-col gap-6 p-4 text-foreground sm:p-6 lg:p-8 ${pageSurfaceClass}`}>
-      <div className="flex w-full max-w-3xl flex-col gap-6 self-center">
-        <header
-          className={`flex flex-col gap-4 rounded-2xl border border-border/70 p-5 shadow-xl sm:p-6 ${pageSurfaceClass}`}
-        >
-          <Link
-            to="/design-system"
-            className="inline-flex items-center gap-1 text-sm text-muted-foreground underline-offset-4 hover:text-foreground hover:underline"
-          >
-            <span aria-hidden="true">←</span>
-            Design system
-          </Link>
-          <div className="flex flex-col gap-2">
-            <Text.H6 color="accentForeground" weight="semibold">
-              Showcase
-            </Text.H6>
-            <Text.H2 className="text-balance">Chat / Conversation</Text.H2>
-          </div>
-          <Text.H6 color="foregroundMuted">
-            Every message role and content part the renderer supports, grouped by theme: text & markdown, media (with
-            broken sources), files & documents, tool calls, and edge-case roles/states.
-          </Text.H6>
-          <div className="flex flex-wrap items-center justify-between gap-3">
-            <Button
-              variant="outline"
-              onClick={() => {
-                setTheme((currentTheme) => {
-                  const nextTheme = currentTheme === "light" ? "dark" : "light"
-                  applyTheme(nextTheme)
-                  return nextTheme
-                })
-              }}
-            >
-              <Icon icon={theme === "light" ? Moon : Sun} size="sm" />
-              {theme === "light" ? "Switch to Dark" : "Switch to Light"}
-            </Button>
-            <div className={`flex items-center gap-2 rounded-lg border border-border/60 p-2 ${pageSurfaceClass}`}>
-              <Text.H6 color="foregroundMuted">Theme</Text.H6>
-              <Text.Mono>{theme}</Text.Mono>
-            </div>
-          </div>
-        </header>
+    <DesignSystemPage
+      eyebrow="Components"
+      title="Chat / Conversation"
+      description="Every message role and content part the renderer supports: text & markdown, media, files, tool calls, and edge-case roles."
+      wide
+    >
+      <UsageSection description="Conversation renders a list of GenAI messages with role-aware styling and rich content parts.">
+        <UsageCode lines={['import { Conversation } from "@repo/ui"', "", "<Conversation messages={messages} />"]} />
+      </UsageSection>
 
-        {SECTIONS.map((section) => (
-          <Section
-            key={section.title}
-            title={section.title}
-            description={section.description}
-            surfaceClass={pageSurfaceClass}
-          >
+      {SECTIONS.map((section) => (
+        <ComponentDemoSection
+          key={section.title}
+          title={section.title}
+          description={section.description}
+          frameClassName="block"
+        >
+          <div className="mx-auto w-full max-w-3xl">
             <Conversation messages={section.messages} />
-          </Section>
-        ))}
-      </div>
-    </main>
+          </div>
+        </ComponentDemoSection>
+      ))}
+    </DesignSystemPage>
   )
 }

@@ -50,6 +50,7 @@ export function CodeBlock({
         <CodeMirrorReadonly
           value={value}
           wrapLines={wrapLines}
+          {...(language != null && { language })}
           {...(className != null && { className })}
           {...(onReady ? { onReady } : {})}
         />
