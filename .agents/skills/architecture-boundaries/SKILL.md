@@ -26,16 +26,18 @@ No business logic in handlers, controllers, or jobs.
 - **Tracing**: Every `Effect.runPromise` call site must include `withTracing` from `@repo/observability` in the pipe chain to connect Effect spans to the OTel pipeline. See [effect-and-errors](../effect-and-errors/SKILL.md) for the full tracing rules.
 - **Configuration values**: Read env through `parseEnv` / `parseEnvOptional` — see [env-configuration](../env-configuration/SKILL.md).
 
-## Web vs public API (`apps/web` and `apps/api`)
+## Web vs public API (`apps/web`, `apps/api`, `@repo/operations`)
 
-- `apps/api` is the stable public API surface. Treat its routes/contracts as externally consumed and evolve them carefully.
+- The public API's operation definitions (route config + transport-neutral `execute` logic) live in **`packages/operations` (`@repo/operations`)** — the boundary-contract layer between apps and domain. One definition fans out to the HTTP route, OpenAPI, MCP tool, SDK methods, CLI command, and in-process agent tools.
+- `apps/api` is the transport shell: middleware (auth, org context, rate limiting), the MCP HTTP transport, mounting `operationModules`, and the manifest emit scripts. Treat the operation contracts as externally consumed and evolve them carefully.
+- `@repo/operations` sits above domain: operations validate input, map to public schemas, and orchestrate `@domain/*` use-cases — the same boundary responsibilities apps own, factored into a package so non-HTTP consumers (worker-side agents) can run `execute` in-process.
 - `apps/web` must not call or proxy through `apps/api` for internal product features.
 - For web product development, implement backend behavior in `apps/web` server functions by composing domain use-cases and platform adapters directly.
 - Keep iteration velocity in `apps/web` by adding web-private server functions/stores while preserving `apps/api` stability.
-- Shared business rules still belong in domain packages; `apps/web` and `apps/api` should both orchestrate domain use-cases rather than duplicating policy.
+- Shared business rules still belong in domain packages; `apps/web` and `@repo/operations` should both orchestrate domain use-cases rather than duplicating policy.
 - Latitude product capabilities should be equally accessible to humans through the web UI and to other LLM agents through MCP/API surfaces.
 - Do not dead-end product behavior into UI-only flows. Preserve the boundary rules above, but design schemas, use-cases, and public capabilities so machine-facing access can exist without redesign.
-- For the concrete recipe — `defineApiEndpoint`, `createXxxRoutes` factories, `pnpm openapi:emit` / `pnpm mcp:emit`, schema-description rules that fan out to the TS + Python SDKs, MCP tools, and the `latitude` CLI, and the required `readOnlyHint` / `destructiveHint` tool annotations — see [api-endpoints](../api-endpoints/SKILL.md).
+- For the concrete recipe — `defineOperation`, `OperationModule` manifests, `group`/`sdkMethod`/`rateLimitTier`, `pnpm openapi:emit` / `pnpm mcp:emit`, schema-description rules that fan out to the TS + Python SDKs, MCP tools, and the `latitude` CLI, the required `readOnlyHint` / `destructiveHint` tool annotations, and `defineToolset` for internal agents — see [api-endpoints](../api-endpoints/SKILL.md).
 
 ## Cross-cutting implementation constraints
 

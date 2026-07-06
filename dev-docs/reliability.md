@@ -129,7 +129,7 @@ Use the repository product pattern for reliability surfaces:
 - reactive client state and optimistic sync live in `apps/web/src/domains/<domain>/*.collection.ts`
 - route-specific reliability UI components should live in the route directory's dedicated `-components/` subfolder so route files stay separate from their supporting UI
 - only rarely, when a component is genuinely shared across multiple routes, it may live in the shared `apps/web/src/components` folder
-- stable public or machine-facing reliability capabilities live in `apps/api/src/routes/*` modules under the existing versioned organization-scoped path shape `/v1/organizations/{organizationId}/...`
+- stable public or machine-facing reliability capabilities live in `packages/operations/src/operations/*` modules under the existing versioned organization-scoped path shape `/v1/organizations/{organizationId}/...`
 - `apps/api` must not become the internal backend for `apps/web`; the web product should compose domain use-cases directly
 - MCP clients consume that public REST API surface; reliability does not need a separate MCP-only backend contract
 
