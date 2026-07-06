@@ -2,10 +2,11 @@ import { SpanId } from "@domain/shared"
 import type { SpanMessagesData } from "@domain/spans"
 import { buildConversationSpanMaps } from "@domain/spans"
 import { queryCollectionOptions } from "@tanstack/query-db-collection"
-import { createCollection, useLiveQuery } from "@tanstack/react-db"
+import { useLiveQuery } from "@tanstack/react-db"
 import { useQuery } from "@tanstack/react-query"
 import { use } from "react"
 import type { GenAIMessage } from "rosetta-ai"
+import { createAppCollection } from "../../lib/data/create-app-collection.ts"
 import { getQueryClient } from "../../lib/data/query-client.tsx"
 import { TraceScopeContext } from "../traces/trace-scope.tsx"
 import {
@@ -28,7 +29,7 @@ const makeSpansByTraceCollection = (
   startTimeTo: string | undefined,
   sandboxOrgId: string | undefined,
 ) =>
-  createCollection(
+  createAppCollection(
     queryCollectionOptions({
       queryClient,
       queryKey: ["spans", "trace", sandboxOrgId, projectId, traceId, startTimeFrom, startTimeTo],
@@ -89,7 +90,7 @@ const makeSpansBySessionCollection = (
   startTimeTo: string | undefined,
   sandboxOrgId: string | undefined,
 ) =>
-  createCollection(
+  createAppCollection(
     queryCollectionOptions({
       queryClient,
       queryKey: ["spans", "session", sandboxOrgId, projectId, sessionId, startTimeFrom, startTimeTo],

@@ -420,9 +420,11 @@ describe("SpanRepository", () => {
       // Equal start_time → span_id DESC tiebreaker gives a total order.
       const page1 = await runCh(repo.listByProjectId({ ...base, options: opts }))
       expect(page1.items.map((span) => span.name)).toEqual(["third", "second"])
-      expect(page1.nextCursor).not.toBeNull()
+      const cursor = page1.nextCursor
+      expect(cursor).not.toBeNull()
+      if (cursor === null) return
 
-      const page2 = await runCh(repo.listByProjectId({ ...base, options: { ...opts, cursor: page1.nextCursor! } }))
+      const page2 = await runCh(repo.listByProjectId({ ...base, options: { ...opts, cursor } }))
       expect(page2.items.map((span) => span.name)).toEqual(["first"])
       expect(page2.nextCursor).toBeNull()
     })
@@ -462,8 +464,11 @@ describe("SpanRepository", () => {
 
       const page1 = await runCh(repo.listByProjectId({ ...base, options: opts }))
       expect(page1.items.map((span) => span.name)).toEqual(["d3", "d2"])
+      const cursor = page1.nextCursor
+      expect(cursor).not.toBeNull()
+      if (cursor === null) return
 
-      const page2 = await runCh(repo.listByProjectId({ ...base, options: { ...opts, cursor: page1.nextCursor! } }))
+      const page2 = await runCh(repo.listByProjectId({ ...base, options: { ...opts, cursor } }))
       expect(page2.items.map((span) => span.name)).toEqual(["d1"])
     })
   })
