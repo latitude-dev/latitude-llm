@@ -23,6 +23,7 @@ import { Effect, Option } from "effect"
 import { z } from "zod"
 import { FLAGGER_DEFAULT_CLASSIFIER_MODEL, FLAGGER_DEFAULT_INSTRUCTION_EXTRACTOR_MODEL } from "../constants.ts"
 import { getFlaggerStrategy, hasFlaggerStrategy, isLlmCapableStrategy } from "../flagger-strategies/index.ts"
+import { iterMessageParts } from "../flagger-strategies/shared.ts"
 import type { FlaggerSlug, FlaggerStrategy } from "../flagger-strategies/types.ts"
 import { FlaggerRepository } from "../ports/flagger-repository.ts"
 import { reflagSuppressionTags } from "../reflag.ts"
@@ -173,7 +174,7 @@ function extractInspectedSystemPrompt(trace: TraceDetail): string {
   return (
     extractTextFromParts(trace.systemInstructions).join("\n\n") ||
     trace.allMessages
-      .flatMap((message) => (message.role === "system" ? extractTextFromParts(message.parts) : []))
+      .flatMap((message) => (message.role === "system" ? extractTextFromParts(iterMessageParts(message.parts)) : []))
       .join("\n\n")
   )
 }
@@ -474,7 +475,7 @@ const buildClassificationSystemPrompt = (strategy: FlaggerStrategy, trace: Trace
 function renderAssistantResponsesForReview(trace: TraceDetail): string {
   const assistantResponses = trace.allMessages.flatMap((message, index) => {
     if (message.role !== "assistant") return []
-    const content = extractTextFromParts(message.parts).join("\n\n")
+    const content = extractTextFromParts(iterMessageParts(message.parts)).join("\n\n")
     if (!content) return []
 
     return [

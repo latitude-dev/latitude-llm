@@ -18,6 +18,7 @@ import { type TraceDetail, TraceRepository } from "@domain/spans"
 import { Effect } from "effect"
 import { FLAGGER_DEFAULT_ANNOTATOR_MODEL } from "../constants.ts"
 import { getFlaggerStrategy } from "../flagger-strategies/index.ts"
+import { iterMessageParts } from "../flagger-strategies/shared.ts"
 import { reflagSuppressionTags } from "../reflag.ts"
 import { flaggerAnnotatorOutputSchema } from "./flagger-annotator-contracts.ts"
 
@@ -184,13 +185,13 @@ function responseIndicatesFailure(response: unknown): boolean {
   return false
 }
 
-const formatConversationForAnnotator = (messages: readonly { role: string; parts: unknown[] }[]): string => {
+const formatConversationForAnnotator = (messages: readonly { role: string; parts?: unknown }[]): string => {
   const lines: string[] = []
 
   for (let msgIdx = 0; msgIdx < messages.length; msgIdx++) {
     const message = messages[msgIdx]!
     if (message.role === "system") {
-      const systemText = message.parts
+      const systemText = iterMessageParts(message.parts)
         .flatMap((part) => {
           if (!isRecord(part) || part.type !== "text") return []
           const content = toNonEmptyString(part.content)
@@ -213,7 +214,7 @@ const formatConversationForAnnotator = (messages: readonly { role: string; parts
       textParts.length = 0
     }
 
-    for (const part of message.parts) {
+    for (const part of iterMessageParts(message.parts)) {
       if (!isRecord(part)) continue
 
       if (part.type === "text") {

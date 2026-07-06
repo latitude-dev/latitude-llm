@@ -2,10 +2,18 @@ import type { TraceDetail } from "@domain/spans"
 import { describe, expect, it } from "vitest"
 
 import { frustrationStrategy } from "./frustration.ts"
-import { extractTextOnlyMessages, extractUserTextMessages, truncateExcerpt } from "./shared.ts"
+import { extractTextOnlyMessages, extractUserTextMessages, iterMessageParts, truncateExcerpt } from "./shared.ts"
 import { makeTrace, user } from "./test-helpers.ts"
 
 type TraceMessage = TraceDetail["allMessages"][number]
+
+describe("iterMessageParts", () => {
+  it("returns an empty array when parts is missing or not an array", () => {
+    expect(iterMessageParts(undefined)).toEqual([])
+    expect(iterMessageParts(null)).toEqual([])
+    expect(iterMessageParts("nope")).toEqual([])
+  })
+})
 
 describe("extractUserTextMessages", () => {
   it("skips malformed messages with missing or non-array parts", () => {

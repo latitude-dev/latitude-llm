@@ -40,8 +40,12 @@ export function truncateExcerpt(text: string, maxLength: number = 500): string {
 // Text extraction helpers used across strategies
 // ---------------------------------------------------------------------------
 
-function iterMessageParts(parts: unknown): readonly unknown[] {
+export function iterMessageParts(parts: unknown): readonly unknown[] {
   return Array.isArray(parts) ? parts : []
+}
+
+export function isMessagePart(value: unknown): value is Record<string, unknown> & { readonly type: string } {
+  return typeof value === "object" && value !== null && typeof (value as { type?: unknown }).type === "string"
 }
 
 function isRecord(value: unknown): value is Record<string, unknown> {
