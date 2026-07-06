@@ -1770,7 +1770,7 @@ export function getOtelExporterLanguageSnippet(
  * project slug + API key pre-filled so the agent doesn't need to ask.
  */
 export function getCodingAgentTelemetryPrompt(): string {
-  return "Install the `latitude-setup` skill from `github.com/latitude-dev/skills`, and use it to add Latitude tracing to this app following best practices."
+  return "Install the `latitude-telemetry` skill from `github.com/latitude-dev/skills`, and use it to add Latitude tracing to this app following best practices."
 }
 
 export type CodingMachineAgentId = "claude-code" | "openclaw" | "hermes" | "pi"

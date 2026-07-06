@@ -1,6 +1,6 @@
 ---
-title: Coding agent
-description: Set up Latitude tracing by asking your coding agent — it installs the Latitude skills, instruments your app, and verifies real traces.
+title: Skills
+description: Give your agent knowledge on how to set up and manage Latitude autonomously with our skills.
 ---
 
 ## Overview
@@ -8,6 +8,24 @@ description: Set up Latitude tracing by asking your coding agent — it installs
 The fastest way to add Latitude to an app is to let your coding agent do it. Latitude publishes a set of **[Agent Skills](https://github.com/latitude-dev/skills)** that teach an agent (Claude Code, Cursor, Codex, Windsurf, OpenCode, …) how to instrument your code, drive the [CLI](/getting-started/cli), and confirm that real traces arrive — following Latitude best practices.
 
 There are two entry points, depending on whether you already have a Latitude account.
+
+## The skills
+
+All skills live in the public [`latitude-dev/skills`](https://github.com/latitude-dev/skills) repo. Most agents can install them with the `skills` CLI:
+
+```bash
+npx skills add https://github.com/latitude-dev/skills --skill latitude-setup,latitude-cli,latitude-telemetry
+```
+
+| Skill | What it does |
+| --- | --- |
+| `latitude-setup` | Zero-account orchestrator: bootstrap → instrument → verify → claim. |
+| `latitude-telemetry` | Adds Latitude / OpenTelemetry instrumentation to your app. |
+| `latitude-cli` | Installs and drives the [`latitude` CLI](/getting-started/cli). |
+
+<Info>
+  `latitude-setup` builds on the other two, so install all three together for the from-scratch flow.
+</Info>
 
 ## No account yet
 
@@ -41,22 +59,6 @@ Install the `latitude-telemetry` skill from `github.com/latitude-dev/skills`, an
 
 Give the agent your `LATITUDE_API_KEY` and `LATITUDE_PROJECT_SLUG` when it asks — or connect the [MCP server](/getting-started/mcp) so it can look them up — and it will instrument your app and verify traces the same way.
 
-## The skills
-
-All skills live in the public [`latitude-dev/skills`](https://github.com/latitude-dev/skills) repo. Most agents can install them with the `skills` CLI:
-
-```bash
-npx skills add https://github.com/latitude-dev/skills --skill latitude-setup,latitude-cli,latitude-telemetry
-```
-
-| Skill | What it does |
-| --- | --- |
-| `latitude-setup` | Zero-account orchestrator: bootstrap → instrument → verify → claim. |
-| `latitude-telemetry` | Adds Latitude / OpenTelemetry instrumentation to your app. |
-| `latitude-cli` | Installs and drives the [`latitude` CLI](/getting-started/cli). |
-
-<Info>
-  `latitude-setup` builds on the other two, so install all three together for the from-scratch flow.
-</Info>
+---
 
 Once traces are flowing, head to the [telemetry guides](/telemetry/start-tracing) for provider-specific details, or the [CLI](/getting-started/cli) and [MCP server](/getting-started/mcp) pages to keep driving Latitude from your terminal or agent.
