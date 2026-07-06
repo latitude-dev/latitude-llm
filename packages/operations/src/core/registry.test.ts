@@ -1,12 +1,12 @@
 import { createRoute, OpenAPIHono, z } from "@hono/zod-openapi"
 import { beforeEach, describe, expect, it } from "vitest"
-import { defineApiEndpoint } from "./define-endpoint.ts"
-import { collectToolDescriptors, resetEndpointRegistry } from "./registry.ts"
+import { defineOperation } from "./define-operation.ts"
+import { collectToolDescriptors, resetOperationRegistry } from "./registry.ts"
 
 type TestEnv = { Variables: Record<string, never> }
 
-const itemEndpoint = defineApiEndpoint<TestEnv>("/items")
-const widgetEndpoint = defineApiEndpoint<TestEnv>("/widgets")
+const itemEndpoint = defineOperation<TestEnv>("/items")
+const widgetEndpoint = defineOperation<TestEnv>("/widgets")
 
 const ItemSchema = z.object({ id: z.string() })
 
@@ -85,7 +85,7 @@ const getWidget = widgetEndpoint({
 
 describe("registry", () => {
   beforeEach(() => {
-    resetEndpointRegistry()
+    resetOperationRegistry()
   })
 
   describe("mountHttp registration", () => {
@@ -115,7 +115,7 @@ describe("registry", () => {
       expect(res.status).toBe(200)
     })
 
-    it("records the prefix from `defineApiEndpoint` on each registered descriptor", () => {
+    it("records the prefix from `defineOperation` on each registered descriptor", () => {
       const sub = new OpenAPIHono<TestEnv>()
       listItems.mountHttp(sub)
       getWidget.mountHttp(sub)
@@ -126,14 +126,14 @@ describe("registry", () => {
     })
   })
 
-  describe("resetEndpointRegistry", () => {
+  describe("resetOperationRegistry", () => {
     it("clears all registered descriptors", () => {
       const sub = new OpenAPIHono<TestEnv>()
       listItems.mountHttp(sub)
       getItem.mountHttp(sub)
       expect(collectToolDescriptors()).toHaveLength(2)
 
-      resetEndpointRegistry()
+      resetOperationRegistry()
       expect(collectToolDescriptors()).toHaveLength(0)
     })
   })

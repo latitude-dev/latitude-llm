@@ -1,5 +1,5 @@
 import { z } from "@hono/zod-openapi"
-import type { AppRouteConfig } from "./define-endpoint.ts"
+import type { AppRouteConfig } from "./define-operation.ts"
 
 /**
  * Where a flat input field came from. Used by the MCP dispatcher (in M2) to put each

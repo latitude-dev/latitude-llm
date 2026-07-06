@@ -18,11 +18,11 @@ import {
   type InMemoryPostgres,
   setupTestClickHouse,
 } from "@platform/testkit"
+import { resetOperationRegistry } from "@repo/operations"
 import { encrypt, hash, hexDecode } from "@repo/utils"
 import { Effect } from "effect"
 import type { TestContext } from "vitest"
 import { afterAll, beforeAll, beforeEach } from "vitest"
-import { resetEndpointRegistry } from "../mcp/registry.ts"
 import { honoErrorHandler } from "../middleware/error-handler.ts"
 import { destroyTouchBuffer } from "../middleware/touch-buffer.ts"
 import { registerRoutes } from "../routes/index.ts"
@@ -92,7 +92,7 @@ export const setupTestApi = () => {
     // The MCP endpoint registry is module-global. Multiple test files mounted in
     // the same vitest worker would otherwise accumulate entries across
     // `registerRoutes` calls — reset before each test app boot.
-    resetEndpointRegistry()
+    resetOperationRegistry()
 
     app = new OpenAPIHono<AppEnv>()
     app.onError(honoErrorHandler)

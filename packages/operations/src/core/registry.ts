@@ -1,27 +1,27 @@
-import type { AnyApiEndpoint, McpToolAnnotations } from "./define-endpoint.ts"
+import type { AnyOperation, McpToolAnnotations } from "./define-operation.ts"
 import { type ExtractedOutput, extractOutputSchema } from "./extract-output.ts"
 import { type FlatInput, flattenRouteInputSchema } from "./flatten-input.ts"
 
 /**
  * Global registry of MCP-eligible endpoints. Populated lazily from
- * {@link defineApiEndpoint}-produced endpoints when their `mountHttp` is called
+ * {@link defineOperation}-produced endpoints when their `mountHttp` is called
  * during route assembly — the endpoint carries the mount prefix baked in by
  * the factory, so the registry doesn't need to know it separately.
  *
  * Module-global so the per-request MCP dispatcher can read a snapshot at
  * tool-call time without threading it through Hono's context. Reset by
- * {@link resetEndpointRegistry} between test runs.
+ * {@link resetOperationRegistry} between test runs.
  */
-const endpointRegistry: AnyApiEndpoint[] = []
+const operationRegistry: AnyOperation[] = []
 
 /**
  * Adds `endpoint` to the global MCP registry. Called from
- * `ApiEndpoint.mountHttp` when the endpoint is tool-eligible (`tool === true`).
+ * `Operation.mountHttp` when the operation is tool-eligible (`tool === true`).
  * Idempotency is the caller's responsibility — tests that re-run
- * `registerRoutes` against the same app should `resetEndpointRegistry` first.
+ * `registerRoutes` against the same app should `resetOperationRegistry` first.
  */
-export const registerEndpoint = (endpoint: AnyApiEndpoint): void => {
-  endpointRegistry.push(endpoint)
+export const registerOperation = (endpoint: AnyOperation): void => {
+  operationRegistry.push(endpoint)
 }
 
 /**
@@ -34,8 +34,8 @@ export const registerEndpoint = (endpoint: AnyApiEndpoint): void => {
  * @public — only consumed by test files which knip doesn't traverse, so we
  * mark it explicitly to stop knip flagging it as unused.
  */
-export const resetEndpointRegistry = (): void => {
-  endpointRegistry.length = 0
+export const resetOperationRegistry = (): void => {
+  operationRegistry.length = 0
 }
 
 /**
@@ -73,7 +73,7 @@ interface ToolDescriptor {
  * route configuration mistakes surface at boot, not on a tool call.
  */
 export const collectToolDescriptors = (): ToolDescriptor[] =>
-  endpointRegistry.map(({ route, prefix }) => {
+  operationRegistry.map(({ route, prefix }) => {
     return {
       name: route.name,
       title: route.summary ?? route.name,

@@ -9,7 +9,7 @@
  *
  * Route files can therefore declare a single constant in Hono form and reuse
  * it for both the parent mount (`routes.route(annotationsPath, …)`) and
- * `defineApiEndpoint(annotationsPath)` — the latter normalizes on the way in.
+ * `defineOperation(annotationsPath)` — the latter normalizes on the way in.
  *
  * The pattern matches Hono's own parameter grammar (alphanumeric + underscore,
  * starting with a letter or underscore). It deliberately doesn't try to

@@ -52,6 +52,7 @@
     "@platform/storage-object": "workspace:*",
     "@platform/workflows-temporal": "workspace:*",
     "@repo/observability": "workspace:*",
+    "@repo/operations": "workspace:*",
     "@repo/utils": "workspace:*",
     "effect": "catalog:",
     "quickjs-emscripten": "catalog:",

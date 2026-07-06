@@ -1,6 +1,6 @@
 import { z } from "@hono/zod-openapi"
 import { describe, expect, it } from "vitest"
-import type { AppRouteConfig } from "./define-endpoint.ts"
+import type { AppRouteConfig } from "./define-operation.ts"
 import { type FieldSource, flattenRouteInputSchema, splitFlatInput } from "./flatten-input.ts"
 
 const baseRoute = {

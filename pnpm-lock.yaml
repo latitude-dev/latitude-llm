@@ -292,6 +292,9 @@ importers:
       '@repo/observability':
         specifier: workspace:*
         version: link:../../packages/observability
+      '@repo/operations':
+        specifier: workspace:*
+        version: link:../../packages/operations
       '@repo/utils':
         specifier: workspace:*
         version: link:../../packages/utils
@@ -1992,6 +1995,70 @@ importers:
       effect:
         specifier: 'catalog:'
         version: 4.0.0-beta.57
+
+  packages/operations:
+    dependencies:
+      '@clickhouse/client':
+        specifier: 'catalog:'
+        version: 1.21.0
+      '@domain/datasets':
+        specifier: workspace:*
+        version: link:../domain/datasets
+      '@domain/evaluations':
+        specifier: workspace:*
+        version: link:../domain/evaluations
+      '@domain/incidents':
+        specifier: workspace:*
+        version: link:../domain/incidents
+      '@domain/monitors':
+        specifier: workspace:*
+        version: link:../domain/monitors
+      '@domain/organizations':
+        specifier: workspace:*
+        version: link:../domain/organizations
+      '@domain/queue':
+        specifier: workspace:*
+        version: link:../domain/queue
+      '@domain/saved-searches':
+        specifier: workspace:*
+        version: link:../domain/saved-searches
+      '@domain/scores':
+        specifier: workspace:*
+        version: link:../domain/scores
+      '@domain/shared':
+        specifier: workspace:*
+        version: link:../domain/shared
+      '@domain/signals':
+        specifier: workspace:*
+        version: link:../domain/signals
+      '@domain/spans':
+        specifier: workspace:*
+        version: link:../domain/spans
+      '@domain/taxonomy':
+        specifier: workspace:*
+        version: link:../domain/taxonomy
+      '@hono/zod-openapi':
+        specifier: 1.3.0
+        version: 1.3.0(hono@4.12.16)(zod@4.3.6)
+      '@platform/cache-redis':
+        specifier: workspace:*
+        version: link:../platform/cache-redis
+      '@platform/db-postgres':
+        specifier: workspace:*
+        version: link:../platform/db-postgres
+      effect:
+        specifier: 'catalog:'
+        version: 4.0.0-beta.57
+      hono:
+        specifier: 4.12.16
+        version: 4.12.16
+      zod:
+        specifier: 'catalog:'
+        version: 4.3.6
+    devDependencies:
+      '@repo/vitest-config':
+        specifier: workspace:*
+        version: link:../vitest-config
 
   packages/platform/agent-dispatch:
     dependencies:

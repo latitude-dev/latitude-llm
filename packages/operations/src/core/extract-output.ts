@@ -1,5 +1,5 @@
 import { z } from "@hono/zod-openapi"
-import type { AppRouteConfig } from "./define-endpoint.ts"
+import type { AppRouteConfig } from "./define-operation.ts"
 
 export interface ExtractedOutput {
   /** Single Zod object holding all output fields, ready for an MCP tool's `outputSchema`. */

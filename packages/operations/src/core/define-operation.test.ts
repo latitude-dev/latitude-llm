@@ -1,7 +1,7 @@
 import { createRoute, OpenAPIHono, z } from "@hono/zod-openapi"
 import { beforeEach, describe, expect, it } from "vitest"
-import { defineApiEndpoint } from "./define-endpoint.ts"
-import { resetEndpointRegistry } from "./registry.ts"
+import { defineOperation } from "./define-operation.ts"
+import { resetOperationRegistry } from "./registry.ts"
 
 type TestEnv = { Variables: Record<string, never> }
 
@@ -9,12 +9,12 @@ type TestEnv = { Variables: Record<string, never> }
 // registry as a side effect. Reset between tests so nothing accumulates from
 // previous cases or sibling test files.
 beforeEach(() => {
-  resetEndpointRegistry()
+  resetOperationRegistry()
 })
 
-const endpoint = defineApiEndpoint<TestEnv>("/test")
+const endpoint = defineOperation<TestEnv>("/test")
 
-describe("defineApiEndpoint", () => {
+describe("defineOperation", () => {
   it("returns the original route untouched (preserves `name`)", () => {
     const ep = endpoint({
       route: createRoute({
@@ -100,6 +100,60 @@ describe("defineApiEndpoint", () => {
     const operation = spec.paths?.["/items"]?.post as Record<string, unknown> | undefined
     expect(operation?.name).toBeUndefined()
     expect(operation?.annotations).toBeUndefined()
+  })
+
+  it("renames group/sdkMethod to x-fern extensions in place, preserving key order", () => {
+    const ep = endpoint({
+      route: createRoute({
+        method: "get",
+        path: "/grouped",
+        name: "listGrouped",
+        tags: ["Grouped"],
+        group: "grouped",
+        sdkMethod: "list",
+        summary: "List grouped",
+        description: "List",
+        annotations: { readOnlyHint: true, destructiveHint: false },
+        responses: {
+          200: {
+            content: { "application/json": { schema: z.object({ ok: z.boolean() }) } },
+            description: "OK",
+          },
+        },
+      }),
+      handler: async (c) => c.json({ ok: true }, 200),
+    })
+
+    const app = new OpenAPIHono<TestEnv>()
+    ep.mountHttp(app)
+
+    const spec = app.getOpenAPI31Document({ openapi: "3.1.0", info: { title: "t", version: "0" } })
+    const operation = spec.paths?.["/grouped"]?.get as Record<string, unknown>
+    expect(operation["x-fern-sdk-group-name"]).toBe("grouped")
+    expect(operation["x-fern-sdk-method-name"]).toBe("list")
+    expect(operation.group).toBeUndefined()
+    expect(operation.sdkMethod).toBeUndefined()
+    // Emitted key order follows declaration order — the extensions must land
+    // exactly where `group`/`sdkMethod` were declared (right after `tags`).
+    const keys = Object.keys(operation)
+    expect(keys.indexOf("x-fern-sdk-group-name")).toBe(keys.indexOf("tags") + 1)
+    expect(keys.indexOf("x-fern-sdk-method-name")).toBe(keys.indexOf("tags") + 2)
+  })
+
+  it("carries rateLimitTier through to the operation", () => {
+    const ep = endpoint({
+      route: createRoute({
+        method: "get",
+        path: "/x",
+        name: "x",
+        description: "x",
+        annotations: { readOnlyHint: true, destructiveHint: false },
+        responses: { 200: { description: "OK" } },
+      }),
+      handler: async (c) => c.body(null, 200),
+      rateLimitTier: "ultra",
+    })
+    expect(ep.rateLimitTier).toBe("ultra")
   })
 
   it("mountHttp wires a working handler that responds to fetch", async () => {

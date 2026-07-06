@@ -1,6 +1,6 @@
 import { z } from "@hono/zod-openapi"
 import { describe, expect, it } from "vitest"
-import type { AppRouteConfig } from "./define-endpoint.ts"
+import type { AppRouteConfig } from "./define-operation.ts"
 import { extractOutputSchema } from "./extract-output.ts"
 
 const route = (responses: AppRouteConfig["responses"]): AppRouteConfig =>
