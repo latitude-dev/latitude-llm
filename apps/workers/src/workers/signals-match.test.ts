@@ -401,10 +401,12 @@ describe("runSignalsMatchJob", () => {
     const semanticEvalId = "d".repeat(24)
 
     await insertTraceRows([makeTraceRow({ projectId, traceId })])
-    await pg.db.insert(signals).values([
-      makeSignalRow({ id: "b".repeat(24), projectId, uuid: "33333333-3333-4333-8333-333333333333" }),
-      makeSignalRow({ id: "c".repeat(24), projectId, uuid: "66666666-6666-4666-8666-666666666666" }),
-    ])
+    await pg.db
+      .insert(signals)
+      .values([
+        makeSignalRow({ id: "b".repeat(24), projectId, uuid: "33333333-3333-4333-8333-333333333333" }),
+        makeSignalRow({ id: "c".repeat(24), projectId, uuid: "66666666-6666-4666-8666-666666666666" }),
+      ])
     await pg.db.insert(evaluations).values([
       makeEvaluationRow({
         id: semanticEvalId,

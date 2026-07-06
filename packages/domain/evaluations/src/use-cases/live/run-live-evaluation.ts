@@ -12,7 +12,12 @@ import {
 } from "@domain/billing"
 import { OutboxEventWriter } from "@domain/events"
 import { type QueuePublishError, QueuePublisher } from "@domain/queue"
-import { DETECTOR_HEALTH_WINDOW_SECONDS, DetectorHealthTracker, requiresEmbedding, type ScriptRuntime } from "@domain/sandbox"
+import {
+  DETECTOR_HEALTH_WINDOW_SECONDS,
+  DetectorHealthTracker,
+  requiresEmbedding,
+  type ScriptRuntime,
+} from "@domain/sandbox"
 import {
   type EvaluationScore,
   type ScoreAnalyticsRepository,
@@ -36,7 +41,7 @@ import {
   type SpanRepository,
   type TraceDetail,
   TraceRepository,
-  TraceSearchRepository,
+  type TraceSearchRepository,
 } from "@domain/spans"
 import { Cause, Effect, Exit } from "effect"
 import type { Evaluation } from "../../entities/evaluation.ts"

@@ -1,5 +1,10 @@
 import type { AI } from "@domain/ai"
-import { requiresEmbedding, type ScriptCompileError, type ScriptRuntime, type ScriptSessionContext } from "@domain/sandbox"
+import {
+  requiresEmbedding,
+  type ScriptCompileError,
+  type ScriptRuntime,
+  type ScriptSessionContext,
+} from "@domain/sandbox"
 import {
   cuidSchema,
   describeError,

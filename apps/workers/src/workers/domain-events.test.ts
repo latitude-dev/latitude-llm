@@ -105,10 +105,7 @@ describe("domain-events dispatcher", () => {
     await consumer.dispatchTask("domain-events", "dispatch", envelopeToDispatchPayload(envelope))
 
     // signals:match is no longer fanned out here — trace-end publishes it once the trace settles.
-    expect(published.map((p) => `${p.queue}:${p.task}`).sort()).toEqual([
-      "projects:checkFirstTrace",
-      "trace-end:run",
-    ])
+    expect(published.map((p) => `${p.queue}:${p.task}`).sort()).toEqual(["projects:checkFirstTrace", "trace-end:run"])
 
     const traceEnd = published.find((p) => p.queue === "trace-end")
     const firstTrace = published.find((p) => p.task === "checkFirstTrace")

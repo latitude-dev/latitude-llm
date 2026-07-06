@@ -61,11 +61,15 @@ describe("resolveTraceSearchRetentionDays", () => {
 
 describe("shouldRetriggerSignalsMatch", () => {
   it("re-triggers when messages were freshly embedded this run", () => {
-    expect(shouldRetriggerSignalsMatch({ embeddingConfigResolved: true, existingCount: 0, embeddedCount: 2 })).toBe(true)
+    expect(shouldRetriggerSignalsMatch({ embeddingConfigResolved: true, existingCount: 0, embeddedCount: 2 })).toBe(
+      true,
+    )
   })
 
   it("re-triggers when all vectors were pre-existing hash hits (embeddedCount 0)", () => {
-    expect(shouldRetriggerSignalsMatch({ embeddingConfigResolved: true, existingCount: 3, embeddedCount: 0 })).toBe(true)
+    expect(shouldRetriggerSignalsMatch({ embeddingConfigResolved: true, existingCount: 3, embeddedCount: 0 })).toBe(
+      true,
+    )
   })
 
   it("does not re-trigger when the trace has no vectors (over budget / provider failure)", () => {
