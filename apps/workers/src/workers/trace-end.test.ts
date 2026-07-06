@@ -398,6 +398,19 @@ describe("runTraceEndJob", () => {
       projectId: PROJECT_ID,
       traceId: TRACE_ID,
     })
+
+    // trace-end now owns the signals:match publish ("trace ends → match signals")
+    const signalsMatchPublish = published.find((p) => p.queue === "signals")
+    expect(signalsMatchPublish?.task).toBe("match")
+    expect(signalsMatchPublish?.payload).toMatchObject({
+      organizationId: ORGANIZATION_ID,
+      projectId: PROJECT_ID,
+      traceId: TRACE_ID,
+      reason: "ingest",
+    })
+    expect(signalsMatchPublish?.options).toMatchObject({
+      dedupeKey: `org:${ORGANIZATION_ID}:signals-match:${PROJECT_ID}:${TRACE_ID}`,
+    })
   })
 })
 
