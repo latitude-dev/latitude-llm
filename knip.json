@@ -174,11 +174,6 @@
   "ignoreBinaries": [
     "tmuxinator",
     "pulumi",
-    "tsx",
-    "tsdown",
-    "vite",
-    "mcp-inspector",
-    "email",
     "packages/cli/target/release/latitude"
   ],
   "ignoreDependencies": [
@@ -188,11 +183,7 @@
     "@pulumi/datadog",
     "@pulumi/random",
     "fern-api",
-    "chdb",
-    "tsx",
-    "zod",
-    "@modelcontextprotocol/inspector",
-    "react-email"
+    "chdb"
   ],
   "tags": [
     "-knipignore"

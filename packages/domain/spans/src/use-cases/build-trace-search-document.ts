@@ -87,7 +87,7 @@ function formatPartForLexical(part: GenAIPart): string {
 }
 
 function formatMessage(message: GenAIMessage, formatter: (p: GenAIPart) => string): string {
-  return message.parts
+  return (message.parts ?? [])
     .map((p) => formatter(p))
     .join("\n")
     .trim()

@@ -18,7 +18,7 @@
     "test": "vitest run --passWithNoTests --dir src"
   },
   "dependencies": {
-    "@base-ui/react": "1.4.1",
+    "@base-ui/react": "1.6.0",
     "@codemirror/commands": "6.10.3",
     "@codemirror/lang-javascript": "6.2.4",
     "@codemirror/lang-json": "6.0.2",

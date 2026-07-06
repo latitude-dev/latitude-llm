@@ -324,6 +324,17 @@ describe("buildTraceSearchDocument", () => {
       expect(document.searchText).toBe("")
     })
 
+    it("skips messages with missing parts instead of throwing", async () => {
+      const document = await build([
+        textMessage("user", "before gap"),
+        { role: "assistant" } as GenAIMessage,
+        textMessage("user", "after gap"),
+      ])
+
+      expect(document.searchText).toBe("before gap after gap")
+      expect(document.chunks).toHaveLength(1)
+    })
+
     it("assigns stable chunk content hashes that vary by chunk index", async () => {
       const turn = "z".repeat(TRACE_SEARCH_CHUNK_MAX_CHARS * 2)
       const a = await build([textMessage("user", turn)])
