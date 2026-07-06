@@ -63,11 +63,6 @@ export interface TraceDetail {
     negativeAnnotationCount: number;
     /** Free-form metadata attached at ingest time. */
     metadata: Record<string, string>;
-    systemInstructions: Latitude.GenAiSystem;
-    /** Input messages sent into the first LLM span of the trace, in OpenTelemetry GenAI format. */
-    inputMessages: Latitude.GenAiMessage[];
-    /** Output messages from the last LLM span of the trace, in OpenTelemetry GenAI format. */
-    outputMessages: Latitude.GenAiMessage[];
-    /** Full conversation view for the trace's final turn — the last span's input messages followed by its output messages, in OpenTelemetry GenAI format. */
-    allMessages: Latitude.GenAiMessage[];
+    /** Full conversation for the trace, in OpenTelemetry GenAI format: the system instructions, then the messages sent into the trace's last LLM-completion span (the running history at that point), followed by that span's generated output. */
+    conversation: Latitude.GenAiMessage[];
 }

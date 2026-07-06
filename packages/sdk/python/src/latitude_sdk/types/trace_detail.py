@@ -7,7 +7,6 @@ import typing_extensions
 from ..core.pydantic_utilities import UniversalBaseModel
 from ..core.serialization import FieldMetadata
 from .gen_ai_message import GenAiMessage
-from .gen_ai_system import GenAiSystem
 
 
 class TraceDetail(UniversalBaseModel):
@@ -191,32 +190,9 @@ class TraceDetail(UniversalBaseModel):
     Free-form metadata attached at ingest time.
     """
 
-    system_instructions: typing_extensions.Annotated[
-        GenAiSystem, FieldMetadata(alias="systemInstructions"), pydantic.Field(alias="systemInstructions")
-    ]
-    input_messages: typing_extensions.Annotated[
-        typing.List[GenAiMessage],
-        FieldMetadata(alias="inputMessages"),
-        pydantic.Field(
-            alias="inputMessages",
-            description="Input messages sent into the first LLM span of the trace, in OpenTelemetry GenAI format.",
-        ),
-    ]
-    output_messages: typing_extensions.Annotated[
-        typing.List[GenAiMessage],
-        FieldMetadata(alias="outputMessages"),
-        pydantic.Field(
-            alias="outputMessages",
-            description="Output messages from the last LLM span of the trace, in OpenTelemetry GenAI format.",
-        ),
-    ]
-    all_messages: typing_extensions.Annotated[
-        typing.List[GenAiMessage],
-        FieldMetadata(alias="allMessages"),
-        pydantic.Field(
-            alias="allMessages",
-            description="Full conversation view for the trace's final turn — the last span's input messages followed by its output messages, in OpenTelemetry GenAI format.",
-        ),
-    ]
+    conversation: typing.List[GenAiMessage] = pydantic.Field()
+    """
+    Full conversation for the trace, in OpenTelemetry GenAI format: the system instructions, then the messages sent into the trace's last LLM-completion span (the running history at that point), followed by that span's generated output.
+    """
 
     model_config: typing.ClassVar[pydantic.ConfigDict] = pydantic.ConfigDict(extra="allow", frozen=True)

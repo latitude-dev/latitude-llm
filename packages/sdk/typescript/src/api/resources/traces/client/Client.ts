@@ -197,7 +197,7 @@ export class TracesClient {
     }
 
     /**
-     * Returns a single trace by id, including the captured system instructions and the conversation messages from the trace's last LLM-completion span.
+     * Returns a single trace by id, including its `conversation`: the system instructions and the messages of the trace's last LLM-completion span, in OpenTelemetry GenAI format.
      *
      * @param {string} projectSlug - Project slug (human-readable identifier)
      * @param {string} traceId - 32-character trace identifier.
