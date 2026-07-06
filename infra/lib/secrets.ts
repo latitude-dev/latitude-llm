@@ -392,28 +392,6 @@ export function createApplicationSecrets(baseName: string, environment: string):
   secrets["posthog-api-key"] = posthogApiKey.secret
   secretVersions["posthog-api-key"] = posthogApiKey.secretVersion
 
-  const framerApiKey = createSingleSecret(
-    baseName,
-    "framer-api-key",
-    "Framer API key",
-    process.env.LAT_FRAMER_API_KEY ?? "placeholder-change-me",
-    environment,
-    immutableSecretResourceOptions,
-  )
-  secrets["framer-api-key"] = framerApiKey.secret
-  secretVersions["framer-api-key"] = framerApiKey.secretVersion
-
-  const framerProjectUrl = createSingleSecret(
-    baseName,
-    "framer-project-url",
-    "Framer project URL",
-    process.env.LAT_FRAMER_PROJECT_URL ?? "placeholder-change-me",
-    environment,
-    immutableSecretResourceOptions,
-  )
-  secrets["framer-project-url"] = framerProjectUrl.secret
-  secretVersions["framer-project-url"] = framerProjectUrl.secretVersion
-
   const loopsApiKey = createSingleSecret(
     baseName,
     "loops-api-key",

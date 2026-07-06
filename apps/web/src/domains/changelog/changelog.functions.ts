@@ -1,6 +1,6 @@
 import { type ChangelogEntry, listChangelogEntriesUseCase } from "@domain/changelog"
 import { RedisCacheStoreLive } from "@platform/cache-redis"
-import { ChangelogReaderLive } from "@platform/changelog-framer"
+import { ChangelogReaderLive } from "@platform/changelog-api"
 import { withTracing } from "@repo/observability"
 import { createServerFn } from "@tanstack/react-start"
 import { Effect, Layer } from "effect"
@@ -9,6 +9,7 @@ import { getRedisClient } from "../../server/clients.ts"
 export interface ChangelogEntryRecord {
   readonly id: string
   readonly slug: string
+  readonly url: string
   readonly title: string
   readonly summary: string | null
   readonly category: string | null
@@ -19,6 +20,7 @@ export interface ChangelogEntryRecord {
 const toRecord = (entry: ChangelogEntry): ChangelogEntryRecord => ({
   id: entry.id,
   slug: entry.slug,
+  url: entry.url,
   title: entry.title,
   summary: entry.summary,
   category: entry.category,
@@ -29,7 +31,7 @@ const toRecord = (entry: ChangelogEntry): ChangelogEntryRecord => ({
 /**
  * Lists recent changelog entries for the in-app "What's new" popover.
  *
- * Returns an empty list when Framer is unconfigured or unreachable so the UI
+ * Returns an empty list when the marketing-site API is unreachable so the UI
  * can simply hide — the changelog is non-critical.
  */
 export const listChangelogEntries = createServerFn({ method: "GET" }).handler(
