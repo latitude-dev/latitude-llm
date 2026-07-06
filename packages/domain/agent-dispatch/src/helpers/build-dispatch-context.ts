@@ -341,9 +341,9 @@ export const buildDispatchContextFromSignal = (input: {
       projectRepo.findById(input.projectId),
     ])
 
-    const signal = yield* signalRepo.findById(input.signalId).pipe(
-      Effect.catchTag("NotFoundError", () => Effect.fail(new Error("Signal not found in this project"))),
-    )
+    const signal = yield* signalRepo
+      .findById(input.signalId)
+      .pipe(Effect.catchTag("NotFoundError", () => Effect.fail(new Error("Signal not found in this project"))))
 
     if (signal.projectId !== input.projectId) {
       return yield* Effect.fail(new Error("Signal not found in this project"))
