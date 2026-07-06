@@ -212,12 +212,13 @@ function CopyPromptModal({
   readonly signalId: string
   readonly onClose: () => void
 }) {
-  const { data, isLoading, isError } = useQuery({
+  const { data, isLoading } = useQuery({
     queryKey: ["signal-dispatch-prompt", projectId, signalId],
     queryFn: () => getSignalDispatchPrompt({ data: { projectId, signalId } }),
   })
 
-  const prompt = data?.prompt
+  const prompt = data && "prompt" in data ? data.prompt : undefined
+  const loadError = data && "error" in data ? data.error : undefined
 
   return (
     <Modal
@@ -229,7 +230,7 @@ function CopyPromptModal({
       footer={<CloseTrigger />}
     >
       <div className="flex flex-col gap-4">
-        {isError || (!isLoading && !prompt) ? (
+        {loadError || (!isLoading && !prompt) ? (
           <Text.H6 color="destructive">Could not load the prompt. Close this dialog and try again.</Text.H6>
         ) : isLoading ? (
           <Skeleton className="h-48 w-full" />

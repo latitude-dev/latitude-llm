@@ -674,24 +674,29 @@ export const listSendToDestinations = createServerFn({ method: "GET" })
     return configs.map((config) => ({ configId: config.id, kind: config.kind }))
   })
 
+type GetSignalDispatchPromptResult = { readonly prompt: string } | { readonly error: string }
+
 export const getSignalDispatchPrompt = createServerFn({ method: "GET" })
   .inputValidator(z.object({ projectId: z.string(), signalId: z.string() }))
-  .handler(async ({ data }): Promise<{ prompt: string }> => {
+  .handler(async ({ data }): Promise<GetSignalDispatchPromptResult> => {
     const { organizationId } = await requireSession()
     const orgId = OrganizationId(organizationId)
     const projectId = ProjectId(data.projectId)
     const signalId = SignalId(data.signalId)
 
-    const prompt = await Effect.runPromise(
+    return Effect.runPromise(
       buildManualSignalContext({ organizationId: orgId, projectId, signalId }).pipe(
-        Effect.map((context) => renderDispatchPrompt({ context })),
+        Effect.map((context) => ({ prompt: renderDispatchPrompt({ context }) })),
         withPostgres(manualContextPgLayer, getPostgresClient(), organizationId),
         withClickHouse(manualContextChLayer, getClickhouseClient(), orgId),
         withTracing,
+        Effect.catch((error: unknown) =>
+          Effect.succeed({
+            error: error instanceof Error ? error.message : "Unknown error",
+          }),
+        ),
       ),
     )
-
-    return { prompt }
   })
 
 const manualSendPgLayer = Layer.mergeAll(
