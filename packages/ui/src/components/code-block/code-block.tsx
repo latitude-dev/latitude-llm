@@ -45,7 +45,12 @@ export function CodeBlock({
   return (
     <div className="group relative">
       <Suspense fallback={<CodeBlockFallback {...(className != null && { className })} />}>
-        <CodeMirrorReadonly value={value} wrapLines={wrapLines} {...(className != null && { className })} />
+        <CodeMirrorReadonly
+          value={value}
+          wrapLines={wrapLines}
+          {...(language != null && { language })}
+          {...(className != null && { className })}
+        />
       </Suspense>
       <CodeBlockControls
         content={value}

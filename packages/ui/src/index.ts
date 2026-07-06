@@ -1,5 +1,6 @@
 // Tokens
 
+export type { GenAIMessage } from "rosetta-ai"
 export { Alert } from "./components/alert/index.tsx"
 export {
   Avatar,
