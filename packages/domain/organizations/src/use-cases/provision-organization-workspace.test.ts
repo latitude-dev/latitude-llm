@@ -120,7 +120,6 @@ describe("provisionOrganizationWorkspaceUseCase", () => {
       organizationId: ORG_ID,
       payload: {
         organizationId: ORG_ID,
-        queueAssigneeUserIds: ["user-1"],
       },
     })
     const apiKeys = [...savedApiKeys.values()]

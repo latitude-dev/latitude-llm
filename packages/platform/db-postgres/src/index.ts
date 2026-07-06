@@ -34,8 +34,6 @@ export { AgentDispatchCredentialRepositoryLive } from "./repositories/agent-disp
 export { AgentDispatchIntegrationRepositoryLive } from "./repositories/agent-dispatch-integration-repository.ts"
 export { AgentDispatchRepositoryLive } from "./repositories/agent-dispatch-repository.ts"
 export { IncidentRepositoryLive } from "./repositories/alert-incident-repository.ts"
-export { AnnotationQueueItemRepositoryLive } from "./repositories/annotation-queue-item-repository.ts"
-export { AnnotationQueueRepositoryLive } from "./repositories/annotation-queue-repository.ts"
 export { ApiKeyRepositoryLive } from "./repositories/api-key-repository.ts"
 export { BillingOverrideRepositoryLive } from "./repositories/billing-override-repository.ts"
 export { BillingUsageEventRepositoryLive } from "./repositories/billing-usage-event-repository.ts"

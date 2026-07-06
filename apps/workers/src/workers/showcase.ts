@@ -1,12 +1,10 @@
 import { ApiKeyRepository, generateApiKeyUseCase } from "@domain/api-keys"
-import { MembershipRepository } from "@domain/organizations"
 import { createProject, ProjectRepository } from "@domain/projects"
 import type { QueueConsumer } from "@domain/queue"
 import { generateSlug, SqlClient } from "@domain/shared"
 import { type Showcase, ShowcaseRepository } from "@domain/showcase"
 import {
   ApiKeyRepositoryLive,
-  MembershipRepositoryLive,
   OutboxEventWriterLive,
   type PostgresClient,
   ProjectRepositoryLive,
@@ -26,7 +24,6 @@ const REGENERATE_WORKFLOW_ID = "showcase:regenerate"
 interface PreparedRegeneration {
   readonly organizationId: string
   readonly projectId: string
-  readonly queueAssigneeUserIds: readonly string[]
   readonly apiKeyId: string
   readonly timelineAnchorIso: string
 }
@@ -41,8 +38,8 @@ interface ShowcaseDeps {
  *
  * The handler owns the *begin* half of the blue/green cycle — resolve the
  * showcase org from the pointer, provision a fresh `next` project (marked
- * `isShowcase` so gardening/retention skip it) plus the api key + queue
- * assignees the seed needs, and flip the pointer to `building`. It then starts
+ * `isShowcase` so gardening/retention skip it) plus the api key the seed
+ * needs, and flip the pointer to `building`. It then starts
  * `regenerateShowcaseWorkflow`, which drives build → gate → atomic swap.
  *
  * Guards that make this safe to fire on a schedule:
@@ -52,8 +49,6 @@ interface ShowcaseDeps {
  *   idempotent workflow start (a genuinely in-flight run dedups via
  *   `workflowId`). This keeps a transient failure between `beginNextBuild` and a
  *   durable workflow start from wedging the pointer in `building` forever.
- * - Showcase org has no members yet → skip (the seed needs a queue assignee;
- *   member provisioning is an org-bootstrap concern, S1/S7).
  */
 export const createShowcaseWorker = ({ consumer, postgresClient }: ShowcaseDeps) => {
   const pgClient = postgresClient ?? getPostgresClient()
@@ -83,22 +78,11 @@ export const createShowcaseWorker = ({ consumer, postgresClient }: ShowcaseDeps)
         // admits the project/api-key inserts and `list()` only sees its keys.
         const prepared = yield* prepareRegeneration(showcase, timelineAnchorIso).pipe(
           withPostgres(
-            Layer.mergeAll(
-              ShowcaseRepositoryLive,
-              ProjectRepositoryLive,
-              ApiKeyRepositoryLive,
-              MembershipRepositoryLive,
-              OutboxEventWriterLive,
-            ),
+            Layer.mergeAll(ShowcaseRepositoryLive, ProjectRepositoryLive, ApiKeyRepositoryLive, OutboxEventWriterLive),
             pgClient,
             organizationId,
           ),
         )
-
-        if (prepared === null) {
-          logger.info("Showcase organization has no members yet — skipping regeneration", { organizationId })
-          return
-        }
 
         const workflowStarter = yield* Effect.promise(() => getWorkflowStarter())
         yield* workflowStarter
@@ -124,11 +108,6 @@ const prepareRegeneration = (showcase: Showcase, timelineAnchorIso: string) =>
       Effect.gen(function* () {
         const organizationId = sqlClient.organizationId
 
-        const membershipRepo = yield* MembershipRepository
-        const members = yield* membershipRepo.listMembersWithUser(organizationId)
-        const queueAssigneeUserIds = members.map((member) => member.userId)
-        if (queueAssigneeUserIds.length === 0) return null
-
         // Seeded ClickHouse spans reference an api key that must exist on the
         // showcase org. Reuse the org's first key if present; otherwise mint one.
         const apiKeyRepo = yield* ApiKeyRepository
@@ -147,7 +126,6 @@ const prepareRegeneration = (showcase: Showcase, timelineAnchorIso: string) =>
           return {
             organizationId,
             projectId: showcase.nextProjectId,
-            queueAssigneeUserIds,
             apiKeyId,
             timelineAnchorIso,
           } satisfies PreparedRegeneration
@@ -172,7 +150,6 @@ const prepareRegeneration = (showcase: Showcase, timelineAnchorIso: string) =>
         return {
           organizationId,
           projectId: project.id,
-          queueAssigneeUserIds,
           apiKeyId,
           timelineAnchorIso,
         } satisfies PreparedRegeneration

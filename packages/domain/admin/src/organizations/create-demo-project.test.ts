@@ -149,9 +149,6 @@ describe("createDemoProjectUseCase", () => {
     // Result reflects what's in the row.
     expect(result.projectId).toBe(saved.id)
     expect(result.projectSlug).toBe("my-demo-project")
-    // Queue assignee picked from one of the org members.
-    const memberIds = org.members.map((m) => m.user.id)
-    expect(memberIds).toContain(result.queueAssigneeUserId)
 
     // Audit event written with the actor + projectId + trimmed name.
     expect(world.outbox).toHaveLength(1)
@@ -167,8 +164,8 @@ describe("createDemoProjectUseCase", () => {
       projectName: "My Demo Project",
     })
 
-    // Seed workflow kicked off with the picked assignee + a workflow id
-    // namespaced by the new project's id.
+    // Seed workflow kicked off with a workflow id namespaced by the new
+    // project's id.
     expect(world.workflows).toHaveLength(1)
     const wf = world.workflows[0]
     if (!wf) throw new Error("no workflow")
@@ -177,7 +174,6 @@ describe("createDemoProjectUseCase", () => {
     expect(wf.input).toMatchObject({
       organizationId: ORG_ID,
       projectId: saved.id,
-      queueAssigneeUserIds: [result.queueAssigneeUserId],
       apiKeyId: FAKE_API_KEY_ID,
     })
   })
@@ -254,27 +250,6 @@ describe("createDemoProjectUseCase", () => {
         }).pipe(Effect.provide(layer)),
       ),
     ).rejects.toMatchObject({ _tag: "ValidationError", field: "projectName" })
-  })
-
-  it("fails with ValidationError when the org has no members", async () => {
-    // Without members we'd have nobody to assign queue items to in the
-    // seed workflow — surfacing this loudly here beats a confusing
-    // workflow failure later.
-    const org = mkOrg({ members: [] })
-    const { layer, world } = buildLayer(org)
-
-    await expect(
-      Effect.runPromise(
-        createDemoProjectUseCase({
-          organizationId: ORG_ID,
-          projectName: "Demo",
-          actorAdminUserId: ADMIN_ID,
-        }).pipe(Effect.provide(layer)),
-      ),
-    ).rejects.toMatchObject({ _tag: "ValidationError", field: "organizationId" })
-
-    expect(world.savedProjects).toHaveLength(0)
-    expect(world.outbox).toHaveLength(0)
   })
 
   it("auto-suffixes the slug when it collides with an existing project across the workspace", async () => {

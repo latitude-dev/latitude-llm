@@ -1,6 +1,4 @@
 import {
-  AnnotationQueueId,
-  AnnotationQueueItemId,
   ApiKeyId,
   DatasetId,
   DatasetVersionId,
@@ -47,17 +45,6 @@ export const SEED_MEMBER_4_MEMBERSHIP_ID = MembershipId("emud7q05yowvbyrhxi1e447
 export const SEED_MEMBER_5_USER_ID = UserId("ov2an3fp4db0177upoaog2i1")
 export const SEED_MEMBER_5_EMAIL = "eli@acme.com"
 export const SEED_MEMBER_5_MEMBERSHIP_ID = MembershipId("amc2xugd6ew7fo7mbsjps262")
-
-/** Owner, admin, and five members — seven users for queues that need a large assignee list. */
-export const SEED_MANUAL_QUEUE_ASSIGNEES = [
-  SEED_OWNER_USER_ID,
-  SEED_ADMIN_USER_ID,
-  SEED_MEMBER_1_USER_ID,
-  SEED_MEMBER_2_USER_ID,
-  SEED_MEMBER_3_USER_ID,
-  SEED_MEMBER_4_USER_ID,
-  SEED_MEMBER_5_USER_ID,
-] as const
 
 // ---------------------------------------------------------------------------
 // Datasets
@@ -137,31 +124,6 @@ export const SEED_WARRANTY_ARCHIVED_EVALUATION_HASH = "bb11cc22dd33ee44ff55aa66b
 export const SEED_COMBINATION_EVALUATION_HASH = "cc11dd22ee33ff44aa55bb66cc77dd88ee99ff00"
 export const SEED_RETURNS_EVALUATION_HASH = "dd11ee22ff33aa44bb55cc66dd77ee88ff99aa00"
 export const SEED_ACCESS_EVALUATION_HASH = "ee11ff22aa33bb44cc55dd66ee77ff88aa99bb00"
-
-// ---------------------------------------------------------------------------
-// Queues
-// ---------------------------------------------------------------------------
-
-export const SEED_ANNOTATION_QUEUE_WARRANTY_ID = AnnotationQueueId("q1w2e3r4t5y6u7i8o9p0a1s2")
-export const SEED_ANNOTATION_QUEUE_COMBINATION_ID = AnnotationQueueId("m1a2n3u4a5l6c7o8m9b0q1u2")
-export const SEED_ANNOTATION_QUEUE_LOGISTICS_ID = AnnotationQueueId("l1o2g3i4s5t6i7c8s9q0u1e2")
-export const SEED_ANNOTATION_QUEUE_SYSTEM_ID = AnnotationQueueId("aq2icpkri3o99sw0u24hy50w")
-export const SEED_ANNOTATION_QUEUE_LIVE_ID = AnnotationQueueId("hikmfvizwaptzothgqtllelw")
-
-export const SEED_ANNOTATION_QUEUE_ITEM_WARRANTY_PENDING_ID = AnnotationQueueItemId("w1a2r3n4t5y6p7e8n9d0i1n2")
-export const SEED_ANNOTATION_QUEUE_ITEM_WARRANTY_COMPLETED_A_ID = AnnotationQueueItemId("w1a2r3c4o5m6p7l8e9t0a1a2")
-export const SEED_ANNOTATION_QUEUE_ITEM_WARRANTY_COMPLETED_B_ID = AnnotationQueueItemId("w1a2r3c4o5m6p7l8e9t0b1b2")
-
-export const SEED_ANNOTATION_QUEUE_ITEM_COMBINATION_PENDING_ID = AnnotationQueueItemId("c1o2m3b4p5e6n7d8i9n0g1a2")
-export const SEED_ANNOTATION_QUEUE_ITEM_COMBINATION_COMPLETED_A_ID = AnnotationQueueItemId("c1o2m3b4c5o6m7p8a9a0a1a2")
-export const SEED_ANNOTATION_QUEUE_ITEM_COMBINATION_COMPLETED_B_ID = AnnotationQueueItemId("c1o2m3b4c5o6m7p8b9b0b1b2")
-
-export const SEED_ANNOTATION_QUEUE_ITEM_LOGISTICS_PENDING_ID = AnnotationQueueItemId("l1o2g3i4p5e6n7d8i9n0g1a2")
-export const SEED_ANNOTATION_QUEUE_ITEM_LOGISTICS_COMPLETED_A_ID = AnnotationQueueItemId("l1o2g3i4c5o6m7p8a9a0a1a2")
-export const SEED_ANNOTATION_QUEUE_ITEM_LOGISTICS_COMPLETED_B_ID = AnnotationQueueItemId("l1o2g3i4c5o6m7p8b9b0b1b2")
-
-export const SEED_ANNOTATION_QUEUE_ITEM_SYSTEM_PENDING_ID = AnnotationQueueItemId("s1y2s3t4e5m6p7e8n9d0i1n2")
-export const SEED_ANNOTATION_QUEUE_ITEM_LIVE_PENDING_ID = AnnotationQueueItemId("l1i2v3e4p5e6n7d8i9n0g1a2")
 
 // ---------------------------------------------------------------------------
 // Simulations
@@ -296,10 +258,6 @@ export const SEED_COMBINATION_SIMULATION_SPAN_IDS: readonly string[] = Array.fro
 /** Dedicated trace for annotation UI polish feature testing (30+ messages). */
 export const SEED_ANNOTATION_DEMO_TRACE_ID = "a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0"
 export const SEED_ANNOTATION_DEMO_SPAN_ID = "b0b0b0b0b0b0b0b0"
-
-/** Kitchen Sink queue for testing all annotation features. */
-export const SEED_ANNOTATION_QUEUE_KITCHEN_SINK_ID = AnnotationQueueId("ksink0demo0queue0000000x")
-export const SEED_ANNOTATION_QUEUE_ITEM_KITCHEN_SINK_ID = AnnotationQueueItemId("ksink0demo0item00000000x")
 
 /** 12 annotation score IDs for the demo trace (see PRD for provenance/anchor distribution). */
 export const SEED_UI_POLISH_SCORE_IDS = {

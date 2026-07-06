@@ -70,7 +70,6 @@ export const createSampleProjectUseCase = Effect.fn("organizations.createSampleP
             payload: {
               organizationId: input.organizationId,
               projectId: sampleProject.id,
-              queueAssigneeUserIds: [input.actorUserId],
               apiKeyId: apiKey.id as string,
               timelineAnchorIso: new Date().toISOString(),
             },

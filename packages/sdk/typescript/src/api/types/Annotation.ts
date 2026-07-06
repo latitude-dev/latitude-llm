@@ -45,7 +45,7 @@ export interface Annotation {
     updatedAt: string;
     /** Always `"annotation"` for this shape. */
     source: Annotation.Source;
-    /** Origin marker. Sentinel `"UI"` / `"API"` / `"SYSTEM"` for drafts and automation, or an annotation-queue CUID for queue-authored rows. */
+    /** Origin marker. Sentinel `"UI"` / `"API"` / `"SYSTEM"` for drafts and automation, or a CUID for authored rows. */
     sourceId: Annotation.SourceId;
     metadata: Latitude.AnnotationMetadata;
 }
@@ -57,7 +57,7 @@ export namespace Annotation {
     } as const;
     export type Source = (typeof Source)[keyof typeof Source];
     /**
-     * Origin marker. Sentinel `"UI"` / `"API"` / `"SYSTEM"` for drafts and automation, or an annotation-queue CUID for queue-authored rows.
+     * Origin marker. Sentinel `"UI"` / `"API"` / `"SYSTEM"` for drafts and automation, or a CUID for authored rows.
      */
     export type SourceId = ("UI" | "API" | "SYSTEM") | string;
 }

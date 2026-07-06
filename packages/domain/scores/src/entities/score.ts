@@ -166,7 +166,7 @@ export type EvaluationScore = z.infer<typeof evaluationScoreSchema>
 
 export const annotationScoreSchema = baseScoreSchema.extend({
   sourceType: z.literal("annotation"),
-  sourceId: annotationScoreSourceIdSchema, // sentinel `"UI"` / `"API"` / `"SYSTEM"` for drafts and automation, or annotation-queue cuid for queue-authored rows
+  sourceId: annotationScoreSourceIdSchema, // sentinel `"UI"` / `"API"` / `"SYSTEM"` for drafts and automation, or a cuid for authored rows
   metadata: annotationScoreMetadataSchema,
 })
 export type AnnotationScore = z.infer<typeof annotationScoreSchema>

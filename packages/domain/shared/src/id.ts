@@ -53,8 +53,6 @@ export type ScoreId = Id<"ScoreId">
 export type SignalId = Id<"SignalId">
 export type EvaluationId = Id<"EvaluationId">
 export type SimulationId = Id<"SimulationId">
-export type AnnotationQueueId = Id<"AnnotationQueueId">
-export type AnnotationQueueItemId = Id<"AnnotationQueueItemId">
 export type FlaggerId = Id<"FlaggerId">
 export type SavedSearchId = Id<"SavedSearchId">
 export type AlertIncidentId = Id<"AlertIncidentId">
@@ -98,8 +96,6 @@ export const ScoreId = (value: string): ScoreId => value as ScoreId
 export const SignalId = (value: string): SignalId => value as SignalId
 export const EvaluationId = (value: string): EvaluationId => value as EvaluationId
 export const SimulationId = (value: string): SimulationId => value as SimulationId
-export const AnnotationQueueId = (value: string): AnnotationQueueId => value as AnnotationQueueId
-export const AnnotationQueueItemId = (value: string): AnnotationQueueItemId => value as AnnotationQueueItemId
 export const FlaggerId = (value: string): FlaggerId => value as FlaggerId
 export const SavedSearchId = (value: string): SavedSearchId => value as SavedSearchId
 export const AlertIncidentId = (value: string): AlertIncidentId => value as AlertIncidentId
@@ -136,8 +132,6 @@ export const datasetVersionIdSchema = cuidSchema.transform(DatasetVersionId)
 export const scoreIdSchema = cuidSchema.transform(ScoreId)
 export const signalIdSchema = cuidSchema.transform(SignalId)
 export const evaluationIdSchema = cuidSchema.transform(EvaluationId)
-export const annotationQueueIdSchema = cuidSchema.transform(AnnotationQueueId)
-export const annotationQueueItemIdSchema = cuidSchema.transform(AnnotationQueueItemId)
 export const flaggerIdSchema = cuidSchema.transform(FlaggerId)
 export const simulationIdSchema = cuidSchema.transform(SimulationId)
 export const savedSearchIdSchema = cuidSchema.transform(SavedSearchId)

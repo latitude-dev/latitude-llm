@@ -225,7 +225,6 @@ describe("domain-events dispatcher", () => {
     const payload = {
       organizationId: "org-1",
       projectId: "sample-1",
-      queueAssigneeUserIds: ["user-1"],
       apiKeyId: "key-1",
       timelineAnchorIso: "2026-06-16T00:00:00.000Z",
     }
@@ -567,7 +566,7 @@ describe("domain-events dispatcher", () => {
     expect(published.some((p) => p.queue === "posthog-analytics")).toBe(false)
   })
 
-  it("routes ScoreCreated to issues:discovery, annotation-scores publish, and markReviewStarted with status-aware dedupe", async () => {
+  it("routes ScoreCreated to issues:discovery and annotation-scores publish with status-aware dedupe", async () => {
     const { consumer, published } = setupDispatcher()
 
     const envelope = makeEnvelope("ScoreCreated", {
@@ -581,7 +580,6 @@ describe("domain-events dispatcher", () => {
     await consumer.dispatchTask("domain-events", "dispatch", envelopeToDispatchPayload(envelope))
 
     expect(published.map((p) => `${p.queue}:${p.task}`).sort()).toEqual([
-      "annotation-scores:markReviewStarted",
       "annotation-scores:publishHumanAnnotation",
       "issues:discovery",
     ])
@@ -594,9 +592,6 @@ describe("domain-events dispatcher", () => {
       dedupeKey: "annotation-scores:publish-human:score-3",
       debounceMs: SCORE_PUBLICATION_DEBOUNCE,
     })
-
-    const review = published.find((p) => p.task === "markReviewStarted")
-    expect(review?.options?.dedupeKey).toBe("annotation-scores:mark-review-started:score-3")
   })
 
   it("uses distinct discovery dedupe keys for draft vs published scores", async () => {

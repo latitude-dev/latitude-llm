@@ -1662,7 +1662,7 @@
                 "maxLength": 24
               }
             ],
-            "description": "Origin marker. Sentinel `\"UI\"` / `\"API\"` / `\"SYSTEM\"` for drafts and automation, or an annotation-queue CUID for queue-authored rows."
+            "description": "Origin marker. Sentinel `\"UI\"` / `\"API\"` / `\"SYSTEM\"` for drafts and automation, or a CUID for authored rows."
           },
           "metadata": {
             "type": "object",
@@ -3724,7 +3724,7 @@
                       "maxLength": 24
                     }
                   ],
-                  "description": "Origin marker. Sentinel `\"UI\"` / `\"API\"` / `\"SYSTEM\"` for drafts and automation, or an annotation-queue CUID for queue-authored rows."
+                  "description": "Origin marker. Sentinel `\"UI\"` / `\"API\"` / `\"SYSTEM\"` for drafts and automation, or a CUID for authored rows."
                 },
                 "metadata": {
                   "type": "object",
@@ -4057,7 +4057,7 @@
                 "maxLength": 24
               }
             ],
-            "description": "Origin marker. Sentinel `\"UI\"` / `\"API\"` / `\"SYSTEM\"` for drafts and automation, or an annotation-queue CUID for queue-authored rows."
+            "description": "Origin marker. Sentinel `\"UI\"` / `\"API\"` / `\"SYSTEM\"` for drafts and automation, or a CUID for authored rows."
           },
           "metadata": {
             "type": "object",

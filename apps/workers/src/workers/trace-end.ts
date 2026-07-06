@@ -1,31 +1,13 @@
-import {
-  AnnotationQueueRepository,
-  buildTraceEndLiveQueueSelectionInputs,
-  orchestrateTraceEndLiveQueueMaterializationUseCase,
-} from "@domain/annotation-queues"
 import { CONVERSATION_INTELLIGENCE_ANALYSIS_DEBOUNCE_MS } from "@domain/conversation-intelligence"
 import { SAVED_SEARCH_MONITORS_THROTTLE_MS, savedSearchMonitorsCheckDedupeKey } from "@domain/monitors"
 import type { QueueConsumer, QueuePublisherShape, WorkflowStarterShape } from "@domain/queue"
 import { OrganizationId } from "@domain/shared"
-import {
-  loadTraceForTraceEndUseCase,
-  selectTraceEndItemsUseCase,
-  summarizeTraceEndItemDecisions,
-  type TraceEndItemDecisionCounts,
-} from "@domain/spans"
-import { RedisCacheStoreLive, type RedisClient } from "@platform/cache-redis"
+import { loadTraceForTraceEndUseCase } from "@domain/spans"
 import { type ClickHouseClient, TraceRepositoryLive, withClickHouse } from "@platform/db-clickhouse"
-import {
-  AnnotationQueueItemRepositoryLive,
-  AnnotationQueueRepositoryLive,
-  OutboxEventWriterLive,
-  type PostgresClient,
-  withPostgres,
-} from "@platform/db-postgres"
 import { createLogger, withTracing } from "@repo/observability"
-import { Effect, Layer } from "effect"
+import { Effect } from "effect"
 
-import { getClickhouseClient, getPostgresClient, getRedisClient, getWorkflowStarter } from "../clients.ts"
+import { getClickhouseClient, getWorkflowStarter } from "../clients.ts"
 
 const logger = createLogger("trace-end")
 const TRACE_END_QUEUE = "trace-end" as const
@@ -43,30 +25,20 @@ type TraceEndLogger = Pick<ReturnType<typeof createLogger>, "info" | "error">
 interface TraceEndDeps {
   consumer: QueueConsumer
   publisher: QueuePublisherShape
-  postgresClient?: PostgresClient
   clickhouseClient?: ClickHouseClient
-  redisClient?: RedisClient
   logger?: TraceEndLogger
   workflowStarter?: WorkflowStarterShape
 }
 
 interface RunTraceEndDeps {
   readonly publisher: QueuePublisherShape
-  readonly postgresClient: PostgresClient
   readonly clickhouseClient: ClickHouseClient
-  readonly redisClient: RedisClient
   readonly workflowStarter: WorkflowStarterShape
-}
-
-type LiveQueueSummary = TraceEndItemDecisionCounts & {
-  readonly liveQueuesScanned: number
-  readonly insertedItemCount: number
 }
 
 type TraceEndRunSummary = {
   readonly traceId: string
   readonly sessionId: string | null
-  readonly liveQueues: LiveQueueSummary
   readonly deterministicFlaggersEnqueued: boolean
 }
 
@@ -90,7 +62,7 @@ const buildRunLogContext = (payload: TraceEndPayload) => ({
 })
 
 export const runTraceEndJob =
-  ({ publisher, postgresClient, clickhouseClient, redisClient, workflowStarter }: RunTraceEndDeps) =>
+  ({ publisher, clickhouseClient, workflowStarter }: RunTraceEndDeps) =>
   (payload: TraceEndPayload) =>
     Effect.gen(function* () {
       if (payload.isSandbox) {
@@ -110,34 +82,7 @@ export const runTraceEndJob =
       const traceDetail = loaded.traceDetail
 
       // Evaluation selection + execution moved to the signals:match worker. trace-end now owns only
-      // live-queue materialization, flaggers, saved-search monitors, trace-search, and conversation
-      // intelligence.
-      const liveQueues = yield* Effect.gen(function* () {
-        const queueRepository = yield* AnnotationQueueRepository
-        return yield* queueRepository.listLiveQueuesByProject({ projectId: traceDetail.projectId })
-      })
-
-      const liveBuilt = buildTraceEndLiveQueueSelectionInputs(liveQueues)
-
-      const decisions = yield* selectTraceEndItemsUseCase({
-        organizationId: payload.organizationId,
-        projectId: payload.projectId,
-        traceId: payload.traceId,
-        items: liveBuilt.items,
-      })
-
-      const liveQueueDecisionCounts = summarizeTraceEndItemDecisions([...liveBuilt.liveQueueIdByKey.keys()], decisions)
-
-      const selectedLiveQueueIds = [...liveBuilt.liveQueueIdByKey.entries()]
-        .filter(([key]) => decisions[key]?.selected === true)
-        .map(([, queueId]) => queueId)
-
-      const { insertedItemCount } = yield* orchestrateTraceEndLiveQueueMaterializationUseCase({
-        traceProjectId: traceDetail.projectId,
-        traceRowId: traceDetail.traceId,
-        traceCreatedAt: traceDetail.startTime,
-        selectedLiveQueueIds,
-      })
+      // flaggers, saved-search monitors, trace-search, and conversation intelligence.
 
       // Hand the deterministic-flagger fan-out to its own worker. Per-strategy
       // isolation (Effect.catch) lives there, so a broken detector can't
@@ -263,24 +208,10 @@ export const runTraceEndJob =
         summary: {
           traceId: traceDetail.traceId,
           sessionId: traceDetail.sessionId ?? null,
-          liveQueues: {
-            ...liveQueueDecisionCounts,
-            liveQueuesScanned: liveQueues.length,
-            insertedItemCount,
-          },
           deterministicFlaggersEnqueued,
         },
       } satisfies TraceEndRunResult
-    }).pipe(
-      withPostgres(
-        Layer.mergeAll(AnnotationQueueItemRepositoryLive, AnnotationQueueRepositoryLive, OutboxEventWriterLive),
-        postgresClient,
-        OrganizationId(payload.organizationId),
-      ),
-      withClickHouse(TraceRepositoryLive, clickhouseClient, OrganizationId(payload.organizationId)),
-      Effect.provide(RedisCacheStoreLive(redisClient)),
-      withTracing,
-    )
+    }).pipe(withClickHouse(TraceRepositoryLive, clickhouseClient, OrganizationId(payload.organizationId)), withTracing)
 
 export const createRunHandler =
   ({ log, ...deps }: RunTraceEndDeps & { readonly log: TraceEndLogger }) =>
@@ -301,7 +232,6 @@ export const createRunHandler =
             ...buildRunLogContext(payload),
             outcome: result.action,
             sessionId: result.summary.sessionId,
-            liveQueues: result.summary.liveQueues,
             deterministicFlaggersEnqueued: result.summary.deterministicFlaggersEnqueued,
           })
         }),
@@ -321,15 +251,11 @@ export const createRunHandler =
 export const createTraceEndWorker = ({
   consumer,
   publisher,
-  postgresClient,
   clickhouseClient,
-  redisClient,
   logger: injectedLogger,
   workflowStarter,
 }: TraceEndDeps) => {
-  const pgClient = postgresClient ?? getPostgresClient()
   const chClient = clickhouseClient ?? getClickhouseClient()
-  const rdClient = redisClient ?? getRedisClient()
   const traceEndLogger = injectedLogger ?? logger
   const temporalStarter =
     workflowStarter ??
@@ -344,9 +270,7 @@ export const createTraceEndWorker = ({
     run: createRunHandler({
       log: traceEndLogger,
       publisher,
-      postgresClient: pgClient,
       clickhouseClient: chClient,
-      redisClient: rdClient,
       workflowStarter: temporalStarter,
     }),
   })

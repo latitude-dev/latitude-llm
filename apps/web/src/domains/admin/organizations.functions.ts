@@ -396,20 +396,17 @@ export const adminCreateDemoProjectInputSchema = z.object({
 interface AdminCreateDemoProjectResultDto {
   projectId: string
   projectSlug: string
-  /** The org member chosen as queue-item assignee for the seeded annotation queues. */
-  queueAssigneeUserId: string
 }
 
 /**
  * Create a "demo project" on the target organization and kick off the
  * Temporal workflow that seeds it with full bootstrap content (datasets,
- * evaluations, issues, queues, scores, ~30 days of telemetry).
+ * evaluations, issues, scores, ~30 days of telemetry).
  *
  * Three-guard discipline mirroring the rest of the backoffice:
  *  - {@link adminMiddleware} rejects non-admins with `NotFoundError`
  *    (indistinguishable from a non-existent server function).
- *  - Use-case enforces name-collision / empty-org-members invariants
- *    before any side effect.
+ *  - Use-case enforces the name-collision invariant before any side effect.
  *  - Postgres reads/writes go through {@link getAdminPostgresClient}
  *    (the only sanctioned RLS-bypass signal).
  *
@@ -443,7 +440,6 @@ export const adminCreateDemoProject = createServerFn({ method: "POST" })
     return {
       projectId: result.projectId,
       projectSlug: result.projectSlug,
-      queueAssigneeUserId: result.queueAssigneeUserId,
     }
   })
 

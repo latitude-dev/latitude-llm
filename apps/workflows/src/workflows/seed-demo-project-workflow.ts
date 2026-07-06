@@ -6,7 +6,7 @@ import { gardenTaxonomyWorkflow } from "./taxonomy-gardening-workflow.ts"
 /**
  * Seeds the base demo content and the derived read models that make the
  * demo immediately usable. The first two activities write a fresh project's
- * worth of seed content (datasets, evaluations, issues, queues, scores,
+ * worth of seed content (datasets, evaluations, issues, scores,
  * tau telemetry) under the supplied `(organizationId, projectId)` pair.
  * The derived activity then imports a precomputed trace-search,
  * conversation-intelligence, and taxonomy snapshot so behaviours are visible
@@ -68,13 +68,6 @@ const { seedDemoProjectTraceSearchActivity } = proxyActivities<typeof activities
 export interface SeedDemoProjectWorkflowInput {
   readonly organizationId: string
   readonly projectId: string
-  /**
-   * Org members that the seeded annotation-queue items should round-robin
-   * across as `assignedTo`. Picked in the request handler so workflow
-   * replays see a stable list; `Math.random` inside workflow code is a
-   * Temporal footgun.
-   */
-  readonly queueAssigneeUserIds: readonly string[]
   /**
    * The target org's existing default api key. Threaded through so seeded
    * ClickHouse spans reference a key that actually exists on the org —

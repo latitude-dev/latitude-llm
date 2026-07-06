@@ -59,8 +59,6 @@ vi.mock("@platform/db-clickhouse", () => ({
 }))
 
 vi.mock("@platform/db-postgres", () => ({
-  AnnotationQueueItemRepositoryLive: {},
-  AnnotationQueueRepositoryLive: {},
   BillingOverrideRepositoryLive: {},
   BillingUsageEventRepositoryLive: {},
   BillingUsagePeriodRepositoryLive: {},

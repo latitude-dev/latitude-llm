@@ -83,14 +83,12 @@ const _registry = {
   seedDemoProjectWorkflow: input<{
     readonly organizationId: string
     readonly projectId: string
-    readonly queueAssigneeUserIds: readonly string[]
     readonly apiKeyId: string
     readonly timelineAnchorIso: string
   }>(),
   regenerateShowcaseWorkflow: input<{
     readonly organizationId: string
     readonly projectId: string
-    readonly queueAssigneeUserIds: readonly string[]
     readonly apiKeyId: string
     readonly timelineAnchorIso: string
   }>(),
