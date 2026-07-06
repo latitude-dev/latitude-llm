@@ -23,7 +23,7 @@ import { Effect, Option } from "effect"
 import { z } from "zod"
 import { FLAGGER_DEFAULT_CLASSIFIER_MODEL, FLAGGER_DEFAULT_INSTRUCTION_EXTRACTOR_MODEL } from "../constants.ts"
 import { getFlaggerStrategy, hasFlaggerStrategy, isLlmCapableStrategy } from "../flagger-strategies/index.ts"
-import { iterMessageParts } from "../flagger-strategies/shared.ts"
+import { isRecord, iterMessageParts } from "../flagger-strategies/shared.ts"
 import type { FlaggerSlug, FlaggerStrategy } from "../flagger-strategies/types.ts"
 import { FlaggerRepository } from "../ports/flagger-repository.ts"
 import { reflagSuppressionTags } from "../reflag.ts"
@@ -151,10 +151,6 @@ const INSPECTED_AGENT_EXTRACTED_FALSE_TTL_SECONDS = 24 * 60 * 60
 const INSPECTED_AGENT_CONTEXT_CACHE_VERSION = 1
 const INSPECTED_AGENT_CONTEXT_CACHE_PREFIX = `flaggers:inspected-agent-context:v${INSPECTED_AGENT_CONTEXT_CACHE_VERSION}:sha256:`
 const FALLBACK_SYSTEM_PROMPT_CHARS = 600
-
-function isRecord(value: unknown): value is Record<string, unknown> {
-  return typeof value === "object" && value !== null
-}
 
 function extractTextFromParts(parts: readonly unknown[]): string[] {
   return parts.flatMap((part) => {

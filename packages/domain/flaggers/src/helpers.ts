@@ -1,6 +1,6 @@
 import type { TraceDetail } from "@domain/spans"
 import { cacheHitRate, formatCount, formatPercentage } from "@repo/utils"
-import { iterMessageParts } from "./flagger-strategies/shared.ts"
+import { isRecord, iterMessageParts } from "./flagger-strategies/shared.ts"
 
 type TraceMessagesOnly = Pick<TraceDetail, "allMessages">
 
@@ -81,10 +81,6 @@ export function detectToolCallErrorsFlagger(trace: TraceMessagesOnly): Determini
   }
 
   return NO_MATCH
-}
-
-function isRecord(value: unknown): value is Record<string, unknown> {
-  return typeof value === "object" && value !== null
 }
 
 function toNonEmptyString(value: unknown): string | null {

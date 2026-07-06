@@ -18,7 +18,7 @@ import { type TraceDetail, TraceRepository } from "@domain/spans"
 import { Effect } from "effect"
 import { FLAGGER_DEFAULT_ANNOTATOR_MODEL } from "../constants.ts"
 import { getFlaggerStrategy } from "../flagger-strategies/index.ts"
-import { iterMessageParts } from "../flagger-strategies/shared.ts"
+import { isRecord, iterMessageParts } from "../flagger-strategies/shared.ts"
 import { reflagSuppressionTags } from "../reflag.ts"
 import { flaggerAnnotatorOutputSchema } from "./flagger-annotator-contracts.ts"
 
@@ -103,10 +103,6 @@ const buildAnnotatorSystemPrompt = (flaggerSlug: string): string => {
   return ANNOTATOR_SYSTEM_PROMPT_TEMPLATE.replace("{flaggerName}", annotator.name)
     .replace("{flaggerDescription}", annotator.description)
     .replace("{flaggerInstructions}", annotator.instructions)
-}
-
-function isRecord(value: unknown): value is Record<string, unknown> {
-  return typeof value === "object" && value !== null
 }
 
 function toNonEmptyString(value: unknown): string | null {
