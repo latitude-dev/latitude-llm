@@ -206,6 +206,7 @@ export function ShaderSurface({ fragmentSource, targetsRef, loading }: ShaderSur
       event.preventDefault()
       contextLost = true
       syncRunning()
+      if (restoreTimer !== null) clearTimeout(restoreTimer)
       restoreTimer = setTimeout(() => disable("WebGL context lost"), CONTEXT_RESTORE_GRACE_MS)
     }
     const onContextRestored = () => {
