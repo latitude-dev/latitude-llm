@@ -4,7 +4,9 @@ import {
   Button,
   Checkbox,
   ClaudeCodeIcon,
+  CloseTrigger,
   CopyableText,
+  CopyButton,
   CursorIcon,
   Icon,
   InfiniteTable,
@@ -21,7 +23,7 @@ import { relativeTime } from "@repo/utils"
 import { useForm } from "@tanstack/react-form"
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 import { Link } from "@tanstack/react-router"
-import { BookOpen, Copy, ExternalLink, type LucideProps, Plus, Webhook } from "lucide-react"
+import { BookOpen, Copy, ExternalLink, FileText, type LucideProps, Plus, Webhook } from "lucide-react"
 import { useState } from "react"
 import { z } from "zod"
 import {
@@ -84,6 +86,54 @@ const DISPATCH_ERROR_FALLBACKS: Record<string, string> = {
   config: "The provider rejected the dispatch request. New failures include the provider response here.",
   rate_limited: "The provider rate-limited this dispatch. It should retry automatically.",
   transport: "The provider could not be reached. It should retry automatically.",
+}
+
+function getDispatchErrorTitle(dispatch: AgentDispatchRecord): string | null {
+  if (!dispatch.errorCategory) return null
+  return DISPATCH_ERROR_TITLES[dispatch.errorCategory] ?? dispatch.errorCategory
+}
+
+function getDispatchErrorDetail(dispatch: AgentDispatchRecord): string | null {
+  const genericErrorDetail = dispatch.errorCategory ? `Agent dispatch adapter failed (${dispatch.errorCategory})` : null
+  if (dispatch.errorDetail && dispatch.errorDetail !== genericErrorDetail) {
+    return dispatch.errorDetail
+  }
+  if (dispatch.errorCategory) {
+    return DISPATCH_ERROR_FALLBACKS[dispatch.errorCategory] ?? null
+  }
+  return null
+}
+
+function DispatchErrorDetailModal({
+  title,
+  detail,
+  onClose,
+}: {
+  readonly title: string
+  readonly detail: string
+  readonly onClose: () => void
+}) {
+  return (
+    <Modal
+      open
+      dismissible
+      onOpenChange={(next) => (!next ? onClose() : undefined)}
+      title={title}
+      description="Full error response from the provider."
+      footer={<CloseTrigger />}
+    >
+      <div className="group relative">
+        <div className="absolute top-0 right-0 z-10 rounded-tr-md rounded-bl-lg bg-muted p-0.5">
+          <CopyButton value={detail} tooltip="Copy" />
+        </div>
+        <textarea
+          readOnly
+          value={detail}
+          className="max-h-80 min-h-32 w-full resize-none rounded-md bg-muted p-3 pr-12 font-mono text-xs leading-relaxed"
+        />
+      </div>
+    </Modal>
+  )
 }
 
 const INTEGRATION_SUBTITLES: Record<AgentDispatchKindKey, string> = {
@@ -1314,6 +1364,7 @@ function AgentDispatchHistorySection({
   readonly projectSlug: string
   readonly kind: AgentDispatchKindKey
 }) {
+  const [errorDetailModal, setErrorDetailModal] = useState<{ title: string; detail: string } | null>(null)
   const { data: dispatches = [], isLoading } = useQuery({
     queryKey: ["agent-dispatches", projectId],
     queryFn: () => listAgentDispatches({ data: { projectId } }),
@@ -1367,29 +1418,28 @@ function AgentDispatchHistorySection({
             : dispatch.status === "failed"
               ? "destructiveMuted"
               : "muted"
-        const genericErrorDetail = dispatch.errorCategory
-          ? `Agent dispatch adapter failed (${dispatch.errorCategory})`
-          : null
-        const errorTitle = dispatch.errorCategory
-          ? (DISPATCH_ERROR_TITLES[dispatch.errorCategory] ?? dispatch.errorCategory)
-          : null
-        const errorDetail =
-          dispatch.errorDetail && dispatch.errorDetail !== genericErrorDetail
-            ? dispatch.errorDetail
-            : dispatch.errorCategory
-              ? (DISPATCH_ERROR_FALLBACKS[dispatch.errorCategory] ?? null)
-              : null
+        const errorTitle = getDispatchErrorTitle(dispatch)
+        const errorDetail = getDispatchErrorDetail(dispatch)
 
         return (
-          <div className="flex min-w-0 flex-col gap-1">
-            <Badge variant={statusVariant} size="small" className="w-fit capitalize">
-              {dispatch.status}
-            </Badge>
-            {errorTitle ? <Text.H7 color="destructive">{errorTitle}</Text.H7> : null}
+          <div className="flex min-w-0 items-start gap-1">
+            <div className="flex min-w-0 flex-col gap-1">
+              <Badge variant={statusVariant} size="small" className="w-fit capitalize">
+                {dispatch.status}
+              </Badge>
+              {errorTitle ? <Text.H7 color="destructive">{errorTitle}</Text.H7> : null}
+            </div>
             {errorDetail ? (
-              <Text.H7 color="foregroundMuted" className="line-clamp-2">
-                {errorDetail}
-              </Text.H7>
+              <Button
+                type="button"
+                variant="ghost"
+                size="sm"
+                className="h-7 w-7 shrink-0 p-0"
+                aria-label="View error details"
+                onClick={() => setErrorDetailModal({ title: errorTitle ?? "Error details", detail: errorDetail })}
+              >
+                <FileText className="h-4 w-4" />
+              </Button>
             ) : null}
           </div>
         )
@@ -1444,6 +1494,13 @@ function AgentDispatchHistorySection({
         scrollAreaLayout="intrinsic"
         className="max-h-[min(32rem,60vh)]"
       />
+      {errorDetailModal ? (
+        <DispatchErrorDetailModal
+          title={errorDetailModal.title}
+          detail={errorDetailModal.detail}
+          onClose={() => setErrorDetailModal(null)}
+        />
+      ) : null}
     </div>
   )
 }

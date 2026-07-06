@@ -61,6 +61,13 @@
         "voyageai"
       ]
     },
+    "apps/design-system": {
+      "entry": [
+        "src/main.tsx",
+        "src/routes/**/*.tsx"
+      ],
+      "project": ["src/**/*.{ts,tsx}"]
+    },
     "infra": {
       "entry": [],
       "project": []
@@ -169,6 +176,7 @@
     "pulumi",
     "tsx",
     "tsdown",
+    "vite",
     "mcp-inspector",
     "email",
     "packages/cli/target/release/latitude"

@@ -18,7 +18,7 @@ import {
 } from "@repo/ui"
 import { useMutation, useQuery } from "@tanstack/react-query"
 import { Link } from "@tanstack/react-router"
-import { Clipboard, Plus, Sparkles } from "lucide-react"
+import { Clipboard, Loader2, Plus, Sparkles } from "lucide-react"
 import { useState } from "react"
 import {
   getSignalDispatchPrompt,
@@ -37,9 +37,27 @@ import {
 const MCP_DOCS_URL = "https://docs.latitude.so/getting-started/mcp"
 
 const failureDescription = (label: string, reason: string): string =>
-  reason === "auth" || reason === "config"
-    ? `${label} rejected the dispatch. Check the integration in Settings → Integrations.`
-    : `Could not reach ${label}. Try again.`
+  reason === "auth" || reason === "config" ? `${label} rejected the dispatch.` : `Could not reach ${label}. Try again.`
+
+function dispatchHistoryLink(projectSlug: string, kind: SendToDestinationRecord["kind"]) {
+  return (
+    <Link
+      to="/projects/$projectSlug/settings/integrations/$integrationKind"
+      params={{ projectSlug, integrationKind: kind }}
+      className="font-medium underline"
+    >
+      View dispatch history
+    </Link>
+  )
+}
+
+function dispatchToastDescription(message: string, projectSlug: string, kind: SendToDestinationRecord["kind"]) {
+  return (
+    <span>
+      {message} {dispatchHistoryLink(projectSlug, kind)}
+    </span>
+  )
+}
 
 export function SignalSendTo({
   projectId,
@@ -74,7 +92,7 @@ export function SignalSendTo({
       const label = AGENT_DISPATCH_KIND_LABELS[destination.kind]
       if (result.status === "dispatched") {
         toast({
-          description: `Sent to ${label}`,
+          description: dispatchToastDescription(`Sent to ${label}.`, projectSlug, destination.kind),
           ...(result.externalUrl
             ? {
                 action: (
@@ -88,13 +106,28 @@ export function SignalSendTo({
             : {}),
         })
       } else if (result.status === "skipped-already-dispatched") {
-        toast({ description: `Already sent to ${label}` })
+        toast({
+          description: dispatchToastDescription(`Already sent to ${label}.`, projectSlug, destination.kind),
+        })
       } else {
-        toast({ variant: "destructive", description: failureDescription(label, result.reason) })
+        toast({
+          variant: "destructive",
+          description: dispatchToastDescription(
+            failureDescription(label, result.reason),
+            projectSlug,
+            destination.kind,
+          ),
+        })
       }
     },
-    onError: (error) => toast({ variant: "destructive", description: toUserMessage(error) }),
+    onError: (error, destination) =>
+      toast({
+        variant: "destructive",
+        description: dispatchToastDescription(toUserMessage(error), projectSlug, destination.kind),
+      }),
   })
+
+  const sendingConfigId = sendMutation.isPending ? sendMutation.variables?.configId : undefined
 
   const hasCloudDestinations = (destinations?.length ?? 0) > 0
   const showCloudSection = dispatchEnabled?.enabled === true
@@ -103,9 +136,13 @@ export function SignalSendTo({
     <>
       <DropdownMenuRoot modal={false}>
         <DropdownMenuTrigger asChild>
-          <Button variant="outline" size="sm" className="text-sm" disabled={disabled}>
-            <Icon icon={Sparkles} size="sm" />
-            Send to agent
+          <Button variant="outline" size="sm" className="text-sm" disabled={disabled || sendMutation.isPending}>
+            {sendMutation.isPending ? (
+              <Loader2 className="h-4 w-4 animate-spin" aria-hidden />
+            ) : (
+              <Icon icon={Sparkles} size="sm" />
+            )}
+            {sendMutation.isPending ? "Sending…" : "Send to agent"}
           </Button>
         </DropdownMenuTrigger>
         <DropdownMenuPortal>
@@ -128,8 +165,16 @@ export function SignalSendTo({
                         sendMutation.mutate(destination)
                       }}
                     >
-                      <Icon icon={AGENT_DISPATCH_KIND_ICONS[destination.kind]} size="sm" />
-                      <Text.H5>{AGENT_DISPATCH_KIND_LABELS[destination.kind]}</Text.H5>
+                      {sendingConfigId === destination.configId ? (
+                        <Loader2 className="h-4 w-4 shrink-0 animate-spin opacity-70" aria-hidden />
+                      ) : (
+                        <Icon icon={AGENT_DISPATCH_KIND_ICONS[destination.kind]} size="sm" />
+                      )}
+                      <Text.H5>
+                        {sendingConfigId === destination.configId
+                          ? "Sending…"
+                          : AGENT_DISPATCH_KIND_LABELS[destination.kind]}
+                      </Text.H5>
                     </DropdownMenuItem>
                   ))
                 ) : (
