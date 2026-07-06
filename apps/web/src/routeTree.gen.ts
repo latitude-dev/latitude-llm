@@ -22,7 +22,6 @@ import { Route as DownloadsExportRouteImport } from './routes/downloads/export'
 import { Route as DesignSystemColorsRouteImport } from './routes/design-system/colors'
 import { Route as DesignSystemChatRouteImport } from './routes/design-system/chat'
 import { Route as DesignSystemButtonRouteImport } from './routes/design-system/button'
-import { Route as DesignSystemAgentTextareaRouteImport } from './routes/design-system/agent-textarea'
 import { Route as ClaimTokenRouteImport } from './routes/claim.$token'
 import { Route as CcWrappedIdRouteImport } from './routes/cc-wrapped/$id'
 import { Route as BackofficeWrappedRouteImport } from './routes/backoffice/wrapped'
@@ -153,12 +152,6 @@ const DesignSystemButtonRoute = DesignSystemButtonRouteImport.update({
   path: '/button',
   getParentRoute: () => DesignSystemRouteRoute,
 } as any)
-const DesignSystemAgentTextareaRoute =
-  DesignSystemAgentTextareaRouteImport.update({
-    id: '/agent-textarea',
-    path: '/agent-textarea',
-    getParentRoute: () => DesignSystemRouteRoute,
-  } as any)
 const ClaimTokenRoute = ClaimTokenRouteImport.update({
   id: '/claim/$token',
   path: '/claim/$token',
@@ -558,7 +551,6 @@ export interface FileRoutesByFullPath {
   '/backoffice/wrapped': typeof BackofficeWrappedRoute
   '/cc-wrapped/$id': typeof CcWrappedIdRouteWithChildren
   '/claim/$token': typeof ClaimTokenRoute
-  '/design-system/agent-textarea': typeof DesignSystemAgentTextareaRoute
   '/design-system/button': typeof DesignSystemButtonRoute
   '/design-system/chat': typeof DesignSystemChatRoute
   '/design-system/colors': typeof DesignSystemColorsRoute
@@ -634,7 +626,6 @@ export interface FileRoutesByTo {
   '/backoffice/wrapped': typeof BackofficeWrappedRoute
   '/cc-wrapped/$id': typeof CcWrappedIdRouteWithChildren
   '/claim/$token': typeof ClaimTokenRoute
-  '/design-system/agent-textarea': typeof DesignSystemAgentTextareaRoute
   '/design-system/button': typeof DesignSystemButtonRoute
   '/design-system/chat': typeof DesignSystemChatRoute
   '/design-system/colors': typeof DesignSystemColorsRoute
@@ -714,7 +705,6 @@ export interface FileRoutesById {
   '/backoffice/wrapped': typeof BackofficeWrappedRoute
   '/cc-wrapped/$id': typeof CcWrappedIdRouteWithChildren
   '/claim/$token': typeof ClaimTokenRoute
-  '/design-system/agent-textarea': typeof DesignSystemAgentTextareaRoute
   '/design-system/button': typeof DesignSystemButtonRoute
   '/design-system/chat': typeof DesignSystemChatRoute
   '/design-system/colors': typeof DesignSystemColorsRoute
@@ -797,7 +787,6 @@ export interface FileRouteTypes {
     | '/backoffice/wrapped'
     | '/cc-wrapped/$id'
     | '/claim/$token'
-    | '/design-system/agent-textarea'
     | '/design-system/button'
     | '/design-system/chat'
     | '/design-system/colors'
@@ -873,7 +862,6 @@ export interface FileRouteTypes {
     | '/backoffice/wrapped'
     | '/cc-wrapped/$id'
     | '/claim/$token'
-    | '/design-system/agent-textarea'
     | '/design-system/button'
     | '/design-system/chat'
     | '/design-system/colors'
@@ -952,7 +940,6 @@ export interface FileRouteTypes {
     | '/backoffice/wrapped'
     | '/cc-wrapped/$id'
     | '/claim/$token'
-    | '/design-system/agent-textarea'
     | '/design-system/button'
     | '/design-system/chat'
     | '/design-system/colors'
@@ -1136,13 +1123,6 @@ declare module '@tanstack/react-router' {
       path: '/button'
       fullPath: '/design-system/button'
       preLoaderRoute: typeof DesignSystemButtonRouteImport
-      parentRoute: typeof DesignSystemRouteRoute
-    }
-    '/design-system/agent-textarea': {
-      id: '/design-system/agent-textarea'
-      path: '/agent-textarea'
-      fullPath: '/design-system/agent-textarea'
-      preLoaderRoute: typeof DesignSystemAgentTextareaRouteImport
       parentRoute: typeof DesignSystemRouteRoute
     }
     '/claim/$token': {
@@ -1631,7 +1611,6 @@ const BackofficeRouteRouteWithChildren = BackofficeRouteRoute._addFileChildren(
 )
 
 interface DesignSystemRouteRouteChildren {
-  DesignSystemAgentTextareaRoute: typeof DesignSystemAgentTextareaRoute
   DesignSystemButtonRoute: typeof DesignSystemButtonRoute
   DesignSystemChatRoute: typeof DesignSystemChatRoute
   DesignSystemColorsRoute: typeof DesignSystemColorsRoute
@@ -1639,7 +1618,6 @@ interface DesignSystemRouteRouteChildren {
 }
 
 const DesignSystemRouteRouteChildren: DesignSystemRouteRouteChildren = {
-  DesignSystemAgentTextareaRoute: DesignSystemAgentTextareaRoute,
   DesignSystemButtonRoute: DesignSystemButtonRoute,
   DesignSystemChatRoute: DesignSystemChatRoute,
   DesignSystemColorsRoute: DesignSystemColorsRoute,

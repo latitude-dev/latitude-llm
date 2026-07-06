@@ -69,6 +69,9 @@ export function AgentTextarea({
   return (
     <FormField label={label} description={description} info={info} errors={errors} inline={inline}>
       <div className="relative">
+        {/* Sits under the canvas so the fill's backdrop is the textarea's own background
+            once the textarea fades out while loading. */}
+        <div className="absolute inset-0 rounded-md bg-background" />
         <ShaderSurface fragmentSource={FRAGMENT_SHADER} targetsRef={targetsRef} loading={loading} />
         <TextareaAutosize
           ref={ref}

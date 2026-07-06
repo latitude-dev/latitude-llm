@@ -274,12 +274,19 @@ void main() {
   float borderFade = (1.0 - u_coverage) * u_intensity;
 
   float inside = 1.0 - smoothstep(-1.5 * px1, 1.5 * px1, d);
-  float fillAlpha = inside * front * u_coverage * 0.96;
+  float fillMask = inside * front * u_coverage;
 
+  // The fill only paints where the composition departs from its anchor color, so the
+  // page surface stays the component background and loading reads as added light.
+  float fillAlpha = 0.0;
   vec3 fillColor = vec3(0.0);
-  if (fillAlpha > 0.001) {
+  if (fillMask > 0.001) {
     float grain = hash21(floor(gl_FragCoord.xy / px1)) - 0.5;
     fillColor = clamp(pools(p, halfSize) + grain * mix(0.06, 0.03, u_light), 0.0, 1.0);
+    vec3 anchor = mix(vec3(0.0), LIGHT_ANCHOR, u_light);
+    vec3 departure = abs(fillColor - anchor);
+    float presence = smoothstep(0.0, 0.3, max(departure.r, max(departure.g, departure.b)));
+    fillAlpha = fillMask * presence * 0.96;
   }
 
   float alpha = clamp(border.a * borderFade + fillAlpha, 0.0, 1.0);

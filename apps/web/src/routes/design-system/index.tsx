@@ -1,5 +1,6 @@
 import type { CheckedState } from "@repo/ui"
 import {
+  AgentTextarea,
   Avatar,
   AvatarGroup,
   Badge,
@@ -30,10 +31,11 @@ import {
   Status,
   Text,
   useMountEffect,
+  useStagedStatus,
 } from "@repo/ui"
 import { createFileRoute, Link } from "@tanstack/react-router"
 import { Check, Moon, Palette, Sparkles, Sun } from "lucide-react"
-import { useState } from "react"
+import { useRef, useState } from "react"
 import { listingLayoutIntrinsicScroll } from "../../layouts/ListingLayout/index.tsx"
 
 export const Route = createFileRoute("/design-system/")({
@@ -253,6 +255,14 @@ function DesignSystemShowcase({ theme }: { theme: "light" | "dark" }) {
             />
           </div>
         </div>
+      </ShowcaseSection>
+
+      <ShowcaseSection
+        theme={theme}
+        title="Agent Textarea"
+        description="AI-triggering input: shader border while idle, the loading fill takes over while an agent works."
+      >
+        <AgentTextareaShowcase />
       </ShowcaseSection>
 
       <ShowcaseSection
@@ -480,6 +490,51 @@ function InfiniteTableGroupedDemo() {
   )
 }
 
+const AGENT_TEXTAREA_STAGES = [
+  { atSeconds: 0, label: "Reading your description" },
+  { atSeconds: 3, label: "Writing the script" },
+  { atSeconds: 14, label: "Running it against a recent session" },
+  { atSeconds: 26, label: "Refining the result" },
+]
+
+const AGENT_TEXTAREA_SIMULATION_MS = 32_000
+
+function AgentTextareaShowcase() {
+  const [simulating, setSimulating] = useState(false)
+  const timeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+
+  useMountEffect(() => () => {
+    if (timeoutRef.current !== null) clearTimeout(timeoutRef.current)
+  })
+
+  const status = useStagedStatus(AGENT_TEXTAREA_STAGES, simulating)
+
+  const toggleSimulation = () => {
+    if (timeoutRef.current !== null) clearTimeout(timeoutRef.current)
+    if (simulating) {
+      setSimulating(false)
+      return
+    }
+    setSimulating(true)
+    timeoutRef.current = setTimeout(() => setSimulating(false), AGENT_TEXTAREA_SIMULATION_MS)
+  }
+
+  return (
+    <div className="flex flex-col gap-4">
+      <AgentTextarea
+        label="This script should check whether…"
+        minRows={3}
+        placeholder='"the session took over 30 seconds and the assistant apologized at any point."'
+        status={status}
+      />
+      <Button className="w-fit" onClick={toggleSimulation}>
+        <Icon icon={Sparkles} size="sm" />
+        {simulating ? "Stop simulation" : "Simulate generation"}
+      </Button>
+    </div>
+  )
+}
+
 function CheckboxShowcase() {
   const [checked, setChecked] = useState<CheckedState>(false)
   const [showHitArea, setShowHitArea] = useState(false)
@@ -676,12 +731,6 @@ function DesignSystemPage() {
                 className="inline-flex items-center gap-1 text-sm text-muted-foreground underline-offset-4 hover:text-foreground hover:underline"
               >
                 Chat
-              </Link>
-              <Link
-                to="/design-system/agent-textarea"
-                className="inline-flex items-center gap-1 text-sm text-muted-foreground underline-offset-4 hover:text-foreground hover:underline"
-              >
-                Agent textarea
               </Link>
             </div>
 
