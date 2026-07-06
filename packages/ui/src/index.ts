@@ -4,10 +4,6 @@ export {
   AgentTextarea,
   type AgentTextareaProps,
 } from "./components/agent-textarea/agent-textarea.tsx"
-export {
-  type AgentTextareaSettings,
-  DEFAULT_AGENT_TEXTAREA_SETTINGS,
-} from "./components/agent-textarea/shaders.ts"
 export { useStagedStatus } from "./components/agent-textarea/use-staged-status.ts"
 export { Alert } from "./components/alert/index.tsx"
 export {

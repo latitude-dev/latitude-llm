@@ -1,59 +1,3 @@
-export interface AgentTextareaSettings {
-  readonly nativeBorder: boolean
-  readonly thicknessIdle: number
-  readonly thicknessFocus: number
-  readonly spotSizeIdle: number
-  readonly spotSizeFocus: number
-  readonly spotCount: number
-  readonly spotIntensity: number
-  readonly pulse: number
-  readonly smokeIdle: number
-  readonly smokeFocus: number
-  readonly smokeScaleIdle: number
-  readonly smokeScaleFocus: number
-  readonly bloom: number
-  readonly baseAlpha: number
-  readonly poolCount: number
-  readonly poolHeight: number
-  readonly poolSpeed: number
-  readonly poolDrift: number
-  readonly poolIntensity: number
-  readonly idleIntensity: number
-  readonly focusIntensity: number
-  readonly loadingIntensity: number
-  readonly idleTimeScale: number
-  readonly focusTimeScale: number
-  readonly loadingTimeScale: number
-}
-
-export const DEFAULT_AGENT_TEXTAREA_SETTINGS: AgentTextareaSettings = {
-  nativeBorder: false,
-  thicknessIdle: 1,
-  thicknessFocus: 2,
-  spotSizeIdle: 0.2,
-  spotSizeFocus: 0.5,
-  spotCount: 3,
-  spotIntensity: 0.75,
-  pulse: 0.25,
-  smokeIdle: 0,
-  smokeFocus: 0.3,
-  smokeScaleIdle: 120,
-  smokeScaleFocus: 60,
-  bloom: 0.33,
-  baseAlpha: 0.5,
-  poolCount: 5,
-  poolHeight: 0.45,
-  poolSpeed: 1,
-  poolDrift: 0.05,
-  poolIntensity: 1,
-  idleIntensity: 0.65,
-  focusIntensity: 0.9,
-  loadingIntensity: 1,
-  idleTimeScale: 0.48,
-  focusTimeScale: 1,
-  loadingTimeScale: 2,
-}
-
 export const VERTEX_SHADER = `
 attribute vec2 a_position;
 void main() {
@@ -77,25 +21,6 @@ uniform float u_light;
 uniform float u_radius;
 uniform float u_bleed;
 
-uniform float u_thicknessIdle;
-uniform float u_thicknessFocus;
-uniform float u_spotSizeIdle;
-uniform float u_spotSizeFocus;
-uniform float u_spotCount;
-uniform float u_spotIntensity;
-uniform float u_pulse;
-uniform float u_smokeIdle;
-uniform float u_smokeFocus;
-uniform float u_smokeScaleIdle;
-uniform float u_smokeScaleFocus;
-uniform float u_bloom;
-uniform float u_baseAlpha;
-uniform float u_poolCount;
-uniform float u_poolHeight;
-uniform float u_poolSpeed;
-uniform float u_poolDrift;
-uniform float u_poolIntensity;
-
 const float PI = 3.14159265359;
 const float TWO_PI = 6.28318530718;
 const float HALF_PI = 1.57079632679;
@@ -107,6 +32,20 @@ const vec3 LIGHT_BLUE = vec3(0.25, 0.60, 1.0);
 const vec3 LIGHT_RED = vec3(0.95, 0.50, 0.56);
 const vec3 LIGHT_YELLOW = vec3(1.0, 0.84, 0.35);
 const vec3 LIGHT_ANCHOR = vec3(0.975, 0.985, 1.0);
+
+const float THICKNESS_IDLE = 1.0;
+const float THICKNESS_FOCUS = 2.0;
+const float SPOT_SIZE_IDLE = 0.2;
+const float SPOT_SIZE_FOCUS = 0.5;
+const float SPOT_INTENSITY = 0.75;
+const float PULSE = 0.25;
+const float SMOKE_FOCUS = 0.3;
+const float SMOKE_SCALE_IDLE = 120.0;
+const float SMOKE_SCALE_FOCUS = 60.0;
+const float BLOOM = 0.33;
+const float BASE_RING_ALPHA = 0.5;
+const float POOL_HEIGHT = 0.45;
+const float POOL_DRIFT = 0.05;
 `
 
 const HELPERS = `
@@ -186,19 +125,18 @@ vec3 pools(vec2 p, vec2 halfSize) {
   vec3 light = rampLight(tBase);
 
   float yUp = p.y + halfSize.y;
-  for (int i = 0; i < 7; i++) {
-    if (float(i) >= u_poolCount) break;
+  for (int i = 0; i < 5; i++) {
     float fi = float(i);
-    float slot = (fi + 0.5) / u_poolCount;
-    float wobble = u_poolDrift * sin(u_time * (0.21 + 0.07 * fi) + fi * 2.4);
+    float slot = (fi + 0.5) / 5.0;
+    float wobble = POOL_DRIFT * sin(u_time * (0.21 + 0.07 * fi) + fi * 2.4);
     float cx = (slot + wobble - 0.5) * box.x;
-    float voice = 0.5 + 0.3 * sin(u_time * u_poolSpeed * (0.55 + 0.17 * fi) + fi * 1.9)
-      + 0.2 * sin(u_time * u_poolSpeed * (0.83 + 0.11 * fi) + fi * 4.1);
+    float voice = 0.5 + 0.3 * sin(u_time * (0.55 + 0.17 * fi) + fi * 1.9)
+      + 0.2 * sin(u_time * (0.83 + 0.11 * fi) + fi * 4.1);
     float sigmaX = (0.11 + 0.03 * sin(fi * 5.7)) * box.x;
     float dx = (p.x - cx) / sigmaX;
-    float reach = max(u_poolHeight * box.y * voice, 1.0);
+    float reach = max(POOL_HEIGHT * box.y * voice, 1.0);
     float dy = yUp / reach;
-    float w = u_poolIntensity * voice * exp(-0.5 * dx * dx - 2.3 * dy * dy);
+    float w = voice * exp(-0.5 * dx * dx - 2.3 * dy * dy);
     dark += poolColor(i) * w;
     light = mix(light, poolColor(i), min(w, 1.0) * 0.75);
   }
@@ -256,30 +194,31 @@ vec4 pulsingBorder(vec2 p, vec2 halfSize, float d, float px1) {
   float pulse = beat(0.18 * u_time);
   // Entering loading, the border shrinks back into its hairline while it fades.
   float shrink = 1.0 - u_coverage;
-  float thickness = mix(u_thicknessIdle, u_thicknessFocus, u_focus) * px1 * shrink;
+  float thickness = mix(THICKNESS_IDLE, THICKNESS_FOCUS, u_focus) * px1 * shrink;
   float reach = thickness * 2.5 + 1.5 * px1;
   float band = pow(1.0 - smoothstep(0.0, reach, abs(d)), 1.75);
-
-  vec2 smokeUV = p / (mix(u_smokeScaleIdle, u_smokeScaleFocus, u_focus) * px1);
-  float smoke = clamp(3.0 * valueNoise(2.7 * smokeUV + 0.5 * t), 0.0, 1.0) - valueNoise(3.4 * smokeUV - 0.5 * t);
   float smokeBand = 1.0 - smoothstep(0.0, reach + 6.0 * px1, abs(d));
+  // Nearly every interior pixel resolves to zero: skip the noise and spot loops there.
+  if (band + smokeBand < 0.004) return vec4(0.0);
+
+  vec2 smokeUV = p / (mix(SMOKE_SCALE_IDLE, SMOKE_SCALE_FOCUS, u_focus) * px1);
+  float smoke = clamp(3.0 * valueNoise(2.7 * smokeUV + 0.5 * t), 0.0, 1.0) - valueNoise(3.4 * smokeUV - 0.5 * t);
   smoke = clamp(30.0 * smoke * smoke, 0.0, 1.0) * smokeBand * smokeBand;
-  float smokeAmount = mix(u_smokeIdle, u_smokeFocus, u_focus);
+  float smokeAmount = SMOKE_FOCUS * u_focus;
   smoke *= 0.5 * smokeAmount * smokeAmount;
-  smoke *= mix(1.0, pulse, u_pulse);
+  smoke *= mix(1.0, pulse, PULSE);
   band = clamp(band + smoke, 0.0, 1.0);
 
   vec2 inner = max(halfSize - vec2(u_radius), vec2(0.001));
   float angle = perimeterCoord(p, inner, max(u_radius + d, 0.5));
-  float spotSizeBase = (0.05 + 0.6 * pow(mix(u_spotSizeIdle, u_spotSizeFocus, u_focus), 2.0)) * shrink;
+  float spotSizeBase = (0.05 + 0.6 * pow(mix(SPOT_SIZE_IDLE, SPOT_SIZE_FOCUS, u_focus), 2.0)) * shrink;
 
   vec3 rgbSum = vec3(0.0);
   float weightSum = 0.0;
   for (int colorIdx = 0; colorIdx < 5; colorIdx++) {
     float ci = float(colorIdx);
     vec3 col = brandColor(colorIdx);
-    for (int spotIdx = 0; spotIdx < 6; spotIdx++) {
-      if (float(spotIdx) >= u_spotCount) break;
+    for (int spotIdx = 0; spotIdx < 3; spotIdx++) {
       float si = float(spotIdx);
       float rnd = hash21(vec2(si * 10.0 + 2.0, 40.0 + ci));
       float rndDir = hash21(vec2(ci * 7.0 + 1.0, si * 3.0 + 9.0));
@@ -290,11 +229,11 @@ vec4 pulsingBorder(vec2 p, vec2 halfSize, float d, float px1) {
         cos(t + si * (3.0 + 1.3 * ci)),
         step(mod(ci, 2.0), 0.5)
       );
-      mask = mix(mask, pulse, clamp(2.0 * u_pulse - rnd, 0.0, 1.0));
+      mask = mix(mask, pulse, clamp(2.0 * PULSE - rnd, 0.0, 1.0));
       float atg = fract(angle + spotTime);
       float size = spotSizeBase + 0.05 * rnd;
       float sector = smoothstep(0.5 - size, 0.5, atg) * (1.0 - smoothstep(0.5, 0.5 + size, atg));
-      float weight = sector * mask * band * u_spotIntensity;
+      float weight = sector * mask * band * SPOT_INTENSITY;
       rgbSum += col * weight;
       weightSum += weight;
     }
@@ -302,13 +241,13 @@ vec4 pulsingBorder(vec2 p, vec2 halfSize, float d, float px1) {
 
   // Weighted-average color so overlapping spots blend hues instead of adding up to white.
   vec3 spotColor = rgbSum / max(weightSum, 0.001);
-  spotColor = min(spotColor * (1.0 + u_bloom * clamp(weightSum - 1.0, 0.0, 1.0)), vec3(1.0));
+  spotColor = min(spotColor * (1.0 + BLOOM * clamp(weightSum - 1.0, 0.0, 1.0)), vec3(1.0));
   float spotAlpha = 1.0 - exp(-1.3 * weightSum);
 
   // Constant hairline under the spots — the component's actual border.
   float ring = 1.0 - smoothstep(0.5 * px1, 1.8 * px1, abs(d));
   vec3 ringColor = mix(vec3(0.149), vec3(0.848), u_light);
-  float ringAlpha = ring * u_baseAlpha;
+  float ringAlpha = ring * BASE_RING_ALPHA;
 
   float outAlpha = spotAlpha + ringAlpha * (1.0 - spotAlpha);
   vec3 outRgb = spotColor * spotAlpha + ringColor * ringAlpha * (1.0 - spotAlpha);
@@ -337,8 +276,11 @@ void main() {
   float inside = 1.0 - smoothstep(-1.5 * px1, 1.5 * px1, d);
   float fillAlpha = inside * front * u_coverage * 0.96;
 
-  float grain = hash21(floor(gl_FragCoord.xy / px1)) - 0.5;
-  vec3 fillColor = clamp(pools(p, halfSize) + grain * mix(0.06, 0.03, u_light), 0.0, 1.0);
+  vec3 fillColor = vec3(0.0);
+  if (fillAlpha > 0.001) {
+    float grain = hash21(floor(gl_FragCoord.xy / px1)) - 0.5;
+    fillColor = clamp(pools(p, halfSize) + grain * mix(0.06, 0.03, u_light), 0.0, 1.0);
+  }
 
   float alpha = clamp(border.a * borderFade + fillAlpha, 0.0, 1.0);
   vec3 colorPremultiplied = min(border.rgb * borderFade + fillColor * fillAlpha, vec3(1.0));

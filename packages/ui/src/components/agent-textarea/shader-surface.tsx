@@ -2,38 +2,14 @@ import { type RefObject, useRef, useState } from "react"
 
 import { useMountEffect } from "../../hooks/use-mount-effect.ts"
 import { cn } from "../../utils/cn.ts"
-import { type AgentTextareaSettings, VERTEX_SHADER } from "./shaders.ts"
+import { VERTEX_SHADER } from "./shaders.ts"
 
 export interface ShaderTargets {
   coverage: number
   intensity: number
   focus: number
   timeScale: number
-  settings: AgentTextareaSettings
 }
-
-const SETTINGS_UNIFORMS = {
-  thicknessIdle: "u_thicknessIdle",
-  thicknessFocus: "u_thicknessFocus",
-  spotSizeIdle: "u_spotSizeIdle",
-  spotSizeFocus: "u_spotSizeFocus",
-  spotCount: "u_spotCount",
-  spotIntensity: "u_spotIntensity",
-  pulse: "u_pulse",
-  smokeIdle: "u_smokeIdle",
-  smokeFocus: "u_smokeFocus",
-  smokeScaleIdle: "u_smokeScaleIdle",
-  smokeScaleFocus: "u_smokeScaleFocus",
-  bloom: "u_bloom",
-  baseAlpha: "u_baseAlpha",
-  poolCount: "u_poolCount",
-  poolHeight: "u_poolHeight",
-  poolSpeed: "u_poolSpeed",
-  poolDrift: "u_poolDrift",
-  poolIntensity: "u_poolIntensity",
-} as const
-
-const SETTINGS_UNIFORM_KEYS = Object.keys(SETTINGS_UNIFORMS) as ReadonlyArray<keyof typeof SETTINGS_UNIFORMS>
 
 interface ShaderSurfaceProps {
   fragmentSource: string
@@ -50,6 +26,7 @@ const FOCUS_RATE = 5
 const TIME_SCALE_RATE = 3
 const LIGHT_RATE = 6
 const MAX_FRAME_DT = 0.05
+const MIN_FRAME_MS = 15
 const CONTEXT_RESTORE_GRACE_MS = 1500
 
 const UNIFORM_NAMES = [
@@ -61,7 +38,6 @@ const UNIFORM_NAMES = [
   "u_light",
   "u_radius",
   "u_bleed",
-  ...Object.values(SETTINGS_UNIFORMS),
 ] as const
 
 type Uniforms = Record<(typeof UNIFORM_NAMES)[number], WebGLUniformLocation | null>
@@ -160,6 +136,11 @@ export function ShaderSurface({ fragmentSource, targetsRef, loading }: ShaderSur
     const frame = (timestamp: number) => {
       const locations = uniforms
       if (locations === null) return
+      // Cap near 60fps: on 120Hz displays rAF would otherwise double the GPU cost.
+      if (lastTimestamp !== null && timestamp - lastTimestamp < MIN_FRAME_MS) {
+        rafId = requestAnimationFrame(frame)
+        return
+      }
       const dt = lastTimestamp === null ? 0 : Math.min((timestamp - lastTimestamp) / 1000, MAX_FRAME_DT)
       lastTimestamp = timestamp
       const targets = targetsRef.current
@@ -178,9 +159,6 @@ export function ShaderSurface({ fragmentSource, targetsRef, loading }: ShaderSur
       gl.uniform1f(locations.u_light, light)
       gl.uniform1f(locations.u_radius, RADIUS_PX * dpr)
       gl.uniform1f(locations.u_bleed, BLEED_PX * dpr)
-      for (const key of SETTINGS_UNIFORM_KEYS) {
-        gl.uniform1f(locations[SETTINGS_UNIFORMS[key]], targets.settings[key])
-      }
       gl.drawArrays(gl.TRIANGLES, 0, 3)
       rafId = requestAnimationFrame(frame)
     }
