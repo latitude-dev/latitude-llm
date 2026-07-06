@@ -2,6 +2,33 @@
 
 ## Unreleased
 
+## v0.3.37 - 2026-07-06
+
+### API and SDK
+
+- **Breaking:** collapsed the four lossy `TraceDetail` message fields (`systemInstructions`, `inputMessages`, `outputMessages`, `allMessages`) into a single `conversation` field on the `getTrace` endpoint. Real multi-turn agent traces showed `inputMessages` only captured the first turn and `outputMessages` only the last, dropping every intermediate turn and tool call, while `allMessages` was already a strict superset; it is now renamed `conversation`. Per-span message fields are unchanged. `openapi.json`, `mcp.json`, the TypeScript SDK (8.0.0), Python SDK (8.0.0), and CLI (6.0.0) were regenerated and bumped as breaking (ref: #3884).
+
+### Signals
+
+- Stopped semantic-similarity live and preview evaluations from persisting permanent false negatives: they now gate on real session embeddings for the active model and skip cleanly (without recording a failure) when vectors are missing, instead of scoring against absent message occurrences (ref: #3872).
+- Reworked the describe-signal generation UX around a new WebGL shader-animated `AgentTextarea` — a pulsing brand-color border with a pools-and-tide loading fill that keeps the textarea's own background in both themes, tuned for typing latency. "Generate signal" and "Configure manually" moved to the modal footer, the prompt stretches to full body height, and staged progress is mocked across the ~30s run until the worker streams real step events (ref: #3882).
+
+### Web
+
+- Re-enabled the in-app changelog sidebar and banner, now backed by a static JSON changelog API served from the marketing site; the old `@platform/changelog-framer` was replaced by a new `@platform/changelog-api` reader (ref: #3875).
+
+### Showcase
+
+- Added the showcase resolver chokepoint (S2): a `resolveShowcaseUseCase` and `resolveShowcaseAccess` server helper resolve the pinned showcase org/project from the `latitude.showcase` pointer (Redis-cached) with authz gating on the org's `wantsShowcase` flag. Behavior-neutral — nothing wires it yet (ref: #3881).
+
+### Design system
+
+- Reused the main app's favicon on the public design-system site, which previously served none (ref: #3883).
+
+### Infrastructure
+
+- Added the `design.latitude.so` Vercel CNAME to production DNS (ref: #3888).
+
 ## v0.3.36 - 2026-07-06
 
 ### Web
