@@ -1,5 +1,5 @@
 import type { AI } from "@domain/ai"
-import type { ScriptCompileError, ScriptRuntime, ScriptSessionContext } from "@domain/sandbox"
+import { requiresEmbedding, type ScriptCompileError, type ScriptRuntime, type ScriptSessionContext } from "@domain/sandbox"
 import {
   cuidSchema,
   describeError,
@@ -22,6 +22,7 @@ import { Effect } from "effect"
 import { z } from "zod"
 import { compileSettingsToScript } from "../codegen/compile-settings-to-script.ts"
 import { validateEvaluationScriptCompiles } from "../codegen/validate-evaluation-script.ts"
+import { hasSessionEmbeddings } from "../runtime/has-session-embeddings.ts"
 import { loadScriptSessionContext } from "../runtime/load-session-context.ts"
 import { executeEvaluationScriptSandboxed } from "../runtime/sandbox-execution.ts"
 import { buildSemanticSimilarityHost } from "../runtime/semantic-similarity.ts"
@@ -59,6 +60,8 @@ export interface PreviewEvaluationRow {
   readonly feedback: string
   /** Set when this sample's run errored; the rest of the preview still returns. */
   readonly error: string | null
+  /** True when a semantic eval was not run because the session has no embeddings yet (no retry here). */
+  readonly skipped: boolean
   /** Session content + metrics; `null` only when the session itself couldn't be loaded. */
   readonly summary: PreviewSessionSummary | null
 }
@@ -99,6 +102,8 @@ export const previewEvaluationUseCase = (input: PreviewEvaluationInput) =>
       "settings" in parsed.evaluation ? compileSettingsToScript(parsed.evaluation.settings) : parsed.evaluation.script
     yield* validateEvaluationScriptCompiles(script)
 
+    const needsEmbedding = requiresEmbedding(script)
+
     const filters: FilterSet | undefined = parsed.filters ?? undefined
     const sessionRepository = yield* SessionRepository
     const traceRepository = yield* TraceRepository
@@ -134,6 +139,27 @@ export const previewEvaluationUseCase = (input: PreviewEvaluationInput) =>
             projectId: parsed.projectId,
             traceDetail,
           })
+
+          if (needsEmbedding) {
+            const embeddingsReady = yield* hasSessionEmbeddings({
+              organizationId: parsed.organizationId,
+              projectId: parsed.projectId,
+              traceIds: scriptSession.traces.map((trace) => trace.id),
+            })
+            if (!embeddingsReady) {
+              return {
+                sessionId: session.sessionId,
+                traceId,
+                passed: null,
+                value: null,
+                feedback: "",
+                error: null,
+                skipped: true,
+                summary: buildSummary(scriptSession),
+              } satisfies PreviewEvaluationRow
+            }
+          }
+
           const similarity = yield* buildSemanticSimilarityHost({
             organizationId: parsed.organizationId,
             projectId: parsed.projectId,
@@ -147,6 +173,7 @@ export const previewEvaluationUseCase = (input: PreviewEvaluationInput) =>
             value: execution.result.value,
             feedback: execution.result.feedback,
             error: null,
+            skipped: false,
             summary: buildSummary(scriptSession),
           } satisfies PreviewEvaluationRow
         }).pipe(
@@ -159,6 +186,7 @@ export const previewEvaluationUseCase = (input: PreviewEvaluationInput) =>
               value: null,
               feedback: "",
               error: describeError(error),
+              skipped: false,
               summary: null,
             }),
           }),
