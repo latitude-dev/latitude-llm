@@ -722,5 +722,48 @@ describe("SpanRepository", () => {
       expect(span.toolNames).toEqual(["defined_only_tool"])
       expect(span.toolDefinitions).toEqual([{ name: "defined_only_tool", description: "d", parameters: {} }])
     })
+
+    it("returns voice span messages with audio parts from stored JSON", async () => {
+      const inputMessages = JSON.stringify([
+        { role: "user", parts: [{ type: "uri", modality: "audio", uri: "https://example.com/in.mp3" }] },
+      ])
+      const outputMessages = JSON.stringify([
+        { role: "assistant", parts: [{ type: "text", content: "hello from speech" }] },
+      ])
+
+      await runCh(
+        insertJsonEachRow(ch.client, "spans", [
+          makeSpanRow({
+            span_id: "7777777777777777",
+            name: "transcribe whisper-1",
+            operation: "transcribe",
+            input_messages: inputMessages,
+            output_messages: outputMessages,
+          }),
+        ]),
+      )
+
+      const span = await runCh(
+        repo.findBySpanId({
+          organizationId: ORG_ID,
+          projectId: PROJECT_ID,
+          traceId: TRACE_ID,
+          spanId: SpanId("7777777777777777"),
+          startTimeFrom: new Date("2026-01-01T00:00:00.000Z"),
+          startTimeTo: new Date("2026-01-01T00:00:01.000Z"),
+        }),
+      )
+
+      expect(span.operation).toBe("transcribe")
+      expect(span.inputMessages[0]?.parts?.[0]).toMatchObject({
+        type: "uri",
+        modality: "audio",
+        uri: "https://example.com/in.mp3",
+      })
+      expect(span.outputMessages[0]?.parts?.[0]).toMatchObject({
+        type: "text",
+        content: "hello from speech",
+      })
+    })
   })
 })
