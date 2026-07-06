@@ -1,7 +1,7 @@
 import type { FilterSet } from "@domain/shared"
 import { SIGNAL_GENERATION_PROMPT_MAX_LENGTH } from "@domain/signals"
-import { Button, Icon, Text, Textarea, useMountEffect } from "@repo/ui"
-import { Loader2Icon, SearchCheckIcon, WandSparklesIcon } from "lucide-react"
+import { AgentTextarea, Button, Icon, Text, useMountEffect } from "@repo/ui"
+import { SearchCheckIcon, WandSparklesIcon } from "lucide-react"
 import { useRef, useState } from "react"
 import { runSignalGeneration } from "../../../../../../../domains/signals/signals.collection.ts"
 import { toUserMessage } from "../../../../../../../lib/errors.ts"
@@ -153,12 +153,12 @@ export function DescribeSignalIntro({
       </div>
 
       <div className="flex flex-col gap-3">
-        <Textarea
+        <AgentTextarea
           label="What do you want to track?"
           minRows={4}
           maxLength={SIGNAL_GENERATION_PROMPT_MAX_LENGTH}
           value={prompt}
-          disabled={generating}
+          status={generating ? `${step ?? "Starting up"}…` : null}
           onChange={(event) => setPrompt(event.target.value)}
           placeholder='"Sessions where the ticket-cancellation tool fails and the user gets frustrated."'
         />
@@ -174,13 +174,6 @@ export function DescribeSignalIntro({
             Configure manually
           </Button>
         </div>
-
-        {generating ? (
-          <div className="flex items-center gap-2">
-            <Loader2Icon className="h-4 w-4 animate-spin text-primary" />
-            <Text.H6 color="foregroundMuted">{step ?? "Starting up"}…</Text.H6>
-          </div>
-        ) : null}
       </div>
     </div>
   )

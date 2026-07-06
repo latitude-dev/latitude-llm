@@ -677,6 +677,12 @@ function DesignSystemPage() {
               >
                 Chat
               </Link>
+              <Link
+                to="/design-system/agent-textarea"
+                className="inline-flex items-center gap-1 text-sm text-muted-foreground underline-offset-4 hover:text-foreground hover:underline"
+              >
+                Agent textarea
+              </Link>
             </div>
 
             <div className="flex flex-col gap-2">
