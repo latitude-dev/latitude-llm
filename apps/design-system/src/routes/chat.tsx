@@ -1,6 +1,5 @@
-import { Conversation } from "@repo/ui"
+import { Conversation, type GenAIMessage } from "@repo/ui"
 import { createFileRoute } from "@tanstack/react-router"
-import type { GenAIMessage } from "rosetta-ai"
 import { ComponentDemoSection } from "./-components/demo-frame.tsx"
 import { DesignSystemPage } from "./-components/design-system-page.tsx"
 import { UsageCode, UsageSection } from "./-components/usage-section.tsx"

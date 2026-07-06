@@ -16,8 +16,7 @@
     "@tanstack/react-router": "1.168.10",
     "lucide-react": "1.9.0",
     "react": "catalog:",
-    "react-dom": "catalog:",
-    "rosetta-ai": "catalog:"
+    "react-dom": "catalog:"
   },
   "devDependencies": {
     "@tailwindcss/vite": "4.2.4",
