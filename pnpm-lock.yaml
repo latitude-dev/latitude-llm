@@ -511,6 +511,9 @@ importers:
       '@domain/shared':
         specifier: workspace:*
         version: link:../../packages/domain/shared
+      '@domain/showcase':
+        specifier: workspace:*
+        version: link:../../packages/domain/showcase
       '@domain/signals':
         specifier: workspace:*
         version: link:../../packages/domain/signals
