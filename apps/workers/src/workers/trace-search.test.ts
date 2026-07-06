@@ -41,7 +41,7 @@ vi.mock("../clients.ts", () => ({
   getRedisClient: vi.fn(() => ({})),
 }))
 
-import { processRefreshTrace, resolveTraceSearchRetentionDays } from "./trace-search.ts"
+import { processRefreshTrace, resolveTraceSearchRetentionDays, shouldRetriggerSignalsMatch } from "./trace-search.ts"
 
 describe("resolveTraceSearchRetentionDays", () => {
   beforeEach(() => {
@@ -56,6 +56,32 @@ describe("resolveTraceSearchRetentionDays", () => {
     )
 
     expect(retentionDays).toBe(30)
+  })
+})
+
+describe("shouldRetriggerSignalsMatch", () => {
+  it("re-triggers when messages were freshly embedded this run", () => {
+    expect(shouldRetriggerSignalsMatch({ embeddingConfigResolved: true, existingCount: 0, embeddedCount: 2 })).toBe(
+      true,
+    )
+  })
+
+  it("re-triggers when all vectors were pre-existing hash hits (embeddedCount 0)", () => {
+    expect(shouldRetriggerSignalsMatch({ embeddingConfigResolved: true, existingCount: 3, embeddedCount: 0 })).toBe(
+      true,
+    )
+  })
+
+  it("does not re-trigger when the trace has no vectors (over budget / provider failure)", () => {
+    expect(shouldRetriggerSignalsMatch({ embeddingConfigResolved: true, existingCount: 0, embeddedCount: 0 })).toBe(
+      false,
+    )
+  })
+
+  it("does not re-trigger when the embedding config could not be resolved", () => {
+    expect(shouldRetriggerSignalsMatch({ embeddingConfigResolved: false, existingCount: 5, embeddedCount: 5 })).toBe(
+      false,
+    )
   })
 })
 

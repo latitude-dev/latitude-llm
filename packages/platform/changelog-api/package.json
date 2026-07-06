@@ -1,5 +1,5 @@
 {
-  "name": "@platform/changelog-framer",
+  "name": "@platform/changelog-api",
   "version": "0.1.0",
   "private": true,
   "type": "module",
@@ -15,6 +15,10 @@
     "@domain/changelog": "workspace:*",
     "@platform/env": "workspace:*",
     "effect": "catalog:",
-    "framer-api": "^0.1.16"
+    "zod": "catalog:"
+  },
+  "devDependencies": {
+    "@repo/vitest-config": "workspace:*",
+    "vitest": "catalog:"
   }
 }

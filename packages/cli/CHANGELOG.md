@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [6.0.0] - 2026-07-06
+
+### Changed
+
+- `latitude traces get` now returns a single `conversation` field — the full trace conversation in OpenTelemetry GenAI format: the system instructions, then the running message history sent into the trace's last LLM-completion span, followed by that span's generated output. The previous `systemInstructions`, `inputMessages`, and `outputMessages` fields are removed; `conversation` supersedes them and additionally includes every intermediate turn and tool call they dropped.
+
 ## [5.0.0] - 2026-07-06
 
 ### Changed

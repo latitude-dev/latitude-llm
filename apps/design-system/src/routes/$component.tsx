@@ -1,10 +1,12 @@
 import type { CheckedState } from "@repo/ui"
 import {
+  AgentTextarea,
   Alert,
   Avatar,
   AvatarGroup,
   Badge,
   BarChart,
+  Button,
   ChartSkeleton,
   Checkbox,
   CopyButton,
@@ -17,10 +19,12 @@ import {
   RichTextEditor,
   Status,
   Text,
+  useMountEffect,
+  useStagedStatus,
 } from "@repo/ui"
 import { createFileRoute, notFound, useParams } from "@tanstack/react-router"
 import type { ReactNode } from "react"
-import { useState } from "react"
+import { useRef, useState } from "react"
 import { ComponentDemoSection } from "./-components/demo-frame.tsx"
 import { DesignSystemPage } from "./-components/design-system-page.tsx"
 import { useDesignSystemTheme } from "./-components/design-system-theme.tsx"
@@ -43,6 +47,22 @@ type ComponentEntry = {
 }
 
 const COMPONENT_REGISTRY: Record<string, ComponentEntry> = {
+  "agent-textarea": {
+    title: "Agent textarea",
+    description:
+      "Textarea for prompts that trigger an AI agent: shader border while idle, loading fill while it works.",
+    usage: {
+      description:
+        "Pass a status string while the agent works — the field locks and the loading fill takes over. useStagedStatus maps elapsed time to stage labels.",
+      lines: [
+        'import { AgentTextarea, useStagedStatus } from "@repo/ui"',
+        "",
+        "const status = useStagedStatus(STAGES, generating)",
+        '<AgentTextarea label="…" value={value} onChange={onChange} status={status} />',
+      ],
+    },
+    Demo: AgentTextareaDemo,
+  },
   alert: {
     title: "Alert",
     description: "Inline feedback banners with semantic variants.",
@@ -185,6 +205,56 @@ function ComponentPage() {
       </UsageSection>
       <entry.Demo />
     </DesignSystemPage>
+  )
+}
+
+const AGENT_TEXTAREA_STAGES = [
+  { atSeconds: 0, label: "Reading your description" },
+  { atSeconds: 3, label: "Writing the script" },
+  { atSeconds: 14, label: "Running it against a recent session" },
+  { atSeconds: 26, label: "Refining the result" },
+]
+
+const AGENT_TEXTAREA_SIMULATION_MS = 32_000
+
+function AgentTextareaDemo() {
+  const [simulating, setSimulating] = useState(false)
+  const timeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+
+  useMountEffect(() => () => {
+    if (timeoutRef.current !== null) clearTimeout(timeoutRef.current)
+  })
+
+  const status = useStagedStatus(AGENT_TEXTAREA_STAGES, simulating)
+
+  const toggleSimulation = () => {
+    if (timeoutRef.current !== null) clearTimeout(timeoutRef.current)
+    if (simulating) {
+      setSimulating(false)
+      return
+    }
+    setSimulating(true)
+    timeoutRef.current = setTimeout(() => setSimulating(false), AGENT_TEXTAREA_SIMULATION_MS)
+  }
+
+  return (
+    <ComponentDemoSection
+      title="Idle, focused, and loading"
+      description="Focus the field to see the focused border; run the simulation for the loading fill."
+      frameClassName="block"
+    >
+      <div className="mx-auto flex w-full max-w-2xl flex-col gap-4">
+        <AgentTextarea
+          label="This script should check whether…"
+          minRows={3}
+          placeholder='"the session took over 30 seconds and the assistant apologized at any point."'
+          status={status}
+        />
+        <Button className="w-fit" onClick={toggleSimulation}>
+          {simulating ? "Stop simulation" : "Simulate generation"}
+        </Button>
+      </div>
+    </ComponentDemoSection>
   )
 }
 

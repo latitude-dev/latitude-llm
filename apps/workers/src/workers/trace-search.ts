@@ -1,6 +1,6 @@
 import { AI, type AIProviderModelConfig, resolveEmbeddingConfig } from "@domain/ai"
 import { ProjectRepository } from "@domain/projects"
-import type { QueueConsumer } from "@domain/queue"
+import type { QueueConsumer, QueuePublisherShape } from "@domain/queue"
 import { LATITUDE_TELEMETRY_PROJECT_SLUGS, OrganizationId, ProjectId, TraceId } from "@domain/shared"
 import {
   buildTraceSearchDocument,
@@ -43,6 +43,7 @@ const TRACE_SEARCH_FALLBACK_RETENTION_DAYS = 30
 
 interface TraceSearchDeps {
   consumer: QueueConsumer
+  publisher: QueuePublisherShape
   clickhouseClient: ClickHouseClient
   postgresClient: PostgresClient
   redisClient: RedisClient
@@ -52,6 +53,8 @@ interface TraceSearchRunDeps {
   clickhouseClient: ClickHouseClient
   postgresClient: PostgresClient
   redisClient: RedisClient
+  // Absent for backfills, which must not fan out a re-trigger per historical trace.
+  publisher?: QueuePublisherShape
 }
 
 interface RefreshTracePayload {
@@ -117,6 +120,17 @@ const uniqueMessagesByHash = <T extends { readonly contentHash: string }>(messag
   return [...byHash.values()]
 }
 
+/**
+ * A trace is ready to re-trigger semantic evals when it has any vector for the active model — counting
+ * both messages embedded this run AND pre-existing hash hits (vectors a sibling trace already wrote).
+ * Gating on embeddedCount alone would miss the all-hash-hit case and leave those evals stuck.
+ */
+export const shouldRetriggerSignalsMatch = (input: {
+  readonly embeddingConfigResolved: boolean
+  readonly existingCount: number
+  readonly embeddedCount: number
+}): boolean => input.embeddingConfigResolved && input.existingCount + input.embeddedCount > 0
+
 const isLatitudeTelemetryProject = (projectId: string) =>
   Effect.gen(function* () {
     const projectRepo = yield* ProjectRepository
@@ -140,8 +154,10 @@ const isLatitudeTelemetryProject = (projectId: string) =>
  *     independently of which messages already have embeddings.
  *  4. Canonicalize each semantic-search eligible message, ensure shared vectors exist, and
  *     insert per-trace occurrence rows unconditionally.
+ *  5. Once the trace has embeddings, re-trigger signals:match so semantic evals that deferred while
+ *     waiting for vectors run the moment they land.
  */
-export const processRefreshTrace = (payload: RefreshTracePayload) =>
+export const processRefreshTrace = (payload: RefreshTracePayload, publisher?: QueuePublisherShape) =>
   Effect.gen(function* () {
     if (payload.isSandbox) return
 
@@ -287,6 +303,29 @@ export const processRefreshTrace = (payload: RefreshTracePayload) =>
     logger.info(
       `Indexed semantic search messages for trace ${traceId}: ${embeddedCount} embedded, ${skippedDuplicate} hash hits, ${hashedMessages.length} occurrences`,
     )
+
+    const hasEmbeddings = shouldRetriggerSignalsMatch({
+      embeddingConfigResolved: embeddingConfig != null,
+      existingCount: existing.length,
+      embeddedCount,
+    })
+    if (hasEmbeddings && publisher) {
+      yield* publisher
+        .publish(
+          "signals",
+          "match",
+          { organizationId, projectId, traceId, reason: "embeddings-ready" },
+          { dedupeKey: `org:${organizationId}:signals-match-embeddings-ready:${projectId}:${traceId}` },
+        )
+        .pipe(
+          Effect.tap(() =>
+            Effect.sync(() => logger.info(`Re-triggered signals:match for trace ${traceId} after embeddings landed`)),
+          ),
+          Effect.catch((error) =>
+            Effect.sync(() => logger.error(`Failed to re-trigger signals:match for trace ${traceId}`, error)),
+          ),
+        )
+    }
   }).pipe(
     Effect.withSpan("trace-search.refreshTrace"),
     Effect.tapError((error) =>
@@ -299,6 +338,7 @@ export const processRefreshTrace = (payload: RefreshTracePayload) =>
 
 export const createTraceSearchWorker = ({
   consumer,
+  publisher,
   clickhouseClient,
   postgresClient,
   redisClient,
@@ -313,6 +353,7 @@ export const createTraceSearchWorker = ({
         clickhouseClient: chClient,
         postgresClient: pgClient,
         redisClient: rdClient,
+        publisher,
       }),
   })
 }
@@ -323,7 +364,7 @@ export const runTraceSearchRefresh = (payload: RefreshTracePayload, deps: TraceS
   const redisClient = deps.redisClient
   const budgetLayer = Layer.provide(TraceSearchBudgetLive(redisClient), EmbedBudgetResolverLive)
 
-  return processRefreshTrace(payload).pipe(
+  return processRefreshTrace(payload, deps.publisher).pipe(
     withPostgres(
       Layer.mergeAll(
         BillingOverrideRepositoryLive,

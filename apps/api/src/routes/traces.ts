@@ -217,7 +217,7 @@ const getTrace = traceEndpoint({
     ...tracesFernGroup("get"),
     summary: "Get project trace",
     description:
-      "Returns a single trace by id, including the captured system instructions and the conversation messages from the trace's last LLM-completion span.",
+      "Returns a single trace by id, including its `conversation`: the system instructions and the messages of the trace's last LLM-completion span, in OpenTelemetry GenAI format.",
     security: PROTECTED_SECURITY,
     request: {
       params: ProjectParamsSchema.extend({ traceId: traceIdSchema }),

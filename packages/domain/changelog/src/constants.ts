@@ -1,10 +1,19 @@
-/** Public marketing-site changelog page — the only navigable target. */
+/** Public marketing-site changelog page. */
 export const FULL_CHANGELOG_URL = "https://latitude.so/changelog"
 
-/** Global (non-org-scoped) cache key for the rendered changelog list. */
-export const CHANGELOG_CACHE_KEY = "changelog:framer:entries:v3"
+/** Base URL for the marketing-site static changelog JSON API. */
+export const CHANGELOG_API_BASE_URL = "https://latitude.so"
 
-/** Cache TTL — keep the Framer fetch bounded while surfacing updates within 30 minutes. */
+/** First page of the static changelog JSON API. */
+export const CHANGELOG_API_FIRST_PAGE_PATH = "/api/changelog.json"
+
+/** Page size enforced by the marketing-site changelog API. */
+export const CHANGELOG_API_PAGE_SIZE = 50
+
+/** Global (non-org-scoped) cache key for the rendered changelog list. */
+export const CHANGELOG_CACHE_KEY = "changelog:api:entries:v1"
+
+/** Cache TTL — pair with the API's CDN cache while bounding upstream fetches. */
 export const CHANGELOG_CACHE_TTL_SECONDS = 30 * 60
 
 /** Default number of entries surfaced in the in-app popover. */

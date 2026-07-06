@@ -240,6 +240,7 @@ const bootstrap = async () => {
     createProductFeedbackWorker(ctx)
     createTraceSearchWorker({
       consumer: ctx.consumer,
+      publisher: ctx.publisher,
       clickhouseClient: ctx.clickhouseClient,
       postgresClient: ctx.postgresClient,
       redisClient: ctx.redisClient,

@@ -1024,7 +1024,7 @@ Enqueues a CSV export of the traces matched by `traces`. The export runs asynchr
 
 #### `latitude traces get`
 
-Returns a single trace by id, including the captured system instructions and the conversation messages from the trace's last LLM-completion span.
+Returns a single trace by id, including its `conversation`: the system instructions and the messages of the trace's last LLM-completion span, in OpenTelemetry GenAI format.
 
 `GET /v1/projects/{projectSlug}/traces/{traceId}`
 
