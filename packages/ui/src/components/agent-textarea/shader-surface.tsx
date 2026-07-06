@@ -90,8 +90,12 @@ export function ShaderSurface({ fragmentSource, targetsRef, loading }: ShaderSur
   useMountEffect(() => {
     const canvas = canvasRef.current
     if (canvas === null) return
+    // Reassigned once observers and listeners exist. disable() must tear them down too:
+    // the effect cleanup only runs on unmount, never when fallback flips at runtime.
+    let teardown = () => {}
     const disable = (reason: string) => {
       console.warn(`AgentTextarea shader disabled: ${reason}`)
+      teardown()
       setFallback(true)
     }
     if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
@@ -214,6 +218,21 @@ export function ShaderSurface({ fragmentSource, targetsRef, loading }: ShaderSur
     canvas.addEventListener("webglcontextlost", onContextLost)
     canvas.addEventListener("webglcontextrestored", onContextRestored)
 
+    let toreDown = false
+    teardown = () => {
+      if (toreDown) return
+      toreDown = true
+      canvas.removeEventListener("webglcontextlost", onContextLost)
+      canvas.removeEventListener("webglcontextrestored", onContextRestored)
+      if (restoreTimer !== null) clearTimeout(restoreTimer)
+      if (rafId !== 0) cancelAnimationFrame(rafId)
+      rafId = 0
+      resizeObserver.disconnect()
+      intersectionObserver.disconnect()
+      themeObserver.disconnect()
+      document.removeEventListener("visibilitychange", onVisibilityChange)
+    }
+
     // Suspense/Activity reconnects re-run this effect after our own cleanup lost the context —
     // getContext then returns the same lost context, so revive it instead of failing compile.
     if (gl.isContextLost()) {
@@ -230,14 +249,7 @@ export function ShaderSurface({ fragmentSource, targetsRef, loading }: ShaderSur
     }
 
     return () => {
-      canvas.removeEventListener("webglcontextlost", onContextLost)
-      canvas.removeEventListener("webglcontextrestored", onContextRestored)
-      if (restoreTimer !== null) clearTimeout(restoreTimer)
-      if (rafId !== 0) cancelAnimationFrame(rafId)
-      resizeObserver.disconnect()
-      intersectionObserver.disconnect()
-      themeObserver.disconnect()
-      document.removeEventListener("visibilitychange", onVisibilityChange)
+      teardown()
       // No loseContext here: Suspense/Activity re-runs this effect and a context we lost ourselves
       // is unrestorable (its lost event fires after our listeners are gone, so nothing can
       // preventDefault it). Shrink the backing store instead; resize() restores it on re-run.
