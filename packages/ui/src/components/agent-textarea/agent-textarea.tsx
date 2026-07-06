@@ -40,7 +40,7 @@ export function AgentTextarea({
   ...props
 }: AgentTextareaProps) {
   const [focused, setFocused] = useState(false)
-  const loading = status !== null
+  const loading = status !== null && status.trim().length > 0
   const showDestructiveBorder = errors !== undefined && errors.length > 0 && !loading
 
   const [statusPair, setStatusPair] = useState<{ current: string | null; previous: string | null }>({
