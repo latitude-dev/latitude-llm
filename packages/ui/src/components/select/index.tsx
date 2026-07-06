@@ -223,17 +223,17 @@ export function Select<V = unknown>(selectProps: SelectProps<V>) {
           />
         ) : searchable ? (
           <Popover open={isOpen} onOpenChange={setIsOpen} modal={false}>
-            <PopoverTrigger asChild disabled={disabled || loading}>
+            <PopoverTrigger asChild disabled={disabled}>
               {trigger ? (
                 trigger
               ) : (
                 <SelectTriggerSurface
                   size={size}
                   aria-expanded={isOpen}
-                  data-disabled={disabled || loading ? "" : undefined}
+                  data-disabled={disabled ? "" : undefined}
                   className={cn({ "border-red-500 focus:ring-red-500": errors }, triggerClassName)}
                   trailing={
-                    removable && hasSelection && !disabled && !loading ? (
+                    removable && hasSelection && !disabled ? (
                       <button
                         type="button"
                         aria-label="Clear selection"
@@ -282,7 +282,7 @@ export function Select<V = unknown>(selectProps: SelectProps<V>) {
           <SelectRoot
             open={isOpen}
             required={required}
-            disabled={disabled || loading}
+            disabled={disabled}
             name={name}
             {...(isControlled ? { value: formValue } : {})}
             onValueChange={_onChange}
@@ -294,7 +294,7 @@ export function Select<V = unknown>(selectProps: SelectProps<V>) {
               <SelectTrigger
                 size={size}
                 className={cn({ "border-red-500 focus:ring-red-500": errors }, triggerClassName)}
-                removable={removable && hasSelection && !disabled && !loading}
+                removable={removable && hasSelection && !disabled}
                 onRemove={_onRemove}
               >
                 {triggerContent}

@@ -651,16 +651,10 @@ const buildManualSignalContext = (input: {
   readonly projectId: ProjectId
   readonly signalId: SignalId
 }) =>
-  Effect.gen(function* () {
-    const signals = yield* SignalRepository
-    const signal = yield* signals
-      .findById(input.signalId)
-      .pipe(Effect.catchTag("NotFoundError", () => Effect.succeed(null)))
-    if (signal === null || signal.projectId !== input.projectId) {
-      return yield* Effect.fail(new Error("Signal not found in this project"))
-    }
-    const context = yield* buildDispatchContextFromSignal({ ...input, webAppUrl: resolveWebAppUrl() })
-    return { ...context, trigger: "manual" as const }
+  buildDispatchContextFromSignal({
+    ...input,
+    webAppUrl: resolveWebAppUrl(),
+    trigger: "manual",
   })
 
 export const listSendToDestinations = createServerFn({ method: "GET" })
@@ -767,6 +761,12 @@ export const sendSignalToIntegration = createServerFn({ method: "POST" })
         withClickHouse(manualContextChLayer, getClickhouseClient(), orgId),
         Effect.provide(AgentDispatchAdaptersLive),
         withTracing,
+        Effect.catch((error: unknown) =>
+          Effect.succeed({
+            status: "failed" as const,
+            reason: error instanceof Error ? error.message : "Unknown error",
+          }),
+        ),
       ),
     )
   })
