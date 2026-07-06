@@ -42,31 +42,36 @@ function RunRow({
   readonly onOpen: (node: CodemodeRunNode) => void
 }) {
   return (
-    <button
-      type="button"
-      onClick={() => onOpen(node)}
-      className="flex w-full min-w-0 items-center gap-2 rounded-md px-2 py-1.5 text-left transition-colors hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-      style={{ paddingLeft: `${depth * 1.25 + 0.5}rem` }}
-    >
-      <Icon icon={KIND_ICON[node.kind]} size="sm" color="foregroundMuted" className="shrink-0" />
-      <div className="flex min-w-0 flex-1 flex-col gap-0.5">
-        <Text.H5 ellipsis noWrap>
-          {node.label}
-        </Text.H5>
-        {node.hint ? (
-          <Text.H6 color="foregroundMuted" ellipsis noWrap>
-            {node.hint}
-          </Text.H6>
+    <>
+      <button
+        type="button"
+        onClick={() => onOpen(node)}
+        className="flex w-full min-w-0 items-center gap-2 rounded-md px-2 py-1.5 text-left transition-colors hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+        style={{ paddingLeft: `${depth * 1.25 + 0.5}rem` }}
+      >
+        <Icon icon={KIND_ICON[node.kind]} size="sm" color="foregroundMuted" className="shrink-0" />
+        <div className="flex min-w-0 flex-1 flex-col gap-0.5">
+          <Text.H5 ellipsis noWrap>
+            {node.label}
+          </Text.H5>
+          {node.hint ? (
+            <Text.H6 color="foregroundMuted" ellipsis noWrap>
+              {node.hint}
+            </Text.H6>
+          ) : null}
+        </div>
+        {node.kind === "unlabeled" ? (
+          <Status variant="neutral" indicator={false} label="Unlabeled" className="shrink-0" />
         ) : null}
-      </div>
-      {node.kind === "unlabeled" ? (
-        <Status variant="neutral" indicator={false} label="Unlabeled" className="shrink-0" />
-      ) : null}
-      <Text.H6 color="foregroundMuted" noWrap className="shrink-0">
-        {formatDuration(node.durationMs)}
-      </Text.H6>
-      {node.isError ? <Status variant="destructive" indicator={false} label="error" className="shrink-0" /> : null}
-    </button>
+        <Text.H6 color="foregroundMuted" noWrap className="shrink-0">
+          {formatDuration(node.durationMs)}
+        </Text.H6>
+        {node.isError ? <Status variant="destructive" indicator={false} label="error" className="shrink-0" /> : null}
+      </button>
+      {node.children.map((child) => (
+        <RunRow key={child.id} node={child} depth={depth + 1} onOpen={onOpen} />
+      ))}
+    </>
   )
 }
 
@@ -123,8 +128,7 @@ export function RunTab({
   ])
 
   const openNode = (node: CodemodeRunNode) => {
-    if (node.spanId) onOpenTrace(node.traceId, { spanId: node.spanId, targetTab: "spans" })
-    else onOpenTrace(node.traceId)
+    onOpenTrace(node.traceId, { spanId: node.spanId, targetTab: "spans" })
   }
 
   if (isSpansLoading && (spans?.length ?? 0) === 0) {
@@ -160,12 +164,7 @@ export function RunTab({
           </div>
           <div className="flex flex-col">
             {turn.nodes.map((node) => (
-              <div key={node.id} className="flex flex-col">
-                <RunRow node={node} depth={0} onOpen={openNode} />
-                {node.children.map((child) => (
-                  <RunRow key={child.id} node={child} depth={1} onOpen={openNode} />
-                ))}
-              </div>
+              <RunRow key={node.id} node={node} depth={0} onOpen={openNode} />
             ))}
           </div>
         </div>

@@ -39,11 +39,11 @@ Open a codemode session and **read the orchestration top-to-bottom once**, expan
 | ID | Decision |
 |---|---|
 | **D1** | Tab name: **Run** (session drawer, multi-trace sessions only). |
-| **D2** | **Telemetry contract first** — stable span attributes before UI heuristics; example app updated in Phase 0. |
-| **D3** | **Turn grouping** — derive turns from user messages on `latestTraceId` conversation (see algorithm below); assign traces/spans to turns by time window. |
+| **D2** | **Reconstruct, don't hand-instrument.** A session's traces are disconnected islands (OTel context does not cross the sandbox / Durable-Object / isolate boundary, so `parentSpanId` never crosses a trace — verified in ClickHouse). The Run tab rebuilds one **session graph** from keys that already exist: `parentSpanId` inside a trace, `run_id` for the sub-agent edge, `inner_tool` + operation for the code node, `functionId` for roles. The only telemetry the app must emit beyond native AI-SDK spans is the sub-agent link (`run_id`, set by `runAgentTool`). No per-span `phase`/`turn_id` required. |
+| **D3** | **Turn grouping from the graph, not from messages.** A new turn begins at each top-level **main-agent entry** node (`functionId ∈ {codemode-turn, codemode-plan}`, i.e. kind `agent`/`plan`); sub-agent, tool, code and `summarize` roots join the current turn. No `turn_id` and no message-count coupling. User messages only supply turn **labels** (by index). |
 | **D4** | **Phase 1 fetches session spans** — reuse `useSpansBySessionCollection` (already used by Conversation timeline and Metadata tab). |
-| **D5** | **Sub-agent drill-in requires explicit link metadata** — no overlap-only matching in v1. Block Phase 2 drill-in on `latitude.agent_tool.parent_tool_call_id` (+ optional `run_id`). |
-| **D6** | **Phase detection priority**: (1) `latitude.codemode.phase` attr, (2) `experimental_telemetry.functionId` on span attrs (verify ingest maps it — otherwise falls through to priority 3), (3) operation + name heuristics for legacy data. |
+| **D5** | **Sub-agent edge is `run_id`.** The delegate tool-call span and every span of the sub-agent trace it spawned share `latitude.agent_tool.run_id`; the sub-agent nests under the delegate via that key (prefer the tool span carrying `parent_tool_call_id`). No time-overlap guessing. |
+| **D6** | **Node role priority**: (1) operation + tool name for the code node (`execute_tool` + `codemode`) and concrete tool calls, (2) `ai.telemetry.functionId` for agent roles (`codemode-plan`→plan, `codemode-summary`→summarize, `codemode-turn`→agent, `research-subagent-turn`→sub-agent), (3) name heuristics (`generateText`/`streamText`) at low confidence for legacy data. |
 
 ## Telemetry contract (Phase 0)
 
@@ -63,34 +63,27 @@ SDK + docs emit these **span attributes** (all optional for backward compat, req
 - Cloudflare codemode example worker: set `latitude.codemode.phase` on plan / execute / summarize tracers; set `parent_tool_call_id` when delegating to sub-agent.  
 - Document contract in `docs/telemetry/frameworks/cloudflare-codemode.mdx`.
 
-## Turn grouping algorithm
+## Session graph algorithm
 
-When **`latitude.codemode.turn_id`** is present on spans/traces, group by it directly (authoritative). The message-timestamp algorithm below is the **fallback** for legacy data lacking `turn_id`.
+`buildCodemodeRunTimeline({ session, traces, spans, messages })` builds one graph from all session spans:
 
-**Fallback algorithm** (sessions have `traceIds[]` and `latestTraceId` but no turn index):
+1. **Adjacency.** For each span: if `parentSpanId` resolves inside the session → intra-trace child. Else (a trace root) resolve a **cross-trace** parent:
+   - sub-agent root (`invoke_agent` with `run_id`) → the delegate tool span sharing that `run_id` in another trace;
+   - inner-tool root (`execute_tool` + `inner_tool`) → the code node whose `[start,end]` window contains it (or the sole code node).
+   Otherwise it is a **forest root**.
+2. **Collapse noise.** Drop `chat` (`.doStream`/`.doGenerate`) spans and bare `ai.toolCall` wrappers, promoting their kept descendants. Kept nodes = agent turns, the code node, and concrete tool calls.
+3. **Turns.** Sort forest roots by start; open a new turn at each main-agent entry (kind `agent`/`plan`); everything else joins the current turn (D3). Label from user messages by index, else `"Turn {n}"`.
 
-1. Load conversation messages from **`latestTraceId`** (existing behavior).  
-2. Enumerate **user messages** in order → each defines a turn `turnIndex` (0-based).  
-3. Turn time window: `[userMessage.atMs, nextUserMessage.atMs)` (last turn: `[atMs, session.endTime]`).  
-4. Assign each **trace** to the turn whose window contains `trace.startTime`.  
-5. Assign each **session span** to the same turn by `span.startTime`.  
-6. **Orphan traces** (no user message yet, e.g. partial ingest): fall into turn 0 or an "Unassigned" bucket shown collapsed at top.
-
-Turn label: first 80 chars of user message text, or `"Turn {n}"`.
-
-## Phase detection (within a turn)
-
-After sorting assigned traces/spans by `startTime ASC`, build the Run tree:
+## Node roles
 
 | Node | Detection (first match) |
 |---|---|
-| **Plan** | span/trace with `latitude.codemode.phase=plan`, OR name `ai.generateText` + metadata `functionId=codemode-plan` |
-| **Execute (codemode)** | span/trace with `phase=execute`, OR `ai.toolCall codemode`, OR parent of inner-tool spans. *Note: `phase=execute` may be unavailable on the `ai.toolCall codemode` span itself (emitted by `createCodeTool` / AI SDK); rely on operation name + inner-tool parent fallback there.* |
-| **Inner tool** | span with `latitude.codemode.inner_tool=true` (group under Execute; sort by startTime) |
-| **Sub-agent** | span/trace with `latitude.agent_tool.run_id` or tag/metadata `subagent` / example role metadata |
-| **Summarize** | `phase=summarize`, OR `ai.streamText` + `functionId=codemode-summary` |
+| **Execute (codemode)** | `execute_tool` with tool name `codemode` (or name ` … codemode`) — high confidence |
+| **Inner / tool** | any other `execute_tool` (concrete tool); `inner_tool=true` hints "inner sandbox tool" |
+| **Plan / Summarize / Agent / Sub-agent** | `invoke_agent` keyed by `functionId` (`codemode-plan` / `codemode-summary` / `codemode-turn` / `research-subagent-turn`), or reached via the `run_id` sub-agent edge |
+| **Legacy fallback** | `generateText`→plan, `streamText`→summarize at **low** confidence when no `functionId` |
 
-Legacy fallback (pre-Phase-0 data): infer Plan/Summarize from trace names + example tags only; show **"Unlabeled phase"** badge when confidence is low.
+Sub-agent trees nest under their delegating tool via the `run_id` edge (D5); inner tools nest under the code node.
 
 ## UI design
 

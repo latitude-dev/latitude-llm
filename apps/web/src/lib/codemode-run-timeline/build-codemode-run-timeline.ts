@@ -1,31 +1,43 @@
-// Pure, dependency-free construction of the session-drawer "Run" tree for
-// codemode orchestrations. Input shapes are structural subsets of the app's
-// `SpanRecord` / `TraceRecord` / `SessionDetailRecord` / `GenAIMessage` so the
-// UI can pass those records directly, while tests can supply richer fixtures
-// (including the `latitude.codemode.*` span attributes that the session-level
-// span collection does not yet serialize — see the module doc note below).
+// Pure, dependency-free construction of the session-drawer "Run" tree.
 //
-// Phase detection follows spec D6 priority: (1) `latitude.codemode.phase`
-// attribute, (2) `ai.telemetry.functionId` attribute, (3) operation + name
-// heuristics for legacy data. When no signal reaches high confidence a node is
-// emitted as "unlabeled" so legacy sessions still render top-to-bottom.
+// First principles: a session's traces are disconnected islands — OTel context
+// does NOT propagate across the sandbox / Durable-Object / isolate boundaries,
+// so `parentSpanId` links never cross a trace. The agent→sub-agent dependency
+// graph therefore is NOT in the waterfall; it has to be reconstructed from the
+// natural keys that already exist on the spans (no bespoke per-span telemetry
+// required beyond the sub-agent link):
+//
+//   • `ai.telemetry.functionId`        — native AI SDK; the node's role.
+//   • `latitude.agent_tool.run_id`     — the ONE irreducible cross-boundary edge:
+//                                        a delegate tool-call span and every span
+//                                        of the sub-agent trace it spawned share it.
+//   • `latitude.codemode.inner_tool`   — sandbox tool spans (attach under the code node).
+//   • operation + tool name            — code node (`execute_tool` + `codemode`).
+//
+// The engine is generic: any agent→sub-agent workload renders with the same
+// forest + run_id edge. Codemode is just the special case that inserts a
+// "code execution" node between an agent and its (sandbox) tools.
 
-export const CODEMODE_ATTR = {
-  phase: "latitude.codemode.phase",
+const CODEMODE_ATTR = {
   innerTool: "latitude.codemode.inner_tool",
-  turnId: "latitude.codemode.turn_id",
   parentToolCallId: "latitude.agent_tool.parent_tool_call_id",
   runId: "latitude.agent_tool.run_id",
   functionId: "ai.telemetry.functionId",
 } as const
 
-const FUNCTION_ID_PHASE: Readonly<Record<string, CodemodeRunNodeKind>> = {
+const FUNCTION_ID_KIND: Readonly<Record<string, CodemodeRunNodeKind>> = {
   "codemode-plan": "plan",
   "codemode-summary": "summarize",
+  "codemode-turn": "agent",
   "research-subagent-turn": "subagent",
 }
 
+/** functionIds that start a new turn (a main-agent entry for one user message). */
+const TURN_ENTRY_KINDS: ReadonlySet<CodemodeRunNodeKind> = new Set(["agent", "plan"])
+
 const USER_LABEL_MAX_CHARS = 80
+/** Slack allowed when matching an inner-tool trace into a code node's time window. */
+const CONTAINMENT_TOLERANCE_MS = 50
 
 export type CodemodeRunNodeKind = "plan" | "execute" | "innerTool" | "subagent" | "summarize" | "agent" | "unlabeled"
 
@@ -58,11 +70,9 @@ export interface CodemodeTimelineTraceInput {
 export interface CodemodeTimelineMessageInput {
   readonly role: string
   readonly parts?: readonly unknown[]
-  /** Optional wall-clock time; absent for `GenAIMessage`, present in fixtures that exercise the window fallback. */
-  readonly atMs?: number
 }
 
-export interface CodemodeTimelineSessionInput {
+interface CodemodeTimelineSessionInput {
   readonly sessionId: string
   readonly startTime: string
   readonly endTime: string
@@ -70,7 +80,7 @@ export interface CodemodeTimelineSessionInput {
 }
 
 export interface CodemodeRunNode {
-  /** Stable identity: the span id when the node is a span, otherwise the trace id. */
+  /** Stable identity: the span id the node maps to. */
   readonly id: string
   readonly kind: CodemodeRunNodeKind
   readonly label: string
@@ -80,14 +90,14 @@ export interface CodemodeRunNode {
   readonly isError: boolean
   readonly confidence: CodemodeRunConfidence
   readonly traceId: string
-  /** Set when the node maps to a specific span (span-detail navigation); null for whole-trace rows. */
-  readonly spanId: string | null
+  /** The span this node navigates to (always set — nodes are span-backed). */
+  readonly spanId: string
   readonly children: readonly CodemodeRunNode[]
   /** Short signal explaining why this step got its kind (shown muted in the Run tab). */
   readonly hint: string | null
 }
 
-export interface CodemodeRunTurn {
+interface CodemodeRunTurn {
   readonly turnId: string
   readonly turnIndex: number
   readonly label: string
@@ -96,11 +106,11 @@ export interface CodemodeRunTurn {
   readonly nodes: readonly CodemodeRunNode[]
 }
 
-export interface CodemodeRunTimeline {
+interface CodemodeRunTimeline {
   readonly turns: readonly CodemodeRunTurn[]
 }
 
-export interface BuildCodemodeRunTimelineInput {
+interface BuildCodemodeRunTimelineInput {
   readonly session: CodemodeTimelineSessionInput
   readonly traces: readonly CodemodeTimelineTraceInput[]
   readonly spans: readonly CodemodeTimelineSpanInput[]
@@ -117,22 +127,10 @@ interface NormalizedSpan {
   readonly startMs: number
   readonly endMs: number
   readonly isError: boolean
-  readonly phaseAttr: string | undefined
   readonly functionId: string | undefined
-  readonly turnId: string | undefined
+  readonly runId: string | undefined
+  readonly parentToolCallId: string | undefined
   readonly isInnerTool: boolean
-  readonly isSubagent: boolean
-}
-
-interface NormalizedTrace {
-  readonly traceId: string
-  readonly startMs: number
-  readonly endMs: number
-  readonly rootSpanName: string
-  readonly isError: boolean
-  readonly metadata: Readonly<Record<string, string>>
-  readonly spans: readonly NormalizedSpan[]
-  readonly turnId: string | undefined
 }
 
 const toMs = (iso: string): number => {
@@ -144,15 +142,6 @@ const attrBool = (span: CodemodeTimelineSpanInput, key: string): boolean =>
   span.attrBool?.[key] === true || span.attrString?.[key] === "true"
 
 function normalizeSpan(span: CodemodeTimelineSpanInput): NormalizedSpan {
-  const phaseAttr = span.attrString?.[CODEMODE_ATTR.phase]
-  const functionId = span.attrString?.[CODEMODE_ATTR.functionId]
-  const turnId = span.attrString?.[CODEMODE_ATTR.turnId]
-  const isInnerTool = attrBool(span, CODEMODE_ATTR.innerTool)
-  const isSubagent =
-    functionId === "research-subagent-turn" ||
-    phaseAttr === "subagent" ||
-    span.attrString?.[CODEMODE_ATTR.runId] !== undefined ||
-    span.attrString?.[CODEMODE_ATTR.parentToolCallId] !== undefined
   return {
     spanId: span.spanId,
     parentSpanId: span.parentSpanId,
@@ -163,156 +152,59 @@ function normalizeSpan(span: CodemodeTimelineSpanInput): NormalizedSpan {
     startMs: toMs(span.startTime),
     endMs: toMs(span.endTime),
     isError: span.statusCode === "error",
-    phaseAttr,
-    functionId,
-    turnId,
-    isInnerTool,
-    isSubagent,
+    functionId: span.attrString?.[CODEMODE_ATTR.functionId],
+    runId: span.attrString?.[CODEMODE_ATTR.runId],
+    parentToolCallId: span.attrString?.[CODEMODE_ATTR.parentToolCallId],
+    isInnerTool: attrBool(span, CODEMODE_ATTR.innerTool),
   }
 }
 
-const isCodemodeExecuteSpan = (span: NormalizedSpan): boolean =>
-  span.operation === "execute_tool" && (span.toolName === "codemode" || / codemode$/i.test(span.name))
+const isToolSpan = (span: NormalizedSpan): boolean => span.operation === "execute_tool"
 
-const isToolCallSpan = (span: NormalizedSpan): boolean => span.operation === "execute_tool"
+const isCodeExecuteSpan = (span: NormalizedSpan): boolean =>
+  isToolSpan(span) && (span.toolName === "codemode" || / codemode$/i.test(span.name))
 
-/** Phase from an individual span using D6 priorities 1→2→3. Returns undefined when nothing matches. */
-function spanPhase(span: NormalizedSpan): { kind: CodemodeRunNodeKind; confidence: CodemodeRunConfidence } | undefined {
-  if (isCodemodeExecuteSpan(span)) return { kind: "execute", confidence: "high" }
-  if (span.phaseAttr === "plan" || span.phaseAttr === "execute" || span.phaseAttr === "summarize") {
-    return { kind: span.phaseAttr, confidence: "high" }
-  }
-  if (span.functionId === "codemode-turn") {
-    if (isCodemodeExecuteSpan(span)) return { kind: "execute", confidence: "high" }
-    return undefined
-  }
-  if (span.functionId && FUNCTION_ID_PHASE[span.functionId]) {
-    return { kind: FUNCTION_ID_PHASE[span.functionId] as CodemodeRunNodeKind, confidence: "high" }
-  }
-  if (span.isSubagent) return { kind: "subagent", confidence: "high" }
-  if (span.isInnerTool && isToolCallSpan(span)) return { kind: "innerTool", confidence: "high" }
-  if (/generateText/i.test(span.name)) return { kind: "plan", confidence: "low" }
-  if (/streamText/i.test(span.name) && span.functionId === "codemode-summary") {
-    return { kind: "summarize", confidence: "high" }
-  }
-  if (/streamText/i.test(span.name)) return { kind: "summarize", confidence: "low" }
-  return undefined
+/** A bare AI-SDK `ai.toolCall` wrapper (no concrete tool) — structural noise we collapse through. */
+const isToolWrapperSpan = (span: NormalizedSpan): boolean =>
+  isToolSpan(span) && span.toolName === "" && /^ai\.toolCall$/i.test(span.name.trim())
+
+const isAgentSpan = (span: NormalizedSpan): boolean => span.operation === "invoke_agent"
+
+/** Kept nodes are the meaningful steps: agent turns, the code node, and concrete tool calls. */
+function isMeaningful(span: NormalizedSpan): boolean {
+  if (isAgentSpan(span)) return true
+  if (isCodeExecuteSpan(span)) return true
+  if (isToolSpan(span) && !isToolWrapperSpan(span)) return true
+  return false
 }
 
-function pickTurnId(spans: readonly NormalizedSpan[]): string | undefined {
-  for (const span of spans) {
-    if (span.turnId) return span.turnId
-  }
-  return undefined
-}
-
-function normalizeTrace(trace: CodemodeTimelineTraceInput, spans: readonly NormalizedSpan[]): NormalizedTrace {
-  return {
-    traceId: trace.traceId,
-    startMs: toMs(trace.startTime),
-    endMs: toMs(trace.endTime),
-    rootSpanName: trace.rootSpanName,
-    isError: trace.errorCount > 0 || spans.some((s) => s.isError),
-    metadata: trace.metadata ?? {},
-    spans,
-    turnId: trace.metadata?.[CODEMODE_ATTR.turnId] ?? pickTurnId(spans),
-  }
-}
-
-const SUBAGENT_METADATA_HINT = /subagent|sub-agent/i
-
-function standaloneInnerToolSpan(trace: NormalizedTrace): NormalizedSpan | undefined {
-  const toolSpans = trace.spans.filter((span) => isToolCallSpan(span) && !isCodemodeExecuteSpan(span))
-  if (toolSpans.length !== 1) return undefined
-  const only = toolSpans[0]
-  if (!only?.isInnerTool) return undefined
-  const nonToolSpans = trace.spans.filter((span) => !isToolCallSpan(span))
-  if (
-    nonToolSpans.some((span) => {
-      const phase = spanPhase(span)
-      return (
-        phase?.kind === "subagent" || phase?.kind === "plan" || phase?.kind === "summarize" || phase?.kind === "execute"
-      )
-    })
-  ) {
-    return undefined
-  }
-  return only
-}
-
-function toolChildSpans(trace: NormalizedTrace, kind: CodemodeRunNodeKind): NormalizedSpan[] {
-  if (kind === "execute") return innerToolSpans(trace)
-  if (kind === "subagent") {
-    return trace.spans.filter((span) => isToolCallSpan(span) && span.isInnerTool).sort((a, b) => a.startMs - b.startMs)
-  }
-  return []
-}
-
-function spanToChildNode(span: NormalizedSpan): CodemodeRunNode {
-  return {
-    id: span.spanId,
-    kind: "innerTool",
-    label: innerToolLabel(span),
-    startMs: span.startMs,
-    endMs: span.endMs,
-    durationMs: Math.max(0, span.endMs - span.startMs),
-    isError: span.isError,
-    confidence: "high",
-    traceId: span.traceId,
-    spanId: span.spanId,
-    children: [],
-    hint: "inner sandbox tool",
-  }
-}
-function tracePhase(trace: NormalizedTrace): { kind: CodemodeRunNodeKind; confidence: CodemodeRunConfidence } {
-  let fallback: { kind: CodemodeRunNodeKind; confidence: CodemodeRunConfidence } | undefined
-  for (const span of trace.spans) {
-    const detected = spanPhase(span)
-    if (!detected) continue
-    if (detected.confidence === "high") return detected
-    fallback = fallback ?? detected
-  }
-
-  const metaRole = trace.metadata.role ?? ""
-  if (SUBAGENT_METADATA_HINT.test(metaRole)) return { kind: "subagent", confidence: "high" }
-
-  if (
-    trace.spans.length > 0 &&
-    trace.spans.every((span) => span.functionId === "codemode-turn") &&
-    trace.spans.every((span) => /streamText/i.test(span.name) || span.operation === "chat")
-  ) {
-    return { kind: "agent", confidence: "high" }
-  }
-
-  const rootName = trace.rootSpanName
-  if (/ codemode$/i.test(rootName) || /toolCall codemode/i.test(rootName)) {
-    return { kind: "execute", confidence: "low" }
-  }
-  if (/generateText/i.test(rootName)) return { kind: "plan", confidence: "low" }
-  if (/streamText/i.test(rootName) && trace.spans.some((span) => span.functionId === "codemode-summary")) {
-    return { kind: "summarize", confidence: "high" }
-  }
-  if (/streamText/i.test(rootName)) return { kind: "summarize", confidence: "low" }
-
-  const loneInnerTool = standaloneInnerToolSpan(trace)
-  if (loneInnerTool) return { kind: "innerTool", confidence: "high" }
-
-  return fallback ?? { kind: "unlabeled", confidence: "low" }
-}
-
-/** Inner-tool spans of the execute trace: explicit `inner_tool` flag, else tool-call spans that aren't the codemode call itself. */
-function innerToolSpans(trace: NormalizedTrace): NormalizedSpan[] {
-  const explicit = trace.spans.filter((s) => s.isInnerTool)
-  if (explicit.length > 0) return explicit.slice().sort((a, b) => a.startMs - b.startMs)
-  return trace.spans.filter((s) => isToolCallSpan(s) && !isCodemodeExecuteSpan(s)).sort((a, b) => a.startMs - b.startMs)
-}
-
-function innerToolLabel(span: NormalizedSpan): string {
+function toolLabel(span: NormalizedSpan): string {
   if (span.toolName) return span.toolName
-  return span.name.replace(/^ai\.toolCall\s+/i, "") || span.name
+  return span.name.replace(/^ai\.toolCall\s+/i, "").trim() || span.name
 }
 
-function phaseLabel(kind: CodemodeRunNodeKind, trace: NormalizedTrace): string {
+function spanKind(
+  span: NormalizedSpan,
+  viaSubagentEdge: boolean,
+): { kind: CodemodeRunNodeKind; confidence: CodemodeRunConfidence } {
+  if (isCodeExecuteSpan(span)) return { kind: "execute", confidence: "high" }
+  if (isToolSpan(span)) return { kind: "innerTool", confidence: "high" }
+
+  // invoke_agent from here down.
+  if (span.functionId && FUNCTION_ID_KIND[span.functionId]) {
+    return { kind: FUNCTION_ID_KIND[span.functionId] as CodemodeRunNodeKind, confidence: "high" }
+  }
+  if (viaSubagentEdge || span.runId !== undefined) return { kind: "subagent", confidence: "high" }
+  if (/generateText/i.test(span.name)) return { kind: "plan", confidence: "low" }
+  if (/streamText/i.test(span.name)) return { kind: "summarize", confidence: "low" }
+  return { kind: "unlabeled", confidence: "low" }
+}
+
+function nodeLabel(
+  kind: CodemodeRunNodeKind,
+  span: NormalizedSpan,
+  traceMeta: Readonly<Record<string, string>> | undefined,
+): string {
   switch (kind) {
     case "plan":
       return "Plan"
@@ -322,72 +214,64 @@ function phaseLabel(kind: CodemodeRunNodeKind, trace: NormalizedTrace): string {
       return "Summarize"
     case "agent":
       return "Agent response"
-    case "innerTool": {
-      const toolSpan = standaloneInnerToolSpan(trace) ?? trace.spans.find((span) => span.isInnerTool)
-      return toolSpan ? innerToolLabel(toolSpan) : trace.rootSpanName || "Tool"
-    }
+    case "innerTool":
+      return toolLabel(span)
     case "subagent": {
-      const role = trace.metadata.role
+      const role = traceMeta?.role
       return role ? `Sub-agent · ${role}` : "Sub-agent"
     }
     default:
-      return trace.rootSpanName || "Unlabeled phase"
+      return span.name || "Unlabeled step"
   }
 }
 
-function phaseHint(kind: CodemodeRunNodeKind, trace: NormalizedTrace): string | null {
+function nodeHint(kind: CodemodeRunNodeKind, span: NormalizedSpan): string | null {
   switch (kind) {
     case "plan":
-      return trace.spans.some((span) => span.functionId === "codemode-plan")
-        ? "generateText · codemode-plan"
-        : "generateText"
+      return span.functionId ? `${span.name} · ${span.functionId}` : span.name
     case "agent":
-      return "streamText · codemode-turn (main agent, not sandbox)"
+      return span.functionId ? `${span.name} · ${span.functionId}` : "main agent"
     case "execute":
       return "execute_tool · codemode"
     case "summarize":
-      return trace.spans.some((span) => span.functionId === "codemode-summary")
-        ? "streamText · codemode-summary"
-        : "streamText"
+      return span.functionId ? `${span.name} · ${span.functionId}` : span.name
     case "subagent":
-      return trace.metadata.role ? `sub-agent · ${trace.metadata.role}` : "research-subagent-turn"
+      return span.functionId ?? "sub-agent"
     case "innerTool":
-      return "inner sandbox tool"
+      return span.isInnerTool ? "inner sandbox tool" : "tool call"
     default:
       return null
   }
 }
 
-function buildTraceNode(trace: NormalizedTrace): CodemodeRunNode {
-  const loneInnerTool = standaloneInnerToolSpan(trace)
-  if (loneInnerTool) {
-    return {
-      ...spanToChildNode(loneInnerTool),
-      kind: "innerTool",
-      label: innerToolLabel(loneInnerTool),
+/**
+ * Resolve the cross-trace parent of a trace-root span (a span whose `parentSpanId`
+ * is not in the session). Returns the span id it should nest under, or undefined.
+ */
+function resolveCrossParent(
+  root: NormalizedSpan,
+  codeExecuteSpans: readonly NormalizedSpan[],
+  delegateByRunId: ReadonlyMap<string, NormalizedSpan>,
+): string | undefined {
+  // Sub-agent trace → the delegate tool-call span that spawned it (shared run_id, different trace).
+  if (isAgentSpan(root) && root.runId !== undefined) {
+    const delegate = delegateByRunId.get(root.runId)
+    if (delegate && delegate.traceId !== root.traceId) return delegate.spanId
+  }
+  // Inner sandbox tool trace → the code node whose execution window contains it.
+  if (isToolSpan(root) && root.isInnerTool && !isCodeExecuteSpan(root)) {
+    const container = codeExecuteSpans.find(
+      (exec) =>
+        exec.spanId !== root.spanId &&
+        root.startMs >= exec.startMs - CONTAINMENT_TOLERANCE_MS &&
+        root.startMs <= exec.endMs + CONTAINMENT_TOLERANCE_MS,
+    )
+    if (container) return container.spanId
+    if (codeExecuteSpans.length === 1 && codeExecuteSpans[0]!.spanId !== root.spanId) {
+      return codeExecuteSpans[0]!.spanId
     }
   }
-
-  const { kind, confidence } = tracePhase(trace)
-  const children: CodemodeRunNode[] = toolChildSpans(trace, kind).map(spanToChildNode)
-
-  const primarySpan =
-    kind === "innerTool" ? (trace.spans.find((span) => span.isInnerTool && isToolCallSpan(span)) ?? null) : null
-
-  return {
-    id: primarySpan?.spanId ?? trace.traceId,
-    kind,
-    label: phaseLabel(kind, trace),
-    startMs: trace.startMs,
-    endMs: trace.endMs,
-    durationMs: Math.max(0, trace.endMs - trace.startMs),
-    isError: trace.isError,
-    confidence,
-    traceId: trace.traceId,
-    spanId: primarySpan?.spanId ?? null,
-    children,
-    hint: phaseHint(kind, trace),
-  }
+  return undefined
 }
 
 function messageText(message: CodemodeTimelineMessageInput): string {
@@ -402,123 +286,111 @@ function messageText(message: CodemodeTimelineMessageInput): string {
 }
 
 function turnLabel(userMessages: readonly CodemodeTimelineMessageInput[], turnIndex: number): string {
-  const message = userMessages[turnIndex]
-  const text = message ? messageText(message) : ""
+  const text = userMessages[turnIndex] ? messageText(userMessages[turnIndex]!) : ""
   if (!text) return `Turn ${turnIndex + 1}`
   return text.length > USER_LABEL_MAX_CHARS ? `${text.slice(0, USER_LABEL_MAX_CHARS)}…` : text
 }
 
-function assignByTurnId(traces: readonly NormalizedTrace[]): Map<string, NormalizedTrace[]> {
-  const byTurn = new Map<string, NormalizedTrace[]>()
-  // Order turn ids by the earliest trace that carries them so turn indices read chronologically.
-  const turnOrder = new Map<string, number>()
-  const sorted = traces.slice().sort((a, b) => a.startMs - b.startMs)
-  for (const trace of sorted) {
-    const turnId = trace.turnId ?? "unassigned"
-    if (!turnOrder.has(turnId)) turnOrder.set(turnId, turnOrder.size)
-    const bucket = byTurn.get(turnId)
-    if (bucket) bucket.push(trace)
-    else byTurn.set(turnId, [trace])
-  }
-  return byTurn
-}
+export function buildCodemodeRunTimeline(input: BuildCodemodeRunTimelineInput): CodemodeRunTimeline {
+  const spans = input.spans.map(normalizeSpan)
+  const spansById = new Map(spans.map((span) => [span.spanId, span]))
+  const traceMetaById = new Map(input.traces.map((trace) => [trace.traceId, trace.metadata ?? {}]))
 
-/** Fallback turn count/boundaries when no `turn_id`: split the chronological run at each Plan phase. */
-function assignByPlanBoundary(traces: readonly NormalizedTrace[]): NormalizedTrace[][] {
-  const sorted = traces.slice().sort((a, b) => a.startMs - b.startMs)
-  const groups: NormalizedTrace[][] = []
-  for (const trace of sorted) {
-    const kind = tracePhase(trace).kind
-    if (groups.length === 0 || kind === "plan") {
-      groups.push([trace])
-    } else {
-      const last = groups[groups.length - 1]
-      if (last) last.push(trace)
+  const codeExecuteSpans = spans.filter(isCodeExecuteSpan)
+  // A delegate is the tool-call span that spawned a sub-agent (shares its run_id). A sub-agent's
+  // OWN tool spans also inherit run_id, so prefer the tool span carrying parent_tool_call_id, then
+  // a trace-root tool span, before any other tool span with that run_id.
+  const delegateByRunId = new Map<string, NormalizedSpan>()
+  const delegateRank = (span: NormalizedSpan): number => {
+    if (span.parentToolCallId !== undefined) return 2
+    if (span.parentSpanId === "" || !spansById.has(span.parentSpanId)) return 1
+    return 0
+  }
+  for (const span of spans) {
+    if (!isToolSpan(span) || span.runId === undefined) continue
+    const current = delegateByRunId.get(span.runId)
+    if (!current || delegateRank(span) > delegateRank(current)) delegateByRunId.set(span.runId, span)
+  }
+
+  // Adjacency across the whole session: intra-trace parentSpanId + cross-trace edges.
+  const childrenByParent = new Map<string, NormalizedSpan[]>()
+  const rootSpans: NormalizedSpan[] = []
+  const subagentEdgeChildren = new Set<string>()
+  const addChild = (parentId: string, child: NormalizedSpan) => {
+    const bucket = childrenByParent.get(parentId)
+    if (bucket) bucket.push(child)
+    else childrenByParent.set(parentId, [child])
+  }
+
+  for (const span of spans) {
+    const intraParent = span.parentSpanId ? spansById.get(span.parentSpanId) : undefined
+    if (intraParent) {
+      addChild(intraParent.spanId, span)
+      continue
     }
-  }
-  return groups.length > 0 ? groups : [[]]
-}
-
-/** Window fallback (spec §"Turn grouping"): assign traces to turns by user-message timestamps. */
-function assignByMessageWindow(
-  traces: readonly NormalizedTrace[],
-  userMessages: readonly CodemodeTimelineMessageInput[],
-  sessionEndMs: number,
-): NormalizedTrace[][] {
-  const windows = userMessages.map((message, index) => ({
-    startMs: message.atMs ?? Number.NEGATIVE_INFINITY,
-    endMs: userMessages[index + 1]?.atMs ?? sessionEndMs,
-  }))
-  const groups: NormalizedTrace[][] = windows.map(() => [])
-  const sorted = traces.slice().sort((a, b) => a.startMs - b.startMs)
-  for (const trace of sorted) {
-    let turnIndex = 0
-    for (let i = 0; i < windows.length; i++) {
-      const window = windows[i]
-      if (window && trace.startMs >= window.startMs && trace.startMs < window.endMs) {
-        turnIndex = i
-        break
-      }
-      if (window && trace.startMs >= window.endMs) turnIndex = Math.min(i + 1, windows.length - 1)
+    const crossParent = resolveCrossParent(span, codeExecuteSpans, delegateByRunId)
+    if (crossParent) {
+      addChild(crossParent, span)
+      if (isAgentSpan(span) && span.runId !== undefined) subagentEdgeChildren.add(span.spanId)
+      continue
     }
-    groups[turnIndex]?.push(trace)
+    rootSpans.push(span)
   }
-  return groups
-}
 
-function buildTurn(
-  turnId: string,
-  turnIndex: number,
-  traces: readonly NormalizedTrace[],
-  userMessages: readonly CodemodeTimelineMessageInput[],
-): CodemodeRunTurn {
-  const nodes = traces
+  // Collapse structural noise (chat spans, bare tool wrappers), promoting kept descendants.
+  const seen = new Set<string>()
+  const collectKept = (span: NormalizedSpan): CodemodeRunNode[] => {
+    if (seen.has(span.spanId)) return []
+    seen.add(span.spanId)
+    const rawChildren = (childrenByParent.get(span.spanId) ?? []).slice().sort((a, b) => a.startMs - b.startMs)
+    const childNodes = rawChildren.flatMap(collectKept)
+    if (!isMeaningful(span)) return childNodes
+    const { kind, confidence } = spanKind(span, subagentEdgeChildren.has(span.spanId))
+    return [
+      {
+        id: span.spanId,
+        kind,
+        label: nodeLabel(kind, span, traceMetaById.get(span.traceId)),
+        startMs: span.startMs,
+        endMs: span.endMs,
+        durationMs: Math.max(0, span.endMs - span.startMs),
+        isError: span.isError,
+        confidence,
+        traceId: span.traceId,
+        spanId: span.spanId,
+        children: childNodes,
+        hint: nodeHint(kind, span),
+      },
+    ]
+  }
+
+  const forest = rootSpans
     .slice()
     .sort((a, b) => a.startMs - b.startMs)
-    .map(buildTraceNode)
-  const startMs = nodes.reduce((min, node) => Math.min(min, node.startMs), Number.POSITIVE_INFINITY)
-  const endMs = nodes.reduce((max, node) => Math.max(max, node.endMs), 0)
-  return {
-    turnId,
-    turnIndex,
-    label: turnLabel(userMessages, turnIndex),
-    startMs: Number.isFinite(startMs) ? startMs : 0,
-    endMs,
-    nodes,
-  }
-}
+    .flatMap(collectKept)
 
-export function buildCodemodeRunTimeline(input: BuildCodemodeRunTimelineInput): CodemodeRunTimeline {
-  const normalizedSpans = input.spans.map(normalizeSpan)
-  const spansByTrace = new Map<string, NormalizedSpan[]>()
-  for (const span of normalizedSpans) {
-    const bucket = spansByTrace.get(span.traceId)
-    if (bucket) bucket.push(span)
-    else spansByTrace.set(span.traceId, [span])
-  }
-
-  const traces = input.traces.map((trace) => normalizeTrace(trace, spansByTrace.get(trace.traceId) ?? []))
+  // Turn grouping: a new turn begins at each main-agent entry (agent/plan). Sub-agent,
+  // tool, code and summarize roots join the current turn. No turn_id / message-count coupling.
   const userMessages = input.messages.filter((message) => message.role === "user")
-  const sessionEndMs = toMs(input.session.endTime)
-
-  const distinctTurnIds = new Set(
-    traces.map((trace) => trace.turnId).filter((turnId): turnId is string => turnId !== undefined),
-  )
-  const canGroupByTurnId = distinctTurnIds.size > 1 || (distinctTurnIds.size === 1 && userMessages.length <= 1)
-
-  let turns: CodemodeRunTurn[]
-  if (canGroupByTurnId && distinctTurnIds.size > 0) {
-    const byTurn = assignByTurnId(traces)
-    turns = [...byTurn.entries()].map(([turnId, group], index) => buildTurn(turnId, index, group, userMessages))
-  } else {
-    const hasTimestamps = userMessages.some((message) => message.atMs !== undefined)
-    const groups =
-      hasTimestamps && userMessages.length > 0
-        ? assignByMessageWindow(traces, userMessages, sessionEndMs)
-        : assignByPlanBoundary(traces)
-    turns = groups.map((group, index) => buildTurn(`${input.session.sessionId}:${index}`, index, group, userMessages))
+  const turnsNodes: CodemodeRunNode[][] = []
+  for (const node of forest) {
+    if (turnsNodes.length === 0 || TURN_ENTRY_KINDS.has(node.kind)) turnsNodes.push([node])
+    else turnsNodes[turnsNodes.length - 1]!.push(node)
   }
+  if (turnsNodes.length === 0) turnsNodes.push([])
 
-  turns.sort((a, b) => a.startMs - b.startMs || a.turnIndex - b.turnIndex)
-  return { turns: turns.map((turn, index) => ({ ...turn, turnIndex: index })) }
+  const turns: CodemodeRunTurn[] = turnsNodes.map((nodes, index) => {
+    const startMs = nodes.reduce((min, node) => Math.min(min, node.startMs), Number.POSITIVE_INFINITY)
+    const endMs = nodes.reduce((max, node) => Math.max(max, node.endMs), 0)
+    return {
+      turnId: `${input.session.sessionId}:${index}`,
+      turnIndex: index,
+      label: turnLabel(userMessages, index),
+      startMs: Number.isFinite(startMs) ? startMs : 0,
+      endMs,
+      nodes,
+    }
+  })
+
+  return { turns }
 }

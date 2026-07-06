@@ -43,9 +43,10 @@ export interface SpanRecord {
   readonly attrBool?: Readonly<Record<string, boolean>>
 }
 
+// The Run tab reconstructs the agent→sub-agent graph from natural keys: functionId
+// (node role), run_id (the cross-trace sub-agent edge), and parent_tool_call_id
+// (disambiguates the delegating tool span). Turn/phase are derived, not read.
 const CODEMODE_TIMELINE_ATTR_STRING_KEYS = [
-  "latitude.codemode.phase",
-  "latitude.codemode.turn_id",
   "latitude.agent_tool.parent_tool_call_id",
   "latitude.agent_tool.run_id",
   "ai.telemetry.functionId",
