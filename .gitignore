@@ -62,6 +62,7 @@ coverage
 out
 build
 dist
+.vercel
 
 # Vim crap
 *.ts-E
