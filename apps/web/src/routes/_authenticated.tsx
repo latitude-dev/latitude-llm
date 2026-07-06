@@ -107,6 +107,8 @@ function BillingCreditCounter({ organizationId }: { readonly organizationId: str
   const hasIncludedCredits = includedCredits !== null && includedCredits > 0
   const progress = hasIncludedCredits ? Math.min(totalUsedCredits / includedCredits, 1) : 1
   const isOverage = overview.overageCredits > 0
+  const isAtIncludedLimit = hasIncludedCredits && totalUsedCredits >= includedCredits
+  const showLimitState = isOverage || (overview.planSlug === "free" && isAtIncludedLimit)
   const strokeOffset = BILLING_COUNTER_CIRCUMFERENCE * (1 - progress)
   const consumedLabel = numberFormatter.format(totalUsedCredits)
   const includedLabel = includedCredits === null ? "custom" : numberFormatter.format(includedCredits)
@@ -170,14 +172,14 @@ function BillingCreditCounter({ organizationId }: { readonly organizationId: str
                   strokeDasharray={BILLING_COUNTER_CIRCUMFERENCE}
                   strokeDashoffset={strokeOffset}
                   className={cn("transition-colors", {
-                    "text-primary": !isOverage,
-                    "text-destructive": isOverage,
+                    "text-primary": !showLimitState,
+                    "text-destructive": showLimitState,
                   })}
                 />
               </svg>
             </span>
             <div className="hidden items-baseline gap-1 md:flex">
-              <Text.H6 weight="medium" color={isOverage ? "destructive" : "foreground"}>
+              <Text.H6 weight="medium" color={showLimitState ? "destructive" : "foreground"}>
                 {usageLabel}
               </Text.H6>
             </div>
