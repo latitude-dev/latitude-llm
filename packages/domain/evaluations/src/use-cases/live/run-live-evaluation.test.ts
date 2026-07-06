@@ -983,6 +983,100 @@ describe("runLiveEvaluationUseCase", () => {
     expect(scriptRuntime.calls.run).toHaveLength(0)
   })
 
+  it("defers when occurrences exist but message embeddings are not stored yet", async () => {
+    const evaluation = makeEvaluation({ script: EMBEDDING_SCRIPT })
+    const traceDetail = makeTraceDetail()
+    const { repository: traceRepository } = createFakeTraceRepository({
+      findByTraceId: () => Effect.succeed(traceDetail),
+    })
+    const evaluationRepository = createEvaluationRepository(() => Effect.succeed(evaluation))
+    const signalRepository = createSignalRepository(() =>
+      Effect.die("Signal should not be loaded while deferring for embeddings"),
+    )
+    const scriptRuntime = createFakeScriptRuntime({
+      run: () => Effect.die("Script should not run while deferring for embeddings"),
+    })
+    const published: Array<{ payload: unknown; options: unknown }> = []
+    const publisher = createNoopPublisher({
+      publish: (_queue, _task, payload, options) =>
+        Effect.sync(() => {
+          published.push({ payload, options })
+        }),
+    })
+    const traceSearchRepository = createFakeTraceSearchRepository({
+      listMessageOccurrencesForTraces: () =>
+        Effect.succeed([{ contentHash: "hash-a", role: "user" as const }]),
+    }).repository
+
+    const result = await Effect.runPromise(
+      runLiveEvaluationUseCase(INPUT).pipe(
+        Effect.provide(
+          createUseCaseLayer({
+            traceRepository,
+            evaluationRepository,
+            signalRepository,
+            publisher,
+            scriptRuntimeLayer: scriptRuntime.layer,
+            traceSearchRepository,
+          }),
+        ),
+      ),
+    )
+
+    expect(result).toEqual({
+      action: "skipped",
+      reason: "awaiting-embeddings",
+      evaluationId: INPUT.evaluationId,
+      traceId: INPUT.traceId,
+    })
+    expect(published).toHaveLength(1)
+    expect(scriptRuntime.calls.run).toHaveLength(0)
+  })
+
+  it("skips without scoring when wait attempts are exhausted but vectors never arrived", async () => {
+    const evaluation = makeEvaluation({ script: EMBEDDING_SCRIPT })
+    const traceDetail = makeTraceDetail()
+    const { repository: traceRepository } = createFakeTraceRepository({
+      findByTraceId: () => Effect.succeed(traceDetail),
+    })
+    const evaluationRepository = createEvaluationRepository(() => Effect.succeed(evaluation))
+    const signalRepository = createSignalRepository(() =>
+      Effect.die("Signal should not be loaded when vectors never arrived"),
+    )
+    const scriptRuntime = createFakeScriptRuntime({
+      run: () => Effect.die("Script should not run when vectors never arrived"),
+    })
+    const traceSearchRepository = createFakeTraceSearchRepository({
+      listMessageOccurrencesForTraces: () =>
+        Effect.succeed([{ contentHash: "hash-a", role: "user" as const }]),
+    }).repository
+    const { operations, scoreWriteLayer } = createTrackedScoreWriteFixture()
+
+    const result = await Effect.runPromise(
+      runLiveEvaluationUseCase({ ...INPUT, embeddingWaitAttempt: 99 }).pipe(
+        Effect.provide(
+          createUseCaseLayer({
+            traceRepository,
+            evaluationRepository,
+            signalRepository,
+            scoreWriteLayer,
+            scriptRuntimeLayer: scriptRuntime.layer,
+            traceSearchRepository,
+          }),
+        ),
+      ),
+    )
+
+    expect(result).toEqual({
+      action: "skipped",
+      reason: "awaiting-embeddings",
+      evaluationId: INPUT.evaluationId,
+      traceId: INPUT.traceId,
+    })
+    expect(scriptRuntime.calls.run).toHaveLength(0)
+    expect(operations).toEqual([])
+  })
+
   it("runs an embedding-capability evaluation anyway once the wait attempts are exhausted", async () => {
     const evaluation = makeEvaluation({ script: EMBEDDING_SCRIPT })
     const issue = makeSignal({ id: SignalId(evaluation.signalId) })

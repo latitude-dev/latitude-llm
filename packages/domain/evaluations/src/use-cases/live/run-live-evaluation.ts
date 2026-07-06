@@ -1,4 +1,4 @@
-import type { AI } from "@domain/ai"
+import { type AI, resolveEmbeddingConfig } from "@domain/ai"
 import {
   authorizeBillableAction,
   type BillingOverrideRepository,
@@ -37,7 +37,7 @@ import {
   TraceId,
 } from "@domain/shared"
 import {
-  type MessageEmbeddingRepository,
+  MessageEmbeddingRepository,
   type SessionRepository,
   type SpanRepository,
   type TraceDetail,
@@ -60,11 +60,45 @@ import {
 /**
  * Readiness gate for embedding-capability evaluations: `signals:match` and `trace-end` are siblings off
  * `TracesIngested`, and `trace-search` (which writes `message_embeddings`) runs after `trace-end`, so
- * embeddings usually aren't indexed when the eval first fires. Defer with a bounded delayed re-publish;
- * on the final attempt run anyway (the host returns 0 for whatever's still missing).
+ * embeddings usually aren't indexed when the eval first fires. Defer with a bounded delayed re-publish.
+ * When occurrences exist but no vectors are stored yet (ingest race or embed-budget skip), defer too —
+ * running early would persist a false negative (`result-already-exists` blocks retry). After exhaustion,
+ * run only when the trace has no occurrences (nothing to compare); otherwise skip without scoring.
  */
 const MAX_EMBEDDING_WAIT_ATTEMPTS = 6
 const EMBEDDING_WAIT_DELAY_MS = 5_000
+
+const traceEmbeddingVectorsIndexed = (input: {
+  readonly organizationId: OrganizationId
+  readonly projectId: ProjectId
+  readonly traceId: TraceId
+}) =>
+  Effect.gen(function* () {
+    const traceSearchRepository = yield* TraceSearchRepository
+    const messageEmbeddingRepository = yield* MessageEmbeddingRepository
+    const occurrences = yield* traceSearchRepository.listMessageOccurrencesForTraces({
+      organizationId: input.organizationId,
+      projectId: input.projectId,
+      traceIds: [input.traceId],
+    })
+    if (occurrences.length === 0) {
+      return { indexed: false, occurrences: 0 } as const
+    }
+
+    const embeddingConfig = yield* resolveEmbeddingConfig().pipe(Effect.option)
+    if (embeddingConfig._tag === "None") {
+      return { indexed: true, occurrences: occurrences.length } as const
+    }
+
+    const uniqueHashes = [...new Set(occurrences.map((occurrence) => occurrence.contentHash))]
+    const rows = yield* messageEmbeddingRepository.findByHashes({
+      organizationId: input.organizationId,
+      projectId: input.projectId,
+      contentHashes: uniqueHashes,
+      embeddingModel: embeddingConfig.value.model,
+    })
+    return { indexed: rows.length > 0, occurrences: occurrences.length } as const
+  })
 
 export interface RunLiveEvaluationInput {
   readonly organizationId: string
@@ -231,13 +265,12 @@ export const runLiveEvaluationUseCase = (input: RunLiveEvaluationInput) =>
     // missing anyway, the host degrades gracefully (returns 0 for the absent vectors), so single-trace
     // readiness is sufficient here.
     if (hasEmbeddingCapability(detectScriptCapabilities(evaluation.script))) {
-      const traceSearchRepository = yield* TraceSearchRepository
-      const occurrences = yield* traceSearchRepository.listMessageOccurrencesForTraces({
+      const embeddingReadiness = yield* traceEmbeddingVectorsIndexed({
         organizationId: OrganizationId(input.organizationId),
         projectId,
-        traceIds: [TraceId(input.traceId)],
+        traceId: TraceId(input.traceId),
       })
-      if (occurrences.length === 0) {
+      if (!embeddingReadiness.indexed) {
         const attempt = input.embeddingWaitAttempt ?? 0
         if (attempt < MAX_EMBEDDING_WAIT_ATTEMPTS) {
           const nextAttempt = attempt + 1
@@ -264,8 +297,17 @@ export const runLiveEvaluationUseCase = (input: RunLiveEvaluationInput) =>
             traceId: input.traceId,
           } satisfies RunLiveEvaluationResult
         }
-        // Out of attempts: run anyway (host returns 0 for the missing vectors). Metric proxy for "never arrived".
-        yield* Effect.annotateCurrentSpan("evaluation.embeddingsMissingAtRun", true)
+        if (embeddingReadiness.occurrences === 0) {
+          yield* Effect.annotateCurrentSpan("evaluation.embeddingsMissingAtRun", true)
+        } else {
+          yield* Effect.annotateCurrentSpan("evaluation.embeddingsUnavailableAtRun", true)
+          return {
+            action: "skipped",
+            reason: "awaiting-embeddings",
+            evaluationId: input.evaluationId,
+            traceId: input.traceId,
+          } satisfies RunLiveEvaluationResult
+        }
       }
     }
 
