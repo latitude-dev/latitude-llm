@@ -45,7 +45,6 @@ const float SMOKE_SCALE_FOCUS = 60.0;
 const float BLOOM = 0.33;
 const float BASE_RING_ALPHA = 0.5;
 const float POOL_HEIGHT = 0.45;
-const float POOL_DRIFT = 0.05;
 `
 
 const HELPERS = `
@@ -115,7 +114,9 @@ vec3 poolColor(int index) {
 }
 
 // Loading fill after marketing gradient preset E: a quiet slice of the preset ramp with
-// soft pools of light rising and falling along the bottom edge, a voice meter slowed down.
+// soft pools of light along the bottom edge, rising and falling like a slowed-down voice
+// meter. Pool centers roam the full width at incommensurate speeds and all pools pour
+// into one weighted-average field, so the union reads as a single shifting mass.
 // Everything is in box fractions so the composition survives any textarea aspect ratio.
 vec3 pools(vec2 p, vec2 halfSize) {
   vec2 box = 2.0 * halfSize;
@@ -125,22 +126,32 @@ vec3 pools(vec2 p, vec2 halfSize) {
   vec3 light = rampLight(tBase);
 
   float yUp = p.y + halfSize.y;
+  float px = p.x + 0.07 * box.x * sin(2.4 * yUp / box.y + 0.35 * u_time + 1.3 * p.x / box.x);
+
+  vec3 rgbSum = vec3(0.0);
+  float weightSum = 0.0;
   for (int i = 0; i < 5; i++) {
     float fi = float(i);
-    float slot = (fi + 0.5) / 5.0;
-    float wobble = POOL_DRIFT * sin(u_time * (0.21 + 0.07 * fi) + fi * 2.4);
-    float cx = (slot + wobble - 0.5) * box.x;
+    float path = 0.5 + 0.3 * sin(u_time * (0.14 + 0.03 * fi) + fi * 2.4)
+      + 0.14 * sin(u_time * (0.06 + 0.02 * fi) + fi * 5.1);
+    float cx = (path - 0.5) * box.x;
     float voice = 0.5 + 0.3 * sin(u_time * (0.55 + 0.17 * fi) + fi * 1.9)
       + 0.2 * sin(u_time * (0.83 + 0.11 * fi) + fi * 4.1);
-    float sigmaX = (0.11 + 0.03 * sin(fi * 5.7)) * box.x;
-    float dx = (p.x - cx) / sigmaX;
+    float sigmaX = (0.16 + 0.04 * sin(fi * 5.7)) * box.x;
+    float dx = (px - cx) / sigmaX;
     float reach = max(POOL_HEIGHT * box.y * voice, 1.0);
     float dy = yUp / reach;
     float w = voice * exp(-0.5 * dx * dx - 2.3 * dy * dy);
-    dark += poolColor(i) * w;
-    light = mix(light, poolColor(i), min(w, 1.0) * 0.75);
+    rgbSum += poolColor(i) * w;
+    weightSum += w;
   }
-  dark = min(dark, vec3(1.0));
+
+  // Weighted-average hue with saturating energy: overlaps blend color instead of
+  // stacking toward white, and the union has one smooth intensity field.
+  vec3 blend = rgbSum / max(weightSum, 0.001);
+  float energy = 1.0 - exp(-1.4 * weightSum);
+  dark = min(dark + blend * energy, vec3(1.0));
+  light = mix(light, blend, 0.85 * energy);
   return mix(dark, light, u_light);
 }
 
