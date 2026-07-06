@@ -11,8 +11,10 @@ import {
   Tooltip,
 } from "@repo/ui"
 import { formatCount } from "@repo/utils"
-import { Link } from "@tanstack/react-router"
+import { Link, useNavigate } from "@tanstack/react-router"
 import { CircleDashedIcon } from "lucide-react"
+import { useCallback, useMemo } from "react"
+import { useListRowKeyboardNav } from "../../../../../../lib/hooks/useListRowKeyboardNav.ts"
 import {
   SIGNAL_PRIORITY_GROUP_ORDER,
   SIGNAL_PRIORITY_META,
@@ -141,6 +143,9 @@ export function SignalsView({
   selection,
   onSortChange,
   projectSlug,
+  focusedSignalId,
+  onFocusedSignalChange,
+  keyboardNavEnabled = true,
 }: {
   readonly issues: readonly SignalRecord[]
   readonly rowMetricsBySignalId: SignalRowMetricsRecord["metricsBySignalId"]
@@ -152,8 +157,28 @@ export function SignalsView({
   readonly selection: InfiniteTableSelection
   readonly onSortChange: (sorting: SignalsTableSorting) => void
   readonly projectSlug: string
+  readonly focusedSignalId?: string | undefined
+  readonly onFocusedSignalChange?: (signalId: string | undefined) => void
+  readonly keyboardNavEnabled?: boolean
 }) {
+  const navigate = useNavigate()
   const memberByUserId = useMemberByUserIdMap()
+  const signalIds = useMemo(() => issues.map((issue) => issue.id), [issues])
+
+  const openSignal = useCallback(
+    (signalId: string) => {
+      void navigate({ to: "/projects/$projectSlug/signals/$signalId", params: { projectSlug, signalId } })
+    },
+    [navigate, projectSlug],
+  )
+
+  useListRowKeyboardNav({
+    rowIds: signalIds,
+    focusedRowId: focusedSignalId,
+    onFocusedRowChange: (signalId) => onFocusedSignalChange?.(signalId),
+    onOpenRow: openSignal,
+    enabled: keyboardNavEnabled,
+  })
 
   const columns: InfiniteTableColumn<SignalRecord>[] = [
     {
@@ -303,6 +328,7 @@ export function SignalsView({
           isLoading={isLoading}
           columns={columns}
           getRowKey={(issue) => issue.id}
+          {...(focusedSignalId ? { activeRowKey: focusedSignalId, activeRowAutoScroll: true } : {})}
           selection={selection}
           getRowGroup={(issue) => issue.priority ?? "none"}
           groupOrder={SIGNAL_PRIORITY_GROUP_ORDER}

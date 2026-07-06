@@ -10,6 +10,7 @@ interface CodeMirrorReadonlyProps {
   readonly value: string
   readonly className?: string
   readonly wrapLines?: boolean
+  readonly onReady?: () => void
 }
 
 function isJson(value: string): boolean {
@@ -68,7 +69,7 @@ function buildState(doc: string, isJsonContent: boolean, wrapLines: boolean) {
   return EditorState.create({ doc, extensions })
 }
 
-export function CodeMirrorReadonly({ value, className, wrapLines = true }: CodeMirrorReadonlyProps) {
+export function CodeMirrorReadonly({ value, className, wrapLines = true, onReady }: CodeMirrorReadonlyProps) {
   const containerRef = useRef<HTMLDivElement>(null)
   const viewRef = useRef<EditorView | null>(null)
   const initialValueRef = useRef(value)
@@ -83,6 +84,7 @@ export function CodeMirrorReadonly({ value, className, wrapLines = true }: CodeM
       parent: container,
     })
     viewRef.current = view
+    onReady?.()
 
     return () => {
       view.destroy()

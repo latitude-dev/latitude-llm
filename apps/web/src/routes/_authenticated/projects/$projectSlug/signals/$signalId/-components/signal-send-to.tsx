@@ -1,10 +1,8 @@
 import type { AgentDispatchKind } from "@domain/agent-dispatch"
 import {
   Button,
-  ClaudeCodeIcon,
   CloseTrigger,
-  CodeBlock,
-  CursorIcon,
+  CopyButton,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuLabel,
@@ -14,8 +12,6 @@ import {
   DropdownMenuTrigger,
   Icon,
   Modal,
-  OpenaiIcon,
-  OpencodeIcon,
   Skeleton,
   Text,
   ToastAction,
@@ -23,9 +19,7 @@ import {
 } from "@repo/ui"
 import { useMutation, useQuery } from "@tanstack/react-query"
 import { Link } from "@tanstack/react-router"
-import type { LucideProps } from "lucide-react"
-import { Plus, SendIcon } from "lucide-react"
-import type { ComponentType } from "react"
+import { Clipboard, Plus, Sparkles } from "lucide-react"
 import { useState } from "react"
 import {
   getSignalDispatchPrompt,
@@ -38,20 +32,6 @@ import { toUserMessage } from "../../../../../../../lib/errors.ts"
 import { AGENT_DISPATCH_KIND_ICONS } from "../../../settings/-components/agent-dispatch-section.tsx"
 
 const MCP_DOCS_URL = "https://docs.latitude.so/getting-started/mcp"
-
-interface LocalHarness {
-  readonly id: string
-  readonly label: string
-  readonly icon: ComponentType<LucideProps>
-  readonly cliCommand: string
-}
-
-const LOCAL_HARNESSES: readonly LocalHarness[] = [
-  { id: "cursor", label: "Cursor", icon: CursorIcon, cliCommand: "cursor-agent" },
-  { id: "claude-code", label: "Claude Code", icon: ClaudeCodeIcon, cliCommand: "claude" },
-  { id: "codex", label: "Codex", icon: OpenaiIcon, cliCommand: "codex" },
-  { id: "opencode", label: "OpenCode", icon: OpencodeIcon, cliCommand: "opencode" },
-]
 
 const CLOUD_KIND_LABELS: Record<AgentDispatchKind, string> = {
   cursor: "Cursor Cloud",
@@ -77,7 +57,7 @@ export function SignalSendTo({
   readonly disabled?: boolean
 }) {
   const { toast } = useToast()
-  const [activeHarness, setActiveHarness] = useState<LocalHarness | null>(null)
+  const [promptModalOpen, setPromptModalOpen] = useState(false)
 
   const { data: dispatchEnabled } = useQuery({
     queryKey: ["agent-dispatch-enabled"],
@@ -120,44 +100,28 @@ export function SignalSendTo({
     onError: (error) => toast({ variant: "destructive", description: toUserMessage(error) }),
   })
 
+  const hasCloudDestinations = (destinations?.length ?? 0) > 0
+  const showCloudSection = dispatchEnabled?.enabled === true
+
   return (
     <>
       <DropdownMenuRoot modal={false}>
         <DropdownMenuTrigger asChild>
           <Button variant="outline" size="sm" className="text-sm" disabled={disabled}>
-            <Icon icon={SendIcon} size="sm" />
-            Send to
+            <Icon icon={Sparkles} size="sm" />
+            Send to agent
           </Button>
         </DropdownMenuTrigger>
         <DropdownMenuPortal>
           <DropdownMenuContent align="end" className="w-56">
-            <DropdownMenuLabel>Open in your agent</DropdownMenuLabel>
-            {LOCAL_HARNESSES.map((harness) => (
-              <DropdownMenuItem
-                key={harness.id}
-                className="cursor-pointer items-center gap-2"
-                onSelect={() => setActiveHarness(harness)}
-              >
-                <Icon icon={harness.icon} size="sm" />
-                <Text.H5>{harness.label}</Text.H5>
-              </DropdownMenuItem>
-            ))}
-            {dispatchEnabled?.enabled ? (
+            {showCloudSection ? (
               <>
-                <DropdownMenuSeparator />
-                <DropdownMenuLabel>Send to integration</DropdownMenuLabel>
+                <DropdownMenuLabel className="font-medium text-muted-foreground">Cloud agents</DropdownMenuLabel>
                 {destinationsLoading ? (
                   <DropdownMenuItem disabled className="items-center gap-2">
                     <Text.H5 color="foregroundMuted">Loading integrations…</Text.H5>
                   </DropdownMenuItem>
-                ) : (destinations?.length ?? 0) === 0 ? (
-                  <DropdownMenuItem asChild className="cursor-pointer items-center gap-2">
-                    <Link to="/projects/$projectSlug/settings/integrations" params={{ projectSlug }}>
-                      <Icon icon={Plus} size="sm" />
-                      <Text.H5>Connect an integration…</Text.H5>
-                    </Link>
-                  </DropdownMenuItem>
-                ) : (
+                ) : hasCloudDestinations ? (
                   destinations?.map((destination) => (
                     <DropdownMenuItem
                       key={destination.configId}
@@ -172,33 +136,46 @@ export function SignalSendTo({
                       <Text.H5>{CLOUD_KIND_LABELS[destination.kind]}</Text.H5>
                     </DropdownMenuItem>
                   ))
+                ) : (
+                  <DropdownMenuItem asChild className="cursor-pointer items-center gap-2">
+                    <Link to="/projects/$projectSlug/settings/integrations" params={{ projectSlug }}>
+                      <Icon icon={Plus} size="sm" />
+                      <Text.H5>Set up cloud agents</Text.H5>
+                    </Link>
+                  </DropdownMenuItem>
                 )}
+                <DropdownMenuSeparator />
               </>
             ) : null}
+            <DropdownMenuLabel className="font-medium text-muted-foreground">Local agents</DropdownMenuLabel>
+            <DropdownMenuItem
+              className="cursor-pointer items-center gap-2"
+              onSelect={() => setPromptModalOpen(true)}
+            >
+              <Icon icon={Clipboard} size="sm" />
+              <Text.H5>Copy prompt</Text.H5>
+            </DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenuPortal>
       </DropdownMenuRoot>
-      {activeHarness ? (
-        <SendToHarnessModal
+      {promptModalOpen ? (
+        <CopyPromptModal
           projectId={projectId}
           signalId={signalId}
-          harness={activeHarness}
-          onClose={() => setActiveHarness(null)}
+          onClose={() => setPromptModalOpen(false)}
         />
       ) : null}
     </>
   )
 }
 
-function SendToHarnessModal({
+function CopyPromptModal({
   projectId,
   signalId,
-  harness,
   onClose,
 }: {
   readonly projectId: string
   readonly signalId: string
-  readonly harness: LocalHarness
   readonly onClose: () => void
 }) {
   const { data, isLoading, isError } = useQuery({
@@ -206,36 +183,39 @@ function SendToHarnessModal({
     queryFn: () => getSignalDispatchPrompt({ data: { projectId, signalId } }),
   })
 
+  const prompt = data?.prompt
+
   return (
     <Modal
       open
       dismissible
       onOpenChange={(next) => (!next ? onClose() : undefined)}
-      title={`Send to ${harness.label}`}
-      description={`Copy this prompt into ${harness.label} in the repository that produced these traces.`}
+      title="Copy prompt"
+      description="Paste this into Cursor, Claude Code, Codex, OpenCode, or any coding agent in the repository that produced these traces."
       footer={<CloseTrigger />}
     >
       <div className="flex flex-col gap-4">
-        {isLoading ? (
-          <Skeleton className="h-48 w-full" />
-        ) : isError || !data ? (
+        {isError || (!isLoading && !prompt) ? (
           <Text.H6 color="destructive">Could not load the prompt. Close this dialog and try again.</Text.H6>
+        ) : isLoading ? (
+          <Skeleton className="h-48 w-full" />
         ) : (
-          <CodeBlock value={data.prompt} expandable={false} className="max-h-80" />
+          <div className="group relative">
+            <div className="absolute top-0 right-0 z-10 rounded-tr-md rounded-bl-lg bg-muted p-0.5">
+              <CopyButton value={prompt ?? ""} tooltip="Copy" />
+            </div>
+            <pre className="max-h-80 overflow-y-auto rounded-md bg-muted p-3 pr-12 font-mono text-xs leading-relaxed break-words whitespace-pre-wrap">
+              {prompt}
+            </pre>
+          </div>
         )}
-        <div className="flex flex-col gap-1">
-          <Text.H6 display="block" color="foregroundMuted">
-            Or run <span className="font-mono text-foreground">{harness.cliCommand}</span> in your repository and paste
-            the prompt.
-          </Text.H6>
-          <Text.H6 display="block" color="foregroundMuted">
-            Works best with the{" "}
-            <a href={MCP_DOCS_URL} target="_blank" rel="noreferrer" className="underline hover:text-foreground">
-              Latitude MCP server
-            </a>{" "}
-            connected, but the prompt carries trace IDs and excerpts as starting evidence either way.
-          </Text.H6>
-        </div>
+        <Text.H6 display="block" color="foregroundMuted">
+          Works best with the{" "}
+          <a href={MCP_DOCS_URL} target="_blank" rel="noreferrer" className="underline hover:text-foreground">
+            Latitude MCP server
+          </a>{" "}
+          connected, but the prompt carries trace IDs and excerpts as starting evidence either way.
+        </Text.H6>
       </div>
     </Modal>
   )

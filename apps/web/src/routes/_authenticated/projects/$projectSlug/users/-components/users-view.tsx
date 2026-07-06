@@ -7,8 +7,9 @@ import {
   Tooltip,
 } from "@repo/ui"
 import { formatCount, formatPrice } from "@repo/utils"
-import { Link } from "@tanstack/react-router"
-import { useState } from "react"
+import { Link, useNavigate } from "@tanstack/react-router"
+import { useCallback, useMemo, useState } from "react"
+import { useListRowKeyboardNav } from "../../../../../../lib/hooks/useListRowKeyboardNav.ts"
 import type { ProjectUserRecord } from "../../../../../../domains/end-users/end-users.functions.ts"
 import {
   ListingLayout as Layout,
@@ -133,6 +134,9 @@ export function UsersView({
   visibleColumnIds,
   onSortChange,
   projectSlug,
+  focusedUserId,
+  onFocusedUserChange,
+  keyboardNavEnabled = true,
 }: {
   readonly users: readonly ProjectUserRecord[]
   readonly isLoading: boolean
@@ -144,7 +148,27 @@ export function UsersView({
   readonly visibleColumnIds: readonly UsersColumnId[]
   readonly onSortChange: (sorting: UsersTableSorting) => void
   readonly projectSlug: string
+  readonly focusedUserId?: string | undefined
+  readonly onFocusedUserChange?: (userId: string | undefined) => void
+  readonly keyboardNavEnabled?: boolean
 }) {
+  const navigate = useNavigate()
+  const userIds = useMemo(() => users.map((user) => user.userId), [users])
+
+  const openUser = useCallback(
+    (userId: string) => {
+      void navigate({ to: "/projects/$projectSlug/users/$userId", params: { projectSlug, userId } })
+    },
+    [navigate, projectSlug],
+  )
+
+  useListRowKeyboardNav({
+    rowIds: userIds,
+    focusedRowId: focusedUserId,
+    onFocusedRowChange: (userId) => onFocusedUserChange?.(userId),
+    onOpenRow: openUser,
+    enabled: keyboardNavEnabled,
+  })
   const [costMode, setCostMode] = useState<CostMode>(() =>
     sorting.column === "costAvg" ? "avg" : sorting.column === "costMedian" ? "median" : "sum",
   )
@@ -289,6 +313,7 @@ export function UsersView({
           isLoading={isLoading}
           columns={columns}
           getRowKey={(user) => user.userId}
+          {...(focusedUserId ? { activeRowKey: focusedUserId, activeRowAutoScroll: true } : {})}
           renderRowLink={(user, props) => (
             <Link
               to="/projects/$projectSlug/users/$userId"

@@ -146,9 +146,17 @@ const INTEGRATION_ICONS = AGENT_DISPATCH_KIND_ICONS
 const CLAUDE_ROUTINE_TEMPLATE =
   "Inspect the Latitude signal, identify the regression or newly discovered issue, implement the fix, run the relevant checks, and report what changed."
 
-function IntegrationDocsButton({ kind }: { readonly kind: AgentDispatchKindKey }) {
+function IntegrationDocsButton({
+  kind,
+  fullWidth = false,
+  variant = "outline",
+}: {
+  readonly kind: AgentDispatchKindKey
+  readonly fullWidth?: boolean
+  readonly variant?: "outline" | "ghost"
+}) {
   return (
-    <Button asChild variant="outline" size="sm" className="w-auto shrink-0">
+    <Button asChild variant={variant} size="sm" className={fullWidth ? "w-full" : "w-auto shrink-0"}>
       <a href={INTEGRATION_DOC_URLS[kind]} target="_blank" rel="noreferrer">
         <Icon icon={BookOpen} size="sm" />
         Setup guide
@@ -998,15 +1006,14 @@ function ConnectAgentDispatchModal({
                 3. Return here, paste the key, and click Connect. You can revoke the key later from Cursor settings.
               </Text.H6>
             </div>
-            <div className="flex flex-row flex-wrap gap-2 pt-1">
-              <IntegrationDocsButton kind={kind} />
-              <Button asChild variant="outline" size="sm">
+            <div className="flex flex-row flex-wrap items-center gap-2 pt-1">
+              <Button asChild variant="outline" size="sm" className="w-auto shrink-0">
                 <a href="https://cursor.com/dashboard/api" target="_blank" rel="noreferrer">
                   <Icon icon={ExternalLink} size="sm" />
                   Cursor
                 </a>
               </Button>
-              <Button asChild variant="outline" size="sm">
+              <Button asChild variant="ghost" size="sm" className="w-auto shrink-0">
                 <a
                   href="https://cursor.com/docs/cli/reference/authentication#api-key-authentication"
                   target="_blank"
@@ -1016,6 +1023,7 @@ function ConnectAgentDispatchModal({
                   Cursor docs
                 </a>
               </Button>
+              <IntegrationDocsButton kind={kind} variant="ghost" />
             </div>
           </div>
           <div className="flex flex-col gap-3">
@@ -1114,9 +1122,12 @@ function ConnectAgentDispatchModal({
               <Text.H6 display="block" color="foregroundMuted">
                 4. Paste both values here. Latitude will extract the routine ID from the page URL.
               </Text.H6>
+            </div>
+            <div className="flex flex-col gap-2 pt-1">
               <Button
                 variant="outline"
                 size="sm"
+                className="w-full"
                 onClick={async () => {
                   await navigator.clipboard.writeText(CLAUDE_ROUTINE_TEMPLATE)
                   toast({ description: "Routine description copied" })
@@ -1125,21 +1136,21 @@ function ConnectAgentDispatchModal({
                 <Icon icon={Copy} size="sm" />
                 Copy routine description
               </Button>
-            </div>
-            <div className="flex flex-row flex-wrap gap-2 pt-1">
-              <IntegrationDocsButton kind={kind} />
-              <Button asChild variant="outline" size="sm">
-                <a href="https://claude.ai/code/routines" target="_blank" rel="noreferrer">
-                  <Icon icon={ExternalLink} size="sm" />
-                  Claude Code
-                </a>
-              </Button>
-              <Button asChild variant="outline" size="sm">
-                <a href="https://code.claude.com/docs/en/routines" target="_blank" rel="noreferrer">
-                  <Icon icon={ExternalLink} size="sm" />
-                  Claude Code docs
-                </a>
-              </Button>
+              <div className="flex flex-row flex-wrap items-center justify-center gap-2">
+                <Button asChild variant="outline" size="sm" className="w-auto shrink-0">
+                  <a href="https://claude.ai/code/routines" target="_blank" rel="noreferrer">
+                    <Icon icon={ExternalLink} size="sm" />
+                    Claude Code
+                  </a>
+                </Button>
+                <Button asChild variant="ghost" size="sm" className="w-auto shrink-0">
+                  <a href="https://code.claude.com/docs/en/routines" target="_blank" rel="noreferrer">
+                    <Icon icon={ExternalLink} size="sm" />
+                    Claude Code docs
+                  </a>
+                </Button>
+                <IntegrationDocsButton kind={kind} variant="ghost" />
+              </div>
             </div>
           </div>
           <form.Field name="claudeRoutineToken">
@@ -1183,20 +1194,20 @@ function ConnectAgentDispatchModal({
                 3. Paste the key, then choose the Linear team where Latitude should create issues.
               </Text.H6>
             </div>
-            <div className="flex flex-row flex-wrap gap-2 pt-1">
-              <IntegrationDocsButton kind={kind} />
-              <Button asChild variant="outline" size="sm">
+            <div className="flex flex-row flex-wrap items-center gap-2 pt-1">
+              <Button asChild variant="outline" size="sm" className="w-auto shrink-0">
                 <a href="https://linear.app/latitude/settings/account/security" target="_blank" rel="noreferrer">
                   <Icon icon={ExternalLink} size="sm" />
-                  Open Linear API settings
+                  Linear API settings
                 </a>
               </Button>
-              <Button asChild variant="outline" size="sm">
+              <Button asChild variant="ghost" size="sm" className="w-auto shrink-0">
                 <a href="https://linear.app/docs/graphql/working-with-the-graphql-api" target="_blank" rel="noreferrer">
                   <Icon icon={ExternalLink} size="sm" />
                   Linear API docs
                 </a>
               </Button>
+              <IntegrationDocsButton kind={kind} variant="ghost" />
             </div>
           </div>
           <div className="flex flex-col gap-3">
@@ -1267,8 +1278,8 @@ function ConnectAgentDispatchModal({
                 4. Return a 2xx response when your system accepts the dispatch.
               </Text.H6>
             </div>
-            <div className="flex flex-row flex-wrap gap-2 pt-1">
-              <IntegrationDocsButton kind={kind} />
+            <div className="flex flex-row flex-wrap items-center gap-2 pt-1">
+              <IntegrationDocsButton kind={kind} variant="outline" />
             </div>
           </div>
           <form.Field name="webhookUrl">

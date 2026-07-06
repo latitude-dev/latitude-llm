@@ -1,7 +1,7 @@
 import { Input, Tabs, useValueWithDefault } from "@repo/ui"
 import { createFileRoute } from "@tanstack/react-router"
 import { CircleSlashIcon, LayoutGridIcon, SearchIcon, TriangleAlertIcon } from "lucide-react"
-import { useCallback, useMemo } from "react"
+import { useCallback, useEffect, useMemo, useState } from "react"
 import { allToolsMonitorTarget } from "../../../../../domains/monitors/monitor-target.ts"
 import { useProjectTools, useToolCallHistogram } from "../../../../../domains/tools/tools.collection.ts"
 import { ListingLayout as Layout } from "../../../../../layouts/ListingLayout/index.tsx"
@@ -84,6 +84,7 @@ function ToolsPageContent() {
   })
   const sorting = useMemo(() => parseSorting(rawSorting), [rawSorting])
   const setSorting = useCallback((next: ToolsTableSorting) => setRawSorting(serializeSorting(next)), [setRawSorting])
+  const [focusedToolName, setFocusedToolName] = useState<string | undefined>()
   const columnSettings = useTableColumnSettings<ToolsColumnId>({
     storageKey: "projects.tools.columns.v1",
     columns: TOOLS_COLUMN_OPTIONS,
@@ -138,6 +139,10 @@ function ToolsPageContent() {
     () => visibleTools.reduce((sum, tool) => sum + (tool.metrics?.calls ?? 0), 0),
     [visibleTools],
   )
+
+  useEffect(() => {
+    setFocusedToolName(undefined)
+  }, [searchQuery, statusTab, rawSorting, timeFrom, timeTo])
 
   const hasAnyTools = (analytics?.tools.length ?? 0) > 0
   const showEmptyState = !isLoading && !hasAnyTools && !searchQuery && statusTab === "all"
@@ -226,6 +231,8 @@ function ToolsPageContent() {
             rangeFromIso={range.fromIso}
             rangeToIso={range.toIso}
             trendBucketSeconds={trendBucketSeconds}
+            focusedToolName={focusedToolName}
+            onFocusedToolChange={setFocusedToolName}
           />
         </>
       )}

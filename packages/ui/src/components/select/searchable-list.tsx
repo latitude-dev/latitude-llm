@@ -1,5 +1,15 @@
 import { Loader2, Search } from "lucide-react"
-import { type KeyboardEvent, type ReactNode, type UIEvent, useCallback, useMemo, useState } from "react"
+import {
+  type KeyboardEvent,
+  type ReactNode,
+  type UIEvent,
+  type WheelEvent,
+  useCallback,
+  useLayoutEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react"
 
 import { cn } from "../../utils/cn.ts"
 import { Text } from "../text/text.tsx"
@@ -40,17 +50,21 @@ export function SearchableSelectList<V = unknown>({
   infiniteScroll,
 }: SearchableSelectListProps<V>) {
   const [search, setSearch] = useState("")
+  const inputRef = useRef<HTMLInputElement | null>(null)
   const focusInputRef = useCallback((node: HTMLInputElement | null) => {
-    node?.focus()
+    inputRef.current = node
+  }, [])
+
+  useLayoutEffect(() => {
+    const frame = requestAnimationFrame(() => {
+      inputRef.current?.focus({ preventScroll: true })
+    })
+    return () => cancelAnimationFrame(frame)
   }, [])
 
   const handleSearch = (value: string) => {
     setSearch(value)
     onSearchChange?.(value)
-  }
-
-  const stopEventPropagation = (event: { stopPropagation(): void }) => {
-    event.stopPropagation()
   }
 
   const handleInputKeyDown = (event: KeyboardEvent<HTMLInputElement>) => {
@@ -80,26 +94,29 @@ export function SearchableSelectList<V = unknown>({
     }
   }
 
+  const stopWheelPropagation = (event: WheelEvent<HTMLDivElement>) => {
+    event.stopPropagation()
+  }
+
   return (
     <div className="flex flex-col">
-      <div className="flex items-center gap-2 border-b px-3 py-2">
+      <div className="flex shrink-0 items-center gap-2 border-b px-3 py-2">
         <Search className="h-4 w-4 shrink-0 opacity-50" />
         <input
           ref={focusInputRef}
           type="text"
           value={search}
           onChange={(e) => handleSearch(e.target.value)}
-          onPointerDown={stopEventPropagation}
-          onPointerUp={stopEventPropagation}
-          onMouseDown={stopEventPropagation}
-          onMouseUp={stopEventPropagation}
-          onClick={stopEventPropagation}
           onKeyDown={handleInputKeyDown}
           placeholder={searchPlaceholder}
           className="flex h-7 w-full rounded-md bg-transparent text-sm outline-none placeholder:text-muted-foreground disabled:cursor-not-allowed disabled:opacity-50"
         />
       </div>
-      <div className="max-h-60 overflow-y-auto p-1" onScroll={handleOptionsScroll}>
+      <div
+        className="max-h-60 min-h-0 overflow-y-auto overscroll-contain p-1"
+        onScroll={handleOptionsScroll}
+        onWheel={stopWheelPropagation}
+      >
         {loading ? (
           <div className="flex items-center justify-center py-4">
             <Loader2 className="h-4 w-4 animate-spin opacity-50" />
