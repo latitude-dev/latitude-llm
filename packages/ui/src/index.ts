@@ -1,6 +1,11 @@
 // Tokens
 
 export type { GenAIMessage } from "rosetta-ai"
+export {
+  AgentTextarea,
+  type AgentTextareaProps,
+} from "./components/agent-textarea/agent-textarea.tsx"
+export { useStagedStatus } from "./components/agent-textarea/use-staged-status.ts"
 export { Alert } from "./components/alert/index.tsx"
 export {
   Avatar,
