@@ -16,8 +16,7 @@ import { submitOnboarding } from "../../../../../domains/users/user.functions.ts
 import { getQueryClient } from "../../../../../lib/data/query-client.tsx"
 import { toUserMessage } from "../../../../../lib/errors.ts"
 import { createFormSubmitHandler } from "../../../../../lib/form-server-action.ts"
-import { CarouselSlide, CarouselTrack } from "./onboarding/carousel-track.tsx"
-import { OnboardingGallery } from "./onboarding/onboarding-gallery.tsx"
+import { OnboardingRightPane } from "./onboarding/onboarding-right-pane.tsx"
 import * as FlaggersStep from "./onboarding/steps/flaggers-step.tsx"
 import * as RoleStep from "./onboarding/steps/role-step.tsx"
 import * as SlackStep from "./onboarding/steps/slack-step.tsx"
@@ -257,17 +256,9 @@ export function OnboardingFlow({
 
   const telemetryBackStep: OnboardingStep = slackStepEnabled ? "slack" : "flaggers"
 
-  type RightSlide = "intro" | "flaggers" | "slack" | "telemetry"
-  const STEP_TO_RIGHT_SLIDE: Record<OnboardingStep, RightSlide> = {
-    role: "intro",
-    flaggers: "flaggers",
-    slack: "slack",
-    telemetry: "telemetry",
-  }
-  const visibleRightSlides: ReadonlyArray<RightSlide> = slackStepEnabled
-    ? ["intro", "flaggers", "slack", "telemetry"]
-    : ["intro", "flaggers", "telemetry"]
-  const activeRightSlideIndex = Math.max(0, visibleRightSlides.indexOf(STEP_TO_RIGHT_SLIDE[step]))
+  const activeSteps: ReadonlyArray<OnboardingStep> = slackStepEnabled
+    ? ["role", "flaggers", "slack", "telemetry"]
+    : ["role", "flaggers", "telemetry"]
 
   return (
     <div className="flex h-full min-h-0 w-full min-w-0 flex-1 flex-row overflow-hidden bg-background">
@@ -309,23 +300,13 @@ export function OnboardingFlow({
         )}
       </div>
 
-      <div className="hidden h-full min-h-0 min-w-0 shrink-0 flex-col overflow-hidden bg-secondary lg:flex lg:w-1/2">
-        <CarouselTrack activeIndex={activeRightSlideIndex}>
-          {visibleRightSlides.map((slide) => (
-            <CarouselSlide key={slide}>
-              {slide === "intro" ? (
-                <OnboardingGallery />
-              ) : slide === "flaggers" ? (
-                <FlaggersStep.Right enabledFlaggerSlugs={enabledFlaggerSlugs} availableFlaggers={availableFlaggers} />
-              ) : slide === "slack" ? (
-                <SlackStep.Right isActive={step === "slack"} />
-              ) : (
-                <TelemetryStep.Right traceReceived={traceReceived} />
-              )}
-            </CarouselSlide>
-          ))}
-        </CarouselTrack>
-      </div>
+      <OnboardingRightPane
+        steps={activeSteps}
+        currentStep={step}
+        enabledFlaggerSlugs={enabledFlaggerSlugs}
+        availableFlaggers={availableFlaggers}
+        traceReceived={traceReceived}
+      />
     </div>
   )
 }
