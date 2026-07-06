@@ -26,11 +26,11 @@ const SETTINGS_UNIFORMS = {
   smokeScaleFocus: "u_smokeScaleFocus",
   bloom: "u_bloom",
   baseAlpha: "u_baseAlpha",
-  dotCell: "u_dotCell",
-  dotSizeMax: "u_dotSizeMax",
-  dotSpeed: "u_dotSpeed",
-  auroraScale: "u_auroraScale",
-  auroraSpeed: "u_auroraSpeed",
+  poolCount: "u_poolCount",
+  poolHeight: "u_poolHeight",
+  poolSpeed: "u_poolSpeed",
+  poolDrift: "u_poolDrift",
+  poolIntensity: "u_poolIntensity",
 } as const
 
 const SETTINGS_UNIFORM_KEYS = Object.keys(SETTINGS_UNIFORMS) as ReadonlyArray<keyof typeof SETTINGS_UNIFORMS>
@@ -44,7 +44,7 @@ interface ShaderSurfaceProps {
 const BLEED_PX = 8
 const RADIUS_PX = 6
 const MAX_DPR = 2
-const COVERAGE_RATE = 8
+const COVERAGE_RATE = 6
 const INTENSITY_RATE = 4
 const FOCUS_RATE = 5
 const TIME_SCALE_RATE = 3

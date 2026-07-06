@@ -65,11 +65,11 @@ const SETTING_SECTIONS: { readonly title: string; readonly sliders: readonly Set
   {
     title: "Loading fill",
     sliders: [
-      { key: "dotCell", label: "Dot cell (px)", min: 6, max: 24, step: 0.5 },
-      { key: "dotSizeMax", label: "Dot max size", min: 0.05, max: 0.6, step: 0.01 },
-      { key: "dotSpeed", label: "Dot speed", min: 0, max: 3, step: 0.05 },
-      { key: "auroraScale", label: "Aurora scale (px)", min: 40, max: 300, step: 5 },
-      { key: "auroraSpeed", label: "Aurora speed", min: 0, max: 1, step: 0.01 },
+      { key: "poolCount", label: "Pools", min: 2, max: 7, step: 1 },
+      { key: "poolHeight", label: "Pool height", min: 0.1, max: 1, step: 0.05 },
+      { key: "poolSpeed", label: "Pool speed", min: 0, max: 3, step: 0.05 },
+      { key: "poolDrift", label: "Pool drift", min: 0, max: 0.15, step: 0.005 },
+      { key: "poolIntensity", label: "Pool intensity", min: 0, max: 2, step: 0.05 },
     ],
   },
   {

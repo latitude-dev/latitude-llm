@@ -89,7 +89,7 @@ export function AgentTextarea({
             font.size.h5,
             "relative z-10 block w-full resize-none outline-none",
             "rounded-md border bg-background px-3 py-2 placeholder:text-muted-foreground",
-            "transition-opacity duration-300 focus-visible:ring-1 focus-visible:ring-ring",
+            "transition-opacity duration-500 focus-visible:ring-1 focus-visible:ring-ring",
             {
               "border-destructive": showDestructiveBorder,
               "border-input": !showDestructiveBorder && resolvedSettings.nativeBorder,

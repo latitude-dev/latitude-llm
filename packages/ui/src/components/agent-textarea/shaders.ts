@@ -13,11 +13,11 @@ export interface AgentTextareaSettings {
   readonly smokeScaleFocus: number
   readonly bloom: number
   readonly baseAlpha: number
-  readonly dotCell: number
-  readonly dotSizeMax: number
-  readonly dotSpeed: number
-  readonly auroraScale: number
-  readonly auroraSpeed: number
+  readonly poolCount: number
+  readonly poolHeight: number
+  readonly poolSpeed: number
+  readonly poolDrift: number
+  readonly poolIntensity: number
   readonly idleIntensity: number
   readonly focusIntensity: number
   readonly loadingIntensity: number
@@ -32,7 +32,7 @@ export const DEFAULT_AGENT_TEXTAREA_SETTINGS: AgentTextareaSettings = {
   thicknessFocus: 2,
   spotSizeIdle: 0.2,
   spotSizeFocus: 0.5,
-  spotCount: 4,
+  spotCount: 3,
   spotIntensity: 0.75,
   pulse: 0.25,
   smokeIdle: 0,
@@ -41,11 +41,11 @@ export const DEFAULT_AGENT_TEXTAREA_SETTINGS: AgentTextareaSettings = {
   smokeScaleFocus: 60,
   bloom: 0.33,
   baseAlpha: 0.5,
-  dotCell: 6,
-  dotSizeMax: 0.14,
-  dotSpeed: 1,
-  auroraScale: 300,
-  auroraSpeed: 0.02,
+  poolCount: 5,
+  poolHeight: 0.45,
+  poolSpeed: 1,
+  poolDrift: 0.05,
+  poolIntensity: 1,
   idleIntensity: 0.65,
   focusIntensity: 0.9,
   loadingIntensity: 1,
@@ -90,11 +90,11 @@ uniform float u_smokeScaleIdle;
 uniform float u_smokeScaleFocus;
 uniform float u_bloom;
 uniform float u_baseAlpha;
-uniform float u_dotCell;
-uniform float u_dotSizeMax;
-uniform float u_dotSpeed;
-uniform float u_auroraScale;
-uniform float u_auroraSpeed;
+uniform float u_poolCount;
+uniform float u_poolHeight;
+uniform float u_poolSpeed;
+uniform float u_poolDrift;
+uniform float u_poolIntensity;
 
 const float PI = 3.14159265359;
 const float TWO_PI = 6.28318530718;
@@ -103,11 +103,9 @@ const float HALF_PI = 1.57079632679;
 const vec3 BRAND_BLUE = vec3(0.0, 0.502, 1.0);
 const vec3 BRAND_RED = vec3(0.898, 0.224, 0.282);
 const vec3 BRAND_YELLOW = vec3(0.996, 0.878, 0.102);
-const vec3 BRAND_BLACK = vec3(0.012, 0.027, 0.071);
 const vec3 LIGHT_BLUE = vec3(0.25, 0.60, 1.0);
 const vec3 LIGHT_RED = vec3(0.95, 0.50, 0.56);
 const vec3 LIGHT_YELLOW = vec3(1.0, 0.84, 0.35);
-const vec3 LIGHT_DEEP = vec3(0.62, 0.80, 1.0);
 const vec3 LIGHT_ANCHOR = vec3(0.975, 0.985, 1.0);
 `
 
@@ -134,46 +132,78 @@ float valueNoise(vec2 p) {
   return mix(mix(a, b, u.x), mix(c, d, u.x), u.y);
 }
 
-float fbm(vec2 p) {
-  float value = 0.0;
-  float amplitude = 0.5;
-  for (int i = 0; i < 4; i++) {
-    value += amplitude * valueNoise(p);
-    p *= 2.0;
-    amplitude *= 0.5;
+float linstep(float a, float b, float t) {
+  return clamp((t - a) / (b - a), 0.0, 1.0);
+}
+
+// Exact radial stops of the design system's marketing gradient preset A (gradients/A.json).
+vec3 rampDark(float t) {
+  vec3 c = vec3(0.0);
+  c = mix(c, vec3(0.0, 0.020, 0.039), linstep(0.30288, 0.33954, t));
+  c = mix(c, vec3(0.0, 0.039, 0.082), linstep(0.33954, 0.3762, t));
+  c = mix(c, vec3(0.0, 0.082, 0.165), linstep(0.3762, 0.44952, t));
+  c = mix(c, vec3(0.0, 0.122, 0.247), linstep(0.44952, 0.52284, t));
+  c = mix(c, vec3(0.0, 0.165, 0.325), linstep(0.52284, 0.59615, t));
+  c = mix(c, vec3(0.0, 0.251, 0.502), linstep(0.59615, 0.73317, t));
+  c = mix(c, vec3(0.0, 0.337, 0.675), linstep(0.73317, 0.87019, t));
+  c = mix(c, vec3(0.0, 0.420, 0.839), linstep(0.87019, 0.9351, t));
+  c = mix(c, BRAND_BLUE, linstep(0.9351, 1.0, t));
+  return c;
+}
+
+// Same offsets re-anchored on white: each stop keeps its fraction of the dark ramp's
+// progress toward full blue.
+vec3 rampLight(float t) {
+  vec3 c = LIGHT_ANCHOR;
+  c = mix(c, vec3(0.937, 0.966, 1.0), linstep(0.30288, 0.33954, t));
+  c = mix(c, vec3(0.899, 0.947, 1.0), linstep(0.33954, 0.3762, t));
+  c = mix(c, vec3(0.815, 0.906, 1.0), linstep(0.3762, 0.44952, t));
+  c = mix(c, vec3(0.739, 0.868, 1.0), linstep(0.44952, 0.52284, t));
+  c = mix(c, vec3(0.655, 0.827, 1.0), linstep(0.52284, 0.59615, t));
+  c = mix(c, vec3(0.488, 0.744, 1.0), linstep(0.59615, 0.73317, t));
+  c = mix(c, vec3(0.320, 0.660, 1.0), linstep(0.73317, 0.87019, t));
+  c = mix(c, vec3(0.160, 0.581, 1.0), linstep(0.87019, 0.9351, t));
+  c = mix(c, BRAND_BLUE, linstep(0.9351, 1.0, t));
+  return c;
+}
+
+vec3 poolColor(int index) {
+  int m = index - (index / 5) * 5;
+  if (m == 1) return mix(BRAND_RED, LIGHT_RED, u_light);
+  if (m == 2) return mix(mix(BRAND_BLUE, vec3(1.0), 0.55), mix(LIGHT_BLUE, vec3(1.0), 0.6), u_light);
+  if (m == 4) return mix(BRAND_YELLOW, LIGHT_YELLOW, u_light);
+  return mix(BRAND_BLUE, LIGHT_BLUE, u_light);
+}
+
+// Loading fill after marketing gradient preset E: a quiet slice of the preset ramp with
+// soft pools of light rising and falling along the bottom edge, a voice meter slowed down.
+// Everything is in box fractions so the composition survives any textarea aspect ratio.
+vec3 pools(vec2 p, vec2 halfSize) {
+  vec2 box = 2.0 * halfSize;
+  float yDown = (halfSize.y - p.y) / box.y;
+  float tBase = mix(0.15, 0.62, yDown);
+  vec3 dark = rampDark(tBase);
+  vec3 light = rampLight(tBase);
+
+  float yUp = p.y + halfSize.y;
+  for (int i = 0; i < 7; i++) {
+    if (float(i) >= u_poolCount) break;
+    float fi = float(i);
+    float slot = (fi + 0.5) / u_poolCount;
+    float wobble = u_poolDrift * sin(u_time * (0.21 + 0.07 * fi) + fi * 2.4);
+    float cx = (slot + wobble - 0.5) * box.x;
+    float voice = 0.5 + 0.3 * sin(u_time * u_poolSpeed * (0.55 + 0.17 * fi) + fi * 1.9)
+      + 0.2 * sin(u_time * u_poolSpeed * (0.83 + 0.11 * fi) + fi * 4.1);
+    float sigmaX = (0.11 + 0.03 * sin(fi * 5.7)) * box.x;
+    float dx = (p.x - cx) / sigmaX;
+    float reach = max(u_poolHeight * box.y * voice, 1.0);
+    float dy = yUp / reach;
+    float w = u_poolIntensity * voice * exp(-0.5 * dx * dx - 2.3 * dy * dy);
+    dark += poolColor(i) * w;
+    light = mix(light, poolColor(i), min(w, 1.0) * 0.75);
   }
-  return value;
-}
-
-vec3 aurora(vec2 px, float px1) {
-  vec2 q = px / (u_auroraScale * px1);
-  float t = u_time * u_auroraSpeed;
-  vec2 warp = vec2(fbm(q + vec2(t * 0.6, t * 0.25)), fbm(q + vec2(5.2 - t * 0.4, 1.3 + t * 0.35)));
-  float band = smoothstep(0.28, 0.85, fbm(q + 2.0 * warp + vec2(t * 0.3, -t * 0.2)));
-  float beamRed = smoothstep(0.62, 0.9, fbm(q * 1.6 - warp + vec2(-t * 0.28, t * 0.42)));
-  float beamYellow = smoothstep(0.66, 0.94, fbm(q * 2.1 + warp * 0.8 + vec2(t * 0.35, t * 0.18)));
-  vec3 deep = mix(BRAND_BLUE * 0.32, LIGHT_DEEP, u_light);
-  vec3 c = mix(deep, mix(BRAND_BLUE, LIGHT_BLUE, u_light), band);
-  c = mix(c, mix(BRAND_RED, LIGHT_RED, u_light), 0.6 * beamRed);
-  c = mix(c, mix(BRAND_YELLOW, LIGHT_YELLOW, u_light), 0.35 * beamYellow);
-  return clamp(c, 0.0, 1.0);
-}
-
-float dotLayer(vec2 px, float px1) {
-  float cell = u_dotCell * px1;
-  vec2 local = (fract(px / cell) - 0.5) * cell;
-  vec2 center = (floor(px / cell) + 0.5) * cell;
-  float n = valueNoise(center / (70.0 * px1) + vec2(0.5, -0.35) * (u_time * u_dotSpeed));
-  float presence = smoothstep(0.25, 0.8, n);
-  float radius = (0.08 + u_dotSizeMax * presence) * cell;
-  return (1.0 - smoothstep(radius - 1.5 * px1, radius + 1.5 * px1, length(local))) * presence;
-}
-
-vec3 surface(vec2 px, float px1) {
-  vec3 silk = aurora(px, px1);
-  vec3 dotBright = clamp(silk * 1.45 + vec3(0.05), 0.0, 1.0);
-  vec3 dotDeep = mix(silk, BRAND_BLUE, 0.65) * 0.85;
-  return mix(silk, mix(dotBright, dotDeep, u_light), dotLayer(px, px1));
+  dark = min(dark, vec3(1.0));
+  return mix(dark, light, u_light);
 }
 
 // Position along the rounded-rect contour as a 0..1 arc-length fraction (CCW from the
@@ -213,16 +243,20 @@ float beat(float time) {
   return clamp(first + 0.6 * second, 0.0, 1.0);
 }
 
+// The border shows the fill's perceived palette: slot 1 pre-bakes the lavender that the
+// fill gets from pooling red light over the deep blue base.
 vec3 brandColor(int index) {
-  if (index == 0) return mix(BRAND_BLUE, LIGHT_BLUE, u_light);
-  if (index == 1) return mix(BRAND_RED, LIGHT_RED, u_light);
-  return mix(BRAND_YELLOW, LIGHT_YELLOW, u_light);
+  int m = index - (index / 5) * 5;
+  if (m == 1) return mix(vec3(0.62, 0.35, 0.66), vec3(0.80, 0.62, 0.88), u_light);
+  return poolColor(index);
 }
 
 vec4 pulsingBorder(vec2 p, vec2 halfSize, float d, float px1) {
   float t = 1.2 * (u_time + 109.0);
   float pulse = beat(0.18 * u_time);
-  float thickness = mix(u_thicknessIdle, u_thicknessFocus, u_focus) * px1;
+  // Entering loading, the border shrinks back into its hairline while it fades.
+  float shrink = 1.0 - u_coverage;
+  float thickness = mix(u_thicknessIdle, u_thicknessFocus, u_focus) * px1 * shrink;
   float reach = thickness * 2.5 + 1.5 * px1;
   float band = pow(1.0 - smoothstep(0.0, reach, abs(d)), 1.75);
 
@@ -237,11 +271,11 @@ vec4 pulsingBorder(vec2 p, vec2 halfSize, float d, float px1) {
 
   vec2 inner = max(halfSize - vec2(u_radius), vec2(0.001));
   float angle = perimeterCoord(p, inner, max(u_radius + d, 0.5));
-  float spotSizeBase = 0.05 + 0.6 * pow(mix(u_spotSizeIdle, u_spotSizeFocus, u_focus), 2.0);
+  float spotSizeBase = (0.05 + 0.6 * pow(mix(u_spotSizeIdle, u_spotSizeFocus, u_focus), 2.0)) * shrink;
 
   vec3 rgbSum = vec3(0.0);
   float weightSum = 0.0;
-  for (int colorIdx = 0; colorIdx < 3; colorIdx++) {
+  for (int colorIdx = 0; colorIdx < 5; colorIdx++) {
     float ci = float(colorIdx);
     vec3 col = brandColor(colorIdx);
     for (int spotIdx = 0; spotIdx < 6; spotIdx++) {
@@ -289,21 +323,22 @@ void main() {
   vec2 halfSize = 0.5 * u_resolution - vec2(u_bleed);
   float d = sdRoundedRect(p, halfSize, u_radius);
 
+  // Loading floods in as a tide rising from the bottom border while the whole fill also
+  // fades in; the waterline undulates only mid-transition.
+  float yUp01 = (p.y + halfSize.y) / (2.0 * halfSize.y);
+  float wave = sin(p.x * 9.42 / (2.0 * halfSize.x) + 0.8 * u_time)
+    + 0.5 * sin(p.x * 21.7 / (2.0 * halfSize.x) - 1.3 * u_time);
+  float level = 1.2 * u_coverage - 0.02 + 0.16 * wave * u_coverage * (1.0 - u_coverage);
+  float front = smoothstep(0.0, 0.12, level - yUp01);
+
   vec4 border = pulsingBorder(p, halfSize, d, px1);
   float borderFade = (1.0 - u_coverage) * u_intensity;
 
   float inside = 1.0 - smoothstep(-1.5 * px1, 1.5 * px1, d);
-  float depth = clamp(-d / min(halfSize.x, halfSize.y), 0.0, 1.0);
-  float front = smoothstep(depth, depth + 0.25, u_coverage * 1.25 - 0.01);
-  float fillAlpha = inside * front * 0.96;
+  float fillAlpha = inside * front * u_coverage * 0.96;
 
-  vec3 col = surface(gl_FragCoord.xy, px1);
-  float scrim = (1.0 - smoothstep(0.25, 0.9, length(p / halfSize))) * u_coverage;
-  vec3 anchor = mix(BRAND_BLACK, LIGHT_ANCHOR, u_light);
-  float richness = mix(mix(0.9, 0.35, scrim), mix(0.95, 0.55, scrim), u_light);
-  vec3 fillColor = mix(anchor, col, richness);
   float grain = hash21(floor(gl_FragCoord.xy / px1)) - 0.5;
-  fillColor = clamp(fillColor + grain * mix(0.06, 0.03, u_light), 0.0, 1.0);
+  vec3 fillColor = clamp(pools(p, halfSize) + grain * mix(0.06, 0.03, u_light), 0.0, 1.0);
 
   float alpha = clamp(border.a * borderFade + fillAlpha, 0.0, 1.0);
   vec3 colorPremultiplied = min(border.rgb * borderFade + fillColor * fillAlpha, vec3(1.0));
