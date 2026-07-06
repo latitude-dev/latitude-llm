@@ -40,6 +40,14 @@ export function truncateExcerpt(text: string, maxLength: number = 500): string {
 // Text extraction helpers used across strategies
 // ---------------------------------------------------------------------------
 
+function iterMessageParts(parts: unknown): readonly unknown[] {
+  return Array.isArray(parts) ? parts : []
+}
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null
+}
+
 /**
  * Extract text-only parts from messages for content scanning.
  * Filters out tool calls, tool responses, and system messages.
@@ -53,11 +61,10 @@ export function extractTextOnlyMessages(
     if (message.role !== "user" && message.role !== "assistant") continue
 
     const textParts: string[] = []
-    for (const part of message.parts) {
-      if (part.type === "text" && typeof part.content === "string") {
-        const trimmed = part.content.trim()
-        if (trimmed) textParts.push(trimmed)
-      }
+    for (const part of iterMessageParts(message.parts)) {
+      if (!isRecord(part) || part.type !== "text" || typeof part.content !== "string") continue
+      const trimmed = part.content.trim()
+      if (trimmed) textParts.push(trimmed)
     }
 
     if (textParts.length > 0) {
@@ -81,11 +88,10 @@ export function extractUserTextMessages(trace: Pick<TraceDetail, "allMessages">)
   for (const message of trace.allMessages) {
     if (message.role !== "user") continue
 
-    for (const part of message.parts) {
-      if (part.type === "text" && typeof part.content === "string") {
-        const trimmed = part.content.trim()
-        if (trimmed) result.push(trimmed)
-      }
+    for (const part of iterMessageParts(message.parts)) {
+      if (!isRecord(part) || part.type !== "text" || typeof part.content !== "string") continue
+      const trimmed = part.content.trim()
+      if (trimmed) result.push(trimmed)
     }
   }
 
