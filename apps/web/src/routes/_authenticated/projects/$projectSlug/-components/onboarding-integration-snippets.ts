@@ -43,6 +43,7 @@ export type OnboardingProviderId =
   | "eve"
   | "flue"
   | "elevenlabs"
+  | "pydantic-ai"
 
 export type TsPackageManager = "npm" | "pnpm" | "yarn" | "bun"
 
@@ -93,6 +94,7 @@ export const ONBOARDING_PROVIDER_SNIPPET_CONFIG: Record<OnboardingProviderId, On
   eve: { id: "eve", ...tsOnly },
   flue: { id: "flue", ...tsOnly },
   elevenlabs: { id: "elevenlabs", ...crossTsPy },
+  "pydantic-ai": { id: "pydantic-ai", ...pyOnly },
 }
 
 // Eve ships its telemetry through @vercel/otel directly, so it does NOT install
@@ -205,6 +207,7 @@ export function getProviderSdkPyInstallCommand(id: OnboardingProviderId, pm: PyP
     haystack: "haystack-ai",
     dspy: "dspy litellm",
     elevenlabs: "openai fastapi uvicorn",
+    "pydantic-ai": "pydantic-ai",
   }
   const pkgs = map[id]
   return pkgs ? pyInstallPackages(pm, pkgs) : null
@@ -326,6 +329,9 @@ export function getOnboardingSnippet(
       break
     case "elevenlabs":
       snippet = lang === "typescript" ? snippetTsElevenlabs() : snippetPyElevenlabs()
+      break
+    case "pydantic-ai":
+      snippet = lang === "python" ? snippetPyPydanticAi() : null
       break
     default:
       snippet = null
@@ -1115,6 +1121,35 @@ if __name__ == "__main__":
 `
 }
 
+function snippetPyPydanticAi() {
+  return `import os
+
+from latitude_telemetry import Latitude, capture
+from pydantic_ai import Agent
+
+latitude = Latitude(
+    api_key=os.environ["LATITUDE_API_KEY"],
+    project=os.environ["LATITUDE_PROJECT_SLUG"],
+)
+
+# Pydantic AI self-instruments via OpenTelemetry onto the global provider
+# Latitude just registered, so no \`instrumentations\` entry is needed.
+Agent.instrument_all()
+
+agent = Agent("openai:gpt-4o-mini", system_prompt="You are a helpful assistant.")
+
+
+@capture("pydantic-ai-run", {"session_id": "example"})
+def main():
+    return agent.run_sync("Hello").output
+
+
+if __name__ == "__main__":
+    main()
+    latitude.shutdown()
+`
+}
+
 function snippetPyGemini() {
   return `import os
 
@@ -1605,6 +1640,7 @@ WATSONX_URL=https://us-south.ml.cloud.ibm.com`
     case "eve":
     case "flue":
     case "elevenlabs":
+    case "pydantic-ai":
       return "OPENAI_API_KEY=sk-..."
     case "google-adk":
       return "GOOGLE_API_KEY=..."
