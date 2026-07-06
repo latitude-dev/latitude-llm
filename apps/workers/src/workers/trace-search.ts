@@ -315,7 +315,7 @@ export const processRefreshTrace = (payload: RefreshTracePayload, publisher?: Qu
           "signals",
           "match",
           { organizationId, projectId, traceId, reason: "embeddings-ready" },
-          { dedupeKey: `org:${organizationId}:signals-match-embeddings-ready:${traceId}` },
+          { dedupeKey: `org:${organizationId}:signals-match-embeddings-ready:${projectId}:${traceId}` },
         )
         .pipe(
           Effect.tap(() =>
