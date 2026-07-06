@@ -1,6 +1,6 @@
 import { compileSettingsToScript, DEFAULT_EVALUATION_SAMPLING, type SignalPreviewResult } from "@domain/evaluations"
 import type { EvaluationRuleCondition, EvaluationSettings, FilterSet } from "@domain/shared"
-import { Button, Input, Modal, Tabs, Text, Textarea, useMountEffect, useToast } from "@repo/ui"
+import { Button, Input, Modal, Tabs, Text, Textarea, useMountEffect, useStagedStatus, useToast } from "@repo/ui"
 import { useNavigate } from "@tanstack/react-router"
 import { useRef, useState } from "react"
 import {
@@ -59,6 +59,16 @@ const EDIT_TAB_OPTIONS: { readonly id: EditTab; readonly label: string }[] = [
   { id: "detector", label: "Evaluation" },
   { id: "scope", label: "Scope" },
   { id: "test", label: "Test" },
+]
+
+// Mocked progress timeline while generation does not stream steps; a real worker step,
+// when one arrives, overrides it.
+const GENERATION_STAGES = [
+  { atSeconds: 0, label: "Reading your description" },
+  { atSeconds: 4, label: "Drafting the evaluation" },
+  { atSeconds: 12, label: "Choosing scope and sampling" },
+  { atSeconds: 20, label: "Testing it against recent sessions" },
+  { atSeconds: 28, label: "Creating the signal" },
 ]
 
 const emptyRuleDraft: RuleDraft = { match: "all", conditions: [] }
@@ -180,6 +190,7 @@ export function SignalBuilderModal({
   const [generationError, setGenerationError] = useState<string | null>(null)
   const previewAbortRef = useRef<AbortController | null>(null)
   const generationAbortRef = useRef<AbortController | null>(null)
+  const stagedStep = useStagedStatus(GENERATION_STAGES, generating)
   // Cancel any in-flight preview or generation poll when the modal unmounts (close) so it
   // stops polling and can't resolve onto an unmounted component. Generation runs in a
   // worker: aborting only stops polling, the signal is still created.
@@ -487,7 +498,7 @@ export function SignalBuilderModal({
             prompt={prompt}
             onPromptChange={setPrompt}
             generating={generating}
-            step={generationStep}
+            step={generationStep ?? stagedStep}
             error={generationError}
           />
         ) : null}
