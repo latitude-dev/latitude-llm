@@ -1004,8 +1004,7 @@ describe("runLiveEvaluationUseCase", () => {
         }),
     })
     const traceSearchRepository = createFakeTraceSearchRepository({
-      listMessageOccurrencesForTraces: () =>
-        Effect.succeed([{ contentHash: "hash-a", role: "user" as const }]),
+      listMessageOccurrencesForTraces: () => Effect.succeed([{ contentHash: "hash-a", role: "user" as const }]),
     }).repository
 
     const result = await Effect.runPromise(
@@ -1047,8 +1046,7 @@ describe("runLiveEvaluationUseCase", () => {
       run: () => Effect.die("Script should not run when vectors never arrived"),
     })
     const traceSearchRepository = createFakeTraceSearchRepository({
-      listMessageOccurrencesForTraces: () =>
-        Effect.succeed([{ contentHash: "hash-a", role: "user" as const }]),
+      listMessageOccurrencesForTraces: () => Effect.succeed([{ contentHash: "hash-a", role: "user" as const }]),
     }).repository
     const { operations, scoreWriteLayer } = createTrackedScoreWriteFixture()
 
