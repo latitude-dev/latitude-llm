@@ -74,6 +74,18 @@ describe("updateProjectUseCase", () => {
     expect(error._tag).toBe("InvalidProjectSlugError")
   })
 
+  it("rejects a reserved slug typed by the user", async () => {
+    const id = ProjectId("1".repeat(24))
+    const { layer, rows } = makeLayer([makeProject({ id, slug: "checkout-agent", name: "Checkout agent" })])
+
+    const error = await Effect.runPromise(
+      updateProjectUseCase({ id, slug: "Lat Demo" }).pipe(Effect.provide(layer), Effect.flip),
+    )
+
+    expect(error._tag).toBe("InvalidProjectSlugError")
+    expect(rows.get(id)?.slug).toBe("checkout-agent")
+  })
+
   it("rejects a slug with no URL-safe characters", async () => {
     const id = ProjectId("1".repeat(24))
     const { layer } = makeLayer([makeProject({ id, slug: "checkout-agent", name: "Checkout agent" })])

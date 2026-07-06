@@ -1,6 +1,6 @@
 import { Effect } from "effect"
 import { describe, expect, it } from "vitest"
-import { generateSlug, SLUG_MAX_LENGTH } from "./slug.ts"
+import { generateSlug, isReservedProjectSlug, RESERVED_PROJECT_SLUGS, SLUG_MAX_LENGTH } from "./slug.ts"
 
 const counts =
   (taken: ReadonlyMap<string, number>) =>
@@ -97,5 +97,38 @@ describe("generateSlug", () => {
 
     const exit = await Effect.runPromiseExit(generateSlug({ name: "Anything", count: failingCount }))
     expect(exit._tag).toBe("Failure")
+  })
+
+  it("auto-suffixes a reserved base even when count reports it free", async () => {
+    const result = await Effect.runPromise(
+      generateSlug({
+        name: "Lat Demo",
+        count: counts(new Map()),
+      }),
+    )
+    expect(result).toMatch(/^lat-demo-[a-z0-9]{4}$/)
+  })
+
+  it("auto-suffixes a reserved base when no count callback is provided", async () => {
+    const result = await Effect.runPromise(generateSlug({ name: "Lat Demo" }))
+    expect(result).toMatch(/^lat-demo-[a-z0-9]{4}$/)
+    expect(isReservedProjectSlug(result)).toBe(false)
+  })
+
+  it("does not treat a non-reserved base as reserved", async () => {
+    const result = await Effect.runPromise(generateSlug({ name: "Demo" }))
+    expect(result).toBe("demo")
+  })
+})
+
+describe("isReservedProjectSlug", () => {
+  it("reserves lat-demo", () => {
+    expect(RESERVED_PROJECT_SLUGS).toContain("lat-demo")
+    expect(isReservedProjectSlug("lat-demo")).toBe(true)
+  })
+
+  it("treats other slugs as free", () => {
+    expect(isReservedProjectSlug("demo")).toBe(false)
+    expect(isReservedProjectSlug("lat-demo-1")).toBe(false)
   })
 })
