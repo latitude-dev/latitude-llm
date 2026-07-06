@@ -2,6 +2,16 @@
 
 ## Unreleased
 
+## v0.3.36 - 2026-07-06
+
+### Web
+
+- Showed the onboarding illustrations in the account-claim flow by extracting the onboarding right-pane into a shared component reused by both the onboarding and claim screens (ref: #3879).
+
+### Showcase
+
+- Landed the first backend slice of the showcase demo project: a new `@domain/showcase` package with a pointer table, repository, and a guarded create-showcase use-case, plus the Postgres migration. Backend-only groundwork with no user-facing behavior yet (ref: #3830).
+
 ## v0.3.35 - 2026-07-06
 
 ### Design system
