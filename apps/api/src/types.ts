@@ -4,7 +4,7 @@ import type { StorageDiskPort } from "@domain/shared"
 import type { RedisClient } from "@platform/cache-redis"
 import type { PostgresClient } from "@platform/db-postgres"
 
-export type { AppEnv, AuthContext, OrganizationScopedEnv, ProtectedEnv } from "@repo/operations"
+export type { AppEnv, AuthContext, ProtectedEnv } from "@repo/operations"
 
 /**
  * Dependencies needed to wire up the API app.

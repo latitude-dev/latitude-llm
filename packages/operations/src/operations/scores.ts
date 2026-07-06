@@ -7,7 +7,7 @@ import {
   submitApiScoreUseCase,
 } from "@domain/scores"
 import { cuidSchema } from "@domain/shared"
-import { createRoute, OpenAPIHono, z } from "@hono/zod-openapi"
+import { createRoute, z } from "@hono/zod-openapi"
 import {
   ScoreAnalyticsRepositoryLive,
   SpanRepositoryLive,
@@ -17,8 +17,8 @@ import {
 import { OutboxEventWriterLive, ProjectRepositoryLive, ScoreRepositoryLive, withPostgres } from "@platform/db-postgres"
 import { withTracing } from "@repo/observability"
 import { Effect, Layer } from "effect"
-import { defineApiEndpoint } from "../mcp/index.ts"
-import { createTierRateLimiter } from "../middleware/rate-limiter.ts"
+import { defineOperation } from "../core/define-operation.ts"
+import type { OperationModule } from "../core/mount.ts"
 import {
   jsonBody,
   openApiResponses,
@@ -182,12 +182,6 @@ const ResponseSchema = z.union([CustomScoreResponseSchema, EvaluationScoreRespon
 
 type ApiScore = CustomScore | EvaluationScore
 
-const scoresFernGroup = (methodName: string) =>
-  ({
-    "x-fern-sdk-group-name": "scores",
-    "x-fern-sdk-method-name": methodName,
-  }) as const
-
 const toResponse = (score: ApiScore) => {
   const baseResponse = {
     id: score.id as string,
@@ -228,9 +222,9 @@ const toResponse = (score: ApiScore) => {
   }
 }
 
-export const scoresPath = "/projects/:projectSlug/scores"
+const scoresPath = "/projects/:projectSlug/scores"
 
-const scoreEndpoint = defineApiEndpoint<OrganizationScopedEnv>(scoresPath)
+const scoreEndpoint = defineOperation<OrganizationScopedEnv>(scoresPath)
 
 const createScore = scoreEndpoint({
   route: createRoute({
@@ -239,7 +233,8 @@ const createScore = scoreEndpoint({
     name: "createScore",
     annotations: { readOnlyHint: false, destructiveHint: false },
     tags: ["Scores"],
-    ...scoresFernGroup("create"),
+    group: "scores",
+    sdkMethod: "create",
     summary: "Create project score",
     description:
       'Creates a score against a target trace. The trace is resolved by explicit id (`trace.by = "id"`) or by a filter set (`trace.by = "filters"`, exactly one match required). Annotations use the separate `/annotations` endpoint.',
@@ -254,6 +249,7 @@ const createScore = scoreEndpoint({
       description: "Score created",
     }),
   }),
+  rateLimitTier: "low",
   handler: async (c) => {
     const body = c.req.valid("json")
     const { projectSlug } = c.req.valid("param")
@@ -309,8 +305,7 @@ const createScore = scoreEndpoint({
   },
 })
 
-export const createScoresRoutes = () => {
-  const app = new OpenAPIHono<OrganizationScopedEnv>()
-  createScore.mountHttp(app, createTierRateLimiter("low"))
-  return app
+export const scoresModule: OperationModule = {
+  path: scoresPath,
+  operations: [createScore],
 }

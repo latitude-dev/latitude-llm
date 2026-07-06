@@ -1,7 +1,7 @@
 import { submitApiAnnotationUseCase } from "@domain/annotations"
 import { ProjectRepository } from "@domain/projects"
 import { cuidSchema, UserId } from "@domain/shared"
-import { createRoute, OpenAPIHono, z } from "@hono/zod-openapi"
+import { createRoute, z } from "@hono/zod-openapi"
 import { AIEmbedLive, withAi } from "@platform/ai"
 import {
   ScoreAnalyticsRepositoryLive,
@@ -13,8 +13,8 @@ import { OutboxEventWriterLive, ProjectRepositoryLive, ScoreRepositoryLive, with
 import { QueuePublisherLive } from "@platform/queue-bullmq"
 import { withTracing } from "@repo/observability"
 import { Effect, Layer } from "effect"
-import { defineApiEndpoint } from "../mcp/index.ts"
-import { createTierRateLimiter } from "../middleware/rate-limiter.ts"
+import { defineOperation } from "../core/define-operation.ts"
+import type { OperationModule } from "../core/mount.ts"
 import { AnnotationAnchorSchema, AnnotationSchema, toAnnotationResponse } from "../openapi/entities/annotation.ts"
 import {
   jsonBody,
@@ -47,15 +47,9 @@ const RequestSchema = z
   })
   .openapi("CreateAnnotationBody")
 
-const annotationsFernGroup = (methodName: string) =>
-  ({
-    "x-fern-sdk-group-name": "annotations",
-    "x-fern-sdk-method-name": methodName,
-  }) as const
+const annotationsPath = "/projects/:projectSlug/annotations"
 
-export const annotationsPath = "/projects/:projectSlug/annotations"
-
-const annotationEndpoint = defineApiEndpoint<OrganizationScopedEnv>(annotationsPath)
+const annotationEndpoint = defineOperation<OrganizationScopedEnv>(annotationsPath)
 
 const createAnnotation = annotationEndpoint({
   route: createRoute({
@@ -64,7 +58,8 @@ const createAnnotation = annotationEndpoint({
     name: "createAnnotation",
     annotations: { readOnlyHint: false, destructiveHint: false },
     tags: ["Annotations"],
-    ...annotationsFernGroup("create"),
+    group: "annotations",
+    sdkMethod: "create",
     summary: "Create project annotation",
     description:
       'Creates a published annotation score against a target trace. The trace is resolved by explicit id (`trace.by = "id"`) or by a filter set (`trace.by = "filters"`, exactly one match required). When called with an OAuth token, the annotation is attributed to the authenticated user.',
@@ -75,6 +70,7 @@ const createAnnotation = annotationEndpoint({
     },
     responses: openApiResponses({ status: 201, schema: AnnotationSchema, description: "Annotation created" }),
   }),
+  rateLimitTier: "low",
   handler: async (c) => {
     const body = c.req.valid("json")
     const { projectSlug } = c.req.valid("param")
@@ -113,8 +109,7 @@ const createAnnotation = annotationEndpoint({
   },
 })
 
-export const createAnnotationsRoutes = () => {
-  const app = new OpenAPIHono<OrganizationScopedEnv>()
-  createAnnotation.mountHttp(app, createTierRateLimiter("low"))
-  return app
+export const annotationsModule: OperationModule = {
+  path: annotationsPath,
+  operations: [createAnnotation],
 }

@@ -3,7 +3,7 @@ import { ExternalUserId, OrganizationId, ProjectId } from "@domain/shared"
 import { buildHistogramBucketScaffold, listUserSignalsUseCase } from "@domain/signals"
 import { USER_SORT_FIELDS, UserAnalyticsRepository } from "@domain/spans"
 import { listUserBehavioursUseCase } from "@domain/taxonomy"
-import { createRoute, OpenAPIHono, z } from "@hono/zod-openapi"
+import { createRoute, z } from "@hono/zod-openapi"
 import {
   ScoreAnalyticsRepositoryLive,
   TaxonomyObservationRepositoryLive,
@@ -18,8 +18,8 @@ import {
 } from "@platform/db-postgres"
 import { withTracing } from "@repo/observability"
 import { Effect, Layer } from "effect"
-import { defineApiEndpoint } from "../mcp/index.ts"
-import { createTierRateLimiter } from "../middleware/rate-limiter.ts"
+import { defineOperation } from "../core/define-operation.ts"
+import type { OperationModule } from "../core/mount.ts"
 import {
   bucketSecondsForRange,
   resolveUserRange,
@@ -41,15 +41,9 @@ import {
 import { openApiResponses, PROTECTED_SECURITY, ProjectParamsSchema } from "../openapi/schemas.ts"
 import type { OrganizationScopedEnv } from "../types.ts"
 
-export const usersPath = "/projects/:projectSlug/users"
+const usersPath = "/projects/:projectSlug/users"
 
-const userEndpoint = defineApiEndpoint<OrganizationScopedEnv>(usersPath)
-
-const usersFernGroup = (methodName: string) =>
-  ({
-    "x-fern-sdk-group-name": "users",
-    "x-fern-sdk-method-name": methodName,
-  }) as const
+const userEndpoint = defineOperation<OrganizationScopedEnv>(usersPath)
 
 const INVALID_RANGE_MESSAGE = "`toIso` must be greater than or equal to `fromIso`."
 const isInvalidRange = (fromIso?: string, toIso?: string): boolean =>
@@ -88,7 +82,8 @@ const listUsers = userEndpoint({
     name: "listUsers",
     annotations: { readOnlyHint: true, destructiveHint: false },
     tags: ["Users"],
-    ...usersFernGroup("list"),
+    group: "users",
+    sdkMethod: "list",
     summary: "List project end-users with usage metrics",
     description:
       "Returns a page of the project's identified end-users over the range, each with trace, session, token, and cost metrics, plus cost aggregates across every matching user. The range defaults to the trailing 30 days.",
@@ -110,6 +105,7 @@ const listUsers = userEndpoint({
     },
     responses: openApiResponses({ status: 200, schema: UserListResponseSchema, description: "Page of end-users" }),
   }),
+  rateLimitTier: "high",
   handler: async (c) => {
     const { projectSlug } = c.req.valid("param")
     const { fromIso, toIso, limit, offset, sortBy, sortDirection, searchQuery } = c.req.valid("query")
@@ -152,7 +148,8 @@ const getUsersOverview = userEndpoint({
     name: "getUsersOverview",
     annotations: { readOnlyHint: true, destructiveHint: false },
     tags: ["Users"],
-    ...usersFernGroup("overview"),
+    group: "users",
+    sdkMethod: "overview",
     summary: "Get project end-user overview",
     description:
       "Returns project-wide end-user aggregates over the range — unique and new users, identified vs total traces and sessions — plus a per-bucket activity histogram. The range defaults to the trailing 30 days.",
@@ -163,6 +160,7 @@ const getUsersOverview = userEndpoint({
     },
     responses: openApiResponses({ status: 200, schema: UsersOverviewResponseSchema, description: "Users overview" }),
   }),
+  rateLimitTier: "medium",
   handler: async (c) => {
     const { projectSlug } = c.req.valid("param")
     const { fromIso, toIso } = c.req.valid("query")
@@ -200,7 +198,8 @@ const getUserActivity = userEndpoint({
     name: "getUserActivity",
     annotations: { readOnlyHint: true, destructiveHint: false },
     tags: ["Users"],
-    ...usersFernGroup("activity"),
+    group: "users",
+    sdkMethod: "activity",
     summary: "Get end-user activity histogram",
     description:
       "Returns the end-user's per-bucket session activity across the range, oldest first. The range defaults to the trailing 30 days.",
@@ -211,6 +210,7 @@ const getUserActivity = userEndpoint({
     },
     responses: openApiResponses({ status: 200, schema: UserActivityResponseSchema, description: "Activity histogram" }),
   }),
+  rateLimitTier: "medium",
   handler: async (c) => {
     const { projectSlug, userId } = c.req.valid("param")
     const { fromIso, toIso, errorsOnly } = c.req.valid("query")
@@ -252,7 +252,8 @@ const getUserUsage = userEndpoint({
     name: "getUserUsage",
     annotations: { readOnlyHint: true, destructiveHint: false },
     tags: ["Users"],
-    ...usersFernGroup("usage"),
+    group: "users",
+    sdkMethod: "usage",
     summary: "Get end-user usage breakdown",
     description:
       "Returns the end-user's top values of a usage dimension — `model`, `provider`, or `tool` — ranked by distinct trace count.",
@@ -267,6 +268,7 @@ const getUserUsage = userEndpoint({
     },
     responses: openApiResponses({ status: 200, schema: UserUsageResponseSchema, description: "Usage breakdown" }),
   }),
+  rateLimitTier: "medium",
   handler: async (c) => {
     const { projectSlug, userId } = c.req.valid("param")
     const { dimension, limit, errorsOnly } = c.req.valid("query")
@@ -304,7 +306,8 @@ const listUserSignals = userEndpoint({
     name: "listUserSignals",
     annotations: { readOnlyHint: true, destructiveHint: false },
     tags: ["Users"],
-    ...usersFernGroup("signals"),
+    group: "users",
+    sdkMethod: "signals",
     summary: "List signals on an end-user's traces",
     description:
       "Returns the signals that occurred on the end-user's traces, most recent occurrence first. Occurrence counts are scoped to the user; signal identity and lifecycle states are the project's.",
@@ -317,6 +320,7 @@ const listUserSignals = userEndpoint({
     },
     responses: openApiResponses({ status: 200, schema: UserSignalsResponseSchema, description: "User signals" }),
   }),
+  rateLimitTier: "low",
   handler: async (c) => {
     const { projectSlug, userId } = c.req.valid("param")
     const { limit } = c.req.valid("query")
@@ -350,7 +354,8 @@ const listUserBehaviours = userEndpoint({
     name: "listUserBehaviours",
     annotations: { readOnlyHint: true, destructiveHint: false },
     tags: ["Users"],
-    ...usersFernGroup("behaviours"),
+    group: "users",
+    sdkMethod: "behaviours",
     summary: "List behaviours observed for an end-user",
     description:
       "Returns the behaviour clusters observed on the end-user's sessions, most frequent first. Counts are scoped to the user; cluster identity comes from the project taxonomy.",
@@ -363,6 +368,7 @@ const listUserBehaviours = userEndpoint({
     },
     responses: openApiResponses({ status: 200, schema: UserBehavioursResponseSchema, description: "User behaviours" }),
   }),
+  rateLimitTier: "low",
   handler: async (c) => {
     const { projectSlug, userId } = c.req.valid("param")
     const { limit } = c.req.valid("query")
@@ -400,7 +406,8 @@ const getUser = userEndpoint({
     name: "getUser",
     annotations: { readOnlyHint: true, destructiveHint: false },
     tags: ["Users"],
-    ...usersFernGroup("get"),
+    group: "users",
+    sdkMethod: "get",
     summary: "Get end-user profile",
     description:
       "Returns the lifetime profile of one end-user — trace, session, token, cost, and activity rollups across all of the user's traces (not range-bound).",
@@ -411,6 +418,7 @@ const getUser = userEndpoint({
     },
     responses: openApiResponses({ status: 200, schema: UserProfileResponseSchema, description: "User profile" }),
   }),
+  rateLimitTier: "low",
   handler: async (c) => {
     const { projectSlug, userId } = c.req.valid("param")
     const { errorsOnly } = c.req.valid("query")
@@ -439,16 +447,17 @@ const getUser = userEndpoint({
   },
 })
 
-export const createUsersRoutes = () => {
-  const app = new OpenAPIHono<OrganizationScopedEnv>()
+export const usersModule: OperationModule = {
+  path: usersPath,
   // Static `/overview` before the `/{userId}` param route so it isn't captured
   // as a user id (Hono resolves in registration order).
-  listUsers.mountHttp(app, createTierRateLimiter("high"))
-  getUsersOverview.mountHttp(app, createTierRateLimiter("medium"))
-  getUserActivity.mountHttp(app, createTierRateLimiter("medium"))
-  getUserUsage.mountHttp(app, createTierRateLimiter("medium"))
-  listUserSignals.mountHttp(app, createTierRateLimiter("low"))
-  listUserBehaviours.mountHttp(app, createTierRateLimiter("low"))
-  getUser.mountHttp(app, createTierRateLimiter("low"))
-  return app
+  operations: [
+    listUsers,
+    getUsersOverview,
+    getUserActivity,
+    getUserUsage,
+    listUserSignals,
+    listUserBehaviours,
+    getUser,
+  ],
 }

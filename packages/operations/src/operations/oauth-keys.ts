@@ -5,13 +5,13 @@ import {
   OAuthKeyNotFoundError,
   revokeOAuthKeyUseCase,
 } from "@domain/oauth-keys"
-import { createRoute, OpenAPIHono, z } from "@hono/zod-openapi"
+import { createRoute, z } from "@hono/zod-openapi"
 import { OAuthKeyRepositoryLive, withPostgres } from "@platform/db-postgres"
 import { OAuthTokenCacheInvalidatorLive } from "@platform/oauth-token-auth"
 import { withTracing } from "@repo/observability"
 import { Effect } from "effect"
-import { defineApiEndpoint } from "../mcp/index.ts"
-import { createTierRateLimiter } from "../middleware/rate-limiter.ts"
+import { defineOperation } from "../core/define-operation.ts"
+import type { OperationModule } from "../core/mount.ts"
 import { jsonResponse, openApiNoContentResponses, openApiResponses, PROTECTED_SECURITY } from "../openapi/schemas.ts"
 import type { OrganizationScopedEnv } from "../types.ts"
 
@@ -48,13 +48,6 @@ const OAuthKeyParamsSchema = z.object({
   oauthKeyId: z.string().min(1).describe("OAuth key identifier."),
 })
 
-// Fern groups so the generated SDK lands at `client.oauthKeys.{list,get,revoke}`.
-const oauthKeysFernGroup = (methodName: string) =>
-  ({
-    "x-fern-sdk-group-name": "oauthKeys",
-    "x-fern-sdk-method-name": methodName,
-  }) as const
-
 const toResponse = (key: OAuthKey) => ({
   id: key.id,
   clientId: key.clientId,
@@ -80,9 +73,9 @@ const parseCompositeId = (id: string): { clientId: string; userId: string } | nu
   return { clientId: id.slice(0, i), userId: id.slice(i + 1) }
 }
 
-export const oauthKeysPath = "/oauth-keys"
+const oauthKeysPath = "/oauth-keys"
 
-const oauthKeyEndpoint = defineApiEndpoint<OrganizationScopedEnv>(oauthKeysPath)
+const oauthKeyEndpoint = defineOperation<OrganizationScopedEnv>(oauthKeysPath)
 
 const listOAuthKeys = oauthKeyEndpoint({
   route: createRoute({
@@ -91,12 +84,14 @@ const listOAuthKeys = oauthKeyEndpoint({
     name: "listOAuthKeys",
     annotations: { readOnlyHint: true, destructiveHint: false },
     tags: ["OAuth Keys"],
-    ...oauthKeysFernGroup("list"),
+    group: "oauthKeys",
+    sdkMethod: "list",
     summary: "List OAuth keys",
     description: "Returns every OAuth key (like MCP clients) connected to the organization.",
     security: PROTECTED_SECURITY,
     responses: { 200: jsonResponse(ListResponseSchema, "List of OAuth keys") },
   }),
+  rateLimitTier: "low",
   handler: async (c) => {
     const keys = await Effect.runPromise(
       listOAuthKeysUseCase().pipe(
@@ -116,13 +111,15 @@ const getOAuthKey = oauthKeyEndpoint({
     name: "getOAuthKey",
     annotations: { readOnlyHint: true, destructiveHint: false },
     tags: ["OAuth Keys"],
-    ...oauthKeysFernGroup("get"),
+    group: "oauthKeys",
+    sdkMethod: "get",
     summary: "Get OAuth key",
     description: "Returns a single OAuth key (like MCP clients) by id.",
     security: PROTECTED_SECURITY,
     request: { params: OAuthKeyParamsSchema },
     responses: openApiResponses({ status: 200, schema: ResponseSchema, description: "OAuth key" }),
   }),
+  rateLimitTier: "low",
   handler: async (c) => {
     const { oauthKeyId } = c.req.valid("param")
     const parsed = parseCompositeId(oauthKeyId)
@@ -151,13 +148,15 @@ const revokeOAuthKey = oauthKeyEndpoint({
     name: "revokeOAuthKey",
     annotations: { readOnlyHint: false, destructiveHint: true },
     tags: ["OAuth Keys"],
-    ...oauthKeysFernGroup("revoke"),
+    group: "oauthKeys",
+    sdkMethod: "revoke",
     summary: "Revoke OAuth key",
     description: "Revokes an OAuth key (like MCP clients). The connected client immediately loses access.",
     security: PROTECTED_SECURITY,
     request: { params: OAuthKeyParamsSchema },
     responses: openApiNoContentResponses({ description: "OAuth key revoked" }),
   }),
+  rateLimitTier: "low",
   handler: async (c) => {
     const { oauthKeyId } = c.req.valid("param")
     const parsed = parseCompositeId(oauthKeyId)
@@ -179,10 +178,7 @@ const revokeOAuthKey = oauthKeyEndpoint({
   },
 })
 
-export const createOAuthKeysRoutes = () => {
-  const app = new OpenAPIHono<OrganizationScopedEnv>()
-  listOAuthKeys.mountHttp(app, createTierRateLimiter("low"))
-  getOAuthKey.mountHttp(app, createTierRateLimiter("low"))
-  revokeOAuthKey.mountHttp(app, createTierRateLimiter("low"))
-  return app
+export const oauthKeysModule: OperationModule = {
+  path: oauthKeysPath,
+  operations: [listOAuthKeys, getOAuthKey, revokeOAuthKey],
 }

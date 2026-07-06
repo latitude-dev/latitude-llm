@@ -13,7 +13,7 @@ import { dirname, resolve } from "node:path"
 import { fileURLToPath } from "node:url"
 import { OpenAPIHono, z } from "@hono/zod-openapi"
 import { MCP_INFO } from "../src/constants.ts"
-import { collectToolDescriptors } from "../src/mcp/index.ts"
+import { collectToolDescriptors } from "@repo/operations"
 import { registerRoutes } from "../src/routes/index.ts"
 import type { AppEnv } from "../src/types.ts"
 

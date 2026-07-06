@@ -16,6 +16,8 @@ const route = (name: string) =>
     method: "get" as const,
     path: "/",
     name,
+    group: "test",
+    sdkMethod: name,
     description: name,
     annotations: { readOnlyHint: true, destructiveHint: false },
     responses: {

@@ -36,13 +36,13 @@ export type AppRouteConfig = Omit<RouteConfig, "operationId"> & {
    * follows declaration order, so declare it right after `tags` where the
    * extension lands today. Doubles as the selector for internal agent toolsets.
    */
-  readonly group?: string
+  readonly group: string
   /**
    * SDK method name inside {@link AppRouteConfig.group} (e.g. `"list"`). Renamed
    * in place to the `x-fern-sdk-method-name` OpenAPI extension. Declare it right
    * after `group`.
    */
-  readonly sdkMethod?: string
+  readonly sdkMethod: string
 }
 
 /**

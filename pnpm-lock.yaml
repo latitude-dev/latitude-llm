@@ -184,9 +184,6 @@ importers:
       '@clickhouse/client':
         specifier: 'catalog:'
         version: 1.21.0
-      '@domain/annotations':
-        specifier: workspace:*
-        version: link:../../packages/domain/annotations
       '@domain/api-keys':
         specifier: workspace:*
         version: link:../../packages/domain/api-keys
@@ -196,36 +193,12 @@ importers:
       '@domain/evaluations':
         specifier: workspace:*
         version: link:../../packages/domain/evaluations
-      '@domain/exports':
-        specifier: workspace:*
-        version: link:../../packages/domain/exports
-      '@domain/flaggers':
-        specifier: workspace:*
-        version: link:../../packages/domain/flaggers
-      '@domain/incidents':
-        specifier: workspace:*
-        version: link:../../packages/domain/incidents
-      '@domain/monitors':
-        specifier: workspace:*
-        version: link:../../packages/domain/monitors
-      '@domain/oauth-keys':
-        specifier: workspace:*
-        version: link:../../packages/domain/oauth-keys
       '@domain/organizations':
         specifier: workspace:*
         version: link:../../packages/domain/organizations
-      '@domain/projects':
-        specifier: workspace:*
-        version: link:../../packages/domain/projects
       '@domain/queue':
         specifier: workspace:*
         version: link:../../packages/domain/queue
-      '@domain/saved-searches':
-        specifier: workspace:*
-        version: link:../../packages/domain/saved-searches
-      '@domain/scores':
-        specifier: workspace:*
-        version: link:../../packages/domain/scores
       '@domain/shared':
         specifier: workspace:*
         version: link:../../packages/domain/shared
@@ -235,12 +208,6 @@ importers:
       '@domain/spans':
         specifier: workspace:*
         version: link:../../packages/domain/spans
-      '@domain/taxonomy':
-        specifier: workspace:*
-        version: link:../../packages/domain/taxonomy
-      '@domain/users':
-        specifier: workspace:*
-        version: link:../../packages/domain/users
       '@hono/node-server':
         specifier: 'catalog:'
         version: 1.19.13(hono@4.12.16)
@@ -256,9 +223,6 @@ importers:
       '@modelcontextprotocol/sdk':
         specifier: 'catalog:'
         version: 1.29.0(@cfworker/json-schema@4.1.1)(zod@4.3.6)
-      '@platform/ai':
-        specifier: workspace:*
-        version: link:../../packages/platform/ai
       '@platform/api-key-auth':
         specifier: workspace:*
         version: link:../../packages/platform/api-key-auth
@@ -280,9 +244,6 @@ importers:
       '@platform/queue-bullmq':
         specifier: workspace:*
         version: link:../../packages/platform/queue-bullmq
-      '@platform/sandbox-quickjs':
-        specifier: workspace:*
-        version: link:../../packages/platform/sandbox-quickjs
       '@platform/storage-object':
         specifier: workspace:*
         version: link:../../packages/platform/storage-object
@@ -2001,18 +1962,33 @@ importers:
       '@clickhouse/client':
         specifier: 'catalog:'
         version: 1.21.0
+      '@domain/annotations':
+        specifier: workspace:*
+        version: link:../domain/annotations
+      '@domain/api-keys':
+        specifier: workspace:*
+        version: link:../domain/api-keys
       '@domain/datasets':
         specifier: workspace:*
         version: link:../domain/datasets
       '@domain/evaluations':
         specifier: workspace:*
         version: link:../domain/evaluations
+      '@domain/exports':
+        specifier: workspace:*
+        version: link:../domain/exports
+      '@domain/flaggers':
+        specifier: workspace:*
+        version: link:../domain/flaggers
       '@domain/incidents':
         specifier: workspace:*
         version: link:../domain/incidents
       '@domain/monitors':
         specifier: workspace:*
         version: link:../domain/monitors
+      '@domain/oauth-keys':
+        specifier: workspace:*
+        version: link:../domain/oauth-keys
       '@domain/organizations':
         specifier: workspace:*
         version: link:../domain/organizations
@@ -2040,9 +2016,18 @@ importers:
       '@domain/taxonomy':
         specifier: workspace:*
         version: link:../domain/taxonomy
+      '@domain/users':
+        specifier: workspace:*
+        version: link:../domain/users
       '@hono/zod-openapi':
         specifier: 1.3.0
         version: 1.3.0(hono@4.12.16)(zod@4.3.6)
+      '@platform/ai':
+        specifier: workspace:*
+        version: link:../platform/ai
+      '@platform/api-key-auth':
+        specifier: workspace:*
+        version: link:../platform/api-key-auth
       '@platform/cache-redis':
         specifier: workspace:*
         version: link:../platform/cache-redis
@@ -2052,6 +2037,21 @@ importers:
       '@platform/db-postgres':
         specifier: workspace:*
         version: link:../platform/db-postgres
+      '@platform/env':
+        specifier: workspace:*
+        version: link:../platform/env
+      '@platform/oauth-token-auth':
+        specifier: workspace:*
+        version: link:../platform/oauth-token-auth
+      '@platform/queue-bullmq':
+        specifier: workspace:*
+        version: link:../platform/queue-bullmq
+      '@platform/sandbox-quickjs':
+        specifier: workspace:*
+        version: link:../platform/sandbox-quickjs
+      '@platform/storage-object':
+        specifier: workspace:*
+        version: link:../platform/storage-object
       '@repo/observability':
         specifier: workspace:*
         version: link:../observability

@@ -8,13 +8,13 @@ import {
   updateApiKeyUseCase,
 } from "@domain/api-keys"
 import { ApiKeyId } from "@domain/shared"
-import { createRoute, OpenAPIHono, z } from "@hono/zod-openapi"
+import { createRoute, z } from "@hono/zod-openapi"
 import { ApiKeyCacheInvalidatorLive } from "@platform/api-key-auth"
 import { ApiKeyRepositoryLive, OutboxEventWriterLive, withPostgres } from "@platform/db-postgres"
 import { withTracing } from "@repo/observability"
 import { Effect, Layer } from "effect"
-import { defineApiEndpoint } from "../mcp/index.ts"
-import { createTierRateLimiter } from "../middleware/rate-limiter.ts"
+import { defineOperation } from "../core/define-operation.ts"
+import type { OperationModule } from "../core/mount.ts"
 import {
   errorResponse,
   jsonBody,
@@ -111,27 +111,9 @@ const toListItemResponse = (apiKey: ApiKey) => ({
   updatedAt: apiKey.updatedAt.toISOString(),
 })
 
-// Fern uses `x-fern-sdk-group-name` + `x-fern-sdk-method-name` to derive the
-// SDK resource namespace (`client.apiKeys.*`) and method names
-// (`.create` / `.list` / `.revoke`) independently of the OpenAPI `tag` and
-// `operationId`. Without these explicit overrides:
-//   - a multi-word tag like "API Keys" makes Fern fall back to concatenating
-//     the operationId into method names (`apiKeysList` instead of `.list`);
-//   - a single-word tag like "ApiKeys" forces Fern to lowercase the whole
-//     resource path (`apikeys/` directory), which then breaks the case-
-//     sensitive filesystem on CI (macOS APFS is case-insensitive and hides
-//     the problem locally).
-// Extending each route's config with the Fern vendor extensions sidesteps
-// both tag-based heuristics entirely.
-const apiKeysFernGroup = (methodName: string) =>
-  ({
-    "x-fern-sdk-group-name": "apiKeys",
-    "x-fern-sdk-method-name": methodName,
-  }) as const
+const apiKeysPath = "/api-keys"
 
-export const apiKeysPath = "/api-keys"
-
-const apiKeyEndpoint = defineApiEndpoint<OrganizationScopedEnv>(apiKeysPath)
+const apiKeyEndpoint = defineOperation<OrganizationScopedEnv>(apiKeysPath)
 
 const createApiKey = apiKeyEndpoint({
   route: createRoute({
@@ -140,7 +122,8 @@ const createApiKey = apiKeyEndpoint({
     name: "createApiKey",
     annotations: { readOnlyHint: false, destructiveHint: false },
     tags: ["API Keys"],
-    ...apiKeysFernGroup("create"),
+    group: "apiKeys",
+    sdkMethod: "create",
     summary: "Generate API key",
     description: "Generates a new API key for the organization. The token is only returned once — store it securely.",
     security: PROTECTED_SECURITY,
@@ -149,6 +132,7 @@ const createApiKey = apiKeyEndpoint({
     },
     responses: openApiResponses({ status: 201, schema: ResponseSchema, description: "API key generated" }),
   }),
+  rateLimitTier: "high",
   handler: async (c) => {
     const { name } = c.req.valid("json")
 
@@ -173,7 +157,8 @@ const listApiKeys = apiKeyEndpoint({
     name: "listApiKeys",
     annotations: { readOnlyHint: true, destructiveHint: false },
     tags: ["API Keys"],
-    ...apiKeysFernGroup("list"),
+    group: "apiKeys",
+    sdkMethod: "list",
     summary: "List API keys",
     description: "Returns all API keys for the organization. Tokens are not included in the list response.",
     security: PROTECTED_SECURITY,
@@ -182,6 +167,7 @@ const listApiKeys = apiKeyEndpoint({
       401: errorResponse("Unauthorized"),
     },
   }),
+  rateLimitTier: "low",
   handler: async (c) => {
     const apiKeys = await Effect.runPromise(
       Effect.gen(function* () {
@@ -200,7 +186,8 @@ const getApiKey = apiKeyEndpoint({
     name: "getApiKey",
     annotations: { readOnlyHint: true, destructiveHint: false },
     tags: ["API Keys"],
-    ...apiKeysFernGroup("get"),
+    group: "apiKeys",
+    sdkMethod: "get",
     summary: "Get API key",
     description:
       "Returns a single API key including the full unmasked `token`. Useful for retrieving a stored token by id without rotating it.",
@@ -208,6 +195,7 @@ const getApiKey = apiKeyEndpoint({
     request: { params: ApiKeyIdParamsSchema },
     responses: openApiResponses({ status: 200, schema: ResponseSchema, description: "API key" }),
   }),
+  rateLimitTier: "low",
   handler: async (c) => {
     const { apiKeyId } = c.req.valid("param")
 
@@ -232,13 +220,15 @@ const updateApiKey = apiKeyEndpoint({
     name: "updateApiKey",
     annotations: { readOnlyHint: false, destructiveHint: true },
     tags: ["API Keys"],
-    ...apiKeysFernGroup("update"),
+    group: "apiKeys",
+    sdkMethod: "update",
     summary: "Update API key",
     description: "Renames an API key. The token itself is immutable — use create + revoke if you need a new value.",
     security: PROTECTED_SECURITY,
     request: { params: ApiKeyIdParamsSchema, body: jsonBody(UpdateApiKeyBody) },
     responses: openApiResponses({ status: 200, schema: ResponseSchema, description: "API key updated" }),
   }),
+  rateLimitTier: "low",
   handler: async (c) => {
     const { apiKeyId } = c.req.valid("param")
     const { name } = c.req.valid("json")
@@ -260,13 +250,15 @@ const revokeApiKey = apiKeyEndpoint({
     name: "revokeApiKey",
     annotations: { readOnlyHint: false, destructiveHint: true },
     tags: ["API Keys"],
-    ...apiKeysFernGroup("revoke"),
+    group: "apiKeys",
+    sdkMethod: "revoke",
     summary: "Revoke API key",
     description: "Revokes an API key.",
     security: PROTECTED_SECURITY,
     request: { params: ApiKeyIdParamsSchema },
     responses: openApiNoContentResponses({ description: "API key revoked" }),
   }),
+  rateLimitTier: "low",
   handler: async (c) => {
     const { apiKeyId } = c.req.valid("param")
 
@@ -281,12 +273,7 @@ const revokeApiKey = apiKeyEndpoint({
   },
 })
 
-export const createApiKeysRoutes = () => {
-  const app = new OpenAPIHono<OrganizationScopedEnv>()
-  createApiKey.mountHttp(app, createTierRateLimiter("high"))
-  listApiKeys.mountHttp(app, createTierRateLimiter("low"))
-  getApiKey.mountHttp(app, createTierRateLimiter("low"))
-  updateApiKey.mountHttp(app, createTierRateLimiter("low"))
-  revokeApiKey.mountHttp(app, createTierRateLimiter("low"))
-  return app
+export const apiKeysModule: OperationModule = {
+  path: apiKeysPath,
+  operations: [createApiKey, listApiKeys, getApiKey, updateApiKey, revokeApiKey],
 }

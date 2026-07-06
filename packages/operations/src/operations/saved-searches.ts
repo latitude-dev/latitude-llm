@@ -10,7 +10,7 @@ import {
 } from "@domain/saved-searches"
 import { BadRequestError, OrganizationId, ProjectId } from "@domain/shared"
 import { TraceRepository } from "@domain/spans"
-import { createRoute, OpenAPIHono, z } from "@hono/zod-openapi"
+import { createRoute, z } from "@hono/zod-openapi"
 import { AIEmbedLive, withAi } from "@platform/ai"
 import { TraceRepositoryLive, withClickHouse } from "@platform/db-clickhouse"
 import {
@@ -22,8 +22,8 @@ import {
 } from "@platform/db-postgres"
 import { withTracing } from "@repo/observability"
 import { Effect, Layer } from "effect"
-import { defineApiEndpoint } from "../mcp/index.ts"
-import { createTierRateLimiter } from "../middleware/rate-limiter.ts"
+import { defineOperation } from "../core/define-operation.ts"
+import type { OperationModule } from "../core/mount.ts"
 import { SavedSearchSchema, toSavedSearchResponse } from "../openapi/entities/saved-search.ts"
 import {
   decodeTraceCursor,
@@ -44,12 +44,6 @@ import {
 } from "../openapi/schemas.ts"
 import type { OrganizationScopedEnv } from "../types.ts"
 import { requireOAuthUserId } from "../utils/require-oauth.ts"
-
-const savedSearchesFernGroup = (methodName: string) =>
-  ({
-    "x-fern-sdk-group-name": "savedSearches",
-    "x-fern-sdk-method-name": methodName,
-  }) as const
 
 const SearchSlugParamsSchema = ProjectParamsSchema.extend({
   searchSlug: z.string().describe("Saved-search slug (human-readable identifier within the project)."),
@@ -94,9 +88,9 @@ const UpdateRequestSchema = z
 
 const PaginatedSavedSearchesSchema = Paginated(SavedSearchSchema, "PaginatedSavedSearches")
 
-export const savedSearchesPath = "/projects/:projectSlug/searches"
+const savedSearchesPath = "/projects/:projectSlug/searches"
 
-const savedSearchEndpoint = defineApiEndpoint<OrganizationScopedEnv>(savedSearchesPath)
+const savedSearchEndpoint = defineOperation<OrganizationScopedEnv>(savedSearchesPath)
 
 const listSavedSearchesEndpoint = savedSearchEndpoint({
   route: createRoute({
@@ -105,7 +99,8 @@ const listSavedSearchesEndpoint = savedSearchEndpoint({
     name: "listSavedSearches",
     annotations: { readOnlyHint: true, destructiveHint: false },
     tags: ["Saved Searches"],
-    ...savedSearchesFernGroup("list"),
+    group: "savedSearches",
+    sdkMethod: "list",
     summary: "List saved searches",
     description:
       "Returns every saved search in the project. The response uses the standard paginated shape; the saved-search list currently fits in a single page (`nextCursor` is always `null`).",
@@ -117,6 +112,7 @@ const listSavedSearchesEndpoint = savedSearchEndpoint({
       description: "List of saved searches",
     }),
   }),
+  rateLimitTier: "low",
   handler: async (c) => {
     const { projectSlug } = c.req.valid("param")
     const organizationId = c.var.organization.id
@@ -147,13 +143,15 @@ const getSavedSearch = savedSearchEndpoint({
     name: "getSavedSearch",
     annotations: { readOnlyHint: true, destructiveHint: false },
     tags: ["Saved Searches"],
-    ...savedSearchesFernGroup("get"),
+    group: "savedSearches",
+    sdkMethod: "get",
     summary: "Get saved search",
     description: "Returns a single saved search by slug.",
     security: PROTECTED_SECURITY,
     request: { params: SearchSlugParamsSchema },
     responses: openApiResponses({ status: 200, schema: SavedSearchSchema, description: "Saved search" }),
   }),
+  rateLimitTier: "low",
   handler: async (c) => {
     const { projectSlug, searchSlug } = c.req.valid("param")
     const organizationId = c.var.organization.id
@@ -184,7 +182,8 @@ const createSavedSearchEndpoint = savedSearchEndpoint({
     name: "createSavedSearch",
     annotations: { readOnlyHint: false, destructiveHint: false },
     tags: ["Saved Searches"],
-    ...savedSearchesFernGroup("create"),
+    group: "savedSearches",
+    sdkMethod: "create",
     summary: "Create saved search",
     description:
       "Creates a saved search within the project. At least one of `query` or `filters` must be set. The slug is derived from `name`. OAuth-authenticated only.",
@@ -192,6 +191,7 @@ const createSavedSearchEndpoint = savedSearchEndpoint({
     request: { params: ProjectParamsSchema, body: jsonBody(CreateRequestSchema) },
     responses: openApiResponses({ status: 201, schema: SavedSearchSchema, description: "Saved search created" }),
   }),
+  rateLimitTier: "low",
   handler: async (c) => {
     const { projectSlug } = c.req.valid("param")
     const body = c.req.valid("json")
@@ -231,7 +231,8 @@ const updateSavedSearchEndpoint = savedSearchEndpoint({
     name: "updateSavedSearch",
     annotations: { readOnlyHint: false, destructiveHint: true },
     tags: ["Saved Searches"],
-    ...savedSearchesFernGroup("update"),
+    group: "savedSearches",
+    sdkMethod: "update",
     summary: "Update saved search",
     description:
       "Updates a saved search. Renaming may regenerate the slug — clients should re-read the response or rely on the `id` for stable references.",
@@ -239,6 +240,7 @@ const updateSavedSearchEndpoint = savedSearchEndpoint({
     request: { params: SearchSlugParamsSchema, body: jsonBody(UpdateRequestSchema) },
     responses: openApiResponses({ status: 200, schema: SavedSearchSchema, description: "Updated saved search" }),
   }),
+  rateLimitTier: "low",
   handler: async (c) => {
     const { projectSlug, searchSlug } = c.req.valid("param")
     const body = c.req.valid("json")
@@ -277,13 +279,15 @@ const deleteSavedSearchEndpoint = savedSearchEndpoint({
     name: "deleteSavedSearch",
     annotations: { readOnlyHint: false, destructiveHint: true },
     tags: ["Saved Searches"],
-    ...savedSearchesFernGroup("delete"),
+    group: "savedSearches",
+    sdkMethod: "delete",
     summary: "Delete saved search",
     description: "Deletes a saved search by slug.",
     security: PROTECTED_SECURITY,
     request: { params: SearchSlugParamsSchema },
     responses: openApiNoContentResponses({ description: "Saved search deleted" }),
   }),
+  rateLimitTier: "low",
   handler: async (c) => {
     const { projectSlug, searchSlug } = c.req.valid("param")
     const organizationId = c.var.organization.id
@@ -328,7 +332,8 @@ const listSavedSearchTraces = savedSearchEndpoint({
     name: "listSavedSearchTraces",
     annotations: { readOnlyHint: true, destructiveHint: false },
     tags: ["Saved Searches"],
-    ...savedSearchesFernGroup("listTraces"),
+    group: "savedSearches",
+    sdkMethod: "listTraces",
     summary: "List traces matching a saved search",
     description:
       "Returns a cursor-paginated page of traces that match the saved search's `query` + `filters`. Each row uses the same `Trace` shape as `listTraces` — use the trace point-lookup endpoints (`getTrace`, `listTraceSpans`, `getTraceSpan`, `listTraceAnnotations`) to drill into individual traces.",
@@ -336,6 +341,7 @@ const listSavedSearchTraces = savedSearchEndpoint({
     request: { params: SearchSlugParamsSchema, query: ListSavedSearchTracesQuerySchema },
     responses: openApiResponses({ status: 200, schema: PaginatedTracesSchema, description: "Page of traces" }),
   }),
+  rateLimitTier: "medium",
   handler: async (c) => {
     const { projectSlug, searchSlug } = c.req.valid("param")
     const query = c.req.valid("query")
@@ -400,13 +406,14 @@ const listSavedSearchTraces = savedSearchEndpoint({
   },
 })
 
-export const createSavedSearchesRoutes = () => {
-  const app = new OpenAPIHono<OrganizationScopedEnv>()
-  listSavedSearchesEndpoint.mountHttp(app, createTierRateLimiter("low"))
-  getSavedSearch.mountHttp(app, createTierRateLimiter("low"))
-  createSavedSearchEndpoint.mountHttp(app, createTierRateLimiter("low"))
-  updateSavedSearchEndpoint.mountHttp(app, createTierRateLimiter("low"))
-  deleteSavedSearchEndpoint.mountHttp(app, createTierRateLimiter("low"))
-  listSavedSearchTraces.mountHttp(app, createTierRateLimiter("medium"))
-  return app
+export const savedSearchesModule: OperationModule = {
+  path: savedSearchesPath,
+  operations: [
+    listSavedSearchesEndpoint,
+    getSavedSearch,
+    createSavedSearchEndpoint,
+    updateSavedSearchEndpoint,
+    deleteSavedSearchEndpoint,
+    listSavedSearchTraces,
+  ],
 }

@@ -10,7 +10,7 @@ import {
 } from "@domain/organizations"
 import { MembershipId, UserId } from "@domain/shared"
 import { UserRepository } from "@domain/users"
-import { createRoute, OpenAPIHono, z } from "@hono/zod-openapi"
+import { createRoute, z } from "@hono/zod-openapi"
 import {
   InvitationRepositoryLive,
   MembershipRepositoryLive,
@@ -22,13 +22,13 @@ import {
 import { parseEnv } from "@platform/env"
 import { withTracing } from "@repo/observability"
 import { Effect, Layer } from "effect"
-import { defineApiEndpoint } from "../mcp/index.ts"
-import { createTierRateLimiter } from "../middleware/rate-limiter.ts"
+import { defineOperation } from "../core/define-operation.ts"
+import type { OperationModule } from "../core/mount.ts"
 import { jsonBody, openApiNoContentResponses, openApiResponses, PROTECTED_SECURITY } from "../openapi/schemas.ts"
 import type { OrganizationScopedEnv } from "../types.ts"
 import { requireOAuthUserId } from "../utils/require-oauth.ts"
 
-export const membersPath = "/members"
+const membersPath = "/members"
 
 // ───────────────────────────────────────────────────────────── schemas ────
 
@@ -89,14 +89,6 @@ const UpdateRoleRequestSchema = z
   })
   .openapi("UpdateMemberRoleBody")
 
-// ────────────────────────────────────────────────────────── Fern naming ───
-
-const fern = (methodName: string) =>
-  ({
-    "x-fern-sdk-group-name": "members",
-    "x-fern-sdk-method-name": methodName,
-  }) as const
-
 const MemberIdParamsSchema = z.object({
   memberId: z.string().min(1).describe("Membership identifier."),
 })
@@ -131,7 +123,7 @@ const toInvitedMember = (invitation: Invitation) => ({
 
 // ─────────────────────────────────────────────────────────────── routes ───
 
-const memberEndpoint = defineApiEndpoint<OrganizationScopedEnv>(membersPath)
+const memberEndpoint = defineOperation<OrganizationScopedEnv>(membersPath)
 
 const listMembers = memberEndpoint({
   route: createRoute({
@@ -140,12 +132,14 @@ const listMembers = memberEndpoint({
     name: "listMembers",
     annotations: { readOnlyHint: true, destructiveHint: false },
     tags: ["Members"],
-    ...fern("list"),
+    group: "members",
+    sdkMethod: "list",
     summary: "List members",
     description: "Returns every active member of the caller's organization with their role and user details.",
     security: PROTECTED_SECURITY,
     responses: openApiResponses({ status: 200, schema: ListResponseSchema, description: "List of members" }),
   }),
+  rateLimitTier: "low",
   handler: async (c) => {
     const { members, invitations } = await Effect.runPromise(
       listMembersUseCase({ organizationId: c.var.organization.id }).pipe(
@@ -168,13 +162,15 @@ const getMember = memberEndpoint({
     name: "getMember",
     annotations: { readOnlyHint: true, destructiveHint: false },
     tags: ["Members"],
-    ...fern("get"),
+    group: "members",
+    sdkMethod: "get",
     summary: "Get member",
     description: "Returns a single member of the caller's organization, including their role and user details.",
     security: PROTECTED_SECURITY,
     request: { params: MemberIdParamsSchema },
     responses: openApiResponses({ status: 200, schema: ActiveMemberSchema, description: "Member" }),
   }),
+  rateLimitTier: "low",
   handler: async (c) => {
     const { memberId } = c.req.valid("param")
     const member = await Effect.runPromise(
@@ -194,7 +190,8 @@ const inviteMember = memberEndpoint({
     name: "inviteMember",
     annotations: { readOnlyHint: false, destructiveHint: false },
     tags: ["Members"],
-    ...fern("invite"),
+    group: "members",
+    sdkMethod: "invite",
     summary: "Invite a member",
     description:
       "Signals an invitation to join the caller's organization. The invitee receives an accept link by email and becomes a member once they accept. The response is the pending invitation record. Requires OAuth authentication (API-key callers can't act on behalf of a specific user).",
@@ -202,6 +199,7 @@ const inviteMember = memberEndpoint({
     request: { body: jsonBody(InviteRequestSchema) },
     responses: openApiResponses({ status: 201, schema: InvitedMemberSchema, description: "Invitation created" }),
   }),
+  rateLimitTier: "high",
   handler: async (c) => {
     const inviterUserId = requireOAuthUserId(c)
     const { email, role } = c.req.valid("json")
@@ -249,7 +247,8 @@ const updateMemberRole = memberEndpoint({
     name: "updateMember",
     annotations: { readOnlyHint: false, destructiveHint: true },
     tags: ["Members"],
-    ...fern("update"),
+    group: "members",
+    sdkMethod: "update",
     summary: "Update a member",
     description:
       "Updates a member of the caller's organization. Today only the role is mutable. The caller must be an admin or owner; owners cannot be demoted via this endpoint. Requires OAuth authentication.",
@@ -261,6 +260,7 @@ const updateMemberRole = memberEndpoint({
       description: "Member with the updated role",
     }),
   }),
+  rateLimitTier: "low",
   handler: async (c) => {
     const requestingUserId = requireOAuthUserId(c)
     const { memberId } = c.req.valid("param")
@@ -294,7 +294,8 @@ const removeMember = memberEndpoint({
     name: "removeMember",
     annotations: { readOnlyHint: false, destructiveHint: true },
     tags: ["Members"],
-    ...fern("remove"),
+    group: "members",
+    sdkMethod: "remove",
     summary: "Remove a member",
     description:
       "Removes a member from the caller's organization. Self-removal and removing the organization owner are rejected — transfer ownership first. Requires OAuth authentication.",
@@ -302,6 +303,7 @@ const removeMember = memberEndpoint({
     request: { params: MemberIdParamsSchema },
     responses: openApiNoContentResponses({ description: "Member removed" }),
   }),
+  rateLimitTier: "low",
   handler: async (c) => {
     const requestingUserId = requireOAuthUserId(c)
     const { memberId } = c.req.valid("param")
@@ -316,12 +318,7 @@ const removeMember = memberEndpoint({
   },
 })
 
-export const createMembersRoutes = () => {
-  const app = new OpenAPIHono<OrganizationScopedEnv>()
-  listMembers.mountHttp(app, createTierRateLimiter("low"))
-  inviteMember.mountHttp(app, createTierRateLimiter("high"))
-  getMember.mountHttp(app, createTierRateLimiter("low"))
-  updateMemberRole.mountHttp(app, createTierRateLimiter("low"))
-  removeMember.mountHttp(app, createTierRateLimiter("low"))
-  return app
+export const membersModule: OperationModule = {
+  path: membersPath,
+  operations: [listMembers, inviteMember, getMember, updateMemberRole, removeMember],
 }

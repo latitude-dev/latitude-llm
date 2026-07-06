@@ -7,6 +7,8 @@ const baseRoute = {
   method: "post",
   path: "/x",
   name: "test",
+  group: "test",
+  sdkMethod: "test",
   description: "",
   responses: {},
 } as const

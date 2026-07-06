@@ -1,7 +1,7 @@
 import { IncidentRepository, resolveIncidentUseCase } from "@domain/incidents"
 import { ProjectRepository } from "@domain/projects"
 import { AlertIncidentId, cuidSchema, NotFoundError, OrganizationId, ProjectId } from "@domain/shared"
-import { createRoute, OpenAPIHono, z } from "@hono/zod-openapi"
+import { createRoute, z } from "@hono/zod-openapi"
 import {
   IncidentRepositoryLive,
   OutboxEventWriterLive,
@@ -10,8 +10,8 @@ import {
 } from "@platform/db-postgres"
 import { withTracing } from "@repo/observability"
 import { Effect, Layer } from "effect"
-import { defineApiEndpoint } from "../mcp/index.ts"
-import { createTierRateLimiter } from "../middleware/rate-limiter.ts"
+import { defineOperation } from "../core/define-operation.ts"
+import type { OperationModule } from "../core/mount.ts"
 import {
   INCIDENT_SEVERITIES,
   INCIDENT_SOURCE_TYPES,
@@ -20,12 +20,6 @@ import {
 } from "../openapi/entities/incident.ts"
 import { openApiResponses, PROTECTED_SECURITY, ProjectParamsSchema } from "../openapi/schemas.ts"
 import type { OrganizationScopedEnv } from "../types.ts"
-
-const incidentsFernGroup = (methodName: string) =>
-  ({
-    "x-fern-sdk-group-name": "incidents",
-    "x-fern-sdk-method-name": methodName,
-  }) as const
 
 const DEFAULT_RANGE_DAYS = 7
 const DEFAULT_RANGE_MS = DEFAULT_RANGE_DAYS * 24 * 60 * 60 * 1000
@@ -69,9 +63,9 @@ const ListIncidentsResponseSchema = z
   })
   .openapi("ListIncidentsResponse")
 
-export const incidentsPath = "/projects/:projectSlug/incidents"
+const incidentsPath = "/projects/:projectSlug/incidents"
 
-const incidentEndpoint = defineApiEndpoint<OrganizationScopedEnv>(incidentsPath)
+const incidentEndpoint = defineOperation<OrganizationScopedEnv>(incidentsPath)
 
 const listIncidents = incidentEndpoint({
   route: createRoute({
@@ -80,7 +74,8 @@ const listIncidents = incidentEndpoint({
     name: "listIncidents",
     annotations: { readOnlyHint: true, destructiveHint: false },
     tags: ["Incidents"],
-    ...incidentsFernGroup("list"),
+    group: "incidents",
+    sdkMethod: "list",
     summary: "List project incidents",
     description:
       "Returns incidents in the project, ordered from oldest to newest. The time window defaults to the trailing 7 days.",
@@ -92,6 +87,7 @@ const listIncidents = incidentEndpoint({
       description: "Matching incidents",
     }),
   }),
+  rateLimitTier: "low",
   handler: async (c) => {
     const { projectSlug } = c.req.valid("param")
     const query = c.req.valid("query")
@@ -139,7 +135,8 @@ const resolveIncident = incidentEndpoint({
     name: "resolveIncident",
     annotations: { readOnlyHint: false, destructiveHint: false },
     tags: ["Incidents"],
-    ...incidentsFernGroup("resolve"),
+    group: "incidents",
+    sdkMethod: "resolve",
     summary: "Resolve incident",
     description:
       "Resolves (closes) an ongoing incident. An already-closed incident is returned unchanged. If the incident's condition triggers again, a new incident will be opened.",
@@ -147,6 +144,7 @@ const resolveIncident = incidentEndpoint({
     request: { params: IncidentParamsSchema },
     responses: openApiResponses({ status: 200, schema: IncidentSchema, description: "Resolved incident" }),
   }),
+  rateLimitTier: "medium",
   handler: async (c) => {
     const { projectSlug, incidentId } = c.req.valid("param")
     const organizationId = c.var.organization.id
@@ -185,9 +183,7 @@ const resolveIncident = incidentEndpoint({
   },
 })
 
-export const createIncidentsRoutes = () => {
-  const app = new OpenAPIHono<OrganizationScopedEnv>()
-  listIncidents.mountHttp(app, createTierRateLimiter("low"))
-  resolveIncident.mountHttp(app, createTierRateLimiter("medium"))
-  return app
+export const incidentsModule: OperationModule = {
+  path: incidentsPath,
+  operations: [listIncidents, resolveIncident],
 }

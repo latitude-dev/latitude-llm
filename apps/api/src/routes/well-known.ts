@@ -15,8 +15,8 @@
  */
 import { createRoute, type OpenAPIHono, z } from "@hono/zod-openapi"
 import { parseEnv } from "@platform/env"
+import { PUBLIC_SECURITY } from "@repo/operations/openapi/schemas"
 import { Effect } from "effect"
-import { PUBLIC_SECURITY } from "../openapi/schemas.ts"
 import type { AppEnv } from "../types.ts"
 
 const ProtectedResourceMetadataSchema = z

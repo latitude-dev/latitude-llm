@@ -6,13 +6,13 @@ import {
   type SpanListOrderField,
   SpanRepository,
 } from "@domain/spans"
-import { createRoute, OpenAPIHono, z } from "@hono/zod-openapi"
+import { createRoute, z } from "@hono/zod-openapi"
 import { SpanRepositoryLive, withClickHouse } from "@platform/db-clickhouse"
 import { ProjectRepositoryLive, withPostgres } from "@platform/db-postgres"
 import { withTracing } from "@repo/observability"
 import { Effect } from "effect"
-import { defineApiEndpoint } from "../mcp/index.ts"
-import { createTierRateLimiter } from "../middleware/rate-limiter.ts"
+import { defineOperation } from "../core/define-operation.ts"
+import type { OperationModule } from "../core/mount.ts"
 import { SpanSchema, toSpanResponse } from "../openapi/entities/span.ts"
 import {
   FilterSetSchema,
@@ -23,15 +23,9 @@ import {
 } from "../openapi/schemas.ts"
 import type { OrganizationScopedEnv } from "../types.ts"
 
-export const spansPath = "/projects/:projectSlug/spans"
+const spansPath = "/projects/:projectSlug/spans"
 
-const spansFernGroup = (methodName: string) =>
-  ({
-    "x-fern-sdk-group-name": "spans",
-    "x-fern-sdk-method-name": methodName,
-  }) as const
-
-const spanEndpoint = defineApiEndpoint<OrganizationScopedEnv>(spansPath)
+const spanEndpoint = defineOperation<OrganizationScopedEnv>(spansPath)
 
 // Opaque keyset cursor — encodes the last row's `(field, direction, sortValue,
 // spanId)` so the next page resumes strictly after it. Keyset (not offset) so a
@@ -123,7 +117,8 @@ const querySpans = spanEndpoint({
     name: "querySpans",
     annotations: { readOnlyHint: true, destructiveHint: false },
     tags: ["Spans"],
-    ...spansFernGroup("query"),
+    group: "spans",
+    sdkMethod: "query",
     summary: "Query spans across traces",
     description:
       'Returns a cursor-paginated page of spans across all traces in the project matching `filters` (and an optional time `range`). The span-grain, row-level complement to `queryAnalytics` with `stream: "spans"` (which returns aggregates): use this to drill from an aggregate into the individual spans behind it — e.g. every failing `search_docs` tool span, or the slowest embedding calls.',
@@ -131,6 +126,7 @@ const querySpans = spanEndpoint({
     request: { params: ProjectParamsSchema, body: jsonBody(QuerySpansBodySchema) },
     responses: openApiResponses({ status: 200, schema: QuerySpansResponseSchema, description: "Page of spans" }),
   }),
+  rateLimitTier: "high",
   handler: async (c) => {
     const { projectSlug } = c.req.valid("param")
     const body = c.req.valid("json")
@@ -190,8 +186,7 @@ const querySpans = spanEndpoint({
   },
 })
 
-export const createSpansRoutes = () => {
-  const app = new OpenAPIHono<OrganizationScopedEnv>()
-  querySpans.mountHttp(app, createTierRateLimiter("high"))
-  return app
+export const spansModule: OperationModule = {
+  path: spansPath,
+  operations: [querySpans],
 }

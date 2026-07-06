@@ -1,7 +1,7 @@
 import { ProjectRepository } from "@domain/projects"
 import { analyticsQuerySchema, isValidAnalyticsRange, OrganizationId, ProjectId } from "@domain/shared"
 import { queryAnalyticsUseCase } from "@domain/spans"
-import { createRoute, OpenAPIHono } from "@hono/zod-openapi"
+import { createRoute } from "@hono/zod-openapi"
 import { AnalyticsQueryReaderLive, withClickHouse } from "@platform/db-clickhouse"
 import {
   ProjectRepositoryLive,
@@ -11,8 +11,8 @@ import {
 } from "@platform/db-postgres"
 import { withTracing } from "@repo/observability"
 import { Effect, Layer } from "effect"
-import { defineApiEndpoint } from "../mcp/index.ts"
-import { createTierRateLimiter } from "../middleware/rate-limiter.ts"
+import { defineOperation } from "../core/define-operation.ts"
+import type { OperationModule } from "../core/mount.ts"
 import {
   AnalyticsQueryBodySchema,
   AnalyticsSeriesResponseSchema,
@@ -22,15 +22,9 @@ import { resolveBreakdownLabels } from "../openapi/entities/analytics-labels.ts"
 import { jsonBody, openApiResponses, PROTECTED_SECURITY, ProjectParamsSchema } from "../openapi/schemas.ts"
 import type { OrganizationScopedEnv } from "../types.ts"
 
-export const analyticsPath = "/projects/:projectSlug/analytics"
+const analyticsPath = "/projects/:projectSlug/analytics"
 
-const analyticsFernGroup = (methodName: string) =>
-  ({
-    "x-fern-sdk-group-name": "analytics",
-    "x-fern-sdk-method-name": methodName,
-  }) as const
-
-const analyticsEndpoint = defineApiEndpoint<OrganizationScopedEnv>(analyticsPath)
+const analyticsEndpoint = defineOperation<OrganizationScopedEnv>(analyticsPath)
 
 const queryAnalytics = analyticsEndpoint({
   route: createRoute({
@@ -39,7 +33,8 @@ const queryAnalytics = analyticsEndpoint({
     name: "queryAnalytics",
     annotations: { readOnlyHint: true, destructiveHint: false },
     tags: ["Analytics"],
-    ...analyticsFernGroup("query"),
+    group: "analytics",
+    sdkMethod: "query",
     summary: "Run an analytics query",
     description:
       "Compute a metric over a filtered stream (`traces`/`sessions`/`spans`), optionally broken down by a dimension and/or bucketed over time. Returns a tidy series — one point per breakdown value and/or time bucket — suitable for charts and dashboards.",
@@ -51,6 +46,7 @@ const queryAnalytics = analyticsEndpoint({
       description: "The analytics series",
     }),
   }),
+  rateLimitTier: "high",
   handler: async (c) => {
     const { projectSlug } = c.req.valid("param")
     const organizationId = c.var.organization.id
@@ -101,8 +97,7 @@ const queryAnalytics = analyticsEndpoint({
   },
 })
 
-export const createAnalyticsRoutes = () => {
-  const app = new OpenAPIHono<OrganizationScopedEnv>()
-  queryAnalytics.mountHttp(app, createTierRateLimiter("high"))
-  return app
+export const analyticsModule: OperationModule = {
+  path: analyticsPath,
+  operations: [queryAnalytics],
 }

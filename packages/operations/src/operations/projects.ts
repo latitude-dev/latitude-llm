@@ -7,7 +7,7 @@ import {
   updateProjectUseCase,
 } from "@domain/projects"
 import type { INCIDENT_NOTIFICATION_KEYS } from "@domain/shared"
-import { createRoute, OpenAPIHono, z } from "@hono/zod-openapi"
+import { createRoute, z } from "@hono/zod-openapi"
 import { RedisCacheStoreLive } from "@platform/cache-redis"
 import {
   FlaggerRepositoryLive,
@@ -17,8 +17,8 @@ import {
 } from "@platform/db-postgres"
 import { withTracing } from "@repo/observability"
 import { Effect, Layer } from "effect"
-import { defineApiEndpoint } from "../mcp/index.ts"
-import { createTierRateLimiter } from "../middleware/rate-limiter.ts"
+import { defineOperation } from "../core/define-operation.ts"
+import type { OperationModule } from "../core/mount.ts"
 import { Paginated } from "../openapi/pagination.ts"
 import {
   jsonBody,
@@ -28,17 +28,6 @@ import {
   ProjectParamsSchema,
 } from "../openapi/schemas.ts"
 import type { OrganizationScopedEnv } from "../types.ts"
-
-// Fern uses `x-fern-sdk-group-name` + `x-fern-sdk-method-name` to derive the
-// SDK resource namespace (`client.projects.*`) and method names independently
-// of the OpenAPI `tag` and `operationId`. Without these explicit overrides Fern
-// falls back to deriving SDK names from the (multi-word) tag, which produces
-// awkward `projectsList`-style methods and case-sensitivity signals on CI.
-const projectsFernGroup = (methodName: string) =>
-  ({
-    "x-fern-sdk-group-name": "projects",
-    "x-fern-sdk-method-name": methodName,
-  }) as const
 
 // Project-settings shape, expressed at the API layer so each field carries a
 // description (the domain `projectSettingsSchema` is description-free by
@@ -191,9 +180,9 @@ const toResponse = (project: Project) => ({
   updatedAt: project.updatedAt.toISOString(),
 })
 
-export const projectsPath = "/projects"
+const projectsPath = "/projects"
 
-const projectEndpoint = defineApiEndpoint<OrganizationScopedEnv>(projectsPath)
+const projectEndpoint = defineOperation<OrganizationScopedEnv>(projectsPath)
 
 const createProject = projectEndpoint({
   route: createRoute({
@@ -202,7 +191,8 @@ const createProject = projectEndpoint({
     name: "createProject",
     annotations: { readOnlyHint: false, destructiveHint: false },
     tags: ["Projects"],
-    ...projectsFernGroup("create"),
+    group: "projects",
+    sdkMethod: "create",
     summary: "Create project",
     description: "Creates a new project within the organization. The name must be unique within the org.",
     security: PROTECTED_SECURITY,
@@ -211,6 +201,7 @@ const createProject = projectEndpoint({
     },
     responses: openApiResponses({ status: 201, schema: ResponseSchema, description: "Project created" }),
   }),
+  rateLimitTier: "high",
   handler: async (c) => {
     const body = c.req.valid("json")
 
@@ -239,13 +230,15 @@ const listProjects = projectEndpoint({
     name: "listProjects",
     annotations: { readOnlyHint: true, destructiveHint: false },
     tags: ["Projects"],
-    ...projectsFernGroup("list"),
+    group: "projects",
+    sdkMethod: "list",
     summary: "List projects",
     description:
       "Returns every project in the organization. The response uses the standard paginated shape; the project list currently fits in a single page (`nextCursor` is always `null`).",
     security: PROTECTED_SECURITY,
     responses: openApiResponses({ status: 200, schema: PaginatedProjectsSchema, description: "List of projects" }),
   }),
+  rateLimitTier: "low",
   handler: async (c) => {
     const projects = await Effect.runPromise(
       Effect.gen(function* () {
@@ -265,13 +258,15 @@ const getProject = projectEndpoint({
     name: "getProject",
     annotations: { readOnlyHint: true, destructiveHint: false },
     tags: ["Projects"],
-    ...projectsFernGroup("get"),
+    group: "projects",
+    sdkMethod: "get",
     summary: "Get project",
     description: "Returns a single project by slug.",
     security: PROTECTED_SECURITY,
     request: { params: ProjectParamsSchema },
     responses: openApiResponses({ status: 200, schema: ResponseSchema, description: "Project" }),
   }),
+  rateLimitTier: "low",
   handler: async (c) => {
     const { projectSlug } = c.req.valid("param")
 
@@ -293,7 +288,8 @@ const updateProject = projectEndpoint({
     name: "updateProject",
     annotations: { readOnlyHint: false, destructiveHint: true },
     tags: ["Projects"],
-    ...projectsFernGroup("update"),
+    group: "projects",
+    sdkMethod: "update",
     summary: "Update project",
     description:
       "Updates a project's name and/or settings. Renaming never changes the slug, and the slug cannot be changed via the API (only from the dashboard). Use `id` or `slug` as stable references.",
@@ -304,6 +300,7 @@ const updateProject = projectEndpoint({
     },
     responses: openApiResponses({ status: 200, schema: ResponseSchema, description: "Updated project" }),
   }),
+  rateLimitTier: "low",
   handler: async (c) => {
     const { projectSlug } = c.req.valid("param")
     const body = c.req.valid("json")
@@ -356,13 +353,15 @@ const deleteProject = projectEndpoint({
     name: "deleteProject",
     annotations: { readOnlyHint: false, destructiveHint: true },
     tags: ["Projects"],
-    ...projectsFernGroup("delete"),
+    group: "projects",
+    sdkMethod: "delete",
     summary: "Delete project",
     description: "Deletes a project by slug.",
     security: PROTECTED_SECURITY,
     request: { params: ProjectParamsSchema },
     responses: openApiNoContentResponses({ description: "Project deleted" }),
   }),
+  rateLimitTier: "low",
   handler: async (c) => {
     const { projectSlug } = c.req.valid("param")
 
@@ -377,12 +376,7 @@ const deleteProject = projectEndpoint({
   },
 })
 
-export const createProjectsRoutes = () => {
-  const app = new OpenAPIHono<OrganizationScopedEnv>()
-  createProject.mountHttp(app, createTierRateLimiter("high"))
-  listProjects.mountHttp(app, createTierRateLimiter("low"))
-  getProject.mountHttp(app, createTierRateLimiter("low"))
-  updateProject.mountHttp(app, createTierRateLimiter("low"))
-  deleteProject.mountHttp(app, createTierRateLimiter("low"))
-  return app
+export const projectsModule: OperationModule = {
+  path: projectsPath,
+  operations: [createProject, listProjects, getProject, updateProject, deleteProject],
 }

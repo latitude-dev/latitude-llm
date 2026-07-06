@@ -11,7 +11,7 @@ import {
 } from "@domain/monitors"
 import { ProjectRepository } from "@domain/projects"
 import { AlertIncidentId, BadRequestError, OrganizationId } from "@domain/shared"
-import { createRoute, OpenAPIHono, z } from "@hono/zod-openapi"
+import { createRoute, z } from "@hono/zod-openapi"
 import {
   IncidentRepositoryLive,
   MonitorRepositoryLive,
@@ -23,8 +23,8 @@ import {
 } from "@platform/db-postgres"
 import { withTracing } from "@repo/observability"
 import { Effect, Layer } from "effect"
-import { defineApiEndpoint } from "../mcp/index.ts"
-import { createTierRateLimiter } from "../middleware/rate-limiter.ts"
+import { defineOperation } from "../core/define-operation.ts"
+import type { OperationModule } from "../core/mount.ts"
 import {
   AlertConditionSchema,
   AlertEscalatingConditionSchema,
@@ -54,12 +54,6 @@ import type { OrganizationScopedEnv } from "../types.ts"
 
 const NAME_MAX_LENGTH = 128
 const DESCRIPTION_MAX_LENGTH = 2000
-
-const monitorsFernGroup = (methodName: string) =>
-  ({
-    "x-fern-sdk-group-name": "monitors",
-    "x-fern-sdk-method-name": methodName,
-  }) as const
 
 const MonitorSlugParamsSchema = ProjectParamsSchema.extend({
   monitorSlug: z.string().describe("Monitor slug (human-readable identifier within the project)."),
@@ -170,9 +164,9 @@ const MonitorListSchema = z
   .object({ items: z.array(MonitorSchema).describe("Matching monitors.") })
   .openapi("MonitorList")
 
-export const monitorsPath = "/projects/:projectSlug/monitors"
+const monitorsPath = "/projects/:projectSlug/monitors"
 
-const monitorEndpoint = defineApiEndpoint<OrganizationScopedEnv>(monitorsPath)
+const monitorEndpoint = defineOperation<OrganizationScopedEnv>(monitorsPath)
 
 const listMonitors = monitorEndpoint({
   route: createRoute({
@@ -181,13 +175,15 @@ const listMonitors = monitorEndpoint({
     name: "listMonitors",
     annotations: { readOnlyHint: true, destructiveHint: false },
     tags: ["Monitors"],
-    ...monitorsFernGroup("list"),
+    group: "monitors",
+    sdkMethod: "list",
     summary: "List monitors",
     description: "Returns the project's monitors, system monitors first, then by most recent activity.",
     security: PROTECTED_SECURITY,
     request: { params: ProjectParamsSchema, query: ListMonitorsQuerySchema },
     responses: openApiResponses({ status: 200, schema: PaginatedMonitorsSchema, description: "Page of monitors" }),
   }),
+  rateLimitTier: "low",
   handler: async (c) => {
     const { projectSlug } = c.req.valid("param")
     const query = c.req.valid("query")
@@ -237,13 +233,15 @@ const createMonitor = monitorEndpoint({
     name: "createMonitor",
     annotations: { readOnlyHint: false, destructiveHint: false },
     tags: ["Monitors"],
-    ...monitorsFernGroup("create"),
+    group: "monitors",
+    sdkMethod: "create",
     summary: "Create monitor",
     description: "Creates a monitor with one rule. The slug is derived from `name`.",
     security: PROTECTED_SECURITY,
     request: { params: ProjectParamsSchema, body: jsonBody(CreateMonitorBodySchema) },
     responses: openApiResponses({ status: 201, schema: MonitorSchema, description: "Monitor created" }),
   }),
+  rateLimitTier: "medium",
   handler: async (c) => {
     const { projectSlug } = c.req.valid("param")
     const body = c.req.valid("json")
@@ -290,13 +288,15 @@ const listMonitorsForTarget = monitorEndpoint({
     name: "listMonitorsForTarget",
     annotations: { readOnlyHint: true, destructiveHint: false },
     tags: ["Monitors"],
-    ...monitorsFernGroup("listForTarget"),
+    group: "monitors",
+    sdkMethod: "listForTarget",
     summary: "List monitors for target",
     description: "Returns live monitors matching the supplied target type and/or filter subset.",
     security: PROTECTED_SECURITY,
     request: { params: ProjectParamsSchema, body: jsonBody(ListMonitorsForTargetBodySchema) },
     responses: openApiResponses({ status: 200, schema: MonitorListSchema, description: "Matching monitors" }),
   }),
+  rateLimitTier: "low",
   handler: async (c) => {
     const { projectSlug } = c.req.valid("param")
     const body = c.req.valid("json")
@@ -332,13 +332,15 @@ const getMonitor = monitorEndpoint({
     name: "getMonitor",
     annotations: { readOnlyHint: true, destructiveHint: false },
     tags: ["Monitors"],
-    ...monitorsFernGroup("get"),
+    group: "monitors",
+    sdkMethod: "get",
     summary: "Get monitor",
     description: "Returns a single monitor by slug.",
     security: PROTECTED_SECURITY,
     request: { params: MonitorSlugParamsSchema },
     responses: openApiResponses({ status: 200, schema: MonitorSchema, description: "Monitor" }),
   }),
+  rateLimitTier: "low",
   handler: async (c) => {
     const { projectSlug, monitorSlug } = c.req.valid("param")
     const organizationId = c.var.organization.id
@@ -369,7 +371,8 @@ const updateMonitor = monitorEndpoint({
     name: "updateMonitor",
     annotations: { readOnlyHint: false, destructiveHint: true },
     tags: ["Monitors"],
-    ...monitorsFernGroup("update"),
+    group: "monitors",
+    sdkMethod: "update",
     summary: "Update monitor",
     description: "Updates a monitor's metadata, target, and rule. System monitor edits are restricted.",
     security: PROTECTED_SECURITY,
@@ -381,6 +384,7 @@ const updateMonitor = monitorEndpoint({
       extraErrors: { 403: { description: "System monitors cannot be edited" } },
     }),
   }),
+  rateLimitTier: "medium",
   handler: async (c) => {
     const { projectSlug, monitorSlug } = c.req.valid("param")
     const body = c.req.valid("json")
@@ -478,13 +482,15 @@ const deleteMonitor = monitorEndpoint({
     name: "deleteMonitor",
     annotations: { readOnlyHint: false, destructiveHint: true },
     tags: ["Monitors"],
-    ...monitorsFernGroup("delete"),
+    group: "monitors",
+    sdkMethod: "delete",
     summary: "Delete monitor",
     description: "Deletes a monitor. System monitors cannot be deleted.",
     security: PROTECTED_SECURITY,
     request: { params: MonitorSlugParamsSchema },
     responses: openApiNoContentResponses({ description: "Monitor deleted" }),
   }),
+  rateLimitTier: "medium",
   handler: async (c) => {
     const { projectSlug, monitorSlug } = c.req.valid("param")
     const organizationId = c.var.organization.id
@@ -516,7 +522,8 @@ const listMonitorIncidents = monitorEndpoint({
     name: "listMonitorIncidents",
     annotations: { readOnlyHint: true, destructiveHint: false },
     tags: ["Monitors"],
-    ...monitorsFernGroup("listIncidents"),
+    group: "monitors",
+    sdkMethod: "listIncidents",
     summary: "List monitor incidents",
     description:
       "Returns the incidents opened by a monitor, most recent first. Each item's `notified` flag shows whether it triggered a notification.",
@@ -528,6 +535,7 @@ const listMonitorIncidents = monitorEndpoint({
       description: "Page of incidents",
     }),
   }),
+  rateLimitTier: "low",
   handler: async (c) => {
     const { projectSlug, monitorSlug } = c.req.valid("param")
     const query = c.req.valid("query")
@@ -583,13 +591,15 @@ const muteMonitor = monitorEndpoint({
     name: "muteMonitor",
     annotations: { readOnlyHint: false, destructiveHint: false },
     tags: ["Monitors"],
-    ...monitorsFernGroup("mute"),
+    group: "monitors",
+    sdkMethod: "mute",
     summary: "Mute monitor",
     description: "Mutes a monitor so its incidents stop sending notifications. Allowed on all monitors.",
     security: PROTECTED_SECURITY,
     request: { params: MonitorSlugParamsSchema },
     responses: openApiResponses({ status: 200, schema: MonitorSchema, description: "Muted monitor" }),
   }),
+  rateLimitTier: "medium",
   handler: async (c) => {
     const { projectSlug, monitorSlug } = c.req.valid("param")
     const organizationId = c.var.organization.id
@@ -621,13 +631,15 @@ const unmuteMonitor = monitorEndpoint({
     name: "unmuteMonitor",
     annotations: { readOnlyHint: false, destructiveHint: false },
     tags: ["Monitors"],
-    ...monitorsFernGroup("unmute"),
+    group: "monitors",
+    sdkMethod: "unmute",
     summary: "Unmute monitor",
     description: "Lifts a monitor's mute so its incidents notify again.",
     security: PROTECTED_SECURITY,
     request: { params: MonitorSlugParamsSchema },
     responses: openApiResponses({ status: 200, schema: MonitorSchema, description: "Unmuted monitor" }),
   }),
+  rateLimitTier: "medium",
   handler: async (c) => {
     const { projectSlug, monitorSlug } = c.req.valid("param")
     const organizationId = c.var.organization.id
@@ -652,16 +664,17 @@ const unmuteMonitor = monitorEndpoint({
   },
 })
 
-export const createMonitorsRoutes = () => {
-  const app = new OpenAPIHono<OrganizationScopedEnv>()
-  listMonitors.mountHttp(app, createTierRateLimiter("low"))
-  createMonitor.mountHttp(app, createTierRateLimiter("medium"))
-  listMonitorsForTarget.mountHttp(app, createTierRateLimiter("low"))
-  getMonitor.mountHttp(app, createTierRateLimiter("low"))
-  updateMonitor.mountHttp(app, createTierRateLimiter("medium"))
-  deleteMonitor.mountHttp(app, createTierRateLimiter("medium"))
-  listMonitorIncidents.mountHttp(app, createTierRateLimiter("low"))
-  muteMonitor.mountHttp(app, createTierRateLimiter("medium"))
-  unmuteMonitor.mountHttp(app, createTierRateLimiter("medium"))
-  return app
+export const monitorsModule: OperationModule = {
+  path: monitorsPath,
+  operations: [
+    listMonitors,
+    createMonitor,
+    listMonitorsForTarget,
+    getMonitor,
+    updateMonitor,
+    deleteMonitor,
+    listMonitorIncidents,
+    muteMonitor,
+    unmuteMonitor,
+  ],
 }

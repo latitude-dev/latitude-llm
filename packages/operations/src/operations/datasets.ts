@@ -32,7 +32,7 @@ import {
   TraceId,
 } from "@domain/shared"
 import { resolveTraceIdsFromRef, type TracesRef } from "@domain/spans"
-import { createRoute, OpenAPIHono, z } from "@hono/zod-openapi"
+import { createRoute, z } from "@hono/zod-openapi"
 import {
   DatasetRowRepositoryLive,
   ScoreAnalyticsRepositoryLive,
@@ -49,8 +49,8 @@ import {
 import { StorageDiskLive } from "@platform/storage-object"
 import { withTracing } from "@repo/observability"
 import { Effect, Layer } from "effect"
-import { defineApiEndpoint } from "../mcp/index.ts"
-import { createTierRateLimiter } from "../middleware/rate-limiter.ts"
+import { defineOperation } from "../core/define-operation.ts"
+import type { OperationModule } from "../core/mount.ts"
 import {
   DATASET_SORT_FIELDS,
   DatasetSchema,
@@ -71,12 +71,6 @@ import {
   TracesRefSchema,
 } from "../openapi/schemas.ts"
 import type { OrganizationScopedEnv } from "../types.ts"
-
-const datasetsFernGroup = (methodName: string) =>
-  ({
-    "x-fern-sdk-group-name": "datasets",
-    "x-fern-sdk-method-name": methodName,
-  }) as const
 
 const DatasetSlugParamsSchema = ProjectParamsSchema.extend({
   datasetSlug: z.string().describe("Dataset slug (human-readable identifier within the project)."),
@@ -129,9 +123,9 @@ const UpdateDatasetBody = z
   })
   .openapi("UpdateDatasetBody")
 
-export const datasetsPath = "/projects/:projectSlug/datasets"
+const datasetsPath = "/projects/:projectSlug/datasets"
 
-const datasetEndpoint = defineApiEndpoint<OrganizationScopedEnv>(datasetsPath)
+const datasetEndpoint = defineOperation<OrganizationScopedEnv>(datasetsPath)
 
 const listDatasetsEndpoint = datasetEndpoint({
   route: createRoute({
@@ -140,13 +134,15 @@ const listDatasetsEndpoint = datasetEndpoint({
     name: "listDatasets",
     annotations: { readOnlyHint: true, destructiveHint: false },
     tags: ["Datasets"],
-    ...datasetsFernGroup("list"),
+    group: "datasets",
+    sdkMethod: "list",
     summary: "List project datasets",
     description: "Returns a cursor-paginated page of datasets in the project.",
     security: PROTECTED_SECURITY,
     request: { params: ProjectParamsSchema, query: ListDatasetsQuerySchema },
     responses: openApiResponses({ status: 200, schema: PaginatedDatasetsSchema, description: "Page of datasets" }),
   }),
+  rateLimitTier: "low",
   handler: async (c) => {
     const { projectSlug } = c.req.valid("param")
     const query = c.req.valid("query")
@@ -203,13 +199,15 @@ const getDataset = datasetEndpoint({
     name: "getDataset",
     annotations: { readOnlyHint: true, destructiveHint: false },
     tags: ["Datasets"],
-    ...datasetsFernGroup("get"),
+    group: "datasets",
+    sdkMethod: "get",
     summary: "Get project dataset",
     description: "Returns one dataset by slug.",
     security: PROTECTED_SECURITY,
     request: { params: DatasetSlugParamsSchema },
     responses: openApiResponses({ status: 200, schema: DatasetSchema, description: "Dataset" }),
   }),
+  rateLimitTier: "low",
   handler: async (c) => {
     const { projectSlug, datasetSlug } = c.req.valid("param")
     const organizationId = c.var.organization.id
@@ -242,13 +240,15 @@ const createDatasetEndpoint = datasetEndpoint({
     name: "createDataset",
     annotations: { readOnlyHint: false, destructiveHint: false },
     tags: ["Datasets"],
-    ...datasetsFernGroup("create"),
+    group: "datasets",
+    sdkMethod: "create",
     summary: "Create dataset",
     description: "Creates an empty dataset in the project. The slug is derived from `name`.",
     security: PROTECTED_SECURITY,
     request: { params: ProjectParamsSchema, body: jsonBody(CreateDatasetBody) },
     responses: openApiResponses({ status: 201, schema: DatasetSchema, description: "Created dataset" }),
   }),
+  rateLimitTier: "high",
   handler: async (c) => {
     const { projectSlug } = c.req.valid("param")
     const body = c.req.valid("json")
@@ -287,7 +287,8 @@ const updateDataset = datasetEndpoint({
     name: "updateDataset",
     annotations: { readOnlyHint: false, destructiveHint: true },
     tags: ["Datasets"],
-    ...datasetsFernGroup("update"),
+    group: "datasets",
+    sdkMethod: "update",
     summary: "Update dataset",
     description:
       "Updates a dataset's `name` and/or `description`. Renaming regenerates the slug — clients should re-read the response or rely on the `id` for stable references.",
@@ -295,6 +296,7 @@ const updateDataset = datasetEndpoint({
     request: { params: DatasetSlugParamsSchema, body: jsonBody(UpdateDatasetBody) },
     responses: openApiResponses({ status: 200, schema: DatasetSchema, description: "Updated dataset" }),
   }),
+  rateLimitTier: "low",
   handler: async (c) => {
     const { projectSlug, datasetSlug } = c.req.valid("param")
     const body = c.req.valid("json")
@@ -337,13 +339,15 @@ const deleteDatasetEndpoint = datasetEndpoint({
     name: "deleteDataset",
     annotations: { readOnlyHint: false, destructiveHint: true },
     tags: ["Datasets"],
-    ...datasetsFernGroup("delete"),
+    group: "datasets",
+    sdkMethod: "delete",
     summary: "Delete dataset",
     description: "Deletes a dataset by slug.",
     security: PROTECTED_SECURITY,
     request: { params: DatasetSlugParamsSchema },
     responses: openApiNoContentResponses({ description: "Dataset deleted" }),
   }),
+  rateLimitTier: "low",
   handler: async (c) => {
     const { projectSlug, datasetSlug } = c.req.valid("param")
     const organizationId = c.var.organization.id
@@ -561,13 +565,15 @@ const listDatasetRowsEndpoint = datasetEndpoint({
     name: "listDatasetRows",
     annotations: { readOnlyHint: true, destructiveHint: false },
     tags: ["Datasets"],
-    ...datasetsFernGroup("listRows"),
+    group: "datasets",
+    sdkMethod: "listRows",
     summary: "List dataset rows",
     description: "Returns a cursor-paginated page of rows.",
     security: PROTECTED_SECURITY,
     request: { params: DatasetSlugParamsSchema, query: ListRowsQuerySchema },
     responses: openApiResponses({ status: 200, schema: PaginatedDatasetRowsSchema, description: "Page of rows" }),
   }),
+  rateLimitTier: "low",
   handler: async (c) => {
     const { projectSlug, datasetSlug } = c.req.valid("param")
     const query = c.req.valid("query")
@@ -630,7 +636,8 @@ const insertDatasetRowsEndpoint = datasetEndpoint({
     name: "insertDatasetRows",
     annotations: { readOnlyHint: false, destructiveHint: false },
     tags: ["Datasets"],
-    ...datasetsFernGroup("insertRows"),
+    group: "datasets",
+    sdkMethod: "insertRows",
     summary: "Insert dataset rows",
     description: "Appends one or more rows to the dataset.",
     security: PROTECTED_SECURITY,
@@ -641,6 +648,7 @@ const insertDatasetRowsEndpoint = datasetEndpoint({
       description: "Rows inserted",
     }),
   }),
+  rateLimitTier: "medium",
   handler: async (c) => {
     const { projectSlug, datasetSlug } = c.req.valid("param")
     const body = c.req.valid("json")
@@ -698,7 +706,8 @@ const updateDatasetRowEndpoint = datasetEndpoint({
     name: "updateDatasetRow",
     annotations: { readOnlyHint: false, destructiveHint: true },
     tags: ["Datasets"],
-    ...datasetsFernGroup("updateRow"),
+    group: "datasets",
+    sdkMethod: "updateRow",
     summary: "Update a dataset row",
     description:
       "Partially updates a single row. Only the cells you send are changed; omitted cells keep their current value. Use this to fill in an `expectedOutput` (or any other cell) after rows were imported. Bumps the dataset version.",
@@ -706,6 +715,7 @@ const updateDatasetRowEndpoint = datasetEndpoint({
     request: { params: DatasetRowParamsSchema, body: jsonBody(UpdateRowBodySchema) },
     responses: openApiResponses({ status: 200, schema: UpdateRowResponseSchema, description: "Row updated" }),
   }),
+  rateLimitTier: "medium",
   handler: async (c) => {
     const { projectSlug, datasetSlug, rowId } = c.req.valid("param")
     const body = c.req.valid("json")
@@ -749,7 +759,8 @@ const deleteDatasetRowsEndpoint = datasetEndpoint({
     name: "deleteDatasetRows",
     annotations: { readOnlyHint: false, destructiveHint: true },
     tags: ["Datasets"],
-    ...datasetsFernGroup("deleteRows"),
+    group: "datasets",
+    sdkMethod: "deleteRows",
     summary: "Delete dataset rows",
     description: "Deletes rows matching the supplied selection.",
     security: PROTECTED_SECURITY,
@@ -760,6 +771,7 @@ const deleteDatasetRowsEndpoint = datasetEndpoint({
       description: "Rows deleted",
     }),
   }),
+  rateLimitTier: "medium",
   handler: async (c) => {
     const { projectSlug, datasetSlug } = c.req.valid("param")
     const body = c.req.valid("json")
@@ -820,7 +832,8 @@ const importRowsFromTracesEndpoint = datasetEndpoint({
     name: "importDatasetRowsFromTraces",
     annotations: { readOnlyHint: false, destructiveHint: false },
     tags: ["Datasets"],
-    ...datasetsFernGroup("importRowsFromTraces"),
+    group: "datasets",
+    sdkMethod: "importRowsFromTraces",
     summary: "Import dataset rows from traces",
     description: "Imports one row per trace matched by `traces`.",
     security: PROTECTED_SECURITY,
@@ -831,6 +844,7 @@ const importRowsFromTracesEndpoint = datasetEndpoint({
       description: "Rows imported",
     }),
   }),
+  rateLimitTier: "high",
   handler: async (c) => {
     const { projectSlug, datasetSlug } = c.req.valid("param")
     const body = c.req.valid("json")
@@ -898,7 +912,8 @@ const exportDatasetRowsEndpoint = datasetEndpoint({
     name: "exportDatasetRows",
     annotations: { readOnlyHint: false, destructiveHint: false },
     tags: ["Datasets"],
-    ...datasetsFernGroup("exportRows"),
+    group: "datasets",
+    sdkMethod: "exportRows",
     summary: "Export dataset rows",
     description:
       'Exports the selected rows as CSV. Returns one of three outcomes, discriminated by `status`:\n\n- `"ready"` — the export fit in the synchronous path. Body carries a short-lived signed `downloadUrl` the caller follows with a plain HTTP GET.\n- `"queued"` — the export was too large for the synchronous path AND a `recipient` was supplied. The CSV will be emailed to that address. The recipient must be a member of the requesting organization.\n- `"too_large"` — the export was too large for the synchronous path AND no `recipient` was supplied. Body includes a `recommendedAction` describing how to recover (typically: ask the user for an email and retry with `recipient` set).',
@@ -916,6 +931,7 @@ const exportDatasetRowsEndpoint = datasetEndpoint({
       ),
     },
   }),
+  rateLimitTier: "ultra",
   handler: async (c) => {
     const { projectSlug, datasetSlug } = c.req.valid("param")
     const body = c.req.valid("json")
@@ -1083,7 +1099,8 @@ const listDatasetColumnsEndpoint = datasetEndpoint({
     name: "listDatasetColumns",
     annotations: { readOnlyHint: true, destructiveHint: false },
     tags: ["Datasets"],
-    ...datasetsFernGroup("listColumns"),
+    group: "datasets",
+    sdkMethod: "listColumns",
     summary: "List dataset columns",
     description:
       "Returns the ordered active column schema — the built-in columns plus any custom columns. Pass `includeRemoved=true` to also return soft-removed columns (so they can be restored).",
@@ -1091,6 +1108,7 @@ const listDatasetColumnsEndpoint = datasetEndpoint({
     request: { params: DatasetSlugParamsSchema, query: ListColumnsQuerySchema },
     responses: openApiResponses({ status: 200, schema: ColumnsListResponseSchema, description: "Column schema" }),
   }),
+  rateLimitTier: "low",
   handler: async (c) => {
     const { projectSlug, datasetSlug } = c.req.valid("param")
     const includeRemoved = c.req.valid("query").includeRemoved === "true"
@@ -1120,7 +1138,8 @@ const addDatasetColumnEndpoint = datasetEndpoint({
     name: "addDatasetColumn",
     annotations: { readOnlyHint: false, destructiveHint: false },
     tags: ["Datasets"],
-    ...datasetsFernGroup("addColumn"),
+    group: "datasets",
+    sdkMethod: "addColumn",
     summary: "Add dataset column",
     description:
       "Adds a custom column. The column starts empty on every row; rows are written only when a cell is filled, so the dataset version does not change.",
@@ -1128,6 +1147,7 @@ const addDatasetColumnEndpoint = datasetEndpoint({
     request: { params: DatasetSlugParamsSchema, body: jsonBody(AddColumnBodySchema) },
     responses: openApiResponses({ status: 201, schema: DatasetColumnSchema, description: "Created column" }),
   }),
+  rateLimitTier: "low",
   handler: async (c) => {
     const { projectSlug, datasetSlug } = c.req.valid("param")
     const body = c.req.valid("json")
@@ -1157,13 +1177,15 @@ const updateDatasetColumnEndpoint = datasetEndpoint({
     name: "updateDatasetColumn",
     annotations: { readOnlyHint: false, destructiveHint: true },
     tags: ["Datasets"],
-    ...datasetsFernGroup("updateColumn"),
+    group: "datasets",
+    sdkMethod: "updateColumn",
     summary: "Update dataset column",
     description: "Renames a column. Works for both built-in and custom columns.",
     security: PROTECTED_SECURITY,
     request: { params: ColumnIdentifierParamsSchema, body: jsonBody(UpdateColumnBodySchema) },
     responses: openApiResponses({ status: 200, schema: DatasetColumnSchema, description: "Updated column" }),
   }),
+  rateLimitTier: "low",
   handler: async (c) => {
     const { projectSlug, datasetSlug, identifier } = c.req.valid("param")
     const body = c.req.valid("json")
@@ -1193,7 +1215,8 @@ const deleteDatasetColumnEndpoint = datasetEndpoint({
     name: "deleteDatasetColumn",
     annotations: { readOnlyHint: false, destructiveHint: true },
     tags: ["Datasets"],
-    ...datasetsFernGroup("deleteColumn"),
+    group: "datasets",
+    sdkMethod: "deleteColumn",
     summary: "Delete dataset column",
     description:
       "Removes a column (built-in or custom) from the active schema. Its data is preserved and the column can be re-added; this does not change the dataset version.",
@@ -1201,6 +1224,7 @@ const deleteDatasetColumnEndpoint = datasetEndpoint({
     request: { params: ColumnIdentifierParamsSchema },
     responses: openApiNoContentResponses({ description: "Column removed" }),
   }),
+  rateLimitTier: "low",
   handler: async (c) => {
     const { projectSlug, datasetSlug, identifier } = c.req.valid("param")
     const organizationId = c.var.organization.id
@@ -1229,7 +1253,8 @@ const reorderDatasetColumnsEndpoint = datasetEndpoint({
     name: "reorderDatasetColumns",
     annotations: { readOnlyHint: false, destructiveHint: false },
     tags: ["Datasets"],
-    ...datasetsFernGroup("reorderColumns"),
+    group: "datasets",
+    sdkMethod: "reorderColumns",
     summary: "Reorder dataset columns",
     description:
       "Sets the left-to-right order of columns. This is a metadata edit and does not change the dataset version.",
@@ -1241,6 +1266,7 @@ const reorderDatasetColumnsEndpoint = datasetEndpoint({
       description: "Reordered column schema",
     }),
   }),
+  rateLimitTier: "low",
   handler: async (c) => {
     const { projectSlug, datasetSlug } = c.req.valid("param")
     const body = c.req.valid("json")
@@ -1270,7 +1296,8 @@ const restoreDatasetColumnEndpoint = datasetEndpoint({
     name: "restoreDatasetColumn",
     annotations: { readOnlyHint: false, destructiveHint: false },
     tags: ["Datasets"],
-    ...datasetsFernGroup("restoreColumn"),
+    group: "datasets",
+    sdkMethod: "restoreColumn",
     summary: "Restore dataset column",
     description:
       "Restores a soft-removed column (built-in or custom) to the active schema, reconnecting its preserved data. Find removed identifiers via `listDatasetColumns` with `includeRemoved=true`.",
@@ -1278,6 +1305,7 @@ const restoreDatasetColumnEndpoint = datasetEndpoint({
     request: { params: ColumnIdentifierParamsSchema },
     responses: openApiResponses({ status: 200, schema: DatasetColumnSchema, description: "Restored column" }),
   }),
+  rateLimitTier: "low",
   handler: async (c) => {
     const { projectSlug, datasetSlug, identifier } = c.req.valid("param")
     const organizationId = c.var.organization.id
@@ -1299,24 +1327,25 @@ const restoreDatasetColumnEndpoint = datasetEndpoint({
   },
 })
 
-export const createDatasetsRoutes = () => {
-  const app = new OpenAPIHono<OrganizationScopedEnv>()
-  listDatasetsEndpoint.mountHttp(app, createTierRateLimiter("low"))
-  getDataset.mountHttp(app, createTierRateLimiter("low"))
-  createDatasetEndpoint.mountHttp(app, createTierRateLimiter("high"))
-  updateDataset.mountHttp(app, createTierRateLimiter("low"))
-  deleteDatasetEndpoint.mountHttp(app, createTierRateLimiter("low"))
-  listDatasetRowsEndpoint.mountHttp(app, createTierRateLimiter("low"))
-  insertDatasetRowsEndpoint.mountHttp(app, createTierRateLimiter("medium"))
-  updateDatasetRowEndpoint.mountHttp(app, createTierRateLimiter("medium"))
-  deleteDatasetRowsEndpoint.mountHttp(app, createTierRateLimiter("medium"))
-  importRowsFromTracesEndpoint.mountHttp(app, createTierRateLimiter("high"))
-  exportDatasetRowsEndpoint.mountHttp(app, createTierRateLimiter("ultra"))
-  listDatasetColumnsEndpoint.mountHttp(app, createTierRateLimiter("low"))
-  addDatasetColumnEndpoint.mountHttp(app, createTierRateLimiter("low"))
-  updateDatasetColumnEndpoint.mountHttp(app, createTierRateLimiter("low"))
-  deleteDatasetColumnEndpoint.mountHttp(app, createTierRateLimiter("low"))
-  reorderDatasetColumnsEndpoint.mountHttp(app, createTierRateLimiter("low"))
-  restoreDatasetColumnEndpoint.mountHttp(app, createTierRateLimiter("low"))
-  return app
+export const datasetsModule: OperationModule = {
+  path: datasetsPath,
+  operations: [
+    listDatasetsEndpoint,
+    getDataset,
+    createDatasetEndpoint,
+    updateDataset,
+    deleteDatasetEndpoint,
+    listDatasetRowsEndpoint,
+    insertDatasetRowsEndpoint,
+    updateDatasetRowEndpoint,
+    deleteDatasetRowsEndpoint,
+    importRowsFromTracesEndpoint,
+    exportDatasetRowsEndpoint,
+    listDatasetColumnsEndpoint,
+    addDatasetColumnEndpoint,
+    updateDatasetColumnEndpoint,
+    deleteDatasetColumnEndpoint,
+    reorderDatasetColumnsEndpoint,
+    restoreDatasetColumnEndpoint,
+  ],
 }

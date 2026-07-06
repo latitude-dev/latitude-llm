@@ -26,7 +26,7 @@ import {
   SignalRepository,
   updateSignalUseCase,
 } from "@domain/signals"
-import { createRoute, OpenAPIHono, z } from "@hono/zod-openapi"
+import { createRoute, z } from "@hono/zod-openapi"
 import { AIEmbedLive, withAi } from "@platform/ai"
 import {
   ScoreAnalyticsRepositoryLive,
@@ -47,8 +47,8 @@ import {
 import { QuickJsScriptRuntimeLive } from "@platform/sandbox-quickjs"
 import { withTracing } from "@repo/observability"
 import { Effect, Layer } from "effect"
-import { defineApiEndpoint } from "../mcp/index.ts"
-import { createTierRateLimiter } from "../middleware/rate-limiter.ts"
+import { defineOperation, type RateLimitTier } from "../core/define-operation.ts"
+import type { OperationModule } from "../core/mount.ts"
 import {
   PaginatedSignalsSchema,
   SignalDetailSchema,
@@ -68,12 +68,6 @@ import {
   ProjectParamsSchema,
 } from "../openapi/schemas.ts"
 import type { OrganizationScopedEnv } from "../types.ts"
-
-const signalsFernGroup = (methodName: string) =>
-  ({
-    "x-fern-sdk-group-name": "signals",
-    "x-fern-sdk-method-name": methodName,
-  }) as const
 
 const SignalSlugParamsSchema = ProjectParamsSchema.extend({
   signalSlug: z.string().describe("Signal slug."),
@@ -152,9 +146,9 @@ const LifecycleResponseSchema = z
   })
   .openapi("SignalsLifecycleResponse")
 
-export const signalsPath = "/projects/:projectSlug/signals"
+const signalsPath = "/projects/:projectSlug/signals"
 
-const signalEndpoint = defineApiEndpoint<OrganizationScopedEnv>(signalsPath)
+const signalEndpoint = defineOperation<OrganizationScopedEnv>(signalsPath)
 
 const buildLifecycleEndpoint = ({
   command,
@@ -164,6 +158,7 @@ const buildLifecycleEndpoint = ({
   summary,
   description,
   bodySchema,
+  rateLimitTier,
 }: {
   command: SignalLifecycleCommand
   name: string
@@ -172,6 +167,7 @@ const buildLifecycleEndpoint = ({
   summary: string
   description: string
   bodySchema: typeof LifecycleBodySchema
+  rateLimitTier: RateLimitTier
 }) =>
   signalEndpoint({
     route: createRoute({
@@ -180,13 +176,15 @@ const buildLifecycleEndpoint = ({
       name,
       annotations: { readOnlyHint: false, destructiveHint: false },
       tags: ["Signals"],
-      ...signalsFernGroup(fernMethod),
+      group: "signals",
+      sdkMethod: fernMethod,
       summary,
       description,
       security: PROTECTED_SECURITY,
       request: { params: ProjectParamsSchema, body: jsonBody(bodySchema) },
       responses: openApiResponses({ status: 200, schema: LifecycleResponseSchema, description: "Per-signal result" }),
     }),
+    rateLimitTier,
     handler: async (c) => {
       const { projectSlug } = c.req.valid("param")
       const body = c.req.valid("json")
@@ -240,6 +238,7 @@ const muteSignals = buildLifecycleEndpoint({
   summary: "Mute signals",
   description: "Mutes each signal in `signalIds`.",
   bodySchema: LifecycleBodySchema,
+  rateLimitTier: "medium",
 })
 
 const unmuteSignals = buildLifecycleEndpoint({
@@ -250,6 +249,7 @@ const unmuteSignals = buildLifecycleEndpoint({
   summary: "Unmute signals",
   description: "Reverts each signal in `signalIds` to an unmuted state.",
   bodySchema: LifecycleBodySchema,
+  rateLimitTier: "medium",
 })
 
 const SIGNAL_LIFECYCLE_GROUP_VALUES = ["active", "archived"] as const
@@ -284,7 +284,8 @@ const listSignals = signalEndpoint({
     name: "listSignals",
     annotations: { readOnlyHint: true, destructiveHint: false },
     tags: ["Signals"],
-    ...signalsFernGroup("list"),
+    group: "signals",
+    sdkMethod: "list",
     summary: "List project signals",
     description:
       "Returns a cursor-paginated page of signals in the project. Each item includes lifecycle `states` plus time-window stats: `firstSeenAt`, `lastSeenAt`, `occurrences`, `affectedSessionsPercent`, `trend`, and `tags`.",
@@ -292,6 +293,7 @@ const listSignals = signalEndpoint({
     request: { params: ProjectParamsSchema, query: ListSignalsQuerySchema },
     responses: openApiResponses({ status: 200, schema: PaginatedSignalsSchema, description: "Page of signals" }),
   }),
+  rateLimitTier: "low",
   handler: async (c) => {
     const { projectSlug } = c.req.valid("param")
     const query = c.req.valid("query")
@@ -381,7 +383,8 @@ const getSignalAnalytics = signalEndpoint({
     name: "getSignalAnalytics",
     annotations: { readOnlyHint: true, destructiveHint: false },
     tags: ["Signals"],
-    ...signalsFernGroup("analytics"),
+    group: "signals",
+    sdkMethod: "analytics",
     summary: "Get project signal analytics",
     description:
       "Returns signal analytics for the project: counts of ongoing, new, and escalating signals, plus total occurrences and a per-bucket occurrence series. Buckets are 12-hour UTC-aligned. The range defaults to the trailing 7 days.",
@@ -393,6 +396,7 @@ const getSignalAnalytics = signalEndpoint({
       description: "Signal analytics",
     }),
   }),
+  rateLimitTier: "medium",
   handler: async (c) => {
     const { projectSlug } = c.req.valid("param")
     const { fromIso, toIso } = c.req.valid("query")
@@ -431,7 +435,8 @@ const getSignal = signalEndpoint({
     name: "getSignal",
     annotations: { readOnlyHint: true, destructiveHint: false },
     tags: ["Signals"],
-    ...signalsFernGroup("get"),
+    group: "signals",
+    sdkMethod: "get",
     summary: "Get project signal",
     description:
       "Returns the full-history detail view of one signal: lifecycle `states`, lifetime activity stats (`firstSeenAt`, `lastSeenAt`, `occurrences`, `affectedSessionsPercent`, `tags`), a 14-day occurrence `trend`, the active `evaluations` monitoring it, and the current `monitoringState`.",
@@ -439,6 +444,7 @@ const getSignal = signalEndpoint({
     request: { params: SignalSlugParamsSchema },
     responses: openApiResponses({ status: 200, schema: SignalDetailSchema, description: "Signal" }),
   }),
+  rateLimitTier: "low",
   handler: async (c) => {
     const { projectSlug, signalSlug } = c.req.valid("param")
     const organizationId = c.var.organization.id
@@ -488,7 +494,8 @@ const getSignalTrend = signalEndpoint({
     name: "getSignalTrend",
     annotations: { readOnlyHint: true, destructiveHint: false },
     tags: ["Signals"],
-    ...signalsFernGroup("trend"),
+    group: "signals",
+    sdkMethod: "trend",
     summary: "Get signal occurrence histogram",
     description:
       "Returns the occurrence histogram for one signal over `[fromIso, toIso]`. The default range is the trailing 14 days. Buckets are 12-hour wide and UTC-aligned.",
@@ -496,6 +503,7 @@ const getSignalTrend = signalEndpoint({
     request: { params: SignalSlugParamsSchema, query: TimeRangeQuerySchema },
     responses: openApiResponses({ status: 200, schema: SignalHistogramSchema, description: "Occurrence histogram" }),
   }),
+  rateLimitTier: "medium",
   handler: async (c) => {
     const { projectSlug, signalSlug } = c.req.valid("param")
     const { fromIso, toIso } = c.req.valid("query")
@@ -536,7 +544,8 @@ const listSignalTraces = signalEndpoint({
     name: "listSignalTraces",
     annotations: { readOnlyHint: true, destructiveHint: false },
     tags: ["Signals"],
-    ...signalsFernGroup("listTraces"),
+    group: "signals",
+    sdkMethod: "listTraces",
     summary: "List signal traces",
     description:
       "Returns the page of distinct traces that contributed at least one occurrence of the signal, ordered by most recent activity first.",
@@ -544,6 +553,7 @@ const listSignalTraces = signalEndpoint({
     request: { params: SignalSlugParamsSchema, query: ListSignalTracesQuerySchema },
     responses: openApiResponses({ status: 200, schema: PaginatedTracesSchema, description: "Page of traces" }),
   }),
+  rateLimitTier: "medium",
   handler: async (c) => {
     const { projectSlug, signalSlug } = c.req.valid("param")
     const query = c.req.valid("query")
@@ -613,7 +623,8 @@ const exportSignals = signalEndpoint({
     name: "exportSignals",
     annotations: { readOnlyHint: false, destructiveHint: false },
     tags: ["Signals"],
-    ...signalsFernGroup("export"),
+    group: "signals",
+    sdkMethod: "export",
     summary: "Export project signals (async)",
     description:
       "Enqueues an asynchronous CSV export. The response returns immediately; the download link is emailed to `recipient` when the file is ready. The recipient must be a member of the requesting organization.",
@@ -621,6 +632,7 @@ const exportSignals = signalEndpoint({
     request: { params: ProjectParamsSchema, body: jsonBody(ExportBodySchema) },
     responses: openApiResponses({ status: 202, schema: ExportResponseSchema, description: "Export enqueued" }),
   }),
+  rateLimitTier: "ultra",
   handler: async (c) => {
     const { projectSlug } = c.req.valid("param")
     const body = c.req.valid("json")
@@ -680,7 +692,8 @@ const monitorSignal = signalEndpoint({
     name: "monitorSignal",
     annotations: { readOnlyHint: false, destructiveHint: false },
     tags: ["Signals"],
-    ...signalsFernGroup("monitor"),
+    group: "signals",
+    sdkMethod: "monitor",
     summary: "Monitor signal",
     description:
       "Starts (or realigns) monitoring for the signal. When the signal has no active evaluation, a new one is generated. When an active evaluation exists, the call realigns it. The work runs asynchronously and the response returns immediately. Returns 400 when monitoring is already in progress for this signal.",
@@ -688,6 +701,7 @@ const monitorSignal = signalEndpoint({
     request: { params: SignalSlugParamsSchema },
     responses: openApiResponses({ status: 202, schema: MonitorResponseSchema, description: "Monitor job enqueued" }),
   }),
+  rateLimitTier: "ultra",
   handler: async (c) => {
     const { projectSlug, signalSlug } = c.req.valid("param")
     const organizationId = c.var.organization.id
@@ -732,7 +746,8 @@ const unmonitorSignal = signalEndpoint({
     name: "unmonitorSignal",
     annotations: { readOnlyHint: false, destructiveHint: false },
     tags: ["Signals"],
-    ...signalsFernGroup("unmonitor"),
+    group: "signals",
+    sdkMethod: "unmonitor",
     summary: "Unmonitor signal",
     description:
       "Stops monitoring the signal. Idempotent — signals that aren't being monitored return 204 without changing anything.",
@@ -740,6 +755,7 @@ const unmonitorSignal = signalEndpoint({
     request: { params: SignalSlugParamsSchema },
     responses: { 204: { description: "Signal unmonitored" } },
   }),
+  rateLimitTier: "medium",
   handler: async (c) => {
     const { projectSlug, signalSlug } = c.req.valid("param")
     const organizationId = c.var.organization.id
@@ -831,7 +847,8 @@ const createSignal = signalEndpoint({
     name: "createSignal",
     annotations: { readOnlyHint: false, destructiveHint: false },
     tags: ["Signals"],
-    ...signalsFernGroup("create"),
+    group: "signals",
+    sdkMethod: "create",
     summary: "Create signal",
     description:
       "Creates a user-defined signal with its membership detector — from `settings` (a `judge` LLM detector or a deterministic `rule`), or a raw `script` (advanced). The script is validated at save time (422 on a compile error). Detectors collect forward from creation; there is no historical backfill.",
@@ -839,6 +856,7 @@ const createSignal = signalEndpoint({
     request: { params: ProjectParamsSchema, body: jsonBody(CreateSignalBodySchema) },
     responses: openApiResponses({ status: 201, schema: CreateSignalResponseSchema, description: "Signal created" }),
   }),
+  rateLimitTier: "ultra",
   handler: async (c) => {
     const { projectSlug } = c.req.valid("param")
     const body = c.req.valid("json")
@@ -879,7 +897,8 @@ const updateSignal = signalEndpoint({
     name: "updateSignal",
     annotations: { readOnlyHint: false, destructiveHint: true },
     tags: ["Signals"],
-    ...signalsFernGroup("update"),
+    group: "signals",
+    sdkMethod: "update",
     summary: "Update signal",
     description:
       "Updates a signal's name, description, and evaluation pre-gate `filters`. Filter changes apply forward-only — existing membership is never re-evaluated. The slug is stable.",
@@ -887,6 +906,7 @@ const updateSignal = signalEndpoint({
     request: { params: SignalSlugParamsSchema, body: jsonBody(UpdateSignalBodySchema) },
     responses: openApiResponses({ status: 200, schema: UpdateSignalResponseSchema, description: "Signal updated" }),
   }),
+  rateLimitTier: "medium",
   handler: async (c) => {
     const { projectSlug, signalSlug } = c.req.valid("param")
     const body = c.req.valid("json")
@@ -926,7 +946,8 @@ const deleteSignal = signalEndpoint({
     name: "deleteSignal",
     annotations: { readOnlyHint: false, destructiveHint: true },
     tags: ["Signals"],
-    ...signalsFernGroup("delete"),
+    group: "signals",
+    sdkMethod: "delete",
     summary: "Delete signal",
     description:
       "Soft-deletes a signal and archives its detector so it stops matching new traces. Existing scores are retained but excluded from reads; the slug becomes reusable.",
@@ -934,6 +955,7 @@ const deleteSignal = signalEndpoint({
     request: { params: SignalSlugParamsSchema },
     responses: { 204: { description: "Signal deleted" } },
   }),
+  rateLimitTier: "medium",
   handler: async (c) => {
     const { projectSlug, signalSlug } = c.req.valid("param")
     const organizationId = c.var.organization.id
@@ -959,20 +981,21 @@ const deleteSignal = signalEndpoint({
   },
 })
 
-export const createSignalsRoutes = () => {
-  const app = new OpenAPIHono<OrganizationScopedEnv>()
-  listSignals.mountHttp(app, createTierRateLimiter("low"))
-  createSignal.mountHttp(app, createTierRateLimiter("ultra"))
-  updateSignal.mountHttp(app, createTierRateLimiter("medium"))
-  deleteSignal.mountHttp(app, createTierRateLimiter("medium"))
-  getSignalAnalytics.mountHttp(app, createTierRateLimiter("medium"))
-  getSignal.mountHttp(app, createTierRateLimiter("low"))
-  getSignalTrend.mountHttp(app, createTierRateLimiter("medium"))
-  listSignalTraces.mountHttp(app, createTierRateLimiter("medium"))
-  muteSignals.mountHttp(app, createTierRateLimiter("medium"))
-  unmuteSignals.mountHttp(app, createTierRateLimiter("medium"))
-  monitorSignal.mountHttp(app, createTierRateLimiter("ultra"))
-  unmonitorSignal.mountHttp(app, createTierRateLimiter("medium"))
-  exportSignals.mountHttp(app, createTierRateLimiter("ultra"))
-  return app
+export const signalsModule: OperationModule = {
+  path: signalsPath,
+  operations: [
+    listSignals,
+    createSignal,
+    updateSignal,
+    deleteSignal,
+    getSignalAnalytics,
+    getSignal,
+    getSignalTrend,
+    listSignalTraces,
+    muteSignals,
+    unmuteSignals,
+    monitorSignal,
+    unmonitorSignal,
+    exportSignals,
+  ],
 }

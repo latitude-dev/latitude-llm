@@ -4,7 +4,7 @@ import { ProjectRepository } from "@domain/projects"
 import type { AnnotationScore } from "@domain/scores"
 import { BadRequestError, cuidSchema, OrganizationId, ProjectId, SpanId, TraceId } from "@domain/shared"
 import { getTraceAnalyticsUseCase, SpanRepository, TraceRepository } from "@domain/spans"
-import { createRoute, OpenAPIHono, z } from "@hono/zod-openapi"
+import { createRoute, z } from "@hono/zod-openapi"
 import { AIEmbedLive, withAi } from "@platform/ai"
 import { SpanRepositoryLive, TraceRepositoryLive, withClickHouse } from "@platform/db-clickhouse"
 import {
@@ -15,8 +15,8 @@ import {
 } from "@platform/db-postgres"
 import { withTracing } from "@repo/observability"
 import { Effect, Layer } from "effect"
-import { defineApiEndpoint } from "../mcp/index.ts"
-import { createTierRateLimiter } from "../middleware/rate-limiter.ts"
+import { defineOperation } from "../core/define-operation.ts"
+import type { OperationModule } from "../core/mount.ts"
 import { AnnotationSchema, toAnnotationResponse } from "../openapi/entities/annotation.ts"
 import { SpanDetailSchema, SpanSchema, toSpanDetailResponse, toSpanResponse } from "../openapi/entities/span.ts"
 import {
@@ -42,12 +42,6 @@ import {
   traceIdSchema,
 } from "../openapi/schemas.ts"
 import type { OrganizationScopedEnv } from "../types.ts"
-
-const tracesFernGroup = (methodName: string) =>
-  ({
-    "x-fern-sdk-group-name": "traces",
-    "x-fern-sdk-method-name": methodName,
-  }) as const
 
 const ListBodySchema = z
   .object({
@@ -122,9 +116,9 @@ const decodeAnnotationOffsetCursor = (raw: string): number | null => {
   }
 }
 
-export const tracesPath = "/projects/:projectSlug/traces"
+const tracesPath = "/projects/:projectSlug/traces"
 
-const traceEndpoint = defineApiEndpoint<OrganizationScopedEnv>(tracesPath)
+const traceEndpoint = defineOperation<OrganizationScopedEnv>(tracesPath)
 
 // `list` is a POST so that `filters` can be a typed object in the request
 // body rather than a URL-encoded JSON string. Clients (SDKs, MCP tool calls)
@@ -137,7 +131,8 @@ const listTraces = traceEndpoint({
     name: "listTraces",
     annotations: { readOnlyHint: true, destructiveHint: false },
     tags: ["Traces"],
-    ...tracesFernGroup("list"),
+    group: "traces",
+    sdkMethod: "list",
     summary: "List project traces",
     description:
       "Returns a cursor-paginated page of traces in the project. Combine `filters` with `query` (free-text semantic search) to narrow the result set. Trace list rows exclude per-message LLM content — use `getTrace` for the full conversation view.",
@@ -148,6 +143,7 @@ const listTraces = traceEndpoint({
     },
     responses: openApiResponses({ status: 200, schema: PaginatedTracesSchema, description: "Page of traces" }),
   }),
+  rateLimitTier: "medium",
   handler: async (c) => {
     const { projectSlug } = c.req.valid("param")
     const body = c.req.valid("json")
@@ -214,7 +210,8 @@ const getTrace = traceEndpoint({
     name: "getTrace",
     annotations: { readOnlyHint: true, destructiveHint: false },
     tags: ["Traces"],
-    ...tracesFernGroup("get"),
+    group: "traces",
+    sdkMethod: "get",
     summary: "Get project trace",
     description:
       "Returns a single trace by id, including its `conversation`: the system instructions and the messages of the trace's last LLM-completion span, in OpenTelemetry GenAI format.",
@@ -224,6 +221,7 @@ const getTrace = traceEndpoint({
     },
     responses: openApiResponses({ status: 200, schema: TraceDetailSchema, description: "Trace detail" }),
   }),
+  rateLimitTier: "low",
   handler: async (c) => {
     const { projectSlug, traceId } = c.req.valid("param")
     const organizationId = c.var.organization.id
@@ -272,7 +270,8 @@ const listTraceSpans = traceEndpoint({
     name: "listTraceSpans",
     annotations: { readOnlyHint: true, destructiveHint: false },
     tags: ["Traces"],
-    ...tracesFernGroup("listSpans"),
+    group: "traces",
+    sdkMethod: "listSpans",
     summary: "List trace spans",
     description:
       "Returns every span belonging to the trace, ordered by `startTime` ascending. Spans carry the OpenTelemetry envelope (kind, status, attributes, resource) plus Latitude's GenAI enrichment (tokens, cost, operation, provider, model). Per-message LLM content is excluded for size; use a span point-lookup for the conversation payload.",
@@ -282,6 +281,7 @@ const listTraceSpans = traceEndpoint({
     },
     responses: openApiResponses({ status: 200, schema: TraceSpansSchema, description: "Spans of the trace" }),
   }),
+  rateLimitTier: "low",
   handler: async (c) => {
     const { projectSlug, traceId } = c.req.valid("param")
     const organizationId = c.var.organization.id
@@ -318,7 +318,8 @@ const getTraceSpan = traceEndpoint({
     name: "getTraceSpan",
     annotations: { readOnlyHint: true, destructiveHint: false },
     tags: ["Traces"],
-    ...tracesFernGroup("getSpan"),
+    group: "traces",
+    sdkMethod: "getSpan",
     summary: "Get trace span",
     description:
       "Returns one span by id, including the LLM conversation (system instructions, input messages, output messages), tool data (definitions, call id, input, output), and the full OpenTelemetry payload (attributes, resource, events, links) that's excluded from the lighter list shape.",
@@ -328,6 +329,7 @@ const getTraceSpan = traceEndpoint({
     },
     responses: openApiResponses({ status: 200, schema: SpanDetailSchema, description: "Span detail" }),
   }),
+  rateLimitTier: "low",
   handler: async (c) => {
     const { projectSlug, traceId, spanId } = c.req.valid("param")
     const organizationId = c.var.organization.id
@@ -364,7 +366,8 @@ const listTraceAnnotations = traceEndpoint({
     name: "listTraceAnnotations",
     annotations: { readOnlyHint: true, destructiveHint: false },
     tags: ["Traces"],
-    ...tracesFernGroup("listAnnotations"),
+    group: "traces",
+    sdkMethod: "listAnnotations",
     summary: "List trace annotations",
     description:
       "Returns a cursor-paginated page of annotations pinned to the trace, including both published annotations and drafts.",
@@ -379,6 +382,7 @@ const listTraceAnnotations = traceEndpoint({
       description: "Annotations of the trace",
     }),
   }),
+  rateLimitTier: "low",
   handler: async (c) => {
     const { projectSlug, traceId } = c.req.valid("param")
     const query = c.req.valid("query")
@@ -432,7 +436,8 @@ const getTraceAnnotation = traceEndpoint({
     name: "getTraceAnnotation",
     annotations: { readOnlyHint: true, destructiveHint: false },
     tags: ["Traces"],
-    ...tracesFernGroup("getAnnotation"),
+    group: "traces",
+    sdkMethod: "getAnnotation",
     summary: "Get trace annotation",
     description: "Returns one annotation by id pinned to the trace.",
     security: PROTECTED_SECURITY,
@@ -444,6 +449,7 @@ const getTraceAnnotation = traceEndpoint({
     },
     responses: openApiResponses({ status: 200, schema: AnnotationSchema, description: "Annotation" }),
   }),
+  rateLimitTier: "low",
   handler: async (c) => {
     const { projectSlug, traceId, annotationId } = c.req.valid("param")
     const organizationId = c.var.organization.id
@@ -475,7 +481,8 @@ const exportTraces = traceEndpoint({
     name: "exportTraces",
     annotations: { readOnlyHint: false, destructiveHint: false },
     tags: ["Traces"],
-    ...tracesFernGroup("export"),
+    group: "traces",
+    sdkMethod: "export",
     summary: "Export project traces (async)",
     description:
       'Enqueues a CSV export of the traces matched by `traces`. The export runs asynchronously; a download link is emailed to `recipient` when the file is ready. The response returns immediately with `status = "queued"`. The recipient must already be a member of the requesting organization.',
@@ -486,6 +493,7 @@ const exportTraces = traceEndpoint({
     },
     responses: openApiResponses({ status: 202, schema: ExportResponseSchema, description: "Export enqueued" }),
   }),
+  rateLimitTier: "ultra",
   handler: async (c) => {
     const { projectSlug } = c.req.valid("param")
     const body = c.req.valid("json")
@@ -542,7 +550,8 @@ const getTraceAnalytics = traceEndpoint({
     name: "getTraceAnalytics",
     annotations: { readOnlyHint: true, destructiveHint: false },
     tags: ["Traces"],
-    ...tracesFernGroup("analytics"),
+    group: "traces",
+    sdkMethod: "analytics",
     summary: "Get project trace analytics",
     description:
       "Returns trace analytics for the project: a total (or median) per metric over the requested range, plus a per-bucket series for each metric. Buckets are 12-hour UTC-aligned. The range defaults to the trailing 7 days.",
@@ -554,6 +563,7 @@ const getTraceAnalytics = traceEndpoint({
       description: "Trace analytics",
     }),
   }),
+  rateLimitTier: "medium",
   handler: async (c) => {
     const { projectSlug } = c.req.valid("param")
     const { fromIso, toIso } = c.req.valid("query")
@@ -585,15 +595,16 @@ const getTraceAnalytics = traceEndpoint({
   },
 })
 
-export const createTracesRoutes = () => {
-  const app = new OpenAPIHono<OrganizationScopedEnv>()
-  listTraces.mountHttp(app, createTierRateLimiter("medium"))
-  getTraceAnalytics.mountHttp(app, createTierRateLimiter("medium"))
-  getTrace.mountHttp(app, createTierRateLimiter("low"))
-  listTraceSpans.mountHttp(app, createTierRateLimiter("low"))
-  getTraceSpan.mountHttp(app, createTierRateLimiter("low"))
-  listTraceAnnotations.mountHttp(app, createTierRateLimiter("low"))
-  getTraceAnnotation.mountHttp(app, createTierRateLimiter("low"))
-  exportTraces.mountHttp(app, createTierRateLimiter("ultra"))
-  return app
+export const tracesModule: OperationModule = {
+  path: tracesPath,
+  operations: [
+    listTraces,
+    getTraceAnalytics,
+    getTrace,
+    listTraceSpans,
+    getTraceSpan,
+    listTraceAnnotations,
+    getTraceAnnotation,
+    exportTraces,
+  ],
 }
