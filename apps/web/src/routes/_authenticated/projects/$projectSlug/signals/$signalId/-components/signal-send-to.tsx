@@ -148,10 +148,7 @@ export function SignalSendTo({
               </>
             ) : null}
             <DropdownMenuLabel className="font-medium text-muted-foreground">Local agents</DropdownMenuLabel>
-            <DropdownMenuItem
-              className="cursor-pointer items-center gap-2"
-              onSelect={() => setPromptModalOpen(true)}
-            >
+            <DropdownMenuItem className="cursor-pointer items-center gap-2" onSelect={() => setPromptModalOpen(true)}>
               <Icon icon={Clipboard} size="sm" />
               <Text.H5>Copy prompt</Text.H5>
             </DropdownMenuItem>
@@ -159,11 +156,7 @@ export function SignalSendTo({
         </DropdownMenuPortal>
       </DropdownMenuRoot>
       {promptModalOpen ? (
-        <CopyPromptModal
-          projectId={projectId}
-          signalId={signalId}
-          onClose={() => setPromptModalOpen(false)}
-        />
+        <CopyPromptModal projectId={projectId} signalId={signalId} onClose={() => setPromptModalOpen(false)} />
       ) : null}
     </>
   )

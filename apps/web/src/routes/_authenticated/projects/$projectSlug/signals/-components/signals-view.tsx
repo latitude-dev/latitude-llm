@@ -14,7 +14,6 @@ import { formatCount } from "@repo/utils"
 import { Link, useNavigate } from "@tanstack/react-router"
 import { CircleDashedIcon } from "lucide-react"
 import { useCallback, useMemo } from "react"
-import { useListRowKeyboardNav } from "../../../../../../lib/hooks/useListRowKeyboardNav.ts"
 import {
   SIGNAL_PRIORITY_GROUP_ORDER,
   SIGNAL_PRIORITY_META,
@@ -31,6 +30,7 @@ import {
   ListingLayout as Layout,
   listingLayoutIntrinsicScroll,
 } from "../../../../../../layouts/ListingLayout/index.tsx"
+import { useListRowKeyboardNav } from "../../../../../../lib/hooks/useListRowKeyboardNav.ts"
 import { formatPercent, formatSeenAgeParts, getPrimaryLifecycleState } from "./signal-formatters.ts"
 import { SignalLifecycleStatuses } from "./signal-lifecycle-statuses.tsx"
 import { SignalTrendBar } from "./signal-trend-bar.tsx"

@@ -3,12 +3,12 @@ import {
   type KeyboardEvent,
   type ReactNode,
   type UIEvent,
-  type WheelEvent,
   useCallback,
   useLayoutEffect,
   useMemo,
   useRef,
   useState,
+  type WheelEvent,
 } from "react"
 
 import { cn } from "../../utils/cn.ts"

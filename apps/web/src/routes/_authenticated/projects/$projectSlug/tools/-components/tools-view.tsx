@@ -3,12 +3,12 @@ import { formatCount, formatDuration, relativeTime } from "@repo/utils"
 import { Link, useNavigate } from "@tanstack/react-router"
 import { WrenchIcon } from "lucide-react"
 import { useCallback, useMemo } from "react"
-import { useListRowKeyboardNav } from "../../../../../../lib/hooks/useListRowKeyboardNav.ts"
 import type { ToolSummaryRecord } from "../../../../../../domains/tools/tools.functions.ts"
 import {
   ListingLayout as Layout,
   listingLayoutIntrinsicScroll,
 } from "../../../../../../layouts/ListingLayout/index.tsx"
+import { useListRowKeyboardNav } from "../../../../../../lib/hooks/useListRowKeyboardNav.ts"
 import { formatPercent, TOOL_FAILING_ERROR_RATE } from "./tool-formatters.ts"
 import { ToolStatusBadges } from "./tool-status-badges.tsx"
 import { ToolTrendBar } from "./tool-trend-bar.tsx"

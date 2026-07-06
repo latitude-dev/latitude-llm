@@ -119,50 +119,49 @@ const SelectContent = React.forwardRef<
   React.ComponentRef<typeof SelectPrimitive.Content>,
   SelectContentProps & { readonly viewportConstrained?: boolean }
 >(({ className, children, position = "popper", viewportConstrained = true, ...props }, ref) => (
-    <SelectPortal>
-      <DismissableLayerBranch>
-        <SelectPrimitive.Content
-          ref={ref}
+  <SelectPortal>
+    <DismissableLayerBranch>
+      <SelectPrimitive.Content
+        ref={ref}
+        className={cn(
+          "relative max-h-72 min-w-32 overflow-hidden rounded-xl border bg-popover text-popover-foreground shadow-md",
+          "data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95",
+          "data-[side=bottom]:slide-in-from-top-2 data-[side=left]:slide-in-from-right-2 data-[side=right]:slide-in-from-left-2 data-[side=top]:slide-in-from-bottom-2",
+          position === "popper" &&
+            "data-[side=bottom]:translate-y-1 data-[side=left]:-translate-x-1 data-[side=right]:translate-x-1 data-[side=top]:-translate-y-1",
+          !viewportConstrained && "max-h-none overflow-visible",
+          zIndex.dropdown,
+          className,
+        )}
+        position={position}
+        {...props}
+      >
+        {viewportConstrained ? (
+          <SelectPrimitive.ScrollUpButton className="flex cursor-default items-center justify-center py-1">
+            <ChevronUp className="h-4 w-4" />
+          </SelectPrimitive.ScrollUpButton>
+        ) : null}
+        <SelectPrimitive.Viewport
           className={cn(
-            "relative max-h-72 min-w-32 overflow-hidden rounded-xl border bg-popover text-popover-foreground shadow-md",
-            "data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95",
-            "data-[side=bottom]:slide-in-from-top-2 data-[side=left]:slide-in-from-right-2 data-[side=right]:slide-in-from-left-2 data-[side=top]:slide-in-from-bottom-2",
+            viewportConstrained && "p-1",
             position === "popper" &&
-              "data-[side=bottom]:translate-y-1 data-[side=left]:-translate-x-1 data-[side=right]:translate-x-1 data-[side=top]:-translate-y-1",
-            !viewportConstrained && "max-h-none overflow-visible",
-            zIndex.dropdown,
-            className,
+              (viewportConstrained
+                ? "h-(--radix-select-trigger-height) w-full min-w-(--radix-select-trigger-width)"
+                : "w-full min-w-(--radix-select-trigger-width)"),
           )}
-          position={position}
-          {...props}
+          {...(viewportConstrained ? {} : { style: { overflow: "visible", flex: "none" } })}
         >
-          {viewportConstrained ? (
-            <SelectPrimitive.ScrollUpButton className="flex cursor-default items-center justify-center py-1">
-              <ChevronUp className="h-4 w-4" />
-            </SelectPrimitive.ScrollUpButton>
-          ) : null}
-          <SelectPrimitive.Viewport
-            className={cn(
-              viewportConstrained && "p-1",
-              position === "popper" &&
-                (viewportConstrained
-                  ? "h-(--radix-select-trigger-height) w-full min-w-(--radix-select-trigger-width)"
-                  : "w-full min-w-(--radix-select-trigger-width)"),
-            )}
-            {...(viewportConstrained ? {} : { style: { overflow: "visible", flex: "none" } })}
-          >
-            {children}
-          </SelectPrimitive.Viewport>
-          {viewportConstrained ? (
-            <SelectPrimitive.ScrollDownButton className="flex cursor-default items-center justify-center py-1">
-              <ChevronDown className="h-4 w-4" />
-            </SelectPrimitive.ScrollDownButton>
-          ) : null}
-        </SelectPrimitive.Content>
-      </DismissableLayerBranch>
-    </SelectPortal>
-  ),
-)
+          {children}
+        </SelectPrimitive.Viewport>
+        {viewportConstrained ? (
+          <SelectPrimitive.ScrollDownButton className="flex cursor-default items-center justify-center py-1">
+            <ChevronDown className="h-4 w-4" />
+          </SelectPrimitive.ScrollDownButton>
+        ) : null}
+      </SelectPrimitive.Content>
+    </DismissableLayerBranch>
+  </SelectPortal>
+))
 SelectContent.displayName = SelectPrimitive.Content.displayName
 
 interface SelectItemProps extends Omit<React.ComponentPropsWithoutRef<typeof SelectPrimitive.Item>, "disabled"> {
@@ -195,12 +194,4 @@ const SelectItem = React.forwardRef<React.ComponentRef<typeof SelectPrimitive.It
 )
 SelectItem.displayName = SelectPrimitive.Item.displayName
 
-export {
-  SelectRoot,
-  SelectGroup,
-  SelectTrigger,
-  SelectTriggerSurface,
-  SelectValue,
-  SelectContent,
-  SelectItem,
-}
+export { SelectRoot, SelectGroup, SelectTrigger, SelectTriggerSurface, SelectValue, SelectContent, SelectItem }

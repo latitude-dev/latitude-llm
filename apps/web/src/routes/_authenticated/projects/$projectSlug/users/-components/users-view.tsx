@@ -9,12 +9,12 @@ import {
 import { formatCount, formatPrice } from "@repo/utils"
 import { Link, useNavigate } from "@tanstack/react-router"
 import { useCallback, useMemo, useState } from "react"
-import { useListRowKeyboardNav } from "../../../../../../lib/hooks/useListRowKeyboardNav.ts"
 import type { ProjectUserRecord } from "../../../../../../domains/end-users/end-users.functions.ts"
 import {
   ListingLayout as Layout,
   listingLayoutIntrinsicScroll,
 } from "../../../../../../layouts/ListingLayout/index.tsx"
+import { useListRowKeyboardNav } from "../../../../../../lib/hooks/useListRowKeyboardNav.ts"
 import { UserActivityBar } from "./user-activity-bar.tsx"
 import {
   formatAgeLabel,

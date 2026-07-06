@@ -1,6 +1,6 @@
+import { ChevronDown, X } from "lucide-react"
 import type { ReactNode } from "react"
 import { useState } from "react"
-import { ChevronDown, X } from "lucide-react"
 
 import { zIndex } from "../../tokens/zIndex.ts"
 import { cn } from "../../utils/cn.ts"
