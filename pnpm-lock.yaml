@@ -541,9 +541,9 @@ importers:
       '@platform/cache-redis':
         specifier: workspace:*
         version: link:../../packages/platform/cache-redis
-      '@platform/changelog-framer':
+      '@platform/changelog-api':
         specifier: workspace:*
-        version: link:../../packages/platform/changelog-framer
+        version: link:../../packages/platform/changelog-api
       '@platform/data-destinations':
         specifier: workspace:*
         version: link:../../packages/platform/data-destinations
@@ -2199,7 +2199,7 @@ importers:
         specifier: 'catalog:'
         version: 5.10.1
 
-  packages/platform/changelog-framer:
+  packages/platform/changelog-api:
     dependencies:
       '@domain/changelog':
         specifier: workspace:*
@@ -2210,9 +2210,16 @@ importers:
       effect:
         specifier: 'catalog:'
         version: 4.0.0-beta.57
-      framer-api:
-        specifier: ^0.1.16
-        version: 0.1.16(csstype@3.2.3)
+      zod:
+        specifier: 'catalog:'
+        version: 4.3.6
+    devDependencies:
+      '@repo/vitest-config':
+        specifier: workspace:*
+        version: link:../../vitest-config
+      vitest:
+        specifier: 'catalog:'
+        version: 4.1.8(@opentelemetry/api@1.9.1)(@types/node@25.9.3)(jsdom@29.0.2(@noble/hashes@2.2.0))(vite@8.0.5(@emnapi/core@1.10.0)(@emnapi/runtime@1.10.0)(@types/node@25.9.3)(esbuild@0.28.1)(jiti@2.6.1)(terser@5.46.2)(tsx@4.21.0)(yaml@2.9.0))
 
   packages/platform/data-destinations:
     dependencies:
@@ -9987,9 +9994,6 @@ packages:
   detect-node-es@1.1.0:
     resolution: {integrity: sha512-ypdmJU/TbBby2Dxibuv7ZLW3Bs1QEmM7nHjEANfohJLvE0XVujisn1qPJcZxg+qDucsr+bP6fLD1rPS3AhJ7EQ==}
 
-  devalue@5.8.1:
-    resolution: {integrity: sha512-4CXDYRBGqN+57wVJkuXBYmpAVUSg3L6JAQa/DFqm238G73E1wuyc/JhGQJzN7vUf/CMphYau2zXbfWzDR5aTEw==}
-
   devlop@1.1.0:
     resolution: {integrity: sha512-RWmIqhcFf1lRYBvNmr7qTNuyCt/7/ns2jbpp1+PalgE/rDQcBT0fioSMUpJ93irlUhC5hrg4cYqe6U+0ImW0rA==}
 
@@ -10561,12 +10565,6 @@ packages:
   fractional-indexing@3.2.0:
     resolution: {integrity: sha512-PcOxmqwYCW7O2ovKRU8OoQQj2yqTfEB/yeTYk4gPid6dN5ODRfU1hXd9tTVZzax/0NkO7AxpHykvZnT1aYp/BQ==}
     engines: {node: ^14.13.1 || >=16.0.0}
-
-  framer-api@0.1.16:
-    resolution: {integrity: sha512-nkiOaavpHOWK/dPYmSHCRFmaQBNw5L3yYpDWFijj+CxAwTIzmj7XGqz4Z3nMqQgD8IyPdmVkPEddwpZ7+XD8FA==}
-    engines: {node: '>=22'}
-    peerDependencies:
-      csstype: ^3.1.1
 
   fresh@2.0.0:
     resolution: {integrity: sha512-Rx/WycZ60HOaqLKAi6cHRKKI7zxWbJ31MhntmtwMoaTeF7XFH9hhBp8vITaMidfljRQ6eYWCKkaTK+ykVJHP2A==}
@@ -22060,8 +22058,6 @@ snapshots:
 
   detect-node-es@1.1.0: {}
 
-  devalue@5.8.1: {}
-
   devlop@1.1.0:
     dependencies:
       dequal: 2.0.3
@@ -22608,12 +22604,6 @@ snapshots:
   forwarded@0.2.0: {}
 
   fractional-indexing@3.2.0: {}
-
-  framer-api@0.1.16(csstype@3.2.3):
-    dependencies:
-      csstype: 3.2.3
-      devalue: 5.8.1
-      std-env: 4.1.0
 
   fresh@2.0.0: {}
 
