@@ -18,11 +18,13 @@ export function useStagedStatus(stages: ReadonlyArray<StagedStatusStage>, active
   const startedAtRef = useRef<number | null>(null)
   activeRef.current = active
   if (active && startedAtRef.current === null) startedAtRef.current = Date.now()
-  if (!active) startedAtRef.current = null
 
   useMountEffect(() => {
     const timer = setInterval(() => {
-      if (activeRef.current) setTick((tick) => tick + 1)
+      // The start time resets here rather than during render, so a transient
+      // active=false flicker between ticks doesn't restart the stage progression.
+      if (!activeRef.current) startedAtRef.current = null
+      else setTick((tick) => tick + 1)
     }, 1000)
     return () => clearInterval(timer)
   })
