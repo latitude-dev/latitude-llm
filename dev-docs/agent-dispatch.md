@@ -38,7 +38,7 @@ Packages:
 
 ## Configuration
 
-Settings → Integrations (feature flag `agent-dispatch`):
+Settings → Integrations:
 
 1. Connect a target (org-level credential)
 2. Per-project dispatch config: enable, triggers, target mapping, guardrails

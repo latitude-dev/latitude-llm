@@ -19,7 +19,6 @@ import {
   AgentDispatchConfigRepositoryLive,
   AgentDispatchCredentialRepositoryLive,
   AgentDispatchRepositoryLive,
-  FeatureFlagRepositoryLive,
   IncidentMonitorReaderLive,
   IncidentRepositoryLive,
   OrganizationRepositoryLive,
@@ -57,7 +56,6 @@ const requestLayer = Layer.mergeAll(
   ProjectRepositoryLive,
   SignalRepositoryLive,
   ScoreRepositoryLive,
-  FeatureFlagRepositoryLive,
 )
 
 const sendLayer = Layer.mergeAll(

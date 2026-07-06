@@ -22,7 +22,6 @@ import { Clipboard, Loader2, Plus, Sparkles } from "lucide-react"
 import { useState } from "react"
 import {
   getSignalDispatchPrompt,
-  isAgentDispatchEnabled,
   listSendToDestinations,
   type SendToDestinationRecord,
   sendSignalToIntegration,
@@ -73,14 +72,9 @@ export function SignalSendTo({
   const { toast } = useToast()
   const [promptModalOpen, setPromptModalOpen] = useState(false)
 
-  const { data: dispatchEnabled } = useQuery({
-    queryKey: ["agent-dispatch-enabled"],
-    queryFn: () => isAgentDispatchEnabled(),
-  })
   const { data: destinations, isLoading: destinationsLoading } = useQuery({
     queryKey: sendToDestinationsQueryKey(projectId),
     queryFn: () => listSendToDestinations({ data: { projectId } }),
-    enabled: dispatchEnabled?.enabled === true,
   })
 
   const sendMutation = useMutation({
@@ -130,7 +124,6 @@ export function SignalSendTo({
   const sendingConfigId = sendMutation.isPending ? sendMutation.variables?.configId : undefined
 
   const hasCloudDestinations = (destinations?.length ?? 0) > 0
-  const showCloudSection = dispatchEnabled?.enabled === true
 
   return (
     <>
@@ -147,10 +140,8 @@ export function SignalSendTo({
         </DropdownMenuTrigger>
         <DropdownMenuPortal>
           <DropdownMenuContent align="end" className="w-56">
-            {showCloudSection ? (
-              <>
-                <DropdownMenuLabel className="font-medium text-muted-foreground">Cloud agents</DropdownMenuLabel>
-                {destinationsLoading ? (
+            <DropdownMenuLabel className="font-medium text-muted-foreground">Cloud agents</DropdownMenuLabel>
+            {destinationsLoading ? (
                   <DropdownMenuItem disabled className="items-center gap-2">
                     <Text.H5 color="foregroundMuted">Loading integrations…</Text.H5>
                   </DropdownMenuItem>
@@ -185,9 +176,7 @@ export function SignalSendTo({
                     </Link>
                   </DropdownMenuItem>
                 )}
-                <DropdownMenuSeparator />
-              </>
-            ) : null}
+            <DropdownMenuSeparator />
             <DropdownMenuLabel className="font-medium text-muted-foreground">Local agents</DropdownMenuLabel>
             <DropdownMenuItem className="cursor-pointer items-center gap-2" onSelect={() => setPromptModalOpen(true)}>
               <Icon icon={Clipboard} size="sm" />

@@ -16,7 +16,6 @@
     "test": "vitest run --passWithNoTests --dir src"
   },
   "dependencies": {
-    "@domain/feature-flags": "workspace:*",
     "@domain/incidents": "workspace:*",
     "@domain/notifications": "workspace:*",
     "@domain/organizations": "workspace:*",
