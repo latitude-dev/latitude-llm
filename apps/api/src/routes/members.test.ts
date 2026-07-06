@@ -1,5 +1,11 @@
 import { generateId } from "@domain/shared"
-import { invitations as invitationsTable, members, users } from "@platform/db-postgres/schema/better-auth"
+import {
+  invitations as invitationsTable,
+  members,
+  oauthAccessTokens,
+  oauthApplications,
+  users,
+} from "@platform/db-postgres/schema/better-auth"
 import { createApiKeyAuthHeaders, type InMemoryPostgres } from "@platform/testkit"
 import { describe, expect, it } from "vitest"
 import {
@@ -224,6 +230,113 @@ describe("Members routes — mutations require OAuth", () => {
       new Request(`http://localhost/v1/members/${target.memberId}`, {
         method: "DELETE",
         headers: createApiKeyAuthHeaders(tenant.apiKeyToken),
+      }),
+    )
+
+    expect(response.status).toBe(403)
+  })
+})
+
+const seedOAuthMemberInOrganization = async (
+  database: ApiTestContext["database"],
+  organizationId: string,
+  options: { role?: "member" | "admin" | "owner"; email?: string; name?: string | null } = {},
+) => {
+  const { userId, memberId, email } = await seedExtraMember(database, organizationId, options)
+  const clientId = `lct_${generateId()}`
+  const oauthAccessToken = `loa_${crypto.randomUUID()}`
+  const oneHour = 60 * 60 * 1000
+
+  await database.db.insert(oauthApplications).values({
+    id: generateId(),
+    name: "Member MCP Client",
+    clientId,
+    userId,
+    organizationId,
+    disabled: false,
+  })
+
+  await database.db.insert(oauthAccessTokens).values({
+    id: generateId(),
+    accessToken: oauthAccessToken,
+    clientId,
+    userId,
+    accessTokenExpiresAt: new Date(Date.now() + oneHour),
+    scopes: "openid profile email",
+  })
+
+  return { userId, memberId, email, oauthAccessToken }
+}
+
+describe("Members routes — OAuth admin authorization", () => {
+  setupTestApi()
+
+  it<ApiTestContext>("POST /v1/members rejects non-admin OAuth callers (403)", async ({ app, database }) => {
+    const tenant = await createOAuthTenantSetup(database)
+    const member = await seedOAuthMemberInOrganization(database, tenant.organizationId, { role: "member" })
+
+    const response = await app.fetch(
+      new Request("http://localhost/v1/members", {
+        method: "POST",
+        headers: { ...createOAuthAuthHeaders(member.oauthAccessToken), "Content-Type": "application/json" },
+        body: JSON.stringify({ email: "denied@example.com" }),
+      }),
+    )
+
+    expect(response.status).toBe(403)
+  })
+
+  it<ApiTestContext>("POST /v1/members rejects non-admin OAuth callers inviting an admin (403)", async ({
+    app,
+    database,
+  }) => {
+    const tenant = await createOAuthTenantSetup(database)
+    const member = await seedOAuthMemberInOrganization(database, tenant.organizationId, { role: "member" })
+
+    const response = await app.fetch(
+      new Request("http://localhost/v1/members", {
+        method: "POST",
+        headers: { ...createOAuthAuthHeaders(member.oauthAccessToken), "Content-Type": "application/json" },
+        body: JSON.stringify({ email: "future-admin@example.com", role: "admin" }),
+      }),
+    )
+
+    expect(response.status).toBe(403)
+  })
+
+  it<ApiTestContext>("DELETE /v1/members/:memberId rejects non-admin OAuth callers removing another member (403)", async ({
+    app,
+    database,
+  }) => {
+    const tenant = await createOAuthTenantSetup(database)
+    const member = await seedOAuthMemberInOrganization(database, tenant.organizationId, { role: "member" })
+    const target = await seedExtraMember(database, tenant.organizationId, { role: "member" })
+
+    const response = await app.fetch(
+      new Request(`http://localhost/v1/members/${target.memberId}`, {
+        method: "DELETE",
+        headers: createOAuthAuthHeaders(member.oauthAccessToken),
+      }),
+    )
+
+    expect(response.status).toBe(403)
+
+    const rows = await listMembersJson(app, createOAuthAuthHeaders(tenant.oauthAccessToken))
+    expect(rows.find((m) => m.id === target.memberId)).toBeDefined()
+  })
+
+  it<ApiTestContext>("DELETE /v1/members/:memberId rejects non-admin OAuth callers removing an admin (403)", async ({
+    app,
+    database,
+  }) => {
+    const tenant = await createOAuthTenantSetup(database)
+    const member = await seedOAuthMemberInOrganization(database, tenant.organizationId, { role: "member" })
+    const target = await seedExtraMember(database, tenant.organizationId, { role: "admin" })
+
+    const response = await app.fetch(
+      new Request(`http://localhost/v1/members/${target.memberId}`, {
+        method: "DELETE",
+        headers: createOAuthAuthHeaders(member.oauthAccessToken),
       }),
     )
 

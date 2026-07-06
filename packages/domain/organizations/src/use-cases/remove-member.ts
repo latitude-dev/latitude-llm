@@ -1,6 +1,6 @@
 import type { MembershipId } from "@domain/shared"
 import { Effect } from "effect"
-import { CannotRemoveOwnerError, CannotRemoveSelfError, MembershipNotFoundError } from "../errors.ts"
+import { CannotRemoveOwnerError, CannotRemoveSelfError, MembershipNotFoundError, NotAdminError } from "../errors.ts"
 import { MembershipRepository } from "../ports/membership-repository.ts"
 
 export interface RemoveMemberInput {
@@ -27,6 +27,11 @@ export const removeMemberUseCase = Effect.fn("organizations.removeMember")(funct
 
   if (membership.role === "owner") {
     return yield* new CannotRemoveOwnerError({ userId: membership.userId })
+  }
+
+  const isAdmin = yield* repository.isAdmin(membership.organizationId, input.requestingUserId)
+  if (!isAdmin) {
+    return yield* new NotAdminError({ userId: input.requestingUserId })
   }
 
   yield* repository.delete(input.membershipId)

@@ -10,7 +10,7 @@
  * if the rules diverge.
  */
 import { OutboxEventWriter, type OutboxEventWriterShape } from "@domain/events"
-import { OrganizationId, SqlClient, UserId } from "@domain/shared"
+import { NotFoundError, OrganizationId, SqlClient, UserId } from "@domain/shared"
 import { createFakeSqlClient } from "@domain/shared/testing"
 import { Effect, Layer } from "effect"
 import { beforeEach, describe, expect, it } from "vitest"
@@ -53,6 +53,7 @@ const buildLayers = () => {
     findByOrganizationAndUser: () =>
       Effect.succeed(createMembership({ organizationId: ORG_ID, userId: INVITER_USER_ID, role: "admin" })),
     findMemberByEmail: () => Effect.succeed(false),
+    isAdmin: () => Effect.succeed(true),
   })
   const { repository: orgRepo, organizations } = createFakeOrganizationRepository()
   organizations.set(
@@ -126,6 +127,7 @@ describe("inviteMemberUseCase — Better Auth parity", () => {
       findByOrganizationAndUser: () =>
         Effect.succeed(createMembership({ organizationId: ORG_ID, userId: INVITER_USER_ID, role: "admin" })),
       findMemberByEmail: () => Effect.succeed(true),
+      isAdmin: () => Effect.succeed(true),
     })
     const { repository: orgRepo, organizations } = createFakeOrganizationRepository()
     organizations.set(
@@ -182,8 +184,7 @@ describe("inviteMemberUseCase — Better Auth parity", () => {
 
   it("rejects with MembershipNotFoundError when the inviter isn't a member of the target org", async () => {
     const { repository: membershipRepo } = createFakeMembershipRepository({
-      findByOrganizationAndUser: () =>
-        Effect.fail(new (require("@domain/shared").NotFoundError)({ entity: "Membership", id: "" })),
+      findByOrganizationAndUser: () => Effect.fail(new NotFoundError({ entity: "Membership", id: "" })),
       findMemberByEmail: () => Effect.succeed(false),
     })
     const { repository: orgRepo, organizations } = createFakeOrganizationRepository()

@@ -9,6 +9,7 @@ import {
   CannotInviteAsOwnerError,
   InvitationLimitReachedError,
   MembershipNotFoundError,
+  NotAdminError,
 } from "../errors.ts"
 import { InvitationRepository } from "../ports/invitation-repository.ts"
 import { MembershipRepository } from "../ports/membership-repository.ts"
@@ -63,9 +64,8 @@ export const PENDING_INVITATION_LIMIT = 100
  *   - `InvitationEmailRequested` — picked up by the email worker.
  *   - `MemberInvited` — picked up by analytics.
  *
- * Owner-or-admin permission enforcement stays at the route layer (it has
- * access to `c.var.auth` and can run `isAdmin`). This use-case focuses on
- * the invitation lifecycle.
+ * Owner-or-admin permission enforcement mirrors Better Auth's default
+ * `invitation:create` permission (owner + admin only).
  */
 export const inviteMemberUseCase = Effect.fn("organizations.inviteMember")(function* (input: InviteMemberInput) {
   yield* Effect.annotateCurrentSpan("organizationId", input.organizationId)
@@ -86,6 +86,11 @@ export const inviteMemberUseCase = Effect.fn("organizations.inviteMember")(funct
     .pipe(
       Effect.catchTag("NotFoundError", () => Effect.fail(new MembershipNotFoundError({ userId: input.inviterUserId }))),
     )
+
+  const isAdmin = yield* membershipRepo.isAdmin(input.organizationId, input.inviterUserId)
+  if (!isAdmin) {
+    return yield* new NotAdminError({ userId: input.inviterUserId })
+  }
 
   const normalizedEmail = input.email.trim().toLowerCase()
 

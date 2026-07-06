@@ -4,12 +4,14 @@ import { ForbiddenError } from "@domain/shared"
 import { isSsoEnforcedForEmailUseCase } from "@domain/sso"
 import { RedisCacheStoreLive } from "@platform/cache-redis"
 import { InvitationRepositoryLive, SsoProviderRepositoryLive, withPostgres } from "@platform/db-postgres"
+import { parseEnvOptional } from "@platform/env"
 import { withTracing } from "@repo/observability"
 import { createServerFn } from "@tanstack/react-start"
 import { getRequestHeaders } from "@tanstack/react-start/server"
 import { Effect } from "effect"
 import z from "zod"
 import { getAdminPostgresClient, getBetterAuth, getRedisClient } from "../../server/clients.ts"
+import { assertTurnstileCaptchaVerified } from "./verify-turnstile-captcha.ts"
 
 const sendMagicLinkInputSchema = z.object({
   email: z.email(),
@@ -37,11 +39,11 @@ export const sendMagicLink = createServerFn({ method: "POST" })
       throw new ForbiddenError({ message: "Your organization requires SSO sign-in" })
     }
 
-    const requestHeaders = await getRequestHeaders()
-    const headers = new Headers(requestHeaders)
-    if (data.captchaToken) {
-      headers.set("x-captcha-response", data.captchaToken)
-    }
+    const captchaSecretKey = Effect.runSync(parseEnvOptional("LAT_TURNSTILE_SECRET_KEY", "string"))
+    await assertTurnstileCaptchaVerified({
+      captchaToken: data.captchaToken,
+      secretKey: captchaSecretKey,
+    })
 
     if (data.attribution) {
       try {
@@ -62,7 +64,7 @@ export const sendMagicLink = createServerFn({ method: "POST" })
         callbackURL: data.callbackURL ?? "/",
         newUserCallbackURL: data.newUserCallbackURL ?? "/welcome",
       },
-      headers,
+      headers: await getRequestHeaders(),
     })
   })
 
