@@ -244,6 +244,22 @@ export const causesIncludePostgresUniqueViolation = (error: unknown): boolean =>
   return false
 }
 
+/** Walks nested `cause` chains for Postgres SQLSTATE `55P03` (lock_not_available). */
+export const causesIncludePostgresLockNotAvailable = (error: unknown): boolean => {
+  const seen = new Set<unknown>()
+  let current: unknown = error
+
+  while (current !== null && current !== undefined && !seen.has(current)) {
+    seen.add(current)
+    if (isRecord(current) && current.code === "55P03") {
+      return true
+    }
+    current = isRecord(current) ? current.cause : undefined
+  }
+
+  return false
+}
+
 /**
  * Walks `error` and nested `cause` chains for a Postgres unique-violation
  * (SQLSTATE `23505`) and returns the name of the violated constraint /

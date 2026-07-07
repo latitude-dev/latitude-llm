@@ -1,6 +1,7 @@
 import { OutboxEventWriter } from "@domain/events"
 import {
   type ConcurrentSqlTransactionError,
+  causesIncludePostgresLockNotAvailable,
   type OrganizationId,
   type RepositoryError,
   SqlClient,
@@ -53,7 +54,13 @@ export const claimOrganizationUseCase = Effect.fn("organizations.claimOrganizati
       const membershipRepo = yield* MembershipRepository
       const outboxEventWriter = yield* OutboxEventWriter
 
-      const claim = yield* claimRepo.findByTokenHashForUpdate(tokenHash)
+      const claim = yield* claimRepo.findByTokenHashForUpdate(tokenHash).pipe(
+        Effect.catchTag("RepositoryError", (error) =>
+          causesIncludePostgresLockNotAvailable(error.cause)
+            ? Effect.fail(new ClaimAlreadyUsedError())
+            : Effect.fail(error),
+        ),
+      )
       if (!claim) return yield* new ClaimTokenInvalidError()
       if (claim.claimedAt !== null) return yield* new ClaimAlreadyUsedError()
       if (claim.expiresAt.getTime() <= Date.now()) return yield* new ClaimExpiredError()

@@ -1,5 +1,5 @@
 import { OutboxEventWriter, type OutboxWriteEvent } from "@domain/events"
-import { OrganizationId, SqlClient, type SqlClientShape, UserId } from "@domain/shared"
+import { OrganizationId, RepositoryError, SqlClient, type SqlClientShape, UserId } from "@domain/shared"
 import { hash } from "@repo/utils"
 import { Effect, Exit } from "effect"
 import { beforeAll, describe, expect, it } from "vitest"
@@ -33,6 +33,7 @@ const setup = (seed: {
   org?: { expiresAt: Date | null }
   withMember?: boolean
   markClaimed?: OrganizationClaimRepositoryShape["markClaimed"]
+  findByTokenHashForUpdate?: OrganizationClaimRepositoryShape["findByTokenHashForUpdate"]
 }) => {
   let inTransaction = false
   const sqlClient: SqlClientShape = {
@@ -52,7 +53,12 @@ const setup = (seed: {
   }
 
   const { repository: claimRepo, claims } = createFakeOrganizationClaimRepository(
-    seed.markClaimed ? { markClaimed: seed.markClaimed } : undefined,
+    seed.markClaimed || seed.findByTokenHashForUpdate
+      ? {
+          ...(seed.markClaimed ? { markClaimed: seed.markClaimed } : {}),
+          ...(seed.findByTokenHashForUpdate ? { findByTokenHashForUpdate: seed.findByTokenHashForUpdate } : {}),
+        }
+      : undefined,
   )
   const { repository: organizationRepo, organizations } = createFakeOrganizationRepository()
   const { repository: membershipRepo, memberships } = createFakeMembershipRepository()
@@ -151,6 +157,16 @@ describe("claimOrganizationUseCase", () => {
       claim: { expiresAt: inOneWeek() },
       org: { expiresAt: inOneWeek() },
       markClaimed: () => Effect.succeed(false),
+    })
+    expect(causeText(await run(RAW_TOKEN))).toContain("ClaimAlreadyUsedError")
+  })
+
+  it("rejects when the claim row lock is already held (NOWAIT)", async () => {
+    const { run } = setup({
+      claim: { expiresAt: inOneWeek() },
+      org: { expiresAt: inOneWeek() },
+      findByTokenHashForUpdate: () =>
+        Effect.fail(new RepositoryError({ cause: { code: "55P03" }, operation: "query" })),
     })
     expect(causeText(await run(RAW_TOKEN))).toContain("ClaimAlreadyUsedError")
   })

@@ -58,7 +58,7 @@ export const OrganizationClaimRepositoryLive = Layer.effect(
               .from(organizationClaims)
               .where(eq(organizationClaims.tokenHash, tokenHash))
               .limit(1)
-              .for("update"),
+              .for("update", { noWait: true }),
           )
           return rows.length > 0 ? toDomainClaim(rows[0] as typeof organizationClaims.$inferSelect) : null
         }),
