@@ -81,7 +81,6 @@ const createWidget = widgetOperation({
     method: "post",
     path: "/",
     name: "createWidget", // ← camelCase. Becomes OpenAPI `operationId` AND MCP tool name.
-    annotations: { readOnlyHint: false, destructiveHint: false }, // ← required; see "Tool annotations" below.
     tags: ["Widgets"],
     group: "widgets", // ← SDK group (x-fern-sdk-group-name) AND agent-toolset selector. Declare right after `tags`.
     sdkMethod: "create", // ← SDK method name inside the group (x-fern-sdk-method-name).
@@ -91,6 +90,7 @@ const createWidget = widgetOperation({
     request: { body: jsonBody(CreateWidgetBody) },
     responses: typedResponses({ status: 201, schema: WidgetSchema, description: "Widget created" }),
   }),
+  access: "write", // ← required: "read-only" | "write" | "destructive". See "Access" below.
   rateLimitTier: "low", // ← declarative; apps/api maps it to middleware at mount time.
   execute: (input, ctx) =>
     Effect.gen(function* () {
@@ -232,37 +232,38 @@ Don't be harsh. A tighter tier doesn't make the API safer in any meaningful way 
 - **`description`** on the route is the single-line tool/method blurb. Treat it as the first sentence an SDK user or AI agent sees when discovering the operation.
 - **`summary`** is optional, shorter, and becomes the MCP tool `title`. Falls back to `name` when omitted.
 
-## Tool annotations — declare read/destructive intent
+## Access — declare what the operation does to data
 
-Every tool-eligible operation **must** carry an `annotations` object on its `createRoute` config (alongside `name` / `summary` / `description`). It maps to the MCP spec's [`ToolAnnotations`](https://modelcontextprotocol.io/specification) and tells MCP clients how cautious to be before calling the tool. `readOnlyHint` and `destructiveHint` are **required** — TypeScript won't let you define an operation without them; the other two hints are optional. (`title` is intentionally not settable here — it's already derived from `summary`/`name`.)
+Every operation **must** declare an `access` field on its `defineOperation` args (a sibling of `rateLimitTier`, not inside `createRoute`). It's a single value — `"read-only" | "write" | "destructive"` — and TypeScript won't let you define an operation without it. `access` is the authoring surface for two things: the MCP tool annotations (translated to the spec's [`ToolAnnotations`](https://modelcontextprotocol.io/specification) `readOnlyHint`/`destructiveHint` by `accessToAnnotations`, the single translation point) and the agent-toolset access ceiling (below).
 
 ```ts
-annotations: { readOnlyHint: false, destructiveHint: true },
+const deleteWidget = widgetOperation({
+  route: createRoute({ /* method, path, name, group, sdkMethod, … */ }),
+  access: "destructive",
+  rateLimitTier: "medium",
+  execute: (input, ctx) => /* … */,
+})
 ```
 
-**The spec's framing for `destructiveHint`.** The MCP spec splits writes into **additive** vs **destructive**: a write is *destructive* if it can **delete or overwrite** existing values (the prior value is lost), and *additive* if it only adds without touching what's already there. That's why an in-place `update*` is `destructiveHint: true` even though it isn't a delete — overwriting a stored name/settings/cell replaces the previous value. The spec also says `destructiveHint` is **only meaningful when `readOnlyHint` is `false`**, and it **defaults to `true`** — so when you're unsure about a non-additive write, prefer `true`.
+**Write vs destructive.** Mirrors the MCP spec's additive/destructive split: a write is *destructive* if it can **delete or overwrite** an existing value (the prior value is lost), and just `"write"` if it only adds without touching what's there. An in-place `update*` is `"destructive"` even though it isn't a delete — overwriting a stored name/settings/cell replaces the previous value. When unsure about a non-additive write, prefer `"destructive"`.
 
-| Hint | Meaning | Set it to… |
+| Value | Wire annotations | Use for |
 | --- | --- | --- |
-| `readOnlyHint` (required) | The tool only reads; it never writes/mutates anything. | `true` for pure reads (GET lists, gets, analytics, histograms — even when the request uses POST for a complex query body). `false` for anything with a side effect: writes, deletes, enqueued jobs, emails, generated export artifacts. |
-| `destructiveHint` (required) | A write may delete or overwrite existing data. Only meaningful when `readOnlyHint` is `false`. | `true` for deletes/revokes/removes and in-place updates that overwrite prior values. `false` for purely additive creates/inserts, and for reversible state toggles (mute/unmute, monitor/unmonitor, resolve, restore, reorder). For read-only tools, set `false`. |
-| `idempotentHint` (optional) | Repeating an identical call has no effect beyond the first. | Usually omit. |
-| `openWorldHint` (optional) | The tool touches entities outside the caller's Latitude organization. | Usually omit (our surface is org-scoped). |
+| `"read-only"` | `{ readOnlyHint: true, destructiveHint: false }` | Pure reads: GET lists, gets, analytics, histograms — even when the request uses POST to carry a complex query body. |
+| `"write"` | `{ readOnlyHint: false, destructiveHint: false }` | Additive or reversible: `create*`/`insert*`/`add*`/`invite*`/`import*`, and state toggles (`mute*`/`unmute*`, `monitor*`/`unmonitor*`, `resolve*`, `restore*`, `reorder*`). Exports that enqueue a job or send email are `"write"` (they're not read-only). |
+| `"destructive"` | `{ readOnlyHint: false, destructiveHint: true }` | `delete*`/`revoke*`/`remove*`, and in-place `update*` that overwrites stored values. |
 
-Rules of thumb:
-
-- **Reads** (`GET`, or `POST` used only to carry a search/filter body) → `{ readOnlyHint: true, destructiveHint: false }`.
-- **Creates / inserts / additive actions** (`create*`, `insert*`, `add*`, `invite*`, `import*`) → `{ readOnlyHint: false, destructiveHint: false }`.
-- **In-place updates** (`update*`, edits that overwrite stored values) → `{ readOnlyHint: false, destructiveHint: true }`.
-- **Deletes / revokes / removes** → `{ readOnlyHint: false, destructiveHint: true }`.
-- **Reversible state toggles** (`mute*`/`unmute*`, `monitor*`/`unmonitor*`, `resolve*`, `restore*`, `reorder*`) → `{ readOnlyHint: false, destructiveHint: false }` — they change state but don't destroy data.
-- **Exports** that enqueue a job, send an email, or write an artifact are **not** read-only → `{ readOnlyHint: false, destructiveHint: false }`.
-
-When you add or modify a tool operation, set these to match what the implementation actually does — a wrong `readOnlyHint`/`destructiveHint` misleads agents about how risky the call is. Beyond MCP clients, `readOnlyHint` is **load-bearing for agent toolsets**: `defineToolset` refuses non-read-only operations, so a wrong hint either leaks a mutation to an agent or blocks a legitimate read. The annotations are stripped before the route reaches the OpenAPI generator, so they appear only in `mcp.json` and the live MCP transport, never in `openapi.json`.
+Set `access` to match what the implementation actually does — a wrong value misstates risk to MCP clients and is **load-bearing for agent toolsets** (`defineToolset` refuses operations above its access ceiling, so an over-broad `access` can leak a mutation to an agent and a too-narrow one blocks a legitimate read). `access` is stripped before the route reaches the OpenAPI generator, so it surfaces only in `mcp.json` and the live MCP transport, never in `openapi.json`.
 
 ## Agent toolsets — exposing operations to internal AI agents
 
-`defineToolset` (in `packages/operations/src/core/toolset.ts`) selects operations by `group` and shapes them as in-process tools (`invoke(rawFlatInput, ctx)` — validate, split, `execute`; no HTTP, no tokens). Selection is asserted at definition time: every group must match, every exclude must exist, and every selected operation must be tool-eligible, `readOnlyHint: true`, and execute-form. Concrete toolsets live in `packages/operations/src/toolsets/` (they can't live in `@domain/*` — that would create a package cycle, since `@repo/operations` imports domain packages).
+`defineToolset` (in `packages/operations/src/core/toolset.ts`) selects operations by `group` and shapes them as in-process tools (`invoke(rawFlatInput, ctx)` — validate, split, `execute`; no HTTP, no tokens). Selection is asserted at definition time: every group must match, every exclude must exist, and every selected operation must be tool-eligible, execute-form, and **at or below the toolset's access ceiling**. Concrete toolsets live in `packages/operations/src/toolsets/` (they can't live in `@domain/*` — that would create a package cycle, since `@repo/operations` imports domain packages).
+
+**Access ceiling.** `ToolsetSpec.access` (default `"read-only"`) is the highest `access` the toolset admits, and it's **cumulative**: a `"write"` ceiling admits read-only *and* write operations; `"destructive"` admits everything. An operation above the ceiling throws — so an agent gets no mutations unless the toolset explicitly opts up. Raising the ceiling is a deliberate, reviewable choice; the default keeps research agents read-only by construction.
+
+```ts
+defineToolset({ name: "signal-writer", groups: ["signals"], access: "write" }, operationModules)
+```
 
 Adding an operation to a selected group automatically adds it to the toolset — the toolset's checked-in manifest snapshot test fails until you regenerate and commit it, which is the deliberate review gate. Tenancy note for toolset consumers: build `OperationContext` from an already-resolved organization; the model-visible input never carries org identity.
 
@@ -290,7 +291,7 @@ pnpm openapi:emit && git diff --exit-code apps/api/openapi.json   # no drift
 pnpm mcp:emit && git diff --exit-code apps/api/mcp.json           # no drift
 ```
 
-Spot-check both manifests by hand: open `apps/api/mcp.json` and `apps/api/openapi.json`, find your operation, confirm every field has a `description`. If something is missing, it'll silently degrade SDK docs and agent UX — fix it at the Zod schema, not in the JSON output. In `mcp.json`, also confirm your tool's `annotations.readOnlyHint` / `annotations.destructiveHint` match what the implementation actually does (see "Tool annotations" above).
+Spot-check both manifests by hand: open `apps/api/mcp.json` and `apps/api/openapi.json`, find your operation, confirm every field has a `description`. If something is missing, it'll silently degrade SDK docs and agent UX — fix it at the Zod schema, not in the JSON output. In `mcp.json`, also confirm your tool's `annotations` (translated from `access`) match what the implementation actually does (see "Access" above).
 
 ## Where the machinery lives
 

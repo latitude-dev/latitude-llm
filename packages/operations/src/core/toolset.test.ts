@@ -1,7 +1,7 @@
 import { createRoute, z } from "@hono/zod-openapi"
 import { Effect } from "effect"
 import { beforeEach, describe, expect, it } from "vitest"
-import { defineOperation } from "./define-operation.ts"
+import { defineOperation, type OperationAccess } from "./define-operation.ts"
 import type { OperationModule } from "./mount.ts"
 import { resetOperationRegistry } from "./registry.ts"
 import { defineToolset } from "./toolset.ts"
@@ -17,12 +17,12 @@ const operation = defineOperation<TestEnv>("/widgets")
 const makeOperation = ({
   name,
   group = "widgets",
-  readOnly = true,
+  access = "read-only",
   executeForm = true,
 }: {
   name: string
   group?: string
-  readOnly?: boolean
+  access?: OperationAccess
   executeForm?: boolean
 }) => {
   const route = createRoute({
@@ -33,15 +33,14 @@ const makeOperation = ({
     sdkMethod: name,
     summary: `Summary of ${name}`,
     description: `Description of ${name}`,
-    annotations: { readOnlyHint: readOnly, destructiveHint: false },
     request: { query: z.object({ limit: z.coerce.number().optional() }) },
     responses: {
       200: { content: { "application/json": { schema: z.object({ ok: z.boolean() }) } }, description: "OK" },
     },
   })
   return executeForm
-    ? operation({ route, execute: () => Effect.succeed({ status: 200, body: { ok: true } } as const) })
-    : operation({ route, handler: async (c) => c.json({ ok: true }, 200) })
+    ? operation({ route, access, execute: () => Effect.succeed({ status: 200, body: { ok: true } } as const) })
+    : operation({ route, access, handler: async (c) => c.json({ ok: true }, 200) })
 }
 
 const moduleOf = (...ops: ReturnType<typeof makeOperation>[]): OperationModule => ({
@@ -86,11 +85,38 @@ describe("defineToolset", () => {
     )
   })
 
-  it("throws when a selected operation is not read-only", () => {
-    const mutating = makeOperation({ name: "createWidget", readOnly: false })
-    expect(() => defineToolset({ name: "t", groups: ["widgets"] }, [moduleOf(mutating)])).toThrowError(
-      /"createWidget" is not read-only/,
+  it("defaults to a read-only ceiling and admits read-only operations", () => {
+    const a = makeOperation({ name: "aWidget", access: "read-only" })
+    const toolset = defineToolset({ name: "t", groups: ["widgets"] }, [moduleOf(a)])
+    expect(toolset.tools.map((t) => t.name)).toEqual(["aWidget"])
+  })
+
+  it("admits everything at or below the ceiling (cumulative)", () => {
+    const read = makeOperation({ name: "readWidget", access: "read-only" })
+    const write = makeOperation({ name: "writeWidget", access: "write" })
+    const destructive = makeOperation({ name: "deleteWidget", access: "destructive" })
+
+    const writeToolset = defineToolset({ name: "w", groups: ["widgets"], access: "write" }, [moduleOf(read, write)])
+    // A "write" ceiling still includes the read-only op — cumulative, not exact-match.
+    expect(writeToolset.tools.map((t) => t.name)).toEqual(["readWidget", "writeWidget"])
+
+    const destructiveToolset = defineToolset({ name: "d", groups: ["widgets"], access: "destructive" }, [
+      moduleOf(read, write, destructive),
+    ])
+    expect(destructiveToolset.tools.map((t) => t.name)).toEqual(["readWidget", "writeWidget", "deleteWidget"])
+  })
+
+  it("throws when a selected operation is above the toolset access ceiling", () => {
+    const write = makeOperation({ name: "writeWidget", access: "write" })
+    // Default ceiling is read-only, so a write op is above it.
+    expect(() => defineToolset({ name: "t", groups: ["widgets"] }, [moduleOf(write)])).toThrowError(
+      /"writeWidget" needs access "write", above toolset ceiling "read-only"/,
     )
+
+    const destructive = makeOperation({ name: "deleteWidget", access: "destructive" })
+    expect(() =>
+      defineToolset({ name: "t", groups: ["widgets"], access: "write" }, [moduleOf(destructive)]),
+    ).toThrowError(/"deleteWidget" needs access "destructive", above toolset ceiling "write"/)
   })
 
   it("throws when a selected operation is handler-form", () => {

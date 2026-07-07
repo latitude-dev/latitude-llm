@@ -37,7 +37,7 @@ No business logic in handlers, controllers, or jobs.
 - Shared business rules still belong in domain packages; `apps/web` and `@repo/operations` should both orchestrate domain use-cases rather than duplicating policy.
 - Latitude product capabilities should be equally accessible to humans through the web UI and to other LLM agents through MCP/API surfaces.
 - Do not dead-end product behavior into UI-only flows. Preserve the boundary rules above, but design schemas, use-cases, and public capabilities so machine-facing access can exist without redesign.
-- For the concrete recipe — `defineOperation`, `OperationModule` manifests, `group`/`sdkMethod`/`rateLimitTier`, `pnpm openapi:emit` / `pnpm mcp:emit`, schema-description rules that fan out to the TS + Python SDKs, MCP tools, and the `latitude` CLI, the required `readOnlyHint` / `destructiveHint` tool annotations, and `defineToolset` for internal agents — see [api-endpoints](../api-endpoints/SKILL.md).
+- For the concrete recipe — `defineOperation`, `OperationModule` manifests, `group`/`sdkMethod`/`access`/`rateLimitTier`, `pnpm openapi:emit` / `pnpm mcp:emit`, schema-description rules that fan out to the TS + Python SDKs, MCP tools, and the `latitude` CLI, the required declarative `access` field, and `defineToolset` (with its access ceiling) for internal agents — see [api-endpoints](../api-endpoints/SKILL.md).
 
 ## Cross-cutting implementation constraints
 

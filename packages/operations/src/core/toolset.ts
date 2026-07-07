@@ -1,7 +1,12 @@
 import type { z } from "@hono/zod-openapi"
 import type { Effect } from "effect"
 import type { OperationContext } from "./context.ts"
-import type { AnyOperation, McpToolAnnotations } from "./define-operation.ts"
+import {
+  type AnyOperation,
+  accessToAnnotations,
+  type McpToolAnnotations,
+  type OperationAccess,
+} from "./define-operation.ts"
 import { extractOutputSchema } from "./extract-output.ts"
 import { flattenRouteInputSchema } from "./flatten-input.ts"
 import { invokeOperation } from "./invoke.ts"
@@ -13,7 +18,16 @@ export interface ToolsetSpec {
   readonly groups: ReadonlyArray<string>
   /** Operation `name`s to leave out of the matched groups. */
   readonly exclude?: ReadonlyArray<string>
+  /**
+   * Highest {@link OperationAccess} the toolset admits. Cumulative: `"write"`
+   * admits read-only and write operations; `"destructive"` admits everything.
+   * Defaults to `"read-only"` — an agent gets no mutations unless the toolset
+   * explicitly raises the ceiling.
+   */
+  readonly access?: OperationAccess
 }
+
+const ACCESS_RANK = { "read-only": 0, write: 1, destructive: 2 } as const
 
 /** One selected operation, shaped for an LLM tool loop. */
 export interface ToolsetTool {
@@ -40,8 +54,9 @@ export interface Toolset {
  *
  * 1. every entry in `groups` matches at least one operation (typo guard),
  * 2. every `exclude` name exists among the matched operations (stale guard),
- * 3. every selected operation is tool-eligible, `readOnlyHint: true`, and
- *    execute-form — agents never get mutations, by construction.
+ * 3. every selected operation is tool-eligible, execute-form, and within the
+ *    toolset's access ceiling (`spec.access`, default `"read-only"`) — so an
+ *    agent only gets the mutation level the toolset explicitly opts into.
  *
  * Tool order follows the module manifest, so derived manifests are stable and
  * snapshot-testable.
@@ -49,6 +64,7 @@ export interface Toolset {
 export const defineToolset = (spec: ToolsetSpec, modules: ReadonlyArray<OperationModule>): Toolset => {
   const operations = modules.flatMap((mod) => mod.operations)
   const candidates = operations.filter((op) => spec.groups.includes(op.route.group))
+  const ceiling = spec.access ?? "read-only"
 
   for (const group of spec.groups) {
     if (!candidates.some((op) => op.route.group === group)) {
@@ -66,8 +82,10 @@ export const defineToolset = (spec: ToolsetSpec, modules: ReadonlyArray<Operatio
     if (!op.tool) {
       throw new Error(`Toolset "${spec.name}": "${op.route.name}" is not tool-eligible; exclude it`)
     }
-    if (op.route.annotations.readOnlyHint !== true) {
-      throw new Error(`Toolset "${spec.name}": "${op.route.name}" is not read-only; exclude it or fix its annotations`)
+    if (ACCESS_RANK[op.access] > ACCESS_RANK[ceiling]) {
+      throw new Error(
+        `Toolset "${spec.name}": "${op.route.name}" needs access "${op.access}", above toolset ceiling "${ceiling}" — exclude it or raise the toolset's access`,
+      )
     }
     if (op.execute === undefined) {
       throw new Error(`Toolset "${spec.name}": "${op.route.name}" is handler-form; convert to execute-form first`)
@@ -86,7 +104,7 @@ const toToolsetTool = (operation: AnyOperation): ToolsetTool => {
     name: operation.route.name,
     title: operation.route.summary ?? operation.route.name,
     description: operation.route.description ?? "",
-    annotations: operation.route.annotations,
+    annotations: accessToAnnotations(operation.access),
     inputSchema: flattenRouteInputSchema(operation.route).schema,
     ...(output ? { outputSchema: output.schema } : {}),
     invoke: (rawInput, ctx) => invokeOperation(operation, rawInput, ctx),
