@@ -5,9 +5,13 @@ description: Understand how Latitude turns annotations, scores, evaluations, and
 
 # Signal discovery
 
-Signals are recurring failure patterns in your agent's production traffic. Latitude groups failed scores into signals, then gives each signal a name, examples, trends, and a lifecycle your team can act on.
+Signals are recurring behavior patterns in your agent's production traffic, usually failures. Latitude discovers most of them for you by grouping similar failed scores, and gives each signal a name, examples, trends, and a lifecycle your team can act on.
 
-The loop is simple: **find bad behavior, explain it, monitor it, fix it, and catch regressions**.
+The loop is the same whether a signal is discovered or defined: find the behavior, explain it, monitor it, fix it, and watch for it coming back.
+
+<Note>
+  Most signals are discovered for you. You can also [create one yourself](./create) when you already know the behavior to track: a specific failure, a policy to enforce, or a check you want from day one.
+</Note>
 
 ## How signal discovery works
 
@@ -79,7 +83,7 @@ Use the **Active / Inactive** tabs to switch between current signals and resolve
 
 Click any signal to open its detail page:
 
-{/* TODO: re-capture signal-detail.png — this is now the full signal page, not the old drawer. */}
+{/* TODO: re-capture signal-detail.png (now the full signal page, not the old drawer). */}
 
 <Frame>
   <img
@@ -92,34 +96,39 @@ The signal page shows the signal description, lifecycle state, impact (affected 
 
 ## Signal lifecycle
 
+A signal's status is one of three states, shown as a chip on the signal:
+
 | State | Meaning |
 | --- | --- |
-| **New** | Newly discovered |
-| **Escalating** | Occurrences are increasing compared to the recent baseline |
-| **Resolved** | Marked fixed or inactive |
-| **Regressed** | New occurrences appeared after the signal was resolved |
-| **Ignored** | Hidden from the active workflow because it is not worth tracking |
+| New | Discovered or created within the last 7 days |
+| Escalating | Occurrences are rising faster than the normal pattern for this time of week |
+| Ongoing | The steady state, once a signal is neither new nor escalating |
 
-An signal can be in multiple states at once. For example, a newly discovered signal can also be escalating.
+A signal can hold more than one state at once. A signal created this week that is also spiking shows as both New and Escalating.
+
+Two more markers appear alongside the state:
+
+- Evaluated: the signal has an active evaluation checking new sessions. See [Evaluations](../evaluations/overview).
+- Archived: the signal has been muted and moved out of the active list. See [Signal management](./management).
 
 ## Common workflows
 
-### Investigate traces
+### Investigate sessions
 
-Use the signal's example traces to understand common user intents, missing context, tool failures, retrieval problems, prompt gaps, or model behavior that needs to change.
+Use the signal's example sessions to understand common user intents, missing context, tool failures, retrieval problems, prompt gaps, or model behavior that needs to change.
 
 ### Generate an evaluation
 
-Click **Generate Evaluation** to create an automated monitor for the signal. The evaluation runs on future traces and helps track whether the signal is still happening.
+Choose Generate an evaluation to attach an automated detector to the signal. It scores new sessions and tracks whether the behavior is still happening. See [Signal management](./management).
 
-### Resolve or ignore
+### Triage and mute
 
-- **Resolve** when the underlying problem is fixed. Keep monitoring enabled if you want Latitude to catch regressions.
-- **Ignore** when the signal is noise or not worth tracking. Ignored signals leave the active workflow.
+Assign an owner and a priority so the right person picks it up. Mute a signal that isn't worth acting on: muting stops its notifications and moves it to the Archived tab. For a signal you created that you no longer need, delete it.
 
 ## Related pages
 
-- [Signal Management](./management): Triage, investigate, resolve, and ignore signals
+- [Create a signal](./create): Define a signal yourself
+- [Signal management](./management): Triage, monitor, mute, and manage signals
 - [Monitors](../monitors/overview): Get notified when signals are discovered, regress, or escalate
 - [Annotations](../annotations/overview): Leave human feedback on traces
 - [Flaggers](../annotations/flaggers): Detect common failure categories automatically

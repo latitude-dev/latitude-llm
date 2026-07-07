@@ -23,7 +23,7 @@ The single biggest predictor of annotation value is consistency.
 
 ## Write specific feedback
 
-Latitude adds conversation context to short feedback automatically, but your verdict and wording still shape how issues group and how evaluations get built.
+Latitude adds conversation context to short feedback automatically, but your verdict and wording still shape how signals group and how evaluations get built.
 
 | Less useful | More useful |
 | --- | --- |
@@ -35,7 +35,7 @@ A few rules of thumb:
 
 - **Say what happened, not just pass/fail.** One short sentence about what the agent did is enough.
 - **Note what set it off.** What in the user's message or earlier turns led to the problem? That helps similar cases group together.
-- **Skip boilerplate and fluff.** No need for "annotation:" prefixes or "this trace shows…". Treat it like a Slack note to a teammate. Padding waste time and reduces automatic issue detection accuracy.
+- **Skip boilerplate and fluff.** No need for "annotation:" prefixes or "this trace shows…". Treat it like a Slack note to a teammate. Padding waste time and reduces automatic signal detection accuracy.
 - **Don't pad obvious passes.** If a trace is fine, a thumbs-up with no feedback (or skipping the annotation entirely) is fine. On a thumbs-down, empty feedback won't help you find or fix issues later.
 
 ## Pick the right scope
@@ -49,7 +49,7 @@ Every annotation can be **conversation-level**, **message-level**, or **text-ran
 <Note>
   Don't over-narrow. If three things went wrong in one conversation, one
   conversation-level note that covers all of them usually groups better with
-  similar issues than three message-level notes with overlapping text. Still be
+  similar signals than three message-level notes with overlapping text. Still be
   specific in what you write.
 </Note>
 
@@ -74,16 +74,16 @@ Flagger annotations feed [signal discovery](../../signals/overview) and [alignme
 
 ## When to link a signal manually
 
-You can let Latitude pick the issue for an annotation, or link it yourself. Usually, let Latitude decide.
+You can let Latitude pick the signal for an annotation, or link it yourself. Usually, let Latitude decide.
 
-- **Automatic linking** keeps issues tidy. Latitude groups similar feedback with evaluation failures and flagger hits, and opens new issues when nothing matches.
-- **Link manually** when you're sure it's the same bug as an existing issue.
+- **Automatic linking** keeps signals tidy. Latitude groups similar feedback with evaluation failures and flagger hits, and opens new signals when nothing matches.
+- **Link manually** when you're sure it's the same bug as an existing signal.
 
 ## Revisit after prompts, product, or model changes
 
 Annotations age. The product changes, the model changes, the prompts change.
 
-- **Re-review after a fix.** When an issue is resolved, annotate a few recent matches of its watch evaluation to confirm the fix held.
+- **Re-review after a fix.** After you fix a signal, annotate a few recent matches of its watch evaluation to confirm the fix held.
 - **Watch alignment.** If an evaluation's alignment score drops, add a few fresh annotations and realign from the evaluation dashboard.
 - **Prune stale saved searches.** If reopening one turns up no recent matches, the traces may be gone or the query needs updating.
 

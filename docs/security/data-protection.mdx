@@ -7,14 +7,14 @@ description: How Latitude keeps hosted customer data and Latitude-managed infere
 
 Hosted Latitude is designed for teams that need AI observability while keeping production agent data within a defined European region. It stores and processes customer data and runs Latitude-managed inference in AWS eu-central-1 in Frankfurt, Germany.
 
-This covers data Latitude receives or creates while operating the platform, including traces, spans, sessions, annotations, scores, issues, evaluations, search indexes, and related metadata.
+This covers data Latitude receives or creates while operating the platform, including traces, spans, sessions, annotations, scores, signals, evaluations, search indexes, and related metadata.
 
 ## European data and inference boundary
 
 Latitude-managed inference includes the internal model calls that power product workflows such as:
 
 - signal discovery and clustering
-- issue names and descriptions
+- signal names and descriptions
 - flagger review for supported failure categories
 - evaluation generation and alignment workflows
 - search, scoring, and reliability analysis
@@ -26,8 +26,8 @@ Your application can call any model provider you choose. This boundary applies o
 Latitude scopes data by organization and project:
 
 - **Organizations** are the top-level access boundary.
-- **Projects** scope traces, search, scores, issues, evaluations, and related workflows.
-- Issue detection runs within a project, so teams can keep unrelated agents separate by routing them to separate projects.
+- **Projects** scope traces, search, scores, signals, evaluations, and related workflows.
+- Signal detection runs within a project, so teams can keep unrelated agents separate by routing them to separate projects.
 
 See [Group traces by project](../observability/guides/group-traces-by-project) for recommended project scoping patterns.
 
