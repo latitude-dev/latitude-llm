@@ -2,6 +2,30 @@
 
 ## Unreleased
 
+## v0.3.39 - 2026-07-07
+
+### Showcase
+
+- Added automated showcase project regeneration, atomic project swaps, daily cron scheduling, stale-project retirement, and self-healing cleanup so the demo project can refresh safely without leaving old generated projects behind (ref: #3887, #3898).
+
+### Telemetry
+
+- Added Pydantic AI telemetry onboarding, docs, and provider icon support for users instrumenting Python agents with Latitude (ref: #3893).
+
+### Reliability
+
+- Hardened flagger execution so prompt-too-long model failures are treated as no-match results and malformed message parts are skipped instead of crashing flagger runs (ref: #3889, #3874).
+- Serialized concurrent claim-token redemption to prevent duplicate organization-claim races (ref: #3899).
+
+### Web
+
+- Fixed searchable selects and rich-text interactions inside modals, including the members role modal, so popovers and editor focus remain usable while dialogs are open (ref: #3901, #3903).
+- Removed the agent-dispatch feature flag now that manual dispatch is generally available (ref: #3877).
+
+### Maintenance
+
+- Updated CI, Docker build, npm, Python telemetry, and OpenTelemetry dependency versions used by the workspace and release pipelines (ref: #3775, #3853, #3854, #3856, #3857, #3858, #3859, #3860, #3861, #3862, #3864, #3865).
+
 ## v0.3.38 - 2026-07-06
 
 ### Signals
