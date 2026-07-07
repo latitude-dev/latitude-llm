@@ -173,7 +173,6 @@ const listMonitors = monitorEndpoint({
     method: "get",
     path: "/",
     name: "listMonitors",
-    annotations: { readOnlyHint: true, destructiveHint: false },
     tags: ["Monitors"],
     group: "monitors",
     sdkMethod: "list",
@@ -183,6 +182,7 @@ const listMonitors = monitorEndpoint({
     request: { params: ProjectParamsSchema, query: ListMonitorsQuerySchema },
     responses: openApiResponses({ status: 200, schema: PaginatedMonitorsSchema, description: "Page of monitors" }),
   }),
+  access: "read-only",
   rateLimitTier: "low",
   handler: async (c) => {
     const { projectSlug } = c.req.valid("param")
@@ -231,7 +231,6 @@ const createMonitor = monitorEndpoint({
     method: "post",
     path: "/",
     name: "createMonitor",
-    annotations: { readOnlyHint: false, destructiveHint: false },
     tags: ["Monitors"],
     group: "monitors",
     sdkMethod: "create",
@@ -241,6 +240,7 @@ const createMonitor = monitorEndpoint({
     request: { params: ProjectParamsSchema, body: jsonBody(CreateMonitorBodySchema) },
     responses: openApiResponses({ status: 201, schema: MonitorSchema, description: "Monitor created" }),
   }),
+  access: "write",
   rateLimitTier: "medium",
   handler: async (c) => {
     const { projectSlug } = c.req.valid("param")
@@ -286,7 +286,6 @@ const listMonitorsForTarget = monitorEndpoint({
     method: "post",
     path: "/for-target",
     name: "listMonitorsForTarget",
-    annotations: { readOnlyHint: true, destructiveHint: false },
     tags: ["Monitors"],
     group: "monitors",
     sdkMethod: "listForTarget",
@@ -296,6 +295,7 @@ const listMonitorsForTarget = monitorEndpoint({
     request: { params: ProjectParamsSchema, body: jsonBody(ListMonitorsForTargetBodySchema) },
     responses: openApiResponses({ status: 200, schema: MonitorListSchema, description: "Matching monitors" }),
   }),
+  access: "read-only",
   rateLimitTier: "low",
   handler: async (c) => {
     const { projectSlug } = c.req.valid("param")
@@ -330,7 +330,6 @@ const getMonitor = monitorEndpoint({
     method: "get",
     path: "/{monitorSlug}",
     name: "getMonitor",
-    annotations: { readOnlyHint: true, destructiveHint: false },
     tags: ["Monitors"],
     group: "monitors",
     sdkMethod: "get",
@@ -340,6 +339,7 @@ const getMonitor = monitorEndpoint({
     request: { params: MonitorSlugParamsSchema },
     responses: openApiResponses({ status: 200, schema: MonitorSchema, description: "Monitor" }),
   }),
+  access: "read-only",
   rateLimitTier: "low",
   handler: async (c) => {
     const { projectSlug, monitorSlug } = c.req.valid("param")
@@ -369,7 +369,6 @@ const updateMonitor = monitorEndpoint({
     method: "patch",
     path: "/{monitorSlug}",
     name: "updateMonitor",
-    annotations: { readOnlyHint: false, destructiveHint: true },
     tags: ["Monitors"],
     group: "monitors",
     sdkMethod: "update",
@@ -384,6 +383,7 @@ const updateMonitor = monitorEndpoint({
       extraErrors: { 403: { description: "System monitors cannot be edited" } },
     }),
   }),
+  access: "destructive",
   rateLimitTier: "medium",
   handler: async (c) => {
     const { projectSlug, monitorSlug } = c.req.valid("param")
@@ -480,7 +480,6 @@ const deleteMonitor = monitorEndpoint({
     method: "delete",
     path: "/{monitorSlug}",
     name: "deleteMonitor",
-    annotations: { readOnlyHint: false, destructiveHint: true },
     tags: ["Monitors"],
     group: "monitors",
     sdkMethod: "delete",
@@ -490,6 +489,7 @@ const deleteMonitor = monitorEndpoint({
     request: { params: MonitorSlugParamsSchema },
     responses: openApiNoContentResponses({ description: "Monitor deleted" }),
   }),
+  access: "destructive",
   rateLimitTier: "medium",
   handler: async (c) => {
     const { projectSlug, monitorSlug } = c.req.valid("param")
@@ -520,7 +520,6 @@ const listMonitorIncidents = monitorEndpoint({
     method: "get",
     path: "/{monitorSlug}/incidents",
     name: "listMonitorIncidents",
-    annotations: { readOnlyHint: true, destructiveHint: false },
     tags: ["Monitors"],
     group: "monitors",
     sdkMethod: "listIncidents",
@@ -535,6 +534,7 @@ const listMonitorIncidents = monitorEndpoint({
       description: "Page of incidents",
     }),
   }),
+  access: "read-only",
   rateLimitTier: "low",
   handler: async (c) => {
     const { projectSlug, monitorSlug } = c.req.valid("param")
@@ -589,7 +589,6 @@ const muteMonitor = monitorEndpoint({
     method: "post",
     path: "/{monitorSlug}/mute",
     name: "muteMonitor",
-    annotations: { readOnlyHint: false, destructiveHint: false },
     tags: ["Monitors"],
     group: "monitors",
     sdkMethod: "mute",
@@ -599,6 +598,7 @@ const muteMonitor = monitorEndpoint({
     request: { params: MonitorSlugParamsSchema },
     responses: openApiResponses({ status: 200, schema: MonitorSchema, description: "Muted monitor" }),
   }),
+  access: "write",
   rateLimitTier: "medium",
   handler: async (c) => {
     const { projectSlug, monitorSlug } = c.req.valid("param")
@@ -629,7 +629,6 @@ const unmuteMonitor = monitorEndpoint({
     method: "post",
     path: "/{monitorSlug}/unmute",
     name: "unmuteMonitor",
-    annotations: { readOnlyHint: false, destructiveHint: false },
     tags: ["Monitors"],
     group: "monitors",
     sdkMethod: "unmute",
@@ -639,6 +638,7 @@ const unmuteMonitor = monitorEndpoint({
     request: { params: MonitorSlugParamsSchema },
     responses: openApiResponses({ status: 200, schema: MonitorSchema, description: "Unmuted monitor" }),
   }),
+  access: "write",
   rateLimitTier: "medium",
   handler: async (c) => {
     const { projectSlug, monitorSlug } = c.req.valid("param")

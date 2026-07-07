@@ -120,7 +120,6 @@ const createApiKey = apiKeyEndpoint({
     method: "post",
     path: "/",
     name: "createApiKey",
-    annotations: { readOnlyHint: false, destructiveHint: false },
     tags: ["API Keys"],
     group: "apiKeys",
     sdkMethod: "create",
@@ -132,6 +131,7 @@ const createApiKey = apiKeyEndpoint({
     },
     responses: openApiResponses({ status: 201, schema: ResponseSchema, description: "API key generated" }),
   }),
+  access: "write",
   rateLimitTier: "high",
   handler: async (c) => {
     const { name } = c.req.valid("json")
@@ -155,7 +155,6 @@ const listApiKeys = apiKeyEndpoint({
     method: "get",
     path: "/",
     name: "listApiKeys",
-    annotations: { readOnlyHint: true, destructiveHint: false },
     tags: ["API Keys"],
     group: "apiKeys",
     sdkMethod: "list",
@@ -167,6 +166,7 @@ const listApiKeys = apiKeyEndpoint({
       401: errorResponse("Unauthorized"),
     },
   }),
+  access: "read-only",
   rateLimitTier: "low",
   handler: async (c) => {
     const apiKeys = await Effect.runPromise(
@@ -184,7 +184,6 @@ const getApiKey = apiKeyEndpoint({
     method: "get",
     path: "/{apiKeyId}",
     name: "getApiKey",
-    annotations: { readOnlyHint: true, destructiveHint: false },
     tags: ["API Keys"],
     group: "apiKeys",
     sdkMethod: "get",
@@ -195,6 +194,7 @@ const getApiKey = apiKeyEndpoint({
     request: { params: ApiKeyIdParamsSchema },
     responses: openApiResponses({ status: 200, schema: ResponseSchema, description: "API key" }),
   }),
+  access: "read-only",
   rateLimitTier: "low",
   handler: async (c) => {
     const { apiKeyId } = c.req.valid("param")
@@ -218,7 +218,6 @@ const updateApiKey = apiKeyEndpoint({
     method: "patch",
     path: "/{apiKeyId}",
     name: "updateApiKey",
-    annotations: { readOnlyHint: false, destructiveHint: true },
     tags: ["API Keys"],
     group: "apiKeys",
     sdkMethod: "update",
@@ -228,6 +227,7 @@ const updateApiKey = apiKeyEndpoint({
     request: { params: ApiKeyIdParamsSchema, body: jsonBody(UpdateApiKeyBody) },
     responses: openApiResponses({ status: 200, schema: ResponseSchema, description: "API key updated" }),
   }),
+  access: "destructive",
   rateLimitTier: "low",
   handler: async (c) => {
     const { apiKeyId } = c.req.valid("param")
@@ -248,7 +248,6 @@ const revokeApiKey = apiKeyEndpoint({
     method: "delete",
     path: "/{apiKeyId}",
     name: "revokeApiKey",
-    annotations: { readOnlyHint: false, destructiveHint: true },
     tags: ["API Keys"],
     group: "apiKeys",
     sdkMethod: "revoke",
@@ -258,6 +257,7 @@ const revokeApiKey = apiKeyEndpoint({
     request: { params: ApiKeyIdParamsSchema },
     responses: openApiNoContentResponses({ description: "API key revoked" }),
   }),
+  access: "destructive",
   rateLimitTier: "low",
   handler: async (c) => {
     const { apiKeyId } = c.req.valid("param")

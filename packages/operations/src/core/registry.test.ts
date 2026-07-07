@@ -18,7 +18,6 @@ const listItems = itemEndpoint({
     group: "test",
     sdkMethod: "listItems",
     description: "List items",
-    annotations: { readOnlyHint: true, destructiveHint: false },
     responses: {
       200: {
         content: { "application/json": { schema: z.object({ items: z.array(ItemSchema) }) } },
@@ -26,6 +25,7 @@ const listItems = itemEndpoint({
       },
     },
   }),
+  access: "read-only",
   handler: async (c) => c.json({ items: [] }, 200),
 })
 
@@ -37,12 +37,12 @@ const getItem = itemEndpoint({
     group: "test",
     sdkMethod: "getItem",
     description: "Get one item",
-    annotations: { readOnlyHint: true, destructiveHint: false },
     request: { params: z.object({ id: z.string() }) },
     responses: {
       200: { content: { "application/json": { schema: ItemSchema } }, description: "OK" },
     },
   }),
+  access: "read-only",
   handler: async (c) => c.json({ id: c.req.valid("param").id }, 200),
 })
 
@@ -54,10 +54,10 @@ const deleteItem = itemEndpoint({
     group: "test",
     sdkMethod: "deleteItem",
     description: "Delete one item",
-    annotations: { readOnlyHint: false, destructiveHint: true },
     request: { params: z.object({ id: z.string() }) },
     responses: { 204: { description: "Deleted" } },
   }),
+  access: "destructive",
   handler: async (c) => c.body(null, 204),
 })
 
@@ -69,9 +69,9 @@ const hiddenItem = itemEndpoint({
     group: "test",
     sdkMethod: "internalOp",
     description: "HTTP-only — not an MCP tool",
-    annotations: { readOnlyHint: true, destructiveHint: false },
     responses: { 200: { description: "OK" } },
   }),
+  access: "read-only",
   handler: async (c) => c.body(null, 200),
   tool: false,
 })
@@ -84,12 +84,12 @@ const getWidget = widgetEndpoint({
     group: "test",
     sdkMethod: "getWidget",
     description: "Get a widget",
-    annotations: { readOnlyHint: true, destructiveHint: false },
     request: { params: z.object({ id: z.string() }) },
     responses: {
       200: { content: { "application/json": { schema: ItemSchema } }, description: "OK" },
     },
   }),
+  access: "read-only",
   handler: async (c) => c.json({ id: c.req.valid("param").id }, 200),
 })
 

@@ -24,13 +24,6 @@ export type AppRouteConfig = Omit<RouteConfig, "operationId"> & {
    */
   readonly name: string
   /**
-   * MCP tool annotations (see {@link McpToolAnnotations}). Declared alongside the
-   * other route fields and stripped before the route reaches the OpenAPI
-   * generator, so it surfaces only in `mcp.json` / the live MCP transport — never
-   * in `openapi.json`.
-   */
-  readonly annotations: McpToolAnnotations
-  /**
    * SDK group the operation belongs to (e.g. `"tools"`). Renamed in place to the
    * `x-fern-sdk-group-name` OpenAPI extension — emitted operation key order
    * follows declaration order, so declare it right after `tags` where the
@@ -46,26 +39,39 @@ export type AppRouteConfig = Omit<RouteConfig, "operationId"> & {
 }
 
 /**
- * MCP tool annotations declared per operation. Maps to the MCP spec's
- * `ToolAnnotations`, but the tool `title` is intentionally omitted — it's
- * derived from the route's `summary`/`name` (see {@link collectToolDescriptors}),
- * so there's nothing to redefine here.
+ * Declarative statement of what an operation does to organization data. The
+ * authoring surface for both the MCP tool annotations and the toolset access
+ * ceiling — one field replaces the {@link McpToolAnnotations} boolean pair,
+ * which only had three valid combinations.
  *
- * `readOnlyHint` and `destructiveHint` are required: every tool author must
- * make an explicit call about whether the operation reads or writes, and
- * whether a write can destroy/overwrite existing data. The remaining hints are
- * optional and default to the MCP spec's behaviour when omitted.
+ * - `"read-only"` — never mutates (GET lists, gets, analytics; also a POST that
+ *   only carries a query body).
+ * - `"write"` — additive or reversible: creates, inserts, invites, imports, and
+ *   state toggles (mute/unmute, monitor/unmonitor, resolve, restore, reorder).
+ * - `"destructive"` — deletes/revokes/removes, and in-place updates that
+ *   overwrite prior values.
+ */
+export type OperationAccess = "read-only" | "write" | "destructive"
+
+/**
+ * Internal MCP wire type — the `ToolAnnotations` shape registered on the MCP
+ * server and emitted into `mcp.json`. Produced only by {@link accessToAnnotations};
+ * operation authors declare {@link OperationAccess} instead.
  */
 export interface McpToolAnnotations {
   /** `true` when the tool only reads — it never modifies organization data. */
   readonly readOnlyHint: boolean
   /** `true` when a write may delete or overwrite existing data. Meaningful only when `readOnlyHint` is `false`. */
   readonly destructiveHint: boolean
-  /** `true` when repeating an identical call has no effect beyond the first. */
-  readonly idempotentHint?: boolean
-  /** `true` when the tool interacts with entities outside the caller's Latitude organization. */
-  readonly openWorldHint?: boolean
 }
+
+/** The single point where {@link OperationAccess} becomes the MCP wire annotations. */
+export const accessToAnnotations = (access: OperationAccess): McpToolAnnotations =>
+  ({
+    "read-only": { readOnlyHint: true, destructiveHint: false },
+    write: { readOnlyHint: false, destructiveHint: false },
+    destructive: { readOnlyHint: false, destructiveHint: true },
+  })[access]
 
 /**
  * Org-scoped rate-limit tier applied to the operation's HTTP mount. Transport
@@ -89,6 +95,8 @@ export type RateLimitTier = "low" | "medium" | "high" | "ultra" | "max"
 interface Operation<R extends AppRouteConfig, E extends Env> {
   readonly route: R
   readonly handler: RouteHandler<R, E>
+  /** What the operation does to org data — drives MCP annotations + toolset ceiling. */
+  readonly access: OperationAccess
   /** Transport-neutral implementation; present only for execute-form operations. */
   readonly execute?: ExecuteFn<R>
   /** Whether this operation should be exposed as an MCP tool. Defaults to `true`. */
@@ -115,6 +123,7 @@ interface Operation<R extends AppRouteConfig, E extends Env> {
  */
 export interface AnyOperation {
   readonly route: AppRouteConfig
+  readonly access: OperationAccess
   readonly tool: boolean
   readonly prefix: string
   readonly rateLimitTier?: RateLimitTier
@@ -126,6 +135,8 @@ export interface AnyOperation {
 
 type OperationArgs<R extends AppRouteConfig, E extends Env> = {
   route: R
+  /** What the operation does to organization data. See {@link OperationAccess}. */
+  access: OperationAccess
   /** Set to `false` to keep the operation HTTP-only (no MCP tool). Defaults to `true`. */
   tool?: boolean
   /** Rate-limit tier applied at HTTP mount time. Required once all modules declare it. */
@@ -182,9 +193,9 @@ type OperationArgs<R extends AppRouteConfig, E extends Env> = {
  *     group: "apiKeys",
  *     sdkMethod: "list",
  *     description: "List all API keys for the organization.",
- *     annotations: { readOnlyHint: true, destructiveHint: false },
  *     responses: { 200: jsonResponse(ListSchema, "OK") },
  *   }),
+ *   access: "read-only",
  *   rateLimitTier: "low",
  *   execute: (_input, _ctx) => Effect.succeed({ status: 200, body: { items: [] } }),
  * })
@@ -193,19 +204,19 @@ type OperationArgs<R extends AppRouteConfig, E extends Env> = {
 export const defineOperation =
   <E extends Env>(prefix: string) =>
   <R extends AppRouteConfig>(args: OperationArgs<R, E>): Operation<R, E> => {
-    const { route, tool = true, rateLimitTier } = args
+    const { route, access, tool = true, rateLimitTier } = args
     const handler = args.execute !== undefined ? executeToHandler<R, E>(route, args.execute) : args.handler
     if (handler === undefined) throw new Error(`Operation "${route.name}" must declare either handler or execute`)
     // Build the config handed to the OpenAPI generator as an order-preserving
-    // transform: `name`/`annotations` are stripped (non-standard fields the
-    // generator would otherwise spread into the operation), `group`/`sdkMethod`
-    // are renamed in place to their x-fern extensions (emitted key order follows
-    // declaration order, and the checked-in openapi.json is diffed byte-for-byte
-    // in CI), and `operationId` is appended from `name` so a single source of
-    // truth drives both the OpenAPI spec and the MCP tool registry.
+    // transform: `name` is stripped (a non-standard field the generator would
+    // otherwise spread into the operation), `group`/`sdkMethod` are renamed in
+    // place to their x-fern extensions (emitted key order follows declaration
+    // order, and the checked-in openapi.json is diffed byte-for-byte in CI), and
+    // `operationId` is appended from `name` so a single source of truth drives
+    // both the OpenAPI spec and the MCP tool registry.
     const routeForHono = Object.fromEntries([
       ...Object.entries(route).flatMap(([key, value]): ReadonlyArray<readonly [string, unknown]> => {
-        if (key === "name" || key === "annotations") return []
+        if (key === "name") return []
         if (key === "group") return [["x-fern-sdk-group-name", value]]
         if (key === "sdkMethod") return [["x-fern-sdk-method-name", value]]
         return [[key, value]]
@@ -219,6 +230,7 @@ export const defineOperation =
     const operation: Operation<R, E> = {
       route,
       handler,
+      access,
       tool,
       prefix: normalizedPrefix,
       ...(args.execute !== undefined ? { execute: args.execute } : {}),

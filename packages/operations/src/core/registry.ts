@@ -1,4 +1,4 @@
-import type { AnyOperation, McpToolAnnotations } from "./define-operation.ts"
+import { type AnyOperation, accessToAnnotations, type McpToolAnnotations } from "./define-operation.ts"
 import { type ExtractedOutput, extractOutputSchema } from "./extract-output.ts"
 import { type FlatInput, flattenRouteInputSchema } from "./flatten-input.ts"
 
@@ -73,12 +73,12 @@ interface ToolDescriptor {
  * route configuration mistakes surface at boot, not on a tool call.
  */
 export const collectToolDescriptors = (): ToolDescriptor[] =>
-  operationRegistry.map(({ route, prefix }) => {
+  operationRegistry.map(({ route, access, prefix }) => {
     return {
       name: route.name,
       title: route.summary ?? route.name,
       description: route.description ?? "",
-      annotations: route.annotations,
+      annotations: accessToAnnotations(access),
       input: flattenRouteInputSchema(route),
       output: extractOutputSchema(route),
       routerPrefix: prefix,

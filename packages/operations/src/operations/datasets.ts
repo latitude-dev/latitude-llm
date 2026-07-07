@@ -132,7 +132,6 @@ const listDatasetsEndpoint = datasetEndpoint({
     method: "get",
     path: "/",
     name: "listDatasets",
-    annotations: { readOnlyHint: true, destructiveHint: false },
     tags: ["Datasets"],
     group: "datasets",
     sdkMethod: "list",
@@ -142,6 +141,7 @@ const listDatasetsEndpoint = datasetEndpoint({
     request: { params: ProjectParamsSchema, query: ListDatasetsQuerySchema },
     responses: openApiResponses({ status: 200, schema: PaginatedDatasetsSchema, description: "Page of datasets" }),
   }),
+  access: "read-only",
   rateLimitTier: "low",
   handler: async (c) => {
     const { projectSlug } = c.req.valid("param")
@@ -197,7 +197,6 @@ const getDataset = datasetEndpoint({
     method: "get",
     path: "/{datasetSlug}",
     name: "getDataset",
-    annotations: { readOnlyHint: true, destructiveHint: false },
     tags: ["Datasets"],
     group: "datasets",
     sdkMethod: "get",
@@ -207,6 +206,7 @@ const getDataset = datasetEndpoint({
     request: { params: DatasetSlugParamsSchema },
     responses: openApiResponses({ status: 200, schema: DatasetSchema, description: "Dataset" }),
   }),
+  access: "read-only",
   rateLimitTier: "low",
   handler: async (c) => {
     const { projectSlug, datasetSlug } = c.req.valid("param")
@@ -238,7 +238,6 @@ const createDatasetEndpoint = datasetEndpoint({
     method: "post",
     path: "/",
     name: "createDataset",
-    annotations: { readOnlyHint: false, destructiveHint: false },
     tags: ["Datasets"],
     group: "datasets",
     sdkMethod: "create",
@@ -248,6 +247,7 @@ const createDatasetEndpoint = datasetEndpoint({
     request: { params: ProjectParamsSchema, body: jsonBody(CreateDatasetBody) },
     responses: openApiResponses({ status: 201, schema: DatasetSchema, description: "Created dataset" }),
   }),
+  access: "write",
   rateLimitTier: "high",
   handler: async (c) => {
     const { projectSlug } = c.req.valid("param")
@@ -285,7 +285,6 @@ const updateDataset = datasetEndpoint({
     method: "patch",
     path: "/{datasetSlug}",
     name: "updateDataset",
-    annotations: { readOnlyHint: false, destructiveHint: true },
     tags: ["Datasets"],
     group: "datasets",
     sdkMethod: "update",
@@ -296,6 +295,7 @@ const updateDataset = datasetEndpoint({
     request: { params: DatasetSlugParamsSchema, body: jsonBody(UpdateDatasetBody) },
     responses: openApiResponses({ status: 200, schema: DatasetSchema, description: "Updated dataset" }),
   }),
+  access: "destructive",
   rateLimitTier: "low",
   handler: async (c) => {
     const { projectSlug, datasetSlug } = c.req.valid("param")
@@ -337,7 +337,6 @@ const deleteDatasetEndpoint = datasetEndpoint({
     method: "delete",
     path: "/{datasetSlug}",
     name: "deleteDataset",
-    annotations: { readOnlyHint: false, destructiveHint: true },
     tags: ["Datasets"],
     group: "datasets",
     sdkMethod: "delete",
@@ -347,6 +346,7 @@ const deleteDatasetEndpoint = datasetEndpoint({
     request: { params: DatasetSlugParamsSchema },
     responses: openApiNoContentResponses({ description: "Dataset deleted" }),
   }),
+  access: "destructive",
   rateLimitTier: "low",
   handler: async (c) => {
     const { projectSlug, datasetSlug } = c.req.valid("param")
@@ -563,7 +563,6 @@ const listDatasetRowsEndpoint = datasetEndpoint({
     method: "get",
     path: "/{datasetSlug}/rows",
     name: "listDatasetRows",
-    annotations: { readOnlyHint: true, destructiveHint: false },
     tags: ["Datasets"],
     group: "datasets",
     sdkMethod: "listRows",
@@ -573,6 +572,7 @@ const listDatasetRowsEndpoint = datasetEndpoint({
     request: { params: DatasetSlugParamsSchema, query: ListRowsQuerySchema },
     responses: openApiResponses({ status: 200, schema: PaginatedDatasetRowsSchema, description: "Page of rows" }),
   }),
+  access: "read-only",
   rateLimitTier: "low",
   handler: async (c) => {
     const { projectSlug, datasetSlug } = c.req.valid("param")
@@ -634,7 +634,6 @@ const insertDatasetRowsEndpoint = datasetEndpoint({
     method: "post",
     path: "/{datasetSlug}/rows",
     name: "insertDatasetRows",
-    annotations: { readOnlyHint: false, destructiveHint: false },
     tags: ["Datasets"],
     group: "datasets",
     sdkMethod: "insertRows",
@@ -648,6 +647,7 @@ const insertDatasetRowsEndpoint = datasetEndpoint({
       description: "Rows inserted",
     }),
   }),
+  access: "write",
   rateLimitTier: "medium",
   handler: async (c) => {
     const { projectSlug, datasetSlug } = c.req.valid("param")
@@ -704,7 +704,6 @@ const updateDatasetRowEndpoint = datasetEndpoint({
     method: "patch",
     path: "/{datasetSlug}/rows/{rowId}",
     name: "updateDatasetRow",
-    annotations: { readOnlyHint: false, destructiveHint: true },
     tags: ["Datasets"],
     group: "datasets",
     sdkMethod: "updateRow",
@@ -715,6 +714,7 @@ const updateDatasetRowEndpoint = datasetEndpoint({
     request: { params: DatasetRowParamsSchema, body: jsonBody(UpdateRowBodySchema) },
     responses: openApiResponses({ status: 200, schema: UpdateRowResponseSchema, description: "Row updated" }),
   }),
+  access: "destructive",
   rateLimitTier: "medium",
   handler: async (c) => {
     const { projectSlug, datasetSlug, rowId } = c.req.valid("param")
@@ -757,7 +757,6 @@ const deleteDatasetRowsEndpoint = datasetEndpoint({
     method: "delete",
     path: "/{datasetSlug}/rows",
     name: "deleteDatasetRows",
-    annotations: { readOnlyHint: false, destructiveHint: true },
     tags: ["Datasets"],
     group: "datasets",
     sdkMethod: "deleteRows",
@@ -771,6 +770,7 @@ const deleteDatasetRowsEndpoint = datasetEndpoint({
       description: "Rows deleted",
     }),
   }),
+  access: "destructive",
   rateLimitTier: "medium",
   handler: async (c) => {
     const { projectSlug, datasetSlug } = c.req.valid("param")
@@ -830,7 +830,6 @@ const importRowsFromTracesEndpoint = datasetEndpoint({
     method: "post",
     path: "/{datasetSlug}/rows/import/traces",
     name: "importDatasetRowsFromTraces",
-    annotations: { readOnlyHint: false, destructiveHint: false },
     tags: ["Datasets"],
     group: "datasets",
     sdkMethod: "importRowsFromTraces",
@@ -844,6 +843,7 @@ const importRowsFromTracesEndpoint = datasetEndpoint({
       description: "Rows imported",
     }),
   }),
+  access: "write",
   rateLimitTier: "high",
   handler: async (c) => {
     const { projectSlug, datasetSlug } = c.req.valid("param")
@@ -910,7 +910,6 @@ const exportDatasetRowsEndpoint = datasetEndpoint({
     method: "post",
     path: "/{datasetSlug}/rows/export",
     name: "exportDatasetRows",
-    annotations: { readOnlyHint: false, destructiveHint: false },
     tags: ["Datasets"],
     group: "datasets",
     sdkMethod: "exportRows",
@@ -931,6 +930,7 @@ const exportDatasetRowsEndpoint = datasetEndpoint({
       ),
     },
   }),
+  access: "write",
   rateLimitTier: "ultra",
   handler: async (c) => {
     const { projectSlug, datasetSlug } = c.req.valid("param")
@@ -1097,7 +1097,6 @@ const listDatasetColumnsEndpoint = datasetEndpoint({
     method: "get",
     path: "/{datasetSlug}/columns",
     name: "listDatasetColumns",
-    annotations: { readOnlyHint: true, destructiveHint: false },
     tags: ["Datasets"],
     group: "datasets",
     sdkMethod: "listColumns",
@@ -1108,6 +1107,7 @@ const listDatasetColumnsEndpoint = datasetEndpoint({
     request: { params: DatasetSlugParamsSchema, query: ListColumnsQuerySchema },
     responses: openApiResponses({ status: 200, schema: ColumnsListResponseSchema, description: "Column schema" }),
   }),
+  access: "read-only",
   rateLimitTier: "low",
   handler: async (c) => {
     const { projectSlug, datasetSlug } = c.req.valid("param")
@@ -1136,7 +1136,6 @@ const addDatasetColumnEndpoint = datasetEndpoint({
     method: "post",
     path: "/{datasetSlug}/columns",
     name: "addDatasetColumn",
-    annotations: { readOnlyHint: false, destructiveHint: false },
     tags: ["Datasets"],
     group: "datasets",
     sdkMethod: "addColumn",
@@ -1147,6 +1146,7 @@ const addDatasetColumnEndpoint = datasetEndpoint({
     request: { params: DatasetSlugParamsSchema, body: jsonBody(AddColumnBodySchema) },
     responses: openApiResponses({ status: 201, schema: DatasetColumnSchema, description: "Created column" }),
   }),
+  access: "write",
   rateLimitTier: "low",
   handler: async (c) => {
     const { projectSlug, datasetSlug } = c.req.valid("param")
@@ -1175,7 +1175,6 @@ const updateDatasetColumnEndpoint = datasetEndpoint({
     method: "patch",
     path: "/{datasetSlug}/columns/{identifier}",
     name: "updateDatasetColumn",
-    annotations: { readOnlyHint: false, destructiveHint: true },
     tags: ["Datasets"],
     group: "datasets",
     sdkMethod: "updateColumn",
@@ -1185,6 +1184,7 @@ const updateDatasetColumnEndpoint = datasetEndpoint({
     request: { params: ColumnIdentifierParamsSchema, body: jsonBody(UpdateColumnBodySchema) },
     responses: openApiResponses({ status: 200, schema: DatasetColumnSchema, description: "Updated column" }),
   }),
+  access: "destructive",
   rateLimitTier: "low",
   handler: async (c) => {
     const { projectSlug, datasetSlug, identifier } = c.req.valid("param")
@@ -1213,7 +1213,6 @@ const deleteDatasetColumnEndpoint = datasetEndpoint({
     method: "delete",
     path: "/{datasetSlug}/columns/{identifier}",
     name: "deleteDatasetColumn",
-    annotations: { readOnlyHint: false, destructiveHint: true },
     tags: ["Datasets"],
     group: "datasets",
     sdkMethod: "deleteColumn",
@@ -1224,6 +1223,7 @@ const deleteDatasetColumnEndpoint = datasetEndpoint({
     request: { params: ColumnIdentifierParamsSchema },
     responses: openApiNoContentResponses({ description: "Column removed" }),
   }),
+  access: "destructive",
   rateLimitTier: "low",
   handler: async (c) => {
     const { projectSlug, datasetSlug, identifier } = c.req.valid("param")
@@ -1251,7 +1251,6 @@ const reorderDatasetColumnsEndpoint = datasetEndpoint({
     method: "post",
     path: "/{datasetSlug}/columns/reorder",
     name: "reorderDatasetColumns",
-    annotations: { readOnlyHint: false, destructiveHint: false },
     tags: ["Datasets"],
     group: "datasets",
     sdkMethod: "reorderColumns",
@@ -1266,6 +1265,7 @@ const reorderDatasetColumnsEndpoint = datasetEndpoint({
       description: "Reordered column schema",
     }),
   }),
+  access: "write",
   rateLimitTier: "low",
   handler: async (c) => {
     const { projectSlug, datasetSlug } = c.req.valid("param")
@@ -1294,7 +1294,6 @@ const restoreDatasetColumnEndpoint = datasetEndpoint({
     method: "post",
     path: "/{datasetSlug}/columns/{identifier}/restore",
     name: "restoreDatasetColumn",
-    annotations: { readOnlyHint: false, destructiveHint: false },
     tags: ["Datasets"],
     group: "datasets",
     sdkMethod: "restoreColumn",
@@ -1305,6 +1304,7 @@ const restoreDatasetColumnEndpoint = datasetEndpoint({
     request: { params: ColumnIdentifierParamsSchema },
     responses: openApiResponses({ status: 200, schema: DatasetColumnSchema, description: "Restored column" }),
   }),
+  access: "write",
   rateLimitTier: "low",
   handler: async (c) => {
     const { projectSlug, datasetSlug, identifier } = c.req.valid("param")

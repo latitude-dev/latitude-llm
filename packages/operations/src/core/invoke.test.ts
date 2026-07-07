@@ -24,7 +24,6 @@ const getWidget = operation({
     group: "widgets",
     sdkMethod: "get",
     description: "Get a widget",
-    annotations: { readOnlyHint: true, destructiveHint: false },
     request: {
       params: z.object({ projectSlug: z.string(), id: z.string() }),
       query: z.object({ limit: z.coerce.number().int().default(10) }),
@@ -36,6 +35,7 @@ const getWidget = operation({
       },
     },
   }),
+  access: "read-only",
   execute: (input, ctx) =>
     Effect.succeed({
       status: 200,
@@ -69,9 +69,9 @@ describe("invokeOperation", () => {
         group: "widgets",
         sdkMethod: "list",
         description: "List widgets",
-        annotations: { readOnlyHint: true, destructiveHint: false },
         responses: { 200: { description: "OK" } },
       }),
+      access: "read-only",
       handler: async (c) => c.body(null, 200),
     })
     const exit = await Effect.runPromiseExit(invokeOperation(handlerForm, {}, stubCtx))

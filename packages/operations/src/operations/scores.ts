@@ -231,7 +231,6 @@ const createScore = scoreEndpoint({
     method: "post",
     path: "/",
     name: "createScore",
-    annotations: { readOnlyHint: false, destructiveHint: false },
     tags: ["Scores"],
     group: "scores",
     sdkMethod: "create",
@@ -249,6 +248,7 @@ const createScore = scoreEndpoint({
       description: "Score created",
     }),
   }),
+  access: "write",
   rateLimitTier: "low",
   handler: async (c) => {
     const body = c.req.valid("json")

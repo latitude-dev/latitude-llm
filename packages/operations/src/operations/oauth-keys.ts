@@ -82,7 +82,6 @@ const listOAuthKeys = oauthKeyEndpoint({
     method: "get",
     path: "/",
     name: "listOAuthKeys",
-    annotations: { readOnlyHint: true, destructiveHint: false },
     tags: ["OAuth Keys"],
     group: "oauthKeys",
     sdkMethod: "list",
@@ -91,6 +90,7 @@ const listOAuthKeys = oauthKeyEndpoint({
     security: PROTECTED_SECURITY,
     responses: { 200: jsonResponse(ListResponseSchema, "List of OAuth keys") },
   }),
+  access: "read-only",
   rateLimitTier: "low",
   handler: async (c) => {
     const keys = await Effect.runPromise(
@@ -109,7 +109,6 @@ const getOAuthKey = oauthKeyEndpoint({
     method: "get",
     path: "/{oauthKeyId}",
     name: "getOAuthKey",
-    annotations: { readOnlyHint: true, destructiveHint: false },
     tags: ["OAuth Keys"],
     group: "oauthKeys",
     sdkMethod: "get",
@@ -119,6 +118,7 @@ const getOAuthKey = oauthKeyEndpoint({
     request: { params: OAuthKeyParamsSchema },
     responses: openApiResponses({ status: 200, schema: ResponseSchema, description: "OAuth key" }),
   }),
+  access: "read-only",
   rateLimitTier: "low",
   handler: async (c) => {
     const { oauthKeyId } = c.req.valid("param")
@@ -146,7 +146,6 @@ const revokeOAuthKey = oauthKeyEndpoint({
     method: "delete",
     path: "/{oauthKeyId}",
     name: "revokeOAuthKey",
-    annotations: { readOnlyHint: false, destructiveHint: true },
     tags: ["OAuth Keys"],
     group: "oauthKeys",
     sdkMethod: "revoke",
@@ -156,6 +155,7 @@ const revokeOAuthKey = oauthKeyEndpoint({
     request: { params: OAuthKeyParamsSchema },
     responses: openApiNoContentResponses({ description: "OAuth key revoked" }),
   }),
+  access: "destructive",
   rateLimitTier: "low",
   handler: async (c) => {
     const { oauthKeyId } = c.req.valid("param")

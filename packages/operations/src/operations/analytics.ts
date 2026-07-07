@@ -31,7 +31,6 @@ const queryAnalytics = analyticsEndpoint({
     method: "post",
     path: "/query",
     name: "queryAnalytics",
-    annotations: { readOnlyHint: true, destructiveHint: false },
     tags: ["Analytics"],
     group: "analytics",
     sdkMethod: "query",
@@ -46,6 +45,7 @@ const queryAnalytics = analyticsEndpoint({
       description: "The analytics series",
     }),
   }),
+  access: "read-only",
   rateLimitTier: "high",
   handler: async (c) => {
     const { projectSlug } = c.req.valid("param")

@@ -97,7 +97,6 @@ const listSavedSearchesEndpoint = savedSearchEndpoint({
     method: "get",
     path: "/",
     name: "listSavedSearches",
-    annotations: { readOnlyHint: true, destructiveHint: false },
     tags: ["Saved Searches"],
     group: "savedSearches",
     sdkMethod: "list",
@@ -112,6 +111,7 @@ const listSavedSearchesEndpoint = savedSearchEndpoint({
       description: "List of saved searches",
     }),
   }),
+  access: "read-only",
   rateLimitTier: "low",
   handler: async (c) => {
     const { projectSlug } = c.req.valid("param")
@@ -141,7 +141,6 @@ const getSavedSearch = savedSearchEndpoint({
     method: "get",
     path: "/{searchSlug}",
     name: "getSavedSearch",
-    annotations: { readOnlyHint: true, destructiveHint: false },
     tags: ["Saved Searches"],
     group: "savedSearches",
     sdkMethod: "get",
@@ -151,6 +150,7 @@ const getSavedSearch = savedSearchEndpoint({
     request: { params: SearchSlugParamsSchema },
     responses: openApiResponses({ status: 200, schema: SavedSearchSchema, description: "Saved search" }),
   }),
+  access: "read-only",
   rateLimitTier: "low",
   handler: async (c) => {
     const { projectSlug, searchSlug } = c.req.valid("param")
@@ -180,7 +180,6 @@ const createSavedSearchEndpoint = savedSearchEndpoint({
     method: "post",
     path: "/",
     name: "createSavedSearch",
-    annotations: { readOnlyHint: false, destructiveHint: false },
     tags: ["Saved Searches"],
     group: "savedSearches",
     sdkMethod: "create",
@@ -191,6 +190,7 @@ const createSavedSearchEndpoint = savedSearchEndpoint({
     request: { params: ProjectParamsSchema, body: jsonBody(CreateRequestSchema) },
     responses: openApiResponses({ status: 201, schema: SavedSearchSchema, description: "Saved search created" }),
   }),
+  access: "write",
   rateLimitTier: "low",
   handler: async (c) => {
     const { projectSlug } = c.req.valid("param")
@@ -229,7 +229,6 @@ const updateSavedSearchEndpoint = savedSearchEndpoint({
     method: "patch",
     path: "/{searchSlug}",
     name: "updateSavedSearch",
-    annotations: { readOnlyHint: false, destructiveHint: true },
     tags: ["Saved Searches"],
     group: "savedSearches",
     sdkMethod: "update",
@@ -240,6 +239,7 @@ const updateSavedSearchEndpoint = savedSearchEndpoint({
     request: { params: SearchSlugParamsSchema, body: jsonBody(UpdateRequestSchema) },
     responses: openApiResponses({ status: 200, schema: SavedSearchSchema, description: "Updated saved search" }),
   }),
+  access: "destructive",
   rateLimitTier: "low",
   handler: async (c) => {
     const { projectSlug, searchSlug } = c.req.valid("param")
@@ -277,7 +277,6 @@ const deleteSavedSearchEndpoint = savedSearchEndpoint({
     method: "delete",
     path: "/{searchSlug}",
     name: "deleteSavedSearch",
-    annotations: { readOnlyHint: false, destructiveHint: true },
     tags: ["Saved Searches"],
     group: "savedSearches",
     sdkMethod: "delete",
@@ -287,6 +286,7 @@ const deleteSavedSearchEndpoint = savedSearchEndpoint({
     request: { params: SearchSlugParamsSchema },
     responses: openApiNoContentResponses({ description: "Saved search deleted" }),
   }),
+  access: "destructive",
   rateLimitTier: "low",
   handler: async (c) => {
     const { projectSlug, searchSlug } = c.req.valid("param")
@@ -330,7 +330,6 @@ const listSavedSearchTraces = savedSearchEndpoint({
     method: "get",
     path: "/{searchSlug}/traces",
     name: "listSavedSearchTraces",
-    annotations: { readOnlyHint: true, destructiveHint: false },
     tags: ["Saved Searches"],
     group: "savedSearches",
     sdkMethod: "listTraces",
@@ -341,6 +340,7 @@ const listSavedSearchTraces = savedSearchEndpoint({
     request: { params: SearchSlugParamsSchema, query: ListSavedSearchTracesQuerySchema },
     responses: openApiResponses({ status: 200, schema: PaginatedTracesSchema, description: "Page of traces" }),
   }),
+  access: "read-only",
   rateLimitTier: "medium",
   handler: async (c) => {
     const { projectSlug, searchSlug } = c.req.valid("param")

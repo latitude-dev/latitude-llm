@@ -189,7 +189,6 @@ const createProject = projectEndpoint({
     method: "post",
     path: "/",
     name: "createProject",
-    annotations: { readOnlyHint: false, destructiveHint: false },
     tags: ["Projects"],
     group: "projects",
     sdkMethod: "create",
@@ -201,6 +200,7 @@ const createProject = projectEndpoint({
     },
     responses: openApiResponses({ status: 201, schema: ResponseSchema, description: "Project created" }),
   }),
+  access: "write",
   rateLimitTier: "high",
   handler: async (c) => {
     const body = c.req.valid("json")
@@ -228,7 +228,6 @@ const listProjects = projectEndpoint({
     method: "get",
     path: "/",
     name: "listProjects",
-    annotations: { readOnlyHint: true, destructiveHint: false },
     tags: ["Projects"],
     group: "projects",
     sdkMethod: "list",
@@ -238,6 +237,7 @@ const listProjects = projectEndpoint({
     security: PROTECTED_SECURITY,
     responses: openApiResponses({ status: 200, schema: PaginatedProjectsSchema, description: "List of projects" }),
   }),
+  access: "read-only",
   rateLimitTier: "low",
   handler: async (c) => {
     const projects = await Effect.runPromise(
@@ -256,7 +256,6 @@ const getProject = projectEndpoint({
     method: "get",
     path: "/{projectSlug}",
     name: "getProject",
-    annotations: { readOnlyHint: true, destructiveHint: false },
     tags: ["Projects"],
     group: "projects",
     sdkMethod: "get",
@@ -266,6 +265,7 @@ const getProject = projectEndpoint({
     request: { params: ProjectParamsSchema },
     responses: openApiResponses({ status: 200, schema: ResponseSchema, description: "Project" }),
   }),
+  access: "read-only",
   rateLimitTier: "low",
   handler: async (c) => {
     const { projectSlug } = c.req.valid("param")
@@ -286,7 +286,6 @@ const updateProject = projectEndpoint({
     method: "patch",
     path: "/{projectSlug}",
     name: "updateProject",
-    annotations: { readOnlyHint: false, destructiveHint: true },
     tags: ["Projects"],
     group: "projects",
     sdkMethod: "update",
@@ -300,6 +299,7 @@ const updateProject = projectEndpoint({
     },
     responses: openApiResponses({ status: 200, schema: ResponseSchema, description: "Updated project" }),
   }),
+  access: "destructive",
   rateLimitTier: "low",
   handler: async (c) => {
     const { projectSlug } = c.req.valid("param")
@@ -351,7 +351,6 @@ const deleteProject = projectEndpoint({
     method: "delete",
     path: "/{projectSlug}",
     name: "deleteProject",
-    annotations: { readOnlyHint: false, destructiveHint: true },
     tags: ["Projects"],
     group: "projects",
     sdkMethod: "delete",
@@ -361,6 +360,7 @@ const deleteProject = projectEndpoint({
     request: { params: ProjectParamsSchema },
     responses: openApiNoContentResponses({ description: "Project deleted" }),
   }),
+  access: "destructive",
   rateLimitTier: "low",
   handler: async (c) => {
     const { projectSlug } = c.req.valid("param")

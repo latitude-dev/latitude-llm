@@ -76,7 +76,6 @@ const listTools = toolOperation({
     method: "get",
     path: "/",
     name: "listTools",
-    annotations: { readOnlyHint: true, destructiveHint: false },
     tags: ["Tools"],
     group: "tools",
     sdkMethod: "list",
@@ -93,6 +92,7 @@ const listTools = toolOperation({
     },
     responses: typedResponses({ status: 200, schema: ToolsAnalyticsResponseSchema, description: "Tools analytics" }),
   }),
+  access: "read-only",
   rateLimitTier: "high",
   execute: (input, ctx) =>
     Effect.gen(function* () {
@@ -125,7 +125,6 @@ const getToolCallHistogram = toolOperation({
     method: "get",
     path: "/histogram",
     name: "getToolCallHistogram",
-    annotations: { readOnlyHint: true, destructiveHint: false },
     tags: ["Tools"],
     group: "tools",
     sdkMethod: "histogram",
@@ -144,6 +143,7 @@ const getToolCallHistogram = toolOperation({
     },
     responses: typedResponses({ status: 200, schema: ToolHistogramResponseSchema, description: "Call histogram" }),
   }),
+  access: "read-only",
   rateLimitTier: "medium",
   execute: (input, ctx) =>
     Effect.gen(function* () {
@@ -179,7 +179,6 @@ const getToolParameters = toolOperation({
     method: "get",
     path: "/{toolName}/parameters",
     name: "getToolParameters",
-    annotations: { readOnlyHint: true, destructiveHint: false },
     tags: ["Tools"],
     group: "tools",
     sdkMethod: "parameters",
@@ -208,6 +207,7 @@ const getToolParameters = toolOperation({
       description: "Parameter stats",
     }),
   }),
+  access: "read-only",
   rateLimitTier: "medium",
   execute: (input, ctx) =>
     Effect.gen(function* () {
@@ -243,7 +243,6 @@ const getToolContext = toolOperation({
     method: "get",
     path: "/{toolName}/context",
     name: "getToolContext",
-    annotations: { readOnlyHint: true, destructiveHint: false },
     tags: ["Tools"],
     group: "tools",
     sdkMethod: "context",
@@ -265,6 +264,7 @@ const getToolContext = toolOperation({
       description: "Context breakdown",
     }),
   }),
+  access: "read-only",
   rateLimitTier: "medium",
   execute: (input, ctx) =>
     Effect.gen(function* () {
@@ -299,7 +299,6 @@ const getToolCoOccurrence = toolOperation({
     method: "get",
     path: "/{toolName}/co-occurrence",
     name: "getToolCoOccurrence",
-    annotations: { readOnlyHint: true, destructiveHint: false },
     tags: ["Tools"],
     group: "tools",
     sdkMethod: "coOccurrence",
@@ -320,6 +319,7 @@ const getToolCoOccurrence = toolOperation({
       description: "Co-occurring tools",
     }),
   }),
+  access: "read-only",
   rateLimitTier: "low",
   execute: (input, ctx) =>
     Effect.gen(function* () {
@@ -354,7 +354,6 @@ const getToolErrors = toolOperation({
     method: "get",
     path: "/{toolName}/errors",
     name: "getToolErrors",
-    annotations: { readOnlyHint: true, destructiveHint: false },
     tags: ["Tools"],
     group: "tools",
     sdkMethod: "errors",
@@ -375,6 +374,7 @@ const getToolErrors = toolOperation({
       description: "Error breakdown",
     }),
   }),
+  access: "read-only",
   rateLimitTier: "low",
   execute: (input, ctx) =>
     Effect.gen(function* () {
@@ -407,7 +407,6 @@ const listToolCalls = toolOperation({
     method: "get",
     path: "/{toolName}/calls",
     name: "listToolCalls",
-    annotations: { readOnlyHint: true, destructiveHint: false },
     tags: ["Tools"],
     group: "tools",
     sdkMethod: "listCalls",
@@ -429,6 +428,7 @@ const listToolCalls = toolOperation({
     },
     responses: typedResponses({ status: 200, schema: PaginatedToolCallsSchema, description: "Page of tool calls" }),
   }),
+  access: "read-only",
   rateLimitTier: "low",
   execute: (input, ctx) =>
     Effect.gen(function* () {
@@ -478,7 +478,6 @@ const getTool = toolOperation({
     method: "get",
     path: "/{toolName}",
     name: "getTool",
-    annotations: { readOnlyHint: true, destructiveHint: false },
     tags: ["Tools"],
     group: "tools",
     sdkMethod: "get",
@@ -492,6 +491,7 @@ const getTool = toolOperation({
     },
     responses: typedResponses({ status: 200, schema: ToolDetailResponseSchema, description: "Tool detail" }),
   }),
+  access: "read-only",
   rateLimitTier: "low",
   execute: (input, ctx) =>
     Effect.gen(function* () {

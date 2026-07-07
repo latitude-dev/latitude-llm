@@ -72,7 +72,6 @@ const listIncidents = incidentEndpoint({
     method: "get",
     path: "/",
     name: "listIncidents",
-    annotations: { readOnlyHint: true, destructiveHint: false },
     tags: ["Incidents"],
     group: "incidents",
     sdkMethod: "list",
@@ -87,6 +86,7 @@ const listIncidents = incidentEndpoint({
       description: "Matching incidents",
     }),
   }),
+  access: "read-only",
   rateLimitTier: "low",
   handler: async (c) => {
     const { projectSlug } = c.req.valid("param")
@@ -133,7 +133,6 @@ const resolveIncident = incidentEndpoint({
     method: "post",
     path: "/{incidentId}",
     name: "resolveIncident",
-    annotations: { readOnlyHint: false, destructiveHint: false },
     tags: ["Incidents"],
     group: "incidents",
     sdkMethod: "resolve",
@@ -144,6 +143,7 @@ const resolveIncident = incidentEndpoint({
     request: { params: IncidentParamsSchema },
     responses: openApiResponses({ status: 200, schema: IncidentSchema, description: "Resolved incident" }),
   }),
+  access: "write",
   rateLimitTier: "medium",
   handler: async (c) => {
     const { projectSlug, incidentId } = c.req.valid("param")

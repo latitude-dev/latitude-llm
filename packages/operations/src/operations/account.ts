@@ -55,7 +55,6 @@ const getAccount = accountOperation({
     method: "get",
     path: "/",
     name: "getAccount",
-    annotations: { readOnlyHint: true, destructiveHint: false },
     tags: ["Account"],
     group: "account",
     sdkMethod: "get",
@@ -65,6 +64,7 @@ const getAccount = accountOperation({
     security: PROTECTED_SECURITY,
     responses: openApiResponses({ status: 200, schema: AccountResponseSchema, description: "Account snapshot" }),
   }),
+  access: "read-only",
   rateLimitTier: "low",
   handler: async (c) => {
     const auth = c.var.auth

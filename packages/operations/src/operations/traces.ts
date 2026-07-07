@@ -129,7 +129,6 @@ const listTraces = traceEndpoint({
     method: "post",
     path: "/list",
     name: "listTraces",
-    annotations: { readOnlyHint: true, destructiveHint: false },
     tags: ["Traces"],
     group: "traces",
     sdkMethod: "list",
@@ -143,6 +142,7 @@ const listTraces = traceEndpoint({
     },
     responses: openApiResponses({ status: 200, schema: PaginatedTracesSchema, description: "Page of traces" }),
   }),
+  access: "read-only",
   rateLimitTier: "medium",
   handler: async (c) => {
     const { projectSlug } = c.req.valid("param")
@@ -208,7 +208,6 @@ const getTrace = traceEndpoint({
     method: "get",
     path: "/{traceId}",
     name: "getTrace",
-    annotations: { readOnlyHint: true, destructiveHint: false },
     tags: ["Traces"],
     group: "traces",
     sdkMethod: "get",
@@ -221,6 +220,7 @@ const getTrace = traceEndpoint({
     },
     responses: openApiResponses({ status: 200, schema: TraceDetailSchema, description: "Trace detail" }),
   }),
+  access: "read-only",
   rateLimitTier: "low",
   handler: async (c) => {
     const { projectSlug, traceId } = c.req.valid("param")
@@ -268,7 +268,6 @@ const listTraceSpans = traceEndpoint({
     method: "get",
     path: "/{traceId}/spans",
     name: "listTraceSpans",
-    annotations: { readOnlyHint: true, destructiveHint: false },
     tags: ["Traces"],
     group: "traces",
     sdkMethod: "listSpans",
@@ -281,6 +280,7 @@ const listTraceSpans = traceEndpoint({
     },
     responses: openApiResponses({ status: 200, schema: TraceSpansSchema, description: "Spans of the trace" }),
   }),
+  access: "read-only",
   rateLimitTier: "low",
   handler: async (c) => {
     const { projectSlug, traceId } = c.req.valid("param")
@@ -316,7 +316,6 @@ const getTraceSpan = traceEndpoint({
     method: "get",
     path: "/{traceId}/spans/{spanId}",
     name: "getTraceSpan",
-    annotations: { readOnlyHint: true, destructiveHint: false },
     tags: ["Traces"],
     group: "traces",
     sdkMethod: "getSpan",
@@ -329,6 +328,7 @@ const getTraceSpan = traceEndpoint({
     },
     responses: openApiResponses({ status: 200, schema: SpanDetailSchema, description: "Span detail" }),
   }),
+  access: "read-only",
   rateLimitTier: "low",
   handler: async (c) => {
     const { projectSlug, traceId, spanId } = c.req.valid("param")
@@ -364,7 +364,6 @@ const listTraceAnnotations = traceEndpoint({
     method: "get",
     path: "/{traceId}/annotations",
     name: "listTraceAnnotations",
-    annotations: { readOnlyHint: true, destructiveHint: false },
     tags: ["Traces"],
     group: "traces",
     sdkMethod: "listAnnotations",
@@ -382,6 +381,7 @@ const listTraceAnnotations = traceEndpoint({
       description: "Annotations of the trace",
     }),
   }),
+  access: "read-only",
   rateLimitTier: "low",
   handler: async (c) => {
     const { projectSlug, traceId } = c.req.valid("param")
@@ -434,7 +434,6 @@ const getTraceAnnotation = traceEndpoint({
     method: "get",
     path: "/{traceId}/annotations/{annotationId}",
     name: "getTraceAnnotation",
-    annotations: { readOnlyHint: true, destructiveHint: false },
     tags: ["Traces"],
     group: "traces",
     sdkMethod: "getAnnotation",
@@ -449,6 +448,7 @@ const getTraceAnnotation = traceEndpoint({
     },
     responses: openApiResponses({ status: 200, schema: AnnotationSchema, description: "Annotation" }),
   }),
+  access: "read-only",
   rateLimitTier: "low",
   handler: async (c) => {
     const { projectSlug, traceId, annotationId } = c.req.valid("param")
@@ -479,7 +479,6 @@ const exportTraces = traceEndpoint({
     method: "post",
     path: "/export",
     name: "exportTraces",
-    annotations: { readOnlyHint: false, destructiveHint: false },
     tags: ["Traces"],
     group: "traces",
     sdkMethod: "export",
@@ -493,6 +492,7 @@ const exportTraces = traceEndpoint({
     },
     responses: openApiResponses({ status: 202, schema: ExportResponseSchema, description: "Export enqueued" }),
   }),
+  access: "write",
   rateLimitTier: "ultra",
   handler: async (c) => {
     const { projectSlug } = c.req.valid("param")
@@ -548,7 +548,6 @@ const getTraceAnalytics = traceEndpoint({
     method: "get",
     path: "/analytics",
     name: "getTraceAnalytics",
-    annotations: { readOnlyHint: true, destructiveHint: false },
     tags: ["Traces"],
     group: "traces",
     sdkMethod: "analytics",
@@ -563,6 +562,7 @@ const getTraceAnalytics = traceEndpoint({
       description: "Trace analytics",
     }),
   }),
+  access: "read-only",
   rateLimitTier: "medium",
   handler: async (c) => {
     const { projectSlug } = c.req.valid("param")

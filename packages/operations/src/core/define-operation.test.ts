@@ -24,7 +24,6 @@ describe("defineOperation", () => {
         group: "test",
         sdkMethod: "fooThing",
         description: "Get a foo",
-        annotations: { readOnlyHint: true, destructiveHint: false },
         responses: {
           200: {
             content: { "application/json": { schema: z.object({ ok: z.boolean() }) } },
@@ -32,6 +31,7 @@ describe("defineOperation", () => {
           },
         },
       }),
+      access: "read-only",
       handler: async (c) => c.json({ ok: true }, 200),
     })
     expect(ep.route.name).toBe("fooThing")
@@ -47,9 +47,9 @@ describe("defineOperation", () => {
         group: "test",
         sdkMethod: "x",
         description: "x",
-        annotations: { readOnlyHint: true, destructiveHint: false },
         responses: { 200: { description: "OK" } },
       }),
+      access: "read-only",
       handler: async (c) => c.body(null, 200),
     })
     expect(ep.tool).toBe(true)
@@ -64,9 +64,9 @@ describe("defineOperation", () => {
         group: "test",
         sdkMethod: "x",
         description: "x",
-        annotations: { readOnlyHint: true, destructiveHint: false },
         responses: { 200: { description: "OK" } },
       }),
+      access: "read-only",
       handler: async (c) => c.body(null, 200),
       tool: false,
     })
@@ -82,7 +82,6 @@ describe("defineOperation", () => {
         group: "test",
         sdkMethod: "createItem",
         description: "Create",
-        annotations: { readOnlyHint: false, destructiveHint: false },
         request: {
           body: {
             content: { "application/json": { schema: z.object({ value: z.string() }) } },
@@ -96,6 +95,7 @@ describe("defineOperation", () => {
           },
         },
       }),
+      access: "write",
       handler: async (c) => c.json({ id: "abc" }, 200),
     })
 
@@ -121,7 +121,6 @@ describe("defineOperation", () => {
         sdkMethod: "list",
         summary: "List grouped",
         description: "List",
-        annotations: { readOnlyHint: true, destructiveHint: false },
         responses: {
           200: {
             content: { "application/json": { schema: z.object({ ok: z.boolean() }) } },
@@ -129,6 +128,7 @@ describe("defineOperation", () => {
           },
         },
       }),
+      access: "read-only",
       handler: async (c) => c.json({ ok: true }, 200),
     })
 
@@ -157,9 +157,9 @@ describe("defineOperation", () => {
         group: "test",
         sdkMethod: "x",
         description: "x",
-        annotations: { readOnlyHint: true, destructiveHint: false },
         responses: { 200: { description: "OK" } },
       }),
+      access: "read-only",
       handler: async (c) => c.body(null, 200),
       rateLimitTier: "ultra",
     })
@@ -175,7 +175,6 @@ describe("defineOperation", () => {
         group: "test",
         sdkMethod: "echo",
         description: "Echo id",
-        annotations: { readOnlyHint: true, destructiveHint: false },
         request: { params: z.object({ id: z.string() }) },
         responses: {
           200: {
@@ -184,6 +183,7 @@ describe("defineOperation", () => {
           },
         },
       }),
+      access: "read-only",
       handler: async (c) => c.json({ id: c.req.valid("param").id }, 200),
     })
 

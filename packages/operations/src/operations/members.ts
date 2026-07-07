@@ -130,7 +130,6 @@ const listMembers = memberEndpoint({
     method: "get",
     path: "/",
     name: "listMembers",
-    annotations: { readOnlyHint: true, destructiveHint: false },
     tags: ["Members"],
     group: "members",
     sdkMethod: "list",
@@ -139,6 +138,7 @@ const listMembers = memberEndpoint({
     security: PROTECTED_SECURITY,
     responses: openApiResponses({ status: 200, schema: ListResponseSchema, description: "List of members" }),
   }),
+  access: "read-only",
   rateLimitTier: "low",
   handler: async (c) => {
     const { members, invitations } = await Effect.runPromise(
@@ -160,7 +160,6 @@ const getMember = memberEndpoint({
     method: "get",
     path: "/{memberId}",
     name: "getMember",
-    annotations: { readOnlyHint: true, destructiveHint: false },
     tags: ["Members"],
     group: "members",
     sdkMethod: "get",
@@ -170,6 +169,7 @@ const getMember = memberEndpoint({
     request: { params: MemberIdParamsSchema },
     responses: openApiResponses({ status: 200, schema: ActiveMemberSchema, description: "Member" }),
   }),
+  access: "read-only",
   rateLimitTier: "low",
   handler: async (c) => {
     const { memberId } = c.req.valid("param")
@@ -188,7 +188,6 @@ const inviteMember = memberEndpoint({
     method: "post",
     path: "/",
     name: "inviteMember",
-    annotations: { readOnlyHint: false, destructiveHint: false },
     tags: ["Members"],
     group: "members",
     sdkMethod: "invite",
@@ -199,6 +198,7 @@ const inviteMember = memberEndpoint({
     request: { body: jsonBody(InviteRequestSchema) },
     responses: openApiResponses({ status: 201, schema: InvitedMemberSchema, description: "Invitation created" }),
   }),
+  access: "write",
   rateLimitTier: "high",
   handler: async (c) => {
     const inviterUserId = requireOAuthUserId(c)
@@ -245,7 +245,6 @@ const updateMemberRole = memberEndpoint({
     method: "patch",
     path: "/{memberId}",
     name: "updateMember",
-    annotations: { readOnlyHint: false, destructiveHint: true },
     tags: ["Members"],
     group: "members",
     sdkMethod: "update",
@@ -260,6 +259,7 @@ const updateMemberRole = memberEndpoint({
       description: "Member with the updated role",
     }),
   }),
+  access: "destructive",
   rateLimitTier: "low",
   handler: async (c) => {
     const requestingUserId = requireOAuthUserId(c)
@@ -292,7 +292,6 @@ const removeMember = memberEndpoint({
     method: "delete",
     path: "/{memberId}",
     name: "removeMember",
-    annotations: { readOnlyHint: false, destructiveHint: true },
     tags: ["Members"],
     group: "members",
     sdkMethod: "remove",
@@ -303,6 +302,7 @@ const removeMember = memberEndpoint({
     request: { params: MemberIdParamsSchema },
     responses: openApiNoContentResponses({ description: "Member removed" }),
   }),
+  access: "destructive",
   rateLimitTier: "low",
   handler: async (c) => {
     const requestingUserId = requireOAuthUserId(c)

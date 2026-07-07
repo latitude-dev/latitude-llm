@@ -56,7 +56,6 @@ const createAnnotation = annotationEndpoint({
     method: "post",
     path: "/",
     name: "createAnnotation",
-    annotations: { readOnlyHint: false, destructiveHint: false },
     tags: ["Annotations"],
     group: "annotations",
     sdkMethod: "create",
@@ -70,6 +69,7 @@ const createAnnotation = annotationEndpoint({
     },
     responses: openApiResponses({ status: 201, schema: AnnotationSchema, description: "Annotation created" }),
   }),
+  access: "write",
   rateLimitTier: "low",
   handler: async (c) => {
     const body = c.req.valid("json")

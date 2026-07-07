@@ -174,7 +174,6 @@ const buildLifecycleEndpoint = ({
       method: "post",
       path: pathSuffix,
       name,
-      annotations: { readOnlyHint: false, destructiveHint: false },
       tags: ["Signals"],
       group: "signals",
       sdkMethod: fernMethod,
@@ -184,6 +183,7 @@ const buildLifecycleEndpoint = ({
       request: { params: ProjectParamsSchema, body: jsonBody(bodySchema) },
       responses: openApiResponses({ status: 200, schema: LifecycleResponseSchema, description: "Per-signal result" }),
     }),
+    access: "write",
     rateLimitTier,
     handler: async (c) => {
       const { projectSlug } = c.req.valid("param")
@@ -282,7 +282,6 @@ const listSignals = signalEndpoint({
     method: "get",
     path: "/",
     name: "listSignals",
-    annotations: { readOnlyHint: true, destructiveHint: false },
     tags: ["Signals"],
     group: "signals",
     sdkMethod: "list",
@@ -293,6 +292,7 @@ const listSignals = signalEndpoint({
     request: { params: ProjectParamsSchema, query: ListSignalsQuerySchema },
     responses: openApiResponses({ status: 200, schema: PaginatedSignalsSchema, description: "Page of signals" }),
   }),
+  access: "read-only",
   rateLimitTier: "low",
   handler: async (c) => {
     const { projectSlug } = c.req.valid("param")
@@ -381,7 +381,6 @@ const getSignalAnalytics = signalEndpoint({
     method: "get",
     path: "/analytics",
     name: "getSignalAnalytics",
-    annotations: { readOnlyHint: true, destructiveHint: false },
     tags: ["Signals"],
     group: "signals",
     sdkMethod: "analytics",
@@ -396,6 +395,7 @@ const getSignalAnalytics = signalEndpoint({
       description: "Signal analytics",
     }),
   }),
+  access: "read-only",
   rateLimitTier: "medium",
   handler: async (c) => {
     const { projectSlug } = c.req.valid("param")
@@ -433,7 +433,6 @@ const getSignal = signalEndpoint({
     method: "get",
     path: "/{signalSlug}",
     name: "getSignal",
-    annotations: { readOnlyHint: true, destructiveHint: false },
     tags: ["Signals"],
     group: "signals",
     sdkMethod: "get",
@@ -444,6 +443,7 @@ const getSignal = signalEndpoint({
     request: { params: SignalSlugParamsSchema },
     responses: openApiResponses({ status: 200, schema: SignalDetailSchema, description: "Signal" }),
   }),
+  access: "read-only",
   rateLimitTier: "low",
   handler: async (c) => {
     const { projectSlug, signalSlug } = c.req.valid("param")
@@ -492,7 +492,6 @@ const getSignalTrend = signalEndpoint({
     method: "get",
     path: "/{signalSlug}/trend",
     name: "getSignalTrend",
-    annotations: { readOnlyHint: true, destructiveHint: false },
     tags: ["Signals"],
     group: "signals",
     sdkMethod: "trend",
@@ -503,6 +502,7 @@ const getSignalTrend = signalEndpoint({
     request: { params: SignalSlugParamsSchema, query: TimeRangeQuerySchema },
     responses: openApiResponses({ status: 200, schema: SignalHistogramSchema, description: "Occurrence histogram" }),
   }),
+  access: "read-only",
   rateLimitTier: "medium",
   handler: async (c) => {
     const { projectSlug, signalSlug } = c.req.valid("param")
@@ -542,7 +542,6 @@ const listSignalTraces = signalEndpoint({
     method: "get",
     path: "/{signalSlug}/traces",
     name: "listSignalTraces",
-    annotations: { readOnlyHint: true, destructiveHint: false },
     tags: ["Signals"],
     group: "signals",
     sdkMethod: "listTraces",
@@ -553,6 +552,7 @@ const listSignalTraces = signalEndpoint({
     request: { params: SignalSlugParamsSchema, query: ListSignalTracesQuerySchema },
     responses: openApiResponses({ status: 200, schema: PaginatedTracesSchema, description: "Page of traces" }),
   }),
+  access: "read-only",
   rateLimitTier: "medium",
   handler: async (c) => {
     const { projectSlug, signalSlug } = c.req.valid("param")
@@ -621,7 +621,6 @@ const exportSignals = signalEndpoint({
     method: "post",
     path: "/export",
     name: "exportSignals",
-    annotations: { readOnlyHint: false, destructiveHint: false },
     tags: ["Signals"],
     group: "signals",
     sdkMethod: "export",
@@ -632,6 +631,7 @@ const exportSignals = signalEndpoint({
     request: { params: ProjectParamsSchema, body: jsonBody(ExportBodySchema) },
     responses: openApiResponses({ status: 202, schema: ExportResponseSchema, description: "Export enqueued" }),
   }),
+  access: "write",
   rateLimitTier: "ultra",
   handler: async (c) => {
     const { projectSlug } = c.req.valid("param")
@@ -690,7 +690,6 @@ const monitorSignal = signalEndpoint({
     method: "post",
     path: "/{signalSlug}/monitor",
     name: "monitorSignal",
-    annotations: { readOnlyHint: false, destructiveHint: false },
     tags: ["Signals"],
     group: "signals",
     sdkMethod: "monitor",
@@ -701,6 +700,7 @@ const monitorSignal = signalEndpoint({
     request: { params: SignalSlugParamsSchema },
     responses: openApiResponses({ status: 202, schema: MonitorResponseSchema, description: "Monitor job enqueued" }),
   }),
+  access: "write",
   rateLimitTier: "ultra",
   handler: async (c) => {
     const { projectSlug, signalSlug } = c.req.valid("param")
@@ -744,7 +744,6 @@ const unmonitorSignal = signalEndpoint({
     method: "post",
     path: "/{signalSlug}/unmonitor",
     name: "unmonitorSignal",
-    annotations: { readOnlyHint: false, destructiveHint: false },
     tags: ["Signals"],
     group: "signals",
     sdkMethod: "unmonitor",
@@ -755,6 +754,7 @@ const unmonitorSignal = signalEndpoint({
     request: { params: SignalSlugParamsSchema },
     responses: { 204: { description: "Signal unmonitored" } },
   }),
+  access: "write",
   rateLimitTier: "medium",
   handler: async (c) => {
     const { projectSlug, signalSlug } = c.req.valid("param")
@@ -845,7 +845,6 @@ const createSignal = signalEndpoint({
     method: "post",
     path: "/",
     name: "createSignal",
-    annotations: { readOnlyHint: false, destructiveHint: false },
     tags: ["Signals"],
     group: "signals",
     sdkMethod: "create",
@@ -856,6 +855,7 @@ const createSignal = signalEndpoint({
     request: { params: ProjectParamsSchema, body: jsonBody(CreateSignalBodySchema) },
     responses: openApiResponses({ status: 201, schema: CreateSignalResponseSchema, description: "Signal created" }),
   }),
+  access: "write",
   rateLimitTier: "ultra",
   handler: async (c) => {
     const { projectSlug } = c.req.valid("param")
@@ -895,7 +895,6 @@ const updateSignal = signalEndpoint({
     method: "patch",
     path: "/{signalSlug}",
     name: "updateSignal",
-    annotations: { readOnlyHint: false, destructiveHint: true },
     tags: ["Signals"],
     group: "signals",
     sdkMethod: "update",
@@ -906,6 +905,7 @@ const updateSignal = signalEndpoint({
     request: { params: SignalSlugParamsSchema, body: jsonBody(UpdateSignalBodySchema) },
     responses: openApiResponses({ status: 200, schema: UpdateSignalResponseSchema, description: "Signal updated" }),
   }),
+  access: "destructive",
   rateLimitTier: "medium",
   handler: async (c) => {
     const { projectSlug, signalSlug } = c.req.valid("param")
@@ -944,7 +944,6 @@ const deleteSignal = signalEndpoint({
     method: "delete",
     path: "/{signalSlug}",
     name: "deleteSignal",
-    annotations: { readOnlyHint: false, destructiveHint: true },
     tags: ["Signals"],
     group: "signals",
     sdkMethod: "delete",
@@ -955,6 +954,7 @@ const deleteSignal = signalEndpoint({
     request: { params: SignalSlugParamsSchema },
     responses: { 204: { description: "Signal deleted" } },
   }),
+  access: "destructive",
   rateLimitTier: "medium",
   handler: async (c) => {
     const { projectSlug, signalSlug } = c.req.valid("param")

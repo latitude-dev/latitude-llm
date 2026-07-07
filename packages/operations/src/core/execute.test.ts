@@ -48,7 +48,6 @@ describe("executeToHandler", () => {
         group: "test",
         sdkMethod: "getWidget",
         description: "Get a widget",
-        annotations: { readOnlyHint: true, destructiveHint: false },
         request: {
           params: z.object({ id: z.string() }),
           query: z.object({ limit: z.coerce.number().optional() }),
@@ -60,6 +59,7 @@ describe("executeToHandler", () => {
           },
         },
       }),
+      access: "read-only",
       execute: (input) => {
         seen = input
         return Effect.succeed({ status: 200, body: { id: input.params.id, limit: input.query.limit ?? 10 } } as const)
@@ -83,7 +83,6 @@ describe("executeToHandler", () => {
         group: "test",
         sdkMethod: "createWidget",
         description: "Create a widget",
-        annotations: { readOnlyHint: false, destructiveHint: false },
         request: {
           body: { content: { "application/json": { schema: z.object({ name: z.string() }) } }, required: true },
         },
@@ -92,6 +91,7 @@ describe("executeToHandler", () => {
           400: { content: { "application/json": { schema: z.object({ error: z.string() }) } }, description: "Invalid" },
         },
       }),
+      access: "write",
       execute: (input) =>
         Effect.succeed(
           input.body.name === "bad"
@@ -129,10 +129,10 @@ describe("executeToHandler", () => {
         group: "test",
         sdkMethod: "deleteWidget",
         description: "Delete a widget",
-        annotations: { readOnlyHint: false, destructiveHint: true },
         request: { params: z.object({ id: z.string() }) },
         responses: { 204: { description: "Deleted" } },
       }),
+      access: "destructive",
       execute: () => Effect.succeed({ status: 204 } as const),
     })
     const app = buildApp()
@@ -153,9 +153,9 @@ describe("executeToHandler", () => {
         group: "test",
         sdkMethod: "listWidgets",
         description: "List widgets",
-        annotations: { readOnlyHint: true, destructiveHint: false },
         responses: { 200: { content: { "application/json": { schema: z.object({}) } }, description: "OK" } },
       }),
+      access: "read-only",
       execute: (_input, ctx) => {
         seen = ctx
         return Effect.succeed({ status: 200, body: {} } as const)
@@ -181,9 +181,9 @@ describe("executeToHandler", () => {
         group: "test",
         sdkMethod: "failWidget",
         description: "Fail",
-        annotations: { readOnlyHint: true, destructiveHint: false },
         responses: { 200: { content: { "application/json": { schema: z.object({}) } }, description: "OK" } },
       }),
+      access: "read-only",
       execute: () => Effect.fail(new Error("domain failure")),
     })
     const app = buildApp()
@@ -208,9 +208,9 @@ describe("executeToHandler", () => {
         group: "test",
         sdkMethod: "unscopedWidget",
         description: "Unscoped",
-        annotations: { readOnlyHint: true, destructiveHint: false },
         responses: { 200: { content: { "application/json": { schema: z.object({}) } }, description: "OK" } },
       }),
+      access: "read-only",
       execute: () => Effect.succeed({ status: 200, body: {} } as const),
     })
     const { organization: _org, ...withoutOrganization } = contextVars

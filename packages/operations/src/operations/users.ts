@@ -80,7 +80,6 @@ const listUsers = userEndpoint({
     method: "get",
     path: "/",
     name: "listUsers",
-    annotations: { readOnlyHint: true, destructiveHint: false },
     tags: ["Users"],
     group: "users",
     sdkMethod: "list",
@@ -105,6 +104,7 @@ const listUsers = userEndpoint({
     },
     responses: openApiResponses({ status: 200, schema: UserListResponseSchema, description: "Page of end-users" }),
   }),
+  access: "read-only",
   rateLimitTier: "high",
   handler: async (c) => {
     const { projectSlug } = c.req.valid("param")
@@ -146,7 +146,6 @@ const getUsersOverview = userEndpoint({
     method: "get",
     path: "/overview",
     name: "getUsersOverview",
-    annotations: { readOnlyHint: true, destructiveHint: false },
     tags: ["Users"],
     group: "users",
     sdkMethod: "overview",
@@ -160,6 +159,7 @@ const getUsersOverview = userEndpoint({
     },
     responses: openApiResponses({ status: 200, schema: UsersOverviewResponseSchema, description: "Users overview" }),
   }),
+  access: "read-only",
   rateLimitTier: "medium",
   handler: async (c) => {
     const { projectSlug } = c.req.valid("param")
@@ -196,7 +196,6 @@ const getUserActivity = userEndpoint({
     method: "get",
     path: "/{userId}/activity",
     name: "getUserActivity",
-    annotations: { readOnlyHint: true, destructiveHint: false },
     tags: ["Users"],
     group: "users",
     sdkMethod: "activity",
@@ -210,6 +209,7 @@ const getUserActivity = userEndpoint({
     },
     responses: openApiResponses({ status: 200, schema: UserActivityResponseSchema, description: "Activity histogram" }),
   }),
+  access: "read-only",
   rateLimitTier: "medium",
   handler: async (c) => {
     const { projectSlug, userId } = c.req.valid("param")
@@ -250,7 +250,6 @@ const getUserUsage = userEndpoint({
     method: "get",
     path: "/{userId}/usage",
     name: "getUserUsage",
-    annotations: { readOnlyHint: true, destructiveHint: false },
     tags: ["Users"],
     group: "users",
     sdkMethod: "usage",
@@ -268,6 +267,7 @@ const getUserUsage = userEndpoint({
     },
     responses: openApiResponses({ status: 200, schema: UserUsageResponseSchema, description: "Usage breakdown" }),
   }),
+  access: "read-only",
   rateLimitTier: "medium",
   handler: async (c) => {
     const { projectSlug, userId } = c.req.valid("param")
@@ -304,7 +304,6 @@ const listUserSignals = userEndpoint({
     method: "get",
     path: "/{userId}/signals",
     name: "listUserSignals",
-    annotations: { readOnlyHint: true, destructiveHint: false },
     tags: ["Users"],
     group: "users",
     sdkMethod: "signals",
@@ -320,6 +319,7 @@ const listUserSignals = userEndpoint({
     },
     responses: openApiResponses({ status: 200, schema: UserSignalsResponseSchema, description: "User signals" }),
   }),
+  access: "read-only",
   rateLimitTier: "low",
   handler: async (c) => {
     const { projectSlug, userId } = c.req.valid("param")
@@ -352,7 +352,6 @@ const listUserBehaviours = userEndpoint({
     method: "get",
     path: "/{userId}/behaviours",
     name: "listUserBehaviours",
-    annotations: { readOnlyHint: true, destructiveHint: false },
     tags: ["Users"],
     group: "users",
     sdkMethod: "behaviours",
@@ -368,6 +367,7 @@ const listUserBehaviours = userEndpoint({
     },
     responses: openApiResponses({ status: 200, schema: UserBehavioursResponseSchema, description: "User behaviours" }),
   }),
+  access: "read-only",
   rateLimitTier: "low",
   handler: async (c) => {
     const { projectSlug, userId } = c.req.valid("param")
@@ -404,7 +404,6 @@ const getUser = userEndpoint({
     method: "get",
     path: "/{userId}",
     name: "getUser",
-    annotations: { readOnlyHint: true, destructiveHint: false },
     tags: ["Users"],
     group: "users",
     sdkMethod: "get",
@@ -418,6 +417,7 @@ const getUser = userEndpoint({
     },
     responses: openApiResponses({ status: 200, schema: UserProfileResponseSchema, description: "User profile" }),
   }),
+  access: "read-only",
   rateLimitTier: "low",
   handler: async (c) => {
     const { projectSlug, userId } = c.req.valid("param")

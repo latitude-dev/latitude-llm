@@ -115,7 +115,6 @@ const querySpans = spanEndpoint({
     method: "post",
     path: "/query",
     name: "querySpans",
-    annotations: { readOnlyHint: true, destructiveHint: false },
     tags: ["Spans"],
     group: "spans",
     sdkMethod: "query",
@@ -126,6 +125,7 @@ const querySpans = spanEndpoint({
     request: { params: ProjectParamsSchema, body: jsonBody(QuerySpansBodySchema) },
     responses: openApiResponses({ status: 200, schema: QuerySpansResponseSchema, description: "Page of spans" }),
   }),
+  access: "read-only",
   rateLimitTier: "high",
   handler: async (c) => {
     const { projectSlug } = c.req.valid("param")

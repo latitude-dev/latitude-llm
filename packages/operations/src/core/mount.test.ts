@@ -19,7 +19,6 @@ const route = (name: string) =>
     group: "test",
     sdkMethod: name,
     description: name,
-    annotations: { readOnlyHint: true, destructiveHint: false },
     responses: {
       200: { content: { "application/json": { schema: z.object({ name: z.string() }) } }, description: "OK" },
     },
@@ -30,11 +29,13 @@ describe("mountOperationModules", () => {
     const applied: Array<{ tier: RateLimitTier; path: string }> = []
     const widgets = defineOperation<TestEnv>("/widgets")({
       route: route("listWidgets"),
+      access: "read-only",
       rateLimitTier: "low",
       handler: async (c) => c.json({ name: "widgets" }, 200),
     })
     const gadgets = defineOperation<TestEnv>("/gadgets")({
       route: route("listGadgets"),
+      access: "read-only",
       rateLimitTier: "high",
       handler: async (c) => c.json({ name: "gadgets" }, 200),
     })
@@ -70,6 +71,7 @@ describe("mountOperationModules", () => {
   it("throws at mount time when an operation declares no rateLimitTier", () => {
     const untiered = defineOperation<TestEnv>("/widgets")({
       route: route("listWidgets"),
+      access: "read-only",
       handler: async (c) => c.json({ name: "widgets" }, 200),
     })
     const routes = new OpenAPIHono<ProtectedEnv>()
