@@ -9,7 +9,7 @@ import {
 } from "./define-operation.ts"
 import { extractOutputSchema } from "./extract-output.ts"
 import { flattenRouteInputSchema } from "./flatten-input.ts"
-import { invokeOperation } from "./invoke.ts"
+import { invokeOperationWithFlat } from "./invoke.ts"
 import type { OperationModule } from "./mount.ts"
 
 export interface ToolsetSpec {
@@ -99,14 +99,17 @@ export const defineToolset = (spec: ToolsetSpec, modules: ReadonlyArray<Operatio
 }
 
 const toToolsetTool = (operation: AnyOperation): ToolsetTool => {
+  // Flatten the static route schema once per tool, not per invocation — a tight
+  // agent loop calls `invoke` repeatedly and the flattened schema never changes.
+  const flat = flattenRouteInputSchema(operation.route)
   const output = extractOutputSchema(operation.route)
   return {
     name: operation.route.name,
     title: operation.route.summary ?? operation.route.name,
     description: operation.route.description ?? "",
     annotations: accessToAnnotations(operation.access),
-    inputSchema: flattenRouteInputSchema(operation.route).schema,
+    inputSchema: flat.schema,
     ...(output ? { outputSchema: output.schema } : {}),
-    invoke: (rawInput, ctx) => invokeOperation(operation, rawInput, ctx),
+    invoke: (rawInput, ctx) => invokeOperationWithFlat(operation, rawInput, ctx, flat),
   }
 }
