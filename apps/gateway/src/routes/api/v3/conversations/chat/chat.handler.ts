@@ -78,9 +78,15 @@ export const chatHandler: AppRouteHandler<ChatRoute> = async (c) => {
   if (error) throw error
 
   const response = (await result.response)!
+  const [runUsage, runCost] = await Promise.all([
+    result.runUsage,
+    result.runCost,
+  ])
 
   const body = runPresenter({
     response,
+    runCost,
+    runUsage,
     source: undefined,
   }).unwrap()
 
