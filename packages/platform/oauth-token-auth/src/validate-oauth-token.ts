@@ -3,8 +3,8 @@ import type { RedisClient } from "@platform/cache-redis"
 // `eq` is re-exported by `@platform/db-postgres` to keep all consumers on one
 // drizzle-orm version (peer-dep collisions cause private-property typecheck
 // errors otherwise).
-import { eq, type PostgresClient } from "@platform/db-postgres"
-import { oauthAccessTokens, oauthApplications } from "@platform/db-postgres/schema/better-auth"
+import { and, eq, type PostgresClient } from "@platform/db-postgres"
+import { members, oauthAccessTokens, oauthApplications } from "@platform/db-postgres/schema/better-auth"
 import { hash } from "@repo/utils"
 import { Effect, Layer } from "effect"
 
@@ -182,9 +182,24 @@ const lookupByToken = (client: PostgresClient, token: string): Promise<DbRow | u
     })
     .from(oauthAccessTokens)
     .innerJoin(oauthApplications, eq(oauthApplications.clientId, oauthAccessTokens.clientId))
+    .innerJoin(
+      members,
+      and(
+        eq(members.organizationId, oauthApplications.organizationId),
+        eq(members.userId, oauthAccessTokens.userId),
+      ),
+    )
     .where(eq(oauthAccessTokens.accessToken, token))
     .limit(1)
     .then((rows) => rows[0])
+
+const hasLiveMembership = (client: PostgresClient, userId: string, organizationId: string): Promise<boolean> =>
+  client.db
+    .select({ id: members.id })
+    .from(members)
+    .where(and(eq(members.organizationId, organizationId), eq(members.userId, userId)))
+    .limit(1)
+    .then((rows) => rows.length > 0)
 
 /**
  * Parse a BA-stored `scopes` text field (space-separated per RFC 6749 §3.3)
@@ -228,6 +243,7 @@ export interface ValidateOAuthAccessTokenDeps {
  *
  * Validation rules (any one rejects the token):
  *   - row not found
+ *   - token user is no longer a member of the bound organization
  *   - `accessTokenExpiresAt < now()`
  *   - `oauth_applications.disabled = true`
  *   - `oauth_applications.organization_id IS NULL` (registered but never
@@ -264,6 +280,18 @@ export const validateOAuthAccessToken = (
         yield* invalidateCache(redis, tokenHash)
         // Fall through to the DB path so we don't return stale-expired.
       } else {
+        if (cached !== null) {
+          const isMember = yield* Effect.tryPromise({
+            try: () => hasLiveMembership(adminClient, cached.userId, cached.organizationId),
+            catch: () => false,
+          }).pipe(Effect.orDie)
+          if (!isMember) {
+            yield* invalidateCache(redis, tokenHash)
+            yield* cache(redis, tokenHash, null, INVALID_TOKEN_TTL_SECONDS)
+            yield* enforceMinimumTime(startTime, MIN_VALIDATION_TIME_MS)
+            return null
+          }
+        }
         yield* enforceMinimumTime(startTime, MIN_VALIDATION_TIME_MS)
         return cached
       }
