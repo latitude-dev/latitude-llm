@@ -13,6 +13,7 @@ from .analytics_query_traces_range import AnalyticsQueryTracesRange
 from .analytics_query_traces_time_bucket import AnalyticsQueryTracesTimeBucket
 from .filter_condition import FilterCondition
 
+
 class AnalyticsQueryTraces(UniversalBaseModel):
     query: typing.Optional[str] = pydantic.Field(default=None)
     """

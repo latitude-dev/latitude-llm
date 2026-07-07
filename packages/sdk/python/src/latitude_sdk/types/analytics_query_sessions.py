@@ -13,6 +13,7 @@ from .analytics_query_sessions_range import AnalyticsQuerySessionsRange
 from .analytics_query_sessions_time_bucket import AnalyticsQuerySessionsTimeBucket
 from .filter_condition import FilterCondition
 
+
 class AnalyticsQuerySessions(UniversalBaseModel):
     query: typing.Optional[str] = pydantic.Field(default=None)
     """

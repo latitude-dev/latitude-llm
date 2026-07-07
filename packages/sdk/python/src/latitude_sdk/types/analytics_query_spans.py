@@ -13,6 +13,7 @@ from .analytics_query_spans_range import AnalyticsQuerySpansRange
 from .analytics_query_spans_time_bucket import AnalyticsQuerySpansTimeBucket
 from .span_row_filter_set import SpanRowFilterSet
 
+
 class AnalyticsQuerySpans(UniversalBaseModel):
     breakdown: typing.Optional[AnalyticsQuerySpansBreakdown] = pydantic.Field(default=None)
     """

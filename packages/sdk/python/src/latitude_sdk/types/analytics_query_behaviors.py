@@ -13,6 +13,7 @@ from .analytics_query_behaviors_range import AnalyticsQueryBehaviorsRange
 from .analytics_query_behaviors_time_bucket import AnalyticsQueryBehaviorsTimeBucket
 from .filter_condition import FilterCondition
 
+
 class AnalyticsQueryBehaviors(UniversalBaseModel):
     breakdown: typing.Optional[AnalyticsQueryBehaviorsBreakdown] = pydantic.Field(default=None)
     """

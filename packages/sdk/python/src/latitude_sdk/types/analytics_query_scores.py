@@ -13,6 +13,7 @@ from .analytics_query_scores_range import AnalyticsQueryScoresRange
 from .analytics_query_scores_time_bucket import AnalyticsQueryScoresTimeBucket
 from .filter_condition import FilterCondition
 
+
 class AnalyticsQueryScores(UniversalBaseModel):
     breakdown: typing.Optional[AnalyticsQueryScoresBreakdown] = pydantic.Field(default=None)
     """
