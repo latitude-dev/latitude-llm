@@ -73,6 +73,9 @@ export const toRecord = (project: Project) => ({
   deletedAt: project.deletedAt ? project.deletedAt.toISOString() : null,
   createdAt: project.createdAt.toISOString(),
   updatedAt: project.updatedAt.toISOString(),
+  // The shared read-only Showcase row (merged client-side into the projects
+  // collection) sets this true; every org-owned project is false.
+  isShowcase: false,
 })
 
 export type ProjectRecord = ReturnType<typeof toRecord>

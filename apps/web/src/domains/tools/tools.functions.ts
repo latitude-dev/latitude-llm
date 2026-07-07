@@ -13,13 +13,14 @@ import type {
   ToolUsageMetrics,
 } from "@domain/spans"
 import { ToolAnalyticsRepository } from "@domain/spans"
-import { ToolAnalyticsRepositoryLive, withClickHouse } from "@platform/db-clickhouse"
+import { ToolAnalyticsRepositoryLive } from "@platform/db-clickhouse"
 import { withTracing } from "@repo/observability"
 import { createServerFn } from "@tanstack/react-start"
 import { Effect } from "effect"
 import { z } from "zod"
 import { getClickhouseClient } from "../../server/clients.ts"
 import { resolveOrgScope } from "../../server/resolve-org-scope.ts"
+import { withScopedClickHouse } from "../../server/scoped-clickhouse.ts"
 
 // Wire records: Dates serialized to ISO strings.
 
@@ -135,7 +136,6 @@ const toRecentDefiningSpanRecord = (span: RecentDefiningSpan): RecentDefiningSpa
 })
 
 const toolsScopeSchema = z.object({
-  sandboxOrgId: z.string().optional(),
   projectId: z.string(),
   fromIso: z.string().datetime(),
   toIso: z.string().datetime(),
@@ -160,8 +160,8 @@ export const listProjectTools = createServerFn({ method: "GET" })
         .max(90 * 24 * 60 * 60),
     }),
   )
-  .handler(async ({ data }): Promise<ToolsAnalyticsRecord> => {
-    const orgId = await resolveOrgScope(data)
+  .handler(async ({ data, context }): Promise<ToolsAnalyticsRecord> => {
+    const orgId = await resolveOrgScope(context)
     return Effect.runPromise(
       Effect.gen(function* () {
         const repo = yield* ToolAnalyticsRepository
@@ -173,14 +173,14 @@ export const listProjectTools = createServerFn({ method: "GET" })
           totals: analytics.totals,
           tools: analytics.tools.map(toToolSummaryRecord),
         }
-      }).pipe(withClickHouse(ToolAnalyticsRepositoryLive, getClickhouseClient(), orgId), withTracing),
+      }).pipe(withScopedClickHouse(ToolAnalyticsRepositoryLive, getClickhouseClient(), orgId), withTracing),
     )
   })
 
 export const getProjectToolDetail = createServerFn({ method: "GET" })
   .inputValidator(toolsScopeSchema.extend({ toolName: toolNameSchema, errorsOnly: z.boolean().optional() }))
-  .handler(async ({ data }): Promise<ToolDetailRecord> => {
-    const orgId = await resolveOrgScope(data)
+  .handler(async ({ data, context }): Promise<ToolDetailRecord> => {
+    const orgId = await resolveOrgScope(context)
     return Effect.runPromise(
       Effect.gen(function* () {
         const repo = yield* ToolAnalyticsRepository
@@ -202,7 +202,7 @@ export const getProjectToolDetail = createServerFn({ method: "GET" })
           usage: usage ? toUsageMetricsRecord(usage) : null,
           errorsUsage: errorsUsage ? toUsageMetricsRecord(errorsUsage) : null,
         }
-      }).pipe(withClickHouse(ToolAnalyticsRepositoryLive, getClickhouseClient(), orgId), withTracing),
+      }).pipe(withScopedClickHouse(ToolAnalyticsRepositoryLive, getClickhouseClient(), orgId), withTracing),
     )
   })
 
@@ -218,8 +218,8 @@ export const getToolCallHistogram = createServerFn({ method: "GET" })
       errorsOnly: z.boolean().optional(),
     }),
   )
-  .handler(async ({ data }): Promise<readonly ToolCallHistogramBucket[]> => {
-    const orgId = await resolveOrgScope(data)
+  .handler(async ({ data, context }): Promise<readonly ToolCallHistogramBucket[]> => {
+    const orgId = await resolveOrgScope(context)
     return Effect.runPromise(
       Effect.gen(function* () {
         const repo = yield* ToolAnalyticsRepository
@@ -229,7 +229,7 @@ export const getToolCallHistogram = createServerFn({ method: "GET" })
           ...(data.toolName === undefined ? {} : { toolName: data.toolName }),
           ...(data.errorsOnly === undefined ? {} : { errorsOnly: data.errorsOnly }),
         })
-      }).pipe(withClickHouse(ToolAnalyticsRepositoryLive, getClickhouseClient(), orgId), withTracing),
+      }).pipe(withScopedClickHouse(ToolAnalyticsRepositoryLive, getClickhouseClient(), orgId), withTracing),
     )
   })
 
@@ -242,8 +242,8 @@ export const getToolParameterStats = createServerFn({ method: "GET" })
       errorsOnly: z.boolean().optional(),
     }),
   )
-  .handler(async ({ data }): Promise<ToolParameterStatsResult> => {
-    const orgId = await resolveOrgScope(data)
+  .handler(async ({ data, context }): Promise<ToolParameterStatsResult> => {
+    const orgId = await resolveOrgScope(context)
     return Effect.runPromise(
       Effect.gen(function* () {
         const repo = yield* ToolAnalyticsRepository
@@ -254,7 +254,7 @@ export const getToolParameterStats = createServerFn({ method: "GET" })
           ...(data.topValuesPerKey === undefined ? {} : { topValuesPerKey: data.topValuesPerKey }),
           ...(data.errorsOnly === undefined ? {} : { errorsOnly: data.errorsOnly }),
         })
-      }).pipe(withClickHouse(ToolAnalyticsRepositoryLive, getClickhouseClient(), orgId), withTracing),
+      }).pipe(withScopedClickHouse(ToolAnalyticsRepositoryLive, getClickhouseClient(), orgId), withTracing),
     )
   })
 
@@ -266,8 +266,8 @@ export const getToolContextBreakdown = createServerFn({ method: "GET" })
       errorsOnly: z.boolean().optional(),
     }),
   )
-  .handler(async ({ data }): Promise<readonly ToolContextBreakdownRow[]> => {
-    const orgId = await resolveOrgScope(data)
+  .handler(async ({ data, context }): Promise<readonly ToolContextBreakdownRow[]> => {
+    const orgId = await resolveOrgScope(context)
     return Effect.runPromise(
       Effect.gen(function* () {
         const repo = yield* ToolAnalyticsRepository
@@ -277,7 +277,7 @@ export const getToolContextBreakdown = createServerFn({ method: "GET" })
           dimension: data.dimension,
           ...(data.errorsOnly === undefined ? {} : { errorsOnly: data.errorsOnly }),
         })
-      }).pipe(withClickHouse(ToolAnalyticsRepositoryLive, getClickhouseClient(), orgId), withTracing),
+      }).pipe(withScopedClickHouse(ToolAnalyticsRepositoryLive, getClickhouseClient(), orgId), withTracing),
     )
   })
 
@@ -289,8 +289,8 @@ export const getToolCoOccurrence = createServerFn({ method: "GET" })
       errorsOnly: z.boolean().optional(),
     }),
   )
-  .handler(async ({ data }): Promise<readonly ToolCoOccurrenceRow[]> => {
-    const orgId = await resolveOrgScope(data)
+  .handler(async ({ data, context }): Promise<readonly ToolCoOccurrenceRow[]> => {
+    const orgId = await resolveOrgScope(context)
     return Effect.runPromise(
       Effect.gen(function* () {
         const repo = yield* ToolAnalyticsRepository
@@ -300,7 +300,7 @@ export const getToolCoOccurrence = createServerFn({ method: "GET" })
           ...(data.limit === undefined ? {} : { limit: data.limit }),
           ...(data.errorsOnly === undefined ? {} : { errorsOnly: data.errorsOnly }),
         })
-      }).pipe(withClickHouse(ToolAnalyticsRepositoryLive, getClickhouseClient(), orgId), withTracing),
+      }).pipe(withScopedClickHouse(ToolAnalyticsRepositoryLive, getClickhouseClient(), orgId), withTracing),
     )
   })
 
@@ -311,8 +311,8 @@ export const getToolErrorBreakdown = createServerFn({ method: "GET" })
       limit: z.number().int().min(1).max(50).optional(),
     }),
   )
-  .handler(async ({ data }): Promise<readonly ToolErrorBreakdownRow[]> => {
-    const orgId = await resolveOrgScope(data)
+  .handler(async ({ data, context }): Promise<readonly ToolErrorBreakdownRow[]> => {
+    const orgId = await resolveOrgScope(context)
     return Effect.runPromise(
       Effect.gen(function* () {
         const repo = yield* ToolAnalyticsRepository
@@ -321,7 +321,7 @@ export const getToolErrorBreakdown = createServerFn({ method: "GET" })
           toolName: data.toolName,
           ...(data.limit === undefined ? {} : { limit: data.limit }),
         })
-      }).pipe(withClickHouse(ToolAnalyticsRepositoryLive, getClickhouseClient(), orgId), withTracing),
+      }).pipe(withScopedClickHouse(ToolAnalyticsRepositoryLive, getClickhouseClient(), orgId), withTracing),
     )
   })
 
@@ -333,8 +333,8 @@ export const listRecentDefiningSpans = createServerFn({ method: "GET" })
       cursor: z.object({ startTimeIso: z.string().datetime(), spanId: z.string().length(16) }).optional(),
     }),
   )
-  .handler(async ({ data }): Promise<RecentDefiningSpansPageRecord> => {
-    const orgId = await resolveOrgScope(data)
+  .handler(async ({ data, context }): Promise<RecentDefiningSpansPageRecord> => {
+    const orgId = await resolveOrgScope(context)
     return Effect.runPromise(
       Effect.gen(function* () {
         const repo = yield* ToolAnalyticsRepository
@@ -358,6 +358,6 @@ export const listRecentDefiningSpans = createServerFn({ method: "GET" })
               }
             : {}),
         }
-      }).pipe(withClickHouse(ToolAnalyticsRepositoryLive, getClickhouseClient(), orgId), withTracing),
+      }).pipe(withScopedClickHouse(ToolAnalyticsRepositoryLive, getClickhouseClient(), orgId), withTracing),
     )
   })

@@ -2,7 +2,6 @@ import { ScoreAnalyticsRepository } from "@domain/scores"
 import {
   type FilterSet,
   filterSetSchema,
-  type OrganizationId,
   PERCENTILE_SESSION_FILTER_FIELDS,
   type PercentileSessionFilterField,
   ProjectId,
@@ -30,13 +29,8 @@ import {
 import { TaxonomyClusterRepository } from "@domain/taxonomy"
 import { AIEmbedLive, withAi } from "@platform/ai"
 import { RedisCacheStoreLive } from "@platform/cache-redis"
-import {
-  ScoreAnalyticsRepositoryLive,
-  SessionRepositoryLive,
-  SpanRepositoryLive,
-  withClickHouse,
-} from "@platform/db-clickhouse"
-import { SignalRepositoryLive, TaxonomyClusterRepositoryLive, withPostgres } from "@platform/db-postgres"
+import { ScoreAnalyticsRepositoryLive, SessionRepositoryLive, SpanRepositoryLive } from "@platform/db-clickhouse"
+import { SignalRepositoryLive, TaxonomyClusterRepositoryLive } from "@platform/db-postgres"
 import { withTracing } from "@repo/observability"
 import { cacheHitRate } from "@repo/utils"
 import { createServerFn } from "@tanstack/react-start"
@@ -44,7 +38,10 @@ import { Effect, Layer } from "effect"
 import type { GenAIMessage, GenAISystem } from "rosetta-ai"
 import { z } from "zod"
 import { getClickhouseClient, getPostgresClient, getRedisClient } from "../../server/clients.ts"
+import type { ScopedOrgId } from "../../server/resolve-org-scope.ts"
 import { resolveOrgScope } from "../../server/resolve-org-scope.ts"
+import { withScopedClickHouse } from "../../server/scoped-clickhouse.ts"
+import { withScopedPostgres } from "../../server/scoped-postgres.ts"
 
 export const serializeSession = (session: Session) => ({
   organizationId: session.organizationId,
@@ -116,7 +113,6 @@ interface SessionListResult {
 export const listSessionsByProject = createServerFn({ method: "GET" })
   .inputValidator(
     z.object({
-      sandboxOrgId: z.string().optional(),
       projectId: z.string(),
       limit: z.number().optional(),
       cursor: sessionListCursorSchema.optional(),
@@ -126,8 +122,8 @@ export const listSessionsByProject = createServerFn({ method: "GET" })
       searchQuery: z.string().max(500).optional(),
     }),
   )
-  .handler(async ({ data }): Promise<SessionListResult> => {
-    const orgId = await resolveOrgScope(data)
+  .handler(async ({ data, context }): Promise<SessionListResult> => {
+    const orgId = await resolveOrgScope(context)
     const filters = await expandTopicFilters(orgId, ProjectId(data.projectId), data.filters)
 
     const page = await Effect.runPromise(
@@ -146,7 +142,7 @@ export const listSessionsByProject = createServerFn({ method: "GET" })
           },
         })
       }).pipe(
-        withClickHouse(SessionRepositoryLive, getClickhouseClient(), orgId),
+        withScopedClickHouse(SessionRepositoryLive, getClickhouseClient(), orgId),
         withAi(AIEmbedLive, getRedisClient()),
         withTracing,
       ),
@@ -169,7 +165,6 @@ export const listSessionsByProject = createServerFn({ method: "GET" })
 export const countSessionsByProject = createServerFn({ method: "GET" })
   .inputValidator(
     z.object({
-      sandboxOrgId: z.string().optional(),
       projectId: z.string(),
       filters: filterSetSchema.optional(),
       searchQuery: z.string().max(500).optional(),
@@ -178,11 +173,12 @@ export const countSessionsByProject = createServerFn({ method: "GET" })
   .handler(
     async ({
       data,
+      context,
     }): Promise<{
       readonly totalCount: number
       readonly matchingTraceCount?: number
     }> => {
-      const orgId = await resolveOrgScope(data)
+      const orgId = await resolveOrgScope(context)
       const filters = await expandTopicFilters(orgId, ProjectId(data.projectId), data.filters)
 
       const result = await Effect.runPromise(
@@ -195,7 +191,7 @@ export const countSessionsByProject = createServerFn({ method: "GET" })
             ...(data.searchQuery ? { searchQuery: data.searchQuery } : {}),
           })
         }).pipe(
-          withClickHouse(SessionRepositoryLive, getClickhouseClient(), orgId),
+          withScopedClickHouse(SessionRepositoryLive, getClickhouseClient(), orgId),
           withAi(AIEmbedLive, getRedisClient()),
           withTracing,
         ),
@@ -214,7 +210,7 @@ export const countSessionsByProject = createServerFn({ method: "GET" })
  * expands each selected node into its subtree ids before ClickHouse sees it.
  */
 const expandTopicFilters = async (
-  orgId: OrganizationId,
+  orgId: ScopedOrgId,
   projectId: ProjectId,
   filters: FilterSet | undefined,
 ): Promise<FilterSet | undefined> => {
@@ -230,7 +226,7 @@ const expandTopicFilters = async (
         for (const subtreeId of subtree) ids.add(subtreeId)
       }
       return [...ids]
-    }).pipe(withPostgres(TaxonomyClusterRepositoryLive, getPostgresClient(), orgId), withTracing),
+    }).pipe(withScopedPostgres(TaxonomyClusterRepositoryLive, getPostgresClient(), orgId), withTracing),
   )
   // A selection that expands to nothing (e.g. a persisted filter pointing at
   // a since-merged cluster) must match ZERO sessions — an empty in-list would
@@ -240,7 +236,6 @@ const expandTopicFilters = async (
 }
 
 const sessionHistogramInputSchema = z.object({
-  sandboxOrgId: z.string().optional(),
   projectId: z.string(),
   filters: filterSetSchema.optional(),
   rangeStartIso: z.string(),
@@ -254,14 +249,14 @@ const sessionHistogramInputSchema = z.object({
 
 export const getSessionTimeHistogramByProject = createServerFn({ method: "GET" })
   .inputValidator(sessionHistogramInputSchema)
-  .handler(async ({ data }): Promise<readonly TraceTimeHistogramBucket[]> => {
+  .handler(async ({ data, context }): Promise<readonly TraceTimeHistogramBucket[]> => {
     const startMs = Date.parse(data.rangeStartIso)
     const endMs = Date.parse(data.rangeEndIso)
     if (!Number.isFinite(startMs) || !Number.isFinite(endMs) || endMs <= startMs) {
       return []
     }
 
-    const orgId = await resolveOrgScope(data)
+    const orgId = await resolveOrgScope(context)
 
     const expandedFilters = await expandTopicFilters(orgId, ProjectId(data.projectId), data.filters)
     const mergedFilters = mergeTraceHistogramTimeFilters(expandedFilters, data.rangeStartIso, data.rangeEndIso)
@@ -275,16 +270,14 @@ export const getSessionTimeHistogramByProject = createServerFn({ method: "GET" }
           filters: mergedFilters,
           bucketSeconds: data.bucketSeconds,
         })
-      }).pipe(withClickHouse(SessionRepositoryLive, getClickhouseClient(), orgId), withTracing),
+      }).pipe(withScopedClickHouse(SessionRepositoryLive, getClickhouseClient(), orgId), withTracing),
     )
   })
 
 export const getSessionMetricsByProject = createServerFn({ method: "GET" })
-  .inputValidator(
-    z.object({ sandboxOrgId: z.string().optional(), projectId: z.string(), filters: filterSetSchema.optional() }),
-  )
-  .handler(async ({ data }): Promise<SessionMetrics | null> => {
-    const orgId = await resolveOrgScope(data)
+  .inputValidator(z.object({ projectId: z.string(), filters: filterSetSchema.optional() }))
+  .handler(async ({ data, context }): Promise<SessionMetrics | null> => {
+    const orgId = await resolveOrgScope(context)
     const filters = await expandTopicFilters(orgId, ProjectId(data.projectId), data.filters)
 
     return Effect.runPromise(
@@ -295,21 +288,21 @@ export const getSessionMetricsByProject = createServerFn({ method: "GET" })
           projectId: ProjectId(data.projectId),
           ...(filters ? { filters } : {}),
         })
-      }).pipe(withClickHouse(SessionRepositoryLive, getClickhouseClient(), orgId), withTracing),
+      }).pipe(withScopedClickHouse(SessionRepositoryLive, getClickhouseClient(), orgId), withTracing),
     )
   })
 
 export const getSessionCohortSummary = createServerFn({ method: "GET" })
-  .inputValidator(z.object({ sandboxOrgId: z.string().optional(), projectId: z.string() }))
-  .handler(async ({ data }): Promise<CohortSummary> => {
-    const orgId = await resolveOrgScope(data)
+  .inputValidator(z.object({ projectId: z.string() }))
+  .handler(async ({ data, context }): Promise<CohortSummary> => {
+    const orgId = await resolveOrgScope(context)
 
     return Effect.runPromise(
       getSessionCohortSummaryUseCase({
         organizationId: orgId,
         projectId: ProjectId(data.projectId),
       }).pipe(
-        withClickHouse(SessionRepositoryLive, getClickhouseClient(), orgId),
+        withScopedClickHouse(SessionRepositoryLive, getClickhouseClient(), orgId),
         Effect.provide(RedisCacheStoreLive(getRedisClient())),
         withTracing,
       ),
@@ -338,9 +331,9 @@ const serializeSessionDetail = (session: SessionDetail, latestTraceId: string): 
 })
 
 export const getSessionDetail = createServerFn({ method: "GET" })
-  .inputValidator(z.object({ sandboxOrgId: z.string().optional(), projectId: z.string(), sessionId: z.string() }))
-  .handler(async ({ data }) => {
-    const orgId = await resolveOrgScope(data)
+  .inputValidator(z.object({ projectId: z.string(), sessionId: z.string() }))
+  .handler(async ({ data, context }) => {
+    const orgId = await resolveOrgScope(context)
     const projectId = ProjectId(data.projectId)
 
     const result = await Effect.runPromise(
@@ -365,7 +358,7 @@ export const getSessionDetail = createServerFn({ method: "GET" })
         })
         return serializeSessionDetail(detail, latestTraceId ?? "")
       }).pipe(
-        withClickHouse(Layer.mergeAll(SessionRepositoryLive, SpanRepositoryLive), getClickhouseClient(), orgId),
+        withScopedClickHouse(Layer.mergeAll(SessionRepositoryLive, SpanRepositoryLive), getClickhouseClient(), orgId),
         withTracing,
       ),
     )
@@ -398,15 +391,14 @@ export interface SessionSignalRecord {
 export const listSessionSignals = createServerFn({ method: "GET" })
   .inputValidator(
     z.object({
-      sandboxOrgId: z.string().optional(),
       projectId: z.string(),
       traceIds: z.array(z.string().length(32)).max(500),
     }),
   )
-  .handler(async ({ data }): Promise<readonly SessionSignalRecord[]> => {
+  .handler(async ({ data, context }): Promise<readonly SessionSignalRecord[]> => {
     if (data.traceIds.length === 0) return []
 
-    const orgId = await resolveOrgScope(data)
+    const orgId = await resolveOrgScope(context)
     const projectId = ProjectId(data.projectId)
     const now = new Date()
 
@@ -453,8 +445,8 @@ export const listSessionSignals = createServerFn({ method: "GET" })
           ]
         })
       }).pipe(
-        withPostgres(SignalRepositoryLive, getPostgresClient(), orgId),
-        withClickHouse(ScoreAnalyticsRepositoryLive, getClickhouseClient(), orgId),
+        withScopedPostgres(SignalRepositoryLive, getPostgresClient(), orgId),
+        withScopedClickHouse(ScoreAnalyticsRepositoryLive, getClickhouseClient(), orgId),
         withTracing,
       ),
     )
@@ -463,13 +455,12 @@ export const listSessionSignals = createServerFn({ method: "GET" })
 export const getSessionDistribution = createServerFn({ method: "GET" })
   .inputValidator(
     z.object({
-      sandboxOrgId: z.string().optional(),
       projectId: z.string(),
       field: z.enum(PERCENTILE_SESSION_FILTER_FIELDS),
     }),
   )
-  .handler(async ({ data }): Promise<TraceDistribution> => {
-    const orgId = await resolveOrgScope(data)
+  .handler(async ({ data, context }): Promise<TraceDistribution> => {
+    const orgId = await resolveOrgScope(context)
 
     return Effect.runPromise(
       Effect.gen(function* () {
@@ -480,7 +471,7 @@ export const getSessionDistribution = createServerFn({ method: "GET" })
           field: data.field as PercentileSessionFilterField,
         })
       }).pipe(
-        withClickHouse(SessionRepositoryLive, getClickhouseClient(), orgId),
+        withScopedClickHouse(SessionRepositoryLive, getClickhouseClient(), orgId),
         withAi(AIEmbedLive, getRedisClient()),
         withTracing,
       ),
@@ -492,15 +483,14 @@ const DISTINCT_COLUMNS = ["userId", "tags", "models", "providers", "serviceNames
 export const getSessionDistinctValues = createServerFn({ method: "GET" })
   .inputValidator(
     z.object({
-      sandboxOrgId: z.string().optional(),
       projectId: z.string(),
       column: z.enum(DISTINCT_COLUMNS),
       limit: z.number().optional(),
       search: z.string().optional(),
     }),
   )
-  .handler(async ({ data }): Promise<readonly string[]> => {
-    const orgId = await resolveOrgScope(data)
+  .handler(async ({ data, context }): Promise<readonly string[]> => {
+    const orgId = await resolveOrgScope(context)
 
     return Effect.runPromise(
       Effect.gen(function* () {
@@ -512,6 +502,6 @@ export const getSessionDistinctValues = createServerFn({ method: "GET" })
           ...(data.limit !== undefined ? { limit: data.limit } : {}),
           ...(data.search ? { search: data.search } : {}),
         })
-      }).pipe(withClickHouse(SessionRepositoryLive, getClickhouseClient(), orgId), withTracing),
+      }).pipe(withScopedClickHouse(SessionRepositoryLive, getClickhouseClient(), orgId), withTracing),
     )
   })

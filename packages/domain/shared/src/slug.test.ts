@@ -1,6 +1,13 @@
 import { Effect } from "effect"
 import { describe, expect, it } from "vitest"
-import { generateSlug, isReservedProjectSlug, RESERVED_PROJECT_SLUGS, SLUG_MAX_LENGTH } from "./slug.ts"
+import {
+  generateSlug,
+  isReservedProjectSlug,
+  isShowcaseProjectSlug,
+  RESERVED_PROJECT_SLUGS,
+  SHOWCASE_PROJECT_SLUG,
+  SLUG_MAX_LENGTH,
+} from "./slug.ts"
 
 const counts =
   (taken: ReadonlyMap<string, number>) =>
@@ -130,5 +137,14 @@ describe("isReservedProjectSlug", () => {
   it("treats other slugs as free", () => {
     expect(isReservedProjectSlug("demo")).toBe(false)
     expect(isReservedProjectSlug("lat-demo-1")).toBe(false)
+  })
+})
+
+describe("isShowcaseProjectSlug", () => {
+  it("matches only the reserved showcase slug", () => {
+    expect(SHOWCASE_PROJECT_SLUG).toBe("lat-demo")
+    expect(isShowcaseProjectSlug(SHOWCASE_PROJECT_SLUG)).toBe(true)
+    expect(isShowcaseProjectSlug("demo")).toBe(false)
+    expect(isShowcaseProjectSlug("lat-demo-1")).toBe(false)
   })
 })
