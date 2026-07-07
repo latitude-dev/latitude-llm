@@ -123,6 +123,65 @@ describe("ShowcaseRepositoryLive", () => {
     expect(after?.nextState).toBe("building")
   })
 
+  it("reclaimStaleBuild resets a stale building pointer to idle and returns the reclaimed project", async () => {
+    await seedPointer("building", NEXT)
+    // Backdate the pointer so it reads as stale regardless of wall clock.
+    await pg.db.update(showcase).set({ updatedAt: new Date("2000-01-01T00:00:00.000Z") })
+
+    const result = await runWithLive(
+      Effect.gen(function* () {
+        const repo = yield* ShowcaseRepository
+        return yield* repo.reclaimStaleBuild(new Date())
+      }),
+    )
+
+    expect(result.reclaimedProjectId).toBe(NEXT)
+    expect(result.showcase.nextProjectId).toBeNull()
+    expect(result.showcase.nextState).toBeNull()
+    // current is never touched by a reclaim
+    expect(result.showcase.currentProjectId).toBe(CURRENT)
+  })
+
+  it("reclaimStaleBuild leaves a healthy in-flight build untouched", async () => {
+    await seedPointer("building", NEXT)
+
+    // staleBefore in the distant past → the just-written pointer is not stale.
+    const result = await runWithLive(
+      Effect.gen(function* () {
+        const repo = yield* ShowcaseRepository
+        return yield* repo.reclaimStaleBuild(new Date("2000-01-01T00:00:00.000Z"))
+      }),
+    )
+
+    expect(result.reclaimedProjectId).toBeNull()
+    expect(result.showcase.nextProjectId).toBe(NEXT)
+    expect(result.showcase.nextState).toBe("building")
+
+    const after = await runWithLive(
+      Effect.gen(function* () {
+        const repo = yield* ShowcaseRepository
+        return yield* repo.find()
+      }),
+    )
+    expect(after?.nextState).toBe("building")
+  })
+
+  it("reclaimStaleBuild does not reclaim a ready (non-building) pointer even if stale", async () => {
+    await seedPointer("ready", NEXT)
+    await pg.db.update(showcase).set({ updatedAt: new Date("2000-01-01T00:00:00.000Z") })
+
+    const result = await runWithLive(
+      Effect.gen(function* () {
+        const repo = yield* ShowcaseRepository
+        return yield* repo.reclaimStaleBuild(new Date())
+      }),
+    )
+
+    expect(result.reclaimedProjectId).toBeNull()
+    expect(result.showcase.nextProjectId).toBe(NEXT)
+    expect(result.showcase.nextState).toBe("ready")
+  })
+
   it("a second swap after the pointer is idle fails ShowcaseNotReadyError (no double-flip)", async () => {
     await seedPointer("ready", NEXT)
 

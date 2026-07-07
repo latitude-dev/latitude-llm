@@ -46,6 +46,18 @@ export const createFakeShowcaseRepository = (initial?: Showcase | null) => {
         return store.current
       }),
 
+    reclaimStaleBuild: (staleBefore: Date) =>
+      Effect.gen(function* () {
+        const row = store.current
+        if (!row) return yield* Effect.fail(new ShowcaseNotFoundError())
+        if (row.nextState === "building" && row.nextProjectId && row.updatedAt < staleBefore) {
+          const reclaimedProjectId = row.nextProjectId
+          store.current = { ...row, nextProjectId: null, nextState: null, updatedAt: new Date() }
+          return { showcase: store.current, reclaimedProjectId }
+        }
+        return { showcase: row, reclaimedProjectId: null }
+      }),
+
     swap: () =>
       Effect.gen(function* () {
         const row = store.current

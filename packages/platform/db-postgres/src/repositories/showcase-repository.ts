@@ -87,6 +87,36 @@ export const ShowcaseRepositoryLive = Layer.effect(
           return toDomainShowcase(row)
         }),
 
+      reclaimStaleBuild: (staleBefore: Date) =>
+        Effect.gen(function* () {
+          const sqlClient = (yield* SqlClient) as SqlClientShape<Operator>
+          return yield* sqlClient.transaction(
+            Effect.gen(function* () {
+              // Lock the pointer so the staleness check and the reset can't race a
+              // concurrent swap / begin-build (same `FOR UPDATE` discipline as swap).
+              const [locked] = yield* sqlClient.query((db) =>
+                db.select().from(showcase).where(eq(showcase.id, SHOWCASE_SINGLETON_ID)).for("update"),
+              )
+              if (!locked) return yield* Effect.fail(new ShowcaseNotFoundError())
+
+              if (locked.nextState !== "building" || !locked.nextProjectId || locked.updatedAt >= staleBefore) {
+                return { showcase: toDomainShowcase(locked), reclaimedProjectId: null }
+              }
+
+              const reclaimedProjectId = ProjectId(locked.nextProjectId)
+              const [reset] = yield* sqlClient.query((db) =>
+                db
+                  .update(showcase)
+                  .set({ nextProjectId: null, nextState: null, updatedAt: new Date() })
+                  .where(eq(showcase.id, SHOWCASE_SINGLETON_ID))
+                  .returning(),
+              )
+              if (!reset) return yield* Effect.fail(new ShowcaseNotFoundError())
+              return { showcase: toDomainShowcase(reset), reclaimedProjectId }
+            }),
+          )
+        }),
+
       swap: () =>
         Effect.gen(function* () {
           const sqlClient = (yield* SqlClient) as SqlClientShape<Operator>
