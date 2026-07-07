@@ -1,8 +1,15 @@
 import { ApiKeyRepository, generateApiKeyUseCase } from "@domain/api-keys"
+import { OutboxEventWriter } from "@domain/events"
 import { createProject, ProjectRepository } from "@domain/projects"
 import type { QueueConsumer } from "@domain/queue"
 import { generateSlug, SqlClient } from "@domain/shared"
-import { type Showcase, ShowcaseRepository } from "@domain/showcase"
+import {
+  SHOWCASE_BUILD_STALE_AFTER_MS,
+  SHOWCASE_RETIRE_GRACE_MS,
+  type Showcase,
+  ShowcaseRepository,
+  selectRetirableShowcaseProjectIds,
+} from "@domain/showcase"
 import {
   ApiKeyRepositoryLive,
   OutboxEventWriterLive,
@@ -97,6 +104,80 @@ export const createShowcaseWorker = ({ consumer, postgresClient }: ShowcaseDeps)
           organizationId,
           nextProjectId: prepared.projectId,
         })
+      }).pipe(withTracing),
+
+    cleanup: () =>
+      Effect.gen(function* () {
+        const now = new Date()
+
+        // Self-heal a wedged build under a row lock: a `building` pointer older
+        // than the stale threshold (its Temporal start failed) is reset to idle
+        // so the next regeneration provisions fresh instead of resuming a dead
+        // run. A healthy in-flight build is left untouched. The pointer table has
+        // no RLS, so this needs no org scope. `find` first so a missing showcase
+        // is a clean skip rather than a `ShowcaseNotFoundError`.
+        const reclaimed = yield* Effect.gen(function* () {
+          const repo = yield* ShowcaseRepository
+          const showcase = yield* repo.find()
+          if (!showcase) return null
+          return yield* repo.reclaimStaleBuild(new Date(now.getTime() - SHOWCASE_BUILD_STALE_AFTER_MS))
+        }).pipe(withPostgres(ShowcaseRepositoryLive, pgClient))
+
+        if (!reclaimed) {
+          logger.info("No showcase exists — skipping cleanup")
+          return
+        }
+        if (reclaimed.reclaimedProjectId) {
+          logger.warn("Reclaimed stale showcase build", {
+            organizationId: reclaimed.showcase.organizationId,
+            reclaimedProjectId: reclaimed.reclaimedProjectId,
+          })
+        }
+
+        const organizationId = reclaimed.showcase.organizationId
+
+        // Soft-delete + emit `ProjectDeleted` for every orphan (neither current
+        // nor next, past the grace window) in one transaction, scoped to the
+        // showcase org so RLS admits the reads/writes. This is the same deletion
+        // path any project takes: `ProjectDeleted` drives the per-project cascade
+        // and the row's ClickHouse telemetry ages out via the table-level
+        // retention TTL — the showcase is not special-cased into a manual purge.
+        const retiredProjectIds = yield* Effect.gen(function* () {
+          const projectRepo = yield* ProjectRepository
+          const outbox = yield* OutboxEventWriter
+          const sqlClient = yield* SqlClient
+          const projects = yield* projectRepo.list()
+          const retirable = selectRetirableShowcaseProjectIds({
+            projects,
+            currentProjectId: reclaimed.showcase.currentProjectId,
+            nextProjectId: reclaimed.showcase.nextProjectId,
+            now,
+            retireGraceMs: SHOWCASE_RETIRE_GRACE_MS,
+          })
+          if (retirable.length === 0) return retirable
+
+          yield* sqlClient.transaction(
+            Effect.gen(function* () {
+              for (const projectId of retirable) {
+                yield* projectRepo.softDelete(projectId)
+                yield* outbox
+                  .write({
+                    eventName: "ProjectDeleted",
+                    aggregateType: "project",
+                    aggregateId: projectId,
+                    organizationId,
+                    payload: { organizationId, actorUserId: "", projectId },
+                  })
+                  .pipe(Effect.mapError((cause) => new Error(`ProjectDeleted outbox write failed: ${String(cause)}`)))
+              }
+            }),
+          )
+          return retirable
+        }).pipe(withPostgres(Layer.mergeAll(ProjectRepositoryLive, OutboxEventWriterLive), pgClient, organizationId))
+
+        if (retiredProjectIds.length > 0) {
+          logger.info("Retired showcase projects", { organizationId, retiredProjectIds })
+        }
       }).pipe(withTracing),
   })
 }

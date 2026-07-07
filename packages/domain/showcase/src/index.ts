@@ -10,6 +10,13 @@ export {
 export { ShowcaseAlreadyExistsError, ShowcaseNotFoundError, ShowcaseNotReadyError } from "./errors.ts"
 export { ShowcaseRepository, type ShowcaseRepositoryShape } from "./ports/showcase-repository.ts"
 export {
+  SHOWCASE_BUILD_STALE_AFTER_MS,
+  SHOWCASE_CLEANUP_CRON_KEY,
+  SHOWCASE_CLEANUP_CRON_PATTERN,
+  SHOWCASE_RETIRE_GRACE_MS,
+  selectRetirableShowcaseProjectIds,
+} from "./retirement.ts"
+export {
   type CreateShowcaseError,
   type CreateShowcaseInput,
   createShowcaseUseCase,

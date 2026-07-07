@@ -57,6 +57,16 @@ const _registry = {
      * the pointer to resolve the showcase org and re-anchors to "now".
      */
     regenerate: Record<string, never>
+    /**
+     * Retire + self-heal (S5). Reclaims a wedged `building` pointer and retires
+     * every showcase-org project that is neither `current` nor `next` via the
+     * standard PG soft-delete + `ProjectDeleted` path (ClickHouse telemetry ages
+     * out via the retention TTL, as for any deleted project). Fired both by a
+     * daily cron and by the regeneration workflow right after a swap (to promptly
+     * retire the just-swapped-out `current`). No payload: the handler reads the
+     * pointer.
+     */
+    cleanup: Record<string, never>
   }>(),
 
   "user-deletion": payloads<{

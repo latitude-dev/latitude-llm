@@ -9,6 +9,7 @@ import {
 } from "@domain/destinations"
 import { SAVED_SEARCH_MONITORS_SWEEPER_KEY, SAVED_SEARCH_MONITORS_SWEEPER_PATTERN } from "@domain/monitors"
 import { SANDBOX_IDLE_SWEEPER_KEY, SANDBOX_IDLE_SWEEPER_PATTERN } from "@domain/sandboxes"
+import { SHOWCASE_CLEANUP_CRON_KEY, SHOWCASE_CLEANUP_CRON_PATTERN } from "@domain/showcase"
 import { ESCALATION_SWEEPER_KEY, ESCALATION_SWEEPER_PATTERN } from "@domain/signals"
 import { TAXONOMY_GARDENING_CRON_KEY, TAXONOMY_GARDENING_CRON_PATTERN } from "@domain/taxonomy"
 import { serve } from "@hono/node-server"
@@ -301,6 +302,21 @@ const bootstrap = async () => {
           "regenerate",
           {},
           { key: "showcase:regenerate:daily", pattern: "0 4 * * *", tz: "UTC" },
+        )
+        .pipe(withTracing),
+    )
+
+    // Daily Showcase cleanup / self-heal (S5), an hour before regeneration:
+    // reclaim a wedged `building` pointer and retire showcase-org projects that
+    // are neither `current` nor `next` (PG soft-delete + background CH delete).
+    // No-ops when no showcase exists / nothing is stale, so safe on every boot.
+    await Effect.runPromise(
+      queuePublisher
+        .scheduleRepeatable(
+          "showcase",
+          "cleanup",
+          {},
+          { key: SHOWCASE_CLEANUP_CRON_KEY, pattern: SHOWCASE_CLEANUP_CRON_PATTERN, tz: "UTC" },
         )
         .pipe(withTracing),
     )

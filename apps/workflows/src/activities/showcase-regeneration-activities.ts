@@ -4,7 +4,7 @@ import { queryClickhouse } from "@platform/db-clickhouse"
 import { ShowcaseRepositoryLive, withPostgres } from "@platform/db-postgres"
 import { createLogger, withTracing } from "@repo/observability"
 import { Data, Effect } from "effect"
-import { getAdminPostgresClient, getClickhouseClient, getRedisClient } from "../clients.ts"
+import { getAdminPostgresClient, getClickhouseClient, getQueuePublisher, getRedisClient } from "../clients.ts"
 
 const logger = createLogger("workflows-showcase-regeneration")
 
@@ -92,6 +92,27 @@ export const markShowcaseNextReadyActivity = (): Promise<void> =>
       })
     }).pipe(
       withPostgres(ShowcaseRepositoryLive, getAdminPostgresClient()),
+      withTracing,
+      Effect.mapError((cause) => new ShowcaseRegenerationActivityError({ cause })),
+    ),
+  )
+
+/**
+ * Enqueue the S5 cleanup sweep after a swap so the just-swapped-out `current`
+ * (now an orphan the pointer no longer names) is retired promptly rather than
+ * waiting for the daily cleanup cron. The sweep itself runs in the workers
+ * process (it needs the project/outbox layers); this only publishes the job.
+ * Lives in `activities/` because the Temporal workflow sandbox forbids the
+ * BullMQ publisher's I/O. `dedupeKey` collapses bursts (e.g. a manual swap
+ * racing the scheduled one) into a single sweep.
+ */
+export const enqueueShowcaseCleanupActivity = (): Promise<void> =>
+  Effect.runPromise(
+    Effect.gen(function* () {
+      const publisher = yield* Effect.promise(() => getQueuePublisher())
+      yield* publisher.publish("showcase", "cleanup", {}, { dedupeKey: "showcase:cleanup" })
+      logger.info("Showcase cleanup enqueued after swap")
+    }).pipe(
       withTracing,
       Effect.mapError((cause) => new ShowcaseRegenerationActivityError({ cause })),
     ),
