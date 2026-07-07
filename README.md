@@ -7,7 +7,7 @@ Make your AI agents self-healing
 </h1>
 
 <p align="center">
-Catch what breaks in production and get it fixed.</p>
+Agents that fix themselves, at scale.</p>
 
 <p align="center">
   <a href="https://github.com/latitude-dev/latitude-llm/blob/main/LICENSE"><img src="https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/latitude-dev/latitude-llm/development/.github/badges/license.json" alt="License"></a>
@@ -39,8 +39,8 @@ Catch what breaks in production and get it fixed.</p>
 
 Latitude finds where your agent fails and gets it fixed.
 - **Observe**: one line of telemetry captures every trace: multi-turn sessions, tool calls, and full execution paths. _([traces](https://docs.latitude.so/observability/traces), [sessions](https://docs.latitude.so/observability/sessions), [tool-call observability](https://docs.latitude.so/observability/tool-calls), [OpenTelemetry ingest](https://docs.latitude.so/telemetry/otel-exporter))_
-- **Understand**: failing traces are auto-grouped into tracked issues with status, size, and trend, so you see what's breaking and how often. _([signals](https://docs.latitude.so/signals/overview), [flaggers](https://docs.latitude.so/annotations/flaggers), [behaviours](https://docs.latitude.so/search/behaviours), [semantic search](https://docs.latitude.so/search/overview), [annotations](https://docs.latitude.so/annotations/overview))_
-- **Fix**: Latitude wakes your coding agent (Claude Code, Cursor) with the full context, sample traces, and a deep link. It writes the smallest correct fix and opens a PR. _([Agent Dispatch](https://docs.latitude.so/agent-dispatch/overview), [MCP server](https://docs.latitude.so/getting-started/mcp), [Linear](https://docs.latitude.so/agent-dispatch/linear) & [webhook dispatch](https://docs.latitude.so/agent-dispatch/webhooks))_
+- **Understand**: failing traces are auto-grouped into tracked signals with status, size, and trend, so you see what's breaking and how often. _([signals](https://docs.latitude.so/signals/overview), [flaggers](https://docs.latitude.so/annotations/flaggers), [behaviours](https://docs.latitude.so/search/behaviours), [semantic search](https://docs.latitude.so/search/overview), [annotations](https://docs.latitude.so/annotations/overview))_
+- **Fix**: Latitude dispatches your coding agents (Claude Code, Cursor) with the full context, sample traces, and a deep link. It writes the smallest correct fix and opens a PR. _([Agent Dispatch](https://docs.latitude.so/agent-dispatch/overview), [MCP server](https://docs.latitude.so/getting-started/mcp), [Linear](https://docs.latitude.so/agent-dispatch/linear) & [webhook dispatch](https://docs.latitude.so/agent-dispatch/webhooks))_
 - **Verify**: fixes are replayed against the real failing traces, so fixed failures don't come back. _([regression datasets](https://docs.latitude.so/test-and-fix/regression-testing), [monitors](https://docs.latitude.so/monitors/overview), alerts)_
 
 Everything you can do in the UI is also available from your coding agent via the **[MCP server](https://docs.latitude.so/getting-started/mcp)** and the **[CLI](https://docs.latitude.so/getting-started/cli)**.
