@@ -34,7 +34,9 @@
           "description": "Bucket width in seconds. Derived from the range (~30 buckets) when omitted."
         }
       },
-      "required": ["projectSlug"],
+      "required": [
+        "projectSlug"
+      ],
       "additionalProperties": false
     }
   },
@@ -81,10 +83,15 @@
         "errorsOnly": {
           "description": "When `true`, scope every aggregate to failed calls only.",
           "type": "string",
-          "enum": ["true", "false"]
+          "enum": [
+            "true",
+            "false"
+          ]
         }
       },
-      "required": ["projectSlug"],
+      "required": [
+        "projectSlug"
+      ],
       "additionalProperties": false
     }
   },
@@ -137,10 +144,16 @@
         "errorsOnly": {
           "description": "When `true`, scope every aggregate to failed calls only.",
           "type": "string",
-          "enum": ["true", "false"]
+          "enum": [
+            "true",
+            "false"
+          ]
         }
       },
-      "required": ["projectSlug", "toolName"],
+      "required": [
+        "projectSlug",
+        "toolName"
+      ],
       "additionalProperties": false
     }
   },
@@ -180,16 +193,27 @@
         },
         "dimension": {
           "type": "string",
-          "enum": ["model", "provider", "tag"],
+          "enum": [
+            "model",
+            "provider",
+            "tag"
+          ],
           "description": "Dimension to break the usage down by."
         },
         "errorsOnly": {
           "description": "When `true`, scope every aggregate to failed calls only.",
           "type": "string",
-          "enum": ["true", "false"]
+          "enum": [
+            "true",
+            "false"
+          ]
         }
       },
-      "required": ["projectSlug", "toolName", "dimension"],
+      "required": [
+        "projectSlug",
+        "toolName",
+        "dimension"
+      ],
       "additionalProperties": false
     }
   },
@@ -236,10 +260,16 @@
         "errorsOnly": {
           "description": "When `true`, scope every aggregate to failed calls only.",
           "type": "string",
-          "enum": ["true", "false"]
+          "enum": [
+            "true",
+            "false"
+          ]
         }
       },
-      "required": ["projectSlug", "toolName"],
+      "required": [
+        "projectSlug",
+        "toolName"
+      ],
       "additionalProperties": false
     }
   },
@@ -284,7 +314,10 @@
           "maximum": 50
         }
       },
-      "required": ["projectSlug", "toolName"],
+      "required": [
+        "projectSlug",
+        "toolName"
+      ],
       "additionalProperties": false
     }
   },
@@ -332,14 +365,21 @@
         "errorsOnly": {
           "description": "When `true`, scope every aggregate to failed calls only.",
           "type": "string",
-          "enum": ["true", "false"]
+          "enum": [
+            "true",
+            "false"
+          ]
         },
         "cursor": {
           "description": "Opaque cursor returned in a previous response's `nextCursor`. Omit on the first page.",
           "type": "string"
         }
       },
-      "required": ["projectSlug", "toolName", "limit"],
+      "required": [
+        "projectSlug",
+        "toolName",
+        "limit"
+      ],
       "additionalProperties": false
     }
   },
@@ -380,10 +420,16 @@
         "errorsOnly": {
           "description": "When `true`, scope every aggregate to failed calls only.",
           "type": "string",
-          "enum": ["true", "false"]
+          "enum": [
+            "true",
+            "false"
+          ]
         }
       },
-      "required": ["projectSlug", "toolName"],
+      "required": [
+        "projectSlug",
+        "toolName"
+      ],
       "additionalProperties": false
     }
   }

@@ -32,7 +32,8 @@
       "!!**/node_modules",
       "!**/*.gen.ts",
       "!**/models.dev.json",
-      "!**/drizzle/**/*.json"
+      "!**/drizzle/**/*.json",
+      "!**/__snapshots__/**"
     ]
   },
   "overrides": [
