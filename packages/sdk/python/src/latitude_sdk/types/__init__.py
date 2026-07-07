@@ -656,6 +656,7 @@ if typing.TYPE_CHECKING:
     from .span_detail_kind import SpanDetailKind
     from .span_detail_status_code import SpanDetailStatusCode
     from .span_kind import SpanKind
+    from .span_row_filter_set import SpanRowFilterSet
     from .span_status_code import SpanStatusCode
     from .tool_call_histogram_bucket import ToolCallHistogramBucket
     from .tool_co_occurrence_response import ToolCoOccurrenceResponse
@@ -1314,6 +1315,7 @@ _dynamic_imports: typing.Dict[str, str] = {
     "SpanDetailKind": ".span_detail_kind",
     "SpanDetailStatusCode": ".span_detail_status_code",
     "SpanKind": ".span_kind",
+    "SpanRowFilterSet": ".span_row_filter_set",
     "SpanStatusCode": ".span_status_code",
     "ToolCallHistogramBucket": ".tool_call_histogram_bucket",
     "ToolCoOccurrenceResponse": ".tool_co_occurrence_response",
@@ -2000,6 +2002,7 @@ __all__ = [
     "SpanDetailKind",
     "SpanDetailStatusCode",
     "SpanKind",
+    "SpanRowFilterSet",
     "SpanStatusCode",
     "ToolCallHistogramBucket",
     "ToolCoOccurrenceResponse",

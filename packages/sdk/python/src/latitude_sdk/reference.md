@@ -8695,7 +8695,7 @@ client.spans.query(
 <dl>
 <dd>
 
-**filters:** `typing.Optional[typing.Dict[str, typing.List[FilterCondition]]]` — Row-local span filter set (same DSL as `listTraces`) over span fields — `operation`, `toolName`, `model`, `provider`, `sessionId`, `traceId`, `tags`, `status` (`error`/`ok`/`unset`), `duration`, `cost`, `tokensInput`/`tokensOutput`.
+**filters:** `typing.Optional[typing.Dict[str, typing.List[FilterCondition]]]` — Row-local span filter set (same DSL as `listTraces`) over span fields — `operation`, `toolName`, `model`, `provider`, `sessionId`, `traceId`, `tags`, `status` (`error`/`ok`/`unset`), `duration`, `cost`, `tokensInput`/`tokensOutput`. `gtePercentile` is not supported — use absolute thresholds or a percentile metric.
     
 </dd>
 </dl>
