@@ -435,7 +435,7 @@ function MembersTable({
               <TableCell>
                 <div className="flex items-center gap-2">
                   {(member.role === "owner" && isOwner) || canChangeRole(member) ? (
-                    <DropdownMenuRoot>
+                    <DropdownMenuRoot modal={false}>
                       <DropdownMenuTrigger asChild>
                         <div className="flex cursor-pointer items-center gap-2 rounded px-2 py-1 transition-colors hover:bg-muted">
                           <Text.H5 color="foregroundMuted">{toTitle(member.role)}</Text.H5>
