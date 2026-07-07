@@ -81,8 +81,15 @@ describe("defineToolset", () => {
   it("throws on a stale exclude", () => {
     const a = makeOperation({ name: "aWidget" })
     expect(() => defineToolset({ name: "t", groups: ["widgets"], exclude: ["gone"] }, [moduleOf(a)])).toThrowError(
-      /exclude "gone" matched no selected operation/,
+      /exclude "gone" matched no operation in scope/,
     )
+  })
+
+  it("selects across all groups when `groups` is omitted", () => {
+    const a = makeOperation({ name: "aWidget", group: "widgets" })
+    const b = makeOperation({ name: "bGadget", group: "gadgets" })
+    const toolset = defineToolset({ name: "t" }, [moduleOf(a, b)])
+    expect(toolset.tools.map((t) => t.name)).toEqual(["aWidget", "bGadget"])
   })
 
   it("defaults to a read-only ceiling and admits read-only operations", () => {
@@ -106,23 +113,19 @@ describe("defineToolset", () => {
     expect(destructiveToolset.tools.map((t) => t.name)).toEqual(["readWidget", "writeWidget", "deleteWidget"])
   })
 
-  it("throws when a selected operation is above the toolset access ceiling", () => {
+  it("excludes operations above the access ceiling", () => {
+    const read = makeOperation({ name: "readWidget", access: "read-only" })
     const write = makeOperation({ name: "writeWidget", access: "write" })
-    // Default ceiling is read-only, so a write op is above it.
-    expect(() => defineToolset({ name: "t", groups: ["widgets"] }, [moduleOf(write)])).toThrowError(
-      /"writeWidget" needs access "write", above toolset ceiling "read-only"/,
-    )
-
     const destructive = makeOperation({ name: "deleteWidget", access: "destructive" })
-    expect(() =>
-      defineToolset({ name: "t", groups: ["widgets"], access: "write" }, [moduleOf(destructive)]),
-    ).toThrowError(/"deleteWidget" needs access "destructive", above toolset ceiling "write"/)
+    // Default ceiling is read-only → only the read-only op survives; writes are dropped, not errored.
+    const toolset = defineToolset({ name: "t", groups: ["widgets"] }, [moduleOf(read, write, destructive)])
+    expect(toolset.tools.map((t) => t.name)).toEqual(["readWidget"])
   })
 
-  it("throws when a selected operation is handler-form", () => {
+  it("excludes handler-form operations (they can't be invoked in-process)", () => {
+    const exec = makeOperation({ name: "execWidget" })
     const legacy = makeOperation({ name: "legacyWidget", executeForm: false })
-    expect(() => defineToolset({ name: "t", groups: ["widgets"] }, [moduleOf(legacy)])).toThrowError(
-      /"legacyWidget" is handler-form/,
-    )
+    const toolset = defineToolset({ name: "t", groups: ["widgets"] }, [moduleOf(exec, legacy)])
+    expect(toolset.tools.map((t) => t.name)).toEqual(["execWidget"])
   })
 })

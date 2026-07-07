@@ -257,15 +257,17 @@ Set `access` to match what the implementation actually does — a wrong value mi
 
 ## Agent toolsets — exposing operations to internal AI agents
 
-`defineToolset` (in `packages/operations/src/core/toolset.ts`) selects operations by `group` and shapes them as in-process tools (`invoke(rawFlatInput, ctx)` — validate, split, `execute`; no HTTP, no tokens). Selection is asserted at definition time: every group must match, every exclude must exist, and every selected operation must be tool-eligible, execute-form, and **at or below the toolset's access ceiling**. Concrete toolsets live in `packages/operations/src/toolsets/` (they can't live in `@domain/*` — that would create a package cycle, since `@repo/operations` imports domain packages).
+`defineToolset` (in `packages/operations/src/core/toolset.ts`) selects operations and shapes them as in-process tools (`invoke(rawFlatInput, ctx)` — validate, split, `execute`; no HTTP, no tokens). Selection is a **filter**: an operation is included when it's tool-eligible, execute-form (invocable in-process), within the access ceiling, and in `spec.groups` if given. Everything else is silently dropped — so an op joins a toolset automatically once it's converted to execute-form, and writes never reach a read-only toolset by construction. Only genuine misconfiguration throws: a `groups` entry matching no operation (typo), or a stale `exclude`. Concrete toolsets live in `packages/operations/src/toolsets/` (they can't live in `@domain/*` — that would create a package cycle, since `@repo/operations` imports domain packages).
 
-**Access ceiling.** `ToolsetSpec.access` (default `"read-only"`) is the highest `access` the toolset admits, and it's **cumulative**: a `"write"` ceiling admits read-only *and* write operations; `"destructive"` admits everything. An operation above the ceiling throws — so an agent gets no mutations unless the toolset explicitly opts up. Raising the ceiling is a deliberate, reviewable choice; the default keeps research agents read-only by construction.
+**Access ceiling.** `ToolsetSpec.access` (default `"read-only"`) is the highest `access` the toolset admits, and it's **cumulative**: a `"write"` ceiling admits read-only *and* write operations; `"destructive"` admits everything. Operations above the ceiling are filtered out, so an agent gets no mutations unless the toolset explicitly opts up; the default keeps research agents read-only. **`groups` is optional** — omit it to span the whole registry, e.g. the shipped `readOnlyToolset`:
 
 ```ts
+export const readOnlyToolset = defineToolset({ name: "read-only", access: "read-only" }, operationModules)
+// or scope + raise the ceiling:
 defineToolset({ name: "signal-writer", groups: ["signals"], access: "write" }, operationModules)
 ```
 
-Adding an operation to a selected group automatically adds it to the toolset — the toolset's checked-in manifest snapshot test fails until you regenerate and commit it, which is the deliberate review gate. Tenancy note for toolset consumers: build `OperationContext` from an already-resolved organization; the model-visible input never carries org identity.
+Tenancy note for toolset consumers: build `OperationContext` from an already-resolved organization; the model-visible input never carries org identity.
 
 ## Opting out of MCP per-route
 
