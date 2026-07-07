@@ -11,8 +11,8 @@ urls.homepage = "https://github.com/latitude-dev/latitude-llm/tree/main/packages
 urls.documentation = "https://github.com/latitude-dev/latitude-llm/tree/main/packages/telemetry/python#readme"
 requires-python = ">=3.11, <3.15"
 dependencies = [
-    "opentelemetry-api==1.42.1",
-    "opentelemetry-sdk==1.42.1",
+    "opentelemetry-api==1.43.0",
+    "opentelemetry-sdk==1.43.0",
     "opentelemetry-exporter-otlp-proto-http==1.43.0",
     "opentelemetry-semantic-conventions-ai==0.5.1",
     "openinference-semantic-conventions==0.1.30",
@@ -34,7 +34,7 @@ dependencies = [
     "opentelemetry-instrumentation-replicate==0.61.0",
     "opentelemetry-instrumentation-sagemaker==0.61.0",
     "opentelemetry-instrumentation-together==0.61.0",
-    "opentelemetry-instrumentation-threading==0.63b1",
+    "opentelemetry-instrumentation-threading==0.64b0",
     "opentelemetry-instrumentation-transformers==0.61.0",
     "opentelemetry-instrumentation-vertexai==0.61.0",
     "opentelemetry-instrumentation-watsonx==0.61.0",
