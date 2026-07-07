@@ -142,40 +142,40 @@ export function SignalSendTo({
           <DropdownMenuContent align="end" className="w-56">
             <DropdownMenuLabel className="font-medium text-muted-foreground">Cloud agents</DropdownMenuLabel>
             {destinationsLoading ? (
-                  <DropdownMenuItem disabled className="items-center gap-2">
-                    <Text.H5 color="foregroundMuted">Loading integrations…</Text.H5>
-                  </DropdownMenuItem>
-                ) : hasCloudDestinations ? (
-                  destinations?.map((destination) => (
-                    <DropdownMenuItem
-                      key={destination.configId}
-                      disabled={sendMutation.isPending}
-                      className="cursor-pointer items-center gap-2"
-                      onSelect={() => {
-                        if (sendMutation.isPending) return
-                        sendMutation.mutate(destination)
-                      }}
-                    >
-                      {sendingConfigId === destination.configId ? (
-                        <Loader2 className="h-4 w-4 shrink-0 animate-spin opacity-70" aria-hidden />
-                      ) : (
-                        <Icon icon={AGENT_DISPATCH_KIND_ICONS[destination.kind]} size="sm" />
-                      )}
-                      <Text.H5>
-                        {sendingConfigId === destination.configId
-                          ? "Sending…"
-                          : AGENT_DISPATCH_KIND_LABELS[destination.kind]}
-                      </Text.H5>
-                    </DropdownMenuItem>
-                  ))
-                ) : (
-                  <DropdownMenuItem asChild className="cursor-pointer items-center gap-2">
-                    <Link to="/projects/$projectSlug/settings/integrations" params={{ projectSlug }}>
-                      <Icon icon={Plus} size="sm" />
-                      <Text.H5>Set up cloud agents</Text.H5>
-                    </Link>
-                  </DropdownMenuItem>
-                )}
+              <DropdownMenuItem disabled className="items-center gap-2">
+                <Text.H5 color="foregroundMuted">Loading integrations…</Text.H5>
+              </DropdownMenuItem>
+            ) : hasCloudDestinations ? (
+              destinations?.map((destination) => (
+                <DropdownMenuItem
+                  key={destination.configId}
+                  disabled={sendMutation.isPending}
+                  className="cursor-pointer items-center gap-2"
+                  onSelect={() => {
+                    if (sendMutation.isPending) return
+                    sendMutation.mutate(destination)
+                  }}
+                >
+                  {sendingConfigId === destination.configId ? (
+                    <Loader2 className="h-4 w-4 shrink-0 animate-spin opacity-70" aria-hidden />
+                  ) : (
+                    <Icon icon={AGENT_DISPATCH_KIND_ICONS[destination.kind]} size="sm" />
+                  )}
+                  <Text.H5>
+                    {sendingConfigId === destination.configId
+                      ? "Sending…"
+                      : AGENT_DISPATCH_KIND_LABELS[destination.kind]}
+                  </Text.H5>
+                </DropdownMenuItem>
+              ))
+            ) : (
+              <DropdownMenuItem asChild className="cursor-pointer items-center gap-2">
+                <Link to="/projects/$projectSlug/settings/integrations" params={{ projectSlug }}>
+                  <Icon icon={Plus} size="sm" />
+                  <Text.H5>Set up cloud agents</Text.H5>
+                </Link>
+              </DropdownMenuItem>
+            )}
             <DropdownMenuSeparator />
             <DropdownMenuLabel className="font-medium text-muted-foreground">Local agents</DropdownMenuLabel>
             <DropdownMenuItem className="cursor-pointer items-center gap-2" onSelect={() => setPromptModalOpen(true)}>
