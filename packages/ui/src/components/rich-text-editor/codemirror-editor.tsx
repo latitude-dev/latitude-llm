@@ -2,7 +2,7 @@ import { defaultKeymap, history, historyKeymap, indentWithTab } from "@codemirro
 import { json } from "@codemirror/lang-json"
 import { defaultHighlightStyle, syntaxHighlighting } from "@codemirror/language"
 import { EditorState } from "@codemirror/state"
-import { EditorView, keymap, lineNumbers } from "@codemirror/view"
+import { EditorView, keymap, lineNumbers, placeholder } from "@codemirror/view"
 import { useEffect, useRef } from "react"
 import { useMountEffect } from "../../hooks/use-mount-effect.ts"
 import { cn } from "../../utils/cn.ts"
@@ -32,6 +32,10 @@ const baseTheme = EditorView.theme({
     caretColor: "hsl(var(--secondary-foreground))",
     backgroundColor: "hsl(var(--secondary))",
   },
+  ".cm-placeholder": {
+    color: "hsl(var(--muted-foreground))",
+    whiteSpace: "pre-wrap",
+  },
   ".cm-gutters": {
     backgroundColor: "hsl(var(--secondary))",
     borderRight: "1px solid hsl(var(--secondary))",
@@ -56,11 +60,13 @@ function buildState({
   doc,
   isJsonContent,
   readOnly,
+  placeholderText,
   onChangeRef,
 }: {
   doc: string
   isJsonContent: boolean
   readOnly: boolean
+  placeholderText?: string | undefined
   onChangeRef: React.RefObject<((value: string) => void) | undefined>
 }) {
   const extensions = [
@@ -77,6 +83,10 @@ function buildState({
     }),
   ]
 
+  if (placeholderText !== undefined) {
+    extensions.push(placeholder(placeholderText))
+  }
+
   if (isJsonContent) {
     extensions.push(json())
   }
@@ -88,7 +98,14 @@ function buildState({
   return EditorState.create({ doc, extensions })
 }
 
-export function CodeMirrorEditor({ value, onChange, readOnly = false, className, minHeight }: RichTextEditorProps) {
+export function CodeMirrorEditor({
+  value,
+  onChange,
+  readOnly = false,
+  className,
+  minHeight,
+  placeholder: placeholderText,
+}: RichTextEditorProps) {
   const containerRef = useRef<HTMLDivElement>(null)
   const viewRef = useRef<EditorView | null>(null)
   const onChangeRef = useRef(onChange)
@@ -105,6 +122,7 @@ export function CodeMirrorEditor({ value, onChange, readOnly = false, className,
         doc: initialValueRef.current,
         isJsonContent,
         readOnly,
+        placeholderText,
         onChangeRef,
       }),
       parent: container,
@@ -127,9 +145,9 @@ export function CodeMirrorEditor({ value, onChange, readOnly = false, className,
     const currentDoc = view.state.doc.toString()
     const isReadOnly = view.state.facet(EditorState.readOnly)
     if (currentDoc !== value || isReadOnly !== readOnly) {
-      view.setState(buildState({ doc: value, isJsonContent, readOnly, onChangeRef }))
+      view.setState(buildState({ doc: value, isJsonContent, readOnly, placeholderText, onChangeRef }))
     }
-  }, [value, isJsonContent, readOnly])
+  }, [value, isJsonContent, readOnly, placeholderText])
 
   return (
     <div

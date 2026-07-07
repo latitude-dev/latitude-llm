@@ -9,12 +9,14 @@ import { Button, RichTextEditor, Text } from "@repo/ui"
 export function AdvancedDetectorEditor({
   compiled,
   script,
+  placeholder,
   onScriptChange,
   onDetach,
 }: {
   /** Script compiled client-side from the active settings draft; null when none is valid. */
   readonly compiled: { readonly kind: "rule" | "judge"; readonly script: string } | null
   readonly script: string
+  readonly placeholder?: string
   readonly onScriptChange: (value: string) => void
   readonly onDetach: () => void
 }) {
@@ -43,7 +45,12 @@ export function AdvancedDetectorEditor({
   return (
     <div className="flex flex-col gap-1.5">
       <Text.H6>Evaluation script</Text.H6>
-      <RichTextEditor value={script} onChange={onScriptChange} minHeight="200px" />
+      <RichTextEditor
+        value={script}
+        onChange={onScriptChange}
+        minHeight="200px"
+        {...(placeholder !== undefined ? { placeholder } : {})}
+      />
     </div>
   )
 }

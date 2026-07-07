@@ -25,24 +25,18 @@ type DetectorTab = "rules" | "llm" | "advanced"
 type StepId = "detector" | "scope" | "test" | "details"
 type EditTab = "detector" | "scope" | "test"
 
-const DETECTOR_TABS: ReadonlyArray<{ readonly id: DetectorTab; readonly title: string; readonly summary: string }> = [
+const DETECTOR_TABS: ReadonlyArray<{ readonly id: DetectorTab; readonly title: string }> = [
   {
     id: "rules",
     title: "Set of conditions",
-    summary:
-      "Match concrete facts about a session: a phrase in the reply, a failed tool, latency or cost over a limit. It's free and runs instantly.",
   },
   {
     id: "llm",
     title: "LLM as judge",
-    summary:
-      "Describe the behavior in your own words and an LLM reads each session and decides. Good for fuzzy things like tone or frustration.",
   },
   {
     id: "advanced",
     title: "Custom script",
-    summary:
-      "The evaluation as the exact script Latitude runs. Compiled from your settings, or written by hand for anything the other two can't express.",
   },
 ]
 
@@ -72,6 +66,11 @@ const GENERATION_STAGES = [
 ]
 
 const emptyRuleDraft: RuleDraft = { match: "all", conditions: [] }
+const DEFAULT_ADVANCED_SCRIPT_PLACEHOLDER = compileSettingsToScript({
+  kind: "rule",
+  match: "any",
+  conditions: [{ type: "error" }],
+})
 
 const filterSetOrNull = (filter: FilterSet): FilterSet | null => (Object.keys(filter).length === 0 ? null : filter)
 
@@ -409,7 +408,6 @@ export function SignalBuilderModal({
   // All three tabs are available in create and edit alike: an evaluation can be re-authored across kinds
   // (settings ⇄ raw script), and the update use-case persists whichever kind the user lands on.
   const detectorTabOptions = DETECTOR_TABS.map(({ id, title }) => ({ id, label: title }))
-  const activeMethod = DETECTOR_TABS.find((method) => method.id === tab)
 
   const footer = inConditionSubStep ? (
     <>
@@ -517,7 +515,6 @@ export function SignalBuilderModal({
                 active={tab}
                 onSelect={selectDetectorTab}
               />
-              {activeMethod ? <Text.H6 color="foregroundMuted">{activeMethod.summary}</Text.H6> : null}
             </div>
             {tab === "rules" ? (
               <RuleConditionList draft={ruleDraft} onChange={setRuleDraft} onEditCondition={openConditionEditor} />
@@ -527,6 +524,7 @@ export function SignalBuilderModal({
               <AdvancedDetectorEditor
                 compiled={compiledView}
                 script={scriptDraft}
+                placeholder={DEFAULT_ADVANCED_SCRIPT_PLACEHOLDER}
                 onScriptChange={setScriptDraft}
                 onDetach={detachToScript}
               />
