@@ -48,9 +48,12 @@ const provideDeps = <A, E>(
     Effect.provideService(OrganizationRepository, {
       findById: (id) =>
         requestingOrg ? Effect.succeed(requestingOrg) : Effect.fail(new NotFoundError({ entity: "Organization", id })),
+      findByIdForUpdate: (id) =>
+        requestingOrg ? Effect.succeed(requestingOrg) : Effect.fail(new NotFoundError({ entity: "Organization", id })),
       listByUserId: () => Effect.die(new Error("unused")),
       save: () => Effect.die(new Error("unused")),
       delete: () => Effect.die(new Error("unused")),
+      deleteIfExpiredUnclaimed: () => Effect.die(new Error("unused")),
       countBySlug: () => Effect.die(new Error("unused")),
       listExpiredUnclaimed: () => Effect.die(new Error("unused")),
     }),
