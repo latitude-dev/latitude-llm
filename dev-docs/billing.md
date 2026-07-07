@@ -161,7 +161,7 @@ If a Pro spend cap is configured, overage reporting is clamped before Stripe see
 Telemetry and trace-search rows are stamped with the effective plan retention at write time:
 
 - span ingest stamps `retention_days` onto `spans`
-- trace search stamps `retention_days` onto `trace_search_documents` and `trace_search_embeddings`
+- trace search stamps `retention_days` onto `trace_search_documents` and `trace_message_occurrences`
 - the `traces` materialized view carries forward `max(retention_days)` from its source spans
 
 ClickHouse TTL enforces physical deletion with a `30` day storage grace buffer:
@@ -169,7 +169,7 @@ ClickHouse TTL enforces physical deletion with a `30` day storage grace buffer:
 - `spans`: `start_time + (retention_days + 30 days)`
 - `traces`: `min_start_time + (retention_days + 30 days)`
 - `trace_search_documents`: `start_time + (retention_days + 30 days)`
-- `trace_search_embeddings`: `start_time + (retention_days + 30 days)`
+- `trace_message_occurrences`: `start_time + (retention_days + 30 days)`
 
 The entitlement value and the physical deletion threshold are intentionally different. The extra `30` day buffer exists so an organization that has fallen past its contracted retention can still upgrade before the data is physically removed.
 
