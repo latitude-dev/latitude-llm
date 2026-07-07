@@ -184,10 +184,7 @@ const lookupByToken = (client: PostgresClient, token: string): Promise<DbRow | u
     .innerJoin(oauthApplications, eq(oauthApplications.clientId, oauthAccessTokens.clientId))
     .innerJoin(
       members,
-      and(
-        eq(members.organizationId, oauthApplications.organizationId),
-        eq(members.userId, oauthAccessTokens.userId),
-      ),
+      and(eq(members.organizationId, oauthApplications.organizationId), eq(members.userId, oauthAccessTokens.userId)),
     )
     .where(eq(oauthAccessTokens.accessToken, token))
     .limit(1)
