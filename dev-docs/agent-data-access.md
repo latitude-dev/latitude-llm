@@ -32,7 +32,7 @@ time. Returns a tidy series suitable for charts.
 - **HTTP**: `POST /v1/projects/{projectSlug}/analytics/query` — rate tier `high`.
 - **MCP tool**: `queryAnalytics`. **SDK**: `client.analytics.query`.
 - **Contract**: `analyticsQuerySchema` in `packages/domain/shared/src/analytics-query.ts`.
-- **Use-case**: `queryAnalyticsUseCase` (`@domain/spans`). **Route**: `apps/api/src/routes/analytics.ts`.
+- **Use-case**: `queryAnalyticsUseCase` (`@domain/spans`). **Route**: `packages/operations/src/operations/analytics.ts`.
 - **Engine**: the `metric-sql/` module in `@platform/db-clickhouse` (see [Engine](#engine)).
 
 ### Query object
@@ -118,7 +118,7 @@ trace; this is cross-trace.
 
 - **HTTP**: `POST /v1/projects/{projectSlug}/spans/query` — rate tier `high`.
 - **MCP tool**: `querySpans`. **SDK**: `client.spans.query`.
-- **Route**: `apps/api/src/routes/spans.ts`; backed by `SpanRepository.listByProjectId`.
+- **Route**: `packages/operations/src/operations/spans.ts`; backed by `SpanRepository.listByProjectId`.
 
 ```ts
 interface QuerySpansBody {

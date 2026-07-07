@@ -35,7 +35,7 @@ All Postgres access flows through `SqlClient`—a domain-level service that abst
 **Usage in boundaries (apps):**
 
 ```typescript
-// apps/api/src/routes/projects.ts
+// packages/operations/src/operations/projects.ts
 import { SqlClientLive } from "@platform/db-postgres"
 import { ProjectRepositoryLive } from "@platform/db-postgres"
 

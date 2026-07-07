@@ -4,7 +4,7 @@ Latitude exposes an [MCP](https://modelcontextprotocol.io/) server so AI agents 
 
 ## Tools are derived from API routes
 
-Every route declared via `defineApiEndpoint(...)` is registered as an MCP tool by default. Tool name = route `name` (camelCase), tool description = route `description`, tool input schema = the flattened union of `route.request.{params, query, body}`, tool output schema = the 2xx-JSON response schema.
+Every operation declared via `defineOperation(...)` is registered as an MCP tool by default. Tool name = route `name` (camelCase), tool description = route `description`, tool input schema = the flattened union of `route.request.{params, query, body}`, tool output schema = the 2xx-JSON response schema.
 
 Opt out per-route by passing `tool: false`. Internal lifecycle endpoints and web-only callbacks should opt out; everything else stays on.
 
@@ -129,7 +129,7 @@ Better Auth's MCP plugin has no `/revoke` endpoint. Revocation is implemented on
 | --- | --- |
 | MCP server + dispatch | `apps/api/src/mcp/server.ts` |
 | Endpoint registry + tool descriptors | `apps/api/src/mcp/registry.ts` |
-| `defineApiEndpoint` + tool opt-out | `apps/api/src/mcp/define-endpoint.ts` |
+| `defineOperation` + tool opt-out | `packages/operations/src/core/define-operation.ts` |
 | Flattened input plumbing | `apps/api/src/mcp/flatten-input.ts` |
 | Protected-resource metadata | `apps/api/src/routes/well-known.ts` |
 | Web consent page | `apps/web/src/routes/auth/consent.tsx` |

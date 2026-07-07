@@ -1,0 +1,94 @@
+import { type AnyOperation, accessToAnnotations, type McpToolAnnotations } from "./define-operation.ts"
+import { type ExtractedOutput, extractOutputSchema } from "./extract-output.ts"
+import { type FlatInput, flattenRouteInputSchema } from "./flatten-input.ts"
+
+/**
+ * Global registry of MCP-eligible endpoints. Populated lazily from
+ * {@link defineOperation}-produced endpoints when their `mountHttp` is called
+ * during route assembly — the endpoint carries the mount prefix baked in by
+ * the factory, so the registry doesn't need to know it separately.
+ *
+ * Module-global so the per-request MCP dispatcher can read a snapshot at
+ * tool-call time without threading it through Hono's context. Reset by
+ * {@link resetOperationRegistry} between test runs.
+ */
+const operationRegistry: AnyOperation[] = []
+
+/**
+ * Adds `endpoint` to the global MCP registry. Called from
+ * `Operation.mountHttp` when the operation is tool-eligible (`tool === true`).
+ *
+ * Throws on a duplicate `name`: operation names are the OpenAPI `operationId`
+ * and the MCP tool name, both of which must be globally unique, so a collision
+ * is always a bug (or a re-run that forgot `resetOperationRegistry`). Failing
+ * loudly here beats silently accumulating duplicate tool descriptors.
+ */
+export const registerOperation = (endpoint: AnyOperation): void => {
+  if (operationRegistry.some((op) => op.route.name === endpoint.route.name)) {
+    throw new Error(`Operation "${endpoint.route.name}" is already registered — names must be unique`)
+  }
+  operationRegistry.push(endpoint)
+}
+
+/**
+ * Drops every registered endpoint. Used by the test harness (`setupTestApi`)
+ * so multiple test files in the same vitest worker don't accumulate stale
+ * entries across `registerRoutes` calls. Production boot doesn't call it —
+ * `registerRoutes` runs once per process, so the registry starts empty
+ * either way.
+ *
+ * @public — only consumed by test files which knip doesn't traverse, so we
+ * mark it explicitly to stop knip flagging it as unused.
+ */
+export const resetOperationRegistry = (): void => {
+  operationRegistry.length = 0
+}
+
+/**
+ * Descriptor used to emit `apps/api/mcp.json` and to register tools on the
+ * per-request `McpServer` instance.
+ */
+interface ToolDescriptor {
+  /** camelCase tool identifier — matches the route's `name`. */
+  readonly name: string
+  /** Human-readable title; falls back to the route's `summary` and finally `name`. */
+  readonly title: string
+  /** Tool description, taken from the route's `description`. */
+  readonly description: string
+  /** MCP tool annotations (read-only / destructive hints) declared at the endpoint. */
+  readonly annotations: McpToolAnnotations
+  /** Flattened Zod input schema + per-field source map for HTTP dispatch. */
+  readonly input: FlatInput
+  /**
+   * Object Zod schema for the route's primary 2xx JSON response. Omitted for routes
+   * whose success response carries no body (204), no JSON content, or a non-object
+   * shape. Maps to the MCP tool's optional `outputSchema`.
+   */
+  readonly output?: ExtractedOutput | undefined
+  /** Path prefix the route's sub-app was mounted at, used to rebuild the dispatch URL. */
+  readonly routerPrefix: string
+  /** Path template inside the sub-app (OpenAPI `{name}` placeholder syntax). */
+  readonly pathTemplate: string
+  /** HTTP method, lowercased (e.g. `"get"`, `"post"`). */
+  readonly httpMethod: string
+}
+
+/**
+ * Walks the populated registry and returns one {@link ToolDescriptor} per registered
+ * endpoint. Throws on flatten collisions (see {@link flattenRouteInputSchema}) so
+ * route configuration mistakes surface at boot, not on a tool call.
+ */
+export const collectToolDescriptors = (): ToolDescriptor[] =>
+  operationRegistry.map(({ route, access, prefix }) => {
+    return {
+      name: route.name,
+      title: route.summary ?? route.name,
+      description: route.description ?? "",
+      annotations: accessToAnnotations(access),
+      input: flattenRouteInputSchema(route),
+      output: extractOutputSchema(route),
+      routerPrefix: prefix,
+      pathTemplate: route.path,
+      httpMethod: route.method.toLowerCase(),
+    }
+  })
