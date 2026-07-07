@@ -20,8 +20,8 @@ import {
   sendAgentDispatchUseCase,
   upsertAgentDispatchConfigUseCase,
 } from "@domain/agent-dispatch"
-import { OrganizationId, ProjectId, SignalId } from "@domain/shared"
 import { IncidentMonitorReader } from "@domain/notifications"
+import { OrganizationId, ProjectId, SignalId } from "@domain/shared"
 import { SignalRepository } from "@domain/signals"
 import { TraceRepository } from "@domain/spans"
 import { AgentDispatchAdaptersLive } from "@platform/agent-dispatch"
@@ -315,7 +315,10 @@ export const listAgentDispatches = createServerFn({ method: "GET" })
         )
         const monitorById = new Map(
           monitors
-            .filter((entry): entry is { monitorId: string; monitor: NonNullable<typeof entry.monitor> } => entry.monitor !== null)
+            .filter(
+              (entry): entry is { monitorId: string; monitor: NonNullable<typeof entry.monitor> } =>
+                entry.monitor !== null,
+            )
             .map((entry) => [entry.monitorId, entry.monitor]),
         )
 

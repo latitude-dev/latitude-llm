@@ -84,8 +84,7 @@ describe("renderDispatchPrompt", () => {
           id: "mon1",
           slug: "cache-hit-rate",
           name: "Cache hit rate",
-          ruleSummary:
-            "Opens an incident when the cache hit rate for the target is under 50%.",
+          ruleSummary: "Opens an incident when the cache hit rate for the target is under 50%.",
         },
         incident: {
           id: "inc1",
