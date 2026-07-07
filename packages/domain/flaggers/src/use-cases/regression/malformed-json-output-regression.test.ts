@@ -12,8 +12,10 @@ const REGRESSION_DATASET_PAGE_SIZE = 200
 
 const OLD_MESSAGE_INDEX_CONTRACT =
   "- Include messageIndex only when one transcript line is clearly the best evidence; it must be a non-negative integer no larger than 10000."
-const NEW_MESSAGE_INDEX_CONTRACT =
+const OLD_MESSAGE_INDEX_STRING_CONTRACT =
   '- Include messageIndex only when one transcript line is clearly the best evidence. messageIndex must be exactly one quoted integer string like "0" or "12"; never output it as a JSON number, decimal, exponent, comma-separated list, range, or unquoted value.'
+const NEW_CLASSIFIER_OUTPUT_CONTRACT =
+  "- Output only matched and feedback. Do not emit messageIndex or any other fields."
 
 const regressionMessagePartSchema = z
   .object({
@@ -51,7 +53,6 @@ const malformedJsonOutputRegressionRowSchema = z.object({
 const classifierOutputSchema = z.object({
   matched: z.boolean().optional().default(false),
   feedback: z.string().min(1).nullable().optional(),
-  messageIndex: z.string().regex(/^\d+$/).optional(),
 })
 
 type MalformedJsonOutputRegressionRow = z.infer<typeof malformedJsonOutputRegressionRowSchema>["metadata"]
@@ -130,8 +131,10 @@ function extractClassifierPrompt(row: MalformedJsonOutputRegressionRow): string 
   return userMessage ? textFromParts(userMessage.parts) : undefined
 }
 
-function patchMessageIndexContract(systemPrompt: string): string {
-  return systemPrompt.replace(OLD_MESSAGE_INDEX_CONTRACT, NEW_MESSAGE_INDEX_CONTRACT)
+function patchClassifierOutputContract(systemPrompt: string): string {
+  return systemPrompt
+    .replace(OLD_MESSAGE_INDEX_CONTRACT, NEW_CLASSIFIER_OUTPUT_CONTRACT)
+    .replace(OLD_MESSAGE_INDEX_STRING_CONTRACT, NEW_CLASSIFIER_OUTPUT_CONTRACT)
 }
 
 function identifyFlaggerSlug(systemPrompt: string): string | undefined {
@@ -174,7 +177,7 @@ describe("flagger malformed JSON output regression dataset", () => {
           throw new Error(`row ${index} should include the captured classifier user prompt`)
         }
 
-        const system = patchMessageIndexContract(capturedSystem)
+        const system = patchClassifierOutputContract(capturedSystem)
         const flaggerSlug = identifyFlaggerSlug(system)
         expect(flaggerSlug, `row ${index} should identify the classifier from the system prompt`).toBeTruthy()
 
@@ -215,13 +218,6 @@ describe("flagger malformed JSON output regression dataset", () => {
             `row ${index} (${flaggerSlug}) must not fail with malformed structured output`,
           ).toBe(false)
           throw new Error(`row ${index} (${flaggerSlug}) should generate structured classifier output:\n${cause}`)
-        }
-
-        if (exit.value.matched) {
-          expect(
-            exit.value.messageIndex,
-            `row ${index} (${flaggerSlug}) should preserve a quoted messageIndex`,
-          ).toMatch(/^\d+$/)
         }
       }
     },

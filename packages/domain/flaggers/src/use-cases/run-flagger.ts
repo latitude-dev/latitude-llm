@@ -64,18 +64,9 @@ export interface ClassifyTraceForFlaggerInput {
   readonly strategyOverride?: FlaggerStrategy
 }
 
-const FLAGGER_MESSAGE_INDEX_MAX = 10_000
-
-const isValidMessageIndex = (value: number | undefined): value is number =>
-  value !== undefined && Number.isInteger(value) && value >= 0 && value <= FLAGGER_MESSAGE_INDEX_MAX
-
 const providerFlaggerOutputSchema = z.object({
   matched: z.boolean().optional().default(false),
   feedback: z.string().min(1).nullable().optional(),
-  // Ask providers for a string instead of a JSON number. Claude/Bedrock can
-  // otherwise produce runaway decimal literals for this field under structured
-  // generation, which makes the whole object fail to materialize.
-  messageIndex: z.string().regex(/^\d+$/).optional(),
 })
 
 const flaggerOutputSchema = providerFlaggerOutputSchema.superRefine((value, ctx) => {
@@ -103,8 +94,8 @@ const FLAGGER_OUTPUT_CONTRACT = `
 Structured output contract:
 - Set matched=false when the trace does not belong to this flagger; in that case feedback must be null or omitted.
 - Set matched=true only when the trace belongs to this flagger; in that case feedback is required.
-- For matched=true, feedback must be the final human-readable annotation: one or two short sentences describing the issue and concrete evidence.
-- Include messageIndex only when one transcript line is clearly the best evidence. messageIndex must be exactly one quoted integer string like "0" or "12"; never output it as a JSON number, decimal, exponent, comma-separated list, range, or unquoted value.
+- For matched=true, feedback must be the final human-readable annotation: one or two short sentences (under 300 characters) describing the issue and concrete evidence.
+- Output only matched and feedback. Do not emit messageIndex or any other fields.
 `.trim()
 
 // Whether a strategy classifies only the evaluated agent's own assistant
@@ -547,21 +538,13 @@ const buildAnnotationReviewPrompt = (
   ].join("\n")
 }
 
-const parseMessageIndex = (value: string | undefined): number | undefined => {
-  if (value === undefined || !/^\d+$/.test(value)) return undefined
-  const parsed = Number.parseInt(value, 10)
-  return isValidMessageIndex(parsed) ? parsed : undefined
-}
-
 const parseFlaggerOutput = (input: unknown): RunFlaggerResult => {
   const parsed = flaggerOutputSchema.safeParse(input)
   if (!parsed.success) return { matched: false }
 
-  const messageIndex = parseMessageIndex(parsed.data.messageIndex)
   return {
     matched: parsed.data.matched,
     ...(parsed.data.matched && parsed.data.feedback ? { feedback: parsed.data.feedback.trim() } : {}),
-    ...(parsed.data.matched && messageIndex !== undefined ? { messageIndex } : {}),
   }
 }
 

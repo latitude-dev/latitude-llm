@@ -17,7 +17,7 @@ export const FLAGGER_DEFAULT_CLASSIFIER_MODEL = {
   provider: "amazon-bedrock",
   model: "anthropic.claude-haiku-4-5-20251001-v1:0",
   temperature: 0,
-  maxTokens: 2048,
+  maxTokens: 512,
 } as const
 
 export const FLAGGER_DEFAULT_INSTRUCTION_EXTRACTOR_MODEL = {
