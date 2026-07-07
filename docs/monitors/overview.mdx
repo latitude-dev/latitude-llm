@@ -5,7 +5,7 @@ description: Watch your signals and saved searches, and get alerted when somethi
 
 # Monitors
 
-A **monitor** watches your production traffic and opens an **incident** when a condition you care about is met. Each monitor has one **alert**, which watches a single signal with its own condition and severity. When the alert fires, Latitude records an incident and sends you a notification through your existing notification channels.
+A **monitor** watches your production traffic and opens an **incident** when a condition you care about is met. Each monitor has one **alert**, which watches a single signal or saved search with its own condition and severity. When the alert fires, Latitude records an incident and sends you a notification through your existing notification channels.
 
 Monitors live on the **Monitors** page of each project. Open it from the project sidebar.
 
@@ -40,7 +40,7 @@ Click any row to open its details panel, where you can see the alert, the full i
 Every project comes with three monitors that watch the signal lifecycle. Each one notifies you about a different moment:
 
 - **Signal discovered**: fires each time a brand-new signal is detected in your traffic.
-- **Signal regressed**: fires each time a signal you had resolved is detected again.
+- **Signal regressed**: fires when a signal that had gone quiet starts being detected again, so a problem you thought was behind you doesn't slip back unnoticed.
 - **Signal escalating**: fires when an ongoing signal is being detected _more than expected_ for this time of day and week. This is the one monitor with a tunable knob: its **sensitivity** (a value from 1 to 6) controls how large a deviation from the normal pattern is needed before it fires. Open the monitor and edit the alert to change it.
 
 System monitors **can't be deleted**: they're part of how Latitude keeps you informed about signals. If you don't want to be notified by one, **mute** it (see [Mute](#mute) below).

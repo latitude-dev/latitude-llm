@@ -67,7 +67,12 @@ export const createOrganization = createServerFn({ method: "POST" })
         defaultProjectName: `${data.name.trim()}'s project`,
       }).pipe(
         withPostgres(
-          Layer.mergeAll(ApiKeyRepositoryLive, ProjectRepositoryLive, OutboxEventWriterLive),
+          Layer.mergeAll(
+            ApiKeyRepositoryLive,
+            ProjectRepositoryLive,
+            OrganizationRepositoryLive,
+            OutboxEventWriterLive,
+          ),
           adminClient,
           organizationId,
         ),

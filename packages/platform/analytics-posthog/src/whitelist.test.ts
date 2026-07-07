@@ -14,7 +14,6 @@ describe("PostHog whitelist", () => {
     expect(POSTHOG_TRACKED_EVENTS.has("DatasetCreated")).toBe(true)
     expect(POSTHOG_TRACKED_EVENTS.has("EvaluationCreated")).toBe(true)
     expect(POSTHOG_TRACKED_EVENTS.has("EvaluationAligned")).toBe(true)
-    expect(POSTHOG_TRACKED_EVENTS.has("AnnotationQueueItemCompleted")).toBe(true)
     expect(POSTHOG_TRACKED_EVENTS.has("ProjectDeleted")).toBe(true)
     expect(POSTHOG_TRACKED_EVENTS.has("FirstTraceReceived")).toBe(true)
   })

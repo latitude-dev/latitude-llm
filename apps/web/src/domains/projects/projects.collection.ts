@@ -1,14 +1,15 @@
 import { generateId, OrganizationId, ProjectId } from "@domain/shared"
 import { queryCollectionOptions } from "@tanstack/query-db-collection"
 import type { Context, QueryBuilder, SchemaFromSource } from "@tanstack/react-db"
-import { createCollection, useLiveQuery } from "@tanstack/react-db"
+import { useLiveQuery } from "@tanstack/react-db"
+import { createAppCollection } from "../../lib/data/create-app-collection.ts"
 import { getQueryClient } from "../../lib/data/query-client.tsx"
 import type { ProjectRecord } from "./projects.functions.ts"
 import { createProject, deleteProject, listProjects, updateProject } from "./projects.functions.ts"
 
 const queryClient = getQueryClient()
 
-const projectsCollection = createCollection(
+const projectsCollection = createAppCollection(
   queryCollectionOptions({
     queryClient,
     queryKey: ["projects"],

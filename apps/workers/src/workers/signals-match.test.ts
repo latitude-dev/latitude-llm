@@ -122,6 +122,7 @@ const makeEvaluationRow = (input: {
   readonly turn?: EvaluationTurn
   readonly projectId?: string
   readonly signalId?: string
+  readonly script?: string
 }) =>
   evaluationSchema.parse({
     id: input.id,
@@ -130,7 +131,7 @@ const makeEvaluationRow = (input: {
     signalId: input.signalId ?? SIGNAL_ID,
     name: `evaluation-${input.id.slice(0, 6)}`,
     description: "Signals match worker live evaluation",
-    script: "export default async function evaluate() { return { value: 1 } }",
+    script: input.script ?? "export default async function evaluate() { return { value: 1 } }",
     trigger: {
       ...defaultEvaluationTrigger(),
       filter: input.filter ?? {},
@@ -393,6 +394,60 @@ describe("runSignalsMatchJob", () => {
     const executePublishes = published.filter((p) => p.queue === "live-evaluations" && p.task === "execute")
     expect(executePublishes).toHaveLength(1)
   })
+
+  it("on an embeddings-ready re-trigger, publishes only semantic evals with a distinct dedupeKey", async () => {
+    const projectId = "y".repeat(24)
+    const traceId = "w".repeat(32)
+    const semanticEvalId = "d".repeat(24)
+
+    await insertTraceRows([makeTraceRow({ projectId, traceId })])
+    await pg.db
+      .insert(signals)
+      .values([
+        makeSignalRow({ id: "b".repeat(24), projectId, uuid: "33333333-3333-4333-8333-333333333333" }),
+        makeSignalRow({ id: "c".repeat(24), projectId, uuid: "66666666-6666-4666-8666-666666666666" }),
+      ])
+    await pg.db.insert(evaluations).values([
+      makeEvaluationRow({
+        id: semanticEvalId,
+        projectId,
+        signalId: "b".repeat(24),
+        script: "return Passed((await semanticSimilarity('frustration')) >= 0.5 ? 1 : 0)",
+      }),
+      makeEvaluationRow({ id: "r".repeat(24), projectId, signalId: "c".repeat(24) }),
+    ])
+
+    const { publisher, published } = createFakeQueuePublisher()
+    const redisClient = createFakeRedisClient()
+
+    const result = await Effect.runPromise(
+      runSignalsMatchJob({
+        publisher,
+        postgresClient: pg.appPostgresClient,
+        clickhouseClient: ch.client,
+        redisClient,
+      })({
+        organizationId: ORGANIZATION_ID,
+        projectId,
+        traceId,
+        reason: "embeddings-ready",
+      }),
+    )
+
+    expect(result.action).toBe("completed")
+
+    const executePublishes = published.filter((p) => p.queue === "live-evaluations" && p.task === "execute")
+    expect(executePublishes).toHaveLength(1)
+    expect(executePublishes[0]?.payload).toMatchObject({ evaluationId: semanticEvalId })
+    expect(executePublishes[0]?.options).toMatchObject({
+      dedupeKey: `${buildLiveEvaluationExecuteTraceDedupeKey({
+        organizationId: ORGANIZATION_ID,
+        projectId,
+        evaluationId: semanticEvalId,
+        traceId,
+      })}:embeddings-ready`,
+    })
+  })
 })
 
 describe("createRunHandler", () => {
@@ -449,6 +504,7 @@ describe("createRunHandler", () => {
       organizationId: ORGANIZATION_ID,
       projectId,
       traceId,
+      reason: "ingest",
       outcome: "completed",
       sessionId,
       activeEvaluationsScanned: 1,

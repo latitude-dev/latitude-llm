@@ -97,6 +97,7 @@ const PROVIDER_ENTRIES: ReadonlyArray<ProviderEntry> = [
   { id: "eve", name: "Eve", icon: "eve" },
   { id: "flue", name: "Flue", icon: "flue" },
   { id: "elevenlabs", name: "ElevenLabs", icon: "elevenlabs" },
+  { id: "pydantic-ai", name: "Pydantic AI", icon: "pydantic-ai" },
 ]
 
 function ProviderChipIcon({ provider }: { readonly provider: ProviderEntry }) {

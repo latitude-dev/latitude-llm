@@ -12,6 +12,7 @@ export const organizationSettingsSchema = z.object({
       spendingLimitCents: z.number().int().positive().optional(),
     })
     .optional(),
+  wantsShowcase: z.boolean().optional(),
 })
 
 const incidentNotificationsKindShape = Object.fromEntries(
@@ -68,6 +69,14 @@ export const projectSettingsSchema = z.object({
   onboardingType: z.enum(["prod-traces", "code-agents"]).optional(),
   onboardingCompleted: z.boolean().optional(),
   isSample: z.boolean().optional(),
+  /**
+   * Marks a project as belonging to the shared read-only Showcase (built by the
+   * regeneration workflow in the showcase org). Distinct from `isSample` (the
+   * per-signup demo) so exclusion filters — taxonomy gardening, retention
+   * handling, landing-project preference — can skip showcase projects without
+   * conflating them with per-org samples.
+   */
+  isShowcase: z.boolean().optional(),
   sampling: samplingSettingSchema.optional(),
 })
 
@@ -123,5 +132,8 @@ export const resolveSettings = (input?: { projectId?: ProjectId }) =>
       projectSettings = yield* reader.getProjectSettings(input.projectId)
     }
 
-    return resolveSettingsCascade({ organization: orgSettings, project: projectSettings })
+    return resolveSettingsCascade({
+      organization: orgSettings,
+      project: projectSettings,
+    })
   })

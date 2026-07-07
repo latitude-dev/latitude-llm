@@ -27,9 +27,26 @@ const DialogOverlay = forwardRef<
 ))
 DialogOverlay.displayName = DialogPrimitive.Overlay.displayName
 
+function isPortaledPickerElement(element: Element): boolean {
+  return (
+    element.closest("[data-radix-select-viewport]") !== null ||
+    element.closest('[role="listbox"]') !== null ||
+    element.closest("[data-radix-popover-content]") !== null ||
+    element.closest('[data-slot="searchable-select-content"]') !== null ||
+    element.closest("[data-radix-menu-content]") !== null ||
+    element.closest('[data-slot="combobox-content"]') !== null
+  )
+}
+
+function isPortaledPickerInteraction(target: EventTarget | null): boolean {
+  if (target instanceof Element && isPortaledPickerElement(target)) return true
+  const activeElement = document.activeElement
+  return activeElement instanceof Element && isPortaledPickerElement(activeElement)
+}
+
 export type DialogContentProps = Omit<
   ComponentPropsWithoutRef<typeof DialogPrimitive.Content>,
-  "onEscapeKeyDown" | "onPointerDownOutside" | "onInteractOutside"
+  "onEscapeKeyDown" | "onPointerDownOutside" | "onInteractOutside" | "onFocusOutside"
 > & {
   dismissible: boolean
   height?: "content" | "screen"
@@ -46,6 +63,10 @@ const DialogContent = forwardRef<ElementRef<typeof DialogPrimitive.Content>, Dia
     )
     const onPointerDownOutside = useCallback(
       (event: CustomEvent<{ originalEvent: PointerEvent }>) => {
+        if (isPortaledPickerInteraction(event.target)) {
+          event.preventDefault()
+          return
+        }
         if (dismissible) return
         event.preventDefault()
       },
@@ -53,6 +74,21 @@ const DialogContent = forwardRef<ElementRef<typeof DialogPrimitive.Content>, Dia
     )
     const onInteractOutside = useCallback(
       (event: CustomEvent<{ originalEvent: Event }>) => {
+        if (isPortaledPickerInteraction(event.target)) {
+          event.preventDefault()
+          return
+        }
+        if (dismissible) return
+        event.preventDefault()
+      },
+      [dismissible],
+    )
+    const onFocusOutside = useCallback(
+      (event: CustomEvent<{ originalEvent: FocusEvent }>) => {
+        if (isPortaledPickerInteraction(event.target)) {
+          event.preventDefault()
+          return
+        }
         if (dismissible) return
         event.preventDefault()
       },
@@ -78,6 +114,7 @@ const DialogContent = forwardRef<ElementRef<typeof DialogPrimitive.Content>, Dia
           onEscapeKeyDown={onEscapeKeyDown}
           onPointerDownOutside={onPointerDownOutside}
           onInteractOutside={onInteractOutside}
+          onFocusOutside={onFocusOutside}
           {...props}
         >
           {children}

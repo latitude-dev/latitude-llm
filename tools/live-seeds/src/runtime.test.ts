@@ -1,4 +1,3 @@
-import type { AnnotationQueue } from "@domain/annotation-queues"
 import type { Evaluation } from "@domain/evaluations"
 import type { Flagger } from "@domain/flaggers"
 import {
@@ -56,11 +55,6 @@ function createSeedTargets(): SeedTargets {
         trigger: { sampling: 10 },
       } as unknown as Evaluation,
     },
-    highCostLiveQueue: {
-      id: "high-cost-live-queue",
-      slug: "high-cost-traces",
-      settings: { sampling: 25 },
-    } as unknown as AnnotationQueue,
     flaggersBySlug: {
       frustration: {
         id: "flagger-frustration-000000",
@@ -117,7 +111,6 @@ function createEmptyPreview() {
       [SEED_RETURNS_EVALUATION_ID]: false,
       [SEED_ACCESS_EVALUATION_ID]: false,
     },
-    liveQueue: false,
     flaggersBySlug: {
       frustration: false,
       "tool-call-errors": false,
@@ -225,7 +218,6 @@ describe("buildLiveSeedRunPlan", () => {
 
     for (const contextTrace of contextTraces) {
       expect(Object.values(contextTrace.samples.evaluationsById).every((sampled) => !sampled)).toBe(true)
-      expect(contextTrace.samples.liveQueue).toBe(false)
       expect(contextTrace.samples.flaggersBySlug.frustration).toBe(false)
     }
   })

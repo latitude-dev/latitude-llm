@@ -15,8 +15,7 @@ import { type QueuePublishError, QueuePublisher } from "@domain/queue"
 import {
   DETECTOR_HEALTH_WINDOW_SECONDS,
   DetectorHealthTracker,
-  detectScriptCapabilities,
-  hasEmbeddingCapability,
+  requiresEmbedding,
   type ScriptRuntime,
 } from "@domain/sandbox"
 import {
@@ -42,7 +41,7 @@ import {
   type SpanRepository,
   type TraceDetail,
   TraceRepository,
-  TraceSearchRepository,
+  type TraceSearchRepository,
 } from "@domain/spans"
 import { Cause, Effect, Exit } from "effect"
 import type { Evaluation } from "../../entities/evaluation.ts"
@@ -50,6 +49,7 @@ import { getLiveEvaluationEligibility } from "../../helpers.ts"
 import { EvaluationRepository } from "../../ports/evaluation-repository.ts"
 import { EvaluationSignalRepository } from "../../ports/evaluation-signal-repository.ts"
 import { buildEvaluationJudgeLiveTelemetryCapture } from "../../runtime/ai-telemetry.ts"
+import { hasSessionEmbeddings } from "../../runtime/has-session-embeddings.ts"
 import { loadScriptSessionContext } from "../../runtime/load-session-context.ts"
 import {
   executeLiveEvaluationUseCase,
@@ -58,13 +58,15 @@ import {
 } from "./execute-live-evaluation.ts"
 
 /**
- * Readiness gate for embedding-capability evaluations: `signals:match` and `trace-end` are siblings off
- * `TracesIngested`, and `trace-search` (which writes `message_embeddings`) runs after `trace-end`, so
- * embeddings usually aren't indexed when the eval first fires. Defer with a bounded delayed re-publish;
- * on the final attempt run anyway (the host returns 0 for whatever's still missing).
+ * Readiness gate for scripts that call `semanticSimilarity()`: `trace-search` (which writes
+ * `message_embeddings`) runs after the eval first fires, so embeddings usually aren't indexed yet.
+ * Defer with a bounded delayed re-publish; once attempts are exhausted, skip WITHOUT persisting a
+ * score — a persisted 0 would block every future retry via `existsByEvaluationIdAndTraceId`. The
+ * primary recovery is `trace-search` re-triggering `signals:match` once embeddings land; this timed
+ * backstop covers a lost re-trigger.
  */
-const MAX_EMBEDDING_WAIT_ATTEMPTS = 6
-const EMBEDDING_WAIT_DELAY_MS = 5_000
+const MAX_EMBEDDING_WAIT_ATTEMPTS = 3
+const EMBEDDING_WAIT_DELAY_MS = 120_000
 
 export interface RunLiveEvaluationInput {
   readonly organizationId: string
@@ -125,6 +127,7 @@ export type RunLiveEvaluationResult =
         | "result-already-exists"
         | "billing-blocked"
         | "awaiting-embeddings"
+        | "embeddings-unavailable"
       readonly evaluationId: string
       readonly traceId: string
     }
@@ -225,47 +228,52 @@ export const runLiveEvaluationUseCase = (input: RunLiveEvaluationInput) =>
       } satisfies RunLiveEvaluationResult
     }
 
-    // Readiness gate — only for embedding-capability scripts, before any billing or execution work.
-    // We only check the triggering trace: it's the one whose embeddings race this run, and older traces
-    // in the session were embedded on their own ingest cycles. If an older trace's vectors happen to be
-    // missing anyway, the host degrades gracefully (returns 0 for the absent vectors), so single-trace
-    // readiness is sufficient here.
-    if (hasEmbeddingCapability(detectScriptCapabilities(evaluation.script))) {
-      const traceSearchRepository = yield* TraceSearchRepository
-      const occurrences = yield* traceSearchRepository.listMessageOccurrencesForTraces({
+    // Readiness gate — only for scripts that call semanticSimilarity(), before any billing or execution
+    // work. We check the triggering trace: it's the one whose embeddings race this run, and older traces
+    // in the session were embedded on their own ingest cycles.
+    if (requiresEmbedding(evaluation.script)) {
+      const embeddingsReady = yield* hasSessionEmbeddings({
         organizationId: OrganizationId(input.organizationId),
         projectId,
-        traceIds: [TraceId(input.traceId)],
-      })
-      if (occurrences.length === 0) {
+        traceIds: [input.traceId],
+      }).pipe(
+        // A malformed embedding config surfaces through execution's AIError handling, not the gate.
+        Effect.catchTag("AIError", () => Effect.succeed(true)),
+      )
+      if (!embeddingsReady) {
         const attempt = input.embeddingWaitAttempt ?? 0
-        if (attempt < MAX_EMBEDDING_WAIT_ATTEMPTS) {
-          const nextAttempt = attempt + 1
-          const publisher = yield* QueuePublisher
-          yield* publisher.publish(
-            "live-evaluations",
-            "execute",
-            {
-              organizationId: input.organizationId,
-              projectId: input.projectId,
-              evaluationId: input.evaluationId,
-              traceId: input.traceId,
-              embeddingWaitAttempt: nextAttempt,
-            },
-            {
-              dedupeKey: `org:${input.organizationId}:live-eval-embedding-wait:${input.evaluationId}:${input.traceId}:${nextAttempt}`,
-              debounceMs: EMBEDDING_WAIT_DELAY_MS,
-            },
-          )
+        if (attempt >= MAX_EMBEDDING_WAIT_ATTEMPTS) {
+          yield* Effect.annotateCurrentSpan("evaluation.embeddingsUnavailable", true)
           return {
             action: "skipped",
-            reason: "awaiting-embeddings",
+            reason: "embeddings-unavailable",
             evaluationId: input.evaluationId,
             traceId: input.traceId,
           } satisfies RunLiveEvaluationResult
         }
-        // Out of attempts: run anyway (host returns 0 for the missing vectors). Metric proxy for "never arrived".
-        yield* Effect.annotateCurrentSpan("evaluation.embeddingsMissingAtRun", true)
+        const nextAttempt = attempt + 1
+        const publisher = yield* QueuePublisher
+        yield* publisher.publish(
+          "live-evaluations",
+          "execute",
+          {
+            organizationId: input.organizationId,
+            projectId: input.projectId,
+            evaluationId: input.evaluationId,
+            traceId: input.traceId,
+            embeddingWaitAttempt: nextAttempt,
+          },
+          {
+            dedupeKey: `org:${input.organizationId}:live-eval-embedding-wait:${input.evaluationId}:${input.traceId}:${nextAttempt}`,
+            debounceMs: EMBEDDING_WAIT_DELAY_MS,
+          },
+        )
+        return {
+          action: "skipped",
+          reason: "awaiting-embeddings",
+          evaluationId: input.evaluationId,
+          traceId: input.traceId,
+        } satisfies RunLiveEvaluationResult
       }
     }
 

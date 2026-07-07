@@ -20,7 +20,6 @@ export const POSTHOG_TRACKED_EVENTS = new Set<TrackedEventName>([
   "DatasetCreated",
   "EvaluationCreated",
   "EvaluationAligned",
-  "AnnotationQueueItemCompleted",
   "ProjectDeleted",
   "FirstTraceReceived",
   "FlaggerToggled",

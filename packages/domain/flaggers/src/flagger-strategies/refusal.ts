@@ -1,5 +1,5 @@
 import type { TraceDetail } from "@domain/spans"
-import { MAX_STAGES_PER_PROMPT } from "./shared.ts"
+import { isMessagePart, iterMessageParts, MAX_STAGES_PER_PROMPT } from "./shared.ts"
 import type { DetectionResult, FlaggerStrategy } from "./types.ts"
 
 /**
@@ -133,16 +133,16 @@ export function extractConversationStages(trace: Pick<TraceDetail, "allMessages"
   for (const message of trace.allMessages) {
     if (message.role === "user") {
       // Accumulate user messages
-      for (const part of message.parts) {
-        if (part.type === "text" && typeof part.content === "string") {
-          const trimmed = part.content.trim()
-          if (trimmed) currentUserMessages.push(trimmed)
-        }
+      for (const part of iterMessageParts(message.parts)) {
+        if (!isMessagePart(part) || part.type !== "text" || typeof part.content !== "string") continue
+        const trimmed = part.content.trim()
+        if (trimmed) currentUserMessages.push(trimmed)
       }
     } else if (message.role === "assistant") {
       // Extract assistant text and tool usage
       let assistantText = ""
-      for (const part of message.parts) {
+      for (const part of iterMessageParts(message.parts)) {
+        if (!isMessagePart(part)) continue
         if (part.type === "text" && typeof part.content === "string") {
           const trimmed = part.content.trim()
           if (trimmed) assistantText = trimmed

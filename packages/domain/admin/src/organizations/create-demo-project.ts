@@ -27,13 +27,6 @@ export interface CreateDemoProjectInput {
 export interface CreateDemoProjectResult {
   readonly projectId: ProjectId
   readonly projectSlug: string
-  /**
-   * The org member chosen as queue-item assignee for the seeded annotation
-   * queues. Picked here (not in the workflow) because workflow code must be
-   * deterministic across replays — `Math.random` inside an activity would
-   * be a Temporal footgun.
-   */
-  readonly queueAssigneeUserId: UserId
 }
 
 const MAX_NAME_LENGTH = 256
@@ -43,7 +36,7 @@ const MAX_NAME_LENGTH = 256
  * Project". The use-case writes the project row directly via
  * `ProjectRepository.save`, deliberately bypassing `createProjectUseCase`
  * (which emits `ProjectCreated` and triggers the api-keys/PostHog/etc.
- * worker chain). The seeded data — datasets, evaluations, issues, queues,
+ * worker chain). The seeded data — datasets, evaluations, issues,
  * scores, ~30 days of telemetry — is written by a Temporal workflow the
  * caller starts after this use-case returns.
  *
@@ -54,9 +47,6 @@ const MAX_NAME_LENGTH = 256
  *    explicitly asked for fail-on-collision rather than auto-suffix.
  * 4. Slug derived from the name is non-empty; auto-suffixes a 4-char random
  *    + count if it collides at the (cross-org) DB level. See `generateSlug`.
- * 5. Org has at least one member — otherwise we'd have no candidate to
- *    pin queue items to. (Empty-member orgs only exist as a degenerate
- *    state; this guard makes the failure mode loud rather than mysterious.)
  *
  * Emits one outbox event on success: `AdminDemoProjectSeeded`. The actual
  * seed workflow's progress is NOT modelled in the audit trail — reconcile
@@ -86,29 +76,6 @@ export const createDemoProjectUseCase = Effect.fn("admin.createDemoProject")(fun
     return yield* new ConflictError({ entity: "Project", field: "name", value: trimmedName })
   }
 
-  if (org.members.length === 0) {
-    return yield* new ValidationError({
-      field: "organizationId",
-      message: "Cannot seed a demo project for an organization with no members",
-    })
-  }
-
-  // Pick a random member from the org. Using `Math.random` is fine here
-  // because this runs inside the request handler, not the Temporal
-  // workflow — the result is captured on the audit event and threaded
-  // forward as workflow input, so replays see the same value.
-  const pickedMember = org.members[Math.floor(Math.random() * org.members.length)]
-  if (!pickedMember) {
-    // Unreachable given the length check above, but TypeScript narrows
-    // through length checks and the picker still returns `T | undefined`.
-    return yield* new ValidationError({
-      field: "organizationId",
-      message: "Unable to pick a queue assignee from the organization",
-    })
-  }
-
-  const queueAssigneeUserId = pickedMember.user.id as UserId
-
   // Pull the org's existing default api key so the seeded ClickHouse
   // spans reference a key that actually exists on the target org. With
   // out this, telemetry rows would point at `SEED_API_KEY_ID` (the
@@ -128,7 +95,6 @@ export const createDemoProjectUseCase = Effect.fn("admin.createDemoProject")(fun
     organizationId: input.organizationId,
     actorAdminUserId: input.actorAdminUserId,
     trimmedName,
-    queueAssigneeUserId,
   })
 
   // Kick off the seed workflow. We start AFTER the project row + audit
@@ -148,7 +114,6 @@ export const createDemoProjectUseCase = Effect.fn("admin.createDemoProject")(fun
   yield* startSeedDemoProjectWorkflow(workflowStarter, {
     organizationId: input.organizationId,
     projectId: result.projectId,
-    queueAssigneeUserIds: [queueAssigneeUserId],
     apiKeyId,
     timelineAnchorIso: new Date().toISOString(),
   }).pipe(Effect.catchTag("WorkflowAlreadyStartedError", () => Effect.void))
@@ -161,7 +126,6 @@ const startSeedDemoProjectWorkflow = (
   input: {
     readonly organizationId: OrganizationId
     readonly projectId: ProjectId
-    readonly queueAssigneeUserIds: readonly UserId[]
     readonly apiKeyId: ApiKeyId
     readonly timelineAnchorIso: string
   },
@@ -171,7 +135,6 @@ const startSeedDemoProjectWorkflow = (
     {
       organizationId: input.organizationId,
       projectId: input.projectId,
-      queueAssigneeUserIds: input.queueAssigneeUserIds,
       apiKeyId: input.apiKeyId,
       timelineAnchorIso: input.timelineAnchorIso,
     },
@@ -189,7 +152,6 @@ const writeDemoProjectRow = (params: {
   readonly organizationId: OrganizationId
   readonly actorAdminUserId: UserId
   readonly trimmedName: string
-  readonly queueAssigneeUserId: UserId
 }) =>
   Effect.gen(function* () {
     const sqlClient = yield* SqlClient
@@ -244,7 +206,6 @@ const writeDemoProjectRow = (params: {
         return {
           projectId: project.id,
           projectSlug: project.slug,
-          queueAssigneeUserId: params.queueAssigneeUserId,
         } satisfies CreateDemoProjectResult
       }),
     )

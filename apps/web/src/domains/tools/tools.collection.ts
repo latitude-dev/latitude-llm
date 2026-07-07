@@ -1,8 +1,8 @@
 import type { ToolContextDimension } from "@domain/spans"
 import type { InfiniteTableInfiniteScroll } from "@repo/ui"
 import { keepPreviousData, useInfiniteQuery, useQuery } from "@tanstack/react-query"
-import { use, useMemo } from "react"
-import { TraceScopeContext, traceScopeData, traceScopeKey } from "../traces/trace-scope.tsx"
+import { useMemo } from "react"
+import { projectScopeData, projectScopeKey, useProjectScope } from "../projects/project-scope.tsx"
 import {
   getProjectToolDetail,
   getToolCallHistogram,
@@ -32,10 +32,10 @@ export function useProjectTools({
   readonly range: ToolsTimeRange
   readonly trendBucketSeconds: number
 }) {
-  const scope = use(TraceScopeContext)
+  const scope = useProjectScope()
   return useQuery({
-    queryKey: [...traceScopeKey(scope), "tools", projectId, range, trendBucketSeconds],
-    queryFn: () => listProjectTools({ data: { ...traceScopeData(scope), projectId, ...range, trendBucketSeconds } }),
+    queryKey: [...projectScopeKey(scope), "tools", projectId, range, trendBucketSeconds],
+    queryFn: () => listProjectTools({ data: { ...projectScopeData(scope), projectId, ...range, trendBucketSeconds } }),
     staleTime: 30_000,
     placeholderData: keepPreviousData,
     enabled: projectId.length > 0,
@@ -53,13 +53,13 @@ export function useToolDetail({
   readonly range: ToolsTimeRange
   readonly errorsOnly?: boolean
 }) {
-  const scope = use(TraceScopeContext)
+  const scope = useProjectScope()
   return useQuery({
-    queryKey: [...traceScopeKey(scope), "tools-detail", projectId, toolName, range, errorsOnly ?? false],
+    queryKey: [...projectScopeKey(scope), "tools-detail", projectId, toolName, range, errorsOnly ?? false],
     queryFn: () =>
       getProjectToolDetail({
         data: {
-          ...traceScopeData(scope),
+          ...projectScopeData(scope),
           projectId,
           toolName,
           ...range,
@@ -87,10 +87,10 @@ export function useToolCallHistogram({
   readonly errorsOnly?: boolean
   readonly enabled?: boolean
 }) {
-  const scope = use(TraceScopeContext)
+  const scope = useProjectScope()
   return useQuery({
     queryKey: [
-      ...traceScopeKey(scope),
+      ...projectScopeKey(scope),
       "tools-histogram",
       projectId,
       toolName ?? null,
@@ -101,7 +101,7 @@ export function useToolCallHistogram({
     queryFn: () =>
       getToolCallHistogram({
         data: {
-          ...traceScopeData(scope),
+          ...projectScopeData(scope),
           projectId,
           ...range,
           bucketSeconds,
@@ -128,13 +128,13 @@ export function useToolParameterStats({
   readonly errorsOnly?: boolean
   readonly enabled?: boolean
 }) {
-  const scope = use(TraceScopeContext)
+  const scope = useProjectScope()
   return useQuery({
-    queryKey: [...traceScopeKey(scope), "tools-parameters", projectId, toolName, range, errorsOnly ?? false],
+    queryKey: [...projectScopeKey(scope), "tools-parameters", projectId, toolName, range, errorsOnly ?? false],
     queryFn: () =>
       getToolParameterStats({
         data: {
-          ...traceScopeData(scope),
+          ...projectScopeData(scope),
           projectId,
           toolName,
           ...range,
@@ -161,13 +161,13 @@ export function useToolContextBreakdown({
   readonly errorsOnly?: boolean
   readonly enabled?: boolean
 }) {
-  const scope = use(TraceScopeContext)
+  const scope = useProjectScope()
   return useQuery({
-    queryKey: [...traceScopeKey(scope), "tools-context", projectId, toolName, dimension, range, errorsOnly ?? false],
+    queryKey: [...projectScopeKey(scope), "tools-context", projectId, toolName, dimension, range, errorsOnly ?? false],
     queryFn: () =>
       getToolContextBreakdown({
         data: {
-          ...traceScopeData(scope),
+          ...projectScopeData(scope),
           projectId,
           toolName,
           dimension,
@@ -193,13 +193,13 @@ export function useToolCoOccurrence({
   readonly errorsOnly?: boolean
   readonly enabled?: boolean
 }) {
-  const scope = use(TraceScopeContext)
+  const scope = useProjectScope()
   return useQuery({
-    queryKey: [...traceScopeKey(scope), "tools-co-occurrence", projectId, toolName, range, errorsOnly ?? false],
+    queryKey: [...projectScopeKey(scope), "tools-co-occurrence", projectId, toolName, range, errorsOnly ?? false],
     queryFn: () =>
       getToolCoOccurrence({
         data: {
-          ...traceScopeData(scope),
+          ...projectScopeData(scope),
           projectId,
           toolName,
           ...range,
@@ -222,13 +222,13 @@ export function useToolErrorBreakdown({
   readonly range: ToolsTimeRange
   readonly enabled?: boolean
 }) {
-  const scope = use(TraceScopeContext)
+  const scope = useProjectScope()
   return useQuery({
-    queryKey: [...traceScopeKey(scope), "tools-error-breakdown", projectId, toolName, range],
+    queryKey: [...projectScopeKey(scope), "tools-error-breakdown", projectId, toolName, range],
     queryFn: () =>
       getToolErrorBreakdown({
         data: {
-          ...traceScopeData(scope),
+          ...projectScopeData(scope),
           projectId,
           toolName,
           ...range,
@@ -250,7 +250,7 @@ export function useRecentDefiningSpans({
   readonly range: ToolsTimeRange
   readonly enabled?: boolean
 }) {
-  const scope = use(TraceScopeContext)
+  const scope = useProjectScope()
   const {
     data: paginatedData,
     isLoading,
@@ -258,11 +258,11 @@ export function useRecentDefiningSpans({
     hasNextPage,
     isFetchingNextPage,
   } = useInfiniteQuery({
-    queryKey: [...traceScopeKey(scope), "tools-recent-defining", projectId, toolName, range],
+    queryKey: [...projectScopeKey(scope), "tools-recent-defining", projectId, toolName, range],
     queryFn: async ({ pageParam }) =>
       listRecentDefiningSpans({
         data: {
-          ...traceScopeData(scope),
+          ...projectScopeData(scope),
           projectId,
           toolName,
           ...range,

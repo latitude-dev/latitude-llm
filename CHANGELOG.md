@@ -2,6 +2,140 @@
 
 ## Unreleased
 
+## v0.3.40 - 2026-07-07
+
+### Search
+
+- Removed the legacy trace-search chunk embedding path and its feature flag, making semantic trace search and highlights use shared message embeddings exclusively (ref: #3904).
+
+### Web
+
+- Kept empty or loading trace lists on the animated connection blank slate so unconnected projects consistently guide users toward instrumentation, even after onboarding has been marked complete (ref: #3905).
+
+### Agent Dispatch
+
+- Updated Cursor dispatch to the v1 agents API payload, deterministic Cursor agent IDs, and immediate config cache updates after connecting a Cursor integration (ref: #3907).
+
+## v0.3.39 - 2026-07-07
+
+### Showcase
+
+- Added automated showcase project regeneration, atomic project swaps, daily cron scheduling, stale-project retirement, and self-healing cleanup so the demo project can refresh safely without leaving old generated projects behind (ref: #3887, #3898).
+
+### Telemetry
+
+- Added Pydantic AI telemetry onboarding, docs, and provider icon support for users instrumenting Python agents with Latitude (ref: #3893).
+
+### Reliability
+
+- Hardened flagger execution so prompt-too-long model failures are treated as no-match results and malformed message parts are skipped instead of crashing flagger runs (ref: #3889, #3874).
+- Serialized concurrent claim-token redemption to prevent duplicate organization-claim races (ref: #3899).
+
+### Web
+
+- Fixed searchable selects and rich-text interactions inside modals, including the members role modal, so popovers and editor focus remain usable while dialogs are open (ref: #3901, #3903).
+- Removed the agent-dispatch feature flag now that manual dispatch is generally available (ref: #3877).
+
+### Maintenance
+
+- Updated CI, Docker build, npm, Python telemetry, and OpenTelemetry dependency versions used by the workspace and release pipelines (ref: #3775, #3853, #3854, #3856, #3857, #3858, #3859, #3860, #3861, #3862, #3864, #3865).
+
+## v0.3.38 - 2026-07-06
+
+### Signals
+
+- Added a "Send to agent" action on the signal detail page, letting users copy an investigation prompt for local coding agents or manually dispatch the signal to configured cloud integrations such as Cursor Cloud, Claude Code Cloud, Linear, and webhooks (ref: #3845).
+
+### Agent Dispatch
+
+- Added the manual dispatch trigger path for signals, including prompt generation, per-send idempotency keys, dispatch-history labeling, project/config validation, and typed failure results for manual cloud sends (ref: #3845).
+
+### Web
+
+- Polished the integration settings and shared select/modal primitives used by agent-dispatch flows, including searchable selects inside modals, keyboard navigation helpers, provider icons for Cursor/Codex, and copyable dispatch-history errors (ref: #3845).
+
+## v0.3.37 - 2026-07-06
+
+### API and SDK
+
+- **Breaking:** collapsed the four lossy `TraceDetail` message fields (`systemInstructions`, `inputMessages`, `outputMessages`, `allMessages`) into a single `conversation` field on the `getTrace` endpoint. Real multi-turn agent traces showed `inputMessages` only captured the first turn and `outputMessages` only the last, dropping every intermediate turn and tool call, while `allMessages` was already a strict superset; it is now renamed `conversation`. Per-span message fields are unchanged. `openapi.json`, `mcp.json`, the TypeScript SDK (8.0.0), Python SDK (8.0.0), and CLI (6.0.0) were regenerated and bumped as breaking (ref: #3884).
+
+### Signals
+
+- Stopped semantic-similarity live and preview evaluations from persisting permanent false negatives: they now gate on real session embeddings for the active model and skip cleanly (without recording a failure) when vectors are missing, instead of scoring against absent message occurrences (ref: #3872).
+- Reworked the describe-signal generation UX around a new WebGL shader-animated `AgentTextarea` — a pulsing brand-color border with a pools-and-tide loading fill that keeps the textarea's own background in both themes, tuned for typing latency. "Generate signal" and "Configure manually" moved to the modal footer, the prompt stretches to full body height, and staged progress is mocked across the ~30s run until the worker streams real step events (ref: #3882).
+
+### Web
+
+- Re-enabled the in-app changelog sidebar and banner, now backed by a static JSON changelog API served from the marketing site; the old `@platform/changelog-framer` was replaced by a new `@platform/changelog-api` reader (ref: #3875).
+
+### Showcase
+
+- Added the showcase resolver chokepoint (S2): a `resolveShowcaseUseCase` and `resolveShowcaseAccess` server helper resolve the pinned showcase org/project from the `latitude.showcase` pointer (Redis-cached) with authz gating on the org's `wantsShowcase` flag. Behavior-neutral — nothing wires it yet (ref: #3881).
+
+### Design system
+
+- Reused the main app's favicon on the public design-system site, which previously served none (ref: #3883).
+
+### Infrastructure
+
+- Added the `design.latitude.so` Vercel CNAME to production DNS (ref: #3888).
+
+## v0.3.36 - 2026-07-06
+
+### Web
+
+- Showed the onboarding illustrations in the account-claim flow by extracting the onboarding right-pane into a shared component reused by both the onboarding and claim screens (ref: #3879).
+
+### Showcase
+
+- Landed the first backend slice of the showcase demo project: a new `@domain/showcase` package with a pointer table, repository, and a guarded create-showcase use-case, plus the Postgres migration. Backend-only groundwork with no user-facing behavior yet (ref: #3830).
+
+## v0.3.35 - 2026-07-06
+
+### Design system
+
+- Launched a standalone public design system site at `design.latitude.so`, extracted from the web app into its own Vite + TanStack Router SPA (`apps/design-system`); the in-app design-system routes were removed (ref: #3834).
+
+### Docs and onboarding
+
+- Published agentic onboarding docs: a new getting-started coding-agent guide covering zero-account and existing-account paths plus the claim flow, a README CLI mention, and in-app coding-agent onboarding copy; the `agentic-experience` spec was retired into `dev-docs/agentic-onboarding.md` (ref: #3876).
+
+### Web
+
+- Showed the billing usage counter in red when a free plan reaches its included credit limit, not only on metered overage (ref: #3878).
+- Laid groundwork for the showcase demo project: central mutation-error handling, a read-only write-gate middleware, a `ProjectScope` context, a globally reserved `lat-demo` project slug, and a per-org `wantsShowcase` flag set at org creation. Behavior-neutral today — no new toasts or blocked writes until the showcase scope is enabled (ref: #3822, #3829, #3831, #3828, #3827).
+
+### Reliability
+
+- Guarded trace search formatting against spans whose message parts are missing, preventing formatter crashes (ref: #3873).
+
+### Models
+
+- Updated the bundled `models.dev` data snapshot (ref: #3852).
+
+## v0.3.34 - 2026-07-05
+
+### Reliability
+
+- Resolved `quickjs-emscripten` at API runtime instead of bundling it, so tsdown no longer inlines the emscripten glue and signals script runs no longer die with "require is not a function" (ref: #3840).
+- Made Cursor agent-dispatch jobs idempotent and retryable: the Cursor adapter now sends the `agentId` as an idempotency key so retries and 409 conflicts dedupe instead of spawning duplicate agents/PRs, send jobs gained attempts/backoff, and claimed ledger rows are marked failed on final transport exhaustion (ref: #3808).
+- Bounded session span-list reads to stop ClickHouse OOMs: `listBySessionId` no longer returns the dynamic attribute maps, the membership coalesce uses bare column equalities so the session/trace bloom-filter skip indexes prune granules, and a 4 GB single-threaded formatting cap is applied to all multi-span reads (ref: #3850).
+
+### Models
+
+- Updated the bundled `models.dev` data snapshot (ref: #3772).
+
+### Infrastructure
+
+- Pointed the `latitude.so` apex and `www` at Vercel and added DNS records for public pages (ref: 26ee482, bd01561).
+
+## v0.3.33 - 2026-07-04
+
+### Web
+
+- Disabled the changelog sidebar UI while the API-backed changelog collection is being updated, preventing the web app from querying or showing the incomplete feature (ref: #3833).
+
 ## v0.3.32 - 2026-07-04
 
 ### Signals
@@ -1114,4 +1248,3 @@
 - Fixed SqlClient transaction isolation so concurrent Effect fibers use separate Postgres transactions while nested calls reuse the current transaction (ref: #3294).
 - Added Framer secrets to infrastructure and web runtime configuration (ref: 6782d44).
 - Updated bundled models.dev data and removed MCP plugin docs for now (refs: #3293, #3298).
-

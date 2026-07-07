@@ -1092,6 +1092,116 @@ ${"Detailed grounding, workflow, callout, and formatting rules. ".repeat(120)}`.
     expect(result).toEqual({ matched: false })
   })
 
+  it("recovers to matched=false when the trace evidence exceeds the model's context window", async () => {
+    const { repository } = createFakeTraceRepository({
+      findByTraceId: () =>
+        Effect.succeed(
+          makeTraceDetail([
+            {
+              role: "user",
+              parts: [{ type: "text", content: "Please do the task." }],
+            },
+            {
+              role: "assistant",
+              parts: [{ type: "text", content: "I'll look into that." }],
+            },
+          ]),
+        ),
+    })
+
+    const sdkError = new Error(
+      "The model returned the following errors: prompt is too long: 219045 tokens > 200000 maximum",
+    )
+    sdkError.name = "AI_APICallError"
+
+    const { layer: aiLayer } = createFakeAI({
+      generate: () =>
+        Effect.fail(
+          new AIError({
+            message: `AI generation failed (${FLAGGER_DEFAULT_CLASSIFIER_MODEL.provider}/${FLAGGER_DEFAULT_CLASSIFIER_MODEL.model}): ${sdkError.message}`,
+            cause: sdkError,
+          }),
+        ),
+    })
+
+    const result = await Effect.runPromise(
+      runFlaggerUseCase({ ...INPUT, flaggerSlug: "laziness" }).pipe(
+        Effect.provide(
+          Layer.mergeAll(
+            Layer.succeed(TraceRepository, repository),
+            Layer.succeed(ChSqlClient, createFakeChSqlClient({ organizationId: OrganizationId(INPUT.organizationId) })),
+            Layer.succeed(SqlClient, createFakeSqlClient({ organizationId: OrganizationId(INPUT.organizationId) })),
+            Layer.succeed(FlaggerRepository, defaultFlaggerRepo),
+            aiLayer,
+            defaultCacheLayer,
+          ),
+        ),
+      ),
+    )
+
+    expect(result).toEqual({ matched: false })
+  })
+
+  it("drops matched annotations when the reviewer call fails because the evidence is too long for the model", async () => {
+    const { repository } = createFakeTraceRepository({
+      findByTraceId: () =>
+        Effect.succeed(
+          makeTraceDetail([
+            {
+              role: "user",
+              parts: [{ type: "text", content: "Please do the task." }],
+            },
+            {
+              role: "assistant",
+              parts: [{ type: "text", content: "I'll look into that." }],
+            },
+          ]),
+        ),
+    })
+
+    const sdkError = new Error(
+      "The model returned the following errors: prompt is too long: 219045 tokens > 200000 maximum",
+    )
+    sdkError.name = "AI_APICallError"
+
+    const { calls, layer: aiLayer } = createFakeAI({
+      generate: <T>(input: GenerateInput<T>) => {
+        const isAnnotationReview = input.system?.includes("adversarial quality reviewer") ?? false
+        if (isAnnotationReview) {
+          return Effect.fail(
+            new AIError({
+              message: `AI generation failed (${FLAGGER_DEFAULT_CLASSIFIER_MODEL.provider}/${FLAGGER_DEFAULT_CLASSIFIER_MODEL.model}): ${sdkError.message}`,
+              cause: sdkError,
+            }),
+          )
+        }
+        return Effect.succeed({
+          object: { matched: true, feedback: "The assistant refused a benign request." } as T,
+          tokens: 20,
+          duration: 90_000_000,
+        })
+      },
+    })
+
+    const result = await Effect.runPromise(
+      runFlaggerUseCase({ ...INPUT, flaggerSlug: "refusal" }).pipe(
+        Effect.provide(
+          Layer.mergeAll(
+            Layer.succeed(TraceRepository, repository),
+            Layer.succeed(ChSqlClient, createFakeChSqlClient({ organizationId: OrganizationId(INPUT.organizationId) })),
+            Layer.succeed(SqlClient, createFakeSqlClient({ organizationId: OrganizationId(INPUT.organizationId) })),
+            Layer.succeed(FlaggerRepository, defaultFlaggerRepo),
+            aiLayer,
+            defaultCacheLayer,
+          ),
+        ),
+      ),
+    )
+
+    expect(result).toEqual({ matched: false })
+    expect(calls.generate).toHaveLength(2)
+  })
+
   it("uses flagger-specific prompt for laziness with work signals", async () => {
     const { repository } = createFakeTraceRepository({
       findByTraceId: () =>

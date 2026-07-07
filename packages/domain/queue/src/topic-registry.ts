@@ -50,6 +50,25 @@ const _registry = {
     reapExpired: Record<string, never>
   }>(),
 
+  showcase: payloads<{
+    /**
+     * Fired by a daily off-peak cron — builds a fresh `next` showcase project,
+     * gates it, and auto-swaps the pointer (S4). No payload: the handler reads
+     * the pointer to resolve the showcase org and re-anchors to "now".
+     */
+    regenerate: Record<string, never>
+    /**
+     * Retire + self-heal (S5). Reclaims a wedged `building` pointer and retires
+     * every showcase-org project that is neither `current` nor `next` via the
+     * standard PG soft-delete + `ProjectDeleted` path (ClickHouse telemetry ages
+     * out via the retention TTL, as for any deleted project). Fired both by a
+     * daily cron and by the regeneration workflow right after a swap (to promptly
+     * retire the just-swapped-out `current`). No payload: the handler reads the
+     * pointer.
+     */
+    cleanup: Record<string, never>
+  }>(),
+
   "user-deletion": payloads<{
     delete: {
       readonly organizationId: string
@@ -382,11 +401,6 @@ const _registry = {
       readonly projectId: string
       readonly scoreId: string
     }
-    markReviewStarted: {
-      readonly organizationId: string
-      readonly projectId: string
-      readonly scoreId: string
-    }
   }>(),
 
   scores: payloads<{
@@ -428,6 +442,8 @@ const _registry = {
       readonly projectId: string
       readonly traceId: string
       readonly isSandbox?: boolean
+      /** "embeddings-ready" re-triggers are filtered to semantic evals; absent/"ingest" is the trace-end pass. */
+      readonly reason?: "ingest" | "embeddings-ready"
     }
   }>(),
 
@@ -500,7 +516,6 @@ const _registry = {
     seedDemo: {
       readonly organizationId: string
       readonly projectId: string
-      readonly queueAssigneeUserIds: readonly string[]
       readonly apiKeyId: string
       readonly timelineAnchorIso: string
     }
@@ -514,22 +529,6 @@ const _registry = {
     create: {
       readonly organizationId: string
       readonly name: string
-    }
-  }>(),
-
-  "annotation-queues": payloads<{
-    bulkImport: {
-      readonly organizationId: string
-      readonly projectId: string
-      readonly queueId: string
-      readonly selection:
-        | { readonly mode: "selected"; readonly traceIds: readonly string[] }
-        | { readonly mode: "all"; readonly filters?: Record<string, unknown> }
-        | {
-            readonly mode: "allExcept"
-            readonly traceIds: readonly string[]
-            readonly filters?: Record<string, unknown>
-          }
     }
   }>(),
 

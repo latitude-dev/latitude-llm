@@ -141,6 +141,7 @@
               "telemetry/frameworks/haystack",
               "telemetry/frameworks/litellm",
               "telemetry/frameworks/dspy",
+              "telemetry/frameworks/pydantic-ai",
               "telemetry/frameworks/mastra",
               "telemetry/frameworks/eve",
               "telemetry/frameworks/flue",
@@ -210,6 +211,7 @@
         "group": "Understand",
         "pages": [
           "signals/overview",
+          "signals/create",
           "signals/management",
           "search/behaviours",
           {
@@ -226,6 +228,8 @@
             "group": "Evaluations",
             "pages": [
               "evaluations/overview",
+              "evaluations/detection-methods",
+              "evaluations/custom-scripts",
               "evaluations/triggers",
               "evaluations/alignment"
             ]
@@ -307,6 +311,7 @@
           "getting-started/concepts",
           "getting-started/mcp",
           "getting-started/cli",
+          "getting-started/skills",
           "more/slack",
           {
             "group": "Data destinations",

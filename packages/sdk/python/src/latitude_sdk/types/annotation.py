@@ -139,7 +139,7 @@ class Annotation(UniversalBaseModel):
         FieldMetadata(alias="sourceId"),
         pydantic.Field(
             alias="sourceId",
-            description='Origin marker. Sentinel `"UI"` / `"API"` / `"SYSTEM"` for drafts and automation, or an annotation-queue CUID for queue-authored rows.',
+            description='Origin marker. Sentinel `"UI"` / `"API"` / `"SYSTEM"` for drafts and automation, or a CUID for authored rows.',
         ),
     ]
     metadata: AnnotationMetadata

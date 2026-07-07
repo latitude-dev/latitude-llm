@@ -200,6 +200,16 @@ export class PermissionError extends Data.TaggedError("PermissionError")<{
   }
 }
 
+export class ReadOnlyProjectError extends Data.TaggedError("ReadOnlyProjectError")<{
+  readonly serverFnName?: string
+  readonly message?: string
+}> {
+  readonly httpStatus = 403
+  get httpMessage() {
+    return this.message ?? "This project is read-only"
+  }
+}
+
 export type DomainError =
   | RepositoryError
   | ConcurrentSqlTransactionError
@@ -207,8 +217,11 @@ export type DomainError =
   | NotFoundError
   | ConflictError
   | UnauthorizedError
+  | ForbiddenError
+  | RateLimitError
   | BadRequestError
   | PermissionError
+  | ReadOnlyProjectError
 
 export const toRepositoryError = (cause: unknown, operation: string): RepositoryError =>
   new RepositoryError({ cause, operation })
@@ -223,6 +236,22 @@ export const causesIncludePostgresUniqueViolation = (error: unknown): boolean =>
   while (current !== null && current !== undefined && !seen.has(current)) {
     seen.add(current)
     if (isRecord(current) && current.code === "23505") {
+      return true
+    }
+    current = isRecord(current) ? current.cause : undefined
+  }
+
+  return false
+}
+
+/** Walks nested `cause` chains for Postgres SQLSTATE `55P03` (lock_not_available). */
+export const causesIncludePostgresLockNotAvailable = (error: unknown): boolean => {
+  const seen = new Set<unknown>()
+  let current: unknown = error
+
+  while (current !== null && current !== undefined && !seen.has(current)) {
+    seen.add(current)
+    if (isRecord(current) && current.code === "55P03") {
       return true
     }
     current = isRecord(current) ? current.cause : undefined

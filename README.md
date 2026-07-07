@@ -1,18 +1,13 @@
 <p align="center">
-  <img src="docs/assets/readme/readme-banner.png?raw=true" alt="Latitude — issue detection for AI agents" width="100%" />
-</p>
-
-<p align="center">
-  <sub><b>New:</b> <a href="https://docs.latitude.so/getting-started/mcp">Latitude MCP server: connect your AI agent to Latitude →</a></sub>
+  <img src="docs/assets/readme/readme-banner.png?raw=true" alt="Latitude — self-healing AI agents" width="100%" />
 </p>
 
 <h1 align="center" style="border: none; margin-bottom: 8px;">
-  Open source AI Agent Monitoring
+Make your AI agents self-healing
 </h1>
 
 <p align="center">
-  Sentry, but for agents and LLMs.
-</p>
+Agents that fix themselves, at scale.</p>
 
 <p align="center">
   <a href="https://github.com/latitude-dev/latitude-llm/blob/main/LICENSE"><img src="https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/latitude-dev/latitude-llm/development/.github/badges/license.json" alt="License"></a>
@@ -42,14 +37,13 @@
 
 ## 🌈 Why Latitude?
 
-Latitude shows you **what will break next** in your AI Agent and helps you fix it before users notice.
+Latitude finds where your agent fails and gets it fixed.
+- **Observe**: one line of telemetry captures every trace: multi-turn sessions, tool calls, and full execution paths. _([traces](https://docs.latitude.so/observability/traces), [sessions](https://docs.latitude.so/observability/sessions), [tool-call observability](https://docs.latitude.so/observability/tool-calls), [OpenTelemetry ingest](https://docs.latitude.so/telemetry/otel-exporter))_
+- **Understand**: failing traces are auto-grouped into tracked signals with status, size, and trend, so you see what's breaking and how often. _([signals](https://docs.latitude.so/signals/overview), [flaggers](https://docs.latitude.so/annotations/flaggers), [behaviours](https://docs.latitude.so/search/behaviours), [semantic search](https://docs.latitude.so/search/overview), [annotations](https://docs.latitude.so/annotations/overview))_
+- **Fix**: Latitude dispatches your coding agents (Claude Code, Cursor) with the full context, sample traces, and a deep link. It writes the smallest correct fix and opens a PR. _([Agent Dispatch](https://docs.latitude.so/agent-dispatch/overview), [MCP server](https://docs.latitude.so/getting-started/mcp), [Linear](https://docs.latitude.so/agent-dispatch/linear) & [webhook dispatch](https://docs.latitude.so/agent-dispatch/webhooks))_
+- **Verify**: fixes are replayed against the real failing traces, so fixed failures don't come back. _([regression datasets](https://docs.latitude.so/test-and-fix/regression-testing), [monitors](https://docs.latitude.so/monitors/overview), alerts)_
 
-- **[Issue-centric](https://docs.latitude.so/issues/overview#issues)**: failed traces grouped into tracked issues, with status, size, and trend.
-- **[Human-aligned evals](https://docs.latitude.so/evaluations/alignment#evaluation-alignment)**: evals built automatically from your team's judgments, with an alignment score that tracks drift from human judgment over time.
-- **[Agent-native traces](https://docs.latitude.so/observability/overview#observability-overview)**: multi-turn sessions, tool calls, and full execution paths in one view.
-- **[Semantic search](https://docs.latitude.so/search/overview#search)**: find any trace by meaning, exact matches, or roughly similar sentences. No sampling, 100% of traces are searchable.
-- **[Issue alerts](https://latitude.so/changelog)**: get notified the moment a new issue is detected or an existing one escalates. Connect Slack, email, or webhooks.
-- **[MCP server](https://docs.latitude.so/getting-started/mcp)**: everything you can do in the Latitude UI, now available from your coding agent via MCP.
+Everything you can do in the UI is also available from your coding agent via the **[MCP server](https://docs.latitude.so/getting-started/mcp)** and the **[CLI](https://docs.latitude.so/getting-started/cli)**.
 
 ## 📚 Table of contents
 
@@ -74,7 +68,7 @@ Sign up at [latitude.so](https://latitude.so) and grab your API key and project 
 Paste this prompt into Claude Code, Cursor, Windsurf, Codex, OpenCode, or another coding agent:
 
 ```text
-Read the Latitude Telemetry AI skill from https://raw.githubusercontent.com/latitude-dev/skills/refs/heads/main/skills/latitude-telemetry/SKILL.md and add tracing to this application.
+Install the `latitude-setup` skill from `github.com/latitude-dev/skills`, and use it to add Latitude tracing to this app following best practices.
 ```
 
 ### Manual TypeScript setup

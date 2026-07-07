@@ -68,7 +68,6 @@ import {
   serializeFilters,
 } from "./trace-page-state.ts"
 import { TracesEmptyOnboarding } from "./traces-empty-onboarding.tsx"
-import { TracesEmptyState } from "./traces-empty-state.tsx"
 import { TracesView } from "./traces-view.tsx"
 
 export type ExplorerMode = "traces" | "sessions"
@@ -462,40 +461,17 @@ export function ProjectExplorer({ projectSlug }: { readonly projectSlug: string 
   ])
 
   const hasNoTraces = totalTraceCount === 0 && !hasActiveFilters && !hasSearchQuery
-  // `firstTraceAt` is the canonical "this project has ever received a trace"
-  // signal (set once by the checkFirstTrace worker). A null value means the
-  // project is genuinely unconnected — distinct from a connected project whose
-  // traces aged out, or an empty filtered result.
-  const isConnected = currentProject.firstTraceAt != null
-  const onboardingCompleted = currentProject.settings.onboardingCompleted === true
   const orgHasConnectedProjects = allProjects.some((p) => p.id !== currentProject.id && p.firstTraceAt != null)
+  const showConnectEmptyState = !hasActiveFilters && !hasSearchQuery && (isTracesCountLoading || hasNoTraces)
 
-  if (isTracesCountLoading && !hasActiveFilters && !hasSearchQuery) {
-    return (
-      <Layout>
-        <TracesEmptyState isLoading />
-      </Layout>
-    )
-  }
-
-  // Never connected + nothing to show → onboarding-style connect experience.
-  if (!isConnected && hasNoTraces && !onboardingCompleted) {
+  if (showConnectEmptyState) {
     return (
       <Layout>
         <TracesEmptyOnboarding
           projectId={currentProject.id}
           projectSlug={currentProject.slug}
-          orgHasConnectedProjects={orgHasConnectedProjects}
+          orgHasConnectedProjects={orgHasConnectedProjects || currentProject.firstTraceAt != null}
         />
-      </Layout>
-    )
-  }
-
-  // Connected before, or onboarding was completed by exploring the sample project → minimal placeholder.
-  if ((isConnected || onboardingCompleted) && hasNoTraces) {
-    return (
-      <Layout>
-        <TracesEmptyState />
       </Layout>
     )
   }

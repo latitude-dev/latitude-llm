@@ -1,5 +1,6 @@
 import type { TraceDetail } from "@domain/spans"
 import { cacheHitRate, formatCount, formatPercentage } from "@repo/utils"
+import { isRecord, iterMessageParts } from "./flagger-strategies/shared.ts"
 
 type TraceMessagesOnly = Pick<TraceDetail, "allMessages">
 
@@ -39,7 +40,10 @@ export function detectToolCallErrorsFlagger(trace: TraceMessagesOnly): Determini
     const message = trace.allMessages[msgIdx]!
     if (message.role !== "assistant" && message.role !== "tool" && message.role !== "function") continue
 
-    for (const part of message.parts) {
+    for (const rawPart of iterMessageParts(message.parts)) {
+      if (!isRecord(rawPart) || typeof rawPart.type !== "string") continue
+      const part = rawPart
+
       if (part.type === "tool_call") {
         if (message.role !== "assistant") continue
         const toolCallId = typeof part.id === "string" ? part.id.trim() : ""
@@ -77,10 +81,6 @@ export function detectToolCallErrorsFlagger(trace: TraceMessagesOnly): Determini
   }
 
   return NO_MATCH
-}
-
-function isRecord(value: unknown): value is Record<string, unknown> {
-  return typeof value === "object" && value !== null
 }
 
 function toNonEmptyString(value: unknown): string | null {
@@ -193,9 +193,9 @@ export function detectOutputSchemaValidationFlagger(trace: TraceDetail): Determi
   for (let msgIdx = 0; msgIdx < trace.allMessages.length; msgIdx++) {
     const message = trace.allMessages[msgIdx]!
     if (message.role !== "assistant") continue
-    for (const part of message.parts) {
-      if (part.type !== "text") continue
-      const content = typeof part.content === "string" ? part.content.trim() : ""
+    for (const rawPart of iterMessageParts(message.parts)) {
+      if (!isRecord(rawPart) || rawPart.type !== "text") continue
+      const content = typeof rawPart.content === "string" ? rawPart.content.trim() : ""
       if (!content || (!content.startsWith("{") && !content.startsWith("["))) continue
 
       if (content.endsWith(","))
@@ -247,13 +247,15 @@ export function detectEmptyResponseFlagger(trace: TraceDetail): DeterministicFla
   let hasNonTextProduction = false
   const textParts: string[] = []
 
-  for (const part of message.parts) {
+  for (const rawPart of iterMessageParts(message.parts)) {
+    if (!isRecord(rawPart) || typeof rawPart.type !== "string") continue
+    const part = rawPart
     if (part.type === "tool_call" || part.type === "reasoning") {
       hasNonTextProduction = true
       continue
     }
     if (part.type === "text") {
-      const content = (part as { content?: unknown }).content
+      const content = part.content
       if (typeof content === "string") textParts.push(content)
     }
   }

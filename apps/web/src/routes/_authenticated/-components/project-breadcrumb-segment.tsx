@@ -118,7 +118,7 @@ export function ProjectBreadcrumbSegment() {
             value={inputValue}
             onChange={(e) => setInputValue(e.target.value)}
           />
-          <ComboboxList>{(item: ProjectOption) => <ProjectOptionRow item={item} />}</ComboboxList>
+          <ComboboxList>{(item: ProjectOption) => <ProjectOptionRow key={item.key} item={item} />}</ComboboxList>
           <ComboboxEmpty>No projects found.</ComboboxEmpty>
         </ComboboxContent>
       </Combobox>

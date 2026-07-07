@@ -1,4 +1,5 @@
 import type { TraceDetail } from "@domain/spans"
+import { isMessagePart, iterMessageParts } from "./shared.ts"
 import type { DetectionResult, FlaggerStrategy } from "./types.ts"
 
 // ---------------------------------------------------------------------------
@@ -110,12 +111,12 @@ function extractToolCallSequence(trace: Pick<TraceDetail, "allMessages">): reado
     if (message.role !== "assistant") continue
     turn++
 
-    for (const part of message.parts) {
-      if (part.type !== "tool_call") continue
+    for (const part of iterMessageParts(message.parts)) {
+      if (!isMessagePart(part) || part.type !== "tool_call") continue
       const name = typeof part.name === "string" ? part.name.trim() : ""
       if (!name) continue
 
-      const rawArgs = (part as { arguments?: unknown }).arguments
+      const rawArgs = part.arguments
       entries.push({
         messageIndex,
         turn,

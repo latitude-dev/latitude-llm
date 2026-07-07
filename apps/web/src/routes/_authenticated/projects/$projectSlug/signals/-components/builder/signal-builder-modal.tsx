@@ -1,10 +1,11 @@
 import { compileSettingsToScript, DEFAULT_EVALUATION_SAMPLING, type SignalPreviewResult } from "@domain/evaluations"
 import type { EvaluationRuleCondition, EvaluationSettings, FilterSet } from "@domain/shared"
-import { Button, Input, Modal, Tabs, Text, Textarea, useMountEffect, useToast } from "@repo/ui"
+import { Button, Input, Modal, Tabs, Text, Textarea, useMountEffect, useStagedStatus, useToast } from "@repo/ui"
 import { useNavigate } from "@tanstack/react-router"
 import { useRef, useState } from "react"
 import {
   invalidateSignalQueries,
+  runSignalGeneration,
   runSignalPreview,
   useCreateSignal,
   useUpdateSignal,
@@ -24,24 +25,18 @@ type DetectorTab = "rules" | "llm" | "advanced"
 type StepId = "detector" | "scope" | "test" | "details"
 type EditTab = "detector" | "scope" | "test"
 
-const DETECTOR_TABS: ReadonlyArray<{ readonly id: DetectorTab; readonly title: string; readonly summary: string }> = [
+const DETECTOR_TABS: ReadonlyArray<{ readonly id: DetectorTab; readonly title: string }> = [
   {
     id: "rules",
     title: "Set of conditions",
-    summary:
-      "Match concrete facts about a session: a phrase in the reply, a failed tool, latency or cost over a limit. It's free and runs instantly.",
   },
   {
     id: "llm",
     title: "LLM as judge",
-    summary:
-      "Describe the behavior in your own words and an LLM reads each session and decides. Good for fuzzy things like tone or frustration.",
   },
   {
     id: "advanced",
     title: "Custom script",
-    summary:
-      "The evaluation as the exact script Latitude runs. Compiled from your settings, or written by hand for anything the other two can't express.",
   },
 ]
 
@@ -60,7 +55,22 @@ const EDIT_TAB_OPTIONS: { readonly id: EditTab; readonly label: string }[] = [
   { id: "test", label: "Test" },
 ]
 
+// Mocked progress timeline while generation does not stream steps; a real worker step,
+// when one arrives, overrides it.
+const GENERATION_STAGES = [
+  { atSeconds: 0, label: "Reading your description" },
+  { atSeconds: 4, label: "Drafting the evaluation" },
+  { atSeconds: 12, label: "Choosing scope and sampling" },
+  { atSeconds: 20, label: "Testing it against recent sessions" },
+  { atSeconds: 28, label: "Creating the signal" },
+]
+
 const emptyRuleDraft: RuleDraft = { match: "all", conditions: [] }
+const DEFAULT_ADVANCED_SCRIPT_PLACEHOLDER = compileSettingsToScript({
+  kind: "rule",
+  match: "any",
+  conditions: [{ type: "error" }],
+})
 
 const filterSetOrNull = (filter: FilterSet): FilterSet | null => (Object.keys(filter).length === 0 ? null : filter)
 
@@ -173,10 +183,20 @@ export function SignalBuilderModal({
   const [previewResult, setPreviewResult] = useState<SignalPreviewResult | null>(null)
   const [previewRunning, setPreviewRunning] = useState(false)
   const [isSaving, setIsSaving] = useState(false)
+  const [prompt, setPrompt] = useState("")
+  const [generating, setGenerating] = useState(false)
+  const [generationStep, setGenerationStep] = useState<string | null>(null)
+  const [generationError, setGenerationError] = useState<string | null>(null)
   const previewAbortRef = useRef<AbortController | null>(null)
-  // Cancel any in-flight preview poll when the modal unmounts (close) so it stops
-  // polling and can't resolve onto an unmounted component.
-  useMountEffect(() => () => previewAbortRef.current?.abort())
+  const generationAbortRef = useRef<AbortController | null>(null)
+  const stagedStep = useStagedStatus(GENERATION_STAGES, generating)
+  // Cancel any in-flight preview or generation poll when the modal unmounts (close) so it
+  // stops polling and can't resolve onto an unmounted component. Generation runs in a
+  // worker: aborting only stops polling, the signal is still created.
+  useMountEffect(() => () => {
+    previewAbortRef.current?.abort()
+    generationAbortRef.current?.abort()
+  })
 
   // The Custom script tab without a raw script is a *view* of the active settings draft: preview
   // and save keep using the settings payload, so merely looking at the compiled code never
@@ -252,6 +272,40 @@ export function SignalBuilderModal({
       to: "/projects/$projectSlug/signals/$signalId",
       params: { projectSlug, signalId },
     })
+  }
+
+  const generate = (): void => {
+    const trimmed = prompt.trim()
+    if (trimmed.length === 0 || generating) return
+    generationAbortRef.current?.abort()
+    const controller = new AbortController()
+    generationAbortRef.current = controller
+    setGenerating(true)
+    setGenerationError(null)
+    setGenerationStep(null)
+    void runSignalGeneration({
+      projectId,
+      prompt: trimmed,
+      filters: filterSetOrNull(filters),
+      signal: controller.signal,
+      onStep: (next) => {
+        if (!controller.signal.aborted) setGenerationStep(next)
+      },
+    })
+      .then((result) => {
+        if (controller.signal.aborted) return
+        if (result.status === "done") {
+          handleGenerated({ signalId: result.signalId })
+          return
+        }
+        if (result.status === "error") setGenerationError(result.error)
+        setGenerating(false)
+      })
+      .catch((error) => {
+        if (controller.signal.aborted) return
+        setGenerationError(toUserMessage(error))
+        setGenerating(false)
+      })
   }
 
   const openConditionEditor = (state: ConditionEditState) => {
@@ -354,7 +408,6 @@ export function SignalBuilderModal({
   // All three tabs are available in create and edit alike: an evaluation can be re-authored across kinds
   // (settings ⇄ raw script), and the update use-case persists whichever kind the user lands on.
   const detectorTabOptions = DETECTOR_TABS.map(({ id, title }) => ({ id, label: title }))
-  const activeMethod = DETECTOR_TABS.find((method) => method.id === tab)
 
   const footer = inConditionSubStep ? (
     <>
@@ -375,9 +428,14 @@ export function SignalBuilderModal({
       </Button>
     </>
   ) : !methodChosen ? (
-    <Button variant="outline" onClick={onClose}>
-      Cancel
-    </Button>
+    <>
+      <Button variant="link" disabled={generating} onClick={() => setMethodChosen(true)}>
+        Configure manually
+      </Button>
+      <Button onClick={generate} disabled={generating || prompt.trim().length === 0} isLoading={generating}>
+        Generate signal
+      </Button>
+    </>
   ) : (
     <>
       <Button
@@ -402,9 +460,10 @@ export function SignalBuilderModal({
   return (
     <Modal
       open
-      dismissible
+      dismissible={!generating}
       size="large"
       scrollable={false}
+      footerAlign={mode === "create" && !methodChosen ? "justify" : "right"}
       onOpenChange={(next) => {
         if (!next) onClose()
       }}
@@ -434,10 +493,11 @@ export function SignalBuilderModal({
       <div className="-mx-2 flex h-[min(60vh,36rem)] flex-col gap-4 overflow-y-auto px-2 pb-6">
         {!methodChosen ? (
           <DescribeSignalIntro
-            projectId={projectId}
-            filters={filterSetOrNull(filters)}
-            onManual={() => setMethodChosen(true)}
-            onCreated={handleGenerated}
+            prompt={prompt}
+            onPromptChange={setPrompt}
+            generating={generating}
+            step={generationStep ?? stagedStep}
+            error={generationError}
           />
         ) : null}
 
@@ -455,7 +515,6 @@ export function SignalBuilderModal({
                 active={tab}
                 onSelect={selectDetectorTab}
               />
-              {activeMethod ? <Text.H6 color="foregroundMuted">{activeMethod.summary}</Text.H6> : null}
             </div>
             {tab === "rules" ? (
               <RuleConditionList draft={ruleDraft} onChange={setRuleDraft} onEditCondition={openConditionEditor} />
@@ -465,6 +524,7 @@ export function SignalBuilderModal({
               <AdvancedDetectorEditor
                 compiled={compiledView}
                 script={scriptDraft}
+                placeholder={DEFAULT_ADVANCED_SCRIPT_PLACEHOLDER}
                 onScriptChange={setScriptDraft}
                 onDetach={detachToScript}
               />

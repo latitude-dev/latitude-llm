@@ -1,11 +1,10 @@
 import type { OpenAPIHono, z } from "@hono/zod-openapi"
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js"
 import { WebStandardStreamableHTTPServerTransport } from "@modelcontextprotocol/sdk/server/webStandardStreamableHttp.js"
+import { collectToolDescriptors, splitFlatInput } from "@repo/operations"
 import type { Context } from "hono"
 import { API_VERSION, MCP_INFO } from "../constants.ts"
 import type { AppEnv, ProtectedEnv } from "../types.ts"
-import { splitFlatInput } from "./flatten-input.ts"
-import { collectToolDescriptors } from "./registry.ts"
 
 /**
  * Mounts the MCP transport endpoint on `routes` (which already lives behind

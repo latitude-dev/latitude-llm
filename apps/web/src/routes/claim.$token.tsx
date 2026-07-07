@@ -21,6 +21,7 @@ import { submitOnboarding } from "../domains/users/user.functions.ts"
 import { getQueryClient } from "../lib/data/query-client.tsx"
 import { toUserMessage } from "../lib/errors.ts"
 import { createFormSubmitHandler } from "../lib/form-server-action.ts"
+import { OnboardingRightPane } from "./_authenticated/projects/$projectSlug/-components/onboarding/onboarding-right-pane.tsx"
 import * as FlaggersStep from "./_authenticated/projects/$projectSlug/-components/onboarding/steps/flaggers-step.tsx"
 import * as RoleStep from "./_authenticated/projects/$projectSlug/-components/onboarding/steps/role-step.tsx"
 import * as SlackStep from "./_authenticated/projects/$projectSlug/-components/onboarding/steps/slack-step.tsx"
@@ -285,9 +286,13 @@ function ClaimOnboarding({
     }
   }
 
+  const activeSteps: ReadonlyArray<ClaimOnboardingStep> = slackEnvConfigured
+    ? ["role", "flaggers", "slack"]
+    : ["role", "flaggers"]
+
   return (
-    <div className="flex min-h-screen w-full flex-col overflow-y-auto bg-background px-6 py-12 sm:px-12">
-      <div className="mx-auto flex w-full max-w-[880px] flex-1 flex-col justify-center">
+    <div className="flex h-screen min-h-0 w-full min-w-0 flex-row overflow-hidden bg-background">
+      <div className="flex h-full min-h-0 w-full min-w-0 flex-col overflow-y-auto overscroll-y-contain px-6 pt-12 pb-16 sm:px-12 sm:pt-16 sm:pb-20 lg:w-1/2 lg:border-r lg:border-border lg:px-24 lg:pt-24 lg:pb-32 [scrollbar-gutter:stable]">
         {step === "role" ? (
           <RoleStep.Left
             form={form}
@@ -316,6 +321,13 @@ function ClaimOnboarding({
           />
         )}
       </div>
+
+      <OnboardingRightPane
+        steps={activeSteps}
+        currentStep={step}
+        enabledFlaggerSlugs={enabledFlaggerSlugs}
+        availableFlaggers={availableFlaggers}
+      />
     </div>
   )
 }

@@ -56,9 +56,6 @@ export const createDomainEventsWorker = ({
           dedupeKey: `annotation-scores:publish-human:${payload.scoreId}`,
           debounceMs: SCORE_PUBLICATION_DEBOUNCE,
         }),
-        pub.publish("annotation-scores", "markReviewStarted", payload, {
-          dedupeKey: `annotation-scores:mark-review-started:${payload.scoreId}`,
-        }),
       ],
       { concurrency: "unbounded" },
     ).pipe(Effect.asVoid)
@@ -112,29 +109,8 @@ export const createDomainEventsWorker = ({
               },
             ),
           ),
-          // The signals matching pipeline runs every active evaluation against the trace. Published
-          // unconditionally with `isSandbox` in the payload (like trace-end); the consumer skips
-          // sandbox traces. Debounced like trace-end so evaluations fire on the settled trace.
-          ...event.payload.traceIds.map((traceId) =>
-            pub.publish(
-              "signals",
-              "match",
-              {
-                organizationId: event.payload.organizationId,
-                projectId: event.payload.projectId,
-                traceId,
-                isSandbox,
-              },
-              {
-                dedupeKey: buildTraceIngestedDedupeKey("signals:match", {
-                  organizationId: event.payload.organizationId,
-                  projectId: event.payload.projectId,
-                  traceId,
-                }),
-                debounceMs: TRACE_END_DEBOUNCE_MS,
-              },
-            ),
-          ),
+          // signals:match is now published from the trace-end job itself ("trace ends → match
+          // signals"), so it runs on the settled trace after trace-end's own debounce.
           // Not gated on `isSandbox`: first-trace detection is onboarding/marketing
           // telemetry, not LLM work. Outbound marketing/notification suppression for
           // sandbox orgs is AGE-113's concern (handled downstream), not this PR's.
@@ -484,7 +460,6 @@ export const createDomainEventsWorker = ({
     // the durable surfacing until a notification kind lands with the signals
     // rollout (specs/sandbox-runtime.md P1-2).
     EvaluationDetectorDegraded: () => Effect.void,
-    AnnotationQueueItemCompleted: () => Effect.void,
     ProjectDeleted: (event) =>
       Effect.all(
         [

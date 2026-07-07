@@ -56,6 +56,12 @@ export {
   waitForTaxonomyObservationStabilityActivity,
 } from "./session-intelligence-backfill-activities.ts"
 export {
+  assertShowcaseNextQualityActivity,
+  enqueueShowcaseCleanupActivity,
+  markShowcaseNextReadyActivity,
+  swapShowcaseActivity,
+} from "./showcase-regeneration-activities.ts"
+export {
   assignOrCreateSignal,
   assignScoreToSignal,
   checkEligibility,

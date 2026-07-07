@@ -203,7 +203,7 @@ A new group is a new user-visible category. Adding one requires schema edits at 
    - Define `deploymentNotificationsSettingSchema` with whatever inner shape is useful at the project level (per-kind, per-target-env, single boolean, etc.). The leaf granularity differs per group based on what users want to dial.
    - Add a project-level helper next to `isIncidentNotificationEnabled` (e.g. `isDeploymentNotificationEnabled`) that reads `settings?.notifications?.deployments?.<leaf> ?? true`.
    - Apply the gate in the matching `requestXxxNotificationsUseCase` before fan-out.
-   - Update the API schema in `apps/api/src/routes/projects.ts` to surface the new sub-shape (`DeploymentNotificationsSettingSchema`, etc.). Regenerate `openapi.json` + `mcp.json` via `pnpm --filter @app/api openapi:emit` + `mcp:emit`.
+   - Update the API schema in `packages/operations/src/operations/projects.ts` to surface the new sub-shape (`DeploymentNotificationsSettingSchema`, etc.). Regenerate `openapi.json` + `mcp.json` via `pnpm --filter @app/api openapi:emit` + `mcp:emit`.
    - Wire the new toggles into `apps/web/src/routes/_authenticated/projects/$projectSlug/settings.tsx`.
 5. **Tests**:
    - Update `request-incident-notifications.test.ts`-style suites for the new group's producer.

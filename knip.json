@@ -8,9 +8,6 @@
       ]
     },
     "apps/api": {
-      "entry": [
-        "src/openapi/pagination.ts"
-      ],
       "project": [
         "src/**/*.ts"
       ],
@@ -55,11 +52,22 @@
         "src/routes/**/*.tsx"
       ],
       "project": ["src/**/*.ts", "src/**/*.tsx"],
+      "ignore": [
+        "src/server/resolve-showcase-access.ts"
+      ],
       "ignoreDependencies": [
+        "@domain/showcase",
         "@temporalio/client",
         "quickjs-emscripten",
         "voyageai"
       ]
+    },
+    "apps/design-system": {
+      "entry": [
+        "src/main.tsx",
+        "src/routes/**/*.tsx"
+      ],
+      "project": ["src/**/*.{ts,tsx}"]
     },
     "infra": {
       "entry": [],
@@ -167,10 +175,6 @@
   "ignoreBinaries": [
     "tmuxinator",
     "pulumi",
-    "tsx",
-    "tsdown",
-    "mcp-inspector",
-    "email",
     "packages/cli/target/release/latitude"
   ],
   "ignoreDependencies": [
@@ -180,11 +184,7 @@
     "@pulumi/datadog",
     "@pulumi/random",
     "fern-api",
-    "chdb",
-    "tsx",
-    "zod",
-    "@modelcontextprotocol/inspector",
-    "react-email"
+    "chdb"
   ],
   "tags": [
     "-knipignore"

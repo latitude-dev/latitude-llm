@@ -23,6 +23,7 @@ import { Effect, Option } from "effect"
 import { z } from "zod"
 import { FLAGGER_DEFAULT_CLASSIFIER_MODEL, FLAGGER_DEFAULT_INSTRUCTION_EXTRACTOR_MODEL } from "../constants.ts"
 import { getFlaggerStrategy, hasFlaggerStrategy, isLlmCapableStrategy } from "../flagger-strategies/index.ts"
+import { isRecord, iterMessageParts } from "../flagger-strategies/shared.ts"
 import type { FlaggerSlug, FlaggerStrategy } from "../flagger-strategies/types.ts"
 import { FlaggerRepository } from "../ports/flagger-repository.ts"
 import { reflagSuppressionTags } from "../reflag.ts"
@@ -151,10 +152,6 @@ const INSPECTED_AGENT_CONTEXT_CACHE_VERSION = 1
 const INSPECTED_AGENT_CONTEXT_CACHE_PREFIX = `flaggers:inspected-agent-context:v${INSPECTED_AGENT_CONTEXT_CACHE_VERSION}:sha256:`
 const FALLBACK_SYSTEM_PROMPT_CHARS = 600
 
-function isRecord(value: unknown): value is Record<string, unknown> {
-  return typeof value === "object" && value !== null
-}
-
 function extractTextFromParts(parts: readonly unknown[]): string[] {
   return parts.flatMap((part) => {
     if (!isRecord(part) || part.type !== "text" || typeof part.content !== "string") return []
@@ -173,7 +170,7 @@ function extractInspectedSystemPrompt(trace: TraceDetail): string {
   return (
     extractTextFromParts(trace.systemInstructions).join("\n\n") ||
     trace.allMessages
-      .flatMap((message) => (message.role === "system" ? extractTextFromParts(message.parts) : []))
+      .flatMap((message) => (message.role === "system" ? extractTextFromParts(iterMessageParts(message.parts)) : []))
       .join("\n\n")
   )
 }
@@ -474,7 +471,7 @@ const buildClassificationSystemPrompt = (strategy: FlaggerStrategy, trace: Trace
 function renderAssistantResponsesForReview(trace: TraceDetail): string {
   const assistantResponses = trace.allMessages.flatMap((message, index) => {
     if (message.role !== "assistant") return []
-    const content = extractTextFromParts(message.parts).join("\n\n")
+    const content = extractTextFromParts(iterMessageParts(message.parts)).join("\n\n")
     if (!content) return []
 
     return [
@@ -580,15 +577,22 @@ const loadTraceDetail = (input: RunFlaggerInput) =>
   })
 
 // The Vercel AI SDK raises `NoObjectGeneratedError` / `NoOutputGeneratedError`
-// when the model returns output that does not materialize as the requested schema.
-// The flagger treats this as a "no match" signal instead of propagating the failure
-// — the model effectively failed to classify, which for a triage flagger is
-// indistinguishable from matched=false.
+// when the model returns output that does not materialize as the requested schema,
+// and `AI_APICallError` with a "prompt is too long" message when the trace evidence
+// exceeds the model's context window. The flagger treats both as a "no match" signal
+// instead of propagating the failure — the model effectively failed to classify,
+// which for a triage flagger is indistinguishable from matched=false.
 const isSchemaMismatchCause = (cause: unknown): boolean => {
   if (!(cause instanceof Error)) return false
   if (cause.name === "AI_NoObjectGeneratedError" || cause.name === "AI_NoOutputGeneratedError") return true
   return typeof cause.message === "string" && cause.message.includes("response did not match schema")
 }
+
+const isPromptTooLongCause = (cause: unknown): boolean =>
+  cause instanceof Error && typeof cause.message === "string" && cause.message.includes("prompt is too long")
+
+const isUnclassifiableModelFailureCause = (cause: unknown): boolean =>
+  isSchemaMismatchCause(cause) || isPromptTooLongCause(cause)
 
 /**
  * LLM classification for an already-loaded trace.
@@ -648,7 +652,7 @@ export const classifyTraceForFlaggerUseCase = Effect.fn("flaggers.classifyTraceF
     .pipe(
       Effect.map((result) => parseFlaggerOutput(result.object)),
       Effect.catchIf(
-        (error): error is AIError => error instanceof AIError && isSchemaMismatchCause(error.cause),
+        (error): error is AIError => error instanceof AIError && isUnclassifiableModelFailureCause(error.cause),
         () =>
           Effect.gen(function* () {
             yield* Effect.annotateCurrentSpan("flagger.flaggerSchemaMismatch", true)
@@ -680,7 +684,7 @@ export const classifyTraceForFlaggerUseCase = Effect.fn("flaggers.classifyTraceF
     .pipe(
       Effect.map((result) => result.object),
       Effect.catchIf(
-        (error): error is AIError => error instanceof AIError && isSchemaMismatchCause(error.cause),
+        (error): error is AIError => error instanceof AIError && isUnclassifiableModelFailureCause(error.cause),
         () =>
           Effect.gen(function* () {
             yield* Effect.annotateCurrentSpan("flagger.annotationReviewSchemaMismatch", true)
