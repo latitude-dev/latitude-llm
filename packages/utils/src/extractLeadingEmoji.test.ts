@@ -18,8 +18,8 @@ describe("extractLeadingEmoji", () => {
   })
 
   it("extracts the full flag emoji even when it precedes a title", () => {
-  expect(extractLeadingEmoji("🇺🇸 Team")).toEqual(["🇺🇸", "Team"])
-})
+    expect(extractLeadingEmoji("🇺🇸 Team")).toEqual(["🇺🇸", "Team"])
+  })
 
   it("extracts the full keycap emoji even when it precedes a title", () => {
     expect(extractLeadingEmoji("1️⃣ Team")).toEqual(["1️⃣", "Team"])
