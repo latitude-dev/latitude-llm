@@ -5,14 +5,14 @@ import { createOpenAI } from "@ai-sdk/openai"
 import { createOpenAICompatible } from "@ai-sdk/openai-compatible"
 import { fromNodeProviderChain } from "@aws-sdk/credential-providers"
 import {
+  type AgentStep,
+  type AgentToolDef,
   AIAgent,
   type AIAgentShape,
   AICredentialError,
   AIError,
   AIGenerate,
   type AIGenerateShape,
-  type AgentStep,
-  type AgentToolDef,
   EMBEDDING_DIMENSIONS,
   type EmbedInput,
   type EmbedResult,
@@ -25,7 +25,7 @@ import {
 } from "@domain/ai"
 import { getLatitudeTracer, runWithAiTelemetry } from "@platform/ai-latitude"
 import { parseEnv, parseEnvOptional } from "@platform/env"
-import { embed, generateText, jsonSchema, Output, rerank, stepCountIs, tool, type ToolSet } from "ai"
+import { embed, generateText, jsonSchema, Output, rerank, stepCountIs, type ToolSet, tool } from "ai"
 import { Effect, Layer } from "effect"
 import { z } from "zod"
 

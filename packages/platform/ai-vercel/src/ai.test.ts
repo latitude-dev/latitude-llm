@@ -405,10 +405,7 @@ describe("AIAgentLive.runAgent", () => {
     )
 
     expect(execute).toHaveBeenCalledWith({ projectSlug: "acme" })
-    expect(steps.map((s) => s.text)).toEqual([
-      "Investigating the ticket_cancellation tool",
-      "Creating the signal",
-    ])
+    expect(steps.map((s) => s.text)).toEqual(["Investigating the ticket_cancellation tool", "Creating the signal"])
     expect(result.steps).toHaveLength(2)
     expect(result.text).toBe("Done")
     expect(result.tokenUsage).toEqual({ input: 13, output: 7 })
