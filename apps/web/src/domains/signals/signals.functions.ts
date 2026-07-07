@@ -22,6 +22,7 @@ import {
   resolveSettings,
   SettingsReader,
   SignalId,
+  signalIdSchema,
 } from "@domain/shared"
 import {
   type ApplySignalLifecycleCommandResult,
@@ -169,7 +170,7 @@ export type SignalsListResultRecord = ReturnType<typeof toSignalsListResultRecor
 
 const signalRowMetricsInputSchema = z.object({
   projectId: z.string(),
-  signalIds: z.array(z.string()).min(1).max(100),
+  signalIds: z.array(signalIdSchema).min(1).max(100),
   timeRange: z
     .object({
       fromIso: z.iso.datetime().optional(),
@@ -190,7 +191,7 @@ export interface SignalRowMetricsRecord {
 
 const signalInputSchema = z.object({
   projectId: z.string(),
-  signalId: z.string(),
+  signalId: signalIdSchema,
 })
 
 const toSignalSummaryRecord = (issue: Signal) => ({
@@ -208,19 +209,19 @@ export type SignalSummaryRecord = ReturnType<typeof toSignalSummaryRecord>
 
 const signalDetailInputSchema = z.object({
   projectId: z.string(),
-  signalId: z.string(),
+  signalId: signalIdSchema,
 })
 
-const signalTracesInputSchema = z.object({
+export const signalTracesInputSchema = z.object({
   projectId: z.string(),
-  signalId: z.string(),
+  signalId: signalIdSchema,
   limit: z.number().int().min(1).max(100).optional(),
   offset: z.number().int().min(0).optional(),
 })
 
 const signalImpactInputSchema = z.object({
   projectId: z.string(),
-  signalId: z.string(),
+  signalId: signalIdSchema,
 })
 
 export interface SignalImpactRecord {
@@ -238,7 +239,7 @@ export interface SignalImpactRecord {
 
 const updateSignalTriageInputSchema = z.object({
   projectId: z.string(),
-  signalId: z.string(),
+  signalId: signalIdSchema,
   // `undefined` (key omitted) leaves the field unchanged; `null` clears it; a value sets it.
   assigneeId: z.string().nullable().optional(),
   priority: signalPrioritySchema.nullable().optional(),
@@ -254,18 +255,18 @@ const signalDimensionSchema = z.enum([
 
 const signalDimensionsInputSchema = z.object({
   projectId: z.string(),
-  signalId: z.string(),
+  signalId: signalIdSchema,
   dimension: signalDimensionSchema,
 })
 
 const signalOccurrencesInputSchema = z.object({
   projectId: z.string(),
-  signalId: z.string(),
+  signalId: signalIdSchema,
 })
 
 const relatedSignalsInputSchema = z.object({
   projectId: z.string(),
-  signalId: z.string(),
+  signalId: signalIdSchema,
 })
 
 // Cap on how many pinpointed example occurrences the carousel loads. Examples
@@ -324,7 +325,7 @@ export type SignalDetailRecord = ReturnType<typeof toSignalDetailRecord>
 
 const signalLifecycleActionInputSchema = z.object({
   projectId: z.string(),
-  signalId: z.string(),
+  signalId: signalIdSchema,
   command: signalLifecycleCommandSchema,
   keepMonitoring: z.boolean().optional(),
 })
@@ -846,7 +847,7 @@ export const listSignalSessions = createServerFn({ method: "GET" })
   })
 
 export const countSignalSessions = createServerFn({ method: "GET" })
-  .inputValidator(z.object({ projectId: z.string(), signalId: z.string() }))
+  .inputValidator(z.object({ projectId: z.string(), signalId: signalIdSchema }))
   .handler(async ({ data }): Promise<number> => {
     const { organizationId } = await requireSession()
     const orgId = OrganizationId(organizationId)
@@ -1370,7 +1371,7 @@ export const createSignal = createServerFn({ method: "POST" })
 
 const updateSignalInputSchema = z.object({
   projectId: z.string(),
-  signalId: z.string(),
+  signalId: signalIdSchema,
   name: z.string().min(1).optional(),
   description: z.string().min(1).optional(),
   filters: filterSetSchema.nullable().optional(),
@@ -1403,7 +1404,7 @@ export const updateSignal = createServerFn({ method: "POST" })
 
 const updateSignalEvaluationInputSchema = z.object({
   projectId: z.string(),
-  signalId: z.string(),
+  signalId: signalIdSchema,
   evaluation: evaluationDraftSchema,
   sampling: z.number().int().min(0).max(100).optional(),
 })
@@ -1437,7 +1438,7 @@ export const updateSignalEvaluation = createServerFn({ method: "POST" })
     },
   )
 
-const deleteSignalInputSchema = z.object({ projectId: z.string(), signalId: z.string() })
+const deleteSignalInputSchema = z.object({ projectId: z.string(), signalId: signalIdSchema })
 
 /** Soft-deletes a signal and archives its evaluation. */
 export const deleteSignal = createServerFn({ method: "POST" })
