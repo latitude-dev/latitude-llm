@@ -8,15 +8,17 @@ import {
   isLlmCapableStrategy,
   updateFlaggerUseCase,
 } from "@domain/flaggers"
-import { OrganizationId, ProjectId } from "@domain/shared"
+import { ProjectId } from "@domain/shared"
 import { RedisCacheStoreLive } from "@platform/cache-redis"
-import { FlaggerRepositoryLive, OutboxEventWriterLive, withPostgres } from "@platform/db-postgres"
+import { FlaggerRepositoryLive, OutboxEventWriterLive } from "@platform/db-postgres"
 import { withTracing } from "@repo/observability"
 import { createServerFn } from "@tanstack/react-start"
 import { Effect, Layer } from "effect"
 import { z } from "zod"
 import { requireSession } from "../../server/auth.ts"
 import { getPostgresClient, getRedisClient } from "../../server/clients.ts"
+import { requireScopedSession, resolveOrgScope } from "../../server/resolve-org-scope.ts"
+import { withScopedPostgres } from "../../server/scoped-postgres.ts"
 
 const humanizeSlug = (slug: string) => slug.replaceAll("-", " ").replace(/\b\w/g, (letter) => letter.toUpperCase())
 
@@ -106,9 +108,8 @@ export const listAvailableFlaggers = createServerFn({ method: "GET" }).handler(
 
 export const listFlaggersByProject = createServerFn({ method: "GET" })
   .inputValidator(z.object({ projectId: z.string() }))
-  .handler(async ({ data }): Promise<readonly FlaggerRecord[]> => {
-    const { organizationId } = await requireSession()
-    const orgId = OrganizationId(organizationId)
+  .handler(async ({ data, context }): Promise<readonly FlaggerRecord[]> => {
+    const orgId = await resolveOrgScope(context)
     const projectId = ProjectId(data.projectId)
     const client = getPostgresClient()
 
@@ -116,13 +117,13 @@ export const listFlaggersByProject = createServerFn({ method: "GET" })
       Effect.gen(function* () {
         const repo = yield* FlaggerRepository
         return yield* repo.listByProject({ projectId })
-      }).pipe(withPostgres(FlaggerRepositoryLive, client, orgId), withTracing),
+      }).pipe(withScopedPostgres(FlaggerRepositoryLive, client, orgId), withTracing),
     )
 
     const storedBySlug = new Map(stored.map((flagger) => [flagger.slug, flagger]))
     return FLAGGER_STRATEGY_SLUGS.map((slug) => {
       const row = storedBySlug.get(slug)
-      return row ? toFlaggerRecord(row) : toMissingFlaggerRecord(slug, organizationId, data.projectId)
+      return row ? toFlaggerRecord(row) : toMissingFlaggerRecord(slug, orgId, data.projectId)
     })
   })
 
@@ -135,20 +136,19 @@ export const configureProjectFlaggersForOnboarding = createServerFn({
       enabledSlugs: z.array(z.enum(FLAGGER_STRATEGY_SLUGS)),
     }),
   )
-  .handler(async ({ data }): Promise<void> => {
-    const { organizationId, userId } = await requireSession()
-    const orgId = OrganizationId(organizationId)
+  .handler(async ({ data, context }): Promise<void> => {
+    const { userId, organizationId: orgId } = await requireScopedSession(context)
     const projectId = ProjectId(data.projectId)
     const client = getPostgresClient()
 
     await Effect.runPromise(
       configureProjectFlaggersForOnboardingUseCase({
-        organizationId,
+        organizationId: orgId,
         projectId,
         enabledSlugs: data.enabledSlugs,
         actorUserId: userId,
       }).pipe(
-        withPostgres(Layer.mergeAll(FlaggerRepositoryLive, OutboxEventWriterLive), client, orgId),
+        withScopedPostgres(Layer.mergeAll(FlaggerRepositoryLive, OutboxEventWriterLive), client, orgId),
         Effect.provide(RedisCacheStoreLive(getRedisClient())),
         withTracing,
       ),
@@ -164,22 +164,21 @@ export const updateFlagger = createServerFn({ method: "POST" })
       sampling: z.number().int().min(0).max(100),
     }),
   )
-  .handler(async ({ data }): Promise<FlaggerRecord | null> => {
-    const { organizationId, userId } = await requireSession()
-    const orgId = OrganizationId(organizationId)
+  .handler(async ({ data, context }): Promise<FlaggerRecord | null> => {
+    const { userId, organizationId: orgId } = await requireScopedSession(context)
     const projectId = ProjectId(data.projectId)
     const client = getPostgresClient()
 
     const flagger = await Effect.runPromise(
       updateFlaggerUseCase({
-        organizationId,
+        organizationId: orgId,
         projectId,
         slug: data.slug,
         enabled: data.enabled,
         sampling: data.sampling,
         actorUserId: userId,
       }).pipe(
-        withPostgres(Layer.mergeAll(FlaggerRepositoryLive, OutboxEventWriterLive), client, orgId),
+        withScopedPostgres(Layer.mergeAll(FlaggerRepositoryLive, OutboxEventWriterLive), client, orgId),
         Effect.provide(RedisCacheStoreLive(getRedisClient())),
         withTracing,
       ),

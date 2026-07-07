@@ -43,7 +43,7 @@ vi.mock("../../../../../../../domains/annotations/annotations.collection.ts", ()
 }))
 
 vi.mock("../../../../../../../domains/members/members.collection.ts", () => ({
-  useMemberByUserIdMap: vi.fn(() => new Map()),
+  useProjectMemberByUserIdMap: vi.fn(() => new Map()),
 }))
 
 vi.mock("../../../../../../../domains/members/pick-users-from-members.ts", () => ({

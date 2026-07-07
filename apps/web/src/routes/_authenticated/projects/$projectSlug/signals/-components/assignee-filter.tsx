@@ -11,7 +11,7 @@ import {
 } from "@repo/ui"
 import { CheckIcon, ChevronDown, CircleDashedIcon, UserRoundIcon } from "lucide-react"
 import { useMemo } from "react"
-import { useMembersCollection } from "../../../../../../domains/members/members.collection.ts"
+import { useProjectMembersCollection } from "../../../../../../domains/members/members.collection.ts"
 
 /** Signals-list assignee filter token: a member userId or the unassigned sentinel. */
 export const UNASSIGNED_FILTER_TOKEN = "unassigned"
@@ -34,7 +34,7 @@ export function AssigneeFilter({
   readonly value: readonly string[]
   readonly onChange: (next: readonly string[]) => void
 }) {
-  const { data: members } = useMembersCollection()
+  const { data: members } = useProjectMembersCollection()
 
   const memberOptions = useMemo<AssigneeFilterOption[]>(() => {
     const rows = members ?? []
