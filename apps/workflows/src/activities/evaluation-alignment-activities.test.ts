@@ -101,7 +101,15 @@ vi.mock("@platform/ai", async () => {
 })
 
 vi.mock("../clients.ts", () => ({
+  getPostgresClient: () => ({}),
   getRedisClient: () => ({}),
+}))
+
+// Billing is exercised by @platform/ai metering tests and the billing worker suite;
+// here it would drag real Postgres billing repositories into the optimizer seam.
+vi.mock("./ai-metering.ts", () => ({
+  withActivityAIMetering: () => (effect: unknown) => effect,
+  activityMeteringKeyParts: (label: string) => [label, "test"],
 }))
 
 import { optimizeEvaluationDraft } from "./index.ts"

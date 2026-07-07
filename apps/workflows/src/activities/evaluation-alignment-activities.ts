@@ -1,4 +1,4 @@
-import { authorizeBillableAction, buildBillingIdempotencyKey, recordBillableActionUseCase } from "@domain/billing"
+import { authorizeBillableAction, buildBillingIdempotencyKey } from "@domain/billing"
 import {
   type BaselineEvaluationResult,
   type CollectedEvaluationAlignmentExamples,
@@ -16,7 +16,7 @@ import {
   type PersistEvaluationAlignmentResult,
   persistAlignmentResultUseCase,
 } from "@domain/evaluations"
-import { OrganizationId, ProjectId } from "@domain/shared"
+import { OrganizationId } from "@domain/shared"
 import { AIEmbedLive, AIGenerateLive, withAi } from "@platform/ai"
 import { RedisBillingSpendReservationLive } from "@platform/cache-redis"
 import { TraceRepositoryLive, withClickHouse } from "@platform/db-clickhouse"
@@ -36,6 +36,7 @@ import { QuickJsScriptRuntimeLive } from "@platform/sandbox-quickjs"
 import { createLogger, withTracing } from "@repo/observability"
 import { Data, Effect, Layer } from "effect"
 import { getClickhouseClient, getPostgresClient, getRedisClient } from "../clients.ts"
+import { withActivityAIMetering } from "./ai-metering.ts"
 
 const logger = createLogger("workflows-evaluation-alignment")
 
@@ -114,7 +115,7 @@ export const collectEvaluationAlignmentExamples = (input: {
 const buildEvaluationGenerationIdempotencyKey = (input: {
   readonly organizationId: string
   readonly billingOperationId: string
-}) => buildBillingIdempotencyKey("eval-generation", [input.organizationId, input.billingOperationId])
+}) => buildBillingIdempotencyKey("llm-call", [input.organizationId, input.billingOperationId, "authorize"])
 
 const authorizeEvaluationGenerationBillingEffect = Effect.fn("workflows.authorizeEvaluationGenerationBilling")(
   function* (input: {
@@ -126,7 +127,7 @@ const authorizeEvaluationGenerationBillingEffect = Effect.fn("workflows.authoriz
     const idempotencyKey = buildEvaluationGenerationIdempotencyKey(input)
     const authorization = yield* authorizeBillableAction({
       organizationId: OrganizationId(input.organizationId),
-      action: "eval-generation",
+      action: "llm-call",
       skipIfBlocked: true,
       idempotencyKey,
     })
@@ -134,48 +135,6 @@ const authorizeEvaluationGenerationBillingEffect = Effect.fn("workflows.authoriz
     return authorization.allowed
   },
 )
-
-const recordEvaluationGenerationUsageEffect = Effect.fn("workflows.recordEvaluationGenerationUsage")(function* (input: {
-  readonly organizationId: string
-  readonly projectId: string
-  readonly evaluationId: string | null
-  readonly billingOperationId: string
-}) {
-  const idempotencyKey = buildEvaluationGenerationIdempotencyKey(input)
-  // Re-authorize so we have a fresh `AuthorizedBillableActionContext` to
-  // pass to the recorder (the workflow cannot serialize `Date` objects
-  // cleanly across activities, and the resolved plan is cached for 60s
-  // anyway). The reservation is idempotent on `idempotencyKey`, so the
-  // Redis counter is not incremented twice.
-  const authorization = yield* authorizeBillableAction({
-    organizationId: OrganizationId(input.organizationId),
-    action: "eval-generation",
-    skipIfBlocked: true,
-    idempotencyKey,
-  })
-
-  if (!authorization.allowed) {
-    // Spending cap was lowered or the plan changed between authorize and
-    // record. Skip recording — work still happened, but persisting the
-    // usage event would breach the cap. This is the rare case the cap
-    // promise documents as a soft-overshoot.
-    return false
-  }
-
-  yield* recordBillableActionUseCase({
-    organizationId: OrganizationId(input.organizationId),
-    projectId: ProjectId(input.projectId),
-    action: "eval-generation",
-    idempotencyKey,
-    context: authorization.context,
-    metadata: {
-      evaluationId: input.evaluationId,
-      billingOperationId: input.billingOperationId,
-    },
-  })
-
-  return true
-})
 
 export const authorizeEvaluationGenerationBilling = (input: {
   readonly organizationId: string
@@ -207,35 +166,17 @@ export const authorizeEvaluationGenerationBilling = (input: {
     ),
   )
 
-export const recordEvaluationGenerationUsage = (input: {
+/**
+ * No-op kept for workflow replay determinism: usage is now recorded per LLM call by the
+ * AI metering scope inside the activities that execute the work. Remove together with
+ * its workflow call sites behind `patched()` once in-flight runs have drained.
+ */
+export const recordEvaluationGenerationUsage = (_input: {
   readonly organizationId: string
   readonly projectId: string
   readonly evaluationId: string | null
   readonly billingOperationId: string
-}): Promise<boolean> =>
-  Effect.runPromise(
-    recordEvaluationGenerationUsageEffect(input).pipe(
-      withPostgres(
-        evaluationGenerationBillingRepositoriesLive,
-        getPostgresClient(),
-        OrganizationId(input.organizationId),
-      ),
-      Effect.provide(RedisBillingSpendReservationLive(getRedisClient())),
-      withTracing,
-      Effect.tap((result) =>
-        result
-          ? Effect.void
-          : Effect.sync(() =>
-              logger.warn("Evaluation generation usage not recorded — billing cap moved during run", {
-                organizationId: input.organizationId,
-                projectId: input.projectId,
-                evaluationId: input.evaluationId,
-                billingOperationId: input.billingOperationId,
-              }),
-            ),
-      ),
-    ),
-  )
+}): Promise<boolean> => Promise.resolve(true)
 
 export const generateBaselineEvaluationDraft = (input: {
   readonly jobId: string
@@ -284,8 +225,19 @@ export const evaluateBaselineEvaluationDraft = (input: {
         jobId: input.jobId,
       },
     }).pipe(
+      withActivityAIMetering({
+        organizationId: input.organizationId,
+        projectId: input.projectId,
+        label: "eval-align-baseline",
+      }),
       withAi(AIGenerateLive, getRedisClient()),
       Effect.provide(QuickJsScriptRuntimeLive),
+      withPostgres(
+        evaluationGenerationBillingRepositoriesLive,
+        getPostgresClient(),
+        OrganizationId(input.organizationId),
+      ),
+      Effect.provide(RedisBillingSpendReservationLive(getRedisClient())),
       withTracing,
       Effect.mapError(
         (cause) =>
@@ -326,8 +278,19 @@ export const evaluateIncrementalEvaluationDraft = (input: {
         ...(input.jobId !== undefined ? { jobId: input.jobId } : {}),
       },
     }).pipe(
+      withActivityAIMetering({
+        organizationId: input.organizationId,
+        projectId: input.projectId,
+        label: "eval-align-incremental",
+      }),
       withAi(AIGenerateLive, getRedisClient()),
       Effect.provide(QuickJsScriptRuntimeLive),
+      withPostgres(
+        evaluationGenerationBillingRepositoriesLive,
+        getPostgresClient(),
+        OrganizationId(input.organizationId),
+      ),
+      Effect.provide(RedisBillingSpendReservationLive(getRedisClient())),
       withTracing,
       Effect.mapError(
         (cause) =>

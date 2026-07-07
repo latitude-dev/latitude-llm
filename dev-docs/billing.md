@@ -23,9 +23,35 @@ Plan semantics:
 Chargeable actions:
 
 - `trace = 1 credit`
-- `flagger-scan = 30 credits`
-- `live-eval-scan = 30 credits`
-- `eval-generation = 1,000 credits`
+- `semantic-query = 30 credits`
+- `llm-call = 250 credits`
+
+AI work is billed per primitive produced, not per feature-level scan: every hosted LLM
+generation is one `llm-call` and every query-time semantic operation (query embedding
+against the search index, or a `semanticSimilarity()` comparison in an evaluation run)
+is one `semantic-query`, wherever they are produced.
+
+### Credit price grounding
+
+Credit prices are grounded in the worst-case provider cost of one unit with a >=50%
+margin at the Pro overage rate (`$0.002/credit`). Re-run this derivation before changing
+a price, adding a model tier, or raising a token budget.
+
+Provider list prices used (per million tokens, Bedrock at first-party parity, checked
+2026-07): Claude Sonnet 4.6 `$3 in / $15 out`, Claude Haiku 4.5 `$1 / $5`, MiniMax M2.5
+`$0.30 / $1.20`, voyage-4-large embeddings `$0.12`, rerank-2.5 `~$0.05`.
+
+- `llm-call`: worst case is a Claude Sonnet 4.6 call at high reasoning (GEPA proposer,
+  signal generation) with an envelope of ~50k input + ~10k output tokens ≈ `$0.30`.
+  `250 credits = $0.50` at the overage rate → ~67% headroom over worst case. Cheap-model
+  calls (MiniMax judges, Haiku classifiers, worst case ≈ `$0.04`) carry a large margin by
+  construction of the flat price.
+- `semantic-query`: worst case is one voyage-4-large query embedding (32k-token context
+  ceiling ≈ `$0.004`) plus a rerank pass (≈ `$0.01`) ≈ `$0.015`. `30 credits = $0.06` →
+  4x worst case. Reranking and document-side embeddings ride on this charge (document
+  embeds are part of trace ingest and are covered by the `trace` credit).
+- `trace`: unchanged; ingest-side document embedding for a typical trace costs well
+  under one credit's overage value.
 
 ## Effective Plan Resolution
 
@@ -89,12 +115,49 @@ Trace ingestion splits enforcement (HTTP) from attribution (worker):
 4. **Persistence semantics**: `recordTraceUsageBatchUseCase` inserts append-only usage events with `ON CONFLICT DO NOTHING` on `(billing_period_start, idempotency_key)`, then advances `billing_usage_periods` atomically through `appendCreditsForBillingPeriod` by the number of newly inserted events in the flush. Parallel trace batches therefore preserve correct counters even under concurrent workers.
 5. If metering fails **after persistence**, ingest remains available (prioritize telemetry durability): log loudly with org/project/trace context and reconcile or retry idempotently out-of-band—the same trace key stays idempotent once billing dependency is healthy again.
 
+### AI metering scopes
+
+LLM calls and semantic queries are metered at the AI layer, not per feature. The
+`createAiLayer` composition in `@platform/ai` wraps every assembled AI service with
+`withAIMetering`, which charges against the ambient `AIMeteringScope`
+(`@domain/billing/src/ai-metering.ts`) when one is present in context:
+
+- `generate` → one `llm-call`, recorded on success and on `AIError` (the provider call
+  was attempted, tokens may have been consumed) but not on `AICredentialError`
+- `embed` with `inputType: "query"` → one `semantic-query`; document embeds and rerank
+  are never charged directly
+- the `semanticSimilarity()` evaluation host verb records one `semantic-query` per
+  executed comparison (its query embed is content-addressed as a document embed, so the
+  charge lives on the comparison, not the embed)
+
+The metering decorator sits **under** `withAICache`, so AI cache hits — which cost no
+provider tokens — are never charged.
+
+Without a scope in context, AI calls run unbilled. That is the intended default for
+platform-internal work (demo seeding, backoffice tooling); every org-serving AI entry
+point must provide a scope. Flows that carry one today: flagger runs and draft
+annotations, live evaluations (judge scripts and semantic-similarity rules), and
+evaluation alignment/optimization (baseline/incremental judging, GEPA proposals and
+candidate evaluation). Web-interactive semantic search (`planSearch` query embeds) meters
+automatically once its server functions provide a scope — pending follow-up.
+
+Scope idempotency keys are `{action}:{organizationId}:{...keyParts}:{sequence}` with the
+sequence assigned in call order. Retries of an operation whose calls replay
+deterministically (Temporal activities are keyed by run id + activity id) reproduce the
+same keys and dedupe; runs whose call order is not deterministic (GEPA's parallel judge
+fan-out) rely on the 24h AI cache to make retried calls free instead.
+
 Canonical charge points:
 
 - trace ingest metering: `apps/workers/src/workers/span-ingestion.ts` emits `TracesIngested`, `apps/workers/src/workers/domain-events.ts` routes billing work, and `apps/workers/src/workers/billing.ts` records once per distinct trace id using `trace:{organizationId}:{projectId}:{traceId}`
-- LLM flagger scans: `apps/workflows/src/activities/flagger-activities.ts` before `draftAnnotate`
-- live evaluations: `apps/workers/src/workers/live-evaluations.ts` immediately before hosted AI execution
-- eval generation: `apps/workflows/src/activities/evaluation-alignment-activities.ts` before expensive alignment generation/optimization work, keyed by `billingOperationId`
+- LLM flagger classification and annotation: `apps/workflows/src/activities/flagger-activities.ts`, metered per call under `flagger-run`/`flagger` scopes
+- live evaluations: `packages/domain/evaluations/src/use-cases/live/run-live-evaluation.ts`, metered per call under a `live-eval` scope
+- evaluation alignment and GEPA optimization: `apps/workflows/src/activities/evaluation-alignment-activities.ts` and `evaluation-optimization-activities.ts`, metered per call under per-activity scopes
+
+Expensive flows still authorize (and cap-reserve) **one** `llm-call` at the boundary
+before any AI work starts; per-call metering then records what actually ran. A flow that
+makes several calls can therefore overshoot a cap by the calls in one flow — the same
+intentional coarseness as the trace ingest gate.
 
 Retries must not double-charge. Idempotency is enforced by `billing_usage_events` on `(billing_period_start, idempotency_key)` and use-case fallback behavior that re-reads the same period snapshot when an event already exists.
 
@@ -104,7 +167,7 @@ Free organizations are hard capped.
 
 Enforcement rules:
 
-- chargeable AI work (`flagger-scan`, `live-eval-scan`, `eval-generation`) is skipped before execution once no credits remain
+- chargeable AI work (`llm-call`, `semantic-query`) is skipped before execution once no credits remain: expensive flows authorize one `llm-call` at their boundary and bail before doing AI work
 - ingest: the **ingest HTTP route** rejects over-limit payloads with **`402`**. Accepted payloads persist first; metering runs afterward inside the ingest worker (`402` semantics use `NoCreditsRemainingError` aligned with metering domain errors).
 
 The system never partially accepts only part of one ingest payload. Do **not** bypass the ingest billing gate—other producers must enqueue `span-ingestion` only after applying the **same credit checks**.
@@ -133,7 +196,7 @@ This applies to the same charge points as normal billing metering:
 Two layers of enforcement run in `authorizeBillableAction`:
 
 1. **Snapshot projection (Postgres)**: reads the current period's `consumedCredits`, computes the projected spend with this action included, and refuses immediately if the projection already exceeds the cap. This catches the simple sequential case.
-2. **Atomic spend reservation (Redis)**: when the caller supplies an `idempotencyKey`, the use-case asks the `BillingSpendReservation` port to reserve `creditsRequested` against an in-memory counter for the period, refusing if the resulting reservation total would exceed the cap. The Redis adapter runs this as a single Lua script so concurrent `live-eval-scan` and `flagger-scan` callers cannot all race past the snapshot check at the cap boundary. The same `idempotencyKey` reused on retry is a no-op success — matching the period-scoped Postgres usage-event idempotency semantics so worker retries don't double-reserve.
+2. **Atomic spend reservation (Redis)**: when the caller supplies an `idempotencyKey`, the use-case asks the `BillingSpendReservation` port to reserve `creditsRequested` against an in-memory counter for the period, refusing if the resulting reservation total would exceed the cap. The Redis adapter runs this as a single Lua script so concurrent AI-flow callers cannot all race past the snapshot check at the cap boundary. The same `idempotencyKey` reused on retry is a no-op success — matching the period-scoped Postgres usage-event idempotency semantics so worker retries don't double-reserve.
 
 The reservation counter is initialized lazily from the Postgres `consumedCredits` snapshot when the key is missing, so a fresh period or a Redis cold start re-syncs to the authoritative value. The counter is not decremented when the worker writes to Postgres — the reservation already counts that consumption — and the period TTL evicts the key after rollover.
 

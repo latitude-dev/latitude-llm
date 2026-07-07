@@ -74,7 +74,7 @@ describe("recordBillableActionUseCase", () => {
       recordBillableActionUseCase({
         organizationId: ORGANIZATION_ID,
         projectId: PROJECT_ID,
-        action: "live-eval-scan",
+        action: "semantic-query",
         idempotencyKey: "live-eval:1",
         context: {
           planSlug: "pro",

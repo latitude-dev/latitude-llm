@@ -1,4 +1,13 @@
 export {
+  AIMeteringScope,
+  type AIMeteringScopeShape,
+  type MakeAIMeteringScopeInput,
+  type MeteredAIAction,
+  makeAIMeteringScope,
+  provideAIMeteringScope,
+  type RecordMeteredAIActionInput,
+} from "./ai-metering.ts"
+export {
   ACTION_CREDITS,
   BILLING_INCLUDED_CREDITS_PG_MAX,
   BILLING_OVERAGE_SYNC_THROTTLE_MS,
@@ -44,6 +53,7 @@ export {
   billingUsagePeriodSchema,
 } from "./entities/billing-usage-period.ts"
 export {
+  AIMeteringRecordError,
   InvalidBillingIdempotencyKeyError,
   NoCreditsRemainingError,
   NoSubscriptionFoundError,

@@ -73,7 +73,7 @@ describe("authorizeBillableAction", () => {
     const result = await Effect.runPromise(
       authorizeBillableAction({
         organizationId: ORGANIZATION_ID,
-        action: "live-eval-scan",
+        action: "semantic-query",
         skipIfBlocked: true,
         idempotencyKey: "live-eval:1",
       }).pipe(Effect.provide(createLayer())),
@@ -111,7 +111,7 @@ describe("authorizeBillableAction", () => {
     const result = await Effect.runPromise(
       authorizeBillableAction({
         organizationId: ORGANIZATION_ID,
-        action: "live-eval-scan",
+        action: "semantic-query",
         skipIfBlocked: true,
         idempotencyKey: "live-eval:2",
       }).pipe(Effect.provide(createLayer({ periods }))),
@@ -142,7 +142,7 @@ describe("authorizeBillableAction", () => {
     const result = await Effect.runPromise(
       authorizeBillableAction({
         organizationId: ORGANIZATION_ID,
-        action: "live-eval-scan",
+        action: "semantic-query",
         skipIfBlocked: true,
         idempotencyKey: "live-eval:3",
       }).pipe(
@@ -182,7 +182,7 @@ describe("authorizeBillableAction", () => {
     const run = () =>
       authorizeBillableAction({
         organizationId: ORGANIZATION_ID,
-        action: "live-eval-scan",
+        action: "semantic-query",
         skipIfBlocked: true,
         idempotencyKey: "live-eval:retry",
       }).pipe(
@@ -211,7 +211,7 @@ describe("authorizeBillableAction", () => {
     const result = await Effect.runPromise(
       authorizeBillableAction({
         organizationId: ORGANIZATION_ID,
-        action: "live-eval-scan",
+        action: "semantic-query",
         skipIfBlocked: true,
         idempotencyKey: "live-eval:free-reservation",
       }).pipe(Effect.provide(createLayer({ reservation }))),

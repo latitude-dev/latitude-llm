@@ -1,8 +1,9 @@
 import {
   authorizeBillableAction,
   buildBillingIdempotencyKey,
+  makeAIMeteringScope,
   NoCreditsRemainingError,
-  recordBillableActionUseCase,
+  provideAIMeteringScope,
 } from "@domain/billing"
 import { OrganizationId, ProjectId, TraceId } from "@domain/shared"
 import { Effect } from "effect"
@@ -20,17 +21,23 @@ export interface DraftFlaggerAnnotationWithBillingInput {
 export const draftFlaggerAnnotationWithBillingUseCase = Effect.fn("flaggers.draftFlaggerAnnotationWithBilling")(
   function* (input: DraftFlaggerAnnotationWithBillingInput) {
     const organizationId = OrganizationId(input.organizationId)
-    const idempotencyKey = buildBillingIdempotencyKey("flagger-scan", [
+    const authorizationKey = buildBillingIdempotencyKey("llm-call", [
       input.organizationId,
+      "flagger",
       input.flaggerSlug,
       input.traceId,
+      "authorize",
     ])
 
+    // Boundary gate: authorize (and reserve) one llm-call before any AI work. The
+    // scope below then records what the flow actually produces, so a flow that makes
+    // several calls may overshoot a cap by the calls in one flow — same intentional
+    // coarseness as the trace ingest gate.
     const billing = yield* authorizeBillableAction({
       organizationId,
-      action: "flagger-scan",
+      action: "llm-call",
       skipIfBlocked: true,
-      idempotencyKey,
+      idempotencyKey: authorizationKey,
     })
 
     if (!billing.allowed) {
@@ -38,26 +45,21 @@ export const draftFlaggerAnnotationWithBillingUseCase = Effect.fn("flaggers.draf
         new NoCreditsRemainingError({
           organizationId,
           planSlug: billing.context.planSlug,
-          action: "flagger-scan",
+          action: "llm-call",
         }),
       )
     }
 
-    const output = (yield* draftFlaggerAnnotationUseCase(input)) as DraftFlaggerAnnotationOutput
-
-    yield* recordBillableActionUseCase({
+    const meteringScope = yield* makeAIMeteringScope({
       organizationId,
       projectId: ProjectId(input.projectId),
-      action: "flagger-scan",
-      idempotencyKey,
+      keyParts: ["flagger", input.flaggerSlug, input.traceId],
       context: billing.context,
       traceId: TraceId(input.traceId),
-      metadata: {
-        flaggerSlug: input.flaggerSlug,
-        traceId: input.traceId,
-      },
     })
 
-    return output
+    return (yield* draftFlaggerAnnotationUseCase(input).pipe(
+      provideAIMeteringScope(meteringScope),
+    )) as DraftFlaggerAnnotationOutput
   },
 )

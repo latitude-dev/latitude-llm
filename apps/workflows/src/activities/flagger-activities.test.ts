@@ -3,6 +3,7 @@ import { Effect, Layer } from "effect"
 import { beforeEach, describe, expect, it, vi } from "vitest"
 
 const {
+  authorizeBillableActionMock,
   draftFlaggerAnnotationWithBillingUseCaseMock,
   loggerErrorMock,
   loggerInfoMock,
@@ -15,6 +16,7 @@ const {
   }
 
   return {
+    authorizeBillableActionMock: vi.fn(),
     draftFlaggerAnnotationWithBillingUseCaseMock: vi.fn(),
     loggerErrorMock: vi.fn(),
     loggerInfoMock: vi.fn(),
@@ -27,6 +29,12 @@ const {
 vi.mock("@domain/billing", () => ({
   BillingSpendReservation: { key: "BillingSpendReservation" },
   NoCreditsRemainingError: noCreditsRemainingErrorClass,
+  authorizeBillableAction: authorizeBillableActionMock,
+  buildBillingIdempotencyKey: (action: string, parts: readonly string[]) => [action, ...parts].join(":"),
+  makeAIMeteringScope: vi.fn((input: { organizationId: string }) =>
+    Effect.succeed({ organizationId: input.organizationId, record: () => Effect.void }),
+  ),
+  provideAIMeteringScope: () => (effect: unknown) => effect,
 }))
 
 vi.mock("@platform/cache-redis", () => ({
@@ -87,6 +95,9 @@ import { draftAnnotate, runFlagger } from "./flagger-activities.ts"
 describe("flagger activities", () => {
   beforeEach(() => {
     vi.clearAllMocks()
+    authorizeBillableActionMock.mockReturnValue(
+      Effect.succeed({ allowed: true, period: null, context: { planSlug: "pro" } }),
+    )
   })
 
   it("returns flagger result on success", async () => {
@@ -101,6 +112,22 @@ describe("flagger activities", () => {
 
     expect(result).toEqual({ matched: true })
     expect(loggerInfoMock).toHaveBeenCalledTimes(1)
+  })
+
+  it("skips the flagger run without executing when billing blocks it", async () => {
+    authorizeBillableActionMock.mockReturnValueOnce(
+      Effect.succeed({ allowed: false, period: null, context: { planSlug: "free" } }),
+    )
+
+    const result = await runFlagger({
+      organizationId: "org-1",
+      projectId: "proj-1",
+      traceId: "trace-1",
+      flaggerSlug: "refusal",
+    })
+
+    expect(result).toEqual({ matched: false })
+    expect(runFlaggerUseCaseMock).not.toHaveBeenCalled()
   })
 
   it("propagates AI errors for retry", async () => {

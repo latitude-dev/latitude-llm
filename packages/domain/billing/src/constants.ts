@@ -10,15 +10,19 @@ export const BILLING_OVERAGE_SYNC_THROTTLE_MS = 5 * 60_000 // 5 minutes
 
 export const SELF_SERVE_PLAN_SLUGS: readonly PlanSlug[] = ["pro"] as const
 
-export const CHARGEABLE_ACTIONS = ["trace", "flagger-scan", "live-eval-scan", "eval-generation"] as const
+export const CHARGEABLE_ACTIONS = ["trace", "semantic-query", "llm-call"] as const
 
 export type ChargeableAction = (typeof CHARGEABLE_ACTIONS)[number]
 
+/**
+ * Credit prices are grounded in worst-case provider cost with a >=50% margin at the
+ * Pro overage rate ($0.002/credit). Derivation lives in dev-docs/billing.md — re-run
+ * it before changing a price or adding a model tier.
+ */
 export const ACTION_CREDITS: Record<ChargeableAction, number> = {
   trace: 1,
-  "flagger-scan": 30,
-  "live-eval-scan": 30,
-  "eval-generation": 1000,
+  "semantic-query": 30,
+  "llm-call": 250,
 } as const
 
 export const FREE_PLAN_CONFIG = {

@@ -90,7 +90,7 @@ describe("recordUsageEventUseCase", () => {
       id: "evt-dup",
       organizationId: ORGANIZATION_ID,
       projectId: PROJECT_ID,
-      action: "live-eval-scan",
+      action: "semantic-query",
       credits: 30,
       idempotencyKey: "dup-key",
       happenedAt: new Date("2026-01-15T00:00:00.000Z"),
@@ -102,7 +102,7 @@ describe("recordUsageEventUseCase", () => {
       recordUsageEventUseCase({
         organizationId: ORGANIZATION_ID,
         projectId: PROJECT_ID,
-        action: "live-eval-scan",
+        action: "semantic-query",
         idempotencyKey: "dup-key",
         planSlug: "pro",
         planSource: "subscription",
@@ -215,7 +215,7 @@ describe("checkCreditAvailabilityUseCase", () => {
     const allowed = await Effect.runPromise(
       checkCreditAvailabilityUseCase({
         organizationId: ORGANIZATION_ID,
-        action: "live-eval-scan",
+        action: "semantic-query",
         planSlug: "free",
         periodStart: PERIOD_START,
         periodEnd: PERIOD_END,
@@ -250,7 +250,7 @@ describe("checkCreditAvailabilityUseCase", () => {
     const allowed = await Effect.runPromise(
       checkCreditAvailabilityUseCase({
         organizationId: ORGANIZATION_ID,
-        action: "live-eval-scan",
+        action: "semantic-query",
         planSlug: "pro",
         periodStart: PERIOD_START,
         periodEnd: PERIOD_END,

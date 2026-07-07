@@ -761,10 +761,8 @@ describe("runLiveEvaluationUseCase", () => {
     })
     expect(duplicateCheckCalls).toBe(2)
     expect(scriptRuntime.calls.run).toHaveLength(1)
-    expect(outboxEvents.map((event) => (event as { eventName: string }).eventName)).toEqual([
-      "BillingUsagePeriodUpdated",
-    ])
-    expect(operations).toEqual(["billing-outbox-write", "score-save"])
+    expect(outboxEvents).toEqual([])
+    expect(operations).toEqual(["score-save"])
   })
 
   it("skips when the trace no longer exists", async () => {
@@ -881,7 +879,7 @@ describe("runLiveEvaluationUseCase", () => {
     expect(calls.generate).toHaveLength(0)
   })
 
-  it("records billing after hosted AI execution completes", async () => {
+  it("writes no flat billing record — usage is metered per AI call by the AI layer", async () => {
     const evaluation = makeEvaluation({ script: VALID_SCRIPT })
     const issue = makeSignal({ id: SignalId(evaluation.signalId) })
     const traceDetail = makeTraceDetail()
@@ -931,7 +929,7 @@ describe("runLiveEvaluationUseCase", () => {
     )
 
     expect(result.action).toBe("persisted")
-    expect(operations).toEqual(["script-run", "billing-outbox-write", "score-outbox-write"])
+    expect(operations).toEqual(["script-run", "score-outbox-write"])
     expect(scriptRuntime.calls.run).toHaveLength(1)
   })
 
@@ -1215,10 +1213,7 @@ describe("runLiveEvaluationUseCase", () => {
     })
     expect(persistedScores.get(result.context.score.id)).toEqual(result.context.score)
     expect(inserted).toEqual([result.context.score.id])
-    expect(outboxEvents.map((event) => (event as { eventName: string }).eventName)).toEqual([
-      "BillingUsagePeriodUpdated",
-      "ScoreCreated",
-    ])
+    expect(outboxEvents.map((event) => (event as { eventName: string }).eventName)).toEqual(["ScoreCreated"])
     expect(scriptRuntime.calls.run).toHaveLength(1)
     expectImmutableAnalyticsSyncOrder(operations)
   })
@@ -1320,10 +1315,7 @@ describe("runLiveEvaluationUseCase", () => {
     })
     expect(persistedScores.get(result.context.score.id)).toEqual(result.context.score)
     expect(inserted).toEqual([result.context.score.id])
-    expect(outboxEvents.map((event) => (event as { eventName: string }).eventName)).toEqual([
-      "BillingUsagePeriodUpdated",
-      "ScoreCreated",
-    ])
+    expect(outboxEvents.map((event) => (event as { eventName: string }).eventName)).toEqual(["ScoreCreated"])
     expectImmutableAnalyticsSyncOrder(operations)
   })
 
@@ -1404,10 +1396,7 @@ describe("runLiveEvaluationUseCase", () => {
     })
     expect(persistedScores.get(result.context.score.id)).toEqual(result.context.score)
     expect(inserted).toEqual([result.context.score.id])
-    expect(outboxEvents.map((event) => (event as { eventName: string }).eventName)).toEqual([
-      "BillingUsagePeriodUpdated",
-      "ScoreCreated",
-    ])
+    expect(outboxEvents.map((event) => (event as { eventName: string }).eventName)).toEqual(["ScoreCreated"])
     expect(scriptRuntime.calls.run).toHaveLength(1)
     expectImmutableAnalyticsSyncOrder(operations)
   })

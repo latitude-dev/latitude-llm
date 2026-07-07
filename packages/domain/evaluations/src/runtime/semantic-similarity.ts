@@ -1,9 +1,10 @@
 import { AI, AIError, type AIProviderModelConfig, resolveEmbeddingConfig } from "@domain/ai"
+import { AIMeteringScope } from "@domain/billing"
 import type { HostSimilarityFunction } from "@domain/sandbox"
 import { cosineSimilarity, type OrganizationId, type ProjectId, TraceId } from "@domain/shared"
 import { MessageEmbeddingRepository, TraceSearchRepository } from "@domain/spans"
 import { hash } from "@repo/utils"
-import { Effect } from "effect"
+import { Effect, Option } from "effect"
 
 /**
  * Bounds a hostile Advanced-tab script: each distinct query embeds at most once (content-addressed),
@@ -152,6 +153,16 @@ export const buildSemanticSimilarityHost = ({
         for (const vector of sessionVectors) {
           maxSimilarity = Math.max(maxSimilarity, cosineSimilarity(queryVector, vector))
         }
+
+        // Each executed comparison is one billable semantic query; the early empty-session
+        // return above did no semantic work and stays free.
+        const meteringScope = yield* Effect.serviceOption(AIMeteringScope)
+        if (Option.isSome(meteringScope)) {
+          yield* meteringScope.value
+            .record({ action: "semantic-query", metadata: { kind: "semantic-similarity" } })
+            .pipe(Effect.mapError((cause) => new AIError({ message: cause.httpMessage, cause })))
+        }
+
         return { similarity: maxSimilarity, tokens }
       })
 

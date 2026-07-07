@@ -2087,6 +2087,9 @@ importers:
       '@domain/ai':
         specifier: workspace:*
         version: link:../../domain/ai
+      '@domain/billing':
+        specifier: workspace:*
+        version: link:../../domain/billing
       '@platform/ai-vercel':
         specifier: workspace:*
         version: link:../ai-vercel

@@ -6,7 +6,8 @@ import {
   type BillingUsageEventRepository,
   type BillingUsagePeriodRepository,
   buildBillingIdempotencyKey,
-  recordBillableActionUseCase,
+  makeAIMeteringScope,
+  provideAIMeteringScope,
   type StripeSubscriptionLookup,
   type UnknownStripePlanError,
 } from "@domain/billing"
@@ -297,16 +298,17 @@ export const runLiveEvaluationUseCase = (input: RunLiveEvaluationInput) =>
     } satisfies LiveEvaluationSignalContext
 
     const billingOrganizationId = OrganizationId(input.organizationId)
-    const idempotencyKey = buildBillingIdempotencyKey("live-eval-scan", [
-      input.organizationId,
-      evaluation.id,
-      input.traceId,
-    ])
     const authorization = yield* authorizeBillableAction({
       organizationId: billingOrganizationId,
-      action: "live-eval-scan",
+      action: "llm-call",
       skipIfBlocked: true,
-      idempotencyKey,
+      idempotencyKey: buildBillingIdempotencyKey("llm-call", [
+        input.organizationId,
+        "live-eval",
+        evaluation.id,
+        input.traceId,
+        "authorize",
+      ]),
     })
 
     if (!authorization.allowed) {
@@ -324,6 +326,17 @@ export const runLiveEvaluationUseCase = (input: RunLiveEvaluationInput) =>
       traceDetail,
     })
 
+    // Per-primitive metering: every LLM call and query-time embedding the script
+    // produces is recorded through this scope by the AI layer, in call order, so a
+    // retried job replays the same idempotency keys instead of double-charging.
+    const meteringScope = yield* makeAIMeteringScope({
+      organizationId: billingOrganizationId,
+      projectId: ProjectId(input.projectId),
+      keyParts: ["live-eval", evaluation.id, input.traceId],
+      context: authorization.context,
+      traceId: TraceId(input.traceId),
+    })
+
     const executionStartedAt = performance.now()
     const execution = yield* executeLiveEvaluationUseCase({
       organizationId: input.organizationId,
@@ -339,6 +352,7 @@ export const runLiveEvaluationUseCase = (input: RunLiveEvaluationInput) =>
         traceId: input.traceId,
       }),
     }).pipe(
+      provideAIMeteringScope(meteringScope),
       Effect.map(
         (result) =>
           ({
@@ -352,26 +366,6 @@ export const runLiveEvaluationUseCase = (input: RunLiveEvaluationInput) =>
         LiveEvaluationExecutionError: (error) => Effect.succeed(toErroredExecution(error.message, executionStartedAt)),
       }),
     )
-
-    // Record billing AFTER the AI work has been attempted so a crash between
-    // authorization and execution does not charge the customer for work that
-    // never ran. The Redis spend reservation taken during `authorizeBillableAction`
-    // protects the spending cap; the Postgres usage event written here is the
-    // truth-of-record that ultimately drives Stripe overage. Both completed and
-    // errored executions are recorded — work was attempted and AI tokens may
-    // have been consumed — but not skips that returned earlier.
-    yield* recordBillableActionUseCase({
-      organizationId: billingOrganizationId,
-      projectId: ProjectId(input.projectId),
-      action: "live-eval-scan",
-      idempotencyKey,
-      context: authorization.context,
-      traceId: TraceId(input.traceId),
-      metadata: {
-        evaluationId: evaluation.id,
-        traceId: input.traceId,
-      },
-    })
 
     // A failed run is a silent false negative, so runs/errors are counted per
     // owner as detector health. Accounting is best-effort: a cache hiccup

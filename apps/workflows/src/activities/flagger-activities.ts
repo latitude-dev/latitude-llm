@@ -1,4 +1,10 @@
-import { NoCreditsRemainingError } from "@domain/billing"
+import {
+  authorizeBillableAction,
+  buildBillingIdempotencyKey,
+  makeAIMeteringScope,
+  NoCreditsRemainingError,
+  provideAIMeteringScope,
+} from "@domain/billing"
 import {
   draftFlaggerAnnotationWithBillingUseCase,
   type FlaggerAnnotateOutput,
@@ -6,7 +12,7 @@ import {
   runFlaggerUseCase,
   saveFlaggerAnnotationUseCase,
 } from "@domain/flaggers"
-import { OrganizationId } from "@domain/shared"
+import { OrganizationId, ProjectId, TraceId } from "@domain/shared"
 import { AIEmbedLive, AIGenerateLive, withAi } from "@platform/ai"
 import { RedisBillingSpendReservationLive, RedisCacheStoreLive } from "@platform/cache-redis"
 import {
@@ -39,10 +45,48 @@ export const runFlagger = async (input: {
   readonly flaggerSlug: string
 }): Promise<RunFlaggerResult> =>
   Effect.runPromise(
-    runFlaggerUseCase(input).pipe(
-      withPostgres(FlaggerRepositoryLive, getPostgresClient(), OrganizationId(input.organizationId)),
+    Effect.gen(function* () {
+      const organizationId = OrganizationId(input.organizationId)
+      const authorization = yield* authorizeBillableAction({
+        organizationId,
+        action: "llm-call",
+        skipIfBlocked: true,
+        idempotencyKey: buildBillingIdempotencyKey("llm-call", [
+          input.organizationId,
+          "flagger-run",
+          input.flaggerSlug,
+          input.traceId,
+          "authorize",
+        ]),
+      })
+
+      if (!authorization.allowed) {
+        logger.info("Flagger run skipped — billing limit reached", {
+          organizationId: input.organizationId,
+          traceId: input.traceId,
+          flaggerSlug: input.flaggerSlug,
+        })
+        return { matched: false } satisfies RunFlaggerResult
+      }
+
+      const meteringScope = yield* makeAIMeteringScope({
+        organizationId,
+        projectId: ProjectId(input.projectId),
+        keyParts: ["flagger-run", input.flaggerSlug, input.traceId],
+        context: authorization.context,
+        traceId: TraceId(input.traceId),
+      })
+
+      return yield* runFlaggerUseCase(input).pipe(provideAIMeteringScope(meteringScope))
+    }).pipe(
+      withPostgres(
+        Layer.mergeAll(FlaggerRepositoryLive, billingLayers),
+        getPostgresClient(),
+        OrganizationId(input.organizationId),
+      ),
       withClickHouse(TraceRepositoryLive, getClickhouseClient(), OrganizationId(input.organizationId)),
       withAi(Layer.mergeAll(AIEmbedLive, AIGenerateLive), getRedisClient()),
+      Effect.provide(RedisBillingSpendReservationLive(getRedisClient())),
       Effect.provide(RedisCacheStoreLive(getRedisClient())),
       withTracing,
       Effect.tap(() =>

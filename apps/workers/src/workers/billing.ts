@@ -44,7 +44,7 @@ interface RecordTraceUsageBatchPayload {
 interface RecordBillableActionPayload {
   readonly organizationId: string
   readonly projectId: string
-  readonly action: "trace" | "flagger-scan" | "live-eval-scan" | "eval-generation"
+  readonly action: "trace" | "semantic-query" | "llm-call"
   readonly idempotencyKey: string
   readonly context: {
     readonly planSlug: "free" | "pro" | "enterprise"
