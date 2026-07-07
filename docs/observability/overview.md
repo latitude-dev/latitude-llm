@@ -14,7 +14,7 @@ For the complete product vocabulary, see [Core Concepts](../getting-started/conc
 Latitude uses three telemetry levels:
 
 - **Spans**: individual operations such as LLM calls, tool invocations, retrieval steps, HTTP requests, or custom work.
-- **Traces**: complete interactions composed of one or more spans. Traces are the main unit for debugging, search, annotations, scores, evaluations, and issues.
+- **Traces**: complete interactions composed of one or more spans. Traces are the main unit for debugging, search, annotations, scores, evaluations, and signals.
 - **Sessions**: optional groups of related traces, usually a multi-turn conversation or workflow identified by a stable session id.
 
 ```text
@@ -38,7 +38,7 @@ Observability views help you answer questions such as:
 - Which model, provider, tool, or service was involved?
 - Where did latency, cost, or errors come from?
 - Which user, session, release, environment, tags, or metadata are attached?
-- What annotations, scores, or issue signals are connected to this trace?
+- What annotations, scores, or signals are connected to this trace?
 
 ## Trace completion
 
@@ -49,7 +49,7 @@ Once a trace is complete, Latitude can:
 - make the conversation available in [Search](../search/overview)
 - run matching [Evaluations](../evaluations/overview)
 - apply enabled [Flaggers](../annotations/flaggers)
-- update related [Scores](../scores/overview) and [Issues](../signals/overview)
+- update related [Scores](../scores/overview) and [Signals](../signals/overview)
 
 ## Next steps
 

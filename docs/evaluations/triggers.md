@@ -1,86 +1,45 @@
 ---
-title: Evaluation Triggers
-description: Configure which traces an evaluation runs against and when
+title: Evaluation triggers
+description: Configure which sessions an evaluation runs on, and how many.
 ---
 
-# Evaluation Triggers
+# Evaluation triggers
 
-Every evaluation has a **trigger configuration** that determines which traces it evaluates. Triggers control monitoring scope without changing the evaluation's detection strategy.
+An evaluation's trigger decides which sessions it runs on and how many of them. It controls monitoring scope and cost without changing how the evaluation decides a match.
 
-## How Triggers Work
+## Scope: which sessions to check
 
-When a trace completes, Latitude checks it against each active evaluation's trigger configuration:
+By default an evaluation runs on every session in your project. Narrow it with filters. When you [create a signal](../signals/create), the Scope step offers these dimensions:
 
-1. **Filter**: Does the trace match the evaluation's filter criteria?
-2. **Sampling**: Should this matching trace be evaluated?
-3. **Turn**: Is this the right turn in the session?
+- Tags
+- Services
+- Models
+- Providers
+- Metadata (any `metadata.*` key your app sends)
 
-If a trace passes all checks, the evaluation runs. Otherwise, it skips that trace.
+With filters set, only matching sessions run through the evaluation, and everything else is skipped. An empty filter means every session.
 
-Triggers use the same **shared filter system** as trace views and saved searches.
+Scope uses the same shared filter system as trace views and [saved searches](../search/saved-searches), so a filter you build for search translates directly to an evaluation's scope. You can also open the builder pre-scoped from a search, using "Create signal from this search."
 
-## Trigger Fields
+## Sampling: how many to check
 
-### Filter
+Sampling is the percentage of matching sessions the evaluation actually runs on, from 0 to 100.
 
-Select which traces the evaluation monitors using any combination of shared filters:
+- It defaults to 10 percent for a new signal.
+- Setting it to 0 pauses the evaluation. The configuration is kept, but no sessions are checked.
+- A [set of conditions](./detection-methods#set-of-conditions) is free and instant, so 100 percent is usually fine. An LLM judge, or a script that calls an LLM, costs money and time per check, so a lower rate keeps costs down while still catching the pattern on a high-traffic project.
 
-- **Status**: Errors or successful traces
-- **Models**: Specific models
-- **Providers**: Specific providers
-- **Tags**: Specific tags
-- **Cost**: Above or below a cost threshold
-- **Duration**: Above or below a duration threshold
-- **Custom metadata**: Any `metadata.*` fields your application sends
+## Timing
 
-An empty filter means "match all traces."
+Latitude runs an evaluation as sessions complete, so it acts on finished work rather than partial executions. The exact turn it runs on, and any debouncing for multi-turn sessions, are handled for you. You set the scope and the sampling rate, and Latitude manages the rest.
 
-### Sampling
+## Scope, search, and annotations
 
-The percentage of matching traces that the evaluation runs against, from 0 to 100. Sampling controls cost and processing time while preserving coverage.
+Scope and sampling control automated monitoring. [Search](../search/overview) and [annotations](../annotations/overview) cover human review: use search to inspect relevant sessions, then annotate the ones that need human judgment for alignment or discovery. [Flaggers](../annotations/flaggers) add automatic signal for a fixed list of common categories.
 
-- Setting sampling to `0` effectively pauses the evaluation.
-- New evaluations generated from issues default to `10%` sampling.
+## Next steps
 
-### Turn
-
-Controls which trace or turn the evaluation runs on:
-
-- **`every`**: Run on every completed trace (the default)
-- **`first`**: Run only on the first trace or turn in a session
-- **`last`**: Run only on the last trace or turn in a session
-
-Use this when an evaluation only makes sense at the start or end of a conversation.
-
-## Trigger Examples
-
-**Monitor all production traces for jailbreak attempts:**
-
-- Filter: metadata `environment` = "production"
-- Sampling: 100%
-- Turn: every
-
-**Spot-check expensive traces for quality:**
-
-- Filter: cost > $0.50
-- Sampling: 25%
-- Turn: every
-
-**Evaluate only the last turn of each session:**
-
-- Filter: empty
-- Sampling: 10%
-- Turn: last
-
-## Triggers, Search, and Annotations
-
-Triggers scope automated monitoring. Search and annotations cover human review: use search to inspect relevant traces, then add annotations when you need human judgment for alignment or signal discovery.
-
-[Flaggers](../annotations/flaggers) provide automatic signal for a fixed list of common categories.
-
-## Next Steps
-
-- [Alignment](./alignment): How human annotations calibrate evaluations
-- [Evaluations Overview](./overview): How evaluations work
-- [Annotations](../annotations/overview): The human side of the feedback loop
-- [Search](../search/overview): Build cohorts of traces to review
+- [Detection methods](./detection-methods): how an evaluation decides a match
+- [Alignment](./alignment): how human annotations calibrate evaluations
+- [Evaluations overview](./overview): how evaluations work
+- [Search](../search/overview): build cohorts of sessions to review

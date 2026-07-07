@@ -14,7 +14,7 @@ This guide walks you through connecting an existing AI agent to Latitude. By the
 
 ## Step 1: Create a Project
 
-After signing in, create a new project from the dashboard. Projects are the main boundary for all reliability features: issues, evaluations, flaggers, and saved searches are all scoped to a project.
+After signing in, create a new project from the dashboard. Projects are the main boundary for all reliability features: signals, evaluations, flaggers, and saved searches are all scoped to a project.
 
 Give your project a descriptive name that matches the agent or feature you're monitoring.
 
@@ -45,7 +45,7 @@ Scores come from three sources:
 2. **Annotations**: human review verdicts from your team
 3. **Custom**: scores you submit from your own code via the API
 
-Your project starts with default [flaggers](../annotations/flaggers) that automatically annotate traces for common problems like jailbreaking, refusals, frustration, and tool call errors. Flagger annotations are written directly on matching traces and feed straight into signal discovery, so you'll see issues forming from your live traffic without configuring anything.
+Your project starts with default [flaggers](../annotations/flaggers) that automatically annotate traces for common problems like jailbreaking, refusals, frustration, and tool call errors. Flagger annotations are written directly on matching traces and feed straight into signal discovery, so you'll see signals forming from your live traffic without configuring anything.
 
 ## Step 5: Explore with Search and Annotate
 
@@ -68,4 +68,4 @@ Your annotations feed into signal discovery and evaluation alignment alongside t
 - [Annotations](../annotations/overview): Build human review workflows
 - [Flaggers](../annotations/flaggers): Automatic annotators for common failure categories
 - [Evaluations](../evaluations/overview): Set up automated monitoring
-- [Issues](../signals/overview): Understand how failure patterns are discovered
+- [Signals](../signals/overview): Understand how failure patterns are discovered

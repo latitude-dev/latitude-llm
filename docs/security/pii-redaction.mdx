@@ -73,7 +73,7 @@ latitude = Latitude(
 Latitude's internal systems are designed to avoid unnecessary sensitive-data exposure:
 
 - Internal AI workflows receive only the trace context needed for the task.
-- Product workflows prefer summaries, derived labels, scores, and issue examples over raw payloads.
+- Product workflows prefer summaries, derived labels, scores, and signal examples over raw payloads.
 - Sensitive implementation details and omitted payloads are not exposed in generated customer-facing explanations.
 - Latitude-managed inference stays within the hosted data boundary described in [Data protection](./data-protection).
 

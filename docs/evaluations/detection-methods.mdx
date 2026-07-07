@@ -1,0 +1,92 @@
+---
+title: Detection methods
+description: The three ways an evaluation decides whether a session matches a signal: a set of conditions, an LLM judge, or a custom script.
+---
+
+When you create a signal, you define how Latitude decides whether a session belongs to it. That check is the signal's evaluation, and you can build it three ways.
+
+| Method | How it decides | Cost | Good for |
+| --- | --- | --- | --- |
+| [Set of conditions](#set-of-conditions) | Deterministic checks on facts about the session | Free, instant | Concrete facts: a phrase, a failed tool, latency over a limit |
+| [LLM as judge](#llm-as-judge) | An LLM reads each session and decides | One LLM call per checked session | Fuzzy behavior: tone, frustration, made-up answers |
+| [Custom script](#custom-script) | JavaScript you write | Depends on the script | Logic the other two can't express |
+
+All three produce the same kind of detector, and a signal has one active detector at a time. You can switch methods while you build or edit a signal.
+
+## Set of conditions
+
+A set of conditions checks concrete facts about a session. Each condition is a small deterministic test. Conditions are free and run instantly, so this is the method to start with.
+
+Add up to 10 conditions and choose how they combine:
+
+- **All**: every condition must hold (AND).
+- **Any**: at least one condition must hold (OR).
+
+The match selector appears once you have two or more conditions. A single condition just has to hold.
+
+### Condition types
+
+| Condition | What it checks | Options |
+| --- | --- | --- |
+| Text match | A message contains, doesn't contain, matches, or doesn't match text or a regex | Where; operator; value; case sensitive |
+| Semantic similarity | A message is semantically close to a query | Query; sensitivity, or a custom threshold |
+| Empty output | The assistant produced no output | None |
+| Output length | The assistant output's length compared to a value | Characters or words; operator; value |
+| JSON output | The assistant output is valid or invalid JSON | Valid or invalid |
+| Metric | A session or trace metric compared to a value | Metric; aggregation; operator; value |
+| Tool used | A specific tool was called | Tool name |
+| Tool failed | A tool call ended with an error status | Tool name (optional; empty means any tool) |
+| Tool call count | How many tool calls happened | Operator; value |
+| Error | The trace or session ended in an error state | None |
+| Finish reason | The model's finish reason, such as stop, length, or tool_calls | Value |
+
+A few details are worth knowing:
+
+- **Where** (for text match) picks which messages to look at: the last assistant message, any assistant message, any user message, any tool message, or the whole conversation.
+- **Comparison operators** read as "greater than", "at least", "less than", and "at most".
+- **Metric** works in display units: duration in milliseconds, cost in dollars. The available metrics are duration, cost, total or input or output tokens, error count, trace count, and span count. Aggregation decides whether a metric is summed across the session or compared per trace.
+- **Tool failed** and **Error** look at the error status of a tool call or trace, not at the content of a tool's output. A tool that returns the word "error" in an otherwise normal result does not count as failed.
+- **Semantic similarity** compares messages to a query using the embeddings Latitude already computed for the session. It is the one condition that isn't instant, because it works on embeddings.
+
+### Semantic similarity sensitivity
+
+The sensitivity presets map to a similarity threshold:
+
+| Preset | Threshold |
+| --- | --- |
+| Broad | 0.40 |
+| Balanced | 0.55 |
+| Strict | 0.70 |
+
+Broad matches loosely and catches more. Strict matches only close paraphrases. Start with Balanced and adjust from the preview, or set an exact threshold and operator under Advanced.
+
+## LLM as judge
+
+An LLM judge reads each matching session and decides whether the behavior is present, with a short reason. You describe the behavior in plain language in the "A session matches when..." field:
+
+> the user got frustrated, repeating themselves, complaining, or giving up before getting a useful answer
+
+Use a judge for behavior that is hard to pin to a fixed rule: tone, frustration, whether the answer actually resolved the request, or whether the model made something up. Latitude writes the prompt and manages the model, so you only supply the criteria.
+
+Each check sends a session to an LLM, which costs money and takes longer than a condition. On high traffic, lower the sampling rate in the [Scope step](../signals/create#scope) so a judge checks a representative slice instead of every session.
+
+## Custom script
+
+A custom script is JavaScript you write that reads a session and returns a score. It can express anything conditions and judges can, plus logic they can't, such as combining several checks or inspecting tool arguments.
+
+The [Custom scripts](./custom-scripts) page documents the full API: the `session` object, the built-in functions, and the limits scripts run under.
+
+## Choosing a method
+
+- If the behavior is a concrete fact you can name, use a set of conditions. It is free, fast, and easy to reason about.
+- If the behavior is fuzzy or semantic, use an LLM judge.
+- If you need logic the builder can't express, write a custom script.
+
+You aren't locked in. Editing a signal lets you switch methods, and the Custom script tab always shows the script your conditions or criteria compiled to, so you can start simple and take over by hand later.
+
+## Related pages
+
+- [Create a signal](../signals/create): where you pick a method and scope the detector
+- [Custom scripts](./custom-scripts): the full scripting reference
+- [Triggers](./triggers): scope and sampling for a detector
+- [Evaluations overview](./overview): how detectors fit the wider evaluation model

@@ -77,7 +77,7 @@ Core observability (trace ingest and viewing) works out of the box. AI-dependent
     pnpm seed
     ```
 
-    Optionally create a sample organization, with a default project, a handful of users, an API key, and realistic sample telemetry across Postgres and ClickHouse — enough to sign in and exercise traces, search, issues, and evaluations immediately.
+    Optionally create a sample organization, with a default project, a handful of users, an API key, and realistic sample telemetry across Postgres and ClickHouse — enough to sign in and exercise traces, search, signals, and evaluations immediately.
   </Step>
 
   <Step title="Start the services">
@@ -163,9 +163,9 @@ The stack boots and core observability (ingest + trace viewing) works **without 
 
 | Capability | Providers | Feature |
 | --- | --- | --- |
-| Generation | Amazon Bedrock (default), Anthropic, OpenAI, Google, or any OpenAI-compatible endpoint | Flaggers, evaluations, issue summarization, taxonomy naming, AI generation |
-| Embeddings | Voyage AI (default), OpenAI, Google, or any OpenAI-compatible endpoint | Semantic trace/issue search, search highlights, issue clustering |
-| Reranking | Voyage AI (default) or Amazon Bedrock | Issue-discovery candidate matching |
+| Generation | Amazon Bedrock (default), Anthropic, OpenAI, Google, or any OpenAI-compatible endpoint | Flaggers, evaluations, signal summarization, taxonomy naming, AI generation |
+| Embeddings | Voyage AI (default), OpenAI, Google, or any OpenAI-compatible endpoint | Semantic trace/signal search, search highlights, signal clustering |
+| Reranking | Voyage AI (default) or Amazon Bedrock | Signal-discovery candidate matching |
 
 Every provider and model is selectable per feature through environment variables — see the [AI configuration reference](/deployment/configuration#ai).
 

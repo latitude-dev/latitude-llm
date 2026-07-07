@@ -5,7 +5,7 @@ description: Understand how scores work as the universal measurement unit in Lat
 
 # Scores
 
-Scores are Latitude's common measurement unit. Every verdict on an agent interaction—from an evaluation, annotation, flagger, or your own code—is stored as a score. Issues, evaluation dashboards, annotation workflows, and analytics all build on this model.
+Scores are Latitude's common measurement unit. Every verdict on an agent interaction—from an evaluation, annotation, flagger, or your own code—is stored as a score. Signals, evaluation dashboards, annotation workflows, and analytics all build on this model.
 
 ## What Is a Score
 
@@ -20,7 +20,7 @@ A score is a verdict attached to a trace. Every score has:
 
 Scores can also carry resource fields such as duration, token count, and cost.
 
-A score is always associated with a **trace**. It can also be associated with a **span**, **session**, or **issue**.
+A score is always associated with a **trace**. It can also be associated with a **span**, **session**, or **signal**.
 
 ## Score Sources
 
@@ -46,8 +46,8 @@ Once finalized, a score becomes part of Latitude's reliability workflows.
 
 Finalized scores feed into:
 
-1. **Signal discovery**: Failed scores can become named, trackable [issues](../signals/overview).
-2. **Evaluation generation**: Issues can generate monitors that produce more scores on live traffic.
+1. **Signal discovery**: Failed scores can become named, trackable [signals](../signals/overview).
+2. **Evaluation generation**: Signals can generate monitors that produce more scores on live traffic.
 3. **Alignment**: Annotation scores are compared with evaluation scores on the same traces.
 4. **Analytics**: Score dashboards show quality trends across your project.
 
@@ -55,6 +55,6 @@ Finalized scores feed into:
 
 - [Annotations](../annotations/overview): How human reviewers create scores
 - [Evaluations](../evaluations/overview): How automated monitors create scores
-- [Issues](../signals/overview): How failed scores become trackable failure patterns
+- [Signals](../signals/overview): How failed scores become trackable failure patterns
 - [Analytics](./analytics): Visualize score trends
 - [Scores API](./api): Submit custom scores programmatically
