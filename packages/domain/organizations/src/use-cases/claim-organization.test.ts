@@ -14,6 +14,8 @@ import { createFakeOrganizationClaimRepository } from "../testing/fake-organizat
 import { createFakeOrganizationRepository } from "../testing/fake-organization-repository.ts"
 import { claimOrganizationUseCase } from "./claim-organization.ts"
 
+type OrganizationClaimRepositoryShape = (typeof OrganizationClaimRepository)["Service"]
+
 const ORG_ID = OrganizationId("oooooooooooooooooooooooo")
 const USER_ID = UserId("uuuuuuuuuuuuuuuuuuuuuuuu")
 const RAW_TOKEN = "a1b2c3d4".repeat(8)
@@ -30,6 +32,7 @@ const setup = (seed: {
   claim?: { tokenHash?: string; expiresAt: Date; claimedAt?: Date | null }
   org?: { expiresAt: Date | null }
   withMember?: boolean
+  markClaimed?: OrganizationClaimRepositoryShape["markClaimed"]
 }) => {
   let inTransaction = false
   const sqlClient: SqlClientShape = {
@@ -48,7 +51,9 @@ const setup = (seed: {
     query: () => Effect.die(new Error("unexpected query")),
   }
 
-  const { repository: claimRepo, claims } = createFakeOrganizationClaimRepository()
+  const { repository: claimRepo, claims } = createFakeOrganizationClaimRepository(
+    seed.markClaimed ? { markClaimed: seed.markClaimed } : undefined,
+  )
   const { repository: organizationRepo, organizations } = createFakeOrganizationRepository()
   const { repository: membershipRepo, memberships } = createFakeMembershipRepository()
   const writtenEvents: OutboxWriteEvent[] = []
@@ -139,5 +144,14 @@ describe("claimOrganizationUseCase", () => {
   it("rejects when the org already has a member (anti-theft)", async () => {
     const { run } = setup({ claim: { expiresAt: inOneWeek() }, org: { expiresAt: inOneWeek() }, withMember: true })
     expect(causeText(await run(RAW_TOKEN))).toContain("OrganizationNotClaimableError")
+  })
+
+  it("rejects when markClaimed loses a concurrent redemption race", async () => {
+    const { run } = setup({
+      claim: { expiresAt: inOneWeek() },
+      org: { expiresAt: inOneWeek() },
+      markClaimed: () => Effect.succeed(false),
+    })
+    expect(causeText(await run(RAW_TOKEN))).toContain("ClaimAlreadyUsedError")
   })
 })

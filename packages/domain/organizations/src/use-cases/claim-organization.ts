@@ -53,7 +53,7 @@ export const claimOrganizationUseCase = Effect.fn("organizations.claimOrganizati
       const membershipRepo = yield* MembershipRepository
       const outboxEventWriter = yield* OutboxEventWriter
 
-      const claim = yield* claimRepo.findByTokenHash(tokenHash)
+      const claim = yield* claimRepo.findByTokenHashForUpdate(tokenHash)
       if (!claim) return yield* new ClaimTokenInvalidError()
       if (claim.claimedAt !== null) return yield* new ClaimAlreadyUsedError()
       if (claim.expiresAt.getTime() <= Date.now()) return yield* new ClaimExpiredError()
@@ -76,7 +76,8 @@ export const claimOrganizationUseCase = Effect.fn("organizations.claimOrganizati
 
       yield* membershipRepo.save(createMembership({ organizationId, userId: input.userId, role: "owner" }))
       yield* organizationRepo.save({ ...organization, expiresAt: null })
-      yield* claimRepo.markClaimed(claim.id, new Date())
+      const marked = yield* claimRepo.markClaimed(claim.id, new Date())
+      if (!marked) return yield* new ClaimAlreadyUsedError()
 
       // Background sample-project seeding (domain-events worker) so the claimed org matches a normal one.
       yield* outboxEventWriter
