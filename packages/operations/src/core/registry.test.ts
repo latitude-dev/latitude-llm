@@ -125,6 +125,12 @@ describe("registry", () => {
       expect(res.status).toBe(200)
     })
 
+    it("throws when the same operation name is registered twice", () => {
+      const sub = new OpenAPIHono<TestEnv>()
+      listItems.mountHttp(sub)
+      expect(() => listItems.mountHttp(sub)).toThrowError(/"listItems" is already registered/)
+    })
+
     it("records the prefix from `defineOperation` on each registered descriptor", () => {
       const sub = new OpenAPIHono<TestEnv>()
       listItems.mountHttp(sub)

@@ -17,10 +17,16 @@ const operationRegistry: AnyOperation[] = []
 /**
  * Adds `endpoint` to the global MCP registry. Called from
  * `Operation.mountHttp` when the operation is tool-eligible (`tool === true`).
- * Idempotency is the caller's responsibility — tests that re-run
- * `registerRoutes` against the same app should `resetOperationRegistry` first.
+ *
+ * Throws on a duplicate `name`: operation names are the OpenAPI `operationId`
+ * and the MCP tool name, both of which must be globally unique, so a collision
+ * is always a bug (or a re-run that forgot `resetOperationRegistry`). Failing
+ * loudly here beats silently accumulating duplicate tool descriptors.
  */
 export const registerOperation = (endpoint: AnyOperation): void => {
+  if (operationRegistry.some((op) => op.route.name === endpoint.route.name)) {
+    throw new Error(`Operation "${endpoint.route.name}" is already registered — names must be unique`)
+  }
   operationRegistry.push(endpoint)
 }
 
