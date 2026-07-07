@@ -444,7 +444,7 @@ export const connectCursorIntegration = createServerFn({ method: "POST" })
           organizationId: OrganizationId(organizationId),
           cursorApiKey: data.cursorApiKey,
         })
-        yield* upsertAgentDispatchConfigUseCase({
+        const config = yield* upsertAgentDispatchConfigUseCase({
           organizationId: OrganizationId(organizationId),
           projectId: ProjectId(data.projectId),
           integrationId: integration.id,
@@ -456,7 +456,7 @@ export const connectCursorIntegration = createServerFn({ method: "POST" })
             ...(data.startingRef ? { startingRef: data.startingRef } : {}),
           },
         })
-        return { integrationId: integration.id }
+        return { integrationId: integration.id, config: toConfigRecord(config) }
       }).pipe(withPostgres(agentDispatchLayer, client, organizationId), withTracing),
     )
   })
