@@ -1,4 +1,10 @@
-import { FILTER_OPERATORS, SESSION_ID_LENGTH, SPAN_ID_LENGTH, SPAN_ROW_FILTER_GTE_PERCENTILE_MESSAGE, TRACE_ID_LENGTH } from "@domain/shared"
+import {
+  FILTER_OPERATORS,
+  SESSION_ID_LENGTH,
+  SPAN_ID_LENGTH,
+  SPAN_ROW_FILTER_GTE_PERCENTILE_MESSAGE,
+  TRACE_ID_LENGTH,
+} from "@domain/shared"
 import { z } from "@hono/zod-openapi"
 
 // Plain (non-transformed) telemetry-id schemas for use in request / response

@@ -15,11 +15,11 @@ import { defineApiEndpoint } from "../mcp/index.ts"
 import { createTierRateLimiter } from "../middleware/rate-limiter.ts"
 import { SpanSchema, toSpanResponse } from "../openapi/entities/span.ts"
 import {
-  SpanRowFilterSetSchema,
   jsonBody,
   openApiResponses,
   PROTECTED_SECURITY,
   ProjectParamsSchema,
+  SpanRowFilterSetSchema,
 } from "../openapi/schemas.ts"
 import type { OrganizationScopedEnv } from "../types.ts"
 

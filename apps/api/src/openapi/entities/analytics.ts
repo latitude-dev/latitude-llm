@@ -60,7 +60,7 @@ const traceSessionFilters = {
 
 const spanRowFilters = {
   filters: SpanRowFilterSetSchema.optional().describe(
-    'Structured filter set over span row fields. `gtePercentile` is not supported — use absolute thresholds or a percentile metric.',
+    "Structured filter set over span row fields. `gtePercentile` is not supported — use absolute thresholds or a percentile metric.",
   ),
 } as const
 
