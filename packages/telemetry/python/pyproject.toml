@@ -13,7 +13,7 @@ requires-python = ">=3.11, <3.15"
 dependencies = [
     "opentelemetry-api==1.42.1",
     "opentelemetry-sdk==1.42.1",
-    "opentelemetry-exporter-otlp-proto-http==1.42.1",
+    "opentelemetry-exporter-otlp-proto-http==1.43.0",
     "opentelemetry-semantic-conventions-ai==0.5.1",
     "openinference-semantic-conventions==0.1.30",
     "opentelemetry-instrumentation-alephalpha==0.61.0",
