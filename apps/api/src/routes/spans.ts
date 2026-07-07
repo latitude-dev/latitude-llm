@@ -1,5 +1,5 @@
 import { ProjectRepository } from "@domain/projects"
-import { OrganizationId, ProjectId, SpanId, spanRowFilterSetSchema } from "@domain/shared"
+import { OrganizationId, ProjectId, SpanId } from "@domain/shared"
 import {
   type SpanListCursor,
   type SpanListOrderDirection,
@@ -15,7 +15,7 @@ import { defineApiEndpoint } from "../mcp/index.ts"
 import { createTierRateLimiter } from "../middleware/rate-limiter.ts"
 import { SpanSchema, toSpanResponse } from "../openapi/entities/span.ts"
 import {
-  FilterSetSchema,
+  SpanRowFilterSetSchema,
   jsonBody,
   openApiResponses,
   PROTECTED_SECURITY,
@@ -69,8 +69,8 @@ const decodeSpanListCursor = (raw: string): SpanListCursor | null => {
 
 const QuerySpansBodySchema = z
   .object({
-    filters: FilterSetSchema.optional().describe(
-      "Row-local span filter set (same DSL as `listTraces`) over span fields — `operation`, `toolName`, `model`, `provider`, `sessionId`, `traceId`, `tags`, `status` (`error`/`ok`/`unset`), `duration`, `cost`, `tokensInput`/`tokensOutput`.",
+    filters: SpanRowFilterSetSchema.optional().describe(
+      "Row-local span filter set (same DSL as `listTraces`) over span fields — `operation`, `toolName`, `model`, `provider`, `sessionId`, `traceId`, `tags`, `status` (`error`/`ok`/`unset`), `duration`, `cost`, `tokensInput`/`tokensOutput`. `gtePercentile` is not supported — use absolute thresholds or a percentile metric.",
     ),
     orderBy: z
       .object({
@@ -151,12 +151,6 @@ const querySpans = spanEndpoint({
     }
     if (body.range && new Date(body.range.fromIso).getTime() >= new Date(body.range.toIso).getTime()) {
       return c.json({ error: "`range.fromIso` must be strictly before `range.toIso`." }, 400)
-    }
-    if (body.filters) {
-      const parsedFilters = spanRowFilterSetSchema.safeParse(body.filters)
-      if (!parsedFilters.success) {
-        return c.json({ error: parsedFilters.error.issues[0]?.message ?? "Invalid filters." }, 400)
-      }
     }
 
     const page = await Effect.runPromise(

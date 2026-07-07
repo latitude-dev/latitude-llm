@@ -8390,16 +8390,6 @@
                 ],
                 "description": "The metric: `count`, `errorRate`, `cacheHitRate`, `{sum|min|max|avg|median}` over `duration`/`cost`/`tokens`, or `{kind:'percentile',field,p}` for an arbitrary percentile (`p` in [1,99]; e.g. `p:95`)."
               },
-              "filters": {
-                "allOf": [
-                  {
-                    "$ref": "#/components/schemas/FilterSet"
-                  },
-                  {
-                    "description": "Structured filter set applied to the stream (same DSL as `listTraces`)."
-                  }
-                ]
-              },
               "timeBucket": {
                 "type": "object",
                 "properties": {
@@ -8479,6 +8469,16 @@
                 "maximum": 500,
                 "default": 50,
                 "description": "Maximum rows returned. Defaults to 50; max 500."
+              },
+              "filters": {
+                "allOf": [
+                  {
+                    "$ref": "#/components/schemas/FilterSet"
+                  },
+                  {
+                    "description": "Structured filter set applied to the stream (same DSL as `listTraces`)."
+                  }
+                ]
               }
             },
             "required": [
@@ -8707,16 +8707,6 @@
                 ],
                 "description": "The metric: `count`, `errorRate`, `cacheHitRate`, `{sum|min|max|avg|median}` over `duration`/`cost`/`tokens`, or `{kind:'percentile',field,p}` for an arbitrary percentile (`p` in [1,99]; e.g. `p:95`)."
               },
-              "filters": {
-                "allOf": [
-                  {
-                    "$ref": "#/components/schemas/FilterSet"
-                  },
-                  {
-                    "description": "Structured filter set applied to the stream (same DSL as `listTraces`)."
-                  }
-                ]
-              },
               "timeBucket": {
                 "type": "object",
                 "properties": {
@@ -8796,6 +8786,16 @@
                 "maximum": 500,
                 "default": 50,
                 "description": "Maximum rows returned. Defaults to 50; max 500."
+              },
+              "filters": {
+                "allOf": [
+                  {
+                    "$ref": "#/components/schemas/FilterSet"
+                  },
+                  {
+                    "description": "Structured filter set applied to the stream (same DSL as `listTraces`)."
+                  }
+                ]
               }
             },
             "required": [
@@ -9018,16 +9018,6 @@
                 ],
                 "description": "The metric: `count`, `errorRate`, `cacheHitRate`, `{sum|min|max|avg|median}` over `duration`/`cost`/`tokens`, or `{kind:'percentile',field,p}` for an arbitrary percentile (`p` in [1,99]; e.g. `p:95`)."
               },
-              "filters": {
-                "allOf": [
-                  {
-                    "$ref": "#/components/schemas/FilterSet"
-                  },
-                  {
-                    "description": "Structured filter set applied to the stream (same DSL as `listTraces`)."
-                  }
-                ]
-              },
               "timeBucket": {
                 "type": "object",
                 "properties": {
@@ -9107,6 +9097,9 @@
                 "maximum": 500,
                 "default": 50,
                 "description": "Maximum rows returned. Defaults to 50; max 500."
+              },
+              "filters": {
+                "$ref": "#/components/schemas/SpanRowFilterSet"
               }
             },
             "required": [
@@ -9270,16 +9263,6 @@
                 ],
                 "description": "The metric: `count`, `passRate`, `errorRate`, or `{avg|min|max|median}` of the 0–1 score `value`."
               },
-              "filters": {
-                "allOf": [
-                  {
-                    "$ref": "#/components/schemas/FilterSet"
-                  },
-                  {
-                    "description": "Structured filter set applied to the stream (same DSL as `listTraces`)."
-                  }
-                ]
-              },
               "timeBucket": {
                 "type": "object",
                 "properties": {
@@ -9359,6 +9342,16 @@
                 "maximum": 500,
                 "default": 50,
                 "description": "Maximum rows returned. Defaults to 50; max 500."
+              },
+              "filters": {
+                "allOf": [
+                  {
+                    "$ref": "#/components/schemas/FilterSet"
+                  },
+                  {
+                    "description": "Structured filter set applied to the stream (same DSL as `listTraces`)."
+                  }
+                ]
               }
             },
             "required": [
@@ -9490,16 +9483,6 @@
                 ],
                 "description": "The metric: `count`, or `{avg|min|max|median}` of the 0–1 assignment `confidence`."
               },
-              "filters": {
-                "allOf": [
-                  {
-                    "$ref": "#/components/schemas/FilterSet"
-                  },
-                  {
-                    "description": "Structured filter set applied to the stream (same DSL as `listTraces`)."
-                  }
-                ]
-              },
               "timeBucket": {
                 "type": "object",
                 "properties": {
@@ -9579,6 +9562,16 @@
                 "maximum": 500,
                 "default": 50,
                 "description": "Maximum rows returned. Defaults to 50; max 500."
+              },
+              "filters": {
+                "allOf": [
+                  {
+                    "$ref": "#/components/schemas/FilterSet"
+                  },
+                  {
+                    "description": "Structured filter set applied to the stream (same DSL as `listTraces`)."
+                  }
+                ]
               }
             },
             "required": [
@@ -9714,16 +9707,6 @@
                 ],
                 "description": "The metric: `count`, or `{avg|min|max|median}` of the 0–1 label `confidence` or moment `coherence`."
               },
-              "filters": {
-                "allOf": [
-                  {
-                    "$ref": "#/components/schemas/FilterSet"
-                  },
-                  {
-                    "description": "Structured filter set applied to the stream (same DSL as `listTraces`)."
-                  }
-                ]
-              },
               "timeBucket": {
                 "type": "object",
                 "properties": {
@@ -9803,6 +9786,16 @@
                 "maximum": 500,
                 "default": 50,
                 "description": "Maximum rows returned. Defaults to 50; max 500."
+              },
+              "filters": {
+                "allOf": [
+                  {
+                    "$ref": "#/components/schemas/FilterSet"
+                  },
+                  {
+                    "description": "Structured filter set applied to the stream (same DSL as `listTraces`)."
+                  }
+                ]
               }
             },
             "required": [
@@ -9813,6 +9806,16 @@
             "additionalProperties": false
           }
         ]
+      },
+      "SpanRowFilterSet": {
+        "type": "object",
+        "additionalProperties": {
+          "type": "array",
+          "items": {
+            "$ref": "#/components/schemas/FilterCondition"
+          }
+        },
+        "description": "Structured filter set over span row fields. `gtePercentile` is not supported — use absolute thresholds or a percentile metric."
       },
       "QuerySpans": {
         "type": "object",
@@ -9848,10 +9851,10 @@
           "filters": {
             "allOf": [
               {
-                "$ref": "#/components/schemas/FilterSet"
+                "$ref": "#/components/schemas/SpanRowFilterSet"
               },
               {
-                "description": "Row-local span filter set (same DSL as `listTraces`) over span fields — `operation`, `toolName`, `model`, `provider`, `sessionId`, `traceId`, `tags`, `status` (`error`/`ok`/`unset`), `duration`, `cost`, `tokensInput`/`tokensOutput`."
+                "description": "Row-local span filter set (same DSL as `listTraces`) over span fields — `operation`, `toolName`, `model`, `provider`, `sessionId`, `traceId`, `tags`, `status` (`error`/`ok`/`unset`), `duration`, `cost`, `tokensInput`/`tokensOutput`. `gtePercentile` is not supported — use absolute thresholds or a percentile metric."
               }
             ]
           },

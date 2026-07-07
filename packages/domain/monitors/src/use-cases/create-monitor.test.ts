@@ -228,4 +228,36 @@ describe("createMonitorUseCase", () => {
     expect(thresholdError).toBeInstanceOf(ValidationError)
     expect(thresholdError.message).toBe("Escalating monitors only support expected thresholds")
   })
+
+  it("rejects gtePercentile on tool monitor span filters", async () => {
+    const { repo } = createFakeMonitorRepository()
+    const error = await runError(
+      createMonitorUseCase({
+        organizationId,
+        projectId,
+        name: "Slow tool monitor",
+        target: {
+          type: "tool",
+          id: null,
+          filterSet: { duration: [{ op: "gtePercentile", value: 90 }] },
+        },
+        rule: {
+          trigger: "threshold",
+          severity: "high",
+          config: {
+            metric: { kind: "count" },
+            condition: {
+              trigger: "threshold",
+              metric: { kind: "count" },
+              threshold: { mode: "absolute", value: 10 },
+              direction: "above",
+            },
+          },
+        },
+      }),
+      repo,
+    )
+    expect(error).toBeInstanceOf(ValidationError)
+    expect(error.message).toContain("gtePercentile is not supported on span row filters")
+  })
 })

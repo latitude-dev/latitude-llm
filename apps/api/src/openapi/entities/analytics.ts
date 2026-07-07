@@ -16,7 +16,7 @@ import {
   TRACE_BREAKDOWN_FIELDS,
 } from "@domain/shared"
 import { z } from "@hono/zod-openapi"
-import { FilterSetSchema } from "../schemas.ts"
+import { FilterSetSchema, SpanRowFilterSetSchema } from "../schemas.ts"
 
 // The OpenAPI/MCP request body. A discriminated union on `stream`, mirroring the
 // domain `analyticsQuerySchema`, but built with the API `FilterSetSchema` (Fern
@@ -25,9 +25,6 @@ import { FilterSetSchema } from "../schemas.ts"
 // domain filter constraints are re-checked in the handler via the domain schema.
 // `metric` is per-stream (added on each variant), so it lives outside `commonFields`.
 const commonFields = {
-  filters: FilterSetSchema.optional().describe(
-    "Structured filter set applied to the stream (same DSL as `listTraces`).",
-  ),
   timeBucket: analyticsTimeBucketSchema
     .optional()
     .describe("Bucket the metric over time. Omit for a single aggregate."),
@@ -55,6 +52,18 @@ const commonFields = {
     .describe(`Maximum rows returned. Defaults to ${ANALYTICS_DEFAULT_LIMIT}; max ${ANALYTICS_MAX_LIMIT}.`),
 } as const
 
+const traceSessionFilters = {
+  filters: FilterSetSchema.optional().describe(
+    "Structured filter set applied to the stream (same DSL as `listTraces`).",
+  ),
+} as const
+
+const spanRowFilters = {
+  filters: SpanRowFilterSetSchema.optional().describe(
+    'Structured filter set over span row fields. `gtePercentile` is not supported — use absolute thresholds or a percentile metric.',
+  ),
+} as const
+
 const traceFamilyMetric = monitorMetricSchema.describe(
   "The metric: `count`, `errorRate`, `cacheHitRate`, `{sum|min|max|avg|median}` over `duration`/`cost`/`tokens`, or `{kind:'percentile',field,p}` for an arbitrary percentile (`p` in [1,99]; e.g. `p:95`).",
 )
@@ -74,6 +83,7 @@ export const AnalyticsQueryBodySchema = z
         breakdown: z.enum(TRACE_BREAKDOWN_FIELDS).optional().describe("Dimension to group by, one row per value."),
         metric: traceFamilyMetric,
         ...commonFields,
+        ...traceSessionFilters,
       })
       .strict(),
     z
@@ -83,6 +93,7 @@ export const AnalyticsQueryBodySchema = z
         breakdown: z.enum(SESSION_BREAKDOWN_FIELDS).optional().describe("Dimension to group by, one row per value."),
         metric: traceFamilyMetric,
         ...commonFields,
+        ...traceSessionFilters,
       })
       .strict(),
     z
@@ -91,6 +102,7 @@ export const AnalyticsQueryBodySchema = z
         breakdown: z.enum(SPAN_BREAKDOWN_FIELDS).optional().describe("Dimension to group by, one row per value."),
         metric: traceFamilyMetric,
         ...commonFields,
+        ...spanRowFilters,
       })
       .strict(),
     z
@@ -108,6 +120,7 @@ export const AnalyticsQueryBodySchema = z
           "The metric: `count`, `passRate`, `errorRate`, or `{avg|min|max|median}` of the 0–1 score `value`.",
         ),
         ...commonFields,
+        ...traceSessionFilters,
       })
       .strict(),
     z
@@ -123,6 +136,7 @@ export const AnalyticsQueryBodySchema = z
           "The metric: `count`, or `{avg|min|max|median}` of the 0–1 assignment `confidence`.",
         ),
         ...commonFields,
+        ...traceSessionFilters,
       })
       .strict(),
     z
@@ -138,6 +152,7 @@ export const AnalyticsQueryBodySchema = z
           "The metric: `count`, or `{avg|min|max|median}` of the 0–1 label `confidence` or moment `coherence`.",
         ),
         ...commonFields,
+        ...traceSessionFilters,
       })
       .strict(),
   ])

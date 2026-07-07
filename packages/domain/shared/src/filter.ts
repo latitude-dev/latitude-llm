@@ -140,7 +140,7 @@ export const SPAN_ROW_FILTER_GTE_PERCENTILE_MESSAGE =
 /** Span row filters (`querySpans`, analytics `stream: "spans"` filters) reject `gtePercentile` at the boundary. */
 export const spanRowFilterSetSchema: z.ZodType<FilterSet> = filterSetSchema.superRefine((filters, ctx) => {
   for (const [field, conditions] of Object.entries(filters)) {
-    conditions?.forEach((cond, index) => {
+    conditions.forEach((cond, index) => {
       if (cond.op === "gtePercentile") {
         ctx.addIssue({
           code: "custom",
