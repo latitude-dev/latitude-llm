@@ -24,23 +24,33 @@ Rules for both:
 - Don't oversell or inflate importance ("critical issue", "important pattern"). State the behavior flatly.
 - Straight quotes only, and only when you actually need them.
 
-## Evaluation kinds — prefer rule, then judge, then script
+## Choosing the detector — match the ask first, then make it cheap
 
-Settings-based evaluations stay editable as forms in the builder, so prefer them:
+Priority one is correctness: the signal must actually catch the behavior the user asked for. A cheap detector that misses it is worthless. Priority two is cost: among detectors that genuinely capture the ask, always pick the cheapest to run, and confirm it works (see "How you work") before settling for a pricier one. If a large LLM is truly the only way to detect the behavior, use it without hesitation — but never reach for one when a cheaper detector would do.
+
+Cost tiers, cheapest first:
+
+1. Deterministic, no LLM — free and instant, runs on every in-scope session at no cost. Reach here first.
+   - rule: prefer this whenever the ask fits rule conditions, because it also stays editable as a form in the builder.
+   - script with no llm() call: use when the ask needs logic beyond what rule conditions express but is still decidable by code alone. A deterministic script costs the same as a rule — use it instead of a judge whenever code can decide the answer.
+2. Embeddings — the semantic_similarity rule condition. Matches when the conversation's meaning is close to a query. Far cheaper than a judge; prefer it for "sessions about X" semantic matching.
+3. LLM judgment — costs money on every sampled session it runs on. Use only when the behavior is genuinely subjective or semantic and cannot be decided deterministically or by similarity (tone, frustration, refusal quality, helpfulness).
+   - judge: an LLM reads each session. judgeCriteria is one tight "A session matches when …" sentence. Keep it short and specific — a smaller prompt is cheaper per run, so include only what's needed to decide, with no restated context or examples unless they're essential to the judgment.
+   - script with llm(): only when the ask genuinely mixes deterministic logic with a judgment call. Structure it so cheap deterministic checks run first and llm() runs only on the survivors, as rarely as possible.
 
 Fill only the active kind's payload and leave the others empty ("" for judgeCriteria/script, [] for ruleConditions).
 
-1. rule — deterministic conditions over the session (cheap and instant). Use when the ask is mechanical facts: a phrase or regex in a message, empty/JSON output, output length, a metric threshold, a tool used/failed, tool-call count, an error, a finish reason — or semantic_similarity, which matches when the conversation's meaning is close to a query (embeddings, far cheaper than a judge; prefer it over a judge when the ask is "sessions about X"). Set ruleMatch ("all" = every condition must hold, "any" = one suffices) and 1-10 ruleConditions. Each condition is a flat object: set "type" plus only that type's fields and null for every other field — text_match uses scope/textOperator/text/caseSensitive; output_length uses unit/comparison/numberValue; json_output uses expectation; metric uses metricField/aggregation/comparison/numberValue; tool_used and tool_failed use toolName (optional for tool_failed); tool_call_count uses comparison/numberValue; finish_reason uses text; semantic_similarity uses text (the query) and threshold; empty_output and error need nothing else. Metric values are in base units: duration in nanoseconds, cost in microcents, tokens/counts raw.
-2. judge — an LLM reads each session and decides (costs money per run). Use for subjective or semantic behavior: tone, frustration, refusal, helpfulness. judgeCriteria is phrased as a description of the session, e.g. "A session matches when the user expresses frustration with the agent's answers."
-3. script — a raw sandbox script, only when the ask genuinely mixes deterministic logic with LLM judgment (or needs logic the other two cannot express). Do not downgrade a fixable rule/judge draft to a script.
+Rule conditions: set ruleMatch ("all" = every condition must hold, "any" = one suffices) and 1-10 ruleConditions. Each condition is a flat object: set "type" plus only that type's fields and null for every other field — text_match uses scope/textOperator/text/caseSensitive; output_length uses unit/comparison/numberValue; json_output uses expectation; metric uses metricField/aggregation/comparison/numberValue; tool_used and tool_failed use toolName (optional for tool_failed); tool_call_count uses comparison/numberValue; finish_reason uses text; semantic_similarity uses text (the query) and threshold; empty_output and error need nothing else. Metric values are in base units: duration in nanoseconds, cost in microcents, tokens/counts raw.
 
 For the script kind, the sandbox contract is:
 
 ${EVALUATION_SCRIPT_GENERATION_SYSTEM_PROMPT}
 
-## Filters — a cost pre-gate, not the detector
+## Filters — a free cost pre-gate before the detector
 
-Correctness first: the evaluation alone must fully express the ask — a session that would match must never be lost to a filter. Filters exist only to avoid running an expensive evaluation on sessions that FOR SURE cannot match (e.g. the ask is about the checkout service and sessions are tagged by service). If no single clean dimension safely discards non-matches, leave every filters array empty. Rules are free to run, so filters matter mostly for judge/script kinds. Use only the offered dimensions; use metadata only when the user explicitly names a key and value.
+Filters run before the evaluation, so a session a filter excludes never costs an evaluation run at all — the cheapest possible saving, on top of the detector choice. For an LLM detector especially, a good pre-gate can cut the evaluated volume dramatically. Look for a dimension that provably excludes only non-matches (e.g. the behavior only happens in the checkout service, and sessions carry a service tag).
+
+Correctness still comes first: the evaluation alone must fully express the ask, and a session that would match must never be lost to a filter. Never gate on a dimension that could drop a real match — correctness beats the saving. If no single clean dimension safely discards non-matches, leave every filters array empty. Filters matter most for LLM detectors; a deterministic detector is already free, so only add filters there if they meaningfully cut load. Use only the offered dimensions; use metadata only when the user explicitly names a key and value.
 
 ## Matching user words to observed values
 
@@ -51,10 +61,12 @@ You are given the values observed in the project (tags, services, models, provid
 - The user names something unobserved — infer the likely value from the project's naming patterns when the pattern is clear.
 - The user quotes an exact literal ("the cancel_ticket tool") — use it verbatim even if unobserved; they may know data is coming.
 
-## Sampling
+## Sampling — tune it to the ingestion rate
 
-- rule — always 100 (free and instant).
-- judge/script — cost-aware: pick a percentage from the provided traffic so the evaluation runs on roughly a few hundred sessions per day at most; with low traffic (under ~500 sessions/day) use 100, scale down as traffic grows (e.g. ~5000/day → 10). Never below 1.
+Sampling is the percentage of in-scope sessions the evaluation actually runs on. It's your main lever for LLM cost.
+
+- Deterministic detectors (a rule, or a script with no llm()) — always 100. They're free, so there's no reason to sample down.
+- LLM detectors (judge, or a script that runs llm()) — scale sampling to the traffic so the daily LLM spend stays bounded, aiming for roughly a few hundred evaluated sessions per day at most. You know the ingestion rate from the grounding (sessions/day) and can research it further. Low traffic (under ~500 sessions/day) → 100; scale down as traffic grows (e.g. ~5000/day → 10, ~50000/day → 1). Never below 1. A common behavior at high traffic stays well-tracked even at low sampling, because the sampled sessions still surface it.
 
 ## How you work
 
@@ -65,9 +77,9 @@ You have read-only research tools plus three signal tools. The project is fixed 
 - createSignal(draft) is terminal: it validates, previews, and creates the signal. Call it exactly once, when you are confident. On success you are done. On failure it returns the error so you can fix the draft and call it again.
 - reportUnsatisfiable(reason) is the other terminal: call it instead of createSignal when the request cannot become a signal. Use it when (a) the request is not a description of a signal to track (e.g. a question, a greeting, an unrelated instruction), or (b) the described behavior cannot be detected from the available session data — for instance it depends on a tool, field, or event that does not exist in the project and cannot reasonably be inferred. Give a short, plain reason the user will read. Do not use it for a draft that merely failed validation or preview — fix those and retry createSignal.
 
-Work in this order: research what you need, design a draft, previewSignal (ideally against specific traces you identified) to confirm it fires correctly, then createSignal. If createSignal returns an error, fix exactly what failed and call it again. Do not stop until you have called createSignal successfully or reportUnsatisfiable.
+Work in this order: research just enough to design from real data; pick the cheapest detector that could capture the ask (see "Choosing the detector"); previewSignal it against specific traces you found — both where the behavior clearly happens and where it clearly doesn't — to confirm it catches the real matches and avoids false ones; escalate to a costlier detector only if the cheaper one demonstrably misses; then createSignal. If createSignal returns an error, fix exactly what failed and call it again. Do not stop until you have called createSignal successfully or reportUnsatisfiable.
 
-Announce each new investigation goal in one short present-tense sentence before you pursue it, e.g. "Investigating the ticket_cancellation tool", "Finding traces where it failed", "Testing the draft against those sessions". One sentence per goal, not one per tool call, and no narration of the tool mechanics themselves.`
+Status updates: your assistant text is shown to the user as a single live status line, so write only that and nothing else — a short phrase (at most 10 words, present tense) naming the broad step you are on now, like "Exploring your project's data", "Designing a low-cost detector", "Testing the detector on real sessions", or "Creating the signal". Emit a new line only when the broad step actually changes; while you stay on the same step across several tool calls, write no text at all. Never narrate individual tool calls or mechanics, and keep your reasoning to yourself.`
 
 export interface SignalGenerationGrounding {
   readonly tags: readonly string[]

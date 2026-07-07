@@ -209,9 +209,13 @@ export const previewEvaluationUseCase = (input: PreviewEvaluationInput) =>
       })
     }
 
-    const rows = yield* Effect.forEach(anchors, ({ traceId, sessionIdHint }) => evaluateAnchor(traceId, sessionIdHint), {
-      concurrency: PREVIEW_CONCURRENCY,
-    })
+    const rows = yield* Effect.forEach(
+      anchors,
+      ({ traceId, sessionIdHint }) => evaluateAnchor(traceId, sessionIdHint),
+      {
+        concurrency: PREVIEW_CONCURRENCY,
+      },
+    )
 
     return { items: rows.filter((row): row is PreviewEvaluationRow => row !== null) } satisfies PreviewEvaluationResult
   }).pipe(Effect.withSpan("evaluations.previewEvaluation")) as Effect.Effect<

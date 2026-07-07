@@ -196,8 +196,11 @@ const runAgenticGeneration = async (params: {
 
   const resultKey = buildSignalGenerationResultKey(organizationId, payload.generationId)
   let lastStep: string | undefined
-  const writeStep = (step: string): void => {
-    if (step === lastStep) {
+  // The model narrates a broad step as its assistant text; clamp to a single short line as a safety
+  // net (it is instructed to keep it terse) and skip blanks and unchanged repeats.
+  const writeStep = (raw: string): void => {
+    const step = raw.split("\n").map((line) => line.trim()).find((line) => line.length > 0)?.slice(0, 120)
+    if (step === undefined || step === lastStep) {
       return
     }
     lastStep = step
@@ -315,11 +318,6 @@ const runAgenticGeneration = async (params: {
       if (!mapped.ok) {
         return { error: mapped.issues }
       }
-      writeStep(
-        parsed.data.traceIds.length > 0
-          ? "Testing the draft against the sessions I found"
-          : "Testing the draft against recent sessions",
-      )
       return Effect.runPromise(
         provideDomain(
           previewEvaluationUseCase({
@@ -397,7 +395,6 @@ const runAgenticGeneration = async (params: {
       if (!parsed.success) {
         return { error: formatZodIssues(parsed.error) }
       }
-      writeStep("Creating the signal")
       return Effect.runPromise(
         provideDomain(
           createSignalDraft(parsed.data).pipe(
