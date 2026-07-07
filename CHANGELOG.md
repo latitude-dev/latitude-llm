@@ -2,6 +2,24 @@
 
 ## Unreleased
 
+## v0.3.41 - 2026-07-07
+
+### Agent Dispatch
+
+- Enabled dispatching agents directly from monitor incidents, building the dispatch context and prompt from incident data.
+
+### Showcase
+
+- Added a reserved-slug loader and client-collection merge for the showcase project, tightening org-scope resolution across web data domains (ref: #3897).
+
+### API
+
+- Extracted API operation definitions into a transport-neutral `@repo/operations` package shared across HTTP, MCP, SDK, and CLI consumers (ref: #3890).
+
+### Docs
+
+- Documented manual signal creation and aligned the "Issues" terminology to "Signals" across the public docs (ref: #3906).
+
 ## v0.3.40 - 2026-07-07
 
 ### Search
