@@ -23,6 +23,7 @@ let adminPostgresClientInstance: PostgresClient | undefined
 let clickhouseInstance: ClickHouseClient | undefined
 let storageDiskInstance: StorageDiskPort | undefined
 let redisInstance: RedisClient | undefined
+let temporalClientPromise: ReturnType<typeof createTemporalClient> | undefined
 let workflowStarterPromise: Promise<WorkflowStarterShape> | undefined
 let workflowQuerierPromise: Promise<WorkflowQuerierShape> | undefined
 let posthogClientInstance: PostHogClientShape | undefined
@@ -107,10 +108,24 @@ export const getProductFeedbackClient = (): ProductFeedbackClientShape => {
   return productFeedbackClientInstance
 }
 
+// One Temporal client, shared by the starter and the querier — each is just a
+// thin wrapper over the same connection, so creating the client per-getter would
+// open a redundant second connection.
+function getTemporalClient(): ReturnType<typeof createTemporalClient> {
+  if (!temporalClientPromise) {
+    temporalClientPromise = createTemporalClient(loadTemporalConfig()).catch((error) => {
+      temporalClientPromise = undefined
+      throw error
+    })
+  }
+
+  return temporalClientPromise
+}
+
 export function getWorkflowStarter(): Promise<WorkflowStarterShape> {
   if (!workflowStarterPromise) {
     const config = loadTemporalConfig()
-    workflowStarterPromise = createTemporalClient(config)
+    workflowStarterPromise = getTemporalClient()
       .then((client) => createWorkflowStarter(client, config))
       .catch((error) => {
         workflowStarterPromise = undefined
@@ -123,8 +138,7 @@ export function getWorkflowStarter(): Promise<WorkflowStarterShape> {
 
 export function getWorkflowQuerier(): Promise<WorkflowQuerierShape> {
   if (!workflowQuerierPromise) {
-    const config = loadTemporalConfig()
-    workflowQuerierPromise = createTemporalClient(config)
+    workflowQuerierPromise = getTemporalClient()
       .then((client) => createWorkflowQuerier(client))
       .catch((error) => {
         workflowQuerierPromise = undefined
