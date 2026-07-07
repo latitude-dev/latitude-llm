@@ -2,6 +2,20 @@
 
 ## Unreleased
 
+## v0.3.40 - 2026-07-07
+
+### Search
+
+- Removed the legacy trace-search chunk embedding path and its feature flag, making semantic trace search and highlights use shared message embeddings exclusively (ref: #3904).
+
+### Web
+
+- Kept empty or loading trace lists on the animated connection blank slate so unconnected projects consistently guide users toward instrumentation, even after onboarding has been marked complete (ref: #3905).
+
+### Agent Dispatch
+
+- Updated Cursor dispatch to the v1 agents API payload, deterministic Cursor agent IDs, and immediate config cache updates after connecting a Cursor integration (ref: #3907).
+
 ## v0.3.39 - 2026-07-07
 
 ### Showcase
