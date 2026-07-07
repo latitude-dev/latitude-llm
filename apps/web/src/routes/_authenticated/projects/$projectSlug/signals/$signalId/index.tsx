@@ -16,6 +16,7 @@ import { SignalExamples } from "./-components/signal-examples.tsx"
 import { SignalNeighborNav } from "./-components/signal-neighbor-nav.tsx"
 import { SignalPatterns } from "./-components/signal-patterns.tsx"
 import { SignalRelated } from "./-components/signal-related.tsx"
+import { SignalSendTo } from "./-components/signal-send-to.tsx"
 import { SignalSummary } from "./-components/signal-summary.tsx"
 import { SignalTriageControls } from "./-components/signal-triage-controls.tsx"
 import { useSignalTriageCommands } from "./-components/use-signal-triage-commands.tsx"
@@ -130,6 +131,12 @@ function SignalDetailPage() {
                   Edit name & description
                 </Tooltip>
               ) : null}
+              <SignalSendTo
+                projectId={project.id}
+                projectSlug={projectSlug}
+                signalId={signalId}
+                disabled={isLoading || !signal}
+              />
               <SignalTriageControls projectId={project.id} signalId={signalId} compact />
               <SignalLifecycleActions projectId={project.id} signalId={signalId} compact />
             </>

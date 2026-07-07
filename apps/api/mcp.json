@@ -1662,7 +1662,7 @@
                 "maxLength": 24
               }
             ],
-            "description": "Origin marker. Sentinel `\"UI\"` / `\"API\"` / `\"SYSTEM\"` for drafts and automation, or an annotation-queue CUID for queue-authored rows."
+            "description": "Origin marker. Sentinel `\"UI\"` / `\"API\"` / `\"SYSTEM\"` for drafts and automation, or a CUID for authored rows."
           },
           "metadata": {
             "type": "object",
@@ -2377,7 +2377,7 @@
     {
       "name": "getTrace",
       "title": "Get project trace",
-      "description": "Returns a single trace by id, including the captured system instructions and the conversation messages from the trace's last LLM-completion span.",
+      "description": "Returns a single trace by id, including its `conversation`: the system instructions and the messages of the trace's last LLM-completion span, in OpenTelemetry GenAI format.",
       "inputSchema": {
         "$schema": "https://json-schema.org/draft/2020-12/schema",
         "type": "object",
@@ -2584,18 +2584,7 @@
             },
             "description": "Free-form metadata attached at ingest time."
           },
-          "systemInstructions": {
-            "type": "array",
-            "items": {
-              "type": "object",
-              "propertyNames": {
-                "type": "string"
-              },
-              "additionalProperties": {}
-            },
-            "description": "System instructions in OpenTelemetry GenAI format — an array of part objects."
-          },
-          "inputMessages": {
+          "conversation": {
             "type": "array",
             "items": {
               "type": "object",
@@ -2605,31 +2594,7 @@
               "additionalProperties": {},
               "description": "Message in OpenTelemetry GenAI format (`role` + content parts + optional tool calls)."
             },
-            "description": "Input messages sent into the first LLM span of the trace, in OpenTelemetry GenAI format."
-          },
-          "outputMessages": {
-            "type": "array",
-            "items": {
-              "type": "object",
-              "propertyNames": {
-                "type": "string"
-              },
-              "additionalProperties": {},
-              "description": "Message in OpenTelemetry GenAI format (`role` + content parts + optional tool calls)."
-            },
-            "description": "Output messages from the last LLM span of the trace, in OpenTelemetry GenAI format."
-          },
-          "allMessages": {
-            "type": "array",
-            "items": {
-              "type": "object",
-              "propertyNames": {
-                "type": "string"
-              },
-              "additionalProperties": {},
-              "description": "Message in OpenTelemetry GenAI format (`role` + content parts + optional tool calls)."
-            },
-            "description": "Full conversation view for the trace's final turn — the last span's input messages followed by its output messages, in OpenTelemetry GenAI format."
+            "description": "Full conversation for the trace, in OpenTelemetry GenAI format: the system instructions, then the messages sent into the trace's last LLM-completion span (the running history at that point), followed by that span's generated output."
           }
         },
         "required": [
@@ -2663,10 +2628,7 @@
           "positiveAnnotationCount",
           "negativeAnnotationCount",
           "metadata",
-          "systemInstructions",
-          "inputMessages",
-          "outputMessages",
-          "allMessages"
+          "conversation"
         ],
         "additionalProperties": false
       },
@@ -3762,7 +3724,7 @@
                       "maxLength": 24
                     }
                   ],
-                  "description": "Origin marker. Sentinel `\"UI\"` / `\"API\"` / `\"SYSTEM\"` for drafts and automation, or an annotation-queue CUID for queue-authored rows."
+                  "description": "Origin marker. Sentinel `\"UI\"` / `\"API\"` / `\"SYSTEM\"` for drafts and automation, or a CUID for authored rows."
                 },
                 "metadata": {
                   "type": "object",
@@ -4095,7 +4057,7 @@
                 "maxLength": 24
               }
             ],
-            "description": "Origin marker. Sentinel `\"UI\"` / `\"API\"` / `\"SYSTEM\"` for drafts and automation, or an annotation-queue CUID for queue-authored rows."
+            "description": "Origin marker. Sentinel `\"UI\"` / `\"API\"` / `\"SYSTEM\"` for drafts and automation, or a CUID for authored rows."
           },
           "metadata": {
             "type": "object",

@@ -6,7 +6,6 @@ const baseInput = {
   organizationId: OrganizationId("org-test"),
   projectId: ProjectId("project-test"),
   timelineAnchor: new Date("2025-01-01T00:00:00.000Z"),
-  queueAssigneeUserIds: ["user-test"] as const,
   apiKeyId: ApiKeyId("apikey-test"),
 }
 

@@ -104,14 +104,10 @@ describe("domain-events dispatcher", () => {
 
     await consumer.dispatchTask("domain-events", "dispatch", envelopeToDispatchPayload(envelope))
 
-    expect(published.map((p) => `${p.queue}:${p.task}`).sort()).toEqual([
-      "projects:checkFirstTrace",
-      "signals:match",
-      "trace-end:run",
-    ])
+    // signals:match is no longer fanned out here — trace-end publishes it once the trace settles.
+    expect(published.map((p) => `${p.queue}:${p.task}`).sort()).toEqual(["projects:checkFirstTrace", "trace-end:run"])
 
     const traceEnd = published.find((p) => p.queue === "trace-end")
-    const signalsMatch = published.find((p) => p.queue === "signals")
     const firstTrace = published.find((p) => p.task === "checkFirstTrace")
 
     expect(traceEnd?.payload).toEqual({
@@ -124,16 +120,7 @@ describe("domain-events dispatcher", () => {
       dedupeKey: "trace-end:run:org-1:proj-1:trace-abc",
       debounceMs: TRACE_END_DEBOUNCE_MS,
     })
-    expect(signalsMatch?.payload).toEqual({
-      organizationId: "org-1",
-      projectId: "proj-1",
-      traceId: "trace-abc",
-      isSandbox: false,
-    })
-    expect(signalsMatch?.options).toEqual({
-      dedupeKey: "signals:match:org-1:proj-1:trace-abc",
-      debounceMs: TRACE_END_DEBOUNCE_MS,
-    })
+    expect(published.some((p) => p.queue === "signals")).toBe(false)
     expect(firstTrace?.options?.dedupeKey).toBe("projects:first-trace:proj-1")
   })
 
@@ -162,12 +149,11 @@ describe("domain-events dispatcher", () => {
 
     const traceEnd = published.find((p) => p.queue === "trace-end")
     const billing = published.find((p) => p.queue === "billing")
-    const signalsMatch = published.find((p) => p.queue === "signals")
     expect((traceEnd?.payload as { isSandbox?: boolean }).isSandbox).toBe(true)
     expect((billing?.payload as { isSandbox?: boolean }).isSandbox).toBe(true)
     expect(published.map((p) => `${p.queue}:${p.task}`)).toContain("projects:checkFirstTrace")
-    // signals:match is fanned out unconditionally too; the signals-match worker owns the sandbox skip.
-    expect((signalsMatch?.payload as { isSandbox?: boolean }).isSandbox).toBe(true)
+    // signals:match is not fanned out here anymore; trace-end publishes it (and skips sandbox itself).
+    expect(published.some((p) => p.queue === "signals")).toBe(false)
   })
 
   it("routes TracesIngested billing snapshots to billing:recordTraceUsageBatch", async () => {
@@ -239,7 +225,6 @@ describe("domain-events dispatcher", () => {
     const payload = {
       organizationId: "org-1",
       projectId: "sample-1",
-      queueAssigneeUserIds: ["user-1"],
       apiKeyId: "key-1",
       timelineAnchorIso: "2026-06-16T00:00:00.000Z",
     }
@@ -581,7 +566,7 @@ describe("domain-events dispatcher", () => {
     expect(published.some((p) => p.queue === "posthog-analytics")).toBe(false)
   })
 
-  it("routes ScoreCreated to issues:discovery, annotation-scores publish, and markReviewStarted with status-aware dedupe", async () => {
+  it("routes ScoreCreated to issues:discovery and annotation-scores publish with status-aware dedupe", async () => {
     const { consumer, published } = setupDispatcher()
 
     const envelope = makeEnvelope("ScoreCreated", {
@@ -595,7 +580,6 @@ describe("domain-events dispatcher", () => {
     await consumer.dispatchTask("domain-events", "dispatch", envelopeToDispatchPayload(envelope))
 
     expect(published.map((p) => `${p.queue}:${p.task}`).sort()).toEqual([
-      "annotation-scores:markReviewStarted",
       "annotation-scores:publishHumanAnnotation",
       "issues:discovery",
     ])
@@ -608,9 +592,6 @@ describe("domain-events dispatcher", () => {
       dedupeKey: "annotation-scores:publish-human:score-3",
       debounceMs: SCORE_PUBLICATION_DEBOUNCE,
     })
-
-    const review = published.find((p) => p.task === "markReviewStarted")
-    expect(review?.options?.dedupeKey).toBe("annotation-scores:mark-review-started:score-3")
   })
 
   it("uses distinct discovery dedupe keys for draft vs published scores", async () => {

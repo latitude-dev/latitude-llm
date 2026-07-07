@@ -25,6 +25,7 @@ export {
   type RefreshEvaluationAlignmentWorkflowResult,
   refreshEvaluationAlignmentWorkflow,
 } from "./refresh-evaluation-alignment-workflow.ts"
+export { regenerateShowcaseWorkflow } from "./regenerate-showcase-workflow.ts"
 export { type SeedDemoProjectWorkflowInput, seedDemoProjectWorkflow } from "./seed-demo-project-workflow.ts"
 export {
   type BackfillSessionIntelligenceWorkflowInput,

@@ -3,12 +3,14 @@ import { OutboxEventWriter } from "@domain/events"
 import { type CreateProjectError, createProjectUseCase } from "@domain/projects"
 import {
   type ConcurrentSqlTransactionError,
+  type NotFoundError,
   type OrganizationId,
   type RepositoryError,
   SqlClient,
   toRepositoryError,
 } from "@domain/shared"
 import { Effect } from "effect"
+import { OrganizationRepository } from "../ports/organization-repository.ts"
 import { createSampleProjectUseCase } from "./create-sample-project.ts"
 
 export interface ProvisionOrganizationWorkspaceInput {
@@ -39,6 +41,7 @@ export interface ProvisionOrganizationWorkspaceResult {
 
 export type ProvisionOrganizationWorkspaceError =
   | RepositoryError
+  | NotFoundError
   | ConcurrentSqlTransactionError
   | GenerateApiKeyError
   | CreateProjectError
@@ -52,6 +55,13 @@ export const provisionOrganizationWorkspaceUseCase = Effect.fn("organizations.pr
     return yield* sqlClient.transaction(
       Effect.gen(function* () {
         const outboxEventWriter = yield* OutboxEventWriter
+        const organizationRepo = yield* OrganizationRepository
+
+        const organization = yield* organizationRepo.findById(input.organizationId)
+        yield* organizationRepo.save({
+          ...organization,
+          settings: { ...organization.settings, wantsShowcase: true },
+        })
 
         const defaultApiKey = yield* generateApiKeyUseCase({
           name: DEFAULT_API_KEY_NAME,

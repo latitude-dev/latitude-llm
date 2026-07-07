@@ -315,13 +315,6 @@ export interface EventPayloads {
     readonly errors: number
     readonly windowSeconds: number
   }
-  AnnotationQueueItemCompleted: {
-    readonly organizationId: string
-    readonly actorUserId: string
-    readonly projectId: string
-    readonly queueId: string
-    readonly itemId: string
-  }
   FirstTraceReceived: {
     readonly organizationId: string
     readonly projectId: string
@@ -451,7 +444,6 @@ export interface EventPayloads {
   SampleProjectCreated: {
     readonly organizationId: string
     readonly projectId: string
-    readonly queueAssigneeUserIds: readonly string[]
     readonly apiKeyId: string
     readonly timelineAnchorIso: string
   }

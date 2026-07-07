@@ -1,6 +1,7 @@
 import { queryCollectionOptions } from "@tanstack/query-db-collection"
 import type { Context, QueryBuilder, SchemaFromSource } from "@tanstack/react-db"
-import { createCollection, useLiveQuery } from "@tanstack/react-db"
+import { useLiveQuery } from "@tanstack/react-db"
+import { createAppCollection } from "../../lib/data/create-app-collection.ts"
 import { getQueryClient } from "../../lib/data/query-client.tsx"
 import { type FlaggerRecord, listFlaggersByProject, updateFlagger } from "./flaggers.functions.ts"
 
@@ -8,7 +9,7 @@ const queryClient = getQueryClient()
 const flaggersQueryKey = (projectId: string) => ["flaggers", projectId] as const
 
 const makeProjectFlaggersCollection = (projectId: string) =>
-  createCollection(
+  createAppCollection(
     queryCollectionOptions({
       queryClient,
       queryKey: flaggersQueryKey(projectId),

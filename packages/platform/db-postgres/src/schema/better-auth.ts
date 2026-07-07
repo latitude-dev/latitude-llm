@@ -136,7 +136,6 @@ export const organizations = latitudeSchema.table(
     logo: text("logo"),
     metadata: text("metadata"),
     stripeCustomerId: text("stripe_customer_id"),
-    /** App extension (not in BA reference). */
     settings: jsonb("settings").$type<OrganizationSettings>(),
     parentOrgId: cuid("parent_org_id", { default: false }),
     expiresAt: tzTimestamp("expires_at"),
@@ -230,7 +229,9 @@ export const oauthApplications = latitudeSchema.table(
     redirectUrls: text("redirect_urls"),
     type: text("type"),
     disabled: boolean("disabled").default(false),
-    userId: cuid("user_id", { default: false }).references(() => users.id, { onDelete: "cascade" }),
+    userId: cuid("user_id", { default: false }).references(() => users.id, {
+      onDelete: "cascade",
+    }),
     organizationId: cuid("organization_id", { default: false }).references(() => organizations.id, {
       onDelete: "cascade",
     }),
@@ -258,8 +259,12 @@ export const oauthAccessTokens = latitudeSchema.table(
     refreshToken: text("refresh_token").unique(),
     accessTokenExpiresAt: tzTimestamp("access_token_expires_at"),
     refreshTokenExpiresAt: tzTimestamp("refresh_token_expires_at"),
-    clientId: text("client_id").references(() => oauthApplications.clientId, { onDelete: "cascade" }),
-    userId: cuid("user_id", { default: false }).references(() => users.id, { onDelete: "cascade" }),
+    clientId: text("client_id").references(() => oauthApplications.clientId, {
+      onDelete: "cascade",
+    }),
+    userId: cuid("user_id", { default: false }).references(() => users.id, {
+      onDelete: "cascade",
+    }),
     scopes: text("scopes"),
     ...timestamps(),
   },
@@ -275,8 +280,12 @@ export const oauthConsents = latitudeSchema.table(
   "oauth_consents",
   {
     id: cuid("id").primaryKey(),
-    clientId: text("client_id").references(() => oauthApplications.clientId, { onDelete: "cascade" }),
-    userId: cuid("user_id", { default: false }).references(() => users.id, { onDelete: "cascade" }),
+    clientId: text("client_id").references(() => oauthApplications.clientId, {
+      onDelete: "cascade",
+    }),
+    userId: cuid("user_id", { default: false }).references(() => users.id, {
+      onDelete: "cascade",
+    }),
     scopes: text("scopes"),
     consentGiven: boolean("consent_given"),
     ...timestamps(),
@@ -315,7 +324,9 @@ export const ssoProviders = latitudeSchema.table(
     issuer: text("issuer").notNull(),
     oidcConfig: text("oidc_config"),
     samlConfig: text("saml_config"),
-    userId: cuid("user_id", { default: false }).references(() => users.id, { onDelete: "cascade" }),
+    userId: cuid("user_id", { default: false }).references(() => users.id, {
+      onDelete: "cascade",
+    }),
     providerId: text("provider_id").notNull().unique(),
     organizationId: cuid("organization_id", { default: false }).references(() => organizations.id, {
       onDelete: "cascade",

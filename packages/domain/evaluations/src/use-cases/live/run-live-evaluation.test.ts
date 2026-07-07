@@ -269,6 +269,9 @@ function createUseCaseLayer(input: {
   readonly scriptRuntimeLayer?: ReturnType<typeof createFakeScriptRuntime>["layer"] | undefined
   readonly detectorHealthLayer?: ReturnType<typeof createFakeDetectorHealthTracker>["layer"] | undefined
   readonly traceSearchRepository?: ReturnType<typeof createFakeTraceSearchRepository>["repository"] | undefined
+  readonly messageEmbeddingRepository?:
+    | ReturnType<typeof createFakeMessageEmbeddingRepository>["repository"]
+    | undefined
   readonly publisher?: QueuePublisherShape | undefined
 }): Layer.Layer<
   | AI
@@ -299,7 +302,10 @@ function createUseCaseLayer(input: {
     Layer.succeed(TraceRepository, input.traceRepository),
     Layer.succeed(SessionRepository, createFakeSessionRepository().repository),
     Layer.succeed(SpanRepository, createFakeSpanRepository().repository),
-    Layer.succeed(MessageEmbeddingRepository, createFakeMessageEmbeddingRepository().repository),
+    Layer.succeed(
+      MessageEmbeddingRepository,
+      input.messageEmbeddingRepository ?? createFakeMessageEmbeddingRepository().repository,
+    ),
     Layer.succeed(TraceSearchRepository, input.traceSearchRepository ?? createFakeTraceSearchRepository().repository),
     Layer.succeed(QueuePublisher, input.publisher ?? createNoopPublisher()),
     Layer.succeed(EvaluationRepository, input.evaluationRepository),
@@ -931,7 +937,31 @@ describe("runLiveEvaluationUseCase", () => {
 
   const EMBEDDING_SCRIPT = "return Passed((await semanticSimilarity('frustration')) >= 0.5 ? 1 : 0)"
 
-  it("defers an embedding-capability evaluation and re-publishes when the session's embeddings are not indexed yet", async () => {
+  // Occurrences are written at ingest even when embedding is skipped (over budget); the readiness gate
+  // must key off embeddings, not occurrences. `withEmbeddings` seeds vectors for those occurrences.
+  const embeddingGateRepos = (opts: { readonly withEmbeddings: boolean }) => {
+    const traceSearchRepository = createFakeTraceSearchRepository({
+      listMessageOccurrencesForTraces: () => Effect.succeed([{ contentHash: "hash-a", role: "user" as const }]),
+    }).repository
+    const messageEmbeddingRepository = createFakeMessageEmbeddingRepository({
+      findByHashes: ({ contentHashes, embeddingModel }) =>
+        Effect.succeed(
+          opts.withEmbeddings
+            ? contentHashes.map((contentHash) => ({
+                organizationId: OrganizationId(INPUT.organizationId),
+                projectId: ProjectId(INPUT.projectId),
+                contentHash,
+                embedding: [1, 0, 0],
+                embeddingModel: embeddingModel ?? "voyage-4-large",
+                insertedAt: new Date(0),
+              }))
+            : [],
+        ),
+    }).repository
+    return { traceSearchRepository, messageEmbeddingRepository }
+  }
+
+  it("defers a semantic evaluation and re-publishes when the session has occurrences but no embeddings yet", async () => {
     const evaluation = makeEvaluation({ script: EMBEDDING_SCRIPT })
     const traceDetail = makeTraceDetail()
     const { repository: traceRepository } = createFakeTraceRepository({
@@ -961,7 +991,7 @@ describe("runLiveEvaluationUseCase", () => {
             signalRepository,
             publisher,
             scriptRuntimeLayer: scriptRuntime.layer,
-            // Default fake returns no occurrences → embeddings not indexed yet.
+            ...embeddingGateRepos({ withEmbeddings: false }),
           }),
         ),
       ),
@@ -983,7 +1013,56 @@ describe("runLiveEvaluationUseCase", () => {
     expect(scriptRuntime.calls.run).toHaveLength(0)
   })
 
-  it("runs an embedding-capability evaluation anyway once the wait attempts are exhausted", async () => {
+  it("skips a semantic evaluation without persisting a score once the wait attempts are exhausted", async () => {
+    const evaluation = makeEvaluation({ script: EMBEDDING_SCRIPT })
+    const traceDetail = makeTraceDetail()
+    const { repository: traceRepository } = createFakeTraceRepository({
+      findByTraceId: () => Effect.succeed(traceDetail),
+    })
+    const evaluationRepository = createEvaluationRepository(() => Effect.succeed(evaluation))
+    const signalRepository = createSignalRepository(() =>
+      Effect.die("Signal should not be loaded when embeddings are unavailable"),
+    )
+    const scriptRuntime = createFakeScriptRuntime({
+      run: () => Effect.die("Script should not run when embeddings are unavailable"),
+    })
+    const { persistedScores, scoreWriteLayer } = createTrackedScoreWriteFixture()
+    const published: unknown[] = []
+    const publisher = createNoopPublisher({
+      publish: (_queue, _task, payload) =>
+        Effect.sync(() => {
+          published.push(payload)
+        }),
+    })
+
+    const result = await Effect.runPromise(
+      runLiveEvaluationUseCase({ ...INPUT, embeddingWaitAttempt: 99 }).pipe(
+        Effect.provide(
+          createUseCaseLayer({
+            traceRepository,
+            evaluationRepository,
+            signalRepository,
+            publisher,
+            scoreWriteLayer,
+            scriptRuntimeLayer: scriptRuntime.layer,
+            ...embeddingGateRepos({ withEmbeddings: false }),
+          }),
+        ),
+      ),
+    )
+
+    expect(result).toEqual({
+      action: "skipped",
+      reason: "embeddings-unavailable",
+      evaluationId: INPUT.evaluationId,
+      traceId: INPUT.traceId,
+    })
+    expect(published).toHaveLength(0)
+    expect(scriptRuntime.calls.run).toHaveLength(0)
+    expect(persistedScores).toHaveLength(0)
+  })
+
+  it("runs a semantic evaluation when the session's embeddings are indexed", async () => {
     const evaluation = makeEvaluation({ script: EMBEDDING_SCRIPT })
     const issue = makeSignal({ id: SignalId(evaluation.signalId) })
     const traceDetail = makeTraceDetail()
@@ -1004,7 +1083,7 @@ describe("runLiveEvaluationUseCase", () => {
     })
 
     const result = await Effect.runPromise(
-      runLiveEvaluationUseCase({ ...INPUT, embeddingWaitAttempt: 99 }).pipe(
+      runLiveEvaluationUseCase(INPUT).pipe(
         Effect.provide(
           createUseCaseLayer({
             traceRepository,
@@ -1013,6 +1092,7 @@ describe("runLiveEvaluationUseCase", () => {
             publisher,
             billingLayer: createBillingLayer(),
             scriptRuntimeLayer: scriptRuntime.layer,
+            ...embeddingGateRepos({ withEmbeddings: true }),
           }),
         ),
       ),

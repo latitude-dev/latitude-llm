@@ -1,5 +1,7 @@
 import type { TraceDetail } from "@domain/spans"
 import {
+  isMessagePart,
+  iterMessageParts,
   MAX_SNIPPET_EXCERPT_LENGTH,
   MAX_SUSPICIOUS_SNIPPETS,
   type SuspiciousSnippet,
@@ -329,10 +331,9 @@ function extractJailbreakSuspiciousSnippets(trace: Pick<TraceDetail, "allMessage
     if (message.role !== "user") continue
 
     let textContent = ""
-    for (const part of message.parts) {
-      if (part.type === "text" && typeof part.content === "string") {
-        textContent += `${part.content} `
-      }
+    for (const part of iterMessageParts(message.parts)) {
+      if (!isMessagePart(part) || part.type !== "text" || typeof part.content !== "string") continue
+      textContent += `${part.content} `
     }
 
     textContent = textContent.trim()

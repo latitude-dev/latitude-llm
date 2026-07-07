@@ -15,8 +15,8 @@ dev = [
     "pytest-xdist==3.8.0",
     "pytest==9.1.1",
     "respx==0.23.1",
-    "pyright==1.1.410",
-    "ruff==0.15.18",
+    "pyright==1.1.411",
+    "ruff==0.15.20",
     "sh==2.3.0",
     "psutil==7.2.2",
 ]

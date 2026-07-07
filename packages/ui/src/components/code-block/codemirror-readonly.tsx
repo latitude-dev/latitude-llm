@@ -1,6 +1,7 @@
+import { javascript } from "@codemirror/lang-javascript"
 import { json } from "@codemirror/lang-json"
 import { defaultHighlightStyle, syntaxHighlighting } from "@codemirror/language"
-import { EditorState } from "@codemirror/state"
+import { EditorState, type Extension } from "@codemirror/state"
 import { EditorView, lineNumbers } from "@codemirror/view"
 import { useEffect, useMemo, useRef } from "react"
 import { useMountEffect } from "../../hooks/use-mount-effect.ts"
@@ -10,6 +11,8 @@ interface CodeMirrorReadonlyProps {
   readonly value: string
   readonly className?: string
   readonly wrapLines?: boolean
+  readonly onReady?: () => void
+  readonly language?: string | undefined
 }
 
 function isJson(value: string): boolean {
@@ -24,10 +27,32 @@ function isJson(value: string): boolean {
   }
 }
 
+function languageSupport(language: string | undefined, isJsonContent: boolean): Extension | null {
+  if (isJsonContent || language?.toLowerCase() === "json") return json()
+  if (!language) return null
+
+  const lang = language.toLowerCase()
+  if (lang === "tsx") {
+    return javascript({ jsx: true, typescript: true })
+  }
+  if (lang === "ts" || lang === "typescript") {
+    return javascript({ typescript: true })
+  }
+  if (lang === "jsx") {
+    return javascript({ jsx: true })
+  }
+  if (lang === "js" || lang === "javascript") {
+    return javascript()
+  }
+
+  return null
+}
+
 const readonlyTheme = EditorView.theme({
   "&": {
     fontSize: "12px",
     fontFamily: "var(--font-mono)",
+    color: "hsl(var(--foreground))",
   },
   ".cm-content": {
     padding: "8px 0",
@@ -48,11 +73,11 @@ const readonlyTheme = EditorView.theme({
   },
 })
 
-function buildState(doc: string, isJsonContent: boolean, wrapLines: boolean) {
-  const extensions = [
+function buildState(doc: string, isJsonContent: boolean, wrapLines: boolean, language: string | undefined) {
+  const extensions: Extension[] = [
     readonlyTheme,
     lineNumbers(),
-    syntaxHighlighting(defaultHighlightStyle),
+    syntaxHighlighting(defaultHighlightStyle, { fallback: true }),
     EditorState.readOnly.of(true),
     EditorView.editable.of(false),
   ]
@@ -61,14 +86,15 @@ function buildState(doc: string, isJsonContent: boolean, wrapLines: boolean) {
     extensions.push(EditorView.lineWrapping)
   }
 
-  if (isJsonContent) {
-    extensions.push(json())
+  const parser = languageSupport(language, isJsonContent)
+  if (parser) {
+    extensions.push(parser)
   }
 
   return EditorState.create({ doc, extensions })
 }
 
-export function CodeMirrorReadonly({ value, className, wrapLines = true }: CodeMirrorReadonlyProps) {
+export function CodeMirrorReadonly({ value, className, wrapLines = true, onReady, language }: CodeMirrorReadonlyProps) {
   const containerRef = useRef<HTMLDivElement>(null)
   const viewRef = useRef<EditorView | null>(null)
   const initialValueRef = useRef(value)
@@ -79,10 +105,11 @@ export function CodeMirrorReadonly({ value, className, wrapLines = true }: CodeM
     if (!container) return
 
     const view = new EditorView({
-      state: buildState(initialValueRef.current, isJsonContent, wrapLines),
+      state: buildState(initialValueRef.current, isJsonContent, wrapLines, language),
       parent: container,
     })
     viewRef.current = view
+    onReady?.()
 
     return () => {
       view.destroy()
@@ -96,9 +123,9 @@ export function CodeMirrorReadonly({ value, className, wrapLines = true }: CodeM
     const view = viewRef.current
     if (!view) return
     if (view.state.doc.toString() !== value) {
-      view.setState(buildState(value, isJsonContent, wrapLines))
+      view.setState(buildState(value, isJsonContent, wrapLines, language))
     }
-  }, [value, isJsonContent, wrapLines])
+  }, [value, isJsonContent, wrapLines, language])
 
   return <div ref={containerRef} className={cn("rounded-md overflow-hidden bg-muted", className)} />
 }

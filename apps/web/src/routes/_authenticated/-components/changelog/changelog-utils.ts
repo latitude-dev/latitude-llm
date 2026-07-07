@@ -1,4 +1,3 @@
-import { FULL_CHANGELOG_URL } from "@domain/changelog"
 import type { ChangelogEntryRecord } from "../../../../domains/changelog/changelog.functions.ts"
 
 /** Persisted when the user collapses the sidebar changelog banner. */
@@ -7,7 +6,7 @@ export type ChangelogBannerDismissed = {
   readonly publishedAt: string
 }
 
-export const changelogEntryUrl = (entry: ChangelogEntryRecord) => `${FULL_CHANGELOG_URL}/${entry.slug}`
+export const changelogEntryUrl = (entry: ChangelogEntryRecord) => entry.url
 
 /** Snapshot to store when the user dismisses the banner for the current latest entry. */
 export const toDismissedBannerState = (entry: ChangelogEntryRecord): ChangelogBannerDismissed => ({
@@ -41,7 +40,7 @@ export const parseDismissedBannerState = (value: unknown): ChangelogBannerDismis
 
 /**
  * True when the user dismissed this exact latest entry (id + publishedAt).
- * A new Framer item (new id) or a changed publish date re-opens the banner.
+ * A new entry (new id) or a changed publish date re-opens the banner.
  */
 export const isChangelogBannerDismissed = (
   latest: ChangelogEntryRecord,

@@ -1,7 +1,7 @@
 import { Button, Icon, Input, Text, useValueWithDefault } from "@repo/ui"
 import { createFileRoute } from "@tanstack/react-router"
 import { ExternalLinkIcon, SearchIcon, UsersRoundIcon } from "lucide-react"
-import { useMemo } from "react"
+import { useEffect, useMemo, useState } from "react"
 import { useProjectUsers, useUsersOverview } from "../../../../../domains/end-users/end-users.collection.ts"
 import { allUsersMonitorTarget } from "../../../../../domains/monitors/monitor-target.ts"
 import { ListingLayout as Layout } from "../../../../../layouts/ListingLayout/index.tsx"
@@ -77,6 +77,7 @@ function UsersPage() {
     validate: (value): value is string => SORT_PARAM_PATTERN.test(value),
   })
   const sorting = useMemo(() => parseSorting(rawSorting), [rawSorting])
+  const [focusedUserId, setFocusedUserId] = useState<string | undefined>()
 
   useDebounce(
     () => {
@@ -108,6 +109,10 @@ function UsersPage() {
     () => pickUserTrendBucketSeconds(Date.parse(range.toIso) - Date.parse(range.fromIso)),
     [range],
   )
+
+  useEffect(() => {
+    setFocusedUserId(undefined)
+  }, [searchQuery, rawSorting, timeFrom, timeTo])
 
   const {
     data: users,
@@ -200,6 +205,8 @@ function UsersPage() {
           visibleColumnIds={columnSettings.visibleColumnIds}
           onSortChange={(next) => setRawSorting(serializeSorting(next))}
           projectSlug={project.slug}
+          focusedUserId={focusedUserId}
+          onFocusedUserChange={setFocusedUserId}
         />
       </Layout.Content>
     </Layout>

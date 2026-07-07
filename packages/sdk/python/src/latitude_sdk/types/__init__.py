@@ -496,7 +496,6 @@ if typing.TYPE_CHECKING:
     from .gen_ai_message import GenAiMessage
     from .gen_ai_span_message import GenAiSpanMessage
     from .gen_ai_span_system import GenAiSpanSystem
-    from .gen_ai_system import GenAiSystem
     from .health_response import HealthResponse
     from .health_response_service import HealthResponseService
     from .health_response_status import HealthResponseStatus
@@ -1159,7 +1158,6 @@ _dynamic_imports: typing.Dict[str, str] = {
     "GenAiMessage": ".gen_ai_message",
     "GenAiSpanMessage": ".gen_ai_span_message",
     "GenAiSpanSystem": ".gen_ai_span_system",
-    "GenAiSystem": ".gen_ai_system",
     "HealthResponse": ".health_response",
     "HealthResponseService": ".health_response_service",
     "HealthResponseStatus": ".health_response_status",
@@ -1846,7 +1844,6 @@ __all__ = [
     "GenAiMessage",
     "GenAiSpanMessage",
     "GenAiSpanSystem",
-    "GenAiSystem",
     "HealthResponse",
     "HealthResponseService",
     "HealthResponseStatus",

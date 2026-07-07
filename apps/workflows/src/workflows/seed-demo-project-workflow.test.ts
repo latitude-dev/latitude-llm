@@ -44,7 +44,6 @@ import { seedDemoProjectWorkflow } from "./seed-demo-project-workflow.ts"
 const baseInput = {
   organizationId: "org-1",
   projectId: "proj-demo",
-  queueAssigneeUserIds: ["user-1", "user-2"] as const,
   apiKeyId: "apikey-1",
   timelineAnchorIso: "2026-01-01T00:00:00.000Z",
 }

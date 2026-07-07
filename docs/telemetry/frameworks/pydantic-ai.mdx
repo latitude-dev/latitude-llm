@@ -1,0 +1,149 @@
+---
+title: Pydantic AI
+description: Connect your Pydantic AI agent to Latitude for observability.
+---
+
+## Overview
+
+This guide shows you how to send traces from a **[Pydantic AI](https://ai.pydantic.dev)** agent to Latitude.
+
+Pydantic AI has OpenTelemetry support built in. Calling `Agent.instrument_all()` makes it emit standard `gen_ai.*` spans for every agent run, model call, and tool execution. Latitude's Python SDK registers the global OpenTelemetry provider those spans flow into, so you get full traces without a dedicated instrumentor — Latitude reads Pydantic AI's native spans directly.
+
+<Check>
+  You'll keep building Pydantic AI agents exactly as you do today. Latitude only
+  adds the export path for the spans Pydantic AI already emits.
+</Check>
+
+<Note>
+  The Pydantic AI integration is **Python only**.
+</Note>
+
+---
+
+## Requirements
+
+- A **Latitude account** and **API key**
+- A **Latitude project slug**
+- A Python project that uses **Pydantic AI** (`pydantic-ai`)
+
+---
+
+## Steps
+
+<Steps>
+
+  <Step title="Install">
+    <CodeGroup>
+      ```bash pip
+      pip install latitude-telemetry pydantic-ai
+      ```
+
+      ```bash uv
+      uv add latitude-telemetry pydantic-ai
+      ```
+
+      ```bash poetry
+      poetry add latitude-telemetry pydantic-ai
+      ```
+    </CodeGroup>
+  </Step>
+
+  <Step title="Initialize Latitude and enable instrumentation">
+    Initialize Latitude once at startup, then turn on Pydantic AI's OpenTelemetry instrumentation. You do not need an `instrumentations` entry for Pydantic AI, because it emits OpenTelemetry spans itself.
+
+    ```python
+    import os
+
+    from latitude_telemetry import Latitude, capture
+    from pydantic_ai import Agent
+
+    latitude = Latitude(
+        api_key=os.environ["LATITUDE_API_KEY"],
+        project=os.environ["LATITUDE_PROJECT_SLUG"],
+    )
+
+    # Pydantic AI self-instruments via OpenTelemetry onto the global provider
+    # Latitude just registered — no `instrumentations` entry required.
+    Agent.instrument_all()
+
+    agent = Agent("openai:gpt-4o", system_prompt="You are a helpful assistant.")
+
+
+    @capture("pydantic-ai-run", {"session_id": "example"})
+    def main():
+        return agent.run_sync("Summarize the key features of Pydantic AI.").output
+
+
+    if __name__ == "__main__":
+        print(main())
+        latitude.shutdown()
+    ```
+
+    <Note>
+      The SDK registers `atexit` and signal shutdown handlers automatically. The
+      explicit `latitude.shutdown()` is a safeguard for short-lived scripts and
+      notebooks, ensuring buffered spans flush before the process exits.
+    </Note>
+  </Step>
+
+  <Step title="Add request context (optional)">
+    Wrap the boundary that runs your agent with `capture()` to attach user, session, tag, or metadata context to every span created inside the callback.
+
+    ```python
+    @capture(
+        "support-agent",
+        {
+            "user_id": user.id,
+            "session_id": conversation.id,
+            "tags": ["pydantic-ai", "support"],
+        },
+    )
+    def handle_request(message: str):
+        return agent.run_sync(message).output
+    ```
+  </Step>
+
+</Steps>
+
+---
+
+## Bring your own OpenTelemetry
+
+If your app already runs its own OpenTelemetry `TracerProvider`, skip the Latitude SDK and point that provider's OTLP exporter at Latitude, then still call `Agent.instrument_all()`:
+
+```bash
+export OTEL_EXPORTER_OTLP_ENDPOINT="https://ingest.latitude.so"
+export OTEL_EXPORTER_OTLP_HEADERS="Authorization=Bearer YOUR_API_KEY,X-Latitude-Project=YOUR_PROJECT_SLUG"
+```
+
+<Note>
+  `OTEL_EXPORTER_OTLP_ENDPOINT` is the **base URL** — the OpenTelemetry SDK
+  appends `/v1/traces` automatically. Do not include the path yourself or traces
+  will fail to reach Latitude. The full endpoint
+  `https://ingest.latitude.so/v1/traces` is what you use with `curl` or the
+  signal-specific `OTEL_EXPORTER_OTLP_TRACES_ENDPOINT`.
+</Note>
+
+On this path Latitude's smart filter does not apply — every exported span is stored — so export only the spans you want to keep. See [GenAI Span Attributes](/telemetry/otel-exporter#genai-span-attributes-llm-metadata) for the attributes Latitude expects.
+
+---
+
+## What you get
+
+Each agent run shows up as a trace with nested spans:
+
+- **Agent spans** — the agent run, its user message, and the final response
+- **Model spans** — model invocations with input/output messages, model name, and token usage
+- **Tool spans** — tool name, input arguments, and output result
+
+Because Pydantic AI emits standard `gen_ai.*` attributes (OpenTelemetry GenAI semantic conventions), Latitude renders model name, token counts, and messages automatically.
+
+---
+
+## Seeing Your Traces
+
+Once connected, traces appear automatically in Latitude:
+
+1. Open your **project** in the Latitude dashboard
+2. Run your agent with at least one model call or tool call
+3. Confirm the agent → model → tool hierarchy appears with model metadata, token usage, and latency

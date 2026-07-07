@@ -4,7 +4,10 @@ import {
   Button,
   Checkbox,
   ClaudeCodeIcon,
+  CloseTrigger,
   CopyableText,
+  CopyButton,
+  CursorIcon,
   Icon,
   InfiniteTable,
   type InfiniteTableColumn,
@@ -20,7 +23,7 @@ import { relativeTime } from "@repo/utils"
 import { useForm } from "@tanstack/react-form"
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 import { Link } from "@tanstack/react-router"
-import { BookOpen, Copy, ExternalLink, type LucideProps, Plus, Webhook } from "lucide-react"
+import { BookOpen, Copy, ExternalLink, FileText, type LucideProps, Plus, Webhook } from "lucide-react"
 import { useState } from "react"
 import { z } from "zod"
 import {
@@ -42,6 +45,7 @@ import {
   listLinearMembers,
   listLinearTeams,
   listLinearTeamsForApiKey,
+  sendToDestinationsQueryKey,
   upsertAgentDispatchConfig,
 } from "../../../../../../domains/agent-dispatch/agent-dispatch.functions.ts"
 import { toUserMessage } from "../../../../../../lib/errors.ts"
@@ -84,6 +88,54 @@ const DISPATCH_ERROR_FALLBACKS: Record<string, string> = {
   transport: "The provider could not be reached. It should retry automatically.",
 }
 
+function getDispatchErrorTitle(dispatch: AgentDispatchRecord): string | null {
+  if (!dispatch.errorCategory) return null
+  return DISPATCH_ERROR_TITLES[dispatch.errorCategory] ?? dispatch.errorCategory
+}
+
+function getDispatchErrorDetail(dispatch: AgentDispatchRecord): string | null {
+  const genericErrorDetail = dispatch.errorCategory ? `Agent dispatch adapter failed (${dispatch.errorCategory})` : null
+  if (dispatch.errorDetail && dispatch.errorDetail !== genericErrorDetail) {
+    return dispatch.errorDetail
+  }
+  if (dispatch.errorCategory) {
+    return DISPATCH_ERROR_FALLBACKS[dispatch.errorCategory] ?? null
+  }
+  return null
+}
+
+function DispatchErrorDetailModal({
+  title,
+  detail,
+  onClose,
+}: {
+  readonly title: string
+  readonly detail: string
+  readonly onClose: () => void
+}) {
+  return (
+    <Modal
+      open
+      dismissible
+      onOpenChange={(next) => (!next ? onClose() : undefined)}
+      title={title}
+      description="Full error response from the provider."
+      footer={<CloseTrigger />}
+    >
+      <div className="group relative">
+        <div className="absolute top-0 right-0 z-10 rounded-tr-md rounded-bl-lg bg-muted p-0.5">
+          <CopyButton value={detail} tooltip="Copy" />
+        </div>
+        <textarea
+          readOnly
+          value={detail}
+          className="max-h-80 min-h-32 w-full resize-none rounded-md bg-muted p-3 pr-12 font-mono text-xs leading-relaxed"
+        />
+      </div>
+    </Modal>
+  )
+}
+
 const INTEGRATION_SUBTITLES: Record<AgentDispatchKindKey, string> = {
   cursor: "Cursor agents react to Latitude signals and push fixes to your code.",
   claude_code: "Claude Code routines react to Latitude signals and push fixes to your code.",
@@ -103,6 +155,7 @@ const ACTIVE_DISPATCH_TRIGGERS = ["signal.discovered", "incident.opened"] as con
 const DISPATCH_TRIGGER_TITLES: Record<string, string> = {
   "signal.discovered": "New signal",
   "incident.opened": "Escalating signal",
+  manual: "Manual send",
 }
 
 const TRIGGER_LABELS: Record<(typeof ACTIVE_DISPATCH_TRIGGERS)[number], { title: string; description: string }> = {
@@ -118,17 +171,6 @@ const TRIGGER_LABELS: Record<(typeof ACTIVE_DISPATCH_TRIGGERS)[number], { title:
 
 function isActiveDispatchTrigger(trigger: string): trigger is (typeof ACTIVE_DISPATCH_TRIGGERS)[number] {
   return ACTIVE_DISPATCH_TRIGGERS.some((activeTrigger) => activeTrigger === trigger)
-}
-
-function CursorIcon(props: LucideProps) {
-  return (
-    <svg aria-hidden="true" viewBox="0 0 24 24" {...props}>
-      <path
-        d="M11.503.131 1.891 5.678a.84.84 0 0 0-.42.726v11.188c0 .3.162.575.42.724l9.609 5.55a1 1 0 0 0 .998 0l9.61-5.55a.84.84 0 0 0 .42-.724V6.404a.84.84 0 0 0-.42-.726L12.497.131a1.01 1.01 0 0 0-.996 0M2.657 6.338h18.55c.263 0 .43.287.297.515L12.23 22.918c-.062.107-.229.064-.229-.06V12.335a.59.59 0 0 0-.295-.51l-9.11-5.257c-.109-.063-.064-.23.061-.23"
-        fill="currentColor"
-      />
-    </svg>
-  )
 }
 
 function LinearIcon(props: LucideProps) {
@@ -155,9 +197,17 @@ const INTEGRATION_ICONS = AGENT_DISPATCH_KIND_ICONS
 const CLAUDE_ROUTINE_TEMPLATE =
   "Inspect the Latitude signal, identify the regression or newly discovered issue, implement the fix, run the relevant checks, and report what changed."
 
-function IntegrationDocsButton({ kind }: { readonly kind: AgentDispatchKindKey }) {
+function IntegrationDocsButton({
+  kind,
+  fullWidth = false,
+  variant = "outline",
+}: {
+  readonly kind: AgentDispatchKindKey
+  readonly fullWidth?: boolean
+  readonly variant?: "outline" | "ghost"
+}) {
   return (
-    <Button asChild variant="outline" size="sm">
+    <Button asChild variant={variant} size="sm" className={fullWidth ? "w-full" : "w-auto shrink-0"}>
       <a href={INTEGRATION_DOC_URLS[kind]} target="_blank" rel="noreferrer">
         <Icon icon={BookOpen} size="sm" />
         Setup guide
@@ -226,6 +276,7 @@ function AgentDispatchKindCard({
     onSuccess: async () => {
       await queryClient.invalidateQueries({ queryKey: AGENT_DISPATCH_INTEGRATIONS_QUERY_KEY })
       await queryClient.invalidateQueries({ queryKey: ["agent-dispatch-config", projectId, kind] })
+      await queryClient.invalidateQueries({ queryKey: sendToDestinationsQueryKey(projectId) })
       toast({ description: `${KIND_LABELS[kind]} disconnected` })
     },
     onError: (error) => toast({ variant: "destructive", description: toUserMessage(error) }),
@@ -337,7 +388,7 @@ export function AgentDispatchIntegrationDetails({
   return (
     <div className="flex flex-col gap-8">
       <div className="flex max-w-3xl flex-col gap-3 rounded-lg border border-border bg-muted/30 p-4 sm:flex-row sm:items-center sm:justify-between">
-        <div className="flex flex-col gap-1">
+        <div className="flex min-w-0 flex-col gap-1">
           <Text.H5 display="block" weight="semibold">
             {KIND_LABELS[kind]} setup guide
           </Text.H5>
@@ -392,6 +443,7 @@ function AgentDispatchConfigForm({
       webhookSecret={webhookSecret}
       onSaved={async () => {
         await queryClient.invalidateQueries({ queryKey: ["agent-dispatch-config", projectId, kind] })
+        await queryClient.invalidateQueries({ queryKey: sendToDestinationsQueryKey(projectId) })
         toast({ description: "Dispatch settings saved" })
       }}
     />
@@ -867,10 +919,13 @@ function ConnectAgentDispatchModal({
           onWebhookSecret(result.webhookSecret)
           await queryClient.invalidateQueries({ queryKey: AGENT_DISPATCH_INTEGRATIONS_QUERY_KEY })
           await queryClient.invalidateQueries({ queryKey: ["agent-dispatch-config", projectId, kind] })
+          await queryClient.invalidateQueries({ queryKey: sendToDestinationsQueryKey(projectId) })
           toast({ description: `${KIND_LABELS[kind]} connected` })
           return
         }
         await queryClient.invalidateQueries({ queryKey: AGENT_DISPATCH_INTEGRATIONS_QUERY_KEY })
+        await queryClient.invalidateQueries({ queryKey: ["agent-dispatch-config", projectId, kind] })
+        await queryClient.invalidateQueries({ queryKey: sendToDestinationsQueryKey(projectId) })
         toast({ description: `${KIND_LABELS[kind]} connected` })
         onClose()
       },
@@ -1007,15 +1062,14 @@ function ConnectAgentDispatchModal({
                 3. Return here, paste the key, and click Connect. You can revoke the key later from Cursor settings.
               </Text.H6>
             </div>
-            <div className="flex flex-row flex-wrap gap-2 pt-1">
-              <IntegrationDocsButton kind={kind} />
-              <Button asChild variant="outline" size="sm">
+            <div className="flex flex-row flex-wrap items-center gap-2 pt-1">
+              <Button asChild variant="outline" size="sm" className="w-auto shrink-0">
                 <a href="https://cursor.com/dashboard/api" target="_blank" rel="noreferrer">
                   <Icon icon={ExternalLink} size="sm" />
                   Cursor
                 </a>
               </Button>
-              <Button asChild variant="outline" size="sm">
+              <Button asChild variant="ghost" size="sm" className="w-auto shrink-0">
                 <a
                   href="https://cursor.com/docs/cli/reference/authentication#api-key-authentication"
                   target="_blank"
@@ -1025,6 +1079,7 @@ function ConnectAgentDispatchModal({
                   Cursor docs
                 </a>
               </Button>
+              <IntegrationDocsButton kind={kind} variant="ghost" />
             </div>
           </div>
           <div className="flex flex-col gap-3">
@@ -1123,9 +1178,12 @@ function ConnectAgentDispatchModal({
               <Text.H6 display="block" color="foregroundMuted">
                 4. Paste both values here. Latitude will extract the routine ID from the page URL.
               </Text.H6>
+            </div>
+            <div className="flex flex-col gap-2 pt-1">
               <Button
                 variant="outline"
                 size="sm"
+                className="w-full"
                 onClick={async () => {
                   await navigator.clipboard.writeText(CLAUDE_ROUTINE_TEMPLATE)
                   toast({ description: "Routine description copied" })
@@ -1134,21 +1192,21 @@ function ConnectAgentDispatchModal({
                 <Icon icon={Copy} size="sm" />
                 Copy routine description
               </Button>
-            </div>
-            <div className="flex flex-row flex-wrap gap-2 pt-1">
-              <IntegrationDocsButton kind={kind} />
-              <Button asChild variant="outline" size="sm">
-                <a href="https://claude.ai/code/routines" target="_blank" rel="noreferrer">
-                  <Icon icon={ExternalLink} size="sm" />
-                  Claude Code
-                </a>
-              </Button>
-              <Button asChild variant="outline" size="sm">
-                <a href="https://code.claude.com/docs/en/routines" target="_blank" rel="noreferrer">
-                  <Icon icon={ExternalLink} size="sm" />
-                  Claude Code docs
-                </a>
-              </Button>
+              <div className="flex flex-row flex-wrap items-center justify-center gap-2">
+                <Button asChild variant="outline" size="sm" className="w-auto shrink-0">
+                  <a href="https://claude.ai/code/routines" target="_blank" rel="noreferrer">
+                    <Icon icon={ExternalLink} size="sm" />
+                    Claude Code
+                  </a>
+                </Button>
+                <Button asChild variant="ghost" size="sm" className="w-auto shrink-0">
+                  <a href="https://code.claude.com/docs/en/routines" target="_blank" rel="noreferrer">
+                    <Icon icon={ExternalLink} size="sm" />
+                    Claude Code docs
+                  </a>
+                </Button>
+                <IntegrationDocsButton kind={kind} variant="ghost" />
+              </div>
             </div>
           </div>
           <form.Field name="claudeRoutineToken">
@@ -1192,20 +1250,20 @@ function ConnectAgentDispatchModal({
                 3. Paste the key, then choose the Linear team where Latitude should create issues.
               </Text.H6>
             </div>
-            <div className="flex flex-row flex-wrap gap-2 pt-1">
-              <IntegrationDocsButton kind={kind} />
-              <Button asChild variant="outline" size="sm">
+            <div className="flex flex-row flex-wrap items-center gap-2 pt-1">
+              <Button asChild variant="outline" size="sm" className="w-auto shrink-0">
                 <a href="https://linear.app/latitude/settings/account/security" target="_blank" rel="noreferrer">
                   <Icon icon={ExternalLink} size="sm" />
-                  Open Linear API settings
+                  Linear API settings
                 </a>
               </Button>
-              <Button asChild variant="outline" size="sm">
+              <Button asChild variant="ghost" size="sm" className="w-auto shrink-0">
                 <a href="https://linear.app/docs/graphql/working-with-the-graphql-api" target="_blank" rel="noreferrer">
                   <Icon icon={ExternalLink} size="sm" />
                   Linear API docs
                 </a>
               </Button>
+              <IntegrationDocsButton kind={kind} variant="ghost" />
             </div>
           </div>
           <div className="flex flex-col gap-3">
@@ -1276,8 +1334,8 @@ function ConnectAgentDispatchModal({
                 4. Return a 2xx response when your system accepts the dispatch.
               </Text.H6>
             </div>
-            <div className="flex flex-row flex-wrap gap-2 pt-1">
-              <IntegrationDocsButton kind={kind} />
+            <div className="flex flex-row flex-wrap items-center gap-2 pt-1">
+              <IntegrationDocsButton kind={kind} variant="outline" />
             </div>
           </div>
           <form.Field name="webhookUrl">
@@ -1306,6 +1364,7 @@ function AgentDispatchHistorySection({
   readonly projectSlug: string
   readonly kind: AgentDispatchKindKey
 }) {
+  const [errorDetailModal, setErrorDetailModal] = useState<{ title: string; detail: string } | null>(null)
   const { data: dispatches = [], isLoading } = useQuery({
     queryKey: ["agent-dispatches", projectId],
     queryFn: () => listAgentDispatches({ data: { projectId } }),
@@ -1359,29 +1418,28 @@ function AgentDispatchHistorySection({
             : dispatch.status === "failed"
               ? "destructiveMuted"
               : "muted"
-        const genericErrorDetail = dispatch.errorCategory
-          ? `Agent dispatch adapter failed (${dispatch.errorCategory})`
-          : null
-        const errorTitle = dispatch.errorCategory
-          ? (DISPATCH_ERROR_TITLES[dispatch.errorCategory] ?? dispatch.errorCategory)
-          : null
-        const errorDetail =
-          dispatch.errorDetail && dispatch.errorDetail !== genericErrorDetail
-            ? dispatch.errorDetail
-            : dispatch.errorCategory
-              ? (DISPATCH_ERROR_FALLBACKS[dispatch.errorCategory] ?? null)
-              : null
+        const errorTitle = getDispatchErrorTitle(dispatch)
+        const errorDetail = getDispatchErrorDetail(dispatch)
 
         return (
-          <div className="flex min-w-0 flex-col gap-1">
-            <Badge variant={statusVariant} size="small" className="w-fit capitalize">
-              {dispatch.status}
-            </Badge>
-            {errorTitle ? <Text.H7 color="destructive">{errorTitle}</Text.H7> : null}
+          <div className="flex min-w-0 items-start gap-1">
+            <div className="flex min-w-0 flex-col gap-1">
+              <Badge variant={statusVariant} size="small" className="w-fit capitalize">
+                {dispatch.status}
+              </Badge>
+              {errorTitle ? <Text.H7 color="destructive">{errorTitle}</Text.H7> : null}
+            </div>
             {errorDetail ? (
-              <Text.H7 color="foregroundMuted" className="line-clamp-2">
-                {errorDetail}
-              </Text.H7>
+              <Button
+                type="button"
+                variant="ghost"
+                size="sm"
+                className="h-7 w-7 shrink-0 p-0"
+                aria-label="View error details"
+                onClick={() => setErrorDetailModal({ title: errorTitle ?? "Error details", detail: errorDetail })}
+              >
+                <FileText className="h-4 w-4" />
+              </Button>
             ) : null}
           </div>
         )
@@ -1424,7 +1482,7 @@ function AgentDispatchHistorySection({
           Dispatch history
         </Text.H5>
         <Text.H6 display="block" color="foregroundMuted">
-          Audit log of dispatches triggered by signals and incidents.
+          Audit log of dispatches triggered by signals, incidents, and manual sends.
         </Text.H6>
       </div>
       <InfiniteTable
@@ -1436,6 +1494,13 @@ function AgentDispatchHistorySection({
         scrollAreaLayout="intrinsic"
         className="max-h-[min(32rem,60vh)]"
       />
+      {errorDetailModal ? (
+        <DispatchErrorDetailModal
+          title={errorDetailModal.title}
+          detail={errorDetailModal.detail}
+          onClose={() => setErrorDetailModal(null)}
+        />
+      ) : null}
     </div>
   )
 }

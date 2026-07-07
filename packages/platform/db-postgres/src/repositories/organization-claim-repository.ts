@@ -1,6 +1,6 @@
 import { type OrganizationClaim, OrganizationClaimRepository, organizationClaimSchema } from "@domain/organizations"
 import { OrganizationId, SqlClient, type SqlClientShape } from "@domain/shared"
-import { eq } from "drizzle-orm"
+import { and, eq, isNull } from "drizzle-orm"
 import { Effect, Layer } from "effect"
 import type { Operator } from "../client.ts"
 import { organizationClaims } from "../schema/organization-claims.ts"
@@ -49,15 +49,31 @@ export const OrganizationClaimRepositoryLive = Layer.effect(
           return rows.length > 0 ? toDomainClaim(rows[0] as typeof organizationClaims.$inferSelect) : null
         }),
 
+      findByTokenHashForUpdate: (tokenHash: string) =>
+        Effect.gen(function* () {
+          const sqlClient = (yield* SqlClient) as SqlClientShape<Operator>
+          const rows = yield* sqlClient.query((db) =>
+            db
+              .select()
+              .from(organizationClaims)
+              .where(eq(organizationClaims.tokenHash, tokenHash))
+              .limit(1)
+              .for("update", { noWait: true }),
+          )
+          return rows.length > 0 ? toDomainClaim(rows[0] as typeof organizationClaims.$inferSelect) : null
+        }),
+
       markClaimed: (id: string, claimedAt: Date) =>
         Effect.gen(function* () {
           const sqlClient = (yield* SqlClient) as SqlClientShape<Operator>
-          yield* sqlClient.query((db) =>
+          const [row] = yield* sqlClient.query((db) =>
             db
               .update(organizationClaims)
               .set({ claimedAt, updatedAt: new Date() })
-              .where(eq(organizationClaims.id, id)),
+              .where(and(eq(organizationClaims.id, id), isNull(organizationClaims.claimedAt)))
+              .returning({ id: organizationClaims.id }),
           )
+          return row !== undefined
         }),
     }
   }),

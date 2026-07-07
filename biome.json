@@ -66,6 +66,39 @@
                     ],
                     "message": "Do not import test utilities in production code. Expose them via a /testing subpath export instead."
                   }
+                ],
+                "paths": {
+                  "@tanstack/react-db": {
+                    "importNames": ["createCollection"],
+                    "message": "Use createAppCollection from apps/web/src/lib/data/create-app-collection.ts — it routes mutation errors into handleMutationError. Raw createCollection leaks unhandled rejections."
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    {
+      "includes": ["apps/web/src/lib/data/create-app-collection.ts"],
+      "linter": {
+        "rules": {
+          "style": {
+            "noRestrictedImports": {
+              "level": "error",
+              "options": {
+                "patterns": [
+                  {
+                    "group": [
+                      "./test/*",
+                      "./testing/*",
+                      "../test/*",
+                      "../testing/*",
+                      "../../test/*",
+                      "../../testing/*"
+                    ],
+                    "message": "Do not import test utilities in production code. Expose them via a /testing subpath export instead."
+                  }
                 ]
               }
             }

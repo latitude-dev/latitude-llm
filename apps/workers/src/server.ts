@@ -45,7 +45,6 @@ import {
   getWorkflowStarter,
 } from "./clients.ts"
 import { createAgentDispatchWorker } from "./workers/agent-dispatch.ts"
-import { createAnnotationQueuesWorker } from "./workers/annotation-queues.ts"
 import { createAnnotationScoresWorker } from "./workers/annotation-scores.ts"
 import { createApiKeysWorker } from "./workers/api-keys.ts"
 import { createBillingWorker } from "./workers/billing.ts"
@@ -72,6 +71,7 @@ import { createProductFeedbackWorker } from "./workers/product-feedback.ts"
 import { createProjectsWorker } from "./workers/projects.ts"
 import { createSandboxesWorker } from "./workers/sandboxes.ts"
 import { createScoresWorker } from "./workers/scores.ts"
+import { createShowcaseWorker } from "./workers/showcase.ts"
 import { createSignalsWorker } from "./workers/signals.ts"
 import { createSignalsGenerateSignalWorker } from "./workers/signals-generate-signal.ts"
 import { createSignalsMatchWorker } from "./workers/signals-match.ts"
@@ -227,7 +227,6 @@ const bootstrap = async () => {
     createEvaluationsWorker(ctx)
     createAnnotationScoresWorker(ctx)
     createLiveEvaluationsWorker(ctx)
-    createAnnotationQueuesWorker(ctx)
     createTraceEndWorker(ctx)
     createSignalsMatchWorker(ctx)
     createSignalsPreviewWorker(ctx)
@@ -236,10 +235,12 @@ const bootstrap = async () => {
     createStartFlaggerWorkflowWorker(ctx)
     createProjectsWorker(ctx)
     createScoresWorker(ctx)
+    createShowcaseWorker(ctx)
     createPostHogAnalyticsWorker(ctx)
     createProductFeedbackWorker(ctx)
     createTraceSearchWorker({
       consumer: ctx.consumer,
+      publisher: ctx.publisher,
       clickhouseClient: ctx.clickhouseClient,
       postgresClient: ctx.postgresClient,
       redisClient: ctx.redisClient,
@@ -286,6 +287,20 @@ const bootstrap = async () => {
           "reapExpired",
           {},
           { key: "organization-cleanup:daily", pattern: "0 3 * * *", tz: "UTC" },
+        )
+        .pipe(withTracing),
+    )
+
+    // Daily off-peak Showcase regeneration (S4): build a fresh `next`, gate it,
+    // and auto-swap the pointer. The handler no-ops when no showcase exists / a
+    // build is already in flight, so this is safe to register on every boot.
+    await Effect.runPromise(
+      queuePublisher
+        .scheduleRepeatable(
+          "showcase",
+          "regenerate",
+          {},
+          { key: "showcase:regenerate:daily", pattern: "0 4 * * *", tz: "UTC" },
         )
         .pipe(withTracing),
     )
