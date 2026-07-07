@@ -49,9 +49,21 @@ vi.mock("ai", () => ({
     object: outputObjectMock,
   },
   rerank: rerankMock,
+  tool: (definition: unknown) => definition,
+  stepCountIs: (count: number) => ({ stepCountIs: count }),
+  jsonSchema: (schema: unknown) => ({ jsonSchema: schema }),
 }))
 
-import { AIGenerateLive, createProviderModel, embedWithVercel, rerankWithVercel } from "./ai.ts"
+import { AIAgent, type RunAgentInput } from "@domain/ai"
+import { z } from "zod"
+import {
+  AIAgentLive,
+  AIGenerateLive,
+  createProviderModel,
+  embedWithVercel,
+  loosenSchemaForBedrock,
+  rerankWithVercel,
+} from "./ai.ts"
 
 const originalAwsRegion = process.env.LAT_AWS_REGION
 const originalAwsAccessKeyId = process.env.LAT_AWS_ACCESS_KEY_ID
@@ -326,5 +338,111 @@ describe("rerankWithVercel", () => {
       { index: 2, relevanceScore: 0.9 },
       { index: 0, relevanceScore: 0.4 },
     ])
+  })
+})
+
+const runAgentEffect = (input: RunAgentInput) =>
+  Effect.gen(function* () {
+    const agent = yield* AIAgent
+    return yield* agent.runAgent(input)
+  }).pipe(Effect.provide(AIAgentLive))
+
+describe("AIAgentLive.runAgent", () => {
+  const baseInput = {
+    provider: "amazon-bedrock",
+    model: "anthropic.claude-sonnet-4-6",
+    system: "You are a research agent.",
+    prompt: "Investigate the project.",
+    tools: [],
+    maxSteps: 5,
+  }
+
+  it("fires onStep per provider step, executes tools, and bounds the loop with stepCountIs", async () => {
+    const execute = vi.fn(async (input: unknown) => ({ echoed: input }))
+    let capturedTools: Record<string, { execute: (input: unknown) => unknown }> = {}
+    let capturedStopWhen: unknown
+
+    generateTextMock.mockImplementation(async (call: Record<string, unknown>) => {
+      capturedTools = call.tools as typeof capturedTools
+      capturedStopWhen = call.stopWhen
+      const onStepFinish = call.onStepFinish as (step: unknown) => void
+      // The adapter awaits the tool `execute`, so mimic the SDK invoking it.
+      await capturedTools.research?.execute({ projectSlug: "acme" })
+      onStepFinish({
+        text: "Investigating the ticket_cancellation tool",
+        toolCalls: [{ toolName: "research", input: { projectSlug: "acme" } }],
+        finishReason: "tool-calls",
+        usage: { inputTokens: 10, outputTokens: 5 },
+      })
+      onStepFinish({
+        text: "Creating the signal",
+        toolCalls: [],
+        finishReason: "stop",
+        usage: { inputTokens: 3, outputTokens: 2 },
+      })
+      return {
+        text: "Done",
+        totalUsage: { inputTokens: 13, outputTokens: 7 },
+        finishReason: "stop",
+      }
+    })
+
+    const steps: Array<{ text?: string }> = []
+    const result = await Effect.runPromise(
+      runAgentEffect({
+        ...baseInput,
+        maxSteps: 9,
+        tools: [
+          {
+            name: "research",
+            description: "Research the project",
+            inputSchema: z.object({ projectSlug: z.string() }),
+            execute,
+          },
+        ],
+        onStep: (step) => steps.push(step),
+      }),
+    )
+
+    expect(execute).toHaveBeenCalledWith({ projectSlug: "acme" })
+    expect(steps.map((s) => s.text)).toEqual([
+      "Investigating the ticket_cancellation tool",
+      "Creating the signal",
+    ])
+    expect(result.steps).toHaveLength(2)
+    expect(result.text).toBe("Done")
+    expect(result.tokenUsage).toEqual({ input: 13, output: 7 })
+    expect(result.finishReason).toBe("stop")
+    expect(capturedStopWhen).toEqual({ stepCountIs: 9 })
+  })
+
+  it("maps provider failures to AIError on the Effect channel", async () => {
+    generateTextMock.mockImplementation(async () => {
+      throw new Error("bedrock exploded")
+    })
+
+    const outcome = await Effect.runPromise(Effect.result(runAgentEffect(baseInput)))
+
+    expect(Result.isFailure(outcome)).toBe(true)
+    if (Result.isFailure(outcome)) {
+      expect(outcome.failure.message).toContain("AI agent run failed")
+      expect(outcome.failure.message).toContain("bedrock exploded")
+    }
+  })
+})
+
+describe("loosenSchemaForBedrock", () => {
+  it("strips numeric/array constraint keywords Bedrock rejects", () => {
+    const schema = z.object({
+      limit: z.number().int().min(1).max(50),
+      names: z.array(z.string()).max(10),
+    })
+
+    const loosened = loosenSchemaForBedrock(schema) as unknown as { jsonSchema: Record<string, unknown> }
+    const serialized = JSON.stringify(loosened.jsonSchema)
+
+    expect(serialized).not.toContain("minimum")
+    expect(serialized).not.toContain("maximum")
+    expect(serialized).not.toContain("maxItems")
   })
 })
