@@ -21,6 +21,7 @@ import {
   upsertAgentDispatchConfigUseCase,
 } from "@domain/agent-dispatch"
 import { OrganizationId, ProjectId, SignalId } from "@domain/shared"
+import { IncidentMonitorReader } from "@domain/notifications"
 import { SignalRepository } from "@domain/signals"
 import { TraceRepository } from "@domain/spans"
 import { AgentDispatchAdaptersLive } from "@platform/agent-dispatch"
@@ -30,6 +31,7 @@ import {
   AgentDispatchCredentialRepositoryLive,
   AgentDispatchIntegrationRepositoryLive,
   AgentDispatchRepositoryLive,
+  IncidentMonitorReaderLive,
   OrganizationRepositoryLive,
   ProjectRepositoryLive,
   ScoreRepositoryLive,
@@ -50,6 +52,7 @@ export interface AgentDispatchRecord {
   readonly sourceType: string
   readonly sourceId: string
   readonly sourceName: string | null
+  readonly sourceSlug: string | null
   readonly status: string
   readonly claimedAt: string
   readonly dispatchedAt: string | null
@@ -165,6 +168,7 @@ const toDispatchRecord = (row: {
   sourceType: row.sourceType,
   sourceId: row.sourceId,
   sourceName: null,
+  sourceSlug: null,
   status: row.status,
   claimedAt: row.claimedAt.toISOString(),
   dispatchedAt: row.dispatchedAt?.toISOString() ?? null,
@@ -292,6 +296,7 @@ export const listAgentDispatches = createServerFn({ method: "GET" })
         const dispatchRepo = yield* AgentDispatchRepository
         const configRepo = yield* AgentDispatchConfigRepository
         const signalRepository = yield* SignalRepository
+        const monitorReader = yield* IncidentMonitorReader
         const dispatches = yield* dispatchRepo.listByProject(projectId)
         const configs = yield* configRepo.listByProject(projectId)
         const configById = new Map(configs.map((config) => [config.id, config]))
@@ -300,6 +305,19 @@ export const listAgentDispatches = createServerFn({ method: "GET" })
           .map((dispatch) => SignalId(dispatch.sourceId))
         const signals = signalIds.length > 0 ? yield* signalRepository.findByIds({ projectId, signalIds }) : []
         const signalNameById = new Map<string, string>(signals.map((signal) => [signal.id, signal.name]))
+        const monitorIds = [
+          ...new Set(
+            dispatches.filter((dispatch) => dispatch.sourceType === "monitor").map((dispatch) => dispatch.sourceId),
+          ),
+        ]
+        const monitors = yield* Effect.forEach(monitorIds, (monitorId) =>
+          monitorReader.findByMonitorId(monitorId).pipe(Effect.map((monitor) => ({ monitorId, monitor }))),
+        )
+        const monitorById = new Map(
+          monitors
+            .filter((entry): entry is { monitorId: string; monitor: NonNullable<typeof entry.monitor> } => entry.monitor !== null)
+            .map((entry) => [entry.monitorId, entry.monitor]),
+        )
 
         return dispatches.map((dispatch) => {
           const config = configById.get(dispatch.configId)
@@ -307,16 +325,28 @@ export const listAgentDispatches = createServerFn({ method: "GET" })
             config?.kind === "claude_code" && "routineTriggerId" in config.target
               ? `https://claude.ai/code/routines/${config.target.routineTriggerId}`
               : null
+          const monitor = dispatch.sourceType === "monitor" ? monitorById.get(dispatch.sourceId) : undefined
 
           return {
             ...toDispatchRecord(dispatch),
-            sourceName: dispatch.sourceType === "signal" ? (signalNameById.get(dispatch.sourceId) ?? null) : null,
+            sourceName:
+              dispatch.sourceType === "signal"
+                ? (signalNameById.get(dispatch.sourceId) ?? null)
+                : dispatch.sourceType === "monitor"
+                  ? (monitor?.name ?? null)
+                  : null,
+            sourceSlug: dispatch.sourceType === "monitor" ? (monitor?.slug ?? null) : null,
             routineUrl,
           }
         })
       }).pipe(
         withPostgres(
-          Layer.mergeAll(AgentDispatchRepositoryLive, AgentDispatchConfigRepositoryLive, SignalRepositoryLive),
+          Layer.mergeAll(
+            AgentDispatchRepositoryLive,
+            AgentDispatchConfigRepositoryLive,
+            SignalRepositoryLive,
+            IncidentMonitorReaderLive,
+          ),
           getPostgresClient(),
           organizationId,
         ),
