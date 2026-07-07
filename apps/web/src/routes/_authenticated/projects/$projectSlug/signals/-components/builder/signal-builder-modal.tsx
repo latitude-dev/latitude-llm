@@ -55,15 +55,9 @@ const EDIT_TAB_OPTIONS: { readonly id: EditTab; readonly label: string }[] = [
   { id: "test", label: "Test" },
 ]
 
-// Mocked progress timeline while generation does not stream steps; a real worker step,
-// when one arrives, overrides it.
-const GENERATION_STAGES = [
-  { atSeconds: 0, label: "Reading your description" },
-  { atSeconds: 4, label: "Drafting the evaluation" },
-  { atSeconds: 12, label: "Choosing scope and sampling" },
-  { atSeconds: 20, label: "Testing it against recent sessions" },
-  { atSeconds: 28, label: "Creating the signal" },
-]
+// Fallback shown only until the agent's first real goal narration arrives (which is fast now
+// that the worker streams goal-level steps). A real worker step overrides it immediately.
+const GENERATION_STAGES = [{ atSeconds: 0, label: "Starting" }]
 
 const emptyRuleDraft: RuleDraft = { match: "all", conditions: [] }
 const DEFAULT_ADVANCED_SCRIPT_PLACEHOLDER = compileSettingsToScript({

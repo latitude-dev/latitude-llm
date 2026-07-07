@@ -1,8 +1,9 @@
+import type { AI } from "@domain/ai"
 import {
+  type AgentToolDef,
   AI_GENERATE_TELEMETRY_SPAN_NAMES,
   AI_GENERATE_TELEMETRY_TAGS,
   AIAgent,
-  type AgentToolDef,
   buildProjectScopedAiMetadata,
   type GenerateTelemetryCapture,
   type RunAgentInput,
@@ -29,18 +30,10 @@ import {
   type SqlClient,
   UserId,
 } from "@domain/shared"
-import type {
-  MessageEmbeddingRepository,
-  SessionRepository,
-  SpanRepository,
-  TraceRepository,
-  TraceSearchRepository,
-} from "@domain/spans"
-import type { AI } from "@domain/ai"
-import type { z } from "zod"
 import {
   assembleSignalGenerationGrounding,
   buildSignalGenerationResultKey,
+  buildSignalGenerationUserPrompt,
   createSignalUseCase,
   type GeneratedSignalDraft,
   generatedSignalDraftSchema,
@@ -52,9 +45,15 @@ import {
   SIGNAL_GENERATION_SYSTEM_PROMPT,
   type SignalGenerationResult,
   type SignalRepository,
-  buildSignalGenerationUserPrompt,
   summarizePreviewVerdicts,
 } from "@domain/signals"
+import type {
+  MessageEmbeddingRepository,
+  SessionRepository,
+  SpanRepository,
+  TraceRepository,
+  TraceSearchRepository,
+} from "@domain/spans"
 import { AIAgentLive, AIEmbedLive, AIGenerateLive, withAi } from "@platform/ai"
 import type { RedisClient } from "@platform/cache-redis"
 import {
@@ -79,6 +78,7 @@ import { QuickJsScriptRuntimeLive } from "@platform/sandbox-quickjs"
 import { createLogger, withTracing } from "@repo/observability"
 import { type OperationContext, signalAgentToolset } from "@repo/operations"
 import { Effect, Layer } from "effect"
+import type { z } from "zod"
 
 import {
   getClickhouseClient,
@@ -202,14 +202,17 @@ const runAgenticGeneration = async (params: {
     }
     lastStep = step
     void deps.redisClient
-      .set(resultKey, JSON.stringify({ status: "pending", step } satisfies SignalGenerationResult), "EX", SIGNAL_GENERATION_RESULT_TTL_SECONDS)
+      .set(
+        resultKey,
+        JSON.stringify({ status: "pending", step } satisfies SignalGenerationResult),
+        "EX",
+        SIGNAL_GENERATION_RESULT_TTL_SECONDS,
+      )
       .catch(() => {})
   }
 
   // Every use-case below owns its full layer pipe, exactly as the HTTP handlers do.
-  const provideDomain = <A, E>(
-    effect: Effect.Effect<A, E, DomainServices>,
-  ): Effect.Effect<A, E> =>
+  const provideDomain = <A, E>(effect: Effect.Effect<A, E, DomainServices>): Effect.Effect<A, E> =>
     effect.pipe(
       withPostgres(
         Layer.mergeAll(EvaluationRepositoryLive, OutboxEventWriterLive, SignalRepositoryLive),
@@ -350,7 +353,9 @@ const runAgenticGeneration = async (params: {
         evaluation: mapped.draft.evaluation,
       }).pipe(
         Effect.map(() => ({ ok: true as const })),
-        Effect.catchTag("ScriptCompileError", (error) => Effect.succeed({ ok: false as const, error: describeError(error) })),
+        Effect.catchTag("ScriptCompileError", (error) =>
+          Effect.succeed({ ok: false as const, error: describeError(error) }),
+        ),
       )
       if (!preview.ok) {
         return { error: `The evaluation script does not compile: ${preview.error}` }
@@ -392,7 +397,9 @@ const runAgenticGeneration = async (params: {
     },
   }
 
-  const modelConfig = await Effect.runPromise(resolveGenerationConfig("SIGNAL_GENERATOR", SIGNAL_GENERATION_DEFAULT_MODEL))
+  const modelConfig = await Effect.runPromise(
+    resolveGenerationConfig("SIGNAL_GENERATOR", SIGNAL_GENERATION_DEFAULT_MODEL),
+  )
   const telemetry: GenerateTelemetryCapture = {
     spanName: AI_GENERATE_TELEMETRY_SPAN_NAMES.signalGeneration,
     project: LATITUDE_TELEMETRY_PROJECT_SLUGS.signalGeneration,
@@ -471,7 +478,8 @@ const runGenerateSignalJob =
         }).pipe(
           Effect.matchEffect({
             onSuccess: (result) => writeResult(deps.redisClient, payload, result),
-            onFailure: (error) => writeResult(deps.redisClient, payload, { status: "error", error: describeError(error) }),
+            onFailure: (error) =>
+              writeResult(deps.redisClient, payload, { status: "error", error: describeError(error) }),
           }),
         )
       }),

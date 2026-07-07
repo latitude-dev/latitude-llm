@@ -1,4 +1,13 @@
-import { ChSqlClient, ExternalUserId, NotFoundError, OrganizationId, ProjectId, SessionId, SpanId, TraceId } from "@domain/shared"
+import {
+  ChSqlClient,
+  ExternalUserId,
+  NotFoundError,
+  OrganizationId,
+  ProjectId,
+  SessionId,
+  SpanId,
+  TraceId,
+} from "@domain/shared"
 import { createFakeChSqlClient } from "@domain/shared/testing"
 import {
   MessageEmbeddingRepository,
@@ -110,7 +119,9 @@ const buildLayer = (options: { hasSessions: boolean }) => {
 describe("assembleSignalGenerationGrounding", () => {
   it("collects distinct values, traffic, and a sample session", async () => {
     const result = await Effect.runPromise(
-      assembleSignalGenerationGrounding({ organizationId, projectId }).pipe(Effect.provide(buildLayer({ hasSessions: true }))),
+      assembleSignalGenerationGrounding({ organizationId, projectId }).pipe(
+        Effect.provide(buildLayer({ hasSessions: true })),
+      ),
     )
 
     expect(result.hasSessions).toBe(true)
@@ -121,7 +132,9 @@ describe("assembleSignalGenerationGrounding", () => {
 
   it("reports no sessions and a null sample when the project is empty", async () => {
     const result = await Effect.runPromise(
-      assembleSignalGenerationGrounding({ organizationId, projectId }).pipe(Effect.provide(buildLayer({ hasSessions: false }))),
+      assembleSignalGenerationGrounding({ organizationId, projectId }).pipe(
+        Effect.provide(buildLayer({ hasSessions: false })),
+      ),
     )
 
     expect(result.hasSessions).toBe(false)
