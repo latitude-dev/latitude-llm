@@ -1,6 +1,6 @@
 import { EVALUATION_SCRIPT_GENERATION_SYSTEM_PROMPT, type PreviewEvaluationRow } from "@domain/evaluations"
 
-export const SIGNAL_GENERATION_SYSTEM_PROMPT = `You design complete Latitude signals. A signal is a tracked bucket of agent sessions: it has a name, a description, an evaluation that decides per session whether the behavior is present, optional filters that pre-gate which sessions the evaluation runs on, and a sampling rate. You will be given the user's ask plus real data observed in their project; design the signal from that data, not from guesses.
+export const SIGNAL_GENERATION_SYSTEM_PROMPT = `You are an agent that designs and creates one complete Latitude signal from a user's description. A signal is a tracked bucket of agent sessions: it has a name, a description, an evaluation that decides per session whether the behavior is present, optional filters that pre-gate which sessions the evaluation runs on, and a sampling rate. You research the project with read-only tools, design the signal from what you find, test it, and create it. Design from real data, not from guesses.
 
 ## Fields
 
@@ -56,11 +56,17 @@ You are given the values observed in the project (tags, services, models, provid
 - rule — always 100 (free and instant).
 - judge/script — cost-aware: pick a percentage from the provided traffic so the evaluation runs on roughly a few hundred sessions per day at most; with low traffic (under ~500 sessions/day) use 100, scale down as traffic grows (e.g. ~5000/day → 10). Never below 1.
 
-## Turn protocol
+## How you work
 
-- First turn: return a complete draft with confirm=false.
-- Repair turn (your previous draft failed validation or every preview run errored): fix exactly what failed and return the full corrected draft, confirm=false.
-- Review turn (you are shown per-session preview verdicts of your draft): when the verdicts match the ask, return the SAME draft unchanged with confirm=true; otherwise return a revised full draft with confirm=false. A preview that matched 0 sessions means the filters discarded everything — loosen or drop them unless the ask requires that scope.`
+You have read-only research tools plus two signal tools. The project is fixed for this run: never pass a project identifier to any tool.
+
+- Research tools inspect the project's tools and their usage and errors (e.g. list the tools, get one tool's detail, get a tool's error breakdown). Prefer the aggregate tools over dumping raw calls, and stop researching once you know enough to design the signal.
+- previewSignal(draft) runs a candidate against recent sessions and returns per-session verdicts, without creating anything. Use it to sanity-check a draft before committing, when the project has sessions.
+- createSignal(draft) is terminal: it validates, previews, and creates the signal. Call it exactly once, when you are confident. On success you are done. On failure it returns the error so you can fix the draft and call it again.
+
+Both signal tools take the same draft shape (the fields above). Work in this order: research what you need, design a draft, previewSignal to check it, then createSignal. If createSignal returns an error, fix exactly what failed and call it again. Do not stop until createSignal succeeds.
+
+Announce each new investigation goal in one short present-tense sentence before you pursue it, e.g. "Investigating the ticket_cancellation tool", "Searching recent sessions for tool failures", "Testing the draft against recent sessions". One sentence per goal, not one per tool call, and no narration of the tool mechanics themselves.`
 
 export interface SignalGenerationGrounding {
   readonly tags: readonly string[]
@@ -120,12 +126,15 @@ interface BuildSignalGenerationUserPromptInput {
   readonly prompt: string
   readonly grounding: SignalGenerationGrounding
   readonly scopeHint: string | null
-  readonly feedback: string | null
-  readonly review: string | null
 }
 
 export const buildSignalGenerationUserPrompt = (input: BuildSignalGenerationUserPromptInput): string => {
-  const parts = ["Design a signal for the following request:", input.prompt, groundingBlock(input.grounding)]
+  const parts = [
+    "Design and create a signal for the following request:",
+    input.prompt,
+    "Warm-start context observed in the project (research further with your tools as needed):",
+    groundingBlock(input.grounding),
+  ]
 
   if (input.scopeHint !== null) {
     parts.push(
@@ -134,18 +143,6 @@ export const buildSignalGenerationUserPrompt = (input: BuildSignalGenerationUser
     )
   }
 
-  if (input.feedback !== null) {
-    parts.push("Your previous draft failed. Fix it and return the full corrected draft:", input.feedback)
-  }
-
-  if (input.review !== null) {
-    parts.push(
-      "This is a review turn. Your draft was previewed against recent sessions:",
-      input.review,
-      "If these verdicts match the ask, return the same draft with confirm=true; otherwise return a revised draft.",
-    )
-  }
-
-  parts.push("Return the full draft per the schema.")
+  parts.push("Research as needed, then call createSignal exactly once when the draft is ready.")
   return parts.join("\n\n")
 }

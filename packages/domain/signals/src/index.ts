@@ -11,10 +11,21 @@ export {
   createSignalUseCase,
 } from "./use-cases/create-signal.ts"
 export {
-  type CreateSignalFromPromptError,
-  type CreateSignalFromPromptInput,
-  createSignalFromPromptUseCase,
-} from "./use-cases/create-signal-from-prompt.ts"
+  assembleSignalGenerationGrounding,
+  type SignalGenerationGroundingResult,
+} from "./signal-generation-grounding.ts"
+export {
+  buildSignalGenerationUserPrompt,
+  SIGNAL_GENERATION_SYSTEM_PROMPT,
+  type SignalGenerationGrounding,
+  summarizePreviewVerdicts,
+} from "./signal-generation-prompt.ts"
+export {
+  type GeneratedSignalDraft,
+  generatedSignalDraftSchema,
+  type MappedSignalDraft,
+  mapGeneratedSignalDraft,
+} from "./signal-generation-schema.ts"
 export {
   type DeleteSignalError,
   type DeleteSignalInput,

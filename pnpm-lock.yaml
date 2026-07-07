@@ -818,6 +818,9 @@ importers:
       '@repo/observability':
         specifier: workspace:*
         version: link:../../packages/observability
+      '@repo/operations':
+        specifier: workspace:*
+        version: link:../../packages/operations
       '@repo/utils':
         specifier: workspace:*
         version: link:../../packages/utils
@@ -842,6 +845,9 @@ importers:
       voyageai:
         specifier: 'catalog:'
         version: 0.2.1
+      zod:
+        specifier: 'catalog:'
+        version: 4.3.6
     devDependencies:
       '@platform/testkit':
         specifier: workspace:*

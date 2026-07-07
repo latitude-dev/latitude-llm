@@ -1,15 +1,5 @@
 import { Data } from "effect"
 
-export class SignalGenerationError extends Data.TaggedError("SignalGenerationError")<{
-  readonly attempts: number
-  readonly message: string | null
-}> {
-  readonly httpStatus = 422
-  get httpMessage() {
-    return this.message ?? "Could not generate a working signal from the description"
-  }
-}
-
 export class ScoreNotFoundForDiscoveryError extends Data.TaggedError("ScoreNotFoundForDiscoveryError")<{
   readonly scoreId: string
 }> {
