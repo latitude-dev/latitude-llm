@@ -1,8 +1,10 @@
+import type { WorkflowExecutionStatus, WorkflowQuerierShape } from "@domain/queue"
 import { OrganizationId, ProjectId } from "@domain/shared"
 import { outboxEvents } from "@platform/db-postgres/schema/outbox-events"
 import { projects } from "@platform/db-postgres/schema/projects"
 import { showcase } from "@platform/db-postgres/schema/showcase"
 import { setupTestPostgres } from "@platform/testkit"
+import { Effect } from "effect"
 import { beforeEach, describe, expect, it } from "vitest"
 import { TestQueueConsumer } from "../testing/index.ts"
 import { createShowcaseWorker } from "./showcase.ts"
@@ -48,9 +50,21 @@ const insertPointer = async (params: {
   })
 }
 
-const runCleanup = async () => {
+// Fake WorkflowQuerier so the reclaim's liveness gate is deterministic without
+// a real Temporal connection. `undefined` status models a missing workflow
+// (reclaimable); a status models a live-or-terminal regeneration run.
+const fakeWorkflowQuerier = (status?: WorkflowExecutionStatus): WorkflowQuerierShape => ({
+  describe: () => Effect.succeed(status ? { status, runId: "run-1", startTime: new Date(), closeTime: null } : null),
+  query: () => Effect.succeed(null),
+})
+
+const runCleanup = async (workflowStatus?: WorkflowExecutionStatus) => {
   const consumer = new TestQueueConsumer()
-  createShowcaseWorker({ consumer, postgresClient: pg.adminPostgresClient })
+  createShowcaseWorker({
+    consumer,
+    postgresClient: pg.adminPostgresClient,
+    workflowQuerier: fakeWorkflowQuerier(workflowStatus),
+  })
   await consumer.dispatchTask("showcase", "cleanup", {})
 }
 
@@ -95,12 +109,13 @@ describe("showcase cleanup worker (retirement flow)", () => {
     expect(pointer?.nextProjectId).toBeNull()
   })
 
-  it("reclaims a stale building pointer to idle and retires the half-built next", async () => {
+  it("reclaims a stale building pointer to idle and retires the half-built next when its workflow is gone", async () => {
     await insertProject(CURRENT, "Current", DAY_MS)
     await insertProject(NEXT, "Half Built", DAY_MS)
     // pointer last advanced 3h ago → past the 2h stale threshold
     await insertPointer({ current: CURRENT, next: NEXT, nextState: "building", pointerAgeMs: 3 * HOUR_MS })
 
+    // no status → regeneration workflow not found (its start never durably landed)
     await runCleanup()
 
     const pointer = await readPointer()
@@ -111,6 +126,23 @@ describe("showcase cleanup worker (retirement flow)", () => {
     expect((await findProject(NEXT))?.deletedAt).not.toBeNull()
     expect((await findProject(CURRENT))?.deletedAt).toBeNull()
     expect((await projectDeletedEvents()).map((e) => e.aggregateId)).toEqual([NEXT])
+  })
+
+  it("does NOT reclaim a stale building pointer while its regeneration workflow is still running", async () => {
+    await insertProject(CURRENT, "Current", DAY_MS)
+    await insertProject(NEXT, "Slow Build", DAY_MS)
+    await insertPointer({ current: CURRENT, next: NEXT, nextState: "building", pointerAgeMs: 3 * HOUR_MS })
+
+    // pointer looks stale (updatedAt not heartbeated), but the workflow is still live
+    await runCleanup("running")
+
+    const pointer = await readPointer()
+    expect(pointer?.nextProjectId).toBe(NEXT)
+    expect(pointer?.nextState).toBe("building")
+
+    expect((await findProject(NEXT))?.deletedAt).toBeNull()
+    expect((await findProject(CURRENT))?.deletedAt).toBeNull()
+    expect(await projectDeletedEvents()).toHaveLength(0)
   })
 
   it("does NOT reclaim or retire a healthy in-flight build", async () => {

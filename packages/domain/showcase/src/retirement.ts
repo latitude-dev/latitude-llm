@@ -30,6 +30,16 @@ export const SHOWCASE_CLEANUP_CRON_KEY = "showcase:cleanup:daily"
 export const SHOWCASE_CLEANUP_CRON_PATTERN = "0 3 * * *"
 
 /**
+ * Burst-collapse window for the post-swap cleanup enqueue. Used as a
+ * *leading-throttle* dedupe (fire immediately, drop re-adds for the window,
+ * then recur) so a manual backoffice swap racing the scheduled swap coalesces
+ * into one prompt sweep — while a genuine later swap (swaps are ~daily) still
+ * enqueues its own. A bare dedupe key would instead pin a retained job id and
+ * silently shadow every post-swap cleanup after the first.
+ */
+export const SHOWCASE_CLEANUP_ENQUEUE_THROTTLE_MS = 5 * 60 * 1000
+
+/**
  * The showcase-org projects to retire: every project that is neither the live
  * `current` nor the in-flight `next`, and older than the grace window. Pure so
  * the selection is unit-testable in isolation from Postgres/ClickHouse. Takes

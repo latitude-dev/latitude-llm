@@ -1,4 +1,4 @@
-import { ShowcaseRepository, swapShowcaseUseCase } from "@domain/showcase"
+import { SHOWCASE_CLEANUP_ENQUEUE_THROTTLE_MS, ShowcaseRepository, swapShowcaseUseCase } from "@domain/showcase"
 import { RedisCacheStoreLive } from "@platform/cache-redis"
 import { queryClickhouse } from "@platform/db-clickhouse"
 import { ShowcaseRepositoryLive, withPostgres } from "@platform/db-postgres"
@@ -103,14 +103,22 @@ export const markShowcaseNextReadyActivity = (): Promise<void> =>
  * waiting for the daily cleanup cron. The sweep itself runs in the workers
  * process (it needs the project/outbox layers); this only publishes the job.
  * Lives in `activities/` because the Temporal workflow sandbox forbids the
- * BullMQ publisher's I/O. `dedupeKey` collapses bursts (e.g. a manual swap
- * racing the scheduled one) into a single sweep.
+ * BullMQ publisher's I/O. A *leading-throttle* dedupe collapses bursts (e.g. a
+ * manual swap racing the scheduled one) into a single prompt sweep, then lets
+ * the window lapse so a genuine later swap enqueues its own — unlike a bare
+ * dedupe key, which would pin a retained job id and shadow every cleanup after
+ * the first.
  */
 export const enqueueShowcaseCleanupActivity = (): Promise<void> =>
   Effect.runPromise(
     Effect.gen(function* () {
       const publisher = yield* Effect.promise(() => getQueuePublisher())
-      yield* publisher.publish("showcase", "cleanup", {}, { dedupeKey: "showcase:cleanup" })
+      yield* publisher.publish(
+        "showcase",
+        "cleanup",
+        {},
+        { dedupeKey: "showcase:cleanup", leadingThrottleMs: SHOWCASE_CLEANUP_ENQUEUE_THROTTLE_MS },
+      )
       logger.info("Showcase cleanup enqueued after swap")
     }).pipe(
       withTracing,
