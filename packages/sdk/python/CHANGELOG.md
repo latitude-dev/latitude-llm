@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [8.0.1] - 2026-07-07
+
+### Changed
+
+- `client.spans.query` and `client.analytics.query` with `stream: "spans"` now use `SpanRowFilterSet` for `filters` — span row filters reject the `gtePercentile` operator (returns `400`). Use `client.analytics.query` with `{ "kind": "percentile", "field": ..., "p": ... }` for span percentile metrics instead.
+
 ## [8.0.0] - 2026-07-06
 
 ### Changed (breaking)
