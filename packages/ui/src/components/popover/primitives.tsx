@@ -14,16 +14,10 @@ const PopoverAnchor = PopoverPrimitive.Anchor
 const PopoverClose = PopoverPrimitive.Close
 
 type PopoverContentProps = ComponentPropsWithoutRef<typeof PopoverPrimitive.Content> & {
-  portaled?: boolean
+  container?: ComponentPropsWithoutRef<typeof PopoverPrimitive.Portal>["container"]
 }
 
-function PopoverContent({
-  className,
-  align = "center",
-  sideOffset = 4,
-  portaled = true,
-  ...props
-}: PopoverContentProps) {
+function PopoverContent({ className, align = "center", sideOffset = 4, container, ...props }: PopoverContentProps) {
   const content = (
     <DismissableLayerBranch>
       <PopoverPrimitive.Content
@@ -45,9 +39,7 @@ function PopoverContent({
     </DismissableLayerBranch>
   )
 
-  if (!portaled) return content
-
-  return <PopoverPrimitive.Portal>{content}</PopoverPrimitive.Portal>
+  return <PopoverPrimitive.Portal container={container}>{content}</PopoverPrimitive.Portal>
 }
 PopoverContent.displayName = PopoverPrimitive.Content.displayName
 
