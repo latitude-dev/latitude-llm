@@ -1,6 +1,10 @@
 import type { TraceDetail } from "@domain/spans"
 import { describe, expect, it } from "vitest"
-import { detectOutputSchemaValidationFlagger, detectToolCallErrorsFlagger } from "./helpers.ts"
+import {
+  detectEmptyResponseFlagger,
+  detectOutputSchemaValidationFlagger,
+  detectToolCallErrorsFlagger,
+} from "./helpers.ts"
 
 type TraceMessage = TraceDetail["allMessages"][number]
 
@@ -319,5 +323,44 @@ describe("detectOutputSchemaValidationFlagger", () => {
       expect(result.feedback).toBe("Assistant output failed JSON parse (malformed or truncated structured output)")
       expect(result.messageIndex).toBe(0)
     }
+  })
+})
+
+describe("malformed message parts", () => {
+  it("detectToolCallErrorsFlagger skips messages without iterable parts", () => {
+    expect(() =>
+      detectToolCallErrorsFlagger(
+        makeTrace([
+          { role: "assistant" } as unknown as TraceMessage,
+          assistantToolCall("call_1"),
+          toolResponse("call_1", { error: "boom" }),
+        ]),
+      ),
+    ).not.toThrow()
+  })
+
+  it("detectOutputSchemaValidationFlagger skips messages without iterable parts", () => {
+    expect(() =>
+      detectOutputSchemaValidationFlagger(
+        makeAssistantTrace([{ role: "assistant" } as unknown as TraceMessage, assistantText('{"ok": true}')]),
+      ),
+    ).not.toThrow()
+  })
+
+  it("detectEmptyResponseFlagger skips messages without iterable parts", () => {
+    expect(() =>
+      detectEmptyResponseFlagger(
+        makeAssistantTrace([
+          { role: "user", parts: null } as unknown as TraceMessage,
+          { role: "assistant" } as unknown as TraceMessage,
+          assistantText("done"),
+        ]),
+      ),
+    ).not.toThrow()
+    expect(detectEmptyResponseFlagger(makeAssistantTrace([{ role: "assistant" } as unknown as TraceMessage]))).toEqual({
+      matched: true,
+      feedback: "Assistant response was empty or whitespace only",
+      messageIndex: 0,
+    })
   })
 })
