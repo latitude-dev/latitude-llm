@@ -13,34 +13,41 @@ const PopoverAnchor = PopoverPrimitive.Anchor
 
 const PopoverClose = PopoverPrimitive.Close
 
+type PopoverContentProps = ComponentPropsWithoutRef<typeof PopoverPrimitive.Content> & {
+  portaled?: boolean
+}
+
 function PopoverContent({
   className,
   align = "center",
   sideOffset = 4,
+  portaled = true,
   ...props
-}: ComponentPropsWithoutRef<typeof PopoverPrimitive.Content>) {
-  return (
-    <PopoverPrimitive.Portal>
-      <DismissableLayerBranch>
-        <PopoverPrimitive.Content
-          data-no-navigate
-          align={align}
-          sideOffset={sideOffset}
-          className={cn(
-            "w-72 rounded-lg border border-border dark:border-white/15 bg-popover text-popover-foreground p-3 shadow-popover outline-none",
-            "data-[state=open]:animate-in data-[state=closed]:animate-out",
-            "data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0",
-            "data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95",
-            "data-[side=bottom]:slide-in-from-top-2 data-[side=left]:slide-in-from-right-2",
-            "data-[side=right]:slide-in-from-left-2 data-[side=top]:slide-in-from-bottom-2",
-            zIndex.popover,
-            className,
-          )}
-          {...props}
-        />
-      </DismissableLayerBranch>
-    </PopoverPrimitive.Portal>
+}: PopoverContentProps) {
+  const content = (
+    <DismissableLayerBranch>
+      <PopoverPrimitive.Content
+        data-no-navigate
+        align={align}
+        sideOffset={sideOffset}
+        className={cn(
+          "w-72 rounded-lg border border-border dark:border-white/15 bg-popover text-popover-foreground p-3 shadow-popover outline-none",
+          "data-[state=open]:animate-in data-[state=closed]:animate-out",
+          "data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0",
+          "data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95",
+          "data-[side=bottom]:slide-in-from-top-2 data-[side=left]:slide-in-from-right-2",
+          "data-[side=right]:slide-in-from-left-2 data-[side=top]:slide-in-from-bottom-2",
+          zIndex.popover,
+          className,
+        )}
+        {...props}
+      />
+    </DismissableLayerBranch>
   )
+
+  if (!portaled) return content
+
+  return <PopoverPrimitive.Portal>{content}</PopoverPrimitive.Portal>
 }
 PopoverContent.displayName = PopoverPrimitive.Content.displayName
 

@@ -257,6 +257,7 @@ export function Select<V = unknown>(selectProps: SelectProps<V>) {
             </PopoverTrigger>
             <PopoverContent
               data-slot="searchable-select-content"
+              portaled={false}
               align={align}
               side={side}
               {...(sideOffset !== undefined ? { sideOffset } : { sideOffset: 4 })}
