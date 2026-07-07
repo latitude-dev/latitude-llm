@@ -1,7 +1,7 @@
 import { ApiKeyRepository, generateApiKeyUseCase } from "@domain/api-keys"
 import { OutboxEventWriter } from "@domain/events"
 import { createProject, ProjectRepository } from "@domain/projects"
-import type { QueueConsumer, WorkflowExecutionStatus, WorkflowQuerierShape } from "@domain/queue"
+import { isWorkflowAliveUseCase, type QueueConsumer, WorkflowQuerier, type WorkflowQuerierShape } from "@domain/queue"
 import { generateSlug, SqlClient } from "@domain/shared"
 import {
   SHOWCASE_BUILD_STALE_AFTER_MS,
@@ -27,20 +27,6 @@ const logger = createLogger("showcase")
 const SHOWCASE_PROJECT_NAME = "Latitude Demo"
 const SHOWCASE_SEED_API_KEY_NAME = "Showcase seed"
 const REGENERATE_WORKFLOW_ID = "showcase:regenerate"
-
-// A stale `building` pointer is only safe to reclaim once its regeneration
-// workflow is provably done — otherwise a slow/retrying/paused-then-resumed run
-// could have its `next` yanked and later mark/swap the wrong build. These are
-// the terminal statuses (plus a missing workflow) that mean nothing will
-// advance the pointer anymore; running / paused / continued-as-new / unknown
-// block the reclaim and let the daily sweep retry.
-const RECLAIMABLE_WORKFLOW_STATUSES = new Set<WorkflowExecutionStatus>([
-  "completed",
-  "failed",
-  "canceled",
-  "terminated",
-  "timed-out",
-])
 
 interface PreparedRegeneration {
   readonly organizationId: string
@@ -153,14 +139,14 @@ export const createShowcaseWorker = ({ consumer, postgresClient, workflowQuerier
           showcase.nextState === "building" && !!showcase.nextProjectId && showcase.updatedAt < staleBefore
         if (looksStale) {
           const querier = workflowQuerier ?? (yield* Effect.promise(() => getWorkflowQuerier()))
-          const description = yield* querier.describe(REGENERATE_WORKFLOW_ID)
-          const workflowStillLive = description !== null && !RECLAIMABLE_WORKFLOW_STATUSES.has(description.status)
+          const workflowAlive = yield* isWorkflowAliveUseCase(REGENERATE_WORKFLOW_ID).pipe(
+            Effect.provideService(WorkflowQuerier, querier),
+          )
 
-          if (workflowStillLive) {
+          if (workflowAlive) {
             logger.info("Stale showcase build, but its regeneration workflow is still live — not reclaiming", {
               organizationId: showcase.organizationId,
               nextProjectId: showcase.nextProjectId,
-              workflowStatus: description?.status,
             })
           } else {
             const reclaimed = yield* Effect.gen(function* () {
@@ -172,7 +158,6 @@ export const createShowcaseWorker = ({ consumer, postgresClient, workflowQuerier
               logger.warn("Reclaimed stale showcase build", {
                 organizationId: reclaimed.showcase.organizationId,
                 reclaimedProjectId: reclaimed.reclaimedProjectId,
-                workflowStatus: description?.status ?? "missing",
               })
             }
           }
