@@ -17,12 +17,6 @@ export const FEATURE_FLAGS = {
     description:
       "Lets org owners/admins configure SAML or OIDC single sign-on and (optionally) enforce it for their verified email domain.",
   },
-  "agent-dispatch": {
-    emoji: "🤖",
-    name: "Agent Dispatch",
-    description:
-      "Wake a hosted coding agent when a signal escalates or is discovered — Cursor, Claude Code, Linear, or webhook.",
-  },
 } as const satisfies Record<
   string,
   {

@@ -37,7 +37,6 @@ import {
   disconnectAgentDispatchIntegration,
   getAgentDispatchConfig,
   getWebhookSecret,
-  isAgentDispatchEnabled,
   listAgentDispatches,
   listAgentDispatchIntegrations,
   listCursorRepositories,
@@ -227,17 +226,11 @@ export function AgentDispatchSection({
   readonly projectId: string
   readonly projectSlug: string
 }) {
-  const { data: enabled } = useQuery({
-    queryKey: ["agent-dispatch-enabled"],
-    queryFn: () => isAgentDispatchEnabled(),
-  })
   const { data: integrations = [], isLoading } = useQuery({
     queryKey: AGENT_DISPATCH_INTEGRATIONS_QUERY_KEY,
     queryFn: () => listAgentDispatchIntegrations(),
-    enabled: enabled?.enabled === true,
   })
 
-  if (!enabled?.enabled) return null
   if (isLoading) return null
 
   return (
@@ -344,20 +337,14 @@ export function AgentDispatchIntegrationDetails({
   readonly projectSlug: string
   readonly kind: AgentDispatchKindKey
 }) {
-  const { data: enabled } = useQuery({
-    queryKey: ["agent-dispatch-enabled"],
-    queryFn: () => isAgentDispatchEnabled(),
-  })
   const { data: integrations = [], isLoading } = useQuery({
     queryKey: AGENT_DISPATCH_INTEGRATIONS_QUERY_KEY,
     queryFn: () => listAgentDispatchIntegrations(),
-    enabled: enabled?.enabled === true,
   })
   const [connectOpen, setConnectOpen] = useState(false)
   const [webhookSecret, setWebhookSecret] = useState<string | null>(null)
   const integration = integrations.find((row: AgentDispatchIntegrationRecord) => row.kind === kind) ?? null
 
-  if (!enabled?.enabled) return null
   if (isLoading) return <Skeleton className="h-32 w-full" />
 
   if (!integration) {

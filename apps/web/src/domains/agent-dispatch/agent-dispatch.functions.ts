@@ -1,6 +1,5 @@
 import { createHmac, randomBytes } from "node:crypto"
 import {
-  AGENT_DISPATCH_FLAG,
   AGENT_DISPATCH_KINDS,
   AGENT_DISPATCH_TRIGGERS,
   type AgentDispatchConfig,
@@ -21,7 +20,6 @@ import {
   sendAgentDispatchUseCase,
   upsertAgentDispatchConfigUseCase,
 } from "@domain/agent-dispatch"
-import { hasFeatureFlagUseCase } from "@domain/feature-flags"
 import { OrganizationId, ProjectId, SignalId } from "@domain/shared"
 import { SignalRepository } from "@domain/signals"
 import { TraceRepository } from "@domain/spans"
@@ -32,7 +30,6 @@ import {
   AgentDispatchCredentialRepositoryLive,
   AgentDispatchIntegrationRepositoryLive,
   AgentDispatchRepositoryLive,
-  FeatureFlagRepositoryLive,
   OrganizationRepositoryLive,
   ProjectRepositoryLive,
   ScoreRepositoryLive,
@@ -257,17 +254,6 @@ const toConfigRecord = (config: AgentDispatchConfig): AgentDispatchConfigRecord 
   promptTemplate: config.promptTemplate,
   guardrails: config.guardrails,
   updatedAt: config.updatedAt.toISOString(),
-})
-
-export const isAgentDispatchEnabled = createServerFn({ method: "GET" }).handler(async () => {
-  const { organizationId } = await requireSession()
-  const enabled = await Effect.runPromise(
-    hasFeatureFlagUseCase({ identifier: AGENT_DISPATCH_FLAG }).pipe(
-      withPostgres(FeatureFlagRepositoryLive, getPostgresClient(), organizationId),
-      withTracing,
-    ),
-  )
-  return { enabled }
 })
 
 export const listAgentDispatchIntegrations = createServerFn({ method: "GET" }).handler(async () => {
@@ -704,7 +690,6 @@ const manualSendPgLayer = Layer.mergeAll(
   AgentDispatchConfigRepositoryLive,
   AgentDispatchRepositoryLive,
   AgentDispatchCredentialRepositoryLive,
-  FeatureFlagRepositoryLive,
 )
 
 export const sendSignalToIntegration = createServerFn({ method: "POST" })
@@ -724,9 +709,6 @@ export const sendSignalToIntegration = createServerFn({ method: "POST" })
 
     return Effect.runPromise(
       Effect.gen(function* () {
-        const enabled = yield* hasFeatureFlagUseCase({ identifier: AGENT_DISPATCH_FLAG })
-        if (!enabled) return yield* Effect.fail(new Error("Agent dispatch is not enabled for this organization"))
-
         const configRepo = yield* AgentDispatchConfigRepository
         const config = yield* configRepo.findById(data.configId)
         if (config.projectId !== projectId || !config.enabled) {
