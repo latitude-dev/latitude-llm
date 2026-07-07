@@ -78,7 +78,7 @@ import { QuickJsScriptRuntimeLive } from "@platform/sandbox-quickjs"
 import { createLogger, withTracing } from "@repo/observability"
 import { type OperationContext, signalAgentToolset } from "@repo/operations"
 import { Effect, Layer } from "effect"
-import type { z } from "zod"
+import { z } from "zod"
 
 import {
   getClickhouseClient,
@@ -293,13 +293,21 @@ const runAgenticGeneration = async (params: {
     }
   })
 
+  const previewSignalToolSchema = generatedSignalDraftSchema.extend({
+    traceIds: z
+      .array(z.string().min(1))
+      .describe(
+        "Trace IDs (from research tools, e.g. listToolCalls) of specific sessions to test against — pick traces where the behavior definitely does or definitely does not occur to verify the draft fires correctly. Empty array [] tests the most recent sessions instead.",
+      ),
+  })
+
   const previewSignalTool: AgentToolDef = {
     name: "previewSignal",
     description:
-      "Run a candidate signal draft against recent sessions and return a summary of per-session verdicts, without creating anything. Use it to sanity-check a draft before createSignal.",
-    inputSchema: generatedSignalDraftSchema,
+      "Run a candidate signal draft against sessions and return a summary of per-session verdicts, without creating anything. Pass traceIds to check known positive/negative examples, or [] for the latest sessions. Use it to confirm the draft behaves as expected before createSignal.",
+    inputSchema: previewSignalToolSchema,
     execute: async (rawInput) => {
-      const parsed = generatedSignalDraftSchema.safeParse(rawInput)
+      const parsed = previewSignalToolSchema.safeParse(rawInput)
       if (!parsed.success) {
         return { error: formatZodIssues(parsed.error) }
       }
@@ -307,7 +315,11 @@ const runAgenticGeneration = async (params: {
       if (!mapped.ok) {
         return { error: mapped.issues }
       }
-      writeStep("Testing the draft against recent sessions")
+      writeStep(
+        parsed.data.traceIds.length > 0
+          ? "Testing the draft against the sessions I found"
+          : "Testing the draft against recent sessions",
+      )
       return Effect.runPromise(
         provideDomain(
           previewEvaluationUseCase({
@@ -315,6 +327,7 @@ const runAgenticGeneration = async (params: {
             projectId,
             filters: mapped.draft.filters ?? null,
             evaluation: mapped.draft.evaluation,
+            ...(parsed.data.traceIds.length > 0 ? { traceIds: parsed.data.traceIds } : {}),
           }).pipe(
             Effect.match({
               onSuccess: (result) => ({ summary: summarizePreviewVerdicts(result.items) }),
@@ -326,9 +339,10 @@ const runAgenticGeneration = async (params: {
     },
   }
 
-  // Holder (not a bare `let`) so the assignment inside the createSignal tool's closure survives
-  // TypeScript's control-flow narrowing at the terminal read after `runAgent` resolves.
+  // Holders (not bare `let`s) so assignments inside tool closures survive TypeScript's control-flow
+  // narrowing at the terminal read after `runAgent` resolves.
   const captureBox: { signal: { readonly signalId: string; readonly slug: string } | null } = { signal: null }
+  const unsatisfiableBox: { reason: string | null } = { reason: null }
 
   const createSignalDraft = (draft: GeneratedSignalDraft) =>
     Effect.gen(function* () {
@@ -397,6 +411,28 @@ const runAgenticGeneration = async (params: {
     },
   }
 
+  const reportUnsatisfiableSchema = z.object({
+    reason: z
+      .string()
+      .min(1)
+      .describe("One or two plain sentences, shown directly to the user, explaining why no signal was created."),
+  })
+
+  const reportUnsatisfiableTool: AgentToolDef = {
+    name: "reportUnsatisfiable",
+    description:
+      "Terminal tool: call this instead of createSignal when the request cannot become a signal. Use it when the request is not a description of a signal to track, or when the described behavior cannot be detected from the available session data (e.g. it names a tool, field, or event that does not exist and cannot be inferred). Do not use it for a draft that merely failed validation — fix and retry createSignal for those.",
+    inputSchema: reportUnsatisfiableSchema,
+    execute: async (rawInput) => {
+      const parsed = reportUnsatisfiableSchema.safeParse(rawInput)
+      if (!parsed.success) {
+        return { error: formatZodIssues(parsed.error) }
+      }
+      unsatisfiableBox.reason = parsed.data.reason
+      return { acknowledged: true }
+    },
+  }
+
   const modelConfig = await Effect.runPromise(
     resolveGenerationConfig("SIGNAL_GENERATOR", SIGNAL_GENERATION_DEFAULT_MODEL),
   )
@@ -413,7 +449,7 @@ const runAgenticGeneration = async (params: {
     model: modelConfig.model,
     system: SIGNAL_GENERATION_SYSTEM_PROMPT,
     prompt: buildSignalGenerationUserPrompt({ prompt, grounding, scopeHint }),
-    tools: [...researchTools, previewSignalTool, createSignalTool],
+    tools: [...researchTools, previewSignalTool, createSignalTool, reportUnsatisfiableTool],
     maxSteps: SIGNAL_GENERATION_MAX_STEPS,
     ...(modelConfig.reasoning !== undefined ? { reasoning: modelConfig.reasoning } : {}),
     ...(modelConfig.maxTokens !== undefined ? { maxTokens: modelConfig.maxTokens } : {}),
@@ -440,14 +476,21 @@ const runAgenticGeneration = async (params: {
     if (captureBox.signal !== null) {
       return { status: "done", signalId: captureBox.signal.signalId, slug: captureBox.signal.slug }
     }
+    if (unsatisfiableBox.reason !== null) {
+      return { status: "error", error: unsatisfiableBox.reason }
+    }
     return { status: "error", error: describeError(error) }
   } finally {
     clearTimeout(deadline)
   }
 
-  return captureBox.signal !== null
-    ? { status: "done", signalId: captureBox.signal.signalId, slug: captureBox.signal.slug }
-    : { status: "error", error: "The agent finished without creating a signal." }
+  if (captureBox.signal !== null) {
+    return { status: "done", signalId: captureBox.signal.signalId, slug: captureBox.signal.slug }
+  }
+  if (unsatisfiableBox.reason !== null) {
+    return { status: "error", error: unsatisfiableBox.reason }
+  }
+  return { status: "error", error: "The agent finished without creating a signal." }
 }
 
 const runGenerateSignalJob =

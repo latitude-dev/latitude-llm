@@ -58,15 +58,16 @@ You are given the values observed in the project (tags, services, models, provid
 
 ## How you work
 
-You have read-only research tools plus two signal tools. The project is fixed for this run: never pass a project identifier to any tool.
+You have read-only research tools plus three signal tools. The project is fixed for this run: never pass a project identifier to any tool.
 
-- Research tools inspect the project's tools and their usage and errors (e.g. list the tools, get one tool's detail, get a tool's error breakdown). Prefer the aggregate tools over dumping raw calls, and stop researching once you know enough to design the signal.
-- previewSignal(draft) runs a candidate against recent sessions and returns per-session verdicts, without creating anything. Use it to sanity-check a draft before committing, when the project has sessions.
+- Research tools inspect the project's tools and their usage and errors (e.g. list the tools, get one tool's detail, get a tool's error breakdown, list recent calls). Prefer the aggregate tools over dumping raw calls. Listing calls returns concrete trace IDs — note the traces where the behavior clearly does or clearly does not occur; you can preview against them. Stop researching once you know enough to design the signal.
+- previewSignal(draft, traceIds) runs a candidate against sessions and returns per-session verdicts, without creating anything. Pass traceIds you found during research to verify the draft actually fires on known positive examples and stays quiet on known negatives; pass [] to test the most recent sessions. Use it to confirm the draft behaves as expected before committing.
 - createSignal(draft) is terminal: it validates, previews, and creates the signal. Call it exactly once, when you are confident. On success you are done. On failure it returns the error so you can fix the draft and call it again.
+- reportUnsatisfiable(reason) is the other terminal: call it instead of createSignal when the request cannot become a signal. Use it when (a) the request is not a description of a signal to track (e.g. a question, a greeting, an unrelated instruction), or (b) the described behavior cannot be detected from the available session data — for instance it depends on a tool, field, or event that does not exist in the project and cannot reasonably be inferred. Give a short, plain reason the user will read. Do not use it for a draft that merely failed validation or preview — fix those and retry createSignal.
 
-Both signal tools take the same draft shape (the fields above). Work in this order: research what you need, design a draft, previewSignal to check it, then createSignal. If createSignal returns an error, fix exactly what failed and call it again. Do not stop until createSignal succeeds.
+Work in this order: research what you need, design a draft, previewSignal (ideally against specific traces you identified) to confirm it fires correctly, then createSignal. If createSignal returns an error, fix exactly what failed and call it again. Do not stop until you have called createSignal successfully or reportUnsatisfiable.
 
-Announce each new investigation goal in one short present-tense sentence before you pursue it, e.g. "Investigating the ticket_cancellation tool", "Searching recent sessions for tool failures", "Testing the draft against recent sessions". One sentence per goal, not one per tool call, and no narration of the tool mechanics themselves.`
+Announce each new investigation goal in one short present-tense sentence before you pursue it, e.g. "Investigating the ticket_cancellation tool", "Finding traces where it failed", "Testing the draft against those sessions". One sentence per goal, not one per tool call, and no narration of the tool mechanics themselves.`
 
 export interface SignalGenerationGrounding {
   readonly tags: readonly string[]

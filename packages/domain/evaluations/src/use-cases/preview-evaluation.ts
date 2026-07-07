@@ -40,6 +40,12 @@ const previewEvaluationInputSchema = z.object({
   projectId: cuidSchema.transform(ProjectId),
   filters: filterSetSchema.nullish(),
   evaluation: evaluationDraftSchema,
+  /**
+   * When set, the preview runs against exactly these traces' sessions (capped, newest wins)
+   * instead of the latest matching sessions — lets a caller verify the draft on known
+   * positive/negative examples. `filters` is ignored when this is provided.
+   */
+  traceIds: z.array(z.string().min(1)).optional(),
 })
 
 export type PreviewEvaluationInput = z.input<typeof previewEvaluationInputSchema>
@@ -109,96 +115,103 @@ export const previewEvaluationUseCase = (input: PreviewEvaluationInput) =>
 
     const needsEmbedding = requiresEmbedding(script)
 
-    const filters: FilterSet | undefined = parsed.filters ?? undefined
     const sessionRepository = yield* SessionRepository
     const traceRepository = yield* TraceRepository
-    const page = yield* sessionRepository.listByProjectId({
-      organizationId: parsed.organizationId,
-      projectId: parsed.projectId,
-      options: { limit: PREVIEW_SAMPLE_LIMIT, ...(filters ? { filters } : {}) },
-    })
 
-    const rows = yield* Effect.forEach(
-      page.items,
-      (session) => {
-        // Any trace anchors the load: `loadScriptSessionContext` resolves the sessionId from it and
-        // evaluates the whole session (all traces), so the choice of `[0]` doesn't narrow coverage.
-        const traceId = session.traceIds[0]
-        if (traceId === undefined) {
-          return Effect.succeed(null)
-        }
-        return Effect.gen(function* () {
-          const traceDetail = yield* traceRepository
-            .findByTraceId({
-              organizationId: parsed.organizationId,
-              projectId: parsed.projectId,
-              traceId: TraceId(traceId),
-            })
-            .pipe(Effect.catchTag("NotFoundError", () => Effect.succeed(null)))
-          if (traceDetail === null) {
-            return null
-          }
-
-          const scriptSession = yield* loadScriptSessionContext({
+    // Any trace anchors the load: `loadScriptSessionContext` resolves the sessionId from it and
+    // evaluates the whole session (all traces), so the anchor choice doesn't narrow coverage.
+    const evaluateAnchor = (traceId: string, sessionIdHint: string | null) =>
+      Effect.gen(function* () {
+        const traceDetail = yield* traceRepository
+          .findByTraceId({
             organizationId: parsed.organizationId,
             projectId: parsed.projectId,
-            traceDetail,
+            traceId: TraceId(traceId),
           })
+          .pipe(Effect.catchTag("NotFoundError", () => Effect.succeed(null)))
+        if (traceDetail === null) {
+          return null
+        }
+        const sessionId = sessionIdHint ?? traceDetail.sessionId ?? traceId
 
-          if (needsEmbedding) {
-            const embeddingsReady = yield* hasSessionEmbeddings({
-              organizationId: parsed.organizationId,
-              projectId: parsed.projectId,
-              traceIds: scriptSession.traces.map((trace) => trace.id),
-            })
-            if (!embeddingsReady) {
-              return {
-                sessionId: session.sessionId,
-                traceId,
-                passed: null,
-                value: null,
-                feedback: "",
-                error: null,
-                skipped: true,
-                summary: buildSummary(scriptSession),
-              } satisfies PreviewEvaluationRow
-            }
-          }
+        const scriptSession = yield* loadScriptSessionContext({
+          organizationId: parsed.organizationId,
+          projectId: parsed.projectId,
+          traceDetail,
+        })
 
-          const similarity = yield* buildSemanticSimilarityHost({
+        if (needsEmbedding) {
+          const embeddingsReady = yield* hasSessionEmbeddings({
             organizationId: parsed.organizationId,
             projectId: parsed.projectId,
             traceIds: scriptSession.traces.map((trace) => trace.id),
           })
-          const execution = yield* executeEvaluationScriptSandboxed({ script, session: scriptSession, similarity })
-          return {
-            sessionId: session.sessionId,
-            traceId,
-            passed: execution.result.passed,
-            value: execution.result.value,
-            feedback: execution.result.feedback,
-            error: null,
-            skipped: false,
-            summary: buildSummary(scriptSession),
-          } satisfies PreviewEvaluationRow
-        }).pipe(
-          Effect.match({
-            onSuccess: (row): PreviewEvaluationRow | null => row,
-            onFailure: (error): PreviewEvaluationRow => ({
-              sessionId: session.sessionId,
+          if (!embeddingsReady) {
+            return {
+              sessionId,
               traceId,
               passed: null,
               value: null,
               feedback: "",
-              error: describeError(error),
-              skipped: false,
-              summary: null,
-            }),
+              error: null,
+              skipped: true,
+              summary: buildSummary(scriptSession),
+            } satisfies PreviewEvaluationRow
+          }
+        }
+
+        const similarity = yield* buildSemanticSimilarityHost({
+          organizationId: parsed.organizationId,
+          projectId: parsed.projectId,
+          traceIds: scriptSession.traces.map((trace) => trace.id),
+        })
+        const execution = yield* executeEvaluationScriptSandboxed({ script, session: scriptSession, similarity })
+        return {
+          sessionId,
+          traceId,
+          passed: execution.result.passed,
+          value: execution.result.value,
+          feedback: execution.result.feedback,
+          error: null,
+          skipped: false,
+          summary: buildSummary(scriptSession),
+        } satisfies PreviewEvaluationRow
+      }).pipe(
+        Effect.match({
+          onSuccess: (row): PreviewEvaluationRow | null => row,
+          onFailure: (error): PreviewEvaluationRow => ({
+            sessionId: sessionIdHint ?? traceId,
+            traceId,
+            passed: null,
+            value: null,
+            feedback: "",
+            error: describeError(error),
+            skipped: false,
+            summary: null,
           }),
-        )
-      },
-      { concurrency: PREVIEW_CONCURRENCY },
-    )
+        }),
+      )
+
+    const requestedTraceIds = parsed.traceIds ?? []
+    let anchors: ReadonlyArray<{ readonly traceId: string; readonly sessionIdHint: string | null }>
+    if (requestedTraceIds.length > 0) {
+      anchors = requestedTraceIds.slice(0, PREVIEW_SAMPLE_LIMIT).map((traceId) => ({ traceId, sessionIdHint: null }))
+    } else {
+      const filters: FilterSet | undefined = parsed.filters ?? undefined
+      const page = yield* sessionRepository.listByProjectId({
+        organizationId: parsed.organizationId,
+        projectId: parsed.projectId,
+        options: { limit: PREVIEW_SAMPLE_LIMIT, ...(filters ? { filters } : {}) },
+      })
+      anchors = page.items.flatMap((session) => {
+        const traceId = session.traceIds[0]
+        return traceId === undefined ? [] : [{ traceId, sessionIdHint: session.sessionId }]
+      })
+    }
+
+    const rows = yield* Effect.forEach(anchors, ({ traceId, sessionIdHint }) => evaluateAnchor(traceId, sessionIdHint), {
+      concurrency: PREVIEW_CONCURRENCY,
+    })
 
     return { items: rows.filter((row): row is PreviewEvaluationRow => row !== null) } satisfies PreviewEvaluationResult
   }).pipe(Effect.withSpan("evaluations.previewEvaluation")) as Effect.Effect<
