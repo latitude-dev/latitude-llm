@@ -25,8 +25,7 @@ const EMPTY_RESULT: TraceSearchHighlightsResult = { highlights: [], firstMatchIn
  *   3. The semantic branch embeds the prompt via Voyage and runs the focused
  *      per-trace `argMax` query. AI unavailable or embed failure → semantic
  *      match drops to `null` and the renderer falls back to literal/token
- *      highlights only (same shape as a pre-migration `trace_search_embeddings`
- *      row with NULL range columns).
+ *      highlights only.
  *   4. Delegate to the pure `computeTraceSearchHighlights` use-case for the
  *      actual highlight emission.
  */

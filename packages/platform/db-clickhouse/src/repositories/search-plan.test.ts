@@ -1,7 +1,7 @@
 import { AI, AIError, type AIShape, EMBEDDING_DIMENSIONS } from "@domain/ai"
 import { parseSearchQuery } from "@domain/spans"
 import { Effect, Layer } from "effect"
-import { afterEach, describe, expect, it } from "vitest"
+import { describe, expect, it } from "vitest"
 import { planSearch } from "./search-plan.ts"
 
 const mockAILayer = Layer.succeed(AI, {
@@ -10,20 +10,8 @@ const mockAILayer = Layer.succeed(AI, {
   rerank: () => Effect.fail(new AIError({ message: "Rerank not implemented in mock" })),
 } as AIShape)
 
-const previousSharedReads = process.env.LAT_TRACE_SEARCH_SHARED_MESSAGE_EMBEDDINGS_READS
-
 describe("planSearch", () => {
-  afterEach(() => {
-    if (previousSharedReads === undefined) {
-      delete process.env.LAT_TRACE_SEARCH_SHARED_MESSAGE_EMBEDDINGS_READS
-    } else {
-      process.env.LAT_TRACE_SEARCH_SHARED_MESSAGE_EMBEDDINGS_READS = previousSharedReads
-    }
-  })
-
   it("uses ANN-shaped shared-message vector retrieval before occurrence fan-out", async () => {
-    process.env.LAT_TRACE_SEARCH_SHARED_MESSAGE_EMBEDDINGS_READS = "true"
-
     const plan = await Effect.runPromise(planSearch(parseSearchQuery("needle")).pipe(Effect.provide(mockAILayer)))
     const normalizedSql = plan.subquery.replace(/\s+/g, " ")
 
@@ -44,8 +32,6 @@ describe("planSearch", () => {
   })
 
   it("suppresses boilerplate hashes from shared-message semantic scoring", async () => {
-    process.env.LAT_TRACE_SEARCH_SHARED_MESSAGE_EMBEDDINGS_READS = "true"
-
     const plan = await Effect.runPromise(planSearch(parseSearchQuery("needle")).pipe(Effect.provide(mockAILayer)))
     const normalizedSql = plan.subquery.replace(/\s+/g, " ")
 
@@ -56,14 +42,5 @@ describe("planSearch", () => {
     expect(normalizedSql).toContain("HAVING uniqExact(trace_id) >= greatest(")
     expect(plan.params.boilerplateMinTraces).toBeGreaterThan(0)
     expect(plan.params.boilerplateTraceFraction).toBeGreaterThan(0)
-  })
-
-  it("keeps the legacy chunk plan free of the boilerplate filter", async () => {
-    process.env.LAT_TRACE_SEARCH_SHARED_MESSAGE_EMBEDDINGS_READS = "false"
-
-    const plan = await Effect.runPromise(planSearch(parseSearchQuery("needle")).pipe(Effect.provide(mockAILayer)))
-
-    expect(plan.subquery).not.toContain("content_hash NOT IN")
-    expect(plan.params.boilerplateMinTraces).toBeUndefined()
   })
 })

@@ -30,18 +30,11 @@ export {
   TRACE_SEARCH_BOILERPLATE_MIN_TRACES,
   TRACE_SEARCH_BOILERPLATE_TRACE_FRACTION,
   TRACE_SEARCH_CHARS_PER_TOKEN_ESTIMATE,
-  TRACE_SEARCH_CHUNK_HEAD_BUDGET_CHARS,
-  TRACE_SEARCH_CHUNK_MAX_CHARS,
-  TRACE_SEARCH_CHUNK_OVERLAP_CHARS,
-  TRACE_SEARCH_CHUNK_TAIL_BUDGET_CHARS,
   TRACE_SEARCH_DEFAULT_DAILY_EMBED_BUDGET_TOKENS,
   TRACE_SEARCH_DEFAULT_MONTHLY_EMBED_BUDGET_TOKENS,
   TRACE_SEARCH_DEFAULT_WEEKLY_EMBED_BUDGET_TOKENS,
-  TRACE_SEARCH_DOCUMENT_LOOKBACK_DAYS,
   TRACE_SEARCH_DOCUMENT_MAX_ESTIMATED_TOKENS,
   TRACE_SEARCH_DOCUMENT_MAX_LENGTH,
-  TRACE_SEARCH_EMBEDDING_LOOKBACK_DAYS,
-  TRACE_SEARCH_EMBEDDING_MIN_LENGTH,
   TRACE_SEARCH_MIN_RELEVANCE_SCORE,
 } from "./constants.ts"
 export type { Session, SessionDetail } from "./entities/session.ts"
@@ -172,7 +165,6 @@ export type {
   TraceMessageOccurrenceContent,
   TraceMessageOccurrenceRow,
   TraceSearchDocumentRow,
-  TraceSearchEmbeddingRow,
   TraceSearchRepositoryShape,
   TraceSemanticHighlightMatch,
 } from "./ports/trace-search-repository.ts"
@@ -197,7 +189,6 @@ export { isUserSortField, USER_SORT_FIELDS, UserAnalyticsRepository } from "./po
 export { deterministicSample } from "./sampling/deterministic-sampler.ts"
 export { extractSamplingKey } from "./sampling/extract-sampling-key.ts"
 export type {
-  TraceSearchChunk,
   TraceSearchDocument,
   TraceSearchDocumentInput,
   TraceSearchEmbeddingMessage,

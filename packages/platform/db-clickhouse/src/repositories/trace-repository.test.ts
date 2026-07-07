@@ -122,12 +122,9 @@ const ch = setupTestClickHouse()
 const runCh = <A, E>(effect: Effect.Effect<A, E, ChSqlClient | AI>) =>
   Effect.runPromise(effect.pipe(Effect.provide(mockAILayer), Effect.provide(ChSqlClientLive(ch.client, ORG_ID))))
 
-// Shared semantic path (LAT_TRACE_SEARCH_SHARED_MESSAGE_EMBEDDINGS_READS=true,
-// the production default): ranked search reads message vectors from
-// `message_embeddings` joined to `trace_message_occurrences`, not the legacy
-// per-trace `trace_search_embeddings` chunks. Seed both so a fixture's vectors
-// are reachable; one occurrence per (trace, messageIndex) maps to what used to
-// be one chunk, and the per-trace max-pool is preserved across messages.
+// Ranked search reads message vectors from `message_embeddings` joined to
+// `trace_message_occurrences`. Seed both so fixture vectors are reachable; the
+// per-trace max-pool is preserved across messages.
 const insertSharedSemanticRows = (
   rows: readonly {
     readonly traceId: string
