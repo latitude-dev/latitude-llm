@@ -1,5 +1,4 @@
 import { alertIncidentSeeders } from "./alert-incidents/index.ts"
-import { annotationQueueSeeders } from "./annotation-queues/index.ts"
 import { apiKeySeeders } from "./api-keys/index.ts"
 import { datasetSeeders } from "./datasets/index.ts"
 import { evaluationSeeders } from "./evaluations/index.ts"
@@ -16,7 +15,7 @@ import { wrappedReportSeeders } from "./wrapped-reports/index.ts"
 
 /**
  * Per-project ("content") seeders — datasets, evaluations, signals,
- * simulations, scores, annotation queues. Re-used by the runtime
+ * simulations, scores. Re-used by the runtime
  * "Create Demo Project" Temporal activity, which threads a per-project
  * `SeedScope` so all entity ids derive fresh under the new project.
  *
@@ -31,7 +30,6 @@ export const contentSeeders: readonly Seeder[] = [
   ...evaluationSeeders,
   ...simulationSeeders,
   ...scoreSeeders,
-  ...annotationQueueSeeders,
   ...flaggerSeeders,
   // Runs after signals + scores so it can derive "currently escalating"
   // from real occurrence patterns in the seeded data via the same

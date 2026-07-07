@@ -36,7 +36,6 @@
     "@domain/agent-dispatch": "workspace:*",
     "@domain/ai": "workspace:*",
     "@domain/incidents": "workspace:*",
-    "@domain/annotation-queues": "workspace:*",
     "@domain/api-keys": "workspace:*",
     "@domain/billing": "workspace:*",
     "@domain/datasets": "workspace:*",

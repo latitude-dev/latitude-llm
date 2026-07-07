@@ -259,9 +259,7 @@ describe("live monitoring integration", () => {
     createTraceEndWorker({
       consumer: harness.consumer,
       publisher: harness.publisher,
-      postgresClient: pg.appPostgresClient,
       clickhouseClient: ch.client,
-      redisClient: createFakeRedisClient(),
       workflowStarter: createFakeWorkflowStarter(),
     })
     createSignalsMatchWorker({
@@ -371,9 +369,7 @@ describe("live monitoring integration", () => {
     createTraceEndWorker({
       consumer: harness.consumer,
       publisher: harness.publisher,
-      postgresClient: pg.appPostgresClient,
       clickhouseClient: ch.client,
-      redisClient: createFakeRedisClient(),
       workflowStarter: createFakeWorkflowStarter(),
     })
     createSignalsMatchWorker({

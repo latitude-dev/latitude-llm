@@ -18,7 +18,6 @@
     "seed:session-search-qa": "node --import tsx src/scripts/send-session-search-qa.ts"
   },
   "dependencies": {
-    "@domain/annotation-queues": "workspace:*",
     "@domain/api-keys": "workspace:*",
     "@domain/evaluations": "workspace:*",
     "@domain/flaggers": "workspace:*",

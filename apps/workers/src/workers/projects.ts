@@ -59,7 +59,6 @@ export const createProjectsWorker = ({ consumer, postgresClient }: ProjectsDeps)
             {
               organizationId: payload.organizationId,
               projectId: payload.projectId,
-              queueAssigneeUserIds: payload.queueAssigneeUserIds,
               apiKeyId: payload.apiKeyId,
               timelineAnchorIso: payload.timelineAnchorIso,
             },

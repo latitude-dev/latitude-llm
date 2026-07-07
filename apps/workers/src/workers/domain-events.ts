@@ -56,9 +56,6 @@ export const createDomainEventsWorker = ({
           dedupeKey: `annotation-scores:publish-human:${payload.scoreId}`,
           debounceMs: SCORE_PUBLICATION_DEBOUNCE,
         }),
-        pub.publish("annotation-scores", "markReviewStarted", payload, {
-          dedupeKey: `annotation-scores:mark-review-started:${payload.scoreId}`,
-        }),
       ],
       { concurrency: "unbounded" },
     ).pipe(Effect.asVoid)
@@ -463,7 +460,6 @@ export const createDomainEventsWorker = ({
     // the durable surfacing until a notification kind lands with the signals
     // rollout (specs/sandbox-runtime.md P1-2).
     EvaluationDetectorDegraded: () => Effect.void,
-    AnnotationQueueItemCompleted: () => Effect.void,
     ProjectDeleted: (event) =>
       Effect.all(
         [

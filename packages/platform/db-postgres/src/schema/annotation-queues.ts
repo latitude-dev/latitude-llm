@@ -1,6 +1,12 @@
-import type { AnnotationQueueSettings } from "@domain/annotation-queues"
 import { boolean, index, integer, jsonb, text, unique, varchar } from "drizzle-orm/pg-core"
 import { cuid, latitudeSchema, organizationRLSPolicy, timestamps, tzTimestamp } from "../schemaHelpers.ts"
+
+// Tables are retained after the annotation-queues feature removal; the former
+// `@domain/annotation-queues` settings type is gone, so its shape is inlined here.
+type AnnotationQueueSettings = {
+  readonly filter?: unknown
+  readonly sampling?: number
+}
 
 export const annotationQueues = latitudeSchema.table(
   "annotation_queues",

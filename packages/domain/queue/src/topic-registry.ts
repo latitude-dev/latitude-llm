@@ -50,6 +50,15 @@ const _registry = {
     reapExpired: Record<string, never>
   }>(),
 
+  showcase: payloads<{
+    /**
+     * Fired by a daily off-peak cron — builds a fresh `next` showcase project,
+     * gates it, and auto-swaps the pointer (S4). No payload: the handler reads
+     * the pointer to resolve the showcase org and re-anchors to "now".
+     */
+    regenerate: Record<string, never>
+  }>(),
+
   "user-deletion": payloads<{
     delete: {
       readonly organizationId: string
@@ -382,11 +391,6 @@ const _registry = {
       readonly projectId: string
       readonly scoreId: string
     }
-    markReviewStarted: {
-      readonly organizationId: string
-      readonly projectId: string
-      readonly scoreId: string
-    }
   }>(),
 
   scores: payloads<{
@@ -502,7 +506,6 @@ const _registry = {
     seedDemo: {
       readonly organizationId: string
       readonly projectId: string
-      readonly queueAssigneeUserIds: readonly string[]
       readonly apiKeyId: string
       readonly timelineAnchorIso: string
     }
@@ -516,22 +519,6 @@ const _registry = {
     create: {
       readonly organizationId: string
       readonly name: string
-    }
-  }>(),
-
-  "annotation-queues": payloads<{
-    bulkImport: {
-      readonly organizationId: string
-      readonly projectId: string
-      readonly queueId: string
-      readonly selection:
-        | { readonly mode: "selected"; readonly traceIds: readonly string[] }
-        | { readonly mode: "all"; readonly filters?: Record<string, unknown> }
-        | {
-            readonly mode: "allExcept"
-            readonly traceIds: readonly string[]
-            readonly filters?: Record<string, unknown>
-          }
     }
   }>(),
 

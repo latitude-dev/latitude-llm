@@ -23,7 +23,7 @@ const DEFAULT_PROJECT_NAME = "Demo Project"
  *
  * Inline copy spells out the behaviour:
  *  - Seeds the bootstrap content (datasets, evaluations, issues,
- *    annotation queues, scores, ~30 days of telemetry) under a fresh
+ *    scores, ~30 days of telemetry) under a fresh
  *    project on this organization.
  *  - The org's existing default API key is reused — no new credentials
  *    are created.
@@ -117,7 +117,7 @@ export function CreateDemoProjectButton({ organizationId }: CreateDemoProjectBut
                 </form.Field>
                 <Alert
                   variant="warning"
-                  description="Seeds the project with the bootstrap content set — datasets, evaluations, issues, annotation queues, scores, and ~30 days of trace telemetry. Reuses the org's existing default API key (no new credentials are created). Runs in the background; the project row appears immediately but content fills in over a minute or two. Fails if a project with the same name already exists on this org."
+                  description="Seeds the project with the bootstrap content set — datasets, evaluations, issues, scores, and ~30 days of trace telemetry. Reuses the org's existing default API key (no new credentials are created). Runs in the background; the project row appears immediately but content fills in over a minute or two. Fails if a project with the same name already exists on this org."
                 />
               </FormWrapper>
             </Modal.Body>

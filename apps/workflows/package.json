@@ -24,6 +24,7 @@
     "@domain/queue": "workspace:*",
     "@domain/scores": "workspace:*",
     "@domain/shared": "workspace:*",
+    "@domain/showcase": "workspace:*",
     "@domain/spans": "workspace:*",
     "@domain/taxonomy": "workspace:*",
     "@platform/ai": "workspace:*",

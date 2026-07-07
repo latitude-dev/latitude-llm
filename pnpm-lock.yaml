@@ -713,9 +713,6 @@ importers:
       '@domain/ai':
         specifier: workspace:*
         version: link:../../packages/domain/ai
-      '@domain/annotation-queues':
-        specifier: workspace:*
-        version: link:../../packages/domain/annotation-queues
       '@domain/annotations':
         specifier: workspace:*
         version: link:../../packages/domain/annotations
@@ -788,6 +785,9 @@ importers:
       '@domain/shared':
         specifier: workspace:*
         version: link:../../packages/domain/shared
+      '@domain/showcase':
+        specifier: workspace:*
+        version: link:../../packages/domain/showcase
       '@domain/signals':
         specifier: workspace:*
         version: link:../../packages/domain/signals
@@ -918,6 +918,9 @@ importers:
       '@domain/shared':
         specifier: workspace:*
         version: link:../../packages/domain/shared
+      '@domain/showcase':
+        specifier: workspace:*
+        version: link:../../packages/domain/showcase
       '@domain/signals':
         specifier: workspace:*
         version: link:../../packages/domain/signals
@@ -1107,33 +1110,6 @@ importers:
       rosetta-ai:
         specifier: 'catalog:'
         version: 2.2.0
-      zod:
-        specifier: 'catalog:'
-        version: 4.3.6
-
-  packages/domain/annotation-queues:
-    dependencies:
-      '@domain/annotations':
-        specifier: workspace:*
-        version: link:../annotations
-      '@domain/events':
-        specifier: workspace:*
-        version: link:../events
-      '@domain/queue':
-        specifier: workspace:*
-        version: link:../queue
-      '@domain/scores':
-        specifier: workspace:*
-        version: link:../scores
-      '@domain/shared':
-        specifier: workspace:*
-        version: link:../shared
-      '@domain/spans':
-        specifier: workspace:*
-        version: link:../spans
-      effect:
-        specifier: 'catalog:'
-        version: 4.0.0-beta.57
       zod:
         specifier: 'catalog:'
         version: 4.3.6
@@ -2342,9 +2318,6 @@ importers:
       '@domain/ai':
         specifier: workspace:*
         version: link:../../domain/ai
-      '@domain/annotation-queues':
-        specifier: workspace:*
-        version: link:../../domain/annotation-queues
       '@domain/api-keys':
         specifier: workspace:*
         version: link:../../domain/api-keys
@@ -3311,9 +3284,6 @@ importers:
 
   tools/live-seeds:
     dependencies:
-      '@domain/annotation-queues':
-        specifier: workspace:*
-        version: link:../../packages/domain/annotation-queues
       '@domain/api-keys':
         specifier: workspace:*
         version: link:../../packages/domain/api-keys

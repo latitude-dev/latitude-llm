@@ -104,7 +104,7 @@ export const AnnotationSchema = z
     sourceId: z
       .union([z.enum(ANNOTATION_SCORE_PARTIAL_SOURCE_IDS), cuidSchema])
       .describe(
-        'Origin marker. Sentinel `"UI"` / `"API"` / `"SYSTEM"` for drafts and automation, or an annotation-queue CUID for queue-authored rows.',
+        'Origin marker. Sentinel `"UI"` / `"API"` / `"SYSTEM"` for drafts and automation, or a CUID for authored rows.',
       ),
     metadata: AnnotationMetadataSchema.describe(
       "Annotation-specific metadata: `rawFeedback` plus a snapshot of the anchor at write time.",

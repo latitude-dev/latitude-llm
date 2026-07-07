@@ -1,5 +1,4 @@
 export { allSeeders } from "./all.ts"
-export { annotationQueueSeeders } from "./annotation-queues/index.ts"
 export { apiKeySeeders } from "./api-keys/index.ts"
 export { datasetSeeders } from "./datasets/index.ts"
 export { flaggerSeeders } from "./flaggers/index.ts"
