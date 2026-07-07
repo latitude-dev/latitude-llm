@@ -14,8 +14,26 @@ const OLD_MESSAGE_INDEX_CONTRACT =
   "- Include messageIndex only when one transcript line is clearly the best evidence; it must be a non-negative integer no larger than 10000."
 const OLD_MESSAGE_INDEX_STRING_CONTRACT =
   '- Include messageIndex only when one transcript line is clearly the best evidence. messageIndex must be exactly one quoted integer string like "0" or "12"; never output it as a JSON number, decimal, exponent, comma-separated list, range, or unquoted value.'
-const NEW_CLASSIFIER_OUTPUT_CONTRACT =
-  "- Output only matched and feedback. Do not emit messageIndex or any other fields."
+const NEW_MESSAGE_INDEX_CONTRACT =
+  '- Include messageIndex only when one transcript line is clearly the best evidence. messageIndex must be a quoted integer string naming an existing transcript line, e.g. "0" or "12"; pick one of the offered indices, and never output it as a JSON number, decimal, exponent, list, or range.'
+
+// Bedrock rejects grammars that are too large, so bound the enum of offered indices.
+const MESSAGE_INDEX_ENUM_LIMIT = 200
+
+// Mirror of the production generation schema: messageIndex is an enum of the
+// trace's real indices, which structurally prevents the digit runaway that
+// truncated output at the token cap.
+function buildRegressionClassifierSchema(messageCount: number) {
+  const base = {
+    matched: z.boolean().optional().default(false),
+    feedback: z.string().min(1).nullable().optional(),
+  }
+  const usable = Math.min(Math.max(messageCount, 0), MESSAGE_INDEX_ENUM_LIMIT)
+  if (usable === 0) return z.object(base)
+
+  const indices = Array.from({ length: usable }, (_, index) => String(index)) as [string, ...string[]]
+  return z.object({ ...base, messageIndex: z.enum(indices).optional() })
+}
 
 const regressionMessagePartSchema = z
   .object({
@@ -53,6 +71,7 @@ const malformedJsonOutputRegressionRowSchema = z.object({
 const classifierOutputSchema = z.object({
   matched: z.boolean().optional().default(false),
   feedback: z.string().min(1).nullable().optional(),
+  messageIndex: z.string().regex(/^\d+$/).optional(),
 })
 
 type MalformedJsonOutputRegressionRow = z.infer<typeof malformedJsonOutputRegressionRowSchema>["metadata"]
@@ -133,8 +152,8 @@ function extractClassifierPrompt(row: MalformedJsonOutputRegressionRow): string 
 
 function patchClassifierOutputContract(systemPrompt: string): string {
   return systemPrompt
-    .replace(OLD_MESSAGE_INDEX_CONTRACT, NEW_CLASSIFIER_OUTPUT_CONTRACT)
-    .replace(OLD_MESSAGE_INDEX_STRING_CONTRACT, NEW_CLASSIFIER_OUTPUT_CONTRACT)
+    .replace(OLD_MESSAGE_INDEX_CONTRACT, NEW_MESSAGE_INDEX_CONTRACT)
+    .replace(OLD_MESSAGE_INDEX_STRING_CONTRACT, NEW_MESSAGE_INDEX_CONTRACT)
 }
 
 function identifyFlaggerSlug(systemPrompt: string): string | undefined {
@@ -181,6 +200,8 @@ describe("flagger malformed JSON output regression dataset", () => {
         const flaggerSlug = identifyFlaggerSlug(system)
         expect(flaggerSlug, `row ${index} should identify the classifier from the system prompt`).toBeTruthy()
 
+        const generationSchema = buildRegressionClassifierSchema(row.allMessages.length)
+
         return Effect.exit(
           Effect.gen(function* () {
             const ai = yield* AIGenerate
@@ -189,7 +210,7 @@ describe("flagger malformed JSON output regression dataset", () => {
               maxTokens: FLAGGER_DEFAULT_CLASSIFIER_MODEL.maxTokens,
               system,
               prompt,
-              schema: classifierOutputSchema,
+              schema: generationSchema,
             })
 
             return result.object
@@ -218,6 +239,13 @@ describe("flagger malformed JSON output regression dataset", () => {
             `row ${index} (${flaggerSlug}) must not fail with malformed structured output`,
           ).toBe(false)
           throw new Error(`row ${index} (${flaggerSlug}) should generate structured classifier output:\n${cause}`)
+        }
+
+        if (exit.value.matched && exit.value.messageIndex !== undefined) {
+          expect(
+            exit.value.messageIndex,
+            `row ${index} (${flaggerSlug}) should preserve a quoted messageIndex`,
+          ).toMatch(/^\d+$/)
         }
       }
     },

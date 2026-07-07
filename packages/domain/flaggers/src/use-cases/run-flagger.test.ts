@@ -25,7 +25,12 @@ import { FLAGGER_DEFAULT_CLASSIFIER_MODEL, FLAGGER_DEFAULT_INSTRUCTION_EXTRACTOR
 import type { Flagger } from "../entities/flagger.ts"
 import { FlaggerRepository } from "../ports/flagger-repository.ts"
 import { createFakeFlaggerRepository } from "../testing/fake-flagger-repository.ts"
-import { classifyTraceForFlaggerUseCase, type RunFlaggerInput, runFlaggerUseCase } from "./run-flagger.ts"
+import {
+  buildProviderFlaggerOutputSchema,
+  classifyTraceForFlaggerUseCase,
+  type RunFlaggerInput,
+  runFlaggerUseCase,
+} from "./run-flagger.ts"
 
 const INPUT: RunFlaggerInput = {
   organizationId: "a".repeat(24),
@@ -63,6 +68,7 @@ const flaggerOutputSchema = z
   .object({
     matched: z.boolean().optional().default(false),
     feedback: z.string().min(1).nullable().optional(),
+    messageIndex: z.string().regex(/^\d+$/).optional(),
   })
   .superRefine((value, ctx) => {
     if (value.matched && !value.feedback?.trim()) {
@@ -1293,7 +1299,61 @@ ${"Detailed grounding, workflow, callout, and formatting rules. ".repeat(120)}`.
     expect(calls.generate[0].prompt).toContain("CANDIDATE STAGES")
   })
 
-  it("instructs flaggers to emit only matched and feedback in structured output", async () => {
+  it("bounds the generation schema messageIndex to the trace's real indices", () => {
+    // Two-message trace → messageIndex may only be "0" or "1"; anything else the
+    // model tries to emit is rejected by the enum, which is what prevents the
+    // open-ended digit runaway that truncated output at the token cap.
+    const schema = buildProviderFlaggerOutputSchema(2)
+
+    expect(schema.safeParse({ matched: true, feedback: "Refused a harmless request.", messageIndex: "1" }).success).toBe(
+      true,
+    )
+    expect(schema.safeParse({ matched: true, feedback: "Refused a harmless request.", messageIndex: "5" }).success).toBe(
+      false,
+    )
+    expect(schema.safeParse({ matched: false }).success).toBe(true)
+  })
+
+  it("omits messageIndex from the generation schema when the trace has no messages", () => {
+    const schema = buildProviderFlaggerOutputSchema(0)
+
+    expect("messageIndex" in schema.shape).toBe(false)
+  })
+
+  it("passes an enum-bounded messageIndex schema to the classifier generate call", async () => {
+    const { repository } = createFakeTraceRepository({
+      findByTraceId: () =>
+        Effect.succeed(
+          makeTraceDetail([
+            { role: "user", parts: [{ type: "text", content: "Please do the task." }] },
+            { role: "assistant", parts: [{ type: "text", content: "I will not do it." }] },
+          ]),
+        ),
+    })
+
+    const { calls, layer: aiLayer } = createClassifyAndApproveAI()
+
+    await Effect.runPromise(
+      runFlaggerUseCase({ ...INPUT, flaggerSlug: "laziness" }).pipe(
+        Effect.provide(
+          Layer.mergeAll(
+            Layer.succeed(TraceRepository, repository),
+            Layer.succeed(ChSqlClient, createFakeChSqlClient({ organizationId: OrganizationId(INPUT.organizationId) })),
+            Layer.succeed(SqlClient, createFakeSqlClient({ organizationId: OrganizationId(INPUT.organizationId) })),
+            Layer.succeed(FlaggerRepository, defaultFlaggerRepo),
+            aiLayer,
+            defaultCacheLayer,
+          ),
+        ),
+      ),
+    )
+
+    const classifySchema = calls.generate[0].schema
+    expect(classifySchema.safeParse({ matched: true, feedback: "x", messageIndex: "1" }).success).toBe(true)
+    expect(classifySchema.safeParse({ matched: true, feedback: "x", messageIndex: "999999" }).success).toBe(false)
+  })
+
+  it("instructs flaggers to choose messageIndex from the offered transcript indices", async () => {
     const { repository } = createFakeTraceRepository({
       findByTraceId: () =>
         Effect.succeed(
@@ -1327,7 +1387,8 @@ ${"Detailed grounding, workflow, callout, and formatting rules. ".repeat(120)}`.
       ),
     )
 
-    expect(calls.generate[0].system).toContain("Output only matched and feedback")
+    expect(calls.generate[0].system).toContain("messageIndex must be a quoted integer string")
+    expect(calls.generate[0].system).toContain("pick one of the offered indices")
     expect(calls.generate[0].system).toContain("under 300 characters")
   })
 
@@ -1394,8 +1455,9 @@ ${"Detailed grounding, workflow, callout, and formatting rules. ".repeat(120)}`.
     const parsed = flaggerOutputSchema.parse({
       matched: true,
       feedback: "Assistant refused a harmless request.",
+      messageIndex: "2",
     })
-    expect(parsed).toEqual({ matched: true, feedback: "Assistant refused a harmless request." })
+    expect(parsed).toEqual({ matched: true, feedback: "Assistant refused a harmless request.", messageIndex: "2" })
   })
 
   it("schema: matched=false rejects annotation feedback", () => {
