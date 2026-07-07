@@ -13,7 +13,6 @@ from .analytics_query_moments_range import AnalyticsQueryMomentsRange
 from .analytics_query_moments_time_bucket import AnalyticsQueryMomentsTimeBucket
 from .filter_condition import FilterCondition
 
-
 class AnalyticsQueryMoments(UniversalBaseModel):
     breakdown: typing.Optional[AnalyticsQueryMomentsBreakdown] = pydantic.Field(default=None)
     """
@@ -24,7 +23,6 @@ class AnalyticsQueryMoments(UniversalBaseModel):
     """
     The metric: `count`, or `{avg|min|max|median}` of the 0–1 label `confidence` or moment `coherence`.
     """
-
 
     time_bucket: typing_extensions.Annotated[
         typing.Optional[AnalyticsQueryMomentsTimeBucket],
@@ -49,7 +47,6 @@ class AnalyticsQueryMoments(UniversalBaseModel):
     """
     Maximum rows returned. Defaults to 50; max 500.
     """
-
 
     filters: typing.Optional[typing.Dict[str, typing.List[FilterCondition]]] = pydantic.Field(default=None)
     """

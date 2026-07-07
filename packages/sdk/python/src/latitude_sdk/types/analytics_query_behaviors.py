@@ -13,7 +13,6 @@ from .analytics_query_behaviors_range import AnalyticsQueryBehaviorsRange
 from .analytics_query_behaviors_time_bucket import AnalyticsQueryBehaviorsTimeBucket
 from .filter_condition import FilterCondition
 
-
 class AnalyticsQueryBehaviors(UniversalBaseModel):
     breakdown: typing.Optional[AnalyticsQueryBehaviorsBreakdown] = pydantic.Field(default=None)
     """
@@ -24,7 +23,6 @@ class AnalyticsQueryBehaviors(UniversalBaseModel):
     """
     The metric: `count`, or `{avg|min|max|median}` of the 0–1 assignment `confidence`.
     """
-
 
     time_bucket: typing_extensions.Annotated[
         typing.Optional[AnalyticsQueryBehaviorsTimeBucket],
@@ -49,7 +47,6 @@ class AnalyticsQueryBehaviors(UniversalBaseModel):
     """
     Maximum rows returned. Defaults to 50; max 500.
     """
-
 
     filters: typing.Optional[typing.Dict[str, typing.List[FilterCondition]]] = pydantic.Field(default=None)
     """

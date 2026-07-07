@@ -13,7 +13,6 @@ from .analytics_query_scores_range import AnalyticsQueryScoresRange
 from .analytics_query_scores_time_bucket import AnalyticsQueryScoresTimeBucket
 from .filter_condition import FilterCondition
 
-
 class AnalyticsQueryScores(UniversalBaseModel):
     breakdown: typing.Optional[AnalyticsQueryScoresBreakdown] = pydantic.Field(default=None)
     """
@@ -24,7 +23,6 @@ class AnalyticsQueryScores(UniversalBaseModel):
     """
     The metric: `count`, `passRate`, `errorRate`, or `{avg|min|max|median}` of the 0–1 score `value`.
     """
-
 
     time_bucket: typing_extensions.Annotated[
         typing.Optional[AnalyticsQueryScoresTimeBucket],
@@ -49,7 +47,6 @@ class AnalyticsQueryScores(UniversalBaseModel):
     """
     Maximum rows returned. Defaults to 50; max 500.
     """
-
 
     filters: typing.Optional[typing.Dict[str, typing.List[FilterCondition]]] = pydantic.Field(default=None)
     """

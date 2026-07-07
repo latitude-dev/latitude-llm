@@ -13,7 +13,6 @@ from .analytics_query_spans_range import AnalyticsQuerySpansRange
 from .analytics_query_spans_time_bucket import AnalyticsQuerySpansTimeBucket
 from .span_row_filter_set import SpanRowFilterSet
 
-
 class AnalyticsQuerySpans(UniversalBaseModel):
     breakdown: typing.Optional[AnalyticsQuerySpansBreakdown] = pydantic.Field(default=None)
     """
@@ -24,7 +23,6 @@ class AnalyticsQuerySpans(UniversalBaseModel):
     """
     The metric: `count`, `errorRate`, `cacheHitRate`, `{sum|min|max|avg|median}` over `duration`/`cost`/`tokens`, or `{kind:'percentile',field,p}` for an arbitrary percentile (`p` in [1,99]; e.g. `p:95`).
     """
-
 
     time_bucket: typing_extensions.Annotated[
         typing.Optional[AnalyticsQuerySpansTimeBucket],
@@ -49,7 +47,6 @@ class AnalyticsQuerySpans(UniversalBaseModel):
     """
     Maximum rows returned. Defaults to 50; max 500.
     """
-
 
     filters: typing.Optional[SpanRowFilterSet] = None
 
