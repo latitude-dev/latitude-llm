@@ -862,7 +862,7 @@ function ConnectAgentDispatchModal({
           const parsed = z
             .object({ cursorApiKey: z.string().min(1), repoUrl: z.string().url(), startingRef: z.string().optional() })
             .parse(values)
-          await connectCursorIntegration({
+          const result = await connectCursorIntegration({
             data: {
               kind: "cursor",
               cursorApiKey: parsed.cursorApiKey,
@@ -871,6 +871,7 @@ function ConnectAgentDispatchModal({
               ...(parsed.startingRef ? { startingRef: parsed.startingRef } : {}),
             },
           })
+          queryClient.setQueryData(["agent-dispatch-config", projectId, kind], result.config)
         } else if (kind === "claude_code") {
           const parsed = z
             .object({
@@ -1409,7 +1410,7 @@ function AgentDispatchHistorySection({
         const errorDetail = getDispatchErrorDetail(dispatch)
 
         return (
-          <div className="flex min-w-0 items-start gap-1">
+          <div className="flex min-w-0 items-end gap-2">
             <div className="flex min-w-0 flex-col gap-1">
               <Badge variant={statusVariant} size="small" className="w-fit capitalize">
                 {dispatch.status}
@@ -1421,11 +1422,11 @@ function AgentDispatchHistorySection({
                 type="button"
                 variant="ghost"
                 size="sm"
-                className="h-7 w-7 shrink-0 p-0"
+                className="h-7 w-7 shrink-0 p-0 text-destructive hover:bg-destructive/10 hover:text-destructive"
                 aria-label="View error details"
                 onClick={() => setErrorDetailModal({ title: errorTitle ?? "Error details", detail: errorDetail })}
               >
-                <FileText className="h-4 w-4" />
+                <Icon icon={FileText} size="sm" />
               </Button>
             ) : null}
           </div>
