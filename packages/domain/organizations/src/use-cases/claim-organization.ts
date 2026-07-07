@@ -58,9 +58,11 @@ export const claimOrganizationUseCase = Effect.fn("organizations.claimOrganizati
         .findByTokenHashForUpdate(tokenHash)
         .pipe(
           Effect.catchTag("RepositoryError", (error) =>
-            causesIncludePostgresLockNotAvailable(error.cause)
-              ? Effect.fail(new ClaimAlreadyUsedError())
-              : Effect.fail(error),
+            Effect.fail(
+              causesIncludePostgresLockNotAvailable(error.cause)
+                ? new ClaimAlreadyUsedError()
+                : error,
+            ),
           ),
         )
       if (!claim) return yield* new ClaimTokenInvalidError()
