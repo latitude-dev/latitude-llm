@@ -61,6 +61,19 @@ You are given the values observed in the project (tags, services, models, provid
 - The user names something unobserved — infer the likely value from the project's naming patterns when the pattern is clear.
 - The user quotes an exact literal ("the cancel_ticket tool") — use it verbatim even if unobserved; they may know data is coming.
 
+## The behavior must be detectable — never fabricate a detector
+
+A detector is only worth creating if it will genuinely identify the behavior. Before committing to one, be sure the thing you key on actually exists in the sessions. You can be sure in exactly two ways:
+
+- The user told you how to detect or infer it — a phrase, a field, a metadata key, a tool, a condition. Examples: "sessions where the user says they're 18 to 35", "when the user.age metadata is between 18 and 35". Honor that method even if no current session shows it yet; the user may know data is coming, and their instruction is what defines the detector.
+- Your research found it in the data — a metadata key, a tool or tool-output field, a tag, or conversational content that actually carries the information.
+
+If neither holds — the user described only *what* to track, not *how*, and nothing you can find in the project carries it — then the behavior is not detectable here. reportUnsatisfiable with a plain reason. Do not build a detector on the hope that the information might be present.
+
+The clear sign you are fabricating: you start guessing at the shape of the data — inventing candidate field names, speculative JSON paths, or broad regexes over free text hoping to catch a mention — for something you were neither told how to find nor saw in the data. That yields a detector that matches nothing, or matches by accident, which is worse than no signal. When you notice you are guessing rather than matching something you know is there, stop and reportUnsatisfiable.
+
+This is not the same as a rare behavior. A detector whose method is grounded (in the user's instruction or an observed field) but that simply hasn't occurred in the sampled sessions is fine — build it. The test is whether the *method* is grounded, not whether recent sessions happen to match. So when the user gives no method, explore the data first; adopt a real signal if you find one, and only reportUnsatisfiable once you've confirmed there is nothing to key on.
+
 ## Sampling — tune it to the ingestion rate
 
 Sampling is the percentage of in-scope sessions the evaluation actually runs on. It's your main lever for LLM cost.
@@ -79,7 +92,7 @@ You have read-only research tools plus three signal tools. The project is fixed 
 
 Work in this order: research just enough to design from real data; pick the cheapest detector that could capture the ask (see "Choosing the detector"); previewSignal it against specific traces you found — both where the behavior clearly happens and where it clearly doesn't — to confirm it catches the real matches and avoids false ones; escalate to a costlier detector only if the cheaper one demonstrably misses; then createSignal. If createSignal returns an error, fix exactly what failed and call it again. Do not stop until you have called createSignal successfully or reportUnsatisfiable.
 
-Status updates: your assistant text is shown to the user as a single live status line, so write only that and nothing else — a short phrase (at most 10 words, present tense) naming the broad step you are on now, like "Exploring your project's data", "Designing a low-cost detector", "Testing the detector on real sessions", or "Creating the signal". Emit a new line only when the broad step actually changes; while you stay on the same step across several tool calls, write no text at all. Never narrate individual tool calls or mechanics, and keep your reasoning to yourself.`
+Status updates: your assistant text is shown to the user as a live status line. Each time you turn your attention to something new, write one short line (present tense, about 10 words) naming what you are focused on right now — specific, not generic. Prefer "Looking for age data in the tool outputs", "Checking how often the checkout tool fails", or "Testing whether the rule catches refusals" over vague phases like "Exploring your project's data". Write a fresh line whenever your focus shifts to something different, but not on every tool call — several calls toward the same objective share one line, and repeating the current objective adds nothing. Don't narrate raw tool mechanics; a little reasoning in the line is fine as long as it stays short.`
 
 export interface SignalGenerationGrounding {
   readonly tags: readonly string[]

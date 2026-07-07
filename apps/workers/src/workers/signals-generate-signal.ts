@@ -199,7 +199,11 @@ const runAgenticGeneration = async (params: {
   // The model narrates a broad step as its assistant text; clamp to a single short line as a safety
   // net (it is instructed to keep it terse) and skip blanks and unchanged repeats.
   const writeStep = (raw: string): void => {
-    const step = raw.split("\n").map((line) => line.trim()).find((line) => line.length > 0)?.slice(0, 120)
+    const step = raw
+      .split("\n")
+      .map((line) => line.trim())
+      .find((line) => line.length > 0)
+      ?.slice(0, 120)
     if (step === undefined || step === lastStep) {
       return
     }
@@ -418,7 +422,7 @@ const runAgenticGeneration = async (params: {
   const reportUnsatisfiableTool: AgentToolDef = {
     name: "reportUnsatisfiable",
     description:
-      "Terminal tool: call this instead of createSignal when the request cannot become a signal. Use it when the request is not a description of a signal to track, or when the described behavior cannot be detected from the available session data (e.g. it names a tool, field, or event that does not exist and cannot be inferred). Do not use it for a draft that merely failed validation — fix and retry createSignal for those.",
+      "Terminal tool: call this instead of createSignal when the request cannot become a signal. Use it when the request is not a description of a signal to track, or when the behavior cannot be detected because the user gave no method to detect it and nothing in the data carries it — do not fabricate a detector (guessing at field names or regexes for information you were not told how to find and did not observe). Do not use it for a draft that merely failed validation — fix and retry createSignal for those.",
     inputSchema: reportUnsatisfiableSchema,
     execute: async (rawInput) => {
       const parsed = reportUnsatisfiableSchema.safeParse(rawInput)
