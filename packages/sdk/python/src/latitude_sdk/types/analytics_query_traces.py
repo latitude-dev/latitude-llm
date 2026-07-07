@@ -30,10 +30,6 @@ class AnalyticsQueryTraces(UniversalBaseModel):
     The metric: `count`, `errorRate`, `cacheHitRate`, `{sum|min|max|avg|median}` over `duration`/`cost`/`tokens`, or `{kind:'percentile',field,p}` for an arbitrary percentile (`p` in [1,99]; e.g. `p:95`).
     """
 
-    filters: typing.Optional[typing.Dict[str, typing.List[FilterCondition]]] = pydantic.Field(default=None)
-    """
-    Structured filter set applied to the stream (same DSL as `listTraces`).
-    """
 
     time_bucket: typing_extensions.Annotated[
         typing.Optional[AnalyticsQueryTracesTimeBucket],
@@ -57,6 +53,12 @@ class AnalyticsQueryTraces(UniversalBaseModel):
     limit: typing.Optional[int] = pydantic.Field(default=None)
     """
     Maximum rows returned. Defaults to 50; max 500.
+    """
+
+
+    filters: typing.Optional[typing.Dict[str, typing.List[FilterCondition]]] = pydantic.Field(default=None)
+    """
+    Structured filter set applied to the stream (same DSL as `listTraces`).
     """
 
     model_config: typing.ClassVar[pydantic.ConfigDict] = pydantic.ConfigDict(extra="allow", frozen=True)
