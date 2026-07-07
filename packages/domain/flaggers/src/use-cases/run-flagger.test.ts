@@ -1305,12 +1305,12 @@ ${"Detailed grounding, workflow, callout, and formatting rules. ".repeat(120)}`.
     // open-ended digit runaway that truncated output at the token cap.
     const schema = buildProviderFlaggerOutputSchema(2)
 
-    expect(schema.safeParse({ matched: true, feedback: "Refused a harmless request.", messageIndex: "1" }).success).toBe(
-      true,
-    )
-    expect(schema.safeParse({ matched: true, feedback: "Refused a harmless request.", messageIndex: "5" }).success).toBe(
-      false,
-    )
+    expect(
+      schema.safeParse({ matched: true, feedback: "Refused a harmless request.", messageIndex: "1" }).success,
+    ).toBe(true)
+    expect(
+      schema.safeParse({ matched: true, feedback: "Refused a harmless request.", messageIndex: "5" }).success,
+    ).toBe(false)
     expect(schema.safeParse({ matched: false }).success).toBe(true)
   })
 
