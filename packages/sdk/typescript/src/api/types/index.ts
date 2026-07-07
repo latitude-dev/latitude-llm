@@ -118,6 +118,7 @@ export * from "./SignalsLifecycleResponse.js";
 export * from "./SignalTrendBucket.js";
 export * from "./Span.js";
 export * from "./SpanDetail.js";
+export * from "./SpanRowFilterSet.js";
 export * from "./ToolCallHistogramBucket.js";
 export * from "./ToolContextBreakdownResponse.js";
 export * from "./ToolContextBreakdownRow.js";
