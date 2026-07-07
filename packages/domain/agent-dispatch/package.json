@@ -17,6 +17,7 @@
   },
   "dependencies": {
     "@domain/incidents": "workspace:*",
+    "@domain/monitors": "workspace:*",
     "@domain/notifications": "workspace:*",
     "@domain/organizations": "workspace:*",
     "@domain/projects": "workspace:*",

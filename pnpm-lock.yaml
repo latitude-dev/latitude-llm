@@ -1019,6 +1019,9 @@ importers:
       '@domain/incidents':
         specifier: workspace:*
         version: link:../incidents
+      '@domain/monitors':
+        specifier: workspace:*
+        version: link:../monitors
       '@domain/notifications':
         specifier: workspace:*
         version: link:../notifications
