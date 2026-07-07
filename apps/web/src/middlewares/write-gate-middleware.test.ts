@@ -25,8 +25,13 @@ describe("isBlockedWrite", () => {
     expect(isBlockedWrite({ scope: SHOWCASE, method: "POST", serverFnName: "createMonitor" })).toBe(true)
   })
 
-  it("allows the POST-read allowlist under the read-only showcase scope", () => {
-    for (const serverFnName of ["previewEvaluation", "listLinearTeamsForApiKey", "listCursorRepositoriesForApiKey"]) {
+  it("allows the POST-read/session-write allowlist under the read-only showcase scope", () => {
+    for (const serverFnName of [
+      "previewEvaluation",
+      "listLinearTeamsForApiKey",
+      "listCursorRepositoriesForApiKey",
+      "rememberLastProjectSlug",
+    ]) {
       expect(isBlockedWrite({ scope: SHOWCASE, method: "POST", serverFnName })).toBe(false)
     }
   })

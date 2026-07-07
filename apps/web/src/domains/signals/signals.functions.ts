@@ -17,7 +17,6 @@ import {
   type FilterSet,
   filterSetSchema,
   generateId,
-  OrganizationId,
   ProjectId,
   resolveSettings,
   SettingsReader,
@@ -62,12 +61,7 @@ import {
 } from "@domain/signals"
 import { SessionRepository } from "@domain/spans"
 import { AIEmbedLive, withAi } from "@platform/ai"
-import {
-  ScoreAnalyticsRepositoryLive,
-  SessionRepositoryLive,
-  TraceRepositoryLive,
-  withClickHouse,
-} from "@platform/db-clickhouse"
+import { ScoreAnalyticsRepositoryLive, SessionRepositoryLive, TraceRepositoryLive } from "@platform/db-clickhouse"
 import {
   EvaluationRepositoryLive,
   MembershipRepositoryLive,
@@ -75,7 +69,6 @@ import {
   ScoreRepositoryLive,
   SettingsReaderLive,
   SignalRepositoryLive,
-  withPostgres,
 } from "@platform/db-postgres"
 import { QuickJsScriptRuntimeLive } from "@platform/sandbox-quickjs"
 import { withTracing } from "@repo/observability"
@@ -86,6 +79,9 @@ import { enforceExportRequestRateLimit } from "../../domains/exports/export-rate
 import { ensureSession } from "../../domains/sessions/session.functions.ts"
 import { getSessionOrganizationId, requireSession } from "../../server/auth.ts"
 import { getClickhouseClient, getPostgresClient, getQueuePublisher, getRedisClient } from "../../server/clients.ts"
+import { resolveOrgScope } from "../../server/resolve-org-scope.ts"
+import { withScopedClickHouse } from "../../server/scoped-clickhouse.ts"
+import { withScopedPostgres } from "../../server/scoped-postgres.ts"
 import {
   type EvaluationSummaryRecord,
   toEvaluationSummaryRecord,
@@ -347,9 +343,10 @@ type ListSignalsRequest = z.infer<typeof listSignalsInputSchema>
 const runSignalsList = async (
   data: ListSignalsRequest,
   options: { readonly includeAnalytics: boolean; readonly includeItems?: boolean },
+  context: Parameters<typeof resolveOrgScope>[0],
 ): Promise<SignalsListResultRecord> => {
-  const { organizationId, userId } = await requireSession()
-  const orgId = OrganizationId(organizationId)
+  const { userId } = await requireSession()
+  const orgId = await resolveOrgScope(context)
   const pgClient = getPostgresClient()
   const chClient = getClickhouseClient()
   const redisClient = getRedisClient()
@@ -379,7 +376,7 @@ const runSignalsList = async (
       const search =
         options.includeAnalytics && trimmedSearchQuery && !directMatch
           ? yield* embedSignalSearchQueryUseCase({
-              organizationId,
+              organizationId: orgId,
               projectId: data.projectId,
               query: trimmedSearchQuery,
             })
@@ -394,7 +391,7 @@ const runSignalsList = async (
           : undefined
 
       return yield* listSignalsUseCase({
-        organizationId,
+        organizationId: orgId,
         projectId: data.projectId,
         ...(data.limit !== undefined ? { limit: data.limit } : {}),
         ...(data.offset !== undefined ? { offset: data.offset } : {}),
@@ -418,8 +415,8 @@ const runSignalsList = async (
               : {}),
       })
     }).pipe(
-      withPostgres(Layer.mergeAll(SignalRepositoryLive, EvaluationRepositoryLive), pgClient, orgId),
-      withClickHouse(Layer.mergeAll(ScoreAnalyticsRepositoryLive, SessionRepositoryLive), chClient, orgId),
+      withScopedPostgres(Layer.mergeAll(SignalRepositoryLive, EvaluationRepositoryLive), pgClient, orgId),
+      withScopedClickHouse(Layer.mergeAll(ScoreAnalyticsRepositoryLive, SessionRepositoryLive), chClient, orgId),
       withAi(AIEmbedLive, redisClient),
       withTracing,
     ),
@@ -430,20 +427,22 @@ const runSignalsList = async (
 
 export const listSignals = createServerFn({ method: "GET" })
   .inputValidator(listSignalsInputSchema)
-  .handler(async ({ data }): Promise<SignalsListResultRecord> => runSignalsList(data, { includeAnalytics: false }))
+  .handler(
+    async ({ data, context }): Promise<SignalsListResultRecord> =>
+      runSignalsList(data, { includeAnalytics: false }, context),
+  )
 
 export const getSignalsAnalytics = createServerFn({ method: "GET" })
   .inputValidator(listSignalsInputSchema)
   .handler(
-    async ({ data }): Promise<SignalsListResultRecord> =>
-      runSignalsList(data, { includeAnalytics: true, includeItems: false }),
+    async ({ data, context }): Promise<SignalsListResultRecord> =>
+      runSignalsList(data, { includeAnalytics: true, includeItems: false }, context),
   )
 
 export const getSignalRowMetrics = createServerFn({ method: "GET" })
   .inputValidator(signalRowMetricsInputSchema)
-  .handler(async ({ data }): Promise<SignalRowMetricsRecord> => {
-    const { organizationId } = await requireSession()
-    const orgId = OrganizationId(organizationId)
+  .handler(async ({ data, context }): Promise<SignalRowMetricsRecord> => {
+    const orgId = await resolveOrgScope(context)
     const chClient = getClickhouseClient()
     const timeRange =
       data.timeRange?.fromIso || data.timeRange?.toIso
@@ -524,7 +523,7 @@ export const getSignalRowMetrics = createServerFn({ method: "GET" })
           ),
         } satisfies SignalRowMetricsRecord
       }).pipe(
-        withClickHouse(Layer.mergeAll(ScoreAnalyticsRepositoryLive, SessionRepositoryLive), chClient, orgId),
+        withScopedClickHouse(Layer.mergeAll(ScoreAnalyticsRepositoryLive, SessionRepositoryLive), chClient, orgId),
         withTracing,
       ),
     )
@@ -566,9 +565,8 @@ export const searchOrgSignals = createServerFn({ method: "GET" })
       limit: z.number().int().min(1).max(25).optional(),
     }),
   )
-  .handler(async ({ data }): Promise<readonly OrgSignalSearchRecord[]> => {
-    const { organizationId } = await requireSession()
-    const orgId = OrganizationId(organizationId)
+  .handler(async ({ data, context }): Promise<readonly OrgSignalSearchRecord[]> => {
+    const orgId = await resolveOrgScope(context)
     const pgClient = getPostgresClient()
     const redisClient = getRedisClient()
 
@@ -576,10 +574,10 @@ export const searchOrgSignals = createServerFn({ method: "GET" })
       Effect.gen(function* () {
         const search = data.semantic
           ? yield* embedSignalSearchQueryUseCase({
-              organizationId,
+              organizationId: orgId,
               // Org-wide search has no single project; `projectId` is telemetry-only on this
               // use-case (it does not scope the embedding), so we tag it with the org id.
-              projectId: organizationId,
+              projectId: orgId,
               query: data.searchQuery,
             })
           : undefined
@@ -591,7 +589,7 @@ export const searchOrgSignals = createServerFn({ method: "GET" })
           ...(data.preferProjectId !== undefined ? { preferProjectId: ProjectId(data.preferProjectId) } : {}),
           ...(data.limit !== undefined ? { limit: data.limit } : {}),
         })
-      }).pipe(withPostgres(SignalRepositoryLive, pgClient, orgId), withAi(AIEmbedLive, redisClient), withTracing),
+      }).pipe(withScopedPostgres(SignalRepositoryLive, pgClient, orgId), withAi(AIEmbedLive, redisClient), withTracing),
     )
 
     return results.map(toOrgSignalSearchRecord)
@@ -599,9 +597,8 @@ export const searchOrgSignals = createServerFn({ method: "GET" })
 
 export const getSignal = createServerFn({ method: "GET" })
   .inputValidator(signalInputSchema)
-  .handler(async ({ data }): Promise<SignalSummaryRecord | null> => {
-    const { organizationId } = await requireSession()
-    const orgId = OrganizationId(organizationId)
+  .handler(async ({ data, context }): Promise<SignalSummaryRecord | null> => {
+    const orgId = await resolveOrgScope(context)
     const pgClient = getPostgresClient()
     const projectId = ProjectId(data.projectId)
     const signalId = SignalId(data.signalId)
@@ -616,7 +613,7 @@ export const getSignal = createServerFn({ method: "GET" })
         const issue = issues[0]
 
         return issue ? toSignalSummaryRecord(issue) : null
-      }).pipe(withPostgres(SignalRepositoryLive, pgClient, orgId), withTracing),
+      }).pipe(withScopedPostgres(SignalRepositoryLive, pgClient, orgId), withTracing),
     )
   })
 
@@ -633,9 +630,8 @@ export interface SignalLifecycleSummaryRecord {
  */
 export const getSignalLifecycleSummary = createServerFn({ method: "GET" })
   .inputValidator(signalInputSchema)
-  .handler(async ({ data }): Promise<SignalLifecycleSummaryRecord | null> => {
-    const { organizationId } = await requireSession()
-    const orgId = OrganizationId(organizationId)
+  .handler(async ({ data, context }): Promise<SignalLifecycleSummaryRecord | null> => {
+    const orgId = await resolveOrgScope(context)
     const pgClient = getPostgresClient()
     const projectId = ProjectId(data.projectId)
     const signalId = SignalId(data.signalId)
@@ -654,15 +650,14 @@ export const getSignalLifecycleSummary = createServerFn({ method: "GET" })
           now,
         })
         return { id: issue.id, name: issue.name, states: [...states] }
-      }).pipe(withPostgres(SignalRepositoryLive, pgClient, orgId), withTracing),
+      }).pipe(withScopedPostgres(SignalRepositoryLive, pgClient, orgId), withTracing),
     )
   })
 
 export const getSignalDetail = createServerFn({ method: "GET" })
   .inputValidator(signalDetailInputSchema)
-  .handler(async ({ data }): Promise<SignalDetailRecord | null> => {
-    const { organizationId } = await requireSession()
-    const orgId = OrganizationId(organizationId)
+  .handler(async ({ data, context }): Promise<SignalDetailRecord | null> => {
+    const orgId = await resolveOrgScope(context)
     const pgClient = getPostgresClient()
     const chClient = getClickhouseClient()
     const projectId = ProjectId(data.projectId)
@@ -784,12 +779,12 @@ export const getSignalDetail = createServerFn({ method: "GET" })
           keepMonitoringDefault: settings.keepMonitoring,
         })
       }).pipe(
-        withPostgres(
+        withScopedPostgres(
           Layer.mergeAll(SignalRepositoryLive, EvaluationRepositoryLive, ScoreRepositoryLive, SettingsReaderLive),
           pgClient,
           orgId,
         ),
-        withClickHouse(ScoreAnalyticsRepositoryLive, chClient, orgId),
+        withScopedClickHouse(ScoreAnalyticsRepositoryLive, chClient, orgId),
         withTracing,
       ),
     )
@@ -806,9 +801,8 @@ export type SignalSessionPageRecord = ReturnType<typeof toSignalSessionPageRecor
 
 export const listSignalSessions = createServerFn({ method: "GET" })
   .inputValidator(signalTracesInputSchema)
-  .handler(async ({ data }): Promise<SignalSessionPageRecord> => {
-    const { organizationId } = await requireSession()
-    const orgId = OrganizationId(organizationId)
+  .handler(async ({ data, context }): Promise<SignalSessionPageRecord> => {
+    const orgId = await resolveOrgScope(context)
     const chClient = getClickhouseClient()
     const projectId = ProjectId(data.projectId)
     const signalId = SignalId(data.signalId)
@@ -839,7 +833,9 @@ export const listSignalSessions = createServerFn({ method: "GET" })
           limit: sessionPage.limit,
           offset: sessionPage.offset,
         }
-      }).pipe(withClickHouse(Layer.mergeAll(ScoreAnalyticsRepositoryLive, SessionRepositoryLive), chClient, orgId)),
+      }).pipe(
+        withScopedClickHouse(Layer.mergeAll(ScoreAnalyticsRepositoryLive, SessionRepositoryLive), chClient, orgId),
+      ),
     )
 
     return toSignalSessionPageRecord(result)
@@ -847,9 +843,8 @@ export const listSignalSessions = createServerFn({ method: "GET" })
 
 export const countSignalSessions = createServerFn({ method: "GET" })
   .inputValidator(z.object({ projectId: z.string(), signalId: z.string() }))
-  .handler(async ({ data }): Promise<number> => {
-    const { organizationId } = await requireSession()
-    const orgId = OrganizationId(organizationId)
+  .handler(async ({ data, context }): Promise<number> => {
+    const orgId = await resolveOrgScope(context)
 
     return Effect.runPromise(
       Effect.gen(function* () {
@@ -859,22 +854,21 @@ export const countSignalSessions = createServerFn({ method: "GET" })
           projectId: ProjectId(data.projectId),
           signalId: SignalId(data.signalId),
         })
-      }).pipe(withClickHouse(ScoreAnalyticsRepositoryLive, getClickhouseClient(), orgId)),
+      }).pipe(withScopedClickHouse(ScoreAnalyticsRepositoryLive, getClickhouseClient(), orgId)),
     )
   })
 
 export const getSignalImpact = createServerFn({ method: "GET" })
   .inputValidator(signalImpactInputSchema)
-  .handler(async ({ data }): Promise<SignalImpactRecord> => {
-    const { organizationId } = await requireSession()
-    const orgId = OrganizationId(organizationId)
+  .handler(async ({ data, context }): Promise<SignalImpactRecord> => {
+    const orgId = await resolveOrgScope(context)
     const chClient = getClickhouseClient()
     const projectId = ProjectId(data.projectId)
     const signalId = SignalId(data.signalId)
 
     return Effect.runPromise(
       getSignalImpactUseCase({ organizationId: orgId, projectId, signalId }).pipe(
-        withClickHouse(
+        withScopedClickHouse(
           Layer.mergeAll(ScoreAnalyticsRepositoryLive, TraceRepositoryLive, SessionRepositoryLive),
           chClient,
           orgId,
@@ -895,9 +889,8 @@ export interface SignalDimensionsRecord {
 
 export const getSignalDimensions = createServerFn({ method: "GET" })
   .inputValidator(signalDimensionsInputSchema)
-  .handler(async ({ data }): Promise<SignalDimensionsRecord> => {
-    const { organizationId } = await requireSession()
-    const orgId = OrganizationId(organizationId)
+  .handler(async ({ data, context }): Promise<SignalDimensionsRecord> => {
+    const orgId = await resolveOrgScope(context)
     const chClient = getClickhouseClient()
     const projectId = ProjectId(data.projectId)
     const signalId = SignalId(data.signalId)
@@ -911,7 +904,7 @@ export const getSignalDimensions = createServerFn({ method: "GET" })
           signalId,
           dimension: data.dimension,
         })
-      }).pipe(withClickHouse(ScoreAnalyticsRepositoryLive, chClient, orgId), withTracing),
+      }).pipe(withScopedClickHouse(ScoreAnalyticsRepositoryLive, chClient, orgId), withTracing),
     )
 
     return {
@@ -948,9 +941,8 @@ export interface RelatedSignalRecord {
 
 export const getRelatedSignals = createServerFn({ method: "GET" })
   .inputValidator(relatedSignalsInputSchema)
-  .handler(async ({ data }): Promise<readonly RelatedSignalRecord[]> => {
-    const { organizationId } = await requireSession()
-    const orgId = OrganizationId(organizationId)
+  .handler(async ({ data, context }): Promise<readonly RelatedSignalRecord[]> => {
+    const orgId = await resolveOrgScope(context)
     const pgClient = getPostgresClient()
     const chClient = getClickhouseClient()
 
@@ -960,8 +952,8 @@ export const getRelatedSignals = createServerFn({ method: "GET" })
         projectId: ProjectId(data.projectId),
         signalId: SignalId(data.signalId),
       }).pipe(
-        withPostgres(SignalRepositoryLive, pgClient, orgId),
-        withClickHouse(ScoreAnalyticsRepositoryLive, chClient, orgId),
+        withScopedPostgres(SignalRepositoryLive, pgClient, orgId),
+        withScopedClickHouse(ScoreAnalyticsRepositoryLive, chClient, orgId),
         withTracing,
       ),
     )
@@ -1008,9 +1000,8 @@ export interface SignalOccurrenceRecord {
  */
 export const getSignalOccurrences = createServerFn({ method: "GET" })
   .inputValidator(signalOccurrencesInputSchema)
-  .handler(async ({ data }): Promise<{ readonly items: readonly SignalOccurrenceRecord[] }> => {
-    const { organizationId } = await requireSession()
-    const orgId = OrganizationId(organizationId)
+  .handler(async ({ data, context }): Promise<{ readonly items: readonly SignalOccurrenceRecord[] }> => {
+    const orgId = await resolveOrgScope(context)
     const pgClient = getPostgresClient()
     const projectId = ProjectId(data.projectId)
     const signalId = SignalId(data.signalId)
@@ -1024,7 +1015,7 @@ export const getSignalOccurrences = createServerFn({ method: "GET" })
           source: "annotation",
           options: { limit: SIGNAL_EXAMPLES_LIMIT, draftMode: "exclude" },
         })
-      }).pipe(withPostgres(ScoreRepositoryLive, pgClient, orgId), withTracing),
+      }).pipe(withScopedPostgres(ScoreRepositoryLive, pgClient, orgId), withTracing),
     )
 
     const items = page.items.flatMap((score): SignalOccurrenceRecord[] => {
@@ -1066,9 +1057,9 @@ export interface UpdateSignalTriageRecord {
 
 export const updateSignalTriage = createServerFn({ method: "POST" })
   .inputValidator(updateSignalTriageInputSchema)
-  .handler(async ({ data }): Promise<UpdateSignalTriageRecord> => {
-    const { organizationId, userId } = await requireSession()
-    const orgId = OrganizationId(organizationId)
+  .handler(async ({ data, context }): Promise<UpdateSignalTriageRecord> => {
+    const { userId } = await requireSession()
+    const orgId = await resolveOrgScope(context)
     const pgClient = getPostgresClient()
 
     const result = await Effect.runPromise(
@@ -1079,7 +1070,7 @@ export const updateSignalTriage = createServerFn({ method: "POST" })
         ...(data.assigneeId !== undefined ? { assigneeId: data.assigneeId } : {}),
         ...(data.priority !== undefined ? { priority: data.priority } : {}),
       }).pipe(
-        withPostgres(
+        withScopedPostgres(
           Layer.mergeAll(SignalRepositoryLive, MembershipRepositoryLive, OutboxEventWriterLive),
           pgClient,
           orgId,
@@ -1099,9 +1090,8 @@ export const updateSignalTriage = createServerFn({ method: "POST" })
 
 export const applySignalLifecycleAction = createServerFn({ method: "POST" })
   .inputValidator(signalLifecycleActionInputSchema)
-  .handler(async ({ data }): Promise<SignalLifecycleCommandRecord> => {
-    const { organizationId } = await requireSession()
-    const orgId = OrganizationId(organizationId)
+  .handler(async ({ data, context }): Promise<SignalLifecycleCommandRecord> => {
+    const orgId = await resolveOrgScope(context)
     const pgClient = getPostgresClient()
 
     const result = await Effect.runPromise(
@@ -1111,7 +1101,7 @@ export const applySignalLifecycleAction = createServerFn({ method: "POST" })
         command: data.command,
         keepMonitoring: data.keepMonitoring,
       }).pipe(
-        withPostgres(
+        withScopedPostgres(
           Layer.mergeAll(SignalRepositoryLive, EvaluationRepositoryLive, OutboxEventWriterLive, SettingsReaderLive),
           pgClient,
           orgId,
@@ -1149,9 +1139,8 @@ const BULK_ACTION_BATCH_SIZE = 100
 
 export const applyBulkSignalLifecycleAction = createServerFn({ method: "POST" })
   .inputValidator(bulkSignalLifecycleActionInputSchema)
-  .handler(async ({ data }): Promise<SignalLifecycleCommandRecord> => {
-    const { organizationId } = await requireSession()
-    const orgId = OrganizationId(organizationId)
+  .handler(async ({ data, context }): Promise<SignalLifecycleCommandRecord> => {
+    const orgId = await resolveOrgScope(context)
     const pgClient = getPostgresClient()
     const chClient = getClickhouseClient()
     const redisClient = getRedisClient()
@@ -1168,7 +1157,7 @@ export const applyBulkSignalLifecycleAction = createServerFn({ method: "POST" })
         Effect.gen(function* () {
           const search = trimmedSearchQuery
             ? yield* embedSignalSearchQueryUseCase({
-                organizationId,
+                organizationId: orgId,
                 projectId: data.projectId,
                 query: trimmedSearchQuery,
               })
@@ -1185,7 +1174,7 @@ export const applyBulkSignalLifecycleAction = createServerFn({ method: "POST" })
           let offset = 0
           while (true) {
             const page = yield* listSignalsUseCase({
-              organizationId,
+              organizationId: orgId,
               projectId: data.projectId,
               limit: BULK_ACTION_BATCH_SIZE,
               offset,
@@ -1217,8 +1206,8 @@ export const applyBulkSignalLifecycleAction = createServerFn({ method: "POST" })
             offset += page.limit
           }
         }).pipe(
-          withPostgres(Layer.mergeAll(SignalRepositoryLive, EvaluationRepositoryLive), pgClient, orgId),
-          withClickHouse(Layer.mergeAll(ScoreAnalyticsRepositoryLive, SessionRepositoryLive), chClient, orgId),
+          withScopedPostgres(Layer.mergeAll(SignalRepositoryLive, EvaluationRepositoryLive), pgClient, orgId),
+          withScopedClickHouse(Layer.mergeAll(ScoreAnalyticsRepositoryLive, SessionRepositoryLive), chClient, orgId),
           withAi(AIEmbedLive, redisClient),
           withTracing,
         ),
@@ -1240,7 +1229,7 @@ export const applyBulkSignalLifecycleAction = createServerFn({ method: "POST" })
         command: data.command,
         keepMonitoring: data.keepMonitoring,
       }).pipe(
-        withPostgres(
+        withScopedPostgres(
           Layer.mergeAll(SignalRepositoryLive, EvaluationRepositoryLive, OutboxEventWriterLive, SettingsReaderLive),
           pgClient,
           orgId,
@@ -1342,8 +1331,8 @@ export interface CreateSignalRecord {
 /** Creates a user-origin signal with its membership detector (settings or raw script). */
 export const createSignal = createServerFn({ method: "POST" })
   .inputValidator(createSignalInputSchema)
-  .handler(async ({ data }): Promise<CreateSignalRecord> => {
-    const { organizationId } = await requireSession()
+  .handler(async ({ data, context }): Promise<CreateSignalRecord> => {
+    const organizationId = await resolveOrgScope(context)
     const client = getPostgresClient()
 
     return Effect.runPromise(
@@ -1357,10 +1346,10 @@ export const createSignal = createServerFn({ method: "POST" })
         ...(data.sampling !== undefined ? { sampling: data.sampling } : {}),
         evaluation: data.evaluation,
       }).pipe(
-        withPostgres(
+        withScopedPostgres(
           Layer.mergeAll(SignalRepositoryLive, EvaluationRepositoryLive, OutboxEventWriterLive),
           client,
-          OrganizationId(organizationId),
+          organizationId,
         ),
         Effect.provide(QuickJsScriptRuntimeLive),
         withTracing,
@@ -1379,8 +1368,8 @@ const updateSignalInputSchema = z.object({
 /** Updates a signal's name/description and its canonical `filters` pre-gate. */
 export const updateSignal = createServerFn({ method: "POST" })
   .inputValidator(updateSignalInputSchema)
-  .handler(async ({ data }): Promise<{ readonly signalId: string; readonly changed: boolean }> => {
-    const { organizationId } = await requireSession()
+  .handler(async ({ data, context }): Promise<{ readonly signalId: string; readonly changed: boolean }> => {
+    const organizationId = await resolveOrgScope(context)
     const client = getPostgresClient()
 
     return Effect.runPromise(
@@ -1391,11 +1380,7 @@ export const updateSignal = createServerFn({ method: "POST" })
         ...(data.description !== undefined ? { description: data.description } : {}),
         ...(data.filters !== undefined ? { filters: data.filters } : {}),
       }).pipe(
-        withPostgres(
-          Layer.mergeAll(SignalRepositoryLive, EvaluationRepositoryLive),
-          client,
-          OrganizationId(organizationId),
-        ),
+        withScopedPostgres(Layer.mergeAll(SignalRepositoryLive, EvaluationRepositoryLive), client, organizationId),
         withTracing,
       ),
     )
@@ -1414,8 +1399,9 @@ export const updateSignalEvaluation = createServerFn({ method: "POST" })
   .handler(
     async ({
       data,
+      context,
     }): Promise<{ readonly signalId: string; readonly evaluationId: string; readonly changed: boolean }> => {
-      const { organizationId } = await requireSession()
+      const organizationId = await resolveOrgScope(context)
       const client = getPostgresClient()
 
       return Effect.runPromise(
@@ -1425,11 +1411,7 @@ export const updateSignalEvaluation = createServerFn({ method: "POST" })
           evaluation: data.evaluation,
           ...(data.sampling !== undefined ? { sampling: data.sampling } : {}),
         }).pipe(
-          withPostgres(
-            Layer.mergeAll(SignalRepositoryLive, EvaluationRepositoryLive),
-            client,
-            OrganizationId(organizationId),
-          ),
+          withScopedPostgres(Layer.mergeAll(SignalRepositoryLive, EvaluationRepositoryLive), client, organizationId),
           Effect.provide(QuickJsScriptRuntimeLive),
           withTracing,
         ),
@@ -1442,17 +1424,13 @@ const deleteSignalInputSchema = z.object({ projectId: z.string(), signalId: z.st
 /** Soft-deletes a signal and archives its evaluation. */
 export const deleteSignal = createServerFn({ method: "POST" })
   .inputValidator(deleteSignalInputSchema)
-  .handler(async ({ data }): Promise<{ readonly signalId: string }> => {
-    const { organizationId } = await requireSession()
+  .handler(async ({ data, context }): Promise<{ readonly signalId: string }> => {
+    const organizationId = await resolveOrgScope(context)
     const client = getPostgresClient()
 
     return Effect.runPromise(
       deleteSignalUseCase({ projectId: data.projectId, signalId: data.signalId }).pipe(
-        withPostgres(
-          Layer.mergeAll(SignalRepositoryLive, EvaluationRepositoryLive),
-          client,
-          OrganizationId(organizationId),
-        ),
+        withScopedPostgres(Layer.mergeAll(SignalRepositoryLive, EvaluationRepositoryLive), client, organizationId),
         withTracing,
       ),
     )

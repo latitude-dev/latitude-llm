@@ -9,9 +9,12 @@ import { createServerFn } from "@tanstack/react-start"
 import { Effect } from "effect"
 import { z } from "zod"
 import { CHANGELOG_UI_ENABLED } from "../../../domains/changelog/changelog.collection.ts"
+import { ProjectScopeProvider, SHOWCASE_SCOPE } from "../../../domains/projects/project-scope.tsx"
 import { PROJECT_SETTINGS_SECTION, useVisibleProjectSectionGroups } from "../../../domains/projects/project-sections.ts"
 import { useProjectsCollection } from "../../../domains/projects/projects.collection.ts"
 import { type ProjectRecord, rememberLastProjectSlug, toRecord } from "../../../domains/projects/projects.functions.ts"
+import { loadProjectRouteData } from "../../../domains/projects/showcase-project.ts"
+import { getShowcaseProjectRecord } from "../../../domains/showcase/showcase.functions.ts"
 import { getLatestWrappedReportForProject } from "../../../domains/wrapped/wrapped.functions.ts"
 import { AppSidebar, NavItem } from "../../../layouts/AppSidebar/index.tsx"
 import { ContentErrorBoundary } from "../../../lib/client-error-reporting.tsx"
@@ -47,13 +50,16 @@ export const Route = createFileRoute("/_authenticated/projects/$projectSlug")({
   // Keep the rendered project record in `loader` so TanStack Router can cache
   // it across same-route search-param navigations. `beforeLoad` is better for
   // middleware-only checks, while descendants can read cached loader data with
-  // `useLoaderData({ select })`.
+  // `useLoaderData({ select })`. The reserved showcase slug resolves cross-org
+  // via the showcase resolver and marks the data `isShowcase` so the layout
+  // scopes descendant reads to the showcase org.
   loader: async ({ params }) => {
     try {
-      const project = await getProjectBySlug({
-        data: { slug: params.projectSlug },
+      return await loadProjectRouteData({
+        slug: params.projectSlug,
+        loadShowcaseProject: () => getShowcaseProjectRecord(),
+        loadProjectBySlug: (slug) => getProjectBySlug({ data: { slug } }),
       })
-      return { project }
     } catch {
       throw redirect({ to: "/" })
     }
@@ -152,6 +158,18 @@ function SampleProjectStrip() {
 }
 
 function ProjectLayout() {
+  const isShowcase = Route.useLoaderData({ select: (data) => data.isShowcase })
+  if (isShowcase) {
+    return (
+      <ProjectScopeProvider scope={SHOWCASE_SCOPE}>
+        <ProjectLayoutContent />
+      </ProjectScopeProvider>
+    )
+  }
+  return <ProjectLayoutContent />
+}
+
+function ProjectLayoutContent() {
   const { projectSlug } = Route.useParams()
   const projectFromLoader = Route.useLoaderData({ select: (data) => data.project })
   const { data: projectFromCollection } = useProjectsCollection(
