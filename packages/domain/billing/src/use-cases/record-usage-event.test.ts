@@ -91,7 +91,7 @@ describe("recordUsageEventUseCase", () => {
       organizationId: ORGANIZATION_ID,
       projectId: PROJECT_ID,
       action: "semantic-query",
-      credits: 30,
+      credits: 15,
       idempotencyKey: "dup-key",
       happenedAt: new Date("2026-01-15T00:00:00.000Z"),
       billingPeriodStart: PERIOD_START,
@@ -206,7 +206,7 @@ describe("checkCreditAvailabilityUseCase", () => {
             periodStart: PERIOD_START,
             periodEnd: PERIOD_END,
             includedCredits: 20_000,
-            consumedCredits: 19_980,
+            consumedCredits: 19_990,
           }),
         )
         .pipe(Effect.provideService(SqlClient, SQL_CLIENT)),

@@ -88,7 +88,7 @@ describe("recordBillableActionUseCase", () => {
       }).pipe(Effect.provide(layer)),
     )
 
-    expect(result.overageCredits).toBe(30)
+    expect(result.overageCredits).toBe(15)
     expect(outboxEvents[0]).toMatchObject({
       eventName: "BillingUsagePeriodUpdated",
       payload: {
@@ -97,7 +97,7 @@ describe("recordBillableActionUseCase", () => {
         periodEnd: PERIOD_END.toISOString(),
         planSource: "subscription",
         overageAllowed: true,
-        overageCredits: 30,
+        overageCredits: 15,
         reportedOverageCredits: 0,
       },
     })

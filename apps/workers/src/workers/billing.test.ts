@@ -243,8 +243,8 @@ describe("billing runtime integration", () => {
       .where(eq(billingUsagePeriods.organizationId, organizationId))
 
     expect(events).toHaveLength(2)
-    expect(events.map((event) => event.credits).sort((a, b) => a - b)).toEqual([30, 250])
-    expect(period?.consumedCredits).toBe(280)
+    expect(events.map((event) => event.credits).sort((a, b) => a - b)).toEqual([15, 250])
+    expect(period?.consumedCredits).toBe(265)
   })
 
   it("treats concurrent duplicate record deliveries as one billed action", async () => {
@@ -291,10 +291,10 @@ describe("billing runtime integration", () => {
       .where(eq(billingUsagePeriods.organizationId, organizationId))
     const outbox = await pg.db.select().from(outboxEvents).where(eq(outboxEvents.organizationId, organizationId))
 
-    expect(first.consumedCredits).toBe(30)
-    expect(second.consumedCredits).toBe(30)
+    expect(first.consumedCredits).toBe(15)
+    expect(second.consumedCredits).toBe(15)
     expect(events).toHaveLength(1)
-    expect(period?.consumedCredits).toBe(30)
+    expect(period?.consumedCredits).toBe(15)
     expect(outbox).toHaveLength(1)
   })
 
@@ -350,7 +350,7 @@ describe("billing runtime integration", () => {
 
     expect(events).toHaveLength(1)
     expect(events[0]?.action).toBe("semantic-query")
-    expect(period?.consumedCredits).toBe(30)
+    expect(period?.consumedCredits).toBe(15)
   })
 
   it("records trace usage batches idempotently across queue retries", async () => {
@@ -833,24 +833,24 @@ describe("billing runtime integration", () => {
      * Setup shared by both tests:
      *
      * - Pro org sitting at exactly 100% of included credits (consumed = includedCredits = 100_000).
-     * - Spending limit = base $99 + $0.30 of overage headroom = 9930 cents. The Pro overage rate
-     *   is $0.002/credit, so $0.30 buys exactly 150 overage credits.
-     * - Each `semantic-query` costs 30 credits → 5 reservations fit, the 6th overshoots.
+     * - Spending limit = base $99 + $0.15 of overage headroom = 9915 cents. The Pro overage rate
+     *   is $0.002/credit, so $0.15 buys exactly 75 overage credits.
+     * - Each `semantic-query` costs 15 credits → 5 reservations fit, the 6th overshoots.
      * - 10 concurrent authorizations.
      *
      * Without atomic reservation, every concurrent caller reads the same 100_000 snapshot, projects
-     * `100_030 ≤ 100_150 (cap)` and is allowed. All 10 then record → final consumed = 100_300, overage = 300,
-     * spend = $99.60, overshooting the $99.30 cap by 100% of available overage.
+     * `100_015 ≤ 100_075 (cap)` and is allowed. All 10 then record → final consumed = 100_150, overage = 150,
+     * spend = $99.30, overshooting the $99.15 cap by 100% of available overage.
      *
-     * With atomic reservation, exactly 5 succeed and the worker writes 5 records → final consumed = 100_150,
-     * overage = 150, spend = $99.30 = cap.
+     * With atomic reservation, exactly 5 succeed and the worker writes 5 records → final consumed = 100_075,
+     * overage = 75, spend = $99.15 = cap.
      */
     const PRO_BASE_CENTS = PLAN_CONFIGS.pro.priceCents as number
-    const SPENDING_LIMIT_CENTS = PRO_BASE_CENTS + 30
+    const SPENDING_LIMIT_CENTS = PRO_BASE_CENTS + 15
     const PERIOD_START = new Date("2026-08-01T00:00:00.000Z")
     const PERIOD_END = new Date("2026-09-01T00:00:00.000Z")
     const CONCURRENCY = 10
-    const ACTION_COST = 30
+    const ACTION_COST = 15
 
     const seedCappedProOrgAtIncludedLimit = async (organizationId: string) => {
       await pg.db.insert(organizations).values({
@@ -963,7 +963,7 @@ describe("billing runtime integration", () => {
 
       expect(result.allowedCount).toBe(CONCURRENCY)
       expect(finalConsumed).toBe(PLAN_CONFIGS.pro.includedCredits + CONCURRENCY * ACTION_COST)
-      // Cap is $99.30; without reservation, final spend reaches $99.60 — $0.30 over the cap, i.e. 100%
+      // Cap is $99.15; without reservation, final spend reaches $99.30 — $0.15 over the cap, i.e. 100%
       // of the available overage budget gets spent on top of what was already allowed.
       expect(finalSpendCents).toBeGreaterThan(SPENDING_LIMIT_CENTS)
     })

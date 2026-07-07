@@ -23,7 +23,7 @@ Plan semantics:
 Chargeable actions:
 
 - `trace = 1 credit`
-- `semantic-query = 30 credits`
+- `semantic-query = 15 credits`
 - `llm-call = 250 credits`
 
 AI work is billed per primitive produced, not per feature-level scan: every hosted LLM
@@ -47,8 +47,8 @@ Provider list prices used (per million tokens, Bedrock at first-party parity, ch
   calls (MiniMax judges, Haiku classifiers, worst case ≈ `$0.04`) carry a large margin by
   construction of the flat price.
 - `semantic-query`: worst case is one voyage-4-large query embedding (32k-token context
-  ceiling ≈ `$0.004`) plus a rerank pass (≈ `$0.01`) ≈ `$0.015`. `30 credits = $0.06` →
-  4x worst case. Reranking and document-side embeddings ride on this charge (document
+  ceiling ≈ `$0.004`) plus a rerank pass (≈ `$0.01`) ≈ `$0.015`. `15 credits = $0.03` →
+  2x worst case. Reranking and document-side embeddings ride on this charge (document
   embeds are part of trace ingest and are covered by the `trace` credit).
 - `trace`: unchanged; ingest-side document embedding for a typical trace costs well
   under one credit's overage value.
