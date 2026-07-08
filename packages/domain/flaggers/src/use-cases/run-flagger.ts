@@ -24,6 +24,8 @@ import { z } from "zod"
 import {
   FLAGGER_DEFAULT_CLASSIFIER_MODEL,
   FLAGGER_DEFAULT_INSTRUCTION_EXTRACTOR_MODEL,
+  FLAGGER_INSPECTED_AGENT_INDEX_MAX_ENTRIES,
+  FLAGGER_INSPECTED_AGENT_SIMILARITY_MAX_HAMMING,
   FLAGGER_INSPECTED_AGENT_VERBATIM_MAX_CHARS,
 } from "../constants.ts"
 import { getFlaggerStrategy, hasFlaggerStrategy, isLlmCapableStrategy } from "../flagger-strategies/index.ts"
@@ -156,8 +158,6 @@ const INSPECTED_AGENT_CONTEXT_CACHE_BASE = `flaggers:inspected-agent-context:v${
 const INSPECTED_AGENT_CONTEXT_CACHE_PREFIX = `${INSPECTED_AGENT_CONTEXT_CACHE_BASE}:sha256:`
 const FALLBACK_SYSTEM_PROMPT_CHARS = 600
 
-const INSPECTED_AGENT_CONTEXT_INDEX_MAX_ENTRIES = 16
-const INSPECTED_AGENT_CONTEXT_SIMILARITY_MAX_HAMMING = 6
 const INSPECTED_AGENT_CONTEXT_INDEX_TTL_SECONDS = INSPECTED_AGENT_EXTRACTED_TRUE_TTL_SECONDS
 
 type InspectedAgentContextSource = "verbatim" | "exact-hit" | "similar-hit" | "extracted" | "fallback" | "missing"
@@ -448,7 +448,7 @@ function upsertInspectedAgentContextIndexEntry(
       // clobber each other's entry, worst case costing one extra extraction later.
       const nextEntries = [{ sketch, contentKey }, ...entries.filter((entry) => entry.contentKey !== contentKey)].slice(
         0,
-        INSPECTED_AGENT_CONTEXT_INDEX_MAX_ENTRIES,
+        FLAGGER_INSPECTED_AGENT_INDEX_MAX_ENTRIES,
       )
 
       return setInspectedAgentContextIndex(indexKey, nextEntries)
@@ -470,7 +470,7 @@ function findSimilarInspectedAgentContext(input: {
         const entrySketch = parseSketchHex(entry.sketch)
         return (
           entrySketch !== null &&
-          hammingDistance64(sketch, entrySketch) <= INSPECTED_AGENT_CONTEXT_SIMILARITY_MAX_HAMMING
+          hammingDistance64(sketch, entrySketch) <= FLAGGER_INSPECTED_AGENT_SIMILARITY_MAX_HAMMING
         )
       })
       if (!match) return Effect.succeed(null)
