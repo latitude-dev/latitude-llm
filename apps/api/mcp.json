@@ -7738,6 +7738,10 @@
                   "type": "string",
                   "description": "URL-safe slug derived from `name`. Unique within the project."
                 },
+                "visualId": {
+                  "type": "string",
+                  "description": "Stable human-readable visual id in `LAT-001` form for copy/reference in PRs and notifications."
+                },
                 "name": {
                   "type": "string",
                   "description": "Human-readable name."
@@ -7843,6 +7847,7 @@
                 "organizationId",
                 "projectId",
                 "slug",
+                "visualId",
                 "name",
                 "description",
                 "source",
@@ -8770,6 +8775,10 @@
             "type": "string",
             "description": "URL-safe slug derived from `name`. Unique within the project."
           },
+          "visualId": {
+            "type": "string",
+            "description": "Stable human-readable visual id in `LAT-001` form for copy/reference in PRs and notifications."
+          },
           "name": {
             "type": "string",
             "description": "Human-readable name."
@@ -9101,6 +9110,7 @@
           "organizationId",
           "projectId",
           "slug",
+          "visualId",
           "name",
           "description",
           "source",
