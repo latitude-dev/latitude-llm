@@ -1,4 +1,4 @@
-import { AgentShaderPanel, Button, Text } from "@repo/ui"
+import { AgentShaderPanel, Button, MarkdownContent, Text } from "@repo/ui"
 import { ChevronDownIcon, ChevronLeftIcon, ChevronUpIcon } from "lucide-react"
 import { type ReactNode, useEffect, useRef, useState } from "react"
 import { useAgentSession } from "../../domains/agent/use-agent-session.ts"
@@ -234,7 +234,7 @@ export function AgentSessionView({
               <Text.H5 color="destructive">{chat.error}</Text.H5>
             ) : chat.response ? (
               <Reveal key={chat.response}>
-                <Text.H5 whiteSpace="preWrap">{chat.response}</Text.H5>
+                <MarkdownContent content={chat.response} />
               </Reveal>
             ) : (
               <Text.H6 color="foregroundMuted">Ask the agent to find, explain, or change something.</Text.H6>
