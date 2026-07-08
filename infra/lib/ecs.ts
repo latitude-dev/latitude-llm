@@ -506,19 +506,23 @@ function createTaskDefinition(
           { name: "LAT_TEMPORAL_TASK_QUEUE", value: temporalCloud.taskQueue },
         ]
 
-        const nodeMaxOldSpaceMb = Math.max(384, Math.floor(serviceConfig.memory * 0.7))
+        const nodeOptions = {
+          name: "NODE_OPTIONS",
+          value: `--max-old-space-size=${Math.max(384, Math.floor(serviceConfig.memory * 0.7))}`,
+        }
 
         const serviceSpecificEnvVars: Record<string, { name: string; value: string }[]> = {
           // The API and web app start/query workflows (e.g. issue monitoring).
-          api: [{ name: "NODE_OPTIONS", value: `--max-old-space-size=${nodeMaxOldSpaceMb}` }, ...temporalEnvVars],
-          web: temporalEnvVars,
+          api: [nodeOptions, ...temporalEnvVars],
+          ingest: [nodeOptions],
+          web: [nodeOptions, ...temporalEnvVars],
           workflows: [
             { name: "LAT_WORKFLOWS_HEALTH_PORT", value: "8080" },
             { name: "LAT_TEMPORAL_MAX_CONCURRENT_ACTIVITY_TASKS", value: "4" },
-            { name: "NODE_OPTIONS", value: `--max-old-space-size=${nodeMaxOldSpaceMb}` },
+            nodeOptions,
             ...temporalEnvVars,
           ],
-          workers: temporalEnvVars,
+          workers: [nodeOptions, ...temporalEnvVars],
         }
 
         const environment = [...baseEnvironment, ...(serviceSpecificEnvVars[serviceConfig.name] ?? [])]
