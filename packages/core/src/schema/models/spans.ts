@@ -44,6 +44,8 @@ export const spans = latitudeSchema.table(
 
     source: varchar('source', { length: 32 }).$type<LogSources>(),
 
+    customIdentifier: varchar('custom_identifier', { length: 256 }),
+
     testDeploymentId: bigint('test_deployment_id', { mode: 'number' }),
 
     tokensPrompt: integer('tokens_prompt'),
@@ -88,6 +90,11 @@ export const spans = latitudeSchema.table(
       table.workspaceId,
       table.type,
       table.source,
+    ),
+    // Per-tenant cost/usage aggregation scoped to a workspace
+    index('spans_workspace_custom_identifier_idx').on(
+      table.workspaceId,
+      table.customIdentifier,
     ),
     index('spans_workspace_started_at_idx').on(
       table.workspaceId,

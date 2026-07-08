@@ -149,5 +149,8 @@ export function extractLatitudeReferences(
   const previousTraceId = attributes[ATTRIBUTES.LATITUDE.previousTraceId]
   if (previousTraceId) references.previousTraceId = String(previousTraceId)
 
+  const customIdentifier = attributes[ATTRIBUTES.LATITUDE.customIdentifier]
+  if (customIdentifier) references.customIdentifier = String(customIdentifier)
+
   return references
 }

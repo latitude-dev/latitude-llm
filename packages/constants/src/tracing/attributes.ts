@@ -51,6 +51,7 @@ export const ATTRIBUTES = {
     experimentUuid: 'latitude.experiment_uuid',
     source: 'latitude.source',
     externalId: 'latitude.external_id',
+    customIdentifier: 'latitude.custom_identifier',
     testDeploymentId: 'latitude.test_deployment_id',
     previousTraceId: 'latitude.previous_trace_id',
 

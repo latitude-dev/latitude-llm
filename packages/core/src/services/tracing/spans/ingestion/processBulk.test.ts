@@ -138,6 +138,38 @@ describe('processSpansBulk', () => {
       expect(result.value?.spans[0]?.apiKeyId).toBe(apiKey.id)
     })
 
+    it('persists customIdentifier from the latitude.custom_identifier attribute on completion spans', async () => {
+      const base = createOtlpSpan()
+      const span = createOtlpSpan({
+        attributes: [
+          ...base.attributes,
+          {
+            key: ATTRIBUTES.LATITUDE.customIdentifier,
+            value: { stringValue: 'tenant-123' },
+          },
+        ],
+      })
+      const result = await processSpansBulk({
+        spans: [createSpanData(span, apiKey, workspace)],
+        apiKey,
+        workspace,
+      })
+
+      expect(result.error).toBeUndefined()
+      expect(result.value?.spans[0]?.customIdentifier).toBe('tenant-123')
+    })
+
+    it('leaves customIdentifier null when the attribute is absent', async () => {
+      const span = createOtlpSpan()
+      const result = await processSpansBulk({
+        spans: [createSpanData(span, apiKey, workspace)],
+        apiKey,
+        workspace,
+      })
+
+      expect(result.value?.spans[0]?.customIdentifier).toBeNull()
+    })
+
     it('publishes spanCreated events for each span', async () => {
       const span1 = createOtlpSpan()
       const span2 = createOtlpSpan()

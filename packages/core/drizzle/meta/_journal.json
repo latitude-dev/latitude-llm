@@ -1926,6 +1926,13 @@
       "when": 1772018456148,
       "tag": "0275_fix_document_unique_index_commit_path_deleted_at",
       "breakpoints": true
+    },
+    {
+      "idx": 276,
+      "version": "7",
+      "when": 1783496444963,
+      "tag": "0276_add_custom_identifier_to_spans",
+      "breakpoints": true
     }
   ]
 }

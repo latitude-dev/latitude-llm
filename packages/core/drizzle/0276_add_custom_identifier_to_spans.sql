@@ -1,0 +1,2 @@
+ALTER TABLE "latitude"."spans" ADD COLUMN "custom_identifier" varchar(256);--> statement-breakpoint
+CREATE INDEX "spans_workspace_custom_identifier_idx" ON "latitude"."spans" USING btree ("workspace_id","custom_identifier");

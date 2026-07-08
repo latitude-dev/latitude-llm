@@ -153,6 +153,12 @@ export type SpanReferenceMetadata = {
   projectId?: number
   testDeploymentId?: number
   previousTraceId?: string
+  /**
+   * Caller-provided tenant/customer identifier, passed as `customIdentifier`
+   * to the run API. Propagated to every span in the trace and persisted as a
+   * queryable column so cost/usage can be aggregated per tenant.
+   */
+  customIdentifier?: string
 }
 
 export type ToolSpanMetadata = BaseSpanMetadata<SpanType.Tool> &
