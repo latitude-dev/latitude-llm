@@ -115,6 +115,7 @@ export const requestAgentDispatchUseCase = (input: {
         return { status: "skipped", reason: "signal-not-found" } as const
       }
       if (signal.mutedAt !== null) return { status: "skipped", reason: "signal-muted" } as const
+      if (signal.origin === "user") return { status: "skipped", reason: "user-origin-signal" } as const
 
       const context = yield* buildDispatchContextFromSignal({
         organizationId: input.source.organizationId,
