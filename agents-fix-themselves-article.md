@@ -38,7 +38,7 @@ A Signal is any pattern you want to follow across production, with a recurring f
 
 An evaluation is a small script that scores live traffic for the Signal, and it can mix three kinds of rules in whatever combination fits the pattern: plain code checks (text matches, tool failures, output shape), semantic similarity against a phrase, and LLM judgment for the parts that need actual reading. Simple ones come from a criteria prompt or a set of conditions, and the advanced path is writing the script yourself.
 
-For Signals born from annotations, Latitude can also generate the script. GEPA, an evolutionary optimizer, uses your annotations as examples, tests script variants against them, and keeps the one that agrees with the human verdicts most, with cost and latency as tiebreakers. Judges optimized this way carry their agreement record, so how often the script scores the way a person would is a measured number rather than an assumption. From then on the evaluation runs on every new trace, and its verdicts keep the Signal current.
+For Signals born from annotations, Latitude can also generate the script. GEPA, an evolutionary optimizer, uses your annotations as examples, tests script variants against them, and keeps the one that agrees with the human verdicts most, with cost and latency as tiebreakers. Judges optimized this way carry their agreement record, so how often the script scores the way a person would is a measured number rather than an assumption, and as new annotations arrive the agreement is remeasured and the script re-optimized if it drops. From then on the evaluation runs on every new trace, and its verdicts keep the Signal current.
 
 ## Step 6: Turn on dispatch
 
