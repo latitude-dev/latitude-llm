@@ -23,9 +23,9 @@ import { Paginated } from "../openapi/pagination.ts"
 import {
   jsonBody,
   openApiNoContentResponses,
-  openApiResponses,
   PROTECTED_SECURITY,
   ProjectParamsSchema,
+  typedResponses,
 } from "../openapi/schemas.ts"
 import type { OrganizationScopedEnv } from "../types.ts"
 
@@ -198,29 +198,23 @@ const createProject = projectEndpoint({
     request: {
       body: jsonBody(CreateRequestSchema),
     },
-    responses: openApiResponses({ status: 201, schema: ResponseSchema, description: "Project created" }),
+    responses: typedResponses({ status: 201, schema: ResponseSchema, description: "Project created" }),
   }),
   access: "write",
   rateLimitTier: "high",
-  handler: async (c) => {
-    const body = c.req.valid("json")
-
-    const input: CreateProjectInput = {
-      name: body.name,
-    }
-
-    const project = await Effect.runPromise(
-      createProjectUseCase(input).pipe(
-        withPostgres(
-          Layer.mergeAll(ProjectRepositoryLive, OutboxEventWriterLive),
-          c.var.postgresClient,
-          c.var.organization.id,
-        ),
-        withTracing,
+  execute: (input, ctx) =>
+    Effect.gen(function* () {
+      const createInput: CreateProjectInput = { name: input.body.name }
+      const project = yield* createProjectUseCase(createInput)
+      return { status: 201, body: toResponse(project) } as const
+    }).pipe(
+      withPostgres(
+        Layer.mergeAll(ProjectRepositoryLive, OutboxEventWriterLive),
+        ctx.postgresClient,
+        ctx.organization.id,
       ),
-    )
-    return c.json(toResponse(project), 201)
-  },
+      withTracing,
+    ),
 })
 
 const listProjects = projectEndpoint({
@@ -235,20 +229,16 @@ const listProjects = projectEndpoint({
     description:
       "Returns every project in the organization. The response uses the standard paginated shape; the project list currently fits in a single page (`nextCursor` is always `null`).",
     security: PROTECTED_SECURITY,
-    responses: openApiResponses({ status: 200, schema: PaginatedProjectsSchema, description: "List of projects" }),
+    responses: typedResponses({ status: 200, schema: PaginatedProjectsSchema, description: "List of projects" }),
   }),
   access: "read-only",
   rateLimitTier: "low",
-  handler: async (c) => {
-    const projects = await Effect.runPromise(
-      Effect.gen(function* () {
-        const repo = yield* ProjectRepository
-        return yield* repo.list()
-      }).pipe(withPostgres(ProjectRepositoryLive, c.var.postgresClient, c.var.organization.id), withTracing),
-    )
-
-    return c.json({ items: projects.map(toResponse), nextCursor: null, hasMore: false }, 200)
-  },
+  execute: (_input, ctx) =>
+    Effect.gen(function* () {
+      const repo = yield* ProjectRepository
+      const projects = yield* repo.list()
+      return { status: 200, body: { items: projects.map(toResponse), nextCursor: null, hasMore: false } } as const
+    }).pipe(withPostgres(ProjectRepositoryLive, ctx.postgresClient, ctx.organization.id), withTracing),
 })
 
 const getProject = projectEndpoint({
@@ -263,22 +253,16 @@ const getProject = projectEndpoint({
     description: "Returns a single project by slug.",
     security: PROTECTED_SECURITY,
     request: { params: ProjectParamsSchema },
-    responses: openApiResponses({ status: 200, schema: ResponseSchema, description: "Project" }),
+    responses: typedResponses({ status: 200, schema: ResponseSchema, description: "Project" }),
   }),
   access: "read-only",
   rateLimitTier: "low",
-  handler: async (c) => {
-    const { projectSlug } = c.req.valid("param")
-
-    const project = await Effect.runPromise(
-      Effect.gen(function* () {
-        const repo = yield* ProjectRepository
-        return yield* repo.findBySlug(projectSlug)
-      }).pipe(withPostgres(ProjectRepositoryLive, c.var.postgresClient, c.var.organization.id), withTracing),
-    )
-
-    return c.json(toResponse(project), 200)
-  },
+  execute: (input, ctx) =>
+    Effect.gen(function* () {
+      const repo = yield* ProjectRepository
+      const project = yield* repo.findBySlug(input.params.projectSlug)
+      return { status: 200, body: toResponse(project) } as const
+    }).pipe(withPostgres(ProjectRepositoryLive, ctx.postgresClient, ctx.organization.id), withTracing),
 })
 
 const updateProject = projectEndpoint({
@@ -297,53 +281,46 @@ const updateProject = projectEndpoint({
       params: ProjectParamsSchema,
       body: jsonBody(UpdateRequestSchema),
     },
-    responses: openApiResponses({ status: 200, schema: ResponseSchema, description: "Updated project" }),
+    responses: typedResponses({ status: 200, schema: ResponseSchema, description: "Updated project" }),
   }),
   access: "destructive",
   rateLimitTier: "low",
-  handler: async (c) => {
-    const { projectSlug } = c.req.valid("param")
-    const body = c.req.valid("json")
-    const organizationId = c.var.organization.id
-    const actorUserId = c.var.auth?.method === "oauth" ? (c.var.auth.userId as string) : undefined
+  execute: (input, ctx) =>
+    Effect.gen(function* () {
+      const body = input.body
+      const actorUserId = ctx.auth.method === "oauth" ? (ctx.auth.userId as string) : undefined
 
-    const updatedProject = await Effect.runPromise(
-      Effect.gen(function* () {
-        const repo = yield* ProjectRepository
-        const project = yield* repo.findBySlug(projectSlug)
+      const repo = yield* ProjectRepository
+      const project = yield* repo.findBySlug(input.params.projectSlug)
 
-        const updated = yield* updateProjectUseCase({
-          id: project.id,
-          ...(body.name !== undefined ? { name: body.name } : {}),
-          ...(body.settings !== undefined ? { settings: body.settings } : {}),
-        })
+      const updated = yield* updateProjectUseCase({
+        id: project.id,
+        ...(body.name !== undefined ? { name: body.name } : {}),
+        ...(body.settings !== undefined ? { settings: body.settings } : {}),
+      })
 
-        if (body.flaggers) {
-          for (const [slug, enabled] of Object.entries(body.flaggers)) {
-            yield* updateFlaggerUseCase({
-              organizationId,
-              projectId: updated.id,
-              slug: slug as FlaggerSlug,
-              enabled,
-              ...(actorUserId !== undefined ? { actorUserId } : {}),
-            })
-          }
+      if (body.flaggers) {
+        for (const [slug, enabled] of Object.entries(body.flaggers)) {
+          yield* updateFlaggerUseCase({
+            organizationId: ctx.organization.id,
+            projectId: updated.id,
+            slug: slug as FlaggerSlug,
+            enabled,
+            ...(actorUserId !== undefined ? { actorUserId } : {}),
+          })
         }
+      }
 
-        return updated
-      }).pipe(
-        withPostgres(
-          Layer.mergeAll(ProjectRepositoryLive, FlaggerRepositoryLive, OutboxEventWriterLive),
-          c.var.postgresClient,
-          c.var.organization.id,
-        ),
-        Effect.provide(RedisCacheStoreLive(c.var.redis)),
-        withTracing,
+      return { status: 200, body: toResponse(updated) } as const
+    }).pipe(
+      withPostgres(
+        Layer.mergeAll(ProjectRepositoryLive, FlaggerRepositoryLive, OutboxEventWriterLive),
+        ctx.postgresClient,
+        ctx.organization.id,
       ),
-    )
-
-    return c.json(toResponse(updatedProject), 200)
-  },
+      Effect.provide(RedisCacheStoreLive(ctx.redis)),
+      withTracing,
+    ),
 })
 
 const deleteProject = projectEndpoint({
@@ -362,18 +339,13 @@ const deleteProject = projectEndpoint({
   }),
   access: "destructive",
   rateLimitTier: "low",
-  handler: async (c) => {
-    const { projectSlug } = c.req.valid("param")
-
-    await Effect.runPromise(
-      Effect.gen(function* () {
-        const repo = yield* ProjectRepository
-        const project = yield* repo.findBySlug(projectSlug)
-        return yield* repo.softDelete(project.id)
-      }).pipe(withPostgres(ProjectRepositoryLive, c.var.postgresClient, c.var.organization.id), withTracing),
-    )
-    return c.body(null, 204)
-  },
+  execute: (input, ctx) =>
+    Effect.gen(function* () {
+      const repo = yield* ProjectRepository
+      const project = yield* repo.findBySlug(input.params.projectSlug)
+      yield* repo.softDelete(project.id)
+      return { status: 204 } as const
+    }).pipe(withPostgres(ProjectRepositoryLive, ctx.postgresClient, ctx.organization.id), withTracing),
 })
 
 export const projectsModule: OperationModule = {

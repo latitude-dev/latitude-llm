@@ -38,9 +38,9 @@ import {
   FilterSetSchema,
   jsonBody,
   openApiNoContentResponses,
-  openApiResponses,
   PROTECTED_SECURITY,
   ProjectParamsSchema,
+  typedResponses,
 } from "../openapi/schemas.ts"
 import type { OrganizationScopedEnv } from "../types.ts"
 import { requireOAuthUserId } from "../utils/require-oauth.ts"
@@ -105,7 +105,7 @@ const listSavedSearchesEndpoint = savedSearchEndpoint({
       "Returns every saved search in the project. The response uses the standard paginated shape; the saved-search list currently fits in a single page (`nextCursor` is always `null`).",
     security: PROTECTED_SECURITY,
     request: { params: ProjectParamsSchema },
-    responses: openApiResponses({
+    responses: typedResponses({
       status: 200,
       schema: PaginatedSavedSearchesSchema,
       description: "List of saved searches",
@@ -113,27 +113,23 @@ const listSavedSearchesEndpoint = savedSearchEndpoint({
   }),
   access: "read-only",
   rateLimitTier: "low",
-  handler: async (c) => {
-    const { projectSlug } = c.req.valid("param")
-    const organizationId = c.var.organization.id
-
-    const page = await Effect.runPromise(
-      Effect.gen(function* () {
-        const projectRepo = yield* ProjectRepository
-        const project = yield* projectRepo.findBySlug(projectSlug)
-        return yield* listSavedSearches({ projectId: project.id })
-      }).pipe(
-        withPostgres(
-          Layer.mergeAll(ProjectRepositoryLive, SavedSearchRepositoryLive),
-          c.var.postgresClient,
-          organizationId,
-        ),
-        withTracing,
+  execute: (input, ctx) =>
+    Effect.gen(function* () {
+      const projectRepo = yield* ProjectRepository
+      const project = yield* projectRepo.findBySlug(input.params.projectSlug)
+      const page = yield* listSavedSearches({ projectId: project.id })
+      return {
+        status: 200,
+        body: { items: page.items.map(toSavedSearchResponse), nextCursor: null, hasMore: false },
+      } as const
+    }).pipe(
+      withPostgres(
+        Layer.mergeAll(ProjectRepositoryLive, SavedSearchRepositoryLive),
+        ctx.postgresClient,
+        ctx.organization.id,
       ),
-    )
-
-    return c.json({ items: page.items.map(toSavedSearchResponse), nextCursor: null, hasMore: false }, 200)
-  },
+      withTracing,
+    ),
 })
 
 const getSavedSearch = savedSearchEndpoint({
@@ -148,31 +144,24 @@ const getSavedSearch = savedSearchEndpoint({
     description: "Returns a single saved search by slug.",
     security: PROTECTED_SECURITY,
     request: { params: SearchSlugParamsSchema },
-    responses: openApiResponses({ status: 200, schema: SavedSearchSchema, description: "Saved search" }),
+    responses: typedResponses({ status: 200, schema: SavedSearchSchema, description: "Saved search" }),
   }),
   access: "read-only",
   rateLimitTier: "low",
-  handler: async (c) => {
-    const { projectSlug, searchSlug } = c.req.valid("param")
-    const organizationId = c.var.organization.id
-
-    const search = await Effect.runPromise(
-      Effect.gen(function* () {
-        const projectRepo = yield* ProjectRepository
-        const project = yield* projectRepo.findBySlug(projectSlug)
-        return yield* getSavedSearchBySlug({ projectId: project.id, slug: searchSlug })
-      }).pipe(
-        withPostgres(
-          Layer.mergeAll(ProjectRepositoryLive, SavedSearchRepositoryLive),
-          c.var.postgresClient,
-          organizationId,
-        ),
-        withTracing,
+  execute: (input, ctx) =>
+    Effect.gen(function* () {
+      const projectRepo = yield* ProjectRepository
+      const project = yield* projectRepo.findBySlug(input.params.projectSlug)
+      const search = yield* getSavedSearchBySlug({ projectId: project.id, slug: input.params.searchSlug })
+      return { status: 200, body: toSavedSearchResponse(search) } as const
+    }).pipe(
+      withPostgres(
+        Layer.mergeAll(ProjectRepositoryLive, SavedSearchRepositoryLive),
+        ctx.postgresClient,
+        ctx.organization.id,
       ),
-    )
-
-    return c.json(toSavedSearchResponse(search), 200)
-  },
+      withTracing,
+    ),
 })
 
 const createSavedSearchEndpoint = savedSearchEndpoint({
@@ -188,40 +177,34 @@ const createSavedSearchEndpoint = savedSearchEndpoint({
       "Creates a saved search within the project. At least one of `query` or `filters` must be set. The slug is derived from `name`. OAuth-authenticated only.",
     security: PROTECTED_SECURITY,
     request: { params: ProjectParamsSchema, body: jsonBody(CreateRequestSchema) },
-    responses: openApiResponses({ status: 201, schema: SavedSearchSchema, description: "Saved search created" }),
+    responses: typedResponses({ status: 201, schema: SavedSearchSchema, description: "Saved search created" }),
   }),
   access: "write",
   rateLimitTier: "low",
-  handler: async (c) => {
-    const { projectSlug } = c.req.valid("param")
-    const body = c.req.valid("json")
-    const organizationId = c.var.organization.id
-    const createdByUserId = requireOAuthUserId(c)
+  execute: (input, ctx) =>
+    Effect.gen(function* () {
+      const body = input.body
+      const createdByUserId = yield* requireOAuthUserId(ctx.auth)
 
-    const search = await Effect.runPromise(
-      Effect.gen(function* () {
-        const projectRepo = yield* ProjectRepository
-        const project = yield* projectRepo.findBySlug(projectSlug)
+      const projectRepo = yield* ProjectRepository
+      const project = yield* projectRepo.findBySlug(input.params.projectSlug)
 
-        return yield* createSavedSearch({
-          projectId: project.id,
-          name: body.name,
-          query: body.query,
-          filterSet: body.filters,
-          createdByUserId,
-        })
-      }).pipe(
-        withPostgres(
-          Layer.mergeAll(ProjectRepositoryLive, SavedSearchRepositoryLive, OutboxEventWriterLive),
-          c.var.postgresClient,
-          organizationId,
-        ),
-        withTracing,
+      const search = yield* createSavedSearch({
+        projectId: project.id,
+        name: body.name,
+        query: body.query,
+        filterSet: body.filters,
+        createdByUserId,
+      })
+      return { status: 201, body: toSavedSearchResponse(search) } as const
+    }).pipe(
+      withPostgres(
+        Layer.mergeAll(ProjectRepositoryLive, SavedSearchRepositoryLive, OutboxEventWriterLive),
+        ctx.postgresClient,
+        ctx.organization.id,
       ),
-    )
-
-    return c.json(toSavedSearchResponse(search), 201)
-  },
+      withTracing,
+    ),
 })
 
 const updateSavedSearchEndpoint = savedSearchEndpoint({
@@ -237,39 +220,32 @@ const updateSavedSearchEndpoint = savedSearchEndpoint({
       "Updates a saved search. Renaming may regenerate the slug — clients should re-read the response or rely on the `id` for stable references.",
     security: PROTECTED_SECURITY,
     request: { params: SearchSlugParamsSchema, body: jsonBody(UpdateRequestSchema) },
-    responses: openApiResponses({ status: 200, schema: SavedSearchSchema, description: "Updated saved search" }),
+    responses: typedResponses({ status: 200, schema: SavedSearchSchema, description: "Updated saved search" }),
   }),
   access: "destructive",
   rateLimitTier: "low",
-  handler: async (c) => {
-    const { projectSlug, searchSlug } = c.req.valid("param")
-    const body = c.req.valid("json")
-    const organizationId = c.var.organization.id
+  execute: (input, ctx) =>
+    Effect.gen(function* () {
+      const body = input.body
+      const projectRepo = yield* ProjectRepository
+      const project = yield* projectRepo.findBySlug(input.params.projectSlug)
+      const current = yield* getSavedSearchBySlug({ projectId: project.id, slug: input.params.searchSlug })
 
-    const updated = await Effect.runPromise(
-      Effect.gen(function* () {
-        const projectRepo = yield* ProjectRepository
-        const project = yield* projectRepo.findBySlug(projectSlug)
-        const current = yield* getSavedSearchBySlug({ projectId: project.id, slug: searchSlug })
-
-        return yield* updateSavedSearch({
-          id: current.id,
-          ...(body.name !== undefined ? { name: body.name } : {}),
-          ...(body.query !== undefined ? { query: body.query } : {}),
-          ...(body.filters !== undefined ? { filterSet: body.filters } : {}),
-        })
-      }).pipe(
-        withPostgres(
-          Layer.mergeAll(ProjectRepositoryLive, SavedSearchRepositoryLive),
-          c.var.postgresClient,
-          organizationId,
-        ),
-        withTracing,
+      const updated = yield* updateSavedSearch({
+        id: current.id,
+        ...(body.name !== undefined ? { name: body.name } : {}),
+        ...(body.query !== undefined ? { query: body.query } : {}),
+        ...(body.filters !== undefined ? { filterSet: body.filters } : {}),
+      })
+      return { status: 200, body: toSavedSearchResponse(updated) } as const
+    }).pipe(
+      withPostgres(
+        Layer.mergeAll(ProjectRepositoryLive, SavedSearchRepositoryLive),
+        ctx.postgresClient,
+        ctx.organization.id,
       ),
-    )
-
-    return c.json(toSavedSearchResponse(updated), 200)
-  },
+      withTracing,
+    ),
 })
 
 const deleteSavedSearchEndpoint = savedSearchEndpoint({
@@ -288,28 +264,21 @@ const deleteSavedSearchEndpoint = savedSearchEndpoint({
   }),
   access: "destructive",
   rateLimitTier: "low",
-  handler: async (c) => {
-    const { projectSlug, searchSlug } = c.req.valid("param")
-    const organizationId = c.var.organization.id
-
-    await Effect.runPromise(
-      Effect.gen(function* () {
-        const projectRepo = yield* ProjectRepository
-        const project = yield* projectRepo.findBySlug(projectSlug)
-        const current = yield* getSavedSearchBySlug({ projectId: project.id, slug: searchSlug })
-        yield* deleteSavedSearch({ savedSearchId: current.id })
-      }).pipe(
-        withPostgres(
-          Layer.mergeAll(ProjectRepositoryLive, SavedSearchRepositoryLive, OutboxEventWriterLive),
-          c.var.postgresClient,
-          organizationId,
-        ),
-        withTracing,
+  execute: (input, ctx) =>
+    Effect.gen(function* () {
+      const projectRepo = yield* ProjectRepository
+      const project = yield* projectRepo.findBySlug(input.params.projectSlug)
+      const current = yield* getSavedSearchBySlug({ projectId: project.id, slug: input.params.searchSlug })
+      yield* deleteSavedSearch({ savedSearchId: current.id })
+      return { status: 204 } as const
+    }).pipe(
+      withPostgres(
+        Layer.mergeAll(ProjectRepositoryLive, SavedSearchRepositoryLive, OutboxEventWriterLive),
+        ctx.postgresClient,
+        ctx.organization.id,
       ),
-    )
-
-    return c.body(null, 204)
-  },
+      withTracing,
+    ),
 })
 
 const ListSavedSearchTracesQuerySchema = PaginatedQueryParamsSchema.extend({
@@ -338,72 +307,66 @@ const listSavedSearchTraces = savedSearchEndpoint({
       "Returns a cursor-paginated page of traces that match the saved search's `query` + `filters`. Each row uses the same `Trace` shape as `listTraces` — use the trace point-lookup endpoints (`getTrace`, `listTraceSpans`, `getTraceSpan`, `listTraceAnnotations`) to drill into individual traces.",
     security: PROTECTED_SECURITY,
     request: { params: SearchSlugParamsSchema, query: ListSavedSearchTracesQuerySchema },
-    responses: openApiResponses({ status: 200, schema: PaginatedTracesSchema, description: "Page of traces" }),
+    responses: typedResponses({ status: 200, schema: PaginatedTracesSchema, description: "Page of traces" }),
   }),
   access: "read-only",
   rateLimitTier: "medium",
-  handler: async (c) => {
-    const { projectSlug, searchSlug } = c.req.valid("param")
-    const query = c.req.valid("query")
-    const organizationId = c.var.organization.id
+  execute: (input, ctx) =>
+    Effect.gen(function* () {
+      const { projectSlug, searchSlug } = input.params
+      const query = input.query
 
-    const result = await Effect.runPromise(
-      Effect.gen(function* () {
-        let cursor: { sortValue: string; traceId: string } | undefined
-        if (query.cursor) {
-          const decoded = decodeTraceCursor(query.cursor)
-          if (!decoded) {
-            return yield* new BadRequestError({ message: "Invalid `cursor` value." })
-          }
-          cursor = decoded
+      let cursor: { sortValue: string; traceId: string } | undefined
+      if (query.cursor) {
+        const decoded = decodeTraceCursor(query.cursor)
+        if (!decoded) {
+          return yield* new BadRequestError({ message: "Invalid `cursor` value." })
         }
+        cursor = decoded
+      }
 
-        const projectRepo = yield* ProjectRepository
-        const project = yield* projectRepo.findBySlug(projectSlug)
-        const projectId = ProjectId(project.id as string)
-        const search = yield* getSavedSearchBySlug({ projectId: project.id, slug: searchSlug })
+      const projectRepo = yield* ProjectRepository
+      const project = yield* projectRepo.findBySlug(projectSlug)
+      const projectId = ProjectId(project.id as string)
+      const search = yield* getSavedSearchBySlug({ projectId: project.id, slug: searchSlug })
 
-        const traceRepo = yield* TraceRepository
-        const page = yield* traceRepo.listByProjectId({
-          organizationId: OrganizationId(organizationId as string),
-          projectId,
-          options: {
-            limit: query.limit,
-            sortBy: query.sortBy,
-            sortDirection: query.sortDirection,
-            ...(cursor ? { cursor } : {}),
-            ...(Object.keys(search.filterSet).length > 0 ? { filters: search.filterSet } : {}),
-            ...(search.query ? { searchQuery: search.query } : {}),
-          },
-        })
+      const traceRepo = yield* TraceRepository
+      const page = yield* traceRepo.listByProjectId({
+        organizationId: OrganizationId(ctx.organization.id as string),
+        projectId,
+        options: {
+          limit: query.limit,
+          sortBy: query.sortBy,
+          sortDirection: query.sortDirection,
+          ...(cursor ? { cursor } : {}),
+          ...(Object.keys(search.filterSet).length > 0 ? { filters: search.filterSet } : {}),
+          ...(search.query ? { searchQuery: search.query } : {}),
+        },
+      })
 
-        const indicators = yield* fetchTraceIndicators({
-          projectId,
-          traceIds: page.items.map((trace) => trace.traceId),
-        })
+      const indicators = yield* fetchTraceIndicators({
+        projectId,
+        traceIds: page.items.map((trace) => trace.traceId),
+      })
 
-        return { page, indicators }
-      }).pipe(
-        withPostgres(
-          Layer.mergeAll(ProjectRepositoryLive, SavedSearchRepositoryLive, ScoreRepositoryLive),
-          c.var.postgresClient,
-          organizationId,
-        ),
-        withClickHouse(TraceRepositoryLive, c.var.clickhouse, organizationId),
-        withAi(AIEmbedLive, c.var.redis),
-        withTracing,
+      return {
+        status: 200,
+        body: {
+          items: page.items.map((trace) => toTraceResponse(trace, indicators)),
+          nextCursor: page.nextCursor ? encodeTraceCursor(page.nextCursor) : null,
+          hasMore: page.hasMore,
+        },
+      } as const
+    }).pipe(
+      withPostgres(
+        Layer.mergeAll(ProjectRepositoryLive, SavedSearchRepositoryLive, ScoreRepositoryLive),
+        ctx.postgresClient,
+        ctx.organization.id,
       ),
-    )
-
-    return c.json(
-      {
-        items: result.page.items.map((trace) => toTraceResponse(trace, result.indicators)),
-        nextCursor: result.page.nextCursor ? encodeTraceCursor(result.page.nextCursor) : null,
-        hasMore: result.page.hasMore,
-      },
-      200,
-    )
-  },
+      withClickHouse(TraceRepositoryLive, ctx.clickhouse, ctx.organization.id),
+      withAi(AIEmbedLive, ctx.redis),
+      withTracing,
+    ),
 })
 
 export const savedSearchesModule: OperationModule = {

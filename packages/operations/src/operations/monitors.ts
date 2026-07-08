@@ -44,11 +44,13 @@ import {
 } from "../openapi/entities/monitor.ts"
 import { Paginated } from "../openapi/pagination.ts"
 import {
+  errorResponse,
   jsonBody,
+  jsonResponse,
   openApiNoContentResponses,
-  openApiResponses,
   PROTECTED_SECURITY,
   ProjectParamsSchema,
+  typedResponses,
 } from "../openapi/schemas.ts"
 import type { OrganizationScopedEnv } from "../types.ts"
 
@@ -180,50 +182,48 @@ const listMonitors = monitorEndpoint({
     description: "Returns the project's monitors, system monitors first, then by most recent activity.",
     security: PROTECTED_SECURITY,
     request: { params: ProjectParamsSchema, query: ListMonitorsQuerySchema },
-    responses: openApiResponses({ status: 200, schema: PaginatedMonitorsSchema, description: "Page of monitors" }),
+    responses: typedResponses({ status: 200, schema: PaginatedMonitorsSchema, description: "Page of monitors" }),
   }),
   access: "read-only",
   rateLimitTier: "low",
-  handler: async (c) => {
-    const { projectSlug } = c.req.valid("param")
-    const query = c.req.valid("query")
-    const organizationId = c.var.organization.id
+  execute: (input, ctx) =>
+    Effect.gen(function* () {
+      const { projectSlug } = input.params
+      const query = input.query
 
-    const result = await Effect.runPromise(
-      Effect.gen(function* () {
-        let offset = 0
-        if (query.cursor) {
-          const decoded = decodeMonitorCursor(query.cursor)
-          if (!decoded) return yield* new BadRequestError({ message: "Invalid `cursor` value." })
-          offset = decoded.offset
-        }
-        const projectRepo = yield* ProjectRepository
-        const project = yield* projectRepo.findBySlug(projectSlug)
-        return yield* listMonitorsUseCase({
-          projectId: project.id,
-          limit: query.limit,
-          offset,
-          ...(query.search ? { searchQuery: query.search } : {}),
-        })
-      }).pipe(
-        withPostgres(
-          Layer.mergeAll(
-            ProjectRepositoryLive,
-            MonitorRepositoryLive,
-            SavedSearchRepositoryLive,
-            IncidentRepositoryLive,
-            OutboxEventWriterLive,
-          ),
-          c.var.postgresClient,
-          organizationId,
+      let offset = 0
+      if (query.cursor) {
+        const decoded = decodeMonitorCursor(query.cursor)
+        if (!decoded) return yield* new BadRequestError({ message: "Invalid `cursor` value." })
+        offset = decoded.offset
+      }
+      const projectRepo = yield* ProjectRepository
+      const project = yield* projectRepo.findBySlug(projectSlug)
+      const result = yield* listMonitorsUseCase({
+        projectId: project.id,
+        limit: query.limit,
+        offset,
+        ...(query.search ? { searchQuery: query.search } : {}),
+      })
+      const nextCursor = result.hasMore ? encodeMonitorCursor(result.offset + result.items.length) : null
+      return {
+        status: 200,
+        body: { items: result.items.map(toMonitorResponse), nextCursor, hasMore: result.hasMore },
+      } as const
+    }).pipe(
+      withPostgres(
+        Layer.mergeAll(
+          ProjectRepositoryLive,
+          MonitorRepositoryLive,
+          SavedSearchRepositoryLive,
+          IncidentRepositoryLive,
+          OutboxEventWriterLive,
         ),
-        withTracing,
+        ctx.postgresClient,
+        ctx.organization.id,
       ),
-    )
-
-    const nextCursor = result.hasMore ? encodeMonitorCursor(result.offset + result.items.length) : null
-    return c.json({ items: result.items.map(toMonitorResponse), nextCursor, hasMore: result.hasMore }, 200)
-  },
+      withTracing,
+    ),
 })
 
 const createMonitor = monitorEndpoint({
@@ -238,47 +238,41 @@ const createMonitor = monitorEndpoint({
     description: "Creates a monitor with one rule. The slug is derived from `name`.",
     security: PROTECTED_SECURITY,
     request: { params: ProjectParamsSchema, body: jsonBody(CreateMonitorBodySchema) },
-    responses: openApiResponses({ status: 201, schema: MonitorSchema, description: "Monitor created" }),
+    responses: typedResponses({ status: 201, schema: MonitorSchema, description: "Monitor created" }),
   }),
   access: "write",
   rateLimitTier: "medium",
-  handler: async (c) => {
-    const { projectSlug } = c.req.valid("param")
-    const body = c.req.valid("json")
-    const organizationId = c.var.organization.id
-
-    const monitor = await Effect.runPromise(
-      Effect.gen(function* () {
-        const projectRepo = yield* ProjectRepository
-        const project = yield* projectRepo.findBySlug(projectSlug)
-        return yield* createMonitorUseCase({
-          organizationId: OrganizationId(organizationId as string),
-          projectId: project.id,
-          name: body.name,
-          ...(body.description !== undefined ? { description: body.description } : {}),
-          target: body.target,
-          rule: {
-            trigger: body.trigger,
-            severity: body.severity,
-            config: {
-              ...(body.metric !== undefined ? { metric: body.metric } : {}),
-              ...("condition" in body ? { condition: body.condition } : {}),
-            },
+  execute: (input, ctx) =>
+    Effect.gen(function* () {
+      const { projectSlug } = input.params
+      const body = input.body
+      const projectRepo = yield* ProjectRepository
+      const project = yield* projectRepo.findBySlug(projectSlug)
+      const monitor = yield* createMonitorUseCase({
+        organizationId: OrganizationId(ctx.organization.id as string),
+        projectId: project.id,
+        name: body.name,
+        ...(body.description !== undefined ? { description: body.description } : {}),
+        target: body.target,
+        rule: {
+          trigger: body.trigger,
+          severity: body.severity,
+          config: {
+            ...(body.metric !== undefined ? { metric: body.metric } : {}),
+            ...("condition" in body ? { condition: body.condition } : {}),
           },
-        })
-      }).pipe(
-        withPostgres(
-          // SavedSearchRepository backs the semantic-search monitorability check on the watched search.
-          Layer.mergeAll(ProjectRepositoryLive, MonitorRepositoryLive, SavedSearchRepositoryLive),
-          c.var.postgresClient,
-          organizationId,
-        ),
-        withTracing,
+        },
+      })
+      return { status: 201, body: toMonitorResponse(monitor) } as const
+    }).pipe(
+      withPostgres(
+        // SavedSearchRepository backs the semantic-search monitorability check on the watched search.
+        Layer.mergeAll(ProjectRepositoryLive, MonitorRepositoryLive, SavedSearchRepositoryLive),
+        ctx.postgresClient,
+        ctx.organization.id,
       ),
-    )
-
-    return c.json(toMonitorResponse(monitor), 201)
-  },
+      withTracing,
+    ),
 })
 
 const listMonitorsForTarget = monitorEndpoint({
@@ -293,36 +287,30 @@ const listMonitorsForTarget = monitorEndpoint({
     description: "Returns live monitors matching the supplied target type and/or filter subset.",
     security: PROTECTED_SECURITY,
     request: { params: ProjectParamsSchema, body: jsonBody(ListMonitorsForTargetBodySchema) },
-    responses: openApiResponses({ status: 200, schema: MonitorListSchema, description: "Matching monitors" }),
+    responses: typedResponses({ status: 200, schema: MonitorListSchema, description: "Matching monitors" }),
   }),
   access: "read-only",
   rateLimitTier: "low",
-  handler: async (c) => {
-    const { projectSlug } = c.req.valid("param")
-    const body = c.req.valid("json")
-    const organizationId = c.var.organization.id
-
-    const monitors = await Effect.runPromise(
-      Effect.gen(function* () {
-        const projectRepo = yield* ProjectRepository
-        const project = yield* projectRepo.findBySlug(projectSlug)
-        return yield* listMonitorsForTargetUseCase({
-          projectId: project.id,
-          ...(body.targetType !== undefined ? { targetType: body.targetType } : {}),
-          filterSetContains: body.filterSetContains,
-        })
-      }).pipe(
-        withPostgres(
-          Layer.mergeAll(ProjectRepositoryLive, MonitorRepositoryLive),
-          c.var.postgresClient,
-          organizationId,
-        ),
-        withTracing,
+  execute: (input, ctx) =>
+    Effect.gen(function* () {
+      const { projectSlug } = input.params
+      const body = input.body
+      const projectRepo = yield* ProjectRepository
+      const project = yield* projectRepo.findBySlug(projectSlug)
+      const monitors = yield* listMonitorsForTargetUseCase({
+        projectId: project.id,
+        ...(body.targetType !== undefined ? { targetType: body.targetType } : {}),
+        filterSetContains: body.filterSetContains,
+      })
+      return { status: 200, body: { items: monitors.map(toMonitorResponse) } } as const
+    }).pipe(
+      withPostgres(
+        Layer.mergeAll(ProjectRepositoryLive, MonitorRepositoryLive),
+        ctx.postgresClient,
+        ctx.organization.id,
       ),
-    )
-
-    return c.json({ items: monitors.map(toMonitorResponse) }, 200)
-  },
+      withTracing,
+    ),
 })
 
 const getMonitor = monitorEndpoint({
@@ -337,31 +325,25 @@ const getMonitor = monitorEndpoint({
     description: "Returns a single monitor by slug.",
     security: PROTECTED_SECURITY,
     request: { params: MonitorSlugParamsSchema },
-    responses: openApiResponses({ status: 200, schema: MonitorSchema, description: "Monitor" }),
+    responses: typedResponses({ status: 200, schema: MonitorSchema, description: "Monitor" }),
   }),
   access: "read-only",
   rateLimitTier: "low",
-  handler: async (c) => {
-    const { projectSlug, monitorSlug } = c.req.valid("param")
-    const organizationId = c.var.organization.id
-
-    const monitor = await Effect.runPromise(
-      Effect.gen(function* () {
-        const projectRepo = yield* ProjectRepository
-        const project = yield* projectRepo.findBySlug(projectSlug)
-        return yield* getMonitorBySlugUseCase({ projectId: project.id, slug: monitorSlug })
-      }).pipe(
-        withPostgres(
-          Layer.mergeAll(ProjectRepositoryLive, MonitorRepositoryLive),
-          c.var.postgresClient,
-          organizationId,
-        ),
-        withTracing,
+  execute: (input, ctx) =>
+    Effect.gen(function* () {
+      const { projectSlug, monitorSlug } = input.params
+      const projectRepo = yield* ProjectRepository
+      const project = yield* projectRepo.findBySlug(projectSlug)
+      const monitor = yield* getMonitorBySlugUseCase({ projectId: project.id, slug: monitorSlug })
+      return { status: 200, body: toMonitorResponse(monitor) } as const
+    }).pipe(
+      withPostgres(
+        Layer.mergeAll(ProjectRepositoryLive, MonitorRepositoryLive),
+        ctx.postgresClient,
+        ctx.organization.id,
       ),
-    )
-
-    return c.json(toMonitorResponse(monitor), 200)
-  },
+      withTracing,
+    ),
 })
 
 const updateMonitor = monitorEndpoint({
@@ -376,103 +358,94 @@ const updateMonitor = monitorEndpoint({
     description: "Updates a monitor's metadata, target, and rule. System monitor edits are restricted.",
     security: PROTECTED_SECURITY,
     request: { params: MonitorSlugParamsSchema, body: jsonBody(UpdateMonitorBodySchema) },
-    responses: openApiResponses({
-      status: 200,
-      schema: MonitorSchema,
-      description: "Updated monitor",
-      extraErrors: { 403: { description: "System monitors cannot be edited" } },
-    }),
+    responses: {
+      200: jsonResponse(MonitorSchema, "Updated monitor"),
+      400: errorResponse("Validation error"),
+      401: errorResponse("Unauthorized"),
+      404: errorResponse("Not found"),
+      403: errorResponse("System monitors cannot be edited"),
+    },
   }),
   access: "destructive",
   rateLimitTier: "medium",
-  handler: async (c) => {
-    const { projectSlug, monitorSlug } = c.req.valid("param")
-    const body = c.req.valid("json")
-    const organizationId = c.var.organization.id
-
-    const monitor = await Effect.runPromise(
-      Effect.gen(function* () {
-        const projectRepo = yield* ProjectRepository
-        const project = yield* projectRepo.findBySlug(projectSlug)
-        const current = yield* getMonitorBySlugUseCase({ projectId: project.id, slug: monitorSlug })
-        const targetPatch = body.target
-        const metric = body.metric ?? current.target.metric
-        const target =
-          targetPatch !== undefined || body.metric !== undefined
-            ? {
-                ...current.target,
-                ...(targetPatch
-                  ? {
-                      type: targetPatch.type,
-                      id: targetPatch.id,
-                      kind: targetPatch.type,
-                      stream: streamForTargetType(targetPatch.type),
-                      query: targetPatch.query ?? null,
-                      savedSearchId: targetPatch.type === "savedSearch" ? targetPatch.id : null,
-                      ...(targetPatch.filterSet !== undefined
-                        ? { filterSet: targetPatch.filterSet }
-                        : { filterSet: undefined }),
-                    }
-                  : {}),
-                metric,
+  execute: (input, ctx) =>
+    Effect.gen(function* () {
+      const { projectSlug, monitorSlug } = input.params
+      const body = input.body
+      const projectRepo = yield* ProjectRepository
+      const project = yield* projectRepo.findBySlug(projectSlug)
+      const current = yield* getMonitorBySlugUseCase({ projectId: project.id, slug: monitorSlug })
+      const targetPatch = body.target
+      const metric = body.metric ?? current.target.metric
+      const target =
+        targetPatch !== undefined || body.metric !== undefined
+          ? {
+              ...current.target,
+              ...(targetPatch
+                ? {
+                    type: targetPatch.type,
+                    id: targetPatch.id,
+                    kind: targetPatch.type,
+                    stream: streamForTargetType(targetPatch.type),
+                    query: targetPatch.query ?? null,
+                    savedSearchId: targetPatch.type === "savedSearch" ? targetPatch.id : null,
+                    ...(targetPatch.filterSet !== undefined
+                      ? { filterSet: targetPatch.filterSet }
+                      : { filterSet: undefined }),
+                  }
+                : {}),
+              metric,
+            }
+          : undefined
+      const trigger = body.trigger ?? current.rule.trigger
+      const hasCondition = Object.hasOwn(body, "condition")
+      const condition = hasCondition ? body.condition : trigger === "match" ? undefined : current.rule.config.condition
+      if (trigger === "match" && condition !== undefined) {
+        throw new BadRequestError({ message: "Match monitors cannot define a condition." })
+      }
+      if (trigger === "threshold" && condition?.trigger !== "threshold") {
+        throw new BadRequestError({ message: "Threshold monitors require a threshold condition." })
+      }
+      if (trigger === "escalating" && condition?.trigger !== "escalating") {
+        throw new BadRequestError({ message: "Escalating monitors require an escalating condition." })
+      }
+      const rule =
+        body.trigger !== undefined || body.metric !== undefined || hasCondition || body.severity !== undefined
+          ? (() => {
+              const { condition: _condition, ...currentConfig } = current.rule.config
+              return {
+                trigger,
+                severity: body.severity ?? current.rule.severity,
+                config: {
+                  ...currentConfig,
+                  metric,
+                  ...(condition !== undefined ? { condition } : {}),
+                },
               }
-            : undefined
-        const trigger = body.trigger ?? current.rule.trigger
-        const hasCondition = Object.hasOwn(body, "condition")
-        const condition = hasCondition
-          ? body.condition
-          : trigger === "match"
-            ? undefined
-            : current.rule.config.condition
-        if (trigger === "match" && condition !== undefined) {
-          throw new BadRequestError({ message: "Match monitors cannot define a condition." })
-        }
-        if (trigger === "threshold" && condition?.trigger !== "threshold") {
-          throw new BadRequestError({ message: "Threshold monitors require a threshold condition." })
-        }
-        if (trigger === "escalating" && condition?.trigger !== "escalating") {
-          throw new BadRequestError({ message: "Escalating monitors require an escalating condition." })
-        }
-        const rule =
-          body.trigger !== undefined || body.metric !== undefined || hasCondition || body.severity !== undefined
-            ? (() => {
-                const { condition: _condition, ...currentConfig } = current.rule.config
-                return {
-                  trigger,
-                  severity: body.severity ?? current.rule.severity,
-                  config: {
-                    ...currentConfig,
-                    metric,
-                    ...(condition !== undefined ? { condition } : {}),
-                  },
-                }
-              })()
-            : undefined
-        return yield* updateMonitorUseCase({
-          id: current.id,
-          ...(body.name !== undefined ? { name: body.name } : {}),
-          ...(body.description !== undefined ? { description: body.description } : {}),
-          ...(target !== undefined ? { target } : {}),
-          ...(rule !== undefined ? { rule } : {}),
-        })
-      }).pipe(
-        withPostgres(
-          Layer.mergeAll(
-            ProjectRepositoryLive,
-            MonitorRepositoryLive,
-            SavedSearchRepositoryLive,
-            IncidentRepositoryLive,
-            OutboxEventWriterLive,
-          ),
-          c.var.postgresClient,
-          organizationId,
+            })()
+          : undefined
+      const monitor = yield* updateMonitorUseCase({
+        id: current.id,
+        ...(body.name !== undefined ? { name: body.name } : {}),
+        ...(body.description !== undefined ? { description: body.description } : {}),
+        ...(target !== undefined ? { target } : {}),
+        ...(rule !== undefined ? { rule } : {}),
+      })
+      return { status: 200, body: toMonitorResponse(monitor) } as const
+    }).pipe(
+      withPostgres(
+        Layer.mergeAll(
+          ProjectRepositoryLive,
+          MonitorRepositoryLive,
+          SavedSearchRepositoryLive,
+          IncidentRepositoryLive,
+          OutboxEventWriterLive,
         ),
-        withTracing,
+        ctx.postgresClient,
+        ctx.organization.id,
       ),
-    )
-
-    return c.json(toMonitorResponse(monitor), 200)
-  },
+      withTracing,
+    ),
 })
 
 const deleteMonitor = monitorEndpoint({
@@ -491,28 +464,22 @@ const deleteMonitor = monitorEndpoint({
   }),
   access: "destructive",
   rateLimitTier: "medium",
-  handler: async (c) => {
-    const { projectSlug, monitorSlug } = c.req.valid("param")
-    const organizationId = c.var.organization.id
-
-    await Effect.runPromise(
-      Effect.gen(function* () {
-        const projectRepo = yield* ProjectRepository
-        const project = yield* projectRepo.findBySlug(projectSlug)
-        const current = yield* getMonitorBySlugUseCase({ projectId: project.id, slug: monitorSlug })
-        yield* deleteMonitorUseCase({ id: current.id })
-      }).pipe(
-        withPostgres(
-          Layer.mergeAll(ProjectRepositoryLive, MonitorRepositoryLive, IncidentRepositoryLive, OutboxEventWriterLive),
-          c.var.postgresClient,
-          organizationId,
-        ),
-        withTracing,
+  execute: (input, ctx) =>
+    Effect.gen(function* () {
+      const { projectSlug, monitorSlug } = input.params
+      const projectRepo = yield* ProjectRepository
+      const project = yield* projectRepo.findBySlug(projectSlug)
+      const current = yield* getMonitorBySlugUseCase({ projectId: project.id, slug: monitorSlug })
+      yield* deleteMonitorUseCase({ id: current.id })
+      return { status: 204 } as const
+    }).pipe(
+      withPostgres(
+        Layer.mergeAll(ProjectRepositoryLive, MonitorRepositoryLive, IncidentRepositoryLive, OutboxEventWriterLive),
+        ctx.postgresClient,
+        ctx.organization.id,
       ),
-    )
-
-    return c.body(null, 204)
-  },
+      withTracing,
+    ),
 })
 
 const listMonitorIncidents = monitorEndpoint({
@@ -528,7 +495,7 @@ const listMonitorIncidents = monitorEndpoint({
       "Returns the incidents opened by a monitor, most recent first. Each item's `notified` flag shows whether it triggered a notification.",
     security: PROTECTED_SECURITY,
     request: { params: MonitorSlugParamsSchema, query: ListMonitorIncidentsQuerySchema },
-    responses: openApiResponses({
+    responses: typedResponses({
       status: 200,
       schema: PaginatedMonitorIncidentsSchema,
       description: "Page of incidents",
@@ -536,52 +503,47 @@ const listMonitorIncidents = monitorEndpoint({
   }),
   access: "read-only",
   rateLimitTier: "low",
-  handler: async (c) => {
-    const { projectSlug, monitorSlug } = c.req.valid("param")
-    const query = c.req.valid("query")
-    const organizationId = c.var.organization.id
+  execute: (input, ctx) =>
+    Effect.gen(function* () {
+      const { projectSlug, monitorSlug } = input.params
+      const query = input.query
 
-    const result = await Effect.runPromise(
-      Effect.gen(function* () {
-        let cursor: { endedAt: Date | null; id: string } | undefined
-        if (query.cursor) {
-          const decoded = decodeMonitorIncidentCursor(query.cursor)
-          if (!decoded) return yield* new BadRequestError({ message: "Invalid `cursor` value." })
-          cursor = decoded
-        }
-        const projectRepo = yield* ProjectRepository
-        const project = yield* projectRepo.findBySlug(projectSlug)
-        const monitor = yield* getMonitorBySlugUseCase({ projectId: project.id, slug: monitorSlug })
-        return yield* getMonitorIncidentsUseCase({
-          organizationId: OrganizationId(organizationId as string),
-          monitorId: monitor.id,
-          limit: query.limit,
-          ...(cursor ? { cursor: { endedAt: cursor.endedAt, id: AlertIncidentId(cursor.id) } } : {}),
-        })
-      }).pipe(
-        withPostgres(
-          Layer.mergeAll(
-            ProjectRepositoryLive,
-            MonitorRepositoryLive,
-            IncidentRepositoryLive,
-            NotificationRepositoryLive,
-          ),
-          c.var.postgresClient,
-          organizationId,
+      let cursor: { endedAt: Date | null; id: string } | undefined
+      if (query.cursor) {
+        const decoded = decodeMonitorIncidentCursor(query.cursor)
+        if (!decoded) return yield* new BadRequestError({ message: "Invalid `cursor` value." })
+        cursor = decoded
+      }
+      const projectRepo = yield* ProjectRepository
+      const project = yield* projectRepo.findBySlug(projectSlug)
+      const monitor = yield* getMonitorBySlugUseCase({ projectId: project.id, slug: monitorSlug })
+      const result = yield* getMonitorIncidentsUseCase({
+        organizationId: OrganizationId(ctx.organization.id as string),
+        monitorId: monitor.id,
+        limit: query.limit,
+        ...(cursor ? { cursor: { endedAt: cursor.endedAt, id: AlertIncidentId(cursor.id) } } : {}),
+      })
+      return {
+        status: 200,
+        body: {
+          items: result.items.map(toMonitorIncidentResponse),
+          nextCursor: result.nextCursor ? encodeMonitorIncidentCursor(result.nextCursor) : null,
+          hasMore: result.hasMore,
+        },
+      } as const
+    }).pipe(
+      withPostgres(
+        Layer.mergeAll(
+          ProjectRepositoryLive,
+          MonitorRepositoryLive,
+          IncidentRepositoryLive,
+          NotificationRepositoryLive,
         ),
-        withTracing,
+        ctx.postgresClient,
+        ctx.organization.id,
       ),
-    )
-
-    return c.json(
-      {
-        items: result.items.map(toMonitorIncidentResponse),
-        nextCursor: result.nextCursor ? encodeMonitorIncidentCursor(result.nextCursor) : null,
-        hasMore: result.hasMore,
-      },
-      200,
-    )
-  },
+      withTracing,
+    ),
 })
 
 const muteMonitor = monitorEndpoint({
@@ -596,32 +558,26 @@ const muteMonitor = monitorEndpoint({
     description: "Mutes a monitor so its incidents stop sending notifications. Allowed on all monitors.",
     security: PROTECTED_SECURITY,
     request: { params: MonitorSlugParamsSchema },
-    responses: openApiResponses({ status: 200, schema: MonitorSchema, description: "Muted monitor" }),
+    responses: typedResponses({ status: 200, schema: MonitorSchema, description: "Muted monitor" }),
   }),
   access: "write",
   rateLimitTier: "medium",
-  handler: async (c) => {
-    const { projectSlug, monitorSlug } = c.req.valid("param")
-    const organizationId = c.var.organization.id
-
-    const monitor = await Effect.runPromise(
-      Effect.gen(function* () {
-        const projectRepo = yield* ProjectRepository
-        const project = yield* projectRepo.findBySlug(projectSlug)
-        const current = yield* getMonitorBySlugUseCase({ projectId: project.id, slug: monitorSlug })
-        return yield* muteMonitorUseCase({ id: current.id })
-      }).pipe(
-        withPostgres(
-          Layer.mergeAll(ProjectRepositoryLive, MonitorRepositoryLive),
-          c.var.postgresClient,
-          organizationId,
-        ),
-        withTracing,
+  execute: (input, ctx) =>
+    Effect.gen(function* () {
+      const { projectSlug, monitorSlug } = input.params
+      const projectRepo = yield* ProjectRepository
+      const project = yield* projectRepo.findBySlug(projectSlug)
+      const current = yield* getMonitorBySlugUseCase({ projectId: project.id, slug: monitorSlug })
+      const monitor = yield* muteMonitorUseCase({ id: current.id })
+      return { status: 200, body: toMonitorResponse(monitor) } as const
+    }).pipe(
+      withPostgres(
+        Layer.mergeAll(ProjectRepositoryLive, MonitorRepositoryLive),
+        ctx.postgresClient,
+        ctx.organization.id,
       ),
-    )
-
-    return c.json(toMonitorResponse(monitor), 200)
-  },
+      withTracing,
+    ),
 })
 
 const unmuteMonitor = monitorEndpoint({
@@ -636,32 +592,26 @@ const unmuteMonitor = monitorEndpoint({
     description: "Lifts a monitor's mute so its incidents notify again.",
     security: PROTECTED_SECURITY,
     request: { params: MonitorSlugParamsSchema },
-    responses: openApiResponses({ status: 200, schema: MonitorSchema, description: "Unmuted monitor" }),
+    responses: typedResponses({ status: 200, schema: MonitorSchema, description: "Unmuted monitor" }),
   }),
   access: "write",
   rateLimitTier: "medium",
-  handler: async (c) => {
-    const { projectSlug, monitorSlug } = c.req.valid("param")
-    const organizationId = c.var.organization.id
-
-    const monitor = await Effect.runPromise(
-      Effect.gen(function* () {
-        const projectRepo = yield* ProjectRepository
-        const project = yield* projectRepo.findBySlug(projectSlug)
-        const current = yield* getMonitorBySlugUseCase({ projectId: project.id, slug: monitorSlug })
-        return yield* unmuteMonitorUseCase({ id: current.id })
-      }).pipe(
-        withPostgres(
-          Layer.mergeAll(ProjectRepositoryLive, MonitorRepositoryLive),
-          c.var.postgresClient,
-          organizationId,
-        ),
-        withTracing,
+  execute: (input, ctx) =>
+    Effect.gen(function* () {
+      const { projectSlug, monitorSlug } = input.params
+      const projectRepo = yield* ProjectRepository
+      const project = yield* projectRepo.findBySlug(projectSlug)
+      const current = yield* getMonitorBySlugUseCase({ projectId: project.id, slug: monitorSlug })
+      const monitor = yield* unmuteMonitorUseCase({ id: current.id })
+      return { status: 200, body: toMonitorResponse(monitor) } as const
+    }).pipe(
+      withPostgres(
+        Layer.mergeAll(ProjectRepositoryLive, MonitorRepositoryLive),
+        ctx.postgresClient,
+        ctx.organization.id,
       ),
-    )
-
-    return c.json(toMonitorResponse(monitor), 200)
-  },
+      withTracing,
+    ),
 })
 
 export const monitorsModule: OperationModule = {

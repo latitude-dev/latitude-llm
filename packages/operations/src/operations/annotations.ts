@@ -18,10 +18,10 @@ import type { OperationModule } from "../core/mount.ts"
 import { AnnotationAnchorSchema, AnnotationSchema, toAnnotationResponse } from "../openapi/entities/annotation.ts"
 import {
   jsonBody,
-  openApiResponses,
   PROTECTED_SECURITY,
   ProjectParamsSchema,
   TraceRefSchema,
+  typedResponses,
 } from "../openapi/schemas.ts"
 import type { OrganizationScopedEnv } from "../types.ts"
 
@@ -67,46 +67,41 @@ const createAnnotation = annotationEndpoint({
       params: ProjectParamsSchema,
       body: jsonBody(RequestSchema),
     },
-    responses: openApiResponses({ status: 201, schema: AnnotationSchema, description: "Annotation created" }),
+    responses: typedResponses({ status: 201, schema: AnnotationSchema, description: "Annotation created" }),
   }),
   access: "write",
   rateLimitTier: "low",
-  handler: async (c) => {
-    const body = c.req.valid("json")
-    const { projectSlug } = c.req.valid("param")
-    const organizationId = c.var.organization.id
-    const annotatorId = c.var.auth?.method === "oauth" ? UserId(c.var.auth.userId as string) : null
+  execute: (input, ctx) =>
+    Effect.gen(function* () {
+      const body = input.body
+      const { projectSlug } = input.params
+      const annotatorId = ctx.auth.method === "oauth" ? UserId(ctx.auth.userId as string) : null
 
-    const score = await Effect.runPromise(
-      Effect.gen(function* () {
-        const projectRepository = yield* ProjectRepository
-        const project = yield* projectRepository.findBySlug(projectSlug)
+      const projectRepository = yield* ProjectRepository
+      const project = yield* projectRepository.findBySlug(projectSlug)
 
-        return yield* submitApiAnnotationUseCase({
-          ...body,
-          projectId: project.id,
-          organizationId,
-          annotatorId,
-        })
-      }).pipe(
-        withPostgres(
-          Layer.mergeAll(ProjectRepositoryLive, ScoreRepositoryLive, OutboxEventWriterLive),
-          c.var.postgresClient,
-          organizationId,
-        ),
-        withClickHouse(
-          Layer.mergeAll(ScoreAnalyticsRepositoryLive, TraceRepositoryLive, SpanRepositoryLive),
-          c.var.clickhouse,
-          organizationId,
-        ),
-        withAi(AIEmbedLive, c.var.redis),
-        Effect.provide(QueuePublisherLive(c.var.queuePublisher)),
-        withTracing,
+      const score = yield* submitApiAnnotationUseCase({
+        ...body,
+        projectId: project.id,
+        organizationId: ctx.organization.id,
+        annotatorId,
+      })
+      return { status: 201, body: toAnnotationResponse(score) } as const
+    }).pipe(
+      withPostgres(
+        Layer.mergeAll(ProjectRepositoryLive, ScoreRepositoryLive, OutboxEventWriterLive),
+        ctx.postgresClient,
+        ctx.organization.id,
       ),
-    )
-
-    return c.json(toAnnotationResponse(score), 201)
-  },
+      withClickHouse(
+        Layer.mergeAll(ScoreAnalyticsRepositoryLive, TraceRepositoryLive, SpanRepositoryLive),
+        ctx.clickhouse,
+        ctx.organization.id,
+      ),
+      withAi(AIEmbedLive, ctx.redis),
+      Effect.provide(QueuePublisherLive(ctx.queuePublisher)),
+      withTracing,
+    ),
 })
 
 export const annotationsModule: OperationModule = {

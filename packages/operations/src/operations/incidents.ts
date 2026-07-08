@@ -18,7 +18,7 @@ import {
   IncidentSchema,
   toIncidentResponse,
 } from "../openapi/entities/incident.ts"
-import { openApiResponses, PROTECTED_SECURITY, ProjectParamsSchema } from "../openapi/schemas.ts"
+import { PROTECTED_SECURITY, ProjectParamsSchema, typedResponses } from "../openapi/schemas.ts"
 import type { OrganizationScopedEnv } from "../types.ts"
 
 const DEFAULT_RANGE_DAYS = 7
@@ -80,7 +80,7 @@ const listIncidents = incidentEndpoint({
       "Returns incidents in the project, ordered from oldest to newest. The time window defaults to the trailing 7 days.",
     security: PROTECTED_SECURITY,
     request: { params: ProjectParamsSchema, query: ListIncidentsQuerySchema },
-    responses: openApiResponses({
+    responses: typedResponses({
       status: 200,
       schema: ListIncidentsResponseSchema,
       description: "Matching incidents",
@@ -88,40 +88,35 @@ const listIncidents = incidentEndpoint({
   }),
   access: "read-only",
   rateLimitTier: "low",
-  handler: async (c) => {
-    const { projectSlug } = c.req.valid("param")
-    const query = c.req.valid("query")
-    const organizationId = c.var.organization.id
-    const { from, to } = resolveIncidentsRange(query.fromIso, query.toIso, new Date())
-    const sourceTypes = query.source_type ? [query.source_type] : undefined
+  execute: (input, ctx) =>
+    Effect.gen(function* () {
+      const { projectSlug } = input.params
+      const query = input.query
+      const { from, to } = resolveIncidentsRange(query.fromIso, query.toIso, new Date())
+      const sourceTypes = query.source_type ? [query.source_type] : undefined
 
-    const incidents = await Effect.runPromise(
-      Effect.gen(function* () {
-        const projectRepo = yield* ProjectRepository
-        const project = yield* projectRepo.findBySlug(projectSlug)
+      const projectRepo = yield* ProjectRepository
+      const project = yield* projectRepo.findBySlug(projectSlug)
 
-        const incidentRepo = yield* IncidentRepository
-        return yield* incidentRepo.listByProjectId({
-          organizationId: OrganizationId(organizationId as string),
-          projectId: ProjectId(project.id as string),
-          from,
-          to,
-          ...(sourceTypes && sourceTypes.length > 0 ? { sourceTypes } : {}),
-          ...(query.source_id ? { sourceId: query.source_id } : {}),
-          ...(query.severities && query.severities.length > 0 ? { severities: query.severities } : {}),
-        })
-      }).pipe(
-        withPostgres(
-          Layer.mergeAll(ProjectRepositoryLive, IncidentRepositoryLive),
-          c.var.postgresClient,
-          organizationId,
-        ),
-        withTracing,
+      const incidentRepo = yield* IncidentRepository
+      const incidents = yield* incidentRepo.listByProjectId({
+        organizationId: OrganizationId(ctx.organization.id as string),
+        projectId: ProjectId(project.id as string),
+        from,
+        to,
+        ...(sourceTypes && sourceTypes.length > 0 ? { sourceTypes } : {}),
+        ...(query.source_id ? { sourceId: query.source_id } : {}),
+        ...(query.severities && query.severities.length > 0 ? { severities: query.severities } : {}),
+      })
+      return { status: 200, body: { items: incidents.map(toIncidentResponse) } } as const
+    }).pipe(
+      withPostgres(
+        Layer.mergeAll(ProjectRepositoryLive, IncidentRepositoryLive),
+        ctx.postgresClient,
+        ctx.organization.id,
       ),
-    )
-
-    return c.json({ items: incidents.map(toIncidentResponse) }, 200)
-  },
+      withTracing,
+    ),
 })
 
 const IncidentParamsSchema = ProjectParamsSchema.extend({
@@ -141,46 +136,41 @@ const resolveIncident = incidentEndpoint({
       "Resolves (closes) an ongoing incident. An already-closed incident is returned unchanged. If the incident's condition triggers again, a new incident will be opened.",
     security: PROTECTED_SECURITY,
     request: { params: IncidentParamsSchema },
-    responses: openApiResponses({ status: 200, schema: IncidentSchema, description: "Resolved incident" }),
+    responses: typedResponses({ status: 200, schema: IncidentSchema, description: "Resolved incident" }),
   }),
   access: "write",
   rateLimitTier: "medium",
-  handler: async (c) => {
-    const { projectSlug, incidentId } = c.req.valid("param")
-    const organizationId = c.var.organization.id
+  execute: (input, ctx) =>
+    Effect.gen(function* () {
+      const { projectSlug, incidentId } = input.params
 
-    const incident = await Effect.runPromise(
-      Effect.gen(function* () {
-        const projectRepo = yield* ProjectRepository
-        const project = yield* projectRepo.findBySlug(projectSlug)
+      const projectRepo = yield* ProjectRepository
+      const project = yield* projectRepo.findBySlug(projectSlug)
 
-        // Re-tag lookup misses as `Incident` and 404 incidents outside the
-        // project in the path, so callers can't probe other projects' ids.
-        const incidentRepo = yield* IncidentRepository
-        const current = yield* incidentRepo
-          .findById(AlertIncidentId(incidentId))
-          .pipe(
-            Effect.catchTag("NotFoundError", () =>
-              Effect.fail(new NotFoundError({ entity: "Incident", id: incidentId })),
-            ),
-          )
-        if ((current.projectId as string) !== (project.id as string)) {
-          return yield* new NotFoundError({ entity: "Incident", id: incidentId })
-        }
+      // Re-tag lookup misses as `Incident` and 404 incidents outside the
+      // project in the path, so callers can't probe other projects' ids.
+      const incidentRepo = yield* IncidentRepository
+      const current = yield* incidentRepo
+        .findById(AlertIncidentId(incidentId))
+        .pipe(
+          Effect.catchTag("NotFoundError", () =>
+            Effect.fail(new NotFoundError({ entity: "Incident", id: incidentId })),
+          ),
+        )
+      if ((current.projectId as string) !== (project.id as string)) {
+        return yield* new NotFoundError({ entity: "Incident", id: incidentId })
+      }
 
-        return yield* resolveIncidentUseCase({ id: current.id, endedAt: new Date() })
-      }).pipe(
-        withPostgres(
-          Layer.mergeAll(ProjectRepositoryLive, IncidentRepositoryLive, OutboxEventWriterLive),
-          c.var.postgresClient,
-          organizationId,
-        ),
-        withTracing,
+      const incident = yield* resolveIncidentUseCase({ id: current.id, endedAt: new Date() })
+      return { status: 200, body: toIncidentResponse(incident) } as const
+    }).pipe(
+      withPostgres(
+        Layer.mergeAll(ProjectRepositoryLive, IncidentRepositoryLive, OutboxEventWriterLive),
+        ctx.postgresClient,
+        ctx.organization.id,
       ),
-    )
-
-    return c.json(toIncidentResponse(incident), 200)
-  },
+      withTracing,
+    ),
 })
 
 export const incidentsModule: OperationModule = {

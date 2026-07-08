@@ -125,7 +125,7 @@ export const toSignalResponse = (item: SignalListItem, organizationId: string) =
   name: item.name,
   description: item.description,
   source: item.source,
-  states: [...item.states],
+  states: [...item.states] as (typeof SIGNAL_STATES)[number][],
   mutedAt: item.mutedAt ? item.mutedAt.toISOString() : null,
   createdAt: item.createdAt.toISOString(),
   updatedAt: item.updatedAt.toISOString(),

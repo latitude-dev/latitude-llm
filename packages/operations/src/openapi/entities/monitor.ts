@@ -158,8 +158,10 @@ export const toMonitorResponse = (monitor: Monitor) => ({
   name: monitor.name,
   description: monitor.description,
   system: monitor.system,
-  target: monitor.target,
-  rule: monitor.rule,
+  // Domain target/rule are structurally wider (readonly filter set, percentile metric); the
+  // published schema is a subset. Pass through as-is, matching the pre-migration handler.
+  target: monitor.target as z.infer<typeof MonitorTargetSchema>,
+  rule: monitor.rule as z.infer<typeof MonitorRuleSchema>,
   mutedAt: monitor.mutedAt ? monitor.mutedAt.toISOString() : null,
   deletedAt: monitor.deletedAt ? monitor.deletedAt.toISOString() : null,
   createdAt: monitor.createdAt.toISOString(),

@@ -12,7 +12,7 @@ import { withTracing } from "@repo/observability"
 import { Effect } from "effect"
 import { defineOperation } from "../core/define-operation.ts"
 import type { OperationModule } from "../core/mount.ts"
-import { jsonResponse, openApiNoContentResponses, openApiResponses, PROTECTED_SECURITY } from "../openapi/schemas.ts"
+import { jsonResponse, openApiNoContentResponses, PROTECTED_SECURITY, typedResponses } from "../openapi/schemas.ts"
 import type { OrganizationScopedEnv } from "../types.ts"
 
 // OAuth keys are the `(client, user)` connections users grant to OAuth /
@@ -92,16 +92,12 @@ const listOAuthKeys = oauthKeyEndpoint({
   }),
   access: "read-only",
   rateLimitTier: "low",
-  handler: async (c) => {
-    const keys = await Effect.runPromise(
-      listOAuthKeysUseCase().pipe(
-        withPostgres(OAuthKeyRepositoryLive, c.var.postgresClient, c.var.organization.id),
-        withTracing,
-      ),
-    )
-    const visibleKeys = c.var.auth.method === "oauth" ? keys.filter((key) => key.userId === c.var.auth.userId) : keys
-    return c.json({ oauthKeys: visibleKeys.map(toResponse) }, 200)
-  },
+  execute: (_input, ctx) =>
+    Effect.gen(function* () {
+      const keys = yield* listOAuthKeysUseCase()
+      const visibleKeys = ctx.auth.method === "oauth" ? keys.filter((key) => key.userId === ctx.auth.userId) : keys
+      return { status: 200, body: { oauthKeys: visibleKeys.map(toResponse) } } as const
+    }).pipe(withPostgres(OAuthKeyRepositoryLive, ctx.postgresClient, ctx.organization.id), withTracing),
 })
 
 const getOAuthKey = oauthKeyEndpoint({
@@ -116,29 +112,25 @@ const getOAuthKey = oauthKeyEndpoint({
     description: "Returns a single OAuth key (like MCP clients) by id.",
     security: PROTECTED_SECURITY,
     request: { params: OAuthKeyParamsSchema },
-    responses: openApiResponses({ status: 200, schema: ResponseSchema, description: "OAuth key" }),
+    responses: typedResponses({ status: 200, schema: ResponseSchema, description: "OAuth key" }),
   }),
   access: "read-only",
   rateLimitTier: "low",
-  handler: async (c) => {
-    const { oauthKeyId } = c.req.valid("param")
-    const parsed = parseCompositeId(oauthKeyId)
-    if (!parsed) {
-      throw new OAuthKeyNotFoundError({ clientId: oauthKeyId, userId: "" })
-    }
+  execute: (input, ctx) =>
+    Effect.gen(function* () {
+      const { oauthKeyId } = input.params
+      const parsed = parseCompositeId(oauthKeyId)
+      if (!parsed) {
+        return yield* new OAuthKeyNotFoundError({ clientId: oauthKeyId, userId: "" })
+      }
 
-    if (c.var.auth.method === "oauth" && parsed.userId !== c.var.auth.userId) {
-      throw new OAuthKeyNotFoundError(parsed)
-    }
+      if (ctx.auth.method === "oauth" && parsed.userId !== ctx.auth.userId) {
+        return yield* new OAuthKeyNotFoundError(parsed)
+      }
 
-    const key = await Effect.runPromise(
-      getOAuthKeyUseCase(parsed).pipe(
-        withPostgres(OAuthKeyRepositoryLive, c.var.postgresClient, c.var.organization.id),
-        withTracing,
-      ),
-    )
-    return c.json(toResponse(key), 200)
-  },
+      const key = yield* getOAuthKeyUseCase(parsed)
+      return { status: 200, body: toResponse(key) } as const
+    }).pipe(withPostgres(OAuthKeyRepositoryLive, ctx.postgresClient, ctx.organization.id), withTracing),
 })
 
 const revokeOAuthKey = oauthKeyEndpoint({
@@ -157,25 +149,20 @@ const revokeOAuthKey = oauthKeyEndpoint({
   }),
   access: "destructive",
   rateLimitTier: "low",
-  handler: async (c) => {
-    const { oauthKeyId } = c.req.valid("param")
-    const parsed = parseCompositeId(oauthKeyId)
-    if (!parsed) {
-      throw new OAuthKeyNotFoundError({ clientId: oauthKeyId, userId: "" })
-    }
+  execute: (input, ctx) =>
+    Effect.gen(function* () {
+      const { oauthKeyId } = input.params
+      const parsed = parseCompositeId(oauthKeyId)
+      if (!parsed) {
+        return yield* new OAuthKeyNotFoundError({ clientId: oauthKeyId, userId: "" })
+      }
 
-    await Effect.runPromise(
-      revokeOAuthKeyUseCase({
+      yield* revokeOAuthKeyUseCase({
         ...parsed,
-        actor: c.var.auth.method === "oauth" ? { kind: "user", userId: c.var.auth.userId } : { kind: "organization" },
-      }).pipe(
-        Effect.provide(OAuthTokenCacheInvalidatorLive(c.var.redis)),
-        withPostgres(OAuthKeyRepositoryLive, c.var.postgresClient, c.var.organization.id),
-        withTracing,
-      ),
-    )
-    return c.body(null, 204)
-  },
+        actor: ctx.auth.method === "oauth" ? { kind: "user", userId: ctx.auth.userId } : { kind: "organization" },
+      }).pipe(Effect.provide(OAuthTokenCacheInvalidatorLive(ctx.redis)))
+      return { status: 204 } as const
+    }).pipe(withPostgres(OAuthKeyRepositoryLive, ctx.postgresClient, ctx.organization.id), withTracing),
 })
 
 export const oauthKeysModule: OperationModule = {
