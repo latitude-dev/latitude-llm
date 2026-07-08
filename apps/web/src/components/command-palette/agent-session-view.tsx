@@ -72,7 +72,7 @@ export function AgentSessionView({
           className="h-full flex-1 bg-transparent text-sm outline-none placeholder:text-muted-foreground"
           disabled={chat.running}
           value={chat.running ? (lastQuery ?? "") : input}
-          placeholder={chat.running ? "" : lastQuery ? `Ask a follow-up (last: "${lastQuery}")` : "Ask anything…"}
+          placeholder={chat.running ? "" : (lastQuery ?? "Ask anything…")}
           onChange={(event) => setInput(event.target.value)}
           onKeyDown={(event) => {
             if (event.key === "Enter" && !event.shiftKey) {

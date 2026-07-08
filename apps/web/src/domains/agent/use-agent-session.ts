@@ -138,7 +138,7 @@ export function useAgentSession(options: {
       if (trimmed.length === 0) return
       setError(null)
       setRunning(true)
-      setStatus("Starting up…")
+      setStatus("Thinking")
       setMessages((current) => [...current, { id: `local-${current.length}`, role: "user", text: trimmed }])
       void startAgentTurn({
         data: {
