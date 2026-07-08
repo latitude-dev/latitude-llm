@@ -34,6 +34,15 @@ class SignalDetail(UniversalBaseModel):
     URL-safe slug derived from `name`. Unique within the project.
     """
 
+    visual_id: typing_extensions.Annotated[
+        str,
+        FieldMetadata(alias="visualId"),
+        pydantic.Field(
+            alias="visualId",
+            description="Stable human-readable visual id in `LAT-001` form for copy/reference in PRs and notifications.",
+        ),
+    ]
+
     name: str = pydantic.Field()
     """
     Human-readable name.

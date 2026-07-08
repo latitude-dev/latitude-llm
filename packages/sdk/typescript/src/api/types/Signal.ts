@@ -11,6 +11,8 @@ export interface Signal {
     projectId: string;
     /** URL-safe slug derived from `name`. Unique within the project. */
     slug: string;
+    /** Stable human-readable visual id in `LAT-001` form for copy/reference in PRs and notifications. */
+    visualId: string;
     /** Human-readable name. */
     name: string;
     /** Description of the signal. */
