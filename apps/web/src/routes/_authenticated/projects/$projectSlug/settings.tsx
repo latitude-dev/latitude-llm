@@ -1,10 +1,19 @@
+import { isShowcaseProjectSlug } from "@domain/shared"
 import { Container, cn } from "@repo/ui"
-import { createFileRoute, Outlet } from "@tanstack/react-router"
+import { createFileRoute, Outlet, redirect } from "@tanstack/react-router"
 import { useHasMatchStaticData } from "../../../../lib/hooks/use-router-selectors.ts"
 import { BreadcrumbText } from "../../-components/breadcrumb-ui.tsx"
 import { SettingsSubNav } from "./settings/-components/settings-sub-nav.tsx"
 
 export const Route = createFileRoute("/_authenticated/projects/$projectSlug/settings")({
+  beforeLoad: ({ params }) => {
+    if (isShowcaseProjectSlug(params.projectSlug)) {
+      throw redirect({
+        to: "/projects/$projectSlug",
+        params: { projectSlug: params.projectSlug },
+      })
+    }
+  },
   staticData: {
     breadcrumb: () => <BreadcrumbText variant="current">Settings</BreadcrumbText>,
     collapseSidebar: true,

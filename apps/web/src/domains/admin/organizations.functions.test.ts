@@ -5,6 +5,7 @@ import {
   adminGetOrganizationInputSchema,
   adminListOrganizationsByUsageInputSchema,
   adminResetSystemMonitorsInputSchema,
+  adminSetOrganizationShowcaseInputSchema,
 } from "./organizations.functions.ts"
 
 describe("adminGetOrganizationInputSchema", () => {
@@ -111,5 +112,24 @@ describe("adminResetSystemMonitorsInputSchema", () => {
 
   it("rejects missing organizationId", () => {
     expect(adminResetSystemMonitorsInputSchema.safeParse({}).success).toBe(false)
+  })
+})
+
+describe("adminSetOrganizationShowcaseInputSchema", () => {
+  it("accepts a valid organizationId + enabled", () => {
+    expect(
+      adminSetOrganizationShowcaseInputSchema.safeParse({ organizationId: "org-123", enabled: true }).success,
+    ).toBe(true)
+    expect(
+      adminSetOrganizationShowcaseInputSchema.safeParse({ organizationId: "org-123", enabled: false }).success,
+    ).toBe(true)
+  })
+
+  it("rejects an empty organizationId", () => {
+    expect(adminSetOrganizationShowcaseInputSchema.safeParse({ organizationId: "", enabled: true }).success).toBe(false)
+  })
+
+  it("rejects a missing enabled flag", () => {
+    expect(adminSetOrganizationShowcaseInputSchema.safeParse({ organizationId: "org-123" }).success).toBe(false)
   })
 })

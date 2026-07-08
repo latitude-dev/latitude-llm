@@ -39,6 +39,7 @@ const mkOrg = (overrides: Partial<AdminOrganizationDetails> = {}): AdminOrganiza
   name: "Acme",
   slug: "acme",
   stripeCustomerId: null,
+  wantsShowcase: false,
   members: [member("user-1"), member("user-2"), member("user-3")],
   projects: [],
   sandboxes: [],
@@ -90,6 +91,7 @@ const buildLayer = (
     findById: () => Effect.succeed(org),
     findFirstApiKeyId: () => Effect.succeed(apiKeyId),
     findManySummariesByIds: () => Effect.succeed(new Map()),
+    setWantsShowcase: () => Effect.void,
   })
 
   // The use-case only calls `save` + `countBySlug`; cast through the full

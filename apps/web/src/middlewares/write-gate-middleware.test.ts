@@ -31,6 +31,8 @@ describe("isBlockedWrite", () => {
       "listLinearTeamsForApiKey",
       "listCursorRepositoriesForApiKey",
       "rememberLastProjectSlug",
+      "dismissShowcase",
+      "reportClientError",
     ]) {
       expect(isBlockedWrite({ scope: SHOWCASE, method: "POST", serverFnName })).toBe(false)
     }

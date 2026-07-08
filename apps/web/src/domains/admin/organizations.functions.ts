@@ -12,6 +12,7 @@ import {
   listOrganizationsByUsageUseCase,
   ORGANIZATION_USAGE_MAX_LIMIT,
   resetSystemMonitorsUseCase,
+  setOrganizationShowcaseUseCase,
   upsertBillingOverrideUseCase,
 } from "@domain/admin"
 import { WorkflowStarter } from "@domain/queue"
@@ -83,6 +84,7 @@ interface AdminOrganizationDetailsDto {
   name: string
   slug: string
   stripeCustomerId: string | null
+  wantsShowcase: boolean
   members: AdminOrganizationMemberDto[]
   projects: AdminOrganizationProjectDto[]
   sandboxes: AdminOrganizationSandboxDto[]
@@ -119,6 +121,7 @@ const toDto = (details: AdminOrganizationDetails): AdminOrganizationDetailsDto =
   name: details.name,
   slug: details.slug,
   stripeCustomerId: details.stripeCustomerId,
+  wantsShowcase: details.wantsShowcase,
   members: details.members.map((m) => ({
     membershipId: m.membershipId,
     role: m.role,
@@ -441,6 +444,34 @@ export const adminCreateDemoProject = createServerFn({ method: "POST" })
       projectId: result.projectId,
       projectSlug: result.projectSlug,
     }
+  })
+
+export const adminSetOrganizationShowcaseInputSchema = z.object({
+  organizationId: z.string().min(1).max(256),
+  enabled: z.boolean(),
+})
+
+/**
+ * Toggle an org's `wantsShowcase` flag from the backoffice — the staff
+ * counterpart to the user-facing "Remove demo" dismiss. Enabling re-surfaces
+ * the shared read-only Showcase for an org that dismissed it (or one created
+ * before the feature). Same three-guard discipline as the rest of the
+ * backoffice; the write merges into `settings` under the admin (RLS-bypass)
+ * client at the `"system"` scope.
+ */
+export const adminSetOrganizationShowcase = createServerFn({ method: "POST" })
+  .middleware([adminMiddleware])
+  .inputValidator(adminSetOrganizationShowcaseInputSchema)
+  .handler(async ({ data, context }): Promise<void> => {
+    const client = getAdminPostgresClient()
+
+    await Effect.runPromise(
+      setOrganizationShowcaseUseCase({
+        organizationId: OrganizationId(data.organizationId),
+        enabled: data.enabled,
+        actorAdminUserId: UserId(context.adminUserId),
+      }).pipe(withPostgres(AdminOrganizationRepositoryLive, client), withTracing),
+    )
   })
 
 interface AdminResetSystemMonitorsResultDto {

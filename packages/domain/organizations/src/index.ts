@@ -85,6 +85,7 @@ export {
   type CreateSampleProjectResult,
   createSampleProjectUseCase,
 } from "./use-cases/create-sample-project.ts"
+export { dismissShowcaseUseCase } from "./use-cases/dismiss-showcase.ts"
 export {
   type GenerateOrganizationClaimError,
   type GenerateOrganizationClaimInput,
