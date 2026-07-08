@@ -24,7 +24,7 @@ Chargeable actions:
 
 - `trace = 1 credit`
 - `semantic-query = 15 credits`
-- `llm-call = 225 credits`
+- `llm-call = 30 credits`
 
 AI work is billed per primitive produced, not per feature-level scan: every hosted LLM
 generation is one `llm-call` and every query-time semantic operation (query embedding
@@ -42,11 +42,14 @@ Provider list prices used (per million tokens, Bedrock at first-party parity, ch
 2026-07): Claude Sonnet 4.6 `$3 in / $15 out`, Claude Haiku 4.5 `$1 / $5`, MiniMax M2.5
 `$0.30 / $1.20`, voyage-4-large embeddings `$0.12`, rerank-2.5 `~$0.05`.
 
-- `llm-call`: worst case is a Claude Sonnet 4.6 call at high reasoning (GEPA proposer,
-  signal generation) with an envelope of ~50k input + ~10k output tokens ≈ `$0.30`.
-  `225 credits = $0.45` at the overage rate → 1.5x worst case. Cheap-model calls
-  (MiniMax judges, Haiku classifiers, worst case ≈ `$0.04`) carry a large margin by
-  construction of the flat price.
+- `llm-call`: the reference model is MiniMax M2.5, where most hosted AI work runs
+  (judges, annotators, extractors). Worst case is an input-heavy call reading a very
+  large session, ~100k input + ~4k output tokens ≈ `$0.04` (also covers Bedrock's
+  higher-quoted `$0.36/$1.44` price variant). `30 credits = $0.06` at the overage rate
+  → 1.5x worst case. The rare Sonnet-tier calls (GEPA proposer, signal generation,
+  worst case ≈ `$0.30`) are knowingly billed below cost per call under this flat
+  price — revisit with a heavy-tier multiplier or a model-default change if their
+  volume grows.
 - `semantic-query`: worst case is one voyage-4-large query embedding (32k-token context
   ceiling ≈ `$0.004`) plus a rerank pass (≈ `$0.01`) ≈ `$0.015`. `15 credits = $0.03` →
   2x worst case. Reranking and document-side embeddings ride on this charge (document

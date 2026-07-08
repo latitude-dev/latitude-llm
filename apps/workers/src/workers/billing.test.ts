@@ -243,8 +243,8 @@ describe("billing runtime integration", () => {
       .where(eq(billingUsagePeriods.organizationId, organizationId))
 
     expect(events).toHaveLength(2)
-    expect(events.map((event) => event.credits).sort((a, b) => a - b)).toEqual([15, 225])
-    expect(period?.consumedCredits).toBe(240)
+    expect(events.map((event) => event.credits).sort((a, b) => a - b)).toEqual([15, 30])
+    expect(period?.consumedCredits).toBe(45)
   })
 
   it("treats concurrent duplicate record deliveries as one billed action", async () => {

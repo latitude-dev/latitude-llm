@@ -23,7 +23,7 @@ export type ChargeableAction = (typeof CHARGEABLE_ACTIONS)[number]
 export const ACTION_CREDITS: Record<ChargeableAction, number> = {
   trace: 1,
   "semantic-query": 15,
-  "llm-call": 225,
+  "llm-call": 30,
 } as const
 
 export const FREE_PLAN_CONFIG = {
