@@ -6,6 +6,7 @@ export {
   type PostHogPersonIdentifyInput,
 } from "./client.ts"
 export { loadPostHogConfig, POSTHOG_DEFAULT_HOST, type PostHogConfig } from "./config.ts"
+export { reportOssDeploymentHeartbeat } from "./oss-telemetry/report.ts"
 export {
   mapEventToPostHog,
   mapOrganizationGroupIdentify,

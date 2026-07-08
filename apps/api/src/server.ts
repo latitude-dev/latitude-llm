@@ -2,6 +2,7 @@ import { serve } from "@hono/node-server"
 import { httpInstrumentationMiddleware as otel } from "@hono/otel"
 import { swaggerUI } from "@hono/swagger-ui"
 import { OpenAPIHono } from "@hono/zod-openapi"
+import { reportOssDeploymentHeartbeat } from "@platform/analytics-posthog"
 import { parseEnv } from "@platform/env"
 import { initializeObservability, shutdownObservability } from "@repo/observability"
 import { loadDevelopmentEnvironments } from "@repo/utils/env"
@@ -110,6 +111,10 @@ const startServer = async () => {
       logger.info(`api listening on http://localhost:${info.port}`)
       logger.info(`OpenAPI spec: http://localhost:${info.port}/openapi.json`)
       logger.info(`Swagger UI:   http://localhost:${info.port}/docs`)
+      void reportOssDeploymentHeartbeat({
+        serviceName: "api",
+        redis: getRedisClient(),
+      })
     },
   )
 }
