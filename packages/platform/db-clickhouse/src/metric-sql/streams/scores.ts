@@ -1,6 +1,6 @@
-import type { ScoreBreakdownField } from "@domain/shared"
+import type { ScoreBreakdownField, ValidationError } from "@domain/shared"
 import { Effect } from "effect"
-import { buildClickHouseWhere } from "../../filter-builder.ts"
+import { buildClickHouseWhere, runFilterBuild } from "../../filter-builder.ts"
 import { SCORE_FIELD_REGISTRY } from "../../registries/score-fields.ts"
 import { scoreAggregate, windowParams } from "../helpers.ts"
 import type { BreakdownExpr, InnerQuery, MetricSqlInput, StreamDescriptor } from "../types.ts"
@@ -32,9 +32,11 @@ const needsTraceJoin = (breakdown: string | undefined): boolean =>
  * (`signalId`/`source`) or none, the join is skipped entirely — those columns
  * are never referenced downstream, and filters are all score-native.
  */
-const buildInner = (input: MetricSqlInput): Effect.Effect<InnerQuery, never, never> =>
-  Effect.sync(() => {
-    const { clauses, params: filterParams } = buildClickHouseWhere(input.filterSet, SCORE_FIELD_REGISTRY)
+const buildInner = (input: MetricSqlInput): Effect.Effect<InnerQuery, ValidationError, never> =>
+  Effect.gen(function* () {
+    const { clauses, params: filterParams } = yield* runFilterBuild(() =>
+      buildClickHouseWhere(input.filterSet, SCORE_FIELD_REGISTRY),
+    )
     const extraWhere = clauses.length > 0 ? `AND ${clauses.join(" AND ")}` : ""
     const scoreWhere = `sc.organization_id = {organizationId:String}
               AND sc.project_id = {projectId:String}
