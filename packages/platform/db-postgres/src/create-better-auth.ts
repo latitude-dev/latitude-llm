@@ -57,10 +57,7 @@ export interface BetterAuthConfig {
     request?: Request,
   ) => Promise<void>
   readonly onUserCreated?: (user: { id: string; email: string; name?: string }) => Promise<void>
-  readonly onBeforeUserCreate?: (
-    user: { email: string },
-    request: Request | undefined,
-  ) => Promise<void>
+  readonly onBeforeUserCreate?: (user: { email: string }, request: Request | undefined) => Promise<void>
   readonly onMemberCreated?: (member: { organizationId: string; userId: string; role: string }) => Promise<void>
   readonly onSubscriptionChanged?: (subscription: {
     referenceId: string
