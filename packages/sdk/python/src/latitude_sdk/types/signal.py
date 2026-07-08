@@ -40,7 +40,6 @@ class Signal(UniversalBaseModel):
             description="Stable human-readable visual id in `LAT-001` form for copy/reference in PRs and notifications.",
         ),
     ]
-
     name: str = pydantic.Field()
     """
     Human-readable name.

@@ -99,21 +99,35 @@ const makeTraceRow = (input?: {
   scope_version: "1.0.0",
 })
 
-const makeSignalRow = (input?: { readonly id?: string; readonly projectId?: string; readonly uuid?: string }) => ({
-  id: input?.id ?? SIGNAL_ID,
-  uuid: input?.uuid ?? "11111111-1111-4111-8111-111111111111",
-  organizationId: ORGANIZATION_ID,
-  projectId: input?.projectId ?? PROJECT_ID,
-  slug: `signals-match-worker-issue-${(input?.id ?? SIGNAL_ID).slice(-6)}`,
-  name: "Signals match worker issue",
-  description: "Signal context for signals-match worker tests",
-  source: "annotation" as const,
-  centroid: createSignalCentroid(),
-  clusteredAt: TIMESTAMP,
-  mutedAt: null,
-  createdAt: TIMESTAMP,
-  updatedAt: TIMESTAMP,
-})
+const visualIdFromTestSignalId = (id: string) => {
+  const sequence = id.split("").reduce((sum, character) => sum + character.charCodeAt(0), 0) % 900 + 100
+  return `LAT-${String(sequence).padStart(3, "0")}`
+}
+
+const makeSignalRow = (input?: {
+  readonly id?: string
+  readonly projectId?: string
+  readonly uuid?: string
+  readonly visualId?: string
+}) => {
+  const id = input?.id ?? SIGNAL_ID
+  return {
+    id,
+    uuid: input?.uuid ?? "11111111-1111-4111-8111-111111111111",
+    organizationId: ORGANIZATION_ID,
+    projectId: input?.projectId ?? PROJECT_ID,
+    slug: `signals-match-worker-issue-${id.slice(-6)}`,
+    visualId: input?.visualId ?? visualIdFromTestSignalId(id),
+    name: "Signals match worker issue",
+    description: "Signal context for signals-match worker tests",
+    source: "annotation" as const,
+    centroid: createSignalCentroid(),
+    clusteredAt: TIMESTAMP,
+    mutedAt: null,
+    createdAt: TIMESTAMP,
+    updatedAt: TIMESTAMP,
+  }
+}
 
 const makeEvaluationRow = (input: {
   readonly id: string
