@@ -21,7 +21,11 @@ import { createFakeTraceRepository } from "@domain/spans/testing"
 import { Cause, Effect, Layer } from "effect"
 import { describe, expect, it } from "vitest"
 import { z } from "zod"
-import { FLAGGER_DEFAULT_CLASSIFIER_MODEL, FLAGGER_DEFAULT_INSTRUCTION_EXTRACTOR_MODEL } from "../constants.ts"
+import {
+  FLAGGER_DEFAULT_CLASSIFIER_MODEL,
+  FLAGGER_DEFAULT_INSTRUCTION_EXTRACTOR_MODEL,
+  FLAGGER_INSPECTED_AGENT_VERBATIM_MAX_CHARS,
+} from "../constants.ts"
 import type { Flagger } from "../entities/flagger.ts"
 import { FlaggerRepository } from "../ports/flagger-repository.ts"
 import { createFakeFlaggerRepository } from "../testing/fake-flagger-repository.ts"
@@ -332,6 +336,48 @@ describe("runFlaggerUseCase", () => {
     expect(calls.generate).toHaveLength(0)
   })
 
+  it("keeps mid-size inspected system prompts verbatim without invoking the instruction extractor", async () => {
+    const midSizeSystemPrompt =
+      `You are a mid-size billing support assistant. ${"Follow the escalation policy and cite the relevant policy section. ".repeat(35)}`.trim()
+    expect(midSizeSystemPrompt.length).toBeGreaterThan(1200)
+    expect(midSizeSystemPrompt.length).toBeLessThanOrEqual(FLAGGER_INSPECTED_AGENT_VERBATIM_MAX_CHARS)
+
+    const systemInstructions = [
+      { type: "text", content: midSizeSystemPrompt },
+    ] satisfies TraceDetail["systemInstructions"]
+    const { calls, layer: aiLayer } = createFakeAI({
+      generate: <T>(input: GenerateInput<T>) => {
+        if (input.system.includes("You extract agent context")) {
+          return Effect.die("Instruction extractor must not run for mid-size verbatim prompts")
+        }
+        return Effect.succeed({ object: { matched: false } as T, tokens: 20, duration: 90_000_000 })
+      },
+    })
+
+    const result = await Effect.runPromise(
+      classifyTraceForFlaggerUseCase({
+        organizationId: INPUT.organizationId,
+        projectId: INPUT.projectId,
+        traceId: INPUT.traceId,
+        flaggerSlug: "laziness",
+        trace: makeTraceDetail(
+          [
+            { role: "user", parts: [{ type: "text", content: "Create the dashboard." }] },
+            { role: "assistant", parts: [{ type: "text", content: "Here is the dashboard." }] },
+          ],
+          [],
+          systemInstructions,
+        ),
+      }).pipe(Effect.provide(Layer.mergeAll(aiLayer, defaultCacheLayer))),
+    )
+
+    expect(result).toEqual({ matched: false })
+    expect(calls.generate).toHaveLength(1)
+    expect(calls.generate.filter((call) => call.system?.includes("You extract agent context"))).toHaveLength(0)
+    expect(calls.generate[0].prompt).toContain("EVALUATED AGENT SYSTEM PROMPT:")
+    expect(calls.generate[0].prompt).toContain(midSizeSystemPrompt)
+  })
+
   it("extracts context for long inspected system prompts before classification", async () => {
     const longSystemPrompt = `You are a dashboard design assistant. ${"Detailed rubric. ".repeat(400)}`
     const systemInstructions = [{ type: "text", content: longSystemPrompt }] satisfies TraceDetail["systemInstructions"]
@@ -557,6 +603,53 @@ ${"Detailed grounding, workflow, callout, and formatting rules. ".repeat(120)}`.
     const extractorCalls = calls.generate.filter((call) => call.system?.includes("You extract agent context"))
     expect(extractorCalls).toHaveLength(1)
     expect(calls.generate).toHaveLength(3)
+  })
+
+  it("sends the raw un-normalized system prompt to the instruction extractor even though the cache key is normalized", async () => {
+    const uuid = "123e4567-e89b-12d3-a456-426614174000"
+    const timestamp = "2026-07-08T12:34:56.789Z"
+    const longSystemPrompt = `You are a dashboard design assistant handling request ${uuid} at ${timestamp}. ${"Detailed rubric. ".repeat(400)}`
+    const systemInstructions = [{ type: "text", content: longSystemPrompt }] satisfies TraceDetail["systemInstructions"]
+
+    const { calls, layer: aiLayer } = createFakeAI({
+      generate: <T>(input: GenerateInput<T>) => {
+        if (input.system.includes("You extract agent context")) {
+          return Effect.succeed({
+            object: {
+              understood: true,
+              agentContext: "This agent is a dashboard design assistant that should create dashboard designs.",
+            } as T,
+            tokens: 20,
+            duration: 90_000_000,
+          })
+        }
+
+        return Effect.succeed({ object: { matched: false } as T, tokens: 20, duration: 90_000_000 })
+      },
+    })
+
+    const result = await Effect.runPromise(
+      classifyTraceForFlaggerUseCase({
+        organizationId: INPUT.organizationId,
+        projectId: INPUT.projectId,
+        traceId: INPUT.traceId,
+        flaggerSlug: "laziness",
+        trace: makeTraceDetail(
+          [
+            { role: "user", parts: [{ type: "text", content: "Create the dashboard." }] },
+            { role: "assistant", parts: [{ type: "text", content: "Here is the dashboard." }] },
+          ],
+          [],
+          systemInstructions,
+        ),
+      }).pipe(Effect.provide(Layer.mergeAll(aiLayer, defaultCacheLayer))),
+    )
+
+    expect(result).toEqual({ matched: false })
+    const extractorCall = calls.generate.find((call) => call.system?.includes("You extract agent context"))
+    expect(extractorCall?.prompt).toContain(uuid)
+    expect(extractorCall?.prompt).toContain(timestamp)
+    expect(normalizeSystemPromptForCacheKey(longSystemPrompt)).not.toContain(uuid)
   })
 
   it("stamps the LLM call with the no-reflag tag when the trace is itself flagger-generated", async () => {
