@@ -1,7 +1,23 @@
 import { AgentShaderPanel, Button, Text } from "@repo/ui"
 import { ChevronLeftIcon } from "lucide-react"
-import { useEffect, useRef, useState } from "react"
+import { type ReactNode, useEffect, useRef, useState } from "react"
 import { useAgentSession } from "../../domains/agent/use-agent-session.ts"
+
+/** Reveals its content from a heavy blur + transparent to sharp + opaque — the thinking→answer settle. */
+function Reveal({ children }: { children: ReactNode }) {
+  const [shown, setShown] = useState(false)
+  useEffect(() => {
+    const frame = requestAnimationFrame(() => setShown(true))
+    return () => cancelAnimationFrame(frame)
+  }, [])
+  return (
+    <div
+      className={`transition-[opacity,filter] duration-700 ease-out ${shown ? "opacity-100 blur-[0px]" : "opacity-0 blur-[16px]"}`}
+    >
+      {children}
+    </div>
+  )
+}
 
 interface AgentSessionViewProps {
   readonly initialSessionId: string | null
@@ -53,8 +69,6 @@ export function AgentSessionView({
     }
   }, [initialPrompt, initialSessionId, chat.send])
 
-  const response = [...chat.messages].reverse().find((message) => message.role === "assistant")?.text ?? null
-
   return (
     <div className="flex h-[min(460px,70vh)] flex-col">
       <div className="flex h-12 items-center gap-2 border-border border-b px-3">
@@ -93,8 +107,10 @@ export function AgentSessionView({
           <div className="h-full overflow-y-auto p-3">
             {chat.error ? (
               <Text.H5 color="destructive">{chat.error}</Text.H5>
-            ) : response ? (
-              <Text.H5 whiteSpace="preWrap">{response}</Text.H5>
+            ) : chat.response ? (
+              <Reveal key={chat.response}>
+                <Text.H5 whiteSpace="preWrap">{chat.response}</Text.H5>
+              </Reveal>
             ) : (
               <Text.H6 color="foregroundMuted">Ask the agent to find, explain, or change something.</Text.H6>
             )}

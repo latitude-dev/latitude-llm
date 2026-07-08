@@ -3,12 +3,6 @@ import { useRouter } from "@tanstack/react-router"
 import { useCallback, useEffect, useRef, useState } from "react"
 import { abortAgentTurn, getAgentSession, respondToConfirmation, startAgentTurn } from "./agent.functions.ts"
 
-interface AgentChatMessage {
-  readonly id: string
-  readonly role: "user" | "assistant" | "tool"
-  readonly text: string
-}
-
 interface PendingConfirmation {
   readonly toolCallId: string
   readonly toolName: string
@@ -36,7 +30,8 @@ const partsText = (rawParts: string): string => {
 
 interface AgentSessionController {
   readonly sessionId: string | null
-  readonly messages: readonly AgentChatMessage[]
+  /** The latest assistant reply, or null while thinking / before the first turn. */
+  readonly response: string | null
   readonly status: string | null
   readonly running: boolean
   readonly error: string | null
@@ -48,8 +43,9 @@ interface AgentSessionController {
 
 /**
  * Drives one command-palette agent chat: opens/continues a session, streams live events over SSE,
- * and exposes the transcript (durable, refetched on each turn end), transient status, and a pending
- * confirmation. `activeProjectSlug` is passed to the worker as context (the agent is org-wide).
+ * and exposes the latest reply, transient status, and any pending confirmation. Only the current
+ * turn is surfaced (the full transcript stays server-side); `activeProjectSlug` is passed to the
+ * worker as context (the agent is org-wide).
  */
 export function useAgentSession(options: {
   readonly initialSessionId: string | null
@@ -59,7 +55,7 @@ export function useAgentSession(options: {
 }): AgentSessionController {
   const router = useRouter()
   const [sessionId, setSessionId] = useState<string | null>(options.initialSessionId)
-  const [messages, setMessages] = useState<readonly AgentChatMessage[]>([])
+  const [response, setResponse] = useState<string | null>(null)
   const [status, setStatus] = useState<string | null>(null)
   const [running, setRunning] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -69,20 +65,19 @@ export function useAgentSession(options: {
   const optionsRef = useRef(options)
   optionsRef.current = options
 
-  const refetchTranscript = useCallback(async (id: string) => {
-    const transcript = await getAgentSession({ data: { sessionId: id } })
-    setMessages(
-      transcript.messages
-        .map((message) => ({ id: message.id, role: message.role, text: partsText(message.parts) }))
-        .filter((message) => message.role !== "tool" && message.text.length > 0),
-    )
-  }, [])
-
-  // Hydrate the durable transcript whenever we attach to an existing session.
+  // Hydrate the last reply when attaching to an existing session (reopen).
   useEffect(() => {
     if (!sessionId) return
-    void refetchTranscript(sessionId)
-  }, [sessionId, refetchTranscript])
+    let cancelled = false
+    void getAgentSession({ data: { sessionId } }).then((transcript) => {
+      if (cancelled) return
+      const lastAssistant = [...transcript.messages].reverse().find((message) => message.role === "assistant")
+      setResponse(lastAssistant ? partsText(lastAssistant.parts) || null : null)
+    })
+    return () => {
+      cancelled = true
+    }
+  }, [sessionId])
 
   // One SSE connection per session, kept open across turns; torn down on unmount / session change.
   useEffect(() => {
@@ -97,9 +92,11 @@ export function useAgentSession(options: {
       }
       switch (parsed.type) {
         case "status":
+          setRunning(true)
           setStatus(parsed.text)
           break
         case "confirmation_request":
+          setRunning(true)
           setPendingConfirmation({
             toolCallId: parsed.toolCallId,
             toolName: parsed.toolName,
@@ -114,11 +111,13 @@ export function useAgentSession(options: {
         case "navigate":
           void router.navigate({ to: parsed.to })
           break
+        case "assistant_message":
+          setResponse(parsed.text)
+          break
         case "done":
           setRunning(false)
           setStatus(null)
           setPendingConfirmation(null)
-          void refetchTranscript(sessionId)
           break
         case "error":
           setRunning(false)
@@ -130,16 +129,16 @@ export function useAgentSession(options: {
       }
     }
     return () => source.close()
-  }, [sessionId, router, refetchTranscript])
+  }, [sessionId, router])
 
   const send = useCallback(
     (prompt: string) => {
       const trimmed = prompt.trim()
       if (trimmed.length === 0) return
       setError(null)
+      setResponse(null)
       setRunning(true)
       setStatus("Thinking")
-      setMessages((current) => [...current, { id: `local-${current.length}`, role: "user", text: trimmed }])
       void startAgentTurn({
         data: {
           ...(sessionId ? { sessionId } : {}),
@@ -179,5 +178,5 @@ export function useAgentSession(options: {
     void abortAgentTurn({ data: { sessionId } })
   }, [sessionId])
 
-  return { sessionId, messages, status, running, error, pendingConfirmation, send, respond, abort }
+  return { sessionId, response, status, running, error, pendingConfirmation, send, respond, abort }
 }
