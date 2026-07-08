@@ -160,6 +160,62 @@ export class AIEmbed extends Context.Service<AIEmbed, AIEmbedShape>()("@domain/a
 export class AIRerank extends Context.Service<AIRerank, AIRerankShape>()("@domain/ai/AIRerank") {}
 
 // ---------------------------------------------------------------------------
+// Agent loop (native tool-calling)
+// ---------------------------------------------------------------------------
+
+/**
+ * A tool the agent loop can call. `inputSchema` is the model-facing schema the
+ * adapter hands the provider; `execute` is an opaque promise the adapter awaits
+ * with the raw provider-parsed input. Callers own validation and error shaping
+ * inside `execute` — the adapter never inspects the input or the return value.
+ */
+export interface AgentToolDef {
+  readonly name: string
+  readonly description: string
+  readonly inputSchema: z.ZodType
+  readonly execute: (input: unknown) => Promise<unknown>
+}
+
+/** One provider step: any assistant narration plus the tool calls it issued. */
+export interface AgentStep {
+  /** Assistant text generated this step; the worker mirrors it into the pending status. */
+  readonly text?: string
+  readonly toolCalls: ReadonlyArray<{ readonly name: string; readonly input: unknown }>
+  readonly finishReason?: string
+  readonly tokenUsage?: { readonly input: number; readonly output: number }
+}
+
+export interface RunAgentInput {
+  readonly provider: string
+  readonly model: string
+  readonly system: string
+  readonly prompt: string
+  readonly tools: ReadonlyArray<AgentToolDef>
+  /** Hard ceiling on provider steps; the loop stops once this many steps run. */
+  readonly maxSteps: number
+  readonly reasoning?: GenerationReasoning
+  readonly maxTokens?: number
+  readonly temperature?: number
+  readonly abortSignal?: AbortSignal
+  /** Invoked after each provider step, in order. Never throws into the loop. */
+  readonly onStep?: (step: AgentStep) => void
+  readonly telemetry?: GenerateTelemetryCapture
+}
+
+export interface RunAgentResult {
+  readonly text: string
+  readonly steps: ReadonlyArray<AgentStep>
+  readonly tokenUsage: { readonly input: number; readonly output: number }
+  readonly finishReason: string
+}
+
+export interface AIAgentShape {
+  runAgent(input: RunAgentInput): Effect.Effect<RunAgentResult, AIError | AICredentialError>
+}
+
+export class AIAgent extends Context.Service<AIAgent, AIAgentShape>()("@domain/ai/AIAgent") {}
+
+// ---------------------------------------------------------------------------
 // Unified AI service
 // ---------------------------------------------------------------------------
 

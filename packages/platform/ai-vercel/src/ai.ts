@@ -5,6 +5,10 @@ import { createOpenAI } from "@ai-sdk/openai"
 import { createOpenAICompatible } from "@ai-sdk/openai-compatible"
 import { fromNodeProviderChain } from "@aws-sdk/credential-providers"
 import {
+  type AgentStep,
+  type AgentToolDef,
+  AIAgent,
+  type AIAgentShape,
   AICredentialError,
   AIError,
   AIGenerate,
@@ -16,11 +20,14 @@ import {
   type GenerateResult,
   type RerankInput,
   type RerankResult,
+  type RunAgentInput,
+  type RunAgentResult,
 } from "@domain/ai"
 import { getLatitudeTracer, runWithAiTelemetry } from "@platform/ai-latitude"
 import { parseEnv, parseEnvOptional } from "@platform/env"
-import { embed, generateText, Output, rerank } from "ai"
+import { embed, generateText, jsonSchema, Output, rerank, stepCountIs, type ToolSet, tool } from "ai"
 import { Effect, Layer } from "effect"
+import { z } from "zod"
 
 const latitudeTracer = getLatitudeTracer("vercelai")
 
@@ -437,6 +444,151 @@ export const AIGenerateLive = Layer.effect(
     return {
       generate,
     } satisfies AIGenerateShape
+  }),
+)
+
+// ---------------------------------------------------------------------------
+// Agent loop (native tool-calling)
+// ---------------------------------------------------------------------------
+
+// JSON-schema keywords Bedrock's tool-use converter rejects. Zod emits these
+// from `.int()`/`.min()`/`.max()`/array bounds, so a schema that round-trips
+// fine everywhere else breaks Bedrock. See memory
+// `bedrock-structured-output-schema-subset`.
+const BEDROCK_UNSUPPORTED_SCHEMA_KEYWORDS = new Set([
+  "minimum",
+  "maximum",
+  "exclusiveMinimum",
+  "exclusiveMaximum",
+  "multipleOf",
+  "minItems",
+  "maxItems",
+])
+
+const stripBedrockUnsupportedKeywords = (node: unknown): unknown => {
+  if (Array.isArray(node)) {
+    return node.map(stripBedrockUnsupportedKeywords)
+  }
+  if (node !== null && typeof node === "object") {
+    const out: Record<string, unknown> = {}
+    for (const [key, value] of Object.entries(node)) {
+      if (BEDROCK_UNSUPPORTED_SCHEMA_KEYWORDS.has(key)) {
+        continue
+      }
+      // Bedrock accepts `anyOf` but not `oneOf`; the two are interchangeable
+      // for validation here because the host re-validates against the real schema.
+      if (key === "oneOf") {
+        out.anyOf = stripBedrockUnsupportedKeywords(value)
+        continue
+      }
+      out[key] = stripBedrockUnsupportedKeywords(value)
+    }
+    return out
+  }
+  return node
+}
+
+/**
+ * Converts a model-facing tool schema to a Bedrock-safe JSON schema, stripping
+ * the constraint keywords Bedrock's tool-use converter rejects. Best-effort:
+ * if the Zod → JSON-schema conversion throws, the raw Zod schema is returned so
+ * the SDK's own conversion still runs (no worse than not loosening). Safe
+ * because every caller re-validates the tool input against the real schema.
+ */
+export const loosenSchemaForBedrock = (schema: z.ZodType): z.ZodType | ReturnType<typeof jsonSchema> => {
+  try {
+    const json = z.toJSONSchema(schema, { target: "draft-2020-12", reused: "inline" })
+    return jsonSchema(stripBedrockUnsupportedKeywords(json) as Parameters<typeof jsonSchema>[0])
+  } catch {
+    return schema
+  }
+}
+
+const buildAgentTools = (defs: ReadonlyArray<AgentToolDef>, provider: string): ToolSet =>
+  Object.fromEntries(
+    defs.map((def) => [
+      def.name,
+      tool({
+        description: def.description,
+        inputSchema: provider === "amazon-bedrock" ? loosenSchemaForBedrock(def.inputSchema) : def.inputSchema,
+        execute: (args: unknown) => def.execute(args),
+      }),
+    ]),
+  )
+
+type AgentStepResult = Parameters<NonNullable<Parameters<typeof generateText>[0]["onStepFinish"]>>[0]
+
+const toAgentStep = (step: AgentStepResult): AgentStep => {
+  const text = step.text.trim()
+  return {
+    ...(text === "" ? {} : { text }),
+    toolCalls: step.toolCalls.map((call) => ({ name: call.toolName, input: call.input })),
+    finishReason: step.finishReason,
+    tokenUsage: { input: step.usage?.inputTokens ?? 0, output: step.usage?.outputTokens ?? 0 },
+  }
+}
+
+export const AIAgentLive = Layer.effect(
+  AIAgent,
+  Effect.gen(function* () {
+    const runAgent = Effect.fn("ai.runAgent")(function* (input: RunAgentInput) {
+      yield* Effect.annotateCurrentSpan("effect.ai.provider", input.provider)
+      yield* Effect.annotateCurrentSpan("effect.ai.model", input.model)
+      if (input.telemetry?.spanName !== undefined) {
+        yield* Effect.annotateCurrentSpan("effect.ai.telemetry_span_name", input.telemetry.spanName)
+      }
+
+      const providerModel = yield* createProviderModel(input.provider, input.model)
+
+      return yield* Effect.tryPromise({
+        try: () =>
+          runWithAiTelemetry(input.telemetry, async () => {
+            const steps: AgentStep[] = []
+            const result = await generateText({
+              model: providerModel,
+              system: input.system,
+              prompt: input.prompt,
+              tools: buildAgentTools(input.tools, input.provider),
+              stopWhen: stepCountIs(input.maxSteps),
+              reasoning: input.reasoning ?? "provider-default",
+              maxOutputTokens: input.maxTokens ?? DEFAULT_MAX_OUTPUT_TOKENS,
+              ...(input.temperature !== undefined ? { temperature: input.temperature } : {}),
+              ...(input.abortSignal !== undefined ? { abortSignal: input.abortSignal } : {}),
+              onStepFinish: (step) => {
+                const agentStep = toAgentStep(step)
+                steps.push(agentStep)
+                // Enforce the port's "never throws into the loop" contract regardless of the caller.
+                try {
+                  input.onStep?.(agentStep)
+                } catch {}
+              },
+              experimental_telemetry: {
+                isEnabled: true,
+                tracer: latitudeTracer,
+              },
+            })
+
+            return {
+              text: result.text,
+              steps,
+              tokenUsage: {
+                input: result.totalUsage?.inputTokens ?? 0,
+                output: result.totalUsage?.outputTokens ?? 0,
+              },
+              finishReason: result.finishReason,
+            } satisfies RunAgentResult
+          }),
+        catch: (error) =>
+          new AIError({
+            message: `AI agent run failed (${input.provider}/${input.model}): ${formatGenerateError(error)}`,
+            cause: error,
+          }),
+      })
+    })
+
+    return {
+      runAgent,
+    } satisfies AIAgentShape
   }),
 )
 

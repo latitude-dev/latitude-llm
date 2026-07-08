@@ -69,6 +69,7 @@ import {
   PROTECTED_SECURITY,
   ProjectParamsSchema,
   TracesRefSchema,
+  typedResponses,
 } from "../openapi/schemas.ts"
 import type { OrganizationScopedEnv } from "../types.ts"
 
@@ -139,57 +140,53 @@ const listDatasetsEndpoint = datasetEndpoint({
     description: "Returns a cursor-paginated page of datasets in the project.",
     security: PROTECTED_SECURITY,
     request: { params: ProjectParamsSchema, query: ListDatasetsQuerySchema },
-    responses: openApiResponses({ status: 200, schema: PaginatedDatasetsSchema, description: "Page of datasets" }),
+    responses: typedResponses({ status: 200, schema: PaginatedDatasetsSchema, description: "Page of datasets" }),
   }),
   access: "read-only",
   rateLimitTier: "low",
-  handler: async (c) => {
-    const { projectSlug } = c.req.valid("param")
-    const query = c.req.valid("query")
-    const organizationId = c.var.organization.id
+  execute: (input, ctx) =>
+    Effect.gen(function* () {
+      const { projectSlug } = input.params
+      const query = input.query
 
-    const page = await Effect.runPromise(
-      Effect.gen(function* () {
-        let cursor: DatasetListCursor | undefined
-        if (query.cursor) {
-          const decoded = decodeDatasetCursor(query.cursor)
-          if (!decoded) {
-            return yield* new BadRequestError({ message: "Invalid `cursor` value." })
-          }
-          cursor = decoded
+      let cursor: DatasetListCursor | undefined
+      if (query.cursor) {
+        const decoded = decodeDatasetCursor(query.cursor)
+        if (!decoded) {
+          return yield* new BadRequestError({ message: "Invalid `cursor` value." })
         }
+        cursor = decoded
+      }
 
-        const projectRepo = yield* ProjectRepository
-        const project = yield* projectRepo.findBySlug(projectSlug)
+      const projectRepo = yield* ProjectRepository
+      const project = yield* projectRepo.findBySlug(projectSlug)
 
-        return yield* listDatasets({
-          projectId: ProjectId(project.id as string),
-          options: {
-            limit: query.limit,
-            sortBy: query.sortBy,
-            sortDirection: query.sortDirection,
-            ...(cursor ? { cursor } : {}),
-          },
-        })
-      }).pipe(
-        withPostgres(
-          Layer.mergeAll(ProjectRepositoryLive, DatasetRepositoryLive),
-          c.var.postgresClient,
-          organizationId,
-        ),
-        withTracing,
+      const page = yield* listDatasets({
+        projectId: ProjectId(project.id as string),
+        options: {
+          limit: query.limit,
+          sortBy: query.sortBy,
+          sortDirection: query.sortDirection,
+          ...(cursor ? { cursor } : {}),
+        },
+      })
+
+      return {
+        status: 200,
+        body: {
+          items: page.datasets.map(toDatasetResponse),
+          nextCursor: page.nextCursor ? encodeDatasetCursor(page.nextCursor) : null,
+          hasMore: page.hasMore,
+        },
+      } as const
+    }).pipe(
+      withPostgres(
+        Layer.mergeAll(ProjectRepositoryLive, DatasetRepositoryLive),
+        ctx.postgresClient,
+        ctx.organization.id,
       ),
-    )
-
-    return c.json(
-      {
-        items: page.datasets.map(toDatasetResponse),
-        nextCursor: page.nextCursor ? encodeDatasetCursor(page.nextCursor) : null,
-        hasMore: page.hasMore,
-      },
-      200,
-    )
-  },
+      withTracing,
+    ),
 })
 
 const getDataset = datasetEndpoint({
@@ -570,63 +567,58 @@ const listDatasetRowsEndpoint = datasetEndpoint({
     description: "Returns a cursor-paginated page of rows.",
     security: PROTECTED_SECURITY,
     request: { params: DatasetSlugParamsSchema, query: ListRowsQuerySchema },
-    responses: openApiResponses({ status: 200, schema: PaginatedDatasetRowsSchema, description: "Page of rows" }),
+    responses: typedResponses({ status: 200, schema: PaginatedDatasetRowsSchema, description: "Page of rows" }),
   }),
   access: "read-only",
   rateLimitTier: "low",
-  handler: async (c) => {
-    const { projectSlug, datasetSlug } = c.req.valid("param")
-    const query = c.req.valid("query")
-    const organizationId = c.var.organization.id
+  execute: (input, ctx) =>
+    Effect.gen(function* () {
+      const { projectSlug, datasetSlug } = input.params
+      const query = input.query
 
-    const page = await Effect.runPromise(
-      Effect.gen(function* () {
-        let cursor: { createdAt: string; rowId: DatasetRowId } | undefined
-        if (query.cursor) {
-          const decoded = decodeRowCursor(query.cursor)
-          if (!decoded) {
-            return yield* new BadRequestError({ message: "Invalid `cursor` value." })
-          }
-          cursor = { createdAt: decoded.createdAt, rowId: DatasetRowId(decoded.rowId) }
+      let cursor: { createdAt: string; rowId: DatasetRowId } | undefined
+      if (query.cursor) {
+        const decoded = decodeRowCursor(query.cursor)
+        if (!decoded) {
+          return yield* new BadRequestError({ message: "Invalid `cursor` value." })
         }
+        cursor = { createdAt: decoded.createdAt, rowId: DatasetRowId(decoded.rowId) }
+      }
 
-        const projectRepo = yield* ProjectRepository
-        const project = yield* projectRepo.findBySlug(projectSlug)
+      const projectRepo = yield* ProjectRepository
+      const project = yield* projectRepo.findBySlug(projectSlug)
 
-        const datasetRepo = yield* DatasetRepository
-        const dataset = yield* datasetRepo.findBySlug({
-          projectId: ProjectId(project.id as string),
-          slug: datasetSlug,
-        })
+      const datasetRepo = yield* DatasetRepository
+      const dataset = yield* datasetRepo.findBySlug({
+        projectId: ProjectId(project.id as string),
+        slug: datasetSlug,
+      })
 
-        const result = yield* listRows({
-          datasetId: DatasetId(dataset.id as string),
-          ...(query.search ? { search: query.search } : {}),
-          sortDirection: query.sortDirection as SortDirection,
-          limit: query.limit,
-          ...(cursor ? { cursor } : {}),
-        })
-        return { result, columns: dataset.columns }
-      }).pipe(
-        withPostgres(
-          Layer.mergeAll(ProjectRepositoryLive, DatasetRepositoryLive),
-          c.var.postgresClient,
-          organizationId,
-        ),
-        withClickHouse(DatasetRowRepositoryLive, c.var.clickhouse, organizationId),
-        withTracing,
+      const result = yield* listRows({
+        datasetId: DatasetId(dataset.id as string),
+        ...(query.search ? { search: query.search } : {}),
+        sortDirection: query.sortDirection as SortDirection,
+        limit: query.limit,
+        ...(cursor ? { cursor } : {}),
+      })
+
+      return {
+        status: 200,
+        body: {
+          items: result.rows.map((row) => toDatasetRowResponse(row, dataset.columns)),
+          nextCursor: result.nextCursor ? encodeRowCursor(result.nextCursor) : null,
+          hasMore: result.nextCursor !== undefined,
+        },
+      } as const
+    }).pipe(
+      withPostgres(
+        Layer.mergeAll(ProjectRepositoryLive, DatasetRepositoryLive),
+        ctx.postgresClient,
+        ctx.organization.id,
       ),
-    )
-
-    return c.json(
-      {
-        items: page.result.rows.map((row) => toDatasetRowResponse(row, page.columns)),
-        nextCursor: page.result.nextCursor ? encodeRowCursor(page.result.nextCursor) : null,
-        hasMore: page.result.nextCursor !== undefined,
-      },
-      200,
-    )
-  },
+      withClickHouse(DatasetRowRepositoryLive, ctx.clickhouse, ctx.organization.id),
+      withTracing,
+    ),
 })
 
 const insertDatasetRowsEndpoint = datasetEndpoint({

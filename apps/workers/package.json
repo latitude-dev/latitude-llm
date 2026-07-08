@@ -72,12 +72,14 @@
     "@platform/workflows-temporal": "workspace:*",
     "@temporalio/worker": "catalog:",
     "@repo/observability": "workspace:*",
+    "@repo/operations": "workspace:*",
     "@repo/utils": "workspace:*",
     "effect": "catalog:",
     "fflate": "0.8.2",
     "quickjs-emscripten": "catalog:",
     "tsx": "catalog:",
-    "voyageai": "catalog:"
+    "voyageai": "catalog:",
+    "zod": "catalog:"
   },
   "devDependencies": {
     "@platform/testkit": "workspace:*",
