@@ -25,6 +25,7 @@ const makeUserSignal = (): Signal => ({
   organizationId,
   projectId,
   slug: "slow-checkout",
+  visualId: "LAT-001",
   name: "Slow checkout",
   description: "Checkout responses take too long",
   source: "custom",

@@ -115,6 +115,7 @@ export interface SignalListItem {
   readonly id: string
   readonly projectId: string
   readonly slug: string
+  readonly visualId: string
   readonly name: string
   readonly description: string
   readonly source: SignalSource
@@ -465,6 +466,7 @@ const toLightListItem = (issue: SignalWithLifecycle, now: Date): SignalListItem 
     id: issue.id,
     projectId: issue.projectId,
     slug: issue.slug,
+    visualId: issue.visualId,
     name: issue.name,
     description: issue.description,
     source: issue.source,
@@ -899,6 +901,7 @@ export const listSignalsUseCase = (
           id: candidate.issue.id,
           projectId: candidate.issue.projectId,
           slug: candidate.issue.slug,
+          visualId: candidate.issue.visualId,
           name: candidate.issue.name,
           description: candidate.issue.description,
           source: candidate.issue.source,

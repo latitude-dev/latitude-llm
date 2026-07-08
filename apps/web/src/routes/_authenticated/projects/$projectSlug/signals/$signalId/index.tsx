@@ -107,7 +107,7 @@ function SignalDetailPage() {
           description={
             !isLoading && signal ? (
               <div className="flex max-w-max">
-                <CopyableText value={signal.slug} size="sm" ellipsis tooltip="Copy signal slug" />
+                <CopyableText value={signal.visualId} size="sm" ellipsis tooltip="Copy signal id" />
               </div>
             ) : undefined
           }

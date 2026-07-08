@@ -17,6 +17,7 @@ export const signals = latitudeSchema.table(
     organizationId: cuid("organization_id").notNull(),
     projectId: cuid("project_id").notNull(),
     slug: varchar("slug", { length: 128 }).notNull(), // url-safe identifier derived from name; regenerated on rename. Unique per (organization_id, project_id). Length matches `SLUG_MAX_LENGTH` in `@domain/shared/slug`. Backfilled from `name` in the M1 migration cascade; new rows get a slug from `createSignalFromScoreUseCase` (and `refreshSignalDetailsUseCase` regenerates on rename).
+    visualId: varchar("visual_id", { length: 16 }).notNull(), // stable human-readable id (LAT-001) for copy/reference; assigned once at creation
     name: varchar("name", { length: 128 }).notNull(), // generated from clustered score feedback and related context; generic enough to represent the shared failure pattern across different backgrounds
     description: text("description").notNull(), // generated from clustered score feedback; focused on the underlying problem rather than one specific conversation
     source: varchar("source", { length: 32 }).$type<SignalSource>().notNull(), // provenance of the first creating score
@@ -51,5 +52,6 @@ export const signals = latitudeSchema.table(
     uniqueIndex("signals_unique_slug_per_project_idx")
       .on(t.organizationId, t.projectId, t.slug)
       .where(sql`${t.deletedAt} IS NULL`),
+    uniqueIndex("signals_visual_id_idx").on(t.visualId),
   ],
 )

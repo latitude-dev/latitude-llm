@@ -1,7 +1,7 @@
 import { AIEmbed, type AIError, EMBEDDING_DIMENSIONS, resolveEmbeddingConfig } from "@domain/ai"
 import { SignalId, toSlug } from "@domain/shared"
 import { SEED_SIGNAL_FIXTURES, type SeedScope } from "@domain/shared/seeding"
-import { createSignalCentroid, type SignalCentroid, updateSignalCentroid } from "@domain/signals"
+import { createSignalCentroid, formatSignalVisualId, type SignalCentroid, updateSignalCentroid } from "@domain/signals"
 import { AIEmbedLive } from "@platform/ai"
 import { Effect } from "effect"
 import { signals } from "../../schema/signals.ts"
@@ -177,6 +177,7 @@ function buildSignalRow(input: {
   readonly issue: (typeof SEED_SIGNAL_FIXTURES)[number]
   readonly signalId: string
   readonly signalUuid: string
+  readonly visualId: string
   readonly organizationId: string
   readonly projectId: string
   readonly signalScores: readonly SignalLinkedScoreSeedRow[]
@@ -211,6 +212,7 @@ function buildSignalRow(input: {
     // up-front from the issue's name. Seed names are unique within the demo
     // project so a plain `toSlug(name)` is collision-free.
     slug: toSlug(input.issue.name),
+    visualId: input.visualId,
     name: input.issue.name,
     description: input.issue.description,
     source: input.issue.source,
@@ -282,6 +284,7 @@ const seedSignals: Seeder = {
             issue,
             signalId,
             signalUuid,
+            visualId: formatSignalVisualId(index + 1),
             organizationId: ctx.scope.organizationId,
             projectId: ctx.scope.projectId,
             signalScores,

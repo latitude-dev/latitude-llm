@@ -157,6 +157,13 @@ export interface SignalRepositoryShape {
     readonly slug: string
     readonly excludeSignalId?: SignalId
   }): Effect.Effect<number, RepositoryError, SqlClient>
+  /** Allocates the next globally unique signal visual id (LAT-001 style). */
+  allocateVisualId(): Effect.Effect<string, RepositoryError, SqlClient>
+  /**
+   * Point-lookup by visual id. Visual ids are globally unique so this is
+   * sufficient for resolving PR mentions without a project scope.
+   */
+  findByVisualId(visualId: string): Effect.Effect<SignalWithLifecycle, NotFoundError | RepositoryError, SqlClient>
   save(issue: Signal): Effect.Effect<void, RepositoryError, SqlClient>
   /** Soft-delete: stamps `deleted_at` so the signal is excluded read-side and frees its slug. No-op if already deleted. */
   softDelete(id: SignalId): Effect.Effect<void, RepositoryError, SqlClient>

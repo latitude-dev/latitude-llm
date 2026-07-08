@@ -3,6 +3,7 @@ import { Effect } from "effect"
 import { SIGNAL_PRIORITY_ORDER } from "../constants.ts"
 import type { Signal } from "../entities/signal.ts"
 import type { SignalLifecycleFlags, SignalRepositoryShape, SignalWithLifecycle } from "../ports/signal-repository.ts"
+import { formatSignalVisualId } from "../visual-id.ts"
 
 const DEFAULT_LIFECYCLE: SignalLifecycleFlags = {
   isEscalating: false,
@@ -32,6 +33,11 @@ export const createFakeSignalRepository = (
 ) => {
   const issues = new Map<string, Signal>(seed.map((issue) => [issue.id, issue] as const))
   const lifecycleOverlay = new Map<string, SignalLifecycleFlags>(options.lifecycle ?? [])
+  let nextVisualIdSequence = seed.reduce((max, issue) => {
+    const match = /^LAT-(\d+)$/i.exec(issue.visualId)
+    if (!match) return max
+    return Math.max(max, Number(match[1]))
+  }, 0)
 
   const lifecycleFor = (signalId: string): SignalLifecycleFlags => lifecycleOverlay.get(signalId) ?? DEFAULT_LIFECYCLE
 
@@ -145,6 +151,22 @@ export const createFakeSignalRepository = (
               (!excludeSignalId || issue.id !== excludeSignalId),
           ).length,
       ),
+
+    allocateVisualId: () =>
+      Effect.sync(() => {
+        nextVisualIdSequence += 1
+        return formatSignalVisualId(nextVisualIdSequence)
+      }),
+
+    findByVisualId: (visualId) =>
+      Effect.gen(function* () {
+        const normalizedVisualId = visualId.trim().toUpperCase()
+        const issue = [...issues.values()].find(
+          (candidate) => candidate.visualId.toUpperCase() === normalizedVisualId && candidate.deletedAt == null,
+        )
+        if (!issue) return yield* new NotFoundError({ entity: "Signal", id: normalizedVisualId })
+        return withLifecycle(issue)
+      }),
 
     list: ({ projectId, limit, offset }) =>
       Effect.sync(() => {

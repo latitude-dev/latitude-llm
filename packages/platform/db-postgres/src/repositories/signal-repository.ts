@@ -9,6 +9,7 @@ import {
   type SqlClientShape,
 } from "@domain/shared"
 import {
+  formatSignalVisualId,
   normalizeSignalCentroid,
   type OrgSignalSearchHit,
   SIGNAL_DISCOVERY_MIN_SIMILARITY,
@@ -66,6 +67,7 @@ const toDomainSignal = (row: typeof signals.$inferSelect): Signal =>
     organizationId: row.organizationId,
     projectId: row.projectId,
     slug: row.slug,
+    visualId: row.visualId,
     name: row.name,
     description: row.description,
     source: row.source,
@@ -168,6 +170,7 @@ const toInsertRow = (issue: Signal, centroidEmbedding: readonly number[] | null)
   organizationId: issue.organizationId,
   projectId: issue.projectId,
   slug: issue.slug,
+  visualId: issue.visualId,
   name: issue.name,
   description: issue.description,
   source: issue.source,
@@ -657,6 +660,51 @@ const signalRepositoryCoreLive = Layer.effect(
             db.select({ count: sql<number>`count(*)::int` }).from(signals).where(conditions),
           )
           return row?.count ?? 0
+        }),
+
+      allocateVisualId: () =>
+        Effect.gen(function* () {
+          const sqlClient = (yield* SqlClient) as SqlClientShape<Operator>
+          const result = yield* sqlClient.query((db) =>
+            db.execute(sql`SELECT nextval('"latitude"."signal_visual_id_seq"')::bigint AS seq`),
+          )
+          const sequence = Number((result as { rows?: ReadonlyArray<{ seq?: string | number }> }).rows?.[0]?.seq)
+          if (!Number.isInteger(sequence) || sequence < 1) {
+            return yield* Effect.fail(
+              new RepositoryError({
+                operation: "SignalRepository.allocateVisualId",
+                cause: new Error(`Invalid visual id sequence: ${sequence}`),
+              }),
+            )
+          }
+          return formatSignalVisualId(sequence)
+        }),
+
+      findByVisualId: (visualId) =>
+        Effect.gen(function* () {
+          const sqlClient = (yield* SqlClient) as SqlClientShape<Operator>
+          const normalizedVisualId = visualId.trim().toUpperCase()
+          return yield* sqlClient
+            .query((db, organizationId) =>
+              db
+                .select(signalColumnsWithLifecycle)
+                .from(signals)
+                .where(
+                  and(
+                    eq(signals.organizationId, organizationId),
+                    eq(signals.visualId, normalizedVisualId),
+                    isNull(signals.deletedAt),
+                  ),
+                )
+                .limit(1),
+            )
+            .pipe(
+              Effect.flatMap((rows) => {
+                const row = rows[0]
+                if (!row) return Effect.fail(new NotFoundError({ entity: "Signal", id: normalizedVisualId }))
+                return Effect.succeed(toSignalWithLifecycle(row))
+              }),
+            )
         }),
 
       findBySlug: ({ projectId, slug }: { readonly projectId: ProjectId; readonly slug: string }) =>

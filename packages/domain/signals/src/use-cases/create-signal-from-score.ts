@@ -71,6 +71,7 @@ const buildNewSignalFromScore = ({
   name,
   description,
   slug,
+  visualId,
 }: {
   readonly score: Score
   readonly normalizedEmbedding: readonly number[]
@@ -79,6 +80,7 @@ const buildNewSignalFromScore = ({
   readonly name: string
   readonly description: string
   readonly slug: string
+  readonly visualId: string
 }): Signal => {
   const centroid = updateSignalCentroid({
     centroid: {
@@ -102,6 +104,7 @@ const buildNewSignalFromScore = ({
     organizationId: score.organizationId,
     projectId: score.projectId,
     slug,
+    visualId,
     name,
     description,
     source,
@@ -166,6 +169,7 @@ export const createSignalFromScoreUseCase = (input: CreateSignalFromScoreInput) 
           name: signalDetails.name,
           count: (slug) => signalRepository.countBySlug({ projectId: ProjectId(score.projectId), slug }),
         })
+        const visualId = yield* signalRepository.allocateVisualId()
         const issue = buildNewSignalFromScore({
           score,
           normalizedEmbedding: input.normalizedEmbedding,
@@ -174,6 +178,7 @@ export const createSignalFromScoreUseCase = (input: CreateSignalFromScoreInput) 
           name: signalDetails.name,
           description: signalDetails.description,
           slug,
+          visualId,
         })
 
         const claimed = yield* scoreRepository.assignSignalIfUnowned({

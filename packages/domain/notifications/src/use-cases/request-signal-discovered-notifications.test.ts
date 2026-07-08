@@ -30,10 +30,12 @@ const makeSignal = (overrides: Partial<Signal> = {}): Signal => {
     organizationId: orgId,
     projectId,
     slug: "bad-json-output",
+    visualId: "LAT-001",
     name: "Bad JSON output",
     description: "The model returns malformed JSON.",
     source: "annotation",
     origin: "system",
+    filters: null,
     assigneeId: null,
     priority: null,
     centroid: {

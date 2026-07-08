@@ -30,6 +30,7 @@ const makeSignal = (overrides: Partial<Signal> = {}): Signal => {
     organizationId,
     projectId,
     slug: "api-token-leak",
+    visualId: "LAT-001",
     name: "API token leak",
     description: "The assistant leaks API tokens.",
     source: "annotation",

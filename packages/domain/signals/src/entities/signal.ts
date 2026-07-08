@@ -2,6 +2,7 @@ import { scoreSourceTypeSchema } from "@domain/scores"
 import { cuidSchema, filterSetSchema, SLUG_MAX_LENGTH, signalIdSchema, signalOriginSchema } from "@domain/shared"
 import { z } from "zod"
 import { SIGNAL_NAME_MAX_LENGTH, SIGNAL_PRIORITIES, SIGNAL_SOURCES, SIGNAL_STATES } from "../constants.ts"
+import { signalVisualIdSchema } from "../visual-id.ts"
 
 // ---------------------------------------------------------------------------
 // SignalState
@@ -48,6 +49,7 @@ export const signalSchema = z.object({
   organizationId: cuidSchema, // owning organization
   projectId: cuidSchema, // owning project
   slug: z.string().min(1).max(SLUG_MAX_LENGTH), // url-safe identifier derived from name; regenerated when name changes via `refreshSignalDetailsUseCase`. Unique per (organization_id, project_id).
+  visualId: signalVisualIdSchema, // stable human-readable id (LAT-001) for copy/reference in PRs and notifications; assigned once at creation
   name: z.string().min(1).max(SIGNAL_NAME_MAX_LENGTH), // generated from clustered score feedback and related evaluation/annotation context; generic enough to represent the shared failure pattern across different backgrounds
   description: z.string().min(1), // generated from clustered score feedback; focused on the underlying problem rather than one specific conversation; helps both human understanding and BM25 matching
   source: signalSourceSchema, // provenance of the first creating score

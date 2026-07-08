@@ -270,6 +270,12 @@ export {
   rerankSignalCandidatesUseCase,
 } from "./use-cases/rerank-signal-candidates.ts"
 export {
+  type ResolvedSignalMention,
+  type ResolveSignalsMentionedInTextError,
+  type ResolveSignalsMentionedInTextInput,
+  resolveSignalsMentionedInTextUseCase,
+} from "./use-cases/resolve-signals-mentioned-in-text.ts"
+export {
   type OrgSignalSearchItem,
   type SearchOrgSignalsInput,
   searchOrgSignalsUseCase,
@@ -285,3 +291,12 @@ export {
   type UpdateSignalTriageResult,
   updateSignalTriageUseCase,
 } from "./use-cases/update-signal-triage.ts"
+export {
+  extractSignalVisualIds,
+  formatSignalVisualId,
+  isSignalVisualId,
+  SIGNAL_VISUAL_ID_MENTION_PATTERN,
+  SIGNAL_VISUAL_ID_PREFIX,
+  type SignalVisualId,
+  signalVisualIdSchema,
+} from "./visual-id.ts"

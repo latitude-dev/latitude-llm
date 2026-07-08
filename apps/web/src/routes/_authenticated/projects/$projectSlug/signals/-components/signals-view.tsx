@@ -188,9 +188,14 @@ export function SignalsView({
       minWidth: 280,
       render: (issue) => (
         <div className="flex min-w-0 items-center gap-2">
-          <Text.H5 className="min-w-0 flex-1" noWrap ellipsis>
-            {issue.name}
-          </Text.H5>
+          <div className="flex min-w-0 flex-1 flex-col gap-0.5">
+            <Text.H6 color="foregroundMuted" className="font-mono">
+              {issue.visualId}
+            </Text.H6>
+            <Text.H5 className="min-w-0" noWrap ellipsis>
+              {issue.name}
+            </Text.H5>
+          </div>
           {issue.evaluations.length > 0 ? (
             <div className="shrink-0">
               <SignalLifecycleStatuses

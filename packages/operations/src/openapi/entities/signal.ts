@@ -57,6 +57,9 @@ const signalCoreFields = {
   organizationId: cuidSchema.describe("Organization that owns this signal."),
   projectId: cuidSchema.describe("Project this signal belongs to."),
   slug: z.string().describe("URL-safe slug derived from `name`. Unique within the project."),
+  visualId: z
+    .string()
+    .describe("Stable human-readable visual id in `LAT-001` form for copy/reference in PRs and notifications."),
   name: z.string().describe("Human-readable name."),
   description: z.string().describe("Description of the signal."),
   source: z.enum(SIGNAL_SOURCES).describe("Where the signal originated from."),
@@ -122,6 +125,7 @@ export const toSignalResponse = (item: SignalListItem, organizationId: string) =
   organizationId,
   projectId: item.projectId,
   slug: item.slug,
+  visualId: item.visualId,
   name: item.name,
   description: item.description,
   source: item.source,
@@ -142,6 +146,7 @@ export const toSignalDetailResponse = (details: SignalDetails, organizationId: s
   organizationId,
   projectId: details.issue.projectId as string,
   slug: details.issue.slug,
+  visualId: details.issue.visualId,
   name: details.issue.name,
   description: details.issue.description,
   source: details.issue.source,

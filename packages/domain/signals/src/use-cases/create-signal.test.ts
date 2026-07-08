@@ -80,6 +80,7 @@ describe("createSignalUseCase", () => {
     const signal = issues.get(result.signalId)
     expect(signal?.origin).toBe("user")
     expect(signal?.source).toBe("custom")
+    expect(signal?.visualId).toBe("LAT-001")
     expect(signal?.centroid).toBeNull()
     expect(signal?.clusteredAt).toBeNull()
 

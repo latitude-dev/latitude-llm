@@ -118,6 +118,7 @@ const toSignalsBucketRecord = (bucket: { readonly bucket: string; readonly count
 const toSignalRecord = (issue: SignalListItem) => ({
   id: issue.id,
   projectId: issue.projectId,
+  visualId: issue.visualId,
   name: issue.name,
   description: issue.description,
   source: issue.source,
@@ -291,6 +292,7 @@ const toSignalDetailRecord = (input: {
 }) => ({
   id: input.issue.id,
   slug: input.issue.slug,
+  visualId: input.issue.visualId,
   projectId: input.issue.projectId,
   name: input.issue.name,
   description: input.issue.description,

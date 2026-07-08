@@ -58,12 +58,14 @@ export const createSignalUseCase = (input: CreateSignalInput) =>
           name: parsed.name,
           count: (slug) => signalRepository.countBySlug({ projectId: parsed.projectId, slug }),
         })
+        const visualId = yield* signalRepository.allocateVisualId()
 
         const signal = signalSchema.parse({
           id: generateId<"SignalId">(),
           organizationId: parsed.organizationId,
           projectId: parsed.projectId,
           slug,
+          visualId,
           name: parsed.name,
           description: parsed.description,
           // user signals carry no score-provenance; `origin` is the authoritative user|system marker

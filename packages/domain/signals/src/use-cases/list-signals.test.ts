@@ -27,6 +27,7 @@ const makeSignal = (overrides: Partial<Signal> = {}): Signal => ({
   organizationId: organizationId as string,
   projectId: projectId as string,
   slug: "test-issue",
+  visualId: "LAT-001",
   name: "Signal candidate",
   description: "Repeated assistant failure",
   source: "annotation",

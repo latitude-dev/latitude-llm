@@ -316,7 +316,7 @@ export function SignalDetailBody({
               {!isLoading && issue && (
                 <div className="flex flex-wrap items-center gap-2">
                   <div className="flex min-w-[33%] max-w-max flex-1">
-                    <CopyableText value={issue.slug} size="sm" ellipsis tooltip="Copy issue slug" />
+                    <CopyableText value={issue.visualId} size="sm" ellipsis tooltip="Copy signal id" />
                   </div>
                   {issue.tags.length > 0 && <TagList tags={issue.tags} wrap />}
                 </div>
