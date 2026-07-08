@@ -26,13 +26,13 @@ annotations + flaggers ──► Signals (tracked patterns, write-time membershi
 
 The platform is MIT-licensed, so everything described below can be checked against the code.
 
-## Everything your agent does becomes searchable
+## Telemetry and search
 
 Traces arrive over OpenTelemetry and carry the model calls, tool calls, retrieved context, latency, and cost of each interaction. Related traces group into sessions, so a ten-turn conversation is a single object rather than ten disconnected rows.
 
 All of that traffic becomes searchable by meaning, and the reason we can afford to cover all of it rather than a sample is that agent traffic is mostly repetition. The same system prompt, tool output, and templated response recur thousands of times a day, so each unique message is embedded once, no matter how many traces contain it, and every trace keeps a reference to the messages it held. A search like "users frustrated with checkout" runs over the unique messages and returns the traces that contain the best matches. Repetition collapses, full coverage costs about as much as a sample would, and search never has to guess about traffic it skipped.
 
-## Topics you didn't ask about
+## Behaviors
 
 Search covers the patterns a team knows how to describe. Behaviors exist for the ones nobody has thought to look for. Latitude clusters sessions by what the user was trying to do and arranges them into a hierarchy of topics, so "what is my agent doing all day" has an answer that does not depend on someone writing the right query.
 
@@ -76,7 +76,7 @@ The regression test the agent writes lives in your repository, not in ours. The 
 
 In our own support agent's repository, the first attempted fix failed the regression check on its pull request, and only the second, which cleared the replayed traces, went in. The monitor keeps watching live traffic in the meantime, and the regressed state reopens the Signal if anything slips through.
 
-## Where humans stay
+## Where humans fit in
 
 Humans remain in two places by design. Annotations are the ground truth every evaluator is optimized against, and a person reviews every pull request before it merges. Everything between those two points, the example-hunting, the context reconstruction, the judgment call about whether a failure is recurring, the trace ids carried from a dashboard into a ticket into an editor, is what got automated.
 
