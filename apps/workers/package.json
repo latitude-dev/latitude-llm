@@ -23,6 +23,7 @@
     "@bull-board/hono": "catalog:",
     "@hono/node-server": "catalog:",
     "hono": "catalog:",
+    "@domain/agent": "workspace:*",
     "@domain/agent-dispatch": "workspace:*",
     "@domain/ai": "workspace:*",
     "@domain/incidents": "workspace:*",

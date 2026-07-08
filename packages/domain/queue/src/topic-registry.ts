@@ -474,6 +474,22 @@ const _registry = {
     }
   }>(),
 
+  // Command-palette agent: runs one turn of the in-product chat agent (an LLM tool loop over the
+  // platform's operations) as the signed-in user. The user's message is already persisted before
+  // enqueue; the worker loads the transcript, runs the turn, streams live events (status, confirmation
+  // requests, navigation, final reply) to a Redis stream the web SSE route tails, and appends the
+  // response to Postgres. `projectId`/`activeProjectSlug` are context only — the agent is org-wide.
+  "agent-run-turn": payloads<{
+    run: {
+      readonly sessionId: string
+      readonly turnId: string
+      readonly organizationId: string
+      readonly userId: string
+      readonly projectId?: string
+      readonly activeProjectSlug?: string
+    }
+  }>(),
+
   // Runs the deterministic portion of every registered flagger strategy against
   // a trace. Matched strategies write a SYSTEM-authored score directly; strategies
   // that return `no-match` are sampled and, if selected, routed to the LLM

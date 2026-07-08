@@ -46,6 +46,7 @@ import {
   getWorkflowStarter,
 } from "./clients.ts"
 import { createAgentDispatchWorker } from "./workers/agent-dispatch.ts"
+import { createAgentRunTurnWorker } from "./workers/agent-run-turn.ts"
 import { createAnnotationScoresWorker } from "./workers/annotation-scores.ts"
 import { createApiKeysWorker } from "./workers/api-keys.ts"
 import { createBillingWorker } from "./workers/billing.ts"
@@ -232,6 +233,7 @@ const bootstrap = async () => {
     createSignalsMatchWorker(ctx)
     createSignalsPreviewWorker(ctx)
     createSignalsGenerateSignalWorker(ctx)
+    createAgentRunTurnWorker(ctx)
     createDeterministicFlaggersWorker(ctx)
     createStartFlaggerWorkflowWorker(ctx)
     createProjectsWorker(ctx)
