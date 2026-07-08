@@ -26,7 +26,11 @@ import { Project } from '@latitude-data/core/schema/models/types/Project'
 import { ProviderApiKey } from '@latitude-data/core/schema/models/types/ProviderApiKey'
 import { DocumentVersion } from '@latitude-data/core/schema/models/types/DocumentVersion'
 import { generateUUIDIdentifier } from '@latitude-data/core/lib/generateUUID'
-import { estimateCost } from '@latitude-data/core/services/ai/estimateCost/index'
+import {
+  estimateCost,
+  estimateCostBreakdown,
+} from '@latitude-data/core/services/ai/estimateCost/index'
+import { totalCost } from '@latitude-data/constants/costs'
 import { Providers } from '@latitude-data/constants'
 
 const MODEL = 'gpt-4o'
@@ -841,6 +845,113 @@ describe('POST /run', () => {
           model: MODEL,
           provider: Providers.OpenAI,
           cost: expectedCost,
+        },
+        source: {
+          commitUuid: commit.uuid,
+          documentUuid: expect.any(String),
+        },
+      })
+    })
+
+    it('returns accumulated run cost and usage (all steps + sub-agents), not the last step', async () => {
+      const documentLogUuid = generateUUIDIdentifier()
+
+      // The final chain step only reflects the last completion...
+      const lastStepUsage = {
+        promptTokens: 4,
+        completionTokens: 6,
+        totalTokens: 10,
+        inputTokens: 4,
+        outputTokens: 6,
+        reasoningTokens: 0,
+        cachedInputTokens: 0,
+      }
+      const lastStepCost = estimateCost({
+        provider: provider.provider,
+        model: MODEL,
+        usage: lastStepUsage,
+      })
+
+      // ...while the run totals sum every step and sub-agent LLM call.
+      const runUsage = {
+        promptTokens: 12,
+        completionTokens: 18,
+        totalTokens: 30,
+        inputTokens: 12,
+        outputTokens: 18,
+        reasoningTokens: 0,
+        cachedInputTokens: 0,
+      }
+      const runCost = estimateCostBreakdown({
+        provider: provider.provider,
+        model: MODEL,
+        usage: runUsage,
+      })
+      const expectedRunCost = totalCost(runCost)
+
+      // Guard: the fix only matters if the accumulated total differs from the
+      // last step. If these were equal the test would pass trivially.
+      expect(expectedRunCost).toBeGreaterThan(lastStepCost)
+
+      const stream = new ReadableStream({
+        start(controller) {
+          controller.enqueue({
+            event: StreamEventTypes.Latitude,
+            data: { type: ChainEventTypes.ChainCompleted },
+          })
+          controller.close()
+        },
+      })
+
+      mocks.resolveAbTestRouting.mockResolvedValue({
+        abTest: null,
+        effectiveCommit: commit,
+        effectiveDocument: document,
+        effectiveSource: LogSources.API,
+      })
+
+      mocks.runForegroundDocument.mockReturnValue(
+        Promise.resolve({
+          stream,
+          error: Promise.resolve(undefined),
+          getFinalResponse: async () => ({
+            response: {
+              streamType: 'text',
+              text: 'Hello',
+              toolCalls: [],
+              usage: lastStepUsage,
+              documentLogUuid,
+              input: responseMessages,
+              model: MODEL,
+              provider: Providers.OpenAI,
+              cost: lastStepCost,
+            },
+            provider,
+            runUsage,
+            runCost,
+          }),
+        }),
+      )
+
+      const res = await app.request(route, {
+        method: 'POST',
+        body,
+        headers,
+      })
+
+      expect(res.status).toBe(200)
+      expect(await res.json()).toEqual({
+        uuid: documentLogUuid,
+        conversation: responseMessages,
+        response: {
+          streamType: 'text',
+          usage: runUsage,
+          text: 'Hello',
+          toolCalls: [],
+          input: responseMessages,
+          model: MODEL,
+          provider: Providers.OpenAI,
+          cost: expectedRunCost,
         },
         source: {
           commitUuid: commit.uuid,

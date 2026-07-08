@@ -74,6 +74,12 @@ describe('runForegroundDocument', () => {
           id: provider.id,
           name: provider.name,
         }),
+        runUsage: Promise.resolve({
+          promptTokens: 12,
+          completionTokens: 18,
+          totalTokens: 30,
+        }),
+        runCost: Promise.resolve({ 'openai/gpt-4o': { cost: 123 } }),
       }) as any,
     )
 
@@ -229,6 +235,27 @@ describe('runForegroundDocument', () => {
           name: provider.name,
         }),
       )
+    })
+
+    it('should return accumulated run usage and cost', async () => {
+      const result = await runForegroundDocument({
+        workspace,
+        document,
+        commit,
+        project,
+        parameters: {},
+        source: LogSources.API,
+        tools: [],
+      })
+
+      const finalResponse = await result.getFinalResponse()
+
+      expect(finalResponse.runUsage).toEqual({
+        promptTokens: 12,
+        completionTokens: 18,
+        totalTokens: 30,
+      })
+      expect(finalResponse.runCost).toEqual({ 'openai/gpt-4o': { cost: 123 } })
     })
 
     it('should throw error if stream error occurs', async () => {

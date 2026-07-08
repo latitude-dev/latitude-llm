@@ -33,6 +33,8 @@ export type RunForegroundDocumentResult = {
   getFinalResponse: () => Promise<{
     response: Awaited<RunResult['lastResponse']>
     provider: Awaited<RunResult['provider']>
+    runUsage: Awaited<RunResult['runUsage']>
+    runCost: Awaited<RunResult['runCost']>
   }>
 }
 
@@ -120,7 +122,12 @@ export async function runForegroundDocument(
         throw new LatitudeError('Provider not found in stream result')
       }
 
-      return { response, provider }
+      const [runUsage, runCost] = await Promise.all([
+        result.runUsage,
+        result.runCost,
+      ])
+
+      return { response, provider, runUsage, runCost }
     },
   }
 }

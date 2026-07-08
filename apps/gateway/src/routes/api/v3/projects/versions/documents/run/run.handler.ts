@@ -290,6 +290,8 @@ async function handleForegroundRun({
 
   const body = runPresenter({
     response: finalResponse.response!,
+    runCost: finalResponse.runCost,
+    runUsage: finalResponse.runUsage,
     source: {
       documentUuid: document.documentUuid,
       commitUuid: commit.uuid,

@@ -7,13 +7,28 @@ import {
   StreamType,
 } from '@latitude-data/constants'
 import { LatitudeError } from '@latitude-data/constants/errors'
+import { CostBreakdown, totalCost } from '@latitude-data/constants/costs'
 import { Result, TypedResult } from '@latitude-data/core/lib/Result'
 
+/**
+ * Builds the synchronous run API response.
+ *
+ * When available, `cost` and `usage` are taken from the accumulated run totals
+ * (`runCost` / `runUsage`), which include every step and sub-agent LLM call in
+ * the run. This matches what the Traces tab reports. The last step's
+ * `response.cost` / `response.usage` only reflect the final completion and
+ * under-report runs that use sub-prompts, so they are used only as a fallback
+ * (e.g. when attaching to a background run, where the totals are not available).
+ */
 export function runPresenter({
   response,
+  runCost,
+  runUsage,
   source,
 }: {
   response: ChainStepResponse<StreamType>
+  runCost?: CostBreakdown
+  runUsage?: ChainStepResponse<StreamType>['usage']
   source?: PromptSource
 }): TypedResult<RunSyncAPIResponse<AssertedStreamType>, LatitudeError> {
   const conversation = response.input
@@ -36,7 +51,7 @@ export function runPresenter({
     uuid: uuid!,
     conversation: conversation!,
     response: {
-      cost: response.cost,
+      cost: runCost ? totalCost(runCost) : response.cost,
       input: response.input,
       model: response.model,
       object: type === 'object' ? response.object : undefined,
@@ -45,7 +60,7 @@ export function runPresenter({
       streamType: type,
       text: response.text,
       toolCalls: type === 'text' ? response.toolCalls : [],
-      usage: response.usage!,
+      usage: runUsage ?? response.usage!,
     },
     source,
   })
