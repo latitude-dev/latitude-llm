@@ -1,8 +1,3 @@
-export {
-  type CreateDemoProjectInput,
-  type CreateDemoProjectResult,
-  createDemoProjectUseCase,
-} from "./create-demo-project.ts"
 export { type GetOrganizationDetailsInput, getOrganizationDetailsUseCase } from "./get-organization-details.ts"
 export {
   type ListOrganizationsByUsageInput,

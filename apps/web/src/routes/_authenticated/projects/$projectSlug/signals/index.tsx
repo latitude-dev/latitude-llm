@@ -15,6 +15,7 @@ import {
 import { eq } from "@tanstack/react-db"
 import { createFileRoute, redirect, useParams } from "@tanstack/react-router"
 import { useProjectFlaggers } from "../../../../../domains/flaggers/flaggers.collection.ts"
+import { defaultProjectTimeWindowSeconds } from "../../../../../domains/projects/default-time-window.ts"
 import { useProjectsCollection } from "../../../../../domains/projects/projects.collection.ts"
 import { BreadcrumbText } from "../../../-components/breadcrumb-ui.tsx"
 
@@ -72,7 +73,6 @@ import { type SignalsTableSorting, SignalsView } from "./-components/signals-vie
 
 const DEFAULT_SORTING: SignalsTableSorting = { column: "lastSeen", direction: "desc" }
 const SIGNAL_SEARCH_DEBOUNCE_MS = 300
-const DEFAULT_SIGNALS_RANGE_SECONDS = 30 * 24 * 60 * 60
 const SORT_COLUMNS = [
   "lastSeen",
   "occurrences",
@@ -196,12 +196,12 @@ function SignalsPage() {
 
   const timeRange = useMemo(() => {
     const toMs = timeTo ? Date.parse(timeTo) : Date.now()
-    const fromMs = timeFrom ? Date.parse(timeFrom) : toMs - DEFAULT_SIGNALS_RANGE_SECONDS * 1000
+    const fromMs = timeFrom ? Date.parse(timeFrom) : toMs - defaultProjectTimeWindowSeconds(project) * 1000
     return {
       fromIso: new Date(fromMs).toISOString(),
       toIso: new Date(toMs).toISOString(),
     }
-  }, [timeFrom, timeTo])
+  }, [timeFrom, timeTo, project])
 
   useEffect(() => {
     setFocusedSignalId(undefined)

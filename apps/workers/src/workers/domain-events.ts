@@ -355,17 +355,9 @@ export const createDomainEventsWorker = ({
     // applied automatically below because both events are on the whitelist.
     OrganizationCreated: () => Effect.void,
 
-    SampleProjectCreated: (event) =>
-      pub.publish("projects", "seedDemo", event.payload, {
-        dedupeKey: `projects:seed-demo:${event.payload.projectId}`,
-        attempts: 10,
-        backoff: { type: "exponential", delayMs: 1_000 },
-      }),
-
-    OrganizationClaimed: (event) =>
-      pub.publish("projects", "createDemo", event.payload, {
-        dedupeKey: `projects:create-demo:${event.payload.organizationId}`,
-      }),
+    // No longer seeds a per-org demo on claim (C1 cutover); the demo is the shared
+    // showcase, which `claimOrganizationUseCase` opts the org into via `wantsShowcase`.
+    OrganizationClaimed: () => Effect.void,
 
     ClaimEmailRequested: (event) =>
       hash(event.payload.claimUrl).pipe(
@@ -501,7 +493,6 @@ export const createDomainEventsWorker = ({
     AdminUserEmailChanged: () => Effect.void,
     AdminUserSessionsRevoked: () => Effect.void,
     AdminUserSessionRevoked: () => Effect.void,
-    AdminDemoProjectSeeded: () => Effect.void,
   }
 
   consumer.subscribe("domain-events", {

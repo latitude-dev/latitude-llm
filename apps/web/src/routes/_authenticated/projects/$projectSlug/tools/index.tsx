@@ -3,6 +3,7 @@ import { createFileRoute } from "@tanstack/react-router"
 import { CircleSlashIcon, LayoutGridIcon, SearchIcon, TriangleAlertIcon } from "lucide-react"
 import { useCallback, useEffect, useMemo, useState } from "react"
 import { allToolsMonitorTarget } from "../../../../../domains/monitors/monitor-target.ts"
+import { defaultProjectTimeWindowSeconds } from "../../../../../domains/projects/default-time-window.ts"
 import { useProjectTools, useToolCallHistogram } from "../../../../../domains/tools/tools.collection.ts"
 import { ListingLayout as Layout } from "../../../../../layouts/ListingLayout/index.tsx"
 import { useDebounce } from "../../../../../lib/hooks/useDebounce.ts"
@@ -12,11 +13,7 @@ import { useTableColumnSettings } from "../-components/table-column-settings.ts"
 import { TimeFilterDropdown } from "../-components/time-filter-dropdown.tsx"
 import { useRouteProject } from "../-route-data.ts"
 import { AddTargetMonitorButton } from "../monitors/-components/add-target-monitor-button.tsx"
-import {
-  DEFAULT_TOOLS_RANGE_SECONDS,
-  getToolStatuses,
-  pickToolTrendBucketSeconds,
-} from "./-components/tool-formatters.ts"
+import { getToolStatuses, pickToolTrendBucketSeconds } from "./-components/tool-formatters.ts"
 import { ToolsAnalyticsPanel } from "./-components/tools-analytics-panel.tsx"
 import { ToolsDiscoveryBanner } from "./-components/tools-discovery-banner.tsx"
 import { ToolsEmptyState } from "./-components/tools-empty-state.tsx"
@@ -105,12 +102,12 @@ function ToolsPageContent() {
   // across re-renders.
   const range = useMemo(() => {
     const toMs = timeTo ? Date.parse(timeTo) : Date.now()
-    const fromMs = timeFrom ? Date.parse(timeFrom) : toMs - DEFAULT_TOOLS_RANGE_SECONDS * 1000
+    const fromMs = timeFrom ? Date.parse(timeFrom) : toMs - defaultProjectTimeWindowSeconds(project) * 1000
     return {
       fromIso: new Date(fromMs).toISOString(),
       toIso: new Date(toMs).toISOString(),
     }
-  }, [timeFrom, timeTo])
+  }, [timeFrom, timeTo, project])
   const trendBucketSeconds = useMemo(
     () => pickToolTrendBucketSeconds(Date.parse(range.toIso) - Date.parse(range.fromIso)),
     [range],
