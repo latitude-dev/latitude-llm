@@ -1,0 +1,114 @@
+<!doctype html>
+<meta charset="utf-8">
+<style>body{margin:0;background:#ffffff}</style>
+<svg width="1600" height="880" viewBox="0 0 1600 880" xmlns="http://www.w3.org/2000/svg" font-family="-apple-system, 'Helvetica Neue', Arial, sans-serif">
+  <defs>
+    <marker id="arr" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M 0 0 L 10 5 L 0 10 z" fill="#8c959f"/>
+    </marker>
+    <marker id="arrg" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M 0 0 L 10 5 L 0 10 z" fill="#1a7f37"/>
+    </marker>
+  </defs>
+
+  <rect width="1600" height="880" fill="#ffffff"/>
+
+  <!-- title -->
+  <text x="60" y="84" font-size="34" font-weight="700" fill="#1f2328">How agents fix themselves</text>
+  <text x="60" y="118" font-size="17" fill="#57606a">From production failure to reviewed pull request</text>
+
+  <!-- legend -->
+  <circle cx="1080" cy="79" r="5" fill="#0969da"/>
+  <text x="1094" y="84" font-size="14" fill="#57606a">Observe</text>
+  <circle cx="1210" cy="79" r="5" fill="#8250df"/>
+  <text x="1224" y="84" font-size="14" fill="#57606a">Understand</text>
+  <circle cx="1372" cy="79" r="5" fill="#1a7f37"/>
+  <text x="1386" y="84" font-size="14" fill="#57606a">Refine</text>
+
+  <!-- top row boxes -->
+  <rect x="60" y="230" width="270" height="120" rx="12" fill="#f6f8fa" stroke="#d0d7de" stroke-width="1.5"/>
+  <text x="80" y="276" font-size="20" font-weight="600" fill="#1f2328">Your agent</text>
+  <text x="80" y="304" font-size="14" fill="#57606a">serving production traffic</text>
+
+  <rect x="476" y="230" width="270" height="120" rx="12" fill="#f6f8fa" stroke="#0969da" stroke-width="1.5"/>
+  <text x="496" y="276" font-size="20" font-weight="600" fill="#1f2328">Telemetry</text>
+  <text x="496" y="304" font-size="14" fill="#57606a">OpenTelemetry traces,</text>
+  <text x="496" y="324" font-size="14" fill="#57606a">spans, sessions</text>
+
+  <rect x="892" y="230" width="270" height="120" rx="12" fill="#f6f8fa" stroke="#8250df" stroke-width="1.5"/>
+  <text x="912" y="276" font-size="20" font-weight="600" fill="#1f2328">Search</text>
+  <text x="912" y="304" font-size="14" fill="#57606a">by meaning, text, or metadata;</text>
+  <text x="912" y="324" font-size="14" fill="#57606a">one vector per unique message</text>
+
+  <rect x="1308" y="230" width="270" height="120" rx="12" fill="#f6f8fa" stroke="#8250df" stroke-width="1.5"/>
+  <text x="1328" y="276" font-size="20" font-weight="600" fill="#1f2328">Behaviors</text>
+  <text x="1328" y="304" font-size="14" fill="#57606a">sessions clustered by meaning,</text>
+  <text x="1328" y="324" font-size="14" fill="#57606a">trends vs weekly baseline</text>
+
+  <!-- top row arrows -->
+  <line x1="334" y1="290" x2="470" y2="290" stroke="#8c959f" stroke-width="2" marker-end="url(#arr)"/>
+  <line x1="750" y1="290" x2="886" y2="290" stroke="#8c959f" stroke-width="2" marker-end="url(#arr)"/>
+  <!-- telemetry forks to behaviors in parallel with search -->
+  <path d="M 611 230 V 178 H 1443 V 222" fill="none" stroke="#8c959f" stroke-width="2" marker-end="url(#arr)"/>
+
+  <!-- search and behaviors both converge on annotations, then signals -->
+  <line x1="1443" y1="354" x2="1443" y2="416" stroke="#8c959f" stroke-width="2" marker-end="url(#arr)"/>
+  <path d="M 1027 354 V 460 H 1302" fill="none" stroke="#8c959f" stroke-width="2" marker-end="url(#arr)"/>
+  <rect x="1308" y="422" width="270" height="76" rx="12" fill="#f6f8fa" stroke="#8250df" stroke-width="1.5"/>
+  <text x="1328" y="454" font-size="18" font-weight="600" fill="#1f2328">Annotations + flaggers</text>
+  <text x="1328" y="478" font-size="14" fill="#57606a">traces scored by humans + rules</text>
+  <line x1="1443" y1="502" x2="1443" y2="552" stroke="#8c959f" stroke-width="2" marker-end="url(#arr)"/>
+
+  <!-- return arrow: PR back to agent -->
+  <line x1="195" y1="556" x2="195" y2="358" stroke="#1a7f37" stroke-width="2.5" marker-end="url(#arrg)"/>
+  <text x="215" y="446" font-size="13" fill="#1a7f37">the fix ships;</text>
+  <text x="215" y="466" font-size="13" fill="#1a7f37">monitors keep watching</text>
+
+  <!-- monitor: configured watcher, dispatches on incident -->
+  <rect x="372" y="410" width="270" height="92" rx="12" fill="#f6f8fa" stroke="#1a7f37" stroke-width="1.5"/>
+  <text x="392" y="442" font-size="18" font-weight="600" fill="#1f2328">Monitor</text>
+  <text x="392" y="466" font-size="14" fill="#57606a">watches a signal, a saved search,</text>
+  <text x="392" y="486" font-size="14" fill="#57606a">or raw traffic; opens an incident</text>
+  <line x1="507" y1="506" x2="507" y2="554" stroke="#8c959f" stroke-width="2" marker-end="url(#arr)"/>
+
+  <!-- bottom row boxes (flow right to left) -->
+  <rect x="1308" y="560" width="270" height="120" rx="12" fill="#f6f8fa" stroke="#8250df" stroke-width="1.5"/>
+  <text x="1328" y="606" font-size="20" font-weight="600" fill="#1f2328">Signals</text>
+  <text x="1328" y="634" font-size="14" fill="#57606a">tracked patterns of interest,</text>
+  <text x="1328" y="654" font-size="14" fill="#57606a">lifecycle, write-time membership</text>
+
+  <rect x="996" y="560" width="270" height="120" rx="12" fill="#f6f8fa" stroke="#1a7f37" stroke-width="1.5"/>
+  <text x="1016" y="606" font-size="20" font-weight="600" fill="#1f2328">Evaluator</text>
+  <text x="1016" y="634" font-size="14" fill="#57606a">GEPA-optimized judge,</text>
+  <text x="1016" y="654" font-size="14" fill="#57606a">scores live traffic</text>
+
+  <rect x="684" y="560" width="270" height="120" rx="12" fill="#f6f8fa" stroke="#1a7f37" stroke-width="1.5"/>
+  <text x="704" y="606" font-size="20" font-weight="600" fill="#1f2328">Signal escalates</text>
+  <text x="704" y="634" font-size="14" fill="#57606a">24h count clears the weekly</text>
+  <text x="704" y="654" font-size="14" fill="#57606a">baseline; an incident opens</text>
+
+  <rect x="372" y="560" width="270" height="120" rx="12" fill="#f6f8fa" stroke="#1a7f37" stroke-width="1.5"/>
+  <text x="392" y="606" font-size="20" font-weight="600" fill="#1f2328">Dispatch</text>
+  <text x="392" y="634" font-size="14" fill="#57606a">coding agent woken with</text>
+  <text x="392" y="654" font-size="14" fill="#57606a">signal id + failing traces</text>
+
+  <rect x="60" y="560" width="270" height="120" rx="12" fill="#f6f8fa" stroke="#d0d7de" stroke-width="1.5"/>
+  <text x="80" y="606" font-size="20" font-weight="600" fill="#1f2328">Pull request</text>
+  <text x="80" y="634" font-size="14" fill="#57606a">written by the coding agent,</text>
+  <text x="80" y="654" font-size="14" fill="#57606a">reviewed by a human</text>
+
+  <!-- bottom row arrows (right to left) -->
+  <line x1="1304" y1="620" x2="1272" y2="620" stroke="#8c959f" stroke-width="2" marker-end="url(#arr)"/>
+  <line x1="992" y1="620" x2="960" y2="620" stroke="#8c959f" stroke-width="2" marker-end="url(#arr)"/>
+  <line x1="680" y1="620" x2="648" y2="620" stroke="#8c959f" stroke-width="2" marker-end="url(#arr)"/>
+  <line x1="368" y1="620" x2="336" y2="620" stroke="#8c959f" stroke-width="2" marker-end="url(#arr)"/>
+
+  <!-- regression gate bar -->
+  <rect x="60" y="756" width="680" height="72" rx="12" fill="#f6f8fa" stroke="#1a7f37" stroke-width="1.5"/>
+  <text x="80" y="786" font-size="16" font-weight="600" fill="#1f2328">Regression test in your CI</text>
+  <text x="80" y="810" font-size="14" fill="#57606a">failing traces become a dataset; every PR replays them before merge</text>
+  <line x1="195" y1="752" x2="195" y2="688" stroke="#8c959f" stroke-width="2" marker-end="url(#arr)"/>
+
+  <!-- footer -->
+  <text x="1540" y="820" font-size="14" fill="#57606a" text-anchor="end">docs.latitude.so</text>
+</svg>
