@@ -18,6 +18,8 @@ import {
   telemetry as realTelemetry,
   type LatitudeTelemetry,
 } from '../../telemetry'
+import { estimateCost } from '../ai/estimateCost'
+import { totalCost } from '@latitude-data/constants/costs'
 
 const mocks = {
   publish: vi.fn(),
@@ -446,6 +448,89 @@ model: gpt-4o
       })
 
       expect(foundExtraUserMessage).toBe(false)
+    })
+  })
+
+  describe('accumulated run cost/usage (basis for the sync run API response)', () => {
+    // gpt-4o, non-zero usage per step so a real cost is computed.
+    const PER_STEP_USAGE = {
+      inputTokens: 100,
+      outputTokens: 50,
+      totalTokens: 150,
+      reasoningTokens: 0,
+      cachedInputTokens: 0,
+    }
+
+    function mockAiWithUsage() {
+      return vi.fn(async () => {
+        const fullStream = new ReadableStream({
+          start(controller) {
+            controller.close()
+          },
+        })
+        return Result.ok({
+          type: 'text',
+          text: Promise.resolve('Fake AI generated text'),
+          providerLog: Promise.resolve({ uuid: 'fake-provider-log-uuid' }),
+          usage: Promise.resolve(PER_STEP_USAGE),
+          toolCalls: Promise.resolve([]),
+          response: Promise.resolve({ messages: [] }),
+          fullStream,
+        })
+      })
+    }
+
+    it('sums cost/usage across every step, exceeding the last-step response cost', async () => {
+      const runAiWithUsage = mockAiWithUsage()
+      // @ts-expect-error - we are mocking the function
+      aiSpy.mockImplementation(runAiWithUsage)
+
+      // dummyDoc1Content has two <step> blocks -> two provider calls.
+      const { context, workspace, document, commit, provider } =
+        await buildData({ doc1Content: dummyDoc1Content })
+
+      const result = await runDocumentAtCommit({
+        context,
+        workspace,
+        document,
+        commit,
+        parameters: {},
+        source: LogSources.API,
+        customIdentifier: 'tenant-abc',
+      }).then((r) => r.unwrap())
+
+      const lastResponse = await result.lastResponse
+      const runUsage = await result.runUsage
+      const runCost = await result.runCost
+
+      // The chain executed two steps -> ai() was called twice.
+      expect(runAiWithUsage).toHaveBeenCalledTimes(2)
+
+      // Accumulated usage is the sum of both steps.
+      expect(runUsage.promptTokens).toBe(PER_STEP_USAGE.inputTokens * 2)
+      expect(runUsage.completionTokens).toBe(PER_STEP_USAGE.outputTokens * 2)
+
+      // Cost of a single step -> this is what the API used to return
+      // (response.cost = last step only).
+      const perStepCost = estimateCost({
+        provider: provider.provider,
+        model: 'gpt-4o',
+        usage: {
+          inputTokens: PER_STEP_USAGE.inputTokens,
+          outputTokens: PER_STEP_USAGE.outputTokens,
+          promptTokens: PER_STEP_USAGE.inputTokens,
+          completionTokens: PER_STEP_USAGE.outputTokens,
+          totalTokens: PER_STEP_USAGE.totalTokens,
+          reasoningTokens: 0,
+          cachedInputTokens: 0,
+        },
+      })
+
+      // The accumulated run cost sums both steps...
+      expect(totalCost(runCost)).toBeCloseTo(perStepCost * 2)
+      // ...while the last step alone (the old response.cost) under-reports it.
+      expect(lastResponse!.cost).toBeCloseTo(perStepCost)
+      expect(totalCost(runCost)).toBeGreaterThan(lastResponse!.cost)
     })
   })
 })
