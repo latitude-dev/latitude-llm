@@ -384,6 +384,7 @@ describe("AIAgentLive.runAgent", () => {
         text: "Done",
         totalUsage: { inputTokens: 13, outputTokens: 7 },
         finishReason: "stop",
+        response: { messages: [] },
       }
     })
 
@@ -411,6 +412,37 @@ describe("AIAgentLive.runAgent", () => {
     expect(result.tokenUsage).toEqual({ input: 13, output: 7 })
     expect(result.finishReason).toBe("stop")
     expect(capturedStopWhen).toEqual({ stepCountIs: 9 })
+  })
+
+  it("passes active tool controls to the provider loop", async () => {
+    let capturedActiveTools: unknown
+    let capturedPrepareStep: ((input: { stepNumber: number }) => Promise<unknown>) | undefined
+
+    generateTextMock.mockImplementation(async (call: Record<string, unknown>) => {
+      capturedActiveTools = call.activeTools
+      capturedPrepareStep = call.prepareStep as typeof capturedPrepareStep
+      return {
+        text: "Done",
+        totalUsage: { inputTokens: 1, outputTokens: 1 },
+        finishReason: "stop",
+        response: { messages: [] },
+      }
+    })
+
+    await Effect.runPromise(
+      runAgentEffect({
+        ...baseInput,
+        activeTools: ["searchTools"],
+        prepareStep: ({ stepNumber }) => ({
+          activeTools: stepNumber === 0 ? ["searchTools"] : ["searchTools", "listSignals"],
+        }),
+      }),
+    )
+
+    expect(capturedActiveTools).toEqual(["searchTools"])
+    await expect(capturedPrepareStep?.({ stepNumber: 2 })).resolves.toEqual({
+      activeTools: ["searchTools", "listSignals"],
+    })
   })
 
   it("maps provider failures to AIError on the Effect channel", async () => {

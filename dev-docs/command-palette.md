@@ -78,7 +78,7 @@ The palette merges, in render order:
    - `useProjectCommands` — switch to any project in the org.
    - `useGlobalCommands` — switch organization (drill-down), switch theme, create
      project/org, docs, backoffice (admins), log out.
-4. **Traces fallback** — a single "Search traces for "…"" action, rendered last.
+4. **Ask agent fallback** — a single `Ask "…"` action for any non-empty query, rendered last.
 
 `useCurrentProject` (`commands/use-current-project.ts`) resolves the active project from the
 `$projectSlug` route loader via `useMatch({ from, shouldThrow: false })` — **not** by matching
@@ -102,8 +102,8 @@ Consequences:
 - Context / navigation / projects / actions and **datasets / saved searches** are filtered
   by `commandMatches` against the live query.
 - **Issue** results are pre-curated by their hook (semantic + substring) and rendered as-is.
-- The **traces fallback** always renders (it *is* the query). So inside a project with a
-  query you never see a bare "No results found." — there is always at least the fallback.
+- The **Ask agent fallback** always renders for a non-empty query (it *is* the query), so the
+  user can hand off open-ended requests instead of reaching a bare empty state.
 - cmdk still owns keyboard navigation, selection, groups, and the empty/loading slots.
 
 ### Sub-pages (drill-down)
@@ -150,6 +150,21 @@ in the Projects group, which renders before the Actions group, so it already out
 - **Traces fallback** (same hook): always-present "Search traces for "<query>"" → opens the
   Search page with `?q=<query>`.
 
+### Ask agent
+
+Selecting the `Ask "…"` fallback opens the command-palette agent view
+(`agent-session-view.tsx`). The worker runs the agent as the signed-in user with
+`commandPaletteAgentToolset` as the local operation registry, but it does not expose that whole
+registry to the model at once.
+
+The provider starts with only `searchTools`, `listLoadedTools`, and `navigateTo` active. Product
+API operations stay in worker memory and become model-visible only after `searchTools` finds and
+loads them. `AIAgent.runAgent` exposes Vercel AI SDK `activeTools` / `prepareStep`, and
+`agent-run-turn.ts` uses those hooks to return the active tool names before every model step.
+Loaded operation tools are evicted after five provider steps with no use; read-only tools execute
+immediately, while write/destructive tools still pass through the confirmation gate before their
+operation runs.
+
 ### File map
 
 | Concern | File |
@@ -164,6 +179,8 @@ in the Projects group, which renders before the Actions group, so it already out
 | Global actions | `apps/web/src/components/command-palette/commands/use-global-commands.tsx` |
 | Issue search | `apps/web/src/components/command-palette/commands/use-issue-search-commands.ts` |
 | Dataset / saved-search / traces fallback | `apps/web/src/components/command-palette/commands/use-project-search-commands.ts` |
+| Ask agent view | `apps/web/src/components/command-palette/agent-session-view.tsx` |
+| Ask agent worker + tool search | `apps/workers/src/workers/agent-run-turn.ts`, `apps/workers/src/workers/agent-tool-search.ts` |
 | Shared project sections (source of truth) | `apps/web/src/domains/projects/project-sections.ts` |
 | Mount point + header button | `apps/web/src/routes/_authenticated.tsx` |
 

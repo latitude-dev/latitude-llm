@@ -185,6 +185,14 @@ export interface AgentStep {
   readonly tokenUsage?: { readonly input: number; readonly output: number }
 }
 
+export interface AgentPrepareStepInput {
+  readonly stepNumber: number
+}
+
+export interface AgentPrepareStepResult {
+  readonly activeTools?: ReadonlyArray<string>
+}
+
 /**
  * Provider-neutral conversation message. Round-trips a multi-turn tool loop: the
  * adapter maps these to/from the Vercel SDK message shapes so callers can persist
@@ -215,6 +223,10 @@ export interface RunAgentInput {
   readonly maxTokens?: number
   readonly temperature?: number
   readonly abortSignal?: AbortSignal
+  readonly activeTools?: ReadonlyArray<string>
+  readonly prepareStep?: (
+    step: AgentPrepareStepInput,
+  ) => AgentPrepareStepResult | Promise<AgentPrepareStepResult | undefined> | undefined
   /** Invoked after each provider step, in order. Never throws into the loop. */
   readonly onStep?: (step: AgentStep) => void
   readonly telemetry?: GenerateTelemetryCapture

@@ -25,6 +25,7 @@ export const buildAgentSystemPrompt = ({ activeProjectSlug }: AgentPromptContext
     "",
     "How to work:",
     "- Before and while you work, emit a short present-tense status line (one clause) whenever your focus shifts, so the user can follow along.",
+    "- Product API tools are loaded on demand. If you need a capability that is not currently available as a tool, call `searchTools` with a short capability query, then use the loaded tool on the next step.",
     "- Prefer read-only tools to gather context before acting.",
     "- Any tool that changes data (create, update, delete, and similar) is automatically paused for the user to approve or reject before it runs. Do not ask for permission in prose — just call the tool. If a call is rejected, adapt or explain what you would need instead.",
     "- To take the user to a page, call the `navigateTo` tool with an in-app path. This moves the user without closing the palette.",

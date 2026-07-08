@@ -609,6 +609,7 @@ export const AIAgentLive = Layer.effect(
       }
 
       const providerModel = yield* createProviderModel(input.provider, input.model)
+      const tools = buildAgentTools(input.tools, input.provider)
 
       return yield* Effect.tryPromise({
         try: () =>
@@ -620,8 +621,17 @@ export const AIAgentLive = Layer.effect(
               ...(input.messages !== undefined && input.messages.length > 0
                 ? { messages: toModelMessages(input.messages) }
                 : { prompt: input.prompt }),
-              tools: buildAgentTools(input.tools, input.provider),
+              tools,
+              ...(input.activeTools !== undefined ? { activeTools: [...input.activeTools] } : {}),
               stopWhen: stepCountIs(input.maxSteps),
+              ...(input.prepareStep !== undefined
+                ? {
+                    prepareStep: async ({ stepNumber }: { stepNumber: number }) => {
+                      const prepared = await input.prepareStep?.({ stepNumber })
+                      return prepared?.activeTools !== undefined ? { activeTools: [...prepared.activeTools] } : {}
+                    },
+                  }
+                : {}),
               reasoning: input.reasoning ?? "provider-default",
               maxOutputTokens: input.maxTokens ?? DEFAULT_MAX_OUTPUT_TOKENS,
               ...(input.temperature !== undefined ? { temperature: input.temperature } : {}),

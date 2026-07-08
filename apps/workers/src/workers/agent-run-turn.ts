@@ -34,7 +34,7 @@ import {
   withPostgres,
 } from "@platform/db-postgres"
 import { createLogger, withTracing } from "@repo/observability"
-import { commandPaletteAgentToolset, type OperationContext } from "@repo/operations"
+import { commandPaletteAgentToolset, type OperationAccess, type OperationContext } from "@repo/operations"
 import { Effect, Layer } from "effect"
 import { z } from "zod"
 
@@ -47,12 +47,22 @@ import {
   getWorkflowQuerier,
   getWorkflowStarter,
 } from "../clients.ts"
+import {
+  AgentToolLoadState,
+  createToolSearchIndex,
+  LIST_LOADED_TOOLS_TOOL_NAME,
+  NAVIGATE_TOOL_NAME,
+  SEARCH_TOOLS_TOOL_NAME,
+  searchAgentTools,
+  TOOL_SEARCH_RESULT_LIMIT,
+} from "./agent-tool-search.ts"
 
 const logger = createLogger("agent-run-turn")
 const AGENT_RUN_TURN_QUEUE = "agent-run-turn" as const
 const AGENT_RUN_TURN_RUN_TASK = "run" as const
 
 const TOOL_RESULT_MAX_CHARS = 12_000
+const OPERATION_ACCESS_VALUES = ["read-only", "write", "destructive"] as const satisfies readonly OperationAccess[]
 
 type DomainServices = SqlClient | AgentSessionRepository | AgentMessageRepository
 
@@ -192,6 +202,13 @@ const runAgentTurn = async ({
       ),
     )
 
+  let currentStep = 0
+  const toolSearchIndex = createToolSearchIndex(commandPaletteAgentToolset.tools)
+  const toolRecordsByName = new Map(toolSearchIndex.map((tool) => [tool.name, tool]))
+  const toolLoadState = new AgentToolLoadState({
+    coreToolNames: [SEARCH_TOOLS_TOOL_NAME, LIST_LOADED_TOOLS_TOOL_NAME, NAVIGATE_TOOL_NAME],
+  })
+
   const operationTools: AgentToolDef[] = commandPaletteAgentToolset.tools.map((toolDef) => {
     const gated = (CONFIRM_ACCESS_LEVELS as ReadonlyArray<string>).includes(toolDef.access)
     return {
@@ -199,6 +216,7 @@ const runAgentTurn = async ({
       description: toolDef.description,
       inputSchema: toolDef.inputSchema,
       execute: async (rawInput) => {
+        toolLoadState.markUsed(toolDef.name, currentStep)
         if (!gated) return runOperation(toolDef, rawInput)
         const toolCallId = generateId()
         await emit({
@@ -220,8 +238,62 @@ const runAgentTurn = async ({
     }
   })
 
+  const searchToolsTool: AgentToolDef = {
+    name: SEARCH_TOOLS_TOOL_NAME,
+    description:
+      "Search Latitude API tools by capability and make the best matches available on the next step. Use this before calling product tools that are not currently loaded.",
+    inputSchema: z.object({
+      query: z.string().min(1).describe("Natural-language capability to search for, such as 'list signals'."),
+      maxAccess: z
+        .enum(OPERATION_ACCESS_VALUES)
+        .optional()
+        .describe("Maximum access level to include. Defaults to destructive, which can include every tool."),
+    }),
+    execute: async (rawInput) => {
+      const input = rawInput as { query?: unknown; maxAccess?: unknown }
+      if (typeof input.query !== "string" || input.query.trim().length === 0) {
+        return { loaded: [], error: "A non-empty query is required." }
+      }
+      const maxAccess = OPERATION_ACCESS_VALUES.includes(input.maxAccess as OperationAccess)
+        ? (input.maxAccess as OperationAccess)
+        : undefined
+      const matches = searchAgentTools(toolSearchIndex, {
+        query: input.query,
+        ...(maxAccess !== undefined ? { maxAccess } : {}),
+        limit: TOOL_SEARCH_RESULT_LIMIT,
+      })
+      toolLoadState.load(
+        matches.map((tool) => tool.name),
+        currentStep,
+      )
+      return {
+        loaded: matches.map(({ name, title, description, group, access }) => ({
+          name,
+          title,
+          description,
+          group,
+          access,
+        })),
+        availableNextStep: true,
+      }
+    },
+  }
+
+  const listLoadedToolsTool: AgentToolDef = {
+    name: LIST_LOADED_TOOLS_TOOL_NAME,
+    description: "List the Latitude API tools currently available for direct use.",
+    inputSchema: z.object({}),
+    execute: async () => ({
+      tools: toolLoadState
+        .loadedToolNames(currentStep)
+        .map((name) => toolRecordsByName.get(name))
+        .filter((tool) => tool !== undefined)
+        .map(({ name, title, description, group, access }) => ({ name, title, description, group, access })),
+    }),
+  }
+
   const navigateTool: AgentToolDef = {
-    name: "navigateTo",
+    name: NAVIGATE_TOOL_NAME,
     description:
       "Navigate the user to an in-app path (e.g. /projects/my-project/signals). Moves the user without closing the palette. Use only for in-app routes.",
     inputSchema: z.object({
@@ -250,11 +322,16 @@ const runAgentTurn = async ({
     system: buildAgentSystemPrompt({ activeProjectSlug: payload.activeProjectSlug ?? null }),
     prompt: "",
     messages,
-    tools: [...operationTools, navigateTool],
+    tools: [...operationTools, searchToolsTool, listLoadedToolsTool, navigateTool],
+    activeTools: toolLoadState.activeToolNames(0),
     maxSteps: AGENT_MAX_STEPS,
     ...(modelConfig.reasoning !== undefined ? { reasoning: modelConfig.reasoning } : {}),
     ...(modelConfig.maxTokens !== undefined ? { maxTokens: modelConfig.maxTokens } : {}),
     ...(modelConfig.temperature !== undefined ? { temperature: modelConfig.temperature } : {}),
+    prepareStep: ({ stepNumber }) => {
+      currentStep = stepNumber
+      return { activeTools: toolLoadState.activeToolNames(stepNumber) }
+    },
     onStep: (step) => {
       if (step.text === undefined) return
       const clamped = step.text
