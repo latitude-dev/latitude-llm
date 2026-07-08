@@ -1,6 +1,7 @@
 // Tokens
 
 export type { GenAIMessage } from "rosetta-ai"
+export { AgentShaderPanel, type AgentShaderPanelProps } from "./components/agent-textarea/agent-shader-panel.tsx"
 export {
   AgentTextarea,
   type AgentTextareaProps,

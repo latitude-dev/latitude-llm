@@ -260,25 +260,16 @@ export function CommandPalette() {
       onEscapeKeyDown={handleEscapeKeyDown}
     >
       {askOpen ? (
-        <>
-          <button
-            type="button"
-            onClick={() => {
-              setAskOpen(false)
-              setAskPrompt(null)
-            }}
-            className="flex w-full items-center gap-1 border-b border-border px-3 py-1.5 text-muted-foreground transition-colors hover:text-foreground"
-          >
-            <ChevronLeftIcon className="size-3.5" />
-            <Text.H6 color="foregroundMuted">Ask the agent</Text.H6>
-          </button>
-          <AgentSessionView
-            initialSessionId={activeAgentSessionId}
-            initialPrompt={askPrompt}
-            {...(currentProject ? { projectId: currentProject.id, activeProjectSlug: currentProject.slug } : {})}
-            onSessionCreated={setActiveAgentSessionId}
-          />
-        </>
+        <AgentSessionView
+          initialSessionId={activeAgentSessionId}
+          initialPrompt={askPrompt}
+          {...(currentProject ? { projectId: currentProject.id, activeProjectSlug: currentProject.slug } : {})}
+          onSessionCreated={setActiveAgentSessionId}
+          onBack={() => {
+            setAskOpen(false)
+            setAskPrompt(null)
+          }}
+        />
       ) : (
         <>
           {currentPage ? (
@@ -309,25 +300,48 @@ export function CommandPalette() {
             )}
             {groups.map((group) => (
               <CommandGroup key={group.key} heading={group.label}>
-                {group.commands.map((command) => (
-                  <CommandItem key={command.id} value={command.id} onSelect={() => execute(command)}>
-                    {command.leading ?? <Icon icon={command.icon} size="sm" color="foregroundMuted" />}
-                    <span className="flex min-w-0 flex-1 items-center gap-2">
-                      <Text.H5 ellipsis noWrap>
-                        {command.titleNode ?? command.title}
-                      </Text.H5>
-                      {command.subtitle ? (
-                        <Text.H6 color="foregroundMuted" ellipsis noWrap>
-                          {command.subtitle}
-                        </Text.H6>
+                {group.commands.map((command) =>
+                  command.id === ASK_COMMAND_ID ? (
+                    // Rotating conic-gradient ring (a 1px rainbow border via the outer p-px) marks the
+                    // agent affordance without a per-row WebGL canvas.
+                    <div key={command.id} className="relative overflow-hidden rounded-md p-px">
+                      <span
+                        aria-hidden
+                        className="pointer-events-none absolute inset-[-150%] animate-[spin_4s_linear_infinite] bg-[conic-gradient(from_0deg,#ff0080,#ff8c00,#ffd500,#00d68f,#00b3ff,#8b5cff,#ff0080)]"
+                      />
+                      <CommandItem
+                        value={command.id}
+                        onSelect={() => execute(command)}
+                        className="relative bg-popover data-[selected=true]:bg-accent"
+                      >
+                        <Icon icon={command.icon} size="sm" color="foregroundMuted" />
+                        <span className="flex min-w-0 flex-1 items-center gap-2">
+                          <Text.H5 ellipsis noWrap>
+                            {command.titleNode ?? command.title}
+                          </Text.H5>
+                        </span>
+                      </CommandItem>
+                    </div>
+                  ) : (
+                    <CommandItem key={command.id} value={command.id} onSelect={() => execute(command)}>
+                      {command.leading ?? <Icon icon={command.icon} size="sm" color="foregroundMuted" />}
+                      <span className="flex min-w-0 flex-1 items-center gap-2">
+                        <Text.H5 ellipsis noWrap>
+                          {command.titleNode ?? command.title}
+                        </Text.H5>
+                        {command.subtitle ? (
+                          <Text.H6 color="foregroundMuted" ellipsis noWrap>
+                            {command.subtitle}
+                          </Text.H6>
+                        ) : null}
+                      </span>
+                      {command.kind === "parent" ? (
+                        <ChevronLeftIcon className="size-3.5 rotate-180 text-muted-foreground" />
                       ) : null}
-                    </span>
-                    {command.kind === "parent" ? (
-                      <ChevronLeftIcon className="size-3.5 rotate-180 text-muted-foreground" />
-                    ) : null}
-                    {command.badge}
-                  </CommandItem>
-                ))}
+                      {command.badge}
+                    </CommandItem>
+                  ),
+                )}
               </CommandGroup>
             ))}
           </CommandList>

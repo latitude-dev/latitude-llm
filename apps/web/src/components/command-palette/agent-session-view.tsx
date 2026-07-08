@@ -1,4 +1,5 @@
-import { AgentTextarea, Button, Text } from "@repo/ui"
+import { AgentShaderPanel, Button, Text } from "@repo/ui"
+import { ChevronLeftIcon } from "lucide-react"
 import { useEffect, useRef, useState } from "react"
 import { useAgentSession } from "../../domains/agent/use-agent-session.ts"
 
@@ -8,12 +9,14 @@ interface AgentSessionViewProps {
   readonly projectId?: string
   readonly activeProjectSlug?: string
   readonly onSessionCreated: (sessionId: string) => void
+  readonly onBack: () => void
 }
 
 /**
- * The command-palette "Ask" surface: a fixed-height chat over the in-product agent. Streams live
- * status into the follow-up textarea's shader, renders the durable transcript, and prompts the user
- * to approve or reject any action the agent wants to take before it runs.
+ * The command-palette "Ask" surface. Not a chat transcript: the top row is the prompt input (the
+ * submitted question while a turn runs, then the last question as placeholder for a follow-up), and
+ * the body shows the agent's live thinking (shader + status) while running and just the latest reply
+ * once done. Mutations pause for an approve/reject confirmation.
  */
 export function AgentSessionView({
   initialSessionId,
@@ -21,6 +24,7 @@ export function AgentSessionView({
   projectId,
   activeProjectSlug,
   onSessionCreated,
+  onBack,
 }: AgentSessionViewProps) {
   const chat = useAgentSession({
     initialSessionId,
@@ -29,83 +33,88 @@ export function AgentSessionView({
     onSessionCreated,
   })
   const [input, setInput] = useState("")
-  const scrollRef = useRef<HTMLDivElement>(null)
+  const [lastQuery, setLastQuery] = useState<string | null>(null)
   const sentInitial = useRef(false)
+
+  const runQuery = (text: string) => {
+    const value = text.trim()
+    if (value.length === 0 || chat.running) return
+    setLastQuery(value)
+    setInput("")
+    chat.send(value)
+  }
 
   useEffect(() => {
     if (sentInitial.current) return
     if (initialPrompt && !initialSessionId) {
       sentInitial.current = true
+      setLastQuery(initialPrompt)
       chat.send(initialPrompt)
     }
   }, [initialPrompt, initialSessionId, chat.send])
 
-  useEffect(() => {
-    scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight })
-  }, [chat.messages, chat.status])
-
-  const submit = () => {
-    const value = input.trim()
-    if (value.length === 0 || chat.running) return
-    chat.send(value)
-    setInput("")
-  }
+  const response = [...chat.messages].reverse().find((message) => message.role === "assistant")?.text ?? null
 
   return (
     <div className="flex h-[min(460px,70vh)] flex-col">
-      <div ref={scrollRef} className="flex flex-1 flex-col gap-3 overflow-y-auto p-4">
-        {chat.messages.length === 0 && !chat.running ? (
-          <Text.H6 color="foregroundMuted">Ask the agent to find, explain, or change something.</Text.H6>
-        ) : null}
-        {chat.messages.map((message) => (
-          <div key={message.id} className={message.role === "user" ? "self-end text-right" : "self-start"}>
-            <div
-              className={
-                message.role === "user"
-                  ? "rounded-lg bg-primary px-3 py-2 text-primary-foreground"
-                  : "rounded-lg bg-muted px-3 py-2"
-              }
-            >
-              <Text.H5 whiteSpace="preWrap">{message.text}</Text.H5>
-            </div>
-          </div>
-        ))}
-        {chat.error ? <Text.H6 color="destructive">{chat.error}</Text.H6> : null}
-      </div>
-
-      {chat.pendingConfirmation ? (
-        <div className="mx-4 mb-3 flex flex-col gap-2 rounded-lg border border-border bg-background p-3 shadow-sm">
-          <Text.H6M>The agent wants to run “{chat.pendingConfirmation.title}”</Text.H6M>
-          {chat.pendingConfirmation.summary ? (
-            <Text.H6 color="foregroundMuted">{chat.pendingConfirmation.summary}</Text.H6>
-          ) : null}
-          <pre className="max-h-24 overflow-auto rounded bg-muted p-2 text-xs">
-            {JSON.stringify(chat.pendingConfirmation.input, null, 2)}
-          </pre>
-          <div className="flex justify-end gap-2">
-            <Button variant="outline" onClick={() => chat.respond(chat.pendingConfirmation!.toolCallId, "deny")}>
-              Reject
-            </Button>
-            <Button onClick={() => chat.respond(chat.pendingConfirmation!.toolCallId, "approve")}>Approve & run</Button>
-          </div>
-        </div>
-      ) : null}
-
-      <div className="border-border border-t p-3">
-        <AgentTextarea
-          value={input}
-          status={chat.running ? (chat.status ?? "Working…") : null}
-          minRows={1}
-          maxRows={5}
-          placeholder="Ask a follow-up…"
+      <div className="flex h-12 items-center gap-2 border-border border-b px-3">
+        <button
+          type="button"
+          onClick={onBack}
+          className="text-muted-foreground transition-colors hover:text-foreground"
+          aria-label="Back"
+        >
+          <ChevronLeftIcon className="size-4" />
+        </button>
+        <input
+          // biome-ignore lint/a11y/noAutofocus: the palette is a focus-trapped dialog opened on demand.
+          autoFocus
+          className="h-full flex-1 bg-transparent text-sm outline-none placeholder:text-muted-foreground"
+          disabled={chat.running}
+          value={chat.running ? (lastQuery ?? "") : input}
+          placeholder={chat.running ? "" : lastQuery ? `Ask a follow-up (last: "${lastQuery}")` : "Ask anything…"}
           onChange={(event) => setInput(event.target.value)}
           onKeyDown={(event) => {
             if (event.key === "Enter" && !event.shiftKey) {
               event.preventDefault()
-              submit()
+              runQuery(input)
             }
           }}
         />
+      </div>
+
+      <div className="relative min-h-0 flex-1 p-3">
+        {chat.running ? (
+          <AgentShaderPanel loading status={chat.status ?? "Working…"} className="h-full" />
+        ) : chat.error ? (
+          <Text.H5 color="destructive">{chat.error}</Text.H5>
+        ) : response ? (
+          <div className="h-full overflow-y-auto">
+            <Text.H5 whiteSpace="preWrap">{response}</Text.H5>
+          </div>
+        ) : (
+          <Text.H6 color="foregroundMuted">Ask the agent to find, explain, or change something.</Text.H6>
+        )}
+
+        {chat.pendingConfirmation ? (
+          <div className="absolute inset-x-3 bottom-3 flex flex-col gap-2 rounded-lg border border-border bg-background p-3 shadow-lg">
+            <Text.H6M>The agent wants to run “{chat.pendingConfirmation.title}”</Text.H6M>
+            {chat.pendingConfirmation.summary ? (
+              <Text.H6 color="foregroundMuted">{chat.pendingConfirmation.summary}</Text.H6>
+            ) : null}
+            <pre className="max-h-24 overflow-auto rounded bg-muted p-2 text-xs">
+              {JSON.stringify(chat.pendingConfirmation.input, null, 2)}
+            </pre>
+            <div className="flex justify-end gap-2">
+              <Button variant="outline" onClick={() => chat.respond(chat.pendingConfirmation!.toolCallId, "deny")}>
+                Reject
+              </Button>
+              <Button onClick={() => chat.respond(chat.pendingConfirmation!.toolCallId, "approve")}>
+                Approve & run
+              </Button>
+            </div>
+          </div>
+        ) : null}
       </div>
     </div>
   )
