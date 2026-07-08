@@ -1,7 +1,8 @@
 import type { FilterCondition, FilterSet } from "@domain/shared"
 import { ValidationError } from "@domain/shared"
+import { Effect } from "effect"
 import { describe, expect, it } from "vitest"
-import { buildClickHouseWhere, type ChFieldRegistry } from "./filter-builder.ts"
+import { buildClickHouseWhere, type ChFieldRegistry, runFilterBuild } from "./filter-builder.ts"
 
 function mapStatus(v: FilterCondition["value"]): FilterCondition["value"] {
   const map: Record<string, number> = { error: 2, ok: 1, unset: 0 }
@@ -61,6 +62,13 @@ describe("buildClickHouseWhere", () => {
   it("rejects fractional values in in/notIn arrays on integer-typed fields", () => {
     const filters: FilterSet = { cost: [{ op: "in", value: [1, 0.5, 3] }] }
     expect(() => buildClickHouseWhere(filters, registry)).toThrow(ValidationError)
+  })
+
+  it("surfaces ValidationError through runFilterBuild as an Effect failure", async () => {
+    const filters: FilterSet = { cost: [{ op: "gte", value: 0.25 }] }
+    await expect(
+      Effect.runPromise(runFilterBuild(() => buildClickHouseWhere(filters, registry))),
+    ).rejects.toBeInstanceOf(ValidationError)
   })
 
   it("handles in operator on scalar field", () => {

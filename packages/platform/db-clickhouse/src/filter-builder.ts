@@ -1,5 +1,6 @@
 import type { FilterCondition, FilterOperator, FilterSet } from "@domain/shared"
-import { ValidationError } from "@domain/shared"
+import { isValidationError, ValidationError } from "@domain/shared"
+import { Effect } from "effect"
 
 // ---------------------------------------------------------------------------
 // ClickHouse-specific field mapping
@@ -143,6 +144,16 @@ export function buildClickHouseWhere(
 
   return { clauses, params }
 }
+
+/** Run synchronous filter SQL building inside Effect, surfacing `ValidationError` as a typed failure. */
+export const runFilterBuild = <A>(build: () => A): Effect.Effect<A, ValidationError> =>
+  Effect.try({
+    try: build,
+    catch: (cause) => {
+      if (isValidationError(cause)) return cause
+      throw cause
+    },
+  })
 
 // ---------------------------------------------------------------------------
 // Internal helpers

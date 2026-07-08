@@ -8,6 +8,7 @@ import type {
   OrganizationId,
   ProjectId,
   RepositoryError,
+  ValidationError,
 } from "@domain/shared"
 import { Context, type Effect } from "effect"
 
@@ -42,7 +43,9 @@ export interface AnalyticsQueryReaderShape {
    * set); a metric-only query returns a single point. Org/project scoping, filter
    * compilation, and wire-scale conversions are inherited from the field registries.
    */
-  query(input: AnalyticsQueryInput): Effect.Effect<readonly AnalyticsSeriesPoint[], RepositoryError, ChSqlClient>
+  query(
+    input: AnalyticsQueryInput,
+  ): Effect.Effect<readonly AnalyticsSeriesPoint[], RepositoryError | ValidationError, ChSqlClient>
 }
 
 export class AnalyticsQueryReader extends Context.Service<AnalyticsQueryReader, AnalyticsQueryReaderShape>()(
