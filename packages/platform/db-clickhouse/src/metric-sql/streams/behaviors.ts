@@ -1,6 +1,6 @@
-import type { BehaviorBreakdownField } from "@domain/shared"
+import type { BehaviorBreakdownField, ValidationError } from "@domain/shared"
 import { Effect } from "effect"
-import { buildClickHouseWhere } from "../../filter-builder.ts"
+import { buildClickHouseWhere, runFilterBuild } from "../../filter-builder.ts"
 import { BEHAVIOR_FIELD_REGISTRY } from "../../registries/behavior-fields.ts"
 import { behaviorAggregate, windowParams } from "../helpers.ts"
 import type { BreakdownExpr, InnerQuery, MetricSqlInput, StreamDescriptor } from "../types.ts"
@@ -13,9 +13,11 @@ const BREAKDOWN = {
 } satisfies Record<BehaviorBreakdownField, BreakdownExpr>
 
 /** One row per taxonomy observation, windowed on `start_time` (DateTime64(9)). */
-const buildInner = (input: MetricSqlInput<"behaviors">): Effect.Effect<InnerQuery, never, never> =>
-  Effect.sync(() => {
-    const { clauses, params: filterParams } = buildClickHouseWhere(input.filterSet, BEHAVIOR_FIELD_REGISTRY)
+const buildInner = (input: MetricSqlInput<"behaviors">): Effect.Effect<InnerQuery, ValidationError, never> =>
+  Effect.gen(function* () {
+    const { clauses, params: filterParams } = yield* runFilterBuild(() =>
+      buildClickHouseWhere(input.filterSet, BEHAVIOR_FIELD_REGISTRY),
+    )
     const extraWhere = clauses.length > 0 ? `AND ${clauses.join(" AND ")}` : ""
     return {
       sql: `SELECT assigned_cluster_id, assignment_confidence, assignment_method, session_id, start_time

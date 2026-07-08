@@ -8,7 +8,7 @@ export {
   createClickhouseClientEffect,
 } from "./client.ts"
 export type { ChFieldMapping, ChFieldRegistry } from "./filter-builder.ts"
-export { buildClickHouseWhere } from "./filter-builder.ts"
+export { buildClickHouseWhere, runFilterBuild } from "./filter-builder.ts"
 export { healthcheckClickhouse } from "./health.ts"
 export { isScoreFilterKey, SCORE_FIELD_REGISTRY, SCORE_FILTER_KEYS } from "./registries/score-fields.ts"
 export { AdminOrganizationUsageRepositoryLive } from "./repositories/admin-organization-usage-repository.ts"

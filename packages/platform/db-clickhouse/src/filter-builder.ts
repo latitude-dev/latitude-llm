@@ -1,4 +1,6 @@
 import type { FilterCondition, FilterOperator, FilterSet } from "@domain/shared"
+import { isValidationError, ValidationError } from "@domain/shared"
+import { Effect } from "effect"
 
 // ---------------------------------------------------------------------------
 // ClickHouse-specific field mapping
@@ -27,6 +29,22 @@ function isSyntheticMapping(mapping: ChFieldMapping): mapping is SyntheticFieldM
 }
 
 export type ChFieldRegistry<K extends string = string> = Readonly<Record<K, ChFieldMapping>>
+
+const INTEGER_CH_TYPE = /^(?:U?Int(?:8|16|32|64))$/
+
+const isIntegerChType = (chType: string): boolean => INTEGER_CH_TYPE.test(chType)
+
+const assertIntegerFilterValue = (field: string, value: FilterCondition["value"]): void => {
+  const values = Array.isArray(value) ? value : [value]
+  for (const item of values) {
+    if (typeof item === "number" && !Number.isInteger(item)) {
+      throw new ValidationError({
+        field,
+        message: `Filter value for '${field}' must be an integer (got ${item}). Numeric filters use storage units (for example cost in microcents, duration in nanoseconds).`,
+      })
+    }
+  }
+}
 
 // ---------------------------------------------------------------------------
 // Operator -> SQL mapping
@@ -111,6 +129,9 @@ export function buildClickHouseWhere(
     for (const cond of conditions) {
       const p = `${prefix}_${paramIdx++}`
       let value: FilterCondition["value"] = mapping.mapValue ? mapping.mapValue(cond.value) : cond.value
+      if (isIntegerChType(mapping.chType)) {
+        assertIntegerFilterValue(field, value)
+      }
       const ilikeWrap =
         (cond.op === "contains" || cond.op === "notContains") && !(mapping.isArray && mapping.arrayContains)
       if (ilikeWrap && typeof value === "string") {
@@ -123,6 +144,16 @@ export function buildClickHouseWhere(
 
   return { clauses, params }
 }
+
+/** Run synchronous filter SQL building inside Effect, surfacing `ValidationError` as a typed failure. */
+export const runFilterBuild = <A>(build: () => A): Effect.Effect<A, ValidationError> =>
+  Effect.try({
+    try: build,
+    catch: (cause) => {
+      if (isValidationError(cause)) return cause
+      throw cause
+    },
+  })
 
 // ---------------------------------------------------------------------------
 // Internal helpers

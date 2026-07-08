@@ -1,4 +1,4 @@
-import type { ChSqlClient, OrganizationId, ProjectId, RepositoryError } from "@domain/shared"
+import type { ChSqlClient, OrganizationId, ProjectId, RepositoryError, ValidationError } from "@domain/shared"
 import { DEFAULT_ESCALATION_SENSITIVITY } from "@domain/shared"
 import { Context, Effect, Layer } from "effect"
 import type { EntrySignalsSnapshot } from "./entities/incident.ts"
@@ -158,7 +158,7 @@ const backtrack = (reader: SeriesReaderShape, input: EscalationEngineInput, dire
 export interface EscalationEngineShape {
   evaluate(
     input: EscalationEngineInput,
-  ): Effect.Effect<EscalationEngineDecision, RepositoryError, SeriesReader | ChSqlClient>
+  ): Effect.Effect<EscalationEngineDecision, RepositoryError | ValidationError, SeriesReader | ChSqlClient>
 }
 
 export class EscalationEngine extends Context.Service<EscalationEngine, EscalationEngineShape>()(

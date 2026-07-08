@@ -1,6 +1,6 @@
-import type { MomentBreakdownField } from "@domain/shared"
+import type { MomentBreakdownField, ValidationError } from "@domain/shared"
 import { Effect } from "effect"
-import { buildClickHouseWhere } from "../../filter-builder.ts"
+import { buildClickHouseWhere, runFilterBuild } from "../../filter-builder.ts"
 import { MOMENT_FIELD_REGISTRY } from "../../registries/moment-fields.ts"
 import { momentAggregate, windowParams } from "../helpers.ts"
 import type { BreakdownExpr, InnerQuery, MetricSqlInput, StreamDescriptor } from "../types.ts"
@@ -27,9 +27,11 @@ const BREAKDOWN = {
  * the join). The labels table has no time axis (partitioned by `indexed_at`), so
  * it can't be time-pruned — only the moment side is; the join restricts the rest.
  */
-const buildInner = (input: MetricSqlInput<"moments">): Effect.Effect<InnerQuery, never, never> =>
-  Effect.sync(() => {
-    const { clauses, params: filterParams } = buildClickHouseWhere(input.filterSet, MOMENT_FIELD_REGISTRY)
+const buildInner = (input: MetricSqlInput<"moments">): Effect.Effect<InnerQuery, ValidationError, never> =>
+  Effect.gen(function* () {
+    const { clauses, params: filterParams } = yield* runFilterBuild(() =>
+      buildClickHouseWhere(input.filterSet, MOMENT_FIELD_REGISTRY),
+    )
     const extraWhere = clauses.length > 0 ? `AND ${clauses.join(" AND ")}` : ""
     return {
       sql: `SELECT

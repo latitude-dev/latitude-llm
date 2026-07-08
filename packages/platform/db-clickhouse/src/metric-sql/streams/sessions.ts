@@ -1,6 +1,7 @@
-import type { ChSqlClient, RepositoryError, SessionBreakdownField } from "@domain/shared"
+import type { ChSqlClient, RepositoryError, SessionBreakdownField, ValidationError } from "@domain/shared"
 import { parseSearchQuery } from "@domain/spans"
 import { Effect } from "effect"
+import { runFilterBuild } from "../../filter-builder.ts"
 import { isActiveSearch, planSearch } from "../../repositories/search-plan.ts"
 import {
   buildSessionFilterClauses,
@@ -41,10 +42,14 @@ const BREAKDOWN = {
  * query: the trace-grained search plan resolves to its sessions via the `traces`
  * rollup, restricting the session set with `session_id IN (…)`.
  */
-const buildInner = (input: MetricSqlInput): Effect.Effect<InnerQuery, RepositoryError, ChSqlClient> =>
+const buildInner = (input: MetricSqlInput): Effect.Effect<InnerQuery, RepositoryError | ValidationError, ChSqlClient> =>
   Effect.gen(function* () {
     const filterSet = yield* resolvePercentileFilters(input.organizationId, input.projectId, input.filterSet)
-    const { havingClauses, whereClauses, params: filterParams } = buildSessionFilterClauses(filterSet)
+    const {
+      havingClauses,
+      whereClauses,
+      params: filterParams,
+    } = yield* runFilterBuild(() => buildSessionFilterClauses(filterSet))
 
     const parsed = input.query ? parseSearchQuery(input.query) : undefined
     let searchCondition = ""
