@@ -14,5 +14,7 @@ describe("readOnlyToolset", () => {
     const names = readOnlyToolset.tools.map((t) => t.name)
     expect(names).toContain("listTools")
     expect(names).not.toContain("createSignal")
+    // Returns an unmasked API-key token; must stay out of the default agent surface.
+    expect(names).not.toContain("getApiKey")
   })
 })
