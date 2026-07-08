@@ -18,6 +18,7 @@ import {
 import { createFakeChSqlClient, createFakeSqlClient } from "@domain/shared/testing"
 import { type TraceDetail, TraceRepository } from "@domain/spans"
 import { createFakeTraceRepository } from "@domain/spans/testing"
+import { simhash64 } from "@repo/utils"
 import { Cause, Effect, Layer } from "effect"
 import { describe, expect, it } from "vitest"
 import { z } from "zod"
@@ -650,6 +651,230 @@ ${"Detailed grounding, workflow, callout, and formatting rules. ".repeat(120)}`.
     expect(extractorCall?.prompt).toContain(uuid)
     expect(extractorCall?.prompt).toContain(timestamp)
     expect(normalizeSystemPromptForCacheKey(longSystemPrompt)).not.toContain(uuid)
+  })
+
+  const buildIndexKey = (organizationId: string, projectId: string) =>
+    `org:${organizationId}:flaggers:inspected-agent-context:v2:index:${projectId}`
+
+  const buildContentKey = (organizationId: string, systemPrompt: string) =>
+    `org:${organizationId}:flaggers:inspected-agent-context:v2:sha256:${createHash("sha256").update(normalizeSystemPromptForCacheKey(systemPrompt)).digest("hex")}`
+
+  const buildRephrasedSupportPrompt = (variant: "a" | "b") => {
+    const intro =
+      variant === "a"
+        ? "You are a customer support assistant for a SaaS billing platform. You help users understand invoices, apply subscription changes, and issue refunds when appropriate."
+        : "You are a customer support assistant for a SaaS billing platform. You help users understand invoices, apply plan changes, and issue refunds when appropriate."
+
+    return `${intro} ${"Always confirm account ownership before making any change. ".repeat(300)}`
+  }
+
+  const buildDissimilarLongPrompt = () =>
+    `You are a network operations agent that watches infrastructure health metrics and pages on-call engineers when thresholds are breached. ${"Escalate persistent alerts to the infrastructure team immediately. ".repeat(300)}`
+
+  it("reuses instruction extraction across similar-but-rephrased long prompts via the per-project similarity index", async () => {
+    const promptA = buildRephrasedSupportPrompt("a")
+    const promptB = buildRephrasedSupportPrompt("b")
+
+    const { calls, layer: aiLayer } = createFakeAI({
+      generate: <T>(input: GenerateInput<T>) => {
+        if (input.system.includes("You extract agent context")) {
+          return Effect.succeed({
+            object: {
+              understood: true,
+              agentContext: "This agent is a customer support assistant for a SaaS billing platform.",
+            } as T,
+            tokens: 20,
+            duration: 90_000_000,
+          })
+        }
+
+        return Effect.succeed({ object: { matched: false } as T, tokens: 20, duration: 90_000_000 })
+      },
+    })
+
+    const cache = createMemoryCacheLayer()
+
+    const classify = (systemPrompt: string) =>
+      Effect.runPromise(
+        classifyTraceForFlaggerUseCase({
+          organizationId: INPUT.organizationId,
+          projectId: INPUT.projectId,
+          traceId: INPUT.traceId,
+          flaggerSlug: "laziness",
+          trace: makeTraceDetail(
+            [
+              { role: "user", parts: [{ type: "text", content: "Explain this invoice." }] },
+              { role: "assistant", parts: [{ type: "text", content: "Here is the breakdown." }] },
+            ],
+            [],
+            [{ type: "text", content: systemPrompt }],
+          ),
+        }).pipe(Effect.provide(Layer.mergeAll(aiLayer, cache.layer))),
+      )
+
+    const resultA = await classify(promptA)
+    const resultB = await classify(promptB)
+
+    expect(resultA).toEqual({ matched: false })
+    expect(resultB).toEqual({ matched: false })
+
+    const extractorCalls = calls.generate.filter((call) => call.system?.includes("You extract agent context"))
+    expect(extractorCalls).toHaveLength(1)
+    expect(calls.generate).toHaveLength(3)
+
+    const contentKeyB = buildContentKey(INPUT.organizationId, promptB)
+    const backfilledWrite = cache.writes.find((write) => write.key === contentKeyB)
+    expect(backfilledWrite).toBeDefined()
+    expect(JSON.parse(backfilledWrite?.value ?? "null")).toMatchObject({
+      understood: true,
+      agentContext: "This agent is a customer support assistant for a SaaS billing platform.",
+    })
+  })
+
+  it("runs a fresh extraction for a genuinely dissimilar long prompt", async () => {
+    const promptA = buildRephrasedSupportPrompt("a")
+    const dissimilarPrompt = buildDissimilarLongPrompt()
+
+    const { calls, layer: aiLayer } = createFakeAI({
+      generate: <T>(input: GenerateInput<T>) => {
+        if (input.system.includes("You extract agent context")) {
+          return Effect.succeed({
+            object: { understood: true, agentContext: "Some extracted agent context." } as T,
+            tokens: 20,
+            duration: 90_000_000,
+          })
+        }
+
+        return Effect.succeed({ object: { matched: false } as T, tokens: 20, duration: 90_000_000 })
+      },
+    })
+
+    const cache = createMemoryCacheLayer()
+
+    const classify = (systemPrompt: string) =>
+      Effect.runPromise(
+        classifyTraceForFlaggerUseCase({
+          organizationId: INPUT.organizationId,
+          projectId: INPUT.projectId,
+          traceId: INPUT.traceId,
+          flaggerSlug: "laziness",
+          trace: makeTraceDetail(
+            [
+              { role: "user", parts: [{ type: "text", content: "Check the alert." }] },
+              { role: "assistant", parts: [{ type: "text", content: "Investigating now." }] },
+            ],
+            [],
+            [{ type: "text", content: systemPrompt }],
+          ),
+        }).pipe(Effect.provide(Layer.mergeAll(aiLayer, cache.layer))),
+      )
+
+    await classify(promptA)
+    await classify(dissimilarPrompt)
+
+    const extractorCalls = calls.generate.filter((call) => call.system?.includes("You extract agent context"))
+    expect(extractorCalls).toHaveLength(2)
+  })
+
+  it("does not reuse an understood=false cached extraction via the similarity index", async () => {
+    const promptA = buildRephrasedSupportPrompt("a")
+    const promptB = buildRephrasedSupportPrompt("b")
+
+    const contentKeyA = buildContentKey(INPUT.organizationId, promptA)
+    const indexKey = buildIndexKey(INPUT.organizationId, INPUT.projectId)
+    const sketchA = simhash64(normalizeSystemPromptForCacheKey(promptA)).toString(16)
+
+    const cache = createMemoryCacheLayer(
+      new Map([
+        [
+          contentKeyA,
+          JSON.stringify({ understood: false, agentContext: "", reasonIfNotUnderstood: "No agent role defined." }),
+        ],
+        [indexKey, JSON.stringify([{ sketch: sketchA, contentKey: contentKeyA }])],
+      ]),
+    )
+
+    const { calls, layer: aiLayer } = createFakeAI({
+      generate: <T>(input: GenerateInput<T>) => {
+        if (input.system.includes("You extract agent context")) {
+          return Effect.succeed({
+            object: {
+              understood: true,
+              agentContext: "This agent is a customer support assistant for a SaaS billing platform.",
+            } as T,
+            tokens: 20,
+            duration: 90_000_000,
+          })
+        }
+
+        return Effect.succeed({ object: { matched: false } as T, tokens: 20, duration: 90_000_000 })
+      },
+    })
+
+    const result = await Effect.runPromise(
+      classifyTraceForFlaggerUseCase({
+        organizationId: INPUT.organizationId,
+        projectId: INPUT.projectId,
+        traceId: INPUT.traceId,
+        flaggerSlug: "laziness",
+        trace: makeTraceDetail(
+          [
+            { role: "user", parts: [{ type: "text", content: "Explain this invoice." }] },
+            { role: "assistant", parts: [{ type: "text", content: "Here is the breakdown." }] },
+          ],
+          [],
+          [{ type: "text", content: promptB }],
+        ),
+      }).pipe(Effect.provide(Layer.mergeAll(aiLayer, cache.layer))),
+    )
+
+    expect(result).toEqual({ matched: false })
+    const extractorCalls = calls.generate.filter((call) => call.system?.includes("You extract agent context"))
+    expect(extractorCalls).toHaveLength(1)
+  })
+
+  it("treats malformed index JSON as a miss instead of throwing", async () => {
+    const promptA = buildRephrasedSupportPrompt("a")
+    const indexKey = buildIndexKey(INPUT.organizationId, INPUT.projectId)
+
+    const cache = createMemoryCacheLayer(new Map([[indexKey, "{not valid json"]]))
+
+    const { calls, layer: aiLayer } = createFakeAI({
+      generate: <T>(input: GenerateInput<T>) => {
+        if (input.system.includes("You extract agent context")) {
+          return Effect.succeed({
+            object: {
+              understood: true,
+              agentContext: "This agent is a customer support assistant for a SaaS billing platform.",
+            } as T,
+            tokens: 20,
+            duration: 90_000_000,
+          })
+        }
+
+        return Effect.succeed({ object: { matched: false } as T, tokens: 20, duration: 90_000_000 })
+      },
+    })
+
+    const result = await Effect.runPromise(
+      classifyTraceForFlaggerUseCase({
+        organizationId: INPUT.organizationId,
+        projectId: INPUT.projectId,
+        traceId: INPUT.traceId,
+        flaggerSlug: "laziness",
+        trace: makeTraceDetail(
+          [
+            { role: "user", parts: [{ type: "text", content: "Explain this invoice." }] },
+            { role: "assistant", parts: [{ type: "text", content: "Here is the breakdown." }] },
+          ],
+          [],
+          [{ type: "text", content: promptA }],
+        ),
+      }).pipe(Effect.provide(Layer.mergeAll(aiLayer, cache.layer))),
+    )
+
+    expect(result).toEqual({ matched: false })
+    expect(calls.generate).toHaveLength(2)
   })
 
   it("stamps the LLM call with the no-reflag tag when the trace is itself flagger-generated", async () => {
