@@ -55,6 +55,8 @@ export type EvaluationId = Id<"EvaluationId">
 export type SimulationId = Id<"SimulationId">
 export type FlaggerId = Id<"FlaggerId">
 export type SavedSearchId = Id<"SavedSearchId">
+export type AgentSessionId = Id<"AgentSessionId">
+export type AgentMessageId = Id<"AgentMessageId">
 export type AlertIncidentId = Id<"AlertIncidentId">
 export type MonitorId = Id<"MonitorId">
 export type NotificationId = Id<"NotificationId">
@@ -98,6 +100,8 @@ export const EvaluationId = (value: string): EvaluationId => value as Evaluation
 export const SimulationId = (value: string): SimulationId => value as SimulationId
 export const FlaggerId = (value: string): FlaggerId => value as FlaggerId
 export const SavedSearchId = (value: string): SavedSearchId => value as SavedSearchId
+export const AgentSessionId = (value: string): AgentSessionId => value as AgentSessionId
+export const AgentMessageId = (value: string): AgentMessageId => value as AgentMessageId
 export const AlertIncidentId = (value: string): AlertIncidentId => value as AlertIncidentId
 export const MonitorId = (value: string): MonitorId => value as MonitorId
 export const NotificationId = (value: string): NotificationId => value as NotificationId
@@ -135,6 +139,8 @@ export const evaluationIdSchema = cuidSchema.transform(EvaluationId)
 export const flaggerIdSchema = cuidSchema.transform(FlaggerId)
 export const simulationIdSchema = cuidSchema.transform(SimulationId)
 export const savedSearchIdSchema = cuidSchema.transform(SavedSearchId)
+export const agentSessionIdSchema = cuidSchema.transform(AgentSessionId)
+export const agentMessageIdSchema = cuidSchema.transform(AgentMessageId)
 export const alertIncidentIdSchema = cuidSchema.transform(AlertIncidentId)
 export const monitorIdSchema = cuidSchema.transform(MonitorId)
 export const notificationIdSchema = cuidSchema.transform(NotificationId)
