@@ -46,7 +46,7 @@ Configure dispatch once, under Settings → Integrations, with Claude Code, Curs
 
 ## 7. Lock the fix in CI
 
-A pull request from a coding agent is a proposal until something proves it. The failing traffic behind the Signal becomes a dataset, and a regression test in your repository, not in Latitude, replays that dataset against the agent as an ordinary CI check on every pull request. The fix has to pass it to merge, and so does every prompt change that comes after.
+A fix from a coding agent has to prove that it works. The failing traffic behind the Signal becomes a dataset, and a regression test in your repository, not in Latitude, replays that dataset against the agent as an ordinary CI check on every pull request. The fix has to pass it to merge, and so does every prompt change that comes after.
 
 When Latitude ran the loop on its own support agent, the first fix the coding agent proposed looked reasonable and failed the regression check on its own pull request; only the second, which cleared every replayed trace, went in. The monitor keeps watching live traffic in the meantime, so if the failure returns, the Signal escalates again and the loop starts over.
 
