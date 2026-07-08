@@ -1,3 +1,9 @@
 {
-  "rewrites": [{ "source": "/(.*)", "destination": "/index.html" }]
+  "rewrites": [{ "source": "/(.*)", "destination": "/index.html" }],
+  "headers": [
+    {
+      "source": "/",
+      "headers": [{ "key": "Link", "value": "</sitemap.xml>; rel=\"sitemap\"" }]
+    }
+  ]
 }
