@@ -10,7 +10,7 @@ This is the loop:
 
 ![Agentic self-healing logic.](article-assets/agents-fix-themselves-loop-simple-dark.png)
 
-Every piece of it exists because the piece before it left a problem behind. Start where every team starts, with an agent in production and a suspicion that something, somewhere, is going wrong.
+And this is the story of the problems and solutions behind each piece of it.
 
 ## Seeing what the agent does
 
