@@ -37,6 +37,8 @@ export interface ToolsetTool {
   readonly name: string
   readonly title: string
   readonly description: string
+  /** Mutation tier, so a caller can gate write/destructive tools behind confirmation. */
+  readonly access: OperationAccess
   readonly annotations: McpToolAnnotations
   readonly inputSchema: z.ZodObject<z.ZodRawShape>
   readonly outputSchema?: z.ZodObject<z.ZodRawShape>
@@ -107,6 +109,7 @@ const toToolsetTool = (operation: AnyOperation): ToolsetTool => {
     name: operation.route.name,
     title: operation.route.summary ?? operation.route.name,
     description: operation.route.description ?? "",
+    access: operation.access,
     annotations: accessToAnnotations(operation.access),
     inputSchema: flat.schema,
     ...(output ? { outputSchema: output.schema } : {}),
