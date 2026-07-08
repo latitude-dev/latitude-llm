@@ -34,12 +34,12 @@ import { Paginated, PaginatedQueryParamsSchema } from "../openapi/pagination.ts"
 import {
   FilterSetSchema,
   jsonBody,
-  openApiResponses,
   PROTECTED_SECURITY,
   ProjectParamsSchema,
   spanIdSchema,
   TracesRefSchema,
   traceIdSchema,
+  typedResponses,
 } from "../openapi/schemas.ts"
 import type { OrganizationScopedEnv } from "../types.ts"
 
@@ -140,67 +140,61 @@ const listTraces = traceEndpoint({
       params: ProjectParamsSchema,
       body: jsonBody(ListBodySchema),
     },
-    responses: openApiResponses({ status: 200, schema: PaginatedTracesSchema, description: "Page of traces" }),
+    responses: typedResponses({ status: 200, schema: PaginatedTracesSchema, description: "Page of traces" }),
   }),
   access: "read-only",
   rateLimitTier: "medium",
-  handler: async (c) => {
-    const { projectSlug } = c.req.valid("param")
-    const body = c.req.valid("json")
-    const organizationId = c.var.organization.id
+  execute: (input, ctx) =>
+    Effect.gen(function* () {
+      const { projectSlug } = input.params
+      const body = input.body
 
-    const result = await Effect.runPromise(
-      Effect.gen(function* () {
-        let cursor: { sortValue: string; traceId: string } | undefined
-        if (body.cursor) {
-          const decoded = decodeTraceCursor(body.cursor)
-          if (!decoded) {
-            return yield* new BadRequestError({ message: "Invalid `cursor` value." })
-          }
-          cursor = decoded
+      let cursor: { sortValue: string; traceId: string } | undefined
+      if (body.cursor) {
+        const decoded = decodeTraceCursor(body.cursor)
+        if (!decoded) {
+          return yield* new BadRequestError({ message: "Invalid `cursor` value." })
         }
+        cursor = decoded
+      }
 
-        const projectRepo = yield* ProjectRepository
-        const project = yield* projectRepo.findBySlug(projectSlug)
-        const projectId = ProjectId(project.id as string)
+      const projectRepo = yield* ProjectRepository
+      const project = yield* projectRepo.findBySlug(projectSlug)
+      const projectId = ProjectId(project.id as string)
 
-        const traceRepo = yield* TraceRepository
-        const page = yield* traceRepo.listByProjectId({
-          organizationId: OrganizationId(organizationId as string),
-          projectId,
-          options: {
-            limit: body.limit,
-            sortBy: body.sortBy,
-            sortDirection: body.sortDirection,
-            ...(cursor ? { cursor } : {}),
-            ...(body.filters ? { filters: body.filters } : {}),
-            ...(body.query ? { searchQuery: body.query } : {}),
-          },
-        })
+      const traceRepo = yield* TraceRepository
+      const page = yield* traceRepo.listByProjectId({
+        organizationId: OrganizationId(ctx.organization.id as string),
+        projectId,
+        options: {
+          limit: body.limit,
+          sortBy: body.sortBy,
+          sortDirection: body.sortDirection,
+          ...(cursor ? { cursor } : {}),
+          ...(body.filters ? { filters: body.filters } : {}),
+          ...(body.query ? { searchQuery: body.query } : {}),
+        },
+      })
 
-        const indicators = yield* fetchTraceIndicators({
-          projectId,
-          traceIds: page.items.map((trace) => trace.traceId),
-        })
+      const indicators = yield* fetchTraceIndicators({
+        projectId,
+        traceIds: page.items.map((trace) => trace.traceId),
+      })
 
-        return { page, indicators }
-      }).pipe(
-        withPostgres(Layer.mergeAll(ProjectRepositoryLive, ScoreRepositoryLive), c.var.postgresClient, organizationId),
-        withClickHouse(TraceRepositoryLive, c.var.clickhouse, organizationId),
-        withAi(AIEmbedLive, c.var.redis),
-        withTracing,
-      ),
-    )
-
-    return c.json(
-      {
-        items: result.page.items.map((trace) => toTraceResponse(trace, result.indicators)),
-        nextCursor: result.page.nextCursor ? encodeTraceCursor(result.page.nextCursor) : null,
-        hasMore: result.page.hasMore,
-      },
-      200,
-    )
-  },
+      return {
+        status: 200,
+        body: {
+          items: page.items.map((trace) => toTraceResponse(trace, indicators)),
+          nextCursor: page.nextCursor ? encodeTraceCursor(page.nextCursor) : null,
+          hasMore: page.hasMore,
+        },
+      } as const
+    }).pipe(
+      withPostgres(Layer.mergeAll(ProjectRepositoryLive, ScoreRepositoryLive), ctx.postgresClient, ctx.organization.id),
+      withClickHouse(TraceRepositoryLive, ctx.clickhouse, ctx.organization.id),
+      withAi(AIEmbedLive, ctx.redis),
+      withTracing,
+    ),
 })
 
 const getTrace = traceEndpoint({
@@ -218,43 +212,37 @@ const getTrace = traceEndpoint({
     request: {
       params: ProjectParamsSchema.extend({ traceId: traceIdSchema }),
     },
-    responses: openApiResponses({ status: 200, schema: TraceDetailSchema, description: "Trace detail" }),
+    responses: typedResponses({ status: 200, schema: TraceDetailSchema, description: "Trace detail" }),
   }),
   access: "read-only",
   rateLimitTier: "low",
-  handler: async (c) => {
-    const { projectSlug, traceId } = c.req.valid("param")
-    const organizationId = c.var.organization.id
+  execute: (input, ctx) =>
+    Effect.gen(function* () {
+      const { projectSlug, traceId } = input.params
 
-    const result = await Effect.runPromise(
-      Effect.gen(function* () {
-        const projectRepo = yield* ProjectRepository
-        const project = yield* projectRepo.findBySlug(projectSlug)
-        const projectId = ProjectId(project.id as string)
+      const projectRepo = yield* ProjectRepository
+      const project = yield* projectRepo.findBySlug(projectSlug)
+      const projectId = ProjectId(project.id as string)
 
-        const traceRepo = yield* TraceRepository
-        const trace = yield* traceRepo.findByTraceId({
-          organizationId: OrganizationId(organizationId as string),
-          projectId,
-          traceId: TraceId(traceId),
-        })
+      const traceRepo = yield* TraceRepository
+      const trace = yield* traceRepo.findByTraceId({
+        organizationId: OrganizationId(ctx.organization.id as string),
+        projectId,
+        traceId: TraceId(traceId),
+      })
 
-        const indicators = yield* fetchTraceIndicators({
-          projectId,
-          traceIds: [TraceId(traceId)],
-        })
+      const indicators = yield* fetchTraceIndicators({
+        projectId,
+        traceIds: [TraceId(traceId)],
+      })
 
-        return { trace, indicators }
-      }).pipe(
-        withPostgres(Layer.mergeAll(ProjectRepositoryLive, ScoreRepositoryLive), c.var.postgresClient, organizationId),
-        withClickHouse(TraceRepositoryLive, c.var.clickhouse, organizationId),
-        withAi(AIEmbedLive, c.var.redis),
-        withTracing,
-      ),
-    )
-
-    return c.json(toTraceDetailResponse(result.trace, result.indicators), 200)
-  },
+      return { status: 200, body: toTraceDetailResponse(trace, indicators) } as const
+    }).pipe(
+      withPostgres(Layer.mergeAll(ProjectRepositoryLive, ScoreRepositoryLive), ctx.postgresClient, ctx.organization.id),
+      withClickHouse(TraceRepositoryLive, ctx.clickhouse, ctx.organization.id),
+      withAi(AIEmbedLive, ctx.redis),
+      withTracing,
+    ),
 })
 
 const TraceSpansSchema = z
@@ -278,37 +266,33 @@ const listTraceSpans = traceEndpoint({
     request: {
       params: ProjectParamsSchema.extend({ traceId: traceIdSchema }),
     },
-    responses: openApiResponses({ status: 200, schema: TraceSpansSchema, description: "Spans of the trace" }),
+    responses: typedResponses({ status: 200, schema: TraceSpansSchema, description: "Spans of the trace" }),
   }),
   access: "read-only",
   rateLimitTier: "low",
-  handler: async (c) => {
-    const { projectSlug, traceId } = c.req.valid("param")
-    const organizationId = c.var.organization.id
+  execute: (input, ctx) =>
+    Effect.gen(function* () {
+      const { projectSlug, traceId } = input.params
 
-    const spans = await Effect.runPromise(
-      Effect.gen(function* () {
-        const projectRepo = yield* ProjectRepository
-        const project = yield* projectRepo.findBySlug(projectSlug)
+      const projectRepo = yield* ProjectRepository
+      const project = yield* projectRepo.findBySlug(projectSlug)
 
-        const spanRepo = yield* SpanRepository
-        return yield* spanRepo.listByTraceId({
-          organizationId: OrganizationId(organizationId as string),
-          projectId: ProjectId(project.id as string),
-          traceId: TraceId(traceId),
-        })
-      }).pipe(
-        withPostgres(ProjectRepositoryLive, c.var.postgresClient, organizationId),
-        withClickHouse(SpanRepositoryLive, c.var.clickhouse, organizationId),
-        withTracing,
-      ),
-    )
+      const spanRepo = yield* SpanRepository
+      const spans = yield* spanRepo.listByTraceId({
+        organizationId: OrganizationId(ctx.organization.id as string),
+        projectId: ProjectId(project.id as string),
+        traceId: TraceId(traceId),
+      })
 
-    // Sort here rather than at the repo layer so the response contract holds
-    // regardless of the underlying ClickHouse query plan / ordering.
-    const sorted = [...spans].sort((a, b) => a.startTime.getTime() - b.startTime.getTime())
-    return c.json({ items: sorted.map(toSpanResponse) }, 200)
-  },
+      // Sort here rather than at the repo layer so the response contract holds
+      // regardless of the underlying ClickHouse query plan / ordering.
+      const sorted = [...spans].sort((a, b) => a.startTime.getTime() - b.startTime.getTime())
+      return { status: 200, body: { items: sorted.map(toSpanResponse) } } as const
+    }).pipe(
+      withPostgres(ProjectRepositoryLive, ctx.postgresClient, ctx.organization.id),
+      withClickHouse(SpanRepositoryLive, ctx.clickhouse, ctx.organization.id),
+      withTracing,
+    ),
 })
 
 const getTraceSpan = traceEndpoint({
@@ -326,35 +310,31 @@ const getTraceSpan = traceEndpoint({
     request: {
       params: ProjectParamsSchema.extend({ traceId: traceIdSchema, spanId: spanIdSchema }),
     },
-    responses: openApiResponses({ status: 200, schema: SpanDetailSchema, description: "Span detail" }),
+    responses: typedResponses({ status: 200, schema: SpanDetailSchema, description: "Span detail" }),
   }),
   access: "read-only",
   rateLimitTier: "low",
-  handler: async (c) => {
-    const { projectSlug, traceId, spanId } = c.req.valid("param")
-    const organizationId = c.var.organization.id
+  execute: (input, ctx) =>
+    Effect.gen(function* () {
+      const { projectSlug, traceId, spanId } = input.params
 
-    const span = await Effect.runPromise(
-      Effect.gen(function* () {
-        const projectRepo = yield* ProjectRepository
-        const project = yield* projectRepo.findBySlug(projectSlug)
+      const projectRepo = yield* ProjectRepository
+      const project = yield* projectRepo.findBySlug(projectSlug)
 
-        const spanRepo = yield* SpanRepository
-        return yield* spanRepo.findBySpanId({
-          organizationId: OrganizationId(organizationId as string),
-          projectId: ProjectId(project.id as string),
-          traceId: TraceId(traceId),
-          spanId: SpanId(spanId),
-        })
-      }).pipe(
-        withPostgres(ProjectRepositoryLive, c.var.postgresClient, organizationId),
-        withClickHouse(SpanRepositoryLive, c.var.clickhouse, organizationId),
-        withTracing,
-      ),
-    )
+      const spanRepo = yield* SpanRepository
+      const span = yield* spanRepo.findBySpanId({
+        organizationId: OrganizationId(ctx.organization.id as string),
+        projectId: ProjectId(project.id as string),
+        traceId: TraceId(traceId),
+        spanId: SpanId(spanId),
+      })
 
-    return c.json(toSpanDetailResponse(span), 200)
-  },
+      return { status: 200, body: toSpanDetailResponse(span) } as const
+    }).pipe(
+      withPostgres(ProjectRepositoryLive, ctx.postgresClient, ctx.organization.id),
+      withClickHouse(SpanRepositoryLive, ctx.clickhouse, ctx.organization.id),
+      withTracing,
+    ),
 })
 
 const PaginatedTraceAnnotationsSchema = Paginated(AnnotationSchema, "PaginatedTraceAnnotations")
@@ -375,7 +355,7 @@ const listTraceAnnotations = traceEndpoint({
       params: ProjectParamsSchema.extend({ traceId: traceIdSchema }),
       query: PaginatedQueryParamsSchema,
     },
-    responses: openApiResponses({
+    responses: typedResponses({
       status: 200,
       schema: PaginatedTraceAnnotationsSchema,
       description: "Annotations of the trace",
@@ -383,50 +363,44 @@ const listTraceAnnotations = traceEndpoint({
   }),
   access: "read-only",
   rateLimitTier: "low",
-  handler: async (c) => {
-    const { projectSlug, traceId } = c.req.valid("param")
-    const query = c.req.valid("query")
-    const organizationId = c.var.organization.id
+  execute: (input, ctx) =>
+    Effect.gen(function* () {
+      const { projectSlug, traceId } = input.params
+      const query = input.query
 
-    const page = await Effect.runPromise(
-      Effect.gen(function* () {
-        let offset = 0
-        if (query.cursor) {
-          const decoded = decodeAnnotationOffsetCursor(query.cursor)
-          if (decoded === null) {
-            return yield* new BadRequestError({ message: "Invalid `cursor` value." })
-          }
-          offset = decoded
+      let offset = 0
+      if (query.cursor) {
+        const decoded = decodeAnnotationOffsetCursor(query.cursor)
+        if (decoded === null) {
+          return yield* new BadRequestError({ message: "Invalid `cursor` value." })
         }
+        offset = decoded
+      }
 
-        const projectRepo = yield* ProjectRepository
-        const project = yield* projectRepo.findBySlug(projectSlug)
+      const projectRepo = yield* ProjectRepository
+      const project = yield* projectRepo.findBySlug(projectSlug)
 
-        const result = yield* listTraceAnnotationsUseCase({
-          projectId: project.id,
-          traceId,
-          limit: query.limit,
-          offset,
-          draftMode: "include",
-        })
-        return { result, offset }
-      }).pipe(
-        withPostgres(Layer.mergeAll(ProjectRepositoryLive, ScoreRepositoryLive), c.var.postgresClient, organizationId),
-        withTracing,
-      ),
-    )
-
-    // The use-case filters by `source: "annotation"` so every row is an
-    // `AnnotationScore`, but its return type is the broader `Score` union.
-    return c.json(
-      {
-        items: page.result.items.map((s) => toAnnotationResponse(s as AnnotationScore)),
-        nextCursor: page.result.hasMore ? encodeAnnotationOffsetCursor(page.offset + page.result.items.length) : null,
-        hasMore: page.result.hasMore,
-      },
-      200,
-    )
-  },
+      const result = yield* listTraceAnnotationsUseCase({
+        projectId: project.id,
+        traceId,
+        limit: query.limit,
+        offset,
+        draftMode: "include",
+      })
+      // The use-case filters by `source: "annotation"` so every row is an
+      // `AnnotationScore`, but its return type is the broader `Score` union.
+      return {
+        status: 200,
+        body: {
+          items: result.items.map((s) => toAnnotationResponse(s as AnnotationScore)),
+          nextCursor: result.hasMore ? encodeAnnotationOffsetCursor(offset + result.items.length) : null,
+          hasMore: result.hasMore,
+        },
+      } as const
+    }).pipe(
+      withPostgres(Layer.mergeAll(ProjectRepositoryLive, ScoreRepositoryLive), ctx.postgresClient, ctx.organization.id),
+      withTracing,
+    ),
 })
 
 const getTraceAnnotation = traceEndpoint({
@@ -446,32 +420,27 @@ const getTraceAnnotation = traceEndpoint({
         annotationId: cuidSchema.describe("Stable annotation identifier."),
       }),
     },
-    responses: openApiResponses({ status: 200, schema: AnnotationSchema, description: "Annotation" }),
+    responses: typedResponses({ status: 200, schema: AnnotationSchema, description: "Annotation" }),
   }),
   access: "read-only",
   rateLimitTier: "low",
-  handler: async (c) => {
-    const { projectSlug, traceId, annotationId } = c.req.valid("param")
-    const organizationId = c.var.organization.id
+  execute: (input, ctx) =>
+    Effect.gen(function* () {
+      const { projectSlug, traceId, annotationId } = input.params
 
-    const annotation = await Effect.runPromise(
-      Effect.gen(function* () {
-        const projectRepo = yield* ProjectRepository
-        const project = yield* projectRepo.findBySlug(projectSlug)
+      const projectRepo = yield* ProjectRepository
+      const project = yield* projectRepo.findBySlug(projectSlug)
 
-        return yield* getTraceAnnotationUseCase({
-          projectId: project.id,
-          traceId: TraceId(traceId),
-          annotationId,
-        })
-      }).pipe(
-        withPostgres(Layer.mergeAll(ProjectRepositoryLive, ScoreRepositoryLive), c.var.postgresClient, organizationId),
-        withTracing,
-      ),
-    )
-
-    return c.json(toAnnotationResponse(annotation), 200)
-  },
+      const annotation = yield* getTraceAnnotationUseCase({
+        projectId: project.id,
+        traceId: TraceId(traceId),
+        annotationId,
+      })
+      return { status: 200, body: toAnnotationResponse(annotation) } as const
+    }).pipe(
+      withPostgres(Layer.mergeAll(ProjectRepositoryLive, ScoreRepositoryLive), ctx.postgresClient, ctx.organization.id),
+      withTracing,
+    ),
 })
 
 const exportTraces = traceEndpoint({
@@ -490,49 +459,44 @@ const exportTraces = traceEndpoint({
       params: ProjectParamsSchema,
       body: jsonBody(ExportBodySchema),
     },
-    responses: openApiResponses({ status: 202, schema: ExportResponseSchema, description: "Export enqueued" }),
+    responses: typedResponses({ status: 202, schema: ExportResponseSchema, description: "Export enqueued" }),
   }),
   access: "write",
   rateLimitTier: "ultra",
-  handler: async (c) => {
-    const { projectSlug } = c.req.valid("param")
-    const body = c.req.valid("json")
-    const organizationId = c.var.organization.id
+  execute: (input, ctx) =>
+    Effect.gen(function* () {
+      const { projectSlug } = input.params
+      const body = input.body
 
-    await Effect.runPromise(
-      Effect.gen(function* () {
-        const projectRepo = yield* ProjectRepository
-        const project = yield* projectRepo.findBySlug(projectSlug)
+      const projectRepo = yield* ProjectRepository
+      const project = yield* projectRepo.findBySlug(projectSlug)
 
-        const membershipRepo = yield* MembershipRepository
-        const isMember = yield* membershipRepo.findMemberByEmail(body.recipient)
-        if (!isMember) {
-          return yield* new BadRequestError({
-            message: "`recipient` must belong to a member of this organization.",
-          })
-        }
-
-        yield* c.var.queuePublisher.publish("exports", "generate", {
-          kind: "traces",
-          organizationId: organizationId as string,
-          projectId: project.id as string,
-          recipientEmail: body.recipient,
-          ...(body.traces.by === "ids"
-            ? { selection: { mode: "selected" as const, rowIds: body.traces.ids as readonly string[] } }
-            : { filters: body.traces.filters }),
+      const membershipRepo = yield* MembershipRepository
+      const isMember = yield* membershipRepo.findMemberByEmail(body.recipient)
+      if (!isMember) {
+        return yield* new BadRequestError({
+          message: "`recipient` must belong to a member of this organization.",
         })
-      }).pipe(
-        withPostgres(
-          Layer.mergeAll(ProjectRepositoryLive, MembershipRepositoryLive),
-          c.var.postgresClient,
-          organizationId,
-        ),
-        withTracing,
-      ),
-    )
+      }
 
-    return c.json({ status: "queued" as const }, 202)
-  },
+      yield* ctx.queuePublisher.publish("exports", "generate", {
+        kind: "traces",
+        organizationId: ctx.organization.id as string,
+        projectId: project.id as string,
+        recipientEmail: body.recipient,
+        ...(body.traces.by === "ids"
+          ? { selection: { mode: "selected" as const, rowIds: body.traces.ids as readonly string[] } }
+          : { filters: body.traces.filters }),
+      })
+      return { status: 202, body: { status: "queued" as const } } as const
+    }).pipe(
+      withPostgres(
+        Layer.mergeAll(ProjectRepositoryLive, MembershipRepositoryLive),
+        ctx.postgresClient,
+        ctx.organization.id,
+      ),
+      withTracing,
+    ),
 })
 
 const AnalyticsQuerySchema = z.object({
@@ -556,7 +520,7 @@ const getTraceAnalytics = traceEndpoint({
       "Returns trace analytics for the project: a total (or median) per metric over the requested range, plus a per-bucket series for each metric. Buckets are 12-hour UTC-aligned. The range defaults to the trailing 7 days.",
     security: PROTECTED_SECURITY,
     request: { params: ProjectParamsSchema, query: AnalyticsQuerySchema },
-    responses: openApiResponses({
+    responses: typedResponses({
       status: 200,
       schema: TraceAnalyticsResponseSchema,
       description: "Trace analytics",
@@ -564,35 +528,30 @@ const getTraceAnalytics = traceEndpoint({
   }),
   access: "read-only",
   rateLimitTier: "medium",
-  handler: async (c) => {
-    const { projectSlug } = c.req.valid("param")
-    const { fromIso, toIso } = c.req.valid("query")
-    const organizationId = c.var.organization.id
+  execute: (input, ctx) =>
+    Effect.gen(function* () {
+      const { projectSlug } = input.params
+      const { fromIso, toIso } = input.query
 
-    if (fromIso && toIso && Date.parse(toIso) < Date.parse(fromIso)) {
-      return c.json({ error: "`toIso` must be greater than or equal to `fromIso`." }, 400)
-    }
+      if (fromIso && toIso && Date.parse(toIso) < Date.parse(fromIso)) {
+        return { status: 400, body: { error: "`toIso` must be greater than or equal to `fromIso`." } } as const
+      }
 
-    const analytics = await Effect.runPromise(
-      Effect.gen(function* () {
-        const projectRepo = yield* ProjectRepository
-        const project = yield* projectRepo.findBySlug(projectSlug)
+      const projectRepo = yield* ProjectRepository
+      const project = yield* projectRepo.findBySlug(projectSlug)
 
-        return yield* getTraceAnalyticsUseCase({
-          organizationId: OrganizationId(organizationId as string),
-          projectId: ProjectId(project.id as string),
-          ...(fromIso ? { from: new Date(fromIso) } : {}),
-          ...(toIso ? { to: new Date(toIso) } : {}),
-        })
-      }).pipe(
-        withPostgres(ProjectRepositoryLive, c.var.postgresClient, organizationId),
-        withClickHouse(TraceRepositoryLive, c.var.clickhouse, organizationId),
-        withTracing,
-      ),
-    )
-
-    return c.json(toTraceAnalyticsResponse(analytics), 200)
-  },
+      const analytics = yield* getTraceAnalyticsUseCase({
+        organizationId: OrganizationId(ctx.organization.id as string),
+        projectId: ProjectId(project.id as string),
+        ...(fromIso ? { from: new Date(fromIso) } : {}),
+        ...(toIso ? { to: new Date(toIso) } : {}),
+      })
+      return { status: 200, body: toTraceAnalyticsResponse(analytics) } as const
+    }).pipe(
+      withPostgres(ProjectRepositoryLive, ctx.postgresClient, ctx.organization.id),
+      withClickHouse(TraceRepositoryLive, ctx.clickhouse, ctx.organization.id),
+      withTracing,
+    ),
 })
 
 export const tracesModule: OperationModule = {

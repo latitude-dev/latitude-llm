@@ -65,7 +65,6 @@ import {
   jsonBody,
   jsonResponse,
   openApiNoContentResponses,
-  openApiResponses,
   PROTECTED_SECURITY,
   ProjectParamsSchema,
   TracesRefSchema,
@@ -201,33 +200,27 @@ const getDataset = datasetEndpoint({
     description: "Returns one dataset by slug.",
     security: PROTECTED_SECURITY,
     request: { params: DatasetSlugParamsSchema },
-    responses: openApiResponses({ status: 200, schema: DatasetSchema, description: "Dataset" }),
+    responses: typedResponses({ status: 200, schema: DatasetSchema, description: "Dataset" }),
   }),
   access: "read-only",
   rateLimitTier: "low",
-  handler: async (c) => {
-    const { projectSlug, datasetSlug } = c.req.valid("param")
-    const organizationId = c.var.organization.id
+  execute: (input, ctx) =>
+    Effect.gen(function* () {
+      const { projectSlug, datasetSlug } = input.params
+      const projectRepo = yield* ProjectRepository
+      const project = yield* projectRepo.findBySlug(projectSlug)
 
-    const dataset = await Effect.runPromise(
-      Effect.gen(function* () {
-        const projectRepo = yield* ProjectRepository
-        const project = yield* projectRepo.findBySlug(projectSlug)
-
-        const datasetRepo = yield* DatasetRepository
-        return yield* datasetRepo.findBySlug({ projectId: ProjectId(project.id as string), slug: datasetSlug })
-      }).pipe(
-        withPostgres(
-          Layer.mergeAll(ProjectRepositoryLive, DatasetRepositoryLive),
-          c.var.postgresClient,
-          organizationId,
-        ),
-        withTracing,
+      const datasetRepo = yield* DatasetRepository
+      const dataset = yield* datasetRepo.findBySlug({ projectId: ProjectId(project.id as string), slug: datasetSlug })
+      return { status: 200, body: toDatasetResponse(dataset) } as const
+    }).pipe(
+      withPostgres(
+        Layer.mergeAll(ProjectRepositoryLive, DatasetRepositoryLive),
+        ctx.postgresClient,
+        ctx.organization.id,
       ),
-    )
-
-    return c.json(toDatasetResponse(dataset), 200)
-  },
+      withTracing,
+    ),
 })
 
 const createDatasetEndpoint = datasetEndpoint({
@@ -242,39 +235,34 @@ const createDatasetEndpoint = datasetEndpoint({
     description: "Creates an empty dataset in the project. The slug is derived from `name`.",
     security: PROTECTED_SECURITY,
     request: { params: ProjectParamsSchema, body: jsonBody(CreateDatasetBody) },
-    responses: openApiResponses({ status: 201, schema: DatasetSchema, description: "Created dataset" }),
+    responses: typedResponses({ status: 201, schema: DatasetSchema, description: "Created dataset" }),
   }),
   access: "write",
   rateLimitTier: "high",
-  handler: async (c) => {
-    const { projectSlug } = c.req.valid("param")
-    const body = c.req.valid("json")
-    const organizationId = c.var.organization.id
-    const actorUserId = c.var.auth.method === "oauth" ? (c.var.auth.userId as string) : undefined
+  execute: (input, ctx) =>
+    Effect.gen(function* () {
+      const { projectSlug } = input.params
+      const body = input.body
+      const actorUserId = ctx.auth.method === "oauth" ? (ctx.auth.userId as string) : undefined
 
-    const dataset = await Effect.runPromise(
-      Effect.gen(function* () {
-        const projectRepo = yield* ProjectRepository
-        const project = yield* projectRepo.findBySlug(projectSlug)
+      const projectRepo = yield* ProjectRepository
+      const project = yield* projectRepo.findBySlug(projectSlug)
 
-        return yield* createDataset({
-          projectId: ProjectId(project.id as string),
-          name: body.name,
-          ...(body.description !== undefined ? { description: body.description } : {}),
-          ...(actorUserId !== undefined ? { actorUserId } : {}),
-        })
-      }).pipe(
-        withPostgres(
-          Layer.mergeAll(ProjectRepositoryLive, DatasetRepositoryLive, OutboxEventWriterLive),
-          c.var.postgresClient,
-          organizationId,
-        ),
-        withTracing,
+      const dataset = yield* createDataset({
+        projectId: ProjectId(project.id as string),
+        name: body.name,
+        ...(body.description !== undefined ? { description: body.description } : {}),
+        ...(actorUserId !== undefined ? { actorUserId } : {}),
+      })
+      return { status: 201, body: toDatasetResponse(dataset) } as const
+    }).pipe(
+      withPostgres(
+        Layer.mergeAll(ProjectRepositoryLive, DatasetRepositoryLive, OutboxEventWriterLive),
+        ctx.postgresClient,
+        ctx.organization.id,
       ),
-    )
-
-    return c.json(toDatasetResponse(dataset), 201)
-  },
+      withTracing,
+    ),
 })
 
 const updateDataset = datasetEndpoint({
@@ -290,43 +278,38 @@ const updateDataset = datasetEndpoint({
       "Updates a dataset's `name` and/or `description`. Renaming regenerates the slug — clients should re-read the response or rely on the `id` for stable references.",
     security: PROTECTED_SECURITY,
     request: { params: DatasetSlugParamsSchema, body: jsonBody(UpdateDatasetBody) },
-    responses: openApiResponses({ status: 200, schema: DatasetSchema, description: "Updated dataset" }),
+    responses: typedResponses({ status: 200, schema: DatasetSchema, description: "Updated dataset" }),
   }),
   access: "destructive",
   rateLimitTier: "low",
-  handler: async (c) => {
-    const { projectSlug, datasetSlug } = c.req.valid("param")
-    const body = c.req.valid("json")
-    const organizationId = c.var.organization.id
+  execute: (input, ctx) =>
+    Effect.gen(function* () {
+      const { projectSlug, datasetSlug } = input.params
+      const body = input.body
 
-    const updated = await Effect.runPromise(
-      Effect.gen(function* () {
-        const projectRepo = yield* ProjectRepository
-        const project = yield* projectRepo.findBySlug(projectSlug)
+      const projectRepo = yield* ProjectRepository
+      const project = yield* projectRepo.findBySlug(projectSlug)
 
-        const datasetRepo = yield* DatasetRepository
-        const current = yield* datasetRepo.findBySlug({
-          projectId: ProjectId(project.id as string),
-          slug: datasetSlug,
-        })
+      const datasetRepo = yield* DatasetRepository
+      const current = yield* datasetRepo.findBySlug({
+        projectId: ProjectId(project.id as string),
+        slug: datasetSlug,
+      })
 
-        return yield* updateDatasetDetails({
-          datasetId: DatasetId(current.id as string),
-          name: body.name ?? current.name,
-          description: body.description !== undefined ? body.description : current.description,
-        })
-      }).pipe(
-        withPostgres(
-          Layer.mergeAll(ProjectRepositoryLive, DatasetRepositoryLive),
-          c.var.postgresClient,
-          organizationId,
-        ),
-        withTracing,
+      const updated = yield* updateDatasetDetails({
+        datasetId: DatasetId(current.id as string),
+        name: body.name ?? current.name,
+        description: body.description !== undefined ? body.description : current.description,
+      })
+      return { status: 200, body: toDatasetResponse(updated) } as const
+    }).pipe(
+      withPostgres(
+        Layer.mergeAll(ProjectRepositoryLive, DatasetRepositoryLive),
+        ctx.postgresClient,
+        ctx.organization.id,
       ),
-    )
-
-    return c.json(toDatasetResponse(updated), 200)
-  },
+      withTracing,
+    ),
 })
 
 const deleteDatasetEndpoint = datasetEndpoint({
@@ -345,34 +328,29 @@ const deleteDatasetEndpoint = datasetEndpoint({
   }),
   access: "destructive",
   rateLimitTier: "low",
-  handler: async (c) => {
-    const { projectSlug, datasetSlug } = c.req.valid("param")
-    const organizationId = c.var.organization.id
+  execute: (input, ctx) =>
+    Effect.gen(function* () {
+      const { projectSlug, datasetSlug } = input.params
 
-    await Effect.runPromise(
-      Effect.gen(function* () {
-        const projectRepo = yield* ProjectRepository
-        const project = yield* projectRepo.findBySlug(projectSlug)
+      const projectRepo = yield* ProjectRepository
+      const project = yield* projectRepo.findBySlug(projectSlug)
 
-        const datasetRepo = yield* DatasetRepository
-        const current = yield* datasetRepo.findBySlug({
-          projectId: ProjectId(project.id as string),
-          slug: datasetSlug,
-        })
+      const datasetRepo = yield* DatasetRepository
+      const current = yield* datasetRepo.findBySlug({
+        projectId: ProjectId(project.id as string),
+        slug: datasetSlug,
+      })
 
-        yield* deleteDataset({ datasetId: DatasetId(current.id as string) })
-      }).pipe(
-        withPostgres(
-          Layer.mergeAll(ProjectRepositoryLive, DatasetRepositoryLive),
-          c.var.postgresClient,
-          organizationId,
-        ),
-        withTracing,
+      yield* deleteDataset({ datasetId: DatasetId(current.id as string) })
+      return { status: 204 } as const
+    }).pipe(
+      withPostgres(
+        Layer.mergeAll(ProjectRepositoryLive, DatasetRepositoryLive),
+        ctx.postgresClient,
+        ctx.organization.id,
       ),
-    )
-
-    return c.body(null, 204)
-  },
+      withTracing,
+    ),
 })
 
 // ─── Rows ────────────────────────────────────────────────────────────────────
@@ -633,7 +611,7 @@ const insertDatasetRowsEndpoint = datasetEndpoint({
     description: "Appends one or more rows to the dataset.",
     security: PROTECTED_SECURITY,
     request: { params: DatasetSlugParamsSchema, body: jsonBody(InsertRowBodySchema) },
-    responses: openApiResponses({
+    responses: typedResponses({
       status: 201,
       schema: InsertRowsResponseSchema,
       description: "Rows inserted",
@@ -641,54 +619,49 @@ const insertDatasetRowsEndpoint = datasetEndpoint({
   }),
   access: "write",
   rateLimitTier: "medium",
-  handler: async (c) => {
-    const { projectSlug, datasetSlug } = c.req.valid("param")
-    const body = c.req.valid("json")
-    const organizationId = c.var.organization.id
+  execute: (input, ctx) =>
+    Effect.gen(function* () {
+      const { projectSlug, datasetSlug } = input.params
+      const body = input.body
 
-    const result = await Effect.runPromise(
-      Effect.gen(function* () {
-        const projectRepo = yield* ProjectRepository
-        const project = yield* projectRepo.findBySlug(projectSlug)
+      const projectRepo = yield* ProjectRepository
+      const project = yield* projectRepo.findBySlug(projectSlug)
 
-        const datasetRepo = yield* DatasetRepository
-        const dataset = yield* datasetRepo.findBySlug({
-          projectId: ProjectId(project.id as string),
-          slug: datasetSlug,
-        })
+      const datasetRepo = yield* DatasetRepository
+      const dataset = yield* datasetRepo.findBySlug({
+        projectId: ProjectId(project.id as string),
+        slug: datasetSlug,
+      })
 
-        return yield* insertRows({
-          datasetId: DatasetId(dataset.id as string),
-          rows: body.rows.map((r) => ({
-            ...(r.id !== undefined ? { id: DatasetRowId(r.id) } : {}),
-            input: r.input,
-            ...(r.output !== undefined ? { output: r.output } : {}),
-            ...(r.expectedOutput !== undefined ? { expectedOutput: r.expectedOutput } : {}),
-            ...(r.metadata !== undefined ? { metadata: r.metadata } : {}),
-            ...(r.custom !== undefined ? { custom: r.custom } : {}),
-          })),
-          source: "api",
-        })
-      }).pipe(
-        withPostgres(
-          Layer.mergeAll(ProjectRepositoryLive, DatasetRepositoryLive),
-          c.var.postgresClient,
-          organizationId,
-        ),
-        withClickHouse(DatasetRowRepositoryLive, c.var.clickhouse, organizationId),
-        withTracing,
+      const result = yield* insertRows({
+        datasetId: DatasetId(dataset.id as string),
+        rows: body.rows.map((r) => ({
+          ...(r.id !== undefined ? { id: DatasetRowId(r.id) } : {}),
+          input: r.input,
+          ...(r.output !== undefined ? { output: r.output } : {}),
+          ...(r.expectedOutput !== undefined ? { expectedOutput: r.expectedOutput } : {}),
+          ...(r.metadata !== undefined ? { metadata: r.metadata } : {}),
+          ...(r.custom !== undefined ? { custom: r.custom } : {}),
+        })),
+        source: "api",
+      })
+      return {
+        status: 201,
+        body: {
+          versionId: result.versionId as string,
+          version: result.version,
+          rowIds: result.rowIds.map((id: string) => id),
+        },
+      } as const
+    }).pipe(
+      withPostgres(
+        Layer.mergeAll(ProjectRepositoryLive, DatasetRepositoryLive),
+        ctx.postgresClient,
+        ctx.organization.id,
       ),
-    )
-
-    return c.json(
-      {
-        versionId: result.versionId as string,
-        version: result.version,
-        rowIds: result.rowIds.map((id: string) => id),
-      },
-      201,
-    )
-  },
+      withClickHouse(DatasetRowRepositoryLive, ctx.clickhouse, ctx.organization.id),
+      withTracing,
+    ),
 })
 
 const updateDatasetRowEndpoint = datasetEndpoint({
@@ -704,44 +677,36 @@ const updateDatasetRowEndpoint = datasetEndpoint({
       "Partially updates a single row. Only the cells you send are changed; omitted cells keep their current value. Use this to fill in an `expectedOutput` (or any other cell) after rows were imported. Bumps the dataset version.",
     security: PROTECTED_SECURITY,
     request: { params: DatasetRowParamsSchema, body: jsonBody(UpdateRowBodySchema) },
-    responses: openApiResponses({ status: 200, schema: UpdateRowResponseSchema, description: "Row updated" }),
+    responses: typedResponses({ status: 200, schema: UpdateRowResponseSchema, description: "Row updated" }),
   }),
   access: "destructive",
   rateLimitTier: "medium",
-  handler: async (c) => {
-    const { projectSlug, datasetSlug, rowId } = c.req.valid("param")
-    const body = c.req.valid("json")
-    const organizationId = c.var.organization.id
+  execute: (input, ctx) =>
+    Effect.gen(function* () {
+      const { projectSlug, datasetSlug, rowId } = input.params
+      const body = input.body
 
-    const result = await Effect.runPromise(
-      resolveDatasetId(projectSlug, datasetSlug)
-        .pipe(
-          Effect.flatMap((datasetId) =>
-            updateRow({
-              datasetId,
-              rowId: DatasetRowId(rowId),
-              ...(body.input !== undefined ? { input: body.input } : {}),
-              ...(body.output !== undefined ? { output: body.output } : {}),
-              ...(body.expectedOutput !== undefined ? { expectedOutput: body.expectedOutput } : {}),
-              ...(body.metadata !== undefined ? { metadata: body.metadata } : {}),
-              ...(body.custom !== undefined ? { custom: body.custom } : {}),
-              source: "api",
-            }),
-          ),
-        )
-        .pipe(
-          withPostgres(
-            Layer.mergeAll(ProjectRepositoryLive, DatasetRepositoryLive),
-            c.var.postgresClient,
-            organizationId,
-          ),
-          withClickHouse(DatasetRowRepositoryLive, c.var.clickhouse, organizationId),
-          withTracing,
-        ),
-    )
-
-    return c.json({ versionId: result.versionId as string, version: result.version }, 200)
-  },
+      const datasetId = yield* resolveDatasetId(projectSlug, datasetSlug)
+      const result = yield* updateRow({
+        datasetId,
+        rowId: DatasetRowId(rowId),
+        ...(body.input !== undefined ? { input: body.input } : {}),
+        ...(body.output !== undefined ? { output: body.output } : {}),
+        ...(body.expectedOutput !== undefined ? { expectedOutput: body.expectedOutput } : {}),
+        ...(body.metadata !== undefined ? { metadata: body.metadata } : {}),
+        ...(body.custom !== undefined ? { custom: body.custom } : {}),
+        source: "api",
+      })
+      return { status: 200, body: { versionId: result.versionId as string, version: result.version } } as const
+    }).pipe(
+      withPostgres(
+        Layer.mergeAll(ProjectRepositoryLive, DatasetRepositoryLive),
+        ctx.postgresClient,
+        ctx.organization.id,
+      ),
+      withClickHouse(DatasetRowRepositoryLive, ctx.clickhouse, ctx.organization.id),
+      withTracing,
+    ),
 })
 
 const deleteDatasetRowsEndpoint = datasetEndpoint({
@@ -756,7 +721,7 @@ const deleteDatasetRowsEndpoint = datasetEndpoint({
     description: "Deletes rows matching the supplied selection.",
     security: PROTECTED_SECURITY,
     request: { params: DatasetSlugParamsSchema, body: jsonBody(DeleteRowsBodySchema) },
-    responses: openApiResponses({
+    responses: typedResponses({
       status: 200,
       schema: DeleteRowsResponseSchema,
       description: "Rows deleted",
@@ -764,57 +729,52 @@ const deleteDatasetRowsEndpoint = datasetEndpoint({
   }),
   access: "destructive",
   rateLimitTier: "medium",
-  handler: async (c) => {
-    const { projectSlug, datasetSlug } = c.req.valid("param")
-    const body = c.req.valid("json")
-    const organizationId = c.var.organization.id
+  execute: (input, ctx) =>
+    Effect.gen(function* () {
+      const { projectSlug, datasetSlug } = input.params
+      const body = input.body
 
-    const result = await Effect.runPromise(
-      Effect.gen(function* () {
-        const projectRepo = yield* ProjectRepository
-        const project = yield* projectRepo.findBySlug(projectSlug)
+      const projectRepo = yield* ProjectRepository
+      const project = yield* projectRepo.findBySlug(projectSlug)
 
-        const datasetRepo = yield* DatasetRepository
-        const dataset = yield* datasetRepo.findBySlug({
-          projectId: ProjectId(project.id as string),
-          slug: datasetSlug,
-        })
+      const datasetRepo = yield* DatasetRepository
+      const dataset = yield* datasetRepo.findBySlug({
+        projectId: ProjectId(project.id as string),
+        slug: datasetSlug,
+      })
 
-        return yield* deleteRows({
-          datasetId: DatasetId(dataset.id as string),
-          selection:
-            body.selection.mode === "selected"
+      const result = yield* deleteRows({
+        datasetId: DatasetId(dataset.id as string),
+        selection:
+          body.selection.mode === "selected"
+            ? {
+                mode: "selected" as const,
+                rowIds: (body.selection.rowIds as readonly string[]).map(DatasetRowId),
+              }
+            : body.selection.mode === "allExcept"
               ? {
-                  mode: "selected" as const,
+                  mode: "allExcept" as const,
                   rowIds: (body.selection.rowIds as readonly string[]).map(DatasetRowId),
                 }
-              : body.selection.mode === "allExcept"
-                ? {
-                    mode: "allExcept" as const,
-                    rowIds: (body.selection.rowIds as readonly string[]).map(DatasetRowId),
-                  }
-                : { mode: "all" as const },
-        })
-      }).pipe(
-        withPostgres(
-          Layer.mergeAll(ProjectRepositoryLive, DatasetRepositoryLive),
-          c.var.postgresClient,
-          organizationId,
-        ),
-        withClickHouse(DatasetRowRepositoryLive, c.var.clickhouse, organizationId),
-        withTracing,
+              : { mode: "all" as const },
+      })
+      return {
+        status: 200,
+        body: {
+          versionId: result.versionId,
+          version: result.version,
+          ...(result.deletedCount !== undefined ? { deletedCount: result.deletedCount } : {}),
+        },
+      } as const
+    }).pipe(
+      withPostgres(
+        Layer.mergeAll(ProjectRepositoryLive, DatasetRepositoryLive),
+        ctx.postgresClient,
+        ctx.organization.id,
       ),
-    )
-
-    return c.json(
-      {
-        versionId: result.versionId,
-        version: result.version,
-        ...(result.deletedCount !== undefined ? { deletedCount: result.deletedCount } : {}),
-      },
-      200,
-    )
-  },
+      withClickHouse(DatasetRowRepositoryLive, ctx.clickhouse, ctx.organization.id),
+      withTracing,
+    ),
 })
 
 const importRowsFromTracesEndpoint = datasetEndpoint({
@@ -829,7 +789,7 @@ const importRowsFromTracesEndpoint = datasetEndpoint({
     description: "Imports one row per trace matched by `traces`.",
     security: PROTECTED_SECURITY,
     request: { params: DatasetSlugParamsSchema, body: jsonBody(ImportFromTracesBodySchema) },
-    responses: openApiResponses({
+    responses: typedResponses({
       status: 201,
       schema: ImportFromTracesResponseSchema,
       description: "Rows imported",
@@ -837,64 +797,59 @@ const importRowsFromTracesEndpoint = datasetEndpoint({
   }),
   access: "write",
   rateLimitTier: "high",
-  handler: async (c) => {
-    const { projectSlug, datasetSlug } = c.req.valid("param")
-    const body = c.req.valid("json")
-    const organizationId = c.var.organization.id
+  execute: (input, ctx) =>
+    Effect.gen(function* () {
+      const { projectSlug, datasetSlug } = input.params
+      const body = input.body
 
-    const result = await Effect.runPromise(
-      Effect.gen(function* () {
-        const projectRepo = yield* ProjectRepository
-        const project = yield* projectRepo.findBySlug(projectSlug)
-        const projectId = ProjectId(project.id as string)
+      const projectRepo = yield* ProjectRepository
+      const project = yield* projectRepo.findBySlug(projectSlug)
+      const projectId = ProjectId(project.id as string)
 
-        const datasetRepo = yield* DatasetRepository
-        const dataset = yield* datasetRepo.findBySlug({ projectId, slug: datasetSlug })
+      const datasetRepo = yield* DatasetRepository
+      const dataset = yield* datasetRepo.findBySlug({ projectId, slug: datasetSlug })
 
-        // Adapter per the M7 plan note: resolve the public `TracesRef` to a
-        // concrete id list and call `addTracesToDataset` with the existing
-        // `{ source, selection }` shape. The use-case stays as-is so the web
-        // caller doesn't move.
-        const tracesRef: TracesRef =
-          body.traces.by === "ids"
-            ? { by: "ids", ids: body.traces.ids.map((id) => TraceId(id)) }
-            : { by: "filters", filters: body.traces.filters }
+      // Adapter per the M7 plan note: resolve the public `TracesRef` to a
+      // concrete id list and call `addTracesToDataset` with the existing
+      // `{ source, selection }` shape. The use-case stays as-is so the web
+      // caller doesn't move.
+      const tracesRef: TracesRef =
+        body.traces.by === "ids"
+          ? { by: "ids", ids: body.traces.ids.map((id) => TraceId(id)) }
+          : { by: "filters", filters: body.traces.filters }
 
-        const traceIds = yield* resolveTraceIdsFromRef(tracesRef, {
-          organizationId: organizationId as string,
-          projectId,
-        })
+      const traceIds = yield* resolveTraceIdsFromRef(tracesRef, {
+        organizationId: ctx.organization.id as string,
+        projectId,
+      })
 
-        return yield* addTracesToDataset({
-          projectId,
-          datasetId: DatasetId(dataset.id as string),
-          source: { kind: "project" as const },
-          selection: { mode: "selected" as const, traceIds },
-        })
-      }).pipe(
-        withPostgres(
-          Layer.mergeAll(ProjectRepositoryLive, DatasetRepositoryLive),
-          c.var.postgresClient,
-          organizationId,
-        ),
-        withClickHouse(
-          Layer.mergeAll(DatasetRowRepositoryLive, TraceRepositoryLive, ScoreAnalyticsRepositoryLive),
-          c.var.clickhouse,
-          organizationId,
-        ),
-        withTracing,
+      const result = yield* addTracesToDataset({
+        projectId,
+        datasetId: DatasetId(dataset.id as string),
+        source: { kind: "project" as const },
+        selection: { mode: "selected" as const, traceIds },
+      })
+      return {
+        status: 201,
+        body: {
+          versionId: result.versionId as string,
+          version: result.version,
+          rowIds: result.rowIds.map((id: string) => id),
+        },
+      } as const
+    }).pipe(
+      withPostgres(
+        Layer.mergeAll(ProjectRepositoryLive, DatasetRepositoryLive),
+        ctx.postgresClient,
+        ctx.organization.id,
       ),
-    )
-
-    return c.json(
-      {
-        versionId: result.versionId as string,
-        version: result.version,
-        rowIds: result.rowIds.map((id: string) => id),
-      },
-      201,
-    )
-  },
+      withClickHouse(
+        Layer.mergeAll(DatasetRowRepositoryLive, TraceRepositoryLive, ScoreAnalyticsRepositoryLive),
+        ctx.clickhouse,
+        ctx.organization.id,
+      ),
+      withTracing,
+    ),
 })
 
 const exportDatasetRowsEndpoint = datasetEndpoint({
@@ -924,16 +879,15 @@ const exportDatasetRowsEndpoint = datasetEndpoint({
   }),
   access: "write",
   rateLimitTier: "ultra",
-  handler: async (c) => {
-    const { projectSlug, datasetSlug } = c.req.valid("param")
-    const body = c.req.valid("json")
-    const organizationId = c.var.organization.id
+  execute: (input, ctx) =>
+    Effect.gen(function* () {
+      const { projectSlug, datasetSlug } = input.params
+      const body = input.body
 
-    // Resolve project + dataset once. We need the projectId and dataset.id for
-    // the queue payload, and the membership check on `recipient` (if supplied)
-    // should fail fast before we count rows or upload anything.
-    const { projectId, datasetId } = await Effect.runPromise(
-      Effect.gen(function* () {
+      // Resolve project + dataset once. We need the projectId and dataset.id for
+      // the queue payload, and the membership check on `recipient` (if supplied)
+      // should fail fast before we count rows or upload anything.
+      const { projectId, datasetId } = yield* Effect.gen(function* () {
         const projectRepo = yield* ProjectRepository
         const project = yield* projectRepo.findBySlug(projectSlug)
         const pid = ProjectId(project.id as string)
@@ -955,80 +909,75 @@ const exportDatasetRowsEndpoint = datasetEndpoint({
       }).pipe(
         withPostgres(
           Layer.mergeAll(ProjectRepositoryLive, DatasetRepositoryLive, MembershipRepositoryLive),
-          c.var.postgresClient,
-          organizationId,
+          ctx.postgresClient,
+          ctx.organization.id,
         ),
         withTracing,
-      ),
-    )
+      )
 
-    const selection = body.selection ?? { mode: "all" as const }
+      const selection = body.selection ?? { mode: "all" as const }
 
-    // Try the synchronous (small-dataset) path first. The use case counts
-    // rows, returns "ready" with a signed URL when it fits, or "tooLarge"
-    // when it doesn't — without uploading anything in the tooLarge case.
-    const downloadResult = await Effect.runPromise(
-      prepareDatasetDownloadUseCase({
+      // Try the synchronous (small-dataset) path first. The use case counts
+      // rows, returns "ready" with a signed URL when it fits, or "tooLarge"
+      // when it doesn't — without uploading anything in the tooLarge case.
+      const downloadResult = yield* prepareDatasetDownloadUseCase({
         datasetId,
-        organizationId: OrganizationId(organizationId as string),
+        organizationId: OrganizationId(ctx.organization.id as string),
         selection,
       }).pipe(
-        withPostgres(DatasetRepositoryLive, c.var.postgresClient, organizationId),
-        withClickHouse(DatasetRowRepositoryLive, c.var.clickhouse, organizationId),
-        Effect.provide(StorageDiskLive(c.var.storageDisk)),
+        withPostgres(DatasetRepositoryLive, ctx.postgresClient, ctx.organization.id),
+        withClickHouse(DatasetRowRepositoryLive, ctx.clickhouse, ctx.organization.id),
+        Effect.provide(StorageDiskLive(ctx.storageDisk)),
         withTracing,
-      ),
-    )
-
-    if (downloadResult.kind === "ready") {
-      return c.json(
-        {
-          status: "ready" as const,
-          downloadUrl: downloadResult.downloadUrl,
-          filename: downloadResult.filename,
-          expiresAt: downloadResult.expiresAt,
-          rowCount: downloadResult.rowCount,
-        },
-        200,
       )
-    }
 
-    // Too large for the synchronous path. With no recipient we tell the
-    // caller how to recover; with a recipient we queue the email flow.
-    if (body.recipient === undefined) {
-      return c.json(
-        {
-          status: "too_large" as const,
-          rowCount: downloadResult.rowCount,
-          threshold: downloadResult.threshold,
-          recommendedAction: `This dataset has ${downloadResult.rowCount} rows, above the ${downloadResult.threshold}-row synchronous limit. Ask the end user for an email address to send the download link to, then retry this call with \`recipient\` set to that email.`,
-        },
-        413,
-      )
-    }
+      if (downloadResult.kind === "ready") {
+        return {
+          status: 200,
+          body: {
+            status: "ready" as const,
+            downloadUrl: downloadResult.downloadUrl,
+            filename: downloadResult.filename,
+            expiresAt: downloadResult.expiresAt,
+            rowCount: downloadResult.rowCount,
+          },
+        } as const
+      }
 
-    await Effect.runPromise(
-      c.var.queuePublisher
+      // Too large for the synchronous path. With no recipient we tell the
+      // caller how to recover; with a recipient we queue the email flow.
+      if (body.recipient === undefined) {
+        return {
+          status: 413,
+          body: {
+            status: "too_large" as const,
+            rowCount: downloadResult.rowCount,
+            threshold: downloadResult.threshold,
+            recommendedAction: `This dataset has ${downloadResult.rowCount} rows, above the ${downloadResult.threshold}-row synchronous limit. Ask the end user for an email address to send the download link to, then retry this call with \`recipient\` set to that email.`,
+          },
+        } as const
+      }
+
+      yield* ctx.queuePublisher
         .publish("exports", "generate", {
           kind: "dataset",
-          organizationId: organizationId as string,
+          organizationId: ctx.organization.id as string,
           projectId: projectId as string,
           datasetId: datasetId as string,
           recipientEmail: body.recipient,
           selection,
         })
-        .pipe(withTracing),
-    )
+        .pipe(withTracing)
 
-    return c.json(
-      {
-        status: "queued" as const,
-        recipient: body.recipient,
-        rowCount: downloadResult.rowCount,
-      },
-      202,
-    )
-  },
+      return {
+        status: 202,
+        body: {
+          status: "queued" as const,
+          recipient: body.recipient,
+          rowCount: downloadResult.rowCount,
+        },
+      } as const
+    }),
 })
 
 // TODO(file-imports): define how to upload binary files (CSV today, parquet
@@ -1097,30 +1046,26 @@ const listDatasetColumnsEndpoint = datasetEndpoint({
       "Returns the ordered active column schema — the built-in columns plus any custom columns. Pass `includeRemoved=true` to also return soft-removed columns (so they can be restored).",
     security: PROTECTED_SECURITY,
     request: { params: DatasetSlugParamsSchema, query: ListColumnsQuerySchema },
-    responses: openApiResponses({ status: 200, schema: ColumnsListResponseSchema, description: "Column schema" }),
+    responses: typedResponses({ status: 200, schema: ColumnsListResponseSchema, description: "Column schema" }),
   }),
   access: "read-only",
   rateLimitTier: "low",
-  handler: async (c) => {
-    const { projectSlug, datasetSlug } = c.req.valid("param")
-    const includeRemoved = c.req.valid("query").includeRemoved === "true"
-    const organizationId = c.var.organization.id
+  execute: (input, ctx) =>
+    Effect.gen(function* () {
+      const { projectSlug, datasetSlug } = input.params
+      const includeRemoved = input.query.includeRemoved === "true"
 
-    const columns = await Effect.runPromise(
-      resolveDatasetId(projectSlug, datasetSlug)
-        .pipe(Effect.flatMap((datasetId) => listColumns({ datasetId, includeRemoved })))
-        .pipe(
-          withPostgres(
-            Layer.mergeAll(ProjectRepositoryLive, DatasetRepositoryLive),
-            c.var.postgresClient,
-            organizationId,
-          ),
-          withTracing,
-        ),
-    )
-
-    return c.json({ columns: columns.map(toDatasetColumnResponse) }, 200)
-  },
+      const datasetId = yield* resolveDatasetId(projectSlug, datasetSlug)
+      const columns = yield* listColumns({ datasetId, includeRemoved })
+      return { status: 200, body: { columns: columns.map(toDatasetColumnResponse) } } as const
+    }).pipe(
+      withPostgres(
+        Layer.mergeAll(ProjectRepositoryLive, DatasetRepositoryLive),
+        ctx.postgresClient,
+        ctx.organization.id,
+      ),
+      withTracing,
+    ),
 })
 
 const addDatasetColumnEndpoint = datasetEndpoint({
@@ -1136,30 +1081,24 @@ const addDatasetColumnEndpoint = datasetEndpoint({
       "Adds a custom column. The column starts empty on every row; rows are written only when a cell is filled, so the dataset version does not change.",
     security: PROTECTED_SECURITY,
     request: { params: DatasetSlugParamsSchema, body: jsonBody(AddColumnBodySchema) },
-    responses: openApiResponses({ status: 201, schema: DatasetColumnSchema, description: "Created column" }),
+    responses: typedResponses({ status: 201, schema: DatasetColumnSchema, description: "Created column" }),
   }),
   access: "write",
   rateLimitTier: "low",
-  handler: async (c) => {
-    const { projectSlug, datasetSlug } = c.req.valid("param")
-    const body = c.req.valid("json")
-    const organizationId = c.var.organization.id
-
-    const column = await Effect.runPromise(
-      resolveDatasetId(projectSlug, datasetSlug)
-        .pipe(Effect.flatMap((datasetId) => addColumn({ datasetId, name: body.name })))
-        .pipe(
-          withPostgres(
-            Layer.mergeAll(ProjectRepositoryLive, DatasetRepositoryLive),
-            c.var.postgresClient,
-            organizationId,
-          ),
-          withTracing,
-        ),
-    )
-
-    return c.json(toDatasetColumnResponse(column), 201)
-  },
+  execute: (input, ctx) =>
+    Effect.gen(function* () {
+      const { projectSlug, datasetSlug } = input.params
+      const datasetId = yield* resolveDatasetId(projectSlug, datasetSlug)
+      const column = yield* addColumn({ datasetId, name: input.body.name })
+      return { status: 201, body: toDatasetColumnResponse(column) } as const
+    }).pipe(
+      withPostgres(
+        Layer.mergeAll(ProjectRepositoryLive, DatasetRepositoryLive),
+        ctx.postgresClient,
+        ctx.organization.id,
+      ),
+      withTracing,
+    ),
 })
 
 const updateDatasetColumnEndpoint = datasetEndpoint({
@@ -1174,30 +1113,24 @@ const updateDatasetColumnEndpoint = datasetEndpoint({
     description: "Renames a column. Works for both built-in and custom columns.",
     security: PROTECTED_SECURITY,
     request: { params: ColumnIdentifierParamsSchema, body: jsonBody(UpdateColumnBodySchema) },
-    responses: openApiResponses({ status: 200, schema: DatasetColumnSchema, description: "Updated column" }),
+    responses: typedResponses({ status: 200, schema: DatasetColumnSchema, description: "Updated column" }),
   }),
   access: "destructive",
   rateLimitTier: "low",
-  handler: async (c) => {
-    const { projectSlug, datasetSlug, identifier } = c.req.valid("param")
-    const body = c.req.valid("json")
-    const organizationId = c.var.organization.id
-
-    const column = await Effect.runPromise(
-      resolveDatasetId(projectSlug, datasetSlug)
-        .pipe(Effect.flatMap((datasetId) => updateColumn({ datasetId, identifier, name: body.name })))
-        .pipe(
-          withPostgres(
-            Layer.mergeAll(ProjectRepositoryLive, DatasetRepositoryLive),
-            c.var.postgresClient,
-            organizationId,
-          ),
-          withTracing,
-        ),
-    )
-
-    return c.json(toDatasetColumnResponse(column), 200)
-  },
+  execute: (input, ctx) =>
+    Effect.gen(function* () {
+      const { projectSlug, datasetSlug, identifier } = input.params
+      const datasetId = yield* resolveDatasetId(projectSlug, datasetSlug)
+      const column = yield* updateColumn({ datasetId, identifier, name: input.body.name })
+      return { status: 200, body: toDatasetColumnResponse(column) } as const
+    }).pipe(
+      withPostgres(
+        Layer.mergeAll(ProjectRepositoryLive, DatasetRepositoryLive),
+        ctx.postgresClient,
+        ctx.organization.id,
+      ),
+      withTracing,
+    ),
 })
 
 const deleteDatasetColumnEndpoint = datasetEndpoint({
@@ -1217,25 +1150,20 @@ const deleteDatasetColumnEndpoint = datasetEndpoint({
   }),
   access: "destructive",
   rateLimitTier: "low",
-  handler: async (c) => {
-    const { projectSlug, datasetSlug, identifier } = c.req.valid("param")
-    const organizationId = c.var.organization.id
-
-    await Effect.runPromise(
-      resolveDatasetId(projectSlug, datasetSlug)
-        .pipe(Effect.flatMap((datasetId) => removeColumn({ datasetId, identifier })))
-        .pipe(
-          withPostgres(
-            Layer.mergeAll(ProjectRepositoryLive, DatasetRepositoryLive),
-            c.var.postgresClient,
-            organizationId,
-          ),
-          withTracing,
-        ),
-    )
-
-    return c.body(null, 204)
-  },
+  execute: (input, ctx) =>
+    Effect.gen(function* () {
+      const { projectSlug, datasetSlug, identifier } = input.params
+      const datasetId = yield* resolveDatasetId(projectSlug, datasetSlug)
+      yield* removeColumn({ datasetId, identifier })
+      return { status: 204 } as const
+    }).pipe(
+      withPostgres(
+        Layer.mergeAll(ProjectRepositoryLive, DatasetRepositoryLive),
+        ctx.postgresClient,
+        ctx.organization.id,
+      ),
+      withTracing,
+    ),
 })
 
 const reorderDatasetColumnsEndpoint = datasetEndpoint({
@@ -1251,7 +1179,7 @@ const reorderDatasetColumnsEndpoint = datasetEndpoint({
       "Sets the left-to-right order of columns. This is a metadata edit and does not change the dataset version.",
     security: PROTECTED_SECURITY,
     request: { params: DatasetSlugParamsSchema, body: jsonBody(ReorderColumnsBodySchema) },
-    responses: openApiResponses({
+    responses: typedResponses({
       status: 200,
       schema: ColumnsListResponseSchema,
       description: "Reordered column schema",
@@ -1259,26 +1187,20 @@ const reorderDatasetColumnsEndpoint = datasetEndpoint({
   }),
   access: "write",
   rateLimitTier: "low",
-  handler: async (c) => {
-    const { projectSlug, datasetSlug } = c.req.valid("param")
-    const body = c.req.valid("json")
-    const organizationId = c.var.organization.id
-
-    const reordered = await Effect.runPromise(
-      resolveDatasetId(projectSlug, datasetSlug)
-        .pipe(Effect.flatMap((datasetId) => reorderColumns({ datasetId, order: body.order })))
-        .pipe(
-          withPostgres(
-            Layer.mergeAll(ProjectRepositoryLive, DatasetRepositoryLive),
-            c.var.postgresClient,
-            organizationId,
-          ),
-          withTracing,
-        ),
-    )
-
-    return c.json({ columns: effectiveColumns(reordered).map(toDatasetColumnResponse) }, 200)
-  },
+  execute: (input, ctx) =>
+    Effect.gen(function* () {
+      const { projectSlug, datasetSlug } = input.params
+      const datasetId = yield* resolveDatasetId(projectSlug, datasetSlug)
+      const reordered = yield* reorderColumns({ datasetId, order: input.body.order })
+      return { status: 200, body: { columns: effectiveColumns(reordered).map(toDatasetColumnResponse) } } as const
+    }).pipe(
+      withPostgres(
+        Layer.mergeAll(ProjectRepositoryLive, DatasetRepositoryLive),
+        ctx.postgresClient,
+        ctx.organization.id,
+      ),
+      withTracing,
+    ),
 })
 
 const restoreDatasetColumnEndpoint = datasetEndpoint({
@@ -1294,29 +1216,24 @@ const restoreDatasetColumnEndpoint = datasetEndpoint({
       "Restores a soft-removed column (built-in or custom) to the active schema, reconnecting its preserved data. Find removed identifiers via `listDatasetColumns` with `includeRemoved=true`.",
     security: PROTECTED_SECURITY,
     request: { params: ColumnIdentifierParamsSchema },
-    responses: openApiResponses({ status: 200, schema: DatasetColumnSchema, description: "Restored column" }),
+    responses: typedResponses({ status: 200, schema: DatasetColumnSchema, description: "Restored column" }),
   }),
   access: "write",
   rateLimitTier: "low",
-  handler: async (c) => {
-    const { projectSlug, datasetSlug, identifier } = c.req.valid("param")
-    const organizationId = c.var.organization.id
-
-    const column = await Effect.runPromise(
-      resolveDatasetId(projectSlug, datasetSlug)
-        .pipe(Effect.flatMap((datasetId) => restoreColumn({ datasetId, identifier })))
-        .pipe(
-          withPostgres(
-            Layer.mergeAll(ProjectRepositoryLive, DatasetRepositoryLive),
-            c.var.postgresClient,
-            organizationId,
-          ),
-          withTracing,
-        ),
-    )
-
-    return c.json(toDatasetColumnResponse(column), 200)
-  },
+  execute: (input, ctx) =>
+    Effect.gen(function* () {
+      const { projectSlug, datasetSlug, identifier } = input.params
+      const datasetId = yield* resolveDatasetId(projectSlug, datasetSlug)
+      const column = yield* restoreColumn({ datasetId, identifier })
+      return { status: 200, body: toDatasetColumnResponse(column) } as const
+    }).pipe(
+      withPostgres(
+        Layer.mergeAll(ProjectRepositoryLive, DatasetRepositoryLive),
+        ctx.postgresClient,
+        ctx.organization.id,
+      ),
+      withTracing,
+    ),
 })
 
 export const datasetsModule: OperationModule = {

@@ -185,5 +185,6 @@ export const toIncidentResponse = (incident: Incident) => ({
   startedAt: incident.startedAt.toISOString(),
   endedAt: incident.endedAt ? incident.endedAt.toISOString() : null,
   createdAt: incident.createdAt.toISOString(),
-  condition: incident.condition,
+  // Published condition schema is a subset of the domain type (no percentile metric); pass through as-is.
+  condition: incident.condition as z.infer<typeof IncidentConditionSchema>,
 })

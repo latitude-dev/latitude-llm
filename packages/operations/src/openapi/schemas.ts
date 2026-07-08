@@ -154,7 +154,7 @@ export const jsonBody = <T extends z.ZodType>(schema: T) =>
  * Includes the success response + 400/401/404 error responses by default.
  * Extra error codes can be added via `extraErrors`.
  */
-export const openApiResponses = ({
+const openApiResponses = ({
   status,
   schema,
   description,

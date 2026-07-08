@@ -34,7 +34,7 @@ export const toSavedSearchResponse = (search: SavedSearch) => ({
   slug: search.slug,
   name: search.name,
   query: search.query,
-  filters: search.filterSet,
+  filters: search.filterSet as z.infer<typeof FilterSetSchema>,
   deletedAt: search.deletedAt ? search.deletedAt.toISOString() : null,
   createdAt: search.createdAt.toISOString(),
   updatedAt: search.updatedAt.toISOString(),
