@@ -33,7 +33,7 @@ export interface SignalDiscoveredNotificationRequest {
 }
 
 export type RequestSignalDiscoveredNotificationsResult =
-  | { readonly status: "skipped"; readonly reason: "signal-not-found" | "no-recipients" }
+  | { readonly status: "skipped"; readonly reason: "signal-not-found" | "user-origin-signal" | "no-recipients" }
   | { readonly status: "ok"; readonly requests: readonly SignalDiscoveredNotificationRequest[] }
 
 export type RequestSignalDiscoveredNotificationsError = RepositoryError
@@ -49,6 +49,10 @@ export const requestSignalDiscoveredNotificationsUseCase = (input: RequestSignal
     if (signal === null || signal.projectId !== input.projectId) {
       yield* Effect.annotateCurrentSpan("skipped", "signal-not-found")
       return { status: "skipped", reason: "signal-not-found" } as const
+    }
+    if (signal.origin === "user") {
+      yield* Effect.annotateCurrentSpan("skipped", "user-origin-signal")
+      return { status: "skipped", reason: "user-origin-signal" } as const
     }
 
     const recipients = yield* resolveRecipients({
