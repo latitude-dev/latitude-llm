@@ -10,57 +10,53 @@ This is the loop:
 
 ![Agentic self-healing logic.](article-assets/agents-fix-themselves-loop-simple-dark.png)
 
-It is not one feature, and none of it has to be adopted at once. Here is how to wire it up for your own agent, in the order that each step starts paying for itself. Latitude is MIT-licensed, so every step can be checked against the code.
+The rest of this post is the story of wiring that loop around one agent, the support agent Latitude runs in Slack, with enough detail at each step to reproduce it for your own. Latitude is MIT-licensed, so everything described here can be checked against the code.
 
-## Step 1: Instrument the agent
+## First, the telemetry
 
-The loop can only act on what it can see, so everything starts with telemetry. Point your agent's OpenTelemetry exporter at Latitude and every interaction starts flowing in as a trace, carrying the model calls, tool calls, retrieved context, latency, and cost. Related traces group into sessions, so a ten-turn conversation is a single object rather than ten disconnected rows. If your agent emits OpenTelemetry today, this is a new endpoint rather than a rewrite.
+The support agent had been answering questions for months before anyone could say what it did all day. Instrumenting it took one change, pointing its OpenTelemetry exporter at Latitude. Every interaction started arriving as a trace, carrying the model calls, the tool calls, the retrieved context, latency, and cost, and related traces grouped into sessions, so a ten-turn conversation became a single object rather than ten disconnected rows. If your agent emits OpenTelemetry today, this step is a new endpoint rather than a rewrite.
 
-## Step 2: Find a failure worth fixing
+## Finding the failure
 
-With traffic flowing, go looking. Search works over everything your agent has done, by meaning rather than keywords, so "users frustrated with checkout" or "refunds where the agent quoted a number" returns the conversations that match. The reason Latitude can afford to cover all of your traffic rather than a sample is that agent traffic is mostly repetition. The same system prompt, tool output, and templated response recur thousands of times a day, so each unique message is embedded once no matter how many traces contain it, and full coverage costs about as much as a sample would.
+With traffic flowing, the shape of the agent's day became visible. Search covers everything the agent has done, by meaning rather than keywords, so "conversations where the user got frustrated" is a query that works. Full coverage is affordable because agent traffic is mostly repetition, the same system prompt and tool outputs recurring thousands of times a day, so each unique message is embedded once no matter how many traces contain it. Behaviors did the part nobody asked for, clustering sessions by what users were trying to do and flagging each topic's trend against the week before it.
 
-For the patterns you would not think to search for, Behaviors cluster sessions by what the user was trying to do and arrange them into a hierarchy of topics, each with a trend computed from the last day of traffic against the week before it. When password-reset loops start spiking, the change shows up as a status before anyone has gone looking for it.
+The failure that mattered surfaced in an ordinary review of those clusters. In escalation threads, the agent kept asserting specifics it had not verified, version numbers, figures, dates, all delivered with full confidence.
 
-Pick the failure that hurts most. For this walkthrough, say your support agent keeps quoting wrong refund amounts.
+## From annotations to a Signal
 
-## Step 3: Annotate what you find
+Whoever found a case said so, right on the trace. A thumbs-down with specific feedback ("quoted a version we never shipped") on the exact offending message is the strongest signal a person can give the system. Nobody organized this feedback. Each time an annotation arrived, discovery compared it against the Signals that already existed and either filed it under one or created a new Signal with a generated name, so a scatter of annotations from different teammates converged on a single tracked pattern instead of remaining disconnected complaints.
 
-Open a failing trace and say so. A thumbs-down with specific feedback ("quoted 30 dollars, the order history says 45") is the strongest signal you can give the system. Do this for a handful of cases as you find them; these annotations become the ground truth everything downstream is built on, and automatic flaggers do the same job for common failure categories without waiting for a human.
+A Signal is any pattern worth following across production, with a recurring failure being the common case. Unlike a saved search, it is a durable entity with a name, a description, members, and a lifecycle. It is new for its first week, escalating while its counts are above normal, and ongoing otherwise, and if it goes quiet and comes back, the same detection escalates it again.
 
-## Step 4: Let the annotations become a Signal
+## Teaching the system to judge
 
-You do not have to organize your annotations. When a new one arrives, discovery compares it against the Signals that already exist and either files it under one or creates a new Signal with a generated name. Ten annotations from three teammates over two weeks converge on a single `wrong_refund_amount` Signal instead of remaining ten disconnected pieces of feedback.
+The Signal then got an evaluation, a small script that scores live traffic and can mix three kinds of rules in whatever combination fits the pattern: plain code checks, semantic similarity against a phrase, and LLM judgment for the parts that need actual reading. Nobody on the team wrote this one. GEPA, an evolutionary optimizer, took the annotations as examples, tested script variants against them, and kept the one that agreed with the human verdicts most, with cost and latency as tiebreakers. The finished judge carries its agreement record, so how often it scores the way a person would is a measured number, and as new annotations arrive the agreement is remeasured and the script re-optimized if it drops.
 
-A Signal is any pattern you want to follow across production, with a recurring failure being the common case. Unlike a saved search, it is a durable entity with a name, a description, members, and a lifecycle. A Signal is new for its first week, escalating while its counts are above normal, and ongoing otherwise, and if a pattern goes quiet and comes back later, the same detection escalates it again.
+From then on, every new conversation was scored on arrival, and the Signal's counts stayed current without anyone watching them.
 
-## Step 5: Give the Signal an evaluation
+## Escalation, and a coding agent wakes up
 
-An evaluation is a small script that scores live traffic for the Signal, and it can mix three kinds of rules in whatever combination fits the pattern: plain code checks (text matches, tool failures, output shape), semantic similarity against a phrase, and LLM judgment for the parts that need actual reading. Simple ones come from a criteria prompt or a set of conditions, and the advanced path is writing the script yourself.
+Escalation is judged against the Signal's own history, the last day of occurrences compared with the same hours over the week before, so a pattern that is growing stands out from ordinary daily rhythm. Monitors extend the same mechanism to anything else worth watching, a saved search or a raw traffic metric, which is how the cache-hit-rate drop in the opening found its way to a coding agent.
 
-For Signals born from annotations, Latitude can also generate the script. GEPA, an evolutionary optimizer, uses your annotations as examples, tests script variants against them, and keeps the one that agrees with the human verdicts most, with cost and latency as tiebreakers. Judges optimized this way carry their agreement record, so how often the script scores the way a person would is a measured number rather than an assumption, and as new annotations arrive the agreement is remeasured and the script re-optimized if it drops. From then on the evaluation runs on every new trace, and its verdicts keep the Signal current.
+Dispatch is configured once, under Settings → Integrations, with Claude Code, Cursor, Linear, or a webhook as the target. When the Signal escalated, the coding agent was woken with a small payload, a prompt, a deep link, and examples of the failing traffic. Latitude is the trigger and the context provider rather than the agent runtime; the dispatched agent runs in your environment, with your credentials, against your repository. It investigated the way an engineer would, reading the Signal and its trend, slicing occurrences to find where they concentrated, reading the failing conversations, and then it changed the agent's escalation prompt, ran the project's checks, and opened a pull request.
 
-## Step 6: Turn on dispatch
+## The first fix failed
 
-Escalation is judged against the Signal's own history, the last day of occurrences compared with the same hours over the week before, so a pattern that is growing stands out from ordinary daily rhythm. Monitors extend the same idea to anything else you care about, a saved search or a raw traffic metric, which is how the cache-hit-rate drop in the opening reached a coding agent within minutes of the deploy.
+This is the part of the story worth slowing down for. Alongside the fix, the failing traffic behind the Signal became a dataset, and a regression test now lives in the support agent's repository, not in Latitude. The test replays that dataset against the agent, and CI runs it as an ordinary check on every pull request.
 
-Dispatch is configured per project under Settings → Integrations, and the targets are Claude Code, Cursor, Linear, or a webhook. When a Signal escalates or a monitor opens an incident, the chosen agent is woken with a small payload, a prompt, a deep link, and examples of the failing traffic. Latitude is the trigger and the context provider rather than the agent runtime. The dispatched agent runs in your environment, with your credentials, against your repository, where it investigates the way an engineer would, reading the Signal and its trend, slicing occurrences to find where they concentrate, and reading the failing conversations. Then it fixes the agent's code or prompts, runs the project's checks, and opens a pull request.
+The first attempted fix looked reasonable and failed that check on its own pull request. The replayed traces caught what review would not have, and the fix never merged. The second attempt cleared every replayed trace and went in. That test still runs on every prompt change the team makes, and the monitor keeps watching live traffic in the meantime, so if the failure returns, the Signal escalates again and the loop starts over.
 
-## Step 7: Lock the fix in CI
+## Where humans stayed
 
-The regression test the agent writes lives in your repository, not in Latitude. The failing traffic behind the Signal becomes a dataset, the test replays that dataset against the agent, and your CI runs it as an ordinary check on every pull request from then on. The fix has to pass it to merge, and so does every prompt change that comes after.
-
-In the repository of Latitude's own support agent, the first attempted fix failed the regression check on its pull request, and only the second, which cleared the replayed traces, went in. The monitor keeps watching live traffic in the meantime, and if the failure returns, the Signal escalates again.
-
-## Where you stay in the loop
-
-Humans remain in two places by design. Annotations are the ground truth every evaluation is optimized against, and a person reviews every pull request before it merges. Everything between those two points, the example-hunting, the context reconstruction, the judgment call about whether a failure is recurring, the trace ids carried from a dashboard into a ticket into an editor, is what got automated.
+Through all of it, people remained in two places by design. Annotations are the ground truth every evaluation is optimized against, and a person reviewed every pull request before it merged. Everything between those two points, the example-hunting, the context reconstruction, the judgment call about whether a failure was recurring, the trace ids carried from a dashboard into a ticket into an editor, is what got automated.
 
 A failure that would once have become a ticket in someone's backlog now arrives as a pull request waiting for review.
 
 ## Start the loop
 
-Steps 1 through 3 take an afternoon, and each step pays for itself before the next one starts. Latitude is MIT-licensed, self-hostable, and the whole workspace is exposed over MCP:
+The order of the story is the order of adoption, and none of it has to happen at once. Telemetry first, because the loop can only act on what it can see. Annotate what you find, promote the worst recurring pattern to a Signal, and turn on dispatch last, by which point the coding agent is acting on the same evidence you have been reading all along. The first three steps take an afternoon.
+
+Latitude is MIT-licensed, self-hostable, and the whole workspace is exposed over MCP:
 
 ```bash
 claude mcp add --transport http latitude https://api.latitude.so/v1/mcp
