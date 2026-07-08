@@ -32,7 +32,7 @@ export function simhash64(text: string): bigint {
     const digest = fnv1a64(shingle)
     for (let bit = 0; bit < SIMHASH_BITS; bit++) {
       const isSet = (digest & (1n << BigInt(bit))) !== 0n
-      bitVotes[bit] += isSet ? 1 : -1
+      bitVotes[bit] = (bitVotes[bit] ?? 0) + (isSet ? 1 : -1)
     }
   }
 
