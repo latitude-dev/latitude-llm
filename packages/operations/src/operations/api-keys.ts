@@ -188,9 +188,6 @@ const getApiKey = apiKeyEndpoint({
     request: { params: ApiKeyIdParamsSchema },
     responses: typedResponses({ status: 200, schema: ResponseSchema, description: "API key" }),
   }),
-  // Returns the full unmasked token — keep it off MCP and every in-process agent
-  // toolset (HTTP/SDK/CLI only) so a secret can't land in an agent's context.
-  tool: false,
   access: "read-only",
   rateLimitTier: "low",
   execute: (input, ctx) =>
