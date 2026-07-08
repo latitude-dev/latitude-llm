@@ -37,6 +37,7 @@ const orgRepo = (summaries: ReadonlyMap<OrganizationId, AdminOrganizationSummary
     findById: () => Effect.die("findById not used in usage tests"),
     findManySummariesByIds: () => Effect.succeed(summaries),
     findFirstApiKeyId: () => Effect.die("findFirstApiKeyId not used in usage tests"),
+    setWantsShowcase: () => Effect.die("setWantsShowcase not used in usage tests"),
   })
 
 const mkSummary = (id: string, overrides: Partial<AdminOrganizationSummary> = {}): AdminOrganizationSummary => ({

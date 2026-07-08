@@ -1,4 +1,5 @@
 import {
+  dismissShowcaseUseCase,
   generateUniqueOrganizationSlugUseCase,
   MembershipRepository,
   OrganizationRepository,
@@ -105,6 +106,27 @@ export const updateOrganization = createServerFn({ method: "POST" })
       ),
     )
   })
+
+/**
+ * "Remove demo" — flip the current org's `wantsShowcase` flag to `false`. This
+ * is a write to the VIEWER'S OWN org (session-scoped), never the shared showcase
+ * org, so it stays a normal allowed write. It fires from app chrome while the
+ * user is viewing `/projects/lat-demo` (showcase scope), so it is on the
+ * write-gate's POST-read allowlist — otherwise the gate would reject it as a
+ * showcase write. Org-wide by design: any member can dismiss it for the whole
+ * team (the UI confirms this explicitly).
+ */
+export const dismissShowcase = createServerFn({ method: "POST" }).handler(async (): Promise<void> => {
+  const { organizationId, userId } = await requireSession()
+  const client = getPostgresClient()
+
+  await Effect.runPromise(
+    dismissShowcaseUseCase({ actorUserId: userId }).pipe(
+      withPostgres(OrganizationRepositoryLive, client, organizationId),
+      withTracing,
+    ),
+  )
+})
 
 /**
  * Permanently delete an organization. Guarded so the only org that can be

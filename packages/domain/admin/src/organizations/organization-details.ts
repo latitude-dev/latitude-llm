@@ -59,6 +59,13 @@ export const adminOrganizationDetailsSchema = z.object({
   slug: z.string(),
   /** Surfaced for support — staff need to map customers to Stripe records. */
   stripeCustomerId: z.string().nullable(),
+  /**
+   * Whether this org opts into the shared read-only Showcase demo project.
+   * Set `true` at org creation for new orgs; staff can toggle it here to
+   * re-enable it for an org that dismissed it (or enable it on an older org
+   * that predates the feature). Surfaced so the toggle shows current state.
+   */
+  wantsShowcase: z.boolean(),
   members: z.array(adminOrganizationMemberSchema),
   projects: z.array(adminOrganizationProjectSchema),
   sandboxes: z.array(adminOrganizationSandboxSchema),

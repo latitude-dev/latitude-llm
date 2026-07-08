@@ -42,6 +42,10 @@ export function useProjectScope(): ProjectScope {
   return use(ProjectScopeContext)
 }
 
+export function useIsReadOnlyProjectScope(): boolean {
+  return isReadOnlyScope(use(ProjectScopeContext))
+}
+
 /**
  * Query-key prefix for the scope. Live is **unmarked** (keys stay byte-identical
  * to production); non-live kinds namespace under their own segment. Spread it

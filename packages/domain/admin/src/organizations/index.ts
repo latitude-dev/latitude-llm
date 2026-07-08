@@ -40,3 +40,8 @@ export {
   type ResetSystemMonitorsResult,
   resetSystemMonitorsUseCase,
 } from "./reset-system-monitors.ts"
+export {
+  type SetOrganizationShowcaseError,
+  type SetOrganizationShowcaseInput,
+  setOrganizationShowcaseUseCase,
+} from "./set-organization-showcase.ts"

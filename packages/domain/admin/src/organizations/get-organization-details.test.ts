@@ -12,6 +12,7 @@ const successfulRepo = (result: AdminOrganizationDetails) =>
     findById: () => Effect.succeed(result),
     findManySummariesByIds: () => Effect.succeed(new Map()),
     findFirstApiKeyId: () => Effect.succeed(null),
+    setWantsShowcase: () => Effect.void,
   })
 
 const missingRepo = () =>
@@ -19,6 +20,7 @@ const missingRepo = () =>
     findById: (id) => Effect.fail(new NotFoundError({ entity: "Organization", id })),
     findManySummariesByIds: () => Effect.succeed(new Map()),
     findFirstApiKeyId: () => Effect.succeed(null),
+    setWantsShowcase: () => Effect.void,
   })
 
 const mkDetails = (overrides: Partial<AdminOrganizationDetails> = {}): AdminOrganizationDetails => ({
@@ -26,6 +28,7 @@ const mkDetails = (overrides: Partial<AdminOrganizationDetails> = {}): AdminOrga
   name: "Acme",
   slug: "acme",
   stripeCustomerId: null,
+  wantsShowcase: false,
   members: [],
   projects: [],
   sandboxes: [],

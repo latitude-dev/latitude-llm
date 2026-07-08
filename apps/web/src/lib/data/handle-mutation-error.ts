@@ -1,12 +1,7 @@
 import { toast } from "@repo/ui"
 import { parseServerError } from "../errors.ts"
 
-/**
- * `_tag` of the server-side error the showcase read-only write-gate will throw
- * (Phase 2). Matched here so the future "read-only showcase" modal branch can be
- * lit up without re-touching this file. No code throws it today — the write-gate
- * is unwired and scope defaults to live — so the branch below is dormant.
- */
+/** `_tag` of the read-only (showcase) write rejection. */
 export const READ_ONLY_PROJECT_ERROR_TAG = "ReadOnlyProjectError"
 
 interface HandleMutationErrorOptions {
@@ -35,13 +30,9 @@ export function handleMutationError(error: unknown, options: HandleMutationError
   const parsed = parseServerError(error)
 
   if (parsed._tag === READ_ONLY_PROJECT_ERROR_TAG) {
-    // DORMANT (showcase Phase 2): open the "read-only showcase — create your own
-    // project" modal and route to /projects. Dispatch a CustomEvent here (keep
-    // this file .ts) — a provider mounted at the app root listens, holds the open
-    // state locally, and renders the modal; this function runs outside React
-    // (MutationCache.onError / a promise .catch) so it can't render JSX itself.
-    // The write-gate that throws this never fires today, so this is a no-op now.
-    // See spec 'Read-only enforcement' layer 3 + D13.
+    // The read-only "demo" modal is opened once, centrally, by the write-gate
+    // client middleware (the single choke point every write flows through). Here
+    // we only swallow the error so it isn't also toasted.
     return
   }
 
