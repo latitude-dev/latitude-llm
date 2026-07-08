@@ -1,4 +1,5 @@
 import {
+  AgentShaderPanel,
   CommandDialog,
   CommandEmpty,
   CommandFooter,
@@ -308,26 +309,25 @@ export function CommandPalette() {
               <CommandGroup key={group.key} heading={group.label}>
                 {group.commands.map((command) =>
                   command.id === ASK_COMMAND_ID ? (
-                    // Rotating conic-gradient ring (a 1px rainbow border via the outer p-px) marks the
-                    // agent affordance without a per-row WebGL canvas.
-                    <div key={command.id} className="relative overflow-hidden rounded-md p-px">
-                      <span
-                        aria-hidden
-                        className="pointer-events-none absolute inset-[-150%] animate-[spin_4s_linear_infinite] bg-[conic-gradient(from_0deg,#ff0080,#ff8c00,#ffd500,#00d68f,#00b3ff,#8b5cff,#ff0080)]"
-                      />
-                      <CommandItem
-                        value={command.id}
-                        onSelect={() => execute(command)}
-                        className="relative bg-popover data-[selected=true]:bg-accent"
-                      >
-                        <Icon icon={command.icon} size="sm" color="foregroundMuted" />
-                        <span className="flex min-w-0 flex-1 items-center gap-2">
-                          <Text.H5 ellipsis noWrap>
-                            {command.titleNode ?? command.title}
-                          </Text.H5>
-                        </span>
-                      </CommandItem>
-                    </div>
+                    // The same WebGL border as AgentTextarea (idle state) so the affordance matches it —
+                    // glowing spots tracing the perimeter, not a rotating conic line.
+                    <CommandItem
+                      key={command.id}
+                      value={command.id}
+                      onSelect={() => execute(command)}
+                      className="group my-1 p-0 data-[selected=true]:bg-transparent"
+                    >
+                      <AgentShaderPanel loading={false} className="w-full">
+                        <div className="flex items-center gap-2.5 rounded-md px-2 py-2 group-data-[selected=true]:bg-accent">
+                          <Icon icon={command.icon} size="sm" color="foregroundMuted" />
+                          <span className="flex min-w-0 flex-1 items-center gap-2">
+                            <Text.H5 ellipsis noWrap>
+                              {command.titleNode ?? command.title}
+                            </Text.H5>
+                          </span>
+                        </div>
+                      </AgentShaderPanel>
+                    </CommandItem>
                   ) : (
                     <CommandItem key={command.id} value={command.id} onSelect={() => execute(command)}>
                       {command.leading ?? <Icon icon={command.icon} size="sm" color="foregroundMuted" />}
