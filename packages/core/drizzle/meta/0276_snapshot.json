@@ -1,5 +1,5 @@
 {
-  "id": "ee2527b9-1c31-4331-9eff-1a4fe46dc4a2",
+  "id": "2a4c4e4a-a38f-4979-bb99-a5e6ae2cc771",
   "prevId": "10b1717d-b52f-4795-95a6-a6f42977da98",
   "version": "7",
   "dialect": "postgresql",
@@ -6620,7 +6620,7 @@
         },
         "custom_identifier": {
           "name": "custom_identifier",
-          "type": "varchar(256)",
+          "type": "text",
           "primaryKey": false,
           "notNull": false
         },

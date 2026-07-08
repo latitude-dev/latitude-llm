@@ -85,10 +85,7 @@ function toRow(span: LocalSpanInput): SpanInput {
     started_at: toClickHouseDateTime(span.startedAt),
     ended_at: toClickHouseDateTime(span.endedAt),
     source: metadataField<string>(span.metadata, 'source'),
-    custom_identifier: metadataField<string>(
-      span.metadata,
-      'customIdentifier',
-    ),
+    custom_identifier: metadataField<string>(span.metadata, 'customIdentifier'),
     ...completion,
     ingested_at: toClickHouseDateTime(new Date()),
     retention_expires_at: toClickHouseDateTime(span.retentionExpiresAt),

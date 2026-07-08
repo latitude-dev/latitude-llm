@@ -4,6 +4,7 @@ import {
   index,
   integer,
   primaryKey,
+  text,
   timestamp,
   uuid,
   varchar,
@@ -44,7 +45,7 @@ export const spans = latitudeSchema.table(
 
     source: varchar('source', { length: 32 }).$type<LogSources>(),
 
-    customIdentifier: varchar('custom_identifier', { length: 256 }),
+    customIdentifier: text('custom_identifier'),
 
     testDeploymentId: bigint('test_deployment_id', { mode: 'number' }),
 

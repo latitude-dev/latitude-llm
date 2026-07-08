@@ -291,6 +291,7 @@ export type Span<T extends SpanType = SpanType> = {
   previousTraceId?: string
 
   source?: LogSources
+  customIdentifier?: string
 
   tokensPrompt?: number
   tokensCached?: number

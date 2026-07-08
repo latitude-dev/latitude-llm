@@ -142,7 +142,7 @@ describe('processSpansBulk', () => {
       const base = createOtlpSpan()
       const span = createOtlpSpan({
         attributes: [
-          ...base.attributes,
+          ...(base.attributes ?? []),
           {
             key: ATTRIBUTES.LATITUDE.customIdentifier,
             value: { stringValue: 'tenant-123' },
