@@ -83,17 +83,20 @@ export function AgentSessionView({
         />
       </div>
 
-      <div className="relative min-h-0 flex-1 p-3">
+      <div className="relative min-h-0 flex-1">
         {chat.running ? (
+          // Full-bleed: the loading shader fills the body edge-to-edge (padding is only for text).
           <AgentShaderPanel loading status={chat.status ?? "Working…"} className="h-full" />
-        ) : chat.error ? (
-          <Text.H5 color="destructive">{chat.error}</Text.H5>
-        ) : response ? (
-          <div className="h-full overflow-y-auto">
-            <Text.H5 whiteSpace="preWrap">{response}</Text.H5>
-          </div>
         ) : (
-          <Text.H6 color="foregroundMuted">Ask the agent to find, explain, or change something.</Text.H6>
+          <div className="h-full overflow-y-auto p-3">
+            {chat.error ? (
+              <Text.H5 color="destructive">{chat.error}</Text.H5>
+            ) : response ? (
+              <Text.H5 whiteSpace="preWrap">{response}</Text.H5>
+            ) : (
+              <Text.H6 color="foregroundMuted">Ask the agent to find, explain, or change something.</Text.H6>
+            )}
+          </div>
         )}
 
         {chat.pendingConfirmation ? (
