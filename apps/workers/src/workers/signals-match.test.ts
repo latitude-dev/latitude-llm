@@ -100,7 +100,7 @@ const makeTraceRow = (input?: {
 })
 
 const visualIdFromTestSignalId = (id: string) => {
-  const sequence = id.split("").reduce((sum, character) => sum + character.charCodeAt(0), 0) % 900 + 100
+  const sequence = (id.split("").reduce((sum, character) => sum + character.charCodeAt(0), 0) % 900) + 100
   return `LAT-${String(sequence).padStart(3, "0")}`
 }
 
