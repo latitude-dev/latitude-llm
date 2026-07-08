@@ -96,11 +96,7 @@ const makeIncident = (overrides: Partial<Incident> = {}): Incident => ({
   ...overrides,
 })
 
-const makeLayer = (opts: {
-  signal: Signal
-  configs?: readonly AgentDispatchConfig[]
-  incident?: Incident | null
-}) => {
+const makeLayer = (opts: { signal: Signal; configs?: readonly AgentDispatchConfig[]; incident?: Incident | null }) => {
   const organization = createOrganization({ id: orgId, name: "Acme", slug: "acme" })
   const project = createProject({ id: projectId, organizationId: orgId, name: "Demo", slug: "demo" })
   const { repository: organizationRepository, organizations } = createFakeOrganizationRepository()
