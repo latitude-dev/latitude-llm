@@ -47,12 +47,7 @@ const JSON_SAMPLE = JSON.stringify(
   2,
 )
 
-// Long enough (> ~3000 chars) to trigger the large-markdown "show more" split.
-const LONG_TEXT = Array.from(
-  { length: 14 },
-  () =>
-    `This is a long assistant response used to demonstrate how the renderer collapses oversized content behind a "show more" affordance, snapping to paragraph boundaries so the head and tail stay readable while the middle is hidden until expanded.`,
-).join("\n\n")
+const LONG_TEXT = `This is a long assistant response used to demonstrate how the renderer collapses oversized content behind a "show more" affordance, snapping to paragraph boundaries so the head and tail stay readable while the middle is hidden until expanded.`
 
 // `as GenAIMessage[]` — the schema is permissive (z.core.$loose) and we want to exercise
 // edge cases (unknown part types/roles, refusals) that aren't in the strict TS unions.
@@ -71,7 +66,6 @@ const TEXT_MESSAGES = [
   { role: "assistant", parts: [{ type: "text", content: MARKDOWN_SAMPLE }] },
   // JSON-block text part — renders via JsonContent (syntax-highlighted).
   { role: "assistant", parts: [{ type: "text", content: JSON_SAMPLE }] },
-  // Long content — renders with the "show more" middle collapse.
   { role: "assistant", parts: [{ type: "text", content: LONG_TEXT }] },
 ] as GenAIMessage[]
 
@@ -223,7 +217,7 @@ const EDGE_CASE_MESSAGES = [
 const SECTIONS: { title: string; description: string; messages: GenAIMessage[] }[] = [
   {
     title: "Text & markdown",
-    description: "System, plain text, rich markdown, JSON blocks, long-content collapse.",
+    description: "System, plain text, rich markdown, JSON blocks.",
     messages: TEXT_MESSAGES,
   },
   {

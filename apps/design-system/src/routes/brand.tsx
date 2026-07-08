@@ -61,11 +61,7 @@ function BrandPage() {
       >
         <BrandLogoFrame
           downloads={
-            <LogoDownloadButton
-              href={`${markLogoBase}.svg`}
-              filename={`${markLogoBase.slice(1)}.svg`}
-              label="SVG"
-            />
+            <LogoDownloadButton href={`${markLogoBase}.svg`} filename={`${markLogoBase.slice(1)}.svg`} label="SVG" />
           }
         >
           {isDark ? (
@@ -83,16 +79,8 @@ function BrandPage() {
         <BrandLogoFrame
           downloads={
             <>
-              <LogoDownloadButton
-                href={`${fullLogoBase}.png`}
-                filename={`${fullLogoBase.slice(1)}.png`}
-                label="PNG"
-              />
-              <LogoDownloadButton
-                href={`${fullLogoBase}.svg`}
-                filename={`${fullLogoBase.slice(1)}.svg`}
-                label="SVG"
-              />
+              <LogoDownloadButton href={`${fullLogoBase}.png`} filename={`${fullLogoBase.slice(1)}.png`} label="PNG" />
+              <LogoDownloadButton href={`${fullLogoBase}.svg`} filename={`${fullLogoBase.slice(1)}.svg`} label="SVG" />
             </>
           }
         >

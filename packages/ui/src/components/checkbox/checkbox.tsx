@@ -53,7 +53,11 @@ function Checkbox({ className, checked, debugHitArea, ref, ...rest }: CheckboxPr
       )}
     >
       <CheckboxPrimitive.Indicator className="flex items-center justify-center">
-        {checked === "indeterminate" ? <Minus className="h-3 w-3" /> : <Check className="h-3 w-3" />}
+        {checked === "indeterminate" ? (
+          <Minus className="h-3 w-3" strokeWidth={2.5} />
+        ) : (
+          <Check className="h-3 w-3" strokeWidth={2.5} />
+        )}
       </CheckboxPrimitive.Indicator>
     </CheckboxPrimitive.Root>
   )
