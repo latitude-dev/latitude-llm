@@ -10,7 +10,7 @@ import { Layer } from "effect"
 // Vercel AI SDK adapter. Apps wire these instead of a concrete adapter so the
 // provider stays a runtime (LAT_AI_*) decision.
 
-export { AIGenerateLive } from "@platform/ai-vercel"
+export { AIAgentLive, AIGenerateLive } from "@platform/ai-vercel"
 
 export const AIEmbedLive = Layer.succeed(AIEmbed, {
   embed: (input) => (input.provider === "voyage" ? embedWithVoyage(input) : embedWithVercel(input)),

@@ -1,6 +1,6 @@
 import type { MarketingContactsPort } from "@domain/marketing"
 import type { ProductFeedbackClientShape } from "@domain/product-feedback"
-import type { WorkflowQuerierShape, WorkflowStarterShape } from "@domain/queue"
+import type { QueuePublisherShape, WorkflowQuerierShape, WorkflowStarterShape } from "@domain/queue"
 import type { StorageDiskPort } from "@domain/shared"
 import { createPostHogClient, loadPostHogConfig, type PostHogClientShape } from "@platform/analytics-posthog"
 import { createRedisClient, createRedisConnection, type RedisClient } from "@platform/cache-redis"
@@ -9,6 +9,7 @@ import { createPostgresClient, type PostgresClient } from "@platform/db-postgres
 import { parseEnv } from "@platform/env"
 import { createLatitudeApiClient, loadLatitudeApiConfig } from "@platform/latitude-api"
 import { createLoopsContactsSender, loadLoopsConfig } from "@platform/loops"
+import { createBullMqQueuePublisher, loadBullMqConfig } from "@platform/queue-bullmq"
 import { createStorageDisk } from "@platform/storage-object"
 import {
   createTemporalClient,
@@ -16,6 +17,7 @@ import {
   createWorkflowStarter,
   loadTemporalConfig,
 } from "@platform/workflows-temporal"
+import { withTracing } from "@repo/observability"
 import { Effect } from "effect"
 
 let pgClientInstance: PostgresClient | undefined
@@ -26,6 +28,7 @@ let redisInstance: RedisClient | undefined
 let temporalClientPromise: ReturnType<typeof createTemporalClient> | undefined
 let workflowStarterPromise: Promise<WorkflowStarterShape> | undefined
 let workflowQuerierPromise: Promise<WorkflowQuerierShape> | undefined
+let queuePublisherPromise: Promise<QueuePublisherShape> | undefined
 let posthogClientInstance: PostHogClientShape | undefined
 let productFeedbackClientInstance: ProductFeedbackClientShape | undefined
 let marketingContactsSenderInstance: MarketingContactsPort | undefined
@@ -72,6 +75,19 @@ export const getRedisClient = (): RedisClient => {
   }
 
   return redisInstance
+}
+
+export const getQueuePublisher = (): Promise<QueuePublisherShape> => {
+  if (!queuePublisherPromise) {
+    queuePublisherPromise = (async () => {
+      const config = Effect.runSync(loadBullMqConfig())
+      return Effect.runPromise(createBullMqQueuePublisher({ redis: config }).pipe(withTracing))
+    })().catch((error) => {
+      queuePublisherPromise = undefined
+      throw error
+    })
+  }
+  return queuePublisherPromise
 }
 
 export const getPostHogClient = (): PostHogClientShape => {

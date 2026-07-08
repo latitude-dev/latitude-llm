@@ -3,18 +3,28 @@
 // use-cases below stay out of that bundle — they transitively pull server-only code (the judge
 // template / @domain/ai) and are only ever run by the API and workers.
 export * from "./browser.ts"
-
+export {
+  assembleSignalGenerationGrounding,
+  type SignalGenerationGroundingResult,
+} from "./signal-generation-grounding.ts"
+export {
+  buildSignalGenerationUserPrompt,
+  SIGNAL_GENERATION_SYSTEM_PROMPT,
+  type SignalGenerationGrounding,
+  summarizePreviewVerdicts,
+} from "./signal-generation-prompt.ts"
+export {
+  type GeneratedSignalDraft,
+  generatedSignalDraftSchema,
+  type MappedSignalDraft,
+  mapGeneratedSignalDraft,
+} from "./signal-generation-schema.ts"
 export {
   type CreateSignalError,
   type CreateSignalInput,
   type CreateSignalResult,
   createSignalUseCase,
 } from "./use-cases/create-signal.ts"
-export {
-  type CreateSignalFromPromptError,
-  type CreateSignalFromPromptInput,
-  createSignalFromPromptUseCase,
-} from "./use-cases/create-signal-from-prompt.ts"
 export {
   type DeleteSignalError,
   type DeleteSignalInput,
