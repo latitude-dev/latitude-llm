@@ -4,6 +4,7 @@ import { Download } from "lucide-react"
 import type { ReactNode } from "react"
 import { DemoFrame } from "./-components/demo-frame.tsx"
 import { DesignSystemPage } from "./-components/design-system-page.tsx"
+import { useDesignSystemTheme } from "./-components/design-system-theme.tsx"
 import { TypographySection } from "./-components/typography-table.tsx"
 import { UsageCode, UsageSection } from "./-components/usage-section.tsx"
 
@@ -32,6 +33,11 @@ function BrandLogoFrame({ children, downloads }: { children: ReactNode; download
 }
 
 function BrandPage() {
+  const { theme } = useDesignSystemTheme()
+  const isDark = theme === "dark"
+  const fullLogoBase = isDark ? "/latitude-logo-dark" : "/latitude-logo"
+  const markLogoBase = isDark ? "/latitude-logo-mark-dark" : "/latitude-logo-mark"
+
   return (
     <DesignSystemPage
       eyebrow="General"
@@ -51,30 +57,46 @@ function BrandPage() {
 
       <TypographySection
         title="Logo mark"
-        description="The standalone icon from LatitudeLogo in @repo/ui. Use for compact surfaces such as nav bars, favicons, and avatars."
+        description="The standalone icon from LatitudeLogo in @repo/ui. Use for compact surfaces such as nav bars, favicons, and avatars. The LatitudeLogo component itself is not theme-aware, so dark surfaces should use the dark SVG asset instead."
       >
         <BrandLogoFrame
           downloads={
-            <LogoDownloadButton href="/latitude-logo-mark.svg" filename="latitude-logo-mark.svg" label="SVG" />
+            <LogoDownloadButton
+              href={`${markLogoBase}.svg`}
+              filename={`${markLogoBase.slice(1)}.svg`}
+              label="SVG"
+            />
           }
         >
-          <LatitudeLogo className="h-28 w-28 sm:h-32 sm:w-32" />
+          {isDark ? (
+            <img src={`${markLogoBase}.svg`} alt="Latitude" className="h-28 w-28 sm:h-32 sm:w-32" />
+          ) : (
+            <LatitudeLogo className="h-28 w-28 sm:h-32 sm:w-32" />
+          )}
         </BrandLogoFrame>
       </TypographySection>
 
       <TypographySection
         title="Full logo"
-        description="The mark paired with the Latitude wordmark. Use when there is room for the full lockup, such as auth screens and email headers."
+        description="The mark paired with the Latitude wordmark. Use when there is room for the full lockup, such as auth screens and email headers. A dark-theme variant with a light wordmark is available for dark surfaces."
       >
         <BrandLogoFrame
           downloads={
             <>
-              <LogoDownloadButton href="/latitude-logo.png" filename="latitude-logo.png" label="PNG" />
-              <LogoDownloadButton href="/latitude-logo.svg" filename="latitude-logo.svg" label="SVG" />
+              <LogoDownloadButton
+                href={`${fullLogoBase}.png`}
+                filename={`${fullLogoBase.slice(1)}.png`}
+                label="PNG"
+              />
+              <LogoDownloadButton
+                href={`${fullLogoBase}.svg`}
+                filename={`${fullLogoBase.slice(1)}.svg`}
+                label="SVG"
+              />
             </>
           }
         >
-          <img src="/latitude-logo.png" alt="Latitude" className="h-14 w-auto sm:h-16" />
+          <img src={`${fullLogoBase}.png`} alt="Latitude" className="h-14 w-auto sm:h-16" />
         </BrandLogoFrame>
       </TypographySection>
     </DesignSystemPage>
