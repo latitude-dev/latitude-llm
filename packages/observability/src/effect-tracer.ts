@@ -16,12 +16,17 @@ import { exitHasOnlyExpectedClientErrors } from "./effect-tracer-client-errors.t
  */
 export const EffectOtelTracerLive = EffectOtelTracer.layerGlobal.pipe(Layer.provide(Resource.layerFromEnv()))
 
-const wrapSpan = (span: Tracer.Span): Tracer.Span => ({
-  ...span,
-  end(endTime, exit) {
-    span.end(endTime, exitHasOnlyExpectedClientErrors(exit) ? Exit.void : exit)
-  },
-})
+const wrapSpan = (span: Tracer.Span): Tracer.Span =>
+  new Proxy(span, {
+    get(target, prop, receiver) {
+      if (prop === "end") {
+        return (endTime: bigint, exit: Exit.Exit<unknown, unknown>) => {
+          target.end(endTime, exitHasOnlyExpectedClientErrors(exit) ? Exit.void : exit)
+        }
+      }
+      return Reflect.get(target, prop, receiver)
+    },
+  })
 
 const ClientErrorSuppressingTracerLive = Layer.effect(
   Tracer.Tracer,
