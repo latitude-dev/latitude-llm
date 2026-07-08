@@ -282,8 +282,10 @@ const runAgenticGeneration = async (params: {
   // model-facing schema drops `projectSlug` (merged in on execute) so the agent
   // can't probe other projects and never has to supply it.
   const researchTools: AgentToolDef[] = signalAgentToolset.tools.map((toolDef) => {
-    const hasProjectSlug = "projectSlug" in toolDef.inputSchema.shape
-    const inputSchema = hasProjectSlug ? toolDef.inputSchema.omit({ projectSlug: true }) : toolDef.inputSchema
+    const inputSchema =
+      toolDef.inputSchema instanceof z.ZodObject && "projectSlug" in toolDef.inputSchema.shape
+        ? toolDef.inputSchema.omit({ projectSlug: true })
+        : toolDef.inputSchema
     return {
       name: toolDef.name,
       description: toolDef.description,
@@ -368,13 +370,27 @@ const runAgenticGeneration = async (params: {
         filters: mapped.draft.filters ?? null,
         evaluation: mapped.draft.evaluation,
       }).pipe(
-        Effect.map(() => ({ ok: true as const })),
+        // A draft that compiles but throws (bad script, judge/embedding failure) still resolves
+        // here with every row carrying an `error` — creating the signal anyway would persist one
+        // that errors on every session. Reject it so the agent fixes and retries.
+        Effect.map((result) => {
+          const rows = result.items
+          return rows.length > 0 && rows.every((row) => row.error !== null)
+            ? {
+                ok: false as const,
+                error: `Every previewed session errored. First error: ${rows[0]?.error ?? "unknown"}`,
+              }
+            : { ok: true as const }
+        }),
         Effect.catchTag("ScriptCompileError", (error) =>
-          Effect.succeed({ ok: false as const, error: describeError(error) }),
+          Effect.succeed({
+            ok: false as const,
+            error: `The evaluation script does not compile: ${describeError(error)}`,
+          }),
         ),
       )
       if (!preview.ok) {
-        return { error: `The evaluation script does not compile: ${preview.error}` }
+        return { error: preview.error }
       }
       const created = yield* createSignalUseCase({
         organizationId,
@@ -395,6 +411,11 @@ const runAgenticGeneration = async (params: {
       "Terminal tool: validate, preview, and create the signal from the draft. Call it exactly once when confident. Returns {signalId, slug} on success or {error} to fix and retry.",
     inputSchema: generatedSignalDraftSchema,
     execute: async (rawInput) => {
+      // The SDK loop keeps running after a successful tool result, so a second createSignal call
+      // in the same run must not create a second signal — return the one already created.
+      if (captureBox.signal !== null) {
+        return { signalId: captureBox.signal.signalId, slug: captureBox.signal.slug }
+      }
       const parsed = generatedSignalDraftSchema.safeParse(rawInput)
       if (!parsed.success) {
         return { error: formatZodIssues(parsed.error) }
