@@ -61,6 +61,7 @@ const loadInstance = (): Promise<PostHog | null> => {
       const posthog = mod.posthog
       posthog.init(env.apiKey, {
         api_host: env.host,
+        cross_subdomain_cookie: true,
         // Per product decision: session recordings + autocapture + pageview.
         // Masking uses PostHog defaults (passwords + [data-ph-mask]).
         capture_pageview: true,
@@ -85,6 +86,20 @@ export const initPostHog = async (): Promise<void> => {
   await loadInstance()
 }
 
+const materializePostHogSessionId = (posthog: PostHog): string | null => {
+  posthog.sessionManager?.checkAndGetSessionAndWindowId(false)
+  return posthog.get_session_id() || null
+}
+
+/**
+ * Ensures PostHog is loaded and a `$session_id` exists on unauthenticated routes
+ * (login/signup) without opting real customers into product analytics. The id is
+ * read from the cross-subdomain cookie when the visitor arrived from latitude.so.
+ */
+export const bootstrapPostHogAttributionSession = async (): Promise<void> => {
+  await getPostHogSessionId()
+}
+
 /**
  * Current PostHog session id, or null if the SDK isn't loaded / has no session.
  * Threaded onto the server-side `UserSignedUp` event as `$session_id` so PostHog
@@ -94,7 +109,7 @@ export const getPostHogSessionId = async (): Promise<string | null> => {
   const posthog = await loadInstance()
   if (!posthog) return null
   try {
-    return posthog.get_session_id() || null
+    return materializePostHogSessionId(posthog)
   } catch {
     return null
   }

@@ -1,4 +1,4 @@
-import { Button, GitHubIcon, GoogleIcon, Icon, LatitudeLogo, Text } from "@repo/ui"
+import { Button, GitHubIcon, GoogleIcon, Icon, LatitudeLogo, Text, useMountEffect } from "@repo/ui"
 import { createFileRoute, redirect } from "@tanstack/react-router"
 import { AlertCircle, ArrowRight, Mail } from "lucide-react"
 import { type SubmitEvent, useCallback, useRef, useState } from "react"
@@ -8,12 +8,13 @@ import { sendMagicLink } from "../domains/auth/auth.functions.ts"
 import { getSession } from "../domains/sessions/session.functions.ts"
 import { lookupSsoForEmail } from "../domains/sso/sso.functions.ts"
 import { appendTrackingParams, gtmHeadScripts, pickTrackingParams } from "../lib/analytics/gtm.ts"
+import { setSignupAttributionCookie } from "../lib/analytics/signup-attribution-cookie.ts"
 import { GtmNoScript, SignupCompleteWatcher } from "../lib/analytics/signup-complete-watcher.tsx"
 import { oauthCallbackErrorMessage } from "../lib/auth/oauth-errors.ts"
 import { authClient } from "../lib/auth-client.ts"
 import { TURNSTILE_SITE_KEY } from "../lib/auth-config.ts"
 import { toUserMessage } from "../lib/errors.ts"
-import { getPostHogSessionId } from "../lib/posthog/posthog-client.ts"
+import { bootstrapPostHogAttributionSession, getPostHogSessionId } from "../lib/posthog/posthog-client.ts"
 
 const loginSearchParams = z.object({
   redirect: z.string().optional(),
@@ -22,6 +23,15 @@ const loginSearchParams = z.object({
   // sign-in fails at the OAuth callback (e.g. `account_not_linked`).
   error: z.string().optional(),
 })
+
+const captureSignupAttribution = async (tracking: Record<string, string>) => {
+  const sessionId = await getPostHogSessionId()
+  return {
+    ...(sessionId ? { sessionId } : {}),
+    ...(window.document.referrer ? { referrer: window.document.referrer } : {}),
+    ...(Object.keys(tracking).length > 0 ? { trackingParams: tracking } : {}),
+  }
+}
 
 export const Route = createFileRoute("/login")({
   validateSearch: loginSearchParams,
@@ -37,6 +47,9 @@ export const Route = createFileRoute("/login")({
 
 function LoginPage() {
   const { redirect: redirectPath, email: prefilledEmail, error: oauthErrorCode } = Route.useSearch()
+  useMountEffect(() => {
+    void bootstrapPostHogAttributionSession()
+  })
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState<string | undefined>(() => oauthCallbackErrorMessage(oauthErrorCode))
   const [isSent, setIsSent] = useState(false)
@@ -71,12 +84,7 @@ function LoginPage() {
     // Capture session + referrer/UTM now; the magic link is verified later
     // (maybe cross-device) without this context. Server stashes it by email and
     // attaches to `UserSignedUp` so PostHog links the event to this session.
-    const sessionId = await getPostHogSessionId()
-    const attribution = {
-      ...(sessionId ? { sessionId } : {}),
-      ...(window.document.referrer ? { referrer: window.document.referrer } : {}),
-      ...(Object.keys(tracking).length > 0 ? { trackingParams: tracking } : {}),
-    }
+    const attribution = await captureSignupAttribution(tracking)
 
     try {
       // Verified enterprise SSO domains skip the magic link entirely and
@@ -116,7 +124,7 @@ function LoginPage() {
     }
   }
 
-  const submitSocialSignIn = (provider: "google" | "github") => {
+  const submitSocialSignIn = async (provider: "google" | "github") => {
     if (isLoading) return
 
     setIsLoading(true)
@@ -124,6 +132,9 @@ function LoginPage() {
 
     try {
       const tracking = pickTrackingParams(window.location.search)
+      const attribution = await captureSignupAttribution(tracking)
+      setSignupAttributionCookie(attribution)
+
       const startParams = new URLSearchParams(tracking)
       if (redirectPath) startParams.set("redirect", redirectPath)
       // Same-origin relative path — no baked deployment URL needed.
@@ -135,9 +146,13 @@ function LoginPage() {
     }
   }
 
-  const handleGoogleClick = () => submitSocialSignIn("google")
+  const handleGoogleClick = () => {
+    void submitSocialSignIn("google")
+  }
 
-  const handleGitHubClick = () => submitSocialSignIn("github")
+  const handleGitHubClick = () => {
+    void submitSocialSignIn("github")
+  }
 
   if (isSent) {
     return (
