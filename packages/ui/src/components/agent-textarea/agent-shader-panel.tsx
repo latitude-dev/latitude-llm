@@ -14,6 +14,8 @@ export interface AgentShaderPanelProps {
   /** When true, the shader floods with the agent "working" fill and the status crossfades over it. */
   loading: boolean
   status?: string | null
+  /** Fades the status line out (e.g. while a confirmation card is shown over the shader). */
+  statusHidden?: boolean
   className?: string
   /** Rendered on top of the shader; faded out while loading so the fill reads cleanly. */
   children?: ReactNode
@@ -24,7 +26,13 @@ export interface AgentShaderPanelProps {
  * instead of a textarea. Idle shows the pulsing rainbow border; loading floods the fill and shows a
  * crossfading status line. Used for the command-palette agent's response body.
  */
-export function AgentShaderPanel({ loading, status = null, className, children }: AgentShaderPanelProps) {
+export function AgentShaderPanel({
+  loading,
+  status = null,
+  statusHidden = false,
+  className,
+  children,
+}: AgentShaderPanelProps) {
   const [statusPair, setStatusPair] = useState<{ current: string | null; previous: string | null }>({
     current: status,
     previous: null,
@@ -53,7 +61,12 @@ export function AgentShaderPanel({ loading, status = null, className, children }
         {children}
       </div>
       {loading ? (
-        <div className="pointer-events-none absolute inset-0 z-20 flex items-center justify-center px-6">
+        <div
+          className={cn(
+            "pointer-events-none absolute inset-0 z-20 flex items-center justify-center px-6 transition-opacity duration-500",
+            { "opacity-0": statusHidden },
+          )}
+        >
           <div className="relative flex w-full items-center justify-center">
             {statusPair.previous !== null ? (
               <div

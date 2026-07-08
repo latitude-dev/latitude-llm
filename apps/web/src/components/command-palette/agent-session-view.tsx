@@ -36,7 +36,7 @@ interface PendingConfirmationLike {
   readonly input: unknown
 }
 
-/** The approve/reject gate: takes over the body when the agent wants to run a write/destructive tool. */
+/** The approve/reject gate: an overlay rendered centered over the still-running shader. */
 function ConfirmationView({
   confirmation,
   expanded,
@@ -53,49 +53,53 @@ function ConfirmationView({
   const destructive = confirmation.access === "destructive"
 
   return (
-    <div className="flex h-full flex-col items-center justify-center gap-4 overflow-y-auto p-4">
-      <Text.H6 color="foregroundMuted">The agent wants to run:</Text.H6>
+    <div className="fade-in absolute inset-0 z-30 flex animate-in flex-col items-center justify-center gap-4 overflow-y-auto p-4 duration-300">
+      <Text.H5 weight="medium" align="center">
+        The agent wants to run:
+      </Text.H5>
 
-      <div className="w-full max-w-md rounded-lg border border-border bg-muted/30 p-3">
-        <Text.H5M>{confirmation.title}</Text.H5M>
-        {confirmation.summary ? (
-          <div className="mt-1">
-            <Text.H6 color="foregroundMuted">{confirmation.summary}</Text.H6>
-          </div>
-        ) : null}
-        {hasPayload ? (
-          <div className="mt-2">
-            <button
-              type="button"
-              onClick={onToggleExpanded}
-              className="flex w-full items-center gap-1 text-left text-muted-foreground transition-colors hover:text-foreground"
-            >
+      <div className="w-full max-w-md">
+        <div className="rounded-lg border border-border bg-background p-3 shadow-lg">
+          <Text.H5M>{confirmation.title}</Text.H5M>
+          {confirmation.summary ? (
+            <div className="mt-1">
+              <Text.H6 color="foregroundMuted">{confirmation.summary}</Text.H6>
+            </div>
+          ) : null}
+          {hasPayload ? (
+            <div className="mt-2">
+              <button
+                type="button"
+                onClick={onToggleExpanded}
+                className="flex w-full items-center gap-1 text-left text-muted-foreground transition-colors hover:text-foreground"
+              >
+                {expanded ? (
+                  <ChevronUpIcon className="size-3.5 shrink-0" />
+                ) : (
+                  <ChevronDownIcon className="size-3.5 shrink-0" />
+                )}
+                {expanded ? null : <span className="min-w-0 flex-1 truncate font-mono text-xs">{payload}</span>}
+                <Kbd>{expanded ? "↑" : "↓"}</Kbd>
+              </button>
               {expanded ? (
-                <ChevronUpIcon className="size-3.5 shrink-0" />
-              ) : (
-                <ChevronDownIcon className="size-3.5 shrink-0" />
-              )}
-              {expanded ? null : <span className="min-w-0 flex-1 truncate font-mono text-xs">{payload}</span>}
-              <Kbd>{expanded ? "↑" : "↓"}</Kbd>
-            </button>
-            {expanded ? (
-              <pre className="mt-1 max-h-40 overflow-auto rounded bg-muted p-2 font-mono text-xs">
-                {JSON.stringify(confirmation.input, null, 2)}
-              </pre>
-            ) : null}
-          </div>
-        ) : null}
-      </div>
+                <pre className="mt-1 max-h-40 overflow-auto rounded bg-muted p-2 font-mono text-xs">
+                  {JSON.stringify(confirmation.input, null, 2)}
+                </pre>
+              ) : null}
+            </div>
+          ) : null}
+        </div>
 
-      <div className="flex items-center justify-center gap-2">
-        <Button variant="outline" onClick={() => onRespond("deny")}>
-          Reject
-          <Kbd>⌫</Kbd>
-        </Button>
-        <Button variant={destructive ? "destructive" : "default"} onClick={() => onRespond("approve")}>
-          {destructive ? "Run anyway" : "Accept"}
-          <Kbd>⏎</Kbd>
-        </Button>
+        <div className="mt-2 flex items-center justify-end gap-2">
+          <Button variant="outline" onClick={() => onRespond("deny")}>
+            Reject
+            <Kbd>⌫</Kbd>
+          </Button>
+          <Button variant={destructive ? "destructive" : "default"} onClick={() => onRespond("approve")}>
+            {destructive ? "Run anyway" : "Accept"}
+            <Kbd>⏎</Kbd>
+          </Button>
+        </div>
       </div>
     </div>
   )
@@ -215,16 +219,15 @@ export function AgentSessionView({
       </div>
 
       <div className="relative min-h-0 flex-1">
-        {pending ? (
-          <ConfirmationView
-            confirmation={pending}
-            expanded={payloadExpanded}
-            onToggleExpanded={() => setPayloadExpanded((value) => !value)}
-            onRespond={(decision) => chat.respond(pending.toolCallId, decision)}
-          />
-        ) : chat.running ? (
+        {chat.running ? (
           // Full-bleed: the loading shader fills the body edge-to-edge (padding is only for text).
-          <AgentShaderPanel loading status={chat.status ?? "Working…"} className="h-full" />
+          // The confirmation card renders over it; the status fades out while it's up.
+          <AgentShaderPanel
+            loading
+            status={chat.status ?? "Working…"}
+            statusHidden={pending !== null}
+            className="h-full"
+          />
         ) : (
           <div className="h-full overflow-y-auto p-3">
             {chat.error ? (
@@ -238,6 +241,15 @@ export function AgentSessionView({
             )}
           </div>
         )}
+
+        {pending ? (
+          <ConfirmationView
+            confirmation={pending}
+            expanded={payloadExpanded}
+            onToggleExpanded={() => setPayloadExpanded((value) => !value)}
+            onRespond={(decision) => chat.respond(pending.toolCallId, decision)}
+          />
+        ) : null}
       </div>
     </div>
   )

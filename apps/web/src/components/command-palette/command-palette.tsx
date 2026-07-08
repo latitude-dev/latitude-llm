@@ -315,7 +315,9 @@ export function CommandPalette() {
                       key={command.id}
                       value={command.id}
                       onSelect={() => execute(command)}
-                      className="group my-1 p-0 data-[selected=true]:bg-transparent"
+                      // mx keeps the shader's 8px outward bleed inside the list's overflow-x-hidden clip
+                      // (only 6px of list padding otherwise), so the left/right glow isn't cut off.
+                      className="group mx-1.5 my-1 p-0 data-[selected=true]:bg-transparent"
                     >
                       <AgentShaderPanel loading={false} className="w-full">
                         <div className="flex items-center gap-2.5 rounded-md px-2 py-2 group-data-[selected=true]:bg-accent">
