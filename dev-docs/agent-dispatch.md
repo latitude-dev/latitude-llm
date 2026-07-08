@@ -44,7 +44,7 @@ Settings → Integrations:
 2. Per-project dispatch config: enable, triggers, target mapping, guardrails
 3. Dispatch history audit log
 
-The settings UI exposes `signal.discovered` (new signal), `incident.opened` (escalating signal), and `monitor.incident` (threshold or escalating monitor) for hosted agent/webhook targets. Linear only exposes `signal.discovered` so it creates follow-up issues for new signals rather than every escalation. `signal.discovered` fires only for `origin = 'system'` signals (auto-discovered); hand-built `origin = 'user'` signals are skipped — humans already chose to create them. Muted signals/monitors suppress dispatch (same as notifications).
+The settings UI exposes `signal.discovered` (new signal), `incident.opened` (escalating signal), and `monitor.incident` (threshold or escalating monitor) for hosted agent/webhook targets. Linear only exposes `signal.discovered` so it creates follow-up issues for new signals rather than every escalation. `signal.discovered` fires only for `origin = 'system'` signals (auto-discovered); hand-built `origin = 'user'` signals are skipped on creation — humans already chose to create them. Escalation still dispatches via `incident.opened` for any signal origin when the signal opens an incident. Muted signals/monitors suppress dispatch (same as notifications).
 
 ## Manual sends ("Send to")
 

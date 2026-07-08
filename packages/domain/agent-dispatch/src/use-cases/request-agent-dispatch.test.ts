@@ -1,4 +1,4 @@
-import { IncidentRepository } from "@domain/incidents"
+import { type Incident, IncidentRepository } from "@domain/incidents"
 import { IncidentMonitorReader } from "@domain/notifications"
 import { createFakeIncidentMonitorReader } from "@domain/notifications/testing"
 import { createOrganization, OrganizationRepository } from "@domain/organizations"
@@ -7,7 +7,7 @@ import { createProject, ProjectRepository } from "@domain/projects"
 import { createFakeProjectRepository } from "@domain/projects/testing"
 import { ScoreAnalyticsRepository, ScoreRepository } from "@domain/scores"
 import { createFakeScoreAnalyticsRepository, createFakeScoreRepository } from "@domain/scores/testing"
-import { OrganizationId, ProjectId, SignalId, SqlClient } from "@domain/shared"
+import { AlertIncidentId, OrganizationId, ProjectId, SignalId, SqlClient } from "@domain/shared"
 import { createFakeSqlClient } from "@domain/shared/testing"
 import { type Signal, SignalRepository } from "@domain/signals"
 import { createFakeSignalRepository } from "@domain/signals/testing"
@@ -52,7 +52,9 @@ const makeSignal = (overrides: Partial<Signal> = {}): Signal => ({
   ...overrides,
 })
 
-const makeConfig = (): AgentDispatchConfig => ({
+const incidentId = AlertIncidentId(cuid("a"))
+
+const makeConfig = (overrides: Partial<AgentDispatchConfig> = {}): AgentDispatchConfig => ({
   id: configId,
   organizationId: orgId,
   projectId,
@@ -65,9 +67,40 @@ const makeConfig = (): AgentDispatchConfig => ({
   guardrails: { maxDispatchesPerDay: 10, cooldownMinutes: 0 },
   createdAt: now,
   updatedAt: now,
+  ...overrides,
 })
 
-const makeLayer = (opts: { signal: Signal; configs?: readonly AgentDispatchConfig[] }) => {
+const makeIncident = (overrides: Partial<Incident> = {}): Incident => ({
+  id: incidentId,
+  organizationId: orgId,
+  projectId,
+  sourceType: "signal",
+  sourceId: signalId,
+  severity: "high",
+  startedAt: now,
+  endedAt: null,
+  createdAt: now,
+  entrySignals: {
+    expected1h: 1,
+    expected6hPerHour: 1,
+    stddev1h: 0.5,
+    stddev6hPerHour: 0.5,
+    kShort: 2,
+    kLong: 2,
+    entryThreshold1h: 3,
+    entryThreshold6hPerHour: 3,
+    entryCount24h: 5,
+  },
+  exitEligibleSince: null,
+  condition: null,
+  ...overrides,
+})
+
+const makeLayer = (opts: {
+  signal: Signal
+  configs?: readonly AgentDispatchConfig[]
+  incident?: Incident | null
+}) => {
   const organization = createOrganization({ id: orgId, name: "Acme", slug: "acme" })
   const project = createProject({ id: projectId, organizationId: orgId, name: "Demo", slug: "demo" })
   const { repository: organizationRepository, organizations } = createFakeOrganizationRepository()
@@ -101,7 +134,13 @@ const makeLayer = (opts: { signal: Signal; configs?: readonly AgentDispatchConfi
   const { reader: incidentMonitorReader } = createFakeIncidentMonitorReader()
   const incidentRepository: (typeof IncidentRepository)["Service"] = {
     insert: () => Effect.die("not used"),
-    findById: () => Effect.die("not used"),
+    findById: (id) => {
+      const incident = opts.incident
+      if (incident === null || incident === undefined || incident.id !== id) {
+        return Effect.die(new Error("incident not found"))
+      }
+      return Effect.succeed(incident)
+    },
     findOpen: () => Effect.succeed(null),
     closeOpen: () => Effect.succeed(null),
     updateExitDwell: () => Effect.void,
@@ -157,6 +196,33 @@ describe("requestAgentDispatchUseCase", () => {
     if (result.status !== "ok") return
     expect(result.requests).toHaveLength(1)
     expect(result.requests[0]?.trigger).toBe("signal.discovered")
+    expect(result.requests[0]?.sourceId).toBe(signalId)
+  })
+
+  it("dispatches incident.opened for user-origin signals on escalation", async () => {
+    const result = await Effect.runPromise(
+      requestAgentDispatchUseCase({
+        source: {
+          type: "incident",
+          organizationId: orgId,
+          alertIncidentId: incidentId,
+        },
+        webAppUrl: "https://console.latitude.so",
+      }).pipe(
+        Effect.provide(
+          makeLayer({
+            signal: makeSignal({ origin: "user", source: "custom", centroid: null, clusteredAt: null }),
+            incident: makeIncident(),
+            configs: [makeConfig({ triggers: ["incident.opened"] })],
+          }),
+        ),
+      ),
+    )
+
+    expect(result.status).toBe("ok")
+    if (result.status !== "ok") return
+    expect(result.requests).toHaveLength(1)
+    expect(result.requests[0]?.trigger).toBe("incident.opened")
     expect(result.requests[0]?.sourceId).toBe(signalId)
   })
 })
