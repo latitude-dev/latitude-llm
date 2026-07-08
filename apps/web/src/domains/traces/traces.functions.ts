@@ -33,7 +33,6 @@ import {
   TaxonomyObservationRepositoryLive,
   TraceRepositoryLive,
   TraceSearchRepositoryLive,
-  withClickHouse,
 } from "@platform/db-clickhouse"
 import { withTracing } from "@repo/observability"
 import { cacheHitRate } from "@repo/utils"
@@ -46,6 +45,7 @@ import { ensureSession } from "../../domains/sessions/session.functions.ts"
 import { getSessionOrganizationId } from "../../server/auth.ts"
 import { getClickhouseClient, getQueuePublisher, getRedisClient } from "../../server/clients.ts"
 import { resolveOrgScope } from "../../server/resolve-org-scope.ts"
+import { withScopedClickHouse } from "../../server/scoped-clickhouse.ts"
 
 export interface TraceRecord {
   readonly organizationId: string
@@ -183,7 +183,6 @@ interface TraceListResult {
 export const listTracesByProject = createServerFn({ method: "GET" })
   .inputValidator(
     z.object({
-      sandboxOrgId: z.string().optional(),
       projectId: z.string(),
       limit: z.number().optional(),
       cursor: traceListCursorSchema.optional(),
@@ -193,8 +192,8 @@ export const listTracesByProject = createServerFn({ method: "GET" })
       searchQuery: z.string().max(500).optional(),
     }),
   )
-  .handler(async ({ data }): Promise<TraceListResult> => {
-    const orgId = await resolveOrgScope(data)
+  .handler(async ({ data, context }): Promise<TraceListResult> => {
+    const orgId = await resolveOrgScope(context)
 
     const page = await Effect.runPromise(
       Effect.gen(function* () {
@@ -212,7 +211,7 @@ export const listTracesByProject = createServerFn({ method: "GET" })
           },
         })
       }).pipe(
-        withClickHouse(TraceRepositoryLive, getClickhouseClient(), orgId),
+        withScopedClickHouse(TraceRepositoryLive, getClickhouseClient(), orgId),
         withAi(AIEmbedLive, getRedisClient()),
         withTracing,
       ),
@@ -231,14 +230,13 @@ export const listTracesByProject = createServerFn({ method: "GET" })
 export const countTracesByProject = createServerFn({ method: "GET" })
   .inputValidator(
     z.object({
-      sandboxOrgId: z.string().optional(),
       projectId: z.string(),
       filters: filterSetSchema.optional(),
       searchQuery: z.string().max(500).optional(),
     }),
   )
-  .handler(async ({ data }): Promise<number> => {
-    const orgId = await resolveOrgScope(data)
+  .handler(async ({ data, context }): Promise<number> => {
+    const orgId = await resolveOrgScope(context)
 
     return Effect.runPromise(
       Effect.gen(function* () {
@@ -250,7 +248,7 @@ export const countTracesByProject = createServerFn({ method: "GET" })
           ...(data.searchQuery ? { searchQuery: data.searchQuery } : {}),
         })
       }).pipe(
-        withClickHouse(TraceRepositoryLive, getClickhouseClient(), orgId),
+        withScopedClickHouse(TraceRepositoryLive, getClickhouseClient(), orgId),
         withAi(AIEmbedLive, getRedisClient()),
         withTracing,
       ),
@@ -260,14 +258,13 @@ export const countTracesByProject = createServerFn({ method: "GET" })
 export const getTraceMetricsByProject = createServerFn({ method: "GET" })
   .inputValidator(
     z.object({
-      sandboxOrgId: z.string().optional(),
       projectId: z.string(),
       filters: filterSetSchema.optional(),
       searchQuery: z.string().max(500).optional(),
     }),
   )
-  .handler(async ({ data }): Promise<TraceMetrics | null> => {
-    const orgId = await resolveOrgScope(data)
+  .handler(async ({ data, context }): Promise<TraceMetrics | null> => {
+    const orgId = await resolveOrgScope(context)
 
     return Effect.runPromise(
       Effect.gen(function* () {
@@ -279,7 +276,7 @@ export const getTraceMetricsByProject = createServerFn({ method: "GET" })
           ...(data.searchQuery ? { searchQuery: data.searchQuery } : {}),
         })
       }).pipe(
-        withClickHouse(TraceRepositoryLive, getClickhouseClient(), orgId),
+        withScopedClickHouse(TraceRepositoryLive, getClickhouseClient(), orgId),
         withAi(AIEmbedLive, getRedisClient()),
         withTracing,
       ),
@@ -287,16 +284,16 @@ export const getTraceMetricsByProject = createServerFn({ method: "GET" })
   })
 
 export const getTraceCohortSummary = createServerFn({ method: "GET" })
-  .inputValidator(z.object({ sandboxOrgId: z.string().optional(), projectId: z.string() }))
-  .handler(async ({ data }): Promise<CohortSummary> => {
-    const orgId = await resolveOrgScope(data)
+  .inputValidator(z.object({ projectId: z.string() }))
+  .handler(async ({ data, context }): Promise<CohortSummary> => {
+    const orgId = await resolveOrgScope(context)
 
     return Effect.runPromise(
       getTraceCohortSummaryUseCase({
         organizationId: orgId,
         projectId: ProjectId(data.projectId),
       }).pipe(
-        withClickHouse(TraceRepositoryLive, getClickhouseClient(), orgId),
+        withScopedClickHouse(TraceRepositoryLive, getClickhouseClient(), orgId),
         Effect.provide(RedisCacheStoreLive(getRedisClient())),
         withTracing,
       ),
@@ -304,7 +301,6 @@ export const getTraceCohortSummary = createServerFn({ method: "GET" })
   })
 
 const traceHistogramInputSchema = z.object({
-  sandboxOrgId: z.string().optional(),
   projectId: z.string(),
   filters: filterSetSchema.optional(),
   rangeStartIso: z.string(),
@@ -319,14 +315,14 @@ const traceHistogramInputSchema = z.object({
 
 export const getTraceTimeHistogramByProject = createServerFn({ method: "GET" })
   .inputValidator(traceHistogramInputSchema)
-  .handler(async ({ data }): Promise<readonly TraceTimeHistogramBucket[]> => {
+  .handler(async ({ data, context }): Promise<readonly TraceTimeHistogramBucket[]> => {
     const startMs = Date.parse(data.rangeStartIso)
     const endMs = Date.parse(data.rangeEndIso)
     if (!Number.isFinite(startMs) || !Number.isFinite(endMs) || endMs <= startMs) {
       return []
     }
 
-    const orgId = await resolveOrgScope(data)
+    const orgId = await resolveOrgScope(context)
 
     const mergedFilters = mergeTraceHistogramTimeFilters(data.filters, data.rangeStartIso, data.rangeEndIso)
 
@@ -341,7 +337,7 @@ export const getTraceTimeHistogramByProject = createServerFn({ method: "GET" })
           ...(data.searchQuery ? { searchQuery: data.searchQuery } : {}),
         })
       }).pipe(
-        withClickHouse(TraceRepositoryLive, getClickhouseClient(), orgId),
+        withScopedClickHouse(TraceRepositoryLive, getClickhouseClient(), orgId),
         withAi(AIEmbedLive, getRedisClient()),
         withTracing,
       ),
@@ -351,14 +347,13 @@ export const getTraceTimeHistogramByProject = createServerFn({ method: "GET" })
 export const getTraceSearchHighlights = createServerFn({ method: "GET" })
   .inputValidator(
     z.object({
-      sandboxOrgId: z.string().optional(),
       projectId: z.string(),
       traceId: z.string(),
       searchQuery: z.string().max(500),
     }),
   )
-  .handler(async ({ data }): Promise<TraceSearchHighlightsResult> => {
-    const orgId = await resolveOrgScope(data)
+  .handler(async ({ data, context }): Promise<TraceSearchHighlightsResult> => {
+    const orgId = await resolveOrgScope(context)
 
     return Effect.runPromise(
       getTraceSearchHighlightsUseCase({
@@ -367,7 +362,7 @@ export const getTraceSearchHighlights = createServerFn({ method: "GET" })
         traceId: TraceId(data.traceId),
         searchQuery: data.searchQuery,
       }).pipe(
-        withClickHouse(Layer.merge(TraceRepositoryLive, TraceSearchRepositoryLive), getClickhouseClient(), orgId),
+        withScopedClickHouse(Layer.merge(TraceRepositoryLive, TraceSearchRepositoryLive), getClickhouseClient(), orgId),
         withAi(AIEmbedLive, getRedisClient()),
         withTracing,
         Effect.orElseSucceed((): TraceSearchHighlightsResult => ({ highlights: [], firstMatchIndex: -1 })),
@@ -378,14 +373,13 @@ export const getTraceSearchHighlights = createServerFn({ method: "GET" })
 export const getSessionMomentIntelligence = createServerFn({ method: "GET" })
   .inputValidator(
     z.object({
-      sandboxOrgId: z.string().optional(),
       projectId: z.string(),
       sessionId: z.string(),
       analysisHash: z.string().optional(),
     }),
   )
-  .handler(async ({ data }): Promise<readonly SessionMomentIntelligenceRecord[]> => {
-    const orgId = await resolveOrgScope(data)
+  .handler(async ({ data, context }): Promise<readonly SessionMomentIntelligenceRecord[]> => {
+    const orgId = await resolveOrgScope(context)
     return Effect.runPromise(
       listSessionMomentIntelligenceUseCase({
         organizationId: orgId,
@@ -421,7 +415,7 @@ export const getSessionMomentIntelligence = createServerFn({ method: "GET" })
             })),
           })),
         ),
-        withClickHouse(
+        withScopedClickHouse(
           Layer.mergeAll(
             SessionSemanticMomentRepositoryLive,
             SessionMomentLabelRepositoryLive,
@@ -437,9 +431,9 @@ export const getSessionMomentIntelligence = createServerFn({ method: "GET" })
   })
 
 export const getTraceDetail = createServerFn({ method: "GET" })
-  .inputValidator(z.object({ sandboxOrgId: z.string().optional(), projectId: z.string(), traceId: z.string() }))
-  .handler(async ({ data }) => {
-    const orgId = await resolveOrgScope(data)
+  .inputValidator(z.object({ projectId: z.string(), traceId: z.string() }))
+  .handler(async ({ data, context }) => {
+    const orgId = await resolveOrgScope(context)
 
     const result = await Effect.runPromise(
       Effect.gen(function* () {
@@ -453,7 +447,7 @@ export const getTraceDetail = createServerFn({ method: "GET" })
           .pipe(Effect.catchTag("NotFoundError", () => Effect.succeed(null)))
         return trace ? serializeTraceDetail(trace) : null
       }).pipe(
-        withClickHouse(TraceRepositoryLive, getClickhouseClient(), orgId),
+        withScopedClickHouse(TraceRepositoryLive, getClickhouseClient(), orgId),
         withAi(AIEmbedLive, getRedisClient()),
         withTracing,
       ),
@@ -465,15 +459,14 @@ export const getTraceDetail = createServerFn({ method: "GET" })
 export const getTraceConversationChunk = createServerFn({ method: "GET" })
   .inputValidator(
     z.object({
-      sandboxOrgId: z.string().optional(),
       projectId: z.string(),
       traceId: z.string(),
       offset: z.number().int().nonnegative().optional(),
       limit: z.number().int().positive().max(100).optional(),
     }),
   )
-  .handler(async ({ data }) => {
-    const orgId = await resolveOrgScope(data)
+  .handler(async ({ data, context }) => {
+    const orgId = await resolveOrgScope(context)
     const offset = data.offset ?? 0
     const limit = data.limit ?? 25
 
@@ -484,7 +477,7 @@ export const getTraceConversationChunk = createServerFn({ method: "GET" })
         traceId: TraceId(data.traceId),
         offset,
         limit,
-      }).pipe(withClickHouse(TraceRepositoryLive, getClickhouseClient(), orgId), withTracing),
+      }).pipe(withScopedClickHouse(TraceRepositoryLive, getClickhouseClient(), orgId), withTracing),
     )
 
     return result as never
@@ -541,13 +534,12 @@ export const enqueueTracesExport = createServerFn({ method: "POST" })
 export const getTraceDistribution = createServerFn({ method: "GET" })
   .inputValidator(
     z.object({
-      sandboxOrgId: z.string().optional(),
       projectId: z.string(),
       field: z.enum(PERCENTILE_TRACE_FILTER_FIELDS),
     }),
   )
-  .handler(async ({ data }): Promise<TraceDistribution> => {
-    const orgId = await resolveOrgScope(data)
+  .handler(async ({ data, context }): Promise<TraceDistribution> => {
+    const orgId = await resolveOrgScope(context)
 
     return Effect.runPromise(
       Effect.gen(function* () {
@@ -558,7 +550,7 @@ export const getTraceDistribution = createServerFn({ method: "GET" })
           field: data.field as PercentileTraceFilterField,
         })
       }).pipe(
-        withClickHouse(TraceRepositoryLive, getClickhouseClient(), orgId),
+        withScopedClickHouse(TraceRepositoryLive, getClickhouseClient(), orgId),
         withAi(AIEmbedLive, getRedisClient()),
         withTracing,
       ),
@@ -568,15 +560,14 @@ export const getTraceDistribution = createServerFn({ method: "GET" })
 export const getTraceDistinctValues = createServerFn({ method: "GET" })
   .inputValidator(
     z.object({
-      sandboxOrgId: z.string().optional(),
       projectId: z.string(),
       column: z.enum(DISTINCT_COLUMNS),
       limit: z.number().optional(),
       search: z.string().optional(),
     }),
   )
-  .handler(async ({ data }): Promise<readonly string[]> => {
-    const orgId = await resolveOrgScope(data)
+  .handler(async ({ data, context }): Promise<readonly string[]> => {
+    const orgId = await resolveOrgScope(context)
 
     return Effect.runPromise(
       Effect.gen(function* () {
@@ -589,7 +580,7 @@ export const getTraceDistinctValues = createServerFn({ method: "GET" })
           ...(data.search ? { search: data.search } : {}),
         })
       }).pipe(
-        withClickHouse(TraceRepositoryLive, getClickhouseClient(), orgId),
+        withScopedClickHouse(TraceRepositoryLive, getClickhouseClient(), orgId),
         withAi(AIEmbedLive, getRedisClient()),
         withTracing,
       ),

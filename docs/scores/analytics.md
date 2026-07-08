@@ -5,7 +5,7 @@ description: Visualize score trends and quality metrics across your project
 
 # Score Analytics
 
-Score analytics show quality trends across your project: whether quality is improving, which evaluations catch the most failures, and when issues occur.
+Score analytics show quality trends across your project: whether quality is improving, which evaluations catch the most failures, and when signals occur.
 
 ## Project-Level Dashboard
 
@@ -28,13 +28,13 @@ Each evaluation has its own analytics page with:
 
 Use evaluation analytics to spot regressions, improvements after a fix, or drift from human judgment.
 
-## Issue-Level Analytics
+## Signal-Level Analytics
 
-Each issue tracks:
+Each signal tracks:
 
-- **Occurrence count**: How many times the issue has been detected
-- **Lifecycle state**: Whether the issue is new, escalating, resolved, or regressed
-- **Resolution history**: When it was resolved and whether it has returned
+- **Occurrence count**: How many times the signal has been detected
+- **Lifecycle state**: Whether the signal is new, escalating, or ongoing
+- **Affected users**: The share of users the signal has impacted
 
 ## Score-Aware Trace Filtering
 
@@ -42,10 +42,10 @@ Traces and sessions can be filtered by score-derived properties:
 
 - **Score state**: Failing scores, passing scores, or draft annotations
 - **Value thresholds**: Scores below a quality threshold
-- **Issue linkage**: Traces associated with a specific issue
+- **Signal linkage**: Traces associated with a specific signal
 - **Score source**: A specific evaluation, annotation source, or custom source
 
-This bridges observability and reliability: you can move from a failed evaluation or issue directly to the underlying conversations.
+This bridges observability and reliability: you can move from a failed evaluation or signal directly to the underlying conversations.
 
 ## Filtering Analytics
 
@@ -55,4 +55,4 @@ Analytics dashboards use the same [filter system](../observability/filters) as t
 
 - [Scores Overview](./overview): How the score model works
 - [Evaluations](../evaluations/overview): How automated evaluations produce scores
-- [Issues](../signals/overview): How failure patterns are discovered from scores
+- [Signals](../signals/overview): How failure patterns are discovered from scores

@@ -1,8 +1,15 @@
 import { ApiKeyRepository, generateApiKeyUseCase } from "@domain/api-keys"
+import { OutboxEventWriter } from "@domain/events"
 import { createProject, ProjectRepository } from "@domain/projects"
-import type { QueueConsumer } from "@domain/queue"
+import { isWorkflowAliveUseCase, type QueueConsumer, WorkflowQuerier, type WorkflowQuerierShape } from "@domain/queue"
 import { generateSlug, SqlClient } from "@domain/shared"
-import { type Showcase, ShowcaseRepository } from "@domain/showcase"
+import {
+  SHOWCASE_BUILD_STALE_AFTER_MS,
+  SHOWCASE_RETIRE_GRACE_MS,
+  type Showcase,
+  ShowcaseRepository,
+  selectRetirableShowcaseProjectIds,
+} from "@domain/showcase"
 import {
   ApiKeyRepositoryLive,
   OutboxEventWriterLive,
@@ -13,7 +20,7 @@ import {
 } from "@platform/db-postgres"
 import { createLogger, withTracing } from "@repo/observability"
 import { Effect, Layer } from "effect"
-import { getPostgresClient, getWorkflowStarter } from "../clients.ts"
+import { getPostgresClient, getWorkflowQuerier, getWorkflowStarter } from "../clients.ts"
 
 const logger = createLogger("showcase")
 
@@ -31,6 +38,7 @@ interface PreparedRegeneration {
 interface ShowcaseDeps {
   consumer: QueueConsumer
   postgresClient?: PostgresClient
+  workflowQuerier?: WorkflowQuerierShape
 }
 
 /**
@@ -50,7 +58,7 @@ interface ShowcaseDeps {
  *   `workflowId`). This keeps a transient failure between `beginNextBuild` and a
  *   durable workflow start from wedging the pointer in `building` forever.
  */
-export const createShowcaseWorker = ({ consumer, postgresClient }: ShowcaseDeps) => {
+export const createShowcaseWorker = ({ consumer, postgresClient, workflowQuerier }: ShowcaseDeps) => {
   const pgClient = postgresClient ?? getPostgresClient()
 
   consumer.subscribe("showcase", {
@@ -97,6 +105,121 @@ export const createShowcaseWorker = ({ consumer, postgresClient }: ShowcaseDeps)
           organizationId,
           nextProjectId: prepared.projectId,
         })
+      }).pipe(withTracing),
+
+    cleanup: () =>
+      Effect.gen(function* () {
+        const now = new Date()
+
+        // The pointer table has no RLS, so this reads without an org scope. `find`
+        // first so a missing showcase is a clean skip rather than a
+        // `ShowcaseNotFoundError`.
+        const staleBefore = new Date(now.getTime() - SHOWCASE_BUILD_STALE_AFTER_MS)
+        const showcase = yield* Effect.gen(function* () {
+          const repo = yield* ShowcaseRepository
+          return yield* repo.find()
+        }).pipe(withPostgres(ShowcaseRepositoryLive, pgClient))
+
+        if (!showcase) {
+          logger.info("No showcase exists — skipping cleanup")
+          return
+        }
+
+        // Self-heal a wedged build: a `building` pointer past the stale threshold
+        // is a candidate for reclaim, but only once its regeneration workflow is
+        // provably done. `updatedAt` is NOT heartbeated while the workflow runs,
+        // so a slow / retrying / paused-then-resumed run can look stale while
+        // still live — reclaiming under it would yank the `next` it later
+        // mark/swaps. Gate on the workflow's terminal status; a still-live run is
+        // left for the next sweep. The subsequent `reclaimStaleBuild` re-checks
+        // staleness under a row lock, so this snapshot only decides whether to
+        // attempt the reclaim at all.
+        let pointer = showcase
+        const looksStale =
+          showcase.nextState === "building" && !!showcase.nextProjectId && showcase.updatedAt < staleBefore
+        if (looksStale) {
+          const querier = workflowQuerier ?? (yield* Effect.promise(() => getWorkflowQuerier()))
+          const workflowAlive = yield* isWorkflowAliveUseCase(REGENERATE_WORKFLOW_ID).pipe(
+            Effect.provideService(WorkflowQuerier, querier),
+          )
+
+          if (workflowAlive) {
+            logger.info("Stale showcase build, but its regeneration workflow is still live — not reclaiming", {
+              organizationId: showcase.organizationId,
+              nextProjectId: showcase.nextProjectId,
+            })
+          } else {
+            const reclaimed = yield* Effect.gen(function* () {
+              const repo = yield* ShowcaseRepository
+              return yield* repo.reclaimStaleBuild(staleBefore)
+            }).pipe(withPostgres(ShowcaseRepositoryLive, pgClient))
+            pointer = reclaimed.showcase
+            if (reclaimed.reclaimedProjectId) {
+              logger.warn("Reclaimed stale showcase build", {
+                organizationId: reclaimed.showcase.organizationId,
+                reclaimedProjectId: reclaimed.reclaimedProjectId,
+              })
+            }
+          }
+        }
+
+        const organizationId = pointer.organizationId
+
+        // Soft-delete + emit `ProjectDeleted` for every orphan (neither current
+        // nor next, past the grace window) in one transaction, scoped to the
+        // showcase org so RLS admits the reads/writes. This is the same deletion
+        // path any project takes: `ProjectDeleted` drives the per-project cascade
+        // and the row's ClickHouse telemetry ages out via the table-level
+        // retention TTL — the showcase is not special-cased into a manual purge.
+        const retiredProjectIds = yield* Effect.gen(function* () {
+          const projectRepo = yield* ProjectRepository
+          const outbox = yield* OutboxEventWriter
+          const sqlClient = yield* SqlClient
+          const projects = yield* projectRepo.list()
+          const retirable = selectRetirableShowcaseProjectIds({
+            projects,
+            currentProjectId: pointer.currentProjectId,
+            nextProjectId: pointer.nextProjectId,
+            now,
+            retireGraceMs: SHOWCASE_RETIRE_GRACE_MS,
+          })
+          if (retirable.length === 0) return []
+
+          const retired: string[] = []
+          yield* sqlClient.transaction(
+            Effect.gen(function* () {
+              for (const projectId of retirable) {
+                // Idempotent: a concurrent sweep (cron vs post-swap) or an admin
+                // action may have already soft-deleted this project between the
+                // `list()` above and here. `softDelete` reports that as a logical
+                // 0-row `NotFoundError` (the UPDATE still succeeds, so the
+                // transaction isn't poisoned) — skip it and its `ProjectDeleted`
+                // emit, which the winning sweep already wrote.
+                const deleted = yield* projectRepo.softDelete(projectId).pipe(
+                  Effect.as(true),
+                  Effect.catchTag("NotFoundError", () => Effect.succeed(false)),
+                )
+                if (!deleted) continue
+
+                yield* outbox
+                  .write({
+                    eventName: "ProjectDeleted",
+                    aggregateType: "project",
+                    aggregateId: projectId,
+                    organizationId,
+                    payload: { organizationId, actorUserId: "", projectId },
+                  })
+                  .pipe(Effect.mapError((cause) => new Error(`ProjectDeleted outbox write failed: ${String(cause)}`)))
+                retired.push(projectId)
+              }
+            }),
+          )
+          return retired
+        }).pipe(withPostgres(Layer.mergeAll(ProjectRepositoryLive, OutboxEventWriterLive), pgClient, organizationId))
+
+        if (retiredProjectIds.length > 0) {
+          logger.info("Retired showcase projects", { organizationId, retiredProjectIds })
+        }
       }).pipe(withTracing),
   })
 }

@@ -1,5 +1,7 @@
 import type { Incident } from "@domain/incidents"
 import { isSignalEscalationEntrySignals } from "@domain/incidents"
+import { formatHumanReadableRule } from "@domain/monitors"
+import { IncidentMonitorReader } from "@domain/notifications"
 import { OrganizationRepository } from "@domain/organizations"
 import { ProjectRepository } from "@domain/projects"
 import { type AnnotationScore, type Score, ScoreAnalyticsRepository, ScoreRepository } from "@domain/scores"
@@ -35,10 +37,12 @@ const buildDeepLink = (input: {
   readonly webAppUrl: string
   readonly projectSlug: string
   readonly signalSlug?: string
+  readonly monitorSlug?: string
   readonly incidentId?: string
 }): string => {
   const base = `${input.webAppUrl}/projects/${input.projectSlug}`
   if (input.signalSlug) return `${base}/signals/${input.signalSlug}`
+  if (input.monitorSlug) return `${base}/monitors/${input.monitorSlug}`
   if (input.incidentId) return `${base}/incidents/${input.incidentId}`
   return base
 }
@@ -259,6 +263,11 @@ export const buildDispatchContextFromIncident = (input: {
             .pipe(Effect.catchTag("NotFoundError", () => Effect.succeed(null)))
         : null
 
+    const monitor =
+      input.incident.sourceType === "monitor"
+        ? yield* (yield* IncidentMonitorReader).findByMonitorId(input.incident.sourceId)
+        : null
+
     const signalId = signal ? SignalId(signal.id) : null
     const [tags, sampleExcerpt, sampleTraceIds, sampleConversations] =
       signalId !== null
@@ -294,6 +303,28 @@ export const buildDispatchContextFromIncident = (input: {
             },
           }
         : {}),
+      ...(monitor
+        ? {
+            monitor: {
+              id: monitor.monitorId,
+              slug: monitor.slug,
+              name: monitor.name,
+              ...(input.incident.condition
+                ? {
+                    ruleSummary: formatHumanReadableRule({
+                      trigger:
+                        input.incident.condition.trigger === "threshold"
+                          ? "threshold"
+                          : input.incident.condition.trigger === "escalating"
+                            ? "escalating"
+                            : "match",
+                      condition: input.incident.condition,
+                    }),
+                  }
+                : {}),
+            },
+          }
+        : {}),
       incident: {
         id: input.incident.id,
         severity: input.incident.severity,
@@ -304,7 +335,11 @@ export const buildDispatchContextFromIncident = (input: {
       deepLinkUrl: buildDeepLink({
         webAppUrl: input.webAppUrl,
         projectSlug: project.slug,
-        ...(signal ? { signalSlug: signal.slug } : { incidentId: input.incident.id }),
+        ...(signal
+          ? { signalSlug: signal.slug }
+          : monitor
+            ? { monitorSlug: monitor.slug }
+            : { incidentId: input.incident.id }),
       }),
       ...(sampleTraceIds ? { sampleTraceIds } : {}),
       ...(sampleConversations ? { sampleConversations } : {}),
@@ -322,6 +357,7 @@ export const buildDispatchContextFromIncident = (input: {
     | ScoreRepository
     | ScoreAnalyticsRepository
     | AgentDispatchTraceReader
+    | IncidentMonitorReader
   >
 
 export const buildDispatchContextFromSignal = (input: {

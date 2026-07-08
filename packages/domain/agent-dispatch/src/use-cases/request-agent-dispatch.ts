@@ -1,11 +1,9 @@
-import { hasFeatureFlagUseCase } from "@domain/feature-flags"
 import { IncidentRepository } from "@domain/incidents"
 import { IncidentMonitorReader } from "@domain/notifications"
 import { isSandbox, OrganizationRepository } from "@domain/organizations"
 import { AlertIncidentId, type OrganizationId, type ProjectId, SignalId, type SqlClient } from "@domain/shared"
 import { SignalRepository } from "@domain/signals"
 import { Effect } from "effect"
-import { AGENT_DISPATCH_FLAG } from "../constants.ts"
 import type { AgentDispatchConfig } from "../entities/agent-dispatch-config.ts"
 import type { AgentDispatchContext, AgentDispatchTrigger } from "../entities/agent-dispatch-context.ts"
 import {
@@ -95,9 +93,6 @@ export const requestAgentDispatchUseCase = (input: {
   readonly webAppUrl: string
 }) =>
   Effect.gen(function* () {
-    const enabled = yield* hasFeatureFlagUseCase({ identifier: AGENT_DISPATCH_FLAG })
-    if (!enabled) return { status: "skipped", reason: "feature-disabled" } as const
-
     const organizations = yield* OrganizationRepository
     const organization = yield* organizations.findById(input.source.organizationId)
     if (isSandbox(organization)) return { status: "skipped", reason: "sandbox" } as const

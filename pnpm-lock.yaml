@@ -43,17 +43,17 @@ catalogs:
       specifier: 3.3.0
       version: 3.3.0
     '@temporalio/activity':
-      specifier: 1.17.0
-      version: 1.17.0
+      specifier: 1.17.5
+      version: 1.17.5
     '@temporalio/client':
-      specifier: 1.17.0
-      version: 1.17.0
+      specifier: 1.17.5
+      version: 1.17.5
     '@temporalio/worker':
-      specifier: 1.17.0
-      version: 1.17.0
+      specifier: 1.17.5
+      version: 1.17.5
     '@temporalio/workflow':
-      specifier: 1.17.2
-      version: 1.17.2
+      specifier: 1.17.5
+      version: 1.17.5
     '@types/mustache':
       specifier: 4.2.6
       version: 4.2.6
@@ -184,9 +184,6 @@ importers:
       '@clickhouse/client':
         specifier: 'catalog:'
         version: 1.21.0
-      '@domain/annotations':
-        specifier: workspace:*
-        version: link:../../packages/domain/annotations
       '@domain/api-keys':
         specifier: workspace:*
         version: link:../../packages/domain/api-keys
@@ -196,36 +193,12 @@ importers:
       '@domain/evaluations':
         specifier: workspace:*
         version: link:../../packages/domain/evaluations
-      '@domain/exports':
-        specifier: workspace:*
-        version: link:../../packages/domain/exports
-      '@domain/flaggers':
-        specifier: workspace:*
-        version: link:../../packages/domain/flaggers
-      '@domain/incidents':
-        specifier: workspace:*
-        version: link:../../packages/domain/incidents
-      '@domain/monitors':
-        specifier: workspace:*
-        version: link:../../packages/domain/monitors
-      '@domain/oauth-keys':
-        specifier: workspace:*
-        version: link:../../packages/domain/oauth-keys
       '@domain/organizations':
         specifier: workspace:*
         version: link:../../packages/domain/organizations
-      '@domain/projects':
-        specifier: workspace:*
-        version: link:../../packages/domain/projects
       '@domain/queue':
         specifier: workspace:*
         version: link:../../packages/domain/queue
-      '@domain/saved-searches':
-        specifier: workspace:*
-        version: link:../../packages/domain/saved-searches
-      '@domain/scores':
-        specifier: workspace:*
-        version: link:../../packages/domain/scores
       '@domain/shared':
         specifier: workspace:*
         version: link:../../packages/domain/shared
@@ -235,12 +208,6 @@ importers:
       '@domain/spans':
         specifier: workspace:*
         version: link:../../packages/domain/spans
-      '@domain/taxonomy':
-        specifier: workspace:*
-        version: link:../../packages/domain/taxonomy
-      '@domain/users':
-        specifier: workspace:*
-        version: link:../../packages/domain/users
       '@hono/node-server':
         specifier: 'catalog:'
         version: 1.19.13(hono@4.12.16)
@@ -256,9 +223,6 @@ importers:
       '@modelcontextprotocol/sdk':
         specifier: 'catalog:'
         version: 1.29.0(@cfworker/json-schema@4.1.1)(zod@4.3.6)
-      '@platform/ai':
-        specifier: workspace:*
-        version: link:../../packages/platform/ai
       '@platform/api-key-auth':
         specifier: workspace:*
         version: link:../../packages/platform/api-key-auth
@@ -280,9 +244,6 @@ importers:
       '@platform/queue-bullmq':
         specifier: workspace:*
         version: link:../../packages/platform/queue-bullmq
-      '@platform/sandbox-quickjs':
-        specifier: workspace:*
-        version: link:../../packages/platform/sandbox-quickjs
       '@platform/storage-object':
         specifier: workspace:*
         version: link:../../packages/platform/storage-object
@@ -292,6 +253,9 @@ importers:
       '@repo/observability':
         specifier: workspace:*
         version: link:../../packages/observability
+      '@repo/operations':
+        specifier: workspace:*
+        version: link:../../packages/operations
       '@repo/utils':
         specifier: workspace:*
         version: link:../../packages/utils
@@ -615,7 +579,7 @@ importers:
         version: 1.167.16(crossws@0.4.5(srvx@0.11.15))(react-dom@19.2.5(react@19.2.5))(react@19.2.5)(vite@8.0.5(@emnapi/core@1.10.0)(@emnapi/runtime@1.10.0)(@types/node@26.0.1)(esbuild@0.28.1)(jiti@2.6.1)(terser@5.46.2)(tsx@4.21.0)(yaml@2.9.0))(webpack@5.106.2(esbuild@0.28.1))
       '@temporalio/client':
         specifier: 'catalog:'
-        version: 1.17.0
+        version: 1.17.5
       better-auth:
         specifier: 'catalog:'
         version: 1.6.11(@opentelemetry/api@1.9.1)(@prisma/client@5.22.0)(@tanstack/react-start@1.167.16(crossws@0.4.5(srvx@0.11.15))(react-dom@19.2.5(react@19.2.5))(react@19.2.5)(vite@8.0.5(@emnapi/core@1.10.0)(@emnapi/runtime@1.10.0)(@types/node@26.0.1)(esbuild@0.28.1)(jiti@2.6.1)(terser@5.46.2)(tsx@4.21.0)(yaml@2.9.0))(webpack@5.106.2(esbuild@0.28.1)))(better-sqlite3@12.9.0)(drizzle-orm@1.0.0-beta.15-859cf75(@electric-sql/pglite@0.4.6)(@opentelemetry/api@1.9.1)(@prisma/client@5.22.0)(@types/mssql@9.1.11)(@types/pg@8.16.0)(better-sqlite3@12.9.0)(mssql@11.0.1)(pg@8.20.0)(zod@4.3.6))(next@16.1.6(@opentelemetry/api@1.9.1)(react-dom@19.2.5(react@19.2.5))(react@19.2.5))(pg@8.20.0)(react-dom@19.2.5(react@19.2.5))(react@19.2.5)(vitest@4.1.8(@opentelemetry/api@1.9.1)(@types/node@26.0.1)(jsdom@29.0.2(@noble/hashes@2.2.0))(vite@8.0.5(@emnapi/core@1.10.0)(@emnapi/runtime@1.10.0)(@types/node@26.0.1)(esbuild@0.28.1)(jiti@2.6.1)(terser@5.46.2)(tsx@4.21.0)(yaml@2.9.0)))
@@ -859,7 +823,7 @@ importers:
         version: link:../../packages/utils
       '@temporalio/worker':
         specifier: 'catalog:'
-        version: 1.17.0(esbuild@0.28.1)(tslib@2.8.1)
+        version: 1.17.5(esbuild@0.28.1)(tslib@2.8.1)
       effect:
         specifier: 'catalog:'
         version: 4.0.0-beta.57
@@ -965,13 +929,13 @@ importers:
         version: link:../../packages/utils
       '@temporalio/activity':
         specifier: 'catalog:'
-        version: 1.17.0
+        version: 1.17.5
       '@temporalio/worker':
         specifier: 'catalog:'
-        version: 1.17.0(esbuild@0.28.1)(tslib@2.8.1)
+        version: 1.17.5(esbuild@0.28.1)(tslib@2.8.1)
       '@temporalio/workflow':
         specifier: 'catalog:'
-        version: 1.17.2
+        version: 1.17.5
       effect:
         specifier: 'catalog:'
         version: 4.0.0-beta.57
@@ -1052,12 +1016,12 @@ importers:
 
   packages/domain/agent-dispatch:
     dependencies:
-      '@domain/feature-flags':
-        specifier: workspace:*
-        version: link:../feature-flags
       '@domain/incidents':
         specifier: workspace:*
         version: link:../incidents
+      '@domain/monitors':
+        specifier: workspace:*
+        version: link:../monitors
       '@domain/notifications':
         specifier: workspace:*
         version: link:../notifications
@@ -1993,6 +1957,118 @@ importers:
         specifier: 'catalog:'
         version: 4.0.0-beta.57
 
+  packages/operations:
+    dependencies:
+      '@clickhouse/client':
+        specifier: 'catalog:'
+        version: 1.21.0
+      '@domain/annotations':
+        specifier: workspace:*
+        version: link:../domain/annotations
+      '@domain/api-keys':
+        specifier: workspace:*
+        version: link:../domain/api-keys
+      '@domain/datasets':
+        specifier: workspace:*
+        version: link:../domain/datasets
+      '@domain/evaluations':
+        specifier: workspace:*
+        version: link:../domain/evaluations
+      '@domain/exports':
+        specifier: workspace:*
+        version: link:../domain/exports
+      '@domain/flaggers':
+        specifier: workspace:*
+        version: link:../domain/flaggers
+      '@domain/incidents':
+        specifier: workspace:*
+        version: link:../domain/incidents
+      '@domain/monitors':
+        specifier: workspace:*
+        version: link:../domain/monitors
+      '@domain/oauth-keys':
+        specifier: workspace:*
+        version: link:../domain/oauth-keys
+      '@domain/organizations':
+        specifier: workspace:*
+        version: link:../domain/organizations
+      '@domain/projects':
+        specifier: workspace:*
+        version: link:../domain/projects
+      '@domain/queue':
+        specifier: workspace:*
+        version: link:../domain/queue
+      '@domain/saved-searches':
+        specifier: workspace:*
+        version: link:../domain/saved-searches
+      '@domain/scores':
+        specifier: workspace:*
+        version: link:../domain/scores
+      '@domain/shared':
+        specifier: workspace:*
+        version: link:../domain/shared
+      '@domain/signals':
+        specifier: workspace:*
+        version: link:../domain/signals
+      '@domain/spans':
+        specifier: workspace:*
+        version: link:../domain/spans
+      '@domain/taxonomy':
+        specifier: workspace:*
+        version: link:../domain/taxonomy
+      '@domain/users':
+        specifier: workspace:*
+        version: link:../domain/users
+      '@hono/zod-openapi':
+        specifier: 1.3.0
+        version: 1.3.0(hono@4.12.16)(zod@4.3.6)
+      '@platform/ai':
+        specifier: workspace:*
+        version: link:../platform/ai
+      '@platform/api-key-auth':
+        specifier: workspace:*
+        version: link:../platform/api-key-auth
+      '@platform/cache-redis':
+        specifier: workspace:*
+        version: link:../platform/cache-redis
+      '@platform/db-clickhouse':
+        specifier: workspace:*
+        version: link:../platform/db-clickhouse
+      '@platform/db-postgres':
+        specifier: workspace:*
+        version: link:../platform/db-postgres
+      '@platform/env':
+        specifier: workspace:*
+        version: link:../platform/env
+      '@platform/oauth-token-auth':
+        specifier: workspace:*
+        version: link:../platform/oauth-token-auth
+      '@platform/queue-bullmq':
+        specifier: workspace:*
+        version: link:../platform/queue-bullmq
+      '@platform/sandbox-quickjs':
+        specifier: workspace:*
+        version: link:../platform/sandbox-quickjs
+      '@platform/storage-object':
+        specifier: workspace:*
+        version: link:../platform/storage-object
+      '@repo/observability':
+        specifier: workspace:*
+        version: link:../observability
+      effect:
+        specifier: 'catalog:'
+        version: 4.0.0-beta.57
+      hono:
+        specifier: 4.12.16
+        version: 4.12.16
+      zod:
+        specifier: 'catalog:'
+        version: 4.3.6
+    devDependencies:
+      '@repo/vitest-config':
+        specifier: workspace:*
+        version: link:../vitest-config
+
   packages/platform/agent-dispatch:
     dependencies:
       '@domain/agent-dispatch':
@@ -2737,13 +2813,13 @@ importers:
         version: link:../../observability
       '@temporalio/activity':
         specifier: 'catalog:'
-        version: 1.17.0
+        version: 1.17.5
       '@temporalio/client':
         specifier: 'catalog:'
-        version: 1.17.0
+        version: 1.17.5
       '@temporalio/worker':
         specifier: 'catalog:'
-        version: 1.17.0(esbuild@0.28.1)(tslib@2.8.1)
+        version: 1.17.5(esbuild@0.28.1)(tslib@2.8.1)
       effect:
         specifier: 'catalog:'
         version: 4.0.0-beta.57
@@ -8729,48 +8805,36 @@ packages:
   '@tediousjs/connection-string@0.5.0':
     resolution: {integrity: sha512-7qSgZbincDDDFyRweCIEvZULFAw5iz/DeunhvuxpL31nfntX3P4Yd4HkHBRg9H8CdqY1e5WFN1PZIz/REL9MVQ==}
 
-  '@temporalio/activity@1.17.0':
-    resolution: {integrity: sha512-jjF38/VX7c9eyAb9g4oP4CAAYO3oWNIPIks5R5z0yszoDGBq+29UwsHYd6WrMviGt63NvLhWJWEOyeyGdA6L1g==}
+  '@temporalio/activity@1.17.5':
+    resolution: {integrity: sha512-nYiRG0hQ8CkpDhCvfQgfu/R2reMjgx+S7uMADvodDMsSmWQEnn3G8TlxBKMOrzsJ46c7Hk9XuaTpB4/qdqp1IA==}
     engines: {node: '>= 20.0.0'}
 
-  '@temporalio/client@1.17.0':
-    resolution: {integrity: sha512-mc1VHfuVjT7D/QprjEGQFpbePMvuA0/kqIWhrEN+D1VYkLdhaMkuMgVjPtsxXjvACR20+qEsDg5m0a1qjllEoA==}
+  '@temporalio/client@1.17.5':
+    resolution: {integrity: sha512-UiSJdwe84OcTyGG9mKxvSJsY92l2HrfhxsmmT3JfMye3MjG8X6xm4Lu2QUnJ7Y8xqt2HB0P79FX8NdmMlfXFHA==}
     engines: {node: '>= 20.0.0'}
 
-  '@temporalio/common@1.17.0':
-    resolution: {integrity: sha512-xOnb1vLYOO9PwTX2kmQdZROnH4fpC+wHSKQxQVZCOFrtxmcF8iN6Llzvc1tP+PQJncLnVpx+YrSCIzSY+e43cw==}
+  '@temporalio/common@1.17.5':
+    resolution: {integrity: sha512-J5Q/mk9vosIKsyMdNPopw7HFGVaDDKaiOZz1bziwb1Uos/dPj6SxIcdX56Ae6H4R1Ifi0G5Wu8NngiQmXS2e3w==}
     engines: {node: '>= 20.0.0'}
 
-  '@temporalio/common@1.17.2':
-    resolution: {integrity: sha512-E+eR17bc/vR7HrmJBLCUq/asQplOUbl2Tm+JQgeK/fbSEAH2KJNL3sAVxx4/32KnOciKOYuV450brEicSNtnwQ==}
+  '@temporalio/core-bridge@1.17.5':
+    resolution: {integrity: sha512-OEg8+rt/kgGAhpBPg9z0yvNEUP3qbrBqPreyg6j6H6BUH00XU56x9eqmYRh5PxbepjsnumIuMNvOJcfDijeYxQ==}
     engines: {node: '>= 20.0.0'}
 
-  '@temporalio/core-bridge@1.17.0':
-    resolution: {integrity: sha512-AR6vLRIyvIaY4raq2wZ9iboKe0IljWgwXM8Hei2OvbmgLNEt0PTiwFPQmVPbsafijOZPKazF1KiPrGrDCE33yA==}
+  '@temporalio/nexus@1.17.5':
+    resolution: {integrity: sha512-yc+jR3QZGUaetuH6QjyeMZhIYCpgKWP6Pn2CQWydDvfP261DCZCSEFBCLkpBIjaK2Z3Ffb86oq59dt9wssrtiQ==}
     engines: {node: '>= 20.0.0'}
 
-  '@temporalio/nexus@1.17.0':
-    resolution: {integrity: sha512-IdVTVS3INmXlRCgmG0Rt0wDfiXrk94A/813AahCDbgq3NdcCRCnAbO0a7KwOJh0S0P0153zX4YZlIStRwfQEGQ==}
+  '@temporalio/proto@1.17.5':
+    resolution: {integrity: sha512-xKLxddhExPIKkO9SzQ8Wvjn5+rAPNfZ9MxIdzxraCapA2YEgc48A/pmy4jdQ26dRpMpAaiys+w48OnnOIOqvCA==}
     engines: {node: '>= 20.0.0'}
 
-  '@temporalio/proto@1.17.0':
-    resolution: {integrity: sha512-Ymo/ka9gO79o3LI0QOSlZuWA2MzrK1ymbwdrBiQrmQFFx/+kb7iFJG91sAaadbCXQONagBG1N+pmFei0b6bSZw==}
+  '@temporalio/worker@1.17.5':
+    resolution: {integrity: sha512-jVjdqMQV6TlB42npax7fIwjjrtJUuhUGAZm3j2HAQTSWx30RpSyg6IiyoSjmJbYlQubYlFxcfIOlwb6l7zLbIg==}
     engines: {node: '>= 20.0.0'}
 
-  '@temporalio/proto@1.17.2':
-    resolution: {integrity: sha512-ecsk9F8863/FBwipQjJtuO/kEzWpIU9poAx+/twnJOesZW5dOabw7hYuqfUQul2H5MWm25qUvgU+SgLEgwr3zw==}
-    engines: {node: '>= 20.0.0'}
-
-  '@temporalio/worker@1.17.0':
-    resolution: {integrity: sha512-oMqar4aMeFyPX30/NfrSGb9VNHzPoP0w9fYiKvyzWV7ZzpvWYufIZYBahnnvy6UwtFBOyv+RwiSxmgOu9TexWA==}
-    engines: {node: '>= 20.0.0'}
-
-  '@temporalio/workflow@1.17.0':
-    resolution: {integrity: sha512-/iYRcjUYQmW/K6le63Y7yp+bdI+4cw8tWDVvHHUEtaT5b2L/4eMbQzmNwuKb0LZCNXi9R6SaUHNJp6EqHMpFNQ==}
-    engines: {node: '>= 20.0.0'}
-
-  '@temporalio/workflow@1.17.2':
-    resolution: {integrity: sha512-eRnZfjfaL9gSmVCOk6zRCE9QKQSyLgnlhnOKMjeIqGJeZC8XAYA16A5HKv2Uf3UiE2EcqRhak+uRPZP9qnTrmQ==}
+  '@temporalio/workflow@1.17.5':
+    resolution: {integrity: sha512-8CNVDYTr2KP5ZzJYFQInvqg06rB0jy4AmrvHj1yv6apUlJhi0udqANv1nlJ577xUIOcQWsIVrzk18e9rC7xFag==}
     engines: {node: '>= 20.0.0'}
 
   '@testing-library/dom@10.4.1':
@@ -20666,71 +20730,58 @@ snapshots:
 
   '@tediousjs/connection-string@0.5.0': {}
 
-  '@temporalio/activity@1.17.0':
+  '@temporalio/activity@1.17.5':
     dependencies:
-      '@temporalio/client': 1.17.0
-      '@temporalio/common': 1.17.0
+      '@temporalio/client': 1.17.5
+      '@temporalio/common': 1.17.5
       abort-controller: 3.0.0
 
-  '@temporalio/client@1.17.0':
+  '@temporalio/client@1.17.5':
     dependencies:
       '@grpc/grpc-js': 1.14.4
-      '@temporalio/common': 1.17.0
-      '@temporalio/proto': 1.17.0
+      '@temporalio/common': 1.17.5
+      '@temporalio/proto': 1.17.5
       abort-controller: 3.0.0
       long: 5.3.2
       uuid: 11.1.1
 
-  '@temporalio/common@1.17.0':
+  '@temporalio/common@1.17.5':
     dependencies:
-      '@temporalio/proto': 1.17.0
+      '@temporalio/proto': 1.17.5
       long: 5.3.2
       ms: 3.0.0-canary.1
       nexus-rpc: 0.0.2
       proto3-json-serializer: 2.0.2
 
-  '@temporalio/common@1.17.2':
-    dependencies:
-      '@temporalio/proto': 1.17.2
-      long: 5.3.2
-      ms: 3.0.0-canary.1
-      nexus-rpc: 0.0.2
-      proto3-json-serializer: 2.0.2
-
-  '@temporalio/core-bridge@1.17.0':
+  '@temporalio/core-bridge@1.17.5':
     dependencies:
       '@grpc/grpc-js': 1.14.4
-      '@temporalio/common': 1.17.0
+      '@temporalio/common': 1.17.5
 
-  '@temporalio/nexus@1.17.0':
+  '@temporalio/nexus@1.17.5':
     dependencies:
-      '@temporalio/client': 1.17.0
-      '@temporalio/common': 1.17.0
-      '@temporalio/proto': 1.17.0
+      '@temporalio/client': 1.17.5
+      '@temporalio/common': 1.17.5
+      '@temporalio/proto': 1.17.5
       long: 5.3.2
       nexus-rpc: 0.0.2
 
-  '@temporalio/proto@1.17.0':
+  '@temporalio/proto@1.17.5':
     dependencies:
       long: 5.3.2
       protobufjs: 8.0.2
 
-  '@temporalio/proto@1.17.2':
-    dependencies:
-      long: 5.3.2
-      protobufjs: 8.0.2
-
-  '@temporalio/worker@1.17.0(esbuild@0.28.1)(tslib@2.8.1)':
+  '@temporalio/worker@1.17.5(esbuild@0.28.1)(tslib@2.8.1)':
     dependencies:
       '@grpc/grpc-js': 1.14.4
       '@swc/core': 1.15.30
-      '@temporalio/activity': 1.17.0
-      '@temporalio/client': 1.17.0
-      '@temporalio/common': 1.17.0
-      '@temporalio/core-bridge': 1.17.0
-      '@temporalio/nexus': 1.17.0
-      '@temporalio/proto': 1.17.0
-      '@temporalio/workflow': 1.17.0
+      '@temporalio/activity': 1.17.5
+      '@temporalio/client': 1.17.5
+      '@temporalio/common': 1.17.5
+      '@temporalio/core-bridge': 1.17.5
+      '@temporalio/nexus': 1.17.5
+      '@temporalio/proto': 1.17.5
+      '@temporalio/workflow': 1.17.5
       abort-controller: 3.0.0
       heap-js: 2.7.1
       memfs: 4.57.2(tslib@2.8.1)
@@ -20751,16 +20802,10 @@ snapshots:
       - uglify-js
       - webpack-cli
 
-  '@temporalio/workflow@1.17.0':
+  '@temporalio/workflow@1.17.5':
     dependencies:
-      '@temporalio/common': 1.17.0
-      '@temporalio/proto': 1.17.0
-      nexus-rpc: 0.0.2
-
-  '@temporalio/workflow@1.17.2':
-    dependencies:
-      '@temporalio/common': 1.17.2
-      '@temporalio/proto': 1.17.2
+      '@temporalio/common': 1.17.5
+      '@temporalio/proto': 1.17.5
       nexus-rpc: 0.0.2
 
   '@testing-library/dom@10.4.1':

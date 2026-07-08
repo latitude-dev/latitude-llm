@@ -1,4 +1,4 @@
-import { Context, type Effect } from "effect"
+import { Context, Effect } from "effect"
 import type { QueuePublishError, QueueSubscribeError, WorkflowAlreadyStartedError } from "./errors.ts"
 import type { TopicRegistry as TR } from "./topic-registry.ts"
 import type { WorkflowRegistry as WR } from "./workflow-registry.ts"
@@ -65,6 +65,21 @@ export type WorkflowExecutionStatus =
   | "paused"
   | "unknown"
 
+// Statuses a workflow can never leave — the execution is done and will not
+// advance further. `running` / `paused` / `continued-as-new` are still live,
+// and `unknown` is treated as not-terminal (conservative: don't assume done).
+const TERMINAL_WORKFLOW_STATUSES = new Set<WorkflowExecutionStatus>([
+  "completed",
+  "failed",
+  "canceled",
+  "terminated",
+  "timed-out",
+])
+
+/** Whether a workflow execution has reached a final state (won't progress). */
+export const isTerminalWorkflowStatus = (status: WorkflowExecutionStatus): boolean =>
+  TERMINAL_WORKFLOW_STATUSES.has(status)
+
 export type WorkflowDescription = {
   readonly status: WorkflowExecutionStatus
   readonly runId: string
@@ -80,6 +95,18 @@ export interface WorkflowQuerierShape {
 export class WorkflowQuerier extends Context.Service<WorkflowQuerier, WorkflowQuerierShape>()(
   "@domain/queue/WorkflowQuerier",
 ) {}
+
+/**
+ * Whether the workflow with `workflowId` is still live — it exists and hasn't
+ * reached a terminal status. A missing workflow (never durably started, or
+ * already GC'd) counts as not alive.
+ */
+export const isWorkflowAliveUseCase = (workflowId: string): Effect.Effect<boolean, never, WorkflowQuerier> =>
+  Effect.gen(function* () {
+    const querier = yield* WorkflowQuerier
+    const description = yield* querier.describe(workflowId)
+    return description !== null && !isTerminalWorkflowStatus(description.status)
+  })
 
 export interface PublishOptions {
   readonly dedupeKey?: string

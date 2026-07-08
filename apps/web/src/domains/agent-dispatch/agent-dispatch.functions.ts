@@ -1,6 +1,5 @@
 import { createHmac, randomBytes } from "node:crypto"
 import {
-  AGENT_DISPATCH_FLAG,
   AGENT_DISPATCH_KINDS,
   AGENT_DISPATCH_TRIGGERS,
   type AgentDispatchConfig,
@@ -21,7 +20,7 @@ import {
   sendAgentDispatchUseCase,
   upsertAgentDispatchConfigUseCase,
 } from "@domain/agent-dispatch"
-import { hasFeatureFlagUseCase } from "@domain/feature-flags"
+import { IncidentMonitorReader } from "@domain/notifications"
 import { OrganizationId, ProjectId, SignalId } from "@domain/shared"
 import { SignalRepository } from "@domain/signals"
 import { TraceRepository } from "@domain/spans"
@@ -32,7 +31,7 @@ import {
   AgentDispatchCredentialRepositoryLive,
   AgentDispatchIntegrationRepositoryLive,
   AgentDispatchRepositoryLive,
-  FeatureFlagRepositoryLive,
+  IncidentMonitorReaderLive,
   OrganizationRepositoryLive,
   ProjectRepositoryLive,
   ScoreRepositoryLive,
@@ -53,6 +52,7 @@ export interface AgentDispatchRecord {
   readonly sourceType: string
   readonly sourceId: string
   readonly sourceName: string | null
+  readonly sourceSlug: string | null
   readonly status: string
   readonly claimedAt: string
   readonly dispatchedAt: string | null
@@ -168,6 +168,7 @@ const toDispatchRecord = (row: {
   sourceType: row.sourceType,
   sourceId: row.sourceId,
   sourceName: null,
+  sourceSlug: null,
   status: row.status,
   claimedAt: row.claimedAt.toISOString(),
   dispatchedAt: row.dispatchedAt?.toISOString() ?? null,
@@ -259,17 +260,6 @@ const toConfigRecord = (config: AgentDispatchConfig): AgentDispatchConfigRecord 
   updatedAt: config.updatedAt.toISOString(),
 })
 
-export const isAgentDispatchEnabled = createServerFn({ method: "GET" }).handler(async () => {
-  const { organizationId } = await requireSession()
-  const enabled = await Effect.runPromise(
-    hasFeatureFlagUseCase({ identifier: AGENT_DISPATCH_FLAG }).pipe(
-      withPostgres(FeatureFlagRepositoryLive, getPostgresClient(), organizationId),
-      withTracing,
-    ),
-  )
-  return { enabled }
-})
-
 export const listAgentDispatchIntegrations = createServerFn({ method: "GET" }).handler(async () => {
   const { organizationId } = await requireSession()
   const client = getPostgresClient()
@@ -306,6 +296,7 @@ export const listAgentDispatches = createServerFn({ method: "GET" })
         const dispatchRepo = yield* AgentDispatchRepository
         const configRepo = yield* AgentDispatchConfigRepository
         const signalRepository = yield* SignalRepository
+        const monitorReader = yield* IncidentMonitorReader
         const dispatches = yield* dispatchRepo.listByProject(projectId)
         const configs = yield* configRepo.listByProject(projectId)
         const configById = new Map(configs.map((config) => [config.id, config]))
@@ -314,6 +305,22 @@ export const listAgentDispatches = createServerFn({ method: "GET" })
           .map((dispatch) => SignalId(dispatch.sourceId))
         const signals = signalIds.length > 0 ? yield* signalRepository.findByIds({ projectId, signalIds }) : []
         const signalNameById = new Map<string, string>(signals.map((signal) => [signal.id, signal.name]))
+        const monitorIds = [
+          ...new Set(
+            dispatches.filter((dispatch) => dispatch.sourceType === "monitor").map((dispatch) => dispatch.sourceId),
+          ),
+        ]
+        const monitors = yield* Effect.forEach(monitorIds, (monitorId) =>
+          monitorReader.findByMonitorId(monitorId).pipe(Effect.map((monitor) => ({ monitorId, monitor }))),
+        )
+        const monitorById = new Map(
+          monitors
+            .filter(
+              (entry): entry is { monitorId: string; monitor: NonNullable<typeof entry.monitor> } =>
+                entry.monitor !== null,
+            )
+            .map((entry) => [entry.monitorId, entry.monitor]),
+        )
 
         return dispatches.map((dispatch) => {
           const config = configById.get(dispatch.configId)
@@ -321,16 +328,28 @@ export const listAgentDispatches = createServerFn({ method: "GET" })
             config?.kind === "claude_code" && "routineTriggerId" in config.target
               ? `https://claude.ai/code/routines/${config.target.routineTriggerId}`
               : null
+          const monitor = dispatch.sourceType === "monitor" ? monitorById.get(dispatch.sourceId) : undefined
 
           return {
             ...toDispatchRecord(dispatch),
-            sourceName: dispatch.sourceType === "signal" ? (signalNameById.get(dispatch.sourceId) ?? null) : null,
+            sourceName:
+              dispatch.sourceType === "signal"
+                ? (signalNameById.get(dispatch.sourceId) ?? null)
+                : dispatch.sourceType === "monitor"
+                  ? (monitor?.name ?? null)
+                  : null,
+            sourceSlug: dispatch.sourceType === "monitor" ? (monitor?.slug ?? null) : null,
             routineUrl,
           }
         })
       }).pipe(
         withPostgres(
-          Layer.mergeAll(AgentDispatchRepositoryLive, AgentDispatchConfigRepositoryLive, SignalRepositoryLive),
+          Layer.mergeAll(
+            AgentDispatchRepositoryLive,
+            AgentDispatchConfigRepositoryLive,
+            SignalRepositoryLive,
+            IncidentMonitorReaderLive,
+          ),
           getPostgresClient(),
           organizationId,
         ),
@@ -458,7 +477,7 @@ export const connectCursorIntegration = createServerFn({ method: "POST" })
           organizationId: OrganizationId(organizationId),
           cursorApiKey: data.cursorApiKey,
         })
-        yield* upsertAgentDispatchConfigUseCase({
+        const config = yield* upsertAgentDispatchConfigUseCase({
           organizationId: OrganizationId(organizationId),
           projectId: ProjectId(data.projectId),
           integrationId: integration.id,
@@ -470,7 +489,7 @@ export const connectCursorIntegration = createServerFn({ method: "POST" })
             ...(data.startingRef ? { startingRef: data.startingRef } : {}),
           },
         })
-        return { integrationId: integration.id }
+        return { integrationId: integration.id, config: toConfigRecord(config) }
       }).pipe(withPostgres(agentDispatchLayer, client, organizationId), withTracing),
     )
   })
@@ -704,7 +723,6 @@ const manualSendPgLayer = Layer.mergeAll(
   AgentDispatchConfigRepositoryLive,
   AgentDispatchRepositoryLive,
   AgentDispatchCredentialRepositoryLive,
-  FeatureFlagRepositoryLive,
 )
 
 export const sendSignalToIntegration = createServerFn({ method: "POST" })
@@ -724,9 +742,6 @@ export const sendSignalToIntegration = createServerFn({ method: "POST" })
 
     return Effect.runPromise(
       Effect.gen(function* () {
-        const enabled = yield* hasFeatureFlagUseCase({ identifier: AGENT_DISPATCH_FLAG })
-        if (!enabled) return yield* Effect.fail(new Error("Agent dispatch is not enabled for this organization"))
-
         const configRepo = yield* AgentDispatchConfigRepository
         const config = yield* configRepo.findById(data.configId)
         if (config.projectId !== projectId || !config.enabled) {

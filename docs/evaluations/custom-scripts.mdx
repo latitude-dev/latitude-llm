@@ -1,0 +1,195 @@
+---
+title: Custom scripts
+description: Write a JavaScript detector that reads a session and decides whether a behavior is present.
+---
+
+A custom script is a detector you write by hand in JavaScript. It reads one session and returns a score saying how strongly a behavior is present. Reach for it when a [set of conditions](./detection-methods#set-of-conditions) is too rigid and an [LLM judge](./detection-methods#llm-as-judge) is too loose, or when you need logic that combines several checks.
+
+Conditions and LLM judges compile down to the same kind of script, so a custom script can express anything they can, plus whatever else you write.
+
+<Note>
+Most signals don't need a custom script. Start with conditions or a judge, and drop to a script when you hit their limits.
+</Note>
+
+## The shape of a script
+
+Your code runs as the body of an async function, so you can use `await` at the top level. It must `return` a score built with `Score`, `Passed`, or `Failed`.
+
+```js
+// Match sessions where the assistant said it couldn't help.
+const messages = session.conversation
+const lastReply = messages.length ? messages[messages.length - 1].content : ''
+return lastReply.includes("I can't help") ? Passed() : Failed()
+```
+
+`Passed()` and `Failed()` are shorthand for a full match (`1`) and no match (`0`). Use `Score(value, feedback)` when you want a strength in between, or a note explaining the verdict.
+
+## Returning a verdict
+
+A script returns a strength between `0` and `1`, not a pass or fail. Latitude compares that strength against a threshold (0.5 by default): at or above it, the behavior counts as present and the session joins the signal.
+
+| Helper | Returns | Use for |
+| --- | --- | --- |
+| `Score(value, feedback?)` | `value`, from 0 to 1 | A graded strength, optionally with a reason |
+| `Passed(value?, feedback?)` | `value` if given, otherwise `1` | A clear match |
+| `Failed(value?, feedback?)` | `value` if given, otherwise `0` | A clear non-match |
+
+`feedback` is optional free text. Latitude stores it on the score and uses it when it groups and displays matches, so a short reason pays off later.
+
+<Warning>
+`passed = true` means the behavior is present, not that the session was good. A signal tracks a behavior, and a matching session is one that exhibits it. A signal for "made-up information" passes when the model hallucinated.
+</Warning>
+
+## The session object
+
+Every script receives one global, `session`: a read-only snapshot of the conversation being checked. It is frozen, so you can read it but not change it.
+
+| Field | Type | Description |
+| --- | --- | --- |
+| `id` | `string` | The session id |
+| `userId` | `string` | The end user's id, empty if none was sent |
+| `startTime`, `endTime` | `string` | ISO 8601 timestamps |
+| `duration` | `number` | Total wall-clock time, in nanoseconds |
+| `timeToFirstToken` | `number` | Time to the first token, in nanoseconds |
+| `traceCount`, `spanCount`, `errorCount` | `number` | Counts across the session |
+| `cost` | `object` | `{ input, output, total }`, in microcents |
+| `tokens` | `object` | `{ input, output, total, cacheRead, cacheCreate, reasoning }` |
+| `tags` | `string[]` | Tags on the session |
+| `metadata` | `object` | The string metadata your app sent |
+| `conversation` | `array` | The transcript, each entry `{ role, content }` |
+| `traces` | `array` | Per-trace breakdown (see below) |
+
+Numbers are in raw units: durations are nanoseconds, costs are microcents (one US cent is 1,000,000 microcents), and token counts are integers. Most scripts read `conversation`, `tags`, `metadata`, and the tool data rather than the cost and token fields.
+
+### Messages
+
+`session.conversation` is the deduplicated transcript for the whole session. Each entry is `{ role, content }`.
+
+```js
+const userTurns = session.conversation.filter((m) => m.role === 'user').length
+return Score(userTurns > 5 ? 1 : 0, `${userTurns} user turns`)
+```
+
+Interpolating the array into a string renders it as `[role] content` lines, one per message, which is handy for prompts:
+
+```js
+const transcript = `${session.conversation}`
+// [user] where is my order?
+// [assistant] let me check that for you...
+```
+
+### Traces and tools
+
+`session.traces` breaks the session down by trace. Each trace carries its own rollups plus the models, providers, finish reasons, and tool calls it used.
+
+| Field | Type | Description |
+| --- | --- | --- |
+| `id`, `name`, `status` | `string` | Trace id, name, and status (`ok`, `error`, or `unset`) |
+| `errorCount`, `spanCount` | `number` | Counts within the trace |
+| `duration`, `timeToFirstToken` | `number` | Nanoseconds |
+| `cost`, `tokens` | `object` | Same shape as the session totals |
+| `models`, `providers`, `finishReasons` | `string[]` | What the trace used |
+| `tools` | `array` | Tool calls in the trace (see below) |
+
+Each tool call has this shape:
+
+| Field | Type | Description |
+| --- | --- | --- |
+| `name` | `string` | The tool's name |
+| `input`, `output` | `string` | The call's arguments and result, possibly truncated for large payloads |
+| `error` | `boolean` | `true` if the call failed |
+| `duration` | `number` | Nanoseconds |
+
+```js
+// Match sessions where any tool call failed.
+const failed = session.traces.some((t) => t.tools.some((tool) => tool.error))
+return failed ? Passed() : Failed()
+```
+
+## Built-in functions
+
+Alongside the score helpers, a few functions are always available, and two more appear only when your script calls them.
+
+### semanticSimilarity(query)
+
+Returns the highest cosine similarity between `query` and any message in the session, from `0` to `1` (0 when the session has no messages). It is async.
+
+```js
+const score = await semanticSimilarity('the user is angry or frustrated')
+return score >= 0.55 ? Passed(score) : Failed(score)
+```
+
+Latitude reuses the message embeddings computed when the session was ingested and embeds only your query, so this stays cheap. As a starting point, about 0.4 is broad, 0.55 is balanced, and 0.7 is strict. A session that hasn't been embedded yet is scored once its embeddings are ready.
+
+### llm(prompt, options)
+
+Sends a prompt to an LLM and returns a structured object matching `schema`. Latitude manages the model and the system prompt. `schema` is required and must be built with `z` (below). It is async.
+
+```js
+const result = await llm(
+  `Did the assistant promise a refund in this conversation?\n${session.conversation}`,
+  { schema: z.object({ promised: z.boolean(), quote: z.string() }) },
+)
+return result.promised ? Passed(1, result.quote) : Failed()
+```
+
+### z
+
+A schema builder for shaping `llm()` output and `parse()` input. It mirrors a subset of Zod: `z.string()`, `z.number()`, `z.boolean()`, `z.literal()`, `z.enum()`, `z.array()`, `z.object()`, and `z.union()`, with `.optional()`, `.nullable()`, `.describe()`, `.min()`, `.max()`, and `.int()`.
+
+### parse(value, schema)
+
+Validates a value against a `z` schema and returns it, or throws if it doesn't match. Useful for checking JSON your agent produced.
+
+```js
+const messages = session.conversation
+const output = messages.length ? messages[messages.length - 1].content : ''
+try {
+  parse(JSON.parse(output), z.object({ answer: z.string(), confidence: z.number() }))
+  return Failed(0, 'output matched the expected schema')
+} catch {
+  return Passed(1, 'output was missing or malformed')
+}
+```
+
+<Note>
+Call `llm` and `semanticSimilarity` by name in your source. Latitude reads those names to allocate the right resources and to make the functions available, so building the call dynamically won't work.
+</Note>
+
+### What isn't available
+
+The sandbox is deliberately small. There is no network access, no `fetch`, no timers, no `Date.now` or `Math.random`, and no Node or browser APIs. The only import allowed is `zod`. A script's verdict depends only on the session and any `llm()` call, which keeps results reproducible.
+
+## Where scripts run and their limits
+
+Detectors run in the background, never inside your app's request path. When a session finishes, Latitude runs the matching detectors on it. A preview runs the same way, over recent sessions, on demand.
+
+Latitude picks a resource budget from what your script uses:
+
+| The script | Time budget |
+| --- | --- |
+| Uses neither `llm()` nor `semanticSimilarity()` | about 1 second |
+| Calls `semanticSimilarity()` | about 15 seconds |
+| Calls `llm()` | about 120 seconds |
+
+Every script gets 64 MiB of memory. These limits are enforced automatically and are generous for typical detectors.
+
+Errors are handled at two points:
+
+- Invalid JavaScript is caught when you save, so a script that won't compile can't be stored.
+- A script that throws at runtime, or exceeds its time or memory budget, scores that session as `errored`. Errored sessions show up in the preview. A detector that errors often is flagged as unhealthy.
+
+LLM and embedding calls cost money, so use the sampling control in the [Scope step](../signals/create#scope) to check a slice of traffic rather than every session.
+
+## Editing and detaching
+
+If you build a detector with conditions or an LLM judge, the Custom script tab shows the exact script Latitude compiled from your settings, read-only. Choose "Edit as custom script" to take it over by hand. This clears the conditions or criteria form and switches the detector to your script.
+
+It is a one-way move. Once the script is the source of truth, the settings form is gone. Switching between the conditions and judge tabs before you detach keeps both drafts, so detach only when you're ready to hand-write.
+
+## Related pages
+
+- [Detection methods](./detection-methods): conditions and LLM judges, the other two ways to define a detector
+- [Create a signal](../signals/create): the full creation flow
+- [Scores](../scores/overview): what a detector produces when it matches
+- [Sessions](../observability/sessions): what a session is

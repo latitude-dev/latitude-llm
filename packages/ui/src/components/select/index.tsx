@@ -156,6 +156,7 @@ export function Select<V = unknown>(selectProps: SelectProps<V>) {
   } = selectProps
   const [internalSelected, setInternalSelected] = useState<V | undefined>(defaultValue)
   const [internalIsOpen, setInternalIsOpen] = useState(false)
+  const [popoverContainer, setPopoverContainer] = useState<HTMLDivElement | null>(null)
 
   const selectedValue = isControlled ? value : internalSelected
   const isOpen = controlledOpen !== undefined ? controlledOpen : internalIsOpen
@@ -213,7 +214,7 @@ export function Select<V = unknown>(selectProps: SelectProps<V>) {
       errors={errors}
       className={width === "full" ? "w-full" : "w-auto"}
     >
-      <div className={width === "full" ? "w-full" : "w-auto"}>
+      <div ref={setPopoverContainer} className={width === "full" ? "w-full" : "w-auto"}>
         {loading ? (
           <Skeleton
             className={cn("h-8 rounded-lg", {
@@ -257,6 +258,7 @@ export function Select<V = unknown>(selectProps: SelectProps<V>) {
             </PopoverTrigger>
             <PopoverContent
               data-slot="searchable-select-content"
+              container={popoverContainer ?? undefined}
               align={align}
               side={side}
               {...(sideOffset !== undefined ? { sideOffset } : { sideOffset: 4 })}

@@ -105,6 +105,106 @@
           }
         }
       }
+    },
+    {
+      "includes": [
+        "apps/web/src/domains/**/*.functions.ts",
+        "!apps/web/src/domains/admin/**",
+        "!apps/web/src/domains/agent-dispatch/**",
+        "!apps/web/src/domains/destinations/**"
+      ],
+      "linter": {
+        "rules": {
+          "style": {
+            "noRestrictedImports": {
+              "level": "error",
+              "options": {
+                "patterns": [
+                  {
+                    "group": [
+                      "./test/*",
+                      "./testing/*",
+                      "../test/*",
+                      "../testing/*",
+                      "../../test/*",
+                      "../../testing/*"
+                    ],
+                    "message": "Do not import test utilities in production code. Expose them via a /testing subpath export instead."
+                  }
+                ],
+                "paths": {
+                  "@platform/db-clickhouse": {
+                    "importNames": ["withClickHouse"],
+                    "message": "Multi-tenant reads must use withScopedClickHouse (apps/web/src/server/scoped-clickhouse.ts): its org comes from resolveOrgScope, so ClickHouse (no RLS) can only read a scoped, authorized org. Exempt: admin/** (cross-org backoffice) and session-org config domains that resolve the viewer's own org, not the project scope (agent-dispatch, destinations)."
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    {
+      "includes": [
+        "apps/web/src/domains/**/*.functions.ts",
+        "!apps/web/src/domains/admin/**",
+        "!apps/web/src/domains/agent-dispatch/**",
+        "!apps/web/src/domains/alerts/**",
+        "!apps/web/src/domains/api-keys/**",
+        "!apps/web/src/domains/auth/**",
+        "!apps/web/src/domains/billing/**",
+        "!apps/web/src/domains/destinations/**",
+        "!apps/web/src/domains/evaluations/**",
+        "!apps/web/src/domains/feature-flags/**",
+        "!apps/web/src/domains/flaggers/**",
+        "!apps/web/src/domains/integrations/**",
+        "!apps/web/src/domains/members/**",
+        "!apps/web/src/domains/notifications/**",
+        "!apps/web/src/domains/oauth/**",
+        "!apps/web/src/domains/organizations/**",
+        "!apps/web/src/domains/projects/**",
+        "!apps/web/src/domains/sandbox/**",
+        "!apps/web/src/domains/saved-searches/**",
+        "!apps/web/src/domains/scores/**",
+        "!apps/web/src/domains/showcase/**",
+        "!apps/web/src/domains/sso/**",
+        "!apps/web/src/domains/users/**",
+        "!apps/web/src/domains/wrapped/**"
+      ],
+      "linter": {
+        "rules": {
+          "style": {
+            "noRestrictedImports": {
+              "level": "error",
+              "options": {
+                "patterns": [
+                  {
+                    "group": [
+                      "./test/*",
+                      "./testing/*",
+                      "../test/*",
+                      "../testing/*",
+                      "../../test/*",
+                      "../../testing/*"
+                    ],
+                    "message": "Do not import test utilities in production code. Expose them via a /testing subpath export instead."
+                  }
+                ],
+                "paths": {
+                  "@platform/db-clickhouse": {
+                    "importNames": ["withClickHouse"],
+                    "message": "Use withScopedClickHouse (apps/web/src/server/scoped-clickhouse.ts) — org must come from resolveOrgScope."
+                  },
+                  "@platform/db-postgres": {
+                    "importNames": ["withPostgres"],
+                    "message": "Use withScopedPostgres (apps/web/src/server/scoped-postgres.ts): its org comes from resolveOrgScope, so under a showcase/sandbox scope it resolves the project's org, not the viewer's session org. If this domain is genuinely session- or cross-org (settings/account/org/admin/config), add it to this rule's exclude-list instead. NOTE: the exclude-list still contains session-org domains pending migration to withScopedPostgres — see #3908; the goal is to shrink it to only the truly non-scopable domains (admin, organizations, sandbox, auth, oauth, sso, showcase, agent-dispatch, destinations)."
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
     }
   ]
 }

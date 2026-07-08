@@ -6,7 +6,7 @@ High-level guide for coding agents working in this repository.
 
 Multi-tenant LLM observability platform. The repo is a **pnpm** workspace orchestrated with **Turbo**.
 
-At a glance: **`apps/*`** own HTTP boundaries (validation, authz, routing to use-cases); **`packages/domain/*`** own business rules and ports; **`packages/platform/*`** implement infrastructure adapters; **`@repo/utils`** holds cross-cutting pure helpers. Telemetry and control data flow through **Postgres**, **ClickHouse**, **Redis**, and object storage, with **organization-scoped** access everywhere at the boundary.
+At a glance: **`apps/*`** own transport (middleware, authn, mounting); **`@repo/operations`** owns the public API's operation contracts (validation, public schemas, routing to use-cases) shared by HTTP/MCP/SDK/CLI and in-process agent tools; **`packages/domain/*`** own business rules and ports; **`packages/platform/*`** implement infrastructure adapters; **`@repo/utils`** holds cross-cutting pure helpers. Telemetry and control data flow through **Postgres**, **ClickHouse**, **Redis**, and object storage, with **organization-scoped** access everywhere at the boundary.
 
 ## Repo-wide conventions
 
@@ -26,7 +26,7 @@ At a glance: **`apps/*`** own HTTP boundaries (validation, authz, routing to use
 
 Detailed policies, command examples, and code samples live under **`.agents/skills/<skill-name>/SKILL.md`**. Load narrow skills instead of memorizing the entire monorepo at once.
 
-**Index coverage:** The glossary lists **every** skill in `.agents/skills/` (one row per `*/SKILL.md`, **27** total), ordered **alphabetically by folder name**. When you add or remove a skill folder, update this table in the same change.
+**Index coverage:** The glossary lists **every** skill in `.agents/skills/` (one row per `*/SKILL.md`, **28** total), ordered **alphabetically by folder name**. When you add or remove a skill folder, update this table in the same change.
 
 ## Skill glossary
 
@@ -34,7 +34,7 @@ Detailed policies, command examples, and code samples live under **`.agents/skil
 | --- | --- | --- |
 | **Agentation watch mode** | [.agents/skills/agentation-watch-mode/SKILL.md](.agents/skills/agentation-watch-mode/SKILL.md) | Agentation annotation watch loops, continuous feedback handling, or when the user says **`watch mode`** and wants annotations acknowledged, fixed, and resolved as they arrive |
 | **Analyze problem** | [.agents/skills/analyze-problem/SKILL.md](.agents/skills/analyze-problem/SKILL.md) | Investigating a bug, task, or reported issue to explain behavior, root cause, proposed fix, and verification steps before implementation |
-| **API endpoints (HTTP, MCP, SDK, CLI)** | [.agents/skills/api-endpoints/SKILL.md](.agents/skills/api-endpoints/SKILL.md) | Adding or changing routes in **`apps/api`**, **`defineApiEndpoint`**, **`openapi.json` / `mcp.json` regen**, **`createXxxRoutes`** factories, writing **field descriptions** that propagate to the **TS + Python SDKs**, **MCP tool**, and **`latitude` CLI** consumers |
+| **API endpoints (HTTP, MCP, SDK, CLI)** | [.agents/skills/api-endpoints/SKILL.md](.agents/skills/api-endpoints/SKILL.md) | Adding or changing API operations in **`@repo/operations`**, **`defineOperation`**, **`openapi.json` / `mcp.json` regen**, **`OperationModule`** manifests, **`group`/`sdkMethod`/`rateLimitTier`**, **`defineToolset`** agent toolsets, writing **field descriptions** that propagate to the **TS + Python SDKs**, **MCP tool**, and **`latitude` CLI** consumers |
 | **Architecture and boundaries** | [.agents/skills/architecture-boundaries/SKILL.md](.agents/skills/architecture-boundaries/SKILL.md) | Layering, web vs public API, **app layout** (clients, routes, logging), ports/adapters, **web-standard APIs in domain/shared/utils**, multi-tenancy, DDD layout, anti-patterns, **machine-facing MCP/API product surfaces** |
 | **Background jobs and events** | [.agents/skills/async-jobs-and-events/SKILL.md](.agents/skills/async-jobs-and-events/SKILL.md) | **Queues/workers**, **domain events**, side effects **outside** HTTP handlers, task payload design, debounce/dedupe, delayed job semantics, **domain event naming**, **publisher–consumer decoupling** |
 | **Authentication** | [.agents/skills/authentication/SKILL.md](.agents/skills/authentication/SKILL.md) | **Better Auth**, sessions, web session helpers, org context on session, **`@domain/auth`** flows |
@@ -50,6 +50,7 @@ Detailed policies, command examples, and code samples live under **`.agents/skil
 | **Environment configuration** | [.agents/skills/env-configuration/SKILL.md](.agents/skills/env-configuration/SKILL.md) | **`LAT_*` / `VITE_LAT_*`**, `.env.example`, **`parseEnv` / `parseEnvOptional`** |
 | **Fix Datadog issues** | [.agents/skills/fix-datadog-issues/SKILL.md](.agents/skills/fix-datadog-issues/SKILL.md) | Finding, triaging, and fixing production errors from **Datadog Error Tracking** (`plugin:datadog:mcp`); picking which issue to work (occurrence/trend/recency, v2-only, prod-only), root-causing in code, reproducing with tests, commenting on the issue, and opening a PR to `development` |
 | **GitHub issues** | [.agents/skills/gh-issue/SKILL.md](.agents/skills/gh-issue/SKILL.md) | Creating clear, actionable GitHub issues for bugs, features, and improvements, optimized for LLM/actionability |
+| **Humanizer** | [.agents/skills/humanizer/SKILL.md](.agents/skills/humanizer/SKILL.md) | Editing or reviewing prose (docs, PR and commit copy) to remove AI-writing tells such as em dashes, rule of three, promotional language, and filler, so it reads naturally |
 | **Managing maintenance windows** | [.agents/skills/managing-maintenance-windows/SKILL.md](.agents/skills/managing-maintenance-windows/SKILL.md) | Enabling, disabling, verifying, or preparing production maintenance mode, which redirects **`console.latitude.so`** to the Better Stack status page with the Pulumi `enableWebMaintenanceRedirect` switch |
 | **Mintlify docs preview** | [.agents/skills/mintlify-preview/SKILL.md](.agents/skills/mintlify-preview/SKILL.md) | Running the public **Mintlify** docs site (`docs/`) locally for live preview (`mint dev`); **Node <25 (nvm v22) requirement**, keeping the CLI current, non-default port, page-path mapping |
 | **Notifications** | [.agents/skills/notifications/SKILL.md](.agents/skills/notifications/SKILL.md) | Adding a notification **kind**, **group**, or **channel**; in-app + email delivery; `NOTIFICATION_KIND_META` / `NOTIFICATION_GROUPS`; per-user prefs (`users.notification_preferences`); project-level gates (`projects.settings.notifications`); idempotency + cascade-on-`ProjectDeleted` |

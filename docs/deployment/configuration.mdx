@@ -86,13 +86,13 @@ Available `<SETTING>`:
 
 ### Embeddings
 
-Embeddings are configured globally through `LAT_AI_EMBEDDING_PROVIDER` and `LAT_AI_EMBEDDING_MODEL`. It defaults to `voyage` / `voyage-4-large`, and powers semantic trace/issue search, search highlights, and issue clustering. Without a working embeddings provider, search falls back to lexical.
+Embeddings are configured globally through `LAT_AI_EMBEDDING_PROVIDER` and `LAT_AI_EMBEDDING_MODEL`. It defaults to `voyage` / `voyage-4-large`, and powers semantic trace/signal search, search highlights, and signal clustering. Without a working embeddings provider, search falls back to lexical.
 
 <Warning>
   The embedding model is a **one-time choice — pick it at install time and keep it**.
 </Warning>
 
-Once an embedding model is used on a live deployment, changing it is a difficult task. Different models produce incompatible vector spaces and existing data is never re-embedded, so switching breaks semantic search, issue matching, and clustering.
+Once an embedding model is used on a live deployment, changing it is a difficult task. Different models produce incompatible vector spaces and existing data is never re-embedded, so switching breaks semantic search, signal matching, and clustering.
 
 The model must also **emit 2048-dimensional vectors** — the dimension is fixed by the database schema and is not configurable.
 

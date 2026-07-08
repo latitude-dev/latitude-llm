@@ -1,6 +1,6 @@
 import { createRoute, type OpenAPIHono, z } from "@hono/zod-openapi"
+import { PUBLIC_SECURITY } from "@repo/operations/openapi/schemas"
 import { LatitudeObservabilityTestError } from "@repo/utils"
-import { PUBLIC_SECURITY } from "../openapi/schemas.ts"
 import type { AppEnv } from "../types.ts"
 
 const HealthResponseSchema = z

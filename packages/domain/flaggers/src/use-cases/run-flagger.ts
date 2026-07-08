@@ -577,15 +577,22 @@ const loadTraceDetail = (input: RunFlaggerInput) =>
   })
 
 // The Vercel AI SDK raises `NoObjectGeneratedError` / `NoOutputGeneratedError`
-// when the model returns output that does not materialize as the requested schema.
-// The flagger treats this as a "no match" signal instead of propagating the failure
-// — the model effectively failed to classify, which for a triage flagger is
-// indistinguishable from matched=false.
+// when the model returns output that does not materialize as the requested schema,
+// and `AI_APICallError` with a "prompt is too long" message when the trace evidence
+// exceeds the model's context window. The flagger treats both as a "no match" signal
+// instead of propagating the failure — the model effectively failed to classify,
+// which for a triage flagger is indistinguishable from matched=false.
 const isSchemaMismatchCause = (cause: unknown): boolean => {
   if (!(cause instanceof Error)) return false
   if (cause.name === "AI_NoObjectGeneratedError" || cause.name === "AI_NoOutputGeneratedError") return true
   return typeof cause.message === "string" && cause.message.includes("response did not match schema")
 }
+
+const isPromptTooLongCause = (cause: unknown): boolean =>
+  cause instanceof Error && typeof cause.message === "string" && cause.message.includes("prompt is too long")
+
+const isUnclassifiableModelFailureCause = (cause: unknown): boolean =>
+  isSchemaMismatchCause(cause) || isPromptTooLongCause(cause)
 
 /**
  * LLM classification for an already-loaded trace.
@@ -645,7 +652,7 @@ export const classifyTraceForFlaggerUseCase = Effect.fn("flaggers.classifyTraceF
     .pipe(
       Effect.map((result) => parseFlaggerOutput(result.object)),
       Effect.catchIf(
-        (error): error is AIError => error instanceof AIError && isSchemaMismatchCause(error.cause),
+        (error): error is AIError => error instanceof AIError && isUnclassifiableModelFailureCause(error.cause),
         () =>
           Effect.gen(function* () {
             yield* Effect.annotateCurrentSpan("flagger.flaggerSchemaMismatch", true)
@@ -677,7 +684,7 @@ export const classifyTraceForFlaggerUseCase = Effect.fn("flaggers.classifyTraceF
     .pipe(
       Effect.map((result) => result.object),
       Effect.catchIf(
-        (error): error is AIError => error instanceof AIError && isSchemaMismatchCause(error.cause),
+        (error): error is AIError => error instanceof AIError && isUnclassifiableModelFailureCause(error.cause),
         () =>
           Effect.gen(function* () {
             yield* Effect.annotateCurrentSpan("flagger.annotationReviewSchemaMismatch", true)

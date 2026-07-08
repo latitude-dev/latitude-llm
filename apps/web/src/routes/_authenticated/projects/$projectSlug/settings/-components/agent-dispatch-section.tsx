@@ -37,7 +37,6 @@ import {
   disconnectAgentDispatchIntegration,
   getAgentDispatchConfig,
   getWebhookSecret,
-  isAgentDispatchEnabled,
   listAgentDispatches,
   listAgentDispatchIntegrations,
   listCursorRepositories,
@@ -137,8 +136,8 @@ function DispatchErrorDetailModal({
 }
 
 const INTEGRATION_SUBTITLES: Record<AgentDispatchKindKey, string> = {
-  cursor: "Cursor agents react to Latitude signals and push fixes to your code.",
-  claude_code: "Claude Code routines react to Latitude signals and push fixes to your code.",
+  cursor: "Cursor agents react to Latitude signals and monitors, then push fixes to your code.",
+  claude_code: "Claude Code routines react to Latitude signals and monitors, then push fixes to your code.",
   linear: "Create Linear issues for signals that need follow-up.",
   webhook: "Send integration events to your own endpoint.",
 }
@@ -150,11 +149,12 @@ const INTEGRATION_DOC_URLS: Record<AgentDispatchKindKey, string> = {
   webhook: "https://docs.latitude.so/agent-dispatch/webhooks",
 }
 
-const ACTIVE_DISPATCH_TRIGGERS = ["signal.discovered", "incident.opened"] as const
+const ACTIVE_DISPATCH_TRIGGERS = ["signal.discovered", "incident.opened", "monitor.incident"] as const
 
 const DISPATCH_TRIGGER_TITLES: Record<string, string> = {
   "signal.discovered": "New signal",
   "incident.opened": "Escalating signal",
+  "monitor.incident": "Monitor incident",
   manual: "Manual send",
 }
 
@@ -166,6 +166,10 @@ const TRIGGER_LABELS: Record<(typeof ACTIVE_DISPATCH_TRIGGERS)[number], { title:
   "incident.opened": {
     title: "Escalating signal",
     description: "Dispatch when a signal escalates into an incident.",
+  },
+  "monitor.incident": {
+    title: "Monitor incident",
+    description: "Dispatch when a threshold or escalating monitor opens an incident.",
   },
 }
 
@@ -227,17 +231,11 @@ export function AgentDispatchSection({
   readonly projectId: string
   readonly projectSlug: string
 }) {
-  const { data: enabled } = useQuery({
-    queryKey: ["agent-dispatch-enabled"],
-    queryFn: () => isAgentDispatchEnabled(),
-  })
   const { data: integrations = [], isLoading } = useQuery({
     queryKey: AGENT_DISPATCH_INTEGRATIONS_QUERY_KEY,
     queryFn: () => listAgentDispatchIntegrations(),
-    enabled: enabled?.enabled === true,
   })
 
-  if (!enabled?.enabled) return null
   if (isLoading) return null
 
   return (
@@ -344,20 +342,14 @@ export function AgentDispatchIntegrationDetails({
   readonly projectSlug: string
   readonly kind: AgentDispatchKindKey
 }) {
-  const { data: enabled } = useQuery({
-    queryKey: ["agent-dispatch-enabled"],
-    queryFn: () => isAgentDispatchEnabled(),
-  })
   const { data: integrations = [], isLoading } = useQuery({
     queryKey: AGENT_DISPATCH_INTEGRATIONS_QUERY_KEY,
     queryFn: () => listAgentDispatchIntegrations(),
-    enabled: enabled?.enabled === true,
   })
   const [connectOpen, setConnectOpen] = useState(false)
   const [webhookSecret, setWebhookSecret] = useState<string | null>(null)
   const integration = integrations.find((row: AgentDispatchIntegrationRecord) => row.kind === kind) ?? null
 
-  if (!enabled?.enabled) return null
   if (isLoading) return <Skeleton className="h-32 w-full" />
 
   if (!integration) {
@@ -468,9 +460,10 @@ function AgentDispatchConfigFormInner({
   readonly onSaved: () => Promise<void>
 }) {
   const target = initial?.target
-  const visibleTriggers = ACTIVE_DISPATCH_TRIGGERS.filter(
-    (trigger) => kind !== "linear" || trigger === "signal.discovered",
-  )
+  const visibleTriggers = ACTIVE_DISPATCH_TRIGGERS.filter((trigger) => {
+    if (kind === "linear") return trigger === "signal.discovered"
+    return true
+  })
   const { data: cursorRepositories = [], isLoading: cursorRepositoriesLoading } = useQuery({
     queryKey: ["cursor-repositories", integrationId],
     queryFn: () => listCursorRepositories({ data: { integrationId } }),
@@ -875,7 +868,7 @@ function ConnectAgentDispatchModal({
           const parsed = z
             .object({ cursorApiKey: z.string().min(1), repoUrl: z.string().url(), startingRef: z.string().optional() })
             .parse(values)
-          await connectCursorIntegration({
+          const result = await connectCursorIntegration({
             data: {
               kind: "cursor",
               cursorApiKey: parsed.cursorApiKey,
@@ -884,6 +877,7 @@ function ConnectAgentDispatchModal({
               ...(parsed.startingRef ? { startingRef: parsed.startingRef } : {}),
             },
           })
+          queryClient.setQueryData(["agent-dispatch-config", projectId, kind], result.config)
         } else if (kind === "claude_code") {
           const parsed = z
             .object({
@@ -1396,6 +1390,16 @@ function AgentDispatchHistorySection({
             <span className="truncate">{dispatch.sourceName ?? "Deleted signal"}</span>
             <Icon icon={ExternalLink} size="xs" />
           </Link>
+        ) : dispatch.sourceType === "monitor" && dispatch.sourceSlug ? (
+          <Link
+            to="/projects/$projectSlug/monitors/$monitorSlug"
+            params={{ projectSlug, monitorSlug: dispatch.sourceSlug }}
+            aria-label={`Open monitor ${dispatch.sourceName ?? dispatch.sourceId}`}
+            className="flex min-w-0 items-center gap-1 text-xs font-semibold text-foreground hover:underline"
+          >
+            <span className="truncate">{dispatch.sourceName ?? "Deleted monitor"}</span>
+            <Icon icon={ExternalLink} size="xs" />
+          </Link>
         ) : (
           <div className="flex min-w-0 flex-col gap-1">
             <Badge variant="outlineMuted" size="small" className="w-fit">
@@ -1422,7 +1426,7 @@ function AgentDispatchHistorySection({
         const errorDetail = getDispatchErrorDetail(dispatch)
 
         return (
-          <div className="flex min-w-0 items-start gap-1">
+          <div className="flex min-w-0 items-end gap-2">
             <div className="flex min-w-0 flex-col gap-1">
               <Badge variant={statusVariant} size="small" className="w-fit capitalize">
                 {dispatch.status}
@@ -1434,11 +1438,11 @@ function AgentDispatchHistorySection({
                 type="button"
                 variant="ghost"
                 size="sm"
-                className="h-7 w-7 shrink-0 p-0"
+                className="h-7 w-7 shrink-0 p-0 text-destructive hover:bg-destructive/10 hover:text-destructive"
                 aria-label="View error details"
                 onClick={() => setErrorDetailModal({ title: errorTitle ?? "Error details", detail: errorDetail })}
               >
-                <FileText className="h-4 w-4" />
+                <Icon icon={FileText} size="sm" />
               </Button>
             ) : null}
           </div>
@@ -1482,7 +1486,7 @@ function AgentDispatchHistorySection({
           Dispatch history
         </Text.H5>
         <Text.H6 display="block" color="foregroundMuted">
-          Audit log of dispatches triggered by signals, incidents, and manual sends.
+          Audit log of dispatches triggered by signals, monitors, incidents, and manual sends.
         </Text.H6>
       </div>
       <InfiniteTable

@@ -1,61 +1,61 @@
 ---
-title: Evaluation Alignment
-description: Measure how well your automated evaluations agree with human judgment
+title: Evaluation alignment
+description: Measure how well your automated evaluations agree with human judgment.
 ---
 
-# Evaluation Alignment
+# Evaluation alignment
 
-Alignment measures how closely evaluations match human judgment. It answers: **Can you trust this monitor to represent the signal your team cares about?**
+Alignment measures how closely an evaluation matches human judgment. It answers one question: can you trust this detector to represent the behavior your team cares about?
 
-## Why Alignment Matters
+## Why alignment matters
 
-Evaluations are useful only when they agree with the way your team reviews real traces. Without alignment tracking:
+An evaluation is useful only when it agrees with the way your team reviews real traffic. Without alignment tracking:
 
 - You may not notice that an evaluation is too strict or too lenient.
-- You may miss drift as your agent, users, or product behavior changes.
-- You may keep monitoring a signal with outdated examples.
+- You may miss drift as your agent, users, or product change.
+- You may keep scoring a behavior against outdated examples.
 
-Alignment helps Latitude keep evaluations calibrated over time.
+Alignment helps Latitude keep generated evaluations calibrated over time.
 
-## How Alignment Works
+## How alignment works
 
-Alignment is computed when an evaluation and a human annotation score the same trace. Latitude compares their verdicts and uses the result as feedback for the monitor.
+Alignment is computed when an evaluation and a human annotation score the same trace. Latitude compares their verdicts and uses the result as feedback for the detector. The point is not to display a metric; it is to keep the evaluation close to the latest human-reviewed examples.
 
-The goal is not just to display a metric; it is to keep the evaluation close to the latest human-reviewed examples of the signal.
+## Viewing alignment
 
-## Viewing Alignment
+Each evaluation detail page shows alignment when enough human-reviewed traces are available. Use it to see whether the evaluation still matches reviewer expectations and where it may be drifting.
 
-Each evaluation detail page shows alignment information when enough human-reviewed traces are available. Use it to see whether the evaluation still matches reviewer expectations and where it may be drifting.
+## Alignment and generated evaluations
 
-## Alignment and Evaluation Generation
+When Latitude generates an evaluation from a signal:
 
-When you generate an evaluation from a signal:
+1. It collects examples from annotations, signal-linked scores, and trace context.
+2. It builds a detector for the behavior.
+3. The detector is compared against known examples.
+4. The detector is attached to the signal.
 
-1. Latitude collects examples from annotations, signal-linked scores, and trace context.
-2. Latitude creates a monitor for the signal pattern.
-3. The evaluation is compared against known examples.
-4. The monitor is attached to the signal.
+A detector can start from a small amount of evidence. As more annotations and scores arrive, Latitude has more to work with, and it can realign the detector as new annotations, flagger matches, evaluation results, and custom scores come in. This keeps the detector matched to the behavior as production traffic evolves.
 
-A monitor can start from a small amount of evidence. As more annotations and scores arrive, Latitude has more signal to improve it.
+## Manually defined detectors
 
-## Automatic Realignment
+A detector you write when you [create a signal](../signals/create) works differently. It runs exactly as you defined it and is not automatically realigned to annotations. That is deliberate: it does what you specified, and nothing changes it behind your back.
 
-Once an evaluation exists, Latitude can realign it as new annotations, flagger matches, evaluation results, and custom scores arrive. This keeps the monitor matched to the signal as production traffic evolves.
+If a detector you defined turns out too strict or too lenient, edit it. Adjust the conditions, rewrite the judge criteria, change a threshold in a script, and preview the change against recent sessions before saving. See [Detection methods](./detection-methods).
 
-## Improving Alignment
+## Improving alignment
 
-When an evaluation appears misaligned:
+When a generated evaluation looks misaligned:
 
 1. Review traces where the evaluation and human review disagree.
 2. Add annotations with specific feedback.
-3. Confirm the signal contains representative examples of the behavior you want to track.
-4. Let the new signal improve future realignment.
+3. Confirm the signal has representative examples of the behavior.
+4. Let the new evidence improve the next realignment.
 
-This process keeps automated monitoring grounded in human judgment.
+This keeps automated scoring grounded in human judgment.
 
-## Next Steps
+## Next steps
 
-- [Annotations](../annotations/overview): How human review produces alignment signal
-- [Flaggers](../annotations/flaggers): Automatic annotators that contribute signal
-- [Search](../search/overview): Build cohorts of traces to annotate
-- [Signals](../signals/overview): How failed evaluations become trackable signals
+- [Annotations](../annotations/overview): how human review produces alignment signal
+- [Flaggers](../annotations/flaggers): automatic annotators that contribute signal
+- [Detection methods](./detection-methods): the three ways to define a detector
+- [Signals](../signals/overview): how evaluation matches become tracked signals

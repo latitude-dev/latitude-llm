@@ -8,14 +8,26 @@ import {
   type ProjectScope,
 } from "../domains/projects/project-scope.tsx"
 
-// POST server fns that are genuine reads (no mutation), so they stay allowed
-// even under a read-only scope. Every other POST is treated as a write. The
-// `*ForApiKey` reads are POST because they carry a raw API key (which must not
-// ride in a GET URL), so they need listing here to survive the gate.
+// POST server fns that are NOT project-data mutations, so they stay allowed
+// even under a read-only scope. Every other POST is treated as a write. Two
+// kinds live here: genuine reads that must be POST because they carry a raw API
+// key (which must not ride in a GET URL — the `*ForApiKey` fns), and session/
+// chrome-state writes that touch no tenant data (e.g. `rememberLastProjectSlug`
+// sets the last-visited cookie — it fires from the project layout's mount
+// effect on every page, showcase included, so blocking it would reject on every
+// showcase visit as an unhandled rejection).
+//
+// These strings must match the compiler-embedded `serverFnMeta.name`. Renaming
+// one of these fns without updating this set makes it throw ReadOnlyProjectError
+// under showcase (fail-closed — visible, not a bypass). Grep the fn name here
+// when renaming: previewEvaluation (@domain/evaluations preview),
+// listLinearTeamsForApiKey / listCursorRepositoriesForApiKey (agent-dispatch),
+// rememberLastProjectSlug (projects.functions.ts).
 const POST_READ_ALLOWLIST: ReadonlySet<string> = new Set([
   "previewEvaluation",
   "listLinearTeamsForApiKey",
   "listCursorRepositoriesForApiKey",
+  "rememberLastProjectSlug",
 ])
 
 /**

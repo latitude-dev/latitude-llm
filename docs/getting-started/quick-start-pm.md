@@ -5,7 +5,7 @@ description: Get started with Latitude through the web UI. No coding required
 
 # No-Code Quick Start
 
-This guide walks you through the Latitude web interface. You'll learn how to navigate the product, review agent interactions, annotate conversations, and understand issues, all without writing code.
+This guide walks you through the Latitude web interface. You'll learn how to navigate the product, review agent interactions, annotate conversations, and understand signals, all without writing code.
 
 ## Prerequisites
 
@@ -18,7 +18,7 @@ When you open a project, you'll see the main navigation with these sections:
 
 - **Search**: Find traces by meaning, and bookmark useful searches for later
 - **Traces**: Every interaction your agent has had, shown as a timeline
-- **Issues**: Failure patterns discovered from your agent's interactions
+- **Signals**: Failure patterns discovered from your agent's interactions
 - **Datasets**: Saved trace collections for offline analysis
 - **Settings**: Project configuration, including flaggers
 
@@ -62,37 +62,37 @@ When a flagger matches, it writes an annotation directly on the trace. That anno
 
 ## Reviewing Traces
 
-To leave human feedback on a trace, open it from any list (Search, Traces, an issue's logs) and use the annotation panel on the right:
+To leave human feedback on a trace, open it from any list (Search, Traces, a signal's logs) and use the annotation panel on the right:
 
 - Click anywhere in the conversation to create a message-level annotation, or use the button for a conversation-level one.
 - Mark it as positive (thumbs up) or negative (thumbs down).
 - Write feedback describing what you observed.
-- Optionally link it to an existing issue, or leave issue assignment automatic.
+- Optionally link it to an existing signal, or leave the assignment automatic.
 
 A typical review session combines saved searches and inline annotations: open the saved search you're responsible for, click the first trace, annotate, move on. The saved search's Annotated count goes up as you work.
 
-## Understanding Issues
+## Understanding Signals
 
-The **Issues** page shows failure patterns your agent is experiencing. Issues are discovered automatically when failed scores share similar feedback.
+The **Signals** page shows failure patterns your agent is experiencing. Signals are discovered automatically when failed scores share similar feedback, and you can also [create one yourself](../signals/create).
 
-Each issue has:
+Each signal has:
 
 - **A name and description** summarizing the failure pattern
-- **A lifecycle state**: New, Escalating, Resolved, Regressed, or Ignored
-- **Linked evaluations** that monitor for this issue on live traffic
-- **Occurrence trends** showing how often the issue appears
+- **A lifecycle state**: New, Escalating, or Ongoing
+- **Linked evaluations** that monitor for this signal on live traffic
+- **Occurrence trends** showing how often the signal appears
 
 You can:
 
-- **Generate an evaluation** from an issue to start automated monitoring
-- **Resolve** an issue when you believe it's fixed (with an option to keep monitoring for regressions)
-- **Ignore** an issue that isn't worth tracking
+- **Generate an evaluation** from a signal to monitor it on live traffic
+- **Assign** a signal and set its **priority** to triage it
+- **Mute** a signal that isn't worth acting on, which moves it to the Archived tab and stops its notifications
 
 ## Understanding Evaluations
 
 The **Evaluations** page shows automated monitors that score your agent's interactions in real time.
 
-Evaluations are typically generated from issues. When you click "Generate Evaluation" on an issue, Latitude creates a monitor that watches for that failure pattern on live traffic.
+Evaluations are often generated from signals. When you choose Generate an evaluation on a signal, Latitude builds a monitor that watches for that pattern on live traffic. You can also define a signal's evaluation yourself when you create the signal.
 
 Each evaluation shows:
 
@@ -109,7 +109,7 @@ Scores are the fundamental unit of measurement in Latitude. Every score has:
 - **Feedback** text describing the verdict
 - A **source**: evaluation, annotation (human review), or custom
 
-Scores appear throughout the product: on traces, in evaluation dashboards, and in issue details.
+Scores appear throughout the product: on traces, in evaluation dashboards, and in signal details.
 
 ## What's Next
 
@@ -118,5 +118,5 @@ Scores appear throughout the product: on traces, in evaluation dashboards, and i
 - [Flaggers](../annotations/flaggers): Built-in automatic annotators for common failures
 - [Scores](../scores/overview): Deep dive into how scores work
 - [Annotations](../annotations/overview): Human review workflows
-- [Issues](../signals/overview): Learn about issue lifecycle and management
+- [Signals](../signals/overview): Learn about signal lifecycle and management
 - [Evaluations](../evaluations/overview): Understand automated monitoring

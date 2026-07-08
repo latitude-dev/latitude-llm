@@ -1,0 +1,87 @@
+---
+title: Create a signal
+description: Define a signal yourself when you already know the behavior you want to track, using the New signal builder.
+---
+
+Signals usually come from [discovery](./overview): Latitude groups similar failed scores into named patterns without you defining them first. You can also create a signal yourself when you already know the behavior you want to track. This page covers that path.
+
+Discovery finds what you didn't know to look for. Creating a signal manually tracks what you already know matters: a specific failure mode, a policy you need to enforce, or a behavior you want measured from day one.
+
+## When to create one manually
+
+- You already know a failure mode and want it tracked and counted from now on.
+- You want to enforce a known requirement, such as a format, a policy, or task success.
+- The behavior is specific enough that you can describe it or write a rule for it.
+
+If you are exploring rather than tracking something specific, start with [Search](../search/overview) and [Behaviours](../search/behaviours) instead, and let discovery surface patterns.
+
+## Open the builder
+
+On the Signals page, select **New signal**. The builder opens on a short intro with two ways forward:
+
+- **Generate signal**: describe the behavior and let Latitude build the whole signal.
+- **Configure manually**: build it yourself step by step.
+
+{/* TODO: add screenshot of the New signal builder intro (describe-first screen). */}
+
+Both paths end the same way: a signal with a detector that checks every new matching session and adds the ones that exhibit the behavior. That detector is an [evaluation](../evaluations/overview).
+
+## Describe it and let Latitude build it
+
+In the "What do you want to track?" field, describe the behavior in plain language. For example:
+
+> Sessions where the ticket-cancellation tool fails and the user gets frustrated.
+
+Select **Generate signal**. Latitude reads your description, drafts a detector, chooses a scope and sampling rate, tests it against recent sessions, names it, and creates it. When it finishes, you land on the new signal's detail page, where you can review it and edit anything.
+
+This is a good starting point even when you plan to adjust the result. You can reopen the builder from the signal to change the detector, scope, or sampling. AI generation is rate limited, so if you generate several in a row you may need to wait before the next one.
+
+## Configure it manually
+
+Choosing **Configure manually** runs a four-step builder.
+
+<Steps>
+  <Step title="Evaluation">
+    Pick how Latitude decides whether a session matches, using one of three [detection methods](../evaluations/detection-methods): a set of conditions, an LLM judge, or a custom script. This check runs automatically on every new matching session, and a session that passes joins the signal.
+  </Step>
+  <Step title="Scope">
+    Choose which sessions get checked and how many of them. See [Scope](#scope) below.
+  </Step>
+  <Step title="Test">
+    Try the detector on recent sessions before saving. See [Test](#test) below.
+  </Step>
+  <Step title="Details">
+    Give the signal a **name** and a **description**. Both are required. The name shows up in the signals list, so pick something your team will recognize.
+  </Step>
+</Steps>
+
+### Scope
+
+By default a detector runs on every session in your project. Narrow it with filters on **Tags**, **Services**, **Models**, **Providers**, or **Metadata**. With filters set, only matching sessions run through the detector and everything else is ignored.
+
+The sampling slider controls how many of those sessions get checked, from 0 to 100 percent. It defaults to 10 percent.
+
+- A set of conditions is free and instant, so checking 100 percent is usually fine.
+- An LLM judge or a script that calls an LLM costs money and time per check. On high traffic, sampling a slice still catches the pattern for much less.
+- Setting sampling to 0 pauses the signal: no sessions are checked.
+
+See [Triggers](../evaluations/triggers) for more on scope and sampling.
+
+### Test
+
+The Test step runs your detector against recent sessions from your project and shows how it scored each one. Nothing is saved. Each session gets a verdict: **match**, **no match**, **skipped** (for example, not embedded yet), or **errored**. If the verdicts look off, go back, adjust the detector or scope, and run the preview again.
+
+## After you create a signal
+
+A new signal starts empty and collects matches from new sessions onward. It does not scan your history.
+
+From there it behaves like any signal. It appears in your Signals list, its occurrences and trends build up as matching sessions arrive, and you can triage, mute, monitor, or delete it from its detail page. See [Signal management](./management).
+
+You can edit the detector, scope, and sampling of a signal you created at any time, and switch detection methods freely. Edits apply going forward. A detector you define runs exactly as you wrote it. Unlike a detector Latitude generates from a discovered signal, it is not automatically realigned to human annotations, so it keeps doing what you specified. See [Alignment](../evaluations/alignment).
+
+## Related pages
+
+- [Detection methods](../evaluations/detection-methods): the three ways to define a detector
+- [Custom scripts](../evaluations/custom-scripts): the scripting reference
+- [Signals overview](./overview): how discovery finds signals for you
+- [Signal management](./management): triage, monitor, mute, and manage signals

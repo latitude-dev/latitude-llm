@@ -1,4 +1,4 @@
-import { ExternalUserId, OrganizationId, ProjectId } from "@domain/shared"
+import { ExternalUserId, ProjectId } from "@domain/shared"
 import { buildHistogramBucketScaffold, fillBuckets, listUserSignalsUseCase } from "@domain/signals"
 import type { ProjectUserSummary, UserProfile, UsersOverview, UserUsageSlice } from "@domain/spans"
 import { USER_SORT_FIELDS, UserAnalyticsRepository } from "@domain/spans"
@@ -7,15 +7,16 @@ import {
   ScoreAnalyticsRepositoryLive,
   TaxonomyObservationRepositoryLive,
   UserAnalyticsRepositoryLive,
-  withClickHouse,
 } from "@platform/db-clickhouse"
-import { SignalRepositoryLive, TaxonomyClusterRepositoryLive, withPostgres } from "@platform/db-postgres"
+import { SignalRepositoryLive, TaxonomyClusterRepositoryLive } from "@platform/db-postgres"
 import { withTracing } from "@repo/observability"
 import { createServerFn } from "@tanstack/react-start"
 import { Effect } from "effect"
 import { z } from "zod"
-import { requireSession } from "../../server/auth.ts"
 import { getClickhouseClient, getPostgresClient } from "../../server/clients.ts"
+import { resolveOrgScope } from "../../server/resolve-org-scope.ts"
+import { withScopedClickHouse } from "../../server/scoped-clickhouse.ts"
+import { withScopedPostgres } from "../../server/scoped-postgres.ts"
 
 const DAY_SECONDS = 24 * 60 * 60
 const HOUR_SECONDS = 60 * 60
@@ -96,9 +97,8 @@ export interface ProjectUsersPageRecord {
 
 export const listProjectUsers = createServerFn({ method: "GET" })
   .inputValidator(listProjectUsersInputSchema)
-  .handler(async ({ data }): Promise<ProjectUsersPageRecord> => {
-    const { organizationId } = await requireSession()
-    const orgId = OrganizationId(organizationId)
+  .handler(async ({ data, context }): Promise<ProjectUsersPageRecord> => {
+    const orgId = await resolveOrgScope(context)
     const chClient = getClickhouseClient()
     const projectId = ProjectId(data.projectId)
     const trimmedSearchQuery = data.searchQuery?.trim() || undefined
@@ -137,7 +137,7 @@ export const listProjectUsers = createServerFn({ method: "GET" })
             : []
 
         return { page, activitySeries }
-      }).pipe(withClickHouse(UserAnalyticsRepositoryLive, chClient, orgId), withTracing),
+      }).pipe(withScopedClickHouse(UserAnalyticsRepositoryLive, chClient, orgId), withTracing),
     )
 
     const activityByUserId = new Map(result.activitySeries.map((series) => [series.userId, series.buckets] as const))
@@ -182,9 +182,8 @@ export type UsersOverviewRecord = ReturnType<typeof toUsersOverviewRecord>
 
 export const getUsersOverview = createServerFn({ method: "GET" })
   .inputValidator(usersOverviewInputSchema)
-  .handler(async ({ data }): Promise<UsersOverviewRecord> => {
-    const { organizationId } = await requireSession()
-    const orgId = OrganizationId(organizationId)
+  .handler(async ({ data, context }): Promise<UsersOverviewRecord> => {
+    const orgId = await resolveOrgScope(context)
     const chClient = getClickhouseClient()
     const projectId = ProjectId(data.projectId)
     const { from, to } = resolveRange(data.timeRange, DEFAULT_OVERVIEW_DAYS)
@@ -199,7 +198,7 @@ export const getUsersOverview = createServerFn({ method: "GET" })
           timeRange: { from, to },
           bucketSeconds,
         })
-      }).pipe(withClickHouse(UserAnalyticsRepositoryLive, chClient, orgId), withTracing),
+      }).pipe(withScopedClickHouse(UserAnalyticsRepositoryLive, chClient, orgId), withTracing),
     )
 
     return toUsersOverviewRecord(overview, { from, to, bucketSeconds })
@@ -234,9 +233,8 @@ export type UserProfileRecord = ReturnType<typeof toUserProfileRecord>
 
 export const getUserProfile = createServerFn({ method: "GET" })
   .inputValidator(userProfileInputSchema)
-  .handler(async ({ data }): Promise<UserProfileRecord | null> => {
-    const { organizationId } = await requireSession()
-    const orgId = OrganizationId(organizationId)
+  .handler(async ({ data, context }): Promise<UserProfileRecord | null> => {
+    const orgId = await resolveOrgScope(context)
     const chClient = getClickhouseClient()
 
     const profile = await Effect.runPromise(
@@ -250,7 +248,7 @@ export const getUserProfile = createServerFn({ method: "GET" })
             ...(data.errorsOnly ? { errorsOnly: true } : {}),
           })
           .pipe(Effect.catchTag("NotFoundError", () => Effect.succeed(null)))
-      }).pipe(withClickHouse(UserAnalyticsRepositoryLive, chClient, orgId), withTracing),
+      }).pipe(withScopedClickHouse(UserAnalyticsRepositoryLive, chClient, orgId), withTracing),
     )
 
     return profile ? toUserProfileRecord(profile) : null
@@ -272,9 +270,8 @@ export interface UserActivityRecord {
 
 export const getUserActivity = createServerFn({ method: "GET" })
   .inputValidator(userActivityInputSchema)
-  .handler(async ({ data }): Promise<UserActivityRecord> => {
-    const { organizationId } = await requireSession()
-    const orgId = OrganizationId(organizationId)
+  .handler(async ({ data, context }): Promise<UserActivityRecord> => {
+    const orgId = await resolveOrgScope(context)
     const chClient = getClickhouseClient()
     const { from, to } = resolveRange(data.timeRange, DEFAULT_OVERVIEW_DAYS)
     const bucketSeconds = bucketSecondsFor(from, to)
@@ -291,7 +288,7 @@ export const getUserActivity = createServerFn({ method: "GET" })
           bucketSeconds,
           ...(data.errorsOnly ? { errorsOnly: true } : {}),
         })
-      }).pipe(withClickHouse(UserAnalyticsRepositoryLive, chClient, orgId), withTracing),
+      }).pipe(withScopedClickHouse(UserAnalyticsRepositoryLive, chClient, orgId), withTracing),
     )
 
     const byBucket = new Map((series[0]?.buckets ?? []).map((bucket) => [bucket.bucket, bucket] as const))
@@ -323,9 +320,8 @@ export interface UserUsageSliceRecord {
 
 export const getUserUsage = createServerFn({ method: "GET" })
   .inputValidator(userUsageInputSchema)
-  .handler(async ({ data }): Promise<readonly UserUsageSliceRecord[]> => {
-    const { organizationId } = await requireSession()
-    const orgId = OrganizationId(organizationId)
+  .handler(async ({ data, context }): Promise<readonly UserUsageSliceRecord[]> => {
+    const orgId = await resolveOrgScope(context)
     const chClient = getClickhouseClient()
 
     const slices = await Effect.runPromise(
@@ -339,7 +335,7 @@ export const getUserUsage = createServerFn({ method: "GET" })
           ...(data.limit !== undefined ? { limit: data.limit } : {}),
           ...(data.errorsOnly ? { errorsOnly: true } : {}),
         })
-      }).pipe(withClickHouse(UserAnalyticsRepositoryLive, chClient, orgId), withTracing),
+      }).pipe(withScopedClickHouse(UserAnalyticsRepositoryLive, chClient, orgId), withTracing),
     )
 
     return slices.map((slice: UserUsageSlice) => ({ value: slice.value, traceCount: slice.traceCount }))
@@ -359,9 +355,8 @@ export interface UserSignalRecord {
 
 export const listUserSignals = createServerFn({ method: "GET" })
   .inputValidator(userInputSchema)
-  .handler(async ({ data }): Promise<readonly UserSignalRecord[]> => {
-    const { organizationId } = await requireSession()
-    const orgId = OrganizationId(organizationId)
+  .handler(async ({ data, context }): Promise<readonly UserSignalRecord[]> => {
+    const orgId = await resolveOrgScope(context)
     const pgClient = getPostgresClient()
     const chClient = getClickhouseClient()
 
@@ -371,8 +366,8 @@ export const listUserSignals = createServerFn({ method: "GET" })
         projectId: ProjectId(data.projectId),
         userId: ExternalUserId(data.userId),
       }).pipe(
-        withPostgres(SignalRepositoryLive, pgClient, orgId),
-        withClickHouse(ScoreAnalyticsRepositoryLive, chClient, orgId),
+        withScopedPostgres(SignalRepositoryLive, pgClient, orgId),
+        withScopedClickHouse(ScoreAnalyticsRepositoryLive, chClient, orgId),
         withTracing,
       ),
     )
@@ -403,9 +398,8 @@ export interface UserBehaviourRecord {
 
 export const listUserBehaviours = createServerFn({ method: "GET" })
   .inputValidator(userInputSchema)
-  .handler(async ({ data }): Promise<readonly UserBehaviourRecord[]> => {
-    const { organizationId } = await requireSession()
-    const orgId = OrganizationId(organizationId)
+  .handler(async ({ data, context }): Promise<readonly UserBehaviourRecord[]> => {
+    const orgId = await resolveOrgScope(context)
     const pgClient = getPostgresClient()
     const chClient = getClickhouseClient()
 
@@ -415,8 +409,8 @@ export const listUserBehaviours = createServerFn({ method: "GET" })
         projectId: ProjectId(data.projectId),
         userId: ExternalUserId(data.userId),
       }).pipe(
-        withPostgres(TaxonomyClusterRepositoryLive, pgClient, orgId),
-        withClickHouse(TaxonomyObservationRepositoryLive, chClient, orgId),
+        withScopedPostgres(TaxonomyClusterRepositoryLive, pgClient, orgId),
+        withScopedClickHouse(TaxonomyObservationRepositoryLive, chClient, orgId),
         withTracing,
       ),
     )

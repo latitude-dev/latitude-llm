@@ -2,6 +2,62 @@
 
 ## Unreleased
 
+## v0.3.41 - 2026-07-07
+
+### Agent Dispatch
+
+- Enabled dispatching agents directly from monitor incidents, building the dispatch context and prompt from incident data.
+
+### Showcase
+
+- Added a reserved-slug loader and client-collection merge for the showcase project, tightening org-scope resolution across web data domains (ref: #3897).
+
+### API
+
+- Extracted API operation definitions into a transport-neutral `@repo/operations` package shared across HTTP, MCP, SDK, and CLI consumers (ref: #3890).
+
+### Docs
+
+- Documented manual signal creation and aligned the "Issues" terminology to "Signals" across the public docs (ref: #3906).
+
+## v0.3.40 - 2026-07-07
+
+### Search
+
+- Removed the legacy trace-search chunk embedding path and its feature flag, making semantic trace search and highlights use shared message embeddings exclusively (ref: #3904).
+
+### Web
+
+- Kept empty or loading trace lists on the animated connection blank slate so unconnected projects consistently guide users toward instrumentation, even after onboarding has been marked complete (ref: #3905).
+
+### Agent Dispatch
+
+- Updated Cursor dispatch to the v1 agents API payload, deterministic Cursor agent IDs, and immediate config cache updates after connecting a Cursor integration (ref: #3907).
+
+## v0.3.39 - 2026-07-07
+
+### Showcase
+
+- Added automated showcase project regeneration, atomic project swaps, daily cron scheduling, stale-project retirement, and self-healing cleanup so the demo project can refresh safely without leaving old generated projects behind (ref: #3887, #3898).
+
+### Telemetry
+
+- Added Pydantic AI telemetry onboarding, docs, and provider icon support for users instrumenting Python agents with Latitude (ref: #3893).
+
+### Reliability
+
+- Hardened flagger execution so prompt-too-long model failures are treated as no-match results and malformed message parts are skipped instead of crashing flagger runs (ref: #3889, #3874).
+- Serialized concurrent claim-token redemption to prevent duplicate organization-claim races (ref: #3899).
+
+### Web
+
+- Fixed searchable selects and rich-text interactions inside modals, including the members role modal, so popovers and editor focus remain usable while dialogs are open (ref: #3901, #3903).
+- Removed the agent-dispatch feature flag now that manual dispatch is generally available (ref: #3877).
+
+### Maintenance
+
+- Updated CI, Docker build, npm, Python telemetry, and OpenTelemetry dependency versions used by the workspace and release pipelines (ref: #3775, #3853, #3854, #3856, #3857, #3858, #3859, #3860, #3861, #3862, #3864, #3865).
+
 ## v0.3.38 - 2026-07-06
 
 ### Signals
