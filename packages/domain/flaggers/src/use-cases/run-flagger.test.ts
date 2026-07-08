@@ -21,11 +21,20 @@ import { createFakeTraceRepository } from "@domain/spans/testing"
 import { Cause, Effect, Layer } from "effect"
 import { describe, expect, it } from "vitest"
 import { z } from "zod"
-import { FLAGGER_DEFAULT_CLASSIFIER_MODEL, FLAGGER_DEFAULT_INSTRUCTION_EXTRACTOR_MODEL } from "../constants.ts"
+import {
+  FLAGGER_DEFAULT_CLASSIFIER_MODEL,
+  FLAGGER_DEFAULT_INSTRUCTION_EXTRACTOR_MODEL,
+  FLAGGER_INSPECTED_AGENT_VERBATIM_MAX_CHARS,
+} from "../constants.ts"
 import type { Flagger } from "../entities/flagger.ts"
 import { FlaggerRepository } from "../ports/flagger-repository.ts"
 import { createFakeFlaggerRepository } from "../testing/fake-flagger-repository.ts"
-import { classifyTraceForFlaggerUseCase, type RunFlaggerInput, runFlaggerUseCase } from "./run-flagger.ts"
+import {
+  classifyTraceForFlaggerUseCase,
+  normalizeSystemPromptForCacheKey,
+  type RunFlaggerInput,
+  runFlaggerUseCase,
+} from "./run-flagger.ts"
 
 const INPUT: RunFlaggerInput = {
   organizationId: "a".repeat(24),
@@ -150,6 +159,36 @@ function createMemoryCacheLayer(initialEntries: ReadonlyMap<string, string> = ne
     }),
   }
 }
+
+describe("normalizeSystemPromptForCacheKey", () => {
+  it("normalizes volatile dates, uuids, ids, and emails to the same placeholders", () => {
+    const promptA =
+      "You are a support agent for org 123e4567-e89b-12d3-a456-426614174000. Request received at 2026-07-08T12:34:56.789Z from user 4009876543210987, contact jane.doe@example.com."
+    const promptB =
+      "You are a support agent for org 550e8400-e29b-41d4-a716-446655440000. Request received at 2026-07-09 01:02:03 from user 1122334455667788, contact john.smith@example.org."
+
+    expect(normalizeSystemPromptForCacheKey(promptA)).toBe(normalizeSystemPromptForCacheKey(promptB))
+  })
+
+  it("keeps materially different prompts distinct", () => {
+    const promptA = "You are a support agent that answers billing questions."
+    const promptB = "You are a support agent that answers shipping questions."
+
+    expect(normalizeSystemPromptForCacheKey(promptA)).not.toBe(normalizeSystemPromptForCacheKey(promptB))
+  })
+
+  it("collapses whitespace runs, including newlines, into single spaces and trims", () => {
+    const prompt = "  You are a support agent.\n\n\tAlways be polite.  \n"
+
+    expect(normalizeSystemPromptForCacheKey(prompt)).toBe("You are a support agent. Always be polite.")
+  })
+
+  it("replaces short digit runs with <num> and long hex-looking runs with <hex>", () => {
+    const prompt = "Ticket 4821 assigned to case a1b2c3d4e5f60718."
+
+    expect(normalizeSystemPromptForCacheKey(prompt)).toBe("Ticket <num> assigned to case <hex>.")
+  })
+})
 
 describe("runFlaggerUseCase", () => {
   it("uses the LLM flagger for jailbreaking with suspicious snippets prompt", async () => {
@@ -297,8 +336,50 @@ describe("runFlaggerUseCase", () => {
     expect(calls.generate).toHaveLength(0)
   })
 
+  it("keeps mid-size inspected system prompts verbatim without invoking the instruction extractor", async () => {
+    const midSizeSystemPrompt =
+      `You are a mid-size billing support assistant. ${"Follow the escalation policy and cite the relevant policy section. ".repeat(35)}`.trim()
+    expect(midSizeSystemPrompt.length).toBeGreaterThan(1200)
+    expect(midSizeSystemPrompt.length).toBeLessThanOrEqual(FLAGGER_INSPECTED_AGENT_VERBATIM_MAX_CHARS)
+
+    const systemInstructions = [
+      { type: "text", content: midSizeSystemPrompt },
+    ] satisfies TraceDetail["systemInstructions"]
+    const { calls, layer: aiLayer } = createFakeAI({
+      generate: <T>(input: GenerateInput<T>) => {
+        if (input.system.includes("You extract agent context")) {
+          return Effect.die("Instruction extractor must not run for mid-size verbatim prompts")
+        }
+        return Effect.succeed({ object: { matched: false } as T, tokens: 20, duration: 90_000_000 })
+      },
+    })
+
+    const result = await Effect.runPromise(
+      classifyTraceForFlaggerUseCase({
+        organizationId: INPUT.organizationId,
+        projectId: INPUT.projectId,
+        traceId: INPUT.traceId,
+        flaggerSlug: "laziness",
+        trace: makeTraceDetail(
+          [
+            { role: "user", parts: [{ type: "text", content: "Create the dashboard." }] },
+            { role: "assistant", parts: [{ type: "text", content: "Here is the dashboard." }] },
+          ],
+          [],
+          systemInstructions,
+        ),
+      }).pipe(Effect.provide(Layer.mergeAll(aiLayer, defaultCacheLayer))),
+    )
+
+    expect(result).toEqual({ matched: false })
+    expect(calls.generate).toHaveLength(1)
+    expect(calls.generate.filter((call) => call.system?.includes("You extract agent context"))).toHaveLength(0)
+    expect(calls.generate[0].prompt).toContain("EVALUATED AGENT SYSTEM PROMPT:")
+    expect(calls.generate[0].prompt).toContain(midSizeSystemPrompt)
+  })
+
   it("extracts context for long inspected system prompts before classification", async () => {
-    const longSystemPrompt = `You are a dashboard design assistant. ${"Detailed rubric. ".repeat(120)}`
+    const longSystemPrompt = `You are a dashboard design assistant. ${"Detailed rubric. ".repeat(400)}`
     const systemInstructions = [{ type: "text", content: longSystemPrompt }] satisfies TraceDetail["systemInstructions"]
     const { calls, layer: aiLayer } = createFakeAI({
       generate: <T>(input: GenerateInput<T>) => {
@@ -393,7 +474,7 @@ ${"Detailed grounding, workflow, callout, and formatting rules. ".repeat(120)}`.
 
   it("skips long inspected system prompts when the extractor cannot understand the agent", async () => {
     const systemInstructions = [
-      { type: "text", content: `Disconnected examples only. ${"example ".repeat(300)}` },
+      { type: "text", content: `Disconnected examples only. ${"example ".repeat(800)}` },
     ] satisfies TraceDetail["systemInstructions"]
     const { calls, layer: aiLayer } = createFakeAI({
       generate: <T>() =>
@@ -430,8 +511,8 @@ ${"Detailed grounding, workflow, callout, and formatting rules. ".repeat(120)}`.
   })
 
   it("uses cached long-prompt extraction results", async () => {
-    const longSystemPrompt = `You are a dashboard design assistant. ${"Detailed rubric. ".repeat(120)}`
-    const cacheKey = `org:${INPUT.organizationId}:flaggers:inspected-agent-context:v1:sha256:${createHash("sha256").update(longSystemPrompt.trim()).digest("hex")}`
+    const longSystemPrompt = `You are a dashboard design assistant. ${"Detailed rubric. ".repeat(400)}`
+    const cacheKey = `org:${INPUT.organizationId}:flaggers:inspected-agent-context:v2:sha256:${createHash("sha256").update(normalizeSystemPromptForCacheKey(longSystemPrompt)).digest("hex")}`
     const cache = createMemoryCacheLayer(
       new Map([
         [
@@ -467,6 +548,108 @@ ${"Detailed grounding, workflow, callout, and formatting rules. ".repeat(120)}`.
     expect(result).toEqual({ matched: false })
     expect(calls.generate).toHaveLength(1)
     expect(calls.generate[0].prompt).toContain("This cached agent designs dashboards.")
+  })
+
+  it("reuses the instruction extraction across traces whose system prompts differ only by volatile ids/timestamps", async () => {
+    const buildSystemPrompt = (timestamp: string, uuid: string) =>
+      `You are a dashboard design assistant handling request ${uuid} at ${timestamp}. ${"Detailed rubric. ".repeat(400)}`
+
+    const promptA = buildSystemPrompt("2026-07-08T12:34:56.789Z", "123e4567-e89b-12d3-a456-426614174000")
+    const promptB = buildSystemPrompt("2026-07-09 01:02:03", "550e8400-e29b-41d4-a716-446655440000")
+
+    const { calls, layer: aiLayer } = createFakeAI({
+      generate: <T>(input: GenerateInput<T>) => {
+        if (input.system.includes("You extract agent context")) {
+          return Effect.succeed({
+            object: {
+              understood: true,
+              agentContext: "This agent is a dashboard design assistant that should create dashboard designs.",
+            } as T,
+            tokens: 20,
+            duration: 90_000_000,
+          })
+        }
+
+        return Effect.succeed({ object: { matched: false } as T, tokens: 20, duration: 90_000_000 })
+      },
+    })
+
+    const cache = createMemoryCacheLayer()
+
+    const classify = (systemPrompt: string) =>
+      Effect.runPromise(
+        classifyTraceForFlaggerUseCase({
+          organizationId: INPUT.organizationId,
+          projectId: INPUT.projectId,
+          traceId: INPUT.traceId,
+          flaggerSlug: "laziness",
+          trace: makeTraceDetail(
+            [
+              { role: "user", parts: [{ type: "text", content: "Create the dashboard." }] },
+              { role: "assistant", parts: [{ type: "text", content: "Here is the dashboard." }] },
+            ],
+            [],
+            [{ type: "text", content: systemPrompt }],
+          ),
+        }).pipe(Effect.provide(Layer.mergeAll(aiLayer, cache.layer))),
+      )
+
+    const resultA = await classify(promptA)
+    const resultB = await classify(promptB)
+
+    expect(resultA).toEqual({ matched: false })
+    expect(resultB).toEqual({ matched: false })
+
+    const extractorCalls = calls.generate.filter((call) => call.system?.includes("You extract agent context"))
+    expect(extractorCalls).toHaveLength(1)
+    expect(calls.generate).toHaveLength(3)
+  })
+
+  it("sends the raw un-normalized system prompt to the instruction extractor even though the cache key is normalized", async () => {
+    const uuid = "123e4567-e89b-12d3-a456-426614174000"
+    const timestamp = "2026-07-08T12:34:56.789Z"
+    const longSystemPrompt = `You are a dashboard design assistant handling request ${uuid} at ${timestamp}. ${"Detailed rubric. ".repeat(400)}`
+    const systemInstructions = [{ type: "text", content: longSystemPrompt }] satisfies TraceDetail["systemInstructions"]
+
+    const { calls, layer: aiLayer } = createFakeAI({
+      generate: <T>(input: GenerateInput<T>) => {
+        if (input.system.includes("You extract agent context")) {
+          return Effect.succeed({
+            object: {
+              understood: true,
+              agentContext: "This agent is a dashboard design assistant that should create dashboard designs.",
+            } as T,
+            tokens: 20,
+            duration: 90_000_000,
+          })
+        }
+
+        return Effect.succeed({ object: { matched: false } as T, tokens: 20, duration: 90_000_000 })
+      },
+    })
+
+    const result = await Effect.runPromise(
+      classifyTraceForFlaggerUseCase({
+        organizationId: INPUT.organizationId,
+        projectId: INPUT.projectId,
+        traceId: INPUT.traceId,
+        flaggerSlug: "laziness",
+        trace: makeTraceDetail(
+          [
+            { role: "user", parts: [{ type: "text", content: "Create the dashboard." }] },
+            { role: "assistant", parts: [{ type: "text", content: "Here is the dashboard." }] },
+          ],
+          [],
+          systemInstructions,
+        ),
+      }).pipe(Effect.provide(Layer.mergeAll(aiLayer, defaultCacheLayer))),
+    )
+
+    expect(result).toEqual({ matched: false })
+    const extractorCall = calls.generate.find((call) => call.system?.includes("You extract agent context"))
+    expect(extractorCall?.prompt).toContain(uuid)
+    expect(extractorCall?.prompt).toContain(timestamp)
+    expect(normalizeSystemPromptForCacheKey(longSystemPrompt)).not.toContain(uuid)
   })
 
   it("stamps the LLM call with the no-reflag tag when the trace is itself flagger-generated", async () => {

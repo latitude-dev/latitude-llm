@@ -21,7 +21,11 @@ import { type TraceDetail, TraceRepository } from "@domain/spans"
 import { hash } from "@repo/utils"
 import { Effect, Option } from "effect"
 import { z } from "zod"
-import { FLAGGER_DEFAULT_CLASSIFIER_MODEL, FLAGGER_DEFAULT_INSTRUCTION_EXTRACTOR_MODEL } from "../constants.ts"
+import {
+  FLAGGER_DEFAULT_CLASSIFIER_MODEL,
+  FLAGGER_DEFAULT_INSTRUCTION_EXTRACTOR_MODEL,
+  FLAGGER_INSPECTED_AGENT_VERBATIM_MAX_CHARS,
+} from "../constants.ts"
 import { getFlaggerStrategy, hasFlaggerStrategy, isLlmCapableStrategy } from "../flagger-strategies/index.ts"
 import { isRecord, iterMessageParts } from "../flagger-strategies/shared.ts"
 import type { FlaggerSlug, FlaggerStrategy } from "../flagger-strategies/types.ts"
@@ -145,10 +149,9 @@ const annotationReviewOutputSchema = z.object({
   reason: z.string().optional(),
 })
 
-const INSPECTED_AGENT_VERBATIM_MAX_CHARS = 1_200
 const INSPECTED_AGENT_EXTRACTED_TRUE_TTL_SECONDS = 30 * 24 * 60 * 60
 const INSPECTED_AGENT_EXTRACTED_FALSE_TTL_SECONDS = 24 * 60 * 60
-const INSPECTED_AGENT_CONTEXT_CACHE_VERSION = 1
+const INSPECTED_AGENT_CONTEXT_CACHE_VERSION = 2
 const INSPECTED_AGENT_CONTEXT_CACHE_PREFIX = `flaggers:inspected-agent-context:v${INSPECTED_AGENT_CONTEXT_CACHE_VERSION}:sha256:`
 const FALLBACK_SYSTEM_PROMPT_CHARS = 600
 
@@ -204,11 +207,35 @@ type InspectedAgentContext =
   | { readonly available: true; readonly text: string }
   | { readonly available: false; readonly reason: string }
 
-const buildCacheKey = (organizationId: string, systemPrompt: string): Effect.Effect<string, never> =>
-  hash(systemPrompt).pipe(
+const UUID_PATTERN = /\b[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}\b/gi
+const ISO_DATETIME_PATTERN = /\d{4}-\d{2}-\d{2}(?:[T ]\d{2}:\d{2}:\d{2}(?:\.\d+)?(?:Z|[+-]\d{2}:?\d{2})?)?/g
+const TIME_PATTERN = /\b\d{1,2}:\d{2}(?::\d{2})?\b/g
+const EMAIL_PATTERN = /[\w.+-]+@[\w-]+(?:\.[\w-]+)+/g
+const HEX_RUN_PATTERN = /\b[0-9a-f]{16,}\b/gi
+const DIGIT_RUN_PATTERN = /\d{4,}/g
+
+export function normalizeSystemPromptForCacheKey(systemPrompt: string): string {
+  return systemPrompt
+    .replace(UUID_PATTERN, "<uuid>")
+    .replace(ISO_DATETIME_PATTERN, "<datetime>")
+    .replace(TIME_PATTERN, "<time>")
+    .replace(EMAIL_PATTERN, "<email>")
+    .replace(HEX_RUN_PATTERN, "<hex>")
+    .replace(DIGIT_RUN_PATTERN, "<num>")
+    .replace(/\s+/g, " ")
+    .trim()
+}
+
+const buildCacheKey = (organizationId: string, systemPrompt: string): Effect.Effect<string, never> => {
+  const normalizedSystemPrompt = normalizeSystemPromptForCacheKey(systemPrompt)
+
+  return hash(normalizedSystemPrompt).pipe(
     Effect.map((digest) => `org:${organizationId}:${INSPECTED_AGENT_CONTEXT_CACHE_PREFIX}${digest}`),
-    Effect.catch(() => Effect.succeed(`org:${organizationId}:${INSPECTED_AGENT_CONTEXT_CACHE_PREFIX}${systemPrompt}`)),
+    Effect.catch(() =>
+      Effect.succeed(`org:${organizationId}:${INSPECTED_AGENT_CONTEXT_CACHE_PREFIX}${normalizedSystemPrompt}`),
+    ),
   )
+}
 
 function parseCachedExtraction(value: string): InstructionExtractorOutput | null {
   try {
@@ -355,7 +382,7 @@ function getInspectedAgentContext(input: {
     return Effect.succeed({ available: false, reason: "missing inspected agent system prompt" })
   }
 
-  if (systemPrompt.length <= INSPECTED_AGENT_VERBATIM_MAX_CHARS) {
+  if (systemPrompt.length <= FLAGGER_INSPECTED_AGENT_VERBATIM_MAX_CHARS) {
     return Effect.succeed({ available: true, text: renderShortSystemPromptContext(systemPrompt) })
   }
 

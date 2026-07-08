@@ -34,6 +34,8 @@ export const FLAGGER_DEFAULT_ANNOTATOR_MODEL = {
   maxTokens: 2048,
 } as const
 
+export const FLAGGER_INSPECTED_AGENT_VERBATIM_MAX_CHARS = 6_000
+
 export const FLAGGER_DRAFT_DEFAULTS = {
   passed: false,
   value: 0,
