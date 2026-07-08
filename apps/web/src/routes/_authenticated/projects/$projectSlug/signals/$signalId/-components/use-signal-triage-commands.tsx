@@ -7,7 +7,7 @@ import {
   SIGNAL_PRIORITY_META,
   type SignalPriorityGroupId,
 } from "../../../../../../../components/signals/signal-priority-meta.tsx"
-import { useMembersCollection } from "../../../../../../../domains/members/members.collection.ts"
+import { useProjectMembersCollection } from "../../../../../../../domains/members/members.collection.ts"
 import { useSignalDetail, useUpdateSignalTriage } from "../../../../../../../domains/signals/signals.collection.ts"
 import { toUserMessage } from "../../../../../../../lib/errors.ts"
 import { useAuthenticatedUser } from "../../../../../-route-data.ts"
@@ -37,7 +37,7 @@ export function useSignalTriageCommands({
   const { toast } = useToast()
   const me = useAuthenticatedUser()
   const { data: issue } = useSignalDetail({ projectId, signalId })
-  const { data: members } = useMembersCollection()
+  const { data: members } = useProjectMembersCollection()
   const triage = useUpdateSignalTriage(projectId, signalId)
 
   const paletteCommands = useMemo<readonly PaletteCommand[]>(() => {

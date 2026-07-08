@@ -64,6 +64,8 @@ const RANDOM_SUFFIX_LENGTH = 4
  */
 export const SHOWCASE_PROJECT_SLUG = "lat-demo"
 
+export const SHOWCASE_ORG_CACHE_KEY = `${SHOWCASE_PROJECT_SLUG}-org`
+
 /** Slug bases reserved for the product; enforced app-layer for every {@link generateSlug} caller. */
 export const RESERVED_PROJECT_SLUGS = [SHOWCASE_PROJECT_SLUG] as const
 

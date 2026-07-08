@@ -13,7 +13,7 @@ import {
 } from "@repo/ui"
 import { CircleDashedIcon, CircleUserRoundIcon } from "lucide-react"
 import { type RefObject, useMemo, useRef, useState } from "react"
-import { useMembersCollection } from "../domains/members/members.collection.ts"
+import { useProjectMembersCollection } from "../domains/members/members.collection.ts"
 import { useAuthenticatedUser } from "../routes/_authenticated/-route-data.ts"
 
 interface MemberOption {
@@ -69,7 +69,7 @@ export function MemberSelector({
   portalContainer,
 }: MemberSelectorProps) {
   const me = useAuthenticatedUser()
-  const { data: members } = useMembersCollection()
+  const { data: members } = useProjectMembersCollection()
   const triggerRef = useRef<HTMLButtonElement>(null)
 
   const memberOptions = useMemo<MemberOption[]>(() => {

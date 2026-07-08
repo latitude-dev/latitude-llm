@@ -19,7 +19,7 @@ import {
   SIGNAL_PRIORITY_META,
   type SignalPriorityGroupId,
 } from "../../../../../../components/signals/signal-priority-meta.tsx"
-import { useMemberByUserIdMap } from "../../../../../../domains/members/members.collection.ts"
+import { useProjectMemberByUserIdMap } from "../../../../../../domains/members/members.collection.ts"
 import type { MemberRecord } from "../../../../../../domains/members/members.functions.ts"
 import type {
   SignalRecord,
@@ -162,7 +162,7 @@ export function SignalsView({
   readonly keyboardNavEnabled?: boolean
 }) {
   const navigate = useNavigate()
-  const memberByUserId = useMemberByUserIdMap()
+  const memberByUserId = useProjectMemberByUserIdMap()
   const signalIds = useMemo(() => issues.map((issue) => issue.id), [issues])
 
   const openSignal = useCallback(

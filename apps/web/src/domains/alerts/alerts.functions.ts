@@ -5,23 +5,18 @@ import {
   type IncidentNotificationKey,
   type IncidentSourceType,
   incidentSourceTypeSchema,
-  OrganizationId,
   ProjectId,
   SignalId,
 } from "@domain/shared"
 import { SignalRepository, type SignalWithLifecycle } from "@domain/signals"
-import {
-  IncidentMonitorReaderLive,
-  IncidentRepositoryLive,
-  SignalRepositoryLive,
-  withPostgres,
-} from "@platform/db-postgres"
+import { IncidentMonitorReaderLive, IncidentRepositoryLive, SignalRepositoryLive } from "@platform/db-postgres"
 import { withTracing } from "@repo/observability"
 import { createServerFn } from "@tanstack/react-start"
 import { Effect, Layer } from "effect"
 import { z } from "zod"
-import { requireSession } from "../../server/auth.ts"
 import { getPostgresClient } from "../../server/clients.ts"
+import { resolveOrgScope } from "../../server/resolve-org-scope.ts"
+import { withScopedPostgres } from "../../server/scoped-postgres.ts"
 
 export const listProjectAlertIncidentsInRangeInputSchema = z.object({
   projectId: z.string(),
@@ -100,9 +95,8 @@ export const listProjectAlertIncidentsInRange = createServerFn({
   method: "GET",
 })
   .inputValidator(listProjectAlertIncidentsInRangeInputSchema)
-  .handler(async ({ data }): Promise<{ readonly items: readonly AlertIncidentRecord[] }> => {
-    const { organizationId } = await requireSession()
-    const orgId = OrganizationId(organizationId)
+  .handler(async ({ data, context }): Promise<{ readonly items: readonly AlertIncidentRecord[] }> => {
+    const orgId = await resolveOrgScope(context)
     const projectId = ProjectId(data.projectId)
     const pgClient = getPostgresClient()
 
@@ -147,7 +141,7 @@ export const listProjectAlertIncidentsInRange = createServerFn({
           ),
         )
       }).pipe(
-        withPostgres(
+        withScopedPostgres(
           Layer.mergeAll(IncidentRepositoryLive, SignalRepositoryLive, IncidentMonitorReaderLive),
           pgClient,
           orgId,
