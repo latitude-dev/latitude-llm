@@ -557,7 +557,10 @@ export const AIAgentLive = Layer.effect(
               onStepFinish: (step) => {
                 const agentStep = toAgentStep(step)
                 steps.push(agentStep)
-                input.onStep?.(agentStep)
+                // Enforce the port's "never throws into the loop" contract regardless of the caller.
+                try {
+                  input.onStep?.(agentStep)
+                } catch {}
               },
               experimental_telemetry: {
                 isEnabled: true,
