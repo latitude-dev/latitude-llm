@@ -24,7 +24,7 @@ Chargeable actions:
 
 - `trace = 1 credit`
 - `semantic-query = 15 credits`
-- `llm-call = 250 credits`
+- `llm-call = 225 credits`
 
 AI work is billed per primitive produced, not per feature-level scan: every hosted LLM
 generation is one `llm-call` and every query-time semantic operation (query embedding
@@ -33,9 +33,10 @@ is one `semantic-query`, wherever they are produced.
 
 ### Credit price grounding
 
-Credit prices are grounded in the worst-case provider cost of one unit with a >=50%
-margin at the Pro overage rate (`$0.002/credit`). Re-run this derivation before changing
-a price, adding a model tier, or raising a token budget.
+Credit prices are grounded in the worst-case provider cost of one unit at the Pro
+overage rate (`$0.002/credit`): a `1.5x` margin over the worst LLM generation and a
+`2x` margin over the worst semantic query. Re-run this derivation before changing a
+price, adding a model tier, or raising a token budget.
 
 Provider list prices used (per million tokens, Bedrock at first-party parity, checked
 2026-07): Claude Sonnet 4.6 `$3 in / $15 out`, Claude Haiku 4.5 `$1 / $5`, MiniMax M2.5
@@ -43,8 +44,8 @@ Provider list prices used (per million tokens, Bedrock at first-party parity, ch
 
 - `llm-call`: worst case is a Claude Sonnet 4.6 call at high reasoning (GEPA proposer,
   signal generation) with an envelope of ~50k input + ~10k output tokens ≈ `$0.30`.
-  `250 credits = $0.50` at the overage rate → ~67% headroom over worst case. Cheap-model
-  calls (MiniMax judges, Haiku classifiers, worst case ≈ `$0.04`) carry a large margin by
+  `225 credits = $0.45` at the overage rate → 1.5x worst case. Cheap-model calls
+  (MiniMax judges, Haiku classifiers, worst case ≈ `$0.04`) carry a large margin by
   construction of the flat price.
 - `semantic-query`: worst case is one voyage-4-large query embedding (32k-token context
   ceiling ≈ `$0.004`) plus a rerank pass (≈ `$0.01`) ≈ `$0.015`. `15 credits = $0.03` →

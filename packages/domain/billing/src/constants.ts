@@ -15,14 +15,15 @@ export const CHARGEABLE_ACTIONS = ["trace", "semantic-query", "llm-call"] as con
 export type ChargeableAction = (typeof CHARGEABLE_ACTIONS)[number]
 
 /**
- * Credit prices are grounded in worst-case provider cost with a >=50% margin at the
- * Pro overage rate ($0.002/credit). Derivation lives in dev-docs/billing.md — re-run
- * it before changing a price or adding a model tier.
+ * Credit prices are grounded in worst-case provider cost at the Pro overage rate
+ * ($0.002/credit): 1.5x over the worst LLM generation, 2x over the worst semantic
+ * query. Derivation lives in dev-docs/billing.md — re-run it before changing a
+ * price or adding a model tier.
  */
 export const ACTION_CREDITS: Record<ChargeableAction, number> = {
   trace: 1,
   "semantic-query": 15,
-  "llm-call": 250,
+  "llm-call": 225,
 } as const
 
 export const FREE_PLAN_CONFIG = {
