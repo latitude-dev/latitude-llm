@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest"
-import { filterSetSchema } from "./filter.ts"
+import { filterSetSchema, spanRowFilterSetSchema } from "./filter.ts"
 
 describe("filterSetSchema", () => {
   it("parses a valid filter set", () => {
@@ -114,5 +114,20 @@ describe("filterSetSchema", () => {
     const input = { duration: [{ op: "gtePercentile", value: -1 }] }
     const result = filterSetSchema.safeParse(input)
     expect(result.success).toBe(false)
+  })
+})
+
+describe("spanRowFilterSetSchema", () => {
+  it("rejects gtePercentile on span row filters", () => {
+    const result = spanRowFilterSetSchema.safeParse({ duration: [{ op: "gtePercentile", value: 90 }] })
+    expect(result.success).toBe(false)
+    if (!result.success) {
+      expect(result.error.issues[0]?.message).toContain("gtePercentile is not supported on span row filters")
+    }
+  })
+
+  it("accepts absolute duration thresholds", () => {
+    const result = spanRowFilterSetSchema.safeParse({ duration: [{ op: "gte", value: 1_000_000_000 }] })
+    expect(result.success).toBe(true)
   })
 })

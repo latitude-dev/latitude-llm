@@ -29858,70 +29858,6 @@
                     ],
                     "description": "The metric: `count`, `errorRate`, `cacheHitRate`, `{sum|min|max|avg|median}` over `duration`/`cost`/`tokens`, or `{kind:'percentile',field,p}` for an arbitrary percentile (`p` in [1,99]; e.g. `p:95`)."
                   },
-                  "filters": {
-                    "description": "Structured filter set applied to the stream (same DSL as `listTraces`).",
-                    "type": "object",
-                    "propertyNames": {
-                      "type": "string"
-                    },
-                    "additionalProperties": {
-                      "type": "array",
-                      "items": {
-                        "type": "object",
-                        "properties": {
-                          "op": {
-                            "type": "string",
-                            "enum": [
-                              "eq",
-                              "neq",
-                              "gt",
-                              "gte",
-                              "lt",
-                              "lte",
-                              "in",
-                              "notIn",
-                              "contains",
-                              "notContains",
-                              "gtePercentile"
-                            ],
-                            "description": "Comparison operator applied to the field's value (e.g. `eq`, `neq`, `in`). The full operator list lives in the API reference."
-                          },
-                          "value": {
-                            "anyOf": [
-                              {
-                                "type": "string"
-                              },
-                              {
-                                "type": "number"
-                              },
-                              {
-                                "type": "boolean"
-                              },
-                              {
-                                "type": "array",
-                                "items": {
-                                  "anyOf": [
-                                    {
-                                      "type": "string"
-                                    },
-                                    {
-                                      "type": "number"
-                                    }
-                                  ]
-                                }
-                              }
-                            ],
-                            "description": "Right-hand value compared against the field. Arrays are required for `in` / `notIn`-style operators."
-                          }
-                        },
-                        "required": [
-                          "op",
-                          "value"
-                        ],
-                        "additionalProperties": false
-                      }
-                    }
-                  },
                   "timeBucket": {
                     "description": "Bucket the metric over time. Omit for a single aggregate.",
                     "type": "object",
@@ -30009,6 +29945,70 @@
                     "type": "integer",
                     "exclusiveMinimum": 0,
                     "maximum": 500
+                  },
+                  "filters": {
+                    "description": "Structured filter set applied to the stream (same DSL as `listTraces`).",
+                    "type": "object",
+                    "propertyNames": {
+                      "type": "string"
+                    },
+                    "additionalProperties": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "op": {
+                            "type": "string",
+                            "enum": [
+                              "eq",
+                              "neq",
+                              "gt",
+                              "gte",
+                              "lt",
+                              "lte",
+                              "in",
+                              "notIn",
+                              "contains",
+                              "notContains",
+                              "gtePercentile"
+                            ],
+                            "description": "Comparison operator applied to the field's value (e.g. `eq`, `neq`, `in`). The full operator list lives in the API reference."
+                          },
+                          "value": {
+                            "anyOf": [
+                              {
+                                "type": "string"
+                              },
+                              {
+                                "type": "number"
+                              },
+                              {
+                                "type": "boolean"
+                              },
+                              {
+                                "type": "array",
+                                "items": {
+                                  "anyOf": [
+                                    {
+                                      "type": "string"
+                                    },
+                                    {
+                                      "type": "number"
+                                    }
+                                  ]
+                                }
+                              }
+                            ],
+                            "description": "Right-hand value compared against the field. Arrays are required for `in` / `notIn`-style operators."
+                          }
+                        },
+                        "required": [
+                          "op",
+                          "value"
+                        ],
+                        "additionalProperties": false
+                      }
+                    }
                   }
                 },
                 "required": [
@@ -30228,70 +30228,6 @@
                     ],
                     "description": "The metric: `count`, `errorRate`, `cacheHitRate`, `{sum|min|max|avg|median}` over `duration`/`cost`/`tokens`, or `{kind:'percentile',field,p}` for an arbitrary percentile (`p` in [1,99]; e.g. `p:95`)."
                   },
-                  "filters": {
-                    "description": "Structured filter set applied to the stream (same DSL as `listTraces`).",
-                    "type": "object",
-                    "propertyNames": {
-                      "type": "string"
-                    },
-                    "additionalProperties": {
-                      "type": "array",
-                      "items": {
-                        "type": "object",
-                        "properties": {
-                          "op": {
-                            "type": "string",
-                            "enum": [
-                              "eq",
-                              "neq",
-                              "gt",
-                              "gte",
-                              "lt",
-                              "lte",
-                              "in",
-                              "notIn",
-                              "contains",
-                              "notContains",
-                              "gtePercentile"
-                            ],
-                            "description": "Comparison operator applied to the field's value (e.g. `eq`, `neq`, `in`). The full operator list lives in the API reference."
-                          },
-                          "value": {
-                            "anyOf": [
-                              {
-                                "type": "string"
-                              },
-                              {
-                                "type": "number"
-                              },
-                              {
-                                "type": "boolean"
-                              },
-                              {
-                                "type": "array",
-                                "items": {
-                                  "anyOf": [
-                                    {
-                                      "type": "string"
-                                    },
-                                    {
-                                      "type": "number"
-                                    }
-                                  ]
-                                }
-                              }
-                            ],
-                            "description": "Right-hand value compared against the field. Arrays are required for `in` / `notIn`-style operators."
-                          }
-                        },
-                        "required": [
-                          "op",
-                          "value"
-                        ],
-                        "additionalProperties": false
-                      }
-                    }
-                  },
                   "timeBucket": {
                     "description": "Bucket the metric over time. Omit for a single aggregate.",
                     "type": "object",
@@ -30379,6 +30315,70 @@
                     "type": "integer",
                     "exclusiveMinimum": 0,
                     "maximum": 500
+                  },
+                  "filters": {
+                    "description": "Structured filter set applied to the stream (same DSL as `listTraces`).",
+                    "type": "object",
+                    "propertyNames": {
+                      "type": "string"
+                    },
+                    "additionalProperties": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "op": {
+                            "type": "string",
+                            "enum": [
+                              "eq",
+                              "neq",
+                              "gt",
+                              "gte",
+                              "lt",
+                              "lte",
+                              "in",
+                              "notIn",
+                              "contains",
+                              "notContains",
+                              "gtePercentile"
+                            ],
+                            "description": "Comparison operator applied to the field's value (e.g. `eq`, `neq`, `in`). The full operator list lives in the API reference."
+                          },
+                          "value": {
+                            "anyOf": [
+                              {
+                                "type": "string"
+                              },
+                              {
+                                "type": "number"
+                              },
+                              {
+                                "type": "boolean"
+                              },
+                              {
+                                "type": "array",
+                                "items": {
+                                  "anyOf": [
+                                    {
+                                      "type": "string"
+                                    },
+                                    {
+                                      "type": "number"
+                                    }
+                                  ]
+                                }
+                              }
+                            ],
+                            "description": "Right-hand value compared against the field. Arrays are required for `in` / `notIn`-style operators."
+                          }
+                        },
+                        "required": [
+                          "op",
+                          "value"
+                        ],
+                        "additionalProperties": false
+                      }
+                    }
                   }
                 },
                 "required": [
@@ -30592,70 +30592,6 @@
                     ],
                     "description": "The metric: `count`, `errorRate`, `cacheHitRate`, `{sum|min|max|avg|median}` over `duration`/`cost`/`tokens`, or `{kind:'percentile',field,p}` for an arbitrary percentile (`p` in [1,99]; e.g. `p:95`)."
                   },
-                  "filters": {
-                    "description": "Structured filter set applied to the stream (same DSL as `listTraces`).",
-                    "type": "object",
-                    "propertyNames": {
-                      "type": "string"
-                    },
-                    "additionalProperties": {
-                      "type": "array",
-                      "items": {
-                        "type": "object",
-                        "properties": {
-                          "op": {
-                            "type": "string",
-                            "enum": [
-                              "eq",
-                              "neq",
-                              "gt",
-                              "gte",
-                              "lt",
-                              "lte",
-                              "in",
-                              "notIn",
-                              "contains",
-                              "notContains",
-                              "gtePercentile"
-                            ],
-                            "description": "Comparison operator applied to the field's value (e.g. `eq`, `neq`, `in`). The full operator list lives in the API reference."
-                          },
-                          "value": {
-                            "anyOf": [
-                              {
-                                "type": "string"
-                              },
-                              {
-                                "type": "number"
-                              },
-                              {
-                                "type": "boolean"
-                              },
-                              {
-                                "type": "array",
-                                "items": {
-                                  "anyOf": [
-                                    {
-                                      "type": "string"
-                                    },
-                                    {
-                                      "type": "number"
-                                    }
-                                  ]
-                                }
-                              }
-                            ],
-                            "description": "Right-hand value compared against the field. Arrays are required for `in` / `notIn`-style operators."
-                          }
-                        },
-                        "required": [
-                          "op",
-                          "value"
-                        ],
-                        "additionalProperties": false
-                      }
-                    }
-                  },
                   "timeBucket": {
                     "description": "Bucket the metric over time. Omit for a single aggregate.",
                     "type": "object",
@@ -30743,6 +30679,70 @@
                     "type": "integer",
                     "exclusiveMinimum": 0,
                     "maximum": 500
+                  },
+                  "filters": {
+                    "description": "Structured filter set over span row fields. `gtePercentile` is not supported — use absolute thresholds or a percentile metric.",
+                    "type": "object",
+                    "propertyNames": {
+                      "type": "string"
+                    },
+                    "additionalProperties": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "op": {
+                            "type": "string",
+                            "enum": [
+                              "eq",
+                              "neq",
+                              "gt",
+                              "gte",
+                              "lt",
+                              "lte",
+                              "in",
+                              "notIn",
+                              "contains",
+                              "notContains",
+                              "gtePercentile"
+                            ],
+                            "description": "Comparison operator applied to the field's value (e.g. `eq`, `neq`, `in`). The full operator list lives in the API reference."
+                          },
+                          "value": {
+                            "anyOf": [
+                              {
+                                "type": "string"
+                              },
+                              {
+                                "type": "number"
+                              },
+                              {
+                                "type": "boolean"
+                              },
+                              {
+                                "type": "array",
+                                "items": {
+                                  "anyOf": [
+                                    {
+                                      "type": "string"
+                                    },
+                                    {
+                                      "type": "number"
+                                    }
+                                  ]
+                                }
+                              }
+                            ],
+                            "description": "Right-hand value compared against the field. Arrays are required for `in` / `notIn`-style operators."
+                          }
+                        },
+                        "required": [
+                          "op",
+                          "value"
+                        ],
+                        "additionalProperties": false
+                      }
+                    }
                   }
                 },
                 "required": [
@@ -30891,70 +30891,6 @@
                     ],
                     "description": "The metric: `count`, `passRate`, `errorRate`, or `{avg|min|max|median}` of the 0–1 score `value`."
                   },
-                  "filters": {
-                    "description": "Structured filter set applied to the stream (same DSL as `listTraces`).",
-                    "type": "object",
-                    "propertyNames": {
-                      "type": "string"
-                    },
-                    "additionalProperties": {
-                      "type": "array",
-                      "items": {
-                        "type": "object",
-                        "properties": {
-                          "op": {
-                            "type": "string",
-                            "enum": [
-                              "eq",
-                              "neq",
-                              "gt",
-                              "gte",
-                              "lt",
-                              "lte",
-                              "in",
-                              "notIn",
-                              "contains",
-                              "notContains",
-                              "gtePercentile"
-                            ],
-                            "description": "Comparison operator applied to the field's value (e.g. `eq`, `neq`, `in`). The full operator list lives in the API reference."
-                          },
-                          "value": {
-                            "anyOf": [
-                              {
-                                "type": "string"
-                              },
-                              {
-                                "type": "number"
-                              },
-                              {
-                                "type": "boolean"
-                              },
-                              {
-                                "type": "array",
-                                "items": {
-                                  "anyOf": [
-                                    {
-                                      "type": "string"
-                                    },
-                                    {
-                                      "type": "number"
-                                    }
-                                  ]
-                                }
-                              }
-                            ],
-                            "description": "Right-hand value compared against the field. Arrays are required for `in` / `notIn`-style operators."
-                          }
-                        },
-                        "required": [
-                          "op",
-                          "value"
-                        ],
-                        "additionalProperties": false
-                      }
-                    }
-                  },
                   "timeBucket": {
                     "description": "Bucket the metric over time. Omit for a single aggregate.",
                     "type": "object",
@@ -31042,6 +30978,70 @@
                     "type": "integer",
                     "exclusiveMinimum": 0,
                     "maximum": 500
+                  },
+                  "filters": {
+                    "description": "Structured filter set applied to the stream (same DSL as `listTraces`).",
+                    "type": "object",
+                    "propertyNames": {
+                      "type": "string"
+                    },
+                    "additionalProperties": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "op": {
+                            "type": "string",
+                            "enum": [
+                              "eq",
+                              "neq",
+                              "gt",
+                              "gte",
+                              "lt",
+                              "lte",
+                              "in",
+                              "notIn",
+                              "contains",
+                              "notContains",
+                              "gtePercentile"
+                            ],
+                            "description": "Comparison operator applied to the field's value (e.g. `eq`, `neq`, `in`). The full operator list lives in the API reference."
+                          },
+                          "value": {
+                            "anyOf": [
+                              {
+                                "type": "string"
+                              },
+                              {
+                                "type": "number"
+                              },
+                              {
+                                "type": "boolean"
+                              },
+                              {
+                                "type": "array",
+                                "items": {
+                                  "anyOf": [
+                                    {
+                                      "type": "string"
+                                    },
+                                    {
+                                      "type": "number"
+                                    }
+                                  ]
+                                }
+                              }
+                            ],
+                            "description": "Right-hand value compared against the field. Arrays are required for `in` / `notIn`-style operators."
+                          }
+                        },
+                        "required": [
+                          "op",
+                          "value"
+                        ],
+                        "additionalProperties": false
+                      }
+                    }
                   }
                 },
                 "required": [
@@ -31160,70 +31160,6 @@
                     ],
                     "description": "The metric: `count`, or `{avg|min|max|median}` of the 0–1 assignment `confidence`."
                   },
-                  "filters": {
-                    "description": "Structured filter set applied to the stream (same DSL as `listTraces`).",
-                    "type": "object",
-                    "propertyNames": {
-                      "type": "string"
-                    },
-                    "additionalProperties": {
-                      "type": "array",
-                      "items": {
-                        "type": "object",
-                        "properties": {
-                          "op": {
-                            "type": "string",
-                            "enum": [
-                              "eq",
-                              "neq",
-                              "gt",
-                              "gte",
-                              "lt",
-                              "lte",
-                              "in",
-                              "notIn",
-                              "contains",
-                              "notContains",
-                              "gtePercentile"
-                            ],
-                            "description": "Comparison operator applied to the field's value (e.g. `eq`, `neq`, `in`). The full operator list lives in the API reference."
-                          },
-                          "value": {
-                            "anyOf": [
-                              {
-                                "type": "string"
-                              },
-                              {
-                                "type": "number"
-                              },
-                              {
-                                "type": "boolean"
-                              },
-                              {
-                                "type": "array",
-                                "items": {
-                                  "anyOf": [
-                                    {
-                                      "type": "string"
-                                    },
-                                    {
-                                      "type": "number"
-                                    }
-                                  ]
-                                }
-                              }
-                            ],
-                            "description": "Right-hand value compared against the field. Arrays are required for `in` / `notIn`-style operators."
-                          }
-                        },
-                        "required": [
-                          "op",
-                          "value"
-                        ],
-                        "additionalProperties": false
-                      }
-                    }
-                  },
                   "timeBucket": {
                     "description": "Bucket the metric over time. Omit for a single aggregate.",
                     "type": "object",
@@ -31311,6 +31247,70 @@
                     "type": "integer",
                     "exclusiveMinimum": 0,
                     "maximum": 500
+                  },
+                  "filters": {
+                    "description": "Structured filter set applied to the stream (same DSL as `listTraces`).",
+                    "type": "object",
+                    "propertyNames": {
+                      "type": "string"
+                    },
+                    "additionalProperties": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "op": {
+                            "type": "string",
+                            "enum": [
+                              "eq",
+                              "neq",
+                              "gt",
+                              "gte",
+                              "lt",
+                              "lte",
+                              "in",
+                              "notIn",
+                              "contains",
+                              "notContains",
+                              "gtePercentile"
+                            ],
+                            "description": "Comparison operator applied to the field's value (e.g. `eq`, `neq`, `in`). The full operator list lives in the API reference."
+                          },
+                          "value": {
+                            "anyOf": [
+                              {
+                                "type": "string"
+                              },
+                              {
+                                "type": "number"
+                              },
+                              {
+                                "type": "boolean"
+                              },
+                              {
+                                "type": "array",
+                                "items": {
+                                  "anyOf": [
+                                    {
+                                      "type": "string"
+                                    },
+                                    {
+                                      "type": "number"
+                                    }
+                                  ]
+                                }
+                              }
+                            ],
+                            "description": "Right-hand value compared against the field. Arrays are required for `in` / `notIn`-style operators."
+                          }
+                        },
+                        "required": [
+                          "op",
+                          "value"
+                        ],
+                        "additionalProperties": false
+                      }
+                    }
                   }
                 },
                 "required": [
@@ -31441,70 +31441,6 @@
                     ],
                     "description": "The metric: `count`, or `{avg|min|max|median}` of the 0–1 label `confidence` or moment `coherence`."
                   },
-                  "filters": {
-                    "description": "Structured filter set applied to the stream (same DSL as `listTraces`).",
-                    "type": "object",
-                    "propertyNames": {
-                      "type": "string"
-                    },
-                    "additionalProperties": {
-                      "type": "array",
-                      "items": {
-                        "type": "object",
-                        "properties": {
-                          "op": {
-                            "type": "string",
-                            "enum": [
-                              "eq",
-                              "neq",
-                              "gt",
-                              "gte",
-                              "lt",
-                              "lte",
-                              "in",
-                              "notIn",
-                              "contains",
-                              "notContains",
-                              "gtePercentile"
-                            ],
-                            "description": "Comparison operator applied to the field's value (e.g. `eq`, `neq`, `in`). The full operator list lives in the API reference."
-                          },
-                          "value": {
-                            "anyOf": [
-                              {
-                                "type": "string"
-                              },
-                              {
-                                "type": "number"
-                              },
-                              {
-                                "type": "boolean"
-                              },
-                              {
-                                "type": "array",
-                                "items": {
-                                  "anyOf": [
-                                    {
-                                      "type": "string"
-                                    },
-                                    {
-                                      "type": "number"
-                                    }
-                                  ]
-                                }
-                              }
-                            ],
-                            "description": "Right-hand value compared against the field. Arrays are required for `in` / `notIn`-style operators."
-                          }
-                        },
-                        "required": [
-                          "op",
-                          "value"
-                        ],
-                        "additionalProperties": false
-                      }
-                    }
-                  },
                   "timeBucket": {
                     "description": "Bucket the metric over time. Omit for a single aggregate.",
                     "type": "object",
@@ -31592,6 +31528,70 @@
                     "type": "integer",
                     "exclusiveMinimum": 0,
                     "maximum": 500
+                  },
+                  "filters": {
+                    "description": "Structured filter set applied to the stream (same DSL as `listTraces`).",
+                    "type": "object",
+                    "propertyNames": {
+                      "type": "string"
+                    },
+                    "additionalProperties": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "op": {
+                            "type": "string",
+                            "enum": [
+                              "eq",
+                              "neq",
+                              "gt",
+                              "gte",
+                              "lt",
+                              "lte",
+                              "in",
+                              "notIn",
+                              "contains",
+                              "notContains",
+                              "gtePercentile"
+                            ],
+                            "description": "Comparison operator applied to the field's value (e.g. `eq`, `neq`, `in`). The full operator list lives in the API reference."
+                          },
+                          "value": {
+                            "anyOf": [
+                              {
+                                "type": "string"
+                              },
+                              {
+                                "type": "number"
+                              },
+                              {
+                                "type": "boolean"
+                              },
+                              {
+                                "type": "array",
+                                "items": {
+                                  "anyOf": [
+                                    {
+                                      "type": "string"
+                                    },
+                                    {
+                                      "type": "number"
+                                    }
+                                  ]
+                                }
+                              }
+                            ],
+                            "description": "Right-hand value compared against the field. Arrays are required for `in` / `notIn`-style operators."
+                          }
+                        },
+                        "required": [
+                          "op",
+                          "value"
+                        ],
+                        "additionalProperties": false
+                      }
+                    }
                   }
                 },
                 "required": [
@@ -31669,7 +31669,7 @@
             "description": "Project slug (human-readable identifier)"
           },
           "filters": {
-            "description": "Row-local span filter set (same DSL as `listTraces`) over span fields — `operation`, `toolName`, `model`, `provider`, `sessionId`, `traceId`, `tags`, `status` (`error`/`ok`/`unset`), `duration`, `cost`, `tokensInput`/`tokensOutput`.",
+            "description": "Row-local span filter set (same DSL as `listTraces`) over span fields — `operation`, `toolName`, `model`, `provider`, `sessionId`, `traceId`, `tags`, `status` (`error`/`ok`/`unset`), `duration`, `cost`, `tokensInput`/`tokensOutput`. `gtePercentile` is not supported — use absolute thresholds or a percentile metric.",
             "type": "object",
             "propertyNames": {
               "type": "string"

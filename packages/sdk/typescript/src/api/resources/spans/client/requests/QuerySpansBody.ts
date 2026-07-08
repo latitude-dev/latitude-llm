@@ -7,7 +7,7 @@ import type * as Latitude from "../../../../index.js";
  *     {}
  */
 export interface QuerySpansBody {
-    /** Row-local span filter set (same DSL as `listTraces`) over span fields — `operation`, `toolName`, `model`, `provider`, `sessionId`, `traceId`, `tags`, `status` (`error`/`ok`/`unset`), `duration`, `cost`, `tokensInput`/`tokensOutput`. */
+    /** Row-local span filter set (same DSL as `listTraces`) over span fields — `operation`, `toolName`, `model`, `provider`, `sessionId`, `traceId`, `tags`, `status` (`error`/`ok`/`unset`), `duration`, `cost`, `tokensInput`/`tokensOutput`. `gtePercentile` is not supported — use absolute thresholds or a percentile metric. */
     filters?: Record<string, Latitude.FilterCondition[]>;
     /** Sort order. Defaults to newest first (`startTime` desc); use `duration`/`cost` desc for top-N slowest/costliest. */
     orderBy?: QuerySpansBody.OrderBy;

@@ -16,23 +16,41 @@ import {
   monitorTriggerSchema,
   organizationIdSchema,
   projectIdSchema,
+  spanRowFilterSetSchema,
 } from "@domain/shared"
 import { z } from "zod"
 
-export const monitorTargetSchema = z.object({
-  type: monitorTargetTypeSchema,
-  id: cuidSchema.nullable(),
-  filterSet: filterSetSchema.nullable().optional(),
-  kind: monitorTargetTypeSchema.default("user"),
-  stream: monitorStreamSchema.default("traces"),
-  query: z.string().nullable().default(null),
-  savedSearchId: cuidSchema.nullable().default(null),
-  metric: monitorMetricSchema.default({ kind: "count" }),
-})
-export type MonitorTarget = z.infer<typeof monitorTargetSchema>
-
 export const monitorStreamForTargetType = (type: MonitorTargetType): MonitorStream =>
   type === "tool" ? "spans" : type === "session" ? "sessions" : "traces"
+
+const validateSpanStreamFilterSet = (
+  stream: MonitorStream,
+  filterSet: FilterSet | null | undefined,
+  ctx: z.RefinementCtx,
+) => {
+  if (stream !== "spans" || filterSet == null) return
+  const parsed = spanRowFilterSetSchema.safeParse(filterSet)
+  if (parsed.success) return
+  for (const issue of parsed.error.issues) {
+    ctx.addIssue({ ...issue, path: ["filterSet", ...issue.path] })
+  }
+}
+
+export const monitorTargetSchema = z
+  .object({
+    type: monitorTargetTypeSchema,
+    id: cuidSchema.nullable(),
+    filterSet: filterSetSchema.nullable().optional(),
+    kind: monitorTargetTypeSchema.default("user"),
+    stream: monitorStreamSchema.default("traces"),
+    query: z.string().nullable().default(null),
+    savedSearchId: cuidSchema.nullable().default(null),
+    metric: monitorMetricSchema.default({ kind: "count" }),
+  })
+  .superRefine((target, ctx) => {
+    validateSpanStreamFilterSet(target.stream ?? monitorStreamForTargetType(target.type), target.filterSet, ctx)
+  })
+export type MonitorTarget = z.infer<typeof monitorTargetSchema>
 
 export const monitorRuleSchema = z.object({
   trigger: monitorTriggerSchema,

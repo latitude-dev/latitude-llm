@@ -15,11 +15,11 @@ import { defineOperation } from "../core/define-operation.ts"
 import type { OperationModule } from "../core/mount.ts"
 import { SpanSchema, toSpanResponse } from "../openapi/entities/span.ts"
 import {
-  FilterSetSchema,
   jsonBody,
   openApiResponses,
   PROTECTED_SECURITY,
   ProjectParamsSchema,
+  SpanRowFilterSetSchema,
 } from "../openapi/schemas.ts"
 import type { OrganizationScopedEnv } from "../types.ts"
 
@@ -63,8 +63,8 @@ const decodeSpanListCursor = (raw: string): SpanListCursor | null => {
 
 const QuerySpansBodySchema = z
   .object({
-    filters: FilterSetSchema.optional().describe(
-      "Row-local span filter set (same DSL as `listTraces`) over span fields — `operation`, `toolName`, `model`, `provider`, `sessionId`, `traceId`, `tags`, `status` (`error`/`ok`/`unset`), `duration`, `cost`, `tokensInput`/`tokensOutput`.",
+    filters: SpanRowFilterSetSchema.optional().describe(
+      "Row-local span filter set (same DSL as `listTraces`) over span fields — `operation`, `toolName`, `model`, `provider`, `sessionId`, `traceId`, `tags`, `status` (`error`/`ok`/`unset`), `duration`, `cost`, `tokensInput`/`tokensOutput`. `gtePercentile` is not supported — use absolute thresholds or a percentile metric.",
     ),
     orderBy: z
       .object({

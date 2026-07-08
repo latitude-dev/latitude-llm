@@ -15,6 +15,7 @@ import {
 } from "@domain/shared"
 import { Effect } from "effect"
 import type { Monitor, MonitorRule, MonitorTarget } from "../entities/monitor.ts"
+import { monitorTargetSchema } from "../entities/monitor.ts"
 import { SystemMonitorForbiddenError } from "../errors.ts"
 import { MonitorRepository } from "../ports/monitor-repository.ts"
 import { assertMonitorableSavedSearch } from "./assert-monitorable-saved-search.ts"
@@ -142,6 +143,15 @@ export const updateMonitorUseCase = (
         yield* validateRule(nextRule, nextTarget.metric)
         if (nextTarget.type === "savedSearch" && nextTarget.id !== null) {
           yield* assertMonitorableSavedSearch(nextTarget.id)
+        }
+
+        const parsedTarget = monitorTargetSchema.safeParse(nextTarget)
+        if (!parsedTarget.success) {
+          const issue = parsedTarget.error.issues[0]
+          return yield* new ValidationError({
+            field: issue?.path.length ? issue.path.map(String).join(".") : "target",
+            message: issue?.message ?? "Invalid monitor target",
+          })
         }
 
         const now = new Date()
