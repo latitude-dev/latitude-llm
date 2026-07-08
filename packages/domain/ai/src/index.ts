@@ -185,11 +185,29 @@ export interface AgentStep {
   readonly tokenUsage?: { readonly input: number; readonly output: number }
 }
 
+/**
+ * Provider-neutral conversation message. Round-trips a multi-turn tool loop: the
+ * adapter maps these to/from the Vercel SDK message shapes so callers can persist
+ * a transcript and replay it on the next turn without importing SDK types.
+ */
+export type AgentMessagePart =
+  | { readonly type: "text"; readonly text: string }
+  | { readonly type: "tool-call"; readonly toolCallId: string; readonly toolName: string; readonly input: unknown }
+  | { readonly type: "tool-result"; readonly toolCallId: string; readonly toolName: string; readonly output: unknown }
+
+export interface AgentMessage {
+  readonly role: "user" | "assistant" | "tool"
+  readonly content: string | ReadonlyArray<AgentMessagePart>
+}
+
 export interface RunAgentInput {
   readonly provider: string
   readonly model: string
   readonly system: string
+  /** Single-turn prompt. Ignored when `messages` is provided. */
   readonly prompt: string
+  /** Prior conversation to continue. When set (non-empty), the loop runs against it instead of `prompt`. */
+  readonly messages?: ReadonlyArray<AgentMessage>
   readonly tools: ReadonlyArray<AgentToolDef>
   /** Hard ceiling on provider steps; the loop stops once this many steps run. */
   readonly maxSteps: number
@@ -205,6 +223,8 @@ export interface RunAgentInput {
 export interface RunAgentResult {
   readonly text: string
   readonly steps: ReadonlyArray<AgentStep>
+  /** The assistant + tool messages produced this turn, to append to the transcript and replay next turn. */
+  readonly responseMessages: ReadonlyArray<AgentMessage>
   readonly tokenUsage: { readonly input: number; readonly output: number }
   readonly finishReason: string
 }

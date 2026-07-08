@@ -5,6 +5,8 @@ import { createOpenAI } from "@ai-sdk/openai"
 import { createOpenAICompatible } from "@ai-sdk/openai-compatible"
 import { fromNodeProviderChain } from "@aws-sdk/credential-providers"
 import {
+  type AgentMessage,
+  type AgentMessagePart,
   type AgentStep,
   type AgentToolDef,
   AIAgent,
@@ -504,6 +506,74 @@ export const loosenSchemaForBedrock = (schema: z.ZodType): z.ZodType | ReturnTyp
   }
 }
 
+type ModelMessage = NonNullable<GenerateTextCall["messages"]>[number]
+type GenerateTextResult = Awaited<ReturnType<typeof generateText>>
+type ResponseMessage = GenerateTextResult["response"]["messages"][number]
+
+const agentPartsToText = (parts: ReadonlyArray<AgentMessagePart>): string =>
+  parts.map((part) => (part.type === "text" ? part.text : "")).join("")
+
+const toModelMessages = (messages: ReadonlyArray<AgentMessage>): ModelMessage[] =>
+  messages.map((message): ModelMessage => {
+    if (message.role === "user") {
+      return {
+        role: "user",
+        content: typeof message.content === "string" ? message.content : agentPartsToText(message.content),
+      }
+    }
+    if (message.role === "assistant") {
+      if (typeof message.content === "string") return { role: "assistant", content: message.content }
+      const content = message.content.map((part) =>
+        part.type === "tool-call"
+          ? { type: "tool-call" as const, toolCallId: part.toolCallId, toolName: part.toolName, input: part.input }
+          : { type: "text" as const, text: part.type === "text" ? part.text : "" },
+      )
+      return { role: "assistant", content } as ModelMessage
+    }
+    const parts = typeof message.content === "string" ? [] : message.content
+    const content = parts
+      .filter((part): part is Extract<AgentMessagePart, { type: "tool-result" }> => part.type === "tool-result")
+      .map((part) => ({
+        type: "tool-result" as const,
+        toolCallId: part.toolCallId,
+        toolName: part.toolName,
+        output: { type: "json" as const, value: part.output as never },
+      }))
+    return { role: "tool", content } as ModelMessage
+  })
+
+const extractToolOutputValue = (output: unknown): unknown =>
+  output !== null && typeof output === "object" && "value" in output ? (output as { value: unknown }).value : output
+
+const fromResponseMessages = (messages: ReadonlyArray<ResponseMessage>): AgentMessage[] =>
+  messages.map((message): AgentMessage => {
+    if (message.role === "tool") {
+      const content = (message.content as ReadonlyArray<Record<string, unknown>>).map((part) => ({
+        type: "tool-result" as const,
+        toolCallId: String(part.toolCallId),
+        toolName: String(part.toolName),
+        output: extractToolOutputValue(part.output),
+      }))
+      return { role: "tool", content }
+    }
+    if (typeof message.content === "string") return { role: "assistant", content: message.content }
+    const content = (message.content as ReadonlyArray<Record<string, unknown>>).flatMap((part): AgentMessagePart[] => {
+      if (part.type === "text") return [{ type: "text", text: String(part.text) }]
+      if (part.type === "tool-call") {
+        return [
+          {
+            type: "tool-call",
+            toolCallId: String(part.toolCallId),
+            toolName: String(part.toolName),
+            input: part.input,
+          },
+        ]
+      }
+      return []
+    })
+    return { role: "assistant", content }
+  })
+
 const buildAgentTools = (defs: ReadonlyArray<AgentToolDef>, provider: string): ToolSet =>
   Object.fromEntries(
     defs.map((def) => [
@@ -547,7 +617,9 @@ export const AIAgentLive = Layer.effect(
             const result = await generateText({
               model: providerModel,
               system: input.system,
-              prompt: input.prompt,
+              ...(input.messages !== undefined && input.messages.length > 0
+                ? { messages: toModelMessages(input.messages) }
+                : { prompt: input.prompt }),
               tools: buildAgentTools(input.tools, input.provider),
               stopWhen: stepCountIs(input.maxSteps),
               reasoning: input.reasoning ?? "provider-default",
@@ -571,6 +643,7 @@ export const AIAgentLive = Layer.effect(
             return {
               text: result.text,
               steps,
+              responseMessages: fromResponseMessages(result.response.messages),
               tokenUsage: {
                 input: result.totalUsage?.inputTokens ?? 0,
                 output: result.totalUsage?.outputTokens ?? 0,
