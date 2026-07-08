@@ -1,0 +1,56 @@
+<!doctype html>
+<meta charset="utf-8">
+<style>body{margin:0;background:#0b0f14}</style>
+<svg width="1600" height="720" viewBox="0 0 1600 720" xmlns="http://www.w3.org/2000/svg" font-family="-apple-system, 'Helvetica Neue', Arial, sans-serif">
+  <defs>
+    <marker id="arr" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M 0 0 L 10 5 L 0 10 z" fill="#5b6673"/>
+    </marker>
+    <marker id="arrg" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M 0 0 L 10 5 L 0 10 z" fill="#3fb950"/>
+    </marker>
+  </defs>
+
+  <rect width="1600" height="720" fill="#0b0f14"/>
+
+  <text x="80" y="84" font-size="34" font-weight="700" fill="#e6edf3">How agents fix themselves</text>
+  <text x="80" y="118" font-size="17" fill="#8b98a5">From production failure to reviewed pull request</text>
+
+  <!-- top row -->
+  <rect x="80" y="180" width="340" height="110" rx="12" fill="#141a22" stroke="#2a3441" stroke-width="1.5"/>
+  <text x="104" y="226" font-size="21" font-weight="600" fill="#e6edf3">Your agent</text>
+  <text x="104" y="254" font-size="15" fill="#8b98a5">serving production traffic</text>
+
+  <rect x="630" y="180" width="340" height="110" rx="12" fill="#141a22" stroke="#2a3441" stroke-width="1.5"/>
+  <text x="654" y="226" font-size="21" font-weight="600" fill="#e6edf3">Telemetry</text>
+  <text x="654" y="254" font-size="15" fill="#8b98a5">traces and sessions over OpenTelemetry</text>
+
+  <rect x="1180" y="180" width="340" height="110" rx="12" fill="#141a22" stroke="#2a3441" stroke-width="1.5"/>
+  <text x="1204" y="226" font-size="21" font-weight="600" fill="#e6edf3">Signals</text>
+  <text x="1204" y="254" font-size="15" fill="#8b98a5">the patterns you care about, tracked</text>
+
+  <!-- bottom row (flows right to left) -->
+  <rect x="1180" y="420" width="340" height="110" rx="12" fill="#141a22" stroke="#2a3441" stroke-width="1.5"/>
+  <text x="1204" y="466" font-size="21" font-weight="600" fill="#e6edf3">Escalation</text>
+  <text x="1204" y="494" font-size="15" fill="#8b98a5">a signal spikes or a monitor fires</text>
+
+  <rect x="630" y="420" width="340" height="110" rx="12" fill="#141a22" stroke="#2a3441" stroke-width="1.5"/>
+  <text x="654" y="466" font-size="21" font-weight="600" fill="#e6edf3">Coding agent</text>
+  <text x="654" y="494" font-size="15" fill="#8b98a5">dispatched with the failing traces</text>
+
+  <rect x="80" y="420" width="340" height="110" rx="12" fill="#141a22" stroke="#2a3441" stroke-width="1.5"/>
+  <text x="104" y="466" font-size="21" font-weight="600" fill="#e6edf3">Pull request</text>
+  <text x="104" y="494" font-size="15" fill="#8b98a5">reviewed by a human</text>
+
+  <!-- arrows around the loop -->
+  <line x1="424" y1="235" x2="624" y2="235" stroke="#5b6673" stroke-width="2" marker-end="url(#arr)"/>
+  <line x1="974" y1="235" x2="1174" y2="235" stroke="#5b6673" stroke-width="2" marker-end="url(#arr)"/>
+  <line x1="1350" y1="294" x2="1350" y2="414" stroke="#5b6673" stroke-width="2" marker-end="url(#arr)"/>
+  <line x1="1176" y1="475" x2="976" y2="475" stroke="#5b6673" stroke-width="2" marker-end="url(#arr)"/>
+  <line x1="626" y1="475" x2="426" y2="475" stroke="#5b6673" stroke-width="2" marker-end="url(#arr)"/>
+  <line x1="250" y1="416" x2="250" y2="296" stroke="#3fb950" stroke-width="2.5" marker-end="url(#arrg)"/>
+  <text x="270" y="350" font-size="14" fill="#3fb950">the fix ships;</text>
+  <text x="270" y="370" font-size="14" fill="#3fb950">the loop keeps watching</text>
+
+  <text x="1520" y="676" font-size="14" fill="#8b98a5" text-anchor="end">docs.latitude.so</text>
+</svg>
