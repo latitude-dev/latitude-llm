@@ -110,6 +110,7 @@
       "includes": [
         "apps/web/src/domains/**/*.functions.ts",
         "!apps/web/src/domains/admin/**",
+        "!apps/web/src/domains/agent/**",
         "!apps/web/src/domains/agent-dispatch/**",
         "!apps/web/src/domains/destinations/**"
       ],
@@ -148,6 +149,7 @@
       "includes": [
         "apps/web/src/domains/**/*.functions.ts",
         "!apps/web/src/domains/admin/**",
+        "!apps/web/src/domains/agent/**",
         "!apps/web/src/domains/agent-dispatch/**",
         "!apps/web/src/domains/api-keys/**",
         "!apps/web/src/domains/auth/**",

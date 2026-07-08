@@ -11,9 +11,11 @@ import {
   Text,
 } from "@repo/ui"
 import { useHotkeys } from "@tanstack/react-hotkeys"
-import { ChevronLeftIcon, Loader2Icon } from "lucide-react"
-import { useMemo, useState } from "react"
+import { ChevronLeftIcon, Loader2Icon, SparklesIcon } from "lucide-react"
+import { useEffect, useMemo, useRef, useState } from "react"
+import { AgentSessionView } from "./agent-session-view.tsx"
 import { useCommandPalette, useCommandPaletteState } from "./command-palette-provider.tsx"
+import { useCurrentProject } from "./commands/use-current-project.ts"
 import { useGlobalCommands } from "./commands/use-global-commands.tsx"
 import { useMonitorSearchCommands } from "./commands/use-monitor-search-commands.ts"
 import { useNavigationCommands } from "./commands/use-navigation-commands.ts"
@@ -30,6 +32,8 @@ import { COMMAND_SECTION_LABELS, COMMAND_SECTION_ORDER, type PaletteCommand, typ
  * for items with a stable value, which made query-driven rows (e.g. "Search traces for …")
  * silently stop matching as the query grew.
  */
+const ASK_COMMAND_ID = "agent-ask"
+
 function commandMatches(command: PaletteCommand, query: string): boolean {
   const q = query.trim().toLowerCase()
   if (!q) return true
@@ -69,24 +73,25 @@ function buildContextGroups(commands: readonly PaletteCommand[]): CommandGroupVi
  * `parent` commands push a keyboard-navigable sub-page (e.g. "Switch organization").
  */
 export function CommandPalette() {
-  const { setOpen } = useCommandPalette()
-  const { open, registeredCommands } = useCommandPaletteState()
+  const { setOpen, setActiveAgentSessionId } = useCommandPalette()
+  const { open, registeredCommands, activeAgentSessionId } = useCommandPaletteState()
+  const currentProject = useCurrentProject()
   const [search, setSearch] = useState("")
   // Stack of opened sub-pages; the last entry is the page currently shown.
   const [pageStack, setPageStack] = useState<readonly ParentCommand[]>([])
   // The query active at each ancestor level, saved on push so going back restores it.
   const [savedSearches, setSavedSearches] = useState<readonly string[]>([])
+  // The agent "Ask" chat surface. `askPrompt` is the message to auto-send when opening a new chat.
+  const [askOpen, setAskOpen] = useState(false)
+  const [askPrompt, setAskPrompt] = useState<string | null>(null)
+  const wasOpen = useRef(false)
 
   const navigationCommands = useNavigationCommands()
   const projectCommands = useProjectCommands()
   const globalCommands = useGlobalCommands()
   const { commands: signalResults, isLoading: signalsLoading } = useSignalSearchCommands(search)
   const monitorResults = useMonitorSearchCommands(search)
-  const {
-    datasets: datasetResults,
-    savedSearches: savedSearchResults,
-    tracesFallback,
-  } = useProjectSearchCommands(search)
+  const { datasets: datasetResults, savedSearches: savedSearchResults } = useProjectSearchCommands(search)
 
   const currentPage = pageStack.at(-1) ?? null
 
@@ -119,11 +124,36 @@ export function CommandPalette() {
       commands: central.filter((command) => command.section === section),
     })).filter((group) => group.commands.length > 0)
 
-    // The "Search traces for …" fallback is the query itself, so it always shows last.
-    const trailingGroups =
-      tracesFallback.length > 0 ? [{ key: "traces", label: "Traces", commands: tracesFallback }] : []
+    // The "Ask …" agent fallback is the query itself, so it always shows last.
+    const trimmed = search.trim()
+    const askGroups: CommandGroupView[] =
+      trimmed.length > 0
+        ? [
+            {
+              key: "ask",
+              label: "Ask the agent",
+              commands: [
+                {
+                  kind: "action",
+                  id: ASK_COMMAND_ID,
+                  title: `Ask "${trimmed}"`,
+                  titleNode: (
+                    <span className="truncate">
+                      <span className="text-muted-foreground">Ask </span>
+                      <span className="font-medium text-foreground">"{trimmed}"</span>
+                    </span>
+                  ),
+                  icon: SparklesIcon,
+                  section: "actions",
+                  keywords: "ask agent assistant",
+                  perform: () => {},
+                },
+              ],
+            },
+          ]
+        : []
 
-    return [...contextGroups, ...entityGroups, ...centralGroups, ...trailingGroups]
+    return [...contextGroups, ...entityGroups, ...centralGroups, ...askGroups]
   }, [
     search,
     currentPage,
@@ -132,7 +162,6 @@ export function CommandPalette() {
     monitorResults,
     datasetResults,
     savedSearchResults,
-    tracesFallback,
     navigationCommands,
     projectCommands,
     globalCommands,
@@ -142,11 +171,29 @@ export function CommandPalette() {
     setSearch("")
     setPageStack([])
     setSavedSearches([])
+    // The chat view is per-open; `activeAgentSessionId` lives in the provider so reopening resumes it.
+    setAskOpen(false)
+    setAskPrompt(null)
   }
 
   const handleOpenChange = (next: boolean) => {
     setOpen(next)
     if (!next) resetState()
+  }
+
+  // Reopening the palette with an in-flight/last chat jumps straight back into it.
+  useEffect(() => {
+    if (open && !wasOpen.current && activeAgentSessionId) {
+      setAskOpen(true)
+      setAskPrompt(null)
+    }
+    wasOpen.current = open
+  }, [open, activeAgentSessionId])
+
+  const openAsk = (prompt: string) => {
+    setActiveAgentSessionId(null)
+    setAskPrompt(prompt)
+    setAskOpen(true)
   }
 
   // Cmd+K opens, or closes through handleOpenChange so closing via the hotkey resets the
@@ -169,6 +216,10 @@ export function CommandPalette() {
   }
 
   const execute = (command: PaletteCommand) => {
+    if (command.id === ASK_COMMAND_ID) {
+      openAsk(search.trim())
+      return
+    }
     if (command.kind === "parent") {
       // Remember this level's query so popping back restores it; the sub-page starts empty.
       setSavedSearches((saved) => [...saved, search])
@@ -183,6 +234,12 @@ export function CommandPalette() {
   // Escape backs out one step (preventing Radix from closing): pop a sub-page, otherwise
   // clear a non-empty query, and only close the palette from an empty root.
   const handleEscapeKeyDown = (event: KeyboardEvent) => {
+    if (askOpen) {
+      event.preventDefault()
+      setAskOpen(false)
+      setAskPrompt(null)
+      return
+    }
     if (pageStack.length > 0) {
       event.preventDefault()
       popPage()
@@ -202,68 +259,92 @@ export function CommandPalette() {
       shouldFilter={false}
       onEscapeKeyDown={handleEscapeKeyDown}
     >
-      {currentPage ? (
-        <button
-          type="button"
-          onClick={popPage}
-          className="flex w-full items-center gap-1 border-b border-border px-3 py-1.5 text-muted-foreground transition-colors hover:text-foreground"
-        >
-          <ChevronLeftIcon className="size-3.5" />
-          <Text.H6 color="foregroundMuted">{currentPage.title}</Text.H6>
-        </button>
-      ) : null}
-      <CommandInput
-        placeholder={
-          currentPage ? `Search ${currentPage.title.toLowerCase()}…` : "Search projects, navigate, run actions…"
-        }
-        value={search}
-        onValueChange={setSearch}
-      />
-      <CommandList>
-        {signalsLoading ? (
-          <CommandLoading>
-            <Loader2Icon className="size-3.5 animate-spin" />
-            Searching issues…
-          </CommandLoading>
-        ) : (
-          <CommandEmpty>No results found.</CommandEmpty>
-        )}
-        {groups.map((group) => (
-          <CommandGroup key={group.key} heading={group.label}>
-            {group.commands.map((command) => (
-              <CommandItem key={command.id} value={command.id} onSelect={() => execute(command)}>
-                {command.leading ?? <Icon icon={command.icon} size="sm" color="foregroundMuted" />}
-                <span className="flex min-w-0 flex-1 items-center gap-2">
-                  <Text.H5 ellipsis noWrap>
-                    {command.titleNode ?? command.title}
-                  </Text.H5>
-                  {command.subtitle ? (
-                    <Text.H6 color="foregroundMuted" ellipsis noWrap>
-                      {command.subtitle}
-                    </Text.H6>
-                  ) : null}
-                </span>
-                {command.kind === "parent" ? (
-                  <ChevronLeftIcon className="size-3.5 rotate-180 text-muted-foreground" />
-                ) : null}
-                {command.badge}
-              </CommandItem>
+      {askOpen ? (
+        <>
+          <button
+            type="button"
+            onClick={() => {
+              setAskOpen(false)
+              setAskPrompt(null)
+            }}
+            className="flex w-full items-center gap-1 border-b border-border px-3 py-1.5 text-muted-foreground transition-colors hover:text-foreground"
+          >
+            <ChevronLeftIcon className="size-3.5" />
+            <Text.H6 color="foregroundMuted">Ask the agent</Text.H6>
+          </button>
+          <AgentSessionView
+            initialSessionId={activeAgentSessionId}
+            initialPrompt={askPrompt}
+            {...(currentProject ? { projectId: currentProject.id, activeProjectSlug: currentProject.slug } : {})}
+            onSessionCreated={setActiveAgentSessionId}
+          />
+        </>
+      ) : (
+        <>
+          {currentPage ? (
+            <button
+              type="button"
+              onClick={popPage}
+              className="flex w-full items-center gap-1 border-b border-border px-3 py-1.5 text-muted-foreground transition-colors hover:text-foreground"
+            >
+              <ChevronLeftIcon className="size-3.5" />
+              <Text.H6 color="foregroundMuted">{currentPage.title}</Text.H6>
+            </button>
+          ) : null}
+          <CommandInput
+            placeholder={
+              currentPage ? `Search ${currentPage.title.toLowerCase()}…` : "Search projects, navigate, run actions…"
+            }
+            value={search}
+            onValueChange={setSearch}
+          />
+          <CommandList>
+            {signalsLoading ? (
+              <CommandLoading>
+                <Loader2Icon className="size-3.5 animate-spin" />
+                Searching issues…
+              </CommandLoading>
+            ) : (
+              <CommandEmpty>No results found.</CommandEmpty>
+            )}
+            {groups.map((group) => (
+              <CommandGroup key={group.key} heading={group.label}>
+                {group.commands.map((command) => (
+                  <CommandItem key={command.id} value={command.id} onSelect={() => execute(command)}>
+                    {command.leading ?? <Icon icon={command.icon} size="sm" color="foregroundMuted" />}
+                    <span className="flex min-w-0 flex-1 items-center gap-2">
+                      <Text.H5 ellipsis noWrap>
+                        {command.titleNode ?? command.title}
+                      </Text.H5>
+                      {command.subtitle ? (
+                        <Text.H6 color="foregroundMuted" ellipsis noWrap>
+                          {command.subtitle}
+                        </Text.H6>
+                      ) : null}
+                    </span>
+                    {command.kind === "parent" ? (
+                      <ChevronLeftIcon className="size-3.5 rotate-180 text-muted-foreground" />
+                    ) : null}
+                    {command.badge}
+                  </CommandItem>
+                ))}
+              </CommandGroup>
             ))}
-          </CommandGroup>
-        ))}
-      </CommandList>
-      <CommandFooter>
-        <span className="flex items-center gap-1">
-          <kbd className="rounded bg-muted px-1 font-mono">↑↓</kbd> navigate
-        </span>
-        <span className="flex items-center gap-1">
-          <kbd className="rounded bg-muted px-1 font-mono">↵</kbd> select
-        </span>
-        <span className="flex items-center gap-1">
-          <kbd className="rounded bg-muted px-1 font-mono">esc</kbd>{" "}
-          {currentPage ? "back" : search !== "" ? "clear" : "close"}
-        </span>
-      </CommandFooter>
+          </CommandList>
+          <CommandFooter>
+            <span className="flex items-center gap-1">
+              <kbd className="rounded bg-muted px-1 font-mono">↑↓</kbd> navigate
+            </span>
+            <span className="flex items-center gap-1">
+              <kbd className="rounded bg-muted px-1 font-mono">↵</kbd> select
+            </span>
+            <span className="flex items-center gap-1">
+              <kbd className="rounded bg-muted px-1 font-mono">esc</kbd>{" "}
+              {currentPage ? "back" : search !== "" ? "clear" : "close"}
+            </span>
+          </CommandFooter>
+        </>
+      )}
     </CommandDialog>
   )
 }

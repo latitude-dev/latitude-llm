@@ -19,11 +19,15 @@ interface CommandPaletteActions {
   readonly openCreateOrganization: () => void
   readonly register: (id: string, commands: readonly PaletteCommand[]) => void
   readonly unregister: (id: string) => void
+  /** The in-flight/last agent chat session, kept outside the palette's per-open reset so closing and
+   * reopening the palette resumes the same conversation. */
+  readonly setActiveAgentSessionId: (sessionId: string | null) => void
 }
 
 interface CommandPaletteState {
   readonly open: boolean
   readonly registeredCommands: readonly PaletteCommand[]
+  readonly activeAgentSessionId: string | null
 }
 
 const CommandPaletteActionsContext = createContext<CommandPaletteActions | null>(null)
@@ -39,6 +43,7 @@ export function CommandPaletteProvider({ children }: { children: ReactNode }) {
   const [createProjectOpen, setCreateProjectOpen] = useState(false)
   const [createOrgOpen, setCreateOrgOpen] = useState(false)
   const [registry, setRegistry] = useState<ReadonlyMap<string, readonly PaletteCommand[]>>(() => new Map())
+  const [activeAgentSessionId, setActiveAgentSessionId] = useState<string | null>(null)
 
   const register = useCallback((id: string, commands: readonly PaletteCommand[]) => {
     setRegistry((prev) => {
@@ -66,12 +71,16 @@ export function CommandPaletteProvider({ children }: { children: ReactNode }) {
       openCreateOrganization: () => setCreateOrgOpen(true),
       register,
       unregister,
+      setActiveAgentSessionId,
     }),
     [register, unregister],
   )
 
   const registeredCommands = useMemo(() => Array.from(registry.values()).flat(), [registry])
-  const state = useMemo<CommandPaletteState>(() => ({ open, registeredCommands }), [open, registeredCommands])
+  const state = useMemo<CommandPaletteState>(
+    () => ({ open, registeredCommands, activeAgentSessionId }),
+    [open, registeredCommands, activeAgentSessionId],
+  )
 
   return (
     <CommandPaletteActionsContext.Provider value={actions}>

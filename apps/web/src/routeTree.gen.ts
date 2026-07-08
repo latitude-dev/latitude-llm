@@ -51,6 +51,7 @@ import { Route as CcWrappedIdOgPngRouteImport } from './routes/cc-wrapped/$id.og
 import { Route as ApiNotificationsNidIncidentTrendDotpngRouteImport } from './routes/api/notifications/$nid/incident-trend[.]png'
 import { Route as ApiAuthMcpAuthorizeRouteImport } from './routes/api/auth/mcp/authorize'
 import { Route as ApiAuthProviderStartRouteImport } from './routes/api/auth/$provider/start'
+import { Route as ApiAgentSessionIdEventsRouteImport } from './routes/api/agent/$sessionId/events'
 import { Route as AuthenticatedProjectsProjectSlugTracesRouteImport } from './routes/_authenticated/projects/$projectSlug/traces'
 import { Route as AuthenticatedProjectsProjectSlugSettingsRouteImport } from './routes/_authenticated/projects/$projectSlug/settings'
 import { Route as AuthenticatedProjectsProjectSlugOnboardingRouteImport } from './routes/_authenticated/projects/$projectSlug/onboarding'
@@ -313,6 +314,11 @@ const ApiAuthProviderStartRoute = ApiAuthProviderStartRouteImport.update({
   path: '/api/auth/$provider/start',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiAgentSessionIdEventsRoute = ApiAgentSessionIdEventsRouteImport.update({
+  id: '/api/agent/$sessionId/events',
+  path: '/api/agent/$sessionId/events',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const AuthenticatedProjectsProjectSlugTracesRoute =
   AuthenticatedProjectsProjectSlugTracesRouteImport.update({
     id: '/traces',
@@ -549,6 +555,7 @@ export interface FileRoutesByFullPath {
   '/projects/$projectSlug/onboarding': typeof AuthenticatedProjectsProjectSlugOnboardingRoute
   '/projects/$projectSlug/settings': typeof AuthenticatedProjectsProjectSlugSettingsRouteWithChildren
   '/projects/$projectSlug/traces': typeof AuthenticatedProjectsProjectSlugTracesRoute
+  '/api/agent/$sessionId/events': typeof ApiAgentSessionIdEventsRoute
   '/api/auth/$provider/start': typeof ApiAuthProviderStartRoute
   '/api/auth/mcp/authorize': typeof ApiAuthMcpAuthorizeRoute
   '/api/notifications/$nid/incident-trend.png': typeof ApiNotificationsNidIncidentTrendDotpngRoute
@@ -620,6 +627,7 @@ export interface FileRoutesByTo {
   '/sandbox/$sandboxOrgId': typeof SandboxSandboxOrgIdIndexRoute
   '/projects/$projectSlug/onboarding': typeof AuthenticatedProjectsProjectSlugOnboardingRoute
   '/projects/$projectSlug/traces': typeof AuthenticatedProjectsProjectSlugTracesRoute
+  '/api/agent/$sessionId/events': typeof ApiAgentSessionIdEventsRoute
   '/api/auth/$provider/start': typeof ApiAuthProviderStartRoute
   '/api/auth/mcp/authorize': typeof ApiAuthMcpAuthorizeRoute
   '/api/notifications/$nid/incident-trend.png': typeof ApiNotificationsNidIncidentTrendDotpngRoute
@@ -697,6 +705,7 @@ export interface FileRoutesById {
   '/_authenticated/projects/$projectSlug/onboarding': typeof AuthenticatedProjectsProjectSlugOnboardingRoute
   '/_authenticated/projects/$projectSlug/settings': typeof AuthenticatedProjectsProjectSlugSettingsRouteWithChildren
   '/_authenticated/projects/$projectSlug/traces': typeof AuthenticatedProjectsProjectSlugTracesRoute
+  '/api/agent/$sessionId/events': typeof ApiAgentSessionIdEventsRoute
   '/api/auth/$provider/start': typeof ApiAuthProviderStartRoute
   '/api/auth/mcp/authorize': typeof ApiAuthMcpAuthorizeRoute
   '/api/notifications/$nid/incident-trend.png': typeof ApiNotificationsNidIncidentTrendDotpngRoute
@@ -774,6 +783,7 @@ export interface FileRouteTypes {
     | '/projects/$projectSlug/onboarding'
     | '/projects/$projectSlug/settings'
     | '/projects/$projectSlug/traces'
+    | '/api/agent/$sessionId/events'
     | '/api/auth/$provider/start'
     | '/api/auth/mcp/authorize'
     | '/api/notifications/$nid/incident-trend.png'
@@ -845,6 +855,7 @@ export interface FileRouteTypes {
     | '/sandbox/$sandboxOrgId'
     | '/projects/$projectSlug/onboarding'
     | '/projects/$projectSlug/traces'
+    | '/api/agent/$sessionId/events'
     | '/api/auth/$provider/start'
     | '/api/auth/mcp/authorize'
     | '/api/notifications/$nid/incident-trend.png'
@@ -921,6 +932,7 @@ export interface FileRouteTypes {
     | '/_authenticated/projects/$projectSlug/onboarding'
     | '/_authenticated/projects/$projectSlug/settings'
     | '/_authenticated/projects/$projectSlug/traces'
+    | '/api/agent/$sessionId/events'
     | '/api/auth/$provider/start'
     | '/api/auth/mcp/authorize'
     | '/api/notifications/$nid/incident-trend.png'
@@ -979,6 +991,7 @@ export interface RootRouteChildren {
   ApiObservabilityTestErrorRoute: typeof ApiObservabilityTestErrorRoute
   IntegrationsSlackInstallRoute: typeof IntegrationsSlackInstallRoute
   ApiObservabilityTestIndexRoute: typeof ApiObservabilityTestIndexRoute
+  ApiAgentSessionIdEventsRoute: typeof ApiAgentSessionIdEventsRoute
   ApiAuthProviderStartRoute: typeof ApiAuthProviderStartRoute
   ApiAuthMcpAuthorizeRoute: typeof ApiAuthMcpAuthorizeRoute
   ApiNotificationsNidIncidentTrendDotpngRoute: typeof ApiNotificationsNidIncidentTrendDotpngRoute
@@ -1279,6 +1292,13 @@ declare module '@tanstack/react-router' {
       path: '/api/auth/$provider/start'
       fullPath: '/api/auth/$provider/start'
       preLoaderRoute: typeof ApiAuthProviderStartRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/agent/$sessionId/events': {
+      id: '/api/agent/$sessionId/events'
+      path: '/api/agent/$sessionId/events'
+      fullPath: '/api/agent/$sessionId/events'
+      preLoaderRoute: typeof ApiAgentSessionIdEventsRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/_authenticated/projects/$projectSlug/traces': {
@@ -1771,6 +1791,7 @@ const rootRouteChildren: RootRouteChildren = {
   ApiObservabilityTestErrorRoute: ApiObservabilityTestErrorRoute,
   IntegrationsSlackInstallRoute: IntegrationsSlackInstallRoute,
   ApiObservabilityTestIndexRoute: ApiObservabilityTestIndexRoute,
+  ApiAgentSessionIdEventsRoute: ApiAgentSessionIdEventsRoute,
   ApiAuthProviderStartRoute: ApiAuthProviderStartRoute,
   ApiAuthMcpAuthorizeRoute: ApiAuthMcpAuthorizeRoute,
   ApiNotificationsNidIncidentTrendDotpngRoute:

@@ -397,6 +397,9 @@ importers:
       '@domain/admin':
         specifier: workspace:*
         version: link:../../packages/domain/admin
+      '@domain/agent':
+        specifier: workspace:*
+        version: link:../../packages/domain/agent
       '@domain/agent-dispatch':
         specifier: workspace:*
         version: link:../../packages/domain/agent-dispatch
