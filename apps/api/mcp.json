@@ -9091,9 +9091,50 @@
                 ],
                 "additionalProperties": false,
                 "description": "An active evaluation is being realigned."
+              },
+              {
+                "type": "object",
+                "properties": {
+                  "kind": {
+                    "type": "string",
+                    "const": "failed"
+                  },
+                  "phase": {
+                    "type": "string",
+                    "enum": [
+                      "generate",
+                      "realign"
+                    ],
+                    "description": "Which workflow failed: `generate` (creating the evaluation) or `realign` (updating it)."
+                  },
+                  "evaluationId": {
+                    "description": "Id of the evaluation whose realignment failed. Absent when the failure was during `generate`.",
+                    "type": "string",
+                    "minLength": 24,
+                    "maxLength": 24
+                  },
+                  "reason": {
+                    "anyOf": [
+                      {
+                        "type": "string"
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ],
+                    "description": "Resolved failure message, or `null` once Temporal has dropped the failed run."
+                  }
+                },
+                "required": [
+                  "kind",
+                  "phase",
+                  "reason"
+                ],
+                "additionalProperties": false,
+                "description": "The most recent generation or realignment workflow for this signal ended in failure."
               }
             ],
-            "description": "Whether the signal is currently being monitored: `automatic`, `idle`, `generating`, or `realigning`."
+            "description": "Whether the signal is currently being monitored: `automatic`, `idle`, `generating`, `realigning`, or `failed`."
           }
         },
         "required": [

@@ -85,6 +85,7 @@ export type WorkflowDescription = {
   readonly runId: string
   readonly startTime: Date
   readonly closeTime: Date | null
+  readonly failure: string | null
 }
 
 export interface WorkflowQuerierShape {
