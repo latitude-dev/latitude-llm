@@ -30,6 +30,13 @@ function nanosToDate(nanos: string | undefined): Date {
   return new Date(ms)
 }
 
+const OTEL_ROOT_PARENT_SPAN_ID = "0000000000000000"
+
+export function normalizeParentSpanId(parentSpanId: string | undefined): string {
+  const id = parentSpanId ?? ""
+  return id === OTEL_ROOT_PARENT_SPAN_ID ? "" : id
+}
+
 function resolveAnyValue(
   value: OtlpAnyValue | undefined,
 ): { type: "string" | "int" | "float" | "bool"; value: string | number | boolean } | null {
@@ -175,7 +182,7 @@ function transformSpan({
     userEmail: resolved.userEmail,
     traceId: TraceId(span.traceId.replace(/-/g, "")),
     spanId: SpanId(span.spanId),
-    parentSpanId: span.parentSpanId ?? "",
+    parentSpanId: normalizeParentSpanId(span.parentSpanId),
     apiKeyId: context.apiKeyId,
     simulationId: SimulationId(""),
     startTime: nanosToDate(span.startTimeUnixNano),
