@@ -6,6 +6,7 @@ import { abortAgentTurn, getAgentSession, respondToConfirmation, startAgentTurn 
 interface PendingConfirmation {
   readonly toolCallId: string
   readonly toolName: string
+  readonly access: string
   readonly title: string
   readonly summary: string
   readonly input: unknown
@@ -100,6 +101,7 @@ export function useAgentSession(options: {
           setPendingConfirmation({
             toolCallId: parsed.toolCallId,
             toolName: parsed.toolName,
+            access: parsed.access,
             title: parsed.title,
             summary: parsed.summary,
             input: parsed.input,
