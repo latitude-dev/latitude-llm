@@ -13,7 +13,6 @@ type OptimizeEvaluationWorkflowInput = {
 
 export type OptimizeEvaluationWorkflowResult =
   | { readonly status: "inactive" }
-  | { readonly status: "blocked"; readonly reason: "no-credits-remaining" }
   | {
       readonly status: "optimized"
       readonly evaluationId: string
@@ -88,19 +87,12 @@ export const optimizeEvaluationWorkflow = async (
     }
   }
 
-  const billingAllowed = await authorizeEvaluationGenerationBilling({
+  await authorizeEvaluationGenerationBilling({
     organizationId: input.organizationId,
     projectId: input.projectId,
     evaluationId: input.evaluationId,
     billingOperationId: input.billingOperationId,
   })
-
-  if (!billingAllowed) {
-    return {
-      status: "blocked",
-      reason: "no-credits-remaining",
-    }
-  }
 
   const collected = await collectEvaluationAlignmentExamples({
     organizationId: input.organizationId,

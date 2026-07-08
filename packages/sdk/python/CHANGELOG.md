@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [8.1.0] - 2026-07-08
+
+### Added
+
+- `SignalDetail.monitoring_state` gains a `failed` variant, returned when the most recent evaluation generation or realignment workflow for the signal ended in failure. It carries `phase` (`"generate"` or `"realign"`), an optional `evaluation_id` (present only for `realign`), and a nullable `reason` with the resolved failure message. A later successful workflow supersedes an older failure, so `failed` only reflects the latest run.
+
 ## [8.0.1] - 2026-07-07
 
 ### Changed

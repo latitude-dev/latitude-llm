@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [6.1.0] - 2026-07-08
+
+### Added
+
+- `latitude signals get` can now return a `failed` `monitoringState`, surfaced when the signal's most recent evaluation generation or realignment workflow ended in failure. It includes `phase` (`generate` or `realign`), an optional `evaluationId` (for `realign`), and a nullable `reason`. A later successful workflow supersedes an older failure.
+
 ## [6.0.0] - 2026-07-06
 
 ### Changed

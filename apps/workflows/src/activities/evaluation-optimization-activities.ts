@@ -19,6 +19,7 @@ import {
   Optimizer,
   splitOptimizationExamples,
 } from "@domain/optimizations"
+import { BadRequestError } from "@domain/shared"
 import { AIGenerateLive, withAi } from "@platform/ai"
 import {
   buildGepaProposalPrompt,
@@ -32,17 +33,24 @@ import { QuickJsScriptRuntimeLive } from "@platform/sandbox-quickjs"
 import { withTracing } from "@repo/observability"
 import { Data, Effect } from "effect"
 import { getRedisClient } from "../clients.ts"
+import { describeActivityCause, logActivityFailure } from "./activity-error.ts"
 
-class EvaluationOptimizationActivityError extends Data.TaggedError("EvaluationAlignmentActivityError")<{
+class EvaluationOptimizationActivityError extends Data.TaggedError("EvaluationOptimizationActivityError")<{
   readonly activity: string
   readonly cause: unknown
+  readonly message: string
 }> {
   readonly httpStatus = 500
 
   get httpMessage() {
-    return `Evaluation alignment activity "${this.activity}" failed`
+    return `Evaluation optimization activity "${this.activity}" failed: ${this.message}`
   }
 }
+
+const toOptimizationActivityError = (activity: string, cause: unknown): EvaluationOptimizationActivityError =>
+  cause instanceof EvaluationOptimizationActivityError
+    ? cause
+    : new EvaluationOptimizationActivityError({ activity, cause, message: describeActivityCause(cause) })
 
 const proposeOptimizationCandidate = (input: {
   readonly organizationId: string
@@ -93,24 +101,14 @@ const proposeOptimizationCandidate = (input: {
         text: script,
         hash: yield* Effect.tryPromise({
           try: () => hashOptimizationCandidateText(script),
-          catch: (cause) =>
-            new EvaluationOptimizationActivityError({
-              activity: "optimizeEvaluationDraft",
-              cause,
-            }),
+          catch: (cause) => toOptimizationActivityError("optimizeEvaluationDraft", cause),
         }),
       } satisfies OptimizationCandidate
     }).pipe(
       withAi(AIGenerateLive, getRedisClient()),
       withTracing,
       Effect.withSpan("evaluations.proposeOptimizationCandidate"),
-      Effect.mapError(
-        (cause) =>
-          new EvaluationOptimizationActivityError({
-            activity: "optimizeEvaluationDraft",
-            cause,
-          }),
-      ),
+      Effect.mapError((cause) => toOptimizationActivityError("optimizeEvaluationDraft", cause)),
     ),
   )
 
@@ -150,12 +148,13 @@ export const optimizeEvaluationDraft = (input: {
         validationRatio: ALIGNMENT_VALIDATION_SPLIT,
       })
 
-      if (dataset.valset.length === 0) {
-        return yield* Effect.fail(
-          new Error(
-            `GEPA optimization requires separate training and validation examples, got ${allExamples.length} curated example${allExamples.length === 1 ? "" : "s"}`,
-          ),
-        )
+      // A single example yields an empty valset, which GEPA tolerates (it reuses
+      // the trainset); only an empty trainset is unoptimizable. Non-retryable.
+      if (dataset.trainset.length === 0) {
+        return yield* new BadRequestError({
+          message:
+            "At least 1 of the signal's traces must be annotated by a human before its evaluation can be optimized.",
+        })
       }
 
       // Stagnation budget sized so the proposer sees at least every curated
@@ -179,10 +178,10 @@ export const optimizeEvaluationDraft = (input: {
         evaluate: async ({ candidate, example }: OptimizeEvaluationInput) => {
           const hydratedExample = examplesById.get(example.id)
           if (!hydratedExample) {
-            throw new EvaluationOptimizationActivityError({
-              activity: "optimizeEvaluationDraft",
-              cause: new Error(`Missing hydrated optimization example ${example.id}`),
-            })
+            throw toOptimizationActivityError(
+              "optimizeEvaluationDraft",
+              new Error(`Missing hydrated optimization example ${example.id}`),
+            )
           }
 
           return Effect.runPromiseWith(services)(
@@ -202,13 +201,7 @@ export const optimizeEvaluationDraft = (input: {
               withAi(AIGenerateLive, getRedisClient()),
               Effect.provide(QuickJsScriptRuntimeLive),
               withTracing,
-              Effect.mapError(
-                (cause) =>
-                  new EvaluationOptimizationActivityError({
-                    activity: "optimizeEvaluationDraft",
-                    cause,
-                  }),
-              ),
+              Effect.mapError((cause) => toOptimizationActivityError("optimizeEvaluationDraft", cause)),
             ),
           )
         },
@@ -239,13 +232,9 @@ export const optimizeEvaluationDraft = (input: {
       Effect.provide(GepaOptimizerLive),
       withTracing,
       Effect.withSpan("evaluations.optimizeEvaluationDraft"),
+      Effect.tapError((cause) => logActivityFailure("optimizeEvaluationDraft", cause)),
       Effect.mapError((cause) =>
-        cause instanceof EvaluationOptimizationActivityError
-          ? cause
-          : new EvaluationOptimizationActivityError({
-              activity: "optimizeEvaluationDraft",
-              cause,
-            }),
+        cause instanceof BadRequestError ? cause : toOptimizationActivityError("optimizeEvaluationDraft", cause),
       ),
     ),
   )
