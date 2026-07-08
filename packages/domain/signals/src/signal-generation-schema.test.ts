@@ -30,7 +30,6 @@ const emptyFilters: GeneratedSignalDraft["filters"] = {
 
 const baseDraft: GeneratedSignalDraft = {
   reasoning: "matches the observed cancel_ticket tool",
-  confirm: false,
   name: "Cancellation tool failures",
   description: "Sessions where the cancel_ticket tool fails",
   evaluationKind: "rule",
