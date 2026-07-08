@@ -10,11 +10,9 @@ This is the loop:
 
 ![Agentic self-healing logic.](article-assets/agents-fix-themselves-loop-simple-dark.png)
 
-The rest of this post is the story of wiring that loop around one agent, the support agent Latitude runs in Slack, with enough detail at each step to reproduce it for your own. Latitude is MIT-licensed, so everything described here can be checked against the code.
-
 ## First, the telemetry
 
-The support agent had been answering questions for months before anyone could say what it did all day. Instrumenting it took one change, pointing its OpenTelemetry exporter at Latitude. Every interaction started arriving as a trace, carrying the model calls, the tool calls, the retrieved context, latency, and cost, and related traces grouped into sessions, so a ten-turn conversation became a single object rather than ten disconnected rows. If your agent emits OpenTelemetry today, this step is a new endpoint rather than a rewrite.
+Latitude runs a support agent in Slack. It had been answering questions for months before anyone could say what it did all day. Instrumenting it took one change, pointing its OpenTelemetry exporter at Latitude. Every interaction started arriving as a trace, carrying the model calls, the tool calls, the retrieved context, latency, and cost, and related traces grouped into sessions, so a ten-turn conversation became a single object rather than ten disconnected rows. If your agent emits OpenTelemetry today, this step is a new endpoint rather than a rewrite.
 
 ## Finding the failure
 
