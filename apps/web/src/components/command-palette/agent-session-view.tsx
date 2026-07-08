@@ -70,7 +70,9 @@ export function AgentSessionView({
           // biome-ignore lint/a11y/noAutofocus: the palette is a focus-trapped dialog opened on demand.
           autoFocus
           className="h-full flex-1 bg-transparent text-sm outline-none placeholder:text-muted-foreground"
-          disabled={chat.running}
+          // readOnly (not disabled) so the input keeps focus while a turn runs — disabling a focused
+          // input drops focus onto the dialog shell and breaks the palette's keyboard handling.
+          readOnly={chat.running}
           value={chat.running ? (lastQuery ?? "") : input}
           placeholder={chat.running ? "" : (lastQuery ?? "Ask anything…")}
           onChange={(event) => setInput(event.target.value)}

@@ -85,6 +85,15 @@ export function CommandPalette() {
   const [askOpen, setAskOpen] = useState(false)
   const [askPrompt, setAskPrompt] = useState<string | null>(null)
   const wasOpen = useRef(false)
+  const inputRef = useRef<HTMLInputElement>(null)
+
+  // Leaving the ask view unmounts its input; hand focus back to the main search input so the palette's
+  // keyboard navigation keeps working instead of focus falling onto the dialog shell.
+  const goToMainMenu = () => {
+    setAskOpen(false)
+    setAskPrompt(null)
+    requestAnimationFrame(() => inputRef.current?.focus())
+  }
 
   const navigationCommands = useNavigationCommands()
   const projectCommands = useProjectCommands()
@@ -236,8 +245,7 @@ export function CommandPalette() {
   const handleEscapeKeyDown = (event: KeyboardEvent) => {
     if (askOpen) {
       event.preventDefault()
-      setAskOpen(false)
-      setAskPrompt(null)
+      goToMainMenu()
       return
     }
     if (pageStack.length > 0) {
@@ -265,10 +273,7 @@ export function CommandPalette() {
           initialPrompt={askPrompt}
           {...(currentProject ? { projectId: currentProject.id, activeProjectSlug: currentProject.slug } : {})}
           onSessionCreated={setActiveAgentSessionId}
-          onBack={() => {
-            setAskOpen(false)
-            setAskPrompt(null)
-          }}
+          onBack={goToMainMenu}
         />
       ) : (
         <>
@@ -283,6 +288,7 @@ export function CommandPalette() {
             </button>
           ) : null}
           <CommandInput
+            ref={inputRef}
             placeholder={
               currentPage ? `Search ${currentPage.title.toLowerCase()}…` : "Search projects, navigate, run actions…"
             }
