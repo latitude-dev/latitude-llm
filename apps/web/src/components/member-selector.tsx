@@ -14,6 +14,7 @@ import {
 import { CircleDashedIcon } from "lucide-react"
 import { type RefObject, useMemo, useRef, useState } from "react"
 import { useProjectMembersCollection } from "../domains/members/members.collection.ts"
+import { compareMemberLabelsCurrentUserFirst } from "../domains/members/pick-users-from-members.ts"
 import { useAuthenticatedUser } from "../routes/_authenticated/-route-data.ts"
 
 interface MemberOption {
@@ -44,9 +45,9 @@ interface MemberSelectorProps {
 }
 
 /**
- * Single-select picker for assigning an organization member. The list is `Unassigned` followed by
- * every active org member with a muted `(You)` suffix on the current user's row. The trigger
- * displays the selected option's avatar/icon + label.
+ * Single-select picker for assigning an organization member. The list is `Unassigned`, then the
+ * current user, then every other active org member alphabetically. The current user's row shows a
+ * muted `(You)` suffix. The trigger displays the selected option's avatar/icon + label.
  *
  * `open` / `onOpenChange` make the popup controllable so other UI (e.g. a row's kebab menu) can
  * open the picker programmatically without imperative refs.
@@ -77,8 +78,13 @@ export function MemberSelector({
           imageSrc: m.image,
         }
       })
-      .sort((a, b) => a.label.localeCompare(b.label))
-  }, [members])
+      .sort((a, b) =>
+        compareMemberLabelsCurrentUserFirst(me.id, { memberUserId: a.userId as string, label: a.label }, {
+          memberUserId: b.userId as string,
+          label: b.label,
+        }),
+      )
+  }, [members, me.id])
 
   const items = useMemo<MemberOption[]>(() => [UNASSIGNED_OPTION, ...memberOptions], [memberOptions])
 

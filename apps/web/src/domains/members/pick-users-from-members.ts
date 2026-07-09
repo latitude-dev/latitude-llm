@@ -14,6 +14,17 @@ function displayNameForMember(m: Pick<MemberRecord, "name" | "email">): string {
   return m.email
 }
 
+export function compareMemberLabelsCurrentUserFirst(
+  currentUserId: string,
+  a: { readonly memberUserId: string; readonly label: string },
+  b: { readonly memberUserId: string; readonly label: string },
+): number {
+  const aIsMe = a.memberUserId === currentUserId
+  const bIsMe = b.memberUserId === currentUserId
+  if (aIsMe !== bIsMe) return aIsMe ? -1 : 1
+  return a.label.localeCompare(b.label)
+}
+
 /** Build once (e.g. `useMemo`) and pass to `pickUserFromMembersMap` per row. */
 export function membersByUserId(members: readonly MemberRecord[]): ReadonlyMap<string, MemberRecord> {
   const map = new Map<string, MemberRecord>()

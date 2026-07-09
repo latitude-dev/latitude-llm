@@ -8,6 +8,7 @@ import {
   type SignalPriorityGroupId,
 } from "../../../../../../../components/signals/signal-priority-meta.tsx"
 import { useProjectMembersCollection } from "../../../../../../../domains/members/members.collection.ts"
+import { compareMemberLabelsCurrentUserFirst } from "../../../../../../../domains/members/pick-users-from-members.ts"
 import { useSignalDetail, useUpdateSignalTriage } from "../../../../../../../domains/signals/signals.collection.ts"
 import { toUserMessage } from "../../../../../../../lib/errors.ts"
 import { useAuthenticatedUser } from "../../../../../-route-data.ts"
@@ -66,7 +67,12 @@ export function useSignalTriageCommands({
         const isMe = member.userId === me.id
         return { userId: member.userId as string, displayName, email: member.email, image: member.image, isMe }
       })
-      .sort((a, b) => a.displayName.localeCompare(b.displayName))
+      .sort((a, b) =>
+        compareMemberLabelsCurrentUserFirst(me.id, { memberUserId: a.userId, label: a.displayName }, {
+          memberUserId: b.userId,
+          label: b.displayName,
+        }),
+      )
       .map(
         (member): PaletteCommand => ({
           id: `issue:${signalId}:assign:${member.userId}`,
