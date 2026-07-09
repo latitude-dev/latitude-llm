@@ -24,6 +24,7 @@ import {
   createDatasetFromTracesFunction,
 } from "../../../../../domains/datasets/datasets.functions.ts"
 import { useMonitors } from "../../../../../domains/monitors/monitors.collection.ts"
+import { defaultProjectTimeWindowSeconds } from "../../../../../domains/projects/default-time-window.ts"
 import { useProjectsCollection } from "../../../../../domains/projects/projects.collection.ts"
 import { useSavedSearchBySlug } from "../../../../../domains/saved-searches/saved-searches.collection.ts"
 import type { SavedSearchRecord } from "../../../../../domains/saved-searches/saved-searches.functions.ts"
@@ -71,10 +72,6 @@ import { TracesEmptyOnboarding } from "./traces-empty-onboarding.tsx"
 import { TracesView } from "./traces-view.tsx"
 
 export type ExplorerMode = "traces" | "sessions"
-
-/** Default Sessions time window when none is set — keeps listing, counts, and
- * metrics scoped to what the time filter shows (matches the Signals page). */
-const DEFAULT_SESSION_RANGE_SECONDS = 30 * 24 * 60 * 60
 
 export function ProjectExplorer({ projectSlug }: { readonly projectSlug: string }) {
   const routeProject = useRouteProject()
@@ -222,27 +219,24 @@ export function ProjectExplorer({ projectSlug }: { readonly projectSlug: string 
   const traceIdsRef = useRef<string[]>([])
 
   const filters = useMemo(() => parseFilters(rawFilters || undefined), [rawFilters])
-  // In Sessions mode, default the time range to the last month when the user
-  // hasn't set one, so listing, counts, metrics, and the time dropdown all stay
-  // scoped to the same visible window (matches the Signals page). Traces mode
-  // keeps the raw filter set untouched.
-  const sessionFilters = useMemo(() => {
-    if (!isSessions || filters.startTime) return filters
-    // Match how the time dropdown stores a "Last month" preset: an open-ended
-    // `gte` (no `lte`), so the dropdown shows "Last month" instead of a custom
-    // absolute range, and the data still scopes to the last 30 days.
-    const fromMs = Date.now() - DEFAULT_SESSION_RANGE_SECONDS * 1000
+  const defaultSessionRangeSeconds = defaultProjectTimeWindowSeconds(currentProject)
+  // Sessions and Traces share the same default window when the user hasn't picked
+  // a range (open-ended `gte` so the dropdown shows the "Last month"/"Last 2 weeks"
+  // preset). Applied in both modes so Traces isn't stuck on "All time".
+  const filtersWithDefaultTime = useMemo(() => {
+    if (filters.startTime) return filters
+    const fromMs = Date.now() - defaultSessionRangeSeconds * 1000
     return {
       ...filters,
       startTime: [{ op: "gte" as const, value: new Date(fromMs).toISOString() }],
     }
-  }, [filters, isSessions])
-  // Sessions hooks apply `withSessionDefaults` internally so orphan-fragment
-  // sessions stay hidden unless the user opts out. Trace-side surfaces here
-  // (count, export, add-to-dataset) need the same default in Sessions mode.
-  // In Traces mode `hasLlmActivity` is session-only and isn't in the trace
-  // filter registry, so we keep the raw filter set there.
-  const effectiveFilters = useMemo(() => (isSessions ? withSessionDefaults(filters) : filters), [filters, isSessions])
+  }, [filters, defaultSessionRangeSeconds])
+  // Data reads use the default-windowed set; `withSessionDefaults` (orphan-fragment
+  // hiding via `hasLlmActivity`) is session-only, so it's layered on in that mode.
+  const effectiveFilters = useMemo(
+    () => (isSessions ? withSessionDefaults(filtersWithDefaultTime) : filtersWithDefaultTime),
+    [filtersWithDefaultTime, isSessions],
+  )
   const traceColumnSettings = useTableColumnSettings<TraceColumnId>({
     storageKey: "projects.traces.columns.v1",
     columns: TRACE_COLUMN_OPTIONS,
@@ -257,8 +251,8 @@ export function ProjectExplorer({ projectSlug }: { readonly projectSlug: string 
   })
   const hasActiveFilters = Object.keys(filters).length > 0
   const hasSelectedSavedSearch = savedSearchSlug.length > 0
-  const timeFrom = getTimeFilterValue(sessionFilters, "gte")
-  const timeTo = getTimeFilterValue(sessionFilters, "lte")
+  const timeFrom = getTimeFilterValue(filtersWithDefaultTime, "gte")
+  const timeTo = getTimeFilterValue(filtersWithDefaultTime, "lte")
   const sessionsMonitorTarget = useMemo<MonitorTarget>(
     () => ({
       type: "session",
@@ -478,7 +472,7 @@ export function ProjectExplorer({ projectSlug }: { readonly projectSlug: string 
 
   const sharedViewProps = {
     projectId: currentProject.id,
-    filters,
+    filters: filtersWithDefaultTime,
     filtersOpen,
     activeTraceId: activeTraceId || undefined,
     activeDrawerTab: traceDetailTab,
@@ -658,7 +652,7 @@ export function ProjectExplorer({ projectSlug }: { readonly projectSlug: string 
         <TraceAggregationsPanel
           projectId={currentProject.id}
           projectSlug={currentProject.slug}
-          filters={sessionFilters}
+          filters={filtersWithDefaultTime}
           mode={activeTab}
           onTimeRangeSelect={onTimeRangeSelect}
         />
@@ -667,7 +661,7 @@ export function ProjectExplorer({ projectSlug }: { readonly projectSlug: string 
       {isSessions ? (
         <SessionsView
           projectId={currentProject.id}
-          filters={sessionFilters}
+          filters={filtersWithDefaultTime}
           filtersOpen={filtersOpen}
           activeSessionId={activeSessionId || undefined}
           activeTraceId={activeTraceId || undefined}
@@ -700,7 +694,7 @@ export function ProjectExplorer({ projectSlug }: { readonly projectSlug: string 
             key={activeTraceId}
             traceId={activeTraceId}
             projectId={currentProject.id}
-            filters={filters}
+            filters={filtersWithDefaultTime}
             onFiltersChange={onFiltersChange}
             onClose={closeTraceDrawer}
             onNextTrace={onNextTrace}
@@ -719,7 +713,7 @@ export function ProjectExplorer({ projectSlug }: { readonly projectSlug: string 
             projectId={currentProject.id}
             sessionId={activeSessionId}
             onClose={closeSessionPanel}
-            filters={filters}
+            filters={filtersWithDefaultTime}
             onFiltersChange={onFiltersChange}
             {...(hasSearchQuery ? { searchQuery: query } : {})}
           />

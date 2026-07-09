@@ -371,4 +371,54 @@ describe("updateMonitorUseCase", () => {
     expect(error).toBeInstanceOf(ValidationError)
     expect(error.message).toBe("Monitor target cannot be changed after creation")
   })
+
+  it("closes an open threshold incident when the condition changes", async () => {
+    const incidentId = AlertIncidentId("i".repeat(24))
+    const incidentRepo = createIncidentRepo(incidentId)
+    const outbox = createOutbox()
+    const thresholdRule = {
+      trigger: "threshold" as const,
+      severity: "high" as const,
+      config: {
+        metric: { kind: "count" as const },
+        condition: {
+          trigger: "threshold" as const,
+          metric: { kind: "count" as const },
+          threshold: { mode: "absolute" as const, value: 2 },
+          direction: "above" as const,
+        },
+      },
+    }
+    const { repo } = createFakeMonitorRepository([makeMonitor({ rule: thresholdRule })])
+
+    await run(
+      updateMonitorUseCase({
+        id: monitorId,
+        rule: {
+          trigger: "threshold",
+          severity: "high",
+          config: {
+            metric: { kind: "count" },
+            condition: {
+              trigger: "threshold",
+              metric: { kind: "count" },
+              threshold: { mode: "absolute", value: 5 },
+              direction: "above",
+            },
+          },
+        },
+      }),
+      repo,
+      incidentRepo.repo,
+      outbox.writer,
+    )
+
+    expect(incidentRepo.closeOpenCalls).toMatchObject([{ sourceType: "monitor", sourceId: monitorId }])
+    // reason "resolved" is silent in the IncidentClosed handler → no recovery email on a reconfigure.
+    expect(outbox.events[0]).toMatchObject({
+      eventName: "IncidentClosed",
+      aggregateId: incidentId,
+      payload: { alertIncidentId: incidentId, reason: "resolved" },
+    })
+  })
 })

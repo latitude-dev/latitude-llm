@@ -1,14 +1,14 @@
-import { Button, GitHubIcon, GoogleIcon, Icon, LatitudeLogo, Text } from "@repo/ui"
+import { Button, GitHubIcon, GoogleIcon, Icon, Input, Text } from "@repo/ui"
 import { createFileRoute, redirect } from "@tanstack/react-router"
 import { AlertCircle, ArrowRight, Mail } from "lucide-react"
 import { type SubmitEvent, useCallback, useRef, useState } from "react"
 import z from "zod"
+import { AuthScreen } from "../components/auth-screen.tsx"
 import { Turnstile } from "../components/turnstile.tsx"
 import { sendMagicLink } from "../domains/auth/auth.functions.ts"
 import { getSession } from "../domains/sessions/session.functions.ts"
 import { lookupSsoForEmail } from "../domains/sso/sso.functions.ts"
 import { appendTrackingParams, gtmHeadScripts, pickTrackingParams } from "../lib/analytics/gtm.ts"
-import { GtmNoScript, SignupCompleteWatcher } from "../lib/analytics/signup-complete-watcher.tsx"
 import { oauthCallbackErrorMessage } from "../lib/auth/oauth-errors.ts"
 import { authClient } from "../lib/auth-client.ts"
 import { TURNSTILE_SITE_KEY } from "../lib/auth-config.ts"
@@ -141,167 +141,153 @@ function LoginPage() {
 
   if (isSent) {
     return (
-      <div className="flex flex-col items-center justify-center min-h-screen p-4 bg-background">
-        <GtmNoScript />
-        <SignupCompleteWatcher />
-        <div className="flex flex-col items-center justify-center gap-y-6 max-w-[22rem] w-full">
-          <LatitudeLogo />
-
-          <div className="flex flex-col items-center gap-4 w-full">
-            <div className="flex h-12 w-12 items-center justify-center rounded-full bg-primary/10">
-              <Icon icon={Mail} className="h-6 w-6 text-primary" />
-            </div>
-            <Text.H3 align="center">Check your email</Text.H3>
-            <Text.H5 color="foregroundMuted" align="center">
-              We sent a link to <strong>{email}</strong>
-            </Text.H5>
-            <Text.H6 color="foregroundMuted" align="center">
-              Click the link in the email to continue. The link will expire in 1 hour.
-            </Text.H6>
-            <Button
-              variant="ghost"
-              className="w-full"
-              onClick={() => {
-                setIsSent(false)
-                setEmail("")
-              }}
-            >
-              Use a different email
-            </Button>
+      <AuthScreen>
+        <div className="flex flex-col items-center gap-4 w-full">
+          <div className="flex h-12 w-12 items-center justify-center rounded-full bg-primary/10">
+            <Icon icon={Mail} className="h-6 w-6 text-primary" />
           </div>
+          <Text.H3 align="center">Check your email</Text.H3>
+          <Text.H5 color="foregroundMuted" align="center">
+            We sent a link to <strong>{email}</strong>
+          </Text.H5>
+          <Text.H6 color="foregroundMuted" align="center">
+            Click the link in the email to continue. The link will expire in 1 hour.
+          </Text.H6>
+          <Button
+            variant="ghost"
+            className="w-full"
+            onClick={() => {
+              setIsSent(false)
+              setEmail("")
+            }}
+          >
+            Use a different email
+          </Button>
         </div>
-      </div>
+      </AuthScreen>
     )
   }
 
   return (
-    <div className="flex flex-col items-center justify-center min-h-screen p-4 bg-background">
-      <GtmNoScript />
-      <SignupCompleteWatcher />
-      <div className="flex flex-col gap-y-8 max-w-[22rem] w-full">
-        <div className="flex flex-col items-center justify-center gap-y-2">
-          <LatitudeLogo />
-          <Text.H3 align="center">Welcome to Latitude</Text.H3>
-          <a
-            href="https://app.latitude.so"
-            target="_blank"
-            rel="noopener noreferrer"
-            className="flex items-center gap-1 mt-1 bg-primary-muted hover:bg-primary-muted/80 transition-colors rounded-xl py-0.5 pl-3 pr-1.5"
-          >
-            <Text.H6 color="primary" weight="medium">
-              Latitude V1 is still available, click to access
-            </Text.H6>
-            <Icon icon={ArrowRight} size="xs" color="primary" />
-          </a>
-        </div>
-
-        <div className="flex flex-col gap-4 rounded-xl overflow-hidden shadow-none bg-muted/50 border border-border p-6">
-          <form onSubmit={handleSubmit} className="flex flex-col gap-4">
-            <label htmlFor="email" className="flex flex-col gap-2">
-              <Text.H6 weight="medium">Email</Text.H6>
-              <input
-                id="email"
-                name="email"
-                type="email"
-                placeholder="Ex.: jon@example.com"
-                required
-                autoComplete="email"
-                data-autofocus="true"
-                defaultValue={email}
-                className="flex w-full border border-input bg-background rounded-lg text-sm leading-5 px-3 py-2 h-9 placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
-              />
-            </label>
-
-            {TURNSTILE_SITE_KEY && (
-              <Turnstile
-                siteKey={TURNSTILE_SITE_KEY}
-                onVerify={handleCaptchaVerify}
-                onExpire={handleCaptchaExpire}
-                onError={handleCaptchaExpire}
-              />
-            )}
-
-            {error && (
-              <div className="flex items-start gap-2">
-                <div className="shrink-0 mt-0.5">
-                  <Icon icon={AlertCircle} size="sm" color="destructive" />
-                </div>
-                <Text.H6 color="destructive">{error}</Text.H6>
-              </div>
-            )}
-
-            <Button
-              size="full"
-              type="submit"
-              disabled={isLoading}
-              className="relative w-full inline-flex items-center justify-center rounded-lg text-sm font-semibold leading-5 text-white bg-primary hover:bg-primary/90 disabled:opacity-50 disabled:pointer-events-none h-9 px-3 py-2 shadow-[inset_0px_0px_0px_1px_rgba(0,0,0,0.4)] active:translate-y-[1px] active:shadow-none transition-all"
-            >
-              {isRedirectingToSso
-                ? "Redirecting to your identity provider…"
-                : isLoading
-                  ? "Sending…"
-                  : "Continue with email"}
-            </Button>
-          </form>
-
-          <div className="flex items-center gap-2">
-            <div className="flex-1 h-[1px] bg-border" />
-            <span className="bg-muted/50 px-2 text-xs leading-4 text-muted-foreground">Or</span>
-            <div className="flex-1 h-[1px] bg-border" />
-          </div>
-
-          <div className="flex flex-col gap-2">
-            <Button
-              variant="ghost"
-              onClick={handleGoogleClick}
-              disabled={isLoading}
-              className="relative w-full inline-flex items-center justify-center rounded-lg text-sm font-medium leading-5 text-foreground bg-background border border-input hover:bg-muted disabled:opacity-50 disabled:pointer-events-none h-9 px-3 py-2 transition-colors"
-            >
-              <GoogleIcon className="mr-2" />
-              Continue with Google
-            </Button>
-
-            <Button
-              size="lg"
-              variant="ghost"
-              onClick={handleGitHubClick}
-              disabled={isLoading}
-              className="relative w-full inline-flex items-center justify-center rounded-lg text-sm font-medium leading-5 text-foreground bg-background border border-input hover:bg-muted disabled:opacity-50 disabled:pointer-events-none h-9 px-3 py-2 transition-colors"
-            >
-              <GitHubIcon className="mr-2" />
-              Continue with GitHub
-            </Button>
-          </div>
-        </div>
-
-        <div className="flex flex-col items-center justify-center gap-y-4">
-          <Text.H6 color="foregroundMuted" align="center">
-            If you have any problem or suggestion check our{" "}
-            <a
-              href="https://docs.latitude.so"
-              className="text-accent-foreground underline hover:no-underline"
-              target="_blank"
-              rel="noopener noreferrer"
-            >
-              documentation
-            </a>{" "}
-            or contact us via{" "}
-            <a href="mailto:hello@latitude.so" className="text-accent-foreground underline hover:no-underline">
-              email
-            </a>{" "}
-            or{" "}
-            <a
-              href="https://join.slack.com/t/trylatitude/shared_invite/zt-35wu2h9es-N419qlptPMhyOeIpj3vjzw"
-              className="text-accent-foreground underline hover:no-underline"
-              target="_blank"
-              rel="noopener noreferrer"
-            >
-              Slack
-            </a>
-            .
+    <AuthScreen>
+      <div className="flex flex-col items-center justify-center gap-y-1 -mt-2">
+        <Text.H3 align="center">Welcome to Latitude</Text.H3>
+        <a
+          href="https://app.latitude.so"
+          target="_blank"
+          rel="noopener noreferrer"
+          className="flex items-center gap-1 mt-1 bg-primary-muted hover:bg-primary-muted/80 transition-colors rounded-xl py-0.5 pl-3 pr-1.5"
+        >
+          <Text.H6 color="primary" weight="medium">
+            Latitude V1 is still available, click to access
           </Text.H6>
+          <Icon icon={ArrowRight} size="xs" color="primary" />
+        </a>
+      </div>
+
+      <div className="flex flex-col gap-4 rounded-xl overflow-hidden shadow-none bg-muted/50 border border-border p-6">
+        <form onSubmit={handleSubmit} className="flex flex-col gap-4">
+          <Input
+            name="email"
+            type="email"
+            label="Email"
+            placeholder="Ex.: jon@example.com"
+            required
+            autoComplete="email"
+            data-autofocus="true"
+            background="background"
+            defaultValue={email}
+          />
+
+          {TURNSTILE_SITE_KEY && (
+            <Turnstile
+              siteKey={TURNSTILE_SITE_KEY}
+              onVerify={handleCaptchaVerify}
+              onExpire={handleCaptchaExpire}
+              onError={handleCaptchaExpire}
+            />
+          )}
+
+          {error && (
+            <div className="flex items-start gap-2">
+              <div className="shrink-0 mt-0.5">
+                <Icon icon={AlertCircle} size="sm" color="destructive" />
+              </div>
+              <Text.H6 color="destructive">{error}</Text.H6>
+            </div>
+          )}
+
+          <Button
+            size="full"
+            type="submit"
+            disabled={isLoading}
+            className="relative w-full inline-flex items-center justify-center rounded-lg text-sm font-semibold leading-5 text-white bg-primary hover:bg-primary/90 disabled:opacity-50 disabled:pointer-events-none h-9 px-3 py-2 shadow-[inset_0px_0px_0px_1px_rgba(0,0,0,0.4)] active:translate-y-[1px] active:shadow-none transition-all"
+          >
+            {isRedirectingToSso
+              ? "Redirecting to your identity provider…"
+              : isLoading
+                ? "Sending…"
+                : "Continue with email"}
+          </Button>
+        </form>
+
+        <div className="flex items-center gap-2">
+          <div className="flex-1 h-[1px] bg-border" />
+          <span className="bg-muted/50 px-2 text-xs leading-4 text-muted-foreground">Or</span>
+          <div className="flex-1 h-[1px] bg-border" />
+        </div>
+
+        <div className="flex flex-col gap-2">
+          <Button
+            variant="ghost"
+            onClick={handleGoogleClick}
+            disabled={isLoading}
+            className="relative w-full inline-flex items-center justify-center rounded-lg text-sm font-medium leading-5 text-foreground bg-background border border-input hover:bg-muted disabled:opacity-50 disabled:pointer-events-none h-9 px-3 py-2 transition-colors"
+          >
+            <GoogleIcon className="mr-2" />
+            Continue with Google
+          </Button>
+
+          <Button
+            size="lg"
+            variant="ghost"
+            onClick={handleGitHubClick}
+            disabled={isLoading}
+            className="relative w-full inline-flex items-center justify-center rounded-lg text-sm font-medium leading-5 text-foreground bg-background border border-input hover:bg-muted disabled:opacity-50 disabled:pointer-events-none h-9 px-3 py-2 transition-colors"
+          >
+            <GitHubIcon className="mr-2" />
+            Continue with GitHub
+          </Button>
         </div>
       </div>
-    </div>
+
+      <div className="flex flex-col items-center justify-center gap-y-4">
+        <Text.H6 color="foregroundMuted" align="center">
+          If you have any problem or suggestion check our{" "}
+          <a
+            href="https://docs.latitude.so"
+            className="text-accent-foreground underline hover:no-underline"
+            target="_blank"
+            rel="noopener noreferrer"
+          >
+            documentation
+          </a>{" "}
+          or contact us via{" "}
+          <a href="mailto:hello@latitude.so" className="text-accent-foreground underline hover:no-underline">
+            email
+          </a>{" "}
+          or{" "}
+          <a
+            href="https://join.slack.com/t/trylatitude/shared_invite/zt-35wu2h9es-N419qlptPMhyOeIpj3vjzw"
+            className="text-accent-foreground underline hover:no-underline"
+            target="_blank"
+            rel="noopener noreferrer"
+          >
+            Slack
+          </a>
+          .
+        </Text.H6>
+      </div>
+    </AuthScreen>
   )
 }

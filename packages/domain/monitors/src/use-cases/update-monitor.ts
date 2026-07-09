@@ -190,8 +190,12 @@ export const updateMonitorUseCase = (
           rule: nextRule,
           updatedAt: now,
         }
+        // `escalating` and `threshold` are the triggers that open a sustained incident; a target/rule
+        // edit must evict the stale open row so the next sweep can't reuse it (or leave it dangling if
+        // the trigger switched to point-based `match`). `IncidentClosed` with `reason: "resolved"` is
+        // silent for both, so no recovery email fires — the incident was reconfigured, not recovered.
         const closesOpenIncident =
-          monitor.rule.trigger === "escalating" &&
+          (monitor.rule.trigger === "escalating" || monitor.rule.trigger === "threshold") &&
           (JSON.stringify(monitor.target) !== JSON.stringify(nextTarget) ||
             monitor.rule.trigger !== nextRule.trigger ||
             JSON.stringify(monitor.rule.config) !== JSON.stringify(nextRule.config))

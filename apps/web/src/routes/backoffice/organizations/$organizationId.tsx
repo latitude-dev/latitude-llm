@@ -17,7 +17,7 @@ import {
 import { relativeTime } from "@repo/utils"
 import { useForm } from "@tanstack/react-form"
 import { createFileRoute, notFound, useRouter } from "@tanstack/react-router"
-import { Flag, PresentationIcon, SparklesIcon } from "lucide-react"
+import { Flag, PresentationIcon } from "lucide-react"
 import { useMemo, useState } from "react"
 import {
   type AdminOrganizationFeatureFlagDto,
@@ -46,7 +46,6 @@ import {
   type PropertiesStripEntry,
   StripeCustomerLink,
 } from "../-components/dashboard/index.ts"
-import { CreateDemoProjectButton } from "../-components/organization-actions/create-demo-project.tsx"
 import { EnableShowcaseButton } from "../-components/organization-actions/enable-showcase.tsx"
 import { OrganizationActionRow, OrganizationActionsSection } from "../-components/organization-actions/section.tsx"
 import { MemberRoleBadge, PlatformStaffBadge } from "../-components/role-badges.tsx"
@@ -198,12 +197,6 @@ function BackofficeOrganizationDetailPage() {
       />
 
       <OrganizationActionsSection>
-        <OrganizationActionRow
-          icon={SparklesIcon}
-          title="Create demo project"
-          description="Spin up a fresh project on this org seeded with bootstrap content (datasets, evaluations, issues, ~30 days of telemetry). Runs in the background."
-          action={<CreateDemoProjectButton organizationId={organization.id} />}
-        />
         <OrganizationActionRow
           icon={PresentationIcon}
           title="Showcase demo"

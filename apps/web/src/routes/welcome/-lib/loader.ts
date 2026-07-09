@@ -1,0 +1,21 @@
+import { redirect } from "@tanstack/react-router"
+import type { getSession } from "../../../domains/sessions/session.functions.ts"
+import type { resolveEntryDestination } from "../../../lib/entry-destination.ts"
+
+export interface WelcomeLoaderDeps {
+  readonly getSession: typeof getSession
+  readonly resolveEntryDestination: typeof resolveEntryDestination
+}
+
+// Renders the create-first-org form; `resolveEntryDestination` diverts existing-org users away.
+export async function welcomeLoader({ getSession, resolveEntryDestination }: WelcomeLoaderDeps): Promise<void> {
+  const session = await getSession()
+  if (!session) {
+    throw redirect({ to: "/login" })
+  }
+
+  const dest = await resolveEntryDestination()
+  if (dest.kind === "choose") {
+    throw redirect({ to: "/choose-organization" })
+  }
+}

@@ -58,6 +58,40 @@ const monitor = ({ id, rule, ...edits }: Partial<Monitor> & Pick<Monitor, "id" |
   ...edits,
 })
 
+const thresholdMonitorId = MonitorId(cuid("m-thr"))
+const thresholdCondition = {
+  trigger: "threshold" as const,
+  metric: { kind: "count" as const },
+  threshold: { mode: "absolute" as const, value: 2 },
+  direction: "above" as const,
+}
+const thresholdMonitor = () =>
+  monitor({
+    id: thresholdMonitorId,
+    rule: {
+      trigger: "threshold",
+      config: { metric: { kind: "count" }, condition: thresholdCondition },
+      severity: "high",
+    },
+  })
+const openThresholdIncident = (overrides: Partial<Incident> = {}): Incident => ({
+  id: AlertIncidentId(cuid("ai-thr")),
+  organizationId,
+  projectId,
+  sourceType: "monitor",
+  sourceId: thresholdMonitorId,
+  severity: "high",
+  startedAt: new Date("2026-06-23T11:00:00.000Z"),
+  endedAt: null,
+  createdAt: new Date("2026-06-23T11:00:00.000Z"),
+  entrySignals: { evaluatedThreshold: 2 },
+  exitEligibleSince: null,
+  condition: thresholdCondition,
+  ...overrides,
+})
+// Two count-metric matches inside the current [now-5m, now) window ⇒ value 2 ⇒ meets `>= 2`.
+const twoMatches = [new Date("2026-06-23T11:57:00.000Z"), new Date("2026-06-23T11:58:00.000Z")]
+
 const layersFor = (
   monitors: readonly Monitor[],
   matches: readonly Date[],
@@ -192,25 +226,10 @@ describe("checkMonitorsUseCase", () => {
     })
   })
 
-  it("creates a point incident for a threshold monitor that breaches", async () => {
+  it("opens an incident for a threshold monitor that breaches and freezes the threshold", async () => {
     const firstMatch = new Date("2026-06-23T11:57:30.000Z")
-    const condition = {
-      trigger: "threshold" as const,
-      metric: { kind: "count" as const },
-      threshold: { mode: "absolute" as const, value: 2 },
-      direction: "above" as const,
-    }
-    const { incidents, layer } = layersFor(
-      [
-        monitor({
-          id: MonitorId(cuid("m2")),
-          rule: {
-            trigger: "threshold",
-            config: { metric: { kind: "count" }, condition },
-            severity: "high",
-          },
-        }),
-      ],
+    const { events, incidents, layer } = layersFor(
+      [thresholdMonitor()],
       [firstMatch, new Date("2026-06-23T11:58:30.000Z")],
     )
 
@@ -220,12 +239,81 @@ describe("checkMonitorsUseCase", () => {
     expect(incidents).toHaveLength(1)
     expect(incidents[0]).toMatchObject({
       sourceType: "monitor",
-      sourceId: MonitorId(cuid("m2")),
+      sourceId: thresholdMonitorId,
       severity: "high",
       startedAt: firstMatch,
-      endedAt: firstMatch,
-      condition,
+      endedAt: null,
+      exitEligibleSince: null,
+      entrySignals: { evaluatedThreshold: 2 },
+      condition: thresholdCondition,
     })
+    expect(events).toHaveLength(1)
+    expect(events[0]).toMatchObject({
+      eventName: "IncidentCreated",
+      payload: { sourceType: "monitor", sourceId: thresholdMonitorId },
+    })
+  })
+
+  it("does not re-open or re-notify while a threshold incident is open", async () => {
+    const { events, incidents, layer } = layersFor([thresholdMonitor()], twoMatches, undefined, undefined, [
+      openThresholdIncident(),
+    ])
+
+    const result = await Effect.runPromise(checkMonitorsUseCase({ projectId }).pipe(Effect.provide(layer)))
+
+    expect(result).toEqual({ checked: 1, evaluatable: 1, evaluated: 1, failed: 0 })
+    expect(incidents).toHaveLength(1)
+    expect(incidents[0]).toMatchObject({ endedAt: null, exitEligibleSince: null })
+    expect(events).toHaveLength(0)
+  })
+
+  it("starts the exit dwell when a threshold condition clears", async () => {
+    const { events, incidents, layer } = layersFor([thresholdMonitor()], [], undefined, undefined, [
+      openThresholdIncident(),
+    ])
+
+    await Effect.runPromise(checkMonitorsUseCase({ projectId }).pipe(Effect.provide(layer)))
+
+    expect(incidents).toHaveLength(1)
+    expect(incidents[0]).toMatchObject({ endedAt: null, exitEligibleSince: now })
+    expect(events).toHaveLength(0)
+  })
+
+  it("holds a threshold incident open during the exit dwell", async () => {
+    const exitEligibleSince = new Date("2026-06-23T11:45:00.000Z") // 15 min before now
+    const { events, incidents, layer } = layersFor([thresholdMonitor()], [], undefined, undefined, [
+      openThresholdIncident({ exitEligibleSince }),
+    ])
+
+    await Effect.runPromise(checkMonitorsUseCase({ projectId }).pipe(Effect.provide(layer)))
+
+    expect(incidents[0]).toMatchObject({ endedAt: null, exitEligibleSince })
+    expect(events).toHaveLength(0)
+  })
+
+  it("closes a threshold incident silently after the exit dwell elapses", async () => {
+    const exitEligibleSince = new Date("2026-06-23T11:29:00.000Z") // 31 min before now
+    const { events, incidents, layer } = layersFor([thresholdMonitor()], [], undefined, undefined, [
+      openThresholdIncident({ exitEligibleSince }),
+    ])
+
+    await Effect.runPromise(checkMonitorsUseCase({ projectId }).pipe(Effect.provide(layer)))
+
+    // Closed at the moment it cleared, and silently — no IncidentClosed event, so no recovery email.
+    expect(incidents[0]).toMatchObject({ endedAt: exitEligibleSince })
+    expect(events).toHaveLength(0)
+  })
+
+  it("resets the exit dwell when a threshold breach resumes", async () => {
+    const exitEligibleSince = new Date("2026-06-23T11:45:00.000Z")
+    const { events, incidents, layer } = layersFor([thresholdMonitor()], twoMatches, undefined, undefined, [
+      openThresholdIncident({ exitEligibleSince }),
+    ])
+
+    await Effect.runPromise(checkMonitorsUseCase({ projectId }).pipe(Effect.provide(layer)))
+
+    expect(incidents[0]).toMatchObject({ endedAt: null, exitEligibleSince: null })
+    expect(events).toHaveLength(0)
   })
 
   it("opens an escalating monitor incident through the sustained state machine", async () => {
