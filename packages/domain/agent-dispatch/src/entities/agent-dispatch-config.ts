@@ -1,6 +1,8 @@
+import type { OrganizationId, ProjectId } from "@domain/shared"
 import { cuidSchema, organizationIdSchema, projectIdSchema } from "@domain/shared"
 import { z } from "zod"
 import { AGENT_DISPATCH_KINDS, AGENT_DISPATCH_TRIGGERS } from "../constants.ts"
+import type { AgentDispatchTrigger } from "./agent-dispatch-context.ts"
 
 export const agentDispatchKindSchema = z.enum(AGENT_DISPATCH_KINDS)
 export type AgentDispatchKind = z.infer<typeof agentDispatchKindSchema>
@@ -41,21 +43,55 @@ export const agentDispatchTargetSchema = z.union([
 
 export type AgentDispatchTarget = z.infer<typeof agentDispatchTargetSchema>
 
-export const agentDispatchConfigSchema = z.object({
+export const storedCursorDispatchTargetSchema = cursorDispatchTargetSchema.partial({ repoUrl: true })
+
+// The fully-optional cursor shape must stay last or it would swallow the other kinds.
+export const storedAgentDispatchTargetSchema = z.union([
+  claudeDispatchTargetSchema,
+  linearDispatchTargetSchema,
+  webhookDispatchTargetSchema,
+  storedCursorDispatchTargetSchema,
+])
+
+export type StoredAgentDispatchTarget = z.infer<typeof storedAgentDispatchTargetSchema>
+
+/**
+ * A stored config row. `projectId === null` marks the org-wide default for the
+ * integration; rows with a project are per-project overrides where each
+ * nullable field means "inherit from the default" and a non-null field
+ * replaces the default's value wholly. `promptTemplate` cannot distinguish
+ * "inherit" from "clear" — an empty string is the escape hatch to disable a
+ * default template.
+ */
+export const agentDispatchConfigRowSchema = z.object({
   id: cuidSchema,
   organizationId: organizationIdSchema,
-  projectId: projectIdSchema,
+  projectId: projectIdSchema.nullable(),
   integrationId: cuidSchema,
   kind: agentDispatchKindSchema,
-  enabled: z.boolean(),
-  triggers: z.array(z.enum(AGENT_DISPATCH_TRIGGERS)),
-  target: agentDispatchTargetSchema,
+  enabled: z.boolean().nullable(),
+  triggers: z.array(z.enum(AGENT_DISPATCH_TRIGGERS)).nullable(),
+  target: storedAgentDispatchTargetSchema.nullable(),
   promptTemplate: z.string().nullable(),
-  guardrails: agentDispatchGuardrailsSchema,
+  guardrails: agentDispatchGuardrailsSchema.nullable(),
   createdAt: z.date(),
   updatedAt: z.date(),
 })
 
-export type AgentDispatchConfig = z.infer<typeof agentDispatchConfigSchema>
+export type AgentDispatchConfigRow = z.infer<typeof agentDispatchConfigRowSchema>
+
+/** A default and its project override merged for one resolving project. */
+export interface EffectiveAgentDispatchConfig {
+  readonly id: string
+  readonly organizationId: OrganizationId
+  readonly projectId: ProjectId
+  readonly integrationId: string
+  readonly kind: AgentDispatchKind
+  readonly enabled: boolean
+  readonly triggers: readonly AgentDispatchTrigger[]
+  readonly target: StoredAgentDispatchTarget | null
+  readonly promptTemplate: string | null
+  readonly guardrails: AgentDispatchGuardrails
+}
 
 export type ResolvedDispatchTarget = AgentDispatchTarget & { readonly kind: AgentDispatchKind }
