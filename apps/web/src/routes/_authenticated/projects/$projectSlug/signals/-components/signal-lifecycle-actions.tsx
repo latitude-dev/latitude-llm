@@ -123,28 +123,29 @@ export function SignalLifecycleActions({
         {issue?.mutedAt ? "Unmute" : "Mute"}
       </Button>
 
-      <Modal.Root
-        open={lifecycleConfirmAction !== null}
-        onOpenChange={(open) => (!open ? setLifecycleConfirmAction(null) : undefined)}
-      >
-        <Modal.Content dismissible>
-          <Modal.Header
-            title={lifecycleConfirmation?.title ?? "Confirm issue action"}
-            description={lifecycleConfirmation?.description ?? "Are you sure you want to continue?"}
-          />
-          <Modal.Footer>
-            <CloseTrigger />
-            <Button
-              {...(lifecycleConfirmation?.confirmVariant ? { variant: lifecycleConfirmation.confirmVariant } : {})}
-              onClick={() => (lifecycleConfirmAction ? void runLifecycleCommand(lifecycleConfirmAction) : undefined)}
-              disabled={lifecycleConfirmAction === null || isLifecycleLoading}
-            >
-              <Icon icon={lifecycleConfirmation?.confirmIcon ?? BellOffIcon} size="sm" />
-              {lifecycleConfirmation?.confirmLabel ?? "Confirm"}
-            </Button>
-          </Modal.Footer>
-        </Modal.Content>
-      </Modal.Root>
+      {lifecycleConfirmAction !== null && lifecycleConfirmation !== null ? (
+        <Modal.Root
+          open
+          onOpenChange={(open) => {
+            if (!open) setLifecycleConfirmAction(null)
+          }}
+        >
+          <Modal.Content dismissible>
+            <Modal.Header title={lifecycleConfirmation.title} description={lifecycleConfirmation.description} />
+            <Modal.Footer>
+              <CloseTrigger />
+              <Button
+                {...(lifecycleConfirmation.confirmVariant ? { variant: lifecycleConfirmation.confirmVariant } : {})}
+                onClick={() => void runLifecycleCommand(lifecycleConfirmAction)}
+                disabled={isLifecycleLoading}
+              >
+                <Icon icon={lifecycleConfirmation.confirmIcon} size="sm" />
+                {lifecycleConfirmation.confirmLabel}
+              </Button>
+            </Modal.Footer>
+          </Modal.Content>
+        </Modal.Root>
+      ) : null}
     </>
   )
 }
