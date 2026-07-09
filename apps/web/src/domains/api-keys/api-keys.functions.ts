@@ -2,12 +2,19 @@ import {
   type ApiKey,
   ApiKeyRepository,
   generateApiKeyUseCase,
+  maskApiKeyToken,
   revokeApiKeyUseCase,
   updateApiKeyUseCase,
 } from "@domain/api-keys"
-import { ApiKeyId, isValidId } from "@domain/shared"
+import { MembershipRepository } from "@domain/organizations"
+import { ApiKeyId, ForbiddenError, isValidId } from "@domain/shared"
 import { ApiKeyCacheInvalidatorLive } from "@platform/api-key-auth"
-import { ApiKeyRepositoryLive, OutboxEventWriterLive, withPostgres } from "@platform/db-postgres"
+import {
+  ApiKeyRepositoryLive,
+  MembershipRepositoryLive,
+  OutboxEventWriterLive,
+  withPostgres,
+} from "@platform/db-postgres"
 import { withTracing } from "@repo/observability"
 import { createServerFn } from "@tanstack/react-start"
 import { Effect, Layer } from "effect"
@@ -25,19 +32,33 @@ export interface ApiKeyRecord {
   readonly updatedAt: string
 }
 
-const toRecord = (apiKey: ApiKey): ApiKeyRecord => ({
+const toRecord = (apiKey: ApiKey, options: { readonly maskToken: boolean }): ApiKeyRecord => ({
   id: apiKey.id,
   organizationId: apiKey.organizationId,
   name: apiKey.name,
-  token: apiKey.token,
+  token: options.maskToken ? maskApiKeyToken(apiKey.token) : apiKey.token,
   lastUsedAt: apiKey.lastUsedAt ? apiKey.lastUsedAt.toISOString() : null,
   createdAt: apiKey.createdAt.toISOString(),
   updatedAt: apiKey.updatedAt.toISOString(),
 })
 
-export const listApiKeys = createServerFn({ method: "GET" }).handler(async (): Promise<ApiKeyRecord[]> => {
-  const { organizationId } = await requireSession()
+const requireApiKeyAdmin = async () => {
+  const session = await requireSession()
   const client = getPostgresClient()
+  const isAdmin = await Effect.runPromise(
+    Effect.gen(function* () {
+      const memberships = yield* MembershipRepository
+      return yield* memberships.isAdmin(session.organizationId, session.userId)
+    }).pipe(withPostgres(MembershipRepositoryLive, client, session.organizationId), withTracing),
+  )
+  if (!isAdmin) {
+    throw new ForbiddenError({ message: "Only organization owners and admins can manage API keys" })
+  }
+  return { ...session, client }
+}
+
+export const listApiKeys = createServerFn({ method: "GET" }).handler(async (): Promise<ApiKeyRecord[]> => {
+  const { organizationId, client } = await requireApiKeyAdmin()
 
   const apiKeys = await Effect.runPromise(
     Effect.gen(function* () {
@@ -46,7 +67,7 @@ export const listApiKeys = createServerFn({ method: "GET" }).handler(async (): P
     }).pipe(withPostgres(ApiKeyRepositoryLive, client, organizationId), withTracing),
   )
 
-  return apiKeys.map(toRecord)
+  return apiKeys.map((apiKey) => toRecord(apiKey, { maskToken: true }))
 })
 
 export const createApiKey = createServerFn({ method: "POST" })
@@ -62,8 +83,7 @@ export const createApiKey = createServerFn({ method: "POST" })
     }),
   )
   .handler(async ({ data }): Promise<ApiKeyRecord> => {
-    const { organizationId, userId } = await requireSession()
-    const client = getPostgresClient()
+    const { organizationId, userId, client } = await requireApiKeyAdmin()
 
     const apiKey = await Effect.runPromise(
       generateApiKeyUseCase({
@@ -77,14 +97,13 @@ export const createApiKey = createServerFn({ method: "POST" })
       ),
     )
 
-    return toRecord(apiKey)
+    return toRecord(apiKey, { maskToken: false })
   })
 
 export const updateApiKey = createServerFn({ method: "POST" })
   .inputValidator(z.object({ id: z.string(), name: z.string().min(1).max(256) }))
   .handler(async ({ data }): Promise<ApiKeyRecord> => {
-    const { organizationId } = await requireSession()
-    const client = getPostgresClient()
+    const { organizationId, client } = await requireApiKeyAdmin()
 
     const apiKey = await Effect.runPromise(
       updateApiKeyUseCase({ id: ApiKeyId(data.id), name: data.name }).pipe(
@@ -93,14 +112,13 @@ export const updateApiKey = createServerFn({ method: "POST" })
       ),
     )
 
-    return toRecord(apiKey)
+    return toRecord(apiKey, { maskToken: true })
   })
 
 export const deleteApiKey = createServerFn({ method: "POST" })
   .inputValidator(z.object({ id: z.string() }))
   .handler(async ({ data }): Promise<void> => {
-    const { organizationId } = await requireSession()
-    const client = getPostgresClient()
+    const { organizationId, client } = await requireApiKeyAdmin()
     const redis = getRedisClient()
 
     await Effect.runPromise(

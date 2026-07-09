@@ -8,8 +8,10 @@
  * Creation happens entirely through the OAuth consent flow
  * (`/auth/consent`) — there's no "Create OAuth key" surface here.
  */
+import { MembershipRepository } from "@domain/organizations"
 import { listOAuthKeysUseCase, type OAuthKey, revokeOAuthKeyUseCase } from "@domain/oauth-keys"
-import { OAuthKeyRepositoryLive, withPostgres } from "@platform/db-postgres"
+import { ForbiddenError } from "@domain/shared"
+import { MembershipRepositoryLive, OAuthKeyRepositoryLive, withPostgres } from "@platform/db-postgres"
 import { OAuthTokenCacheInvalidatorLive } from "@platform/oauth-token-auth"
 import { withTracing } from "@repo/observability"
 import { createServerFn } from "@tanstack/react-start"
@@ -50,9 +52,23 @@ const toRecord = (key: OAuthKey): OAuthKeyRecord => ({
   disabled: key.disabled,
 })
 
-export const listOAuthKeys = createServerFn({ method: "GET" }).handler(async (): Promise<OAuthKeyRecord[]> => {
-  const { organizationId } = await requireSession()
+const requireOAuthKeyAdmin = async () => {
+  const session = await requireSession()
   const client = getPostgresClient()
+  const isAdmin = await Effect.runPromise(
+    Effect.gen(function* () {
+      const memberships = yield* MembershipRepository
+      return yield* memberships.isAdmin(session.organizationId, session.userId)
+    }).pipe(withPostgres(MembershipRepositoryLive, client, session.organizationId), withTracing),
+  )
+  if (!isAdmin) {
+    throw new ForbiddenError({ message: "Only organization owners and admins can manage OAuth keys" })
+  }
+  return { ...session, client }
+}
+
+export const listOAuthKeys = createServerFn({ method: "GET" }).handler(async (): Promise<OAuthKeyRecord[]> => {
+  const { organizationId, client } = await requireOAuthKeyAdmin()
 
   const keys = await Effect.runPromise(
     listOAuthKeysUseCase().pipe(withPostgres(OAuthKeyRepositoryLive, client, organizationId), withTracing),
@@ -69,8 +85,7 @@ const revokeInputSchema = z.object({
 export const revokeOAuthKey = createServerFn({ method: "POST" })
   .inputValidator(revokeInputSchema)
   .handler(async ({ data }): Promise<{ readonly success: true }> => {
-    const { organizationId } = await requireSession()
-    const client = getPostgresClient()
+    const { organizationId, client } = await requireOAuthKeyAdmin()
     const redis = getRedisClient()
 
     await Effect.runPromise(

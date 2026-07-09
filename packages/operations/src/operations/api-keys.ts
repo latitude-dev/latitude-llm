@@ -7,10 +7,16 @@ import {
   revokeApiKeyUseCase,
   updateApiKeyUseCase,
 } from "@domain/api-keys"
-import { ApiKeyId } from "@domain/shared"
+import { MembershipRepository } from "@domain/organizations"
+import { ApiKeyId, ForbiddenError } from "@domain/shared"
 import { createRoute, z } from "@hono/zod-openapi"
 import { ApiKeyCacheInvalidatorLive } from "@platform/api-key-auth"
-import { ApiKeyRepositoryLive, OutboxEventWriterLive, withPostgres } from "@platform/db-postgres"
+import {
+  ApiKeyRepositoryLive,
+  MembershipRepositoryLive,
+  OutboxEventWriterLive,
+  withPostgres,
+} from "@platform/db-postgres"
 import { withTracing } from "@repo/observability"
 import { Effect, Layer } from "effect"
 import { defineOperation } from "../core/define-operation.ts"
@@ -25,6 +31,11 @@ import {
 } from "../openapi/schemas.ts"
 import type { OrganizationScopedEnv } from "../types.ts"
 
+type ApiKeyOperationContext = {
+  readonly auth: OrganizationScopedEnv["Variables"]["auth"]
+  readonly organization: OrganizationScopedEnv["Variables"]["organization"]
+}
+
 const ResponseSchema = z
   .object({
     id: z.string().describe("Stable API-key identifier."),
@@ -32,9 +43,7 @@ const ResponseSchema = z
     name: z.string().describe("Human-readable name."),
     token: z
       .string()
-      .describe(
-        "The full API key token. Returned by create / get / update — store it securely; treat it as a password.",
-      ),
+      .describe("API-key token. Create returns the full token; later responses return a masked preview."),
     lastUsedAt: z
       .string()
       .nullable()
@@ -111,6 +120,19 @@ const toListItemResponse = (apiKey: ApiKey) => ({
   updatedAt: apiKey.updatedAt.toISOString(),
 })
 
+const requireApiKeyAdmin = (ctx: ApiKeyOperationContext) =>
+  Effect.gen(function* () {
+    if (ctx.auth.method !== "oauth") {
+      return yield* new ForbiddenError({ message: "Only organization owners and admins can manage API keys" })
+    }
+
+    const memberships = yield* MembershipRepository
+    const isAdmin = yield* memberships.isAdmin(ctx.organization.id, ctx.auth.userId)
+    if (!isAdmin) {
+      return yield* new ForbiddenError({ message: "Only organization owners and admins can manage API keys" })
+    }
+  })
+
 const apiKeysPath = "/api-keys"
 
 const apiKeyEndpoint = defineOperation<OrganizationScopedEnv>(apiKeysPath)
@@ -135,11 +157,12 @@ const createApiKey = apiKeyEndpoint({
   rateLimitTier: "high",
   execute: (input, ctx) =>
     Effect.gen(function* () {
+      yield* requireApiKeyAdmin(ctx)
       const apiKey = yield* generateApiKeyUseCase({ name: input.body.name, isSandbox: false })
       return { status: 201, body: toResponse(apiKey) } as const
     }).pipe(
       withPostgres(
-        Layer.mergeAll(ApiKeyRepositoryLive, OutboxEventWriterLive),
+        Layer.mergeAll(ApiKeyRepositoryLive, MembershipRepositoryLive, OutboxEventWriterLive),
         ctx.postgresClient,
         ctx.organization.id,
       ),
@@ -167,10 +190,18 @@ const listApiKeys = apiKeyEndpoint({
   rateLimitTier: "low",
   execute: (_input, ctx) =>
     Effect.gen(function* () {
+      yield* requireApiKeyAdmin(ctx)
       const repo = yield* ApiKeyRepository
       const apiKeys = yield* repo.list()
       return { status: 200, body: { apiKeys: apiKeys.map(toListItemResponse) } } as const
-    }).pipe(withPostgres(ApiKeyRepositoryLive, ctx.postgresClient, ctx.organization.id), withTracing),
+    }).pipe(
+      withPostgres(
+        Layer.mergeAll(ApiKeyRepositoryLive, MembershipRepositoryLive),
+        ctx.postgresClient,
+        ctx.organization.id,
+      ),
+      withTracing,
+    ),
 })
 
 const getApiKey = apiKeyEndpoint({
@@ -192,13 +223,21 @@ const getApiKey = apiKeyEndpoint({
   rateLimitTier: "low",
   execute: (input, ctx) =>
     Effect.gen(function* () {
+      yield* requireApiKeyAdmin(ctx)
       const { apiKeyId } = input.params
       const repo = yield* ApiKeyRepository
       const apiKey = yield* repo
         .findById(ApiKeyId(apiKeyId))
         .pipe(Effect.catchTag("NotFoundError", () => Effect.fail(new ApiKeyNotFoundError({ id: ApiKeyId(apiKeyId) }))))
-      return { status: 200, body: toResponse(apiKey) } as const
-    }).pipe(withPostgres(ApiKeyRepositoryLive, ctx.postgresClient, ctx.organization.id), withTracing),
+      return { status: 200, body: toListItemResponse(apiKey) } as const
+    }).pipe(
+      withPostgres(
+        Layer.mergeAll(ApiKeyRepositoryLive, MembershipRepositoryLive),
+        ctx.postgresClient,
+        ctx.organization.id,
+      ),
+      withTracing,
+    ),
 })
 
 const updateApiKey = apiKeyEndpoint({
@@ -219,9 +258,17 @@ const updateApiKey = apiKeyEndpoint({
   rateLimitTier: "low",
   execute: (input, ctx) =>
     Effect.gen(function* () {
+      yield* requireApiKeyAdmin(ctx)
       const apiKey = yield* updateApiKeyUseCase({ id: ApiKeyId(input.params.apiKeyId), name: input.body.name })
-      return { status: 200, body: toResponse(apiKey) } as const
-    }).pipe(withPostgres(ApiKeyRepositoryLive, ctx.postgresClient, ctx.organization.id), withTracing),
+      return { status: 200, body: toListItemResponse(apiKey) } as const
+    }).pipe(
+      withPostgres(
+        Layer.mergeAll(ApiKeyRepositoryLive, MembershipRepositoryLive),
+        ctx.postgresClient,
+        ctx.organization.id,
+      ),
+      withTracing,
+    ),
 })
 
 const revokeApiKey = apiKeyEndpoint({
@@ -241,11 +288,18 @@ const revokeApiKey = apiKeyEndpoint({
   access: "destructive",
   rateLimitTier: "low",
   execute: (input, ctx) =>
-    revokeApiKeyUseCase({ id: ApiKeyId(input.params.apiKeyId) }).pipe(
+    Effect.gen(function* () {
+      yield* requireApiKeyAdmin(ctx)
+      yield* revokeApiKeyUseCase({ id: ApiKeyId(input.params.apiKeyId) })
+      return { status: 204 } as const
+    }).pipe(
       Effect.provide(ApiKeyCacheInvalidatorLive(ctx.redis)),
-      withPostgres(ApiKeyRepositoryLive, ctx.postgresClient, ctx.organization.id),
+      withPostgres(
+        Layer.mergeAll(ApiKeyRepositoryLive, MembershipRepositoryLive),
+        ctx.postgresClient,
+        ctx.organization.id,
+      ),
       withTracing,
-      Effect.as({ status: 204 } as const),
     ),
 })
 

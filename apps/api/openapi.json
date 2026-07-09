@@ -6949,7 +6949,7 @@
           },
           "token": {
             "type": "string",
-            "description": "The full API key token. Returned by create / get / update — store it securely; treat it as a password."
+            "description": "API-key token. Create returns the full token; later responses return a masked preview."
           },
           "lastUsedAt": {
             "type": [
