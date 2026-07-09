@@ -22,6 +22,12 @@ import { assertMonitorableSavedSearch } from "./assert-monitorable-saved-search.
 
 const NAME_MAX_LENGTH = 128
 
+const configsEqual = (left: MonitorConfig, right: MonitorConfig): boolean =>
+  JSON.stringify(left) === JSON.stringify(right)
+
+const targetsEqual = (left: MonitorTarget, right: MonitorTarget): boolean =>
+  JSON.stringify(left) === JSON.stringify(right)
+
 export interface UpdateMonitorInput {
   readonly id: MonitorId
   readonly name?: string
@@ -103,12 +109,32 @@ export const updateMonitorUseCase = (
         const repository = yield* MonitorRepository
         const monitor = yield* repository.findById(input.id)
         const editsMetadata = input.name !== undefined || input.description !== undefined
-        const editsTarget = input.target !== undefined
+        const editsTarget = input.target !== undefined && !targetsEqual(input.target, monitor.target)
         const editsLockedSystemRule =
           input.rule !== undefined &&
-          (input.rule.trigger !== monitor.rule.trigger || input.rule.severity !== monitor.rule.severity)
+          (input.rule.trigger !== monitor.rule.trigger || !configsEqual(input.rule.config, monitor.rule.config))
         if (monitor.system && (editsMetadata || editsTarget || editsLockedSystemRule)) {
           return yield* new SystemMonitorForbiddenError({ monitorId: input.id, operation: "edited" })
+        }
+        if (editsTarget) {
+          return yield* new ValidationError({
+            field: "target",
+            message: "Monitor target cannot be changed after creation",
+          })
+        }
+        if (input.rule !== undefined) {
+          if (input.rule.trigger !== monitor.rule.trigger) {
+            return yield* new ValidationError({
+              field: "rule.trigger",
+              message: "Monitor trigger cannot be changed after creation",
+            })
+          }
+          if (!configsEqual(input.rule.config, monitor.rule.config)) {
+            return yield* new ValidationError({
+              field: "rule.config",
+              message: "Monitor conditions cannot be changed after creation",
+            })
+          }
         }
 
         let nextName = monitor.name

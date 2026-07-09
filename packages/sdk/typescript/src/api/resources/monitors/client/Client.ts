@@ -464,7 +464,7 @@ export class MonitorsClient {
     }
 
     /**
-     * Updates a monitor's metadata, target, and rule. System monitor edits are restricted.
+     * Updates a monitor's metadata and incident severity. Target, trigger, metric, and conditions are fixed after creation. System monitor edits are restricted.
      *
      * @param {string} projectSlug - Project slug (human-readable identifier)
      * @param {string} monitorSlug - Monitor slug (human-readable identifier within the project).

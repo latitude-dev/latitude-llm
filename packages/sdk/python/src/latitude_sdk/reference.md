@@ -8155,7 +8155,7 @@ client.monitors.delete(
 <dl>
 <dd>
 
-Updates a monitor's metadata, target, and rule. System monitor edits are restricted.
+Updates a monitor's metadata and incident severity. Target, trigger, metric, and conditions are fixed after creation. System monitor edits are restricted.
 </dd>
 </dl>
 </dd>
@@ -8222,38 +8222,6 @@ client.monitors.update(
 <dd>
 
 **description:** `typing.Optional[str]` — New description.
-    
-</dd>
-</dl>
-
-<dl>
-<dd>
-
-**target:** `typing.Optional[UpdateMonitorBodyTarget]` — Replacement target watched by the monitor.
-    
-</dd>
-</dl>
-
-<dl>
-<dd>
-
-**trigger:** `typing.Optional[UpdateMonitorBodyTrigger]` — Replacement incident trigger for the monitor rule.
-    
-</dd>
-</dl>
-
-<dl>
-<dd>
-
-**metric:** `typing.Optional[UpdateMonitorBodyMetric]` — Replacement metric evaluated by the monitor.
-    
-</dd>
-</dl>
-
-<dl>
-<dd>
-
-**condition:** `typing.Optional[UpdateMonitorBodyCondition]` — Replacement condition for threshold or escalating monitors.
     
 </dd>
 </dl>

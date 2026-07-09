@@ -26,7 +26,6 @@ import { Effect, Layer } from "effect"
 import { defineOperation } from "../core/define-operation.ts"
 import type { OperationModule } from "../core/mount.ts"
 import {
-  AlertConditionSchema,
   AlertEscalatingConditionSchema,
   AlertThresholdConditionSchema,
 } from "../openapi/entities/incident.ts"
@@ -60,9 +59,6 @@ const DESCRIPTION_MAX_LENGTH = 2000
 const MonitorSlugParamsSchema = ProjectParamsSchema.extend({
   monitorSlug: z.string().describe("Monitor slug (human-readable identifier within the project)."),
 })
-
-const streamForTargetType = (type: z.infer<typeof MonitorTargetSchema>["type"]) =>
-  type === "tool" ? ("spans" as const) : type === "session" ? ("sessions" as const) : ("traces" as const)
 
 const CreateMonitorBaseBodySchema = z.object({
   name: z.string().min(1).max(NAME_MAX_LENGTH).describe("Human-readable name. Used to derive the slug."),
@@ -101,33 +97,7 @@ const UpdateMonitorBodySchema = z
       .optional()
       .describe("New name. Renaming may regenerate the slug — re-read the response or rely on `id`."),
     description: z.string().max(DESCRIPTION_MAX_LENGTH).optional().describe("New description."),
-    target: MonitorTargetSchema.optional().describe("Replacement target watched by the monitor."),
-    trigger: z
-      .enum(["match", "threshold", "escalating"])
-      .optional()
-      .describe("Replacement incident trigger for the monitor rule."),
-    metric: MonitorMetricSchema.optional().describe("Replacement metric evaluated by the monitor."),
-    condition: AlertConditionSchema.optional().describe("Replacement condition for threshold or escalating monitors."),
     severity: z.enum(["low", "medium", "high"]).optional().describe("Replacement incident severity."),
-  })
-  .superRefine((body, ctx) => {
-    if (body.trigger === "match" && body.condition !== undefined) {
-      ctx.addIssue({ code: "custom", path: ["condition"], message: "Match monitors cannot define a condition." })
-    }
-    if (body.trigger === "threshold" && body.condition !== undefined && body.condition.trigger !== "threshold") {
-      ctx.addIssue({
-        code: "custom",
-        path: ["condition"],
-        message: "Threshold monitor condition must use trigger `threshold`.",
-      })
-    }
-    if (body.trigger === "escalating" && body.condition !== undefined && body.condition.trigger !== "escalating") {
-      ctx.addIssue({
-        code: "custom",
-        path: ["condition"],
-        message: "Escalating monitor condition must use trigger `escalating`.",
-      })
-    }
   })
   .openapi("UpdateMonitorBody")
 
@@ -355,7 +325,7 @@ const updateMonitor = monitorEndpoint({
     group: "monitors",
     sdkMethod: "update",
     summary: "Update monitor",
-    description: "Updates a monitor's metadata, target, and rule. System monitor edits are restricted.",
+    description: "Updates a monitor's metadata and incident severity. Target, trigger, metric, and conditions are fixed after creation. System monitor edits are restricted.",
     security: PROTECTED_SECURITY,
     request: { params: MonitorSlugParamsSchema, body: jsonBody(UpdateMonitorBodySchema) },
     responses: {
@@ -375,60 +345,18 @@ const updateMonitor = monitorEndpoint({
       const projectRepo = yield* ProjectRepository
       const project = yield* projectRepo.findBySlug(projectSlug)
       const current = yield* getMonitorBySlugUseCase({ projectId: project.id, slug: monitorSlug })
-      const targetPatch = body.target
-      const metric = body.metric ?? current.target.metric
-      const target =
-        targetPatch !== undefined || body.metric !== undefined
-          ? {
-              ...current.target,
-              ...(targetPatch
-                ? {
-                    type: targetPatch.type,
-                    id: targetPatch.id,
-                    kind: targetPatch.type,
-                    stream: streamForTargetType(targetPatch.type),
-                    query: targetPatch.query ?? null,
-                    savedSearchId: targetPatch.type === "savedSearch" ? targetPatch.id : null,
-                    ...(targetPatch.filterSet !== undefined
-                      ? { filterSet: targetPatch.filterSet }
-                      : { filterSet: undefined }),
-                  }
-                : {}),
-              metric,
-            }
-          : undefined
-      const trigger = body.trigger ?? current.rule.trigger
-      const hasCondition = Object.hasOwn(body, "condition")
-      const condition = hasCondition ? body.condition : trigger === "match" ? undefined : current.rule.config.condition
-      if (trigger === "match" && condition !== undefined) {
-        throw new BadRequestError({ message: "Match monitors cannot define a condition." })
-      }
-      if (trigger === "threshold" && condition?.trigger !== "threshold") {
-        throw new BadRequestError({ message: "Threshold monitors require a threshold condition." })
-      }
-      if (trigger === "escalating" && condition?.trigger !== "escalating") {
-        throw new BadRequestError({ message: "Escalating monitors require an escalating condition." })
-      }
       const rule =
-        body.trigger !== undefined || body.metric !== undefined || hasCondition || body.severity !== undefined
-          ? (() => {
-              const { condition: _condition, ...currentConfig } = current.rule.config
-              return {
-                trigger,
-                severity: body.severity ?? current.rule.severity,
-                config: {
-                  ...currentConfig,
-                  metric,
-                  ...(condition !== undefined ? { condition } : {}),
-                },
-              }
-            })()
+        body.severity !== undefined
+          ? {
+              trigger: current.rule.trigger,
+              severity: body.severity,
+              config: current.rule.config,
+            }
           : undefined
       const monitor = yield* updateMonitorUseCase({
         id: current.id,
         ...(body.name !== undefined ? { name: body.name } : {}),
         ...(body.description !== undefined ? { description: body.description } : {}),
-        ...(target !== undefined ? { target } : {}),
         ...(rule !== undefined ? { rule } : {}),
       })
       return { status: 200, body: toMonitorResponse(monitor) } as const
