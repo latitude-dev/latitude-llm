@@ -2,6 +2,16 @@
 
 ## Unreleased
 
+## v0.3.43 - 2026-07-09
+
+### Monitors
+
+- Gave threshold monitors an open/close incident lifecycle: a sustained breach now opens a single incident and dedups until a 30-minute exit dwell closes it, instead of emailing on every ~5-minute sweep. Editing a monitor with an open incident now evicts the stale incident (ref: #3949).
+
+### Showcase
+
+- Flipped onboarding to the shared read-only showcase: new orgs get only their real empty default project and land on `/projects/lat-demo` when the showcase resolves, with a fallback to their own default project. Retired the old per-signup/claim demo-project seeding machinery (ref: #3940).
+
 ## v0.3.42 - 2026-07-09
 
 ### Signals
