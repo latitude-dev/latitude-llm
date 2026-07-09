@@ -26,9 +26,9 @@ interface ShowcaseActionButtonProps {
 /**
  * Generic confirm-then-run button for the backoffice showcase actions
  * (Create / Regenerate / Swap / Retry). Each action is a single global
- * mutation behind a warning modal — the same shape as the org-level actions
- * (`create-demo-project`, `reset-system-monitors`) — so they share this shell
- * and differ only in copy and the `run` callback.
+ * mutation behind a warning modal — the same shape as the org-level
+ * `reset-system-monitors` action — so they share this shell and differ only
+ * in copy and the `run` callback.
  */
 export function ShowcaseActionButton({
   label,

@@ -54,9 +54,10 @@ export const entrySignalsSnapshotSchema = z.object({
 export type EntrySignalsSnapshot = z.infer<typeof entrySignalsSnapshotSchema>
 
 /**
- * Entry snapshot for a `savedSearch.escalating` incident: the threshold frozen at
- * open time so the close-side compares against it rather than re-resolving a
- * drifting baseline. `baselineCount` + `baseline` are multiplier-mode only.
+ * Entry snapshot for a monitor `threshold` incident: the evaluated threshold frozen at
+ * open time so the close-side compares against it rather than re-resolving a drifting
+ * multiplier/seasonal baseline (which could auto-close a live breach). `baselineCount` +
+ * `baseline` are multiplier-mode only.
  */
 export const savedSearchEntrySignalsSchema = z.object({
   evaluatedThreshold: z.number(),

@@ -513,16 +513,6 @@ const _registry = {
       readonly projectId: string
       readonly traceId: string
     }
-    seedDemo: {
-      readonly organizationId: string
-      readonly projectId: string
-      readonly apiKeyId: string
-      readonly timelineAnchorIso: string
-    }
-    createDemo: {
-      readonly organizationId: string
-      readonly ownerUserId: string
-    }
   }>(),
 
   "api-keys": payloads<{

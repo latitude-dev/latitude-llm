@@ -5,7 +5,6 @@ import {
   type AdminOrganizationUsageSummary,
   adminOrganizationUsageCursorSchema,
   clearBillingOverrideUseCase,
-  createDemoProjectUseCase,
   getOrganizationBillingUseCase,
   getOrganizationDetailsUseCase,
   type ListOrganizationsByUsageOutput,
@@ -15,7 +14,6 @@ import {
   setOrganizationShowcaseUseCase,
   upsertBillingOverrideUseCase,
 } from "@domain/admin"
-import { WorkflowStarter } from "@domain/queue"
 import { OrganizationId, UserId } from "@domain/shared"
 import { RedisCacheStoreLive } from "@platform/cache-redis"
 import { AdminOrganizationUsageRepositoryLive, withClickHouse } from "@platform/db-clickhouse"
@@ -26,8 +24,6 @@ import {
   invalidateEffectivePlanCache,
   MonitorRepositoryLive,
   OrganizationRepositoryLive,
-  OutboxEventWriterLive,
-  ProjectRepositoryLive,
   resolveEffectivePlanCached,
   SettingsReaderLive,
   StripeSubscriptionLookupLive,
@@ -38,12 +34,7 @@ import { createServerFn } from "@tanstack/react-start"
 import { Effect, Layer } from "effect"
 import { z } from "zod"
 import { adminMiddleware } from "../../server/admin-middleware.ts"
-import {
-  getAdminPostgresClient,
-  getClickhouseClient,
-  getRedisClient,
-  getWorkflowStarter,
-} from "../../server/clients.ts"
+import { getAdminPostgresClient, getClickhouseClient, getRedisClient } from "../../server/clients.ts"
 
 export interface AdminOrganizationMemberDto {
   membershipId: string
@@ -381,69 +372,6 @@ export const adminListOrganizationsByUsage = createServerFn({ method: "GET" })
     )
 
     return toUsagePageDto(page)
-  })
-
-// ───────────────────────────────────────────────────────────────────
-// Create demo project (backoffice action)
-// ───────────────────────────────────────────────────────────────────
-
-/**
- * Exported for input-schema tests.
- */
-export const adminCreateDemoProjectInputSchema = z.object({
-  organizationId: z.string().min(1).max(256),
-  /** User-typed name from the modal. Trimmed and validated server-side. */
-  projectName: z.string().min(1).max(256),
-})
-
-interface AdminCreateDemoProjectResultDto {
-  projectId: string
-  projectSlug: string
-}
-
-/**
- * Create a "demo project" on the target organization and kick off the
- * Temporal workflow that seeds it with full bootstrap content (datasets,
- * evaluations, issues, scores, ~30 days of telemetry).
- *
- * Three-guard discipline mirroring the rest of the backoffice:
- *  - {@link adminMiddleware} rejects non-admins with `NotFoundError`
- *    (indistinguishable from a non-existent server function).
- *  - Use-case enforces the name-collision invariant before any side effect.
- *  - Postgres reads/writes go through {@link getAdminPostgresClient}
- *    (the only sanctioned RLS-bypass signal).
- *
- * The server function returns as soon as the project row + audit event
- * commit and Temporal accepts the workflow handle. Seeding runs in the
- * background — the UI just `router.invalidate()`s and lets the staff
- * refresh to watch the project's content fill in.
- */
-export const adminCreateDemoProject = createServerFn({ method: "POST" })
-  .middleware([adminMiddleware])
-  .inputValidator(adminCreateDemoProjectInputSchema)
-  .handler(async ({ data, context }): Promise<AdminCreateDemoProjectResultDto> => {
-    const client = getAdminPostgresClient()
-    const workflowStarter = await getWorkflowStarter()
-
-    const result = await Effect.runPromise(
-      createDemoProjectUseCase({
-        organizationId: OrganizationId(data.organizationId),
-        projectName: data.projectName,
-        actorAdminUserId: UserId(context.adminUserId),
-      }).pipe(
-        withPostgres(
-          Layer.mergeAll(AdminOrganizationRepositoryLive, ProjectRepositoryLive, OutboxEventWriterLive),
-          client,
-        ),
-        Effect.provideService(WorkflowStarter, workflowStarter),
-        withTracing,
-      ),
-    )
-
-    return {
-      projectId: result.projectId,
-      projectSlug: result.projectSlug,
-    }
   })
 
 export const adminSetOrganizationShowcaseInputSchema = z.object({
