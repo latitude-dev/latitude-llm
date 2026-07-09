@@ -25,6 +25,7 @@ export type SpanRow = {
   started_at: string
   ended_at: string
   source: string | null
+  custom_identifier: string | null
 
   provider: string
   model: string | null
@@ -62,6 +63,7 @@ export type SpanInput = {
   started_at: string
   ended_at: string
   source: string | null
+  custom_identifier: string | null
 
   provider: string
   model: string | null

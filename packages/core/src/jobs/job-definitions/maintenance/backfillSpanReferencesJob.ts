@@ -197,6 +197,7 @@ export async function backfillSpanReferencesJob(
           started_at: toClickHouseDateTime(span.startedAt),
           ended_at: toClickHouseDateTime(span.endedAt),
           source: span.source ?? null,
+          custom_identifier: span.customIdentifier ?? null,
           provider: isCompletion ? '' : '',
           model: isCompletion ? (span.model ?? null) : null,
           cost: isCompletion ? (span.cost ?? null) : null,
