@@ -777,7 +777,6 @@ const updateMonitorRuleInputSchema = z.object({
   severity: alertSeveritySchema.optional(),
 })
 
-
 export const updateMonitorRule = createServerFn({ method: "POST" })
   .inputValidator(updateMonitorRuleInputSchema)
   .handler(async ({ data, context }): Promise<MonitorRecord> => {

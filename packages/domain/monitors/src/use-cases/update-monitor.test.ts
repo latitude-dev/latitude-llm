@@ -4,7 +4,7 @@ import { type Monitor, MonitorRepository, updateMonitorUseCase } from "@domain/m
 import { createFakeMonitorRepository } from "@domain/monitors/testing"
 import { SavedSearchRepository } from "@domain/saved-searches"
 import { createFakeSavedSearchRepository } from "@domain/saved-searches/testing"
-import { AlertIncidentId, MonitorId, OrganizationId, ProjectId, SqlClient, ValidationError } from "@domain/shared"
+import { type AlertIncidentId, MonitorId, OrganizationId, ProjectId, SqlClient, ValidationError } from "@domain/shared"
 import { createFakeSqlClient } from "@domain/shared/testing"
 import { Effect, Layer } from "effect"
 import { describe, expect, it } from "vitest"
@@ -116,8 +116,13 @@ describe("updateMonitorUseCase", () => {
   })
 
   it("allows editing severity on a system monitor", async () => {
-    const { repo } = createFakeMonitorRepository([makeMonitor({ system: true, rule: { trigger: "match", config: {}, severity: "low" } })])
-    const result = await run(updateMonitorUseCase({ id: monitorId, rule: { trigger: "match", config: {}, severity: "high" } }), repo)
+    const { repo } = createFakeMonitorRepository([
+      makeMonitor({ system: true, rule: { trigger: "match", config: {}, severity: "low" } }),
+    ])
+    const result = await run(
+      updateMonitorUseCase({ id: monitorId, rule: { trigger: "match", config: {}, severity: "high" } }),
+      repo,
+    )
     expect(result.rule.severity).toBe("high")
   })
 

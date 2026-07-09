@@ -25,10 +25,7 @@ import { withTracing } from "@repo/observability"
 import { Effect, Layer } from "effect"
 import { defineOperation } from "../core/define-operation.ts"
 import type { OperationModule } from "../core/mount.ts"
-import {
-  AlertEscalatingConditionSchema,
-  AlertThresholdConditionSchema,
-} from "../openapi/entities/incident.ts"
+import { AlertEscalatingConditionSchema, AlertThresholdConditionSchema } from "../openapi/entities/incident.ts"
 import {
   decodeMonitorCursor,
   decodeMonitorIncidentCursor,
@@ -325,7 +322,8 @@ const updateMonitor = monitorEndpoint({
     group: "monitors",
     sdkMethod: "update",
     summary: "Update monitor",
-    description: "Updates a monitor's metadata and incident severity. Target, trigger, metric, and conditions are fixed after creation. System monitor edits are restricted.",
+    description:
+      "Updates a monitor's metadata and incident severity. Target, trigger, metric, and conditions are fixed after creation. System monitor edits are restricted.",
     security: PROTECTED_SECURITY,
     request: { params: MonitorSlugParamsSchema, body: jsonBody(UpdateMonitorBodySchema) },
     responses: {
