@@ -7,7 +7,7 @@ import { FormField } from "../form-field/form-field.tsx"
 
 const inputVariants = cva(
   cn(
-    "flex w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm transition-colors file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50",
+    "flex w-full rounded-md border border-input px-3 py-1 text-sm transition-colors file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50",
     font.size.h5,
   ),
   {
@@ -17,9 +17,14 @@ const inputVariants = cva(
         sm: "h-8 px-2",
         lg: "h-10 px-4",
       },
+      background: {
+        transparent: "bg-transparent",
+        background: "bg-background",
+      },
     },
     defaultVariants: {
       size: "default",
+      background: "transparent",
     },
   },
 )
@@ -38,11 +43,14 @@ export interface InputProps
 }
 
 const Input = forwardRef<HTMLInputElement, InputProps>(
-  ({ className, label, description, info, errors, inline, size, type, ...props }, ref) => {
+  ({ className, label, description, info, errors, inline, size, background, type, ...props }, ref) => {
     const input = (
       <input
         type={type}
-        className={cn(inputVariants({ size, className }), errors && errors.length > 0 && "border-destructive")}
+        className={cn(
+          inputVariants({ size, background, className }),
+          errors && errors.length > 0 && "border-destructive",
+        )}
         ref={ref}
         {...props}
       />

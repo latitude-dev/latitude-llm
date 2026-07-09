@@ -4,6 +4,7 @@ import { ExternalLinkIcon, SearchIcon, UsersRoundIcon } from "lucide-react"
 import { useEffect, useMemo, useState } from "react"
 import { useProjectUsers, useUsersOverview } from "../../../../../domains/end-users/end-users.collection.ts"
 import { allUsersMonitorTarget } from "../../../../../domains/monitors/monitor-target.ts"
+import { defaultProjectTimeWindowSeconds } from "../../../../../domains/projects/default-time-window.ts"
 import { ListingLayout as Layout } from "../../../../../layouts/ListingLayout/index.tsx"
 import { useDebounce } from "../../../../../lib/hooks/useDebounce.ts"
 import { useParamState } from "../../../../../lib/hooks/useParamState.ts"
@@ -12,7 +13,7 @@ import { useTableColumnSettings } from "../-components/table-column-settings.ts"
 import { TimeFilterDropdown } from "../-components/time-filter-dropdown.tsx"
 import { useRouteProject } from "../-route-data.ts"
 import { AddTargetMonitorButton } from "../monitors/-components/add-target-monitor-button.tsx"
-import { DEFAULT_USERS_RANGE_SECONDS, pickUserTrendBucketSeconds } from "./-components/user-formatters.ts"
+import { pickUserTrendBucketSeconds } from "./-components/user-formatters.ts"
 import { UsersAnalyticsPanel } from "./-components/users-analytics-panel.tsx"
 import {
   USERS_COLUMN_OPTIONS,
@@ -96,15 +97,15 @@ function UsersPage() {
   })
 
   // Recomputed only when the URL params change, so query keys stay stable
-  // across re-renders. Defaults to the last 30 days, like the tools section.
+  // across re-renders. Default window comes from `defaultProjectTimeWindowSeconds`.
   const range = useMemo(() => {
     const toMs = timeTo ? Date.parse(timeTo) : Date.now()
-    const fromMs = timeFrom ? Date.parse(timeFrom) : toMs - DEFAULT_USERS_RANGE_SECONDS * 1000
+    const fromMs = timeFrom ? Date.parse(timeFrom) : toMs - defaultProjectTimeWindowSeconds(project) * 1000
     return {
       fromIso: new Date(fromMs).toISOString(),
       toIso: new Date(toMs).toISOString(),
     }
-  }, [timeFrom, timeTo])
+  }, [timeFrom, timeTo, project])
   const trendBucketSeconds = useMemo(
     () => pickUserTrendBucketSeconds(Date.parse(range.toIso) - Date.parse(range.fromIso)),
     [range],

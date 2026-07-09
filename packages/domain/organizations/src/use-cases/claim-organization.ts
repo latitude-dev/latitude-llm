@@ -81,12 +81,21 @@ export const claimOrganizationUseCase = Effect.fn("organizations.claimOrganizati
       const members = yield* membershipRepo.listByOrganizationId(organizationId)
       if (members.length > 0) return yield* new OrganizationNotClaimableError()
 
-      yield* membershipRepo.save(createMembership({ organizationId, userId: input.userId, role: "owner" }))
-      yield* organizationRepo.save({ ...organization, expiresAt: null })
+      yield* membershipRepo.save(
+        createMembership({
+          organizationId,
+          userId: input.userId,
+          role: "owner",
+        }),
+      )
+      yield* organizationRepo.save({
+        ...organization,
+        expiresAt: null,
+        settings: { ...organization.settings, wantsShowcase: true },
+      })
       const marked = yield* claimRepo.markClaimed(claim.id, new Date())
       if (!marked) return yield* new ClaimAlreadyUsedError()
 
-      // Background sample-project seeding (domain-events worker) so the claimed org matches a normal one.
       yield* outboxEventWriter
         .write({
           eventName: "OrganizationClaimed",
@@ -98,7 +107,10 @@ export const claimOrganizationUseCase = Effect.fn("organizations.claimOrganizati
         .pipe(Effect.mapError((error) => toRepositoryError(error, "write")))
 
       return {
-        organization: { id: organization.id as string, slug: organization.slug },
+        organization: {
+          id: organization.id as string,
+          slug: organization.slug,
+        },
       } satisfies ClaimOrganizationResult
     }),
   )

@@ -120,6 +120,10 @@ const TAGS_LOOKBACK_DAYS = 30
 
 const resolveKind = (incident: Incident, transition: IncidentTransition): IncidentNotificationKind => {
   if (transition === "closed") return "incident.closed"
+  // Monitor threshold incidents are sustained (open, `endedAt = null`) for dedup + tracking,
+  // but alert once on open with no recovery email — the same one-shot copy as a point event.
+  // So they emit `incident.event` despite being open; the close is silent (no IncidentClosed).
+  if (incident.sourceType === "monitor" && incident.condition?.trigger === "threshold") return "incident.event"
   // "created" — the incident is freshly inserted. `endedAt = startedAt`
   // means an eventful kind that collapsed
   // to a point in time; otherwise it's the open side of a sustained

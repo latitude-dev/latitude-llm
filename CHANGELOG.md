@@ -2,6 +2,66 @@
 
 ## Unreleased
 
+## v0.3.43 - 2026-07-09
+
+### Monitors
+
+- Gave threshold monitors an open/close incident lifecycle: a sustained breach now opens a single incident and dedups until a 30-minute exit dwell closes it, instead of emailing on every ~5-minute sweep. Editing a monitor with an open incident now evicts the stale incident (ref: #3949).
+
+### Showcase
+
+- Flipped onboarding to the shared read-only showcase: new orgs get only their real empty default project and land on `/projects/lat-demo` when the showcase resolves, with a fallback to their own default project. Retired the old per-signup/claim demo-project seeding machinery (ref: #3940).
+
+## v0.3.42 - 2026-07-09
+
+### Signals
+
+- Generated signals with a research agent instead of a fixed prompt loop, giving richer investigation output (ref: #3922).
+
+### Agent Dispatch
+
+- Skipped agent dispatch for user-created signals on `signal.discovered` so only auto-discovered signals trigger dispatch (ref: #3925).
+- Improved the signal dispatch prompt fallback (ref: #3913).
+
+### Notifications
+
+- Enriched signal discovery notification messages (ref: #3937).
+
+### Evaluations
+
+- Surfaced GEPA optimization failures and added support for single-example signals (ref: #3935).
+
+### Showcase
+
+- Added read-only UI variance and org-wide showcase dismissal (S6) (ref: #3918).
+- Added a backoffice showcase section for managing the demo project (S7) (ref: #3919).
+- Scoped project-section Postgres domains onto `withScopedPostgres` (ref: #3909).
+
+### API
+
+- Restored `getApiKey` as a tool and converted all handler-form operations to execute-form (ref: #3938, #3934).
+- Rejected `gtePercentile` on span row filters and fractional values on integer ClickHouse filter fields (ref: #3839, #3924).
+
+### Performance
+
+- Reused instruction extractions across similar system prompts, normalized the instruction-extractor cache key, and raised the verbatim threshold to cut flagger work (ref: #3928, #3926).
+
+### Web
+
+- Optimized the public design system (ref: #3929).
+
+### Telemetry
+
+- Tracked self-hosted deployments in PostHog.
+
+### Infra
+
+- Tuned production ECS memory and autoscaling.
+
+### Maintenance
+
+- Updated bundled models.dev data, refreshed the knip configuration, and bumped `@temporalio/*` to 1.17.5 for a workflow isolation fix (ref: #3895, #3921).
+
 ## v0.3.41 - 2026-07-07
 
 ### Agent Dispatch

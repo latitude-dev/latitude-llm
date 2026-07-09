@@ -1,9 +1,11 @@
 import { OutboxEventWriter } from "@domain/events"
 import {
   IncidentRepository,
+  isSavedSearchEntrySignals,
   isSignalEscalationEntrySignals,
   MIN_SEASONAL_SAMPLES,
   makeEscalationEngine,
+  type SavedSearchEntrySignals,
   SeriesReader,
   seasonalAnomalyThreshold,
 } from "@domain/incidents"
@@ -25,7 +27,7 @@ import {
 } from "@domain/shared"
 import { SEASONAL_HISTORY_WEEKS } from "@domain/signals"
 import { Effect } from "effect"
-import { SAVED_SEARCH_CURRENT_WINDOW_MS } from "../constants.ts"
+import { SAVED_SEARCH_CURRENT_WINDOW_MS, THRESHOLD_EXIT_DWELL_MS } from "../constants.ts"
 import type { Monitor } from "../entities/monitor.ts"
 import { monitorConfigCondition } from "../entities/monitor.ts"
 import type { MetricSeriesReaderShape, MetricSeriesTarget } from "../ports/metric-series-reader.ts"
@@ -154,41 +156,49 @@ const resolveMonitorTargets = (monitors: readonly Monitor[]) =>
     return resolved.filter((entry): entry is ResolvedMonitorTarget => entry !== null)
   })
 
-const evaluatePointMonitor = (
+type ThresholdCondition = Extract<AlertIncidentCondition, { trigger: "threshold" }>
+
+const thresholdMetricTarget = (target: MetricSeriesTarget, condition: ThresholdCondition): MetricSeriesTarget => ({
+  ...target,
+  metric: condition.metric,
+})
+
+const evaluateMatchPoint = (
   monitor: Monitor,
   target: MetricSeriesTarget,
-  condition: AlertIncidentCondition | null,
   metricReader: MetricSeriesReaderShape,
   now: Date,
 ) =>
   Effect.gen(function* () {
     const from = new Date(now.getTime() - SAVED_SEARCH_CURRENT_WINDOW_MS)
-    if (monitor.rule.trigger === "match") {
-      const matchTarget = { ...target, metric: { kind: "count" as const } }
-      const value = yield* metricReader.valueInWindow({
-        organizationId: monitor.organizationId,
-        projectId: monitor.projectId,
-        target: matchTarget,
-        from,
-        to: now,
-      })
-      if (value <= 0) return null
-      const firstEventAt = yield* metricReader.firstEventAt({
-        organizationId: monitor.organizationId,
-        projectId: monitor.projectId,
-        target: matchTarget,
-        from,
-        to: now,
-      })
-      return {
-        startedAt: firstEventAt ?? now,
-        condition,
-      }
-    }
+    const matchTarget = { ...target, metric: { kind: "count" as const } }
+    const value = yield* metricReader.valueInWindow({
+      organizationId: monitor.organizationId,
+      projectId: monitor.projectId,
+      target: matchTarget,
+      from,
+      to: now,
+    })
+    if (value <= 0) return null
+    const firstEventAt = yield* metricReader.firstEventAt({
+      organizationId: monitor.organizationId,
+      projectId: monitor.projectId,
+      target: matchTarget,
+      from,
+      to: now,
+    })
+    return { startedAt: firstEventAt ?? now }
+  })
 
-    if (condition?.trigger !== "threshold") return null
-
-    const metricTarget = { ...target, metric: condition.metric }
+const computeThresholdValue = (
+  monitor: Monitor,
+  target: MetricSeriesTarget,
+  condition: ThresholdCondition,
+  metricReader: MetricSeriesReaderShape,
+  now: Date,
+) =>
+  Effect.gen(function* () {
+    const metricTarget = thresholdMetricTarget(target, condition)
     const valueIn = (windowFrom: Date, windowTo: Date) =>
       metricReader.valueInWindow({
         organizationId: monitor.organizationId,
@@ -197,28 +207,54 @@ const evaluatePointMonitor = (
         from: windowFrom,
         to: windowTo,
       })
-    const value = yield* valueIn(from, now)
     const threshold = condition.threshold
     const direction = condition.direction ?? "above"
-    let thresholdValue: number
-    if (threshold.mode === "absolute") {
-      thresholdValue = threshold.value
-    } else if (threshold.mode === "multiplier") {
+    if (threshold.mode === "absolute") return threshold.value
+    if (threshold.mode === "multiplier") {
       const baseline = baselineWindow(threshold.baseline, now)
       const baselineValue = yield* valueIn(baseline.from, baseline.to)
       const scale = metricIsAccumulating(metricTarget.metric) ? SAVED_SEARCH_CURRENT_WINDOW_MS / baseline.lengthMs : 1
-      thresholdValue = threshold.factor * baselineValue * scale
-    } else {
-      const historical = yield* Effect.all(
-        Array.from({ length: SEASONAL_HISTORY_WEEKS }, (_unused, index) => {
-          const historyTo = new Date(now.getTime() - (index + 1) * WEEK_MS)
-          return valueIn(new Date(historyTo.getTime() - SAVED_SEARCH_CURRENT_WINDOW_MS), historyTo)
-        }),
-        { concurrency: "unbounded" },
-      )
-      thresholdValue = seasonalThreshold(historical, threshold, direction)
+      return threshold.factor * baselineValue * scale
     }
+    const historical = yield* Effect.all(
+      Array.from({ length: SEASONAL_HISTORY_WEEKS }, (_unused, index) => {
+        const historyTo = new Date(now.getTime() - (index + 1) * WEEK_MS)
+        return valueIn(new Date(historyTo.getTime() - SAVED_SEARCH_CURRENT_WINDOW_MS), historyTo)
+      }),
+      { concurrency: "unbounded" },
+    )
+    return seasonalThreshold(historical, threshold, direction)
+  })
 
+/**
+ * Evaluate a threshold condition over the current window. Without `frozenThreshold` the
+ * live threshold is computed (the open decision); passing an open incident's frozen entry
+ * threshold re-checks it against what tripped it, so a drifting multiplier/seasonal baseline
+ * can't silently close a real breach.
+ */
+const evaluateThreshold = (
+  monitor: Monitor,
+  target: MetricSeriesTarget,
+  condition: ThresholdCondition,
+  metricReader: MetricSeriesReaderShape,
+  now: Date,
+  frozenThreshold?: number,
+) =>
+  Effect.gen(function* () {
+    const metricTarget = thresholdMetricTarget(target, condition)
+    const from = new Date(now.getTime() - SAVED_SEARCH_CURRENT_WINDOW_MS)
+    const value = yield* metricReader.valueInWindow({
+      organizationId: monitor.organizationId,
+      projectId: monitor.projectId,
+      target: metricTarget,
+      from,
+      to: now,
+    })
+    const thresholdValue =
+      frozenThreshold !== undefined
+        ? frozenThreshold
+        : yield* computeThresholdValue(monitor, target, condition, metricReader, now)
+    const direction = condition.direction ?? "above"
     let isMet = isThresholdMet(value, thresholdValue, direction)
     const firstEventAt = isMet
       ? yield* metricReader.firstEventAt({
@@ -229,12 +265,9 @@ const evaluatePointMonitor = (
           to: now,
         })
       : null
-    if (isMet && direction === "below" && threshold.mode === "absolute" && firstEventAt === null) isMet = false
-    if (!isMet) return null
-    return {
-      startedAt: firstEventAt ?? now,
-      condition,
-    }
+    if (isMet && direction === "below" && condition.threshold.mode === "absolute" && firstEventAt === null)
+      isMet = false
+    return { met: isMet, startedAt: firstEventAt ?? now, thresholdValue }
   })
 
 export const checkMonitorsUseCase = (input: CheckMonitorsInput) =>
@@ -251,10 +284,9 @@ export const checkMonitorsUseCase = (input: CheckMonitorsInput) =>
     let failed = 0
     const evaluatable = active.filter(monitorCanEvaluate)
 
-    const checkPointMonitor = (monitor: Monitor, target: MetricSeriesTarget) =>
+    const checkMatchMonitor = (monitor: Monitor, target: MetricSeriesTarget) =>
       Effect.gen(function* () {
-        const condition = monitorConfigCondition(monitor.rule.config)
-        const point = yield* evaluatePointMonitor(monitor, target, condition, metricReader, now)
+        const point = yield* evaluateMatchPoint(monitor, target, metricReader, now)
         if (point === null) return
         yield* sqlClient.transaction(
           Effect.gen(function* () {
@@ -271,7 +303,7 @@ export const checkMonitorsUseCase = (input: CheckMonitorsInput) =>
               createdAt,
               entrySignals: null,
               exitEligibleSince: null,
-              condition: point.condition,
+              condition: null,
             }
             yield* incidentRepository.insert(incident)
             yield* outboxEventWriter.write({
@@ -289,6 +321,80 @@ export const checkMonitorsUseCase = (input: CheckMonitorsInput) =>
             })
           }),
         )
+      })
+
+    const checkThresholdMonitor = (monitor: Monitor, target: MetricSeriesTarget) =>
+      Effect.gen(function* () {
+        const condition = monitorConfigCondition(monitor.rule.config)
+        if (condition?.trigger !== "threshold") return
+        const openIncident = yield* incidentRepository.findOpen({ sourceType: "monitor", sourceId: monitor.id })
+
+        if (openIncident === null) {
+          const breach = yield* evaluateThreshold(monitor, target, condition, metricReader, now)
+          if (!breach.met) return
+          yield* sqlClient.transaction(
+            Effect.gen(function* () {
+              const createdAt = new Date()
+              const incident = {
+                id: AlertIncidentId(generateId()),
+                organizationId: monitor.organizationId,
+                projectId: monitor.projectId,
+                sourceType: "monitor" as const,
+                sourceId: monitor.id,
+                severity: monitor.rule.severity,
+                startedAt: breach.startedAt,
+                endedAt: null,
+                createdAt,
+                entrySignals: { evaluatedThreshold: breach.thresholdValue } satisfies SavedSearchEntrySignals,
+                exitEligibleSince: null,
+                condition,
+              }
+              yield* incidentRepository.insert(incident)
+              yield* outboxEventWriter.write({
+                eventName: "IncidentCreated",
+                aggregateType: "alert_incident",
+                aggregateId: incident.id,
+                organizationId: incident.organizationId,
+                payload: {
+                  organizationId: incident.organizationId,
+                  projectId: incident.projectId,
+                  alertIncidentId: incident.id,
+                  sourceType: "monitor",
+                  sourceId: monitor.id,
+                },
+              })
+            }),
+          )
+          return
+        }
+
+        // An open incident exists: re-check against the FROZEN entry threshold so a
+        // drifting baseline can't auto-close a live breach. A single open incident per
+        // episode (the partial unique index) means one alert, not one per sweep.
+        const frozenThreshold = isSavedSearchEntrySignals(openIncident.entrySignals)
+          ? openIncident.entrySignals.evaluatedThreshold
+          : undefined
+        const breach = yield* evaluateThreshold(monitor, target, condition, metricReader, now, frozenThreshold)
+
+        if (breach.met) {
+          if (openIncident.exitEligibleSince !== null) {
+            yield* incidentRepository.updateExitDwell({ id: openIncident.id, exitEligibleSince: null })
+          }
+          return
+        }
+        if (openIncident.exitEligibleSince === null) {
+          yield* incidentRepository.updateExitDwell({ id: openIncident.id, exitEligibleSince: now })
+          return
+        }
+        if (now.getTime() - openIncident.exitEligibleSince.getTime() >= THRESHOLD_EXIT_DWELL_MS) {
+          // Silent close: no IncidentClosed event, so no recovery notification. `ended_at`
+          // is the moment it cleared, and closing re-arms a fresh alert on recurrence.
+          yield* incidentRepository.closeOpen({
+            sourceType: "monitor",
+            sourceId: monitor.id,
+            endedAt: openIncident.exitEligibleSince,
+          })
+        }
       })
 
     const checkEscalatingMonitor = (monitor: Monitor, target: MetricSeriesTarget) =>
@@ -407,8 +513,12 @@ export const checkMonitorsUseCase = (input: CheckMonitorsInput) =>
         const resolved = yield* resolveMonitorTargets([monitor])
         const entry = resolved[0]
         if (entry === undefined) return false
-        if (monitor.rule.trigger === "match" || monitor.rule.trigger === "threshold") {
-          yield* checkPointMonitor(entry.monitor, entry.target)
+        if (monitor.rule.trigger === "match") {
+          yield* checkMatchMonitor(entry.monitor, entry.target)
+          return true
+        }
+        if (monitor.rule.trigger === "threshold") {
+          yield* checkThresholdMonitor(entry.monitor, entry.target)
           return true
         }
         if (monitorCanUseSeasonalEngine(monitor)) {
