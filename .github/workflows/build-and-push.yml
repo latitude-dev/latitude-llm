@@ -260,8 +260,29 @@ jobs:
             S3_BUCKET=${{ vars.STATIC_ASSETS_S3_BUCKET }}
             STATIC_ASSETS_HOST=${{ vars.STATIC_ASSETS_HOST }}
             NEXT_PUBLIC_STATIC_ASSETS_URL=${{ env.NEXT_PUBLIC_STATIC_ASSETS_URL }}
+  run-migrations:
+    needs: [build-and-push-private, acceptance-tests]
+    uses: ./.github/workflows/run-migrations.yml
+    with:
+      workflow_call: true
+    secrets:
+      DB_HOST: ${{ secrets.DB_HOST }}
+      DB_NAME: ${{ secrets.DB_NAME }}
+      DB_PASSWORD: ${{ secrets.DB_PASSWORD }}
+      DB_PORT: ${{ secrets.DB_PORT }}
+      DB_USERNAME: ${{ secrets.DB_USERNAME }}
+      SSH_HOST: ${{ secrets.SSH_HOST }}
+      SSH_PRIVATE_KEY: ${{ secrets.SSH_PRIVATE_KEY }}
+      SSH_USER: ${{ secrets.SSH_USER }}
+      CLICKHOUSE_MIGRATION_URL: ${{ secrets.CLICKHOUSE_MIGRATION_URL }}
+      CLICKHOUSE_URL: ${{ secrets.CLICKHOUSE_URL }}
+      CLICKHOUSE_DB: ${{ secrets.CLICKHOUSE_DB }}
+      CLICKHOUSE_USER: ${{ secrets.CLICKHOUSE_USER }}
+      CLICKHOUSE_PASSWORD: ${{ secrets.CLICKHOUSE_PASSWORD }}
+      CLICKHOUSE_MIGRATION_SSL: ${{ secrets.CLICKHOUSE_MIGRATION_SSL }}
+
   deploy-bluegreen:
-    needs: [build-and-push-private]
+    needs: [run-migrations, build-and-push-private]
     uses: ./.github/workflows/deploy-bluegreen.yml
     permissions:
       id-token: write
@@ -273,7 +294,7 @@ jobs:
       AWS_ACCOUNT_ID: ${{ secrets.AWS_ACCOUNT_ID }}
 
   deploy-rolling:
-    needs: [build-and-push-private]
+    needs: [run-migrations, build-and-push-private]
     uses: ./.github/workflows/deploy-rolling.yml
     permissions:
       id-token: write
