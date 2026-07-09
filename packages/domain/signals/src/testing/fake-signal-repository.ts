@@ -171,8 +171,11 @@ export const createFakeSignalRepository = (
             if (lifecycleGroup === "active" && archived) return false
             if (lifecycleGroup === "archived" && !archived) return false
             if (assigneeIds?.length && !assigneeIds.includes(issue.assigneeId ?? "unassigned")) return false
-            if (timeRange?.from && issue.updatedAt < timeRange.from) return false
-            if (timeRange?.to && issue.updatedAt > timeRange.to) return false
+            if (timeRange?.from || timeRange?.to) {
+              const inWindow = (date: Date) =>
+                (!timeRange.from || date >= timeRange.from) && (!timeRange.to || date <= timeRange.to)
+              if (!inWindow(issue.updatedAt) && !inWindow(issue.createdAt)) return false
+            }
             if (
               query &&
               !issue.name.toLowerCase().includes(query) &&

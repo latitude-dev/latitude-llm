@@ -23,7 +23,23 @@ import {
   signalSchema,
   UNASSIGNED_FILTER,
 } from "@domain/signals"
-import { and, asc, count, desc, eq, getTableColumns, ilike, inArray, isNotNull, isNull, ne, or, sql } from "drizzle-orm"
+import {
+  and,
+  asc,
+  count,
+  desc,
+  eq,
+  getTableColumns,
+  gte,
+  ilike,
+  inArray,
+  isNotNull,
+  isNull,
+  lte,
+  ne,
+  or,
+  sql,
+} from "drizzle-orm"
 import { Effect, Layer } from "effect"
 import type { Operator } from "../client.ts"
 import { incidents } from "../schema/alert-incidents.ts"
@@ -239,18 +255,26 @@ const signalRepositoryCoreLive = Layer.effect(
               const search = searchQuery?.trim()
               const scoreCreatedFromClause = timeRange?.from ? sql`and ${scores.createdAt} >= ${timeRange.from}` : sql``
               const scoreCreatedToClause = timeRange?.to ? sql`and ${scores.createdAt} <= ${timeRange.to}` : sql``
-              const hasScoreActivityInTimeRange =
+              // A signal belongs in the window if it fired in it OR was created in it, so a
+              // freshly created signal appears before its first occurrence lands.
+              const activityOrCreatedInTimeRange =
                 timeRange?.from || timeRange?.to
-                  ? sql<boolean>`exists (
-                      select 1
-                      from ${scores}
-                      where ${scores.organizationId} = ${organizationId}
-                        and ${scores.projectId} = ${projectId}
-                        and ${scores.signalId} = ${signals.id}
-                        and ${scores.draftedAt} is null
-                        ${scoreCreatedFromClause}
-                        ${scoreCreatedToClause}
-                    )`
+                  ? or(
+                      sql<boolean>`exists (
+                        select 1
+                        from ${scores}
+                        where ${scores.organizationId} = ${organizationId}
+                          and ${scores.projectId} = ${projectId}
+                          and ${scores.signalId} = ${signals.id}
+                          and ${scores.draftedAt} is null
+                          ${scoreCreatedFromClause}
+                          ${scoreCreatedToClause}
+                      )`,
+                      and(
+                        timeRange?.from ? gte(signals.createdAt, timeRange.from) : undefined,
+                        timeRange?.to ? lte(signals.createdAt, timeRange.to) : undefined,
+                      ),
+                    )
                   : undefined
               const where = and(
                 eq(signals.organizationId, organizationId),
@@ -262,7 +286,7 @@ const signalRepositoryCoreLive = Layer.effect(
                     ? isNotNull(signals.mutedAt)
                     : undefined,
                 assigneeConditions,
-                hasScoreActivityInTimeRange,
+                activityOrCreatedInTimeRange,
                 search ? or(ilike(signals.name, `%${search}%`), ilike(signals.description, `%${search}%`)) : undefined,
               )
               const direction = sort?.direction === "asc" ? asc : desc
