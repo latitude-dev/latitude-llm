@@ -2,6 +2,18 @@
 
 ## Unreleased
 
+## v0.3.44 - 2026-07-09
+
+### Agent Dispatch
+
+- Added org-default dispatch configuration with per-project overrides: dispatch repos now resolve from an org-wide default that any project can override or reset, replacing the single flat config (ref: #3952).
+
+### Signals
+
+- Showed freshly created signals immediately even before they have any occurrences (ref: #3945).
+- Removed the ghost modal left behind after confirming a mute-signal action (ref: #3946).
+- Removed the redundant "Me" option from assignee selectors (ref: #3948).
+
 ## v0.3.43 - 2026-07-09
 
 ### Monitors
