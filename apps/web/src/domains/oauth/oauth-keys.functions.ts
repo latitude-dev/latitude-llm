@@ -8,8 +8,9 @@
  * Creation happens entirely through the OAuth consent flow
  * (`/auth/consent`) — there's no "Create OAuth key" surface here.
  */
-import { MembershipRepository } from "@domain/organizations"
+
 import { listOAuthKeysUseCase, type OAuthKey, revokeOAuthKeyUseCase } from "@domain/oauth-keys"
+import { MembershipRepository } from "@domain/organizations"
 import { ForbiddenError } from "@domain/shared"
 import { MembershipRepositoryLive, OAuthKeyRepositoryLive, withPostgres } from "@platform/db-postgres"
 import { OAuthTokenCacheInvalidatorLive } from "@platform/oauth-token-auth"
