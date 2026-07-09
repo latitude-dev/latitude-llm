@@ -152,9 +152,7 @@ function MemberOptionRow({ item, isMe }: { readonly item: MemberOption; readonly
     <ComboboxItem value={item}>
       <OptionLeading item={item} />
       <Text.H5 className="flex-1 truncate">{item.label}</Text.H5>
-      {item.key !== UNASSIGNED_KEY && isMe ? (
-        <Text.H6 color="foregroundMuted">(You)</Text.H6>
-      ) : null}
+      {item.key !== UNASSIGNED_KEY && isMe ? <Text.H6 color="foregroundMuted">(You)</Text.H6> : null}
     </ComboboxItem>
   )
 }
