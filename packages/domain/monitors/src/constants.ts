@@ -13,6 +13,13 @@ export const SAVED_SEARCH_CURRENT_WINDOW_MS = 5 * 60 * 1000
  */
 export const SAVED_SEARCH_MONITORS_THROTTLE_MS = 5 * 60 * 1000
 
+/**
+ * How long a `threshold` monitor's condition must stay clear before its open incident
+ * closes — hysteresis so a metric oscillating around the threshold doesn't flap open/closed.
+ * Independent of the escalation engine's dwell so threshold behaviour can be tuned alone.
+ */
+export const THRESHOLD_EXIT_DWELL_MS = 30 * 60 * 1000
+
 /** Per-project `checkSavedSearchMonitors` dedupe key, shared by trace-end + the sweep so the two triggers coalesce into one throttled check stream. */
 export const savedSearchMonitorsCheckDedupeKey = ({
   organizationId,
