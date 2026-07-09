@@ -34,7 +34,52 @@ The way in is ElevenLabs' [**Custom LLM**](https://elevenlabs.io/docs/eleven-age
 
 ---
 
-## Steps
+## ElevenLabs-managed agents (post-call OpenTelemetry)
+
+If your agent uses an **ElevenLabs-managed LLM** (not Custom LLM), the LLM calls never leave ElevenLabs' infrastructure. Latitude still receives the full conversation when ElevenLabs exports **post-call OpenTelemetry traces** to a webhook you configure.
+
+ElevenLabs sends `post_call_transcription_otel` webhooks with an `otlp_traces` payload (OTLP JSON). Latitude verifies the `ElevenLabs-Signature` header and ingests those spans into your project.
+
+<Steps>
+
+  <Step title="Enable the webhook in Latitude">
+    In your Latitude project, open **Settings → Integrations → ElevenLabs Agents** and click **Connect**. Paste the **signing secret** from your ElevenLabs workspace webhook. Copy the **Webhook URL** Latitude shows you.
+  </Step>
+
+  <Step title="Create a workspace webhook in ElevenLabs">
+    In the [ElevenAgents dashboard](https://elevenlabs.io/app/agents), create a workspace webhook with the Latitude URL and authentication enabled. Save the signing secret — you need the same value in Latitude.
+  </Step>
+
+  <Step title="Attach the webhook to your agent">
+    Open your agent settings, assign the webhook as the **post-call webhook**, enable the **Transcript** event, and set **transcript format** to **OpenTelemetry**.
+
+    See ElevenLabs' [OpenTelemetry traces guide](https://elevenlabs.io/docs/eleven-agents/customization/opentelemetry-traces#post-call-webhook) for CLI/API examples (`transcript_format: "opentelemetry"`).
+  </Step>
+
+  <Step title="Finish a conversation">
+    After a call completes and analysis finishes, ElevenLabs POSTs the OTLP trace to Latitude. Conversations appear grouped by `elevenlabs.conversation_id` with user/agent transcript spans and tool calls.
+  </Step>
+
+</Steps>
+
+### What you get
+
+| Span | Visible in Latitude |
+| --- | --- |
+| `elevenlabs.conversation` | Session root for the call |
+| `elevenlabs.recv.user_transcript` | User speech (text) |
+| `elevenlabs.recv.agent_response` | Agent reply (text) |
+| `elevenlabs.tool.*` | Tool executions |
+
+STT and TTS still run inside ElevenLabs; the webhook export covers the conversation transcript and tool timeline, not raw audio.
+
+---
+
+## Custom LLM proxy
+
+<Note>
+  Use **post-call OpenTelemetry webhooks** (above) for ElevenLabs-managed LLMs. Use the **Custom LLM** path below when you route the LLM through infrastructure you control and want per-turn token usage from your provider.
+</Note>
 
 <Steps>
 
@@ -244,10 +289,4 @@ Once connected, traces appear automatically in Latitude:
 2. Each agent turn shows the LLM call with its input/output conversation
 3. Token usage and latency are aggregated at every level
 
-<Note>
-  ElevenLabs-managed LLMs (where you don't bring your own endpoint) cannot be
-  traced this way — the calls never leave ElevenLabs' infrastructure. For those
-  agents, conversation transcripts are available via ElevenLabs'
-  [post-call webhooks](https://elevenlabs.io/docs/eleven-agents/workflows/post-call-webhooks)
-  and Conversations API.
-</Note>
+For ElevenLabs-managed agents without Custom LLM, use **Settings → Integrations → ElevenLabs Agents** to connect post-call OpenTelemetry webhooks instead.

@@ -17,6 +17,7 @@
     "@domain/queue": "workspace:*",
     "@domain/sandboxes": "workspace:*",
     "@domain/shared": "workspace:*",
+    "@domain/elevenlabs": "workspace:*",
     "@domain/spans": "workspace:*",
     "@hono/node-server": "catalog:",
     "@hono/otel": "1.1.1",

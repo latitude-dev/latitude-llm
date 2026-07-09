@@ -76,12 +76,22 @@ function anthropicProviderFromClaudeCodeSpanName(spanName: string): string | und
   return "anthropic"
 }
 
+function elevenlabsProviderFromSpan(scopeName: string, spanName: string): string | undefined {
+  if (scopeName === "elevenlabs.convai" || spanName.startsWith("elevenlabs.")) return "elevenlabs"
+  return undefined
+}
+
 /**
  * Resolves telemetry provider from span attributes, with a fallback for Agent SDK
  * span names (`claude_code.llm_request`) when `span.type` is absent.
  */
-export function resolveProvider(spanAttrs: readonly OtlpKeyValue[], spanName: string): string {
-  return first(providerCandidates, spanAttrs) ?? anthropicProviderFromClaudeCodeSpanName(spanName) ?? ""
+export function resolveProvider(spanAttrs: readonly OtlpKeyValue[], spanName: string, scopeName = ""): string {
+  return (
+    first(providerCandidates, spanAttrs) ??
+    anthropicProviderFromClaudeCodeSpanName(spanName) ??
+    elevenlabsProviderFromSpan(scopeName, spanName) ??
+    ""
+  )
 }
 
 export const modelCandidates: Candidate<string>[] = [
@@ -120,6 +130,7 @@ export const sessionIdCandidates = [
   fromString("wandb.thread_id"), // W&B Weave
   fromString("ai.telemetry.metadata.threadId"), // Opik (via Vercel AI SDK metadata)
   fromString("gen_ai.conversation.id"), // GenAI semconv
+  fromString("elevenlabs.conversation_id"), // ElevenLabs Agents OTEL export
   fromString("eve.turn.id"), // Eve framework (per-turn thread fallback)
 ]
 

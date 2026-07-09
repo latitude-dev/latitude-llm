@@ -3,6 +3,7 @@ import type { ToolDefinition } from "../../entities/span.ts"
 import { stringAttr } from "../attributes.ts"
 import type { OtlpKeyValue } from "../types.ts"
 import { parseClaudeCode } from "./claude-code.ts"
+import { parseElevenlabs } from "./elevenlabs.ts"
 import { parseFlue } from "./flue.ts"
 import { parseGenAICurrent } from "./genai.ts"
 import { parseGenAIDeprecated } from "./genai_deprecated.ts"
@@ -75,6 +76,10 @@ const PARSERS: readonly ContentParser[] = [
   {
     canHandle: (attrs) => hasKey(attrs, "flue.turn.input") || hasKey(attrs, "flue.turn.output"),
     parse: parseFlue,
+  },
+  {
+    canHandle: (attrs) => hasKey(attrs, "elevenlabs.user.text") || hasKey(attrs, "elevenlabs.agent.text"),
+    parse: parseElevenlabs,
   },
   {
     canHandle: (attrs) => hasKey(attrs, "user_prompt"), // Claude Code

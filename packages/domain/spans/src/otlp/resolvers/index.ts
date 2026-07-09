@@ -43,7 +43,7 @@ export function resolveAttributes({
   spanName = "",
   scopeName = "",
 }: ResolveAttributesInput): ResolvedAttributes {
-  const provider = resolveProvider(spanAttrs, spanName)
+  const provider = resolveProvider(spanAttrs, spanName, scopeName)
   const model = first(modelCandidates, spanAttrs) ?? ""
   const operation = resolveOperation(spanAttrs, spanName, scopeName)
 

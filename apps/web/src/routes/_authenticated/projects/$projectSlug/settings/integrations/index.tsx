@@ -16,6 +16,7 @@ import { useProjectsCollection } from "../../../../../../domains/projects/projec
 import { toUserMessage } from "../../../../../../lib/errors.ts"
 import { useRouteProject } from "../../-route-data.ts"
 import { AgentDispatchSection } from "../-components/agent-dispatch-section.tsx"
+import { ElevenlabsWebhookSection } from "../-components/elevenlabs-webhook-section.tsx"
 import { IntegrationCard } from "../-components/integration-card.tsx"
 import { SettingsPage } from "../-components/settings-page.tsx"
 import { SLACK_INTEGRATION_QUERY_KEY, SlackRouteRow } from "../-components/slack-route-row.tsx"
@@ -66,7 +67,10 @@ function IntegrationsSettingsPage() {
       <div className="flex flex-col gap-3">
         <SlackIntegrationSection />
         {currentProject ? (
-          <AgentDispatchSection projectId={currentProject.id} projectSlug={currentProject.slug} />
+          <>
+            <ElevenlabsWebhookSection projectId={currentProject.id} />
+            <AgentDispatchSection projectId={currentProject.id} projectSlug={currentProject.slug} />
+          </>
         ) : null}
       </div>
     </SettingsPage>

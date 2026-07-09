@@ -6,4 +6,4 @@
 export { decodeOtlpProtobuf } from "./otlp/proto.ts"
 export type { TransformContext } from "./otlp/transform.ts"
 export { transformOtlpToSpans } from "./otlp/transform.ts"
-export type { OtlpExportTraceServiceRequest } from "./otlp/types.ts"
+export type { OtlpExportTraceServiceRequest, OtlpKeyValue, OtlpSpan } from "./otlp/types.ts"

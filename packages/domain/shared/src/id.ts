@@ -66,6 +66,7 @@ export type TaxonomyLineageId = Id<"TaxonomyLineageId">
 // Integration-related IDs
 export type SlackIntegrationId = Id<"SlackIntegrationId">
 export type SlackDeliveryId = Id<"SlackDeliveryId">
+export type ElevenlabsWebhookEndpointId = Id<"ElevenlabsWebhookEndpointId">
 
 // Data-destination IDs
 export type DestinationId = Id<"DestinationId">
@@ -106,6 +107,8 @@ export const TaxonomyClusterId = (value: string): TaxonomyClusterId => value as 
 export const TaxonomyRunId = (value: string): TaxonomyRunId => value as TaxonomyRunId
 export const TaxonomyLineageId = (value: string): TaxonomyLineageId => value as TaxonomyLineageId
 export const SlackIntegrationId = (value: string): SlackIntegrationId => value as SlackIntegrationId
+export const ElevenlabsWebhookEndpointId = (value: string): ElevenlabsWebhookEndpointId =>
+  value as ElevenlabsWebhookEndpointId
 export const SlackDeliveryId = (value: string): SlackDeliveryId => value as SlackDeliveryId
 export const DestinationId = (value: string): DestinationId => value as DestinationId
 export const DestinationSyncRunId = (value: string): DestinationSyncRunId => value as DestinationSyncRunId
@@ -143,6 +146,7 @@ export const taxonomyClusterIdSchema = cuidSchema.transform(TaxonomyClusterId)
 export const taxonomyRunIdSchema = cuidSchema.transform(TaxonomyRunId)
 export const taxonomyLineageIdSchema = cuidSchema.transform(TaxonomyLineageId)
 export const slackIntegrationIdSchema = cuidSchema.transform(SlackIntegrationId)
+export const elevenlabsWebhookEndpointIdSchema = cuidSchema.transform(ElevenlabsWebhookEndpointId)
 export const slackDeliveryIdSchema = cuidSchema.transform(SlackDeliveryId)
 export const destinationIdSchema = cuidSchema.transform(DestinationId)
 export const destinationSyncRunIdSchema = cuidSchema.transform(DestinationSyncRunId)

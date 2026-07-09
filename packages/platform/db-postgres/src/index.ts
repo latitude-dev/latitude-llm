@@ -14,6 +14,7 @@ export {
   type StripePlanConfig,
   type User,
 } from "./create-better-auth.ts"
+export { decryptField, encryptField, getEncryptionKey } from "./encryption-key.ts"
 export { healthcheckPostgres } from "./health.ts"
 // Outbox consumer for reliable event publishing
 export {
@@ -42,6 +43,10 @@ export { DatasetRepositoryLive } from "./repositories/dataset-repository.ts"
 export { DestinationRepositoryLive } from "./repositories/destination-repository.ts"
 export { DestinationSourceStateRepositoryLive } from "./repositories/destination-source-state-repository.ts"
 export { DestinationSyncRunRepositoryLive } from "./repositories/destination-sync-run-repository.ts"
+export {
+  ElevenlabsWebhookEndpointRepositoryLive,
+  findActiveElevenlabsWebhookEndpointByToken,
+} from "./repositories/elevenlabs-webhook-endpoint-repository.ts"
 // Repository implementations
 export { EvaluationAlignmentExamplesRepositoryLive } from "./repositories/evaluation-alignment-examples-repository.ts"
 export { EvaluationRepositoryLive } from "./repositories/evaluation-repository.ts"
