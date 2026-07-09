@@ -13,6 +13,7 @@ import { Route as LoginRouteImport } from './routes/login'
 import { Route as AuthenticatedRouteImport } from './routes/_authenticated'
 import { Route as BackofficeRouteRouteImport } from './routes/backoffice/route'
 import { Route as WelcomeIndexRouteImport } from './routes/welcome/index'
+import { Route as ChooseOrganizationIndexRouteImport } from './routes/choose-organization/index'
 import { Route as BackofficeIndexRouteImport } from './routes/backoffice/index'
 import { Route as AuthenticatedIndexRouteImport } from './routes/_authenticated/index'
 import { Route as WrappedIdRouteImport } from './routes/wrapped/$id'
@@ -101,6 +102,11 @@ const BackofficeRouteRoute = BackofficeRouteRouteImport.update({
 const WelcomeIndexRoute = WelcomeIndexRouteImport.update({
   id: '/welcome/',
   path: '/welcome/',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ChooseOrganizationIndexRoute = ChooseOrganizationIndexRouteImport.update({
+  id: '/choose-organization/',
+  path: '/choose-organization/',
   getParentRoute: () => rootRouteImport,
 } as any)
 const BackofficeIndexRoute = BackofficeIndexRouteImport.update({
@@ -529,6 +535,7 @@ export interface FileRoutesByFullPath {
   '/downloads/export': typeof DownloadsExportRoute
   '/wrapped/$id': typeof WrappedIdRouteWithChildren
   '/backoffice/': typeof BackofficeIndexRoute
+  '/choose-organization/': typeof ChooseOrganizationIndexRoute
   '/welcome/': typeof WelcomeIndexRoute
   '/.well-known/oauth-authorization-server/$': typeof Char91DotwellKnownChar93OauthAuthorizationServerSplatRoute
   '/.well-known/openid-configuration/$': typeof Char91DotwellKnownChar93OpenidConfigurationSplatRoute
@@ -602,6 +609,7 @@ export interface FileRoutesByTo {
   '/wrapped/$id': typeof WrappedIdRouteWithChildren
   '/': typeof AuthenticatedIndexRoute
   '/backoffice': typeof BackofficeIndexRoute
+  '/choose-organization': typeof ChooseOrganizationIndexRoute
   '/welcome': typeof WelcomeIndexRoute
   '/.well-known/oauth-authorization-server/$': typeof Char91DotwellKnownChar93OauthAuthorizationServerSplatRoute
   '/.well-known/openid-configuration/$': typeof Char91DotwellKnownChar93OpenidConfigurationSplatRoute
@@ -677,6 +685,7 @@ export interface FileRoutesById {
   '/wrapped/$id': typeof WrappedIdRouteWithChildren
   '/_authenticated/': typeof AuthenticatedIndexRoute
   '/backoffice/': typeof BackofficeIndexRoute
+  '/choose-organization/': typeof ChooseOrganizationIndexRoute
   '/welcome/': typeof WelcomeIndexRoute
   '/.well-known/oauth-authorization-server/$': typeof Char91DotwellKnownChar93OauthAuthorizationServerSplatRoute
   '/.well-known/openid-configuration/$': typeof Char91DotwellKnownChar93OpenidConfigurationSplatRoute
@@ -754,6 +763,7 @@ export interface FileRouteTypes {
     | '/downloads/export'
     | '/wrapped/$id'
     | '/backoffice/'
+    | '/choose-organization/'
     | '/welcome/'
     | '/.well-known/oauth-authorization-server/$'
     | '/.well-known/openid-configuration/$'
@@ -827,6 +837,7 @@ export interface FileRouteTypes {
     | '/wrapped/$id'
     | '/'
     | '/backoffice'
+    | '/choose-organization'
     | '/welcome'
     | '/.well-known/oauth-authorization-server/$'
     | '/.well-known/openid-configuration/$'
@@ -901,6 +912,7 @@ export interface FileRouteTypes {
     | '/wrapped/$id'
     | '/_authenticated/'
     | '/backoffice/'
+    | '/choose-organization/'
     | '/welcome/'
     | '/.well-known/oauth-authorization-server/$'
     | '/.well-known/openid-configuration/$'
@@ -974,6 +986,7 @@ export interface RootRouteChildren {
   ClaimTokenRoute: typeof ClaimTokenRoute
   DownloadsExportRoute: typeof DownloadsExportRoute
   WrappedIdRoute: typeof WrappedIdRouteWithChildren
+  ChooseOrganizationIndexRoute: typeof ChooseOrganizationIndexRoute
   WelcomeIndexRoute: typeof WelcomeIndexRoute
   ApiAuthSplatRoute: typeof ApiAuthSplatRoute
   ApiObservabilityTestErrorRoute: typeof ApiObservabilityTestErrorRoute
@@ -1013,6 +1026,13 @@ declare module '@tanstack/react-router' {
       path: '/welcome'
       fullPath: '/welcome/'
       preLoaderRoute: typeof WelcomeIndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/choose-organization/': {
+      id: '/choose-organization/'
+      path: '/choose-organization'
+      fullPath: '/choose-organization/'
+      preLoaderRoute: typeof ChooseOrganizationIndexRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/backoffice/': {
@@ -1766,6 +1786,7 @@ const rootRouteChildren: RootRouteChildren = {
   ClaimTokenRoute: ClaimTokenRoute,
   DownloadsExportRoute: DownloadsExportRoute,
   WrappedIdRoute: WrappedIdRouteWithChildren,
+  ChooseOrganizationIndexRoute: ChooseOrganizationIndexRoute,
   WelcomeIndexRoute: WelcomeIndexRoute,
   ApiAuthSplatRoute: ApiAuthSplatRoute,
   ApiObservabilityTestErrorRoute: ApiObservabilityTestErrorRoute,

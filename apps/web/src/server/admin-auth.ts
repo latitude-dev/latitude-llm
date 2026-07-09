@@ -30,6 +30,9 @@ export function assertAdminUser(
   }
 }
 
+export const isAdminUser = (user: (User & { role?: string | null }) | null | undefined): boolean =>
+  user?.role === "admin"
+
 /**
  * Admin gate for backoffice server functions and the backoffice route
  * loader. MUST be the first IO of every admin-gated handler — TanStack
