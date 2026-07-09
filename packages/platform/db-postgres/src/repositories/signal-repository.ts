@@ -368,6 +368,27 @@ const signalRepositoryCoreLive = Layer.effect(
             )
         }),
 
+      listIdsCreatedInTimeRange: ({ projectId, timeRange }) =>
+        Effect.gen(function* () {
+          const sqlClient = (yield* SqlClient) as SqlClientShape<Operator>
+          return yield* sqlClient
+            .query((db, organizationId) =>
+              db
+                .select({ id: signals.id })
+                .from(signals)
+                .where(
+                  and(
+                    eq(signals.organizationId, organizationId),
+                    eq(signals.projectId, projectId),
+                    isNull(signals.deletedAt),
+                    timeRange.from ? gte(signals.createdAt, timeRange.from) : undefined,
+                    timeRange.to ? lte(signals.createdAt, timeRange.to) : undefined,
+                  ),
+                ),
+            )
+            .pipe(Effect.map((rows) => rows.map((row) => SignalId(row.id))))
+        }),
+
       findById: (id: SignalId) =>
         Effect.gen(function* () {
           const sqlClient = (yield* SqlClient) as SqlClientShape<Operator>

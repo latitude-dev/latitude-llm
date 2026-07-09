@@ -203,6 +203,18 @@ export const createFakeSignalRepository = (
         }
       }),
 
+    listIdsCreatedInTimeRange: ({ projectId, timeRange }) =>
+      Effect.sync(() =>
+        [...issues.values()]
+          .filter((issue) => issue.projectId === projectId && issue.deletedAt === null)
+          .filter(
+            (issue) =>
+              (!timeRange.from || issue.createdAt >= timeRange.from) &&
+              (!timeRange.to || issue.createdAt <= timeRange.to),
+          )
+          .map((issue) => issue.id),
+      ),
+
     ...overrides,
   }
 

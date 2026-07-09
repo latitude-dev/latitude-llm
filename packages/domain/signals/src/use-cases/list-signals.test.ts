@@ -492,6 +492,76 @@ describe("listSignalsUseCase", () => {
     expect(result.hasAnySignals).toBe(true)
   })
 
+  it("includes a signal created in the selected window with zero occurrences in the analytics counts and items", async () => {
+    const now = new Date("2026-04-10T00:00:00.000Z")
+    const timeRange = { from: new Date("2026-03-11T00:00:00.000Z"), to: now }
+    const activeSignal = makeSignal({
+      id: SignalId("aaaaaaaaaaaaaaaaaaaaaaaa"),
+      priority: "high",
+      createdAt: new Date("2026-03-20T08:00:00.000Z"),
+      updatedAt: new Date("2026-03-20T08:00:00.000Z"),
+      clusteredAt: new Date("2026-03-20T08:00:00.000Z"),
+    })
+    // A freshly created user signal with no scores yet: no ClickHouse window
+    // metric, but its createdAt falls in the window, so it must still surface in
+    // the analytics path that drives the counts, public API list, and export.
+    const freshSignal = makeSignal({
+      id: SignalId("ffffffffffffffffffffffff"),
+      origin: "user",
+      source: "custom",
+      priority: "urgent",
+      centroid: null,
+      clusteredAt: null,
+      createdAt: new Date("2026-04-09T08:00:00.000Z"),
+      updatedAt: new Date("2026-04-09T08:00:00.000Z"),
+    })
+
+    const { repository: signalRepository } = createFakeSignalRepository([activeSignal, freshSignal])
+    const { repository: evaluationRepository } = createEvaluationRepository()
+    const { repository: scoreAnalyticsRepository } = createFakeScoreAnalyticsRepository({
+      listSignalWindowMetrics: () =>
+        Effect.succeed([
+          makeWindowMetric({
+            signalId: activeSignal.id,
+            occurrences: 5,
+            firstSeenAt: new Date("2026-04-01T00:00:00.000Z"),
+            lastSeenAt: new Date("2026-04-05T00:00:00.000Z"),
+          }),
+        ]),
+      aggregateBySignals: aggregateOccurrences([
+        makeOccurrence({
+          signalId: activeSignal.id,
+          totalOccurrences: 5,
+          firstSeenAt: new Date("2026-04-01T00:00:00.000Z"),
+          lastSeenAt: new Date("2026-04-05T00:00:00.000Z"),
+        }),
+      ]),
+    })
+
+    const result = await Effect.runPromise(
+      listSignalsUseCase({ organizationId, projectId, now, timeRange }).pipe(
+        Effect.provide(
+          Layer.mergeAll(
+            Layer.succeed(SignalRepository, signalRepository),
+            Layer.succeed(EvaluationRepository, evaluationRepository),
+            Layer.succeed(ScoreAnalyticsRepository, scoreAnalyticsRepository),
+            Layer.succeed(SqlClient, createFakeSqlClient({ organizationId })),
+            Layer.succeed(ChSqlClient, createFakeChSqlClient({ organizationId })),
+            provideSessionRepository,
+          ),
+        ),
+      ),
+    )
+
+    expect(result.totalCount).toBe(2)
+    // Priority-grouped: urgent (fresh) before high (active).
+    expect(result.items.map((issue) => issue.id)).toEqual([freshSignal.id, activeSignal.id])
+    const fresh = result.items.find((issue) => issue.id === freshSignal.id)
+    expect(fresh?.occurrences).toBe(0)
+    expect(result.priorityCounts.urgent).toBe(1)
+    expect(result.priorityCounts.high).toBe(1)
+  })
+
   it("keeps analytics independent from the lifecycle tab and hydrates only visible signal ids", async () => {
     const now = new Date("2026-04-10T12:00:00.000Z")
     const activeSignal = makeSignal({
