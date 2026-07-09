@@ -124,15 +124,16 @@ export function SignalLifecycleActions({
       </Button>
 
       {lifecycleConfirmAction !== null && lifecycleConfirmation !== null ? (
-        <Modal.Root
+        <Modal
           open
           onOpenChange={(open) => {
             if (!open) setLifecycleConfirmAction(null)
           }}
-        >
-          <Modal.Content dismissible>
-            <Modal.Header title={lifecycleConfirmation.title} description={lifecycleConfirmation.description} />
-            <Modal.Footer>
+          dismissible
+          title={lifecycleConfirmation.title}
+          description={lifecycleConfirmation.description}
+          footer={
+            <>
               <CloseTrigger />
               <Button
                 {...(lifecycleConfirmation.confirmVariant ? { variant: lifecycleConfirmation.confirmVariant } : {})}
@@ -142,9 +143,9 @@ export function SignalLifecycleActions({
                 <Icon icon={lifecycleConfirmation.confirmIcon} size="sm" />
                 {lifecycleConfirmation.confirmLabel}
               </Button>
-            </Modal.Footer>
-          </Modal.Content>
-        </Modal.Root>
+            </>
+          }
+        />
       ) : null}
     </>
   )
