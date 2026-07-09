@@ -1101,6 +1101,45 @@ export const TraceRepositoryLive = Layer.effect(
           const havingClause = havingClauses.length > 0 ? `HAVING ${havingClauses.join(" AND ")}` : ""
           const extraWhere = whereClauses.length > 0 ? `AND ${whereClauses.join(" AND ")}` : ""
 
+          const mapLastAt = (rows: ReadonlyArray<{ last_at: string | null }>) => {
+            const raw = rows[0]?.last_at ?? null
+            if (!raw) return null
+            const parsedDate = new Date(raw.includes(" ") ? `${raw.replace(" ", "T")}Z` : raw)
+            return Number.isNaN(parsedDate.getTime()) ? null : parsedDate
+          }
+
+          const parsedSearch = searchQuery ? parseSearchQuery(searchQuery) : undefined
+          const hasSearch = Boolean(parsedSearch && isActiveSearch(parsedSearch))
+
+          // Fast path — no filters, no search (the dominant All-time histogram-anchor call). A trace's
+          // `start_time` is `min(min_start_time)`, so the latest trace start is `max` over a minimal
+          // grouped subquery. Avoids projecting the full, expensive `LIST_SELECT` per trace.
+          if (havingClauses.length === 0 && whereClauses.length === 0 && !hasSearch) {
+            return yield* chSqlClient
+              .query(async (client) => {
+                const result = await client.query({
+                  query: `SELECT toString(maxOrNull(trace_start)) AS last_at
+                          FROM (
+                            SELECT min(min_start_time) AS trace_start
+                            FROM traces
+                            WHERE organization_id = {organizationId:String}
+                              AND project_id = {projectId:String}
+                            GROUP BY organization_id, project_id, trace_id
+                          )`,
+                  query_params: {
+                    organizationId: organizationId as string,
+                    projectId: projectId as string,
+                  },
+                  format: "JSONEachRow",
+                })
+                return result.json<{ last_at: string | null }>()
+              })
+              .pipe(
+                Effect.map(mapLastAt),
+                Effect.mapError((error) => toRepositoryError(error, "findLastTraceAt")),
+              )
+          }
+
           const runQuery = (
             extraJoinCondition: string,
             extraParams: Record<string, unknown>,
@@ -1109,7 +1148,7 @@ export const TraceRepositoryLive = Layer.effect(
             chSqlClient
               .query(async (client) => {
                 const result = await client.query({
-                  query: `SELECT toString(max(start_time)) AS last_at
+                  query: `SELECT toString(maxOrNull(start_time)) AS last_at
                         FROM (
                           SELECT ${LIST_SELECT}
                           FROM traces
@@ -1132,18 +1171,12 @@ export const TraceRepositoryLive = Layer.effect(
                 return result.json<{ last_at: string | null }>()
               })
               .pipe(
-                Effect.map((rows) => {
-                  const raw = rows[0]?.last_at ?? null
-                  if (!raw) return null
-                  const parsed = new Date(raw.includes(" ") ? `${raw.replace(" ", "T")}Z` : raw)
-                  return Number.isNaN(parsed.getTime()) ? null : parsed
-                }),
+                Effect.map(mapLastAt),
                 Effect.mapError((error) => toRepositoryError(error, "findLastTraceAt")),
               )
 
-          const parsed = searchQuery ? parseSearchQuery(searchQuery) : undefined
-          if (parsed && isActiveSearch(parsed)) {
-            const plan = yield* planSearch(parsed)
+          if (parsedSearch && isActiveSearch(parsedSearch)) {
+            const plan = yield* planSearch(parsedSearch)
             return yield* runQuery(
               `AND trace_id IN (SELECT trace_id FROM (${plan.subquery}))`,
               plan.params,
@@ -1152,6 +1185,38 @@ export const TraceRepositoryLive = Layer.effect(
           }
 
           return yield* runQuery("", {})
+        }),
+
+      // Earliest activity is the global min of the raw start column — no per-trace GROUP BY or
+      // LIST_SELECT needed (min-of-per-trace-min == global min). `minOrNull` yields null (not epoch)
+      // for a project with no rows.
+      findFirstTraceAt: ({ organizationId, projectId }) =>
+        Effect.gen(function* () {
+          const chSqlClient = (yield* ChSqlClient) as ChSqlClientShape<ClickHouseClient>
+          return yield* chSqlClient
+            .query(async (client) => {
+              const result = await client.query({
+                query: `SELECT toString(minOrNull(min_start_time)) AS first_at
+                        FROM traces
+                        WHERE organization_id = {organizationId:String}
+                          AND project_id = {projectId:String}`,
+                query_params: {
+                  organizationId: organizationId as string,
+                  projectId: projectId as string,
+                },
+                format: "JSONEachRow",
+              })
+              return result.json<{ first_at: string | null }>()
+            })
+            .pipe(
+              Effect.map((rows) => {
+                const raw = rows[0]?.first_at ?? null
+                if (!raw) return null
+                const parsed = new Date(raw.includes(" ") ? `${raw.replace(" ", "T")}Z` : raw)
+                return Number.isNaN(parsed.getTime()) ? null : parsed
+              }),
+              Effect.mapError((error) => toRepositoryError(error, "findFirstTraceAt")),
+            )
         }),
 
       countAnnotatedByProjectId: ({ organizationId, projectId, filters, searchQuery }) =>

@@ -1,7 +1,7 @@
 import type { FilterSet } from "@domain/shared"
 import { denseTraceTimeHistogramBuckets, type TraceHistogramMetric } from "@domain/spans"
 import { BarChart, HistogramSkeleton, Text } from "@repo/ui"
-import { useCallback, useMemo } from "react"
+import { type ReactNode, useCallback, useMemo } from "react"
 
 import { useProjectAlertIncidentsInRange } from "../../../../../../domains/alerts/alerts.collection.ts"
 import { IncidentMarkerPopover } from "../../../../../../domains/alerts/incident-marker-popover.tsx"
@@ -9,6 +9,7 @@ import { buildIncidentMarkers } from "../../../../../../domains/alerts/incident-
 import { useIncidentBucketHoverPopover } from "../../../../../../domains/alerts/use-incident-bucket-hover-popover.ts"
 import { useSessionTimeHistogram } from "../../../../../../domains/sessions/sessions.collection.ts"
 import { useTraceTimeHistogram } from "../../../../../../domains/traces/traces.collection.ts"
+import { ChartHeader } from "../chart-header.tsx"
 import { HISTOGRAM_METRIC_DEFINITIONS } from "./histogram-metrics.ts"
 
 function formatBucketAxisLabel(iso: string): string {
@@ -29,6 +30,12 @@ interface HistogramProps {
   readonly metric: TraceHistogramMetric
   readonly showIncidents: boolean
   readonly onRangeSelect?: ((range: { from: string; to: string } | null) => void) | undefined
+  /** Forces the histogram window (independent of `filters`) — anchors an "All time" list to recent activity. */
+  readonly rangeOverride?: { readonly rangeStartIso: string; readonly rangeEndIso: string }
+  /** All time (no lower bound) — flags the header copy that the chart is a recent, anchored slice. */
+  readonly isAllTime?: boolean
+  /** Right-aligned header controls (e.g. the Incidents overlay toggle). */
+  readonly headerActions?: ReactNode
 }
 
 export function Histogram({
@@ -39,15 +46,20 @@ export function Histogram({
   metric,
   showIncidents,
   onRangeSelect,
+  rangeOverride,
+  isAllTime,
+  headerActions,
 }: HistogramProps) {
   const isSessionsMode = mode === "sessions"
   const traceHistogram = useTraceTimeHistogram({
     projectId: isSessionsMode ? "" : projectId,
     filters,
+    ...(rangeOverride ?? {}),
   })
   const sessionHistogram = useSessionTimeHistogram({
     projectId: isSessionsMode ? projectId : "",
     filters,
+    ...(rangeOverride ?? {}),
   })
   const {
     data: sparseBuckets,
@@ -161,26 +173,34 @@ export function Histogram({
   }
 
   return (
-    <div className="px-4 py-3">
-      <BarChart
-        data={chartData}
-        height={160}
-        showYAxis={false}
-        ariaLabel={`${definition.label} by time bucket`}
-        formatTooltip={formatTooltip}
-        onSelect={onRangeSelect ? handleSelect : undefined}
-        {...(overlay ? { overlay } : {})}
-        {...(showIncidents ? { onBucketAxisPointerChange: handleBucketAxisPointerChange } : {})}
+    <>
+      <ChartHeader
+        fromIso={rangeStartIso}
+        toIso={rangeEndIso}
+        isAllTime={isAllTime ?? false}
+        {...(headerActions ? { actions: headerActions } : {})}
       />
-      <IncidentMarkerPopover
-        open={popover !== null}
-        anchor={popover?.anchor ?? null}
-        incidents={popoverIncidents}
-        projectSlug={projectSlug}
-        onOpenChange={onPopoverOpenChange}
-        onContentMouseEnter={onContentMouseEnter}
-        onContentMouseLeave={onContentMouseLeave}
-      />
-    </div>
+      <div className="px-4 py-3">
+        <BarChart
+          data={chartData}
+          height={160}
+          showYAxis={false}
+          ariaLabel={`${definition.label} by time bucket`}
+          formatTooltip={formatTooltip}
+          onSelect={onRangeSelect ? handleSelect : undefined}
+          {...(overlay ? { overlay } : {})}
+          {...(showIncidents ? { onBucketAxisPointerChange: handleBucketAxisPointerChange } : {})}
+        />
+        <IncidentMarkerPopover
+          open={popover !== null}
+          anchor={popover?.anchor ?? null}
+          incidents={popoverIncidents}
+          projectSlug={projectSlug}
+          onOpenChange={onPopoverOpenChange}
+          onContentMouseEnter={onContentMouseEnter}
+          onContentMouseLeave={onContentMouseLeave}
+        />
+      </div>
+    </>
   )
 }
