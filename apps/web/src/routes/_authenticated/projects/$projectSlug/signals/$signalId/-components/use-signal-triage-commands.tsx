@@ -1,5 +1,5 @@
 import { Avatar, useToast } from "@repo/ui"
-import { CircleDashedIcon, CircleUserRoundIcon, FlagIcon, UserRoundIcon, UsersRoundIcon } from "lucide-react"
+import { CircleDashedIcon, FlagIcon, UserRoundIcon, UsersRoundIcon } from "lucide-react"
 import { useMemo } from "react"
 import { useRegisterCommands } from "../../../../../../../components/command-palette/command-palette-provider.tsx"
 import type { PaletteCommand } from "../../../../../../../components/command-palette/types.ts"
@@ -60,41 +60,31 @@ export function useSignalTriageCommands({
     }
 
     const memberChildren: PaletteCommand[] = (members ?? [])
-      .filter((member) => member.status === "active" && member.userId && member.userId !== me.id)
+      .filter((member) => member.status === "active" && member.userId)
       .map((member) => {
         const displayName = member.name?.trim() && member.name.trim().length > 0 ? member.name.trim() : member.email
-        return { userId: member.userId as string, displayName, email: member.email, image: member.image }
+        const isMe = member.userId === me.id
+        return { userId: member.userId as string, displayName, email: member.email, image: member.image, isMe }
       })
       .sort((a, b) => a.displayName.localeCompare(b.displayName))
       .map(
         (member): PaletteCommand => ({
           id: `issue:${signalId}:assign:${member.userId}`,
-          title: member.displayName,
+          title: member.isMe ? `${member.displayName} (You)` : member.displayName,
           icon: UserRoundIcon,
           leading: <Avatar size="xs" name={member.displayName} imageSrc={member.image} />,
           section: "context",
-          keywords: member.email,
+          keywords: member.isMe ? `${member.email} me myself self` : member.email,
           ...(issue.assigneeId === member.userId ? { subtitle: "Current" } : {}),
           perform: () => {
             if (issue.assigneeId === member.userId) return
-            return performTriage({ assigneeId: member.userId }, `Assigned to ${member.displayName}.`)
+            const successMessage = member.isMe ? "Assigned to you." : `Assigned to ${member.displayName}.`
+            return performTriage({ assigneeId: member.userId }, successMessage)
           },
         }),
       )
 
     const assignChildren: PaletteCommand[] = [
-      {
-        id: `issue:${signalId}:assign:me`,
-        title: "Me",
-        icon: CircleUserRoundIcon,
-        section: "context",
-        keywords: "me myself self",
-        ...(issue.assigneeId === me.id ? { subtitle: "Current" } : {}),
-        perform: () => {
-          if (issue.assigneeId === me.id) return
-          return performTriage({ assigneeId: me.id }, "Assigned to you.")
-        },
-      },
       {
         id: `issue:${signalId}:assign:unassigned`,
         title: "Unassigned",
