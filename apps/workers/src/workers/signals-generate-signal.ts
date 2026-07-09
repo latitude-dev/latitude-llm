@@ -89,6 +89,7 @@ import {
   getWorkflowQuerier,
   getWorkflowStarter,
 } from "../clients.ts"
+import { createSignalGenerationProgressWriter } from "./signal-generation-progress.ts"
 
 const logger = createLogger("signals-generate-signal")
 const SIGNALS_GENERATE_SIGNAL_QUEUE = "signals-generate-signal" as const
@@ -195,27 +196,13 @@ const runAgenticGeneration = async (params: {
   }
 
   const resultKey = buildSignalGenerationResultKey(organizationId, payload.generationId)
-  let lastStep: string | undefined
-  // The model narrates a broad step as its assistant text; clamp to a single short line as a safety
-  // net (it is instructed to keep it terse) and skip blanks and unchanged repeats.
-  const writeStep = (raw: string): void => {
-    const step = raw
-      .split("\n")
-      .map((line) => line.trim())
-      .find((line) => line.length > 0)
-      ?.slice(0, 120)
-    if (step === undefined || step === lastStep) {
-      return
-    }
-    lastStep = step
-    void deps.redisClient
-      .set(
-        resultKey,
-        JSON.stringify({ status: "pending", step } satisfies SignalGenerationResult),
-        "EX",
-        SIGNAL_GENERATION_RESULT_TTL_SECONDS,
-      )
-      .catch(() => {})
+  const progress = createSignalGenerationProgressWriter({
+    setResult: async (value) =>
+      deps.redisClient.set(resultKey, JSON.stringify(value), "EX", SIGNAL_GENERATION_RESULT_TTL_SECONDS),
+  })
+  const finalizeProgress = async <T>(result: T): Promise<T> => {
+    await progress.finalize()
+    return result
   }
 
   // Every use-case below owns its full layer pipe, exactly as the HTTP handlers do.
@@ -273,7 +260,7 @@ const runAgenticGeneration = async (params: {
     storageDisk: getStorageDisk(),
   }
 
-  writeStep("Looking at your project's data")
+  progress.writeStep("Looking at your project's data")
   const { grounding } = await Effect.runPromise(
     provideDomain(assembleSignalGenerationGrounding({ organizationId, projectId, scope: filters })),
   )
@@ -478,7 +465,7 @@ const runAgenticGeneration = async (params: {
     ...(modelConfig.temperature !== undefined ? { temperature: modelConfig.temperature } : {}),
     onStep: (step) => {
       if (step.text !== undefined) {
-        writeStep(step.text)
+        progress.writeStep(step.text)
       }
     },
     telemetry,
@@ -496,23 +483,31 @@ const runAgenticGeneration = async (params: {
     )
   } catch (error) {
     if (captureBox.signal !== null) {
-      return { status: "done", signalId: captureBox.signal.signalId, slug: captureBox.signal.slug }
+      return finalizeProgress({
+        status: "done",
+        signalId: captureBox.signal.signalId,
+        slug: captureBox.signal.slug,
+      })
     }
     if (unsatisfiableBox.reason !== null) {
-      return { status: "error", error: unsatisfiableBox.reason }
+      return finalizeProgress({ status: "error", error: unsatisfiableBox.reason })
     }
-    return { status: "error", error: describeError(error) }
+    return finalizeProgress({ status: "error", error: describeError(error) })
   } finally {
     clearTimeout(deadline)
   }
 
   if (captureBox.signal !== null) {
-    return { status: "done", signalId: captureBox.signal.signalId, slug: captureBox.signal.slug }
+    return finalizeProgress({
+      status: "done",
+      signalId: captureBox.signal.signalId,
+      slug: captureBox.signal.slug,
+    })
   }
   if (unsatisfiableBox.reason !== null) {
-    return { status: "error", error: unsatisfiableBox.reason }
+    return finalizeProgress({ status: "error", error: unsatisfiableBox.reason })
   }
-  return { status: "error", error: "The agent finished without creating a signal." }
+  return finalizeProgress({ status: "error", error: "The agent finished without creating a signal." })
 }
 
 const runGenerateSignalJob =
