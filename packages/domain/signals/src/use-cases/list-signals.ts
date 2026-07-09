@@ -658,6 +658,16 @@ export const listSignalsUseCase = (
         })
       : Effect.succeed([] satisfies readonly SignalSearchCandidate[])
 
+    // ClickHouse window metrics never surface zero-occurrence signals, so a
+    // signal created in the window is invisible to the analytics path (counts,
+    // public API list, export) even though the table now lists it. Pull those
+    // ids from Postgres and fold them into the candidate set below.
+    const createdInWindowEffect = selectedTimeRange
+      ? signalRepository
+          .listIdsCreatedInTimeRange({ projectId: parsed.projectId, timeRange: selectedTimeRange })
+          .pipe(Effect.withSpan("issues.listSignals.listIdsCreatedInTimeRange"))
+      : Effect.succeed([] satisfies readonly SignalId[])
+
     // The denominator for `affectedSessionsPercent` must be counted against
     // `sessions.start_time` (not `scores.created_at`) so the percentage stays
     // consistent with what the web table shows. Async scoring can produce
@@ -681,14 +691,21 @@ export const listSignalsUseCase = (
       })
       .pipe(Effect.withSpan("issues.listSignals.countByProjectId"))
 
-    const [windowMetrics, searchCandidates] = yield* Effect.all([windowMetricsEffect, searchCandidatesEffect])
+    const [windowMetrics, searchCandidates, createdInWindowIds] = yield* Effect.all([
+      windowMetricsEffect,
+      searchCandidatesEffect,
+      createdInWindowEffect,
+    ])
 
     const windowMetricsBySignalId = new Map(windowMetrics.map((metric) => [metric.signalId, metric] as const))
+    const createdInWindowSet = new Set<SignalId>(createdInWindowIds)
+    // A created-in-window signal still has to match an active search, so it
+    // only joins the candidate set through the search hits — never as a bare id.
     const baseCandidateIds = parsed.search
       ? searchCandidates
           .map((candidate) => candidate.signalId)
-          .filter((signalId) => windowMetricsBySignalId.has(signalId))
-      : windowMetrics.map((metric) => metric.signalId)
+          .filter((signalId) => windowMetricsBySignalId.has(signalId) || createdInWindowSet.has(signalId))
+      : Array.from(new Set<SignalId>([...windowMetrics.map((metric) => metric.signalId), ...createdInWindowIds]))
     // When the caller passed an explicit `signalIds` filter, include those
     // issues in the candidate set even if they had no activity in the
     // window — they get synthesized zero `windowMetric` rows below so the
@@ -743,7 +760,10 @@ export const listSignalsUseCase = (
     const searchScoresBySignalId = new Map(
       searchCandidates.map((candidate) => [candidate.signalId, candidate.score] as const),
     )
-    const forceIncludeSignalIds = parsed.signalIds ? new Set<string>(parsed.signalIds) : null
+    const forceIncludeSignalIds =
+      parsed.signalIds || createdInWindowIds.length > 0
+        ? new Set<string>([...(parsed.signalIds ?? []), ...createdInWindowIds])
+        : null
     const canonicalSignals = yield* signalRepository
       .findByIds({
         projectId: parsed.projectId,
@@ -756,10 +776,10 @@ export const listSignalsUseCase = (
     const analyticsCandidates = canonicalSignals
       .map((issue) => {
         const windowMetric = windowMetricsBySignalId.get(issue.id) ?? null
-        // Signals without window metrics are normally filtered out — but when
-        // the caller passed `signalIds`, force-include them with a synthesized
-        // zero-activity metric so a point-lookup over a known issue id still
-        // returns a stable analytics shape.
+        // Signals without window metrics are normally filtered out. Force-include
+        // those the caller pinned via `signalIds` or that were created in the
+        // window, synthesizing a zero-activity metric so the analytics shape
+        // stays stable and zero-occurrence signals still surface.
         if (!windowMetric && !forceIncludeSignalIds?.has(issue.id)) {
           return null
         }
