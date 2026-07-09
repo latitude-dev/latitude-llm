@@ -107,12 +107,21 @@ function ProjectDispatchKindSection({
         extraActions={
           showForm ? (
             hasOverride ? (
-              <Button variant="outline" onClick={() => resetMutation.mutate()} isLoading={resetMutation.isPending}>
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => resetMutation.mutate()}
+                isLoading={resetMutation.isPending}
+              >
                 Reset to organization defaults
               </Button>
-            ) : null
+            ) : (
+              <Button type="button" variant="outline" onClick={() => setEditing(false)}>
+                Cancel
+              </Button>
+            )
           ) : (
-            <Button variant="outline" onClick={() => setEditing(true)}>
+            <Button type="button" variant="outline" onClick={() => setEditing(true)}>
               Override for this project
             </Button>
           )

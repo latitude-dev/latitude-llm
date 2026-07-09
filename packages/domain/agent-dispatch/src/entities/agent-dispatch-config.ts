@@ -45,7 +45,10 @@ export type AgentDispatchTarget = z.infer<typeof agentDispatchTargetSchema>
 
 export const storedCursorDispatchTargetSchema = cursorDispatchTargetSchema.partial({ repoUrl: true })
 
-// The fully-optional cursor shape must stay last or it would swallow the other kinds.
+// storedCursorDispatchTargetSchema has every field optional, so it matches `{}` and
+// any object — it MUST stay last, and no other all-optional kind may precede it, or
+// zod's union would match cursor first and mis-parse. e.g. a `{ teamId }` linear target
+// placed after cursor would resolve as an empty cursor target instead.
 export const storedAgentDispatchTargetSchema = z.union([
   claudeDispatchTargetSchema,
   linearDispatchTargetSchema,

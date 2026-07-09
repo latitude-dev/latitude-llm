@@ -791,6 +791,9 @@ export const listSendToDestinations = createServerFn({ method: "GET" })
           const integration = yield* integrationRepo.findActiveByKind(kind)
           if (!integration) continue
           const effective = effectiveByIntegration.get(integration.id)
+          // Manual send-to is gated on the credential + a complete target, not `enabled`;
+          // `enabled` only governs automatic dispatch, so a disabled integration is still
+          // manually sendable.
           const readiness = checkTargetReadiness(kind, effective?.target ?? null)
           destinations.push({
             integrationId: integration.id,
