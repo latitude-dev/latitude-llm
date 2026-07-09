@@ -62,7 +62,7 @@ describe("auth middleware dispatch", () => {
     await insertApiKey(database, tenant.organizationId, token)
 
     const res = await app.fetch(
-      new Request("http://localhost/v1/api-keys", {
+      new Request("http://localhost/v1/projects", {
         headers: { Authorization: `Bearer ${token}` },
       }),
     )
@@ -75,7 +75,7 @@ describe("auth middleware dispatch", () => {
     await insertOAuthApplicationAndToken(database, tenant.organizationId, tenant.userId, token)
 
     const res = await app.fetch(
-      new Request("http://localhost/v1/api-keys", {
+      new Request("http://localhost/v1/projects", {
         headers: { Authorization: `Bearer ${token}` },
       }),
     )
@@ -86,7 +86,7 @@ describe("auth middleware dispatch", () => {
     await createTenantSetup(database)
 
     const res = await app.fetch(
-      new Request("http://localhost/v1/api-keys", {
+      new Request("http://localhost/v1/projects", {
         headers: { Authorization: `Bearer ${crypto.randomUUID()}` },
       }),
     )
@@ -94,7 +94,7 @@ describe("auth middleware dispatch", () => {
   })
 
   it<ApiTestContext>("rejects requests with no Authorization header", async ({ app }) => {
-    const res = await app.fetch(new Request("http://localhost/v1/api-keys"))
+    const res = await app.fetch(new Request("http://localhost/v1/projects"))
     expect(res.status).toBe(401)
   })
 

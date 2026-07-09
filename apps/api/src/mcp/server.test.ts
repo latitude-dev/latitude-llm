@@ -8,6 +8,7 @@ import { Effect } from "effect"
 import { describe, expect, it } from "vitest"
 import {
   type ApiTestContext,
+  createOAuthTenantSetup,
   createTenantSetup,
   setupTestApi,
   TEST_ENCRYPTION_KEY,
@@ -221,13 +222,13 @@ describe("/v1/mcp", () => {
     app,
     database,
   }) => {
-    const tenant = await createTenantSetup(database)
+    const tenant = await createOAuthTenantSetup(database)
     // Seed two extra API keys so the listApiKeys tool returns >= 3 entries
     // (the auth key from `createTenantSetup` plus these two).
     await insertApiKey(database, tenant.organizationId, generateApiKeyToken())
     await insertApiKey(database, tenant.organizationId, generateApiKeyToken())
 
-    const res = await sendMcpRequest(app, tenant.apiKeyToken, {
+    const res = await sendMcpRequest(app, tenant.oauthAccessToken, {
       jsonrpc: "2.0",
       id: 3,
       method: "tools/call",
@@ -302,8 +303,8 @@ describe("/v1/mcp", () => {
     app,
     database,
   }) => {
-    const tenant = await createTenantSetup(database)
-    const res = await sendMcpRequest(app, tenant.apiKeyToken, {
+    const tenant = await createOAuthTenantSetup(database)
+    const res = await sendMcpRequest(app, tenant.oauthAccessToken, {
       jsonrpc: "2.0",
       id: 4,
       method: "tools/call",
@@ -329,11 +330,11 @@ describe("/v1/mcp", () => {
     app,
     database,
   }) => {
-    const tenantA = await createTenantSetup(database)
+    const tenantA = await createOAuthTenantSetup(database)
     const tenantB = await createTenantSetup(database)
-    // Try to revoke tenant B's API key with tenant A's bearer — the inner
+    // Try to revoke tenant B's API key with tenant A's OAuth bearer — the inner
     // route's org-scoped repository returns 404, which surfaces as isError.
-    const res = await sendMcpRequest(app, tenantA.apiKeyToken, {
+    const res = await sendMcpRequest(app, tenantA.oauthAccessToken, {
       jsonrpc: "2.0",
       id: 5,
       method: "tools/call",
