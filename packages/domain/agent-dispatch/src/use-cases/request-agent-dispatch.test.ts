@@ -13,7 +13,7 @@ import { type Signal, SignalRepository } from "@domain/signals"
 import { createFakeSignalRepository } from "@domain/signals/testing"
 import { Effect, Layer } from "effect"
 import { describe, expect, it } from "vitest"
-import type { AgentDispatchConfig } from "../entities/agent-dispatch-config.ts"
+import type { AgentDispatchConfigRow } from "../entities/agent-dispatch-config.ts"
 import { AgentDispatchConfigRepository, AgentDispatchTraceReader } from "../ports/repositories.ts"
 import { requestAgentDispatchUseCase } from "./request-agent-dispatch.ts"
 
@@ -54,7 +54,7 @@ const makeSignal = (overrides: Partial<Signal> = {}): Signal => ({
 
 const incidentId = AlertIncidentId(cuid("a"))
 
-const makeConfig = (overrides: Partial<AgentDispatchConfig> = {}): AgentDispatchConfig => ({
+const makeConfig = (overrides: Partial<AgentDispatchConfigRow> = {}): AgentDispatchConfigRow => ({
   id: configId,
   organizationId: orgId,
   projectId,
@@ -96,7 +96,12 @@ const makeIncident = (overrides: Partial<Incident> = {}): Incident => ({
   ...overrides,
 })
 
-const makeLayer = (opts: { signal: Signal; configs?: readonly AgentDispatchConfig[]; incident?: Incident | null }) => {
+const makeLayer = (opts: {
+  signal: Signal
+  configs?: readonly AgentDispatchConfigRow[]
+  incident?: Incident | null
+  guardrailCalls?: Array<{ configId: string; projectId: string }>
+}) => {
   const organization = createOrganization({ id: orgId, name: "Acme", slug: "acme" })
   const project = createProject({ id: projectId, organizationId: orgId, name: "Demo", slug: "demo" })
   const { repository: organizationRepository, organizations } = createFakeOrganizationRepository()
@@ -108,10 +113,14 @@ const makeLayer = (opts: { signal: Signal; configs?: readonly AgentDispatchConfi
   const configs = opts.configs ?? [makeConfig()]
 
   const configRepository: (typeof AgentDispatchConfigRepository)["Service"] = {
-    listEnabledByProject: () => Effect.succeed(configs),
-    listByProject: () => Effect.succeed(configs),
-    findByProjectAndIntegration: () => Effect.succeed(configs[0] ?? null),
-    listByOrganization: () => Effect.succeed(configs),
+    listByProjectIncludingDefaults: (forProjectId) =>
+      Effect.succeed(configs.filter((row) => row.projectId === null || row.projectId === forProjectId)),
+    findDefaultByIntegration: (forIntegrationId) =>
+      Effect.succeed(configs.find((row) => row.projectId === null && row.integrationId === forIntegrationId) ?? null),
+    findOverrideByProjectAndIntegration: (query) =>
+      Effect.succeed(
+        configs.find((row) => row.projectId === query.projectId && row.integrationId === query.integrationId) ?? null,
+      ),
     findById: (id) => {
       const config = configs.find((row) => row.id === id)
       return config ? Effect.succeed(config) : Effect.die(new Error("config not found"))
@@ -119,7 +128,10 @@ const makeLayer = (opts: { signal: Signal; configs?: readonly AgentDispatchConfi
     upsert: (config) => Effect.succeed(config),
     delete: () => Effect.void,
     deleteByIntegrationId: () => Effect.void,
-    countDispatchesInLast24h: () => Effect.succeed(0),
+    countDispatchesInLast24h: (query) => {
+      opts.guardrailCalls?.push(query)
+      return Effect.succeed(0)
+    },
     hasRecentDispatchForSource: () => Effect.succeed(false),
   }
 
@@ -193,6 +205,96 @@ describe("requestAgentDispatchUseCase", () => {
     expect(result.requests).toHaveLength(1)
     expect(result.requests[0]?.trigger).toBe("signal.discovered")
     expect(result.requests[0]?.sourceId).toBe(signalId)
+    expect(result.requests[0]?.target).toEqual({ webhookUrl: "https://example.com/hook", kind: "webhook" })
+  })
+
+  it("inherits an enabled org default when the project has no override", async () => {
+    const guardrailCalls: Array<{ configId: string; projectId: string }> = []
+    const result = await Effect.runPromise(
+      requestAgentDispatchUseCase(input).pipe(
+        Effect.provide(
+          makeLayer({
+            signal: makeSignal({ origin: "system" }),
+            configs: [makeConfig({ projectId: null })],
+            guardrailCalls,
+          }),
+        ),
+      ),
+    )
+
+    expect(result.status).toBe("ok")
+    if (result.status !== "ok") return
+    expect(result.requests).toHaveLength(1)
+    expect(result.requests[0]?.projectId).toBe(projectId)
+    expect(result.requests[0]?.configId).toBe(configId)
+    expect(guardrailCalls).toEqual([{ configId, projectId }])
+  })
+
+  it("suppresses an enabled default when the project override disables it", async () => {
+    const result = await Effect.runPromise(
+      requestAgentDispatchUseCase(input).pipe(
+        Effect.provide(
+          makeLayer({
+            signal: makeSignal({ origin: "system" }),
+            configs: [
+              makeConfig({ projectId: null }),
+              makeConfig({
+                id: cuid("c2"),
+                enabled: false,
+                triggers: null,
+                target: null,
+                guardrails: null,
+              }),
+            ],
+          }),
+        ),
+      ),
+    )
+
+    expect(result).toEqual({ status: "skipped", reason: "no-config" })
+  })
+
+  it("merges override fields over default fields per top-level field", async () => {
+    const result = await Effect.runPromise(
+      requestAgentDispatchUseCase(input).pipe(
+        Effect.provide(
+          makeLayer({
+            signal: makeSignal({ origin: "system" }),
+            configs: [
+              makeConfig({ projectId: null }),
+              makeConfig({
+                id: cuid("c2"),
+                enabled: null,
+                triggers: null,
+                target: { webhookUrl: "https://project.example.com/hook" },
+                guardrails: null,
+              }),
+            ],
+          }),
+        ),
+      ),
+    )
+
+    expect(result.status).toBe("ok")
+    if (result.status !== "ok") return
+    expect(result.requests).toHaveLength(1)
+    expect(result.requests[0]?.configId).toBe(cuid("c2"))
+    expect(result.requests[0]?.target).toEqual({ webhookUrl: "https://project.example.com/hook", kind: "webhook" })
+  })
+
+  it("skips configs whose effective target is incomplete", async () => {
+    const result = await Effect.runPromise(
+      requestAgentDispatchUseCase(input).pipe(
+        Effect.provide(
+          makeLayer({
+            signal: makeSignal({ origin: "system" }),
+            configs: [makeConfig({ projectId: null, kind: "cursor", target: { startingRef: "main" } })],
+          }),
+        ),
+      ),
+    )
+
+    expect(result).toEqual({ status: "skipped", reason: "no-matching-config" })
   })
 
   it("dispatches incident.opened for user-origin signals on escalation", async () => {
