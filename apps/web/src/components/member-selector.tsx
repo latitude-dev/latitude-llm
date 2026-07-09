@@ -79,10 +79,14 @@ export function MemberSelector({
         }
       })
       .sort((a, b) =>
-        compareMemberLabelsCurrentUserFirst(me.id, { memberUserId: a.userId as string, label: a.label }, {
-          memberUserId: b.userId as string,
-          label: b.label,
-        }),
+        compareMemberLabelsCurrentUserFirst(
+          me.id,
+          { memberUserId: a.userId as string, label: a.label },
+          {
+            memberUserId: b.userId as string,
+            label: b.label,
+          },
+        ),
       )
   }, [members, me.id])
 

@@ -68,10 +68,14 @@ export function useSignalTriageCommands({
         return { userId: member.userId as string, displayName, email: member.email, image: member.image, isMe }
       })
       .sort((a, b) =>
-        compareMemberLabelsCurrentUserFirst(me.id, { memberUserId: a.userId, label: a.displayName }, {
-          memberUserId: b.userId,
-          label: b.displayName,
-        }),
+        compareMemberLabelsCurrentUserFirst(
+          me.id,
+          { memberUserId: a.userId, label: a.displayName },
+          {
+            memberUserId: b.userId,
+            label: b.displayName,
+          },
+        ),
       )
       .map(
         (member): PaletteCommand => ({

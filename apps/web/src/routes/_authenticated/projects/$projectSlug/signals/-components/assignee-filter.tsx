@@ -51,10 +51,14 @@ export function AssigneeFilter({
         return { token: userId, label: displayName, imageSrc: m.image, isMe: userId === me.id }
       })
       .sort((a, b) =>
-        compareMemberLabelsCurrentUserFirst(me.id, { memberUserId: a.token, label: a.label }, {
-          memberUserId: b.token,
-          label: b.label,
-        }),
+        compareMemberLabelsCurrentUserFirst(
+          me.id,
+          { memberUserId: a.token, label: a.label },
+          {
+            memberUserId: b.token,
+            label: b.label,
+          },
+        ),
       )
   }, [members, me.id])
 
@@ -145,9 +149,7 @@ function AssigneeFilterRow({
     >
       {leading}
       <span className="min-w-0 flex-1 truncate">{label}</span>
-      {isMe ? (
-        <Text.H6 color="foregroundMuted">(You)</Text.H6>
-      ) : null}
+      {isMe ? <Text.H6 color="foregroundMuted">(You)</Text.H6> : null}
       {checked && <Icon icon={CheckIcon} size="sm" />}
     </DropdownMenuItem>
   )
