@@ -90,7 +90,8 @@
         "group": "Overview",
         "pages": [
           "getting-started/introduction",
-          "getting-started/how-to-use-latitude"
+          "getting-started/how-to-use-latitude",
+          "getting-started/self-healing-agents"
         ]
       },
       {
