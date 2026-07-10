@@ -708,7 +708,7 @@ export function SessionsView({
         <InfiniteTable
           {...listingLayoutIntrinsicScroll.infiniteTable}
           data={tableData}
-          isLoading={isLoading}
+          isLoading={isLoading || isOrphanFragmentCountLoading}
           columns={columns}
           getRowKey={getRowKey}
           onRowClick={onRowClick}

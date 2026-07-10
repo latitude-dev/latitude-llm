@@ -465,13 +465,14 @@ export function ProjectExplorer({ projectSlug }: { readonly projectSlug: string 
   // `firstTraceAt` is a best-effort column (only written by live ingestion), so a null value doesn't
   // prove emptiness — backfilled/old projects can have traces with a null `firstTraceAt`. Confirm
   // with an unwindowed total count, but only when the fast path can't already vouch for traces.
-  const { totalCount: everTraceCount } = useTracesCount({
+  const { totalCount: everTraceCount, isLoading: everTraceCountLoading } = useTracesCount({
     projectId: currentProject.id,
     enabled: currentProject.firstTraceAt == null,
   })
   const projectHasTracesEver = currentProject.firstTraceAt != null || everTraceCount > 0
   const orgHasConnectedProjects = allProjects.some((p) => p.id !== currentProject.id && p.firstTraceAt != null)
-  const showConnectEmptyState = !projectHasTracesEver && !hasActiveFilters && !hasSearchQuery
+  const showConnectEmptyState =
+    !everTraceCountLoading && !projectHasTracesEver && !hasActiveFilters && !hasSearchQuery
 
   if (showConnectEmptyState) {
     return (
