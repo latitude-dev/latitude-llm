@@ -250,9 +250,7 @@ function AssistantMessage({
     <div className="relative flex min-w-0 max-w-full w-full flex-col gap-1">
       <MessageActionsRail>
         {onNavigate && <ViewSourceSpanButton onNavigate={onNavigate} />}
-        {canCollapse && (
-          <CollapseToggleButton collapsed={collapsed} onToggle={() => setCollapsed((v) => !v)} />
-        )}
+        {canCollapse && <CollapseToggleButton collapsed={collapsed} onToggle={() => setCollapsed((v) => !v)} />}
       </MessageActionsRail>
       {collapsed ? (
         <CollapsedPreview parts={message.parts} />
