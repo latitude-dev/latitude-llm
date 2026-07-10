@@ -166,8 +166,18 @@ describe("SpanRepository", () => {
       await runCh(
         insertJsonEachRow(ch.client, "spans", [
           // Same span id in two traces + a re-ingested duplicate within trace A.
-          makeSpanRow({ trace_id: traceA, span_id: "abababababababab", name: "a-older", ingested_at: "2026-01-01 00:00:00.000" }),
-          makeSpanRow({ trace_id: traceA, span_id: "abababababababab", name: "a-newer", ingested_at: "2026-01-01 00:00:01.000" }),
+          makeSpanRow({
+            trace_id: traceA,
+            span_id: "abababababababab",
+            name: "a-older",
+            ingested_at: "2026-01-01 00:00:00.000",
+          }),
+          makeSpanRow({
+            trace_id: traceA,
+            span_id: "abababababababab",
+            name: "a-newer",
+            ingested_at: "2026-01-01 00:00:01.000",
+          }),
           makeSpanRow({
             trace_id: traceB,
             span_id: "abababababababab",
@@ -189,10 +199,73 @@ describe("SpanRepository", () => {
     })
 
     it("returns an empty array for no trace ids without querying", async () => {
-      const spans = await runCh(
-        repo.listByTraceIds({ organizationId: ORG_ID, projectId: PROJECT_ID, traceIds: [] }),
-      )
+      const spans = await runCh(repo.listByTraceIds({ organizationId: ORG_ID, projectId: PROJECT_ID, traceIds: [] }))
       expect(spans).toEqual([])
+    })
+  })
+
+  describe("findSpanConversationChunk", () => {
+    const CHUNK_SPAN = "5c5c5c5c5c5c5c5c"
+    const insertConversationSpan = () =>
+      runCh(
+        insertJsonEachRow(ch.client, "spans", [
+          makeSpanRow({
+            span_id: CHUNK_SPAN,
+            operation: "chat",
+            system_instructions: JSON.stringify([{ type: "text", content: "you are a subagent" }]),
+            input_messages: JSON.stringify([{ role: "user", parts: [{ type: "text", content: "hi" }] }]),
+            output_messages: JSON.stringify([{ role: "assistant", parts: [{ type: "text", content: "hello" }] }]),
+          }),
+        ]),
+      )
+
+    it("concatenates system + input + output messages, system first", async () => {
+      await insertConversationSpan()
+      const chunk = await runCh(
+        repo.findSpanConversationChunk({
+          organizationId: ORG_ID,
+          projectId: PROJECT_ID,
+          traceId: TRACE_ID,
+          spanId: SpanId(CHUNK_SPAN),
+          offset: 0,
+          limit: 25,
+        }),
+      )
+      expect(chunk.totalMessages).toBe(3)
+      expect(chunk.messages.map((m) => m.role)).toEqual(["system", "user", "assistant"])
+      expect(chunk.hasMore).toBe(false)
+    })
+
+    it("slices by offset/limit and reports hasMore", async () => {
+      await insertConversationSpan()
+      const chunk = await runCh(
+        repo.findSpanConversationChunk({
+          organizationId: ORG_ID,
+          projectId: PROJECT_ID,
+          traceId: TRACE_ID,
+          spanId: SpanId(CHUNK_SPAN),
+          offset: 1,
+          limit: 1,
+        }),
+      )
+      expect(chunk.messages.map((m) => m.role)).toEqual(["user"])
+      expect(chunk.totalMessages).toBe(3)
+      expect(chunk.hasMore).toBe(true)
+    })
+
+    it("returns an empty chunk for a missing span", async () => {
+      const chunk = await runCh(
+        repo.findSpanConversationChunk({
+          organizationId: ORG_ID,
+          projectId: PROJECT_ID,
+          traceId: TRACE_ID,
+          spanId: SpanId("dddddddddddddddd"),
+          offset: 0,
+          limit: 25,
+        }),
+      )
+      expect(chunk.totalMessages).toBe(0)
+      expect(chunk.messages).toEqual([])
     })
   })
 

@@ -23,6 +23,7 @@ import type {
   SpanMessagesData,
   SpanStatusCode,
   ToolDefinition,
+  TraceConversationChunk,
 } from "@domain/spans"
 import { SpanRepository, type SpanRepositoryShape } from "@domain/spans"
 import { formatCHDate, normalizeCHString, parseCHDate } from "@repo/utils"
@@ -276,6 +277,26 @@ const parseSystem = (json: string): GenAISystem => {
   } catch {
     return []
   }
+}
+
+const parseMessage = (json: string): GenAIMessage | null => {
+  try {
+    const parsed = JSON.parse(json)
+    return parsed && typeof parsed === "object" ? (parsed as GenAIMessage) : null
+  } catch {
+    return null
+  }
+}
+
+const parseClickHouseNumber = (value: string | number | undefined): number => {
+  const numeric = Number(value)
+  return Number.isFinite(numeric) ? numeric : 0
+}
+
+type SpanConversationChunkRow = {
+  total_messages: string | number
+  payload_bytes: string | number
+  messages: readonly string[]
 }
 
 const parseToolDefinitions = (json: string): ToolDefinition[] => {
@@ -992,6 +1013,76 @@ export const SpanRepositoryLive = Layer.effect(
             .pipe(
               Effect.map((rows) => rows.map(toDomainSpanMessages)),
               Effect.mapError((error) => toRepositoryError(error, "findMessagesForTrace")),
+            )
+        }),
+
+      findSpanConversationChunk: ({ organizationId, projectId, traceId, spanId, offset, limit }) =>
+        Effect.gen(function* () {
+          const chSqlClient = (yield* ChSqlClient) as ChSqlClientShape<ClickHouseClient>
+          return yield* chSqlClient
+            .query(async (client) => {
+              const result = await client.query({
+                // Concatenate the span's own system + input + output messages, then
+                // slice. Dedup via `LIMIT 1 BY span_id` (newest ingested wins) — the
+                // spans table is ReplacingMergeTree, so no GROUP BY / FINAL.
+                query: `SELECT
+                          length(all_messages) AS total_messages,
+                          arraySum(message -> length(message), all_messages) AS payload_bytes,
+                          arraySlice(all_messages, {offset:UInt64} + 1, {limit:UInt64}) AS messages
+                        FROM (
+                          SELECT arrayConcat(
+                            if(
+                              length(JSONExtractArrayRaw(system_instructions)) > 0,
+                              [concat('{"role":"system","parts":', system_instructions, '}')],
+                              []
+                            ),
+                            JSONExtractArrayRaw(input_messages),
+                            JSONExtractArrayRaw(output_messages)
+                          ) AS all_messages
+                          FROM (
+                            SELECT system_instructions, input_messages, output_messages
+                            FROM spans
+                            WHERE organization_id = {organizationId:String}
+                              AND project_id = {projectId:String}
+                              AND trace_id = {traceId:FixedString(32)}
+                              AND span_id = {spanId:FixedString(16)}
+                            ORDER BY span_id, ingested_at DESC
+                            LIMIT 1 BY span_id
+                          )
+                        )`,
+                query_params: {
+                  organizationId: organizationId as string,
+                  projectId: projectId as string,
+                  traceId,
+                  spanId,
+                  offset,
+                  limit,
+                },
+                format: "JSONEachRow",
+              })
+              return result.json<SpanConversationChunkRow>()
+            })
+            .pipe(
+              Effect.map((rows): TraceConversationChunk => {
+                const row = rows[0]
+                if (!row) return { messages: [], offset, limit, totalMessages: 0, hasMore: false, payloadBytes: 0 }
+
+                const totalMessages = parseClickHouseNumber(row.total_messages)
+                const messages = row.messages.flatMap((message) => {
+                  const parsed = parseMessage(message)
+                  return parsed ? [parsed] : []
+                })
+
+                return {
+                  messages,
+                  offset,
+                  limit,
+                  totalMessages,
+                  hasMore: offset + messages.length < totalMessages,
+                  payloadBytes: parseClickHouseNumber(row.payload_bytes),
+                }
+              }),
+              Effect.mapError((error) => toRepositoryError(error, "findSpanConversationChunk")),
             )
         }),
 

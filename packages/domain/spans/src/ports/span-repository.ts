@@ -12,6 +12,7 @@ import type {
 import { Context, type Effect } from "effect"
 import type { GenAIMessage } from "rosetta-ai"
 import type { Operation, Span, SpanDetail } from "../entities/span.ts"
+import type { TraceConversationChunk } from "../entities/trace.ts"
 
 /**
  * Minimal span shape with message content — used for conversation-to-span attribution.
@@ -129,6 +130,22 @@ export interface SpanRepositoryShape {
     readonly startTimeFrom: Date
     readonly startTimeTo: Date
   }): Effect.Effect<readonly SpanMessagesData[], RepositoryError, ChSqlClient>
+
+  /**
+   * A single span's own conversation as a paginated chunk: its
+   * `system_instructions` + `input_messages` + `output_messages` concatenated
+   * (system first), sliced by `offset`/`limit`. Twin of
+   * `TraceRepository.findConversationChunk`, keyed on `(trace_id, span_id)` and
+   * deduped by newest `ingested_at`. Powers the subagent conversation view.
+   */
+  findSpanConversationChunk(input: {
+    readonly organizationId: OrganizationId
+    readonly projectId: ProjectId
+    readonly traceId: TraceId
+    readonly spanId: SpanId
+    readonly offset: number
+    readonly limit: number
+  }): Effect.Effect<TraceConversationChunk, RepositoryError, ChSqlClient>
 
   /**
    * The session's tool spans (`operation = execute_tool`), projected to name + I/O + error + duration.
