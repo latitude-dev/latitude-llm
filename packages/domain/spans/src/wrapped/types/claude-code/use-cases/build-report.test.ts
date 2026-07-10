@@ -1,7 +1,7 @@
 import type { Project } from "@domain/projects"
 import { OrganizationId, ProjectId } from "@domain/shared"
 import { describe, expect, it } from "vitest"
-import { reportV1Schema } from "../entities/report.ts"
+import { reportV1Schema, reportV3Schema } from "../entities/report.ts"
 import type { ToolMixRow } from "../ports/claude-code-span-reader.ts"
 import {
   type AssembleReportInput,
@@ -710,6 +710,25 @@ describe("assembleReport", () => {
       ],
     })
     expect(report.toolMix.edit).toBe(15)
+  })
+
+  it("carries the skills breakdown and per-workspace skills through to V3", () => {
+    const report = assembleReport(baseInput)
+    expect(() => reportV3Schema.parse(report)).not.toThrow()
+    const parsed = reportV3Schema.parse(report)
+    expect(parsed.skills).toEqual({
+      distinctUsed: 3,
+      totalUses: 11,
+      top: [
+        { name: "code-review", count: 6 },
+        { name: "create-pr", count: 3 },
+        { name: "testing", count: 2 },
+      ],
+    })
+    expect(parsed.workspaceDeepDives[0]?.skills).toEqual([
+      { name: "code-review", count: 6 },
+      { name: "create-pr", count: 3 },
+    ])
   })
 
   it("computes LOC totals and anchors", () => {
