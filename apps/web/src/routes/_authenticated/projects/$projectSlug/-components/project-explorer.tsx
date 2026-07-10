@@ -89,6 +89,7 @@ export function ProjectExplorer({ projectSlug }: { readonly projectSlug: string 
   const [activeTraceId, setActiveTraceId] = useParamState("traceId", "")
   const [activeSessionId, setActiveSessionId] = useParamState("sessionId", "")
   const [, setSelectedSpanId] = useParamState("spanId", "")
+  const [, setSelectedSpanTraceId] = useParamState("spanTraceId", "")
   const [rawFilters, setRawFilters] = useParamState("filters", "")
   const [query, setQuery] = useParamState("query", "")
   const [savedSearchSlug, setSavedSearchSlug] = useParamState("savedSearch", "")
@@ -101,8 +102,9 @@ export function ProjectExplorer({ projectSlug }: { readonly projectSlug: string 
       setActiveSessionId("")
       setActiveTraceId("")
       setSelectedSpanId("")
+      setSelectedSpanTraceId("")
     },
-    [activeTab, setActiveTab, setActiveSessionId, setActiveTraceId, setSelectedSpanId],
+    [activeTab, setActiveTab, setActiveSessionId, setActiveTraceId, setSelectedSpanId, setSelectedSpanTraceId],
   )
   const hasSearchQuery = query.length > 0
   const hasSemanticSearchQuery = searchHasSemanticPart(query)
@@ -335,7 +337,8 @@ export function ProjectExplorer({ projectSlug }: { readonly projectSlug: string 
   const closeTraceDrawer = useCallback(() => {
     setActiveTraceId("")
     setSelectedSpanId("")
-  }, [setActiveTraceId, setSelectedSpanId])
+    setSelectedSpanTraceId("")
+  }, [setActiveTraceId, setSelectedSpanId, setSelectedSpanTraceId])
 
   const onActiveTraceChange = (traceId: string | undefined) => {
     if (!traceId) {
@@ -352,15 +355,18 @@ export function ProjectExplorer({ projectSlug }: { readonly projectSlug: string 
     (sessionId: string, traceId?: string) => {
       setActiveSessionId(sessionId)
       setActiveTraceId(traceId ?? "")
+      setSelectedSpanId("")
+      setSelectedSpanTraceId("")
     },
-    [setActiveSessionId, setActiveTraceId],
+    [setActiveSessionId, setActiveTraceId, setSelectedSpanId, setSelectedSpanTraceId],
   )
 
   const closeSessionPanel = useCallback(() => {
     setActiveSessionId("")
     setActiveTraceId("")
     setSelectedSpanId("")
-  }, [setActiveSessionId, setActiveTraceId, setSelectedSpanId])
+    setSelectedSpanTraceId("")
+  }, [setActiveSessionId, setActiveTraceId, setSelectedSpanId, setSelectedSpanTraceId])
 
   // Submitting a new query invalidates any open drawer context against the new result set.
   // The `savedSearch` slug is intentionally kept so the Save button can surface drift.

@@ -230,6 +230,43 @@ describe("SpanRepository", () => {
       expect(detail.attrString).toEqual({ "ai.prompt": "huge-blob" })
     })
 
+    it("keeps identical span ids from different traces while deduping re-ingestion within each trace", async () => {
+      const otherTrace = TraceId("12121212121212121212121212121212")
+      await runCh(
+        insertJsonEachRow(ch.client, "spans", [
+          makeSpanRow({
+            session_id: SESSION_ID,
+            trace_id: TRACE_ID,
+            span_id: "abababababababab",
+            name: "trace-a-older",
+            ingested_at: "2026-01-01 00:00:00.000",
+          }),
+          makeSpanRow({
+            session_id: SESSION_ID,
+            trace_id: TRACE_ID,
+            span_id: "abababababababab",
+            name: "trace-a-newer",
+            ingested_at: "2026-01-01 00:00:01.000",
+          }),
+          makeSpanRow({
+            session_id: SESSION_ID,
+            trace_id: otherTrace,
+            span_id: "abababababababab",
+            name: "trace-b",
+            start_time: "2026-01-01 00:00:02.000000000",
+            end_time: "2026-01-01 00:00:03.000000000",
+          }),
+        ]),
+      )
+
+      const spans = await runCh(
+        repo.listBySessionId({ organizationId: ORG_ID, projectId: PROJECT_ID, sessionId: SESSION_ID }),
+      )
+
+      expect(spans.map((span) => span.name)).toEqual(["trace-a-newer", "trace-b"])
+      expect(spans.map((span) => span.traceId)).toEqual([TRACE_ID, otherTrace])
+    })
+
     it("matches orphan single-trace sessions keyed by trace id", async () => {
       await insertListFixture()
 
