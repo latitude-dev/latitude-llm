@@ -454,9 +454,15 @@ export function ProjectExplorer({ projectSlug }: { readonly projectSlug: string 
     },
   ])
 
-  const hasNoTraces = totalTraceCount === 0 && !hasActiveFilters && !hasSearchQuery
+  // Gate on whether the project ever received a trace, not the windowed count — old-data projects
+  // fall through to the normal view (with the time filter) instead of the false onboarding.
+  const projectNeverReceivedTraces = currentProject.firstTraceAt == null
   const orgHasConnectedProjects = allProjects.some((p) => p.id !== currentProject.id && p.firstTraceAt != null)
-  const showConnectEmptyState = !hasActiveFilters && !hasSearchQuery && (isTracesCountLoading || hasNoTraces)
+  const showConnectEmptyState =
+    projectNeverReceivedTraces &&
+    !hasActiveFilters &&
+    !hasSearchQuery &&
+    (isTracesCountLoading || totalTraceCount === 0)
 
   if (showConnectEmptyState) {
     return (
