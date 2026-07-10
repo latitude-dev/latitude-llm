@@ -109,8 +109,7 @@ const seedLatitudeDogfoodProjects: Seeder = {
     }),
 }
 
-// QA fixture project with `first_trace_at` backdated so it reads as "has ever had traces" while its
-// ClickHouse spans (seeded separately) all predate the default window. See `SEED_OLD_TRACES_QA_*`.
+// QA fixture: project with a backdated first_trace_at; its ClickHouse spans (seeded separately) all predate the default window.
 const seedOldTracesQaProject: Seeder = {
   name: "projects/old-traces-qa",
   run: (ctx: SeedContext) =>

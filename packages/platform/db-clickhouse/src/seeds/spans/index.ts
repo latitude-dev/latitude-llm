@@ -62,10 +62,8 @@ export const runSpansSeed = (
     return traceIds
   })
 
-// QA fixture: spans for the `old-traces-qa` project, all older than the 30-day default window, so
-// the project has data but nothing recent. Idempotent — no-ops if the project already has spans.
-// Bootstrap-only (wired into `ch:seed`'s run.ts, NOT `spanSeeders`/`allSeeders`) so it never runs
-// during runtime demo-project creation and stays out of the `spanTraceSlots` demo catalog.
+// QA fixture: idempotent spans for `old-traces-qa`, all older than the 30-day window. Bootstrap-only —
+// kept out of spanSeeders/allSeeders so it never runs during demo-project creation or the spanTraceSlots catalog.
 export const oldTracesQaSeeder: Seeder = {
   name: "spans/old-traces-qa",
   run: (ctx: SeedContext) =>
