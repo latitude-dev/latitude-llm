@@ -471,8 +471,7 @@ export function ProjectExplorer({ projectSlug }: { readonly projectSlug: string 
   })
   const projectHasTracesEver = currentProject.firstTraceAt != null || everTraceCount > 0
   const orgHasConnectedProjects = allProjects.some((p) => p.id !== currentProject.id && p.firstTraceAt != null)
-  const showConnectEmptyState =
-    !everTraceCountLoading && !projectHasTracesEver && !hasActiveFilters && !hasSearchQuery
+  const showConnectEmptyState = !everTraceCountLoading && !projectHasTracesEver && !hasActiveFilters && !hasSearchQuery
 
   if (showConnectEmptyState) {
     return (
