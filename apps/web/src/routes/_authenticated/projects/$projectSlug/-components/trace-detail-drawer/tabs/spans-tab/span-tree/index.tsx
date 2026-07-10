@@ -8,7 +8,7 @@ import {
   MaximizeIcon,
   MinimizeIcon,
 } from "lucide-react"
-import { type ReactNode, useMemo, useRef, useState } from "react"
+import { type ReactNode, useEffect, useMemo, useRef, useState } from "react"
 import { HotkeyBadge } from "../../../../../../../../../components/hotkey-badge.tsx"
 import type { SpanRecord } from "../../../../../../../../../domains/spans/spans.functions.ts"
 import {
@@ -296,6 +296,19 @@ export function GroupedSpanTree({
     [...collapsibleIds].map((spanId) => spanTreeSelectionKey({ traceId: group.traceId, spanId })),
   )
   const isAllCollapsed = collapsibleSelections.length > 0 && collapsibleSelections.every((key) => collapsed.has(key))
+
+  // TODO(frontend-use-effect-policy): a span selected from outside (deep link,
+  // conversation) may target a collapsed trace; expand it so its row renders,
+  // scrolls into view, and stays reachable by J/K.
+  useEffect(() => {
+    if (!selectedSpan) return
+    setCollapsedTraces((current) => {
+      if (!current.has(selectedSpan.traceId)) return current
+      const next = new Set(current)
+      next.delete(selectedSpan.traceId)
+      return next
+    })
+  }, [selectedSpan])
 
   function toggle(selection: SpanTreeSelection) {
     setCollapsed((current) => toggleCollapsedSpan(current, selection))
