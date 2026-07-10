@@ -1,6 +1,6 @@
 import { isJsonBlock } from "@repo/utils"
 import { ChevronDownIcon, ChevronRightIcon, ScanSearchIcon } from "lucide-react"
-import { type ReactNode, useState } from "react"
+import { type ReactNode, type Ref, useLayoutEffect, useRef, useState } from "react"
 import type { GenAIMessage } from "rosetta-ai"
 import { cn } from "../../utils/cn.ts"
 import { Icon } from "../icons/icons.tsx"
@@ -14,6 +14,48 @@ type PartType = GenAIMessage["parts"][number]
 
 function isAlreadyCollapsible(parts: readonly PartType[] | undefined): boolean {
   return parts?.[0]?.type === "tool_call" || parts?.[0]?.type === "tool_call_response"
+}
+
+function hasPotentiallyCollapsibleContent(parts: readonly PartType[] | undefined): boolean {
+  if (!parts?.length || isAlreadyCollapsible(parts)) return false
+  if (parts.length > 1) return true
+
+  const content = parts[0]?.content
+  if (typeof content !== "string") return true
+
+  return content.length > 100 || content.includes("\n") || isJsonBlock(content)
+}
+
+function canCollapseRenderedContent(element: HTMLDivElement): boolean {
+  const textPart = element.querySelector<HTMLElement>('[data-content-type="text"], [data-content-type="reasoning"]')
+  const firstTextBlock = textPart?.querySelector<HTMLElement>("p, h1, h2, h3, h4, h5, h6") ?? textPart
+  const lineHeight = firstTextBlock ? Number.parseFloat(window.getComputedStyle(firstTextBlock).lineHeight) : 24
+  const singleLineHeight = Number.isFinite(lineHeight) ? lineHeight : 24
+
+  return element.getBoundingClientRect().height > singleLineHeight + 1
+}
+
+function useMessageCollapse(parts: readonly PartType[] | undefined, defaultCollapsed = false) {
+  const potentiallyCollapsible = hasPotentiallyCollapsibleContent(parts)
+  const [collapsed, setCollapsed] = useState(defaultCollapsed && potentiallyCollapsible)
+  const [canCollapse, setCanCollapse] = useState(potentiallyCollapsible)
+  const contentRef = useRef<HTMLDivElement>(null)
+
+  useLayoutEffect(() => {
+    if (collapsed || isAlreadyCollapsible(parts)) return
+
+    const element = contentRef.current
+    if (!element) return
+
+    const measure = () => setCanCollapse(canCollapseRenderedContent(element))
+    const observer = new ResizeObserver(measure)
+    observer.observe(element)
+    measure()
+
+    return () => observer.disconnect()
+  }, [collapsed, parts])
+
+  return { collapsed, setCollapsed, canCollapse, contentRef }
 }
 
 function getFirstLinePreview(parts: readonly PartType[] | undefined): string {
@@ -119,15 +161,17 @@ function PartsRenderer({
   toolCallActions,
   failedToolCallIds,
   messageIndex,
+  contentRef,
 }: {
   readonly parts: readonly PartType[] | undefined
   readonly toolResults?: ReadonlyMap<string, ToolCallResult> | undefined
   readonly toolCallActions?: ToolCallActions
   readonly failedToolCallIds?: ReadonlySet<string> | undefined
   readonly messageIndex?: number | undefined
+  readonly contentRef?: Ref<HTMLDivElement>
 }) {
   return (
-    <div className="flex min-w-0 flex-col gap-2">
+    <div ref={contentRef} className="flex min-w-0 flex-col gap-2">
       {(parts ?? []).map((part, partIndex) => {
         if (!part) return null
 
@@ -167,11 +211,11 @@ function UserMessage({
   readonly messageIndex?: number | undefined
   readonly alignment: "left" | "right"
 }) {
-  const [collapsed, setCollapsed] = useState(false)
+  const { collapsed, setCollapsed, canCollapse, contentRef } = useMessageCollapse(message.parts)
   return (
     <div className={cn("flex min-w-0 max-w-full flex-col gap-1", alignment === "right" ? "items-end" : "items-start")}>
       <div className="relative min-w-0 max-w-full rounded-2xl bg-accent px-4 py-3">
-        {!isAlreadyCollapsible(message.parts) && (
+        {canCollapse && (
           <MessageActionsRail>
             <CollapseToggleButton collapsed={collapsed} onToggle={() => setCollapsed((v) => !v)} />
           </MessageActionsRail>
@@ -179,7 +223,7 @@ function UserMessage({
         {collapsed ? (
           <CollapsedPreview parts={message.parts} />
         ) : (
-          <PartsRenderer parts={message.parts} messageIndex={messageIndex} />
+          <PartsRenderer parts={message.parts} messageIndex={messageIndex} contentRef={contentRef} />
         )}
       </div>
     </div>
@@ -201,12 +245,12 @@ function AssistantMessage({
   readonly failedToolCallIds?: ReadonlySet<string> | undefined
   readonly onNavigate?: () => void
 }) {
-  const [collapsed, setCollapsed] = useState(false)
+  const { collapsed, setCollapsed, canCollapse, contentRef } = useMessageCollapse(message.parts)
   return (
     <div className="relative flex min-w-0 max-w-full w-full flex-col gap-1">
       <MessageActionsRail>
         {onNavigate && <ViewSourceSpanButton onNavigate={onNavigate} />}
-        {!isAlreadyCollapsible(message.parts) && (
+        {canCollapse && (
           <CollapseToggleButton collapsed={collapsed} onToggle={() => setCollapsed((v) => !v)} />
         )}
       </MessageActionsRail>
@@ -219,6 +263,7 @@ function AssistantMessage({
           {...(toolResults ? { toolResults } : {})}
           {...(toolCallActions ? { toolCallActions } : {})}
           {...(failedToolCallIds ? { failedToolCallIds } : {})}
+          contentRef={contentRef}
         />
       )}
     </div>
@@ -232,11 +277,11 @@ function SystemMessage({
   readonly message: GenAIMessage
   readonly messageIndex?: number | undefined
 }) {
-  const [collapsed, setCollapsed] = useState(true)
+  const { collapsed, setCollapsed, canCollapse, contentRef } = useMessageCollapse(message.parts, true)
   return (
     <div className="flex min-w-0 max-w-full flex-col gap-1">
       <div className="relative min-w-0 max-w-full border-l-2 border-accent bg-muted/50 rounded-r-lg px-4 py-3">
-        {!isAlreadyCollapsible(message.parts) && (
+        {canCollapse && (
           <MessageActionsRail>
             <CollapseToggleButton collapsed={collapsed} onToggle={() => setCollapsed((v) => !v)} />
           </MessageActionsRail>
@@ -244,7 +289,7 @@ function SystemMessage({
         {collapsed ? (
           <CollapsedPreview parts={message.parts} />
         ) : (
-          <PartsRenderer parts={message.parts} messageIndex={messageIndex} />
+          <PartsRenderer parts={message.parts} messageIndex={messageIndex} contentRef={contentRef} />
         )}
       </div>
     </div>
