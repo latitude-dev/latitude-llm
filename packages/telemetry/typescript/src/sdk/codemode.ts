@@ -38,8 +38,27 @@ export type CodemodeTelemetry = {
 }
 
 type TraceState = {
-  parentContext: OtelContext | undefined
+  parentContext: OtelContext
   latitudeContext: ContextOptions | undefined
+}
+
+function resolveTraceState(states: ReadonlySet<TraceState>, activeContext: OtelContext) {
+  if (states.size === 1) return states.values().next().value
+
+  const activeSpanContext = trace.getSpanContext(activeContext)
+  if (!activeSpanContext) return undefined
+
+  for (const state of states) {
+    const parentSpanContext = trace.getSpanContext(state.parentContext)
+    if (
+      parentSpanContext?.traceId === activeSpanContext.traceId &&
+      parentSpanContext.spanId === activeSpanContext.spanId
+    ) {
+      return state
+    }
+  }
+
+  return undefined
 }
 
 function isTraceableTool(value: unknown): value is TraceableTool {
@@ -98,26 +117,32 @@ export function createCodemodeTelemetry(options: CodemodeTelemetryOptions): Code
   const captureInputs = options.capture?.inputs ?? true
   const captureOutputs = options.capture?.outputs ?? true
   const redact = options.redact ?? ((value: unknown) => value)
-  const state: TraceState = { parentContext: undefined, latitudeContext: undefined }
+  const activeStates = new Set<TraceState>()
 
   const runWithTraceContext = async <T>(run: () => Promise<T>) => {
-    const previousParentContext = state.parentContext
-    const previousLatitudeContext = state.latitudeContext
-    state.parentContext = otelContext.active()
-    state.latitudeContext = resolveContext(options.context)
+    const state: TraceState = {
+      parentContext: otelContext.active(),
+      latitudeContext: resolveContext(options.context),
+    }
+    activeStates.add(state)
 
     try {
       return await run()
     } finally {
-      state.parentContext = previousParentContext
-      state.latitudeContext = previousLatitudeContext
+      activeStates.delete(state)
     }
   }
 
   const traceToolCall: CodemodeTelemetry["traceToolCall"] = async ({ name, input, execute }) => {
+    const activeContext = otelContext.active()
+    const state = resolveTraceState(activeStates, activeContext)
+
+    // Codemode callbacks have no execution id, so ambiguous concurrent calls cannot be correlated safely.
+    if (activeStates.size > 1 && !state) return await execute()
+
     const toolCallId = `codemode-${name}-${crypto.randomUUID()}`
-    const parentContext = state.parentContext ?? otelContext.active()
-    const latitudeContext = state.latitudeContext ?? resolveContext(options.context)
+    const parentContext = state?.parentContext ?? activeContext
+    const latitudeContext = state ? state.latitudeContext : resolveContext(options.context)
     const span = options.latitude.getTracer(scope).startSpan(
       `ai.toolCall ${name}`,
       {

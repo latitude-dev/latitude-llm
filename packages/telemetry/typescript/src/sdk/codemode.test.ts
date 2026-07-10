@@ -71,6 +71,67 @@ describe("createCodemodeTelemetry", () => {
     await latitude.shutdown()
   })
 
+  it("does not misparent internal spans when execute calls overlap", async () => {
+    const exporter = new InMemorySpanExporter()
+    const latitude = new Latitude({ apiKey: "test-key", project: "test-project", exporter, disableBatch: true })
+    let sessionId = ""
+    const telemetry = createCodemodeTelemetry({
+      latitude,
+      context: () => ({ sessionId }),
+    })
+    const callbacks = new Map<string, () => Promise<void>>()
+    const tools = telemetry.traceToolSet({
+      internalTool: {
+        execute: async ({ id }: { id: string }) => ({ id }),
+      },
+    })
+    const executeTool = telemetry.wrapExecuteTool({
+      execute: ({ id }: { id: string }) =>
+        new Promise<{ id: string }>((resolve, reject) => {
+          callbacks.set(id, () => tools.internalTool.execute({ id }).then(resolve, reject))
+        }),
+    })
+    const tracer = latitude.getTracer("cloudflare-think")
+    const run = (id: string) => {
+      sessionId = id
+      return tracer.startActiveSpan(`ai.toolCall execute ${id}`, async (span) => {
+        const output = await executeTool.execute({ id })
+        span.end()
+        return output
+      })
+    }
+
+    const first = run("first")
+    const second = run("second")
+    await Promise.resolve()
+
+    const callFirst = callbacks.get("first")
+    const callSecond = callbacks.get("second")
+    expect(callFirst).toBeDefined()
+    expect(callSecond).toBeDefined()
+    await Promise.all([callFirst?.(), callSecond?.()])
+    await Promise.all([first, second])
+
+    const third = run("third")
+    await Promise.resolve()
+
+    const callThird = callbacks.get("third")
+    expect(callThird).toBeDefined()
+    await callThird?.()
+    await third
+    await latitude.flush()
+
+    const spans = exporter.getFinishedSpans()
+    const internalSpans = spans.filter((span) => span.name === "ai.toolCall internalTool")
+    const thirdExecute = spans.find((span) => span.name === "ai.toolCall execute third")
+
+    expect(internalSpans).toHaveLength(1)
+    expect(internalSpans[0]?.parentSpanContext?.spanId).toBe(thirdExecute?.spanContext().spanId)
+    expect(internalSpans[0] ? attr(internalSpans[0], "session.id") : undefined).toBe("third")
+
+    await latitude.shutdown()
+  })
+
   it("supports input and output redaction", async () => {
     const exporter = new InMemorySpanExporter()
     const latitude = new Latitude({ apiKey: "test-key", project: "test-project", exporter, disableBatch: true })

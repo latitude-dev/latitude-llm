@@ -187,6 +187,9 @@ wrap both the internal tool set and the outer `execute` tool with
 The helper records each internal codemode tool as an `ai.toolCall <name>` child
 span under `execute`, stamps the same Latitude context as the turn, records AI
 SDK and GenAI tool attributes, and marks failed tools with exception details.
+When concurrent `execute` calls cannot be correlated after crossing the codemode
+sandbox boundary, ambiguous internal spans are omitted instead of attaching them
+to the wrong trace.
 
 ```ts
 import { Think, type TurnConfig, type TurnContext } from "@cloudflare/think"
