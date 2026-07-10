@@ -91,6 +91,7 @@ export const useSpansByTraceCollection = ({
 const makeSpansBySessionCollection = (
   projectId: string,
   sessionId: string,
+  traceIds: readonly string[],
   startTimeFrom: string | undefined,
   startTimeTo: string | undefined,
   sandboxOrgId: string | undefined,
@@ -101,7 +102,13 @@ const makeSpansBySessionCollection = (
       queryKey: ["spans", "session", sandboxOrgId, projectId, sessionId, startTimeFrom, startTimeTo],
       queryFn: () =>
         listSpansBySession({
-          data: { ...(sandboxOrgId ? { sandboxOrgId } : {}), projectId, sessionId, startTimeFrom, startTimeTo },
+          data: {
+            ...(sandboxOrgId ? { sandboxOrgId } : {}),
+            projectId,
+            traceIds: [...traceIds],
+            startTimeFrom,
+            startTimeTo,
+          },
         }),
       getKey: (item: SpanRecord): string => `${item.traceId}-${item.spanId}`,
     }),
@@ -113,6 +120,7 @@ const sessionCollectionsCache: Record<string, SpansBySessionCollection> = {}
 const getSpansBySessionCollection = (
   projectId: string,
   sessionId: string,
+  traceIds: readonly string[],
   startTimeFrom: string | undefined,
   startTimeTo: string | undefined,
   sandboxOrgId: string | undefined,
@@ -122,6 +130,7 @@ const getSpansBySessionCollection = (
     sessionCollectionsCache[cacheKey] = makeSpansBySessionCollection(
       projectId,
       sessionId,
+      traceIds,
       startTimeFrom,
       startTimeTo,
       sandboxOrgId,
@@ -133,11 +142,13 @@ const getSpansBySessionCollection = (
 export const useSpansBySessionCollection = ({
   projectId,
   sessionId,
+  traceIds,
   startTimeFrom,
   startTimeTo,
 }: {
   readonly projectId: string
   readonly sessionId: string
+  readonly traceIds: readonly string[]
   readonly startTimeFrom?: string | undefined
   readonly startTimeTo?: string | undefined
 }) => {
@@ -145,6 +156,7 @@ export const useSpansBySessionCollection = ({
   const collection = getSpansBySessionCollection(
     projectId,
     sessionId,
+    traceIds,
     startTimeFrom,
     startTimeTo,
     sandboxOrgIdForScope(scope),

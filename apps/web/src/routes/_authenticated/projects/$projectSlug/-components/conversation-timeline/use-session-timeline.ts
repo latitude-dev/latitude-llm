@@ -40,6 +40,7 @@ export function useSessionTimeline({
   const { data: spans } = useSpansBySessionCollection({
     projectId,
     sessionId: session.sessionId,
+    traceIds: session.traceIds,
     startTimeFrom: session.startTime,
     startTimeTo: session.endTime,
   })

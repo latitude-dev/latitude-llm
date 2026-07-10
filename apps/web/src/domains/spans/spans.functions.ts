@@ -170,24 +170,28 @@ export const listSpansByTrace = createServerFn({ method: "GET" })
     return spans.map(serializeSpan)
   })
 
+// Reads by the session's authoritative `traceIds` rather than `session_id`
+// membership, so subagent spans that override `session_id` to the child's own
+// value still surface in the session's Spans tab and breakdowns.
 export const listSpansBySession = createServerFn({ method: "GET" })
   .inputValidator(
     z.object({
       projectId: z.string(),
-      sessionId: z.string(),
+      traceIds: z.array(z.string().length(32)).max(500),
       startTimeFrom: dateTimeParamSchema.optional(),
       startTimeTo: dateTimeParamSchema.optional(),
     }),
   )
   .handler(async ({ data, context }): Promise<SpanRecord[]> => {
+    if (data.traceIds.length === 0) return []
     const orgId = await resolveOrgScope(context)
     const spans = await Effect.runPromise(
       Effect.gen(function* () {
         const repo = yield* SpanRepository
-        return yield* repo.listBySessionId({
+        return yield* repo.listByTraceIds({
           organizationId: orgId,
           projectId: ProjectId(data.projectId),
-          sessionId: SessionId(data.sessionId),
+          traceIds: data.traceIds.map(TraceId),
           ...(data.startTimeFrom ? { startTimeFrom: data.startTimeFrom } : {}),
           ...(data.startTimeTo ? { startTimeTo: data.startTimeTo } : {}),
         })

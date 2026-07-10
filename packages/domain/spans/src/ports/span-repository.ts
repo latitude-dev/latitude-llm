@@ -91,6 +91,22 @@ export interface SpanRepositoryShape {
     readonly startTimeTo?: Date
   }): Effect.Effect<readonly Span[], RepositoryError, ChSqlClient>
 
+  /**
+   * Every span belonging to any of `traceIds`, deduped by `(trace_id, span_id)`
+   * (span ids are only unique within a trace). The authoritative way to read a
+   * session's spans: a session's `traceIds` are resolved from the session
+   * materialization, so this catches subagent spans that override `session_id`
+   * to the child's own value and would be invisible to a `session_id` membership
+   * scan. Attribute maps come back empty (same memory hazard as listBySessionId).
+   */
+  listByTraceIds(input: {
+    readonly organizationId: OrganizationId
+    readonly projectId: ProjectId
+    readonly traceIds: readonly TraceId[]
+    readonly startTimeFrom?: Date
+    readonly startTimeTo?: Date
+  }): Effect.Effect<readonly Span[], RepositoryError, ChSqlClient>
+
   listByProjectId(input: {
     readonly organizationId: OrganizationId
     readonly projectId: ProjectId

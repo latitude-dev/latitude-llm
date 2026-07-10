@@ -83,6 +83,7 @@ export function MetadataTab({
   const { data: spans, isLoading: isSpansLoading } = useSpansBySessionCollection({
     projectId: session.projectId,
     sessionId: session.sessionId,
+    traceIds: session.traceIds,
     startTimeFrom: session.startTime,
     startTimeTo: session.endTime,
   })

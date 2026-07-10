@@ -486,6 +486,59 @@ export const SpanRepositoryLive = Layer.effect(
           )
       })
 
+    const listByTraceIds: SpanRepositoryShape["listByTraceIds"] = ({
+      organizationId,
+      projectId,
+      traceIds,
+      startTimeFrom,
+      startTimeTo,
+    }) =>
+      Effect.gen(function* () {
+        const chSqlClient = (yield* ChSqlClient) as ChSqlClientShape<ClickHouseClient>
+        if (traceIds.length === 0) return []
+        const startFromClause = startTimeFrom
+          ? "AND start_time >= parseDateTime64BestEffort({startTimeFrom:String}, 9, 'UTC')"
+          : ""
+        const startToClause = startTimeTo
+          ? "AND start_time <= parseDateTime64BestEffort({startTimeTo:String}, 9, 'UTC')"
+          : ""
+        return yield* chSqlClient
+          .query(async (client) => {
+            const result = await client.query({
+              // Dedupe by trace + span because span ids are trace-scoped, and drop
+              // the attr maps (same OOM hazard as listBySessionId — the span detail
+              // view reads attributes via findBySpanId).
+              query: `SELECT ${LIST_COLUMNS_LEAN}, ${EMPTY_ATTR_MAP_COLUMNS}
+                    FROM (
+                      SELECT ${LIST_COLUMNS_LEAN}
+                      FROM spans
+                      WHERE organization_id = {organizationId:String}
+                        AND project_id = {projectId:String}
+                        AND trace_id IN ({traceIds:Array(String)})
+                        ${startFromClause}
+                        ${startToClause}
+                      ORDER BY trace_id, span_id, ingested_at DESC
+                      LIMIT 1 BY trace_id, span_id
+                    )
+                    ORDER BY start_time ASC`,
+              query_params: {
+                organizationId: organizationId as string,
+                projectId: projectId as string,
+                traceIds: Array.from(traceIds) as string[],
+                ...(startTimeFrom ? { startTimeFrom: toClickhouseDateTime(startTimeFrom) } : {}),
+                ...(startTimeTo ? { startTimeTo: toClickhouseDateTime(startTimeTo) } : {}),
+              },
+              format: "JSONEachRow",
+              clickhouse_settings: BOUNDED_READ_SETTINGS,
+            })
+            return result.json<SpanListRow>()
+          })
+          .pipe(
+            Effect.map((rows) => rows.map(toDomainSpan)),
+            Effect.mapError((error) => toRepositoryError(error, "listByTraceIds")),
+          )
+      })
+
     const listByProjectId: SpanRepositoryShape["listByProjectId"] = ({ organizationId, projectId, options }) =>
       Effect.gen(function* () {
         const chSqlClient = (yield* ChSqlClient) as ChSqlClientShape<ClickHouseClient>
@@ -768,6 +821,8 @@ export const SpanRepositoryLive = Layer.effect(
         }),
 
       listByTraceId,
+
+      listByTraceIds,
 
       listBySessionId,
 

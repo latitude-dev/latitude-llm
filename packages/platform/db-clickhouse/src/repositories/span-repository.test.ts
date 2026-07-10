@@ -158,6 +158,44 @@ describe("SpanRepository", () => {
     })
   })
 
+  describe("listByTraceIds", () => {
+    it("returns spans across multiple traces, deduping by (trace_id, span_id)", async () => {
+      const traceA = TraceId("a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1")
+      const traceB = TraceId("b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2")
+      const traceC = TraceId("c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3")
+      await runCh(
+        insertJsonEachRow(ch.client, "spans", [
+          // Same span id in two traces + a re-ingested duplicate within trace A.
+          makeSpanRow({ trace_id: traceA, span_id: "abababababababab", name: "a-older", ingested_at: "2026-01-01 00:00:00.000" }),
+          makeSpanRow({ trace_id: traceA, span_id: "abababababababab", name: "a-newer", ingested_at: "2026-01-01 00:00:01.000" }),
+          makeSpanRow({
+            trace_id: traceB,
+            span_id: "abababababababab",
+            name: "b",
+            start_time: "2026-01-01 00:00:02.000000000",
+            end_time: "2026-01-01 00:00:03.000000000",
+          }),
+          // A trace not requested — must be excluded.
+          makeSpanRow({ trace_id: traceC, span_id: "cdcdcdcdcdcdcdcd", name: "c-excluded" }),
+        ]),
+      )
+
+      const spans = await runCh(
+        repo.listByTraceIds({ organizationId: ORG_ID, projectId: PROJECT_ID, traceIds: [traceA, traceB] }),
+      )
+
+      expect(spans.map((span) => span.name)).toEqual(["a-newer", "b"])
+      expect(spans.map((span) => span.traceId)).toEqual([traceA, traceB])
+    })
+
+    it("returns an empty array for no trace ids without querying", async () => {
+      const spans = await runCh(
+        repo.listByTraceIds({ organizationId: ORG_ID, projectId: PROJECT_ID, traceIds: [] }),
+      )
+      expect(spans).toEqual([])
+    })
+  })
+
   describe("listBySessionId", () => {
     const SESSION_ID = SessionId("session-list")
     const HEX32_SESSION_ID = SessionId("99999999999999999999999999999999")

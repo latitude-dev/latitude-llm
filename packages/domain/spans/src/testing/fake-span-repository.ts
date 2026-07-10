@@ -14,6 +14,7 @@ export const createFakeSpanRepository = (overrides?: Partial<SpanRepositoryShape
       return Effect.void
     },
     listByTraceId: () => Effect.succeed([]),
+    listByTraceIds: () => Effect.succeed([]),
     listBySessionId: () => Effect.succeed([]),
     listToolSpansBySessionId: () => Effect.succeed([]),
     listByProjectId: () => Effect.succeed({ items: [], nextCursor: null }),
