@@ -121,8 +121,10 @@ export function SessionSlot({
   }
 
   function navigateToSpan(spanId: string) {
-    if (!latestTraceId) return
-    selectSpan({ traceId: latestTraceId, spanId })
+    // Conversation span links come from session-wide span maps, so the span can
+    // belong to any trace; let SessionSpansTab resolve the trace from its spans.
+    setSelectedSpanTraceId("")
+    setSelectedSpanId(spanId)
     onActiveTabChange("spans")
   }
 
