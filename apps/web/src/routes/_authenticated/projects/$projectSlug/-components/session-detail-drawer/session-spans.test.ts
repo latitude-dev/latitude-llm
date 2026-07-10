@@ -28,6 +28,7 @@ function makeSpan(
     model: "",
     toolName: "",
     toolNames: [],
+    toolCallId: "",
     tokensInput: 0,
     tokensOutput: 0,
     costTotalMicrocents: 0,

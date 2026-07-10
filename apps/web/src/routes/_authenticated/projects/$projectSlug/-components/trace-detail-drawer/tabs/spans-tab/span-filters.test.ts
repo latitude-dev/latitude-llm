@@ -24,6 +24,7 @@ function makeSpan(partial: Partial<SpanRecord> & Pick<SpanRecord, "spanId">): Sp
     model: "",
     toolName: "",
     toolNames: [],
+    toolCallId: "",
     tokensInput: 0,
     tokensOutput: 0,
     costTotalMicrocents: 0,

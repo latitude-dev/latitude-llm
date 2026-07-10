@@ -122,6 +122,15 @@ export interface BuildConversationTimelineInput {
   readonly moments: readonly TimelineMomentInput[]
 }
 
+/** Flatten a `{ traceId, spanId }`-valued span map to a bare span-id map (timelines are trace-local). */
+export function toSpanIdMap<K extends string | number>(
+  map: Readonly<Record<K, { readonly spanId: string }>>,
+): Record<K, string> {
+  const out = {} as Record<K, string>
+  for (const key in map) out[key] = map[key].spanId
+  return out
+}
+
 function countStreamableChars(message: GenAIMessage): number {
   let chars = 0
   for (const part of message.parts ?? []) {

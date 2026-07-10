@@ -19,6 +19,7 @@ import type { TraceConversationChunk } from "../entities/trace.ts"
  * Only returned by findMessagesForTrace; avoids fetching full SpanDetail for every span.
  */
 export interface SpanMessagesData {
+  readonly traceId: TraceId
   readonly spanId: SpanId
   readonly operation: Operation
   readonly toolCallId: string

@@ -32,6 +32,7 @@ export interface SpanRecord {
   readonly model: string
   readonly toolName: string
   readonly toolNames: readonly string[]
+  readonly toolCallId: string
   readonly tokensInput: number
   readonly tokensOutput: number
   readonly costTotalMicrocents: number
@@ -74,7 +75,6 @@ export interface SpanDetailRecord extends SpanRecord {
   readonly outputMessages: readonly object[]
   readonly systemInstructions: readonly object[]
   readonly toolDefinitions: readonly object[]
-  readonly toolCallId: string
   readonly toolInput: string
   readonly toolOutput: string
 }
@@ -96,6 +96,7 @@ const serializeSpan = (span: Span): SpanRecord => ({
   model: span.model,
   toolName: span.toolName,
   toolNames: span.toolNames,
+  toolCallId: span.toolCallId,
   tokensInput: span.tokensInput,
   tokensOutput: span.tokensOutput,
   costTotalMicrocents: span.costTotalMicrocents,
@@ -139,7 +140,6 @@ const serializeSpanDetail = (span: SpanDetail): SpanDetailRecord => ({
   outputMessages: span.outputMessages as readonly object[],
   systemInstructions: span.systemInstructions as readonly object[],
   toolDefinitions: span.toolDefinitions as readonly object[],
-  toolCallId: span.toolCallId,
   toolInput: span.toolInput,
   toolOutput: span.toolOutput,
 })
@@ -201,6 +201,7 @@ export const listSpansBySession = createServerFn({ method: "GET" })
   })
 
 export interface SpanMessagesRecord {
+  readonly traceId: string
   readonly spanId: string
   readonly operation: Operation
   readonly toolCallId: string
@@ -211,6 +212,7 @@ export interface SpanMessagesRecord {
 }
 
 const serializeSpanMessages = (span: SpanMessagesData): SpanMessagesRecord => ({
+  traceId: span.traceId as string,
   spanId: span.spanId as string,
   operation: span.operation,
   toolCallId: span.toolCallId,

@@ -20,6 +20,7 @@ function makeSpan(spanId: string, parentSpanId: string, startTime = "2024-01-01T
     model: "",
     toolName: "",
     toolNames: [],
+    toolCallId: "",
     tokensInput: 0,
     tokensOutput: 0,
     costTotalMicrocents: 0,

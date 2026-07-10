@@ -70,7 +70,7 @@ const LIST_COLUMNS_LEAN = `
   trace_flags, trace_state, error_type, tags, metadata,
   events_json, links_json,
   operation, provider, model, response_model,
-  tool_name, tool_names,
+  tool_name, tool_names, tool_call_id,
   tokens_input, tokens_output, tokens_cache_read,
   tokens_cache_create, tokens_reasoning,
   cost_input_microcents, cost_output_microcents,
@@ -108,7 +108,7 @@ const LIST_COLUMNS = `${LIST_COLUMNS_LEAN}, ${ATTR_MAP_COLUMNS}`
 // memory, bounded on paged window reads.
 const DETAIL_COLUMNS = `${LIST_COLUMNS},
   input_messages, output_messages, system_instructions,
-  tool_definitions, tool_call_id, tool_input, tool_output
+  tool_definitions, tool_input, tool_output
 `
 
 // Same row shape as `DETAIL_COLUMNS`, but the heavy payload columns are returned
@@ -117,7 +117,7 @@ const DETAIL_COLUMNS = `${LIST_COLUMNS},
 // keeps a window read off the largest columns, where the formatter's memory goes.
 const DETAIL_COLUMNS_NO_PAYLOADS = `${LIST_COLUMNS},
   '' AS input_messages, '' AS output_messages, '' AS system_instructions,
-  '' AS tool_definitions, '' AS tool_call_id, '' AS tool_input, '' AS tool_output
+  '' AS tool_definitions, '' AS tool_input, '' AS tool_output
 `
 
 type SpanListRow = {
@@ -151,6 +151,7 @@ type SpanListRow = {
   response_model: string
   tool_name: string
   tool_names: string[]
+  tool_call_id: string
   tokens_input: number
   tokens_output: number
   tokens_cache_read: number
@@ -180,7 +181,6 @@ type SpanDetailRow = SpanListRow & {
   output_messages: string
   system_instructions: string
   tool_definitions: string
-  tool_call_id: string
   tool_input: string
   tool_output: string
 }
@@ -235,6 +235,7 @@ const toBaseFields = (row: SpanListRow) => ({
   responseModel: row.response_model,
   toolName: normalizeCHString(row.tool_name),
   toolNames: row.tool_names.map(normalizeCHString),
+  toolCallId: normalizeCHString(row.tool_call_id),
   tokensInput: row.tokens_input,
   tokensOutput: row.tokens_output,
   tokensCacheRead: row.tokens_cache_read,
@@ -310,6 +311,7 @@ const parseToolDefinitions = (json: string): ToolDefinition[] => {
 }
 
 type SpanMessagesRow = {
+  trace_id: string
   span_id: string
   operation: string
   tool_call_id: string
@@ -320,6 +322,7 @@ type SpanMessagesRow = {
 }
 
 const toDomainSpanMessages = (row: SpanMessagesRow): SpanMessagesData => ({
+  traceId: toTraceId(normalizeCHString(row.trace_id)),
   spanId: SpanId(row.span_id),
   operation: row.operation,
   toolCallId: row.tool_call_id,
@@ -335,7 +338,6 @@ const toDomainSpanDetail = (row: SpanDetailRow): SpanDetail => ({
   outputMessages: parseMessages(row.output_messages),
   systemInstructions: parseSystem(row.system_instructions),
   toolDefinitions: parseToolDefinitions(row.tool_definitions),
-  toolCallId: normalizeCHString(row.tool_call_id),
   toolInput: row.tool_input,
   toolOutput: row.tool_output,
 })
@@ -984,9 +986,9 @@ export const SpanRepositoryLive = Layer.effect(
                 // merges all matching parts at query time and is the
                 // dominant memory cost for traces with heavy
                 // input/output_messages payloads.
-                query: `SELECT span_id, operation, tool_call_id, tool_name, tool_input, input_messages, output_messages
+                query: `SELECT trace_id, span_id, operation, tool_call_id, tool_name, tool_input, input_messages, output_messages
                       FROM (
-                        SELECT span_id, operation, tool_call_id, tool_name, tool_input, input_messages, output_messages, start_time
+                        SELECT trace_id, span_id, operation, tool_call_id, tool_name, tool_input, input_messages, output_messages, start_time
                         FROM spans
                         WHERE organization_id = {organizationId:String}
                           AND project_id = {projectId:String}
@@ -1093,9 +1095,9 @@ export const SpanRepositoryLive = Layer.effect(
           return yield* chSqlClient
             .query(async (client) => {
               const result = await client.query({
-                query: `SELECT span_id, operation, tool_call_id, tool_name, tool_input, input_messages, output_messages
+                query: `SELECT trace_id, span_id, operation, tool_call_id, tool_name, tool_input, input_messages, output_messages
                       FROM (
-                        SELECT span_id, operation, tool_call_id, tool_name, tool_input, input_messages, output_messages, start_time
+                        SELECT trace_id, span_id, operation, tool_call_id, tool_name, tool_input, input_messages, output_messages, start_time
                         FROM spans
                         WHERE organization_id = {organizationId:String}
                           AND project_id = {projectId:String}
@@ -1103,8 +1105,8 @@ export const SpanRepositoryLive = Layer.effect(
                           AND start_time <= {startTimeTo:DateTime64(9, 'UTC')}
                           AND ${membership.clause}
                           AND operation IN ('chat', 'text_completion', 'generate_content', 'execute_tool')
-                        ORDER BY span_id, ingested_at DESC
-                        LIMIT 1 BY span_id
+                        ORDER BY trace_id, span_id, ingested_at DESC
+                        LIMIT 1 BY trace_id, span_id
                       )
                       ORDER BY start_time ASC`,
                 query_params: {

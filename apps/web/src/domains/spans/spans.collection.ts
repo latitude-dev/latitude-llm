@@ -1,4 +1,4 @@
-import { SpanId } from "@domain/shared"
+import { SpanId, TraceId } from "@domain/shared"
 import type { SpanMessagesData } from "@domain/spans"
 import { buildConversationSpanMaps } from "@domain/spans"
 import { queryCollectionOptions } from "@tanstack/query-db-collection"
@@ -201,6 +201,7 @@ export const useSpanDetail = ({
 const asMessageSpans = (records: readonly SpanMessagesRecord[]): readonly SpanMessagesData[] =>
   records.map((record) => ({
     ...record,
+    traceId: TraceId(record.traceId),
     spanId: SpanId(record.spanId),
     inputMessages: record.inputMessages as readonly GenAIMessage[],
     outputMessages: record.outputMessages as readonly GenAIMessage[],

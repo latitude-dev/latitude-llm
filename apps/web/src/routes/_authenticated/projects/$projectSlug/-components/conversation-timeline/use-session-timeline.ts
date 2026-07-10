@@ -12,6 +12,7 @@ import {
   buildConversationTimeline,
   type ConversationTimeline,
   type TimelineMomentInput,
+  toSpanIdMap,
 } from "../../../../../../lib/conversation-timeline/build-conversation-timeline.ts"
 import { annotatorNameFor, toTimelineAnnotation, toTimelineSpan, toTimelineTrace } from "./timeline-adapters.ts"
 
@@ -65,8 +66,8 @@ export function useSessionTimeline({
     return buildConversationTimeline({
       messages: conversation.messages,
       spans: (spans ?? []).map(toTimelineSpan),
-      messageSpanMap: spanMaps.messageSpanMap,
-      toolCallSpanMap: spanMaps.toolCallSpanMap,
+      messageSpanMap: toSpanIdMap(spanMaps.messageSpanMap),
+      toolCallSpanMap: toSpanIdMap(spanMaps.toolCallSpanMap),
       traces: traces.map(toTimelineTrace),
       annotations: (annotationsData?.items ?? []).map((a) =>
         toTimelineAnnotation(a, annotatorNameFor(a, memberByUserId)),

@@ -116,7 +116,7 @@ function ConversationContent({
 }: {
   readonly traceDetail: TraceDetailRecord
   readonly messages: readonly GenAIMessage[]
-  readonly navigateToSpan?: ((spanId: string) => void) | undefined
+  readonly navigateToSpan?: ((spanId: string, traceId?: string) => void) | undefined
   /** When set, message/tool-call navigation links resolve against ALL session spans
    *  (not just this trace); annotations still anchor to this trace. */
   readonly sessionSpanScope?:
@@ -184,7 +184,10 @@ function ConversationContent({
     [timeline, hoveredMessageIndex],
   )
 
-  const getSpanIdForMessage = useCallback((messageIndex: number) => spanMaps?.messageSpanMap[messageIndex], [spanMaps])
+  const getSpanIdForMessage = useCallback(
+    (messageIndex: number) => spanMaps?.messageSpanMap[messageIndex]?.spanId,
+    [spanMaps],
+  )
 
   const { messageLevelAnnotations, isCreatePending, isUpdatePending } = useTraceAnnotationsData({
     projectId,
@@ -494,9 +497,9 @@ function ConversationContent({
   const messageActions =
     navigateToSpan && navSpanMaps && Object.keys(navSpanMaps.messageSpanMap).length > 0
       ? new Map(
-          Object.entries(navSpanMaps.messageSpanMap).map(([idx, spanId]) => [
+          Object.entries(navSpanMaps.messageSpanMap).map(([idx, ref]) => [
             Number(idx),
-            () => navigateToSpan(spanId),
+            () => navigateToSpan(ref.spanId, ref.traceId),
           ]),
         )
       : undefined
@@ -504,9 +507,9 @@ function ConversationContent({
   const toolCallActions =
     navigateToSpan && navSpanMaps && Object.keys(navSpanMaps.toolCallSpanMap).length > 0
       ? new Map(
-          Object.entries(navSpanMaps.toolCallSpanMap).map(([toolCallId, spanId]) => [
+          Object.entries(navSpanMaps.toolCallSpanMap).map(([toolCallId, ref]) => [
             toolCallId,
-            () => navigateToSpan(spanId),
+            () => navigateToSpan(ref.spanId, ref.traceId),
           ]),
         )
       : undefined
@@ -589,7 +592,7 @@ function ConversationContent({
                       messageRole={role}
                       projectId={projectId}
                       traceId={traceDetail.traceId}
-                      spanId={spanMaps?.messageSpanMap[messageIndex]}
+                      spanId={spanMaps?.messageSpanMap[messageIndex]?.spanId}
                       annotations={data?.annotations ?? []}
                       annotators={data?.annotators ?? []}
                       onClose={onPopoverClose}
@@ -671,7 +674,7 @@ export function ConversationTab({
   readonly traceDetail: TraceDetailRecord | null | undefined
   readonly isDetailLoading: boolean
   /** Optional callback to navigate to a span. If not provided, message/tool call actions are hidden. */
-  readonly navigateToSpan?: ((spanId: string) => void) | undefined
+  readonly navigateToSpan?: ((spanId: string, traceId?: string) => void) | undefined
   /** When set, message/tool-call navigation links resolve against ALL session spans
    *  (not just this trace); annotations still anchor to this trace. */
   readonly sessionSpanScope?:
