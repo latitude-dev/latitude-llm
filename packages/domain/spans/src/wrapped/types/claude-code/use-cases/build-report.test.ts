@@ -97,6 +97,15 @@ const baseInput: AssembleReportInput = {
   ],
   busiestDay: { date: "2026-05-06", toolCalls: 40 },
   biggestWrite: { filePath: `${WORKSPACE_PATH}/src/index.ts`, lines: 320 },
+  skillUsage: {
+    distinctUsed: 3,
+    totalUses: 11,
+    top: [
+      { name: "code-review", count: 6 },
+      { name: "create-pr", count: 3 },
+      { name: "testing", count: 2 },
+    ],
+  },
   deepDives: [
     {
       workspace: { name: "poncho-ios", sessions: 5, toolCalls: 100 },
@@ -115,6 +124,10 @@ const baseInput: AssembleReportInput = {
           { pattern: "pnpm", uses: 9 },
           { pattern: "git", uses: 6 },
           { pattern: "swift", uses: 3 },
+        ],
+        skills: [
+          { name: "code-review", count: 6 },
+          { name: "create-pr", count: 3 },
         ],
         dominantTool: "Edit",
       },
@@ -787,6 +800,7 @@ describe("assembleReport", () => {
           topFiles: [],
           topBranches: [],
           topBashCommands: [],
+          skills: [],
           dominantTool: "Edit",
         },
       })),

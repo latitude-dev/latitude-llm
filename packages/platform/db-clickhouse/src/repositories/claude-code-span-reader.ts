@@ -19,6 +19,8 @@ import {
   type HeatmapCellRow,
   type LocStatsRow,
   type SessionDurationStatsRow,
+  type SkillCountRow,
+  type SkillUsageRow,
   type ToolMixRow,
   type WorkspaceDeepDiveRow,
   type WorkspaceRow,
@@ -45,6 +47,29 @@ const FILE_PATH_TOOLS = ["Read", "Edit", "Write", "NotebookEdit", "MultiEdit"] a
 // file path.
 const FILE_PATH_TOOLS_SQL = FILE_PATH_TOOLS.map((t) => `'${t}'`).join(",")
 const PATH_AWARE_TOOLS_SQL = `('Edit','MultiEdit','NotebookEdit','Write','Read','NotebookRead')`
+
+// A "skill use" is a `SKILL.md` read (Read / NotebookRead) or a `Skill` tool
+// call. Skills are keyed by name alone, so the same name from different paths
+// (in-repo `.agents/skills/`, `~/.claude/skills/`, plugins) merges.
+const SKILL_MATCH_PREDICATE = `
+  (
+    tool_name = 'Skill'
+    OR (
+      tool_name IN ('Read', 'NotebookRead')
+      AND endsWith(JSONExtractString(tool_input, 'file_path'), 'SKILL.md')
+    )
+  )
+`
+
+// Derives the skill name: the `Skill` tool's `skill` argument, else the parent
+// directory of the `SKILL.md` file. Empty string when neither applies (filtered
+// out by the caller).
+const SKILL_NAME_EXPR = `
+  multiIf(
+    tool_name = 'Skill', JSONExtractString(tool_input, 'skill'),
+    arrayElement(splitByChar('/', JSONExtractString(tool_input, 'file_path')), -2)
+  )
+`
 
 // Splits a Bash command string into its `&&` / `||`-separated segments.
 //
@@ -403,6 +428,13 @@ interface FileTouchesCHRow {
   readonly touches: number | string
 }
 
+interface SkillUsageCHRow {
+  readonly total_uses: number | string
+  readonly distinct_skills: number | string
+  readonly top_names: readonly string[] | null
+  readonly top_counts: readonly (number | string)[] | null
+}
+
 interface BashPatternCHRow {
   readonly pattern: string
   readonly uses: number | string
@@ -434,6 +466,9 @@ interface WorkspaceDeepDiveCHRow {
   /** Parallel arrays describing the top 3 bash command prefixes. */
   readonly top_command_patterns: readonly string[] | null
   readonly top_command_counts: readonly (number | string)[] | null
+  /** Parallel arrays describing the top 3 skills used in this workspace. */
+  readonly top_skill_names: readonly string[] | null
+  readonly top_skill_counts: readonly (number | string)[] | null
   readonly dominant_tool: readonly string[] | null
 }
 
@@ -933,6 +968,57 @@ export const ClaudeCodeSpanReaderLive = Layer.effect(
           )
       })
 
+    const getSkillUsage: ClaudeCodeSpanReaderShape["getSkillUsage"] = (params) =>
+      Effect.gen(function* () {
+        const chSqlClient = (yield* ChSqlClient) as ChSqlClientShape<ClickHouseClient>
+        return yield* chSqlClient
+          .query(async (client) => {
+            // `skill_spans` materialises one row per skill use (name != '');
+            // `top_skills` is the top-3 by usage. `groupArray` over the
+            // ordered CTE keeps names and counts aligned (same pattern as the
+            // workspace deep-dive's parallel arrays).
+            const result = await client.query({
+              query: `
+                WITH
+                  skill_spans AS (
+                    SELECT skill FROM (
+                      SELECT ${SKILL_NAME_EXPR} AS skill
+                      FROM spans
+                      WHERE ${PROJECT_WINDOW_FILTER}
+                        AND ${SKILL_MATCH_PREDICATE}
+                    ) WHERE skill != ''
+                  ),
+                  top_skills AS (
+                    SELECT skill AS name, count() AS uses
+                    FROM skill_spans
+                    GROUP BY name
+                    ORDER BY uses DESC, name ASC
+                    LIMIT 3
+                  )
+                SELECT
+                  (SELECT count() FROM skill_spans)         AS total_uses,
+                  (SELECT uniqExact(skill) FROM skill_spans) AS distinct_skills,
+                  (SELECT groupArray(name) FROM top_skills) AS top_names,
+                  (SELECT groupArray(uses) FROM top_skills) AS top_counts
+              `,
+              query_params: projectWindowParams(params),
+              format: "JSONEachRow",
+            })
+            const [row] = await result.json<SkillUsageCHRow>()
+            const empty: SkillUsageRow = { distinctUsed: 0, totalUses: 0, top: [] }
+            if (!row) return empty
+            const names = row.top_names ?? []
+            const counts = row.top_counts ?? []
+            const top: SkillCountRow[] = names.map((name, i) => ({ name, count: num(counts[i] ?? 0) }))
+            return {
+              distinctUsed: num(row.distinct_skills),
+              totalUses: num(row.total_uses),
+              top,
+            } satisfies SkillUsageRow
+          })
+          .pipe(Effect.mapError((error) => toRepositoryError(error, "getSkillUsage")))
+      })
+
     const getTopBashCommands: ClaudeCodeSpanReaderShape["getTopBashCommands"] = (params) =>
       Effect.gen(function* () {
         const chSqlClient = (yield* ChSqlClient) as ChSqlClientShape<ClickHouseClient>
@@ -1094,6 +1180,20 @@ export const ClaudeCodeSpanReaderLive = Layer.effect(
                   GROUP BY pattern
                   ORDER BY uses DESC
                   LIMIT 3
+                ),
+                skills AS (
+                  SELECT name, count() AS uses
+                  FROM (
+                    SELECT ${SKILL_NAME_EXPR} AS name
+                    FROM spans
+                    WHERE ${PROJECT_WINDOW_FILTER}
+                      AND metadata['workspace.name'] = {workspaceName:String}
+                      AND ${SKILL_MATCH_PREDICATE}
+                  )
+                  WHERE name != ''
+                  GROUP BY name
+                  ORDER BY uses DESC, name ASC
+                  LIMIT 3
                 )
                 SELECT
                   (SELECT count() FROM spans
@@ -1137,7 +1237,9 @@ export const ClaudeCodeSpanReaderLive = Layer.effect(
                   (SELECT groupArray(lines_removed) FROM files) AS top_file_lines_removed,
                   (SELECT groupArray(reads)         FROM files) AS top_file_reads,
                   (SELECT groupArray(pattern)       FROM commands) AS top_command_patterns,
-                  (SELECT groupArray(uses)          FROM commands) AS top_command_counts
+                  (SELECT groupArray(uses)          FROM commands) AS top_command_counts,
+                  (SELECT groupArray(name)          FROM skills)   AS top_skill_names,
+                  (SELECT groupArray(uses)          FROM skills)   AS top_skill_counts
               `,
               query_params: { ...projectWindowParams(params), workspaceName: params.workspaceName },
               format: "JSONEachRow",
@@ -1151,6 +1253,7 @@ export const ClaudeCodeSpanReaderLive = Layer.effect(
               topFiles: [],
               topBranches: [],
               topBashCommands: [],
+              skills: [],
               dominantTool: null,
             }
             if (!row) return empty
@@ -1174,6 +1277,12 @@ export const ClaudeCodeSpanReaderLive = Layer.effect(
               .map((pattern, i) => ({ pattern, uses: num(commandCounts[i] ?? 0) }))
               .filter((cmd) => cmd.pattern !== "")
 
+            const skillNames = row.top_skill_names ?? []
+            const skillCounts = row.top_skill_counts ?? []
+            const skills = skillNames
+              .map((name, i) => ({ name, count: num(skillCounts[i] ?? 0) }))
+              .filter((skill) => skill.name !== "")
+
             return {
               toolCalls: num(row.tool_calls),
               sessions: num(row.sessions),
@@ -1182,6 +1291,7 @@ export const ClaudeCodeSpanReaderLive = Layer.effect(
               topFiles,
               topBranches: row.top_branches ?? [],
               topBashCommands,
+              skills,
               dominantTool: row.dominant_tool?.[0] ?? null,
             }
           })
@@ -1255,6 +1365,7 @@ export const ClaudeCodeSpanReaderLive = Layer.effect(
       getBiggestWrite,
       getToolMix,
       getTopFiles,
+      getSkillUsage,
       getTopBashCommands,
       getTopWorkspaces,
       getTopBranches,

@@ -5,10 +5,10 @@ import {
   type FileLine,
   type LastReport,
   type Report,
-  reportV2Schema,
+  reportV3Schema,
   type ToolBucket,
   type ToolMix,
-  type WorkspaceDeepDive,
+  type WorkspaceDeepDiveV3,
 } from "../entities/report.ts"
 import { pickReadAnchor, pickWrittenAnchor } from "../helpers/anchors.ts"
 import {
@@ -18,6 +18,7 @@ import {
   type HeatmapCellRow,
   type LocStatsRow,
   type SessionDurationStatsRow,
+  type SkillUsageRow,
   type ToolMixRow,
   type WorkspaceDeepDiveRow,
   type WorkspaceRow,
@@ -386,7 +387,7 @@ const fillHeatmap = (rows: readonly HeatmapCellRow[]): Report["heatmap"] => {
   return matrix
 }
 
-const buildDeepDive = (workspace: WorkspaceRow, row: WorkspaceDeepDiveRow): WorkspaceDeepDive => ({
+const buildDeepDive = (workspace: WorkspaceRow, row: WorkspaceDeepDiveRow): WorkspaceDeepDiveV3 => ({
   name: workspace.name,
   toolCalls: row.toolCalls,
   sessions: row.sessions,
@@ -402,6 +403,7 @@ const buildDeepDive = (workspace: WorkspaceRow, row: WorkspaceDeepDiveRow): Work
   ),
   topBranches: [...row.topBranches],
   topBashCommands: row.topBashCommands.map((cmd) => ({ pattern: cmd.pattern, count: cmd.uses })),
+  skills: row.skills.map((skill) => ({ name: skill.name, count: skill.count })),
   dominantTool: row.dominantTool ? toolBucketFor(row.dominantTool) : "other",
 })
 
@@ -419,6 +421,7 @@ export interface AssembleReportInput {
   readonly heatmap: readonly HeatmapCellRow[]
   readonly busiestDay: BusiestDayRow | null
   readonly biggestWrite: BiggestWriteRow | null
+  readonly skillUsage: SkillUsageRow
   readonly deepDives: ReadonlyArray<{
     readonly workspace: WorkspaceRow
     readonly row: WorkspaceDeepDiveRow
@@ -499,11 +502,17 @@ export const assembleReport = (input: AssembleReportInput): Report => {
       prev && "tokensTotal" in prev.totals ? (prev.totals as unknown as { tokensTotal: number }).tokensTotal : null,
   }
 
+  const skills = {
+    distinctUsed: input.skillUsage.distinctUsed,
+    totalUses: input.skillUsage.totalUses,
+    top: input.skillUsage.top.map((skill) => ({ name: skill.name, count: skill.count })),
+  }
+
   // Runtime-validate the assembled object so callers can rely on the
   // return being a `Report` even when something upstream (a query, an
   // adapter, a refactor) drifts away from the schema. Cheap — one Zod
   // parse per Wrapped run, fired ~once per project per week.
-  return reportV2Schema.parse({
+  return reportV3Schema.parse({
     project: { id: input.project.id, name: input.project.name, slug: input.project.slug },
     organization: input.organization,
     window: { start: input.windowStart, end: input.windowEnd },
@@ -538,6 +547,7 @@ export const assembleReport = (input: AssembleReportInput): Report => {
     moments: { longestSession, busiestDay, biggestWrite },
     personality,
     lastReport,
+    skills,
   })
 }
 
@@ -565,21 +575,32 @@ export const buildReportUseCase = Effect.fn("claude-code-wrapped.buildReport")(f
     to: input.windowEnd,
   }
 
-  const [totals, durationStats, locStats, toolMix, topBash, topWorkspaces, heatmap, busiestDay, biggestWrite] =
-    yield* Effect.all(
-      [
-        reader.getTotalsForProject(projectScope),
-        reader.getSessionDurationStats(projectScope),
-        reader.getLocStats(projectScope),
-        reader.getToolMix(projectScope),
-        reader.getTopBashCommands(projectScope),
-        reader.getTopWorkspaces(projectScope),
-        reader.getHeatmap(projectScope),
-        reader.getBusiestDay(projectScope),
-        reader.getBiggestWrite(projectScope),
-      ],
-      { concurrency: QUERY_CONCURRENCY },
-    )
+  const [
+    totals,
+    durationStats,
+    locStats,
+    toolMix,
+    topBash,
+    topWorkspaces,
+    heatmap,
+    busiestDay,
+    biggestWrite,
+    skillUsage,
+  ] = yield* Effect.all(
+    [
+      reader.getTotalsForProject(projectScope),
+      reader.getSessionDurationStats(projectScope),
+      reader.getLocStats(projectScope),
+      reader.getToolMix(projectScope),
+      reader.getTopBashCommands(projectScope),
+      reader.getTopWorkspaces(projectScope),
+      reader.getHeatmap(projectScope),
+      reader.getBusiestDay(projectScope),
+      reader.getBiggestWrite(projectScope),
+      reader.getSkillUsage(projectScope),
+    ],
+    { concurrency: QUERY_CONCURRENCY },
+  )
 
   const deepDiveTargets = topWorkspaces.slice(0, MAX_WORKSPACE_DEEP_DIVES)
   const deepDives = yield* Effect.forEach(
@@ -605,6 +626,7 @@ export const buildReportUseCase = Effect.fn("claude-code-wrapped.buildReport")(f
     heatmap,
     busiestDay,
     biggestWrite,
+    skillUsage,
     deepDives,
     ...(input.previousReport !== undefined ? { previousReport: input.previousReport } : {}),
   })
