@@ -1,6 +1,13 @@
 import { cn, Text, Tooltip } from "@repo/ui"
 import { useHotkeys } from "@tanstack/react-hotkeys"
-import { ChevronsDownUpIcon, ChevronsUpDownIcon, MaximizeIcon, MinimizeIcon } from "lucide-react"
+import {
+  ChevronDownIcon,
+  ChevronRightIcon,
+  ChevronsDownUpIcon,
+  ChevronsUpDownIcon,
+  MaximizeIcon,
+  MinimizeIcon,
+} from "lucide-react"
 import { type ReactNode, useMemo, useRef, useState } from "react"
 import { HotkeyBadge } from "../../../../../../../../../components/hotkey-badge.tsx"
 import type { SpanRecord } from "../../../../../../../../../domains/spans/spans.functions.ts"
@@ -24,11 +31,16 @@ import { useWaterfallCursor, WaterfallCursorOverlay } from "./waterfall.tsx"
 
 export type { SpanTreeSelection } from "./grouped-tree-state.ts"
 
+export interface SpanTreeGroupHeader {
+  readonly label: ReactNode
+  readonly meta: ReactNode
+}
+
 export interface SpanTreeGroup {
   readonly traceId: string
   readonly spans: readonly SpanRecord[]
   readonly timeRange?: TraceTimeRange | undefined
-  readonly header?: ReactNode
+  readonly header?: SpanTreeGroupHeader
 }
 
 function collectCollapsibleIds(roots: ReturnType<typeof buildSpanTree>): Set<string> {
@@ -46,6 +58,124 @@ function collectCollapsibleIds(roots: ReturnType<typeof buildSpanTree>): Set<str
   return ids
 }
 
+function TreeAxisHeader({
+  treeWidth,
+  timeRange,
+  hasCollapsible,
+  isAllCollapsed,
+  onToggleAll,
+  selectedSpan,
+  isMinimized,
+  onToggleMinimized,
+}: {
+  readonly treeWidth: number
+  readonly timeRange: TraceTimeRange
+  readonly hasCollapsible: boolean
+  readonly isAllCollapsed: boolean
+  readonly onToggleAll: () => void
+  readonly selectedSpan: SpanTreeSelection | null
+  readonly isMinimized: boolean
+  readonly onToggleMinimized: () => void
+}) {
+  return (
+    <div
+      className="sticky top-0 z-30 flex shrink-0 flex-row items-center border-b border-border bg-background"
+      style={{ height: ROW_HEIGHT }}
+    >
+      <div className="flex shrink-0 flex-row items-center gap-1 px-2" style={{ width: treeWidth }}>
+        <Tooltip side="bottom" trigger={<Text.H6 color="foregroundMuted">Span</Text.H6>}>
+          Navigate <HotkeyBadge hotkey="J" /> <HotkeyBadge hotkey="K" /> · Deselect <HotkeyBadge hotkey="Escape" />
+        </Tooltip>
+        {hasCollapsible && (
+          <Tooltip
+            asChild
+            side="bottom"
+            trigger={
+              <button
+                type="button"
+                className="shrink-0 rounded p-0.5 text-muted-foreground transition-colors hover:bg-muted"
+                onClick={onToggleAll}
+              >
+                {isAllCollapsed ? (
+                  <ChevronsUpDownIcon className="h-3.5 w-3.5" />
+                ) : (
+                  <ChevronsDownUpIcon className="h-3.5 w-3.5" />
+                )}
+              </button>
+            }
+          >
+            {isAllCollapsed ? "Expand all" : "Collapse all"} <HotkeyBadge hotkey="E" />
+          </Tooltip>
+        )}
+        {selectedSpan && (
+          <Tooltip
+            asChild
+            side="bottom"
+            trigger={
+              <button
+                type="button"
+                className="shrink-0 rounded p-0.5 text-muted-foreground transition-colors hover:bg-muted"
+                onClick={onToggleMinimized}
+              >
+                {isMinimized ? <MaximizeIcon className="h-3.5 w-3.5" /> : <MinimizeIcon className="h-3.5 w-3.5" />}
+              </button>
+            }
+          >
+            {isMinimized ? "Expand tree" : "Minimize tree"}
+          </Tooltip>
+        )}
+      </div>
+      <div className="w-px shrink-0 self-stretch bg-border" />
+      <div
+        className="flex min-w-0 flex-1 flex-row items-center justify-between"
+        style={{ paddingLeft: WATERFALL_H_INSET_PX, paddingRight: WATERFALL_H_INSET_PX }}
+      >
+        <Text.H6 color="foregroundMuted">0ms</Text.H6>
+        <Text.H6 color="foregroundMuted">{formatDuration(timeRange.totalDuration)}</Text.H6>
+      </div>
+    </div>
+  )
+}
+
+function TraceSectionHeader({
+  treeWidth,
+  isCollapsed,
+  onToggleCollapsed,
+  label,
+  meta,
+}: {
+  readonly treeWidth: number
+  readonly isCollapsed: boolean
+  readonly onToggleCollapsed: () => void
+  readonly label: ReactNode
+  readonly meta: ReactNode
+}) {
+  return (
+    <div className="flex shrink-0 flex-row items-center border-y border-border bg-muted" style={{ height: ROW_HEIGHT }}>
+      <button
+        type="button"
+        className="flex h-full min-w-0 shrink-0 flex-row items-center gap-1 px-2 text-left transition-colors hover:bg-muted-foreground/10"
+        style={{ width: treeWidth }}
+        onClick={onToggleCollapsed}
+      >
+        {isCollapsed ? (
+          <ChevronRightIcon className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
+        ) : (
+          <ChevronDownIcon className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
+        )}
+        {label}
+      </button>
+      <div className="w-px shrink-0 self-stretch bg-border" />
+      <div
+        className="flex min-w-0 flex-1 flex-row items-center justify-between gap-2"
+        style={{ paddingLeft: WATERFALL_H_INSET_PX, paddingRight: WATERFALL_H_INSET_PX }}
+      >
+        {meta}
+      </div>
+    </div>
+  )
+}
+
 function SpanTreeGroupRows({
   group,
   visibleNodes,
@@ -55,12 +185,6 @@ function SpanTreeGroupRows({
   onSelectSpan,
   treeWidth,
   timeRange,
-  showControls,
-  hasCollapsible,
-  isAllCollapsed,
-  onToggleAll,
-  isMinimized,
-  onToggleMinimized,
 }: {
   readonly group: SpanTreeGroup
   readonly visibleNodes: ReturnType<typeof flattenTree>
@@ -70,12 +194,6 @@ function SpanTreeGroupRows({
   readonly onSelectSpan: (selection: SpanTreeSelection | null) => void
   readonly treeWidth: number
   readonly timeRange: TraceTimeRange
-  readonly showControls: boolean
-  readonly hasCollapsible: boolean
-  readonly isAllCollapsed: boolean
-  readonly onToggleAll: () => void
-  readonly isMinimized: boolean
-  readonly onToggleMinimized: () => void
 }) {
   const containerRef = useRef<HTMLDivElement | null>(null)
   const { cursorX, cursorTimeLabel, onMouseMove, onMouseLeave } = useWaterfallCursor({
@@ -87,64 +205,6 @@ function SpanTreeGroupRows({
   return (
     // biome-ignore lint/a11y/noStaticElementInteractions: passive mouse tracking for waterfall cursor
     <div ref={containerRef} className="relative flex flex-col" onMouseMove={onMouseMove} onMouseLeave={onMouseLeave}>
-      <div className="flex shrink-0 flex-row items-center border-b border-border" style={{ height: ROW_HEIGHT }}>
-        <div className="flex shrink-0 flex-row items-center gap-1 px-2" style={{ width: treeWidth }}>
-          {showControls ? (
-            <Tooltip side="bottom" trigger={<Text.H6 color="foregroundMuted">Span</Text.H6>}>
-              Navigate <HotkeyBadge hotkey="J" /> <HotkeyBadge hotkey="K" /> · Deselect <HotkeyBadge hotkey="Escape" />
-            </Tooltip>
-          ) : (
-            <Text.H6 color="foregroundMuted">Span</Text.H6>
-          )}
-          {showControls && hasCollapsible && (
-            <Tooltip
-              asChild
-              side="bottom"
-              trigger={
-                <button
-                  type="button"
-                  className="shrink-0 rounded p-0.5 text-muted-foreground transition-colors hover:bg-muted"
-                  onClick={onToggleAll}
-                >
-                  {isAllCollapsed ? (
-                    <ChevronsUpDownIcon className="h-3.5 w-3.5" />
-                  ) : (
-                    <ChevronsDownUpIcon className="h-3.5 w-3.5" />
-                  )}
-                </button>
-              }
-            >
-              {isAllCollapsed ? "Expand all" : "Collapse all"} <HotkeyBadge hotkey="E" />
-            </Tooltip>
-          )}
-          {showControls && selectedSpan && (
-            <Tooltip
-              asChild
-              side="bottom"
-              trigger={
-                <button
-                  type="button"
-                  className="shrink-0 rounded p-0.5 text-muted-foreground transition-colors hover:bg-muted"
-                  onClick={onToggleMinimized}
-                >
-                  {isMinimized ? <MaximizeIcon className="h-3.5 w-3.5" /> : <MinimizeIcon className="h-3.5 w-3.5" />}
-                </button>
-              }
-            >
-              {isMinimized ? "Expand tree" : "Minimize tree"}
-            </Tooltip>
-          )}
-        </div>
-        <div className="w-px shrink-0 self-stretch bg-border" />
-        <div
-          className="flex min-w-0 flex-1 flex-row items-center justify-between"
-          style={{ paddingLeft: WATERFALL_H_INSET_PX, paddingRight: WATERFALL_H_INSET_PX }}
-        >
-          <Text.H6 color="foregroundMuted">0ms</Text.H6>
-          <Text.H6 color="foregroundMuted">{formatDuration(timeRange.totalDuration)}</Text.H6>
-        </div>
-      </div>
-
       {visibleNodes.map((flatNode) => {
         const spanId = flatNode.node.span.spanId
         const selection = { traceId: group.traceId, spanId }
@@ -185,6 +245,7 @@ export function GroupedSpanTree({
 }) {
   const containerRef = useRef<HTMLDivElement | null>(null)
   const [collapsed, setCollapsed] = useState<Set<string>>(new Set())
+  const [collapsedTraces, setCollapsedTraces] = useState<Set<string>>(new Set())
   const { treeWidth, isDragging, onPointerDown, onKeyDown } = useResizablePanel({ containerRef })
   const resolvedTreeWidth = treeWidth ?? MIN_TREE_WIDTH
 
@@ -208,8 +269,28 @@ export function GroupedSpanTree({
     [collapsed, groups],
   )
 
+  const sharedDuration = useMemo(
+    () => preparedGroups.reduce((max, { timeRange }) => Math.max(max, timeRange.totalDuration), 0),
+    [preparedGroups],
+  )
+  const axisTimeRange: TraceTimeRange = { minTime: 0, maxTime: sharedDuration, totalDuration: sharedDuration }
+  const renderGroups = useMemo(
+    () =>
+      preparedGroups.map((prepared) => ({
+        ...prepared,
+        rowTimeRange: {
+          minTime: prepared.timeRange.minTime,
+          maxTime: prepared.timeRange.minTime + sharedDuration,
+          totalDuration: sharedDuration,
+        } satisfies TraceTimeRange,
+      })),
+    [preparedGroups, sharedDuration],
+  )
+
   const visibleSelections = preparedGroups.flatMap(({ group, visibleNodes }) =>
-    visibleNodes.map(({ node }) => ({ traceId: group.traceId, spanId: node.span.spanId })),
+    collapsedTraces.has(group.traceId)
+      ? []
+      : visibleNodes.map(({ node }) => ({ traceId: group.traceId, spanId: node.span.spanId })),
   )
   const collapsibleSelections = preparedGroups.flatMap(({ group, collapsibleIds }) =>
     [...collapsibleIds].map((spanId) => spanTreeSelectionKey({ traceId: group.traceId, spanId })),
@@ -222,6 +303,15 @@ export function GroupedSpanTree({
 
   function toggleAll() {
     setCollapsed(isAllCollapsed ? new Set() : new Set(collapsibleSelections))
+  }
+
+  function toggleTrace(traceId: string) {
+    setCollapsedTraces((current) => {
+      const next = new Set(current)
+      if (next.has(traceId)) next.delete(traceId)
+      else next.add(traceId)
+      return next
+    })
   }
 
   useHotkeys([
@@ -263,27 +353,44 @@ export function GroupedSpanTree({
       style={isMinimized ? { maxHeight: MINIMIZED_MAX_HEIGHT } : undefined}
     >
       <div className="flex flex-1 flex-col overflow-y-auto">
-        {preparedGroups.map(({ group, visibleNodes, collapsed: groupCollapsed, timeRange }, index) => (
-          <div key={group.traceId} className="flex shrink-0 flex-col">
-            {group.header}
-            <SpanTreeGroupRows
-              group={group}
-              visibleNodes={visibleNodes}
-              collapsed={groupCollapsed}
-              selectedSpan={selectedSpan}
-              onToggle={(spanId) => toggle({ traceId: group.traceId, spanId })}
-              onSelectSpan={onSelectSpan}
-              treeWidth={resolvedTreeWidth}
-              timeRange={timeRange}
-              showControls={index === 0}
-              hasCollapsible={collapsibleSelections.length > 0}
-              isAllCollapsed={isAllCollapsed}
-              onToggleAll={toggleAll}
-              isMinimized={isMinimized}
-              onToggleMinimized={onToggleMinimized}
-            />
-          </div>
-        ))}
+        <TreeAxisHeader
+          treeWidth={resolvedTreeWidth}
+          timeRange={axisTimeRange}
+          hasCollapsible={collapsibleSelections.length > 0}
+          isAllCollapsed={isAllCollapsed}
+          onToggleAll={toggleAll}
+          selectedSpan={selectedSpan}
+          isMinimized={isMinimized}
+          onToggleMinimized={onToggleMinimized}
+        />
+        {renderGroups.map(({ group, visibleNodes, collapsed: groupCollapsed, rowTimeRange }) => {
+          const isTraceCollapsed = collapsedTraces.has(group.traceId)
+          return (
+            <div key={group.traceId} className="flex shrink-0 flex-col">
+              {group.header && (
+                <TraceSectionHeader
+                  treeWidth={resolvedTreeWidth}
+                  isCollapsed={isTraceCollapsed}
+                  onToggleCollapsed={() => toggleTrace(group.traceId)}
+                  label={group.header.label}
+                  meta={group.header.meta}
+                />
+              )}
+              {!isTraceCollapsed && (
+                <SpanTreeGroupRows
+                  group={group}
+                  visibleNodes={visibleNodes}
+                  collapsed={groupCollapsed}
+                  selectedSpan={selectedSpan}
+                  onToggle={(spanId) => toggle({ traceId: group.traceId, spanId })}
+                  onSelectSpan={onSelectSpan}
+                  treeWidth={resolvedTreeWidth}
+                  timeRange={rowTimeRange}
+                />
+              )}
+            </div>
+          )
+        })}
       </div>
 
       {/* biome-ignore lint/a11y/useSemanticElements: resize handle requires div for drag events */}
@@ -296,7 +403,7 @@ export function GroupedSpanTree({
         aria-valuemax={containerRef.current ? containerRef.current.offsetWidth - MIN_WATERFALL_WIDTH : 9999}
         tabIndex={0}
         className={cn(
-          "absolute bottom-0 top-0 z-10 w-px cursor-col-resize touch-none",
+          "absolute bottom-0 top-0 z-40 w-px cursor-col-resize touch-none",
           "transition-colors hover:bg-primary",
           "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-1",
           "before:absolute before:inset-y-0 before:-left-1.5 before:-right-1.5 before:content-['']",

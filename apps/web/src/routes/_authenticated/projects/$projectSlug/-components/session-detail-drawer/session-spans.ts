@@ -23,10 +23,6 @@ export function getSessionTraceNumberById(groups: readonly SessionSpanGroup[]): 
   return new Map(groups.map((group, index) => [group.traceId, index + 1]))
 }
 
-export function getSessionSpanGroupName(group: SessionSpanGroup): string {
-  return group.trace?.rootSpanName || group.traceId.slice(0, 7)
-}
-
 export function groupSessionSpans(
   spans: readonly SpanRecord[],
   traces: readonly TraceRecord[],

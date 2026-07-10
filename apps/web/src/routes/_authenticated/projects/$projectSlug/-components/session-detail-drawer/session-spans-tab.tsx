@@ -1,5 +1,4 @@
 import { Button, Icon, Text } from "@repo/ui"
-import { formatCount } from "@repo/utils"
 import { ArrowUpRightIcon } from "lucide-react"
 import { useEffect, useMemo, useRef, useState } from "react"
 import type { SessionDetailRecord } from "../../../../../../domains/sessions/sessions.functions.ts"
@@ -17,7 +16,6 @@ import { getTraceTimeRange } from "../trace-detail-drawer/tabs/spans-tab/span-tr
 import { useSpanFilters } from "../trace-detail-drawer/tabs/spans-tab/use-span-filters.ts"
 import {
   filterSessionSpanGroups,
-  getSessionSpanGroupName,
   getSessionTraceNumberById,
   groupSessionSpans,
   resolveSpanTraceId,
@@ -59,10 +57,6 @@ export function SessionSpansTab({
   const groups = useMemo(() => groupSessionSpans(spans ?? [], traces), [spans, traces])
   const filteredGroups = useMemo(() => filterSessionSpanGroups(groups, filters), [filters, groups])
   const traceNumberById = useMemo(() => getSessionTraceNumberById(groups), [groups])
-  const spanCountByTraceId = useMemo(
-    () => new Map(groups.map((group) => [group.traceId, group.spans.length])),
-    [groups],
-  )
   const timeRangeByTraceId = useMemo(
     () => new Map(groups.map((group) => [group.traceId, getTraceTimeRange(group.spans)])),
     [groups],
@@ -177,33 +171,26 @@ export function SessionSpansTab({
           traceId: group.traceId,
           spans: group.spans,
           timeRange: timeRangeByTraceId.get(group.traceId),
-          header: (
-            <div className="flex min-h-12 shrink-0 flex-row items-center justify-between gap-3 border-b border-border bg-muted/30 px-3 py-2">
-              <div className="flex min-w-0 flex-col gap-0.5">
-                <div className="flex min-w-0 flex-row items-center gap-1.5">
-                  <Text.H6B noWrap>Trace {traceNumberById.get(group.traceId)}</Text.H6B>
-                  <Text.H6 color="foregroundMuted" noWrap ellipsis>
-                    {getSessionSpanGroupName(group)}
-                  </Text.H6>
-                </div>
+          header: {
+            label: <Text.H6B noWrap>Trace {traceNumberById.get(group.traceId)}</Text.H6B>,
+            meta: (
+              <>
                 <Text.H6 color="foregroundMuted" noWrap>
-                  {new Date(group.startTime).toLocaleString()} ·{" "}
-                  {formatCount(spanCountByTraceId.get(group.traceId) ?? 0)}{" "}
-                  {spanCountByTraceId.get(group.traceId) === 1 ? "span" : "spans"}
+                  {new Date(group.startTime).toLocaleString()}
                 </Text.H6>
-              </div>
-              <Button
-                type="button"
-                variant="ghost"
-                size="sm"
-                className="shrink-0"
-                onClick={() => handleOpenTrace(group.traceId)}
-              >
-                View trace
-                <Icon icon={ArrowUpRightIcon} size="xs" />
-              </Button>
-            </div>
-          ),
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  className="shrink-0"
+                  onClick={() => handleOpenTrace(group.traceId)}
+                >
+                  View trace
+                  <Icon icon={ArrowUpRightIcon} size="xs" />
+                </Button>
+              </>
+            ),
+          },
         }))}
         selectedSpan={selectedSpan}
         onSelectSpan={handleSelectSpan}

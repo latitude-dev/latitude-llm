@@ -4,7 +4,6 @@ import type { TraceRecord } from "../../../../../../domains/traces/traces.functi
 import { getTraceTimeRange } from "../trace-detail-drawer/tabs/spans-tab/span-tree/tree-utils.ts"
 import {
   filterSessionSpanGroups,
-  getSessionSpanGroupName,
   getSessionTraceNumberById,
   groupSessionSpans,
   resolveSpanTraceId,
@@ -105,9 +104,7 @@ describe("session span groups", () => {
     ])
     expect(groups[0]?.trace).toBeUndefined()
     expect(groups[0]?.startTime).toBe("2026-01-01T00:00:00.000Z")
-    expect(groups[0] && getSessionSpanGroupName(groups[0])).toBe("trace-b")
     expect(groups[1]?.trace?.rootSpanName).toBe("Known trace")
-    expect(groups[1] && getSessionSpanGroupName(groups[1])).toBe("Known trace")
     expect(groups.map((group) => getTraceTimeRange(group.spans).totalDuration)).toEqual([1000, 1000])
   })
 
