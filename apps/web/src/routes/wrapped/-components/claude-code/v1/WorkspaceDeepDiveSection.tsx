@@ -47,6 +47,8 @@ function FileRow({ file }: { file: WrappedReportRecord["report"]["workspaceDeepD
 
 export function WorkspaceDeepDiveSection({ workspace }: WorkspaceDeepDiveSectionProps) {
   const dominantLabel = TOOL_LABEL[workspace.dominantTool] ?? "Other"
+  // `skills` only exists on V3+ deep dives; V1/V2 records render unchanged.
+  const skills = "skills" in workspace ? workspace.skills : []
   const breadthParts: string[] = [
     `${formatCompact(workspace.toolCalls)} tool calls`,
     `${formatCompact(workspace.sessions)} session${workspace.sessions === 1 ? "" : "s"}`,
@@ -99,6 +101,31 @@ export function WorkspaceDeepDiveSection({ workspace }: WorkspaceDeepDiveSection
                   </td>
                   <td className="py-2 pl-3 text-right text-sm whitespace-nowrap" style={{ color: "#6E6A5E" }}>
                     {`${formatCompact(cmd.count)} run${cmd.count === 1 ? "" : "s"}`}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      ) : null}
+
+      {skills.length > 0 ? (
+        <div className="mt-4">
+          <p
+            className="mb-2 text-[11px] uppercase tracking-[0.12em]"
+            style={{ color: "#6E6A5E", fontFamily: "Georgia, serif" }}
+          >
+            Top skills
+          </p>
+          <table className="w-full">
+            <tbody>
+              {skills.map((skill) => (
+                <tr className="border-b last:border-0" key={skill.name} style={{ borderColor: "#E8E4D8" }}>
+                  <td className="py-2 pr-3 font-mono text-xs break-all sm:text-sm" style={{ color: "#1A1A1A" }}>
+                    {skill.name}
+                  </td>
+                  <td className="py-2 pl-3 text-right text-sm whitespace-nowrap" style={{ color: "#6E6A5E" }}>
+                    {`${formatCompact(skill.count)} use${skill.count === 1 ? "" : "s"}`}
                   </td>
                 </tr>
               ))}

@@ -42,6 +42,7 @@ const byIdInputSchema = z.object({ id: wrappedReportIdSchema })
  *   - topBashCommand → null
  *   - workspaceDeepDives → []
  *   - otherWorkspaceCount → 0
+ *   - skills.top → [] (V3+; distinct/total counts stay, names don't)
  *
  * Everything else (counts, owner name, project name, heatmap, personality)
  * stays — those fields are public-safe by design.
@@ -53,6 +54,7 @@ const redactForPublic = (record: WrappedReportRecord): WrappedReportRecord => ({
     topBashCommand: null,
     workspaceDeepDives: [],
     otherWorkspaceCount: 0,
+    ...("skills" in record.report ? { skills: { ...record.report.skills, top: [] } } : {}),
     moments: {
       ...record.report.moments,
       longestSession: record.report.moments.longestSession
