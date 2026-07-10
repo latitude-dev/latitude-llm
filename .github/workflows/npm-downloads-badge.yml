@@ -12,6 +12,7 @@ on:
 
 permissions:
   contents: write
+  pull-requests: write
 
 concurrency:
   group: npm-downloads-badge
@@ -63,15 +64,12 @@ jobs:
           echo "Wrote badge:"
           cat .github/badges/npm-downloads.json
 
-      - name: Commit if changed
-        run: |
-          set -euo pipefail
-          if git diff --quiet -- .github/badges/npm-downloads.json; then
-            echo "Badge unchanged; nothing to commit."
-            exit 0
-          fi
-          git config user.name "github-actions[bot]"
-          git config user.email "github-actions[bot]@users.noreply.github.com"
-          git add .github/badges/npm-downloads.json
-          git commit -m "chore: update npm downloads badge [skip ci]"
-          git push
+      - name: Create pull request
+        uses: peter-evans/create-pull-request@v8
+        with:
+          commit-message: "chore: update npm downloads badge [skip ci]"
+          title: "chore: update npm downloads badge"
+          body: Automated update of the npm monthly downloads badge.
+          branch: chore/update-npm-downloads-badge
+          delete-branch: true
+          add-paths: .github/badges/npm-downloads.json
