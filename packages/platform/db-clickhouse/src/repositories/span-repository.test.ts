@@ -230,6 +230,43 @@ describe("SpanRepository", () => {
       expect(detail.attrString).toEqual({ "ai.prompt": "huge-blob" })
     })
 
+    it("keeps identical span ids from different traces while deduping re-ingestion within each trace", async () => {
+      const otherTrace = TraceId("12121212121212121212121212121212")
+      await runCh(
+        insertJsonEachRow(ch.client, "spans", [
+          makeSpanRow({
+            session_id: SESSION_ID,
+            trace_id: TRACE_ID,
+            span_id: "abababababababab",
+            name: "trace-a-older",
+            ingested_at: "2026-01-01 00:00:00.000",
+          }),
+          makeSpanRow({
+            session_id: SESSION_ID,
+            trace_id: TRACE_ID,
+            span_id: "abababababababab",
+            name: "trace-a-newer",
+            ingested_at: "2026-01-01 00:00:01.000",
+          }),
+          makeSpanRow({
+            session_id: SESSION_ID,
+            trace_id: otherTrace,
+            span_id: "abababababababab",
+            name: "trace-b",
+            start_time: "2026-01-01 00:00:02.000000000",
+            end_time: "2026-01-01 00:00:03.000000000",
+          }),
+        ]),
+      )
+
+      const spans = await runCh(
+        repo.listBySessionId({ organizationId: ORG_ID, projectId: PROJECT_ID, sessionId: SESSION_ID }),
+      )
+
+      expect(spans.map((span) => span.name)).toEqual(["trace-a-newer", "trace-b"])
+      expect(spans.map((span) => span.traceId)).toEqual([TRACE_ID, otherTrace])
+    })
+
     it("matches orphan single-trace sessions keyed by trace id", async () => {
       await insertListFixture()
 
@@ -943,6 +980,53 @@ describe("SpanRepository", () => {
       )
 
       expect(tools.map((t) => t.name)).toEqual(["orphan_tool"])
+    })
+
+    it("keeps identical tool span ids from different traces while deduping re-ingestion within each trace", async () => {
+      const DEDUP_SESSION = SessionId("tool-dedup-session")
+      const traceA = TraceId("55555555555555555555555555555555")
+      const traceB = TraceId("66666666666666666666666666666666")
+      await runCh(
+        insertJsonEachRow(ch.client, "spans", [
+          makeSpanRow({
+            session_id: DEDUP_SESSION,
+            trace_id: traceA,
+            span_id: "eeee111111111111",
+            operation: "execute_tool",
+            tool_name: "shared_older",
+            start_time: "2026-03-01 00:04:00.000000000",
+            end_time: "2026-03-01 00:04:00.100000000",
+            ingested_at: "2026-03-01 00:04:00.000",
+          }),
+          makeSpanRow({
+            session_id: DEDUP_SESSION,
+            trace_id: traceA,
+            span_id: "eeee111111111111",
+            operation: "execute_tool",
+            tool_name: "shared_newer",
+            start_time: "2026-03-01 00:04:00.000000000",
+            end_time: "2026-03-01 00:04:00.100000000",
+            ingested_at: "2026-03-01 00:04:01.000",
+          }),
+          makeSpanRow({
+            session_id: DEDUP_SESSION,
+            trace_id: traceB,
+            span_id: "eeee111111111111",
+            operation: "execute_tool",
+            tool_name: "trace_b_tool",
+            start_time: "2026-03-01 00:05:00.000000000",
+            end_time: "2026-03-01 00:05:00.100000000",
+            ingested_at: "2026-03-01 00:05:00.000",
+          }),
+        ]),
+      )
+
+      const tools = await runCh(
+        repo.listToolSpansBySessionId({ organizationId: ORG_ID, projectId: PROJECT_ID, sessionId: DEDUP_SESSION }),
+      )
+
+      expect(tools.map((t) => t.name)).toEqual(["shared_newer", "trace_b_tool"])
+      expect(tools.map((t) => t.traceId)).toEqual([traceA, traceB])
     })
   })
 

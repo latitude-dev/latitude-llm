@@ -286,7 +286,7 @@ export function ConversationTab({
   readonly focusMomentKind?: MomentKind | undefined
   /** Scrolls to this semantic moment when no label kind is focused. */
   readonly focusMomentId?: string | undefined
-  /** Navigates to a span in the session's single-trace Spans tab; enables the conversation's span-link affordances. */
+  /** Navigates to a span in the session Spans tab; enables the conversation's span-link affordances. */
   readonly navigateToSpan?: ((spanId: string) => void) | undefined
 }) {
   const sessionId = session.sessionId
