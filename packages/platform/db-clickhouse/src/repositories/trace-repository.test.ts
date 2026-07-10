@@ -479,6 +479,24 @@ describe("TraceRepository", () => {
     })
   })
 
+  describe("findSummaryByTraceId", () => {
+    it("loads trace orchestration fields without conversation content", async () => {
+      const summary = await runCh(
+        repo.findSummaryByTraceId({
+          organizationId: ORG_ID,
+          projectId: PROJECT_ID,
+          traceId: TraceId(SEED_ANNOTATION_DEMO_TRACE_ID),
+        }),
+      )
+
+      expect(summary.traceId).toBe(SEED_ANNOTATION_DEMO_TRACE_ID)
+      expect(summary.projectId).toBe(PROJECT_ID)
+      expect(summary.startTime).toBeInstanceOf(Date)
+      expect(summary.rootSpanName).toBeTypeOf("string")
+      expect("outputMessages" in summary).toBe(false)
+    })
+  })
+
   describe("findByTraceId", () => {
     it("prepends system instructions as first message in allMessages", async () => {
       const detail = await runCh(
