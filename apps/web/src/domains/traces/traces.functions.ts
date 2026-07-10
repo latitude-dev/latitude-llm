@@ -32,8 +32,8 @@ import {
   SessionAnalysisRepositoryLive,
   SessionMomentLabelRepositoryLive,
   SessionSemanticMomentRepositoryLive,
-  TaxonomyObservationRepositoryLive,
   SpanRepositoryLive,
+  TaxonomyObservationRepositoryLive,
   TraceRepositoryLive,
   TraceSearchRepositoryLive,
 } from "@platform/db-clickhouse"

@@ -49,6 +49,7 @@ import { TimelineBar } from "../../conversation-timeline/timeline-bar.tsx"
 import { useViewportBand } from "../../conversation-timeline/use-viewport-band.ts"
 import { buildSubagentToolCalls } from "../../session-detail-drawer/agents-breakdown/agent-decorations.ts"
 import { SubagentConversationView } from "../../session-detail-drawer/agents-breakdown/subagent-conversation-view.tsx"
+import { SubagentFooterNav } from "../../session-detail-drawer/agents-breakdown/subagent-footer-nav.tsx"
 import { useAgentGraph } from "../../session-detail-drawer/agents-breakdown/use-agent-graph.ts"
 import {
   computeLoadedConversationHighlights,
@@ -681,6 +682,7 @@ function ConversationContent({
           onMarkerClick={handleMarkerClick}
         />
       )}
+      {onSelectAgent && <SubagentFooterNav graph={agentGraph} onSelectAgent={onSelectAgent} />}
     </div>
   )
 }
