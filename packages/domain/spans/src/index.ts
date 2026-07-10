@@ -21,7 +21,9 @@ export {
   type MetricPercentiles,
 } from "./cohort-baselines.ts"
 export {
+  AGENT_GRAPH_MAIN_ID,
   COHORT_SUMMARY_CACHE_TTL_SECONDS,
+  MAX_AGENT_GRAPH_DEPTH,
   SESSION_ID_MAX_LENGTH,
   SESSION_SEARCH_MAX_MATCHING_TRACES_PER_ROW,
   SPAN_ID_LENGTH,
@@ -188,6 +190,15 @@ export type {
 export { isUserSortField, USER_SORT_FIELDS, UserAnalyticsRepository } from "./ports/user-analytics-repository.ts"
 export { deterministicSample } from "./sampling/deterministic-sampler.ts"
 export { extractSamplingKey } from "./sampling/extract-sampling-key.ts"
+export type {
+  AgentGraph,
+  AgentGraphSpanInput,
+  AgentMetrics,
+  AgentNode,
+  AgentNodeKind,
+  AgentTrigger,
+} from "./use-cases/build-agent-graph.ts"
+export { buildAgentGraph } from "./use-cases/build-agent-graph.ts"
 export type {
   TraceSearchDocument,
   TraceSearchDocumentInput,
