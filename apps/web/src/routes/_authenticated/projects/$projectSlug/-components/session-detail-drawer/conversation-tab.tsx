@@ -402,6 +402,11 @@ export function ConversationTab({
       textSelectionPopoverControlsRef={textSelectionPopoverControlsRef}
       timeline={timeline}
       focusMessageIndex={focusMessageIndex}
+      sessionSpanScope={{
+        sessionId,
+        sessionStartTime: session.startTime,
+        sessionEndTime: session.endTime,
+      }}
       {...(navigateToSpan ? { navigateToSpan } : {})}
       {...(labelsByMessageIndex.size > 0 ? { messageTrailingSlot } : {})}
       {...(searchQuery ? { searchQuery } : {})}
