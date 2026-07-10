@@ -34,15 +34,15 @@
         "default": "./dist/index.cjs"
       }
     },
-    "./codemode": {
-      "source": "./src/codemode.ts",
+    "./cloudflare": {
+      "source": "./src/cloudflare.ts",
       "import": {
-        "types": "./dist/codemode.d.ts",
-        "default": "./dist/codemode.js"
+        "types": "./dist/cloudflare.d.ts",
+        "default": "./dist/cloudflare.js"
       },
       "require": {
-        "types": "./dist/codemode.d.cts",
-        "default": "./dist/codemode.cjs"
+        "types": "./dist/cloudflare.d.cts",
+        "default": "./dist/cloudflare.cjs"
       }
     }
   },

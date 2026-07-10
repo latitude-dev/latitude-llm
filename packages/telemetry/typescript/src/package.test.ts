@@ -23,6 +23,7 @@ describe("published package metadata", () => {
 
   it("points CommonJS type resolution at CommonJS declarations", () => {
     expect(packageJson.exports?.["."]?.require?.types).toBe("./dist/index.d.cts")
-    expect(packageJson.exports?.["./codemode"]?.require?.types).toBe("./dist/codemode.d.cts")
+    expect(packageJson.exports?.["./cloudflare"]?.require?.types).toBe("./dist/cloudflare.d.cts")
+    expect(packageJson.exports).not.toHaveProperty("./codemode")
   })
 })

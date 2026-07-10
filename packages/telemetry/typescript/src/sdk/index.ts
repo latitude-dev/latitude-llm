@@ -1,4 +1,3 @@
-export { type CodemodeTelemetry, type CodemodeTelemetryOptions, createCodemodeTelemetry } from "./codemode.ts"
 export { type CaptureScope, capture } from "./context.ts"
 export { initLatitude, Latitude } from "./init.ts"
 export type { InstrumentationName, InstrumentationsInput } from "./instrumentations.ts"
