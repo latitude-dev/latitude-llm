@@ -15,6 +15,7 @@ import type { RenderedEmail } from "../../types.ts"
 import type { NotificationEmailRenderContext, NotificationEmailRenderer } from "../types.ts"
 import { ClaudeCodeWrappedEmailV1 } from "./claude-code/v1/EmailTemplateV1.tsx"
 import { ClaudeCodeWrappedEmailV2 } from "./claude-code/v2/EmailTemplateV2.tsx"
+import { ClaudeCodeWrappedEmailV3 } from "./claude-code/v3/EmailTemplateV3.tsx"
 
 const PLAIN_RANGE_FMT = new Intl.DateTimeFormat("en-US", { month: "short", day: "numeric", timeZone: "UTC" })
 
@@ -30,9 +31,10 @@ const formatPlainRange = (start: Date, end: Date): string =>
 const TEMPLATE_BY_TYPE_VERSION = {
   claude_code: {
     1: ClaudeCodeWrappedEmailV1,
-    // Cast so the dispatcher constraint is satisfied — V2 accepts the same
-    // runtime props as V1 (report: Report) but its PreviewProps differ.
+    // Cast so the dispatcher constraint is satisfied — V2/V3 accept the same
+    // runtime props as V1 (report: Report) but their PreviewProps differ.
     2: ClaudeCodeWrappedEmailV2 as unknown as typeof ClaudeCodeWrappedEmailV1,
+    3: ClaudeCodeWrappedEmailV3 as unknown as typeof ClaudeCodeWrappedEmailV1,
   },
 } as const satisfies Record<WrappedReportType, Record<ReportVersion, typeof ClaudeCodeWrappedEmailV1>>
 
@@ -61,7 +63,14 @@ const renderWrappedHtml = async (input: RenderInput): Promise<RenderedEmail> => 
     input.reportVersion in templatesForType ? input.reportVersion : CURRENT_REPORT_VERSION
   const Template = templatesForType[resolvedVersion]
   const emailJsx =
-    resolvedVersion === 2 ? (
+    resolvedVersion === 3 ? (
+      <ClaudeCodeWrappedEmailV3
+        userName={input.userName}
+        report={input.report}
+        webAppUrl={input.webAppUrl}
+        reportId={reportIdBranded}
+      />
+    ) : resolvedVersion === 2 ? (
       <ClaudeCodeWrappedEmailV2
         userName={input.userName}
         report={input.report}
@@ -76,12 +85,17 @@ const renderWrappedHtml = async (input: RenderInput): Promise<RenderedEmail> => 
         reportId={reportIdBranded}
       />
     )
+  // V3+ carries a public skills summary; earlier versions don't.
+  const skillsLine =
+    "skills" in input.report && input.report.skills.totalUses > 0
+      ? `\n• ${input.report.skills.distinctUsed.toLocaleString("en-US")} skills used (${input.report.skills.totalUses.toLocaleString("en-US")} uses)`
+      : ""
   const baseText = `Hi ${input.userName},\n\nYour Claude Code Wrapped for ${projectName} (${formatPlainRange(
     input.report.window.start,
     input.report.window.end,
   )} UTC):\n\n• ${input.report.totals.sessions.toLocaleString("en-US")} sessions\n• ${input.report.totals.toolCalls.toLocaleString(
     "en-US",
-  )} tool calls\n• ${input.report.totals.filesTouched.toLocaleString("en-US")} files touched\n\nSee your full week:\n${fullReportUrl}`
+  )} tool calls\n• ${input.report.totals.filesTouched.toLocaleString("en-US")} files touched${skillsLine}\n\nSee your full week:\n${fullReportUrl}`
   return {
     html: await renderEmail(emailJsx),
     subject: `Your Claude Code week in ${projectName}`,
@@ -136,4 +150,4 @@ export const wrappedReportRenderer: NotificationEmailRenderer<"wrapped.report"> 
 // Default export drives the React Email dev preview at /wrapped-report/index —
 // keep it pointed at the current (highest) report version so the parent route
 // in the preview server reflects the version users actually receive.
-export default ClaudeCodeWrappedEmailV2
+export default ClaudeCodeWrappedEmailV3
