@@ -5,6 +5,9 @@ export {
   type DepthSchedule,
 } from "./clustering.ts"
 export {
+  CUSTOM_BEHAVIOR_LOOKBACK_DAYS,
+  CUSTOM_BEHAVIOR_NAME_MAX_LENGTH,
+  CUSTOM_BEHAVIOR_STATUSES,
   TAXONOMY_ASSIGN_ABSOLUTE_THRESHOLD,
   TAXONOMY_ASSIGN_RELATIVE_MARGIN,
   TAXONOMY_ASSIGN_TEMPERATURE,
@@ -57,6 +60,19 @@ export {
   taxonomyClusterSchema,
   taxonomyClusterStateSchema,
 } from "./entities/cluster.ts"
+export {
+  CUSTOM_BEHAVIOR_EXCLUDED_FILTER_FIELD,
+  CUSTOM_BEHAVIOR_TOPICS_REJECTED_MESSAGE,
+  type CustomBehavior,
+  CustomBehaviorStatus,
+  customBehaviorFilterSetSchema,
+  customBehaviorSchema,
+  customBehaviorStatusSchema,
+} from "./entities/custom-behavior.ts"
+export {
+  type CustomBehaviorAssignment,
+  customBehaviorAssignmentSchema,
+} from "./entities/custom-behavior-assignment.ts"
 export { TaxonomyDimension, taxonomyDimensionSchema } from "./entities/dimension.ts"
 export {
   type TaxonomyClusterLineage,
@@ -106,6 +122,16 @@ export {
   type TaxonomyLineageMatch,
 } from "./lineage.ts"
 export { taxonomyClusterLockKey, withTaxonomyClusterLock } from "./locks.ts"
+export {
+  type CustomBehaviorAssignmentClusterCount,
+  CustomBehaviorAssignmentRepository,
+  type CustomBehaviorAssignmentRepositoryShape,
+} from "./ports/custom-behavior-assignment-repository.ts"
+export {
+  CustomBehaviorRepository,
+  type CustomBehaviorRepositoryShape,
+  type FindCustomBehaviorBySlugInput,
+} from "./ports/custom-behavior-repository.ts"
 export {
   type ClusterAnalysisAggregate,
   type ClusterRepresentativeExample,
