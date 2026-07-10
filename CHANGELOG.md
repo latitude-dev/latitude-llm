@@ -2,6 +2,20 @@
 
 ## Unreleased
 
+## v0.3.45 - 2026-07-10
+
+### Traces
+
+- Stopped showing the "Waiting for your first trace" onboarding for projects whose traces all predate the default 30-day window. They now open the normal Sessions/Traces view with the time filter available, so the range can be widened to reveal older data (ref: #3961).
+
+### Behaviours
+
+- Removed the breadcrumb row (Back button + topic-path chips) above the behaviours trajectory chart (ref: #3958).
+
+### Models
+
+- Refreshed the bundled models.dev model catalog (ref: #3957).
+
 ## v0.3.44 - 2026-07-09
 
 ### Agent Dispatch
