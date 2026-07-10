@@ -7,6 +7,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [3.6.0] - 2026-07-10
+
+### Added
+
+- `createCodemodeTelemetry()` wraps codemode `execute` tools and internal tool sets so tools called from inside codemode emit nested `ai.toolCall <name>` spans under the outer `execute` span. The helper stamps Latitude context, records AI SDK and GenAI tool attributes, supports input/output capture with redaction, and marks failed tool spans with exception details.
+- A public `@latitude-data/telemetry/codemode` subpath exports the codemode tracing helper for consumers that want to import only that API.
+- The Cloudflare Think telemetry guide and runnable example now show codemode tracing with `createCodemodeTelemetry()`.
+
 ## [3.5.0] - 2026-06-29
 
 ### Added
