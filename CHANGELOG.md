@@ -2,6 +2,13 @@
 
 ## Unreleased
 
+## v0.3.46 - 2026-07-10
+
+### Traces
+
+- Added a session-wide grouped Spans tab in the session detail drawer (ref: #3962).
+- Fixed the "Waiting for your first trace" screen getting stuck on projects that have only older traces (or a backfilled `first_trace_at`): the onboarding now confirms emptiness with an unwindowed trace count instead of trusting the best-effort `first_trace_at` flag (ref: #3964).
+
 ## v0.3.45 - 2026-07-10
 
 ### Traces
