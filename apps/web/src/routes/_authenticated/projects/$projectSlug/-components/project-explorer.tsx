@@ -454,9 +454,15 @@ export function ProjectExplorer({ projectSlug }: { readonly projectSlug: string 
     },
   ])
 
+  // Only show the "Waiting for your first trace" onboarding when the project has *never* received a
+  // trace. A project that has traces but none in the current time window falls through to the normal
+  // view (which keeps the time-filter dropdown) so the user can widen the range instead of seeing a
+  // false onboarding screen.
+  const projectNeverReceivedTraces = currentProject.firstTraceAt == null
   const hasNoTraces = totalTraceCount === 0 && !hasActiveFilters && !hasSearchQuery
   const orgHasConnectedProjects = allProjects.some((p) => p.id !== currentProject.id && p.firstTraceAt != null)
-  const showConnectEmptyState = !hasActiveFilters && !hasSearchQuery && (isTracesCountLoading || hasNoTraces)
+  const showConnectEmptyState =
+    projectNeverReceivedTraces && !hasActiveFilters && !hasSearchQuery && (isTracesCountLoading || hasNoTraces)
 
   if (showConnectEmptyState) {
     return (
