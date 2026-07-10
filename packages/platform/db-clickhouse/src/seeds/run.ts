@@ -7,6 +7,7 @@ import { Effect } from "effect"
 import { closeClickhouse, createClickhouseClient } from "../client.ts"
 import { allSeeders } from "./all.ts"
 import { runSeeders } from "./runner.ts"
+import { oldTracesQaSeeder } from "./spans/index.ts"
 import { truncateDataTables } from "./truncate-data-tables.ts"
 
 const nodeEnv = Effect.runSync(parseEnv("NODE_ENV", "string", "development"))
@@ -44,7 +45,9 @@ const main = async () => {
           console.log("- truncating all data tables")
           yield* truncateDataTables(client)
         }
-        yield* runSeeders(allSeeders, { client, scope: bootstrapSeedScope })
+        // `oldTracesQaSeeder` is bootstrap-only (kept out of `allSeeders` so it never runs during
+        // runtime demo-project creation, which reuses `allSeeders`).
+        yield* runSeeders([...allSeeders, oldTracesQaSeeder], { client, scope: bootstrapSeedScope })
       }),
     )
     console.log("Seed complete.")
