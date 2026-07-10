@@ -4,7 +4,7 @@ import { type ReactNode, type Ref, type RefObject, useCallback, useMemo, useRef 
 import type { GenAIMessage } from "rosetta-ai"
 import { ScrollNavigator, type ScrollNavigatorHandle } from "../scroll-navigator/scroll-navigator.tsx"
 import { Tooltip } from "../tooltip/tooltip.tsx"
-import { Message, type ToolCallActions } from "./message.tsx"
+import { Message, type SubagentToolCalls, type ToolCallActions } from "./message.tsx"
 import type { ToolCallResult } from "./part.tsx"
 import { getKnownField } from "./parts/helpers.tsx"
 import { SelectionActionPopover } from "./selection-action-popover.tsx"
@@ -137,6 +137,7 @@ export function Conversation({
   nextLabel,
   messageActions,
   toolCallActions,
+  subagentToolCalls,
   failedToolCallIds,
   onTextSelect,
   onSelectionDismiss,
@@ -167,6 +168,8 @@ export function Conversation({
   readonly messageActions?: ReadonlyMap<number, () => void>
   /** Map of toolCallId → action, renders a navigate button inside each ToolCallBlock. */
   readonly toolCallActions?: ToolCallActions
+  /** Map of toolCallId → subagent decoration, marks tool calls that spawned a subagent. */
+  readonly subagentToolCalls?: SubagentToolCalls | undefined
   /** Tool calls whose execution span errored — renders them as failed even if the part claims success. */
   readonly failedToolCallIds?: ReadonlySet<string> | undefined
   /** Called when the user selects text within a message part. Emits the canonical anchor and popover position. */
@@ -334,6 +337,7 @@ export function Conversation({
                     toolResults={message.role === "assistant" ? resultMap : undefined}
                     {...(onNavigate ? { onNavigate } : {})}
                     {...(toolCallActions ? { toolCallActions } : {})}
+                    {...(subagentToolCalls ? { subagentToolCalls } : {})}
                     {...(failedToolCallIds ? { failedToolCallIds } : {})}
                   />
                   {annotationSlot && <div className="mt-3">{annotationSlot}</div>}

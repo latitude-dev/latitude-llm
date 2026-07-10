@@ -1,10 +1,12 @@
-import { buildAgentGraph } from "@domain/spans"
 import type { AgentGraphSpanInput } from "@domain/spans"
+import { buildAgentGraph } from "@domain/spans"
 import { describe, expect, it } from "vitest"
 import { flattenAgentTree, formatAgentCost, hasSubagents, subtreeHasSubagents } from "./agent-breakdown-helpers.ts"
 
 let clock = 0
-function span(o: Partial<AgentGraphSpanInput> & Pick<AgentGraphSpanInput, "spanId" | "operation">): AgentGraphSpanInput {
+function span(
+  o: Partial<AgentGraphSpanInput> & Pick<AgentGraphSpanInput, "spanId" | "operation">,
+): AgentGraphSpanInput {
   const start = clock
   clock += 10
   return {
@@ -27,7 +29,10 @@ describe("agent-breakdown-helpers", () => {
   it("hasSubagents is false for a lone main and true once a subagent exists", () => {
     clock = 0
     const solo = buildAgentGraph({
-      spans: [span({ spanId: "r", operation: "invoke_agent" }), span({ spanId: "g", operation: "chat", parentSpanId: "r", model: "m" })],
+      spans: [
+        span({ spanId: "r", operation: "invoke_agent" }),
+        span({ spanId: "g", operation: "chat", parentSpanId: "r", model: "m" }),
+      ],
     })
     expect(hasSubagents(solo)).toBe(false)
 

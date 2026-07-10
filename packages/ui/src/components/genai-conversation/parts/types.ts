@@ -48,3 +48,15 @@ export interface ToolCallResult {
   readonly response: unknown
   readonly isError: boolean
 }
+
+/** Decoration for a tool call that spawned a subagent, keyed by tool-call id. */
+export interface SubagentToolCallInfo {
+  /** The subagent's display label (agent name or tool name). */
+  readonly label: string
+  /** The subagent's primary model, when known. */
+  readonly model?: string | undefined
+  /** A compact metrics summary (e.g. "$0.0012 · 3 gen"). */
+  readonly statsLabel: string
+  /** Opens the subagent's conversation in place. Absent renders no button. */
+  readonly onOpenConversation?: (() => void) | undefined
+}

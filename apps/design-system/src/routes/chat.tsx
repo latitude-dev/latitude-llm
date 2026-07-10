@@ -1,4 +1,4 @@
-import { Conversation, type GenAIMessage } from "@repo/ui"
+import { Conversation, type GenAIMessage, type SubagentToolCallInfo } from "@repo/ui"
 import { createFileRoute } from "@tanstack/react-router"
 import { ComponentDemoSection } from "./-components/demo-frame.tsx"
 import { DesignSystemPage } from "./-components/design-system-page.tsx"
@@ -242,6 +242,18 @@ const SECTIONS: { title: string; description: string; messages: GenAIMessage[] }
   },
 ]
 
+const SUBAGENT_TOOL_CALLS: ReadonlyMap<string, SubagentToolCallInfo> = new Map([
+  [
+    "call_metrics_1",
+    {
+      label: "metrics-analyst",
+      model: "gpt-4o",
+      statsLabel: "$0.0021 · 4 gen",
+      onOpenConversation: () => {},
+    },
+  ],
+])
+
 function ChatPage() {
   return (
     <DesignSystemPage
@@ -266,6 +278,16 @@ function ChatPage() {
           </div>
         </ComponentDemoSection>
       ))}
+
+      <ComponentDemoSection
+        title="Subagent tool call"
+        description="A tool call that spawned a subagent: bot badge, subagent label + model, own-cost/generation stats, and an Open conversation affordance."
+        frameClassName="block"
+      >
+        <div className="mx-auto w-full max-w-3xl">
+          <Conversation messages={TOOL_MESSAGES} subagentToolCalls={SUBAGENT_TOOL_CALLS} />
+        </div>
+      </ComponentDemoSection>
     </DesignSystemPage>
   )
 }

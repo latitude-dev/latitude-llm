@@ -20,7 +20,10 @@ import { useAuthSession } from "../../../../../../../domains/sessions/session.co
 import {
   useConversationSpanMaps,
   useSessionConversationSpanMaps,
+  useSpansByTraceCollection,
 } from "../../../../../../../domains/spans/spans.collection.ts"
+import { buildSubagentToolCalls } from "../../session-detail-drawer/agents-breakdown/agent-decorations.ts"
+import { useAgentGraph } from "../../session-detail-drawer/agents-breakdown/use-agent-graph.ts"
 import {
   useTraceConversationMessages,
   useTraceSearchHighlights,
@@ -172,6 +175,14 @@ function ConversationContent({
   })
 
   const navSpanMaps = sessionSpanScope ? sessionSpanMaps : spanMaps
+
+  const { data: agentSpans } = useSpansByTraceCollection({
+    projectId,
+    traceId: traceDetail.traceId,
+    startTimeFrom: traceDetail.startTime,
+    startTimeTo: traceDetail.endTime,
+  })
+  const agentGraph = useAgentGraph(agentSpans)
 
   const band = useViewportBand({ scrollRef, timeline: timeline ?? null, isActive })
 
@@ -514,6 +525,15 @@ function ConversationContent({
         )
       : undefined
 
+  const subagentToolCalls = useMemo(
+    () =>
+      spanMaps && agentGraph
+        ? buildSubagentToolCalls({ graph: agentGraph, toolCallSpanMap: spanMaps.toolCallSpanMap })
+        : undefined,
+    [agentGraph, spanMaps],
+  )
+  const subagentToolCallsProp = subagentToolCalls && subagentToolCalls.size > 0 ? subagentToolCalls : undefined
+
   // A "successful" result part from a failed execution span should always
   // render as failed.
   const failedToolCallIds = timeline && timeline.failedToolCallIds.size > 0 ? timeline.failedToolCallIds : undefined
@@ -606,6 +626,7 @@ function ConversationContent({
             : {})}
           {...(messageActions ? { messageActions } : {})}
           {...(toolCallActions ? { toolCallActions } : {})}
+          {...(subagentToolCallsProp ? { subagentToolCalls: subagentToolCallsProp } : {})}
           {...(messageTrailingSlot ? { messageTrailingSlot } : {})}
         />
         {hasMoreMessages ? (

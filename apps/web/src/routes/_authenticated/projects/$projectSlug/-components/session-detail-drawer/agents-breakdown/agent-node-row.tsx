@@ -66,7 +66,8 @@ export function AgentNodeRow({
           <div className="flex flex-col gap-0.5">
             <Text.H6 color="white">Own: {formatAgentCost(node.own.costMicrocents)}</Text.H6>
             <Text.H6 color="white">
-              Total (with subagents): {formatAgentCost(node.total.costMicrocents)} · {formatCount(node.total.tokensInput + node.total.tokensOutput)} tokens
+              Total (with subagents): {formatAgentCost(node.total.costMicrocents)} ·{" "}
+              {formatCount(node.total.tokensInput + node.total.tokensOutput)} tokens
             </Text.H6>
           </div>
         </Tooltip>

@@ -174,6 +174,7 @@ export { Message } from "./components/genai-conversation/message.tsx"
 export {
   Part,
   ReasoningGroup,
+  type SubagentToolCallInfo,
   type ToolCallResult,
 } from "./components/genai-conversation/part.tsx"
 export { CollapsibleBlock } from "./components/genai-conversation/parts/collapsible-block.tsx"

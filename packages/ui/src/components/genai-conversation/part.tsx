@@ -16,6 +16,7 @@ import type {
   BlobPart,
   FilePart,
   ReasoningPart,
+  SubagentToolCallInfo,
   TextPart,
   ToolCallPart,
   ToolCallResponsePart,
@@ -25,7 +26,7 @@ import type {
 import { TextSelectionContext } from "./text-selection.tsx"
 
 export { ReasoningGroup } from "./parts/reasoning-group.tsx"
-export type { ToolCallResult } from "./parts/types.ts"
+export type { SubagentToolCallInfo, ToolCallResult } from "./parts/types.ts"
 
 /** Last non-empty path segment of a URI, used as a file card's display name (undefined if none). */
 function fileNameFromUri(uri: string): string | undefined {
@@ -64,6 +65,7 @@ export function Part({
   toolResult,
   toolCallFailed = false,
   onNavigateToSpan,
+  subagent,
   messageIndex,
   partIndex,
 }: {
@@ -71,6 +73,7 @@ export function Part({
   readonly toolResult?: ToolCallResult | undefined
   readonly toolCallFailed?: boolean
   readonly onNavigateToSpan?: () => void
+  readonly subagent?: SubagentToolCallInfo | undefined
   readonly messageIndex?: number | undefined
   readonly partIndex?: number | undefined
 }) {
@@ -177,6 +180,7 @@ export function Part({
             failed={toolCallFailed}
             {...(toolResult ? { result: toolResult } : {})}
             {...(onNavigateToSpan ? { onNavigateToSpan } : {})}
+            {...(subagent ? { subagent } : {})}
           />
         </SearchHitDecoration>
       )
