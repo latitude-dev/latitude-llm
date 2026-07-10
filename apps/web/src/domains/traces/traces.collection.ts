@@ -98,17 +98,19 @@ export function useTracesCount({
   projectId,
   filters,
   searchQuery,
+  enabled = true,
 }: {
   readonly projectId: string
   readonly filters?: FilterSet
   readonly searchQuery?: string
+  readonly enabled?: boolean
 }) {
   const scope = useProjectScope()
   const { data: totalCount = 0, isLoading } = useQuery({
     queryKey: [...projectScopeKey(scope), "traces-count", projectId, filters, searchQuery],
     queryFn: () => countTracesByProject({ data: { ...projectScopeData(scope), projectId, filters, searchQuery } }),
     staleTime: 30_000,
-    enabled: projectId.length > 0,
+    enabled: enabled && projectId.length > 0,
   })
 
   return { totalCount, isLoading }
