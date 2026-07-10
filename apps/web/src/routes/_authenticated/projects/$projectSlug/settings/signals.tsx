@@ -5,6 +5,7 @@ import { useState } from "react"
 import { updateProjectMutation, useProjectsCollection } from "../../../../../domains/projects/projects.collection.ts"
 import { toUserMessage } from "../../../../../lib/errors.ts"
 import { useRouteProject } from "../-route-data.ts"
+import { ProjectDispatchOverrides } from "./-components/project-dispatch-overrides.tsx"
 import { SettingsPage } from "./-components/settings-page.tsx"
 
 export const Route = createFileRoute("/_authenticated/projects/$projectSlug/settings/signals")({
@@ -60,6 +61,7 @@ function ProjectSignalsSettingsPage() {
           />
         </div>
       </div>
+      <ProjectDispatchOverrides projectId={currentProject.id} />
     </SettingsPage>
   )
 }

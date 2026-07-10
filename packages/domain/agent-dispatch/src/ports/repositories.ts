@@ -9,29 +9,32 @@ import type {
 } from "@domain/shared"
 import { Context, type Effect } from "effect"
 import type { AgentDispatch } from "../entities/agent-dispatch.ts"
-import type { AgentDispatchConfig, AgentDispatchKind } from "../entities/agent-dispatch-config.ts"
+import type { AgentDispatchConfigRow, AgentDispatchKind } from "../entities/agent-dispatch-config.ts"
 import type { AgentDispatchTrigger } from "../entities/agent-dispatch-context.ts"
 import type { AgentDispatchIntegrationConflictError } from "../errors.ts"
 
 export interface AgentDispatchConfigRepositoryShape {
-  readonly listEnabledByProject: (
+  readonly listByProjectIncludingDefaults: (
     projectId: ProjectId,
-  ) => Effect.Effect<readonly AgentDispatchConfig[], RepositoryError, SqlClient>
-  readonly listByProject: (
-    projectId: ProjectId,
-  ) => Effect.Effect<readonly AgentDispatchConfig[], RepositoryError, SqlClient>
-  readonly findByProjectAndIntegration: (input: {
+  ) => Effect.Effect<readonly AgentDispatchConfigRow[], RepositoryError, SqlClient>
+  readonly findDefaultByIntegration: (
+    integrationId: string,
+  ) => Effect.Effect<AgentDispatchConfigRow | null, RepositoryError, SqlClient>
+  readonly findOverrideByProjectAndIntegration: (input: {
     readonly projectId: ProjectId
     readonly integrationId: string
-  }) => Effect.Effect<AgentDispatchConfig | null, RepositoryError, SqlClient>
-  readonly listByOrganization: () => Effect.Effect<readonly AgentDispatchConfig[], RepositoryError, SqlClient>
-  readonly findById: (id: string) => Effect.Effect<AgentDispatchConfig, RepositoryError, SqlClient>
-  readonly upsert: (config: AgentDispatchConfig) => Effect.Effect<AgentDispatchConfig, RepositoryError, SqlClient>
+  }) => Effect.Effect<AgentDispatchConfigRow | null, RepositoryError, SqlClient>
+  readonly findById: (id: string) => Effect.Effect<AgentDispatchConfigRow, RepositoryError, SqlClient>
+  readonly upsert: (config: AgentDispatchConfigRow) => Effect.Effect<AgentDispatchConfigRow, RepositoryError, SqlClient>
   readonly delete: (id: string) => Effect.Effect<void, RepositoryError, SqlClient>
   readonly deleteByIntegrationId: (integrationId: string) => Effect.Effect<void, RepositoryError, SqlClient>
-  readonly countDispatchesInLast24h: (configId: string) => Effect.Effect<number, RepositoryError, SqlClient>
+  readonly countDispatchesInLast24h: (input: {
+    readonly configId: string
+    readonly projectId: ProjectId
+  }) => Effect.Effect<number, RepositoryError, SqlClient>
   readonly hasRecentDispatchForSource: (input: {
     readonly configId: string
+    readonly projectId: ProjectId
     readonly sourceId: string
     readonly cooldownMinutes: number
   }) => Effect.Effect<boolean, RepositoryError, SqlClient>

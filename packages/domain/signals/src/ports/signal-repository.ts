@@ -164,6 +164,20 @@ export interface SignalRepositoryShape {
   listTableRows(
     input: ListSignalTableRowsRepositoryInput,
   ): Effect.Effect<SignalTableRowsPage, RepositoryError, SqlClient>
+  /**
+   * Ids of non-deleted signals created within the window. The analytics path
+   * seeds its candidate set from ClickHouse activity metrics, which never
+   * include zero-occurrence signals; feeding these ids in keeps the counts,
+   * public API list, and export consistent with the table (which lists a
+   * signal that fired in OR was created in the window).
+   */
+  listIdsCreatedInTimeRange(input: {
+    readonly projectId: ProjectId
+    readonly timeRange: {
+      readonly from?: Date
+      readonly to?: Date
+    }
+  }): Effect.Effect<readonly SignalId[], RepositoryError, SqlClient>
 }
 
 export class SignalRepository extends Context.Service<SignalRepository, SignalRepositoryShape>()(
