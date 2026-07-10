@@ -285,6 +285,15 @@ export const SEED_OWNER_EMAIL = "owner@acme.com"
 export const SEED_ADMIN_EMAIL = "admin@acme.com"
 export const SEED_PROJECT_NAME = "Support Agent"
 export const SEED_PROJECT_SLUG = "default-project"
+
+// QA fixture: a project whose traces are ALL older than the 30-day default window, so it has
+// `first_trace_at` set but zero recent spans — the exact shape that used to trip the "Waiting for
+// your first trace" onboarding. Seed it (`pnpm seed`) and open `/projects/old-traces-qa`.
+export const SEED_OLD_TRACES_QA_PROJECT_ID = ProjectId("oldtracesqaproject000001")
+export const SEED_OLD_TRACES_QA_PROJECT_NAME = "Old traces (QA)"
+export const SEED_OLD_TRACES_QA_PROJECT_SLUG = "old-traces-qa"
+export const SEED_OLD_TRACES_QA_FROM_DAYS_AGO = 45
+export const SEED_OLD_TRACES_QA_TO_DAYS_AGO = 31
 export const SEED_API_KEY_TOKEN = "lat_seed_default_api_key_token"
 
 // Dogfood projects — one per internal AI feature, mirroring
