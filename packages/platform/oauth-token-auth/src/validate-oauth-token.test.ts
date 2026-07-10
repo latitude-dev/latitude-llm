@@ -225,6 +225,25 @@ describe.skipIf(!nodeSupportsUint8Hex)("validateOAuthAccessToken (integration, N
     expect(result).toBeNull()
   })
 
+  it("returns null when the token user is not a member at initial DB lookup", async () => {
+    const organization = await Effect.runPromise(createOrganizationFixture(database.postgresDb))
+    const setup = await insertOAuthSetup(database.postgresDb, {
+      organizationId: organization.id,
+      createMembership: false,
+    })
+
+    const redis = createFakeRedis()
+
+    const result = await Effect.runPromise(
+      validateOAuthAccessToken(setup.accessToken, {
+        redis,
+        adminClient: database.adminPostgresClient,
+      }),
+    )
+
+    expect(result).toBeNull()
+  })
+
   it("returns null after the token user is removed from the bound org", async () => {
     const organization = await Effect.runPromise(createOrganizationFixture(database.postgresDb))
     const setup = await insertOAuthSetup(database.postgresDb, {

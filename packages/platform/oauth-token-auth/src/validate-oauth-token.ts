@@ -247,6 +247,9 @@ export interface ValidateOAuthAccessTokenDeps {
  *     consent-bound to an org — the `/auth/consent` step never happened or
  *     was abandoned)
  *
+ * On cache hits, membership is re-verified live so revocation takes effect on
+ * the next request rather than waiting for cache TTL (~300 s) to expire.
+ *
  * The DB query uses the admin Postgres connection (RLS-bypass) because
  * `oauth_applications` has RLS scoped by `organization_id` and the org id
  * is exactly what we're trying to discover from the token.
@@ -278,6 +281,7 @@ export const validateOAuthAccessToken = (
         // Fall through to the DB path so we don't return stale-expired.
       } else {
         if (cached !== null) {
+          // catch → error channel; Effect.orDie makes DB errors defects, not a silent false fallback.
           const isMember = yield* Effect.tryPromise({
             try: () => hasLiveMembership(adminClient, cached.userId, cached.organizationId),
             catch: () => false,
