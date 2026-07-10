@@ -177,14 +177,41 @@ This is the recommended setup for most Think apps.
 
 ## Codemode Internal Tools
 
-Think's codemode `execute` tool appears as a normal AI SDK tool span. If you
-also want the tools called from inside codemode to appear as child spans under
-that `execute` span, wrap both the codemode tool set and the outer execute tool
-with `createCodemodeTelemetry()`.
+Requires `@latitude-data/telemetry` 3.6.0 or newer.
+
+Think's codemode `execute` tool appears as a normal AI SDK tool span. Tools
+called from inside codemode run outside the active AI SDK tool-call context, so
+wrap both the internal tool set and the outer `execute` tool with
+`createCodemodeTelemetry()`.
+
+The helper records each internal codemode tool as an `ai.toolCall <name>` child
+span under `execute`, stamps the same Latitude context as the turn, records AI
+SDK and GenAI tool attributes, and marks failed tools with exception details.
 
 ```ts
+import { Think, type TurnConfig, type TurnContext } from "@cloudflare/think"
 import { createExecuteTool } from "@cloudflare/think/tools/execute"
+import type { ContextOptions } from "@latitude-data/telemetry"
 import { createCodemodeTelemetry } from "@latitude-data/telemetry/codemode"
+import { tool } from "ai"
+import { z } from "zod"
+
+const travelTools = {
+  getWeather: tool({
+    description: "Get the current weather for a city.",
+    inputSchema: z.object({ city: z.string() }),
+    execute: async ({ city }) => ({ city, temperatureC: 21, conditions: "sunny" }),
+  }),
+  estimateTripBudget: tool({
+    description: "Estimate a trip budget for a city.",
+    inputSchema: z.object({
+      city: z.string(),
+      days: z.number().int().positive(),
+      travelers: z.number().int().positive().default(1),
+    }),
+    execute: async ({ city, days, travelers }) => ({ city, estimatedEur: days * travelers * 95 }),
+  }),
+}
 
 export class MyAgent extends Think<Env> {
   private latitudeContext: ContextOptions | undefined
@@ -199,7 +226,7 @@ export class MyAgent extends Think<Env> {
     return {
       execute: codemode.wrapExecuteTool(
         createExecuteTool(this, {
-          tools: codemode.traceToolSet({ getWeather, estimateTripBudget }),
+          tools: codemode.traceToolSet(travelTools),
         }),
       ),
     }
@@ -227,6 +254,18 @@ ai.streamText
   ai.toolCall execute
     ai.toolCall getWeather
     ai.toolCall estimateTripBudget
+```
+
+By default, tool inputs and outputs are captured as span attributes. Disable
+capture or redact values if codemode tools handle sensitive data:
+
+```ts
+const codemode = createCodemodeTelemetry({
+  latitude: getLatitude(this.env),
+  context: () => this.latitudeContext,
+  capture: { inputs: true, outputs: false },
+  redact: (value, info) => (info.toolName === "lookupCustomer" ? "[redacted]" : value),
+})
 ```
 
 ---
