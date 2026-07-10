@@ -17,6 +17,8 @@ import type { SpanRecord } from "../../../../../../../domains/spans/spans.functi
 import type { TraceDetailRecord, TraceRecord } from "../../../../../../../domains/traces/traces.functions.ts"
 import { aggregateToolPills, ToolPillList } from "../../tool-pills.tsx"
 import { TraceOutlierBadge, type TraceOutlierMetric } from "../../trace-outlier-badge.tsx"
+import { AgentsBreakdown } from "../../session-detail-drawer/agents-breakdown/agents-breakdown.tsx"
+import { useAgentGraph } from "../../session-detail-drawer/agents-breakdown/use-agent-graph.ts"
 import { DurationBar } from "../duration-bar.tsx"
 import { computeDurationBreakdown } from "../duration-composition.ts"
 import { ModelFilterLink } from "./spans-tab/model-filter-link.tsx"
@@ -90,6 +92,7 @@ export function TraceTab({
 
   // Falls back to the record total until spans load, so the duration always renders.
   const durationBreakdown = useMemo(() => computeDurationBreakdown(spans ?? []), [spans])
+  const agentGraph = useAgentGraph(spans)
   const toolPills = useMemo(() => aggregateToolPills(spans), [spans])
   const fallbackDurationMs = traceRecord ? traceRecord.durationNs / 1_000_000 : 0
   const durationWallClockMs = durationBreakdown.wallClockMs > 0 ? durationBreakdown.wallClockMs : fallbackDurationMs
@@ -177,6 +180,8 @@ export function TraceTab({
           </div>
         )
       )}
+
+      <AgentsBreakdown graph={agentGraph} variant="trace" />
 
       {/* ── Tags ── */}
       <div className="flex flex-col gap-1">

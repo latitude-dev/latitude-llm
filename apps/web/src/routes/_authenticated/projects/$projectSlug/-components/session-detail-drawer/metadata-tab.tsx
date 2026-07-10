@@ -21,6 +21,8 @@ import { DurationBar } from "../trace-detail-drawer/duration-bar.tsx"
 import { computeSessionDurationBreakdown } from "../trace-detail-drawer/duration-composition.ts"
 import { ModelFilterLink } from "../trace-detail-drawer/tabs/spans-tab/model-filter-link.tsx"
 import { UsageSummary } from "../trace-detail-drawer/tabs/spans-tab/span-detail/usage-summary.tsx"
+import { AgentsBreakdown } from "./agents-breakdown/agents-breakdown.tsx"
+import { useAgentGraph } from "./agents-breakdown/use-agent-graph.ts"
 
 // Sessions only expose percentile filters for duration/TTFT/cost
 // (`PERCENTILE_SESSION_FILTER_FIELDS`), so the tokens badge stays informational
@@ -88,6 +90,7 @@ export function MetadataTab({
     startTimeTo: session.endTime,
   })
   const durationBreakdown = useMemo(() => computeSessionDurationBreakdown(spans ?? []), [spans])
+  const agentGraph = useAgentGraph(spans)
   const toolPills = useMemo(() => aggregateToolPills(spans), [spans])
   const fallbackDurationMs = session.durationNs / 1_000_000
   const durationWallClockMs = durationBreakdown.wallClockMs > 0 ? durationBreakdown.wallClockMs : fallbackDurationMs
@@ -163,6 +166,8 @@ export function MetadataTab({
         />
         <UsageSummary data={session} costBadges={costBadgesNode} />
       </div>
+
+      <AgentsBreakdown graph={agentGraph} variant="session" />
 
       <div className="flex flex-col gap-1">
         <Text.H6 color="foregroundMuted">Tags</Text.H6>
