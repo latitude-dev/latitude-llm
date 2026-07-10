@@ -644,8 +644,8 @@ export const SpanRepositoryLive = Layer.effect(
                         AND project_id = {projectId:String}
                         AND ${membership.clause}
                         AND operation = 'execute_tool'
-                      ORDER BY span_id, ingested_at DESC
-                      LIMIT 1 BY span_id
+                      ORDER BY trace_id, span_id, ingested_at DESC
+                      LIMIT 1 BY trace_id, span_id
                     )
                     ORDER BY start_time ASC`,
               query_params: {
