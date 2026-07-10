@@ -232,6 +232,8 @@ export type {
 export { getTraceAnalyticsUseCase } from "./use-cases/get-trace-analytics.ts"
 export type { GetTraceCohortSummaryInput } from "./use-cases/get-trace-cohort-summary.ts"
 export { getTraceCohortSummaryUseCase } from "./use-cases/get-trace-cohort-summary.ts"
+export type { GetSpanConversationChunkInput } from "./use-cases/get-span-conversation-chunk.ts"
+export { getSpanConversationChunkUseCase } from "./use-cases/get-span-conversation-chunk.ts"
 export type { GetTraceConversationChunkInput } from "./use-cases/get-trace-conversation-chunk.ts"
 export { getTraceConversationChunkUseCase } from "./use-cases/get-trace-conversation-chunk.ts"
 export { getTraceSearchHighlightsUseCase } from "./use-cases/get-trace-search-highlights.ts"

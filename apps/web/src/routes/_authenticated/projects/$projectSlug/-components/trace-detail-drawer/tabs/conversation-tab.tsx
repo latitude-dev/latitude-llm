@@ -1,4 +1,4 @@
-import type { TraceSearchHighlightsResult } from "@domain/spans"
+import type { AgentNode, TraceSearchHighlightsResult } from "@domain/spans"
 import {
   Button,
   Conversation,
@@ -22,8 +22,6 @@ import {
   useSessionConversationSpanMaps,
   useSpansByTraceCollection,
 } from "../../../../../../../domains/spans/spans.collection.ts"
-import { buildSubagentToolCalls } from "../../session-detail-drawer/agents-breakdown/agent-decorations.ts"
-import { useAgentGraph } from "../../session-detail-drawer/agents-breakdown/use-agent-graph.ts"
 import {
   useTraceConversationMessages,
   useTraceSearchHighlights,
@@ -38,6 +36,7 @@ import {
   visibleRangeToBand,
 } from "../../../../../../../lib/conversation-timeline/message-windows.ts"
 import { wallToTimeline } from "../../../../../../../lib/conversation-timeline/timeline-scale.ts"
+import { useParamState } from "../../../../../../../lib/hooks/useParamState.ts"
 import { AnnotationPopover } from "../../annotations/annotation-popover.tsx"
 import {
   type TextSelectionPopoverControls,
@@ -48,6 +47,9 @@ import { MessageAnnotationTrigger } from "../../annotations/message-annotation-t
 import { findNearestMessageAnchor, flashElement } from "../../conversation-timeline/flash-highlight.ts"
 import { TimelineBar } from "../../conversation-timeline/timeline-bar.tsx"
 import { useViewportBand } from "../../conversation-timeline/use-viewport-band.ts"
+import { buildSubagentToolCalls } from "../../session-detail-drawer/agents-breakdown/agent-decorations.ts"
+import { SubagentConversationView } from "../../session-detail-drawer/agents-breakdown/subagent-conversation-view.tsx"
+import { useAgentGraph } from "../../session-detail-drawer/agents-breakdown/use-agent-graph.ts"
 import {
   computeLoadedConversationHighlights,
   formatConversationSearchForBackend,
@@ -116,6 +118,7 @@ function ConversationContent({
   hasMoreMessages,
   isLoadingMoreMessages,
   onLoadMoreMessages,
+  onSelectAgent,
 }: {
   readonly traceDetail: TraceDetailRecord
   readonly messages: readonly GenAIMessage[]
@@ -147,6 +150,8 @@ function ConversationContent({
   readonly hasMoreMessages: boolean
   readonly isLoadingMoreMessages: boolean
   readonly onLoadMoreMessages: () => unknown
+  /** Opens a subagent's conversation in place (from a decorated tool call). */
+  readonly onSelectAgent?: ((node: AgentNode) => void) | undefined
 }) {
   const internalScrollRef = useRef<HTMLDivElement>(null)
   const scrollRef = scrollContainerRef ?? internalScrollRef
@@ -528,9 +533,13 @@ function ConversationContent({
   const subagentToolCalls = useMemo(
     () =>
       spanMaps && agentGraph
-        ? buildSubagentToolCalls({ graph: agentGraph, toolCallSpanMap: spanMaps.toolCallSpanMap })
+        ? buildSubagentToolCalls({
+            graph: agentGraph,
+            toolCallSpanMap: spanMaps.toolCallSpanMap,
+            onOpenConversation: onSelectAgent,
+          })
         : undefined,
-    [agentGraph, spanMaps],
+    [agentGraph, spanMaps, onSelectAgent],
   )
   const subagentToolCallsProp = subagentToolCalls && subagentToolCalls.size > 0 ? subagentToolCalls : undefined
 
@@ -727,6 +736,22 @@ export function ConversationTab({
     enabled: traceDetail != null,
   })
 
+  const [agentTraceId, setAgentTraceId] = useParamState("agentTraceId", "", { history: "push" })
+  const [agentSpanId, setAgentSpanId] = useParamState("agentSpanId", "", { history: "push" })
+  const selectAgent = useCallback(
+    (node: AgentNode | null) => {
+      if (!node?.ref.spanId) {
+        setAgentTraceId("")
+        setAgentSpanId("")
+        return
+      }
+      setAgentTraceId(node.ref.traceId)
+      setAgentSpanId(node.ref.spanId)
+    },
+    [setAgentTraceId, setAgentSpanId],
+  )
+  const showSubagent = agentSpanId.length > 0 && agentTraceId.length > 0
+
   if (isDetailLoading || (traceDetail && conversation.isLoading)) {
     return (
       <div className="flex flex-col gap-4 py-8 px-4 flex-1">
@@ -746,26 +771,40 @@ export function ConversationTab({
   }
 
   return (
-    <ConversationContent
-      isActive={isActive}
-      annotationsEnabled={annotationsEnabled}
-      traceDetail={traceDetail}
-      messages={conversation.messages}
-      navigateToSpan={navigateToSpan}
-      sessionSpanScope={sessionSpanScope}
-      projectId={projectId}
-      scrollContainerRef={scrollContainerRef}
-      textSelectionPopoverControlsRef={textSelectionPopoverControlsRef}
-      onPopoverClose={onPopoverClose}
-      searchQuery={searchQuery}
-      messageTrailingSlot={messageTrailingSlot}
-      timeline={timeline}
-      focusMessageIndex={focusMessageIndex}
-      totalMessages={conversation.totalMessages}
-      payloadBytes={conversation.payloadBytes}
-      hasMoreMessages={conversation.hasNextPage}
-      isLoadingMoreMessages={conversation.isFetchingNextPage}
-      onLoadMoreMessages={() => conversation.fetchNextPage()}
-    />
+    <div className="flex min-h-0 flex-1 flex-col">
+      {/* Keep the main conversation mounted (hidden) while a subagent is shown so its scroll position survives. */}
+      <div className={showSubagent ? "hidden" : "flex min-h-0 flex-1 flex-col"}>
+        <ConversationContent
+          isActive={isActive && !showSubagent}
+          annotationsEnabled={annotationsEnabled}
+          traceDetail={traceDetail}
+          messages={conversation.messages}
+          navigateToSpan={navigateToSpan}
+          sessionSpanScope={sessionSpanScope}
+          projectId={projectId}
+          scrollContainerRef={scrollContainerRef}
+          textSelectionPopoverControlsRef={textSelectionPopoverControlsRef}
+          onPopoverClose={onPopoverClose}
+          searchQuery={searchQuery}
+          messageTrailingSlot={messageTrailingSlot}
+          timeline={timeline}
+          focusMessageIndex={focusMessageIndex}
+          totalMessages={conversation.totalMessages}
+          payloadBytes={conversation.payloadBytes}
+          hasMoreMessages={conversation.hasNextPage}
+          isLoadingMoreMessages={conversation.isFetchingNextPage}
+          onLoadMoreMessages={() => conversation.fetchNextPage()}
+          onSelectAgent={selectAgent}
+        />
+      </div>
+      {showSubagent && (
+        <SubagentConversationView
+          projectId={projectId}
+          agentTraceId={agentTraceId}
+          agentSpanId={agentSpanId}
+          onSelectAgent={selectAgent}
+        />
+      )}
+    </div>
   )
 }

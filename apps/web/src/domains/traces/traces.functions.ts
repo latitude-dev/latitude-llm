@@ -5,6 +5,7 @@ import {
   PERCENTILE_TRACE_FILTER_FIELDS,
   type PercentileTraceFilterField,
   ProjectId,
+  SpanId,
   TraceId,
 } from "@domain/shared"
 import type {
@@ -18,6 +19,7 @@ import type {
   TraceTimeHistogramBucket,
 } from "@domain/spans"
 import {
+  getSpanConversationChunkUseCase,
   getTraceCohortSummaryUseCase,
   getTraceConversationChunkUseCase,
   getTraceSearchHighlightsUseCase,
@@ -31,6 +33,7 @@ import {
   SessionMomentLabelRepositoryLive,
   SessionSemanticMomentRepositoryLive,
   TaxonomyObservationRepositoryLive,
+  SpanRepositoryLive,
   TraceRepositoryLive,
   TraceSearchRepositoryLive,
 } from "@platform/db-clickhouse"
@@ -524,6 +527,37 @@ export const getTraceConversationChunk = createServerFn({ method: "GET" })
         offset,
         limit,
       }).pipe(withScopedClickHouse(TraceRepositoryLive, getClickhouseClient(), orgId), withTracing),
+    )
+
+    return result as never
+  })
+
+// The conversation of a single span (subagent boundary), paginated. Twin of
+// getTraceConversationChunk over SpanRepository.findSpanConversationChunk.
+export const getSpanConversationChunk = createServerFn({ method: "GET" })
+  .inputValidator(
+    z.object({
+      projectId: z.string(),
+      traceId: z.string(),
+      spanId: z.string(),
+      offset: z.number().int().nonnegative().optional(),
+      limit: z.number().int().positive().max(100).optional(),
+    }),
+  )
+  .handler(async ({ data, context }) => {
+    const orgId = await resolveOrgScope(context)
+    const offset = data.offset ?? 0
+    const limit = data.limit ?? 25
+
+    const result = await Effect.runPromise(
+      getSpanConversationChunkUseCase({
+        organizationId: orgId,
+        projectId: ProjectId(data.projectId),
+        traceId: TraceId(data.traceId),
+        spanId: SpanId(data.spanId),
+        offset,
+        limit,
+      }).pipe(withScopedClickHouse(SpanRepositoryLive, getClickhouseClient(), orgId), withTracing),
     )
 
     return result as never
