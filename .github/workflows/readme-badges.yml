@@ -63,7 +63,7 @@ jobs:
 
           total=0
           for pkg in "${PACKAGES[@]}"; do
-            dl=$(curl -fsSL "https://pypistats.org/api/packages/${pkg}/recent" 2>/dev/null | jq -r '.data.last_month // 0')
+            dl=$(curl -fsSL "https://pypistats.org/api/packages/${pkg}/recent" 2>/dev/null | jq -r '.data.last_month // 0' || true)
             dl=${dl:-0}
             echo "  ${pkg}: ${dl}"
             total=$((total + dl))
