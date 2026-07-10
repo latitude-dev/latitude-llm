@@ -175,6 +175,62 @@ This is the recommended setup for most Think apps.
 
 ---
 
+## Codemode Internal Tools
+
+Think's codemode `execute` tool appears as a normal AI SDK tool span. If you
+also want the tools called from inside codemode to appear as child spans under
+that `execute` span, wrap both the codemode tool set and the outer execute tool
+with `createCodemodeTelemetry()`.
+
+```ts
+import { createExecuteTool } from "@cloudflare/think/tools/execute"
+import { createCodemodeTelemetry } from "@latitude-data/telemetry/codemode"
+
+export class MyAgent extends Think<Env> {
+  private latitudeContext: ContextOptions | undefined
+
+  getTools() {
+    const codemode = createCodemodeTelemetry({
+      latitude: getLatitude(this.env),
+      scope: "cloudflare-think-codemode",
+      context: () => this.latitudeContext,
+    })
+
+    return {
+      execute: codemode.wrapExecuteTool(
+        createExecuteTool(this, {
+          tools: codemode.traceToolSet({ getWeather, estimateTripBudget }),
+        }),
+      ),
+    }
+  }
+
+  beforeTurn(ctx: TurnContext): TurnConfig {
+    this.latitudeContext = (ctx.body ?? {}) as ContextOptions
+
+    return {
+      experimental_telemetry: {
+        isEnabled: true,
+        tracer: getLatitude(this.env).getTracer("cloudflare-think", this.latitudeContext),
+        functionId: "think-turn",
+      },
+    }
+  }
+}
+```
+
+This produces one trace waterfall with the codemode internals nested under the
+outer tool call:
+
+```text
+ai.streamText
+  ai.toolCall execute
+    ai.toolCall getWeather
+    ai.toolCall estimateTripBudget
+```
+
+---
+
 ## Programmatic Turns
 
 If your app starts Think turns with your own `runTurn()` call, wrap that call

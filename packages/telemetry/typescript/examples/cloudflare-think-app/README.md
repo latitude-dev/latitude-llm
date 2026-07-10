@@ -10,9 +10,9 @@ so model and tool spans are stored with `user_id` and `session_id`.
 
 `MyAgent` exposes a single codemode `execute` tool. Inside codemode, the model can
 call three deterministic demo tools: `getWeather`, `estimateTripBudget`, and
-`listCityHighlights`. Each internal tool is wrapped in an OpenTelemetry span with
-AI SDK-compatible `ai.toolCall.*` attributes, parented under the outer `execute`
-span so Latitude shows the full codemode waterfall in one trace.
+`listCityHighlights`. The example uses `createCodemodeTelemetry()` to wrap the
+codemode tool set and outer `execute` tool, so internal tool spans are parented
+under `execute` and Latitude shows the full codemode waterfall in one trace.
 
 ## Run locally
 

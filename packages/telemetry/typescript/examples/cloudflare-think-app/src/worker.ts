@@ -2,8 +2,7 @@ import { createAnthropic } from "@ai-sdk/anthropic"
 import { CodemodeRuntime } from "@cloudflare/codemode"
 import { Think, type TurnConfig, type TurnContext } from "@cloudflare/think"
 import { createExecuteTool } from "@cloudflare/think/tools/execute"
-import { type ContextOptions, Latitude } from "@latitude-data/telemetry"
-import { type Context as OtelContext, context as otelContext, SpanStatusCode, trace } from "@opentelemetry/api"
+import { type ContextOptions, createCodemodeTelemetry, Latitude } from "@latitude-data/telemetry"
 import { routeAgentRequest } from "agents"
 import { type ToolSet, tool } from "ai"
 import { z } from "zod"
@@ -17,11 +16,6 @@ type Env = {
   LATITUDE_PROJECT_SLUG: string
   LATITUDE_TELEMETRY_URL?: string
   ANTHROPIC_API_KEY: string
-}
-
-type CodemodeTraceState = {
-  parentContext?: OtelContext
-  latitudeContext?: ContextOptions
 }
 
 let latitude: Latitude | undefined
@@ -59,91 +53,6 @@ function contextFromTurn(env: Env, ctx: TurnContext): ContextOptions {
   }
 }
 
-function latitudeSpanAttributes(context: ContextOptions | undefined) {
-  return {
-    ...(context?.sessionId ? { "session.id": context.sessionId } : {}),
-    ...(context?.userId ? { "user.id": context.userId } : {}),
-    ...(context?.userEmail ? { "user.email": context.userEmail } : {}),
-    ...(context?.project ? { "latitude.project": context.project } : {}),
-    ...(context?.tags ? { "latitude.tags": JSON.stringify(context.tags) } : {}),
-    ...(context?.metadata ? { "latitude.metadata": JSON.stringify(context.metadata) } : {}),
-  }
-}
-
-function stringifyToolValue(value: unknown) {
-  try {
-    return JSON.stringify(value)
-  } catch {
-    return String(value)
-  }
-}
-
-async function withCodemodeTraceContext<T>(
-  state: CodemodeTraceState,
-  latitudeContext: ContextOptions | undefined,
-  run: () => Promise<T>,
-) {
-  const previousParentContext = state.parentContext
-  const previousLatitudeContext = state.latitudeContext
-  state.parentContext = otelContext.active()
-  state.latitudeContext = latitudeContext
-
-  try {
-    return await run()
-  } finally {
-    state.parentContext = previousParentContext
-    state.latitudeContext = previousLatitudeContext
-  }
-}
-
-async function traceCodemodeTool<TInput, TOutput>(
-  env: Env,
-  state: CodemodeTraceState,
-  name: string,
-  input: TInput,
-  execute: () => Promise<TOutput>,
-) {
-  const toolCallId = `codemode-${name}-${crypto.randomUUID()}`
-  const inputJson = stringifyToolValue(input)
-  const parentContext = state.parentContext ?? otelContext.active()
-  const span = getLatitude(env)
-    .getTracer("cloudflare-think-codemode")
-    .startSpan(
-      `ai.toolCall ${name}`,
-      {
-        attributes: {
-          ...latitudeSpanAttributes(state.latitudeContext),
-          "ai.operationId": "ai.toolCall",
-          "ai.toolCall.name": name,
-          "ai.toolCall.id": toolCallId,
-          "ai.toolCall.args": inputJson,
-          "gen_ai.tool.name": name,
-          "gen_ai.tool.call.id": toolCallId,
-          "gen_ai.tool.call.arguments": inputJson,
-        },
-      },
-      parentContext,
-    )
-
-  return otelContext.with(trace.setSpan(parentContext, span), async () => {
-    try {
-      const output = await execute()
-      const outputJson = stringifyToolValue(output)
-      span.setAttributes({
-        "ai.toolCall.result": outputJson,
-        "gen_ai.tool.call.result": outputJson,
-      })
-      return output
-    } catch (error) {
-      span.recordException(error as Error)
-      span.setStatus({ code: SpanStatusCode.ERROR, message: error instanceof Error ? error.message : String(error) })
-      throw error
-    } finally {
-      span.end()
-    }
-  })
-}
-
 async function getWeather(city: string) {
   return {
     city,
@@ -168,14 +77,14 @@ async function listCityHighlights(city: string) {
   }
 }
 
-function createCodemodeTools(env: Env, traceState: CodemodeTraceState): ToolSet {
+function createCodemodeTools(): ToolSet {
   return {
     getWeather: tool({
       description: "Get the current weather for a city.",
       inputSchema: z.object({
         city: z.string().describe("City to look up."),
       }),
-      execute: async (input) => traceCodemodeTool(env, traceState, "getWeather", input, () => getWeather(input.city)),
+      execute: async ({ city }) => getWeather(city),
     }),
     estimateTripBudget: tool({
       description: "Estimate a simple trip budget for a city.",
@@ -184,45 +93,20 @@ function createCodemodeTools(env: Env, traceState: CodemodeTraceState): ToolSet 
         days: z.number().int().positive().describe("Trip length in days."),
         travelers: z.number().int().positive().default(1).describe("Number of travelers."),
       }),
-      execute: async (input) =>
-        traceCodemodeTool(env, traceState, "estimateTripBudget", input, () =>
-          estimateTripBudget(input.city, input.days, input.travelers),
-        ),
+      execute: async ({ city, days, travelers }) => estimateTripBudget(city, days, travelers),
     }),
     listCityHighlights: tool({
       description: "List deterministic city highlights for planning demos.",
       inputSchema: z.object({
         city: z.string().describe("City to summarize."),
       }),
-      execute: async (input) =>
-        traceCodemodeTool(env, traceState, "listCityHighlights", input, () => listCityHighlights(input.city)),
+      execute: async ({ city }) => listCityHighlights(city),
     }),
-  }
-}
-
-type ExecutableTool = ReturnType<typeof createExecuteTool> & {
-  execute?: (input: unknown, options: unknown) => Promise<unknown>
-}
-
-function createTracedExecuteTool(agent: MyAgent, env: Env, traceState: CodemodeTraceState) {
-  const executeTool = createExecuteTool(agent, {
-    name: "travel-codemode",
-    tools: createCodemodeTools(env, traceState),
-  }) as ExecutableTool
-  const execute = executeTool.execute
-
-  if (!execute) return executeTool
-
-  return {
-    ...executeTool,
-    execute: async (input: unknown, options: unknown) =>
-      withCodemodeTraceContext(traceState, agent.getLatitudeContext(), () => execute(input, options)),
   }
 }
 
 export class MyAgent extends Think<Env> {
   private latitudeContext: ContextOptions | undefined
-  private readonly codemodeTraceState: CodemodeTraceState = {}
 
   getModel() {
     return getAnthropicModel(this.env.ANTHROPIC_API_KEY)
@@ -239,13 +123,20 @@ export class MyAgent extends Think<Env> {
   }
 
   getTools(): ToolSet {
-    return {
-      execute: createTracedExecuteTool(this, this.env, this.codemodeTraceState),
-    }
-  }
+    const codemode = createCodemodeTelemetry({
+      latitude: getLatitude(this.env),
+      scope: "cloudflare-think-codemode",
+      context: () => this.latitudeContext,
+    })
 
-  getLatitudeContext() {
-    return this.latitudeContext
+    return {
+      execute: codemode.wrapExecuteTool(
+        createExecuteTool(this, {
+          name: "travel-codemode",
+          tools: codemode.traceToolSet(createCodemodeTools()),
+        }),
+      ),
+    }
   }
 
   beforeTurn(ctx: TurnContext): TurnConfig {

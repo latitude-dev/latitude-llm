@@ -33,6 +33,17 @@
         "types": "./dist/index.d.cts",
         "default": "./dist/index.cjs"
       }
+    },
+    "./codemode": {
+      "source": "./src/codemode.ts",
+      "import": {
+        "types": "./dist/codemode.d.ts",
+        "default": "./dist/codemode.js"
+      },
+      "require": {
+        "types": "./dist/codemode.d.cts",
+        "default": "./dist/codemode.cjs"
+      }
     }
   },
   "scripts": {
