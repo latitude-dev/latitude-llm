@@ -15,6 +15,7 @@ import {
   SessionId,
   SimulationId,
   SpanId,
+  type TraceId,
   OrganizationId as toOrganizationId,
   ProjectId as toProjectId,
   toRepositoryError,
