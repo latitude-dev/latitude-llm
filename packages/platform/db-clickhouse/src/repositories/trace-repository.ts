@@ -89,12 +89,23 @@ export const LIST_SELECT = `
   argMinIfMerge(root_span_name) AS root_span_name
 `
 
+const MESSAGE_OPERATION_FILTER = "operation IN ('chat', 'text_completion', 'generate_content')"
+const SYSTEM_INSTRUCTION_OPERATION_FILTER =
+  "operation IN ('chat', 'text_completion', 'generate_content', 'invoke_agent')"
+
 const SPAN_MESSAGES_SELECT = `
   trace_id,
-  argMinIf(input_messages, start_time, input_messages != '' AND operation IN ('chat', 'text_completion', 'generate_content')) AS first_input_messages,
-  argMaxIf(input_messages, end_time, output_messages != '' AND operation IN ('chat', 'text_completion', 'generate_content')) AS last_input_messages,
-  argMaxIf(output_messages, end_time, output_messages != '' AND operation IN ('chat', 'text_completion', 'generate_content')) AS final_output_messages,
-  argMinIf(system_instructions, start_time, system_instructions != '' AND operation IN ('chat', 'text_completion', 'generate_content', 'invoke_agent')) AS first_system_instructions
+  argMinIf(input_messages, start_time, input_messages != '' AND ${MESSAGE_OPERATION_FILTER}) AS first_input_messages,
+  argMaxIf(input_messages, end_time, output_messages != '' AND ${MESSAGE_OPERATION_FILTER}) AS last_input_messages,
+  argMaxIf(output_messages, end_time, output_messages != '' AND ${MESSAGE_OPERATION_FILTER}) AS final_output_messages,
+  argMinIf(system_instructions, start_time, system_instructions != '' AND ${SYSTEM_INSTRUCTION_OPERATION_FILTER}) AS first_system_instructions
+`
+
+const SPAN_METADATA_MESSAGES_SELECT = `
+  trace_id,
+  argMinIf(input_messages, start_time, input_messages != '' AND ${MESSAGE_OPERATION_FILTER}) AS first_input_messages,
+  argMaxIf(output_messages, end_time, output_messages != '' AND ${MESSAGE_OPERATION_FILTER}) AS final_output_messages,
+  argMinIf(system_instructions, start_time, system_instructions != '' AND ${SYSTEM_INSTRUCTION_OPERATION_FILTER}) AS first_system_instructions
 `
 
 type TraceListRow = {
@@ -138,6 +149,8 @@ type SpanMessagesRow = {
   final_output_messages: string
   first_system_instructions: string
 }
+
+type SpanMetadataMessagesRow = Omit<SpanMessagesRow, "last_input_messages">
 
 type TraceConversationChunkRow = {
   total_messages: string | number
@@ -356,7 +369,7 @@ const toDomainTraceDetail = (summary: Trace, messages: Omit<SpanMessagesRow, "tr
 
 const toDomainTraceMetadataDetail = (
   summary: Trace,
-  messages: Omit<SpanMessagesRow, "trace_id">,
+  messages: Omit<SpanMetadataMessagesRow, "trace_id">,
 ): TraceMetadataDetail => ({
   ...summary,
   systemInstructions: parseSystem(messages.first_system_instructions),
@@ -936,6 +949,34 @@ export const TraceRepositoryLive = Layer.effect(
         })
       })
 
+    const listSpanMetadataMessagesByTraceIds = (input: {
+      readonly organizationId: OrganizationId
+      readonly projectId: ProjectId
+      readonly traceIds: readonly TraceId[]
+    }) =>
+      Effect.gen(function* () {
+        const chSqlClient = (yield* ChSqlClient) as ChSqlClientShape<ClickHouseClient>
+        if (input.traceIds.length === 0) return []
+
+        return yield* chSqlClient.query(async (client) => {
+          const result = await client.query({
+            query: `SELECT ${SPAN_METADATA_MESSAGES_SELECT}
+                    FROM spans
+                    WHERE organization_id = {organizationId:String}
+                      AND project_id = {projectId:String}
+                      AND trace_id IN ({traceIds:Array(String)})
+                    GROUP BY trace_id`,
+            query_params: {
+              organizationId: input.organizationId as string,
+              projectId: input.projectId as string,
+              traceIds: Array.from(input.traceIds) as string[],
+            },
+            format: "JSONEachRow",
+          })
+          return result.json<SpanMetadataMessagesRow>()
+        })
+      })
+
     const listByTraceIds: TraceRepositoryShape["listByTraceIds"] = (input) =>
       Effect.gen(function* () {
         const [summaries, messageRows] = yield* Effect.all(
@@ -1507,7 +1548,7 @@ export const TraceRepositoryLive = Layer.effect(
           const [summaries, messageRows] = yield* Effect.all(
             [
               listSummariesByTraceIds({ organizationId, projectId, traceIds: [traceId] }),
-              listSpanMessagesByTraceIds({ organizationId, projectId, traceIds: [traceId] }),
+              listSpanMetadataMessagesByTraceIds({ organizationId, projectId, traceIds: [traceId] }),
             ],
             { concurrency: "unbounded" },
           )
@@ -1543,9 +1584,9 @@ export const TraceRepositoryLive = Layer.effect(
                           ) AS all_messages
                           FROM (
                             SELECT
-                              argMinIf(system_instructions, start_time, system_instructions != '' AND operation IN ('chat', 'text_completion', 'generate_content', 'invoke_agent')) AS system_instructions_json,
-                              argMaxIf(input_messages, end_time, output_messages != '' AND operation IN ('chat', 'text_completion', 'generate_content')) AS last_input_messages_json,
-                              argMaxIf(output_messages, end_time, output_messages != '' AND operation IN ('chat', 'text_completion', 'generate_content')) AS output_messages_json
+                              argMinIf(system_instructions, start_time, system_instructions != '' AND ${SYSTEM_INSTRUCTION_OPERATION_FILTER}) AS system_instructions_json,
+                              argMaxIf(input_messages, end_time, output_messages != '' AND ${MESSAGE_OPERATION_FILTER}) AS last_input_messages_json,
+                              argMaxIf(output_messages, end_time, output_messages != '' AND ${MESSAGE_OPERATION_FILTER}) AS output_messages_json
                             FROM spans
                             WHERE organization_id = {organizationId:String}
                               AND project_id = {projectId:String}

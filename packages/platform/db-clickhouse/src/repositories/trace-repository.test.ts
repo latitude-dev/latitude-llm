@@ -533,6 +533,31 @@ describe("TraceRepository", () => {
         }
       }
     })
+
+    it("loads conversation chunks with the same message assembly as trace detail", async () => {
+      const [detail, chunk] = await Promise.all([
+        runCh(
+          repo.findByTraceId({
+            organizationId: ORG_ID,
+            projectId: PROJECT_ID,
+            traceId: TraceId(SEED_ANNOTATION_DEMO_TRACE_ID),
+          }),
+        ),
+        runCh(
+          repo.findConversationChunk({
+            organizationId: ORG_ID,
+            projectId: PROJECT_ID,
+            traceId: TraceId(SEED_ANNOTATION_DEMO_TRACE_ID),
+            offset: 0,
+            limit: 100,
+          }),
+        ),
+      ])
+
+      expect(chunk.messages).toEqual(detail.allMessages)
+      expect(chunk.totalMessages).toBe(detail.allMessages.length)
+      expect(chunk.hasMore).toBe(false)
+    })
   })
 
   describe("listMatchingFilterIdsByTraceId", () => {
