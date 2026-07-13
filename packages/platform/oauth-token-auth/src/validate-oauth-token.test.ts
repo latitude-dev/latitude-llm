@@ -1,10 +1,11 @@
 import { generateId } from "@domain/shared"
 import type { RedisClient } from "@platform/cache-redis"
-import type { PostgresDb } from "@platform/db-postgres"
-import { oauthAccessTokens, oauthApplications } from "@platform/db-postgres/schema/better-auth"
+import { and, eq, type PostgresDb } from "@platform/db-postgres"
+import { members, oauthAccessTokens, oauthApplications } from "@platform/db-postgres/schema/better-auth"
 import {
   closeInMemoryPostgres,
   createInMemoryPostgres,
+  createMembershipFixture,
   createOrganizationFixture,
   createUserFixture,
   type InMemoryPostgres,
@@ -50,6 +51,7 @@ interface InsertOAuthSetupOptions {
   /** Default: 5 minutes from now. */
   readonly accessTokenExpiresAt?: Date
   readonly scopes?: string
+  readonly createMembership?: boolean
 }
 
 /**
@@ -90,6 +92,16 @@ const insertOAuthSetup = async (db: PostgresDb, options: InsertOAuthSetupOptions
     userId,
     scopes: options.scopes ?? "openid profile",
   })
+
+  if (options.organizationId !== null && options.createMembership !== false) {
+    await Effect.runPromise(
+      createMembershipFixture(db, {
+        organizationId: options.organizationId,
+        userId,
+        role: "member",
+      }),
+    )
+  }
 
   return {
     accessToken,
@@ -211,6 +223,54 @@ describe.skipIf(!nodeSupportsUint8Hex)("validateOAuthAccessToken (integration, N
     )
 
     expect(result).toBeNull()
+  })
+
+  it("returns null when the token user is not a member at initial DB lookup", async () => {
+    const organization = await Effect.runPromise(createOrganizationFixture(database.postgresDb))
+    const setup = await insertOAuthSetup(database.postgresDb, {
+      organizationId: organization.id,
+      createMembership: false,
+    })
+
+    const redis = createFakeRedis()
+
+    const result = await Effect.runPromise(
+      validateOAuthAccessToken(setup.accessToken, {
+        redis,
+        adminClient: database.adminPostgresClient,
+      }),
+    )
+
+    expect(result).toBeNull()
+  })
+
+  it("returns null after the token user is removed from the bound org", async () => {
+    const organization = await Effect.runPromise(createOrganizationFixture(database.postgresDb))
+    const setup = await insertOAuthSetup(database.postgresDb, {
+      organizationId: organization.id,
+    })
+
+    const redis = createFakeRedis()
+    const beforeRemoval = await Effect.runPromise(
+      validateOAuthAccessToken(setup.accessToken, {
+        redis,
+        adminClient: database.adminPostgresClient,
+      }),
+    )
+    expect(beforeRemoval?.userId).toBe(setup.userId)
+
+    await database.postgresDb
+      .delete(members)
+      .where(and(eq(members.organizationId, organization.id), eq(members.userId, setup.userId)))
+
+    const afterRemoval = await Effect.runPromise(
+      validateOAuthAccessToken(setup.accessToken, {
+        redis,
+        adminClient: database.adminPostgresClient,
+      }),
+    )
+
+    expect(afterRemoval).toBeNull()
   })
 
   it("serves a cached result without calling onTokenValidated again", async () => {
