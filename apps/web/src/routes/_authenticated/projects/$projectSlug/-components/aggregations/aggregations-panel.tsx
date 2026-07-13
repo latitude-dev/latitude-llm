@@ -18,6 +18,8 @@ interface TraceAggregationsPanelProps {
   readonly mode: "traces" | "sessions"
   /** Called when user selects a time range via brush on the histogram. */
   readonly onTimeRangeSelect?: (range: { from: string; to: string } | null) => void
+  /** Overrides the histogram window (independent of `filters`) — used to anchor an "All time" list to recent activity. */
+  readonly histogramRangeOverride?: { readonly rangeStartIso: string; readonly rangeEndIso: string }
 }
 
 export function TraceAggregationsPanel({
@@ -26,6 +28,7 @@ export function TraceAggregationsPanel({
   filters,
   mode,
   onTimeRangeSelect,
+  histogramRangeOverride,
 }: TraceAggregationsPanelProps) {
   const [collapsed, setCollapsed] = useState(false)
   const [selectedMetric, setSelectedMetric] = useParamState("histogramMetric", DEFAULT_HISTOGRAM_METRIC, {
@@ -63,37 +66,39 @@ export function TraceAggregationsPanel({
           onMetricSelect={onMetricSelect}
           onCollapse={() => setCollapsed(true)}
         />
-        <div className="relative">
-          {incidentsFlagEnabled ? (
-            <div className="absolute right-2 top-2 z-10">
-              <Tooltip
-                asChild
-                trigger={
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => setShowIncidents((prev) => !prev)}
-                    aria-pressed={showIncidents}
+        <Histogram
+          projectId={projectId}
+          projectSlug={projectSlug}
+          filters={filters}
+          mode={mode}
+          metric={selectedMetric}
+          showIncidents={incidentsFlagEnabled && showIncidents}
+          onRangeSelect={onTimeRangeSelect}
+          isAllTime={!!histogramRangeOverride}
+          {...(histogramRangeOverride ? { rangeOverride: histogramRangeOverride } : {})}
+          {...(incidentsFlagEnabled
+            ? {
+                headerActions: (
+                  <Tooltip
+                    asChild
+                    trigger={
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => setShowIncidents((prev) => !prev)}
+                        aria-pressed={showIncidents}
+                      >
+                        <Icon icon={showIncidents ? ShieldAlertIcon : ShieldOffIcon} size="sm" />
+                        Incidents
+                      </Button>
+                    }
                   >
-                    <Icon icon={showIncidents ? ShieldAlertIcon : ShieldOffIcon} size="sm" />
-                    Incidents
-                  </Button>
-                }
-              >
-                Overlay incidents on the timeline
-              </Tooltip>
-            </div>
-          ) : null}
-          <Histogram
-            projectId={projectId}
-            projectSlug={projectSlug}
-            filters={filters}
-            mode={mode}
-            metric={selectedMetric}
-            showIncidents={incidentsFlagEnabled && showIncidents}
-            onRangeSelect={onTimeRangeSelect}
-          />
-        </div>
+                    Overlay incidents on the timeline
+                  </Tooltip>
+                ),
+              }
+            : {})}
+        />
       </div>
     </div>
   )

@@ -92,6 +92,7 @@ interface SignalsKeyInput {
   readonly sorting: SignalsSorting
   readonly searchQuery: string | undefined
   readonly timeRange: SignalsTimeRange | undefined
+  readonly histogramMaxSpanDays: number | undefined
 }
 
 const getSignalsQueryKey = (input: SignalsKeyInput) =>
@@ -152,6 +153,7 @@ const buildListSignalsRequest = (input: SignalsKeyInput, offset: number) => ({
   ...(input.assigneeIds?.length ? { assigneeIds: [...input.assigneeIds] } : {}),
   ...(input.searchQuery ? { searchQuery: input.searchQuery } : {}),
   ...(input.timeRange?.fromIso || input.timeRange?.toIso ? { timeRange: input.timeRange } : {}),
+  ...(input.histogramMaxSpanDays ? { histogramMaxSpanDays: input.histogramMaxSpanDays } : {}),
 })
 
 export function useSignals(input: {
@@ -161,6 +163,7 @@ export function useSignals(input: {
   readonly sorting?: SignalsSorting
   readonly searchQuery?: string
   readonly timeRange?: SignalsTimeRange
+  readonly histogramMaxSpanDays?: number
   readonly limit?: number
   readonly enabled?: boolean
 }) {
@@ -175,6 +178,7 @@ export function useSignals(input: {
     sorting,
     searchQuery: normalizedSearchQuery,
     timeRange: input.timeRange,
+    histogramMaxSpanDays: input.histogramMaxSpanDays,
   }
 
   const queryKey = useMemo(
