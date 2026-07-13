@@ -17,10 +17,12 @@ export const createFakeTraceRepository = (overrides?: Partial<TraceRepositorySha
     listByProjectId: () => Effect.succeed({ items: [], hasMore: false }),
     countByProjectId: () => Effect.succeed(0),
     findLastTraceAt: () => Effect.succeed(null),
+    findFirstTraceAt: () => Effect.succeed(null),
     countAnnotatedByProjectId: () => Effect.succeed(0),
     aggregateMetricsByProjectId: () => Effect.succeed(emptyTraceMetrics()),
     histogramByProjectId: () => Effect.succeed([]),
     findByTraceId: () => Effect.fail(new NotFoundError({ entity: "Trace", id: "" })),
+    findSummaryByTraceId: () => Effect.fail(new NotFoundError({ entity: "Trace", id: "" })),
     findMetadataByTraceId: () => Effect.fail(new NotFoundError({ entity: "Trace", id: "" })),
     findConversationChunk: () =>
       Effect.succeed({ messages: [], offset: 0, limit: 0, totalMessages: 0, hasMore: false, payloadBytes: 0 }),

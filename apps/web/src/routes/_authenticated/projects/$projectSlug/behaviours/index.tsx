@@ -2,6 +2,7 @@ import { Button, Icon, Text } from "@repo/ui"
 import { createFileRoute } from "@tanstack/react-router"
 import { ExternalLinkIcon, Loader2Icon, TagsIcon } from "lucide-react"
 import { useMemo } from "react"
+import { useAnalyticsTimeWindow } from "../../../../../domains/projects/use-analytics-time-window.ts"
 import { type BehaviourSegment, useProjectBehaviours } from "../../../../../domains/taxonomy/taxonomy.collection.ts"
 import type {
   BehaviourMomentRangeRecord,
@@ -77,21 +78,20 @@ function BehavioursPageContent() {
       value === "all" || value === "new_this_week" || value === "spiking" || value === "high_escalation",
   })
   const [behaviourPathParam, setBehaviourPathParam] = useParamState("behaviourPath", "", { history: "push" })
-  const [timeFrom, setTimeFrom] = useParamState("behaviourTimeFrom", "")
-  const [timeTo, setTimeTo] = useParamState("behaviourTimeTo", "")
+  const tw = useAnalyticsTimeWindow({ project, fromKey: "behaviourTimeFrom", toKey: "behaviourTimeTo" })
   const [momentMetric, setMomentMetric] = useParamState("behaviourMomentMetric", "")
   const [momentTurnFrom, setMomentTurnFrom] = useParamState("behaviourMomentTurnFrom", "")
   const [momentTurnTo, setMomentTurnTo] = useParamState("behaviourMomentTurnTo", "")
   const [momentTurnMax, setMomentTurnMax] = useParamState("behaviourMomentTurnMax", "")
   const timeRange = useMemo(
     () =>
-      timeFrom || timeTo
-        ? {
-            ...(timeFrom ? { fromIso: timeFrom } : {}),
-            ...(timeTo ? { toIso: timeTo } : {}),
-          }
-        : undefined,
-    [timeFrom, timeTo],
+      tw.isAllTime
+        ? undefined
+        : {
+            ...(tw.listRange.fromIso ? { fromIso: tw.listRange.fromIso } : {}),
+            toIso: tw.listRange.toIso,
+          },
+    [tw.isAllTime, tw.listRange],
   )
   const isDemoProject = project.settings.isSample || isDemoProjectName(project.name)
   const { data, isLoading } = useProjectBehaviours({
@@ -181,12 +181,9 @@ function BehavioursPageContent() {
           behaviourPath={behaviourPath}
           timeFilter={
             <TimeFilterDropdown
-              {...(timeFrom ? { startTimeFrom: timeFrom } : {})}
-              {...(timeTo ? { startTimeTo: timeTo } : {})}
-              onChange={(from, to) => {
-                setTimeFrom(from ?? "")
-                setTimeTo(to ?? "")
-              }}
+              {...(tw.pickerStartFrom ? { startTimeFrom: tw.pickerStartFrom } : {})}
+              {...(tw.pickerStartTo ? { startTimeTo: tw.pickerStartTo } : {})}
+              onChange={tw.onTimeChange}
             />
           }
           timeRange={timeRange}

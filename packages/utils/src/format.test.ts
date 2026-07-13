@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest"
 import {
   cacheHitRate,
   formatBytes,
+  formatChartWindowCaption,
   formatCount,
   formatDuration,
   formatPercentage,
@@ -10,6 +11,29 @@ import {
   normalizeCHString,
   parseCHDate,
 } from "./format.ts"
+
+describe("formatChartWindowCaption", () => {
+  it("omits the start year when both ends share a year and always shows the end year", () => {
+    // Midday UTC keeps the calendar day stable across the runner's timezone.
+    const result = formatChartWindowCaption("2026-06-25T12:00:00.000Z", "2026-07-01T12:00:00.000Z")
+    expect(result).toContain("–")
+    expect(result).toMatch(/, 2026$/)
+    const [start] = result.split(" – ")
+    expect(start).not.toContain("2026")
+  })
+
+  it("shows both years when the window crosses a year boundary", () => {
+    const result = formatChartWindowCaption("2025-12-28T12:00:00.000Z", "2026-01-03T12:00:00.000Z")
+    const [start, end] = result.split(" – ")
+    expect(start).toContain("2025")
+    expect(end).toContain("2026")
+  })
+
+  it("returns an empty string for unparseable input", () => {
+    expect(formatChartWindowCaption("nope", "2026-07-01T00:00:00.000Z")).toBe("")
+    expect(formatChartWindowCaption("2026-07-01T00:00:00.000Z", "")).toBe("")
+  })
+})
 
 describe("formatBytes", () => {
   it("formats whole bytes without decimals", () => {
