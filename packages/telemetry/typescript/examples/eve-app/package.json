@@ -24,7 +24,7 @@
   },
   "devDependencies": {
     "@types/node": "24.x",
-    "@typescript/native-preview": "7.0.0-dev.20260523.1"
+    "@typescript/native-preview": "7.0.0-dev.20260705.1"
   },
   "overrides": {
     "ai": "7.0.0-beta.178"

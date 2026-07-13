@@ -47,7 +47,7 @@ catalog:
   "@types/pg": 8.16.0
   "@types/react": 19.2.14
   "@types/react-dom": 19.2.3
-  "@typescript/native-preview": 7.0.0-dev.20260421.2
+  "@typescript/native-preview": 7.0.0-dev.20260705.1
   "@vitejs/plugin-react": 6.0.1
   better-auth: 1.6.11
   "@better-auth/core": 1.6.9

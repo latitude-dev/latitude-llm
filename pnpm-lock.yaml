@@ -70,8 +70,8 @@ catalogs:
       specifier: 19.2.3
       version: 19.2.3
     '@typescript/native-preview':
-      specifier: 7.0.0-dev.20260421.2
-      version: 7.0.0-dev.20260421.2
+      specifier: 7.0.0-dev.20260705.1
+      version: 7.0.0-dev.20260705.1
     '@vitejs/plugin-react':
       specifier: 6.0.1
       version: 6.0.1
@@ -162,7 +162,7 @@ importers:
         version: 22.14.1
       '@typescript/native-preview':
         specifier: 'catalog:'
-        version: 7.0.0-dev.20260421.2
+        version: 7.0.0-dev.20260705.1
       fern-api:
         specifier: 5.50.4
         version: 5.50.4
@@ -289,7 +289,7 @@ importers:
         version: link:../../packages/platform/testkit
       tsdown:
         specifier: 'catalog:'
-        version: 0.21.9(@typescript/native-preview@7.0.0-dev.20260421.2)(oxc-resolver@11.19.1(@emnapi/core@1.9.2)(@emnapi/runtime@1.9.2))(typescript@6.0.3)
+        version: 0.21.9(@typescript/native-preview@7.0.0-dev.20260705.1)(oxc-resolver@11.19.1(@emnapi/core@1.9.2)(@emnapi/runtime@1.9.2))(typescript@6.0.3)
 
   apps/design-system:
     dependencies:
@@ -390,7 +390,7 @@ importers:
     devDependencies:
       tsdown:
         specifier: 'catalog:'
-        version: 0.21.9(@typescript/native-preview@7.0.0-dev.20260421.2)(oxc-resolver@11.19.1(@emnapi/core@1.10.0)(@emnapi/runtime@1.10.0))(typescript@6.0.3)
+        version: 0.21.9(@typescript/native-preview@7.0.0-dev.20260705.1)(oxc-resolver@11.19.1(@emnapi/core@1.10.0)(@emnapi/runtime@1.10.0))(typescript@6.0.3)
 
   apps/web:
     dependencies:
@@ -857,7 +857,7 @@ importers:
         version: link:../../packages/platform/testkit
       tsdown:
         specifier: 'catalog:'
-        version: 0.21.9(@typescript/native-preview@7.0.0-dev.20260421.2)(oxc-resolver@11.19.1(@emnapi/core@1.10.0)(@emnapi/runtime@1.10.0))(typescript@6.0.3)
+        version: 0.21.9(@typescript/native-preview@7.0.0-dev.20260705.1)(oxc-resolver@11.19.1(@emnapi/core@1.10.0)(@emnapi/runtime@1.10.0))(typescript@6.0.3)
 
   apps/workflows:
     dependencies:
@@ -963,7 +963,7 @@ importers:
         version: link:../../packages/vitest-config
       tsdown:
         specifier: 'catalog:'
-        version: 0.21.9(@typescript/native-preview@7.0.0-dev.20260421.2)(oxc-resolver@11.19.1(@emnapi/core@1.10.0)(@emnapi/runtime@1.10.0))(typescript@6.0.3)
+        version: 0.21.9(@typescript/native-preview@7.0.0-dev.20260705.1)(oxc-resolver@11.19.1(@emnapi/core@1.10.0)(@emnapi/runtime@1.10.0))(typescript@6.0.3)
 
   infra:
     dependencies:
@@ -988,7 +988,7 @@ importers:
         version: 22.19.17
       '@typescript/native-preview':
         specifier: 'catalog:'
-        version: 7.0.0-dev.20260421.2
+        version: 7.0.0-dev.20260705.1
       typescript:
         specifier: 6.0.3
         version: 6.0.3
@@ -1291,7 +1291,7 @@ importers:
         version: 19.2.14
       '@typescript/native-preview':
         specifier: 'catalog:'
-        version: 7.0.0-dev.20260421.2
+        version: 7.0.0-dev.20260705.1
       react-email:
         specifier: 5.2.9
         version: 5.2.9
@@ -1655,7 +1655,7 @@ importers:
         version: 2.4.6
       '@typescript/native-preview':
         specifier: 'catalog:'
-        version: 7.0.0-dev.20260421.2
+        version: 7.0.0-dev.20260705.1
       typescript:
         specifier: 6.0.3
         version: 6.0.3
@@ -2841,10 +2841,10 @@ importers:
         version: 22.14.1
       '@typescript/native-preview':
         specifier: 'catalog:'
-        version: 7.0.0-dev.20260421.2
+        version: 7.0.0-dev.20260705.1
       tsdown:
         specifier: 'catalog:'
-        version: 0.21.9(@typescript/native-preview@7.0.0-dev.20260421.2)(oxc-resolver@11.19.1(@emnapi/core@1.10.0)(@emnapi/runtime@1.10.0))(typescript@6.0.3)
+        version: 0.21.9(@typescript/native-preview@7.0.0-dev.20260705.1)(oxc-resolver@11.19.1(@emnapi/core@1.10.0)(@emnapi/runtime@1.10.0))(typescript@6.0.3)
       typescript:
         specifier: 'catalog:'
         version: 6.0.3
@@ -2863,7 +2863,7 @@ importers:
         version: 22.14.1
       '@typescript/native-preview':
         specifier: 'catalog:'
-        version: 7.0.0-dev.20260421.2
+        version: 7.0.0-dev.20260705.1
       tsx:
         specifier: 'catalog:'
         version: 4.21.0
@@ -2888,10 +2888,10 @@ importers:
         version: 22.14.1
       '@typescript/native-preview':
         specifier: 'catalog:'
-        version: 7.0.0-dev.20260421.2
+        version: 7.0.0-dev.20260705.1
       tsdown:
         specifier: 'catalog:'
-        version: 0.21.9(@typescript/native-preview@7.0.0-dev.20260421.2)(oxc-resolver@11.19.1(@emnapi/core@1.10.0)(@emnapi/runtime@1.10.0))(typescript@6.0.3)
+        version: 0.21.9(@typescript/native-preview@7.0.0-dev.20260705.1)(oxc-resolver@11.19.1(@emnapi/core@1.10.0)(@emnapi/runtime@1.10.0))(typescript@6.0.3)
       typescript:
         specifier: 'catalog:'
         version: 6.0.3
@@ -2909,10 +2909,10 @@ importers:
         version: 22.14.1
       '@typescript/native-preview':
         specifier: 'catalog:'
-        version: 7.0.0-dev.20260421.2
+        version: 7.0.0-dev.20260705.1
       tsdown:
         specifier: 'catalog:'
-        version: 0.21.9(@typescript/native-preview@7.0.0-dev.20260421.2)(oxc-resolver@11.19.1(@emnapi/core@1.10.0)(@emnapi/runtime@1.10.0))(typescript@6.0.3)
+        version: 0.21.9(@typescript/native-preview@7.0.0-dev.20260705.1)(oxc-resolver@11.19.1(@emnapi/core@1.10.0)(@emnapi/runtime@1.10.0))(typescript@6.0.3)
       typescript:
         specifier: 'catalog:'
         version: 6.0.3
@@ -2937,10 +2937,10 @@ importers:
         version: 22.14.1
       '@typescript/native-preview':
         specifier: 'catalog:'
-        version: 7.0.0-dev.20260421.2
+        version: 7.0.0-dev.20260705.1
       tsdown:
         specifier: 'catalog:'
-        version: 0.21.9(@typescript/native-preview@7.0.0-dev.20260421.2)(oxc-resolver@11.19.1(@emnapi/core@1.10.0)(@emnapi/runtime@1.10.0))(typescript@6.0.3)
+        version: 0.21.9(@typescript/native-preview@7.0.0-dev.20260705.1)(oxc-resolver@11.19.1(@emnapi/core@1.10.0)(@emnapi/runtime@1.10.0))(typescript@6.0.3)
       typescript:
         specifier: 'catalog:'
         version: 6.0.3
@@ -2965,10 +2965,10 @@ importers:
         version: 22.14.1
       '@typescript/native-preview':
         specifier: 'catalog:'
-        version: 7.0.0-dev.20260421.2
+        version: 7.0.0-dev.20260705.1
       tsdown:
         specifier: 'catalog:'
-        version: 0.21.9(@typescript/native-preview@7.0.0-dev.20260421.2)(oxc-resolver@11.19.1(@emnapi/core@1.10.0)(@emnapi/runtime@1.10.0))(typescript@6.0.3)
+        version: 0.21.9(@typescript/native-preview@7.0.0-dev.20260705.1)(oxc-resolver@11.19.1(@emnapi/core@1.10.0)(@emnapi/runtime@1.10.0))(typescript@6.0.3)
       typescript:
         specifier: 'catalog:'
         version: 6.0.3
@@ -3068,7 +3068,7 @@ importers:
         version: 22.14.1
       '@typescript/native-preview':
         specifier: 'catalog:'
-        version: 7.0.0-dev.20260421.2
+        version: 7.0.0-dev.20260705.1
       ai:
         specifier: 6.0.208
         version: 6.0.208(zod@4.3.6)
@@ -3089,7 +3089,7 @@ importers:
         version: 0.40.0
       tsdown:
         specifier: 'catalog:'
-        version: 0.21.9(@typescript/native-preview@7.0.0-dev.20260421.2)(oxc-resolver@11.19.1(@emnapi/core@1.10.0)(@emnapi/runtime@1.10.0))(typescript@6.0.3)
+        version: 0.21.9(@typescript/native-preview@7.0.0-dev.20260705.1)(oxc-resolver@11.19.1(@emnapi/core@1.10.0)(@emnapi/runtime@1.10.0))(typescript@6.0.3)
       typescript:
         specifier: 'catalog:'
         version: 6.0.3
@@ -3245,7 +3245,7 @@ importers:
         version: 19.2.3(@types/react@19.2.14)
       '@typescript/native-preview':
         specifier: 'catalog:'
-        version: 7.0.0-dev.20260421.2
+        version: 7.0.0-dev.20260705.1
       postcss:
         specifier: 8.5.14
         version: 8.5.14
@@ -9114,43 +9114,51 @@ packages:
   '@types/ws@8.18.1':
     resolution: {integrity: sha512-ThVF6DCVhA8kUGy+aazFQ4kXQ7E1Ty7A3ypFOe0IcJV8O/M511G99AW24irKrW56Wt44yG9+ij8FaqoBGkuBXg==}
 
-  '@typescript/native-preview-darwin-arm64@7.0.0-dev.20260421.2':
-    resolution: {integrity: sha512-fHv1r3ZmVo6zxuAIFmuX3w9QxbcauoG0SsWhmDwm6VmRubLlOJIcmTtlmV3JAb9oOnq8LuzZljzT7Q39fSMQDw==}
+  '@typescript/native-preview-darwin-arm64@7.0.0-dev.20260705.1':
+    resolution: {integrity: sha512-OemjoGm+5nLCaUyL0zwWcSDhyQYQnO6/DcOidm2EzOqK7dYXgaCerDFUAz6iOGjOFtTAQFU50CV+ZbtUxodk9A==}
+    engines: {node: '>=16.20.0'}
     cpu: [arm64]
     os: [darwin]
 
-  '@typescript/native-preview-darwin-x64@7.0.0-dev.20260421.2':
-    resolution: {integrity: sha512-KWTR6xbW9t+JS7D5DQIzo75pqVXVWUxF9PMv/+S6xsnOjCVd6g0ixHcFpFMJMKSUQpGPr8Z5f7b8ks6LHW01jg==}
+  '@typescript/native-preview-darwin-x64@7.0.0-dev.20260705.1':
+    resolution: {integrity: sha512-jYEsBtcVOin3ARa2xAkwM21KOlmr9s3FGxcY28gESigXPJOGooRaxZlJ45tFM3TczCMEGmML88XCXuQaH2z1kw==}
+    engines: {node: '>=16.20.0'}
     cpu: [x64]
     os: [darwin]
 
-  '@typescript/native-preview-linux-arm64@7.0.0-dev.20260421.2':
-    resolution: {integrity: sha512-VLMEuml3BhUb+jaL0TXQ4xvVODxJF+RhkI+tBWvlynsJI4khTXEiwWh+wPOJrsfBRYFRMXEu28Odl/HXkYze8w==}
+  '@typescript/native-preview-linux-arm64@7.0.0-dev.20260705.1':
+    resolution: {integrity: sha512-kmWaZkuqb5RGTHt4AFIdPJ53/wO8vuZbmjSizNFNpvx1owYgQ8QZNu51zKfLQZbMs2FR7NAzVuQT14mhBaQW5Q==}
+    engines: {node: '>=16.20.0'}
     cpu: [arm64]
     os: [linux]
 
-  '@typescript/native-preview-linux-arm@7.0.0-dev.20260421.2':
-    resolution: {integrity: sha512-BWLQO3nemLDSV5PoE5GPHe1dU9Dth77Kv8/cle9Ujcp4LhPo0KincdPqFH/qKeU/xvW25mgFueflZ1nc4rKuww==}
+  '@typescript/native-preview-linux-arm@7.0.0-dev.20260705.1':
+    resolution: {integrity: sha512-abTOyfyx5SW5szf1YeZf5K9vUWEE7nbbqUUthl8OgRrFrJzlZnDIRf/FV0h6QGqQIN7XTf8lgKjdFe4piNFLww==}
+    engines: {node: '>=16.20.0'}
     cpu: [arm]
     os: [linux]
 
-  '@typescript/native-preview-linux-x64@7.0.0-dev.20260421.2':
-    resolution: {integrity: sha512-qUrJWTB5/wv4wnRG0TRXElAxc2kykNiRNyEIEqBbLmzDlrcvAW7RRy8MXoY1ZyTiKGMu14itZ3x9oW6+blFpRw==}
+  '@typescript/native-preview-linux-x64@7.0.0-dev.20260705.1':
+    resolution: {integrity: sha512-oNA9I3MFLqdFVbwolnsFObjrQ1AsBXc4WXPcNyKcoaauAmFTwjxOBPKtiaqFKj4j4Abum7KvjVj0fgBaO5gRPA==}
+    engines: {node: '>=16.20.0'}
     cpu: [x64]
     os: [linux]
 
-  '@typescript/native-preview-win32-arm64@7.0.0-dev.20260421.2':
-    resolution: {integrity: sha512-Rc6NsWlZmCs5YUKVzKgwoBOoRUGsPzct4BDMRX0csD1devLBBc4AbUXWKsJRbpwIAnqMO1ld4sNHEb+wXgfNHQ==}
+  '@typescript/native-preview-win32-arm64@7.0.0-dev.20260705.1':
+    resolution: {integrity: sha512-K6hTgnqAEBbrIGH6feXM//FHbk0ilSAQDpLct+3IHfd+tg2sKop5lK2rTZkl/ptHM7Vlh0CF77m0RL73an+oAw==}
+    engines: {node: '>=16.20.0'}
     cpu: [arm64]
     os: [win32]
 
-  '@typescript/native-preview-win32-x64@7.0.0-dev.20260421.2':
-    resolution: {integrity: sha512-GQv1+dya1t6EqF2Cpsb+xoozovdX10JUSf6Kl/8xNkTapzmlHd+uMr+8ku3jIASTxoRGn0Mklgjj3MDKrOTuLg==}
+  '@typescript/native-preview-win32-x64@7.0.0-dev.20260705.1':
+    resolution: {integrity: sha512-gAwPJgfQWtJnZlMrJ8NCA+vdI42N+XLev+jqZnpcMqt+Jd2zMtoNpppHB0I6URMVys+R2WpMiOOSlHcnvOMyTQ==}
+    engines: {node: '>=16.20.0'}
     cpu: [x64]
     os: [win32]
 
-  '@typescript/native-preview@7.0.0-dev.20260421.2':
-    resolution: {integrity: sha512-CmajHI25HpVWE9R1XFoxr+cphJPxoYD3eFioQtAvXYkMFKnLdICMS9pXre9Pybizb75ejRxjKD5/CVG055rEIg==}
+  '@typescript/native-preview@7.0.0-dev.20260705.1':
+    resolution: {integrity: sha512-mXc3tDkRCe8UinMcl5yqUfLAP5Vk5MFuZNNaNsrwRehu1d+lnL+Zu+K7g6kSMOV8NOY9bn9tGFN4/cqhlK4VwA==}
+    engines: {node: '>=16.20.0'}
     hasBin: true
 
   '@typespec/ts-http-runtime@0.3.6':
@@ -15812,7 +15820,7 @@ snapshots:
     dependencies:
       '@floating-ui/dom': 1.7.6
       react: 18.3.1
-      react-dom: 18.3.1(react@18.3.1)
+      react-dom: 18.3.1(react@19.2.5)
 
   '@floating-ui/react-dom@2.1.8(react-dom@19.2.5(react@19.2.5))(react@19.2.5)':
     dependencies:
@@ -16342,7 +16350,7 @@ snapshots:
       '@modelcontextprotocol/ext-apps': 1.7.1(@modelcontextprotocol/sdk@1.29.0(@cfworker/json-schema@4.1.1)(zod@4.3.6))(react-dom@18.3.1(react@18.3.1))(react@18.3.1)(zod@3.25.76)
       '@modelcontextprotocol/sdk': 1.29.0(@cfworker/json-schema@4.1.1)(zod@3.25.76)
       react: 18.3.1
-      react-dom: 18.3.1(react@18.3.1)
+      react-dom: 18.3.1(react@19.2.5)
       zod: 3.25.76
     transitivePeerDependencies:
       - '@cfworker/json-schema'
@@ -16355,7 +16363,7 @@ snapshots:
       zod: 3.25.76
     optionalDependencies:
       react: 18.3.1
-      react-dom: 18.3.1(react@18.3.1)
+      react-dom: 18.3.1(react@19.2.5)
 
   '@modelcontextprotocol/inspector-cli@0.21.2(@cfworker/json-schema@4.1.1)(zod@3.25.76)':
     dependencies:
@@ -16392,7 +16400,7 @@ snapshots:
       pkce-challenge: 4.1.0
       prismjs: 1.30.0
       react: 18.3.1
-      react-dom: 18.3.1(react@18.3.1)
+      react-dom: 18.3.1(react@19.2.5)
       react-simple-code-editor: 0.14.1(react-dom@18.3.1(react@18.3.1))(react@18.3.1)
       serve-handler: 6.1.7
       tailwind-merge: 2.6.1
@@ -18044,7 +18052,7 @@ snapshots:
     dependencies:
       '@radix-ui/react-primitive': 2.1.6(@types/react-dom@19.2.3(@types/react@19.2.14))(@types/react@19.2.14)(react-dom@18.3.1(react@18.3.1))(react@18.3.1)
       react: 18.3.1
-      react-dom: 18.3.1(react@18.3.1)
+      react-dom: 18.3.1(react@19.2.5)
     optionalDependencies:
       '@types/react': 19.2.14
       '@types/react-dom': 19.2.3(@types/react@19.2.14)
@@ -18062,7 +18070,7 @@ snapshots:
     dependencies:
       '@radix-ui/react-primitive': 2.1.3(@types/react-dom@19.2.3(@types/react@19.2.14))(@types/react@19.2.14)(react-dom@18.3.1(react@18.3.1))(react@18.3.1)
       react: 18.3.1
-      react-dom: 18.3.1(react@18.3.1)
+      react-dom: 18.3.1(react@19.2.5)
     optionalDependencies:
       '@types/react': 19.2.14
       '@types/react-dom': 19.2.3(@types/react@19.2.14)
@@ -18087,7 +18095,7 @@ snapshots:
       '@radix-ui/react-use-previous': 1.1.1(@types/react@19.2.14)(react@18.3.1)
       '@radix-ui/react-use-size': 1.1.1(@types/react@19.2.14)(react@18.3.1)
       react: 18.3.1
-      react-dom: 18.3.1(react@18.3.1)
+      react-dom: 18.3.1(react@19.2.5)
     optionalDependencies:
       '@types/react': 19.2.14
       '@types/react-dom': 19.2.3(@types/react@19.2.14)
@@ -18115,7 +18123,7 @@ snapshots:
       '@radix-ui/react-primitive': 2.1.6(@types/react-dom@19.2.3(@types/react@19.2.14))(@types/react@19.2.14)(react-dom@18.3.1(react@18.3.1))(react@18.3.1)
       '@radix-ui/react-slot': 1.3.0(@types/react@19.2.14)(react@18.3.1)
       react: 18.3.1
-      react-dom: 18.3.1(react@18.3.1)
+      react-dom: 18.3.1(react@19.2.5)
     optionalDependencies:
       '@types/react': 19.2.14
       '@types/react-dom': 19.2.3(@types/react@19.2.14)
@@ -18139,7 +18147,7 @@ snapshots:
       '@radix-ui/react-primitive': 2.1.3(@types/react-dom@19.2.3(@types/react@19.2.14))(@types/react@19.2.14)(react-dom@18.3.1(react@18.3.1))(react@18.3.1)
       '@radix-ui/react-slot': 1.2.3(@types/react@19.2.14)(react@18.3.1)
       react: 18.3.1
-      react-dom: 18.3.1(react@18.3.1)
+      react-dom: 18.3.1(react@19.2.5)
     optionalDependencies:
       '@types/react': 19.2.14
       '@types/react-dom': 19.2.3(@types/react@19.2.14)
@@ -18220,7 +18228,7 @@ snapshots:
       '@radix-ui/react-use-controllable-state': 1.2.3(@types/react@19.2.14)(react@18.3.1)
       aria-hidden: 1.2.6
       react: 18.3.1
-      react-dom: 18.3.1(react@18.3.1)
+      react-dom: 18.3.1(react@19.2.5)
       react-remove-scroll: 2.7.2(@types/react@19.2.14)(react@18.3.1)
     optionalDependencies:
       '@types/react': 19.2.14
@@ -18280,7 +18288,7 @@ snapshots:
       '@radix-ui/react-use-callback-ref': 1.1.1(@types/react@19.2.14)(react@18.3.1)
       '@radix-ui/react-use-escape-keydown': 1.1.1(@types/react@19.2.14)(react@18.3.1)
       react: 18.3.1
-      react-dom: 18.3.1(react@18.3.1)
+      react-dom: 18.3.1(react@19.2.5)
     optionalDependencies:
       '@types/react': 19.2.14
       '@types/react-dom': 19.2.3(@types/react@19.2.14)
@@ -18306,7 +18314,7 @@ snapshots:
       '@radix-ui/react-use-callback-ref': 1.1.2(@types/react@19.2.14)(react@18.3.1)
       '@radix-ui/react-use-escape-keydown': 1.1.2(@types/react@19.2.14)(react@18.3.1)
       react: 18.3.1
-      react-dom: 18.3.1(react@18.3.1)
+      react-dom: 18.3.1(react@19.2.5)
     optionalDependencies:
       '@types/react': 19.2.14
       '@types/react-dom': 19.2.3(@types/react@19.2.14)
@@ -18369,7 +18377,7 @@ snapshots:
       '@radix-ui/react-primitive': 2.1.6(@types/react-dom@19.2.3(@types/react@19.2.14))(@types/react@19.2.14)(react-dom@18.3.1(react@18.3.1))(react@18.3.1)
       '@radix-ui/react-use-callback-ref': 1.1.2(@types/react@19.2.14)(react@18.3.1)
       react: 18.3.1
-      react-dom: 18.3.1(react@18.3.1)
+      react-dom: 18.3.1(react@19.2.5)
     optionalDependencies:
       '@types/react': 19.2.14
       '@types/react-dom': 19.2.3(@types/react@19.2.14)
@@ -18391,7 +18399,7 @@ snapshots:
       '@radix-ui/react-primitive': 2.1.3(@types/react-dom@19.2.3(@types/react@19.2.14))(@types/react@19.2.14)(react-dom@18.3.1(react@18.3.1))(react@18.3.1)
       '@radix-ui/react-use-callback-ref': 1.1.1(@types/react@19.2.14)(react@18.3.1)
       react: 18.3.1
-      react-dom: 18.3.1(react@18.3.1)
+      react-dom: 18.3.1(react@19.2.5)
     optionalDependencies:
       '@types/react': 19.2.14
       '@types/react-dom': 19.2.3(@types/react@19.2.14)
@@ -18443,7 +18451,7 @@ snapshots:
     dependencies:
       '@radix-ui/react-primitive': 2.1.4(@types/react-dom@19.2.3(@types/react@19.2.14))(@types/react@19.2.14)(react-dom@18.3.1(react@18.3.1))(react@18.3.1)
       react: 18.3.1
-      react-dom: 18.3.1(react@18.3.1)
+      react-dom: 18.3.1(react@19.2.5)
     optionalDependencies:
       '@types/react': 19.2.14
       '@types/react-dom': 19.2.3(@types/react@19.2.14)
@@ -18500,7 +18508,7 @@ snapshots:
       '@radix-ui/react-use-controllable-state': 1.2.2(@types/react@19.2.14)(react@18.3.1)
       aria-hidden: 1.2.6
       react: 18.3.1
-      react-dom: 18.3.1(react@18.3.1)
+      react-dom: 18.3.1(react@19.2.5)
       react-remove-scroll: 2.7.2(@types/react@19.2.14)(react@18.3.1)
     optionalDependencies:
       '@types/react': 19.2.14
@@ -18542,7 +18550,7 @@ snapshots:
       '@radix-ui/react-use-size': 1.1.1(@types/react@19.2.14)(react@18.3.1)
       '@radix-ui/rect': 1.1.1
       react: 18.3.1
-      react-dom: 18.3.1(react@18.3.1)
+      react-dom: 18.3.1(react@19.2.5)
     optionalDependencies:
       '@types/react': 19.2.14
       '@types/react-dom': 19.2.3(@types/react@19.2.14)
@@ -18578,7 +18586,7 @@ snapshots:
       '@radix-ui/react-use-size': 1.1.2(@types/react@19.2.14)(react@18.3.1)
       '@radix-ui/rect': 1.1.2
       react: 18.3.1
-      react-dom: 18.3.1(react@18.3.1)
+      react-dom: 18.3.1(react@19.2.5)
     optionalDependencies:
       '@types/react': 19.2.14
       '@types/react-dom': 19.2.3(@types/react@19.2.14)
@@ -18606,7 +18614,7 @@ snapshots:
       '@radix-ui/react-primitive': 2.1.6(@types/react-dom@19.2.3(@types/react@19.2.14))(@types/react@19.2.14)(react-dom@18.3.1(react@18.3.1))(react@18.3.1)
       '@radix-ui/react-use-layout-effect': 1.1.2(@types/react@19.2.14)(react@18.3.1)
       react: 18.3.1
-      react-dom: 18.3.1(react@18.3.1)
+      react-dom: 18.3.1(react@19.2.5)
     optionalDependencies:
       '@types/react': 19.2.14
       '@types/react-dom': 19.2.3(@types/react@19.2.14)
@@ -18626,7 +18634,7 @@ snapshots:
       '@radix-ui/react-primitive': 2.1.3(@types/react-dom@19.2.3(@types/react@19.2.14))(@types/react@19.2.14)(react-dom@18.3.1(react@18.3.1))(react@18.3.1)
       '@radix-ui/react-use-layout-effect': 1.1.1(@types/react@19.2.14)(react@18.3.1)
       react: 18.3.1
-      react-dom: 18.3.1(react@18.3.1)
+      react-dom: 18.3.1(react@19.2.5)
     optionalDependencies:
       '@types/react': 19.2.14
       '@types/react-dom': 19.2.3(@types/react@19.2.14)
@@ -18646,7 +18654,7 @@ snapshots:
       '@radix-ui/react-compose-refs': 1.1.2(@types/react@19.2.14)(react@18.3.1)
       '@radix-ui/react-use-layout-effect': 1.1.1(@types/react@19.2.14)(react@18.3.1)
       react: 18.3.1
-      react-dom: 18.3.1(react@18.3.1)
+      react-dom: 18.3.1(react@19.2.5)
     optionalDependencies:
       '@types/react': 19.2.14
       '@types/react-dom': 19.2.3(@types/react@19.2.14)
@@ -18665,7 +18673,7 @@ snapshots:
     dependencies:
       '@radix-ui/react-use-layout-effect': 1.1.2(@types/react@19.2.14)(react@18.3.1)
       react: 18.3.1
-      react-dom: 18.3.1(react@18.3.1)
+      react-dom: 18.3.1(react@19.2.5)
     optionalDependencies:
       '@types/react': 19.2.14
       '@types/react-dom': 19.2.3(@types/react@19.2.14)
@@ -18683,7 +18691,7 @@ snapshots:
     dependencies:
       '@radix-ui/react-slot': 1.2.3(@types/react@19.2.14)(react@18.3.1)
       react: 18.3.1
-      react-dom: 18.3.1(react@18.3.1)
+      react-dom: 18.3.1(react@19.2.5)
     optionalDependencies:
       '@types/react': 19.2.14
       '@types/react-dom': 19.2.3(@types/react@19.2.14)
@@ -18701,7 +18709,7 @@ snapshots:
     dependencies:
       '@radix-ui/react-slot': 1.2.4(@types/react@19.2.14)(react@18.3.1)
       react: 18.3.1
-      react-dom: 18.3.1(react@18.3.1)
+      react-dom: 18.3.1(react@19.2.5)
     optionalDependencies:
       '@types/react': 19.2.14
       '@types/react-dom': 19.2.3(@types/react@19.2.14)
@@ -18719,7 +18727,7 @@ snapshots:
     dependencies:
       '@radix-ui/react-slot': 1.3.0(@types/react@19.2.14)(react@18.3.1)
       react: 18.3.1
-      react-dom: 18.3.1(react@18.3.1)
+      react-dom: 18.3.1(react@19.2.5)
     optionalDependencies:
       '@types/react': 19.2.14
       '@types/react-dom': 19.2.3(@types/react@19.2.14)
@@ -18745,7 +18753,7 @@ snapshots:
       '@radix-ui/react-use-callback-ref': 1.1.1(@types/react@19.2.14)(react@18.3.1)
       '@radix-ui/react-use-controllable-state': 1.2.2(@types/react@19.2.14)(react@18.3.1)
       react: 18.3.1
-      react-dom: 18.3.1(react@18.3.1)
+      react-dom: 18.3.1(react@19.2.5)
     optionalDependencies:
       '@types/react': 19.2.14
       '@types/react-dom': 19.2.3(@types/react@19.2.14)
@@ -18791,7 +18799,7 @@ snapshots:
       '@radix-ui/react-visually-hidden': 1.2.6(@types/react-dom@19.2.3(@types/react@19.2.14))(@types/react@19.2.14)(react-dom@18.3.1(react@18.3.1))(react@18.3.1)
       aria-hidden: 1.2.6
       react: 18.3.1
-      react-dom: 18.3.1(react@18.3.1)
+      react-dom: 18.3.1(react@19.2.5)
       react-remove-scroll: 2.7.2(@types/react@19.2.14)(react@18.3.1)
     optionalDependencies:
       '@types/react': 19.2.14
@@ -18907,7 +18915,7 @@ snapshots:
       '@radix-ui/react-use-previous': 1.1.1(@types/react@19.2.14)(react@18.3.1)
       '@radix-ui/react-use-size': 1.1.1(@types/react@19.2.14)(react@18.3.1)
       react: 18.3.1
-      react-dom: 18.3.1(react@18.3.1)
+      react-dom: 18.3.1(react@19.2.5)
     optionalDependencies:
       '@types/react': 19.2.14
       '@types/react-dom': 19.2.3(@types/react@19.2.14)
@@ -18938,7 +18946,7 @@ snapshots:
       '@radix-ui/react-roving-focus': 1.1.11(@types/react-dom@19.2.3(@types/react@19.2.14))(@types/react@19.2.14)(react-dom@18.3.1(react@18.3.1))(react@18.3.1)
       '@radix-ui/react-use-controllable-state': 1.2.2(@types/react@19.2.14)(react@18.3.1)
       react: 18.3.1
-      react-dom: 18.3.1(react@18.3.1)
+      react-dom: 18.3.1(react@19.2.5)
     optionalDependencies:
       '@types/react': 19.2.14
       '@types/react-dom': 19.2.3(@types/react@19.2.14)
@@ -18958,7 +18966,7 @@ snapshots:
       '@radix-ui/react-use-layout-effect': 1.1.1(@types/react@19.2.14)(react@18.3.1)
       '@radix-ui/react-visually-hidden': 1.2.3(@types/react-dom@19.2.3(@types/react@19.2.14))(@types/react@19.2.14)(react-dom@18.3.1(react@18.3.1))(react@18.3.1)
       react: 18.3.1
-      react-dom: 18.3.1(react@18.3.1)
+      react-dom: 18.3.1(react@19.2.5)
     optionalDependencies:
       '@types/react': 19.2.14
       '@types/react-dom': 19.2.3(@types/react@19.2.14)
@@ -18998,7 +19006,7 @@ snapshots:
       '@radix-ui/react-use-controllable-state': 1.2.2(@types/react@19.2.14)(react@18.3.1)
       '@radix-ui/react-visually-hidden': 1.2.3(@types/react-dom@19.2.3(@types/react@19.2.14))(@types/react@19.2.14)(react-dom@18.3.1(react@18.3.1))(react@18.3.1)
       react: 18.3.1
-      react-dom: 18.3.1(react@18.3.1)
+      react-dom: 18.3.1(react@19.2.5)
     optionalDependencies:
       '@types/react': 19.2.14
       '@types/react-dom': 19.2.3(@types/react@19.2.14)
@@ -19243,7 +19251,7 @@ snapshots:
     dependencies:
       '@radix-ui/react-primitive': 2.1.3(@types/react-dom@19.2.3(@types/react@19.2.14))(@types/react@19.2.14)(react-dom@18.3.1(react@18.3.1))(react@18.3.1)
       react: 18.3.1
-      react-dom: 18.3.1(react@18.3.1)
+      react-dom: 18.3.1(react@19.2.5)
     optionalDependencies:
       '@types/react': 19.2.14
       '@types/react-dom': 19.2.3(@types/react@19.2.14)
@@ -19261,7 +19269,7 @@ snapshots:
     dependencies:
       '@radix-ui/react-primitive': 2.1.6(@types/react-dom@19.2.3(@types/react@19.2.14))(@types/react@19.2.14)(react-dom@18.3.1(react@18.3.1))(react@18.3.1)
       react: 18.3.1
-      react-dom: 18.3.1(react@18.3.1)
+      react-dom: 18.3.1(react@19.2.5)
     optionalDependencies:
       '@types/react': 19.2.14
       '@types/react-dom': 19.2.3(@types/react@19.2.14)
@@ -21150,36 +21158,36 @@ snapshots:
     dependencies:
       '@types/node': 22.19.17
 
-  '@typescript/native-preview-darwin-arm64@7.0.0-dev.20260421.2':
+  '@typescript/native-preview-darwin-arm64@7.0.0-dev.20260705.1':
     optional: true
 
-  '@typescript/native-preview-darwin-x64@7.0.0-dev.20260421.2':
+  '@typescript/native-preview-darwin-x64@7.0.0-dev.20260705.1':
     optional: true
 
-  '@typescript/native-preview-linux-arm64@7.0.0-dev.20260421.2':
+  '@typescript/native-preview-linux-arm64@7.0.0-dev.20260705.1':
     optional: true
 
-  '@typescript/native-preview-linux-arm@7.0.0-dev.20260421.2':
+  '@typescript/native-preview-linux-arm@7.0.0-dev.20260705.1':
     optional: true
 
-  '@typescript/native-preview-linux-x64@7.0.0-dev.20260421.2':
+  '@typescript/native-preview-linux-x64@7.0.0-dev.20260705.1':
     optional: true
 
-  '@typescript/native-preview-win32-arm64@7.0.0-dev.20260421.2':
+  '@typescript/native-preview-win32-arm64@7.0.0-dev.20260705.1':
     optional: true
 
-  '@typescript/native-preview-win32-x64@7.0.0-dev.20260421.2':
+  '@typescript/native-preview-win32-x64@7.0.0-dev.20260705.1':
     optional: true
 
-  '@typescript/native-preview@7.0.0-dev.20260421.2':
+  '@typescript/native-preview@7.0.0-dev.20260705.1':
     optionalDependencies:
-      '@typescript/native-preview-darwin-arm64': 7.0.0-dev.20260421.2
-      '@typescript/native-preview-darwin-x64': 7.0.0-dev.20260421.2
-      '@typescript/native-preview-linux-arm': 7.0.0-dev.20260421.2
-      '@typescript/native-preview-linux-arm64': 7.0.0-dev.20260421.2
-      '@typescript/native-preview-linux-x64': 7.0.0-dev.20260421.2
-      '@typescript/native-preview-win32-arm64': 7.0.0-dev.20260421.2
-      '@typescript/native-preview-win32-x64': 7.0.0-dev.20260421.2
+      '@typescript/native-preview-darwin-arm64': 7.0.0-dev.20260705.1
+      '@typescript/native-preview-darwin-x64': 7.0.0-dev.20260705.1
+      '@typescript/native-preview-linux-arm': 7.0.0-dev.20260705.1
+      '@typescript/native-preview-linux-arm64': 7.0.0-dev.20260705.1
+      '@typescript/native-preview-linux-x64': 7.0.0-dev.20260705.1
+      '@typescript/native-preview-win32-arm64': 7.0.0-dev.20260705.1
+      '@typescript/native-preview-win32-x64': 7.0.0-dev.20260705.1
 
   '@typespec/ts-http-runtime@0.3.6':
     dependencies:
@@ -21896,7 +21904,7 @@ snapshots:
       '@radix-ui/react-id': 1.1.1(@types/react@19.2.14)(react@18.3.1)
       '@radix-ui/react-primitive': 2.1.4(@types/react-dom@19.2.3(@types/react@19.2.14))(@types/react@19.2.14)(react-dom@18.3.1(react@18.3.1))(react@18.3.1)
       react: 18.3.1
-      react-dom: 18.3.1(react@18.3.1)
+      react-dom: 18.3.1(react@19.2.5)
     transitivePeerDependencies:
       - '@types/react'
       - '@types/react-dom'
@@ -24821,10 +24829,10 @@ snapshots:
       date-fns: 3.6.0
       react: 19.2.5
 
-  react-dom@18.3.1(react@18.3.1):
+  react-dom@18.3.1(react@19.2.5):
     dependencies:
       loose-envify: 1.4.0
-      react: 18.3.1
+      react: 19.2.5
       scheduler: 0.23.2
 
   react-dom@19.2.5(react@19.2.5):
@@ -24922,7 +24930,7 @@ snapshots:
   react-simple-code-editor@0.14.1(react-dom@18.3.1(react@18.3.1))(react@18.3.1):
     dependencies:
       react: 18.3.1
-      react-dom: 18.3.1(react@18.3.1)
+      react-dom: 18.3.1(react@19.2.5)
 
   react-style-singleton@2.2.3(@types/react@19.2.14)(react@18.3.1):
     dependencies:
@@ -25111,7 +25119,7 @@ snapshots:
 
   rfdc@1.4.1: {}
 
-  rolldown-plugin-dts@0.23.2(@typescript/native-preview@7.0.0-dev.20260421.2)(oxc-resolver@11.19.1(@emnapi/core@1.10.0)(@emnapi/runtime@1.10.0))(rolldown@1.0.0-rc.16)(typescript@6.0.3):
+  rolldown-plugin-dts@0.23.2(@typescript/native-preview@7.0.0-dev.20260705.1)(oxc-resolver@11.19.1(@emnapi/core@1.10.0)(@emnapi/runtime@1.10.0))(rolldown@1.0.0-rc.16)(typescript@6.0.3):
     dependencies:
       '@babel/generator': 8.0.0-rc.3
       '@babel/helper-validator-identifier': 8.0.0-rc.3
@@ -25125,12 +25133,12 @@ snapshots:
       picomatch: 4.0.4
       rolldown: 1.0.0-rc.16
     optionalDependencies:
-      '@typescript/native-preview': 7.0.0-dev.20260421.2
+      '@typescript/native-preview': 7.0.0-dev.20260705.1
       typescript: 6.0.3
     transitivePeerDependencies:
       - oxc-resolver
 
-  rolldown-plugin-dts@0.23.2(@typescript/native-preview@7.0.0-dev.20260421.2)(oxc-resolver@11.19.1(@emnapi/core@1.9.2)(@emnapi/runtime@1.9.2))(rolldown@1.0.0-rc.16)(typescript@6.0.3):
+  rolldown-plugin-dts@0.23.2(@typescript/native-preview@7.0.0-dev.20260705.1)(oxc-resolver@11.19.1(@emnapi/core@1.9.2)(@emnapi/runtime@1.9.2))(rolldown@1.0.0-rc.16)(typescript@6.0.3):
     dependencies:
       '@babel/generator': 8.0.0-rc.3
       '@babel/helper-validator-identifier': 8.0.0-rc.3
@@ -25144,7 +25152,7 @@ snapshots:
       picomatch: 4.0.4
       rolldown: 1.0.0-rc.16
     optionalDependencies:
-      '@typescript/native-preview': 7.0.0-dev.20260421.2
+      '@typescript/native-preview': 7.0.0-dev.20260705.1
       typescript: 6.0.3
     transitivePeerDependencies:
       - oxc-resolver
@@ -25940,7 +25948,7 @@ snapshots:
       minimist: 1.2.8
       strip-bom: 3.0.0
 
-  tsdown@0.21.9(@typescript/native-preview@7.0.0-dev.20260421.2)(oxc-resolver@11.19.1(@emnapi/core@1.10.0)(@emnapi/runtime@1.10.0))(typescript@6.0.3):
+  tsdown@0.21.9(@typescript/native-preview@7.0.0-dev.20260705.1)(oxc-resolver@11.19.1(@emnapi/core@1.10.0)(@emnapi/runtime@1.10.0))(typescript@6.0.3):
     dependencies:
       ansis: 4.2.0
       cac: 7.0.0
@@ -25951,7 +25959,7 @@ snapshots:
       obug: 2.1.1
       picomatch: 4.0.4
       rolldown: 1.0.0-rc.16
-      rolldown-plugin-dts: 0.23.2(@typescript/native-preview@7.0.0-dev.20260421.2)(oxc-resolver@11.19.1(@emnapi/core@1.10.0)(@emnapi/runtime@1.10.0))(rolldown@1.0.0-rc.16)(typescript@6.0.3)
+      rolldown-plugin-dts: 0.23.2(@typescript/native-preview@7.0.0-dev.20260705.1)(oxc-resolver@11.19.1(@emnapi/core@1.10.0)(@emnapi/runtime@1.10.0))(rolldown@1.0.0-rc.16)(typescript@6.0.3)
       semver: 7.8.1
       tinyexec: 1.1.1
       tinyglobby: 0.2.16
@@ -25967,7 +25975,7 @@ snapshots:
       - synckit
       - vue-tsc
 
-  tsdown@0.21.9(@typescript/native-preview@7.0.0-dev.20260421.2)(oxc-resolver@11.19.1(@emnapi/core@1.9.2)(@emnapi/runtime@1.9.2))(typescript@6.0.3):
+  tsdown@0.21.9(@typescript/native-preview@7.0.0-dev.20260705.1)(oxc-resolver@11.19.1(@emnapi/core@1.9.2)(@emnapi/runtime@1.9.2))(typescript@6.0.3):
     dependencies:
       ansis: 4.2.0
       cac: 7.0.0
@@ -25978,7 +25986,7 @@ snapshots:
       obug: 2.1.1
       picomatch: 4.0.4
       rolldown: 1.0.0-rc.16
-      rolldown-plugin-dts: 0.23.2(@typescript/native-preview@7.0.0-dev.20260421.2)(oxc-resolver@11.19.1(@emnapi/core@1.9.2)(@emnapi/runtime@1.9.2))(rolldown@1.0.0-rc.16)(typescript@6.0.3)
+      rolldown-plugin-dts: 0.23.2(@typescript/native-preview@7.0.0-dev.20260705.1)(oxc-resolver@11.19.1(@emnapi/core@1.9.2)(@emnapi/runtime@1.9.2))(rolldown@1.0.0-rc.16)(typescript@6.0.3)
       semver: 7.8.1
       tinyexec: 1.1.1
       tinyglobby: 0.2.16
