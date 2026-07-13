@@ -84,6 +84,13 @@ const listSignalsInputSchema = z.object({
     }),
   limit: z.number().int().min(1).max(200).default(50),
   offset: z.number().int().min(0).default(0),
+  /**
+   * Max span (days) of the All-time occurrences histogram, anchored to the latest activity so a
+   * bounded, latest-activity window is charted instead of an unbounded per-bucket scan. Defaults to
+   * the legacy 6-day window; the web app passes the project's default time window (30d / 14d showcase)
+   * to keep it consistent with the Traces/Tools/Users charts. Explicit ranges are always shown in full.
+   */
+  histogramMaxSpanDays: z.number().int().positive().default(6),
   includeAnalytics: z.boolean().default(true),
   includeItems: z.boolean().default(true),
   now: z.date().optional(),
@@ -175,9 +182,26 @@ const toUtcDayStart = (value: Date): Date =>
 const toUtcDayEnd = (value: Date): Date =>
   new Date(Date.UTC(value.getUTCFullYear(), value.getUTCMonth(), value.getUTCDate(), 23, 59, 59, 999))
 
+/**
+ * End of the default (All-time) chart window. Anchored to the latest activity so the histogram/trend
+ * shows the most recent real data instead of a blank "last N days from now" when a project's activity
+ * predates today. Capped at the upper bound (a user-selected `to`, else `now`) so it never runs past
+ * the selected/current time, and falls back to that cap when there is no activity to anchor to.
+ */
+const resolveAnchoredWindowEnd = (input: {
+  readonly to: Date | undefined
+  readonly now: Date
+  readonly latestActivityAt: Date | undefined
+}): Date => {
+  const cap = input.to ?? input.now
+  return input.latestActivityAt && input.latestActivityAt.getTime() < cap.getTime() ? input.latestActivityAt : cap
+}
+
 const resolveHistogramTimeRange = (input: {
   readonly timeRange: z.infer<typeof signalsTimeRangeSchema> | undefined
   readonly now: Date
+  readonly latestActivityAt?: Date
+  readonly maxSpanDays: number
 }): { readonly from: Date; readonly to: Date } => {
   if (input.timeRange?.from && input.timeRange?.to) {
     return {
@@ -193,9 +217,11 @@ const resolveHistogramTimeRange = (input: {
     }
   }
 
-  const end = toUtcDayEnd(input.timeRange?.to ?? input.now)
+  const end = toUtcDayEnd(
+    resolveAnchoredWindowEnd({ to: input.timeRange?.to, now: input.now, latestActivityAt: input.latestActivityAt }),
+  )
   const start = new Date(end)
-  start.setUTCDate(start.getUTCDate() - 6)
+  start.setUTCDate(start.getUTCDate() - input.maxSpanDays)
   start.setUTCHours(0, 0, 0, 0)
 
   return {
@@ -207,8 +233,13 @@ const resolveHistogramTimeRange = (input: {
 const resolveTrendTimeRange = (input: {
   readonly timeRange: z.infer<typeof signalsTimeRangeSchema> | undefined
   readonly now: Date
+  readonly latestActivityAt?: Date
 }): { readonly from: Date; readonly to: Date } => {
-  const end = toUtcDayEnd(input.timeRange?.to ?? input.timeRange?.from ?? input.now)
+  const end = toUtcDayEnd(
+    input.timeRange?.from
+      ? (input.timeRange.to ?? input.timeRange.from)
+      : resolveAnchoredWindowEnd({ to: input.timeRange?.to, now: input.now, latestActivityAt: input.latestActivityAt }),
+  )
   const start = new Date(end)
   start.setUTCDate(start.getUTCDate() - 13)
   start.setUTCHours(0, 0, 0, 0)
@@ -517,6 +548,7 @@ export const listSignalsUseCase = (
         const histogramTimeRange = resolveHistogramTimeRange({
           timeRange: parsed.timeRange,
           now,
+          maxSpanDays: parsed.histogramMaxSpanDays,
         })
         const histogramBucketSeconds = pickTraceHistogramBucketSeconds(
           histogramTimeRange.from.getTime(),
@@ -557,6 +589,7 @@ export const listSignalsUseCase = (
       const histogramTimeRange = resolveHistogramTimeRange({
         timeRange: parsed.timeRange,
         now,
+        maxSpanDays: parsed.histogramMaxSpanDays,
       })
       const histogramBucketSeconds = pickTraceHistogramBucketSeconds(
         histogramTimeRange.from.getTime(),
@@ -698,6 +731,12 @@ export const listSignalsUseCase = (
     ])
 
     const windowMetricsBySignalId = new Map(windowMetrics.map((metric) => [metric.signalId, metric] as const))
+    // Latest occurrence across the (list-window) metrics — anchors the All-time histogram/trend so
+    // they chart the most recent real activity instead of a blank "last N days from now".
+    const latestActivityAt = windowMetrics.reduce<Date | undefined>(
+      (latest, metric) => (!latest || metric.lastSeenAt.getTime() > latest.getTime() ? metric.lastSeenAt : latest),
+      undefined,
+    )
     const createdInWindowSet = new Set<SignalId>(createdInWindowIds)
     // A created-in-window signal still has to match an active search, so it
     // only joins the candidate set through the search hits — never as a bare id.
@@ -716,6 +755,8 @@ export const listSignalsUseCase = (
     const histogramTimeRange = resolveHistogramTimeRange({
       timeRange: parsed.timeRange,
       now,
+      maxSpanDays: parsed.histogramMaxSpanDays,
+      ...(latestActivityAt ? { latestActivityAt } : {}),
     })
     // Pick a "nice" bucket width adaptively so a 6-day default window lands at ~3h–4h bars while
     // longer user-selected ranges step up to 6h, 12h, 1d, etc. Same helper the Traces histogram
@@ -828,6 +869,7 @@ export const listSignalsUseCase = (
     const trendTimeRange = resolveTrendTimeRange({
       timeRange: parsed.timeRange,
       now,
+      ...(latestActivityAt ? { latestActivityAt } : {}),
     })
     const trendScaffold = buildBucketScaffold(trendTimeRange)
     const tagsTimeRange = resolveTagsTimeRange({ timeRange: selectedTimeRange, now })
