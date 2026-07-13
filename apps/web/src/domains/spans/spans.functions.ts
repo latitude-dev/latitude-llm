@@ -30,6 +30,7 @@ export interface SpanRecord {
   readonly operation: Operation
   readonly provider: string
   readonly model: string
+  readonly agentName: string
   readonly toolName: string
   readonly toolNames: readonly string[]
   readonly toolCallId: string
@@ -94,6 +95,7 @@ const serializeSpan = (span: Span): SpanRecord => ({
   operation: span.operation,
   provider: span.provider,
   model: span.model,
+  agentName: span.agentName,
   toolName: span.toolName,
   toolNames: span.toolNames,
   toolCallId: span.toolCallId,

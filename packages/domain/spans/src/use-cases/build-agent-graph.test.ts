@@ -298,6 +298,100 @@ describe("buildAgentGraph", () => {
     expect(graph.nodeForSpanId.get(agentGraphSpanKey("trace-a", "root"))?.kind).toBe("main")
   })
 
+  describe("agent name labeling", () => {
+    it("labels a tool subagent from the collapsed invoke_agent's agentName", () => {
+      clock = 0
+      const spans = [
+        span({ spanId: "root", operation: "invoke_agent", agentName: "main_agent" }),
+        gen({ spanId: "g1", parentSpanId: "root", agentName: "main_agent" }),
+        // The tool call span carries the *parent* agent's name — must be ignored.
+        span({
+          spanId: "tool",
+          operation: "execute_tool",
+          toolName: "task",
+          toolCallId: "tc1",
+          parentSpanId: "root",
+          agentName: "main_agent",
+        }),
+        span({ spanId: "inner", operation: "invoke_agent", parentSpanId: "tool", agentName: "npc_actor" }),
+        gen({ spanId: "g2", parentSpanId: "inner", agentName: "npc_actor" }),
+      ]
+      const graph = buildAgentGraph({ spans })
+      const sub = findSubagents(graph)[0] as AgentNode
+      expect(sub.ref.spanId).toBe("tool")
+      expect(sub.label).toBe("npc_actor")
+    })
+
+    it("falls back to the tool name when no agent name is present", () => {
+      clock = 0
+      const spans = [
+        span({ spanId: "root", operation: "invoke_agent" }),
+        gen({ spanId: "g1", parentSpanId: "root" }),
+        span({ spanId: "tool", operation: "execute_tool", toolName: "task", toolCallId: "tc1", parentSpanId: "root" }),
+        span({ spanId: "inner", operation: "invoke_agent", parentSpanId: "tool" }),
+        gen({ spanId: "g2", parentSpanId: "inner" }),
+      ]
+      const graph = buildAgentGraph({ spans })
+      expect((findSubagents(graph)[0] as AgentNode).label).toBe("task")
+    })
+
+    it("never labels a tool boundary from its own agentName", () => {
+      clock = 0
+      const spans = [
+        span({ spanId: "root", operation: "invoke_agent" }),
+        gen({ spanId: "g1", parentSpanId: "root" }),
+        // execute_tool boundary owning a generation directly; its own agentName is the parent's.
+        span({
+          spanId: "tool",
+          operation: "execute_tool",
+          toolName: "task",
+          toolCallId: "tc1",
+          parentSpanId: "root",
+          agentName: "main_agent",
+        }),
+        gen({ spanId: "g2", parentSpanId: "tool" }),
+      ]
+      const graph = buildAgentGraph({ spans })
+      expect((findSubagents(graph)[0] as AgentNode).label).toBe("task")
+    })
+
+    it("names the main node from the root invoke_agent's agentName", () => {
+      clock = 0
+      const spans = [
+        span({ spanId: "root", operation: "invoke_agent", name: "ai.generateText", agentName: "orchestrator" }),
+        gen({ spanId: "g1", parentSpanId: "root", agentName: "orchestrator" }),
+      ]
+      const graph = buildAgentGraph({ spans })
+      expect((graph.roots[0] as AgentNode).label).toBe("orchestrator")
+    })
+
+    it("names an invoke_agent subagent from its own agentName", () => {
+      clock = 0
+      const spans = [
+        span({ spanId: "root", operation: "invoke_agent", agentName: "main_agent" }),
+        gen({ spanId: "g0", parentSpanId: "root", agentName: "main_agent" }),
+        span({ spanId: "a", operation: "invoke_agent", parentSpanId: "root", agentName: "researcher" }),
+        gen({ spanId: "ga", parentSpanId: "a", agentName: "researcher" }),
+      ]
+      const graph = buildAgentGraph({ spans })
+      const sub = findSubagents(graph).find((s) => s.ref.spanId === "a") as AgentNode
+      expect(sub.label).toBe("researcher")
+    })
+
+    it("falls back to an owned generation's agentName when the identity span carries none", () => {
+      clock = 0
+      const spans = [
+        span({ spanId: "root", operation: "invoke_agent" }),
+        gen({ spanId: "g1", parentSpanId: "root" }),
+        span({ spanId: "tool", operation: "execute_tool", toolName: "task", toolCallId: "tc1", parentSpanId: "root" }),
+        span({ spanId: "inner", operation: "invoke_agent", parentSpanId: "tool" }),
+        gen({ spanId: "g2", parentSpanId: "inner", agentName: "worker" }),
+      ]
+      const graph = buildAgentGraph({ spans })
+      expect((findSubagents(graph)[0] as AgentNode).label).toBe("worker")
+    })
+  })
+
   it("is resilient to orphan / cycle / self-referential parents", () => {
     clock = 0
     const spans = [

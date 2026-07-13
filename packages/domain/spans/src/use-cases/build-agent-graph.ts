@@ -14,6 +14,7 @@ export interface AgentGraphSpanInput {
   readonly name: string
   readonly toolName: string
   readonly model: string
+  readonly agentName?: string
   readonly statusCode: string
   readonly startTime: string | Date
   readonly endTime: string | Date
@@ -128,6 +129,13 @@ function addSpanMetrics(target: MutableMetrics, span: AgentGraphSpanInput): void
   target.tokensCacheRead += span.tokensCacheRead ?? 0
   target.tokensCacheCreate += span.tokensCacheCreate ?? 0
   target.tokensReasoning += span.tokensReasoning ?? 0
+}
+
+/** Earliest-by-start ordering (span id tiebreak) used to pick a node's identity invoke_agent span. */
+function isEarlierByStart(a: AgentGraphSpanInput, b: AgentGraphSpanInput): boolean {
+  const byStart = toMs(a.startTime) - toMs(b.startTime)
+  if (byStart !== 0) return byStart < 0
+  return a.spanId.localeCompare(b.spanId) < 0
 }
 
 /** Latest-first ordering used to pick a node's representative generation span. */
@@ -258,6 +266,26 @@ function buildTraceGraph(traceId: string, traceSpans: readonly AgentGraphSpanInp
   const nodeCandidateIds = new Set<string>()
   for (const c of candidates) {
     if (isBoundary(c)) nodeCandidateIds.add(c.spanId)
+  }
+
+  // ── agent-identity invoke_agent span per node ──
+  // The span whose `agentName` names the node's agent: the invoke_agent boundary
+  // itself, or — for a tool boundary — the transparent invoke_agent collapsed into
+  // it (earliest by start). Never the execute_tool boundary span: SDKs stamp the
+  // *parent* agent's name on the tool call, so its own value is the wrong agent.
+  const identitySpanByCandidateId = new Map<string, AgentGraphSpanInput>()
+  if (backedMain) identitySpanByCandidateId.set(backedMain.spanId, backedMain)
+  for (const c of candidates) {
+    if (nodeCandidateIds.has(c.spanId) && c.operation === "invoke_agent") {
+      identitySpanByCandidateId.set(c.spanId, c)
+    }
+  }
+  for (const c of candidates) {
+    if (classificationById.get(c.spanId) !== "transparent") continue
+    const owner = effectiveOwner(c)
+    if (!owner || owner.operation !== "execute_tool" || !nodeCandidateIds.has(owner.spanId)) continue
+    const existing = identitySpanByCandidateId.get(owner.spanId)
+    if (!existing || isEarlierByStart(c, existing)) identitySpanByCandidateId.set(owner.spanId, c)
   }
 
   const traceStart = traceSpans.reduce((min, s) => Math.min(min, toMs(s.startTime)), Number.POSITIVE_INFINITY)
@@ -407,6 +435,11 @@ function buildTraceGraph(traceId: string, traceSpans: readonly AgentGraphSpanInp
     ;(state.node as { models: readonly string[] }).models = models
     ;(state.node as { representativeGenerationSpanId: string | undefined }).representativeGenerationSpanId =
       representative?.spanId
+    const refSpanId = state.node.ref.spanId
+    const identity = refSpanId ? identitySpanByCandidateId.get(refSpanId) : undefined
+    const resolvedAgentName =
+      identity?.agentName?.trim() || gens.map((gen) => gen.agentName?.trim()).find((name) => name)
+    if (resolvedAgentName) (state.node as { label: string }).label = resolvedAgentName
     // Duration is the boundary wall-clock, already set; carry it into own.
     ;(state.own as MutableMetrics).durationMs = state.node.endTime - state.node.startTime
   }

@@ -26,6 +26,7 @@ function makeSpan(
     operation: "",
     provider: "",
     model: "",
+    agentName: "",
     toolName: "",
     toolNames: [],
     toolCallId: "",
