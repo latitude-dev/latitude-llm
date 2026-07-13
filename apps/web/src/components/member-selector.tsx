@@ -11,9 +11,10 @@ import {
   Icon,
   Text,
 } from "@repo/ui"
-import { CircleDashedIcon, CircleUserRoundIcon } from "lucide-react"
+import { CircleDashedIcon } from "lucide-react"
 import { type RefObject, useMemo, useRef, useState } from "react"
 import { useProjectMembersCollection } from "../domains/members/members.collection.ts"
+import { compareMemberLabelsCurrentUserFirst } from "../domains/members/pick-users-from-members.ts"
 import { useAuthenticatedUser } from "../routes/_authenticated/-route-data.ts"
 
 interface MemberOption {
@@ -25,21 +26,12 @@ interface MemberOption {
 }
 
 const UNASSIGNED_KEY = "@unassigned"
-const ME_KEY = "@me"
 
 const UNASSIGNED_OPTION: MemberOption = {
   key: UNASSIGNED_KEY,
   userId: null,
   label: "Unassigned",
   searchText: "unassigned none nobody",
-  imageSrc: null,
-}
-
-const ME_OPTION: MemberOption = {
-  key: ME_KEY,
-  userId: null,
-  label: "Me",
-  searchText: "me yourself",
   imageSrc: null,
 }
 
@@ -53,9 +45,9 @@ interface MemberSelectorProps {
 }
 
 /**
- * Single-select picker for assigning an organization member. The list is `Unassigned` → `Me`
- * (current-user shortcut) → every active org member with a muted `(You)` suffix on the row that
- * points at the current user. The trigger displays the selected option's avatar/icon + label.
+ * Single-select picker for assigning an organization member. The list is `Unassigned`, then the
+ * current user, then every other active org member alphabetically. The current user's row shows a
+ * muted `(You)` suffix. The trigger displays the selected option's avatar/icon + label.
  *
  * `open` / `onOpenChange` make the popup controllable so other UI (e.g. a row's kebab menu) can
  * open the picker programmatically without imperative refs.
@@ -86,10 +78,19 @@ export function MemberSelector({
           imageSrc: m.image,
         }
       })
-      .sort((a, b) => a.label.localeCompare(b.label))
-  }, [members])
+      .sort((a, b) =>
+        compareMemberLabelsCurrentUserFirst(
+          me.id,
+          { memberUserId: a.userId as string, label: a.label },
+          {
+            memberUserId: b.userId as string,
+            label: b.label,
+          },
+        ),
+      )
+  }, [members, me.id])
 
-  const items = useMemo<MemberOption[]>(() => [UNASSIGNED_OPTION, ME_OPTION, ...memberOptions], [memberOptions])
+  const items = useMemo<MemberOption[]>(() => [UNASSIGNED_OPTION, ...memberOptions], [memberOptions])
 
   // Map `value` (the userId stored on the saved search) to the matching option, falling back to the
   // Unassigned option when null. This keeps the trigger styled like every other selection state and
@@ -111,10 +112,6 @@ export function MemberSelector({
         setInputValue("")
         if (!picked || picked.key === UNASSIGNED_KEY) {
           onChange(null)
-          return
-        }
-        if (picked.key === ME_KEY) {
-          onChange(me.id)
           return
         }
         onChange(picked.userId)
@@ -152,7 +149,7 @@ export function MemberSelector({
 function SelectedTrigger({ selected }: { readonly selected: MemberOption }) {
   return (
     <span className="flex min-w-0 items-center gap-1.5">
-      <OptionLeading item={selected} mutedIcon />
+      <OptionLeading item={selected} />
       <Text.H5 ellipsis noWrap color={selected.key === UNASSIGNED_KEY ? "foregroundMuted" : "foreground"}>
         {selected.label}
       </Text.H5>
@@ -165,23 +162,14 @@ function MemberOptionRow({ item, isMe }: { readonly item: MemberOption; readonly
     <ComboboxItem value={item}>
       <OptionLeading item={item} />
       <Text.H5 className="flex-1 truncate">{item.label}</Text.H5>
-      {item.key !== ME_KEY && item.key !== UNASSIGNED_KEY && isMe ? (
-        <Text.H6 color="foregroundMuted">(You)</Text.H6>
-      ) : null}
+      {item.key !== UNASSIGNED_KEY && isMe ? <Text.H6 color="foregroundMuted">(You)</Text.H6> : null}
     </ComboboxItem>
   )
 }
 
-function OptionLeading({ item, mutedIcon = false }: { readonly item: MemberOption; readonly mutedIcon?: boolean }) {
+function OptionLeading({ item }: { readonly item: MemberOption }) {
   if (item.key === UNASSIGNED_KEY) {
     return <Icon icon={CircleDashedIcon} size="default" color="foregroundMuted" />
-  }
-  if (item.key === ME_KEY) {
-    return mutedIcon ? (
-      <Icon icon={CircleUserRoundIcon} size="default" color="foregroundMuted" />
-    ) : (
-      <Icon icon={CircleUserRoundIcon} size="default" />
-    )
   }
   return <Avatar size="xs" name={item.label} imageSrc={item.imageSrc} />
 }

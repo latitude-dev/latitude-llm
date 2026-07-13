@@ -638,11 +638,14 @@ if typing.TYPE_CHECKING:
     from .signal_monitoring_state import (
         SignalMonitoringState,
         SignalMonitoringState_Automatic,
+        SignalMonitoringState_Failed,
         SignalMonitoringState_Generating,
         SignalMonitoringState_Idle,
         SignalMonitoringState_Realigning,
     )
     from .signal_monitoring_state_automatic import SignalMonitoringStateAutomatic
+    from .signal_monitoring_state_failed import SignalMonitoringStateFailed
+    from .signal_monitoring_state_failed_phase import SignalMonitoringStateFailedPhase
     from .signal_monitoring_state_generating import SignalMonitoringStateGenerating
     from .signal_monitoring_state_idle import SignalMonitoringStateIdle
     from .signal_monitoring_state_realigning import SignalMonitoringStateRealigning
@@ -1298,10 +1301,13 @@ _dynamic_imports: typing.Dict[str, str] = {
     "SignalLifecycleItem": ".signal_lifecycle_item",
     "SignalMonitoringState": ".signal_monitoring_state",
     "SignalMonitoringStateAutomatic": ".signal_monitoring_state_automatic",
+    "SignalMonitoringStateFailed": ".signal_monitoring_state_failed",
+    "SignalMonitoringStateFailedPhase": ".signal_monitoring_state_failed_phase",
     "SignalMonitoringStateGenerating": ".signal_monitoring_state_generating",
     "SignalMonitoringStateIdle": ".signal_monitoring_state_idle",
     "SignalMonitoringStateRealigning": ".signal_monitoring_state_realigning",
     "SignalMonitoringState_Automatic": ".signal_monitoring_state",
+    "SignalMonitoringState_Failed": ".signal_monitoring_state",
     "SignalMonitoringState_Generating": ".signal_monitoring_state",
     "SignalMonitoringState_Idle": ".signal_monitoring_state",
     "SignalMonitoringState_Realigning": ".signal_monitoring_state",
@@ -1985,10 +1991,13 @@ __all__ = [
     "SignalLifecycleItem",
     "SignalMonitoringState",
     "SignalMonitoringStateAutomatic",
+    "SignalMonitoringStateFailed",
+    "SignalMonitoringStateFailedPhase",
     "SignalMonitoringStateGenerating",
     "SignalMonitoringStateIdle",
     "SignalMonitoringStateRealigning",
     "SignalMonitoringState_Automatic",
+    "SignalMonitoringState_Failed",
     "SignalMonitoringState_Generating",
     "SignalMonitoringState_Idle",
     "SignalMonitoringState_Realigning",

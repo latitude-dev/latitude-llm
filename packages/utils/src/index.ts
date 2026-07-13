@@ -12,6 +12,7 @@ export { extractLeadingEmoji } from "./extractLeadingEmoji.ts"
 export {
   cacheHitRate,
   formatBytes,
+  formatChartWindowCaption,
   formatCount,
   formatDuration,
   formatPercentage,
@@ -34,4 +35,5 @@ export {
 export { mapByEntityId } from "./map-by-entity-id.ts"
 export { LatitudeObservabilityTestError } from "./observability-test.ts"
 export { relativeTime } from "./relativeTime.ts"
+export { hammingDistance64, simhash64 } from "./simhash.ts"
 export { toTitle } from "./to-title.ts"

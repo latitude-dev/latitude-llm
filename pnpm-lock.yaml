@@ -998,21 +998,12 @@ importers:
       '@domain/billing':
         specifier: workspace:*
         version: link:../billing
-      '@domain/events':
-        specifier: workspace:*
-        version: link:../events
       '@domain/feature-flags':
         specifier: workspace:*
         version: link:../feature-flags
       '@domain/monitors':
         specifier: workspace:*
         version: link:../monitors
-      '@domain/projects':
-        specifier: workspace:*
-        version: link:../projects
-      '@domain/queue':
-        specifier: workspace:*
-        version: link:../queue
       '@domain/shared':
         specifier: workspace:*
         version: link:../shared

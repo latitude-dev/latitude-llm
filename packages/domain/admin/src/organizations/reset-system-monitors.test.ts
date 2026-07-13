@@ -18,6 +18,7 @@ const makeOrg = (projectIds: readonly string[]): AdminOrganizationDetails => ({
   name: "Acme",
   slug: "acme",
   stripeCustomerId: null,
+  wantsShowcase: false,
   members: [],
   projects: projectIds.map((id) => ({ id, name: `Project ${id}`, slug: id, createdAt: at })),
   sandboxes: [],
@@ -30,6 +31,7 @@ const fakeAdminRepo = (org: AdminOrganizationDetails) =>
     findById: () => Effect.succeed(org),
     findManySummariesByIds: () => Effect.die("findManySummariesByIds not used"),
     findFirstApiKeyId: () => Effect.die("findFirstApiKeyId not used"),
+    setWantsShowcase: () => Effect.die("setWantsShowcase not used"),
   })
 
 const run = (org: AdminOrganizationDetails, monitorRepo: ReturnType<typeof createFakeMonitorRepository>["repo"]) =>

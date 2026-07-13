@@ -1,4 +1,8 @@
-import { type AgentDispatchConfig, AgentDispatchConfigRepository, type AgentDispatchKind } from "@domain/agent-dispatch"
+import {
+  AgentDispatchConfigRepository,
+  type AgentDispatchConfigRow,
+  type AgentDispatchKind,
+} from "@domain/agent-dispatch"
 import {
   generateId,
   OrganizationId,
@@ -7,21 +11,21 @@ import {
   type SqlClientShape,
   toRepositoryError,
 } from "@domain/shared"
-import { and, eq, gte, inArray, sql } from "drizzle-orm"
+import { and, eq, gte, inArray, isNull, or, sql } from "drizzle-orm"
 import { Effect, Layer } from "effect"
 import type { Operator } from "../client.ts"
 import { agentDispatchConfigs } from "../schema/agent-dispatch-configs.ts"
 import { agentDispatches } from "../schema/agent-dispatches.ts"
 
-const toDomainConfig = (row: typeof agentDispatchConfigs.$inferSelect): AgentDispatchConfig => ({
+const toDomainConfig = (row: typeof agentDispatchConfigs.$inferSelect): AgentDispatchConfigRow => ({
   id: row.id,
   organizationId: OrganizationId(row.organizationId),
-  projectId: ProjectId(row.projectId),
+  projectId: row.projectId === null ? null : ProjectId(row.projectId),
   integrationId: row.integrationId,
   kind: row.kind as AgentDispatchKind,
   enabled: row.enabled,
-  triggers: row.triggers as AgentDispatchConfig["triggers"],
-  target: row.target as AgentDispatchConfig["target"],
+  triggers: row.triggers as AgentDispatchConfigRow["triggers"],
+  target: row.target as AgentDispatchConfigRow["target"],
   promptTemplate: row.promptTemplate,
   guardrails: row.guardrails,
   createdAt: row.createdAt,
@@ -29,7 +33,7 @@ const toDomainConfig = (row: typeof agentDispatchConfigs.$inferSelect): AgentDis
 })
 
 export const AgentDispatchConfigRepositoryLive = Layer.succeed(AgentDispatchConfigRepository, {
-  listEnabledByProject: (projectId) =>
+  listByProjectIncludingDefaults: (projectId) =>
     Effect.gen(function* () {
       const sqlClient = (yield* SqlClient) as SqlClientShape<Operator>
       const rows = yield* sqlClient
@@ -39,17 +43,16 @@ export const AgentDispatchConfigRepositoryLive = Layer.succeed(AgentDispatchConf
             .from(agentDispatchConfigs)
             .where(
               and(
-                eq(agentDispatchConfigs.projectId, projectId),
                 eq(agentDispatchConfigs.organizationId, organizationId),
-                eq(agentDispatchConfigs.enabled, true),
+                or(isNull(agentDispatchConfigs.projectId), eq(agentDispatchConfigs.projectId, projectId)),
               ),
             ),
         )
-        .pipe(Effect.mapError((e) => toRepositoryError(e, "listAgentDispatchConfigs")))
+        .pipe(Effect.mapError((e) => toRepositoryError(e, "listAgentDispatchConfigsIncludingDefaults")))
       return rows.map(toDomainConfig)
     }),
 
-  listByProject: (projectId) =>
+  findDefaultByIntegration: (integrationId) =>
     Effect.gen(function* () {
       const sqlClient = (yield* SqlClient) as SqlClientShape<Operator>
       const rows = yield* sqlClient
@@ -59,16 +62,18 @@ export const AgentDispatchConfigRepositoryLive = Layer.succeed(AgentDispatchConf
             .from(agentDispatchConfigs)
             .where(
               and(
-                eq(agentDispatchConfigs.projectId, projectId),
+                isNull(agentDispatchConfigs.projectId),
+                eq(agentDispatchConfigs.integrationId, integrationId),
                 eq(agentDispatchConfigs.organizationId, organizationId),
               ),
-            ),
+            )
+            .limit(1),
         )
-        .pipe(Effect.mapError((e) => toRepositoryError(e, "listAgentDispatchConfigsByProject")))
-      return rows.map(toDomainConfig)
+        .pipe(Effect.mapError((e) => toRepositoryError(e, "findDefaultAgentDispatchConfig")))
+      return rows[0] ? toDomainConfig(rows[0]) : null
     }),
 
-  findByProjectAndIntegration: ({ projectId, integrationId }) =>
+  findOverrideByProjectAndIntegration: ({ projectId, integrationId }) =>
     Effect.gen(function* () {
       const sqlClient = (yield* SqlClient) as SqlClientShape<Operator>
       const rows = yield* sqlClient
@@ -85,19 +90,8 @@ export const AgentDispatchConfigRepositoryLive = Layer.succeed(AgentDispatchConf
             )
             .limit(1),
         )
-        .pipe(Effect.mapError((e) => toRepositoryError(e, "findAgentDispatchConfigByProjectIntegration")))
+        .pipe(Effect.mapError((e) => toRepositoryError(e, "findAgentDispatchConfigOverride")))
       return rows[0] ? toDomainConfig(rows[0]) : null
-    }),
-
-  listByOrganization: () =>
-    Effect.gen(function* () {
-      const sqlClient = (yield* SqlClient) as SqlClientShape<Operator>
-      const rows = yield* sqlClient
-        .query((db, organizationId) =>
-          db.select().from(agentDispatchConfigs).where(eq(agentDispatchConfigs.organizationId, organizationId)),
-        )
-        .pipe(Effect.mapError((e) => toRepositoryError(e, "listAgentDispatchConfigsByOrg")))
-      return rows.map(toDomainConfig)
     }),
 
   findById: (id) =>
@@ -131,8 +125,8 @@ export const AgentDispatchConfigRepositoryLive = Layer.succeed(AgentDispatchConf
               integrationId: config.integrationId,
               kind: config.kind,
               enabled: config.enabled,
-              triggers: [...config.triggers],
-              target: config.target as Record<string, unknown>,
+              triggers: config.triggers ? [...config.triggers] : null,
+              target: config.target as Record<string, unknown> | null,
               promptTemplate: config.promptTemplate,
               guardrails: config.guardrails,
             })
@@ -140,8 +134,8 @@ export const AgentDispatchConfigRepositoryLive = Layer.succeed(AgentDispatchConf
               target: agentDispatchConfigs.id,
               set: {
                 enabled: config.enabled,
-                triggers: [...config.triggers],
-                target: config.target as Record<string, unknown>,
+                triggers: config.triggers ? [...config.triggers] : null,
+                target: config.target as Record<string, unknown> | null,
                 promptTemplate: config.promptTemplate,
                 guardrails: config.guardrails,
                 updatedAt: new Date(),
@@ -184,7 +178,7 @@ export const AgentDispatchConfigRepositoryLive = Layer.succeed(AgentDispatchConf
         .pipe(Effect.mapError((e) => toRepositoryError(e, "deleteAgentDispatchConfigsByIntegration")))
     }),
 
-  countDispatchesInLast24h: (configId) =>
+  countDispatchesInLast24h: ({ configId, projectId }) =>
     Effect.gen(function* () {
       const sqlClient = (yield* SqlClient) as SqlClientShape<Operator>
       const since = new Date(Date.now() - 24 * 60 * 60 * 1000)
@@ -196,6 +190,7 @@ export const AgentDispatchConfigRepositoryLive = Layer.succeed(AgentDispatchConf
             .where(
               and(
                 eq(agentDispatches.configId, configId),
+                eq(agentDispatches.projectId, projectId),
                 eq(agentDispatches.organizationId, organizationId),
                 gte(agentDispatches.claimedAt, since),
                 inArray(agentDispatches.status, ["claimed", "dispatched"]),
@@ -206,7 +201,7 @@ export const AgentDispatchConfigRepositoryLive = Layer.succeed(AgentDispatchConf
       return rows[0]?.count ?? 0
     }),
 
-  hasRecentDispatchForSource: ({ configId, sourceId, cooldownMinutes }) =>
+  hasRecentDispatchForSource: ({ configId, projectId, sourceId, cooldownMinutes }) =>
     Effect.gen(function* () {
       if (cooldownMinutes <= 0) return false
       const sqlClient = (yield* SqlClient) as SqlClientShape<Operator>
@@ -219,6 +214,7 @@ export const AgentDispatchConfigRepositoryLive = Layer.succeed(AgentDispatchConf
             .where(
               and(
                 eq(agentDispatches.configId, configId),
+                eq(agentDispatches.projectId, projectId),
                 eq(agentDispatches.sourceId, sourceId),
                 eq(agentDispatches.organizationId, organizationId),
                 gte(agentDispatches.claimedAt, since),

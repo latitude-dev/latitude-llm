@@ -7,11 +7,11 @@ import { Effect } from "effect"
 import { describe, expect, it } from "vitest"
 import { OrganizationRepository } from "../ports/organization-repository.ts"
 import { createFakeOrganizationRepository } from "../testing/index.ts"
-import { provisionOrganizationWorkspaceUseCase } from "./provision-organization-workspace.ts"
+import { completeOnboardingUseCase } from "./complete-onboarding.ts"
 
 const ORG_ID = OrganizationId("oooooooooooooooooooooooo")
 
-describe("provisionOrganizationWorkspaceUseCase", () => {
+describe("completeOnboardingUseCase", () => {
   it("creates the organization outbox event, default api key, and default project inside one transaction", async () => {
     let transactionCalls = 0
     let inTransaction = false
@@ -50,7 +50,7 @@ describe("provisionOrganizationWorkspaceUseCase", () => {
     }
 
     const result = await Effect.runPromise(
-      provisionOrganizationWorkspaceUseCase({
+      completeOnboardingUseCase({
         organizationId: ORG_ID,
         actorUserId: "user-1",
         name: "Acme",
@@ -84,7 +84,9 @@ describe("provisionOrganizationWorkspaceUseCase", () => {
     )
 
     expect(transactionCalls).toBe(1)
-    expect(writtenEvents).toHaveLength(4)
+    // No SampleProjectCreated event: provisioning no longer seeds a per-org demo
+    // (Phase 3 cutover, task C1). Only ApiKeyCreated, ProjectCreated, OrganizationCreated.
+    expect(writtenEvents).toHaveLength(3)
     expect(writtenEvents[0]).toMatchObject({
       eventName: "ApiKeyCreated",
       organizationId: ORG_ID,
@@ -115,28 +117,17 @@ describe("provisionOrganizationWorkspaceUseCase", () => {
         slug: "acme",
       },
     })
-    expect(writtenEvents[3]).toMatchObject({
-      eventName: "SampleProjectCreated",
-      organizationId: ORG_ID,
-      payload: {
-        organizationId: ORG_ID,
-      },
-    })
     const apiKeys = [...savedApiKeys.values()]
     expect(apiKeys).toHaveLength(1)
     expect(apiKeys[0]?.name).toBe(DEFAULT_API_KEY_NAME)
     expect(apiKeys[0]?.token.startsWith(SANDBOX_API_KEY_TOKEN_PREFIX)).toBe(false)
-    expect(savedProjects).toHaveLength(2)
+    // Only the real default project — no seeded "Sample project" anymore.
+    expect(savedProjects).toHaveLength(1)
     expect(savedProjects[0]).toMatchObject({ name: "My project", slug: "my-project", organizationId: ORG_ID })
-    expect(savedProjects[1]).toMatchObject({
-      name: "Sample project",
-      slug: "sample-project",
-      organizationId: ORG_ID,
-      settings: { isSample: true },
-    })
+    expect(savedProjects.some((project) => project.settings?.isSample === true)).toBe(false)
     expect(savedOrganizations.get(ORG_ID)).toMatchObject({ id: ORG_ID, settings: { wantsShowcase: true } })
     expect(result.defaultApiKey).toMatchObject({ name: DEFAULT_API_KEY_NAME })
     expect(result.defaultProject).toMatchObject({ name: "My project", slug: "my-project" })
-    expect(result.sampleProject).toMatchObject({ name: "Sample project", slug: "sample-project" })
+    expect(result).not.toHaveProperty("sampleProject")
   })
 })

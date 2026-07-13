@@ -6,7 +6,14 @@ import {
   type AdminOrganizationSandbox,
   type AdminOrganizationSummary,
 } from "@domain/admin"
-import { type ApiKeyId, NotFoundError, OrganizationId, SqlClient, type SqlClientShape } from "@domain/shared"
+import {
+  type ApiKeyId,
+  NotFoundError,
+  OrganizationId,
+  type OrganizationSettings,
+  SqlClient,
+  type SqlClientShape,
+} from "@domain/shared"
 import { and, asc, desc, eq, inArray, isNull, sql } from "drizzle-orm"
 import { Effect, Layer } from "effect"
 import type { Operator } from "../client.ts"
@@ -49,6 +56,7 @@ export const AdminOrganizationRepositoryLive = Layer.effect(
                 name: organizations.name,
                 slug: organizations.slug,
                 stripeCustomerId: organizations.stripeCustomerId,
+                settings: organizations.settings,
                 createdAt: organizations.createdAt,
                 updatedAt: organizations.updatedAt,
               })
@@ -149,6 +157,7 @@ export const AdminOrganizationRepositoryLive = Layer.effect(
             name: orgRow.name,
             slug: orgRow.slug,
             stripeCustomerId: orgRow.stripeCustomerId ?? null,
+            wantsShowcase: (orgRow.settings as OrganizationSettings | null)?.wantsShowcase ?? false,
             members: memberDtos,
             projects: projectDtos,
             sandboxes: sandboxDtos,
@@ -267,6 +276,33 @@ export const AdminOrganizationRepositoryLive = Layer.effect(
           )
           return rows[0]?.id ?? null
         }) as Effect.Effect<ApiKeyId | null, never>,
+
+      setWantsShowcase: (organizationId: OrganizationId, enabled: boolean) =>
+        Effect.gen(function* () {
+          const rows = yield* sqlClient.query((db) =>
+            db
+              .select({ settings: organizations.settings })
+              .from(organizations)
+              .where(eq(organizations.id, organizationId))
+              .limit(1),
+          )
+          const row = rows[0]
+          if (!row) {
+            return yield* Effect.fail(new NotFoundError({ entity: "Organization", id: organizationId }))
+          }
+
+          const nextSettings: OrganizationSettings = {
+            ...((row.settings as OrganizationSettings | null) ?? {}),
+            wantsShowcase: enabled,
+          }
+
+          yield* sqlClient.query((db) =>
+            db
+              .update(organizations)
+              .set({ settings: nextSettings, updatedAt: new Date() })
+              .where(eq(organizations.id, organizationId)),
+          )
+        }),
     }
   }),
 )

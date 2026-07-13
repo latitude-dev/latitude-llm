@@ -3,7 +3,9 @@ import { createFileRoute } from "@tanstack/react-router"
 import { CircleSlashIcon, LayoutGridIcon, SearchIcon, TriangleAlertIcon } from "lucide-react"
 import { useCallback, useEffect, useMemo, useState } from "react"
 import { allToolsMonitorTarget } from "../../../../../domains/monitors/monitor-target.ts"
+import { useAnalyticsTimeWindow } from "../../../../../domains/projects/use-analytics-time-window.ts"
 import { useProjectTools, useToolCallHistogram } from "../../../../../domains/tools/tools.collection.ts"
+import { useProjectFirstTraceAt, useProjectLastTraceAt } from "../../../../../domains/traces/traces.collection.ts"
 import { ListingLayout as Layout } from "../../../../../layouts/ListingLayout/index.tsx"
 import { useDebounce } from "../../../../../lib/hooks/useDebounce.ts"
 import { useParamState } from "../../../../../lib/hooks/useParamState.ts"
@@ -12,11 +14,7 @@ import { useTableColumnSettings } from "../-components/table-column-settings.ts"
 import { TimeFilterDropdown } from "../-components/time-filter-dropdown.tsx"
 import { useRouteProject } from "../-route-data.ts"
 import { AddTargetMonitorButton } from "../monitors/-components/add-target-monitor-button.tsx"
-import {
-  DEFAULT_TOOLS_RANGE_SECONDS,
-  getToolStatuses,
-  pickToolTrendBucketSeconds,
-} from "./-components/tool-formatters.ts"
+import { getToolStatuses, pickToolTrendBucketSeconds } from "./-components/tool-formatters.ts"
 import { ToolsAnalyticsPanel } from "./-components/tools-analytics-panel.tsx"
 import { ToolsDiscoveryBanner } from "./-components/tools-discovery-banner.tsx"
 import { ToolsEmptyState } from "./-components/tools-empty-state.tsx"
@@ -72,8 +70,15 @@ export const Route = createFileRoute("/_authenticated/projects/$projectSlug/tool
 
 function ToolsPageContent() {
   const project = useRouteProject()
-  const [timeFrom, setTimeFrom] = useParamState("toolsTimeFrom", "")
-  const [timeTo, setTimeTo] = useParamState("toolsTimeTo", "")
+  const { firstTraceAt } = useProjectFirstTraceAt({ projectId: project.id })
+  const { lastTraceAt } = useProjectLastTraceAt({ projectId: project.id })
+  const tw = useAnalyticsTimeWindow({
+    project,
+    fromKey: "toolsTimeFrom",
+    toKey: "toolsTimeTo",
+    allTimeLowerBoundIso: firstTraceAt,
+    lastActivityIso: lastTraceAt,
+  })
   const [searchQuery, setSearchQuery] = useParamState("toolsSearch", "")
   const [searchInput, setSearchInput] = useValueWithDefault(searchQuery)
   const [statusTab, setStatusTab] = useParamState("toolsStatus", "all", {
@@ -101,26 +106,30 @@ function ToolsPageContent() {
     [searchInput],
   )
 
-  // Recomputed only when the URL params change, so query keys stay stable
-  // across re-renders.
-  const range = useMemo(() => {
-    const toMs = timeTo ? Date.parse(timeTo) : Date.now()
-    const fromMs = timeFrom ? Date.parse(timeFrom) : toMs - DEFAULT_TOOLS_RANGE_SECONDS * 1000
-    return {
-      fromIso: new Date(fromMs).toISOString(),
-      toIso: new Date(toMs).toISOString(),
-    }
-  }, [timeFrom, timeTo])
+  // Tools' queries require a concrete lower bound, so "All time" resolves to the project's earliest
+  // activity (falling back to the default window when the project has no traces yet).
+  const range = useMemo(
+    () => ({ fromIso: tw.listRange.fromIso ?? tw.trendRange.fromIso, toIso: tw.listRange.toIso }),
+    [tw.listRange, tw.trendRange],
+  )
   const trendBucketSeconds = useMemo(
     () => pickToolTrendBucketSeconds(Date.parse(range.toIso) - Date.parse(range.fromIso)),
     [range],
+  )
+  // The histogram clamps to the anchored window (≤ project window, latest-activity anchored when All
+  // time) so it stays consistent with the Traces/Users charts and never scans the full history per
+  // bucket; the list/counts above keep the full `range`. Explicit ranges are shown in full.
+  const histogramRange = useMemo(() => (tw.isAllTime ? tw.trendRange : range), [tw.isAllTime, tw.trendRange, range])
+  const histogramBucketSeconds = useMemo(
+    () => pickToolTrendBucketSeconds(Date.parse(histogramRange.toIso) - Date.parse(histogramRange.fromIso)),
+    [histogramRange],
   )
 
   const { data: analytics, isLoading } = useProjectTools({ projectId: project.id, range, trendBucketSeconds })
   const { data: histogram = [], isLoading: histogramLoading } = useToolCallHistogram({
     projectId: project.id,
-    range,
-    bucketSeconds: trendBucketSeconds,
+    range: histogramRange,
+    bucketSeconds: histogramBucketSeconds,
   })
 
   const visibleTools = useMemo(() => {
@@ -142,9 +151,11 @@ function ToolsPageContent() {
 
   useEffect(() => {
     setFocusedToolName(undefined)
-  }, [searchQuery, statusTab, rawSorting, timeFrom, timeTo])
+  }, [searchQuery, statusTab, rawSorting, tw.timeFrom, tw.timeTo])
 
   const hasAnyTools = (analytics?.tools.length ?? 0) > 0
+  // `hasAnyTools` is over the All-time default, so no tools here means the project has never had a
+  // tool call — a robust empty-state signal (not the best-effort `firstTraceAt`).
   const showEmptyState = !isLoading && !hasAnyTools && !searchQuery && statusTab === "all"
   const hasOnlyDefinedTools = !isLoading && hasAnyTools && (analytics?.totals.tracesWithToolCalls ?? 0) === 0
 
@@ -154,12 +165,9 @@ function ToolsPageContent() {
         <Layout.ActionsRow>
           <Layout.ActionRowItem>
             <TimeFilterDropdown
-              startTimeFrom={timeFrom || range.fromIso}
-              startTimeTo={timeTo || undefined}
-              onChange={(from, to) => {
-                setTimeFrom(from ?? "")
-                setTimeTo(to ?? "")
-              }}
+              {...(tw.pickerStartFrom ? { startTimeFrom: tw.pickerStartFrom } : {})}
+              {...(tw.pickerStartTo ? { startTimeTo: tw.pickerStartTo } : {})}
+              onChange={tw.onTimeChange}
             />
             <Tabs
               variant="bordered"
@@ -216,7 +224,10 @@ function ToolsPageContent() {
             <ToolsAnalyticsPanel
               analytics={analytics}
               histogram={histogram}
-              bucketSeconds={trendBucketSeconds}
+              bucketSeconds={histogramBucketSeconds}
+              rangeFromIso={histogramRange.fromIso}
+              rangeToIso={histogramRange.toIso}
+              isAllTime={tw.isAllTime}
               isLoading={isLoading || histogramLoading}
             />
           </div>

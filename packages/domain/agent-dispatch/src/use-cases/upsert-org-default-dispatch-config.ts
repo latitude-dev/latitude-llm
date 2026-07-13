@@ -1,40 +1,36 @@
-import { generateId, type OrganizationId, type ProjectId, type SqlClient } from "@domain/shared"
+import { generateId, type OrganizationId, type SqlClient } from "@domain/shared"
 import { Effect } from "effect"
 import { DEFAULT_COOLDOWN_MINUTES, DEFAULT_MAX_DISPATCHES_PER_DAY } from "../constants.ts"
 import type {
-  AgentDispatchConfig,
+  AgentDispatchConfigRow,
   AgentDispatchGuardrails,
   AgentDispatchKind,
-  AgentDispatchTarget,
+  StoredAgentDispatchTarget,
 } from "../entities/agent-dispatch-config.ts"
 import type { AgentDispatchTrigger } from "../entities/agent-dispatch-context.ts"
 import { AgentDispatchConfigRepository } from "../ports/repositories.ts"
 
-export interface UpsertAgentDispatchConfigInput {
+export interface UpsertOrgDefaultDispatchConfigInput {
   readonly organizationId: OrganizationId
-  readonly projectId: ProjectId
   readonly integrationId: string
   readonly kind: AgentDispatchKind
   readonly enabled: boolean
   readonly triggers: readonly AgentDispatchTrigger[]
-  readonly target: AgentDispatchTarget
+  readonly target: StoredAgentDispatchTarget
   readonly promptTemplate?: string | null
   readonly guardrails?: AgentDispatchGuardrails
 }
 
-export const upsertAgentDispatchConfigUseCase = (input: UpsertAgentDispatchConfigInput) =>
+export const upsertOrgDefaultDispatchConfigUseCase = (input: UpsertOrgDefaultDispatchConfigInput) =>
   Effect.gen(function* () {
     const configRepo = yield* AgentDispatchConfigRepository
-    const existing = yield* configRepo.findByProjectAndIntegration({
-      projectId: input.projectId,
-      integrationId: input.integrationId,
-    })
+    const existing = yield* configRepo.findDefaultByIntegration(input.integrationId)
 
     const now = new Date()
-    const config: AgentDispatchConfig = {
+    const config: AgentDispatchConfigRow = {
       id: existing?.id ?? generateId(),
       organizationId: input.organizationId,
-      projectId: input.projectId,
+      projectId: null,
       integrationId: input.integrationId,
       kind: input.kind,
       enabled: input.enabled,
@@ -51,8 +47,8 @@ export const upsertAgentDispatchConfigUseCase = (input: UpsertAgentDispatchConfi
     }
 
     return yield* configRepo.upsert(config)
-  }).pipe(Effect.withSpan("agentDispatch.upsertConfig")) as Effect.Effect<
-    AgentDispatchConfig,
+  }).pipe(Effect.withSpan("agentDispatch.upsertOrgDefaultConfig")) as Effect.Effect<
+    AgentDispatchConfigRow,
     unknown,
     AgentDispatchConfigRepository | SqlClient
   >

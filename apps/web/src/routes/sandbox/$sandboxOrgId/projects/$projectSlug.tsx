@@ -85,6 +85,7 @@ function SandboxTracesContent({ sandboxOrgId, projectSlug }: { sandboxOrgId: str
   const [activeTraceId, setActiveTraceId] = useParamState("traceId", "")
   const [activeSessionId, setActiveSessionId] = useParamState("sessionId", "")
   const [, setSelectedSpanId] = useParamState("spanId", "")
+  const [, setSelectedSpanTraceId] = useParamState("spanTraceId", "")
 
   const tabDefaultSorting = activeTab === "sessions" ? DEFAULT_SESSION_SORTING : DEFAULT_TRACE_SORTING
   const [sortBy, setSortBy] = useParamState("sortBy", tabDefaultSorting.column)
@@ -138,7 +139,8 @@ function SandboxTracesContent({ sandboxOrgId, projectSlug }: { sandboxOrgId: str
   const closeTraceDrawer = useCallback(() => {
     setActiveTraceId("")
     setSelectedSpanId("")
-  }, [setActiveTraceId, setSelectedSpanId])
+    setSelectedSpanTraceId("")
+  }, [setActiveTraceId, setSelectedSpanId, setSelectedSpanTraceId])
 
   const onActiveTraceChange = (traceId: string | undefined) => {
     if (!traceId) {
@@ -154,15 +156,18 @@ function SandboxTracesContent({ sandboxOrgId, projectSlug }: { sandboxOrgId: str
     (sessionId: string, traceId?: string) => {
       setActiveSessionId(sessionId)
       setActiveTraceId(traceId ?? "")
+      setSelectedSpanId("")
+      setSelectedSpanTraceId("")
     },
-    [setActiveSessionId, setActiveTraceId],
+    [setActiveSessionId, setActiveTraceId, setSelectedSpanId, setSelectedSpanTraceId],
   )
 
   const closeSessionPanel = useCallback(() => {
     setActiveSessionId("")
     setActiveTraceId("")
     setSelectedSpanId("")
-  }, [setActiveSessionId, setActiveTraceId, setSelectedSpanId])
+    setSelectedSpanTraceId("")
+  }, [setActiveSessionId, setActiveTraceId, setSelectedSpanId, setSelectedSpanTraceId])
 
   // Next/prev trace navigation off the loaded list (Traces tab drawer).
   const navigateTrace = useCallback(

@@ -13,6 +13,8 @@ import { useMemo } from "react"
 import { projectScopeData, projectScopeKey, useProjectScope } from "../projects/project-scope.tsx"
 import {
   countTracesByProject,
+  getProjectFirstTraceAt,
+  getProjectLastTraceAt,
   getSessionMomentIntelligence,
   getTraceCohortSummary,
   getTraceConversationChunk,
@@ -98,20 +100,73 @@ export function useTracesCount({
   projectId,
   filters,
   searchQuery,
+  enabled = true,
 }: {
   readonly projectId: string
   readonly filters?: FilterSet
   readonly searchQuery?: string
+  readonly enabled?: boolean
 }) {
   const scope = useProjectScope()
   const { data: totalCount = 0, isLoading } = useQuery({
     queryKey: [...projectScopeKey(scope), "traces-count", projectId, filters, searchQuery],
     queryFn: () => countTracesByProject({ data: { ...projectScopeData(scope), projectId, filters, searchQuery } }),
     staleTime: 30_000,
-    enabled: projectId.length > 0,
+    enabled: enabled && projectId.length > 0,
   })
 
   return { totalCount, isLoading }
+}
+
+/**
+ * Latest trace `start_time` (ISO) matching `filters`, or null. Used to anchor the histogram to
+ * real activity when the list is showing "All time" but recent activity is empty.
+ */
+export function useProjectLastTraceAt({
+  projectId,
+  filters,
+  searchQuery,
+  enabled = true,
+}: {
+  readonly projectId: string
+  readonly filters?: FilterSet
+  readonly searchQuery?: string
+  readonly enabled?: boolean
+}) {
+  const scope = useProjectScope()
+  const { data = null } = useQuery({
+    queryKey: [...projectScopeKey(scope), "traces-last-at", projectId, filters, searchQuery],
+    queryFn: () =>
+      getProjectLastTraceAt({
+        data: { ...projectScopeData(scope), projectId, filters, ...(searchQuery ? { searchQuery } : {}) },
+      }),
+    staleTime: 30_000,
+    enabled: enabled && projectId.length > 0,
+  })
+
+  return { lastTraceAt: data }
+}
+
+/**
+ * Earliest trace `start_time` (ISO) for the whole project, or null. The concrete "All time" lower
+ * bound for analytics screens whose endpoints require one (robust, unlike `project.firstTraceAt`).
+ */
+export function useProjectFirstTraceAt({
+  projectId,
+  enabled = true,
+}: {
+  readonly projectId: string
+  readonly enabled?: boolean
+}) {
+  const scope = useProjectScope()
+  const { data = null } = useQuery({
+    queryKey: [...projectScopeKey(scope), "traces-first-at", projectId],
+    queryFn: () => getProjectFirstTraceAt({ data: { ...projectScopeData(scope), projectId } }),
+    staleTime: 30_000,
+    enabled: enabled && projectId.length > 0,
+  })
+
+  return { firstTraceAt: data }
 }
 
 export function useTraceMetrics({

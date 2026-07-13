@@ -4,6 +4,8 @@ import { ExternalLinkIcon, SearchIcon, UsersRoundIcon } from "lucide-react"
 import { useEffect, useMemo, useState } from "react"
 import { useProjectUsers, useUsersOverview } from "../../../../../domains/end-users/end-users.collection.ts"
 import { allUsersMonitorTarget } from "../../../../../domains/monitors/monitor-target.ts"
+import { useAnalyticsTimeWindow } from "../../../../../domains/projects/use-analytics-time-window.ts"
+import { useProjectFirstTraceAt, useProjectLastTraceAt } from "../../../../../domains/traces/traces.collection.ts"
 import { ListingLayout as Layout } from "../../../../../layouts/ListingLayout/index.tsx"
 import { useDebounce } from "../../../../../lib/hooks/useDebounce.ts"
 import { useParamState } from "../../../../../lib/hooks/useParamState.ts"
@@ -12,7 +14,7 @@ import { useTableColumnSettings } from "../-components/table-column-settings.ts"
 import { TimeFilterDropdown } from "../-components/time-filter-dropdown.tsx"
 import { useRouteProject } from "../-route-data.ts"
 import { AddTargetMonitorButton } from "../monitors/-components/add-target-monitor-button.tsx"
-import { DEFAULT_USERS_RANGE_SECONDS, pickUserTrendBucketSeconds } from "./-components/user-formatters.ts"
+import { pickUserTrendBucketSeconds } from "./-components/user-formatters.ts"
 import { UsersAnalyticsPanel } from "./-components/users-analytics-panel.tsx"
 import {
   USERS_COLUMN_OPTIONS,
@@ -23,6 +25,8 @@ import {
 
 const DEFAULT_SORTING: UsersTableSorting = { column: "lastSeen", direction: "desc" }
 const USER_SEARCH_DEBOUNCE_MS = 300
+// Server caps `trendBucketSeconds` at 31 days; clamp so an all-time span never exceeds it.
+const USER_TREND_BUCKET_MAX_SECONDS = 31 * 24 * 60 * 60
 const SORT_PARAM_PATTERN = /^(lastSeen|firstSeen|sessions|errors|tokens|cost|costAvg|costMedian):(asc|desc)$/
 
 function serializeSorting(sorting: UsersTableSorting): string {
@@ -69,8 +73,15 @@ function UsersEmptyState() {
 
 function UsersPage() {
   const project = useRouteProject()
-  const [timeFrom, setTimeFrom] = useParamState("usersTimeFrom", "")
-  const [timeTo, setTimeTo] = useParamState("usersTimeTo", "")
+  const { firstTraceAt } = useProjectFirstTraceAt({ projectId: project.id })
+  const { lastTraceAt } = useProjectLastTraceAt({ projectId: project.id })
+  const tw = useAnalyticsTimeWindow({
+    project,
+    fromKey: "usersTimeFrom",
+    toKey: "usersTimeTo",
+    allTimeLowerBoundIso: firstTraceAt,
+    lastActivityIso: lastTraceAt,
+  })
   const [searchQuery, setSearchQuery] = useParamState("usersSearch", "")
   const [searchInput, setSearchInput] = useValueWithDefault(searchQuery)
   const [rawSorting, setRawSorting] = useParamState("usersSort", serializeSorting(DEFAULT_SORTING), {
@@ -95,24 +106,24 @@ function UsersPage() {
     columns: USERS_COLUMN_OPTIONS,
   })
 
-  // Recomputed only when the URL params change, so query keys stay stable
-  // across re-renders. Defaults to the last 30 days, like the tools section.
-  const range = useMemo(() => {
-    const toMs = timeTo ? Date.parse(timeTo) : Date.now()
-    const fromMs = timeFrom ? Date.parse(timeFrom) : toMs - DEFAULT_USERS_RANGE_SECONDS * 1000
-    return {
-      fromIso: new Date(fromMs).toISOString(),
-      toIso: new Date(toMs).toISOString(),
-    }
-  }, [timeFrom, timeTo])
+  // The list uses a concrete range ("All time" → [firstTraceAt, now]); its per-user activity
+  // sparklines are bucketed over it, so the bucket is capped at the server's 31-day max.
+  const range = useMemo(
+    () => ({ fromIso: tw.listRange.fromIso ?? tw.trendRange.fromIso, toIso: tw.listRange.toIso }),
+    [tw.listRange, tw.trendRange],
+  )
   const trendBucketSeconds = useMemo(
-    () => pickUserTrendBucketSeconds(Date.parse(range.toIso) - Date.parse(range.fromIso)),
+    () =>
+      Math.min(
+        pickUserTrendBucketSeconds(Date.parse(range.toIso) - Date.parse(range.fromIso)),
+        USER_TREND_BUCKET_MAX_SECONDS,
+      ),
     [range],
   )
 
   useEffect(() => {
     setFocusedUserId(undefined)
-  }, [searchQuery, rawSorting, timeFrom, timeTo])
+  }, [searchQuery, rawSorting, tw.timeFrom, tw.timeTo])
 
   const {
     data: users,
@@ -129,14 +140,19 @@ function UsersPage() {
     ...(searchQuery ? { searchQuery } : {}),
   })
 
+  // The overview's per-day/hour bucketing would blow up over an all-time span, so All time uses the
+  // clamped, latest-activity-anchored trend range; an explicit/default range is shown as-is.
+  const overviewRange = useMemo(() => (tw.isAllTime ? tw.trendRange : range), [tw.isAllTime, tw.trendRange, range])
   const { data: overview, isLoading: overviewLoading } = useUsersOverview({
     projectId: project.id,
-    timeRange: range,
+    timeRange: overviewRange,
   })
 
   const showSkeletons = isLoading
 
-  const hasActiveFilters = searchQuery !== "" || Boolean(timeFrom || timeTo)
+  const hasActiveFilters = searchQuery !== "" || tw.hasExplicitRange
+  // `totalCount` is over the All-time default, so 0 means the project has no users at all — a robust
+  // empty-state signal (not the best-effort `firstTraceAt`).
   const showEmptyState = !showSkeletons && totalCount === 0 && !hasActiveFilters
 
   if (showEmptyState) {
@@ -156,12 +172,9 @@ function UsersPage() {
           <Layout.ActionsRow>
             <Layout.ActionRowItem>
               <TimeFilterDropdown
-                startTimeFrom={timeFrom || range.fromIso}
-                {...(timeTo ? { startTimeTo: timeTo } : {})}
-                onChange={(from, to) => {
-                  setTimeFrom(from ?? "")
-                  setTimeTo(to ?? "")
-                }}
+                {...(tw.pickerStartFrom ? { startTimeFrom: tw.pickerStartFrom } : {})}
+                {...(tw.pickerStartTo ? { startTimeTo: tw.pickerStartTo } : {})}
+                onChange={tw.onTimeChange}
               />
             </Layout.ActionRowItem>
             <Layout.ActionRowItem>
@@ -188,10 +201,10 @@ function UsersPage() {
           <UsersAnalyticsPanel
             overview={overview}
             isLoading={overviewLoading}
-            onRangeSelect={(selected) => {
-              setTimeFrom(selected?.from ?? "")
-              setTimeTo(selected?.to ?? "")
-            }}
+            rangeFromIso={overviewRange.fromIso}
+            rangeToIso={overviewRange.toIso}
+            isAllTime={tw.isAllTime}
+            onRangeSelect={tw.onBrushSelect}
           />
         </div>
         <UsersView

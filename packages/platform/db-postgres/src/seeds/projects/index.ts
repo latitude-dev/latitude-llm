@@ -22,6 +22,10 @@ import {
   SEED_LATITUDE_TAXONOMY_PROJECT_ID,
   SEED_LATITUDE_TAXONOMY_PROJECT_NAME,
   SEED_LATITUDE_TAXONOMY_PROJECT_SLUG,
+  SEED_OLD_TRACES_QA_FROM_DAYS_AGO,
+  SEED_OLD_TRACES_QA_PROJECT_ID,
+  SEED_OLD_TRACES_QA_PROJECT_NAME,
+  SEED_OLD_TRACES_QA_PROJECT_SLUG,
   SEED_ORG_ID,
   SEED_PROJECT_ID,
   SEED_PROJECT_NAME,
@@ -105,4 +109,23 @@ const seedLatitudeDogfoodProjects: Seeder = {
     }),
 }
 
-export const projectSeeders: readonly Seeder[] = [seedProjects, seedLatitudeDogfoodProjects]
+// QA fixture: project with a backdated first_trace_at; its ClickHouse spans (seeded separately) all predate the default window.
+const seedOldTracesQaProject: Seeder = {
+  name: "projects/old-traces-qa",
+  run: (ctx: SeedContext) =>
+    Effect.gen(function* () {
+      const project = createProject({
+        id: SEED_OLD_TRACES_QA_PROJECT_ID,
+        organizationId: SEED_ORG_ID,
+        name: SEED_OLD_TRACES_QA_PROJECT_NAME,
+        slug: SEED_OLD_TRACES_QA_PROJECT_SLUG,
+        firstTraceAt: new Date(Date.now() - SEED_OLD_TRACES_QA_FROM_DAYS_AGO * 24 * 60 * 60 * 1000),
+      })
+      yield* ctx.repositories.project.save(project)
+      console.log(
+        `  -> project: ${project.name} (${project.slug}) [first_trace_at ~${SEED_OLD_TRACES_QA_FROM_DAYS_AGO}d ago]`,
+      )
+    }),
+}
+
+export const projectSeeders: readonly Seeder[] = [seedProjects, seedLatitudeDogfoodProjects, seedOldTracesQaProject]

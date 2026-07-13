@@ -4,6 +4,7 @@ import { HotkeysProvider } from "@tanstack/react-hotkeys"
 import { createRootRoute, HeadContent, Outlet, Scripts } from "@tanstack/react-router"
 import type { ReactNode } from "react"
 import { lazy, Suspense } from "react"
+import { ReadOnlyProjectModal } from "../components/read-only-project-modal.tsx"
 import { getThemePreference } from "../domains/theme/theme.functions.ts"
 import { ErrorFallback } from "../lib/client-error-reporting.tsx"
 import { AppQueryProvider } from "../lib/data/query-client.tsx"
@@ -76,6 +77,7 @@ function RootDocument({ children }: Readonly<{ children: ReactNode }>) {
         <PostHogProvider />
         <AppQueryProvider>
           <HotkeysProvider>{children}</HotkeysProvider>
+          <ReadOnlyProjectModal />
           <Toaster />
           {AgentationToolbar !== null ? (
             <Suspense fallback={null}>

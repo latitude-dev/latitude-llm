@@ -6,8 +6,6 @@ const YEAR_MS = 365 * DAY_MS
 const HOUR_SECONDS = 60 * 60
 const DAY_SECONDS = 24 * HOUR_SECONDS
 
-export const DEFAULT_USERS_RANGE_SECONDS = 30 * DAY_SECONDS // last 30 days, like the tools section
-
 /** Same bar as the tools dashboard: error rates at or above this render red. */
 export const USER_FAILING_ERROR_RATE = 0.05
 

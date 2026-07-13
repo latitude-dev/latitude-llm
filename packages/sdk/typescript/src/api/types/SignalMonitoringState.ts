@@ -3,7 +3,7 @@
 import type * as Latitude from "../index.js";
 
 /**
- * Whether the signal is currently being monitored: `automatic`, `idle`, `generating`, or `realigning`.
+ * Whether the signal is currently being monitored: `automatic`, `idle`, `generating`, `realigning`, or `failed`.
  */
 export type SignalMonitoringState =
     /**
@@ -17,7 +17,10 @@ export type SignalMonitoringState =
     | Latitude.SignalMonitoringState.Generating
     /**
      * An active evaluation is being realigned. */
-    | Latitude.SignalMonitoringState.Realigning;
+    | Latitude.SignalMonitoringState.Realigning
+    /**
+     * The most recent generation or realignment workflow for this signal ended in failure. */
+    | Latitude.SignalMonitoringState.Failed;
 
 export namespace SignalMonitoringState {
     export interface Automatic {
@@ -36,5 +39,24 @@ export namespace SignalMonitoringState {
         kind: "realigning";
         /** Id of the evaluation currently being realigned. */
         evaluationId: string;
+    }
+
+    export interface Failed {
+        kind: "failed";
+        /** Which workflow failed: `generate` (creating the evaluation) or `realign` (updating it). */
+        phase: SignalMonitoringStateFailed.Phase;
+        /** Id of the evaluation whose realignment failed. Absent when the failure was during `generate`. */
+        evaluationId?: string | undefined;
+        /** Resolved failure message, or `null` once Temporal has dropped the failed run. */
+        reason: string | null;
+    }
+
+    export namespace SignalMonitoringStateFailed {
+        /** Which workflow failed: `generate` (creating the evaluation) or `realign` (updating it). */
+        export const Phase = {
+            Generate: "generate",
+            Realign: "realign",
+        } as const;
+        export type Phase = (typeof Phase)[keyof typeof Phase];
     }
 }

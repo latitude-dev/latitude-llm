@@ -109,6 +109,26 @@ const formatUnknownError = (error: unknown): string => {
   return String(error)
 }
 
+// Temporal nests the failure (WorkflowFailedError -> ActivityFailure ->
+// ApplicationFailure); the outer wrappers are generic, so return the deepest
+// cause's message — the actual reason the activity threw.
+export const resolveWorkflowFailureReason = (error: unknown): string | null => {
+  let current: unknown = error
+  let reason: string | null = null
+  const seen = new Set<unknown>()
+
+  while (current instanceof Error && !seen.has(current)) {
+    seen.add(current)
+    const message = toNonEmptyString(current.message)
+    if (message !== undefined && message !== OPAQUE_TEMPORAL_ERROR_MESSAGE) {
+      reason = message
+    }
+    current = current.cause
+  }
+
+  return reason
+}
+
 export class TemporalConnectionError extends Data.TaggedError("TemporalConnectionError")<{
   readonly message: string
 }> {}
@@ -183,13 +203,27 @@ export function createWorkflowQuerier(client: Client): WorkflowQuerierShape {
     describe: (workflowId) =>
       Effect.promise(async (): Promise<WorkflowDescription | null> => {
         try {
-          const description = await client.workflow.getHandle(workflowId).describe()
+          const handle = client.workflow.getHandle(workflowId)
+          const description = await handle.describe()
+          const status = mapWorkflowStatus(description.status.name)
+
+          // `describe()` lacks the failure reason; `result()` rejects with it.
+          // Only for failed runs, so the common path stays a single RPC.
+          let failure: string | null = null
+          if (status === "failed") {
+            try {
+              await handle.result()
+            } catch (error) {
+              failure = resolveWorkflowFailureReason(error)
+            }
+          }
 
           return {
-            status: mapWorkflowStatus(description.status.name),
+            status,
             runId: description.runId,
             startTime: description.startTime,
             closeTime: description.closeTime ?? null,
+            failure,
           }
         } catch (error) {
           if (error instanceof WorkflowNotFoundError) {

@@ -37,6 +37,7 @@ import {
   updateDatasetRow,
 } from "../../../../../domains/datasets/datasets.functions.ts"
 import { ListingLayout as Layout, listingLayoutIntrinsicScroll } from "../../../../../layouts/ListingLayout/index.tsx"
+import { handleMutationError } from "../../../../../lib/data/handle-mutation-error.ts"
 import { getQueryClient } from "../../../../../lib/data/query-client.tsx"
 import { useParamState } from "../../../../../lib/hooks/useParamState.ts"
 import { type BulkSelection, useSelectableRows } from "../../../../../lib/hooks/useSelectableRows.ts"
@@ -553,6 +554,8 @@ function DatasetRowsView({
         getQueryClient().invalidateQueries({
           queryKey: ["datasetRow", datasetId, rid],
         })
+      } catch (error) {
+        handleMutationError(error)
       } finally {
         setSaving(false)
       }
@@ -607,6 +610,8 @@ function DatasetRowsView({
         queryKey: ["datasetRowCount", datasetId],
       })
       getQueryClient().invalidateQueries({ queryKey: ["dataset", datasetId] })
+    } catch (error) {
+      handleMutationError(error)
     } finally {
       setDeleting(false)
     }

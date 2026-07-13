@@ -54,7 +54,8 @@ const insertPointer = async (params: {
 // a real Temporal connection. `undefined` status models a missing workflow
 // (reclaimable); a status models a live-or-terminal regeneration run.
 const fakeWorkflowQuerier = (status?: WorkflowExecutionStatus): WorkflowQuerierShape => ({
-  describe: () => Effect.succeed(status ? { status, runId: "run-1", startTime: new Date(), closeTime: null } : null),
+  describe: () =>
+    Effect.succeed(status ? { status, runId: "run-1", startTime: new Date(), closeTime: null, failure: null } : null),
   query: () => Effect.succeed(null),
 })
 

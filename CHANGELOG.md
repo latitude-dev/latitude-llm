@@ -2,6 +2,117 @@
 
 ## Unreleased
 
+## v0.3.47 - 2026-07-13
+
+### Traces
+
+- Defaulted Sessions/Traces and Tools/Signals/Users time filters to All time, with bounded chart windows so older project data is visible without expensive trend scans (ref: #3955).
+- Fixed "Clear dates" so it removes date bounds instead of restoring the previous default window, and stopped showing false onboarding states for projects that only have older traces (ref: #3955).
+- Added session-wide span links in the Conversation tab so messages and tool calls can jump to spans from earlier traces in the same session (ref: #3965).
+- Reduced ClickHouse memory usage for trace detail reads by loading trace summaries separately from source-span message content (ref: ad54c4154).
+
+### Telemetry
+
+- Released `@latitude-data/telemetry` 3.6.0 with `createCodemodeTelemetry()` for Cloudflare Think Codemode tracing, including nested tool-call spans, capture/redaction options, and error recording (ref: #3956).
+- Updated the Cloudflare Think telemetry guide and example app for Codemode tracing and local verification (ref: #3956).
+
+### Models
+
+- Refreshed the bundled models.dev model catalog (ref: #3983).
+
+## v0.3.46 - 2026-07-10
+
+### Traces
+
+- Added a session-wide grouped Spans tab in the session detail drawer (ref: #3962).
+- Fixed the "Waiting for your first trace" screen getting stuck on projects that have only older traces (or a backfilled `first_trace_at`): the onboarding now confirms emptiness with an unwindowed trace count instead of trusting the best-effort `first_trace_at` flag (ref: #3964).
+
+## v0.3.45 - 2026-07-10
+
+### Traces
+
+- Stopped showing the "Waiting for your first trace" onboarding for projects whose traces all predate the default 30-day window. They now open the normal Sessions/Traces view with the time filter available, so the range can be widened to reveal older data (ref: #3961).
+
+### Behaviours
+
+- Removed the breadcrumb row (Back button + topic-path chips) above the behaviours trajectory chart (ref: #3958).
+
+### Models
+
+- Refreshed the bundled models.dev model catalog (ref: #3957).
+
+## v0.3.44 - 2026-07-09
+
+### Agent Dispatch
+
+- Added org-default dispatch configuration with per-project overrides: dispatch repos now resolve from an org-wide default that any project can override or reset, replacing the single flat config (ref: #3952).
+
+### Signals
+
+- Showed freshly created signals immediately even before they have any occurrences (ref: #3945).
+- Removed the ghost modal left behind after confirming a mute-signal action (ref: #3946).
+- Removed the redundant "Me" option from assignee selectors (ref: #3948).
+
+## v0.3.43 - 2026-07-09
+
+### Monitors
+
+- Gave threshold monitors an open/close incident lifecycle: a sustained breach now opens a single incident and dedups until a 30-minute exit dwell closes it, instead of emailing on every ~5-minute sweep. Editing a monitor with an open incident now evicts the stale incident (ref: #3949).
+
+### Showcase
+
+- Flipped onboarding to the shared read-only showcase: new orgs get only their real empty default project and land on `/projects/lat-demo` when the showcase resolves, with a fallback to their own default project. Retired the old per-signup/claim demo-project seeding machinery (ref: #3940).
+
+## v0.3.42 - 2026-07-09
+
+### Signals
+
+- Generated signals with a research agent instead of a fixed prompt loop, giving richer investigation output (ref: #3922).
+
+### Agent Dispatch
+
+- Skipped agent dispatch for user-created signals on `signal.discovered` so only auto-discovered signals trigger dispatch (ref: #3925).
+- Improved the signal dispatch prompt fallback (ref: #3913).
+
+### Notifications
+
+- Enriched signal discovery notification messages (ref: #3937).
+
+### Evaluations
+
+- Surfaced GEPA optimization failures and added support for single-example signals (ref: #3935).
+
+### Showcase
+
+- Added read-only UI variance and org-wide showcase dismissal (S6) (ref: #3918).
+- Added a backoffice showcase section for managing the demo project (S7) (ref: #3919).
+- Scoped project-section Postgres domains onto `withScopedPostgres` (ref: #3909).
+
+### API
+
+- Restored `getApiKey` as a tool and converted all handler-form operations to execute-form (ref: #3938, #3934).
+- Rejected `gtePercentile` on span row filters and fractional values on integer ClickHouse filter fields (ref: #3839, #3924).
+
+### Performance
+
+- Reused instruction extractions across similar system prompts, normalized the instruction-extractor cache key, and raised the verbatim threshold to cut flagger work (ref: #3928, #3926).
+
+### Web
+
+- Optimized the public design system (ref: #3929).
+
+### Telemetry
+
+- Tracked self-hosted deployments in PostHog.
+
+### Infra
+
+- Tuned production ECS memory and autoscaling.
+
+### Maintenance
+
+- Updated bundled models.dev data, refreshed the knip configuration, and bumped `@temporalio/*` to 1.17.5 for a workflow isolation fix (ref: #3895, #3921).
+
 ## v0.3.41 - 2026-07-07
 
 ### Agent Dispatch

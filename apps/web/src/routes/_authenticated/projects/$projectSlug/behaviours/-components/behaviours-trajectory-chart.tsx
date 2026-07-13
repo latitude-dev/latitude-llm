@@ -1,6 +1,6 @@
 import { Button, cn, Icon, Tabs, Text, Tooltip } from "@repo/ui"
 import { formatCount } from "@repo/utils"
-import { ChevronLeftIcon, ChevronRightIcon } from "lucide-react"
+import { ChevronRightIcon } from "lucide-react"
 import { useMemo, useState } from "react"
 import { useBehaviourTrajectory } from "../../../../../../domains/taxonomy/taxonomy.collection.ts"
 import type {
@@ -241,7 +241,6 @@ export function BehavioursTrajectoryChart({
       ? Math.max(...buckets.map((candidate) => Number(candidate.split(":")[1] ?? candidate)).filter(Number.isFinite), 0)
       : 0
   const chartHeight = Math.max(visibleNodes.length * ROW_HEIGHT_PX, ROW_HEIGHT_PX)
-  const canGoBack = visibleLevel.trail.length > 0
   const currentPath = visibleLevel.trail.map((node) => node.cluster.id)
 
   return (
@@ -267,28 +266,6 @@ export function BehavioursTrajectoryChart({
           onSelect={(value) => setAxis(value)}
         />
       </div>
-
-      {canGoBack || visibleLevel.trail.length > 0 ? (
-        <div className="mt-3 flex flex-wrap items-center gap-2">
-          {canGoBack ? (
-            <Button variant="ghost" size="sm" onClick={() => onSelectPath(currentPath.slice(0, -1))}>
-              <Icon icon={ChevronLeftIcon} size="xs" />
-              Back
-            </Button>
-          ) : null}
-          {visibleLevel.trail.map((node, index) => (
-            <button
-              type="button"
-              key={node.cluster.id}
-              className="inline-flex items-center gap-1 rounded-full border border-border/60 bg-background/70 px-2 py-1 text-xs text-muted-foreground hover:bg-muted/40"
-              onClick={() => onSelectPath(currentPath.slice(0, index + 1))}
-            >
-              {index > 0 ? <Icon icon={ChevronRightIcon} size="xs" color="foregroundMuted" /> : null}
-              <span className="max-w-36 truncate">{node.cluster.name}</span>
-            </button>
-          ))}
-        </div>
-      ) : null}
 
       <div className="mt-4 grid grid-cols-[minmax(8rem,12rem)_minmax(0,1fr)] gap-3">
         <div className="flex flex-col" style={{ height: chartHeight }}>

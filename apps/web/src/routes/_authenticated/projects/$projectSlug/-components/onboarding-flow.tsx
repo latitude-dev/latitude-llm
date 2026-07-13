@@ -107,7 +107,9 @@ export function OnboardingFlow({
   const [selectedFlaggerSlugs, setSelectedFlaggerSlugs] = useState<ReadonlySet<string> | null>(null)
   const [isSavingFlaggers, setIsSavingFlaggers] = useState(false)
   const { data: allProjects = [] } = useProjectsCollection()
-  const sampleProject = allProjects.find((project) => project.id !== projectId && project.settings.isSample === true)
+  // The demo to explore is now the shared, pre-created showcase (merged into the
+  // collection as the `isShowcase` row) rather than a per-org seeded sample.
+  const sampleProject = allProjects.find((project) => project.isShowcase === true)
 
   const form = useForm({
     defaultValues: {
