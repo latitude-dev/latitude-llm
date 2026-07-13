@@ -30,6 +30,7 @@ export interface SignalDiscoveredNotificationRequest {
   readonly payload: SignalDiscoveredPayload
   readonly notificationId: NotificationId
   readonly projectId: ProjectId
+  readonly slackEligible: boolean
 }
 
 export type RequestSignalDiscoveredNotificationsResult =
@@ -55,11 +56,17 @@ export const requestSignalDiscoveredNotificationsUseCase = (input: RequestSignal
       return { status: "skipped", reason: "user-origin-signal" } as const
     }
 
-    const recipients = yield* resolveRecipients({
-      organizationId: input.organizationId,
-      projectId: input.projectId,
-      kind: "signal.discovered",
-    })
+    const hasSignalAssignee = Boolean(signal.assigneeId)
+    let recipients: readonly UserId[]
+    if (signal.assigneeId) {
+      recipients = [UserId(signal.assigneeId)]
+    } else {
+      recipients = yield* resolveRecipients({
+        organizationId: input.organizationId,
+        projectId: input.projectId,
+        kind: "signal.discovered",
+      })
+    }
     if (recipients.length === 0) {
       return { status: "skipped", reason: "no-recipients" } as const
     }
@@ -78,6 +85,7 @@ export const requestSignalDiscoveredNotificationsUseCase = (input: RequestSignal
         payload,
         notificationId: NotificationId(generateId()),
         projectId: input.projectId,
+        slackEligible: !hasSignalAssignee,
       }),
     )
 

@@ -68,6 +68,7 @@ export interface IncidentNotificationRequest {
   readonly notificationId: NotificationId
   /** Project anchor for cascade-delete on `ProjectDeleted`. */
   readonly projectId: ProjectId
+  readonly slackEligible: boolean
 }
 
 export type RequestIncidentNotificationsResult =
@@ -543,11 +544,17 @@ export const requestIncidentNotificationsUseCase = (input: RequestIncidentNotifi
       { concurrency: "unbounded" },
     )
 
-    const recipients = yield* resolveRecipients({
-      organizationId: incident.organizationId,
-      projectId: incident.projectId,
-      kind: incidentNotificationKey,
-    })
+    const hasSignalAssignee = Boolean(signal?.assigneeId)
+    let recipients: readonly UserId[]
+    if (signal?.assigneeId) {
+      recipients = [UserId(signal.assigneeId)]
+    } else {
+      recipients = yield* resolveRecipients({
+        organizationId: incident.organizationId,
+        projectId: incident.projectId,
+        kind: incidentNotificationKey,
+      })
+    }
 
     if (recipients.length === 0) {
       return { status: "skipped", reason: "no-recipients" } as const
@@ -586,6 +593,7 @@ export const requestIncidentNotificationsUseCase = (input: RequestIncidentNotifi
       payload,
       notificationId: NotificationId(generateId()),
       projectId: incident.projectId,
+      slackEligible: !hasSignalAssignee,
     }))
 
     return { status: "ok", requests } as const

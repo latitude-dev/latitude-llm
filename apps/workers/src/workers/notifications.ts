@@ -74,6 +74,7 @@ interface ProducerRequest {
   /** One per-recipient notification ID (all share the same idempotencyKey).
    *  The first one is passed to Slack jobs for chart URL generation. */
   readonly notificationId: string
+  readonly slackEligible?: boolean
 }
 
 const fanOutSlackRoutes = (
@@ -83,6 +84,7 @@ const fanOutSlackRoutes = (
   Effect.gen(function* () {
     if (requests.length === 0) return
     const first = requests[0]!
+    if (first.slackEligible === false) return
 
     const repo = yield* SlackIntegrationRepository
     const integration = yield* repo.findActiveByOrganizationId().pipe(Effect.orElseSucceed(() => null))
