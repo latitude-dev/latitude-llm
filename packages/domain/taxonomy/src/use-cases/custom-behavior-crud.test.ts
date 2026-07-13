@@ -75,6 +75,15 @@ describe("createCustomBehavior", () => {
     ).rejects.toBeInstanceOf(CustomBehaviorNameInvalidError)
   })
 
+  it("rejects a name with no url-safe characters instead of failing to slug", async () => {
+    const { layer } = makeLayer()
+    await expect(
+      Effect.runPromise(
+        createCustomBehavior({ projectId: PROJECT_ID, name: "!!! 🎉", filterSet: {} }).pipe(Effect.provide(layer)),
+      ),
+    ).rejects.toBeInstanceOf(CustomBehaviorNameInvalidError)
+  })
+
   it("rejects an 11th behavior once the project cap is reached", async () => {
     const { layer } = makeLayer()
     await expect(
@@ -114,6 +123,18 @@ describe("updateCustomBehavior", () => {
     )
     expect(result.name).toBe("Chargebacks")
     expect(result.slug).toBe("chargebacks")
+  })
+
+  it("rejects a rename to a name with no url-safe characters", async () => {
+    const { layer } = makeLayer()
+    await expect(
+      Effect.runPromise(
+        Effect.gen(function* () {
+          const created = yield* createCustomBehavior({ projectId: PROJECT_ID, name: "Refunds", filterSet: {} })
+          return yield* updateCustomBehavior({ id: created.id, name: "!!!" })
+        }).pipe(Effect.provide(layer)),
+      ),
+    ).rejects.toBeInstanceOf(CustomBehaviorNameInvalidError)
   })
 
   it("rejects a filter set containing topics on update", async () => {

@@ -1,4 +1,12 @@
-import { CustomBehaviorId, type FilterSet, generateId, generateSlug, type ProjectId, SqlClient } from "@domain/shared"
+import {
+  CustomBehaviorId,
+  type FilterSet,
+  generateId,
+  generateSlug,
+  type ProjectId,
+  SqlClient,
+  toSlug,
+} from "@domain/shared"
 import { Effect } from "effect"
 import { CUSTOM_BEHAVIOR_NAME_MAX_LENGTH, MAX_CUSTOM_BEHAVIORS_PER_PROJECT } from "../constants.ts"
 import {
@@ -35,9 +43,14 @@ export const createCustomBehavior = Effect.fn("taxonomy.createCustomBehavior")(f
       message: `Name exceeds ${CUSTOM_BEHAVIOR_NAME_MAX_LENGTH} characters`,
     })
   }
+  if (toSlug(trimmedName).length === 0) {
+    return yield* new CustomBehaviorNameInvalidError({
+      field: "name",
+      message: "Name must contain at least one letter or number",
+    })
+  }
 
-  // Defense-in-depth on top of the 1a Zod contract: reject any FilterSet that
-  // scopes on `topics` (a behavior scoped on behaviors is circular).
+  // Defense-in-depth on the 1a Zod contract: reject a FilterSet scoping on `topics` (circular).
   const parsedFilterSet = customBehaviorFilterSetSchema.safeParse(input.filterSet)
   if (!parsedFilterSet.success) {
     return yield* new CustomBehaviorFilterInvalidError({

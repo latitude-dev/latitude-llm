@@ -8,8 +8,7 @@ export const deleteCustomBehavior = Effect.fn("taxonomy.deleteCustomBehavior")(f
   yield* Effect.annotateCurrentSpan("customBehaviorId", input.id)
 
   const repo = yield* CustomBehaviorRepository
-  // findById is org-scoped via RLS, so a cross-org (or missing) id surfaces
-  // NotFoundError rather than silently no-op'ing the delete.
+  // findById is org-scoped, so a cross-org/missing id surfaces NotFoundError instead of a silent no-op.
   yield* repo.findById(input.id)
   yield* repo.delete(input.id)
 })

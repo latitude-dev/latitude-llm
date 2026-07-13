@@ -32,6 +32,12 @@ export const updateCustomBehavior = Effect.fn("taxonomy.updateCustomBehavior")(f
         message: `Name exceeds ${CUSTOM_BEHAVIOR_NAME_MAX_LENGTH} characters`,
       })
     }
+    if (toSlug(trimmed).length === 0) {
+      return yield* new CustomBehaviorNameInvalidError({
+        field: "name",
+        message: "Name must contain at least one letter or number",
+      })
+    }
     if (trimmed !== current.name) {
       nextName = trimmed
       nameChanged = true

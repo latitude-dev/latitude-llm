@@ -5,13 +5,7 @@ import type { CustomBehaviorRepositoryShape } from "../ports/custom-behavior-rep
 
 const FAKE_ORG_ID = OrganizationId("fake-org".padEnd(24, "0"))
 
-/**
- * In-memory {@link CustomBehaviorRepositoryShape} for use-case unit tests. It
- * enforces the same project+slug uniqueness the Postgres unique index does, so
- * a `save` that collides on slug fails with a `RepositoryError` (mirroring a
- * 23505). Org scoping is a live-repo/RLS concern and is exercised in the
- * platform testkit tests, not here.
- */
+/** In-memory repo for use-case tests; a slug collision on `save` fails like the Postgres unique index (23505). */
 export const createFakeCustomBehaviorRepository = (
   seed: readonly CustomBehavior[] = [],
   overrides?: Partial<CustomBehaviorRepositoryShape>,
