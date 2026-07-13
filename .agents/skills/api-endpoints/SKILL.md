@@ -213,15 +213,15 @@ Same rule for the verbs used in route/operation `summary`: "Delete project" beat
 
 ### Picking a tier
 
-Default to `low`. Most CRUD operations don't need more — `low` is 100 req/min/org, which comfortably covers SDK polling, MCP tool calls, and human-driven dashboards. Step up only when the operation genuinely warrants tighter limits.
+Default to `low`. Most CRUD operations don't need more — `low` is 1,000 req/min/org, which comfortably covers SDK polling, MCP tool calls, and human-driven dashboards. Step up only when the operation genuinely warrants tighter limits.
 
 | Tier | Quota (per org / min) | Pick this when… |
 | --- | --- | --- |
-| `low` | 100 | **The default**: id-keyed CRUD, list of bounded size, simple lookups, account/settings reads. Most operations land here. |
-| `medium` | 60 | Mutations with non-trivial side effects, and moderate analytics reads. |
-| `high` | 15 | Bulk reads with filter / search / semantic / vector load that scan large data sets per request. |
-| `ultra` | 3 | Workflow-kicking ops: imports, exports, monitor-signal, anything that sends email or enqueues a heavy job. |
-| `max` | 1 | Unauthenticated or abuse-prone surfaces (used with extra global limiting; see `routes/bootstrap.ts`). |
+| `low` | 1,000 | **The default**: id-keyed CRUD, list of bounded size, simple lookups, account/settings reads. Most operations land here. |
+| `medium` | 600 | Mutations with non-trivial side effects, and moderate analytics reads. |
+| `high` | 150 | Bulk reads with filter / search / semantic / vector load that scan large data sets per request. |
+| `ultra` | 30 | Workflow-kicking ops: imports, exports, monitor-signal, anything that sends email or enqueues a heavy job. |
+| `max` | 10 | Unauthenticated or abuse-prone surfaces (used with extra global limiting; see `routes/bootstrap.ts`). |
 
 Don't be harsh. A tighter tier doesn't make the API safer in any meaningful way for cheap operations — it just frustrates legitimate callers. When in doubt, pick `low` and bump it later if a specific operation shows up in incident traffic.
 
