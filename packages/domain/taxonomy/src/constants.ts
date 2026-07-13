@@ -46,6 +46,23 @@ export const TAXONOMY_OBSERVATION_ASSIGNMENT_METHODS = [
 ] as const
 
 // ---------------------------------------------------------------------------
+// Custom behaviors
+// ---------------------------------------------------------------------------
+
+export const CUSTOM_BEHAVIOR_NAME_MAX_LENGTH = 80
+
+export const CUSTOM_BEHAVIOR_STATUSES = ["pending", "generating", "ready", "failed"] as const
+
+/**
+ * Fixed lookback window the scoped-sampling activity reads observations over
+ * before clustering a custom behavior (LAT-746 Q2 = fixed 7d). Phase 2 passes
+ * this as the sampling activity's *parameter* — never hardcoded inside the
+ * query — so a future selectable window is an additive nullable-column swap
+ * with no Temporal non-determinism risk.
+ */
+export const CUSTOM_BEHAVIOR_LOOKBACK_DAYS = 7
+
+// ---------------------------------------------------------------------------
 // Embedding + summary
 // ---------------------------------------------------------------------------
 

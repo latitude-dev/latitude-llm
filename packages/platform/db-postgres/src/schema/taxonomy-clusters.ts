@@ -29,6 +29,8 @@ export const taxonomyClusters = latitudeSchema.table(
     id: cuid("id").primaryKey(),
     organizationId: cuid("organization_id").notNull(),
     projectId: cuid("project_id").notNull(),
+    // NULL = global taxonomy; non-null scopes the row to a custom behavior's sub-tree.
+    customBehaviorId: cuid("custom_behavior_id", { default: false }),
     parentClusterId: cuid("parent_cluster_id", { default: false }),
     depth: bigint("depth", { mode: "number" }).notNull().default(0),
     path: varchar("path", { length: 256 }).notNull().default(""),
