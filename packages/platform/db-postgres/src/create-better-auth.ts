@@ -57,6 +57,7 @@ export interface BetterAuthConfig {
     request?: Request,
   ) => Promise<void>
   readonly onUserCreated?: (user: { id: string; email: string; name?: string }) => Promise<void>
+  readonly onBeforeUserCreate?: (user: { email: string }, request: Request | undefined) => Promise<void>
   readonly onMemberCreated?: (member: { organizationId: string; userId: string; role: string }) => Promise<void>
   readonly onSubscriptionChanged?: (subscription: {
     referenceId: string
@@ -188,10 +189,11 @@ export const createBetterAuth = (config: BetterAuthConfig) => {
     databaseHooks: {
       user: {
         create: {
-          before: async (user) => {
+          before: async (user, ctx) => {
             if (config.allowedEmailDomain && !user.email.toLowerCase().endsWith(`@${config.allowedEmailDomain}`)) {
               throw new Error(`Only @${config.allowedEmailDomain} emails are allowed on staging`)
             }
+            await config.onBeforeUserCreate?.({ email: user.email }, ctx?.request)
             return { data: user }
           },
           after: async (user) => {
