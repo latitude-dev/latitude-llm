@@ -63,6 +63,7 @@ export const createCustomBehavior = Effect.fn("taxonomy.createCustomBehavior")(f
     Effect.gen(function* () {
       const repo = yield* CustomBehaviorRepository
 
+      // Soft cost guard (MVP): count-based, not locked, so concurrent creates may briefly overshoot by a few. Intentional — see LAT-748.
       const existing = yield* repo.countByProject({ projectId: input.projectId })
       if (existing >= MAX_CUSTOM_BEHAVIORS_PER_PROJECT) {
         return yield* new CustomBehaviorLimitReachedError({
