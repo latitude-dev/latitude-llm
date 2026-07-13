@@ -26,7 +26,7 @@
     "@types/react-dom": "^19.2.3",
     "@vitejs/plugin-react": "^6.0.3",
     "typescript": "^5.7.2",
-    "vite": "^8.1.0",
+    "vite": "^8.0.16",
     "wrangler": "^4.105.0"
   }
 }

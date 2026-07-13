@@ -24,11 +24,9 @@ import {
   createDatasetFromTracesFunction,
 } from "../../../../../domains/datasets/datasets.functions.ts"
 import { useMonitors } from "../../../../../domains/monitors/monitors.collection.ts"
-import { defaultProjectTimeWindowSeconds } from "../../../../../domains/projects/default-time-window.ts"
 import { useProjectsCollection } from "../../../../../domains/projects/projects.collection.ts"
 import { useSavedSearchBySlug } from "../../../../../domains/saved-searches/saved-searches.collection.ts"
 import type { SavedSearchRecord } from "../../../../../domains/saved-searches/saved-searches.functions.ts"
-import { withSessionDefaults } from "../../../../../domains/sessions/sessions.collection.ts"
 import { useTracesCount } from "../../../../../domains/traces/traces.collection.ts"
 import { enqueueTracesExport } from "../../../../../domains/traces/traces.functions.ts"
 import { ListingLayout as Layout } from "../../../../../layouts/ListingLayout/index.tsx"
@@ -61,15 +59,10 @@ import {
 import { useTableColumnSettings } from "./table-column-settings.ts"
 import { TimeFilterDropdown } from "./time-filter-dropdown.tsx"
 import { TraceDetailDrawer } from "./trace-detail-drawer.tsx"
-import {
-  DEFAULT_SEARCH_SORTING,
-  DEFAULT_TRACE_SORTING,
-  getTimeFilterValue,
-  parseFilters,
-  serializeFilters,
-} from "./trace-page-state.ts"
+import { DEFAULT_SEARCH_SORTING, DEFAULT_TRACE_SORTING, parseFilters, serializeFilters } from "./trace-page-state.ts"
 import { TracesEmptyOnboarding } from "./traces-empty-onboarding.tsx"
 import { TracesView } from "./traces-view.tsx"
+import { useProjectTimeWindow } from "./use-project-time-window.ts"
 
 export type ExplorerMode = "traces" | "sessions"
 
@@ -221,24 +214,23 @@ export function ProjectExplorer({ projectSlug }: { readonly projectSlug: string 
   const traceIdsRef = useRef<string[]>([])
 
   const filters = useMemo(() => parseFilters(rawFilters || undefined), [rawFilters])
-  const defaultSessionRangeSeconds = defaultProjectTimeWindowSeconds(currentProject)
-  // Sessions and Traces share the same default window when the user hasn't picked
-  // a range (open-ended `gte` so the dropdown shows the "Last month"/"Last 2 weeks"
-  // preset). Applied in both modes so Traces isn't stuck on "All time".
-  const filtersWithDefaultTime = useMemo(() => {
-    if (filters.startTime) return filters
-    const fromMs = Date.now() - defaultSessionRangeSeconds * 1000
-    return {
-      ...filters,
-      startTime: [{ op: "gte" as const, value: new Date(fromMs).toISOString() }],
-    }
-  }, [filters, defaultSessionRangeSeconds])
-  // Data reads use the default-windowed set; `withSessionDefaults` (orphan-fragment
-  // hiding via `hasLlmActivity`) is session-only, so it's layered on in that mode.
-  const effectiveFilters = useMemo(
-    () => (isSessions ? withSessionDefaults(filtersWithDefaultTime) : filtersWithDefaultTime),
-    [filtersWithDefaultTime, isSessions],
-  )
+  // Sessions/Traces date filter: default is "All time"; a picked range lives in `filters.startTime`,
+  // and the histogram stays clamped (anchored to latest activity when All time). See the hook.
+  const {
+    filtersWithDefaultTime,
+    effectiveFilters,
+    timeFrom,
+    timeTo,
+    histogramRangeOverride,
+    onTimeFilterChange,
+    onTimeRangeSelect,
+  } = useProjectTimeWindow({
+    project: currentProject,
+    filters,
+    setRawFilters,
+    isSessions,
+    ...(hasSearchQuery ? { searchQuery: query } : {}),
+  })
   const traceColumnSettings = useTableColumnSettings<TraceColumnId>({
     storageKey: "projects.traces.columns.v1",
     columns: TRACE_COLUMN_OPTIONS,
@@ -251,10 +243,10 @@ export function ProjectExplorer({ projectSlug }: { readonly projectSlug: string 
     storageKey: "projects.sessions.columns.v3",
     columns: getSessionColumnOptions(hasSearchQuery),
   })
-  const hasActiveFilters = Object.keys(filters).length > 0
+  // A cleared time filter persists as `startTime: []` (explicit "All time"); an empty
+  // condition array is not a user-applied filter, so ignore empties here.
+  const hasActiveFilters = Object.values(filters).some((conds) => conds.length > 0)
   const hasSelectedSavedSearch = savedSearchSlug.length > 0
-  const timeFrom = getTimeFilterValue(filtersWithDefaultTime, "gte")
-  const timeTo = getTimeFilterValue(filtersWithDefaultTime, "lte")
   const sessionsMonitorTarget = useMemo<MonitorTarget>(
     () => ({
       type: "session",
@@ -283,7 +275,7 @@ export function ProjectExplorer({ projectSlug }: { readonly projectSlug: string 
   const [exportModalOpen, setExportModalOpen] = useState(false)
   const [exporting, setExporting] = useState(false)
 
-  const { totalCount: totalTraceCount } = useTracesCount({
+  const { totalCount: totalTraceCount, isLoading: isTracesCountLoading } = useTracesCount({
     projectId: currentProject.id,
     filters: effectiveFilters,
     ...(hasSearchQuery ? { searchQuery: query } : {}),
@@ -305,22 +297,6 @@ export function ProjectExplorer({ projectSlug }: { readonly projectSlug: string 
   const onShowAllSessions = useCallback(() => {
     setRawFilters(serializeFilters({ ...filters, hasLlmActivity: [{ op: "eq", value: false as const }] }) ?? "")
   }, [filters, setRawFilters])
-
-  const onTimeRangeSelect = useCallback((range: { from: string; to: string } | null) => {
-    setRawFilters((prev) => {
-      const current = parseFilters(prev || undefined)
-      const next = { ...current }
-      if (range) {
-        next.startTime = [
-          { op: "gte" as const, value: range.from },
-          { op: "lte" as const, value: range.to },
-        ]
-      } else {
-        delete next.startTime
-      }
-      return serializeFilters(next) ?? ""
-    })
-  }, [])
 
   // "Clear all" resets the whole search bar: filters, query, and the selected saved search.
   // Also drop an explicit sort so a `relevance` sort doesn't linger in the header after
@@ -460,18 +436,11 @@ export function ProjectExplorer({ projectSlug }: { readonly projectSlug: string 
     },
   ])
 
-  // Gate on whether the project ever received a trace, not the windowed count — old-data projects
-  // fall through to the normal view (with the time filter) instead of the false onboarding.
-  // `firstTraceAt` is a best-effort column (only written by live ingestion), so a null value doesn't
-  // prove emptiness — backfilled/old projects can have traces with a null `firstTraceAt`. Confirm
-  // with an unwindowed total count, but only when the fast path can't already vouch for traces.
-  const { totalCount: everTraceCount } = useTracesCount({
-    projectId: currentProject.id,
-    enabled: currentProject.firstTraceAt == null,
-  })
-  const projectHasTracesEver = currentProject.firstTraceAt != null || everTraceCount > 0
+  // Reads default to All time, so `totalTraceCount` is the unwindowed count — `=== 0` (once loaded)
+  // means the project has no traces at all, a robust "empty project" signal. `firstTraceAt` is
+  // best-effort (null on backfilled/old-data projects), so it must not gate the onboarding.
   const orgHasConnectedProjects = allProjects.some((p) => p.id !== currentProject.id && p.firstTraceAt != null)
-  const showConnectEmptyState = !projectHasTracesEver && !hasActiveFilters && !hasSearchQuery
+  const showConnectEmptyState = !isTracesCountLoading && totalTraceCount === 0 && !hasActiveFilters && !hasSearchQuery
 
   if (showConnectEmptyState) {
     return (
@@ -479,7 +448,7 @@ export function ProjectExplorer({ projectSlug }: { readonly projectSlug: string 
         <TracesEmptyOnboarding
           projectId={currentProject.id}
           projectSlug={currentProject.slug}
-          orgHasConnectedProjects={orgHasConnectedProjects || currentProject.firstTraceAt != null}
+          orgHasConnectedProjects={orgHasConnectedProjects}
         />
       </Layout>
     )
@@ -510,19 +479,7 @@ export function ProjectExplorer({ projectSlug }: { readonly projectSlug: string 
             <TimeFilterDropdown
               {...(timeFrom ? { startTimeFrom: timeFrom } : {})}
               {...(timeTo ? { startTimeTo: timeTo } : {})}
-              onChange={(from, to) => {
-                const next = { ...filters }
-                if (from || to) {
-                  const conditions = [
-                    ...(from ? [{ op: "gte" as const, value: from }] : []),
-                    ...(to ? [{ op: "lte" as const, value: to }] : []),
-                  ]
-                  next.startTime = conditions
-                } else {
-                  delete next.startTime
-                }
-                setRawFilters(serializeFilters(next) ?? "")
-              }}
+              onChange={onTimeFilterChange}
             />
             {isSessions ? (
               <ColumnsSelector
@@ -670,6 +627,7 @@ export function ProjectExplorer({ projectSlug }: { readonly projectSlug: string 
           filters={filtersWithDefaultTime}
           mode={activeTab}
           onTimeRangeSelect={onTimeRangeSelect}
+          {...(histogramRangeOverride ? { histogramRangeOverride } : {})}
         />
       </div>
 
