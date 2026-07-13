@@ -3,6 +3,7 @@ import {
   alignUnixSecondsToHistogramBucket,
   denseTraceTimeHistogramBuckets,
   pickTraceHistogramBucketSeconds,
+  resolveTraceHistogramRangeIso,
 } from "./helpers.ts"
 import { emptyTraceTimeHistogramBucket } from "./ports/trace-repository.ts"
 
@@ -12,6 +13,87 @@ describe("alignUnixSecondsToHistogramBucket", () => {
     const t = Date.UTC(2024, 5, 1, 10, 0, 0) / 1000
     expect(alignUnixSecondsToHistogramBucket(t + 90, bs)).toBe(t)
     expect(alignUnixSecondsToHistogramBucket(t, bs)).toBe(t)
+  })
+})
+
+describe("resolveTraceHistogramRangeIso", () => {
+  const DAY = 24 * 60 * 60 * 1000
+  const now = Date.UTC(2026, 6, 9, 12, 0, 0)
+  const iso = (ms: number) => new Date(ms).toISOString()
+
+  it("unbounded ('All time'): last 7 days ending now", () => {
+    const r = resolveTraceHistogramRangeIso({}, now)
+    expect(r).toEqual({ rangeStartIso: iso(now - 7 * DAY), rangeEndIso: iso(now) })
+  })
+
+  it("empty startTime array (cleared to All time): same as unbounded", () => {
+    const r = resolveTraceHistogramRangeIso({ startTime: [] }, now)
+    expect(r).toEqual({ rangeStartIso: iso(now - 7 * DAY), rangeEndIso: iso(now) })
+  })
+
+  it("range ≤ 30 days is used verbatim", () => {
+    const gte = iso(now - 10 * DAY)
+    const lte = iso(now - 3 * DAY)
+    const r = resolveTraceHistogramRangeIso(
+      {
+        startTime: [
+          { op: "gte", value: gte },
+          { op: "lte", value: lte },
+        ],
+      },
+      now,
+    )
+    expect(r).toEqual({ rangeStartIso: gte, rangeEndIso: lte })
+  })
+
+  it("clamps a > 30 day range to the most recent 30 days of it", () => {
+    const gte = iso(now - 90 * DAY)
+    const lte = iso(now - 5 * DAY)
+    const r = resolveTraceHistogramRangeIso(
+      {
+        startTime: [
+          { op: "gte", value: gte },
+          { op: "lte", value: lte },
+        ],
+      },
+      now,
+    )
+    expect(r).toEqual({ rangeStartIso: iso(now - 35 * DAY), rangeEndIso: lte })
+  })
+
+  it("open-ended gte older than 30 days clamps to last 30 days ending now", () => {
+    const gte = iso(now - 90 * DAY)
+    const r = resolveTraceHistogramRangeIso({ startTime: [{ op: "gte", value: gte }] }, now)
+    expect(r).toEqual({ rangeStartIso: iso(now - 30 * DAY), rangeEndIso: iso(now) })
+  })
+
+  it("falls back safely on unparseable URL dates instead of throwing", () => {
+    const r = resolveTraceHistogramRangeIso(
+      {
+        startTime: [
+          { op: "gte", value: "not-a-date" },
+          { op: "lte", value: "also-bad" },
+        ],
+      },
+      now,
+    )
+    // Bad `lte` → end = now; bad `gte` → start = end - 7d default. Both valid ISO, no RangeError.
+    expect(r).toEqual({ rangeStartIso: iso(now - 7 * DAY), rangeEndIso: iso(now) })
+  })
+
+  it("clamps start ≤ end when the range is inverted (gte after lte)", () => {
+    const gte = iso(now - 2 * DAY)
+    const lte = iso(now - 5 * DAY)
+    const r = resolveTraceHistogramRangeIso(
+      {
+        startTime: [
+          { op: "gte", value: gte },
+          { op: "lte", value: lte },
+        ],
+      },
+      now,
+    )
+    expect(r).toEqual({ rangeStartIso: lte, rangeEndIso: lte })
   })
 })
 
