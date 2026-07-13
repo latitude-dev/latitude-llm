@@ -8,6 +8,7 @@ import { buildIncidentMarkers } from "../../../../../../domains/alerts/incident-
 import { useIncidentBucketHoverPopover } from "../../../../../../domains/alerts/use-incident-bucket-hover-popover.ts"
 import { useShowIncidentsOverlay } from "../../../../../../domains/alerts/use-show-incidents-overlay.ts"
 import type { SignalsListResultRecord } from "../../../../../../domains/signals/signals.functions.ts"
+import { ChartHeader } from "../../-components/chart-header.tsx"
 import { formatHistogramBucketLabel, formatHistogramBucketTooltipLabel } from "./signal-formatters.ts"
 
 const COUNT_CARDS = [
@@ -47,12 +48,14 @@ export function SignalsAnalyticsPanel({
   projectSlug,
   analytics,
   isLoading,
+  isAllTime,
   onRangeSelect,
 }: {
   readonly projectId: string
   readonly projectSlug: string
   readonly analytics: SignalsListResultRecord["analytics"]
   readonly isLoading: boolean
+  readonly isAllTime: boolean
   readonly onRangeSelect?: ((range: { from: string; to: string } | null) => void) | undefined
 }) {
   const [collapsed, setCollapsed] = useState(false)
@@ -215,26 +218,34 @@ export function SignalsAnalyticsPanel({
           </div>
         ) : (
           <>
-            {incidentsFlagEnabled ? (
-              <div className="flex items-center justify-end gap-2 px-4 -mb-1">
-                <Tooltip
-                  asChild
-                  trigger={
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => setShowIncidents((prev) => !prev)}
-                      aria-pressed={showIncidents}
-                    >
-                      <Icon icon={showIncidents ? ShieldAlertIcon : ShieldOffIcon} size="sm" />
-                      Incidents
-                    </Button>
+            <ChartHeader
+              title="Occurrences over time"
+              fromIso={incidentRange?.fromIso ?? ""}
+              toIso={incidentRange?.toIso ?? ""}
+              isAllTime={isAllTime}
+              {...(incidentsFlagEnabled
+                ? {
+                    actions: (
+                      <Tooltip
+                        asChild
+                        trigger={
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => setShowIncidents((prev) => !prev)}
+                            aria-pressed={showIncidents}
+                          >
+                            <Icon icon={showIncidents ? ShieldAlertIcon : ShieldOffIcon} size="sm" />
+                            Incidents
+                          </Button>
+                        }
+                      >
+                        Overlay incidents on the timeline
+                      </Tooltip>
+                    ),
                   }
-                >
-                  Overlay incidents on the timeline
-                </Tooltip>
-              </div>
-            ) : null}
+                : {})}
+            />
             <div className="px-4 py-3">
               <BarChart
                 data={histogramBarChartData}

@@ -12,6 +12,7 @@ export { extractLeadingEmoji } from "./extractLeadingEmoji.ts"
 export {
   cacheHitRate,
   formatBytes,
+  formatChartWindowCaption,
   formatCount,
   formatDuration,
   formatPercentage,

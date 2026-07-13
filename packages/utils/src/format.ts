@@ -250,3 +250,23 @@ export function safeStringifyJson(value: unknown, fallback = ""): string {
 export function stableStringify(value: unknown): string {
   return stringify(value)
 }
+
+/**
+ * Human caption for a chart's rendered time window, e.g. `"Jun 25 – Jul 1, 2026"`. Shown under
+ * histograms so a bounded window (e.g. the All-time charts, which render a recent slice anchored to
+ * the latest activity) reads clearly instead of being mistaken for the full selected scope. The year
+ * is omitted from the start when both ends fall in the same year. Returns `""` for unparseable input.
+ */
+export function formatChartWindowCaption(fromIso: string, toIso: string): string {
+  const from = new Date(fromIso)
+  const to = new Date(toIso)
+  if (Number.isNaN(from.getTime()) || Number.isNaN(to.getTime())) return ""
+  const sameYear = from.getFullYear() === to.getFullYear()
+  const fromLabel = from.toLocaleDateString(undefined, {
+    month: "short",
+    day: "numeric",
+    ...(sameYear ? {} : { year: "numeric" }),
+  })
+  const toLabel = to.toLocaleDateString(undefined, { month: "short", day: "numeric", year: "numeric" })
+  return `${fromLabel} – ${toLabel}`
+}
