@@ -65,10 +65,14 @@ export function SubagentCard({
   onNavigateToSpan,
 }: SubagentCardProps) {
   return (
+    // biome-ignore lint/a11y/noStaticElementInteractions: pointer convenience; the Open conversation button is the keyboard-accessible affordance
+    // biome-ignore lint/a11y/useKeyWithClickEvents: same
     <div
+      onClick={onOpenConversation}
       className={cn(
-        "group/subagent my-1 flex min-w-0 max-w-full flex-col gap-2 rounded-r-lg border-l-2 bg-muted/50 py-2 pl-4 pr-3 sm:max-w-150",
-        hasError ? "border-destructive" : "border-accent",
+        "group/subagent my-1 flex min-w-0 max-w-full flex-col gap-2 rounded-r-lg border-l-2 py-2 pl-4 pr-3 sm:max-w-150",
+        onOpenConversation && "cursor-pointer transition-colors hover:bg-muted",
+        hasError ? "border-destructive bg-destructive-muted/30" : "border-accent bg-muted/50",
       )}
     >
       <div className="flex min-w-0 flex-row items-center gap-2">
@@ -77,27 +81,31 @@ export function SubagentCard({
           {label}
         </Text.H5M>
         <span className="min-w-0 flex-1" />
-        {onNavigateToSpan && (
-          <Tooltip
-            asChild
-            trigger={
-              <button
-                type="button"
-                onClick={onNavigateToSpan}
-                className="flex items-center text-muted-foreground opacity-0 transition-opacity hover:text-foreground group-hover/subagent:opacity-100 cursor-pointer"
-              >
-                <ScanSearchIcon className="h-4 w-4" />
-              </button>
-            }
-          >
-            <Text.H6>View execution span</Text.H6>
-          </Tooltip>
-        )}
-        {toolCallId && (
-          <span className="opacity-0 transition-opacity group-hover/subagent:opacity-100">
-            <CopyButton value={toolCallId} tooltip={toolCallId} />
-          </span>
-        )}
+        {/* biome-ignore lint/a11y/noStaticElementInteractions: swallows clicks so the row-level open handler doesn't fire for these actions */}
+        {/* biome-ignore lint/a11y/useKeyWithClickEvents: the wrapped controls are themselves keyboard-accessible */}
+        <div className="flex items-center gap-2" onClick={(e) => e.stopPropagation()}>
+          {onNavigateToSpan && (
+            <Tooltip
+              asChild
+              trigger={
+                <button
+                  type="button"
+                  onClick={onNavigateToSpan}
+                  className="flex items-center text-muted-foreground opacity-0 transition-opacity hover:text-foreground group-hover/subagent:opacity-100 cursor-pointer"
+                >
+                  <ScanSearchIcon className="h-4 w-4" />
+                </button>
+              }
+            >
+              <Text.H6>View execution span</Text.H6>
+            </Tooltip>
+          )}
+          {toolCallId && (
+            <span className="opacity-0 transition-opacity group-hover/subagent:opacity-100">
+              <CopyButton value={toolCallId} tooltip={toolCallId} />
+            </span>
+          )}
+        </div>
       </div>
 
       <div className="flex min-w-0 flex-col gap-1.5">
@@ -110,13 +118,21 @@ export function SubagentCard({
       {onOpenConversation && (
         <button
           type="button"
-          onClick={onOpenConversation}
-          className="flex w-fit items-center gap-1 text-primary hover:underline cursor-pointer"
+          onClick={(e) => {
+            e.stopPropagation()
+            onOpenConversation()
+          }}
+          className="flex w-fit items-center gap-1 self-end text-primary cursor-pointer"
         >
           <Text.H6 color="primary" noWrap>
             Open conversation
           </Text.H6>
-          <Icon icon={ArrowRightIcon} size="sm" color="primary" />
+          <Icon
+            icon={ArrowRightIcon}
+            size="sm"
+            color="primary"
+            className="transition-transform group-hover/subagent:translate-x-0.5"
+          />
         </button>
       )}
     </div>
