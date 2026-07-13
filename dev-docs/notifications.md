@@ -33,7 +33,10 @@ notifications:request-{incident,wrapped-report,signal-assigned}-notifications
         endedAt > startedAt → incident.closed)
      – gate (incidents only): projectSettings.notifications.incidents[incidentNotificationKey]
      – mute gate (incidents only): skip muted monitor or muted signal sources
-     – resolveRecipients (today: all org members)
+     – signal-related notifications target the signal assignee when present;
+       unassigned signals and non-signal notifications use the existing
+       project-member fan-out
+     – assignee-targeted signal notifications do not fan out to shared Slack routes
      – signal-assigned: single recipient (the new assignee); router +
        producer both skip cleared assignments and self-assignments
      – snapshot trend window (signal-sourced sustained kinds: 14d ending at the
