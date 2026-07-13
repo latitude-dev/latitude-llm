@@ -224,7 +224,6 @@ export {
   type GetClusterSessionIntelligenceResult,
   getClusterSessionIntelligenceUseCase,
 } from "./use-cases/get-cluster-session-intelligence.ts"
-export { getCustomBehavior } from "./use-cases/get-custom-behavior.ts"
 export {
   type GetClusterDetailsInput,
   type GetClusterDetailsResult,
@@ -239,7 +238,6 @@ export {
   listClustersUseCase,
   type TaxonomyClusterPage,
 } from "./use-cases/list-clusters.ts"
-export { listCustomBehaviors } from "./use-cases/list-custom-behaviors.ts"
 export {
   type ListObservationsInClusterResult,
   type ListTaxonomyObservationsInClusterInput,

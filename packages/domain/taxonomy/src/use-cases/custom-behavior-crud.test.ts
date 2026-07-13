@@ -13,8 +13,6 @@ import { CustomBehaviorRepository } from "../ports/custom-behavior-repository.ts
 import { createFakeCustomBehaviorRepository } from "../testing/fake-custom-behavior-repository.ts"
 import { createCustomBehavior } from "./create-custom-behavior.ts"
 import { deleteCustomBehavior } from "./delete-custom-behavior.ts"
-import { getCustomBehavior } from "./get-custom-behavior.ts"
-import { listCustomBehaviors } from "./list-custom-behaviors.ts"
 import { updateCustomBehavior } from "./update-custom-behavior.ts"
 
 const PROJECT_ID = ProjectId("p".repeat(24))
@@ -134,28 +132,15 @@ describe("updateCustomBehavior", () => {
   })
 })
 
-describe("getCustomBehavior / listCustomBehaviors / deleteCustomBehavior", () => {
-  it("gets a behavior by id and lists it by project", async () => {
-    const { layer } = makeLayer()
-    const { fetched, listed } = await Effect.runPromise(
-      Effect.gen(function* () {
-        const created = yield* createCustomBehavior({ projectId: PROJECT_ID, name: "Refunds", filterSet: {} })
-        const fetched = yield* getCustomBehavior({ id: created.id })
-        const listed = yield* listCustomBehaviors({ projectId: PROJECT_ID })
-        return { fetched, listed }
-      }).pipe(Effect.provide(layer)),
-    )
-    expect(fetched.name).toBe("Refunds")
-    expect(listed.map((b) => b.slug)).toEqual(["refunds"])
-  })
-
-  it("deletes a behavior so it is no longer listed", async () => {
+describe("deleteCustomBehavior", () => {
+  it("deletes a behavior so it is no longer listed (reads go straight through the repository)", async () => {
     const { layer } = makeLayer()
     const listed = await Effect.runPromise(
       Effect.gen(function* () {
         const created = yield* createCustomBehavior({ projectId: PROJECT_ID, name: "Refunds", filterSet: {} })
         yield* deleteCustomBehavior({ id: created.id })
-        return yield* listCustomBehaviors({ projectId: PROJECT_ID })
+        const repo = yield* CustomBehaviorRepository
+        return yield* repo.listByProject({ projectId: PROJECT_ID })
       }).pipe(Effect.provide(layer)),
     )
     expect(listed).toHaveLength(0)
