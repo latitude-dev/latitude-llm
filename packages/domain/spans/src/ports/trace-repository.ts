@@ -91,6 +91,12 @@ export interface TraceRepositoryShape {
     readonly traceId: TraceId
   }): Effect.Effect<TraceDetail, NotFoundError | RepositoryError, ChSqlClient>
 
+  findSummaryByTraceId(input: {
+    readonly organizationId: OrganizationId
+    readonly projectId: ProjectId
+    readonly traceId: TraceId
+  }): Effect.Effect<Trace, NotFoundError | RepositoryError, ChSqlClient>
+
   findMetadataByTraceId(input: {
     readonly organizationId: OrganizationId
     readonly projectId: ProjectId
