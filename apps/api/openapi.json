@@ -8000,45 +8000,6 @@
             "maxLength": 2000,
             "description": "New description."
           },
-          "target": {
-            "allOf": [
-              {
-                "$ref": "#/components/schemas/MonitorTarget"
-              },
-              {
-                "description": "Replacement target watched by the monitor."
-              }
-            ]
-          },
-          "trigger": {
-            "type": "string",
-            "enum": [
-              "match",
-              "threshold",
-              "escalating"
-            ],
-            "description": "Replacement incident trigger for the monitor rule."
-          },
-          "metric": {
-            "allOf": [
-              {
-                "$ref": "#/components/schemas/MonitorMetric"
-              },
-              {
-                "description": "Replacement metric evaluated by the monitor."
-              }
-            ]
-          },
-          "condition": {
-            "allOf": [
-              {
-                "$ref": "#/components/schemas/AlertCondition"
-              },
-              {
-                "description": "Replacement condition for threshold or escalating monitors."
-              }
-            ]
-          },
           "severity": {
             "type": "string",
             "enum": [
@@ -17747,7 +17708,7 @@
         "x-fern-sdk-group-name": "monitors",
         "x-fern-sdk-method-name": "update",
         "summary": "Update monitor",
-        "description": "Updates a monitor's metadata, target, and rule. System monitor edits are restricted.",
+        "description": "Updates a monitor's metadata and incident severity. Target, trigger, metric, and conditions are fixed after creation. System monitor edits are restricted.",
         "security": [
           {
             "ApiKeyAuth": []

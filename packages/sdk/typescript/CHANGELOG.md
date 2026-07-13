@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [9.0.0] - 2026-07-10
+
+### Changed (breaking)
+
+- `client.monitors.update` (`UpdateMonitorBody`) no longer accepts `target`, `trigger`, `metric`, or `condition`. Monitor target, trigger, metric, and incident-launching conditions are fixed after creation; use this call for `name`, `description`, and `severity` only.
+
 ## [8.1.0] - 2026-07-08
 
 ### Added

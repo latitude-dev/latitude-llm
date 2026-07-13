@@ -90,8 +90,8 @@ export const monitorConfigFilterSet = (config: MonitorConfig): FilterSet | null 
  * `@domain/notifications`). `deletedAt` soft-deletes (hidden + stops firing).
  *
  * `system` monitors are auto-provisioned, not deletable, and structurally
- * locked: name/slug and the alert set (kind/source/severity) are fixed, but
- * `mutedAt` and the predefined alerts' `condition` values stay editable.
+ * locked: name/slug, target, trigger, and conditions are fixed; only severity
+ * and `mutedAt` stay editable.
  */
 export const monitorSchema = z.object({
   id: monitorIdSchema,

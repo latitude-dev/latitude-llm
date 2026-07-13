@@ -142,6 +142,7 @@ export type TabsProps<T extends string = string> = {
   readonly active: T
   readonly onSelect: (id: T) => void
   readonly hideLabels?: boolean
+  readonly disabled?: boolean
 } & VariantProps<typeof tabsListVariants>
 
 type SlidingIndicatorParams<T extends string> = {
@@ -249,6 +250,7 @@ export function Tabs<T extends string>({
   active,
   onSelect,
   hideLabels = false,
+  disabled = false,
   variant = "secondary",
   size = "md",
   wrap = false,
@@ -264,6 +266,7 @@ export function Tabs<T extends string>({
 
   const onKeyDown = useCallback(
     (e: KeyboardEvent) => {
+      if (disabled) return
       const currentIndex = options.findIndex((o) => o.id === active)
       let nextIndex: number | undefined
 
@@ -290,12 +293,14 @@ export function Tabs<T extends string>({
       onSelect(next.id)
       tabRefs.current.get(next.id)?.focus()
     },
-    [options, active, onSelect],
+    [options, active, onSelect, disabled],
   )
 
   return (
     <div
-      className={cn(tabsListVariants({ variant: resolvedVariant, size: resolvedSize, wrap }))}
+      className={cn(tabsListVariants({ variant: resolvedVariant, size: resolvedSize, wrap }), {
+        "cursor-not-allowed opacity-60": disabled,
+      })}
       role="tablist"
       onKeyDown={onKeyDown}
       ref={listRef}
@@ -316,6 +321,7 @@ export function Tabs<T extends string>({
             ref={(el) => setTabRef(option.id, el)}
             role="tab"
             type="button"
+            disabled={disabled}
             aria-selected={isActive}
             aria-label={hideLabels ? option.label : undefined}
             tabIndex={isActive ? 0 : -1}
@@ -326,8 +332,11 @@ export function Tabs<T extends string>({
                 active: isActive,
                 hideLabels,
               }),
+              disabled && "pointer-events-none",
             )}
-            onClick={() => onSelect(option.id)}
+            onClick={() => {
+              if (!disabled) onSelect(option.id)
+            }}
           >
             {hideLabels ? (
               <>

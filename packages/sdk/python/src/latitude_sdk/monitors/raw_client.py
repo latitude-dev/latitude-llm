@@ -23,11 +23,7 @@ from ..types.monitor_list import MonitorList
 from ..types.paginated_monitor_incidents import PaginatedMonitorIncidents
 from ..types.paginated_monitors import PaginatedMonitors
 from .types.list_monitors_for_target_body_target_type import ListMonitorsForTargetBodyTargetType
-from .types.update_monitor_body_condition import UpdateMonitorBodyCondition
-from .types.update_monitor_body_metric import UpdateMonitorBodyMetric
 from .types.update_monitor_body_severity import UpdateMonitorBodySeverity
-from .types.update_monitor_body_target import UpdateMonitorBodyTarget
-from .types.update_monitor_body_trigger import UpdateMonitorBodyTrigger
 from pydantic import ValidationError
 
 # this is used as the default value for optional parameters
@@ -464,15 +460,11 @@ class RawMonitorsClient:
         *,
         name: typing.Optional[str] = OMIT,
         description: typing.Optional[str] = OMIT,
-        target: typing.Optional[UpdateMonitorBodyTarget] = OMIT,
-        trigger: typing.Optional[UpdateMonitorBodyTrigger] = OMIT,
-        metric: typing.Optional[UpdateMonitorBodyMetric] = OMIT,
-        condition: typing.Optional[UpdateMonitorBodyCondition] = OMIT,
         severity: typing.Optional[UpdateMonitorBodySeverity] = OMIT,
         request_options: typing.Optional[RequestOptions] = None,
     ) -> HttpResponse[Monitor]:
         """
-        Updates a monitor's metadata, target, and rule. System monitor edits are restricted.
+        Updates a monitor's metadata and incident severity. Target, trigger, metric, and conditions are fixed after creation. System monitor edits are restricted.
 
         Parameters
         ----------
@@ -487,18 +479,6 @@ class RawMonitorsClient:
 
         description : typing.Optional[str]
             New description.
-
-        target : typing.Optional[UpdateMonitorBodyTarget]
-            Replacement target watched by the monitor.
-
-        trigger : typing.Optional[UpdateMonitorBodyTrigger]
-            Replacement incident trigger for the monitor rule.
-
-        metric : typing.Optional[UpdateMonitorBodyMetric]
-            Replacement metric evaluated by the monitor.
-
-        condition : typing.Optional[UpdateMonitorBodyCondition]
-            Replacement condition for threshold or escalating monitors.
 
         severity : typing.Optional[UpdateMonitorBodySeverity]
             Replacement incident severity.
@@ -517,16 +497,6 @@ class RawMonitorsClient:
             json={
                 "name": name,
                 "description": description,
-                "target": convert_and_respect_annotation_metadata(
-                    object_=target, annotation=UpdateMonitorBodyTarget, direction="write"
-                ),
-                "trigger": trigger,
-                "metric": convert_and_respect_annotation_metadata(
-                    object_=metric, annotation=UpdateMonitorBodyMetric, direction="write"
-                ),
-                "condition": convert_and_respect_annotation_metadata(
-                    object_=condition, annotation=UpdateMonitorBodyCondition, direction="write"
-                ),
                 "severity": severity,
             },
             headers={
@@ -1282,15 +1252,11 @@ class AsyncRawMonitorsClient:
         *,
         name: typing.Optional[str] = OMIT,
         description: typing.Optional[str] = OMIT,
-        target: typing.Optional[UpdateMonitorBodyTarget] = OMIT,
-        trigger: typing.Optional[UpdateMonitorBodyTrigger] = OMIT,
-        metric: typing.Optional[UpdateMonitorBodyMetric] = OMIT,
-        condition: typing.Optional[UpdateMonitorBodyCondition] = OMIT,
         severity: typing.Optional[UpdateMonitorBodySeverity] = OMIT,
         request_options: typing.Optional[RequestOptions] = None,
     ) -> AsyncHttpResponse[Monitor]:
         """
-        Updates a monitor's metadata, target, and rule. System monitor edits are restricted.
+        Updates a monitor's metadata and incident severity. Target, trigger, metric, and conditions are fixed after creation. System monitor edits are restricted.
 
         Parameters
         ----------
@@ -1305,18 +1271,6 @@ class AsyncRawMonitorsClient:
 
         description : typing.Optional[str]
             New description.
-
-        target : typing.Optional[UpdateMonitorBodyTarget]
-            Replacement target watched by the monitor.
-
-        trigger : typing.Optional[UpdateMonitorBodyTrigger]
-            Replacement incident trigger for the monitor rule.
-
-        metric : typing.Optional[UpdateMonitorBodyMetric]
-            Replacement metric evaluated by the monitor.
-
-        condition : typing.Optional[UpdateMonitorBodyCondition]
-            Replacement condition for threshold or escalating monitors.
 
         severity : typing.Optional[UpdateMonitorBodySeverity]
             Replacement incident severity.
@@ -1335,16 +1289,6 @@ class AsyncRawMonitorsClient:
             json={
                 "name": name,
                 "description": description,
-                "target": convert_and_respect_annotation_metadata(
-                    object_=target, annotation=UpdateMonitorBodyTarget, direction="write"
-                ),
-                "trigger": trigger,
-                "metric": convert_and_respect_annotation_metadata(
-                    object_=metric, annotation=UpdateMonitorBodyMetric, direction="write"
-                ),
-                "condition": convert_and_respect_annotation_metadata(
-                    object_=condition, annotation=UpdateMonitorBodyCondition, direction="write"
-                ),
                 "severity": severity,
             },
             headers={

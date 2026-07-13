@@ -774,25 +774,8 @@ export const deleteMonitor = createServerFn({ method: "POST" })
 
 const updateMonitorRuleInputSchema = z.object({
   monitorId: z.string(),
-  kind: userAlertKindSchema.optional(),
-  source: monitorRuleSourceSchema.optional(),
-  condition: alertIncidentConditionSchema.nullish(),
   severity: alertSeveritySchema.optional(),
 })
-
-const configWithCondition = (
-  config: Monitor["rule"]["config"],
-  condition: Monitor["rule"]["config"]["condition"] | null | undefined,
-) => {
-  const next = { ...config }
-  if (condition === undefined) return next
-  if (condition === null) {
-    delete next.condition
-    return next
-  }
-  next.condition = condition
-  return next
-}
 
 export const updateMonitorRule = createServerFn({ method: "POST" })
   .inputValidator(updateMonitorRuleInputSchema)
@@ -803,23 +786,11 @@ export const updateMonitorRule = createServerFn({ method: "POST" })
       Effect.gen(function* () {
         const repository = yield* MonitorRepository
         const current = yield* repository.findById(MonitorId(data.monitorId))
-        const trigger = data.kind !== undefined ? triggerForAlertKind(data.kind) : current.rule.trigger
-        const condition = data.kind !== undefined && trigger === "match" ? null : data.condition
-        const target =
-          data.source?.type === "savedSearch"
-            ? {
-                ...current.target,
-                type: "savedSearch" as const,
-                id: data.source.id,
-                savedSearchId: data.source.id,
-              }
-            : current.target
         return yield* updateMonitorUseCase({
           id: current.id,
-          target,
           rule: {
-            trigger,
-            config: configWithCondition(current.rule.config, condition),
+            trigger: current.rule.trigger,
+            config: current.rule.config,
             severity: data.severity ?? current.rule.severity,
           },
         })
