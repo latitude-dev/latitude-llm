@@ -71,46 +71,65 @@ export interface ClassifyTraceForFlaggerInput {
 }
 
 const FLAGGER_MESSAGE_INDEX_MAX = 10_000
+// Bedrock/Anthropic object generation runs away on open-ended numeric fields: at
+// temperature 0 it keeps emitting digits for messageIndex until the output-token
+// cap, which truncates the JSON and makes the whole object fail to parse. Bounding
+// messageIndex to a finite enum of the trace's real indices makes the field a
+// choice among a small set of exact literals, so it cannot run away. Cap the enum
+// size so a very long trace can't compile to a grammar Bedrock rejects.
+const FLAGGER_MESSAGE_INDEX_ENUM_LIMIT = 200
 
 const isValidMessageIndex = (value: number | undefined): value is number =>
   value !== undefined && Number.isInteger(value) && value >= 0 && value <= FLAGGER_MESSAGE_INDEX_MAX
 
-const providerFlaggerOutputSchema = z.object({
+const baseFlaggerOutputFields = {
   matched: z.boolean().optional().default(false),
   feedback: z.string().min(1).nullable().optional(),
-  // Ask providers for a string instead of a JSON number. Claude/Bedrock can
-  // otherwise produce runaway decimal literals for this field under structured
-  // generation, which makes the whole object fail to materialize.
-  messageIndex: z.string().regex(/^\d+$/).optional(),
-})
+}
 
-const flaggerOutputSchema = providerFlaggerOutputSchema.superRefine((value, ctx) => {
-  const feedback = value.feedback?.trim()
+// Generation schema, rebuilt per classify call so messageIndex is an enum of the
+// trace's valid transcript indices (as strings). Traces with no messages omit the
+// field entirely (z.enum needs a non-empty set).
+export const buildProviderFlaggerOutputSchema = (messageCount: number) => {
+  const usable = Math.min(Math.max(messageCount, 0), FLAGGER_MESSAGE_INDEX_ENUM_LIMIT)
+  if (usable === 0) return z.object(baseFlaggerOutputFields)
 
-  if (value.matched) {
-    if (!feedback) {
+  const indices = Array.from({ length: usable }, (_, index) => String(index)) as [string, ...string[]]
+  return z.object({ ...baseFlaggerOutputFields, messageIndex: z.enum(indices).optional() })
+}
+
+// Parsing schema, kept lenient: a model that ignores the offered enum and emits
+// any numeric string is still parsed, and out-of-range values are dropped in
+// parseFlaggerOutput rather than failing the whole classification.
+const flaggerOutputSchema = z
+  .object({ ...baseFlaggerOutputFields, messageIndex: z.string().regex(/^\d+$/).optional() })
+  .superRefine((value, ctx) => {
+    const feedback = value.feedback?.trim()
+
+    if (value.matched) {
+      if (!feedback) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          path: ["feedback"],
+          message: "matched=true requires positive annotation feedback",
+        })
+        return
+      }
+    } else if (feedback) {
       ctx.addIssue({
         code: z.ZodIssueCode.custom,
         path: ["feedback"],
-        message: "matched=true requires positive annotation feedback",
+        message: "matched=false must not include annotation feedback",
       })
-      return
     }
-  } else if (feedback) {
-    ctx.addIssue({
-      code: z.ZodIssueCode.custom,
-      path: ["feedback"],
-      message: "matched=false must not include annotation feedback",
-    })
-  }
-})
+  })
 
 const FLAGGER_OUTPUT_CONTRACT = `
 Structured output contract:
 - Set matched=false when the trace does not belong to this flagger; in that case feedback must be null or omitted.
 - Set matched=true only when the trace belongs to this flagger; in that case feedback is required.
-- For matched=true, feedback must be the final human-readable annotation: one or two short sentences describing the issue and concrete evidence.
-- Include messageIndex only when one transcript line is clearly the best evidence. messageIndex must be exactly one quoted integer string like "0" or "12"; never output it as a JSON number, decimal, exponent, comma-separated list, range, or unquoted value.
+- For matched=true, feedback must be the final human-readable annotation: one or two short sentences (under 300 characters) describing the issue and concrete evidence.
+- Include messageIndex only when one transcript line is clearly the best evidence. messageIndex must be a quoted integer string naming an existing transcript line, e.g. "0" or "12"; pick one of the offered indices, and never output it as a JSON number, decimal, exponent, list, or range.
 `.trim()
 
 // Whether a strategy classifies only the evaluated agent's own assistant
@@ -825,7 +844,7 @@ export const classifyTraceForFlaggerUseCase = Effect.fn("flaggers.classifyTraceF
       ...flaggerModelConfig,
       system: classificationSystemPrompt,
       prompt: classificationPrompt,
-      schema: providerFlaggerOutputSchema,
+      schema: buildProviderFlaggerOutputSchema(input.trace.allMessages.length),
       telemetry: {
         spanName: AI_GENERATE_TELEMETRY_SPAN_NAMES.flaggerClassify,
         project: LATITUDE_TELEMETRY_PROJECT_SLUGS.flaggers,

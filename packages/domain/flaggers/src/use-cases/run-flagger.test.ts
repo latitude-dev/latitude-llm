@@ -31,6 +31,7 @@ import type { Flagger } from "../entities/flagger.ts"
 import { FlaggerRepository } from "../ports/flagger-repository.ts"
 import { createFakeFlaggerRepository } from "../testing/fake-flagger-repository.ts"
 import {
+  buildProviderFlaggerOutputSchema,
   classifyTraceForFlaggerUseCase,
   normalizeSystemPromptForCacheKey,
   type RunFlaggerInput,
@@ -1341,6 +1342,57 @@ ${"Detailed grounding, workflow, callout, and formatting rules. ".repeat(120)}`.
     expect(calls.generate[1].prompt).toContain("No jailbreaking behavior detected")
   })
 
+  it("recovers to matched=false for length-truncated structured output missing feedback", async () => {
+    const { repository } = createFakeTraceRepository({
+      findByTraceId: () =>
+        Effect.succeed(
+          makeTraceDetail([
+            {
+              role: "user",
+              parts: [{ type: "text", content: "Please do the task." }],
+            },
+            {
+              role: "assistant",
+              parts: [{ type: "text", content: "I will not do it." }],
+            },
+          ]),
+        ),
+    })
+
+    const truncatedOutput = '{"matched":true,"messageIndex":"1"'
+    const sdkError = new Error(`No output generated. Output: ${truncatedOutput}`)
+    sdkError.name = "AI_NoOutputGeneratedError"
+
+    const { calls, layer: aiLayer } = createFakeAI({
+      generate: () =>
+        Effect.fail(
+          new AIError({
+            message: `AI generation failed (${FLAGGER_DEFAULT_CLASSIFIER_MODEL.provider}/${FLAGGER_DEFAULT_CLASSIFIER_MODEL.model}): No output generated.`,
+            cause: sdkError,
+          }),
+        ),
+    })
+
+    const result = await Effect.runPromise(
+      runFlaggerUseCase({ ...INPUT, flaggerSlug: "laziness" }).pipe(
+        Effect.provide(
+          Layer.mergeAll(
+            Layer.succeed(TraceRepository, repository),
+            Layer.succeed(ChSqlClient, createFakeChSqlClient({ organizationId: OrganizationId(INPUT.organizationId) })),
+            Layer.succeed(SqlClient, createFakeSqlClient({ organizationId: OrganizationId(INPUT.organizationId) })),
+            Layer.succeed(FlaggerRepository, defaultFlaggerRepo),
+            aiLayer,
+            defaultCacheLayer,
+          ),
+        ),
+      ),
+    )
+
+    expect(result).toEqual({ matched: false })
+    expect(calls.generate).toHaveLength(1)
+    expect(calls.generate[0].maxTokens).toBe(FLAGGER_DEFAULT_CLASSIFIER_MODEL.maxTokens)
+  })
+
   it("recovers to matched=false for the runaway decimal messageIndex output from trace-0e838fd", async () => {
     const { repository } = createFakeTraceRepository({
       findByTraceId: () =>
@@ -1403,8 +1455,6 @@ ${"Detailed grounding, workflow, callout, and formatting rules. ".repeat(120)}`.
 
     expect(result).toEqual({ matched: false })
     expect(calls.generate).toHaveLength(1)
-    expect(calls.generate[0].system).toContain("messageIndex must be exactly one quoted integer string")
-    expect(calls.generate[0].system).toContain("never output it as a JSON number")
   })
 
   it("recovers to matched=false when the SDK cause has no AI_NoObjectGeneratedError name but the message indicates a schema mismatch", async () => {
@@ -1653,7 +1703,61 @@ ${"Detailed grounding, workflow, callout, and formatting rules. ".repeat(120)}`.
     expect(calls.generate[0].prompt).toContain("CANDIDATE STAGES")
   })
 
-  it("instructs flaggers to emit messageIndex as exactly one quoted integer string", async () => {
+  it("bounds the generation schema messageIndex to the trace's real indices", () => {
+    // Two-message trace → messageIndex may only be "0" or "1"; anything else the
+    // model tries to emit is rejected by the enum, which is what prevents the
+    // open-ended digit runaway that truncated output at the token cap.
+    const schema = buildProviderFlaggerOutputSchema(2)
+
+    expect(
+      schema.safeParse({ matched: true, feedback: "Refused a harmless request.", messageIndex: "1" }).success,
+    ).toBe(true)
+    expect(
+      schema.safeParse({ matched: true, feedback: "Refused a harmless request.", messageIndex: "5" }).success,
+    ).toBe(false)
+    expect(schema.safeParse({ matched: false }).success).toBe(true)
+  })
+
+  it("omits messageIndex from the generation schema when the trace has no messages", () => {
+    const schema = buildProviderFlaggerOutputSchema(0)
+
+    expect("messageIndex" in schema.shape).toBe(false)
+  })
+
+  it("passes an enum-bounded messageIndex schema to the classifier generate call", async () => {
+    const { repository } = createFakeTraceRepository({
+      findByTraceId: () =>
+        Effect.succeed(
+          makeTraceDetail([
+            { role: "user", parts: [{ type: "text", content: "Please do the task." }] },
+            { role: "assistant", parts: [{ type: "text", content: "I will not do it." }] },
+          ]),
+        ),
+    })
+
+    const { calls, layer: aiLayer } = createClassifyAndApproveAI()
+
+    await Effect.runPromise(
+      runFlaggerUseCase({ ...INPUT, flaggerSlug: "laziness" }).pipe(
+        Effect.provide(
+          Layer.mergeAll(
+            Layer.succeed(TraceRepository, repository),
+            Layer.succeed(ChSqlClient, createFakeChSqlClient({ organizationId: OrganizationId(INPUT.organizationId) })),
+            Layer.succeed(SqlClient, createFakeSqlClient({ organizationId: OrganizationId(INPUT.organizationId) })),
+            Layer.succeed(FlaggerRepository, defaultFlaggerRepo),
+            aiLayer,
+            defaultCacheLayer,
+          ),
+        ),
+      ),
+    )
+
+    const classifySchema = calls.generate[0].schema
+    expect(classifySchema.safeParse({ matched: true, feedback: "x", messageIndex: "1" }).success).toBe(true)
+    expect(classifySchema.safeParse({ matched: true, feedback: "x", messageIndex: "999999" }).success).toBe(false)
+  })
+
+  it("instructs flaggers to choose messageIndex from the offered transcript indices", async () => {
     const { repository } = createFakeTraceRepository({
       findByTraceId: () =>
         Effect.succeed(
@@ -1687,8 +1791,9 @@ ${"Detailed grounding, workflow, callout, and formatting rules. ".repeat(120)}`.
       ),
     )
 
-    expect(calls.generate[0].system).toContain("messageIndex must be exactly one quoted integer string")
-    expect(calls.generate[0].system).toContain("never output it as a JSON number")
+    expect(calls.generate[0].system).toContain("messageIndex must be a quoted integer string")
+    expect(calls.generate[0].system).toContain("pick one of the offered indices")
+    expect(calls.generate[0].system).toContain("under 300 characters")
   })
 
   it("uses flagger-specific prompt for NSFW with suspicious snippets", async () => {
