@@ -715,11 +715,12 @@ describe("listSignalsUseCase", () => {
     expect(result.items[0]?.trend).toHaveLength(14)
     expect(listBySignalIdsCalls).toEqual([[activeSignal.id]])
     expect(histogramInputs[0]?.signalIds).toEqual([activeSignal.id, regressedSignal.id, archivedSignal.id])
-    expect(histogramInputs[0]?.from.toISOString()).toBe("2026-04-04T00:00:00.000Z")
-    expect(histogramInputs[0]?.to.toISOString()).toBe("2026-04-10T23:59:59.999Z")
+    // All-time window anchors to the latest occurrence (2026-04-09), not today (2026-04-10).
+    expect(histogramInputs[0]?.from.toISOString()).toBe("2026-04-03T00:00:00.000Z")
+    expect(histogramInputs[0]?.to.toISOString()).toBe("2026-04-09T23:59:59.999Z")
     expect(trendInputs[0]?.signalIds).toEqual([activeSignal.id])
-    expect(trendInputs[0]?.from.toISOString()).toBe("2026-03-28T00:00:00.000Z")
-    expect(trendInputs[0]?.to.toISOString()).toBe("2026-04-10T23:59:59.999Z")
+    expect(trendInputs[0]?.from.toISOString()).toBe("2026-03-27T00:00:00.000Z")
+    expect(trendInputs[0]?.to.toISOString()).toBe("2026-04-09T23:59:59.999Z")
   })
 
   it("attaches per-issue tag aggregates to the visible page", async () => {
@@ -992,6 +993,73 @@ describe("listSignalsUseCase", () => {
       for (const [index, bucket] of histogram.entries()) {
         expect(Date.parse(bucket.bucket)).toBe(firstMs + index * widthMs)
       }
+    })
+
+    it("anchors the All-time histogram and trend to the latest activity when data predates today", async () => {
+      const now = new Date("2026-04-10T12:00:00.000Z")
+      const issue = makeSignal({ id: SignalId("o".repeat(24)), name: "Old-data issue" })
+      // Latest occurrence is three weeks before today: the window must end here, not at `now`.
+      const latestOccurrence = new Date("2026-03-20T00:00:00.000Z")
+
+      const { repository: signalRepository } = createFakeSignalRepository([issue])
+      const { repository: evaluationRepository } = createEvaluationRepository()
+      const histogramInputs: Array<{ from: Date; to: Date }> = []
+      const trendInputs: Array<{ from: Date; to: Date }> = []
+      const { repository: scoreAnalyticsRepository } = createFakeScoreAnalyticsRepository({
+        listSignalWindowMetrics: () =>
+          Effect.succeed([
+            makeWindowMetric({
+              signalId: issue.id,
+              occurrences: 4,
+              firstSeenAt: new Date("2026-03-01T00:00:00.000Z"),
+              lastSeenAt: latestOccurrence,
+            }),
+          ]),
+        aggregateBySignals: aggregateOccurrences([
+          makeOccurrence({
+            signalId: issue.id,
+            totalOccurrences: 4,
+            recentOccurrences: 4,
+            baselineAvgOccurrences: 1,
+            firstSeenAt: new Date("2026-03-01T00:00:00.000Z"),
+            lastSeenAt: latestOccurrence,
+          }),
+        ]),
+        histogramBySignals: ({ timeRange }) =>
+          Effect.sync(() => {
+            histogramInputs.push({ from: timeRange.from ?? new Date(0), to: timeRange.to ?? new Date(0) })
+            return []
+          }),
+        trendBySignals: ({ timeRange }) =>
+          Effect.sync(() => {
+            trendInputs.push({ from: timeRange.from ?? new Date(0), to: timeRange.to ?? new Date(0) })
+            return []
+          }),
+      })
+      createSignalSearch([])
+      sessionCount = 4
+
+      await Effect.runPromise(
+        listSignalsUseCase({ organizationId, projectId, now }).pipe(
+          Effect.provide(
+            Layer.mergeAll(
+              Layer.succeed(SignalRepository, signalRepository),
+              Layer.succeed(EvaluationRepository, evaluationRepository),
+              Layer.succeed(ScoreAnalyticsRepository, scoreAnalyticsRepository),
+              Layer.succeed(SqlClient, createFakeSqlClient({ organizationId })),
+              Layer.succeed(ChSqlClient, createFakeChSqlClient({ organizationId })),
+              provideSessionRepository,
+            ),
+          ),
+        ),
+      )
+
+      // Histogram: last 7 days ending at the latest occurrence (2026-03-20), not today.
+      expect(histogramInputs[0]?.from.toISOString()).toBe("2026-03-14T00:00:00.000Z")
+      expect(histogramInputs[0]?.to.toISOString()).toBe("2026-03-20T23:59:59.999Z")
+      // Trend: 14 days ending at the latest occurrence.
+      expect(trendInputs[0]?.from.toISOString()).toBe("2026-03-07T00:00:00.000Z")
+      expect(trendInputs[0]?.to.toISOString()).toBe("2026-03-20T23:59:59.999Z")
     })
   })
 

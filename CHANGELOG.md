@@ -2,6 +2,24 @@
 
 ## Unreleased
 
+## v0.3.47 - 2026-07-13
+
+### Traces
+
+- Defaulted Sessions/Traces and Tools/Signals/Users time filters to All time, with bounded chart windows so older project data is visible without expensive trend scans (ref: #3955).
+- Fixed "Clear dates" so it removes date bounds instead of restoring the previous default window, and stopped showing false onboarding states for projects that only have older traces (ref: #3955).
+- Added session-wide span links in the Conversation tab so messages and tool calls can jump to spans from earlier traces in the same session (ref: #3965).
+- Reduced ClickHouse memory usage for trace detail reads by loading trace summaries separately from source-span message content (ref: ad54c4154).
+
+### Telemetry
+
+- Released `@latitude-data/telemetry` 3.6.0 with `createCodemodeTelemetry()` for Cloudflare Think Codemode tracing, including nested tool-call spans, capture/redaction options, and error recording (ref: #3956).
+- Updated the Cloudflare Think telemetry guide and example app for Codemode tracing and local verification (ref: #3956).
+
+### Models
+
+- Refreshed the bundled models.dev model catalog (ref: #3983).
+
 ## v0.3.46 - 2026-07-10
 
 ### Traces

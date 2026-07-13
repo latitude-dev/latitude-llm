@@ -1,7 +1,7 @@
 import { type ChSqlClient, OrganizationId, ProjectId, type RepositoryError, TraceId } from "@domain/shared"
 import { Effect } from "effect"
 
-import type { TraceDetail } from "../entities/trace.ts"
+import type { Trace } from "../entities/trace.ts"
 import { TraceRepository } from "../ports/trace-repository.ts"
 
 export type LoadTraceForTraceEndSkipped = {
@@ -12,7 +12,7 @@ export type LoadTraceForTraceEndSkipped = {
 
 export type LoadTraceForTraceEndFound = {
   readonly kind: "found"
-  readonly traceDetail: TraceDetail
+  readonly traceDetail: Trace
 }
 
 export type LoadTraceForTraceEndResult = LoadTraceForTraceEndSkipped | LoadTraceForTraceEndFound
@@ -28,7 +28,7 @@ export const loadTraceForTraceEndUseCase = (input: {
 
     const traceRepository = yield* TraceRepository
     const detail = yield* traceRepository
-      .findByTraceId({
+      .findSummaryByTraceId({
         organizationId: OrganizationId(input.organizationId),
         projectId: ProjectId(input.projectId),
         traceId: TraceId(input.traceId),
