@@ -136,6 +136,53 @@ The divisive build rebuilds the whole tree from scratch every pass, so without i
 
 The matcher is biased toward continuation on purpose — a false continuation is a visual no-op, a false birth+death pair breaks trend charts. It is pure and deterministic, so a pass replays identically under Temporal. Thresholds are MVP defaults seeded by analogy to published lineage-layer baselines; tune offline on real cross-pass corpora. `split` / `merge` are intentionally not modelled: a confident 1:1 continuation carries the identity trend UIs need, and the divisive build cannot produce near-duplicate siblings to merge.
 
+## Custom behaviors
+
+A **custom behavior** is a named, project-scoped exploration scope: a `FilterSet` selects which sessions Phase 2 samples and clusters into a **scoped behavior sub-tree** that sits alongside the global taxonomy without mutating it. Domain code: `packages/domain/taxonomy` (`createCustomBehavior`, `updateCustomBehavior`, `deleteCustomBehavior`). Postgres adapter: `packages/platform/db-postgres/src/repositories/custom-behavior-repository.ts`. ClickHouse adapter: `packages/platform/db-clickhouse/src/repositories/custom-behavior-assignment-repository.ts`.
+
+### Model
+
+Postgres (`custom_behaviors`):
+
+- `name`, `slug` (unique per project), `filter_set` (JSONB `FilterSet`), `status` (`pending` → `generating` → `ready` | `failed`).
+- Created rows start at `pending`. Phase 2 (workflow) will drive `generating` / `ready` / `failed`; Phase 1 only persists definitions.
+
+Scoped taxonomy rows reuse the global cluster/run tables with a `custom_behavior_id` foreign key (application-layer, no FK constraint):
+
+- `taxonomy_clusters.custom_behavior_id` — `NULL` = global gardening tree; non-null = clusters belonging to one behavior's sub-tree.
+- `taxonomy_runs.custom_behavior_id` — `NULL` = global gardening run; non-null = a behavior-scoped build run (Phase 2).
+
+ClickHouse (`custom_behavior_assignments`):
+
+- Mirrors `taxonomy_observations` assignment columns but is keyed by `custom_behavior_id`.
+- A behavior's scoped tree **never writes** `taxonomy_observations.assigned_cluster_id`; the global online router and gardening paths stay isolated.
+- `ReplacingMergeTree(indexed_at)` on `(organization_id, project_id, custom_behavior_id, observation_id)`; TTL on `start_time` + `retention_days + 30`.
+
+### Filter contract
+
+Custom behaviors reuse the shared `FilterSet` with one hard exclusion: the `topics` field (behaviours tree filter) is rejected because scoping a behavior on behaviours is circular (`CUSTOM_BEHAVIOR_EXCLUDED_FILTER_FIELD`). Every other sessions filter field — including `moments` — stays allowed. The exclusion is enforced in `customBehaviorFilterSetSchema` so web, API, and the Phase 2 workflow share one contract.
+
+### Limits and constants
+
+| Constant | Value | Role |
+| --- | --- | --- |
+| `MAX_CUSTOM_BEHAVIORS_PER_PROJECT` | 10 | Create-time cap (count-based, intentionally soft under concurrency) |
+| `CUSTOM_BEHAVIOR_LOOKBACK_DAYS` | 7 | Fixed sampling window Phase 2 passes as a workflow parameter |
+| `CUSTOM_BEHAVIOR_NAME_MAX_LENGTH` | 80 | Name bound |
+
+### CRUD (Phase 1)
+
+- **Create** — validates name + filter set, generates slug, enforces per-project cap, saves `status: pending`.
+- **Update** — `name` and/or `filterSet` only; slug regenerates when `toSlug(name)` changes.
+- **Delete** — org-scoped `findById` then hard delete from Postgres. ClickHouse slice purge (`deleteByBehavior`) is wired on the assignment repository for Phase 2/3 lifecycle hooks.
+
+Public HTTP/MCP operations and web UI for custom behaviors are not mounted yet; Phase 1 lands domain ports, schema, and use-cases only.
+
+### Phases still open
+
+- **Phase 2** — Temporal workflow: sample scoped sessions over `CUSTOM_BEHAVIOR_LOOKBACK_DAYS`, run divisive clustering into `custom_behavior_id`-tagged clusters, write `custom_behavior_assignments`, drive status transitions.
+- **Phase 3** — Read surfaces: behaviours UI scoped tree, session filters, intelligence drawer backed by the assignment slice instead of global observations.
+
 ## Read paths
 
 - **Behaviours page** (`listProjectBehavioursUseCase`): returns the literal tree, but **unwraps the single englobing root** — when there is exactly one depth-0 root with children, its depth-1 children become the top-level rows so the table opens on several real categories instead of one all-encompassing row (a tiny corpus collapsed to a single childless root is still shown). Each node's `subtreeObservationCount` is rolled up across visible descendants **at read time** (not the stored counter); zero-residue interior nodes synthesize a zero trend rather than vanish with their subtree. The web layer indents by **relative** tree-walk depth (not absolute `cluster.depth`), rolls conversation-intelligence rates up each subtree weighted by sessions, and renders an expandable tree. The topics filter dropdown (`getTopicFilterOptions`) applies the same root unwrap.

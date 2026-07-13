@@ -129,7 +129,9 @@ Translates a `FilterSet` into parameterized SQL clauses. Behavior:
 | tokensInput | tokens_input | UInt64 | |
 | tokensOutput | tokens_output | UInt64 | |
 | cacheHitRate | synthetic | — | token-weighted prompt-cache hit rate; filter wire values are integer percentages (0–100), SQL divides by 100 |
-| startTime | start_time | DateTime64 | |
+| startTime | start_time | DateTime64 | compiled via `parseDateTime64BestEffort` (see below) |
+
+**DateTime64 filters:** `startTime` on traces and sessions uses `dateTime64BestEffortExpression` (`packages/platform/db-clickhouse/src/registries/helpers.ts`). Filter wire values stay as ISO strings in `{param:String}` / `{param:Array(String)}` bindings; SQL wraps them in `parseDateTime64BestEffort(..., 9, 'UTC')` so ClickHouse accepts `Z`, numeric offsets (`+05:30`, `-0500`), and bare timestamps without a separate pre-strip pass. Scalar comparisons compile to `column >= parseDateTime64BestEffort({f_N:String}, 9, 'UTC')`; `in`/`notIn` use `has(arrayMap(x -> parseDateTime64BestEffort(x, 9, 'UTC'), ...), column)`.
 
 Plus any `metadata.*` key (dynamic, no registry entry needed).
 

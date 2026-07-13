@@ -45,7 +45,7 @@ The middleware writes the chosen variant onto `c.var.auth`. `c.var.organization`
 Both validators live in dedicated platform packages so they can be reused by other resource servers without pulling in HTTP middleware:
 
 - `packages/platform/api-key-auth` — `validateApiKey(token, deps)`. Looks up the org-scoped API key, decrypts the AES-256-GCM-encrypted token, returns an `api-key` `AuthContext`.
-- `packages/platform/oauth-token-auth` — `validateOAuthAccessToken(token, deps)`. Joins `oauth_access_tokens → oauth_applications`, rejects on expired token / disabled application / missing org binding, returns an `oauth` `AuthContext`. Pure Drizzle — no Better Auth dependency on the API side.
+- `packages/platform/oauth-token-auth` — `validateOAuthAccessToken(token, deps)`. Joins `oauth_access_tokens → oauth_applications → members`, rejects on expired token / disabled application / missing org binding / **revoked org membership**, returns an `oauth` `AuthContext`. Pure Drizzle — no Better Auth dependency on the API side. On cache hits, membership is re-checked live so removal takes effect on the next request instead of waiting for the ~300s TTL.
 
 Both follow the same caching shape:
 
@@ -81,11 +81,11 @@ Public routes are bodyless metadata documents — never product data. Everything
 
 | Tier | Quota (per org/min) | Typical use |
 | --- | --- | --- |
-| `low` | 100 | Default. ID-keyed CRUD, simple lookups, account/settings reads. |
-| `medium` | 60 | Mutations with non-trivial side effects (email, fan-out writes). |
-| `high` | 15 | Bulk reads with filter/search/vector load. |
-| `ultra` | 3 | Imports, exports, monitor-signal — anything that enqueues a heavy job or sends email. |
-| `max` | 1 | Unauthenticated or abuse-prone surfaces (paired with a global limiter). |
+| `low` | 1,000 | Default. ID-keyed CRUD, simple lookups, account/settings reads. |
+| `medium` | 600 | Mutations with non-trivial side effects (email, fan-out writes). |
+| `high` | 150 | Bulk reads with filter/search/vector load. |
+| `ultra` | 30 | Imports, exports, monitor-signal — anything that enqueues a heavy job or sends email. |
+| `max` | 10 | Unauthenticated or abuse-prone surfaces (paired with a global limiter). |
 
 Default to `low`. Pick a tighter tier only when an endpoint genuinely warrants it.
 

@@ -103,12 +103,20 @@ type AlertIncidentCondition =
     }
 ```
 
-Create/update validation keeps the rule coherent:
+Create validation keeps the rule coherent:
 
 - `match` rules cannot carry a condition.
 - `threshold` and `escalating` rules must carry a condition whose `trigger` matches the rule trigger.
 - `escalating` rules are count-only (the rule metric and condition metric must both be `count`). The seasonal engine reads count series.
 - An `escalating` condition that carries a `threshold` must use `expected` mode; absolute and multiplier thresholds are rejected for escalating.
+
+### Edit lock after creation
+
+Once a monitor exists, **incident-launching configuration is immutable**. `updateMonitorUseCase` rejects any change to `target`, `rule.trigger`, or `rule.config` (metric, threshold, sensitivity, condition). Only **name**, **description**, and **rule.severity** remain editable. This keeps open incidents, frozen `entrySignals`, and notification keys aligned with the rule that opened them.
+
+`system` monitors are further restricted: name, slug, target, trigger, and conditions were already fixed at provision time; post-creation edits are limited to severity and mute, same as user monitors for the overlapping fields.
+
+Mute (`muted_at`) is independent of the edit lock and works on all monitors.
 
 ## Incidents
 
@@ -186,16 +194,17 @@ Signal discovery notifications are separate from incidents. A new signal can be 
 
 The managed web surface exposes monitors as a single-rule editor:
 
-- Create modals choose a target preset and an initial rule.
-- The detail page edits the monitor metadata and rule.
-- The rule editor uses `monitor.match`, `monitor.threshold`, and `monitor.escalating` vocabulary in the UI layer, then maps it back to the domain `trigger` + `condition` shape.
+- Create modals choose a target preset and an initial rule (the only time target/trigger/conditions are set).
+- The detail page edits **metadata and severity** after creation; target and rule configuration are read-only in the UI.
+- The create flow uses `monitor.match`, `monitor.threshold`, and `monitor.escalating` vocabulary in the UI layer, then maps it back to the domain `trigger` + `condition` shape.
 - The incidents table reads `sourceType` and `sourceId` from incident rows. `monitor` rows link back to the current monitor context; `signal` rows link to the signal detail page when the signal still exists.
 
-Public API/MCP surfaces follow the same contract: monitor create/update accepts one target and one rule. There are no alert subroutes or alert-card stacks in the final monitor model.
+Public API/MCP surfaces follow the same contract: `createMonitor` accepts one target and one rule; `updateMonitor` accepts only `name`, `description`, and `severity`. There are no alert subroutes or alert-card stacks in the final monitor model.
 
 ## Operational Invariants
 
 - Every active monitor has exactly one target and one rule.
+- Target, trigger, metric, and conditions are fixed after creation; only name, description, and severity update.
 - Monitor slugs are unique per project among non-deleted rows.
 - Soft delete sets `deleted_at`; deleted monitors are hidden and do not fire.
 - Deleting a saved search cascades to active monitors with `target.type = "savedSearch"` and `target.id` matching the saved search.
