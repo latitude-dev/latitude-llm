@@ -108,6 +108,7 @@ const listSignalsInputSchema = z.object({
       toIso: z.iso.datetime().optional(),
     })
     .optional(),
+  histogramMaxSpanDays: z.number().int().positive().optional(),
 })
 
 const toSignalsBucketRecord = (bucket: { readonly bucket: string; readonly count: number }) => ({
@@ -401,6 +402,7 @@ const runSignalsList = async (
         ...(data.assigneeIds?.length ? { assigneeIds: data.assigneeIds } : {}),
         ...(data.sort ? { sort: data.sort } : {}),
         ...(timeRange ? { timeRange } : {}),
+        ...(data.histogramMaxSpanDays ? { histogramMaxSpanDays: data.histogramMaxSpanDays } : {}),
         ...(directMatch
           ? { signalIds: [directMatch.id] }
           : search

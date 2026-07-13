@@ -51,6 +51,12 @@ export interface TraceRepositoryShape {
     readonly searchQuery?: string
   }): Effect.Effect<Date | null, RepositoryError, ChSqlClient>
 
+  /** Earliest `start_time` across all of a project's traces (unfiltered) — the "All time" lower bound. */
+  findFirstTraceAt(input: {
+    readonly organizationId: OrganizationId
+    readonly projectId: ProjectId
+  }): Effect.Effect<Date | null, RepositoryError, ChSqlClient>
+
   /**
    * Count of traces matching the same filter + search semantics as `countByProjectId` that have at
    * least one `source = 'annotation'` score linked. The shared `searchQuery` path requires AI
