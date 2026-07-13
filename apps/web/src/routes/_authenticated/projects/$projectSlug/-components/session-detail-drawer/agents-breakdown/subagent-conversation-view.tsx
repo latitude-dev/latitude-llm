@@ -1,10 +1,7 @@
-import type { AgentNode } from "@domain/spans"
+import { type AgentNode, agentGraphSpanKey } from "@domain/spans"
 import { Button, Conversation, Text } from "@repo/ui"
 import { useMemo } from "react"
-import {
-  useConversationSpanMaps,
-  useSpansByTraceCollection,
-} from "../../../../../../../domains/spans/spans.collection.ts"
+import { useSpansByTraceCollection } from "../../../../../../../domains/spans/spans.collection.ts"
 import { useSpanConversationMessages } from "../../../../../../../domains/traces/traces.collection.ts"
 import { AgentBreadcrumb } from "./agent-breadcrumb.tsx"
 import { buildSubagentToolCalls } from "./agent-decorations.ts"
@@ -27,10 +24,10 @@ export function SubagentConversationView({
   readonly agentSpanId: string
   readonly onSelectAgent: (node: AgentNode | null) => void
 }) {
+  // Agent nesting is trace-local, so a subagent's own subtree lives entirely in its trace.
   const { data: spans } = useSpansByTraceCollection({ projectId, traceId: agentTraceId })
   const graph = useAgentGraph(spans)
-  const node = graph.nodeForSpanId.get(agentSpanId)
-  const traceStartTime = graph.roots[0] ? new Date(graph.roots[0].startTime).toISOString() : undefined
+  const node = graph.nodeForSpanId.get(agentGraphSpanKey(agentTraceId, agentSpanId))
   const conversationSpanId = node?.representativeGenerationSpanId ?? agentSpanId
 
   const conversation = useSpanConversationMessages({
@@ -40,26 +37,11 @@ export function SubagentConversationView({
     enabled: node?.kind === "subagent",
   })
 
-  const { data: spanMaps } = useConversationSpanMaps({
-    projectId,
-    traceId: agentTraceId,
-    startTime: traceStartTime,
-    allMessages: conversation.messages,
-    enabled: conversation.messages.length > 0,
-  })
-
   const subagentToolCalls = useMemo(
-    () =>
-      spanMaps
-        ? buildSubagentToolCalls({
-            graph,
-            toolCallSpanMap: spanMaps.toolCallSpanMap,
-            onOpenConversation: onSelectAgent,
-          })
-        : undefined,
-    [graph, spanMaps, onSelectAgent],
+    () => buildSubagentToolCalls({ graph, onOpenConversation: onSelectAgent }),
+    [graph, onSelectAgent],
   )
-  const subagentToolCallsProp = subagentToolCalls && subagentToolCalls.size > 0 ? subagentToolCalls : undefined
+  const subagentToolCallsProp = subagentToolCalls.size > 0 ? subagentToolCalls : undefined
 
   if (!node || node.kind !== "subagent") {
     return (

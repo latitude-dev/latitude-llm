@@ -198,7 +198,7 @@ export type {
   AgentNodeKind,
   AgentTrigger,
 } from "./use-cases/build-agent-graph.ts"
-export { buildAgentGraph } from "./use-cases/build-agent-graph.ts"
+export { agentGraphSpanKey, agentGraphToolCallKey, buildAgentGraph } from "./use-cases/build-agent-graph.ts"
 export type {
   TraceSearchDocument,
   TraceSearchDocumentInput,

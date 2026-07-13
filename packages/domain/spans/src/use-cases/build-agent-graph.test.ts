@@ -1,5 +1,11 @@
 import { describe, expect, it } from "vitest"
-import { type AgentGraphSpanInput, type AgentNode, buildAgentGraph } from "./build-agent-graph.ts"
+import {
+  type AgentGraphSpanInput,
+  type AgentNode,
+  agentGraphSpanKey,
+  agentGraphToolCallKey,
+  buildAgentGraph,
+} from "./build-agent-graph.ts"
 
 let clock = 0
 
@@ -85,7 +91,7 @@ describe("buildAgentGraph", () => {
     expect(sub.ref.spanId).toBe("tool")
     expect(sub.trigger).toEqual({ type: "tool", toolName: "delegate", toolCallId: "tc1" })
     expect(sub.ownGenerationCount).toBe(1)
-    expect(graph.nodeByToolCallId.get("tc1")).toBe(sub)
+    expect(graph.nodeByToolCallId.get(agentGraphToolCallKey("trace-a", "tc1"))).toBe(sub)
   })
 
   it("treats an execute_tool with no generations as a plain tool, not an agent", () => {
@@ -222,6 +228,41 @@ describe("buildAgentGraph", () => {
     expect(graph.roots.every((r) => r.kind === "main")).toBe(true)
   })
 
+  it("keeps subagents from different traces distinct when they share span/tool-call ids", () => {
+    clock = 0
+    const spans = [
+      // Two traces whose delegating tool span and tool-call id collide by value.
+      span({ traceId: "t1", spanId: "root", operation: "invoke_agent", parentSpanId: "" }),
+      span({
+        traceId: "t1",
+        spanId: "tool",
+        operation: "execute_tool",
+        toolName: "a",
+        toolCallId: "tc",
+        parentSpanId: "root",
+      }),
+      gen({ traceId: "t1", spanId: "g", parentSpanId: "tool" }),
+      span({ traceId: "t2", spanId: "root", operation: "invoke_agent", parentSpanId: "" }),
+      span({
+        traceId: "t2",
+        spanId: "tool",
+        operation: "execute_tool",
+        toolName: "b",
+        toolCallId: "tc",
+        parentSpanId: "root",
+      }),
+      gen({ traceId: "t2", spanId: "g", parentSpanId: "tool" }),
+    ]
+    const graph = buildAgentGraph({ spans })
+    const sub1 = graph.nodeByToolCallId.get(agentGraphToolCallKey("t1", "tc")) as AgentNode
+    const sub2 = graph.nodeByToolCallId.get(agentGraphToolCallKey("t2", "tc")) as AgentNode
+    expect(sub1.label).toBe("a")
+    expect(sub2.label).toBe("b")
+    expect(sub1).not.toBe(sub2)
+    expect(graph.nodeForSpanId.get(agentGraphSpanKey("t1", "g"))).toBe(sub1)
+    expect(graph.nodeForSpanId.get(agentGraphSpanKey("t2", "g"))).toBe(sub2)
+  })
+
   it("upholds the cost invariant: Σ own === trace total === main total", () => {
     clock = 0
     const spans = [
@@ -248,13 +289,13 @@ describe("buildAgentGraph", () => {
       gen({ spanId: "g", parentSpanId: "inner" }),
     ]
     const graph = buildAgentGraph({ spans })
-    const sub = graph.nodeByToolCallId.get("tc") as AgentNode
+    const sub = graph.nodeByToolCallId.get(agentGraphToolCallKey("trace-a", "tc")) as AgentNode
     expect(sub).toBeDefined()
     // the generation nested under the collapsed tool resolves to the subagent node
-    expect(graph.nodeForSpanId.get("g")).toBe(sub)
-    expect(graph.nodeForSpanId.get("tool")).toBe(sub)
+    expect(graph.nodeForSpanId.get(agentGraphSpanKey("trace-a", "g"))).toBe(sub)
+    expect(graph.nodeForSpanId.get(agentGraphSpanKey("trace-a", "tool"))).toBe(sub)
     // a main-scope span resolves to the main
-    expect(graph.nodeForSpanId.get("root")?.kind).toBe("main")
+    expect(graph.nodeForSpanId.get(agentGraphSpanKey("trace-a", "root"))?.kind).toBe("main")
   })
 
   it("is resilient to orphan / cycle / self-referential parents", () => {

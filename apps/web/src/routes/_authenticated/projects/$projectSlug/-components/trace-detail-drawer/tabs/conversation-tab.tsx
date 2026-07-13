@@ -1,4 +1,4 @@
-import type { AgentNode, TraceSearchHighlightsResult } from "@domain/spans"
+import type { AgentGraph, AgentNode, TraceSearchHighlightsResult } from "@domain/spans"
 import {
   Button,
   Conversation,
@@ -120,6 +120,7 @@ function ConversationContent({
   isLoadingMoreMessages,
   onLoadMoreMessages,
   onSelectAgent,
+  agentGraph: agentGraphOverride,
 }: {
   readonly traceDetail: TraceDetailRecord
   readonly messages: readonly GenAIMessage[]
@@ -153,6 +154,8 @@ function ConversationContent({
   readonly onLoadMoreMessages: () => unknown
   /** Opens a subagent's conversation in place (from a decorated tool call). */
   readonly onSelectAgent?: ((node: AgentNode) => void) | undefined
+  /** Session-wide agent graph. When set, replaces the trace-local graph so tool calls from every trace in the accumulated conversation decorate, not just the latest. */
+  readonly agentGraph?: AgentGraph | undefined
 }) {
   const internalScrollRef = useRef<HTMLDivElement>(null)
   const scrollRef = scrollContainerRef ?? internalScrollRef
@@ -188,7 +191,9 @@ function ConversationContent({
     startTimeFrom: traceDetail.startTime,
     startTimeTo: traceDetail.endTime,
   })
-  const agentGraph = useAgentGraph(agentSpans)
+  const traceAgentGraph = useAgentGraph(agentSpans)
+  // A session passes the session-wide graph so tool calls from every trace decorate; a plain trace uses its own.
+  const agentGraph = agentGraphOverride ?? traceAgentGraph
 
   const band = useViewportBand({ scrollRef, timeline: timeline ?? null, isActive })
 
@@ -532,15 +537,8 @@ function ConversationContent({
       : undefined
 
   const subagentToolCalls = useMemo(
-    () =>
-      spanMaps && agentGraph
-        ? buildSubagentToolCalls({
-            graph: agentGraph,
-            toolCallSpanMap: spanMaps.toolCallSpanMap,
-            onOpenConversation: onSelectAgent,
-          })
-        : undefined,
-    [agentGraph, spanMaps, onSelectAgent],
+    () => buildSubagentToolCalls({ graph: agentGraph, onOpenConversation: onSelectAgent }),
+    [agentGraph, onSelectAgent],
   )
   const subagentToolCallsProp = subagentToolCalls && subagentToolCalls.size > 0 ? subagentToolCalls : undefined
 
@@ -702,6 +700,7 @@ export function ConversationTab({
   messageTrailingSlot,
   timeline,
   focusMessageIndex,
+  agentGraph,
 }: {
   readonly traceDetail: TraceDetailRecord | null | undefined
   readonly isDetailLoading: boolean
@@ -731,6 +730,8 @@ export function ConversationTab({
   /** Timeline for the minimap bar: null while loading, undefined when the feature is off. */
   readonly timeline?: ConversationTimeline | null | undefined
   readonly focusMessageIndex?: number | undefined
+  /** Session-wide agent graph for decoration; when omitted the conversation derives a trace-local one. */
+  readonly agentGraph?: AgentGraph | undefined
 }) {
   const conversation = useTraceConversationMessages({
     projectId,
@@ -797,6 +798,7 @@ export function ConversationTab({
           isLoadingMoreMessages={conversation.isFetchingNextPage}
           onLoadMoreMessages={() => conversation.fetchNextPage()}
           onSelectAgent={selectAgent}
+          agentGraph={agentGraph}
         />
       </div>
       {showSubagent && (

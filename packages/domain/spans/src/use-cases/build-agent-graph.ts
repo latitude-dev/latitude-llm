@@ -70,10 +70,20 @@ export interface AgentGraph {
   /** One main node per trace, chronological by start time. */
   readonly roots: readonly AgentNode[]
   readonly nodesById: ReadonlyMap<string, AgentNode>
-  /** Any span id → the node that owns it (its enclosing agent scope). */
+  /** `agentGraphSpanKey(traceId, spanId)` → the node that owns that span. Keyed by trace since span ids are trace-scoped. */
   readonly nodeForSpanId: ReadonlyMap<string, AgentNode>
-  /** Spawning tool-call id → the subagent node it launched (when detectable). */
+  /** `agentGraphToolCallKey(traceId, toolCallId)` → the subagent node that tool call launched (when detectable). */
   readonly nodeByToolCallId: ReadonlyMap<string, AgentNode>
+}
+
+/** Key for `AgentGraph.nodeForSpanId`. Span ids are only unique within a trace, so a session-wide graph must scope by trace. */
+export function agentGraphSpanKey(traceId: string, spanId: string): string {
+  return `${traceId}:${spanId}`
+}
+
+/** Key for `AgentGraph.nodeByToolCallId`. Tool-call ids are only unique within a trace. */
+export function agentGraphToolCallKey(traceId: string, toolCallId: string): string {
+  return `${traceId}:${toolCallId}`
 }
 
 interface AgentGraphInput {
@@ -437,12 +447,12 @@ function buildTraceGraph(traceId: string, traceSpans: readonly AgentGraphSpanInp
   registerNode(finalNode, acc.nodesById)
   for (const span of traceSpans) {
     const state = stateForNodeId(ownerNodeId(span))
-    if (state) acc.nodeForSpanId.set(span.spanId, state.node as unknown as AgentNode)
+    if (state) acc.nodeForSpanId.set(agentGraphSpanKey(traceId, span.spanId), state.node as unknown as AgentNode)
   }
   for (const state of stateByCandidateId.values()) {
     const trigger = state.node.trigger
     if (trigger.type === "tool" && trigger.toolCallId) {
-      acc.nodeByToolCallId.set(trigger.toolCallId, state.node as unknown as AgentNode)
+      acc.nodeByToolCallId.set(agentGraphToolCallKey(traceId, trigger.toolCallId), state.node as unknown as AgentNode)
     }
   }
 }
