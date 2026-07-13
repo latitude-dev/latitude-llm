@@ -13,7 +13,16 @@ import {
 import { formatBytes } from "@repo/utils"
 import { useHotkeys } from "@tanstack/react-hotkeys"
 import { DownloadIcon } from "lucide-react"
-import { type ReactNode, type RefObject, useCallback, useEffect, useMemo, useRef, useState } from "react"
+import {
+  type ReactNode,
+  type RefObject,
+  startTransition,
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react"
 import type { GenAIMessage } from "rosetta-ai"
 import { HotkeyBadge } from "../../../../../../../components/hotkey-badge.tsx"
 import { useAuthSession } from "../../../../../../../domains/sessions/session.collection.ts"
@@ -753,19 +762,39 @@ export function ConversationTab({
 
   const [agentTraceId, setAgentTraceId] = useParamState("agentTraceId", "", { history: "push" })
   const [agentSpanId, setAgentSpanId] = useParamState("agentSpanId", "", { history: "push" })
+  const [mountedAgent, setMountedAgent] = useState<{ readonly traceId: string; readonly spanId: string } | null>(null)
+  const [subagentSlidIn, setSubagentSlidIn] = useState(false)
+
   const selectAgent = useCallback(
     (node: AgentNode | null) => {
       if (!node?.ref.spanId) {
+        setSubagentSlidIn(false)
         setAgentTraceId("")
         setAgentSpanId("")
         return
       }
+      // Flip the transform in the same tick as the click so the slide starts
+      // immediately; the pane's content mounts a beat later (see the effect below).
+      setSubagentSlidIn(true)
       setAgentTraceId(node.ref.traceId)
       setAgentSpanId(node.ref.spanId)
     },
     [setAgentTraceId, setAgentSpanId],
   )
   const showSubagent = agentSpanId.length > 0 && agentTraceId.length > 0
+
+  // Reconcile the slide with the URL (browser back/forward, or the drawer
+  // clearing the params) and mount the pane's content off the critical path via
+  // startTransition so the transform can start animating right away.
+  // TODO(frontend-use-effect-policy): coordinates URL-driven mount/animate with the DOM transition.
+  useEffect(() => {
+    if (showSubagent) {
+      setSubagentSlidIn(true)
+      startTransition(() => setMountedAgent({ traceId: agentTraceId, spanId: agentSpanId }))
+    } else {
+      setSubagentSlidIn(false)
+    }
+  }, [showSubagent, agentTraceId, agentSpanId])
 
   if (isDetailLoading || (traceDetail && conversation.isLoading)) {
     return (
@@ -787,40 +816,54 @@ export function ConversationTab({
 
   return (
     <div className="flex min-h-0 flex-1 flex-col">
-      {/* Keep the main conversation mounted (hidden) while a subagent is shown so its scroll position survives. */}
-      <div className={showSubagent ? "hidden" : "flex min-h-0 flex-1 flex-col"}>
-        <ConversationContent
-          isActive={isActive && !showSubagent}
-          annotationsEnabled={annotationsEnabled}
-          traceDetail={traceDetail}
-          messages={conversation.messages}
-          navigateToSpan={navigateToSpan}
-          sessionSpanScope={sessionSpanScope}
-          projectId={projectId}
-          scrollContainerRef={scrollContainerRef}
-          textSelectionPopoverControlsRef={textSelectionPopoverControlsRef}
-          onPopoverClose={onPopoverClose}
-          searchQuery={searchQuery}
-          messageTrailingSlot={messageTrailingSlot}
-          timeline={timeline}
-          focusMessageIndex={focusMessageIndex}
-          totalMessages={conversation.totalMessages}
-          payloadBytes={conversation.payloadBytes}
-          hasMoreMessages={conversation.hasNextPage}
-          isLoadingMoreMessages={conversation.isFetchingNextPage}
-          onLoadMoreMessages={() => conversation.fetchNextPage()}
-          onSelectAgent={selectAgent}
-          agentGraph={agentGraph}
-        />
+      <div className="relative flex min-h-0 flex-1 overflow-hidden">
+        <div
+          className="flex h-full w-full transition-transform duration-300 ease-out"
+          style={{ transform: subagentSlidIn ? "translateX(-100%)" : "translateX(0)" }}
+          onTransitionEnd={(e) => {
+            // Unmount the subagent pane only after it has slid fully back out.
+            if (e.target === e.currentTarget && !showSubagent) setMountedAgent(null)
+          }}
+        >
+          {/* Main conversation — stays mounted through the slide so its scroll position survives. */}
+          <div className="flex min-h-0 w-full shrink-0 flex-col">
+            <ConversationContent
+              isActive={isActive && !showSubagent}
+              annotationsEnabled={annotationsEnabled}
+              traceDetail={traceDetail}
+              messages={conversation.messages}
+              navigateToSpan={navigateToSpan}
+              sessionSpanScope={sessionSpanScope}
+              projectId={projectId}
+              scrollContainerRef={scrollContainerRef}
+              textSelectionPopoverControlsRef={textSelectionPopoverControlsRef}
+              onPopoverClose={onPopoverClose}
+              searchQuery={searchQuery}
+              messageTrailingSlot={messageTrailingSlot}
+              timeline={timeline}
+              focusMessageIndex={focusMessageIndex}
+              totalMessages={conversation.totalMessages}
+              payloadBytes={conversation.payloadBytes}
+              hasMoreMessages={conversation.hasNextPage}
+              isLoadingMoreMessages={conversation.isFetchingNextPage}
+              onLoadMoreMessages={() => conversation.fetchNextPage()}
+              onSelectAgent={selectAgent}
+              agentGraph={agentGraph}
+            />
+          </div>
+          {/* Subagent conversation — lazily mounted to the right, then slid into view. */}
+          <div className="flex min-h-0 w-full shrink-0 flex-col">
+            {mountedAgent && (
+              <SubagentConversationView
+                projectId={projectId}
+                agentTraceId={mountedAgent.traceId}
+                agentSpanId={mountedAgent.spanId}
+                onSelectAgent={selectAgent}
+              />
+            )}
+          </div>
+        </div>
       </div>
-      {showSubagent && (
-        <SubagentConversationView
-          projectId={projectId}
-          agentTraceId={agentTraceId}
-          agentSpanId={agentSpanId}
-          onSelectAgent={selectAgent}
-        />
-      )}
     </div>
   )
 }

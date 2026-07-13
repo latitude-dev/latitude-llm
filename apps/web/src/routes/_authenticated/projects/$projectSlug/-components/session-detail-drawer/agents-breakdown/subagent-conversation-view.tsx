@@ -1,5 +1,6 @@
 import { type AgentNode, agentGraphSpanKey } from "@domain/spans"
-import { Button, Conversation, Text } from "@repo/ui"
+import { Button, Conversation, Icon, Text } from "@repo/ui"
+import { ChevronLeftIcon } from "lucide-react"
 import { useMemo } from "react"
 import { useSpansByTraceCollection } from "../../../../../../../domains/spans/spans.collection.ts"
 import { useSpanConversationMessages } from "../../../../../../../domains/traces/traces.collection.ts"
@@ -48,11 +49,16 @@ export function SubagentConversationView({
   if (!node || node.kind !== "subagent") {
     return (
       <div className="flex flex-1 flex-col">
-        <div className="flex items-center gap-2 border-b border-border px-3 py-2">
-          <Button type="button" variant="ghost" size="sm" onClick={() => onSelectAgent(null)}>
-            Back to conversation
-          </Button>
-        </div>
+        <button
+          type="button"
+          onClick={() => onSelectAgent(null)}
+          className="flex w-full shrink-0 items-center gap-2 border-b border-border bg-background px-4 py-2 text-left transition-colors hover:bg-muted cursor-pointer"
+        >
+          <div className="flex h-8 items-center gap-2">
+            <Icon icon={ChevronLeftIcon} size="sm" color="foregroundMuted" />
+            <Text.H6 color="foregroundMuted">Back to conversation</Text.H6>
+          </div>
+        </button>
         <div className="flex flex-1 items-center justify-center">
           <Text.H5 color="foregroundMuted">Agent not found</Text.H5>
         </div>
