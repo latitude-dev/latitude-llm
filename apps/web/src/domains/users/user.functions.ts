@@ -6,22 +6,10 @@ import { UserRepository } from "@domain/users"
 import { OutboxEventWriterLive, ProjectRepositoryLive, UserRepositoryLive, withPostgres } from "@platform/db-postgres"
 import { withTracing } from "@repo/observability"
 import { createServerFn } from "@tanstack/react-start"
-import { getRequestHeaders } from "@tanstack/react-start/server"
 import { Effect, Layer } from "effect"
 import { z } from "zod"
 import { requireSession } from "../../server/auth.ts"
-import { getAdminPostgresClient, getBetterAuth } from "../../server/clients.ts"
-
-export const updateUser = createServerFn({ method: "POST" })
-  .inputValidator(z.object({ name: z.string().min(1).max(256) }))
-  .handler(async ({ data }) => {
-    await getBetterAuth().api.updateUser({
-      body: {
-        name: data.name,
-      },
-      headers: await getRequestHeaders(),
-    })
-  })
+import { getAdminPostgresClient } from "../../server/clients.ts"
 
 const submitOnboardingSchema = z.object({
   jobTitle: z

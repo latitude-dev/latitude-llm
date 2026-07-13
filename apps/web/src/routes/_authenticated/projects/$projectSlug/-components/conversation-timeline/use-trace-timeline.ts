@@ -1,6 +1,6 @@
 import { useMemo } from "react"
 import { useAnnotationsByTrace } from "../../../../../../domains/annotations/annotations.collection.ts"
-import { useMemberByUserIdMap } from "../../../../../../domains/members/members.collection.ts"
+import { useProjectMemberByUserIdMap } from "../../../../../../domains/members/members.collection.ts"
 import { useConversationSpanMaps } from "../../../../../../domains/spans/spans.collection.ts"
 import type { SpanRecord } from "../../../../../../domains/spans/spans.functions.ts"
 import { useTraceConversationMessages } from "../../../../../../domains/traces/traces.collection.ts"
@@ -44,7 +44,7 @@ export function useTraceTimeline({
     draftMode: "include",
     enabled: annotationsEnabled,
   })
-  const memberByUserId = useMemberByUserIdMap()
+  const memberByUserId = useProjectMemberByUserIdMap()
 
   return useMemo(() => {
     if (!traceDetail || !spanMaps || conversation.messages.length === 0) return null

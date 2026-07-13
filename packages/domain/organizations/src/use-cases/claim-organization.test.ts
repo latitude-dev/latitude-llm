@@ -75,11 +75,20 @@ const setup = (seed: {
     )
   }
   if (seed.org) {
-    const org = createOrganization({ id: ORG_ID, name: "Acme", slug: "acme", expiresAt: seed.org.expiresAt })
+    const org = createOrganization({
+      id: ORG_ID,
+      name: "Acme",
+      slug: "acme",
+      expiresAt: seed.org.expiresAt,
+    })
     organizations.set(org.id, org)
   }
   if (seed.withMember) {
-    const member = createMembership({ organizationId: ORG_ID, userId: UserId("m".repeat(24)), role: "owner" })
+    const member = createMembership({
+      organizationId: ORG_ID,
+      userId: UserId("m".repeat(24)),
+      role: "owner",
+    })
     memberships.set(member.id, member)
   }
 
@@ -121,34 +130,66 @@ describe("claimOrganizationUseCase", () => {
 
     const savedMembers = [...memberships.values()]
     expect(savedMembers).toHaveLength(1)
-    expect(savedMembers[0]).toMatchObject({ organizationId: ORG_ID, userId: USER_ID, role: "owner" })
+    expect(savedMembers[0]).toMatchObject({
+      organizationId: ORG_ID,
+      userId: USER_ID,
+      role: "owner",
+    })
 
     expect(organizations.get(ORG_ID)?.expiresAt).toBeNull()
     expect(claims[0]?.claimedAt).toBeInstanceOf(Date)
   })
 
+  it("opts the claimed org into the shared showcase (wantsShowcase)", async () => {
+    const { run, organizations } = setup({
+      claim: { expiresAt: inOneWeek() },
+      org: { expiresAt: inOneWeek() },
+    })
+    expect(organizations.get(ORG_ID)?.settings?.wantsShowcase).not.toBe(true)
+
+    const exit = await run(RAW_TOKEN)
+    expect(Exit.isSuccess(exit)).toBe(true)
+    expect(organizations.get(ORG_ID)?.settings?.wantsShowcase).toBe(true)
+  })
+
   it("rejects an unknown token", async () => {
-    const { run } = setup({ claim: { expiresAt: inOneWeek() }, org: { expiresAt: inOneWeek() } })
+    const { run } = setup({
+      claim: { expiresAt: inOneWeek() },
+      org: { expiresAt: inOneWeek() },
+    })
     expect(causeText(await run("nope".repeat(16)))).toContain("ClaimTokenInvalidError")
   })
 
   it("rejects an already-claimed token", async () => {
-    const { run } = setup({ claim: { expiresAt: inOneWeek(), claimedAt: new Date() }, org: { expiresAt: inOneWeek() } })
+    const { run } = setup({
+      claim: { expiresAt: inOneWeek(), claimedAt: new Date() },
+      org: { expiresAt: inOneWeek() },
+    })
     expect(causeText(await run(RAW_TOKEN))).toContain("ClaimAlreadyUsedError")
   })
 
   it("rejects an expired token", async () => {
-    const { run } = setup({ claim: { expiresAt: inThePast() }, org: { expiresAt: inOneWeek() } })
+    const { run } = setup({
+      claim: { expiresAt: inThePast() },
+      org: { expiresAt: inOneWeek() },
+    })
     expect(causeText(await run(RAW_TOKEN))).toContain("ClaimExpiredError")
   })
 
   it("rejects when the org is already normalized (expires_at null)", async () => {
-    const { run } = setup({ claim: { expiresAt: inOneWeek() }, org: { expiresAt: null } })
+    const { run } = setup({
+      claim: { expiresAt: inOneWeek() },
+      org: { expiresAt: null },
+    })
     expect(causeText(await run(RAW_TOKEN))).toContain("OrganizationNotClaimableError")
   })
 
   it("rejects when the org already has a member (anti-theft)", async () => {
-    const { run } = setup({ claim: { expiresAt: inOneWeek() }, org: { expiresAt: inOneWeek() }, withMember: true })
+    const { run } = setup({
+      claim: { expiresAt: inOneWeek() },
+      org: { expiresAt: inOneWeek() },
+      withMember: true,
+    })
     expect(causeText(await run(RAW_TOKEN))).toContain("OrganizationNotClaimableError")
   })
 

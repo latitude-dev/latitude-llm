@@ -587,7 +587,7 @@ export const SpanRepositoryLive = Layer.effect(
         return yield* chSqlClient
           .query(async (client) => {
             const result = await client.query({
-              // Same `LIMIT 1 BY span_id` dedupe as listByTraceId. The attr maps
+              // Dedupe by trace + span because OpenTelemetry span ids are trace-scoped. The attr maps
               // come back as empty literals: a session is unbounded in span count
               // and `attr_string` alone can hold the full conversation per span
               // (Vercel AI SDK `ai.prompt*`), so reading them here has OOMed the
@@ -602,8 +602,8 @@ export const SpanRepositoryLive = Layer.effect(
                         AND ${membership.clause}
                         ${startFromClause}
                         ${startToClause}
-                      ORDER BY span_id, ingested_at DESC
-                      LIMIT 1 BY span_id
+                      ORDER BY trace_id, span_id, ingested_at DESC
+                      LIMIT 1 BY trace_id, span_id
                     )
                     ORDER BY start_time ASC`,
               query_params: {
@@ -644,8 +644,8 @@ export const SpanRepositoryLive = Layer.effect(
                         AND project_id = {projectId:String}
                         AND ${membership.clause}
                         AND operation = 'execute_tool'
-                      ORDER BY span_id, ingested_at DESC
-                      LIMIT 1 BY span_id
+                      ORDER BY trace_id, span_id, ingested_at DESC
+                      LIMIT 1 BY trace_id, span_id
                     )
                     ORDER BY start_time ASC`,
               query_params: {

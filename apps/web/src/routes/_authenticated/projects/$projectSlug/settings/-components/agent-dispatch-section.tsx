@@ -1,4 +1,8 @@
-import { AGENT_DISPATCH_TRIGGERS } from "@domain/agent-dispatch"
+import {
+  AGENT_DISPATCH_TRIGGERS,
+  type AgentDispatchTrigger,
+  type StoredAgentDispatchTarget,
+} from "@domain/agent-dispatch"
 import {
   Badge,
   Button,
@@ -24,7 +28,7 @@ import { useForm } from "@tanstack/react-form"
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 import { Link } from "@tanstack/react-router"
 import { BookOpen, Copy, ExternalLink, FileText, type LucideProps, Plus, Webhook } from "lucide-react"
-import { useState } from "react"
+import { type ReactNode, useState } from "react"
 import { z } from "zod"
 import {
   type AgentDispatchConfigRecord,
@@ -35,7 +39,7 @@ import {
   connectLinearIntegration,
   connectWebhookIntegration,
   disconnectAgentDispatchIntegration,
-  getAgentDispatchConfig,
+  getOrgDefaultDispatchConfig,
   getWebhookSecret,
   listAgentDispatches,
   listAgentDispatchIntegrations,
@@ -45,7 +49,7 @@ import {
   listLinearTeams,
   listLinearTeamsForApiKey,
   sendToDestinationsQueryKey,
-  upsertAgentDispatchConfig,
+  upsertOrgDefaultDispatchConfig,
 } from "../../../../../../domains/agent-dispatch/agent-dispatch.functions.ts"
 import { toUserMessage } from "../../../../../../lib/errors.ts"
 import { createFormSubmitHandler, fieldErrorsAsStrings } from "../../../../../../lib/form-server-action.ts"
@@ -54,6 +58,17 @@ import { maskSensitiveValue } from "../../../../../../lib/mask-sensitive-value.t
 import { IntegrationCard } from "./integration-card.tsx"
 
 export const AGENT_DISPATCH_INTEGRATIONS_QUERY_KEY = ["agent-dispatch-integrations"] as const
+
+export const orgDefaultConfigQueryKey = (kind: string) => ["agent-dispatch-config-default", kind] as const
+
+export const projectDispatchSettingsQueryKey = (projectId: string, kind: string) =>
+  ["agent-dispatch-project-settings", projectId, kind] as const
+
+export interface DispatchConfigFormValues {
+  readonly triggers: readonly AgentDispatchTrigger[]
+  readonly target: StoredAgentDispatchTarget
+  readonly guardrails: { readonly maxDispatchesPerDay: number; readonly cooldownMinutes: number }
+}
 
 export const AGENT_DISPATCH_KIND_LABELS = {
   cursor: "Cursor",
@@ -136,8 +151,8 @@ function DispatchErrorDetailModal({
 }
 
 const INTEGRATION_SUBTITLES: Record<AgentDispatchKindKey, string> = {
-  cursor: "Cursor agents react to Latitude signals and push fixes to your code.",
-  claude_code: "Claude Code routines react to Latitude signals and push fixes to your code.",
+  cursor: "Cursor agents react to Latitude signals and monitors, then push fixes to your code.",
+  claude_code: "Claude Code routines react to Latitude signals and monitors, then push fixes to your code.",
   linear: "Create Linear issues for signals that need follow-up.",
   webhook: "Send integration events to your own endpoint.",
 }
@@ -149,11 +164,12 @@ const INTEGRATION_DOC_URLS: Record<AgentDispatchKindKey, string> = {
   webhook: "https://docs.latitude.so/agent-dispatch/webhooks",
 }
 
-const ACTIVE_DISPATCH_TRIGGERS = ["signal.discovered", "incident.opened"] as const
+const ACTIVE_DISPATCH_TRIGGERS = ["signal.discovered", "incident.opened", "monitor.incident"] as const
 
 const DISPATCH_TRIGGER_TITLES: Record<string, string> = {
   "signal.discovered": "New signal",
   "incident.opened": "Escalating signal",
+  "monitor.incident": "Monitor incident",
   manual: "Manual send",
 }
 
@@ -165,6 +181,10 @@ const TRIGGER_LABELS: Record<(typeof ACTIVE_DISPATCH_TRIGGERS)[number], { title:
   "incident.opened": {
     title: "Escalating signal",
     description: "Dispatch when a signal escalates into an incident.",
+  },
+  "monitor.incident": {
+    title: "Monitor incident",
+    description: "Dispatch when a threshold or escalating monitor opens an incident.",
   },
 }
 
@@ -268,7 +288,7 @@ function AgentDispatchKindCard({
     mutationFn: () => disconnectAgentDispatchIntegration({ data: { integrationId: integration!.id } }),
     onSuccess: async () => {
       await queryClient.invalidateQueries({ queryKey: AGENT_DISPATCH_INTEGRATIONS_QUERY_KEY })
-      await queryClient.invalidateQueries({ queryKey: ["agent-dispatch-config", projectId, kind] })
+      await queryClient.invalidateQueries({ queryKey: orgDefaultConfigQueryKey(kind) })
       await queryClient.invalidateQueries({ queryKey: sendToDestinationsQueryKey(projectId) })
       toast({ description: `${KIND_LABELS[kind]} disconnected` })
     },
@@ -385,8 +405,22 @@ export function AgentDispatchIntegrationDetails({
         </div>
         <IntegrationDocsButton kind={kind} />
       </div>
+      <div className="flex max-w-3xl flex-col gap-1">
+        <Text.H5 display="block" weight="semibold">
+          Default settings
+        </Text.H5>
+        <Text.H6 display="block" color="foregroundMuted">
+          These defaults apply to every project in your organization.{" "}
+          <Link
+            to="/projects/$projectSlug/settings/signals"
+            params={{ projectSlug }}
+            className="font-semibold text-foreground hover:underline"
+          >
+            Configure for this project only →
+          </Link>
+        </Text.H6>
+      </div>
       <AgentDispatchConfigForm
-        projectId={projectId}
         kind={kind}
         integrationId={integration.id}
         vendorAccountId={integration.vendorAccountId}
@@ -398,13 +432,11 @@ export function AgentDispatchIntegrationDetails({
 }
 
 function AgentDispatchConfigForm({
-  projectId,
   kind,
   integrationId,
   vendorAccountId,
   webhookSecret,
 }: {
-  readonly projectId: string
   readonly kind: AgentDispatchKindKey
   readonly integrationId: string
   readonly vendorAccountId: string
@@ -413,8 +445,8 @@ function AgentDispatchConfigForm({
   const queryClient = useQueryClient()
   const { toast } = useToast()
   const { data: config, isLoading } = useQuery({
-    queryKey: ["agent-dispatch-config", projectId, kind],
-    queryFn: () => getAgentDispatchConfig({ data: { projectId, kind } }),
+    queryKey: orgDefaultConfigQueryKey(kind),
+    queryFn: () => getOrgDefaultDispatchConfig({ data: { kind } }),
   })
 
   if (isLoading) return null
@@ -422,42 +454,56 @@ function AgentDispatchConfigForm({
   return (
     <AgentDispatchConfigFormInner
       key={config ? `${config.id}:${config.updatedAt}` : "new"}
-      projectId={projectId}
       kind={kind}
       integrationId={integrationId}
       vendorAccountId={vendorAccountId}
       initial={config ?? null}
       webhookSecret={webhookSecret}
-      onSaved={async () => {
-        await queryClient.invalidateQueries({ queryKey: ["agent-dispatch-config", projectId, kind] })
-        await queryClient.invalidateQueries({ queryKey: sendToDestinationsQueryKey(projectId) })
-        toast({ description: "Dispatch settings saved" })
+      onSubmit={async (values) => {
+        await upsertOrgDefaultDispatchConfig({
+          data: {
+            integrationId,
+            kind,
+            enabled: values.triggers.length > 0,
+            triggers: values.triggers,
+            target: values.target,
+            guardrails: values.guardrails,
+          },
+        })
+        await queryClient.invalidateQueries({ queryKey: orgDefaultConfigQueryKey(kind) })
+        await queryClient.invalidateQueries({ queryKey: ["send-to-destinations"] })
+        toast({ description: "Default settings saved" })
       }}
     />
   )
 }
 
-function AgentDispatchConfigFormInner({
-  projectId,
+export function AgentDispatchConfigFormInner({
   kind,
   integrationId,
   vendorAccountId,
   initial,
   webhookSecret,
-  onSaved,
+  readOnly = false,
+  submitLabel = "Save settings",
+  extraActions,
+  onSubmit,
 }: {
-  readonly projectId: string
   readonly kind: AgentDispatchKindKey
   readonly integrationId: string
   readonly vendorAccountId: string
   readonly initial: AgentDispatchConfigRecord | null
   readonly webhookSecret: string | null
-  readonly onSaved: () => Promise<void>
+  readonly readOnly?: boolean
+  readonly submitLabel?: string
+  readonly extraActions?: ReactNode
+  readonly onSubmit: (values: DispatchConfigFormValues) => Promise<void>
 }) {
   const target = initial?.target
-  const visibleTriggers = ACTIVE_DISPATCH_TRIGGERS.filter(
-    (trigger) => kind !== "linear" || trigger === "signal.discovered",
-  )
+  const visibleTriggers = ACTIVE_DISPATCH_TRIGGERS.filter((trigger) => {
+    if (kind === "linear") return trigger === "signal.discovered"
+    return true
+  })
   const { data: cursorRepositories = [], isLoading: cursorRepositoriesLoading } = useQuery({
     queryKey: ["cursor-repositories", integrationId],
     queryFn: () => listCursorRepositories({ data: { integrationId } }),
@@ -528,112 +574,37 @@ function AgentDispatchConfigFormInner({
     },
     onSubmit: createFormSubmitHandler(
       async (values: Record<string, unknown>) => {
+        const common = z
+          .object({
+            triggers: z.array(z.enum(AGENT_DISPATCH_TRIGGERS)),
+            maxDispatchesPerDay: z.coerce.number().int().positive(),
+            cooldownMinutes: z.coerce.number().int().nonnegative(),
+          })
+          .parse(values)
+        const guardrails = {
+          maxDispatchesPerDay: common.maxDispatchesPerDay,
+          cooldownMinutes: common.cooldownMinutes,
+        }
+        let target: StoredAgentDispatchTarget
         if (kind === "cursor") {
           const parsed = z
-            .object({
-              enabled: z.boolean(),
-              triggers: z.array(z.enum(AGENT_DISPATCH_TRIGGERS)),
-              maxDispatchesPerDay: z.coerce.number().int().positive(),
-              cooldownMinutes: z.coerce.number().int().nonnegative(),
-              repoUrl: z.string().url(),
-              startingRef: z.string().optional(),
-            })
+            .object({ repoUrl: z.string().url().or(z.literal("")), startingRef: z.string().optional() })
             .parse(values)
-          await upsertAgentDispatchConfig({
-            data: {
-              projectId,
-              integrationId,
-              kind,
-              enabled: parsed.triggers.length > 0,
-              triggers: parsed.triggers,
-              target: {
-                repoUrl: parsed.repoUrl,
-                ...(parsed.startingRef ? { startingRef: parsed.startingRef } : {}),
-              },
-              guardrails: {
-                maxDispatchesPerDay: parsed.maxDispatchesPerDay,
-                cooldownMinutes: parsed.cooldownMinutes,
-              },
-            },
-          })
+          target = {
+            ...(parsed.repoUrl ? { repoUrl: parsed.repoUrl } : {}),
+            ...(parsed.startingRef ? { startingRef: parsed.startingRef } : {}),
+          }
         } else if (kind === "claude_code") {
-          const parsed = z
-            .object({
-              enabled: z.boolean(),
-              triggers: z.array(z.enum(AGENT_DISPATCH_TRIGGERS)),
-              maxDispatchesPerDay: z.coerce.number().int().positive(),
-              cooldownMinutes: z.coerce.number().int().nonnegative(),
-              routineTriggerId: z.string().min(1),
-            })
-            .parse(values)
-          await upsertAgentDispatchConfig({
-            data: {
-              projectId,
-              integrationId,
-              kind,
-              enabled: parsed.triggers.length > 0,
-              triggers: parsed.triggers,
-              target: { routineTriggerId: parsed.routineTriggerId },
-              guardrails: {
-                maxDispatchesPerDay: parsed.maxDispatchesPerDay,
-                cooldownMinutes: parsed.cooldownMinutes,
-              },
-            },
-          })
+          const parsed = z.object({ routineTriggerId: z.string().min(1) }).parse(values)
+          target = { routineTriggerId: parsed.routineTriggerId }
         } else if (kind === "linear") {
-          const parsed = z
-            .object({
-              enabled: z.boolean(),
-              triggers: z.array(z.enum(AGENT_DISPATCH_TRIGGERS)),
-              maxDispatchesPerDay: z.coerce.number().int().positive(),
-              cooldownMinutes: z.coerce.number().int().nonnegative(),
-              teamId: z.string().uuid(),
-              assigneeId: z.string().optional(),
-            })
-            .parse(values)
-          await upsertAgentDispatchConfig({
-            data: {
-              projectId,
-              integrationId,
-              kind,
-              enabled: parsed.triggers.length > 0,
-              triggers: parsed.triggers,
-              target: {
-                teamId: parsed.teamId,
-                ...(parsed.assigneeId ? { assigneeId: parsed.assigneeId } : {}),
-              },
-              guardrails: {
-                maxDispatchesPerDay: parsed.maxDispatchesPerDay,
-                cooldownMinutes: parsed.cooldownMinutes,
-              },
-            },
-          })
+          const parsed = z.object({ teamId: z.string().uuid(), assigneeId: z.string().optional() }).parse(values)
+          target = { teamId: parsed.teamId, ...(parsed.assigneeId ? { assigneeId: parsed.assigneeId } : {}) }
         } else {
-          const parsed = z
-            .object({
-              enabled: z.boolean(),
-              triggers: z.array(z.enum(AGENT_DISPATCH_TRIGGERS)),
-              maxDispatchesPerDay: z.coerce.number().int().positive(),
-              cooldownMinutes: z.coerce.number().int().nonnegative(),
-              webhookUrl: z.string().url(),
-            })
-            .parse(values)
-          await upsertAgentDispatchConfig({
-            data: {
-              projectId,
-              integrationId,
-              kind,
-              enabled: parsed.triggers.length > 0,
-              triggers: parsed.triggers,
-              target: { webhookUrl: parsed.webhookUrl },
-              guardrails: {
-                maxDispatchesPerDay: parsed.maxDispatchesPerDay,
-                cooldownMinutes: parsed.cooldownMinutes,
-              },
-            },
-          })
+          const parsed = z.object({ webhookUrl: z.string().url() }).parse(values)
+          target = { webhookUrl: parsed.webhookUrl }
         }
-        await onSaved()
+        await onSubmit({ triggers: common.triggers, target, guardrails })
       },
       { resetOnSuccess: false },
     ),
@@ -656,6 +627,7 @@ function AgentDispatchConfigFormInner({
               return (
                 <div key={trigger} className="flex flex-row items-start gap-3">
                   <Checkbox
+                    disabled={readOnly}
                     checked={field.state.value.includes(trigger)}
                     onCheckedChange={(checked) => {
                       field.handleChange(
@@ -689,7 +661,7 @@ function AgentDispatchConfigFormInner({
                   placeholder={cursorRepositoriesLoading ? "Loading repositories" : "Select a repository"}
                   searchable
                   loading={cursorRepositoriesLoading}
-                  disabled={cursorRepositoriesLoading}
+                  disabled={readOnly || cursorRepositoriesLoading}
                   options={cursorRepositoryOptions}
                   value={field.state.value}
                   onChange={(value) => field.handleChange(String(value))}
@@ -699,7 +671,7 @@ function AgentDispatchConfigFormInner({
                 <Input
                   label="Repository URL"
                   placeholder="https://github.com/acme/app"
-                  disabled={cursorRepositoriesLoading}
+                  disabled={readOnly || cursorRepositoriesLoading}
                   value={field.state.value}
                   onChange={(event) => field.handleChange(event.target.value)}
                   errors={fieldErrorsAsStrings(field.state.meta.errors)}
@@ -713,6 +685,7 @@ function AgentDispatchConfigFormInner({
                 label="Branch"
                 placeholder="main"
                 className="h-9"
+                disabled={readOnly}
                 value={field.state.value}
                 onChange={(event) => field.handleChange(event.target.value)}
                 errors={fieldErrorsAsStrings(field.state.meta.errors)}
@@ -728,6 +701,7 @@ function AgentDispatchConfigFormInner({
             {(field) => (
               <Input
                 label="Routine trigger ID"
+                disabled={readOnly}
                 value={field.state.value}
                 onChange={(event) => field.handleChange(event.target.value)}
                 errors={fieldErrorsAsStrings(field.state.meta.errors)}
@@ -747,7 +721,7 @@ function AgentDispatchConfigFormInner({
                 placeholder={linearTeamsLoading ? "Loading Linear teams" : "Select a Linear team"}
                 searchable
                 loading={linearTeamsLoading}
-                disabled={linearTeamsLoading}
+                disabled={readOnly || linearTeamsLoading}
                 options={linearTeamOptions}
                 value={field.state.value}
                 onChange={(value) => field.handleChange(String(value))}
@@ -765,7 +739,7 @@ function AgentDispatchConfigFormInner({
                 searchable
                 removable
                 loading={linearMembersLoading}
-                disabled={linearMembersLoading}
+                disabled={readOnly || linearMembersLoading}
                 options={linearMemberOptions}
                 value={field.state.value}
                 onChange={(value) => field.handleChange(String(value))}
@@ -790,6 +764,7 @@ function AgentDispatchConfigFormInner({
             {(field) => (
               <Input
                 label="Webhook URL"
+                disabled={readOnly}
                 value={String(field.state.value)}
                 onChange={(event) => field.handleChange(event.target.value)}
                 errors={fieldErrorsAsStrings(field.state.meta.errors)}
@@ -799,17 +774,24 @@ function AgentDispatchConfigFormInner({
         </div>
       ) : null}
 
-      <form.Subscribe selector={(state) => ({ isDirty: state.isDirty, isSubmitting: state.isSubmitting })}>
-        {({ isDirty, isSubmitting }) =>
-          isDirty ? (
-            <div className="max-w-3xl">
-              <Button type="submit" isLoading={isSubmitting}>
-                Save settings
-              </Button>
+      {readOnly ? (
+        extraActions ? (
+          <div className="flex max-w-3xl flex-row gap-2">{extraActions}</div>
+        ) : null
+      ) : (
+        <form.Subscribe selector={(state) => ({ isDirty: state.isDirty, isSubmitting: state.isSubmitting })}>
+          {({ isDirty, isSubmitting }) => (
+            <div className="flex max-w-3xl flex-row gap-2">
+              {isDirty ? (
+                <Button type="submit" isLoading={isSubmitting}>
+                  {submitLabel}
+                </Button>
+              ) : null}
+              {extraActions}
             </div>
-          ) : null
-        }
-      </form.Subscribe>
+          )}
+        </form.Subscribe>
+      )}
     </form>
   )
 }
@@ -860,18 +842,20 @@ function ConnectAgentDispatchModal({
       ) => {
         if (kind === "cursor") {
           const parsed = z
-            .object({ cursorApiKey: z.string().min(1), repoUrl: z.string().url(), startingRef: z.string().optional() })
+            .object({
+              cursorApiKey: z.string().min(1),
+              repoUrl: z.string().url().or(z.literal("")),
+              startingRef: z.string().optional(),
+            })
             .parse(values)
-          const result = await connectCursorIntegration({
+          await connectCursorIntegration({
             data: {
               kind: "cursor",
               cursorApiKey: parsed.cursorApiKey,
-              projectId,
-              repoUrl: parsed.repoUrl,
+              ...(parsed.repoUrl ? { repoUrl: parsed.repoUrl } : {}),
               ...(parsed.startingRef ? { startingRef: parsed.startingRef } : {}),
             },
           })
-          queryClient.setQueryData(["agent-dispatch-config", projectId, kind], result.config)
         } else if (kind === "claude_code") {
           const parsed = z
             .object({
@@ -890,29 +874,28 @@ function ConnectAgentDispatchModal({
               kind: "claude_code",
               claudeRoutineToken: parsed.claudeRoutineToken,
               routineTriggerId: extractClaudeRoutineTriggerId(parsed.routineUrl)!,
-              projectId,
             },
           })
         } else if (kind === "linear") {
           const parsed = z.object({ linearApiKey: z.string().min(1), teamId: z.string().uuid() }).parse(values)
           await connectLinearIntegration({
-            data: { kind: "linear", linearApiKey: parsed.linearApiKey, teamId: parsed.teamId, projectId },
+            data: { kind: "linear", linearApiKey: parsed.linearApiKey, teamId: parsed.teamId },
           })
         } else {
           const parsed = z.object({ webhookUrl: z.string().url() }).parse(values)
           const result = await connectWebhookIntegration({
-            data: { kind: "webhook", webhookUrl: parsed.webhookUrl, projectId },
+            data: { kind: "webhook", webhookUrl: parsed.webhookUrl },
           })
           setWebhookSecret(result.webhookSecret)
           onWebhookSecret(result.webhookSecret)
           await queryClient.invalidateQueries({ queryKey: AGENT_DISPATCH_INTEGRATIONS_QUERY_KEY })
-          await queryClient.invalidateQueries({ queryKey: ["agent-dispatch-config", projectId, kind] })
+          await queryClient.invalidateQueries({ queryKey: orgDefaultConfigQueryKey(kind) })
           await queryClient.invalidateQueries({ queryKey: sendToDestinationsQueryKey(projectId) })
           toast({ description: `${KIND_LABELS[kind]} connected` })
           return
         }
         await queryClient.invalidateQueries({ queryKey: AGENT_DISPATCH_INTEGRATIONS_QUERY_KEY })
-        await queryClient.invalidateQueries({ queryKey: ["agent-dispatch-config", projectId, kind] })
+        await queryClient.invalidateQueries({ queryKey: orgDefaultConfigQueryKey(kind) })
         await queryClient.invalidateQueries({ queryKey: sendToDestinationsQueryKey(projectId) })
         toast({ description: `${KIND_LABELS[kind]} connected` })
         onClose()
@@ -1384,6 +1367,16 @@ function AgentDispatchHistorySection({
             <span className="truncate">{dispatch.sourceName ?? "Deleted signal"}</span>
             <Icon icon={ExternalLink} size="xs" />
           </Link>
+        ) : dispatch.sourceType === "monitor" && dispatch.sourceSlug ? (
+          <Link
+            to="/projects/$projectSlug/monitors/$monitorSlug"
+            params={{ projectSlug, monitorSlug: dispatch.sourceSlug }}
+            aria-label={`Open monitor ${dispatch.sourceName ?? dispatch.sourceId}`}
+            className="flex min-w-0 items-center gap-1 text-xs font-semibold text-foreground hover:underline"
+          >
+            <span className="truncate">{dispatch.sourceName ?? "Deleted monitor"}</span>
+            <Icon icon={ExternalLink} size="xs" />
+          </Link>
         ) : (
           <div className="flex min-w-0 flex-col gap-1">
             <Badge variant="outlineMuted" size="small" className="w-fit">
@@ -1470,7 +1463,7 @@ function AgentDispatchHistorySection({
           Dispatch history
         </Text.H5>
         <Text.H6 display="block" color="foregroundMuted">
-          Audit log of dispatches triggered by signals, incidents, and manual sends.
+          Audit log of dispatches triggered by signals, monitors, incidents, and manual sends.
         </Text.H6>
       </div>
       <InfiniteTable

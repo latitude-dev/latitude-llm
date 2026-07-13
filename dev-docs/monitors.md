@@ -69,7 +69,7 @@ All monitor kinds use the same target x trigger matrix:
 | Trigger | Condition | Incident lifecycle | Notification key |
 | --- | --- | --- | --- |
 | `match` | none | point event, `ended_at = started_at` | `monitor.match` |
-| `threshold` | metric threshold over the target window | point event, `ended_at = started_at` | `monitor.threshold` |
+| `threshold` | metric threshold over the target window | open/close incident; alerts once on open, closes silently after the exit dwell | `monitor.threshold` |
 | `escalating` | sustained count escalation | open/close incident | `monitor.escalating` |
 
 Supported metrics are:
@@ -138,7 +138,7 @@ Monitor evaluation inserts incidents with:
 - `severity: monitor.rule.severity`
 - `condition: null` for `match`, or the rule condition snapshot for threshold/escalating
 
-Point monitors (`match`, `threshold`) insert an event row with `endedAt = startedAt` every time the rule fires. Escalating monitors use the sustained path: one open row per monitor, closed when `EscalationEngine` exits.
+`match` monitors are point events: they insert a row with `endedAt = startedAt` every time the rule fires. `threshold` and `escalating` monitors use the sustained path: one open row per monitor while the condition holds. `threshold` opens an incident on first breach (freezing the evaluated threshold into `entrySignals` so the close-side compares against what tripped it, not a drifting baseline), then closes it once the condition has been clear for `THRESHOLD_EXIT_DWELL_MS` (`exitEligibleSince` tracks the dwell). A `threshold` incident alerts once on open (`incident.event`) and closes **silently** — no `IncidentClosed` event, so no recovery notification; closing simply re-arms a fresh alert if the breach recurs. `escalating` incidents close when `EscalationEngine` exits (and do notify on close).
 
 ## Evaluation
 
@@ -201,6 +201,6 @@ Public API/MCP surfaces follow the same contract: monitor create/update accepts 
 - Deleting a saved search cascades to active monitors with `target.type = "savedSearch"` and `target.id` matching the saved search.
 - Mute sets `muted_at`; muted monitors do not evaluate and the notification producer also skips any race-window fan-out.
 - Incidents are source keyed by `(source_type, source_id)`, not by a monitor-alert join.
-- At most one *open* incident per `(organization_id, source_type, source_id)` — enforced by a partial unique index on `incidents` where `ended_at IS NULL`. Point incidents (`ended_at = started_at`) are not open and do not contend for this slot.
+- At most one *open* incident per `(organization_id, source_type, source_id)` — enforced by a partial unique index on `incidents` where `ended_at IS NULL`. `threshold` and `escalating` incidents are open and contend for this slot; `match` point incidents (`ended_at = started_at`) are not open and do not.
 - Escalating monitors must use count series.
 - Organization/project scoping is enforced at repository and boundary layers; Postgres follows the repo's no-FK rule.

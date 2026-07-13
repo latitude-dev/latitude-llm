@@ -24,6 +24,14 @@ export const agentDispatchContextSchema = z.object({
       severity: z.string(),
     })
     .optional(),
+  monitor: z
+    .object({
+      id: z.string(),
+      slug: z.string(),
+      name: z.string(),
+      ruleSummary: z.string().optional(),
+    })
+    .optional(),
   metrics: z
     .object({
       occurrences: z.number(),

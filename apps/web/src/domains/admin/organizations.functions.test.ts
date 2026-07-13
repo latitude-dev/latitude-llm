@@ -1,10 +1,10 @@
 import { ORGANIZATION_USAGE_MAX_LIMIT } from "@domain/admin"
 import { describe, expect, it } from "vitest"
 import {
-  adminCreateDemoProjectInputSchema,
   adminGetOrganizationInputSchema,
   adminListOrganizationsByUsageInputSchema,
   adminResetSystemMonitorsInputSchema,
+  adminSetOrganizationShowcaseInputSchema,
 } from "./organizations.functions.ts"
 
 describe("adminGetOrganizationInputSchema", () => {
@@ -68,34 +68,6 @@ describe("adminListOrganizationsByUsageInputSchema", () => {
   })
 })
 
-describe("adminCreateDemoProjectInputSchema", () => {
-  it("accepts a valid organizationId + projectName", () => {
-    expect(
-      adminCreateDemoProjectInputSchema.safeParse({ organizationId: "org-123", projectName: "Demo Project" }).success,
-    ).toBe(true)
-  })
-
-  it("rejects an empty projectName", () => {
-    expect(adminCreateDemoProjectInputSchema.safeParse({ organizationId: "org-123", projectName: "" }).success).toBe(
-      false,
-    )
-  })
-
-  it("rejects a projectName above the max length", () => {
-    expect(
-      adminCreateDemoProjectInputSchema.safeParse({ organizationId: "org-123", projectName: "x".repeat(257) }).success,
-    ).toBe(false)
-  })
-
-  it("rejects an empty organizationId", () => {
-    expect(adminCreateDemoProjectInputSchema.safeParse({ organizationId: "", projectName: "Demo" }).success).toBe(false)
-  })
-
-  it("rejects a missing projectName", () => {
-    expect(adminCreateDemoProjectInputSchema.safeParse({ organizationId: "org-123" }).success).toBe(false)
-  })
-})
-
 describe("adminResetSystemMonitorsInputSchema", () => {
   it("accepts a valid organizationId", () => {
     expect(adminResetSystemMonitorsInputSchema.safeParse({ organizationId: "org-123" }).success).toBe(true)
@@ -111,5 +83,24 @@ describe("adminResetSystemMonitorsInputSchema", () => {
 
   it("rejects missing organizationId", () => {
     expect(adminResetSystemMonitorsInputSchema.safeParse({}).success).toBe(false)
+  })
+})
+
+describe("adminSetOrganizationShowcaseInputSchema", () => {
+  it("accepts a valid organizationId + enabled", () => {
+    expect(
+      adminSetOrganizationShowcaseInputSchema.safeParse({ organizationId: "org-123", enabled: true }).success,
+    ).toBe(true)
+    expect(
+      adminSetOrganizationShowcaseInputSchema.safeParse({ organizationId: "org-123", enabled: false }).success,
+    ).toBe(true)
+  })
+
+  it("rejects an empty organizationId", () => {
+    expect(adminSetOrganizationShowcaseInputSchema.safeParse({ organizationId: "", enabled: true }).success).toBe(false)
+  })
+
+  it("rejects a missing enabled flag", () => {
+    expect(adminSetOrganizationShowcaseInputSchema.safeParse({ organizationId: "org-123" }).success).toBe(false)
   })
 })

@@ -518,7 +518,7 @@ Lifts a monitor's mute so its incidents notify again.
 
 #### `latitude monitors update`
 
-Updates a monitor's metadata, target, and rule. System monitor edits are restricted.
+Updates a monitor's metadata and incident severity. Target, trigger, metric, and conditions are fixed after creation. System monitor edits are restricted.
 
 `PATCH /v1/projects/{projectSlug}/monitors/{monitorSlug}`
 

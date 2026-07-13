@@ -42,6 +42,9 @@ describe("renderDispatchPrompt", () => {
     expect(prompt).not.toContain("Severity:")
     expect(prompt).not.toContain("Tags:")
     expect(prompt).toContain("If Latitude MCP tools are available")
+    expect(prompt).toContain("suggest installing the Latitude MCP server")
+    expect(prompt).toContain("do not make speculative code changes")
+    expect(prompt).toContain("Do not mute or resolve the signal")
   })
 
   it("includes sample conversation excerpts", () => {
@@ -71,6 +74,36 @@ describe("renderDispatchPrompt", () => {
     expect(prompt).toContain("Sample conversation excerpts")
     expect(prompt).toContain("trace1")
     expect(prompt).toContain("called tool twice")
+  })
+
+  it("renders a monitor incident prompt with rule summary", () => {
+    const prompt = renderDispatchPrompt({
+      context: {
+        trigger: "monitor.incident",
+        organizationName: "Acme",
+        projectName: "My App",
+        projectSlug: "my-app",
+        monitor: {
+          id: "mon1",
+          slug: "cache-hit-rate",
+          name: "Cache hit rate",
+          ruleSummary: "Opens an incident when the cache hit rate for the target is under 50%.",
+        },
+        incident: {
+          id: "inc1",
+          severity: "high",
+        },
+        deepLinkUrl: "https://console.latitude.so/projects/my-app/monitors/cache-hit-rate",
+      },
+    })
+    expect(prompt).toContain("monitor fired")
+    expect(prompt).toContain("Cache hit rate")
+    expect(prompt).toContain("under 50%")
+    expect(prompt).toContain("Using the Latitude MCP")
+    expect(prompt).toContain("do not make speculative code changes")
+    expect(prompt).not.toContain("queryAnalytics")
+    expect(prompt).not.toContain("Do not mute or resolve the signal")
+    expect(prompt).toContain("Do not mute or resolve the monitor")
   })
 
   it("still substitutes placeholders for custom templates", () => {

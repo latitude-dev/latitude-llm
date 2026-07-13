@@ -1,8 +1,9 @@
 import {
+  completeOnboardingUseCase,
+  dismissShowcaseUseCase,
   generateUniqueOrganizationSlugUseCase,
   MembershipRepository,
   OrganizationRepository,
-  provisionOrganizationWorkspaceUseCase,
   updateOrganizationUseCase,
 } from "@domain/organizations"
 import { purgeOrganizationProjectsUseCase } from "@domain/projects"
@@ -22,6 +23,11 @@ import { Effect, Layer } from "effect"
 import { z } from "zod"
 import { requireSession, requireUserSession } from "../../server/auth.ts"
 import { getAdminPostgresClient, getBetterAuth, getPostgresClient } from "../../server/clients.ts"
+import {
+  type CompleteOnboardingDeps,
+  completeOnboardingInputSchema,
+  runCompleteOnboarding,
+} from "./complete-onboarding.ts"
 
 export const listOrganizations = createServerFn({ method: "GET" }).handler(async () => {
   const userId = await requireUserSession()
@@ -59,7 +65,7 @@ export const createOrganization = createServerFn({ method: "POST" })
 
     const organizationId = OrganizationId(organization.id)
     const workspace = await Effect.runPromise(
-      provisionOrganizationWorkspaceUseCase({
+      completeOnboardingUseCase({
         organizationId,
         actorUserId: userId,
         name: data.name,
@@ -81,6 +87,64 @@ export const createOrganization = createServerFn({ method: "POST" })
     )
 
     return { ...organization, ...workspace }
+  })
+
+// Wires the real Better Auth + Postgres deps into `runCompleteOnboarding` (which owns the ordering).
+export const completeOnboarding = createServerFn({ method: "POST" })
+  .inputValidator(completeOnboardingInputSchema)
+  .handler(async ({ data }) => {
+    const userId = await requireUserSession()
+    const adminClient = getAdminPostgresClient()
+    const auth = getBetterAuth()
+    const headers = await getRequestHeaders()
+
+    const deps: CompleteOnboardingDeps = {
+      updateUserName: async (name) => {
+        await auth.api.updateUser({ body: { name }, headers })
+      },
+      generateOrganizationSlug: (organizationName) =>
+        Effect.runPromise(
+          generateUniqueOrganizationSlugUseCase({ name: organizationName }).pipe(
+            withPostgres(OrganizationRepositoryLive, adminClient),
+            withTracing,
+          ),
+        ),
+      createOrganization: async ({ name, slug }) => {
+        const organization = await auth.api.createOrganization({
+          body: { name, slug, userId, keepCurrentActiveOrganization: false },
+          headers,
+        })
+        return { id: organization.id }
+      },
+      provisionWorkspace: async ({ organizationId, actorUserId, name, slug, defaultProjectName }) => {
+        const orgId = OrganizationId(organizationId)
+        const workspace = await Effect.runPromise(
+          completeOnboardingUseCase({ organizationId: orgId, actorUserId, name, slug, defaultProjectName }).pipe(
+            withPostgres(
+              Layer.mergeAll(
+                ApiKeyRepositoryLive,
+                ProjectRepositoryLive,
+                OrganizationRepositoryLive,
+                OutboxEventWriterLive,
+              ),
+              adminClient,
+              orgId,
+            ),
+            withTracing,
+          ),
+        )
+        return { defaultProjectSlug: workspace.defaultProject.slug }
+      },
+      setActiveOrganization: async ({ organizationId, organizationSlug }) => {
+        await auth.api.setActiveOrganization({ body: { organizationId, organizationSlug }, headers })
+      },
+    }
+
+    return runCompleteOnboarding(deps, {
+      actorUserId: userId,
+      name: data.name,
+      organizationName: data.organizationName,
+    })
   })
 
 const organizationSettingsSchema = z.object({
@@ -105,6 +169,27 @@ export const updateOrganization = createServerFn({ method: "POST" })
       ),
     )
   })
+
+/**
+ * "Remove demo" — flip the current org's `wantsShowcase` flag to `false`. This
+ * is a write to the VIEWER'S OWN org (session-scoped), never the shared showcase
+ * org, so it stays a normal allowed write. It fires from app chrome while the
+ * user is viewing `/projects/lat-demo` (showcase scope), so it is on the
+ * write-gate's POST-read allowlist — otherwise the gate would reject it as a
+ * showcase write. Org-wide by design: any member can dismiss it for the whole
+ * team (the UI confirms this explicitly).
+ */
+export const dismissShowcase = createServerFn({ method: "POST" }).handler(async (): Promise<void> => {
+  const { organizationId, userId } = await requireSession()
+  const client = getPostgresClient()
+
+  await Effect.runPromise(
+    dismissShowcaseUseCase({ actorUserId: userId }).pipe(
+      withPostgres(OrganizationRepositoryLive, client, organizationId),
+      withTracing,
+    ),
+  )
+})
 
 /**
  * Permanently delete an organization. Guarded so the only org that can be

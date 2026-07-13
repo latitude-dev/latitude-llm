@@ -135,7 +135,7 @@ async def handle_gepa_optimize(server: RpcServer, params: GepaOptimizeParams) ->
         ),
         seed_candidate=params.baseline,
         trainset=params.trainset,
-        valset=params.valset,
+        valset=params.valset or None,
         candidate_selection_strategy="pareto",
         frontier_type="instance",
         batch_sampler="epoch_shuffled",

@@ -48,6 +48,21 @@ const SignalMonitoringStateSchema = z
         evaluationId: cuidSchema.describe("Id of the evaluation currently being realigned."),
       })
       .describe("An active evaluation is being realigned."),
+    z
+      .object({
+        kind: z.literal("failed"),
+        phase: z
+          .enum(["generate", "realign"])
+          .describe("Which workflow failed: `generate` (creating the evaluation) or `realign` (updating it)."),
+        evaluationId: cuidSchema
+          .optional()
+          .describe("Id of the evaluation whose realignment failed. Absent when the failure was during `generate`."),
+        reason: z
+          .string()
+          .nullable()
+          .describe("Resolved failure message, or `null` once Temporal has dropped the failed run."),
+      })
+      .describe("The most recent generation or realignment workflow for this signal ended in failure."),
   ])
   .openapi("SignalMonitoringState")
 
@@ -107,7 +122,7 @@ const signalDetailFields = {
     .array(EvaluationSchema)
     .describe("Active evaluations monitoring the signal. Archived and deleted evaluations are excluded."),
   monitoringState: SignalMonitoringStateSchema.describe(
-    "Whether the signal is currently being monitored: `automatic`, `idle`, `generating`, or `realigning`.",
+    "Whether the signal is currently being monitored: `automatic`, `idle`, `generating`, `realigning`, or `failed`.",
   ),
 } as const
 
@@ -125,7 +140,7 @@ export const toSignalResponse = (item: SignalListItem, organizationId: string) =
   name: item.name,
   description: item.description,
   source: item.source,
-  states: [...item.states],
+  states: [...item.states] as (typeof SIGNAL_STATES)[number][],
   mutedAt: item.mutedAt ? item.mutedAt.toISOString() : null,
   createdAt: item.createdAt.toISOString(),
   updatedAt: item.updatedAt.toISOString(),
@@ -156,8 +171,21 @@ export const toSignalDetailResponse = (details: SignalDetails, organizationId: s
   tags: [...details.tags],
   trend: details.trend.map((bucket) => ({ bucket: bucket.bucket, count: bucket.count })),
   evaluations: details.evaluations.map(toEvaluationResponse),
-  monitoringState:
-    details.alignmentState.kind === "realigning"
-      ? { kind: "realigning" as const, evaluationId: details.alignmentState.evaluationId }
-      : { kind: details.alignmentState.kind as "automatic" | "idle" | "generating" },
+  monitoringState: toMonitoringStateResponse(details.alignmentState),
 })
+
+const toMonitoringStateResponse = (state: SignalDetails["alignmentState"]) => {
+  switch (state.kind) {
+    case "realigning":
+      return { kind: "realigning" as const, evaluationId: state.evaluationId }
+    case "failed":
+      return {
+        kind: "failed" as const,
+        phase: state.phase,
+        ...(state.evaluationId !== undefined ? { evaluationId: state.evaluationId } : {}),
+        reason: state.reason,
+      }
+    default:
+      return { kind: state.kind }
+  }
+}

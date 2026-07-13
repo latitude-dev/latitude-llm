@@ -1,7 +1,12 @@
 import { SignalId } from "@domain/shared"
 import { SignalRepository } from "@domain/signals"
 import { Effect } from "effect"
+// @ts-expect-error TS6133 - React required at runtime for JSX in workers
+// biome-ignore lint/correctness/noUnusedImports: React required at runtime for JSX in workers
+import React from "react"
+import { renderEmail } from "../../../utils/render.ts"
 import type { NotificationEmailRenderContext, NotificationEmailRenderer } from "../types.ts"
+import { SignalDiscoveredEmail } from "./EmailTemplate.tsx"
 
 const loadError = (cause: unknown) => ({
   _tag: "RenderNotificationEmailError" as const,
@@ -14,14 +19,6 @@ const buildSignalUrl = (ctx: NotificationEmailRenderContext, signalId: string): 
   return `${ctx.webAppUrl}/projects/${ctx.project.slug}/signals/${encodeURIComponent(signalId)}`
 }
 
-const escapeHtml = (value: string): string =>
-  value
-    .replaceAll("&", "&amp;")
-    .replaceAll("<", "&lt;")
-    .replaceAll(">", "&gt;")
-    .replaceAll('"', "&quot;")
-    .replaceAll("'", "&#39;")
-
 export const signalDiscoveredRenderer: NotificationEmailRenderer<"signal.discovered"> = (payload, ctx) =>
   Effect.gen(function* () {
     const signals = yield* SignalRepository
@@ -30,20 +27,35 @@ export const signalDiscoveredRenderer: NotificationEmailRenderer<"signal.discove
       Effect.catchTag("RepositoryError", (cause) => Effect.fail(loadError(cause))),
     )
 
-    const signalName = signal?.name ?? "A new signal"
+    const signalName = signal?.name ?? "a signal"
     const signalUrl = buildSignalUrl(ctx, payload.signalId)
-    const subject = `[Latitude] ${signalName} was discovered`
-    const projectText = ctx.project ? ` in ${ctx.project.name}` : ""
-    const html = [
-      `<p>Latitude discovered a new signal${escapeHtml(projectText)}.</p>`,
-      `<p><strong>${escapeHtml(signalName)}</strong></p>`,
-      signal?.description ? `<p>${escapeHtml(signal.description)}</p>` : "",
-      signalUrl ? `<p><a href="${escapeHtml(signalUrl)}">Open signal</a></p>` : "",
-    ].join("")
+    const subject = `Signal discovered: ${signalName}`
+    const html = yield* Effect.tryPromise({
+      try: () =>
+        renderEmail(
+          <SignalDiscoveredEmail
+            signalId={payload.signalId}
+            signalName={signalName}
+            description={signal?.description ?? undefined}
+            signalUrl={signalUrl}
+            notificationCreatedAt={ctx.notificationCreatedAt}
+            organizationName={ctx.organization.name}
+            projectName={ctx.project?.name}
+            webAppUrl={ctx.webAppUrl}
+          />,
+        ),
+      catch: (cause) => ({
+        _tag: "RenderNotificationEmailError" as const,
+        message: "Failed to render signal.discovered email",
+        cause,
+      }),
+    })
 
     return {
       html,
       subject,
-      text: `${signalName} was discovered${projectText}.${signalUrl ? `\n\n${signalUrl}` : ""}\n\n- Latitude`,
+      text: `${subject}.${signalUrl ? `\n\n${signalUrl}` : ""}\n\n— Latitude`,
     }
   })
+
+export default SignalDiscoveredEmail

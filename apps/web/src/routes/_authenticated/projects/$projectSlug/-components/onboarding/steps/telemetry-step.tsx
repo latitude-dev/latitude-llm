@@ -44,7 +44,7 @@ export function Left({
           </Button>
           {sampleProjectSlug ? (
             <Button variant="ghost" onClick={onOpenSampleProject}>
-              Explore sample project
+              Explore demo project
             </Button>
           ) : null}
         </div>

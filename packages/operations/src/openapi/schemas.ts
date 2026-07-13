@@ -1,4 +1,10 @@
-import { FILTER_OPERATORS, SESSION_ID_LENGTH, SPAN_ID_LENGTH, TRACE_ID_LENGTH } from "@domain/shared"
+import {
+  FILTER_OPERATORS,
+  SESSION_ID_LENGTH,
+  SPAN_ID_LENGTH,
+  SPAN_ROW_FILTER_GTE_PERCENTILE_MESSAGE,
+  TRACE_ID_LENGTH,
+} from "@domain/shared"
 import { z } from "@hono/zod-openapi"
 
 // Plain (non-transformed) telemetry-id schemas for use in request / response
@@ -51,6 +57,24 @@ export const FilterSetSchema = z
     "Filter set keyed by field name. Each entry holds an array of conditions ANDed together for that field; field-level groups are also ANDed across the set.",
   )
   .openapi("FilterSet")
+
+export const SpanRowFilterSetSchema = FilterSetSchema.superRefine((filters, ctx) => {
+  for (const [field, conditions] of Object.entries(filters)) {
+    conditions.forEach((cond, index) => {
+      if (cond.op === "gtePercentile") {
+        ctx.addIssue({
+          code: "custom",
+          message: SPAN_ROW_FILTER_GTE_PERCENTILE_MESSAGE,
+          path: [field, index, "op"],
+        })
+      }
+    })
+  }
+})
+  .describe(
+    'Span row filter set. `gtePercentile` is not supported — use absolute `gte`/`lte` thresholds or `queryAnalytics` with `stream: "spans"` and a percentile metric.',
+  )
+  .openapi("SpanRowFilterSet")
 
 export const TraceRefSchema = z
   .discriminatedUnion("by", [
@@ -130,7 +154,7 @@ export const jsonBody = <T extends z.ZodType>(schema: T) =>
  * Includes the success response + 400/401/404 error responses by default.
  * Extra error codes can be added via `extraErrors`.
  */
-export const openApiResponses = ({
+const openApiResponses = ({
   status,
   schema,
   description,

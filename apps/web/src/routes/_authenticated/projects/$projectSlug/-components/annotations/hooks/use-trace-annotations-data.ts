@@ -9,7 +9,7 @@ import {
   useUpdateAnnotation,
 } from "../../../../../../../domains/annotations/annotations.collection.ts"
 import type { AnnotationRecord } from "../../../../../../../domains/annotations/annotations.functions.ts"
-import { useMemberByUserIdMap } from "../../../../../../../domains/members/members.collection.ts"
+import { useProjectMemberByUserIdMap } from "../../../../../../../domains/members/members.collection.ts"
 import { pickUserFromMembersMap } from "../../../../../../../domains/members/pick-users-from-members.ts"
 
 const AGENT_ANNOTATOR_ID_PREFIX = "agent:"
@@ -64,7 +64,7 @@ export function useTraceAnnotationsData({ projectId, traceId, enabled = true }: 
     enabled,
   })
 
-  const memberByUserId = useMemberByUserIdMap()
+  const memberByUserId = useProjectMemberByUserIdMap()
 
   const createMutation = useCreateAnnotation()
   const updateMutation = useUpdateAnnotation()

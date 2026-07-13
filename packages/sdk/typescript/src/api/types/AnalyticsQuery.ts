@@ -19,8 +19,6 @@ export namespace AnalyticsQuery {
         breakdown?: AnalyticsQueryTraces.Breakdown | undefined;
         /** The metric: `count`, `errorRate`, `cacheHitRate`, `{sum|min|max|avg|median}` over `duration`/`cost`/`tokens`, or `{kind:'percentile',field,p}` for an arbitrary percentile (`p` in [1,99]; e.g. `p:95`). */
         metric: Latitude.AnalyticsQueryTracesMetric;
-        /** Structured filter set applied to the stream (same DSL as `listTraces`). */
-        filters?: Record<string, Latitude.FilterCondition[]> | undefined;
         /** Bucket the metric over time. Omit for a single aggregate. */
         timeBucket?: AnalyticsQueryTraces.TimeBucket | undefined;
         /** The time window. */
@@ -29,6 +27,8 @@ export namespace AnalyticsQuery {
         orderBy?: AnalyticsQueryTraces.OrderBy | undefined;
         /** Maximum rows returned. Defaults to 50; max 500. */
         limit?: number | undefined;
+        /** Structured filter set applied to the stream (same DSL as `listTraces`). */
+        filters?: Record<string, Latitude.FilterCondition[]> | undefined;
     }
 
     export namespace AnalyticsQueryTraces {
@@ -105,8 +105,6 @@ export namespace AnalyticsQuery {
         breakdown?: AnalyticsQuerySessions.Breakdown | undefined;
         /** The metric: `count`, `errorRate`, `cacheHitRate`, `{sum|min|max|avg|median}` over `duration`/`cost`/`tokens`, or `{kind:'percentile',field,p}` for an arbitrary percentile (`p` in [1,99]; e.g. `p:95`). */
         metric: Latitude.AnalyticsQuerySessionsMetric;
-        /** Structured filter set applied to the stream (same DSL as `listTraces`). */
-        filters?: Record<string, Latitude.FilterCondition[]> | undefined;
         /** Bucket the metric over time. Omit for a single aggregate. */
         timeBucket?: AnalyticsQuerySessions.TimeBucket | undefined;
         /** The time window. */
@@ -115,6 +113,8 @@ export namespace AnalyticsQuery {
         orderBy?: AnalyticsQuerySessions.OrderBy | undefined;
         /** Maximum rows returned. Defaults to 50; max 500. */
         limit?: number | undefined;
+        /** Structured filter set applied to the stream (same DSL as `listTraces`). */
+        filters?: Record<string, Latitude.FilterCondition[]> | undefined;
     }
 
     export namespace AnalyticsQuerySessions {
@@ -188,8 +188,6 @@ export namespace AnalyticsQuery {
         breakdown?: AnalyticsQuerySpans.Breakdown | undefined;
         /** The metric: `count`, `errorRate`, `cacheHitRate`, `{sum|min|max|avg|median}` over `duration`/`cost`/`tokens`, or `{kind:'percentile',field,p}` for an arbitrary percentile (`p` in [1,99]; e.g. `p:95`). */
         metric: Latitude.AnalyticsQuerySpansMetric;
-        /** Structured filter set applied to the stream (same DSL as `listTraces`). */
-        filters?: Record<string, Latitude.FilterCondition[]> | undefined;
         /** Bucket the metric over time. Omit for a single aggregate. */
         timeBucket?: AnalyticsQuerySpans.TimeBucket | undefined;
         /** The time window. */
@@ -198,6 +196,7 @@ export namespace AnalyticsQuery {
         orderBy?: AnalyticsQuerySpans.OrderBy | undefined;
         /** Maximum rows returned. Defaults to 50; max 500. */
         limit?: number | undefined;
+        filters?: Latitude.SpanRowFilterSet | undefined;
     }
 
     export namespace AnalyticsQuerySpans {
@@ -271,8 +270,6 @@ export namespace AnalyticsQuery {
         breakdown?: AnalyticsQueryScores.Breakdown | undefined;
         /** The metric: `count`, `passRate`, `errorRate`, or `{avg|min|max|median}` of the 0–1 score `value`. */
         metric: Latitude.AnalyticsQueryScoresMetric;
-        /** Structured filter set applied to the stream (same DSL as `listTraces`). */
-        filters?: Record<string, Latitude.FilterCondition[]> | undefined;
         /** Bucket the metric over time. Omit for a single aggregate. */
         timeBucket?: AnalyticsQueryScores.TimeBucket | undefined;
         /** The time window. */
@@ -281,6 +278,8 @@ export namespace AnalyticsQuery {
         orderBy?: AnalyticsQueryScores.OrderBy | undefined;
         /** Maximum rows returned. Defaults to 50; max 500. */
         limit?: number | undefined;
+        /** Structured filter set applied to the stream (same DSL as `listTraces`). */
+        filters?: Record<string, Latitude.FilterCondition[]> | undefined;
     }
 
     export namespace AnalyticsQueryScores {
@@ -354,8 +353,6 @@ export namespace AnalyticsQuery {
         breakdown?: AnalyticsQueryBehaviors.Breakdown | undefined;
         /** The metric: `count`, or `{avg|min|max|median}` of the 0–1 assignment `confidence`. */
         metric: Latitude.AnalyticsQueryBehaviorsMetric;
-        /** Structured filter set applied to the stream (same DSL as `listTraces`). */
-        filters?: Record<string, Latitude.FilterCondition[]> | undefined;
         /** Bucket the metric over time. Omit for a single aggregate. */
         timeBucket?: AnalyticsQueryBehaviors.TimeBucket | undefined;
         /** The time window. */
@@ -364,6 +361,8 @@ export namespace AnalyticsQuery {
         orderBy?: AnalyticsQueryBehaviors.OrderBy | undefined;
         /** Maximum rows returned. Defaults to 50; max 500. */
         limit?: number | undefined;
+        /** Structured filter set applied to the stream (same DSL as `listTraces`). */
+        filters?: Record<string, Latitude.FilterCondition[]> | undefined;
     }
 
     export namespace AnalyticsQueryBehaviors {
@@ -433,8 +432,6 @@ export namespace AnalyticsQuery {
         breakdown?: AnalyticsQueryMoments.Breakdown | undefined;
         /** The metric: `count`, or `{avg|min|max|median}` of the 0–1 label `confidence` or moment `coherence`. */
         metric: Latitude.AnalyticsQueryMomentsMetric;
-        /** Structured filter set applied to the stream (same DSL as `listTraces`). */
-        filters?: Record<string, Latitude.FilterCondition[]> | undefined;
         /** Bucket the metric over time. Omit for a single aggregate. */
         timeBucket?: AnalyticsQueryMoments.TimeBucket | undefined;
         /** The time window. */
@@ -443,6 +440,8 @@ export namespace AnalyticsQuery {
         orderBy?: AnalyticsQueryMoments.OrderBy | undefined;
         /** Maximum rows returned. Defaults to 50; max 500. */
         limit?: number | undefined;
+        /** Structured filter set applied to the stream (same DSL as `listTraces`). */
+        filters?: Record<string, Latitude.FilterCondition[]> | undefined;
     }
 
     export namespace AnalyticsQueryMoments {

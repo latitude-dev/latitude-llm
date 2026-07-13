@@ -1,6 +1,6 @@
 import { z } from "zod"
 import { type MonitorMetric, monitorMetricSchema } from "./alert-incident-condition.ts"
-import { filterSetSchema } from "./filter.ts"
+import { filterSetSchema, spanRowFilterSetSchema } from "./filter.ts"
 
 /**
  * Breakdown dimensions per stream — logical names the API accepts, mapped to
@@ -176,7 +176,15 @@ export const analyticsQuerySchema = z.discriminatedUnion("stream", [
       stream: z.literal("spans"),
       breakdown: z.enum(SPAN_BREAKDOWN_FIELDS).optional().describe("Dimension to group by, one row per value."),
       metric: traceFamilyMetric,
-      ...commonFields,
+      filters: spanRowFilterSetSchema
+        .optional()
+        .describe(
+          "Structured filter set over span row fields. `gtePercentile` is not supported — use absolute thresholds or a percentile metric.",
+        ),
+      timeBucket: commonFields.timeBucket,
+      range: commonFields.range,
+      orderBy: commonFields.orderBy,
+      limit: commonFields.limit,
     })
     .strict(),
   z

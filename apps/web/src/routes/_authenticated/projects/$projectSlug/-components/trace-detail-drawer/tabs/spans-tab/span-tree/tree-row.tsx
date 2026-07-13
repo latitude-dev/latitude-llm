@@ -34,6 +34,7 @@ function TreeConnectors({
 }
 
 export const TreeRow = memo(function TreeRow({
+  traceId,
   flatNode,
   isExpanded,
   isSelected,
@@ -42,6 +43,7 @@ export const TreeRow = memo(function TreeRow({
   treeWidth,
   timeRange,
 }: {
+  readonly traceId: string
   readonly flatNode: FlattenedNode
   readonly isExpanded: boolean
   readonly isSelected: boolean
@@ -59,6 +61,7 @@ export const TreeRow = memo(function TreeRow({
     <div
       role="button"
       tabIndex={0}
+      data-trace-id={traceId}
       data-span-id={node.span.spanId}
       className={cn(
         "flex flex-row items-center shrink-0 cursor-pointer transition-colors",

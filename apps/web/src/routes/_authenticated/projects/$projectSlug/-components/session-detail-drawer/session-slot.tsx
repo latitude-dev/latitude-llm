@@ -13,11 +13,12 @@ import type { TraceRecord } from "../../../../../../domains/traces/traces.functi
 import { useParamState } from "../../../../../../lib/hooks/useParamState.ts"
 import { AddTraceToDatasetAction } from "../add-trace-to-dataset-action.tsx"
 import type { OpenTraceOptions } from "../session-detail-drawer.tsx"
+import type { SpanTreeSelection } from "../trace-detail-drawer/tabs/spans-tab/span-tree/index.tsx"
 import { useSpanFilters } from "../trace-detail-drawer/tabs/spans-tab/use-span-filters.ts"
-import { SpansTab } from "../trace-detail-drawer/tabs/spans-tab.tsx"
 import { ConversationTab } from "./conversation-tab.tsx"
 import { MetadataTab } from "./metadata-tab.tsx"
 import { ScoresTab } from "./scores-tab.tsx"
+import { SessionSpansTab } from "./session-spans-tab.tsx"
 import { SessionStatusPill } from "./session-status-pill.tsx"
 import { SignalsTab } from "./signals-tab.tsx"
 
@@ -86,11 +87,10 @@ export function SessionSlot({
   const isSandbox = useProjectScope().kind === "sandbox"
   const scoresEnabled = !isSandbox
   const signalsEnabled = !isSandbox
-  // A single-trace session can surface its spans inline
-  const singleTrace = traces.length === 1 ? traces[0] : undefined
   const [selectedSpanId, setSelectedSpanId] = useParamState("spanId", "")
+  const [selectedSpanTraceId, setSelectedSpanTraceId] = useParamState("spanTraceId", "")
   const { openWithErrors, openWithModel } = useSpanFilters()
-  const requestedTab: SessionTabId = activeTab === "spans" && !singleTrace ? "session" : normalizeSessionTab(activeTab)
+  const requestedTab = normalizeSessionTab(activeTab)
   // A deep-linked tab for a feature that's off (sandbox) falls back to Session.
   const effectiveActiveTab: SessionTabId =
     (requestedTab === "scores" && !scoresEnabled) || (requestedTab === "issues" && !signalsEnabled)
@@ -109,23 +109,28 @@ export function SessionSlot({
   }
 
   function navigateToSpansWithErrors() {
-    if (!singleTrace) return
     openWithErrors()
-    setSelectedSpanId("")
+    selectSpan(null)
     onActiveTabChange("spans")
   }
 
   function navigateToSpansWithModel(model: string) {
-    if (!singleTrace) return
     openWithModel(model)
-    setSelectedSpanId("")
+    selectSpan(null)
     onActiveTabChange("spans")
   }
 
   function navigateToSpan(spanId: string) {
-    if (!singleTrace) return
+    // Conversation span links come from session-wide span maps, so the span can
+    // belong to any trace; let SessionSpansTab resolve the trace from its spans.
+    setSelectedSpanTraceId("")
     setSelectedSpanId(spanId)
     onActiveTabChange("spans")
+  }
+
+  function selectSpan(selection: SpanTreeSelection | null) {
+    setSelectedSpanTraceId(selection?.traceId ?? "")
+    setSelectedSpanId(selection?.spanId ?? "")
   }
 
   // Badge counts. Both queries are shared (same key) with the tab panes, so
@@ -163,14 +168,12 @@ export function SessionSlot({
         icon: <Icon icon={MessagesSquareIcon} size="sm" />,
       },
     ]
-    if (singleTrace) {
-      all.push({
-        id: "spans",
-        label: "Spans",
-        icon: <Icon icon={ListTreeIcon} size="sm" />,
-        suffix: countSuffix(singleTrace.spanCount),
-      })
-    }
+    all.push({
+      id: "spans",
+      label: "Spans",
+      icon: <Icon icon={ListTreeIcon} size="sm" />,
+      suffix: countSuffix(session.spanCount),
+    })
     if (scoresEnabled) {
       all.push({
         id: "scores",
@@ -188,7 +191,7 @@ export function SessionSlot({
       })
     }
     return all
-  }, [scoresEnabled, signalsEnabled, scoreCount, signalCount, singleTrace])
+  }, [scoresEnabled, session.spanCount, signalsEnabled, scoreCount, signalCount])
 
   // H/L cycle the session tabs (wrapping), matching the trace drawer. Disabled
   // while a trace/issue slot is shown so they don't collide with the trace slot.
@@ -247,27 +250,19 @@ export function SessionSlot({
             )}
             <SessionStatusPill status={status} lastActivity={relativeTime(new Date(session.endTime))} />
             {session.errorCount > 0 ? (
-              singleTrace ? (
-                <button
-                  type="button"
-                  onClick={navigateToSpansWithErrors}
-                  aria-label={`View ${session.errorCount} errored spans`}
-                  className="inline-flex shrink-0 rounded-full focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
-                >
-                  <Status
-                    variant="destructive"
-                    indicator={false}
-                    label={`${formatCount(session.errorCount)} ${session.errorCount === 1 ? "error" : "errors"}`}
-                    className="cursor-pointer transition-opacity hover:opacity-80"
-                  />
-                </button>
-              ) : (
+              <button
+                type="button"
+                onClick={navigateToSpansWithErrors}
+                aria-label={`View ${session.errorCount} errored spans`}
+                className="inline-flex shrink-0 rounded-full focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
+              >
                 <Status
                   variant="destructive"
                   indicator={false}
                   label={`${formatCount(session.errorCount)} ${session.errorCount === 1 ? "error" : "errors"}`}
+                  className="cursor-pointer transition-opacity hover:opacity-80"
                 />
-              )
+              </button>
             ) : null}
             {!isSandbox && datasetTraceId ? (
               <div className="ml-auto shrink-0">
@@ -293,8 +288,8 @@ export function SessionSlot({
         {effectiveActiveTab === "session" && (
           <MetadataTab
             session={session}
-            spansNavEnabled={Boolean(singleTrace)}
-            {...(singleTrace ? { onOpenSpansWithModel: navigateToSpansWithModel } : {})}
+            spansNavEnabled
+            onOpenSpansWithModel={navigateToSpansWithModel}
             {...(filters ? { filters } : {})}
             {...(onFiltersChange ? { onFiltersChange } : {})}
           />
@@ -309,18 +304,21 @@ export function SessionSlot({
               isActive={effectiveActiveTab === "conversation"}
               focusMomentKind={focusMomentKind}
               focusMomentId={focusMomentId}
-              {...(singleTrace ? { navigateToSpan } : {})}
+              {...(latestTraceId ? { navigateToSpan } : {})}
               {...(searchQuery ? { searchQuery } : {})}
             />
           </div>
         )}
-        {singleTrace && visitedTabs.has("spans") && (
+        {visitedTabs.has("spans") && (
           <div className={effectiveActiveTab === "spans" ? "flex min-h-0 flex-1 flex-col" : "hidden"}>
-            <SpansTab
+            <SessionSpansTab
               projectId={projectId}
-              traceId={singleTrace.traceId}
+              session={session}
+              traces={traces}
               selectedSpanId={selectedSpanId}
-              onSelectSpan={setSelectedSpanId}
+              selectedSpanTraceId={selectedSpanTraceId}
+              onSelectSpan={selectSpan}
+              onOpenTrace={onOpenTrace}
               isActive={effectiveActiveTab === "spans"}
             />
           </div>

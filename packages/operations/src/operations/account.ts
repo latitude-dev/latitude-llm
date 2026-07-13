@@ -10,7 +10,7 @@ import { withTracing } from "@repo/observability"
 import { Effect, Layer } from "effect"
 import { defineOperation } from "../core/define-operation.ts"
 import type { OperationModule } from "../core/mount.ts"
-import { openApiResponses, PROTECTED_SECURITY } from "../openapi/schemas.ts"
+import { PROTECTED_SECURITY, typedResponses } from "../openapi/schemas.ts"
 import type { OrganizationScopedEnv } from "../types.ts"
 
 const accountPath = "/account"
@@ -62,27 +62,23 @@ const getAccount = accountOperation({
     description:
       "Returns the caller's account snapshot: the organization the request is scoped to, plus the user record and their role when the request was made by a real user (OAuth). API-key callers receive `user: null` and `role: null` because API keys aren't tied to a specific user.",
     security: PROTECTED_SECURITY,
-    responses: openApiResponses({ status: 200, schema: AccountResponseSchema, description: "Account snapshot" }),
+    responses: typedResponses({ status: 200, schema: AccountResponseSchema, description: "Account snapshot" }),
   }),
   access: "read-only",
   rateLimitTier: "low",
-  handler: async (c) => {
-    const auth = c.var.auth
-    const userId = auth.method === "oauth" ? auth.userId : null
-
-    const result = await Effect.runPromise(
-      getAccountUseCase({ organizationId: c.var.organization.id, userId }).pipe(
-        withPostgres(
-          Layer.mergeAll(UserRepositoryLive, OrganizationRepositoryLive, MembershipRepositoryLive),
-          c.var.postgresClient,
-          c.var.organization.id,
-        ),
-        withTracing,
+  execute: (_input, ctx) =>
+    Effect.gen(function* () {
+      const userId = ctx.auth.method === "oauth" ? ctx.auth.userId : null
+      const result = yield* getAccountUseCase({ organizationId: ctx.organization.id, userId })
+      return { status: 200, body: toResponse(result) } as const
+    }).pipe(
+      withPostgres(
+        Layer.mergeAll(UserRepositoryLive, OrganizationRepositoryLive, MembershipRepositoryLive),
+        ctx.postgresClient,
+        ctx.organization.id,
       ),
-    )
-
-    return c.json(toResponse(result), 200)
-  },
+      withTracing,
+    ),
 })
 
 const toResponse = (result: GetAccountResult) => ({

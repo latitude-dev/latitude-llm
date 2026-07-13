@@ -133,3 +133,21 @@ export const filterSetSchema: z.ZodType<FilterSet> = z
       message: "Metadata keys must use dot-notation segments with [a-zA-Z0-9_-], max path length 200, max depth 12",
     },
   )
+
+export const SPAN_ROW_FILTER_GTE_PERCENTILE_MESSAGE =
+  'gtePercentile is not supported on span row filters; use absolute gte/lte thresholds or queryAnalytics with stream "spans" and a percentile metric.'
+
+/** Span row filters (`querySpans`, analytics `stream: "spans"` filters) reject `gtePercentile` at the boundary. */
+export const spanRowFilterSetSchema: z.ZodType<FilterSet> = filterSetSchema.superRefine((filters, ctx) => {
+  for (const [field, conditions] of Object.entries(filters)) {
+    conditions.forEach((cond, index) => {
+      if (cond.op === "gtePercentile") {
+        ctx.addIssue({
+          code: "custom",
+          message: SPAN_ROW_FILTER_GTE_PERCENTILE_MESSAGE,
+          path: [field, index, "op"],
+        })
+      }
+    })
+  }
+})

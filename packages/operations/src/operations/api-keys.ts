@@ -20,8 +20,8 @@ import {
   jsonBody,
   jsonResponse,
   openApiNoContentResponses,
-  openApiResponses,
   PROTECTED_SECURITY,
+  typedResponses,
 } from "../openapi/schemas.ts"
 import type { OrganizationScopedEnv } from "../types.ts"
 
@@ -129,25 +129,22 @@ const createApiKey = apiKeyEndpoint({
     request: {
       body: jsonBody(CreateApiKeyBody),
     },
-    responses: openApiResponses({ status: 201, schema: ResponseSchema, description: "API key generated" }),
+    responses: typedResponses({ status: 201, schema: ResponseSchema, description: "API key generated" }),
   }),
   access: "write",
   rateLimitTier: "high",
-  handler: async (c) => {
-    const { name } = c.req.valid("json")
-
-    const apiKey = await Effect.runPromise(
-      generateApiKeyUseCase({ name, isSandbox: false }).pipe(
-        withPostgres(
-          Layer.mergeAll(ApiKeyRepositoryLive, OutboxEventWriterLive),
-          c.var.postgresClient,
-          c.var.organization.id,
-        ),
-        withTracing,
+  execute: (input, ctx) =>
+    Effect.gen(function* () {
+      const apiKey = yield* generateApiKeyUseCase({ name: input.body.name, isSandbox: false })
+      return { status: 201, body: toResponse(apiKey) } as const
+    }).pipe(
+      withPostgres(
+        Layer.mergeAll(ApiKeyRepositoryLive, OutboxEventWriterLive),
+        ctx.postgresClient,
+        ctx.organization.id,
       ),
-    )
-    return c.json(toResponse(apiKey), 201)
-  },
+      withTracing,
+    ),
 })
 
 const listApiKeys = apiKeyEndpoint({
@@ -168,15 +165,12 @@ const listApiKeys = apiKeyEndpoint({
   }),
   access: "read-only",
   rateLimitTier: "low",
-  handler: async (c) => {
-    const apiKeys = await Effect.runPromise(
-      Effect.gen(function* () {
-        const repo = yield* ApiKeyRepository
-        return yield* repo.list()
-      }).pipe(withPostgres(ApiKeyRepositoryLive, c.var.postgresClient, c.var.organization.id), withTracing),
-    )
-    return c.json({ apiKeys: apiKeys.map(toListItemResponse) }, 200)
-  },
+  execute: (_input, ctx) =>
+    Effect.gen(function* () {
+      const repo = yield* ApiKeyRepository
+      const apiKeys = yield* repo.list()
+      return { status: 200, body: { apiKeys: apiKeys.map(toListItemResponse) } } as const
+    }).pipe(withPostgres(ApiKeyRepositoryLive, ctx.postgresClient, ctx.organization.id), withTracing),
 })
 
 const getApiKey = apiKeyEndpoint({
@@ -192,25 +186,19 @@ const getApiKey = apiKeyEndpoint({
       "Returns a single API key including the full unmasked `token`. Useful for retrieving a stored token by id without rotating it.",
     security: PROTECTED_SECURITY,
     request: { params: ApiKeyIdParamsSchema },
-    responses: openApiResponses({ status: 200, schema: ResponseSchema, description: "API key" }),
+    responses: typedResponses({ status: 200, schema: ResponseSchema, description: "API key" }),
   }),
   access: "read-only",
   rateLimitTier: "low",
-  handler: async (c) => {
-    const { apiKeyId } = c.req.valid("param")
-
-    const apiKey = await Effect.runPromise(
-      Effect.gen(function* () {
-        const repo = yield* ApiKeyRepository
-        return yield* repo
-          .findById(ApiKeyId(apiKeyId))
-          .pipe(
-            Effect.catchTag("NotFoundError", () => Effect.fail(new ApiKeyNotFoundError({ id: ApiKeyId(apiKeyId) }))),
-          )
-      }).pipe(withPostgres(ApiKeyRepositoryLive, c.var.postgresClient, c.var.organization.id), withTracing),
-    )
-    return c.json(toResponse(apiKey), 200)
-  },
+  execute: (input, ctx) =>
+    Effect.gen(function* () {
+      const { apiKeyId } = input.params
+      const repo = yield* ApiKeyRepository
+      const apiKey = yield* repo
+        .findById(ApiKeyId(apiKeyId))
+        .pipe(Effect.catchTag("NotFoundError", () => Effect.fail(new ApiKeyNotFoundError({ id: ApiKeyId(apiKeyId) }))))
+      return { status: 200, body: toResponse(apiKey) } as const
+    }).pipe(withPostgres(ApiKeyRepositoryLive, ctx.postgresClient, ctx.organization.id), withTracing),
 })
 
 const updateApiKey = apiKeyEndpoint({
@@ -225,22 +213,15 @@ const updateApiKey = apiKeyEndpoint({
     description: "Renames an API key. The token itself is immutable — use create + revoke if you need a new value.",
     security: PROTECTED_SECURITY,
     request: { params: ApiKeyIdParamsSchema, body: jsonBody(UpdateApiKeyBody) },
-    responses: openApiResponses({ status: 200, schema: ResponseSchema, description: "API key updated" }),
+    responses: typedResponses({ status: 200, schema: ResponseSchema, description: "API key updated" }),
   }),
   access: "destructive",
   rateLimitTier: "low",
-  handler: async (c) => {
-    const { apiKeyId } = c.req.valid("param")
-    const { name } = c.req.valid("json")
-
-    const apiKey = await Effect.runPromise(
-      updateApiKeyUseCase({ id: ApiKeyId(apiKeyId), name }).pipe(
-        withPostgres(ApiKeyRepositoryLive, c.var.postgresClient, c.var.organization.id),
-        withTracing,
-      ),
-    )
-    return c.json(toResponse(apiKey), 200)
-  },
+  execute: (input, ctx) =>
+    Effect.gen(function* () {
+      const apiKey = yield* updateApiKeyUseCase({ id: ApiKeyId(input.params.apiKeyId), name: input.body.name })
+      return { status: 200, body: toResponse(apiKey) } as const
+    }).pipe(withPostgres(ApiKeyRepositoryLive, ctx.postgresClient, ctx.organization.id), withTracing),
 })
 
 const revokeApiKey = apiKeyEndpoint({
@@ -259,18 +240,13 @@ const revokeApiKey = apiKeyEndpoint({
   }),
   access: "destructive",
   rateLimitTier: "low",
-  handler: async (c) => {
-    const { apiKeyId } = c.req.valid("param")
-
-    await Effect.runPromise(
-      revokeApiKeyUseCase({ id: ApiKeyId(apiKeyId) }).pipe(
-        Effect.provide(ApiKeyCacheInvalidatorLive(c.var.redis)),
-        withPostgres(ApiKeyRepositoryLive, c.var.postgresClient, c.var.organization.id),
-        withTracing,
-      ),
-    )
-    return c.body(null, 204)
-  },
+  execute: (input, ctx) =>
+    revokeApiKeyUseCase({ id: ApiKeyId(input.params.apiKeyId) }).pipe(
+      Effect.provide(ApiKeyCacheInvalidatorLive(ctx.redis)),
+      withPostgres(ApiKeyRepositoryLive, ctx.postgresClient, ctx.organization.id),
+      withTracing,
+      Effect.as({ status: 204 } as const),
+    ),
 })
 
 export const apiKeysModule: OperationModule = {

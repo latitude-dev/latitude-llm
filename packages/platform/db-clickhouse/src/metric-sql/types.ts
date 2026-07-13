@@ -9,6 +9,7 @@ import type {
   ProjectId,
   RepositoryError,
   ScoreMetric,
+  ValidationError,
 } from "@domain/shared"
 import type { Effect } from "effect"
 
@@ -75,7 +76,7 @@ export interface BreakdownExpr {
  * shape (scores, moments, …) bring their own.
  */
 export interface StreamDescriptor<S extends AnalyticsStream = AnalyticsStream> {
-  buildInner(input: MetricSqlInput<S>): Effect.Effect<InnerQuery, RepositoryError, ChSqlClient>
+  buildInner(input: MetricSqlInput<S>): Effect.Effect<InnerQuery, RepositoryError | ValidationError, ChSqlClient>
   /** SQL aggregate over the inner subquery's columns, for the metric this stream accepts. */
   aggregate(metric: MetricForStream<S>): string
   /** Breakdown dimensions this stream exposes (logical field → SQL expression). */

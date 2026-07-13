@@ -4,6 +4,13 @@ import { emptyTraceTimeHistogramBucket, type TraceTimeHistogramBucket } from "./
 
 const DEFAULT_RANGE_MS = 7 * 24 * 60 * 60 * 1000
 
+/**
+ * Hard cap on the histogram's time span. The list and aggregations honor an unbounded
+ * ("All time") selection, but the histogram is a per-bucket scan whose cost grows with
+ * the span, so it never charts more than this window — anchored to the selection's end.
+ */
+const MAX_HISTOGRAM_SPAN_MS = 30 * 24 * 60 * 60 * 1000
+
 /** Rough target bar count; actual count depends on the chosen nice bucket width. */
 const TARGET_HISTOGRAM_BUCKET_COUNT = 50
 
@@ -59,39 +66,27 @@ export function parseStartTimeBoundsFromFilters(filters: FilterSet): { gte?: str
 }
 
 /**
- * Resolves the histogram time window (ISO strings, UTC).
- * When no `startTime` filter exists, uses the last 7 days ending at `nowMs`.
- * When only `lte` is set, uses a 7-day window ending at `lte`.
+ * Resolves the histogram time window (ISO strings, UTC), anchored to the selection's end.
+ * When no `startTime` `gte` is set (unbounded / "All time"), starts {@link DEFAULT_RANGE_MS}
+ * before the end. The span is always clamped to {@link MAX_HISTOGRAM_SPAN_MS} so an unbounded
+ * or very wide list selection never turns into an unbounded per-bucket scan.
  */
 export function resolveTraceHistogramRangeIso(
   filters: FilterSet,
   nowMs: number,
 ): { readonly rangeStartIso: string; readonly rangeEndIso: string } {
   const { gte, lte } = parseStartTimeBoundsFromFilters(filters)
-  const nowIso = new Date(nowMs).toISOString()
+  // Bounds come from the URL and may be unparseable (hand-crafted); fall back to the defaults so
+  // `new Date(NaN).toISOString()` can never throw. Clamp start ≤ end for a safe (degenerate) window.
+  const parsedEndMs = lte ? new Date(lte).getTime() : nowMs
+  const endMs = Number.isFinite(parsedEndMs) ? parsedEndMs : nowMs
+  const parsedStartMs = gte ? new Date(gte).getTime() : endMs - DEFAULT_RANGE_MS
+  const desiredStartMs = Number.isFinite(parsedStartMs) ? parsedStartMs : endMs - DEFAULT_RANGE_MS
+  const startMs = Math.min(Math.max(desiredStartMs, endMs - MAX_HISTOGRAM_SPAN_MS), endMs)
 
-  if (!gte && !lte) {
-    return {
-      rangeStartIso: new Date(nowMs - DEFAULT_RANGE_MS).toISOString(),
-      rangeEndIso: nowIso,
-    }
-  }
-  if (gte && lte) {
-    return { rangeStartIso: gte, rangeEndIso: lte }
-  }
-  if (gte) {
-    return { rangeStartIso: gte, rangeEndIso: nowIso }
-  }
-  if (lte) {
-    const lteMs = new Date(lte).getTime()
-    return {
-      rangeStartIso: new Date(lteMs - DEFAULT_RANGE_MS).toISOString(),
-      rangeEndIso: lte,
-    }
-  }
   return {
-    rangeStartIso: new Date(nowMs - DEFAULT_RANGE_MS).toISOString(),
-    rangeEndIso: nowIso,
+    rangeStartIso: new Date(startMs).toISOString(),
+    rangeEndIso: new Date(endMs).toISOString(),
   }
 }
 

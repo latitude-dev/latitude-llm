@@ -67,7 +67,6 @@ const { callOrder, mockActivities } = vi.hoisted(() => {
   const mockActivities = {
     authorizeEvaluationGenerationBilling: vi.fn(async () => {
       callOrder.push("authorizeEvaluationGenerationBilling")
-      return true
     }),
     recordEvaluationGenerationUsage: vi.fn(async () => {
       callOrder.push("recordEvaluationGenerationUsage")
@@ -253,25 +252,24 @@ describe("optimizeEvaluationWorkflow", () => {
     expect(mockActivities.collectEvaluationAlignmentExamples).not.toHaveBeenCalled()
   })
 
-  it("returns blocked before starting AI generation when billing rejects the run", async () => {
+  it("fails before starting AI generation when billing rejects the run", async () => {
+    const billingError = new Error("Not enough credits to generate this evaluation.")
     mockActivities.authorizeEvaluationGenerationBilling.mockImplementationOnce(async () => {
       callOrder.push("authorizeEvaluationGenerationBilling")
-      return false
+      throw billingError
     })
 
-    const result = await optimizeEvaluationWorkflow({
-      organizationId: "org-1",
-      projectId: "proj-1",
-      signalId: "issue-1",
-      evaluationId: null,
-      jobId: "job-1",
-      billingOperationId: "billing-op-1",
-    })
+    await expect(
+      optimizeEvaluationWorkflow({
+        organizationId: "org-1",
+        projectId: "proj-1",
+        signalId: "issue-1",
+        evaluationId: null,
+        jobId: "job-1",
+        billingOperationId: "billing-op-1",
+      }),
+    ).rejects.toThrow(billingError)
 
-    expect(result).toEqual({
-      status: "blocked",
-      reason: "no-credits-remaining",
-    })
     expect(callOrder).toEqual(["authorizeEvaluationGenerationBilling"])
     expect(mockActivities.collectEvaluationAlignmentExamples).not.toHaveBeenCalled()
     expect(mockActivities.recordEvaluationGenerationUsage).not.toHaveBeenCalled()

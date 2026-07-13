@@ -19,7 +19,7 @@ import {
   toAnalyticsResponse,
 } from "../openapi/entities/analytics.ts"
 import { resolveBreakdownLabels } from "../openapi/entities/analytics-labels.ts"
-import { jsonBody, openApiResponses, PROTECTED_SECURITY, ProjectParamsSchema } from "../openapi/schemas.ts"
+import { jsonBody, PROTECTED_SECURITY, ProjectParamsSchema, typedResponses } from "../openapi/schemas.ts"
 import type { OrganizationScopedEnv } from "../types.ts"
 
 const analyticsPath = "/projects/:projectSlug/analytics"
@@ -39,7 +39,7 @@ const queryAnalytics = analyticsEndpoint({
       "Compute a metric over a filtered stream (`traces`/`sessions`/`spans`), optionally broken down by a dimension and/or bucketed over time. Returns a tidy series — one point per breakdown value and/or time bucket — suitable for charts and dashboards.",
     security: PROTECTED_SECURITY,
     request: { params: ProjectParamsSchema, body: jsonBody(AnalyticsQueryBodySchema) },
-    responses: openApiResponses({
+    responses: typedResponses({
       status: 200,
       schema: AnalyticsSeriesResponseSchema,
       description: "The analytics series",
@@ -47,54 +47,48 @@ const queryAnalytics = analyticsEndpoint({
   }),
   access: "read-only",
   rateLimitTier: "high",
-  handler: async (c) => {
-    const { projectSlug } = c.req.valid("param")
-    const organizationId = c.var.organization.id
+  execute: (input, ctx) =>
+    Effect.gen(function* () {
+      const { projectSlug } = input.params
 
-    // Re-validate through the domain schema for the filter constraints + typing;
-    // the body schema above is the Fern-friendly mirror used for docs/SDK.
-    const parsed = analyticsQuerySchema.safeParse(c.req.valid("json"))
-    if (!parsed.success) {
-      return c.json({ error: parsed.error.issues[0]?.message ?? "Invalid analytics query." }, 400)
-    }
-    if (!isValidAnalyticsRange(parsed.data.range)) {
-      return c.json({ error: "`range.fromIso` must be strictly before `range.toIso`." }, 400)
-    }
+      // Re-validate through the domain schema for the filter constraints + typing;
+      // the body schema above is the Fern-friendly mirror used for docs/SDK.
+      const parsed = analyticsQuerySchema.safeParse(input.body)
+      if (!parsed.success) {
+        return { status: 400, body: { error: parsed.error.issues[0]?.message ?? "Invalid analytics query." } } as const
+      }
+      if (!isValidAnalyticsRange(parsed.data.range)) {
+        return { status: 400, body: { error: "`range.fromIso` must be strictly before `range.toIso`." } } as const
+      }
 
-    const result = await Effect.runPromise(
-      Effect.gen(function* () {
-        const projectRepo = yield* ProjectRepository
-        const project = yield* projectRepo.findBySlug(projectSlug)
-        const projectId = ProjectId(project.id as string)
+      const projectRepo = yield* ProjectRepository
+      const project = yield* projectRepo.findBySlug(projectSlug)
+      const projectId = ProjectId(project.id as string)
 
-        const series = yield* queryAnalyticsUseCase({
-          organizationId: OrganizationId(organizationId as string),
-          projectId,
-          query: parsed.data,
-        })
+      const series = yield* queryAnalyticsUseCase({
+        organizationId: OrganizationId(ctx.organization.id as string),
+        projectId,
+        query: parsed.data,
+      })
 
-        const keys = [...new Set(series.map((point) => point.key).filter((k): k is string => Boolean(k)))]
-        const labels = yield* resolveBreakdownLabels({
-          stream: parsed.data.stream,
-          breakdown: parsed.data.breakdown,
-          projectId,
-          keys,
-        })
+      const keys = [...new Set(series.map((point) => point.key).filter((k): k is string => Boolean(k)))]
+      const labels = yield* resolveBreakdownLabels({
+        stream: parsed.data.stream,
+        breakdown: parsed.data.breakdown,
+        projectId,
+        keys,
+      })
 
-        return { series, labels }
-      }).pipe(
-        withPostgres(
-          Layer.mergeAll(ProjectRepositoryLive, SignalRepositoryLive, TaxonomyClusterRepositoryLive),
-          c.var.postgresClient,
-          organizationId,
-        ),
-        withClickHouse(AnalyticsQueryReaderLive, c.var.clickhouse, organizationId),
-        withTracing,
+      return { status: 200, body: toAnalyticsResponse(series, labels) } as const
+    }).pipe(
+      withPostgres(
+        Layer.mergeAll(ProjectRepositoryLive, SignalRepositoryLive, TaxonomyClusterRepositoryLive),
+        ctx.postgresClient,
+        ctx.organization.id,
       ),
-    )
-
-    return c.json(toAnalyticsResponse(result.series, result.labels), 200)
-  },
+      withClickHouse(AnalyticsQueryReaderLive, ctx.clickhouse, ctx.organization.id),
+      withTracing,
+    ),
 })
 
 export const analyticsModule: OperationModule = {

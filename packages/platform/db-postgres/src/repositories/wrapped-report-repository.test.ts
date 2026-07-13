@@ -2,7 +2,7 @@ import { generateId, NotFoundError, OrganizationId, ProjectId, type SqlClient, W
 import {
   CURRENT_REPORT_VERSION,
   type Report,
-  type ReportV2,
+  type ReportV3,
   type WrappedReportRecord,
   WrappedReportRepository,
 } from "@domain/spans"
@@ -23,8 +23,8 @@ const runWithLive = <A, E>(
   org: OrganizationId = OrganizationId("system"),
 ) => Effect.runPromise(effect.pipe(withPostgres(WrappedReportRepositoryLive, pg.adminPostgresClient, org)))
 
-// V2 report — includes tokensTotal and lastReport required by the current schema.
-const sampleReport: ReportV2 = {
+// V3 report — includes tokensTotal, lastReport, and skills required by the current schema.
+const sampleReport: ReportV3 = {
   project: { id: PROJECT_A, name: "poncho-ios", slug: "poncho-ios" },
   organization: { id: ORG_A, name: "Acme" },
   window: { start: new Date("2026-05-04T00:00:00.000Z"), end: new Date("2026-05-11T00:00:00.000Z") },
@@ -69,6 +69,15 @@ const sampleReport: ReportV2 = {
     filesTouched: null,
     locWritten: null,
     tokensTotal: null,
+  },
+  skills: {
+    distinctUsed: 3,
+    totalUses: 11,
+    top: [
+      { name: "code-review", count: 6 },
+      { name: "create-pr", count: 3 },
+      { name: "testing", count: 2 },
+    ],
   },
 }
 
@@ -246,7 +255,7 @@ describe("WrappedReportRepositoryLive", () => {
       toolCalls: opts.toolCalls ?? sampleReport.totals.toolCalls,
       tokensTotal: opts.tokensTotal ?? sampleReport.totals.tokensTotal,
     }
-    const report: ReportV2 = { ...sampleReport, totals }
+    const report: ReportV3 = { ...sampleReport, totals }
     await pg.db.insert(wrappedReports).values({
       id: WrappedReportId(opts.id),
       type: "claude_code",

@@ -157,4 +157,30 @@ describe("Monitors Routes Integration", () => {
 
     expect(res.status).toBe(400)
   })
+
+  it<ApiTestContext>("rejects gtePercentile on tool monitor span filters", async ({ app, database }) => {
+    const tenant = await createTenantSetup(database)
+    const slug = await createProjectRecord(database, tenant.organizationId, "dddddddddddddddddddddddd")
+
+    const res = await app.fetch(
+      new Request(`http://localhost/v1/projects/${slug}/monitors`, {
+        method: "POST",
+        headers: { ...createApiKeyAuthHeaders(tenant.apiKeyToken), "content-type": "application/json" },
+        body: JSON.stringify({
+          name: "Invalid tool monitor",
+          target: {
+            type: "tool",
+            id: null,
+            filterSet: { duration: [{ op: "gtePercentile", value: 90 }] },
+          },
+          trigger: "threshold",
+          metric: { kind: "count" },
+          condition: thresholdCondition,
+          severity: "medium",
+        }),
+      }),
+    )
+
+    expect(res.status).toBe(400)
+  })
 })

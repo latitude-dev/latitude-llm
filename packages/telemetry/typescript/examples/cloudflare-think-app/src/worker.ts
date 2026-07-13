@@ -1,24 +1,28 @@
+import { createAnthropic } from "@ai-sdk/anthropic"
+import { CodemodeRuntime } from "@cloudflare/codemode"
 import { Think, type TurnConfig, type TurnContext } from "@cloudflare/think"
-import { Latitude } from "@latitude-data/telemetry"
+import { createExecuteTool } from "@cloudflare/think/tools/execute"
+import { type ContextOptions, Latitude } from "@latitude-data/telemetry"
+import { createCodemodeTelemetry } from "@latitude-data/telemetry/cloudflare"
 import { routeAgentRequest } from "agents"
 import { tool } from "ai"
-import { createWorkersAI } from "workers-ai-provider"
 import { z } from "zod"
 
+export { CodemodeRuntime }
+
 type Env = {
-  AI: Ai
+  LOADER: WorkerLoader
   MyAgent: DurableObjectNamespace<MyAgent>
   LATITUDE_API_KEY: string
   LATITUDE_PROJECT_SLUG: string
   LATITUDE_TELEMETRY_URL?: string
+  ANTHROPIC_API_KEY: string
 }
 
 let latitude: Latitude | undefined
 
 function getLatitude(env: Env) {
-  if (env.LATITUDE_TELEMETRY_URL) {
-    process.env.LATITUDE_TELEMETRY_URL = env.LATITUDE_TELEMETRY_URL
-  }
+  if (env.LATITUDE_TELEMETRY_URL) process.env.LATITUDE_TELEMETRY_URL = env.LATITUDE_TELEMETRY_URL
 
   latitude ??= new Latitude({
     apiKey: env.LATITUDE_API_KEY,
@@ -29,42 +33,80 @@ function getLatitude(env: Env) {
   return latitude
 }
 
-function stringFromBody(body: Record<string, unknown> | undefined, key: string) {
-  const value = body?.[key]
-  return typeof value === "string" && value.length > 0 ? value : undefined
+function latitudeContext(env: Env, ctx: TurnContext): ContextOptions {
+  const body = (ctx.body ?? {}) as Record<string, unknown>
+
+  return {
+    userId: typeof body.userId === "string" ? body.userId : undefined,
+    sessionId: typeof body.sessionId === "string" ? body.sessionId : undefined,
+    project: env.LATITUDE_PROJECT_SLUG,
+    tags: ["cloudflare-think"],
+    metadata: { framework: "cloudflare-think", continuation: ctx.continuation },
+  }
 }
 
-const getWeather = tool({
-  description: "Get the current weather for a city.",
-  inputSchema: z.object({
-    city: z.string().describe("City to look up."),
+const travelTools = {
+  getWeather: tool({
+    description: "Get the current weather for a city.",
+    inputSchema: z.object({ city: z.string() }),
+    execute: async ({ city }) => ({ city, temperatureC: 21, conditions: "sunny" }),
   }),
-  execute: async ({ city }) => ({
-    city,
-    temperatureC: 21,
-    conditions: "sunny",
+  estimateTripBudget: tool({
+    description: "Estimate a trip budget for a city.",
+    inputSchema: z.object({
+      city: z.string(),
+      days: z.number().int().positive(),
+      travelers: z.number().int().positive().default(1),
+    }),
+    execute: async ({ city, days, travelers }) => ({ city, estimatedEur: days * travelers * 95 }),
   }),
-})
+  listCityHighlights: tool({
+    description: "List city highlights.",
+    inputSchema: z.object({ city: z.string() }),
+    execute: async ({ city }) => ({ city, highlights: ["old town walk", "local market", "sunset viewpoint"] }),
+  }),
+}
 
 export class MyAgent extends Think<Env> {
+  private context: ContextOptions | undefined
+
   getModel() {
-    return createWorkersAI({ binding: this.env.AI })("@cf/meta/llama-4-scout-17b-16e-instruct")
+    return createAnthropic({ apiKey: this.env.ANTHROPIC_API_KEY })("claude-sonnet-4-5")
+  }
+
+  getSystemPrompt() {
+    return [
+      "Use execute once for travel planning.",
+      "Do not inspect tool signatures.",
+      "Inside execute, call tools.getWeather({ city }), tools.estimateTripBudget({ city, days, travelers }), and tools.listCityHighlights({ city }).",
+      "Return one object with those results, then summarize it briefly.",
+    ].join(" ")
   }
 
   getTools() {
-    return { getWeather }
+    const codemode = createCodemodeTelemetry({
+      latitude: getLatitude(this.env),
+      scope: "cloudflare-think-codemode",
+      context: () => this.context,
+    })
+
+    return {
+      execute: codemode.wrapExecuteTool(
+        createExecuteTool(this, {
+          tools: codemode.traceToolSet(travelTools),
+        }),
+      ),
+    }
   }
 
   beforeTurn(ctx: TurnContext): TurnConfig {
+    this.context = latitudeContext(this.env, ctx)
+
     return {
+      maxSteps: 4,
       experimental_telemetry: {
         isEnabled: true,
-        tracer: getLatitude(this.env).getTracer("cloudflare-think", {
-          userId: stringFromBody(ctx.body, "userId"),
-          sessionId: stringFromBody(ctx.body, "sessionId"),
-          tags: ["cloudflare-think"],
-          metadata: { framework: "cloudflare-think", continuation: ctx.continuation },
-        }),
+        tracer: getLatitude(this.env).getTracer("cloudflare-think", this.context),
         functionId: "think-turn",
       },
     }

@@ -1,6 +1,14 @@
 import { ALERT_SEVERITIES } from "@domain/incidents"
 import type { Monitor, MonitorIncidentItem } from "@domain/monitors"
-import { cuidSchema, FILTER_OPERATORS, MONITOR_STREAMS, MONITOR_TARGET_TYPES, MONITOR_TRIGGERS } from "@domain/shared"
+import { monitorStreamForTargetType } from "@domain/monitors"
+import {
+  cuidSchema,
+  FILTER_OPERATORS,
+  MONITOR_STREAMS,
+  MONITOR_TARGET_TYPES,
+  MONITOR_TRIGGERS,
+  SPAN_ROW_FILTER_GTE_PERCENTILE_MESSAGE,
+} from "@domain/shared"
 import { z } from "@hono/zod-openapi"
 import { AlertConditionSchema, incidentFields, toIncidentResponse } from "./incident.ts"
 
@@ -77,6 +85,21 @@ export const MonitorTargetSchema = z
       .describe("Saved-search id for saved-search monitors, or `null` for inline targets."),
     metric: MonitorMetricSchema.optional().describe("Default metric evaluated for this target."),
   })
+  .superRefine((target, ctx) => {
+    const stream = target.stream ?? monitorStreamForTargetType(target.type)
+    if (stream !== "spans" || target.filterSet == null) return
+    for (const [field, conditions] of Object.entries(target.filterSet)) {
+      conditions.forEach((cond, index) => {
+        if (cond.op === "gtePercentile") {
+          ctx.addIssue({
+            code: "custom",
+            message: SPAN_ROW_FILTER_GTE_PERCENTILE_MESSAGE,
+            path: ["filterSet", field, index, "op"],
+          })
+        }
+      })
+    }
+  })
   .openapi("MonitorTarget")
 
 const MonitorConfigSchema = z
@@ -135,8 +158,10 @@ export const toMonitorResponse = (monitor: Monitor) => ({
   name: monitor.name,
   description: monitor.description,
   system: monitor.system,
-  target: monitor.target,
-  rule: monitor.rule,
+  // Domain target/rule are structurally wider (readonly filter set, percentile metric); the
+  // published schema is a subset. Pass through as-is, matching the pre-migration handler.
+  target: monitor.target as z.infer<typeof MonitorTargetSchema>,
+  rule: monitor.rule as z.infer<typeof MonitorRuleSchema>,
   mutedAt: monitor.mutedAt ? monitor.mutedAt.toISOString() : null,
   deletedAt: monitor.deletedAt ? monitor.deletedAt.toISOString() : null,
   createdAt: monitor.createdAt.toISOString(),

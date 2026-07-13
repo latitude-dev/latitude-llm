@@ -15,11 +15,11 @@ import { defineOperation } from "../core/define-operation.ts"
 import type { OperationModule } from "../core/mount.ts"
 import { SpanSchema, toSpanResponse } from "../openapi/entities/span.ts"
 import {
-  FilterSetSchema,
   jsonBody,
-  openApiResponses,
   PROTECTED_SECURITY,
   ProjectParamsSchema,
+  SpanRowFilterSetSchema,
+  typedResponses,
 } from "../openapi/schemas.ts"
 import type { OrganizationScopedEnv } from "../types.ts"
 
@@ -63,8 +63,8 @@ const decodeSpanListCursor = (raw: string): SpanListCursor | null => {
 
 const QuerySpansBodySchema = z
   .object({
-    filters: FilterSetSchema.optional().describe(
-      "Row-local span filter set (same DSL as `listTraces`) over span fields — `operation`, `toolName`, `model`, `provider`, `sessionId`, `traceId`, `tags`, `status` (`error`/`ok`/`unset`), `duration`, `cost`, `tokensInput`/`tokensOutput`.",
+    filters: SpanRowFilterSetSchema.optional().describe(
+      "Row-local span filter set (same DSL as `listTraces`) over span fields — `operation`, `toolName`, `model`, `provider`, `sessionId`, `traceId`, `tags`, `status` (`error`/`ok`/`unset`), `duration`, `cost`, `tokensInput`/`tokensOutput`. `gtePercentile` is not supported — use absolute thresholds or a percentile metric.",
     ),
     orderBy: z
       .object({
@@ -123,67 +123,66 @@ const querySpans = spanEndpoint({
       'Returns a cursor-paginated page of spans across all traces in the project matching `filters` (and an optional time `range`). The span-grain, row-level complement to `queryAnalytics` with `stream: "spans"` (which returns aggregates): use this to drill from an aggregate into the individual spans behind it — e.g. every failing `search_docs` tool span, or the slowest embedding calls.',
     security: PROTECTED_SECURITY,
     request: { params: ProjectParamsSchema, body: jsonBody(QuerySpansBodySchema) },
-    responses: openApiResponses({ status: 200, schema: QuerySpansResponseSchema, description: "Page of spans" }),
+    responses: typedResponses({ status: 200, schema: QuerySpansResponseSchema, description: "Page of spans" }),
   }),
   access: "read-only",
   rateLimitTier: "high",
-  handler: async (c) => {
-    const { projectSlug } = c.req.valid("param")
-    const body = c.req.valid("json")
-    const organizationId = c.var.organization.id
+  execute: (input, ctx) =>
+    Effect.gen(function* () {
+      const { projectSlug } = input.params
+      const body = input.body
 
-    const orderBy = body.orderBy ?? { field: "startTime" as const, direction: "desc" as const }
+      const orderBy = body.orderBy ?? { field: "startTime" as const, direction: "desc" as const }
 
-    let cursor: SpanListCursor | undefined
-    if (body.cursor) {
-      const decoded = decodeSpanListCursor(body.cursor)
-      if (decoded === null) return c.json({ error: "Invalid `cursor` value." }, 400)
-      // The cursor is pinned to the ordering it was minted under; replaying it
-      // under a different `orderBy` would page incoherently.
-      if (decoded.field !== orderBy.field || decoded.direction !== orderBy.direction) {
-        return c.json({ error: "`cursor` does not match `orderBy`; restart pagination without the cursor." }, 400)
+      let cursor: SpanListCursor | undefined
+      if (body.cursor) {
+        const decoded = decodeSpanListCursor(body.cursor)
+        if (decoded === null) return { status: 400, body: { error: "Invalid `cursor` value." } } as const
+        // The cursor is pinned to the ordering it was minted under; replaying it
+        // under a different `orderBy` would page incoherently.
+        if (decoded.field !== orderBy.field || decoded.direction !== orderBy.direction) {
+          return {
+            status: 400,
+            body: { error: "`cursor` does not match `orderBy`; restart pagination without the cursor." },
+          } as const
+        }
+        cursor = decoded
       }
-      cursor = decoded
-    }
-    if (body.range && new Date(body.range.fromIso).getTime() >= new Date(body.range.toIso).getTime()) {
-      return c.json({ error: "`range.fromIso` must be strictly before `range.toIso`." }, 400)
-    }
+      if (body.range && new Date(body.range.fromIso).getTime() >= new Date(body.range.toIso).getTime()) {
+        return { status: 400, body: { error: "`range.fromIso` must be strictly before `range.toIso`." } } as const
+      }
 
-    const page = await Effect.runPromise(
-      Effect.gen(function* () {
-        const projectRepo = yield* ProjectRepository
-        const project = yield* projectRepo.findBySlug(projectSlug)
+      const projectRepo = yield* ProjectRepository
+      const project = yield* projectRepo.findBySlug(projectSlug)
 
-        const spanRepo = yield* SpanRepository
-        return yield* spanRepo.listByProjectId({
-          organizationId: OrganizationId(organizationId as string),
-          projectId: ProjectId(project.id as string),
-          options: {
-            limit: body.limit,
-            orderBy,
-            ...(cursor ? { cursor } : {}),
-            ...(body.filters ? { filters: body.filters } : {}),
-            ...(body.range
-              ? { startTimeFrom: new Date(body.range.fromIso), startTimeTo: new Date(body.range.toIso) }
-              : {}),
-          },
-        })
-      }).pipe(
-        withPostgres(ProjectRepositoryLive, c.var.postgresClient, organizationId),
-        withClickHouse(SpanRepositoryLive, c.var.clickhouse, organizationId),
-        withTracing,
-      ),
-    )
+      const spanRepo = yield* SpanRepository
+      const page = yield* spanRepo.listByProjectId({
+        organizationId: OrganizationId(ctx.organization.id as string),
+        projectId: ProjectId(project.id as string),
+        options: {
+          limit: body.limit,
+          orderBy,
+          ...(cursor ? { cursor } : {}),
+          ...(body.filters ? { filters: body.filters } : {}),
+          ...(body.range
+            ? { startTimeFrom: new Date(body.range.fromIso), startTimeTo: new Date(body.range.toIso) }
+            : {}),
+        },
+      })
 
-    return c.json(
-      {
-        items: page.items.map(toSpanResponse),
-        nextCursor: page.nextCursor ? encodeSpanListCursor(page.nextCursor) : null,
-        hasMore: page.nextCursor !== null,
-      },
-      200,
-    )
-  },
+      return {
+        status: 200,
+        body: {
+          items: page.items.map(toSpanResponse),
+          nextCursor: page.nextCursor ? encodeSpanListCursor(page.nextCursor) : null,
+          hasMore: page.nextCursor !== null,
+        },
+      } as const
+    }).pipe(
+      withPostgres(ProjectRepositoryLive, ctx.postgresClient, ctx.organization.id),
+      withClickHouse(SpanRepositoryLive, ctx.clickhouse, ctx.organization.id),
+      withTracing,
+    ),
 })
 
 export const spansModule: OperationModule = {

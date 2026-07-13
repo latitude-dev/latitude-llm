@@ -19,7 +19,7 @@ import {
 import { PercentileFilter } from "../../../../../components/filters-builder/percentile-filter.tsx"
 import { StatusFilter, type StatusFilterValue } from "../../../../../components/filters-builder/status-filter.tsx"
 import type { DistinctColumn } from "../../../../../components/filters-builder/types.ts"
-import { useMembersCollection } from "../../../../../domains/members/members.collection.ts"
+import { useProjectMembersCollection } from "../../../../../domains/members/members.collection.ts"
 import { isHasLlmActivityFilterOn } from "../../../../../domains/sessions/sessions.collection.ts"
 import { useTopicFilterOptions } from "../../../../../domains/taxonomy/taxonomy.collection.ts"
 import { ListingLayout as Layout } from "../../../../../layouts/ListingLayout/index.tsx"
@@ -477,7 +477,7 @@ export function FiltersSidebar({ mode, projectId, filters, onFiltersChange, onCl
   // create scores via the API. `meId` is undefined until the session resolves.
   const { data: session } = authClient.useSession()
   const meId = session?.user.id
-  const { data: members } = useMembersCollection()
+  const { data: members } = useProjectMembersCollection()
   const annotatorItems = useMemo<readonly StaticFilterItem[]>(() => {
     const active = (members ?? []).filter((m) => m.status === "active" && m.userId)
     const others = active

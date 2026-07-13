@@ -1,0 +1,35 @@
+# Latitude Design System — public component/brand reference
+# https://design.latitude.so
+
+User-agent: *
+Allow: /
+Content-Signal: search=yes, ai-input=yes, ai-train=no
+
+User-agent: GPTBot
+Allow: /
+
+User-agent: OAI-SearchBot
+Allow: /
+
+User-agent: ChatGPT-User
+Allow: /
+
+User-agent: ClaudeBot
+Allow: /
+
+User-agent: Claude-Web
+Allow: /
+
+User-agent: anthropic-ai
+Allow: /
+
+User-agent: Google-Extended
+Allow: /
+
+User-agent: CCBot
+Allow: /
+
+User-agent: PerplexityBot
+Allow: /
+
+Sitemap: https://design.latitude.so/sitemap.xml

@@ -17,7 +17,10 @@ import { type ReactNode, type RefObject, useCallback, useEffect, useMemo, useRef
 import type { GenAIMessage } from "rosetta-ai"
 import { HotkeyBadge } from "../../../../../../../components/hotkey-badge.tsx"
 import { useAuthSession } from "../../../../../../../domains/sessions/session.collection.ts"
-import { useConversationSpanMaps } from "../../../../../../../domains/spans/spans.collection.ts"
+import {
+  useConversationSpanMaps,
+  useSessionConversationSpanMaps,
+} from "../../../../../../../domains/spans/spans.collection.ts"
 import {
   useTraceConversationMessages,
   useTraceSearchHighlights,
@@ -94,6 +97,7 @@ function ConversationContent({
   traceDetail,
   messages,
   navigateToSpan,
+  sessionSpanScope,
   projectId,
   isActive,
   annotationsEnabled,
@@ -113,6 +117,15 @@ function ConversationContent({
   readonly traceDetail: TraceDetailRecord
   readonly messages: readonly GenAIMessage[]
   readonly navigateToSpan?: ((spanId: string) => void) | undefined
+  /** When set, message/tool-call navigation links resolve against ALL session spans
+   *  (not just this trace); annotations still anchor to this trace. */
+  readonly sessionSpanScope?:
+    | {
+        readonly sessionId: string
+        readonly sessionStartTime: string
+        readonly sessionEndTime: string
+      }
+    | undefined
   readonly projectId: string
   readonly isActive: boolean
   /** Off under a sandbox scope — hides the inline annotate affordances and skips annotation fetches. */
@@ -145,8 +158,20 @@ function ConversationContent({
     traceId: traceDetail.traceId,
     startTime: traceDetail.startTime,
     allMessages: messages,
-    enabled: messages.length > 0 && (annotationsEnabled || navigateToSpan !== undefined),
+    enabled: messages.length > 0 && (annotationsEnabled || (navigateToSpan !== undefined && sessionSpanScope == null)),
   })
+
+  const { data: sessionSpanMaps } = useSessionConversationSpanMaps({
+    projectId,
+    sessionId: sessionSpanScope?.sessionId ?? "",
+    latestTraceId: traceDetail.traceId,
+    sessionStartTime: sessionSpanScope?.sessionStartTime ?? "",
+    sessionEndTime: sessionSpanScope?.sessionEndTime ?? "",
+    allMessages: messages,
+    enabled: sessionSpanScope != null && messages.length > 0 && navigateToSpan !== undefined,
+  })
+
+  const navSpanMaps = sessionSpanScope ? sessionSpanMaps : spanMaps
 
   const band = useViewportBand({ scrollRef, timeline: timeline ?? null, isActive })
 
@@ -467,16 +492,19 @@ function ConversationContent({
   }
 
   const messageActions =
-    navigateToSpan && spanMaps && Object.keys(spanMaps.messageSpanMap).length > 0
+    navigateToSpan && navSpanMaps && Object.keys(navSpanMaps.messageSpanMap).length > 0
       ? new Map(
-          Object.entries(spanMaps.messageSpanMap).map(([idx, spanId]) => [Number(idx), () => navigateToSpan(spanId)]),
+          Object.entries(navSpanMaps.messageSpanMap).map(([idx, spanId]) => [
+            Number(idx),
+            () => navigateToSpan(spanId),
+          ]),
         )
       : undefined
 
   const toolCallActions =
-    navigateToSpan && spanMaps && Object.keys(spanMaps.toolCallSpanMap).length > 0
+    navigateToSpan && navSpanMaps && Object.keys(navSpanMaps.toolCallSpanMap).length > 0
       ? new Map(
-          Object.entries(spanMaps.toolCallSpanMap).map(([toolCallId, spanId]) => [
+          Object.entries(navSpanMaps.toolCallSpanMap).map(([toolCallId, spanId]) => [
             toolCallId,
             () => navigateToSpan(spanId),
           ]),
@@ -628,6 +656,7 @@ export function ConversationTab({
   traceDetail,
   isDetailLoading,
   navigateToSpan,
+  sessionSpanScope,
   projectId,
   isActive,
   annotationsEnabled = true,
@@ -643,6 +672,15 @@ export function ConversationTab({
   readonly isDetailLoading: boolean
   /** Optional callback to navigate to a span. If not provided, message/tool call actions are hidden. */
   readonly navigateToSpan?: ((spanId: string) => void) | undefined
+  /** When set, message/tool-call navigation links resolve against ALL session spans
+   *  (not just this trace); annotations still anchor to this trace. */
+  readonly sessionSpanScope?:
+    | {
+        readonly sessionId: string
+        readonly sessionStartTime: string
+        readonly sessionEndTime: string
+      }
+    | undefined
   readonly projectId: string
   readonly isActive: boolean
   /** Off under a sandbox scope — hides inline annotate affordances and skips annotation fetches. Defaults on. */
@@ -690,6 +728,7 @@ export function ConversationTab({
       traceDetail={traceDetail}
       messages={conversation.messages}
       navigateToSpan={navigateToSpan}
+      sessionSpanScope={sessionSpanScope}
       projectId={projectId}
       scrollContainerRef={scrollContainerRef}
       textSelectionPopoverControlsRef={textSelectionPopoverControlsRef}

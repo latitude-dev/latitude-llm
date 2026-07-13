@@ -1,6 +1,6 @@
 import { useMemo } from "react"
 import { useAnnotationsBySession } from "../../../../../../domains/annotations/annotations.collection.ts"
-import { useMemberByUserIdMap } from "../../../../../../domains/members/members.collection.ts"
+import { useProjectMemberByUserIdMap } from "../../../../../../domains/members/members.collection.ts"
 import type { SessionDetailRecord } from "../../../../../../domains/sessions/sessions.functions.ts"
 import {
   useSessionConversationSpanMaps,
@@ -57,7 +57,7 @@ export function useSessionTimeline({
     traceIds: session.traceIds,
     enabled: annotationsEnabled,
   })
-  const memberByUserId = useMemberByUserIdMap()
+  const memberByUserId = useProjectMemberByUserIdMap()
 
   return useMemo(() => {
     if (!traceDetail || !spanMaps || conversation.messages.length === 0) return null

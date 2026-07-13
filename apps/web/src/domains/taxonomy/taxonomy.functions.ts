@@ -1,5 +1,5 @@
 import { MOMENT_KINDS, type MomentKind } from "@domain/conversation-intelligence"
-import { normalizeCentroid, OrganizationId, ProjectId, TaxonomyClusterId } from "@domain/shared"
+import { normalizeCentroid, ProjectId, TaxonomyClusterId } from "@domain/shared"
 import {
   type ClusterAnalysisAggregate,
   getClusterSessionIntelligenceUseCase,
@@ -11,18 +11,16 @@ import {
   TaxonomyClusterRepository,
   type TaxonomyClusterTrendSummary,
 } from "@domain/taxonomy"
-import {
-  TaxonomyClusterIntelligenceRepositoryLive,
-  TaxonomyObservationRepositoryLive,
-  withClickHouse,
-} from "@platform/db-clickhouse"
-import { TaxonomyClusterRepositoryLive, withPostgres } from "@platform/db-postgres"
+import { TaxonomyClusterIntelligenceRepositoryLive, TaxonomyObservationRepositoryLive } from "@platform/db-clickhouse"
+import { TaxonomyClusterRepositoryLive } from "@platform/db-postgres"
 import { withTracing } from "@repo/observability"
 import { createServerFn } from "@tanstack/react-start"
 import { Effect, Layer } from "effect"
 import { z } from "zod"
-import { requireSession } from "../../server/auth.ts"
 import { getClickhouseClient, getPostgresClient } from "../../server/clients.ts"
+import { resolveOrgScope } from "../../server/resolve-org-scope.ts"
+import { withScopedClickHouse } from "../../server/scoped-clickhouse.ts"
+import { withScopedPostgres } from "../../server/scoped-postgres.ts"
 import { type CentroidPoint2D, projectCentroidsTo2D } from "./centroid-projection.ts"
 
 export interface TaxonomyClusterRecord {
@@ -338,9 +336,8 @@ interface TopicFilterOptionRecord {
  */
 export const getTopicFilterOptions = createServerFn({ method: "GET" })
   .inputValidator(z.object({ projectId: z.string() }))
-  .handler(async ({ data }): Promise<readonly TopicFilterOptionRecord[]> => {
-    const { organizationId } = await requireSession()
-    const orgId = OrganizationId(organizationId)
+  .handler(async ({ data, context }): Promise<readonly TopicFilterOptionRecord[]> => {
+    const orgId = await resolveOrgScope(context)
     const projectId = ProjectId(data.projectId)
 
     return Effect.runPromise(
@@ -372,7 +369,7 @@ export const getTopicFilterOptions = createServerFn({ method: "GET" })
         const rootChildren = roots.length === 1 && roots[0] ? (childrenByParent.get(roots[0].id) ?? []) : []
         walk(roots.length === 1 && rootChildren.length > 0 ? rootChildren : roots)
         return out
-      }).pipe(withPostgres(postgresTaxonomyReadLayer, getPostgresClient(), orgId), withTracing),
+      }).pipe(withScopedPostgres(postgresTaxonomyReadLayer, getPostgresClient(), orgId), withTracing),
     )
   })
 
@@ -388,9 +385,8 @@ export const getProjectBehaviours = createServerFn({ method: "GET" })
       timeRange: behaviourTimeRangeSchema,
     }),
   )
-  .handler(async ({ data }): Promise<ProjectBehavioursRecord> => {
-    const { organizationId } = await requireSession()
-    const orgId = OrganizationId(organizationId)
+  .handler(async ({ data, context }): Promise<ProjectBehavioursRecord> => {
+    const orgId = await resolveOrgScope(context)
     const projectId = ProjectId(data.projectId)
     const timeRange = parseBehaviourTimeRange(data.timeRange)
 
@@ -444,8 +440,8 @@ export const getProjectBehaviours = createServerFn({ method: "GET" })
         const displayTopics = data.segment === "high_escalation" ? pruneToHighEscalation(topics) : topics
         return { topics: countBehaviourNodes(displayTopics) >= 2 ? displayTopics : [] }
       }).pipe(
-        withPostgres(postgresTaxonomyReadLayer, getPostgresClient(), orgId),
-        withClickHouse(clickHouseTaxonomyIntelligenceLayer, getClickhouseClient(), orgId),
+        withScopedPostgres(postgresTaxonomyReadLayer, getPostgresClient(), orgId),
+        withScopedClickHouse(clickHouseTaxonomyIntelligenceLayer, getClickhouseClient(), orgId),
         withTracing,
       ),
     )
@@ -469,9 +465,8 @@ export const getBehaviourTrajectory = createServerFn({ method: "GET" })
       timeRange: behaviourTimeRangeSchema,
     }),
   )
-  .handler(async ({ data }): Promise<BehaviourTrajectoryRecord> => {
-    const { organizationId } = await requireSession()
-    const orgId = OrganizationId(organizationId)
+  .handler(async ({ data, context }): Promise<BehaviourTrajectoryRecord> => {
+    const orgId = await resolveOrgScope(context)
     const projectId = ProjectId(data.projectId)
     const timeRange = parseBehaviourTimeRange(data.timeRange)
     const categoryClusterIds = [...new Set(data.categoryClusterIds)].filter((id) => id.length > 0)
@@ -488,7 +483,7 @@ export const getBehaviourTrajectory = createServerFn({ method: "GET" })
               .pipe(Effect.map((clusterIds) => [clusterId, clusterIds] as const)),
           { concurrency: 6 },
         )
-      }).pipe(withPostgres(postgresTaxonomyReadLayer, getPostgresClient(), orgId), withTracing),
+      }).pipe(withScopedPostgres(postgresTaxonomyReadLayer, getPostgresClient(), orgId), withTracing),
     )
 
     const bucketExpression = trajectoryBucketExpression(data.axis)
@@ -547,7 +542,7 @@ export const getBehaviourTrajectory = createServerFn({ method: "GET" })
             ORDER BY ${data.axis === "day" ? "bucket ASC" : "toUInt16(bucket) ASC"}
           `,
           query_params: {
-            organizationId,
+            organizationId: orgId,
             projectId: data.projectId,
             clusterIds,
             axis: data.axis,
@@ -693,9 +688,8 @@ export const getBehaviourSessions = createServerFn({ method: "GET" })
       momentRange: behaviourMomentRangeSchema,
     }),
   )
-  .handler(async ({ data }): Promise<BehaviourSessionsRecord> => {
-    const { organizationId } = await requireSession()
-    const orgId = OrganizationId(organizationId)
+  .handler(async ({ data, context }): Promise<BehaviourSessionsRecord> => {
+    const orgId = await resolveOrgScope(context)
     const offset = data.offset ?? 0
     const limit = data.limit ?? 50
     const filter = data.filter ?? "all"
@@ -709,7 +703,7 @@ export const getBehaviourSessions = createServerFn({ method: "GET" })
           projectId: ProjectId(data.projectId),
           clusterId: TaxonomyClusterId(data.clusterId),
         })
-      }).pipe(withPostgres(postgresTaxonomyReadLayer, getPostgresClient(), orgId), withTracing),
+      }).pipe(withScopedPostgres(postgresTaxonomyReadLayer, getPostgresClient(), orgId), withTracing),
     )
     const timeFromClause = timeRange.from ? "AND o.start_time >= {startTimeFrom:DateTime64(9, 'UTC')}" : ""
     const timeToClause = timeRange.to ? "AND o.start_time < {startTimeTo:DateTime64(9, 'UTC')}" : ""
@@ -731,7 +725,7 @@ export const getBehaviourSessions = createServerFn({ method: "GET" })
               LIMIT {pageSize:UInt32}
               OFFSET {offset:UInt32}`,
       query_params: {
-        organizationId,
+        organizationId: orgId,
         projectId: data.projectId,
         clusterIds,
         filter,
@@ -766,7 +760,7 @@ export const getBehaviourSessions = createServerFn({ method: "GET" })
               GROUP BY startTime
               ORDER BY startTime ASC`,
       query_params: {
-        organizationId,
+        organizationId: orgId,
         projectId: data.projectId,
         clusterIds,
         filter,
@@ -806,9 +800,8 @@ export const getBehaviourSessions = createServerFn({ method: "GET" })
 
 export const getClusterProfile = createServerFn({ method: "GET" })
   .inputValidator(z.object({ projectId: z.string(), clusterId: z.string(), timeRange: behaviourTimeRangeSchema }))
-  .handler(async ({ data }): Promise<ClusterSessionIntelligenceRecord> => {
-    const { organizationId } = await requireSession()
-    const orgId = OrganizationId(organizationId)
+  .handler(async ({ data, context }): Promise<ClusterSessionIntelligenceRecord> => {
+    const orgId = await resolveOrgScope(context)
     const projectId = ProjectId(data.projectId)
     const timeRange = parseBehaviourTimeRange(data.timeRange)
 
@@ -827,8 +820,8 @@ export const getClusterProfile = createServerFn({ method: "GET" })
             Object.fromEntries(Object.entries(example).map(([key, value]) => [key, String(value)])),
           ),
         })),
-        withPostgres(postgresTaxonomyReadLayer, getPostgresClient(), orgId),
-        withClickHouse(clickHouseTaxonomyIntelligenceLayer, getClickhouseClient(), orgId),
+        withScopedPostgres(postgresTaxonomyReadLayer, getPostgresClient(), orgId),
+        withScopedClickHouse(clickHouseTaxonomyIntelligenceLayer, getClickhouseClient(), orgId),
         withTracing,
       ),
     )

@@ -96,4 +96,16 @@ describe("requestSignalDiscoveredNotificationsUseCase", () => {
 
     expect(result).toEqual({ status: "skipped", reason: "signal-not-found" })
   })
+
+  it("skips user-origin signals", async () => {
+    const result = await Effect.runPromise(
+      requestSignalDiscoveredNotificationsUseCase(input).pipe(
+        Effect.provide(
+          makeLayer({ signal: makeSignal({ origin: "user", source: "custom", centroid: null, clusteredAt: null }) }),
+        ),
+      ),
+    )
+
+    expect(result).toEqual({ status: "skipped", reason: "user-origin-signal" })
+  })
 })

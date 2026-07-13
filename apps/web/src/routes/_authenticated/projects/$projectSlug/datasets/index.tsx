@@ -8,16 +8,15 @@ import {
   type InfiniteTableSorting,
   type SortDirection,
   Tooltip,
-  useToast,
 } from "@repo/ui"
 import { relativeTime } from "@repo/utils"
+import { useMutation } from "@tanstack/react-query"
 import { createFileRoute, Link } from "@tanstack/react-router"
-import { useCallback, useState } from "react"
+import { useCallback } from "react"
 import { useDatasetsInfiniteScroll } from "../../../../../domains/datasets/datasets.collection.ts"
 import type { DatasetRecord } from "../../../../../domains/datasets/datasets.functions.ts"
 import { createDatasetMutation } from "../../../../../domains/datasets/datasets.mutations.ts"
 import { ListingLayout as Layout, listingLayoutIntrinsicScroll } from "../../../../../layouts/ListingLayout/index.tsx"
-import { toUserMessage } from "../../../../../lib/errors.ts"
 import { useParamState } from "../../../../../lib/hooks/useParamState.ts"
 import { BreadcrumbText } from "../../../-components/breadcrumb-ui.tsx"
 import { useRouteProject } from "../-route-data.ts"
@@ -61,8 +60,6 @@ function DatasetsPage() {
   const { projectSlug } = Route.useParams()
   const project = useRouteProject()
   const navigate = Route.useNavigate()
-  const { toast } = useToast()
-  const [creating, setCreating] = useState(false)
 
   const [sortBy, setSortBy] = useParamState("sortBy", DEFAULT_SORTING.column)
   const [sortDirection, setSortDirection] = useParamState("sortDirection", DEFAULT_SORTING.direction, {
@@ -100,25 +97,24 @@ function DatasetsPage() {
   const hasNoDatasets = datasets.length === 0
   const showEmptyState = !isLoading && hasNoDatasets
 
-  const handleCreate = useCallback(async () => {
-    setCreating(true)
-    try {
+  // No local error handling: errors route through MutationCache.onError →
+  // handleMutationError (the single sink), which opens the read-only modal for
+  // showcase writes and toasts everything else (meta.globalErrorToast).
+  const createDataset = useMutation({
+    mutationFn: async (name: string) => {
       const datasetId = generateId()
-      await createDatasetMutation({
-        id: datasetId,
-        projectId: project.id,
-        name: `Dataset ${new Date().toLocaleString()}`,
-      })
-      navigate({
-        to: "/projects/$projectSlug/datasets/$datasetId",
-        params: { projectSlug, datasetId },
-      })
-    } catch (err) {
-      toast({ variant: "destructive", description: toUserMessage(err) })
-    } finally {
-      setCreating(false)
-    }
-  }, [project, projectSlug, navigate, toast])
+      await createDatasetMutation({ id: datasetId, projectId: project.id, name })
+      return datasetId
+    },
+    meta: { globalErrorToast: true },
+    onSuccess: (datasetId) => {
+      navigate({ to: "/projects/$projectSlug/datasets/$datasetId", params: { projectSlug, datasetId } })
+    },
+  })
+  const creating = createDataset.isPending
+  const handleCreate = useCallback(() => {
+    createDataset.mutate(`Dataset ${new Date().toLocaleString()}`)
+  }, [createDataset])
 
   if (isLoading && hasNoDatasets) {
     return null

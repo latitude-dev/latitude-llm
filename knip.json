@@ -52,11 +52,7 @@
         "src/routes/**/*.tsx"
       ],
       "project": ["src/**/*.ts", "src/**/*.tsx"],
-      "ignore": [
-        "src/server/resolve-showcase-access.ts"
-      ],
       "ignoreDependencies": [
-        "@domain/showcase",
         "@temporalio/client",
         "quickjs-emscripten",
         "voyageai"
@@ -64,10 +60,17 @@
     },
     "apps/design-system": {
       "entry": [
-        "src/main.tsx",
         "src/routes/**/*.tsx"
       ],
       "project": ["src/**/*.{ts,tsx}"]
+    },
+    "packages/operations": {
+      "project": [
+        "src/**/*.ts"
+      ],
+      "ignoreDependencies": [
+        "zod"
+      ]
     },
     "infra": {
       "entry": [],

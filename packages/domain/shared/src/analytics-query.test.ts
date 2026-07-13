@@ -85,6 +85,25 @@ describe("analyticsQuerySchema", () => {
     ).toBe(false)
   })
 
+  it("rejects gtePercentile on spans stream row filters", () => {
+    const result = analyticsQuerySchema.safeParse({
+      stream: "spans",
+      metric: { kind: "count" },
+      filters: { duration: [{ op: "gtePercentile", value: 90 }] },
+      range,
+    })
+    expect(result.success).toBe(false)
+  })
+
+  it("accepts a percentile metric on the spans stream", () => {
+    const result = analyticsQuerySchema.safeParse({
+      stream: "spans",
+      metric: { kind: "percentile", field: "duration", p: 90 },
+      range,
+    })
+    expect(result.success).toBe(true)
+  })
+
   it("accepts a semantic query on sessions (session search is supported)", () => {
     const result = analyticsQuerySchema.safeParse({
       stream: "sessions",

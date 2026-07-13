@@ -5123,9 +5123,47 @@
               "evaluationId"
             ],
             "description": "An active evaluation is being realigned."
+          },
+          {
+            "type": "object",
+            "properties": {
+              "kind": {
+                "type": "string",
+                "enum": [
+                  "failed"
+                ]
+              },
+              "phase": {
+                "type": "string",
+                "enum": [
+                  "generate",
+                  "realign"
+                ],
+                "description": "Which workflow failed: `generate` (creating the evaluation) or `realign` (updating it)."
+              },
+              "evaluationId": {
+                "type": "string",
+                "minLength": 24,
+                "maxLength": 24,
+                "description": "Id of the evaluation whose realignment failed. Absent when the failure was during `generate`."
+              },
+              "reason": {
+                "type": [
+                  "string",
+                  "null"
+                ],
+                "description": "Resolved failure message, or `null` once Temporal has dropped the failed run."
+              }
+            },
+            "required": [
+              "kind",
+              "phase",
+              "reason"
+            ],
+            "description": "The most recent generation or realignment workflow for this signal ended in failure."
           }
         ],
-        "description": "Whether the signal is currently being monitored: `automatic`, `idle`, `generating`, or `realigning`."
+        "description": "Whether the signal is currently being monitored: `automatic`, `idle`, `generating`, `realigning`, or `failed`."
       },
       "SignalHistogram": {
         "type": "object",
@@ -7962,45 +8000,6 @@
             "maxLength": 2000,
             "description": "New description."
           },
-          "target": {
-            "allOf": [
-              {
-                "$ref": "#/components/schemas/MonitorTarget"
-              },
-              {
-                "description": "Replacement target watched by the monitor."
-              }
-            ]
-          },
-          "trigger": {
-            "type": "string",
-            "enum": [
-              "match",
-              "threshold",
-              "escalating"
-            ],
-            "description": "Replacement incident trigger for the monitor rule."
-          },
-          "metric": {
-            "allOf": [
-              {
-                "$ref": "#/components/schemas/MonitorMetric"
-              },
-              {
-                "description": "Replacement metric evaluated by the monitor."
-              }
-            ]
-          },
-          "condition": {
-            "allOf": [
-              {
-                "$ref": "#/components/schemas/AlertCondition"
-              },
-              {
-                "description": "Replacement condition for threshold or escalating monitors."
-              }
-            ]
-          },
           "severity": {
             "type": "string",
             "enum": [
@@ -8390,16 +8389,6 @@
                 ],
                 "description": "The metric: `count`, `errorRate`, `cacheHitRate`, `{sum|min|max|avg|median}` over `duration`/`cost`/`tokens`, or `{kind:'percentile',field,p}` for an arbitrary percentile (`p` in [1,99]; e.g. `p:95`)."
               },
-              "filters": {
-                "allOf": [
-                  {
-                    "$ref": "#/components/schemas/FilterSet"
-                  },
-                  {
-                    "description": "Structured filter set applied to the stream (same DSL as `listTraces`)."
-                  }
-                ]
-              },
               "timeBucket": {
                 "type": "object",
                 "properties": {
@@ -8479,6 +8468,16 @@
                 "maximum": 500,
                 "default": 50,
                 "description": "Maximum rows returned. Defaults to 50; max 500."
+              },
+              "filters": {
+                "allOf": [
+                  {
+                    "$ref": "#/components/schemas/FilterSet"
+                  },
+                  {
+                    "description": "Structured filter set applied to the stream (same DSL as `listTraces`)."
+                  }
+                ]
               }
             },
             "required": [
@@ -8707,16 +8706,6 @@
                 ],
                 "description": "The metric: `count`, `errorRate`, `cacheHitRate`, `{sum|min|max|avg|median}` over `duration`/`cost`/`tokens`, or `{kind:'percentile',field,p}` for an arbitrary percentile (`p` in [1,99]; e.g. `p:95`)."
               },
-              "filters": {
-                "allOf": [
-                  {
-                    "$ref": "#/components/schemas/FilterSet"
-                  },
-                  {
-                    "description": "Structured filter set applied to the stream (same DSL as `listTraces`)."
-                  }
-                ]
-              },
               "timeBucket": {
                 "type": "object",
                 "properties": {
@@ -8796,6 +8785,16 @@
                 "maximum": 500,
                 "default": 50,
                 "description": "Maximum rows returned. Defaults to 50; max 500."
+              },
+              "filters": {
+                "allOf": [
+                  {
+                    "$ref": "#/components/schemas/FilterSet"
+                  },
+                  {
+                    "description": "Structured filter set applied to the stream (same DSL as `listTraces`)."
+                  }
+                ]
               }
             },
             "required": [
@@ -9018,16 +9017,6 @@
                 ],
                 "description": "The metric: `count`, `errorRate`, `cacheHitRate`, `{sum|min|max|avg|median}` over `duration`/`cost`/`tokens`, or `{kind:'percentile',field,p}` for an arbitrary percentile (`p` in [1,99]; e.g. `p:95`)."
               },
-              "filters": {
-                "allOf": [
-                  {
-                    "$ref": "#/components/schemas/FilterSet"
-                  },
-                  {
-                    "description": "Structured filter set applied to the stream (same DSL as `listTraces`)."
-                  }
-                ]
-              },
               "timeBucket": {
                 "type": "object",
                 "properties": {
@@ -9107,6 +9096,9 @@
                 "maximum": 500,
                 "default": 50,
                 "description": "Maximum rows returned. Defaults to 50; max 500."
+              },
+              "filters": {
+                "$ref": "#/components/schemas/SpanRowFilterSet"
               }
             },
             "required": [
@@ -9270,16 +9262,6 @@
                 ],
                 "description": "The metric: `count`, `passRate`, `errorRate`, or `{avg|min|max|median}` of the 0–1 score `value`."
               },
-              "filters": {
-                "allOf": [
-                  {
-                    "$ref": "#/components/schemas/FilterSet"
-                  },
-                  {
-                    "description": "Structured filter set applied to the stream (same DSL as `listTraces`)."
-                  }
-                ]
-              },
               "timeBucket": {
                 "type": "object",
                 "properties": {
@@ -9359,6 +9341,16 @@
                 "maximum": 500,
                 "default": 50,
                 "description": "Maximum rows returned. Defaults to 50; max 500."
+              },
+              "filters": {
+                "allOf": [
+                  {
+                    "$ref": "#/components/schemas/FilterSet"
+                  },
+                  {
+                    "description": "Structured filter set applied to the stream (same DSL as `listTraces`)."
+                  }
+                ]
               }
             },
             "required": [
@@ -9490,16 +9482,6 @@
                 ],
                 "description": "The metric: `count`, or `{avg|min|max|median}` of the 0–1 assignment `confidence`."
               },
-              "filters": {
-                "allOf": [
-                  {
-                    "$ref": "#/components/schemas/FilterSet"
-                  },
-                  {
-                    "description": "Structured filter set applied to the stream (same DSL as `listTraces`)."
-                  }
-                ]
-              },
               "timeBucket": {
                 "type": "object",
                 "properties": {
@@ -9579,6 +9561,16 @@
                 "maximum": 500,
                 "default": 50,
                 "description": "Maximum rows returned. Defaults to 50; max 500."
+              },
+              "filters": {
+                "allOf": [
+                  {
+                    "$ref": "#/components/schemas/FilterSet"
+                  },
+                  {
+                    "description": "Structured filter set applied to the stream (same DSL as `listTraces`)."
+                  }
+                ]
               }
             },
             "required": [
@@ -9714,16 +9706,6 @@
                 ],
                 "description": "The metric: `count`, or `{avg|min|max|median}` of the 0–1 label `confidence` or moment `coherence`."
               },
-              "filters": {
-                "allOf": [
-                  {
-                    "$ref": "#/components/schemas/FilterSet"
-                  },
-                  {
-                    "description": "Structured filter set applied to the stream (same DSL as `listTraces`)."
-                  }
-                ]
-              },
               "timeBucket": {
                 "type": "object",
                 "properties": {
@@ -9803,6 +9785,16 @@
                 "maximum": 500,
                 "default": 50,
                 "description": "Maximum rows returned. Defaults to 50; max 500."
+              },
+              "filters": {
+                "allOf": [
+                  {
+                    "$ref": "#/components/schemas/FilterSet"
+                  },
+                  {
+                    "description": "Structured filter set applied to the stream (same DSL as `listTraces`)."
+                  }
+                ]
               }
             },
             "required": [
@@ -9813,6 +9805,16 @@
             "additionalProperties": false
           }
         ]
+      },
+      "SpanRowFilterSet": {
+        "type": "object",
+        "additionalProperties": {
+          "type": "array",
+          "items": {
+            "$ref": "#/components/schemas/FilterCondition"
+          }
+        },
+        "description": "Structured filter set over span row fields. `gtePercentile` is not supported — use absolute thresholds or a percentile metric."
       },
       "QuerySpans": {
         "type": "object",
@@ -9848,10 +9850,10 @@
           "filters": {
             "allOf": [
               {
-                "$ref": "#/components/schemas/FilterSet"
+                "$ref": "#/components/schemas/SpanRowFilterSet"
               },
               {
-                "description": "Row-local span filter set (same DSL as `listTraces`) over span fields — `operation`, `toolName`, `model`, `provider`, `sessionId`, `traceId`, `tags`, `status` (`error`/`ok`/`unset`), `duration`, `cost`, `tokensInput`/`tokensOutput`."
+                "description": "Row-local span filter set (same DSL as `listTraces`) over span fields — `operation`, `toolName`, `model`, `provider`, `sessionId`, `traceId`, `tags`, `status` (`error`/`ok`/`unset`), `duration`, `cost`, `tokensInput`/`tokensOutput`. `gtePercentile` is not supported — use absolute thresholds or a percentile metric."
               }
             ]
           },
@@ -17706,7 +17708,7 @@
         "x-fern-sdk-group-name": "monitors",
         "x-fern-sdk-method-name": "update",
         "summary": "Update monitor",
-        "description": "Updates a monitor's metadata, target, and rule. System monitor edits are restricted.",
+        "description": "Updates a monitor's metadata and incident severity. Target, trigger, metric, and conditions are fixed after creation. System monitor edits are restricted.",
         "security": [
           {
             "ApiKeyAuth": []

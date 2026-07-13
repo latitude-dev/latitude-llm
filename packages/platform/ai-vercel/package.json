@@ -22,6 +22,7 @@
     "@platform/ai-latitude": "workspace:*",
     "@platform/env": "workspace:*",
     "ai": "7.0.0-beta.45",
-    "effect": "catalog:"
+    "effect": "catalog:",
+    "zod": "catalog:"
   }
 }

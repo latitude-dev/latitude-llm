@@ -18,10 +18,16 @@ import {
   TraceId,
 } from "@domain/shared"
 import { type TraceDetail, TraceRepository } from "@domain/spans"
-import { hash } from "@repo/utils"
+import { hammingDistance64, hash, simhash64 } from "@repo/utils"
 import { Effect, Option } from "effect"
 import { z } from "zod"
-import { FLAGGER_DEFAULT_CLASSIFIER_MODEL, FLAGGER_DEFAULT_INSTRUCTION_EXTRACTOR_MODEL } from "../constants.ts"
+import {
+  FLAGGER_DEFAULT_CLASSIFIER_MODEL,
+  FLAGGER_DEFAULT_INSTRUCTION_EXTRACTOR_MODEL,
+  FLAGGER_INSPECTED_AGENT_INDEX_MAX_ENTRIES,
+  FLAGGER_INSPECTED_AGENT_SIMILARITY_MAX_HAMMING,
+  FLAGGER_INSPECTED_AGENT_VERBATIM_MAX_CHARS,
+} from "../constants.ts"
 import { getFlaggerStrategy, hasFlaggerStrategy, isLlmCapableStrategy } from "../flagger-strategies/index.ts"
 import { isRecord, iterMessageParts } from "../flagger-strategies/shared.ts"
 import type { FlaggerSlug, FlaggerStrategy } from "../flagger-strategies/types.ts"
@@ -164,12 +170,25 @@ const annotationReviewOutputSchema = z.object({
   reason: z.string().optional(),
 })
 
-const INSPECTED_AGENT_VERBATIM_MAX_CHARS = 1_200
 const INSPECTED_AGENT_EXTRACTED_TRUE_TTL_SECONDS = 30 * 24 * 60 * 60
 const INSPECTED_AGENT_EXTRACTED_FALSE_TTL_SECONDS = 24 * 60 * 60
-const INSPECTED_AGENT_CONTEXT_CACHE_VERSION = 1
-const INSPECTED_AGENT_CONTEXT_CACHE_PREFIX = `flaggers:inspected-agent-context:v${INSPECTED_AGENT_CONTEXT_CACHE_VERSION}:sha256:`
+const INSPECTED_AGENT_CONTEXT_CACHE_VERSION = 2
+const INSPECTED_AGENT_CONTEXT_CACHE_BASE = `flaggers:inspected-agent-context:v${INSPECTED_AGENT_CONTEXT_CACHE_VERSION}`
+const INSPECTED_AGENT_CONTEXT_CACHE_PREFIX = `${INSPECTED_AGENT_CONTEXT_CACHE_BASE}:sha256:`
 const FALLBACK_SYSTEM_PROMPT_CHARS = 600
+
+const INSPECTED_AGENT_CONTEXT_INDEX_TTL_SECONDS = INSPECTED_AGENT_EXTRACTED_TRUE_TTL_SECONDS
+
+type InspectedAgentContextSource = "verbatim" | "exact-hit" | "similar-hit" | "extracted" | "fallback" | "missing"
+
+const inspectedAgentContextIndexEntrySchema = z.object({
+  sketch: z.string().min(1),
+  contentKey: z.string().min(1),
+})
+
+const inspectedAgentContextIndexSchema = z.array(inspectedAgentContextIndexEntrySchema)
+
+type InspectedAgentContextIndexEntry = z.infer<typeof inspectedAgentContextIndexEntrySchema>
 
 function extractTextFromParts(parts: readonly unknown[]): string[] {
   return parts.flatMap((part) => {
@@ -223,16 +242,57 @@ type InspectedAgentContext =
   | { readonly available: true; readonly text: string }
   | { readonly available: false; readonly reason: string }
 
-const buildCacheKey = (organizationId: string, systemPrompt: string): Effect.Effect<string, never> =>
-  hash(systemPrompt).pipe(
+const UUID_PATTERN = /\b[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}\b/gi
+const ISO_DATETIME_PATTERN = /\d{4}-\d{2}-\d{2}(?:[T ]\d{2}:\d{2}:\d{2}(?:\.\d+)?(?:Z|[+-]\d{2}:?\d{2})?)?/g
+const TIME_PATTERN = /\b\d{1,2}:\d{2}(?::\d{2})?\b/g
+const EMAIL_PATTERN = /[\w.+-]+@[\w-]+(?:\.[\w-]+)+/g
+const HEX_RUN_PATTERN = /\b[0-9a-f]{16,}\b/gi
+const DIGIT_RUN_PATTERN = /\d{4,}/g
+
+export function normalizeSystemPromptForCacheKey(systemPrompt: string): string {
+  return systemPrompt
+    .replace(UUID_PATTERN, "<uuid>")
+    .replace(ISO_DATETIME_PATTERN, "<datetime>")
+    .replace(TIME_PATTERN, "<time>")
+    .replace(EMAIL_PATTERN, "<email>")
+    .replace(HEX_RUN_PATTERN, "<hex>")
+    .replace(DIGIT_RUN_PATTERN, "<num>")
+    .replace(/\s+/g, " ")
+    .trim()
+}
+
+const buildCacheKey = (organizationId: string, normalizedSystemPrompt: string): Effect.Effect<string, never> =>
+  hash(normalizedSystemPrompt).pipe(
     Effect.map((digest) => `org:${organizationId}:${INSPECTED_AGENT_CONTEXT_CACHE_PREFIX}${digest}`),
-    Effect.catch(() => Effect.succeed(`org:${organizationId}:${INSPECTED_AGENT_CONTEXT_CACHE_PREFIX}${systemPrompt}`)),
+    Effect.catch(() =>
+      Effect.succeed(`org:${organizationId}:${INSPECTED_AGENT_CONTEXT_CACHE_PREFIX}${normalizedSystemPrompt}`),
+    ),
   )
+
+const buildInspectedAgentContextIndexKey = (organizationId: string, projectId: string): string =>
+  `org:${organizationId}:${INSPECTED_AGENT_CONTEXT_CACHE_BASE}:index:${projectId}`
 
 function parseCachedExtraction(value: string): InstructionExtractorOutput | null {
   try {
     const parsed = JSON.parse(value) as unknown
     return instructionExtractorOutputSchema.parse(parsed)
+  } catch {
+    return null
+  }
+}
+
+function parseInspectedAgentContextIndex(value: string): InspectedAgentContextIndexEntry[] {
+  try {
+    const parsed = JSON.parse(value) as unknown
+    return inspectedAgentContextIndexSchema.parse(parsed)
+  } catch {
+    return []
+  }
+}
+
+function parseSketchHex(hex: string): bigint | null {
+  try {
+    return BigInt(`0x${hex}`)
   } catch {
     return null
   }
@@ -360,6 +420,161 @@ function setCachedExtraction(cacheKey: string, result: InstructionExtractorOutpu
   )
 }
 
+function getInspectedAgentContextIndex(
+  indexKey: string,
+): Effect.Effect<InspectedAgentContextIndexEntry[], never, CacheStore> {
+  return Effect.serviceOption(CacheStore).pipe(
+    Effect.flatMap(
+      Option.match({
+        onNone: () => Effect.succeed([] as InspectedAgentContextIndexEntry[]),
+        onSome: (cache) =>
+          cache.get(indexKey).pipe(
+            Effect.map((value) => (value ? parseInspectedAgentContextIndex(value) : [])),
+            Effect.catchTag("CacheError", () => Effect.succeed([] as InspectedAgentContextIndexEntry[])),
+          ),
+      }),
+    ),
+  )
+}
+
+function setInspectedAgentContextIndex(
+  indexKey: string,
+  entries: readonly InspectedAgentContextIndexEntry[],
+): Effect.Effect<void, never, CacheStore> {
+  return Effect.serviceOption(CacheStore).pipe(
+    Effect.flatMap(
+      Option.match({
+        onNone: () => Effect.void,
+        onSome: (cache) =>
+          cache
+            .set(indexKey, JSON.stringify(entries), { ttlSeconds: INSPECTED_AGENT_CONTEXT_INDEX_TTL_SECONDS })
+            .pipe(Effect.catchTag("CacheError", () => Effect.void)),
+      }),
+    ),
+  )
+}
+
+function upsertInspectedAgentContextIndexEntry(
+  indexKey: string,
+  normalizedSystemPrompt: string,
+  contentKey: string,
+): Effect.Effect<void, never, CacheStore> {
+  const sketch = simhash64(normalizedSystemPrompt).toString(16)
+
+  return getInspectedAgentContextIndex(indexKey).pipe(
+    Effect.flatMap((entries) => {
+      // Lossy by design: concurrent classifications can race this read-modify-write and
+      // clobber each other's entry, worst case costing one extra extraction later.
+      const nextEntries = [{ sketch, contentKey }, ...entries.filter((entry) => entry.contentKey !== contentKey)].slice(
+        0,
+        FLAGGER_INSPECTED_AGENT_INDEX_MAX_ENTRIES,
+      )
+
+      return setInspectedAgentContextIndex(indexKey, nextEntries)
+    }),
+  )
+}
+
+function findSimilarInspectedAgentContext(input: {
+  readonly indexKey: string
+  readonly cacheKey: string
+  readonly normalizedSystemPrompt: string
+}): Effect.Effect<InstructionExtractorOutput | null, never, CacheStore> {
+  return getInspectedAgentContextIndex(input.indexKey).pipe(
+    Effect.flatMap((entries) => {
+      if (entries.length === 0) return Effect.succeed(null)
+
+      const sketch = simhash64(input.normalizedSystemPrompt)
+      const match = entries.find((entry) => {
+        const entrySketch = parseSketchHex(entry.sketch)
+        return (
+          entrySketch !== null &&
+          hammingDistance64(sketch, entrySketch) <= FLAGGER_INSPECTED_AGENT_SIMILARITY_MAX_HAMMING
+        )
+      })
+      if (!match) return Effect.succeed(null)
+
+      return getCachedExtraction(match.contentKey).pipe(
+        Effect.flatMap((cached) => {
+          if (!cached || !cached.understood) return Effect.succeed(null)
+
+          return setCachedExtraction(input.cacheKey, cached).pipe(Effect.as(cached))
+        }),
+      )
+    }),
+  )
+}
+
+const annotateInspectedAgentContextSource = (source: InspectedAgentContextSource) =>
+  Effect.annotateCurrentSpan("flagger.inspectedAgentContextSource", source)
+
+function runInstructionExtraction(input: {
+  readonly trace: TraceDetail
+  readonly ai: AIShape
+  readonly organizationId: string
+  readonly projectId: string
+  readonly traceId: string
+  readonly flaggerSlug: string
+  readonly systemPrompt: string
+  readonly normalizedSystemPrompt: string
+  readonly cacheKey: string
+  readonly indexKey: string
+}): Effect.Effect<InspectedAgentContext, never, CacheStore> {
+  return resolveGenerationConfig("FLAGGER_EXTRACTOR", FLAGGER_DEFAULT_INSTRUCTION_EXTRACTOR_MODEL).pipe(
+    Effect.flatMap((modelConfig) =>
+      input.ai
+        .generate({
+          ...modelConfig,
+          system: INSTRUCTION_EXTRACTOR_SYSTEM_PROMPT,
+          prompt: buildInstructionExtractorPrompt(input.systemPrompt),
+          schema: instructionExtractorOutputSchema,
+          telemetry: {
+            spanName: AI_GENERATE_TELEMETRY_SPAN_NAMES.flaggerExtractInstructions,
+            project: LATITUDE_TELEMETRY_PROJECT_SLUGS.flaggers,
+            tags: [
+              ...AI_GENERATE_TELEMETRY_TAGS.flaggerExtractInstructions,
+              ...reflagSuppressionTags(input.trace.tags),
+            ],
+            metadata: buildProjectScopedAiMetadata(
+              { organizationId: input.organizationId, projectId: input.projectId },
+              { traceId: input.traceId, flaggerSlug: input.flaggerSlug, stage: "instruction-extraction" },
+            ),
+          },
+        })
+        .pipe(
+          Effect.flatMap((result) =>
+            Effect.try({
+              try: () => instructionExtractorOutputSchema.parse(result.object),
+              catch: (error) =>
+                new AIError({
+                  message: "Instruction extractor returned invalid structured output.",
+                  cause: error,
+                }),
+            }),
+          ),
+          Effect.tap((result) => setCachedExtraction(input.cacheKey, result)),
+          Effect.tap((result) =>
+            result.understood
+              ? upsertInspectedAgentContextIndexEntry(input.indexKey, input.normalizedSystemPrompt, input.cacheKey)
+              : Effect.void,
+          ),
+          Effect.flatMap((result) => annotateInspectedAgentContextSource("extracted").pipe(Effect.as(result))),
+          Effect.map((result) => renderExtractionResult(result)),
+        ),
+    ),
+    Effect.catch(() =>
+      Effect.gen(function* () {
+        yield* Effect.annotateCurrentSpan("flagger.instructionExtractionFallback", true)
+        yield* annotateInspectedAgentContextSource("fallback")
+        return {
+          available: true,
+          text: renderFallbackAgentContext(input.systemPrompt),
+        } satisfies InspectedAgentContext
+      }),
+    ),
+  )
+}
+
 function getInspectedAgentContext(input: {
   readonly trace: TraceDetail
   readonly ai: AIShape
@@ -371,64 +586,38 @@ function getInspectedAgentContext(input: {
   const systemPrompt = extractInspectedSystemPrompt(input.trace)
 
   if (!systemPrompt) {
-    return Effect.succeed({ available: false, reason: "missing inspected agent system prompt" })
+    return annotateInspectedAgentContextSource("missing").pipe(
+      Effect.as({ available: false, reason: "missing inspected agent system prompt" }),
+    )
   }
 
-  if (systemPrompt.length <= INSPECTED_AGENT_VERBATIM_MAX_CHARS) {
-    return Effect.succeed({ available: true, text: renderShortSystemPromptContext(systemPrompt) })
+  if (systemPrompt.length <= FLAGGER_INSPECTED_AGENT_VERBATIM_MAX_CHARS) {
+    return annotateInspectedAgentContextSource("verbatim").pipe(
+      Effect.as({ available: true, text: renderShortSystemPromptContext(systemPrompt) }),
+    )
   }
 
-  return buildCacheKey(input.organizationId, systemPrompt).pipe(
+  const normalizedSystemPrompt = normalizeSystemPromptForCacheKey(systemPrompt)
+  const indexKey = buildInspectedAgentContextIndexKey(input.organizationId, input.projectId)
+
+  return buildCacheKey(input.organizationId, normalizedSystemPrompt).pipe(
     Effect.flatMap((cacheKey) =>
       getCachedExtraction(cacheKey).pipe(
         Effect.flatMap((cached) => {
-          if (cached) return Effect.succeed(renderExtractionResult(cached))
+          if (cached) {
+            return annotateInspectedAgentContextSource("exact-hit").pipe(Effect.as(renderExtractionResult(cached)))
+          }
 
-          return resolveGenerationConfig("FLAGGER_EXTRACTOR", FLAGGER_DEFAULT_INSTRUCTION_EXTRACTOR_MODEL).pipe(
-            Effect.flatMap((modelConfig) =>
-              input.ai
-                .generate({
-                  ...modelConfig,
-                  system: INSTRUCTION_EXTRACTOR_SYSTEM_PROMPT,
-                  prompt: buildInstructionExtractorPrompt(systemPrompt),
-                  schema: instructionExtractorOutputSchema,
-                  telemetry: {
-                    spanName: AI_GENERATE_TELEMETRY_SPAN_NAMES.flaggerExtractInstructions,
-                    project: LATITUDE_TELEMETRY_PROJECT_SLUGS.flaggers,
-                    tags: [
-                      ...AI_GENERATE_TELEMETRY_TAGS.flaggerExtractInstructions,
-                      ...reflagSuppressionTags(input.trace.tags),
-                    ],
-                    metadata: buildProjectScopedAiMetadata(
-                      { organizationId: input.organizationId, projectId: input.projectId },
-                      { traceId: input.traceId, flaggerSlug: input.flaggerSlug, stage: "instruction-extraction" },
-                    ),
-                  },
-                })
-                .pipe(
-                  Effect.flatMap((result) =>
-                    Effect.try({
-                      try: () => instructionExtractorOutputSchema.parse(result.object),
-                      catch: (error) =>
-                        new AIError({
-                          message: "Instruction extractor returned invalid structured output.",
-                          cause: error,
-                        }),
-                    }),
-                  ),
-                  Effect.tap((result) => setCachedExtraction(cacheKey, result)),
-                  Effect.map((result) => renderExtractionResult(result)),
-                ),
-            ),
-            Effect.catch(() =>
-              Effect.gen(function* () {
-                yield* Effect.annotateCurrentSpan("flagger.instructionExtractionFallback", true)
-                return {
-                  available: true,
-                  text: renderFallbackAgentContext(systemPrompt),
-                } satisfies InspectedAgentContext
-              }),
-            ),
+          return findSimilarInspectedAgentContext({ indexKey, cacheKey, normalizedSystemPrompt }).pipe(
+            Effect.flatMap((similar) => {
+              if (similar) {
+                return annotateInspectedAgentContextSource("similar-hit").pipe(
+                  Effect.as(renderExtractionResult(similar)),
+                )
+              }
+
+              return runInstructionExtraction({ ...input, systemPrompt, normalizedSystemPrompt, cacheKey, indexKey })
+            }),
           )
         }),
       ),

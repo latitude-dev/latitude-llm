@@ -479,6 +479,24 @@ describe("TraceRepository", () => {
     })
   })
 
+  describe("findSummaryByTraceId", () => {
+    it("loads trace orchestration fields without conversation content", async () => {
+      const summary = await runCh(
+        repo.findSummaryByTraceId({
+          organizationId: ORG_ID,
+          projectId: PROJECT_ID,
+          traceId: TraceId(SEED_ANNOTATION_DEMO_TRACE_ID),
+        }),
+      )
+
+      expect(summary.traceId).toBe(SEED_ANNOTATION_DEMO_TRACE_ID)
+      expect(summary.projectId).toBe(PROJECT_ID)
+      expect(summary.startTime).toBeInstanceOf(Date)
+      expect(summary.rootSpanName).toBeTypeOf("string")
+      expect("outputMessages" in summary).toBe(false)
+    })
+  })
+
   describe("findByTraceId", () => {
     it("prepends system instructions as first message in allMessages", async () => {
       const detail = await runCh(
@@ -514,6 +532,31 @@ describe("TraceRepository", () => {
           expect(detail.allMessages[0]?.role).not.toBe("system")
         }
       }
+    })
+
+    it("loads conversation chunks with the same message assembly as trace detail", async () => {
+      const [detail, chunk] = await Promise.all([
+        runCh(
+          repo.findByTraceId({
+            organizationId: ORG_ID,
+            projectId: PROJECT_ID,
+            traceId: TraceId(SEED_ANNOTATION_DEMO_TRACE_ID),
+          }),
+        ),
+        runCh(
+          repo.findConversationChunk({
+            organizationId: ORG_ID,
+            projectId: PROJECT_ID,
+            traceId: TraceId(SEED_ANNOTATION_DEMO_TRACE_ID),
+            offset: 0,
+            limit: 100,
+          }),
+        ),
+      ])
+
+      expect(chunk.messages).toEqual(detail.allMessages)
+      expect(chunk.totalMessages).toBe(detail.allMessages.length)
+      expect(chunk.hasMore).toBe(false)
     })
   })
 

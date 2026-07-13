@@ -1,0 +1,123 @@
+name: Update README badges
+
+on:
+  schedule:
+    - cron: "17 6 * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  pull-requests: write
+
+concurrency:
+  group: readme-badges
+  cancel-in-progress: false
+
+jobs:
+  update-badges:
+    runs-on: ubuntu-latest
+    if: ${{ github.repository == 'latitude-dev/latitude-llm' }}
+    steps:
+      - uses: actions/checkout@v7.0.0
+
+      - name: Update npm downloads badge
+        run: |
+          set -euo pipefail
+
+          PACKAGES=(
+            "@latitude-data/sdk"
+            "@latitude-data/telemetry"
+            "@latitude-data/claude-code-telemetry"
+            "@latitude-data/pi-telemetry"
+            "@latitude-data/openclaw-telemetry"
+            "@latitude-data/openclaw-telemetry-cli"
+          )
+
+          total=0
+          for pkg in "${PACKAGES[@]}"; do
+            dl=$(curl -fsSL "https://api.npmjs.org/downloads/point/last-month/${pkg}" | jq -r '.downloads // 0')
+            echo "  ${pkg}: ${dl}"
+            total=$((total + dl))
+          done
+          echo "Total last-month downloads: ${total}"
+
+          if [ "$total" -ge 1000000 ]; then
+            msg=$(awk "BEGIN { printf \"%.1fM/month\", ${total}/1000000 }")
+          elif [ "$total" -ge 1000 ]; then
+            msg=$(awk "BEGIN { printf \"%.0fk/month\", ${total}/1000 }")
+          else
+            msg="${total}/month"
+          fi
+
+          jq -n --arg msg "$msg" \
+            '{schemaVersion: 1, label: "npm latitude", message: $msg, color: "blue"}' \
+            > .github/badges/npm-downloads.json
+
+      - name: Update PyPI downloads badge
+        run: |
+          set -uo pipefail
+
+          PACKAGES=(
+            "latitude-telemetry"
+          )
+
+          total=0
+          for pkg in "${PACKAGES[@]}"; do
+            dl=$(curl -fsSL "https://pypistats.org/api/packages/${pkg}/recent" 2>/dev/null | jq -r '.data.last_month // 0' || true)
+            dl=${dl:-0}
+            echo "  ${pkg}: ${dl}"
+            total=$((total + dl))
+            sleep 2
+          done
+          echo "Total last-month downloads: ${total}"
+
+          if [ "$total" -eq 0 ]; then
+            echo "Total is 0; keeping existing badge."
+            exit 0
+          fi
+
+          if [ "$total" -ge 1000000 ]; then
+            msg=$(awk "BEGIN { printf \"%.1fM/month\", ${total}/1000000 }")
+          elif [ "$total" -ge 1000 ]; then
+            msg=$(awk "BEGIN { printf \"%.0fk/month\", ${total}/1000 }")
+          else
+            msg="${total}/month"
+          fi
+
+          jq -n --arg msg "$msg" \
+            '{schemaVersion: 1, label: "pypi latitude", message: $msg, color: "blue"}' \
+            > .github/badges/pypi-downloads.json
+
+      - name: Update GitHub stars badge
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -euo pipefail
+
+          stars=$(gh api "repos/${GITHUB_REPOSITORY}" --jq '.stargazers_count')
+          echo "Star count: ${stars}"
+
+          if [ "$stars" -ge 1000000 ]; then
+            msg=$(awk "BEGIN { printf \"%.1fM\", ${stars}/1000000 }")
+          elif [ "$stars" -ge 1000 ]; then
+            msg=$(awk "BEGIN { printf \"%.1fk\", ${stars}/1000 }")
+          else
+            msg="${stars}"
+          fi
+
+          jq -n --arg msg "$msg" \
+            '{schemaVersion: 1, label: "GitHub stars", message: $msg, color: "blue"}' \
+            > .github/badges/stars.json
+
+      - name: Create pull request
+        uses: peter-evans/create-pull-request@v8
+        with:
+          commit-message: "chore: update README badges [skip ci]"
+          title: "chore: update README badges"
+          body: Automated update of the npm downloads, PyPI downloads, and GitHub stars badges.
+          branch: chore/update-readme-badges
+          delete-branch: true
+          add-paths: |
+            .github/badges/npm-downloads.json
+            .github/badges/pypi-downloads.json
+            .github/badges/stars.json

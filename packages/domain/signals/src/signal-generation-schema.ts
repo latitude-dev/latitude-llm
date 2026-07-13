@@ -106,7 +106,6 @@ const toSharedCondition = (c: GeneratedRuleCondition): Record<string, unknown> =
       return {
         type: c.type,
         ...(c.text === null ? {} : { query: c.text }),
-        ...(c.comparison === null ? {} : { operator: c.comparison }),
         ...(c.threshold === null ? {} : { threshold: c.threshold }),
       }
     case "empty_output":
@@ -131,9 +130,6 @@ const generatedFiltersSchema = z.object({
 
 export const generatedSignalDraftSchema = z.object({
   reasoning: z.string().min(1).describe("How the draft maps to the ask and which observed project values you matched"),
-  confirm: z
-    .boolean()
-    .describe("true ONLY on a review turn when the previewed verdicts match the ask and no changes are needed"),
   // Constraint keywords Bedrock structured output rejects (maxLength, maxItems, maximum) stay out
   // of this schema; `mapGeneratedSignalDraft` clamps or re-validates instead.
   name: z.string().min(1).describe(`At most ${SIGNAL_NAME_MAX_LENGTH} characters, recognizable in a list`),

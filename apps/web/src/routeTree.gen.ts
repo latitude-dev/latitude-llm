@@ -13,6 +13,7 @@ import { Route as LoginRouteImport } from './routes/login'
 import { Route as AuthenticatedRouteImport } from './routes/_authenticated'
 import { Route as BackofficeRouteRouteImport } from './routes/backoffice/route'
 import { Route as WelcomeIndexRouteImport } from './routes/welcome/index'
+import { Route as ChooseOrganizationIndexRouteImport } from './routes/choose-organization/index'
 import { Route as BackofficeIndexRouteImport } from './routes/backoffice/index'
 import { Route as AuthenticatedIndexRouteImport } from './routes/_authenticated/index'
 import { Route as WrappedIdRouteImport } from './routes/wrapped/$id'
@@ -28,6 +29,7 @@ import { Route as Char91DotwellKnownChar93OpenidConfigurationRouteImport } from 
 import { Route as Char91DotwellKnownChar93OauthAuthorizationServerRouteImport } from './routes/[.well-known]/oauth-authorization-server'
 import { Route as SandboxSandboxOrgIdRouteRouteImport } from './routes/sandbox/$sandboxOrgId/route'
 import { Route as SandboxSandboxOrgIdIndexRouteImport } from './routes/sandbox/$sandboxOrgId/index'
+import { Route as BackofficeShowcaseIndexRouteImport } from './routes/backoffice/showcase/index'
 import { Route as BackofficeOrganizationsIndexRouteImport } from './routes/backoffice/organizations/index'
 import { Route as BackofficeFeatureFlagsIndexRouteImport } from './routes/backoffice/feature-flags/index'
 import { Route as ApiObservabilityTestIndexRouteImport } from './routes/api/observability-test/index'
@@ -100,6 +102,11 @@ const BackofficeRouteRoute = BackofficeRouteRouteImport.update({
 const WelcomeIndexRoute = WelcomeIndexRouteImport.update({
   id: '/welcome/',
   path: '/welcome/',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ChooseOrganizationIndexRoute = ChooseOrganizationIndexRouteImport.update({
+  id: '/choose-organization/',
+  path: '/choose-organization/',
   getParentRoute: () => rootRouteImport,
 } as any)
 const BackofficeIndexRoute = BackofficeIndexRouteImport.update({
@@ -181,6 +188,11 @@ const SandboxSandboxOrgIdIndexRoute =
     path: '/',
     getParentRoute: () => SandboxSandboxOrgIdRouteRoute,
   } as any)
+const BackofficeShowcaseIndexRoute = BackofficeShowcaseIndexRouteImport.update({
+  id: '/showcase/',
+  path: '/showcase/',
+  getParentRoute: () => BackofficeRouteRoute,
+} as any)
 const BackofficeOrganizationsIndexRoute =
   BackofficeOrganizationsIndexRouteImport.update({
     id: '/organizations/',
@@ -523,6 +535,7 @@ export interface FileRoutesByFullPath {
   '/downloads/export': typeof DownloadsExportRoute
   '/wrapped/$id': typeof WrappedIdRouteWithChildren
   '/backoffice/': typeof BackofficeIndexRoute
+  '/choose-organization/': typeof ChooseOrganizationIndexRoute
   '/welcome/': typeof WelcomeIndexRoute
   '/.well-known/oauth-authorization-server/$': typeof Char91DotwellKnownChar93OauthAuthorizationServerSplatRoute
   '/.well-known/openid-configuration/$': typeof Char91DotwellKnownChar93OpenidConfigurationSplatRoute
@@ -538,6 +551,7 @@ export interface FileRoutesByFullPath {
   '/api/observability-test/': typeof ApiObservabilityTestIndexRoute
   '/backoffice/feature-flags/': typeof BackofficeFeatureFlagsIndexRoute
   '/backoffice/organizations/': typeof BackofficeOrganizationsIndexRoute
+  '/backoffice/showcase/': typeof BackofficeShowcaseIndexRoute
   '/sandbox/$sandboxOrgId/': typeof SandboxSandboxOrgIdIndexRoute
   '/projects/$projectSlug/onboarding': typeof AuthenticatedProjectsProjectSlugOnboardingRoute
   '/projects/$projectSlug/settings': typeof AuthenticatedProjectsProjectSlugSettingsRouteWithChildren
@@ -595,6 +609,7 @@ export interface FileRoutesByTo {
   '/wrapped/$id': typeof WrappedIdRouteWithChildren
   '/': typeof AuthenticatedIndexRoute
   '/backoffice': typeof BackofficeIndexRoute
+  '/choose-organization': typeof ChooseOrganizationIndexRoute
   '/welcome': typeof WelcomeIndexRoute
   '/.well-known/oauth-authorization-server/$': typeof Char91DotwellKnownChar93OauthAuthorizationServerSplatRoute
   '/.well-known/openid-configuration/$': typeof Char91DotwellKnownChar93OpenidConfigurationSplatRoute
@@ -609,6 +624,7 @@ export interface FileRoutesByTo {
   '/api/observability-test': typeof ApiObservabilityTestIndexRoute
   '/backoffice/feature-flags': typeof BackofficeFeatureFlagsIndexRoute
   '/backoffice/organizations': typeof BackofficeOrganizationsIndexRoute
+  '/backoffice/showcase': typeof BackofficeShowcaseIndexRoute
   '/sandbox/$sandboxOrgId': typeof SandboxSandboxOrgIdIndexRoute
   '/projects/$projectSlug/onboarding': typeof AuthenticatedProjectsProjectSlugOnboardingRoute
   '/projects/$projectSlug/traces': typeof AuthenticatedProjectsProjectSlugTracesRoute
@@ -669,6 +685,7 @@ export interface FileRoutesById {
   '/wrapped/$id': typeof WrappedIdRouteWithChildren
   '/_authenticated/': typeof AuthenticatedIndexRoute
   '/backoffice/': typeof BackofficeIndexRoute
+  '/choose-organization/': typeof ChooseOrganizationIndexRoute
   '/welcome/': typeof WelcomeIndexRoute
   '/.well-known/oauth-authorization-server/$': typeof Char91DotwellKnownChar93OauthAuthorizationServerSplatRoute
   '/.well-known/openid-configuration/$': typeof Char91DotwellKnownChar93OpenidConfigurationSplatRoute
@@ -684,6 +701,7 @@ export interface FileRoutesById {
   '/api/observability-test/': typeof ApiObservabilityTestIndexRoute
   '/backoffice/feature-flags/': typeof BackofficeFeatureFlagsIndexRoute
   '/backoffice/organizations/': typeof BackofficeOrganizationsIndexRoute
+  '/backoffice/showcase/': typeof BackofficeShowcaseIndexRoute
   '/sandbox/$sandboxOrgId/': typeof SandboxSandboxOrgIdIndexRoute
   '/_authenticated/projects/$projectSlug/onboarding': typeof AuthenticatedProjectsProjectSlugOnboardingRoute
   '/_authenticated/projects/$projectSlug/settings': typeof AuthenticatedProjectsProjectSlugSettingsRouteWithChildren
@@ -745,6 +763,7 @@ export interface FileRouteTypes {
     | '/downloads/export'
     | '/wrapped/$id'
     | '/backoffice/'
+    | '/choose-organization/'
     | '/welcome/'
     | '/.well-known/oauth-authorization-server/$'
     | '/.well-known/openid-configuration/$'
@@ -760,6 +779,7 @@ export interface FileRouteTypes {
     | '/api/observability-test/'
     | '/backoffice/feature-flags/'
     | '/backoffice/organizations/'
+    | '/backoffice/showcase/'
     | '/sandbox/$sandboxOrgId/'
     | '/projects/$projectSlug/onboarding'
     | '/projects/$projectSlug/settings'
@@ -817,6 +837,7 @@ export interface FileRouteTypes {
     | '/wrapped/$id'
     | '/'
     | '/backoffice'
+    | '/choose-organization'
     | '/welcome'
     | '/.well-known/oauth-authorization-server/$'
     | '/.well-known/openid-configuration/$'
@@ -831,6 +852,7 @@ export interface FileRouteTypes {
     | '/api/observability-test'
     | '/backoffice/feature-flags'
     | '/backoffice/organizations'
+    | '/backoffice/showcase'
     | '/sandbox/$sandboxOrgId'
     | '/projects/$projectSlug/onboarding'
     | '/projects/$projectSlug/traces'
@@ -890,6 +912,7 @@ export interface FileRouteTypes {
     | '/wrapped/$id'
     | '/_authenticated/'
     | '/backoffice/'
+    | '/choose-organization/'
     | '/welcome/'
     | '/.well-known/oauth-authorization-server/$'
     | '/.well-known/openid-configuration/$'
@@ -905,6 +928,7 @@ export interface FileRouteTypes {
     | '/api/observability-test/'
     | '/backoffice/feature-flags/'
     | '/backoffice/organizations/'
+    | '/backoffice/showcase/'
     | '/sandbox/$sandboxOrgId/'
     | '/_authenticated/projects/$projectSlug/onboarding'
     | '/_authenticated/projects/$projectSlug/settings'
@@ -962,6 +986,7 @@ export interface RootRouteChildren {
   ClaimTokenRoute: typeof ClaimTokenRoute
   DownloadsExportRoute: typeof DownloadsExportRoute
   WrappedIdRoute: typeof WrappedIdRouteWithChildren
+  ChooseOrganizationIndexRoute: typeof ChooseOrganizationIndexRoute
   WelcomeIndexRoute: typeof WelcomeIndexRoute
   ApiAuthSplatRoute: typeof ApiAuthSplatRoute
   ApiObservabilityTestErrorRoute: typeof ApiObservabilityTestErrorRoute
@@ -1001,6 +1026,13 @@ declare module '@tanstack/react-router' {
       path: '/welcome'
       fullPath: '/welcome/'
       preLoaderRoute: typeof WelcomeIndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/choose-organization/': {
+      id: '/choose-organization/'
+      path: '/choose-organization'
+      fullPath: '/choose-organization/'
+      preLoaderRoute: typeof ChooseOrganizationIndexRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/backoffice/': {
@@ -1107,6 +1139,13 @@ declare module '@tanstack/react-router' {
       fullPath: '/sandbox/$sandboxOrgId/'
       preLoaderRoute: typeof SandboxSandboxOrgIdIndexRouteImport
       parentRoute: typeof SandboxSandboxOrgIdRouteRoute
+    }
+    '/backoffice/showcase/': {
+      id: '/backoffice/showcase/'
+      path: '/showcase'
+      fullPath: '/backoffice/showcase/'
+      preLoaderRoute: typeof BackofficeShowcaseIndexRouteImport
+      parentRoute: typeof BackofficeRouteRoute
     }
     '/backoffice/organizations/': {
       id: '/backoffice/organizations/'
@@ -1498,6 +1537,7 @@ interface BackofficeRouteRouteChildren {
   BackofficeUsersUserIdRoute: typeof BackofficeUsersUserIdRoute
   BackofficeFeatureFlagsIndexRoute: typeof BackofficeFeatureFlagsIndexRoute
   BackofficeOrganizationsIndexRoute: typeof BackofficeOrganizationsIndexRoute
+  BackofficeShowcaseIndexRoute: typeof BackofficeShowcaseIndexRoute
 }
 
 const BackofficeRouteRouteChildren: BackofficeRouteRouteChildren = {
@@ -1510,6 +1550,7 @@ const BackofficeRouteRouteChildren: BackofficeRouteRouteChildren = {
   BackofficeUsersUserIdRoute: BackofficeUsersUserIdRoute,
   BackofficeFeatureFlagsIndexRoute: BackofficeFeatureFlagsIndexRoute,
   BackofficeOrganizationsIndexRoute: BackofficeOrganizationsIndexRoute,
+  BackofficeShowcaseIndexRoute: BackofficeShowcaseIndexRoute,
 }
 
 const BackofficeRouteRouteWithChildren = BackofficeRouteRoute._addFileChildren(
@@ -1745,6 +1786,7 @@ const rootRouteChildren: RootRouteChildren = {
   ClaimTokenRoute: ClaimTokenRoute,
   DownloadsExportRoute: DownloadsExportRoute,
   WrappedIdRoute: WrappedIdRouteWithChildren,
+  ChooseOrganizationIndexRoute: ChooseOrganizationIndexRoute,
   WelcomeIndexRoute: WelcomeIndexRoute,
   ApiAuthSplatRoute: ApiAuthSplatRoute,
   ApiObservabilityTestErrorRoute: ApiObservabilityTestErrorRoute,

@@ -5,6 +5,7 @@ import type {
   OrganizationId,
   ProjectId,
   RepositoryError,
+  ValidationError,
 } from "@domain/shared"
 import { Effect } from "effect"
 import { AnalyticsQueryReader } from "../ports/analytics-query-reader.ts"
@@ -23,7 +24,11 @@ export interface QueryAnalyticsInput {
  */
 export const queryAnalyticsUseCase = (
   input: QueryAnalyticsInput,
-): Effect.Effect<readonly AnalyticsSeriesPoint[], RepositoryError, AnalyticsQueryReader | ChSqlClient> =>
+): Effect.Effect<
+  readonly AnalyticsSeriesPoint[],
+  RepositoryError | ValidationError,
+  AnalyticsQueryReader | ChSqlClient
+> =>
   Effect.gen(function* () {
     const reader = yield* AnalyticsQueryReader
     const q = input.query

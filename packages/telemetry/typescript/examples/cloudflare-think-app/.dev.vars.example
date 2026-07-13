@@ -1,3 +1,4 @@
 # Local secrets for `wrangler dev` (copy to .dev.vars; .dev.vars is gitignored).
 # For local/self-hosted Latitude, the seed key works out of the box:
 LATITUDE_API_KEY=lat_seed_default_api_key_token
+ANTHROPIC_API_KEY=sk-ant-api03-your-local-key

@@ -6,7 +6,6 @@ import {
   AvatarGroup,
   Badge,
   BarChart,
-  Button,
   ChartSkeleton,
   Checkbox,
   CopyButton,
@@ -215,46 +214,59 @@ const AGENT_TEXTAREA_STAGES = [
   { atSeconds: 26, label: "Refining the result" },
 ]
 
-const AGENT_TEXTAREA_SIMULATION_MS = 32_000
-
 function AgentTextareaDemo() {
-  const [simulating, setSimulating] = useState(false)
-  const timeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const focusedRef = useRef<HTMLTextAreaElement>(null)
 
-  useMountEffect(() => () => {
-    if (timeoutRef.current !== null) clearTimeout(timeoutRef.current)
+  useMountEffect(() => {
+    focusedRef.current?.focus()
   })
 
-  const status = useStagedStatus(AGENT_TEXTAREA_STAGES, simulating)
-
-  const toggleSimulation = () => {
-    if (timeoutRef.current !== null) clearTimeout(timeoutRef.current)
-    if (simulating) {
-      setSimulating(false)
-      return
-    }
-    setSimulating(true)
-    timeoutRef.current = setTimeout(() => setSimulating(false), AGENT_TEXTAREA_SIMULATION_MS)
-  }
+  const status = useStagedStatus(AGENT_TEXTAREA_STAGES, true)
 
   return (
-    <ComponentDemoSection
-      title="Idle, focused, and loading"
-      description="Focus the field to see the focused border; run the simulation for the loading fill."
-      frameClassName="block"
-    >
-      <div className="mx-auto flex w-full max-w-2xl flex-col gap-4">
-        <AgentTextarea
-          label="This script should check whether…"
-          minRows={3}
-          placeholder='"the session took over 30 seconds and the assistant apologized at any point."'
-          status={status}
-        />
-        <Button className="w-fit" onClick={toggleSimulation}>
-          {simulating ? "Stop simulation" : "Simulate generation"}
-        </Button>
-      </div>
-    </ComponentDemoSection>
+    <>
+      <ComponentDemoSection
+        title="Idle"
+        description="Default state before the field has been touched."
+        frameClassName="block"
+      >
+        <div className="mx-auto w-full max-w-lg">
+          <AgentTextarea
+            label="This script should check whether…"
+            minRows={3}
+            placeholder='"the session took over 30 seconds and the assistant apologized at any point."'
+          />
+        </div>
+      </ComponentDemoSection>
+      <ComponentDemoSection
+        title="Focused"
+        description="Border intensifies once the field has focus."
+        frameClassName="block"
+      >
+        <div className="mx-auto w-full max-w-lg">
+          <AgentTextarea
+            ref={focusedRef}
+            label="This script should check whether…"
+            minRows={3}
+            placeholder='"the session took over 30 seconds and the assistant apologized at any point."'
+          />
+        </div>
+      </ComponentDemoSection>
+      <ComponentDemoSection
+        title="Loading"
+        description="Field locks and the shader fill takes over while the agent works."
+        frameClassName="block"
+      >
+        <div className="mx-auto w-full max-w-lg">
+          <AgentTextarea
+            label="This script should check whether…"
+            minRows={3}
+            placeholder='"the session took over 30 seconds and the assistant apologized at any point."'
+            status={status}
+          />
+        </div>
+      </ComponentDemoSection>
+    </>
   )
 }
 

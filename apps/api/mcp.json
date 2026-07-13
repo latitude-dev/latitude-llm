@@ -9091,9 +9091,50 @@
                 ],
                 "additionalProperties": false,
                 "description": "An active evaluation is being realigned."
+              },
+              {
+                "type": "object",
+                "properties": {
+                  "kind": {
+                    "type": "string",
+                    "const": "failed"
+                  },
+                  "phase": {
+                    "type": "string",
+                    "enum": [
+                      "generate",
+                      "realign"
+                    ],
+                    "description": "Which workflow failed: `generate` (creating the evaluation) or `realign` (updating it)."
+                  },
+                  "evaluationId": {
+                    "description": "Id of the evaluation whose realignment failed. Absent when the failure was during `generate`.",
+                    "type": "string",
+                    "minLength": 24,
+                    "maxLength": 24
+                  },
+                  "reason": {
+                    "anyOf": [
+                      {
+                        "type": "string"
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ],
+                    "description": "Resolved failure message, or `null` once Temporal has dropped the failed run."
+                  }
+                },
+                "required": [
+                  "kind",
+                  "phase",
+                  "reason"
+                ],
+                "additionalProperties": false,
+                "description": "The most recent generation or realignment workflow for this signal ended in failure."
               }
             ],
-            "description": "Whether the signal is currently being monitored: `automatic`, `idle`, `generating`, or `realigning`."
+            "description": "Whether the signal is currently being monitored: `automatic`, `idle`, `generating`, `realigning`, or `failed`."
           }
         },
         "required": [
@@ -23290,7 +23331,7 @@
     {
       "name": "updateMonitor",
       "title": "Update monitor",
-      "description": "Updates a monitor's metadata, target, and rule. System monitor edits are restricted.",
+      "description": "Updates a monitor's metadata and incident severity. Target, trigger, metric, and conditions are fixed after creation. System monitor edits are restricted.",
       "inputSchema": {
         "$schema": "https://json-schema.org/draft/2020-12/schema",
         "type": "object",
@@ -23313,1200 +23354,6 @@
             "description": "New description.",
             "type": "string",
             "maxLength": 2000
-          },
-          "target": {
-            "description": "Replacement target watched by the monitor.",
-            "type": "object",
-            "properties": {
-              "type": {
-                "type": "string",
-                "enum": [
-                  "savedSearch",
-                  "tool",
-                  "user",
-                  "session"
-                ],
-                "description": "Product target category: `savedSearch`, `tool`, `user`, or `session`."
-              },
-              "id": {
-                "anyOf": [
-                  {
-                    "type": "string",
-                    "minLength": 24,
-                    "maxLength": 24
-                  },
-                  {
-                    "type": "null"
-                  }
-                ],
-                "description": "Target entity id, or `null` for project-wide targets."
-              },
-              "filterSet": {
-                "description": "Additional filters applied when evaluating the monitor.",
-                "type": "object",
-                "propertyNames": {
-                  "type": "string"
-                },
-                "additionalProperties": {
-                  "type": "array",
-                  "items": {
-                    "type": "object",
-                    "properties": {
-                      "op": {
-                        "type": "string",
-                        "enum": [
-                          "eq",
-                          "neq",
-                          "gt",
-                          "gte",
-                          "lt",
-                          "lte",
-                          "in",
-                          "notIn",
-                          "contains",
-                          "notContains",
-                          "gtePercentile"
-                        ],
-                        "description": "Comparison operator to apply to the field."
-                      },
-                      "value": {
-                        "anyOf": [
-                          {
-                            "type": "string"
-                          },
-                          {
-                            "type": "number"
-                          },
-                          {
-                            "type": "boolean"
-                          },
-                          {
-                            "type": "array",
-                            "items": {
-                              "anyOf": [
-                                {
-                                  "type": "string"
-                                },
-                                {
-                                  "type": "number"
-                                }
-                              ]
-                            },
-                            "description": "String or numeric values for `in` and `notIn` operators."
-                          }
-                        ],
-                        "description": "Value to compare with the field."
-                      }
-                    },
-                    "required": [
-                      "op",
-                      "value"
-                    ],
-                    "additionalProperties": false
-                  }
-                }
-              },
-              "query": {
-                "description": "Semantic query applied when evaluating inline trace targets.",
-                "anyOf": [
-                  {
-                    "type": "string"
-                  },
-                  {
-                    "type": "null"
-                  }
-                ]
-              },
-              "kind": {
-                "description": "Normalized target kind returned on persisted monitors.",
-                "type": "string",
-                "enum": [
-                  "savedSearch",
-                  "tool",
-                  "user",
-                  "session"
-                ]
-              },
-              "stream": {
-                "description": "Telemetry stream evaluated by the monitor.",
-                "type": "string",
-                "enum": [
-                  "traces",
-                  "spans",
-                  "sessions"
-                ]
-              },
-              "savedSearchId": {
-                "description": "Saved-search id for saved-search monitors, or `null` for inline targets.",
-                "anyOf": [
-                  {
-                    "type": "string",
-                    "minLength": 24,
-                    "maxLength": 24
-                  },
-                  {
-                    "type": "null"
-                  }
-                ]
-              },
-              "metric": {
-                "description": "Default metric evaluated for this target.",
-                "oneOf": [
-                  {
-                    "type": "object",
-                    "properties": {
-                      "kind": {
-                        "type": "string",
-                        "const": "count",
-                        "description": "Count matching events in each evaluation bucket."
-                      }
-                    },
-                    "required": [
-                      "kind"
-                    ],
-                    "additionalProperties": false
-                  },
-                  {
-                    "type": "object",
-                    "properties": {
-                      "kind": {
-                        "type": "string",
-                        "const": "errorRate",
-                        "description": "Measure the fraction of matching events that errored."
-                      }
-                    },
-                    "required": [
-                      "kind"
-                    ],
-                    "additionalProperties": false
-                  },
-                  {
-                    "type": "object",
-                    "properties": {
-                      "kind": {
-                        "type": "string",
-                        "const": "cacheHitRate",
-                        "description": "Token-weighted prompt-cache hit rate (cache-read tokens over total input-side tokens), a 0..1 fraction."
-                      }
-                    },
-                    "required": [
-                      "kind"
-                    ],
-                    "additionalProperties": false
-                  },
-                  {
-                    "type": "object",
-                    "properties": {
-                      "kind": {
-                        "type": "string",
-                        "const": "sum",
-                        "description": "Sum a numeric field over matching events."
-                      },
-                      "field": {
-                        "type": "string",
-                        "enum": [
-                          "duration",
-                          "cost",
-                          "tokens"
-                        ],
-                        "description": "Numeric field to aggregate."
-                      }
-                    },
-                    "required": [
-                      "kind",
-                      "field"
-                    ],
-                    "additionalProperties": false
-                  },
-                  {
-                    "type": "object",
-                    "properties": {
-                      "kind": {
-                        "type": "string",
-                        "const": "min",
-                        "description": "Find the minimum numeric field value over matching events."
-                      },
-                      "field": {
-                        "type": "string",
-                        "enum": [
-                          "duration",
-                          "cost",
-                          "tokens"
-                        ],
-                        "description": "Numeric field to aggregate."
-                      }
-                    },
-                    "required": [
-                      "kind",
-                      "field"
-                    ],
-                    "additionalProperties": false
-                  },
-                  {
-                    "type": "object",
-                    "properties": {
-                      "kind": {
-                        "type": "string",
-                        "const": "max",
-                        "description": "Find the maximum numeric field value over matching events."
-                      },
-                      "field": {
-                        "type": "string",
-                        "enum": [
-                          "duration",
-                          "cost",
-                          "tokens"
-                        ],
-                        "description": "Numeric field to aggregate."
-                      }
-                    },
-                    "required": [
-                      "kind",
-                      "field"
-                    ],
-                    "additionalProperties": false
-                  },
-                  {
-                    "type": "object",
-                    "properties": {
-                      "kind": {
-                        "type": "string",
-                        "const": "avg",
-                        "description": "Average a numeric field over matching events."
-                      },
-                      "field": {
-                        "type": "string",
-                        "enum": [
-                          "duration",
-                          "cost",
-                          "tokens"
-                        ],
-                        "description": "Numeric field to aggregate."
-                      }
-                    },
-                    "required": [
-                      "kind",
-                      "field"
-                    ],
-                    "additionalProperties": false
-                  },
-                  {
-                    "type": "object",
-                    "properties": {
-                      "kind": {
-                        "type": "string",
-                        "const": "median",
-                        "description": "Find the median numeric field value over matching events."
-                      },
-                      "field": {
-                        "type": "string",
-                        "enum": [
-                          "duration",
-                          "cost",
-                          "tokens"
-                        ],
-                        "description": "Numeric field to aggregate."
-                      }
-                    },
-                    "required": [
-                      "kind",
-                      "field"
-                    ],
-                    "additionalProperties": false
-                  }
-                ]
-              }
-            },
-            "required": [
-              "type",
-              "id"
-            ],
-            "additionalProperties": false
-          },
-          "trigger": {
-            "description": "Replacement incident trigger for the monitor rule.",
-            "type": "string",
-            "enum": [
-              "match",
-              "threshold",
-              "escalating"
-            ]
-          },
-          "metric": {
-            "description": "Replacement metric evaluated by the monitor.",
-            "oneOf": [
-              {
-                "type": "object",
-                "properties": {
-                  "kind": {
-                    "type": "string",
-                    "const": "count",
-                    "description": "Count matching events in each evaluation bucket."
-                  }
-                },
-                "required": [
-                  "kind"
-                ],
-                "additionalProperties": false
-              },
-              {
-                "type": "object",
-                "properties": {
-                  "kind": {
-                    "type": "string",
-                    "const": "errorRate",
-                    "description": "Measure the fraction of matching events that errored."
-                  }
-                },
-                "required": [
-                  "kind"
-                ],
-                "additionalProperties": false
-              },
-              {
-                "type": "object",
-                "properties": {
-                  "kind": {
-                    "type": "string",
-                    "const": "cacheHitRate",
-                    "description": "Token-weighted prompt-cache hit rate (cache-read tokens over total input-side tokens), a 0..1 fraction."
-                  }
-                },
-                "required": [
-                  "kind"
-                ],
-                "additionalProperties": false
-              },
-              {
-                "type": "object",
-                "properties": {
-                  "kind": {
-                    "type": "string",
-                    "const": "sum",
-                    "description": "Sum a numeric field over matching events."
-                  },
-                  "field": {
-                    "type": "string",
-                    "enum": [
-                      "duration",
-                      "cost",
-                      "tokens"
-                    ],
-                    "description": "Numeric field to aggregate."
-                  }
-                },
-                "required": [
-                  "kind",
-                  "field"
-                ],
-                "additionalProperties": false
-              },
-              {
-                "type": "object",
-                "properties": {
-                  "kind": {
-                    "type": "string",
-                    "const": "min",
-                    "description": "Find the minimum numeric field value over matching events."
-                  },
-                  "field": {
-                    "type": "string",
-                    "enum": [
-                      "duration",
-                      "cost",
-                      "tokens"
-                    ],
-                    "description": "Numeric field to aggregate."
-                  }
-                },
-                "required": [
-                  "kind",
-                  "field"
-                ],
-                "additionalProperties": false
-              },
-              {
-                "type": "object",
-                "properties": {
-                  "kind": {
-                    "type": "string",
-                    "const": "max",
-                    "description": "Find the maximum numeric field value over matching events."
-                  },
-                  "field": {
-                    "type": "string",
-                    "enum": [
-                      "duration",
-                      "cost",
-                      "tokens"
-                    ],
-                    "description": "Numeric field to aggregate."
-                  }
-                },
-                "required": [
-                  "kind",
-                  "field"
-                ],
-                "additionalProperties": false
-              },
-              {
-                "type": "object",
-                "properties": {
-                  "kind": {
-                    "type": "string",
-                    "const": "avg",
-                    "description": "Average a numeric field over matching events."
-                  },
-                  "field": {
-                    "type": "string",
-                    "enum": [
-                      "duration",
-                      "cost",
-                      "tokens"
-                    ],
-                    "description": "Numeric field to aggregate."
-                  }
-                },
-                "required": [
-                  "kind",
-                  "field"
-                ],
-                "additionalProperties": false
-              },
-              {
-                "type": "object",
-                "properties": {
-                  "kind": {
-                    "type": "string",
-                    "const": "median",
-                    "description": "Find the median numeric field value over matching events."
-                  },
-                  "field": {
-                    "type": "string",
-                    "enum": [
-                      "duration",
-                      "cost",
-                      "tokens"
-                    ],
-                    "description": "Numeric field to aggregate."
-                  }
-                },
-                "required": [
-                  "kind",
-                  "field"
-                ],
-                "additionalProperties": false
-              }
-            ]
-          },
-          "condition": {
-            "description": "Replacement condition for threshold or escalating monitors.",
-            "oneOf": [
-              {
-                "type": "object",
-                "properties": {
-                  "trigger": {
-                    "type": "string",
-                    "const": "threshold",
-                    "description": "Opens once the measured value crosses the threshold."
-                  },
-                  "metric": {
-                    "oneOf": [
-                      {
-                        "type": "object",
-                        "properties": {
-                          "kind": {
-                            "type": "string",
-                            "const": "count",
-                            "description": "Count matching events in each evaluation bucket."
-                          }
-                        },
-                        "required": [
-                          "kind"
-                        ],
-                        "additionalProperties": false
-                      },
-                      {
-                        "type": "object",
-                        "properties": {
-                          "kind": {
-                            "type": "string",
-                            "const": "errorRate",
-                            "description": "Measure the fraction of matching events that errored."
-                          }
-                        },
-                        "required": [
-                          "kind"
-                        ],
-                        "additionalProperties": false
-                      },
-                      {
-                        "type": "object",
-                        "properties": {
-                          "kind": {
-                            "type": "string",
-                            "const": "cacheHitRate",
-                            "description": "Token-weighted prompt-cache hit rate (cache-read tokens over total input-side tokens), a 0..1 fraction."
-                          }
-                        },
-                        "required": [
-                          "kind"
-                        ],
-                        "additionalProperties": false
-                      },
-                      {
-                        "type": "object",
-                        "properties": {
-                          "kind": {
-                            "type": "string",
-                            "const": "avg",
-                            "description": "Average a numeric field over matching events."
-                          },
-                          "field": {
-                            "type": "string",
-                            "enum": [
-                              "duration",
-                              "cost",
-                              "tokens"
-                            ],
-                            "description": "Numeric field to aggregate."
-                          }
-                        },
-                        "required": [
-                          "kind",
-                          "field"
-                        ],
-                        "additionalProperties": false
-                      },
-                      {
-                        "type": "object",
-                        "properties": {
-                          "kind": {
-                            "type": "string",
-                            "const": "sum",
-                            "description": "Sum a numeric field over matching events."
-                          },
-                          "field": {
-                            "type": "string",
-                            "enum": [
-                              "duration",
-                              "cost",
-                              "tokens"
-                            ],
-                            "description": "Numeric field to aggregate."
-                          }
-                        },
-                        "required": [
-                          "kind",
-                          "field"
-                        ],
-                        "additionalProperties": false
-                      },
-                      {
-                        "type": "object",
-                        "properties": {
-                          "kind": {
-                            "type": "string",
-                            "const": "min",
-                            "description": "Find the minimum numeric field value over matching events."
-                          },
-                          "field": {
-                            "type": "string",
-                            "enum": [
-                              "duration",
-                              "cost",
-                              "tokens"
-                            ],
-                            "description": "Numeric field to aggregate."
-                          }
-                        },
-                        "required": [
-                          "kind",
-                          "field"
-                        ],
-                        "additionalProperties": false
-                      },
-                      {
-                        "type": "object",
-                        "properties": {
-                          "kind": {
-                            "type": "string",
-                            "const": "max",
-                            "description": "Find the maximum numeric field value over matching events."
-                          },
-                          "field": {
-                            "type": "string",
-                            "enum": [
-                              "duration",
-                              "cost",
-                              "tokens"
-                            ],
-                            "description": "Numeric field to aggregate."
-                          }
-                        },
-                        "required": [
-                          "kind",
-                          "field"
-                        ],
-                        "additionalProperties": false
-                      },
-                      {
-                        "type": "object",
-                        "properties": {
-                          "kind": {
-                            "type": "string",
-                            "const": "median",
-                            "description": "Find the median numeric field value over matching events."
-                          },
-                          "field": {
-                            "type": "string",
-                            "enum": [
-                              "duration",
-                              "cost",
-                              "tokens"
-                            ],
-                            "description": "Numeric field to aggregate."
-                          }
-                        },
-                        "required": [
-                          "kind",
-                          "field"
-                        ],
-                        "additionalProperties": false
-                      }
-                    ],
-                    "description": "Metric measured over the monitor target."
-                  },
-                  "threshold": {
-                    "oneOf": [
-                      {
-                        "type": "object",
-                        "properties": {
-                          "mode": {
-                            "type": "string",
-                            "const": "absolute",
-                            "description": "Compare the metric against a fixed value; read `value`."
-                          },
-                          "value": {
-                            "type": "number",
-                            "exclusiveMinimum": 0,
-                            "description": "Metric value that opens the incident."
-                          }
-                        },
-                        "required": [
-                          "mode",
-                          "value"
-                        ],
-                        "additionalProperties": false
-                      },
-                      {
-                        "type": "object",
-                        "properties": {
-                          "mode": {
-                            "type": "string",
-                            "const": "multiplier",
-                            "description": "Compare the metric rate against `factor × baseline`; read `factor` and `baseline`."
-                          },
-                          "factor": {
-                            "type": "number",
-                            "exclusiveMinimum": 0,
-                            "description": "Multiple of the baseline rate that opens the incident (e.g. `3` = 3×)."
-                          },
-                          "baseline": {
-                            "type": "object",
-                            "properties": {
-                              "kind": {
-                                "type": "string",
-                                "enum": [
-                                  "average",
-                                  "period"
-                                ],
-                                "description": "How the comparison rate is computed. `average` is the rolling rate over the last `lookback`; `period` is the equal-length window immediately before it (e.g. `lookback` of 1 day compares against yesterday) for daily/weekly seasonality."
-                              },
-                              "lookback": {
-                                "oneOf": [
-                                  {
-                                    "type": "object",
-                                    "properties": {
-                                      "unit": {
-                                        "type": "string",
-                                        "const": "minutes",
-                                        "description": "The duration is expressed in whole minutes; read `minutes`."
-                                      },
-                                      "minutes": {
-                                        "type": "number",
-                                        "exclusiveMinimum": 0,
-                                        "description": "Number of minutes."
-                                      }
-                                    },
-                                    "required": [
-                                      "unit",
-                                      "minutes"
-                                    ],
-                                    "additionalProperties": false
-                                  },
-                                  {
-                                    "type": "object",
-                                    "properties": {
-                                      "unit": {
-                                        "type": "string",
-                                        "const": "hours",
-                                        "description": "The duration is expressed in whole hours; read `hours`."
-                                      },
-                                      "hours": {
-                                        "type": "number",
-                                        "exclusiveMinimum": 0,
-                                        "description": "Number of hours."
-                                      }
-                                    },
-                                    "required": [
-                                      "unit",
-                                      "hours"
-                                    ],
-                                    "additionalProperties": false
-                                  },
-                                  {
-                                    "type": "object",
-                                    "properties": {
-                                      "unit": {
-                                        "type": "string",
-                                        "const": "days",
-                                        "description": "The duration is expressed in whole days; read `days`."
-                                      },
-                                      "days": {
-                                        "type": "number",
-                                        "exclusiveMinimum": 0,
-                                        "description": "Number of days."
-                                      }
-                                    },
-                                    "required": [
-                                      "unit",
-                                      "days"
-                                    ],
-                                    "additionalProperties": false
-                                  }
-                                ],
-                                "description": "Length of the window used to compute the baseline rate."
-                              }
-                            },
-                            "required": [
-                              "kind",
-                              "lookback"
-                            ],
-                            "additionalProperties": false,
-                            "description": "Fixed-window baseline the current rate is compared against."
-                          }
-                        },
-                        "required": [
-                          "mode",
-                          "factor",
-                          "baseline"
-                        ],
-                        "additionalProperties": false
-                      },
-                      {
-                        "type": "object",
-                        "properties": {
-                          "mode": {
-                            "type": "string",
-                            "const": "expected",
-                            "description": "Compare against the seasonally-learned expected value for this time of day/week."
-                          },
-                          "sensitivity": {
-                            "description": "Detector sensitivity from 1 (noisiest) to 6 (strictest). Defaults to 3 when omitted.",
-                            "type": "integer",
-                            "minimum": 1,
-                            "maximum": 6
-                          }
-                        },
-                        "required": [
-                          "mode"
-                        ],
-                        "additionalProperties": false
-                      }
-                    ],
-                    "description": "How the metric is compared."
-                  },
-                  "direction": {
-                    "description": "Direction that opens the incident. Defaults to `above` when omitted.",
-                    "type": "string",
-                    "enum": [
-                      "above",
-                      "below"
-                    ]
-                  }
-                },
-                "required": [
-                  "trigger",
-                  "metric",
-                  "threshold"
-                ],
-                "additionalProperties": false
-              },
-              {
-                "type": "object",
-                "properties": {
-                  "trigger": {
-                    "type": "string",
-                    "const": "escalating",
-                    "description": "Opens when the monitor target is escalating or sustained."
-                  },
-                  "metric": {
-                    "oneOf": [
-                      {
-                        "type": "object",
-                        "properties": {
-                          "kind": {
-                            "type": "string",
-                            "const": "count",
-                            "description": "Count matching events in each evaluation bucket."
-                          }
-                        },
-                        "required": [
-                          "kind"
-                        ],
-                        "additionalProperties": false
-                      },
-                      {
-                        "type": "object",
-                        "properties": {
-                          "kind": {
-                            "type": "string",
-                            "const": "errorRate",
-                            "description": "Measure the fraction of matching events that errored."
-                          }
-                        },
-                        "required": [
-                          "kind"
-                        ],
-                        "additionalProperties": false
-                      },
-                      {
-                        "type": "object",
-                        "properties": {
-                          "kind": {
-                            "type": "string",
-                            "const": "cacheHitRate",
-                            "description": "Token-weighted prompt-cache hit rate (cache-read tokens over total input-side tokens), a 0..1 fraction."
-                          }
-                        },
-                        "required": [
-                          "kind"
-                        ],
-                        "additionalProperties": false
-                      },
-                      {
-                        "type": "object",
-                        "properties": {
-                          "kind": {
-                            "type": "string",
-                            "const": "avg",
-                            "description": "Average a numeric field over matching events."
-                          },
-                          "field": {
-                            "type": "string",
-                            "enum": [
-                              "duration",
-                              "cost",
-                              "tokens"
-                            ],
-                            "description": "Numeric field to aggregate."
-                          }
-                        },
-                        "required": [
-                          "kind",
-                          "field"
-                        ],
-                        "additionalProperties": false
-                      },
-                      {
-                        "type": "object",
-                        "properties": {
-                          "kind": {
-                            "type": "string",
-                            "const": "sum",
-                            "description": "Sum a numeric field over matching events."
-                          },
-                          "field": {
-                            "type": "string",
-                            "enum": [
-                              "duration",
-                              "cost",
-                              "tokens"
-                            ],
-                            "description": "Numeric field to aggregate."
-                          }
-                        },
-                        "required": [
-                          "kind",
-                          "field"
-                        ],
-                        "additionalProperties": false
-                      },
-                      {
-                        "type": "object",
-                        "properties": {
-                          "kind": {
-                            "type": "string",
-                            "const": "min",
-                            "description": "Find the minimum numeric field value over matching events."
-                          },
-                          "field": {
-                            "type": "string",
-                            "enum": [
-                              "duration",
-                              "cost",
-                              "tokens"
-                            ],
-                            "description": "Numeric field to aggregate."
-                          }
-                        },
-                        "required": [
-                          "kind",
-                          "field"
-                        ],
-                        "additionalProperties": false
-                      },
-                      {
-                        "type": "object",
-                        "properties": {
-                          "kind": {
-                            "type": "string",
-                            "const": "max",
-                            "description": "Find the maximum numeric field value over matching events."
-                          },
-                          "field": {
-                            "type": "string",
-                            "enum": [
-                              "duration",
-                              "cost",
-                              "tokens"
-                            ],
-                            "description": "Numeric field to aggregate."
-                          }
-                        },
-                        "required": [
-                          "kind",
-                          "field"
-                        ],
-                        "additionalProperties": false
-                      },
-                      {
-                        "type": "object",
-                        "properties": {
-                          "kind": {
-                            "type": "string",
-                            "const": "median",
-                            "description": "Find the median numeric field value over matching events."
-                          },
-                          "field": {
-                            "type": "string",
-                            "enum": [
-                              "duration",
-                              "cost",
-                              "tokens"
-                            ],
-                            "description": "Numeric field to aggregate."
-                          }
-                        },
-                        "required": [
-                          "kind",
-                          "field"
-                        ],
-                        "additionalProperties": false
-                      }
-                    ],
-                    "description": "Metric measured over the monitor target."
-                  },
-                  "threshold": {
-                    "description": "How the metric is compared when threshold-based.",
-                    "oneOf": [
-                      {
-                        "type": "object",
-                        "properties": {
-                          "mode": {
-                            "type": "string",
-                            "const": "absolute",
-                            "description": "Compare the metric against a fixed value; read `value`."
-                          },
-                          "value": {
-                            "type": "number",
-                            "exclusiveMinimum": 0,
-                            "description": "Metric value that opens the incident."
-                          }
-                        },
-                        "required": [
-                          "mode",
-                          "value"
-                        ],
-                        "additionalProperties": false
-                      },
-                      {
-                        "type": "object",
-                        "properties": {
-                          "mode": {
-                            "type": "string",
-                            "const": "multiplier",
-                            "description": "Compare the metric rate against `factor × baseline`; read `factor` and `baseline`."
-                          },
-                          "factor": {
-                            "type": "number",
-                            "exclusiveMinimum": 0,
-                            "description": "Multiple of the baseline rate that opens the incident (e.g. `3` = 3×)."
-                          },
-                          "baseline": {
-                            "type": "object",
-                            "properties": {
-                              "kind": {
-                                "type": "string",
-                                "enum": [
-                                  "average",
-                                  "period"
-                                ],
-                                "description": "How the comparison rate is computed. `average` is the rolling rate over the last `lookback`; `period` is the equal-length window immediately before it (e.g. `lookback` of 1 day compares against yesterday) for daily/weekly seasonality."
-                              },
-                              "lookback": {
-                                "oneOf": [
-                                  {
-                                    "type": "object",
-                                    "properties": {
-                                      "unit": {
-                                        "type": "string",
-                                        "const": "minutes",
-                                        "description": "The duration is expressed in whole minutes; read `minutes`."
-                                      },
-                                      "minutes": {
-                                        "type": "number",
-                                        "exclusiveMinimum": 0,
-                                        "description": "Number of minutes."
-                                      }
-                                    },
-                                    "required": [
-                                      "unit",
-                                      "minutes"
-                                    ],
-                                    "additionalProperties": false
-                                  },
-                                  {
-                                    "type": "object",
-                                    "properties": {
-                                      "unit": {
-                                        "type": "string",
-                                        "const": "hours",
-                                        "description": "The duration is expressed in whole hours; read `hours`."
-                                      },
-                                      "hours": {
-                                        "type": "number",
-                                        "exclusiveMinimum": 0,
-                                        "description": "Number of hours."
-                                      }
-                                    },
-                                    "required": [
-                                      "unit",
-                                      "hours"
-                                    ],
-                                    "additionalProperties": false
-                                  },
-                                  {
-                                    "type": "object",
-                                    "properties": {
-                                      "unit": {
-                                        "type": "string",
-                                        "const": "days",
-                                        "description": "The duration is expressed in whole days; read `days`."
-                                      },
-                                      "days": {
-                                        "type": "number",
-                                        "exclusiveMinimum": 0,
-                                        "description": "Number of days."
-                                      }
-                                    },
-                                    "required": [
-                                      "unit",
-                                      "days"
-                                    ],
-                                    "additionalProperties": false
-                                  }
-                                ],
-                                "description": "Length of the window used to compute the baseline rate."
-                              }
-                            },
-                            "required": [
-                              "kind",
-                              "lookback"
-                            ],
-                            "additionalProperties": false,
-                            "description": "Fixed-window baseline the current rate is compared against."
-                          }
-                        },
-                        "required": [
-                          "mode",
-                          "factor",
-                          "baseline"
-                        ],
-                        "additionalProperties": false
-                      },
-                      {
-                        "type": "object",
-                        "properties": {
-                          "mode": {
-                            "type": "string",
-                            "const": "expected",
-                            "description": "Compare against the seasonally-learned expected value for this time of day/week."
-                          },
-                          "sensitivity": {
-                            "description": "Detector sensitivity from 1 (noisiest) to 6 (strictest). Defaults to 3 when omitted.",
-                            "type": "integer",
-                            "minimum": 1,
-                            "maximum": 6
-                          }
-                        },
-                        "required": [
-                          "mode"
-                        ],
-                        "additionalProperties": false
-                      }
-                    ]
-                  },
-                  "direction": {
-                    "description": "Direction that opens the incident. Defaults to `above` when omitted.",
-                    "type": "string",
-                    "enum": [
-                      "above",
-                      "below"
-                    ]
-                  },
-                  "sensitivity": {
-                    "description": "Detector sensitivity from 1 (noisiest) to 6 (strictest). Defaults to 3 when omitted.",
-                    "type": "integer",
-                    "minimum": 1,
-                    "maximum": 6
-                  },
-                  "window": {
-                    "type": "object",
-                    "properties": {
-                      "minutes": {
-                        "type": "integer",
-                        "minimum": 5,
-                        "maximum": 9007199254740991,
-                        "description": "How long the threshold must stay crossed before the incident opens. Minimum 5."
-                      }
-                    },
-                    "required": [
-                      "minutes"
-                    ],
-                    "additionalProperties": false,
-                    "description": "Sustained-condition window."
-                  }
-                },
-                "required": [
-                  "trigger",
-                  "metric",
-                  "window"
-                ],
-                "additionalProperties": false
-              }
-            ]
           },
           "severity": {
             "description": "Replacement incident severity.",
@@ -29858,70 +28705,6 @@
                     ],
                     "description": "The metric: `count`, `errorRate`, `cacheHitRate`, `{sum|min|max|avg|median}` over `duration`/`cost`/`tokens`, or `{kind:'percentile',field,p}` for an arbitrary percentile (`p` in [1,99]; e.g. `p:95`)."
                   },
-                  "filters": {
-                    "description": "Structured filter set applied to the stream (same DSL as `listTraces`).",
-                    "type": "object",
-                    "propertyNames": {
-                      "type": "string"
-                    },
-                    "additionalProperties": {
-                      "type": "array",
-                      "items": {
-                        "type": "object",
-                        "properties": {
-                          "op": {
-                            "type": "string",
-                            "enum": [
-                              "eq",
-                              "neq",
-                              "gt",
-                              "gte",
-                              "lt",
-                              "lte",
-                              "in",
-                              "notIn",
-                              "contains",
-                              "notContains",
-                              "gtePercentile"
-                            ],
-                            "description": "Comparison operator applied to the field's value (e.g. `eq`, `neq`, `in`). The full operator list lives in the API reference."
-                          },
-                          "value": {
-                            "anyOf": [
-                              {
-                                "type": "string"
-                              },
-                              {
-                                "type": "number"
-                              },
-                              {
-                                "type": "boolean"
-                              },
-                              {
-                                "type": "array",
-                                "items": {
-                                  "anyOf": [
-                                    {
-                                      "type": "string"
-                                    },
-                                    {
-                                      "type": "number"
-                                    }
-                                  ]
-                                }
-                              }
-                            ],
-                            "description": "Right-hand value compared against the field. Arrays are required for `in` / `notIn`-style operators."
-                          }
-                        },
-                        "required": [
-                          "op",
-                          "value"
-                        ],
-                        "additionalProperties": false
-                      }
-                    }
-                  },
                   "timeBucket": {
                     "description": "Bucket the metric over time. Omit for a single aggregate.",
                     "type": "object",
@@ -30009,6 +28792,70 @@
                     "type": "integer",
                     "exclusiveMinimum": 0,
                     "maximum": 500
+                  },
+                  "filters": {
+                    "description": "Structured filter set applied to the stream (same DSL as `listTraces`).",
+                    "type": "object",
+                    "propertyNames": {
+                      "type": "string"
+                    },
+                    "additionalProperties": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "op": {
+                            "type": "string",
+                            "enum": [
+                              "eq",
+                              "neq",
+                              "gt",
+                              "gte",
+                              "lt",
+                              "lte",
+                              "in",
+                              "notIn",
+                              "contains",
+                              "notContains",
+                              "gtePercentile"
+                            ],
+                            "description": "Comparison operator applied to the field's value (e.g. `eq`, `neq`, `in`). The full operator list lives in the API reference."
+                          },
+                          "value": {
+                            "anyOf": [
+                              {
+                                "type": "string"
+                              },
+                              {
+                                "type": "number"
+                              },
+                              {
+                                "type": "boolean"
+                              },
+                              {
+                                "type": "array",
+                                "items": {
+                                  "anyOf": [
+                                    {
+                                      "type": "string"
+                                    },
+                                    {
+                                      "type": "number"
+                                    }
+                                  ]
+                                }
+                              }
+                            ],
+                            "description": "Right-hand value compared against the field. Arrays are required for `in` / `notIn`-style operators."
+                          }
+                        },
+                        "required": [
+                          "op",
+                          "value"
+                        ],
+                        "additionalProperties": false
+                      }
+                    }
                   }
                 },
                 "required": [
@@ -30228,70 +29075,6 @@
                     ],
                     "description": "The metric: `count`, `errorRate`, `cacheHitRate`, `{sum|min|max|avg|median}` over `duration`/`cost`/`tokens`, or `{kind:'percentile',field,p}` for an arbitrary percentile (`p` in [1,99]; e.g. `p:95`)."
                   },
-                  "filters": {
-                    "description": "Structured filter set applied to the stream (same DSL as `listTraces`).",
-                    "type": "object",
-                    "propertyNames": {
-                      "type": "string"
-                    },
-                    "additionalProperties": {
-                      "type": "array",
-                      "items": {
-                        "type": "object",
-                        "properties": {
-                          "op": {
-                            "type": "string",
-                            "enum": [
-                              "eq",
-                              "neq",
-                              "gt",
-                              "gte",
-                              "lt",
-                              "lte",
-                              "in",
-                              "notIn",
-                              "contains",
-                              "notContains",
-                              "gtePercentile"
-                            ],
-                            "description": "Comparison operator applied to the field's value (e.g. `eq`, `neq`, `in`). The full operator list lives in the API reference."
-                          },
-                          "value": {
-                            "anyOf": [
-                              {
-                                "type": "string"
-                              },
-                              {
-                                "type": "number"
-                              },
-                              {
-                                "type": "boolean"
-                              },
-                              {
-                                "type": "array",
-                                "items": {
-                                  "anyOf": [
-                                    {
-                                      "type": "string"
-                                    },
-                                    {
-                                      "type": "number"
-                                    }
-                                  ]
-                                }
-                              }
-                            ],
-                            "description": "Right-hand value compared against the field. Arrays are required for `in` / `notIn`-style operators."
-                          }
-                        },
-                        "required": [
-                          "op",
-                          "value"
-                        ],
-                        "additionalProperties": false
-                      }
-                    }
-                  },
                   "timeBucket": {
                     "description": "Bucket the metric over time. Omit for a single aggregate.",
                     "type": "object",
@@ -30379,6 +29162,70 @@
                     "type": "integer",
                     "exclusiveMinimum": 0,
                     "maximum": 500
+                  },
+                  "filters": {
+                    "description": "Structured filter set applied to the stream (same DSL as `listTraces`).",
+                    "type": "object",
+                    "propertyNames": {
+                      "type": "string"
+                    },
+                    "additionalProperties": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "op": {
+                            "type": "string",
+                            "enum": [
+                              "eq",
+                              "neq",
+                              "gt",
+                              "gte",
+                              "lt",
+                              "lte",
+                              "in",
+                              "notIn",
+                              "contains",
+                              "notContains",
+                              "gtePercentile"
+                            ],
+                            "description": "Comparison operator applied to the field's value (e.g. `eq`, `neq`, `in`). The full operator list lives in the API reference."
+                          },
+                          "value": {
+                            "anyOf": [
+                              {
+                                "type": "string"
+                              },
+                              {
+                                "type": "number"
+                              },
+                              {
+                                "type": "boolean"
+                              },
+                              {
+                                "type": "array",
+                                "items": {
+                                  "anyOf": [
+                                    {
+                                      "type": "string"
+                                    },
+                                    {
+                                      "type": "number"
+                                    }
+                                  ]
+                                }
+                              }
+                            ],
+                            "description": "Right-hand value compared against the field. Arrays are required for `in` / `notIn`-style operators."
+                          }
+                        },
+                        "required": [
+                          "op",
+                          "value"
+                        ],
+                        "additionalProperties": false
+                      }
+                    }
                   }
                 },
                 "required": [
@@ -30592,70 +29439,6 @@
                     ],
                     "description": "The metric: `count`, `errorRate`, `cacheHitRate`, `{sum|min|max|avg|median}` over `duration`/`cost`/`tokens`, or `{kind:'percentile',field,p}` for an arbitrary percentile (`p` in [1,99]; e.g. `p:95`)."
                   },
-                  "filters": {
-                    "description": "Structured filter set applied to the stream (same DSL as `listTraces`).",
-                    "type": "object",
-                    "propertyNames": {
-                      "type": "string"
-                    },
-                    "additionalProperties": {
-                      "type": "array",
-                      "items": {
-                        "type": "object",
-                        "properties": {
-                          "op": {
-                            "type": "string",
-                            "enum": [
-                              "eq",
-                              "neq",
-                              "gt",
-                              "gte",
-                              "lt",
-                              "lte",
-                              "in",
-                              "notIn",
-                              "contains",
-                              "notContains",
-                              "gtePercentile"
-                            ],
-                            "description": "Comparison operator applied to the field's value (e.g. `eq`, `neq`, `in`). The full operator list lives in the API reference."
-                          },
-                          "value": {
-                            "anyOf": [
-                              {
-                                "type": "string"
-                              },
-                              {
-                                "type": "number"
-                              },
-                              {
-                                "type": "boolean"
-                              },
-                              {
-                                "type": "array",
-                                "items": {
-                                  "anyOf": [
-                                    {
-                                      "type": "string"
-                                    },
-                                    {
-                                      "type": "number"
-                                    }
-                                  ]
-                                }
-                              }
-                            ],
-                            "description": "Right-hand value compared against the field. Arrays are required for `in` / `notIn`-style operators."
-                          }
-                        },
-                        "required": [
-                          "op",
-                          "value"
-                        ],
-                        "additionalProperties": false
-                      }
-                    }
-                  },
                   "timeBucket": {
                     "description": "Bucket the metric over time. Omit for a single aggregate.",
                     "type": "object",
@@ -30743,6 +29526,70 @@
                     "type": "integer",
                     "exclusiveMinimum": 0,
                     "maximum": 500
+                  },
+                  "filters": {
+                    "description": "Structured filter set over span row fields. `gtePercentile` is not supported — use absolute thresholds or a percentile metric.",
+                    "type": "object",
+                    "propertyNames": {
+                      "type": "string"
+                    },
+                    "additionalProperties": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "op": {
+                            "type": "string",
+                            "enum": [
+                              "eq",
+                              "neq",
+                              "gt",
+                              "gte",
+                              "lt",
+                              "lte",
+                              "in",
+                              "notIn",
+                              "contains",
+                              "notContains",
+                              "gtePercentile"
+                            ],
+                            "description": "Comparison operator applied to the field's value (e.g. `eq`, `neq`, `in`). The full operator list lives in the API reference."
+                          },
+                          "value": {
+                            "anyOf": [
+                              {
+                                "type": "string"
+                              },
+                              {
+                                "type": "number"
+                              },
+                              {
+                                "type": "boolean"
+                              },
+                              {
+                                "type": "array",
+                                "items": {
+                                  "anyOf": [
+                                    {
+                                      "type": "string"
+                                    },
+                                    {
+                                      "type": "number"
+                                    }
+                                  ]
+                                }
+                              }
+                            ],
+                            "description": "Right-hand value compared against the field. Arrays are required for `in` / `notIn`-style operators."
+                          }
+                        },
+                        "required": [
+                          "op",
+                          "value"
+                        ],
+                        "additionalProperties": false
+                      }
+                    }
                   }
                 },
                 "required": [
@@ -30891,70 +29738,6 @@
                     ],
                     "description": "The metric: `count`, `passRate`, `errorRate`, or `{avg|min|max|median}` of the 0–1 score `value`."
                   },
-                  "filters": {
-                    "description": "Structured filter set applied to the stream (same DSL as `listTraces`).",
-                    "type": "object",
-                    "propertyNames": {
-                      "type": "string"
-                    },
-                    "additionalProperties": {
-                      "type": "array",
-                      "items": {
-                        "type": "object",
-                        "properties": {
-                          "op": {
-                            "type": "string",
-                            "enum": [
-                              "eq",
-                              "neq",
-                              "gt",
-                              "gte",
-                              "lt",
-                              "lte",
-                              "in",
-                              "notIn",
-                              "contains",
-                              "notContains",
-                              "gtePercentile"
-                            ],
-                            "description": "Comparison operator applied to the field's value (e.g. `eq`, `neq`, `in`). The full operator list lives in the API reference."
-                          },
-                          "value": {
-                            "anyOf": [
-                              {
-                                "type": "string"
-                              },
-                              {
-                                "type": "number"
-                              },
-                              {
-                                "type": "boolean"
-                              },
-                              {
-                                "type": "array",
-                                "items": {
-                                  "anyOf": [
-                                    {
-                                      "type": "string"
-                                    },
-                                    {
-                                      "type": "number"
-                                    }
-                                  ]
-                                }
-                              }
-                            ],
-                            "description": "Right-hand value compared against the field. Arrays are required for `in` / `notIn`-style operators."
-                          }
-                        },
-                        "required": [
-                          "op",
-                          "value"
-                        ],
-                        "additionalProperties": false
-                      }
-                    }
-                  },
                   "timeBucket": {
                     "description": "Bucket the metric over time. Omit for a single aggregate.",
                     "type": "object",
@@ -31042,6 +29825,70 @@
                     "type": "integer",
                     "exclusiveMinimum": 0,
                     "maximum": 500
+                  },
+                  "filters": {
+                    "description": "Structured filter set applied to the stream (same DSL as `listTraces`).",
+                    "type": "object",
+                    "propertyNames": {
+                      "type": "string"
+                    },
+                    "additionalProperties": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "op": {
+                            "type": "string",
+                            "enum": [
+                              "eq",
+                              "neq",
+                              "gt",
+                              "gte",
+                              "lt",
+                              "lte",
+                              "in",
+                              "notIn",
+                              "contains",
+                              "notContains",
+                              "gtePercentile"
+                            ],
+                            "description": "Comparison operator applied to the field's value (e.g. `eq`, `neq`, `in`). The full operator list lives in the API reference."
+                          },
+                          "value": {
+                            "anyOf": [
+                              {
+                                "type": "string"
+                              },
+                              {
+                                "type": "number"
+                              },
+                              {
+                                "type": "boolean"
+                              },
+                              {
+                                "type": "array",
+                                "items": {
+                                  "anyOf": [
+                                    {
+                                      "type": "string"
+                                    },
+                                    {
+                                      "type": "number"
+                                    }
+                                  ]
+                                }
+                              }
+                            ],
+                            "description": "Right-hand value compared against the field. Arrays are required for `in` / `notIn`-style operators."
+                          }
+                        },
+                        "required": [
+                          "op",
+                          "value"
+                        ],
+                        "additionalProperties": false
+                      }
+                    }
                   }
                 },
                 "required": [
@@ -31160,70 +30007,6 @@
                     ],
                     "description": "The metric: `count`, or `{avg|min|max|median}` of the 0–1 assignment `confidence`."
                   },
-                  "filters": {
-                    "description": "Structured filter set applied to the stream (same DSL as `listTraces`).",
-                    "type": "object",
-                    "propertyNames": {
-                      "type": "string"
-                    },
-                    "additionalProperties": {
-                      "type": "array",
-                      "items": {
-                        "type": "object",
-                        "properties": {
-                          "op": {
-                            "type": "string",
-                            "enum": [
-                              "eq",
-                              "neq",
-                              "gt",
-                              "gte",
-                              "lt",
-                              "lte",
-                              "in",
-                              "notIn",
-                              "contains",
-                              "notContains",
-                              "gtePercentile"
-                            ],
-                            "description": "Comparison operator applied to the field's value (e.g. `eq`, `neq`, `in`). The full operator list lives in the API reference."
-                          },
-                          "value": {
-                            "anyOf": [
-                              {
-                                "type": "string"
-                              },
-                              {
-                                "type": "number"
-                              },
-                              {
-                                "type": "boolean"
-                              },
-                              {
-                                "type": "array",
-                                "items": {
-                                  "anyOf": [
-                                    {
-                                      "type": "string"
-                                    },
-                                    {
-                                      "type": "number"
-                                    }
-                                  ]
-                                }
-                              }
-                            ],
-                            "description": "Right-hand value compared against the field. Arrays are required for `in` / `notIn`-style operators."
-                          }
-                        },
-                        "required": [
-                          "op",
-                          "value"
-                        ],
-                        "additionalProperties": false
-                      }
-                    }
-                  },
                   "timeBucket": {
                     "description": "Bucket the metric over time. Omit for a single aggregate.",
                     "type": "object",
@@ -31311,6 +30094,70 @@
                     "type": "integer",
                     "exclusiveMinimum": 0,
                     "maximum": 500
+                  },
+                  "filters": {
+                    "description": "Structured filter set applied to the stream (same DSL as `listTraces`).",
+                    "type": "object",
+                    "propertyNames": {
+                      "type": "string"
+                    },
+                    "additionalProperties": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "op": {
+                            "type": "string",
+                            "enum": [
+                              "eq",
+                              "neq",
+                              "gt",
+                              "gte",
+                              "lt",
+                              "lte",
+                              "in",
+                              "notIn",
+                              "contains",
+                              "notContains",
+                              "gtePercentile"
+                            ],
+                            "description": "Comparison operator applied to the field's value (e.g. `eq`, `neq`, `in`). The full operator list lives in the API reference."
+                          },
+                          "value": {
+                            "anyOf": [
+                              {
+                                "type": "string"
+                              },
+                              {
+                                "type": "number"
+                              },
+                              {
+                                "type": "boolean"
+                              },
+                              {
+                                "type": "array",
+                                "items": {
+                                  "anyOf": [
+                                    {
+                                      "type": "string"
+                                    },
+                                    {
+                                      "type": "number"
+                                    }
+                                  ]
+                                }
+                              }
+                            ],
+                            "description": "Right-hand value compared against the field. Arrays are required for `in` / `notIn`-style operators."
+                          }
+                        },
+                        "required": [
+                          "op",
+                          "value"
+                        ],
+                        "additionalProperties": false
+                      }
+                    }
                   }
                 },
                 "required": [
@@ -31441,70 +30288,6 @@
                     ],
                     "description": "The metric: `count`, or `{avg|min|max|median}` of the 0–1 label `confidence` or moment `coherence`."
                   },
-                  "filters": {
-                    "description": "Structured filter set applied to the stream (same DSL as `listTraces`).",
-                    "type": "object",
-                    "propertyNames": {
-                      "type": "string"
-                    },
-                    "additionalProperties": {
-                      "type": "array",
-                      "items": {
-                        "type": "object",
-                        "properties": {
-                          "op": {
-                            "type": "string",
-                            "enum": [
-                              "eq",
-                              "neq",
-                              "gt",
-                              "gte",
-                              "lt",
-                              "lte",
-                              "in",
-                              "notIn",
-                              "contains",
-                              "notContains",
-                              "gtePercentile"
-                            ],
-                            "description": "Comparison operator applied to the field's value (e.g. `eq`, `neq`, `in`). The full operator list lives in the API reference."
-                          },
-                          "value": {
-                            "anyOf": [
-                              {
-                                "type": "string"
-                              },
-                              {
-                                "type": "number"
-                              },
-                              {
-                                "type": "boolean"
-                              },
-                              {
-                                "type": "array",
-                                "items": {
-                                  "anyOf": [
-                                    {
-                                      "type": "string"
-                                    },
-                                    {
-                                      "type": "number"
-                                    }
-                                  ]
-                                }
-                              }
-                            ],
-                            "description": "Right-hand value compared against the field. Arrays are required for `in` / `notIn`-style operators."
-                          }
-                        },
-                        "required": [
-                          "op",
-                          "value"
-                        ],
-                        "additionalProperties": false
-                      }
-                    }
-                  },
                   "timeBucket": {
                     "description": "Bucket the metric over time. Omit for a single aggregate.",
                     "type": "object",
@@ -31592,6 +30375,70 @@
                     "type": "integer",
                     "exclusiveMinimum": 0,
                     "maximum": 500
+                  },
+                  "filters": {
+                    "description": "Structured filter set applied to the stream (same DSL as `listTraces`).",
+                    "type": "object",
+                    "propertyNames": {
+                      "type": "string"
+                    },
+                    "additionalProperties": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "op": {
+                            "type": "string",
+                            "enum": [
+                              "eq",
+                              "neq",
+                              "gt",
+                              "gte",
+                              "lt",
+                              "lte",
+                              "in",
+                              "notIn",
+                              "contains",
+                              "notContains",
+                              "gtePercentile"
+                            ],
+                            "description": "Comparison operator applied to the field's value (e.g. `eq`, `neq`, `in`). The full operator list lives in the API reference."
+                          },
+                          "value": {
+                            "anyOf": [
+                              {
+                                "type": "string"
+                              },
+                              {
+                                "type": "number"
+                              },
+                              {
+                                "type": "boolean"
+                              },
+                              {
+                                "type": "array",
+                                "items": {
+                                  "anyOf": [
+                                    {
+                                      "type": "string"
+                                    },
+                                    {
+                                      "type": "number"
+                                    }
+                                  ]
+                                }
+                              }
+                            ],
+                            "description": "Right-hand value compared against the field. Arrays are required for `in` / `notIn`-style operators."
+                          }
+                        },
+                        "required": [
+                          "op",
+                          "value"
+                        ],
+                        "additionalProperties": false
+                      }
+                    }
                   }
                 },
                 "required": [
@@ -31669,7 +30516,7 @@
             "description": "Project slug (human-readable identifier)"
           },
           "filters": {
-            "description": "Row-local span filter set (same DSL as `listTraces`) over span fields — `operation`, `toolName`, `model`, `provider`, `sessionId`, `traceId`, `tags`, `status` (`error`/`ok`/`unset`), `duration`, `cost`, `tokensInput`/`tokensOutput`.",
+            "description": "Row-local span filter set (same DSL as `listTraces`) over span fields — `operation`, `toolName`, `model`, `provider`, `sessionId`, `traceId`, `tags`, `status` (`error`/`ok`/`unset`), `duration`, `cost`, `tokensInput`/`tokensOutput`. `gtePercentile` is not supported — use absolute thresholds or a percentile metric.",
             "type": "object",
             "propertyNames": {
               "type": "string"
