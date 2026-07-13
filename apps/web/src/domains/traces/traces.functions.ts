@@ -255,6 +255,52 @@ export const countTracesByProject = createServerFn({ method: "GET" })
     )
   })
 
+export const getProjectLastTraceAt = createServerFn({ method: "GET" })
+  .inputValidator(
+    z.object({
+      projectId: z.string(),
+      filters: filterSetSchema.optional(),
+      searchQuery: z.string().max(500).optional(),
+    }),
+  )
+  .handler(async ({ data, context }): Promise<string | null> => {
+    const orgId = await resolveOrgScope(context)
+
+    return Effect.runPromise(
+      Effect.gen(function* () {
+        const repo = yield* TraceRepository
+        const lastAt = yield* repo.findLastTraceAt({
+          organizationId: orgId,
+          projectId: ProjectId(data.projectId),
+          ...(data.filters ? { filters: data.filters } : {}),
+          ...(data.searchQuery ? { searchQuery: data.searchQuery } : {}),
+        })
+        return lastAt ? lastAt.toISOString() : null
+      }).pipe(
+        withScopedClickHouse(TraceRepositoryLive, getClickhouseClient(), orgId),
+        withAi(AIEmbedLive, getRedisClient()),
+        withTracing,
+      ),
+    )
+  })
+
+export const getProjectFirstTraceAt = createServerFn({ method: "GET" })
+  .inputValidator(z.object({ projectId: z.string() }))
+  .handler(async ({ data, context }): Promise<string | null> => {
+    const orgId = await resolveOrgScope(context)
+
+    return Effect.runPromise(
+      Effect.gen(function* () {
+        const repo = yield* TraceRepository
+        const firstAt = yield* repo.findFirstTraceAt({
+          organizationId: orgId,
+          projectId: ProjectId(data.projectId),
+        })
+        return firstAt ? firstAt.toISOString() : null
+      }).pipe(withScopedClickHouse(TraceRepositoryLive, getClickhouseClient(), orgId), withTracing),
+    )
+  })
+
 export const getTraceMetricsByProject = createServerFn({ method: "GET" })
   .inputValidator(
     z.object({

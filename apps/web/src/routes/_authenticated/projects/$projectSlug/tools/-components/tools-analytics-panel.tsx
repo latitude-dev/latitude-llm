@@ -4,6 +4,7 @@ import { formatCount } from "@repo/utils"
 import { BarChart2, ChevronDown, ChevronUp } from "lucide-react"
 import { useMemo, useState } from "react"
 import type { ToolsAnalyticsRecord } from "../../../../../../domains/tools/tools.functions.ts"
+import { ChartHeader } from "../../-components/chart-header.tsx"
 import { formatBucketLabel, formatPercent, getToolStatuses } from "./tool-formatters.ts"
 
 const OK_CALLS_COLOR = "hsl(217 91% 60%)"
@@ -44,11 +45,17 @@ export function ToolsAnalyticsPanel({
   analytics,
   histogram,
   bucketSeconds,
+  rangeFromIso,
+  rangeToIso,
+  isAllTime,
   isLoading,
 }: {
   readonly analytics: ToolsAnalyticsRecord | undefined
   readonly histogram: readonly ToolCallHistogramBucket[]
   readonly bucketSeconds: number
+  readonly rangeFromIso: string
+  readonly rangeToIso: string
+  readonly isAllTime: boolean
   readonly isLoading: boolean
 }) {
   const [collapsed, setCollapsed] = useState(false)
@@ -177,15 +184,18 @@ export function ToolsAnalyticsPanel({
             <Text.H6 color="foregroundMuted">No tool calls in this time window</Text.H6>
           </div>
         ) : (
-          <div className="px-4 py-3">
-            <Chart
-              categories={categories}
-              series={series}
-              height={160}
-              xAxisLabelFontSize={10}
-              ariaLabel="Tool calls over time"
-            />
-          </div>
+          <>
+            <ChartHeader title="Tool calls over time" fromIso={rangeFromIso} toIso={rangeToIso} isAllTime={isAllTime} />
+            <div className="px-4 py-3">
+              <Chart
+                categories={categories}
+                series={series}
+                height={160}
+                xAxisLabelFontSize={10}
+                ariaLabel="Tool calls over time"
+              />
+            </div>
+          </>
         )}
       </div>
     </div>
