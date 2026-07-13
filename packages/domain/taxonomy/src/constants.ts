@@ -54,6 +54,15 @@ export const CUSTOM_BEHAVIOR_NAME_MAX_LENGTH = 80
 export const CUSTOM_BEHAVIOR_STATUSES = ["pending", "generating", "ready", "failed"] as const
 
 /**
+ * Per-project cap on custom behaviors (LAT-746 Q1 = flat 10), enforced in the
+ * create use-case. Each behavior spawns its own scoped clusters, a ClickHouse
+ * `custom_behavior_assignments` slice, and a workflow run, so the cap bounds
+ * CH storage + LLM naming cost. Deliberately a single constant: raising it is a
+ * one-line change, no per-plan machinery.
+ */
+export const MAX_CUSTOM_BEHAVIORS_PER_PROJECT = 10
+
+/**
  * Fixed lookback window the scoped-sampling activity reads observations over
  * before clustering a custom behavior (LAT-746 Q2 = fixed 7d). Phase 2 passes
  * this as the sampling activity's *parameter* — never hardcoded inside the
