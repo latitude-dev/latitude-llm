@@ -50,6 +50,7 @@ import { useViewportBand } from "../../conversation-timeline/use-viewport-band.t
 import { buildSubagentToolCalls } from "../../session-detail-drawer/agents-breakdown/agent-decorations.ts"
 import { SubagentConversationView } from "../../session-detail-drawer/agents-breakdown/subagent-conversation-view.tsx"
 import { useAgentGraph } from "../../session-detail-drawer/agents-breakdown/use-agent-graph.ts"
+import { useSubagentPreviews } from "../../session-detail-drawer/agents-breakdown/use-subagent-previews.ts"
 import {
   computeLoadedConversationHighlights,
   formatConversationSearchForBackend,
@@ -547,9 +548,10 @@ function ConversationContent({
         )
       : undefined
 
+  const subagentPreviews = useSubagentPreviews({ projectId, graph: agentGraph })
   const subagentToolCalls = useMemo(
-    () => buildSubagentToolCalls({ graph: agentGraph, onOpenConversation: onSelectAgent }),
-    [agentGraph, onSelectAgent],
+    () => buildSubagentToolCalls({ graph: agentGraph, onOpenConversation: onSelectAgent, previews: subagentPreviews }),
+    [agentGraph, onSelectAgent, subagentPreviews],
   )
   const subagentToolCallsProp = subagentToolCalls && subagentToolCalls.size > 0 ? subagentToolCalls : undefined
 

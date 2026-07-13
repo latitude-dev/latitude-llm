@@ -178,6 +178,7 @@ export {
   type ToolCallResult,
 } from "./components/genai-conversation/part.tsx"
 export { CollapsibleBlock } from "./components/genai-conversation/parts/collapsible-block.tsx"
+export { SubagentCard, type SubagentCardProps } from "./components/genai-conversation/parts/subagent-card.tsx"
 export {
   type FirstMatchHint,
   type HighlightRange,

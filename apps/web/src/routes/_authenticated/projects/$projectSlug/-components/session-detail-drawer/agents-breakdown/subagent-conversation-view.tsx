@@ -6,6 +6,7 @@ import { useSpanConversationMessages } from "../../../../../../../domains/traces
 import { AgentBreadcrumb } from "./agent-breadcrumb.tsx"
 import { buildSubagentToolCalls } from "./agent-decorations.ts"
 import { useAgentGraph } from "./use-agent-graph.ts"
+import { useSubagentPreviews } from "./use-subagent-previews.ts"
 
 /**
  * Renders one selected subagent's conversation in place of the main one. Owns
@@ -37,9 +38,10 @@ export function SubagentConversationView({
     enabled: node?.kind === "subagent",
   })
 
+  const subagentPreviews = useSubagentPreviews({ projectId, graph })
   const subagentToolCalls = useMemo(
-    () => buildSubagentToolCalls({ graph, onOpenConversation: onSelectAgent }),
-    [graph, onSelectAgent],
+    () => buildSubagentToolCalls({ graph, onOpenConversation: onSelectAgent, previews: subagentPreviews }),
+    [graph, onSelectAgent, subagentPreviews],
   )
   const subagentToolCallsProp = subagentToolCalls.size > 0 ? subagentToolCalls : undefined
 

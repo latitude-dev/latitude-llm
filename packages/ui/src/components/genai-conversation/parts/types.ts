@@ -53,10 +53,10 @@ export interface ToolCallResult {
 export interface SubagentToolCallInfo {
   /** The subagent's display label (agent name or tool name). */
   readonly label: string
-  /** The subagent's primary model, when known. */
-  readonly model?: string | undefined
-  /** A compact metrics summary (e.g. "$0.0012 · 3 gen"). */
-  readonly statsLabel: string
+  /** The subagent conversation's first message, as readable text (input peek). */
+  readonly taskPreview?: string | undefined
+  /** The subagent conversation's last message, as readable text (output peek). */
+  readonly resultPreview?: string | undefined
   /** Opens the subagent's conversation in place. Absent renders no button. */
   readonly onOpenConversation?: (() => void) | undefined
 }

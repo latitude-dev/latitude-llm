@@ -11,6 +11,7 @@ import { FileCard } from "./parts/file-card.tsx"
 import { formatJson, getKnownField, renderMediaByModality } from "./parts/helpers.tsx"
 import { isLexicalSearchHighlight } from "./parts/highlight-segments.ts"
 import { MarkdownContent } from "./parts/lazy-markdown-content.tsx"
+import { SubagentCard } from "./parts/subagent-card.tsx"
 import { ToolCallBlock } from "./parts/tool-call-block.tsx"
 import type {
   BlobPart,
@@ -171,6 +172,22 @@ export function Part({
       // `resultMap`); the container marker is anchored here so the decoration
       // lands on the part the user actually sees. `key` flip re-evaluates
       // `defaultOpen` when first-match status changes between searches.
+      if (subagent) {
+        const hasError = toolCallFailed || toolResult?.isError === true
+        return (
+          <SearchHitDecoration hasHit={partHasLexicalHit}>
+            <SubagentCard
+              label={subagent.label}
+              hasError={hasError}
+              taskPreview={subagent.taskPreview ?? formatJson(p.arguments)}
+              resultPreview={subagent.resultPreview ?? (toolResult ? formatJson(toolResult.response) : undefined)}
+              toolCallId={p.id}
+              onOpenConversation={subagent.onOpenConversation}
+              onNavigateToSpan={onNavigateToSpan}
+            />
+          </SearchHitDecoration>
+        )
+      }
       return (
         <SearchHitDecoration hasHit={partHasLexicalHit}>
           <ToolCallBlock
@@ -180,7 +197,6 @@ export function Part({
             failed={toolCallFailed}
             {...(toolResult ? { result: toolResult } : {})}
             {...(onNavigateToSpan ? { onNavigateToSpan } : {})}
-            {...(subagent ? { subagent } : {})}
           />
         </SearchHitDecoration>
       )

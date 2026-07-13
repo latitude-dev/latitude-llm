@@ -1,7 +1,6 @@
 import type { AgentGraph, AgentNode } from "@domain/spans"
 import type { SubagentToolCallInfo } from "@repo/ui"
-import { formatCount } from "@repo/utils"
-import { formatAgentCost } from "./agent-breakdown-helpers.ts"
+import type { SubagentPreview } from "./use-subagent-previews.ts"
 
 /**
  * Decorates the conversation tool calls that spawned a subagent, keyed by the
@@ -16,17 +15,20 @@ import { formatAgentCost } from "./agent-breakdown-helpers.ts"
 export function buildSubagentToolCalls({
   graph,
   onOpenConversation,
+  previews,
 }: {
   readonly graph: AgentGraph
   readonly onOpenConversation?: ((node: AgentNode) => void) | undefined
+  readonly previews?: ReadonlyMap<string, SubagentPreview> | undefined
 }): Map<string, SubagentToolCallInfo> {
   const out = new Map<string, SubagentToolCallInfo>()
   for (const node of graph.nodeByToolCallId.values()) {
     if (node.kind !== "subagent" || node.trigger.type !== "tool" || !node.trigger.toolCallId) continue
+    const preview = previews?.get(node.trigger.toolCallId)
     out.set(node.trigger.toolCallId, {
       label: node.label,
-      model: node.models[0],
-      statsLabel: `${formatAgentCost(node.total.costMicrocents)} · ${formatCount(node.ownGenerationCount)} gen`,
+      ...(preview?.taskPreview ? { taskPreview: preview.taskPreview } : {}),
+      ...(preview?.resultPreview ? { resultPreview: preview.resultPreview } : {}),
       ...(onOpenConversation ? { onOpenConversation: () => onOpenConversation(node) } : {}),
     })
   }
