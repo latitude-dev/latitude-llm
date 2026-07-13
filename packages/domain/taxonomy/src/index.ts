@@ -8,6 +8,7 @@ export {
   CUSTOM_BEHAVIOR_LOOKBACK_DAYS,
   CUSTOM_BEHAVIOR_NAME_MAX_LENGTH,
   CUSTOM_BEHAVIOR_STATUSES,
+  MAX_CUSTOM_BEHAVIORS_PER_PROJECT,
   TAXONOMY_ASSIGN_ABSOLUTE_THRESHOLD,
   TAXONOMY_ASSIGN_RELATIVE_MARGIN,
   TAXONOMY_ASSIGN_TEMPERATURE,
@@ -95,6 +96,9 @@ export {
   taxonomyProjectionMethodSchema,
 } from "./entities/observation.ts"
 export {
+  CustomBehaviorFilterInvalidError,
+  CustomBehaviorLimitReachedError,
+  CustomBehaviorNameInvalidError,
   TaxonomyClusterLockUnavailableError,
   TaxonomyClusterNotFoundError,
   TaxonomyQualityGateError,
@@ -208,16 +212,19 @@ export {
   planHierarchicalTaxonomyUseCase,
   type TaxonomyClusterBuilder,
 } from "./use-cases/build-hierarchical-taxonomy.ts"
+export { type CreateCustomBehaviorInput, createCustomBehavior } from "./use-cases/create-custom-behavior.ts"
 export {
   type ClusterAssignmentDecision,
   decideClusterAssignment,
 } from "./use-cases/decide-cluster-assignment.ts"
+export { deleteCustomBehavior } from "./use-cases/delete-custom-behavior.ts"
 export { type EmitLineageInput, emitLineageUseCase } from "./use-cases/emit-lineage.ts"
 export {
   type GetClusterSessionIntelligenceInput,
   type GetClusterSessionIntelligenceResult,
   getClusterSessionIntelligenceUseCase,
 } from "./use-cases/get-cluster-session-intelligence.ts"
+export { getCustomBehavior } from "./use-cases/get-custom-behavior.ts"
 export {
   type GetClusterDetailsInput,
   type GetClusterDetailsResult,
@@ -232,6 +239,7 @@ export {
   listClustersUseCase,
   type TaxonomyClusterPage,
 } from "./use-cases/list-clusters.ts"
+export { listCustomBehaviors } from "./use-cases/list-custom-behaviors.ts"
 export {
   type ListObservationsInClusterResult,
   type ListTaxonomyObservationsInClusterInput,
@@ -265,3 +273,4 @@ export {
   taxonomyGardenProjectDedupeKey,
   triggerProjectGardeningUseCase,
 } from "./use-cases/trigger-project-gardening.ts"
+export { type UpdateCustomBehaviorInput, updateCustomBehavior } from "./use-cases/update-custom-behavior.ts"
