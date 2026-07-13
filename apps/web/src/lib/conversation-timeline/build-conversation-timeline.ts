@@ -42,6 +42,16 @@ export interface TimelineMomentInput {
   readonly confidence: number | null
 }
 
+export interface TimelineSubagentInput {
+  readonly traceId: string
+  readonly spanId: string
+  readonly label: string
+  /** The spawning tool call, when the trigger is a tool call — anchors the marker to the tool call in the conversation. */
+  readonly toolName: string | null
+  readonly toolCallId: string | null
+  readonly startMs: number
+}
+
 export type TimelineMessageSchedule =
   | { readonly kind: "instant"; readonly atMs: number }
   | {
@@ -99,6 +109,15 @@ export type TimelineMarker =
       readonly summary: string
       readonly confidence: number | null
     }
+  | {
+      readonly kind: "subagentSpawned"
+      readonly atMs: number
+      readonly traceId: string
+      readonly spanId: string
+      readonly label: string
+      readonly toolName: string | null
+      readonly toolCallId: string | null
+    }
 
 export interface ConversationTimeline {
   readonly messages: readonly GenAIMessage[]
@@ -120,6 +139,7 @@ export interface BuildConversationTimelineInput {
   readonly traces: readonly TimelineTraceInput[]
   readonly annotations: readonly TimelineAnnotationInput[]
   readonly moments: readonly TimelineMomentInput[]
+  readonly subagents: readonly TimelineSubagentInput[]
 }
 
 /** Flatten a `{ traceId, spanId }`-valued span map to a bare span-id map (timelines are trace-local). */
@@ -427,6 +447,17 @@ export function buildConversationTimeline(input: BuildConversationTimelineInput)
       label: moment.kind,
       summary: moment.summary,
       confidence: moment.confidence,
+    })
+  }
+  for (const subagent of input.subagents) {
+    markers.push({
+      kind: "subagentSpawned",
+      atMs: clamp(subagent.startMs),
+      traceId: subagent.traceId,
+      spanId: subagent.spanId,
+      label: subagent.label,
+      toolName: subagent.toolName,
+      toolCallId: subagent.toolCallId,
     })
   }
   markers.sort((a, b) => a.atMs - b.atMs)

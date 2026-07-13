@@ -49,7 +49,6 @@ import { TimelineBar } from "../../conversation-timeline/timeline-bar.tsx"
 import { useViewportBand } from "../../conversation-timeline/use-viewport-band.ts"
 import { buildSubagentToolCalls } from "../../session-detail-drawer/agents-breakdown/agent-decorations.ts"
 import { SubagentConversationView } from "../../session-detail-drawer/agents-breakdown/subagent-conversation-view.tsx"
-import { SubagentFooterNav } from "../../session-detail-drawer/agents-breakdown/subagent-footer-nav.tsx"
 import { useAgentGraph } from "../../session-detail-drawer/agents-breakdown/use-agent-graph.ts"
 import {
   computeLoadedConversationHighlights,
@@ -325,6 +324,18 @@ function ConversationContent({
           const index =
             marker.firstMessageIndex ?? messageIndexAtTime(timeline, wallToTimeline(timeline.scale, marker.atMs))
           scrollToMessageAnchor(index ?? 0)
+          return
+        }
+        case "subagentSpawned": {
+          const el = marker.toolCallId
+            ? container.querySelector<HTMLElement>(`[data-tool-call-id="${marker.toolCallId}"]`)
+            : null
+          if (el) {
+            el.scrollIntoView({ block: "center", behavior: "smooth" })
+            flashElement(el)
+            return
+          }
+          handleTrackClick(wallToTimeline(timeline.scale, marker.atMs))
           return
         }
       }
@@ -680,7 +691,6 @@ function ConversationContent({
           onMarkerClick={handleMarkerClick}
         />
       )}
-      {onSelectAgent && <SubagentFooterNav graph={agentGraph} onSelectAgent={onSelectAgent} />}
     </div>
   )
 }

@@ -1,5 +1,5 @@
 import { cn, LatitudeLogo, Text } from "@repo/ui"
-import { MessageSquareIcon, TagsIcon, ThumbsDownIcon, ThumbsUpIcon, UserIcon, WrenchIcon } from "lucide-react"
+import { BotIcon, MessageSquareIcon, TagsIcon, ThumbsDownIcon, ThumbsUpIcon, UserIcon, WrenchIcon } from "lucide-react"
 import type { ReactNode } from "react"
 import { createPortal } from "react-dom"
 import type { TimelineMarker } from "../../../../../../lib/conversation-timeline/build-conversation-timeline.ts"
@@ -29,6 +29,8 @@ export function markerAriaLabel(marker: TimelineMarker): string {
       return `${marker.label} failed · ${formatDuration(marker.durationMs)}`
     case "moment":
       return marker.summary ? `${marker.label} — ${marker.summary}` : marker.label
+    case "subagentSpawned":
+      return `Subagent: ${marker.label}`
   }
 }
 
@@ -51,6 +53,8 @@ export function markerIcon(marker: TimelineMarker): ReactNode {
       return <WrenchIcon className="h-3.5 w-3.5 text-destructive" />
     case "moment":
       return <TagsIcon className="h-3.5 w-3.5 text-violet-500" />
+    case "subagentSpawned":
+      return <BotIcon className="h-3.5 w-3.5 text-sky-500" />
   }
 }
 
@@ -68,6 +72,8 @@ export function markerChipIcon(marker: TimelineMarker): ReactNode {
       return <WrenchIcon className="h-3 w-3 text-destructive" />
     case "moment":
       return <TagsIcon className="h-3 w-3 text-violet-500" />
+    case "subagentSpawned":
+      return <BotIcon className="h-3 w-3 text-sky-500" />
   }
 }
 
@@ -83,6 +89,8 @@ function eventHeader(marker: TimelineMarker): {
       return { label: "Tool failed", colorClass: "text-destructive", icon: <WrenchIcon className="h-3.5 w-3.5" /> }
     case "moment":
       return { label: "Moment", colorClass: "text-violet-500", icon: <TagsIcon className="h-3.5 w-3.5" /> }
+    case "subagentSpawned":
+      return { label: "Subagent", colorClass: "text-sky-500", icon: <BotIcon className="h-3.5 w-3.5" /> }
     case "annotation":
       if (marker.flaggerSlug)
         return {
@@ -120,6 +128,8 @@ function eventFooterMeta(marker: TimelineMarker): readonly string[] {
       return !marker.flaggerSlug && marker.annotatorName ? [`by ${marker.annotatorName}`] : []
     case "moment":
       return marker.confidence !== null ? [`${Math.round(marker.confidence * 100)}% confidence`] : []
+    case "subagentSpawned":
+      return marker.toolName ? [`via ${marker.toolName}`] : []
   }
 }
 
@@ -172,6 +182,8 @@ function EventDetails({ marker }: { readonly marker: TimelineMarker }) {
           )}
         </>
       )
+    case "subagentSpawned":
+      return <Text.H6 lineClamp={2}>{marker.label}</Text.H6>
   }
 }
 

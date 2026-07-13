@@ -10,7 +10,14 @@ import {
   type ConversationTimeline,
   toSpanIdMap,
 } from "../../../../../../lib/conversation-timeline/build-conversation-timeline.ts"
-import { annotatorNameFor, toTimelineAnnotation, toTimelineSpan, toTimelineTrace } from "./timeline-adapters.ts"
+import { useAgentGraph } from "../session-detail-drawer/agents-breakdown/use-agent-graph.ts"
+import {
+  annotatorNameFor,
+  toTimelineAnnotation,
+  toTimelineSpan,
+  toTimelineSubagents,
+  toTimelineTrace,
+} from "./timeline-adapters.ts"
 
 export function useTraceTimeline({
   projectId,
@@ -46,6 +53,7 @@ export function useTraceTimeline({
     enabled: annotationsEnabled,
   })
   const memberByUserId = useProjectMemberByUserIdMap()
+  const agentGraph = useAgentGraph(spans)
 
   return useMemo(() => {
     if (!traceDetail || !spanMaps || conversation.messages.length === 0) return null
@@ -59,6 +67,7 @@ export function useTraceTimeline({
         toTimelineAnnotation(a, annotatorNameFor(a, memberByUserId)),
       ),
       moments: [],
+      subagents: toTimelineSubagents(agentGraph),
     })
-  }, [traceDetail, traceRecord, spans, spanMaps, annotationsData, memberByUserId, conversation.messages])
+  }, [traceDetail, traceRecord, spans, spanMaps, annotationsData, memberByUserId, agentGraph, conversation.messages])
 }
