@@ -139,6 +139,7 @@ export const invite = createServerFn({ method: "POST" })
   .inputValidator(
     z.object({
       email: z.email(),
+      role: z.enum(["admin", "member"]),
     }),
   )
   .handler(async ({ data }): Promise<{ invitationId: string }> => {
@@ -156,6 +157,7 @@ export const invite = createServerFn({ method: "POST" })
         return yield* inviteMemberUseCase({
           organizationId,
           email: data.email,
+          role: data.role,
           inviterUserId: UserId(userId),
           inviterName,
           webUrl,

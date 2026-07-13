@@ -60,9 +60,9 @@ export const useMembersCollection = () => {
  * Invite is not a collection mutation, so it must not use `createOptimisticAction` with an empty
  * `onMutate`: TanStack DB skips `mutationFn` when the transaction has zero pending mutations.
  */
-export async function inviteMemberMutation(email: string): Promise<void> {
+export async function inviteMemberMutation(email: string, role: "admin" | "member"): Promise<void> {
   await invite({
-    data: { email },
+    data: { email, role },
   })
   await queryClient.invalidateQueries({ queryKey: MEMBERS_QUERY_KEY })
 }
