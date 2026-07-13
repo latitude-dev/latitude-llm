@@ -1,4 +1,4 @@
-import type { GenAIPart } from "rosetta-ai"
+import type { GenAIMessage, GenAIPart } from "rosetta-ai"
 import { describe, expect, it } from "vitest"
 import { formatGenAIConversation, formatGenAIMessage, formatGenAIPart } from "./formatAi.ts"
 
@@ -51,6 +51,14 @@ describe("formatGenAIMessage", () => {
         ],
       }),
     ).toBe("a\nb")
+  })
+
+  it("returns an empty string when parts is missing", () => {
+    expect(formatGenAIMessage({ role: "user" } as GenAIMessage)).toBe("")
+  })
+
+  it("returns an empty string when parts is not an array", () => {
+    expect(formatGenAIMessage({ role: "user", parts: null } as unknown as GenAIMessage)).toBe("")
   })
 })
 
