@@ -6,8 +6,8 @@ import { describe, expect, it } from "vitest"
 import { z } from "zod"
 import { FLAGGER_DEFAULT_CLASSIFIER_MODEL } from "../../constants.ts"
 
-const REGRESSION_DATASET_PROJECT_SLUG = "latitude"
-const MALFORMED_JSON_OUTPUT_REGRESSION_DATASET_SLUG = "malformed-json-output-regression-test"
+const REGRESSION_DATASET_PROJECT_SLUG = "latitude-flaggers"
+const MALFORMED_JSON_OUTPUT_REGRESSION_DATASET_SLUG = "malformed-structured-output"
 const REGRESSION_DATASET_PAGE_SIZE = 200
 
 const OLD_MESSAGE_INDEX_CONTRACT =
@@ -160,8 +160,12 @@ function identifyFlaggerSlug(systemPrompt: string): string | undefined {
   const directCategory = /matches the ([A-Za-z-]+) issue category\b/.exec(systemPrompt)?.[1]
   if (directCategory) return categoryToFlaggerSlug[directCategory.toLowerCase()]
 
+  const annotationQueueCategory = /belongs in the ([A-Za-z-]+) annotation queue\b/.exec(systemPrompt)?.[1]
+  if (annotationQueueCategory) return categoryToFlaggerSlug[annotationQueueCategory.toLowerCase()]
+
   for (const [category, slug] of Object.entries(categoryToFlaggerSlug)) {
     if (systemPrompt.toLowerCase().includes(`${category} issue category`)) return slug
+    if (systemPrompt.toLowerCase().includes(`${category} annotation queue`)) return slug
   }
 
   return undefined
