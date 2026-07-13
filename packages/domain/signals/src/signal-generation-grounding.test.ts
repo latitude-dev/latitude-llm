@@ -61,6 +61,7 @@ const traceDetail: TraceDetail = {
   models: ["gpt-4o-mini"],
   providers: ["openai"],
   serviceNames: ["web"],
+  agentNames: [],
   rootSpanId: SpanId("r".repeat(16)),
   rootSpanName: "root",
   systemInstructions: [],

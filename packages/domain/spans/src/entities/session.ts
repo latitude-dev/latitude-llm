@@ -58,6 +58,7 @@ export const sessionSchema = z.object({
   models: z.array(z.string()).readonly(),
   providers: z.array(z.string()).readonly(),
   serviceNames: z.array(z.string()).readonly(),
+  agentNames: z.array(z.string()).readonly(),
 
   rootSpanId: z.union([z.literal(""), spanIdSchema]), // root of the session's first trace, empty string when no root span has been ingested
   rootSpanName: z.string(),

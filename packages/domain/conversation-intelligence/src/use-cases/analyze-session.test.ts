@@ -89,6 +89,7 @@ const makeSession = (overrides: Partial<SessionDetail> = {}): SessionDetail => (
   models: ["gpt"],
   providers: ["openai"],
   serviceNames: ["chat-api"],
+  agentNames: [],
   rootSpanId: SpanId("s".repeat(16)),
   rootSpanName: "chat",
   systemInstructions: { role: "system", parts: [] } as never,

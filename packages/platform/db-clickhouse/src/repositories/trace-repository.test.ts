@@ -85,6 +85,7 @@ function makeSpanRow({
     operation: "chat",
     provider: "",
     model: "",
+    agent_name: "",
     response_model: "",
     tokens_input: tokensInput,
     tokens_output: tokensOutput,

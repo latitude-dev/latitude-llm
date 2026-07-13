@@ -29,6 +29,7 @@ export type SpanRow = {
   operation: string
   provider: string
   model: string
+  agent_name: string
   response_model: string
   tokens_input: number
   tokens_output: number
@@ -259,6 +260,7 @@ function makeBaseSpan(base: SpanBase): SpanRow {
     operation: "unspecified",
     provider: "",
     model: "",
+    agent_name: "",
     response_model: "",
     tokens_input: 0,
     tokens_output: 0,

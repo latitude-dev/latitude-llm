@@ -69,7 +69,7 @@ const LIST_COLUMNS_LEAN = `
   name, service_name, kind, status_code, status_message,
   trace_flags, trace_state, error_type, tags, metadata,
   events_json, links_json,
-  operation, provider, model, response_model,
+  operation, provider, model, agent_name, response_model,
   tool_name, tool_names, tool_call_id,
   tokens_input, tokens_output, tokens_cache_read,
   tokens_cache_create, tokens_reasoning,
@@ -148,6 +148,7 @@ type SpanListRow = {
   operation: string
   provider: string
   model: string
+  agent_name: string
   response_model: string
   tool_name: string
   tool_names: string[]
@@ -232,6 +233,7 @@ const toBaseFields = (row: SpanListRow) => ({
   operation: row.operation,
   provider: row.provider,
   model: row.model,
+  agentName: normalizeCHString(row.agent_name),
   responseModel: row.response_model,
   toolName: normalizeCHString(row.tool_name),
   toolNames: row.tool_names.map(normalizeCHString),
@@ -370,6 +372,7 @@ const toInsertRow = (span: SpanDetail) => ({
   operation: span.operation,
   provider: span.provider,
   model: span.model,
+  agent_name: span.agentName,
   response_model: span.responseModel,
   tokens_input: span.tokensInput,
   tokens_output: span.tokensOutput,
