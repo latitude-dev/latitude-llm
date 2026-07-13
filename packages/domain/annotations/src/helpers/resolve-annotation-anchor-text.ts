@@ -2,9 +2,9 @@ import type { AnnotationAnchor } from "@domain/scores"
 import { formatPartText } from "@repo/utils"
 import type { GenAIMessage } from "rosetta-ai"
 
-function joinTextParts(parts: GenAIMessage["parts"]): string {
+function joinTextParts(parts: GenAIMessage["parts"] | undefined): string {
   let out = ""
-  for (const part of parts) {
+  for (const part of parts ?? []) {
     if (part.type === "text" && typeof part.content === "string") {
       out += part.content
     }
@@ -39,7 +39,7 @@ export function resolveAnnotationAnchorText(
 
   let text: string
   if (anchor.partIndex !== undefined) {
-    const part = message.parts[anchor.partIndex]
+    const part = message.parts?.[anchor.partIndex]
     if (!part) {
       return undefined
     }

@@ -303,4 +303,10 @@ describe("formatGenAIMessagesForEnrichmentPrompt", () => {
     expect(out).toContain("[message 1] role=assistant")
     expect(out).toContain("\n\n---\n\n")
   })
+
+  it("does not crash on a message missing parts (malformed ClickHouse payload)", () => {
+    const out = formatGenAIMessagesForEnrichmentPrompt([{ role: "system" } as GenAIMessage])
+    expect(out).toContain("[message 0] role=system")
+    expect(out).toContain("<no plain text in this message>")
+  })
 })
