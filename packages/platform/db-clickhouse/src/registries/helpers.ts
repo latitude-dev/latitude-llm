@@ -1,15 +1,17 @@
 import type { FilterCondition } from "@domain/shared"
 
 /**
- * ClickHouse `DateTime64(9, 'UTC')` bound parameters reject typical JS `toISOString()` output with a
- * trailing `Z` (BAD_QUERY_PARAMETER: parsed incompletely — the `Z` is an extra byte). Normalize to
- * `YYYY-MM-DD HH:MM:SS.sss...` without a timezone suffix so parameterized queries bind correctly.
+ * ClickHouse `DateTime64(9, 'UTC')` bound parameters reject any timezone suffix — a trailing `Z` as
+ * produced by JS `toISOString()`, or a `+00:00` / `-05:00` offset as produced by Postgres and other
+ * sources — with BAD_QUERY_PARAMETER: parsed incompletely, the suffix is an extra byte. Normalize to
+ * `YYYY-MM-DD HH:MM:SS.sss...` without any timezone suffix so parameterized queries bind correctly.
  */
+const TIMEZONE_SUFFIX_PATTERN = /(?:Z|[+-]\d{2}:?\d{2})$/
+
 export function mapDateTime64UtcQueryParam(value: FilterCondition["value"]): FilterCondition["value"] {
   if (typeof value !== "string") return value
   const t = value.trim()
-  const withoutZ = t.endsWith("Z") ? t.slice(0, -1) : t
-  return withoutZ.replace("T", " ")
+  return t.replace(TIMEZONE_SUFFIX_PATTERN, "").replace("T", " ")
 }
 
 type StatusEnum = "ok" | "error" | "unset"
