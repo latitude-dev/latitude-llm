@@ -23,10 +23,11 @@ const formatPlainRange = (start: Date, end: Date): string =>
   `${PLAIN_RANGE_FMT.format(start)} – ${PLAIN_RANGE_FMT.format(end)}`
 
 /**
- * Dispatch by `(type, reportVersion)` → versioned React template. Today
- * the only entry is `claude_code: { 1: ClaudeCodeWrappedEmailV1 }`. When a
- * second Wrapped type lands, add a sibling entry; when V2 of an existing
- * type ships, freeze the V1 component and add V2 alongside.
+ * Dispatch by `(type, reportVersion)` → versioned React template. When a new
+ * Wrapped type lands, add a sibling entry; when a new version of an existing
+ * type ships, freeze the prior component and add the new one alongside. Every
+ * component takes the same runtime props, so `renderWrappedHtml` renders the
+ * resolved entry directly without a per-version branch.
  */
 const TEMPLATE_BY_TYPE_VERSION = {
   claude_code: {
@@ -61,30 +62,12 @@ const renderWrappedHtml = async (input: RenderInput): Promise<RenderedEmail> => 
   const templatesForType = TEMPLATE_BY_TYPE_VERSION[input.type] ?? TEMPLATE_BY_TYPE_VERSION.claude_code
   const resolvedVersion: ReportVersion =
     input.reportVersion in templatesForType ? input.reportVersion : CURRENT_REPORT_VERSION
+  // Every version's component takes the same runtime props (`report: Report`);
+  // the registry casts each to V1's signature, so one call covers all versions.
   const Template = templatesForType[resolvedVersion]
-  const emailJsx =
-    resolvedVersion === 3 ? (
-      <ClaudeCodeWrappedEmailV3
-        userName={input.userName}
-        report={input.report}
-        webAppUrl={input.webAppUrl}
-        reportId={reportIdBranded}
-      />
-    ) : resolvedVersion === 2 ? (
-      <ClaudeCodeWrappedEmailV2
-        userName={input.userName}
-        report={input.report}
-        webAppUrl={input.webAppUrl}
-        reportId={reportIdBranded}
-      />
-    ) : (
-      <Template
-        userName={input.userName}
-        report={input.report}
-        webAppUrl={input.webAppUrl}
-        reportId={reportIdBranded}
-      />
-    )
+  const emailJsx = (
+    <Template userName={input.userName} report={input.report} webAppUrl={input.webAppUrl} reportId={reportIdBranded} />
+  )
   // V3+ carries a public skills summary; earlier versions don't.
   const skillsLine =
     "skills" in input.report && input.report.skills.totalUses > 0
