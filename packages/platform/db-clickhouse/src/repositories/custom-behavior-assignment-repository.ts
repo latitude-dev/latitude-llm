@@ -14,10 +14,14 @@ import {
   CustomBehaviorAssignmentRepository,
   customBehaviorAssignmentSchema,
 } from "@domain/taxonomy"
+import { formatCHDate, parseCHDate } from "@repo/utils"
 import { Effect, Layer } from "effect"
-
-const toClickhouseDateTime = (date: Date): string => date.toISOString().replace("Z", "")
-const parseClickhouseDate = (value: string): Date => new Date(`${value.replace(" ", "T")}Z`)
+import {
+  type TaxonomyObservationRow,
+  selectColumns as taxonomyObservationSelectColumns,
+  toDomainObservation,
+  validObservationIdClause,
+} from "./taxonomy-observation-repository.ts"
 
 type CustomBehaviorAssignmentRow = {
   readonly organization_id: string
@@ -59,9 +63,9 @@ const toInsertRow = (assignment: CustomBehaviorAssignment) => ({
   assignment_confidence: assignment.assignmentConfidence,
   assignment_method: assignment.assignmentMethod,
   reassignment_run_id: assignment.reassignmentRunId ?? "",
-  start_time: toClickhouseDateTime(assignment.startTime),
+  start_time: formatCHDate(assignment.startTime),
   retention_days: assignment.retentionDays,
-  indexed_at: toClickhouseDateTime(assignment.indexedAt),
+  indexed_at: formatCHDate(assignment.indexedAt),
 })
 
 const toDomain = (row: CustomBehaviorAssignmentRow): CustomBehaviorAssignment =>
@@ -75,9 +79,9 @@ const toDomain = (row: CustomBehaviorAssignmentRow): CustomBehaviorAssignment =>
     assignmentConfidence: row.assignment_confidence,
     assignmentMethod: row.assignment_method,
     reassignmentRunId: row.reassignment_run_id === "" ? null : TaxonomyRunId(row.reassignment_run_id),
-    startTime: parseClickhouseDate(row.start_time),
+    startTime: parseCHDate(row.start_time),
     retentionDays: row.retention_days,
-    indexedAt: parseClickhouseDate(row.indexed_at),
+    indexedAt: parseCHDate(row.indexed_at),
   })
 
 export const CustomBehaviorAssignmentRepositoryLive = Layer.effect(
@@ -155,6 +159,49 @@ export const CustomBehaviorAssignmentRepositoryLive = Layer.effect(
             .pipe(
               Effect.mapError((error) =>
                 toRepositoryError(error, "CustomBehaviorAssignmentRepository.getClusterAssignmentCounts"),
+              ),
+            )
+        }),
+
+      // Resolve a scoped cluster's members back to the global taxonomy_observations
+      // rows for the embeddings + summaries the naming step needs. Read-only on the
+      // global table.
+      listClusterMemberObservations: ({ organizationId, projectId, customBehaviorId, clusterId, limit }) =>
+        Effect.gen(function* () {
+          const chSqlClient = (yield* ChSqlClient) as ChSqlClientShape<ClickHouseClient>
+          return yield* chSqlClient
+            .query(async (client) => {
+              const result = await client.query({
+                query: `SELECT ${taxonomyObservationSelectColumns}
+                        FROM taxonomy_observations FINAL
+                        WHERE organization_id = {organizationId:String}
+                          AND project_id = {projectId:String}
+                          AND ${validObservationIdClause}
+                          AND observation_id IN (
+                            SELECT observation_id
+                            FROM custom_behavior_assignments FINAL
+                            WHERE organization_id = {organizationId:String}
+                              AND project_id = {projectId:String}
+                              AND custom_behavior_id = {customBehaviorId:String}
+                              AND assigned_cluster_id = {clusterId:String}
+                          )
+                        ORDER BY start_time DESC, observation_id ASC
+                        LIMIT {limit:UInt32}`,
+                query_params: {
+                  organizationId: organizationId as string,
+                  projectId: projectId as string,
+                  customBehaviorId: customBehaviorId as string,
+                  clusterId: clusterId as string,
+                  limit,
+                },
+                format: "JSONEachRow",
+              })
+              const rows = await result.json<TaxonomyObservationRow>()
+              return rows.map(toDomainObservation)
+            })
+            .pipe(
+              Effect.mapError((error) =>
+                toRepositoryError(error, "CustomBehaviorAssignmentRepository.listClusterMemberObservations"),
               ),
             )
         }),

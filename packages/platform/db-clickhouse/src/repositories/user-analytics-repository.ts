@@ -17,10 +17,8 @@ import type {
   UserUsageDimension,
 } from "@domain/spans"
 import { UserAnalyticsRepository } from "@domain/spans"
-import { normalizeCHString, parseCHDate } from "@repo/utils"
+import { formatCHDate, normalizeCHString, parseCHDate } from "@repo/utils"
 import { Effect, Layer } from "effect"
-
-const toClickhouseDateTime = (date: Date): string => date.toISOString().replace("Z", "")
 
 /**
  * Per-trace rollup the user aggregates are computed over. The `traces` MV
@@ -129,11 +127,11 @@ function buildUserScopeClauses(input: {
   const params: Record<string, unknown> = {}
   if (input.timeRange?.from) {
     clauses.push("AND start_time >= {fromTime:DateTime64(9, 'UTC')}")
-    params.fromTime = toClickhouseDateTime(input.timeRange.from)
+    params.fromTime = formatCHDate(input.timeRange.from)
   }
   if (input.timeRange?.to) {
     clauses.push("AND start_time < {toTime:DateTime64(9, 'UTC')}")
-    params.toTime = toClickhouseDateTime(input.timeRange.to)
+    params.toTime = formatCHDate(input.timeRange.to)
   }
   let having = ""
   if (input.searchQuery) {
@@ -270,8 +268,8 @@ export const UserAnalyticsRepositoryLive = Layer.effect(
                 projectId: projectId as string,
                 userIds: userIds as readonly string[],
                 bucketSeconds: Math.floor(bucketSeconds),
-                fromTime: toClickhouseDateTime(timeRange.from),
-                toTime: toClickhouseDateTime(timeRange.to),
+                fromTime: formatCHDate(timeRange.from),
+                toTime: formatCHDate(timeRange.to),
               },
               format: "JSONEachRow",
             })
@@ -309,8 +307,8 @@ export const UserAnalyticsRepositoryLive = Layer.effect(
         const params = {
           organizationId: organizationId as string,
           projectId: projectId as string,
-          fromTime: toClickhouseDateTime(timeRange.from),
-          toTime: toClickhouseDateTime(timeRange.to),
+          fromTime: formatCHDate(timeRange.from),
+          toTime: formatCHDate(timeRange.to),
         }
 
         const [summaryRows, newUserRows, histogramRows] = yield* Effect.all(

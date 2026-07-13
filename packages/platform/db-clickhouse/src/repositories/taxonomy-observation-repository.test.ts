@@ -15,6 +15,7 @@ import {
 import { setupTestClickHouse } from "@platform/testkit"
 import { Effect } from "effect"
 import { describe, expect, it } from "vitest"
+import type { SpanRow } from "../seeds/spans/span-builders.ts"
 import { withClickHouse } from "../with-clickhouse.ts"
 import { TaxonomyObservationRepositoryLive } from "./taxonomy-observation-repository.ts"
 
@@ -337,5 +338,141 @@ describe("TaxonomyObservationRepositoryLive", () => {
     expect(sample).toHaveLength(2)
     const days = new Set(sample.map((observation) => observation.startTime.toISOString().slice(0, 10)))
     expect(days).toEqual(new Set(["2026-05-20", "2026-05-23"]))
+  })
+})
+
+const makeLlmSpanRow = (overrides: {
+  readonly projectId: ProjectId
+  readonly sessionId: string
+  readonly model: string
+  readonly startTime: Date
+  readonly traceId: string
+  readonly spanId: string
+}): SpanRow => ({
+  organization_id: organizationId as string,
+  project_id: overrides.projectId as string,
+  session_id: overrides.sessionId,
+  user_id: "",
+  trace_id: overrides.traceId,
+  span_id: overrides.spanId,
+  parent_span_id: "",
+  api_key_id: "test-api-key",
+  simulation_id: "",
+  start_time: toClickHouseDateTime(overrides.startTime),
+  end_time: toClickHouseDateTime(new Date(overrides.startTime.getTime() + 1_000)),
+  name: `chat ${overrides.model}`,
+  service_name: "test-service",
+  kind: 0,
+  status_code: 0,
+  status_message: "",
+  error_type: "",
+  tags: [],
+  metadata: {},
+  operation: "chat",
+  provider: "openai",
+  model: overrides.model,
+  response_model: "",
+  tokens_input: 10,
+  tokens_output: 5,
+  tokens_cache_read: 0,
+  tokens_cache_create: 0,
+  tokens_reasoning: 0,
+  cost_input_microcents: 0,
+  cost_output_microcents: 0,
+  cost_total_microcents: 0,
+  cost_is_estimated: 0,
+  time_to_first_token_ns: 0,
+  is_streaming: 0,
+  response_id: "",
+  finish_reasons: [],
+  input_messages: "",
+  output_messages: "",
+  system_instructions: "",
+  tool_definitions: "",
+  tool_call_id: "",
+  tool_name: "",
+  tool_input: "",
+  tool_output: "",
+  attr_string: {},
+  attr_int: {},
+  attr_float: {},
+  attr_bool: {},
+  resource_string: {},
+  scope_name: "",
+  scope_version: "",
+})
+
+describe("TaxonomyObservationRepositoryLive.listForCustomBehaviorSample", () => {
+  // Regression for the scoped-sampling HAVING bug: a custom behavior filterSet
+  // that compiles to a HAVING predicate (models/tags/cost/…) references rollup
+  // aliases that only exist once LIST_SELECT is projected. Before the fix this
+  // query threw "unknown identifier"; now it must filter to matching sessions.
+  it("restricts the sample to sessions matching a filterSet that compiles to HAVING", async () => {
+    const scopedProjectId = ProjectId("q".repeat(24))
+    const matchSession = "cb-match-session"
+    const otherSession = "cb-other-session"
+    const at = new Date("2026-05-24T12:00:00.000Z")
+
+    await ch.client.insert({
+      table: "spans",
+      values: [
+        makeLlmSpanRow({
+          projectId: scopedProjectId,
+          sessionId: matchSession,
+          model: "gpt-4",
+          startTime: at,
+          traceId: "t1",
+          spanId: "s1",
+        }),
+        makeLlmSpanRow({
+          projectId: scopedProjectId,
+          sessionId: otherSession,
+          model: "claude-3",
+          startTime: at,
+          traceId: "t2",
+          spanId: "s2",
+        }),
+      ],
+      format: "JSONEachRow",
+    })
+    await ch.client.insert({
+      table: "taxonomy_observations",
+      values: [
+        makeObservationRow(
+          makeObservation({
+            observationId: "m".repeat(24),
+            projectId: scopedProjectId,
+            sessionId: SessionId(matchSession),
+            startTime: at,
+          }),
+        ),
+        makeObservationRow(
+          makeObservation({
+            observationId: "n".repeat(24),
+            projectId: scopedProjectId,
+            sessionId: SessionId(otherSession),
+            startTime: at,
+          }),
+        ),
+      ],
+      format: "JSONEachRow",
+    })
+
+    const sample = await runWithRepository(
+      Effect.gen(function* () {
+        const repo = yield* TaxonomyObservationRepository
+        return yield* repo.listForCustomBehaviorSample({
+          organizationId,
+          projectId: scopedProjectId,
+          since: new Date("2026-05-23T00:00:00.000Z"),
+          limit: 10,
+          filterSet: { models: [{ op: "in", value: ["gpt-4"] }] },
+        })
+      }),
+    )
+
+    expect(sample).toHaveLength(1)
+    expect(sample[0]?.observationId).toBe("m".repeat(24))
+    expect(sample[0]?.sessionId).toBe(matchSession)
   })
 })

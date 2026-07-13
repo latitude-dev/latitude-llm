@@ -70,6 +70,22 @@ export {
   syncScoreAnalytics,
 } from "./signal-discovery-activities.ts"
 export {
+  assertGardenCustomBehaviorQualityActivity,
+  buildGardenCustomBehaviorTaxonomyActivity,
+  cleanupGardenCustomBehaviorClustersActivity,
+  completeGardenCustomBehaviorRunActivity,
+  deprecateGardenCustomBehaviorClustersActivity,
+  failGardenCustomBehaviorRunActivity,
+  type GardenCustomBehaviorActivityInput,
+  type GardenCustomBehaviorBuildResult,
+  type GardenCustomBehaviorNamingPlanResult,
+  type GardenCustomBehaviorResult,
+  type GardenCustomBehaviorStepInput,
+  nameGardenCustomBehaviorClusterActivity,
+  planGardenCustomBehaviorNamingActivity,
+  startGardenCustomBehaviorRunActivity,
+} from "./taxonomy-custom-behavior-activities.ts"
+export {
   assertGardenTaxonomyQualityActivity,
   buildHierarchicalGardenTaxonomyActivity,
   completeGardenTaxonomyRunActivity,

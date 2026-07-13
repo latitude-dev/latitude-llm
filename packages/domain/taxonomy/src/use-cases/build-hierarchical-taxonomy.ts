@@ -48,6 +48,7 @@
 
 import { resolveEmbeddingConfig } from "@domain/ai"
 import {
+  type CustomBehaviorId,
   generateId,
   type OrganizationId,
   type ProjectId,
@@ -84,7 +85,7 @@ import {
   normalizeTaxonomyEmbedding,
   updateTaxonomyCentroid,
 } from "../helpers.ts"
-import { matchTaxonomyLineage } from "../lineage.ts"
+import { type LineageDecision, matchTaxonomyLineage } from "../lineage.ts"
 import { TaxonomyClusterRepository } from "../ports/taxonomy-cluster-repository.ts"
 import {
   type ReassignTaxonomyObservationByIdInput,
@@ -139,7 +140,7 @@ export interface PersistHierarchicalTaxonomyPlanInput {
 
 const lookbackStart = (now: Date): Date => new Date(now.getTime() - TAXONOMY_NOISE_LOOKBACK_DAYS * 24 * 60 * 60_000)
 
-const seedFromProjectId = (projectId: string): number => {
+export const seedFromProjectId = (projectId: string): number => {
   let hash = 0
   for (let index = 0; index < projectId.length; index++) {
     hash = (Math.imul(hash, 31) + projectId.charCodeAt(index)) >>> 0
@@ -148,10 +149,12 @@ const seedFromProjectId = (projectId: string): number => {
   return hash === 0 ? 0x9e3779b9 : hash
 }
 
-const buildPersistedCluster = (input: {
+export const buildPersistedCluster = (input: {
   readonly id: string
   readonly organizationId: OrganizationId
   readonly projectId: ProjectId
+  /** NULL = global taxonomy; non-null scopes the row to a custom behavior's sub-tree. */
+  readonly customBehaviorId?: CustomBehaviorId | null
   readonly dimension: TaxonomyDimensionType
   readonly parentId: string | null
   readonly path: string
@@ -196,6 +199,7 @@ const buildPersistedCluster = (input: {
     id: TaxonomyClusterId(input.id),
     organizationId: input.organizationId,
     projectId: input.projectId,
+    customBehaviorId: input.customBehaviorId ?? null,
     dimension: input.dimension,
     parentClusterId: input.parentId === null ? null : TaxonomyClusterId(input.parentId),
     depth: input.depth,
@@ -250,7 +254,7 @@ interface PersistedLeaf {
  * 1:1 assignment), so we collect descriptors first, match, resolve ids, and
  * only then materialize the persisted rows.
  */
-interface NodeDescriptor {
+export interface NodeDescriptor {
   readonly tempId: string
   readonly parentTempId: string | null
   readonly depth: number
@@ -261,7 +265,7 @@ interface NodeDescriptor {
   readonly isLeaf: boolean
 }
 
-const collectNodes = (
+export const collectNodes = (
   node: ClusteringTreeNode,
   parentTempId: string | null,
   counter: { value: number },
@@ -279,6 +283,43 @@ const collectNodes = (
   })
   for (const child of node.children) collectNodes(child, tempId, counter, out)
   return tempId
+}
+
+/**
+ * Match the freshly built nodes 1:1 against the previously-active clusters and
+ * resolve every node's final id: a confident continuation reuses its
+ * predecessor's id (keeping id-keyed trends continuous), everything else gets a
+ * fresh cuid. Shared by the global and custom-behavior builds — the scope of
+ * `previouslyActive` is the only thing that differs, and the caller chooses it.
+ */
+export interface ResolvedTaxonomyLineage {
+  readonly oldById: ReadonlyMap<string, TaxonomyCluster>
+  readonly decisionByTempId: ReadonlyMap<string, LineageDecision>
+  readonly finalIdByTempId: ReadonlyMap<string, string>
+}
+
+export const resolveTaxonomyLineage = (input: {
+  readonly descriptors: readonly NodeDescriptor[]
+  readonly previouslyActive: readonly TaxonomyCluster[]
+}): ResolvedTaxonomyLineage => {
+  const oldById = new Map(input.previouslyActive.map((cluster) => [cluster.id as string, cluster] as const))
+  const match = matchTaxonomyLineage({
+    newNodes: input.descriptors.map((node) => ({ tempId: node.tempId, depth: node.depth, centroid: node.centroid })),
+    oldClusters: input.previouslyActive.map((cluster) => ({
+      id: cluster.id,
+      depth: cluster.depth,
+      centroid: normalizeTaxonomyCentroid(cluster.centroid),
+    })),
+    continuationThreshold: TAXONOMY_CONTINUATION_THRESHOLD,
+    nameReuseThreshold: TAXONOMY_NAME_REUSE_THRESHOLD,
+  })
+  const decisionByTempId = new Map(match.decisions.map((decision) => [decision.tempId, decision] as const))
+  const finalIdByTempId = new Map<string, string>()
+  for (const node of input.descriptors) {
+    const decision = decisionByTempId.get(node.tempId)
+    finalIdByTempId.set(node.tempId, decision?.transition === "continuation" ? decision.reuseId : generateId())
+  }
+  return { oldById, decisionByTempId, finalIdByTempId }
 }
 
 export const planHierarchicalTaxonomyUseCase = (input: PlanHierarchicalTaxonomyInput) =>
@@ -343,23 +384,7 @@ export const planHierarchicalTaxonomyUseCase = (input: PlanHierarchicalTaxonomyI
     collectNodes(tree, null, { value: 0 }, descriptors)
 
     const previouslyActive = yield* clustersRepo.listActiveByProject({ projectId: input.projectId, dimension })
-    const oldById = new Map(previouslyActive.map((cluster) => [cluster.id as string, cluster] as const))
-    const match = matchTaxonomyLineage({
-      newNodes: descriptors.map((node) => ({ tempId: node.tempId, depth: node.depth, centroid: node.centroid })),
-      oldClusters: previouslyActive.map((cluster) => ({
-        id: cluster.id,
-        depth: cluster.depth,
-        centroid: normalizeTaxonomyCentroid(cluster.centroid),
-      })),
-      continuationThreshold: TAXONOMY_CONTINUATION_THRESHOLD,
-      nameReuseThreshold: TAXONOMY_NAME_REUSE_THRESHOLD,
-    })
-    const decisionByTempId = new Map(match.decisions.map((decision) => [decision.tempId, decision] as const))
-    const finalIdByTempId = new Map<string, string>()
-    for (const node of descriptors) {
-      const decision = decisionByTempId.get(node.tempId)
-      finalIdByTempId.set(node.tempId, decision?.transition === "continuation" ? decision.reuseId : generateId())
-    }
+    const { oldById, decisionByTempId, finalIdByTempId } = resolveTaxonomyLineage({ descriptors, previouslyActive })
 
     const orderedDescriptors = [...descriptors].sort((a, b) => a.depth - b.depth)
     const pathByTempId = new Map<string, string>()

@@ -46,6 +46,29 @@ const makeAssignment = (overrides: Partial<CustomBehaviorAssignment> = {}): Cust
   }
 }
 
+const toCh = (date: Date) => date.toISOString().replace("Z", "")
+
+const makeObservationRow = (observationId: string, startTime: Date, summary: string) => ({
+  organization_id: organizationId as string,
+  project_id: projectId as string,
+  observation_id: observationId,
+  session_id: "session-x",
+  analysis_hash: "a".repeat(64),
+  moment_id: "moment-1",
+  projection_method: "moment_text_embedding",
+  projection_hash: "e".repeat(64),
+  projection_metadata: JSON.stringify({ summary }),
+  embedding: [1, 0, 0],
+  assigned_cluster_id: "",
+  assignment_confidence: 0,
+  assignment_method: "noise",
+  reassignment_run_id: "",
+  start_time: toCh(startTime),
+  end_time: toCh(startTime),
+  retention_days: 90,
+  indexed_at: toCh(startTime),
+})
+
 describe("CustomBehaviorAssignmentRepositoryLive", () => {
   it("upserts assignments and lists them by behavior, newest first", async () => {
     const older = makeAssignment({
@@ -139,5 +162,48 @@ describe("CustomBehaviorAssignmentRepositoryLive", () => {
       }),
     )
     expect(listed).toHaveLength(0)
+  })
+
+  it("lists a scoped cluster's member observations by joining back to global taxonomy_observations", async () => {
+    const m1 = "m1".padEnd(24, "0")
+    const m2 = "m2".padEnd(24, "0")
+    const m3 = "m3".padEnd(24, "0")
+    const m4 = "m4".padEnd(24, "0")
+    await ch.client.insert({
+      table: "taxonomy_observations",
+      values: [
+        makeObservationRow(m1, new Date("2026-06-01T10:00:00.000Z"), "user asks about billing"),
+        makeObservationRow(m2, new Date("2026-06-01T11:00:00.000Z"), "user asks about refunds"),
+        makeObservationRow(m3, new Date("2026-06-01T09:00:00.000Z"), "user asks about shipping"),
+        makeObservationRow(m4, new Date("2026-06-01T12:00:00.000Z"), "another behavior's observation"),
+      ],
+      format: "JSONEachRow",
+    })
+
+    const observations = await run(
+      Effect.gen(function* () {
+        const repo = yield* CustomBehaviorAssignmentRepository
+        yield* repo.upsertMany([
+          makeAssignment({ observationId: m1, assignedClusterId: clusterA }),
+          makeAssignment({ observationId: m2, assignedClusterId: clusterA }),
+          makeAssignment({ observationId: m3, assignedClusterId: clusterB }),
+          makeAssignment({ observationId: m4, assignedClusterId: clusterA, customBehaviorId: otherBehaviorId }),
+        ])
+        return yield* repo.listClusterMemberObservations({
+          organizationId,
+          projectId,
+          customBehaviorId,
+          clusterId: clusterA,
+          limit: 100,
+        })
+      }),
+    )
+
+    // Only clusterA members of THIS behavior, newest-first — excludes clusterB (m3)
+    // and the other behavior's clusterA assignment (m4). The joined rows carry the
+    // global observation's embedding + summary the naming step reads.
+    expect(observations.map((o) => o.observationId)).toEqual([m2, m1])
+    expect(observations[0]?.projectionMetadata).toEqual({ summary: "user asks about refunds" })
+    expect(observations[0]?.embedding).toEqual([1, 0, 0])
   })
 })

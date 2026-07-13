@@ -24,12 +24,13 @@ export const createFakeTaxonomyClusterRepository = (
         ids.map((id) => clusters.get(id)).filter((cluster): cluster is TaxonomyCluster => cluster !== undefined),
       ),
 
-    listActiveByProject: ({ projectId, parentClusterId }) =>
+    listActiveByProject: ({ projectId, parentClusterId, customBehaviorId }) =>
       Effect.sync(() =>
         [...clusters.values()].filter(
           (cluster) =>
             cluster.projectId === projectId &&
             cluster.state === "active" &&
+            (cluster.customBehaviorId ?? null) === (customBehaviorId ?? null) &&
             (parentClusterId === undefined || cluster.parentClusterId === parentClusterId),
         ),
       ),
@@ -85,10 +86,15 @@ export const createFakeTaxonomyClusterRepository = (
           })),
       ),
 
-    list: ({ projectId, state, sort, limit, offset }) =>
+    list: ({ projectId, state, sort, limit, offset, customBehaviorId }) =>
       Effect.sync(() => {
         const filtered = [...clusters.values()]
-          .filter((cluster) => cluster.projectId === projectId && (state ? cluster.state === state : true))
+          .filter(
+            (cluster) =>
+              cluster.projectId === projectId &&
+              (cluster.customBehaviorId ?? null) === (customBehaviorId ?? null) &&
+              (state ? cluster.state === state : true),
+          )
           .sort((a, b) => {
             switch (sort ?? "observation_count_desc") {
               case "last_observed_desc":

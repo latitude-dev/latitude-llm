@@ -85,7 +85,8 @@ vi.mock("@platform/ai", async () => {
   }
 })
 
-import { runGardenProjectJob, runGardenSweepJob } from "./taxonomy.ts"
+import { WorkflowAlreadyStartedError } from "@domain/queue"
+import { runGardenCustomBehaviorJob, runGardenProjectJob, runGardenSweepJob } from "./taxonomy.ts"
 
 const pg = setupTestPostgres()
 const ch = setupTestClickHouse()
@@ -94,7 +95,28 @@ const ORGANIZATION_ID = OrganizationId("o".repeat(24))
 const PROJECT_ID = ProjectId("p".repeat(24))
 const PROJECT_ID_2 = ProjectId("q".repeat(24))
 const PROJECT_ID_E2E = ProjectId("r".repeat(24))
+const CUSTOM_BEHAVIOR_ID = "b".repeat(24)
 const START_TIME = new Date("2026-05-24T12:00:00.000Z")
+
+const recordingWorkflowStarter = () => {
+  const started: Array<{ readonly workflow: string; readonly input: unknown; readonly workflowId: string }> = []
+  const starter = {
+    start: (workflow: string, input: unknown, options: { readonly workflowId: string }) => {
+      started.push({ workflow, input, workflowId: options.workflowId })
+      return Effect.void
+    },
+    signalWithStart: () => Effect.void,
+  }
+  return { started, starter }
+}
+
+const runtimeDeps = (workflowStarter?: unknown) =>
+  ({
+    clickhouseClient: null as never,
+    postgresClient: null as never,
+    redisClient: null as never,
+    ...(workflowStarter === undefined ? {} : { workflowStarter: workflowStarter as never }),
+  }) as never
 
 const activeProjectRow = (projectId = PROJECT_ID) => ({ organization_id: ORGANIZATION_ID, project_id: projectId })
 
@@ -385,5 +407,84 @@ describe("taxonomy gardening worker", () => {
         workflowId: `org:${ORGANIZATION_ID}:taxonomy:garden:${PROJECT_ID}`,
       },
     ])
+  })
+
+  it("starts the scoped workflow deduped on the behavior, passing the job reason as trigger", async () => {
+    const { started, starter } = recordingWorkflowStarter()
+
+    await Effect.runPromise(
+      runGardenCustomBehaviorJob(
+        {
+          organizationId: ORGANIZATION_ID,
+          projectId: PROJECT_ID,
+          customBehaviorId: CUSTOM_BEHAVIOR_ID,
+          reason: "cron",
+        },
+        runtimeDeps(starter),
+      ),
+    )
+
+    expect(started).toEqual([
+      {
+        workflow: "gardenCustomBehaviorWorkflow",
+        input: {
+          organizationId: ORGANIZATION_ID,
+          projectId: PROJECT_ID,
+          customBehaviorId: CUSTOM_BEHAVIOR_ID,
+          trigger: "cron",
+        },
+        workflowId: `org:${ORGANIZATION_ID}:taxonomy:gardenCustomBehavior:${CUSTOM_BEHAVIOR_ID}`,
+      },
+    ])
+  })
+
+  it("defaults the trigger to manual when the job carries no reason", async () => {
+    const { started, starter } = recordingWorkflowStarter()
+
+    await Effect.runPromise(
+      runGardenCustomBehaviorJob(
+        { organizationId: ORGANIZATION_ID, projectId: PROJECT_ID, customBehaviorId: CUSTOM_BEHAVIOR_ID },
+        runtimeDeps(starter),
+      ),
+    )
+
+    expect((started[0]?.input as { trigger: string }).trigger).toBe("manual")
+  })
+
+  it("collapses WorkflowAlreadyStartedError into a no-op instead of rethrowing", async () => {
+    let calls = 0
+    const starter = {
+      start: () => {
+        calls += 1
+        return Effect.fail(
+          new WorkflowAlreadyStartedError({
+            workflowId: `org:${ORGANIZATION_ID}:taxonomy:gardenCustomBehavior:${CUSTOM_BEHAVIOR_ID}`,
+            workflow: "gardenCustomBehaviorWorkflow",
+          }),
+        )
+      },
+      signalWithStart: () => Effect.void,
+    }
+
+    await expect(
+      Effect.runPromise(
+        runGardenCustomBehaviorJob(
+          { organizationId: ORGANIZATION_ID, projectId: PROJECT_ID, customBehaviorId: CUSTOM_BEHAVIOR_ID },
+          runtimeDeps(starter),
+        ),
+      ),
+    ).resolves.toBeUndefined()
+    expect(calls).toBe(1)
+  })
+
+  it("skips without throwing when no workflow starter is configured", async () => {
+    await expect(
+      Effect.runPromise(
+        runGardenCustomBehaviorJob(
+          { organizationId: ORGANIZATION_ID, projectId: PROJECT_ID, customBehaviorId: CUSTOM_BEHAVIOR_ID },
+          runtimeDeps(),
+        ),
+      ),
+    ).resolves.toBeUndefined()
   })
 })

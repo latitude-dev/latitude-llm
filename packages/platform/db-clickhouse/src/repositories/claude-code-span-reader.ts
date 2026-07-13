@@ -26,6 +26,7 @@ import {
   type WorkspaceRow,
   type WrappedTotalsRow,
 } from "@domain/spans"
+import { formatCHDate } from "@repo/utils"
 import { Effect, Layer } from "effect"
 
 // Spans from `@latitude-data/telemetry-claude-code` always carry the Claude
@@ -33,10 +34,6 @@ import { Effect, Layer } from "effect"
 // works against ClickHouse's `Map(String, String)` storage and lets us scan
 // without a separate column.
 const CLAUDE_CODE_VERSION_KEY = "claude_code.version"
-
-// ClickHouse DateTime64(9, 'UTC') rejects trailing 'Z'; strip it. (Mirrors the
-// helper used in span-repository.ts.)
-const toClickhouseDateTime = (date: Date): string => date.toISOString().replace("Z", "")
 
 // Tool names that carry a `file_path` in `tool_input`. Kept literal so the
 // embedded SQL matches what the spans adapter actually inserts.
@@ -357,8 +354,8 @@ const projectWindowParams = (params: {
 }) => ({
   organizationId: params.organizationId as string,
   projectId: params.projectId as string,
-  from: toClickhouseDateTime(params.from),
-  to: toClickhouseDateTime(params.to),
+  from: formatCHDate(params.from),
+  to: formatCHDate(params.to),
   metadataKey: CLAUDE_CODE_VERSION_KEY,
 })
 
@@ -504,8 +501,8 @@ export const ClaudeCodeSpanReaderLive = Layer.effect(
                       AND start_time <= {to:DateTime64(9, 'UTC')}
                       AND ifNull(metadata[{metadataKey:String}], '') != ''`,
               query_params: {
-                from: toClickhouseDateTime(from),
-                to: toClickhouseDateTime(to),
+                from: formatCHDate(from),
+                to: formatCHDate(to),
                 metadataKey: CLAUDE_CODE_VERSION_KEY,
               },
               format: "JSONEachRow",

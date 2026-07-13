@@ -2,11 +2,10 @@ import type { ClickHouseClient } from "@clickhouse/client"
 import { DEFAULT_EMBEDDING_CONFIG, resolveEmbeddingConfig } from "@domain/ai"
 import { ChSqlClient, type ChSqlClientShape, toRepositoryError } from "@domain/shared"
 import { type MessageEmbeddingRole, TraceSearchRepository, type TraceSearchRepositoryShape } from "@domain/spans"
+import { formatCHDate } from "@repo/utils"
 import { Effect, Layer } from "effect"
 import { BOILERPLATE_FILTER_PARAMS, BOILERPLATE_HASH_FILTER } from "./search-plan.ts"
 
-// ClickHouse DateTime64(9, 'UTC') rejects trailing 'Z'; strip it.
-const toClickhouseDateTime = (date: Date): string => date.toISOString().replace("Z", "")
 const resolveSharedEmbeddingModel = (): string =>
   Effect.runSync(resolveEmbeddingConfig().pipe(Effect.orElseSucceed(() => DEFAULT_EMBEDDING_CONFIG))).model
 
@@ -25,12 +24,12 @@ export const TraceSearchRepositoryLive = Layer.effect(
                 organization_id: row.organizationId as string,
                 project_id: row.projectId as string,
                 trace_id: row.traceId,
-                start_time: toClickhouseDateTime(row.startTime),
+                start_time: formatCHDate(row.startTime),
                 root_span_name: row.rootSpanName,
                 search_text: row.searchText,
                 content_hash: row.contentHash,
                 retention_days: row.retentionDays ?? 90,
-                indexed_at: toClickhouseDateTime(new Date()),
+                indexed_at: formatCHDate(new Date()),
               },
             ],
             format: "JSONEachRow",
@@ -41,7 +40,7 @@ export const TraceSearchRepositoryLive = Layer.effect(
     const upsertMessageOccurrences: TraceSearchRepositoryShape["upsertMessageOccurrences"] = (rows) => {
       if (rows.length === 0) return Effect.void
 
-      const indexedAt = toClickhouseDateTime(new Date())
+      const indexedAt = formatCHDate(new Date())
       return chSqlClient
         .query(async (client) => {
           await client.insert({
@@ -53,7 +52,7 @@ export const TraceSearchRepositoryLive = Layer.effect(
               message_index: row.messageIndex,
               content_hash: row.contentHash,
               session_id: row.sessionId as string,
-              start_time: toClickhouseDateTime(row.startTime),
+              start_time: formatCHDate(row.startTime),
               role: row.role,
               is_output: row.isOutput ? 1 : 0,
               retention_days: row.retentionDays ?? 30,

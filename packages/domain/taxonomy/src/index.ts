@@ -170,6 +170,7 @@ export {
   type TaxonomyObservationCounts,
   TaxonomyObservationRepository,
   type TaxonomyObservationRepositoryShape,
+  type TaxonomyScopedClusteringObservation,
 } from "./ports/taxonomy-observation-repository.ts"
 export {
   TaxonomyRunRepository,
@@ -202,6 +203,11 @@ export {
   replaceObservationInClusterUseCase,
 } from "./use-cases/assign-observation-to-cluster.ts"
 export {
+  type BuildCustomBehaviorTaxonomyInput,
+  type BuildCustomBehaviorTaxonomyResult,
+  buildCustomBehaviorTaxonomyUseCase,
+} from "./use-cases/build-custom-behavior-taxonomy.ts"
+export {
   type BuildHierarchicalTaxonomyInput,
   type BuildHierarchicalTaxonomyResult,
   buildHierarchicalTaxonomyUseCase,
@@ -218,6 +224,10 @@ export {
   decideClusterAssignment,
 } from "./use-cases/decide-cluster-assignment.ts"
 export { deleteCustomBehavior } from "./use-cases/delete-custom-behavior.ts"
+export {
+  type DeprecateCustomBehaviorTreeInput,
+  deprecateCustomBehaviorTreeUseCase,
+} from "./use-cases/deprecate-custom-behavior-tree.ts"
 export { type EmitLineageInput, emitLineageUseCase } from "./use-cases/emit-lineage.ts"
 export {
   type GetClusterSessionIntelligenceInput,
@@ -260,6 +270,10 @@ export {
   type UserBehaviourItem,
 } from "./use-cases/list-user-behaviours.ts"
 export {
+  type NameCustomBehaviorClusterInput,
+  nameCustomBehaviorClusterUseCase,
+} from "./use-cases/name-custom-behavior-cluster.ts"
+export {
   type NameClusterInput,
   type NameTaxonomyResult,
   nameClusterUseCase,
@@ -268,6 +282,7 @@ export { type RouteToDeepestClusterInput, routeToDeepestClusterUseCase } from ".
 export {
   type TriggerProjectGardeningInput,
   type TriggerProjectGardeningResult,
+  taxonomyGardenCustomBehaviorDedupeKey,
   taxonomyGardenProjectDedupeKey,
   triggerProjectGardeningUseCase,
 } from "./use-cases/trigger-project-gardening.ts"

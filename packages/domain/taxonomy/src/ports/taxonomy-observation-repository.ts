@@ -1,6 +1,7 @@
 import type {
   ChSqlClient,
   ExternalUserId,
+  FilterSet,
   OrganizationId,
   ProjectId,
   RepositoryError,
@@ -49,6 +50,15 @@ export interface TaxonomyClusteringObservation {
   readonly observationId: string
   readonly embedding: readonly number[]
   readonly startTime: Date
+}
+
+/**
+ * A clustering-sample observation carrying its `sessionId`, so scoped custom
+ * behavior assignments (which live in the `custom_behavior_assignments` slice,
+ * keyed by session) can be written without a second lookup.
+ */
+export interface TaxonomyScopedClusteringObservation extends TaxonomyClusteringObservation {
+  readonly sessionId: SessionId
 }
 
 export interface TaxonomyObservationCounts {
@@ -119,6 +129,21 @@ export interface TaxonomyObservationRepositoryShape {
     readonly since: Date
     readonly limit: number
   }) => Effect.Effect<readonly TaxonomyClusteringObservation[], RepositoryError, ChSqlClient>
+  /**
+   * Scoped clustering sample for a custom behavior: the day-stratified sample
+   * of `listForClusteringSample`, additionally restricted to observations whose
+   * session matches `filterSet` (compiled via the shared session filter). Reads
+   * global `taxonomy_observations` but never mutates it. `since` is the lookback
+   * window lower bound, passed in from `CUSTOM_BEHAVIOR_LOOKBACK_DAYS` — never
+   * hardcoded here, so a future selectable window is a caller-side swap.
+   */
+  readonly listForCustomBehaviorSample: (input: {
+    readonly organizationId: OrganizationId
+    readonly projectId: ProjectId
+    readonly since: Date
+    readonly limit: number
+    readonly filterSet: FilterSet
+  }) => Effect.Effect<readonly TaxonomyScopedClusteringObservation[], RepositoryError, ChSqlClient>
   readonly listByCluster: (
     input: ListTaxonomyObservationClusterInput,
   ) => Effect.Effect<readonly TaxonomyMomentObservation[], RepositoryError, ChSqlClient>

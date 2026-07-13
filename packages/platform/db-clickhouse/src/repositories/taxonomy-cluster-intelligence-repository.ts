@@ -5,9 +5,8 @@ import {
   type ClusterRepresentativeExample,
   TaxonomyClusterIntelligenceRepository,
 } from "@domain/taxonomy"
+import { formatCHDate } from "@repo/utils"
 import { Effect, Layer } from "effect"
-
-const toClickhouseDateTime = (date: Date): string => date.toISOString().replace("Z", "")
 
 const behaviourSessionFilterSql = `
   ({filter:String} = 'all'
@@ -115,8 +114,8 @@ export const TaxonomyClusterIntelligenceRepositoryLive = Layer.effect(
                 organizationId: organizationId as string,
                 projectId: projectId as string,
                 clusterIds: clusterIds as readonly string[],
-                sourceWindowStart: toClickhouseDateTime(sourceWindowStart),
-                sourceWindowEnd: toClickhouseDateTime(sourceWindowEnd),
+                sourceWindowStart: formatCHDate(sourceWindowStart),
+                sourceWindowEnd: formatCHDate(sourceWindowEnd),
               }
               const aggregateResult = await client.query({
                 // Superseded analysis generations are never deleted; pinning
@@ -222,8 +221,8 @@ export const TaxonomyClusterIntelligenceRepositoryLive = Layer.effect(
                   organizationId: organizationId as string,
                   projectId: projectId as string,
                   clusterIds: clusterIds as readonly string[],
-                  sourceWindowStart: toClickhouseDateTime(sourceWindowStart),
-                  sourceWindowEnd: toClickhouseDateTime(sourceWindowEnd),
+                  sourceWindowStart: formatCHDate(sourceWindowStart),
+                  sourceWindowEnd: formatCHDate(sourceWindowEnd),
                   limit,
                 },
                 format: "JSONEachRow",
@@ -274,8 +273,8 @@ export const TaxonomyClusterIntelligenceRepositoryLive = Layer.effect(
                   clusterIds: clusterIds as readonly string[],
                   filter,
                   limit,
-                  ...(startTimeFrom ? { startTimeFrom: toClickhouseDateTime(startTimeFrom) } : {}),
-                  ...(startTimeTo ? { startTimeTo: toClickhouseDateTime(startTimeTo) } : {}),
+                  ...(startTimeFrom ? { startTimeFrom: formatCHDate(startTimeFrom) } : {}),
+                  ...(startTimeTo ? { startTimeTo: formatCHDate(startTimeTo) } : {}),
                   ...(momentRange
                     ? { momentMetric: momentRange.metric, turnFrom: momentRange.fromTurn, turnTo: momentRange.toTurn }
                     : {}),
