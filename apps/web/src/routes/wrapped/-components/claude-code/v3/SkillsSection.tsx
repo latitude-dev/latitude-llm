@@ -1,9 +1,8 @@
 import type { ReportV3 } from "@domain/spans"
 import { WRAPPED_COLORS } from "../v1/personality-copy.ts"
+import { formatCompact } from "../v1/WrappedReportV1.tsx"
 
 const { creamDeep: CREAM_DEEP, accent: ACCENT, ink: INK, muted: MUTED } = WRAPPED_COLORS
-
-const formatCompact = (n: number): string => n.toLocaleString("en-US")
 
 function StatTile({ label, value }: { readonly label: string; readonly value: string }) {
   return (
