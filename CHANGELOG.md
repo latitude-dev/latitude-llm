@@ -2,6 +2,35 @@
 
 ## Unreleased
 
+## v0.3.48 - 2026-07-13
+
+### Monitors
+
+- Made monitor targets and incident conditions immutable after creation across the web, API, CLI, and SDKs. Existing monitors can still update their name, description, and severity (ref: #3947).
+
+### Notifications
+
+- Routed signal notifications to the assigned user when present and kept targeted notifications out of shared Slack channels (ref: #4009).
+
+### Claude Code Wrapped
+
+- Added skill usage totals, top skills, and per-workspace skill breakdowns to Claude Code Wrapped reports and emails (ref: #3978).
+
+### Reliability
+
+- Fixed classifier flaggers producing truncated structured output that could fail JSON parsing (ref: #3910).
+- Fixed trace, session, and session-intelligence time filters for timestamps containing timezone offsets (ref: #4007).
+- Fixed newly created datasets temporarily hiding their imported rows (ref: #4006).
+
+### API and ingestion
+
+- Raised public API and trace-ingestion rate limits to support higher normal throughput (ref: 1deab1b9f, ebff4940f).
+- Rejected OAuth access tokens as soon as their user no longer belongs to the authorized organization (ref: #3917).
+
+### Models
+
+- Refreshed the bundled models.dev model catalog (ref: #3987).
+
 ## v0.3.47 - 2026-07-13
 
 ### Traces
