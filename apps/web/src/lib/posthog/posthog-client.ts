@@ -86,10 +86,7 @@ export const initPostHog = async (): Promise<void> => {
   await loadInstance()
 }
 
-const materializePostHogSessionId = (posthog: PostHog): string | null => {
-  posthog.sessionManager?.checkAndGetSessionAndWindowId(false)
-  return posthog.get_session_id() || null
-}
+const readPostHogSessionId = (posthog: PostHog): string | null => posthog.get_session_id() || null
 
 /**
  * Ensures PostHog is loaded and a `$session_id` exists on unauthenticated routes
@@ -97,7 +94,9 @@ const materializePostHogSessionId = (posthog: PostHog): string | null => {
  * read from the cross-subdomain cookie when the visitor arrived from latitude.so.
  */
 export const bootstrapPostHogAttributionSession = async (): Promise<void> => {
-  await getPostHogSessionId()
+  const posthog = await loadInstance()
+  if (!posthog) return
+  readPostHogSessionId(posthog)
 }
 
 /**
@@ -109,7 +108,7 @@ export const getPostHogSessionId = async (): Promise<string | null> => {
   const posthog = await loadInstance()
   if (!posthog) return null
   try {
-    return materializePostHogSessionId(posthog)
+    return readPostHogSessionId(posthog)
   } catch {
     return null
   }
