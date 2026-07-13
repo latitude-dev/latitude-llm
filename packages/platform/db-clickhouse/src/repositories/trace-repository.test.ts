@@ -558,6 +558,46 @@ describe("TraceRepository", () => {
       expect(chunk.totalMessages).toBe(detail.allMessages.length)
       expect(chunk.hasMore).toBe(false)
     })
+
+    it("uses the newest ingested_at row when the same span_id is re-ingested", async () => {
+      const REINGEST_TRACE_ID = TraceId("99999999999999999999999999999999")
+      const startTime = new Date("2026-03-01T00:00:00.000Z")
+      const spanBase = makeSpanRow({
+        traceId: REINGEST_TRACE_ID as string,
+        spanId: "reingestspan1111",
+        startTime,
+      })
+
+      await runCh(
+        insertJsonEachRow(ch.client, "spans", [
+          {
+            ...spanBase,
+            operation: "chat",
+            input_messages: '[{"role":"user","parts":[{"type":"text","content":"hi"}]}]',
+            output_messages: '[{"role":"assistant","parts":[{"type":"text","content":"older"}]}]',
+            ingested_at: "2026-03-01 00:00:00.000",
+          },
+          {
+            ...spanBase,
+            operation: "chat",
+            input_messages: '[{"role":"user","parts":[{"type":"text","content":"hi"}]}]',
+            output_messages: '[{"role":"assistant","parts":[{"type":"text","content":"newer"}]}]',
+            ingested_at: "2026-03-01 00:00:01.000",
+          },
+        ]),
+      )
+
+      const detail = await runCh(
+        repo.findByTraceId({
+          organizationId: ORG_ID,
+          projectId: PROJECT_ID,
+          traceId: REINGEST_TRACE_ID,
+        }),
+      )
+
+      const assistantMessage = detail.outputMessages.find((message) => message.role === "assistant")
+      expect(assistantMessage?.parts?.[0]).toMatchObject({ content: "newer" })
+    })
   })
 
   describe("listMatchingFilterIdsByTraceId", () => {
