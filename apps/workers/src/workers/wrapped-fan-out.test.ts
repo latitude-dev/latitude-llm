@@ -47,6 +47,7 @@ const makeReader = (
   getBiggestWrite: () => Effect.die("not used"),
   getToolMix: () => Effect.die("not used"),
   getTopFiles: () => Effect.die("not used"),
+  getSkillUsage: () => Effect.die("not used"),
   getTopBashCommands: () => Effect.die("not used"),
   getTopWorkspaces: () => Effect.die("not used"),
   getTopBranches: () => Effect.die("not used"),

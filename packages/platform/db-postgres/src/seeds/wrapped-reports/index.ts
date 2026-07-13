@@ -5,15 +5,15 @@ import {
   PERSONALITY_KINDS,
   type PersonalityKind,
   pickWrittenAnchor,
-  type ReportV2,
-  reportV2Schema,
+  type ReportV3,
+  reportV3Schema,
 } from "@domain/spans"
 import { Effect } from "effect"
 import { wrappedReports } from "../../schema/wrapped-reports.ts"
 import { type SeedContext, SeedError, type Seeder } from "../types.ts"
 
 /**
- * 100 seeded Claude Code Wrapped V2 reports — one per unique fake project.
+ * 100 seeded Claude Code Wrapped V3 reports — one per unique fake project.
  *
  * All created on "today" (daysAgo = 0) at 09:00 UTC so they:
  *  - appear in the backoffice analytics page (within the last 7 days)
@@ -86,7 +86,7 @@ function makePrng(seed: number) {
   }
 }
 
-function buildReport(i: number, projectId: string, orgId: string): ReportV2 {
+function buildReport(i: number, projectId: string, orgId: string): ReportV3 {
   const rand = makePrng(i * 17 + 42)
   const ri = (n: number) => Math.floor(rand() * n)
   const rr = (lo: number, hi: number) => lo + Math.floor(rand() * (hi - lo + 1))
@@ -120,7 +120,15 @@ function buildReport(i: number, projectId: string, orgId: string): ReportV2 {
     Array.from({ length: 24 }, () => (rand() < 0.4 ? ri(8) : 0)),
   )
 
-  const report = reportV2Schema.parse({
+  const skillNames = ["code-review", "create-pr", "testing", "analyze-problem", "humanizer"]
+  const distinctUsed = rr(0, skillNames.length)
+  const topSkills = Array.from({ length: Math.min(3, distinctUsed) }, (_, s) => ({
+    name: skillNames[s] ?? "code-review",
+    count: rr(1, 20),
+  }))
+  const totalUses = topSkills.reduce((sum, s) => sum + s.count, 0) + (distinctUsed > 3 ? rr(1, 10) : 0)
+
+  const report = reportV3Schema.parse({
     project: {
       id: ProjectId(projectId),
       name: projectName,
@@ -194,6 +202,7 @@ function buildReport(i: number, projectId: string, orgId: string): ReportV2 {
       locWritten: rand() > 0.3 ? rr(80, 4500) : null,
       tokensTotal: rand() > 0.3 ? rr(400_000, 25_000_000) : null,
     },
+    skills: { distinctUsed, totalUses, top: topSkills },
   })
 
   return report

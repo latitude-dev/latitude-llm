@@ -149,6 +149,21 @@ export interface FileTouchesRow {
   readonly touches: number
 }
 
+export interface SkillCountRow {
+  /** Skill name only — the `SKILL.md` parent dir, or the `Skill` tool's `skill` arg. */
+  readonly name: string
+  readonly count: number
+}
+
+export interface SkillUsageRow {
+  /** Distinct skills used (public). */
+  readonly distinctUsed: number
+  /** Total skill usages — one per matching span (public). */
+  readonly totalUses: number
+  /** Top skills by usage (up to 3), name + count. Member-only. */
+  readonly top: readonly SkillCountRow[]
+}
+
 export interface BashPatternRow {
   readonly pattern: string
   readonly uses: number
@@ -194,6 +209,8 @@ export interface WorkspaceDeepDiveRow {
   readonly topBranches: readonly string[]
   /** Top bash command prefixes used in this workspace (up to 3). */
   readonly topBashCommands: readonly WorkspaceBashCommandRow[]
+  /** Top skills used in this workspace (up to 3). */
+  readonly skills: readonly SkillCountRow[]
   readonly dominantTool: string | null
 }
 
@@ -245,6 +262,12 @@ export interface ClaudeCodeSpanReaderShape {
 
   /** Top 5 file paths by touch count across Read/Edit/Write tools. */
   getTopFiles(params: ProjectWindowInput): Effect.Effect<readonly FileTouchesRow[], RepositoryError, ChSqlClient>
+
+  /**
+   * Skill-usage breakdown — distinct + total (public) and top-3 (member).
+   * A skill use is a `SKILL.md` read or a `Skill` tool call, keyed by name.
+   */
+  getSkillUsage(params: ProjectWindowInput): Effect.Effect<SkillUsageRow, RepositoryError, ChSqlClient>
 
   /** Top 5 Bash commands grouped by leading whitespace token. */
   getTopBashCommands(params: ProjectWindowInput): Effect.Effect<readonly BashPatternRow[], RepositoryError, ChSqlClient>

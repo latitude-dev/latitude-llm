@@ -13,9 +13,9 @@ import { z } from "zod"
  * The blob in Postgres is the raw `Report` (no version field embedded);
  * the version metadata lives in the DB column and in this constant.
  */
-export const REPORT_VERSIONS = [1, 2] as const
+export const REPORT_VERSIONS = [1, 2, 3] as const
 export type ReportVersion = (typeof REPORT_VERSIONS)[number]
-export const CURRENT_REPORT_VERSION: ReportVersion = 2
+export const CURRENT_REPORT_VERSION: ReportVersion = 3
 
 /**
  * Tool-call buckets used by the personality algorithm and the
@@ -88,6 +88,34 @@ const workspaceDeepDiveSchema = z.object({
   dominantTool: z.enum(TOOL_BUCKETS),
 })
 export type WorkspaceDeepDive = z.infer<typeof workspaceDeepDiveSchema>
+
+const skillCountSchema = z.object({
+  /** Skill name only — the `SKILL.md` parent dir, or the `Skill` tool's `skill` arg. */
+  name: z.string(),
+  count: z.number().int().nonnegative(),
+})
+export type SkillCount = z.infer<typeof skillCountSchema>
+
+/**
+ * Skill-usage breakdown (V3+). A "skill use" is a span that either reads a
+ * `SKILL.md` file (Read / NotebookRead) or invokes the `Skill` tool. Skills
+ * are keyed by name alone, so the same name from different paths merges.
+ *
+ * `distinctUsed` / `totalUses` are public; `top` is member-only and redacted
+ * to `[]` for non-member viewers (see `redactForPublic`).
+ */
+const skillsSchema = z.object({
+  distinctUsed: z.number().int().nonnegative(),
+  totalUses: z.number().int().nonnegative(),
+  top: z.array(skillCountSchema).max(3),
+})
+export type Skills = z.infer<typeof skillsSchema>
+
+const workspaceDeepDiveV3Schema = workspaceDeepDiveSchema.extend({
+  /** Top skills used within this workspace (up to 3). Member-only. */
+  skills: z.array(skillCountSchema).max(3),
+})
+export type WorkspaceDeepDiveV3 = z.infer<typeof workspaceDeepDiveV3Schema>
 
 const toolMixSchema = z.object({
   bash: z.number().int().nonnegative(),
@@ -256,8 +284,22 @@ export const reportV2Schema = reportV1Schema.extend({
 })
 export type ReportV2 = z.infer<typeof reportV2Schema>
 
+/**
+ * V3 adds:
+ *  - `skills` — skill-usage breakdown (distinct + total public, top-3 member-only)
+ *  - `workspaceDeepDives[].skills` — per-workspace top skills (member-only)
+ *
+ * V1/V2 blobs are still validated against their frozen schemas; only new runs
+ * produce V3 blobs. `reportV2Schema` is frozen.
+ */
+export const reportV3Schema = reportV2Schema.extend({
+  skills: skillsSchema,
+  workspaceDeepDives: z.array(workspaceDeepDiveV3Schema).max(3),
+})
+export type ReportV3 = z.infer<typeof reportV3Schema>
+
 /** Discriminated union across all schema versions. */
-export type Report = ReportV1 | ReportV2
+export type Report = ReportV1 | ReportV2 | ReportV3
 
 /**
  * Maps a persisted `report_version` to the Zod schema that validates its
@@ -266,4 +308,5 @@ export type Report = ReportV1 | ReportV2
 export const SCHEMA_BY_VERSION = {
   1: reportV1Schema,
   2: reportV2Schema,
+  3: reportV3Schema,
 } as const satisfies Record<ReportVersion, z.ZodTypeAny>
