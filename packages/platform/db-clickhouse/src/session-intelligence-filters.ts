@@ -1,6 +1,5 @@
 import type { FilterSet } from "@domain/shared"
 import { parseStartTimeBoundsFromFilters } from "@domain/spans"
-import { mapDateTime64UtcQueryParam } from "./registries/helpers.ts"
 
 const MOMENTS_FILTER_FIELD = "moments"
 const TOPICS_FILTER_FIELD = "topics"
@@ -43,7 +42,7 @@ const latestAnalysisSemijoin = (
           SELECT session_id, argMax(analysis_hash, indexed_at)
           FROM session_analyses
           WHERE organization_id = {organizationId:String}
-            AND project_id = {projectId:String}${withRangeStart ? "\n            AND start_time >= {ciRangeStart:DateTime64(9, 'UTC')}" : ""}
+            AND project_id = {projectId:String}${withRangeStart ? "\n            AND start_time >= parseDateTime64BestEffort({ciRangeStart:String}, 9, 'UTC')" : ""}
           GROUP BY session_id
         )`
 
@@ -57,7 +56,7 @@ const buildTopicClustersSubquery = (withRangeStart: boolean): string => `session
       FROM taxonomy_observations AS o FINAL
       WHERE o.organization_id = {organizationId:String}
         AND o.project_id = {projectId:String}
-        AND o.assigned_cluster_id IN {topicClusterIds:Array(String)}${withRangeStart ? "\n        AND o.start_time >= {ciRangeStart:DateTime64(9, 'UTC')}" : ""}
+        AND o.assigned_cluster_id IN {topicClusterIds:Array(String)}${withRangeStart ? "\n        AND o.start_time >= parseDateTime64BestEffort({ciRangeStart:String}, 9, 'UTC')" : ""}
         AND ${latestAnalysisSemijoin("o", withRangeStart)}
       GROUP BY o.session_id
     )`
@@ -71,7 +70,7 @@ const buildMomentKindsSubquery = (withRangeStart: boolean): string => `session_i
       FROM session_moment_labels AS m FINAL
       WHERE m.organization_id = {organizationId:String}
         AND m.project_id = {projectId:String}
-        AND m.kind IN {momentKinds:Array(String)}${withRangeStart ? "\n        AND m.indexed_at >= {ciRangeStart:DateTime64(9, 'UTC')}" : ""}
+        AND m.kind IN {momentKinds:Array(String)}${withRangeStart ? "\n        AND m.indexed_at >= parseDateTime64BestEffort({ciRangeStart:String}, 9, 'UTC')" : ""}
         AND ${latestAnalysisSemijoin("m", withRangeStart)}
       GROUP BY m.session_id
     )`
@@ -99,7 +98,7 @@ export function buildSessionIntelligenceFilters(filters: FilterSet | undefined):
   if (momentKinds || topicClusterIds) {
     const rangeStart = filters ? parseStartTimeBoundsFromFilters(filters).gte : undefined
     const withRangeStart = rangeStart !== undefined
-    if (withRangeStart) params = { ...params, ciRangeStart: mapDateTime64UtcQueryParam(rangeStart) }
+    if (withRangeStart) params = { ...params, ciRangeStart: rangeStart }
     if (momentKinds) {
       clauses.push(buildMomentKindsSubquery(withRangeStart))
       params = { ...params, momentKinds }

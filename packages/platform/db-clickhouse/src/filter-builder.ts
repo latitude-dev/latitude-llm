@@ -12,6 +12,7 @@ export interface ScalarFieldMapping {
   readonly isArray?: boolean
   readonly arrayContains?: boolean
   readonly mapValue?: (value: FilterCondition["value"]) => FilterCondition["value"]
+  readonly valueExpression?: (paramName: string, options: { readonly array: boolean }) => string
 }
 
 export interface SyntheticFieldMapping {
@@ -161,25 +162,26 @@ export const runFilterBuild = <A>(build: () => A): Effect.Effect<A, ValidationEr
 
 function buildClause(mapping: ScalarFieldMapping, paramName: string, cond: FilterCondition): string {
   const { column, chType, isArray, arrayContains } = mapping
+  const scalarValue = mapping.valueExpression?.(paramName, { array: false }) ?? `{${paramName}:${chType}}`
+  const arrayValue = mapping.valueExpression?.(paramName, { array: true }) ?? `{${paramName}:Array(${chType})}`
 
   // Array fields: in/notIn use hasAny
   if (isArray && (cond.op === "in" || cond.op === "notIn")) {
-    return cond.op === "in"
-      ? `hasAny(${column}, {${paramName}:Array(${chType})})`
-      : `NOT hasAny(${column}, {${paramName}:Array(${chType})})`
+    return cond.op === "in" ? `hasAny(${column}, ${arrayValue})` : `NOT hasAny(${column}, ${arrayValue})`
   }
 
   if (isArray && arrayContains && (cond.op === "eq" || cond.op === "contains")) {
-    return `has(${column}, {${paramName}:${chType}})`
+    return `has(${column}, ${scalarValue})`
   }
   if (isArray && arrayContains && (cond.op === "neq" || cond.op === "notContains")) {
-    return `NOT has(${column}, {${paramName}:${chType}})`
+    return `NOT has(${column}, ${scalarValue})`
   }
 
   // Scalar in/notIn
   if (cond.op === "in" || cond.op === "notIn") {
     const not = cond.op === "notIn" ? "NOT " : ""
-    return `${column} ${not}IN ({${paramName}:Array(${chType})})`
+    if (mapping.valueExpression) return `${not}has(${arrayValue}, ${column})`
+    return `${column} ${not}IN (${arrayValue})`
   }
 
   // contains/notContains use ILIKE
@@ -193,7 +195,7 @@ function buildClause(mapping: ScalarFieldMapping, paramName: string, cond: Filte
   // Scalar comparison operators
   const sqlOp = SCALAR_OPS[cond.op as ScalarOp]
   if (sqlOp) {
-    return `${column} ${sqlOp} {${paramName}:${chType}}`
+    return `${column} ${sqlOp} ${scalarValue}`
   }
 
   throw new Error(`Unsupported filter operator: ${cond.op}`)

@@ -1,7 +1,8 @@
 import type { FilterCondition } from "@domain/shared"
+import { setupTestClickHouse } from "@platform/testkit"
 import { describe, expect, it } from "vitest"
 import { buildClickHouseWhere } from "../filter-builder.ts"
-import { buildCacheHitRateClause } from "./helpers.ts"
+import { buildCacheHitRateClause, dateTime64BestEffortExpression } from "./helpers.ts"
 
 describe("buildCacheHitRateClause", () => {
   it("builds a divide-by-zero-guarded HAVING ratio for gte, treating the value as a percentage", () => {
@@ -24,6 +25,108 @@ describe("buildCacheHitRateClause", () => {
     expect(() => buildCacheHitRateClause({ op: "contains", value: "x" }, "f_0")).toThrow(
       /Unsupported cacheHitRate filter operator/,
     )
+  })
+})
+
+describe("dateTime64BestEffortExpression", () => {
+  const registry = {
+    startTime: {
+      column: "start_time",
+      chType: "DateTime64(9, 'UTC')",
+      valueExpression: dateTime64BestEffortExpression,
+    },
+  } as const
+
+  it("compiles scalar comparisons through parseDateTime64BestEffort with String params", () => {
+    const value = "2026-06-09T22:41:43.054269123-05:00"
+    const { clauses, params } = buildClickHouseWhere({ startTime: [{ op: "gte", value }] }, registry)
+
+    expect(clauses).toEqual(["start_time >= parseDateTime64BestEffort({f_0:String}, 9, 'UTC')"])
+    expect(params).toEqual({ f_0: value })
+  })
+
+  it("compiles in arrays through parseDateTime64BestEffort without rewriting values", () => {
+    const values = ["2026-06-09T22:41:43.054269123Z", "2026-06-10T05:11:12.987654321+05:30"]
+    const { clauses, params } = buildClickHouseWhere({ startTime: [{ op: "in", value: values }] }, registry)
+
+    expect(clauses).toEqual([
+      "has(arrayMap(x -> parseDateTime64BestEffort(x, 9, 'UTC'), {f_0:Array(String)}), start_time)",
+    ])
+    expect(params).toEqual({ f_0: values })
+  })
+
+  it("compiles notIn arrays through parseDateTime64BestEffort without rewriting values", () => {
+    const values = ["2026-06-09T22:41:43.054269123-07:00"]
+    const { clauses, params } = buildClickHouseWhere({ startTime: [{ op: "notIn", value: values }] }, registry)
+
+    expect(clauses).toEqual([
+      "NOT has(arrayMap(x -> parseDateTime64BestEffort(x, 9, 'UTC'), {f_0:Array(String)}), start_time)",
+    ])
+    expect(params).toEqual({ f_0: values })
+  })
+})
+
+describe("dateTime64BestEffortExpression with chdb", () => {
+  const ch = setupTestClickHouse()
+  const registry = {
+    startTime: {
+      column: "parseDateTime64BestEffort({candidate:String}, 9, 'UTC')",
+      chType: "DateTime64(9, 'UTC')",
+      valueExpression: dateTime64BestEffortExpression,
+    },
+  } as const
+
+  async function scalarMatch(op: FilterCondition["op"], value: FilterCondition["value"], candidate = UTC_INSTANT) {
+    const { clauses, params } = buildClickHouseWhere({ startTime: [{ op, value }] }, registry)
+    const result = await ch.client.query({
+      query: `SELECT ${clauses[0]} AS matched`,
+      query_params: { ...params, candidate },
+      format: "JSONEachRow",
+    })
+    const rows = await result.json<{ matched: boolean | number }>()
+    return rows[0]?.matched === true || rows[0]?.matched === 1
+  }
+
+  const UTC_INSTANT = "2026-06-10T03:41:43.054269123Z"
+
+  it.each([
+    ["Z", "2026-06-10T03:41:43.054269123Z"],
+    ["+00:00", "2026-06-10T03:41:43.054269123+00:00"],
+    ["negative offset", "2026-06-09T22:41:43.054269123-05:00"],
+    ["positive offset", "2026-06-10T09:11:43.054269123+05:30"],
+    ["negative offset without colon", "2026-06-09T22:41:43.054269123-0500"],
+    ["positive offset without colon", "2026-06-10T09:11:43.054269123+0530"],
+    ["bare timestamp", "2026-06-10T03:41:43.054269123"],
+  ])("parses %s as the same UTC DateTime64(9) instant", async (_label, value) => {
+    await expect(scalarMatch("eq", value)).resolves.toBe(true)
+  })
+
+  it("executes scalar comparisons at nanosecond precision", async () => {
+    await expect(scalarMatch("gt", "2026-06-10T03:41:43.054269122Z")).resolves.toBe(true)
+    await expect(scalarMatch("lt", "2026-06-10T03:41:43.054269124Z")).resolves.toBe(true)
+    await expect(scalarMatch("gte", UTC_INSTANT)).resolves.toBe(true)
+    await expect(scalarMatch("lte", UTC_INSTANT)).resolves.toBe(true)
+  })
+
+  it("executes in and notIn arrays through generated array expressions", async () => {
+    const sameInstantValues = ["2026-06-09T22:41:43.054269123-05:00", "2026-06-10T09:11:43.054269123+05:30"]
+
+    await expect(scalarMatch("in", sameInstantValues)).resolves.toBe(true)
+    await expect(scalarMatch("notIn", sameInstantValues)).resolves.toBe(false)
+    await expect(scalarMatch("notIn", ["2026-06-10T03:41:43.054269124Z"])).resolves.toBe(true)
+  })
+
+  it("keeps original values parameterized when building filters", () => {
+    const values = ["2026-06-09T22:41:43.054269123-05:00", "2026-06-10T09:11:43.054269123+05:30"]
+    const { clauses, params } = buildClickHouseWhere({ startTime: [{ op: "in", value: values }] }, registry)
+
+    expect(clauses.join(" ")).not.toContain(values[0])
+    expect(clauses.join(" ")).not.toContain(values[1])
+    expect(params).toEqual({ f_0: values })
+  })
+
+  it("fails invalid timestamp input at execution", async () => {
+    await expect(scalarMatch("eq", "not-a-timestamp")).rejects.toThrow()
   })
 })
 
