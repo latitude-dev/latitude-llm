@@ -3,11 +3,12 @@ import {
   inviteMemberUseCase,
   type ListMembersResult,
   listMembersUseCase,
+  MembershipRepository,
   removeMemberUseCase,
   transferOwnershipUseCase,
   updateMemberRoleUseCase,
 } from "@domain/organizations"
-import { InvitationId, MembershipId, UserId } from "@domain/shared"
+import { ForbiddenError, InvitationId, MembershipId, UserId } from "@domain/shared"
 import { UserRepository } from "@domain/users"
 import {
   InvitationRepositoryLive,
@@ -149,6 +150,12 @@ export const invite = createServerFn({ method: "POST" })
 
     const invitation = await Effect.runPromise(
       Effect.gen(function* () {
+        const membershipRepo = yield* MembershipRepository
+        const isAdmin = yield* membershipRepo.isAdmin(organizationId, userId)
+        if (!isAdmin) {
+          return yield* new ForbiddenError({ message: "Only organization owners and admins can invite members" })
+        }
+
         const userRepo = yield* UserRepository
         const inviter = yield* userRepo.findById(UserId(userId))
         const inviterName =
