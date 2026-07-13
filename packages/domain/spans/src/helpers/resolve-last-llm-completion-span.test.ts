@@ -35,6 +35,7 @@ function baseSpan(overrides: Partial<Span> & Pick<Span, "spanId" | "operation" |
     model: "",
     responseModel: "",
     toolName: "",
+    agentName: "",
     toolNames: [],
     toolCallId: "",
     tokensInput: 0,

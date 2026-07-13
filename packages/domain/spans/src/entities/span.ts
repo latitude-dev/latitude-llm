@@ -84,6 +84,7 @@ export const spanSchema = z.object({
   model: z.string(),
   responseModel: z.string(),
   toolName: z.string(),
+  agentName: z.string(),
   toolNames: z.array(z.string()).readonly(),
   toolCallId: z.string(),
   tokensInput: z.number(),
