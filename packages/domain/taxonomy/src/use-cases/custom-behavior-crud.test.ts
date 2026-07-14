@@ -1,4 +1,4 @@
-import { CustomBehaviorId, ProjectId, SqlClient } from "@domain/shared"
+import { CustomBehaviorId, type FilterSet, ProjectId, SqlClient } from "@domain/shared"
 import { createFakeSqlClient } from "@domain/shared/testing"
 import { Effect, Layer } from "effect"
 import { describe, expect, it } from "vitest"
@@ -17,6 +17,7 @@ import { updateCustomBehavior } from "./update-custom-behavior.ts"
 
 const PROJECT_ID = ProjectId("p".repeat(24))
 const OTHER_PROJECT_ID = ProjectId("q".repeat(24))
+const FILTER: FilterSet = { moments: [{ op: "in", value: ["escalation"] }] }
 
 function makeLayer() {
   const { repository, rows } = createFakeCustomBehaviorRepository()
@@ -46,8 +47,8 @@ describe("createCustomBehavior", () => {
     const { layer } = makeLayer()
     const result = await Effect.runPromise(
       Effect.gen(function* () {
-        yield* createCustomBehavior({ projectId: PROJECT_ID, name: "Refunds", filterSet: {} })
-        return yield* createCustomBehavior({ projectId: PROJECT_ID, name: "Refunds", filterSet: {} })
+        yield* createCustomBehavior({ projectId: PROJECT_ID, name: "Refunds", filterSet: FILTER })
+        return yield* createCustomBehavior({ projectId: PROJECT_ID, name: "Refunds", filterSet: FILTER })
       }).pipe(Effect.provide(layer)),
     )
     expect(result.slug).toMatch(/^refunds-[a-z0-9]{4}$/)
@@ -66,11 +67,20 @@ describe("createCustomBehavior", () => {
     ).rejects.toBeInstanceOf(CustomBehaviorFilterInvalidError)
   })
 
+  it("rejects an empty filter set (an unfiltered scope is the global taxonomy)", async () => {
+    const { layer } = makeLayer()
+    await expect(
+      Effect.runPromise(
+        createCustomBehavior({ projectId: PROJECT_ID, name: "Everything", filterSet: {} }).pipe(Effect.provide(layer)),
+      ),
+    ).rejects.toBeInstanceOf(CustomBehaviorFilterInvalidError)
+  })
+
   it("rejects an empty name", async () => {
     const { layer } = makeLayer()
     await expect(
       Effect.runPromise(
-        createCustomBehavior({ projectId: PROJECT_ID, name: "   ", filterSet: {} }).pipe(Effect.provide(layer)),
+        createCustomBehavior({ projectId: PROJECT_ID, name: "   ", filterSet: FILTER }).pipe(Effect.provide(layer)),
       ),
     ).rejects.toBeInstanceOf(CustomBehaviorNameInvalidError)
   })
@@ -79,7 +89,7 @@ describe("createCustomBehavior", () => {
     const { layer } = makeLayer()
     await expect(
       Effect.runPromise(
-        createCustomBehavior({ projectId: PROJECT_ID, name: "!!! 🎉", filterSet: {} }).pipe(Effect.provide(layer)),
+        createCustomBehavior({ projectId: PROJECT_ID, name: "!!! 🎉", filterSet: FILTER }).pipe(Effect.provide(layer)),
       ),
     ).rejects.toBeInstanceOf(CustomBehaviorNameInvalidError)
   })
@@ -90,9 +100,9 @@ describe("createCustomBehavior", () => {
       Effect.runPromise(
         Effect.gen(function* () {
           for (let i = 0; i < MAX_CUSTOM_BEHAVIORS_PER_PROJECT; i++) {
-            yield* createCustomBehavior({ projectId: PROJECT_ID, name: `Behavior ${i}`, filterSet: {} })
+            yield* createCustomBehavior({ projectId: PROJECT_ID, name: `Behavior ${i}`, filterSet: FILTER })
           }
-          return yield* createCustomBehavior({ projectId: PROJECT_ID, name: "One too many", filterSet: {} })
+          return yield* createCustomBehavior({ projectId: PROJECT_ID, name: "One too many", filterSet: FILTER })
         }).pipe(Effect.provide(layer)),
       ),
     ).rejects.toBeInstanceOf(CustomBehaviorLimitReachedError)
@@ -103,9 +113,9 @@ describe("createCustomBehavior", () => {
     const created = await Effect.runPromise(
       Effect.gen(function* () {
         for (let i = 0; i < MAX_CUSTOM_BEHAVIORS_PER_PROJECT; i++) {
-          yield* createCustomBehavior({ projectId: PROJECT_ID, name: `Behavior ${i}`, filterSet: {} })
+          yield* createCustomBehavior({ projectId: PROJECT_ID, name: `Behavior ${i}`, filterSet: FILTER })
         }
-        return yield* createCustomBehavior({ projectId: OTHER_PROJECT_ID, name: "Fresh project", filterSet: {} })
+        return yield* createCustomBehavior({ projectId: OTHER_PROJECT_ID, name: "Fresh project", filterSet: FILTER })
       }).pipe(Effect.provide(layer)),
     )
     expect(created.projectId).toBe(OTHER_PROJECT_ID)
@@ -117,7 +127,7 @@ describe("updateCustomBehavior", () => {
     const { layer } = makeLayer()
     const result = await Effect.runPromise(
       Effect.gen(function* () {
-        const created = yield* createCustomBehavior({ projectId: PROJECT_ID, name: "Refunds", filterSet: {} })
+        const created = yield* createCustomBehavior({ projectId: PROJECT_ID, name: "Refunds", filterSet: FILTER })
         return yield* updateCustomBehavior({ id: created.id, name: "Chargebacks" })
       }).pipe(Effect.provide(layer)),
     )
@@ -130,7 +140,7 @@ describe("updateCustomBehavior", () => {
     await expect(
       Effect.runPromise(
         Effect.gen(function* () {
-          const created = yield* createCustomBehavior({ projectId: PROJECT_ID, name: "Refunds", filterSet: {} })
+          const created = yield* createCustomBehavior({ projectId: PROJECT_ID, name: "Refunds", filterSet: FILTER })
           return yield* updateCustomBehavior({ id: created.id, name: "!!!" })
         }).pipe(Effect.provide(layer)),
       ),
@@ -142,7 +152,7 @@ describe("updateCustomBehavior", () => {
     await expect(
       Effect.runPromise(
         Effect.gen(function* () {
-          const created = yield* createCustomBehavior({ projectId: PROJECT_ID, name: "Refunds", filterSet: {} })
+          const created = yield* createCustomBehavior({ projectId: PROJECT_ID, name: "Refunds", filterSet: FILTER })
           return yield* updateCustomBehavior({
             id: created.id,
             filterSet: { topics: [{ op: "in", value: ["support"] }] },
@@ -158,7 +168,7 @@ describe("deleteCustomBehavior", () => {
     const { layer } = makeLayer()
     const listed = await Effect.runPromise(
       Effect.gen(function* () {
-        const created = yield* createCustomBehavior({ projectId: PROJECT_ID, name: "Refunds", filterSet: {} })
+        const created = yield* createCustomBehavior({ projectId: PROJECT_ID, name: "Refunds", filterSet: FILTER })
         yield* deleteCustomBehavior({ id: created.id })
         const repo = yield* CustomBehaviorRepository
         return yield* repo.listByProject({ projectId: PROJECT_ID })

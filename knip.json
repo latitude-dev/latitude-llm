@@ -67,9 +67,6 @@
     "packages/operations": {
       "project": [
         "src/**/*.ts"
-      ],
-      "ignoreDependencies": [
-        "zod"
       ]
     },
     "infra": {

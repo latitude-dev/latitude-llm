@@ -67,6 +67,12 @@ export interface TaxonomyObservationCounts {
   readonly noise: number
 }
 
+/** Eligible session + observation totals for a custom behavior's FilterSet over the lookback window. */
+export interface CustomBehaviorSampleCounts {
+  readonly sessionCount: number
+  readonly observationCount: number
+}
+
 export interface TaxonomyObservationClusterOccurrence {
   readonly clusterId: TaxonomyClusterId
   readonly count: number
@@ -144,6 +150,19 @@ export interface TaxonomyObservationRepositoryShape {
     readonly limit: number
     readonly filterSet: FilterSet
   }) => Effect.Effect<readonly TaxonomyScopedClusteringObservation[], RepositoryError, ChSqlClient>
+  /**
+   * True eligible totals for a custom behavior preview: the unsampled analogue
+   * of `listForCustomBehaviorSample` (same `filterSet`/window scoping) counting
+   * every matching observation and its distinct sessions. `observationCount` is
+   * what the <15 not-ready gate compares against; `since` is the lookback lower
+   * bound, passed in from `CUSTOM_BEHAVIOR_LOOKBACK_DAYS`, never hardcoded here.
+   */
+  readonly countForCustomBehaviorSample: (input: {
+    readonly organizationId: OrganizationId
+    readonly projectId: ProjectId
+    readonly since: Date
+    readonly filterSet: FilterSet
+  }) => Effect.Effect<CustomBehaviorSampleCounts, RepositoryError, ChSqlClient>
   readonly listByCluster: (
     input: ListTaxonomyObservationClusterInput,
   ) => Effect.Effect<readonly TaxonomyMomentObservation[], RepositoryError, ChSqlClient>

@@ -62,10 +62,12 @@ export {
   taxonomyClusterStateSchema,
 } from "./entities/cluster.ts"
 export {
+  CUSTOM_BEHAVIOR_EMPTY_FILTER_MESSAGE,
   CUSTOM_BEHAVIOR_EXCLUDED_FILTER_FIELD,
   CUSTOM_BEHAVIOR_TOPICS_REJECTED_MESSAGE,
   type CustomBehavior,
   CustomBehaviorStatus,
+  customBehaviorFilterSetHasConditions,
   customBehaviorFilterSetSchema,
   customBehaviorSchema,
   customBehaviorStatusSchema,
@@ -159,6 +161,7 @@ export {
   type TaxonomyLineageRepositoryShape,
 } from "./ports/taxonomy-lineage-repository.ts"
 export {
+  type CustomBehaviorSampleCounts,
   type ListTaxonomyNoiseInput,
   type ListTaxonomyObservationClusterInput,
   type ReassignTaxonomyObservationByIdInput,
@@ -278,6 +281,11 @@ export {
   type NameTaxonomyResult,
   nameClusterUseCase,
 } from "./use-cases/name-taxonomy.ts"
+export {
+  type PreviewCustomBehaviorSampleInput,
+  type PreviewCustomBehaviorSampleResult,
+  previewCustomBehaviorSampleUseCase,
+} from "./use-cases/preview-custom-behavior-sample.ts"
 export { type RouteToDeepestClusterInput, routeToDeepestClusterUseCase } from "./use-cases/route-to-deepest-cluster.ts"
 export {
   type TriggerProjectGardeningInput,

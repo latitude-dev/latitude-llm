@@ -19,7 +19,7 @@ import {
 } from "@domain/taxonomy"
 import { formatCHDate, parseCHDate } from "@repo/utils"
 import { Effect, Layer } from "effect"
-import { buildSessionFilterClauses, LIST_SELECT } from "./session-repository.ts"
+import { buildSessionFilterClauses, LIST_SELECT, resolvePercentileFilters } from "./session-repository.ts"
 
 const parseMetadata = (value: string): Record<string, unknown> => {
   const parsed: unknown = JSON.parse(value.length === 0 ? "{}" : value)
@@ -448,12 +448,16 @@ export const TaxonomyObservationRepositoryLive = Layer.effect(
       listForCustomBehaviorSample: ({ organizationId, projectId, since, limit, filterSet }) =>
         Effect.gen(function* () {
           const chSqlClient = (yield* ChSqlClient) as ChSqlClientShape<ClickHouseClient>
+          // Percentile filters carry `gtePercentile`, which the session compiler
+          // has no SQL mapping for; resolve them to concrete `gte` thresholds first,
+          // exactly as the Sessions list paths do.
+          const resolvedFilterSet = yield* resolvePercentileFilters(organizationId, projectId, filterSet)
           return yield* chSqlClient
             .query(async (client) => {
               // Resolve the behavior's filterSet into the matching sessions with
               // the same compiler the Sessions list uses (topics are already
               // excluded by the custom-behavior Zod contract; moments stay).
-              const { havingClauses, whereClauses, params: filterParams } = buildSessionFilterClauses(filterSet)
+              const { havingClauses, whereClauses, params: filterParams } = buildSessionFilterClauses(resolvedFilterSet)
               const extraWhere = whereClauses.length > 0 ? `AND ${whereClauses.join(" AND ")}` : ""
               const havingClause = havingClauses.length > 0 ? `HAVING ${havingClauses.join(" AND ")}` : ""
               // havingClauses reference the rollup aliases defined in LIST_SELECT
@@ -522,6 +526,65 @@ export const TaxonomyObservationRepositoryLive = Layer.effect(
             .pipe(
               Effect.mapError((error) =>
                 toRepositoryError(error, "TaxonomyObservationRepository.listForCustomBehaviorSample"),
+              ),
+            )
+        }),
+
+      countForCustomBehaviorSample: ({ organizationId, projectId, since, filterSet }) =>
+        Effect.gen(function* () {
+          const chSqlClient = (yield* ChSqlClient) as ChSqlClientShape<ClickHouseClient>
+          const resolvedFilterSet = yield* resolvePercentileFilters(organizationId, projectId, filterSet)
+          return yield* chSqlClient
+            .query(async (client) => {
+              // Same session compiler and window scoping as listForCustomBehaviorSample,
+              // minus the day-stratified sampling: the preview reports the true eligible
+              // totals, so what the user sees is exactly what gardening will sample.
+              const { havingClauses, whereClauses, params: filterParams } = buildSessionFilterClauses(resolvedFilterSet)
+              const extraWhere = whereClauses.length > 0 ? `AND ${whereClauses.join(" AND ")}` : ""
+              const havingClause = havingClauses.length > 0 ? `HAVING ${havingClauses.join(" AND ")}` : ""
+              const matchingSessions = `session_id IN (
+                        SELECT session_id
+                        FROM (
+                          SELECT ${LIST_SELECT}
+                          FROM sessions
+                          WHERE organization_id = {organizationId:String}
+                            AND project_id = {projectId:String}
+                            ${extraWhere}
+                          GROUP BY organization_id, project_id, session_id
+                          ${havingClause}
+                        )
+                      )`
+              const result = await client.query({
+                query: `SELECT
+                          count() AS observation_count,
+                          uniqExact(session_id) AS session_count
+                        FROM taxonomy_observations FINAL
+                        WHERE organization_id = {organizationId:String}
+                          AND project_id = {projectId:String}
+                          AND ${validObservationIdClause}
+                          AND length(embedding) > 0
+                          AND start_time >= {since:DateTime64(9, 'UTC')}
+                          AND ${matchingSessions}`,
+                query_params: {
+                  organizationId: organizationId as string,
+                  projectId: projectId as string,
+                  since: formatCHDate(since),
+                  ...filterParams,
+                },
+                format: "JSONEachRow",
+              })
+              const [row] = await result.json<{
+                observation_count: string | number
+                session_count: string | number
+              }>()
+              return {
+                observationCount: Number(row?.observation_count ?? 0),
+                sessionCount: Number(row?.session_count ?? 0),
+              }
+            })
+            .pipe(
+              Effect.mapError((error) =>
+                toRepositoryError(error, "TaxonomyObservationRepository.countForCustomBehaviorSample"),
               ),
             )
         }),
