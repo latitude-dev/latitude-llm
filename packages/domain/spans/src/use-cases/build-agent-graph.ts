@@ -439,8 +439,9 @@ function buildTraceGraph(traceId: string, traceSpans: readonly AgentGraphSpanInp
     const identity = refSpanId ? identitySpanByCandidateId.get(refSpanId) : undefined
     const resolvedAgentName =
       identity?.agentName?.trim() || gens.map((gen) => gen.agentName?.trim()).find((name) => name)
-    if (resolvedAgentName) (state.node as { label: string }).label = resolvedAgentName
-    // Duration is the boundary wall-clock, already set; carry it into own.
+    if (resolvedAgentName)
+      (state.node as { label: string }).label = resolvedAgentName
+      // Duration is the boundary wall-clock, already set; carry it into own.
     ;(state.own as MutableMetrics).durationMs = state.node.endTime - state.node.startTime
   }
   // The main's own generation count includes generations attributed to the main scope directly.
