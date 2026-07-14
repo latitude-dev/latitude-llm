@@ -167,7 +167,7 @@ export function MetadataTab({
         <UsageSummary data={session} costBadges={costBadgesNode} />
       </div>
 
-      <AgentsBreakdown graph={agentGraph} variant="session" />
+      <AgentsBreakdown graph={agentGraph} />
 
       <div className="flex flex-col gap-1">
         <Text.H6 color="foregroundMuted">Tags</Text.H6>

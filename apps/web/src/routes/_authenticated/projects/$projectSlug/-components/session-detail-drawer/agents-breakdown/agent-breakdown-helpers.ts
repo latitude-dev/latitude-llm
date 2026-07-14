@@ -1,4 +1,4 @@
-import type { AgentGraph, AgentNode } from "@domain/spans"
+import type { AgentGraph, AgentNodeKind } from "@domain/spans"
 import { formatPrice } from "@repo/utils"
 
 /** True when any node in the graph is a subagent — the gate for showing the Agents section. */
@@ -9,20 +9,75 @@ export function hasSubagents(graph: AgentGraph): boolean {
   return false
 }
 
-/** True when a node has any subagent in its subtree (all non-root nodes are subagents). */
-export function subtreeHasSubagents(node: AgentNode): boolean {
-  return node.children.some((child) => child.kind === "subagent" || subtreeHasSubagents(child))
+/** One row of the Agents breakdown: every graph node sharing an agent name, aggregated. */
+export interface AgentSummary {
+  readonly label: string
+  readonly kind: AgentNodeKind
+  readonly instanceCount: number
+  readonly totalCostMicrocents: number
+  /** Σ own wall-clock across instances — cumulative active time, not elapsed (instances may overlap). */
+  readonly totalDurationMs: number
+  readonly models: readonly string[]
+  readonly hasError: boolean
 }
 
-/** Pre-order flatten of a node's subtree for row rendering (depth carried on each node). */
-export function flattenAgentTree(root: AgentNode): AgentNode[] {
-  const out: AgentNode[] = []
-  const walk = (node: AgentNode) => {
-    out.push(node)
-    for (const child of node.children) walk(child)
+/**
+ * Aggregate every node in the graph by agent name (`node.label`), summing each node's own
+ * cost/duration so parent totals never double-count their subagents. Main-agent groups sort
+ * first, then by total cost descending.
+ */
+export function aggregateByAgentName(graph: AgentGraph): AgentSummary[] {
+  const groups = new Map<
+    string,
+    {
+      label: string
+      isMain: boolean
+      instanceCount: number
+      totalCostMicrocents: number
+      totalDurationMs: number
+      models: Set<string>
+      hasError: boolean
+    }
+  >()
+
+  for (const node of graph.nodesById.values()) {
+    let group = groups.get(node.label)
+    if (!group) {
+      group = {
+        label: node.label,
+        isMain: false,
+        instanceCount: 0,
+        totalCostMicrocents: 0,
+        totalDurationMs: 0,
+        models: new Set(),
+        hasError: false,
+      }
+      groups.set(node.label, group)
+    }
+    group.instanceCount += 1
+    group.totalCostMicrocents += node.own.costMicrocents
+    group.totalDurationMs += node.own.durationMs
+    if (node.kind === "main") group.isMain = true
+    if (node.hasError) group.hasError = true
+    for (const model of node.models) group.models.add(model)
   }
-  walk(root)
-  return out
+
+  return [...groups.values()]
+    .map(
+      (group): AgentSummary => ({
+        label: group.label,
+        kind: group.isMain ? "main" : "subagent",
+        instanceCount: group.instanceCount,
+        totalCostMicrocents: group.totalCostMicrocents,
+        totalDurationMs: group.totalDurationMs,
+        models: [...group.models],
+        hasError: group.hasError,
+      }),
+    )
+    .sort((a, b) => {
+      if (a.kind !== b.kind) return a.kind === "main" ? -1 : 1
+      return b.totalCostMicrocents - a.totalCostMicrocents
+    })
 }
 
 /** Microcents → a human price string (`$0`, `$0.0012`, `$1.23`). */

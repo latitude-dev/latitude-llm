@@ -181,7 +181,7 @@ export function TraceTab({
         )
       )}
 
-      <AgentsBreakdown graph={agentGraph} variant="trace" />
+      <AgentsBreakdown graph={agentGraph} />
 
       {/* ── Tags ── */}
       <div className="flex flex-col gap-1">
