@@ -1,6 +1,6 @@
 import { ExternalUserId, OrganizationId, ProjectId, SessionId, SimulationId, SpanId, TraceId } from "@domain/shared"
 import type { SpanDetail, SpanKind, SpanStatusCode } from "../entities/span.ts"
-import { stringAttr } from "./attributes.ts"
+import { attrArray, stringAttr } from "./attributes.ts"
 import { parseContent } from "./content/index.ts"
 import { isDroppedSpan } from "./dropped-spans.ts"
 import { resolveAttributes } from "./resolvers/index.ts"
@@ -122,9 +122,9 @@ function transformSpan({
   projectId: string
   ingestedAt: Date
 }): SpanDetail {
-  const spanAttrs = span.attributes ?? []
+  const spanAttrs = attrArray(span.attributes)
   const spanEvents = span.events ?? []
-  const resourceAttrs = resource?.attributes ?? []
+  const resourceAttrs = attrArray(resource?.attributes)
   const otelStatusCode = INT_TO_STATUS_CODE[span.status?.code ?? 0] ?? "unset"
   const statusCode = resolveStatusCode(spanAttrs, otelStatusCode, scopeName)
 

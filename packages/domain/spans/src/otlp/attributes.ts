@@ -1,7 +1,16 @@
 import type { OtlpKeyValue } from "./types.ts"
 
+/**
+ * OTLP/JSON bodies are cast, not validated, so a malformed payload can send `attributes`
+ * as a non-array (e.g. a key→value object). Coerce to an array so the read paths that
+ * iterate or `.find` over attributes don't crash the whole ingest batch.
+ */
+export function attrArray(attrs: readonly OtlpKeyValue[] | undefined): readonly OtlpKeyValue[] {
+  return Array.isArray(attrs) ? attrs : []
+}
+
 function findAttr(attrs: readonly OtlpKeyValue[], key: string) {
-  return attrs.find((a) => a.key === key)
+  return attrArray(attrs).find((a) => a.key === key)
 }
 
 export function stringAttr(attrs: readonly OtlpKeyValue[], key: string): string | undefined {
