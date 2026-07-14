@@ -144,15 +144,29 @@ const invalidateExperimentQueries = (queryClient: ReturnType<typeof useQueryClie
     queryClient.invalidateQueries({ queryKey: ["experiments", "comparison", projectId] }),
   ])
 
+/** A variant to seed a new experiment with (no id — the domain mints it). */
+export interface NewExperimentVariant {
+  readonly name: string
+  readonly baseline: boolean
+  readonly filterSet: FilterSet
+  readonly query: string | null
+  readonly timeRange: ExperimentVariant["timeRange"]
+}
+
 export function useCreateExperiment(projectId: string) {
   const queryClient = useQueryClient()
   return useMutation({
-    mutationFn: (input: { readonly name: string; readonly description?: string }) =>
+    mutationFn: (input: {
+      readonly name: string
+      readonly description?: string
+      readonly variants?: readonly NewExperimentVariant[]
+    }) =>
       createExperiment({
         data: {
           projectId,
           name: input.name,
           ...(input.description !== undefined ? { description: input.description } : {}),
+          ...(input.variants !== undefined ? { variants: [...input.variants] } : {}),
         },
       }),
     onSuccess: () => invalidateExperimentQueries(queryClient, projectId),
