@@ -10,15 +10,12 @@ export const MINIMIZED_MAX_HEIGHT = 192
 export const KEYBOARD_STEP = 8
 export const KEYBOARD_STEP_LARGE = 32
 
-export function statusBarColor(statusCode: string): string {
-  switch (statusCode) {
-    case "error":
-      return "bg-destructive"
-    case "ok":
-      return "bg-primary"
-    default:
-      return "bg-muted-foreground/40"
-  }
+export function statusBarColor(statusCode: string, operation: string): string {
+  if (statusCode === "error") return "bg-destructive"
+  if (operation === "invoke_agent") return "bg-primary"
+  if (operation === "chat") return "bg-primary/40"
+  if (operation === "execute_tool") return "bg-success/40"
+  return "bg-muted-foreground/40"
 }
 
 export function statusTextColor(statusCode: string): "foregroundMuted" | "destructive" {
