@@ -403,9 +403,9 @@ function SignalsPage() {
                 active={lifecycleGroup}
                 onSelect={(value) => setLifecycleGroup(value)}
               />
-              <Button size="sm" onClick={() => openCreate(null)}>
+              <Button onClick={() => openCreate(null)}>
                 <Icon icon={PlusIcon} size="sm" />
-                New signal
+                Signal
               </Button>
             </Layout.ActionRowItem>
           </Layout.ActionsRow>

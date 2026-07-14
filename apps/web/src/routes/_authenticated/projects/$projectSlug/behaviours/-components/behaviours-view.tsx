@@ -1077,6 +1077,9 @@ export function BehavioursView({
         <Layout.ActionsRow>
           <Layout.ActionRowItem>
             {timeFilter}
+            {momentRange ? <BehaviourBadge label={selectedMomentRangeLabel(momentRange)} icon={TagIcon} /> : null}
+          </Layout.ActionRowItem>
+          <Layout.ActionRowItem>
             <Tabs
               variant="bordered"
               size="sm"
@@ -1084,7 +1087,6 @@ export function BehavioursView({
               active={segment}
               onSelect={(value) => onSegmentChange(value)}
             />
-            {momentRange ? <BehaviourBadge label={selectedMomentRangeLabel(momentRange)} icon={TagIcon} /> : null}
           </Layout.ActionRowItem>
         </Layout.ActionsRow>
       </Layout.Actions>

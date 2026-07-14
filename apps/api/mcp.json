@@ -30988,6 +30988,3196 @@
         "readOnlyHint": true,
         "destructiveHint": false
       }
+    },
+    {
+      "name": "listExperiments",
+      "title": "List experiments",
+      "description": "Returns the project's experiments with cheap summary metrics (variant count, distinct sessions and users across all variant populations). Excludes per-variant comparison metrics — fetch a single experiment for those.",
+      "inputSchema": {
+        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "type": "object",
+        "properties": {
+          "projectSlug": {
+            "type": "string",
+            "description": "Project slug (human-readable identifier)"
+          },
+          "cursor": {
+            "description": "Opaque cursor returned in a previous response's `nextCursor`. Omit on the first page.",
+            "type": "string"
+          },
+          "limit": {
+            "default": 50,
+            "description": "Page size. Defaults to 50; max 100.",
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 100
+          },
+          "search": {
+            "description": "Filter by name (case-insensitive substring).",
+            "type": "string"
+          }
+        },
+        "required": [
+          "projectSlug",
+          "limit"
+        ],
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "type": "object",
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "id": {
+                  "type": "string",
+                  "minLength": 24,
+                  "maxLength": 24,
+                  "description": "Stable experiment identifier."
+                },
+                "organizationId": {
+                  "type": "string",
+                  "minLength": 24,
+                  "maxLength": 24,
+                  "description": "Organization that owns this experiment."
+                },
+                "projectId": {
+                  "type": "string",
+                  "minLength": 24,
+                  "maxLength": 24,
+                  "description": "Project this experiment belongs to."
+                },
+                "slug": {
+                  "type": "string",
+                  "description": "URL-safe slug derived from `name`. Unique within the project."
+                },
+                "name": {
+                  "type": "string",
+                  "description": "Human-readable name."
+                },
+                "description": {
+                  "type": "string",
+                  "description": "Free-form description. Empty string when not set."
+                },
+                "variants": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "properties": {
+                      "id": {
+                        "type": "string",
+                        "minLength": 24,
+                        "maxLength": 24,
+                        "description": "Stable variant identifier, unique within the experiment."
+                      },
+                      "name": {
+                        "type": "string",
+                        "description": "Human-readable variant name (e.g. \"Variant A\"). Unique within the experiment."
+                      },
+                      "baseline": {
+                        "type": "boolean",
+                        "description": "`true` for the single baseline variant that every other variant is compared against."
+                      },
+                      "filterSet": {
+                        "type": "object",
+                        "propertyNames": {
+                          "type": "string"
+                        },
+                        "additionalProperties": {
+                          "type": "array",
+                          "items": {
+                            "type": "object",
+                            "properties": {
+                              "op": {
+                                "type": "string",
+                                "enum": [
+                                  "eq",
+                                  "neq",
+                                  "gt",
+                                  "gte",
+                                  "lt",
+                                  "lte",
+                                  "in",
+                                  "notIn",
+                                  "contains",
+                                  "notContains",
+                                  "gtePercentile"
+                                ],
+                                "description": "Comparison operator applied to the field's value (e.g. `eq`, `neq`, `in`). The full operator list lives in the API reference."
+                              },
+                              "value": {
+                                "anyOf": [
+                                  {
+                                    "type": "string"
+                                  },
+                                  {
+                                    "type": "number"
+                                  },
+                                  {
+                                    "type": "boolean"
+                                  },
+                                  {
+                                    "type": "array",
+                                    "items": {
+                                      "anyOf": [
+                                        {
+                                          "type": "string"
+                                        },
+                                        {
+                                          "type": "number"
+                                        }
+                                      ]
+                                    }
+                                  }
+                                ],
+                                "description": "Right-hand value compared against the field. Arrays are required for `in` / `notIn`-style operators."
+                              }
+                            },
+                            "required": [
+                              "op",
+                              "value"
+                            ],
+                            "additionalProperties": false
+                          }
+                        },
+                        "description": "Session filters selecting this variant's population."
+                      },
+                      "query": {
+                        "anyOf": [
+                          {
+                            "type": "string"
+                          },
+                          {
+                            "type": "null"
+                          }
+                        ],
+                        "description": "Free-text / semantic search applied to the population, or `null`."
+                      },
+                      "timeRange": {
+                        "anyOf": [
+                          {
+                            "oneOf": [
+                              {
+                                "type": "object",
+                                "properties": {
+                                  "type": {
+                                    "type": "string",
+                                    "const": "relative",
+                                    "description": "A live window ending now, spanning the last `seconds`."
+                                  },
+                                  "seconds": {
+                                    "type": "integer",
+                                    "exclusiveMinimum": 0,
+                                    "maximum": 9007199254740991,
+                                    "description": "Length of the live window in seconds (e.g. 2592000 for the last 30 days)."
+                                  }
+                                },
+                                "required": [
+                                  "type",
+                                  "seconds"
+                                ],
+                                "additionalProperties": false
+                              },
+                              {
+                                "type": "object",
+                                "properties": {
+                                  "type": {
+                                    "type": "string",
+                                    "const": "absolute",
+                                    "description": "A fixed window between two instants."
+                                  },
+                                  "fromIso": {
+                                    "type": "string",
+                                    "description": "ISO-8601 start of the window (inclusive)."
+                                  },
+                                  "toIso": {
+                                    "type": "string",
+                                    "description": "ISO-8601 end of the window (inclusive)."
+                                  }
+                                },
+                                "required": [
+                                  "type",
+                                  "fromIso",
+                                  "toIso"
+                                ],
+                                "additionalProperties": false
+                              }
+                            ]
+                          },
+                          {
+                            "type": "null"
+                          }
+                        ],
+                        "description": "Time window the variant is measured over. `null` uses the default last-30-days window."
+                      }
+                    },
+                    "required": [
+                      "id",
+                      "name",
+                      "baseline",
+                      "filterSet",
+                      "query",
+                      "timeRange"
+                    ],
+                    "additionalProperties": false
+                  },
+                  "description": "Ordered variants. Exactly one carries the baseline flag when the list is non-empty."
+                },
+                "createdAt": {
+                  "type": "string",
+                  "description": "ISO-8601 timestamp of creation."
+                },
+                "updatedAt": {
+                  "type": "string",
+                  "description": "ISO-8601 timestamp of the last update."
+                },
+                "variantCount": {
+                  "type": "integer",
+                  "minimum": -9007199254740991,
+                  "maximum": 9007199254740991,
+                  "description": "Number of variants in the experiment."
+                },
+                "sessionsDistinct": {
+                  "type": "integer",
+                  "minimum": -9007199254740991,
+                  "maximum": 9007199254740991,
+                  "description": "Distinct sessions across the union of every variant's population (a session in several variants counts once)."
+                },
+                "usersDistinct": {
+                  "type": "integer",
+                  "minimum": -9007199254740991,
+                  "maximum": 9007199254740991,
+                  "description": "Distinct users across the union of every variant's population (a user in several variants counts once)."
+                }
+              },
+              "required": [
+                "id",
+                "organizationId",
+                "projectId",
+                "slug",
+                "name",
+                "description",
+                "variants",
+                "createdAt",
+                "updatedAt",
+                "variantCount",
+                "sessionsDistinct",
+                "usersDistinct"
+              ],
+              "additionalProperties": false
+            },
+            "description": "Page of items, in the requested sort order."
+          },
+          "nextCursor": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Opaque cursor for fetching the next page. `null` when there are no more pages. Pass it back in `cursor` to continue."
+          },
+          "hasMore": {
+            "type": "boolean",
+            "description": "`true` when there is at least one more page after this one."
+          }
+        },
+        "required": [
+          "items",
+          "nextCursor",
+          "hasMore"
+        ],
+        "additionalProperties": false
+      },
+      "annotations": {
+        "readOnlyHint": true,
+        "destructiveHint": false
+      }
+    },
+    {
+      "name": "createExperiment",
+      "title": "Create experiment",
+      "description": "Creates an experiment. The slug is derived from `name`. Omit `variants` to seed two defaults.",
+      "inputSchema": {
+        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "type": "object",
+        "properties": {
+          "projectSlug": {
+            "type": "string",
+            "description": "Project slug (human-readable identifier)"
+          },
+          "name": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 128,
+            "description": "Human-readable name. Used to derive the slug."
+          },
+          "description": {
+            "description": "Optional free-form description.",
+            "type": "string",
+            "maxLength": 2000
+          },
+          "variants": {
+            "description": "Variant definitions. Omit to seed two default variants (`Variant A` baseline + `Variant B`); pass `[]` to create an empty experiment.",
+            "maxItems": 10,
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "id": {
+                  "description": "Existing variant id to preserve. Omit to mint a new variant.",
+                  "type": "string"
+                },
+                "name": {
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 128,
+                  "description": "Variant name. Unique within the experiment."
+                },
+                "baseline": {
+                  "type": "boolean",
+                  "description": "`true` for the baseline variant. Exactly one variant must be the baseline."
+                },
+                "filterSet": {
+                  "type": "object",
+                  "propertyNames": {
+                    "type": "string"
+                  },
+                  "additionalProperties": {
+                    "type": "array",
+                    "items": {
+                      "type": "object",
+                      "properties": {
+                        "op": {
+                          "type": "string",
+                          "enum": [
+                            "eq",
+                            "neq",
+                            "gt",
+                            "gte",
+                            "lt",
+                            "lte",
+                            "in",
+                            "notIn",
+                            "contains",
+                            "notContains",
+                            "gtePercentile"
+                          ],
+                          "description": "Comparison operator applied to the field's value (e.g. `eq`, `neq`, `in`). The full operator list lives in the API reference."
+                        },
+                        "value": {
+                          "anyOf": [
+                            {
+                              "type": "string"
+                            },
+                            {
+                              "type": "number"
+                            },
+                            {
+                              "type": "boolean"
+                            },
+                            {
+                              "type": "array",
+                              "items": {
+                                "anyOf": [
+                                  {
+                                    "type": "string"
+                                  },
+                                  {
+                                    "type": "number"
+                                  }
+                                ]
+                              }
+                            }
+                          ],
+                          "description": "Right-hand value compared against the field. Arrays are required for `in` / `notIn`-style operators."
+                        }
+                      },
+                      "required": [
+                        "op",
+                        "value"
+                      ],
+                      "additionalProperties": false
+                    }
+                  },
+                  "description": "Session filters selecting this variant's population."
+                },
+                "query": {
+                  "anyOf": [
+                    {
+                      "type": "string",
+                      "maxLength": 500
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ],
+                  "description": "Free-text / semantic search, or `null`."
+                },
+                "timeRange": {
+                  "anyOf": [
+                    {
+                      "oneOf": [
+                        {
+                          "type": "object",
+                          "properties": {
+                            "type": {
+                              "type": "string",
+                              "const": "relative"
+                            },
+                            "seconds": {
+                              "type": "integer",
+                              "exclusiveMinimum": 0,
+                              "maximum": 9007199254740991,
+                              "description": "Length of the live window in seconds."
+                            }
+                          },
+                          "required": [
+                            "type",
+                            "seconds"
+                          ],
+                          "additionalProperties": false
+                        },
+                        {
+                          "type": "object",
+                          "properties": {
+                            "type": {
+                              "type": "string",
+                              "const": "absolute"
+                            },
+                            "fromIso": {
+                              "type": "string",
+                              "description": "ISO-8601 start of the window (inclusive)."
+                            },
+                            "toIso": {
+                              "type": "string",
+                              "description": "ISO-8601 end of the window (inclusive)."
+                            }
+                          },
+                          "required": [
+                            "type",
+                            "fromIso",
+                            "toIso"
+                          ],
+                          "additionalProperties": false
+                        }
+                      ],
+                      "description": "Relative (last N seconds) or absolute window."
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ],
+                  "description": "Time window, or `null` for the default last-30-days window."
+                }
+              },
+              "required": [
+                "name",
+                "baseline",
+                "filterSet",
+                "query",
+                "timeRange"
+              ],
+              "additionalProperties": false
+            }
+          }
+        },
+        "required": [
+          "projectSlug",
+          "name"
+        ],
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "minLength": 24,
+            "maxLength": 24,
+            "description": "Stable experiment identifier."
+          },
+          "organizationId": {
+            "type": "string",
+            "minLength": 24,
+            "maxLength": 24,
+            "description": "Organization that owns this experiment."
+          },
+          "projectId": {
+            "type": "string",
+            "minLength": 24,
+            "maxLength": 24,
+            "description": "Project this experiment belongs to."
+          },
+          "slug": {
+            "type": "string",
+            "description": "URL-safe slug derived from `name`. Unique within the project."
+          },
+          "name": {
+            "type": "string",
+            "description": "Human-readable name."
+          },
+          "description": {
+            "type": "string",
+            "description": "Free-form description. Empty string when not set."
+          },
+          "variants": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "id": {
+                  "type": "string",
+                  "minLength": 24,
+                  "maxLength": 24,
+                  "description": "Stable variant identifier, unique within the experiment."
+                },
+                "name": {
+                  "type": "string",
+                  "description": "Human-readable variant name (e.g. \"Variant A\"). Unique within the experiment."
+                },
+                "baseline": {
+                  "type": "boolean",
+                  "description": "`true` for the single baseline variant that every other variant is compared against."
+                },
+                "filterSet": {
+                  "type": "object",
+                  "propertyNames": {
+                    "type": "string"
+                  },
+                  "additionalProperties": {
+                    "type": "array",
+                    "items": {
+                      "type": "object",
+                      "properties": {
+                        "op": {
+                          "type": "string",
+                          "enum": [
+                            "eq",
+                            "neq",
+                            "gt",
+                            "gte",
+                            "lt",
+                            "lte",
+                            "in",
+                            "notIn",
+                            "contains",
+                            "notContains",
+                            "gtePercentile"
+                          ],
+                          "description": "Comparison operator applied to the field's value (e.g. `eq`, `neq`, `in`). The full operator list lives in the API reference."
+                        },
+                        "value": {
+                          "anyOf": [
+                            {
+                              "type": "string"
+                            },
+                            {
+                              "type": "number"
+                            },
+                            {
+                              "type": "boolean"
+                            },
+                            {
+                              "type": "array",
+                              "items": {
+                                "anyOf": [
+                                  {
+                                    "type": "string"
+                                  },
+                                  {
+                                    "type": "number"
+                                  }
+                                ]
+                              }
+                            }
+                          ],
+                          "description": "Right-hand value compared against the field. Arrays are required for `in` / `notIn`-style operators."
+                        }
+                      },
+                      "required": [
+                        "op",
+                        "value"
+                      ],
+                      "additionalProperties": false
+                    }
+                  },
+                  "description": "Session filters selecting this variant's population."
+                },
+                "query": {
+                  "anyOf": [
+                    {
+                      "type": "string"
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ],
+                  "description": "Free-text / semantic search applied to the population, or `null`."
+                },
+                "timeRange": {
+                  "anyOf": [
+                    {
+                      "oneOf": [
+                        {
+                          "type": "object",
+                          "properties": {
+                            "type": {
+                              "type": "string",
+                              "const": "relative",
+                              "description": "A live window ending now, spanning the last `seconds`."
+                            },
+                            "seconds": {
+                              "type": "integer",
+                              "exclusiveMinimum": 0,
+                              "maximum": 9007199254740991,
+                              "description": "Length of the live window in seconds (e.g. 2592000 for the last 30 days)."
+                            }
+                          },
+                          "required": [
+                            "type",
+                            "seconds"
+                          ],
+                          "additionalProperties": false
+                        },
+                        {
+                          "type": "object",
+                          "properties": {
+                            "type": {
+                              "type": "string",
+                              "const": "absolute",
+                              "description": "A fixed window between two instants."
+                            },
+                            "fromIso": {
+                              "type": "string",
+                              "description": "ISO-8601 start of the window (inclusive)."
+                            },
+                            "toIso": {
+                              "type": "string",
+                              "description": "ISO-8601 end of the window (inclusive)."
+                            }
+                          },
+                          "required": [
+                            "type",
+                            "fromIso",
+                            "toIso"
+                          ],
+                          "additionalProperties": false
+                        }
+                      ]
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ],
+                  "description": "Time window the variant is measured over. `null` uses the default last-30-days window."
+                }
+              },
+              "required": [
+                "id",
+                "name",
+                "baseline",
+                "filterSet",
+                "query",
+                "timeRange"
+              ],
+              "additionalProperties": false
+            },
+            "description": "Ordered variants. Exactly one carries the baseline flag when the list is non-empty."
+          },
+          "createdAt": {
+            "type": "string",
+            "description": "ISO-8601 timestamp of creation."
+          },
+          "updatedAt": {
+            "type": "string",
+            "description": "ISO-8601 timestamp of the last update."
+          }
+        },
+        "required": [
+          "id",
+          "organizationId",
+          "projectId",
+          "slug",
+          "name",
+          "description",
+          "variants",
+          "createdAt",
+          "updatedAt"
+        ],
+        "additionalProperties": false
+      },
+      "annotations": {
+        "readOnlyHint": false,
+        "destructiveHint": false
+      }
+    },
+    {
+      "name": "getExperiment",
+      "title": "Get experiment",
+      "description": "Returns a single experiment plus its comparison: per-variant metrics, deltas vs the baseline, and population-deviation flags.",
+      "inputSchema": {
+        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "type": "object",
+        "properties": {
+          "projectSlug": {
+            "type": "string",
+            "description": "Project slug (human-readable identifier)"
+          },
+          "experimentSlug": {
+            "type": "string",
+            "description": "Experiment slug (human-readable identifier within the project)."
+          }
+        },
+        "required": [
+          "projectSlug",
+          "experimentSlug"
+        ],
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "type": "object",
+        "properties": {
+          "experiment": {
+            "type": "object",
+            "properties": {
+              "id": {
+                "type": "string",
+                "minLength": 24,
+                "maxLength": 24,
+                "description": "Stable experiment identifier."
+              },
+              "organizationId": {
+                "type": "string",
+                "minLength": 24,
+                "maxLength": 24,
+                "description": "Organization that owns this experiment."
+              },
+              "projectId": {
+                "type": "string",
+                "minLength": 24,
+                "maxLength": 24,
+                "description": "Project this experiment belongs to."
+              },
+              "slug": {
+                "type": "string",
+                "description": "URL-safe slug derived from `name`. Unique within the project."
+              },
+              "name": {
+                "type": "string",
+                "description": "Human-readable name."
+              },
+              "description": {
+                "type": "string",
+                "description": "Free-form description. Empty string when not set."
+              },
+              "variants": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "properties": {
+                    "id": {
+                      "type": "string",
+                      "minLength": 24,
+                      "maxLength": 24,
+                      "description": "Stable variant identifier, unique within the experiment."
+                    },
+                    "name": {
+                      "type": "string",
+                      "description": "Human-readable variant name (e.g. \"Variant A\"). Unique within the experiment."
+                    },
+                    "baseline": {
+                      "type": "boolean",
+                      "description": "`true` for the single baseline variant that every other variant is compared against."
+                    },
+                    "filterSet": {
+                      "type": "object",
+                      "propertyNames": {
+                        "type": "string"
+                      },
+                      "additionalProperties": {
+                        "type": "array",
+                        "items": {
+                          "type": "object",
+                          "properties": {
+                            "op": {
+                              "type": "string",
+                              "enum": [
+                                "eq",
+                                "neq",
+                                "gt",
+                                "gte",
+                                "lt",
+                                "lte",
+                                "in",
+                                "notIn",
+                                "contains",
+                                "notContains",
+                                "gtePercentile"
+                              ],
+                              "description": "Comparison operator applied to the field's value (e.g. `eq`, `neq`, `in`). The full operator list lives in the API reference."
+                            },
+                            "value": {
+                              "anyOf": [
+                                {
+                                  "type": "string"
+                                },
+                                {
+                                  "type": "number"
+                                },
+                                {
+                                  "type": "boolean"
+                                },
+                                {
+                                  "type": "array",
+                                  "items": {
+                                    "anyOf": [
+                                      {
+                                        "type": "string"
+                                      },
+                                      {
+                                        "type": "number"
+                                      }
+                                    ]
+                                  }
+                                }
+                              ],
+                              "description": "Right-hand value compared against the field. Arrays are required for `in` / `notIn`-style operators."
+                            }
+                          },
+                          "required": [
+                            "op",
+                            "value"
+                          ],
+                          "additionalProperties": false
+                        }
+                      },
+                      "description": "Session filters selecting this variant's population."
+                    },
+                    "query": {
+                      "anyOf": [
+                        {
+                          "type": "string"
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ],
+                      "description": "Free-text / semantic search applied to the population, or `null`."
+                    },
+                    "timeRange": {
+                      "anyOf": [
+                        {
+                          "oneOf": [
+                            {
+                              "type": "object",
+                              "properties": {
+                                "type": {
+                                  "type": "string",
+                                  "const": "relative",
+                                  "description": "A live window ending now, spanning the last `seconds`."
+                                },
+                                "seconds": {
+                                  "type": "integer",
+                                  "exclusiveMinimum": 0,
+                                  "maximum": 9007199254740991,
+                                  "description": "Length of the live window in seconds (e.g. 2592000 for the last 30 days)."
+                                }
+                              },
+                              "required": [
+                                "type",
+                                "seconds"
+                              ],
+                              "additionalProperties": false
+                            },
+                            {
+                              "type": "object",
+                              "properties": {
+                                "type": {
+                                  "type": "string",
+                                  "const": "absolute",
+                                  "description": "A fixed window between two instants."
+                                },
+                                "fromIso": {
+                                  "type": "string",
+                                  "description": "ISO-8601 start of the window (inclusive)."
+                                },
+                                "toIso": {
+                                  "type": "string",
+                                  "description": "ISO-8601 end of the window (inclusive)."
+                                }
+                              },
+                              "required": [
+                                "type",
+                                "fromIso",
+                                "toIso"
+                              ],
+                              "additionalProperties": false
+                            }
+                          ]
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ],
+                      "description": "Time window the variant is measured over. `null` uses the default last-30-days window."
+                    }
+                  },
+                  "required": [
+                    "id",
+                    "name",
+                    "baseline",
+                    "filterSet",
+                    "query",
+                    "timeRange"
+                  ],
+                  "additionalProperties": false
+                },
+                "description": "Ordered variants. Exactly one carries the baseline flag when the list is non-empty."
+              },
+              "createdAt": {
+                "type": "string",
+                "description": "ISO-8601 timestamp of creation."
+              },
+              "updatedAt": {
+                "type": "string",
+                "description": "ISO-8601 timestamp of the last update."
+              }
+            },
+            "required": [
+              "id",
+              "organizationId",
+              "projectId",
+              "slug",
+              "name",
+              "description",
+              "variants",
+              "createdAt",
+              "updatedAt"
+            ],
+            "additionalProperties": false,
+            "description": "The experiment, including its variant definitions."
+          },
+          "variants": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "variantId": {
+                  "type": "string",
+                  "description": "Id of the variant these metrics belong to."
+                },
+                "baseline": {
+                  "type": "boolean",
+                  "description": "`true` when this is the baseline variant; every metric's `delta` is `null`."
+                },
+                "approximate": {
+                  "type": "boolean",
+                  "description": "`true` when the variant's query has a semantic component, making its population a best-effort sample."
+                },
+                "resolvedRange": {
+                  "type": "object",
+                  "properties": {
+                    "fromIso": {
+                      "type": "string",
+                      "description": "ISO-8601 start of the resolved window."
+                    },
+                    "toIso": {
+                      "type": "string",
+                      "description": "ISO-8601 end of the resolved window."
+                    }
+                  },
+                  "required": [
+                    "fromIso",
+                    "toIso"
+                  ],
+                  "additionalProperties": false,
+                  "description": "The absolute window the metrics were computed over."
+                },
+                "metrics": {
+                  "type": "object",
+                  "properties": {
+                    "sessions": {
+                      "type": "object",
+                      "properties": {
+                        "count": {
+                          "type": "object",
+                          "properties": {
+                            "value": {
+                              "anyOf": [
+                                {
+                                  "type": "number"
+                                },
+                                {
+                                  "type": "null"
+                                }
+                              ],
+                              "description": "Value in the metric's unit; `null` when empty or not computable."
+                            },
+                            "delta": {
+                              "anyOf": [
+                                {
+                                  "anyOf": [
+                                    {
+                                      "type": "number"
+                                    },
+                                    {
+                                      "type": "string",
+                                      "const": "up-from-zero"
+                                    }
+                                  ]
+                                },
+                                {
+                                  "type": "null"
+                                }
+                              ]
+                            }
+                          },
+                          "required": [
+                            "value",
+                            "delta"
+                          ],
+                          "additionalProperties": false,
+                          "description": "Sessions — count."
+                        },
+                        "users": {
+                          "type": "object",
+                          "properties": {
+                            "value": {
+                              "anyOf": [
+                                {
+                                  "type": "number"
+                                },
+                                {
+                                  "type": "null"
+                                }
+                              ],
+                              "description": "Value in the metric's unit; `null` when empty or not computable."
+                            },
+                            "delta": {
+                              "anyOf": [
+                                {
+                                  "anyOf": [
+                                    {
+                                      "type": "number"
+                                    },
+                                    {
+                                      "type": "string",
+                                      "const": "up-from-zero"
+                                    }
+                                  ]
+                                },
+                                {
+                                  "type": "null"
+                                }
+                              ]
+                            }
+                          },
+                          "required": [
+                            "value",
+                            "delta"
+                          ],
+                          "additionalProperties": false,
+                          "description": "Users — count."
+                        },
+                        "cost_total": {
+                          "type": "object",
+                          "properties": {
+                            "value": {
+                              "anyOf": [
+                                {
+                                  "type": "number"
+                                },
+                                {
+                                  "type": "null"
+                                }
+                              ],
+                              "description": "Value in the metric's unit; `null` when empty or not computable."
+                            },
+                            "delta": {
+                              "anyOf": [
+                                {
+                                  "anyOf": [
+                                    {
+                                      "type": "number"
+                                    },
+                                    {
+                                      "type": "string",
+                                      "const": "up-from-zero"
+                                    }
+                                  ]
+                                },
+                                {
+                                  "type": "null"
+                                }
+                              ]
+                            }
+                          },
+                          "required": [
+                            "value",
+                            "delta"
+                          ],
+                          "additionalProperties": false,
+                          "description": "Total cost — USD; lower is better."
+                        },
+                        "tokens_total": {
+                          "type": "object",
+                          "properties": {
+                            "value": {
+                              "anyOf": [
+                                {
+                                  "type": "number"
+                                },
+                                {
+                                  "type": "null"
+                                }
+                              ],
+                              "description": "Value in the metric's unit; `null` when empty or not computable."
+                            },
+                            "delta": {
+                              "anyOf": [
+                                {
+                                  "anyOf": [
+                                    {
+                                      "type": "number"
+                                    },
+                                    {
+                                      "type": "string",
+                                      "const": "up-from-zero"
+                                    }
+                                  ]
+                                },
+                                {
+                                  "type": "null"
+                                }
+                              ]
+                            }
+                          },
+                          "required": [
+                            "value",
+                            "delta"
+                          ],
+                          "additionalProperties": false,
+                          "description": "Total tokens — tokens."
+                        },
+                        "error_rate": {
+                          "type": "object",
+                          "properties": {
+                            "value": {
+                              "anyOf": [
+                                {
+                                  "type": "number"
+                                },
+                                {
+                                  "type": "null"
+                                }
+                              ],
+                              "description": "Value in the metric's unit; `null` when empty or not computable."
+                            },
+                            "delta": {
+                              "anyOf": [
+                                {
+                                  "anyOf": [
+                                    {
+                                      "type": "number"
+                                    },
+                                    {
+                                      "type": "string",
+                                      "const": "up-from-zero"
+                                    }
+                                  ]
+                                },
+                                {
+                                  "type": "null"
+                                }
+                              ]
+                            }
+                          },
+                          "required": [
+                            "value",
+                            "delta"
+                          ],
+                          "additionalProperties": false,
+                          "description": "Error rate — fraction (0–1); lower is better."
+                        },
+                        "cache_hit_rate": {
+                          "type": "object",
+                          "properties": {
+                            "value": {
+                              "anyOf": [
+                                {
+                                  "type": "number"
+                                },
+                                {
+                                  "type": "null"
+                                }
+                              ],
+                              "description": "Value in the metric's unit; `null` when empty or not computable."
+                            },
+                            "delta": {
+                              "anyOf": [
+                                {
+                                  "anyOf": [
+                                    {
+                                      "type": "number"
+                                    },
+                                    {
+                                      "type": "string",
+                                      "const": "up-from-zero"
+                                    }
+                                  ]
+                                },
+                                {
+                                  "type": "null"
+                                }
+                              ]
+                            }
+                          },
+                          "required": [
+                            "value",
+                            "delta"
+                          ],
+                          "additionalProperties": false,
+                          "description": "Cache hit rate — fraction (0–1); higher is better."
+                        },
+                        "duration_median": {
+                          "type": "object",
+                          "properties": {
+                            "value": {
+                              "anyOf": [
+                                {
+                                  "type": "number"
+                                },
+                                {
+                                  "type": "null"
+                                }
+                              ],
+                              "description": "Value in the metric's unit; `null` when empty or not computable."
+                            },
+                            "delta": {
+                              "anyOf": [
+                                {
+                                  "anyOf": [
+                                    {
+                                      "type": "number"
+                                    },
+                                    {
+                                      "type": "string",
+                                      "const": "up-from-zero"
+                                    }
+                                  ]
+                                },
+                                {
+                                  "type": "null"
+                                }
+                              ]
+                            }
+                          },
+                          "required": [
+                            "value",
+                            "delta"
+                          ],
+                          "additionalProperties": false,
+                          "description": "Median duration — seconds; lower is better."
+                        },
+                        "duration_p90": {
+                          "type": "object",
+                          "properties": {
+                            "value": {
+                              "anyOf": [
+                                {
+                                  "type": "number"
+                                },
+                                {
+                                  "type": "null"
+                                }
+                              ],
+                              "description": "Value in the metric's unit; `null` when empty or not computable."
+                            },
+                            "delta": {
+                              "anyOf": [
+                                {
+                                  "anyOf": [
+                                    {
+                                      "type": "number"
+                                    },
+                                    {
+                                      "type": "string",
+                                      "const": "up-from-zero"
+                                    }
+                                  ]
+                                },
+                                {
+                                  "type": "null"
+                                }
+                              ]
+                            }
+                          },
+                          "required": [
+                            "value",
+                            "delta"
+                          ],
+                          "additionalProperties": false,
+                          "description": "p90 duration — seconds; lower is better."
+                        },
+                        "duration_p95": {
+                          "type": "object",
+                          "properties": {
+                            "value": {
+                              "anyOf": [
+                                {
+                                  "type": "number"
+                                },
+                                {
+                                  "type": "null"
+                                }
+                              ],
+                              "description": "Value in the metric's unit; `null` when empty or not computable."
+                            },
+                            "delta": {
+                              "anyOf": [
+                                {
+                                  "anyOf": [
+                                    {
+                                      "type": "number"
+                                    },
+                                    {
+                                      "type": "string",
+                                      "const": "up-from-zero"
+                                    }
+                                  ]
+                                },
+                                {
+                                  "type": "null"
+                                }
+                              ]
+                            }
+                          },
+                          "required": [
+                            "value",
+                            "delta"
+                          ],
+                          "additionalProperties": false,
+                          "description": "p95 duration — seconds; lower is better."
+                        },
+                        "cost_avg": {
+                          "type": "object",
+                          "properties": {
+                            "value": {
+                              "anyOf": [
+                                {
+                                  "type": "number"
+                                },
+                                {
+                                  "type": "null"
+                                }
+                              ],
+                              "description": "Value in the metric's unit; `null` when empty or not computable."
+                            },
+                            "delta": {
+                              "anyOf": [
+                                {
+                                  "anyOf": [
+                                    {
+                                      "type": "number"
+                                    },
+                                    {
+                                      "type": "string",
+                                      "const": "up-from-zero"
+                                    }
+                                  ]
+                                },
+                                {
+                                  "type": "null"
+                                }
+                              ]
+                            }
+                          },
+                          "required": [
+                            "value",
+                            "delta"
+                          ],
+                          "additionalProperties": false,
+                          "description": "Avg cost — USD; lower is better."
+                        },
+                        "tokens_avg": {
+                          "type": "object",
+                          "properties": {
+                            "value": {
+                              "anyOf": [
+                                {
+                                  "type": "number"
+                                },
+                                {
+                                  "type": "null"
+                                }
+                              ],
+                              "description": "Value in the metric's unit; `null` when empty or not computable."
+                            },
+                            "delta": {
+                              "anyOf": [
+                                {
+                                  "anyOf": [
+                                    {
+                                      "type": "number"
+                                    },
+                                    {
+                                      "type": "string",
+                                      "const": "up-from-zero"
+                                    }
+                                  ]
+                                },
+                                {
+                                  "type": "null"
+                                }
+                              ]
+                            }
+                          },
+                          "required": [
+                            "value",
+                            "delta"
+                          ],
+                          "additionalProperties": false,
+                          "description": "Avg tokens — tokens."
+                        },
+                        "ttft_median": {
+                          "type": "object",
+                          "properties": {
+                            "value": {
+                              "anyOf": [
+                                {
+                                  "type": "number"
+                                },
+                                {
+                                  "type": "null"
+                                }
+                              ],
+                              "description": "Value in the metric's unit; `null` when empty or not computable."
+                            },
+                            "delta": {
+                              "anyOf": [
+                                {
+                                  "anyOf": [
+                                    {
+                                      "type": "number"
+                                    },
+                                    {
+                                      "type": "string",
+                                      "const": "up-from-zero"
+                                    }
+                                  ]
+                                },
+                                {
+                                  "type": "null"
+                                }
+                              ]
+                            }
+                          },
+                          "required": [
+                            "value",
+                            "delta"
+                          ],
+                          "additionalProperties": false,
+                          "description": "Median time to first token — seconds; lower is better."
+                        },
+                        "spans_avg": {
+                          "type": "object",
+                          "properties": {
+                            "value": {
+                              "anyOf": [
+                                {
+                                  "type": "number"
+                                },
+                                {
+                                  "type": "null"
+                                }
+                              ],
+                              "description": "Value in the metric's unit; `null` when empty or not computable."
+                            },
+                            "delta": {
+                              "anyOf": [
+                                {
+                                  "anyOf": [
+                                    {
+                                      "type": "number"
+                                    },
+                                    {
+                                      "type": "string",
+                                      "const": "up-from-zero"
+                                    }
+                                  ]
+                                },
+                                {
+                                  "type": "null"
+                                }
+                              ]
+                            }
+                          },
+                          "required": [
+                            "value",
+                            "delta"
+                          ],
+                          "additionalProperties": false,
+                          "description": "Avg spans — count."
+                        },
+                        "traces_avg": {
+                          "type": "object",
+                          "properties": {
+                            "value": {
+                              "anyOf": [
+                                {
+                                  "type": "number"
+                                },
+                                {
+                                  "type": "null"
+                                }
+                              ],
+                              "description": "Value in the metric's unit; `null` when empty or not computable."
+                            },
+                            "delta": {
+                              "anyOf": [
+                                {
+                                  "anyOf": [
+                                    {
+                                      "type": "number"
+                                    },
+                                    {
+                                      "type": "string",
+                                      "const": "up-from-zero"
+                                    }
+                                  ]
+                                },
+                                {
+                                  "type": "null"
+                                }
+                              ]
+                            }
+                          },
+                          "required": [
+                            "value",
+                            "delta"
+                          ],
+                          "additionalProperties": false,
+                          "description": "Avg traces — count."
+                        }
+                      },
+                      "required": [
+                        "count",
+                        "users",
+                        "cost_total",
+                        "tokens_total",
+                        "error_rate",
+                        "cache_hit_rate",
+                        "duration_median",
+                        "duration_p90",
+                        "duration_p95",
+                        "cost_avg",
+                        "tokens_avg",
+                        "ttft_median",
+                        "spans_avg",
+                        "traces_avg"
+                      ],
+                      "additionalProperties": false
+                    },
+                    "users": {
+                      "type": "object",
+                      "properties": {
+                        "distinct": {
+                          "type": "object",
+                          "properties": {
+                            "value": {
+                              "anyOf": [
+                                {
+                                  "type": "number"
+                                },
+                                {
+                                  "type": "null"
+                                }
+                              ],
+                              "description": "Value in the metric's unit; `null` when empty or not computable."
+                            },
+                            "delta": {
+                              "anyOf": [
+                                {
+                                  "anyOf": [
+                                    {
+                                      "type": "number"
+                                    },
+                                    {
+                                      "type": "string",
+                                      "const": "up-from-zero"
+                                    }
+                                  ]
+                                },
+                                {
+                                  "type": "null"
+                                }
+                              ]
+                            }
+                          },
+                          "required": [
+                            "value",
+                            "delta"
+                          ],
+                          "additionalProperties": false,
+                          "description": "Users — count."
+                        },
+                        "sessions_per_user": {
+                          "type": "object",
+                          "properties": {
+                            "value": {
+                              "anyOf": [
+                                {
+                                  "type": "number"
+                                },
+                                {
+                                  "type": "null"
+                                }
+                              ],
+                              "description": "Value in the metric's unit; `null` when empty or not computable."
+                            },
+                            "delta": {
+                              "anyOf": [
+                                {
+                                  "anyOf": [
+                                    {
+                                      "type": "number"
+                                    },
+                                    {
+                                      "type": "string",
+                                      "const": "up-from-zero"
+                                    }
+                                  ]
+                                },
+                                {
+                                  "type": "null"
+                                }
+                              ]
+                            }
+                          },
+                          "required": [
+                            "value",
+                            "delta"
+                          ],
+                          "additionalProperties": false,
+                          "description": "Avg sessions — count."
+                        },
+                        "traces_per_user": {
+                          "type": "object",
+                          "properties": {
+                            "value": {
+                              "anyOf": [
+                                {
+                                  "type": "number"
+                                },
+                                {
+                                  "type": "null"
+                                }
+                              ],
+                              "description": "Value in the metric's unit; `null` when empty or not computable."
+                            },
+                            "delta": {
+                              "anyOf": [
+                                {
+                                  "anyOf": [
+                                    {
+                                      "type": "number"
+                                    },
+                                    {
+                                      "type": "string",
+                                      "const": "up-from-zero"
+                                    }
+                                  ]
+                                },
+                                {
+                                  "type": "null"
+                                }
+                              ]
+                            }
+                          },
+                          "required": [
+                            "value",
+                            "delta"
+                          ],
+                          "additionalProperties": false,
+                          "description": "Avg traces — count."
+                        },
+                        "cost_avg": {
+                          "type": "object",
+                          "properties": {
+                            "value": {
+                              "anyOf": [
+                                {
+                                  "type": "number"
+                                },
+                                {
+                                  "type": "null"
+                                }
+                              ],
+                              "description": "Value in the metric's unit; `null` when empty or not computable."
+                            },
+                            "delta": {
+                              "anyOf": [
+                                {
+                                  "anyOf": [
+                                    {
+                                      "type": "number"
+                                    },
+                                    {
+                                      "type": "string",
+                                      "const": "up-from-zero"
+                                    }
+                                  ]
+                                },
+                                {
+                                  "type": "null"
+                                }
+                              ]
+                            }
+                          },
+                          "required": [
+                            "value",
+                            "delta"
+                          ],
+                          "additionalProperties": false,
+                          "description": "Avg cost — USD; lower is better."
+                        },
+                        "duration_median": {
+                          "type": "object",
+                          "properties": {
+                            "value": {
+                              "anyOf": [
+                                {
+                                  "type": "number"
+                                },
+                                {
+                                  "type": "null"
+                                }
+                              ],
+                              "description": "Value in the metric's unit; `null` when empty or not computable."
+                            },
+                            "delta": {
+                              "anyOf": [
+                                {
+                                  "anyOf": [
+                                    {
+                                      "type": "number"
+                                    },
+                                    {
+                                      "type": "string",
+                                      "const": "up-from-zero"
+                                    }
+                                  ]
+                                },
+                                {
+                                  "type": "null"
+                                }
+                              ]
+                            }
+                          },
+                          "required": [
+                            "value",
+                            "delta"
+                          ],
+                          "additionalProperties": false,
+                          "description": "Median duration — seconds; lower is better."
+                        },
+                        "duration_p90": {
+                          "type": "object",
+                          "properties": {
+                            "value": {
+                              "anyOf": [
+                                {
+                                  "type": "number"
+                                },
+                                {
+                                  "type": "null"
+                                }
+                              ],
+                              "description": "Value in the metric's unit; `null` when empty or not computable."
+                            },
+                            "delta": {
+                              "anyOf": [
+                                {
+                                  "anyOf": [
+                                    {
+                                      "type": "number"
+                                    },
+                                    {
+                                      "type": "string",
+                                      "const": "up-from-zero"
+                                    }
+                                  ]
+                                },
+                                {
+                                  "type": "null"
+                                }
+                              ]
+                            }
+                          },
+                          "required": [
+                            "value",
+                            "delta"
+                          ],
+                          "additionalProperties": false,
+                          "description": "p90 duration — seconds; lower is better."
+                        },
+                        "duration_p95": {
+                          "type": "object",
+                          "properties": {
+                            "value": {
+                              "anyOf": [
+                                {
+                                  "type": "number"
+                                },
+                                {
+                                  "type": "null"
+                                }
+                              ],
+                              "description": "Value in the metric's unit; `null` when empty or not computable."
+                            },
+                            "delta": {
+                              "anyOf": [
+                                {
+                                  "anyOf": [
+                                    {
+                                      "type": "number"
+                                    },
+                                    {
+                                      "type": "string",
+                                      "const": "up-from-zero"
+                                    }
+                                  ]
+                                },
+                                {
+                                  "type": "null"
+                                }
+                              ]
+                            }
+                          },
+                          "required": [
+                            "value",
+                            "delta"
+                          ],
+                          "additionalProperties": false,
+                          "description": "p95 duration — seconds; lower is better."
+                        },
+                        "error_session_rate": {
+                          "type": "object",
+                          "properties": {
+                            "value": {
+                              "anyOf": [
+                                {
+                                  "type": "number"
+                                },
+                                {
+                                  "type": "null"
+                                }
+                              ],
+                              "description": "Value in the metric's unit; `null` when empty or not computable."
+                            },
+                            "delta": {
+                              "anyOf": [
+                                {
+                                  "anyOf": [
+                                    {
+                                      "type": "number"
+                                    },
+                                    {
+                                      "type": "string",
+                                      "const": "up-from-zero"
+                                    }
+                                  ]
+                                },
+                                {
+                                  "type": "null"
+                                }
+                              ]
+                            }
+                          },
+                          "required": [
+                            "value",
+                            "delta"
+                          ],
+                          "additionalProperties": false,
+                          "description": "Avg error rate — fraction (0–1); lower is better."
+                        }
+                      },
+                      "required": [
+                        "distinct",
+                        "sessions_per_user",
+                        "traces_per_user",
+                        "cost_avg",
+                        "duration_median",
+                        "duration_p90",
+                        "duration_p95",
+                        "error_session_rate"
+                      ],
+                      "additionalProperties": false
+                    },
+                    "tools": {
+                      "type": "object",
+                      "properties": {
+                        "calls": {
+                          "type": "object",
+                          "properties": {
+                            "value": {
+                              "anyOf": [
+                                {
+                                  "type": "number"
+                                },
+                                {
+                                  "type": "null"
+                                }
+                              ],
+                              "description": "Value in the metric's unit; `null` when empty or not computable."
+                            },
+                            "delta": {
+                              "anyOf": [
+                                {
+                                  "anyOf": [
+                                    {
+                                      "type": "number"
+                                    },
+                                    {
+                                      "type": "string",
+                                      "const": "up-from-zero"
+                                    }
+                                  ]
+                                },
+                                {
+                                  "type": "null"
+                                }
+                              ]
+                            }
+                          },
+                          "required": [
+                            "value",
+                            "delta"
+                          ],
+                          "additionalProperties": false,
+                          "description": "Tool calls — count."
+                        },
+                        "distinct": {
+                          "type": "object",
+                          "properties": {
+                            "value": {
+                              "anyOf": [
+                                {
+                                  "type": "number"
+                                },
+                                {
+                                  "type": "null"
+                                }
+                              ],
+                              "description": "Value in the metric's unit; `null` when empty or not computable."
+                            },
+                            "delta": {
+                              "anyOf": [
+                                {
+                                  "anyOf": [
+                                    {
+                                      "type": "number"
+                                    },
+                                    {
+                                      "type": "string",
+                                      "const": "up-from-zero"
+                                    }
+                                  ]
+                                },
+                                {
+                                  "type": "null"
+                                }
+                              ]
+                            }
+                          },
+                          "required": [
+                            "value",
+                            "delta"
+                          ],
+                          "additionalProperties": false,
+                          "description": "Tools used — count."
+                        },
+                        "sessions_with_tools_rate": {
+                          "type": "object",
+                          "properties": {
+                            "value": {
+                              "anyOf": [
+                                {
+                                  "type": "number"
+                                },
+                                {
+                                  "type": "null"
+                                }
+                              ],
+                              "description": "Value in the metric's unit; `null` when empty or not computable."
+                            },
+                            "delta": {
+                              "anyOf": [
+                                {
+                                  "anyOf": [
+                                    {
+                                      "type": "number"
+                                    },
+                                    {
+                                      "type": "string",
+                                      "const": "up-from-zero"
+                                    }
+                                  ]
+                                },
+                                {
+                                  "type": "null"
+                                }
+                              ]
+                            }
+                          },
+                          "required": [
+                            "value",
+                            "delta"
+                          ],
+                          "additionalProperties": false,
+                          "description": "Usage rate — fraction (0–1)."
+                        },
+                        "error_rate": {
+                          "type": "object",
+                          "properties": {
+                            "value": {
+                              "anyOf": [
+                                {
+                                  "type": "number"
+                                },
+                                {
+                                  "type": "null"
+                                }
+                              ],
+                              "description": "Value in the metric's unit; `null` when empty or not computable."
+                            },
+                            "delta": {
+                              "anyOf": [
+                                {
+                                  "anyOf": [
+                                    {
+                                      "type": "number"
+                                    },
+                                    {
+                                      "type": "string",
+                                      "const": "up-from-zero"
+                                    }
+                                  ]
+                                },
+                                {
+                                  "type": "null"
+                                }
+                              ]
+                            }
+                          },
+                          "required": [
+                            "value",
+                            "delta"
+                          ],
+                          "additionalProperties": false,
+                          "description": "Error rate — fraction (0–1); lower is better."
+                        },
+                        "duration_p50": {
+                          "type": "object",
+                          "properties": {
+                            "value": {
+                              "anyOf": [
+                                {
+                                  "type": "number"
+                                },
+                                {
+                                  "type": "null"
+                                }
+                              ],
+                              "description": "Value in the metric's unit; `null` when empty or not computable."
+                            },
+                            "delta": {
+                              "anyOf": [
+                                {
+                                  "anyOf": [
+                                    {
+                                      "type": "number"
+                                    },
+                                    {
+                                      "type": "string",
+                                      "const": "up-from-zero"
+                                    }
+                                  ]
+                                },
+                                {
+                                  "type": "null"
+                                }
+                              ]
+                            }
+                          },
+                          "required": [
+                            "value",
+                            "delta"
+                          ],
+                          "additionalProperties": false,
+                          "description": "Median duration — seconds; lower is better."
+                        },
+                        "duration_p90": {
+                          "type": "object",
+                          "properties": {
+                            "value": {
+                              "anyOf": [
+                                {
+                                  "type": "number"
+                                },
+                                {
+                                  "type": "null"
+                                }
+                              ],
+                              "description": "Value in the metric's unit; `null` when empty or not computable."
+                            },
+                            "delta": {
+                              "anyOf": [
+                                {
+                                  "anyOf": [
+                                    {
+                                      "type": "number"
+                                    },
+                                    {
+                                      "type": "string",
+                                      "const": "up-from-zero"
+                                    }
+                                  ]
+                                },
+                                {
+                                  "type": "null"
+                                }
+                              ]
+                            }
+                          },
+                          "required": [
+                            "value",
+                            "delta"
+                          ],
+                          "additionalProperties": false,
+                          "description": "p90 duration — seconds; lower is better."
+                        },
+                        "duration_p95": {
+                          "type": "object",
+                          "properties": {
+                            "value": {
+                              "anyOf": [
+                                {
+                                  "type": "number"
+                                },
+                                {
+                                  "type": "null"
+                                }
+                              ],
+                              "description": "Value in the metric's unit; `null` when empty or not computable."
+                            },
+                            "delta": {
+                              "anyOf": [
+                                {
+                                  "anyOf": [
+                                    {
+                                      "type": "number"
+                                    },
+                                    {
+                                      "type": "string",
+                                      "const": "up-from-zero"
+                                    }
+                                  ]
+                                },
+                                {
+                                  "type": "null"
+                                }
+                              ]
+                            }
+                          },
+                          "required": [
+                            "value",
+                            "delta"
+                          ],
+                          "additionalProperties": false,
+                          "description": "p95 duration — seconds; lower is better."
+                        },
+                        "top": {
+                          "type": "array",
+                          "items": {
+                            "type": "object",
+                            "properties": {
+                              "key": {
+                                "type": "string",
+                                "description": "Stable identity: tool name, signal id, or cluster id."
+                              },
+                              "label": {
+                                "type": "string",
+                                "description": "Human-readable label (resolved name; falls back to `key` when unresolved)."
+                              },
+                              "value": {
+                                "type": "number",
+                                "description": "Ranking value: tool calls / signal occurrences / behaviour observations."
+                              }
+                            },
+                            "required": [
+                              "key",
+                              "label",
+                              "value"
+                            ],
+                            "additionalProperties": false
+                          },
+                          "description": "Top tools by call count."
+                        }
+                      },
+                      "required": [
+                        "calls",
+                        "distinct",
+                        "sessions_with_tools_rate",
+                        "error_rate",
+                        "duration_p50",
+                        "duration_p90",
+                        "duration_p95",
+                        "top"
+                      ],
+                      "additionalProperties": false
+                    },
+                    "signals": {
+                      "type": "object",
+                      "properties": {
+                        "distinct": {
+                          "type": "object",
+                          "properties": {
+                            "value": {
+                              "anyOf": [
+                                {
+                                  "type": "number"
+                                },
+                                {
+                                  "type": "null"
+                                }
+                              ],
+                              "description": "Value in the metric's unit; `null` when empty or not computable."
+                            },
+                            "delta": {
+                              "anyOf": [
+                                {
+                                  "anyOf": [
+                                    {
+                                      "type": "number"
+                                    },
+                                    {
+                                      "type": "string",
+                                      "const": "up-from-zero"
+                                    }
+                                  ]
+                                },
+                                {
+                                  "type": "null"
+                                }
+                              ]
+                            }
+                          },
+                          "required": [
+                            "value",
+                            "delta"
+                          ],
+                          "additionalProperties": false,
+                          "description": "Signals — count; lower is better."
+                        },
+                        "occurrences": {
+                          "type": "object",
+                          "properties": {
+                            "value": {
+                              "anyOf": [
+                                {
+                                  "type": "number"
+                                },
+                                {
+                                  "type": "null"
+                                }
+                              ],
+                              "description": "Value in the metric's unit; `null` when empty or not computable."
+                            },
+                            "delta": {
+                              "anyOf": [
+                                {
+                                  "anyOf": [
+                                    {
+                                      "type": "number"
+                                    },
+                                    {
+                                      "type": "string",
+                                      "const": "up-from-zero"
+                                    }
+                                  ]
+                                },
+                                {
+                                  "type": "null"
+                                }
+                              ]
+                            }
+                          },
+                          "required": [
+                            "value",
+                            "delta"
+                          ],
+                          "additionalProperties": false,
+                          "description": "Occurrences — count; lower is better."
+                        },
+                        "affected_sessions_rate": {
+                          "type": "object",
+                          "properties": {
+                            "value": {
+                              "anyOf": [
+                                {
+                                  "type": "number"
+                                },
+                                {
+                                  "type": "null"
+                                }
+                              ],
+                              "description": "Value in the metric's unit; `null` when empty or not computable."
+                            },
+                            "delta": {
+                              "anyOf": [
+                                {
+                                  "anyOf": [
+                                    {
+                                      "type": "number"
+                                    },
+                                    {
+                                      "type": "string",
+                                      "const": "up-from-zero"
+                                    }
+                                  ]
+                                },
+                                {
+                                  "type": "null"
+                                }
+                              ]
+                            }
+                          },
+                          "required": [
+                            "value",
+                            "delta"
+                          ],
+                          "additionalProperties": false,
+                          "description": "Affected sessions — fraction (0–1); lower is better."
+                        },
+                        "affected_traces_rate": {
+                          "type": "object",
+                          "properties": {
+                            "value": {
+                              "anyOf": [
+                                {
+                                  "type": "number"
+                                },
+                                {
+                                  "type": "null"
+                                }
+                              ],
+                              "description": "Value in the metric's unit; `null` when empty or not computable."
+                            },
+                            "delta": {
+                              "anyOf": [
+                                {
+                                  "anyOf": [
+                                    {
+                                      "type": "number"
+                                    },
+                                    {
+                                      "type": "string",
+                                      "const": "up-from-zero"
+                                    }
+                                  ]
+                                },
+                                {
+                                  "type": "null"
+                                }
+                              ]
+                            }
+                          },
+                          "required": [
+                            "value",
+                            "delta"
+                          ],
+                          "additionalProperties": false,
+                          "description": "Affected traces — fraction (0–1); lower is better."
+                        },
+                        "affected_users": {
+                          "type": "object",
+                          "properties": {
+                            "value": {
+                              "anyOf": [
+                                {
+                                  "type": "number"
+                                },
+                                {
+                                  "type": "null"
+                                }
+                              ],
+                              "description": "Value in the metric's unit; `null` when empty or not computable."
+                            },
+                            "delta": {
+                              "anyOf": [
+                                {
+                                  "anyOf": [
+                                    {
+                                      "type": "number"
+                                    },
+                                    {
+                                      "type": "string",
+                                      "const": "up-from-zero"
+                                    }
+                                  ]
+                                },
+                                {
+                                  "type": "null"
+                                }
+                              ]
+                            }
+                          },
+                          "required": [
+                            "value",
+                            "delta"
+                          ],
+                          "additionalProperties": false,
+                          "description": "Affected users — fraction (0–1); lower is better."
+                        },
+                        "cost_impact": {
+                          "type": "object",
+                          "properties": {
+                            "value": {
+                              "anyOf": [
+                                {
+                                  "type": "number"
+                                },
+                                {
+                                  "type": "null"
+                                }
+                              ],
+                              "description": "Value in the metric's unit; `null` when empty or not computable."
+                            },
+                            "delta": {
+                              "anyOf": [
+                                {
+                                  "anyOf": [
+                                    {
+                                      "type": "number"
+                                    },
+                                    {
+                                      "type": "string",
+                                      "const": "up-from-zero"
+                                    }
+                                  ]
+                                },
+                                {
+                                  "type": "null"
+                                }
+                              ]
+                            }
+                          },
+                          "required": [
+                            "value",
+                            "delta"
+                          ],
+                          "additionalProperties": false,
+                          "description": "Cost impact — USD; lower is better."
+                        },
+                        "top": {
+                          "type": "array",
+                          "items": {
+                            "type": "object",
+                            "properties": {
+                              "key": {
+                                "type": "string",
+                                "description": "Stable identity: tool name, signal id, or cluster id."
+                              },
+                              "label": {
+                                "type": "string",
+                                "description": "Human-readable label (resolved name; falls back to `key` when unresolved)."
+                              },
+                              "value": {
+                                "type": "number",
+                                "description": "Ranking value: tool calls / signal occurrences / behaviour observations."
+                              }
+                            },
+                            "required": [
+                              "key",
+                              "label",
+                              "value"
+                            ],
+                            "additionalProperties": false
+                          },
+                          "description": "Top signals by occurrence count."
+                        }
+                      },
+                      "required": [
+                        "distinct",
+                        "occurrences",
+                        "affected_sessions_rate",
+                        "affected_traces_rate",
+                        "affected_users",
+                        "cost_impact",
+                        "top"
+                      ],
+                      "additionalProperties": false
+                    },
+                    "behaviours": {
+                      "type": "object",
+                      "properties": {
+                        "observations": {
+                          "type": "object",
+                          "properties": {
+                            "value": {
+                              "anyOf": [
+                                {
+                                  "type": "number"
+                                },
+                                {
+                                  "type": "null"
+                                }
+                              ],
+                              "description": "Value in the metric's unit; `null` when empty or not computable."
+                            },
+                            "delta": {
+                              "anyOf": [
+                                {
+                                  "anyOf": [
+                                    {
+                                      "type": "number"
+                                    },
+                                    {
+                                      "type": "string",
+                                      "const": "up-from-zero"
+                                    }
+                                  ]
+                                },
+                                {
+                                  "type": "null"
+                                }
+                              ]
+                            }
+                          },
+                          "required": [
+                            "value",
+                            "delta"
+                          ],
+                          "additionalProperties": false,
+                          "description": "Observations — count."
+                        },
+                        "distinct_clusters": {
+                          "type": "object",
+                          "properties": {
+                            "value": {
+                              "anyOf": [
+                                {
+                                  "type": "number"
+                                },
+                                {
+                                  "type": "null"
+                                }
+                              ],
+                              "description": "Value in the metric's unit; `null` when empty or not computable."
+                            },
+                            "delta": {
+                              "anyOf": [
+                                {
+                                  "anyOf": [
+                                    {
+                                      "type": "number"
+                                    },
+                                    {
+                                      "type": "string",
+                                      "const": "up-from-zero"
+                                    }
+                                  ]
+                                },
+                                {
+                                  "type": "null"
+                                }
+                              ]
+                            }
+                          },
+                          "required": [
+                            "value",
+                            "delta"
+                          ],
+                          "additionalProperties": false,
+                          "description": "Clusters — count."
+                        },
+                        "moments": {
+                          "type": "object",
+                          "properties": {
+                            "value": {
+                              "anyOf": [
+                                {
+                                  "type": "number"
+                                },
+                                {
+                                  "type": "null"
+                                }
+                              ],
+                              "description": "Value in the metric's unit; `null` when empty or not computable."
+                            },
+                            "delta": {
+                              "anyOf": [
+                                {
+                                  "anyOf": [
+                                    {
+                                      "type": "number"
+                                    },
+                                    {
+                                      "type": "string",
+                                      "const": "up-from-zero"
+                                    }
+                                  ]
+                                },
+                                {
+                                  "type": "null"
+                                }
+                              ]
+                            }
+                          },
+                          "required": [
+                            "value",
+                            "delta"
+                          ],
+                          "additionalProperties": false,
+                          "description": "Moments — count."
+                        },
+                        "top": {
+                          "type": "array",
+                          "items": {
+                            "type": "object",
+                            "properties": {
+                              "key": {
+                                "type": "string",
+                                "description": "Stable identity: tool name, signal id, or cluster id."
+                              },
+                              "label": {
+                                "type": "string",
+                                "description": "Human-readable label (resolved name; falls back to `key` when unresolved)."
+                              },
+                              "value": {
+                                "type": "number",
+                                "description": "Ranking value: tool calls / signal occurrences / behaviour observations."
+                              }
+                            },
+                            "required": [
+                              "key",
+                              "label",
+                              "value"
+                            ],
+                            "additionalProperties": false
+                          },
+                          "description": "Top behaviours by observation count."
+                        }
+                      },
+                      "required": [
+                        "observations",
+                        "distinct_clusters",
+                        "moments",
+                        "top"
+                      ],
+                      "additionalProperties": false
+                    }
+                  },
+                  "required": [
+                    "sessions",
+                    "users",
+                    "tools",
+                    "signals",
+                    "behaviours"
+                  ],
+                  "additionalProperties": false
+                },
+                "deviatingPopulationKeys": {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  },
+                  "description": "Population keys (a subset of `sessions.count` / `sessions.users`) that deviate from the baseline by more than 25%."
+                }
+              },
+              "required": [
+                "variantId",
+                "baseline",
+                "approximate",
+                "resolvedRange",
+                "metrics",
+                "deviatingPopulationKeys"
+              ],
+              "additionalProperties": false
+            },
+            "description": "One entry per variant, in the experiment's stored variant order. The baseline is the entry whose `baseline` field is `true` — identify it by that flag, never by array position."
+          }
+        },
+        "required": [
+          "experiment",
+          "variants"
+        ],
+        "additionalProperties": false
+      },
+      "annotations": {
+        "readOnlyHint": true,
+        "destructiveHint": false
+      }
+    },
+    {
+      "name": "updateExperiment",
+      "title": "Update experiment",
+      "description": "Replaces an experiment's mutable fields. `variants`, when supplied, fully replaces the array (each variant carries its own `baseline` flag). Renaming may regenerate the slug.",
+      "inputSchema": {
+        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "type": "object",
+        "properties": {
+          "projectSlug": {
+            "type": "string",
+            "description": "Project slug (human-readable identifier)"
+          },
+          "experimentSlug": {
+            "type": "string",
+            "description": "Experiment slug (human-readable identifier within the project)."
+          },
+          "name": {
+            "description": "New name. Renaming may regenerate the slug — re-read the response or rely on `id`.",
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 128
+          },
+          "description": {
+            "description": "New description.",
+            "type": "string",
+            "maxLength": 2000
+          },
+          "variants": {
+            "description": "Full replacement of the variants array. Each variant carries its own `baseline` flag.",
+            "maxItems": 10,
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "id": {
+                  "description": "Existing variant id to preserve. Omit to mint a new variant.",
+                  "type": "string"
+                },
+                "name": {
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 128,
+                  "description": "Variant name. Unique within the experiment."
+                },
+                "baseline": {
+                  "type": "boolean",
+                  "description": "`true` for the baseline variant. Exactly one variant must be the baseline."
+                },
+                "filterSet": {
+                  "type": "object",
+                  "propertyNames": {
+                    "type": "string"
+                  },
+                  "additionalProperties": {
+                    "type": "array",
+                    "items": {
+                      "type": "object",
+                      "properties": {
+                        "op": {
+                          "type": "string",
+                          "enum": [
+                            "eq",
+                            "neq",
+                            "gt",
+                            "gte",
+                            "lt",
+                            "lte",
+                            "in",
+                            "notIn",
+                            "contains",
+                            "notContains",
+                            "gtePercentile"
+                          ],
+                          "description": "Comparison operator applied to the field's value (e.g. `eq`, `neq`, `in`). The full operator list lives in the API reference."
+                        },
+                        "value": {
+                          "anyOf": [
+                            {
+                              "type": "string"
+                            },
+                            {
+                              "type": "number"
+                            },
+                            {
+                              "type": "boolean"
+                            },
+                            {
+                              "type": "array",
+                              "items": {
+                                "anyOf": [
+                                  {
+                                    "type": "string"
+                                  },
+                                  {
+                                    "type": "number"
+                                  }
+                                ]
+                              }
+                            }
+                          ],
+                          "description": "Right-hand value compared against the field. Arrays are required for `in` / `notIn`-style operators."
+                        }
+                      },
+                      "required": [
+                        "op",
+                        "value"
+                      ],
+                      "additionalProperties": false
+                    }
+                  },
+                  "description": "Session filters selecting this variant's population."
+                },
+                "query": {
+                  "anyOf": [
+                    {
+                      "type": "string",
+                      "maxLength": 500
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ],
+                  "description": "Free-text / semantic search, or `null`."
+                },
+                "timeRange": {
+                  "anyOf": [
+                    {
+                      "oneOf": [
+                        {
+                          "type": "object",
+                          "properties": {
+                            "type": {
+                              "type": "string",
+                              "const": "relative"
+                            },
+                            "seconds": {
+                              "type": "integer",
+                              "exclusiveMinimum": 0,
+                              "maximum": 9007199254740991,
+                              "description": "Length of the live window in seconds."
+                            }
+                          },
+                          "required": [
+                            "type",
+                            "seconds"
+                          ],
+                          "additionalProperties": false
+                        },
+                        {
+                          "type": "object",
+                          "properties": {
+                            "type": {
+                              "type": "string",
+                              "const": "absolute"
+                            },
+                            "fromIso": {
+                              "type": "string",
+                              "description": "ISO-8601 start of the window (inclusive)."
+                            },
+                            "toIso": {
+                              "type": "string",
+                              "description": "ISO-8601 end of the window (inclusive)."
+                            }
+                          },
+                          "required": [
+                            "type",
+                            "fromIso",
+                            "toIso"
+                          ],
+                          "additionalProperties": false
+                        }
+                      ],
+                      "description": "Relative (last N seconds) or absolute window."
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ],
+                  "description": "Time window, or `null` for the default last-30-days window."
+                }
+              },
+              "required": [
+                "name",
+                "baseline",
+                "filterSet",
+                "query",
+                "timeRange"
+              ],
+              "additionalProperties": false
+            }
+          }
+        },
+        "required": [
+          "projectSlug",
+          "experimentSlug"
+        ],
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "minLength": 24,
+            "maxLength": 24,
+            "description": "Stable experiment identifier."
+          },
+          "organizationId": {
+            "type": "string",
+            "minLength": 24,
+            "maxLength": 24,
+            "description": "Organization that owns this experiment."
+          },
+          "projectId": {
+            "type": "string",
+            "minLength": 24,
+            "maxLength": 24,
+            "description": "Project this experiment belongs to."
+          },
+          "slug": {
+            "type": "string",
+            "description": "URL-safe slug derived from `name`. Unique within the project."
+          },
+          "name": {
+            "type": "string",
+            "description": "Human-readable name."
+          },
+          "description": {
+            "type": "string",
+            "description": "Free-form description. Empty string when not set."
+          },
+          "variants": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "id": {
+                  "type": "string",
+                  "minLength": 24,
+                  "maxLength": 24,
+                  "description": "Stable variant identifier, unique within the experiment."
+                },
+                "name": {
+                  "type": "string",
+                  "description": "Human-readable variant name (e.g. \"Variant A\"). Unique within the experiment."
+                },
+                "baseline": {
+                  "type": "boolean",
+                  "description": "`true` for the single baseline variant that every other variant is compared against."
+                },
+                "filterSet": {
+                  "type": "object",
+                  "propertyNames": {
+                    "type": "string"
+                  },
+                  "additionalProperties": {
+                    "type": "array",
+                    "items": {
+                      "type": "object",
+                      "properties": {
+                        "op": {
+                          "type": "string",
+                          "enum": [
+                            "eq",
+                            "neq",
+                            "gt",
+                            "gte",
+                            "lt",
+                            "lte",
+                            "in",
+                            "notIn",
+                            "contains",
+                            "notContains",
+                            "gtePercentile"
+                          ],
+                          "description": "Comparison operator applied to the field's value (e.g. `eq`, `neq`, `in`). The full operator list lives in the API reference."
+                        },
+                        "value": {
+                          "anyOf": [
+                            {
+                              "type": "string"
+                            },
+                            {
+                              "type": "number"
+                            },
+                            {
+                              "type": "boolean"
+                            },
+                            {
+                              "type": "array",
+                              "items": {
+                                "anyOf": [
+                                  {
+                                    "type": "string"
+                                  },
+                                  {
+                                    "type": "number"
+                                  }
+                                ]
+                              }
+                            }
+                          ],
+                          "description": "Right-hand value compared against the field. Arrays are required for `in` / `notIn`-style operators."
+                        }
+                      },
+                      "required": [
+                        "op",
+                        "value"
+                      ],
+                      "additionalProperties": false
+                    }
+                  },
+                  "description": "Session filters selecting this variant's population."
+                },
+                "query": {
+                  "anyOf": [
+                    {
+                      "type": "string"
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ],
+                  "description": "Free-text / semantic search applied to the population, or `null`."
+                },
+                "timeRange": {
+                  "anyOf": [
+                    {
+                      "oneOf": [
+                        {
+                          "type": "object",
+                          "properties": {
+                            "type": {
+                              "type": "string",
+                              "const": "relative",
+                              "description": "A live window ending now, spanning the last `seconds`."
+                            },
+                            "seconds": {
+                              "type": "integer",
+                              "exclusiveMinimum": 0,
+                              "maximum": 9007199254740991,
+                              "description": "Length of the live window in seconds (e.g. 2592000 for the last 30 days)."
+                            }
+                          },
+                          "required": [
+                            "type",
+                            "seconds"
+                          ],
+                          "additionalProperties": false
+                        },
+                        {
+                          "type": "object",
+                          "properties": {
+                            "type": {
+                              "type": "string",
+                              "const": "absolute",
+                              "description": "A fixed window between two instants."
+                            },
+                            "fromIso": {
+                              "type": "string",
+                              "description": "ISO-8601 start of the window (inclusive)."
+                            },
+                            "toIso": {
+                              "type": "string",
+                              "description": "ISO-8601 end of the window (inclusive)."
+                            }
+                          },
+                          "required": [
+                            "type",
+                            "fromIso",
+                            "toIso"
+                          ],
+                          "additionalProperties": false
+                        }
+                      ]
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ],
+                  "description": "Time window the variant is measured over. `null` uses the default last-30-days window."
+                }
+              },
+              "required": [
+                "id",
+                "name",
+                "baseline",
+                "filterSet",
+                "query",
+                "timeRange"
+              ],
+              "additionalProperties": false
+            },
+            "description": "Ordered variants. Exactly one carries the baseline flag when the list is non-empty."
+          },
+          "createdAt": {
+            "type": "string",
+            "description": "ISO-8601 timestamp of creation."
+          },
+          "updatedAt": {
+            "type": "string",
+            "description": "ISO-8601 timestamp of the last update."
+          }
+        },
+        "required": [
+          "id",
+          "organizationId",
+          "projectId",
+          "slug",
+          "name",
+          "description",
+          "variants",
+          "createdAt",
+          "updatedAt"
+        ],
+        "additionalProperties": false
+      },
+      "annotations": {
+        "readOnlyHint": false,
+        "destructiveHint": true
+      }
+    },
+    {
+      "name": "deleteExperiment",
+      "title": "Delete experiment",
+      "description": "Deletes an experiment. Its slug becomes reusable.",
+      "inputSchema": {
+        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "type": "object",
+        "properties": {
+          "projectSlug": {
+            "type": "string",
+            "description": "Project slug (human-readable identifier)"
+          },
+          "experimentSlug": {
+            "type": "string",
+            "description": "Experiment slug (human-readable identifier within the project)."
+          }
+        },
+        "required": [
+          "projectSlug",
+          "experimentSlug"
+        ],
+        "additionalProperties": false
+      },
+      "annotations": {
+        "readOnlyHint": false,
+        "destructiveHint": true
+      }
     }
   ]
 }

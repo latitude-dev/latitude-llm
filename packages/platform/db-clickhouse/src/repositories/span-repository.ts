@@ -427,13 +427,17 @@ const sessionMembership = (sessionId: string): { clause: string; params: Record<
   return { clause: "session_id = {sessionId:String}", params: { sessionId } }
 }
 
-// Defense-in-depth for multi-span reads: single-threaded formatting + a
-// per-query memory cap so a pathological query fails its own request
-// (retryable RepositoryError) rather than tripping the server-wide
-// OvercommitTracker and killing unrelated tenants' queries.
+// Defense-in-depth for multi-span reads: single-threaded formatting, a per-query
+// memory cap, and an execution-time cap so a pathological query fails its own
+// request (retryable RepositoryError) rather than tripping the server-wide
+// OvercommitTracker and killing unrelated tenants' queries. The time cap sits
+// under the client's 30s `request_timeout` so ClickHouse cancels the query
+// server-side (freeing the shared socket) instead of the client abandoning a
+// query that keeps burning a thread.
 const BOUNDED_READ_SETTINGS = {
   output_format_parallel_formatting: 0,
-  max_memory_usage: "4000000000",
+  max_memory_usage: "1000000000",
+  max_execution_time: 5,
 } as const
 
 const PAGINATED_READ_SETTINGS = {

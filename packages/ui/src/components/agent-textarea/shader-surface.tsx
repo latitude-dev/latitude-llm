@@ -15,10 +15,13 @@ interface ShaderSurfaceProps {
   fragmentSource: string
   targetsRef: RefObject<ShaderTargets>
   loading: boolean
+  /** Corner radius (CSS px) of the drawn border, to match the wrapped element's rounding.
+   * A tuple sets each corner in CSS order (top-left, top-right, bottom-right, bottom-left). */
+  radiusPx?: number | readonly [number, number, number, number]
 }
 
 const BLEED_PX = 8
-const RADIUS_PX = 6
+const DEFAULT_RADIUS_PX = 6
 const MAX_DPR = 2
 const COVERAGE_RATE = 6
 const INTENSITY_RATE = 4
@@ -36,7 +39,7 @@ const UNIFORM_NAMES = [
   "u_intensity",
   "u_focus",
   "u_light",
-  "u_radius",
+  "u_radii",
   "u_bleed",
 ] as const
 
@@ -108,9 +111,15 @@ function smoothToward(value: number, target: number, rate: number, dt: number): 
   return value + (target - value) * (1 - Math.exp(-rate * dt))
 }
 
-export function ShaderSurface({ fragmentSource, targetsRef, loading }: ShaderSurfaceProps) {
+export function ShaderSurface({
+  fragmentSource,
+  targetsRef,
+  loading,
+  radiusPx = DEFAULT_RADIUS_PX,
+}: ShaderSurfaceProps) {
   const canvasRef = useRef<HTMLCanvasElement | null>(null)
   const [fallback, setFallback] = useState(false)
+  const radii = typeof radiusPx === "number" ? ([radiusPx, radiusPx, radiusPx, radiusPx] as const) : radiusPx
 
   // fragmentSource is read once here; remount (key) to switch shaders.
   useMountEffect(() => {
@@ -187,7 +196,7 @@ export function ShaderSurface({ fragmentSource, targetsRef, loading }: ShaderSur
       gl.uniform1f(locations.u_intensity, current.intensity)
       gl.uniform1f(locations.u_focus, current.focus)
       gl.uniform1f(locations.u_light, light)
-      gl.uniform1f(locations.u_radius, RADIUS_PX * dpr)
+      gl.uniform4f(locations.u_radii, radii[0] * dpr, radii[1] * dpr, radii[2] * dpr, radii[3] * dpr)
       gl.uniform1f(locations.u_bleed, BLEED_PX * dpr)
       gl.drawArrays(gl.TRIANGLES, 0, 3)
       rafId = requestAnimationFrame(frame)
@@ -300,7 +309,8 @@ export function ShaderSurface({ fragmentSource, targetsRef, loading }: ShaderSur
     <div className="pointer-events-none absolute -inset-2">
       {fallback ? (
         <div
-          className={cn("absolute inset-2 rounded-md border border-input transition-colors", {
+          style={{ borderRadius: radii.map((radius) => `${radius}px`).join(" ") }}
+          className={cn("absolute inset-2 border border-input transition-colors", {
             "bg-primary-muted": loading,
             "shadow-[0_0_12px_3px_hsl(var(--primary)/0.25)]": !loading,
           })}

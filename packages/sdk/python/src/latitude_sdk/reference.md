@@ -8715,3 +8715,469 @@ client.spans.query(
 </dl>
 </details>
 
+## Experiments
+<details><summary><code>client.experiments.<a href="src/latitude_sdk/experiments/client.py">list</a>(...) -> PaginatedExperiments</code></summary>
+<dl>
+<dd>
+
+#### 📝 Description
+
+<dl>
+<dd>
+
+<dl>
+<dd>
+
+Returns the project's experiments with cheap summary metrics (variant count, distinct sessions and users across all variant populations). Excludes per-variant comparison metrics — fetch a single experiment for those.
+</dd>
+</dl>
+</dd>
+</dl>
+
+#### 🔌 Usage
+
+<dl>
+<dd>
+
+<dl>
+<dd>
+
+```python
+from latitude_sdk import LatitudeClient
+from latitude_sdk.environment import LatitudeClientEnvironment
+
+client = LatitudeClient(
+    api_key="<token>",
+    environment=LatitudeClientEnvironment.PRODUCTION,
+)
+
+client.experiments.list(
+    project_slug="projectSlug",
+)
+
+```
+</dd>
+</dl>
+</dd>
+</dl>
+
+#### ⚙️ Parameters
+
+<dl>
+<dd>
+
+<dl>
+<dd>
+
+**project_slug:** `str` — Project slug (human-readable identifier)
+    
+</dd>
+</dl>
+
+<dl>
+<dd>
+
+**cursor:** `typing.Optional[str]` — Opaque cursor returned in a previous response's `nextCursor`. Omit on the first page.
+    
+</dd>
+</dl>
+
+<dl>
+<dd>
+
+**limit:** `typing.Optional[int]` — Page size. Defaults to 50; max 100.
+    
+</dd>
+</dl>
+
+<dl>
+<dd>
+
+**search:** `typing.Optional[str]` — Filter by name (case-insensitive substring).
+    
+</dd>
+</dl>
+
+<dl>
+<dd>
+
+**request_options:** `typing.Optional[RequestOptions]` — Request-specific configuration.
+    
+</dd>
+</dl>
+</dd>
+</dl>
+
+
+</dd>
+</dl>
+</details>
+
+<details><summary><code>client.experiments.<a href="src/latitude_sdk/experiments/client.py">create</a>(...) -> Experiment</code></summary>
+<dl>
+<dd>
+
+#### 📝 Description
+
+<dl>
+<dd>
+
+<dl>
+<dd>
+
+Creates an experiment. The slug is derived from `name`. Omit `variants` to seed two defaults.
+</dd>
+</dl>
+</dd>
+</dl>
+
+#### 🔌 Usage
+
+<dl>
+<dd>
+
+<dl>
+<dd>
+
+```python
+from latitude_sdk import LatitudeClient
+from latitude_sdk.environment import LatitudeClientEnvironment
+
+client = LatitudeClient(
+    api_key="<token>",
+    environment=LatitudeClientEnvironment.PRODUCTION,
+)
+
+client.experiments.create(
+    project_slug="projectSlug",
+    name="name",
+)
+
+```
+</dd>
+</dl>
+</dd>
+</dl>
+
+#### ⚙️ Parameters
+
+<dl>
+<dd>
+
+<dl>
+<dd>
+
+**project_slug:** `str` — Project slug (human-readable identifier)
+    
+</dd>
+</dl>
+
+<dl>
+<dd>
+
+**name:** `str` — Human-readable name. Used to derive the slug.
+    
+</dd>
+</dl>
+
+<dl>
+<dd>
+
+**description:** `typing.Optional[str]` — Optional free-form description.
+    
+</dd>
+</dl>
+
+<dl>
+<dd>
+
+**variants:** `typing.Optional[typing.List[CreateExperimentBodyVariantsItem]]` — Variant definitions. Omit to seed two default variants (`Variant A` baseline + `Variant B`); pass `[]` to create an empty experiment.
+    
+</dd>
+</dl>
+
+<dl>
+<dd>
+
+**request_options:** `typing.Optional[RequestOptions]` — Request-specific configuration.
+    
+</dd>
+</dl>
+</dd>
+</dl>
+
+
+</dd>
+</dl>
+</details>
+
+<details><summary><code>client.experiments.<a href="src/latitude_sdk/experiments/client.py">get</a>(...) -> ExperimentComparison</code></summary>
+<dl>
+<dd>
+
+#### 📝 Description
+
+<dl>
+<dd>
+
+<dl>
+<dd>
+
+Returns a single experiment plus its comparison: per-variant metrics, deltas vs the baseline, and population-deviation flags.
+</dd>
+</dl>
+</dd>
+</dl>
+
+#### 🔌 Usage
+
+<dl>
+<dd>
+
+<dl>
+<dd>
+
+```python
+from latitude_sdk import LatitudeClient
+from latitude_sdk.environment import LatitudeClientEnvironment
+
+client = LatitudeClient(
+    api_key="<token>",
+    environment=LatitudeClientEnvironment.PRODUCTION,
+)
+
+client.experiments.get(
+    project_slug="projectSlug",
+    experiment_slug="experimentSlug",
+)
+
+```
+</dd>
+</dl>
+</dd>
+</dl>
+
+#### ⚙️ Parameters
+
+<dl>
+<dd>
+
+<dl>
+<dd>
+
+**project_slug:** `str` — Project slug (human-readable identifier)
+    
+</dd>
+</dl>
+
+<dl>
+<dd>
+
+**experiment_slug:** `str` — Experiment slug (human-readable identifier within the project).
+    
+</dd>
+</dl>
+
+<dl>
+<dd>
+
+**request_options:** `typing.Optional[RequestOptions]` — Request-specific configuration.
+    
+</dd>
+</dl>
+</dd>
+</dl>
+
+
+</dd>
+</dl>
+</details>
+
+<details><summary><code>client.experiments.<a href="src/latitude_sdk/experiments/client.py">update</a>(...) -> Experiment</code></summary>
+<dl>
+<dd>
+
+#### 📝 Description
+
+<dl>
+<dd>
+
+<dl>
+<dd>
+
+Replaces an experiment's mutable fields. `variants`, when supplied, fully replaces the array (each variant carries its own `baseline` flag). Renaming may regenerate the slug.
+</dd>
+</dl>
+</dd>
+</dl>
+
+#### 🔌 Usage
+
+<dl>
+<dd>
+
+<dl>
+<dd>
+
+```python
+from latitude_sdk import LatitudeClient
+from latitude_sdk.environment import LatitudeClientEnvironment
+
+client = LatitudeClient(
+    api_key="<token>",
+    environment=LatitudeClientEnvironment.PRODUCTION,
+)
+
+client.experiments.update(
+    project_slug="projectSlug",
+    experiment_slug="experimentSlug",
+)
+
+```
+</dd>
+</dl>
+</dd>
+</dl>
+
+#### ⚙️ Parameters
+
+<dl>
+<dd>
+
+<dl>
+<dd>
+
+**project_slug:** `str` — Project slug (human-readable identifier)
+    
+</dd>
+</dl>
+
+<dl>
+<dd>
+
+**experiment_slug:** `str` — Experiment slug (human-readable identifier within the project).
+    
+</dd>
+</dl>
+
+<dl>
+<dd>
+
+**name:** `typing.Optional[str]` — New name. Renaming may regenerate the slug — re-read the response or rely on `id`.
+    
+</dd>
+</dl>
+
+<dl>
+<dd>
+
+**description:** `typing.Optional[str]` — New description.
+    
+</dd>
+</dl>
+
+<dl>
+<dd>
+
+**variants:** `typing.Optional[typing.List[UpdateExperimentBodyVariantsItem]]` — Full replacement of the variants array. Each variant carries its own `baseline` flag.
+    
+</dd>
+</dl>
+
+<dl>
+<dd>
+
+**request_options:** `typing.Optional[RequestOptions]` — Request-specific configuration.
+    
+</dd>
+</dl>
+</dd>
+</dl>
+
+
+</dd>
+</dl>
+</details>
+
+<details><summary><code>client.experiments.<a href="src/latitude_sdk/experiments/client.py">delete</a>(...)</code></summary>
+<dl>
+<dd>
+
+#### 📝 Description
+
+<dl>
+<dd>
+
+<dl>
+<dd>
+
+Deletes an experiment. Its slug becomes reusable.
+</dd>
+</dl>
+</dd>
+</dl>
+
+#### 🔌 Usage
+
+<dl>
+<dd>
+
+<dl>
+<dd>
+
+```python
+from latitude_sdk import LatitudeClient
+from latitude_sdk.environment import LatitudeClientEnvironment
+
+client = LatitudeClient(
+    api_key="<token>",
+    environment=LatitudeClientEnvironment.PRODUCTION,
+)
+
+client.experiments.delete(
+    project_slug="projectSlug",
+    experiment_slug="experimentSlug",
+)
+
+```
+</dd>
+</dl>
+</dd>
+</dl>
+
+#### ⚙️ Parameters
+
+<dl>
+<dd>
+
+<dl>
+<dd>
+
+**project_slug:** `str` — Project slug (human-readable identifier)
+    
+</dd>
+</dl>
+
+<dl>
+<dd>
+
+**experiment_slug:** `str` — Experiment slug (human-readable identifier within the project).
+    
+</dd>
+</dl>
+
+<dl>
+<dd>
+
+**request_options:** `typing.Optional[RequestOptions]` — Request-specific configuration.
+    
+</dd>
+</dl>
+</dd>
+</dl>
+
+
+</dd>
+</dl>
+</details>
+

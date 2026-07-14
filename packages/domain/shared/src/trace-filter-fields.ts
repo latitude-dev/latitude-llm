@@ -66,7 +66,7 @@ export const TRACE_FILTER_FIELDS = [
   {
     field: "duration",
     type: "numberRange",
-    label: "Duration (seconds)",
+    label: "Duration (s)",
     tooltip: "Active execution time, in seconds.",
     percentile: true,
     displayScale: 1_000_000_000,
@@ -75,7 +75,7 @@ export const TRACE_FILTER_FIELDS = [
   {
     field: "ttft",
     type: "numberRange",
-    label: "TTFT (milliseconds)",
+    label: "TTFT (ms)",
     tooltip: "Time to first token, in milliseconds.",
     percentile: true,
     displayScale: 1_000_000,

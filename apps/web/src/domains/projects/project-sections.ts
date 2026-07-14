@@ -5,6 +5,7 @@ import {
   CreditCard,
   DatabaseIcon,
   Fingerprint,
+  FlaskConical,
   Key,
   type LucideIcon,
   MessagesSquareIcon,
@@ -77,6 +78,14 @@ const PROJECT_SECTIONS: readonly ProjectSection[] = [
     group: "understand",
     path: (slug) => `/projects/${slug}/behaviours`,
     isActive: (pathname, slug) => pathname.startsWith(`/projects/${slug}/behaviours`),
+  },
+  {
+    key: "experiments",
+    label: "Experiments",
+    icon: FlaskConical,
+    group: "understand",
+    path: (slug) => `/projects/${slug}/experiments`,
+    isActive: (pathname, slug) => pathname.startsWith(`/projects/${slug}/experiments`),
   },
   {
     key: "custom-behaviours",

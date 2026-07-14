@@ -1,6 +1,6 @@
 import { type DateRange, DateRangePicker, type DateRangePickerPreset } from "@repo/ui"
 
-const TIME_PRESETS = [
+export const TIME_PRESETS = [
   { id: "last-30-seconds", label: "Last 30 seconds", seconds: 30 },
   { id: "last-15-minutes", label: "Last 15 minutes", seconds: 15 * 60 },
   { id: "last-30-minutes", label: "Last 30 minutes", seconds: 30 * 60 },

@@ -9,6 +9,8 @@ export * as apiKeys from "./apiKeys/index.js";
 export * from "./datasets/client/requests/index.js";
 export * as datasets from "./datasets/index.js";
 export * from "./datasets/types/index.js";
+export * from "./experiments/client/requests/index.js";
+export * as experiments from "./experiments/index.js";
 export * from "./incidents/client/requests/index.js";
 export * as incidents from "./incidents/index.js";
 export * from "./incidents/types/index.js";
