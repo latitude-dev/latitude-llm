@@ -824,9 +824,7 @@ describe("SpanRepository", () => {
             cursor = result.nextCursor
           }
 
-          expect(delivered).toEqual(
-            direction === "asc" ? ["tie-1", "tie-2", "tie-3"] : ["tie-3", "tie-2", "tie-1"],
-          )
+          expect(delivered).toEqual(direction === "asc" ? ["tie-1", "tie-2", "tie-3"] : ["tie-3", "tie-2", "tie-1"])
         }
       }
     })
