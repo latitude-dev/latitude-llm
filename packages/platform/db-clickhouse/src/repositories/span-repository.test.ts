@@ -1,5 +1,5 @@
 import { type ChSqlClient, OrganizationId, ProjectId, SessionId, SpanId, TraceId } from "@domain/shared"
-import { SpanRepository, type SpanRepositoryShape } from "@domain/spans"
+import { type SpanListCursor, type SpanListPage, SpanRepository, type SpanRepositoryShape } from "@domain/spans"
 import { setupTestClickHouse } from "@platform/testkit"
 import { Effect } from "effect"
 import { beforeAll, describe, expect, it } from "vitest"
@@ -500,6 +500,52 @@ describe("SpanRepository", () => {
       expect(spans.items.map((span) => span.name)).toEqual(["tool-span"])
     })
 
+    it("late-materializes selected versions without returning dynamic maps", async () => {
+      await runCh(
+        insertJsonEachRow(ch.client, "spans", [
+          makeSpanRow({
+            span_id: "late000000000001",
+            name: "older",
+            metadata: { source: "target" },
+            attr_string: { "ai.prompt": "x".repeat(1_000_000) },
+            attr_int: { retries: 2 },
+            attr_float: { temperature: 0.7 },
+            attr_bool: { streamed: 1 },
+            resource_string: { host: "worker-1" },
+            ingested_at: "2026-01-01 00:00:00.000",
+          }),
+          makeSpanRow({
+            span_id: "late000000000001",
+            name: "newer",
+            metadata: { source: "target" },
+            attr_string: { "ai.prompt": "x".repeat(1_000_000) },
+            ingested_at: "2026-01-01 00:00:01.000",
+          }),
+          makeSpanRow({
+            span_id: "late000000000002",
+            name: "metadata-miss",
+            metadata: { source: "other" },
+          }),
+        ]),
+      )
+
+      const page = await runCh(
+        repo.listByProjectId({
+          organizationId: ORG_ID,
+          projectId: PROJECT_ID,
+          options: { limit: 10, filters: { "metadata.source": [{ op: "eq", value: "target" }] } },
+        }),
+      )
+
+      expect(page.items).toHaveLength(1)
+      expect(page.items[0]).toMatchObject({ name: "newer", metadata: { source: "target" } })
+      expect(page.items[0]?.attrString).toEqual({})
+      expect(page.items[0]?.attrInt).toEqual({})
+      expect(page.items[0]?.attrFloat).toEqual({})
+      expect(page.items[0]?.attrBool).toEqual({})
+      expect(page.items[0]?.resourceString).toEqual({})
+    })
+
     it("sorts by a chosen field and filters by status", async () => {
       await runCh(
         insertJsonEachRow(ch.client, "spans", [
@@ -618,6 +664,169 @@ describe("SpanRepository", () => {
 
       const page2 = await runCh(repo.listByProjectId({ ...base, options: { ...opts, cursor } }))
       expect(page2.items.map((span) => span.name)).toEqual(["d1"])
+    })
+
+    it("keeps matching span ids in separate traces across page boundaries", async () => {
+      const traceA = TraceId("11111111111111111111111111111111")
+      const traceB = TraceId("22222222222222222222222222222222")
+      const sharedStart = "2026-06-01 00:00:00.000000000"
+      await runCh(
+        insertJsonEachRow(ch.client, "spans", [
+          makeSpanRow({
+            trace_id: traceA,
+            span_id: "shar000000000001",
+            name: "trace-a-old",
+            operation: "trace-keyset",
+            start_time: sharedStart,
+            ingested_at: "2026-06-01 00:00:00.000",
+          }),
+          makeSpanRow({
+            trace_id: traceA,
+            span_id: "shar000000000001",
+            name: "trace-a-new",
+            operation: "trace-keyset",
+            start_time: sharedStart,
+            ingested_at: "2026-06-01 00:00:01.000",
+          }),
+          makeSpanRow({
+            trace_id: traceB,
+            span_id: "shar000000000001",
+            name: "trace-b",
+            operation: "trace-keyset",
+            start_time: sharedStart,
+          }),
+        ]),
+      )
+      const options = { limit: 1, filters: { operation: [{ op: "eq" as const, value: "trace-keyset" }] } }
+
+      const first = await runCh(repo.listByProjectId({ organizationId: ORG_ID, projectId: PROJECT_ID, options }))
+      expect(first.items.map((span) => span.name)).toEqual(["trace-b"])
+      expect(first.nextCursor?.traceId).toBe(traceB)
+      expect(first.nextCursor).not.toBeNull()
+      if (first.nextCursor === null) return
+
+      const second = await runCh(
+        repo.listByProjectId({
+          organizationId: ORG_ID,
+          projectId: PROJECT_ID,
+          options: { ...options, cursor: first.nextCursor },
+        }),
+      )
+      expect(second.items.map((span) => span.name)).toEqual(["trace-a-new"])
+    })
+
+    it("keyset-paginates every ordering and direction", async () => {
+      const base = { organizationId: ORG_ID, projectId: PROJECT_ID }
+      const fields = ["startTime", "duration", "cost"] as const
+      const directions = ["asc", "desc"] as const
+
+      for (const field of fields) {
+        const operation = `all-orders-${field}`
+        await runCh(
+          insertJsonEachRow(ch.client, "spans", [
+            makeSpanRow({
+              span_id: `${field.slice(0, 3)}0000000000001`,
+              name: `${field}-one`,
+              operation,
+              start_time: "2026-07-01 00:00:00.000000000",
+              end_time: "2026-07-01 00:00:01.000000000",
+              cost_total_microcents: 100,
+            }),
+            makeSpanRow({
+              span_id: `${field.slice(0, 3)}0000000000002`,
+              name: `${field}-two`,
+              operation,
+              start_time: "2026-07-01 00:00:02.000000000",
+              end_time: "2026-07-01 00:00:04.000000000",
+              cost_total_microcents: 200,
+            }),
+            makeSpanRow({
+              span_id: `${field.slice(0, 3)}0000000000003`,
+              name: `${field}-three`,
+              operation,
+              start_time: "2026-07-01 00:00:04.000000000",
+              end_time: "2026-07-01 00:00:07.000000000",
+              cost_total_microcents: 300,
+            }),
+          ]),
+        )
+
+        for (const direction of directions) {
+          const expected = direction === "asc" ? ["one", "two", "three"] : ["three", "two", "one"]
+          const delivered: string[] = []
+          let cursor: SpanListCursor | null = null
+
+          for (let page = 0; page < 3; page++) {
+            const result: SpanListPage = await runCh(
+              repo.listByProjectId({
+                ...base,
+                options: {
+                  limit: 1,
+                  filters: { operation: [{ op: "eq", value: operation }] },
+                  orderBy: { field, direction },
+                  ...(cursor ? { cursor } : {}),
+                },
+              }),
+            )
+            delivered.push(...result.items.map((span) => span.name.split("-").at(-1) ?? ""))
+            cursor = result.nextCursor
+            if (cursor === null) break
+          }
+
+          expect(delivered).toEqual(expected)
+        }
+      }
+    })
+
+    it("keyset-paginates equal duration and cost values by trace and span id", async () => {
+      const traces = [
+        TraceId("11111111111111111111111111111111"),
+        TraceId("22222222222222222222222222222222"),
+        TraceId("33333333333333333333333333333333"),
+      ]
+      await runCh(
+        insertJsonEachRow(
+          ch.client,
+          "spans",
+          traces.map((traceId, index) =>
+            makeSpanRow({
+              trace_id: traceId,
+              span_id: "ties000000000001",
+              name: `tie-${index + 1}`,
+              operation: "equal-order-values",
+              start_time: "2026-08-01 00:00:00.000000000",
+              end_time: "2026-08-01 00:00:01.000000000",
+              cost_total_microcents: 100,
+            }),
+          ),
+        ),
+      )
+
+      for (const field of ["duration", "cost"] as const) {
+        for (const direction of ["asc", "desc"] as const) {
+          const delivered: string[] = []
+          let cursor: SpanListCursor | null = null
+
+          for (let page = 0; page < traces.length; page++) {
+            const result: SpanListPage = await runCh(
+              repo.listByProjectId({
+                organizationId: ORG_ID,
+                projectId: PROJECT_ID,
+                options: {
+                  limit: 1,
+                  filters: { operation: [{ op: "eq", value: "equal-order-values" }] },
+                  orderBy: { field, direction },
+                  ...(cursor ? { cursor } : {}),
+                },
+              }),
+            )
+            delivered.push(...result.items.map((span) => span.name))
+            cursor = result.nextCursor
+          }
+
+          expect(delivered).toEqual(direction === "asc" ? ["tie-1", "tie-2", "tie-3"] : ["tie-3", "tie-2", "tie-1"])
+        }
+      }
     })
   })
 
