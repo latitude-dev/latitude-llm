@@ -21,7 +21,9 @@ export {
   type MetricPercentiles,
 } from "./cohort-baselines.ts"
 export {
+  AGENT_GRAPH_MAIN_ID,
   COHORT_SUMMARY_CACHE_TTL_SECONDS,
+  MAX_AGENT_GRAPH_DEPTH,
   SESSION_ID_MAX_LENGTH,
   SESSION_SEARCH_MAX_MATCHING_TRACES_PER_ROW,
   SPAN_ID_LENGTH,
@@ -189,6 +191,15 @@ export { isUserSortField, USER_SORT_FIELDS, UserAnalyticsRepository } from "./po
 export { deterministicSample } from "./sampling/deterministic-sampler.ts"
 export { extractSamplingKey } from "./sampling/extract-sampling-key.ts"
 export type {
+  AgentGraph,
+  AgentGraphSpanInput,
+  AgentMetrics,
+  AgentNode,
+  AgentNodeKind,
+  AgentTrigger,
+} from "./use-cases/build-agent-graph.ts"
+export { agentGraphSpanKey, agentGraphToolCallKey, buildAgentGraph } from "./use-cases/build-agent-graph.ts"
+export type {
   TraceSearchDocument,
   TraceSearchDocumentInput,
   TraceSearchEmbeddingMessage,
@@ -210,6 +221,8 @@ export type {
 export { computeTraceSearchHighlights } from "./use-cases/compute-trace-search-highlights.ts"
 export type { GetSessionCohortSummaryInput } from "./use-cases/get-session-cohort-summary.ts"
 export { getSessionCohortSummaryUseCase } from "./use-cases/get-session-cohort-summary.ts"
+export type { GetSpanConversationChunkInput } from "./use-cases/get-span-conversation-chunk.ts"
+export { getSpanConversationChunkUseCase } from "./use-cases/get-span-conversation-chunk.ts"
 export type {
   GetTraceAnalyticsError,
   GetTraceAnalyticsInput,
@@ -233,7 +246,7 @@ export type {
   LoadTraceForTraceEndSkipped,
 } from "./use-cases/load-trace-for-trace-end.ts"
 export { loadTraceForTraceEndUseCase } from "./use-cases/load-trace-for-trace-end.ts"
-export { buildConversationSpanMaps } from "./use-cases/map-conversation-to-spans.ts"
+export { buildConversationSpanMaps, type ConversationSpanRef } from "./use-cases/map-conversation-to-spans.ts"
 export type { ParsedSearchQuery } from "./use-cases/parse-search-query.ts"
 export { parseSearchQuery } from "./use-cases/parse-search-query.ts"
 export type { ProcessIngestedSpansDeps, ProcessIngestedSpansInput } from "./use-cases/process-ingested-spans.ts"

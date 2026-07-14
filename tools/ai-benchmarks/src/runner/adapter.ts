@@ -58,6 +58,7 @@ export function fixtureRowToTraceDetail(row: FixtureRow): TraceDetail {
     models: [],
     providers: [],
     serviceNames: [],
+    agentNames: [],
     rootSpanId: SpanId(BENCHMARK_ROOT_SPAN_ID),
     rootSpanName: "benchmark",
     systemInstructions,

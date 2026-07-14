@@ -48,6 +48,7 @@ const stubSpanDetail = (overrides: Partial<SpanDetail> = {}): SpanDetail => ({
   operation: "chat",
   provider: "openai",
   model: "gpt-4o",
+  agentName: "",
   responseModel: "",
   tokensInput: 120,
   tokensOutput: 45,

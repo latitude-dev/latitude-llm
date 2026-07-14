@@ -195,6 +195,7 @@ function transformSpan({
     operation: resolved.operation,
     provider: resolved.provider,
     model: resolved.model,
+    agentName: resolved.agentName,
     responseModel: resolved.responseModel,
     tokensInput: resolved.tokensInput,
     tokensOutput: resolved.tokensOutput,

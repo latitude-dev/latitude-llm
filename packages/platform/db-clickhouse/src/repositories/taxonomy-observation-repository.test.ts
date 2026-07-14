@@ -371,6 +371,7 @@ const makeLlmSpanRow = (overrides: {
   operation: "chat",
   provider: "openai",
   model: overrides.model,
+  agent_name: "",
   response_model: "",
   tokens_input: 10,
   tokens_output: 5,

@@ -7,8 +7,11 @@ import { Icon } from "../icons/icons.tsx"
 import { Text } from "../text/text.tsx"
 import { Tooltip } from "../tooltip/tooltip.tsx"
 import { Part, type ToolCallResult } from "./part.tsx"
+import type { SubagentToolCallInfo } from "./parts/types.ts"
 
 export type ToolCallActions = ReadonlyMap<string, () => void>
+
+export type SubagentToolCalls = ReadonlyMap<string, SubagentToolCallInfo>
 
 type PartType = GenAIMessage["parts"][number]
 
@@ -117,12 +120,14 @@ function PartsRenderer({
   parts,
   toolResults,
   toolCallActions,
+  subagentToolCalls,
   failedToolCallIds,
   messageIndex,
 }: {
   readonly parts: readonly PartType[] | undefined
   readonly toolResults?: ReadonlyMap<string, ToolCallResult> | undefined
   readonly toolCallActions?: ToolCallActions
+  readonly subagentToolCalls?: SubagentToolCalls | undefined
   readonly failedToolCallIds?: ReadonlySet<string> | undefined
   readonly messageIndex?: number | undefined
 }) {
@@ -134,6 +139,7 @@ function PartsRenderer({
         const partId = part.type === "tool_call" ? ((part as { id?: string }).id ?? "") : ""
         const result = toolResults?.get(partId)
         const onNavigateToSpan = toolCallActions?.get(partId)
+        const subagent = subagentToolCalls?.get(partId)
         const toolCallFailed = partId.length > 0 && failedToolCallIds?.has(partId) === true
         const isSelectableTextPart = part.type === "text" || part.type === "reasoning"
         return (
@@ -150,6 +156,7 @@ function PartsRenderer({
               toolCallFailed={toolCallFailed}
               {...(result ? { toolResult: result } : {})}
               {...(onNavigateToSpan ? { onNavigateToSpan } : {})}
+              {...(subagent ? { subagent } : {})}
             />
           </div>
         )
@@ -191,6 +198,7 @@ function AssistantMessage({
   messageIndex,
   toolResults,
   toolCallActions,
+  subagentToolCalls,
   failedToolCallIds,
   onNavigate,
 }: {
@@ -198,6 +206,7 @@ function AssistantMessage({
   readonly messageIndex?: number | undefined
   readonly toolResults?: ReadonlyMap<string, ToolCallResult> | undefined
   readonly toolCallActions?: ToolCallActions
+  readonly subagentToolCalls?: SubagentToolCalls | undefined
   readonly failedToolCallIds?: ReadonlySet<string> | undefined
   readonly onNavigate?: () => void
 }) {
@@ -218,6 +227,7 @@ function AssistantMessage({
           messageIndex={messageIndex}
           {...(toolResults ? { toolResults } : {})}
           {...(toolCallActions ? { toolCallActions } : {})}
+          {...(subagentToolCalls ? { subagentToolCalls } : {})}
           {...(failedToolCallIds ? { failedToolCallIds } : {})}
         />
       )}
@@ -283,6 +293,7 @@ export function Message({
   alignment = "right",
   toolResults,
   toolCallActions,
+  subagentToolCalls,
   failedToolCallIds,
   onNavigate,
 }: {
@@ -291,6 +302,7 @@ export function Message({
   readonly alignment?: "left" | "right"
   readonly toolResults?: ReadonlyMap<string, ToolCallResult> | undefined
   readonly toolCallActions?: ToolCallActions
+  readonly subagentToolCalls?: SubagentToolCalls | undefined
   readonly failedToolCallIds?: ReadonlySet<string> | undefined
   readonly onNavigate?: () => void
 }) {
@@ -304,6 +316,7 @@ export function Message({
           messageIndex={messageIndex}
           {...(toolResults ? { toolResults } : {})}
           {...(toolCallActions ? { toolCallActions } : {})}
+          {...(subagentToolCalls ? { subagentToolCalls } : {})}
           {...(failedToolCallIds ? { failedToolCallIds } : {})}
           {...(onNavigate ? { onNavigate } : {})}
         />

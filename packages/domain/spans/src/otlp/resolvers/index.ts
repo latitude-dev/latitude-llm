@@ -2,6 +2,7 @@ import { stringAttr } from "../attributes.ts"
 import type { OtlpKeyValue } from "../types.ts"
 import { resolveMetadata, tagsCandidates } from "./enrichment.ts"
 import {
+  agentNameCandidates,
   modelCandidates,
   resolveProvider,
   responseModelCandidates,
@@ -19,6 +20,7 @@ interface ResolvedAttributes extends ResolvedUsage {
   readonly operation: string
   readonly provider: string
   readonly model: string
+  readonly agentName: string
   readonly responseModel: string
   readonly responseId: string
   readonly finishReasons: readonly string[]
@@ -51,6 +53,7 @@ export function resolveAttributes({
     operation,
     provider,
     model,
+    agentName: first(agentNameCandidates, spanAttrs) ?? "",
     responseModel: first(responseModelCandidates, spanAttrs) ?? "",
     ...resolveUsage({ attrs: spanAttrs, provider, model }),
     responseId: first(responseIdCandidates, spanAttrs) ?? "",

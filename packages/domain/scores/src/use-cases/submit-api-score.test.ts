@@ -62,6 +62,7 @@ const traceDetailStub = (traceId: string): TraceDetail => ({
   models: [],
   providers: [],
   serviceNames: [],
+  agentNames: [],
   rootSpanId: SpanId("r".repeat(16)),
   rootSpanName: "root",
   systemInstructions: [],
@@ -98,6 +99,7 @@ const traceStub = (traceId: string): Trace => ({
   models: [],
   providers: [],
   serviceNames: [],
+  agentNames: [],
   rootSpanId: SpanId("r".repeat(16)),
   rootSpanName: "root",
 })

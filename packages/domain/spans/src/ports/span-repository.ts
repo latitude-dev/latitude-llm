@@ -12,12 +12,14 @@ import type {
 import { Context, type Effect } from "effect"
 import type { GenAIMessage } from "rosetta-ai"
 import type { Operation, Span, SpanDetail } from "../entities/span.ts"
+import type { TraceConversationChunk } from "../entities/trace.ts"
 
 /**
  * Minimal span shape with message content — used for conversation-to-span attribution.
  * Only returned by findMessagesForTrace; avoids fetching full SpanDetail for every span.
  */
 export interface SpanMessagesData {
+  readonly traceId: TraceId
   readonly spanId: SpanId
   readonly operation: Operation
   readonly toolCallId: string
@@ -91,6 +93,22 @@ export interface SpanRepositoryShape {
     readonly startTimeTo?: Date
   }): Effect.Effect<readonly Span[], RepositoryError, ChSqlClient>
 
+  /**
+   * Every span belonging to any of `traceIds`, deduped by `(trace_id, span_id)`
+   * (span ids are only unique within a trace). The authoritative way to read a
+   * session's spans: a session's `traceIds` are resolved from the session
+   * materialization, so this catches subagent spans that override `session_id`
+   * to the child's own value and would be invisible to a `session_id` membership
+   * scan. Attribute maps come back empty (same memory hazard as listBySessionId).
+   */
+  listByTraceIds(input: {
+    readonly organizationId: OrganizationId
+    readonly projectId: ProjectId
+    readonly traceIds: readonly TraceId[]
+    readonly startTimeFrom?: Date
+    readonly startTimeTo?: Date
+  }): Effect.Effect<readonly Span[], RepositoryError, ChSqlClient>
+
   listByProjectId(input: {
     readonly organizationId: OrganizationId
     readonly projectId: ProjectId
@@ -113,6 +131,22 @@ export interface SpanRepositoryShape {
     readonly startTimeFrom: Date
     readonly startTimeTo: Date
   }): Effect.Effect<readonly SpanMessagesData[], RepositoryError, ChSqlClient>
+
+  /**
+   * A single span's own conversation as a paginated chunk: its
+   * `system_instructions` + `input_messages` + `output_messages` concatenated
+   * (system first), sliced by `offset`/`limit`. Twin of
+   * `TraceRepository.findConversationChunk`, keyed on `(trace_id, span_id)` and
+   * deduped by newest `ingested_at`. Powers the subagent conversation view.
+   */
+  findSpanConversationChunk(input: {
+    readonly organizationId: OrganizationId
+    readonly projectId: ProjectId
+    readonly traceId: TraceId
+    readonly spanId: SpanId
+    readonly offset: number
+    readonly limit: number
+  }): Effect.Effect<TraceConversationChunk, RepositoryError, ChSqlClient>
 
   /**
    * The session's tool spans (`operation = execute_tool`), projected to name + I/O + error + duration.

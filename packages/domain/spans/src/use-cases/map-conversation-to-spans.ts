@@ -2,6 +2,12 @@ import { stableStringify } from "@repo/utils"
 import type { GenAIMessage } from "rosetta-ai"
 import type { SpanMessagesData } from "../ports/span-repository.ts"
 
+/** A span reference carrying its trace, so lookups stay correct across a multi-trace session. */
+export interface ConversationSpanRef {
+  readonly traceId: string
+  readonly spanId: string
+}
+
 function fingerprintMessage(msg: GenAIMessage): string {
   return msg.parts
     .map((part) => {
@@ -59,12 +65,17 @@ function canonicalizeToolArgs(value: unknown): string {
 export function buildConversationSpanMaps(
   allMessages: readonly GenAIMessage[],
   spans: readonly SpanMessagesData[],
-): { messageSpanMap: Record<number, string>; toolCallSpanMap: Record<string, string> } {
-  // Tool call map: toolCallId → spanId (deterministic via execute_tool spans)
-  const toolCallSpanMap: Record<string, string> = {}
+): { messageSpanMap: Record<number, ConversationSpanRef>; toolCallSpanMap: Record<string, ConversationSpanRef> } {
+  const refOf = (span: SpanMessagesData): ConversationSpanRef => ({
+    traceId: span.traceId as string,
+    spanId: span.spanId as string,
+  })
+
+  // Tool call map: toolCallId → span ref (deterministic via execute_tool spans)
+  const toolCallSpanMap: Record<string, ConversationSpanRef> = {}
   for (const span of spans) {
     if (span.toolCallId) {
-      toolCallSpanMap[span.toolCallId] = span.spanId as string
+      toolCallSpanMap[span.toolCallId] = refOf(span)
     }
   }
 
@@ -73,7 +84,7 @@ export function buildConversationSpanMaps(
   // linked to its execute span by name+args+order — otherwise the tool result can't navigate.
   const executeSpans = spans
     .filter((span) => span.operation === "execute_tool" && span.toolName)
-    .map((span) => ({ spanId: span.spanId as string, name: span.toolName, args: canonicalizeToolArgs(span.toolInput) }))
+    .map((span) => ({ ref: refOf(span), name: span.toolName, args: canonicalizeToolArgs(span.toolInput) }))
   if (executeSpans.length > 0) {
     const consumed = new Set<number>()
     for (const msg of allMessages) {
@@ -88,7 +99,7 @@ export function buildConversationSpanMaps(
         const match = idx >= 0 ? executeSpans[idx] : undefined
         if (!match) continue
         consumed.add(idx)
-        toolCallSpanMap[tc.id] = match.spanId
+        toolCallSpanMap[tc.id] = match.ref
       }
     }
   }
@@ -108,7 +119,7 @@ export function buildConversationSpanMaps(
   }
 
   // Walk allMessages and attribute each assistant message to a span
-  const messageSpanMap: Record<number, string> = {}
+  const messageSpanMap: Record<number, ConversationSpanRef> = {}
   for (let i = 0; i < allMessages.length; i++) {
     const msg = allMessages[i]
     if (!msg || msg.role !== "assistant") continue
@@ -118,25 +129,25 @@ export function buildConversationSpanMaps(
     if (!candidates || candidates.length === 0) continue
 
     if (candidates.length === 1) {
-      const spanId = candidates[0]?.spanId as string | undefined
-      if (spanId) messageSpanMap[i] = spanId
+      const only = candidates[0]
+      if (only) messageSpanMap[i] = refOf(only)
       continue
     }
 
     // Disambiguate by context: score each candidate's input against preceding messages
     const preceding = allMessages.slice(0, i)
-    let bestSpanId = candidates[0]?.spanId as string | undefined
+    let best = candidates[0]
     let bestScore = -1
 
     for (const candidate of candidates) {
       const score = scoreContextMatch(candidate.inputMessages, preceding)
       if (score > bestScore) {
         bestScore = score
-        bestSpanId = candidate.spanId as string | undefined
+        best = candidate
       }
     }
 
-    if (bestSpanId) messageSpanMap[i] = bestSpanId
+    if (best) messageSpanMap[i] = refOf(best)
   }
 
   return { messageSpanMap, toolCallSpanMap }

@@ -55,6 +55,8 @@ export function SessionDetailDrawer({
   const [, setFocusAnnotationId] = useParamState("annotationId", "")
   const [, setSelectedSpanId] = useParamState("spanId", "")
   const [, setSelectedSpanTraceId] = useParamState("spanTraceId", "")
+  const [, setSelectedAgentSpanId] = useParamState("agentSpanId", "")
+  const [, setSelectedAgentTraceId] = useParamState("agentTraceId", "")
   const [q] = useParamState("q", "")
   // Land on the conversation tab when arriving from an active search, so the
   // conversation tab's search-match autoscroll/highlight has something to scroll to.
@@ -115,6 +117,8 @@ export function SessionDetailDrawer({
     const { focusAnnotationId, targetTab } = options
     setSelectedSpanId("")
     setSelectedSpanTraceId("")
+    setSelectedAgentSpanId("")
+    setSelectedAgentTraceId("")
     setFocusAnnotationId(focusAnnotationId ?? "")
     setTraceTab(targetTab ?? (focusAnnotationId ? "conversation" : "trace"))
     setTraceId(nextTraceId)
@@ -123,6 +127,8 @@ export function SessionDetailDrawer({
   const openSignal = (nextSignalId: string) => {
     setSelectedSpanId("")
     setSelectedSpanTraceId("")
+    setSelectedAgentSpanId("")
+    setSelectedAgentTraceId("")
     setFocusAnnotationId("")
     setTraceId("")
     setSignalId(nextSignalId)
@@ -136,6 +142,8 @@ export function SessionDetailDrawer({
   const backToSession = () => {
     setSelectedSpanId("")
     setSelectedSpanTraceId("")
+    setSelectedAgentSpanId("")
+    setSelectedAgentTraceId("")
     setFocusAnnotationId("")
     setTraceId("")
     setSignalId("")
@@ -144,6 +152,8 @@ export function SessionDetailDrawer({
   const handleClose = () => {
     setSelectedSpanId("")
     setSelectedSpanTraceId("")
+    setSelectedAgentSpanId("")
+    setSelectedAgentTraceId("")
     setFocusAnnotationId("")
     setTraceId("")
     setSignalId("")
