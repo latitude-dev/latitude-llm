@@ -1,4 +1,12 @@
-import type { Experiment, ExperimentComparison } from "@domain/experiments"
+import {
+  EXPERIMENT_METRICS,
+  type Experiment,
+  type ExperimentComparison,
+  METRIC_ENTITIES,
+  type MetricDirection,
+  type MetricEntity,
+  type MetricUnit,
+} from "@domain/experiments"
 import { cuidSchema } from "@domain/shared"
 import { z } from "@hono/zod-openapi"
 import { FilterSetSchema } from "../schemas.ts"
@@ -90,41 +98,102 @@ const TopListItemSchema = z
   })
   .openapi("ExperimentTopListItem")
 
-const VariantMetricsSchema = z
-  .object({
-    values: z
-      .record(z.string(), z.number().nullable())
-      .describe("Metric value per `<entity>.<metric>` catalog key; `null` when empty or not computable.")
-      .openapi("VariantMetricValues"),
-    topTools: z.array(TopListItemSchema).describe("Top tools by call count."),
-    topSignals: z.array(TopListItemSchema).describe("Top signals by occurrence count."),
-    topBehaviours: z.array(TopListItemSchema).describe("Top behaviours by observation count."),
-  })
-  .openapi("VariantMetrics")
+/** Human-readable unit of a metric's value, so an agent knows what the number means. */
+const METRIC_UNIT_LABEL: Record<MetricUnit, string> = {
+  count: "count",
+  percent: "fraction (0–1)",
+  seconds: "seconds",
+  dollars: "USD",
+  tokens: "tokens",
+  score: "score (0–1)",
+  days: "days",
+}
+
+/** Which delta direction is "good", appended to a metric's description so an agent can read a change. */
+const METRIC_DIRECTION_HINT: Record<MetricDirection, string> = {
+  "up-good": "; higher is better",
+  "down-good": "; lower is better",
+  neutral: "",
+}
+
+/** Self-describing label for one metric: its UI name, unit, and which delta direction is good. */
+const metricDescription = (metric: (typeof EXPERIMENT_METRICS)[number]): string =>
+  `${metric.label} — ${METRIC_UNIT_LABEL[metric.unit]}${METRIC_DIRECTION_HINT[metric.direction]}.`
+
+/** A metric's field name within its entity object — the part after `<entity>.`. */
+const metricField = (key: string): string => key.slice(key.indexOf(".") + 1)
+
+const entityComponent = (entity: MetricEntity): string =>
+  `Experiment${entity.charAt(0).toUpperCase()}${entity.slice(1)}Metrics`
+
+/** Entities that rank a top-N list alongside their metrics, keyed to that list's description. */
+const ENTITY_TOP_LIST = {
+  tools: "Top tools by call count.",
+  signals: "Top signals by occurrence count.",
+  behaviours: "Top behaviours by observation count.",
+} as const satisfies Partial<Record<MetricEntity, string>>
 
 const MetricDeltaSchema = z
   .union([z.number(), z.literal("up-from-zero")])
   .nullable()
   .describe(
-    'Change vs the baseline: a signed fraction `(value - baseline) / baseline`, `"up-from-zero"` for an unbounded increase from a zero baseline, or `null` when incomparable or on the baseline itself.',
+    'Change vs the baseline: a signed fraction `(value - baseline) / baseline`, `"up-from-zero"` for an unbounded increase from a zero baseline, or `null` when incomparable or on the baseline variant itself.',
   )
   .openapi("MetricDelta")
+
+/** Reused leaf for a metric's value; the enclosing per-metric object carries the name/unit/direction. */
+const metricValueField = z
+  .number()
+  .nullable()
+  .describe("Value in the metric's unit; `null` when empty or not computable.")
+
+/**
+ * One metric as an inline `{ value, delta }` pair, described (name/unit/direction) at the object level.
+ * Inline rather than a shared `.openapi()` component on purpose: zod-to-openapi lets the first `$ref`
+ * define the component, which would swallow the first metric's field description onto the component.
+ */
+const metricSchema = (metric: (typeof EXPERIMENT_METRICS)[number]) =>
+  z.object({ value: metricValueField, delta: MetricDeltaSchema }).describe(metricDescription(metric))
+
+/**
+ * Group the metric catalog into one object per entity (`sessions`/`users`/`tools`/`signals`/
+ * `behaviours`). Every metric is a `{ value, delta }` pair described with its UI name, unit, and
+ * which delta direction is good; `tools`/`signals`/`behaviours` also carry a `top` ranked list. Built
+ * from `EXPERIMENT_METRICS`, so the public schema (and thus the SDK/MCP/CLI) stays exhaustive and in
+ * sync with the catalog by construction: adding a metric there surfaces it here with no edits.
+ */
+const VariantMetricsSchema = z
+  .object(
+    Object.fromEntries(
+      METRIC_ENTITIES.map((entity) => {
+        const fields: Record<string, z.ZodTypeAny> = Object.fromEntries(
+          EXPERIMENT_METRICS.filter((metric) => metric.entity === entity).map((metric) => [
+            metricField(metric.key),
+            metricSchema(metric),
+          ]),
+        )
+        const topDescription = ENTITY_TOP_LIST[entity as keyof typeof ENTITY_TOP_LIST]
+        if (topDescription) fields.top = z.array(TopListItemSchema).describe(topDescription)
+        return [entity, z.object(fields).openapi(entityComponent(entity))]
+      }),
+    ),
+  )
+  .describe(
+    "Population-scoped metrics grouped by entity. Each metric is a `{ value, delta }` pair; `delta` is the change vs the baseline (`null` on the baseline itself). `tools`, `signals`, and `behaviours` also carry a `top` ranked list.",
+  )
+  .openapi("VariantMetrics")
 
 const VariantComparisonSchema = z
   .object({
     variantId: z.string().describe("Id of the variant these metrics belong to."),
-    baseline: z.boolean().describe("`true` when this is the baseline variant; its deltas are empty."),
+    baseline: z.boolean().describe("`true` when this is the baseline variant; every metric's `delta` is `null`."),
     approximate: z
       .boolean()
       .describe(
         "`true` when the variant's query has a semantic component, making its population a best-effort sample.",
       ),
     resolvedRange: ResolvedRangeSchema.describe("The absolute window the metrics were computed over."),
-    metrics: VariantMetricsSchema.describe("Population-scoped metric values and top-N lists."),
-    deltas: z
-      .record(z.string(), MetricDeltaSchema)
-      .describe("Per-metric change vs the baseline, keyed by catalog key. Empty for the baseline variant.")
-      .openapi("VariantMetricDeltas"),
+    metrics: VariantMetricsSchema,
     deviatingPopulationKeys: z
       .array(z.string())
       .describe(
@@ -165,6 +234,38 @@ export const toExperimentResponse = (experiment: Experiment) => ({
   updatedAt: experiment.updatedAt.toISOString(),
 })
 
+const toTopItem = (item: { key: string; label: string; value: number }) => ({
+  key: item.key,
+  label: item.label,
+  value: item.value,
+})
+
+/**
+ * Merge the reader's flat metric values with their baseline deltas into `{ value, delta }` pairs
+ * grouped per entity, folding each ranking entity's `top` list into its section.
+ */
+const toMetricsResponse = (
+  metrics: ExperimentComparison["variants"][number]["metrics"],
+  deltas: ExperimentComparison["variants"][number]["deltas"],
+) => {
+  const nested: Record<string, Record<string, unknown>> = {}
+  const groupFor = (entity: string) => {
+    const group = nested[entity] ?? {}
+    nested[entity] = group
+    return group
+  }
+  for (const metric of EXPERIMENT_METRICS) {
+    groupFor(metric.entity)[metricField(metric.key)] = {
+      value: metrics.values[metric.key] ?? null,
+      delta: deltas[metric.key] ?? null,
+    }
+  }
+  groupFor("tools").top = metrics.topTools.map(toTopItem)
+  groupFor("signals").top = metrics.topSignals.map(toTopItem)
+  groupFor("behaviours").top = metrics.topBehaviours.map(toTopItem)
+  return nested
+}
+
 export const toExperimentComparisonResponse = (comparison: ExperimentComparison) => ({
   experiment: toExperimentResponse(comparison.experiment),
   variants: comparison.variants.map((variant) => ({
@@ -172,17 +273,7 @@ export const toExperimentComparisonResponse = (comparison: ExperimentComparison)
     baseline: variant.baseline,
     approximate: variant.approximate,
     resolvedRange: { fromIso: variant.resolvedRange.fromIso, toIso: variant.resolvedRange.toIso },
-    metrics: {
-      values: variant.metrics.values as Record<string, number | null>,
-      topTools: variant.metrics.topTools.map((item) => ({ key: item.key, label: item.label, value: item.value })),
-      topSignals: variant.metrics.topSignals.map((item) => ({ key: item.key, label: item.label, value: item.value })),
-      topBehaviours: variant.metrics.topBehaviours.map((item) => ({
-        key: item.key,
-        label: item.label,
-        value: item.value,
-      })),
-    },
-    deltas: variant.deltas as Record<string, number | "up-from-zero" | null>,
+    metrics: toMetricsResponse(variant.metrics, variant.deltas),
     deviatingPopulationKeys: [...variant.deviatingPopulationKeys] as string[],
   })),
 })

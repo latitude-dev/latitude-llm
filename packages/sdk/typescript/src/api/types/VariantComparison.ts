@@ -5,13 +5,12 @@ import type * as Latitude from "../index.js";
 export interface VariantComparison {
     /** Id of the variant these metrics belong to. */
     variantId: string;
-    /** `true` when this is the baseline variant; its deltas are empty. */
+    /** `true` when this is the baseline variant; every metric's `delta` is `null`. */
     baseline: boolean;
     /** `true` when the variant's query has a semantic component, making its population a best-effort sample. */
     approximate: boolean;
     resolvedRange: Latitude.ResolvedRange;
     metrics: Latitude.VariantMetrics;
-    deltas: Latitude.VariantMetricDeltas;
     /** Population keys (a subset of `sessions.count` / `sessions.users`) that deviate from the baseline by more than 25%. */
     deviatingPopulationKeys: string[];
 }

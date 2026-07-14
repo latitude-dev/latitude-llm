@@ -3,33 +3,23 @@
 import typing
 
 import pydantic
-import typing_extensions
 from ..core.pydantic_utilities import UniversalBaseModel
-from ..core.serialization import FieldMetadata
-from .experiment_top_list_item import ExperimentTopListItem
-from .variant_metric_values import VariantMetricValues
+from .experiment_behaviours_metrics import ExperimentBehavioursMetrics
+from .experiment_sessions_metrics import ExperimentSessionsMetrics
+from .experiment_signals_metrics import ExperimentSignalsMetrics
+from .experiment_tools_metrics import ExperimentToolsMetrics
+from .experiment_users_metrics import ExperimentUsersMetrics
 
 
 class VariantMetrics(UniversalBaseModel):
     """
-    Population-scoped metric values and top-N lists.
+    Population-scoped metrics grouped by entity. Each metric is a `{ value, delta }` pair; `delta` is the change vs the baseline (`null` on the baseline itself). `tools`, `signals`, and `behaviours` also carry a `top` ranked list.
     """
 
-    values: VariantMetricValues
-    top_tools: typing_extensions.Annotated[
-        typing.List[ExperimentTopListItem],
-        FieldMetadata(alias="topTools"),
-        pydantic.Field(alias="topTools", description="Top tools by call count."),
-    ]
-    top_signals: typing_extensions.Annotated[
-        typing.List[ExperimentTopListItem],
-        FieldMetadata(alias="topSignals"),
-        pydantic.Field(alias="topSignals", description="Top signals by occurrence count."),
-    ]
-    top_behaviours: typing_extensions.Annotated[
-        typing.List[ExperimentTopListItem],
-        FieldMetadata(alias="topBehaviours"),
-        pydantic.Field(alias="topBehaviours", description="Top behaviours by observation count."),
-    ]
+    sessions: ExperimentSessionsMetrics
+    users: ExperimentUsersMetrics
+    tools: ExperimentToolsMetrics
+    signals: ExperimentSignalsMetrics
+    behaviours: ExperimentBehavioursMetrics
 
     model_config: typing.ClassVar[pydantic.ConfigDict] = pydantic.ConfigDict(extra="allow", frozen=True)

@@ -3,14 +3,12 @@
 import type * as Latitude from "../index.js";
 
 /**
- * Population-scoped metric values and top-N lists.
+ * Population-scoped metrics grouped by entity. Each metric is a `{ value, delta }` pair; `delta` is the change vs the baseline (`null` on the baseline itself). `tools`, `signals`, and `behaviours` also carry a `top` ranked list.
  */
 export interface VariantMetrics {
-    values: Latitude.VariantMetricValues;
-    /** Top tools by call count. */
-    topTools: Latitude.ExperimentTopListItem[];
-    /** Top signals by occurrence count. */
-    topSignals: Latitude.ExperimentTopListItem[];
-    /** Top behaviours by observation count. */
-    topBehaviours: Latitude.ExperimentTopListItem[];
+    sessions: Latitude.ExperimentSessionsMetrics;
+    users: Latitude.ExperimentUsersMetrics;
+    tools: Latitude.ExperimentToolsMetrics;
+    signals: Latitude.ExperimentSignalsMetrics;
+    behaviours: Latitude.ExperimentBehavioursMetrics;
 }

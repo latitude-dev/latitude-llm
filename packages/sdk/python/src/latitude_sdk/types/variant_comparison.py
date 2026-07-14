@@ -7,7 +7,6 @@ import typing_extensions
 from ..core.pydantic_utilities import UniversalBaseModel
 from ..core.serialization import FieldMetadata
 from .resolved_range import ResolvedRange
-from .variant_metric_deltas import VariantMetricDeltas
 from .variant_metrics import VariantMetrics
 
 
@@ -19,7 +18,7 @@ class VariantComparison(UniversalBaseModel):
     ]
     baseline: bool = pydantic.Field()
     """
-    `true` when this is the baseline variant; its deltas are empty.
+    `true` when this is the baseline variant; every metric's `delta` is `null`.
     """
 
     approximate: bool = pydantic.Field()
@@ -31,7 +30,6 @@ class VariantComparison(UniversalBaseModel):
         ResolvedRange, FieldMetadata(alias="resolvedRange"), pydantic.Field(alias="resolvedRange")
     ]
     metrics: VariantMetrics
-    deltas: VariantMetricDeltas
     deviating_population_keys: typing_extensions.Annotated[
         typing.List[str],
         FieldMetadata(alias="deviatingPopulationKeys"),

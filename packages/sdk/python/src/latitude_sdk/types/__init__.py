@@ -481,10 +481,53 @@ if typing.TYPE_CHECKING:
     from .evaluation_score_metadata import EvaluationScoreMetadata
     from .evaluation_score_response import EvaluationScoreResponse
     from .experiment import Experiment
+    from .experiment_behaviours_metrics import ExperimentBehavioursMetrics
+    from .experiment_behaviours_metrics_distinct_clusters import ExperimentBehavioursMetricsDistinctClusters
+    from .experiment_behaviours_metrics_moments import ExperimentBehavioursMetricsMoments
+    from .experiment_behaviours_metrics_observations import ExperimentBehavioursMetricsObservations
     from .experiment_comparison import ExperimentComparison
     from .experiment_comparison_experiment import ExperimentComparisonExperiment
     from .experiment_list_item import ExperimentListItem
+    from .experiment_sessions_metrics import ExperimentSessionsMetrics
+    from .experiment_sessions_metrics_cache_hit_rate import ExperimentSessionsMetricsCacheHitRate
+    from .experiment_sessions_metrics_cost_avg import ExperimentSessionsMetricsCostAvg
+    from .experiment_sessions_metrics_cost_total import ExperimentSessionsMetricsCostTotal
+    from .experiment_sessions_metrics_count import ExperimentSessionsMetricsCount
+    from .experiment_sessions_metrics_duration_median import ExperimentSessionsMetricsDurationMedian
+    from .experiment_sessions_metrics_duration_p90 import ExperimentSessionsMetricsDurationP90
+    from .experiment_sessions_metrics_duration_p95 import ExperimentSessionsMetricsDurationP95
+    from .experiment_sessions_metrics_error_rate import ExperimentSessionsMetricsErrorRate
+    from .experiment_sessions_metrics_spans_avg import ExperimentSessionsMetricsSpansAvg
+    from .experiment_sessions_metrics_tokens_avg import ExperimentSessionsMetricsTokensAvg
+    from .experiment_sessions_metrics_tokens_total import ExperimentSessionsMetricsTokensTotal
+    from .experiment_sessions_metrics_traces_avg import ExperimentSessionsMetricsTracesAvg
+    from .experiment_sessions_metrics_ttft_median import ExperimentSessionsMetricsTtftMedian
+    from .experiment_sessions_metrics_users import ExperimentSessionsMetricsUsers
+    from .experiment_signals_metrics import ExperimentSignalsMetrics
+    from .experiment_signals_metrics_affected_sessions_rate import ExperimentSignalsMetricsAffectedSessionsRate
+    from .experiment_signals_metrics_affected_traces_rate import ExperimentSignalsMetricsAffectedTracesRate
+    from .experiment_signals_metrics_affected_users import ExperimentSignalsMetricsAffectedUsers
+    from .experiment_signals_metrics_cost_impact import ExperimentSignalsMetricsCostImpact
+    from .experiment_signals_metrics_distinct import ExperimentSignalsMetricsDistinct
+    from .experiment_signals_metrics_occurrences import ExperimentSignalsMetricsOccurrences
+    from .experiment_tools_metrics import ExperimentToolsMetrics
+    from .experiment_tools_metrics_calls import ExperimentToolsMetricsCalls
+    from .experiment_tools_metrics_distinct import ExperimentToolsMetricsDistinct
+    from .experiment_tools_metrics_duration_p50 import ExperimentToolsMetricsDurationP50
+    from .experiment_tools_metrics_duration_p90 import ExperimentToolsMetricsDurationP90
+    from .experiment_tools_metrics_duration_p95 import ExperimentToolsMetricsDurationP95
+    from .experiment_tools_metrics_error_rate import ExperimentToolsMetricsErrorRate
+    from .experiment_tools_metrics_sessions_with_tools_rate import ExperimentToolsMetricsSessionsWithToolsRate
     from .experiment_top_list_item import ExperimentTopListItem
+    from .experiment_users_metrics import ExperimentUsersMetrics
+    from .experiment_users_metrics_cost_avg import ExperimentUsersMetricsCostAvg
+    from .experiment_users_metrics_distinct import ExperimentUsersMetricsDistinct
+    from .experiment_users_metrics_duration_median import ExperimentUsersMetricsDurationMedian
+    from .experiment_users_metrics_duration_p90 import ExperimentUsersMetricsDurationP90
+    from .experiment_users_metrics_duration_p95 import ExperimentUsersMetricsDurationP95
+    from .experiment_users_metrics_error_session_rate import ExperimentUsersMetricsErrorSessionRate
+    from .experiment_users_metrics_sessions_per_user import ExperimentUsersMetricsSessionsPerUser
+    from .experiment_users_metrics_traces_per_user import ExperimentUsersMetricsTracesPerUser
     from .experiment_variant import ExperimentVariant
     from .export_dataset_rows_queued_response import ExportDatasetRowsQueuedResponse
     from .export_dataset_rows_queued_response_status import ExportDatasetRowsQueuedResponseStatus
@@ -729,8 +772,6 @@ if typing.TYPE_CHECKING:
     from .users_overview_bucket import UsersOverviewBucket
     from .users_overview_response import UsersOverviewResponse
     from .variant_comparison import VariantComparison
-    from .variant_metric_deltas import VariantMetricDeltas
-    from .variant_metric_values import VariantMetricValues
     from .variant_metrics import VariantMetrics
     from .variant_time_range import VariantTimeRange
 _dynamic_imports: typing.Dict[str, str] = {
@@ -1166,10 +1207,53 @@ _dynamic_imports: typing.Dict[str, str] = {
     "EvaluationScoreMetadata": ".evaluation_score_metadata",
     "EvaluationScoreResponse": ".evaluation_score_response",
     "Experiment": ".experiment",
+    "ExperimentBehavioursMetrics": ".experiment_behaviours_metrics",
+    "ExperimentBehavioursMetricsDistinctClusters": ".experiment_behaviours_metrics_distinct_clusters",
+    "ExperimentBehavioursMetricsMoments": ".experiment_behaviours_metrics_moments",
+    "ExperimentBehavioursMetricsObservations": ".experiment_behaviours_metrics_observations",
     "ExperimentComparison": ".experiment_comparison",
     "ExperimentComparisonExperiment": ".experiment_comparison_experiment",
     "ExperimentListItem": ".experiment_list_item",
+    "ExperimentSessionsMetrics": ".experiment_sessions_metrics",
+    "ExperimentSessionsMetricsCacheHitRate": ".experiment_sessions_metrics_cache_hit_rate",
+    "ExperimentSessionsMetricsCostAvg": ".experiment_sessions_metrics_cost_avg",
+    "ExperimentSessionsMetricsCostTotal": ".experiment_sessions_metrics_cost_total",
+    "ExperimentSessionsMetricsCount": ".experiment_sessions_metrics_count",
+    "ExperimentSessionsMetricsDurationMedian": ".experiment_sessions_metrics_duration_median",
+    "ExperimentSessionsMetricsDurationP90": ".experiment_sessions_metrics_duration_p90",
+    "ExperimentSessionsMetricsDurationP95": ".experiment_sessions_metrics_duration_p95",
+    "ExperimentSessionsMetricsErrorRate": ".experiment_sessions_metrics_error_rate",
+    "ExperimentSessionsMetricsSpansAvg": ".experiment_sessions_metrics_spans_avg",
+    "ExperimentSessionsMetricsTokensAvg": ".experiment_sessions_metrics_tokens_avg",
+    "ExperimentSessionsMetricsTokensTotal": ".experiment_sessions_metrics_tokens_total",
+    "ExperimentSessionsMetricsTracesAvg": ".experiment_sessions_metrics_traces_avg",
+    "ExperimentSessionsMetricsTtftMedian": ".experiment_sessions_metrics_ttft_median",
+    "ExperimentSessionsMetricsUsers": ".experiment_sessions_metrics_users",
+    "ExperimentSignalsMetrics": ".experiment_signals_metrics",
+    "ExperimentSignalsMetricsAffectedSessionsRate": ".experiment_signals_metrics_affected_sessions_rate",
+    "ExperimentSignalsMetricsAffectedTracesRate": ".experiment_signals_metrics_affected_traces_rate",
+    "ExperimentSignalsMetricsAffectedUsers": ".experiment_signals_metrics_affected_users",
+    "ExperimentSignalsMetricsCostImpact": ".experiment_signals_metrics_cost_impact",
+    "ExperimentSignalsMetricsDistinct": ".experiment_signals_metrics_distinct",
+    "ExperimentSignalsMetricsOccurrences": ".experiment_signals_metrics_occurrences",
+    "ExperimentToolsMetrics": ".experiment_tools_metrics",
+    "ExperimentToolsMetricsCalls": ".experiment_tools_metrics_calls",
+    "ExperimentToolsMetricsDistinct": ".experiment_tools_metrics_distinct",
+    "ExperimentToolsMetricsDurationP50": ".experiment_tools_metrics_duration_p50",
+    "ExperimentToolsMetricsDurationP90": ".experiment_tools_metrics_duration_p90",
+    "ExperimentToolsMetricsDurationP95": ".experiment_tools_metrics_duration_p95",
+    "ExperimentToolsMetricsErrorRate": ".experiment_tools_metrics_error_rate",
+    "ExperimentToolsMetricsSessionsWithToolsRate": ".experiment_tools_metrics_sessions_with_tools_rate",
     "ExperimentTopListItem": ".experiment_top_list_item",
+    "ExperimentUsersMetrics": ".experiment_users_metrics",
+    "ExperimentUsersMetricsCostAvg": ".experiment_users_metrics_cost_avg",
+    "ExperimentUsersMetricsDistinct": ".experiment_users_metrics_distinct",
+    "ExperimentUsersMetricsDurationMedian": ".experiment_users_metrics_duration_median",
+    "ExperimentUsersMetricsDurationP90": ".experiment_users_metrics_duration_p90",
+    "ExperimentUsersMetricsDurationP95": ".experiment_users_metrics_duration_p95",
+    "ExperimentUsersMetricsErrorSessionRate": ".experiment_users_metrics_error_session_rate",
+    "ExperimentUsersMetricsSessionsPerUser": ".experiment_users_metrics_sessions_per_user",
+    "ExperimentUsersMetricsTracesPerUser": ".experiment_users_metrics_traces_per_user",
     "ExperimentVariant": ".experiment_variant",
     "ExportDatasetRowsQueuedResponse": ".export_dataset_rows_queued_response",
     "ExportDatasetRowsQueuedResponseStatus": ".export_dataset_rows_queued_response_status",
@@ -1414,8 +1498,6 @@ _dynamic_imports: typing.Dict[str, str] = {
     "UsersOverviewBucket": ".users_overview_bucket",
     "UsersOverviewResponse": ".users_overview_response",
     "VariantComparison": ".variant_comparison",
-    "VariantMetricDeltas": ".variant_metric_deltas",
-    "VariantMetricValues": ".variant_metric_values",
     "VariantMetrics": ".variant_metrics",
     "VariantTimeRange": ".variant_time_range",
 }
@@ -1875,10 +1957,53 @@ __all__ = [
     "EvaluationScoreMetadata",
     "EvaluationScoreResponse",
     "Experiment",
+    "ExperimentBehavioursMetrics",
+    "ExperimentBehavioursMetricsDistinctClusters",
+    "ExperimentBehavioursMetricsMoments",
+    "ExperimentBehavioursMetricsObservations",
     "ExperimentComparison",
     "ExperimentComparisonExperiment",
     "ExperimentListItem",
+    "ExperimentSessionsMetrics",
+    "ExperimentSessionsMetricsCacheHitRate",
+    "ExperimentSessionsMetricsCostAvg",
+    "ExperimentSessionsMetricsCostTotal",
+    "ExperimentSessionsMetricsCount",
+    "ExperimentSessionsMetricsDurationMedian",
+    "ExperimentSessionsMetricsDurationP90",
+    "ExperimentSessionsMetricsDurationP95",
+    "ExperimentSessionsMetricsErrorRate",
+    "ExperimentSessionsMetricsSpansAvg",
+    "ExperimentSessionsMetricsTokensAvg",
+    "ExperimentSessionsMetricsTokensTotal",
+    "ExperimentSessionsMetricsTracesAvg",
+    "ExperimentSessionsMetricsTtftMedian",
+    "ExperimentSessionsMetricsUsers",
+    "ExperimentSignalsMetrics",
+    "ExperimentSignalsMetricsAffectedSessionsRate",
+    "ExperimentSignalsMetricsAffectedTracesRate",
+    "ExperimentSignalsMetricsAffectedUsers",
+    "ExperimentSignalsMetricsCostImpact",
+    "ExperimentSignalsMetricsDistinct",
+    "ExperimentSignalsMetricsOccurrences",
+    "ExperimentToolsMetrics",
+    "ExperimentToolsMetricsCalls",
+    "ExperimentToolsMetricsDistinct",
+    "ExperimentToolsMetricsDurationP50",
+    "ExperimentToolsMetricsDurationP90",
+    "ExperimentToolsMetricsDurationP95",
+    "ExperimentToolsMetricsErrorRate",
+    "ExperimentToolsMetricsSessionsWithToolsRate",
     "ExperimentTopListItem",
+    "ExperimentUsersMetrics",
+    "ExperimentUsersMetricsCostAvg",
+    "ExperimentUsersMetricsDistinct",
+    "ExperimentUsersMetricsDurationMedian",
+    "ExperimentUsersMetricsDurationP90",
+    "ExperimentUsersMetricsDurationP95",
+    "ExperimentUsersMetricsErrorSessionRate",
+    "ExperimentUsersMetricsSessionsPerUser",
+    "ExperimentUsersMetricsTracesPerUser",
     "ExperimentVariant",
     "ExportDatasetRowsQueuedResponse",
     "ExportDatasetRowsQueuedResponseStatus",
@@ -2123,8 +2248,6 @@ __all__ = [
     "UsersOverviewBucket",
     "UsersOverviewResponse",
     "VariantComparison",
-    "VariantMetricDeltas",
-    "VariantMetricValues",
     "VariantMetrics",
     "VariantTimeRange",
 ]

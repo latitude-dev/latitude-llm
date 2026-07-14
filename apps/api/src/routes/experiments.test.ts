@@ -31,8 +31,7 @@ interface ComparisonResponse {
     baseline: boolean
     approximate: boolean
     resolvedRange: { fromIso: string; toIso: string }
-    metrics: { values: Record<string, number | null> }
-    deltas: Record<string, number | "up-from-zero" | null>
+    metrics: Record<string, Record<string, { value: number | null; delta: number | "up-from-zero" | null }>>
     deviatingPopulationKeys: string[]
   }>
 }
@@ -85,7 +84,7 @@ describe("Experiments Routes Integration", () => {
     expect(comparison.variants).toHaveLength(2)
     expect(comparison.variants.filter((variant) => variant.baseline)).toHaveLength(1)
     const baselineVariant = comparison.variants.find((variant) => variant.baseline)
-    expect(baselineVariant?.metrics.values["sessions.count"]).toBe(0)
+    expect(baselineVariant?.metrics.sessions?.count?.value).toBe(0)
     expect(baselineVariant?.resolvedRange.fromIso).toBeDefined()
     expect(baselineVariant?.approximate).toBe(false)
 

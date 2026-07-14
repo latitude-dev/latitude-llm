@@ -10344,7 +10344,7 @@
           },
           "baseline": {
             "type": "boolean",
-            "description": "`true` when this is the baseline variant; its deltas are empty."
+            "description": "`true` when this is the baseline variant; every metric's `delta` is `null`."
           },
           "approximate": {
             "type": "boolean",
@@ -10355,9 +10355,6 @@
           },
           "metrics": {
             "$ref": "#/components/schemas/VariantMetrics"
-          },
-          "deltas": {
-            "$ref": "#/components/schemas/VariantMetricDeltas"
           },
           "deviatingPopulationKeys": {
             "type": "array",
@@ -10373,7 +10370,6 @@
           "approximate",
           "resolvedRange",
           "metrics",
-          "deltas",
           "deviatingPopulationKeys"
         ]
       },
@@ -10398,48 +10394,685 @@
       "VariantMetrics": {
         "type": "object",
         "properties": {
-          "values": {
-            "$ref": "#/components/schemas/VariantMetricValues"
+          "sessions": {
+            "$ref": "#/components/schemas/ExperimentSessionsMetrics"
           },
-          "topTools": {
+          "users": {
+            "$ref": "#/components/schemas/ExperimentUsersMetrics"
+          },
+          "tools": {
+            "$ref": "#/components/schemas/ExperimentToolsMetrics"
+          },
+          "signals": {
+            "$ref": "#/components/schemas/ExperimentSignalsMetrics"
+          },
+          "behaviours": {
+            "$ref": "#/components/schemas/ExperimentBehavioursMetrics"
+          }
+        },
+        "required": [
+          "sessions",
+          "users",
+          "tools",
+          "signals",
+          "behaviours"
+        ],
+        "description": "Population-scoped metrics grouped by entity. Each metric is a `{ value, delta }` pair; `delta` is the change vs the baseline (`null` on the baseline itself). `tools`, `signals`, and `behaviours` also carry a `top` ranked list."
+      },
+      "ExperimentSessionsMetrics": {
+        "type": "object",
+        "properties": {
+          "count": {
+            "type": "object",
+            "properties": {
+              "value": {
+                "type": [
+                  "number",
+                  "null"
+                ],
+                "description": "Value in the metric's unit; `null` when empty or not computable."
+              },
+              "delta": {
+                "$ref": "#/components/schemas/MetricDelta"
+              }
+            },
+            "required": [
+              "value",
+              "delta"
+            ],
+            "description": "Sessions — count."
+          },
+          "users": {
+            "type": "object",
+            "properties": {
+              "value": {
+                "type": [
+                  "number",
+                  "null"
+                ],
+                "description": "Value in the metric's unit; `null` when empty or not computable."
+              },
+              "delta": {
+                "$ref": "#/components/schemas/MetricDelta"
+              }
+            },
+            "required": [
+              "value",
+              "delta"
+            ],
+            "description": "Users — count."
+          },
+          "cost_total": {
+            "type": "object",
+            "properties": {
+              "value": {
+                "type": [
+                  "number",
+                  "null"
+                ],
+                "description": "Value in the metric's unit; `null` when empty or not computable."
+              },
+              "delta": {
+                "$ref": "#/components/schemas/MetricDelta"
+              }
+            },
+            "required": [
+              "value",
+              "delta"
+            ],
+            "description": "Total cost — USD; lower is better."
+          },
+          "tokens_total": {
+            "type": "object",
+            "properties": {
+              "value": {
+                "type": [
+                  "number",
+                  "null"
+                ],
+                "description": "Value in the metric's unit; `null` when empty or not computable."
+              },
+              "delta": {
+                "$ref": "#/components/schemas/MetricDelta"
+              }
+            },
+            "required": [
+              "value",
+              "delta"
+            ],
+            "description": "Total tokens — tokens."
+          },
+          "error_rate": {
+            "type": "object",
+            "properties": {
+              "value": {
+                "type": [
+                  "number",
+                  "null"
+                ],
+                "description": "Value in the metric's unit; `null` when empty or not computable."
+              },
+              "delta": {
+                "$ref": "#/components/schemas/MetricDelta"
+              }
+            },
+            "required": [
+              "value",
+              "delta"
+            ],
+            "description": "Error rate — fraction (0–1); lower is better."
+          },
+          "cache_hit_rate": {
+            "type": "object",
+            "properties": {
+              "value": {
+                "type": [
+                  "number",
+                  "null"
+                ],
+                "description": "Value in the metric's unit; `null` when empty or not computable."
+              },
+              "delta": {
+                "$ref": "#/components/schemas/MetricDelta"
+              }
+            },
+            "required": [
+              "value",
+              "delta"
+            ],
+            "description": "Cache hit rate — fraction (0–1); higher is better."
+          },
+          "duration_median": {
+            "type": "object",
+            "properties": {
+              "value": {
+                "type": [
+                  "number",
+                  "null"
+                ],
+                "description": "Value in the metric's unit; `null` when empty or not computable."
+              },
+              "delta": {
+                "$ref": "#/components/schemas/MetricDelta"
+              }
+            },
+            "required": [
+              "value",
+              "delta"
+            ],
+            "description": "Median duration — seconds; lower is better."
+          },
+          "duration_p90": {
+            "type": "object",
+            "properties": {
+              "value": {
+                "type": [
+                  "number",
+                  "null"
+                ],
+                "description": "Value in the metric's unit; `null` when empty or not computable."
+              },
+              "delta": {
+                "$ref": "#/components/schemas/MetricDelta"
+              }
+            },
+            "required": [
+              "value",
+              "delta"
+            ],
+            "description": "p90 duration — seconds; lower is better."
+          },
+          "duration_p95": {
+            "type": "object",
+            "properties": {
+              "value": {
+                "type": [
+                  "number",
+                  "null"
+                ],
+                "description": "Value in the metric's unit; `null` when empty or not computable."
+              },
+              "delta": {
+                "$ref": "#/components/schemas/MetricDelta"
+              }
+            },
+            "required": [
+              "value",
+              "delta"
+            ],
+            "description": "p95 duration — seconds; lower is better."
+          },
+          "cost_avg": {
+            "type": "object",
+            "properties": {
+              "value": {
+                "type": [
+                  "number",
+                  "null"
+                ],
+                "description": "Value in the metric's unit; `null` when empty or not computable."
+              },
+              "delta": {
+                "$ref": "#/components/schemas/MetricDelta"
+              }
+            },
+            "required": [
+              "value",
+              "delta"
+            ],
+            "description": "Avg cost — USD; lower is better."
+          },
+          "tokens_avg": {
+            "type": "object",
+            "properties": {
+              "value": {
+                "type": [
+                  "number",
+                  "null"
+                ],
+                "description": "Value in the metric's unit; `null` when empty or not computable."
+              },
+              "delta": {
+                "$ref": "#/components/schemas/MetricDelta"
+              }
+            },
+            "required": [
+              "value",
+              "delta"
+            ],
+            "description": "Avg tokens — tokens."
+          },
+          "ttft_median": {
+            "type": "object",
+            "properties": {
+              "value": {
+                "type": [
+                  "number",
+                  "null"
+                ],
+                "description": "Value in the metric's unit; `null` when empty or not computable."
+              },
+              "delta": {
+                "$ref": "#/components/schemas/MetricDelta"
+              }
+            },
+            "required": [
+              "value",
+              "delta"
+            ],
+            "description": "Median time to first token — seconds; lower is better."
+          },
+          "spans_avg": {
+            "type": "object",
+            "properties": {
+              "value": {
+                "type": [
+                  "number",
+                  "null"
+                ],
+                "description": "Value in the metric's unit; `null` when empty or not computable."
+              },
+              "delta": {
+                "$ref": "#/components/schemas/MetricDelta"
+              }
+            },
+            "required": [
+              "value",
+              "delta"
+            ],
+            "description": "Avg spans — count."
+          },
+          "traces_avg": {
+            "type": "object",
+            "properties": {
+              "value": {
+                "type": [
+                  "number",
+                  "null"
+                ],
+                "description": "Value in the metric's unit; `null` when empty or not computable."
+              },
+              "delta": {
+                "$ref": "#/components/schemas/MetricDelta"
+              }
+            },
+            "required": [
+              "value",
+              "delta"
+            ],
+            "description": "Avg traces — count."
+          }
+        },
+        "required": [
+          "count",
+          "users",
+          "cost_total",
+          "tokens_total",
+          "error_rate",
+          "cache_hit_rate",
+          "duration_median",
+          "duration_p90",
+          "duration_p95",
+          "cost_avg",
+          "tokens_avg",
+          "ttft_median",
+          "spans_avg",
+          "traces_avg"
+        ]
+      },
+      "MetricDelta": {
+        "anyOf": [
+          {
+            "type": "number"
+          },
+          {
+            "type": "string",
+            "enum": [
+              "up-from-zero"
+            ]
+          },
+          {
+            "type": "null"
+          }
+        ],
+        "description": "Change vs the baseline: a signed fraction `(value - baseline) / baseline`, `\"up-from-zero\"` for an unbounded increase from a zero baseline, or `null` when incomparable or on the baseline variant itself."
+      },
+      "ExperimentUsersMetrics": {
+        "type": "object",
+        "properties": {
+          "distinct": {
+            "type": "object",
+            "properties": {
+              "value": {
+                "type": [
+                  "number",
+                  "null"
+                ],
+                "description": "Value in the metric's unit; `null` when empty or not computable."
+              },
+              "delta": {
+                "$ref": "#/components/schemas/MetricDelta"
+              }
+            },
+            "required": [
+              "value",
+              "delta"
+            ],
+            "description": "Users — count."
+          },
+          "sessions_per_user": {
+            "type": "object",
+            "properties": {
+              "value": {
+                "type": [
+                  "number",
+                  "null"
+                ],
+                "description": "Value in the metric's unit; `null` when empty or not computable."
+              },
+              "delta": {
+                "$ref": "#/components/schemas/MetricDelta"
+              }
+            },
+            "required": [
+              "value",
+              "delta"
+            ],
+            "description": "Avg sessions — count."
+          },
+          "traces_per_user": {
+            "type": "object",
+            "properties": {
+              "value": {
+                "type": [
+                  "number",
+                  "null"
+                ],
+                "description": "Value in the metric's unit; `null` when empty or not computable."
+              },
+              "delta": {
+                "$ref": "#/components/schemas/MetricDelta"
+              }
+            },
+            "required": [
+              "value",
+              "delta"
+            ],
+            "description": "Avg traces — count."
+          },
+          "cost_avg": {
+            "type": "object",
+            "properties": {
+              "value": {
+                "type": [
+                  "number",
+                  "null"
+                ],
+                "description": "Value in the metric's unit; `null` when empty or not computable."
+              },
+              "delta": {
+                "$ref": "#/components/schemas/MetricDelta"
+              }
+            },
+            "required": [
+              "value",
+              "delta"
+            ],
+            "description": "Avg cost — USD; lower is better."
+          },
+          "duration_median": {
+            "type": "object",
+            "properties": {
+              "value": {
+                "type": [
+                  "number",
+                  "null"
+                ],
+                "description": "Value in the metric's unit; `null` when empty or not computable."
+              },
+              "delta": {
+                "$ref": "#/components/schemas/MetricDelta"
+              }
+            },
+            "required": [
+              "value",
+              "delta"
+            ],
+            "description": "Median duration — seconds; lower is better."
+          },
+          "duration_p90": {
+            "type": "object",
+            "properties": {
+              "value": {
+                "type": [
+                  "number",
+                  "null"
+                ],
+                "description": "Value in the metric's unit; `null` when empty or not computable."
+              },
+              "delta": {
+                "$ref": "#/components/schemas/MetricDelta"
+              }
+            },
+            "required": [
+              "value",
+              "delta"
+            ],
+            "description": "p90 duration — seconds; lower is better."
+          },
+          "duration_p95": {
+            "type": "object",
+            "properties": {
+              "value": {
+                "type": [
+                  "number",
+                  "null"
+                ],
+                "description": "Value in the metric's unit; `null` when empty or not computable."
+              },
+              "delta": {
+                "$ref": "#/components/schemas/MetricDelta"
+              }
+            },
+            "required": [
+              "value",
+              "delta"
+            ],
+            "description": "p95 duration — seconds; lower is better."
+          },
+          "error_session_rate": {
+            "type": "object",
+            "properties": {
+              "value": {
+                "type": [
+                  "number",
+                  "null"
+                ],
+                "description": "Value in the metric's unit; `null` when empty or not computable."
+              },
+              "delta": {
+                "$ref": "#/components/schemas/MetricDelta"
+              }
+            },
+            "required": [
+              "value",
+              "delta"
+            ],
+            "description": "Avg error rate — fraction (0–1); lower is better."
+          }
+        },
+        "required": [
+          "distinct",
+          "sessions_per_user",
+          "traces_per_user",
+          "cost_avg",
+          "duration_median",
+          "duration_p90",
+          "duration_p95",
+          "error_session_rate"
+        ]
+      },
+      "ExperimentToolsMetrics": {
+        "type": "object",
+        "properties": {
+          "calls": {
+            "type": "object",
+            "properties": {
+              "value": {
+                "type": [
+                  "number",
+                  "null"
+                ],
+                "description": "Value in the metric's unit; `null` when empty or not computable."
+              },
+              "delta": {
+                "$ref": "#/components/schemas/MetricDelta"
+              }
+            },
+            "required": [
+              "value",
+              "delta"
+            ],
+            "description": "Tool calls — count."
+          },
+          "distinct": {
+            "type": "object",
+            "properties": {
+              "value": {
+                "type": [
+                  "number",
+                  "null"
+                ],
+                "description": "Value in the metric's unit; `null` when empty or not computable."
+              },
+              "delta": {
+                "$ref": "#/components/schemas/MetricDelta"
+              }
+            },
+            "required": [
+              "value",
+              "delta"
+            ],
+            "description": "Tools used — count."
+          },
+          "sessions_with_tools_rate": {
+            "type": "object",
+            "properties": {
+              "value": {
+                "type": [
+                  "number",
+                  "null"
+                ],
+                "description": "Value in the metric's unit; `null` when empty or not computable."
+              },
+              "delta": {
+                "$ref": "#/components/schemas/MetricDelta"
+              }
+            },
+            "required": [
+              "value",
+              "delta"
+            ],
+            "description": "Usage rate — fraction (0–1)."
+          },
+          "error_rate": {
+            "type": "object",
+            "properties": {
+              "value": {
+                "type": [
+                  "number",
+                  "null"
+                ],
+                "description": "Value in the metric's unit; `null` when empty or not computable."
+              },
+              "delta": {
+                "$ref": "#/components/schemas/MetricDelta"
+              }
+            },
+            "required": [
+              "value",
+              "delta"
+            ],
+            "description": "Error rate — fraction (0–1); lower is better."
+          },
+          "duration_p50": {
+            "type": "object",
+            "properties": {
+              "value": {
+                "type": [
+                  "number",
+                  "null"
+                ],
+                "description": "Value in the metric's unit; `null` when empty or not computable."
+              },
+              "delta": {
+                "$ref": "#/components/schemas/MetricDelta"
+              }
+            },
+            "required": [
+              "value",
+              "delta"
+            ],
+            "description": "Median duration — seconds; lower is better."
+          },
+          "duration_p90": {
+            "type": "object",
+            "properties": {
+              "value": {
+                "type": [
+                  "number",
+                  "null"
+                ],
+                "description": "Value in the metric's unit; `null` when empty or not computable."
+              },
+              "delta": {
+                "$ref": "#/components/schemas/MetricDelta"
+              }
+            },
+            "required": [
+              "value",
+              "delta"
+            ],
+            "description": "p90 duration — seconds; lower is better."
+          },
+          "duration_p95": {
+            "type": "object",
+            "properties": {
+              "value": {
+                "type": [
+                  "number",
+                  "null"
+                ],
+                "description": "Value in the metric's unit; `null` when empty or not computable."
+              },
+              "delta": {
+                "$ref": "#/components/schemas/MetricDelta"
+              }
+            },
+            "required": [
+              "value",
+              "delta"
+            ],
+            "description": "p95 duration — seconds; lower is better."
+          },
+          "top": {
             "type": "array",
             "items": {
               "$ref": "#/components/schemas/ExperimentTopListItem"
             },
             "description": "Top tools by call count."
-          },
-          "topSignals": {
-            "type": "array",
-            "items": {
-              "$ref": "#/components/schemas/ExperimentTopListItem"
-            },
-            "description": "Top signals by occurrence count."
-          },
-          "topBehaviours": {
-            "type": "array",
-            "items": {
-              "$ref": "#/components/schemas/ExperimentTopListItem"
-            },
-            "description": "Top behaviours by observation count."
           }
         },
         "required": [
-          "values",
-          "topTools",
-          "topSignals",
-          "topBehaviours"
-        ],
-        "description": "Population-scoped metric values and top-N lists."
-      },
-      "VariantMetricValues": {
-        "type": "object",
-        "additionalProperties": {
-          "type": [
-            "number",
-            "null"
-          ]
-        },
-        "description": "Metric value per `<entity>.<metric>` catalog key; `null` when empty or not computable."
+          "calls",
+          "distinct",
+          "sessions_with_tools_rate",
+          "error_rate",
+          "duration_p50",
+          "duration_p90",
+          "duration_p95",
+          "top"
+        ]
       },
       "ExperimentTopListItem": {
         "type": "object",
@@ -10463,29 +11096,224 @@
           "value"
         ]
       },
-      "VariantMetricDeltas": {
+      "ExperimentSignalsMetrics": {
         "type": "object",
-        "additionalProperties": {
-          "$ref": "#/components/schemas/MetricDelta"
-        },
-        "description": "Per-metric change vs the baseline, keyed by catalog key. Empty for the baseline variant."
-      },
-      "MetricDelta": {
-        "anyOf": [
-          {
-            "type": "number"
+        "properties": {
+          "distinct": {
+            "type": "object",
+            "properties": {
+              "value": {
+                "type": [
+                  "number",
+                  "null"
+                ],
+                "description": "Value in the metric's unit; `null` when empty or not computable."
+              },
+              "delta": {
+                "$ref": "#/components/schemas/MetricDelta"
+              }
+            },
+            "required": [
+              "value",
+              "delta"
+            ],
+            "description": "Signals — count; lower is better."
           },
-          {
-            "type": "string",
-            "enum": [
-              "up-from-zero"
-            ]
+          "occurrences": {
+            "type": "object",
+            "properties": {
+              "value": {
+                "type": [
+                  "number",
+                  "null"
+                ],
+                "description": "Value in the metric's unit; `null` when empty or not computable."
+              },
+              "delta": {
+                "$ref": "#/components/schemas/MetricDelta"
+              }
+            },
+            "required": [
+              "value",
+              "delta"
+            ],
+            "description": "Occurrences — count; lower is better."
           },
-          {
-            "type": "null"
+          "affected_sessions_rate": {
+            "type": "object",
+            "properties": {
+              "value": {
+                "type": [
+                  "number",
+                  "null"
+                ],
+                "description": "Value in the metric's unit; `null` when empty or not computable."
+              },
+              "delta": {
+                "$ref": "#/components/schemas/MetricDelta"
+              }
+            },
+            "required": [
+              "value",
+              "delta"
+            ],
+            "description": "Affected sessions — fraction (0–1); lower is better."
+          },
+          "affected_traces_rate": {
+            "type": "object",
+            "properties": {
+              "value": {
+                "type": [
+                  "number",
+                  "null"
+                ],
+                "description": "Value in the metric's unit; `null` when empty or not computable."
+              },
+              "delta": {
+                "$ref": "#/components/schemas/MetricDelta"
+              }
+            },
+            "required": [
+              "value",
+              "delta"
+            ],
+            "description": "Affected traces — fraction (0–1); lower is better."
+          },
+          "affected_users": {
+            "type": "object",
+            "properties": {
+              "value": {
+                "type": [
+                  "number",
+                  "null"
+                ],
+                "description": "Value in the metric's unit; `null` when empty or not computable."
+              },
+              "delta": {
+                "$ref": "#/components/schemas/MetricDelta"
+              }
+            },
+            "required": [
+              "value",
+              "delta"
+            ],
+            "description": "Affected users — fraction (0–1); lower is better."
+          },
+          "cost_impact": {
+            "type": "object",
+            "properties": {
+              "value": {
+                "type": [
+                  "number",
+                  "null"
+                ],
+                "description": "Value in the metric's unit; `null` when empty or not computable."
+              },
+              "delta": {
+                "$ref": "#/components/schemas/MetricDelta"
+              }
+            },
+            "required": [
+              "value",
+              "delta"
+            ],
+            "description": "Cost impact — USD; lower is better."
+          },
+          "top": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ExperimentTopListItem"
+            },
+            "description": "Top signals by occurrence count."
           }
-        ],
-        "description": "Change vs the baseline: a signed fraction `(value - baseline) / baseline`, `\"up-from-zero\"` for an unbounded increase from a zero baseline, or `null` when incomparable or on the baseline itself."
+        },
+        "required": [
+          "distinct",
+          "occurrences",
+          "affected_sessions_rate",
+          "affected_traces_rate",
+          "affected_users",
+          "cost_impact",
+          "top"
+        ]
+      },
+      "ExperimentBehavioursMetrics": {
+        "type": "object",
+        "properties": {
+          "observations": {
+            "type": "object",
+            "properties": {
+              "value": {
+                "type": [
+                  "number",
+                  "null"
+                ],
+                "description": "Value in the metric's unit; `null` when empty or not computable."
+              },
+              "delta": {
+                "$ref": "#/components/schemas/MetricDelta"
+              }
+            },
+            "required": [
+              "value",
+              "delta"
+            ],
+            "description": "Observations — count."
+          },
+          "distinct_clusters": {
+            "type": "object",
+            "properties": {
+              "value": {
+                "type": [
+                  "number",
+                  "null"
+                ],
+                "description": "Value in the metric's unit; `null` when empty or not computable."
+              },
+              "delta": {
+                "$ref": "#/components/schemas/MetricDelta"
+              }
+            },
+            "required": [
+              "value",
+              "delta"
+            ],
+            "description": "Clusters — count."
+          },
+          "moments": {
+            "type": "object",
+            "properties": {
+              "value": {
+                "type": [
+                  "number",
+                  "null"
+                ],
+                "description": "Value in the metric's unit; `null` when empty or not computable."
+              },
+              "delta": {
+                "$ref": "#/components/schemas/MetricDelta"
+              }
+            },
+            "required": [
+              "value",
+              "delta"
+            ],
+            "description": "Moments — count."
+          },
+          "top": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ExperimentTopListItem"
+            },
+            "description": "Top behaviours by observation count."
+          }
+        },
+        "required": [
+          "observations",
+          "distinct_clusters",
+          "moments",
+          "top"
+        ]
       },
       "UpdateExperimentBody": {
         "type": "object",
