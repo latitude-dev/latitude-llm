@@ -22,6 +22,7 @@ import { Route as ClaimTokenRouteImport } from './routes/claim.$token'
 import { Route as CcWrappedIdRouteImport } from './routes/cc-wrapped/$id'
 import { Route as BackofficeWrappedRouteImport } from './routes/backoffice/wrapped'
 import { Route as BackofficeSearchRouteImport } from './routes/backoffice/search'
+import { Route as AuthVerifyRouteImport } from './routes/auth/verify'
 import { Route as AuthInviteRouteImport } from './routes/auth/invite'
 import { Route as AuthConsentRouteImport } from './routes/auth/consent'
 import { Route as ApiHealthRouteImport } from './routes/api/health'
@@ -151,6 +152,11 @@ const BackofficeSearchRoute = BackofficeSearchRouteImport.update({
   id: '/search',
   path: '/search',
   getParentRoute: () => BackofficeRouteRoute,
+} as any)
+const AuthVerifyRoute = AuthVerifyRouteImport.update({
+  id: '/auth/verify',
+  path: '/auth/verify',
+  getParentRoute: () => rootRouteImport,
 } as any)
 const AuthInviteRoute = AuthInviteRouteImport.update({
   id: '/auth/invite',
@@ -551,6 +557,7 @@ export interface FileRoutesByFullPath {
   '/api/health': typeof ApiHealthRoute
   '/auth/consent': typeof AuthConsentRoute
   '/auth/invite': typeof AuthInviteRoute
+  '/auth/verify': typeof AuthVerifyRoute
   '/backoffice/search': typeof BackofficeSearchRoute
   '/backoffice/wrapped': typeof BackofficeWrappedRoute
   '/cc-wrapped/$id': typeof CcWrappedIdRouteWithChildren
@@ -627,6 +634,7 @@ export interface FileRoutesByTo {
   '/api/health': typeof ApiHealthRoute
   '/auth/consent': typeof AuthConsentRoute
   '/auth/invite': typeof AuthInviteRoute
+  '/auth/verify': typeof AuthVerifyRoute
   '/backoffice/search': typeof BackofficeSearchRoute
   '/backoffice/wrapped': typeof BackofficeWrappedRoute
   '/cc-wrapped/$id': typeof CcWrappedIdRouteWithChildren
@@ -706,6 +714,7 @@ export interface FileRoutesById {
   '/api/health': typeof ApiHealthRoute
   '/auth/consent': typeof AuthConsentRoute
   '/auth/invite': typeof AuthInviteRoute
+  '/auth/verify': typeof AuthVerifyRoute
   '/backoffice/search': typeof BackofficeSearchRoute
   '/backoffice/wrapped': typeof BackofficeWrappedRoute
   '/cc-wrapped/$id': typeof CcWrappedIdRouteWithChildren
@@ -788,6 +797,7 @@ export interface FileRouteTypes {
     | '/api/health'
     | '/auth/consent'
     | '/auth/invite'
+    | '/auth/verify'
     | '/backoffice/search'
     | '/backoffice/wrapped'
     | '/cc-wrapped/$id'
@@ -864,6 +874,7 @@ export interface FileRouteTypes {
     | '/api/health'
     | '/auth/consent'
     | '/auth/invite'
+    | '/auth/verify'
     | '/backoffice/search'
     | '/backoffice/wrapped'
     | '/cc-wrapped/$id'
@@ -942,6 +953,7 @@ export interface FileRouteTypes {
     | '/api/health'
     | '/auth/consent'
     | '/auth/invite'
+    | '/auth/verify'
     | '/backoffice/search'
     | '/backoffice/wrapped'
     | '/cc-wrapped/$id'
@@ -1023,6 +1035,7 @@ export interface RootRouteChildren {
   ApiHealthRoute: typeof ApiHealthRoute
   AuthConsentRoute: typeof AuthConsentRoute
   AuthInviteRoute: typeof AuthInviteRoute
+  AuthVerifyRoute: typeof AuthVerifyRoute
   CcWrappedIdRoute: typeof CcWrappedIdRouteWithChildren
   ClaimTokenRoute: typeof ClaimTokenRoute
   DownloadsExportRoute: typeof DownloadsExportRoute
@@ -1131,6 +1144,13 @@ declare module '@tanstack/react-router' {
       fullPath: '/backoffice/search'
       preLoaderRoute: typeof BackofficeSearchRouteImport
       parentRoute: typeof BackofficeRouteRoute
+    }
+    '/auth/verify': {
+      id: '/auth/verify'
+      path: '/auth/verify'
+      fullPath: '/auth/verify'
+      preLoaderRoute: typeof AuthVerifyRouteImport
+      parentRoute: typeof rootRouteImport
     }
     '/auth/invite': {
       id: '/auth/invite'
@@ -1853,6 +1873,7 @@ const rootRouteChildren: RootRouteChildren = {
   ApiHealthRoute: ApiHealthRoute,
   AuthConsentRoute: AuthConsentRoute,
   AuthInviteRoute: AuthInviteRoute,
+  AuthVerifyRoute: AuthVerifyRoute,
   CcWrappedIdRoute: CcWrappedIdRouteWithChildren,
   ClaimTokenRoute: ClaimTokenRoute,
   DownloadsExportRoute: DownloadsExportRoute,
