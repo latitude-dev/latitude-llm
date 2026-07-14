@@ -1,9 +1,12 @@
 import {
   FILTER_OPERATORS,
+  SCORE_FILTER_FIELDS,
   SESSION_ID_LENGTH,
   SPAN_ID_LENGTH,
   SPAN_ROW_FILTER_GTE_PERCENTILE_MESSAGE,
   TRACE_ID_LENGTH,
+  TRACE_TELEMETRY_FILTER_FIELDS,
+  unknownTraceFilterFields,
 } from "@domain/shared"
 import { z } from "@hono/zod-openapi"
 
@@ -75,6 +78,28 @@ export const SpanRowFilterSetSchema = FilterSetSchema.superRefine((filters, ctx)
     'Span row filter set. `gtePercentile` is not supported — use absolute `gte`/`lte` thresholds or `queryAnalytics` with `stream: "spans"` and a percentile metric.',
   )
   .openapi("SpanRowFilterSet")
+
+export const TRACE_FILTER_SET_DESCRIPTION = `Filter set keyed by trace field. Each entry holds an array of conditions ANDed together for that field; field-level groups are ANDed across the set. Valid fields: ${TRACE_TELEMETRY_FILTER_FIELDS.join(", ")}; score-derived keys (${SCORE_FILTER_FIELDS.join(", ")}); and arbitrary metadata via \`metadata.<key>\`. \`startTime\`/\`endTime\` take ISO-8601 values (a trace's first span start / last span end). Unknown fields are rejected rather than ignored.`
+
+const traceFilterFieldIssue = (field: string): string =>
+  `Unknown trace filter field "${field}". Valid fields: ${TRACE_TELEMETRY_FILTER_FIELDS.join(", ")}; score.* keys (e.g. ${SCORE_FILTER_FIELDS[0]}); or metadata.<key>.`
+
+/** Flags every filter-set key the trace query cannot apply, so callers get a 400 instead of silently unfiltered results. */
+export const addTraceFilterFieldIssues = (
+  filters: Readonly<Record<string, unknown>>,
+  ctx: z.RefinementCtx,
+  basePath: readonly (string | number)[] = [],
+): void => {
+  for (const field of unknownTraceFilterFields(filters)) {
+    ctx.addIssue({ code: "custom", message: traceFilterFieldIssue(field), path: [...basePath, field] })
+  }
+}
+
+export const TraceFilterSetSchema = FilterSetSchema.superRefine((filters, ctx) => {
+  addTraceFilterFieldIssues(filters, ctx)
+})
+  .describe(TRACE_FILTER_SET_DESCRIPTION)
+  .openapi("TraceFilterSet")
 
 export const TraceRefSchema = z
   .discriminatedUnion("by", [

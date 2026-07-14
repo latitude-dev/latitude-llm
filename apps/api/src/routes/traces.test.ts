@@ -96,6 +96,52 @@ describe("Traces Routes Integration", () => {
     expect(res.status).toBe(400)
   })
 
+  it<ApiTestContext>("POST /list rejects an unknown filter field with 400 instead of ignoring it", async ({
+    app,
+    database,
+  }) => {
+    const tenant = await createTenantSetup(database)
+    const projectId = "eeeeeeeeeeeeeeeeeeeeeeee"
+    const slug = await createProjectRecord(database, tenant.organizationId, projectId)
+
+    const res = await app.fetch(
+      new Request(`http://localhost/v1/projects/${slug}/traces/list`, {
+        method: "POST",
+        headers: {
+          ...createApiKeyAuthHeaders(tenant.apiKeyToken),
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ filters: { endTimee: [{ op: "lte", value: "2026-01-01T00:00:00Z" }] } }),
+      }),
+    )
+
+    expect(res.status).toBe(400)
+  })
+
+  it<ApiTestContext>("POST /list accepts startTime/endTime time-window filters", async ({ app, database }) => {
+    const tenant = await createTenantSetup(database)
+    const projectId = "ffffffffffffffffffffffff"
+    const slug = await createProjectRecord(database, tenant.organizationId, projectId)
+
+    const res = await app.fetch(
+      new Request(`http://localhost/v1/projects/${slug}/traces/list`, {
+        method: "POST",
+        headers: {
+          ...createApiKeyAuthHeaders(tenant.apiKeyToken),
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          filters: {
+            startTime: [{ op: "gte", value: "2026-01-01T00:00:00Z" }],
+            endTime: [{ op: "lte", value: "2026-01-02T00:00:00Z" }],
+          },
+        }),
+      }),
+    )
+
+    expect(res.status).toBe(200)
+  })
+
   it<ApiTestContext>("POST /list accepts a typed body with limit + sort overrides", async ({ app, database }) => {
     const tenant = await createTenantSetup(database)
     const projectId = "999999999999999999999999"
