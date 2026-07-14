@@ -1,3 +1,4 @@
+import { QueuePublisher } from "@domain/queue"
 import { CustomBehaviorId, type FilterSet, ProjectId, toSlug } from "@domain/shared"
 import {
   CUSTOM_BEHAVIOR_NAME_MAX_LENGTH,
@@ -7,6 +8,7 @@ import {
   createCustomBehavior,
   customBehaviorFilterSetSchema,
   deleteCustomBehavior,
+  generateCustomBehavior,
   previewCustomBehaviorSampleUseCase,
   updateCustomBehavior,
 } from "@domain/taxonomy"
@@ -16,7 +18,7 @@ import { withTracing } from "@repo/observability"
 import { createServerFn } from "@tanstack/react-start"
 import { Effect } from "effect"
 import { z } from "zod"
-import { getClickhouseClient, getPostgresClient } from "../../server/clients.ts"
+import { getClickhouseClient, getPostgresClient, getQueuePublisher } from "../../server/clients.ts"
 import { resolveOrgScope } from "../../server/resolve-org-scope.ts"
 import { withScopedClickHouse } from "../../server/scoped-clickhouse.ts"
 import { withScopedPostgres } from "../../server/scoped-postgres.ts"
@@ -70,7 +72,9 @@ export const listCustomBehaviors = createServerFn({ method: "GET" })
     const behaviors = await Effect.runPromise(
       Effect.gen(function* () {
         const repo = yield* CustomBehaviorRepository
-        return yield* repo.listByProject({ projectId: ProjectId(data.projectId) })
+        return yield* repo.listByProject({
+          projectId: ProjectId(data.projectId),
+        })
       }).pipe(withScopedPostgres(CustomBehaviorRepositoryLive, getPostgresClient(), orgId), withTracing),
     )
     return behaviors.map(toRecord)
@@ -131,8 +135,31 @@ export const deleteCustomBehaviorFn = createServerFn({ method: "POST" })
     )
   })
 
+export const generateCustomBehaviorFn = createServerFn({ method: "POST" })
+  .inputValidator(z.object({ id: z.string() }))
+  .handler(async ({ data, context }): Promise<CustomBehaviorRecord> => {
+    const orgId = await resolveOrgScope(context)
+    const publisher = await getQueuePublisher()
+
+    const updated = await Effect.runPromise(
+      generateCustomBehavior({
+        customBehaviorId: CustomBehaviorId(data.id),
+      }).pipe(
+        Effect.provideService(QueuePublisher, publisher),
+        withScopedPostgres(CustomBehaviorRepositoryLive, getPostgresClient(), orgId),
+        withTracing,
+      ),
+    )
+    return toRecord(updated)
+  })
+
 export const previewCustomBehaviorSample = createServerFn({ method: "GET" })
-  .inputValidator(z.object({ projectId: z.string(), filterSet: customBehaviorFilterSetSchema }))
+  .inputValidator(
+    z.object({
+      projectId: z.string(),
+      filterSet: customBehaviorFilterSetSchema,
+    }),
+  )
   .handler(async ({ data, context }): Promise<CustomBehaviorPreviewRecord> => {
     const orgId = await resolveOrgScope(context)
 

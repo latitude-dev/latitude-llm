@@ -64,6 +64,8 @@ export interface TaxonomyClusterRepositoryShape {
   listSubtreeIds(input: {
     readonly projectId: ProjectId
     readonly clusterId: TaxonomyClusterId
+    /** Omit/null = global taxonomy (custom_behavior_id IS NULL); an id scopes to that behavior's sub-tree. */
+    readonly customBehaviorId?: CustomBehaviorId | null
   }): Effect.Effect<readonly TaxonomyClusterId[], RepositoryError, SqlClient>
   /**
    * Exact pgvector cosine over `(organization_id, project_id)` for state =

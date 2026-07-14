@@ -71,6 +71,7 @@ export {
   customBehaviorFilterSetSchema,
   customBehaviorSchema,
   customBehaviorStatusSchema,
+  stripCustomBehaviorExcludedFields,
 } from "./entities/custom-behavior.ts"
 export {
   type CustomBehaviorAssignment,
@@ -141,8 +142,15 @@ export {
 export {
   type ClusterAnalysisAggregate,
   type ClusterRepresentativeExample,
+  type ClusterSessionHistogramBucket,
   type ClusterSessionMomentRange,
+  type ClusterSessionRow,
+  type ClusterSessionsPage,
   type ClusterSessionTraceIdsInput,
+  type ClusterTrajectoryAxis,
+  type ClusterTrajectoryRow,
+  type GetClusterTrajectoryInput,
+  type ListClusterSessionsInput,
   TaxonomyClusterIntelligenceRepository,
   type TaxonomyClusterIntelligenceRepositoryShape,
 } from "./ports/taxonomy-cluster-intelligence-repository.ts"
@@ -232,6 +240,13 @@ export {
   deprecateCustomBehaviorTreeUseCase,
 } from "./use-cases/deprecate-custom-behavior-tree.ts"
 export { type EmitLineageInput, emitLineageUseCase } from "./use-cases/emit-lineage.ts"
+export { type GenerateCustomBehaviorInput, generateCustomBehavior } from "./use-cases/generate-custom-behavior.ts"
+export {
+  type BehaviourTrajectoryCategoryRow,
+  type BehaviourTrajectoryResult,
+  type GetBehaviourTrajectoryInput,
+  getBehaviourTrajectoryUseCase,
+} from "./use-cases/get-behaviour-trajectory.ts"
 export {
   type GetClusterSessionIntelligenceInput,
   type GetClusterSessionIntelligenceResult,
@@ -242,6 +257,10 @@ export {
   type GetClusterDetailsResult,
   getClusterDetailsUseCase,
 } from "./use-cases/get-details.ts"
+export {
+  type ListBehaviourSessionsInput,
+  listBehaviourSessionsUseCase,
+} from "./use-cases/list-behaviour-sessions.ts"
 export {
   type ListClusterSessionTraceIdsInput,
   listClusterSessionTraceIdsUseCase,

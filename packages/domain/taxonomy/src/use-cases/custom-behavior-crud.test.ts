@@ -1,9 +1,11 @@
-import { CustomBehaviorId, type FilterSet, ProjectId, SqlClient } from "@domain/shared"
+import { QueuePublisher } from "@domain/queue"
+import { createFakeQueuePublisher } from "@domain/queue/testing"
+import { CustomBehaviorId, type FilterSet, OrganizationId, ProjectId, SqlClient } from "@domain/shared"
 import { createFakeSqlClient } from "@domain/shared/testing"
-import { Effect, Layer } from "effect"
+import { Effect, Exit, Layer } from "effect"
 import { describe, expect, it } from "vitest"
 import { MAX_CUSTOM_BEHAVIORS_PER_PROJECT } from "../constants.ts"
-import { CustomBehaviorStatus } from "../entities/custom-behavior.ts"
+import { type CustomBehavior, CustomBehaviorStatus } from "../entities/custom-behavior.ts"
 import {
   CustomBehaviorFilterInvalidError,
   CustomBehaviorLimitReachedError,
@@ -13,11 +15,27 @@ import { CustomBehaviorRepository } from "../ports/custom-behavior-repository.ts
 import { createFakeCustomBehaviorRepository } from "../testing/fake-custom-behavior-repository.ts"
 import { createCustomBehavior } from "./create-custom-behavior.ts"
 import { deleteCustomBehavior } from "./delete-custom-behavior.ts"
+import { generateCustomBehavior } from "./generate-custom-behavior.ts"
+import { taxonomyGardenCustomBehaviorDedupeKey } from "./trigger-project-gardening.ts"
 import { updateCustomBehavior } from "./update-custom-behavior.ts"
 
+const ORG_ID = OrganizationId("o".repeat(24))
 const PROJECT_ID = ProjectId("p".repeat(24))
 const OTHER_PROJECT_ID = ProjectId("q".repeat(24))
 const FILTER: FilterSet = { moments: [{ op: "in", value: ["escalation"] }] }
+
+const makeBehavior = (overrides: Partial<CustomBehavior> = {}): CustomBehavior => ({
+  id: CustomBehaviorId("b".repeat(24)),
+  organizationId: ORG_ID,
+  projectId: PROJECT_ID,
+  slug: "refunds",
+  name: "Refunds",
+  filterSet: FILTER,
+  status: CustomBehaviorStatus.Pending,
+  createdAt: new Date("2026-01-01T00:00:00.000Z"),
+  updatedAt: new Date("2026-01-01T00:00:00.000Z"),
+  ...overrides,
+})
 
 function makeLayer() {
   const { repository, rows } = createFakeCustomBehaviorRepository()
@@ -182,5 +200,71 @@ describe("deleteCustomBehavior", () => {
     await expect(
       Effect.runPromise(deleteCustomBehavior({ id: CustomBehaviorId("z".repeat(24)) }).pipe(Effect.provide(layer))),
     ).rejects.toThrow()
+  })
+})
+
+describe("generateCustomBehavior", () => {
+  it("flips the row to generating and enqueues gardenCustomBehavior with the record's org + project", async () => {
+    const behavior = makeBehavior()
+    const { repository, rows } = createFakeCustomBehaviorRepository([behavior])
+    const queue = createFakeQueuePublisher()
+
+    const result = await Effect.runPromise(
+      generateCustomBehavior({ customBehaviorId: behavior.id }).pipe(
+        Effect.provide(Layer.succeed(CustomBehaviorRepository, repository)),
+        Effect.provide(Layer.succeed(QueuePublisher, queue.publisher)),
+        Effect.provide(Layer.succeed(SqlClient, createFakeSqlClient())),
+      ),
+    )
+
+    expect(result.status).toBe(CustomBehaviorStatus.Generating)
+    expect(rows.get(behavior.id)?.status).toBe(CustomBehaviorStatus.Generating)
+    expect(queue.published).toHaveLength(1)
+    expect(queue.published[0]).toMatchObject({
+      queue: "taxonomy",
+      task: "gardenCustomBehavior",
+      payload: {
+        organizationId: ORG_ID,
+        projectId: PROJECT_ID,
+        customBehaviorId: behavior.id,
+        reason: "manual",
+      },
+      options: {
+        dedupeKey: taxonomyGardenCustomBehaviorDedupeKey({ organizationId: ORG_ID, customBehaviorId: behavior.id }),
+      },
+    })
+  })
+
+  it("rolls the status back to its prior value when the enqueue fails", async () => {
+    const behavior = makeBehavior({ status: CustomBehaviorStatus.Failed })
+    const { repository, rows } = createFakeCustomBehaviorRepository([behavior])
+    const queue = createFakeQueuePublisher({ publish: () => Effect.die(new Error("queue down")) })
+
+    const exit = await Effect.runPromiseExit(
+      generateCustomBehavior({ customBehaviorId: behavior.id }).pipe(
+        Effect.provide(Layer.succeed(CustomBehaviorRepository, repository)),
+        Effect.provide(Layer.succeed(QueuePublisher, queue.publisher)),
+        Effect.provide(Layer.succeed(SqlClient, createFakeSqlClient())),
+      ),
+    )
+
+    expect(Exit.isFailure(exit)).toBe(true)
+    expect(rows.get(behavior.id)?.status).toBe(CustomBehaviorStatus.Failed)
+  })
+
+  it("fails with NotFoundError and enqueues nothing for a missing behavior", async () => {
+    const { repository } = createFakeCustomBehaviorRepository([])
+    const queue = createFakeQueuePublisher()
+
+    const exit = await Effect.runPromiseExit(
+      generateCustomBehavior({ customBehaviorId: CustomBehaviorId("z".repeat(24)) }).pipe(
+        Effect.provide(Layer.succeed(CustomBehaviorRepository, repository)),
+        Effect.provide(Layer.succeed(QueuePublisher, queue.publisher)),
+        Effect.provide(Layer.succeed(SqlClient, createFakeSqlClient())),
+      ),
+    )
+
+    expect(Exit.isFailure(exit)).toBe(true)
+    expect(queue.published).toHaveLength(0)
   })
 })

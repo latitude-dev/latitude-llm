@@ -259,6 +259,7 @@ export function BehaviourDetailDrawer({
   timeRange,
   momentRange,
   momentRangeMaxTurn,
+  customBehaviorId,
   onMomentRangeChange,
   onClose,
 }: {
@@ -268,6 +269,7 @@ export function BehaviourDetailDrawer({
   readonly timeRange: BehaviourTimeRangeRecord | undefined
   readonly momentRange: BehaviourMomentRangeRecord | undefined
   readonly momentRangeMaxTurn: number
+  readonly customBehaviorId?: string
   readonly onMomentRangeChange: (range: BehaviourMomentRangeRecord | undefined, maxTurn?: number) => void
   readonly onClose: () => void
 }) {
@@ -278,14 +280,14 @@ export function BehaviourDetailDrawer({
   const [sessionPanelEntered, setSessionPanelEntered] = useState(false)
   const [selectionState, setSelectionState] = useState<SelectionState<string>>(EMPTY_SELECTION)
   const [addToDatasetOpen, setAddToDatasetOpen] = useState(false)
-  const { data: intelligence } = useClusterProfile(projectId, cluster.id, timeRange)
+  const { data: intelligence } = useClusterProfile(projectId, cluster.id, timeRange, customBehaviorId)
   const {
     data: behaviourSessionsData,
     isLoading: behaviourSessionsLoading,
     fetchNextPage: fetchNextBehaviourSessionsPage,
     hasNextPage: hasNextBehaviourSessionsPage,
     isFetchingNextPage: isFetchingNextBehaviourSessionsPage,
-  } = useBehaviourSessions(projectId, cluster.id, sessionFilter, timeRange, momentRange)
+  } = useBehaviourSessions(projectId, cluster.id, sessionFilter, timeRange, momentRange, customBehaviorId)
   const behaviourSessions = behaviourSessionsData?.pages.flatMap((page) => page.sessions) ?? []
   const behaviourSessionHistogram = behaviourSessionsData?.pages[0]?.histogram ?? []
   // A session row's identity is its (first) trace id — the unit a dataset row is
@@ -313,8 +315,9 @@ export function BehaviourDetailDrawer({
         : {}),
       ...(timeRange?.fromIso ? { timeFromIso: timeRange.fromIso } : {}),
       ...(timeRange?.toIso ? { timeToIso: timeRange.toIso } : {}),
+      ...(customBehaviorId ? { customBehaviorId } : {}),
     }),
-    [cluster.id, sessionFilter, momentRange, timeRange],
+    [cluster.id, sessionFilter, momentRange, timeRange, customBehaviorId],
   )
   const datasetSelection = sessionSelection.bulkSelection
   const detectedSignals = intelligence?.topMoments ?? []
@@ -855,6 +858,7 @@ export function BehavioursView({
   timeFilter,
   timeRange,
   momentRange,
+  customBehaviorId,
   onSegmentChange,
   onBehaviourPathChange,
   onMomentRangeChange,
@@ -862,12 +866,19 @@ export function BehavioursView({
   readonly topics: readonly BehaviourNodeRecord[]
   readonly projectId: string
   readonly isLoading: boolean
-  readonly segment: BehaviourSegment
+  /** Global-only chrome, like `timeFilter`: pass `segment` + `onSegmentChange`
+   * to show the segment tabs; omit them (e.g. a scoped tree, whose trends are
+   * neutral) to hide them. */
+  readonly segment?: BehaviourSegment
   readonly behaviourPath: readonly string[]
+  /** Slot for the global time-window picker; scoped trees pass `null` (fixed 7d). */
   readonly timeFilter: ReactNode
   readonly timeRange: BehaviourTimeRangeRecord | undefined
   readonly momentRange: BehaviourMomentRangeRecord | undefined
-  readonly onSegmentChange: (segment: BehaviourSegment) => void
+  /** Data scope only: reads the behavior's scoped clusters/sessions/trajectory.
+   * It does not drive chrome — visible controls are chosen by the caller. */
+  readonly customBehaviorId?: string
+  readonly onSegmentChange?: (segment: BehaviourSegment) => void
   readonly onBehaviourPathChange: (path: readonly string[]) => void
   readonly onMomentRangeChange: (range: BehaviourMomentRangeRecord | undefined, maxTurn?: number) => void
 }) {
@@ -1079,15 +1090,17 @@ export function BehavioursView({
             {timeFilter}
             {momentRange ? <BehaviourBadge label={selectedMomentRangeLabel(momentRange)} icon={TagIcon} /> : null}
           </Layout.ActionRowItem>
-          <Layout.ActionRowItem>
-            <Tabs
-              variant="bordered"
-              size="sm"
-              options={segmentOptions.map((option) => ({ id: option.id, label: option.label }))}
-              active={segment}
-              onSelect={(value) => onSegmentChange(value)}
-            />
-          </Layout.ActionRowItem>
+          {onSegmentChange ? (
+            <Layout.ActionRowItem>
+              <Tabs
+                variant="bordered"
+                size="sm"
+                options={segmentOptions.map((option) => ({ id: option.id, label: option.label }))}
+                active={segment ?? "all"}
+                onSelect={(value) => onSegmentChange(value)}
+              />
+            </Layout.ActionRowItem>
+          ) : null}
         </Layout.ActionsRow>
       </Layout.Actions>
       <Layout.Body>
@@ -1105,6 +1118,7 @@ export function BehavioursView({
                 topics={topics}
                 selectedPath={behaviourPath}
                 timeRange={timeRange}
+                {...(customBehaviorId ? { customBehaviorId } : {})}
                 onSelectPath={handleDotChartPathChange}
                 onSelectPoint={handleDotChartPointSelect}
               />

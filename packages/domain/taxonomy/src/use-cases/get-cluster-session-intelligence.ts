@@ -1,4 +1,4 @@
-import type { OrganizationId, ProjectId, TaxonomyClusterId } from "@domain/shared"
+import type { CustomBehaviorId, OrganizationId, ProjectId, TaxonomyClusterId } from "@domain/shared"
 import { Effect } from "effect"
 import type {
   ClusterAnalysisAggregate,
@@ -15,6 +15,8 @@ export interface GetClusterSessionIntelligenceInput {
   readonly sourceWindowDays?: number
   readonly sourceWindowStart?: Date
   readonly sourceWindowEnd?: Date
+  /** Omit/null = global taxonomy; an id scopes the subtree to that behavior's sub-tree. */
+  readonly customBehaviorId?: CustomBehaviorId | null
 }
 
 export interface GetClusterSessionIntelligenceResult {
@@ -48,13 +50,19 @@ export const getClusterSessionIntelligenceUseCase = (input: GetClusterSessionInt
     // A tree node's profile covers its whole subtree: interior nodes hold
     // only residue directly, but represent every session routed below them —
     // matching the subtree-scoped session list shown next to this profile.
-    const clusterIds = yield* clusters.listSubtreeIds({ projectId: input.projectId, clusterId: input.clusterId })
+    const clusterIds = yield* clusters.listSubtreeIds({
+      projectId: input.projectId,
+      clusterId: input.clusterId,
+      ...(input.customBehaviorId != null ? { customBehaviorId: input.customBehaviorId } : {}),
+    })
+    const scope = input.customBehaviorId != null ? { customBehaviorId: input.customBehaviorId } : {}
     const aggregate = yield* intelligence.getClusterAggregate({
       organizationId: input.organizationId,
       projectId: input.projectId,
       clusterIds,
       sourceWindowStart,
       sourceWindowEnd,
+      ...scope,
     })
     const representativeExamples = yield* intelligence.listRepresentativeExamples({
       organizationId: input.organizationId,
@@ -63,6 +71,7 @@ export const getClusterSessionIntelligenceUseCase = (input: GetClusterSessionInt
       sourceWindowStart,
       sourceWindowEnd,
       limit: 10,
+      ...scope,
     })
     const eligibleSessionDenominator = aggregate.eligibleSessionCount
     const queryLatencyMs = Date.now() - queryStartedAt

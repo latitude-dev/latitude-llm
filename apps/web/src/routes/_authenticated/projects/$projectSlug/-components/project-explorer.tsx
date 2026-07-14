@@ -1,5 +1,6 @@
 import type { MonitorTarget } from "@domain/monitors"
 import type { FilterSet } from "@domain/shared"
+import { stripCustomBehaviorExcludedFields } from "@domain/taxonomy"
 import { Button, Icon, type InfiniteTableSorting, type SortDirection, Tabs, Tooltip, toast } from "@repo/ui"
 import { eq } from "@tanstack/react-db"
 import { useHotkeys } from "@tanstack/react-hotkeys"
@@ -12,6 +13,7 @@ import {
   FilterXIcon,
   MessagesSquareIcon,
   ShieldAlertIcon,
+  SlidersHorizontalIcon,
   TextIcon,
   XIcon,
 } from "lucide-react"
@@ -23,6 +25,7 @@ import {
   addTracesToDatasetFunction,
   createDatasetFromTracesFunction,
 } from "../../../../../domains/datasets/datasets.functions.ts"
+import { useFeatureFlags } from "../../../../../domains/feature-flags/feature-flags.collection.ts"
 import { useMonitors } from "../../../../../domains/monitors/monitors.collection.ts"
 import { useProjectsCollection } from "../../../../../domains/projects/projects.collection.ts"
 import { useSavedSearchBySlug } from "../../../../../domains/saved-searches/saved-searches.collection.ts"
@@ -247,6 +250,18 @@ export function ProjectExplorer({ projectSlug }: { readonly projectSlug: string 
   // condition array is not a user-applied filter, so ignore empties here.
   const hasActiveFilters = Object.values(filters).some((conds) => conds.length > 0)
   const hasSelectedSavedSearch = savedSearchSlug.length > 0
+  const featureFlags = useFeatureFlags()
+  // A custom behavior copies the current filter minus topics (a behavior scoped
+  // on behaviors is circular). Only offer it when a non-topics filter exists.
+  const customBehaviorSeedFilters = useMemo(() => stripCustomBehaviorExcludedFields(filters), [filters])
+  const canCreateCustomBehavior =
+    featureFlags.has("customBehaviors") && Object.keys(customBehaviorSeedFilters).length > 0
+  const createCustomBehaviorFromFilters = () =>
+    navigate({
+      to: "/projects/$projectSlug/custom-behaviours",
+      params: { projectSlug },
+      search: { create: serializeFilters(customBehaviorSeedFilters) },
+    })
   const sessionsMonitorTarget = useMemo<MonitorTarget>(
     () => ({
       type: "session",
@@ -557,6 +572,24 @@ export function ProjectExplorer({ projectSlug }: { readonly projectSlug: string 
                   additionalMonitors={savedSearchMonitors}
                 />
               )
+            ) : null}
+            {isSessions && canCreateCustomBehavior ? (
+              <Tooltip
+                asChild
+                trigger={
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="h-8 w-auto"
+                    onClick={() => void createCustomBehaviorFromFilters()}
+                  >
+                    <Icon icon={SlidersHorizontalIcon} size="sm" />
+                    Create custom behavior
+                  </Button>
+                }
+              >
+                Cluster the sessions matching these filters into their own behavior tree.
+              </Tooltip>
             ) : null}
             <Tabs
               variant="bordered"

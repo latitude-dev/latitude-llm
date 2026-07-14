@@ -4,52 +4,16 @@ import { ExternalLinkIcon, Loader2Icon, TagsIcon } from "lucide-react"
 import { useMemo } from "react"
 import { useAnalyticsTimeWindow } from "../../../../../domains/projects/use-analytics-time-window.ts"
 import { type BehaviourSegment, useProjectBehaviours } from "../../../../../domains/taxonomy/taxonomy.collection.ts"
-import type {
-  BehaviourMomentRangeRecord,
-  BehaviourNodeRecord,
-  BehaviourTrajectoryMetric,
-} from "../../../../../domains/taxonomy/taxonomy.functions.ts"
+import type { BehaviourMomentRangeRecord } from "../../../../../domains/taxonomy/taxonomy.functions.ts"
 import { ListingLayout as Layout } from "../../../../../layouts/ListingLayout/index.tsx"
 import { useParamState } from "../../../../../lib/hooks/useParamState.ts"
 import { BreadcrumbText } from "../../../-components/breadcrumb-ui.tsx"
 import { TimeFilterDropdown } from "../-components/time-filter-dropdown.tsx"
 import { useRouteProject } from "../-route-data.ts"
+import { findNodeById, findNodeByPath, isBehaviourTrajectoryMetric } from "./-components/behaviour-tree-nav.ts"
 import { BehaviourDetailDrawer, BehavioursView } from "./-components/behaviours-view.tsx"
 
-const isBehaviourTrajectoryMetric = (value: string): value is BehaviourTrajectoryMetric =>
-  value === "frequency" || value === "escalation" || value === "resolution" || value === "churnRisk" || value === "wins"
-
 const isDemoProjectName = (name: string) => /(^|\b)demo project(\b|$)/i.test(name)
-
-const findNodeByPath = (
-  topics: readonly BehaviourNodeRecord[],
-  path: readonly string[],
-): { readonly node: BehaviourNodeRecord; readonly parent: BehaviourNodeRecord | null } | null => {
-  let nodes = topics
-  let parent: BehaviourNodeRecord | null = null
-  let selected: { readonly node: BehaviourNodeRecord; readonly parent: BehaviourNodeRecord | null } | null = null
-  for (const id of path) {
-    const node = nodes.find((candidate) => candidate.cluster.id === id)
-    if (!node) return null
-    selected = { node, parent }
-    nodes = node.children
-    parent = node
-  }
-  return selected
-}
-
-const findNodeById = (
-  nodes: readonly BehaviourNodeRecord[],
-  clusterId: string,
-  parent: BehaviourNodeRecord | null = null,
-): { readonly node: BehaviourNodeRecord; readonly parent: BehaviourNodeRecord | null } | null => {
-  for (const node of nodes) {
-    if (node.cluster.id === clusterId) return { node, parent }
-    const found = findNodeById(node.children, clusterId, node)
-    if (found) return found
-  }
-  return null
-}
 
 function BehavioursBreadcrumb() {
   return (
