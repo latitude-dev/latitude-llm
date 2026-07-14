@@ -116,6 +116,19 @@ export default defineConfig({
         codeSplitting: {
           groups: [
             {
+              // The Effect runtime leaks into the client bundle via shared domain/server-fn
+              // modules and is the single largest vendor in the entry chunk. Peel it into its
+              // own cacheable chunk so `main` stays under the client-asset size budget.
+              test: /node_modules\/effect\//,
+              name: "effect",
+            },
+            {
+              // TanStack router core is a large, stable vendor loaded on every page; keeping it
+              // in its own chunk trims the entry chunk and caches across deploys.
+              test: /node_modules\/@tanstack\/(router-core|react-router|history)\//,
+              name: "tanstack-router",
+            },
+            {
               test: /node_modules\/codemirror/,
               name: "codemirror",
             },

@@ -30988,6 +30988,1636 @@
         "readOnlyHint": true,
         "destructiveHint": false
       }
+    },
+    {
+      "name": "listExperiments",
+      "title": "List experiments",
+      "description": "Returns the project's experiments with cheap summary metrics (variant count, distinct sessions and users across all variant populations). Excludes per-variant comparison metrics — fetch a single experiment for those.",
+      "inputSchema": {
+        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "type": "object",
+        "properties": {
+          "projectSlug": {
+            "type": "string",
+            "description": "Project slug (human-readable identifier)"
+          },
+          "cursor": {
+            "description": "Opaque cursor returned in a previous response's `nextCursor`. Omit on the first page.",
+            "type": "string"
+          },
+          "limit": {
+            "default": 50,
+            "description": "Page size. Defaults to 50; max 100.",
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 100
+          },
+          "search": {
+            "description": "Filter by name (case-insensitive substring).",
+            "type": "string"
+          }
+        },
+        "required": [
+          "projectSlug",
+          "limit"
+        ],
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "type": "object",
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "id": {
+                  "type": "string",
+                  "minLength": 24,
+                  "maxLength": 24,
+                  "description": "Stable experiment identifier."
+                },
+                "organizationId": {
+                  "type": "string",
+                  "minLength": 24,
+                  "maxLength": 24,
+                  "description": "Organization that owns this experiment."
+                },
+                "projectId": {
+                  "type": "string",
+                  "minLength": 24,
+                  "maxLength": 24,
+                  "description": "Project this experiment belongs to."
+                },
+                "slug": {
+                  "type": "string",
+                  "description": "URL-safe slug derived from `name`. Unique within the project."
+                },
+                "name": {
+                  "type": "string",
+                  "description": "Human-readable name."
+                },
+                "description": {
+                  "type": "string",
+                  "description": "Free-form description. Empty string when not set."
+                },
+                "variants": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "properties": {
+                      "id": {
+                        "type": "string",
+                        "minLength": 24,
+                        "maxLength": 24,
+                        "description": "Stable variant identifier, unique within the experiment."
+                      },
+                      "name": {
+                        "type": "string",
+                        "description": "Human-readable variant name (e.g. \"Variant A\"). Unique within the experiment."
+                      },
+                      "baseline": {
+                        "type": "boolean",
+                        "description": "`true` for the single baseline variant that every other variant is compared against."
+                      },
+                      "filterSet": {
+                        "type": "object",
+                        "propertyNames": {
+                          "type": "string"
+                        },
+                        "additionalProperties": {
+                          "type": "array",
+                          "items": {
+                            "type": "object",
+                            "properties": {
+                              "op": {
+                                "type": "string",
+                                "enum": [
+                                  "eq",
+                                  "neq",
+                                  "gt",
+                                  "gte",
+                                  "lt",
+                                  "lte",
+                                  "in",
+                                  "notIn",
+                                  "contains",
+                                  "notContains",
+                                  "gtePercentile"
+                                ],
+                                "description": "Comparison operator applied to the field's value (e.g. `eq`, `neq`, `in`). The full operator list lives in the API reference."
+                              },
+                              "value": {
+                                "anyOf": [
+                                  {
+                                    "type": "string"
+                                  },
+                                  {
+                                    "type": "number"
+                                  },
+                                  {
+                                    "type": "boolean"
+                                  },
+                                  {
+                                    "type": "array",
+                                    "items": {
+                                      "anyOf": [
+                                        {
+                                          "type": "string"
+                                        },
+                                        {
+                                          "type": "number"
+                                        }
+                                      ]
+                                    }
+                                  }
+                                ],
+                                "description": "Right-hand value compared against the field. Arrays are required for `in` / `notIn`-style operators."
+                              }
+                            },
+                            "required": [
+                              "op",
+                              "value"
+                            ],
+                            "additionalProperties": false
+                          }
+                        },
+                        "description": "Session filters selecting this variant's population."
+                      },
+                      "query": {
+                        "anyOf": [
+                          {
+                            "type": "string"
+                          },
+                          {
+                            "type": "null"
+                          }
+                        ],
+                        "description": "Free-text / semantic search applied to the population, or `null`."
+                      },
+                      "timeRange": {
+                        "anyOf": [
+                          {
+                            "oneOf": [
+                              {
+                                "type": "object",
+                                "properties": {
+                                  "type": {
+                                    "type": "string",
+                                    "const": "relative",
+                                    "description": "A live window ending now, spanning the last `seconds`."
+                                  },
+                                  "seconds": {
+                                    "type": "integer",
+                                    "exclusiveMinimum": 0,
+                                    "maximum": 9007199254740991,
+                                    "description": "Length of the live window in seconds (e.g. 2592000 for the last 30 days)."
+                                  }
+                                },
+                                "required": [
+                                  "type",
+                                  "seconds"
+                                ],
+                                "additionalProperties": false
+                              },
+                              {
+                                "type": "object",
+                                "properties": {
+                                  "type": {
+                                    "type": "string",
+                                    "const": "absolute",
+                                    "description": "A fixed window between two instants."
+                                  },
+                                  "fromIso": {
+                                    "type": "string",
+                                    "description": "ISO-8601 start of the window (inclusive)."
+                                  },
+                                  "toIso": {
+                                    "type": "string",
+                                    "description": "ISO-8601 end of the window (inclusive)."
+                                  }
+                                },
+                                "required": [
+                                  "type",
+                                  "fromIso",
+                                  "toIso"
+                                ],
+                                "additionalProperties": false
+                              }
+                            ]
+                          },
+                          {
+                            "type": "null"
+                          }
+                        ],
+                        "description": "Time window the variant is measured over. `null` uses the default last-30-days window."
+                      }
+                    },
+                    "required": [
+                      "id",
+                      "name",
+                      "baseline",
+                      "filterSet",
+                      "query",
+                      "timeRange"
+                    ],
+                    "additionalProperties": false
+                  },
+                  "description": "Ordered variants. Exactly one carries the baseline flag when the list is non-empty."
+                },
+                "createdAt": {
+                  "type": "string",
+                  "description": "ISO-8601 timestamp of creation."
+                },
+                "updatedAt": {
+                  "type": "string",
+                  "description": "ISO-8601 timestamp of the last update."
+                },
+                "variantCount": {
+                  "type": "integer",
+                  "minimum": -9007199254740991,
+                  "maximum": 9007199254740991,
+                  "description": "Number of variants in the experiment."
+                },
+                "sessionsDistinct": {
+                  "type": "integer",
+                  "minimum": -9007199254740991,
+                  "maximum": 9007199254740991,
+                  "description": "Distinct sessions across the union of every variant's population (a session in several variants counts once)."
+                },
+                "usersDistinct": {
+                  "type": "integer",
+                  "minimum": -9007199254740991,
+                  "maximum": 9007199254740991,
+                  "description": "Distinct users across the union of every variant's population (a user in several variants counts once)."
+                }
+              },
+              "required": [
+                "id",
+                "organizationId",
+                "projectId",
+                "slug",
+                "name",
+                "description",
+                "variants",
+                "createdAt",
+                "updatedAt",
+                "variantCount",
+                "sessionsDistinct",
+                "usersDistinct"
+              ],
+              "additionalProperties": false
+            },
+            "description": "Page of items, in the requested sort order."
+          },
+          "nextCursor": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Opaque cursor for fetching the next page. `null` when there are no more pages. Pass it back in `cursor` to continue."
+          },
+          "hasMore": {
+            "type": "boolean",
+            "description": "`true` when there is at least one more page after this one."
+          }
+        },
+        "required": [
+          "items",
+          "nextCursor",
+          "hasMore"
+        ],
+        "additionalProperties": false
+      },
+      "annotations": {
+        "readOnlyHint": true,
+        "destructiveHint": false
+      }
+    },
+    {
+      "name": "createExperiment",
+      "title": "Create experiment",
+      "description": "Creates an experiment. The slug is derived from `name`. Omit `variants` to seed two defaults.",
+      "inputSchema": {
+        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "type": "object",
+        "properties": {
+          "projectSlug": {
+            "type": "string",
+            "description": "Project slug (human-readable identifier)"
+          },
+          "name": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 128,
+            "description": "Human-readable name. Used to derive the slug."
+          },
+          "description": {
+            "description": "Optional free-form description.",
+            "type": "string",
+            "maxLength": 2000
+          },
+          "variants": {
+            "description": "Variant definitions. Omit to seed two default variants (`Variant A` baseline + `Variant B`); pass `[]` to create an empty experiment.",
+            "maxItems": 10,
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "id": {
+                  "description": "Existing variant id to preserve. Omit to mint a new variant.",
+                  "type": "string"
+                },
+                "name": {
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 128,
+                  "description": "Variant name. Unique within the experiment."
+                },
+                "baseline": {
+                  "type": "boolean",
+                  "description": "`true` for the baseline variant. Exactly one variant must be the baseline."
+                },
+                "filterSet": {
+                  "type": "object",
+                  "propertyNames": {
+                    "type": "string"
+                  },
+                  "additionalProperties": {
+                    "type": "array",
+                    "items": {
+                      "type": "object",
+                      "properties": {
+                        "op": {
+                          "type": "string",
+                          "enum": [
+                            "eq",
+                            "neq",
+                            "gt",
+                            "gte",
+                            "lt",
+                            "lte",
+                            "in",
+                            "notIn",
+                            "contains",
+                            "notContains",
+                            "gtePercentile"
+                          ],
+                          "description": "Comparison operator applied to the field's value (e.g. `eq`, `neq`, `in`). The full operator list lives in the API reference."
+                        },
+                        "value": {
+                          "anyOf": [
+                            {
+                              "type": "string"
+                            },
+                            {
+                              "type": "number"
+                            },
+                            {
+                              "type": "boolean"
+                            },
+                            {
+                              "type": "array",
+                              "items": {
+                                "anyOf": [
+                                  {
+                                    "type": "string"
+                                  },
+                                  {
+                                    "type": "number"
+                                  }
+                                ]
+                              }
+                            }
+                          ],
+                          "description": "Right-hand value compared against the field. Arrays are required for `in` / `notIn`-style operators."
+                        }
+                      },
+                      "required": [
+                        "op",
+                        "value"
+                      ],
+                      "additionalProperties": false
+                    }
+                  },
+                  "description": "Session filters selecting this variant's population."
+                },
+                "query": {
+                  "anyOf": [
+                    {
+                      "type": "string",
+                      "maxLength": 500
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ],
+                  "description": "Free-text / semantic search, or `null`."
+                },
+                "timeRange": {
+                  "anyOf": [
+                    {
+                      "oneOf": [
+                        {
+                          "type": "object",
+                          "properties": {
+                            "type": {
+                              "type": "string",
+                              "const": "relative"
+                            },
+                            "seconds": {
+                              "type": "integer",
+                              "exclusiveMinimum": 0,
+                              "maximum": 9007199254740991,
+                              "description": "Length of the live window in seconds."
+                            }
+                          },
+                          "required": [
+                            "type",
+                            "seconds"
+                          ],
+                          "additionalProperties": false
+                        },
+                        {
+                          "type": "object",
+                          "properties": {
+                            "type": {
+                              "type": "string",
+                              "const": "absolute"
+                            },
+                            "fromIso": {
+                              "type": "string",
+                              "description": "ISO-8601 start of the window (inclusive)."
+                            },
+                            "toIso": {
+                              "type": "string",
+                              "description": "ISO-8601 end of the window (inclusive)."
+                            }
+                          },
+                          "required": [
+                            "type",
+                            "fromIso",
+                            "toIso"
+                          ],
+                          "additionalProperties": false
+                        }
+                      ],
+                      "description": "Relative (last N seconds) or absolute window."
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ],
+                  "description": "Time window, or `null` for the default last-30-days window."
+                }
+              },
+              "required": [
+                "name",
+                "baseline",
+                "filterSet",
+                "query",
+                "timeRange"
+              ],
+              "additionalProperties": false
+            }
+          }
+        },
+        "required": [
+          "projectSlug",
+          "name"
+        ],
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "minLength": 24,
+            "maxLength": 24,
+            "description": "Stable experiment identifier."
+          },
+          "organizationId": {
+            "type": "string",
+            "minLength": 24,
+            "maxLength": 24,
+            "description": "Organization that owns this experiment."
+          },
+          "projectId": {
+            "type": "string",
+            "minLength": 24,
+            "maxLength": 24,
+            "description": "Project this experiment belongs to."
+          },
+          "slug": {
+            "type": "string",
+            "description": "URL-safe slug derived from `name`. Unique within the project."
+          },
+          "name": {
+            "type": "string",
+            "description": "Human-readable name."
+          },
+          "description": {
+            "type": "string",
+            "description": "Free-form description. Empty string when not set."
+          },
+          "variants": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "id": {
+                  "type": "string",
+                  "minLength": 24,
+                  "maxLength": 24,
+                  "description": "Stable variant identifier, unique within the experiment."
+                },
+                "name": {
+                  "type": "string",
+                  "description": "Human-readable variant name (e.g. \"Variant A\"). Unique within the experiment."
+                },
+                "baseline": {
+                  "type": "boolean",
+                  "description": "`true` for the single baseline variant that every other variant is compared against."
+                },
+                "filterSet": {
+                  "type": "object",
+                  "propertyNames": {
+                    "type": "string"
+                  },
+                  "additionalProperties": {
+                    "type": "array",
+                    "items": {
+                      "type": "object",
+                      "properties": {
+                        "op": {
+                          "type": "string",
+                          "enum": [
+                            "eq",
+                            "neq",
+                            "gt",
+                            "gte",
+                            "lt",
+                            "lte",
+                            "in",
+                            "notIn",
+                            "contains",
+                            "notContains",
+                            "gtePercentile"
+                          ],
+                          "description": "Comparison operator applied to the field's value (e.g. `eq`, `neq`, `in`). The full operator list lives in the API reference."
+                        },
+                        "value": {
+                          "anyOf": [
+                            {
+                              "type": "string"
+                            },
+                            {
+                              "type": "number"
+                            },
+                            {
+                              "type": "boolean"
+                            },
+                            {
+                              "type": "array",
+                              "items": {
+                                "anyOf": [
+                                  {
+                                    "type": "string"
+                                  },
+                                  {
+                                    "type": "number"
+                                  }
+                                ]
+                              }
+                            }
+                          ],
+                          "description": "Right-hand value compared against the field. Arrays are required for `in` / `notIn`-style operators."
+                        }
+                      },
+                      "required": [
+                        "op",
+                        "value"
+                      ],
+                      "additionalProperties": false
+                    }
+                  },
+                  "description": "Session filters selecting this variant's population."
+                },
+                "query": {
+                  "anyOf": [
+                    {
+                      "type": "string"
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ],
+                  "description": "Free-text / semantic search applied to the population, or `null`."
+                },
+                "timeRange": {
+                  "anyOf": [
+                    {
+                      "oneOf": [
+                        {
+                          "type": "object",
+                          "properties": {
+                            "type": {
+                              "type": "string",
+                              "const": "relative",
+                              "description": "A live window ending now, spanning the last `seconds`."
+                            },
+                            "seconds": {
+                              "type": "integer",
+                              "exclusiveMinimum": 0,
+                              "maximum": 9007199254740991,
+                              "description": "Length of the live window in seconds (e.g. 2592000 for the last 30 days)."
+                            }
+                          },
+                          "required": [
+                            "type",
+                            "seconds"
+                          ],
+                          "additionalProperties": false
+                        },
+                        {
+                          "type": "object",
+                          "properties": {
+                            "type": {
+                              "type": "string",
+                              "const": "absolute",
+                              "description": "A fixed window between two instants."
+                            },
+                            "fromIso": {
+                              "type": "string",
+                              "description": "ISO-8601 start of the window (inclusive)."
+                            },
+                            "toIso": {
+                              "type": "string",
+                              "description": "ISO-8601 end of the window (inclusive)."
+                            }
+                          },
+                          "required": [
+                            "type",
+                            "fromIso",
+                            "toIso"
+                          ],
+                          "additionalProperties": false
+                        }
+                      ]
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ],
+                  "description": "Time window the variant is measured over. `null` uses the default last-30-days window."
+                }
+              },
+              "required": [
+                "id",
+                "name",
+                "baseline",
+                "filterSet",
+                "query",
+                "timeRange"
+              ],
+              "additionalProperties": false
+            },
+            "description": "Ordered variants. Exactly one carries the baseline flag when the list is non-empty."
+          },
+          "createdAt": {
+            "type": "string",
+            "description": "ISO-8601 timestamp of creation."
+          },
+          "updatedAt": {
+            "type": "string",
+            "description": "ISO-8601 timestamp of the last update."
+          }
+        },
+        "required": [
+          "id",
+          "organizationId",
+          "projectId",
+          "slug",
+          "name",
+          "description",
+          "variants",
+          "createdAt",
+          "updatedAt"
+        ],
+        "additionalProperties": false
+      },
+      "annotations": {
+        "readOnlyHint": false,
+        "destructiveHint": false
+      }
+    },
+    {
+      "name": "getExperiment",
+      "title": "Get experiment",
+      "description": "Returns a single experiment plus its comparison: per-variant metrics, deltas vs the baseline, and population-deviation flags.",
+      "inputSchema": {
+        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "type": "object",
+        "properties": {
+          "projectSlug": {
+            "type": "string",
+            "description": "Project slug (human-readable identifier)"
+          },
+          "experimentSlug": {
+            "type": "string",
+            "description": "Experiment slug (human-readable identifier within the project)."
+          }
+        },
+        "required": [
+          "projectSlug",
+          "experimentSlug"
+        ],
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "type": "object",
+        "properties": {
+          "experiment": {
+            "type": "object",
+            "properties": {
+              "id": {
+                "type": "string",
+                "minLength": 24,
+                "maxLength": 24,
+                "description": "Stable experiment identifier."
+              },
+              "organizationId": {
+                "type": "string",
+                "minLength": 24,
+                "maxLength": 24,
+                "description": "Organization that owns this experiment."
+              },
+              "projectId": {
+                "type": "string",
+                "minLength": 24,
+                "maxLength": 24,
+                "description": "Project this experiment belongs to."
+              },
+              "slug": {
+                "type": "string",
+                "description": "URL-safe slug derived from `name`. Unique within the project."
+              },
+              "name": {
+                "type": "string",
+                "description": "Human-readable name."
+              },
+              "description": {
+                "type": "string",
+                "description": "Free-form description. Empty string when not set."
+              },
+              "variants": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "properties": {
+                    "id": {
+                      "type": "string",
+                      "minLength": 24,
+                      "maxLength": 24,
+                      "description": "Stable variant identifier, unique within the experiment."
+                    },
+                    "name": {
+                      "type": "string",
+                      "description": "Human-readable variant name (e.g. \"Variant A\"). Unique within the experiment."
+                    },
+                    "baseline": {
+                      "type": "boolean",
+                      "description": "`true` for the single baseline variant that every other variant is compared against."
+                    },
+                    "filterSet": {
+                      "type": "object",
+                      "propertyNames": {
+                        "type": "string"
+                      },
+                      "additionalProperties": {
+                        "type": "array",
+                        "items": {
+                          "type": "object",
+                          "properties": {
+                            "op": {
+                              "type": "string",
+                              "enum": [
+                                "eq",
+                                "neq",
+                                "gt",
+                                "gte",
+                                "lt",
+                                "lte",
+                                "in",
+                                "notIn",
+                                "contains",
+                                "notContains",
+                                "gtePercentile"
+                              ],
+                              "description": "Comparison operator applied to the field's value (e.g. `eq`, `neq`, `in`). The full operator list lives in the API reference."
+                            },
+                            "value": {
+                              "anyOf": [
+                                {
+                                  "type": "string"
+                                },
+                                {
+                                  "type": "number"
+                                },
+                                {
+                                  "type": "boolean"
+                                },
+                                {
+                                  "type": "array",
+                                  "items": {
+                                    "anyOf": [
+                                      {
+                                        "type": "string"
+                                      },
+                                      {
+                                        "type": "number"
+                                      }
+                                    ]
+                                  }
+                                }
+                              ],
+                              "description": "Right-hand value compared against the field. Arrays are required for `in` / `notIn`-style operators."
+                            }
+                          },
+                          "required": [
+                            "op",
+                            "value"
+                          ],
+                          "additionalProperties": false
+                        }
+                      },
+                      "description": "Session filters selecting this variant's population."
+                    },
+                    "query": {
+                      "anyOf": [
+                        {
+                          "type": "string"
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ],
+                      "description": "Free-text / semantic search applied to the population, or `null`."
+                    },
+                    "timeRange": {
+                      "anyOf": [
+                        {
+                          "oneOf": [
+                            {
+                              "type": "object",
+                              "properties": {
+                                "type": {
+                                  "type": "string",
+                                  "const": "relative",
+                                  "description": "A live window ending now, spanning the last `seconds`."
+                                },
+                                "seconds": {
+                                  "type": "integer",
+                                  "exclusiveMinimum": 0,
+                                  "maximum": 9007199254740991,
+                                  "description": "Length of the live window in seconds (e.g. 2592000 for the last 30 days)."
+                                }
+                              },
+                              "required": [
+                                "type",
+                                "seconds"
+                              ],
+                              "additionalProperties": false
+                            },
+                            {
+                              "type": "object",
+                              "properties": {
+                                "type": {
+                                  "type": "string",
+                                  "const": "absolute",
+                                  "description": "A fixed window between two instants."
+                                },
+                                "fromIso": {
+                                  "type": "string",
+                                  "description": "ISO-8601 start of the window (inclusive)."
+                                },
+                                "toIso": {
+                                  "type": "string",
+                                  "description": "ISO-8601 end of the window (inclusive)."
+                                }
+                              },
+                              "required": [
+                                "type",
+                                "fromIso",
+                                "toIso"
+                              ],
+                              "additionalProperties": false
+                            }
+                          ]
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ],
+                      "description": "Time window the variant is measured over. `null` uses the default last-30-days window."
+                    }
+                  },
+                  "required": [
+                    "id",
+                    "name",
+                    "baseline",
+                    "filterSet",
+                    "query",
+                    "timeRange"
+                  ],
+                  "additionalProperties": false
+                },
+                "description": "Ordered variants. Exactly one carries the baseline flag when the list is non-empty."
+              },
+              "createdAt": {
+                "type": "string",
+                "description": "ISO-8601 timestamp of creation."
+              },
+              "updatedAt": {
+                "type": "string",
+                "description": "ISO-8601 timestamp of the last update."
+              }
+            },
+            "required": [
+              "id",
+              "organizationId",
+              "projectId",
+              "slug",
+              "name",
+              "description",
+              "variants",
+              "createdAt",
+              "updatedAt"
+            ],
+            "additionalProperties": false,
+            "description": "The experiment, including its variant definitions."
+          },
+          "variants": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "variantId": {
+                  "type": "string",
+                  "description": "Id of the variant these metrics belong to."
+                },
+                "baseline": {
+                  "type": "boolean",
+                  "description": "`true` when this is the baseline variant; its deltas are empty."
+                },
+                "approximate": {
+                  "type": "boolean",
+                  "description": "`true` when the variant's query has a semantic component, making its population a best-effort sample."
+                },
+                "resolvedRange": {
+                  "type": "object",
+                  "properties": {
+                    "fromIso": {
+                      "type": "string",
+                      "description": "ISO-8601 start of the resolved window."
+                    },
+                    "toIso": {
+                      "type": "string",
+                      "description": "ISO-8601 end of the resolved window."
+                    }
+                  },
+                  "required": [
+                    "fromIso",
+                    "toIso"
+                  ],
+                  "additionalProperties": false,
+                  "description": "The absolute window the metrics were computed over."
+                },
+                "metrics": {
+                  "type": "object",
+                  "properties": {
+                    "values": {
+                      "type": "object",
+                      "propertyNames": {
+                        "type": "string"
+                      },
+                      "additionalProperties": {
+                        "anyOf": [
+                          {
+                            "type": "number"
+                          },
+                          {
+                            "type": "null"
+                          }
+                        ]
+                      }
+                    },
+                    "topTools": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "key": {
+                            "type": "string",
+                            "description": "Stable identity: tool name, signal id, or cluster id."
+                          },
+                          "label": {
+                            "type": "string",
+                            "description": "Human-readable label (resolved name; falls back to `key` when unresolved)."
+                          },
+                          "value": {
+                            "type": "number",
+                            "description": "Ranking value: tool calls / signal occurrences / behaviour observations."
+                          }
+                        },
+                        "required": [
+                          "key",
+                          "label",
+                          "value"
+                        ],
+                        "additionalProperties": false
+                      },
+                      "description": "Top tools by call count."
+                    },
+                    "topSignals": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "key": {
+                            "type": "string",
+                            "description": "Stable identity: tool name, signal id, or cluster id."
+                          },
+                          "label": {
+                            "type": "string",
+                            "description": "Human-readable label (resolved name; falls back to `key` when unresolved)."
+                          },
+                          "value": {
+                            "type": "number",
+                            "description": "Ranking value: tool calls / signal occurrences / behaviour observations."
+                          }
+                        },
+                        "required": [
+                          "key",
+                          "label",
+                          "value"
+                        ],
+                        "additionalProperties": false
+                      },
+                      "description": "Top signals by occurrence count."
+                    },
+                    "topBehaviours": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "key": {
+                            "type": "string",
+                            "description": "Stable identity: tool name, signal id, or cluster id."
+                          },
+                          "label": {
+                            "type": "string",
+                            "description": "Human-readable label (resolved name; falls back to `key` when unresolved)."
+                          },
+                          "value": {
+                            "type": "number",
+                            "description": "Ranking value: tool calls / signal occurrences / behaviour observations."
+                          }
+                        },
+                        "required": [
+                          "key",
+                          "label",
+                          "value"
+                        ],
+                        "additionalProperties": false
+                      },
+                      "description": "Top behaviours by observation count."
+                    }
+                  },
+                  "required": [
+                    "values",
+                    "topTools",
+                    "topSignals",
+                    "topBehaviours"
+                  ],
+                  "additionalProperties": false,
+                  "description": "Population-scoped metric values and top-N lists."
+                },
+                "deltas": {
+                  "type": "object",
+                  "propertyNames": {
+                    "type": "string"
+                  },
+                  "additionalProperties": {
+                    "anyOf": [
+                      {
+                        "anyOf": [
+                          {
+                            "type": "number"
+                          },
+                          {
+                            "type": "string",
+                            "const": "up-from-zero"
+                          }
+                        ]
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ]
+                  }
+                },
+                "deviatingPopulationKeys": {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  },
+                  "description": "Population keys (a subset of `sessions.count` / `sessions.users`) that deviate from the baseline by more than 25%."
+                }
+              },
+              "required": [
+                "variantId",
+                "baseline",
+                "approximate",
+                "resolvedRange",
+                "metrics",
+                "deltas",
+                "deviatingPopulationKeys"
+              ],
+              "additionalProperties": false
+            },
+            "description": "Per-variant metrics and deltas, baseline first."
+          }
+        },
+        "required": [
+          "experiment",
+          "variants"
+        ],
+        "additionalProperties": false
+      },
+      "annotations": {
+        "readOnlyHint": true,
+        "destructiveHint": false
+      }
+    },
+    {
+      "name": "updateExperiment",
+      "title": "Update experiment",
+      "description": "Replaces an experiment's mutable fields. `variants`, when supplied, fully replaces the array (each variant carries its own `baseline` flag). Renaming may regenerate the slug.",
+      "inputSchema": {
+        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "type": "object",
+        "properties": {
+          "projectSlug": {
+            "type": "string",
+            "description": "Project slug (human-readable identifier)"
+          },
+          "experimentSlug": {
+            "type": "string",
+            "description": "Experiment slug (human-readable identifier within the project)."
+          },
+          "name": {
+            "description": "New name. Renaming may regenerate the slug — re-read the response or rely on `id`.",
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 128
+          },
+          "description": {
+            "description": "New description.",
+            "type": "string",
+            "maxLength": 2000
+          },
+          "variants": {
+            "description": "Full replacement of the variants array. Each variant carries its own `baseline` flag.",
+            "maxItems": 10,
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "id": {
+                  "description": "Existing variant id to preserve. Omit to mint a new variant.",
+                  "type": "string"
+                },
+                "name": {
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 128,
+                  "description": "Variant name. Unique within the experiment."
+                },
+                "baseline": {
+                  "type": "boolean",
+                  "description": "`true` for the baseline variant. Exactly one variant must be the baseline."
+                },
+                "filterSet": {
+                  "type": "object",
+                  "propertyNames": {
+                    "type": "string"
+                  },
+                  "additionalProperties": {
+                    "type": "array",
+                    "items": {
+                      "type": "object",
+                      "properties": {
+                        "op": {
+                          "type": "string",
+                          "enum": [
+                            "eq",
+                            "neq",
+                            "gt",
+                            "gte",
+                            "lt",
+                            "lte",
+                            "in",
+                            "notIn",
+                            "contains",
+                            "notContains",
+                            "gtePercentile"
+                          ],
+                          "description": "Comparison operator applied to the field's value (e.g. `eq`, `neq`, `in`). The full operator list lives in the API reference."
+                        },
+                        "value": {
+                          "anyOf": [
+                            {
+                              "type": "string"
+                            },
+                            {
+                              "type": "number"
+                            },
+                            {
+                              "type": "boolean"
+                            },
+                            {
+                              "type": "array",
+                              "items": {
+                                "anyOf": [
+                                  {
+                                    "type": "string"
+                                  },
+                                  {
+                                    "type": "number"
+                                  }
+                                ]
+                              }
+                            }
+                          ],
+                          "description": "Right-hand value compared against the field. Arrays are required for `in` / `notIn`-style operators."
+                        }
+                      },
+                      "required": [
+                        "op",
+                        "value"
+                      ],
+                      "additionalProperties": false
+                    }
+                  },
+                  "description": "Session filters selecting this variant's population."
+                },
+                "query": {
+                  "anyOf": [
+                    {
+                      "type": "string",
+                      "maxLength": 500
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ],
+                  "description": "Free-text / semantic search, or `null`."
+                },
+                "timeRange": {
+                  "anyOf": [
+                    {
+                      "oneOf": [
+                        {
+                          "type": "object",
+                          "properties": {
+                            "type": {
+                              "type": "string",
+                              "const": "relative"
+                            },
+                            "seconds": {
+                              "type": "integer",
+                              "exclusiveMinimum": 0,
+                              "maximum": 9007199254740991,
+                              "description": "Length of the live window in seconds."
+                            }
+                          },
+                          "required": [
+                            "type",
+                            "seconds"
+                          ],
+                          "additionalProperties": false
+                        },
+                        {
+                          "type": "object",
+                          "properties": {
+                            "type": {
+                              "type": "string",
+                              "const": "absolute"
+                            },
+                            "fromIso": {
+                              "type": "string",
+                              "description": "ISO-8601 start of the window (inclusive)."
+                            },
+                            "toIso": {
+                              "type": "string",
+                              "description": "ISO-8601 end of the window (inclusive)."
+                            }
+                          },
+                          "required": [
+                            "type",
+                            "fromIso",
+                            "toIso"
+                          ],
+                          "additionalProperties": false
+                        }
+                      ],
+                      "description": "Relative (last N seconds) or absolute window."
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ],
+                  "description": "Time window, or `null` for the default last-30-days window."
+                }
+              },
+              "required": [
+                "name",
+                "baseline",
+                "filterSet",
+                "query",
+                "timeRange"
+              ],
+              "additionalProperties": false
+            }
+          }
+        },
+        "required": [
+          "projectSlug",
+          "experimentSlug"
+        ],
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "minLength": 24,
+            "maxLength": 24,
+            "description": "Stable experiment identifier."
+          },
+          "organizationId": {
+            "type": "string",
+            "minLength": 24,
+            "maxLength": 24,
+            "description": "Organization that owns this experiment."
+          },
+          "projectId": {
+            "type": "string",
+            "minLength": 24,
+            "maxLength": 24,
+            "description": "Project this experiment belongs to."
+          },
+          "slug": {
+            "type": "string",
+            "description": "URL-safe slug derived from `name`. Unique within the project."
+          },
+          "name": {
+            "type": "string",
+            "description": "Human-readable name."
+          },
+          "description": {
+            "type": "string",
+            "description": "Free-form description. Empty string when not set."
+          },
+          "variants": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "id": {
+                  "type": "string",
+                  "minLength": 24,
+                  "maxLength": 24,
+                  "description": "Stable variant identifier, unique within the experiment."
+                },
+                "name": {
+                  "type": "string",
+                  "description": "Human-readable variant name (e.g. \"Variant A\"). Unique within the experiment."
+                },
+                "baseline": {
+                  "type": "boolean",
+                  "description": "`true` for the single baseline variant that every other variant is compared against."
+                },
+                "filterSet": {
+                  "type": "object",
+                  "propertyNames": {
+                    "type": "string"
+                  },
+                  "additionalProperties": {
+                    "type": "array",
+                    "items": {
+                      "type": "object",
+                      "properties": {
+                        "op": {
+                          "type": "string",
+                          "enum": [
+                            "eq",
+                            "neq",
+                            "gt",
+                            "gte",
+                            "lt",
+                            "lte",
+                            "in",
+                            "notIn",
+                            "contains",
+                            "notContains",
+                            "gtePercentile"
+                          ],
+                          "description": "Comparison operator applied to the field's value (e.g. `eq`, `neq`, `in`). The full operator list lives in the API reference."
+                        },
+                        "value": {
+                          "anyOf": [
+                            {
+                              "type": "string"
+                            },
+                            {
+                              "type": "number"
+                            },
+                            {
+                              "type": "boolean"
+                            },
+                            {
+                              "type": "array",
+                              "items": {
+                                "anyOf": [
+                                  {
+                                    "type": "string"
+                                  },
+                                  {
+                                    "type": "number"
+                                  }
+                                ]
+                              }
+                            }
+                          ],
+                          "description": "Right-hand value compared against the field. Arrays are required for `in` / `notIn`-style operators."
+                        }
+                      },
+                      "required": [
+                        "op",
+                        "value"
+                      ],
+                      "additionalProperties": false
+                    }
+                  },
+                  "description": "Session filters selecting this variant's population."
+                },
+                "query": {
+                  "anyOf": [
+                    {
+                      "type": "string"
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ],
+                  "description": "Free-text / semantic search applied to the population, or `null`."
+                },
+                "timeRange": {
+                  "anyOf": [
+                    {
+                      "oneOf": [
+                        {
+                          "type": "object",
+                          "properties": {
+                            "type": {
+                              "type": "string",
+                              "const": "relative",
+                              "description": "A live window ending now, spanning the last `seconds`."
+                            },
+                            "seconds": {
+                              "type": "integer",
+                              "exclusiveMinimum": 0,
+                              "maximum": 9007199254740991,
+                              "description": "Length of the live window in seconds (e.g. 2592000 for the last 30 days)."
+                            }
+                          },
+                          "required": [
+                            "type",
+                            "seconds"
+                          ],
+                          "additionalProperties": false
+                        },
+                        {
+                          "type": "object",
+                          "properties": {
+                            "type": {
+                              "type": "string",
+                              "const": "absolute",
+                              "description": "A fixed window between two instants."
+                            },
+                            "fromIso": {
+                              "type": "string",
+                              "description": "ISO-8601 start of the window (inclusive)."
+                            },
+                            "toIso": {
+                              "type": "string",
+                              "description": "ISO-8601 end of the window (inclusive)."
+                            }
+                          },
+                          "required": [
+                            "type",
+                            "fromIso",
+                            "toIso"
+                          ],
+                          "additionalProperties": false
+                        }
+                      ]
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ],
+                  "description": "Time window the variant is measured over. `null` uses the default last-30-days window."
+                }
+              },
+              "required": [
+                "id",
+                "name",
+                "baseline",
+                "filterSet",
+                "query",
+                "timeRange"
+              ],
+              "additionalProperties": false
+            },
+            "description": "Ordered variants. Exactly one carries the baseline flag when the list is non-empty."
+          },
+          "createdAt": {
+            "type": "string",
+            "description": "ISO-8601 timestamp of creation."
+          },
+          "updatedAt": {
+            "type": "string",
+            "description": "ISO-8601 timestamp of the last update."
+          }
+        },
+        "required": [
+          "id",
+          "organizationId",
+          "projectId",
+          "slug",
+          "name",
+          "description",
+          "variants",
+          "createdAt",
+          "updatedAt"
+        ],
+        "additionalProperties": false
+      },
+      "annotations": {
+        "readOnlyHint": false,
+        "destructiveHint": true
+      }
+    },
+    {
+      "name": "deleteExperiment",
+      "title": "Delete experiment",
+      "description": "Deletes an experiment. Its slug becomes reusable.",
+      "inputSchema": {
+        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "type": "object",
+        "properties": {
+          "projectSlug": {
+            "type": "string",
+            "description": "Project slug (human-readable identifier)"
+          },
+          "experimentSlug": {
+            "type": "string",
+            "description": "Experiment slug (human-readable identifier within the project)."
+          }
+        },
+        "required": [
+          "projectSlug",
+          "experimentSlug"
+        ],
+        "additionalProperties": false
+      },
+      "annotations": {
+        "readOnlyHint": false,
+        "destructiveHint": true
+      }
     }
   ]
 }

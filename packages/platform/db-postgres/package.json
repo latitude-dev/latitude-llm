@@ -42,6 +42,7 @@
     "@domain/destinations": "workspace:*",
     "@domain/evaluations": "workspace:*",
     "@domain/events": "workspace:*",
+    "@domain/experiments": "workspace:*",
     "@domain/feature-flags": "workspace:*",
     "@domain/flaggers": "workspace:*",
     "@domain/integrations": "workspace:*",

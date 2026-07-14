@@ -46,6 +46,7 @@ export { DestinationSyncRunRepositoryLive } from "./repositories/destination-syn
 // Repository implementations
 export { EvaluationAlignmentExamplesRepositoryLive } from "./repositories/evaluation-alignment-examples-repository.ts"
 export { EvaluationRepositoryLive } from "./repositories/evaluation-repository.ts"
+export { ExperimentRepositoryLive } from "./repositories/experiment-repository.ts"
 export { FeatureFlagRepositoryLive } from "./repositories/feature-flag-repository.ts"
 export { FlaggerRepositoryLive } from "./repositories/flagger-repository.ts"
 export { type GardenableProjectRef, listGardenableProjectRefs } from "./repositories/gardenable-projects.ts"

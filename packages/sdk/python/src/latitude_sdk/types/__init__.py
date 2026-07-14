@@ -6,6 +6,8 @@ import typing
 from importlib import import_module
 
 if typing.TYPE_CHECKING:
+    from .absolute_variant_time_range import AbsoluteVariantTimeRange
+    from .absolute_variant_time_range_type import AbsoluteVariantTimeRangeType
     from .account_organization import AccountOrganization
     from .account_response import AccountResponse
     from .account_response_role import AccountResponseRole
@@ -478,6 +480,12 @@ if typing.TYPE_CHECKING:
     from .evaluation_alignment_metrics import EvaluationAlignmentMetrics
     from .evaluation_score_metadata import EvaluationScoreMetadata
     from .evaluation_score_response import EvaluationScoreResponse
+    from .experiment import Experiment
+    from .experiment_comparison import ExperimentComparison
+    from .experiment_comparison_experiment import ExperimentComparisonExperiment
+    from .experiment_list_item import ExperimentListItem
+    from .experiment_top_list_item import ExperimentTopListItem
+    from .experiment_variant import ExperimentVariant
     from .export_dataset_rows_queued_response import ExportDatasetRowsQueuedResponse
     from .export_dataset_rows_queued_response_status import ExportDatasetRowsQueuedResponseStatus
     from .export_dataset_rows_ready_response import ExportDatasetRowsReadyResponse
@@ -512,6 +520,8 @@ if typing.TYPE_CHECKING:
     from .list_incidents_response import ListIncidentsResponse
     from .member import Member, Member_Active, Member_Invited
     from .member_list import MemberList
+    from .metric_delta import MetricDelta
+    from .metric_delta_one import MetricDeltaOne
     from .monitor import Monitor
     from .monitor_config import MonitorConfig
     from .monitor_config_metric import (
@@ -606,6 +616,7 @@ if typing.TYPE_CHECKING:
     from .o_auth_protected_resource_metadata import OAuthProtectedResourceMetadata
     from .paginated_dataset_rows import PaginatedDatasetRows
     from .paginated_datasets import PaginatedDatasets
+    from .paginated_experiments import PaginatedExperiments
     from .paginated_monitor_incidents import PaginatedMonitorIncidents
     from .paginated_monitors import PaginatedMonitors
     from .paginated_projects import PaginatedProjects
@@ -620,6 +631,9 @@ if typing.TYPE_CHECKING:
     from .query_spans import QuerySpans
     from .recent_tool_call import RecentToolCall
     from .recent_tool_call_status_code import RecentToolCallStatusCode
+    from .relative_variant_time_range import RelativeVariantTimeRange
+    from .relative_variant_time_range_type import RelativeVariantTimeRangeType
+    from .resolved_range import ResolvedRange
     from .saved_search import SavedSearch
     from .score_response import ScoreResponse, ScoreResponse_Custom, ScoreResponse_Evaluation
     from .signal import Signal
@@ -714,7 +728,14 @@ if typing.TYPE_CHECKING:
     from .user_usage_slice import UserUsageSlice
     from .users_overview_bucket import UsersOverviewBucket
     from .users_overview_response import UsersOverviewResponse
+    from .variant_comparison import VariantComparison
+    from .variant_metric_deltas import VariantMetricDeltas
+    from .variant_metric_values import VariantMetricValues
+    from .variant_metrics import VariantMetrics
+    from .variant_time_range import VariantTimeRange
 _dynamic_imports: typing.Dict[str, str] = {
+    "AbsoluteVariantTimeRange": ".absolute_variant_time_range",
+    "AbsoluteVariantTimeRangeType": ".absolute_variant_time_range_type",
     "AccountOrganization": ".account_organization",
     "AccountResponse": ".account_response",
     "AccountResponseRole": ".account_response_role",
@@ -1144,6 +1165,12 @@ _dynamic_imports: typing.Dict[str, str] = {
     "EvaluationAlignmentMetrics": ".evaluation_alignment_metrics",
     "EvaluationScoreMetadata": ".evaluation_score_metadata",
     "EvaluationScoreResponse": ".evaluation_score_response",
+    "Experiment": ".experiment",
+    "ExperimentComparison": ".experiment_comparison",
+    "ExperimentComparisonExperiment": ".experiment_comparison_experiment",
+    "ExperimentListItem": ".experiment_list_item",
+    "ExperimentTopListItem": ".experiment_top_list_item",
+    "ExperimentVariant": ".experiment_variant",
     "ExportDatasetRowsQueuedResponse": ".export_dataset_rows_queued_response",
     "ExportDatasetRowsQueuedResponseStatus": ".export_dataset_rows_queued_response_status",
     "ExportDatasetRowsReadyResponse": ".export_dataset_rows_ready_response",
@@ -1180,6 +1207,8 @@ _dynamic_imports: typing.Dict[str, str] = {
     "MemberList": ".member_list",
     "Member_Active": ".member",
     "Member_Invited": ".member",
+    "MetricDelta": ".metric_delta",
+    "MetricDeltaOne": ".metric_delta_one",
     "Monitor": ".monitor",
     "MonitorConfig": ".monitor_config",
     "MonitorConfigMetric": ".monitor_config_metric",
@@ -1268,6 +1297,7 @@ _dynamic_imports: typing.Dict[str, str] = {
     "OAuthProtectedResourceMetadata": ".o_auth_protected_resource_metadata",
     "PaginatedDatasetRows": ".paginated_dataset_rows",
     "PaginatedDatasets": ".paginated_datasets",
+    "PaginatedExperiments": ".paginated_experiments",
     "PaginatedMonitorIncidents": ".paginated_monitor_incidents",
     "PaginatedMonitors": ".paginated_monitors",
     "PaginatedProjects": ".paginated_projects",
@@ -1282,6 +1312,9 @@ _dynamic_imports: typing.Dict[str, str] = {
     "QuerySpans": ".query_spans",
     "RecentToolCall": ".recent_tool_call",
     "RecentToolCallStatusCode": ".recent_tool_call_status_code",
+    "RelativeVariantTimeRange": ".relative_variant_time_range",
+    "RelativeVariantTimeRangeType": ".relative_variant_time_range_type",
+    "ResolvedRange": ".resolved_range",
     "SavedSearch": ".saved_search",
     "ScoreResponse": ".score_response",
     "ScoreResponse_Custom": ".score_response",
@@ -1380,6 +1413,11 @@ _dynamic_imports: typing.Dict[str, str] = {
     "UserUsageSlice": ".user_usage_slice",
     "UsersOverviewBucket": ".users_overview_bucket",
     "UsersOverviewResponse": ".users_overview_response",
+    "VariantComparison": ".variant_comparison",
+    "VariantMetricDeltas": ".variant_metric_deltas",
+    "VariantMetricValues": ".variant_metric_values",
+    "VariantMetrics": ".variant_metrics",
+    "VariantTimeRange": ".variant_time_range",
 }
 
 
@@ -1405,6 +1443,8 @@ def __dir__():
 
 
 __all__ = [
+    "AbsoluteVariantTimeRange",
+    "AbsoluteVariantTimeRangeType",
     "AccountOrganization",
     "AccountResponse",
     "AccountResponseRole",
@@ -1834,6 +1874,12 @@ __all__ = [
     "EvaluationAlignmentMetrics",
     "EvaluationScoreMetadata",
     "EvaluationScoreResponse",
+    "Experiment",
+    "ExperimentComparison",
+    "ExperimentComparisonExperiment",
+    "ExperimentListItem",
+    "ExperimentTopListItem",
+    "ExperimentVariant",
     "ExportDatasetRowsQueuedResponse",
     "ExportDatasetRowsQueuedResponseStatus",
     "ExportDatasetRowsReadyResponse",
@@ -1870,6 +1916,8 @@ __all__ = [
     "MemberList",
     "Member_Active",
     "Member_Invited",
+    "MetricDelta",
+    "MetricDeltaOne",
     "Monitor",
     "MonitorConfig",
     "MonitorConfigMetric",
@@ -1958,6 +2006,7 @@ __all__ = [
     "OAuthProtectedResourceMetadata",
     "PaginatedDatasetRows",
     "PaginatedDatasets",
+    "PaginatedExperiments",
     "PaginatedMonitorIncidents",
     "PaginatedMonitors",
     "PaginatedProjects",
@@ -1972,6 +2021,9 @@ __all__ = [
     "QuerySpans",
     "RecentToolCall",
     "RecentToolCallStatusCode",
+    "RelativeVariantTimeRange",
+    "RelativeVariantTimeRangeType",
+    "ResolvedRange",
     "SavedSearch",
     "ScoreResponse",
     "ScoreResponse_Custom",
@@ -2070,4 +2122,9 @@ __all__ = [
     "UserUsageSlice",
     "UsersOverviewBucket",
     "UsersOverviewResponse",
+    "VariantComparison",
+    "VariantMetricDeltas",
+    "VariantMetricValues",
+    "VariantMetrics",
+    "VariantTimeRange",
 ]

@@ -9,6 +9,7 @@ Full command reference for `latitude`.
 - [`latitude annotations`](#latitude-annotations)
 - [`latitude api-keys`](#latitude-api-keys)
 - [`latitude datasets`](#latitude-datasets)
+- [`latitude experiments`](#latitude-experiments)
 - [`latitude incidents`](#latitude-incidents)
 - [`latitude members`](#latitude-members)
 - [`latitude monitors`](#latitude-monitors)
@@ -337,6 +338,68 @@ Partially updates a single row. Only the cells you send are changed; omitted cel
 | `--project-slug` | `string` | Yes | Project slug (human-readable identifier) |
 | `--dataset-slug` | `string` | Yes | Dataset slug (human-readable identifier within the project). |
 | `--row-id` | `string` | Yes | Stable row identifier (from `listDatasetRows`). |
+| `--json` | `JSON` | Yes | Request body as JSON (or use individual body-field flags) |
+
+---
+
+### `latitude experiments`
+
+#### `latitude experiments create`
+
+Creates an experiment. The slug is derived from `name`. Omit `variants` to seed two defaults.
+
+`POST /v1/projects/{projectSlug}/experiments`
+
+| Flag | Type | Required | Description |
+|------|------|----------|-------------|
+| `--project-slug` | `string` | Yes | Project slug (human-readable identifier) |
+| `--json` | `JSON` | Yes | Request body as JSON (or use individual body-field flags) |
+
+#### `latitude experiments delete`
+
+Deletes an experiment. Its slug becomes reusable.
+
+`DELETE /v1/projects/{projectSlug}/experiments/{experimentSlug}`
+
+| Flag | Type | Required | Description |
+|------|------|----------|-------------|
+| `--project-slug` | `string` | Yes | Project slug (human-readable identifier) |
+| `--experiment-slug` | `string` | Yes | Experiment slug (human-readable identifier within the project). |
+
+#### `latitude experiments get`
+
+Returns a single experiment plus its comparison: per-variant metrics, deltas vs the baseline, and population-deviation flags.
+
+`GET /v1/projects/{projectSlug}/experiments/{experimentSlug}`
+
+| Flag | Type | Required | Description |
+|------|------|----------|-------------|
+| `--project-slug` | `string` | Yes | Project slug (human-readable identifier) |
+| `--experiment-slug` | `string` | Yes | Experiment slug (human-readable identifier within the project). |
+
+#### `latitude experiments list`
+
+Returns the project's experiments with cheap summary metrics (variant count, distinct sessions and users across all variant populations). Excludes per-variant comparison metrics — fetch a single experiment for those.
+
+`GET /v1/projects/{projectSlug}/experiments`
+
+| Flag | Type | Required | Description |
+|------|------|----------|-------------|
+| `--project-slug` | `string` | Yes | Project slug (human-readable identifier) |
+| `--cursor` | `string` | No | Opaque cursor returned in a previous response's `nextCursor`. Omit on the first page. |
+| `--limit` | `integer` | No | Page size. Defaults to 50; max 100. |
+| `--search` | `string` | No | Filter by name (case-insensitive substring). |
+
+#### `latitude experiments update`
+
+Replaces an experiment's mutable fields. `variants`, when supplied, fully replaces the array (each variant carries its own `baseline` flag). Renaming may regenerate the slug.
+
+`PUT /v1/projects/{projectSlug}/experiments/{experimentSlug}`
+
+| Flag | Type | Required | Description |
+|------|------|----------|-------------|
+| `--project-slug` | `string` | Yes | Project slug (human-readable identifier) |
+| `--experiment-slug` | `string` | Yes | Experiment slug (human-readable identifier within the project). |
 | `--json` | `JSON` | Yes | Request body as JSON (or use individual body-field flags) |
 
 ---

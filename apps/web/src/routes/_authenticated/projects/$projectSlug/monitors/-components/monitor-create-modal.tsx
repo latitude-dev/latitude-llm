@@ -242,7 +242,8 @@ export function MonitorCreateModal({
             <Text.H5M>Source</Text.H5M>
             <Select<MonitorSource>
               name="monitor-source"
-              width="auto"
+              width="full"
+              contentWidth="trigger"
               options={SOURCE_OPTIONS}
               value={source}
               onChange={onSourceChange}
@@ -254,7 +255,8 @@ export function MonitorCreateModal({
             <Text.H5M>Saved search</Text.H5M>
             <Select<string>
               name="monitor-saved-search"
-              width="auto"
+              width="full"
+              contentWidth="trigger"
               options={savedSearches.map((search) => ({
                 label: search.name,
                 value: search.id,
@@ -275,7 +277,8 @@ export function MonitorCreateModal({
             <Text.H5M>Tool</Text.H5M>
             <Select<string>
               name="monitor-tool"
-              width="auto"
+              width="full"
+              contentWidth="trigger"
               options={(toolsData?.tools ?? []).map((tool) => ({
                 label: tool.name,
                 value: tool.name,
@@ -296,7 +299,8 @@ export function MonitorCreateModal({
             <Text.H5M>User</Text.H5M>
             <Select<string>
               name="monitor-user"
-              width="auto"
+              width="full"
+              contentWidth="trigger"
               options={users.map((user) => ({
                 label: userLabel(user),
                 value: user.userId,

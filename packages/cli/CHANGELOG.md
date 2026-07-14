@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [7.1.0] - 2026-07-14
+
+### Added
+
+- `latitude experiments list/get/create/update/delete` — manage project experiments that compare two or more variants (a filter set + search query + time range) against a baseline. `get` returns the full comparison: per-variant metrics across sessions, users, tools, signals, and behaviours, each with its signed change versus the baseline.
+
 ## [7.0.0] - 2026-07-10
 
 ### Changed (breaking)

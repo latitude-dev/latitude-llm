@@ -214,6 +214,7 @@
           "signals/create",
           "signals/management",
           "search/behaviours",
+          "experiments/overview",
           {
             "group": "Annotations",
             "pages": [

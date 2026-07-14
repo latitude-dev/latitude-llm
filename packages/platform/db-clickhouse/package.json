@@ -33,6 +33,7 @@
     "@domain/conversation-intelligence": "workspace:*",
     "@domain/datasets": "workspace:*",
     "@domain/events": "workspace:*",
+    "@domain/experiments": "workspace:*",
     "@domain/monitors": "workspace:*",
     "@domain/scores": "workspace:*",
     "@domain/shared": "workspace:*",

@@ -161,56 +161,58 @@ function ToolsPageContent() {
 
   return (
     <Layout>
-      <Layout.Actions>
-        <Layout.ActionsRow>
-          <Layout.ActionRowItem>
-            <TimeFilterDropdown
-              {...(tw.pickerStartFrom ? { startTimeFrom: tw.pickerStartFrom } : {})}
-              {...(tw.pickerStartTo ? { startTimeTo: tw.pickerStartTo } : {})}
-              onChange={tw.onTimeChange}
-            />
-            <Tabs
-              variant="bordered"
-              size="sm"
-              options={[
-                { id: "all", label: "All", icon: <LayoutGridIcon className="w-4 h-4" /> },
-                {
-                  id: "unused",
-                  label: "Unused",
-                  icon: <CircleSlashIcon className="w-4 h-4" />,
-                  tooltip: "Tools offered to the model in this window but never called.",
-                },
-                {
-                  id: "failing",
-                  label: "Failing",
-                  icon: <TriangleAlertIcon className="w-4 h-4" />,
-                  tooltip: "Tools with an error rate of 5% or more in this window.",
-                },
-              ]}
-              active={statusTab}
-              onSelect={(value) => setStatusTab(value)}
-            />
-          </Layout.ActionRowItem>
-          <Layout.ActionRowItem>
-            <div className="relative">
-              <Input
-                value={searchInput}
-                onChange={(event) => setSearchInput(event.target.value)}
-                placeholder="Search tools"
-                size="sm"
-                className="w-64 pl-8 rounded-lg"
+      {showEmptyState ? null : (
+        <Layout.Actions>
+          <Layout.ActionsRow>
+            <Layout.ActionRowItem>
+              <TimeFilterDropdown
+                {...(tw.pickerStartFrom ? { startTimeFrom: tw.pickerStartFrom } : {})}
+                {...(tw.pickerStartTo ? { startTimeTo: tw.pickerStartTo } : {})}
+                onChange={tw.onTimeChange}
               />
-              <SearchIcon className="pointer-events-none absolute left-2.5 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-            </div>
-            <AddTargetMonitorButton
-              projectId={project.id}
-              projectSlug={project.slug}
-              target={allToolsMonitorTarget()}
-              label="Monitor tools"
-            />
-          </Layout.ActionRowItem>
-        </Layout.ActionsRow>
-      </Layout.Actions>
+              <Tabs
+                variant="bordered"
+                size="sm"
+                options={[
+                  { id: "all", label: "All", icon: <LayoutGridIcon className="w-4 h-4" /> },
+                  {
+                    id: "unused",
+                    label: "Unused",
+                    icon: <CircleSlashIcon className="w-4 h-4" />,
+                    tooltip: "Tools offered to the model in this window but never called.",
+                  },
+                  {
+                    id: "failing",
+                    label: "Failing",
+                    icon: <TriangleAlertIcon className="w-4 h-4" />,
+                    tooltip: "Tools with an error rate of 5% or more in this window.",
+                  },
+                ]}
+                active={statusTab}
+                onSelect={(value) => setStatusTab(value)}
+              />
+            </Layout.ActionRowItem>
+            <Layout.ActionRowItem>
+              <div className="relative">
+                <Input
+                  value={searchInput}
+                  onChange={(event) => setSearchInput(event.target.value)}
+                  placeholder="Search tools"
+                  size="sm"
+                  className="w-64 pl-8 rounded-lg"
+                />
+                <SearchIcon className="pointer-events-none absolute left-2.5 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+              </div>
+              <AddTargetMonitorButton
+                projectId={project.id}
+                projectSlug={project.slug}
+                target={allToolsMonitorTarget()}
+                label="Monitor tools"
+              />
+            </Layout.ActionRowItem>
+          </Layout.ActionsRow>
+        </Layout.Actions>
+      )}
       {showEmptyState ? (
         <ToolsEmptyState isLoading={isLoading} />
       ) : (

@@ -5,6 +5,7 @@ export {
   AgentTextarea,
   type AgentTextareaProps,
 } from "./components/agent-textarea/agent-textarea.tsx"
+export { AnimatedBorder } from "./components/agent-textarea/animated-border.tsx"
 export { useStagedStatus } from "./components/agent-textarea/use-staged-status.ts"
 export { Alert } from "./components/alert/index.tsx"
 export {
