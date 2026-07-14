@@ -344,7 +344,7 @@ function buildTraceGraph(traceId: string, traceSpans: readonly AgentGraphSpanInp
     isVirtual: !backedMain,
     parentId: null,
     depth: 0,
-    label: backedMain ? labelFor(backedMain, "main") : "Main agent",
+    label: "Main agent",
     trigger: { type: "root" },
     representativeGenerationSpanId: undefined,
     models: [],
@@ -375,7 +375,7 @@ function buildTraceGraph(traceId: string, traceSpans: readonly AgentGraphSpanInp
       isVirtual: false,
       parentId: null, // filled after all nodes exist
       depth: 0,
-      label: labelFor(c, "subagent"),
+      label: subagentLabelFor(c),
       trigger,
       representativeGenerationSpanId: undefined,
       models: [],
@@ -489,8 +489,10 @@ function registerNode(node: AgentNode, nodesById: Map<string, AgentNode>): void 
   for (const child of node.children) registerNode(child, nodesById)
 }
 
-function labelFor(span: AgentGraphSpanInput, kind: AgentNodeKind): string {
-  if (kind === "main") return span.name || "Main agent"
+// Structural fallback only; the resolved agentName (finalize step) overrides it
+// when present. The boundary span's own `name` is a framework token (e.g.
+// "interaction"), so a tool-triggered subagent prefers its tool name.
+function subagentLabelFor(span: AgentGraphSpanInput): string {
   if (span.operation === "execute_tool") return span.toolName || span.name || "Subagent"
   return span.name || "Subagent"
 }

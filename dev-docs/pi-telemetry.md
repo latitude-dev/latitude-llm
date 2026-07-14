@@ -79,7 +79,7 @@ The extension emits one Latitude trace per pi user prompt/agent run. All spans a
 ## Trace shape
 
 ```text
-interaction                         span.type=interaction → operation prompt
+interaction                         span.type=interaction → operation invoke_agent
 ├── llm_request                     span.type=llm_request + gen_ai.operation.name=chat
 ├── tool_call:<toolName>            span.type=tool_execution + gen_ai.operation.name=execute_tool
 ├── llm_request                     next model call after tool results
@@ -94,7 +94,7 @@ The package intentionally emits the attributes Latitude's OTLP resolvers already
 
 | Attribute | Purpose |
 | --- | --- |
-| `span.type=interaction` | Resolved to operation `prompt` by `packages/domain/spans/src/otlp/resolvers/operation.ts`. |
+| `span.type=interaction` | Resolved to operation `invoke_agent` by `packages/domain/spans/src/otlp/resolvers/operation.ts`. |
 | `span.type=llm_request` | Claude-Code-compatible fallback and human-readable span typing. |
 | `gen_ai.operation.name=chat` | Resolved to operation `chat`. |
 | `gen_ai.operation.name=execute_tool` | Resolved to operation `execute_tool`. |

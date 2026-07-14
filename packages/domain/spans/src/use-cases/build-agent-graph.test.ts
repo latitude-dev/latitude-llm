@@ -121,6 +121,47 @@ describe("buildAgentGraph", () => {
     expect((subs[0] as AgentNode).trigger.type).toBe("invoke_agent")
   })
 
+  it("treats a Claude Code interaction as the backed main and tool:Agent → nested interaction as a subagent", () => {
+    clock = 0
+    const spans = [
+      // Root turn: interaction (invoke_agent) with a chat leaf and two tool calls.
+      span({ spanId: "root", operation: "invoke_agent", name: "interaction" }),
+      gen({ spanId: "g1", parentSpanId: "root" }),
+      span({
+        spanId: "read",
+        operation: "execute_tool",
+        toolName: "Read",
+        toolCallId: "tc-read",
+        parentSpanId: "root",
+      }),
+      span({
+        spanId: "agent",
+        operation: "execute_tool",
+        toolName: "Agent",
+        toolCallId: "tc-agent",
+        parentSpanId: "root",
+      }),
+      // The Agent tool nests its own interaction with its own generation.
+      span({ spanId: "sub-int", operation: "invoke_agent", name: "interaction", parentSpanId: "agent" }),
+      gen({ spanId: "g2", parentSpanId: "sub-int" }),
+    ]
+    const graph = buildAgentGraph({ spans })
+    expect(graph.roots).toHaveLength(1)
+    const main = graph.roots[0] as AgentNode
+    expect(main.kind).toBe("main")
+    expect(main.isVirtual).toBe(false)
+    expect(main.ref.spanId).toBe("root")
+    expect(main.label).toBe("Main agent")
+    const subs = findSubagents(graph)
+    expect(subs).toHaveLength(1)
+    const sub = subs[0] as AgentNode
+    expect(sub.ref.spanId).toBe("agent")
+    expect(sub.trigger).toEqual({ type: "tool", toolName: "Agent", toolCallId: "tc-agent" })
+    expect(sub.label).toBe("Agent")
+    expect(sub.ownGenerationCount).toBe(1)
+    expect(main.ownGenerationCount).toBe(1)
+  })
+
   it("detects parallel subagents under the main", () => {
     clock = 0
     const spans = [
@@ -379,6 +420,18 @@ describe("buildAgentGraph", () => {
       ]
       const graph = buildAgentGraph({ spans })
       expect((graph.roots[0] as AgentNode).label).toBe("orchestrator")
+    })
+
+    it("keeps the main labeled 'Main agent' rather than the backing span's framework name", () => {
+      clock = 0
+      const spans = [
+        span({ spanId: "root", operation: "invoke_agent", name: "interaction" }),
+        gen({ spanId: "g1", parentSpanId: "root" }),
+      ]
+      const graph = buildAgentGraph({ spans })
+      const main = graph.roots[0] as AgentNode
+      expect(main.isVirtual).toBe(false)
+      expect(main.label).toBe("Main agent")
     })
 
     it("names an invoke_agent subagent from its own agentName", () => {

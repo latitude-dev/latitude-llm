@@ -282,6 +282,21 @@ describe("resolveAttributes", () => {
       expect(result.agentName).toBe("capture-agent")
     })
 
+    it("resolves the name half of Claude Code subagent.id as a last resort", () => {
+      const attrs: OtlpKeyValue[] = [strAttr("subagent.id", "Explore:ab6332237989040a9")]
+      const result = resolveAttributes({ spanAttrs: attrs, statusCode: "unset" })
+      expect(result.agentName).toBe("Explore")
+    })
+
+    it("prefers subagent.type over the id-embedded subagent.id name", () => {
+      const attrs: OtlpKeyValue[] = [
+        strAttr("subagent.id", "Explore:ab6332237989040a9"),
+        strAttr("subagent.type", "general-purpose"),
+      ]
+      const result = resolveAttributes({ spanAttrs: attrs, statusCode: "unset" })
+      expect(result.agentName).toBe("general-purpose")
+    })
+
     it("prefers gen_ai.agent.name over lower-ranked candidates", () => {
       const attrs: OtlpKeyValue[] = [
         strAttr("subagent.type", "general-purpose"),
