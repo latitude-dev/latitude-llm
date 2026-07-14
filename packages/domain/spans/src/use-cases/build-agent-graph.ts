@@ -242,15 +242,11 @@ function buildTraceGraph(traceId: string, traceSpans: readonly AgentGraphSpanInp
 
   // ── generation ownership → boundary set ──
   const generationCount = new Map<string, number>()
-  let mainScopeGenerationCount = 0
   for (const span of traceSpans) {
     if (!isLlmCompletionOperation(span.operation as never)) continue
     const parent = nca(span)
     const owner = parent ? effectiveOwner(parent) : undefined
-    if (!owner) {
-      mainScopeGenerationCount++
-      continue
-    }
+    if (!owner) continue
     generationCount.set(owner.spanId, (generationCount.get(owner.spanId) ?? 0) + 1)
   }
 
@@ -444,9 +440,6 @@ function buildTraceGraph(traceId: string, traceSpans: readonly AgentGraphSpanInp
       // Duration is the boundary wall-clock, already set; carry it into own.
     ;(state.own as MutableMetrics).durationMs = state.node.endTime - state.node.startTime
   }
-  // The main's own generation count includes generations attributed to the main scope directly.
-  ;(mainNode as { ownGenerationCount: number }).ownGenerationCount =
-    mainState.ownedGenerations.length + (backedMain ? 0 : mainScopeGenerationCount)
 
   // ── post-order totals (cost/tokens sum; duration stays own) ──
   function computeTotal(node: MutableNode, depth: number): AgentMetrics {

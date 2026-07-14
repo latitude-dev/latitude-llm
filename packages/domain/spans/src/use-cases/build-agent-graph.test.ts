@@ -193,6 +193,22 @@ describe("buildAgentGraph", () => {
     expect(findSubagents(graph)).toHaveLength(2)
   })
 
+  it("does not double-count a virtual main's own generations when it has a subagent", () => {
+    clock = 0
+    const spans = [
+      gen({ spanId: "g1", parentSpanId: "" }),
+      gen({ spanId: "g2", parentSpanId: "" }),
+      span({ spanId: "tool", operation: "execute_tool", toolName: "t", toolCallId: "tc", parentSpanId: "" }),
+      gen({ spanId: "g3", parentSpanId: "tool" }),
+    ]
+    const graph = buildAgentGraph({ spans })
+    const main = graph.roots[0] as AgentNode
+    expect(main.isVirtual).toBe(true)
+    expect(findSubagents(graph)).toHaveLength(1)
+    // g1 + g2 are main-scope; g3 belongs to the subagent. Not 4 (the old double-count).
+    expect(main.ownGenerationCount).toBe(2)
+  })
+
   it("attributes embedding cost to the owning scope", () => {
     clock = 0
     const spans = [
