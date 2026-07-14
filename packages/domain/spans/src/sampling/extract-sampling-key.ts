@@ -1,3 +1,4 @@
+import { coerceOtlpKeyValues } from "../otlp/attributes.ts"
 import { sessionIdCandidates } from "../otlp/resolvers/identity.ts"
 import { first } from "../otlp/resolvers/utils.ts"
 import type { OtlpExportTraceServiceRequest } from "../otlp/types.ts"
@@ -13,10 +14,10 @@ import type { OtlpExportTraceServiceRequest } from "../otlp/types.ts"
  */
 export function extractSamplingKey(request: OtlpExportTraceServiceRequest): string | null {
   for (const resourceSpans of request.resourceSpans ?? []) {
-    const resourceAttrs = resourceSpans.resource?.attributes ?? []
+    const resourceAttrs = coerceOtlpKeyValues(resourceSpans.resource?.attributes)
     for (const scopeSpans of resourceSpans.scopeSpans ?? []) {
       for (const span of scopeSpans.spans ?? []) {
-        const fromSpan = first(sessionIdCandidates, span.attributes ?? [])
+        const fromSpan = first(sessionIdCandidates, coerceOtlpKeyValues(span.attributes))
         if (fromSpan) return fromSpan
         const fromResource = first(sessionIdCandidates, resourceAttrs)
         if (fromResource) return fromResource

@@ -13,6 +13,7 @@ import {
 import { base64Encode } from "@repo/utils"
 import { Effect } from "effect"
 import { SpanDecodingError } from "../errors.ts"
+import { coerceOtlpKeyValues } from "../otlp/attributes.ts"
 import { decodeOtlpProtobuf } from "../otlp/proto.ts"
 import { resolveSpanProjectSlug } from "../otlp/transform.ts"
 import type { OtlpExportTraceServiceRequest } from "../otlp/types.ts"
@@ -69,11 +70,11 @@ function inspectPayload(request: OtlpExportTraceServiceRequest): PayloadInspecti
   let totalSpans = 0
 
   for (const resourceSpans of request.resourceSpans ?? []) {
-    const resourceAttrs = resourceSpans.resource?.attributes ?? []
+    const resourceAttrs = coerceOtlpKeyValues(resourceSpans.resource?.attributes)
     for (const scopeSpans of resourceSpans.scopeSpans ?? []) {
       for (const span of scopeSpans.spans ?? []) {
         totalSpans++
-        const slug = resolveSpanProjectSlug(span.attributes ?? [], resourceAttrs)
+        const slug = resolveSpanProjectSlug(span.attributes, resourceAttrs)
         spanSlugs.push(slug)
         if (slug) uniqueSlugs.add(slug)
       }

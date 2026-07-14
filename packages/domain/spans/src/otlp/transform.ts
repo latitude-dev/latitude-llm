@@ -1,13 +1,13 @@
 import { ExternalUserId, OrganizationId, ProjectId, SessionId, SimulationId, SpanId, TraceId } from "@domain/shared"
 import type { SpanDetail, SpanKind, SpanStatusCode } from "../entities/span.ts"
-import { stringAttr } from "./attributes.ts"
+import { coerceOtlpKeyValues, stringAttr } from "./attributes.ts"
 import { parseContent } from "./content/index.ts"
 import { isDroppedSpan } from "./dropped-spans.ts"
 import { resolveAttributes } from "./resolvers/index.ts"
 import { resolvePerformance } from "./resolvers/performance.ts"
 import { resolveStatusCode } from "./resolvers/status.ts"
 import { resolveToolExecution } from "./resolvers/tool-execution.ts"
-import type { OtlpAnyValue, OtlpExportTraceServiceRequest, OtlpKeyValue, OtlpResource, OtlpSpan } from "./types.ts"
+import type { OtlpAnyValue, OtlpExportTraceServiceRequest, OtlpResource, OtlpSpan } from "./types.ts"
 
 const INT_TO_SPAN_KIND: Record<number, SpanKind> = {
   0: "unspecified",
@@ -42,9 +42,10 @@ function resolveAnyValue(
 }
 
 function extractResourceString(resource: OtlpResource | undefined): Record<string, string> {
-  if (!resource?.attributes) return {}
+  const attributes = coerceOtlpKeyValues(resource?.attributes)
+  if (attributes.length === 0) return {}
   const result: Record<string, string> = {}
-  for (const attr of resource.attributes) {
+  for (const attr of attributes) {
     if (attr.value?.stringValue !== undefined) {
       result[attr.key] = attr.value.stringValue
     }
@@ -86,18 +87,11 @@ interface TransformResult {
 }
 
 /** Reads `latitude.project` from span attrs first, falling back to resource attrs. */
-export function resolveSpanProjectSlug(
-  spanAttrs: readonly OtlpKeyValue[],
-  resourceAttrs: readonly OtlpKeyValue[],
-): string | undefined {
+export function resolveSpanProjectSlug(spanAttrs: unknown, resourceAttrs: unknown): string | undefined {
   return stringAttr(spanAttrs, "latitude.project") ?? stringAttr(resourceAttrs, "latitude.project")
 }
 
-function resolveSpanProjectId(
-  spanAttrs: readonly OtlpKeyValue[],
-  resourceAttrs: readonly OtlpKeyValue[],
-  context: TransformContext,
-): string | null {
+function resolveSpanProjectId(spanAttrs: unknown, resourceAttrs: unknown, context: TransformContext): string | null {
   const slug = resolveSpanProjectSlug(spanAttrs, resourceAttrs)
   if (slug) {
     return context.projectIdBySlug.get(slug) ?? null
@@ -122,9 +116,9 @@ function transformSpan({
   projectId: string
   ingestedAt: Date
 }): SpanDetail {
-  const spanAttrs = span.attributes ?? []
+  const spanAttrs = coerceOtlpKeyValues(span.attributes)
   const spanEvents = span.events ?? []
-  const resourceAttrs = resource?.attributes ?? []
+  const resourceAttrs = coerceOtlpKeyValues(resource?.attributes)
   const otelStatusCode = INT_TO_STATUS_CODE[span.status?.code ?? 0] ?? "unset"
   const statusCode = resolveStatusCode(spanAttrs, otelStatusCode, scopeName)
 
@@ -240,13 +234,13 @@ export function transformOtlpToSpans(
 
   for (const resourceSpans of request.resourceSpans ?? []) {
     const resource = resourceSpans.resource
-    const resourceAttrs = resource?.attributes ?? []
+    const resourceAttrs = coerceOtlpKeyValues(resource?.attributes)
     for (const scopeSpans of resourceSpans.scopeSpans ?? []) {
       const scopeName = scopeSpans.scope?.name ?? ""
       const scopeVersion = scopeSpans.scope?.version ?? ""
       for (const span of scopeSpans.spans ?? []) {
         if (isDroppedSpan(scopeName, span.name ?? "")) continue
-        const projectId = resolveSpanProjectId(span.attributes ?? [], resourceAttrs, context)
+        const projectId = resolveSpanProjectId(span.attributes, resourceAttrs, context)
         if (!projectId) {
           rejectedSpans++
           continue

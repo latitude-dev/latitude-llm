@@ -315,6 +315,41 @@ describe("ingestSpansUseCase project scoping", () => {
     expect(published).toHaveLength(0)
   })
 
+  it("accepts spans whose latitude.project attribute is a single KeyValue object", async () => {
+    const { disk } = createFakeStorageDisk()
+    const { publisher, published } = createFakeQueuePublisher()
+
+    const payload = new TextEncoder().encode(
+      JSON.stringify({
+        resourceSpans: [
+          {
+            scopeSpans: [
+              {
+                scope: { name: "test", version: "1.0.0" },
+                spans: [
+                  {
+                    traceId: "0af7651916cd43dd8448eb211c80319c",
+                    spanId: "b7ad6b7169203331",
+                    name: "test-span",
+                    startTimeUnixNano: "1710590400000000000",
+                    endTimeUnixNano: "1710590401000000000",
+                    attributes: { key: "latitude.project", value: { stringValue: "primary" } },
+                    status: { code: 1 },
+                  },
+                ],
+              },
+            ],
+          },
+        ],
+      }),
+    )
+
+    const result = await Effect.runPromise(runUseCase(makeInput(payload), disk, publisher))
+
+    expect(result).toEqual({ totalSpans: 1, acceptedSpans: 1, rejectedSpans: 0 })
+    expect(published).toHaveLength(1)
+  })
+
   it("rejects spans whose latitude.project slug isn't in the org and keeps the rest", async () => {
     const { disk } = createFakeStorageDisk()
     const { publisher, published } = createFakeQueuePublisher()
