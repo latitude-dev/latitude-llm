@@ -88,6 +88,11 @@ export const useSpansByTraceCollection = ({
   )
 }
 
+// Order-independent signature of the session's trace set, so the collection
+// cache/query refresh when a live session gains a trace (traceIds changes) but
+// stay stable across reorderings of the same set.
+const traceIdsSignature = (traceIds: readonly string[]): string => [...traceIds].sort().join(",")
+
 const makeSpansBySessionCollection = (
   projectId: string,
   sessionId: string,
@@ -99,7 +104,16 @@ const makeSpansBySessionCollection = (
   createAppCollection(
     queryCollectionOptions({
       queryClient,
-      queryKey: ["spans", "session", sandboxOrgId, projectId, sessionId, startTimeFrom, startTimeTo],
+      queryKey: [
+        "spans",
+        "session",
+        sandboxOrgId,
+        projectId,
+        sessionId,
+        traceIdsSignature(traceIds),
+        startTimeFrom,
+        startTimeTo,
+      ],
       queryFn: () =>
         listSpansBySession({
           data: {
@@ -125,7 +139,7 @@ const getSpansBySessionCollection = (
   startTimeTo: string | undefined,
   sandboxOrgId: string | undefined,
 ): SpansBySessionCollection => {
-  const cacheKey = `${sandboxOrgId ?? ""}:${projectId}:${sessionId}:${startTimeFrom ?? ""}:${startTimeTo ?? ""}`
+  const cacheKey = `${sandboxOrgId ?? ""}:${projectId}:${sessionId}:${traceIdsSignature(traceIds)}:${startTimeFrom ?? ""}:${startTimeTo ?? ""}`
   if (!sessionCollectionsCache[cacheKey]) {
     sessionCollectionsCache[cacheKey] = makeSpansBySessionCollection(
       projectId,
@@ -163,7 +177,7 @@ export const useSpansBySessionCollection = ({
   )
   return useLiveQuery(
     (q) => q.from({ span: collection }),
-    [projectId, sessionId, startTimeFrom, startTimeTo, sandboxOrgIdForScope(scope)],
+    [projectId, sessionId, traceIdsSignature(traceIds), startTimeFrom, startTimeTo, sandboxOrgIdForScope(scope)],
   )
 }
 
