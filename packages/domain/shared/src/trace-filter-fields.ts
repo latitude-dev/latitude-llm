@@ -184,13 +184,13 @@ export const TRACE_TELEMETRY_FILTER_FIELDS = [
   ...TRACE_TIME_FILTER_FIELDS,
 ] as const
 
-/** Every non-metadata field name a trace filter set may key on at the API boundary. */
-export const TRACE_FILTER_FIELD_NAMES = [...TRACE_TELEMETRY_FILTER_FIELDS, ...SCORE_FILTER_FIELDS] as const
-
-const TRACE_FILTER_FIELD_NAME_SET: ReadonlySet<string> = new Set(TRACE_FILTER_FIELD_NAMES)
+const TRACE_FILTER_FIELD_NAME_SET: ReadonlySet<string> = new Set([
+  ...TRACE_TELEMETRY_FILTER_FIELDS,
+  ...SCORE_FILTER_FIELDS,
+])
 
 /** Prefix for arbitrary metadata keys (`metadata.<path>`) in a filter set. */
-export const METADATA_FILTER_FIELD_PREFIX = "metadata."
+const METADATA_FILTER_FIELD_PREFIX = "metadata."
 
 /** True when `key` is a filter field the trace query can actually apply (registry field, `score.*`, or `metadata.<path>`). */
 export const isTraceFilterFieldName = (key: string): boolean =>
