@@ -44,6 +44,10 @@ The [Anthropic Agent SDK](https://code.claude.com/docs/en/agent-sdk/overview) us
 
 Server-side routing lives in `packages/domain/spans/src/otlp/resolvers/operation.ts` (`CLAUDE_CODE_OPERATION` map) and `packages/domain/spans/src/otlp/content/claude-code.ts`. The `gen_ai.input.messages` / `gen_ai.output.messages` attributes are parsed by the generic `parseGenAICurrent` parser, which takes precedence over `parseClaudeCode`.
 
+### Subagents (`Agent` tool)
+
+`Agent` tool calls spawn subagents whose transcripts live in separate files (`<session>/subagents/agent-<agentId>.jsonl`). The hook stitches each subagent's turns under its parent `tool:Agent` span, producing a nested `interaction` → `llm_request` → `tool:*` tree. Each subagent's sidecar `.meta.json` carries `toolUseId` (the id of the parent `Agent` tool_use), `agentType`, and `description`; the stitcher matches on `toolUseId` — the only key unique per invocation, so subagents spawned in parallel (which share a `promptId`) each attach to their own `Agent` call. Subagent spans carry `subagent.id` (`<agentType>:<agentId>`), `subagent.name` and `subagent.type` (both the agent type, e.g. `Explore`), which feed `agentName` resolution and `buildAgentGraph`.
+
 ## Supported surfaces
 
 | Surface | Works | Why |

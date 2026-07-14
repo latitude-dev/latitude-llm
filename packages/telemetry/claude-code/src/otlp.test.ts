@@ -677,6 +677,7 @@ describe("buildOtlpRequest", () => {
     expect(getAttr(agentTool.attributes, "span.type")).toBe("tool_execution")
     expect(getAttr(agentTool.attributes, "gen_ai.tool.name")).toBe("Agent")
     expect(getAttr(agentTool.attributes, "subagent.type")).toBe("Explore")
+    expect(getAttr(agentTool.attributes, "subagent.name")).toBe("Explore")
     expect(getAttr(agentTool.attributes, "subagent.turn_count")).toBe("1")
     // Tool is a sibling of the llm_request that emitted it, parented to the interaction.
     expect(agentTool.parentSpanId).toBe(mainInteraction.spanId)
@@ -684,11 +685,13 @@ describe("buildOtlpRequest", () => {
     expect(getAttr(subInteraction.attributes, "span.type")).toBe("interaction")
     expect(getAttr(subInteraction.attributes, "interaction.kind")).toBe("subagent")
     expect(getAttr(subInteraction.attributes, "subagent.id")).toBe("Explore:a4dabb47")
+    expect(getAttr(subInteraction.attributes, "subagent.name")).toBe("Explore")
     expect(subInteraction.parentSpanId).toBe(agentTool.spanId)
     expect(subInteraction.traceId).toBe(mainInteraction.traceId)
 
     expect(getAttr(subLlm.attributes, "span.type")).toBe("llm_request")
     expect(getAttr(subLlm.attributes, "model")).toBe("claude-haiku-4-5")
+    expect(getAttr(subLlm.attributes, "subagent.name")).toBe("Explore")
     expect(getAttr(subLlm.attributes, "input_tokens")).toBe("500")
     expect(subLlm.parentSpanId).toBe(subInteraction.spanId)
 

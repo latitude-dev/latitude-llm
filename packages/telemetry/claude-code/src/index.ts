@@ -12,14 +12,17 @@ import { deleteRequest, loadRequestsByMessageId, pruneStaleRequests } from "./re
 import { normalizeInstallFlags, parseFlags, runInstall, runUninstall } from "./setup.ts"
 import { load, save, stateKey, withLock } from "./state.ts"
 import {
+  type AgentCallIndex,
   buildTurns,
   discoverSubagentFiles,
   firstPromptIdOf,
+  indexAgentCalls,
+  matchAgentCall,
   readAllTurns,
   readIncremental,
   readSubagentMeta,
 } from "./transcript.ts"
-import type { AssistantCall, HookPayload, SubagentFile, ToolCall, TranscriptRow, Turn } from "./types.ts"
+import type { AssistantCall, HookPayload, SubagentFile, TranscriptRow, Turn } from "./types.ts"
 
 const INTERCEPT_INSTALL_PATH = join(homedir(), ".claude", "state", "latitude", "intercept.js")
 
@@ -266,8 +269,8 @@ function stitchSubagents(args: {
   const files = discoverSubagentFiles(mainTranscriptPath)
   if (files.length === 0) return []
 
-  const agentCallsByPromptId = indexAgentCallsByPromptId(turns)
-  if (agentCallsByPromptId.size === 0) {
+  const agentCalls = indexAgentCalls(turns)
+  if (agentCalls.byToolUseId.size === 0) {
     logger.debug(`found ${files.length} subagent file(s) but no Agent tool calls in new turns`)
     return []
   }
@@ -289,7 +292,7 @@ function stitchSubagents(args: {
       file,
       rows,
       subTurns,
-      agentCallsByPromptId,
+      agentCalls,
       logger,
     })
 
@@ -303,39 +306,23 @@ function stitchSubagents(args: {
   return results
 }
 
-function indexAgentCallsByPromptId(turns: Turn[]): Map<string, ToolCall> {
-  const map = new Map<string, ToolCall>()
-  for (const turn of turns) {
-    for (const assistantCall of turn.calls) {
-      for (const toolCall of assistantCall.toolUses) {
-        if (toolCall.name !== "Agent") continue
-        if (!toolCall.promptId) continue
-        map.set(toolCall.promptId, toolCall)
-      }
-    }
-  }
-  return map
-}
-
 function attachSubagentTurns(args: {
   file: SubagentFile
   rows: TranscriptRow[]
   subTurns: Turn[]
-  agentCallsByPromptId: Map<string, ToolCall>
+  agentCalls: AgentCallIndex
   logger: Logger
 }): void {
-  const { file, rows, subTurns, agentCallsByPromptId, logger } = args
-  const promptId = firstPromptIdOf(rows)
-  if (!promptId) {
-    logger.debug(`subagent ${file.agentId}: no promptId in rows; skipping stitch`)
-    return
-  }
-  const call = agentCallsByPromptId.get(promptId)
-  if (!call) {
-    logger.debug(`subagent ${file.agentId}: no matching Agent tool call for promptId=${promptId}`)
-    return
-  }
+  const { file, rows, subTurns, agentCalls, logger } = args
   const meta = readSubagentMeta(file.metaPath)
+  const promptId = firstPromptIdOf(rows)
+  const call = matchAgentCall(agentCalls, { toolUseId: meta?.toolUseId, promptId })
+  if (!call) {
+    logger.debug(
+      `subagent ${file.agentId}: no matching Agent tool call (toolUseId=${meta?.toolUseId ?? "none"} promptId=${promptId ?? "none"})`,
+    )
+    return
+  }
   call.subagent = {
     agentId: file.agentId,
     agentType: meta?.agentType ?? "unknown",

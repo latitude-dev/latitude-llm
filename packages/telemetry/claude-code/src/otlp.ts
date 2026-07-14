@@ -99,6 +99,7 @@ function buildTurnSpans(
     turn,
     isSubagent: false,
     subagentLabel: undefined,
+    subagentName: undefined,
     turnNum,
     interactionIdSalt: "turn",
     genIdSalt: "gen",
@@ -118,6 +119,7 @@ interface TreeCtx {
   turn: Turn
   isSubagent: boolean
   subagentLabel: string | undefined
+  subagentName: string | undefined
   turnNum: number | undefined
   interactionIdSalt: string
   genIdSalt: string
@@ -127,7 +129,7 @@ interface TreeCtx {
 }
 
 function buildInteractionTree(out: OtlpSpan[], ctx: TreeCtx): void {
-  const { traceId, sessionId, userId, turn, isSubagent, subagentLabel, turnNum } = ctx
+  const { traceId, sessionId, userId, turn, isSubagent, subagentLabel, subagentName, turnNum } = ctx
   const startNs = msToNs(turn.startMs)
   const endNs = msToNs(turn.endMs)
   const durationMs = Math.max(0, turn.endMs - turn.startMs)
@@ -155,6 +157,7 @@ function buildInteractionTree(out: OtlpSpan[], ctx: TreeCtx): void {
       int("interaction.tool_call_count", totalToolCalls),
       turnNum !== undefined ? int("turn.number", turnNum) : undefined,
       isSubagent && subagentLabel ? str("subagent.id", subagentLabel) : undefined,
+      isSubagent && subagentName ? str("subagent.name", subagentName) : undefined,
       str("gen_ai.input.messages", JSON.stringify([messagePart("user", promptText)])),
       promptText.length < turn.userText.length ? str("latitude.truncation", "user prompt clamped") : undefined,
       // Diagnostic: per-interaction snapshot of what the hook saw from the intercept.
@@ -181,7 +184,7 @@ function buildInteractionTree(out: OtlpSpan[], ctx: TreeCtx): void {
 }
 
 function emitCallAndTools(out: OtlpSpan[], ctx: TreeCtx, call: AssistantCall, callIdx: number): void {
-  const { traceId, sessionId, userId, turn, isSubagent, subagentLabel } = ctx
+  const { traceId, sessionId, userId, turn, isSubagent, subagentLabel, subagentName } = ctx
   const callStartNs = msToNs(call.startMs)
   const callEndNs = msToNs(call.endMs)
 
@@ -246,6 +249,7 @@ function emitCallAndTools(out: OtlpSpan[], ctx: TreeCtx, call: AssistantCall, ca
         : undefined,
       str("success", "true"),
       isSubagent && subagentLabel ? str("subagent.id", subagentLabel) : undefined,
+      isSubagent && subagentName ? str("subagent.name", subagentName) : undefined,
       payloads.systemJson ? str("gen_ai.system_instructions", payloads.systemJson) : undefined,
       payloads.toolDefsJson ? str("gen_ai.tool.definitions", payloads.toolDefsJson) : undefined,
       str("gen_ai.input.messages", payloads.inputJson),
@@ -280,6 +284,7 @@ function emitCallAndTools(out: OtlpSpan[], ctx: TreeCtx, call: AssistantCall, ca
         turn: subTurn,
         isSubagent: true,
         subagentLabel: subagentAttr(subagent),
+        subagentName: subagent.agentType,
         turnNum: undefined,
         interactionIdSalt: `${subSalt}:turn`,
         genIdSalt: `${subSalt}:gen`,
@@ -342,6 +347,7 @@ function buildToolSpan(
       bool("tool.is_error", call.isError === true),
       str("success", call.isError ? "false" : "true"),
       call.subagent ? str("subagent.id", subagentAttr(call.subagent)) : undefined,
+      call.subagent ? str("subagent.name", call.subagent.agentType) : undefined,
       call.subagent ? str("subagent.type", call.subagent.agentType) : undefined,
       call.subagent ? int("subagent.turn_count", call.subagent.turns.length) : undefined,
       ...contextAttrs,
