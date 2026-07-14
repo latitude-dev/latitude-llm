@@ -74,7 +74,8 @@ describe("Experiments Routes Integration", () => {
     expect(row?.sessionsDistinct).toBe(0)
     expect(row?.usersDistinct).toBe(0)
 
-    // Get → the comparison bundle: per-variant metrics, baseline first, deltas present.
+    // Get → the comparison bundle: per-variant metrics, deltas present. The baseline is identified
+    // by the `baseline` flag, never by array position.
     const getRes = await app.fetch(
       new Request(`${base}/${created.slug}`, { headers: createApiKeyAuthHeaders(tenant.apiKeyToken) }),
     )
@@ -82,10 +83,11 @@ describe("Experiments Routes Integration", () => {
     const comparison = (await getRes.json()) as ComparisonResponse
     expect(comparison.experiment.slug).toBe(created.slug)
     expect(comparison.variants).toHaveLength(2)
-    expect(comparison.variants[0]?.baseline).toBe(true)
-    expect(comparison.variants[0]?.metrics.values["sessions.count"]).toBe(0)
-    expect(comparison.variants[0]?.resolvedRange.fromIso).toBeDefined()
-    expect(comparison.variants[0]?.approximate).toBe(false)
+    expect(comparison.variants.filter((variant) => variant.baseline)).toHaveLength(1)
+    const baselineVariant = comparison.variants.find((variant) => variant.baseline)
+    expect(baselineVariant?.metrics.values["sessions.count"]).toBe(0)
+    expect(baselineVariant?.resolvedRange.fromIso).toBeDefined()
+    expect(baselineVariant?.approximate).toBe(false)
 
     // Update → rename + replace the variants with a single baseline.
     const updateRes = await app.fetch(

@@ -250,7 +250,7 @@ export function ExperimentDetailPage() {
             title="Add variant from a saved search"
             description="Create a new variant from a saved search's filters and query."
             confirmLabel="Add variant"
-            onImport={(filterSet, query) => actions.addVariantFromSearch(filterSet, query)}
+            onImport={(filterSet, query, timeRange) => actions.addVariantFromSearch(filterSet, query, timeRange)}
             onClose={() => setImportOpen(false)}
           />
         ) : null}

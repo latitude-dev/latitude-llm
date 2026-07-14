@@ -37,8 +37,8 @@ const MICROCENTS_PER_DOLLAR = 100_000_000
  * caps always win. Mirrors `BOUNDED_READ_SETTINGS` in the span repository.
  */
 const BOUNDED_METRIC_SETTINGS = {
-  max_execution_time: 25,
-  max_memory_usage: "4000000000",
+  max_execution_time: 5,
+  max_memory_usage: "1000000000",
   output_format_parallel_formatting: 0,
 } as const
 

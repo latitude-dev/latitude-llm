@@ -136,7 +136,11 @@ const VariantComparisonSchema = z
 export const ExperimentComparisonSchema = z
   .object({
     experiment: ExperimentSchema.describe("The experiment, including its variant definitions."),
-    variants: z.array(VariantComparisonSchema).describe("Per-variant metrics and deltas, baseline first."),
+    variants: z
+      .array(VariantComparisonSchema)
+      .describe(
+        "One entry per variant, in the experiment's stored variant order. The baseline is the entry whose `baseline` field is `true` — identify it by that flag, never by array position.",
+      ),
   })
   .openapi("ExperimentComparison")
 

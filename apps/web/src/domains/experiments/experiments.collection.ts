@@ -210,8 +210,8 @@ export function useExperimentVariantActions(projectId: string, experiment: Exper
   return {
     isPending: update.isPending,
     addVariant: () => persist([...variants, newVariant(variants)]),
-    addVariantFromSearch: (filterSet: FilterSet, query: string | null) =>
-      persist([...variants, { ...newVariant(variants), filterSet, query }]),
+    addVariantFromSearch: (filterSet: FilterSet, query: string | null, timeRange: ExperimentVariant["timeRange"]) =>
+      persist([...variants, { ...newVariant(variants), filterSet, query, timeRange }]),
     renameVariant: (variantId: string, name: string) =>
       persist(variants.map((variant) => (variant.id === variantId ? { ...variant, name } : variant))),
     removeVariant: (variantId: string) =>
@@ -219,7 +219,14 @@ export function useExperimentVariantActions(projectId: string, experiment: Exper
     setBaseline: (variantId: string) => persist(withBaseline(variants, variantId)),
     updateVariant: (variantId: string, patch: VariantPatch) =>
       persist(variants.map((variant) => (variant.id === variantId ? { ...variant, ...patch } : variant))),
-    importFromSearch: (variantId: string, filterSet: FilterSet, query: string | null) =>
-      persist(variants.map((variant) => (variant.id === variantId ? { ...variant, filterSet, query } : variant))),
+    importFromSearch: (
+      variantId: string,
+      filterSet: FilterSet,
+      query: string | null,
+      timeRange: ExperimentVariant["timeRange"],
+    ) =>
+      persist(
+        variants.map((variant) => (variant.id === variantId ? { ...variant, filterSet, query, timeRange } : variant)),
+      ),
   }
 }

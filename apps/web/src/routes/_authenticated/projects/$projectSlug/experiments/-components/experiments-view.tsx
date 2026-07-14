@@ -69,6 +69,7 @@ export function ExperimentsView({
   projectSlug,
   sorting,
   onSortChange,
+  sortable,
 }: {
   readonly rows: readonly ExperimentListRow[]
   readonly isLoading: boolean
@@ -77,6 +78,13 @@ export function ExperimentsView({
   readonly projectSlug: string
   readonly sorting: ExperimentsSorting | null
   readonly onSortChange: (sorting: ExperimentsSorting) => void
+  /**
+   * Sorting is client-side over the loaded rows, so it is only meaningful once every page is
+   * loaded — otherwise it would rank the current page and silently omit experiments still unpaged.
+   * When `false`, the sort headers are disabled (no `onSortChange` → `InfiniteTable` renders them
+   * inert) and rows stay in the server's `updatedAt`-desc page order.
+   */
+  readonly sortable: boolean
 }) {
   const [renameTarget, setRenameTarget] = useState<ExperimentRecord | null>(null)
   const [deleteTarget, setDeleteTarget] = useState<ExperimentRecord | null>(null)
@@ -144,10 +152,13 @@ export function ExperimentsView({
             columns={columns}
             getRowKey={(row) => row.experiment.id}
             infiniteScroll={infiniteScroll}
-            {...(sorting ? { sorting } : {})}
-            onSortChange={(next) =>
-              onSortChange({ column: next.column as ExperimentsSortColumn, direction: next.direction })
-            }
+            {...(sortable && sorting ? { sorting } : {})}
+            {...(sortable
+              ? {
+                  onSortChange: (next: { column: string; direction: SortDirection }) =>
+                    onSortChange({ column: next.column as ExperimentsSortColumn, direction: next.direction }),
+                }
+              : {})}
             renderRowLink={(row, props) => (
               <Link
                 to="/projects/$projectSlug/experiments/$experimentSlug"

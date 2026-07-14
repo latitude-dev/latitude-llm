@@ -5,7 +5,7 @@ import type * as Latitude from "../index.js";
 export interface ExperimentComparison {
     /** The experiment, including its variant definitions. */
     experiment: ExperimentComparison.Experiment;
-    /** Per-variant metrics and deltas, baseline first. */
+    /** One entry per variant, in the experiment's stored variant order. The baseline is the entry whose `baseline` field is `true` — identify it by that flag, never by array position. */
     variants: Latitude.VariantComparison[];
 }
 

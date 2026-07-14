@@ -436,8 +436,8 @@ const sessionMembership = (sessionId: string): { clause: string; params: Record<
 // query that keeps burning a thread.
 const BOUNDED_READ_SETTINGS = {
   output_format_parallel_formatting: 0,
-  max_memory_usage: "4000000000",
-  max_execution_time: 25,
+  max_memory_usage: "1000000000",
+  max_execution_time: 5,
 } as const
 
 const PAGINATED_READ_SETTINGS = {

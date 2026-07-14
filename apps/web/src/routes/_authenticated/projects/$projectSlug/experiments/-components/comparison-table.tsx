@@ -95,7 +95,12 @@ interface VariantActions {
   readonly setBaseline: (variantId: string) => Promise<void>
   readonly removeVariant: (variantId: string) => Promise<void>
   readonly updateVariant: (variantId: string, patch: VariantPatch) => Promise<void>
-  readonly importFromSearch: (variantId: string, filterSet: FilterSet, query: string | null) => Promise<void>
+  readonly importFromSearch: (
+    variantId: string,
+    filterSet: FilterSet,
+    query: string | null,
+    timeRange: ExperimentVariantRecord["timeRange"],
+  ) => Promise<void>
 }
 
 interface ComparisonEntry {
@@ -152,7 +157,8 @@ function headerCellClass({ column, count, scrolled }: { column: number; count: n
 }
 
 /**
- * The variant comparison as one table: a supercolumn per variant (baseline first, sticky-left),
+ * The variant comparison as one table: a supercolumn per variant (the baseline — the one flagged
+ * `baseline: true` — sorted to the front and pinned sticky-left),
  * shared rows for the header / population editors / headline summaries, then a collapsible header
  * row per metric entity spanning every supercolumn with one aligned row per metric beneath it.
  * Columns divide the available width equally and floor at `MIN_COLUMN_PX`, overflowing to the
@@ -450,7 +456,7 @@ function VariantHeaderCell({
       {modal === "import" ? (
         <VariantImportFromSearchModal
           projectId={projectId}
-          onImport={(filterSet, query) => actions.importFromSearch(variant.id, filterSet, query)}
+          onImport={(filterSet, query, timeRange) => actions.importFromSearch(variant.id, filterSet, query, timeRange)}
           onClose={() => setModal(null)}
         />
       ) : null}

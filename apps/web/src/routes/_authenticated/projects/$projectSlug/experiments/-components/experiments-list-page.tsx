@@ -68,7 +68,12 @@ export function ExperimentsListPage() {
     ...(searchQuery ? { searchQuery } : {}),
   })
 
-  const sortedRows = useMemo(() => sortExperimentRows(rows, sorting), [rows, sorting])
+  // Sorting is applied client-side over the loaded rows, so it is only correct once every page is
+  // in — the server pages by `updatedAt`, so sorting a partial set would rank the loaded rows while
+  // omitting later experiments that should sort first. Offer sorting only when all rows are loaded.
+  const allRowsLoaded = !infiniteScroll.hasMore
+  const effectiveSorting = allRowsLoaded ? sorting : null
+  const sortedRows = useMemo(() => sortExperimentRows(rows, effectiveSorting), [rows, effectiveSorting])
 
   const hasExperiments = totalCount > 0
   const showEmptyState = !isLoading && !hasExperiments && !searchQuery
@@ -119,8 +124,9 @@ export function ExperimentsListPage() {
           infiniteScroll={infiniteScroll}
           projectId={project.id}
           projectSlug={project.slug}
-          sorting={sorting}
+          sorting={effectiveSorting}
           onSortChange={setSorting}
+          sortable={allRowsLoaded}
         />
         {createModal}
       </Layout.Content>
