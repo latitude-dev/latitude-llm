@@ -2,6 +2,24 @@
 
 ## Unreleased
 
+## v0.3.50 - 2026-07-14
+
+### Subagent visibility
+
+- Detected Claude Code subagents by classifying interaction spans as agent invocations, so the agent graph roots each turn on a real boundary and surfaces Task subagents with proper names (ref: #4022).
+
+### Spans
+
+- Colored the span-tree waterfall bars by operation: agent invocations use the accent color, chat spans a muted accent, and successful tool calls green, with errored spans still red (ref: #4023).
+
+### Custom Behaviors
+
+- Added the project custom-behaviors authoring UI (list, create/edit modal, live eligible-session preview, active-filter summaries), gated behind a feature flag and hidden by default until the Generate flow ships (ref: #4018).
+
+### Reliability
+
+- Bounded ClickHouse memory usage for project span queries to prevent out-of-memory failures (ref: #4019).
+
 ## v0.3.49 - 2026-07-14
 
 ### Subagent visibility
