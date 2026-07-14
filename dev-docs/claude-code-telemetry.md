@@ -36,7 +36,7 @@ Each turn produces three kinds of spans, all routed through the existing `apps/i
 
 | `span.type` | Maps to `Operation` | Carries |
 | --- | --- | --- |
-| `interaction` | `prompt` | Root of the turn. `user_prompt`, `session.id`, `interaction.duration_ms`. |
+| `interaction` | `invoke_agent` | Root of the turn — the agent boundary that orchestrates the turn's generations and tool calls. `user_prompt`, `session.id`, `interaction.duration_ms`. |
 | `llm_request` | `chat` | Child of interaction. `model`, token counts (input/output/cache_read/cache_creation), `gen_ai.input.messages`, `gen_ai.output.messages` (full conversation as JSON). |
 | `tool_execution` or `tool` | `execute_tool` | Child of llm_request, one per tool call. `tool.name`, `tool.id`, `tool.input`, `tool.output`. |
 
