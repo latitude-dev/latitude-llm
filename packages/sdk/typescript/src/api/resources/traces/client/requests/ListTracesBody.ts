@@ -17,7 +17,7 @@ export interface ListTracesBody {
     sortDirection?: ListTracesBody.SortDirection;
     /** Free-text semantic search across the trace's input and output messages. Combined with `filters` via AND. */
     query?: string;
-    filters?: Latitude.FilterSet;
+    filters?: Latitude.TraceFilterSet;
 }
 
 export namespace ListTracesBody {
