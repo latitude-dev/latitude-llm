@@ -101,7 +101,7 @@ describe("Traces Routes Integration", () => {
     database,
   }) => {
     const tenant = await createTenantSetup(database)
-    const projectId = "eeeeeeeeeeeeeeeeeeeeeeee"
+    const projectId = "5555555555555555aaaaaaaa"
     const slug = await createProjectRecord(database, tenant.organizationId, projectId)
 
     const res = await app.fetch(
@@ -120,7 +120,7 @@ describe("Traces Routes Integration", () => {
 
   it<ApiTestContext>("POST /list accepts startTime/endTime time-window filters", async ({ app, database }) => {
     const tenant = await createTenantSetup(database)
-    const projectId = "ffffffffffffffffffffffff"
+    const projectId = "6666666666666666aaaaaaaa"
     const slug = await createProjectRecord(database, tenant.organizationId, projectId)
 
     const res = await app.fetch(
