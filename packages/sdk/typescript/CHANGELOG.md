@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [9.1.0] - 2026-07-14
+
+### Added
+
+- `client.experiments` — manage project experiments that compare two or more variants against a baseline: `list`, `create`, `get`, `update`, `delete`. Each variant is a population defined by a `filterSet`, an optional search `query`, and a `timeRange`; exactly one variant carries the `baseline` flag. `client.experiments.get` returns the full comparison — per-variant metrics grouped by entity (`sessions`, `users`, `tools`, `signals`, `behaviours`), where every metric is a `{ value, delta }` pair whose `delta` is the signed change versus the baseline (`null` on the baseline variant itself). `tools`, `signals`, and `behaviours` also carry a `top` ranked list.
+
 ## [9.0.0] - 2026-07-10
 
 ### Changed (breaking)

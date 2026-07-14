@@ -587,6 +587,7 @@ export function ProjectExplorer({ projectSlug }: { readonly projectSlug: string 
             <div className="group/searchbar flex h-10 min-w-0 flex-1 items-center overflow-hidden rounded-lg border border-input transition-colors focus-within:ring-1 focus-within:ring-ring">
               <SavedSearchSelector
                 projectId={currentProject.id}
+                projectSlug={currentProject.slug}
                 selectedSlug={savedSearchSlug}
                 onSelect={applySavedSearch}
                 onSelectedSlugChange={setSavedSearchSlug}

@@ -1,4 +1,11 @@
-import { type ExperimentVariant, ensureBaseline, newVariant, withBaseline } from "@domain/experiments"
+import {
+  EXPERIMENT_NAME_MAX_LENGTH,
+  type ExperimentVariant,
+  ensureBaseline,
+  newVariant,
+  VARIANT_NAME_MAX_LENGTH,
+  withBaseline,
+} from "@domain/experiments"
 import type { FilterSet } from "@domain/shared"
 import { type InfiniteTableInfiniteScroll, useToast } from "@repo/ui"
 import { keepPreviousData, useInfiniteQuery, useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
@@ -18,6 +25,7 @@ import {
   searchExperimentsOrgWide,
   updateExperiment,
 } from "./experiments.functions.ts"
+import { extractVariantTimeRange } from "./experiments.helpers.ts"
 
 export type { ExperimentComparisonRecord, ExperimentListRow, ExperimentRecord, ExperimentVariantRecord }
 
@@ -136,17 +144,63 @@ const invalidateExperimentQueries = (queryClient: ReturnType<typeof useQueryClie
     queryClient.invalidateQueries({ queryKey: ["experiments", "comparison", projectId] }),
   ])
 
+/** A variant to seed a new experiment with (no id — the domain mints it). */
+export interface NewExperimentVariant {
+  readonly name: string
+  readonly baseline: boolean
+  readonly filterSet: FilterSet
+  readonly query: string | null
+  readonly timeRange: ExperimentVariant["timeRange"]
+}
+
 export function useCreateExperiment(projectId: string) {
   const queryClient = useQueryClient()
   return useMutation({
-    mutationFn: (input: { readonly name: string; readonly description?: string }) =>
+    mutationFn: (input: {
+      readonly name: string
+      readonly description?: string
+      readonly variants?: readonly NewExperimentVariant[]
+    }) =>
       createExperiment({
         data: {
           projectId,
           name: input.name,
           ...(input.description !== undefined ? { description: input.description } : {}),
+          ...(input.variants !== undefined ? { variants: [...input.variants] } : {}),
         },
       }),
+    onSuccess: () => invalidateExperimentQueries(queryClient, projectId),
+  })
+}
+
+/**
+ * Create an experiment seeded from a search: its filters/query/time window become the baseline
+ * variant (named after the search), plus one empty comparison variant the domain auto-names. The
+ * search's time window lives inside `filterSet.startTime`, so it is lifted into the variant's
+ * `timeRange` rather than left as a hidden filter (see {@link extractVariantTimeRange}).
+ */
+export function useCreateExperimentFromSearch(projectId: string) {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: (input: { readonly name: string; readonly filterSet: FilterSet; readonly query: string | null }) => {
+      const { filterSet, timeRange } = extractVariantTimeRange(input.filterSet)
+      return createExperiment({
+        data: {
+          projectId,
+          name: input.name.slice(0, EXPERIMENT_NAME_MAX_LENGTH),
+          variants: [
+            {
+              name: input.name.slice(0, VARIANT_NAME_MAX_LENGTH),
+              baseline: true,
+              filterSet,
+              query: input.query,
+              timeRange,
+            },
+            { name: "", baseline: false, filterSet: {}, query: null, timeRange: null },
+          ],
+        },
+      })
+    },
     onSuccess: () => invalidateExperimentQueries(queryClient, projectId),
   })
 }

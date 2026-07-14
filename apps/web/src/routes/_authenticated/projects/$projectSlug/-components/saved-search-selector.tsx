@@ -12,22 +12,29 @@ import {
   Tooltip,
   toast,
 } from "@repo/ui"
+import { useNavigate } from "@tanstack/react-router"
 import {
+  BellPlusIcon,
   BookmarkIcon,
   BookmarkPlusIcon,
   ChevronDownIcon,
   FilterIcon,
+  FlaskConicalIcon,
   PencilIcon,
   SearchIcon,
   Trash2Icon,
 } from "lucide-react"
 import { useMemo, useState } from "react"
+import { useCreateExperimentFromSearch } from "../../../../../domains/experiments/experiments.collection.ts"
+import { savedSearchMonitorTarget } from "../../../../../domains/monitors/monitor-target.ts"
 import {
   useDeleteSavedSearch,
   useSavedSearchesList,
 } from "../../../../../domains/saved-searches/saved-searches.collection.ts"
 import type { SavedSearchRecord } from "../../../../../domains/saved-searches/saved-searches.functions.ts"
 import { toUserMessage } from "../../../../../lib/errors.ts"
+import { targetAlertDraft } from "../monitors/-components/alert-form-helpers.ts"
+import { MonitorCreateModal } from "../monitors/-components/monitor-create-modal.tsx"
 import { SaveSearchModal } from "./save-search-modal.tsx"
 
 /**
@@ -37,6 +44,7 @@ import { SaveSearchModal } from "./save-search-modal.tsx"
  */
 export function SavedSearchSelector({
   projectId,
+  projectSlug,
   selectedSlug,
   onSelect,
   onSelectedSlugChange,
@@ -44,6 +52,7 @@ export function SavedSearchSelector({
   canSaveCurrent,
 }: {
   readonly projectId: string
+  readonly projectSlug: string
   readonly selectedSlug: string
   readonly onSelect: (record: SavedSearchRecord) => void
   /** Re-point (or clear with `""`) the selected `savedSearch` slug — used when the selected search is deleted or renamed. */
@@ -55,6 +64,8 @@ export function SavedSearchSelector({
   const [filter, setFilter] = useState("")
   const [rowToDelete, setRowToDelete] = useState<SavedSearchRecord | null>(null)
   const [rowToRename, setRowToRename] = useState<SavedSearchRecord | null>(null)
+  const [rowToMonitor, setRowToMonitor] = useState<SavedSearchRecord | null>(null)
+  const [rowToCompare, setRowToCompare] = useState<SavedSearchRecord | null>(null)
 
   const { data: savedSearches } = useSavedSearchesList(projectId)
 
@@ -118,7 +129,7 @@ export function SavedSearchSelector({
                   <div
                     key={record.id}
                     className={cn(
-                      "group/row flex items-center gap-1 rounded-md pr-1",
+                      "group/row relative flex items-center rounded-md",
                       isSelected ? "bg-accent" : "hover:bg-accent/60",
                     )}
                   >
@@ -152,38 +163,75 @@ export function SavedSearchSelector({
                         ) : null}
                       </span>
                     </button>
-                    <Tooltip
-                      asChild
-                      trigger={
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          className="opacity-0 group-hover/row:opacity-100 focus-visible:opacity-100"
-                          aria-label={`Rename saved search ${record.name}`}
-                          onClick={() => setRowToRename(record)}
+                    {/* Actions sit in a panel overlaid on the row's right edge, revealed on hover/focus:
+                        a solid `bg-accent` strip holds the buttons, and a gradient to its left fades the
+                        item's name/subtitle out underneath them. `pointer-events-none` while hidden lets
+                        clicks fall through to the Select button behind it. */}
+                    <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center opacity-0 transition-opacity group-hover/row:pointer-events-auto group-hover/row:opacity-100 focus-within:pointer-events-auto focus-within:opacity-100">
+                      <div aria-hidden className="h-full w-10 bg-gradient-to-l from-accent to-transparent" />
+                      <div className="flex h-full items-center gap-0.5 rounded-r-md bg-accent pr-1">
+                        <Tooltip
+                          asChild
+                          trigger={
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              aria-label={`Create a monitor from ${record.name}`}
+                              onClick={() => setRowToMonitor(record)}
+                            >
+                              <Icon icon={BellPlusIcon} size="sm" color="foregroundMuted" />
+                            </Button>
+                          }
                         >
-                          <Icon icon={PencilIcon} size="sm" color="foregroundMuted" />
-                        </Button>
-                      }
-                    >
-                      Rename
-                    </Tooltip>
-                    <Tooltip
-                      asChild
-                      trigger={
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          className="opacity-0 group-hover/row:opacity-100 focus-visible:opacity-100"
-                          aria-label={`Delete saved search ${record.name}`}
-                          onClick={() => setRowToDelete(record)}
+                          Monitor
+                        </Tooltip>
+                        <Tooltip
+                          asChild
+                          trigger={
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              aria-label={`Create an experiment from ${record.name}`}
+                              onClick={() => setRowToCompare(record)}
+                            >
+                              <Icon icon={FlaskConicalIcon} size="sm" color="foregroundMuted" />
+                            </Button>
+                          }
                         >
-                          <Icon icon={Trash2Icon} size="sm" color="destructive" />
-                        </Button>
-                      }
-                    >
-                      Remove
-                    </Tooltip>
+                          Compare
+                        </Tooltip>
+                        <Tooltip
+                          asChild
+                          trigger={
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              aria-label={`Rename saved search ${record.name}`}
+                              onClick={() => setRowToRename(record)}
+                            >
+                              <Icon icon={PencilIcon} size="sm" color="foregroundMuted" />
+                            </Button>
+                          }
+                        >
+                          Rename
+                        </Tooltip>
+                        <Tooltip
+                          asChild
+                          trigger={
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              aria-label={`Delete saved search ${record.name}`}
+                              onClick={() => setRowToDelete(record)}
+                            >
+                              <Icon icon={Trash2Icon} size="sm" color="destructive" />
+                            </Button>
+                          }
+                        >
+                          Remove
+                        </Tooltip>
+                      </div>
+                    </div>
                   </div>
                 )
               })
@@ -229,7 +277,81 @@ export function SavedSearchSelector({
           }}
         />
       ) : null}
+      {rowToMonitor ? (
+        <MonitorCreateModal
+          projectId={projectId}
+          projectSlug={projectSlug}
+          initialAlert={targetAlertDraft(savedSearchMonitorTarget(rowToMonitor.id))}
+          onClose={() => setRowToMonitor(null)}
+        />
+      ) : null}
+      {rowToCompare ? (
+        <CompareSavedSearchModal
+          row={rowToCompare}
+          projectId={projectId}
+          projectSlug={projectSlug}
+          onClose={() => setRowToCompare(null)}
+          onCreated={() => setOpen(false)}
+        />
+      ) : null}
     </>
+  )
+}
+
+function CompareSavedSearchModal({
+  row,
+  projectId,
+  projectSlug,
+  onClose,
+  onCreated,
+}: {
+  readonly row: SavedSearchRecord
+  readonly projectId: string
+  readonly projectSlug: string
+  readonly onClose: () => void
+  readonly onCreated: () => void
+}) {
+  const navigate = useNavigate()
+  const createExperiment = useCreateExperimentFromSearch(projectId)
+
+  const handleCreate = async () => {
+    try {
+      const experiment = await createExperiment.mutateAsync({
+        name: row.name,
+        filterSet: row.filterSet,
+        query: row.query,
+      })
+      onCreated()
+      onClose()
+      void navigate({
+        to: "/projects/$projectSlug/experiments/$experimentSlug",
+        params: { projectSlug, experimentSlug: experiment.slug },
+      })
+    } catch (error) {
+      toast({ variant: "destructive", title: "Could not create experiment", description: toUserMessage(error) })
+    }
+  }
+
+  return (
+    <Modal
+      open
+      dismissible
+      onOpenChange={onClose}
+      title="Create experiment from search"
+      description="The search's filters and query will be imported into a new experiment variant as the baseline."
+      footer={
+        <>
+          <CloseTrigger />
+          <Button
+            onClick={() => void handleCreate()}
+            disabled={createExperiment.isPending}
+            isLoading={createExperiment.isPending}
+          >
+            Create experiment
+          </Button>
+        </>
+      }
+    />
   )
 }
 

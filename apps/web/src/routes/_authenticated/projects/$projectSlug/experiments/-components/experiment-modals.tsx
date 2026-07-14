@@ -1,4 +1,4 @@
-import { Button, CloseTrigger, Input, Modal, Textarea, useToast } from "@repo/ui"
+import { Button, CloseTrigger, cn, Icon, Input, Modal, Text, Textarea, useToast } from "@repo/ui"
 import { useForm } from "@tanstack/react-form"
 import { useNavigate } from "@tanstack/react-router"
 import { useState } from "react"
@@ -8,6 +8,11 @@ import {
   useDeleteExperiment,
   useUpdateExperiment,
 } from "../../../../../../domains/experiments/experiments.collection.ts"
+import {
+  buildPresetVariants,
+  EXPERIMENT_PRESET_OPTIONS,
+  type ExperimentPreset,
+} from "../../../../../../domains/experiments/experiments.presets.ts"
 import { toUserMessage } from "../../../../../../lib/errors.ts"
 import { createFormSubmitHandler, fieldErrorsAsStrings } from "../../../../../../lib/form-server-action.ts"
 
@@ -24,11 +29,20 @@ export function ExperimentCreateModal({
   const { toast } = useToast()
   const navigate = useNavigate()
   const create = useCreateExperiment(projectId)
+  const [preset, setPreset] = useState<ExperimentPreset>("custom")
 
   const form = useForm({
     defaultValues: { name: "", description: "" },
     onSubmit: createFormSubmitHandler(
-      async (value) => create.mutateAsync({ name: value.name.trim(), description: value.description.trim() }),
+      async (value) => {
+        const name = value.name.trim()
+        const variants = buildPresetVariants(preset, name, new Date())
+        return create.mutateAsync({
+          name,
+          description: value.description.trim(),
+          ...(variants ? { variants } : {}),
+        })
+      },
       {
         onSuccess: (experiment: ExperimentRecord) => {
           onClose()
@@ -90,6 +104,37 @@ export function ExperimentCreateModal({
             />
           )}
         </form.Field>
+        <div className="flex flex-col gap-2">
+          <Text.H5M>Preset</Text.H5M>
+          <div className="grid grid-cols-2 gap-2">
+            {EXPERIMENT_PRESET_OPTIONS.map((option) => {
+              const active = option.value === preset
+              return (
+                <button
+                  key={option.value}
+                  type="button"
+                  aria-pressed={active}
+                  className={cn(
+                    "flex min-w-0 cursor-pointer items-start gap-2 rounded-lg border border-border p-3 text-left transition-colors",
+                    active ? "border-primary bg-primary/5" : "hover:bg-muted",
+                  )}
+                  onClick={() => setPreset(option.value)}
+                >
+                  <Icon
+                    icon={option.icon}
+                    size="sm"
+                    color={active ? "primary" : "foregroundMuted"}
+                    className="mt-0.5 shrink-0"
+                  />
+                  <span className="flex min-w-0 flex-col gap-0.5">
+                    <Text.H5M>{option.label}</Text.H5M>
+                    <Text.H6 color="foregroundMuted">{option.description}</Text.H6>
+                  </span>
+                </button>
+              )
+            })}
+          </div>
+        </div>
       </form>
     </Modal>
   )
