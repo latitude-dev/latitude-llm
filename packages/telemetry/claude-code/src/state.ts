@@ -26,6 +26,13 @@ interface SessionState {
   buffer: string
   turnCount: number
   traceId?: string | undefined
+  // Main-session entries only: accumulated parent Agent tool_use -> span links,
+  // keyed by toolUseId (and promptId as a fallback), so subagents can re-parent on
+  // later turns.
+  agentLinks?: Record<string, { traceId: string; parentSpanId: string }> | undefined
+  // Subagent-file entries only: file size at last emission, so a subagent's spans
+  // are re-emitted only when its transcript grows (e.g. the late final synthesis).
+  emittedSize?: number | undefined
   updated?: string | undefined
 }
 
@@ -47,6 +54,8 @@ export function load(key: string): SessionState {
       buffer: typeof entry.buffer === "string" ? entry.buffer : "",
       turnCount: Number(entry.turnCount) || 0,
       traceId: typeof entry.traceId === "string" ? entry.traceId : undefined,
+      agentLinks: entry.agentLinks && typeof entry.agentLinks === "object" ? entry.agentLinks : undefined,
+      emittedSize: typeof entry.emittedSize === "number" ? entry.emittedSize : undefined,
     }
   } catch {
     return empty()

@@ -1,4 +1,4 @@
-import { copyFileSync, existsSync, mkdirSync, readdirSync, statSync } from "node:fs"
+import { copyFileSync, existsSync, mkdirSync, statSync } from "node:fs"
 import { homedir } from "node:os"
 import { dirname, join } from "node:path"
 import { fileURLToPath } from "node:url"
@@ -7,22 +7,23 @@ import { loadConfig } from "./config.ts"
 import { collectTraceContext } from "./context.ts"
 import type { Logger } from "./logger.ts"
 import { createLogger } from "./logger.ts"
-import { buildOtlpRequest, chunkOtlpRequest } from "./otlp.ts"
+import { buildOtlpRequest, buildSubagentSpans, chunkOtlpRequest } from "./otlp.ts"
+import type { RedactConfig } from "./redaction.ts"
 import { deleteRequest, loadRequestsByMessageId, pruneStaleRequests } from "./request-store.ts"
 import { normalizeInstallFlags, parseFlags, runInstall, runUninstall } from "./setup.ts"
 import { load, save, stateKey, withLock } from "./state.ts"
 import {
-  type AgentCallIndex,
   buildTurns,
   discoverSubagentFiles,
   firstPromptIdOf,
-  indexAgentCalls,
-  matchAgentCall,
+  readAllRows,
   readAllTurns,
   readIncremental,
   readSubagentMeta,
 } from "./transcript.ts"
-import type { AssistantCall, HookPayload, SubagentFile, TranscriptRow, Turn } from "./types.ts"
+import type { AgentSpanLink, HookPayload, OtlpSpan, SubagentInvocation, TraceContext, Turn } from "./types.ts"
+
+type AgentLinkMap = Record<string, { traceId: string; parentSpanId: string }>
 
 const INTERCEPT_INSTALL_PATH = join(homedir(), ".claude", "state", "latitude", "intercept.js")
 
@@ -97,53 +98,61 @@ async function main(): Promise<void> {
     const prior = load(key)
     logger.debug(`prior offset=${prior.offset} turnCount=${prior.turnCount}`)
 
-    const { rows, newOffset, newBuffer } = readIncremental(transcriptPath, prior.offset, prior.buffer)
-    logger.debug(`read ${rows.length} rows; newOffset=${newOffset}`)
-
-    if (rows.length === 0) {
-      save(key, { ...prior, offset: newOffset, buffer: newBuffer })
-      return
-    }
-
-    const turns = buildTurns(rows)
-    logger.debug(`assembled ${turns.length} turn(s)`)
-    if (turns.length === 0) {
-      save(key, { ...prior, offset: newOffset, buffer: newBuffer })
-      return
-    }
-
-    const subagentStates = stitchSubagents({
-      sessionId,
-      mainTranscriptPath: transcriptPath,
-      turns,
-      logger,
-    })
-
     const context = collectTraceContext(payload)
     logger.debug(`context tags=${context.tags.length} metadata=${Object.keys(context.metadata).length}`)
 
+    const { rows, newOffset, newBuffer } = readIncremental(transcriptPath, prior.offset, prior.buffer)
+    const turns = buildTurns(rows)
+    logger.debug(`read ${rows.length} row(s); ${turns.length} new turn(s); newOffset=${newOffset}`)
+
     const allTurns = readAllTurns(transcriptPath)
-    const conversationHistory = allTurns.slice(0, Math.max(0, allTurns.length - turns.length))
-    logger.debug(`conversation history: ${conversationHistory.length} prior turn(s)`)
+    const conversationHistory =
+      turns.length > 0 ? allTurns.slice(0, Math.max(0, allTurns.length - turns.length)) : allTurns
 
-    const messageIds = collectMessageIds(turns)
-    const requestsByMessageId = loadRequestsByMessageId(messageIds)
-    logger.debug(`captured requests: ${requestsByMessageId.size}/${messageIds.length} messages`)
-    if (requestsByMessageId.size < messageIds.length) {
-      const missing = messageIds.filter((id) => !requestsByMessageId.has(id))
-      logger.debug(`missing ${missing.length}: ${missing.join(", ")}`)
-      logger.debug(`dir listing: ${listRequestFilenames().join(", ")}`)
-    }
-
+    // Main-turn spans, capturing a link (traceId + tool span id) for every parent
+    // Agent tool call so subagents can attach under it — this turn or a later one.
+    const mainMessageIds = collectCallMessageIds(turns)
+    const mainRequests = loadRequestsByMessageId(mainMessageIds)
+    const agentLinks: AgentSpanLink[] = []
     const otlpRequest = buildOtlpRequest({
       sessionId,
       turnStartNumber: prior.turnCount + 1,
       turns,
       context,
       conversationHistory,
-      requestsByMessageId,
+      requestsByMessageId: mainRequests,
       redact: config.redact,
+      agentLinks,
     })
+
+    const linkMap: AgentLinkMap = { ...(prior.agentLinks ?? {}) }
+    for (const link of agentLinks) {
+      const target = { traceId: link.traceId, parentSpanId: link.parentSpanId }
+      linkMap[link.toolUseId] = target
+      if (link.promptId) linkMap[link.promptId] = target
+    }
+
+    // Subagents run in their own transcript files and typically finish flushing
+    // after the parent turn was already shipped (the final synthesis lands last).
+    // Re-emit each subagent's whole subtree whenever its file has grown since the
+    // last emission — idempotent, because span ids and start times are stable.
+    const subagents = emitSubagents({
+      sessionId,
+      mainTranscriptPath: transcriptPath,
+      linkMap,
+      context,
+      redact: config.redact,
+      logger,
+    })
+
+    const scope = otlpRequest.resourceSpans[0]?.scopeSpans[0]
+    if (scope) scope.spans.push(...subagents.spans)
+    const spanCount = scope?.spans.length ?? 0
+
+    if (spanCount === 0) {
+      save(key, { ...prior, offset: newOffset, buffer: newBuffer, agentLinks: linkMap })
+      return
+    }
 
     // Long agentic turns produce payloads far beyond what a single POST can deliver,
     // so the batch ships as size-bounded chunks. The offset only advances after every
@@ -173,59 +182,33 @@ async function main(): Promise<void> {
         offset: newOffset,
         buffer: newBuffer,
         turnCount: prior.turnCount + turns.length,
+        agentLinks: linkMap,
       })
-      for (const s of subagentStates) {
-        save(s.key, { offset: s.newOffset, buffer: s.newBuffer, turnCount: s.turnCount })
+      for (const s of subagents.saves) {
+        save(s.key, { offset: 0, buffer: "", turnCount: 0, emittedSize: s.emittedSize })
       }
-      // Prune the request files we just consumed, then sweep anything older than 24h.
-      for (const id of requestsByMessageId.keys()) deleteRequest(id)
+      // Prune the main request files we just consumed, then sweep anything older
+      // than 24h. Subagent request files are left for the 24h sweep so a later
+      // re-emission can still recover their captured payloads.
+      for (const id of mainMessageIds) deleteRequest(id)
       const stalePruned = pruneStaleRequests()
       if (stalePruned > 0) logger.debug(`pruned ${stalePruned} stale request file(s)`)
     })()
   })
 }
 
-function collectMessageIds(turns: Turn[]): string[] {
-  // Flatten every real assistant message.id across the main turns and any nested
-  // subagent turns. Uses a Set so duplicates (e.g. an id that somehow appears in
-  // both a subagent's own turn list and its parent reference) don't cause
-  // redundant disk reads in loadRequestsByMessageId.
+function collectCallMessageIds(turns: Turn[]): string[] {
   const ids = new Set<string>()
-  const addId = (id: string | undefined): void => {
-    if (id && !id.startsWith("noid:")) ids.add(id)
-  }
   for (const turn of turns) {
-    for (const call of turn.calls) addId(call.messageId)
-    collectSubagentIds(turn.calls, addId)
+    for (const call of turn.calls) {
+      if (call.messageId && !call.messageId.startsWith("noid:")) ids.add(call.messageId)
+    }
   }
   return Array.from(ids)
 }
 
-function collectSubagentIds(calls: AssistantCall[], addId: (id: string | undefined) => void): void {
-  for (const call of calls) {
-    for (const tool of call.toolUses) {
-      const sub = tool.subagent
-      if (!sub) continue
-      for (const subTurn of sub.turns) {
-        for (const subCall of subTurn.calls) addId(subCall.messageId)
-        collectSubagentIds(subTurn.calls, addId)
-      }
-    }
-  }
-}
-
 function delay(ms: number): Promise<void> {
   return new Promise((resolve) => setTimeout(resolve, ms))
-}
-
-function listRequestFilenames(): string[] {
-  try {
-    const dir = join(homedir(), ".claude", "state", "latitude", "requests")
-    if (!existsSync(dir)) return []
-    return readdirSync(dir)
-  } catch {
-    return []
-  }
 }
 
 function materializeIntercept(logger: Logger): void {
@@ -252,86 +235,69 @@ function materializeIntercept(logger: Logger): void {
   }
 }
 
-interface SubagentReadResult {
-  key: string
-  newOffset: number
-  newBuffer: string
-  turnCount: number
+interface SubagentEmission {
+  spans: OtlpSpan[]
+  saves: Array<{ key: string; emittedSize: number }>
 }
 
-function stitchSubagents(args: {
+function emitSubagents(args: {
   sessionId: string
   mainTranscriptPath: string
-  turns: Turn[]
+  linkMap: AgentLinkMap
+  context: TraceContext
+  redact?: RedactConfig | undefined
   logger: Logger
-}): SubagentReadResult[] {
-  const { sessionId, mainTranscriptPath, turns, logger } = args
-  const files = discoverSubagentFiles(mainTranscriptPath)
-  if (files.length === 0) return []
+}): SubagentEmission {
+  const { sessionId, mainTranscriptPath, linkMap, context, redact, logger } = args
+  const spans: OtlpSpan[] = []
+  const saves: Array<{ key: string; emittedSize: number }> = []
 
-  const agentCalls = indexAgentCalls(turns)
-  if (agentCalls.byToolUseId.size === 0) {
-    logger.debug(`found ${files.length} subagent file(s) but no Agent tool calls in new turns`)
-    return []
-  }
+  for (const file of discoverSubagentFiles(mainTranscriptPath)) {
+    let size: number
+    try {
+      size = statSync(file.filePath).size
+    } catch {
+      continue
+    }
+    const subKey = stateKey(sessionId, file.filePath)
+    const subPrior = load(subKey)
+    if (size <= (subPrior.emittedSize ?? 0)) continue
 
-  const results: SubagentReadResult[] = []
-  for (const file of files) {
-    const key = stateKey(sessionId, file.filePath)
-    const prior = load(key)
-    const { rows, newOffset, newBuffer } = readIncremental(file.filePath, prior.offset, prior.buffer)
-    if (rows.length === 0) continue
-
-    const subTurns = buildTurns(rows, { includeSidechain: true })
-    if (subTurns.length === 0) {
-      results.push({ key, newOffset, newBuffer, turnCount: prior.turnCount })
+    const meta = readSubagentMeta(file.metaPath)
+    const rows = readAllRows(file.filePath)
+    const promptId = firstPromptIdOf(rows)
+    const link = (meta?.toolUseId ? linkMap[meta.toolUseId] : undefined) ?? (promptId ? linkMap[promptId] : undefined)
+    if (!link) {
+      logger.debug(`subagent ${file.agentId}: parent Agent link not seen yet (toolUseId=${meta?.toolUseId ?? "none"})`)
       continue
     }
 
-    attachSubagentTurns({
-      file,
-      rows,
-      subTurns,
-      agentCalls,
-      logger,
-    })
+    const subTurns = buildTurns(rows, { includeSidechain: true })
+    if (subTurns.length === 0) continue
 
-    results.push({
-      key,
-      newOffset,
-      newBuffer,
-      turnCount: prior.turnCount + subTurns.length,
-    })
-  }
-  return results
-}
-
-function attachSubagentTurns(args: {
-  file: SubagentFile
-  rows: TranscriptRow[]
-  subTurns: Turn[]
-  agentCalls: AgentCallIndex
-  logger: Logger
-}): void {
-  const { file, rows, subTurns, agentCalls, logger } = args
-  const meta = readSubagentMeta(file.metaPath)
-  const promptId = firstPromptIdOf(rows)
-  const call = matchAgentCall(agentCalls, { toolUseId: meta?.toolUseId, promptId })
-  if (!call) {
-    logger.debug(
-      `subagent ${file.agentId}: no matching Agent tool call (toolUseId=${meta?.toolUseId ?? "none"} promptId=${promptId ?? "none"})`,
+    const subagent: SubagentInvocation = {
+      agentId: file.agentId,
+      agentType: meta?.agentType ?? "unknown",
+      description: meta?.description ?? "",
+      turns: subTurns,
+    }
+    const requestsByMessageId = loadRequestsByMessageId(collectCallMessageIds(subTurns))
+    spans.push(
+      ...buildSubagentSpans({
+        sessionId,
+        traceId: link.traceId,
+        parentSpanId: link.parentSpanId,
+        subagent,
+        context,
+        requestsByMessageId,
+        redact,
+      }),
     )
-    return
+    saves.push({ key: subKey, emittedSize: size })
+    logger.debug(`subagent ${file.agentId}: emitted ${subTurns.length} turn(s) at size=${size}`)
   }
-  call.subagent = {
-    agentId: file.agentId,
-    agentType: meta?.agentType ?? "unknown",
-    description: meta?.description ?? "",
-    turns: subTurns,
-  }
-  logger.debug(
-    `subagent ${file.agentId}: attached ${subTurns.length} turn(s) to Agent call ${call.id} (${meta?.agentType ?? "unknown"})`,
-  )
+
+  return { spans, saves }
 }
 
 main()

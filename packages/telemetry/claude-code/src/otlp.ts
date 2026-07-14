@@ -3,6 +3,7 @@ import { arch, hostname, platform, release } from "node:os"
 import { type RedactConfig, redactAttributes } from "./redaction.ts"
 import type { AnthropicMessage, AnthropicMessageBlock, AnthropicSystem, StoredRequest } from "./request-store.ts"
 import type {
+  AgentSpanLink,
   AssistantCall,
   OtlpExportRequest,
   OtlpKeyValue,
@@ -46,6 +47,9 @@ export function buildOtlpRequest(opts: {
   conversationHistory?: Turn[] | undefined
   requestsByMessageId?: Map<string, StoredRequest> | undefined
   redact?: RedactConfig | undefined
+  // Out-param: populated with one link per parent Agent tool call emitted, so the
+  // caller can (re-)attach subagent spans under it on later turns.
+  agentLinks?: AgentSpanLink[]
 }): OtlpExportRequest {
   const contextAttrs = buildContextAttrs(opts.context)
   const history = opts.conversationHistory ?? []
@@ -55,7 +59,16 @@ export function buildOtlpRequest(opts: {
     const turnNum = opts.turnStartNumber + i
     const priorTurns = [...history, ...opts.turns.slice(0, i)]
     spans.push(
-      ...buildTurnSpans(opts.sessionId, opts.userId, turnNum, turn, contextAttrs, priorTurns, requestsByMessageId),
+      ...buildTurnSpans(
+        opts.sessionId,
+        opts.userId,
+        turnNum,
+        turn,
+        contextAttrs,
+        priorTurns,
+        requestsByMessageId,
+        opts.agentLinks,
+      ),
     )
   })
 
@@ -86,6 +99,7 @@ function buildTurnSpans(
   contextAttrs: OtlpKeyValue[],
   priorTurns: Turn[],
   requestsByMessageId: Map<string, StoredRequest>,
+  agentLinks: AgentSpanLink[] | undefined,
 ): OtlpSpan[] {
   const traceId = hashHex(`${sessionId}:${turnNum}`, 32)
   const turnSpanId = hashHex(`${traceId}:turn`, 16)
@@ -106,6 +120,7 @@ function buildTurnSpans(
     contextAttrs,
     priorTurns,
     requestsByMessageId,
+    agentLinks,
   })
   return out
 }
@@ -126,6 +141,7 @@ interface TreeCtx {
   contextAttrs: OtlpKeyValue[]
   priorTurns: Turn[]
   requestsByMessageId: Map<string, StoredRequest>
+  agentLinks: AgentSpanLink[] | undefined
 }
 
 function buildInteractionTree(out: OtlpSpan[], ctx: TreeCtx): void {
@@ -271,29 +287,86 @@ function emitCallAndTools(out: OtlpSpan[], ctx: TreeCtx, call: AssistantCall, ca
     // interaction so the timeline reads as: llm_request → tool → llm_request → tool → ...
     out.push(buildToolSpan(traceId, ctx.turnSpanId, toolSpanId, sessionId, userId, tool, ctx.contextAttrs))
 
-    const subagent = tool.subagent
-    if (!subagent) return
-    subagent.turns.forEach((subTurn, subIdx) => {
-      const subSalt = `sub:${subagent.agentId}:${subIdx}`
-      buildInteractionTree(out, {
+    if (!isSubagent && tool.name === "Agent") {
+      ctx.agentLinks?.push({ toolUseId: tool.id, promptId: tool.promptId, traceId, parentSpanId: toolSpanId })
+    }
+
+    if (tool.subagent) {
+      emitSubagentTree(out, {
         traceId,
-        turnSpanId: hashHex(`${traceId}:${subSalt}:turn`, 16),
         parentSpanId: toolSpanId,
         sessionId,
         userId,
-        turn: subTurn,
-        isSubagent: true,
-        subagentLabel: subagentAttr(subagent),
-        subagentName: subagent.agentType,
-        turnNum: undefined,
-        interactionIdSalt: `${subSalt}:turn`,
-        genIdSalt: `${subSalt}:gen`,
+        subagent: tool.subagent,
         contextAttrs: ctx.contextAttrs,
-        priorTurns: subagent.turns.slice(0, subIdx),
         requestsByMessageId: ctx.requestsByMessageId,
       })
+    }
+  })
+}
+
+interface SubagentTreeCtx {
+  traceId: string
+  parentSpanId: string
+  sessionId: string
+  userId: string | undefined
+  subagent: SubagentInvocation
+  contextAttrs: OtlpKeyValue[]
+  requestsByMessageId: Map<string, StoredRequest>
+}
+
+// Emits a subagent's interaction/llm_request/tool subtree under `parentSpanId`.
+// Span ids are salted only by traceId, agentId, and turn/call index, so a later
+// re-emission from a grown transcript produces byte-identical ids (and start
+// times) — the server dedupes on the full sort key, so re-sends are idempotent.
+function emitSubagentTree(out: OtlpSpan[], ctx: SubagentTreeCtx): void {
+  const { subagent } = ctx
+  subagent.turns.forEach((subTurn, subIdx) => {
+    const subSalt = `sub:${subagent.agentId}:${subIdx}`
+    buildInteractionTree(out, {
+      traceId: ctx.traceId,
+      turnSpanId: hashHex(`${ctx.traceId}:${subSalt}:turn`, 16),
+      parentSpanId: ctx.parentSpanId,
+      sessionId: ctx.sessionId,
+      userId: ctx.userId,
+      turn: subTurn,
+      isSubagent: true,
+      subagentLabel: subagentAttr(subagent),
+      subagentName: subagent.agentType,
+      turnNum: undefined,
+      interactionIdSalt: `${subSalt}:turn`,
+      genIdSalt: `${subSalt}:gen`,
+      contextAttrs: ctx.contextAttrs,
+      priorTurns: subagent.turns.slice(0, subIdx),
+      requestsByMessageId: ctx.requestsByMessageId,
+      agentLinks: undefined,
     })
   })
+}
+
+// Standalone subagent subtree for re-emission on a later turn: builds context
+// attrs and applies redaction itself (it does not pass through buildOtlpRequest).
+export function buildSubagentSpans(opts: {
+  sessionId: string
+  userId?: string | undefined
+  traceId: string
+  parentSpanId: string
+  subagent: SubagentInvocation
+  context?: TraceContext | undefined
+  requestsByMessageId?: Map<string, StoredRequest> | undefined
+  redact?: RedactConfig | undefined
+}): OtlpSpan[] {
+  const out: OtlpSpan[] = []
+  emitSubagentTree(out, {
+    traceId: opts.traceId,
+    parentSpanId: opts.parentSpanId,
+    sessionId: opts.sessionId,
+    userId: opts.userId,
+    subagent: opts.subagent,
+    contextAttrs: buildContextAttrs(opts.context),
+    requestsByMessageId: opts.requestsByMessageId ?? new Map<string, StoredRequest>(),
+  })
+  return opts.redact ? out.map((span) => redactSpan(span, opts.redact as RedactConfig)) : out
 }
 
 function subagentAttr(sub: SubagentInvocation): string {

@@ -18,7 +18,7 @@ interface ReadResult {
   newBuffer: string
 }
 
-export function readAllTurns(path: string, opts: { includeSidechain?: boolean } = {}): Turn[] {
+export function readAllRows(path: string): TranscriptRow[] {
   if (!existsSync(path)) return []
   const raw = readFileSync(path, "utf-8")
   const rows: TranscriptRow[] = []
@@ -31,7 +31,11 @@ export function readAllTurns(path: string, opts: { includeSidechain?: boolean } 
       // skip malformed line
     }
   }
-  return buildTurns(rows, opts)
+  return rows
+}
+
+export function readAllTurns(path: string, opts: { includeSidechain?: boolean } = {}): Turn[] {
+  return buildTurns(readAllRows(path), opts)
 }
 
 export function readIncremental(path: string, offset: number, buffer: string): ReadResult {
@@ -336,41 +340,6 @@ export function readSubagentMeta(metaPath: string): SubagentMeta | undefined {
   } catch {
     return undefined
   }
-}
-
-export interface AgentCallIndex {
-  byToolUseId: Map<string, ToolCall>
-  byPromptId: Map<string, ToolCall>
-}
-
-export function indexAgentCalls(turns: Turn[]): AgentCallIndex {
-  const byToolUseId = new Map<string, ToolCall>()
-  const byPromptId = new Map<string, ToolCall>()
-  for (const turn of turns) {
-    for (const assistantCall of turn.calls) {
-      for (const toolCall of assistantCall.toolUses) {
-        if (toolCall.name !== "Agent") continue
-        byToolUseId.set(toolCall.id, toolCall)
-        if (toolCall.promptId) byPromptId.set(toolCall.promptId, toolCall)
-      }
-    }
-  }
-  return { byToolUseId, byPromptId }
-}
-
-// Prefer the meta's toolUseId — the only key unique per invocation, so parallel
-// subagents spawned in one turn (which share a promptId) each resolve to their own
-// Agent call. Fall back to promptId for transcripts whose meta predates toolUseId.
-export function matchAgentCall(
-  index: AgentCallIndex,
-  keys: { toolUseId?: string | undefined; promptId?: string | undefined },
-): ToolCall | undefined {
-  if (keys.toolUseId) {
-    const byId = index.byToolUseId.get(keys.toolUseId)
-    if (byId) return byId
-  }
-  if (keys.promptId) return index.byPromptId.get(keys.promptId)
-  return undefined
 }
 
 export function firstPromptIdOf(rows: TranscriptRow[]): string | undefined {

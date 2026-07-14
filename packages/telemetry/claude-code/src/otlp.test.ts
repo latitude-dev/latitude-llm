@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest"
-import { buildOtlpRequest, chunkOtlpRequest } from "./otlp.ts"
+import { buildOtlpRequest, buildSubagentSpans, chunkOtlpRequest } from "./otlp.ts"
 import type { StoredRequest } from "./request-store.ts"
-import type { AssistantCall, OtlpKeyValue, ToolCall, Turn, Usage } from "./types.ts"
+import type { AgentSpanLink, AssistantCall, OtlpKeyValue, SubagentInvocation, ToolCall, Turn, Usage } from "./types.ts"
 
 function unwrap<T>(value: T | undefined | null): T {
   expect(value).toBeDefined()
@@ -838,5 +838,121 @@ describe("chunkOtlpRequest", () => {
     const chunks = chunkOtlpRequest(req, 10_000)
     const reassembled = chunks.flatMap((c) => otlpSpans(c))
     expect(reassembled.map((s) => s.spanId)).toEqual(all.map((s) => s.spanId))
+  })
+})
+
+describe("agent link capture", () => {
+  it("captures a distinct link per parallel Agent tool call", () => {
+    const agentLinks: AgentSpanLink[] = []
+    buildOtlpRequest({
+      sessionId: "sess-1",
+      turnStartNumber: 1,
+      turns: [
+        baseTurn({
+          calls: [
+            {
+              messageId: "a1",
+              model: "claude-opus-4-7",
+              text: "spawning",
+              tokens: {},
+              startMs: 1_000,
+              endMs: 1_100,
+              toolUses: [
+                { id: "toolu_1", name: "Agent", input: {}, promptId: "p-shared", startMs: 1_100, endMs: 1_200 },
+                { id: "toolu_2", name: "Agent", input: {}, promptId: "p-shared", startMs: 1_100, endMs: 1_200 },
+              ],
+            },
+          ],
+        }),
+      ],
+      agentLinks,
+    })
+
+    expect(agentLinks.map((l) => l.toolUseId)).toEqual(["toolu_1", "toolu_2"])
+    // Parallel calls share a promptId but get distinct parent span ids.
+    expect(agentLinks[0]?.parentSpanId).not.toBe(agentLinks[1]?.parentSpanId)
+    expect(new Set(agentLinks.map((l) => l.traceId)).size).toBe(1)
+  })
+})
+
+describe("buildSubagentSpans", () => {
+  const grepCall: AssistantCall = {
+    messageId: "s1",
+    model: "claude-haiku-4-5",
+    text: "searching",
+    tokens: { input_tokens: 100, output_tokens: 10 },
+    startMs: 1_100,
+    endMs: 1_150,
+    toolUses: [
+      { id: "toolu_grep", name: "Grep", input: { pattern: "X" }, output: "match", startMs: 1_150, endMs: 1_200 },
+    ],
+  }
+  const synthesisCall: AssistantCall = {
+    messageId: "s2",
+    model: "claude-haiku-4-5",
+    text: "the answer is foo.ts",
+    tokens: { input_tokens: 300, output_tokens: 40 },
+    startMs: 1_300,
+    endMs: 1_400,
+    toolUses: [],
+  }
+  const subagentOf = (calls: AssistantCall[], endMs: number): SubagentInvocation => ({
+    agentId: "a4dabb47",
+    agentType: "Explore",
+    description: "find X",
+    turns: [{ userText: "find X", calls, startMs: 1_000, endMs }],
+  })
+
+  it("emits the subtree under the given trace and parent span", () => {
+    const spans = buildSubagentSpans({
+      sessionId: "sess-1",
+      traceId: "trace-abc",
+      parentSpanId: "parent-tool-span",
+      subagent: subagentOf([grepCall], 1_200),
+    })
+
+    const interaction = unwrap(spans.find((s) => getAttr(s.attributes, "span.type") === "interaction"))
+    const llm = unwrap(spans.find((s) => getAttr(s.attributes, "span.type") === "llm_request"))
+    const tool = unwrap(spans.find((s) => getAttr(s.attributes, "span.type") === "tool_execution"))
+
+    expect(spans.every((s) => s.traceId === "trace-abc")).toBe(true)
+    expect(interaction.parentSpanId).toBe("parent-tool-span")
+    expect(getAttr(interaction.attributes, "subagent.id")).toBe("Explore:a4dabb47")
+    expect(getAttr(interaction.attributes, "subagent.name")).toBe("Explore")
+    expect(llm.parentSpanId).toBe(interaction.spanId)
+    expect(tool.parentSpanId).toBe(interaction.spanId)
+  })
+
+  it("re-emits stable span ids and start times when the transcript grows (idempotent)", () => {
+    const partial = buildSubagentSpans({
+      sessionId: "sess-1",
+      traceId: "trace-abc",
+      parentSpanId: "parent-tool-span",
+      subagent: subagentOf([grepCall], 1_200),
+    })
+    // Later turn: the final synthesis llm_request has landed and the file grew.
+    const complete = buildSubagentSpans({
+      sessionId: "sess-1",
+      traceId: "trace-abc",
+      parentSpanId: "parent-tool-span",
+      subagent: subagentOf([grepCall, synthesisCall], 1_400),
+    })
+
+    const startById = (spans: typeof partial) => new Map(spans.map((s) => [s.spanId, s.startTimeUnixNano]))
+    const partialStarts = startById(partial)
+    const completeStarts = startById(complete)
+
+    // Every span the partial emission produced reappears with an identical id AND
+    // start time — the full ReplacingMergeTree sort key matches, so the re-send
+    // dedupes instead of duplicating.
+    for (const [spanId, start] of partialStarts) {
+      expect(completeStarts.get(spanId)).toBe(start)
+    }
+    // The final synthesis llm_request is the one genuinely new span.
+    const llmCount = (spans: typeof partial) =>
+      spans.filter((s) => getAttr(s.attributes, "span.type") === "llm_request").length
+    expect(llmCount(partial)).toBe(1)
+    expect(llmCount(complete)).toBe(2)
+    expect(complete.length).toBe(partial.length + 1)
   })
 })

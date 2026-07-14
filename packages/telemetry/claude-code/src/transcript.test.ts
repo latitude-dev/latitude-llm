@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest"
-import { buildTurns, indexAgentCalls, matchAgentCall } from "./transcript.ts"
+import { buildTurns } from "./transcript.ts"
 import type { TranscriptRow } from "./types.ts"
 
 describe("buildTurns", () => {
@@ -409,55 +409,5 @@ describe("buildTurns", () => {
     expect(turns[0]?.calls[0]?.tokens.cache_read_input_tokens).toBe(50)
     expect(turns[0]?.calls[1]?.tokens.input_tokens).toBe(120)
     expect(turns[0]?.calls[1]?.tokens.output_tokens).toBe(15)
-  })
-})
-
-describe("indexAgentCalls / matchAgentCall", () => {
-  // Two Agent tool calls dispatched in parallel from one assistant message: their
-  // tool_result rows share a single promptId, so promptId cannot tell them apart.
-  const parallelAgentRows: TranscriptRow[] = [
-    { type: "user", message: { role: "user", content: "spawn two explorers" } },
-    {
-      type: "assistant",
-      message: {
-        id: "a1",
-        role: "assistant",
-        content: [
-          { type: "tool_use", id: "toolu_agent_1", name: "Agent", input: { subagent_type: "Explore" } },
-          { type: "tool_use", id: "toolu_agent_2", name: "Agent", input: { subagent_type: "Explore" } },
-        ],
-      },
-    },
-    {
-      type: "user",
-      promptId: "p-shared",
-      message: { role: "user", content: [{ type: "tool_result", tool_use_id: "toolu_agent_1", content: "a" }] },
-    },
-    {
-      type: "user",
-      promptId: "p-shared",
-      message: { role: "user", content: [{ type: "tool_result", tool_use_id: "toolu_agent_2", content: "b" }] },
-    },
-  ]
-
-  it("resolves parallel Agent calls that share a promptId to distinct calls by toolUseId", () => {
-    const index = indexAgentCalls(buildTurns(parallelAgentRows))
-
-    expect(matchAgentCall(index, { toolUseId: "toolu_agent_1", promptId: "p-shared" })?.id).toBe("toolu_agent_1")
-    expect(matchAgentCall(index, { toolUseId: "toolu_agent_2", promptId: "p-shared" })?.id).toBe("toolu_agent_2")
-  })
-
-  it("falls back to promptId when no toolUseId is available", () => {
-    const index = indexAgentCalls(buildTurns(parallelAgentRows))
-
-    expect(matchAgentCall(index, { promptId: "p-shared" })?.id).toBe("toolu_agent_2")
-    expect(matchAgentCall(index, { toolUseId: "toolu_unknown", promptId: "p-shared" })?.id).toBe("toolu_agent_2")
-  })
-
-  it("returns undefined when neither key matches an Agent call", () => {
-    const index = indexAgentCalls(buildTurns(parallelAgentRows))
-
-    expect(matchAgentCall(index, { toolUseId: "toolu_unknown", promptId: "p-none" })).toBeUndefined()
-    expect(matchAgentCall(index, {})).toBeUndefined()
   })
 })

@@ -46,7 +46,11 @@ Server-side routing lives in `packages/domain/spans/src/otlp/resolvers/operation
 
 ### Subagents (`Agent` tool)
 
-`Agent` tool calls spawn subagents whose transcripts live in separate files (`<session>/subagents/agent-<agentId>.jsonl`). The hook stitches each subagent's turns under its parent `tool:Agent` span, producing a nested `interaction` → `llm_request` → `tool:*` tree. Each subagent's sidecar `.meta.json` carries `toolUseId` (the id of the parent `Agent` tool_use), `agentType`, and `description`; the stitcher matches on `toolUseId` — the only key unique per invocation, so subagents spawned in parallel (which share a `promptId`) each attach to their own `Agent` call. Subagent spans carry `subagent.id` (`<agentType>:<agentId>`), `subagent.name` and `subagent.type` (both the agent type, e.g. `Explore`), which feed `agentName` resolution and `buildAgentGraph`.
+`Agent` tool calls spawn subagents whose transcripts live in separate files (`<session>/subagents/agent-<agentId>.jsonl`). The hook emits each subagent's turns as a nested `interaction` → `llm_request` → `tool:*` tree parented under its `tool:Agent` span. Subagent spans carry `subagent.id` (`<agentType>:<agentId>`), `subagent.name` and `subagent.type` (both the agent type, e.g. `Explore`), which feed `agentName` resolution and `buildAgentGraph`.
+
+The parent-to-subagent link is the `.meta.json` sidecar's `toolUseId` (the id of the parent `Agent` tool_use) — the only key unique per invocation, so subagents spawned in parallel (which share a `promptId`) each attach to their own `Agent` call; `promptId` is a lossy fallback for older transcripts. When the parent turn is shipped, the hook records `toolUseId → { traceId, parentSpanId }` in the session state. Subagents then emit against that persisted link, not the live turn window.
+
+Subagents rarely finish flushing before the parent turn is shipped (the final synthesis lands last), so each subagent file is re-read in full and re-emitted whenever it has grown since the last emission (tracked per file as `emittedSize`). Re-sends are idempotent: span ids and start times are salted only by stable coordinates (`traceId`, `agentId`, turn/call index), and the `spans` table's `ReplacingMergeTree(ingested_at)` collapses duplicates keyed on the full sort key, so the newest emission wins. This is what recovers the final `llm_request` that an earlier, incomplete read would otherwise drop.
 
 ## Supported surfaces
 
