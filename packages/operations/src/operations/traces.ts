@@ -32,7 +32,6 @@ import {
 import { TraceAnalyticsResponseSchema, toTraceAnalyticsResponse } from "../openapi/entities/trace-analytics.ts"
 import { Paginated, PaginatedQueryParamsSchema } from "../openapi/pagination.ts"
 import {
-  addTraceFilterFieldIssues,
   jsonBody,
   PROTECTED_SECURITY,
   ProjectParamsSchema,
@@ -83,9 +82,6 @@ const ExportBodySchema = z
       ),
   })
   .openapi("ExportTracesBody")
-  .superRefine((body, ctx) => {
-    if (body.traces.by === "filters") addTraceFilterFieldIssues(body.traces.filters, ctx, ["traces", "filters"])
-  })
 
 const ExportResponseSchema = z
   .object({

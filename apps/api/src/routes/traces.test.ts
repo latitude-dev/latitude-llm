@@ -391,6 +391,31 @@ describe("Traces Routes Integration", () => {
     expect(res.status).toBe(400)
   })
 
+  it<ApiTestContext>("POST /export rejects an unknown filter field in `traces.filters` with 400", async ({
+    app,
+    database,
+  }) => {
+    const tenant = await createTenantSetup(database)
+    const projectId = "7777777777777777aaaaaaaa"
+    const slug = await createProjectRecord(database, tenant.organizationId, projectId)
+
+    const res = await app.fetch(
+      new Request(`http://localhost/v1/projects/${slug}/traces/export`, {
+        method: "POST",
+        headers: {
+          ...createApiKeyAuthHeaders(tenant.apiKeyToken),
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          traces: { by: "filters", filters: { endTimee: [{ op: "lte", value: "2026-01-01T00:00:00Z" }] } },
+          recipient: `${tenant.userId}@example.com`,
+        }),
+      }),
+    )
+
+    expect(res.status).toBe(400)
+  })
+
   it<ApiTestContext>("GET /analytics rejects unauthenticated requests with 401", async ({ app }) => {
     const res = await app.fetch(new Request("http://localhost/v1/projects/foo/traces/analytics"))
     expect(res.status).toBe(401)

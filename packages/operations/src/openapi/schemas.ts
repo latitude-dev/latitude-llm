@@ -85,7 +85,7 @@ const traceFilterFieldIssue = (field: string): string =>
   `Unknown trace filter field "${field}". Valid fields: ${TRACE_TELEMETRY_FILTER_FIELDS.join(", ")}; score.* keys (e.g. ${SCORE_FILTER_FIELDS[0]}); or metadata.<key>.`
 
 /** Flags every filter-set key the trace query cannot apply, so callers get a 400 instead of silently unfiltered results. */
-export const addTraceFilterFieldIssues = (
+const addTraceFilterFieldIssues = (
   filters: Readonly<Record<string, unknown>>,
   ctx: z.RefinementCtx,
   basePath: readonly (string | number)[] = [],
@@ -115,6 +115,11 @@ export const TraceRefSchema = z
     }),
   ])
   .openapi("TraceRef")
+  .superRefine((ref, ctx) => {
+    // Same allow-list as TraceFilterSetSchema — the filters branch resolves
+    // against the trace registry, which silently drops unknown keys.
+    if (ref.by === "filters") addTraceFilterFieldIssues(ref.filters, ctx, ["filters"])
+  })
 
 /**
  * Plural sibling of {@link TraceRefSchema} for bulk endpoints (export traces,
@@ -140,6 +145,9 @@ export const TracesRefSchema = z
     }),
   ])
   .openapi("TracesRef")
+  .superRefine((ref, ctx) => {
+    if (ref.by === "filters") addTraceFilterFieldIssues(ref.filters, ctx, ["filters"])
+  })
 
 // All protected endpoints are already org-scoped via the Bearer API key
 // (resolved by `createAuthMiddleware` + `createOrganizationContextMiddleware`),

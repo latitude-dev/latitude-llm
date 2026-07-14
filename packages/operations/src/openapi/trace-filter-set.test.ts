@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest"
-import { TraceFilterSetSchema } from "./schemas.ts"
+import { TraceFilterSetSchema, TraceRefSchema, TracesRefSchema } from "./schemas.ts"
 
 describe("TraceFilterSetSchema", () => {
   it("accepts the documented telemetry, time-window, score, and metadata fields", () => {
@@ -35,5 +35,27 @@ describe("TraceFilterSetSchema", () => {
       const badPaths = result.error.issues.map((issue) => issue.path.join("."))
       expect(badPaths.sort()).toEqual(["finishedAt", "score.bogus"])
     }
+  })
+})
+
+describe("TraceRefSchema / TracesRefSchema filter validation", () => {
+  const traceId = "a".repeat(32)
+
+  it("accepts the id branch and a valid filter set", () => {
+    expect(TraceRefSchema.safeParse({ by: "id", id: traceId }).success).toBe(true)
+    expect(
+      TraceRefSchema.safeParse({ by: "filters", filters: { status: [{ op: "eq", value: "error" }] } }).success,
+    ).toBe(true)
+    expect(TracesRefSchema.safeParse({ by: "ids", ids: [traceId] }).success).toBe(true)
+  })
+
+  it("rejects an unknown filter field in the filters branch (single + plural)", () => {
+    const single = TraceRefSchema.safeParse({ by: "filters", filters: { finishedAt: [{ op: "lte", value: 1 }] } })
+    expect(single.success).toBe(false)
+    if (!single.success) expect(single.error.issues[0]?.path).toEqual(["filters", "finishedAt"])
+
+    const plural = TracesRefSchema.safeParse({ by: "filters", filters: { finishedAt: [{ op: "lte", value: 1 }] } })
+    expect(plural.success).toBe(false)
+    if (!plural.success) expect(plural.error.issues[0]?.path).toEqual(["filters", "finishedAt"])
   })
 })
