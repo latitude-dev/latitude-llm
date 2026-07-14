@@ -1,4 +1,11 @@
-import type { NotFoundError, ProjectId, RepositoryError, SqlClient, TaxonomyClusterId } from "@domain/shared"
+import type {
+  CustomBehaviorId,
+  NotFoundError,
+  ProjectId,
+  RepositoryError,
+  SqlClient,
+  TaxonomyClusterId,
+} from "@domain/shared"
 import { Context, type Effect } from "effect"
 import type { TaxonomyCluster } from "../entities/cluster.ts"
 import type { TaxonomyDimension } from "../entities/dimension.ts"
@@ -25,6 +32,8 @@ export interface ListClustersInput {
   readonly sort?: TaxonomyClusterSort
   readonly limit: number
   readonly offset: number
+  /** Omit/null = global taxonomy (custom_behavior_id IS NULL); an id scopes to that behavior's sub-tree. */
+  readonly customBehaviorId?: CustomBehaviorId | null
 }
 
 export interface TaxonomyClusterListPage {
@@ -48,6 +57,8 @@ export interface TaxonomyClusterRepositoryShape {
     readonly dimension: TaxonomyDimension
     /** Omit for all nodes; null for roots; an id for that node's children. */
     readonly parentClusterId?: TaxonomyClusterId | null
+    /** Omit/null = global taxonomy (custom_behavior_id IS NULL); an id scopes to that behavior's sub-tree. */
+    readonly customBehaviorId?: CustomBehaviorId | null
   }): Effect.Effect<readonly TaxonomyCluster[], RepositoryError, SqlClient>
   /** Active ids of the node plus all its descendants (path prefix match). */
   listSubtreeIds(input: {

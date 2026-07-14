@@ -1,6 +1,8 @@
-import { AI, type AIShape, DEFAULT_EMBEDDING_CONFIG, type GenerateInput, type GenerateResult } from "@domain/ai"
+import { DEFAULT_EMBEDDING_CONFIG, type GenerateInput, type GenerateResult } from "@domain/ai"
+import { createFakeAI } from "@domain/ai/testing"
 import {
   ChSqlClient,
+  CustomBehaviorId,
   DistributedLockRepository,
   OrganizationId,
   ProjectId,
@@ -18,14 +20,15 @@ import {
   TaxonomyObservationAssignmentMethod,
   TaxonomyProjectionMethod,
 } from "../entities/observation.ts"
+import { CustomBehaviorAssignmentRepository } from "../ports/custom-behavior-assignment-repository.ts"
 import { TaxonomyClusterRepository } from "../ports/taxonomy-cluster-repository.ts"
-import { TaxonomyObservationRepository } from "../ports/taxonomy-observation-repository.ts"
+import { createFakeCustomBehaviorAssignmentRepository } from "../testing/fake-custom-behavior-assignment-repository.ts"
 import { createFakeTaxonomyClusterRepository } from "../testing/fake-taxonomy-cluster-repository.ts"
-import { createFakeTaxonomyObservationRepository } from "../testing/fake-taxonomy-observation-repository.ts"
-import { nameClusterUseCase } from "./name-taxonomy.ts"
+import { nameCustomBehaviorClusterUseCase } from "./name-custom-behavior-cluster.ts"
 
 const organizationId = OrganizationId("o".repeat(24))
 const projectId = ProjectId("p".repeat(24))
+const customBehaviorId = CustomBehaviorId("b".repeat(24))
 const clusterId = TaxonomyClusterId("c".repeat(24))
 const now = new Date("2026-06-04T00:00:00.000Z")
 
@@ -33,7 +36,7 @@ const cluster = (overrides: Partial<TaxonomyCluster> = {}): TaxonomyCluster => (
   id: clusterId,
   organizationId,
   projectId,
-  customBehaviorId: null,
+  customBehaviorId,
   dimension: "topic",
   parentClusterId: null,
   depth: 0,
@@ -83,62 +86,50 @@ const observation = (overrides: Partial<TaxonomyMomentObservation> = {}): Taxono
 
 const runNameCluster = (input: {
   readonly seedCluster?: TaxonomyCluster
-  readonly seedObservations: readonly TaxonomyMomentObservation[]
-  readonly ai: AIShape
+  readonly members: readonly TaxonomyMomentObservation[]
+  readonly generate: <T>(input: GenerateInput<T>) => Effect.Effect<GenerateResult<T>>
 }) => {
   const clusters = createFakeTaxonomyClusterRepository([input.seedCluster ?? cluster()])
-  const observations = createFakeTaxonomyObservationRepository(input.seedObservations)
-  const effect = nameClusterUseCase({ organizationId, projectId, clusterId, now }).pipe(
+  const assignments = createFakeCustomBehaviorAssignmentRepository({ [clusterId]: input.members })
+  const ai = createFakeAI({ generate: input.generate })
+  const effect = nameCustomBehaviorClusterUseCase({ organizationId, projectId, customBehaviorId, clusterId, now }).pipe(
     Effect.provide(Layer.succeed(TaxonomyClusterRepository, clusters.repository)),
-    Effect.provide(Layer.succeed(TaxonomyObservationRepository, observations.repository)),
-    Effect.provide(Layer.succeed(AI, input.ai)),
+    Effect.provide(Layer.succeed(CustomBehaviorAssignmentRepository, assignments.repository)),
+    Effect.provide(ai.layer),
     Effect.provide(Layer.succeed(ChSqlClient, createFakeChSqlClient())),
     Effect.provide(Layer.succeed(SqlClient, createFakeSqlClient())),
     Effect.provide(Layer.succeed(DistributedLockRepository, createFakeDistributedLockRepository().repository)),
   )
-  return { effect, clusters }
+  return { effect, clusters, ai }
 }
 
-describe("nameClusterUseCase", () => {
-  it("leaves clusters pending instead of naming from missing summaries", async () => {
-    let generateCalls = 0
-    const { effect, clusters } = runNameCluster({
-      seedObservations: [observation()],
-      ai: {
-        generate: <T>() => {
-          generateCalls++
-          return Effect.die("naming should not be called without summaries") as Effect.Effect<GenerateResult<T>>
-        },
-        embed: () => Effect.die("embed not used"),
-        rerank: () => Effect.die("rerank not used"),
-      },
+describe("nameCustomBehaviorClusterUseCase", () => {
+  it("leaves the scoped cluster pending when its members have no readable summaries", async () => {
+    const { effect, clusters, ai } = runNameCluster({
+      members: [observation()],
+      generate: <T>() =>
+        Effect.die("naming should not be called without summaries") as Effect.Effect<GenerateResult<T>>,
     })
 
     await expect(Effect.runPromise(effect)).resolves.toEqual({ name: "Pending", description: "" })
 
-    expect(generateCalls).toBe(0)
+    expect(ai.calls.generate).toHaveLength(0)
     expect(clusters.clusters.get(clusterId)?.name).toBe("Pending")
   })
 
-  it("names clusters from readable summaries without passing moment identifiers to the model", async () => {
-    const prompts: string[] = []
+  it("names the scoped cluster from its behavior-slice member summaries", async () => {
     const momentId = "f".repeat(64)
     const summary = "Agent behavior: Assistant: The agent reset roaming settings and explained the next step."
-    const { effect, clusters } = runNameCluster({
-      seedObservations: [observation({ momentId, projectionMetadata: { summary } })],
-      ai: {
-        generate: <T>(input: GenerateInput<T>) => {
-          prompts.push(input.prompt)
-          const object = input.prompt.includes("Candidates:")
-            ? {
-                name: "Roaming Troubleshooting",
-                description: "Agent resets roaming settings and explains follow-up steps.",
-              }
-            : { candidates: [{ theme: "roaming troubleshooting", examples: [0] }] }
-          return Effect.succeed({ object: object as T, tokens: 10, duration: 1 } satisfies GenerateResult<T>)
-        },
-        embed: () => Effect.die("embed not used"),
-        rerank: () => Effect.die("rerank not used"),
+    const { effect, clusters, ai } = runNameCluster({
+      members: [observation({ momentId, projectionMetadata: { summary } })],
+      generate: <T>(input: GenerateInput<T>) => {
+        const object = input.prompt.includes("Candidates:")
+          ? {
+              name: "Roaming Troubleshooting",
+              description: "Agent resets roaming settings and explains follow-up steps.",
+            }
+          : { candidates: [{ theme: "roaming troubleshooting", examples: [0] }] }
+        return Effect.succeed({ object: object as T, tokens: 10, duration: 1 } satisfies GenerateResult<T>)
       },
     })
 
@@ -147,8 +138,12 @@ describe("nameClusterUseCase", () => {
       description: "Agent resets roaming settings and explains follow-up steps.",
     })
 
-    expect(prompts.join("\n")).toContain(summary)
-    expect(prompts.join("\n")).not.toContain(momentId)
-    expect(clusters.clusters.get(clusterId)?.name).toBe("Roaming Troubleshooting")
+    const prompts = ai.calls.generate.map((call) => call.prompt).join("\n")
+    expect(prompts).toContain(summary)
+    expect(prompts).not.toContain(momentId)
+    const saved = clusters.clusters.get(clusterId)
+    expect(saved?.name).toBe("Roaming Troubleshooting")
+    // The naming step must not leak the write out of the behavior scope.
+    expect(saved?.customBehaviorId).toBe(customBehaviorId)
   })
 })

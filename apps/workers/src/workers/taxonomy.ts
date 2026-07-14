@@ -1,5 +1,5 @@
 import type { QueueConsumer, QueuePublisherShape, WorkflowStarterShape } from "@domain/queue"
-import { OrganizationId, ProjectId } from "@domain/shared"
+import { CustomBehaviorId, OrganizationId, ProjectId } from "@domain/shared"
 import {
   TAXONOMY_GARDENING_MIN_OBSERVATIONS,
   TAXONOMY_GARDENING_SWEEP_SPREAD_MS,
@@ -7,6 +7,7 @@ import {
   TAXONOMY_NOISE_LOOKBACK_DAYS,
   type TaxonomyObservationCounts,
   TaxonomyObservationRepository,
+  taxonomyGardenCustomBehaviorDedupeKey,
   taxonomyGardenProjectDedupeKey,
 } from "@domain/taxonomy"
 import type { RedisClient } from "@platform/cache-redis"
@@ -36,6 +37,13 @@ interface GardenProjectPayload {
   readonly organizationId: string
   readonly projectId: string
   readonly reason: "cron" | "manual" | "threshold"
+}
+
+interface GardenCustomBehaviorPayload {
+  readonly organizationId: string
+  readonly projectId: string
+  readonly customBehaviorId: string
+  readonly reason?: "manual" | "cron"
 }
 
 interface TaxonomyRuntimeDeps {
@@ -196,6 +204,66 @@ export const runGardenProjectJob = (payload: GardenProjectPayload, deps: Taxonom
   ).pipe(withTracing, Effect.withSpan("taxonomy.gardenProject"), Effect.asVoid)
 }
 
+// On-demand scoped regeneration for one custom behavior, driven by an explicit
+// enqueue rather than a cron sweep (scoped trees are regenerated on request).
+// Dedupe on the behavior so concurrent triggers collapse.
+export const runGardenCustomBehaviorJob = (payload: GardenCustomBehaviorPayload, deps: TaxonomyRuntimeDeps) => {
+  if (!deps.workflowStarter) {
+    return Effect.sync(() =>
+      logger.error("Custom behavior gardening skipped: no Temporal workflow starter configured", {
+        metric: "taxonomy.gardenCustomBehavior",
+        outcome: "skipped",
+        organizationId: payload.organizationId,
+        projectId: payload.projectId,
+        customBehaviorId: payload.customBehaviorId,
+      }),
+    ).pipe(withTracing, Effect.withSpan("taxonomy.gardenCustomBehavior"), Effect.asVoid)
+  }
+
+  const workflowId = taxonomyGardenCustomBehaviorDedupeKey({
+    organizationId: OrganizationId(payload.organizationId),
+    customBehaviorId: CustomBehaviorId(payload.customBehaviorId),
+  })
+  return deps.workflowStarter
+    .start(
+      "gardenCustomBehaviorWorkflow",
+      {
+        organizationId: payload.organizationId,
+        projectId: payload.projectId,
+        customBehaviorId: payload.customBehaviorId,
+        trigger: payload.reason ?? "manual",
+      },
+      { workflowId },
+    )
+    .pipe(
+      Effect.tap(() =>
+        Effect.sync(() =>
+          logger.info("Started GardenCustomBehaviorWorkflow", {
+            metric: "taxonomy.gardenCustomBehavior.workflowStart",
+            organizationId: payload.organizationId,
+            projectId: payload.projectId,
+            customBehaviorId: payload.customBehaviorId,
+            workflowId,
+          }),
+        ),
+      ),
+      Effect.catchTag("WorkflowAlreadyStartedError", () =>
+        Effect.sync(() =>
+          logger.info("GardenCustomBehaviorWorkflow already running", {
+            metric: "taxonomy.gardenCustomBehavior.workflowStart",
+            outcome: "already_running",
+            organizationId: payload.organizationId,
+            customBehaviorId: payload.customBehaviorId,
+            workflowId,
+          }),
+        ),
+      ),
+      withTracing,
+      Effect.withSpan("taxonomy.gardenCustomBehavior.startWorkflow"),
+      Effect.asVoid,
+    )
+}
+
 export const createTaxonomyWorker = ({
   consumer,
   publisher,
@@ -218,6 +286,14 @@ export const createTaxonomyWorker = ({
       runGardenSweepJob(payload as GardenSweepPayload, {
         listActiveProjects: () => listActiveProjects(adminPostgresClient),
         readObservationCounts: (input) => readObservationCounts(clickhouseClient, input),
+        publisher,
+        workflowStarter,
+      }),
+    gardenCustomBehavior: (payload) =>
+      runGardenCustomBehaviorJob(payload as GardenCustomBehaviorPayload, {
+        clickhouseClient,
+        postgresClient,
+        redisClient,
         publisher,
         workflowStarter,
       }),

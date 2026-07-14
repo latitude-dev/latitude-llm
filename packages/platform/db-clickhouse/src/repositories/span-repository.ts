@@ -25,14 +25,10 @@ import type {
   ToolDefinition,
 } from "@domain/spans"
 import { SpanRepository, type SpanRepositoryShape } from "@domain/spans"
-import { normalizeCHString, parseCHDate } from "@repo/utils"
+import { formatCHDate, normalizeCHString, parseCHDate } from "@repo/utils"
 import { Effect, Layer } from "effect"
 import type { GenAIMessage, GenAISystem } from "rosetta-ai"
 import { buildSpanFilterClauses } from "../registries/span-fields.ts"
-
-// ClickHouse DateTime64(9, 'UTC') rejects trailing 'Z'; strip it.
-const toClickhouseDateTime = (date: Date | undefined): string | undefined =>
-  date ? date.toISOString().replace("Z", "") : undefined
 
 const SPAN_KIND_TO_INT: Record<SpanKind, number> = {
   unspecified: 0,
@@ -334,8 +330,8 @@ const toInsertRow = (span: SpanDetail) => ({
   parent_span_id: span.parentSpanId,
   api_key_id: span.apiKeyId,
   simulation_id: span.simulationId as string,
-  start_time: toClickhouseDateTime(span.startTime),
-  end_time: toClickhouseDateTime(span.endTime),
+  start_time: formatCHDate(span.startTime),
+  end_time: formatCHDate(span.endTime),
   name: span.name,
   service_name: span.serviceName,
   kind: SPAN_KIND_TO_INT[span.kind],
@@ -381,7 +377,7 @@ const toInsertRow = (span: SpanDetail) => ({
   tool_name: span.toolName,
   tool_input: span.toolInput,
   tool_output: span.toolOutput,
-  ingested_at: toClickhouseDateTime(span.ingestedAt),
+  ingested_at: formatCHDate(span.ingestedAt),
 })
 
 // Session membership mirrors the sessions_mv grouping key
@@ -476,8 +472,8 @@ export const SpanRepositoryLive = Layer.effect(
                 organizationId: organizationId as string,
                 projectId: projectId as string,
                 traceId,
-                ...(startTimeFrom ? { startTimeFrom: toClickhouseDateTime(startTimeFrom) } : {}),
-                ...(startTimeTo ? { startTimeTo: toClickhouseDateTime(startTimeTo) } : {}),
+                ...(startTimeFrom ? { startTimeFrom: formatCHDate(startTimeFrom) } : {}),
+                ...(startTimeTo ? { startTimeTo: formatCHDate(startTimeTo) } : {}),
               },
               format: "JSONEachRow",
               clickhouse_settings: BOUNDED_READ_SETTINGS,
@@ -538,8 +534,8 @@ export const SpanRepositoryLive = Layer.effect(
               query_params: {
                 organizationId: organizationId as string,
                 projectId: projectId as string,
-                ...(options.startTimeFrom ? { startTimeFrom: toClickhouseDateTime(options.startTimeFrom) } : {}),
-                ...(options.startTimeTo ? { startTimeTo: toClickhouseDateTime(options.startTimeTo) } : {}),
+                ...(options.startTimeFrom ? { startTimeFrom: formatCHDate(options.startTimeFrom) } : {}),
+                ...(options.startTimeTo ? { startTimeTo: formatCHDate(options.startTimeTo) } : {}),
                 ...filterParams,
                 limitPlusOne: limit + 1,
                 ...(options.cursor
@@ -610,8 +606,8 @@ export const SpanRepositoryLive = Layer.effect(
                 organizationId: organizationId as string,
                 projectId: projectId as string,
                 ...membership.params,
-                ...(startTimeFrom ? { startTimeFrom: toClickhouseDateTime(startTimeFrom) } : {}),
-                ...(startTimeTo ? { startTimeTo: toClickhouseDateTime(startTimeTo) } : {}),
+                ...(startTimeFrom ? { startTimeFrom: formatCHDate(startTimeFrom) } : {}),
+                ...(startTimeTo ? { startTimeTo: formatCHDate(startTimeTo) } : {}),
               },
               format: "JSONEachRow",
               clickhouse_settings: BOUNDED_READ_SETTINGS,
@@ -722,9 +718,9 @@ export const SpanRepositoryLive = Layer.effect(
               query_params: {
                 organizationId: organizationId as string,
                 projectId: projectId as string,
-                cursorIngestedAt: toClickhouseDateTime(cursor.ingestedAt),
+                cursorIngestedAt: formatCHDate(cursor.ingestedAt),
                 cursorSpanId: cursor.spanId as string,
-                windowEnd: toClickhouseDateTime(windowEnd),
+                windowEnd: formatCHDate(windowEnd),
                 limit,
               },
               format: "JSONEachRow",
@@ -839,7 +835,7 @@ export const SpanRepositoryLive = Layer.effect(
                 query_params: {
                   organizationId: organizationId as string,
                   projectId: projectId as string,
-                  windowEnd: toClickhouseDateTime(windowEnd),
+                  windowEnd: formatCHDate(windowEnd),
                   limit,
                 },
                 format: "JSONEachRow",
@@ -882,8 +878,8 @@ export const SpanRepositoryLive = Layer.effect(
                   projectId: projectId as string,
                   traceId,
                   spanId,
-                  ...(startTimeFrom ? { startTimeFrom: toClickhouseDateTime(startTimeFrom) } : {}),
-                  ...(startTimeTo ? { startTimeTo: toClickhouseDateTime(startTimeTo) } : {}),
+                  ...(startTimeFrom ? { startTimeFrom: formatCHDate(startTimeFrom) } : {}),
+                  ...(startTimeTo ? { startTimeTo: formatCHDate(startTimeTo) } : {}),
                 },
                 format: "JSONEachRow",
               })
@@ -929,8 +925,8 @@ export const SpanRepositoryLive = Layer.effect(
                 query_params: {
                   organizationId: organizationId as string,
                   projectId: projectId as string,
-                  startTimeFrom: toClickhouseDateTime(startTimeFrom),
-                  startTimeTo: toClickhouseDateTime(startTimeTo),
+                  startTimeFrom: formatCHDate(startTimeFrom),
+                  startTimeTo: formatCHDate(startTimeTo),
                   traceId,
                 },
                 format: "JSONEachRow",
@@ -968,8 +964,8 @@ export const SpanRepositoryLive = Layer.effect(
                 query_params: {
                   organizationId: organizationId as string,
                   projectId: projectId as string,
-                  startTimeFrom: toClickhouseDateTime(startTimeFrom),
-                  startTimeTo: toClickhouseDateTime(startTimeTo),
+                  startTimeFrom: formatCHDate(startTimeFrom),
+                  startTimeTo: formatCHDate(startTimeTo),
                   ...membership.params,
                 },
                 format: "JSONEachRow",

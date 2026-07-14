@@ -5,10 +5,8 @@ import {
   type MessageEmbeddingRepositoryShape,
   type MessageEmbeddingUpsert,
 } from "@domain/spans"
+import { formatCHDate, parseCHDate } from "@repo/utils"
 import { Effect, Layer } from "effect"
-
-const toClickhouseDateTime = (date: Date): string => date.toISOString().replace("Z", "")
-const parseClickhouseDate = (value: string): Date => new Date(`${value.replace(" ", "T")}Z`)
 
 type MessageEmbeddingRow = {
   readonly organization_id: string
@@ -25,7 +23,7 @@ const toDomain = (row: MessageEmbeddingRow) => ({
   contentHash: row.content_hash,
   embedding: row.embedding,
   embeddingModel: row.embedding_model,
-  insertedAt: parseClickhouseDate(row.inserted_at),
+  insertedAt: parseCHDate(row.inserted_at),
 })
 
 const keyOf = (row: {
@@ -132,7 +130,7 @@ export const MessageEmbeddingRepositoryLive = Layer.effect(
               content_hash: row.contentHash,
               embedding: [...row.embedding],
               embedding_model: row.embeddingModel,
-              inserted_at: toClickhouseDateTime(row.insertedAt ?? new Date()),
+              inserted_at: formatCHDate(row.insertedAt ?? new Date()),
             })),
             format: "JSONEachRow",
             // Buffer concurrent small embedding batches into fewer ClickHouse parts.

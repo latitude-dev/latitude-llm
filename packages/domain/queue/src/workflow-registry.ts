@@ -98,6 +98,12 @@ const _registry = {
     readonly dimension: "topic"
     readonly trigger: "cron" | "manual" | "threshold"
   }>(),
+  gardenCustomBehaviorWorkflow: input<{
+    readonly organizationId: string
+    readonly projectId: string
+    readonly customBehaviorId: string
+    readonly trigger: "manual" | "cron"
+  }>(),
 }
 
 export type WorkflowRegistry = typeof _registry

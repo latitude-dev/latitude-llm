@@ -1,5 +1,12 @@
 import { EMBEDDING_DIMENSIONS, resolveEmbeddingConfig } from "@domain/ai"
-import { NotFoundError, RepositoryError, SqlClient, type SqlClientShape, TaxonomyClusterId } from "@domain/shared"
+import {
+  type CustomBehaviorId,
+  NotFoundError,
+  RepositoryError,
+  SqlClient,
+  type SqlClientShape,
+  TaxonomyClusterId,
+} from "@domain/shared"
 import {
   normalizeTaxonomyCentroid,
   TAXONOMY_SEARCH_MIN_SCORE,
@@ -19,6 +26,7 @@ const toDomainCluster = (row: typeof taxonomyClusters.$inferSelect): TaxonomyClu
     id: row.id,
     organizationId: row.organizationId,
     projectId: row.projectId,
+    customBehaviorId: row.customBehaviorId,
     dimension: TaxonomyDimension.Topic,
     parentClusterId: row.parentClusterId,
     depth: row.depth,
@@ -105,6 +113,7 @@ const toInsertRow = (
   id: cluster.id,
   organizationId: cluster.organizationId,
   projectId: cluster.projectId,
+  customBehaviorId: cluster.customBehaviorId,
   parentClusterId: cluster.parentClusterId,
   depth: cluster.depth,
   path: cluster.path,
@@ -122,6 +131,15 @@ const toInsertRow = (
   createdAt: cluster.createdAt,
   updatedAt: cluster.updatedAt,
 })
+
+// Global taxonomy reads and scoped custom-behavior reads share one table.
+// Omit/null scopes to the global tree (custom_behavior_id IS NULL); an id
+// scopes to that behavior's sub-tree. Keeps the global Behaviours page and
+// Topics filter isolated from scoped rows.
+const scopeCondition = (customBehaviorId: CustomBehaviorId | null | undefined) =>
+  customBehaviorId == null
+    ? isNull(taxonomyClusters.customBehaviorId)
+    : eq(taxonomyClusters.customBehaviorId, customBehaviorId)
 
 export const TaxonomyClusterRepositoryLive = Layer.effect(
   TaxonomyClusterRepository,
@@ -160,7 +178,7 @@ export const TaxonomyClusterRepositoryLive = Layer.effect(
           return rows.map(toDomainCluster)
         }),
 
-      listActiveByProject: ({ projectId, parentClusterId }) =>
+      listActiveByProject: ({ projectId, parentClusterId, customBehaviorId }) =>
         Effect.gen(function* () {
           const sqlClient = (yield* SqlClient) as SqlClientShape<Operator>
           const rows = yield* sqlClient.query((db, organizationId) =>
@@ -172,6 +190,7 @@ export const TaxonomyClusterRepositoryLive = Layer.effect(
                   eq(taxonomyClusters.organizationId, organizationId),
                   eq(taxonomyClusters.projectId, projectId),
                   eq(taxonomyClusters.state, "active"),
+                  scopeCondition(customBehaviorId),
                   ...(parentClusterId === undefined
                     ? []
                     : parentClusterId === null
@@ -196,6 +215,7 @@ export const TaxonomyClusterRepositoryLive = Layer.effect(
                   eq(taxonomyClusters.organizationId, organizationId),
                   eq(taxonomyClusters.projectId, projectId),
                   eq(taxonomyClusters.state, "active"),
+                  isNull(taxonomyClusters.customBehaviorId),
                   or(eq(taxonomyClusters.id, clusterId), like(taxonomyClusters.path, `%${clusterId}/%`)),
                 ),
               ),
@@ -218,6 +238,7 @@ export const TaxonomyClusterRepositoryLive = Layer.effect(
                   eq(taxonomyClusters.organizationId, organizationId),
                   eq(taxonomyClusters.projectId, projectId),
                   eq(taxonomyClusters.state, "active"),
+                  isNull(taxonomyClusters.customBehaviorId),
                   isNotNull(taxonomyClusters.centroidEmbedding),
                   ...(parentClusterId === undefined
                     ? []
@@ -249,6 +270,7 @@ export const TaxonomyClusterRepositoryLive = Layer.effect(
             eq(taxonomyClusters.organizationId, sqlClient.organizationId),
             eq(taxonomyClusters.projectId, projectId),
             eq(taxonomyClusters.state, state ?? "active"),
+            isNull(taxonomyClusters.customBehaviorId),
             isNotNull(taxonomyClusters.centroidEmbedding),
             or(gte(score, TAXONOMY_SEARCH_MIN_SCORE), gte(vectorScore, TAXONOMY_SEARCH_MIN_VECTOR_SIMILARITY)),
           ]
@@ -271,12 +293,13 @@ export const TaxonomyClusterRepositoryLive = Layer.effect(
           return rows.map((row) => ({ ...row, clusterId: TaxonomyClusterId(row.clusterId) }))
         }),
 
-      list: ({ projectId, state, sort, limit, offset }) =>
+      list: ({ projectId, state, sort, limit, offset, customBehaviorId }) =>
         Effect.gen(function* () {
           const sqlClient = (yield* SqlClient) as SqlClientShape<Operator>
           const conditions = [
             eq(taxonomyClusters.organizationId, sqlClient.organizationId),
             eq(taxonomyClusters.projectId, projectId),
+            scopeCondition(customBehaviorId),
           ]
           if (state) conditions.push(eq(taxonomyClusters.state, state))
 

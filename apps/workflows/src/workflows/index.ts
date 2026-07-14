@@ -8,6 +8,11 @@ export { assignScoreToKnownSignalWorkflow } from "./assign-score-to-known-signal
 export { type BillingOverageWorkflowInput, billingOverageWorkflow } from "./billing-overage-workflow.ts"
 export { flaggerWorkflow } from "./flagger-workflow.ts"
 export {
+  type GardenCustomBehaviorWorkflowInput,
+  type GardenCustomBehaviorWorkflowResult,
+  gardenCustomBehaviorWorkflow,
+} from "./garden-custom-behavior-workflow.ts"
+export {
   type OptimizeEvaluationWorkflowResult,
   optimizeEvaluationWorkflow,
 } from "./optimize-evaluation-workflow.ts"

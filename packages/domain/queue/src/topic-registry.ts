@@ -568,6 +568,12 @@ const _registry = {
     gardenSweep: {
       readonly triggeredAt: string
     }
+    gardenCustomBehavior: {
+      readonly organizationId: string
+      readonly projectId: string
+      readonly customBehaviorId: string
+      readonly reason?: "manual" | "cron"
+    }
   }>(),
 
   billing: payloads<{

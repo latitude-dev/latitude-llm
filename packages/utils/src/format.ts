@@ -217,6 +217,18 @@ export function parseCHDate(value: string, { fallback }: { readonly fallback?: D
   return Number.isNaN(parsed.getTime()) ? (fallback ?? parsed) : parsed
 }
 
+/**
+ * Serialize a `Date` for a ClickHouse `DateTime`/`DateTime64` column, which
+ * store naive UTC and reject the ISO `Z` suffix. Inverse of {@link parseCHDate}.
+ * Overloaded so an optional date round-trips to `undefined` for callers that
+ * conditionally include the column.
+ */
+export function formatCHDate(date: Date): string
+export function formatCHDate(date: Date | undefined): string | undefined
+export function formatCHDate(date: Date | undefined): string | undefined {
+  return date === undefined ? undefined : date.toISOString().replace("Z", "")
+}
+
 const ZWSP_AND_BOM = /[\u200B-\u200D\uFEFF]/g
 
 /**
