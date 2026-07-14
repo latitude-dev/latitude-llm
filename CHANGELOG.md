@@ -2,6 +2,24 @@
 
 ## Unreleased
 
+## v0.3.49 - 2026-07-14
+
+### Subagent visibility
+
+- Added agent breakdowns and nested conversation cards that show subagent handoffs, activity, costs, duration, models, and runs, with in-place navigation between parent and subagent conversations (ref: #4014).
+
+### Organization members
+
+- Let owners and admins choose whether an invited organization member joins as a member or admin (ref: #4013).
+
+### Custom Behaviors
+
+- Added scoped taxonomy gardening for custom behaviors, building and refreshing behavior-specific trees from matching session samples without changing the global taxonomy (ref: #4010).
+
+### Reliability
+
+- Prevented annotation formatting from failing when malformed GenAI messages are missing their parts (ref: #4011).
+
 ## v0.3.48 - 2026-07-13
 
 ### Monitors
