@@ -60,9 +60,12 @@ const OPENAI_AGENTS_OPERATION: Record<string, Operation> = {
   "agents.guardrail": "guardrail",
 }
 
+// `interaction` orchestrates a turn's generations + tool calls (and nests via
+// tool:Agent) exactly like an agent invocation, so it maps to invoke_agent — the
+// lossy-wrapper contract holds (no own usage; truth lives on the chat leaves).
 const CLAUDE_CODE_OPERATION: Record<string, string> = {
   llm_request: "chat",
-  interaction: "prompt",
+  interaction: "invoke_agent",
   tool_execution: "execute_tool",
   /** Native Claude Code / Agent SDK OTEL (`claude_code.tool` spans) */
   tool: "execute_tool",
@@ -83,7 +86,7 @@ const CLAUDE_CODE_NATIVE_SPAN_PREFIX = "claude_code."
 function operationFromClaudeCodeNativeSpanName(spanName: string): string | undefined {
   if (!spanName.startsWith(CLAUDE_CODE_NATIVE_SPAN_PREFIX)) return undefined
   const rest = spanName.slice(CLAUDE_CODE_NATIVE_SPAN_PREFIX.length)
-  if (rest === "interaction") return "prompt"
+  if (rest === "interaction") return "invoke_agent"
   if (rest === "llm_request") return "chat"
   if (rest === "tool" || rest.startsWith("tool.")) return "execute_tool"
   return undefined
