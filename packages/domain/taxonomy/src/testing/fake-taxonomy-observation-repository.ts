@@ -246,6 +246,27 @@ export const createFakeTaxonomyObservationRepository = (
           }))
       }),
 
+    // Like listForCustomBehaviorSample, the fake does not compile `filterSet`;
+    // it returns the unsampled eligible totals over the window.
+    countForCustomBehaviorSample: ({ organizationId, projectId, since }) =>
+      Effect.sync(() => {
+        const sessions = new Set<string>()
+        let observationCount = 0
+        for (const observation of rows.values()) {
+          if (
+            observation.organizationId !== organizationId ||
+            observation.projectId !== projectId ||
+            observation.embedding.length === 0 ||
+            observation.startTime < since
+          ) {
+            continue
+          }
+          observationCount++
+          sessions.add(observation.sessionId)
+        }
+        return { observationCount, sessionCount: sessions.size }
+      }),
+
     listByCluster: ({ organizationId, projectId, clusterId, limit, beforeStartTime, beforeObservationId }) =>
       Effect.sync(() =>
         latestProjectWindow(organizationId, projectId)

@@ -53,6 +53,13 @@ export const customBehaviorFilterSetSchema: z.ZodType<FilterSet> = filterSetSche
   }
 })
 
+export const CUSTOM_BEHAVIOR_EMPTY_FILTER_MESSAGE =
+  "A custom behavior needs at least one filter — an unfiltered scope is the project-wide Behaviors taxonomy"
+
+/** A FilterSet only scopes a behavior when at least one field carries a condition. */
+export const customBehaviorFilterSetHasConditions = (filterSet: FilterSet): boolean =>
+  Object.values(filterSet).some((conditions) => conditions.length > 0)
+
 // ---------------------------------------------------------------------------
 // CustomBehavior
 // ---------------------------------------------------------------------------
