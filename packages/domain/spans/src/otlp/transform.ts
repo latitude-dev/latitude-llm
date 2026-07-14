@@ -42,9 +42,8 @@ function resolveAnyValue(
 }
 
 function extractResourceString(resource: OtlpResource | undefined): Record<string, string> {
-  if (!resource?.attributes) return {}
   const result: Record<string, string> = {}
-  for (const attr of resource.attributes) {
+  for (const attr of attrArray(resource?.attributes)) {
     if (attr.value?.stringValue !== undefined) {
       result[attr.key] = attr.value.stringValue
     }

@@ -58,7 +58,7 @@ describe("resolveSpanProjectSlug", () => {
     expect(resolveSpanProjectSlug(malformed, [])).toBeUndefined()
   })
 
-  it("falls back to the resource attribute when the span attributes is a non-array", () => {
+  it("falls back to the resource attribute when the span attributes are a non-array", () => {
     const malformed = { "latitude.project": "span-slug" } as unknown as OtlpKeyValue[]
     const resource = [str("latitude.project", "resource-slug")]
     expect(resolveSpanProjectSlug(malformed, resource)).toBe("resource-slug")
@@ -227,6 +227,43 @@ describe("transformOtlpToSpans per-span project resolution", () => {
     expect(rejectedSpans).toBe(0)
     expect(spans).toHaveLength(1)
     expect(spans[0]?.projectId).toBe("proj-default")
+  })
+
+  it("does not crash the batch when resource attributes are a non-array", () => {
+    const { spans, rejectedSpans } = transformOtlpToSpans(
+      {
+        resourceSpans: [
+          {
+            resource: { attributes: { "service.name": "test" } as unknown as OtlpKeyValue[] },
+            scopeSpans: [
+              {
+                scope: { name: "scope", version: "1" },
+                spans: [
+                  {
+                    traceId: TRACE,
+                    spanId: "res-malformed",
+                    name: "res-malformed",
+                    startTimeUnixNano: "1710590400000000000",
+                    endTimeUnixNano: "1710590401000000000",
+                    attributes: [],
+                    status: { code: 1 },
+                  },
+                ],
+              },
+            ],
+          },
+        ],
+      },
+      {
+        ...baseContext,
+        defaultProjectId: "proj-default",
+        projectIdBySlug: new Map(),
+      },
+    )
+    expect(rejectedSpans).toBe(0)
+    expect(spans).toHaveLength(1)
+    expect(spans[0]?.projectId).toBe("proj-default")
+    expect(spans[0]?.serviceName).toBe("")
   })
 
   it("handles a mixed batch: some valid spans, some rejected", () => {
