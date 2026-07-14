@@ -1,5 +1,5 @@
 import { ProjectRepository } from "@domain/projects"
-import { OrganizationId, ProjectId, SpanId } from "@domain/shared"
+import { OrganizationId, ProjectId, SpanId, TraceId } from "@domain/shared"
 import {
   type SpanListCursor,
   type SpanListOrderDirection,
@@ -28,14 +28,14 @@ const spansPath = "/projects/:projectSlug/spans"
 const spanEndpoint = defineOperation<OrganizationScopedEnv>(spansPath)
 
 // Opaque keyset cursor — encodes the last row's `(field, direction, sortValue,
-// spanId)` so the next page resumes strictly after it. Keyset (not offset) so a
+// traceId, spanId)` so the next page resumes strictly after it. Keyset (not offset) so a
 // span landing mid-pagination can't shift the window and skip/duplicate rows.
 const ORDER_FIELDS: readonly SpanListOrderField[] = ["startTime", "duration", "cost"]
 const ORDER_DIRECTIONS: readonly SpanListOrderDirection[] = ["asc", "desc"]
 
 const encodeSpanListCursor = (cursor: SpanListCursor): string =>
   Buffer.from(
-    JSON.stringify({ f: cursor.field, d: cursor.direction, v: cursor.sortValue, s: cursor.spanId }),
+    JSON.stringify({ f: cursor.field, d: cursor.direction, v: cursor.sortValue, t: cursor.traceId, s: cursor.spanId }),
     "utf8",
   ).toString("base64url")
 
@@ -45,15 +45,17 @@ const decodeSpanListCursor = (raw: string): SpanListCursor | null => {
       f?: unknown
       d?: unknown
       v?: unknown
+      t?: unknown
       s?: unknown
     }
     if (!ORDER_FIELDS.includes(p.f as SpanListOrderField)) return null
     if (!ORDER_DIRECTIONS.includes(p.d as SpanListOrderDirection)) return null
-    if (typeof p.v !== "string" || typeof p.s !== "string") return null
+    if (typeof p.v !== "string" || typeof p.t !== "string" || typeof p.s !== "string") return null
     return {
       field: p.f as SpanListOrderField,
       direction: p.d as SpanListOrderDirection,
       sortValue: p.v,
+      traceId: TraceId(p.t),
       spanId: SpanId(p.s),
     }
   } catch {

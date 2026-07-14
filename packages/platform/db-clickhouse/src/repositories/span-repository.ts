@@ -101,6 +101,7 @@ const EMPTY_ATTR_MAP_COLUMNS = `
 
 // Columns selected for list/trace queries (excludes large blob payloads).
 const LIST_COLUMNS = `${LIST_COLUMNS_LEAN}, ${ATTR_MAP_COLUMNS}`
+const LIST_COLUMNS_NO_ATTRS = `${LIST_COLUMNS_LEAN}, ${EMPTY_ATTR_MAP_COLUMNS}`
 
 // `LIST_COLUMNS` plus the large payload columns a `SpanDetail` needs. Selected
 // explicitly (never `SELECT *`) so reads project exactly the typed row and skip
@@ -435,6 +436,11 @@ const BOUNDED_READ_SETTINGS = {
   max_memory_usage: "4000000000",
 } as const
 
+const PAGINATED_READ_SETTINGS = {
+  ...BOUNDED_READ_SETTINGS,
+  max_bytes_before_external_sort: "268435456",
+} as const
+
 // `listByProjectId` keyset pagination. The sort column is an enum → fixed column
 // (never user-interpolated raw SQL); the cursor param is typed to match it so the
 // tuple comparison is valid. Only `start_time` is in the table's primary key
@@ -582,34 +588,45 @@ export const SpanRepositoryLive = Layer.effect(
         const direction = options.orderBy?.direction ?? "desc"
         const orderColumn = SPAN_LIST_ORDER_COLUMN[field]
         const orderDirection = direction === "asc" ? "ASC" : "DESC"
-        // Keyset: resume strictly after the cursor's `(sortValue, spanId)`. The
-        // tuple lives in the inner scan so a `startTime` sort prunes granules via
-        // the primary key. `<` for DESC, `>` for ASC — the direction of "after".
         const cursorComparator = direction === "asc" ? ">" : "<"
         const cursorClause = options.cursor
-          ? `AND (${orderColumn}, span_id) ${cursorComparator} ({cursorSort:${SPAN_LIST_CURSOR_TYPE[field]}}, {cursorSpanId:FixedString(16)})`
+          ? `AND (${orderColumn}, trace_id, span_id) ${cursorComparator} ({cursorSort:${SPAN_LIST_CURSOR_TYPE[field]}}, {cursorTraceId:FixedString(32)}, {cursorSpanId:FixedString(16)})`
           : ""
         const limit = options.limit ?? 50
         return yield* chSqlClient
           .query(async (client) => {
             const result = await client.query({
-              // Over-fetch one row to detect a next page without a count.
-              query: `SELECT ${LIST_COLUMNS}, duration_ns
+              query: `SELECT ${LIST_COLUMNS_NO_ATTRS}, duration_ns
                     FROM (
-                      -- expose duration_ns (an ALIAS column) so the outer ORDER BY / cursor can sort on it
-                      SELECT ${LIST_COLUMNS}, duration_ns
+                      SELECT ${LIST_COLUMNS_LEAN}, duration_ns
                       FROM spans
                       WHERE organization_id = {organizationId:String}
                         AND project_id = {projectId:String}
                         ${startFromClause}
                         ${startToClause}
                         ${filterClause}
-                        ${cursorClause}
-                      ORDER BY span_id, ingested_at DESC
-                      LIMIT 1 BY span_id
+                        AND (trace_id, span_id, ingested_at) IN (
+                          SELECT trace_id, span_id, ingested_at
+                          FROM (
+                            SELECT trace_id, span_id, ingested_at, start_time, duration_ns, cost_total_microcents
+                            FROM spans
+                            WHERE organization_id = {organizationId:String}
+                              AND project_id = {projectId:String}
+                              ${startFromClause}
+                              ${startToClause}
+                              ${filterClause}
+                            ORDER BY trace_id, span_id, ingested_at DESC
+                            LIMIT 1 BY trace_id, span_id
+                          )
+                          WHERE 1 = 1
+                            ${cursorClause}
+                          ORDER BY ${orderColumn} ${orderDirection}, trace_id ${orderDirection}, span_id ${orderDirection}
+                          LIMIT {limitPlusOne:UInt32}
+                        )
+                      ORDER BY trace_id, span_id, ingested_at DESC
+                      LIMIT 1 BY trace_id, span_id
                     )
-                    ORDER BY ${orderColumn} ${orderDirection}, span_id ${orderDirection}
-                    LIMIT {limitPlusOne:UInt32}`,
+                    ORDER BY ${orderColumn} ${orderDirection}, trace_id ${orderDirection}, span_id ${orderDirection}`,
               query_params: {
                 organizationId: organizationId as string,
                 projectId: projectId as string,
@@ -618,11 +635,15 @@ export const SpanRepositoryLive = Layer.effect(
                 ...filterParams,
                 limitPlusOne: limit + 1,
                 ...(options.cursor
-                  ? { cursorSort: options.cursor.sortValue, cursorSpanId: options.cursor.spanId as string }
+                  ? {
+                      cursorSort: options.cursor.sortValue,
+                      cursorSpanId: options.cursor.spanId as string,
+                      cursorTraceId: options.cursor.traceId as string,
+                    }
                   : {}),
               },
               format: "JSONEachRow",
-              clickhouse_settings: BOUNDED_READ_SETTINGS,
+              clickhouse_settings: PAGINATED_READ_SETTINGS,
             })
             return result.json<SpanListRow>()
           })
@@ -635,7 +656,13 @@ export const SpanRepositoryLive = Layer.effect(
               const lastItem = items[items.length - 1]
               const nextCursor: SpanListCursor | null =
                 hasMore && lastRow && lastItem
-                  ? { field, direction, sortValue: spanListCursorSortValue(lastRow, field), spanId: lastItem.spanId }
+                  ? {
+                      field,
+                      direction,
+                      sortValue: spanListCursorSortValue(lastRow, field),
+                      traceId: lastItem.traceId,
+                      spanId: lastItem.spanId,
+                    }
                   : null
               return { items, nextCursor }
             }),

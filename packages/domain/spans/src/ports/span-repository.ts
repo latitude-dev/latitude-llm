@@ -233,7 +233,7 @@ export type SpanListOrderDirection = "asc" | "desc"
 
 /**
  * Keyset cursor for `listByProjectId` — points at the last returned row's
- * `(sortValue, spanId)` in the active ordering. Stable across concurrent inserts
+ * `(sortValue, traceId, spanId)` in the active ordering. Stable across concurrent inserts
  * (unlike an offset, which shifts when rows land mid-pagination). `sortValue` is
  * the raw sort-column value carried at full fidelity: a nanosecond ClickHouse
  * datetime for `startTime`, a base-10 integer for `duration`/`cost`. `field` and
@@ -244,6 +244,7 @@ export interface SpanListCursor {
   readonly field: SpanListOrderField
   readonly direction: SpanListOrderDirection
   readonly sortValue: string
+  readonly traceId: TraceId
   readonly spanId: SpanId
 }
 
