@@ -209,6 +209,11 @@ export type {
 export { Input, type InputProps } from "./components/input/input.tsx"
 export { Label } from "./components/label/label.tsx"
 export {
+  MasterDetail,
+  type MasterDetailItem,
+  type MasterDetailProps,
+} from "./components/master-detail/master-detail.tsx"
+export {
   CloseTrigger,
   Modal,
   type ModalBodyProps,

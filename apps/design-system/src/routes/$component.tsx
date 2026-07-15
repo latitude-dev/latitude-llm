@@ -15,6 +15,7 @@ import {
   HistogramSkeleton,
   Input,
   Label,
+  MasterDetail,
   RichTextEditor,
   Status,
   Text,
@@ -150,6 +151,24 @@ const COMPONENT_REGISTRY: Record<string, ComponentEntry> = {
       ],
     },
     Demo: FormsDemo,
+  },
+  "master-detail": {
+    title: "Master detail",
+    description: "Two-pane list and content layout with a selectable rail.",
+    usage: {
+      description:
+        "Pass items for the rail and renderDetail for the right pane. Selection is uncontrolled unless you pass selectedKey. Set a height via className so the panes scroll.",
+      lines: [
+        'import { MasterDetail } from "@repo/ui"',
+        "",
+        "<MasterDetail",
+        '  className="h-72"',
+        '  items={[{ key: "1", label: "user/preferences" }]}',
+        "  renderDetail={(key) => <Text.H5>{details[key]}</Text.H5>}",
+        "/>",
+      ],
+    },
+    Demo: MasterDetailDemo,
   },
   "rich-text-editor": {
     title: "Rich text editor",
@@ -431,6 +450,80 @@ function StatusDemo() {
         <Status label="Destructive" variant="destructive" />
       </div>
     </ComponentDemoSection>
+  )
+}
+
+function MasterDetailDemo() {
+  const details: Record<string, string> = {
+    "1": "The user prefers dark mode and concise responses.",
+    "2": "Europe/Madrid (UTC+1).",
+    "3": "Currently working on the memory-observability feature.",
+  }
+  const items = [
+    { key: "1", label: "user/preferences" },
+    { key: "2", label: "user/timezone" },
+    { key: "3", label: "user/projects" },
+  ]
+  const scored = [
+    {
+      key: "1",
+      label: "mem_9f2a",
+      trailing: (
+        <Badge variant="secondary" size="small">
+          0.95
+        </Badge>
+      ),
+    },
+    {
+      key: "2",
+      label: "mem_1c04",
+      trailing: (
+        <Badge variant="secondary" size="small">
+          0.82
+        </Badge>
+      ),
+    },
+    {
+      key: "3",
+      label: "mem_77be",
+      trailing: (
+        <Badge variant="secondary" size="small">
+          0.61
+        </Badge>
+      ),
+    },
+  ]
+
+  return (
+    <>
+      <ComponentDemoSection
+        title="List and detail"
+        description="Selectable rail on the left, the selected item's content on the right."
+        frameClassName="block"
+      >
+        <div className="mx-auto w-full max-w-2xl">
+          <MasterDetail className="h-64" items={items} renderDetail={(key) => <Text.H5>{details[key]}</Text.H5>} />
+        </div>
+      </ComponentDemoSection>
+      <ComponentDemoSection
+        title="Header and trailing"
+        description="Optional header bar and per-row trailing content, e.g. a relevance score."
+        frameClassName="block"
+      >
+        <div className="mx-auto w-full max-w-2xl">
+          <MasterDetail
+            className="h-64"
+            header={
+              <div className="bg-secondary px-3 py-2">
+                <Text.H6 color="foregroundMuted">Search results</Text.H6>
+              </div>
+            }
+            items={scored}
+            renderDetail={(key) => <Text.H5>Content for {key}</Text.H5>}
+          />
+        </div>
+      </ComponentDemoSection>
+    </>
   )
 }
 

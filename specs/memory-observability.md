@@ -88,7 +88,7 @@ Span name SHOULD equal `gen_ai.operation.name`; span kind CLIENT (or INTERNAL fo
 1. **There is no `gen_ai.memory.scope` attribute** (contrary to an earlier internal report). Scope/layering must be derived — see [Scope resolution](#scope-resolution).
 2. **There is no before/after on the wire, and no token count.** `gen_ai.memory.records` is the *current* content of the records in that operation (opt-in). A diff and a token count are things **we derive**, not read. `record.count` is the only always-available quantity.
 
-`gen_ai.memory.records` content model (from the spec's example): an array of `{ id, content, score?, metadata? }` where `content` is a string or nested object. We treat, per record, the `content` field (stringified if object) as that record's new full body.
+`gen_ai.memory.records` content model (`model/gen-ai/gen-ai-memory-records.json`, verified): an array of records where **`content` (`any`) is the only required field**, plus optional `id` (string), `score` (number, populated on search results), and `metadata` (object). The attribute is declared `any` and `development`-stage, so emitters may deviate — consumers validate the shape and fall back to the raw payload. We treat, per record, the `content` field (stringified if object) as that record's new full body.
 
 ---
 

@@ -1,24 +1,15 @@
 import { CodeBlock, DetailSection, DetailSummary, Text } from "@repo/ui"
 import { BracesIcon, DatabaseIcon } from "lucide-react"
-import { useMemo } from "react"
 import type { SpanDetailRecord } from "../../../../../../../../../domains/spans/spans.functions.ts"
 import { isMemoryOperation } from "../memory-operations.ts"
-import { JsonBlock } from "./helpers.tsx"
+import { MemoryRecordsView } from "./memory-records.tsx"
+import { parseMemoryRecords } from "./memory-records-parse.ts"
 
 const STORE_ID_ATTR = "gen_ai.memory.store.id"
 const RECORD_ID_ATTR = "gen_ai.memory.record.id"
 const RECORD_COUNT_ATTR = "gen_ai.memory.record.count"
 const QUERY_TEXT_ATTR = "gen_ai.memory.query.text"
 const RECORDS_ATTR = "gen_ai.memory.records"
-
-function tryParseJson(value: string): unknown | null {
-  if (!value) return null
-  try {
-    return JSON.parse(value)
-  } catch {
-    return null
-  }
-}
 
 export function isMemoryOperationSpan(span: SpanDetailRecord): boolean {
   return (
@@ -35,7 +26,8 @@ export function MemoryOperationSection({ span }: { readonly span: SpanDetailReco
   const queryText = span.attrString[QUERY_TEXT_ATTR]
   const recordCount = span.attrInt[RECORD_COUNT_ATTR] ?? span.attrString[RECORD_COUNT_ATTR]
   const recordsRaw = span.attrString[RECORDS_ATTR] ?? ""
-  const parsedRecords = useMemo(() => tryParseJson(recordsRaw), [recordsRaw])
+  const records = parseMemoryRecords(recordsRaw)
+  const isSearch = span.operation === "search_memory"
 
   const items = [
     ...(storeId ? [{ label: "Store", value: storeId, copyable: true }] : []),
@@ -43,13 +35,16 @@ export function MemoryOperationSection({ span }: { readonly span: SpanDetailReco
     ...(recordCount !== undefined ? [{ label: "Records", value: String(recordCount) }] : []),
   ]
 
+  // For a search with rendered records the query heads the records view instead, so it isn't shown twice.
+  const showQueryHere = !!queryText && !(records && isSearch)
+
   return (
     <>
-      {(items.length > 0 || queryText) && (
+      {(items.length > 0 || showQueryHere) && (
         <DetailSection icon={<DatabaseIcon className="w-4 h-4" />} label="Memory">
           <div className="flex flex-col gap-2">
             {items.length > 0 && <DetailSummary items={items} />}
-            {queryText && (
+            {showQueryHere && (
               <div className="flex flex-col gap-1">
                 <Text.H6 color="foregroundMuted">Query</Text.H6>
                 <CodeBlock value={queryText} className="bg-secondary" />
@@ -59,9 +54,13 @@ export function MemoryOperationSection({ span }: { readonly span: SpanDetailReco
         </DetailSection>
       )}
 
-      <DetailSection icon={<BracesIcon className="w-4 h-4" />} label="Records">
-        {parsedRecords !== null ? (
-          <JsonBlock value={parsedRecords} />
+      <DetailSection
+        icon={<BracesIcon className="w-4 h-4" />}
+        label="Records"
+        contentClassName="max-h-none overflow-visible pl-0"
+      >
+        {records ? (
+          <MemoryRecordsView records={records} isSearch={isSearch} {...(queryText ? { queryText } : {})} />
         ) : recordsRaw ? (
           <CodeBlock value={recordsRaw} className="bg-secondary" />
         ) : (
