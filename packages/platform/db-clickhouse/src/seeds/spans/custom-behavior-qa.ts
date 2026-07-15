@@ -210,7 +210,7 @@ const buildCohortRows = (cohort: CustomBehaviorQaCohort, scope: SeedScope, nowMs
 }
 
 /**
- * Build the full QA fixture (both cohorts). Pure — the seeder inserts the
+ * Build the full QA fixture (every cohort). Pure — the seeder inserts the
  * result; tests exercise the repository queries against it directly.
  * `nowMs` anchors recency to wall-clock time so every observation lands
  * inside the `CUSTOM_BEHAVIOR_LOOKBACK_DAYS` window at generation time.
@@ -226,10 +226,10 @@ export const buildCustomBehaviorQaFixture = (scope: SeedScope, nowMs: number): C
   return { spans, observations }
 }
 
-// Bootstrap-only QA fixture (LAT-752): injects two generatable custom-behavior
-// cohorts (backing sessions + clustered taxonomy observations) on the seed
-// project. Kept out of `allSeeders` so it never runs during runtime
-// demo-project creation.
+// Bootstrap-only QA fixture (LAT-752): injects the custom-behavior cohorts
+// (backing sessions + clustered taxonomy observations) on the seed project —
+// two above the ≥15 gardening gate and one under it (the waiting state). Kept
+// out of `allSeeders` so it never runs during runtime demo-project creation.
 export const customBehaviorQaSeeder: Seeder = {
   name: "spans/custom-behavior-qa",
   run: (ctx) =>
@@ -251,7 +251,7 @@ export const customBehaviorQaSeeder: Seeder = {
       yield* insertJsonEachRow(ctx.client, "taxonomy_observations", observations)
       if (!ctx.quiet) {
         console.log(
-          `  -> spans/custom-behavior-qa: ${spans.length} sessions + ${observations.length} observations across 2 cohorts`,
+          `  -> spans/custom-behavior-qa: ${spans.length} sessions + ${observations.length} observations across ${CUSTOM_BEHAVIOR_QA_COHORT_LIST.length} cohorts`,
         )
       }
     }),

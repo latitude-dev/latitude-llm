@@ -1,6 +1,9 @@
 import { EMBEDDING_DIMENSIONS } from "@domain/ai"
 import type { ChSqlClient, OrganizationId, ProjectId } from "@domain/shared"
-import { CUSTOM_BEHAVIOR_QA_COHORTS } from "@domain/shared/seed-content/custom-behavior-qa"
+import {
+  CUSTOM_BEHAVIOR_QA_COHORT_LIST,
+  CUSTOM_BEHAVIOR_QA_COHORTS,
+} from "@domain/shared/seed-content/custom-behavior-qa"
 import { bootstrapSeedScope } from "@domain/shared/seeding"
 import {
   CUSTOM_BEHAVIOR_LOOKBACK_DAYS,
@@ -37,9 +40,9 @@ describe("customBehaviorQa fixture", () => {
 
   it("builds clustered observations with non-empty embeddings and global cluster ids", () => {
     const { observations } = buildCustomBehaviorQaFixture(bootstrapSeedScope, NOW_MS)
-    expect(observations).toHaveLength(
-      cohortSize(CUSTOM_BEHAVIOR_QA_COHORTS.a) + cohortSize(CUSTOM_BEHAVIOR_QA_COHORTS.b),
-    )
+    const totalObservations = CUSTOM_BEHAVIOR_QA_COHORT_LIST.reduce((sum, cohort) => sum + cohortSize(cohort), 0)
+    const totalSubTopics = CUSTOM_BEHAVIOR_QA_COHORT_LIST.reduce((sum, cohort) => sum + cohort.subTopics.length, 0)
+    expect(observations).toHaveLength(totalObservations)
     for (const observation of observations) {
       expect(observation.embedding.length).toBe(EMBEDDING_DIMENSIONS)
       expect(observation.assigned_cluster_id.length).toBe(24)
@@ -48,19 +51,18 @@ describe("customBehaviorQa fixture", () => {
     // Distinct global clusters per cohort (>1 sub-topic) — the geometry a
     // successful scoped generation resolves into more than one cluster.
     const clusterIds = new Set(observations.map((observation) => observation.assigned_cluster_id))
-    expect(clusterIds.size).toBe(
-      CUSTOM_BEHAVIOR_QA_COHORTS.a.subTopics.length + CUSTOM_BEHAVIOR_QA_COHORTS.b.subTopics.length,
-    )
+    expect(clusterIds.size).toBe(totalSubTopics)
   })
 
-  it("previews ≥15 observations for both cohorts inside the lookback window", async () => {
-    const { a, b } = CUSTOM_BEHAVIOR_QA_COHORTS
-    const [countA, countB] = await runWithRepository(
+  it("previews ≥15 for the two full cohorts and <15 for the waiting cohort", async () => {
+    const { a, b, c } = CUSTOM_BEHAVIOR_QA_COHORTS
+    const [countA, countB, countC] = await runWithRepository(
       Effect.gen(function* () {
         const repo = yield* TaxonomyObservationRepository
         return [
           yield* repo.countForCustomBehaviorSample({ organizationId, projectId, since: SINCE, filterSet: a.filterSet }),
           yield* repo.countForCustomBehaviorSample({ organizationId, projectId, since: SINCE, filterSet: b.filterSet }),
+          yield* repo.countForCustomBehaviorSample({ organizationId, projectId, since: SINCE, filterSet: c.filterSet }),
         ] as const
       }),
     )
@@ -71,6 +73,10 @@ describe("customBehaviorQa fixture", () => {
     expect(countB.observationCount).toBeGreaterThanOrEqual(TAXONOMY_GARDENING_MIN_OBSERVATIONS)
     expect(countA.sessionCount).toBe(cohortSize(a))
     expect(countB.sessionCount).toBe(cohortSize(b))
+
+    // Cohort C matches its sessions but stays under the gate → gardening waits.
+    expect(countC.observationCount).toBe(cohortSize(c))
+    expect(countC.observationCount).toBeLessThan(TAXONOMY_GARDENING_MIN_OBSERVATIONS)
   })
 
   it("samples only the sessions matching each cohort's filter (no cross-cohort bleed)", async () => {
