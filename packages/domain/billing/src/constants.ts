@@ -15,10 +15,10 @@ export const CHARGEABLE_ACTIONS = ["trace", "semantic-query", "llm-call"] as con
 export type ChargeableAction = (typeof CHARGEABLE_ACTIONS)[number]
 
 /**
- * Credit prices are grounded in worst-case provider cost at the Pro overage rate
- * ($0.002/credit): 1.5x over the worst LLM generation, 2x over the worst semantic
- * query. Derivation lives in dev-docs/billing.md — re-run it before changing a
- * price or adding a model tier.
+ * Flat credit prices at the Pro overage rate ($0.002/credit). `llm-call` is the
+ * authorization estimate and the fallback when the model registry has no pricing —
+ * actual generations bill their estimated provider cost through
+ * `creditsForLlmGenerationCost`. Derivation lives in dev-docs/billing.md.
  */
 export const ACTION_CREDITS: Record<ChargeableAction, number> = {
   trace: 1,
@@ -95,6 +95,22 @@ export const SELF_SERVE_PLAN_SLUG_TO_STRIPE_PLAN_NAME: Record<string, PlanSlug> 
 } as const
 
 export const OverageCreditUnit = PRO_PLAN_CONFIG.overageCreditsPerUnit
+
+/** Dollar value of one credit at the Pro overage rate, in mills ($20 per 10k credits = 2 mills). */
+export const CREDIT_VALUE_MILLS =
+  (PRO_PLAN_CONFIG.overagePriceCentsPerUnit * CENT_TO_MILLS) / PRO_PLAN_CONFIG.overageCreditsPerUnit
+
+export const LLM_GENERATION_BILLING_MARGIN = 1.2
+
+const USD_TO_MILLS = 1_000
+
+/**
+ * Credits billed for one LLM generation from its estimated provider cost: a 1.2x
+ * margin over cost, converted at the overage credit value, rounded up to an integer
+ * with a 1-credit floor.
+ */
+export const creditsForLlmGenerationCost = (costUsd: number): number =>
+  Math.max(1, Math.ceil((costUsd * USD_TO_MILLS * LLM_GENERATION_BILLING_MARGIN) / CREDIT_VALUE_MILLS))
 
 export const calculateOverageAmountMills = (planSlug: PlanSlug, overageCredits: number) => {
   if (planSlug !== "pro") return 0

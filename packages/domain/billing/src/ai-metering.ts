@@ -12,6 +12,8 @@ export type MeteredAIAction = Extract<ChargeableAction, "llm-call" | "semantic-q
 
 export interface RecordMeteredAIActionInput {
   readonly action: MeteredAIAction
+  /** Overrides the flat `ACTION_CREDITS` price, e.g. cost-based generation billing. */
+  readonly credits?: number | undefined
   readonly metadata?: Record<string, unknown> | undefined
 }
 
@@ -66,6 +68,7 @@ export const makeAIMeteringScope = Effect.fn("billing.makeAIMeteringScope")(func
         organizationId: input.organizationId,
         projectId: input.projectId,
         action: recordInput.action,
+        credits: recordInput.credits,
         idempotencyKey,
         context: input.context,
         traceId: input.traceId,

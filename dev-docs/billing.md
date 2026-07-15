@@ -24,7 +24,7 @@ Chargeable actions:
 
 - `trace = 1 credit`
 - `semantic-query = 15 credits`
-- `llm-call = 30 credits`
+- `llm-call = cost-based` (flat `30 credits` as authorization estimate and fallback)
 
 AI work is billed per primitive produced, not per feature-level scan: every hosted LLM
 generation is one `llm-call` and every query-time semantic operation (query embedding
@@ -33,27 +33,28 @@ is one `semantic-query`, wherever they are produced.
 
 ### Credit price grounding
 
-Credit prices are grounded in the worst-case provider cost of one unit at the Pro
-overage rate (`$0.002/credit`): a `1.5x` margin over the worst LLM generation and a
-`2x` margin over the worst semantic query. Re-run this derivation before changing a
-price, adding a model tier, or raising a token budget.
+One credit is worth `2` mills at the Pro overage rate (`$20` per `10,000` credits =
+`$0.002/credit`, `CREDIT_VALUE_MILLS`).
 
-Provider list prices used (per million tokens, Bedrock at first-party parity, checked
-2026-07): Claude Sonnet 4.6 `$3 in / $15 out`, Claude Haiku 4.5 `$1 / $5`, MiniMax M2.5
-`$0.30 / $1.20`, voyage-4-large embeddings `$0.12`, rerank-2.5 `~$0.05`.
-
-- `llm-call`: the reference model is MiniMax M2.5, where most hosted AI work runs
-  (judges, annotators, extractors). Worst case is an input-heavy call reading a very
-  large session, ~100k input + ~4k output tokens ≈ `$0.04` (also covers Bedrock's
-  higher-quoted `$0.36/$1.44` price variant). `30 credits = $0.06` at the overage rate
-  → 1.5x worst case. The rare Sonnet-tier calls (GEPA proposer, signal generation,
-  worst case ≈ `$0.30`) are knowingly billed below cost per call under this flat
-  price — revisit with a heavy-tier multiplier or a model-default change if their
-  volume grows.
-- `semantic-query`: worst case is one voyage-4-large query embedding (32k-token context
-  ceiling ≈ `$0.004`) plus a rerank pass (≈ `$0.01`) ≈ `$0.015`. `15 credits = $0.03` →
-  2x worst case. Reranking and document-side embeddings ride on this charge (document
-  embeds are part of trace ingest and are covered by the `trace` credit).
+- `llm-call`: each generation bills its **estimated provider cost with a `1.2x`
+  margin** (`LLM_GENERATION_BILLING_MARGIN`), converted at the overage credit value
+  and rounded **up** to an integer with a 1-credit floor:
+  `credits = max(1, ceil(costUsd * 1000 * 1.2 / 2))` (`creditsForLlmGenerationCost`).
+  Cost is estimated from the provider-reported token usage priced through the
+  `@domain/models` registry (the same catalog that prices customer spans), covering
+  input/output/reasoning/cache token rates. Examples: a typical MiniMax M2.5 judge
+  call (~`$0.005`) bills 3 credits; a 100k-token-session judge call (~`$0.04`) bills
+  24; a Sonnet-tier GEPA proposal (~`$0.30`) bills 180.
+  **Fallback**: when the registry has no pricing for the configured model or the
+  provider reported no usage (including errored calls), the flat
+  `ACTION_CREDITS["llm-call"] = 30` applies and a warning is logged — keep the
+  registry data current for every model configured via `LAT_AI_*`.
+- `semantic-query`: flat-priced at 2x its worst case: one voyage-4-large query
+  embedding (32k-token context ceiling ≈ `$0.004`) plus a rerank pass (≈ `$0.01`)
+  ≈ `$0.015` → `15 credits = $0.03`. Flat rather than cost-based because the embed
+  adapter does not report token usage. Reranking and document-side embeddings ride
+  on this charge (document embeds are part of trace ingest and are covered by the
+  `trace` credit).
 - `trace`: unchanged; ingest-side document embedding for a typical trace costs well
   under one credit's overage value.
 
@@ -126,8 +127,10 @@ LLM calls and semantic queries are metered at the AI layer, not per feature. The
 `withAIMetering`, which charges against the ambient `AIMeteringScope`
 (`@domain/billing/src/ai-metering.ts`) when one is present in context:
 
-- `generate` → one `llm-call`, recorded on success and on `AIError` (the provider call
-  was attempted, tokens may have been consumed) but not on `AICredentialError`
+- `generate` → one `llm-call` billed at estimated cost x 1.2 (flat 30-credit fallback
+  when registry pricing or provider usage is unavailable), recorded on success and on
+  `AIError` (the provider call was attempted, tokens may have been consumed — flat
+  price, no usage to bill) but not on `AICredentialError`
 - `embed` with `inputType: "query"` → one `semantic-query`; document embeds and rerank
   are never charged directly
 - the `semanticSimilarity()` evaluation host verb records one `semantic-query` per
@@ -158,10 +161,11 @@ Canonical charge points:
 - live evaluations: `packages/domain/evaluations/src/use-cases/live/run-live-evaluation.ts`, metered per call under a `live-eval` scope
 - evaluation alignment and GEPA optimization: `apps/workflows/src/activities/evaluation-alignment-activities.ts` and `evaluation-optimization-activities.ts`, metered per call under per-activity scopes
 
-Expensive flows still authorize (and cap-reserve) **one** `llm-call` at the boundary
-before any AI work starts; per-call metering then records what actually ran. A flow that
-makes several calls can therefore overshoot a cap by the calls in one flow — the same
-intentional coarseness as the trace ingest gate.
+Expensive flows still authorize (and cap-reserve) **one** flat-estimate `llm-call` at
+the boundary before any AI work starts; per-call metering then records the exact
+cost-based credits for what actually ran. A flow that makes several calls, or a call
+that costs more than the estimate, can therefore overshoot a cap by the calls in one
+flow — the same intentional coarseness as the trace ingest gate.
 
 Retries must not double-charge. Idempotency is enforced by `billing_usage_events` on `(billing_period_start, idempotency_key)` and use-case fallback behavior that re-reads the same period snapshot when an event already exists.
 

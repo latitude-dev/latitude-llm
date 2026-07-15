@@ -12,6 +12,8 @@ export interface RecordUsageEventInput {
   readonly organizationId: OrganizationId
   readonly projectId: ProjectId
   readonly action: ChargeableAction
+  /** Overrides the flat `ACTION_CREDITS` price, e.g. cost-based generation billing. */
+  readonly credits?: number | undefined
   readonly idempotencyKey: string
   readonly planSlug: BillingUsagePeriod["planSlug"]
   readonly planSource: "override" | "subscription" | "free-fallback"
@@ -61,7 +63,7 @@ export const recordUsageEventUseCase = Effect.fn("billing.recordUsageEvent")(fun
 
   return yield* sqlClient.transaction(
     Effect.gen(function* () {
-      const credits = ACTION_CREDITS[input.action]
+      const credits = input.credits ?? ACTION_CREDITS[input.action]
       const now = new Date()
       const persistedIncludedCredits = persistedIncludedCreditsForPlan(input.planSlug, input.includedCredits)
 

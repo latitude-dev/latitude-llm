@@ -2090,6 +2090,9 @@ importers:
       '@domain/billing':
         specifier: workspace:*
         version: link:../../domain/billing
+      '@domain/models':
+        specifier: workspace:*
+        version: link:../../domain/models
       '@platform/ai-vercel':
         specifier: workspace:*
         version: link:../ai-vercel
