@@ -59,9 +59,9 @@ export const allSeeders: readonly Seeder[] = [
   // and the public Wrapped share URLs. All created "today" so they appear
   // in the backoffice list and form a single leaderboard cohort.
   ...wrappedReportSeeders,
-  // Bootstrap-only: two generatable QA custom behaviors on the seed project
-  // (LAT-752). Excluded from `contentSeeders` so the demo workflow never
-  // provisions them; their backing sessions + observations come from the
-  // ClickHouse `spans/custom-behavior-qa` seeder.
+  // Bootstrap-only: QA custom behaviors on the seed project. Excluded from
+  // `contentSeeders` so the demo workflow never provisions them; their backing
+  // sessions + observations come from the ClickHouse `spans/custom-behavior-qa`
+  // seeder.
   ...customBehaviorQaSeeders,
 ]

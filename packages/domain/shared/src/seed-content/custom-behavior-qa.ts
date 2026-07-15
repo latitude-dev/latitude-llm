@@ -1,7 +1,7 @@
 import type { FilterSet } from "../filter.ts"
 
 /**
- * Shared spec for the QA custom-behavior cohorts (LAT-752). Both the Postgres
+ * Shared spec for the QA custom-behavior cohorts. Both the Postgres
  * seeder (which writes the `custom_behaviors` rows) and the ClickHouse seeder
  * (which writes the backing sessions + taxonomy observations) read from this
  * single source so a behavior's `filterSet` always matches the cohort's

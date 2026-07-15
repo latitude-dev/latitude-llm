@@ -3,7 +3,7 @@ import { Effect } from "effect"
 import { customBehaviors } from "../../schema/custom-behaviors.ts"
 import type { SeedContext, Seeder } from "../types.ts"
 
-// Bootstrap-only QA fixture (LAT-752): two generatable custom behaviors on the
+// Bootstrap-only QA fixture: two generatable custom behaviors on the
 // seed project, one scoped by `user_id`, one by `service_names`. Their filter
 // sets match the cohorts the ClickHouse seeder injects into
 // `taxonomy_observations`, so both preview ≥15 observations and generate a

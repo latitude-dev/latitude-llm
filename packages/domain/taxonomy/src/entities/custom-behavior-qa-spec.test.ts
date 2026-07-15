@@ -13,7 +13,7 @@ import {
 const cohortSize = (cohort: (typeof CUSTOM_BEHAVIOR_QA_COHORT_LIST)[number]) =>
   cohort.subTopics.reduce((sum, topic) => sum + topic.sessionCount, 0)
 
-// The QA cohorts (LAT-752) drive both the seed and the acceptance checks, so
+// The QA cohorts drive both the seed and the acceptance checks, so
 // their filter sets must satisfy the same contract create/update enforce:
 // non-empty, and no `topics` (a scoped tree from topics would be circular).
 describe("custom-behavior QA cohort spec", () => {

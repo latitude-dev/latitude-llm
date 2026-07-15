@@ -227,7 +227,7 @@ export const buildCustomBehaviorQaFixture = (scope: SeedScope, nowMs: number): C
   return { spans, observations }
 }
 
-// Bootstrap-only QA fixture (LAT-752): injects the custom-behavior cohorts
+// Bootstrap-only QA fixture: injects the custom-behavior cohorts
 // (backing sessions + clustered taxonomy observations) on the seed project —
 // two above the ≥15 gardening gate and one under it (the waiting state). Kept
 // out of `allSeeders` so it never runs during runtime demo-project creation.
