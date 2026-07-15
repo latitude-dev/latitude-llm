@@ -67,6 +67,13 @@ export interface SpanRepositoryShape {
   // consistent across append-only and upsert-backed stores.
   insert(spans: readonly SpanDetail[]): Effect.Effect<void, RepositoryError, ChSqlClient>
 
+  /**
+   * Every span in a trace. The dynamic attribute maps
+   * (`attrString`/`attrInt`/`attrFloat`/`attrBool`/`resourceString`) come back
+   * empty for the same reason as `listBySessionId`: a trace's spans can each
+   * carry whole conversations or memory records in their attributes, so reading
+   * them here is a memory hazard — fetch a span's attributes via `findBySpanId`.
+   */
   listByTraceId(input: {
     readonly organizationId: OrganizationId
     readonly projectId: ProjectId
