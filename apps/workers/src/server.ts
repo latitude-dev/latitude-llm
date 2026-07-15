@@ -72,6 +72,7 @@ import { createProductFeedbackWorker } from "./workers/product-feedback.ts"
 import { createProjectsWorker } from "./workers/projects.ts"
 import { createSandboxesWorker } from "./workers/sandboxes.ts"
 import { createScoresWorker } from "./workers/scores.ts"
+import { createSessionEndWorker } from "./workers/session-end.ts"
 import { createShowcaseWorker } from "./workers/showcase.ts"
 import { createSignalsWorker } from "./workers/signals.ts"
 import { createSignalsGenerateSignalWorker } from "./workers/signals-generate-signal.ts"
@@ -229,6 +230,7 @@ const bootstrap = async () => {
     createAnnotationScoresWorker(ctx)
     createLiveEvaluationsWorker(ctx)
     createTraceEndWorker(ctx)
+    createSessionEndWorker(ctx)
     createSignalsMatchWorker(ctx)
     createSignalsPreviewWorker(ctx)
     createSignalsGenerateSignalWorker(ctx)

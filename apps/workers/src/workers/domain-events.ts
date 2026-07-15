@@ -109,8 +109,8 @@ export const createDomainEventsWorker = ({
               },
             ),
           ),
-          // signals:match is now published from the trace-end job itself ("trace ends → match
-          // signals"), so it runs on the settled trace after trace-end's own debounce.
+          // Session-level work (signals:match, session analysis) is published downstream via the
+          // trace-end → session-end chain, not here.
           // Not gated on `isSandbox`: first-trace detection is onboarding/marketing
           // telemetry, not LLM work. Outbound marketing/notification suppression for
           // sandbox orgs is AGE-113's concern (handled downstream), not this PR's.

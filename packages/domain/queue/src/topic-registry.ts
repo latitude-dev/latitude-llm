@@ -433,6 +433,21 @@ const _registry = {
     }
   }>(),
 
+  // Session-level dispatch: each settled trace-end enqueues this with a session-keyed dedupeKey and a
+  // debounce, so repeated trace-ends collapse to one firing once the session goes quiet. Carries the
+  // latest trace of the session (debounce replaces the pending payload) for the trace-scoped work it
+  // fans out (signals:match, session analysis).
+  "session-end": payloads<{
+    run: {
+      readonly organizationId: string
+      readonly projectId: string
+      readonly sessionId: string
+      readonly latestTraceId: string
+      readonly latestTraceStartTime: string
+      readonly isSandbox?: boolean
+    }
+  }>(),
+
   // The unified evaluation matching pipeline: runs a project's active evaluations against an
   // ingested trace (sampling/turn/filter selection) and fans out live-evaluations:execute jobs.
   // Replaces trace-end's evaluation fan-out for all signals. Never enqueued for sandbox traces.

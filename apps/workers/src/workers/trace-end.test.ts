@@ -1,5 +1,5 @@
-import type { WorkflowStarterShape } from "@domain/queue"
 import { createFakeQueuePublisher } from "@domain/queue/testing"
+import { SESSION_END_DEBOUNCE_MS } from "@domain/spans"
 import { setupTestClickHouse } from "@platform/testkit"
 import { Effect } from "effect"
 import { describe, expect, it } from "vitest"
@@ -22,26 +22,6 @@ const toMessageJson = (role: "user" | "assistant", content: string) =>
   JSON.stringify([{ role, parts: [{ type: "text", content }] }])
 
 const toSystemJson = (content: string) => JSON.stringify([{ type: "text", content }])
-
-const createFakeWorkflowStarter = () => {
-  const started: Array<{
-    readonly workflow: string
-    readonly input: unknown
-    readonly options: unknown
-    readonly mode: "start" | "signalWithStart"
-  }> = []
-  const workflowStarter: WorkflowStarterShape = {
-    start: (workflow, input, options) =>
-      Effect.sync(() => {
-        started.push({ workflow, input, options, mode: "start" })
-      }) as never,
-    signalWithStart: (workflow, input, options) =>
-      Effect.sync(() => {
-        started.push({ workflow, input, options, mode: "signalWithStart" })
-      }),
-  }
-  return { workflowStarter, started }
-}
 
 const makeTraceRow = (input?: {
   readonly traceId?: string
@@ -117,13 +97,11 @@ describe("createTraceEndWorker", () => {
   it("registers the trace-end run task", () => {
     const consumer = new TestQueueConsumer()
     const { publisher } = createFakeQueuePublisher()
-    const { workflowStarter } = createFakeWorkflowStarter()
 
     createTraceEndWorker({
       consumer,
       publisher,
       clickhouseClient: ch.client,
-      workflowStarter,
     })
 
     expect(consumer.getRegisteredTasks("trace-end")).toEqual(["run"])
@@ -133,13 +111,11 @@ describe("createTraceEndWorker", () => {
 describe("runTraceEndJob", () => {
   it("skips when the trace no longer exists", async () => {
     const { publisher, published } = createFakeQueuePublisher()
-    const { workflowStarter } = createFakeWorkflowStarter()
 
     const result = await Effect.runPromise(
       runTraceEndJob({
         publisher,
         clickhouseClient: ch.client,
-        workflowStarter,
       })({
         organizationId: ORGANIZATION_ID,
         projectId: PROJECT_ID,
@@ -157,13 +133,11 @@ describe("runTraceEndJob", () => {
 
   it("skips all LLM work for sandbox traces (before loading the trace)", async () => {
     const { publisher, published } = createFakeQueuePublisher()
-    const { workflowStarter, started } = createFakeWorkflowStarter()
 
     const result = await Effect.runPromise(
       runTraceEndJob({
         publisher,
         clickhouseClient: ch.client,
-        workflowStarter,
       })({
         organizationId: ORGANIZATION_ID,
         projectId: PROJECT_ID,
@@ -174,20 +148,17 @@ describe("runTraceEndJob", () => {
 
     expect(result).toEqual({ action: "skipped", reason: "sandbox", traceId: TRACE_ID })
     expect(published).toEqual([])
-    expect(started).toEqual([])
   })
 
-  it("enqueues deterministic flaggers, trace-search, signals match, and starts session analysis", async () => {
+  it("enqueues deterministic flaggers, trace-search, and session-end", async () => {
     await insertTraceRows([makeTraceRow()])
 
     const { publisher, published } = createFakeQueuePublisher()
-    const { workflowStarter, started } = createFakeWorkflowStarter()
 
     const result = await Effect.runPromise(
       runTraceEndJob({
         publisher,
         clickhouseClient: ch.client,
-        workflowStarter,
       })({
         organizationId: ORGANIZATION_ID,
         projectId: PROJECT_ID,
@@ -221,27 +192,6 @@ describe("runTraceEndJob", () => {
       ]),
     )
 
-    expect(started).toEqual([
-      {
-        workflow: "analyzeSessionWorkflow",
-        mode: "signalWithStart",
-        input: {
-          organizationId: ORGANIZATION_ID,
-          projectId: PROJECT_ID,
-          sessionId: SESSION_ID,
-          triggeringTraceId: TRACE_ID,
-          triggeringStartTime: TIMESTAMP.toISOString(),
-          reason: "trace_completed",
-          debounceMs: 5 * 60_000,
-        },
-        options: {
-          workflowId: `org:${ORGANIZATION_ID}:conversation-intelligence:analyzeSession:${PROJECT_ID}:${SESSION_ID}`,
-          signal: "traceCompleted",
-          signalArgs: [{ debounceMs: 5 * 60_000 }],
-        },
-      },
-    ])
-
     // Verify trace-search refresh task was published
     const traceSearchPublish = published.find((p) => p.queue === "trace-search")
     expect(traceSearchPublish?.task).toBe("refreshTrace")
@@ -251,17 +201,22 @@ describe("runTraceEndJob", () => {
       traceId: TRACE_ID,
     })
 
-    // trace-end now owns the signals:match publish ("trace ends → match signals")
-    const signalsMatchPublish = published.find((p) => p.queue === "signals")
-    expect(signalsMatchPublish?.task).toBe("match")
-    expect(signalsMatchPublish?.payload).toMatchObject({
+    // Session-level work (signals:match, session analysis) is handed to session-end, debounced per
+    // session and carrying the session's latest trace. trace-end no longer publishes signals:match.
+    expect(published.find((p) => p.queue === "signals")).toBeUndefined()
+    const sessionEndPublish = published.find((p) => p.queue === "session-end")
+    expect(sessionEndPublish?.task).toBe("run")
+    expect(sessionEndPublish?.payload).toMatchObject({
       organizationId: ORGANIZATION_ID,
       projectId: PROJECT_ID,
-      traceId: TRACE_ID,
-      reason: "ingest",
+      sessionId: SESSION_ID,
+      latestTraceId: TRACE_ID,
+      latestTraceStartTime: TIMESTAMP.toISOString(),
+      isSandbox: false,
     })
-    expect(signalsMatchPublish?.options).toMatchObject({
-      dedupeKey: `org:${ORGANIZATION_ID}:signals-match:${PROJECT_ID}:${TRACE_ID}`,
+    expect(sessionEndPublish?.options).toMatchObject({
+      dedupeKey: `org:${ORGANIZATION_ID}:session-end:${PROJECT_ID}:${SESSION_ID}`,
+      debounceMs: SESSION_END_DEBOUNCE_MS,
     })
   })
 })
@@ -281,7 +236,6 @@ describe("createRunHandler", () => {
     ])
 
     const { publisher } = createFakeQueuePublisher()
-    const { workflowStarter } = createFakeWorkflowStarter()
     const log = createMockLogger()
 
     await Effect.runPromise(
@@ -289,7 +243,6 @@ describe("createRunHandler", () => {
         log,
         publisher,
         clickhouseClient: ch.client,
-        workflowStarter,
       })({
         organizationId: ORGANIZATION_ID,
         projectId,
