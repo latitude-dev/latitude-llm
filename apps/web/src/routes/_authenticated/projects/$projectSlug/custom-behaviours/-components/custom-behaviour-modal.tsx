@@ -65,17 +65,20 @@ function PreviewStrip({ projectId, filterSet }: { readonly projectId: string; re
 export function CustomBehaviourModal({
   projectId,
   behaviour,
+  initialFilterSet,
   onClose,
 }: {
   readonly projectId: string
   /** Present → edit; null → create. */
   readonly behaviour: CustomBehaviorRecord | null
+  /** Seeds the create form's filters (e.g. copied from a Sessions view or saved search). */
+  readonly initialFilterSet?: FilterSet
   readonly onClose: () => void
 }) {
   const { toast } = useToast()
   const create = useCreateCustomBehavior(projectId)
   const update = useUpdateCustomBehavior(projectId)
-  const [filterSet, setFilterSet] = useState<FilterSet>(behaviour?.filterSet ?? {})
+  const [filterSet, setFilterSet] = useState<FilterSet>(behaviour?.filterSet ?? initialFilterSet ?? {})
   const hasFilters = customBehaviorFilterSetHasConditions(filterSet)
 
   const form = useForm({

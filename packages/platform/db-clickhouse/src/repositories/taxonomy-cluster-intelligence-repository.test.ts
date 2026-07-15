@@ -1,4 +1,4 @@
-import { type ChSqlClient, OrganizationId, ProjectId, TaxonomyClusterId } from "@domain/shared"
+import { type ChSqlClient, CustomBehaviorId, OrganizationId, ProjectId, TaxonomyClusterId } from "@domain/shared"
 import { TaxonomyClusterIntelligenceRepository } from "@domain/taxonomy"
 import { setupTestClickHouse } from "@platform/testkit"
 import { Effect } from "effect"
@@ -9,6 +9,9 @@ import { TaxonomyClusterIntelligenceRepositoryLive } from "./taxonomy-cluster-in
 const organizationId = OrganizationId("o".repeat(24))
 const projectId = ProjectId("p".repeat(24))
 const clusterId = TaxonomyClusterId("c".repeat(24))
+const customBehaviorId = CustomBehaviorId("b".repeat(24))
+const scopedClusterId = TaxonomyClusterId("s".repeat(24))
+const otherClusterId = TaxonomyClusterId("x".repeat(24))
 const analysisHash = "a".repeat(64)
 const ts = "2026-05-24 12:00:00.000000000"
 
@@ -73,6 +76,51 @@ const insertMomentLabel = (sessionId: string, kind: string, firstMessageIndex: n
         first_message_index: firstMessageIndex,
         last_message_index: firstMessageIndex,
         evidence: "",
+      },
+    ],
+    format: "JSONEachRow",
+  })
+
+// An observation whose GLOBAL assigned_cluster_id is deliberately NOT the
+// scoped cluster, so a scoped read that still finds it proves it resolved
+// membership from custom_behavior_assignments rather than assigned_cluster_id.
+const insertObservationAssignedElsewhere = (sessionId: string) =>
+  ch.client.insert({
+    table: "taxonomy_observations",
+    values: [
+      {
+        organization_id: organizationId as string,
+        project_id: projectId as string,
+        observation_id: `obs-${sessionId}`,
+        session_id: sessionId,
+        analysis_hash: analysisHash,
+        moment_id: `moment-${sessionId}`,
+        projection_method: "session_user_intent_embedding",
+        projection_hash: "d".repeat(64),
+        projection_metadata: JSON.stringify({ summary: `summary ${sessionId}` }),
+        embedding: [1, 0, 0],
+        assigned_cluster_id: otherClusterId as string,
+        assignment_confidence: 1,
+        assignment_method: "gardening_reassign",
+        start_time: ts,
+        end_time: ts,
+      },
+    ],
+    format: "JSONEachRow",
+  })
+
+const insertCustomBehaviorAssignment = (sessionId: string) =>
+  ch.client.insert({
+    table: "custom_behavior_assignments",
+    values: [
+      {
+        organization_id: organizationId as string,
+        project_id: projectId as string,
+        custom_behavior_id: customBehaviorId as string,
+        observation_id: `obs-${sessionId}`,
+        session_id: sessionId,
+        assigned_cluster_id: scopedClusterId as string,
+        start_time: ts,
       },
     ],
     format: "JSONEachRow",
@@ -177,5 +225,131 @@ describe("TaxonomyClusterIntelligenceRepository.listSessionTraceIds", () => {
     await insertAnalysis("any", [traceIdFor(1)])
 
     expect(await runList({ clusterIds: [] })).toEqual([])
+  })
+})
+
+describe("TaxonomyClusterIntelligenceRepository scoped custom-behavior reads", () => {
+  it("resolves membership from the assignment slice, not the global assigned_cluster_id", async () => {
+    await insertObservationAssignedElsewhere("scoped")
+    await insertAnalysis("scoped", [traceIdFor(7)])
+    await insertCustomBehaviorAssignment("scoped")
+
+    const scoped = await run(
+      Effect.gen(function* () {
+        const repo = yield* TaxonomyClusterIntelligenceRepository
+        return yield* repo.listSessionTraceIds({
+          organizationId,
+          projectId,
+          clusterIds: [scopedClusterId],
+          filter: "all",
+          limit: 100,
+          customBehaviorId,
+        })
+      }),
+    )
+    expect(scoped).toEqual([traceIdFor(7)])
+
+    // The same scoped cluster id resolves to nothing on the global path, because
+    // no observation carries it in assigned_cluster_id.
+    const global = await runList({ clusterIds: [scopedClusterId] })
+    expect(global).toEqual([])
+
+    // And the scoped aggregate reads the slice's sessions too (global would be 0).
+    const aggregate = await run(
+      Effect.gen(function* () {
+        const repo = yield* TaxonomyClusterIntelligenceRepository
+        return yield* repo.getClusterAggregate({
+          organizationId,
+          projectId,
+          clusterIds: [scopedClusterId],
+          sourceWindowStart: new Date("2026-05-01T00:00:00.000Z"),
+          sourceWindowEnd: new Date("2026-06-01T00:00:00.000Z"),
+          customBehaviorId,
+        })
+      }),
+    )
+    expect(aggregate.sourceSessionCount).toBe(1)
+  })
+})
+
+describe("TaxonomyClusterIntelligenceRepository.listClusterSessions", () => {
+  const listSessions = (overrides: {
+    clusterIds?: readonly TaxonomyClusterId[]
+    filter?: string
+    offset?: number
+    limit?: number
+    customBehaviorId?: CustomBehaviorId
+  }) =>
+    run(
+      Effect.gen(function* () {
+        const repo = yield* TaxonomyClusterIntelligenceRepository
+        return yield* repo.listClusterSessions({
+          organizationId,
+          projectId,
+          clusterIds: overrides.clusterIds ?? [clusterId],
+          filter: overrides.filter ?? "all",
+          offset: overrides.offset ?? 0,
+          limit: overrides.limit ?? 50,
+          ...(overrides.customBehaviorId ? { customBehaviorId: overrides.customBehaviorId } : {}),
+        })
+      }),
+    )
+
+  it("returns filtered sessions with a histogram and paginates", async () => {
+    await insertObservation("escalated")
+    await insertAnalysis("escalated", [traceIdFor(1)])
+    await insertMomentLabel("escalated", "escalation", 3)
+    await insertObservation("resolved")
+    await insertAnalysis("resolved", [traceIdFor(2)])
+    await insertMomentLabel("resolved", "resolution", 1)
+
+    const all = await listSessions({})
+    expect([...all.sessions.map((session) => session.sessionId)].sort()).toEqual(["escalated", "resolved"])
+    expect(all.sessions.every((session) => session.startTime instanceof Date)).toBe(true)
+    expect(all.histogram.reduce((sum, bucket) => sum + bucket.count, 0)).toBe(2)
+    expect(all.hasMore).toBe(false)
+
+    expect((await listSessions({ filter: "escalation" })).sessions.map((session) => session.sessionId)).toEqual([
+      "escalated",
+    ])
+
+    const page = await listSessions({ limit: 1 })
+    expect(page.sessions).toHaveLength(1)
+    expect(page.hasMore).toBe(true)
+    expect(page.nextOffset).toBe(1)
+  })
+
+  it("reads the scoped slice when customBehaviorId is set", async () => {
+    await insertObservationAssignedElsewhere("scoped")
+    await insertAnalysis("scoped", [traceIdFor(9)])
+    await insertCustomBehaviorAssignment("scoped")
+
+    const scoped = await listSessions({ clusterIds: [scopedClusterId], customBehaviorId })
+    expect(scoped.sessions.map((session) => session.sessionId)).toEqual(["scoped"])
+
+    // The same scoped cluster id resolves to nothing on the global path.
+    expect((await listSessions({ clusterIds: [scopedClusterId] })).sessions).toEqual([])
+  })
+})
+
+describe("TaxonomyClusterIntelligenceRepository.getClusterTrajectory", () => {
+  it("buckets moment-metric counts by turn", async () => {
+    await insertObservation("s1")
+    await insertAnalysis("s1", [traceIdFor(1)])
+    await insertMomentLabel("s1", "escalation", 3)
+    await insertObservation("s2")
+    await insertAnalysis("s2", [traceIdFor(2)])
+    await insertMomentLabel("s2", "resolution", 5)
+
+    const rows = await run(
+      Effect.gen(function* () {
+        const repo = yield* TaxonomyClusterIntelligenceRepository
+        return yield* repo.getClusterTrajectory({ organizationId, projectId, clusterIds: [clusterId], axis: "turn" })
+      }),
+    )
+    const byBucket = Object.fromEntries(rows.map((row) => [row.bucket, row]))
+    expect(byBucket["3"]?.escalation).toBe(1)
+    expect(byBucket["5"]?.resolution).toBe(1)
+    expect(rows.reduce((sum, row) => sum + row.frequency, 0)).toBe(2)
   })
 })

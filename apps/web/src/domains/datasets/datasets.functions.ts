@@ -28,6 +28,7 @@ import {
   updateRow,
 } from "@domain/datasets"
 import {
+  CustomBehaviorId,
   DatasetId,
   DatasetRowId,
   DatasetVersionId,
@@ -788,6 +789,9 @@ const clusterSourceSchema = z.object({
     .optional(),
   timeFromIso: z.string().optional(),
   timeToIso: z.string().optional(),
+  // Present → resolve sessions from the behavior's scoped assignment slice
+  // instead of the global taxonomy subtree.
+  customBehaviorId: z.string().optional(),
 })
 
 export type ClusterSource = z.infer<typeof clusterSourceSchema>
@@ -814,6 +818,7 @@ function resolveClusterTraceIds(
       ...(cluster.momentRange ? { momentRange: cluster.momentRange } : {}),
       ...(cluster.timeFromIso ? { startTimeFrom: new Date(cluster.timeFromIso) } : {}),
       ...(cluster.timeToIso ? { startTimeTo: new Date(cluster.timeToIso) } : {}),
+      ...(cluster.customBehaviorId ? { customBehaviorId: CustomBehaviorId(cluster.customBehaviorId) } : {}),
       limit: MAX_TRACES_PER_DATASET_IMPORT + 1,
     })
     if (selection.mode === "all") return all

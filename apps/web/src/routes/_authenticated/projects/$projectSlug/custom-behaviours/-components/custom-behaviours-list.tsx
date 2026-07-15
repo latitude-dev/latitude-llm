@@ -19,13 +19,15 @@ import {
   useToast,
 } from "@repo/ui"
 import { relativeTime } from "@repo/utils"
-import { Loader2, PencilIcon, PlusIcon, SlidersHorizontalIcon, Trash2 } from "lucide-react"
+import { Link } from "@tanstack/react-router"
+import { Loader2, PencilIcon, PlusIcon, RefreshCwIcon, SlidersHorizontalIcon, SparklesIcon, Trash2 } from "lucide-react"
 import { useState } from "react"
 import { summarizeFilterSet } from "../../../../../../components/filters-builder/filter-summary.ts"
 import {
   useCustomBehaviorPreview,
   useCustomBehaviorsList,
   useDeleteCustomBehavior,
+  useGenerateCustomBehavior,
 } from "../../../../../../domains/taxonomy/custom-behaviors.collection.ts"
 import type { CustomBehaviorRecord } from "../../../../../../domains/taxonomy/custom-behaviors.functions.ts"
 import { ListingLayout as Layout } from "../../../../../../layouts/ListingLayout/index.tsx"
@@ -73,20 +75,43 @@ function FilterSummaryCell({ filterSet }: { readonly filterSet: FilterSet }) {
 
 function CustomBehaviourRow({
   projectId,
+  projectSlug,
   behaviour,
   onEdit,
   onDelete,
 }: {
   readonly projectId: string
+  readonly projectSlug: string
   readonly behaviour: CustomBehaviorRecord
   readonly onEdit: (behaviour: CustomBehaviorRecord) => void
   readonly onDelete: (behaviour: CustomBehaviorRecord) => void
 }) {
   const status = STATUS_META[behaviour.status]
+  const generate = useGenerateCustomBehavior(projectId)
+  const { toast } = useToast()
+  const isGenerating = behaviour.status === "generating"
+  const neverGenerated = behaviour.status === "pending"
+
+  const runGenerate = async () => {
+    try {
+      await generate.mutateAsync(behaviour.id)
+      toast({ description: "Generation started. The tree updates when it completes." })
+    } catch (error) {
+      toast({ variant: "destructive", description: toUserMessage(error) })
+    }
+  }
+
   return (
     <TableRow verticalPadding hoverable={false}>
       <TableCell>
-        <Text.H5>{behaviour.name}</Text.H5>
+        <Link
+          to="/projects/$projectSlug/custom-behaviours/$behaviourSlug"
+          params={{ projectSlug, behaviourSlug: behaviour.slug }}
+          aria-label={`Open the ${behaviour.name} behavior tree`}
+          className="hover:underline"
+        >
+          <Text.H5>{behaviour.name}</Text.H5>
+        </Link>
       </TableCell>
       <TableCell>
         <Badge variant={status.variant}>{status.label}</Badge>
@@ -104,6 +129,26 @@ function CustomBehaviourRow({
       </TableCell>
       <TableCell align="right">
         <div className="inline-flex flex-row items-center gap-1">
+          <Tooltip
+            asChild
+            trigger={
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={() => void runGenerate()}
+                disabled={isGenerating || generate.isPending}
+                aria-label={neverGenerated ? "Generate custom behavior" : "Regenerate custom behavior"}
+              >
+                <Icon
+                  icon={isGenerating || generate.isPending ? Loader2 : neverGenerated ? SparklesIcon : RefreshCwIcon}
+                  size="sm"
+                  className={isGenerating || generate.isPending ? "animate-spin" : ""}
+                />
+              </Button>
+            }
+          >
+            {isGenerating ? "Generating…" : neverGenerated ? "Generate" : "Regenerate"}
+          </Tooltip>
           <Tooltip
             asChild
             trigger={
@@ -135,23 +180,36 @@ function CustomBehaviourRow({
   )
 }
 
-export function CustomBehavioursList({ projectId }: { readonly projectId: string }) {
+export function CustomBehavioursList({
+  projectId,
+  projectSlug,
+  initialCreateFilterSet,
+}: {
+  readonly projectId: string
+  readonly projectSlug: string
+  /** When present, the create modal opens on mount with these filters prefilled
+   * (topics already stripped) — set by the "Create custom behavior" entry points. */
+  readonly initialCreateFilterSet?: FilterSet
+}) {
   const { toast } = useToast()
   const { data: behaviours, isLoading } = useCustomBehaviorsList(projectId)
   const del = useDeleteCustomBehavior(projectId)
-  const [modalOpen, setModalOpen] = useState(false)
+  const [modalOpen, setModalOpen] = useState(Boolean(initialCreateFilterSet))
   const [editTarget, setEditTarget] = useState<CustomBehaviorRecord | null>(null)
   const [deleteTarget, setDeleteTarget] = useState<CustomBehaviorRecord | null>(null)
+  const [prefillFilterSet, setPrefillFilterSet] = useState<FilterSet | undefined>(initialCreateFilterSet)
 
   const sorted = [...behaviours].sort((a, b) => (a.createdAt < b.createdAt ? 1 : a.createdAt > b.createdAt ? -1 : 0))
   const atCap = behaviours.length >= MAX_CUSTOM_BEHAVIORS_PER_PROJECT
 
   const openCreate = () => {
     setEditTarget(null)
+    setPrefillFilterSet(undefined)
     setModalOpen(true)
   }
   const openEdit = (behaviour: CustomBehaviorRecord) => {
     setEditTarget(behaviour)
+    setPrefillFilterSet(undefined)
     setModalOpen(true)
   }
 
@@ -228,6 +286,7 @@ export function CustomBehavioursList({ projectId }: { readonly projectId: string
                   <CustomBehaviourRow
                     key={behaviour.id}
                     projectId={projectId}
+                    projectSlug={projectSlug}
                     behaviour={behaviour}
                     onEdit={openEdit}
                     onDelete={setDeleteTarget}
@@ -243,7 +302,11 @@ export function CustomBehavioursList({ projectId }: { readonly projectId: string
             key={editTarget?.id ?? "new"}
             projectId={projectId}
             behaviour={editTarget}
-            onClose={() => setModalOpen(false)}
+            {...(prefillFilterSet ? { initialFilterSet: prefillFilterSet } : {})}
+            onClose={() => {
+              setModalOpen(false)
+              setPrefillFilterSet(undefined)
+            }}
           />
         ) : null}
 

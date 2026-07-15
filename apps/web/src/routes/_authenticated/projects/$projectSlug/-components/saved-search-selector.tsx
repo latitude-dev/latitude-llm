@@ -1,3 +1,4 @@
+import { stripCustomBehaviorExcludedFields } from "@domain/taxonomy"
 import {
   Button,
   CloseTrigger,
@@ -22,10 +23,12 @@ import {
   FlaskConicalIcon,
   PencilIcon,
   SearchIcon,
+  SlidersHorizontalIcon,
   Trash2Icon,
 } from "lucide-react"
 import { useMemo, useState } from "react"
 import { useCreateExperimentFromSearch } from "../../../../../domains/experiments/experiments.collection.ts"
+import { useFeatureFlags } from "../../../../../domains/feature-flags/feature-flags.collection.ts"
 import { savedSearchMonitorTarget } from "../../../../../domains/monitors/monitor-target.ts"
 import {
   useDeleteSavedSearch,
@@ -36,6 +39,7 @@ import { toUserMessage } from "../../../../../lib/errors.ts"
 import { targetAlertDraft } from "../monitors/-components/alert-form-helpers.ts"
 import { MonitorCreateModal } from "../monitors/-components/monitor-create-modal.tsx"
 import { SaveSearchModal } from "./save-search-modal.tsx"
+import { serializeFilters } from "./trace-page-state.ts"
 
 /**
  * Dropdown listing the project's saved searches with a filter, per-row actions,
@@ -60,6 +64,9 @@ export function SavedSearchSelector({
   readonly onSaveCurrent: () => void
   readonly canSaveCurrent: boolean
 }) {
+  const navigate = useNavigate()
+  const featureFlags = useFeatureFlags()
+  const customBehaviorsEnabled = featureFlags.has("customBehaviors")
   const [open, setOpen] = useState(false)
   const [filter, setFilter] = useState("")
   const [rowToDelete, setRowToDelete] = useState<SavedSearchRecord | null>(null)
@@ -68,6 +75,18 @@ export function SavedSearchSelector({
   const [rowToCompare, setRowToCompare] = useState<SavedSearchRecord | null>(null)
 
   const { data: savedSearches } = useSavedSearchesList(projectId)
+
+  // Per spec, a custom behavior seeded from a saved search copies its filterSet
+  // only (never the semantic query), with the excluded `topics` field stripped.
+  const createCustomBehaviorFromSavedSearch = (record: SavedSearchRecord) => {
+    const seed = stripCustomBehaviorExcludedFields(record.filterSet)
+    setOpen(false)
+    navigate({
+      to: "/projects/$projectSlug/custom-behaviours",
+      params: { projectSlug },
+      search: { create: serializeFilters(seed) },
+    })
+  }
 
   const selected = useMemo(
     () => savedSearches.find((search) => search.slug === selectedSlug) ?? null,
@@ -170,6 +189,24 @@ export function SavedSearchSelector({
                     <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center opacity-0 transition-opacity group-hover/row:pointer-events-auto group-hover/row:opacity-100 focus-within:pointer-events-auto focus-within:opacity-100">
                       <div aria-hidden className="h-full w-10 bg-gradient-to-l from-accent to-transparent" />
                       <div className="flex h-full items-center gap-0.5 rounded-r-md bg-accent pr-1">
+                        {customBehaviorsEnabled &&
+                        Object.keys(stripCustomBehaviorExcludedFields(record.filterSet)).length > 0 ? (
+                          <Tooltip
+                            asChild
+                            trigger={
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                aria-label={`Create a custom behavior from saved search ${record.name}`}
+                                onClick={() => createCustomBehaviorFromSavedSearch(record)}
+                              >
+                                <Icon icon={SlidersHorizontalIcon} size="sm" color="foregroundMuted" />
+                              </Button>
+                            }
+                          >
+                            Create custom behavior
+                          </Tooltip>
+                        ) : null}
                         <Tooltip
                           asChild
                           trigger={
