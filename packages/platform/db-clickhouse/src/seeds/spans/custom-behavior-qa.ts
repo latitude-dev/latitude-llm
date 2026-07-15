@@ -6,8 +6,8 @@ import {
 } from "@domain/shared/seed-content/custom-behavior-qa"
 import type { SeedScope } from "@domain/shared/seeding"
 import {
-  CUSTOM_BEHAVIOR_LOOKBACK_DAYS,
   normalizeTaxonomyEmbedding,
+  TAXONOMY_NOISE_LOOKBACK_DAYS,
   TAXONOMY_OBSERVATION_RETENTION_DAYS,
   TaxonomyProjectionMethod,
 } from "@domain/taxonomy"
@@ -18,8 +18,11 @@ import type { Seeder } from "../types.ts"
 import type { SpanRow } from "./span-builders.ts"
 
 const DAY_MS = 24 * 60 * 60 * 1000
-/** Sessions span the last week so the day-stratified sample sees several days. */
-const LOOKBACK_SPREAD_DAYS = 7
+// The shared global gardening sample window (the window the divisive build
+// day-stratifies over). Custom-behavior gardening samples over the same window,
+// so the seed anchors observation recency to it rather than a custom-specific
+// constant.
+const GARDENING_SAMPLE_WINDOW_DAYS = TAXONOMY_NOISE_LOOKBACK_DAYS
 /** Small isotropic jitter around each centroid — tight enough to stay one cluster per sub-topic. */
 const JITTER_SCALE = 0.15
 
@@ -117,7 +120,8 @@ const buildCohortRows = (cohort: CustomBehaviorQaCohort, scope: SeedScope, nowMs
 
     for (let member = 0; member < subTopic.sessionCount; member++) {
       const memberKey = `${cohort.idKey}:${subTopic.key}:${member}`
-      const daysAgo = sessionIndex % LOOKBACK_SPREAD_DAYS
+      // Spread sessions across the sample window so day-stratified sampling sees several days.
+      const daysAgo = sessionIndex % GARDENING_SAMPLE_WINDOW_DAYS
       const start = new Date(nowMs - daysAgo * DAY_MS - (sessionIndex % 6) * 60 * 60 * 1000)
       const traceId = scope.traceHex(cohort.idKey, sessionIndex)
       const spanId = scope.spanHex(cohort.idKey, sessionIndex)
@@ -214,7 +218,7 @@ const buildCohortRows = (cohort: CustomBehaviorQaCohort, scope: SeedScope, nowMs
  * Build the full QA fixture (every cohort). Pure — the seeder inserts the
  * result; tests exercise the repository queries against it directly.
  * `nowMs` anchors recency to wall-clock time so every observation lands
- * inside the `CUSTOM_BEHAVIOR_LOOKBACK_DAYS` window at generation time.
+ * inside the gardening sample window at generation time.
  */
 export const buildCustomBehaviorQaFixture = (scope: SeedScope, nowMs: number): CustomBehaviorQaFixture => {
   const spans: SpanRow[] = []
@@ -236,13 +240,13 @@ export const customBehaviorQaSeeder: Seeder = {
   run: (ctx) =>
     Effect.gen(function* () {
       const nowMs = Date.now()
-      const since = new Date(nowMs - CUSTOM_BEHAVIOR_LOOKBACK_DAYS * DAY_MS)
+      const since = new Date(nowMs - GARDENING_SAMPLE_WINDOW_DAYS * DAY_MS)
       const sentinelObservationId = ctx.scope.cuid("custom-behavior-qa-a:obs:a-order-status:0")
       // Recency-aware sentinel: skip only when the first fixture observation is
-      // present AND still inside the lookback window. A fixture seeded more than
-      // CUSTOM_BEHAVIOR_LOOKBACK_DAYS ago is stale — reseed so its observations
-      // land back inside the window (the re-inserted ids collapse to the fresh
-      // rows under `taxonomy_observations FINAL` at query time).
+      // present AND still inside the sample window. A fixture seeded more than
+      // the window ago is stale — reseed so its observations land back inside
+      // the window (the re-inserted ids collapse to the fresh rows under
+      // `taxonomy_observations FINAL` at query time).
       const freshFixturePresent = yield* isSentinelPresent(
         ctx.client,
         "taxonomy_observations",

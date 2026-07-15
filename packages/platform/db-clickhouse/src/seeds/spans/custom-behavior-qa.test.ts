@@ -6,8 +6,8 @@ import {
 } from "@domain/shared/seed-content/custom-behavior-qa"
 import { bootstrapSeedScope } from "@domain/shared/seeding"
 import {
-  CUSTOM_BEHAVIOR_LOOKBACK_DAYS,
   TAXONOMY_GARDENING_MIN_OBSERVATIONS,
+  TAXONOMY_NOISE_LOOKBACK_DAYS,
   TaxonomyObservationRepository,
 } from "@domain/taxonomy"
 import { setupTestClickHouse } from "@platform/testkit"
@@ -22,7 +22,7 @@ const ch = setupTestClickHouse()
 const organizationId = bootstrapSeedScope.organizationId as OrganizationId
 const projectId = bootstrapSeedScope.projectId as ProjectId
 const NOW_MS = Date.parse("2026-07-14T12:00:00.000Z")
-const SINCE = new Date(NOW_MS - CUSTOM_BEHAVIOR_LOOKBACK_DAYS * 24 * 60 * 60 * 1000)
+const SINCE = new Date(NOW_MS - TAXONOMY_NOISE_LOOKBACK_DAYS * 24 * 60 * 60 * 1000)
 
 const cohortSize = (cohort: (typeof CUSTOM_BEHAVIOR_QA_COHORTS)["a"]) =>
   cohort.subTopics.reduce((sum, topic) => sum + topic.sessionCount, 0)
