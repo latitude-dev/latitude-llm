@@ -53,8 +53,6 @@ import {
   resolveTaxonomyLineage,
   seedFromProjectId,
 } from "./build-hierarchical-taxonomy.ts"
-import { deprecateCustomBehaviorTreeUseCase } from "./deprecate-custom-behavior-tree.ts"
-
 export interface BuildCustomBehaviorTaxonomyInput {
   readonly organizationId: OrganizationId
   readonly projectId: ProjectId
@@ -83,6 +81,7 @@ interface PersistedLeafMembers {
 
 interface MaterializedScopedClusters {
   readonly bornLeaves: readonly PersistedLeafMembers[]
+  readonly bornClusterIds: readonly TaxonomyClusterId[]
   readonly clustersBorn: number
   readonly clustersContinued: number
   readonly maxDepthReached: number
@@ -122,6 +121,7 @@ const materializeScopedClusters = (params: {
     const orderedDescriptors = [...descriptors].sort((a, b) => a.depth - b.depth)
     const pathByTempId = new Map<string, string>()
     const bornLeaves: PersistedLeafMembers[] = []
+    const bornClusterIds: TaxonomyClusterId[] = []
     let maxDepthReached = 0
     let clustersBorn = 0
     let clustersContinued = 0
@@ -164,13 +164,16 @@ const materializeScopedClusters = (params: {
       yield* clustersRepo.save(cluster)
       if (node.depth > maxDepthReached) maxDepthReached = node.depth
       if (old) clustersContinued++
-      else clustersBorn++
+      else {
+        clustersBorn++
+        bornClusterIds.push(cluster.id)
+      }
       if (node.isLeaf) {
         bornLeaves.push({ clusterId: cluster.id, observationIndices: node.memberIndices, centroid: node.centroid })
       }
     }
 
-    return { bornLeaves, clustersBorn, clustersContinued, maxDepthReached } satisfies MaterializedScopedClusters
+    return { bornLeaves, bornClusterIds, clustersBorn, clustersContinued, maxDepthReached } satisfies MaterializedScopedClusters
   })
 
 const buildScopedAssignments = (params: {
@@ -230,11 +233,13 @@ export const buildCustomBehaviorTaxonomyUseCase = (input: BuildCustomBehaviorTax
     const lineage = resolveTaxonomyLineage({ descriptors, previouslyActive })
 
     // The persist phase writes clusters active up front and upserts assignments.
-    // If it fails partway (and Temporal exhausts its retries), deprecate the
-    // scoped tree we were building so a terminal failure can't leave a half-built
-    // tree active and polluting the next run's lineage match. Best-effort so it
-    // never masks the original error; scoped to the persist phase so a failure
-    // before any write (sampling, tree build) leaves the prior tree intact.
+    // If it fails partway (and Temporal exhausts its retries), deprecate only
+    // clusters born in this pass so a terminal failure can't leave a half-built
+    // tree active and polluting the next run's lineage match. Continued clusters
+    // and any prior tree left untouched stay serving. Best-effort so it never
+    // masks the original error; scoped to the persist phase so a failure before
+    // any write (sampling, tree build) leaves the prior tree intact.
+    let bornClusterIdsForCompensation: readonly TaxonomyClusterId[] = []
     const { clustersBorn, clustersContinued, maxDepthReached, leavesAssigned } = yield* Effect.gen(function* () {
       const materialized = yield* materializeScopedClusters({
         input,
@@ -245,6 +250,7 @@ export const buildCustomBehaviorTaxonomyUseCase = (input: BuildCustomBehaviorTax
         normalizedEmbeddings,
         lineage,
       })
+      bornClusterIdsForCompensation = materialized.bornClusterIds
       const assignments = buildScopedAssignments({
         input,
         now,
@@ -255,11 +261,10 @@ export const buildCustomBehaviorTaxonomyUseCase = (input: BuildCustomBehaviorTax
       return { ...materialized, leavesAssigned: assignments.length }
     }).pipe(
       Effect.onError(() =>
-        deprecateCustomBehaviorTreeUseCase({
-          projectId: input.projectId,
-          customBehaviorId: input.customBehaviorId,
-          dimension,
-          now,
+        Effect.gen(function* () {
+          for (const clusterId of bornClusterIdsForCompensation) {
+            yield* clustersRepo.markDeprecated({ clusterId, timestamp: now })
+          }
         }).pipe(Effect.ignore),
       ),
     )

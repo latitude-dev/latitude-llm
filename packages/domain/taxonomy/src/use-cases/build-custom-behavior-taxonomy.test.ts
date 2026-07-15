@@ -215,4 +215,25 @@ describe("buildCustomBehaviorTaxonomyUseCase", () => {
     expect(persisted.length).toBeGreaterThan(0)
     expect(persisted.every((cluster) => cluster.state === "deprecated")).toBe(true)
   })
+
+  it("leaves the prior scoped tree active when persistence fails on regeneration", async () => {
+    const old = makeCluster({
+      id: "a".repeat(24) as TaxonomyClusterId,
+      centroid: centroidFrom(E1, new Date("2026-01-01T00:00:00.000Z")),
+    })
+    const now = new Date("2026-05-24T12:00:00.000Z")
+    const observations = Array.from({ length: 20 }, (_, index) => makeObservation(index, E2, now))
+    const clusters = createFakeTaxonomyClusterRepository([old])
+    const assignments = createFakeCustomBehaviorAssignmentRepository(
+      {},
+      { upsertMany: () => Effect.die(new Error("assignment upsert failed")) },
+    )
+
+    await expect(runBuild(observations, clusters, assignments, now)).rejects.toThrow()
+
+    expect(clusters.clusters.get(old.id)?.state).toBe("active")
+    const born = [...clusters.clusters.values()].filter((cluster) => cluster.id !== old.id)
+    expect(born.length).toBeGreaterThan(0)
+    expect(born.every((cluster) => cluster.state === "deprecated")).toBe(true)
+  })
 })
