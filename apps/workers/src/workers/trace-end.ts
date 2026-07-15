@@ -125,7 +125,7 @@ export const runTraceEndJob =
             traceId: payload.traceId,
           },
           {
-            dedupeKey: `memory-projection:${payload.traceId}`,
+            dedupeKey: `org:${payload.organizationId}:memory-projection:${payload.projectId}:${payload.traceId}`,
           },
         )
         .pipe(
