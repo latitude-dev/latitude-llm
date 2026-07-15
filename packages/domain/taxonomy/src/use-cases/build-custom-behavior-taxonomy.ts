@@ -173,7 +173,13 @@ const materializeScopedClusters = (params: {
       }
     }
 
-    return { bornLeaves, bornClusterIds, clustersBorn, clustersContinued, maxDepthReached } satisfies MaterializedScopedClusters
+    return {
+      bornLeaves,
+      bornClusterIds,
+      clustersBorn,
+      clustersContinued,
+      maxDepthReached,
+    } satisfies MaterializedScopedClusters
   })
 
 const buildScopedAssignments = (params: {
