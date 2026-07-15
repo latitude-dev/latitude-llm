@@ -1,5 +1,6 @@
 import { CodeBlock, DetailSection, DetailSummary, Text } from "@repo/ui"
-import { BracesIcon, DatabaseIcon } from "lucide-react"
+import { DatabaseIcon } from "lucide-react"
+import type { ReactNode } from "react"
 import type { SpanDetailRecord } from "../../../../../../../../../domains/spans/spans.functions.ts"
 import { isMemoryOperation } from "../memory-operations.ts"
 import { MemoryRecordsView } from "./memory-records.tsx"
@@ -20,6 +21,15 @@ export function isMemoryOperationSpan(span: SpanDetailRecord): boolean {
   )
 }
 
+function Subsection({ label, children }: { readonly label: string; readonly children: ReactNode }) {
+  return (
+    <div className="flex flex-col gap-1">
+      <Text.H6 color="foregroundMuted">{label}</Text.H6>
+      {children}
+    </div>
+  )
+}
+
 export function MemoryOperationSection({ span }: { readonly span: SpanDetailRecord }) {
   const storeId = span.attrString[STORE_ID_ATTR]
   const recordId = span.attrString[RECORD_ID_ATTR]
@@ -28,45 +38,41 @@ export function MemoryOperationSection({ span }: { readonly span: SpanDetailReco
   const recordsRaw = span.attrString[RECORDS_ATTR] ?? ""
   const records = parseMemoryRecords(recordsRaw)
   const isSearch = span.operation === "search_memory"
+  const recordsLabel = isSearch ? "Results" : "Records"
 
-  const items = [
-    ...(storeId ? [{ label: "Store", value: storeId, copyable: true }] : []),
-    ...(recordId ? [{ label: "Record", value: recordId, copyable: true }] : []),
-    ...(recordCount !== undefined ? [{ label: "Records", value: String(recordCount) }] : []),
-  ]
-
-  // For a search with rendered records the query heads the records view instead, so it isn't shown twice.
-  const showQueryHere = !!queryText && !(records && isSearch)
+  // Store and count ride the records header; the identity fields only surface as
+  // summary fields when there's no records table to carry them.
+  const items = records
+    ? []
+    : [
+        ...(storeId ? [{ label: "Store", value: storeId, copyable: true }] : []),
+        ...(recordId ? [{ label: "Record", value: recordId, copyable: true }] : []),
+        ...(recordCount !== undefined ? [{ label: "Records", value: String(recordCount) }] : []),
+      ]
 
   return (
-    <>
-      {(items.length > 0 || showQueryHere) && (
-        <DetailSection icon={<DatabaseIcon className="w-4 h-4" />} label="Memory">
-          <div className="flex flex-col gap-2">
-            {items.length > 0 && <DetailSummary items={items} />}
-            {showQueryHere && (
-              <div className="flex flex-col gap-1">
-                <Text.H6 color="foregroundMuted">Query</Text.H6>
-                <CodeBlock value={queryText} className="bg-secondary" />
-              </div>
-            )}
-          </div>
-        </DetailSection>
-      )}
-
-      <DetailSection
-        icon={<BracesIcon className="w-4 h-4" />}
-        label="Records"
-        contentClassName="max-h-none overflow-visible pl-0"
-      >
-        {records ? (
-          <MemoryRecordsView records={records} isSearch={isSearch} {...(queryText ? { queryText } : {})} />
-        ) : recordsRaw ? (
-          <CodeBlock value={recordsRaw} className="bg-secondary" />
-        ) : (
-          <Text.H6 color="foregroundMuted">Content not captured</Text.H6>
+    <DetailSection
+      icon={<DatabaseIcon className="w-4 h-4" />}
+      label="Memory"
+      contentClassName="max-h-none overflow-visible"
+    >
+      <div className="flex flex-col gap-3">
+        {items.length > 0 && <DetailSummary items={items} />}
+        {queryText && (
+          <Subsection label="Query">
+            <CodeBlock value={queryText} className="bg-secondary" />
+          </Subsection>
         )}
-      </DetailSection>
-    </>
+        <Subsection label={recordsLabel}>
+          {records ? (
+            <MemoryRecordsView records={records} isSearch={isSearch} {...(storeId ? { storeId } : {})} />
+          ) : recordsRaw ? (
+            <CodeBlock value={recordsRaw} className="bg-secondary" />
+          ) : (
+            <Text.H6 color="foregroundMuted">Content not captured</Text.H6>
+          )}
+        </Subsection>
+      </div>
+    </DetailSection>
   )
 }

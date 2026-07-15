@@ -1,5 +1,5 @@
 import { Badge, CodeBlock, Icon, MasterDetail, type MasterDetailItem, Text } from "@repo/ui"
-import { SearchIcon } from "lucide-react"
+import { DatabaseIcon } from "lucide-react"
 import { JsonBlock } from "./helpers.tsx"
 import type { MemoryRecord } from "./memory-records-parse.ts"
 
@@ -11,14 +11,16 @@ function RecordDetail({ record }: { readonly record: MemoryRecord }) {
   const hasMetadata = !!record.metadata && Object.keys(record.metadata).length > 0
 
   return (
-    <div className="flex flex-col gap-3">
-      {typeof record.content === "string" ? (
-        <CodeBlock value={record.content} className="bg-secondary" />
-      ) : (
-        <JsonBlock value={record.content} />
-      )}
+    <div className="flex h-full flex-col">
+      <div className="flex min-h-0 flex-1 flex-col">
+        {typeof record.content === "string" ? (
+          <CodeBlock value={record.content} fillHeight className="h-full rounded-none bg-secondary" />
+        ) : (
+          <JsonBlock value={record.content} fillHeight className="h-full rounded-none bg-secondary" />
+        )}
+      </div>
       {(record.score != null || hasMetadata) && (
-        <div className="flex flex-col gap-2">
+        <div className="flex shrink-0 flex-col gap-2 border-t border-border p-3">
           {record.score != null && (
             <div className="flex flex-row items-center gap-2">
               <Text.H6 color="foregroundMuted">Score</Text.H6>
@@ -37,13 +39,18 @@ function RecordDetail({ record }: { readonly record: MemoryRecord }) {
   )
 }
 
-function SearchQueryHeader({ query }: { readonly query: string }) {
+function RecordsHeader({ storeId, count }: { readonly storeId?: string; readonly count: number }) {
   return (
     <div className="flex flex-row items-center gap-2 bg-secondary px-3 py-2">
-      <Icon icon={SearchIcon} size="xs" color="foregroundMuted" />
-      <Text.H6 color="foregroundMuted" ellipsis noWrap>
-        {query}
-      </Text.H6>
+      <Icon icon={DatabaseIcon} size="xs" color="foregroundMuted" />
+      {storeId ? (
+        <div className="flex min-w-0 flex-1">
+          <Text.H6 color="foregroundMuted" ellipsis noWrap>
+            {storeId}
+          </Text.H6>
+        </div>
+      ) : null}
+      <Text.H6 color="foregroundMuted" noWrap>{`(${count})`}</Text.H6>
     </div>
   )
 }
@@ -51,11 +58,11 @@ function SearchQueryHeader({ query }: { readonly query: string }) {
 export function MemoryRecordsView({
   records,
   isSearch,
-  queryText,
+  storeId,
 }: {
   readonly records: readonly MemoryRecord[]
   readonly isSearch: boolean
-  readonly queryText?: string
+  readonly storeId?: string
 }) {
   const ordered =
     isSearch && records.some((record) => record.score != null)
@@ -84,7 +91,7 @@ export function MemoryRecordsView({
         const record = ordered[Number(key)]
         return record ? <RecordDetail record={record} /> : null
       }}
-      {...(isSearch && queryText ? { header: <SearchQueryHeader query={queryText} /> } : {})}
+      header={<RecordsHeader count={ordered.length} {...(storeId ? { storeId } : {})} />}
     />
   )
 }
