@@ -90,7 +90,7 @@ export function MasterDetail({
             )
           })}
         </div>
-        <div className={cn("min-w-0 flex-1 overflow-y-auto p-3", detailClassName)}>
+        <div className={cn("flex min-w-0 flex-1 flex-col overflow-hidden", detailClassName)}>
           {activeKey !== undefined ? renderDetail(activeKey) : null}
         </div>
       </div>

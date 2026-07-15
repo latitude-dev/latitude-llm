@@ -502,7 +502,15 @@ function MasterDetailDemo() {
         frameClassName="block"
       >
         <div className="mx-auto w-full max-w-2xl">
-          <MasterDetail className="h-64" items={items} renderDetail={(key) => <Text.H5>{details[key]}</Text.H5>} />
+          <MasterDetail
+            className="h-64"
+            items={items}
+            renderDetail={(key) => (
+              <div className="p-3">
+                <Text.H5>{details[key]}</Text.H5>
+              </div>
+            )}
+          />
         </div>
       </ComponentDemoSection>
       <ComponentDemoSection
@@ -519,7 +527,11 @@ function MasterDetailDemo() {
               </div>
             }
             items={scored}
-            renderDetail={(key) => <Text.H5>Content for {key}</Text.H5>}
+            renderDetail={(key) => (
+              <div className="p-3">
+                <Text.H5>Content for {key}</Text.H5>
+              </div>
+            )}
           />
         </div>
       </ComponentDemoSection>
