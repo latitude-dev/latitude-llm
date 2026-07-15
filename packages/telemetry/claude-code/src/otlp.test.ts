@@ -759,6 +759,82 @@ describe("span size capping", () => {
     expect(JSON.stringify(llm).length).toBeLessThan(256 * 1024)
   })
 
+  it("strips orphan tool responses when an oversized tool message alone survives truncation", () => {
+    const giantOutput = "x".repeat(50_000)
+    const history: Turn[] = Array.from({ length: 5 }, (_, i) =>
+      baseTurn({
+        userText: `question ${i} ${"h".repeat(15_000)}`,
+        assistantText: `answer ${i} ${"a".repeat(15_000)}`,
+        messageId: `msg_h${i}`,
+      }),
+    )
+    const req = buildOtlpRequest({
+      sessionId: "sess-cap",
+      turnStartNumber: 6,
+      turns: [
+        baseTurn({
+          userText: "read screenshots",
+          calls: [
+            {
+              messageId: "msg_tools",
+              model: "claude-opus-4-8",
+              text: "",
+              toolUses: [
+                {
+                  id: "toolu_orphan1",
+                  name: "Read",
+                  input: { path: "/a.png" },
+                  output: giantOutput,
+                  startMs: 1_000,
+                  endMs: 2_000,
+                },
+                {
+                  id: "toolu_orphan2",
+                  name: "Read",
+                  input: { path: "/b.png" },
+                  output: giantOutput,
+                  startMs: 1_000,
+                  endMs: 2_000,
+                },
+              ],
+              tokens: { input_tokens: 100, output_tokens: 50 },
+              startMs: 1_000,
+              endMs: 2_000,
+            },
+            {
+              messageId: "msg_final",
+              model: "claude-opus-4-8",
+              text: "I see the screenshots",
+              toolUses: [],
+              tokens: { input_tokens: 100, output_tokens: 50 },
+              startMs: 2_000,
+              endMs: 3_000,
+            },
+          ],
+        }),
+      ],
+      conversationHistory: history,
+    })
+    const llmSpans = otlpSpans(req).filter((s) => s.name === "llm_request")
+    const followUpLlm = unwrap(llmSpans[llmSpans.length - 1])
+    const inputJson = unwrap(getAttr(followUpLlm.attributes, "gen_ai.input.messages"))
+    expect(inputJson.length).toBeLessThanOrEqual(64 * 1024)
+    const messages = JSON.parse(inputJson) as Array<{
+      role: string
+      parts: Array<{ type: string; id?: string }>
+    }>
+    const toolCallIds = new Set<string>()
+    for (const msg of messages) {
+      for (const part of msg.parts) {
+        if (part.type === "tool_call" && part.id) toolCallIds.add(part.id)
+        if (part.type === "tool_call_response" && part.id) {
+          expect(toolCallIds.has(part.id)).toBe(true)
+        }
+      }
+    }
+    expect(getAttr(followUpLlm.attributes, "latitude.truncation")).toContain("stripped orphan tool responses")
+  })
+
   it("clamps oversized user prompts on the interaction span", () => {
     const req = buildOtlpRequest({
       sessionId: "sess-cap",

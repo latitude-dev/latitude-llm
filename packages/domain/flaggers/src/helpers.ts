@@ -35,6 +35,13 @@ const match = (feedback: string, messageIndex?: number): DeterministicFlaggerMat
 
 export function detectToolCallErrorsFlagger(trace: TraceMessagesOnly): DeterministicFlaggerMatch {
   const callById = new Map<string, { name: string; messageIndex: number }>()
+  const hasAnyToolCall = trace.allMessages.some((message) => {
+    if (message.role !== "assistant") return false
+    for (const rawPart of iterMessageParts(message.parts)) {
+      if (isRecord(rawPart) && rawPart.type === "tool_call") return true
+    }
+    return false
+  })
 
   for (let msgIdx = 0; msgIdx < trace.allMessages.length; msgIdx++) {
     const message = trace.allMessages[msgIdx]!
@@ -67,6 +74,7 @@ export function detectToolCallErrorsFlagger(trace: TraceMessagesOnly): Determini
       const toolCallId = typeof part.id === "string" ? part.id.trim() : ""
       const call = toolCallId ? callById.get(toolCallId) : undefined
       if (!call) {
+        if (!hasAnyToolCall) continue
         return match(`Tool response references an unknown tool_call id "${toolCallId || "<empty>"}"`, msgIdx)
       }
 
