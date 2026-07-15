@@ -234,4 +234,36 @@ describe("materializeTraceMemory", () => {
     )
     expect((await reconstruct(memory, "user1")).records.map((record) => record.recordId)).toEqual(["rec2"])
   })
+
+  it("classifies an upsert of a wiped record as add, not update", async () => {
+    const memory = createFakeMemoryRepository()
+    // create rec1, then wipe the store — rec1 is tombstoned in memory_current
+    await materialize(
+      [
+        makeSpan({
+          spanId: spanId("1"),
+          operation: "create_memory",
+          recordsRaw: records({ id: "rec1", content: "v1" }),
+          endTime: at(0),
+        }),
+        makeSpan({ spanId: spanId("2"), operation: "delete_memory", recordId: "", endTime: at(5) }),
+      ],
+      memory,
+    )
+    // a later upsert of the wiped record must be an add, not an update
+    await materialize(
+      [
+        makeSpan({
+          spanId: spanId("3"),
+          operation: "upsert_memory",
+          recordsRaw: records({ id: "rec1", content: "v2" }),
+          endTime: at(10),
+        }),
+      ],
+      memory,
+    )
+    const upsert = memory.events.find((event) => event.spanId === spanId("3"))
+    expect(upsert?.changeKind).toBe("add")
+    expect((await reconstruct(memory, "user1")).records.map((record) => record.recordId)).toEqual(["rec1"])
+  })
 })
