@@ -1,4 +1,4 @@
-import { Button, CopyableText, Skeleton, TagList, Text, Tooltip } from "@repo/ui"
+import { Button, CopyableText, Icon, Skeleton, TagList, Text, Tooltip } from "@repo/ui"
 import { eq } from "@tanstack/react-db"
 import { createFileRoute, getRouteApi, Link } from "@tanstack/react-router"
 import { ArrowLeftIcon, PencilIcon } from "lucide-react"
@@ -93,12 +93,30 @@ function SignalDetailPage() {
               {isLoading ? (
                 <Skeleton className="h-7 w-56" />
               ) : (
-                <div className="flex min-w-0 items-center gap-2">
+                <div className="group/title flex min-w-0 items-center gap-2">
                   <Text.H4M className="min-w-0 truncate">{signal?.name ?? "Signal not found"}</Text.H4M>
                   {signal && signal.states.length > 0 ? (
                     <div className="shrink-0">
                       <SignalLifecycleStatuses states={signal.states} />
                     </div>
+                  ) : null}
+                  {signal?.origin === "user" ? (
+                    <Tooltip
+                      asChild
+                      side="bottom"
+                      trigger={
+                        <Button
+                          variant="ghost"
+                          className="h-7 w-7 shrink-0 p-0 opacity-0 transition-opacity group-hover/title:opacity-100 group-focus-within/title:opacity-100 focus-visible:opacity-100"
+                          aria-label="Edit signal name and description"
+                          onClick={() => setRenameOpen(true)}
+                        >
+                          <Icon icon={PencilIcon} size="sm" color="foregroundMuted" />
+                        </Button>
+                      }
+                    >
+                      Edit name & description
+                    </Tooltip>
                   ) : null}
                 </div>
               )}
@@ -113,24 +131,6 @@ function SignalDetailPage() {
           }
           actions={
             <>
-              {signal?.origin === "user" ? (
-                <Tooltip
-                  asChild
-                  side="bottom"
-                  trigger={
-                    <Button
-                      variant="ghost"
-                      className="h-7 w-7 p-0"
-                      aria-label="Edit signal name and description"
-                      onClick={() => setRenameOpen(true)}
-                    >
-                      <PencilIcon className="h-4 w-4 text-muted-foreground" />
-                    </Button>
-                  }
-                >
-                  Edit name & description
-                </Tooltip>
-              ) : null}
               <SignalSendTo
                 projectId={project.id}
                 projectSlug={projectSlug}
