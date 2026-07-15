@@ -6,6 +6,7 @@ import {
 } from "@domain/shared/seed-content/custom-behavior-qa"
 import type { SeedScope } from "@domain/shared/seeding"
 import {
+  CUSTOM_BEHAVIOR_LOOKBACK_DAYS,
   normalizeTaxonomyEmbedding,
   TAXONOMY_OBSERVATION_RETENTION_DAYS,
   TaxonomyProjectionMethod,
@@ -234,19 +235,26 @@ export const customBehaviorQaSeeder: Seeder = {
   name: "spans/custom-behavior-qa",
   run: (ctx) =>
     Effect.gen(function* () {
+      const nowMs = Date.now()
+      const since = new Date(nowMs - CUSTOM_BEHAVIOR_LOOKBACK_DAYS * DAY_MS)
       const sentinelObservationId = ctx.scope.cuid("custom-behavior-qa-a:obs:a-order-status:0")
-      const alreadySeeded = yield* isSentinelPresent(
+      // Recency-aware sentinel: skip only when the first fixture observation is
+      // present AND still inside the lookback window. A fixture seeded more than
+      // CUSTOM_BEHAVIOR_LOOKBACK_DAYS ago is stale — reseed so its observations
+      // land back inside the window (the re-inserted ids collapse to the fresh
+      // rows under `taxonomy_observations FINAL` at query time).
+      const freshFixturePresent = yield* isSentinelPresent(
         ctx.client,
         "taxonomy_observations",
-        "observation_id = {observationId:String}",
-        { observationId: sentinelObservationId },
+        "observation_id = {observationId:String} AND start_time >= {since:DateTime64(9, 'UTC')}",
+        { observationId: sentinelObservationId, since: formatClickHouseTimestamp(since) },
       )
-      if (alreadySeeded) {
-        if (!ctx.quiet) console.log("  -> spans/custom-behavior-qa: already seeded, skipping")
+      if (freshFixturePresent) {
+        if (!ctx.quiet) console.log("  -> spans/custom-behavior-qa: already seeded (fresh), skipping")
         return
       }
 
-      const { spans, observations } = buildCustomBehaviorQaFixture(ctx.scope, Date.now())
+      const { spans, observations } = buildCustomBehaviorQaFixture(ctx.scope, nowMs)
       yield* insertJsonEachRow(ctx.client, "spans", spans)
       yield* insertJsonEachRow(ctx.client, "taxonomy_observations", observations)
       if (!ctx.quiet) {

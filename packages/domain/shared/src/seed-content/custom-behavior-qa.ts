@@ -55,10 +55,12 @@ const cohortA: CustomBehaviorQaCohort = {
   userId: CUSTOM_BEHAVIOR_QA_USER_ID,
   metadata: { seed: "custom-behavior-qa", cohort: "a" },
   filterSet: { userId: [{ op: "in", value: [CUSTOM_BEHAVIOR_QA_USER_ID] }] },
+  // Two centroids of 21 — each root child clears the depth-0 split floor
+  // (TAXONOMY_TREE_DEPTH_SCHEDULE[0].minClusterAbs = 20), so gardening yields a
+  // multi-cluster scoped tree instead of collapsing to a single leaf.
   subTopics: [
-    { key: "a-order-status", summary: "Where is my order — delivery and tracking questions.", sessionCount: 15 },
-    { key: "a-returns", summary: "Return and refund eligibility for delivered items.", sessionCount: 14 },
-    { key: "a-account-access", summary: "Login, password reset, and account recovery help.", sessionCount: 13 },
+    { key: "a-order-status", summary: "Where is my order — delivery and tracking questions.", sessionCount: 21 },
+    { key: "a-returns", summary: "Return and refund eligibility for delivered items.", sessionCount: 21 },
   ],
 }
 
@@ -71,9 +73,8 @@ const cohortB: CustomBehaviorQaCohort = {
   metadata: { seed: "custom-behavior-qa", cohort: "b", domain: "retail" },
   filterSet: { serviceNames: [{ op: "in", value: [CUSTOM_BEHAVIOR_QA_SERVICE_NAME] }] },
   subTopics: [
-    { key: "b-exchange", summary: "Exchange a delivered item for a different size or colour.", sessionCount: 15 },
-    { key: "b-payment", summary: "Payment method updates and failed-charge troubleshooting.", sessionCount: 14 },
-    { key: "b-cancellation", summary: "Cancel or modify an order before it ships.", sessionCount: 13 },
+    { key: "b-exchange", summary: "Exchange a delivered item for a different size or colour.", sessionCount: 21 },
+    { key: "b-payment", summary: "Payment method updates and failed-charge troubleshooting.", sessionCount: 21 },
   ],
 }
 

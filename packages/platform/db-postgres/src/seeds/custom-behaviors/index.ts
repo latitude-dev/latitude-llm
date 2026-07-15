@@ -26,7 +26,9 @@ const seedCustomBehaviorsQa: Seeder = {
               filterSet: cohort.filterSet,
               status: "pending",
             })
-            .onConflictDoNothing({ target: customBehaviors.id })
+            // No target: a re-seed is a no-op whether it collides on the id or
+            // on the (organizationId, projectId, slug) unique index.
+            .onConflictDoNothing()
         }
         console.log(`  -> custom-behaviors/qa: ${CUSTOM_BEHAVIOR_QA_COHORT_LIST.length} QA custom behaviors`)
       },
