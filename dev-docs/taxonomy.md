@@ -165,6 +165,28 @@ Out of scope (as for the global tree): per-run membership-migration history — 
 - **Sessions table topics filter**: selected nodes expand to subtree ids server-side before ClickHouse; see the CI doc for the subquery shape and time-bound pruning. Repository-level observation reads use `FINAL` over the stable `observation_id` key; read paths that join observations to moments or trace ids still pin through `session_analyses` so every joined row comes from the same current generation.
 - **Backoffice** (`AdminTaxonomyRepositoryLive`): keeps the legacy category/subcategory DTO shape but sources it from the tree — roots as groups, descendants rolled up by first path segment.
 
+## Custom behaviors — scoped trees
+
+A **custom behavior** is a user-named session `FilterSet` with its own generated topic tree: the same taxonomy machinery pointed at a subset. It answers "cluster the behaviors *within these sessions*" without touching the project-wide tree. Scope table `custom_behaviors` (`packages/platform/db-postgres/src/schema/custom-behaviors.ts`); orchestration `apps/workflows/src/workflows/garden-custom-behavior-workflow.ts`; the clustering/naming/lineage code is shared with the global tree.
+
+- **Definition.** `custom_behaviors` rows carry `name`, project-unique `slug`, `filter_set` (jsonb), `status` (`pending` / `generating` / `ready` / `failed`), and `last_gardened_at`. The filter may use any Sessions field **except `topics`** — scoping a behavior tree on behavior clusters is circular (rejected by `customBehaviorFilterSetSchema`). Capped at `MAX_CUSTOM_BEHAVIORS_PER_PROJECT` (10); authz matches saved searches (any org member).
+- **One clustering path, tagged by scope.** `taxonomy_clusters` and `taxonomy_runs` carry a nullable `custom_behavior_id` (`NULL` = the global tree). The build/naming/lineage code is reused unchanged, filtered by that column, so a scoped tree is a first-class sibling of the global one — not a fork of the algorithm.
+
+### Isolation from the global tree
+
+Scoped assignments live in a **separate ClickHouse table**, `custom_behavior_assignments`, keyed `(organization_id, project_id, custom_behavior_id, observation_id)` with `start_time` + retention. A scoped run **never writes `taxonomy_observations.assigned_cluster_id`** — a custom behavior only *reads* the shared observations and re-clusters them into its own slice, so a bug in scoped sampling cannot corrupt or re-route the live global tree. Observations and their 2048-d embeddings are **reused, not copied**: the assignment table stores only the observation→cluster edge, no embedding (which is why it is `custom_behavior_assignments`, not a `custom_taxonomy_observations` clone).
+
+### Lifecycle — a scoped living taxonomy
+
+There is **no manual "generate"** step. Creating a custom behavior enqueues its first gardening run, and the shared taxonomy sweep re-gardens every behavior on the same cadence as the global tree. Because scoped assignments **accumulate across runs** and cluster ids survive regeneration (scoped continuation via `lineage.ts` filtered by `custom_behavior_id`), a scoped tree is a **living taxonomy** — trend, novelty, "new this week", and spiking are all real, at parity with the global Behaviours page, read via a scoped `getClusterTrendCounts` windowed over `custom_behavior_assignments.start_time`.
+
+- **Sampling window.** Scoped gardening samples the **same shared gardening window as the global tree** — there is no custom-specific lookback. A scoped filter is sparser than the project as a whole, so a behavior may hold fewer observations than global at the same window.
+- **Minimum gate → waiting state.** A run needs ≥ `TAXONOMY_GARDENING_MIN_OBSERVATIONS` (15) matching observations to build; below that it produces no tree and the behavior shows a **waiting** state until enough accumulate and a later sweep gardens it. There is no manual override.
+- **Failure retains the prior tree** (deprecate-last): a failed run leaves the last good scoped tree in place.
+- **Preview** without a run: `countForCustomBehaviorSample` / `listForCustomBehaviorSample` compile the `FilterSet` to the scoped observation set.
+
+Read paths reuse the global **Behaviours** view parameterized by `custom_behavior_id`; cluster membership resolves from `custom_behavior_assignments` instead of `taxonomy_observations`, and the global read paths above are unchanged.
+
 ## Trade-off decisions
 
 - **One tree instead of clusters + categories**: levels differ only by density, so a single node type replaced the two-model design; it removed an entire data model and the singleton-category pathology, at the cost of residue semantics every read surface must respect.
