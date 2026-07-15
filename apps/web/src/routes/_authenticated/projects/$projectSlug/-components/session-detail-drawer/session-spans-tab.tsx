@@ -41,7 +41,7 @@ export function SessionSpansTab({
   readonly onOpenTrace: (traceId: string, options?: OpenTraceOptions) => void
   readonly isActive: boolean
 }) {
-  const { filters, clearFilters, toggleErrors, toggleTools, selectModel } = useSpanFilters()
+  const { filters, clearFilters, toggleErrors, toggleTools, toggleMemory, selectModel } = useSpanFilters()
   const {
     data: spans,
     isLoading,
@@ -145,6 +145,7 @@ export function SessionSpansTab({
           filters={filters}
           onToggleErrors={toggleErrors}
           onToggleTools={toggleTools}
+          onToggleMemory={toggleMemory}
           onSelectModel={selectModel}
           onClearFilters={clearFilters}
         />
@@ -164,6 +165,7 @@ export function SessionSpansTab({
         filters={filters}
         onToggleErrors={toggleErrors}
         onToggleTools={toggleTools}
+        onToggleMemory={toggleMemory}
         onSelectModel={selectModel}
         onClearFilters={clearFilters}
       />

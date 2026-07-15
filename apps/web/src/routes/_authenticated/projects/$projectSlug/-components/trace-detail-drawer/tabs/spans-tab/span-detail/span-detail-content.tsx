@@ -6,6 +6,7 @@ import { formatDuration } from "../span-tree/tree-utils.ts"
 import { mergeAttributes, StatusBadge } from "./helpers.tsx"
 import { IdentifiersSection } from "./identifiers-section.tsx"
 import { LlmSections } from "./llm-sections.tsx"
+import { isMemoryOperationSpan, MemoryOperationSection } from "./memory-operation-section.tsx"
 import { OperationalMetadataSection } from "./operational-metadata-section.tsx"
 import { RawTelemetrySections } from "./raw-telemetry-sections.tsx"
 import { isToolExecutionSpan, ToolExecutionSection } from "./tool-execution-section.tsx"
@@ -98,6 +99,7 @@ export function SpanDetailContent({ span }: { readonly span: SpanDetailRecord })
     [span],
   )
   const isToolSpan = useMemo(() => isToolExecutionSpan(span), [span])
+  const isMemorySpan = useMemo(() => isMemoryOperationSpan(span), [span])
 
   return (
     <div className="flex flex-col gap-6">
@@ -142,6 +144,9 @@ export function SpanDetailContent({ span }: { readonly span: SpanDetailRecord })
 
       {/* ── Tool execution ── */}
       {isToolSpan && <ToolExecutionSection span={span} />}
+
+      {/* ── Memory operation ── */}
+      {isMemorySpan && <MemoryOperationSection span={span} />}
 
       {/* ── Operational metadata ── */}
       <OperationalMetadataSection span={span} />

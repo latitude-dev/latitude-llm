@@ -41,8 +41,8 @@ function makeSpan(partial: Partial<SpanRecord> & Pick<SpanRecord, "spanId">): Sp
 describe("span filters", () => {
   it("returns all spans when no filters are active", () => {
     const spans = [makeSpan({ spanId: "a" }), makeSpan({ spanId: "b" })]
-    expect(hasActiveSpanFilters({ errors: false, tools: false, model: "" })).toBe(false)
-    expect(filterSpansWithAncestors(spans, { errors: false, tools: false, model: "" })).toEqual(spans)
+    expect(hasActiveSpanFilters({ errors: false, tools: false, memory: false, model: "" })).toBe(false)
+    expect(filterSpansWithAncestors(spans, { errors: false, tools: false, memory: false, model: "" })).toEqual(spans)
   })
 
   it("filters by model and keeps ancestors", () => {
@@ -52,9 +52,14 @@ describe("span filters", () => {
       makeSpan({ spanId: "other", parentSpanId: "root", model: "claude-fable-5" }),
     ]
 
-    const filtered = filterSpansWithAncestors(spans, { errors: false, tools: false, model: "claude-opus-4-8" })
+    const filtered = filterSpansWithAncestors(spans, {
+      errors: false,
+      tools: false,
+      memory: false,
+      model: "claude-opus-4-8",
+    })
     expect(filtered.map((span) => span.spanId)).toEqual(["root", "child"])
-    expect(countMatchingSpans(spans, { errors: false, tools: false, model: "claude-opus-4-8" })).toBe(1)
+    expect(countMatchingSpans(spans, { errors: false, tools: false, memory: false, model: "claude-opus-4-8" })).toBe(1)
   })
 
   it("filters by errors and tools together", () => {
@@ -64,8 +69,20 @@ describe("span filters", () => {
       makeSpan({ spanId: "chat-err", operation: "chat", statusCode: "error" }),
     ]
 
-    const filtered = filterSpansWithAncestors(spans, { errors: true, tools: true, model: "" })
+    const filtered = filterSpansWithAncestors(spans, { errors: true, tools: true, memory: false, model: "" })
     expect(filtered.map((span) => span.spanId)).toEqual(["tool-err"])
+  })
+
+  it("filters by memory operation and keeps ancestors", () => {
+    const spans = [
+      makeSpan({ spanId: "root", parentSpanId: "" }),
+      makeSpan({ spanId: "mem", parentSpanId: "root", operation: "update_memory" }),
+      makeSpan({ spanId: "chat", parentSpanId: "root", operation: "chat" }),
+    ]
+
+    const filtered = filterSpansWithAncestors(spans, { errors: false, tools: false, memory: true, model: "" })
+    expect(filtered.map((span) => span.spanId)).toEqual(["root", "mem"])
+    expect(countMatchingSpans(spans, { errors: false, tools: false, memory: true, model: "" })).toBe(1)
   })
 
   it("collects unique sorted models", () => {

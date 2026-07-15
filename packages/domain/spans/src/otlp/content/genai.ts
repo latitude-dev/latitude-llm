@@ -5,7 +5,8 @@
 import type { GenAIMessage, GenAISystem } from "rosetta-ai"
 import { Provider, safeTranslate } from "rosetta-ai"
 import type { ToolDefinition } from "../../entities/span.ts"
-import type { OtlpAnyValue, OtlpKeyValue } from "../types.ts"
+import { anyValueToPlain } from "../any-value.ts"
+import type { OtlpKeyValue } from "../types.ts"
 import { parseGenAIDeprecated } from "./genai_deprecated.ts"
 import type { ParsedContent } from "./index.ts"
 import { toToolDefinition } from "./utils.ts"
@@ -13,23 +14,6 @@ import { parseVercelOutput } from "./vercel.ts"
 
 function messagesHaveContent(messages: readonly GenAIMessage[]): boolean {
   return messages.some((m) => Array.isArray(m.parts) && m.parts.length > 0)
-}
-
-function anyValueToJs(value: OtlpAnyValue | undefined): unknown {
-  if (!value) return undefined
-  if (value.stringValue !== undefined) return value.stringValue
-  if (value.boolValue !== undefined) return value.boolValue
-  if (value.intValue !== undefined) return Number(value.intValue)
-  if (value.doubleValue !== undefined) return value.doubleValue
-  if (value.arrayValue?.values) return value.arrayValue.values.map(anyValueToJs)
-  if (value.kvlistValue?.values) {
-    const obj: Record<string, unknown> = {}
-    for (const kv of value.kvlistValue.values) {
-      obj[kv.key] = anyValueToJs(kv.value)
-    }
-    return obj
-  }
-  return undefined
 }
 
 function extractJsonAttr(attrs: readonly OtlpKeyValue[], key: string): unknown {
@@ -43,7 +27,7 @@ function extractJsonAttr(attrs: readonly OtlpKeyValue[], key: string): unknown {
     }
   }
   if (kv.value.arrayValue || kv.value.kvlistValue) {
-    return anyValueToJs(kv.value)
+    return anyValueToPlain(kv.value)
   }
   return undefined
 }

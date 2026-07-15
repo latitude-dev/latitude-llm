@@ -6,4 +6,5 @@ export const ATTRIBUTES = {
   userId: "user.id",
   userEmail: "user.email",
   project: "latitude.project",
+  memoryScope: "latitude.memory.scope",
 } as const

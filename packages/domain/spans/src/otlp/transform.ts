@@ -1,5 +1,6 @@
 import { ExternalUserId, OrganizationId, ProjectId, SessionId, SimulationId, SpanId, TraceId } from "@domain/shared"
 import type { SpanDetail, SpanKind, SpanStatusCode } from "../entities/span.ts"
+import { anyValueToPlain } from "./any-value.ts"
 import { attrArray, stringAttr } from "./attributes.ts"
 import { parseContent } from "./content/index.ts"
 import { isDroppedSpan } from "./dropped-spans.ts"
@@ -38,6 +39,10 @@ function resolveAnyValue(
   if (value.boolValue !== undefined) return { type: "bool", value: value.boolValue }
   if (value.intValue !== undefined) return { type: "int", value: Number(value.intValue) }
   if (value.doubleValue !== undefined) return { type: "float", value: value.doubleValue }
+  // Structured OTLP values (e.g. gen_ai.memory.records) are flattened to a JSON string so they survive in attr_string.
+  if (value.arrayValue !== undefined || value.kvlistValue !== undefined) {
+    return { type: "string", value: JSON.stringify(anyValueToPlain(value)) }
+  }
   return null
 }
 

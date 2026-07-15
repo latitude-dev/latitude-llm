@@ -491,9 +491,12 @@ export const SpanRepositoryLive = Layer.effect(
               // matching parts and is expensive for traces with many spans or
               // large payload columns. The newest ingested row wins, matching
               // the table's ReplacingMergeTree(ingested_at) semantics.
-              query: `SELECT ${LIST_COLUMNS}
+              // Drop the attr maps (same OOM hazard as listBySessionId — a trace's
+              // spans can each carry whole conversations or memory records in
+              // `attr_string`; the span detail view reads attributes via findBySpanId).
+              query: `SELECT ${LIST_COLUMNS_LEAN}, ${EMPTY_ATTR_MAP_COLUMNS}
                     FROM (
-                      SELECT ${LIST_COLUMNS}
+                      SELECT ${LIST_COLUMNS_LEAN}
                       FROM spans
                       WHERE organization_id = {organizationId:String}
                         AND project_id = {projectId:String}
