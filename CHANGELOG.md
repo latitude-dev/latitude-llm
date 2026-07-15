@@ -2,6 +2,39 @@
 
 ## Unreleased
 
+## v0.3.51 - 2026-07-15
+
+### Experiments
+
+- Added project-scoped Experiments: a container that compares up to 10 variants (each a filter set, search query, and time range) against a baseline across every session, user, tool, signal, and behaviour metric Latitude computes, with a variant-comparison table, shared population editors, and list/create/rename/delete/import flows (ref: #4017).
+- Let users create experiments straight from a saved search, added a "Compare this search" toggle and Monitor/Compare row actions to the saved-search UI, and added creation presets (A/B test, versions, seasonal, failures, outliers) to the experiment create modal (ref: #4034).
+
+### Signals
+
+- Introduced a session-end trigger so signal matching and conversation analysis run once per session after it settles, collapsing a session's trace-ends into a single firing against its latest trace instead of dispatching per trace (ref: #4040).
+- Moved the signal edit button beside the signal title (ref: #4039).
+
+### Custom Behaviors
+
+- Wired up the Generate flow for custom behaviors and the per-behavior scoped taxonomy tree, added a generation status indicator, and added entry points to create a custom behavior from the Sessions view or a saved search (ref: #4027).
+
+### Memory observability
+
+- Added ingest support for GenAI memory operation spans and a git-style, content-addressed memory ledger that materializes memory events into ClickHouse at the settled trace boundary, with point-in-time snapshot reconstruction (groundwork, refs: #4035, #4041).
+
+### Claude Code telemetry
+
+- Recovered subagent spans that were previously lost for parallel subagents and on the final llm_request of a turn (ref: #4028).
+- Made the Hermes plugin flush on session end and split its api_request and llm_call hooks (refs: #4029, #4030).
+
+### Authentication
+
+- Protected magic links from being consumed by email link scanners (ref: #4026).
+
+### Reliability
+
+- Tolerated non-array OTLP span attributes during ingest instead of failing (ref: #4031).
+
 ## v0.3.50 - 2026-07-14
 
 ### Subagent visibility
