@@ -1,6 +1,7 @@
 import { QueuePublisher } from "@domain/queue"
 import type { CustomBehaviorId } from "@domain/shared"
 import { Effect } from "effect"
+import { CUSTOM_BEHAVIOR_GARDENING_MIN_INTERVAL_MS } from "../constants.ts"
 import { type CustomBehavior, CustomBehaviorStatus } from "../entities/custom-behavior.ts"
 import { CustomBehaviorRepository } from "../ports/custom-behavior-repository.ts"
 import { taxonomyGardenCustomBehaviorDedupeKey } from "./trigger-project-gardening.ts"
@@ -48,6 +49,10 @@ export const generateCustomBehavior = Effect.fn("taxonomy.generateCustomBehavior
           organizationId: behavior.organizationId,
           customBehaviorId: behavior.id,
         }),
+        // Fire now, but a TTL-based dedupe marker (not a retained jobId) drops
+        // re-adds for the cadence window, so create-time + the next sweep for
+        // the same behavior collapse instead of the job going dormant.
+        leadingThrottleMs: CUSTOM_BEHAVIOR_GARDENING_MIN_INTERVAL_MS,
       },
     )
     .pipe(Effect.onError(() => repo.save(behavior).pipe(Effect.ignore)))

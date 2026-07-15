@@ -9,7 +9,7 @@ import {
   type ReassignTaxonomyObservationByIdInput,
   TAXONOMY_CLUSTERING_PROPOSAL_SAMPLE_MAX,
   TAXONOMY_CLUSTERING_SAMPLE_STRATEGY,
-  TAXONOMY_NOISE_LOOKBACK_DAYS,
+  TAXONOMY_GARDENING_SAMPLE_LOOKBACK_DAYS,
   type TaxonomyCluster,
   type TaxonomyClusterLineage,
   TaxonomyClusterRepository,
@@ -167,7 +167,7 @@ const errorMessage = (error: unknown): string => {
 }
 
 const gardeningLookbackStart = (now: Date): Date =>
-  new Date(now.getTime() - TAXONOMY_NOISE_LOOKBACK_DAYS * 24 * 60 * 60_000)
+  new Date(now.getTime() - TAXONOMY_GARDENING_SAMPLE_LOOKBACK_DAYS * 24 * 60 * 60_000)
 
 const TAXONOMY_GARDENING_PLAN_TTL_SECONDS = 14 * 24 * 60 * 60
 

@@ -15,7 +15,6 @@ import {
   SettingsIcon,
   Share2Icon,
   ShieldAlertIcon,
-  SlidersHorizontalIcon,
   TagsIcon,
   UserRound,
   Users,
@@ -86,15 +85,6 @@ const PROJECT_SECTIONS: readonly ProjectSection[] = [
     group: "understand",
     path: (slug) => `/projects/${slug}/experiments`,
     isActive: (pathname, slug) => pathname.startsWith(`/projects/${slug}/experiments`),
-  },
-  {
-    key: "custom-behaviours",
-    label: "Custom behaviors",
-    icon: SlidersHorizontalIcon,
-    group: "understand",
-    path: (slug) => `/projects/${slug}/custom-behaviours`,
-    isActive: (pathname, slug) => pathname.startsWith(`/projects/${slug}/custom-behaviours`),
-    featureFlag: "customBehaviors",
   },
   {
     key: "monitors",

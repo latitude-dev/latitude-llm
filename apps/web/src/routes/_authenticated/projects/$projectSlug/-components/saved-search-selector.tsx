@@ -82,9 +82,9 @@ export function SavedSearchSelector({
     const seed = stripCustomBehaviorExcludedFields(record.filterSet)
     setOpen(false)
     navigate({
-      to: "/projects/$projectSlug/custom-behaviours",
+      to: "/projects/$projectSlug/behaviours/new",
       params: { projectSlug },
-      search: { create: serializeFilters(seed) },
+      search: { filters: serializeFilters(seed) },
     })
   }
 

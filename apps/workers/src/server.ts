@@ -11,7 +11,12 @@ import { SAVED_SEARCH_MONITORS_SWEEPER_KEY, SAVED_SEARCH_MONITORS_SWEEPER_PATTER
 import { SANDBOX_IDLE_SWEEPER_KEY, SANDBOX_IDLE_SWEEPER_PATTERN } from "@domain/sandboxes"
 import { SHOWCASE_CLEANUP_CRON_KEY, SHOWCASE_CLEANUP_CRON_PATTERN } from "@domain/showcase"
 import { ESCALATION_SWEEPER_KEY, ESCALATION_SWEEPER_PATTERN } from "@domain/signals"
-import { TAXONOMY_GARDENING_CRON_KEY, TAXONOMY_GARDENING_CRON_PATTERN } from "@domain/taxonomy"
+import {
+  CUSTOM_BEHAVIOR_GARDENING_CRON_KEY,
+  CUSTOM_BEHAVIOR_GARDENING_CRON_PATTERN,
+  TAXONOMY_GARDENING_CRON_KEY,
+  TAXONOMY_GARDENING_CRON_PATTERN,
+} from "@domain/taxonomy"
 import { serve } from "@hono/node-server"
 import { serveStatic } from "@hono/node-server/serve-static"
 import { createPollingOutboxConsumer } from "@platform/db-postgres"
@@ -358,6 +363,21 @@ const bootstrap = async () => {
           "gardenSweep",
           { triggeredAt: new Date().toISOString() },
           { key: TAXONOMY_GARDENING_CRON_KEY, pattern: TAXONOMY_GARDENING_CRON_PATTERN, tz: "UTC" },
+        )
+        .pipe(withTracing),
+    )
+
+    // Scoped-gardening sweep: keeps every eligible custom behavior a living
+    // taxonomy, the scoped analogue of the global gardenSweep above.
+    await Effect.runPromise(
+      queuePublisher
+        .scheduleRepeatable(
+          "taxonomy",
+          "gardenCustomBehaviorSweep",
+          // No triggeredAt: repeatable payloads are frozen at boot, so the handler
+          // anchors its throttle window at execution time instead.
+          {},
+          { key: CUSTOM_BEHAVIOR_GARDENING_CRON_KEY, pattern: CUSTOM_BEHAVIOR_GARDENING_CRON_PATTERN, tz: "UTC" },
         )
         .pipe(withTracing),
     )

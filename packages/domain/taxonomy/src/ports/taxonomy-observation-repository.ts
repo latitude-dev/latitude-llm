@@ -140,8 +140,8 @@ export interface TaxonomyObservationRepositoryShape {
    * of `listForClusteringSample`, additionally restricted to observations whose
    * session matches `filterSet` (compiled via the shared session filter). Reads
    * global `taxonomy_observations` but never mutates it. `since` is the lookback
-   * window lower bound, passed in from `CUSTOM_BEHAVIOR_LOOKBACK_DAYS` — never
-   * hardcoded here, so a future selectable window is a caller-side swap.
+   * lower bound the caller derives from `TAXONOMY_GARDENING_SAMPLE_LOOKBACK_DAYS`
+   * — the same gardening window global uses, so the two can't drift.
    */
   readonly listForCustomBehaviorSample: (input: {
     readonly organizationId: OrganizationId
@@ -154,8 +154,8 @@ export interface TaxonomyObservationRepositoryShape {
    * True eligible totals for a custom behavior preview: the unsampled analogue
    * of `listForCustomBehaviorSample` (same `filterSet`/window scoping) counting
    * every matching observation and its distinct sessions. `observationCount` is
-   * what the <15 not-ready gate compares against; `since` is the lookback lower
-   * bound, passed in from `CUSTOM_BEHAVIOR_LOOKBACK_DAYS`, never hardcoded here.
+   * what the <15 not-ready gate compares against; `since` is the same gardening
+   * sample window (`TAXONOMY_GARDENING_SAMPLE_LOOKBACK_DAYS`) the run itself uses.
    */
   readonly countForCustomBehaviorSample: (input: {
     readonly organizationId: OrganizationId

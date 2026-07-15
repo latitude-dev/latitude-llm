@@ -8,7 +8,6 @@ import {
   createCustomBehavior,
   customBehaviorFilterSetSchema,
   deleteCustomBehavior,
-  generateCustomBehavior,
   previewCustomBehaviorSampleUseCase,
   updateCustomBehavior,
 } from "@domain/taxonomy"
@@ -90,13 +89,20 @@ export const createCustomBehaviorFn = createServerFn({ method: "POST" })
   )
   .handler(async ({ data, context }): Promise<CustomBehaviorRecord> => {
     const orgId = await resolveOrgScope(context)
+    // Creating a behavior auto-starts its first gardening run, so the create
+    // use-case enqueues through the QueuePublisher.
+    const publisher = await getQueuePublisher()
 
     const created = await Effect.runPromise(
       createCustomBehavior({
         projectId: ProjectId(data.projectId),
         name: data.name,
         filterSet: data.filterSet,
-      }).pipe(withScopedPostgres(CustomBehaviorRepositoryLive, getPostgresClient(), orgId), withTracing),
+      }).pipe(
+        Effect.provideService(QueuePublisher, publisher),
+        withScopedPostgres(CustomBehaviorRepositoryLive, getPostgresClient(), orgId),
+        withTracing,
+      ),
     )
     return toRecord(created)
   })
@@ -133,24 +139,6 @@ export const deleteCustomBehaviorFn = createServerFn({ method: "POST" })
         withTracing,
       ),
     )
-  })
-
-export const generateCustomBehaviorFn = createServerFn({ method: "POST" })
-  .inputValidator(z.object({ id: z.string() }))
-  .handler(async ({ data, context }): Promise<CustomBehaviorRecord> => {
-    const orgId = await resolveOrgScope(context)
-    const publisher = await getQueuePublisher()
-
-    const updated = await Effect.runPromise(
-      generateCustomBehavior({
-        customBehaviorId: CustomBehaviorId(data.id),
-      }).pipe(
-        Effect.provideService(QueuePublisher, publisher),
-        withScopedPostgres(CustomBehaviorRepositoryLive, getPostgresClient(), orgId),
-        withTracing,
-      ),
-    )
-    return toRecord(updated)
   })
 
 export const previewCustomBehaviorSample = createServerFn({ method: "GET" })

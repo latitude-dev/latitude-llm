@@ -15,9 +15,18 @@ interface FiltersSidebarProps {
   readonly filters: FilterSet
   readonly onFiltersChange: (filters: FilterSet) => void
   readonly onClose: () => void
+  /** Filter fields to hide (e.g. `topics` for custom behaviors). */
+  readonly excludeFields?: readonly string[]
 }
 
-export function FiltersSidebar({ mode, projectId, filters, onFiltersChange, onClose }: FiltersSidebarProps) {
+export function FiltersSidebar({
+  mode,
+  projectId,
+  filters,
+  onFiltersChange,
+  onClose,
+  excludeFields,
+}: FiltersSidebarProps) {
   return (
     <Layout.Sidebar>
       <div className="flex items-center justify-between px-4 py-3 border-b">
@@ -28,7 +37,13 @@ export function FiltersSidebar({ mode, projectId, filters, onFiltersChange, onCl
       </div>
 
       <div className="flex flex-col px-4 overflow-y-auto flex-1">
-        <FiltersBuilderFields mode={mode} projectId={projectId} filters={filters} onFiltersChange={onFiltersChange} />
+        <FiltersBuilderFields
+          mode={mode}
+          projectId={projectId}
+          filters={filters}
+          onFiltersChange={onFiltersChange}
+          {...(excludeFields ? { excludeFields } : {})}
+        />
       </div>
     </Layout.Sidebar>
   )

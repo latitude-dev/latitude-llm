@@ -574,6 +574,10 @@ const _registry = {
       readonly customBehaviorId: string
       readonly reason?: "manual" | "cron"
     }
+    gardenCustomBehaviorSweep: {
+      /** Optional override for ad-hoc runs; the repeatable sweep anchors at execution time instead. */
+      readonly triggeredAt?: string
+    }
   }>(),
 
   billing: payloads<{

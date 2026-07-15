@@ -16,7 +16,6 @@ const { mockActivities } = vi.hoisted(() => {
       runId: "r".repeat(24),
       now: "2026-01-01T00:00:00.000Z",
       filterSet: {},
-      lookbackDays: 7,
     })),
     buildGardenCustomBehaviorTaxonomyActivity: vi.fn(async () => builtResult),
     planGardenCustomBehaviorNamingActivity: vi.fn(async () => ({

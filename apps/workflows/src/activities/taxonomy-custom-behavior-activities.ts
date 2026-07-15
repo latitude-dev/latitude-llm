@@ -9,7 +9,6 @@ import {
 import {
   assertTaxonomyQualityUseCase,
   buildCustomBehaviorTaxonomyUseCase,
-  CUSTOM_BEHAVIOR_LOOKBACK_DAYS,
   CustomBehaviorRepository,
   CustomBehaviorStatus,
   deprecateCustomBehaviorTreeUseCase,
@@ -17,6 +16,7 @@ import {
   nameCustomBehaviorClusterUseCase,
   TAXONOMY_CLUSTERING_PROPOSAL_SAMPLE_MAX,
   TAXONOMY_GARDENING_MIN_OBSERVATIONS,
+  TAXONOMY_GARDENING_SAMPLE_LOOKBACK_DAYS,
   TaxonomyClusterRepository,
   type TaxonomyDimension,
   TaxonomyObservationRepository,
@@ -50,12 +50,6 @@ export interface GardenCustomBehaviorStepInput extends GardenCustomBehaviorActiv
   readonly runId: string
   readonly now: string
   readonly filterSet: FilterSet
-  /**
-   * Lookback window in days, sourced from `CUSTOM_BEHAVIOR_LOOKBACK_DAYS` in the
-   * start activity and passed as a parameter — never hardcoded inside the query
-   * — so a future selectable window is a param-source swap (LAT-746 Q2).
-   */
-  readonly lookbackDays: number
 }
 
 export type GardenCustomBehaviorBuildResult =
@@ -187,13 +181,16 @@ export const startGardenCustomBehaviorRunActivity = (
     Effect.gen(function* () {
       const behaviors = yield* CustomBehaviorRepository
       const behavior = yield* behaviors.findById(CustomBehaviorId(input.customBehaviorId))
-      yield* behaviors.save({ ...behavior, status: CustomBehaviorStatus.Generating, updatedAt: new Date() })
+      const startedAt = new Date()
+      yield* behaviors.save({ ...behavior, status: CustomBehaviorStatus.Generating, updatedAt: startedAt })
+      // Stamp the cadence anchor at run start so the scoped sweep throttles on it
+      // (survives a crash mid-run) — a run only starts here, cron or create-time.
+      yield* behaviors.markGardened({ id: behavior.id, gardenedAt: startedAt })
       return {
         ...input,
         runId: deterministicRunId(input.customBehaviorId, input.workflowRunId),
         now: new Date().toISOString(),
         filterSet: behavior.filterSet,
-        lookbackDays: CUSTOM_BEHAVIOR_LOOKBACK_DAYS,
       } satisfies GardenCustomBehaviorStepInput
     }).pipe((effect) => withCustomBehaviorPostgres(effect, input.organizationId)),
   )
@@ -207,7 +204,9 @@ export const buildGardenCustomBehaviorTaxonomyActivity = (
     Effect.gen(function* () {
       const observations = yield* TaxonomyObservationRepository
       const now = new Date(step.now)
-      const since = new Date(now.getTime() - step.lookbackDays * DAY_MS)
+      // Same gardening window as global (and the preview), so a scoped run
+      // clusters exactly what the preview counted.
+      const since = new Date(now.getTime() - TAXONOMY_GARDENING_SAMPLE_LOOKBACK_DAYS * DAY_MS)
       const sample = yield* observations.listForCustomBehaviorSample({
         organizationId: OrganizationId(step.organizationId),
         projectId: ProjectId(step.projectId),
