@@ -30,6 +30,21 @@ function nanosToDate(nanos: string | undefined): Date {
   return new Date(ms)
 }
 
+function anyValueToPlain(value: OtlpAnyValue | undefined): unknown {
+  if (!value) return undefined
+  if (value.stringValue !== undefined) return value.stringValue
+  if (value.boolValue !== undefined) return value.boolValue
+  if (value.intValue !== undefined) return Number(value.intValue)
+  if (value.doubleValue !== undefined) return value.doubleValue
+  if (value.arrayValue !== undefined) return (value.arrayValue.values ?? []).map(anyValueToPlain)
+  if (value.kvlistValue !== undefined) {
+    const result: Record<string, unknown> = {}
+    for (const entry of value.kvlistValue.values ?? []) result[entry.key] = anyValueToPlain(entry.value)
+    return result
+  }
+  return undefined
+}
+
 function resolveAnyValue(
   value: OtlpAnyValue | undefined,
 ): { type: "string" | "int" | "float" | "bool"; value: string | number | boolean } | null {
@@ -38,6 +53,10 @@ function resolveAnyValue(
   if (value.boolValue !== undefined) return { type: "bool", value: value.boolValue }
   if (value.intValue !== undefined) return { type: "int", value: Number(value.intValue) }
   if (value.doubleValue !== undefined) return { type: "float", value: value.doubleValue }
+  // Structured OTLP values (e.g. gen_ai.memory.records) are flattened to a JSON string so they survive in attr_string.
+  if (value.arrayValue !== undefined || value.kvlistValue !== undefined) {
+    return { type: "string", value: JSON.stringify(anyValueToPlain(value)) }
+  }
   return null
 }
 

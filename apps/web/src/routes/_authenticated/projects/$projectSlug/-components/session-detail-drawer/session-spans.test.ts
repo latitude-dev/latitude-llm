@@ -137,7 +137,7 @@ describe("session span groups", () => {
       [],
     )
 
-    const filtered = filterSessionSpanGroups(groups, { errors: true, tools: false, model: "" })
+    const filtered = filterSessionSpanGroups(groups, { errors: true, tools: false, memory: false, model: "" })
 
     expect(filtered).toHaveLength(1)
     expect(filtered[0]?.traceId).toBe("trace-a")

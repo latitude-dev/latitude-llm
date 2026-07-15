@@ -1,3 +1,5 @@
+import { isMemoryOperation } from "../memory-operations.ts"
+
 /** Horizontal inset for waterfall bars & time labels so bars don’t touch column edges (matches `px-3`). */
 export const WATERFALL_H_INSET_PX = 12
 
@@ -15,6 +17,7 @@ export function statusBarColor(statusCode: string, operation: string): string {
   if (operation === "invoke_agent") return "bg-primary"
   if (operation === "chat") return "bg-primary/40"
   if (operation === "execute_tool") return "bg-success/40"
+  if (isMemoryOperation(operation)) return "bg-warning/60"
   return "bg-muted-foreground/40"
 }
 

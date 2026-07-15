@@ -1,0 +1,73 @@
+import { CodeBlock, DetailSection, DetailSummary, Text } from "@repo/ui"
+import { BracesIcon, DatabaseIcon } from "lucide-react"
+import { useMemo } from "react"
+import type { SpanDetailRecord } from "../../../../../../../../../domains/spans/spans.functions.ts"
+import { isMemoryOperation } from "../memory-operations.ts"
+import { JsonBlock } from "./helpers.tsx"
+
+const STORE_ID_ATTR = "gen_ai.memory.store.id"
+const RECORD_ID_ATTR = "gen_ai.memory.record.id"
+const RECORD_COUNT_ATTR = "gen_ai.memory.record.count"
+const QUERY_TEXT_ATTR = "gen_ai.memory.query.text"
+const RECORDS_ATTR = "gen_ai.memory.records"
+
+function tryParseJson(value: string): unknown | null {
+  if (!value) return null
+  try {
+    return JSON.parse(value)
+  } catch {
+    return null
+  }
+}
+
+export function isMemoryOperationSpan(span: SpanDetailRecord): boolean {
+  return (
+    isMemoryOperation(span.operation) ||
+    !!span.attrString[STORE_ID_ATTR] ||
+    !!span.attrString[RECORD_ID_ATTR] ||
+    !!span.attrString[RECORDS_ATTR]
+  )
+}
+
+export function MemoryOperationSection({ span }: { readonly span: SpanDetailRecord }) {
+  const storeId = span.attrString[STORE_ID_ATTR]
+  const recordId = span.attrString[RECORD_ID_ATTR]
+  const queryText = span.attrString[QUERY_TEXT_ATTR]
+  const recordCount = span.attrInt[RECORD_COUNT_ATTR] ?? span.attrString[RECORD_COUNT_ATTR]
+  const recordsRaw = span.attrString[RECORDS_ATTR] ?? ""
+  const parsedRecords = useMemo(() => tryParseJson(recordsRaw), [recordsRaw])
+
+  const items = [
+    ...(storeId ? [{ label: "Store", value: storeId, copyable: true }] : []),
+    ...(recordId ? [{ label: "Record", value: recordId, copyable: true }] : []),
+    ...(recordCount !== undefined ? [{ label: "Records", value: String(recordCount) }] : []),
+  ]
+
+  return (
+    <>
+      {(items.length > 0 || queryText) && (
+        <DetailSection icon={<DatabaseIcon className="w-4 h-4" />} label="Memory">
+          <div className="flex flex-col gap-2">
+            {items.length > 0 && <DetailSummary items={items} />}
+            {queryText && (
+              <div className="flex flex-col gap-1">
+                <Text.H6 color="foregroundMuted">Query</Text.H6>
+                <CodeBlock value={queryText} className="bg-secondary" />
+              </div>
+            )}
+          </div>
+        </DetailSection>
+      )}
+
+      <DetailSection icon={<BracesIcon className="w-4 h-4" />} label="Records">
+        {parsedRecords !== null ? (
+          <JsonBlock value={parsedRecords} />
+        ) : recordsRaw ? (
+          <CodeBlock value={recordsRaw} className="bg-secondary" />
+        ) : (
+          <Text.H6 color="foregroundMuted">Content not captured</Text.H6>
+        )}
+      </DetailSection>
+    </>
+  )
+}

@@ -134,8 +134,9 @@ Materialization runs at the **trace-end boundary** (`apps/workers/src/workers/tr
 
 New/changed code:
 
-- `packages/domain/spans/src/entities/span.ts` — extend `operationSchema` with the 7 memory ops.
-- `packages/domain/spans/src/otlp/resolvers/memory.ts` — new resolver (candidate lists for store/record/count/query/records/scope), wired into `resolvers/index.ts` and `transform.ts`.
+- `packages/domain/spans/src/entities/span.ts` — extend `operationSchema` with the 7 memory ops; export `MEMORY_OPERATIONS` / `isMemoryOperation`.
+- `packages/domain/spans/src/otlp/transform.ts` — `resolveAnyValue` flattens OTLP `arrayValue`/`kvlistValue` attributes to a JSON string so structured payloads (e.g. `gen_ai.memory.records`) survive in `attr_string`.
+- `packages/domain/spans/src/otlp/resolvers/memory.ts` — new resolver (candidate lists for store/record/count/query/records/scope), wired into `resolvers/index.ts` and `transform.ts`. *(Phase 1 — Phase 0 reads the raw attributes instead.)*
 - `packages/domain/memories/*` — new domain package (entities, ports, use-cases; see [Data model](#data-model)).
 - `packages/platform/db-clickhouse/src/repositories/memory-repository.ts` — CH adapter + migrations (`memory_events`, `memory_blobs`, `memory_current`), created via `pnpm --filter @platform/db-clickhouse ch:create`.
 - `apps/workers/src/workers/memory-projection.ts` — trace-end-triggered materializer.
@@ -350,14 +351,24 @@ Per record at T: load its mutating versions ordered by `end_time` (each carries 
 
 > **Status legend**: `[ ] pending`, `[~] in progress`, `[x] complete`
 
-### Phase 0 — Memory spans on the Spans tab (Feature 1)
+### Phase 0 — Memory spans on the Spans tab (Feature 1) — shipped
 
-- [ ] **P0-1**: Add the 7 memory operations to `operationSchema` (`packages/domain/spans/src/entities/span.ts`).
-- [ ] **P0-2**: Add `resolvers/memory.ts` (store/record/count/query/records/scope candidate lists) + wire into `resolvers/index.ts`, `ResolvedAttributes`, and `transform.ts`.
-- [ ] **P0-3**: Spans-tab rendering — `memory-operation-section.tsx` detail panel, span icon, operation color, `span-filters.ts` filter.
-- [ ] **P0-4**: Add `memoryScope` to `packages/telemetry/typescript/src/constants/attributes.ts` + SDK capture option; document the scope/user-tagging requirement.
+Phase 0 reads memory attributes straight from `attr_string`/`attr_int` + the indexed `operation` column; **no ClickHouse migration and no memory resolver** (both move to Phase 1 with the ledger).
 
-**Exit gate:** a trace containing `create_memory`/`update_memory`/`search_memory` spans classifies them, shows the detail panel, colors them in the waterfall, and filters to them — no ledger yet.
+- [x] **P0-1**: Add the 7 memory operations to `operationSchema` + export `MEMORY_OPERATIONS` / `isMemoryOperation` (`packages/domain/spans/src/entities/span.ts`).
+- [x] **P0-2**: Capture structured attributes — `resolveAnyValue` (`packages/domain/spans/src/otlp/transform.ts`) flattens `arrayValue`/`kvlistValue` to a JSON string so `gen_ai.memory.records` survives in `attr_string`. (Dedicated `resolvers/memory.ts` + resolved fields/columns deferred to Phase 1.)
+- [x] **P0-3**: Spans-tab rendering — `span-detail/memory-operation-section.tsx` detail panel (reads attr maps), memory icons (`span-icon.tsx`), waterfall color (`span-tree/helpers.ts`), and a "Memory" filter toggle (`span-filters.ts` / `use-span-filters.ts` / `span-filters-bar.tsx`). Shared `isMemoryOperation` in `spans-tab/memory-operations.ts`.
+- [x] **P0-4**: Add `memoryScope` (`latitude.memory.scope`) to the TS SDK (`constants/attributes.ts` + `ContextOptions` + both `processor.ts`/`tracer.ts` stamping paths); documented the scope/user-tagging requirement. (Ingest-side `scope` resolver deferred to Phase 1.)
+
+**Exit gate (met):** a trace containing `create_memory`/`update_memory`/`search_memory` spans classifies them, shows the detail panel, colors them in the waterfall, and filters to them — no ledger yet.
+
+**Phase 0 implementation notes (deviations from the original plan):**
+
+- **No ClickHouse migration.** Filtering rides the indexed `operation` column; scalar memory attrs and the flattened `records` JSON ride `attr_string`/`attr_int`, already returned by the span-detail read path (`findBySpanId`).
+- **The `arrayValue`/`kvlistValue` flattening is general** — every previously-dropped structured attribute now persists as a JSON string in `attr_string` (relying on `CODEC(ZSTD)`; add a length cap in `resolveAnyValue` if a pathological emitter bloats it).
+- **`OPERATION_ICON`'s `satisfies` is vacuous** (the `z.string()` catch-all collapses the `Exclude` to `never`), so memory icon entries are a manual, non-compiler-enforced addition.
+- **The web keeps its own `MEMORY_OPERATIONS`/`isMemoryOperation`** (`spans-tab/memory-operations.ts`, type-only domain import) instead of importing the domain runtime helper into the client bundle — accepted duplication of a 7-string list.
+- **Deferred to Phase 1:** `resolvers/memory.ts` + resolved fields / indexed columns, the ingest-side `scope` resolver + column, and the `"update_memory · <record.id>"` tree-row label (needs `memoryRecordId` on the list-shape `SpanRecord`).
 
 ### Phase 1 — Ledger, blobs, projection, materializer (engine)
 
