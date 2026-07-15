@@ -166,6 +166,32 @@ describe("detectToolCallErrorsFlagger", () => {
     }
   })
 
+  it("does not flag tool responses orphaned by truncated conversation history", () => {
+    const result = detectToolCallErrorsFlagger(
+      makeTrace([
+        { role: "system", parts: [{ type: "text", content: "system prompt" }] },
+        toolResponse("toolu_01Mc2CLTvPdWYtKRaUA5VnQa", { ok: true }),
+        { role: "assistant", parts: [{ type: "text", content: "Done reviewing the images." }] },
+      ]),
+    )
+
+    expect(result).toEqual({ matched: false })
+  })
+
+  it("still flags tool responses with unknown ids when no assistant follows", () => {
+    const result = detectToolCallErrorsFlagger(
+      makeTrace([
+        { role: "system", parts: [{ type: "text", content: "system prompt" }] },
+        toolResponse("toolu_orphan", { ok: true }),
+      ]),
+    )
+
+    expect(result.matched).toBe(true)
+    if (result.matched) {
+      expect(result.feedback).toContain("unknown tool_call id")
+    }
+  })
+
   it("does not match plain-string responses by keyword (only structured signals count)", () => {
     const result = detectToolCallErrorsFlagger(
       makeTrace([

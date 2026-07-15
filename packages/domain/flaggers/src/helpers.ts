@@ -67,6 +67,7 @@ export function detectToolCallErrorsFlagger(trace: TraceMessagesOnly): Determini
       const toolCallId = typeof part.id === "string" ? part.id.trim() : ""
       const call = toolCallId ? callById.get(toolCallId) : undefined
       if (!call) {
+        if (isLikelyTruncatedToolResponse(trace.allMessages, msgIdx, callById.size)) continue
         return match(`Tool response references an unknown tool_call id "${toolCallId || "<empty>"}"`, msgIdx)
       }
 
@@ -81,6 +82,18 @@ export function detectToolCallErrorsFlagger(trace: TraceMessagesOnly): Determini
   }
 
   return NO_MATCH
+}
+
+function isLikelyTruncatedToolResponse(
+  messages: TraceMessagesOnly["allMessages"],
+  messageIndex: number,
+  registeredCallCount: number,
+): boolean {
+  if (registeredCallCount > 0 || messageIndex === 0) return false
+  for (let i = messageIndex + 1; i < messages.length; i++) {
+    if (messages[i]!.role === "assistant") return true
+  }
+  return false
 }
 
 function toNonEmptyString(value: unknown): string | null {
