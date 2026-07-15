@@ -127,28 +127,26 @@ export const runTraceEndJob =
       // the session-end worker, debounced per session so repeated trace-ends collapse to one firing
       // once the session goes quiet. The debounce replaces the pending payload, so the surviving job
       // carries the session's latest trace. Never fires for sandbox traces (sandbox returns early).
-      yield* publisher
-        .publish(
-          "session-end",
-          "run",
-          {
-            organizationId: payload.organizationId,
-            projectId: payload.projectId,
-            sessionId: canonicalSessionId,
-            latestTraceId: payload.traceId,
-            latestTraceStartTime: traceDetail.startTime.toISOString(),
-            isSandbox: payload.isSandbox ?? false,
-          },
-          {
-            dedupeKey: `org:${payload.organizationId}:session-end:${payload.projectId}:${canonicalSessionId}`,
-            debounceMs: SESSION_END_DEBOUNCE_MS,
-          },
-        )
-        .pipe(
-          Effect.catch((error) =>
-            Effect.logError("Failed to enqueue session end", { ...buildRunLogContext(payload), error }),
-          ),
-        )
+      //
+      // Not caught: session-end is the single entry point for both signals:match and session analysis,
+      // so a dropped enqueue would silently lose all session-level work. Let it fail the trace-end job
+      // so its retry re-enqueues; the job's other publishes are idempotent under retry via dedupe keys.
+      yield* publisher.publish(
+        "session-end",
+        "run",
+        {
+          organizationId: payload.organizationId,
+          projectId: payload.projectId,
+          sessionId: canonicalSessionId,
+          latestTraceId: payload.traceId,
+          latestTraceStartTime: traceDetail.startTime.toISOString(),
+          isSandbox: payload.isSandbox ?? false,
+        },
+        {
+          dedupeKey: `org:${payload.organizationId}:session-end:${payload.projectId}:${canonicalSessionId}`,
+          debounceMs: SESSION_END_DEBOUNCE_MS,
+        },
+      )
 
       // Saved-search firing check, throttled to one run per project per 5 min.
       // Leading-edge: runs immediately so its trailing evaluation window covers

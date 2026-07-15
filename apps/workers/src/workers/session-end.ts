@@ -1,8 +1,16 @@
 import type { QueueConsumer, QueuePublisherShape, WorkflowStarterShape } from "@domain/queue"
+import { OrganizationId, ProjectId, SessionId, TraceId } from "@domain/shared"
+import { SessionRepository, SpanRepository } from "@domain/spans"
+import {
+  type ClickHouseClient,
+  SessionRepositoryLive,
+  SpanRepositoryLive,
+  withClickHouse,
+} from "@platform/db-clickhouse"
 import { createLogger, withTracing } from "@repo/observability"
-import { Effect } from "effect"
+import { Effect, Layer } from "effect"
 
-import { getWorkflowStarter } from "../clients.ts"
+import { getClickhouseClient, getWorkflowStarter } from "../clients.ts"
 
 const logger = createLogger("session-end")
 const SESSION_END_QUEUE = "session-end" as const
@@ -22,12 +30,14 @@ type SessionEndLogger = Pick<ReturnType<typeof createLogger>, "info" | "error">
 interface SessionEndDeps {
   consumer: QueueConsumer
   publisher: QueuePublisherShape
+  clickhouseClient?: ClickHouseClient
   logger?: SessionEndLogger
   workflowStarter?: WorkflowStarterShape
 }
 
 interface RunSessionEndDeps {
   readonly publisher: QueuePublisherShape
+  readonly clickhouseClient: ClickHouseClient
   readonly workflowStarter: WorkflowStarterShape
 }
 
@@ -52,15 +62,58 @@ const buildRunLogContext = (payload: SessionEndPayload) => ({
   latestTraceId: payload.latestTraceId,
 })
 
+/**
+ * The session's latest output-producing trace, resolved by time rather than by enqueue order: the
+ * debounce that hands us here is last-write-wins, so a late span on an older trace can leave the
+ * payload pointing at a trace that isn't actually the newest. Uses the same `argMax(end_time)` the
+ * session panel surfaces as "current state". Falls back to the enqueued trace when the session isn't
+ * materialized yet or the read fails — signals should still run on the best trace we have.
+ */
+const resolveLatestTraceId = (payload: SessionEndPayload) =>
+  Effect.gen(function* () {
+    const sessionRepository = yield* SessionRepository
+    const spanRepository = yield* SpanRepository
+
+    const detail = yield* sessionRepository
+      .findBySessionId({
+        organizationId: OrganizationId(payload.organizationId),
+        projectId: ProjectId(payload.projectId),
+        sessionId: SessionId(payload.sessionId),
+      })
+      .pipe(Effect.catchTag("NotFoundError", () => Effect.succeed(null)))
+
+    if (!detail || detail.traceIds.length === 0) return payload.latestTraceId
+
+    const latest = yield* spanRepository.findLatestOutputTraceId({
+      organizationId: OrganizationId(payload.organizationId),
+      projectId: ProjectId(payload.projectId),
+      traceIds: detail.traceIds.map(TraceId),
+    })
+
+    return latest ?? payload.latestTraceId
+  }).pipe(
+    Effect.catch((error) =>
+      Effect.gen(function* () {
+        yield* Effect.logWarning("Failed to resolve session latest trace; using enqueued trace", {
+          ...buildRunLogContext(payload),
+          error,
+        })
+        return payload.latestTraceId
+      }),
+    ),
+  )
+
 export const runSessionEndJob =
-  ({ publisher, workflowStarter }: RunSessionEndDeps) =>
+  ({ publisher, clickhouseClient, workflowStarter }: RunSessionEndDeps) =>
   (payload: SessionEndPayload) =>
     Effect.gen(function* () {
       if (payload.isSandbox) {
         return { action: "skipped", reason: "sandbox", sessionId: payload.sessionId } satisfies SessionEndRunResult
       }
 
-      // Session settled → match signals against the latest trace of the session (per-trace scoring is
+      const latestTraceId = yield* resolveLatestTraceId(payload)
+
+      // Session settled → match signals against the session's latest trace (per-trace scoring is
       // unchanged; the script still loads full session context). Older traces are intentionally not
       // re-evaluated — one evaluation per session, off its latest trace.
       yield* publisher
@@ -70,12 +123,12 @@ export const runSessionEndJob =
           {
             organizationId: payload.organizationId,
             projectId: payload.projectId,
-            traceId: payload.latestTraceId,
+            traceId: latestTraceId,
             isSandbox: false,
             reason: "ingest",
           },
           {
-            dedupeKey: `org:${payload.organizationId}:signals-match:${payload.projectId}:${payload.latestTraceId}`,
+            dedupeKey: `org:${payload.organizationId}:signals-match:${payload.projectId}:${latestTraceId}`,
           },
         )
         .pipe(
@@ -84,6 +137,8 @@ export const runSessionEndJob =
           ),
         )
 
+      // Session analysis reloads the whole session, so the triggering trace is only a pointer — the
+      // enqueued one is fine here, no need for the resolved latest.
       const analyzeSessionWorkflowId = `org:${payload.organizationId}:conversation-intelligence:analyzeSession:${payload.projectId}:${payload.sessionId}`
       yield* workflowStarter
         .signalWithStart(
@@ -115,9 +170,16 @@ export const runSessionEndJob =
       return {
         action: "completed",
         sessionId: payload.sessionId,
-        latestTraceId: payload.latestTraceId,
+        latestTraceId,
       } satisfies SessionEndRunResult
-    }).pipe(withTracing)
+    }).pipe(
+      withClickHouse(
+        Layer.mergeAll(SessionRepositoryLive, SpanRepositoryLive),
+        clickhouseClient,
+        OrganizationId(payload.organizationId),
+      ),
+      withTracing,
+    )
 
 export const createRunHandler =
   ({ log, ...deps }: RunSessionEndDeps & { readonly log: SessionEndLogger }) =>
@@ -137,6 +199,7 @@ export const createRunHandler =
           log.info("Session-end runtime completed", {
             ...buildRunLogContext(payload),
             outcome: result.action,
+            resolvedLatestTraceId: result.latestTraceId,
           })
         }),
       ),
@@ -155,9 +218,11 @@ export const createRunHandler =
 export const createSessionEndWorker = ({
   consumer,
   publisher,
+  clickhouseClient,
   logger: injectedLogger,
   workflowStarter,
 }: SessionEndDeps) => {
+  const chClient = clickhouseClient ?? getClickhouseClient()
   const sessionEndLogger = injectedLogger ?? logger
   const temporalStarter =
     workflowStarter ??
@@ -172,6 +237,7 @@ export const createSessionEndWorker = ({
     run: createRunHandler({
       log: sessionEndLogger,
       publisher,
+      clickhouseClient: chClient,
       workflowStarter: temporalStarter,
     }),
   })

@@ -106,6 +106,8 @@ export const createDomainEventsWorker = ({
                   traceId,
                 }),
                 debounceMs: TRACE_END_DEBOUNCE_MS,
+                attempts: 10,
+                backoff: { type: "exponential", delayMs: 1_000 },
               },
             ),
           ),

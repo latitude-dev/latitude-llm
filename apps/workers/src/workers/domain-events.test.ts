@@ -119,6 +119,8 @@ describe("domain-events dispatcher", () => {
     expect(traceEnd?.options).toEqual({
       dedupeKey: "trace-end:run:org-1:proj-1:trace-abc",
       debounceMs: TRACE_END_DEBOUNCE_MS,
+      attempts: 10,
+      backoff: { type: "exponential", delayMs: 1_000 },
     })
     expect(published.some((p) => p.queue === "signals")).toBe(false)
     expect(firstTrace?.options?.dedupeKey).toBe("projects:first-trace:proj-1")

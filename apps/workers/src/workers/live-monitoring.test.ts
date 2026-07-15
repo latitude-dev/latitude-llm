@@ -265,6 +265,7 @@ describe("live monitoring integration", () => {
     createSessionEndWorker({
       consumer: harness.consumer,
       publisher: harness.publisher,
+      clickhouseClient: ch.client,
       workflowStarter: createFakeWorkflowStarter(),
     })
     createSignalsMatchWorker({
@@ -297,6 +298,8 @@ describe("live monitoring integration", () => {
         options: {
           dedupeKey: `trace-end:run:${ORGANIZATION_ID}:${PROJECT_ID}:${TRACE_ID}`,
           debounceMs: TRACE_END_DEBOUNCE_MS,
+          attempts: 10,
+          backoff: { type: "exponential", delayMs: 1_000 },
         },
       },
     ])
@@ -403,6 +406,7 @@ describe("live monitoring integration", () => {
     createSessionEndWorker({
       consumer: harness.consumer,
       publisher: harness.publisher,
+      clickhouseClient: ch.client,
       workflowStarter: createFakeWorkflowStarter(),
     })
     createSignalsMatchWorker({
@@ -438,6 +442,8 @@ describe("live monitoring integration", () => {
       options: {
         dedupeKey: `trace-end:run:${ORGANIZATION_ID}:${PROJECT_ID}:${TRACE_ID}`,
         debounceMs: TRACE_END_DEBOUNCE_MS,
+        attempts: 10,
+        backoff: { type: "exponential", delayMs: 1_000 },
       },
     })
 
