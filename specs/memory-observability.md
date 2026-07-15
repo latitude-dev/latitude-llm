@@ -223,7 +223,7 @@ Dedup of record bodies. `ReplacingMergeTree(created_at)`.
 
 ### `memory_current` — hot current-state projection
 
-Latest mutating version per record, for fast "current snapshot" reads (T = now). `ReplacingMergeTree(end_time)` keyed `(organization_id, project_id, scope, store_id, record_id)`, one row upserted per mutating event, carrying `content_hash`, `change_kind`, `span_id`, `trace_id`, `session_id`, `token_count`, `end_time`. Reads take the latest row per key (`FINAL`/`argMax`) and drop `change_kind = 'remove'`. Point-in-time reads (T ≠ now) do **not** use this table — they aggregate the ledger.
+Latest mutating version per record, for fast "current snapshot" reads (T = now). `ReplacingMergeTree(end_time)` keyed `(organization_id, project_id, scope, store_id, record_id)`, one row upserted per mutating event, carrying `content_hash`, `change_kind`, `span_id`, `trace_id`, `session_id`, `token_count`, `end_time`. Reads take the latest row per key (`FINAL`/`argMax`) and drop `change_kind = 'remove'`. Point-in-time reads (T ≠ now) do **not** use this table — they aggregate the ledger. A whole-store wipe writes a `remove` row here for every live record in the store (a tombstone), so the current view reflects the wipe without depending on the ledger's `store_delete` event. This table carries **no TTL** — it is bounded by live-record count, and the wipe tombstones must outlive the ledger's retention.
 
 ### Domain package `packages/domain/memories`
 
@@ -259,7 +259,7 @@ GROUP BY store_id, record_id
 HAVING change_kind != 'remove'
 ```
 
-Whole-store wipes (`delete_memory` without `record.id`) are applied as a post-filter: for each `store_id`, drop records whose latest mutation `end_time` is earlier than the store's latest wipe `end_time ≤ {at}`. `T = now` shortcuts to `memory_current`.
+Whole-store wipes (`delete_memory` without `record.id`, and `delete_memory_store`) are handled two ways. At materialization the wipe writes a `remove` tombstone into `memory_current` for each of the store's live records, so the `T = now` read (which shortcuts to `memory_current`) reflects the wipe directly and durably. The ledger keeps no per-record tombstone, so point-in-time reads (T ≠ now) apply a post-filter: for each `store_id`, drop records whose latest mutation `end_time` is earlier than the store's latest wipe `end_time ≤ {at}`. The post-filter runs on both paths; for `T = now` it is redundant with the tombstones but harmless.
 
 Scaling lever (deferred, [D7](#decisions)): if a scope's event count grows large, periodic materialized snapshot checkpoints per scope turn point-in-time into "nearest checkpoint + short forward scan" — git's commit-tree tradeoff. Not built in v1.
 
@@ -333,7 +333,7 @@ Per record at T: load its mutating versions ordered by `end_time` (each carries 
 ## Metering, retention, tenancy, self-hosting
 
 - **Metering:** memory operations are spans; they are metered by the existing span/trace usage path. No new meter. ([D11](#decisions))
-- **Retention:** `memory_events`/`memory_current` follow project/plan retention like other CH tables. `memory_blobs` gets its own retention knob (content is the heaviest and most sensitive column); a blob is collectable once no retained event references its hash. Point-in-time reconstruction older than blob retention degrades to hashes/ids without bodies.
+- **Retention:** `memory_events` carries a TTL (`retention_days + 30`). `memory_current` has **no TTL** (bounded by live-record count; its wipe tombstones must outlive the ledger). `memory_blobs` has **no TTL or GC yet** and grows unbounded until a collector drops hashes no retained event references — a pre-GA lever, alongside a **memory-body size cap** (content is uncapped and stored inline today, [D1](#decisions)); these two are the storage levers that matter before high-volume GA, not day-one cost. Point-in-time reconstruction older than blob retention degrades to hashes/ids without bodies.
 - **Tenancy:** every table is `organization_id`/`project_id` scoped; `scope` strings are opaque and org-partitioned; blob dedup is per-org (never cross-tenant).
 - **Self-hosting:** no new infrastructure — blobs inline in ClickHouse (ZSTD), with the object-storage fallback using the existing `@platform/storage-object` `StorageDisk` (SeaweedFS by default). New deps `js-tiktoken` (MIT) and the already-present `diff`/jsdiff (BSD) are permissive and satisfy the OSS bundle rule; audit transitive additions when adding `js-tiktoken`.
 
@@ -349,7 +349,7 @@ Per record at T: load its mutating versions ordered by `end_time` (each carries 
 - **D6 — Git-style storage:** content-addressed `memory_blobs` (dedup) + `memory_events` ledger + `memory_current` projection. Store snapshots, derive diffs.
 - **D7 — Reconstruction:** current-state via `memory_current`; point-in-time / diff / blame on demand in `@domain/memories`. Per-scope snapshot checkpoints deferred until volume demands.
 - **D8 — Materialization at the trace-end boundary** via a dedicated `memory-projection` worker (isolated failure domain, mirrors deterministic-flaggers).
-- **D9 — Delete semantics:** `delete_memory` with `record.id` = record remove; without = whole-store wipe (reconstruction post-filter by store wipe time); `delete_memory_store` drops the store folder.
+- **D9 — Delete semantics:** `delete_memory` with `record.id` = record remove; without `record.id` = whole-store wipe; `delete_memory_store` = whole-store wipe of that store. A whole-store wipe writes a `store_delete` ledger event **and** a per-record `remove` tombstone into `memory_current` for every live record in the store, so the current view survives the ledger's retention TTL and a later `upsert` of a wiped record classifies as `add` (the seed snapshot is wipe-aware); point-in-time reconstruction additionally applies the post-filter by store wipe time.
 - **D10 — Provider adapters out of scope**, but `memory_events.source` reserved so Mem0/Supermemory/Zep can write the same tables later.
 - **D11 — No billing change**; memory ops ride span metering.
 - **D12 — Tenancy:** all tables org+project scoped; blob dedup per-org.
@@ -398,7 +398,8 @@ Phase 0 reads memory attributes straight from `attr_string`/`attr_int` + the ind
 - **Blobs are inline-only in Phase 1.** `content_file_key` is reserved in the schema but always empty; the `putInDisk` object-storage overflow is deferred (it needs a new `memory` storage namespace, and record bodies are small / already stored inline in `spans` today). No `StorageDisk` dependency in the materializer or worker.
 - **`memory_events` stays `MergeTree` (append-only).** A retried projection can append duplicate rows; reconstruction is `argMax`-based so duplicates are harmless. Phase-2 aggregations must dedup by `(span_id, store_id, record_id)`.
 - **Retention:** `memory_events`/`memory_current` carry `retention_days` (default 90) + a TTL on `memory_events`; per-plan retention wiring and `memory_blobs` GC are follow-ups.
-- **Idempotency at the boundary** rides the `trace-end` 90s debounce + `dedupeKey: memory-projection:<traceId>`.
+- **Idempotency at the boundary** rides the `trace-end` 90s debounce + the org-scoped `dedupeKey: org:{orgId}:memory-projection:{projectId}:{traceId}`.
+- **Whole-store wipes tombstone `memory_current`.** A wipe writes a per-record `remove` into `memory_current` for the store's live records (not just the `store_delete` ledger event), so the current view survives ledger TTL and upsert add-vs-update stays correct after a wipe. See [D9](#decisions) / [Reconstruction](#reconstruct-a-manifest-at-time-t).
 
 ### Phase 2 — Diff, blame, and the session/trace summary (Feature 2)
 
