@@ -145,7 +145,16 @@ describe("analyzeSessionWorkflow", () => {
     expect(mockActivities.embedAnalyzeSessionTurnsActivity).not.toHaveBeenCalled()
   })
 
-  it("preserves debounce before activity execution", async () => {
+  it("skips the internal debounce for post-patch executions (session-end now owns it)", async () => {
+    await analyzeSessionWorkflow({ ...input, debounceMs: 123 })
+
+    expect(sleep).not.toHaveBeenCalled()
+    expect(mockActivities.loadAnalyzeSessionActivity).toHaveBeenCalled()
+  })
+
+  it("replays the internal debounce for pre-patch executions", async () => {
+    patchedState.enabled = false
+
     await analyzeSessionWorkflow({ ...input, debounceMs: 123 })
 
     expect(sleep).toHaveBeenCalledWith(123)

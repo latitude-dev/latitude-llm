@@ -11,6 +11,9 @@ export const AGENT_GRAPH_MAIN_ID = "__main__"
 /** Debounce window for trace end detection (1:30 minutes in milliseconds). */
 export const TRACE_END_DEBOUNCE_MS = 90 * 1000
 
+/** Debounce window for session end detection: session-level work fires once a session has been quiet this long (5 minutes). */
+export const SESSION_END_DEBOUNCE_MS = 5 * 60 * 1000
+
 /** TTL for cached tag-scoped cohort baseline summaries (1 hour in seconds). Shared by traces and sessions. */
 export const COHORT_SUMMARY_CACHE_TTL_SECONDS = 60 * 60
 

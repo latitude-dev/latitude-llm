@@ -29,7 +29,6 @@
     "@domain/annotations": "workspace:*",
     "@domain/api-keys": "workspace:*",
     "@domain/billing": "workspace:*",
-    "@domain/conversation-intelligence": "workspace:*",
     "@domain/datasets": "workspace:*",
     "@domain/destinations": "workspace:*",
     "@domain/email": "workspace:*",

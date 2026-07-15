@@ -692,9 +692,6 @@ importers:
       '@domain/billing':
         specifier: workspace:*
         version: link:../../packages/domain/billing
-      '@domain/conversation-intelligence':
-        specifier: workspace:*
-        version: link:../../packages/domain/conversation-intelligence
       '@domain/datasets':
         specifier: workspace:*
         version: link:../../packages/domain/datasets
