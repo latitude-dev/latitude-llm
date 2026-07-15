@@ -14,6 +14,8 @@ import {
   TraceId as toTraceId,
 } from "@domain/shared"
 import type {
+  MemoryOperationSpan,
+  Operation,
   SessionToolSpan,
   Span,
   SpanDetail,
@@ -25,7 +27,7 @@ import type {
   ToolDefinition,
   TraceConversationChunk,
 } from "@domain/spans"
-import { SpanRepository, type SpanRepositoryShape } from "@domain/spans"
+import { MEMORY_OPERATIONS, SpanRepository, type SpanRepositoryShape } from "@domain/spans"
 import { formatCHDate, normalizeCHString, parseCHDate } from "@repo/utils"
 import { Effect, Layer } from "effect"
 import type { GenAIMessage, GenAISystem } from "rosetta-ai"
@@ -465,6 +467,40 @@ const SPAN_LIST_CURSOR_TYPE: Record<SpanListOrderField, string> = {
 const spanListCursorSortValue = (row: SpanListRow, field: SpanListOrderField): string =>
   field === "startTime" ? row.start_time : field === "duration" ? row.duration_ns : row.cost_total_microcents
 
+type MemoryOperationSpanRow = {
+  readonly span_id: string
+  readonly trace_id: string
+  readonly session_id: string
+  readonly user_id: string
+  readonly operation: string
+  readonly start_time: string
+  readonly end_time: string
+  readonly store_id: string
+  readonly record_id: string
+  readonly record_count: string | number
+  readonly query_text: string
+  readonly records_raw: string
+  readonly scope_attr: string
+  readonly latitude_scope_attr: string
+}
+
+const toMemoryOperationSpan = (row: MemoryOperationSpanRow): MemoryOperationSpan => ({
+  spanId: SpanId(normalizeCHString(row.span_id)),
+  traceId: toTraceId(normalizeCHString(row.trace_id)),
+  sessionId: SessionId(row.session_id),
+  userId: ExternalUserId(row.user_id),
+  operation: row.operation as Operation,
+  startTime: parseCHDate(row.start_time),
+  endTime: parseCHDate(row.end_time),
+  storeId: row.store_id,
+  recordId: row.record_id,
+  recordCount: Number(row.record_count),
+  queryText: row.query_text,
+  recordsRaw: row.records_raw,
+  scopeAttr: row.scope_attr,
+  latitudeScopeAttr: row.latitude_scope_attr,
+})
+
 export const SpanRepositoryLive = Layer.effect(
   SpanRepository,
   Effect.gen(function* () {
@@ -773,6 +809,56 @@ export const SpanRepositoryLive = Layer.effect(
           )
       })
 
+    const listMemoryOperationSpansByTraceId: SpanRepositoryShape["listMemoryOperationSpansByTraceId"] = ({
+      organizationId,
+      projectId,
+      traceId,
+    }) =>
+      Effect.gen(function* () {
+        const chSqlClient = (yield* ChSqlClient) as ChSqlClientShape<ClickHouseClient>
+        return yield* chSqlClient
+          .query(async (client) => {
+            const result = await client.query({
+              // Only memory ops (indexed `operation`), deduped by newest ingested_at. Memory
+              // attributes are read as scalar map lookups so the (possibly large) records
+              // payload is fetched only for these few spans, never the whole attribute map.
+              query: `SELECT span_id, trace_id, session_id, user_id, operation, start_time, end_time,
+                             store_id, record_id, record_count, query_text, records_raw, scope_attr, latitude_scope_attr
+                      FROM (
+                        SELECT span_id, trace_id, session_id, user_id, operation, start_time, end_time, ingested_at,
+                               attr_string['gen_ai.memory.store.id']   AS store_id,
+                               attr_string['gen_ai.memory.record.id']  AS record_id,
+                               attr_int['gen_ai.memory.record.count']  AS record_count,
+                               attr_string['gen_ai.memory.query.text'] AS query_text,
+                               attr_string['gen_ai.memory.records']    AS records_raw,
+                               attr_string['gen_ai.memory.scope']      AS scope_attr,
+                               attr_string['latitude.memory.scope']    AS latitude_scope_attr
+                        FROM spans
+                        WHERE organization_id = {organizationId:String}
+                          AND project_id = {projectId:String}
+                          AND trace_id = {traceId:FixedString(32)}
+                          AND operation IN {operations:Array(String)}
+                        ORDER BY span_id, ingested_at DESC
+                        LIMIT 1 BY span_id
+                      )
+                      ORDER BY end_time ASC`,
+              query_params: {
+                organizationId: organizationId as string,
+                projectId: projectId as string,
+                traceId: traceId as string,
+                operations: [...MEMORY_OPERATIONS],
+              },
+              format: "JSONEachRow",
+              clickhouse_settings: BOUNDED_READ_SETTINGS,
+            })
+            return result.json<MemoryOperationSpanRow>()
+          })
+          .pipe(
+            Effect.map((rows) => rows.map(toMemoryOperationSpan)),
+            Effect.mapError((error) => toRepositoryError(error, "listMemoryOperationSpansByTraceId")),
+          )
+      })
+
     const listByIngestedAtWindow: SpanRepositoryShape["listByIngestedAtWindow"] = ({
       organizationId,
       projectId,
@@ -887,6 +973,8 @@ export const SpanRepositoryLive = Layer.effect(
       listBySessionId,
 
       listToolSpansBySessionId,
+
+      listMemoryOperationSpansByTraceId,
 
       listByProjectId,
 

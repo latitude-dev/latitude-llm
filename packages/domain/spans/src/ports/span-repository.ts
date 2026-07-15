@@ -1,5 +1,6 @@
 import type {
   ChSqlClient,
+  ExternalUserId,
   FilterSet,
   NotFoundError,
   OrganizationId,
@@ -40,6 +41,32 @@ export interface SessionToolSpan {
   readonly output: string
   readonly error: boolean
   readonly durationNs: number
+}
+
+/**
+ * A memory-operation span (`operation` ∈ the 7 GenAI memory ops) projected to the
+ * memory attributes the ledger materializer needs. Read as scalar map lookups
+ * (`attr_string['gen_ai.memory.…']`) so the potentially large
+ * `gen_ai.memory.records` payload is fetched only for a trace's handful of
+ * memory spans, never the whole attribute map. `recordsRaw` is the flattened
+ * records JSON (empty when the opt-in content attribute is absent); the scope
+ * attributes are resolved by the caller.
+ */
+export interface MemoryOperationSpan {
+  readonly spanId: SpanId
+  readonly traceId: TraceId
+  readonly sessionId: SessionId
+  readonly userId: ExternalUserId
+  readonly operation: Operation
+  readonly startTime: Date
+  readonly endTime: Date
+  readonly storeId: string
+  readonly recordId: string
+  readonly recordCount: number
+  readonly queryText: string
+  readonly recordsRaw: string
+  readonly scopeAttr: string
+  readonly latitudeScopeAttr: string
 }
 
 /**
@@ -115,6 +142,20 @@ export interface SpanRepositoryShape {
     readonly startTimeFrom?: Date
     readonly startTimeTo?: Date
   }): Effect.Effect<readonly Span[], RepositoryError, ChSqlClient>
+
+  /**
+   * The trace's memory-operation spans projected to their memory attributes (see
+   * `MemoryOperationSpan`). Filtered on the indexed `operation` column, deduped by
+   * newest `ingested_at`, ordered by `end_time`. Unlike `listByTraceId` this
+   * returns the memory attribute values (scalar map lookups, so no memory hazard)
+   * because the ledger materializer needs the record content — but only for the
+   * few memory spans in one trace.
+   */
+  listMemoryOperationSpansByTraceId(input: {
+    readonly organizationId: OrganizationId
+    readonly projectId: ProjectId
+    readonly traceId: TraceId
+  }): Effect.Effect<readonly MemoryOperationSpan[], RepositoryError, ChSqlClient>
 
   listByProjectId(input: {
     readonly organizationId: OrganizationId

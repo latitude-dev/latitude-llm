@@ -110,6 +110,30 @@ export const runTraceEndJob =
           ),
         )
 
+      // Materialize the settled trace's memory-operation spans into the memory
+      // ledger. Its own worker + failure domain, like deterministic-flaggers.
+      yield* publisher
+        .publish(
+          "memory-projection",
+          "run",
+          {
+            organizationId: payload.organizationId,
+            projectId: payload.projectId,
+            traceId: payload.traceId,
+          },
+          {
+            dedupeKey: `org:${payload.organizationId}:memory-projection:${payload.projectId}:${payload.traceId}`,
+          },
+        )
+        .pipe(
+          Effect.catch((error) =>
+            Effect.logError("Failed to enqueue memory-projection", {
+              ...buildRunLogContext(payload),
+              error,
+            }),
+          ),
+        )
+
       // Publish trace-search refresh task after successful trace-end completion
       yield* publisher.publish("trace-search", "refreshTrace", {
         organizationId: payload.organizationId,
