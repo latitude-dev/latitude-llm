@@ -53,7 +53,16 @@ The one-line model: **we treat every memory-mutating span as a commit, and deriv
 
 ## Ground truth: the OTEL memory conventions
 
-Verified against `open-telemetry/semantic-conventions-genai` (`docs/gen-ai/gen-ai-spans.md`, section "Memory"; `docs/registry/attributes/gen-ai.md`). **Everything here is at `Development` stability** — unstable, and shipping instrumentation that emits it is nascent as of mid-2026. We adopt it as the canonical wire format but must tolerate absence and change.
+### Where the conventions live (as of mid-2026)
+
+The GenAI semantic conventions were **split out of the `open-telemetry/semantic-conventions` monorepo into their own repository, [`open-telemetry/semantic-conventions-genai`](https://github.com/open-telemetry/semantic-conventions-genai)** — that repo is now the source of truth for everything `gen_ai.*`, memory included. Two consequences: the memory attributes are newer and thinner than a casual read of the old monorepo docs suggests, and the authoritative definitions are the machine-readable model files, not the rendered docs. Under **`model/gen-ai/`**:
+
+- **`registry.yaml`** — every `gen_ai.*` attribute (id, type, stability, brief). All five `gen_ai.memory.*` attributes are declared here.
+- **`spans.yaml`** — the memory operation spans and which attributes apply to each.
+- **`gen-ai-memory-records.json`** — a **JSON Schema** for the `gen_ai.memory.records` payload. The attribute's declared `type` is `any`; this companion file is what actually pins the record structure. The same "`any` attribute + companion JSON Schema" pattern is used for the other content-bearing attributes (`gen-ai-input-messages.json`, `gen-ai-output-messages.json`, `gen-ai-tool-call-*.json`, `gen-ai-tool-definitions.json`, `gen-ai-retrieval-documents.json`, `gen-ai-system-instructions.json`).
+- The rendered docs (`docs/gen-ai/gen-ai-spans.md` → "Memory"; `docs/registry/attributes/gen-ai.md`) are generated from the model — read the model files when in doubt.
+
+Everything below was verified against those model files. **Everything here is at `Development` stability** — unstable, and shipping instrumentation that emits it is nascent as of mid-2026. We adopt it as the canonical wire format but must tolerate absence and change.
 
 ### Operations (`gen_ai.operation.name` values)
 
@@ -88,7 +97,7 @@ Span name SHOULD equal `gen_ai.operation.name`; span kind CLIENT (or INTERNAL fo
 1. **There is no `gen_ai.memory.scope` attribute** (contrary to an earlier internal report). Scope/layering must be derived — see [Scope resolution](#scope-resolution).
 2. **There is no before/after on the wire, and no token count.** `gen_ai.memory.records` is the *current* content of the records in that operation (opt-in). A diff and a token count are things **we derive**, not read. `record.count` is the only always-available quantity.
 
-`gen_ai.memory.records` content model (`model/gen-ai/gen-ai-memory-records.json`, verified): an array of records where **`content` (`any`) is the only required field**, plus optional `id` (string), `score` (number, populated on search results), and `metadata` (object). The attribute is declared `any` and `development`-stage, so emitters may deviate — consumers validate the shape and fall back to the raw payload. We treat, per record, the `content` field (stringified if object) as that record's new full body.
+`gen_ai.memory.records` content model (`model/gen-ai/gen-ai-memory-records.json`, verified): an **array** of records where **`content` (`any`) is the only required field**, plus optional `id` (string), `score` (number, populated on search results), and `metadata` (object). The record object also sets **`additionalProperties: true`** — extra keys are tolerated but undefined by the standard. Notably there is **no `moved_from`/rename field and no rename operation**: a rename is not representable from a single span and is a derived (ledger/Phase 1) concern, not a wire fact. Because the attribute is declared `any` and is `development`-stage, emitters may deviate — consumers validate the shape and fall back to the raw payload. We treat, per record, the `content` field (stringified if object) as that record's new full body.
 
 ---
 
@@ -280,10 +289,10 @@ Per record at T: load its mutating versions ordered by `end_time` (each carries 
 **Goal:** the 7 memory operations are first-class spans: classified, colored, filterable, with a detail panel.
 
 - **Classification:** add the ops to `operationSchema` (`span.ts`). `resolveOperation` already reads `gen_ai.operation.name`, so they classify with no extra mapping; the enum entry unlocks first-class icon/color and filtering. `resolvers/memory.ts` extracts `store.id`, `record.id`, `record.count`, `query.text`, and `records` into resolved fields (and, passively, dot-flattened attrs already land in `attr_string`/metadata).
-- **Rendering:** a `memory-operation-section.tsx` under `span-detail/` showing operation, store, record id(s), record count, query text (reads), and the records payload — with a "View in Memory →" link to the scope page (Feature 3/4). An icon in `span-tree/span-icon.tsx` and a color in the operation color map (the operation-coloring introduced by #4023). A filter entry in `span-filters.ts` to filter a trace to its memory ops.
+- **Rendering (shipped):** `memory-operation-section.tsx` under `span-detail/` renders one **Memory** section — `query.text` for reads, then the records. When the payload matches the record schema it renders as a **master-detail** (a records rail + a content pane that fills edge-to-edge and scrolls internally; header `[db] <store id> (N)`; `search_memory` results sort by `score`); off-schema/absent payloads fall back to the raw JSON or "Content not captured". Store + count ride the records header; identity fields (`store.id`/`record.id`/`record.count`) drop to a summary row only when there's no records table. An icon in `span-tree/span-icon.tsx`, a color in the operation color map (the operation-coloring introduced by #4023), and a filter entry in `span-filters.ts`. Built on a reusable `MasterDetail` (`@repo/ui`) + a `fillHeight` mode on `CodeBlock`. The "View in Memory →" link to the scope page is deferred until Feature 3/4 exist.
 - **No storage dependency** — ships independently of the ledger.
 
-**UI copy:** `search_memory` reads render as "read"; create/update/upsert/delete render with their `change_kind` badge.
+**UI copy:** `search_memory` results render under a "Results" subsection; the other operations render their records under "Records". Per-record change badges (create/update/delete/rename icons) were explored and **dropped**: a span's `operation` is uniform across all records it carries, so a meaningful per-record change kind (and rename detection) is a Phase 1 / Memory-page concern, not something derivable in the span detail.
 
 ---
 
@@ -357,7 +366,7 @@ Phase 0 reads memory attributes straight from `attr_string`/`attr_int` + the ind
 
 - [x] **P0-1**: Add the 7 memory operations to `operationSchema` + export `MEMORY_OPERATIONS` / `isMemoryOperation` (`packages/domain/spans/src/entities/span.ts`).
 - [x] **P0-2**: Capture structured attributes — `resolveAnyValue` (`packages/domain/spans/src/otlp/transform.ts`) flattens `arrayValue`/`kvlistValue` to a JSON string so `gen_ai.memory.records` survives in `attr_string`. (Dedicated `resolvers/memory.ts` + resolved fields/columns deferred to Phase 1.)
-- [x] **P0-3**: Spans-tab rendering — `span-detail/memory-operation-section.tsx` detail panel (reads attr maps), memory icons (`span-icon.tsx`), waterfall color (`span-tree/helpers.ts`), and a "Memory" filter toggle (`span-filters.ts` / `use-span-filters.ts` / `span-filters-bar.tsx`). Shared `isMemoryOperation` in `spans-tab/memory-operations.ts`.
+- [x] **P0-3**: Spans-tab rendering — `span-detail/memory-operation-section.tsx` detail panel (reads attr maps), memory icons (`span-icon.tsx`), waterfall color (`span-tree/helpers.ts`), and a "Memory" filter toggle (`span-filters.ts` / `use-span-filters.ts` / `span-filters-bar.tsx`). Shared `isMemoryOperation` in `spans-tab/memory-operations.ts`. The records payload renders as a schema-validated master-detail (`memory-records.tsx` + `memory-records-parse.ts`) built on a new reusable `MasterDetail` (`@repo/ui`) and a `fillHeight` mode on `CodeBlock`.
 - [x] **P0-4**: Add `memoryScope` (`latitude.memory.scope`) to the TS SDK (`constants/attributes.ts` + `ContextOptions` + both `processor.ts`/`tracer.ts` stamping paths); documented the scope/user-tagging requirement. (Ingest-side `scope` resolver deferred to Phase 1.)
 
 **Exit gate (met):** a trace containing `create_memory`/`update_memory`/`search_memory` spans classifies them, shows the detail panel, colors them in the waterfall, and filters to them — no ledger yet.
@@ -368,6 +377,9 @@ Phase 0 reads memory attributes straight from `attr_string`/`attr_int` + the ind
 - **The `arrayValue`/`kvlistValue` flattening is general** — every previously-dropped structured attribute now persists as a JSON string in `attr_string` (relying on `CODEC(ZSTD)`; add a length cap in `resolveAnyValue` if a pathological emitter bloats it).
 - **`OPERATION_ICON`'s `satisfies` is vacuous** (the `z.string()` catch-all collapses the `Exclude` to `never`), so memory icon entries are a manual, non-compiler-enforced addition.
 - **The web keeps its own `MEMORY_OPERATIONS`/`isMemoryOperation`** (`spans-tab/memory-operations.ts`, type-only domain import) instead of importing the domain runtime helper into the client bundle — accepted duplication of a 7-string list.
+- **Records master-detail.** The records payload is validated against `gen-ai-memory-records.json` (`parseMemoryRecords`) and rendered as a two-pane list + content view; a new generic `MasterDetail` primitive was added to `@repo/ui` (with a design-system showcase entry) and a `fillHeight` mode to `CodeBlock`/`CodeMirrorReadonly` so content fills the pane and scrolls internally. Per-record change badges were dropped (see Feature 1 UI copy).
+- **Trace-list read path hardened.** `listByTraceId` now returns empty attr maps (mirrors `listBySessionId`/`listByTraceIds`), so the flattened `gen_ai.memory.records` payloads — which this PR is what puts into `attr_string` — don't bloat the trace-list read; the span detail still reads attributes via `findBySpanId`.
+- **Shared OTLP flattener.** The `arrayValue`/`kvlistValue`→JSON flattening lives in a single `otlp/any-value.ts` (`anyValueToPlain`), replacing three near-identical copies across `transform.ts`, the enricher, and the GenAI content parser.
 - **Deferred to Phase 1:** `resolvers/memory.ts` + resolved fields / indexed columns, the ingest-side `scope` resolver + column, and the `"update_memory · <record.id>"` tree-row label (needs `memoryRecordId` on the list-shape `SpanRecord`).
 
 ### Phase 1 — Ledger, blobs, projection, materializer (engine)
