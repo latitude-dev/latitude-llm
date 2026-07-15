@@ -1,5 +1,6 @@
 import { ExternalUserId, OrganizationId, ProjectId, SessionId, SimulationId, SpanId, TraceId } from "@domain/shared"
 import type { SpanDetail, SpanKind, SpanStatusCode } from "../entities/span.ts"
+import { anyValueToPlain } from "./any-value.ts"
 import { attrArray, stringAttr } from "./attributes.ts"
 import { parseContent } from "./content/index.ts"
 import { isDroppedSpan } from "./dropped-spans.ts"
@@ -28,21 +29,6 @@ function nanosToDate(nanos: string | undefined): Date {
   if (!nanos || nanos === "0") return new Date()
   const ms = Number(BigInt(nanos) / BigInt(1_000_000))
   return new Date(ms)
-}
-
-function anyValueToPlain(value: OtlpAnyValue | undefined): unknown {
-  if (!value) return undefined
-  if (value.stringValue !== undefined) return value.stringValue
-  if (value.boolValue !== undefined) return value.boolValue
-  if (value.intValue !== undefined) return Number(value.intValue)
-  if (value.doubleValue !== undefined) return value.doubleValue
-  if (value.arrayValue !== undefined) return (value.arrayValue.values ?? []).map(anyValueToPlain)
-  if (value.kvlistValue !== undefined) {
-    const result: Record<string, unknown> = {}
-    for (const entry of value.kvlistValue.values ?? []) result[entry.key] = anyValueToPlain(entry.value)
-    return result
-  }
-  return undefined
 }
 
 function resolveAnyValue(
