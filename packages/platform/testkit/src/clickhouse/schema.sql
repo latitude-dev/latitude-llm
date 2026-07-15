@@ -22,107 +22,6 @@ PRIMARY KEY (organization_id, dataset_id)
 ORDER BY (organization_id, dataset_id, row_id, xact_id)
 SETTINGS index_granularity = 8192;
 
-CREATE TABLE evaluation_results
-(
-    `id` UInt64,
-    `uuid` UUID,
-    `workspace_id` UInt64,
-    `project_id` UInt64,
-    `commit_uuid` UUID,
-    `document_uuid` UUID,
-    `evaluation_uuid` UUID,
-    `type` LowCardinality(Nullable(String)),
-    `metric` LowCardinality(Nullable(String)),
-    `model` LowCardinality(Nullable(String)),
-    `provider` LowCardinality(Nullable(String)),
-    `experiment_id` Nullable(UInt64),
-    `dataset_id` Nullable(UInt64),
-    `evaluated_row_id` Nullable(UInt64),
-    `evaluated_log_uuid` Nullable(String),
-    `evaluated_span_id` Nullable(String),
-    `evaluated_trace_id` Nullable(String),
-    `score` Nullable(Int64),
-    `normalized_score` Nullable(Int64),
-    `has_passed` Nullable(UInt8),
-    `tokens` Nullable(Int64),
-    `cost` Nullable(Int64),
-    `metadata` Nullable(String) CODEC(ZSTD(3)),
-    `error` Nullable(String) CODEC(ZSTD(3)),
-    `created_at` DateTime64(3, 'UTC'),
-    `updated_at` DateTime64(3, 'UTC'),
-    `created_date` Date MATERIALIZED toDate(created_at),
-    `has_error` UInt8 MATERIALIZED if(isNull(error), 0, 1)
-)
-ENGINE = ReplacingMergeTree(updated_at)
-PARTITION BY toYYYYMM(created_at)
-ORDER BY (workspace_id, created_at, evaluation_uuid, id)
-SETTINGS index_granularity = 8192;
-
-CREATE TABLE memory_blobs
-(
-    `organization_id` LowCardinality(String) CODEC(ZSTD(1)),
-    `content_hash` String CODEC(ZSTD(1)),
-    `content` String DEFAULT '' CODEC(ZSTD(3)),
-    `content_file_key` String DEFAULT '' CODEC(ZSTD(1)),
-    `byte_size` UInt32 DEFAULT 0 CODEC(T64, ZSTD(1)),
-    `token_count` UInt32 DEFAULT 0 CODEC(T64, ZSTD(1)),
-    `created_at` DateTime64(3, 'UTC') DEFAULT now64(3) CODEC(Delta(8), LZ4)
-)
-ENGINE = ReplacingMergeTree(created_at)
-PRIMARY KEY (organization_id, content_hash)
-ORDER BY (organization_id, content_hash)
-SETTINGS index_granularity = 8192;
-
-CREATE TABLE memory_current
-(
-    `organization_id` LowCardinality(String) CODEC(ZSTD(1)),
-    `project_id` LowCardinality(String) CODEC(ZSTD(1)),
-    `scope` String CODEC(ZSTD(1)),
-    `store_id` String DEFAULT '' CODEC(ZSTD(1)),
-    `record_id` String DEFAULT '' CODEC(ZSTD(1)),
-    `content_hash` String DEFAULT '' CODEC(ZSTD(1)),
-    `change_kind` LowCardinality(String) CODEC(ZSTD(1)),
-    `token_count` UInt32 DEFAULT 0 CODEC(T64, ZSTD(1)),
-    `span_id` FixedString(16) DEFAULT '' CODEC(ZSTD(1)),
-    `trace_id` FixedString(32) DEFAULT '' CODEC(ZSTD(1)),
-    `session_id` String DEFAULT '' CODEC(ZSTD(1)),
-    `end_time` DateTime64(6, 'UTC') CODEC(Delta(8), ZSTD(1))
-)
-ENGINE = ReplacingMergeTree(end_time)
-PRIMARY KEY (organization_id, project_id, scope, store_id, record_id)
-ORDER BY (organization_id, project_id, scope, store_id, record_id)
-SETTINGS index_granularity = 8192;
-
-CREATE TABLE memory_events
-(
-    `organization_id` LowCardinality(String) CODEC(ZSTD(1)),
-    `project_id` LowCardinality(String) CODEC(ZSTD(1)),
-    `scope` String CODEC(ZSTD(1)),
-    `store_id` String DEFAULT '' CODEC(ZSTD(1)),
-    `record_id` String DEFAULT '' CODEC(ZSTD(1)),
-    `operation` LowCardinality(String) CODEC(ZSTD(1)),
-    `change_kind` LowCardinality(String) CODEC(ZSTD(1)),
-    `content_hash` String DEFAULT '' CODEC(ZSTD(1)),
-    `token_count` UInt32 DEFAULT 0 CODEC(T64, ZSTD(1)),
-    `record_count` UInt32 DEFAULT 0 CODEC(T64, ZSTD(1)),
-    `query_text` String DEFAULT '' CODEC(ZSTD(3)),
-    `span_id` FixedString(16) DEFAULT '' CODEC(ZSTD(1)),
-    `trace_id` FixedString(32) DEFAULT '' CODEC(ZSTD(1)),
-    `session_id` String DEFAULT '' CODEC(ZSTD(1)),
-    `user_id` String DEFAULT '' CODEC(ZSTD(1)),
-    `start_time` DateTime64(6, 'UTC') CODEC(Delta(8), ZSTD(1)),
-    `end_time` DateTime64(6, 'UTC') CODEC(Delta(8), ZSTD(1)),
-    `source` LowCardinality(String) DEFAULT 'otlp' CODEC(ZSTD(1)),
-    `retention_days` UInt16 DEFAULT 90 CODEC(T64, ZSTD(1)),
-    `ingested_at` DateTime64(3, 'UTC') DEFAULT now64(3) CODEC(Delta(8), LZ4),
-    INDEX idx_memory_events_session_id session_id TYPE bloom_filter(0.01) GRANULARITY 4
-)
-ENGINE = MergeTree
-PARTITION BY toYYYYMM(end_time)
-PRIMARY KEY (organization_id, project_id, scope, store_id, record_id, end_time)
-ORDER BY (organization_id, project_id, scope, store_id, record_id, end_time, span_id)
-SETTINGS index_granularity = 8192;
-
 CREATE TABLE message_embeddings
 (
     `organization_id` LowCardinality(String) CODEC(ZSTD(1)),
@@ -139,16 +38,6 @@ PRIMARY KEY (organization_id, project_id, embedding_model, content_hash)
 ORDER BY (organization_id, project_id, embedding_model, content_hash)
 SETTINGS index_granularity = 8192;
 
-CREATE TABLE schema_migrations
-(
-    `version` Int64,
-    `dirty` UInt8,
-    `sequence` UInt64
-)
-ENGINE = MergeTree
-ORDER BY sequence
-SETTINGS index_granularity = 8192;
-
 CREATE TABLE scores
 (
     `id` FixedString(24) CODEC(ZSTD(1)),
@@ -159,6 +48,7 @@ CREATE TABLE scores
     `span_id` FixedString(16) DEFAULT '' CODEC(ZSTD(1)),
     `source` FixedString(32) CODEC(ZSTD(1)),
     `source_id` FixedString(128) CODEC(ZSTD(1)),
+    `annotator_id` FixedString(24) DEFAULT '' CODEC(ZSTD(1)),
     `simulation_id` FixedString(24) DEFAULT '' CODEC(ZSTD(1)),
     `issue_id` FixedString(24) DEFAULT '' CODEC(ZSTD(1)),
     `value` Float32 CODEC(Gorilla(4), ZSTD(1)),
@@ -169,9 +59,9 @@ CREATE TABLE scores
     `cost` UInt64 DEFAULT 0 CODEC(T64, ZSTD(1)),
     `created_at` DateTime64(3, 'UTC') CODEC(Delta(8), ZSTD(1)),
     `signal_id` FixedString(24) DEFAULT '' CODEC(ZSTD(1)),
-    `annotator_id` FixedString(24) DEFAULT '' CODEC(ZSTD(1)),
     INDEX idx_source source TYPE set(3) GRANULARITY 4,
     INDEX idx_source_id source_id TYPE bloom_filter(0.01) GRANULARITY 2,
+    INDEX idx_annotator_id annotator_id TYPE bloom_filter(0.01) GRANULARITY 2,
     INDEX idx_issue_id issue_id TYPE bloom_filter(0.01) GRANULARITY 2,
     INDEX idx_simulation_id simulation_id TYPE bloom_filter(0.01) GRANULARITY 2,
     INDEX idx_trace_id trace_id TYPE bloom_filter(0.01) GRANULARITY 1,
@@ -179,8 +69,7 @@ CREATE TABLE scores
     INDEX idx_span_id span_id TYPE bloom_filter(0.01) GRANULARITY 1,
     INDEX idx_passed passed TYPE bloom_filter(0.01) GRANULARITY 1,
     INDEX idx_errored errored TYPE bloom_filter(0.01) GRANULARITY 1,
-    INDEX idx_signal_id signal_id TYPE bloom_filter(0.01) GRANULARITY 2,
-    INDEX idx_annotator_id annotator_id TYPE bloom_filter(0.01) GRANULARITY 2
+    INDEX idx_signal_id signal_id TYPE bloom_filter(0.01) GRANULARITY 2
 )
 ENGINE = MergeTree
 PARTITION BY toYYYYMM(created_at)
@@ -609,27 +498,6 @@ PRIMARY KEY (organization_id, project_id, trace_id)
 ORDER BY (organization_id, project_id, trace_id)
 SETTINGS index_granularity = 8192;
 
-CREATE TABLE trace_search_embeddings
-(
-    `organization_id` LowCardinality(String) CODEC(ZSTD(1)),
-    `project_id` LowCardinality(String) CODEC(ZSTD(1)),
-    `trace_id` FixedString(32) CODEC(ZSTD(1)),
-    `chunk_index` UInt16 CODEC(T64, ZSTD(1)),
-    `start_time` DateTime64(9, 'UTC') CODEC(Delta(8), ZSTD(1)),
-    `content_hash` FixedString(64) CODEC(ZSTD(1)),
-    `embedding_model` LowCardinality(String) CODEC(ZSTD(1)),
-    `embedding` Array(Float32) CODEC(ZSTD(1)),
-    `indexed_at` DateTime64(3, 'UTC') DEFAULT now64(3) CODEC(Delta(8), LZ4),
-    `retention_days` UInt16 DEFAULT 30 CODEC(T64, ZSTD(1)),
-    `first_message_index` Nullable(UInt32) CODEC(T64, ZSTD(1)),
-    `last_message_index` Nullable(UInt32) CODEC(T64, ZSTD(1))
-)
-ENGINE = ReplacingMergeTree(indexed_at)
-PARTITION BY toYYYYMM(start_time)
-PRIMARY KEY (organization_id, project_id, trace_id, chunk_index)
-ORDER BY (organization_id, project_id, trace_id, chunk_index)
-SETTINGS index_granularity = 8192;
-
 CREATE TABLE traces
 (
     `organization_id` LowCardinality(String) CODEC(ZSTD(1)),
@@ -760,3 +628,91 @@ GROUP BY
     project_id,
     trace_id;
 
+CREATE TABLE custom_behavior_assignments
+(
+    `organization_id` LowCardinality(String) CODEC(ZSTD(1)),
+    `project_id` LowCardinality(String) CODEC(ZSTD(1)),
+    `custom_behavior_id` LowCardinality(String) CODEC(ZSTD(1)),
+    `observation_id` String CODEC(ZSTD(1)),
+    `session_id` String CODEC(ZSTD(1)),
+    `assigned_cluster_id` String DEFAULT '' CODEC(ZSTD(1)),
+    `assignment_confidence` Float32 DEFAULT 0. CODEC(ZSTD(1)),
+    `assignment_method` LowCardinality(String) DEFAULT '' CODEC(ZSTD(1)),
+    `reassignment_run_id` String DEFAULT '' CODEC(ZSTD(1)),
+    `start_time` DateTime64(9, 'UTC') CODEC(Delta(8), ZSTD(1)),
+    `retention_days` UInt16 DEFAULT 90 CODEC(T64, ZSTD(1)),
+    `indexed_at` DateTime64(3, 'UTC') DEFAULT now64(3) CODEC(Delta(8), LZ4),
+    INDEX idx_custom_behavior_assignments_session_id session_id TYPE bloom_filter(0.01) GRANULARITY 4,
+    INDEX idx_custom_behavior_assignments_observation_id observation_id TYPE bloom_filter(0.01) GRANULARITY 4,
+    INDEX idx_custom_behavior_assignments_cluster_id assigned_cluster_id TYPE bloom_filter(0.01) GRANULARITY 4
+)
+ENGINE = ReplacingMergeTree(indexed_at)
+PARTITION BY toYYYYMM(start_time)
+PRIMARY KEY (organization_id, project_id, custom_behavior_id, observation_id)
+ORDER BY (organization_id, project_id, custom_behavior_id, observation_id)
+SETTINGS index_granularity = 8192;
+
+CREATE TABLE memory_blobs
+(
+    `organization_id` LowCardinality(String) CODEC(ZSTD(1)),
+    `content_hash` String CODEC(ZSTD(1)),
+    `content` String DEFAULT '' CODEC(ZSTD(3)),
+    `content_file_key` String DEFAULT '' CODEC(ZSTD(1)),
+    `byte_size` UInt32 DEFAULT 0 CODEC(T64, ZSTD(1)),
+    `token_count` UInt32 DEFAULT 0 CODEC(T64, ZSTD(1)),
+    `created_at` DateTime64(3, 'UTC') DEFAULT now64(3) CODEC(Delta(8), LZ4)
+)
+ENGINE = ReplacingMergeTree(created_at)
+PRIMARY KEY (organization_id, content_hash)
+ORDER BY (organization_id, content_hash)
+SETTINGS index_granularity = 8192;
+
+CREATE TABLE memory_current
+(
+    `organization_id` LowCardinality(String) CODEC(ZSTD(1)),
+    `project_id` LowCardinality(String) CODEC(ZSTD(1)),
+    `scope` String CODEC(ZSTD(1)),
+    `store_id` String DEFAULT '' CODEC(ZSTD(1)),
+    `record_id` String DEFAULT '' CODEC(ZSTD(1)),
+    `content_hash` String DEFAULT '' CODEC(ZSTD(1)),
+    `change_kind` LowCardinality(String) CODEC(ZSTD(1)),
+    `token_count` UInt32 DEFAULT 0 CODEC(T64, ZSTD(1)),
+    `span_id` FixedString(16) DEFAULT '' CODEC(ZSTD(1)),
+    `trace_id` FixedString(32) DEFAULT '' CODEC(ZSTD(1)),
+    `session_id` String DEFAULT '' CODEC(ZSTD(1)),
+    `end_time` DateTime64(6, 'UTC') CODEC(Delta(8), ZSTD(1))
+)
+ENGINE = ReplacingMergeTree(end_time)
+PRIMARY KEY (organization_id, project_id, scope, store_id, record_id)
+ORDER BY (organization_id, project_id, scope, store_id, record_id)
+SETTINGS index_granularity = 8192;
+
+CREATE TABLE memory_events
+(
+    `organization_id` LowCardinality(String) CODEC(ZSTD(1)),
+    `project_id` LowCardinality(String) CODEC(ZSTD(1)),
+    `scope` String CODEC(ZSTD(1)),
+    `store_id` String DEFAULT '' CODEC(ZSTD(1)),
+    `record_id` String DEFAULT '' CODEC(ZSTD(1)),
+    `operation` LowCardinality(String) CODEC(ZSTD(1)),
+    `change_kind` LowCardinality(String) CODEC(ZSTD(1)),
+    `content_hash` String DEFAULT '' CODEC(ZSTD(1)),
+    `token_count` UInt32 DEFAULT 0 CODEC(T64, ZSTD(1)),
+    `record_count` UInt32 DEFAULT 0 CODEC(T64, ZSTD(1)),
+    `query_text` String DEFAULT '' CODEC(ZSTD(3)),
+    `span_id` FixedString(16) DEFAULT '' CODEC(ZSTD(1)),
+    `trace_id` FixedString(32) DEFAULT '' CODEC(ZSTD(1)),
+    `session_id` String DEFAULT '' CODEC(ZSTD(1)),
+    `user_id` String DEFAULT '' CODEC(ZSTD(1)),
+    `start_time` DateTime64(6, 'UTC') CODEC(Delta(8), ZSTD(1)),
+    `end_time` DateTime64(6, 'UTC') CODEC(Delta(8), ZSTD(1)),
+    `source` LowCardinality(String) DEFAULT 'otlp' CODEC(ZSTD(1)),
+    `retention_days` UInt16 DEFAULT 90 CODEC(T64, ZSTD(1)),
+    `ingested_at` DateTime64(3, 'UTC') DEFAULT now64(3) CODEC(Delta(8), LZ4),
+    INDEX idx_memory_events_session_id session_id TYPE bloom_filter(0.01) GRANULARITY 4
+)
+ENGINE = MergeTree
+PARTITION BY toYYYYMM(end_time)
+PRIMARY KEY (organization_id, project_id, scope, store_id, record_id, end_time)
+ORDER BY (organization_id, project_id, scope, store_id, record_id, end_time, span_id)
+SETTINGS index_granularity = 8192;
