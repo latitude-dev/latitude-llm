@@ -258,6 +258,12 @@ describe("resolveAttributes", () => {
       expect(result.agentName).toBe("researcher")
     })
 
+    it("resolves from Claude Code subagent.name", () => {
+      const attrs: OtlpKeyValue[] = [strAttr("subagent.name", "Explore")]
+      const result = resolveAttributes({ spanAttrs: attrs, statusCode: "unset" })
+      expect(result.agentName).toBe("Explore")
+    })
+
     it("resolves from Claude Code subagent.type", () => {
       const attrs: OtlpKeyValue[] = [strAttr("subagent.type", "general-purpose")]
       const result = resolveAttributes({ spanAttrs: attrs, statusCode: "unset" })

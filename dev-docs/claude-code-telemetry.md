@@ -44,6 +44,16 @@ The [Anthropic Agent SDK](https://code.claude.com/docs/en/agent-sdk/overview) us
 
 Server-side routing lives in `packages/domain/spans/src/otlp/resolvers/operation.ts` (`CLAUDE_CODE_OPERATION` map) and `packages/domain/spans/src/otlp/content/claude-code.ts`. The `gen_ai.input.messages` / `gen_ai.output.messages` attributes are parsed by the generic `parseGenAICurrent` parser, which takes precedence over `parseClaudeCode`.
 
+### Subagents (`Agent` tool)
+
+`Agent` tool calls spawn subagents whose transcripts live in separate files (`<session>/subagents/agent-<agentId>.jsonl`). The hook emits each subagent's turns as a nested `interaction` → `llm_request` → `tool:*` tree parented under its `tool:Agent` span. Subagent spans carry `subagent.id` (`<agentType>:<agentId>`), `subagent.name` and `subagent.type` (both the agent type, e.g. `Explore`), which feed `agentName` resolution and `buildAgentGraph`.
+
+The parent-to-subagent link is the `.meta.json` sidecar's `toolUseId` (the id of the parent `Agent` tool_use) — the only key unique per invocation, so subagents spawned in parallel (which share a `promptId`) each attach to their own `Agent` call; `promptId` is a lossy fallback for older transcripts. When the parent turn is shipped, the hook records `toolUseId → { traceId, parentSpanId }` in the session state. Subagents then emit against that persisted link, not the live turn window.
+
+Subagents rarely finish flushing before the parent turn is shipped (the final synthesis lands last), so the hook re-reads each subagent file every Stop and emits **incrementally**: each span exactly once, when its content is settled. A call is emitted once a later call closes it; the trailing call and the one-time interaction span are held until the file size is unchanged from the previous Stop, which means the final message has finished flushing. Per-file progress lives in the session state (`emittedCalls`, `interactionEmitted`, `lastSize`, `subDone`).
+
+Emit-once matters because span ids and start times are salted only by stable coordinates (`traceId`, `agentId`, turn/call index), but the two storage paths dedupe differently: the `spans` table is `ReplacingMergeTree(ingested_at)` and would collapse a re-sent span, whereas `traces_mv` (the trace-summary rollup) is a plain per-insert `GROUP BY` with no dedup — re-sending a span there would additively inflate `span_count`, tokens, and cost. Emitting each span once keeps both correct. The trade-off: if a session ends while a subagent's transcript is still growing, its trailing call is not emitted (no worse than before, which dropped the final `llm_request` outright).
+
 ## Supported surfaces
 
 | Surface | Works | Why |

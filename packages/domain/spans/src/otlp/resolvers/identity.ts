@@ -104,6 +104,7 @@ export const modelCandidates: Candidate<string>[] = [
 export const agentNameCandidates: Candidate<string>[] = [
   fromString("gen_ai.agent.name"), // OTEL GenAI semconv (Vercel AI SDK v7, generic OTEL)
   fromString("openai.agents.name"), // OpenAI Agents SDK bridge
+  fromString("subagent.name"), // Claude Code
   fromString("subagent.type"), // Claude Code
   fromString("subagent.id", (v) => v.split(":")[0]?.trim() || undefined), // Claude Code
   fromString("openclaw.subagent.label"), // OpenClaw wrapper span

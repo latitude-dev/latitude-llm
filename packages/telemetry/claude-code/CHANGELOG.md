@@ -7,6 +7,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.0.10] - 2026-07-14
+
+### Fixed
+
+- **Parallel subagents now each get their own trace subtree.** When one turn spawned several `Agent` subagents at once, only one `tool:Agent` span received a nested `interaction` — the others showed no children. The stitcher matched subagents to their parent `Agent` call by `promptId`, which parallel calls share, so they collapsed onto a single call. Subagents are now matched by the `toolUseId` recorded in each subagent's `.meta.json` (unique per invocation), with `promptId` kept as a fallback for older transcripts.
+- **A subagent's final `llm_request` is no longer dropped.** A subagent's transcript usually finishes flushing after its parent turn was already shipped (the final synthesis lands last), and the one-shot incremental read froze each subagent's offset before that row arrived, with no way to re-attach it. Subagents now emit as a standalone pass keyed off the parent `Agent` call's persisted span link: each subagent file is re-read every Stop and its spans are emitted **incrementally, exactly once** — a call once a later call closes it, and the trailing call plus interaction span once the file stops growing. Emitting each span once (rather than re-sending the whole subtree) keeps the additive `traces` rollup correct, since that view has no per-span dedup unlike the raw `spans` table.
+
+### Added
+
+- `subagent.name` attribute (the agent type, e.g. `Explore`) on subagent spans, alongside the existing `subagent.id` and `subagent.type`.
+
 ## [0.0.9] - 2026-06-18
 
 ### Added
