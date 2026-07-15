@@ -487,6 +487,17 @@ const _registry = {
     }
   }>(),
 
+  // Materializes a settled trace's memory-operation spans into the memory ledger
+  // (memory_events / memory_blobs / memory_current). Fanned out from trace-end as
+  // an isolated failure domain, mirroring deterministic-flaggers.
+  "memory-projection": payloads<{
+    run: {
+      readonly organizationId: string
+      readonly projectId: string
+      readonly traceId: string
+    }
+  }>(),
+
   // Thin start-workflow job. Separates the Temporal `start()` call out of the
   // deterministic-flaggers hot path so transient Temporal unavailability retries
   // with bounded BullMQ backoff instead of re-running the whole deterministic fan-out.

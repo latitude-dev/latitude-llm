@@ -17,6 +17,7 @@ export { AnalyticsQueryReaderLive } from "./repositories/analytics-query-reposit
 export { ClaudeCodeSpanReaderLive } from "./repositories/claude-code-span-reader.ts"
 export { CustomBehaviorAssignmentRepositoryLive } from "./repositories/custom-behavior-assignment-repository.ts"
 export { DatasetRowRepositoryLive } from "./repositories/dataset-row-repository.ts"
+export { MemoryRepositoryLive } from "./repositories/memory-repository.ts"
 export { MessageEmbeddingRepositoryLive } from "./repositories/message-embedding-repository.ts"
 export { MetricSeriesReaderLive } from "./repositories/metric-series-reader.ts"
 export { ScoreAnalyticsRepositoryLive } from "./repositories/score-analytics-repository.ts"

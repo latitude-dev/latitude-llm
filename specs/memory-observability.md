@@ -384,13 +384,21 @@ Phase 0 reads memory attributes straight from `attr_string`/`attr_int` + the ind
 
 ### Phase 1 — Ledger, blobs, projection, materializer (engine)
 
-- [ ] **P1-1**: `ch:create` migrations for `memory_events`, `memory_blobs`, `memory_current` (append-only rules).
-- [ ] **P1-2**: `@domain/memories` package skeleton (entities, port, index/testing exports) matching `@domain/scores`.
-- [ ] **P1-3**: `memory-repository.ts` CH adapter: insert events/blobs, upsert current, read current snapshot, read manifest-at-T, read record versions, read session events, list scopes.
-- [ ] **P1-4**: `materialize-trace-memory` use-case (body → sha256 + tiktoken `token_count`, `change_kind` derivation incl. upsert add-vs-update and whole-store wipe) + `memory-projection` worker triggered from `trace-end.ts`.
-- [ ] **P1-5**: `reconstruct-snapshot` (ledger argMax + store-wipe post-filter; `memory_current` shortcut for now).
+- [x] **P1-1**: `ch:create` migrations for `memory_events` (`MergeTree`, `PARTITION BY toYYYYMM(end_time)`), `memory_blobs` (`ReplacingMergeTree(created_at)`, no partition), `memory_current` (`ReplacingMergeTree(end_time)`, no partition — a record's versions must stay in one partition to dedup). Unclustered + clustered pairs; `ch:up` + `ch:schema:dump` synced the chdb test schema.
+- [x] **P1-2**: `@domain/memories` package (entities `memory-event`/`memory-record`/`memory-blob`/`memory-current`/`memory-snapshot`, `MemoryRepository` port, `./testing` fake, index) matching `@domain/scores`. New dep `js-tiktoken` (catalog).
+- [x] **P1-3**: `memory-repository.ts` CH adapter — `insertEvents`, `upsertBlobs`, `upsertCurrent`, `readCurrentSnapshot`, `readManifestAt`, `readLatestStoreWipes`; chdb integration tests (dedup, point-in-time manifest, current snapshot, store wipes). *(Blame/session/scope-list reads grow the port in Phases 2/3.)*
+- [x] **P1-4**: `materialize-trace-memory` use-case (body → sha256 + `o200k_base` `token_count`, `change_kind` derivation incl. upsert add-vs-update and whole-store wipe, per-record fan-out) + `memory-projection` worker (topic-registry + `server.ts`) fanned out from `trace-end.ts`. Reads the trace's memory spans via a new `SpanRepository.listMemoryOperationSpansByTraceId` (memory attrs as scalar map lookups — no OOM).
+- [x] **P1-5**: `reconstruct-snapshot` (`memory_current` for now, ledger argMax for point-in-time; store-wipe post-filter applied to both paths).
 
-**Exit gate:** ingesting seeded memory spans populates the three tables; `reconstruct-snapshot(scope, now)` and `reconstruct-snapshot(scope, pastT)` return correct manifests in chdb integration tests; dedup verified (identical body ⇒ one blob).
+**Exit gate (met):** seeded memory spans populate the three tables; `reconstruct-snapshot(scope, now)` and `reconstruct-snapshot(scope, pastT)` return correct manifests in chdb integration tests; dedup verified (identical body ⇒ one blob).
+
+**Phase 1 implementation notes (deviations from the original plan):**
+
+- **Resolve at projection, not ingestion.** No spans-table migration and no `resolvers/memory.ts`; the materializer derives store/record/count/query/records + scope (`gen_ai.memory.scope` → `latitude.memory.scope` → span `user_id` → `""`) from the already-stored span attributes at trace-end. Keeps Phase 1 additive and off the hot ingestion path. The Spans-tab niceties this defers (lean `memory_store_id`/`memory_record_id` columns, the `update_memory · <record.id>` tree label, server-side record filtering) remain a separate Feature-1 polish PR.
+- **Blobs are inline-only in Phase 1.** `content_file_key` is reserved in the schema but always empty; the `putInDisk` object-storage overflow is deferred (it needs a new `memory` storage namespace, and record bodies are small / already stored inline in `spans` today). No `StorageDisk` dependency in the materializer or worker.
+- **`memory_events` stays `MergeTree` (append-only).** A retried projection can append duplicate rows; reconstruction is `argMax`-based so duplicates are harmless. Phase-2 aggregations must dedup by `(span_id, store_id, record_id)`.
+- **Retention:** `memory_events`/`memory_current` carry `retention_days` (default 90) + a TTL on `memory_events`; per-plan retention wiring and `memory_blobs` GC are follow-ups.
+- **Idempotency at the boundary** rides the `trace-end` 90s debounce + `dedupeKey: memory-projection:<traceId>`.
 
 ### Phase 2 — Diff, blame, and the session/trace summary (Feature 2)
 

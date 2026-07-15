@@ -34,6 +34,7 @@
     "@domain/datasets": "workspace:*",
     "@domain/events": "workspace:*",
     "@domain/experiments": "workspace:*",
+    "@domain/memories": "workspace:*",
     "@domain/monitors": "workspace:*",
     "@domain/scores": "workspace:*",
     "@domain/shared": "workspace:*",

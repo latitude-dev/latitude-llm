@@ -38,6 +38,7 @@
     "@domain/exports": "workspace:*",
     "@domain/flaggers": "workspace:*",
     "@domain/integrations": "workspace:*",
+    "@domain/memories": "workspace:*",
     "@domain/organizations": "workspace:*",
     "@domain/product-feedback": "workspace:*",
     "@domain/projects": "workspace:*",
