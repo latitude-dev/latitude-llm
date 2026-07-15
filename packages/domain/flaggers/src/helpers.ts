@@ -189,6 +189,22 @@ function responseIndicatesFailure(response: unknown): boolean {
   return Array.isArray(response.errors) && response.errors.length > 0
 }
 
+function looksLikeStructuredJsonOutput(content: string): boolean {
+  if (content.startsWith("{")) return true
+  if (!content.startsWith("[")) return false
+  if (/^\[[^\]]+\]\(/.test(content)) return false
+
+  const afterBracket = content.slice(1).trimStart()
+  if (afterBracket.length === 0) return true
+
+  const first = afterBracket[0]!
+  if (first === "]" || first === "{" || first === "[" || first === '"' || first === "-") return true
+  if (first >= "0" && first <= "9") return true
+  return (
+    afterBracket.startsWith("true") || afterBracket.startsWith("false") || afterBracket.startsWith("null")
+  )
+}
+
 export function detectOutputSchemaValidationFlagger(trace: TraceDetail): DeterministicFlaggerMatch {
   for (let msgIdx = 0; msgIdx < trace.allMessages.length; msgIdx++) {
     const message = trace.allMessages[msgIdx]!
@@ -196,7 +212,7 @@ export function detectOutputSchemaValidationFlagger(trace: TraceDetail): Determi
     for (const rawPart of iterMessageParts(message.parts)) {
       if (!isRecord(rawPart) || rawPart.type !== "text") continue
       const content = typeof rawPart.content === "string" ? rawPart.content.trim() : ""
-      if (!content || (!content.startsWith("{") && !content.startsWith("["))) continue
+      if (!content || !looksLikeStructuredJsonOutput(content)) continue
 
       if (content.endsWith(","))
         return match("Assistant output ended with a trailing comma, suggesting truncated JSON", msgIdx)
