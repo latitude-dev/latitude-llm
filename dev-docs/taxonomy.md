@@ -9,6 +9,16 @@ The tree is produced two ways that must be read separately:
 
 Domain code: `packages/domain/taxonomy`. Postgres adapters: `packages/platform/db-postgres/src/repositories/taxonomy-*.ts`. ClickHouse adapter: `packages/platform/db-clickhouse/src/repositories/taxonomy-observation-repository.ts`. Orchestration: `apps/workflows/src/workflows/taxonomy-gardening-workflow.ts` + `apps/workflows/src/activities/taxonomy-gardening-activities.ts`. Temporal is the **only** gardening orchestrator — a missing workflow starter is a logged misconfiguration, not a fallback.
 
+## Naming: behaviors, moments, and the *other* "signals"
+
+Three concepts here were renamed at the UI layer only (`#3704`), so a code identifier rarely matches the label a user sees. This is the biggest source of confusion in the area; keep it straight:
+
+- **Topics → "Behaviors".** The cluster tree in this doc is the product's **Behaviors** page. The code dimension is still the singleton `topic` (`assigned_cluster_id`, the sessions `topics` filter). Same thing, two names.
+- **Moment labels → "Moments"** (was **"Detected signals"**). Per-session behavioral labels — `escalation`, `user_frustration`, `resolution`, … — live in [conversation intelligence](./conversation-intelligence.md) (`session_moment_labels`), **not here**. They are a read/annotation layer: they feed the behaviour-drawer rollups and the sessions `moments` filter, but they are **never clustered into the taxonomy**. In web/domain code they are still named `signals` (`detectedSignals`, `BehaviourSignalRecord`, the `"signals"` column key), sourced from moment-kind distributions. When someone says "moments *son* signals," this is what they mean.
+- **The Signals product** (`@domain/signals`, was **"Issues"**) is a **separate** system that clusters failed *scores* into failure patterns and escalates them to incidents (see [signals](./signals.md)). It has **no data relationship** to the taxonomy or to moments — no shared id, no FK, no pipeline hop. The only overlap is the generic decayed-centroid helper in `@domain/shared` (this doc's "shared math with issues" above), used independently at different half-lives.
+
+Net: a bare "signal" in this codebase is ambiguous — in behaviours/taxonomy code it means a **moment label**; in `@domain/signals` it means a **failure pattern** (the former "issues"). Not the same thing, and nothing wires them together.
+
 ## Tree model
 
 `taxonomy_clusters` (Postgres, `packages/platform/db-postgres/src/schema/taxonomy-clusters.ts`) rows carry the tree shape. The `TaxonomyCluster` entity (`packages/domain/taxonomy/src/entities/cluster.ts`) mirrors them:
