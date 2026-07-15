@@ -142,6 +142,10 @@ interface TreeCtx {
   priorTurns: Turn[]
   requestsByMessageId: Map<string, StoredRequest>
   agentLinks: AgentSpanLink[] | undefined
+  // Emission window (subagent incremental re-emission). Defaults emit everything.
+  emitInteraction?: boolean
+  callFrom?: number
+  callTo?: number
 }
 
 function buildInteractionTree(out: OtlpSpan[], ctx: TreeCtx): void {
@@ -192,9 +196,12 @@ function buildInteractionTree(out: OtlpSpan[], ctx: TreeCtx): void {
     ]),
     status: { code: 1 },
   }
-  out.push(interactionSpan)
+  if (ctx.emitInteraction ?? true) out.push(interactionSpan)
 
+  const callFrom = ctx.callFrom ?? 0
+  const callTo = ctx.callTo ?? turn.calls.length
   turn.calls.forEach((call, callIdx) => {
+    if (callIdx < callFrom || callIdx >= callTo) return
     emitCallAndTools(out, ctx, call, callIdx)
   })
 }
@@ -292,6 +299,7 @@ function emitCallAndTools(out: OtlpSpan[], ctx: TreeCtx, call: AssistantCall, ca
     }
 
     if (tool.subagent) {
+      const totalCalls = tool.subagent.turns.reduce((sum, t) => sum + t.calls.length, 0)
       emitSubagentTree(out, {
         traceId,
         parentSpanId: toolSpanId,
@@ -300,6 +308,9 @@ function emitCallAndTools(out: OtlpSpan[], ctx: TreeCtx, call: AssistantCall, ca
         subagent: tool.subagent,
         contextAttrs: ctx.contextAttrs,
         requestsByMessageId: ctx.requestsByMessageId,
+        emitInteraction: true,
+        fromCall: 0,
+        toCall: totalCalls,
       })
     }
   })
@@ -313,16 +324,26 @@ interface SubagentTreeCtx {
   subagent: SubagentInvocation
   contextAttrs: OtlpKeyValue[]
   requestsByMessageId: Map<string, StoredRequest>
+  // Emission window over the subagent's calls, flattened across its turns. The
+  // interaction span is emitted only when emitInteraction is set. Defaults emit all.
+  emitInteraction: boolean
+  fromCall: number
+  toCall: number
 }
 
 // Emits a subagent's interaction/llm_request/tool subtree under `parentSpanId`.
-// Span ids are salted only by traceId, agentId, and turn/call index, so a later
-// re-emission from a grown transcript produces byte-identical ids (and start
-// times) — the server dedupes on the full sort key, so re-sends are idempotent.
+// Span ids are salted only by traceId, agentId, and turn/call index — never by how
+// many calls exist yet — so emitting calls incrementally across turns produces the
+// same ids a single full emission would. Each span is therefore inserted at most
+// once, which keeps the additive trace-level aggregates (span_count, tokens, cost)
+// correct: those come from a plain per-insert GROUP BY with no dedup, unlike the
+// spans table's ReplacingMergeTree.
 function emitSubagentTree(out: OtlpSpan[], ctx: SubagentTreeCtx): void {
   const { subagent } = ctx
+  let globalIdx = 0
   subagent.turns.forEach((subTurn, subIdx) => {
     const subSalt = `sub:${subagent.agentId}:${subIdx}`
+    const count = subTurn.calls.length
     buildInteractionTree(out, {
       traceId: ctx.traceId,
       turnSpanId: hashHex(`${ctx.traceId}:${subSalt}:turn`, 16),
@@ -340,23 +361,34 @@ function emitSubagentTree(out: OtlpSpan[], ctx: SubagentTreeCtx): void {
       priorTurns: subagent.turns.slice(0, subIdx),
       requestsByMessageId: ctx.requestsByMessageId,
       agentLinks: undefined,
+      emitInteraction: ctx.emitInteraction,
+      callFrom: Math.max(0, ctx.fromCall - globalIdx),
+      callTo: Math.min(count, ctx.toCall - globalIdx),
     })
+    globalIdx += count
   })
 }
 
 // Standalone subagent subtree for re-emission on a later turn: builds context
 // attrs and applies redaction itself (it does not pass through buildOtlpRequest).
+// `fromCall`/`toCall` bound which calls (flattened across the subagent's turns) are
+// emitted this pass, and `emitInteraction` controls the one-time interaction span,
+// so a growing transcript sends each span exactly once.
 export function buildSubagentSpans(opts: {
   sessionId: string
   userId?: string | undefined
   traceId: string
   parentSpanId: string
   subagent: SubagentInvocation
+  emitInteraction?: boolean
+  fromCall?: number
+  toCall?: number
   context?: TraceContext | undefined
   requestsByMessageId?: Map<string, StoredRequest> | undefined
   redact?: RedactConfig | undefined
 }): OtlpSpan[] {
   const out: OtlpSpan[] = []
+  const totalCalls = opts.subagent.turns.reduce((sum, t) => sum + t.calls.length, 0)
   emitSubagentTree(out, {
     traceId: opts.traceId,
     parentSpanId: opts.parentSpanId,
@@ -365,6 +397,9 @@ export function buildSubagentSpans(opts: {
     subagent: opts.subagent,
     contextAttrs: buildContextAttrs(opts.context),
     requestsByMessageId: opts.requestsByMessageId ?? new Map<string, StoredRequest>(),
+    emitInteraction: opts.emitInteraction ?? true,
+    fromCall: opts.fromCall ?? 0,
+    toCall: opts.toCall ?? totalCalls,
   })
   return opts.redact ? out.map((span) => redactSpan(span, opts.redact as RedactConfig)) : out
 }

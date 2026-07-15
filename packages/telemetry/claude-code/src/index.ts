@@ -185,7 +185,7 @@ async function main(): Promise<void> {
         agentLinks: linkMap,
       })
       for (const s of subagents.saves) {
-        save(s.key, { offset: 0, buffer: "", turnCount: 0, emittedSize: s.emittedSize })
+        save(s.key, { offset: 0, buffer: "", turnCount: 0, ...s.state })
       }
       // Prune the main request files we just consumed, then sweep anything older
       // than 24h. Subagent request files are left for the 24h sweep so a later
@@ -235,9 +235,16 @@ function materializeIntercept(logger: Logger): void {
   }
 }
 
+interface SubagentSave {
+  emittedCalls: number
+  interactionEmitted: boolean
+  lastSize: number
+  subDone: boolean
+}
+
 interface SubagentEmission {
   spans: OtlpSpan[]
-  saves: Array<{ key: string; emittedSize: number }>
+  saves: Array<{ key: string; state: SubagentSave }>
 }
 
 function emitSubagents(args: {
@@ -250,7 +257,7 @@ function emitSubagents(args: {
 }): SubagentEmission {
   const { sessionId, mainTranscriptPath, linkMap, context, redact, logger } = args
   const spans: OtlpSpan[] = []
-  const saves: Array<{ key: string; emittedSize: number }> = []
+  const saves: Array<{ key: string; state: SubagentSave }> = []
 
   for (const file of discoverSubagentFiles(mainTranscriptPath)) {
     let size: number
@@ -259,9 +266,11 @@ function emitSubagents(args: {
     } catch {
       continue
     }
+    if (size === 0) continue
+
     const subKey = stateKey(sessionId, file.filePath)
-    const subPrior = load(subKey)
-    if (size <= (subPrior.emittedSize ?? 0)) continue
+    const prior = load(subKey)
+    if (prior.subDone && size === prior.lastSize) continue
 
     const meta = readSubagentMeta(file.metaPath)
     const rows = readAllRows(file.filePath)
@@ -274,6 +283,28 @@ function emitSubagents(args: {
 
     const subTurns = buildTurns(rows, { includeSidechain: true })
     if (subTurns.length === 0) continue
+    const totalCalls = subTurns.reduce((sum, t) => sum + t.calls.length, 0)
+
+    // A call is safe to emit once it is closed by a later call. The trailing call
+    // (and the interaction span's final duration) only settle once the transcript
+    // stops growing, so hold it until the file size is unchanged from the last Stop.
+    const stable = prior.lastSize !== undefined && size === prior.lastSize
+    const emittedCalls = prior.emittedCalls ?? 0
+    const targetCalls = stable ? totalCalls : Math.max(0, totalCalls - 1)
+    const emitInteraction = !(prior.interactionEmitted ?? false)
+
+    if (targetCalls <= emittedCalls && !emitInteraction) {
+      saves.push({
+        key: subKey,
+        state: {
+          emittedCalls,
+          interactionEmitted: prior.interactionEmitted ?? false,
+          lastSize: size,
+          subDone: stable && emittedCalls >= totalCalls,
+        },
+      })
+      continue
+    }
 
     const subagent: SubagentInvocation = {
       agentId: file.agentId,
@@ -288,13 +319,26 @@ function emitSubagents(args: {
         traceId: link.traceId,
         parentSpanId: link.parentSpanId,
         subagent,
+        emitInteraction,
+        fromCall: emittedCalls,
+        toCall: targetCalls,
         context,
         requestsByMessageId,
         redact,
       }),
     )
-    saves.push({ key: subKey, emittedSize: size })
-    logger.debug(`subagent ${file.agentId}: emitted ${subTurns.length} turn(s) at size=${size}`)
+    saves.push({
+      key: subKey,
+      state: {
+        emittedCalls: targetCalls,
+        interactionEmitted: true,
+        lastSize: size,
+        subDone: stable && targetCalls >= totalCalls,
+      },
+    })
+    logger.debug(
+      `subagent ${file.agentId}: emitted calls [${emittedCalls}, ${targetCalls}) interaction=${emitInteraction} stable=${stable}`,
+    )
   }
 
   return { spans, saves }

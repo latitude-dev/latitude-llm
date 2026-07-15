@@ -923,36 +923,65 @@ describe("buildSubagentSpans", () => {
     expect(tool.parentSpanId).toBe(interaction.spanId)
   })
 
-  it("re-emits stable span ids and start times when the transcript grows (idempotent)", () => {
-    const partial = buildSubagentSpans({
+  it("emits only the windowed calls, and the interaction only when asked", () => {
+    // Second Stop: first call already emitted, interaction already emitted; only the
+    // now-settled trailing (synthesis) call should go out.
+    const trailingOnly = buildSubagentSpans({
       sessionId: "sess-1",
       traceId: "trace-abc",
       parentSpanId: "parent-tool-span",
-      subagent: subagentOf([grepCall], 1_200),
+      subagent: subagentOf([grepCall, synthesisCall], 1_400),
+      emitInteraction: false,
+      fromCall: 1,
+      toCall: 2,
     })
-    // Later turn: the final synthesis llm_request has landed and the file grew.
-    const complete = buildSubagentSpans({
+
+    expect(trailingOnly.some((s) => getAttr(s.attributes, "span.type") === "interaction")).toBe(false)
+    const llms = trailingOnly.filter((s) => getAttr(s.attributes, "span.type") === "llm_request")
+    expect(llms).toHaveLength(1)
+    expect(getAttr(unwrap(llms[0]).attributes, "llm_request.message_id")).toBe("s2")
+  })
+
+  it("emits each span exactly once as the transcript grows (no double-count)", () => {
+    // Full subtree for reference — this is what a single complete emission produces.
+    const full = buildSubagentSpans({
       sessionId: "sess-1",
       traceId: "trace-abc",
       parentSpanId: "parent-tool-span",
       subagent: subagentOf([grepCall, synthesisCall], 1_400),
     })
 
-    const startById = (spans: typeof partial) => new Map(spans.map((s) => [s.spanId, s.startTimeUnixNano]))
-    const partialStarts = startById(partial)
-    const completeStarts = startById(complete)
+    // Stop 1 (still growing): interaction + closed calls [0,1). Stop 2 (stable): the
+    // trailing call [1,2), no interaction.
+    const stop1 = buildSubagentSpans({
+      sessionId: "sess-1",
+      traceId: "trace-abc",
+      parentSpanId: "parent-tool-span",
+      subagent: subagentOf([grepCall], 1_200),
+      emitInteraction: true,
+      fromCall: 0,
+      toCall: 1,
+    })
+    const stop2 = buildSubagentSpans({
+      sessionId: "sess-1",
+      traceId: "trace-abc",
+      parentSpanId: "parent-tool-span",
+      subagent: subagentOf([grepCall, synthesisCall], 1_400),
+      emitInteraction: false,
+      fromCall: 1,
+      toCall: 2,
+    })
 
-    // Every span the partial emission produced reappears with an identical id AND
-    // start time — the full ReplacingMergeTree sort key matches, so the re-send
-    // dedupes instead of duplicating.
-    for (const [spanId, start] of partialStarts) {
-      expect(completeStarts.get(spanId)).toBe(start)
+    const ids1 = stop1.map((s) => s.spanId)
+    const ids2 = stop2.map((s) => s.spanId)
+    // No span id is sent twice — the additive traces aggregate can't double-count.
+    expect(ids1.filter((id) => ids2.includes(id))).toEqual([])
+    // Together the two passes cover exactly the full subtree, once each.
+    expect([...ids1, ...ids2].sort()).toEqual(full.map((s) => s.spanId).sort())
+    // Start times match the reference emission (stable ReplacingMergeTree sort key).
+    const fullStart = new Map(full.map((s) => [s.spanId, s.startTimeUnixNano]))
+    for (const s of [...stop1, ...stop2]) {
+      expect(s.startTimeUnixNano).toBe(fullStart.get(s.spanId))
     }
-    // The final synthesis llm_request is the one genuinely new span.
-    const llmCount = (spans: typeof partial) =>
-      spans.filter((s) => getAttr(s.attributes, "span.type") === "llm_request").length
-    expect(llmCount(partial)).toBe(1)
-    expect(llmCount(complete)).toBe(2)
-    expect(complete.length).toBe(partial.length + 1)
   })
 })
