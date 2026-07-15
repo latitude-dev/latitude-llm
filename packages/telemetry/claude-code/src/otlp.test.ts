@@ -759,6 +759,53 @@ describe("span size capping", () => {
     expect(JSON.stringify(llm).length).toBeLessThan(256 * 1024)
   })
 
+  it("keeps the issuing assistant message when tail truncation would orphan tool responses", () => {
+    const giant = "x".repeat(60_000)
+    const req = buildOtlpRequest({
+      sessionId: "sess-cap",
+      turnStartNumber: 1,
+      turns: [
+        baseTurn({
+          userText: "analyze images",
+          calls: [
+            {
+              messageId: "msg_tools",
+              model: "claude-opus-4-8",
+              text: "",
+              startMs: 1_000,
+              endMs: 1_500,
+              tokens: { input_tokens: 100, output_tokens: 50 },
+              toolUses: [
+                { id: "toolu_01", name: "Read", input: { path: "a.jpg" }, output: giant, startMs: 1_500, endMs: 1_800 },
+                { id: "toolu_02", name: "Read", input: { path: "b.jpg" }, output: giant, startMs: 1_500, endMs: 1_800 },
+              ],
+            },
+            {
+              messageId: "msg_final",
+              model: "claude-opus-4-8",
+              text: "summary",
+              startMs: 2_000,
+              endMs: 2_500,
+              tokens: { input_tokens: 200, output_tokens: 100 },
+              toolUses: [],
+            },
+          ],
+        }),
+      ],
+    })
+    const llm = unwrap(otlpSpans(req).find((s) => getAttr(s.attributes, "llm_request.message_id") === "msg_final"))
+    const inputJson = unwrap(getAttr(llm.attributes, "gen_ai.input.messages"))
+    const messages = JSON.parse(inputJson) as Array<{ role: string; parts: Array<{ type: string; id?: string }> }>
+    const assistantWithCall = messages.find(
+      (m) => m.role === "assistant" && m.parts.some((p) => p.type === "tool_call" && p.id === "toolu_01"),
+    )
+    const toolResponses = messages.find(
+      (m) => m.role === "tool" && m.parts.some((p) => p.type === "tool_call_response" && p.id === "toolu_01"),
+    )
+    expect(assistantWithCall).toBeDefined()
+    expect(toolResponses).toBeDefined()
+  })
+
   it("clamps oversized user prompts on the interaction span", () => {
     const req = buildOtlpRequest({
       sessionId: "sess-cap",

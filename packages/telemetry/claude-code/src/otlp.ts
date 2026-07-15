@@ -602,8 +602,10 @@ function capMessagesJson(messages: Message[], maxBytes: number): CapResult {
     start--
   }
 
-  const kept = messages.slice(start)
+  const pairStart = extendStartForLeadingToolResponses(messages, start)
+  const kept = messages.slice(pairStart)
   const notes: string[] = []
+  if (pairStart < start) notes.push(`kept ${start - pairStart} message(s) for tool_call pairing`)
   if (kept.length === 0) {
     // Even the newest message alone exceeds the budget: shrink its parts instead.
     const last = messages[messages.length - 1]
@@ -614,8 +616,54 @@ function capMessagesJson(messages: Message[], maxBytes: number): CapResult {
     }
     start = messages.length - 1
   }
-  if (start > 0) notes.push(`dropped ${start} oldest of ${messages.length} messages`)
+  if (pairStart > 0) notes.push(`dropped ${pairStart} oldest of ${messages.length} messages`)
   return { json: JSON.stringify(kept), note: notes.join("; ") }
+}
+
+function toolCallIdsInMessage(message: Message): Set<string> {
+  const ids = new Set<string>()
+  for (const part of message.parts) {
+    if (part.type === "tool_call" && typeof part.id === "string" && part.id.trim() !== "") {
+      ids.add(part.id.trim())
+    }
+  }
+  return ids
+}
+
+function toolCallResponseIdsInMessage(message: Message): Set<string> {
+  const ids = new Set<string>()
+  for (const part of message.parts) {
+    if (part.type === "tool_call_response" && typeof part.id === "string" && part.id.trim() !== "") {
+      ids.add(part.id.trim())
+    }
+  }
+  return ids
+}
+
+function extendStartForLeadingToolResponses(messages: Message[], start: number): number {
+  let pairStart = start
+  while (pairStart > 0) {
+    const first = messages[pairStart]
+    if (!first || first.role !== "tool") break
+
+    const responseIds = toolCallResponseIdsInMessage(first)
+    if (responseIds.size === 0) break
+
+    const knownCallIds = new Set<string>()
+    for (const message of messages.slice(pairStart)) {
+      for (const id of toolCallIdsInMessage(message)) knownCallIds.add(id)
+    }
+    if ([...responseIds].every((id) => knownCallIds.has(id))) break
+
+    const prev = messages[pairStart - 1]
+    if (!prev || prev.role !== "assistant") break
+
+    const prevCallIds = toolCallIdsInMessage(prev)
+    if (![...responseIds].every((id) => prevCallIds.has(id))) break
+
+    pairStart--
+  }
+  return pairStart
 }
 
 function capPartsJson(parts: MessagePart[], maxBytes: number): CapResult {
