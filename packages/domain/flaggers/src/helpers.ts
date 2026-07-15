@@ -200,9 +200,7 @@ function looksLikeStructuredJsonOutput(content: string): boolean {
   const first = afterBracket[0]!
   if (first === "]" || first === "{" || first === "[" || first === '"' || first === "-") return true
   if (first >= "0" && first <= "9") return true
-  return (
-    afterBracket.startsWith("true") || afterBracket.startsWith("false") || afterBracket.startsWith("null")
-  )
+  return afterBracket.startsWith("true") || afterBracket.startsWith("false") || afterBracket.startsWith("null")
 }
 
 export function detectOutputSchemaValidationFlagger(trace: TraceDetail): DeterministicFlaggerMatch {
