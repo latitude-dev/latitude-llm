@@ -47,6 +47,10 @@ The previous recursive gardening implementation derived child density from each 
 * Reintroducing incremental recurse/merge/noise gardening.
 * Changing the Behaviors empty state.
 
+## Scope: global and custom behaviors
+
+The global taxonomy garden and the custom-behavior-scoped garden share one builder, one depth schedule, one publish path, and the same mode gate — global vs scoped is a `customBehaviorId` parameter, not a fork. Every change here applies to both, and `off` must be byte-identical on both. Custom behaviors are not yet in production, so adaptive enforcement affects only the live global tree today; the pilot rollout carries no scoped-tree risk. The online routing threshold is global-only by design — scoped trees are assigned by full reassignment into `custom_behavior_assignments`, never served by the online router (`listNearestActive` / `hybridSearch` are `custom_behavior_id IS NULL`). Phase-3 QA must still cover the scoped write target, since the shared code runs it under test before the feature launches.
+
 ## Adaptive split algorithm
 
 The depth schedule retains scale-free policy:
@@ -272,7 +276,7 @@ Exit: deterministic output, narrow-domain separation, unimodal suppression, fini
 * Add invariant checks, abandoned-staging cleanup, and catch-up assignment.
 * Verify every subtree-based read surface.
 
-QA: invariant tests that no active read (`listActiveByProject`, `listNearestActive`, list-clusters, analytics) returns a `staging` row; atomic-swap test leaves exactly one active tree; injected-failure test proves the old tree stays active and staging rows are cleaned up; catch-up test assigns observations indexed mid-reassignment; naming test forces a rename on leaf↔interior or child-count change and keeps the name on a same-shape high-similarity continuation; a golden regression on the seeded Acme corpus proves `off` output is byte-identical to pre-change; a Temporal replay test proves the `patched()` marker reconciles an in-flight pre-change history.
+QA: invariant tests that no active read (`listActiveByProject`, `listNearestActive`, list-clusters, analytics) returns a `staging` row; atomic-swap test leaves exactly one active tree; injected-failure test proves the old tree stays active and staging rows are cleaned up; catch-up test assigns observations indexed mid-reassignment; the reassignment and atomic-swap tests run against both write targets — global `taxonomy_observations.assigned_cluster_id` and scoped `custom_behavior_assignments` — since the shared publish path forks only there; naming test forces a rename on leaf↔interior or child-count change and keeps the name on a same-shape high-similarity continuation; a golden regression on the seeded Acme corpus proves `off` output is byte-identical to pre-change for both the global and scoped paths; a Temporal replay test proves the `patched()` marker reconciles an in-flight pre-change history.
 
 Exit: the bounded snapshot is assigned before publication, active reads never see two trees, stale names cannot survive structure changes, `off` is a verified no-op, and the quality gate passes.
 
