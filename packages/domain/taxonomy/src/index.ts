@@ -216,18 +216,10 @@ export {
   replaceObservationInClusterUseCase,
 } from "./use-cases/assign-observation-to-cluster.ts"
 export {
-  type BuildCustomBehaviorTaxonomyInput,
-  type BuildCustomBehaviorTaxonomyResult,
-  buildCustomBehaviorTaxonomyUseCase,
-} from "./use-cases/build-custom-behavior-taxonomy.ts"
-export {
   type BuildHierarchicalTaxonomyInput,
   type BuildHierarchicalTaxonomyResult,
-  buildHierarchicalTaxonomyUseCase,
   type HierarchicalTaxonomyPlan,
-  type PersistHierarchicalTaxonomyPlanInput,
   type PlanHierarchicalTaxonomyInput,
-  persistHierarchicalTaxonomyPlanUseCase,
   planHierarchicalTaxonomyUseCase,
   type TaxonomyClusterBuilder,
 } from "./use-cases/build-hierarchical-taxonomy.ts"
@@ -237,10 +229,6 @@ export {
   decideClusterAssignment,
 } from "./use-cases/decide-cluster-assignment.ts"
 export { deleteCustomBehavior } from "./use-cases/delete-custom-behavior.ts"
-export {
-  type DeprecateCustomBehaviorTreeInput,
-  deprecateCustomBehaviorTreeUseCase,
-} from "./use-cases/deprecate-custom-behavior-tree.ts"
 export { type EmitLineageInput, emitLineageUseCase } from "./use-cases/emit-lineage.ts"
 export { type GenerateCustomBehaviorInput, generateCustomBehavior } from "./use-cases/generate-custom-behavior.ts"
 export {

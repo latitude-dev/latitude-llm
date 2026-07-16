@@ -1,10 +1,19 @@
-import { OrganizationId, ProjectId, TaxonomyClusterId, TaxonomyRunId } from "@domain/shared"
+import {
+  CustomBehaviorId,
+  type FilterSet,
+  OrganizationId,
+  ProjectId,
+  TaxonomyClusterId,
+  TaxonomyRunId,
+} from "@domain/shared"
 import {
   assertTaxonomyQualityUseCase,
-  buildHierarchicalTaxonomyUseCase,
+  type CustomBehaviorAssignment,
+  CustomBehaviorAssignmentRepository,
+  CustomBehaviorRepository,
+  CustomBehaviorStatus,
   emitLineageUseCase,
   isDisplayableTaxonomyName,
-  nameClusterUseCase,
   planHierarchicalTaxonomyUseCase,
   type ReassignTaxonomyObservationByIdInput,
   TAXONOMY_CLUSTERING_PROPOSAL_SAMPLE_MAX,
@@ -18,10 +27,13 @@ import {
   type TaxonomyRun,
   TaxonomyRunRepository,
 } from "@domain/taxonomy"
-import { AIEmbedLive, AIGenerateLive, withAi } from "@platform/ai"
-import { RedisCacheStoreLive, RedisDistributedLockRepositoryLive } from "@platform/cache-redis"
-import { TaxonomyObservationRepositoryLive, withClickHouse } from "@platform/db-clickhouse"
 import {
+  CustomBehaviorAssignmentRepositoryLive,
+  TaxonomyObservationRepositoryLive,
+  withClickHouse,
+} from "@platform/db-clickhouse"
+import {
+  CustomBehaviorRepositoryLive,
   TaxonomyClusterRepositoryLive,
   TaxonomyLineageRepositoryLive,
   TaxonomyRunRepositoryLive,
@@ -47,11 +59,18 @@ export interface GardenTaxonomyActivityInput {
    */
   readonly workflowRunId?: string
   readonly taxonomyRunId?: string
+  /**
+   * Scope. Absent ⇒ global gardening (project-wide, byte-identical to the
+   * pre-unification workflow). Present ⇒ a custom behavior's scoped sub-tree.
+   */
+  readonly customBehaviorId?: string
 }
 
 export interface GardenTaxonomyStepInput extends GardenTaxonomyActivityInput {
   readonly runId: string
   readonly now: string
+  /** Populated by the start step for the scoped path; the FilterSet the plan samples. */
+  readonly filterSet?: FilterSet
 }
 
 export interface GardenTaxonomyCompleteInput extends GardenTaxonomyStepInput {
@@ -107,6 +126,10 @@ export type GardenTaxonomyDeprecateClustersInput = GardenTaxonomyPlanReferenceIn
 interface StoredGardenTaxonomyPlan {
   readonly clusters: readonly TaxonomyCluster[]
   readonly observationAssignments: readonly ReassignTaxonomyObservationByIdInput[]
+  /** Scoped write target; empty on the global path. */
+  readonly customAssignments: readonly CustomBehaviorAssignment[]
+  /** Non-null ⇒ the plan is scoped to this custom behavior (drives the reassign write target). */
+  readonly customBehaviorId: string | null
   readonly deprecatedClusterIds: readonly string[]
 }
 
@@ -149,7 +172,10 @@ const deterministicTaxonomyRunId = (input: GardenTaxonomyActivityInput) => {
 
 const baseStepInput = (input: GardenTaxonomyActivityInput): GardenTaxonomyStepInput => {
   const workflowId =
-    input.workflowId ?? `org:${input.organizationId}:taxonomy:garden:${input.projectId}:${input.dimension}`
+    input.workflowId ??
+    (input.customBehaviorId
+      ? `org:${input.organizationId}:taxonomy:gardenCustomBehavior:${input.customBehaviorId}`
+      : `org:${input.organizationId}:taxonomy:garden:${input.projectId}:${input.dimension}`)
   return {
     ...input,
     workflowId,
@@ -223,6 +249,12 @@ const reviveAssignment = (assignment: ReassignTaxonomyObservationByIdInput): Rea
   indexedAt: reviveDate(assignment.indexedAt),
 })
 
+const reviveCustomAssignment = (assignment: CustomBehaviorAssignment): CustomBehaviorAssignment => ({
+  ...assignment,
+  startTime: reviveDate(assignment.startTime),
+  indexedAt: reviveDate(assignment.indexedAt),
+})
+
 const withTaxonomyPostgres = <A, E, R>(effect: Effect.Effect<A, E, R>, organizationId: string) =>
   effect.pipe(
     withPostgres(
@@ -232,16 +264,22 @@ const withTaxonomyPostgres = <A, E, R>(effect: Effect.Effect<A, E, R>, organizat
     ),
   )
 
+const withCustomBehaviorPostgres = <A, E, R>(effect: Effect.Effect<A, E, R>, organizationId: string) =>
+  effect.pipe(
+    withPostgres(
+      Layer.mergeAll(TaxonomyClusterRepositoryLive, CustomBehaviorRepositoryLive),
+      getPostgresClient(),
+      OrganizationId(organizationId),
+    ),
+  )
+
 const withTaxonomyClickHouse = <A, E, R>(effect: Effect.Effect<A, E, R>, organizationId: string) =>
   effect.pipe(withClickHouse(TaxonomyObservationRepositoryLive, getClickhouseClient(), OrganizationId(organizationId)))
 
-const withTaxonomyAiAndRedis = <A, E, R>(effect: Effect.Effect<A, E, R>) => {
-  const redisClient = getRedisClient()
-  return effect.pipe(
-    withAi(Layer.mergeAll(AIEmbedLive, AIGenerateLive), redisClient),
-    Effect.provide(Layer.mergeAll(RedisCacheStoreLive(redisClient), RedisDistributedLockRepositoryLive(redisClient))),
+const withCustomBehaviorClickHouse = <A, E, R>(effect: Effect.Effect<A, E, R>, organizationId: string) =>
+  effect.pipe(
+    withClickHouse(CustomBehaviorAssignmentRepositoryLive, getClickhouseClient(), OrganizationId(organizationId)),
   )
-}
 
 const runGardenStep = <A, E>(
   name: string,
@@ -258,6 +296,7 @@ const runGardenStep = <A, E>(
             organizationId: input.organizationId,
             projectId: input.projectId,
             dimension: input.dimension,
+            customBehaviorId: input.customBehaviorId,
             workflowId: "workflowId" in input ? input.workflowId : undefined,
             runId: "runId" in input ? input.runId : input.taxonomyRunId,
             durationMs: Date.now() - startedAt,
@@ -272,6 +311,7 @@ const runGardenStep = <A, E>(
             organizationId: input.organizationId,
             projectId: input.projectId,
             dimension: input.dimension,
+            customBehaviorId: input.customBehaviorId,
             workflowId: "workflowId" in input ? input.workflowId : undefined,
             runId: "runId" in input ? input.runId : input.taxonomyRunId,
             durationMs: Date.now() - startedAt,
@@ -284,8 +324,7 @@ const runGardenStep = <A, E>(
   )
 }
 
-export const startGardenTaxonomyRunActivity = (input: GardenTaxonomyActivityInput) => {
-  const step = baseStepInput(input)
+const startGlobalRun = (step: GardenTaxonomyStepInput) => {
   const now = new Date(step.now)
   const run = {
     id: TaxonomyRunId(step.runId),
@@ -336,22 +375,35 @@ export const startGardenTaxonomyRunActivity = (input: GardenTaxonomyActivityInpu
   )
 }
 
-export const buildHierarchicalGardenTaxonomyActivity = (input: GardenTaxonomyStepInput) =>
+// Scoped start: mark the behavior Generating and stamp the cadence anchor at run
+// start (so the scoped sweep throttles on it and it survives a crash mid-run),
+// carrying the behavior's FilterSet into the step so the plan can sample it.
+const startCustomBehaviorRun = (step: GardenTaxonomyStepInput) =>
   runGardenStep(
-    "GardenTaxonomyWorkflow build hierarchical tree",
-    input,
-    buildHierarchicalTaxonomyUseCase({
-      organizationId: OrganizationId(input.organizationId),
-      projectId: ProjectId(input.projectId),
-      runId: TaxonomyRunId(input.runId),
-      dimension: input.dimension,
-      now: new Date(input.now),
-    }).pipe(
-      (effect) => withTaxonomyPostgres(effect, input.organizationId),
-      (effect) => withTaxonomyClickHouse(effect, input.organizationId),
-      withTaxonomyAiAndRedis,
-    ),
+    "GardenTaxonomyWorkflow start run",
+    step,
+    Effect.gen(function* () {
+      const behaviors = yield* CustomBehaviorRepository
+      const behavior = yield* behaviors.findById(CustomBehaviorId(step.customBehaviorId as string))
+      const startedAt = new Date(step.now)
+      yield* behaviors.save({ ...behavior, status: CustomBehaviorStatus.Generating, updatedAt: startedAt })
+      yield* behaviors.markGardened({ id: behavior.id, gardenedAt: startedAt })
+      return {
+        ...step,
+        filterSet: behavior.filterSet,
+        observationsScanned: 0,
+        observationsAvailable: 0,
+        observationsSampled: 0,
+        sampleStrategy: TAXONOMY_CLUSTERING_SAMPLE_STRATEGY,
+        sampleCap: TAXONOMY_CLUSTERING_PROPOSAL_SAMPLE_MAX,
+      } satisfies GardenTaxonomyStartResult
+    }).pipe((effect) => withCustomBehaviorPostgres(effect, step.organizationId)),
   )
+
+export const startGardenTaxonomyRunActivity = (input: GardenTaxonomyActivityInput) => {
+  const step = baseStepInput(input)
+  return step.customBehaviorId ? startCustomBehaviorRun(step) : startGlobalRun(step)
+}
 
 export const planHierarchicalGardenTaxonomyActivity = (input: GardenTaxonomyStepInput) =>
   runGardenStep(
@@ -368,12 +420,16 @@ export const planHierarchicalGardenTaxonomyActivity = (input: GardenTaxonomyStep
           try: () => buildHierarchicalClustersInWorker(builderInput),
           catch: (error) => (error instanceof Error ? error : new Error(String(error))),
         }),
+      ...(input.customBehaviorId ? { customBehaviorId: CustomBehaviorId(input.customBehaviorId) } : {}),
+      ...(input.filterSet ? { filterSet: input.filterSet } : {}),
     }).pipe(
       Effect.flatMap((plan) =>
         Effect.gen(function* () {
           const planKey = yield* storeGardenTaxonomyPlan(input, {
             clusters: plan.clusters,
             observationAssignments: plan.observationAssignments,
+            customAssignments: plan.customAssignments,
+            customBehaviorId: plan.customBehaviorId,
             deprecatedClusterIds: plan.deprecatedClusterIds.map((clusterId) => clusterId as string),
           })
           return {
@@ -410,20 +466,37 @@ export const saveGardenTaxonomyClustersActivity = (input: GardenTaxonomySaveClus
     }).pipe((effect) => withTaxonomyPostgres(effect, input.organizationId)),
   )
 
+const reassignGlobalObservations = (input: GardenTaxonomyReassignObservationsInput, plan: StoredGardenTaxonomyPlan) =>
+  Effect.gen(function* () {
+    const observations = yield* TaxonomyObservationRepository
+    yield* observations.reassignManyById({
+      organizationId: OrganizationId(input.organizationId),
+      projectId: ProjectId(input.projectId),
+      assignments: plan.observationAssignments.map(reviveAssignment),
+    })
+    return { observationsReassigned: plan.observationAssignments.length }
+  }).pipe((effect) => withTaxonomyClickHouse(effect, input.organizationId))
+
+const reassignScopedAssignments = (input: GardenTaxonomyReassignObservationsInput, plan: StoredGardenTaxonomyPlan) =>
+  Effect.gen(function* () {
+    const assignments = yield* CustomBehaviorAssignmentRepository
+    yield* assignments.upsertMany(plan.customAssignments.map(reviveCustomAssignment))
+    return { observationsReassigned: plan.customAssignments.length }
+  }).pipe((effect) => withCustomBehaviorClickHouse(effect, input.organizationId))
+
 export const reassignGardenTaxonomyObservationsActivity = (input: GardenTaxonomyReassignObservationsInput) =>
   runGardenStep(
     "GardenTaxonomyWorkflow reassign observations",
     input,
+    // A plan staged by the pre-unification code has no `customBehaviorId` key
+    // (undefined) — a truthy check keeps those, and every global run, on the
+    // observation-reassign branch; only a real behavior id routes to the slice.
     Effect.gen(function* () {
       const plan = yield* loadGardenTaxonomyPlan(input)
-      const observations = yield* TaxonomyObservationRepository
-      yield* observations.reassignManyById({
-        organizationId: OrganizationId(input.organizationId),
-        projectId: ProjectId(input.projectId),
-        assignments: plan.observationAssignments.map(reviveAssignment),
-      })
-      return { observationsReassigned: plan.observationAssignments.length }
-    }).pipe((effect) => withTaxonomyClickHouse(effect, input.organizationId)),
+      return yield* plan.customBehaviorId
+        ? reassignScopedAssignments(input, plan)
+        : reassignGlobalObservations(input, plan)
+    }),
   )
 
 export const deprecateGardenTaxonomyClustersActivity = (input: GardenTaxonomyDeprecateClustersInput) =>
@@ -448,6 +521,7 @@ export const assertGardenTaxonomyQualityActivity = (input: GardenTaxonomyStepInp
       organizationId: OrganizationId(input.organizationId),
       projectId: ProjectId(input.projectId),
       dimension: input.dimension,
+      ...(input.customBehaviorId ? { customBehaviorId: CustomBehaviorId(input.customBehaviorId) } : {}),
     }).pipe(
       (effect) => withTaxonomyPostgres(effect, input.organizationId),
       (effect) => withTaxonomyClickHouse(effect, input.organizationId),
@@ -468,7 +542,11 @@ export const planGardenTaxonomyNamingActivity = (input: GardenTaxonomyStepInput 
         input.lineage.flatMap((row) => (row.transitionType === "birth" ? row.toClusterIds : [])),
       )
       const projectId = ProjectId(input.projectId)
-      const activeClusters = yield* clusters.listActiveByProject({ projectId, dimension: input.dimension })
+      const activeClusters = yield* clusters.listActiveByProject({
+        projectId,
+        dimension: input.dimension,
+        ...(input.customBehaviorId ? { customBehaviorId: CustomBehaviorId(input.customBehaviorId) } : {}),
+      })
       // Name deepest clusters first. Interior naming falls back to its
       // children's already-assigned names; if we name top-down the interior
       // gets handed "Pending" descriptions and either stays Pending or
@@ -493,99 +571,125 @@ export const planGardenTaxonomyNamingActivity = (input: GardenTaxonomyStepInput 
     }).pipe((effect) => withTaxonomyPostgres(effect, input.organizationId)),
   )
 
-export const nameGardenTaxonomyActivity = (input: GardenTaxonomyStepInput & GardenTaxonomyLineageResult) =>
-  runGardenStep(
-    "GardenTaxonomyWorkflow name taxonomy",
-    input,
-    Effect.gen(function* () {
-      const plan = yield* Effect.promise(() => planGardenTaxonomyNamingActivity(input))
-      const projectId = ProjectId(input.projectId)
-      const organizationId = OrganizationId(input.organizationId)
-      for (const clusterId of plan.clusterIds) {
-        yield* nameClusterUseCase({
-          organizationId,
-          projectId,
-          clusterId: TaxonomyClusterId(clusterId),
-          now: new Date(input.now),
-        })
-      }
-      return { ...plan, clustersNamed: plan.clusterIds.length }
-    }).pipe(
-      (effect) => withTaxonomyPostgres(effect, input.organizationId),
-      (effect) => withTaxonomyClickHouse(effect, input.organizationId),
-      withTaxonomyAiAndRedis,
-    ),
-  )
-
+// Global emits lineage rows to the shared lineage table; a scoped run is
+// analytic-only and never writes into the global lineage table.
 export const emitGardenTaxonomyLineageActivity = (input: GardenTaxonomyStepInput & GardenTaxonomyLineageResult) =>
   runGardenStep(
     "GardenTaxonomyWorkflow emit lineage",
     input,
-    emitLineageUseCase({ transitions: input.lineage.map(reviveLineage) }).pipe((effect) =>
-      withTaxonomyPostgres(effect, input.organizationId),
-    ),
+    input.customBehaviorId
+      ? Effect.succeed({ lineageEmitted: 0 })
+      : emitLineageUseCase({ transitions: input.lineage.map(reviveLineage) }).pipe(
+          Effect.as({ lineageEmitted: input.lineage.length }),
+          (effect) => withTaxonomyPostgres(effect, input.organizationId),
+        ),
   )
 
-export const completeGardenTaxonomyRunActivity = (input: GardenTaxonomyCompleteInput) =>
+const buildRun = (input: GardenTaxonomyCompleteInput, status: "completed"): TaxonomyRun => ({
+  id: TaxonomyRunId(input.runId),
+  organizationId: OrganizationId(input.organizationId),
+  projectId: ProjectId(input.projectId),
+  dimension: input.dimension,
+  trigger: input.trigger,
+  status,
+  startedAt: new Date(input.now),
+  completedAt: new Date(),
+  observationsScanned: input.observationsScanned,
+  observationsAvailable: input.observationsAvailable,
+  observationsSampled: input.observationsSampled,
+  sampleStrategy: input.sampleStrategy,
+  sampleCap: input.sampleCap,
+  noiseScanned: input.noiseScanned,
+  clustersBorn: input.clustersBorn,
+  clustersMerged: input.clustersMerged,
+  clustersDeprecated: input.clustersDeprecated,
+  error: null,
+})
+
+const completeGlobalRun = (input: GardenTaxonomyCompleteInput) =>
   runGardenStep(
     "GardenTaxonomyWorkflow complete run",
     input,
     Effect.gen(function* () {
       const runs = yield* TaxonomyRunRepository
-      const run: TaxonomyRun = {
-        id: TaxonomyRunId(input.runId),
-        organizationId: OrganizationId(input.organizationId),
-        projectId: ProjectId(input.projectId),
-        dimension: input.dimension,
-        trigger: input.trigger,
-        status: "completed",
-        startedAt: new Date(input.now),
-        completedAt: new Date(),
-        observationsScanned: input.observationsScanned,
-        observationsAvailable: input.observationsAvailable,
-        observationsSampled: input.observationsSampled,
-        sampleStrategy: input.sampleStrategy,
-        sampleCap: input.sampleCap,
-        noiseScanned: input.noiseScanned,
-        clustersBorn: input.clustersBorn,
-        clustersMerged: input.clustersMerged,
-        clustersDeprecated: input.clustersDeprecated,
-        error: null,
-      }
+      const run = buildRun(input, "completed")
       yield* runs.save(run)
       return run
     }).pipe((effect) => withTaxonomyPostgres(effect, input.organizationId)),
   )
 
-export const failGardenTaxonomyRunActivity = (input: GardenTaxonomyFailInput) =>
+const completeCustomBehaviorRun = (input: GardenTaxonomyCompleteInput) =>
+  runGardenStep(
+    "GardenTaxonomyWorkflow complete run",
+    input,
+    Effect.gen(function* () {
+      const behaviors = yield* CustomBehaviorRepository
+      const behavior = yield* behaviors.findById(CustomBehaviorId(input.customBehaviorId as string))
+      yield* behaviors.save({ ...behavior, status: CustomBehaviorStatus.Ready, updatedAt: new Date() })
+      return buildRun(input, "completed")
+    }).pipe((effect) => withCustomBehaviorPostgres(effect, input.organizationId)),
+  )
+
+export const completeGardenTaxonomyRunActivity = (input: GardenTaxonomyCompleteInput) =>
+  input.customBehaviorId ? completeCustomBehaviorRun(input) : completeGlobalRun(input)
+
+const failRun = (input: GardenTaxonomyFailInput): TaxonomyRun => ({
+  id: TaxonomyRunId(input.runId),
+  organizationId: OrganizationId(input.organizationId),
+  projectId: ProjectId(input.projectId),
+  dimension: input.dimension,
+  trigger: input.trigger,
+  status: "failed",
+  startedAt: new Date(input.now),
+  completedAt: new Date(),
+  observationsScanned: 0,
+  observationsAvailable: 0,
+  observationsSampled: 0,
+  sampleStrategy: TAXONOMY_CLUSTERING_SAMPLE_STRATEGY,
+  sampleCap: TAXONOMY_CLUSTERING_PROPOSAL_SAMPLE_MAX,
+  noiseScanned: 0,
+  clustersBorn: 0,
+  clustersMerged: 0,
+  clustersDeprecated: 0,
+  error: input.error,
+})
+
+const failGlobalRun = (input: GardenTaxonomyFailInput) =>
   runGardenStep(
     "GardenTaxonomyWorkflow fail run",
     input,
     Effect.gen(function* () {
       const runs = yield* TaxonomyRunRepository
-      const run: TaxonomyRun = {
-        id: TaxonomyRunId(input.runId),
-        organizationId: OrganizationId(input.organizationId),
-        projectId: ProjectId(input.projectId),
-        dimension: input.dimension,
-        trigger: input.trigger,
-        status: "failed",
-        startedAt: new Date(input.now),
-        completedAt: new Date(),
-        observationsScanned: 0,
-        observationsAvailable: 0,
-        observationsSampled: 0,
-        sampleStrategy: TAXONOMY_CLUSTERING_SAMPLE_STRATEGY,
-        sampleCap: TAXONOMY_CLUSTERING_PROPOSAL_SAMPLE_MAX,
-        noiseScanned: 0,
-        clustersBorn: 0,
-        clustersMerged: 0,
-        clustersDeprecated: 0,
-        error: input.error,
-      }
+      const run = failRun(input)
       yield* runs.save(run)
       return run
     }).pipe((effect) => withTaxonomyPostgres(effect, input.organizationId)),
   )
+
+const failCustomBehaviorRun = (input: GardenTaxonomyFailInput) =>
+  runGardenStep(
+    "GardenTaxonomyWorkflow fail run",
+    input,
+    Effect.gen(function* () {
+      const behaviors = yield* CustomBehaviorRepository
+      // A missing behavior (deleted mid-run) has no status to set; treat as a no-op failure.
+      const behavior = yield* behaviors
+        .findById(CustomBehaviorId(input.customBehaviorId as string))
+        .pipe(Effect.orElseSucceed(() => null))
+      if (behavior !== null) {
+        yield* behaviors.save({ ...behavior, status: CustomBehaviorStatus.Failed, updatedAt: new Date() })
+      }
+      return failRun(input)
+    }).pipe((effect) => withCustomBehaviorPostgres(effect, input.organizationId)),
+  )
+
+// Takes the raw workflow input (+ error), not a prior step result, so it can mark
+// a run/behavior failed even when the START activity itself failed (leaving a
+// scoped behavior stuck `generating`). `baseStepInput` re-derives the same
+// deterministic run id start would have used.
+export const failGardenTaxonomyRunActivity = (input: GardenTaxonomyActivityInput & { readonly error: string }) => {
+  const failInput: GardenTaxonomyFailInput = { ...baseStepInput(input), error: input.error }
+  return failInput.customBehaviorId ? failCustomBehaviorRun(failInput) : failGlobalRun(failInput)
+}
 
 export { errorMessage as gardenTaxonomyErrorMessage }
