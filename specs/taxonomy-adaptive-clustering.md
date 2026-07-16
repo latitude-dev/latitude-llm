@@ -161,19 +161,24 @@ The clustering worker must add:
 
 ## Observability
 
-Emit bounded structured telemetry:
+Emit bounded structured telemetry as **one event per garden run** — not per node — through the existing structured logger (`createLogger("taxonomy-gardening-workflow")`, the established `logger.info(msg, { metric, ...dimensions })` convention), so it lands in Datadog Logs (`ddsource:nodejs`, trace-correlated) and is aggregated as logs-based analytics. There is no separate metrics client; every numeric value is a field on that log line.
+
+Each event carries:
 
 * policy version and mode;
+* project id and custom-behavior id dimensions;
 * observations sampled;
 * node, leaf, and maximum-depth counts;
 * selected K by depth;
 * accepted and rejected candidates;
 * rejection reasons: undersized child, dominant child, low score, low relative separation;
-* accepted relative-separation distribution;
-* routing-threshold distribution;
-* static-versus-adaptive comparison in shadow mode;
+* accepted relative-separation distribution, summarized as bounded percentiles (p10/p50/p90), never raw arrays;
+* routing-threshold distribution, as the same bounded percentiles;
 * continuation and naming churn;
-* fallback reason.
+* fallback reason;
+* run duration and peak memory.
+
+In `shadow` mode the run additionally emits a single paired comparison event (`metric: "taxonomy.gardenTaxonomyWorkflow.shadowComparison"`) with `static.*` and `adaptive.*` shape counts side by side, their deltas, and the partition agreement (ARI) between the two trees on the shared sample. The shadow report is a Datadog Logs dashboard over this event: a per-project table of static-vs-adaptive root-child counts and ARI, a timeseries of the root-child delta across runs, a rejection-reason breakdown, a fallback count, and a runtime/memory panel.
 
 Do not log embeddings, per-member assignments, conversation content, or unbounded candidate arrays.
 
@@ -289,7 +294,20 @@ Exit: the bounded snapshot is assigned before publication, active reads never se
 * Record schedule adjustments and rollout findings.
 * Verify Temporal replay safety.
 
-QA: a static-vs-adaptive shadow-comparison report derived from telemetry alone (no content, no embeddings); a Temporal replay test across the mode branches; guardrail assertions that no structural or resource violation occurs across the contrasting-project shadow runs; a fault-injection test that non-finite or structural-limit adaptive output falls back to static in the planning activity; re-confirm `off` stays a no-op.
+QA: a static-vs-adaptive shadow-comparison report built as a Datadog Logs dashboard over the single per-run `taxonomy.gardenTaxonomyWorkflow.shadowComparison` event, derived from telemetry alone (no content, no embeddings, percentiles not raw arrays); a Temporal replay test across the mode branches; guardrail assertions that no structural or resource violation occurs across the contrasting-project shadow runs; a fault-injection test that non-finite or structural-limit adaptive output falls back to static in the planning activity; re-confirm `off` stays a no-op.
+
+Dashboard setup (Datadog MCP): create the dashboard programmatically with `upsert_datadog_dashboard` rather than by hand, so it is reproducible and version-controllable.
+
+1. Confirm shadow events are arriving: query Logs for `@metric:taxonomy.gardenTaxonomyWorkflow.shadowComparison service:workflows` and check the JSON attributes are parsed. If the numeric attributes are not aggregatable yet, create log facets/measures on `@diff.rootChildDelta`, `@diff.partitionAri`, `@static.rootChildCount`, `@adaptive.rootChildCount`, `@adaptiveDurationMs`, `@staticDurationMs`, and `@fallbackReason` first — Datadog only aggregates attributes promoted to measures.
+2. Call `upsert_datadog_dashboard` with a Logs-source (`data_source: logs`) widget set, all scoped to the query above:
+   * a **table** grouped by `@projectId` (and `@customBehaviorId`) showing `@static.rootChildCount`, `@adaptive.rootChildCount`, and `@diff.partitionAri` — the pilot row is the tell (static ≈ 1, adaptive 3–5);
+   * a **timeseries** of `avg:@diff.rootChildDelta` split by `@projectId` over the shadow window (stability across runs);
+   * a **top-list** of `@rejectionReason` counts and a p50 line of `@relativeSeparation.p50`;
+   * a **query-value** counting events where `@fallbackReason:*` (target ~0);
+   * a **timeseries** of `@adaptiveDurationMs` vs `@staticDurationMs` and max `@peakRssBytes` (the ≤25%-slower / worker-memory criteria).
+3. Template-variable the dashboard on `$project` so the pilot and each contrasting project share one view. Read it back with `get_datadog_dashboard` to confirm the widgets resolve, and iterate with the same `upsert_datadog_dashboard` call (idempotent on dashboard id).
+
+Timing: garden sweeps run every 6 hours (`0 */6 * * *`, up to ~5h jitter) over a 7-day lookback, for both global and scoped scopes. The **first** comparison event for a project lands within roughly 6–11 hours of enabling `shadow`; a **decision-grade** read needs the 7-day sample window to fully turn over — consecutive 6-hour runs share almost the entire window and are highly correlated — so plan on **~1 week minimum**, and ~2 weeks to confirm the root-child delta and ARI hold across more than one turnover cycle. Fix the exact shadow duration as a calibrated Phase-1 rollout value.
 
 Exit: no structural or resource guardrail violations, and every collapse/expansion can be explained from telemetry.
 
