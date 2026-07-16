@@ -480,8 +480,6 @@ type MemoryOperationSpanRow = {
   readonly record_count: string | number
   readonly query_text: string
   readonly records_raw: string
-  readonly scope_attr: string
-  readonly latitude_scope_attr: string
 }
 
 const toMemoryOperationSpan = (row: MemoryOperationSpanRow): MemoryOperationSpan => ({
@@ -497,8 +495,6 @@ const toMemoryOperationSpan = (row: MemoryOperationSpanRow): MemoryOperationSpan
   recordCount: Number(row.record_count),
   queryText: row.query_text,
   recordsRaw: row.records_raw,
-  scopeAttr: row.scope_attr,
-  latitudeScopeAttr: row.latitude_scope_attr,
 })
 
 export const SpanRepositoryLive = Layer.effect(
@@ -823,16 +819,14 @@ export const SpanRepositoryLive = Layer.effect(
               // attributes are read as scalar map lookups so the (possibly large) records
               // payload is fetched only for these few spans, never the whole attribute map.
               query: `SELECT span_id, trace_id, session_id, user_id, operation, start_time, end_time,
-                             store_id, record_id, record_count, query_text, records_raw, scope_attr, latitude_scope_attr
+                             store_id, record_id, record_count, query_text, records_raw
                       FROM (
                         SELECT span_id, trace_id, session_id, user_id, operation, start_time, end_time, ingested_at,
                                attr_string['gen_ai.memory.store.id']   AS store_id,
                                attr_string['gen_ai.memory.record.id']  AS record_id,
                                attr_int['gen_ai.memory.record.count']  AS record_count,
                                attr_string['gen_ai.memory.query.text'] AS query_text,
-                               attr_string['gen_ai.memory.records']    AS records_raw,
-                               attr_string['gen_ai.memory.scope']      AS scope_attr,
-                               attr_string['latitude.memory.scope']    AS latitude_scope_attr
+                               attr_string['gen_ai.memory.records']    AS records_raw
                         FROM spans
                         WHERE organization_id = {organizationId:String}
                           AND project_id = {projectId:String}

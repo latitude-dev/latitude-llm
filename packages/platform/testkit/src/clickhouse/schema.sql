@@ -671,7 +671,6 @@ CREATE TABLE memory_current
 (
     `organization_id` LowCardinality(String) CODEC(ZSTD(1)),
     `project_id` LowCardinality(String) CODEC(ZSTD(1)),
-    `scope` String CODEC(ZSTD(1)),
     `store_id` String DEFAULT '' CODEC(ZSTD(1)),
     `record_id` String DEFAULT '' CODEC(ZSTD(1)),
     `content_hash` String DEFAULT '' CODEC(ZSTD(1)),
@@ -683,15 +682,14 @@ CREATE TABLE memory_current
     `end_time` DateTime64(6, 'UTC') CODEC(Delta(8), ZSTD(1))
 )
 ENGINE = ReplacingMergeTree(end_time)
-PRIMARY KEY (organization_id, project_id, scope, store_id, record_id)
-ORDER BY (organization_id, project_id, scope, store_id, record_id)
+PRIMARY KEY (organization_id, project_id, store_id, record_id)
+ORDER BY (organization_id, project_id, store_id, record_id)
 SETTINGS index_granularity = 8192;
 
 CREATE TABLE memory_events
 (
     `organization_id` LowCardinality(String) CODEC(ZSTD(1)),
     `project_id` LowCardinality(String) CODEC(ZSTD(1)),
-    `scope` String CODEC(ZSTD(1)),
     `store_id` String DEFAULT '' CODEC(ZSTD(1)),
     `record_id` String DEFAULT '' CODEC(ZSTD(1)),
     `operation` LowCardinality(String) CODEC(ZSTD(1)),
@@ -713,6 +711,6 @@ CREATE TABLE memory_events
 )
 ENGINE = MergeTree
 PARTITION BY toYYYYMM(end_time)
-PRIMARY KEY (organization_id, project_id, scope, store_id, record_id, end_time)
-ORDER BY (organization_id, project_id, scope, store_id, record_id, end_time, span_id)
+PRIMARY KEY (organization_id, project_id, store_id, record_id, end_time)
+ORDER BY (organization_id, project_id, store_id, record_id, end_time, span_id)
 SETTINGS index_granularity = 8192;

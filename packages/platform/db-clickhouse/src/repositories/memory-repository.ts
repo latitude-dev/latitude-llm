@@ -54,7 +54,6 @@ type StoreWipeRow = {
 }
 
 const EVENT_COLUMNS = `
-  scope,
   store_id,
   record_id,
   operation,
@@ -73,7 +72,6 @@ const EVENT_COLUMNS = `
 `
 
 type MemoryEventRow = {
-  readonly scope: string
   readonly store_id: string
   readonly record_id: string
   readonly operation: string
@@ -104,7 +102,6 @@ const toEvent =
   (row: MemoryEventRow): MemoryEvent => ({
     organizationId,
     projectId,
-    scope: row.scope,
     storeId: row.store_id,
     recordId: row.record_id,
     operation: row.operation,
@@ -136,7 +133,6 @@ const toBlob =
 const toEventInsertRow = (event: MemoryEvent) => ({
   organization_id: event.organizationId as string,
   project_id: event.projectId as string,
-  scope: event.scope,
   store_id: event.storeId,
   record_id: event.recordId,
   operation: event.operation,
@@ -166,7 +162,6 @@ const toBlobInsertRow = (blob: MemoryBlob) => ({
 const toCurrentInsertRow = (entry: MemoryCurrentEntry) => ({
   organization_id: entry.organizationId as string,
   project_id: entry.projectId as string,
-  scope: entry.scope,
   store_id: entry.storeId,
   record_id: entry.recordId,
   content_hash: entry.contentHash,
@@ -238,7 +233,11 @@ export const MemoryRepositoryLive = Layer.effect(
           .pipe(Effect.mapError((error) => toRepositoryError(error, "MemoryRepository.upsertCurrent")))
       })
 
-    const readCurrentSnapshot: MemoryRepositoryShape["readCurrentSnapshot"] = ({ organizationId, projectId, scope }) =>
+    const readCurrentSnapshot: MemoryRepositoryShape["readCurrentSnapshot"] = ({
+      organizationId,
+      projectId,
+      storeId,
+    }) =>
       Effect.gen(function* () {
         const chSqlClient = (yield* ChSqlClient) as ChSqlClientShape<ClickHouseClient>
         return yield* chSqlClient
@@ -251,7 +250,7 @@ export const MemoryRepositoryLive = Layer.effect(
                         FROM memory_current
                         WHERE organization_id = {organizationId:String}
                           AND project_id = {projectId:String}
-                          AND scope = {scope:String}
+                          AND store_id = {storeId:String}
                         ORDER BY store_id, record_id, end_time DESC
                         LIMIT 1 BY store_id, record_id
                       )
@@ -259,7 +258,7 @@ export const MemoryRepositoryLive = Layer.effect(
               query_params: {
                 organizationId: organizationId as string,
                 projectId: projectId as string,
-                scope,
+                storeId,
               },
               format: "JSONEachRow",
             })
@@ -269,7 +268,7 @@ export const MemoryRepositoryLive = Layer.effect(
           .pipe(Effect.mapError((error) => toRepositoryError(error, "MemoryRepository.readCurrentSnapshot")))
       })
 
-    const readManifestAt: MemoryRepositoryShape["readManifestAt"] = ({ organizationId, projectId, scope, at }) =>
+    const readManifestAt: MemoryRepositoryShape["readManifestAt"] = ({ organizationId, projectId, storeId, at }) =>
       Effect.gen(function* () {
         const chSqlClient = (yield* ChSqlClient) as ChSqlClientShape<ClickHouseClient>
         return yield* chSqlClient
@@ -291,7 +290,7 @@ export const MemoryRepositoryLive = Layer.effect(
                         FROM memory_events
                         WHERE organization_id = {organizationId:String}
                           AND project_id = {projectId:String}
-                          AND scope = {scope:String}
+                          AND store_id = {storeId:String}
                           AND change_kind IN ('add', 'update', 'remove')
                           AND end_time <= {at:DateTime64(6, 'UTC')}
                       )
@@ -300,7 +299,7 @@ export const MemoryRepositoryLive = Layer.effect(
               query_params: {
                 organizationId: organizationId as string,
                 projectId: projectId as string,
-                scope,
+                storeId,
                 at: formatCHDate(at),
               },
               format: "JSONEachRow",
@@ -314,7 +313,7 @@ export const MemoryRepositoryLive = Layer.effect(
     const readLatestStoreWipes: MemoryRepositoryShape["readLatestStoreWipes"] = ({
       organizationId,
       projectId,
-      scope,
+      storeId,
       at,
     }) =>
       Effect.gen(function* () {
@@ -330,7 +329,7 @@ export const MemoryRepositoryLive = Layer.effect(
                         FROM memory_events
                         WHERE organization_id = {organizationId:String}
                           AND project_id = {projectId:String}
-                          AND scope = {scope:String}
+                          AND store_id = {storeId:String}
                           AND change_kind = 'store_delete'
                           AND end_time <= {at:DateTime64(6, 'UTC')}
                       )
@@ -338,7 +337,7 @@ export const MemoryRepositoryLive = Layer.effect(
               query_params: {
                 organizationId: organizationId as string,
                 projectId: projectId as string,
-                scope,
+                storeId,
                 at: formatCHDate(at),
               },
               format: "JSONEachRow",
@@ -412,7 +411,6 @@ export const MemoryRepositoryLive = Layer.effect(
     const readRecordVersions: MemoryRepositoryShape["readRecordVersions"] = ({
       organizationId,
       projectId,
-      scope,
       records,
       at,
     }) =>
@@ -422,7 +420,7 @@ export const MemoryRepositoryLive = Layer.effect(
         // filtered in the caller. `wanted` narrows the returned set back down.
         const storeIds = [...new Set(records.map((record) => record.storeId))]
         const recordIds = [...new Set(records.map((record) => record.recordId))]
-        const wanted = new Set(records.map((record) => `${record.storeId} ${record.recordId}`))
+        const wanted = new Set(records.map((record) => `${record.storeId}\u0000${record.recordId}`))
         const chSqlClient = (yield* ChSqlClient) as ChSqlClientShape<ClickHouseClient>
         return yield* chSqlClient
           .query(async (client) => {
@@ -434,7 +432,6 @@ export const MemoryRepositoryLive = Layer.effect(
                         FROM memory_events
                         WHERE organization_id = {organizationId:String}
                           AND project_id = {projectId:String}
-                          AND scope = {scope:String}
                           AND change_kind IN ('add', 'update', 'remove')
                           AND store_id IN {storeIds:Array(String)}
                           AND record_id IN {recordIds:Array(String)}
@@ -446,7 +443,6 @@ export const MemoryRepositoryLive = Layer.effect(
               query_params: {
                 organizationId: organizationId as string,
                 projectId: projectId as string,
-                scope,
                 storeIds,
                 recordIds,
                 ...(at !== undefined ? { at: formatCHDate(at) } : {}),
@@ -454,7 +450,7 @@ export const MemoryRepositoryLive = Layer.effect(
               format: "JSONEachRow",
             })
             const rows = await result.json<MemoryRecordVersionRow>()
-            return rows.map(toVersion).filter((version) => wanted.has(`${version.storeId} ${version.recordId}`))
+            return rows.map(toVersion).filter((version) => wanted.has(`${version.storeId}\u0000${version.recordId}`))
           })
           .pipe(Effect.mapError((error) => toRepositoryError(error, "MemoryRepository.readRecordVersions")))
       })

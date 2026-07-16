@@ -33,15 +33,12 @@ const makeSpan = (o: Partial<MemoryOperationSpan> = {}): MemoryOperationSpan => 
   recordCount: 1,
   queryText: "",
   recordsRaw: "",
-  scopeAttr: "",
-  latitudeScopeAttr: "",
   ...o,
 })
 
 const makeEvent = (o: Partial<MemoryEvent> = {}): MemoryEvent => ({
   organizationId,
   projectId,
-  scope: "user1",
   storeId: "store1",
   recordId: "rec1",
   operation: "update_memory",
@@ -78,7 +75,7 @@ const materialize = (spans: readonly MemoryOperationSpan[], memory: Fake) => {
   )
 }
 
-const diff = (memory: Fake, input: { scope: string; from?: Date; to?: Date }) =>
+const diff = (memory: Fake, input: { storeId: string; from?: Date; to?: Date }) =>
   Effect.runPromise(
     computeMemoryDiffUseCase({ organizationId, projectId, ...input }).pipe(Effect.provide(layerFor(memory))),
   )
@@ -108,7 +105,7 @@ describe("computeMemoryDiff", () => {
       memory,
     )
 
-    const result = await diff(memory, { scope: "user1", from: at(2), to: at(4) })
+    const result = await diff(memory, { storeId: "store1", from: at(2), to: at(4) })
     const byId = Object.fromEntries(result.changes.map((change) => [change.recordId, change]))
 
     expect(Object.keys(byId).sort()).toEqual(["rec1", "rec2", "rec3"]) // rec4 pruned (hash unchanged)
@@ -138,7 +135,7 @@ describe("computeMemoryDiff", () => {
       memory,
     )
 
-    const result = await diff(memory, { scope: "user1", to: at(1) })
+    const result = await diff(memory, { storeId: "store1", to: at(1) })
     expect(result.recordsChanged).toEqual({ added: 2, updated: 0, removed: 0 })
     expect(result.tokensRemoved).toBe(0)
     expect(result.tokensAdded).toBeGreaterThan(0)
@@ -152,7 +149,7 @@ describe("computeMemoryDiff", () => {
       makeEvent({ recordId: "rec9", changeKind: "update", contentHash: "h2", tokenCount: 8, endTime: at(3) }),
     )
 
-    const result = await diff(memory, { scope: "user1", from: at(2), to: at(4) })
+    const result = await diff(memory, { storeId: "store1", from: at(2), to: at(4) })
     expect(result.changes).toHaveLength(1)
     expect(result.changes[0]?.kind).toBe("updated")
     expect(result.changes[0]?.degraded).toBe(true)

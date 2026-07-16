@@ -79,10 +79,9 @@ describe("LatitudeSpanProcessor", () => {
         expect(mockSpan.setAttribute).toHaveBeenCalledWith(ATTRIBUTES.tags, JSON.stringify(["test"]))
         expect(mockSpan.setAttribute).toHaveBeenCalledWith(ATTRIBUTES.sessionId, "session-1")
         expect(mockSpan.setAttribute).toHaveBeenCalledWith(ATTRIBUTES.userId, "user-1")
-        expect(mockSpan.setAttribute).toHaveBeenCalledWith(ATTRIBUTES.memoryScope, "team-acme")
         expect(mockSpan.setAttribute).toHaveBeenCalledWith(ATTRIBUTES.metadata, JSON.stringify({ foo: "bar" }))
       },
-      { tags: ["test"], sessionId: "session-1", userId: "user-1", memoryScope: "team-acme", metadata: { foo: "bar" } },
+      { tags: ["test"], sessionId: "session-1", userId: "user-1", metadata: { foo: "bar" } },
     )
   })
 

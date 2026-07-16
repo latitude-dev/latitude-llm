@@ -1,5 +1,5 @@
 /**
- * One record's change between two points in a scope's history. Token deltas come
+ * One record's change between two points in a store's history. Token deltas come
  * from a line diff of the two bodies; `degraded` marks a change whose body was
  * unavailable (content opt-out or a pruned blob), so the counts are the
  * record-level `tokenCount` approximation rather than a line-accurate diff ([D5]).
@@ -15,9 +15,9 @@ export interface MemoryRecordChange {
   readonly degraded: boolean
 }
 
-/** The diff of a scope between two points: changed records, pruned by hash equality. */
+/** The diff of a store between two points: changed records, pruned by hash equality. */
 export interface MemoryDiff {
-  readonly scope: string
+  readonly storeId: string
   readonly changes: readonly MemoryRecordChange[]
   readonly tokensAdded: number
   readonly tokensRemoved: number

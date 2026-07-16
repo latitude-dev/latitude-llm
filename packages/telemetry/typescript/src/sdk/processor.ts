@@ -130,9 +130,6 @@ export class LatitudeSpanProcessor implements SpanProcessor {
       if (latitudeData.userEmail) {
         span.setAttribute(ATTRIBUTES.userEmail, latitudeData.userEmail)
       }
-      if (latitudeData.memoryScope) {
-        span.setAttribute(ATTRIBUTES.memoryScope, latitudeData.memoryScope)
-      }
       if (latitudeData.project) {
         span.setAttribute(ATTRIBUTES.project, latitudeData.project)
       }

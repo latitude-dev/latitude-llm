@@ -33,8 +33,6 @@ const makeSpan = (o: Partial<MemoryOperationSpan> = {}): MemoryOperationSpan => 
   recordCount: 1,
   queryText: "",
   recordsRaw: "",
-  scopeAttr: "",
-  latitudeScopeAttr: "",
   ...o,
 })
 
@@ -159,23 +157,22 @@ describe("computeSessionMemorySummary", () => {
     expect(summary.total).toEqual({ readTokens: 0, tokensAdded: 0, tokensRemoved: 0 })
   })
 
-  it("lists each touched record with its own scope across a multi-scope session", async () => {
+  it("lists each touched record across multiple stores in the session", async () => {
     const memory = createFakeMemoryRepository()
     await materialize(
       [
-        makeSpan({ spanId: spanId("1"), recordsRaw: records({ id: "rec1", content: "a" }), scopeAttr: "team-x" }),
+        makeSpan({ spanId: spanId("1"), recordsRaw: records({ id: "rec1", content: "a" }) }),
         makeSpan({
           spanId: spanId("2"),
           storeId: "store2",
           recordsRaw: records({ id: "rec2", content: "b" }),
-          scopeAttr: "team-y",
         }),
       ],
       memory,
     )
 
     const summary = await summarize(memory, { sessionId: SessionId("sess1") })
-    expect(summary.records.map((r) => r.scope).sort()).toEqual(["team-x", "team-y"])
+    expect(summary.records.map((r) => r.storeId).sort()).toEqual(["store1", "store2"])
     expect(summary.records.every((r) => r.tokensAdded > 0)).toBe(true)
     expect(summary.total.tokensAdded).toBeGreaterThan(0)
   })

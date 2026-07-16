@@ -27,7 +27,6 @@ export function latitudeAttributesFromContext(options: ContextOptions): Attribut
   if (options.sessionId) attributes[ATTRIBUTES.sessionId] = options.sessionId
   if (options.userId) attributes[ATTRIBUTES.userId] = options.userId
   if (options.userEmail) attributes[ATTRIBUTES.userEmail] = options.userEmail
-  if (options.memoryScope) attributes[ATTRIBUTES.memoryScope] = options.memoryScope
   if (project) attributes[ATTRIBUTES.project] = project
 
   return attributes

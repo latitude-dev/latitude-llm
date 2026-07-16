@@ -13,7 +13,7 @@ const ORG = OrganizationId("org_mem_proj_test")
 const PROJECT = ProjectId("proj_mem_proj_test")
 const TRACE = TraceId("a".repeat(32))
 const SESSION = SessionId("conv-canonical") // the trace's canonical session; differs from the spans' own session_id
-const SCOPE = "user-1" // resolves from user_id (no scope attribute set)
+const STORE = "store1" // the store every seeded span writes to
 
 const ch = setupTestClickHouse()
 
@@ -162,7 +162,7 @@ describe("memory projection (end to end)", () => {
     )
     expect(Number(blobs[0]?.n)).toBe(3)
 
-    const now = await provide(reconstructSnapshotUseCase({ organizationId: ORG, projectId: PROJECT, scope: SCOPE }))
+    const now = await provide(reconstructSnapshotUseCase({ organizationId: ORG, projectId: PROJECT, storeId: STORE }))
     expect(now.records.map((record) => record.recordId).sort()).toEqual(["rec1", "rec2", "rec3"])
     const rec1Now = now.records.find((record) => record.recordId === "rec1")
     expect(rec1Now?.changeKind).toBe("update")
@@ -171,11 +171,11 @@ describe("memory projection (end to end)", () => {
       reconstructSnapshotUseCase({
         organizationId: ORG,
         projectId: PROJECT,
-        scope: SCOPE,
+        storeId: STORE,
         at: new Date("2026-06-01T12:00:00.500Z"),
       }),
     )
     expect(past.records.map((record) => record.recordId)).toEqual(["rec1"])
-    expect(past.records[0]?.changeKind).toBe("add") // only the create is in scope at t0.5
+    expect(past.records[0]?.changeKind).toBe("add") // only the create is present at t0.5
   })
 })
