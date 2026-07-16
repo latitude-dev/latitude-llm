@@ -136,6 +136,17 @@ export const CustomBehaviorRepositoryLive = Layer.effect(
           )
         }),
 
+      markGardened: ({ id, gardenedAt }) =>
+        Effect.gen(function* () {
+          const sqlClient = (yield* SqlClient) as SqlClientShape<Operator>
+          yield* sqlClient.query((db, organizationId) =>
+            db
+              .update(customBehaviors)
+              .set({ lastGardenedAt: gardenedAt })
+              .where(and(eq(customBehaviors.organizationId, organizationId), eq(customBehaviors.id, id))),
+          )
+        }),
+
       delete: (id) =>
         Effect.gen(function* () {
           const sqlClient = (yield* SqlClient) as SqlClientShape<Operator>

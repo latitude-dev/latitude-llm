@@ -11,6 +11,9 @@ export const createFakeCustomBehaviorRepository = (
   overrides?: Partial<CustomBehaviorRepositoryShape>,
 ) => {
   const rows = new Map<CustomBehaviorId, CustomBehavior>(seed.map((row) => [row.id, row] as const))
+  // Scheduling columns live off the entity in Postgres; mirror that here so
+  // tests can assert markGardened without widening CustomBehavior.
+  const gardenedAt = new Map<CustomBehaviorId, Date>()
 
   const collidesOnSlug = (projectId: string, slug: string, excludeId: string): boolean => {
     for (const row of rows.values()) {
@@ -60,9 +63,11 @@ export const createFakeCustomBehaviorRepository = (
         rows.set(behavior.id, { ...behavior, organizationId: FAKE_ORG_ID })
       }),
 
+    markGardened: ({ id, gardenedAt: at }) => Effect.sync(() => void gardenedAt.set(id, at)),
+
     delete: (id) => Effect.sync(() => void rows.delete(id)),
     ...overrides,
   }
 
-  return { repository, rows }
+  return { repository, rows, gardenedAt }
 }

@@ -1,10 +1,11 @@
 import type { QueueConsumer, QueuePublisherShape, WorkflowStarterShape } from "@domain/queue"
 import { CustomBehaviorId, OrganizationId, ProjectId } from "@domain/shared"
 import {
+  CUSTOM_BEHAVIOR_GARDENING_MIN_INTERVAL_MS,
   TAXONOMY_GARDENING_MIN_OBSERVATIONS,
+  TAXONOMY_GARDENING_SAMPLE_LOOKBACK_DAYS,
   TAXONOMY_GARDENING_SWEEP_SPREAD_MS,
   TAXONOMY_GARDENING_THROTTLE_MS,
-  TAXONOMY_NOISE_LOOKBACK_DAYS,
   type TaxonomyObservationCounts,
   TaxonomyObservationRepository,
   taxonomyGardenCustomBehaviorDedupeKey,
@@ -13,7 +14,12 @@ import {
 import type { RedisClient } from "@platform/cache-redis"
 import type { ClickHouseClient } from "@platform/db-clickhouse"
 import { TaxonomyObservationRepositoryLive, withClickHouse } from "@platform/db-clickhouse"
-import { listGardenableProjectRefs, type PostgresClient } from "@platform/db-postgres"
+import {
+  type GardenableCustomBehaviorRef,
+  listGardenableCustomBehaviors,
+  listGardenableProjectRefs,
+  type PostgresClient,
+} from "@platform/db-postgres"
 import { createLogger, withTracing } from "@repo/observability"
 import { Effect } from "effect"
 
@@ -46,6 +52,11 @@ interface GardenCustomBehaviorPayload {
   readonly reason?: "manual" | "cron"
 }
 
+interface GardenCustomBehaviorSweepPayload {
+  /** Optional override for ad-hoc runs; the repeatable sweep anchors at execution time. */
+  readonly triggeredAt?: string
+}
+
 interface TaxonomyRuntimeDeps {
   readonly clickhouseClient: ClickHouseClient
   readonly postgresClient: PostgresClient
@@ -72,8 +83,15 @@ interface TaxonomySweepDeps {
   readonly workflowStarter?: WorkflowStarterShape
 }
 
+interface CustomBehaviorSweepDeps {
+  readonly listGardenableCustomBehaviors: (
+    gardenedBefore: Date,
+  ) => Effect.Effect<readonly GardenableCustomBehaviorRef[], unknown>
+  readonly publisher: QueuePublisherShape
+}
+
 const lookbackStart = (triggeredAt: Date): Date =>
-  new Date(triggeredAt.getTime() - TAXONOMY_NOISE_LOOKBACK_DAYS * 24 * 60 * 60_000)
+  new Date(triggeredAt.getTime() - TAXONOMY_GARDENING_SAMPLE_LOOKBACK_DAYS * 24 * 60 * 60_000)
 
 const deterministicProjectDelayMs = (input: {
   readonly organizationId: string
@@ -90,6 +108,12 @@ const deterministicProjectDelayMs = (input: {
 const listActiveProjects = (adminPostgresClient: PostgresClient) =>
   Effect.tryPromise({
     try: () => listGardenableProjectRefs(adminPostgresClient),
+    catch: (cause) => cause,
+  })
+
+const listGardenableCustomBehaviorsEffect = (adminPostgresClient: PostgresClient, gardenedBefore: Date) =>
+  Effect.tryPromise({
+    try: () => listGardenableCustomBehaviors(adminPostgresClient, { gardenedBefore }),
     catch: (cause) => cause,
   })
 
@@ -158,6 +182,71 @@ export const runGardenSweepJob = (payload: GardenSweepPayload, deps: TaxonomySwe
     Effect.tapError((error) => Effect.sync(() => logger.error("Taxonomy gardening sweep failed", error))),
     withTracing,
     Effect.withSpan("taxonomy.gardenSweep"),
+    Effect.asVoid,
+  )
+
+// Scoped analogue of runGardenSweepJob: enqueue a `gardenCustomBehavior` run
+// (reason "cron") for each eligible custom behavior. Eligibility (live project,
+// past the cadence throttle) is resolved in the admin query; the ≥15-observation
+// gate and dedupe live in the per-behavior job + workflow, so this loop just
+// fans out.
+export const runGardenCustomBehaviorSweepJob = (
+  payload: GardenCustomBehaviorSweepPayload,
+  deps: CustomBehaviorSweepDeps,
+) =>
+  Effect.gen(function* () {
+    // Anchor the throttle window at execution time. A repeatable job's payload is
+    // frozen at scheduler-registration (worker boot), so trusting a payload
+    // timestamp would freeze `gardenedBefore` and stall the sweep once behaviors
+    // stamp a newer `last_gardened_at`; `triggeredAt` is honored only as an
+    // explicit override for ad-hoc/manual invocations.
+    const override = payload.triggeredAt ? new Date(payload.triggeredAt) : null
+    const anchor = override && !Number.isNaN(override.getTime()) ? override : new Date()
+    const gardenedBefore = new Date(anchor.getTime() - CUSTOM_BEHAVIOR_GARDENING_MIN_INTERVAL_MS)
+    const behaviors = yield* deps.listGardenableCustomBehaviors(gardenedBefore)
+    let published = 0
+    let failed = 0
+
+    for (const behavior of behaviors) {
+      const organizationId = OrganizationId(behavior.organization_id)
+      const customBehaviorId = CustomBehaviorId(behavior.custom_behavior_id)
+      yield* Effect.gen(function* () {
+        yield* deps.publisher.publish(
+          "taxonomy",
+          "gardenCustomBehavior",
+          {
+            organizationId: behavior.organization_id,
+            projectId: behavior.project_id,
+            customBehaviorId: behavior.custom_behavior_id,
+            reason: "cron",
+          },
+          {
+            dedupeKey: taxonomyGardenCustomBehaviorDedupeKey({ organizationId, customBehaviorId }),
+            // TTL-based dedupe (not a retained jobId) so recurring sweeps keep
+            // re-enqueueing this behavior instead of the first run shadowing the rest.
+            leadingThrottleMs: CUSTOM_BEHAVIOR_GARDENING_MIN_INTERVAL_MS,
+          },
+        )
+        published++
+      }).pipe(
+        Effect.catch((error) =>
+          Effect.sync(() => {
+            failed++
+            logger.warn("Custom behavior gardening sweep enqueue failed", {
+              organizationId,
+              customBehaviorId,
+              error,
+            })
+          }),
+        ),
+      )
+    }
+
+    logger.info("Custom behavior gardening sweep completed", { attempted: behaviors.length, published, failed })
+  }).pipe(
+    Effect.tapError((error) => Effect.sync(() => logger.error("Custom behavior gardening sweep failed", error))),
+    withTracing,
+    Effect.withSpan("taxonomy.gardenCustomBehaviorSweep"),
     Effect.asVoid,
   )
 
@@ -296,6 +385,12 @@ export const createTaxonomyWorker = ({
         redisClient,
         publisher,
         workflowStarter,
+      }),
+    gardenCustomBehaviorSweep: (payload) =>
+      runGardenCustomBehaviorSweepJob(payload as GardenCustomBehaviorSweepPayload, {
+        listGardenableCustomBehaviors: (gardenedBefore) =>
+          listGardenableCustomBehaviorsEffect(adminPostgresClient, gardenedBefore),
+        publisher,
       }),
   })
 }

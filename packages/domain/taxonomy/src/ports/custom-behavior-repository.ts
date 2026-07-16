@@ -19,6 +19,15 @@ export interface CustomBehaviorRepositoryShape {
   /** Existing rows using `slug` in the project; pairs with `generateSlug`'s `count` callback. */
   countBySlug(input: FindCustomBehaviorBySlugInput): Effect.Effect<number, RepositoryError, SqlClient>
   save(behavior: CustomBehavior): Effect.Effect<void, RepositoryError, SqlClient>
+  /**
+   * Stamp `last_gardened_at` when a scoped garden run starts. Kept off `save`
+   * (and the entity) so the scheduling columns stay repository-internal: `save`
+   * never overwrites them, and the cron eligibility query reads them directly.
+   */
+  markGardened(input: {
+    readonly id: CustomBehaviorId
+    readonly gardenedAt: Date
+  }): Effect.Effect<void, RepositoryError, SqlClient>
   delete(id: CustomBehaviorId): Effect.Effect<void, RepositoryError, SqlClient>
 }
 

@@ -639,6 +639,42 @@ describe("listProjectBehavioursUseCase (custom behavior scope)", () => {
     expect(result.topics.every((topic) => topic.trend.status === "steady")).toBe(true)
   })
 
+  it("derives per-cluster trend from the windowed assignment slice (not steady)", async () => {
+    const clusters = seededClusters()
+    const observations = createFakeTaxonomyObservationRepository([])
+    const assignments = createFakeCustomBehaviorAssignmentRepository(
+      {},
+      {
+        getClusterAssignmentCounts: () =>
+          Effect.succeed([
+            { clusterId: scopedA, count: 10 },
+            { clusterId: scopedB, count: 6 },
+          ]),
+        // A spiking scoped cluster and a cooling one — proves the scoped branch
+        // now reads a real start_time-windowed trend instead of hardcoding steady.
+        getClusterTrendCounts: () =>
+          Effect.succeed([
+            { clusterId: scopedA, currentCount: 10, baselineCount: 7, baselineDays: 7 },
+            { clusterId: scopedB, currentCount: 1, baselineCount: 28, baselineDays: 7 },
+          ]),
+      },
+    )
+
+    const result = await Effect.runPromise(
+      listProjectBehavioursUseCase({ organizationId, projectId, now, customBehaviorId: behaviorId }).pipe(
+        Effect.provide(Layer.succeed(TaxonomyClusterRepository, clusters.repository)),
+        Effect.provide(Layer.succeed(TaxonomyObservationRepository, observations.repository)),
+        Effect.provide(Layer.succeed(CustomBehaviorAssignmentRepository, assignments.repository)),
+        Effect.provide(Layer.succeed(SqlClient, createFakeSqlClient())),
+        Effect.provide(Layer.succeed(ChSqlClient, createFakeChSqlClient())),
+      ),
+    )
+
+    const trendById = new Map(result.topics.map((topic) => [topic.cluster.id, topic.trend.status] as const))
+    expect(trendById.get(scopedA)).toBe("spike")
+    expect(trendById.get(scopedB)).toBe("cooling")
+  })
+
   it("the global read ignores custom-behavior clusters entirely", async () => {
     const clusters = seededClusters()
     const observations = createFakeTaxonomyObservationRepository([makeObservation(1, globalId)])
