@@ -286,6 +286,18 @@ describe("detectOutputSchemaValidationFlagger", () => {
     expect(result).toEqual({ matched: false })
   })
 
+  it("does not match markdown links that start with [", () => {
+    const result = detectOutputSchemaValidationFlagger(
+      makeAssistantTrace([
+        assistantText(
+          "[Pull request #39](https://github.com/latitude-dev/latitude-llm-public/pull/39) is open against main.",
+        ),
+      ]),
+    )
+
+    expect(result).toEqual({ matched: false })
+  })
+
   it("matches with the trailing-comma message when JSON is truncated after a comma", () => {
     const result = detectOutputSchemaValidationFlagger(makeAssistantTrace([assistantText('{"a": 1,')]))
 
