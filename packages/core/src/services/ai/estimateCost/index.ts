@@ -163,9 +163,22 @@ export function estimateCost({
   const costPer1M = getCostPer1M({ provider, model })
   const costSpec = costPer1M.cost
 
+  // Providers report `cachedInputTokens` as a subset of `promptTokens` and
+  // `reasoningTokens` as a subset of `completionTokens`. Price only the
+  // non-overlapping remainder in the base buckets so cached/reasoning tokens
+  // are not billed twice.
+  const nonCachedPromptTokens = Math.max(
+    0,
+    toValidNumber(promptTokens) - toValidNumber(cachedInputTokens),
+  )
+  const nonReasoningCompletionTokens = Math.max(
+    0,
+    toValidNumber(completionTokens) - toValidNumber(reasoningTokens),
+  )
+
   const inputCost = computeCost({
     costSpec,
-    tokens: toValidNumber(promptTokens),
+    tokens: nonCachedPromptTokens,
     tokenType: 'input',
   })
   const cacheReadCost = computeCost({
@@ -180,7 +193,7 @@ export function estimateCost({
   })
   const outputCost = computeCost({
     costSpec,
-    tokens: toValidNumber(completionTokens),
+    tokens: nonReasoningCompletionTokens,
     tokenType: 'output',
   })
 
@@ -204,9 +217,20 @@ export function estimateCostBreakdown({
   const reasoningTokens = toValidNumber(usage.reasoningTokens)
   const completionTokens = toValidNumber(usage.completionTokens)
 
+  // `cachedTokens` is a subset of `promptTokens` and `reasoningTokens` is a
+  // subset of `completionTokens`. Break them into disjoint buckets so each
+  // category's tokens and cost are self-consistent and summing the categories
+  // (totalCost / totalTokens) does not double-count: prompt+cached = raw prompt
+  // and completion+reasoning = raw completion.
+  const nonCachedPromptTokens = Math.max(0, promptTokens - cachedTokens)
+  const nonReasoningCompletionTokens = Math.max(
+    0,
+    completionTokens - reasoningTokens,
+  )
+
   const promptCost = computeCost({
     costSpec,
-    tokens: promptTokens,
+    tokens: nonCachedPromptTokens,
     tokenType: 'input',
   })
   const cachedCost = computeCost({
@@ -221,7 +245,7 @@ export function estimateCostBreakdown({
   })
   const completionCost = computeCost({
     costSpec,
-    tokens: completionTokens,
+    tokens: nonReasoningCompletionTokens,
     tokenType: 'output',
   })
 
@@ -231,7 +255,7 @@ export function estimateCostBreakdown({
     [key]: {
       input: {
         prompt: {
-          tokens: promptTokens,
+          tokens: nonCachedPromptTokens,
           cost: promptCost,
         },
         cached: {
@@ -245,7 +269,7 @@ export function estimateCostBreakdown({
           cost: reasoningCost,
         },
         completion: {
-          tokens: completionTokens,
+          tokens: nonReasoningCompletionTokens,
           cost: completionCost,
         },
       },

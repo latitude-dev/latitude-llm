@@ -323,8 +323,6 @@ export class ExperimentsRepository extends Repository<Experiment> {
         totalTokens: sql<number>`
           COALESCE(SUM(
             COALESCE(${spans.tokensPrompt}, 0) +
-            COALESCE(${spans.tokensCached}, 0) +
-            COALESCE(${spans.tokensReasoning}, 0) +
             COALESCE(${spans.tokensCompletion}, 0)
           ), 0)
         `.mapWith(Number),

@@ -195,10 +195,12 @@ describe('estimateCost integration', () => {
     it('returns a full cost breakdown by token category', () => {
       const provider = Providers.OpenAI
       const model = 'gpt-4o'
+      // cached is a subset of prompt (1M of 2M) and reasoning is a subset of
+      // completion (300k of 500k).
       const usage = createUsage({
         promptTokens: 2_000_000,
         cachedInputTokens: 1_000_000,
-        reasoningTokens: 3_000_000,
+        reasoningTokens: 300_000,
         completionTokens: 500_000,
       })
       const costSpec = getCostPer1M({ provider, model }).cost
@@ -213,10 +215,12 @@ describe('estimateCost integration', () => {
         'openai/gpt-4o': {
           input: {
             prompt: {
-              tokens: 2_000_000,
+              // Disjoint buckets: prompt holds the non-cached remainder so
+              // prompt + cached = the raw prompt count.
+              tokens: usage.promptTokens - usage.cachedInputTokens,
               cost: computeCost({
                 costSpec,
-                tokens: usage.promptTokens,
+                tokens: usage.promptTokens - usage.cachedInputTokens,
                 tokenType: 'input',
               }),
             },
@@ -231,7 +235,7 @@ describe('estimateCost integration', () => {
           },
           output: {
             reasoning: {
-              tokens: 3_000_000,
+              tokens: 300_000,
               cost: computeCost({
                 costSpec,
                 tokens: usage.reasoningTokens,
@@ -239,16 +243,49 @@ describe('estimateCost integration', () => {
               }),
             },
             completion: {
-              tokens: 500_000,
+              // Disjoint buckets: completion holds the non-reasoning remainder
+              // so completion + reasoning = the raw completion count.
+              tokens: usage.completionTokens - usage.reasoningTokens,
               cost: computeCost({
                 costSpec,
-                tokens: usage.completionTokens,
+                tokens: usage.completionTokens - usage.reasoningTokens,
                 tokenType: 'output',
               }),
             },
           },
         },
       })
+    })
+
+    it('does not double-count cached/reasoning tokens (subsets of prompt/completion)', () => {
+      const provider = Providers.OpenAI
+      const model = 'gpt-4o'
+      const costSpec = getCostPer1M({ provider, model }).cost
+      const usage = createUsage({
+        promptTokens: 1000,
+        cachedInputTokens: 400,
+        completionTokens: 600,
+        reasoningTokens: 200,
+      })
+
+      const cost = estimateCost({ provider, model, usage })
+
+      // Correct: non-cached prompt + cached + non-reasoning completion + reasoning.
+      const expected =
+        computeCost({ costSpec, tokens: 600, tokenType: 'input' }) + // 1000 - 400
+        computeCost({ costSpec, tokens: 400, tokenType: 'cacheRead' }) +
+        computeCost({ costSpec, tokens: 200, tokenType: 'reasoning' }) +
+        computeCost({ costSpec, tokens: 400, tokenType: 'output' }) // 600 - 200
+      expect(cost).toBeCloseTo(expected, 10)
+
+      // And strictly less than the old double-counting formula (full prompt +
+      // cached + reasoning + full completion).
+      const doubleCounted =
+        computeCost({ costSpec, tokens: 1000, tokenType: 'input' }) +
+        computeCost({ costSpec, tokens: 400, tokenType: 'cacheRead' }) +
+        computeCost({ costSpec, tokens: 200, tokenType: 'reasoning' }) +
+        computeCost({ costSpec, tokens: 600, tokenType: 'output' })
+      expect(cost).toBeLessThan(doubleCounted)
     })
 
     it('converts NaN token counts to zero in each category', () => {

@@ -42,8 +42,6 @@ export const computeDocumentTracesAggregations = scopedQuery(
         coalesce(
           sumIf(
             coalesce(tokens_prompt, 0) +
-            coalesce(tokens_cached, 0) +
-            coalesce(tokens_reasoning, 0) +
             coalesce(tokens_completion, 0),
             type = {completionType: String}
           ),
@@ -57,8 +55,6 @@ export const computeDocumentTracesAggregations = scopedQuery(
           isNaN(
             avgIf(
               coalesce(tokens_prompt, 0) +
-              coalesce(tokens_cached, 0) +
-              coalesce(tokens_reasoning, 0) +
               coalesce(tokens_completion, 0),
               type = {completionType: String}
             )
@@ -66,8 +62,6 @@ export const computeDocumentTracesAggregations = scopedQuery(
           0,
           avgIf(
             coalesce(tokens_prompt, 0) +
-            coalesce(tokens_cached, 0) +
-            coalesce(tokens_reasoning, 0) +
             coalesce(tokens_completion, 0),
             type = {completionType: String}
           )

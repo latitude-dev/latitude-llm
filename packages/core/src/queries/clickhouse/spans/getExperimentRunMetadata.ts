@@ -33,8 +33,6 @@ export const getExperimentRunMetadata = scopedQuery(
         coalesce(
           sumIf(
             coalesce(tokens_prompt, 0) +
-              coalesce(tokens_cached, 0) +
-              coalesce(tokens_reasoning, 0) +
               coalesce(tokens_completion, 0),
             type = {completionType: String}
           ),

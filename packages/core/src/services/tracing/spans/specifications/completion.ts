@@ -343,9 +343,6 @@ async function enrichCost(
   workspace: Workspace,
   db = database,
 ): Promise<TypedResult<Required<CompletionSpanMetadata>['cost']>> {
-  const inputTokens = tokens.prompt + tokens.cached
-  const outputTokens = tokens.reasoning + tokens.completion
-
   let providerKey
   try {
     providerKey = await findProviderApiKeyByName(
@@ -356,15 +353,17 @@ async function enrichCost(
     providerKey = undefined
   }
 
-  const totalTokens =
-    inputTokens + outputTokens + tokens.reasoning + tokens.cached
+  // Pass the raw provider token counts: `tokens.prompt` already includes
+  // `tokens.cached` and `tokens.completion` already includes `tokens.reasoning`.
+  // estimateCost prices the non-overlapping remainder, so we must not pre-add
+  // the cached/reasoning subsets here (doing so double-counted them).
   const estimatedCost = estimateCost({
     usage: {
-      inputTokens,
-      outputTokens,
-      promptTokens: inputTokens,
-      completionTokens: outputTokens,
-      totalTokens,
+      inputTokens: tokens.prompt,
+      outputTokens: tokens.completion,
+      promptTokens: tokens.prompt,
+      completionTokens: tokens.completion,
+      totalTokens: tokens.prompt + tokens.completion,
       reasoningTokens: tokens.reasoning,
       cachedInputTokens: tokens.cached,
     },
