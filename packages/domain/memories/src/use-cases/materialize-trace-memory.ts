@@ -2,11 +2,11 @@ import { createHash } from "node:crypto"
 import type { OrganizationId, ProjectId, TraceId } from "@domain/shared"
 import { type MemoryOperationSpan, SpanRepository } from "@domain/spans"
 import { Effect } from "effect"
-import { getEncoding, type Tiktoken } from "js-tiktoken"
 import type { MemoryBlob } from "../entities/memory-blob.ts"
 import type { MemoryCurrentEntry } from "../entities/memory-current.ts"
 import type { MemoryChangeKind, MemoryEvent } from "../entities/memory-event.ts"
 import { memoryRecordBody, parseMemoryRecords } from "../entities/memory-record.ts"
+import { countTokens } from "../entities/tokenizer.ts"
 import { MemoryRepository } from "../ports/memory-repository.ts"
 
 export interface MaterializeTraceMemoryInput {
@@ -24,14 +24,6 @@ export interface MaterializeTraceMemoryResult {
 const textEncoder = new TextEncoder()
 const sha256Hex = (body: string) => createHash("sha256").update(body).digest("hex")
 const byteLength = (body: string) => textEncoder.encode(body).length
-
-// Lazily loaded so importing this module (e.g. transitively for types) doesn't
-// pull the o200k_base ranks into memory until a projection actually runs.
-let encoder: Tiktoken | null = null
-const tokenCount = (body: string): number => {
-  if (encoder === null) encoder = getEncoding("o200k_base")
-  return encoder.encode(body).length
-}
 
 const resolveScope = (span: MemoryOperationSpan): string =>
   span.scopeAttr || span.latitudeScopeAttr || (span.userId as string) || ""
@@ -142,7 +134,7 @@ export const materializeTraceMemoryUseCase = Effect.fn("memories.materializeTrac
     let tokens = 0
     if (body !== null) {
       contentHash = sha256Hex(body)
-      tokens = tokenCount(body)
+      tokens = countTokens(body)
       if (!blobs.has(contentHash)) {
         blobs.set(contentHash, {
           organizationId,
@@ -229,7 +221,7 @@ export const materializeTraceMemoryUseCase = Effect.fn("memories.materializeTrac
     switch (span.operation) {
       case "search_memory": {
         const records = parseMemoryRecords(span.recordsRaw)
-        const tokens = records ? records.reduce((sum, record) => sum + tokenCount(memoryRecordBody(record)), 0) : 0
+        const tokens = records ? records.reduce((sum, record) => sum + countTokens(memoryRecordBody(record)), 0) : 0
         pushSpanEvent(span, scope, "read", { recordId: span.recordId, tokenCount: tokens, queryText: span.queryText })
         break
       }
