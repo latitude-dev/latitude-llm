@@ -136,7 +136,7 @@ Read side (@domain/memories, on demand):
   reconstructSnapshot(scope, at)   → manifest {record → blob} via argMax over ledger (or memory_current for now)
   computeDiff(scope, from, to)     → hash-prune + jsdiff on survivors → {added/updated/removed, +/- tokens}
   computeBlame(scope, record, at)  → walk versions newest→oldest, attribute lines → span_id/trace_id
-  sessionSummary(session)          → read tokens (search spans) + write diff (before vs after)
+  sessionSummary(session)          → per-record read tokens (search hits by record id) + per-record write diff
 ```
 
 Materialization runs at the **trace-end boundary** (`apps/workers/src/workers/trace-end.ts`), not inline in ingestion, because that is the settled point where a record's final body within a trace and a stable end-time ordering are known. It is added as its own worker/queue step exactly like the deterministic-flaggers fan-out already is (isolated failure domain).
@@ -199,7 +199,7 @@ One row per memory-operation span (mutations **and** reads). `MergeTree`.
 `ORDER BY (organization_id, project_id, scope, store_id, record_id, end_time, span_id)`, `PARTITION BY toYYYYMM(end_time)`.
 
 `change_kind` derivation at materialization:
-- `search_memory` → `read` (never mutates the manifest).
+- `search_memory` → `read` (one event per returned record, keyed on the record's own `id`; never mutates the manifest).
 - `create_memory` → `add`; `update_memory` → `update`.
 - `upsert_memory` → `add` if the record had no prior mutating event in scope, else `update`.
 - `delete_memory` with `record.id` → `remove`; without `record.id` → a `store_delete`-flavored whole-store wipe (see reconstruction).
@@ -298,12 +298,13 @@ Per record at T: load its mutating versions ordered by `end_time` (each carries 
 
 ## Feature 2 — session / trace memory summary
 
-**Goal:** a compact chip on session and trace views: `read 412k · write +612 −24` (tokens), plus `+A ~U −R records` on expand.
+**Goal:** a per-record memory footprint on the session and trace detail views: read / added / removed token pills, hover-expanding to a per-record breakdown grouped by store.
 
-- **Read** = Σ `token_count` of the blobs returned by `search_memory` spans in the session/trace (tiktoken approx over `gen_ai.memory.records`). When content is absent, degrade to record count (`read 3 records`). ([D5](#decisions))
-- **Write** = the session/trace write diff from [Reconstruction § session write diff](#session--trace-write-diff-the-concurrency-rule): `+N −N tokens` derived from the endpoint line diff, churn collapsed. Fallback to `+/- lines` if a body is missing.
-- **Placement:** a `Memory` metric row in the detail body, directly under Cost — the trace `TraceTab` and the session `MetadataTab`, both right after `UsageSummary` (matching the Tokens/Cost row grammar). Computed by `compute-session-memory-summary`. **No cache in v1** — the read is cheap (bloom-indexed session scan + a batched blob fetch); Redis caching + worker-driven invalidation is a deferred lever, not day-one.
-- **Click-through:** the write chip links to Feature 4 (`/memory/{scope}?session={id}`). If the session touched multiple scopes, the chip expands to one row per scope. *(The link is wired in Phase 4, when the route exists; Phase 2 ships the chip and the multi-scope expansion.)*
+- **Read** = per record, Σ `token_count` of that record's `search_memory` read events ([D5](#decisions)). The materializer emits **one read event per returned record, keyed on the record's `id`** in `gen_ai.memory.records` (the scalar `gen_ai.memory.record.id` is empty on search) — so reads attribute to the record they came from and merge with that record's writes. Hits with no `id` bucket together under `''`.
+- **Write** = the per-record endpoint diff from [Reconstruction § session write diff](#session--trace-write-diff-the-concurrency-rule): `+N −N tokens`, churn collapsed. Fallback to record-level `tokenCount` when a body is absent.
+- **Shape:** `compute-session-memory-summary` returns per-record `{ scope, storeId, recordId, readTokens, tokensAdded, tokensRemoved }` plus a `total`; a record read *and* written merges into one entry.
+- **Placement:** a `Memory` row in the detail body directly under Cost — the trace `TraceTab` and session `MetadataTab`, after `UsageSummary`. Soft `*-muted` pills for read / added / removed tokens (eye / plus / minus icons, the icon carrying the sign so numbers drop the `+`/`−` prefix; `tok` unit); the added/removed pair shows only when there is a token delta. Hover opens a breakdown grouped by store (plain store headers with no value of their own), one row per record with its read / added / removed metrics toned muted / success / destructive (text + icon color only), capped at 10 rows; id-less reads collapse to one `—` row. Renders nothing until the summary loads or when the session touched no memory. **No cache in v1** — the read is cheap (bloom-indexed session scan + one batched blob fetch); Redis + worker invalidation is a deferred lever.
+- **Click-through:** each scope will link to Feature 4 (`/memory/{scope}?session={id}`), wired in Phase 4 (P4-2) once that route exists.
 
 ---
 
@@ -321,7 +322,7 @@ Per record at T: load its mutating versions ordered by `end_time` (each carries 
 
 ## Feature 4 — commit-style session diff view
 
-**Goal:** from a session's write chip, land on the scope at that session and read it like a GitHub commit.
+**Goal:** from the session's memory summary, land on the scope at that session and read it like a GitHub commit.
 
 - **Route:** `…/memory/$scope/index.tsx?session={sessionId}` (or `…/memory/$scope/sessions/$sessionId`). Header shows the session/trace link and the `+N −N tokens · +A ~U −R records` summary.
 - **Time-travel snapshot:** reconstruct the scope's manifest **as of the session's end** (`reconstruct-snapshot(scope, at=sessionEnd)`), so the tree reflects history, not "now".
@@ -345,7 +346,7 @@ Per record at T: load its mutating versions ordered by `end_time` (each carries 
 - **D2 — Span = full record snapshot; last-to-finish wins.** Each mutating span carries the full new body of the record it touches; versions order by `end_time`; the latest is current. No parent-pointer isolation, no merge. *(User call.)*
 - **D3 — Record identity = `(store_id, record_id)`; UI path = `"{store_id}/{record_id}"` split on `/`.** Records need not be real files. *(User call.)*
 - **D4 — Scope resolution order:** `gen_ai.memory.scope` → `latitude.memory.scope` → resolved `user.id` → `""`. *(User call.)*
-- **D5 — Read metric = approx tokens (js-tiktoken), fallback record count. Write metric = `+/− tokens` from the endpoint line diff (fallback lines) + records changed.** *(User call.)*
+- **D5 — Read metric = approx tokens (js-tiktoken), fallback record count. Write metric = `+/− tokens` from the endpoint line diff (fallback lines) + records changed.** Both are attributed **per record** — reads keyed on the search hit's own `gen_ai.memory.records[].id`, id-less hits bucketed under `''`. *(User call.)*
 - **D6 — Git-style storage:** content-addressed `memory_blobs` (dedup) + `memory_events` ledger + `memory_current` projection. Store snapshots, derive diffs.
 - **D7 — Reconstruction:** current-state via `memory_current`; point-in-time / diff / blame on demand in `@domain/memories`. Per-scope snapshot checkpoints deferred until volume demands.
 - **D8 — Materialization at the trace-end boundary** via a dedicated `memory-projection` worker (isolated failure domain, mirrors deterministic-flaggers).
@@ -416,16 +417,18 @@ Blame (originally P2-3) moved to **Phase 3**: its only surface is the Memory-pag
 - **Blame deferred to Phase 3** (see above) — no `compute-memory-blame` / `memory-blame.ts` yet.
 - **`diff` was not a workspace dependency.** Despite the original note, jsdiff (`diff` v8, BSD) lived only in `tools/ai-benchmarks`; Phase 2 adds it to the pnpm catalog and `@domain/memories` (ships its own TS types, no `@types/diff`).
 - **New port reads:** `readBlobs`, `readSessionMemoryEvents` (rides the `memory_events.session_id` bloom filter; optional in-SQL trace filter), `readRecordVersions` (two `Array(String)` params — no `Array(Tuple)` support — with exact-pair filtering in the use-case). Every new aggregate dedups retried ledger rows by `(span_id, store_id, record_id)`.
+- **Per-record reads (materializer change) + per-record summary.** `search_memory` now emits one read event per returned record keyed on the record's `id` (was one aggregate read keyed on the span's empty scalar `gen_ai.memory.record.id`, which produced a single unattributed "—" read). `compute-session-memory-summary` was reshaped from a per-scope to a per-record output (`records[]` + `total`); a record read *and* written merges into one entry. A content-hash fallback (match an id-less hit's body to a known record) was built then reverted — conformant emitters include record ids on search hits, so it was dead weight.
+- **Re-projection caveat.** Read attribution and session-id stamping happen at materialization, so already-projected traces keep their old rows until re-projected; re-projecting without first truncating the memory tables double-counts (append-only ledger; the old aggregate read and the new per-record reads have different `(span_id, store_id, record_id)` keys and both survive dedup).
 - **Shared token math.** `compute-memory-diff` is the manifest two-point diff (Feature 4 will consume it); `compute-session-memory-summary` applies the per-record endpoint rule directly. Both go through one `recordTokenDelta` helper (line diff + o200k_base tokens, degrading to record-level `tokenCount` when a body is absent) and a lifted `countTokens` tokenizer singleton.
 - **No summary cache in v1** (the read is cheap; Redis + worker invalidation is a later lever).
-- **Whole-store wipe in a session** counts the store's records live at the wipe — read via raw `readManifestAt`, not the D9-filtered reconstruction — as removed, excluding records the session also touched.
-- **Session id is stamped from the trace, not the span.** `session_id` is resolved per span at ingest and memory-operation spans routinely carry no session attribute (only sibling chat spans do), which left the ledger's `session_id` empty and the summary read (`WHERE session_id = …`) matching nothing. `trace-end` now passes the trace's canonical session id (`traceDetail.sessionId || traceId`, the same value it hands `session-end`) in the `memory-projection` payload, and `materialize-trace-memory` stamps it on every event. A trace belongs to one session, so this always agrees with the session/trace entity the chip opens from.
-- **Tested** against the in-memory fake (`compute-memory-diff`, `compute-session-memory-summary`, session-id stamping) and chdb (`readBlobs` / `readSessionMemoryEvents` / `readRecordVersions`; event `session_id` inherits the trace session even when the span's own differs).
+- **Whole-store wipe in a session** counts the store's records live *just before* the wipe as removed (excluding records the session also touched). The live set is reconstructed via `reconstructSnapshotUseCase` at `wipeAt − 1ms`, which applies the D9 store-wipe post-filter; raw `readManifestAt(wipeAt)` (the first cut) re-counted records already dropped by an *earlier* wipe as removed again — fixed after the PR #4053 review, with a wipe → repopulate → wipe regression test.
+- **Session id is stamped from the trace, not the span.** `session_id` is resolved per span at ingest and memory-operation spans routinely carry no session attribute (only sibling chat spans do), which left the ledger's `session_id` empty and the summary read (`WHERE session_id = …`) matching nothing. `trace-end` now passes the trace's canonical session id (`traceDetail.sessionId || traceId`, the same value it hands `session-end`) in the `memory-projection` payload, and `materialize-trace-memory` stamps it on every event. A trace belongs to one session, so this always agrees with the session/trace entity the summary opens from.
+- **Tested** against the in-memory fake (`compute-memory-diff`; `compute-session-memory-summary` incl. per-record read/write, multi-scope, repeated-wipe double-count; per-record search reads; session-id stamping) and chdb (`readBlobs` / `readSessionMemoryEvents` / `readRecordVersions`; event `session_id` inherits the trace session even when the span's own differs).
 
 **Phase 2 UI note (P2-4):**
 
 - New `apps/web` `memories` domain (`memories.functions.ts` `getSessionMemorySummary` server fn over `MemoryRepositoryLive`, no cache; `memories.collection.ts` `useMemorySummary` hook). `@domain/memories` added as an `apps/web` dependency.
-- `MemorySummary` (`-components/memory-summary.tsx`) renders a `read N · write +A −R` metric row in the detail body under Cost (the trace `TraceTab` and session `MetadataTab`, after `UsageSummary`) and hover-expands to per-scope rows. It renders nothing until the summary loads or when the session touched no memory. The scope-row click-through link is wired in Phase 4 (P4-2).
+- `MemorySummary` (`-components/memory-summary.tsx`) is a `Memory` row in the trace `TraceTab` + session `MetadataTab` detail bodies, under Cost: read/added/removed token pills (a local `MetricPill` — the `@repo/ui` `Badge` forces an `xs` icon and its colored variants carry a border, so a small local pill was cleaner) that hover-open a per-record breakdown grouped by store (metrics toned per kind, capped 10, id-less reads → `—`). Renders nothing until loaded / when the session touched no memory. The trace variant passes `sessionId={traceRecord.sessionId || traceId}` so sessionless traces still resolve (matching the canonical id stamped at trace-end). Presentation iterated with the user through a header chip → detail-body text row → badges → the current pills + breakdown; the scope click-through is wired in Phase 4 (P4-2).
 
 ### Phase 3 — The Memory page (Feature 3)
 
@@ -440,7 +443,7 @@ Blame (originally P2-3) moved to **Phase 3**: its only surface is the Memory-pag
 - [ ] **P4-1**: `/memory/$scope?session=…` route: time-travel snapshot at session end, changed-file badges, per-file unified/split diff, header summary + trace link. Backed by `compute-memory-diff` (built in Phase 2).
 - [ ] **P4-2**: Wire the Feature 2 summary's click-through (deferred from Phase 2) to this route — `MemorySummary` in the session/trace detail bodies links each scope row to `/memory/{scope}?session={id}`.
 
-**Exit gate:** clicking a session's write chip lands on the scope as-of that session, marks exactly the files it changed, and shows a correct per-file diff.
+**Exit gate:** clicking through from the session's memory summary lands on the scope as-of that session, marks exactly the files it changed, and shows a correct per-file diff.
 
 ### Later (out of this spec)
 
