@@ -302,7 +302,7 @@ Per record at T: load its mutating versions ordered by `end_time` (each carries 
 
 - **Read** = Σ `token_count` of the blobs returned by `search_memory` spans in the session/trace (tiktoken approx over `gen_ai.memory.records`). When content is absent, degrade to record count (`read 3 records`). ([D5](#decisions))
 - **Write** = the session/trace write diff from [Reconstruction § session write diff](#session--trace-write-diff-the-concurrency-rule): `+N −N tokens` derived from the endpoint line diff, churn collapsed. Fallback to `+/- lines` if a body is missing.
-- **Placement:** the session drawer's `session-slot.tsx` header and the trace drawer's `TraceDetailBody` header (the trace slot reuses the latter). Computed by `compute-session-memory-summary`. **No cache in v1** — the read is cheap (bloom-indexed session scan + a batched blob fetch); Redis caching + worker-driven invalidation is a deferred lever, not day-one.
+- **Placement:** a `Memory` metric row in the detail body, directly under Cost — the trace `TraceTab` and the session `MetadataTab`, both right after `UsageSummary` (matching the Tokens/Cost row grammar). Computed by `compute-session-memory-summary`. **No cache in v1** — the read is cheap (bloom-indexed session scan + a batched blob fetch); Redis caching + worker-driven invalidation is a deferred lever, not day-one.
 - **Click-through:** the write chip links to Feature 4 (`/memory/{scope}?session={id}`). If the session touched multiple scopes, the chip expands to one row per scope. *(The link is wired in Phase 4, when the route exists; Phase 2 ships the chip and the multi-scope expansion.)*
 
 ---
@@ -425,7 +425,7 @@ Blame (originally P2-3) moved to **Phase 3**: its only surface is the Memory-pag
 **Phase 2 UI note (P2-4):**
 
 - New `apps/web` `memories` domain (`memories.functions.ts` `getSessionMemorySummary` server fn over `MemoryRepositoryLive`, no cache; `memories.collection.ts` `useMemorySummary` hook). `@domain/memories` added as an `apps/web` dependency.
-- `MemorySummaryChip` (`-components/memory-summary-chip.tsx`) renders `read N · write +A −R` and hover-expands to per-scope rows; placed in `session-slot.tsx` and `TraceDetailBody` (the trace slot reuses the latter). It renders nothing until the summary loads or when the session touched no memory. The scope-row click-through link is wired in Phase 4 (P4-2).
+- `MemorySummary` (`-components/memory-summary.tsx`) renders a `read N · write +A −R` metric row in the detail body under Cost (the trace `TraceTab` and session `MetadataTab`, after `UsageSummary`) and hover-expands to per-scope rows. It renders nothing until the summary loads or when the session touched no memory. The scope-row click-through link is wired in Phase 4 (P4-2).
 
 ### Phase 3 — The Memory page (Feature 3)
 
@@ -438,7 +438,7 @@ Blame (originally P2-3) moved to **Phase 3**: its only surface is the Memory-pag
 ### Phase 4 — Commit-style session diff view (Feature 4)
 
 - [ ] **P4-1**: `/memory/$scope?session=…` route: time-travel snapshot at session end, changed-file badges, per-file unified/split diff, header summary + trace link. Backed by `compute-memory-diff` (built in Phase 2).
-- [ ] **P4-2**: Wire the Feature 2 summary chip's click-through (deferred from Phase 2) to this route — `MemorySummaryChip` in the session/trace drawers links each scope row to `/memory/{scope}?session={id}`.
+- [ ] **P4-2**: Wire the Feature 2 summary's click-through (deferred from Phase 2) to this route — `MemorySummary` in the session/trace detail bodies links each scope row to `/memory/{scope}?session={id}`.
 
 **Exit gate:** clicking a session's write chip lands on the scope as-of that session, marks exactly the files it changed, and shows a correct per-file diff.
 
