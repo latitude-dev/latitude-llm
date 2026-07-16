@@ -2,6 +2,12 @@
 
 ## Unreleased
 
+## v0.3.54 - 2026-07-16
+
+### Navigation
+
+- Preserved project and organization names beginning with digits, `#`, or `*` instead of rendering their first character as an emoji in navigation and command palettes (ref: #4063).
+
 ## v0.3.53 - 2026-07-16
 
 ### Memory observability

@@ -2,8 +2,8 @@ apiVersion: v2
 name: latitude
 description: Open-source AI Agent Monitoring Platform
 type: application
-version: 0.3.53
-appVersion: "0.3.53"
+version: 0.3.54
+appVersion: "0.3.54"
 home: https://latitude.so
 sources:
   - https://github.com/latitude-dev/latitude-llm
