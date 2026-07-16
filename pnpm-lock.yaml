@@ -81,6 +81,9 @@ catalogs:
     bullmq:
       specifier: 5.76.2
       version: 5.76.2
+    diff:
+      specifier: 8.0.4
+      version: 8.0.4
     dotenv:
       specifier: 17.3.1
       version: 17.3.1
@@ -1518,6 +1521,9 @@ importers:
       '@domain/spans':
         specifier: workspace:*
         version: link:../spans
+      diff:
+        specifier: 'catalog:'
+        version: 8.0.4
       effect:
         specifier: 'catalog:'
         version: 4.0.0-beta.57
