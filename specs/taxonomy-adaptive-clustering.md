@@ -324,24 +324,30 @@ Timing: garden sweeps run every 6 hours (`0 */6 * * *`, up to ~5h jitter) over a
 
 Exit: no structural or resource guardrail violations, and every collapse/expansion can be explained from telemetry.
 
-### Phase 5: enforcement and docs
+### Phase 5: enforcement
 
 * Enforce for the pilot organization by enabling `adaptiveTaxonomyClustering` for that org (baseline stays `shadow`).
 * Verify online assignments and parent residue.
 * Expand to contrasting organizations by enabling the flag for each.
 * Enable globally with `enabled_for_all` (or promote the env baseline to `enforced`) after exit criteria pass.
-* Update taxonomy and conversation-intelligence documentation.
-* Correct stale documentation that says the clustering sample cap is 10,000 instead of 1,500.
 * Decide whether intent projection is required based on shadow results.
 
-QA: a pilot acceptance run confirming the root gains 3–5 children, labeled purity/recall targets hold, online assignments land, and parent residue is correct; a mode-resolution test proving flag-enabled orgs resolve to `enforced` while others stay on the `shadow` baseline and an `off` baseline overrides the flag; a rollback drill that disables the flag (and flips the baseline to `off`) and confirms the next garden pass restores static behavior with no orphaned staging rows; a doc-accuracy check that the "10,000" sample-cap claim is gone from `dev-docs`.
+QA: a pilot acceptance run confirming the root gains 3–5 children, labeled purity/recall targets hold, online assignments land, and parent residue is correct; a mode-resolution test proving flag-enabled orgs resolve to `enforced` while others stay on the `shadow` baseline and an `off` baseline overrides the flag; a rollback drill that disables the flag (and flips the baseline to `off`) and confirms the next garden pass restores static behavior with no orphaned staging rows.
 
-Exit: adaptive is the production default, evaluation targets pass, docs match behavior, and rollback remains available.
+Exit: adaptive is the production default, evaluation targets pass, and rollback remains available.
 
-### Phase 6: cleanup
+### Phase 6: cleanup and docs
+
+All durable documentation lands here, after adaptive has been the stable enforced default through the observation period — not mid-rollout.
 
 * Remove the static sibling-cosine path after the observation period.
 * Remove shadow-only code.
 * Remove deprecated constants and tests.
 * Decide whether to keep the environment kill switch.
+* Update taxonomy and conversation-intelligence documentation to match the enforced behavior.
+* Correct stale documentation that says the clustering sample cap is 10,000 instead of 1,500.
 * Promote final decisions to `dev-docs` and retire the repository spec.
+
+QA: a doc-accuracy check that the "10,000" sample-cap claim is gone from `dev-docs` and the durable docs match enforced behavior.
+
+Exit: no dead static/shadow code remains, the durable docs are authoritative and match behavior, and the repository spec is retired.
