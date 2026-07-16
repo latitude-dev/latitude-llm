@@ -62,13 +62,16 @@ export {
   taxonomyClusterStateSchema,
 } from "./entities/cluster.ts"
 export {
+  CUSTOM_BEHAVIOR_EMPTY_FILTER_MESSAGE,
   CUSTOM_BEHAVIOR_EXCLUDED_FILTER_FIELD,
   CUSTOM_BEHAVIOR_TOPICS_REJECTED_MESSAGE,
   type CustomBehavior,
   CustomBehaviorStatus,
+  customBehaviorFilterSetHasConditions,
   customBehaviorFilterSetSchema,
   customBehaviorSchema,
   customBehaviorStatusSchema,
+  stripCustomBehaviorExcludedFields,
 } from "./entities/custom-behavior.ts"
 export {
   type CustomBehaviorAssignment,
@@ -139,8 +142,15 @@ export {
 export {
   type ClusterAnalysisAggregate,
   type ClusterRepresentativeExample,
+  type ClusterSessionHistogramBucket,
   type ClusterSessionMomentRange,
+  type ClusterSessionRow,
+  type ClusterSessionsPage,
   type ClusterSessionTraceIdsInput,
+  type ClusterTrajectoryAxis,
+  type ClusterTrajectoryRow,
+  type GetClusterTrajectoryInput,
+  type ListClusterSessionsInput,
   TaxonomyClusterIntelligenceRepository,
   type TaxonomyClusterIntelligenceRepositoryShape,
 } from "./ports/taxonomy-cluster-intelligence-repository.ts"
@@ -159,6 +169,7 @@ export {
   type TaxonomyLineageRepositoryShape,
 } from "./ports/taxonomy-lineage-repository.ts"
 export {
+  type CustomBehaviorSampleCounts,
   type ListTaxonomyNoiseInput,
   type ListTaxonomyObservationClusterInput,
   type ReassignTaxonomyObservationByIdInput,
@@ -229,6 +240,13 @@ export {
   deprecateCustomBehaviorTreeUseCase,
 } from "./use-cases/deprecate-custom-behavior-tree.ts"
 export { type EmitLineageInput, emitLineageUseCase } from "./use-cases/emit-lineage.ts"
+export { type GenerateCustomBehaviorInput, generateCustomBehavior } from "./use-cases/generate-custom-behavior.ts"
+export {
+  type BehaviourTrajectoryCategoryRow,
+  type BehaviourTrajectoryResult,
+  type GetBehaviourTrajectoryInput,
+  getBehaviourTrajectoryUseCase,
+} from "./use-cases/get-behaviour-trajectory.ts"
 export {
   type GetClusterSessionIntelligenceInput,
   type GetClusterSessionIntelligenceResult,
@@ -239,6 +257,10 @@ export {
   type GetClusterDetailsResult,
   getClusterDetailsUseCase,
 } from "./use-cases/get-details.ts"
+export {
+  type ListBehaviourSessionsInput,
+  listBehaviourSessionsUseCase,
+} from "./use-cases/list-behaviour-sessions.ts"
 export {
   type ListClusterSessionTraceIdsInput,
   listClusterSessionTraceIdsUseCase,
@@ -278,6 +300,11 @@ export {
   type NameTaxonomyResult,
   nameClusterUseCase,
 } from "./use-cases/name-taxonomy.ts"
+export {
+  type PreviewCustomBehaviorSampleInput,
+  type PreviewCustomBehaviorSampleResult,
+  previewCustomBehaviorSampleUseCase,
+} from "./use-cases/preview-custom-behavior-sample.ts"
 export { type RouteToDeepestClusterInput, routeToDeepestClusterUseCase } from "./use-cases/route-to-deepest-cluster.ts"
 export {
   type TriggerProjectGardeningInput,

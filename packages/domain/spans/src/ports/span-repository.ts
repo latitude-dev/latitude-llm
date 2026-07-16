@@ -1,5 +1,6 @@
 import type {
   ChSqlClient,
+  ExternalUserId,
   FilterSet,
   NotFoundError,
   OrganizationId,
@@ -12,12 +13,14 @@ import type {
 import { Context, type Effect } from "effect"
 import type { GenAIMessage } from "rosetta-ai"
 import type { Operation, Span, SpanDetail } from "../entities/span.ts"
+import type { TraceConversationChunk } from "../entities/trace.ts"
 
 /**
  * Minimal span shape with message content — used for conversation-to-span attribution.
  * Only returned by findMessagesForTrace; avoids fetching full SpanDetail for every span.
  */
 export interface SpanMessagesData {
+  readonly traceId: TraceId
   readonly spanId: SpanId
   readonly operation: Operation
   readonly toolCallId: string
@@ -38,6 +41,32 @@ export interface SessionToolSpan {
   readonly output: string
   readonly error: boolean
   readonly durationNs: number
+}
+
+/**
+ * A memory-operation span (`operation` ∈ the 7 GenAI memory ops) projected to the
+ * memory attributes the ledger materializer needs. Read as scalar map lookups
+ * (`attr_string['gen_ai.memory.…']`) so the potentially large
+ * `gen_ai.memory.records` payload is fetched only for a trace's handful of
+ * memory spans, never the whole attribute map. `recordsRaw` is the flattened
+ * records JSON (empty when the opt-in content attribute is absent); the scope
+ * attributes are resolved by the caller.
+ */
+export interface MemoryOperationSpan {
+  readonly spanId: SpanId
+  readonly traceId: TraceId
+  readonly sessionId: SessionId
+  readonly userId: ExternalUserId
+  readonly operation: Operation
+  readonly startTime: Date
+  readonly endTime: Date
+  readonly storeId: string
+  readonly recordId: string
+  readonly recordCount: number
+  readonly queryText: string
+  readonly recordsRaw: string
+  readonly scopeAttr: string
+  readonly latitudeScopeAttr: string
 }
 
 /**
@@ -65,6 +94,13 @@ export interface SpanRepositoryShape {
   // consistent across append-only and upsert-backed stores.
   insert(spans: readonly SpanDetail[]): Effect.Effect<void, RepositoryError, ChSqlClient>
 
+  /**
+   * Every span in a trace. The dynamic attribute maps
+   * (`attrString`/`attrInt`/`attrFloat`/`attrBool`/`resourceString`) come back
+   * empty for the same reason as `listBySessionId`: a trace's spans can each
+   * carry whole conversations or memory records in their attributes, so reading
+   * them here is a memory hazard — fetch a span's attributes via `findBySpanId`.
+   */
   listByTraceId(input: {
     readonly organizationId: OrganizationId
     readonly projectId: ProjectId
@@ -91,6 +127,36 @@ export interface SpanRepositoryShape {
     readonly startTimeTo?: Date
   }): Effect.Effect<readonly Span[], RepositoryError, ChSqlClient>
 
+  /**
+   * Every span belonging to any of `traceIds`, deduped by `(trace_id, span_id)`
+   * (span ids are only unique within a trace). The authoritative way to read a
+   * session's spans: a session's `traceIds` are resolved from the session
+   * materialization, so this catches subagent spans that override `session_id`
+   * to the child's own value and would be invisible to a `session_id` membership
+   * scan. Attribute maps come back empty (same memory hazard as listBySessionId).
+   */
+  listByTraceIds(input: {
+    readonly organizationId: OrganizationId
+    readonly projectId: ProjectId
+    readonly traceIds: readonly TraceId[]
+    readonly startTimeFrom?: Date
+    readonly startTimeTo?: Date
+  }): Effect.Effect<readonly Span[], RepositoryError, ChSqlClient>
+
+  /**
+   * The trace's memory-operation spans projected to their memory attributes (see
+   * `MemoryOperationSpan`). Filtered on the indexed `operation` column, deduped by
+   * newest `ingested_at`, ordered by `end_time`. Unlike `listByTraceId` this
+   * returns the memory attribute values (scalar map lookups, so no memory hazard)
+   * because the ledger materializer needs the record content — but only for the
+   * few memory spans in one trace.
+   */
+  listMemoryOperationSpansByTraceId(input: {
+    readonly organizationId: OrganizationId
+    readonly projectId: ProjectId
+    readonly traceId: TraceId
+  }): Effect.Effect<readonly MemoryOperationSpan[], RepositoryError, ChSqlClient>
+
   listByProjectId(input: {
     readonly organizationId: OrganizationId
     readonly projectId: ProjectId
@@ -113,6 +179,22 @@ export interface SpanRepositoryShape {
     readonly startTimeFrom: Date
     readonly startTimeTo: Date
   }): Effect.Effect<readonly SpanMessagesData[], RepositoryError, ChSqlClient>
+
+  /**
+   * A single span's own conversation as a paginated chunk: its
+   * `system_instructions` + `input_messages` + `output_messages` concatenated
+   * (system first), sliced by `offset`/`limit`. Twin of
+   * `TraceRepository.findConversationChunk`, keyed on `(trace_id, span_id)` and
+   * deduped by newest `ingested_at`. Powers the subagent conversation view.
+   */
+  findSpanConversationChunk(input: {
+    readonly organizationId: OrganizationId
+    readonly projectId: ProjectId
+    readonly traceId: TraceId
+    readonly spanId: SpanId
+    readonly offset: number
+    readonly limit: number
+  }): Effect.Effect<TraceConversationChunk, RepositoryError, ChSqlClient>
 
   /**
    * The session's tool spans (`operation = execute_tool`), projected to name + I/O + error + duration.
@@ -199,7 +281,7 @@ export type SpanListOrderDirection = "asc" | "desc"
 
 /**
  * Keyset cursor for `listByProjectId` — points at the last returned row's
- * `(sortValue, spanId)` in the active ordering. Stable across concurrent inserts
+ * `(sortValue, traceId, spanId)` in the active ordering. Stable across concurrent inserts
  * (unlike an offset, which shifts when rows land mid-pagination). `sortValue` is
  * the raw sort-column value carried at full fidelity: a nanosecond ClickHouse
  * datetime for `startTime`, a base-10 integer for `duration`/`cost`. `field` and
@@ -210,6 +292,7 @@ export interface SpanListCursor {
   readonly field: SpanListOrderField
   readonly direction: SpanListOrderDirection
   readonly sortValue: string
+  readonly traceId: TraceId
   readonly spanId: SpanId
 }
 

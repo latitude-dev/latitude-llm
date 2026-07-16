@@ -42,11 +42,34 @@ export const operationSchema = z.union([
     "retrieval",
     "guardrail",
     "evaluator",
+    "create_memory",
+    "update_memory",
+    "upsert_memory",
+    "delete_memory",
+    "search_memory",
+    "create_memory_store",
+    "delete_memory_store",
     "unspecified",
   ]),
   z.string(),
 ])
 export type Operation = z.infer<typeof operationSchema>
+
+export const MEMORY_OPERATIONS = [
+  "create_memory",
+  "update_memory",
+  "upsert_memory",
+  "delete_memory",
+  "search_memory",
+  "create_memory_store",
+  "delete_memory_store",
+] as const satisfies readonly Operation[]
+
+const MEMORY_OPERATIONS_SET: ReadonlySet<string> = new Set(MEMORY_OPERATIONS)
+
+export function isMemoryOperation(operation: string): boolean {
+  return MEMORY_OPERATIONS_SET.has(operation)
+}
 
 /**
  * Span — the listing/query shape returned by list and trace queries.
@@ -84,7 +107,9 @@ export const spanSchema = z.object({
   model: z.string(),
   responseModel: z.string(),
   toolName: z.string(),
+  agentName: z.string(),
   toolNames: z.array(z.string()).readonly(),
+  toolCallId: z.string(),
   tokensInput: z.number(),
   tokensOutput: z.number(),
   tokensCacheRead: z.number(),
@@ -124,7 +149,6 @@ export const spanDetailSchema = spanSchema.extend({
   outputMessages: z.array(genAIMessageSchema).readonly(),
   systemInstructions: genAISystemSchema,
   toolDefinitions: z.array(toolDefinitionSchema).readonly(),
-  toolCallId: z.string(),
   toolInput: z.string(),
   toolOutput: z.string(),
 })

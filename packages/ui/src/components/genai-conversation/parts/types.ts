@@ -48,3 +48,15 @@ export interface ToolCallResult {
   readonly response: unknown
   readonly isError: boolean
 }
+
+/** Decoration for a tool call that spawned a subagent, keyed by tool-call id. */
+export interface SubagentToolCallInfo {
+  /** The subagent's display label (agent name or tool name). */
+  readonly label: string
+  /** The subagent conversation's first message, as readable text (input peek). */
+  readonly taskPreview?: string | undefined
+  /** The subagent conversation's last message, as readable text (output peek). */
+  readonly resultPreview?: string | undefined
+  /** Opens the subagent's conversation in place. Absent renders no button. */
+  readonly onOpenConversation?: (() => void) | undefined
+}

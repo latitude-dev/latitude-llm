@@ -9,7 +9,7 @@ const EMPTY_FEATURE_FLAGS = new Set<FeatureFlagId>()
 
 const getEnabledFeatureFlagsQueryKey = (organizationId: string) => [...FEATURE_FLAGS_QUERY_KEY, organizationId]
 
-function useFeatureFlags(): ReadonlySet<FeatureFlagId> {
+export function useFeatureFlags(): ReadonlySet<FeatureFlagId> {
   const organizationId = useAuthenticatedOrganizationId()
   const { data } = useQuery({
     queryKey: getEnabledFeatureFlagsQueryKey(organizationId),

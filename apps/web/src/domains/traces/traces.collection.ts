@@ -16,6 +16,7 @@ import {
   getProjectFirstTraceAt,
   getProjectLastTraceAt,
   getSessionMomentIntelligence,
+  getSpanConversationChunk,
   getTraceCohortSummary,
   getTraceConversationChunk,
   getTraceDetail,
@@ -376,6 +377,46 @@ export function useTraceConversationMessages({
 
   const messages = useMemo(() => query.data?.pages.flatMap((page) => page.messages) ?? [], [query.data])
   // Every chunk carries whole-conversation metadata; page 0 is the stable header.
+  const totalMessages = query.data?.pages[0]?.totalMessages ?? 0
+  const payloadBytes = query.data?.pages[0]?.payloadBytes ?? 0
+
+  return { ...query, messages, totalMessages, payloadBytes }
+}
+
+/** A single span's own conversation (subagent boundary), same contract as useTraceConversationMessages. */
+export function useSpanConversationMessages({
+  projectId,
+  traceId,
+  spanId,
+  enabled = true,
+}: {
+  readonly projectId: string
+  readonly traceId: string
+  readonly spanId: string
+  readonly enabled?: boolean
+}) {
+  const scope = useProjectScope()
+  const query = useInfiniteQuery({
+    queryKey: [...projectScopeKey(scope), "spanConversation", projectId, traceId, spanId],
+    queryFn: async ({ pageParam }): Promise<TraceConversationChunkRecord> => {
+      const result = await getSpanConversationChunk({
+        data: {
+          ...projectScopeData(scope),
+          projectId,
+          traceId,
+          spanId,
+          offset: pageParam,
+          limit: CONVERSATION_CHUNK_SIZE,
+        },
+      })
+      return result as TraceConversationChunkRecord
+    },
+    initialPageParam: 0,
+    getNextPageParam: (lastPage) => (lastPage.hasMore ? lastPage.offset + lastPage.messages.length : undefined),
+    enabled: enabled && projectId.length > 0 && traceId.length > 0 && spanId.length > 0,
+  })
+
+  const messages = useMemo(() => query.data?.pages.flatMap((page) => page.messages) ?? [], [query.data])
   const totalMessages = query.data?.pages[0]?.totalMessages ?? 0
   const payloadBytes = query.data?.pages[0]?.payloadBytes ?? 0
 

@@ -26,8 +26,10 @@ function makeSpan(
     operation: "",
     provider: "",
     model: "",
+    agentName: "",
     toolName: "",
     toolNames: [],
+    toolCallId: "",
     tokensInput: 0,
     tokensOutput: 0,
     costTotalMicrocents: 0,
@@ -135,7 +137,7 @@ describe("session span groups", () => {
       [],
     )
 
-    const filtered = filterSessionSpanGroups(groups, { errors: true, tools: false, model: "" })
+    const filtered = filterSessionSpanGroups(groups, { errors: true, tools: false, memory: false, model: "" })
 
     expect(filtered).toHaveLength(1)
     expect(filtered[0]?.traceId).toBe("trace-a")

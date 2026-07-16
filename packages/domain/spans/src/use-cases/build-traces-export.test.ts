@@ -39,6 +39,7 @@ const makeTrace = (traceId: string, overrides: Partial<Trace> = {}): Trace =>
     models: [],
     providers: [],
     serviceNames: [],
+    agentNames: [],
     rootSpanId: "span-1" as Trace["rootSpanId"],
     rootSpanName: "root",
     ...overrides,

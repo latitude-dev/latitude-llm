@@ -45,6 +45,7 @@ const span = (
     operation: "chat",
     provider: "",
     model: opts.model ?? "",
+    agent_name: "",
     response_model: "",
     tokens_input: 0,
     tokens_output: 0,

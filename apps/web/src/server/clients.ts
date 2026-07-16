@@ -30,6 +30,7 @@ import { mcp } from "better-auth/plugins"
 import { tanstackStartCookies } from "better-auth/tanstack-start"
 import { Effect } from "effect"
 import { parseSignupAttributionCookie } from "../lib/analytics/signup-attribution-cookie.ts"
+import { createMagicLinkConfirmationUrl } from "../lib/auth/magic-link.ts"
 
 let postgresClientInstance: PostgresClient | undefined
 let adminPostgresClientInstance: PostgresClient | undefined
@@ -307,7 +308,7 @@ export const getBetterAuth = () => {
               organizationId: "system",
               payload: {
                 email,
-                magicLinkUrl: url,
+                magicLinkUrl: createMagicLinkConfirmationUrl({ verificationUrl: url, webUrl }),
                 organizationId: "system",
               },
             })

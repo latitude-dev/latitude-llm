@@ -85,7 +85,7 @@ export function AssigneeFilter({
   return (
     <DropdownMenuRoot>
       <DropdownMenuTrigger asChild>
-        <Button variant={selected.size > 0 ? "secondary" : "outline"} size="sm">
+        <Button variant={selected.size > 0 ? "secondary" : "outline"}>
           <Icon icon={UserRoundIcon} size="sm" />
           {triggerLabel}
           <Icon icon={ChevronDown} size="sm" />

@@ -120,10 +120,11 @@ export function SessionSlot({
     onActiveTabChange("spans")
   }
 
-  function navigateToSpan(spanId: string) {
-    // Conversation span links come from session-wide span maps, so the span can
-    // belong to any trace; let SessionSpansTab resolve the trace from its spans.
-    setSelectedSpanTraceId("")
+  function navigateToSpan(spanId: string, traceId?: string) {
+    // Conversation span links carry their trace (span ids are trace-scoped, so a
+    // bare span id collides across a session's traces). Fall back to letting
+    // SessionSpansTab resolve the trace when a caller omits it.
+    setSelectedSpanTraceId(traceId ?? "")
     setSelectedSpanId(spanId)
     onActiveTabChange("spans")
   }

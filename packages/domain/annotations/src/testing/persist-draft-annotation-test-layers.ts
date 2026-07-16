@@ -69,6 +69,7 @@ export function makeTraceDetail(allMessages: readonly GenAIMessage[]): TraceDeta
     models: [],
     providers: [],
     serviceNames: [],
+    agentNames: [],
     rootSpanId: SpanId("r".repeat(16)),
     rootSpanName: "root",
     systemInstructions: [],

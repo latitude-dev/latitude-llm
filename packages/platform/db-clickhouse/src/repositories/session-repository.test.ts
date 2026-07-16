@@ -76,6 +76,7 @@ const makeSpanRow = (overrides: SpanOverrides): SpanRow => {
     operation: overrides.operation ?? "chat",
     provider: overrides.provider ?? "",
     model: overrides.model ?? "",
+    agent_name: "",
     response_model: "",
     tokens_input: overrides.tokensInput ?? 0,
     tokens_output: overrides.tokensOutput ?? 0,

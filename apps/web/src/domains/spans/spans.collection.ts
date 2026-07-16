@@ -1,4 +1,4 @@
-import { SpanId } from "@domain/shared"
+import { SpanId, TraceId } from "@domain/shared"
 import type { SpanMessagesData } from "@domain/spans"
 import { buildConversationSpanMaps } from "@domain/spans"
 import { queryCollectionOptions } from "@tanstack/query-db-collection"
@@ -88,9 +88,15 @@ export const useSpansByTraceCollection = ({
   )
 }
 
+// Order-independent signature of the session's trace set, so the collection
+// cache/query refresh when a live session gains a trace (traceIds changes) but
+// stay stable across reorderings of the same set.
+const traceIdsSignature = (traceIds: readonly string[]): string => [...traceIds].sort().join(",")
+
 const makeSpansBySessionCollection = (
   projectId: string,
   sessionId: string,
+  traceIds: readonly string[],
   startTimeFrom: string | undefined,
   startTimeTo: string | undefined,
   sandboxOrgId: string | undefined,
@@ -98,10 +104,25 @@ const makeSpansBySessionCollection = (
   createAppCollection(
     queryCollectionOptions({
       queryClient,
-      queryKey: ["spans", "session", sandboxOrgId, projectId, sessionId, startTimeFrom, startTimeTo],
+      queryKey: [
+        "spans",
+        "session",
+        sandboxOrgId,
+        projectId,
+        sessionId,
+        traceIdsSignature(traceIds),
+        startTimeFrom,
+        startTimeTo,
+      ],
       queryFn: () =>
         listSpansBySession({
-          data: { ...(sandboxOrgId ? { sandboxOrgId } : {}), projectId, sessionId, startTimeFrom, startTimeTo },
+          data: {
+            ...(sandboxOrgId ? { sandboxOrgId } : {}),
+            projectId,
+            traceIds: [...traceIds],
+            startTimeFrom,
+            startTimeTo,
+          },
         }),
       getKey: (item: SpanRecord): string => `${item.traceId}-${item.spanId}`,
     }),
@@ -113,15 +134,17 @@ const sessionCollectionsCache: Record<string, SpansBySessionCollection> = {}
 const getSpansBySessionCollection = (
   projectId: string,
   sessionId: string,
+  traceIds: readonly string[],
   startTimeFrom: string | undefined,
   startTimeTo: string | undefined,
   sandboxOrgId: string | undefined,
 ): SpansBySessionCollection => {
-  const cacheKey = `${sandboxOrgId ?? ""}:${projectId}:${sessionId}:${startTimeFrom ?? ""}:${startTimeTo ?? ""}`
+  const cacheKey = `${sandboxOrgId ?? ""}:${projectId}:${sessionId}:${traceIdsSignature(traceIds)}:${startTimeFrom ?? ""}:${startTimeTo ?? ""}`
   if (!sessionCollectionsCache[cacheKey]) {
     sessionCollectionsCache[cacheKey] = makeSpansBySessionCollection(
       projectId,
       sessionId,
+      traceIds,
       startTimeFrom,
       startTimeTo,
       sandboxOrgId,
@@ -133,11 +156,13 @@ const getSpansBySessionCollection = (
 export const useSpansBySessionCollection = ({
   projectId,
   sessionId,
+  traceIds,
   startTimeFrom,
   startTimeTo,
 }: {
   readonly projectId: string
   readonly sessionId: string
+  readonly traceIds: readonly string[]
   readonly startTimeFrom?: string | undefined
   readonly startTimeTo?: string | undefined
 }) => {
@@ -145,13 +170,14 @@ export const useSpansBySessionCollection = ({
   const collection = getSpansBySessionCollection(
     projectId,
     sessionId,
+    traceIds,
     startTimeFrom,
     startTimeTo,
     sandboxOrgIdForScope(scope),
   )
   return useLiveQuery(
     (q) => q.from({ span: collection }),
-    [projectId, sessionId, startTimeFrom, startTimeTo, sandboxOrgIdForScope(scope)],
+    [projectId, sessionId, traceIdsSignature(traceIds), startTimeFrom, startTimeTo, sandboxOrgIdForScope(scope)],
   )
 }
 
@@ -189,6 +215,7 @@ export const useSpanDetail = ({
 const asMessageSpans = (records: readonly SpanMessagesRecord[]): readonly SpanMessagesData[] =>
   records.map((record) => ({
     ...record,
+    traceId: TraceId(record.traceId),
     spanId: SpanId(record.spanId),
     inputMessages: record.inputMessages as readonly GenAIMessage[],
     outputMessages: record.outputMessages as readonly GenAIMessage[],

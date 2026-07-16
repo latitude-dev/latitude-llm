@@ -38,7 +38,7 @@ function runTransform(span: OtlpSpan): SpanDetail {
 }
 
 describe("Claude Code OTLP span expansion", () => {
-  it("maps interaction spans: user_prompt → gen_ai.input.messages and operation", () => {
+  it("maps interaction spans: user_prompt → gen_ai.input.messages and invoke_agent operation", () => {
     const span: OtlpSpan = {
       traceId: TRACE_ID,
       spanId: "aaaaaaaaaaaaaaaa",
@@ -62,7 +62,7 @@ describe("Claude Code OTLP span expansion", () => {
 
     expect(d.sessionId).toBe(SESSION)
     expect(d.userId).toBe(USER_ID)
-    expect(d.operation).toBe("prompt")
+    expect(d.operation).toBe("invoke_agent")
     expect(d.inputMessages).toHaveLength(1)
     expect(d.inputMessages[0]?.role).toBe("user")
     const parts = d.inputMessages[0]?.parts
@@ -150,7 +150,7 @@ describe("Claude Code OTLP span expansion", () => {
       attributes: [str("session.id", SESSION), str("user.id", USER_ID), str("user_prompt", "hello from agent sdk")],
       status: { code: 1 },
     }
-    expect(runTransform(interaction).operation).toBe("prompt")
+    expect(runTransform(interaction).operation).toBe("invoke_agent")
 
     const llm: OtlpSpan = {
       traceId: TRACE_ID,

@@ -19,7 +19,7 @@ Stream Claude Code conversations into Latitude as traces. After setup, Claude Co
 3. Run the installer:
 
 ```bash
-npx -y @latitude-data/claude-code-telemetry install
+npx -y @latitude-data/claude-code-telemetry@latest install
 ```
 
 The installer prompts for your API key and project slug, then configures Claude Code to export telemetry after each turn.
@@ -27,7 +27,7 @@ The installer prompts for your API key and project slug, then configures Claude 
 You can also pass values directly:
 
 ```bash
-npx -y @latitude-data/claude-code-telemetry install \
+npx -y @latitude-data/claude-code-telemetry@latest install \
   --api-key=lat_xxx \
   --project=your-project-slug \
   --yes
@@ -50,7 +50,7 @@ Restart Claude Code for the change to take effect.
 To remove the integration:
 
 ```bash
-npx -y @latitude-data/claude-code-telemetry uninstall
+npx -y @latitude-data/claude-code-telemetry@latest uninstall
 ```
 
 ## Manual configuration
@@ -69,7 +69,7 @@ If you manage Claude Code settings yourself, add the telemetry command to `~/.cl
         "hooks": [
           {
             "type": "command",
-            "command": "npx -y @latitude-data/claude-code-telemetry",
+            "command": "npx -y @latitude-data/claude-code-telemetry@latest",
             "async": true
           }
         ]

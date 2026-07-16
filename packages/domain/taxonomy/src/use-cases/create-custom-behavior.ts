@@ -10,8 +10,10 @@ import {
 import { Effect } from "effect"
 import { CUSTOM_BEHAVIOR_NAME_MAX_LENGTH, MAX_CUSTOM_BEHAVIORS_PER_PROJECT } from "../constants.ts"
 import {
+  CUSTOM_BEHAVIOR_EMPTY_FILTER_MESSAGE,
   type CustomBehavior,
   CustomBehaviorStatus,
+  customBehaviorFilterSetHasConditions,
   customBehaviorFilterSetSchema,
 } from "../entities/custom-behavior.ts"
 import {
@@ -56,6 +58,9 @@ export const createCustomBehavior = Effect.fn("taxonomy.createCustomBehavior")(f
     return yield* new CustomBehaviorFilterInvalidError({
       message: parsedFilterSet.error.issues[0]?.message ?? "Invalid filter set",
     })
+  }
+  if (!customBehaviorFilterSetHasConditions(parsedFilterSet.data)) {
+    return yield* new CustomBehaviorFilterInvalidError({ message: CUSTOM_BEHAVIOR_EMPTY_FILTER_MESSAGE })
   }
 
   const sqlClient = yield* SqlClient

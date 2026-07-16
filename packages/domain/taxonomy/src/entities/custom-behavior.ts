@@ -53,6 +53,24 @@ export const customBehaviorFilterSetSchema: z.ZodType<FilterSet> = filterSetSche
   }
 })
 
+/**
+ * Drop the excluded (`topics`) field from a FilterSet so a Sessions or saved-
+ * search filter can seed a custom behavior. Entry points copy a filter and
+ * strip topics here rather than re-deriving the exclusion at each call site.
+ */
+export const stripCustomBehaviorExcludedFields = (filterSet: FilterSet): FilterSet => {
+  if (!Object.hasOwn(filterSet, CUSTOM_BEHAVIOR_EXCLUDED_FILTER_FIELD)) return filterSet
+  const { [CUSTOM_BEHAVIOR_EXCLUDED_FILTER_FIELD]: _excluded, ...rest } = filterSet
+  return rest
+}
+
+export const CUSTOM_BEHAVIOR_EMPTY_FILTER_MESSAGE =
+  "A custom behavior needs at least one filter — an unfiltered scope is the project-wide Behaviors taxonomy"
+
+/** A FilterSet only scopes a behavior when at least one field carries a condition. */
+export const customBehaviorFilterSetHasConditions = (filterSet: FilterSet): boolean =>
+  Object.values(filterSet).some((conditions) => conditions.length > 0)
+
 // ---------------------------------------------------------------------------
 // CustomBehavior
 // ---------------------------------------------------------------------------

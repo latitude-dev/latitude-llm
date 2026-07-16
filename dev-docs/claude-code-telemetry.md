@@ -19,7 +19,7 @@ Paste into `~/.claude/settings.json`:
         "hooks": [
           {
             "type": "command",
-            "command": "npx -y @latitude-data/claude-code-telemetry"
+            "command": "npx -y @latitude-data/claude-code-telemetry@latest"
           }
         ]
       }
@@ -27,6 +27,8 @@ Paste into `~/.claude/settings.json`:
   }
 }
 ```
+
+The `@latest` tag makes the hook self-update: `npx` re-resolves the newest published version on each run (a cheap, etag-revalidated metadata check — a full download only when a new version ships), so users pick up fixes without re-installing. A bare `npx <pkg>` would reuse whatever the npx cache first fetched and never update. Keep `async: true` so this resolution runs off the turn's critical path.
 
 The hook runs on every assistant-turn completion. It reads **new** lines from the session transcript since the last run (state is tracked at `~/.claude/state/latitude/state.json`), converts them into OTLP spans, and POSTs to `${LATITUDE_BASE_URL}/v1/traces` with `Authorization: Bearer ${LATITUDE_API_KEY}` and `X-Latitude-Project: ${LATITUDE_PROJECT}`. The project must already exist under the organization that owns the API key.
 
@@ -36,13 +38,23 @@ Each turn produces three kinds of spans, all routed through the existing `apps/i
 
 | `span.type` | Maps to `Operation` | Carries |
 | --- | --- | --- |
-| `interaction` | `prompt` | Root of the turn. `user_prompt`, `session.id`, `interaction.duration_ms`. |
+| `interaction` | `invoke_agent` | Root of the turn — the agent boundary that orchestrates the turn's generations and tool calls. `user_prompt`, `session.id`, `interaction.duration_ms`. |
 | `llm_request` | `chat` | Child of interaction. `model`, token counts (input/output/cache_read/cache_creation), `gen_ai.input.messages`, `gen_ai.output.messages` (full conversation as JSON). |
 | `tool_execution` or `tool` | `execute_tool` | Child of llm_request, one per tool call. `tool.name`, `tool.id`, `tool.input`, `tool.output`. |
 
 The [Anthropic Agent SDK](https://code.claude.com/docs/en/agent-sdk/overview) uses the same CLI and can emit OTLP without the hook ([observability](https://code.claude.com/docs/en/agent-sdk/observability)). Native exports often use span **names** such as `claude_code.interaction`, `claude_code.llm_request`, and `claude_code.tool`; ingest maps those to the same operations as `span.type`-based spans (`resolveOperation` in `operation.ts`).
 
 Server-side routing lives in `packages/domain/spans/src/otlp/resolvers/operation.ts` (`CLAUDE_CODE_OPERATION` map) and `packages/domain/spans/src/otlp/content/claude-code.ts`. The `gen_ai.input.messages` / `gen_ai.output.messages` attributes are parsed by the generic `parseGenAICurrent` parser, which takes precedence over `parseClaudeCode`.
+
+### Subagents (`Agent` tool)
+
+`Agent` tool calls spawn subagents whose transcripts live in separate files (`<session>/subagents/agent-<agentId>.jsonl`). The hook emits each subagent's turns as a nested `interaction` → `llm_request` → `tool:*` tree parented under its `tool:Agent` span. Subagent spans carry `subagent.id` (`<agentType>:<agentId>`), `subagent.name` and `subagent.type` (both the agent type, e.g. `Explore`), which feed `agentName` resolution and `buildAgentGraph`.
+
+The parent-to-subagent link is the `.meta.json` sidecar's `toolUseId` (the id of the parent `Agent` tool_use) — the only key unique per invocation, so subagents spawned in parallel (which share a `promptId`) each attach to their own `Agent` call; `promptId` is a lossy fallback for older transcripts. When the parent turn is shipped, the hook records `toolUseId → { traceId, parentSpanId }` in the session state. Subagents then emit against that persisted link, not the live turn window.
+
+Subagents rarely finish flushing before the parent turn is shipped (the final synthesis lands last), so the hook re-reads each subagent file every Stop and emits **incrementally**: each span exactly once, when its content is settled. A call is emitted once a later call closes it; the trailing call and the one-time interaction span are held until the file size is unchanged from the previous Stop, which means the final message has finished flushing. Per-file progress lives in the session state (`emittedCalls`, `interactionEmitted`, `lastSize`, `subDone`).
+
+Emit-once matters because span ids and start times are salted only by stable coordinates (`traceId`, `agentId`, turn/call index), but the two storage paths dedupe differently: the `spans` table is `ReplacingMergeTree(ingested_at)` and would collapse a re-sent span, whereas `traces_mv` (the trace-summary rollup) is a plain per-insert `GROUP BY` with no dedup — re-sending a span there would additively inflate `span_count`, tokens, and cost. Emitting each span once keeps both correct. The trade-off: if a session ends while a subagent's transcript is still growing, its trailing call is not emitted (no worse than before, which dropped the final `llm_request` outright).
 
 ## Supported surfaces
 

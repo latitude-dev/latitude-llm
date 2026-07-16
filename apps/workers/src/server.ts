@@ -62,6 +62,7 @@ import { createDomainEventsWorker } from "./workers/domain-events.ts"
 import { createEvaluationsWorker } from "./workers/evaluations.ts"
 import { createExportsWorker } from "./workers/exports.ts"
 import { createLiveEvaluationsWorker } from "./workers/live-evaluations.ts"
+import { createMemoryProjectionWorker } from "./workers/memory-projection.ts"
 import { createMonitorsWorker } from "./workers/monitors.ts"
 import { createNotificationEmailerWorker } from "./workers/notification-emailer.ts"
 import { createNotificationSlackWorker } from "./workers/notification-slack.ts"
@@ -72,6 +73,7 @@ import { createProductFeedbackWorker } from "./workers/product-feedback.ts"
 import { createProjectsWorker } from "./workers/projects.ts"
 import { createSandboxesWorker } from "./workers/sandboxes.ts"
 import { createScoresWorker } from "./workers/scores.ts"
+import { createSessionEndWorker } from "./workers/session-end.ts"
 import { createShowcaseWorker } from "./workers/showcase.ts"
 import { createSignalsWorker } from "./workers/signals.ts"
 import { createSignalsGenerateSignalWorker } from "./workers/signals-generate-signal.ts"
@@ -229,10 +231,12 @@ const bootstrap = async () => {
     createAnnotationScoresWorker(ctx)
     createLiveEvaluationsWorker(ctx)
     createTraceEndWorker(ctx)
+    createSessionEndWorker(ctx)
     createSignalsMatchWorker(ctx)
     createSignalsPreviewWorker(ctx)
     createSignalsGenerateSignalWorker(ctx)
     createDeterministicFlaggersWorker(ctx)
+    createMemoryProjectionWorker(ctx)
     createStartFlaggerWorkflowWorker(ctx)
     createProjectsWorker(ctx)
     createScoresWorker(ctx)

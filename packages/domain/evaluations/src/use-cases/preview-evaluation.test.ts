@@ -70,6 +70,7 @@ const makeSession = (sessionId: string, traceIds: readonly string[]): Session =>
   models: [],
   providers: [],
   serviceNames: [],
+  agentNames: [],
   rootSpanId: "",
   rootSpanName: "",
 })
@@ -102,6 +103,7 @@ const makeTraceDetail = (traceId: string, sessionId: string): TraceDetail => ({
   models: [],
   providers: [],
   serviceNames: [],
+  agentNames: [],
   rootSpanId: SpanId("r".repeat(16)),
   rootSpanName: "root",
   systemInstructions: [],

@@ -218,8 +218,8 @@ export const productionConfig: EnvironmentConfig = {
         memory: 3072,
         port: 8080,
         healthCheckPath: "/api/health",
-        desiredCount: 1,
-        minCount: 1,
+        desiredCount: 2,
+        minCount: 2,
         maxCount: 4,
       },
       {

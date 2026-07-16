@@ -11,11 +11,13 @@ import { FileCard } from "./parts/file-card.tsx"
 import { formatJson, getKnownField, renderMediaByModality } from "./parts/helpers.tsx"
 import { isLexicalSearchHighlight } from "./parts/highlight-segments.ts"
 import { MarkdownContent } from "./parts/lazy-markdown-content.tsx"
+import { SubagentCard } from "./parts/subagent-card.tsx"
 import { ToolCallBlock } from "./parts/tool-call-block.tsx"
 import type {
   BlobPart,
   FilePart,
   ReasoningPart,
+  SubagentToolCallInfo,
   TextPart,
   ToolCallPart,
   ToolCallResponsePart,
@@ -25,7 +27,7 @@ import type {
 import { TextSelectionContext } from "./text-selection.tsx"
 
 export { ReasoningGroup } from "./parts/reasoning-group.tsx"
-export type { ToolCallResult } from "./parts/types.ts"
+export type { SubagentToolCallInfo, ToolCallResult } from "./parts/types.ts"
 
 /** Last non-empty path segment of a URI, used as a file card's display name (undefined if none). */
 function fileNameFromUri(uri: string): string | undefined {
@@ -64,6 +66,7 @@ export function Part({
   toolResult,
   toolCallFailed = false,
   onNavigateToSpan,
+  subagent,
   messageIndex,
   partIndex,
 }: {
@@ -71,6 +74,7 @@ export function Part({
   readonly toolResult?: ToolCallResult | undefined
   readonly toolCallFailed?: boolean
   readonly onNavigateToSpan?: () => void
+  readonly subagent?: SubagentToolCallInfo | undefined
   readonly messageIndex?: number | undefined
   readonly partIndex?: number | undefined
 }) {
@@ -168,6 +172,22 @@ export function Part({
       // `resultMap`); the container marker is anchored here so the decoration
       // lands on the part the user actually sees. `key` flip re-evaluates
       // `defaultOpen` when first-match status changes between searches.
+      if (subagent) {
+        const hasError = toolCallFailed || toolResult?.isError === true
+        return (
+          <SearchHitDecoration hasHit={partHasLexicalHit}>
+            <SubagentCard
+              label={subagent.label}
+              hasError={hasError}
+              taskPreview={subagent.taskPreview ?? formatJson(p.arguments)}
+              resultPreview={subagent.resultPreview ?? (toolResult ? formatJson(toolResult.response) : undefined)}
+              toolCallId={p.id}
+              onOpenConversation={subagent.onOpenConversation}
+              onNavigateToSpan={onNavigateToSpan}
+            />
+          </SearchHitDecoration>
+        )
+      }
       return (
         <SearchHitDecoration hasHit={partHasLexicalHit}>
           <ToolCallBlock

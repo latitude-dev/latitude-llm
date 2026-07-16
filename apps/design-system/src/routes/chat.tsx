@@ -1,4 +1,4 @@
-import { Conversation, type GenAIMessage } from "@repo/ui"
+import { Conversation, type GenAIMessage, type SubagentToolCallInfo } from "@repo/ui"
 import { createFileRoute } from "@tanstack/react-router"
 import { ComponentDemoSection } from "./-components/demo-frame.tsx"
 import { DesignSystemPage } from "./-components/design-system-page.tsx"
@@ -242,6 +242,18 @@ const SECTIONS: { title: string; description: string; messages: GenAIMessage[] }
   },
 ]
 
+const SUBAGENT_TOOL_CALLS: ReadonlyMap<string, SubagentToolCallInfo> = new Map([
+  [
+    "call_metrics_1",
+    {
+      label: "metrics-analyst",
+      taskPreview: "Summarize p95 latency across providers for the last 7 days.",
+      resultPreview: "OpenAI p95 is 412ms (above 400ms); Anthropic 380ms and the rest are within budget.",
+      onOpenConversation: () => {},
+    },
+  ],
+])
+
 function ChatPage() {
   return (
     <DesignSystemPage
@@ -266,6 +278,16 @@ function ChatPage() {
           </div>
         </ComponentDemoSection>
       ))}
+
+      <ComponentDemoSection
+        title="Subagent tool call"
+        description="A tool call that spawned a subagent renders as a nested sub-conversation: the agent's request and reply as a chat peek, with an Open conversation affordance."
+        frameClassName="block"
+      >
+        <div className="mx-auto w-full max-w-3xl">
+          <Conversation messages={TOOL_MESSAGES} subagentToolCalls={SUBAGENT_TOOL_CALLS} />
+        </div>
+      </ComponentDemoSection>
     </DesignSystemPage>
   )
 }

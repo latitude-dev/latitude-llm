@@ -16,10 +16,18 @@ const createProjectRecord = async (
 const RANGE = { fromIso: "2026-06-01T00:00:00.000Z", toIso: "2026-06-08T00:00:00.000Z" }
 
 // Mirrors the route's opaque keyset-cursor encoding so tests can mint cursors.
-const encodeCursor = (c: { f: string; d: string; v: string; s: string }): string =>
+const encodeCursor = (c: { f: string; d: string; v: string; t?: string; s: string }): string =>
   Buffer.from(JSON.stringify(c), "utf8").toString("base64url")
 
 const START_TIME_DESC_CURSOR = encodeCursor({
+  f: "startTime",
+  d: "desc",
+  v: "2026-06-01 00:00:00.000000000",
+  t: "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+  s: "1111111111111111",
+})
+
+const LEGACY_START_TIME_DESC_CURSOR = encodeCursor({
   f: "startTime",
   d: "desc",
   v: "2026-06-01 00:00:00.000000000",
@@ -84,6 +92,7 @@ describe("Spans Routes Integration", () => {
         name: "cursor whose direction disagrees with orderBy",
         body: { orderBy: { field: "startTime", direction: "asc" }, cursor: START_TIME_DESC_CURSOR },
       },
+      { name: "cursor without a trace-id tiebreaker", body: { cursor: LEGACY_START_TIME_DESC_CURSOR } },
       { name: "inverted range", body: { range: { fromIso: RANGE.toIso, toIso: RANGE.fromIso } } },
       { name: "empty range (fromIso === toIso)", body: { range: { fromIso: RANGE.fromIso, toIso: RANGE.fromIso } } },
       { name: "limit over the cap", body: { limit: 100_000 } },

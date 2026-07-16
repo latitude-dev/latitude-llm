@@ -1,9 +1,11 @@
+import type { FeatureFlagId } from "@domain/feature-flags"
 import {
   BellRingIcon,
   Building2,
   CreditCard,
   DatabaseIcon,
   Fingerprint,
+  FlaskConical,
   Key,
   type LucideIcon,
   MessagesSquareIcon,
@@ -13,6 +15,7 @@ import {
   SettingsIcon,
   Share2Icon,
   ShieldAlertIcon,
+  SlidersHorizontalIcon,
   TagsIcon,
   UserRound,
   Users,
@@ -20,6 +23,7 @@ import {
   WrenchIcon,
 } from "lucide-react"
 import { useMemo } from "react"
+import { useFeatureFlags } from "../feature-flags/feature-flags.collection.ts"
 
 type SectionGroupKey = "observe" | "understand" | "refine"
 
@@ -30,6 +34,8 @@ interface ProjectSection {
   readonly group: SectionGroupKey
   readonly path: (projectSlug: string) => string
   readonly isActive: (pathname: string, projectSlug: string) => boolean
+  /** When set, the section renders only if this feature flag is enabled for the org. */
+  readonly featureFlag?: FeatureFlagId
 }
 
 const PROJECT_SECTIONS: readonly ProjectSection[] = [
@@ -72,6 +78,23 @@ const PROJECT_SECTIONS: readonly ProjectSection[] = [
     group: "understand",
     path: (slug) => `/projects/${slug}/behaviours`,
     isActive: (pathname, slug) => pathname.startsWith(`/projects/${slug}/behaviours`),
+  },
+  {
+    key: "experiments",
+    label: "Experiments",
+    icon: FlaskConical,
+    group: "understand",
+    path: (slug) => `/projects/${slug}/experiments`,
+    isActive: (pathname, slug) => pathname.startsWith(`/projects/${slug}/experiments`),
+  },
+  {
+    key: "custom-behaviours",
+    label: "Custom behaviors",
+    icon: SlidersHorizontalIcon,
+    group: "understand",
+    path: (slug) => `/projects/${slug}/custom-behaviours`,
+    isActive: (pathname, slug) => pathname.startsWith(`/projects/${slug}/custom-behaviours`),
+    featureFlag: "customBehaviors",
   },
   {
     key: "monitors",
@@ -209,7 +232,11 @@ const PROJECT_SETTINGS_GROUPS: readonly ProjectSettingsGroup[] = [
 
 /** Project sections visible to the current org, in sidebar/palette order. */
 export function useVisibleProjectSections(): readonly ProjectSection[] {
-  return PROJECT_SECTIONS
+  const flags = useFeatureFlags()
+  return useMemo(
+    () => PROJECT_SECTIONS.filter((section) => !section.featureFlag || flags.has(section.featureFlag)),
+    [flags],
+  )
 }
 
 interface VisibleProjectSectionGroup extends ProjectSectionGroup {

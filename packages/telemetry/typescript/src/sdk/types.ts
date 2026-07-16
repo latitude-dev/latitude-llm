@@ -12,6 +12,12 @@ export type ContextOptions = {
   userId?: string
   userEmail?: string
   /**
+   * Scope key for memory observability. Groups memory operations (`create_memory` /
+   * `update_memory` / `search_memory` spans) into one evolving memory store. On ingest the
+   * scope resolves to this value, else the span's `userId`, else an empty (unscoped) bucket.
+   */
+  memoryScope?: string
+  /**
    * Route the capture (and all child spans) to a specific Latitude project.
    *
    * Overrides the constructor `project` default for this capture only. Useful when one

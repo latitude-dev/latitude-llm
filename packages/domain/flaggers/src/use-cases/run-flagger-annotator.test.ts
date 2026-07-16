@@ -54,6 +54,7 @@ function makeTraceDetail(allMessages: TraceDetail["allMessages"]): TraceDetail {
     models: [],
     providers: [],
     serviceNames: [],
+    agentNames: [],
     rootSpanId: SpanId("r".repeat(16)),
     rootSpanName: "root",
     systemInstructions: [],

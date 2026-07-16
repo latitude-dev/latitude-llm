@@ -6,6 +6,8 @@ import typing
 from importlib import import_module
 
 if typing.TYPE_CHECKING:
+    from .absolute_variant_time_range import AbsoluteVariantTimeRange
+    from .absolute_variant_time_range_type import AbsoluteVariantTimeRangeType
     from .account_organization import AccountOrganization
     from .account_response import AccountResponse
     from .account_response_role import AccountResponseRole
@@ -478,6 +480,55 @@ if typing.TYPE_CHECKING:
     from .evaluation_alignment_metrics import EvaluationAlignmentMetrics
     from .evaluation_score_metadata import EvaluationScoreMetadata
     from .evaluation_score_response import EvaluationScoreResponse
+    from .experiment import Experiment
+    from .experiment_behaviours_metrics import ExperimentBehavioursMetrics
+    from .experiment_behaviours_metrics_distinct_clusters import ExperimentBehavioursMetricsDistinctClusters
+    from .experiment_behaviours_metrics_moments import ExperimentBehavioursMetricsMoments
+    from .experiment_behaviours_metrics_observations import ExperimentBehavioursMetricsObservations
+    from .experiment_comparison import ExperimentComparison
+    from .experiment_comparison_experiment import ExperimentComparisonExperiment
+    from .experiment_list_item import ExperimentListItem
+    from .experiment_sessions_metrics import ExperimentSessionsMetrics
+    from .experiment_sessions_metrics_cache_hit_rate import ExperimentSessionsMetricsCacheHitRate
+    from .experiment_sessions_metrics_cost_avg import ExperimentSessionsMetricsCostAvg
+    from .experiment_sessions_metrics_cost_total import ExperimentSessionsMetricsCostTotal
+    from .experiment_sessions_metrics_count import ExperimentSessionsMetricsCount
+    from .experiment_sessions_metrics_duration_median import ExperimentSessionsMetricsDurationMedian
+    from .experiment_sessions_metrics_duration_p90 import ExperimentSessionsMetricsDurationP90
+    from .experiment_sessions_metrics_duration_p95 import ExperimentSessionsMetricsDurationP95
+    from .experiment_sessions_metrics_error_rate import ExperimentSessionsMetricsErrorRate
+    from .experiment_sessions_metrics_spans_avg import ExperimentSessionsMetricsSpansAvg
+    from .experiment_sessions_metrics_tokens_avg import ExperimentSessionsMetricsTokensAvg
+    from .experiment_sessions_metrics_tokens_total import ExperimentSessionsMetricsTokensTotal
+    from .experiment_sessions_metrics_traces_avg import ExperimentSessionsMetricsTracesAvg
+    from .experiment_sessions_metrics_ttft_median import ExperimentSessionsMetricsTtftMedian
+    from .experiment_sessions_metrics_users import ExperimentSessionsMetricsUsers
+    from .experiment_signals_metrics import ExperimentSignalsMetrics
+    from .experiment_signals_metrics_affected_sessions_rate import ExperimentSignalsMetricsAffectedSessionsRate
+    from .experiment_signals_metrics_affected_traces_rate import ExperimentSignalsMetricsAffectedTracesRate
+    from .experiment_signals_metrics_affected_users import ExperimentSignalsMetricsAffectedUsers
+    from .experiment_signals_metrics_cost_impact import ExperimentSignalsMetricsCostImpact
+    from .experiment_signals_metrics_distinct import ExperimentSignalsMetricsDistinct
+    from .experiment_signals_metrics_occurrences import ExperimentSignalsMetricsOccurrences
+    from .experiment_tools_metrics import ExperimentToolsMetrics
+    from .experiment_tools_metrics_calls import ExperimentToolsMetricsCalls
+    from .experiment_tools_metrics_distinct import ExperimentToolsMetricsDistinct
+    from .experiment_tools_metrics_duration_p50 import ExperimentToolsMetricsDurationP50
+    from .experiment_tools_metrics_duration_p90 import ExperimentToolsMetricsDurationP90
+    from .experiment_tools_metrics_duration_p95 import ExperimentToolsMetricsDurationP95
+    from .experiment_tools_metrics_error_rate import ExperimentToolsMetricsErrorRate
+    from .experiment_tools_metrics_sessions_with_tools_rate import ExperimentToolsMetricsSessionsWithToolsRate
+    from .experiment_top_list_item import ExperimentTopListItem
+    from .experiment_users_metrics import ExperimentUsersMetrics
+    from .experiment_users_metrics_cost_avg import ExperimentUsersMetricsCostAvg
+    from .experiment_users_metrics_distinct import ExperimentUsersMetricsDistinct
+    from .experiment_users_metrics_duration_median import ExperimentUsersMetricsDurationMedian
+    from .experiment_users_metrics_duration_p90 import ExperimentUsersMetricsDurationP90
+    from .experiment_users_metrics_duration_p95 import ExperimentUsersMetricsDurationP95
+    from .experiment_users_metrics_error_session_rate import ExperimentUsersMetricsErrorSessionRate
+    from .experiment_users_metrics_sessions_per_user import ExperimentUsersMetricsSessionsPerUser
+    from .experiment_users_metrics_traces_per_user import ExperimentUsersMetricsTracesPerUser
+    from .experiment_variant import ExperimentVariant
     from .export_dataset_rows_queued_response import ExportDatasetRowsQueuedResponse
     from .export_dataset_rows_queued_response_status import ExportDatasetRowsQueuedResponseStatus
     from .export_dataset_rows_ready_response import ExportDatasetRowsReadyResponse
@@ -512,6 +563,8 @@ if typing.TYPE_CHECKING:
     from .list_incidents_response import ListIncidentsResponse
     from .member import Member, Member_Active, Member_Invited
     from .member_list import MemberList
+    from .metric_delta import MetricDelta
+    from .metric_delta_one import MetricDeltaOne
     from .monitor import Monitor
     from .monitor_config import MonitorConfig
     from .monitor_config_metric import (
@@ -606,6 +659,7 @@ if typing.TYPE_CHECKING:
     from .o_auth_protected_resource_metadata import OAuthProtectedResourceMetadata
     from .paginated_dataset_rows import PaginatedDatasetRows
     from .paginated_datasets import PaginatedDatasets
+    from .paginated_experiments import PaginatedExperiments
     from .paginated_monitor_incidents import PaginatedMonitorIncidents
     from .paginated_monitors import PaginatedMonitors
     from .paginated_projects import PaginatedProjects
@@ -620,6 +674,9 @@ if typing.TYPE_CHECKING:
     from .query_spans import QuerySpans
     from .recent_tool_call import RecentToolCall
     from .recent_tool_call_status_code import RecentToolCallStatusCode
+    from .relative_variant_time_range import RelativeVariantTimeRange
+    from .relative_variant_time_range_type import RelativeVariantTimeRangeType
+    from .resolved_range import ResolvedRange
     from .saved_search import SavedSearch
     from .score_response import ScoreResponse, ScoreResponse_Custom, ScoreResponse_Evaluation
     from .signal import Signal
@@ -715,7 +772,12 @@ if typing.TYPE_CHECKING:
     from .user_usage_slice import UserUsageSlice
     from .users_overview_bucket import UsersOverviewBucket
     from .users_overview_response import UsersOverviewResponse
+    from .variant_comparison import VariantComparison
+    from .variant_metrics import VariantMetrics
+    from .variant_time_range import VariantTimeRange
 _dynamic_imports: typing.Dict[str, str] = {
+    "AbsoluteVariantTimeRange": ".absolute_variant_time_range",
+    "AbsoluteVariantTimeRangeType": ".absolute_variant_time_range_type",
     "AccountOrganization": ".account_organization",
     "AccountResponse": ".account_response",
     "AccountResponseRole": ".account_response_role",
@@ -1145,6 +1207,55 @@ _dynamic_imports: typing.Dict[str, str] = {
     "EvaluationAlignmentMetrics": ".evaluation_alignment_metrics",
     "EvaluationScoreMetadata": ".evaluation_score_metadata",
     "EvaluationScoreResponse": ".evaluation_score_response",
+    "Experiment": ".experiment",
+    "ExperimentBehavioursMetrics": ".experiment_behaviours_metrics",
+    "ExperimentBehavioursMetricsDistinctClusters": ".experiment_behaviours_metrics_distinct_clusters",
+    "ExperimentBehavioursMetricsMoments": ".experiment_behaviours_metrics_moments",
+    "ExperimentBehavioursMetricsObservations": ".experiment_behaviours_metrics_observations",
+    "ExperimentComparison": ".experiment_comparison",
+    "ExperimentComparisonExperiment": ".experiment_comparison_experiment",
+    "ExperimentListItem": ".experiment_list_item",
+    "ExperimentSessionsMetrics": ".experiment_sessions_metrics",
+    "ExperimentSessionsMetricsCacheHitRate": ".experiment_sessions_metrics_cache_hit_rate",
+    "ExperimentSessionsMetricsCostAvg": ".experiment_sessions_metrics_cost_avg",
+    "ExperimentSessionsMetricsCostTotal": ".experiment_sessions_metrics_cost_total",
+    "ExperimentSessionsMetricsCount": ".experiment_sessions_metrics_count",
+    "ExperimentSessionsMetricsDurationMedian": ".experiment_sessions_metrics_duration_median",
+    "ExperimentSessionsMetricsDurationP90": ".experiment_sessions_metrics_duration_p90",
+    "ExperimentSessionsMetricsDurationP95": ".experiment_sessions_metrics_duration_p95",
+    "ExperimentSessionsMetricsErrorRate": ".experiment_sessions_metrics_error_rate",
+    "ExperimentSessionsMetricsSpansAvg": ".experiment_sessions_metrics_spans_avg",
+    "ExperimentSessionsMetricsTokensAvg": ".experiment_sessions_metrics_tokens_avg",
+    "ExperimentSessionsMetricsTokensTotal": ".experiment_sessions_metrics_tokens_total",
+    "ExperimentSessionsMetricsTracesAvg": ".experiment_sessions_metrics_traces_avg",
+    "ExperimentSessionsMetricsTtftMedian": ".experiment_sessions_metrics_ttft_median",
+    "ExperimentSessionsMetricsUsers": ".experiment_sessions_metrics_users",
+    "ExperimentSignalsMetrics": ".experiment_signals_metrics",
+    "ExperimentSignalsMetricsAffectedSessionsRate": ".experiment_signals_metrics_affected_sessions_rate",
+    "ExperimentSignalsMetricsAffectedTracesRate": ".experiment_signals_metrics_affected_traces_rate",
+    "ExperimentSignalsMetricsAffectedUsers": ".experiment_signals_metrics_affected_users",
+    "ExperimentSignalsMetricsCostImpact": ".experiment_signals_metrics_cost_impact",
+    "ExperimentSignalsMetricsDistinct": ".experiment_signals_metrics_distinct",
+    "ExperimentSignalsMetricsOccurrences": ".experiment_signals_metrics_occurrences",
+    "ExperimentToolsMetrics": ".experiment_tools_metrics",
+    "ExperimentToolsMetricsCalls": ".experiment_tools_metrics_calls",
+    "ExperimentToolsMetricsDistinct": ".experiment_tools_metrics_distinct",
+    "ExperimentToolsMetricsDurationP50": ".experiment_tools_metrics_duration_p50",
+    "ExperimentToolsMetricsDurationP90": ".experiment_tools_metrics_duration_p90",
+    "ExperimentToolsMetricsDurationP95": ".experiment_tools_metrics_duration_p95",
+    "ExperimentToolsMetricsErrorRate": ".experiment_tools_metrics_error_rate",
+    "ExperimentToolsMetricsSessionsWithToolsRate": ".experiment_tools_metrics_sessions_with_tools_rate",
+    "ExperimentTopListItem": ".experiment_top_list_item",
+    "ExperimentUsersMetrics": ".experiment_users_metrics",
+    "ExperimentUsersMetricsCostAvg": ".experiment_users_metrics_cost_avg",
+    "ExperimentUsersMetricsDistinct": ".experiment_users_metrics_distinct",
+    "ExperimentUsersMetricsDurationMedian": ".experiment_users_metrics_duration_median",
+    "ExperimentUsersMetricsDurationP90": ".experiment_users_metrics_duration_p90",
+    "ExperimentUsersMetricsDurationP95": ".experiment_users_metrics_duration_p95",
+    "ExperimentUsersMetricsErrorSessionRate": ".experiment_users_metrics_error_session_rate",
+    "ExperimentUsersMetricsSessionsPerUser": ".experiment_users_metrics_sessions_per_user",
+    "ExperimentUsersMetricsTracesPerUser": ".experiment_users_metrics_traces_per_user",
+    "ExperimentVariant": ".experiment_variant",
     "ExportDatasetRowsQueuedResponse": ".export_dataset_rows_queued_response",
     "ExportDatasetRowsQueuedResponseStatus": ".export_dataset_rows_queued_response_status",
     "ExportDatasetRowsReadyResponse": ".export_dataset_rows_ready_response",
@@ -1181,6 +1292,8 @@ _dynamic_imports: typing.Dict[str, str] = {
     "MemberList": ".member_list",
     "Member_Active": ".member",
     "Member_Invited": ".member",
+    "MetricDelta": ".metric_delta",
+    "MetricDeltaOne": ".metric_delta_one",
     "Monitor": ".monitor",
     "MonitorConfig": ".monitor_config",
     "MonitorConfigMetric": ".monitor_config_metric",
@@ -1269,6 +1382,7 @@ _dynamic_imports: typing.Dict[str, str] = {
     "OAuthProtectedResourceMetadata": ".o_auth_protected_resource_metadata",
     "PaginatedDatasetRows": ".paginated_dataset_rows",
     "PaginatedDatasets": ".paginated_datasets",
+    "PaginatedExperiments": ".paginated_experiments",
     "PaginatedMonitorIncidents": ".paginated_monitor_incidents",
     "PaginatedMonitors": ".paginated_monitors",
     "PaginatedProjects": ".paginated_projects",
@@ -1283,6 +1397,9 @@ _dynamic_imports: typing.Dict[str, str] = {
     "QuerySpans": ".query_spans",
     "RecentToolCall": ".recent_tool_call",
     "RecentToolCallStatusCode": ".recent_tool_call_status_code",
+    "RelativeVariantTimeRange": ".relative_variant_time_range",
+    "RelativeVariantTimeRangeType": ".relative_variant_time_range_type",
+    "ResolvedRange": ".resolved_range",
     "SavedSearch": ".saved_search",
     "ScoreResponse": ".score_response",
     "ScoreResponse_Custom": ".score_response",
@@ -1382,6 +1499,9 @@ _dynamic_imports: typing.Dict[str, str] = {
     "UserUsageSlice": ".user_usage_slice",
     "UsersOverviewBucket": ".users_overview_bucket",
     "UsersOverviewResponse": ".users_overview_response",
+    "VariantComparison": ".variant_comparison",
+    "VariantMetrics": ".variant_metrics",
+    "VariantTimeRange": ".variant_time_range",
 }
 
 
@@ -1407,6 +1527,8 @@ def __dir__():
 
 
 __all__ = [
+    "AbsoluteVariantTimeRange",
+    "AbsoluteVariantTimeRangeType",
     "AccountOrganization",
     "AccountResponse",
     "AccountResponseRole",
@@ -1836,6 +1958,55 @@ __all__ = [
     "EvaluationAlignmentMetrics",
     "EvaluationScoreMetadata",
     "EvaluationScoreResponse",
+    "Experiment",
+    "ExperimentBehavioursMetrics",
+    "ExperimentBehavioursMetricsDistinctClusters",
+    "ExperimentBehavioursMetricsMoments",
+    "ExperimentBehavioursMetricsObservations",
+    "ExperimentComparison",
+    "ExperimentComparisonExperiment",
+    "ExperimentListItem",
+    "ExperimentSessionsMetrics",
+    "ExperimentSessionsMetricsCacheHitRate",
+    "ExperimentSessionsMetricsCostAvg",
+    "ExperimentSessionsMetricsCostTotal",
+    "ExperimentSessionsMetricsCount",
+    "ExperimentSessionsMetricsDurationMedian",
+    "ExperimentSessionsMetricsDurationP90",
+    "ExperimentSessionsMetricsDurationP95",
+    "ExperimentSessionsMetricsErrorRate",
+    "ExperimentSessionsMetricsSpansAvg",
+    "ExperimentSessionsMetricsTokensAvg",
+    "ExperimentSessionsMetricsTokensTotal",
+    "ExperimentSessionsMetricsTracesAvg",
+    "ExperimentSessionsMetricsTtftMedian",
+    "ExperimentSessionsMetricsUsers",
+    "ExperimentSignalsMetrics",
+    "ExperimentSignalsMetricsAffectedSessionsRate",
+    "ExperimentSignalsMetricsAffectedTracesRate",
+    "ExperimentSignalsMetricsAffectedUsers",
+    "ExperimentSignalsMetricsCostImpact",
+    "ExperimentSignalsMetricsDistinct",
+    "ExperimentSignalsMetricsOccurrences",
+    "ExperimentToolsMetrics",
+    "ExperimentToolsMetricsCalls",
+    "ExperimentToolsMetricsDistinct",
+    "ExperimentToolsMetricsDurationP50",
+    "ExperimentToolsMetricsDurationP90",
+    "ExperimentToolsMetricsDurationP95",
+    "ExperimentToolsMetricsErrorRate",
+    "ExperimentToolsMetricsSessionsWithToolsRate",
+    "ExperimentTopListItem",
+    "ExperimentUsersMetrics",
+    "ExperimentUsersMetricsCostAvg",
+    "ExperimentUsersMetricsDistinct",
+    "ExperimentUsersMetricsDurationMedian",
+    "ExperimentUsersMetricsDurationP90",
+    "ExperimentUsersMetricsDurationP95",
+    "ExperimentUsersMetricsErrorSessionRate",
+    "ExperimentUsersMetricsSessionsPerUser",
+    "ExperimentUsersMetricsTracesPerUser",
+    "ExperimentVariant",
     "ExportDatasetRowsQueuedResponse",
     "ExportDatasetRowsQueuedResponseStatus",
     "ExportDatasetRowsReadyResponse",
@@ -1872,6 +2043,8 @@ __all__ = [
     "MemberList",
     "Member_Active",
     "Member_Invited",
+    "MetricDelta",
+    "MetricDeltaOne",
     "Monitor",
     "MonitorConfig",
     "MonitorConfigMetric",
@@ -1960,6 +2133,7 @@ __all__ = [
     "OAuthProtectedResourceMetadata",
     "PaginatedDatasetRows",
     "PaginatedDatasets",
+    "PaginatedExperiments",
     "PaginatedMonitorIncidents",
     "PaginatedMonitors",
     "PaginatedProjects",
@@ -1974,6 +2148,9 @@ __all__ = [
     "QuerySpans",
     "RecentToolCall",
     "RecentToolCallStatusCode",
+    "RelativeVariantTimeRange",
+    "RelativeVariantTimeRangeType",
+    "ResolvedRange",
     "SavedSearch",
     "ScoreResponse",
     "ScoreResponse_Custom",
@@ -2073,4 +2250,7 @@ __all__ = [
     "UserUsageSlice",
     "UsersOverviewBucket",
     "UsersOverviewResponse",
+    "VariantComparison",
+    "VariantMetrics",
+    "VariantTimeRange",
 ]

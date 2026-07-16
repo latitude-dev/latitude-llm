@@ -245,6 +245,79 @@ describe("resolveAttributes", () => {
     })
   })
 
+  describe("agent name resolution", () => {
+    it("resolves from OTEL gen_ai.agent.name", () => {
+      const attrs: OtlpKeyValue[] = [strAttr("gen_ai.agent.name", "npc_actor")]
+      const result = resolveAttributes({ spanAttrs: attrs, statusCode: "unset" })
+      expect(result.agentName).toBe("npc_actor")
+    })
+
+    it("resolves from OpenAI Agents openai.agents.name", () => {
+      const attrs: OtlpKeyValue[] = [strAttr("openai.agents.name", "researcher")]
+      const result = resolveAttributes({ spanAttrs: attrs, statusCode: "unset" })
+      expect(result.agentName).toBe("researcher")
+    })
+
+    it("resolves from Claude Code subagent.name", () => {
+      const attrs: OtlpKeyValue[] = [strAttr("subagent.name", "Explore")]
+      const result = resolveAttributes({ spanAttrs: attrs, statusCode: "unset" })
+      expect(result.agentName).toBe("Explore")
+    })
+
+    it("resolves from Claude Code subagent.type", () => {
+      const attrs: OtlpKeyValue[] = [strAttr("subagent.type", "general-purpose")]
+      const result = resolveAttributes({ spanAttrs: attrs, statusCode: "unset" })
+      expect(result.agentName).toBe("general-purpose")
+    })
+
+    it("resolves from OpenClaw openclaw.subagent.label", () => {
+      const attrs: OtlpKeyValue[] = [strAttr("openclaw.subagent.label", "planner")]
+      const result = resolveAttributes({ spanAttrs: attrs, statusCode: "unset" })
+      expect(result.agentName).toBe("planner")
+    })
+
+    it("resolves from OpenClaw openclaw.agent.name", () => {
+      const attrs: OtlpKeyValue[] = [strAttr("openclaw.agent.name", "main-agent")]
+      const result = resolveAttributes({ spanAttrs: attrs, statusCode: "unset" })
+      expect(result.agentName).toBe("main-agent")
+    })
+
+    it("resolves from Latitude latitude.capture.name", () => {
+      const attrs: OtlpKeyValue[] = [strAttr("latitude.capture.name", "capture-agent")]
+      const result = resolveAttributes({ spanAttrs: attrs, statusCode: "unset" })
+      expect(result.agentName).toBe("capture-agent")
+    })
+
+    it("resolves the name half of Claude Code subagent.id as a last resort", () => {
+      const attrs: OtlpKeyValue[] = [strAttr("subagent.id", "Explore:ab6332237989040a9")]
+      const result = resolveAttributes({ spanAttrs: attrs, statusCode: "unset" })
+      expect(result.agentName).toBe("Explore")
+    })
+
+    it("prefers subagent.type over the id-embedded subagent.id name", () => {
+      const attrs: OtlpKeyValue[] = [
+        strAttr("subagent.id", "Explore:ab6332237989040a9"),
+        strAttr("subagent.type", "general-purpose"),
+      ]
+      const result = resolveAttributes({ spanAttrs: attrs, statusCode: "unset" })
+      expect(result.agentName).toBe("general-purpose")
+    })
+
+    it("prefers gen_ai.agent.name over lower-ranked candidates", () => {
+      const attrs: OtlpKeyValue[] = [
+        strAttr("subagent.type", "general-purpose"),
+        strAttr("gen_ai.agent.name", "npc_actor"),
+      ]
+      const result = resolveAttributes({ spanAttrs: attrs, statusCode: "unset" })
+      expect(result.agentName).toBe("npc_actor")
+    })
+
+    it("defaults to empty string when no candidate present", () => {
+      const result = resolveAttributes({ spanAttrs: [], statusCode: "unset" })
+      expect(result.agentName).toBe("")
+    })
+  })
+
   describe("response model resolution", () => {
     it("resolves from gen_ai.response.model", () => {
       const attrs: OtlpKeyValue[] = [strAttr("gen_ai.response.model", "gpt-4o-2024-05-13")]

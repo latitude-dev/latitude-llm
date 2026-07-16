@@ -1,4 +1,4 @@
-import type { OrganizationId, ProjectId, TaxonomyClusterId } from "@domain/shared"
+import type { CustomBehaviorId, OrganizationId, ProjectId, TaxonomyClusterId } from "@domain/shared"
 import { Effect } from "effect"
 import type { ClusterSessionMomentRange } from "../ports/taxonomy-cluster-intelligence-repository.ts"
 import { TaxonomyClusterIntelligenceRepository } from "../ports/taxonomy-cluster-intelligence-repository.ts"
@@ -14,6 +14,8 @@ export interface ListClusterSessionTraceIdsInput {
   readonly startTimeFrom?: Date
   readonly startTimeTo?: Date
   readonly limit: number
+  /** Omit/null = global taxonomy; an id resolves the subtree + sessions from that behavior's scoped slice. */
+  readonly customBehaviorId?: CustomBehaviorId | null
 }
 
 /**
@@ -27,8 +29,13 @@ export const listClusterSessionTraceIdsUseCase = (input: ListClusterSessionTrace
     yield* Effect.annotateCurrentSpan("taxonomy.clusterId", input.clusterId)
     const clusters = yield* TaxonomyClusterRepository
     const intelligence = yield* TaxonomyClusterIntelligenceRepository
+    const scope = input.customBehaviorId != null ? { customBehaviorId: input.customBehaviorId } : {}
     // A tree node represents its whole subtree: sessions are assigned to leaves.
-    const clusterIds = yield* clusters.listSubtreeIds({ projectId: input.projectId, clusterId: input.clusterId })
+    const clusterIds = yield* clusters.listSubtreeIds({
+      projectId: input.projectId,
+      clusterId: input.clusterId,
+      ...scope,
+    })
     return yield* intelligence.listSessionTraceIds({
       organizationId: input.organizationId,
       projectId: input.projectId,
@@ -38,5 +45,6 @@ export const listClusterSessionTraceIdsUseCase = (input: ListClusterSessionTrace
       ...(input.startTimeFrom ? { startTimeFrom: input.startTimeFrom } : {}),
       ...(input.startTimeTo ? { startTimeTo: input.startTimeTo } : {}),
       limit: input.limit,
+      ...scope,
     })
   }).pipe(Effect.withSpan("taxonomy.listClusterSessionTraceIds"))

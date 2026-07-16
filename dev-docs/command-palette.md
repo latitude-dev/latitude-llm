@@ -147,6 +147,10 @@ in the Projects group, which renders before the Actions group, so it already out
   (`useMonitorsSearch`, fetched only while searching), filtered by the query server-side with the
   current project preferred in ordering. Selecting opens the monitor detail route; muted/system
   monitors are labelled in their subtitle.
+- **Experiments** (`commands/use-experiment-search-commands.ts`): org-wide experiment name search
+  (`useExperimentsSearch`, fetched only while searching), ranked server-side with the current
+  project preferred. Selecting opens the experiment detail route; the subtitle shows the variant
+  count.
 - **Traces fallback** (same hook): always-present "Search traces for "<query>"" → opens the
   Search page with `?q=<query>`.
 
@@ -164,6 +168,8 @@ in the Projects group, which renders before the Actions group, so it already out
 | Global actions | `apps/web/src/components/command-palette/commands/use-global-commands.tsx` |
 | Issue search | `apps/web/src/components/command-palette/commands/use-issue-search-commands.ts` |
 | Dataset / saved-search / traces fallback | `apps/web/src/components/command-palette/commands/use-project-search-commands.ts` |
+| Monitor search | `apps/web/src/components/command-palette/commands/use-monitor-search-commands.ts` |
+| Experiment search | `apps/web/src/components/command-palette/commands/use-experiment-search-commands.ts` |
 | Shared project sections (source of truth) | `apps/web/src/domains/projects/project-sections.ts` |
 | Mount point + header button | `apps/web/src/routes/_authenticated.tsx` |
 

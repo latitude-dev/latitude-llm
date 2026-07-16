@@ -118,6 +118,7 @@ function makeTraceDetail(
     models: ["gpt-4o-mini"],
     providers: ["openai"],
     serviceNames: ["web"],
+    agentNames: [],
     rootSpanId: SpanId("r".repeat(16)),
     rootSpanName: "root",
     systemInstructions: [{ type: "text", text: "You are a careful assistant." }],

@@ -113,4 +113,5 @@ export const TIMELINE_FIXTURE: BuildConversationTimelineInput = {
   moments: [
     { id: "label1", messageIndex: 6, kind: "frustration", summary: "User repeated the request", confidence: 0.87 },
   ],
+  subagents: [],
 }

@@ -83,6 +83,7 @@ export const LIST_SELECT = `
   groupUniqArrayIfMerge(models)        AS models,
   groupUniqArrayIfMerge(providers)     AS providers,
   groupUniqArrayIfMerge(service_names) AS service_names,
+  groupUniqArrayIfMerge(agent_names)   AS agent_names,
   groupUniqArrayIfMerge(tools)         AS tools,
   groupUniqArrayArray(defined_tools)   AS defined_tools,
   argMinIfMerge(root_span_id)   AS root_span_id,
@@ -136,6 +137,7 @@ type TraceListRow = {
   models: string[]
   providers: string[]
   service_names: string[]
+  agent_names: string[]
   tools: string[]
   defined_tools: string[]
   root_span_id: string
@@ -250,6 +252,7 @@ const toBaseFields = (row: TraceListRow): Trace => ({
   models: row.models.map(normalizeCHString),
   providers: row.providers.map(normalizeCHString),
   serviceNames: row.service_names.map(normalizeCHString),
+  agentNames: row.agent_names.map(normalizeCHString),
   rootSpanId: SpanId(normalizeCHString(row.root_span_id)),
   rootSpanName: normalizeCHString(row.root_span_name),
 })

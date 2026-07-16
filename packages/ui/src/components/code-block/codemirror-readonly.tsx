@@ -13,6 +13,7 @@ interface CodeMirrorReadonlyProps {
   readonly wrapLines?: boolean
   readonly onReady?: () => void
   readonly language?: string | undefined
+  readonly fillHeight?: boolean
 }
 
 function isJson(value: string): boolean {
@@ -48,6 +49,11 @@ function languageSupport(language: string | undefined, isJsonContent: boolean): 
   return null
 }
 
+// Makes the editor fill a height-bounded parent so the scroller (not the page) scrolls.
+const fillHeightTheme = EditorView.theme({
+  "&": { height: "100%" },
+})
+
 const readonlyTheme = EditorView.theme({
   "&": {
     fontSize: "12px",
@@ -73,7 +79,13 @@ const readonlyTheme = EditorView.theme({
   },
 })
 
-function buildState(doc: string, isJsonContent: boolean, wrapLines: boolean, language: string | undefined) {
+function buildState(
+  doc: string,
+  isJsonContent: boolean,
+  wrapLines: boolean,
+  language: string | undefined,
+  fillHeight: boolean,
+) {
   const extensions: Extension[] = [
     readonlyTheme,
     lineNumbers(),
@@ -81,6 +93,10 @@ function buildState(doc: string, isJsonContent: boolean, wrapLines: boolean, lan
     EditorState.readOnly.of(true),
     EditorView.editable.of(false),
   ]
+
+  if (fillHeight) {
+    extensions.push(fillHeightTheme)
+  }
 
   if (wrapLines) {
     extensions.push(EditorView.lineWrapping)
@@ -94,7 +110,14 @@ function buildState(doc: string, isJsonContent: boolean, wrapLines: boolean, lan
   return EditorState.create({ doc, extensions })
 }
 
-export function CodeMirrorReadonly({ value, className, wrapLines = true, onReady, language }: CodeMirrorReadonlyProps) {
+export function CodeMirrorReadonly({
+  value,
+  className,
+  wrapLines = true,
+  onReady,
+  language,
+  fillHeight = false,
+}: CodeMirrorReadonlyProps) {
   const containerRef = useRef<HTMLDivElement>(null)
   const viewRef = useRef<EditorView | null>(null)
   const initialValueRef = useRef(value)
@@ -105,7 +128,7 @@ export function CodeMirrorReadonly({ value, className, wrapLines = true, onReady
     if (!container) return
 
     const view = new EditorView({
-      state: buildState(initialValueRef.current, isJsonContent, wrapLines, language),
+      state: buildState(initialValueRef.current, isJsonContent, wrapLines, language, fillHeight),
       parent: container,
     })
     viewRef.current = view
@@ -123,9 +146,14 @@ export function CodeMirrorReadonly({ value, className, wrapLines = true, onReady
     const view = viewRef.current
     if (!view) return
     if (view.state.doc.toString() !== value) {
-      view.setState(buildState(value, isJsonContent, wrapLines, language))
+      view.setState(buildState(value, isJsonContent, wrapLines, language, fillHeight))
     }
-  }, [value, isJsonContent, wrapLines, language])
+  }, [value, isJsonContent, wrapLines, language, fillHeight])
 
-  return <div ref={containerRef} className={cn("rounded-md overflow-hidden bg-muted", className)} />
+  return (
+    <div
+      ref={containerRef}
+      className={cn("rounded-md overflow-hidden bg-muted", { "h-full": fillHeight }, className)}
+    />
+  )
 }

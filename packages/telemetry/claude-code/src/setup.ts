@@ -10,6 +10,7 @@ import {
   backupSettings,
   type ClaudeSettings,
   hasLatitudeStopHook,
+  latitudeStopHookCommand,
   readSettings,
   removeEnv,
   removeLatitudeStopHook,
@@ -27,7 +28,10 @@ const PLIST_PATH = join(homedir(), "Library", "LaunchAgents", "so.latitude.claud
 const PLIST_LABEL = "so.latitude.claude-code-telemetry"
 // Linux: systemd user environment drop-in; mirrors the macOS plist for persistence.
 const ENVIRONMENT_D_CONF_PATH = join(homedir(), ".config", "environment.d", "latitude-telemetry.conf")
-const DEFAULT_HOOK_COMMAND = "npx -y @latitude-data/claude-code-telemetry"
+// Pin the `@latest` tag so the hook re-resolves the newest published version on
+// each run (a cheap, etag-revalidated metadata check) and self-updates. A bare
+// `npx <pkg>` reuses whatever the npx cache first fetched and never updates.
+const DEFAULT_HOOK_COMMAND = "npx -y @latitude-data/claude-code-telemetry@latest"
 const DOCS_URL = "https://docs.latitude.so/telemetry/claude-code"
 
 // Environments pick the app + ingest domain pair. Every URL shown or written
@@ -256,8 +260,15 @@ async function applyChanges(args: ApplyArgs): Promise<void> {
   if (useLaunchctl || useSystemd) next = removeEnv(next, "BUN_OPTIONS")
   else next = setEnv(next, "BUN_OPTIONS", `--preload=${INTERCEPT_INSTALL_PATH}`)
 
-  const hookAlreadyThere = hasLatitudeStopHook(next)
+  const priorHookCommand = latitudeStopHookCommand(next)
   next = addLatitudeStopHook(next, DEFAULT_HOOK_COMMAND)
+
+  const hookNote =
+    priorHookCommand === undefined
+      ? "  + Stop hook installed"
+      : priorHookCommand === DEFAULT_HOOK_COMMAND
+        ? ""
+        : "  + Stop hook updated"
 
   const step = stepLogger(interactive)
 
@@ -267,7 +278,7 @@ async function applyChanges(args: ApplyArgs): Promise<void> {
   step.stop(
     [
       `~/.claude/settings.json updated`,
-      hookAlreadyThere ? "" : "  + Stop hook installed",
+      hookNote,
       backedUp ? pc.dim(`  (backup at ${SETTINGS_BACKUP_PATH})`) : pc.dim("  (new file)"),
     ]
       .filter(Boolean)

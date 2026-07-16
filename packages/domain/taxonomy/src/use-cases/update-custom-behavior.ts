@@ -1,7 +1,12 @@
 import { type CustomBehaviorId, type FilterSet, generateSlug, toSlug } from "@domain/shared"
 import { Effect } from "effect"
 import { CUSTOM_BEHAVIOR_NAME_MAX_LENGTH } from "../constants.ts"
-import { type CustomBehavior, customBehaviorFilterSetSchema } from "../entities/custom-behavior.ts"
+import {
+  CUSTOM_BEHAVIOR_EMPTY_FILTER_MESSAGE,
+  type CustomBehavior,
+  customBehaviorFilterSetHasConditions,
+  customBehaviorFilterSetSchema,
+} from "../entities/custom-behavior.ts"
 import { CustomBehaviorFilterInvalidError, CustomBehaviorNameInvalidError } from "../errors.ts"
 import { CustomBehaviorRepository } from "../ports/custom-behavior-repository.ts"
 
@@ -51,6 +56,9 @@ export const updateCustomBehavior = Effect.fn("taxonomy.updateCustomBehavior")(f
       return yield* new CustomBehaviorFilterInvalidError({
         message: parsed.error.issues[0]?.message ?? "Invalid filter set",
       })
+    }
+    if (!customBehaviorFilterSetHasConditions(parsed.data)) {
+      return yield* new CustomBehaviorFilterInvalidError({ message: CUSTOM_BEHAVIOR_EMPTY_FILTER_MESSAGE })
     }
     nextFilterSet = parsed.data
   }

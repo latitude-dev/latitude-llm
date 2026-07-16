@@ -157,6 +157,23 @@ describe("/v1/mcp", () => {
     )
   })
 
+  it<ApiTestContext>("tools/list includes the experiment tools", async ({ app, database }) => {
+    const tenant = await createTenantSetup(database)
+    const res = await sendMcpRequest(app, tenant.apiKeyToken, { jsonrpc: "2.0", id: 26, method: "tools/list" })
+    expect(res.status).toBe(200)
+    const payload = (await readSseJsonRpc(res)) as { result?: { tools?: ReadonlyArray<{ name: string }> } }
+    const toolNames = payload.result?.tools?.map((t) => t.name) ?? []
+    expect(toolNames).toEqual(
+      expect.arrayContaining([
+        "listExperiments",
+        "createExperiment",
+        "getExperiment",
+        "updateExperiment",
+        "deleteExperiment",
+      ]),
+    )
+  })
+
   it<ApiTestContext>("tools/list includes the user-analytics tools", async ({ app, database }) => {
     const tenant = await createTenantSetup(database)
     const res = await sendMcpRequest(app, tenant.apiKeyToken, { jsonrpc: "2.0", id: 22, method: "tools/list" })

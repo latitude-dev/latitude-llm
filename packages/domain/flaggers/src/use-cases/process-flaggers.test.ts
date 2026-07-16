@@ -78,6 +78,7 @@ const makeTraceDetail = (allMessages: TraceDetail["allMessages"], tags: readonly
   models: [],
   providers: [],
   serviceNames: [],
+  agentNames: [],
   rootSpanId: SpanId("r".repeat(16)),
   rootSpanName: "root",
   systemInstructions: [],

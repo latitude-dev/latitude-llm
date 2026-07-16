@@ -17,6 +17,12 @@ export const FEATURE_FLAGS = {
     description:
       "Lets org owners/admins configure SAML or OIDC single sign-on and (optionally) enforce it for their verified email domain.",
   },
+  customBehaviors: {
+    emoji: "🎛️",
+    name: "Custom behaviors",
+    description:
+      "Project-scoped, filter-defined behavior taxonomies with their own authoring UI. Hidden until the Generate flow ships.",
+  },
 } as const satisfies Record<
   string,
   {

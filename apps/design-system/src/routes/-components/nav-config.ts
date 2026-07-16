@@ -41,6 +41,7 @@ export const DESIGN_SYSTEM_NAV: DesignSystemNavSection[] = [
       { label: "Date range picker", to: "/date-range-picker" },
       { label: "Forms", to: "/forms" },
       { label: "Infinite table", to: "/infinite-table" },
+      { label: "Master detail", to: "/master-detail" },
       { label: "Rich text editor", to: "/rich-text-editor" },
       { label: "Status", to: "/status" },
       { label: "Charts", to: "/charts" },
