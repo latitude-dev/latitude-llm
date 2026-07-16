@@ -35,7 +35,7 @@ export interface SessionMemorySummary {
   readonly total: MemorySummaryTotals
 }
 
-const recordKey = (storeId: string, recordId: string) => `${storeId} ${recordId}`
+const recordKey = (storeId: string, recordId: string) => `${storeId}\u0000${recordId}`
 
 type WriteEndpoint = {
   readonly storeId: string

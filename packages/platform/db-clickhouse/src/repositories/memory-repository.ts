@@ -420,7 +420,7 @@ export const MemoryRepositoryLive = Layer.effect(
         // filtered in the caller. `wanted` narrows the returned set back down.
         const storeIds = [...new Set(records.map((record) => record.storeId))]
         const recordIds = [...new Set(records.map((record) => record.recordId))]
-        const wanted = new Set(records.map((record) => `${record.storeId} ${record.recordId}`))
+        const wanted = new Set(records.map((record) => `${record.storeId}\u0000${record.recordId}`))
         const chSqlClient = (yield* ChSqlClient) as ChSqlClientShape<ClickHouseClient>
         return yield* chSqlClient
           .query(async (client) => {
@@ -450,7 +450,7 @@ export const MemoryRepositoryLive = Layer.effect(
               format: "JSONEachRow",
             })
             const rows = await result.json<MemoryRecordVersionRow>()
-            return rows.map(toVersion).filter((version) => wanted.has(`${version.storeId} ${version.recordId}`))
+            return rows.map(toVersion).filter((version) => wanted.has(`${version.storeId}\u0000${version.recordId}`))
           })
           .pipe(Effect.mapError((error) => toRepositoryError(error, "MemoryRepository.readRecordVersions")))
       })

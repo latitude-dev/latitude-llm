@@ -5,8 +5,8 @@ import { MEMORY_MUTATING_CHANGE_KINDS, type MemoryEvent } from "../entities/memo
 import type { MemoryRecordVersion, MemoryStoreWipe } from "../entities/memory-snapshot.ts"
 import type { MemoryRepositoryShape } from "../ports/memory-repository.ts"
 
-const recordKey = (storeId: string, recordId: string) => `${storeId} ${recordId}`
-const blobKey = (organizationId: string, contentHash: string) => `${organizationId} ${contentHash}`
+const recordKey = (storeId: string, recordId: string) => `${storeId}\u0000${recordId}`
+const blobKey = (organizationId: string, contentHash: string) => `${organizationId}\u0000${contentHash}`
 const isMutating = (kind: MemoryEvent["changeKind"]): boolean =>
   (MEMORY_MUTATING_CHANGE_KINDS as readonly string[]).includes(kind)
 
@@ -100,20 +100,20 @@ export const createFakeMemoryRepository = (overrides?: Partial<MemoryRepositoryS
           if (event.organizationId !== organizationId || event.projectId !== projectId) continue
           if (event.sessionId !== sessionId) continue
           if (traceId !== undefined && event.traceId !== traceId) continue
-          deduped.set(`${event.spanId} ${event.storeId} ${event.recordId}`, event)
+          deduped.set(`${event.spanId}\u0000${event.storeId}\u0000${event.recordId}`, event)
         }
         return [...deduped.values()].sort((a, b) => a.endTime.getTime() - b.endTime.getTime())
       }),
     readRecordVersions: ({ organizationId, projectId, records, at }) =>
       Effect.sync(() => {
-        const wanted = new Set(records.map((record) => `${record.storeId} ${record.recordId}`))
+        const wanted = new Set(records.map((record) => `${record.storeId}\u0000${record.recordId}`))
         const deduped = new Map<string, MemoryEvent>()
         for (const event of events) {
           if (event.organizationId !== organizationId || event.projectId !== projectId) continue
           if (!isMutating(event.changeKind)) continue
-          if (!wanted.has(`${event.storeId} ${event.recordId}`)) continue
+          if (!wanted.has(`${event.storeId}\u0000${event.recordId}`)) continue
           if (at !== undefined && event.endTime > at) continue
-          deduped.set(`${event.spanId} ${event.storeId} ${event.recordId}`, event)
+          deduped.set(`${event.spanId}\u0000${event.storeId}\u0000${event.recordId}`, event)
         }
         return [...deduped.values()]
           .sort(
