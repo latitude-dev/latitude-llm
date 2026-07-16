@@ -326,6 +326,11 @@ type SpanMessagesRow = {
   output_messages: string
 }
 
+type SpanMessagesRowWithTime = SpanMessagesRow & { start_time: string }
+
+const sortSpanMessageRowsByStartTime = (rows: readonly SpanMessagesRowWithTime[]): SpanMessagesRowWithTime[] =>
+  [...rows].sort((a, b) => parseCHDate(a.start_time).getTime() - parseCHDate(b.start_time).getTime())
+
 const toDomainSpanMessages = (row: SpanMessagesRow): SpanMessagesData => ({
   traceId: toTraceId(normalizeCHString(row.trace_id)),
   spanId: SpanId(row.span_id),
@@ -446,6 +451,23 @@ const PAGINATED_READ_SETTINGS = {
   ...BOUNDED_READ_SETTINGS,
   max_bytes_before_external_sort: "268435456",
 } as const
+
+const CONVERSATION_MESSAGE_OPERATIONS_SQL = "('chat', 'text_completion', 'generate_content', 'execute_tool')"
+
+const MESSAGES_FOR_TRACE_SQL = `SELECT trace_id, span_id, operation, tool_call_id, tool_name, tool_input, input_messages, output_messages, start_time
+                      FROM (
+                        SELECT trace_id, span_id, operation, tool_call_id, tool_name, tool_input, input_messages, output_messages, start_time
+                        FROM spans
+                        WHERE organization_id = {organizationId:String}
+                          AND project_id = {projectId:String}
+                          AND start_time >= {startTimeFrom:DateTime64(9, 'UTC')}
+                          AND start_time <= {startTimeTo:DateTime64(9, 'UTC')}
+                          AND trace_id = {traceId:FixedString(32)}
+                          AND operation IN ${CONVERSATION_MESSAGE_OPERATIONS_SQL}
+                        ORDER BY span_id, ingested_at DESC
+                        LIMIT 1 BY span_id
+                      )
+                      ORDER BY start_time ASC`
 
 // `listByProjectId` keyset pagination. The sort column is an enum → fixed column
 // (never user-interpolated raw SQL); the cursor param is typed to match it so the
@@ -1100,25 +1122,7 @@ export const SpanRepositoryLive = Layer.effect(
           return yield* chSqlClient
             .query(async (client) => {
               const result = await client.query({
-                // Dedupe ReplacingMergeTree rows with `LIMIT 1 BY span_id`
-                // (newest `ingested_at` wins) instead of `FINAL`, which
-                // merges all matching parts at query time and is the
-                // dominant memory cost for traces with heavy
-                // input/output_messages payloads.
-                query: `SELECT trace_id, span_id, operation, tool_call_id, tool_name, tool_input, input_messages, output_messages
-                      FROM (
-                        SELECT trace_id, span_id, operation, tool_call_id, tool_name, tool_input, input_messages, output_messages, start_time
-                        FROM spans
-                        WHERE organization_id = {organizationId:String}
-                          AND project_id = {projectId:String}
-                          AND start_time >= {startTimeFrom:DateTime64(9, 'UTC')}
-                          AND start_time <= {startTimeTo:DateTime64(9, 'UTC')}
-                          AND trace_id = {traceId:FixedString(32)}
-                          AND operation IN ('chat', 'text_completion', 'generate_content', 'execute_tool')
-                        ORDER BY span_id, ingested_at DESC
-                        LIMIT 1 BY span_id
-                      )
-                      ORDER BY start_time ASC`,
+                query: MESSAGES_FOR_TRACE_SQL,
                 query_params: {
                   organizationId: organizationId as string,
                   projectId: projectId as string,
@@ -1129,7 +1133,7 @@ export const SpanRepositoryLive = Layer.effect(
                 format: "JSONEachRow",
                 clickhouse_settings: BOUNDED_READ_SETTINGS,
               })
-              return result.json<SpanMessagesRow>()
+              return result.json<SpanMessagesRowWithTime>()
             })
             .pipe(
               Effect.map((rows) => rows.map(toDomainSpanMessages)),
@@ -1211,39 +1215,49 @@ export const SpanRepositoryLive = Layer.effect(
         Effect.gen(function* () {
           const chSqlClient = (yield* ChSqlClient) as ChSqlClientShape<ClickHouseClient>
           const membership = sessionMembership(sessionId as string)
-          return yield* chSqlClient
+          const queryParams = {
+            organizationId: organizationId as string,
+            projectId: projectId as string,
+            startTimeFrom: formatCHDate(startTimeFrom),
+            startTimeTo: formatCHDate(startTimeTo),
+            ...membership.params,
+          }
+          const traceIdRows = yield* chSqlClient
             .query(async (client) => {
               const result = await client.query({
-                query: `SELECT trace_id, span_id, operation, tool_call_id, tool_name, tool_input, input_messages, output_messages
-                      FROM (
-                        SELECT trace_id, span_id, operation, tool_call_id, tool_name, tool_input, input_messages, output_messages, start_time
-                        FROM spans
-                        WHERE organization_id = {organizationId:String}
-                          AND project_id = {projectId:String}
-                          AND start_time >= {startTimeFrom:DateTime64(9, 'UTC')}
-                          AND start_time <= {startTimeTo:DateTime64(9, 'UTC')}
-                          AND ${membership.clause}
-                          AND operation IN ('chat', 'text_completion', 'generate_content', 'execute_tool')
-                        ORDER BY trace_id, span_id, ingested_at DESC
-                        LIMIT 1 BY trace_id, span_id
-                      )
-                      ORDER BY start_time ASC`,
-                query_params: {
-                  organizationId: organizationId as string,
-                  projectId: projectId as string,
-                  startTimeFrom: formatCHDate(startTimeFrom),
-                  startTimeTo: formatCHDate(startTimeTo),
-                  ...membership.params,
-                },
+                query: `SELECT DISTINCT trace_id
+                      FROM spans
+                      WHERE organization_id = {organizationId:String}
+                        AND project_id = {projectId:String}
+                        AND start_time >= {startTimeFrom:DateTime64(9, 'UTC')}
+                        AND start_time <= {startTimeTo:DateTime64(9, 'UTC')}
+                        AND ${membership.clause}
+                        AND operation IN ${CONVERSATION_MESSAGE_OPERATIONS_SQL}`,
+                query_params: queryParams,
                 format: "JSONEachRow",
                 clickhouse_settings: BOUNDED_READ_SETTINGS,
               })
-              return result.json<SpanMessagesRow>()
+              return result.json<{ trace_id: string }>()
             })
-            .pipe(
-              Effect.map((rows) => rows.map(toDomainSpanMessages)),
-              Effect.mapError((error) => toRepositoryError(error, "findMessagesForSession")),
-            )
+            .pipe(Effect.mapError((error) => toRepositoryError(error, "findMessagesForSession")))
+
+          const allRows: SpanMessagesRowWithTime[] = []
+          for (const { trace_id: traceId } of traceIdRows) {
+            const rows = yield* chSqlClient
+              .query(async (client) => {
+                const result = await client.query({
+                  query: MESSAGES_FOR_TRACE_SQL,
+                  query_params: { ...queryParams, traceId },
+                  format: "JSONEachRow",
+                  clickhouse_settings: BOUNDED_READ_SETTINGS,
+                })
+                return result.json<SpanMessagesRowWithTime>()
+              })
+              .pipe(Effect.mapError((error) => toRepositoryError(error, "findMessagesForSession")))
+            allRows.push(...rows)
+          }
+
+          return sortSpanMessageRowsByStartTime(allRows).map(toDomainSpanMessages)
         }),
 
       findLatestOutputTraceId: ({ organizationId, projectId, traceIds }) =>
