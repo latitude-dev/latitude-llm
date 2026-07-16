@@ -22,6 +22,8 @@ const spanId = SpanId("s".repeat(16))
 const traceId = TraceId("t".repeat(32))
 const base = new Date("2026-06-01T12:00:00.000Z").getTime()
 const at = (seconds: number) => new Date(base + seconds * 1000)
+const spanN = (n: number) => SpanId(String(n).padStart(16, "0"))
+const traceN = (n: number) => TraceId(String(n).padStart(32, "0"))
 
 const ch = setupTestClickHouse()
 
@@ -153,5 +155,137 @@ describe("MemoryRepository", () => {
     expect(wipes).toHaveLength(1)
     expect(wipes[0]?.storeId).toBe("store1")
     expect(wipes[0]?.endTime.getTime()).toBe(at(20).getTime())
+  })
+
+  it("reads blob bodies by hash, ignoring empty and unknown hashes", async () => {
+    await withRepo((repo) =>
+      repo.upsertBlobs([
+        makeBlob({ contentHash: "h1", content: "one" }),
+        makeBlob({ contentHash: "h2", content: "two" }),
+      ]),
+    )
+
+    const got = await withRepo((repo) => repo.readBlobs({ organizationId, hashes: ["h1", "", "missing", "h2"] }))
+    expect(got.map((b) => [b.contentHash, b.content]).sort()).toEqual([
+      ["h1", "one"],
+      ["h2", "two"],
+    ])
+  })
+
+  it("reads a session's events (deduped, end_time ASC) and filters by trace", async () => {
+    await withRepo((repo) =>
+      repo.insertEvents([
+        makeEvent({
+          recordId: "rec1",
+          spanId: spanN(1),
+          traceId: traceN(1),
+          sessionId: SessionId("sessA"),
+          endTime: at(1),
+        }),
+        // retried projection duplicate of the same (span, store, record)
+        makeEvent({
+          recordId: "rec1",
+          spanId: spanN(1),
+          traceId: traceN(1),
+          sessionId: SessionId("sessA"),
+          endTime: at(1),
+        }),
+        makeEvent({
+          recordId: "rec2",
+          spanId: spanN(2),
+          traceId: traceN(2),
+          sessionId: SessionId("sessA"),
+          endTime: at(3),
+        }),
+        makeEvent({
+          recordId: "rec3",
+          spanId: spanN(3),
+          traceId: traceN(9),
+          sessionId: SessionId("sessB"),
+          endTime: at(5),
+        }),
+      ]),
+    )
+
+    const all = await withRepo((repo) =>
+      repo.readSessionMemoryEvents({ organizationId, projectId, sessionId: SessionId("sessA") }),
+    )
+    expect(all.map((e) => e.recordId)).toEqual(["rec1", "rec2"])
+    expect(all.map((e) => e.spanId)).toEqual([spanN(1), spanN(2)])
+
+    const oneTrace = await withRepo((repo) =>
+      repo.readSessionMemoryEvents({ organizationId, projectId, sessionId: SessionId("sessA"), traceId: traceN(1) }),
+    )
+    expect(oneTrace.map((e) => e.recordId)).toEqual(["rec1"])
+  })
+
+  it("reads mutating version chains for the requested record set, honoring `at` and exact pairs", async () => {
+    await withRepo((repo) =>
+      repo.insertEvents([
+        makeEvent({
+          scope: "s",
+          storeId: "store1",
+          recordId: "recA",
+          spanId: spanN(1),
+          changeKind: "add",
+          contentHash: "a0",
+          endTime: at(0),
+        }),
+        makeEvent({
+          scope: "s",
+          storeId: "store1",
+          recordId: "recA",
+          spanId: spanN(2),
+          changeKind: "update",
+          contentHash: "a1",
+          endTime: at(3),
+        }),
+        makeEvent({
+          scope: "s",
+          storeId: "store2",
+          recordId: "recB",
+          spanId: spanN(3),
+          changeKind: "add",
+          contentHash: "b0",
+          endTime: at(2),
+        }),
+        // matches the IN cross-product (store1 × recB) but is not a requested pair
+        makeEvent({
+          scope: "s",
+          storeId: "store1",
+          recordId: "recB",
+          spanId: spanN(4),
+          changeKind: "add",
+          contentHash: "x0",
+          endTime: at(1),
+        }),
+        // reads never enter a version chain
+        makeEvent({
+          scope: "s",
+          storeId: "store1",
+          recordId: "recA",
+          spanId: spanN(5),
+          changeKind: "read",
+          contentHash: "",
+          endTime: at(4),
+        }),
+      ]),
+    )
+
+    const records = [
+      { storeId: "store1", recordId: "recA" },
+      { storeId: "store2", recordId: "recB" },
+    ]
+    const chain = await withRepo((repo) => repo.readRecordVersions({ organizationId, projectId, scope: "s", records }))
+    expect(chain.map((v) => [v.storeId, v.recordId, v.contentHash])).toEqual([
+      ["store1", "recA", "a0"],
+      ["store1", "recA", "a1"],
+      ["store2", "recB", "b0"],
+    ])
+
+    const bounded = await withRepo((repo) =>
+      repo.readRecordVersions({ organizationId, projectId, scope: "s", records, at: at(1) }),
+    )
+    expect(bounded.map((v) => v.contentHash)).toEqual(["a0"])
   })
 })

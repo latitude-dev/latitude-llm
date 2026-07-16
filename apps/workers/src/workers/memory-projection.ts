@@ -1,6 +1,6 @@
 import { materializeTraceMemoryUseCase } from "@domain/memories"
 import type { QueueConsumer } from "@domain/queue"
-import { OrganizationId, ProjectId, TraceId } from "@domain/shared"
+import { OrganizationId, ProjectId, SessionId, TraceId } from "@domain/shared"
 import {
   type ClickHouseClient,
   MemoryRepositoryLive,
@@ -20,6 +20,7 @@ interface RunPayload {
   readonly organizationId: string
   readonly projectId: string
   readonly traceId: string
+  readonly sessionId: string
 }
 
 type MemoryProjectionLogger = Pick<ReturnType<typeof createLogger>, "info" | "error">
@@ -52,6 +53,7 @@ export const createMemoryProjectionWorker = ({
         organizationId: OrganizationId(payload.organizationId),
         projectId: ProjectId(payload.projectId),
         traceId: TraceId(payload.traceId),
+        sessionId: SessionId(payload.sessionId),
       }).pipe(
         withClickHouse(
           Layer.mergeAll(SpanRepositoryLive, MemoryRepositoryLive),

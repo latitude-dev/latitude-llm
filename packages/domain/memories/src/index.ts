@@ -6,6 +6,10 @@ export {
   type MemoryCurrentEntry,
   memoryCurrentEntrySchema,
 } from "./entities/memory-current.ts"
+export type {
+  MemoryDiff,
+  MemoryRecordChange,
+} from "./entities/memory-diff.ts"
 export {
   MEMORY_CHANGE_KINDS,
   MEMORY_EVENT_SOURCES,
@@ -32,6 +36,17 @@ export {
   MemoryRepository,
   type MemoryRepositoryShape,
 } from "./ports/memory-repository.ts"
+export {
+  type ComputeMemoryDiffInput,
+  computeMemoryDiffUseCase,
+} from "./use-cases/compute-memory-diff.ts"
+export {
+  type ComputeSessionMemorySummaryInput,
+  computeSessionMemorySummaryUseCase,
+  type MemoryRecordSummary,
+  type MemorySummaryTotals,
+  type SessionMemorySummary,
+} from "./use-cases/compute-session-memory-summary.ts"
 export {
   type MaterializeTraceMemoryInput,
   type MaterializeTraceMemoryResult,

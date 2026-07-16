@@ -15,6 +15,7 @@ import { ArrowDownRightIcon, ArrowUpRightIcon, BrainIcon, FingerprintIcon, TextI
 import { useMemo } from "react"
 import type { SessionDetailRecord } from "../../../../../../domains/sessions/sessions.functions.ts"
 import { useSpansBySessionCollection } from "../../../../../../domains/spans/spans.collection.ts"
+import { MemorySummary } from "../memory-summary.tsx"
 import { SessionOutlierBadge, type SessionOutlierMetric } from "../session-outlier-badge.tsx"
 import { aggregateToolPills, ToolPillList } from "../tool-pills.tsx"
 import { DurationBar } from "../trace-detail-drawer/duration-bar.tsx"
@@ -165,6 +166,7 @@ export function MetadataTab({
           isLoading={isSpansLoading}
         />
         <UsageSummary data={session} costBadges={costBadgesNode} />
+        <MemorySummary projectId={session.projectId} sessionId={session.sessionId} />
       </div>
 
       <AgentsBreakdown graph={agentGraph} />

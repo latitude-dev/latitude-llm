@@ -1,18 +1,22 @@
 import { createHash } from "node:crypto"
-import type { OrganizationId, ProjectId, TraceId } from "@domain/shared"
+import type { OrganizationId, ProjectId, SessionId, TraceId } from "@domain/shared"
 import { type MemoryOperationSpan, SpanRepository } from "@domain/spans"
 import { Effect } from "effect"
-import { getEncoding, type Tiktoken } from "js-tiktoken"
 import type { MemoryBlob } from "../entities/memory-blob.ts"
 import type { MemoryCurrentEntry } from "../entities/memory-current.ts"
 import type { MemoryChangeKind, MemoryEvent } from "../entities/memory-event.ts"
 import { memoryRecordBody, parseMemoryRecords } from "../entities/memory-record.ts"
+import { countTokens } from "../entities/tokenizer.ts"
 import { MemoryRepository } from "../ports/memory-repository.ts"
 
 export interface MaterializeTraceMemoryInput {
   readonly organizationId: OrganizationId
   readonly projectId: ProjectId
   readonly traceId: TraceId
+  /** The trace's canonical session id, stamped on every event so the ledger's
+   * session_id agrees with the trace/session entity — a memory span may carry
+   * no session attribute even when its sibling chat spans do. */
+  readonly sessionId: SessionId
 }
 
 export interface MaterializeTraceMemoryResult {
@@ -24,14 +28,6 @@ export interface MaterializeTraceMemoryResult {
 const textEncoder = new TextEncoder()
 const sha256Hex = (body: string) => createHash("sha256").update(body).digest("hex")
 const byteLength = (body: string) => textEncoder.encode(body).length
-
-// Lazily loaded so importing this module (e.g. transitively for types) doesn't
-// pull the o200k_base ranks into memory until a projection actually runs.
-let encoder: Tiktoken | null = null
-const tokenCount = (body: string): number => {
-  if (encoder === null) encoder = getEncoding("o200k_base")
-  return encoder.encode(body).length
-}
 
 const resolveScope = (span: MemoryOperationSpan): string =>
   span.scopeAttr || span.latitudeScopeAttr || (span.userId as string) || ""
@@ -59,7 +55,7 @@ const needsPresentSeed = (span: MemoryOperationSpan): boolean =>
 export const materializeTraceMemoryUseCase = Effect.fn("memories.materializeTraceMemory")(function* (
   input: MaterializeTraceMemoryInput,
 ) {
-  const { organizationId, projectId, traceId } = input
+  const { organizationId, projectId, traceId, sessionId } = input
   yield* Effect.annotateCurrentSpan("memory.traceId", traceId)
 
   const spanRepository = yield* SpanRepository
@@ -123,7 +119,7 @@ export const materializeTraceMemoryUseCase = Effect.fn("memories.materializeTrac
       queryText: extra.queryText ?? "",
       spanId: span.spanId,
       traceId: span.traceId,
-      sessionId: span.sessionId,
+      sessionId,
       userId: span.userId,
       startTime: span.startTime,
       endTime: span.endTime,
@@ -142,7 +138,7 @@ export const materializeTraceMemoryUseCase = Effect.fn("memories.materializeTrac
     let tokens = 0
     if (body !== null) {
       contentHash = sha256Hex(body)
-      tokens = tokenCount(body)
+      tokens = countTokens(body)
       if (!blobs.has(contentHash)) {
         blobs.set(contentHash, {
           organizationId,
@@ -168,7 +164,7 @@ export const materializeTraceMemoryUseCase = Effect.fn("memories.materializeTrac
       queryText: "",
       spanId: span.spanId,
       traceId: span.traceId,
-      sessionId: span.sessionId,
+      sessionId,
       userId: span.userId,
       startTime: span.startTime,
       endTime: span.endTime,
@@ -185,7 +181,7 @@ export const materializeTraceMemoryUseCase = Effect.fn("memories.materializeTrac
       tokenCount: tokens,
       spanId: span.spanId,
       traceId: span.traceId,
-      sessionId: span.sessionId,
+      sessionId,
       endTime: span.endTime,
     })
     const records = liveRecords(scope, span.storeId)
@@ -209,7 +205,7 @@ export const materializeTraceMemoryUseCase = Effect.fn("memories.materializeTrac
         tokenCount: 0,
         spanId: span.spanId,
         traceId: span.traceId,
-        sessionId: span.sessionId,
+        sessionId,
         endTime: span.endTime,
       })
       records.delete(recordId)
@@ -228,9 +224,21 @@ export const materializeTraceMemoryUseCase = Effect.fn("memories.materializeTrac
 
     switch (span.operation) {
       case "search_memory": {
+        // One read event per returned record, keyed on the record's own id so
+        // the read attributes to that record; id-less hits fall back to the
+        // span's (usually empty) record id and bucket together.
         const records = parseMemoryRecords(span.recordsRaw)
-        const tokens = records ? records.reduce((sum, record) => sum + tokenCount(memoryRecordBody(record)), 0) : 0
-        pushSpanEvent(span, scope, "read", { recordId: span.recordId, tokenCount: tokens, queryText: span.queryText })
+        if (records && records.length > 0) {
+          for (const record of records) {
+            pushSpanEvent(span, scope, "read", {
+              recordId: record.id ?? span.recordId,
+              tokenCount: countTokens(memoryRecordBody(record)),
+              queryText: span.queryText,
+            })
+          }
+        } else {
+          pushSpanEvent(span, scope, "read", { recordId: span.recordId, tokenCount: 0, queryText: span.queryText })
+        }
         break
       }
 

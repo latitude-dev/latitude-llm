@@ -12,6 +12,7 @@ import { reconstructSnapshotUseCase } from "./reconstruct-snapshot.ts"
 const organizationId = OrganizationId("o".repeat(24))
 const projectId = ProjectId("p".repeat(24))
 const traceId = TraceId("t".repeat(32))
+const traceSessionId = SessionId("trace-session")
 const base = new Date("2026-06-01T12:00:00.000Z").getTime()
 const at = (seconds: number) => new Date(base + seconds * 1000)
 const spanId = (char: string) => SpanId(char.repeat(16))
@@ -37,7 +38,7 @@ const makeSpan = (o: Partial<MemoryOperationSpan> = {}): MemoryOperationSpan => 
 
 type Fake = ReturnType<typeof createFakeMemoryRepository>
 
-const materialize = (spans: readonly MemoryOperationSpan[], memory: Fake) => {
+const materialize = (spans: readonly MemoryOperationSpan[], memory: Fake, sessionId: SessionId = traceSessionId) => {
   const spanRepo = createFakeSpanRepository({
     listMemoryOperationSpansByTraceId: () => Effect.succeed(spans),
   }).repository
@@ -47,7 +48,7 @@ const materialize = (spans: readonly MemoryOperationSpan[], memory: Fake) => {
     Layer.succeed(ChSqlClient, createFakeChSqlClient({ organizationId })),
   )
   return Effect.runPromise(
-    materializeTraceMemoryUseCase({ organizationId, projectId, traceId }).pipe(Effect.provide(layer)),
+    materializeTraceMemoryUseCase({ organizationId, projectId, traceId, sessionId }).pipe(Effect.provide(layer)),
   )
 }
 
@@ -110,6 +111,25 @@ describe("materializeTraceMemory", () => {
     expect(memory.events[0]?.changeKind).toBe("read")
     expect(memory.events[0]?.queryText).toBe("find alpha")
     expect(memory.events[0]?.tokenCount).toBeGreaterThan(0)
+    expect(memory.events[0]?.recordId).toBe("r1") // read attributes to the hit's own record id
+  })
+
+  it("emits one read per returned record and buckets id-less hits together", async () => {
+    const memory = createFakeMemoryRepository()
+    await materialize(
+      [
+        makeSpan({
+          operation: "search_memory",
+          recordCount: 2,
+          queryText: "q",
+          recordsRaw: JSON.stringify([{ id: "rec1", content: "alpha" }, { content: "beta" }]),
+        }),
+      ],
+      memory,
+    )
+
+    const reads = memory.events.filter((event) => event.changeKind === "read")
+    expect(reads.map((event) => event.recordId).sort()).toEqual(["", "rec1"])
   })
 
   it("resolves upsert to update for existing records and add for new ones", async () => {
@@ -150,6 +170,30 @@ describe("materializeTraceMemory", () => {
     expect(result.eventCount).toBe(1)
     expect(memory.events[0]?.changeKind).toBe("store_delete")
     expect(memory.events[0]?.recordId).toBe("")
+  })
+
+  it("stamps every event with the trace session id, ignoring the span's own", async () => {
+    const memory = createFakeMemoryRepository()
+    await materialize(
+      [
+        makeSpan({
+          spanId: spanId("a"),
+          operation: "search_memory",
+          recordsRaw: records({ id: "r1", content: "alpha" }),
+          sessionId: SessionId(""),
+        }),
+        makeSpan({
+          spanId: spanId("b"),
+          operation: "create_memory",
+          recordsRaw: records({ id: "r2", content: "beta" }),
+          sessionId: SessionId("span-local"),
+        }),
+      ],
+      memory,
+      SessionId("conv-1"),
+    )
+
+    expect(memory.events.every((event) => event.sessionId === "conv-1")).toBe(true)
   })
 
   it("resolves scope from the scope attribute, else the user id, else empty", async () => {

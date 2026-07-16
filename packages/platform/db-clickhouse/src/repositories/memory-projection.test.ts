@@ -1,5 +1,5 @@
 import { type MemoryRepository, materializeTraceMemoryUseCase, reconstructSnapshotUseCase } from "@domain/memories"
-import { type ChSqlClient, OrganizationId, ProjectId, TraceId } from "@domain/shared"
+import { type ChSqlClient, OrganizationId, ProjectId, SessionId, TraceId } from "@domain/shared"
 import type { SpanRepository } from "@domain/spans"
 import { setupTestClickHouse } from "@platform/testkit"
 import { Effect, Layer } from "effect"
@@ -12,6 +12,7 @@ import { SpanRepositoryLive } from "./span-repository.ts"
 const ORG = OrganizationId("org_mem_proj_test")
 const PROJECT = ProjectId("proj_mem_proj_test")
 const TRACE = TraceId("a".repeat(32))
+const SESSION = SessionId("conv-canonical") // the trace's canonical session; differs from the spans' own session_id
 const SCOPE = "user-1" // resolves from user_id (no scope attribute set)
 
 const ch = setupTestClickHouse()
@@ -143,7 +144,7 @@ describe("memory projection (end to end)", () => {
     )
 
     const result = await provide(
-      materializeTraceMemoryUseCase({ organizationId: ORG, projectId: PROJECT, traceId: TRACE }),
+      materializeTraceMemoryUseCase({ organizationId: ORG, projectId: PROJECT, traceId: TRACE, sessionId: SESSION }),
     )
     expect(result.eventCount).toBe(5)
     expect(result.blobCount).toBe(3) // v1, v2, shared — the duplicate "shared" body dedups
@@ -152,6 +153,10 @@ describe("memory projection (end to end)", () => {
       "SELECT count() AS n FROM memory_events WHERE organization_id = {organizationId:String}",
     )
     expect(Number(events[0]?.n)).toBe(5)
+    const sessions = await rawRows<{ session_id: string }>(
+      "SELECT DISTINCT session_id FROM memory_events WHERE organization_id = {organizationId:String}",
+    )
+    expect(sessions.map((row) => row.session_id)).toEqual(["conv-canonical"])
     const blobs = await rawRows<{ n: string | number }>(
       "SELECT count() AS n FROM memory_blobs FINAL WHERE organization_id = {organizationId:String}",
     )
