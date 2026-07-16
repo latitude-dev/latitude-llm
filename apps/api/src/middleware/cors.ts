@@ -38,7 +38,8 @@ export const registerCorsMiddleware = (app: Hono, options: RegisterCorsMiddlewar
           return origin
         }
 
-        logger.warn(`CORS rejected origin: ${origin} for path: ${c.req.path}`)
+        const sanitize = (value: string): string => value.replace(/[\r\n\t]/g, "")
+        logger.warn(`CORS rejected origin: ${sanitize(origin)} for path: ${sanitize(c.req.path)}`)
         return null
       },
       allowMethods: ["GET", "POST", "PUT", "PATCH", "DELETE"],
