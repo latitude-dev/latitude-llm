@@ -27,7 +27,10 @@ const PLIST_PATH = join(homedir(), "Library", "LaunchAgents", "so.latitude.claud
 const PLIST_LABEL = "so.latitude.claude-code-telemetry"
 // Linux: systemd user environment drop-in; mirrors the macOS plist for persistence.
 const ENVIRONMENT_D_CONF_PATH = join(homedir(), ".config", "environment.d", "latitude-telemetry.conf")
-const DEFAULT_HOOK_COMMAND = "npx -y @latitude-data/claude-code-telemetry"
+// Pin the `@latest` tag so the hook re-resolves the newest published version on
+// each run (a cheap, etag-revalidated metadata check) and self-updates. A bare
+// `npx <pkg>` reuses whatever the npx cache first fetched and never updates.
+const DEFAULT_HOOK_COMMAND = "npx -y @latitude-data/claude-code-telemetry@latest"
 const DOCS_URL = "https://docs.latitude.so/telemetry/claude-code"
 
 // Environments pick the app + ingest domain pair. Every URL shown or written

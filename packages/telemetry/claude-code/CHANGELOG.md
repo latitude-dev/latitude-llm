@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.0.11] - 2026-07-16
+
+### Changed
+
+- The installer now writes the Stop-hook command with the `@latest` tag (`npx -y @latitude-data/claude-code-telemetry@latest`) instead of a bare package name. A bare `npx <pkg>` reuses whatever version the npx cache first fetched and never updates, so users could silently stay on an old build; `@latest` re-resolves the newest published version each run (a cheap etag-revalidated check, off the critical path thanks to `async: true`), so fixes ship without a re-install. Existing installs keep working; re-running the installer or updating the command picks up the change. Docs updated to match.
+
 ## [0.0.10] - 2026-07-14
 
 ### Fixed

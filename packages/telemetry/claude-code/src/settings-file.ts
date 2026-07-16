@@ -89,7 +89,7 @@ export function hasLatitudeStopHook(settings: ClaudeSettings): boolean {
 
 export function addLatitudeStopHook(
   settings: ClaudeSettings,
-  command = "npx -y @latitude-data/claude-code-telemetry",
+  command = "npx -y @latitude-data/claude-code-telemetry@latest",
 ): ClaudeSettings {
   if (hasLatitudeStopHook(settings)) return settings
   const hooks = { ...(settings.hooks ?? {}) }
