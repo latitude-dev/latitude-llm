@@ -183,14 +183,6 @@ Contributions are welcome. Read the [Contributing Guide](CONTRIBUTING.md) to get
   <a href="https://github.com/eeshsaxena" title="eeshsaxena"><img src="https://avatars.githubusercontent.com/u/139802361?v=4&s=128" width="64" height="64" alt="eeshsaxena" /></a>
   <a href="https://github.com/Osamaali313" title="Osamaali313"><img src="https://avatars.githubusercontent.com/u/86572800?v=4&s=128" width="64" height="64" alt="Osamaali313" /></a>
   <a href="https://github.com/GouravSingal-code" title="GouravSingal-code"><img src="https://avatars.githubusercontent.com/u/60310438?v=4&s=128" width="64" height="64" alt="GouravSingal-code" /></a>
-  <a href="https://github.com/apps/dependabot" title="dependabot[bot]"><img src="https://avatars.githubusercontent.com/in/29110?v=4&s=128" width="64" height="64" alt="dependabot[bot]" /></a>
-  <a href="https://github.com/apps/github-actions" title="github-actions[bot]"><img src="https://avatars.githubusercontent.com/in/15368?v=4&s=128" width="64" height="64" alt="github-actions[bot]" /></a>
-  <a href="https://github.com/apps/cursor" title="cursor[bot]"><img src="https://avatars.githubusercontent.com/in/1210556?v=4&s=128" width="64" height="64" alt="cursor[bot]" /></a>
-  <a href="https://github.com/apps/mintlify" title="mintlify[bot]"><img src="https://avatars.githubusercontent.com/in/222410?v=4&s=128" width="64" height="64" alt="mintlify[bot]" /></a>
-  <a href="https://github.com/Copilot" title="Copilot"><img src="https://avatars.githubusercontent.com/in/1143301?v=4&s=128" width="64" height="64" alt="Copilot" /></a>
-  <a href="https://github.com/claude" title="claude"><img src="https://avatars.githubusercontent.com/u/81847?v=4&s=128" width="64" height="64" alt="claude" /></a>
-  <a href="https://github.com/apps/google-labs-jules" title="google-labs-jules[bot]"><img src="https://avatars.githubusercontent.com/in/842251?v=4&s=128" width="64" height="64" alt="google-labs-jules[bot]" /></a>
-  <a href="https://github.com/sisyphus-dev-ai" title="sisyphus-dev-ai"><img src="https://avatars.githubusercontent.com/u/238992291?v=4&s=128" width="64" height="64" alt="sisyphus-dev-ai" /></a>
 </p>
 
 ## 🔗 Links
