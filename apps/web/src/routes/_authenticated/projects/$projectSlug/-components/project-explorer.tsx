@@ -258,9 +258,9 @@ export function ProjectExplorer({ projectSlug }: { readonly projectSlug: string 
     featureFlags.has("customBehaviors") && Object.keys(customBehaviorSeedFilters).length > 0
   const createCustomBehaviorFromFilters = () =>
     navigate({
-      to: "/projects/$projectSlug/custom-behaviours",
+      to: "/projects/$projectSlug/behaviours/new",
       params: { projectSlug },
-      search: { create: serializeFilters(customBehaviorSeedFilters) },
+      search: { filters: serializeFilters(customBehaviorSeedFilters) },
     })
   const sessionsMonitorTarget = useMemo<MonitorTarget>(
     () => ({

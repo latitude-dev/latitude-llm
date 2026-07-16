@@ -1,6 +1,6 @@
 import type { FilterSet, OrganizationId, ProjectId } from "@domain/shared"
 import { Effect } from "effect"
-import { CUSTOM_BEHAVIOR_LOOKBACK_DAYS, TAXONOMY_GARDENING_MIN_OBSERVATIONS } from "../constants.ts"
+import { TAXONOMY_GARDENING_MIN_OBSERVATIONS, TAXONOMY_GARDENING_SAMPLE_LOOKBACK_DAYS } from "../constants.ts"
 import { customBehaviorFilterSetSchema } from "../entities/custom-behavior.ts"
 import { CustomBehaviorFilterInvalidError } from "../errors.ts"
 import { TaxonomyObservationRepository } from "../ports/taxonomy-observation-repository.ts"
@@ -34,7 +34,9 @@ export const previewCustomBehaviorSampleUseCase = (input: PreviewCustomBehaviorS
     }
 
     const now = input.now ?? new Date()
-    const since = new Date(now.getTime() - CUSTOM_BEHAVIOR_LOOKBACK_DAYS * DAY_MS)
+    // Same window as the scoped gardening sample (and global gardening), so the
+    // preview count matches what a run would actually cluster.
+    const since = new Date(now.getTime() - TAXONOMY_GARDENING_SAMPLE_LOOKBACK_DAYS * DAY_MS)
 
     const observations = yield* TaxonomyObservationRepository
     const counts = yield* observations.countForCustomBehaviorSample({

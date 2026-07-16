@@ -23,15 +23,38 @@ export const createFakeCustomBehaviorAssignmentRepository = (
         assignments.filter((assignment) => assignment.customBehaviorId === customBehaviorId).slice(0, limit),
       ),
 
-    getClusterAssignmentCounts: ({ customBehaviorId }) =>
+    getClusterAssignmentCounts: ({ customBehaviorId, startTimeFrom, startTimeTo }) =>
       Effect.sync(() => {
         const counts = new Map<string, number>()
         for (const assignment of assignments) {
           if (assignment.customBehaviorId !== customBehaviorId) continue
+          if (assignment.assignedClusterId == null) continue
+          if (startTimeFrom && assignment.startTime < startTimeFrom) continue
+          if (startTimeTo && assignment.startTime >= startTimeTo) continue
           const key = assignment.assignedClusterId as string
           counts.set(key, (counts.get(key) ?? 0) + 1)
         }
         return [...counts].map(([clusterId, count]) => ({ clusterId: clusterId as TaxonomyClusterId, count }))
+      }),
+
+    getClusterTrendCounts: ({ customBehaviorId, clusterIds, currentSince, baselineSince, baselineDays }) =>
+      Effect.sync(() => {
+        const wanted = new Set(clusterIds.map((id) => id as string))
+        const current = new Map<string, number>()
+        const baseline = new Map<string, number>()
+        for (const assignment of assignments) {
+          if (assignment.customBehaviorId !== customBehaviorId) continue
+          const key = assignment.assignedClusterId as string
+          if (!wanted.has(key)) continue
+          if (assignment.startTime >= currentSince) current.set(key, (current.get(key) ?? 0) + 1)
+          else if (assignment.startTime >= baselineSince) baseline.set(key, (baseline.get(key) ?? 0) + 1)
+        }
+        return clusterIds.map((clusterId) => ({
+          clusterId,
+          currentCount: current.get(clusterId as string) ?? 0,
+          baselineCount: baseline.get(clusterId as string) ?? 0,
+          baselineDays,
+        }))
       }),
 
     listClusterMemberObservations: ({ clusterId, limit }) =>

@@ -158,6 +158,42 @@ describe("buildCustomBehaviorTaxonomyUseCase", () => {
     expect(clusters.clusters.get(firstId as TaxonomyClusterId)?.firstObservedAt).toEqual(new Date(pass1.getTime()))
   })
 
+  it("accumulates assignments across re-runs and never truncates the prior slice", async () => {
+    const pass1 = new Date("2026-05-24T12:00:00.000Z")
+    const clusters = createFakeTaxonomyClusterRepository([])
+    let deleteCalled = false
+    const assignments = createFakeCustomBehaviorAssignmentRepository(
+      {},
+      {
+        deleteByBehavior: () =>
+          Effect.sync(() => {
+            deleteCalled = true
+          }),
+      },
+    )
+
+    await runBuild(
+      Array.from({ length: 20 }, (_, index) => makeObservation(index, E1, pass1)),
+      clusters,
+      assignments,
+      pass1,
+    )
+    expect(assignments.assignments).toHaveLength(20)
+
+    // A later pass re-emits only the freshly-sampled observations; the prior
+    // rows must remain (ReplacingMergeTree keeps them until TTL in production).
+    const pass2 = new Date("2026-05-25T12:00:00.000Z")
+    await runBuild(
+      Array.from({ length: 20 }, (_, index) => makeObservation(100 + index, E1, pass2)),
+      clusters,
+      assignments,
+      pass2,
+    )
+
+    expect(assignments.assignments).toHaveLength(40)
+    expect(deleteCalled).toBe(false)
+  })
+
   it("returns prior scoped clusters for deprecation without touching them when the topic changed", async () => {
     const old = makeCluster({
       id: "a".repeat(24) as TaxonomyClusterId,

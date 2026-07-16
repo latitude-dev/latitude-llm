@@ -11,6 +11,7 @@ import {
 import { createFakeChSqlClient, createFakeSqlClient } from "@domain/shared/testing"
 import { Effect, Layer } from "effect"
 import { describe, expect, it } from "vitest"
+import type { ClusteringTreeNode } from "../clustering.ts"
 import { TAXONOMY_CLUSTERING_PROPOSAL_SAMPLE_MAX } from "../constants.ts"
 import type { TaxonomyCluster } from "../entities/cluster.ts"
 import type { TaxonomyMomentObservation } from "../entities/observation.ts"
@@ -19,7 +20,11 @@ import { TaxonomyClusterRepository } from "../ports/taxonomy-cluster-repository.
 import { TaxonomyObservationRepository } from "../ports/taxonomy-observation-repository.ts"
 import { createFakeTaxonomyClusterRepository } from "../testing/fake-taxonomy-cluster-repository.ts"
 import { createFakeTaxonomyObservationRepository } from "../testing/fake-taxonomy-observation-repository.ts"
-import { buildHierarchicalTaxonomyUseCase, planHierarchicalTaxonomyUseCase } from "./build-hierarchical-taxonomy.ts"
+import {
+  buildHierarchicalTaxonomyUseCase,
+  computeSplitLinkThreshold,
+  planHierarchicalTaxonomyUseCase,
+} from "./build-hierarchical-taxonomy.ts"
 
 const organizationId = OrganizationId("o".repeat(24))
 const projectId = ProjectId("p".repeat(24))
@@ -32,6 +37,32 @@ const vector = (values: Record<number, number>) => {
 
 const E1 = vector({ 0: 1 })
 const E2 = vector({ 1: 1 })
+
+describe("computeSplitLinkThreshold", () => {
+  const childNode = (centroid: readonly number[]): ClusteringTreeNode => ({
+    memberIndices: [],
+    centroid,
+    children: [],
+    depth: 1,
+  })
+
+  it("returns null for fewer than two children", () => {
+    expect(computeSplitLinkThreshold([])).toBeNull()
+    expect(computeSplitLinkThreshold([childNode(E1)])).toBeNull()
+  })
+
+  it("clamps a negative min similarity to 0 (schema contract is [0, 1])", () => {
+    // Opposite unit centroids give cosine similarity -1; the stored contract is
+    // z.number().min(0), so the raw value must be clamped rather than persisted.
+    const threshold = computeSplitLinkThreshold([childNode(E1), childNode(vector({ 0: -1 }))])
+    expect(threshold).toBe(0)
+  })
+
+  it("keeps an in-range similarity and never exceeds 1", () => {
+    expect(computeSplitLinkThreshold([childNode(E1), childNode(E2)])).toBe(0)
+    expect(computeSplitLinkThreshold([childNode(E1), childNode(E1)])).toBe(1)
+  })
+})
 
 const makeObservation = (index: number, embedding: readonly number[], at: Date): TaxonomyMomentObservation => ({
   organizationId,

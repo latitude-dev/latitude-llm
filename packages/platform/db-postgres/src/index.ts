@@ -49,6 +49,10 @@ export { EvaluationRepositoryLive } from "./repositories/evaluation-repository.t
 export { ExperimentRepositoryLive } from "./repositories/experiment-repository.ts"
 export { FeatureFlagRepositoryLive } from "./repositories/feature-flag-repository.ts"
 export { FlaggerRepositoryLive } from "./repositories/flagger-repository.ts"
+export {
+  type GardenableCustomBehaviorRef,
+  listGardenableCustomBehaviors,
+} from "./repositories/gardenable-custom-behaviors.ts"
 export { type GardenableProjectRef, listGardenableProjectRefs } from "./repositories/gardenable-projects.ts"
 export { IncidentMonitorReaderLive } from "./repositories/incident-monitor-reader.ts"
 export { InvitationRepositoryLive } from "./repositories/invitation-repository.ts"

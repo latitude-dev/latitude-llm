@@ -2,7 +2,7 @@ import type { FilterSet } from "@domain/shared"
 import { SLUG_MAX_LENGTH } from "@domain/shared"
 import { CUSTOM_BEHAVIOR_NAME_MAX_LENGTH, type CustomBehaviorStatus } from "@domain/taxonomy"
 import { index, jsonb, unique, varchar } from "drizzle-orm/pg-core"
-import { cuid, latitudeSchema, organizationRLSPolicy, timestamps } from "../schemaHelpers.ts"
+import { cuid, latitudeSchema, organizationRLSPolicy, timestamps, tzTimestamp } from "../schemaHelpers.ts"
 
 /** A named, project-scoped exploration scope. Slug is unique per project. */
 export const customBehaviors = latitudeSchema.table(
@@ -15,6 +15,8 @@ export const customBehaviors = latitudeSchema.table(
     slug: varchar("slug", { length: SLUG_MAX_LENGTH }).notNull(),
     filterSet: jsonb("filter_set").$type<FilterSet>().notNull(),
     status: varchar("status", { length: 16 }).$type<CustomBehaviorStatus>().notNull().default("pending"),
+    // Gardening throttle anchor, stamped at each run start; null = never gardened.
+    lastGardenedAt: tzTimestamp("last_gardened_at"),
     ...timestamps(),
   },
   (t) => [

@@ -67,11 +67,11 @@ import {
   TAXONOMY_CLUSTERING_SAMPLE_STRATEGY,
   TAXONOMY_CONTINUATION_THRESHOLD,
   TAXONOMY_GARDENING_MIN_OBSERVATIONS,
+  TAXONOMY_GARDENING_SAMPLE_LOOKBACK_DAYS,
   TAXONOMY_KMEANS_MAX_ITER,
   TAXONOMY_KMEANS_RESTARTS,
   TAXONOMY_KMEANS_TOLERANCE,
   TAXONOMY_NAME_REUSE_THRESHOLD,
-  TAXONOMY_NOISE_LOOKBACK_DAYS,
   TAXONOMY_PENDING_DISPLAY_NAME,
   TAXONOMY_TREE_DEPTH_SCHEDULE,
 } from "../constants.ts"
@@ -138,7 +138,8 @@ export interface PersistHierarchicalTaxonomyPlanInput {
   readonly now?: Date
 }
 
-const lookbackStart = (now: Date): Date => new Date(now.getTime() - TAXONOMY_NOISE_LOOKBACK_DAYS * 24 * 60 * 60_000)
+const lookbackStart = (now: Date): Date =>
+  new Date(now.getTime() - TAXONOMY_GARDENING_SAMPLE_LOOKBACK_DAYS * 24 * 60 * 60_000)
 
 export const seedFromProjectId = (projectId: string): number => {
   let hash = 0
@@ -225,7 +226,7 @@ export const buildPersistedCluster = (input: {
  * are still distinguishable from each other, which is what the online router
  * uses as a per-level descent gate.
  */
-const computeSplitLinkThreshold = (children: readonly ClusteringTreeNode[]): number | null => {
+export const computeSplitLinkThreshold = (children: readonly ClusteringTreeNode[]): number | null => {
   if (children.length < 2) return null
   let minPair = Number.POSITIVE_INFINITY
   for (let i = 0; i < children.length; i++) {
@@ -238,7 +239,9 @@ const computeSplitLinkThreshold = (children: readonly ClusteringTreeNode[]): num
       if (similarity < minPair) minPair = similarity
     }
   }
-  return Number.isFinite(minPair) ? minPair : null
+  // Cosine similarity is [-1, 1], but the stored threshold contract is [0, 1];
+  // near-orthogonal centroids can dip just below 0, so clamp to keep it valid.
+  return Number.isFinite(minPair) ? Math.min(1, Math.max(0, minPair)) : null
 }
 
 interface PersistedLeaf {

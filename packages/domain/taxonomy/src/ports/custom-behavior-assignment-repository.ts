@@ -16,6 +16,18 @@ export interface CustomBehaviorAssignmentClusterCount {
 }
 
 /**
+ * Per-cluster current-vs-baseline counts over `custom_behavior_assignments.start_time`.
+ * Same shape the global `TaxonomyObservationRepository.getClusterTrendCounts`
+ * returns, so both feed `classifyClusterTrend` identically.
+ */
+export interface CustomBehaviorAssignmentClusterTrendCount {
+  readonly clusterId: TaxonomyClusterId
+  readonly currentCount: number
+  readonly baselineCount: number
+  readonly baselineDays: number
+}
+
+/**
  * ClickHouse-backed `custom_behavior_assignments` slice — the shared boundary
  * Phase 2 writes and Phase 3 reads. It never touches global
  * `taxonomy_observations.assigned_cluster_id`.
@@ -34,7 +46,27 @@ export interface CustomBehaviorAssignmentRepositoryShape {
     readonly organizationId: OrganizationId
     readonly projectId: ProjectId
     readonly customBehaviorId: CustomBehaviorId
+    /** Optional window over `start_time`; omit for the whole retained slice. */
+    readonly startTimeFrom?: Date
+    readonly startTimeTo?: Date
   }) => Effect.Effect<readonly CustomBehaviorAssignmentClusterCount[], RepositoryError, ChSqlClient>
+  /**
+   * Current-vs-baseline per-cluster counts windowed over
+   * `custom_behavior_assignments.start_time` — the scoped mirror of the global
+   * `getClusterTrendCounts`. Because scoped gardening accumulates rows across
+   * runs (ReplacingMergeTree, no truncate) and keeps stable cluster ids via the
+   * Hungarian lineage matcher, these deltas carry born/continue/die trend just
+   * like the global tree.
+   */
+  readonly getClusterTrendCounts: (input: {
+    readonly organizationId: OrganizationId
+    readonly projectId: ProjectId
+    readonly customBehaviorId: CustomBehaviorId
+    readonly clusterIds: readonly TaxonomyClusterId[]
+    readonly currentSince: Date
+    readonly baselineSince: Date
+    readonly baselineDays: number
+  }) => Effect.Effect<readonly CustomBehaviorAssignmentClusterTrendCount[], RepositoryError, ChSqlClient>
   /**
    * Full observation rows assigned to one scoped cluster, resolved by joining
    * the behavior's assignment slice back to global `taxonomy_observations` for

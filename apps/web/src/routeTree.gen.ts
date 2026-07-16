@@ -78,6 +78,7 @@ import { Route as AuthenticatedProjectsProjectSlugSettingsAccountRouteImport } f
 import { Route as AuthenticatedProjectsProjectSlugMonitorsSignalsRouteImport } from './routes/_authenticated/projects/$projectSlug/monitors/signals'
 import { Route as AuthenticatedProjectsProjectSlugMonitorsSearchRouteImport } from './routes/_authenticated/projects/$projectSlug/monitors/search'
 import { Route as AuthenticatedProjectsProjectSlugDatasetsDatasetIdRouteImport } from './routes/_authenticated/projects/$projectSlug/datasets/$datasetId'
+import { Route as AuthenticatedProjectsProjectSlugBehavioursNewRouteImport } from './routes/_authenticated/projects/$projectSlug/behaviours/new'
 import { Route as AuthenticatedProjectsProjectSlugUsersUserIdIndexRouteImport } from './routes/_authenticated/projects/$projectSlug/users/$userId/index'
 import { Route as AuthenticatedProjectsProjectSlugToolsToolNameIndexRouteImport } from './routes/_authenticated/projects/$projectSlug/tools/$toolName/index'
 import { Route as AuthenticatedProjectsProjectSlugSignalsSignalIdIndexRouteImport } from './routes/_authenticated/projects/$projectSlug/signals/$signalId/index'
@@ -87,8 +88,10 @@ import { Route as AuthenticatedProjectsProjectSlugMonitorsMonitorSlugIndexRouteI
 import { Route as AuthenticatedProjectsProjectSlugIssuesIssueIdIndexRouteImport } from './routes/_authenticated/projects/$projectSlug/issues/$issueId/index'
 import { Route as AuthenticatedProjectsProjectSlugExperimentsExperimentSlugIndexRouteImport } from './routes/_authenticated/projects/$projectSlug/experiments/$experimentSlug/index'
 import { Route as AuthenticatedProjectsProjectSlugCustomBehavioursBehaviourSlugIndexRouteImport } from './routes/_authenticated/projects/$projectSlug/custom-behaviours/$behaviourSlug/index'
+import { Route as AuthenticatedProjectsProjectSlugBehavioursBehaviourSlugIndexRouteImport } from './routes/_authenticated/projects/$projectSlug/behaviours/$behaviourSlug/index'
 import { Route as AuthenticatedProjectsProjectSlugSettingsIntegrationsIntegrationKindRouteImport } from './routes/_authenticated/projects/$projectSlug/settings/integrations/$integrationKind'
 import { Route as AuthenticatedProjectsProjectSlugSettingsDataDestinationsDestinationIdRouteImport } from './routes/_authenticated/projects/$projectSlug/settings/data-destinations/$destinationId'
+import { Route as AuthenticatedProjectsProjectSlugBehavioursBehaviourSlugEditRouteImport } from './routes/_authenticated/projects/$projectSlug/behaviours/$behaviourSlug/edit'
 
 const LoginRoute = LoginRouteImport.update({
   id: '/login',
@@ -479,6 +482,12 @@ const AuthenticatedProjectsProjectSlugDatasetsDatasetIdRoute =
     path: '/datasets/$datasetId',
     getParentRoute: () => AuthenticatedProjectsProjectSlugRoute,
   } as any)
+const AuthenticatedProjectsProjectSlugBehavioursNewRoute =
+  AuthenticatedProjectsProjectSlugBehavioursNewRouteImport.update({
+    id: '/behaviours/new',
+    path: '/behaviours/new',
+    getParentRoute: () => AuthenticatedProjectsProjectSlugRoute,
+  } as any)
 const AuthenticatedProjectsProjectSlugUsersUserIdIndexRoute =
   AuthenticatedProjectsProjectSlugUsersUserIdIndexRouteImport.update({
     id: '/users/$userId/',
@@ -539,6 +548,14 @@ const AuthenticatedProjectsProjectSlugCustomBehavioursBehaviourSlugIndexRoute =
       getParentRoute: () => AuthenticatedProjectsProjectSlugRoute,
     } as any,
   )
+const AuthenticatedProjectsProjectSlugBehavioursBehaviourSlugIndexRoute =
+  AuthenticatedProjectsProjectSlugBehavioursBehaviourSlugIndexRouteImport.update(
+    {
+      id: '/behaviours/$behaviourSlug/',
+      path: '/behaviours/$behaviourSlug/',
+      getParentRoute: () => AuthenticatedProjectsProjectSlugRoute,
+    } as any,
+  )
 const AuthenticatedProjectsProjectSlugSettingsIntegrationsIntegrationKindRoute =
   AuthenticatedProjectsProjectSlugSettingsIntegrationsIntegrationKindRouteImport.update(
     {
@@ -553,6 +570,14 @@ const AuthenticatedProjectsProjectSlugSettingsDataDestinationsDestinationIdRoute
       id: '/data-destinations/$destinationId',
       path: '/data-destinations/$destinationId',
       getParentRoute: () => AuthenticatedProjectsProjectSlugSettingsRoute,
+    } as any,
+  )
+const AuthenticatedProjectsProjectSlugBehavioursBehaviourSlugEditRoute =
+  AuthenticatedProjectsProjectSlugBehavioursBehaviourSlugEditRouteImport.update(
+    {
+      id: '/behaviours/$behaviourSlug/edit',
+      path: '/behaviours/$behaviourSlug/edit',
+      getParentRoute: () => AuthenticatedProjectsProjectSlugRoute,
     } as any,
   )
 
@@ -603,6 +628,7 @@ export interface FileRoutesByFullPath {
   '/sandbox/$sandboxOrgId/projects/$projectSlug': typeof SandboxSandboxOrgIdProjectsProjectSlugRoute
   '/wrapped/$id/og/png': typeof WrappedIdOgPngRoute
   '/projects/$projectSlug/': typeof AuthenticatedProjectsProjectSlugIndexRoute
+  '/projects/$projectSlug/behaviours/new': typeof AuthenticatedProjectsProjectSlugBehavioursNewRoute
   '/projects/$projectSlug/datasets/$datasetId': typeof AuthenticatedProjectsProjectSlugDatasetsDatasetIdRoute
   '/projects/$projectSlug/monitors/search': typeof AuthenticatedProjectsProjectSlugMonitorsSearchRoute
   '/projects/$projectSlug/monitors/signals': typeof AuthenticatedProjectsProjectSlugMonitorsSignalsRoute
@@ -625,8 +651,10 @@ export interface FileRoutesByFullPath {
   '/projects/$projectSlug/signals/': typeof AuthenticatedProjectsProjectSlugSignalsIndexRoute
   '/projects/$projectSlug/tools/': typeof AuthenticatedProjectsProjectSlugToolsIndexRoute
   '/projects/$projectSlug/users/': typeof AuthenticatedProjectsProjectSlugUsersIndexRoute
+  '/projects/$projectSlug/behaviours/$behaviourSlug/edit': typeof AuthenticatedProjectsProjectSlugBehavioursBehaviourSlugEditRoute
   '/projects/$projectSlug/settings/data-destinations/$destinationId': typeof AuthenticatedProjectsProjectSlugSettingsDataDestinationsDestinationIdRoute
   '/projects/$projectSlug/settings/integrations/$integrationKind': typeof AuthenticatedProjectsProjectSlugSettingsIntegrationsIntegrationKindRoute
+  '/projects/$projectSlug/behaviours/$behaviourSlug/': typeof AuthenticatedProjectsProjectSlugBehavioursBehaviourSlugIndexRoute
   '/projects/$projectSlug/custom-behaviours/$behaviourSlug/': typeof AuthenticatedProjectsProjectSlugCustomBehavioursBehaviourSlugIndexRoute
   '/projects/$projectSlug/experiments/$experimentSlug/': typeof AuthenticatedProjectsProjectSlugExperimentsExperimentSlugIndexRoute
   '/projects/$projectSlug/issues/$issueId/': typeof AuthenticatedProjectsProjectSlugIssuesIssueIdIndexRoute
@@ -680,6 +708,7 @@ export interface FileRoutesByTo {
   '/sandbox/$sandboxOrgId/projects/$projectSlug': typeof SandboxSandboxOrgIdProjectsProjectSlugRoute
   '/wrapped/$id/og/png': typeof WrappedIdOgPngRoute
   '/projects/$projectSlug': typeof AuthenticatedProjectsProjectSlugIndexRoute
+  '/projects/$projectSlug/behaviours/new': typeof AuthenticatedProjectsProjectSlugBehavioursNewRoute
   '/projects/$projectSlug/datasets/$datasetId': typeof AuthenticatedProjectsProjectSlugDatasetsDatasetIdRoute
   '/projects/$projectSlug/monitors/search': typeof AuthenticatedProjectsProjectSlugMonitorsSearchRoute
   '/projects/$projectSlug/monitors/signals': typeof AuthenticatedProjectsProjectSlugMonitorsSignalsRoute
@@ -702,8 +731,10 @@ export interface FileRoutesByTo {
   '/projects/$projectSlug/signals': typeof AuthenticatedProjectsProjectSlugSignalsIndexRoute
   '/projects/$projectSlug/tools': typeof AuthenticatedProjectsProjectSlugToolsIndexRoute
   '/projects/$projectSlug/users': typeof AuthenticatedProjectsProjectSlugUsersIndexRoute
+  '/projects/$projectSlug/behaviours/$behaviourSlug/edit': typeof AuthenticatedProjectsProjectSlugBehavioursBehaviourSlugEditRoute
   '/projects/$projectSlug/settings/data-destinations/$destinationId': typeof AuthenticatedProjectsProjectSlugSettingsDataDestinationsDestinationIdRoute
   '/projects/$projectSlug/settings/integrations/$integrationKind': typeof AuthenticatedProjectsProjectSlugSettingsIntegrationsIntegrationKindRoute
+  '/projects/$projectSlug/behaviours/$behaviourSlug': typeof AuthenticatedProjectsProjectSlugBehavioursBehaviourSlugIndexRoute
   '/projects/$projectSlug/custom-behaviours/$behaviourSlug': typeof AuthenticatedProjectsProjectSlugCustomBehavioursBehaviourSlugIndexRoute
   '/projects/$projectSlug/experiments/$experimentSlug': typeof AuthenticatedProjectsProjectSlugExperimentsExperimentSlugIndexRoute
   '/projects/$projectSlug/issues/$issueId': typeof AuthenticatedProjectsProjectSlugIssuesIssueIdIndexRoute
@@ -763,6 +794,7 @@ export interface FileRoutesById {
   '/sandbox/$sandboxOrgId/projects/$projectSlug': typeof SandboxSandboxOrgIdProjectsProjectSlugRoute
   '/wrapped/$id/og/png': typeof WrappedIdOgPngRoute
   '/_authenticated/projects/$projectSlug/': typeof AuthenticatedProjectsProjectSlugIndexRoute
+  '/_authenticated/projects/$projectSlug/behaviours/new': typeof AuthenticatedProjectsProjectSlugBehavioursNewRoute
   '/_authenticated/projects/$projectSlug/datasets/$datasetId': typeof AuthenticatedProjectsProjectSlugDatasetsDatasetIdRoute
   '/_authenticated/projects/$projectSlug/monitors/search': typeof AuthenticatedProjectsProjectSlugMonitorsSearchRoute
   '/_authenticated/projects/$projectSlug/monitors/signals': typeof AuthenticatedProjectsProjectSlugMonitorsSignalsRoute
@@ -785,8 +817,10 @@ export interface FileRoutesById {
   '/_authenticated/projects/$projectSlug/signals/': typeof AuthenticatedProjectsProjectSlugSignalsIndexRoute
   '/_authenticated/projects/$projectSlug/tools/': typeof AuthenticatedProjectsProjectSlugToolsIndexRoute
   '/_authenticated/projects/$projectSlug/users/': typeof AuthenticatedProjectsProjectSlugUsersIndexRoute
+  '/_authenticated/projects/$projectSlug/behaviours/$behaviourSlug/edit': typeof AuthenticatedProjectsProjectSlugBehavioursBehaviourSlugEditRoute
   '/_authenticated/projects/$projectSlug/settings/data-destinations/$destinationId': typeof AuthenticatedProjectsProjectSlugSettingsDataDestinationsDestinationIdRoute
   '/_authenticated/projects/$projectSlug/settings/integrations/$integrationKind': typeof AuthenticatedProjectsProjectSlugSettingsIntegrationsIntegrationKindRoute
+  '/_authenticated/projects/$projectSlug/behaviours/$behaviourSlug/': typeof AuthenticatedProjectsProjectSlugBehavioursBehaviourSlugIndexRoute
   '/_authenticated/projects/$projectSlug/custom-behaviours/$behaviourSlug/': typeof AuthenticatedProjectsProjectSlugCustomBehavioursBehaviourSlugIndexRoute
   '/_authenticated/projects/$projectSlug/experiments/$experimentSlug/': typeof AuthenticatedProjectsProjectSlugExperimentsExperimentSlugIndexRoute
   '/_authenticated/projects/$projectSlug/issues/$issueId/': typeof AuthenticatedProjectsProjectSlugIssuesIssueIdIndexRoute
@@ -846,6 +880,7 @@ export interface FileRouteTypes {
     | '/sandbox/$sandboxOrgId/projects/$projectSlug'
     | '/wrapped/$id/og/png'
     | '/projects/$projectSlug/'
+    | '/projects/$projectSlug/behaviours/new'
     | '/projects/$projectSlug/datasets/$datasetId'
     | '/projects/$projectSlug/monitors/search'
     | '/projects/$projectSlug/monitors/signals'
@@ -868,8 +903,10 @@ export interface FileRouteTypes {
     | '/projects/$projectSlug/signals/'
     | '/projects/$projectSlug/tools/'
     | '/projects/$projectSlug/users/'
+    | '/projects/$projectSlug/behaviours/$behaviourSlug/edit'
     | '/projects/$projectSlug/settings/data-destinations/$destinationId'
     | '/projects/$projectSlug/settings/integrations/$integrationKind'
+    | '/projects/$projectSlug/behaviours/$behaviourSlug/'
     | '/projects/$projectSlug/custom-behaviours/$behaviourSlug/'
     | '/projects/$projectSlug/experiments/$experimentSlug/'
     | '/projects/$projectSlug/issues/$issueId/'
@@ -923,6 +960,7 @@ export interface FileRouteTypes {
     | '/sandbox/$sandboxOrgId/projects/$projectSlug'
     | '/wrapped/$id/og/png'
     | '/projects/$projectSlug'
+    | '/projects/$projectSlug/behaviours/new'
     | '/projects/$projectSlug/datasets/$datasetId'
     | '/projects/$projectSlug/monitors/search'
     | '/projects/$projectSlug/monitors/signals'
@@ -945,8 +983,10 @@ export interface FileRouteTypes {
     | '/projects/$projectSlug/signals'
     | '/projects/$projectSlug/tools'
     | '/projects/$projectSlug/users'
+    | '/projects/$projectSlug/behaviours/$behaviourSlug/edit'
     | '/projects/$projectSlug/settings/data-destinations/$destinationId'
     | '/projects/$projectSlug/settings/integrations/$integrationKind'
+    | '/projects/$projectSlug/behaviours/$behaviourSlug'
     | '/projects/$projectSlug/custom-behaviours/$behaviourSlug'
     | '/projects/$projectSlug/experiments/$experimentSlug'
     | '/projects/$projectSlug/issues/$issueId'
@@ -1005,6 +1045,7 @@ export interface FileRouteTypes {
     | '/sandbox/$sandboxOrgId/projects/$projectSlug'
     | '/wrapped/$id/og/png'
     | '/_authenticated/projects/$projectSlug/'
+    | '/_authenticated/projects/$projectSlug/behaviours/new'
     | '/_authenticated/projects/$projectSlug/datasets/$datasetId'
     | '/_authenticated/projects/$projectSlug/monitors/search'
     | '/_authenticated/projects/$projectSlug/monitors/signals'
@@ -1027,8 +1068,10 @@ export interface FileRouteTypes {
     | '/_authenticated/projects/$projectSlug/signals/'
     | '/_authenticated/projects/$projectSlug/tools/'
     | '/_authenticated/projects/$projectSlug/users/'
+    | '/_authenticated/projects/$projectSlug/behaviours/$behaviourSlug/edit'
     | '/_authenticated/projects/$projectSlug/settings/data-destinations/$destinationId'
     | '/_authenticated/projects/$projectSlug/settings/integrations/$integrationKind'
+    | '/_authenticated/projects/$projectSlug/behaviours/$behaviourSlug/'
     | '/_authenticated/projects/$projectSlug/custom-behaviours/$behaviourSlug/'
     | '/_authenticated/projects/$projectSlug/experiments/$experimentSlug/'
     | '/_authenticated/projects/$projectSlug/issues/$issueId/'
@@ -1552,6 +1595,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedProjectsProjectSlugDatasetsDatasetIdRouteImport
       parentRoute: typeof AuthenticatedProjectsProjectSlugRoute
     }
+    '/_authenticated/projects/$projectSlug/behaviours/new': {
+      id: '/_authenticated/projects/$projectSlug/behaviours/new'
+      path: '/behaviours/new'
+      fullPath: '/projects/$projectSlug/behaviours/new'
+      preLoaderRoute: typeof AuthenticatedProjectsProjectSlugBehavioursNewRouteImport
+      parentRoute: typeof AuthenticatedProjectsProjectSlugRoute
+    }
     '/_authenticated/projects/$projectSlug/users/$userId/': {
       id: '/_authenticated/projects/$projectSlug/users/$userId/'
       path: '/users/$userId'
@@ -1615,6 +1665,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedProjectsProjectSlugCustomBehavioursBehaviourSlugIndexRouteImport
       parentRoute: typeof AuthenticatedProjectsProjectSlugRoute
     }
+    '/_authenticated/projects/$projectSlug/behaviours/$behaviourSlug/': {
+      id: '/_authenticated/projects/$projectSlug/behaviours/$behaviourSlug/'
+      path: '/behaviours/$behaviourSlug'
+      fullPath: '/projects/$projectSlug/behaviours/$behaviourSlug/'
+      preLoaderRoute: typeof AuthenticatedProjectsProjectSlugBehavioursBehaviourSlugIndexRouteImport
+      parentRoute: typeof AuthenticatedProjectsProjectSlugRoute
+    }
     '/_authenticated/projects/$projectSlug/settings/integrations/$integrationKind': {
       id: '/_authenticated/projects/$projectSlug/settings/integrations/$integrationKind'
       path: '/integrations/$integrationKind'
@@ -1628,6 +1685,13 @@ declare module '@tanstack/react-router' {
       fullPath: '/projects/$projectSlug/settings/data-destinations/$destinationId'
       preLoaderRoute: typeof AuthenticatedProjectsProjectSlugSettingsDataDestinationsDestinationIdRouteImport
       parentRoute: typeof AuthenticatedProjectsProjectSlugSettingsRoute
+    }
+    '/_authenticated/projects/$projectSlug/behaviours/$behaviourSlug/edit': {
+      id: '/_authenticated/projects/$projectSlug/behaviours/$behaviourSlug/edit'
+      path: '/behaviours/$behaviourSlug/edit'
+      fullPath: '/projects/$projectSlug/behaviours/$behaviourSlug/edit'
+      preLoaderRoute: typeof AuthenticatedProjectsProjectSlugBehavioursBehaviourSlugEditRouteImport
+      parentRoute: typeof AuthenticatedProjectsProjectSlugRoute
     }
   }
 }
@@ -1720,6 +1784,7 @@ interface AuthenticatedProjectsProjectSlugRouteChildren {
   AuthenticatedProjectsProjectSlugSettingsRoute: typeof AuthenticatedProjectsProjectSlugSettingsRouteWithChildren
   AuthenticatedProjectsProjectSlugTracesRoute: typeof AuthenticatedProjectsProjectSlugTracesRoute
   AuthenticatedProjectsProjectSlugIndexRoute: typeof AuthenticatedProjectsProjectSlugIndexRoute
+  AuthenticatedProjectsProjectSlugBehavioursNewRoute: typeof AuthenticatedProjectsProjectSlugBehavioursNewRoute
   AuthenticatedProjectsProjectSlugDatasetsDatasetIdRoute: typeof AuthenticatedProjectsProjectSlugDatasetsDatasetIdRoute
   AuthenticatedProjectsProjectSlugMonitorsSearchRoute: typeof AuthenticatedProjectsProjectSlugMonitorsSearchRoute
   AuthenticatedProjectsProjectSlugMonitorsSignalsRoute: typeof AuthenticatedProjectsProjectSlugMonitorsSignalsRoute
@@ -1732,6 +1797,8 @@ interface AuthenticatedProjectsProjectSlugRouteChildren {
   AuthenticatedProjectsProjectSlugSignalsIndexRoute: typeof AuthenticatedProjectsProjectSlugSignalsIndexRoute
   AuthenticatedProjectsProjectSlugToolsIndexRoute: typeof AuthenticatedProjectsProjectSlugToolsIndexRoute
   AuthenticatedProjectsProjectSlugUsersIndexRoute: typeof AuthenticatedProjectsProjectSlugUsersIndexRoute
+  AuthenticatedProjectsProjectSlugBehavioursBehaviourSlugEditRoute: typeof AuthenticatedProjectsProjectSlugBehavioursBehaviourSlugEditRoute
+  AuthenticatedProjectsProjectSlugBehavioursBehaviourSlugIndexRoute: typeof AuthenticatedProjectsProjectSlugBehavioursBehaviourSlugIndexRoute
   AuthenticatedProjectsProjectSlugCustomBehavioursBehaviourSlugIndexRoute: typeof AuthenticatedProjectsProjectSlugCustomBehavioursBehaviourSlugIndexRoute
   AuthenticatedProjectsProjectSlugExperimentsExperimentSlugIndexRoute: typeof AuthenticatedProjectsProjectSlugExperimentsExperimentSlugIndexRoute
   AuthenticatedProjectsProjectSlugIssuesIssueIdIndexRoute: typeof AuthenticatedProjectsProjectSlugIssuesIssueIdIndexRoute
@@ -1751,6 +1818,8 @@ const AuthenticatedProjectsProjectSlugRouteChildren: AuthenticatedProjectsProjec
       AuthenticatedProjectsProjectSlugTracesRoute,
     AuthenticatedProjectsProjectSlugIndexRoute:
       AuthenticatedProjectsProjectSlugIndexRoute,
+    AuthenticatedProjectsProjectSlugBehavioursNewRoute:
+      AuthenticatedProjectsProjectSlugBehavioursNewRoute,
     AuthenticatedProjectsProjectSlugDatasetsDatasetIdRoute:
       AuthenticatedProjectsProjectSlugDatasetsDatasetIdRoute,
     AuthenticatedProjectsProjectSlugMonitorsSearchRoute:
@@ -1775,6 +1844,10 @@ const AuthenticatedProjectsProjectSlugRouteChildren: AuthenticatedProjectsProjec
       AuthenticatedProjectsProjectSlugToolsIndexRoute,
     AuthenticatedProjectsProjectSlugUsersIndexRoute:
       AuthenticatedProjectsProjectSlugUsersIndexRoute,
+    AuthenticatedProjectsProjectSlugBehavioursBehaviourSlugEditRoute:
+      AuthenticatedProjectsProjectSlugBehavioursBehaviourSlugEditRoute,
+    AuthenticatedProjectsProjectSlugBehavioursBehaviourSlugIndexRoute:
+      AuthenticatedProjectsProjectSlugBehavioursBehaviourSlugIndexRoute,
     AuthenticatedProjectsProjectSlugCustomBehavioursBehaviourSlugIndexRoute:
       AuthenticatedProjectsProjectSlugCustomBehavioursBehaviourSlugIndexRoute,
     AuthenticatedProjectsProjectSlugExperimentsExperimentSlugIndexRoute:
