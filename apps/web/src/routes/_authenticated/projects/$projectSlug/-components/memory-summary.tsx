@@ -72,30 +72,24 @@ function MemoryBreakdown({ summary }: { readonly summary: SessionMemorySummary }
 
   return (
     <div className="flex min-w-[200px] flex-col gap-2 text-left">
-      {groups.map((group) => {
-        // Reads that couldn't be tied to a record id (search hits with no id and
-        // no body match) bucket at the store level — shown on the store header.
-        const storeLevel = group.records.find((record) => record.recordId === "")
-        const named = group.records.filter((record) => record.recordId !== "")
-        return (
-          <div key={`${group.scope} ${group.storeId}`} className="flex flex-col gap-0.5">
-            <div className="flex flex-row items-center justify-between gap-4">
-              <Text.H6 color="foregroundMuted" ellipsis>
-                {multiScope ? `${scopeLabel(group.scope)} · ${group.storeId || "—"}` : group.storeId || "—"}
+      {groups.map((group) => (
+        <div key={`${group.scope} ${group.storeId}`} className="flex flex-col gap-0.5">
+          <Text.H6 color="foregroundMuted" ellipsis>
+            {multiScope ? `${scopeLabel(group.scope)} · ${group.storeId || "—"}` : group.storeId || "—"}
+          </Text.H6>
+          {group.records.map((record) => (
+            <div
+              key={`${record.storeId} ${record.recordId}`}
+              className="flex flex-row items-center justify-between gap-4 pl-2"
+            >
+              <Text.H6 color="foreground" ellipsis>
+                {record.recordId || "—"}
               </Text.H6>
-              {storeLevel ? <RecordMetrics record={storeLevel} /> : null}
+              <RecordMetrics record={record} />
             </div>
-            {named.map((record) => (
-              <div key={record.recordId} className="flex flex-row items-center justify-between gap-4 pl-2">
-                <Text.H6 color="foreground" ellipsis>
-                  {record.recordId}
-                </Text.H6>
-                <RecordMetrics record={record} />
-              </div>
-            ))}
-          </div>
-        )
-      })}
+          ))}
+        </div>
+      ))}
       {hidden > 0 ? (
         <Text.H6 color="foregroundMuted" italic>
           {`+${hidden} more record${hidden === 1 ? "" : "s"}`}
