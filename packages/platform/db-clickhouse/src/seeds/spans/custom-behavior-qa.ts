@@ -23,6 +23,14 @@ const DAY_MS = 24 * 60 * 60 * 1000
 // so the seed anchors observation recency to it rather than a custom-specific
 // constant.
 const GARDENING_SAMPLE_WINDOW_DAYS = TAXONOMY_GARDENING_SAMPLE_LOOKBACK_DAYS
+// Anchor the cohort's observations to the most recent few days of the window
+// rather than spreading them across all of it. Spreading across the full window
+// means a day's worth ages out of the trailing edge almost immediately, dropping
+// a cohort below the 2×minClusterAbs split floor within a day; concentrating them
+// recently lets a seeded cohort stay above the floor (multi-cluster) for several
+// days before it needs re-seeding, while still spanning enough days for
+// day-stratified sampling.
+const QA_OBSERVATION_SPREAD_DAYS = Math.min(3, GARDENING_SAMPLE_WINDOW_DAYS)
 /** Small isotropic jitter around each centroid — tight enough to stay one cluster per sub-topic. */
 const JITTER_SCALE = 0.15
 /** Matches the retention the real conversation-intelligence pipeline stamps. */
@@ -169,8 +177,9 @@ const buildCohortRows = (cohort: CustomBehaviorQaCohort, scope: SeedScope, nowMs
 
     for (let member = 0; member < subTopic.sessionCount; member++) {
       const memberKey = `${cohort.idKey}:${subTopic.key}:${member}`
-      // Spread sessions across the sample window so day-stratified sampling sees several days.
-      const daysAgo = sessionIndex % GARDENING_SAMPLE_WINDOW_DAYS
+      // Spread across the recent days of the window (see QA_OBSERVATION_SPREAD_DAYS)
+      // so the cohort decays slowly instead of dropping below the split floor after a day.
+      const daysAgo = sessionIndex % QA_OBSERVATION_SPREAD_DAYS
       const start = new Date(nowMs - daysAgo * DAY_MS - (sessionIndex % 6) * 60 * 60 * 1000)
       const traceId = scope.traceHex(cohort.idKey, sessionIndex)
       const spanId = scope.spanHex(cohort.idKey, sessionIndex)
