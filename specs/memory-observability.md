@@ -407,7 +407,7 @@ Blame (originally P2-3) moved to **Phase 3**: its only surface is the Memory-pag
 
 - [x] **P2-1**: `compute-memory-diff` (hash-prune + jsdiff + token deltas + record buckets).
 - [x] **P2-2**: `compute-session-memory-summary` (read tokens + per-record endpoint write diff, churn collapse, concurrency rule).
-- [ ] **P2-4**: Summary chip in the session drawer + trace header; multi-scope expansion. Click-through to Feature 4 deferred until that route exists (see Phase 4).
+- [x] **P2-4**: Summary chip in the session drawer + trace header; multi-scope expansion. Click-through to Feature 4 deferred until that route exists (see Phase 4).
 
 **Exit gate:** on seeded data, `read X · write +N −N` matches hand-computed values; a record changed twice in one session counts once (net).
 
@@ -420,6 +420,11 @@ Blame (originally P2-3) moved to **Phase 3**: its only surface is the Memory-pag
 - **No summary cache in v1** (the read is cheap; Redis + worker invalidation is a later lever).
 - **Whole-store wipe in a session** counts the store's records live at the wipe — read via raw `readManifestAt`, not the D9-filtered reconstruction — as removed, excluding records the session also touched.
 - **Tested** against the in-memory fake (`compute-memory-diff`, `compute-session-memory-summary`) and chdb (`readBlobs` / `readSessionMemoryEvents` / `readRecordVersions`).
+
+**Phase 2 UI note (P2-4):**
+
+- New `apps/web` `memories` domain (`memories.functions.ts` `getSessionMemorySummary` server fn over `MemoryRepositoryLive`, no cache; `memories.collection.ts` `useMemorySummary` hook). `@domain/memories` added as an `apps/web` dependency.
+- `MemorySummaryChip` (`-components/memory-summary-chip.tsx`) renders `read N · write +A −R` and hover-expands to per-scope rows; placed in `session-slot.tsx` and `TraceDetailBody` (the trace slot reuses the latter). It renders nothing until the summary loads or when the session touched no memory. The scope-row click-through link is wired in Phase 4 (P4-2).
 
 ### Phase 3 — The Memory page (Feature 3)
 
