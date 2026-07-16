@@ -265,7 +265,6 @@ describe("live monitoring integration", () => {
     createSessionEndWorker({
       consumer: harness.consumer,
       publisher: harness.publisher,
-      clickhouseClient: ch.client,
       workflowStarter: createFakeWorkflowStarter(),
     })
     createSignalsMatchWorker({
@@ -320,9 +319,23 @@ describe("live monitoring integration", () => {
 
     await harness.flushDelayed("trace-end")
 
-    // trace-end hands session-level work to session-end, debounced per session and carrying the
-    // session's latest trace. signals:match is not published until session-end fires.
-    expect(harness.published.find((message) => message.queue === "signals" && message.task === "match")).toBeUndefined()
+    // trace-end publishes per-trace signals:match; session-end only debounces conversation analysis.
+    const signalsMatch = harness.published.find((message) => message.queue === "signals" && message.task === "match")
+    if (signalsMatch === undefined) throw new Error("trace-end did not publish signals:match")
+    expect(signalsMatch).toEqual({
+      queue: "signals",
+      task: "match",
+      payload: {
+        organizationId: ORGANIZATION_ID,
+        projectId: PROJECT_ID,
+        traceId: TRACE_ID,
+        isSandbox: false,
+        reason: "ingest",
+      },
+      options: {
+        dedupeKey: `org:${ORGANIZATION_ID}:signals-match:${PROJECT_ID}:${TRACE_ID}`,
+      },
+    })
     expect(harness.getDelayed("session-end")).toEqual([
       {
         queue: "session-end",
@@ -341,26 +354,6 @@ describe("live monitoring integration", () => {
         },
       },
     ])
-
-    await harness.flushDelayed("session-end")
-
-    // session-end publishes signals:match immediately (no debounce) with reason "ingest".
-    const signalsMatch = harness.published.find((message) => message.queue === "signals" && message.task === "match")
-    if (signalsMatch === undefined) throw new Error("session-end did not publish signals:match")
-    expect(signalsMatch).toEqual({
-      queue: "signals",
-      task: "match",
-      payload: {
-        organizationId: ORGANIZATION_ID,
-        projectId: PROJECT_ID,
-        traceId: TRACE_ID,
-        isSandbox: false,
-        reason: "ingest",
-      },
-      options: {
-        dedupeKey: `org:${ORGANIZATION_ID}:signals-match:${PROJECT_ID}:${TRACE_ID}`,
-      },
-    })
 
     await harness.consumer.dispatchTask("signals", "match", signalsMatch.payload)
 
@@ -406,7 +399,6 @@ describe("live monitoring integration", () => {
     createSessionEndWorker({
       consumer: harness.consumer,
       publisher: harness.publisher,
-      clickhouseClient: ch.client,
       workflowStarter: createFakeWorkflowStarter(),
     })
     createSignalsMatchWorker({
@@ -452,16 +444,13 @@ describe("live monitoring integration", () => {
     // The two collapsed trace-end runs debounce to a single session-end job (same session dedupeKey).
     expect(harness.getDelayed("session-end")).toHaveLength(1)
 
-    await harness.flushDelayed("session-end")
-
-    // The single session-end run publishes exactly one signals:match.
     const signalsMatches = harness.published.filter(
       (message) => message.queue === "signals" && message.task === "match",
     )
     expect(signalsMatches).toHaveLength(1)
 
     const signalsMatch = signalsMatches[0]
-    if (signalsMatch === undefined) throw new Error("session-end did not publish signals:match")
+    if (signalsMatch === undefined) throw new Error("trace-end did not publish signals:match")
     await harness.consumer.dispatchTask("signals", "match", signalsMatch.payload)
 
     const liveEvalExecutePublishes = harness.published.filter(

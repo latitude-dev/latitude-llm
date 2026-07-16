@@ -78,8 +78,8 @@ export const runTraceEndJob =
 
       const traceDetail = loaded.traceDetail
 
-      // trace-end owns per-trace fan-out: deterministic flaggers, trace-search, and saved-search
-      // monitors. Session-level work (signals:match, session analysis) is delegated to session-end.
+      // trace-end owns per-trace fan-out: deterministic flaggers, memory projection, trace-search,
+      // signals:match, and saved-search monitors. Session analysis is delegated to session-end.
 
       // Hand the deterministic-flagger fan-out to its own worker. Per-strategy
       // isolation (Effect.catch) lives there, so a broken detector can't
@@ -112,27 +112,21 @@ export const runTraceEndJob =
 
       // Materialize the settled trace's memory-operation spans into the memory
       // ledger. Its own worker + failure domain, like deterministic-flaggers.
-      yield* publisher
-        .publish(
-          "memory-projection",
-          "run",
-          {
-            organizationId: payload.organizationId,
-            projectId: payload.projectId,
-            traceId: payload.traceId,
-          },
-          {
-            dedupeKey: `org:${payload.organizationId}:memory-projection:${payload.projectId}:${payload.traceId}`,
-          },
-        )
-        .pipe(
-          Effect.catch((error) =>
-            Effect.logError("Failed to enqueue memory-projection", {
-              ...buildRunLogContext(payload),
-              error,
-            }),
-          ),
-        )
+      //
+      // Not caught: a dropped enqueue would silently skip ledger projection for the trace.
+      // Let it fail the trace-end job so its retry re-enqueues.
+      yield* publisher.publish(
+        "memory-projection",
+        "run",
+        {
+          organizationId: payload.organizationId,
+          projectId: payload.projectId,
+          traceId: payload.traceId,
+        },
+        {
+          dedupeKey: `org:${payload.organizationId}:memory-projection:${payload.projectId}:${payload.traceId}`,
+        },
+      )
 
       // Publish trace-search refresh task after successful trace-end completion
       yield* publisher.publish("trace-search", "refreshTrace", {
@@ -144,17 +138,34 @@ export const runTraceEndJob =
         isSandbox: payload.isSandbox ?? false,
       })
 
+      // Per-trace evaluation fan-out (`turn = every` with no debounce uses a per-trace dedupe key).
+      // Session-end only starts conversation analysis once the session settles.
+      yield* publisher.publish(
+        "signals",
+        "match",
+        {
+          organizationId: payload.organizationId,
+          projectId: payload.projectId,
+          traceId: payload.traceId,
+          isSandbox: payload.isSandbox ?? false,
+          reason: "ingest",
+        },
+        {
+          dedupeKey: `org:${payload.organizationId}:signals-match:${payload.projectId}:${payload.traceId}`,
+        },
+      )
+
       const canonicalSessionId =
         traceDetail.sessionId && traceDetail.sessionId.length > 0 ? traceDetail.sessionId : traceDetail.traceId
 
-      // "Trace ends → session settles": hand session-level work (signals:match, session analysis) to
+      // "Trace ends → session settles": hand session analysis to
       // the session-end worker, debounced per session so repeated trace-ends collapse to one firing
       // once the session goes quiet. The debounce replaces the pending payload, so the surviving job
       // carries the session's latest trace. Never fires for sandbox traces (sandbox returns early).
       //
-      // Not caught: session-end is the single entry point for both signals:match and session analysis,
-      // so a dropped enqueue would silently lose all session-level work. Let it fail the trace-end job
-      // so its retry re-enqueues; the job's other publishes are idempotent under retry via dedupe keys.
+      // Not caught: session-end is the entry point for conversation analysis, so a dropped
+      // enqueue would silently lose that work. Let it fail the trace-end job so its retry
+      // re-enqueues; the job's other publishes are idempotent under retry via dedupe keys.
       yield* publisher.publish(
         "session-end",
         "run",

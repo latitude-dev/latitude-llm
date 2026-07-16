@@ -6,7 +6,7 @@ import { getEncoding, type Tiktoken } from "js-tiktoken"
 import type { MemoryBlob } from "../entities/memory-blob.ts"
 import type { MemoryCurrentEntry } from "../entities/memory-current.ts"
 import type { MemoryChangeKind, MemoryEvent } from "../entities/memory-event.ts"
-import { memoryRecordBody, parseMemoryRecords } from "../entities/memory-record.ts"
+import { type MemoryRecord, memoryRecordBody, parseMemoryRecords } from "../entities/memory-record.ts"
 import { MemoryRepository } from "../ports/memory-repository.ts"
 
 export interface MaterializeTraceMemoryInput {
@@ -31,6 +31,12 @@ let encoder: Tiktoken | null = null
 const tokenCount = (body: string): number => {
   if (encoder === null) encoder = getEncoding("o200k_base")
   return encoder.encode(body).length
+}
+
+const resolveRecordId = (record: MemoryRecord, span: MemoryOperationSpan, index: number, recordCount: number): string => {
+  if (record.id) return record.id
+  if (recordCount === 1 && span.recordId) return span.recordId
+  return `${span.spanId}:${index}`
 }
 
 const resolveScope = (span: MemoryOperationSpan): string =>
@@ -260,8 +266,8 @@ export const materializeTraceMemoryUseCase = Effect.fn("memories.materializeTrac
         // create_memory / update_memory / upsert_memory
         const records = parseMemoryRecords(span.recordsRaw)
         if (records && records.length > 0) {
-          for (const record of records) {
-            const recordId = record.id ?? span.recordId
+          for (const [index, record] of records.entries()) {
+            const recordId = resolveRecordId(record, span, index, records.length)
             applyMutation(span, scope, recordId, memoryRecordBody(record), mutatingKind(span, scope, recordId))
           }
         } else {

@@ -201,9 +201,19 @@ describe("runTraceEndJob", () => {
       traceId: TRACE_ID,
     })
 
-    // Session-level work (signals:match, session analysis) is handed to session-end, debounced per
-    // session and carrying the session's latest trace. trace-end no longer publishes signals:match.
-    expect(published.find((p) => p.queue === "signals")).toBeUndefined()
+    // Per-trace signals:match runs from trace-end; session-end only starts session analysis.
+    const signalsMatchPublish = published.find((p) => p.queue === "signals")
+    expect(signalsMatchPublish?.task).toBe("match")
+    expect(signalsMatchPublish?.payload).toMatchObject({
+      organizationId: ORGANIZATION_ID,
+      projectId: PROJECT_ID,
+      traceId: TRACE_ID,
+      reason: "ingest",
+    })
+    expect(signalsMatchPublish?.options).toMatchObject({
+      dedupeKey: `org:${ORGANIZATION_ID}:signals-match:${PROJECT_ID}:${TRACE_ID}`,
+    })
+
     const sessionEndPublish = published.find((p) => p.queue === "session-end")
     expect(sessionEndPublish?.task).toBe("run")
     expect(sessionEndPublish?.payload).toMatchObject({
