@@ -30,7 +30,6 @@ import { AddTraceToDatasetAction } from "./add-trace-to-dataset-action.tsx"
 import { isGlobalAnnotation } from "./annotations/hooks/use-annotation-navigation.ts"
 import { useConversationAnnotationFocus } from "./annotations/hooks/use-conversation-annotation-focus.ts"
 import { useTraceTimeline } from "./conversation-timeline/use-trace-timeline.ts"
-import { MemorySummaryChip } from "./memory-summary-chip.tsx"
 import { TraceScoresList } from "./scores/trace-scores-list.tsx"
 import { ConversationTab } from "./trace-detail-drawer/tabs/conversation-tab.tsx"
 import { useSpanFilters } from "./trace-detail-drawer/tabs/spans-tab/use-span-filters.ts"
@@ -410,9 +409,6 @@ export function TraceDetailBody({
                   className="cursor-pointer transition-opacity hover:opacity-80"
                 />
               </button>
-            ) : null}
-            {traceRecord?.sessionId ? (
-              <MemorySummaryChip projectId={projectId} sessionId={traceRecord.sessionId} traceId={traceId} />
             ) : null}
             {!isSandbox ? (
               <div className="ml-auto shrink-0">

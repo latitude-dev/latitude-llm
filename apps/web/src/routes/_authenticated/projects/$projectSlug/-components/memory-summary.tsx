@@ -1,7 +1,6 @@
 import type { ScopeMemorySummary } from "@domain/memories"
 import { Text, Tooltip } from "@repo/ui"
 import { formatCount } from "@repo/utils"
-import { DatabaseIcon } from "lucide-react"
 import { useMemorySummary } from "../../../../../domains/memories/memories.collection.ts"
 
 const scopeLabel = (scope: string) => (scope === "" ? "unscoped" : scope)
@@ -17,11 +16,12 @@ const ScopeRow = ({ scope }: { readonly scope: ScopeMemorySummary }) => (
 )
 
 /**
- * Compact `read N · write +A −R` memory chip for the session and trace drawers.
- * Renders nothing until the summary loads or when the session touched no memory;
- * hovering expands to a per-scope breakdown. Pass `traceId` for the trace view.
+ * `Memory` metric row for the trace / session detail body, sitting under Cost:
+ * `read N · write +A −R`, hover-expanding to a per-scope breakdown. Renders
+ * nothing until the summary loads or when the session touched no memory. Pass
+ * `traceId` for the trace view (restricts the write diff to that trace).
  */
-export function MemorySummaryChip({
+export function MemorySummary({
   projectId,
   sessionId,
   traceId,
@@ -43,22 +43,28 @@ export function MemorySummaryChip({
   if (hasWrite) parts.push(`write +${formatCount(total.tokensAdded)} −${formatCount(total.tokensRemoved)}`)
 
   return (
-    <Tooltip
-      asChild
-      trigger={
-        <span className="inline-flex shrink-0 items-center gap-1.5 rounded-full border px-2 py-0.5">
-          <DatabaseIcon className="h-3.5 w-3.5 text-muted-foreground" />
-          <Text.H6 color="foregroundMuted" noWrap>
-            {parts.join(" · ")}
-          </Text.H6>
-        </span>
-      }
-    >
-      <div className="flex flex-col gap-1.5 text-left">
-        {scopes.map((scope) => (
-          <ScopeRow key={scope.scope} scope={scope} />
-        ))}
+    <div className="flex min-h-8 flex-row items-center gap-3">
+      <div className="flex min-w-12 self-center">
+        <Text.H6 color="foregroundMuted" noWrap>
+          Memory
+        </Text.H6>
       </div>
-    </Tooltip>
+      <Tooltip
+        asChild
+        trigger={
+          <div className="flex items-center self-center">
+            <Text.H5 color="foreground" noWrap>
+              {parts.join(" · ")}
+            </Text.H5>
+          </div>
+        }
+      >
+        <div className="flex flex-col gap-1.5 text-left">
+          {scopes.map((scope) => (
+            <ScopeRow key={scope.scope} scope={scope} />
+          ))}
+        </div>
+      </Tooltip>
+    </div>
   )
 }

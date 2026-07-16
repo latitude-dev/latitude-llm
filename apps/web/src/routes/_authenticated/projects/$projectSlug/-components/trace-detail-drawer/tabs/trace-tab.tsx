@@ -15,6 +15,7 @@ import { ArrowDownRightIcon, ArrowUpRightIcon, BrainIcon, FingerprintIcon, TextI
 import { useMemo } from "react"
 import type { SpanRecord } from "../../../../../../../domains/spans/spans.functions.ts"
 import type { TraceDetailRecord, TraceRecord } from "../../../../../../../domains/traces/traces.functions.ts"
+import { MemorySummary } from "../../memory-summary.tsx"
 import { AgentsBreakdown } from "../../session-detail-drawer/agents-breakdown/agents-breakdown.tsx"
 import { useAgentGraph } from "../../session-detail-drawer/agents-breakdown/use-agent-graph.ts"
 import { aggregateToolPills, ToolPillList } from "../../tool-pills.tsx"
@@ -177,6 +178,7 @@ export function TraceTab({
               isLoading={isSpansLoading}
             />
             <UsageSummary data={traceRecord} costBadges={costBadgesNode} />
+            <MemorySummary projectId={projectId} sessionId={traceRecord.sessionId} traceId={traceId} />
           </div>
         )
       )}
