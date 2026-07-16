@@ -2,6 +2,32 @@
 
 ## Unreleased
 
+## v0.3.52 - 2026-07-16
+
+### Custom Behaviors
+
+- Unified global and custom-behavior taxonomy gardening into one workflow: scoped gardening with global-parity trends, auto-gardening on create, and custom behaviors merged into the Behaviours view (refs: #4037, #4052).
+
+### Traces
+
+- Validated trace filter fields at the API boundary and added an `endTime` filter (ref: #4021).
+
+### Signals
+
+- Skipped markdown links when validating flagger output schemas (ref: #4038).
+
+### Claude Code telemetry
+
+- Installed the Stop hook with `@latest` so it self-updates (ref: #4049).
+
+### Reliability
+
+- Raised the production web service minimum capacity (ref: #4045).
+
+### Documentation
+
+- Fixed the Detection Methods documentation page.
+
 ## v0.3.51 - 2026-07-15
 
 ### Experiments
