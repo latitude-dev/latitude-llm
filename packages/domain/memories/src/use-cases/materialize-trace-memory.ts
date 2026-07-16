@@ -35,10 +35,11 @@ const resolveScope = (span: MemoryOperationSpan): string =>
 const isWholeStoreWipe = (span: MemoryOperationSpan): boolean =>
   span.operation === "delete_memory_store" || (span.operation === "delete_memory" && span.recordId === "")
 
-// Scopes whose pre-trace live-record set we need: upsert (add-vs-update) and
-// whole-store wipes (tombstoning the store's records).
+// Scopes whose pre-trace snapshot we need: upsert (add-vs-update), whole-store
+// wipes (tombstoning the store's records), and searches (attributing id-less
+// read hits to a record by matching content hash).
 const needsPresentSeed = (span: MemoryOperationSpan): boolean =>
-  span.operation === "upsert_memory" || isWholeStoreWipe(span)
+  span.operation === "upsert_memory" || span.operation === "search_memory" || isWholeStoreWipe(span)
 
 /**
  * Materialize one settled trace's memory-operation spans into the ledger:
@@ -70,6 +71,11 @@ export const materializeTraceMemoryUseCase = Effect.fn("memories.materializeTrac
   // scopes with an upsert or a whole-store wipe (the snapshot already excludes
   // records tombstoned by earlier wipes), then kept in step as spans apply.
   const present = new Map<string, Map<string, Set<string>>>()
+  // content_hash → record id per (scope, store), so an id-less search hit can be
+  // attributed to the record whose current body it matches (seeded pre-trace,
+  // then kept in step as writes apply).
+  const recordByHash = new Map<string, string>()
+  const hashKey = (scope: string, storeId: string, contentHash: string) => JSON.stringify([scope, storeId, contentHash])
   for (const scope of new Set(spans.filter(needsPresentSeed).map(resolveScope))) {
     const snapshot = yield* memoryRepository.readCurrentSnapshot({ organizationId, projectId, scope })
     const byStore = new Map<string, Set<string>>()
@@ -77,6 +83,8 @@ export const materializeTraceMemoryUseCase = Effect.fn("memories.materializeTrac
       const records = byStore.get(version.storeId) ?? new Set<string>()
       records.add(version.recordId)
       byStore.set(version.storeId, records)
+      if (version.contentHash !== "")
+        recordByHash.set(hashKey(scope, version.storeId, version.contentHash), version.recordId)
     }
     present.set(scope, byStore)
   }
@@ -139,6 +147,7 @@ export const materializeTraceMemoryUseCase = Effect.fn("memories.materializeTrac
     if (body !== null) {
       contentHash = sha256Hex(body)
       tokens = countTokens(body)
+      recordByHash.set(hashKey(scope, span.storeId, contentHash), recordId)
       if (!blobs.has(contentHash)) {
         blobs.set(contentHash, {
           organizationId,
@@ -224,16 +233,16 @@ export const materializeTraceMemoryUseCase = Effect.fn("memories.materializeTrac
 
     switch (span.operation) {
       case "search_memory": {
-        // One read event per returned record so reads attribute per record;
-        // falls back to a single event when the records payload is absent.
+        // One read event per returned record. Search hits rarely carry a record
+        // id, so fall back to matching the hit's body hash to a known record
+        // before giving up on the (usually empty) span record id.
         const records = parseMemoryRecords(span.recordsRaw)
         if (records && records.length > 0) {
           for (const record of records) {
-            pushSpanEvent(span, scope, "read", {
-              recordId: record.id ?? span.recordId,
-              tokenCount: countTokens(memoryRecordBody(record)),
-              queryText: span.queryText,
-            })
+            const body = memoryRecordBody(record)
+            const recordId =
+              record.id ?? recordByHash.get(hashKey(scope, span.storeId, sha256Hex(body))) ?? span.recordId
+            pushSpanEvent(span, scope, "read", { recordId, tokenCount: countTokens(body), queryText: span.queryText })
           }
         } else {
           pushSpanEvent(span, scope, "read", { recordId: span.recordId, tokenCount: 0, queryText: span.queryText })

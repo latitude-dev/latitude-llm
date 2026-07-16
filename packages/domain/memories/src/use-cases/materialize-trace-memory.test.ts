@@ -113,6 +113,31 @@ describe("materializeTraceMemory", () => {
     expect(memory.events[0]?.tokenCount).toBeGreaterThan(0)
   })
 
+  it("attributes an id-less search hit to the record whose body it matches", async () => {
+    const memory = createFakeMemoryRepository()
+    await materialize(
+      [
+        makeSpan({
+          spanId: spanId("1"),
+          operation: "create_memory",
+          recordsRaw: records({ id: "rec1", content: "the answer is 42" }),
+          endTime: at(0),
+        }),
+        makeSpan({
+          spanId: spanId("2"),
+          operation: "search_memory",
+          queryText: "answer",
+          recordsRaw: JSON.stringify([{ content: "the answer is 42" }]),
+          endTime: at(1),
+        }),
+      ],
+      memory,
+    )
+
+    const read = memory.events.find((event) => event.changeKind === "read")
+    expect(read?.recordId).toBe("rec1")
+  })
+
   it("resolves upsert to update for existing records and add for new ones", async () => {
     const memory = createFakeMemoryRepository()
     await materialize(
