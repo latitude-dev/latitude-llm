@@ -44,13 +44,17 @@ const layerFor = (memory: Fake) =>
     Layer.succeed(ChSqlClient, createFakeChSqlClient({ organizationId })),
   )
 
-const materialize = (spans: readonly MemoryOperationSpan[], memory: Fake) => {
+const materialize = (
+  spans: readonly MemoryOperationSpan[],
+  memory: Fake,
+  sessionId: SessionId = SessionId("sess1"),
+) => {
   const spanRepo = createFakeSpanRepository({
     listMemoryOperationSpansByTraceId: () => Effect.succeed(spans),
   }).repository
   const layer = Layer.merge(layerFor(memory), Layer.succeed(SpanRepository, spanRepo))
   return Effect.runPromise(
-    materializeTraceMemoryUseCase({ organizationId, projectId, traceId }).pipe(Effect.provide(layer)),
+    materializeTraceMemoryUseCase({ organizationId, projectId, traceId, sessionId }).pipe(Effect.provide(layer)),
   )
 }
 
@@ -104,11 +108,11 @@ describe("computeSessionMemorySummary", () => {
           spanId: spanId("1"),
           operation: "create_memory",
           recordsRaw: records({ id: "rec1", content: "hello" }),
-          sessionId: SessionId("sessOld"),
           endTime: at(0),
         }),
       ],
       memory,
+      SessionId("sessOld"),
     )
     await materialize(
       [
@@ -116,11 +120,11 @@ describe("computeSessionMemorySummary", () => {
           spanId: spanId("2"),
           operation: "update_memory",
           recordsRaw: records({ id: "rec1", content: "hello world" }),
-          sessionId: SessionId("sessNew"),
           endTime: at(5),
         }),
       ],
       memory,
+      SessionId("sessNew"),
     )
 
     const summary = await summarize(memory, { sessionId: SessionId("sessNew") })
@@ -179,17 +183,16 @@ describe("computeSessionMemorySummary", () => {
         makeSpan({
           spanId: spanId("1"),
           recordsRaw: records({ id: "rec1", content: "a" }),
-          sessionId: SessionId("sessOld"),
           endTime: at(0),
         }),
         makeSpan({
           spanId: spanId("2"),
           recordsRaw: records({ id: "rec2", content: "b" }),
-          sessionId: SessionId("sessOld"),
           endTime: at(0),
         }),
       ],
       memory,
+      SessionId("sessOld"),
     )
     await materialize(
       [
@@ -197,11 +200,11 @@ describe("computeSessionMemorySummary", () => {
           spanId: spanId("9"),
           operation: "delete_memory",
           recordId: "",
-          sessionId: SessionId("sessNew"),
           endTime: at(5),
         }),
       ],
       memory,
+      SessionId("sessNew"),
     )
 
     const summary = await summarize(memory, { sessionId: SessionId("sessNew") })

@@ -190,7 +190,7 @@ One row per memory-operation span (mutations **and** reads). `MergeTree`.
 | `query_text` | String CODEC(ZSTD(3)) | for `search_memory` |
 | `span_id` | FixedString(16) | authoring span (blame target) |
 | `trace_id` | FixedString(32) | |
-| `session_id` | String | `gen_ai.conversation.id` (join key for session summary) |
+| `session_id` | String | the trace's **canonical** session id, stamped on every event at materialization (join key for session summary) — see note below |
 | `user_id` | String | resolved user identity |
 | `start_time`, `end_time` | DateTime64(6) | **ordering is by `end_time`** ([D2](#decisions)) |
 | `source` | LowCardinality(String) | `'otlp'` today; reserved for provider adapters ([D10](#decisions)) |
@@ -419,7 +419,8 @@ Blame (originally P2-3) moved to **Phase 3**: its only surface is the Memory-pag
 - **Shared token math.** `compute-memory-diff` is the manifest two-point diff (Feature 4 will consume it); `compute-session-memory-summary` applies the per-record endpoint rule directly. Both go through one `recordTokenDelta` helper (line diff + o200k_base tokens, degrading to record-level `tokenCount` when a body is absent) and a lifted `countTokens` tokenizer singleton.
 - **No summary cache in v1** (the read is cheap; Redis + worker invalidation is a later lever).
 - **Whole-store wipe in a session** counts the store's records live at the wipe — read via raw `readManifestAt`, not the D9-filtered reconstruction — as removed, excluding records the session also touched.
-- **Tested** against the in-memory fake (`compute-memory-diff`, `compute-session-memory-summary`) and chdb (`readBlobs` / `readSessionMemoryEvents` / `readRecordVersions`).
+- **Session id is stamped from the trace, not the span.** `session_id` is resolved per span at ingest and memory-operation spans routinely carry no session attribute (only sibling chat spans do), which left the ledger's `session_id` empty and the summary read (`WHERE session_id = …`) matching nothing. `trace-end` now passes the trace's canonical session id (`traceDetail.sessionId || traceId`, the same value it hands `session-end`) in the `memory-projection` payload, and `materialize-trace-memory` stamps it on every event. A trace belongs to one session, so this always agrees with the session/trace entity the chip opens from.
+- **Tested** against the in-memory fake (`compute-memory-diff`, `compute-session-memory-summary`, session-id stamping) and chdb (`readBlobs` / `readSessionMemoryEvents` / `readRecordVersions`; event `session_id` inherits the trace session even when the span's own differs).
 
 **Phase 2 UI note (P2-4):**
 

@@ -72,7 +72,9 @@ const materialize = (spans: readonly MemoryOperationSpan[], memory: Fake) => {
   }).repository
   const layer = Layer.merge(layerFor(memory), Layer.succeed(SpanRepository, spanRepo))
   return Effect.runPromise(
-    materializeTraceMemoryUseCase({ organizationId, projectId, traceId }).pipe(Effect.provide(layer)),
+    materializeTraceMemoryUseCase({ organizationId, projectId, traceId, sessionId: SessionId("sess1") }).pipe(
+      Effect.provide(layer),
+    ),
   )
 }
 

@@ -1,5 +1,5 @@
 import { createHash } from "node:crypto"
-import type { OrganizationId, ProjectId, TraceId } from "@domain/shared"
+import type { OrganizationId, ProjectId, SessionId, TraceId } from "@domain/shared"
 import { type MemoryOperationSpan, SpanRepository } from "@domain/spans"
 import { Effect } from "effect"
 import type { MemoryBlob } from "../entities/memory-blob.ts"
@@ -13,6 +13,10 @@ export interface MaterializeTraceMemoryInput {
   readonly organizationId: OrganizationId
   readonly projectId: ProjectId
   readonly traceId: TraceId
+  /** The trace's canonical session id, stamped on every event so the ledger's
+   * session_id agrees with the trace/session entity — a memory span may carry
+   * no session attribute even when its sibling chat spans do. */
+  readonly sessionId: SessionId
 }
 
 export interface MaterializeTraceMemoryResult {
@@ -51,7 +55,7 @@ const needsPresentSeed = (span: MemoryOperationSpan): boolean =>
 export const materializeTraceMemoryUseCase = Effect.fn("memories.materializeTraceMemory")(function* (
   input: MaterializeTraceMemoryInput,
 ) {
-  const { organizationId, projectId, traceId } = input
+  const { organizationId, projectId, traceId, sessionId } = input
   yield* Effect.annotateCurrentSpan("memory.traceId", traceId)
 
   const spanRepository = yield* SpanRepository
@@ -115,7 +119,7 @@ export const materializeTraceMemoryUseCase = Effect.fn("memories.materializeTrac
       queryText: extra.queryText ?? "",
       spanId: span.spanId,
       traceId: span.traceId,
-      sessionId: span.sessionId,
+      sessionId,
       userId: span.userId,
       startTime: span.startTime,
       endTime: span.endTime,
@@ -160,7 +164,7 @@ export const materializeTraceMemoryUseCase = Effect.fn("memories.materializeTrac
       queryText: "",
       spanId: span.spanId,
       traceId: span.traceId,
-      sessionId: span.sessionId,
+      sessionId,
       userId: span.userId,
       startTime: span.startTime,
       endTime: span.endTime,
@@ -177,7 +181,7 @@ export const materializeTraceMemoryUseCase = Effect.fn("memories.materializeTrac
       tokenCount: tokens,
       spanId: span.spanId,
       traceId: span.traceId,
-      sessionId: span.sessionId,
+      sessionId,
       endTime: span.endTime,
     })
     const records = liveRecords(scope, span.storeId)
@@ -201,7 +205,7 @@ export const materializeTraceMemoryUseCase = Effect.fn("memories.materializeTrac
         tokenCount: 0,
         spanId: span.spanId,
         traceId: span.traceId,
-        sessionId: span.sessionId,
+        sessionId,
         endTime: span.endTime,
       })
       records.delete(recordId)

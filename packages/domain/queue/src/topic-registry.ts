@@ -510,6 +510,7 @@ const _registry = {
       readonly organizationId: string
       readonly projectId: string
       readonly traceId: string
+      readonly sessionId: string
     }
   }>(),
 
