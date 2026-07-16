@@ -2,6 +2,16 @@
 
 ## Unreleased
 
+## v0.3.53 - 2026-07-16
+
+### Memory observability
+
+- Added per-record memory footprints to session and trace details, showing read, added, and removed tokens with a hover breakdown grouped by memory store (ref: #4053).
+
+### Billing
+
+- Charged deterministic live-evaluation scans at 1 credit instead of 30; evaluations that call `llm()` remain at 30 credits (ref: #4055).
+
 ## v0.3.52 - 2026-07-16
 
 ### Custom Behaviors
