@@ -30,8 +30,6 @@ function MetricPill({
 
 const MAX_ROWS = 10
 
-const scopeLabel = (scope: string) => (scope === "" ? "unscoped" : scope)
-
 const METRIC_TONE = {
   read: { iconClass: "text-muted-foreground", textColor: "foregroundMuted" },
   added: { iconClass: "text-success", textColor: "success" },
@@ -76,21 +74,20 @@ function MemoryBreakdown({ summary }: { readonly summary: SessionMemorySummary }
   )
   const shown = sorted.slice(0, MAX_ROWS)
   const hidden = sorted.length - shown.length
-  const multiScope = new Set(sorted.map((record) => record.scope)).size > 1
 
-  const groups: { scope: string; storeId: string; records: MemoryRecordSummary[] }[] = []
+  const groups: { storeId: string; records: MemoryRecordSummary[] }[] = []
   for (const record of shown) {
-    const group = groups.find((candidate) => candidate.scope === record.scope && candidate.storeId === record.storeId)
+    const group = groups.find((candidate) => candidate.storeId === record.storeId)
     if (group) group.records.push(record)
-    else groups.push({ scope: record.scope, storeId: record.storeId, records: [record] })
+    else groups.push({ storeId: record.storeId, records: [record] })
   }
 
   return (
     <div className="flex min-w-[200px] flex-col gap-2 text-left">
       {groups.map((group) => (
-        <div key={`${group.scope} ${group.storeId}`} className="flex flex-col gap-0.5">
+        <div key={group.storeId} className="flex flex-col gap-0.5">
           <Text.H6 color="foregroundMuted" ellipsis>
-            {multiScope ? `${scopeLabel(group.scope)} · ${group.storeId || "—"}` : group.storeId || "—"}
+            {group.storeId || "—"}
           </Text.H6>
           {group.records.map((record) => (
             <div
