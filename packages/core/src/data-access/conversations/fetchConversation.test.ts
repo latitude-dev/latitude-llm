@@ -304,7 +304,9 @@ describe('fetchConversation', () => {
 
       expect(result.ok).toBe(true)
       const conversation = result.unwrap()
-      expect(conversation.totalTokens).toBe(525)
+      // prompt + completion only: (100 + 200) + (50 + 100) = 450. cached and
+      // reasoning are subsets already included in prompt/completion.
+      expect(conversation.totalTokens).toBe(450)
     })
 
     it('correctly calculates totalCost', async () => {

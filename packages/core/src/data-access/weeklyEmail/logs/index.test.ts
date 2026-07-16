@@ -279,8 +279,10 @@ describe('getLogsData', () => {
       })
 
       expect(result.usedInProduction).toEqual(true)
-      // Total: (100 + 200 + 50 + 25) + (150 + 250 + 75 + 30) = 375 + 505 = 880
-      expect(result.tokensSpent).toEqual(880)
+      // prompt already includes cached and completion already includes
+      // reasoning, so the total is prompt + completion per span:
+      // (100 + 200) + (150 + 250) = 300 + 400 = 700
+      expect(result.tokensSpent).toEqual(700)
     })
 
     it('sums cost from completion spans only and converts from millicents (all sources)', async () => {

@@ -675,7 +675,9 @@ describe('ExperimentsRepository', () => {
       expect(metadata.count).toBe(2)
       expect(metadata.totalDuration).toBe(3000)
       expect(metadata.totalCost).toBe(300)
-      expect(metadata.totalTokens).toBe(50 + 10 + 5 + 25 + 100 + 20 + 10 + 50)
+      // prompt + completion only; cached/reasoning are subsets already
+      // included in prompt/completion.
+      expect(metadata.totalTokens).toBe(50 + 25 + 100 + 50)
     })
 
     it('returns zero values when no spans exist for experiment', async () => {

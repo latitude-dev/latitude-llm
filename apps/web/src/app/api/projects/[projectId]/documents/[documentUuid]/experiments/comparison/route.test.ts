@@ -300,9 +300,9 @@ describe('GET /api/projects/[projectId]/documents/[documentUuid]/experiments/com
         expect(data[0].runMetadata.count).toBe(2)
         expect(data[0].runMetadata.totalDuration).toBe(3000)
         expect(data[0].runMetadata.totalCost).toBe(300)
-        expect(data[0].runMetadata.totalTokens).toBe(
-          50 + 25 + 100 + 50 + 10 + 5,
-        )
+        // prompt + completion only; cached (10) and reasoning (5) are subsets
+        // already included in prompt/completion, so they are not added again.
+        expect(data[0].runMetadata.totalTokens).toBe(50 + 25 + 100 + 50)
       })
 
       it('ignores spans that do not belong to the experiment', async () => {
