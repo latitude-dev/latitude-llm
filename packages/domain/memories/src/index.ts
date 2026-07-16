@@ -41,6 +41,13 @@ export {
   computeMemoryDiffUseCase,
 } from "./use-cases/compute-memory-diff.ts"
 export {
+  type ComputeSessionMemorySummaryInput,
+  computeSessionMemorySummaryUseCase,
+  type MemorySummaryTotals,
+  type ScopeMemorySummary,
+  type SessionMemorySummary,
+} from "./use-cases/compute-session-memory-summary.ts"
+export {
   type MaterializeTraceMemoryInput,
   type MaterializeTraceMemoryResult,
   materializeTraceMemoryUseCase,
