@@ -296,7 +296,7 @@ Exit: the bounded snapshot is assigned before publication, active reads never se
 
 QA: a static-vs-adaptive shadow-comparison report built as a Datadog Logs dashboard over the single per-run `taxonomy.gardenTaxonomyWorkflow.shadowComparison` event, derived from telemetry alone (no content, no embeddings, percentiles not raw arrays); a Temporal replay test across the mode branches; guardrail assertions that no structural or resource violation occurs across the contrasting-project shadow runs; a fault-injection test that non-finite or structural-limit adaptive output falls back to static in the planning activity; re-confirm `off` stays a no-op.
 
-Dashboard setup (Datadog MCP): create the dashboard programmatically with `upsert_datadog_dashboard` rather than by hand, so it is reproducible and version-controllable.
+Dashboard setup (Datadog MCP): create the dashboard programmatically with `upsert_datadog_dashboard` rather than by hand, so it is reproducible and version-controllable. This is one internal dashboard in Latitude's own Datadog org — an engineering view, never exposed to tenants. It is faceted by the product's `@organizationId` / `@projectId` / `@customBehaviorId` dimensions; it is not a dashboard per tenant.
 
 1. Confirm shadow events are arriving: query Logs for `@metric:taxonomy.gardenTaxonomyWorkflow.shadowComparison service:workflows` and check the JSON attributes are parsed. If the numeric attributes are not aggregatable yet, create log facets/measures on `@diff.rootChildDelta`, `@diff.partitionAri`, `@static.rootChildCount`, `@adaptive.rootChildCount`, `@adaptiveDurationMs`, `@staticDurationMs`, and `@fallbackReason` first — Datadog only aggregates attributes promoted to measures.
 2. Call `upsert_datadog_dashboard` with a Logs-source (`data_source: logs`) widget set, all scoped to the query above:
@@ -305,7 +305,7 @@ Dashboard setup (Datadog MCP): create the dashboard programmatically with `upser
    * a **top-list** of `@rejectionReason` counts and a p50 line of `@relativeSeparation.p50`;
    * a **query-value** counting events where `@fallbackReason:*` (target ~0);
    * a **timeseries** of `@adaptiveDurationMs` vs `@staticDurationMs` and max `@peakRssBytes` (the ≤25%-slower / worker-memory criteria).
-3. Template-variable the dashboard on `$project` so the pilot and each contrasting project share one view. Read it back with `get_datadog_dashboard` to confirm the widgets resolve, and iterate with the same `upsert_datadog_dashboard` call (idempotent on dashboard id).
+3. Template-variable the dashboard on `$organization` and `$project` (both from the tagged log attributes) so the pilot and each contrasting project share one view and a whole customer org can be filtered at once. Read it back with `get_datadog_dashboard` to confirm the widgets resolve, and iterate with the same `upsert_datadog_dashboard` call (idempotent on dashboard id).
 
 Timing: garden sweeps run every 6 hours (`0 */6 * * *`, up to ~5h jitter) over a 7-day lookback, for both global and scoped scopes. The **first** comparison event for a project lands within roughly 6–11 hours of enabling `shadow`; a **decision-grade** read needs the 7-day sample window to fully turn over — consecutive 6-hour runs share almost the entire window and are highly correlated — so plan on **~1 week minimum**, and ~2 weeks to confirm the root-child delta and ARI hold across more than one turnover cycle. Fix the exact shadow duration as a calibrated Phase-1 rollout value.
 
