@@ -252,7 +252,9 @@ describe("planHierarchicalTaxonomyUseCase scoped to a custom behavior", () => {
         dimension: "topic",
         now,
         customBehaviorId,
-        filterSet: {},
+        // Non-empty so the scoped-run guard passes; the fake repo ignores it and
+        // returns the canned observations regardless.
+        filterSet: { userId: [{ op: "in", value: ["usr-scoped-qa"] }] },
       }).pipe(
         Effect.provide(Layer.succeed(TaxonomyObservationRepository, observations.repository)),
         Effect.provide(Layer.succeed(TaxonomyClusterRepository, clusters.repository)),
@@ -260,6 +262,30 @@ describe("planHierarchicalTaxonomyUseCase scoped to a custom behavior", () => {
         Effect.provide(Layer.succeed(ChSqlClient, createFakeChSqlClient())),
       ),
     )
+
+  it("fails fast on a scoped run with no filter (never silently samples the whole project)", async () => {
+    const now = new Date("2026-05-24T12:00:00.000Z")
+    const observations = createFakeTaxonomyObservationRepository([])
+    const clusters = createFakeTaxonomyClusterRepository([])
+    await expect(
+      Effect.runPromise(
+        planHierarchicalTaxonomyUseCase({
+          organizationId,
+          projectId,
+          runId: TaxonomyRunId("r".repeat(24)),
+          dimension: "topic",
+          now,
+          customBehaviorId,
+          filterSet: {},
+        }).pipe(
+          Effect.provide(Layer.succeed(TaxonomyObservationRepository, observations.repository)),
+          Effect.provide(Layer.succeed(TaxonomyClusterRepository, clusters.repository)),
+          Effect.provide(Layer.succeed(SqlClient, createFakeSqlClient())),
+          Effect.provide(Layer.succeed(ChSqlClient, createFakeChSqlClient())),
+        ),
+      ),
+    ).rejects.toThrow()
+  })
 
   it("clusters the scoped sample, tags clusters + assignments with the behavior, and writes no global assignments", async () => {
     const now = new Date("2026-05-24T12:00:00.000Z")

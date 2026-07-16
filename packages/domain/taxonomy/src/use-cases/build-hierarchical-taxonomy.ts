@@ -353,6 +353,14 @@ export const planHierarchicalTaxonomyUseCase = (input: PlanHierarchicalTaxonomyI
     const observationsRepo = yield* TaxonomyObservationRepository
     const clustersRepo = yield* TaxonomyClusterRepository
     const scopedBehaviorId = input.customBehaviorId ?? null
+    // A scoped run without a filter would sample the whole project yet tag the
+    // clusters/assignments to the behavior — silently wrong. Custom behaviors
+    // always carry a non-empty filter, so fail fast rather than fall back to `{}`.
+    if (scopedBehaviorId !== null && (!input.filterSet || Object.keys(input.filterSet).length === 0)) {
+      return yield* Effect.die(
+        new Error(`planHierarchicalTaxonomy: scoped run for ${scopedBehaviorId} requires a non-empty filterSet`),
+      )
+    }
     const since = lookbackStart(now)
     // Scoped gardening samples the behavior's FilterSet session slice (rows carry
     // sessionId for the assignment write); global samples the project-wide window.
@@ -527,20 +535,30 @@ export const planHierarchicalTaxonomyUseCase = (input: PlanHierarchicalTaxonomyI
           indexedAt: now,
         }))
     const customAssignments: CustomBehaviorAssignment[] = scopedBehaviorId
-      ? leafMembers.map(({ leaf, observation, confidence }) => ({
-          organizationId: input.organizationId,
-          projectId: input.projectId,
-          customBehaviorId: scopedBehaviorId,
-          observationId: observation.observationId,
-          sessionId: (observation as TaxonomyScopedClusteringObservation).sessionId,
-          assignedClusterId: leaf.clusterId,
-          assignmentConfidence: confidence,
-          assignmentMethod: "gardening_birth" as const,
-          reassignmentRunId: input.runId,
-          startTime: observation.startTime,
-          retentionDays: TAXONOMY_OBSERVATION_RETENTION_DAYS,
-          indexedAt: now,
-        }))
+      ? leafMembers.flatMap(({ leaf, observation, confidence }) => {
+          // Scoped samples come from listForCustomBehaviorSample and carry a
+          // sessionId; guard at runtime (via a widening cast, not an unchecked
+          // one) so a non-scoped observation can never yield a `sessionId:
+          // undefined` assignment.
+          const sessionId = (observation as Partial<TaxonomyScopedClusteringObservation>).sessionId
+          if (sessionId === undefined) return []
+          return [
+            {
+              organizationId: input.organizationId,
+              projectId: input.projectId,
+              customBehaviorId: scopedBehaviorId,
+              observationId: observation.observationId,
+              sessionId,
+              assignedClusterId: leaf.clusterId,
+              assignmentConfidence: confidence,
+              assignmentMethod: "gardening_birth" as const,
+              reassignmentRunId: input.runId,
+              startTime: observation.startTime,
+              retentionDays: TAXONOMY_OBSERVATION_RETENTION_DAYS,
+              indexedAt: now,
+            } satisfies CustomBehaviorAssignment,
+          ]
+        })
       : []
 
     const finalIds = new Set(finalIdByTempId.values())

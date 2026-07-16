@@ -172,6 +172,20 @@ describe("taxonomy gardening workflow (divisive build)", () => {
     expect(mockActivities.completeGardenTaxonomyRunActivity).not.toHaveBeenCalled()
   })
 
+  it("marks a scoped behavior failed when the START activity errors (no stuck generating)", async () => {
+    mockActivities.startGardenTaxonomyRunActivity.mockRejectedValueOnce(new Error("start exploded"))
+
+    await expect(gardenTaxonomyWorkflow(scopedInput)).rejects.toThrow("start exploded")
+
+    // Start runs inside the try and the catch fails from the raw input (not the
+    // never-returned start result), so a scoped start failure still marks the
+    // behavior failed rather than leaving it stuck `generating`.
+    expect(mockActivities.failGardenTaxonomyRunActivity).toHaveBeenCalledWith(
+      expect.objectContaining({ customBehaviorId: "b".repeat(24), error: "start exploded" }),
+    )
+    expect(mockActivities.planHierarchicalGardenTaxonomyActivity).not.toHaveBeenCalled()
+  })
+
   it("records a failed run in a non-cancellable cleanup scope when cancellation interrupts a step", async () => {
     const cancellation = new Error("cancelled")
     cancellation.name = "CancelledFailure"

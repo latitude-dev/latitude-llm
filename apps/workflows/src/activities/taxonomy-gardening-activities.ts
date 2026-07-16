@@ -683,7 +683,13 @@ const failCustomBehaviorRun = (input: GardenTaxonomyFailInput) =>
     }).pipe((effect) => withCustomBehaviorPostgres(effect, input.organizationId)),
   )
 
-export const failGardenTaxonomyRunActivity = (input: GardenTaxonomyFailInput) =>
-  input.customBehaviorId ? failCustomBehaviorRun(input) : failGlobalRun(input)
+// Takes the raw workflow input (+ error), not a prior step result, so it can mark
+// a run/behavior failed even when the START activity itself failed (leaving a
+// scoped behavior stuck `generating`). `baseStepInput` re-derives the same
+// deterministic run id start would have used.
+export const failGardenTaxonomyRunActivity = (input: GardenTaxonomyActivityInput & { readonly error: string }) => {
+  const failInput: GardenTaxonomyFailInput = { ...baseStepInput(input), error: input.error }
+  return failInput.customBehaviorId ? failCustomBehaviorRun(failInput) : failGlobalRun(failInput)
+}
 
 export { errorMessage as gardenTaxonomyErrorMessage }

@@ -79,12 +79,11 @@ const errorMessage = (error: unknown): string => {
 export const gardenTaxonomyWorkflow = async (
   input: GardenTaxonomyWorkflowInput,
 ): Promise<GardenTaxonomyWorkflowResult> => {
-  const started = await startGardenTaxonomyRunActivity({ ...input, workflowRunId: workflowInfo().runId })
   try {
-    // Split-build is unconditional now; deprecatePatch sits exactly where the old
-    // `patched("…-split-build-v1")` gate did (first statement in the try, after
-    // start) so replay of in-flight split-build histories reconciles the marker
-    // at the same position.
+    const started = await startGardenTaxonomyRunActivity({ ...input, workflowRunId: workflowInfo().runId })
+    // Split-build is unconditional now; deprecatePatch sits right after start
+    // (where the old `patched("…-split-build-v1")` gate did) so replay of in-flight
+    // split-build histories reconciles the marker at the same position.
     deprecatePatch("taxonomy-gardening-split-build-v1")
     const built = await planHierarchicalGardenTaxonomyActivity(started)
     // Scoped cold-start: the plan sampled below the gardening minimum and built
@@ -138,8 +137,12 @@ export const gardenTaxonomyWorkflow = async (
       clustersDeprecated: built.clustersDeprecated,
     })
   } catch (error) {
+    // Fail from the raw input, not `started`: the scoped start activity flips the
+    // behavior to `generating` up front, so a start-activity failure must still
+    // mark it failed instead of leaving it stuck generating. The fail activity
+    // re-derives the (deterministic) run id from the input.
     await CancellationScope.nonCancellable(() =>
-      failGardenTaxonomyRunActivity({ ...started, error: errorMessage(error) }),
+      failGardenTaxonomyRunActivity({ ...input, workflowRunId: workflowInfo().runId, error: errorMessage(error) }),
     )
     throw error
   }
