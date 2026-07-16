@@ -1,6 +1,7 @@
 import type { ScopeMemorySummary } from "@domain/memories"
-import { Text, Tooltip } from "@repo/ui"
+import { Badge, Text, Tooltip } from "@repo/ui"
 import { formatCount } from "@repo/utils"
+import { EyeIcon, SquarePenIcon } from "lucide-react"
 import { useMemorySummary } from "../../../../../domains/memories/memories.collection.ts"
 
 const scopeLabel = (scope: string) => (scope === "" ? "unscoped" : scope)
@@ -17,9 +18,10 @@ const ScopeRow = ({ scope }: { readonly scope: ScopeMemorySummary }) => (
 
 /**
  * `Memory` metric row for the trace / session detail body, sitting under Cost:
- * `read N · write +A −R`, hover-expanding to a per-scope breakdown. Renders
- * nothing until the summary loads or when the session touched no memory. Pass
- * `traceId` for the trace view (restricts the write diff to that trace).
+ * a read-tokens badge and a write badge (`+added` in success, `−removed` in
+ * destructive), hover-expanding to a per-scope breakdown. Renders nothing until
+ * the summary loads or when the session touched no memory. Pass `traceId` for
+ * the trace view (restricts the write diff to that trace).
  */
 export function MemorySummary({
   projectId,
@@ -35,12 +37,9 @@ export function MemorySummary({
 
   const { total, scopes } = data
   const recordsChanged = total.recordsAdded + total.recordsUpdated + total.recordsRemoved
+  const hasRead = total.readTokens > 0
   const hasWrite = recordsChanged > 0 || total.tokensAdded > 0 || total.tokensRemoved > 0
-  if (total.readTokens === 0 && !hasWrite) return null
-
-  const parts: string[] = []
-  if (total.readTokens > 0) parts.push(`read ${formatCount(total.readTokens)}`)
-  if (hasWrite) parts.push(`write +${formatCount(total.tokensAdded)} −${formatCount(total.tokensRemoved)}`)
+  if (!hasRead && !hasWrite) return null
 
   return (
     <div className="flex min-h-8 flex-row items-center gap-3">
@@ -52,10 +51,20 @@ export function MemorySummary({
       <Tooltip
         asChild
         trigger={
-          <div className="flex items-center self-center">
-            <Text.H5 color="foreground" noWrap>
-              {parts.join(" · ")}
-            </Text.H5>
+          <div className="flex flex-row flex-wrap items-center gap-1.5">
+            {hasRead ? (
+              <Badge variant="muted" iconProps={{ icon: EyeIcon, placement: "start", color: "foregroundMuted" }}>
+                {`${formatCount(total.readTokens)} tok`}
+              </Badge>
+            ) : null}
+            {hasWrite ? (
+              <Badge variant="muted" iconProps={{ icon: SquarePenIcon, placement: "start", color: "foregroundMuted" }}>
+                <span className="inline-flex items-center gap-1">
+                  <span className="text-success">{`+${formatCount(total.tokensAdded)}`}</span>
+                  <span className="text-destructive">{`−${formatCount(total.tokensRemoved)}`}</span>
+                </span>
+              </Badge>
+            ) : null}
           </div>
         }
       >
