@@ -584,11 +584,11 @@ export function ProjectExplorer({ projectSlug }: { readonly projectSlug: string 
                     onClick={() => void createCustomBehaviorFromFilters()}
                   >
                     <Icon icon={SlidersHorizontalIcon} size="sm" />
-                    Create custom behavior
+                    Create cohort
                   </Button>
                 }
               >
-                Cluster the sessions matching these filters into their own behavior tree.
+                Group the sessions matching these filters into a cohort with its own behavior tree.
               </Tooltip>
             ) : null}
             <Tabs

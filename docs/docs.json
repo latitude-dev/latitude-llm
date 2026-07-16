@@ -213,7 +213,10 @@
           "signals/overview",
           "signals/create",
           "signals/management",
-          "search/behaviours",
+          {
+            "group": "Behaviours",
+            "pages": ["search/behaviours", "search/cohorts"]
+          },
           "experiments/overview",
           {
             "group": "Annotations",

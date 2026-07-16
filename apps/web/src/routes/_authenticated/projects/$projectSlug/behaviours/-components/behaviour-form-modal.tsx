@@ -59,7 +59,7 @@ export function BehaviourFormModal({
       },
       {
         onSuccess: (result: CustomBehaviorRecord) => {
-          toast({ description: behaviour ? "Custom behavior updated." : "Custom behavior created." })
+          toast({ description: behaviour ? "Cohort updated." : "Cohort created." })
           void navigate({
             to: "/projects/$projectSlug/behaviours/$behaviourSlug",
             params: { projectSlug, behaviourSlug: result.slug },
@@ -75,7 +75,7 @@ export function BehaviourFormModal({
     <Modal.Root open onOpenChange={(next) => (next || isSaving ? undefined : onClose())}>
       <Modal.Content size="full" height="screen" dismissible>
         <div className="flex shrink-0 flex-col gap-3 px-6 pt-6">
-          <Text.H4M>{behaviour ? "Edit behavior" : "New behavior"}</Text.H4M>
+          <Text.H4M>{behaviour ? "Edit cohort" : "New cohort"}</Text.H4M>
           <form.Field name="name">
             {(field) => (
               <Input

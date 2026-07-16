@@ -15,7 +15,7 @@ function NewBehaviourBreadcrumb() {
         Behaviors
       </BreadcrumbLink>
       <BreadcrumbSeparator />
-      <BreadcrumbText variant="current">New behavior</BreadcrumbText>
+      <BreadcrumbText variant="current">New cohort</BreadcrumbText>
     </>
   )
 }

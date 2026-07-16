@@ -37,7 +37,7 @@ function ScopedTreeWaiting({ behaviour }: { readonly behaviour: CustomBehaviorRe
         <Text.H4>Waiting for matching sessions</Text.H4>
         <Text.H5 color="foregroundMuted" centered className="max-w-md">
           {`Found ${(count ?? 0).toLocaleString()} of ${threshold} matching sessions so far. `}
-          This behavior is built automatically once there are enough.
+          This cohort's behaviors are built automatically once there are enough.
         </Text.H5>
       </div>
     )
@@ -48,9 +48,9 @@ function ScopedTreeWaiting({ behaviour }: { readonly behaviour: CustomBehaviorRe
     return (
       <div className="flex flex-1 flex-col items-center justify-center gap-3 p-8 text-center">
         <Loader2Icon className="h-6 w-6 animate-spin text-muted-foreground" />
-        <Text.H4>Building this behavior</Text.H4>
+        <Text.H4>Building this cohort</Text.H4>
         <Text.H5 color="foregroundMuted" centered className="max-w-md">
-          Analyzing the matching sessions now — it'll appear here when it's ready.
+          Analyzing the matching sessions now. Its behaviors will appear here when they're ready.
         </Text.H5>
       </div>
     )
@@ -64,8 +64,8 @@ function ScopedTreeWaiting({ behaviour }: { readonly behaviour: CustomBehaviorRe
       <Text.H4>Waiting for the next run</Text.H4>
       <Text.H5 color="foregroundMuted" centered className="max-w-md">
         {count !== undefined ? `${count.toLocaleString()} matching sessions found. ` : ""}
-        This behavior is built automatically on a schedule — it'll appear after the next run, which can take a few
-        hours.
+        This cohort's behaviors are built automatically on a schedule. They'll appear after the next run, which can take
+        a few hours.
       </Text.H5>
     </div>
   )

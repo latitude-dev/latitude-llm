@@ -1,0 +1,41 @@
+---
+title: Cohorts
+description: Save a set of session filters as a cohort and get its own behaviour tree, built automatically and kept current, for just the sessions you care about.
+---
+
+<Info>
+  **Where this fits:** Cohorts are part of the **Understand** section. The [Behaviours](./behaviours)
+  page discovers topics across every session; a cohort discovers them inside a slice you define.
+</Info>
+
+A **cohort** is a saved set of session filters that gets its own behaviour tree. The [Behaviours](./behaviours) page clusters every session in your project. A cohort narrows that to the sessions that match your filters and discovers the behaviours within just that slice, so you can study one part of your traffic on its own.
+
+## Create a cohort
+
+You create a cohort by giving it a name and a set of session filters. The filters can use any session field, such as status, user, tags, or model, with one exception: you cannot filter by topic. A cohort exists to discover the topics inside it, so the topic itself is not an input.
+
+You can start a cohort from scratch on the Behaviours page, or seed one from filters you already have on the [Sessions](../observability/sessions) view or a [saved search](./saved-searches). Any topic filters are dropped when you do.
+
+## It builds itself
+
+Once you save a cohort, Latitude clusters its matching sessions into a behaviour tree on its own. You do not run anything.
+
+A new cohort needs a minimum number of matching sessions before its first tree appears. Until it reaches that point, the cohort shows how many matching sessions it has found so far. After the first build it stays living: it re-gardens on a schedule, so trends and newly emerging behaviours stay current as more sessions arrive.
+
+## Browse its behaviours
+
+A cohort's behaviours read the same way as the global [Behaviours](./behaviours) page: the same topic and subtopic hierarchy, session counts, detected moments, trends, and detail view. What changes is the scope. Every count is computed over the cohort's sessions rather than the whole project.
+
+Switch between the global view and any cohort from the scope selector at the top of the Behaviours page.
+
+<Note>
+  A cohort is different from a [percentile cohort](../observability/features/percentile-cohorts). A
+  percentile cohort groups traces by tag to compare latency and cost percentiles. A cohort here is a
+  saved session filter that produces a behaviour tree.
+</Note>
+
+## Next step
+
+- [Behaviours](./behaviours): the same view across every session in the project.
+- [Saved searches](./saved-searches): bookmark a filter and reuse it, including as the seed for a cohort.
+- [Signals](../signals/overview): turn a recurring failure in a cohort into a tracked signal.

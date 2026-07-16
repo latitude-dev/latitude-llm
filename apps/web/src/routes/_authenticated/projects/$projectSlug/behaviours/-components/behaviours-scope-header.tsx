@@ -41,7 +41,7 @@ export type BehaviourFormIntent =
   | { readonly mode: "create"; readonly initialFilterSet?: FilterSet }
   | { readonly mode: "edit" }
 
-const GLOBAL_LABEL = "Global behavior"
+const GLOBAL_LABEL = "All sessions"
 
 function ScopeTitle({ current }: { readonly current: CustomBehaviorRecord | null }) {
   if (current) {
@@ -83,8 +83,8 @@ function ScopeTitle({ current }: { readonly current: CustomBehaviorRecord | null
       <div className="flex flex-row items-center gap-1.5">
         <Text.H4M>{GLOBAL_LABEL}</Text.H4M>
         <Tooltip asChild trigger={<Icon icon={InfoIcon} size="sm" color="foregroundMuted" />}>
-          Shown by default — captures every behavior in this project. You can also create your own custom behavior to
-          discover the patterns within a filtered set of sessions.
+          Shown by default. These behaviors come from every session in this project. Create a cohort to see the
+          behaviors within a filtered set of sessions instead.
         </Tooltip>
       </div>
       <Text.H6 color="foregroundMuted">No filters applied</Text.H6>
@@ -149,7 +149,7 @@ function ScopeActionsMenu({ onEdit, onDelete }: { readonly onEdit: () => void; r
   return (
     <DropdownMenuRoot modal={false}>
       <DropdownMenuTrigger asChild>
-        <Button variant="ghost" size="icon" aria-label="Custom behavior actions">
+        <Button variant="ghost" size="icon" aria-label="Cohort actions">
           <Icon icon={MoreVerticalIcon} size="sm" />
         </Button>
       </DropdownMenuTrigger>
@@ -235,7 +235,7 @@ export function BehavioursScopeHeader({
     if (!current) return
     try {
       await del.mutateAsync(current.id)
-      toast({ description: "Custom behavior deleted." })
+      toast({ description: "Cohort deleted." })
       setDeleteOpen(false)
       await navigate({ to: "/projects/$projectSlug/behaviours", params: { projectSlug } })
     } catch (error) {
@@ -254,7 +254,7 @@ export function BehavioursScopeHeader({
             ) : null}
             <Button variant="outline" size="sm" className="h-8 w-auto" onClick={openCreate}>
               <Icon icon={PlusIcon} size="sm" />
-              New behavior
+              New cohort
             </Button>
             {current ? <ScopeActionsMenu onEdit={openEdit} onDelete={() => setDeleteOpen(true)} /> : null}
           </div>
@@ -276,8 +276,8 @@ export function BehavioursScopeHeader({
           onOpenChange={(next) => {
             if (!next && !del.isPending) setDeleteOpen(false)
           }}
-          title="Delete custom behavior"
-          description={`Delete "${current.name}"? This removes the behavior definition and its scoped taxonomy. This action cannot be undone.`}
+          title="Delete cohort"
+          description={`Delete "${current.name}"? This removes the cohort and the behaviors gardened within it. This action cannot be undone.`}
           footer={
             <div className="flex flex-row items-center gap-2">
               <Button variant="outline" onClick={() => setDeleteOpen(false)} disabled={del.isPending}>

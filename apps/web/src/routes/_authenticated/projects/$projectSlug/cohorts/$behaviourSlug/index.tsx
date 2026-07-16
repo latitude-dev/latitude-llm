@@ -1,7 +1,7 @@
 import { createFileRoute, redirect } from "@tanstack/react-router"
 
-// Custom behaviors folded into the Behaviours section; keep old links working.
-export const Route = createFileRoute("/_authenticated/projects/$projectSlug/custom-behaviours/$behaviourSlug/")({
+// Cohorts live inside the Behaviours section; this path is a friendly redirect.
+export const Route = createFileRoute("/_authenticated/projects/$projectSlug/cohorts/$behaviourSlug/")({
   beforeLoad: ({ params }) => {
     throw redirect({
       to: "/projects/$projectSlug/behaviours/$behaviourSlug",

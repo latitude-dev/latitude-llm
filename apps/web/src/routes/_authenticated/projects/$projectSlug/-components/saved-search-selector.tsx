@@ -197,14 +197,14 @@ export function SavedSearchSelector({
                               <Button
                                 variant="ghost"
                                 size="icon"
-                                aria-label={`Create a custom behavior from saved search ${record.name}`}
+                                aria-label={`Create a cohort from saved search ${record.name}`}
                                 onClick={() => createCustomBehaviorFromSavedSearch(record)}
                               >
                                 <Icon icon={SlidersHorizontalIcon} size="sm" color="foregroundMuted" />
                               </Button>
                             }
                           >
-                            Create custom behavior
+                            Create cohort
                           </Tooltip>
                         ) : null}
                         <Tooltip

@@ -56,7 +56,7 @@ function CustomBehaviourViewPage() {
           </div>
         ) : (
           <div className="flex flex-1 flex-col items-center justify-center gap-3 p-8 text-center">
-            <Text.H3>Custom behavior not found</Text.H3>
+            <Text.H3>Cohort not found</Text.H3>
             <Button asChild variant="outline">
               <Link to="/projects/$projectSlug/behaviours" params={{ projectSlug }}>
                 Back to behaviors
