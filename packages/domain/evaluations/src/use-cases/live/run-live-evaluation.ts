@@ -15,7 +15,9 @@ import { type QueuePublishError, QueuePublisher } from "@domain/queue"
 import {
   DETECTOR_HEALTH_WINDOW_SECONDS,
   DetectorHealthTracker,
-  requiresEmbedding,
+  detectScriptCapabilities,
+  hasEmbeddingCapability,
+  hasLlmCapability,
   type ScriptRuntime,
 } from "@domain/sandbox"
 import {
@@ -185,6 +187,7 @@ export const runLiveEvaluationUseCase = (input: RunLiveEvaluationInput) =>
     }
 
     const liveEvaluationEligibility = getLiveEvaluationEligibility(evaluation)
+    const scriptCapabilities = detectScriptCapabilities(evaluation.script)
 
     if (!liveEvaluationEligibility.eligible) {
       return {
@@ -231,7 +234,7 @@ export const runLiveEvaluationUseCase = (input: RunLiveEvaluationInput) =>
     // Readiness gate — only for scripts that call semanticSimilarity(), before any billing or execution
     // work. We check the triggering trace: it's the one whose embeddings race this run, and older traces
     // in the session were embedded on their own ingest cycles.
-    if (requiresEmbedding(evaluation.script)) {
+    if (hasEmbeddingCapability(scriptCapabilities)) {
       const embeddingsReady = yield* hasSessionEmbeddings({
         organizationId: OrganizationId(input.organizationId),
         projectId,
@@ -297,14 +300,15 @@ export const runLiveEvaluationUseCase = (input: RunLiveEvaluationInput) =>
     } satisfies LiveEvaluationSignalContext
 
     const billingOrganizationId = OrganizationId(input.organizationId)
-    const idempotencyKey = buildBillingIdempotencyKey("live-eval-scan", [
+    const billingAction = hasLlmCapability(scriptCapabilities) ? "live-eval-scan" : "deterministic-eval-scan"
+    const idempotencyKey = buildBillingIdempotencyKey(billingAction, [
       input.organizationId,
       evaluation.id,
       input.traceId,
     ])
     const authorization = yield* authorizeBillableAction({
       organizationId: billingOrganizationId,
-      action: "live-eval-scan",
+      action: billingAction,
       skipIfBlocked: true,
       idempotencyKey,
     })
@@ -363,7 +367,7 @@ export const runLiveEvaluationUseCase = (input: RunLiveEvaluationInput) =>
     yield* recordBillableActionUseCase({
       organizationId: billingOrganizationId,
       projectId: ProjectId(input.projectId),
-      action: "live-eval-scan",
+      action: billingAction,
       idempotencyKey,
       context: authorization.context,
       traceId: TraceId(input.traceId),

@@ -10,13 +10,20 @@ export const BILLING_OVERAGE_SYNC_THROTTLE_MS = 5 * 60_000 // 5 minutes
 
 export const SELF_SERVE_PLAN_SLUGS: readonly PlanSlug[] = ["pro"] as const
 
-export const CHARGEABLE_ACTIONS = ["trace", "flagger-scan", "live-eval-scan", "eval-generation"] as const
+export const CHARGEABLE_ACTIONS = [
+  "trace",
+  "flagger-scan",
+  "deterministic-eval-scan",
+  "live-eval-scan",
+  "eval-generation",
+] as const
 
 export type ChargeableAction = (typeof CHARGEABLE_ACTIONS)[number]
 
 export const ACTION_CREDITS: Record<ChargeableAction, number> = {
   trace: 1,
   "flagger-scan": 30,
+  "deterministic-eval-scan": 1,
   "live-eval-scan": 30,
   "eval-generation": 1000,
 } as const

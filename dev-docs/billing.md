@@ -24,7 +24,8 @@ Chargeable actions:
 
 - `trace = 1 credit`
 - `flagger-scan = 30 credits`
-- `live-eval-scan = 30 credits`
+- `deterministic-eval-scan = 1 credit`
+- `live-eval-scan = 30 credits` for scripts that call `llm()`
 - `eval-generation = 1,000 credits`
 
 ## Effective Plan Resolution
@@ -93,7 +94,7 @@ Canonical charge points:
 
 - trace ingest metering: `apps/workers/src/workers/span-ingestion.ts` emits `TracesIngested`, `apps/workers/src/workers/domain-events.ts` routes billing work, and `apps/workers/src/workers/billing.ts` records once per distinct trace id using `trace:{organizationId}:{projectId}:{traceId}`
 - LLM flagger scans: `apps/workflows/src/activities/flagger-activities.ts` before `draftAnnotate`
-- live evaluations: `apps/workers/src/workers/live-evaluations.ts` immediately before hosted AI execution
+- live evaluations: `apps/workers/src/workers/live-evaluations.ts` immediately before execution; script capabilities select `deterministic-eval-scan` or `live-eval-scan`
 - eval generation: `apps/workflows/src/activities/evaluation-alignment-activities.ts` before expensive alignment generation/optimization work, keyed by `billingOperationId`
 
 Retries must not double-charge. Idempotency is enforced by `billing_usage_events` on `(billing_period_start, idempotency_key)` and use-case fallback behavior that re-reads the same period snapshot when an event already exists.
@@ -104,7 +105,7 @@ Free organizations are hard capped.
 
 Enforcement rules:
 
-- chargeable AI work (`flagger-scan`, `live-eval-scan`, `eval-generation`) is skipped before execution once no credits remain
+- chargeable scan and AI work (`flagger-scan`, `deterministic-eval-scan`, `live-eval-scan`, `eval-generation`) is skipped before execution once no credits remain
 - ingest: the **ingest HTTP route** rejects over-limit payloads with **`402`**. Accepted payloads persist first; metering runs afterward inside the ingest worker (`402` semantics use `NoCreditsRemainingError` aligned with metering domain errors).
 
 The system never partially accepts only part of one ingest payload. Do **not** bypass the ingest billing gate—other producers must enqueue `span-ingestion` only after applying the **same credit checks**.
@@ -133,7 +134,7 @@ This applies to the same charge points as normal billing metering:
 Two layers of enforcement run in `authorizeBillableAction`:
 
 1. **Snapshot projection (Postgres)**: reads the current period's `consumedCredits`, computes the projected spend with this action included, and refuses immediately if the projection already exceeds the cap. This catches the simple sequential case.
-2. **Atomic spend reservation (Redis)**: when the caller supplies an `idempotencyKey`, the use-case asks the `BillingSpendReservation` port to reserve `creditsRequested` against an in-memory counter for the period, refusing if the resulting reservation total would exceed the cap. The Redis adapter runs this as a single Lua script so concurrent `live-eval-scan` and `flagger-scan` callers cannot all race past the snapshot check at the cap boundary. The same `idempotencyKey` reused on retry is a no-op success — matching the period-scoped Postgres usage-event idempotency semantics so worker retries don't double-reserve.
+2. **Atomic spend reservation (Redis)**: when the caller supplies an `idempotencyKey`, the use-case asks the `BillingSpendReservation` port to reserve `creditsRequested` against an in-memory counter for the period, refusing if the resulting reservation total would exceed the cap. The Redis adapter runs this as a single Lua script so concurrent scan callers cannot all race past the snapshot check at the cap boundary. The same `idempotencyKey` reused on retry is a no-op success — matching the period-scoped Postgres usage-event idempotency semantics so worker retries don't double-reserve.
 
 The reservation counter is initialized lazily from the Postgres `consumedCredits` snapshot when the key is missing, so a fresh period or a Redis cold start re-syncs to the authoritative value. The counter is not decremented when the worker writes to Postgres — the reservation already counts that consumption — and the period TTL evicts the key after rollover.
 
