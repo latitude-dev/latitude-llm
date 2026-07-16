@@ -184,17 +184,28 @@ Do not log embeddings, per-member assignments, conversation content, or unbounde
 
 ## Rollout
 
-Validated environment setting:
+Rollout mode has three values, resolved from two inputs so a whole environment can be shadowed while only chosen organizations are enforced:
 
 ```text
-LAT_TAXONOMY_ADAPTIVE_CLUSTERING_MODE=off|shadow|enforced
+LAT_TAXONOMY_ADAPTIVE_CLUSTERING_MODE=off|shadow|enforced   # environment baseline
+adaptiveTaxonomyClustering                                  # per-organization feature flag
 ```
-
-The activity layer reads the setting. Temporal workflow code must not read environment state. If the workflow command sequence changes, add a `patched()` marker.
 
 * `off`: persist the static tree.
 * `shadow`: persist static, compute adaptive for comparison.
 * `enforced`: persist adaptive.
+
+The env variable is the **environment baseline** — one value for the whole deploy (the kill switch and the shadow toggle). The `adaptiveTaxonomyClustering` feature flag is the **per-organization enforcement opt-in**, reusing the existing per-org boolean flag system (`feature_flags.enabled_for_all` for everyone, an `organization_feature_flags` row for a single org) with no schema change. Resolution, in the planning activity:
+
+```text
+mode = envBaseline === "off"        ? "off"        // hard kill switch wins over the flag
+     : flagEnabledForOrg            ? "enforced"   // flag can only raise to enforced
+     : envBaseline                                  // otherwise the baseline (off/shadow/enforced)
+```
+
+The flag never lowers the mode and `off` always wins, so `off` stays a guaranteed global no-op. This is how "enforce the pilot organization first, then everyone" works: set the baseline to `shadow`, enable the flag for the one org, and later flip `enabled_for_all` (or set the baseline to `enforced`). The flag is **organization-grained**, so enabling it enforces adaptive on every project in that org; true per-project isolation would need a new `project_feature_flags` dimension and is out of scope.
+
+Both inputs are read in the activity layer only — the env baseline from `parseEnv`, the flag via `hasFeatureFlagUseCase` under `withPostgres(FeatureFlagRepositoryLive, pgClient, organizationId)` using the garden run's org id. Temporal workflow code must read neither environment state nor live flag state; if the workflow command sequence changes, add a `patched()` marker.
 
 All fallback selection occurs in the planning activity before staging the Redis plan artifact or starting writes. Fall back to static on structural-limit or non-finite output violations.
 
@@ -244,6 +255,7 @@ The narrow-domain pilot project (identified in the private Linear project) is th
 12. Reassign the complete bounded live window before publishing the tree.
 13. Resolve rollout mode in activity code, never workflow code.
 14. Publish staged trees through one atomic Postgres active-tree swap.
+15. Enforce per organization through the `adaptiveTaxonomyClustering` feature flag over an environment baseline; the env `off` is a hard kill switch that overrides the flag.
 
 ## Implementation phases
 
@@ -289,6 +301,7 @@ Exit: the bounded snapshot is assigned before publication, active reads never se
 
 * Build on the gate introduced in Phase 3 — the switch already exists here.
 * Implement off, shadow, and enforced planning.
+* Add the `adaptiveTaxonomyClustering` per-organization feature flag to the registry and resolve mode from the env baseline plus the flag in the planning activity (flag read via `hasFeatureFlagUseCase` with the garden run's org id).
 * Add bounded comparison telemetry and fallback reasons.
 * Run shadow across contrasting projects.
 * Record schedule adjustments and rollout findings.
@@ -313,15 +326,15 @@ Exit: no structural or resource guardrail violations, and every collapse/expansi
 
 ### Phase 5: enforcement and docs
 
-* Enforce for the pilot project.
+* Enforce for the pilot organization by enabling `adaptiveTaxonomyClustering` for that org (baseline stays `shadow`).
 * Verify online assignments and parent residue.
-* Expand to contrasting projects.
-* Enable globally after exit criteria pass.
+* Expand to contrasting organizations by enabling the flag for each.
+* Enable globally with `enabled_for_all` (or promote the env baseline to `enforced`) after exit criteria pass.
 * Update taxonomy and conversation-intelligence documentation.
 * Correct stale documentation that says the clustering sample cap is 10,000 instead of 1,500.
 * Decide whether intent projection is required based on shadow results.
 
-QA: a pilot-project acceptance run confirming the root gains 3–5 children, labeled purity/recall targets hold, online assignments land, and parent residue is correct; a rollback drill that flips `enforced`→`off` and confirms the next garden pass restores static behavior with no orphaned staging rows; a doc-accuracy check that the "10,000" sample-cap claim is gone from `dev-docs`.
+QA: a pilot acceptance run confirming the root gains 3–5 children, labeled purity/recall targets hold, online assignments land, and parent residue is correct; a mode-resolution test proving flag-enabled orgs resolve to `enforced` while others stay on the `shadow` baseline and an `off` baseline overrides the flag; a rollback drill that disables the flag (and flips the baseline to `off`) and confirms the next garden pass restores static behavior with no orphaned staging rows; a doc-accuracy check that the "10,000" sample-cap claim is gone from `dev-docs`.
 
 Exit: adaptive is the production default, evaluation targets pass, docs match behavior, and rollback remains available.
 
