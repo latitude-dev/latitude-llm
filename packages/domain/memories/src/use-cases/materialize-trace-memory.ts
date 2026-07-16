@@ -33,7 +33,12 @@ const tokenCount = (body: string): number => {
   return encoder.encode(body).length
 }
 
-const resolveRecordId = (record: MemoryRecord, span: MemoryOperationSpan, index: number, recordCount: number): string => {
+const resolveRecordId = (
+  record: MemoryRecord,
+  span: MemoryOperationSpan,
+  index: number,
+  recordCount: number,
+): string => {
   if (record.id) return record.id
   if (recordCount === 1 && span.recordId) return span.recordId
   return `${span.spanId}:${index}`

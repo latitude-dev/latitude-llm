@@ -102,10 +102,7 @@ describe("materializeTraceMemory", () => {
     const result = await materialize([span], memory)
 
     expect(result.eventCount).toBe(2)
-    expect(memory.events.map((event) => event.recordId).sort()).toEqual([
-      `${span.spanId}:0`,
-      `${span.spanId}:1`,
-    ])
+    expect(memory.events.map((event) => event.recordId).sort()).toEqual([`${span.spanId}:0`, `${span.spanId}:1`])
   })
 
   it("records search_memory as a read with a token count and no blobs", async () => {
