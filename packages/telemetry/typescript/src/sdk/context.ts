@@ -25,7 +25,6 @@ type LatitudeContextData = {
   sessionId: string | undefined
   userId: string | undefined
   userEmail: string | undefined
-  memoryScope: string | undefined
   project: string | undefined
 }
 
@@ -112,7 +111,6 @@ function buildCaptureContext(name: string, currentContext: Context, options: Con
     sessionId: options.sessionId ?? existingData?.sessionId,
     userId: options.userId ?? existingData?.userId,
     userEmail: options.userEmail ?? existingData?.userEmail,
-    memoryScope: options.memoryScope ?? existingData?.memoryScope,
     project: projectFromOptions ?? existingData?.project,
   }
 
