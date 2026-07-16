@@ -4094,7 +4094,9 @@
               "enum": [
                 "new",
                 "escalating",
-                "ongoing"
+                "ongoing",
+                "resolved",
+                "ignored"
               ]
             },
             "description": "Active lifecycle states. A signal may carry multiple states at once (e.g. `escalating` + `ongoing`)."
@@ -4105,6 +4107,20 @@
               "null"
             ],
             "description": "ISO-8601 timestamp at which the signal was muted, or `null`."
+          },
+          "resolvedAt": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "ISO-8601 timestamp at which the signal was resolved, or `null`."
+          },
+          "ignoredAt": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "ISO-8601 timestamp at which the signal was ignored, or `null`."
           },
           "createdAt": {
             "type": "string",
@@ -4158,6 +4174,8 @@
           "source",
           "states",
           "mutedAt",
+          "resolvedAt",
+          "ignoredAt",
           "createdAt",
           "updatedAt",
           "trend",
@@ -4848,7 +4866,9 @@
               "enum": [
                 "new",
                 "escalating",
-                "ongoing"
+                "ongoing",
+                "resolved",
+                "ignored"
               ]
             },
             "description": "Active lifecycle states. A signal may carry multiple states at once (e.g. `escalating` + `ongoing`)."
@@ -4859,6 +4879,20 @@
               "null"
             ],
             "description": "ISO-8601 timestamp at which the signal was muted, or `null`."
+          },
+          "resolvedAt": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "ISO-8601 timestamp at which the signal was resolved, or `null`."
+          },
+          "ignoredAt": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "ISO-8601 timestamp at which the signal was ignored, or `null`."
           },
           "createdAt": {
             "type": "string",
@@ -4928,6 +4962,8 @@
           "source",
           "states",
           "mutedAt",
+          "resolvedAt",
+          "ignoredAt",
           "createdAt",
           "updatedAt",
           "trend",
@@ -5239,6 +5275,20 @@
             ],
             "description": "ISO-8601 timestamp at which the signal was muted, or `null`."
           },
+          "resolvedAt": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "ISO-8601 timestamp at which the signal was resolved, or `null`."
+          },
+          "ignoredAt": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "ISO-8601 timestamp at which the signal was ignored, or `null`."
+          },
           "updatedAt": {
             "type": "string",
             "description": "ISO-8601 timestamp of the last update."
@@ -5251,6 +5301,8 @@
         "required": [
           "signalId",
           "mutedAt",
+          "resolvedAt",
+          "ignoredAt",
           "updatedAt",
           "changed"
         ]
@@ -5271,6 +5323,22 @@
         },
         "required": [
           "signalIds"
+        ]
+      },
+      "ResolveSignalsBody": {
+        "allOf": [
+          {
+            "$ref": "#/components/schemas/SignalsLifecycleBody"
+          },
+          {
+            "type": "object",
+            "properties": {
+              "keepMonitoring": {
+                "type": "boolean",
+                "description": "When `false`, stops monitoring linked evaluations on resolve. When omitted, uses the project default from settings."
+              }
+            }
+          }
         ]
       },
       "MonitorSignalResponse": {
@@ -5335,7 +5403,7 @@
               "active",
               "archived"
             ],
-            "description": "`\"active\"` for unmuted signals; `\"archived\"` for muted signals. Omit to include both."
+            "description": "`\"active\"` for signals that are not resolved and not ignored; `\"archived\"` for resolved or ignored signals. Omit to include both."
           }
         },
         "required": [
@@ -15153,10 +15221,10 @@
                 "active",
                 "archived"
               ],
-              "description": "`\"active\"` for unmuted signals; `\"archived\"` for muted signals. Omit to include both."
+              "description": "`\"active\"` for signals that are not resolved and not ignored; `\"archived\"` for resolved or ignored signals. Omit to include both."
             },
             "required": false,
-            "description": "`\"active\"` for unmuted signals; `\"archived\"` for muted signals. Omit to include both.",
+            "description": "`\"active\"` for signals that are not resolved and not ignored; `\"archived\"` for resolved or ignored signals. Omit to include both.",
             "name": "lifecycleGroup",
             "in": "query"
           },
@@ -15945,6 +16013,330 @@
           }
         ],
         "operationId": "unmuteSignals",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "description": "Project slug (human-readable identifier)"
+            },
+            "required": true,
+            "description": "Project slug (human-readable identifier)",
+            "name": "projectSlug",
+            "in": "path"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SignalsLifecycleBody"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Per-signal result",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SignalsLifecycleResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Validation error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/projects/{projectSlug}/signals/resolve": {
+      "post": {
+        "tags": [
+          "Signals"
+        ],
+        "x-fern-sdk-group-name": "signals",
+        "x-fern-sdk-method-name": "resolve",
+        "summary": "Resolve signals",
+        "description": "Marks each signal in `signalIds` as resolved.",
+        "security": [
+          {
+            "ApiKeyAuth": []
+          }
+        ],
+        "operationId": "resolveSignals",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "description": "Project slug (human-readable identifier)"
+            },
+            "required": true,
+            "description": "Project slug (human-readable identifier)",
+            "name": "projectSlug",
+            "in": "path"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ResolveSignalsBody"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Per-signal result",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SignalsLifecycleResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Validation error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/projects/{projectSlug}/signals/unresolve": {
+      "post": {
+        "tags": [
+          "Signals"
+        ],
+        "x-fern-sdk-group-name": "signals",
+        "x-fern-sdk-method-name": "unresolve",
+        "summary": "Unresolve signals",
+        "description": "Clears the resolved state for each signal in `signalIds`.",
+        "security": [
+          {
+            "ApiKeyAuth": []
+          }
+        ],
+        "operationId": "unresolveSignals",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "description": "Project slug (human-readable identifier)"
+            },
+            "required": true,
+            "description": "Project slug (human-readable identifier)",
+            "name": "projectSlug",
+            "in": "path"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SignalsLifecycleBody"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Per-signal result",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SignalsLifecycleResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Validation error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/projects/{projectSlug}/signals/ignore": {
+      "post": {
+        "tags": [
+          "Signals"
+        ],
+        "x-fern-sdk-group-name": "signals",
+        "x-fern-sdk-method-name": "ignore",
+        "summary": "Ignore signals",
+        "description": "Marks each signal in `signalIds` as ignored and stops monitoring linked evaluations.",
+        "security": [
+          {
+            "ApiKeyAuth": []
+          }
+        ],
+        "operationId": "ignoreSignals",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "description": "Project slug (human-readable identifier)"
+            },
+            "required": true,
+            "description": "Project slug (human-readable identifier)",
+            "name": "projectSlug",
+            "in": "path"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SignalsLifecycleBody"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Per-signal result",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SignalsLifecycleResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Validation error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/projects/{projectSlug}/signals/unignore": {
+      "post": {
+        "tags": [
+          "Signals"
+        ],
+        "x-fern-sdk-group-name": "signals",
+        "x-fern-sdk-method-name": "unignore",
+        "summary": "Unignore signals",
+        "description": "Clears the ignored state for each signal in `signalIds`.",
+        "security": [
+          {
+            "ApiKeyAuth": []
+          }
+        ],
+        "operationId": "unignoreSignals",
         "parameters": [
           {
             "schema": {

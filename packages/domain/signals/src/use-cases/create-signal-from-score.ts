@@ -111,6 +111,8 @@ const buildNewSignalFromScore = ({
     centroid,
     clusteredAt: centroid.clusteredAt,
     mutedAt: null,
+    resolvedAt: null,
+    ignoredAt: null,
     createdAt: assignedAt,
     updatedAt: assignedAt,
   }

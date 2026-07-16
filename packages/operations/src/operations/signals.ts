@@ -110,7 +110,9 @@ const ExportBodySchema = z
     lifecycleGroup: z
       .enum(SIGNAL_LIFECYCLE_GROUPS)
       .optional()
-      .describe('`"active"` for unmuted signals; `"archived"` for muted signals. Omit to include both.'),
+      .describe(
+        '`"active"` for signals that are not resolved and not ignored; `"archived"` for resolved or ignored signals. Omit to include both.',
+      ),
   })
   .openapi("ExportSignalsBody")
 
@@ -129,10 +131,21 @@ const LifecycleBodySchema = z
   })
   .openapi("SignalsLifecycleBody")
 
+const ResolveBodySchema = LifecycleBodySchema.extend({
+  keepMonitoring: z
+    .boolean()
+    .optional()
+    .describe(
+      "When `false`, stops monitoring linked evaluations on resolve. When omitted, uses the project default from settings.",
+    ),
+}).openapi("ResolveSignalsBody")
+
 const LifecycleItemSchema = z
   .object({
     signalId: cuidSchema.describe("Signal this entry applies to."),
     mutedAt: z.string().nullable().describe("ISO-8601 timestamp at which the signal was muted, or `null`."),
+    resolvedAt: z.string().nullable().describe("ISO-8601 timestamp at which the signal was resolved, or `null`."),
+    ignoredAt: z.string().nullable().describe("ISO-8601 timestamp at which the signal was ignored, or `null`."),
     updatedAt: z.string().describe("ISO-8601 timestamp of the last update."),
     changed: z
       .boolean()
@@ -163,10 +176,10 @@ const buildLifecycleEndpoint = ({
   command: SignalLifecycleCommand
   name: string
   fernMethod: string
-  pathSuffix: "/mute" | "/unmute"
+  pathSuffix: "/resolve" | "/unresolve" | "/ignore" | "/unignore" | "/mute" | "/unmute"
   summary: string
   description: string
-  bodySchema: typeof LifecycleBodySchema
+  bodySchema: typeof LifecycleBodySchema | typeof ResolveBodySchema
   rateLimitTier: RateLimitTier
 }) =>
   signalEndpoint({
@@ -197,6 +210,9 @@ const buildLifecycleEndpoint = ({
           projectId: project.id,
           signalIds: body.signalIds.map((id) => SignalId(id)),
           command,
+          ...(command === "resolve" && "keepMonitoring" in body && body.keepMonitoring !== undefined
+            ? { keepMonitoring: body.keepMonitoring }
+            : {}),
         })
         return {
           status: 200,
@@ -204,6 +220,8 @@ const buildLifecycleEndpoint = ({
             items: result.items.map((item) => ({
               signalId: item.signalId,
               mutedAt: item.mutedAt ? item.mutedAt.toISOString() : null,
+              resolvedAt: item.resolvedAt ? item.resolvedAt.toISOString() : null,
+              ignoredAt: item.ignoredAt ? item.ignoredAt.toISOString() : null,
               updatedAt: item.updatedAt.toISOString(),
               changed: item.changed,
             })),
@@ -224,6 +242,50 @@ const buildLifecycleEndpoint = ({
         withTracing,
       ),
   })
+
+const resolveSignals = buildLifecycleEndpoint({
+  command: "resolve",
+  name: "resolveSignals",
+  fernMethod: "resolve",
+  pathSuffix: "/resolve",
+  summary: "Resolve signals",
+  description: "Marks each signal in `signalIds` as resolved.",
+  bodySchema: ResolveBodySchema,
+  rateLimitTier: "medium",
+})
+
+const unresolveSignals = buildLifecycleEndpoint({
+  command: "unresolve",
+  name: "unresolveSignals",
+  fernMethod: "unresolve",
+  pathSuffix: "/unresolve",
+  summary: "Unresolve signals",
+  description: "Clears the resolved state for each signal in `signalIds`.",
+  bodySchema: LifecycleBodySchema,
+  rateLimitTier: "medium",
+})
+
+const ignoreSignals = buildLifecycleEndpoint({
+  command: "ignore",
+  name: "ignoreSignals",
+  fernMethod: "ignore",
+  pathSuffix: "/ignore",
+  summary: "Ignore signals",
+  description: "Marks each signal in `signalIds` as ignored and stops monitoring linked evaluations.",
+  bodySchema: LifecycleBodySchema,
+  rateLimitTier: "medium",
+})
+
+const unignoreSignals = buildLifecycleEndpoint({
+  command: "unignore",
+  name: "unignoreSignals",
+  fernMethod: "unignore",
+  pathSuffix: "/unignore",
+  summary: "Unignore signals",
+  description: "Clears the ignored state for each signal in `signalIds`.",
+  bodySchema: LifecycleBodySchema,
+  rateLimitTier: "medium",
+})
 
 const muteSignals = buildLifecycleEndpoint({
   command: "mute",
@@ -260,7 +322,9 @@ const ListSignalsQuerySchema = PaginatedQueryParamsSchema.extend({
   lifecycleGroup: z
     .enum(SIGNAL_LIFECYCLE_GROUP_VALUES)
     .optional()
-    .describe('`"active"` for unmuted signals; `"archived"` for muted signals. Omit to include both.'),
+    .describe(
+      '`"active"` for signals that are not resolved and not ignored; `"archived"` for resolved or ignored signals. Omit to include both.',
+    ),
   sortBy: z
     .enum(ISSUES_SORT_FIELDS)
     .default("lastSeen")
@@ -943,6 +1007,10 @@ export const signalsModule: OperationModule = {
     listSignalTraces,
     muteSignals,
     unmuteSignals,
+    resolveSignals,
+    unresolveSignals,
+    ignoreSignals,
+    unignoreSignals,
     monitorSignal,
     unmonitorSignal,
     exportSignals,

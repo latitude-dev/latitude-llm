@@ -80,7 +80,7 @@ These consequences carry through the rest of the spec:
 - an optional **`filters`** (a `FilterSet`): a cheap, row-local pre-gate restricting which traces the evaluation is even run against ("only `service = checkout`", "only traces above p90 latency"). Empty/absent = all traces. `filters` is only meaningful alongside an evaluation — it gates evaluation execution.
 - an optional **`evaluation`** (an `evaluations` row linked 1:1 via `evaluations.signal_id`, **one active per signal**): the membership detector, run at write time. With no linked evaluation there is no write-time detection — membership comes only from annotations. Having or not having an evaluation is a *state*, not a kind: a system-created signal starts with no evaluation and can later gain one (when tracked) while keeping `origin = 'system'`. Tell auto-generated from hand-built by `origin`, never by the presence of an evaluation.
 - **triage metadata**: priority and a single assignee, carried over from issues (multi-assignee deferred).
-- a **status** derived from age, activity, and signal-sourced incidents: `new`, `ongoing`, and `escalating`. Manual noise control is `muted_at`, not a resolved/ignored lifecycle.
+- a **status** derived from age, activity, and signal-sourced incidents: `new`, `ongoing`, `escalating`, plus manual archive stamps `resolved` / `ignored`. Notification mute remains `muted_at` and is independent of archive.
 
 Constraints:
 
@@ -611,7 +611,7 @@ The builder UI shipped (and expanded — it absorbs the former judge-builder pha
 - [x] **P4-a** Signal escalation uses the shared `EscalationEngine` and score occurrence series instead of default per-signal monitor provisioning.
 - [x] **P4-b** Signal incidents use `(source_type, source_id) = ("signal", signal.id)` and no monitor-alert join.
 - [x] **P4-c** Signal mute is `signals.muted_at`; mute gates notification fan-out and does not stop discovery or score assignment.
-- [x] **P4-d** Signal UI exposes mute/unmute, not resolve/ignore/regression actions.
+- [x] **P4-d** Signal UI exposes resolve/ignore archive actions; mute/unmute remains as notification control (no regression actions).
 - [x] **P4-e** Notification settings gate `signal.escalating`, while monitor settings gate `monitor.match`, `monitor.threshold`, and `monitor.escalating`.
 
 **Exit gate:** a signal escalation opens/closes a `signal` incident, respects signal mute, and fans out under the `signal.escalating` gate.
@@ -631,7 +631,7 @@ The builder UI shipped (and expanded — it absorbs the former judge-builder pha
 - [x] **P6-a** Incident sources are `monitor | signal`.
 - [x] **P6-b** Incident notification keys are `monitor.match`, `monitor.threshold`, `monitor.escalating`, and `signal.escalating`.
 - [x] **P6-c** Monitor UI/API use a single `rule`, with target-mode drafts mapped to `monitor.*`.
-- [x] **P6-d** Signal lifecycle actions are mute/unmute; resolved/ignored/regressed UI copy is retired.
+- [x] **P6-d** Signal lifecycle actions include resolve/ignore (archive) and mute/unmute (notifications); regressed UI copy stays retired.
 - **P6-e** → moved to the [Cleanup](#cleanup--legacy-storage-retirement-post-mvp) roadmap item: dropping dormant storage from the rename (`scores.issue_id`, retired `issue.*` kinds) as a compatibility-only migration.
 
 **Exit gate:** monitor and signal incidents use the final source taxonomy; the old alert-kind axis is absent from the shipped monitor/signal UI and notification producer.

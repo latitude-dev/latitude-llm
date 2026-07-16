@@ -128,6 +128,8 @@ const toSignalRecord = (issue: SignalListItem) => ({
   createdAt: issue.createdAt.toISOString(),
   updatedAt: issue.updatedAt.toISOString(),
   mutedAt: issue.mutedAt?.toISOString() ?? null,
+  resolvedAt: issue.resolvedAt?.toISOString() ?? null,
+  ignoredAt: issue.ignoredAt?.toISOString() ?? null,
   firstSeenAt: issue.firstSeenAt.toISOString(),
   lastSeenAt: issue.lastSeenAt.toISOString(),
   occurrences: issue.occurrences,
@@ -199,6 +201,8 @@ const toSignalSummaryRecord = (issue: Signal) => ({
   createdAt: issue.createdAt.toISOString(),
   updatedAt: issue.updatedAt.toISOString(),
   mutedAt: issue.mutedAt?.toISOString() ?? null,
+  resolvedAt: issue.resolvedAt?.toISOString() ?? null,
+  ignoredAt: issue.ignoredAt?.toISOString() ?? null,
 })
 
 export type SignalSummaryRecord = ReturnType<typeof toSignalSummaryRecord>
@@ -304,6 +308,8 @@ const toSignalDetailRecord = (input: {
   createdAt: input.issue.createdAt.toISOString(),
   updatedAt: input.issue.updatedAt.toISOString(),
   mutedAt: input.issue.mutedAt?.toISOString() ?? null,
+  resolvedAt: input.issue.resolvedAt?.toISOString() ?? null,
+  ignoredAt: input.issue.ignoredAt?.toISOString() ?? null,
   firstSeenAt: input.firstSeenAt?.toISOString() ?? null,
   lastSeenAt: input.lastSeenAt?.toISOString() ?? null,
   totalOccurrences: input.totalOccurrences,
@@ -332,6 +338,8 @@ const toSignalLifecycleCommandRecord = (result: ApplySignalLifecycleCommandResul
   items: result.items.map((item) => ({
     signalId: item.signalId,
     mutedAt: item.mutedAt?.toISOString() ?? null,
+    resolvedAt: item.resolvedAt?.toISOString() ?? null,
+    ignoredAt: item.ignoredAt?.toISOString() ?? null,
     updatedAt: item.updatedAt.toISOString(),
     changed: item.changed,
   })),
@@ -1219,7 +1227,7 @@ export const applyBulkSignalLifecycleAction = createServerFn({ method: "POST" })
     if (signalIds.length === 0) {
       return {
         command: data.command,
-        keepMonitoring: true,
+        keepMonitoring: data.command === "resolve" ? (data.keepMonitoring ?? true) : null,
         items: [],
       }
     }

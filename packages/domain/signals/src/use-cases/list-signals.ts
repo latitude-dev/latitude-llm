@@ -129,6 +129,8 @@ export interface SignalListItem {
   readonly assigneeId: string | null
   readonly priority: SignalPriority | null
   readonly mutedAt: Date | null
+  readonly resolvedAt: Date | null
+  readonly ignoredAt: Date | null
   readonly createdAt: Date
   readonly updatedAt: Date
   readonly firstSeenAt: Date
@@ -320,7 +322,7 @@ const matchesLifecycleGroup = (
     return true
   }
 
-  const isArchived = candidate.issue.mutedAt !== null
+  const isArchived = candidate.issue.ignoredAt !== null || candidate.lifecycleStates.includes(SignalState.Resolved)
   return lifecycleGroup === "archived" ? isArchived : !isArchived
 }
 
@@ -364,6 +366,8 @@ const LIFECYCLE_STATE_PRIORITY: Record<string, number> = {
   [SignalState.Escalating]: 0,
   [SignalState.New]: 1,
   [SignalState.Ongoing]: 2,
+  [SignalState.Resolved]: 3,
+  [SignalState.Ignored]: 4,
 }
 
 const UNKNOWN_STATE_PRIORITY = 99
@@ -505,6 +509,8 @@ const toLightListItem = (issue: SignalWithLifecycle, now: Date): SignalListItem 
     createdAt: issue.createdAt,
     updatedAt: issue.updatedAt,
     mutedAt: issue.mutedAt,
+    resolvedAt: issue.resolvedAt,
+    ignoredAt: issue.ignoredAt,
     firstSeenAt: issue.createdAt,
     lastSeenAt: issue.updatedAt,
     occurrences: 0,
@@ -968,6 +974,8 @@ export const listSignalsUseCase = (
           assigneeId: candidate.issue.assigneeId,
           priority: candidate.issue.priority,
           mutedAt: candidate.issue.mutedAt,
+          resolvedAt: candidate.issue.resolvedAt,
+          ignoredAt: candidate.issue.ignoredAt,
           createdAt: candidate.issue.createdAt,
           updatedAt: candidate.issue.updatedAt,
           firstSeenAt: occurrence?.firstSeenAt ?? candidate.firstSeenAt,

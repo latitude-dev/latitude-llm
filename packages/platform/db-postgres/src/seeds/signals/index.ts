@@ -216,7 +216,9 @@ function buildSignalRow(input: {
     source: input.issue.source,
     centroid,
     clusteredAt: centroid.clusteredAt,
-    mutedAt: fixtureDates.ignoredAt,
+    mutedAt: null,
+    resolvedAt: fixtureDates.resolvedAt,
+    ignoredAt: fixtureDates.ignoredAt,
     createdAt,
     updatedAt,
   }

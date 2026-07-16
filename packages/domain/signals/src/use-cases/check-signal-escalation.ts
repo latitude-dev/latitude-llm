@@ -84,7 +84,7 @@ export const checkSignalEscalationUseCase = (input: CheckSignalEscalationInput) 
     const wasEscalating = signalWithLifecycle.lifecycle.isEscalating
     const now = new Date()
 
-    if (signalWithLifecycle.mutedAt !== null) {
+    if (signalWithLifecycle.ignoredAt !== null || signalWithLifecycle.mutedAt !== null) {
       return { transition: "none", currentlyEscalating: wasEscalating } satisfies CheckSignalEscalationResult
     }
 
@@ -123,6 +123,14 @@ export const checkSignalEscalationUseCase = (input: CheckSignalEscalationInput) 
     if (decision.transition === "enter") {
       yield* sqlClient.transaction(
         Effect.gen(function* () {
+          if (signalWithLifecycle.resolvedAt !== null) {
+            yield* signalRepository.save({
+              ...signalWithLifecycle,
+              resolvedAt: null,
+              updatedAt: now,
+            })
+          }
+
           yield* outboxEventWriter.write({
             eventName: "SignalEscalated",
             aggregateType: "issue",

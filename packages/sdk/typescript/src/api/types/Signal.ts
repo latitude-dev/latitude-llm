@@ -21,6 +21,10 @@ export interface Signal {
     states: Signal.States.Item[];
     /** ISO-8601 timestamp at which the signal was muted, or `null`. */
     mutedAt: string | null;
+    /** ISO-8601 timestamp at which the signal was resolved, or `null`. */
+    resolvedAt: string | null;
+    /** ISO-8601 timestamp at which the signal was ignored, or `null`. */
+    ignoredAt: string | null;
     /** ISO-8601 timestamp of creation. */
     createdAt: string;
     /** ISO-8601 timestamp of the last update. */
@@ -54,6 +58,8 @@ export namespace Signal {
             New: "new",
             Escalating: "escalating",
             Ongoing: "ongoing",
+            Resolved: "resolved",
+            Ignored: "ignored",
         } as const;
         export type Item = (typeof Item)[keyof typeof Item];
     }

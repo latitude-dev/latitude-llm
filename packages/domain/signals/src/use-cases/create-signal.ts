@@ -75,6 +75,8 @@ export const createSignalUseCase = (input: CreateSignalInput) =>
           centroid: null,
           clusteredAt: null,
           mutedAt: null,
+          resolvedAt: null,
+          ignoredAt: null,
           deletedAt: null,
           createdAt: now,
           updatedAt: now,

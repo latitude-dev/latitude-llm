@@ -27,6 +27,8 @@ export const SignalState = {
   New: "new",
   Escalating: "escalating",
   Ongoing: "ongoing",
+  Resolved: "resolved",
+  Ignored: "ignored",
 } as const satisfies Record<string, SignalState>
 
 // ---------------------------------------------------------------------------
@@ -58,6 +60,8 @@ export const signalSchema = z.object({
   centroid: signalCentroidSchema.nullable(), // running weighted sum of clustered score feedback embeddings (discovered signals only); null for user-created evaluation-backed signals
   clusteredAt: z.date().nullable(), // last time the centroid/cluster state was refreshed (discovered signals only); authoritative decay anchor (not updatedAt)
   mutedAt: z.date().nullable(),
+  resolvedAt: z.date().nullable(),
+  ignoredAt: z.date().nullable(),
   deletedAt: z.date().nullish(), // soft-delete timestamp; deleted signals are excluded read-side
   createdAt: z.date(), // issue creation time
   updatedAt: z.date(), // issue update time

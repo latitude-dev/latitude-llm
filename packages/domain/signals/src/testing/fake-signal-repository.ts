@@ -167,7 +167,7 @@ export const createFakeSignalRepository = (
           .filter((issue) => issue.projectId === projectId)
           .map(withLifecycle)
           .filter((issue) => {
-            const archived = issue.mutedAt !== null
+            const archived = issue.resolvedAt !== null || issue.ignoredAt !== null
             if (lifecycleGroup === "active" && archived) return false
             if (lifecycleGroup === "archived" && !archived) return false
             if (assigneeIds?.length && !assigneeIds.includes(issue.assigneeId ?? "unassigned")) return false

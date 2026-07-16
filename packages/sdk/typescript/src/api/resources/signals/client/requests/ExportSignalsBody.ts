@@ -11,12 +11,12 @@ export interface ExportSignalsBody {
     recipient: string;
     /** Restrict the export to this subset of signals. Omit to export every signal in the project. */
     signalIds?: string[];
-    /** `"active"` for unmuted signals; `"archived"` for muted signals. Omit to include both. */
+    /** `"active"` for signals that are not resolved and not ignored; `"archived"` for resolved or ignored signals. Omit to include both. */
     lifecycleGroup?: ExportSignalsBody.LifecycleGroup;
 }
 
 export namespace ExportSignalsBody {
-    /** `"active"` for unmuted signals; `"archived"` for muted signals. Omit to include both. */
+    /** `"active"` for signals that are not resolved and not ignored; `"archived"` for resolved or ignored signals. Omit to include both. */
     export const LifecycleGroup = {
         Active: "active",
         Archived: "archived",

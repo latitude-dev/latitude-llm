@@ -45,6 +45,8 @@ const makeSignal = (overrides: Partial<Signal> = {}): Signal => {
     },
     clusteredAt: now,
     mutedAt: null,
+    resolvedAt: null,
+    ignoredAt: null,
     createdAt: now,
     updatedAt: now,
     ...overrides,

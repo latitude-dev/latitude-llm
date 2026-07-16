@@ -13,7 +13,7 @@ export interface ListSignalsRequest {
     limit?: number;
     /** Free-text semantic search across the signals' names and descriptions. */
     query?: string;
-    /** `"active"` for unmuted signals; `"archived"` for muted signals. Omit to include both. */
+    /** `"active"` for signals that are not resolved and not ignored; `"archived"` for resolved or ignored signals. Omit to include both. */
     lifecycleGroup?: Latitude.ListSignalsRequestLifecycleGroup;
     /** Sort field. `lastSeen` orders by most recent occurrence; `occurrences` by total count in the time window; `state` by lifecycle priority. */
     sortBy?: Latitude.ListSignalsRequestSortBy;

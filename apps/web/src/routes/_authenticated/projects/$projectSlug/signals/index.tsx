@@ -5,8 +5,11 @@ import {
   DotIndicator,
   Icon,
   Input,
+  Label,
   Modal,
+  Switch,
   Tabs,
+  Text,
   Tooltip,
   toast,
   useMountEffect,
@@ -49,7 +52,17 @@ function SignalsBreadcrumb() {
   )
 }
 
-import { ActivityIcon, ArchiveIcon, DownloadIcon, PauseIcon, PlayIcon, PlusIcon, SearchIcon } from "lucide-react"
+import {
+  ActivityIcon,
+  ArchiveIcon,
+  CheckIcon,
+  DownloadIcon,
+  PauseIcon,
+  PlayIcon,
+  PlusIcon,
+  SearchIcon,
+  XIcon,
+} from "lucide-react"
 import { useCallback, useEffect, useMemo, useState } from "react"
 import { invalidateSignalQueries, useSignals } from "../../../../../domains/signals/signals.collection.ts"
 import {
@@ -165,7 +178,9 @@ function SignalsPage() {
   const [selectionState, setSelectionState] = useState<SelectionState<string>>(EMPTY_SELECTION)
   const [exportModalOpen, setExportModalOpen] = useState(false)
   const [exporting, setExporting] = useState(false)
-  const [bulkMuteModalOpen, setBulkMuteModalOpen] = useState(false)
+  const [bulkResolveModalOpen, setBulkResolveModalOpen] = useState(false)
+  const [bulkIgnoreModalOpen, setBulkIgnoreModalOpen] = useState(false)
+  const [keepMonitoring, setKeepMonitoring] = useState(true)
   const [bulkActionLoading, setBulkActionLoading] = useState(false)
   const [builderOpen, setBuilderOpen] = useState(false)
   const [builderInitialFilters, setBuilderInitialFilters] = useState<FilterSet | null>(null)
@@ -281,7 +296,7 @@ function SignalsPage() {
     }
   }, [lifecycleGroup, project.id, searchQuery, selection, sorting.column, sorting.direction, tw.listRange])
 
-  const handleBulkMute = useCallback(async () => {
+  const handleBulkResolve = useCallback(async () => {
     const bulkSelection = selection.bulkSelection
     if (!bulkSelection) return
 
@@ -291,7 +306,8 @@ function SignalsPage() {
         data: {
           projectId: project.id,
           selection: bulkSelection,
-          command: archived ? "unmute" : "mute",
+          command: archived ? "unresolve" : "resolve",
+          ...(archived ? {} : { keepMonitoring }),
           lifecycleGroup,
           sort: {
             field: sorting.column,
@@ -303,18 +319,72 @@ function SignalsPage() {
         },
       })
       const changedCount = result.items.filter((item) => item.changed).length
-      const verb = archived ? "unmuted" : "muted"
+      const verb = archived ? "unresolved" : "resolved"
       await invalidateSignalQueries(project.id)
       toast({
         description:
           changedCount === 0
-            ? `No signals were ${verb}.`
+            ? `No issues were ${verb}.`
             : changedCount === 1
-              ? `1 signal ${verb}.`
-              : `${changedCount} signals ${verb}.`,
+              ? `1 issue ${verb}.`
+              : `${changedCount} issues ${verb}.`,
       })
       selection.clearSelections()
-      setBulkMuteModalOpen(false)
+      setBulkResolveModalOpen(false)
+    } catch (error) {
+      toast({
+        variant: "destructive",
+        description: toUserMessage(error),
+      })
+    } finally {
+      setBulkActionLoading(false)
+    }
+  }, [
+    archived,
+    keepMonitoring,
+    lifecycleGroup,
+    project.id,
+    searchQuery,
+    selection,
+    sorting.column,
+    sorting.direction,
+    tw.listRange,
+  ])
+
+  const handleBulkIgnore = useCallback(async () => {
+    const bulkSelection = selection.bulkSelection
+    if (!bulkSelection) return
+
+    setBulkActionLoading(true)
+    try {
+      const result = await applyBulkSignalLifecycleAction({
+        data: {
+          projectId: project.id,
+          selection: bulkSelection,
+          command: archived ? "unignore" : "ignore",
+          lifecycleGroup,
+          sort: {
+            field: sorting.column,
+            direction: sorting.direction,
+          },
+          ...(assigneeIds.length > 0 ? { assigneeIds: [...assigneeIds] } : {}),
+          ...(searchQuery ? { searchQuery } : {}),
+          timeRange: tw.listRange,
+        },
+      })
+      const changedCount = result.items.filter((item) => item.changed).length
+      const verb = archived ? "unignored" : "ignored"
+      await invalidateSignalQueries(project.id)
+      toast({
+        description:
+          changedCount === 0
+            ? `No issues were ${verb}.`
+            : changedCount === 1
+              ? `1 issue ${verb}.`
+              : `${changedCount} issues ${verb}.`,
+      })
+      selection.clearSelections()
+      setBulkIgnoreModalOpen(false)
     } catch (error) {
       toast({
         variant: "destructive",
@@ -412,9 +482,26 @@ function SignalsPage() {
         </Layout.Actions>
         {selection.selectedCount > 0 && (
           <div className="flex items-center gap-2 px-6">
-            <Button variant="outline" size="sm" onClick={() => setBulkMuteModalOpen(true)} disabled={bulkActionLoading}>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setBulkIgnoreModalOpen(true)}
+              disabled={bulkActionLoading}
+            >
               <Icon icon={archived ? PlayIcon : PauseIcon} size="sm" />
-              {archived ? "Unmute" : "Mute"} ({selection.selectedCount.toLocaleString()})
+              {archived ? "Unignore" : "Ignore"} ({selection.selectedCount.toLocaleString()})
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => {
+                setKeepMonitoring(true)
+                setBulkResolveModalOpen(true)
+              }}
+              disabled={bulkActionLoading}
+            >
+              <Icon icon={archived ? XIcon : CheckIcon} size="sm" />
+              {archived ? "Unresolve" : "Resolve"} ({selection.selectedCount.toLocaleString()})
             </Button>
             <Button variant="outline" size="sm" onClick={() => setExportModalOpen(true)} disabled={exporting}>
               <Icon icon={DownloadIcon} size="sm" />
@@ -445,7 +532,7 @@ function SignalsPage() {
           projectSlug={project.slug}
           focusedSignalId={focusedSignalId}
           onFocusedSignalChange={setFocusedSignalId}
-          keyboardNavEnabled={!builderOpen && !exportModalOpen && !bulkMuteModalOpen}
+          keyboardNavEnabled={!builderOpen && !exportModalOpen && !bulkResolveModalOpen && !bulkIgnoreModalOpen}
         />
         {selection.bulkSelection && (
           <ExportConfirmationModal
@@ -459,25 +546,73 @@ function SignalsPage() {
         )}
 
         <Modal
-          open={bulkMuteModalOpen}
-          onOpenChange={setBulkMuteModalOpen}
+          open={bulkResolveModalOpen}
+          onOpenChange={setBulkResolveModalOpen}
           dismissible
-          title={archived ? "Unmute signals" : "Mute signals"}
+          title={archived ? "Unresolve signals" : "Resolve signals"}
           description={
             archived
-              ? `Unmute ${selection.selectedCount === 1 ? "this signal" : `${selection.selectedCount} signals`}. New occurrences can trigger notifications again.`
-              : `Mute ${selection.selectedCount === 1 ? "this signal" : `${selection.selectedCount} signals`}. New occurrences will not trigger signal notifications.`
+              ? `Reopen ${selection.selectedCount === 1 ? "this signal" : `${selection.selectedCount} signals`}. New occurrences won't mark ${selection.selectedCount === 1 ? "it" : "them"} as regressed.`
+              : `Mark ${selection.selectedCount === 1 ? "this signal" : `${selection.selectedCount} signals`} as resolved. If any of these signals start occurring again we will alert you and promote them as regressed.`
+          }
+          footer={
+            <>
+              <Button variant="outline" onClick={() => setBulkResolveModalOpen(false)} disabled={bulkActionLoading}>
+                Cancel
+              </Button>
+              <Button
+                {...(archived ? { variant: "destructive" as const } : {})}
+                onClick={() => void handleBulkResolve()}
+                disabled={bulkActionLoading}
+              >
+                <Icon icon={archived ? XIcon : CheckIcon} size="sm" />
+                {archived ? "Unresolve" : "Resolve"}{" "}
+                {selection.selectedCount === 1 ? "Signal" : `${selection.selectedCount} Signals`}
+              </Button>
+            </>
+          }
+        >
+          {!archived && (
+            <div className="flex flex-col gap-3">
+              <div className="flex flex-row items-center justify-between gap-4">
+                <div className="flex flex-col gap-1">
+                  <Label htmlFor="bulk-keep-monitoring">Keep evaluating these signals</Label>
+                  <Text.H6 color="foregroundMuted">
+                    Evaluations for these signals will stay active to detect further regressions
+                  </Text.H6>
+                </div>
+                <Switch
+                  id="bulk-keep-monitoring"
+                  checked={keepMonitoring}
+                  onCheckedChange={setKeepMonitoring}
+                  disabled={bulkActionLoading}
+                  aria-label="Keep evaluating these signals"
+                />
+              </div>
+            </div>
+          )}
+        </Modal>
+
+        <Modal
+          open={bulkIgnoreModalOpen}
+          onOpenChange={setBulkIgnoreModalOpen}
+          dismissible
+          title={archived ? "Unignore signals" : "Ignore signals"}
+          description={
+            archived
+              ? `Stop ignoring ${selection.selectedCount === 1 ? "this signal" : `${selection.selectedCount} signals`}. New occurrences will surface ${selection.selectedCount === 1 ? "it" : "them"} again.`
+              : `Mark ${selection.selectedCount === 1 ? "this signal" : `${selection.selectedCount} signals`} as ignored. You won't be alerted about new occurrences of these signals anymore.`
           }
           footer={
             <>
               <CloseTrigger />
               <Button
                 {...(archived ? {} : { variant: "destructive" as const })}
-                onClick={() => void handleBulkMute()}
+                onClick={() => void handleBulkIgnore()}
                 disabled={bulkActionLoading}
               >
                 <Icon icon={archived ? PlayIcon : PauseIcon} size="sm" />
-                {archived ? "Unmute" : "Mute"}{" "}
+                {archived ? "Unignore" : "Ignore"}{" "}
                 {selection.selectedCount === 1 ? "Signal" : `${selection.selectedCount} Signals`}
               </Button>
             </>

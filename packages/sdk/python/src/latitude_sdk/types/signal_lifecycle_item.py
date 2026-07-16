@@ -21,6 +21,24 @@ class SignalLifecycleItem(UniversalBaseModel):
             alias="mutedAt", default=None, description="ISO-8601 timestamp at which the signal was muted, or `null`."
         ),
     ]
+    resolved_at: typing_extensions.Annotated[
+        typing.Optional[str],
+        FieldMetadata(alias="resolvedAt"),
+        pydantic.Field(
+            alias="resolvedAt",
+            default=None,
+            description="ISO-8601 timestamp at which the signal was resolved, or `null`.",
+        ),
+    ]
+    ignored_at: typing_extensions.Annotated[
+        typing.Optional[str],
+        FieldMetadata(alias="ignoredAt"),
+        pydantic.Field(
+            alias="ignoredAt",
+            default=None,
+            description="ISO-8601 timestamp at which the signal was ignored, or `null`.",
+        ),
+    ]
     updated_at: typing_extensions.Annotated[
         str,
         FieldMetadata(alias="updatedAt"),

@@ -92,6 +92,8 @@ const toDomainSignal = (row: typeof signals.$inferSelect): Signal =>
     centroid: row.centroid,
     clusteredAt: row.clusteredAt,
     mutedAt: row.mutedAt,
+    resolvedAt: row.resolvedAt,
+    ignoredAt: row.ignoredAt,
     deletedAt: row.deletedAt,
     createdAt: row.createdAt,
     updatedAt: row.updatedAt,
@@ -195,6 +197,8 @@ const toInsertRow = (issue: Signal, centroidEmbedding: readonly number[] | null)
   centroidEmbedding: centroidEmbedding === null ? null : [...centroidEmbedding],
   clusteredAt: issue.clusteredAt,
   mutedAt: issue.mutedAt,
+  resolvedAt: issue.resolvedAt,
+  ignoredAt: issue.ignoredAt,
   deletedAt: issue.deletedAt,
   createdAt: issue.createdAt,
   updatedAt: issue.updatedAt,
@@ -281,9 +285,9 @@ const signalRepositoryCoreLive = Layer.effect(
                 eq(signals.projectId, projectId),
                 isNull(signals.deletedAt),
                 lifecycleGroup === "active"
-                  ? isNull(signals.mutedAt)
+                  ? and(isNull(signals.resolvedAt), isNull(signals.ignoredAt))
                   : lifecycleGroup === "archived"
-                    ? isNotNull(signals.mutedAt)
+                    ? or(isNotNull(signals.resolvedAt), isNotNull(signals.ignoredAt))
                     : undefined,
                 assigneeConditions,
                 activityOrCreatedInTimeRange,
@@ -335,7 +339,7 @@ const signalRepositoryCoreLive = Layer.effect(
               end`
               const secondaryOrderBy =
                 sort?.field === "state"
-                  ? [direction(signals.mutedAt), direction(signals.updatedAt)]
+                  ? [direction(signals.resolvedAt), direction(signals.ignoredAt), direction(signals.updatedAt)]
                   : sort?.field === "occurrences"
                     ? [direction(occurrencesSort), desc(lastSeenSort), asc(signals.id)]
                     : sort?.field === "affectedSessions"
@@ -593,7 +597,8 @@ const signalRepositoryCoreLive = Layer.effect(
                   and(
                     eq(signals.organizationId, organizationId),
                     isNull(projects.deletedAt),
-                    isNull(signals.mutedAt),
+                    isNull(signals.resolvedAt),
+                    isNull(signals.ignoredAt),
                     or(sql`${signals.searchDocument} @@ ${lexicalQuery}`, ilike(signals.name, `%${query}%`)),
                   ),
                 )
@@ -632,7 +637,8 @@ const signalRepositoryCoreLive = Layer.effect(
                 and(
                   eq(signals.organizationId, organizationId),
                   isNull(projects.deletedAt),
-                  isNull(signals.mutedAt),
+                  isNull(signals.resolvedAt),
+                  isNull(signals.ignoredAt),
                   isNull(signals.deletedAt),
                   isNotNull(signals.centroidEmbedding),
                   sql`(${score} >= ${SIGNAL_DISCOVERY_MIN_SIMILARITY} OR ${vectorScore} >= ${SIGNAL_DISCOVERY_MIN_VECTOR_SIMILARITY})`,
@@ -670,6 +676,8 @@ const signalRepositoryCoreLive = Layer.effect(
                   centroidEmbedding: row.centroidEmbedding,
                   clusteredAt: row.clusteredAt,
                   mutedAt: row.mutedAt,
+                  resolvedAt: row.resolvedAt,
+                  ignoredAt: row.ignoredAt,
                   deletedAt: row.deletedAt,
                   updatedAt: row.updatedAt,
                 },

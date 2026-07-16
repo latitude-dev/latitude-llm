@@ -821,6 +821,17 @@ Returns the full-history detail view of one signal: lifecycle `states`, lifetime
 | `--project-slug` | `string` | Yes | Project slug (human-readable identifier) |
 | `--signal-slug` | `string` | Yes | Signal slug. |
 
+#### `latitude signals ignore`
+
+Marks each signal in `signalIds` as ignored and stops monitoring linked evaluations.
+
+`POST /v1/projects/{projectSlug}/signals/ignore`
+
+| Flag | Type | Required | Description |
+|------|------|----------|-------------|
+| `--project-slug` | `string` | Yes | Project slug (human-readable identifier) |
+| `--json` | `JSON` | Yes | Request body as JSON (or use individual body-field flags) |
+
 #### `latitude signals list`
 
 Returns a cursor-paginated page of signals in the project. Each item includes lifecycle `states` plus time-window stats: `firstSeenAt`, `lastSeenAt`, `occurrences`, `affectedSessionsPercent`, `trend`, and `tags`.
@@ -833,7 +844,7 @@ Returns a cursor-paginated page of signals in the project. Each item includes li
 | `--cursor` | `string` | No | Opaque cursor returned in a previous response's `nextCursor`. Omit on the first page. |
 | `--limit` | `integer` | No | Page size. Defaults to 50; max 200. |
 | `--query` | `string` | No | Free-text semantic search across the signals' names and descriptions. |
-| `--lifecycle-group` | `active | archived` | No | `"active"` for unmuted signals; `"archived"` for muted signals. Omit to include both. |
+| `--lifecycle-group` | `active | archived` | No | `"active"` for signals that are not resolved and not ignored; `"archived"` for resolved or ignored signals. Omit to include both. |
 | `--sort-by` | `lastSeen | occurrences | state` | No | Sort field. `lastSeen` orders by most recent occurrence; `occurrences` by total count in the time window; `state` by lifecycle priority. |
 | `--sort-direction` | `asc | desc` | No | Sort direction. Defaults to `desc`. |
 | `--from-iso` | `string (date-time)` | No | Lower bound (inclusive) of the time window. Defaults to ~6 days ago. |
@@ -874,6 +885,17 @@ Mutes each signal in `signalIds`.
 | `--project-slug` | `string` | Yes | Project slug (human-readable identifier) |
 | `--json` | `JSON` | Yes | Request body as JSON (or use individual body-field flags) |
 
+#### `latitude signals resolve`
+
+Marks each signal in `signalIds` as resolved.
+
+`POST /v1/projects/{projectSlug}/signals/resolve`
+
+| Flag | Type | Required | Description |
+|------|------|----------|-------------|
+| `--project-slug` | `string` | Yes | Project slug (human-readable identifier) |
+| `--json` | `JSON` | Yes | Request body as JSON (or use individual body-field flags) |
+
 #### `latitude signals trend`
 
 Returns the occurrence histogram for one signal over `[fromIso, toIso]`. The default range is the trailing 14 days. Buckets are 12-hour wide and UTC-aligned.
@@ -886,6 +908,17 @@ Returns the occurrence histogram for one signal over `[fromIso, toIso]`. The def
 | `--signal-slug` | `string` | Yes | Signal slug. |
 | `--from-iso` | `string (date-time)` | No | Lower bound (inclusive). Defaults to ~14 days before `toIso`. |
 | `--to-iso` | `string (date-time)` | No | Upper bound (inclusive). Defaults to now. |
+
+#### `latitude signals unignore`
+
+Clears the ignored state for each signal in `signalIds`.
+
+`POST /v1/projects/{projectSlug}/signals/unignore`
+
+| Flag | Type | Required | Description |
+|------|------|----------|-------------|
+| `--project-slug` | `string` | Yes | Project slug (human-readable identifier) |
+| `--json` | `JSON` | Yes | Request body as JSON (or use individual body-field flags) |
 
 #### `latitude signals unmonitor`
 
@@ -903,6 +936,17 @@ Stops monitoring the signal. Idempotent — signals that aren't being monitored 
 Reverts each signal in `signalIds` to an unmuted state.
 
 `POST /v1/projects/{projectSlug}/signals/unmute`
+
+| Flag | Type | Required | Description |
+|------|------|----------|-------------|
+| `--project-slug` | `string` | Yes | Project slug (human-readable identifier) |
+| `--json` | `JSON` | Yes | Request body as JSON (or use individual body-field flags) |
+
+#### `latitude signals unresolve`
+
+Clears the resolved state for each signal in `signalIds`.
+
+`POST /v1/projects/{projectSlug}/signals/unresolve`
 
 | Flag | Type | Required | Description |
 |------|------|----------|-------------|

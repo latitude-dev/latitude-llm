@@ -907,6 +907,359 @@ export class SignalsClient {
     }
 
     /**
+     * Marks each signal in `signalIds` as resolved.
+     *
+     * @param {string} projectSlug - Project slug (human-readable identifier)
+     * @param {Latitude.ResolveSignalsBody} request
+     * @param {SignalsClient.RequestOptions} requestOptions - Request-specific configuration.
+     *
+     * @throws {@link Latitude.BadRequestError}
+     * @throws {@link Latitude.UnauthorizedError}
+     * @throws {@link Latitude.NotFoundError}
+     *
+     * @example
+     *     await client.signals.resolve("projectSlug", {
+     *         signalIds: ["signalIds"]
+     *     })
+     */
+    public resolve(
+        projectSlug: string,
+        request: Latitude.ResolveSignalsBody,
+        requestOptions?: SignalsClient.RequestOptions,
+    ): core.HttpResponsePromise<Latitude.SignalsLifecycleResponse> {
+        return core.HttpResponsePromise.fromPromise(this.__resolve(projectSlug, request, requestOptions));
+    }
+
+    private async __resolve(
+        projectSlug: string,
+        request: Latitude.ResolveSignalsBody,
+        requestOptions?: SignalsClient.RequestOptions,
+    ): Promise<core.WithRawResponse<Latitude.SignalsLifecycleResponse>> {
+        const _authRequest: core.AuthRequest = await this._options.authProvider.getAuthRequest();
+        const _headers: core.Fetcher.Args["headers"] = mergeHeaders(
+            _authRequest.headers,
+            this._options?.headers,
+            requestOptions?.headers,
+        );
+        const _response = await core.fetcher({
+            url: core.url.join(
+                (await core.Supplier.get(this._options.baseUrl)) ??
+                    (await core.Supplier.get(this._options.environment)) ??
+                    environments.LatitudeEnvironment.Production,
+                `v1/projects/${core.url.encodePathParam(projectSlug)}/signals/resolve`,
+            ),
+            method: "POST",
+            headers: _headers,
+            contentType: "application/json",
+            queryString: core.url.queryBuilder().mergeAdditional(requestOptions?.queryParams).build(),
+            requestType: "json",
+            body: request,
+            timeoutMs: (requestOptions?.timeoutInSeconds ?? this._options?.timeoutInSeconds ?? 60) * 1000,
+            maxRetries: requestOptions?.maxRetries ?? this._options?.maxRetries,
+            abortSignal: requestOptions?.abortSignal,
+            fetchFn: this._options?.fetch,
+            logging: this._options.logging,
+        });
+        if (_response.ok) {
+            return { data: _response.body as Latitude.SignalsLifecycleResponse, rawResponse: _response.rawResponse };
+        }
+
+        if (_response.error.reason === "status-code") {
+            switch (_response.error.statusCode) {
+                case 400:
+                    throw new Latitude.BadRequestError(_response.error.body as Latitude.Error_, _response.rawResponse);
+                case 401:
+                    throw new Latitude.UnauthorizedError(
+                        _response.error.body as Latitude.Error_,
+                        _response.rawResponse,
+                    );
+                case 404:
+                    throw new Latitude.NotFoundError(_response.error.body as Latitude.Error_, _response.rawResponse);
+                default:
+                    throw new errors.LatitudeError({
+                        statusCode: _response.error.statusCode,
+                        body: _response.error.body,
+                        rawResponse: _response.rawResponse,
+                    });
+            }
+        }
+
+        return handleNonStatusCodeError(
+            _response.error,
+            _response.rawResponse,
+            "POST",
+            "/v1/projects/{projectSlug}/signals/resolve",
+        );
+    }
+
+    /**
+     * Clears the resolved state for each signal in `signalIds`.
+     *
+     * @param {string} projectSlug - Project slug (human-readable identifier)
+     * @param {Latitude.UnresolveSignalsRequest} request
+     * @param {SignalsClient.RequestOptions} requestOptions - Request-specific configuration.
+     *
+     * @throws {@link Latitude.BadRequestError}
+     * @throws {@link Latitude.UnauthorizedError}
+     * @throws {@link Latitude.NotFoundError}
+     *
+     * @example
+     *     await client.signals.unresolve("projectSlug", {
+     *         body: {
+     *             signalIds: ["signalIds"]
+     *         }
+     *     })
+     */
+    public unresolve(
+        projectSlug: string,
+        request: Latitude.UnresolveSignalsRequest,
+        requestOptions?: SignalsClient.RequestOptions,
+    ): core.HttpResponsePromise<Latitude.SignalsLifecycleResponse> {
+        return core.HttpResponsePromise.fromPromise(this.__unresolve(projectSlug, request, requestOptions));
+    }
+
+    private async __unresolve(
+        projectSlug: string,
+        request: Latitude.UnresolveSignalsRequest,
+        requestOptions?: SignalsClient.RequestOptions,
+    ): Promise<core.WithRawResponse<Latitude.SignalsLifecycleResponse>> {
+        const { body: _body } = request;
+        const _authRequest: core.AuthRequest = await this._options.authProvider.getAuthRequest();
+        const _headers: core.Fetcher.Args["headers"] = mergeHeaders(
+            _authRequest.headers,
+            this._options?.headers,
+            requestOptions?.headers,
+        );
+        const _response = await core.fetcher({
+            url: core.url.join(
+                (await core.Supplier.get(this._options.baseUrl)) ??
+                    (await core.Supplier.get(this._options.environment)) ??
+                    environments.LatitudeEnvironment.Production,
+                `v1/projects/${core.url.encodePathParam(projectSlug)}/signals/unresolve`,
+            ),
+            method: "POST",
+            headers: _headers,
+            contentType: "application/json",
+            queryString: core.url.queryBuilder().mergeAdditional(requestOptions?.queryParams).build(),
+            requestType: "json",
+            body: _body,
+            timeoutMs: (requestOptions?.timeoutInSeconds ?? this._options?.timeoutInSeconds ?? 60) * 1000,
+            maxRetries: requestOptions?.maxRetries ?? this._options?.maxRetries,
+            abortSignal: requestOptions?.abortSignal,
+            fetchFn: this._options?.fetch,
+            logging: this._options.logging,
+        });
+        if (_response.ok) {
+            return { data: _response.body as Latitude.SignalsLifecycleResponse, rawResponse: _response.rawResponse };
+        }
+
+        if (_response.error.reason === "status-code") {
+            switch (_response.error.statusCode) {
+                case 400:
+                    throw new Latitude.BadRequestError(_response.error.body as Latitude.Error_, _response.rawResponse);
+                case 401:
+                    throw new Latitude.UnauthorizedError(
+                        _response.error.body as Latitude.Error_,
+                        _response.rawResponse,
+                    );
+                case 404:
+                    throw new Latitude.NotFoundError(_response.error.body as Latitude.Error_, _response.rawResponse);
+                default:
+                    throw new errors.LatitudeError({
+                        statusCode: _response.error.statusCode,
+                        body: _response.error.body,
+                        rawResponse: _response.rawResponse,
+                    });
+            }
+        }
+
+        return handleNonStatusCodeError(
+            _response.error,
+            _response.rawResponse,
+            "POST",
+            "/v1/projects/{projectSlug}/signals/unresolve",
+        );
+    }
+
+    /**
+     * Marks each signal in `signalIds` as ignored and stops monitoring linked evaluations.
+     *
+     * @param {string} projectSlug - Project slug (human-readable identifier)
+     * @param {Latitude.IgnoreSignalsRequest} request
+     * @param {SignalsClient.RequestOptions} requestOptions - Request-specific configuration.
+     *
+     * @throws {@link Latitude.BadRequestError}
+     * @throws {@link Latitude.UnauthorizedError}
+     * @throws {@link Latitude.NotFoundError}
+     *
+     * @example
+     *     await client.signals.ignore("projectSlug", {
+     *         body: {
+     *             signalIds: ["signalIds"]
+     *         }
+     *     })
+     */
+    public ignore(
+        projectSlug: string,
+        request: Latitude.IgnoreSignalsRequest,
+        requestOptions?: SignalsClient.RequestOptions,
+    ): core.HttpResponsePromise<Latitude.SignalsLifecycleResponse> {
+        return core.HttpResponsePromise.fromPromise(this.__ignore(projectSlug, request, requestOptions));
+    }
+
+    private async __ignore(
+        projectSlug: string,
+        request: Latitude.IgnoreSignalsRequest,
+        requestOptions?: SignalsClient.RequestOptions,
+    ): Promise<core.WithRawResponse<Latitude.SignalsLifecycleResponse>> {
+        const { body: _body } = request;
+        const _authRequest: core.AuthRequest = await this._options.authProvider.getAuthRequest();
+        const _headers: core.Fetcher.Args["headers"] = mergeHeaders(
+            _authRequest.headers,
+            this._options?.headers,
+            requestOptions?.headers,
+        );
+        const _response = await core.fetcher({
+            url: core.url.join(
+                (await core.Supplier.get(this._options.baseUrl)) ??
+                    (await core.Supplier.get(this._options.environment)) ??
+                    environments.LatitudeEnvironment.Production,
+                `v1/projects/${core.url.encodePathParam(projectSlug)}/signals/ignore`,
+            ),
+            method: "POST",
+            headers: _headers,
+            contentType: "application/json",
+            queryString: core.url.queryBuilder().mergeAdditional(requestOptions?.queryParams).build(),
+            requestType: "json",
+            body: _body,
+            timeoutMs: (requestOptions?.timeoutInSeconds ?? this._options?.timeoutInSeconds ?? 60) * 1000,
+            maxRetries: requestOptions?.maxRetries ?? this._options?.maxRetries,
+            abortSignal: requestOptions?.abortSignal,
+            fetchFn: this._options?.fetch,
+            logging: this._options.logging,
+        });
+        if (_response.ok) {
+            return { data: _response.body as Latitude.SignalsLifecycleResponse, rawResponse: _response.rawResponse };
+        }
+
+        if (_response.error.reason === "status-code") {
+            switch (_response.error.statusCode) {
+                case 400:
+                    throw new Latitude.BadRequestError(_response.error.body as Latitude.Error_, _response.rawResponse);
+                case 401:
+                    throw new Latitude.UnauthorizedError(
+                        _response.error.body as Latitude.Error_,
+                        _response.rawResponse,
+                    );
+                case 404:
+                    throw new Latitude.NotFoundError(_response.error.body as Latitude.Error_, _response.rawResponse);
+                default:
+                    throw new errors.LatitudeError({
+                        statusCode: _response.error.statusCode,
+                        body: _response.error.body,
+                        rawResponse: _response.rawResponse,
+                    });
+            }
+        }
+
+        return handleNonStatusCodeError(
+            _response.error,
+            _response.rawResponse,
+            "POST",
+            "/v1/projects/{projectSlug}/signals/ignore",
+        );
+    }
+
+    /**
+     * Clears the ignored state for each signal in `signalIds`.
+     *
+     * @param {string} projectSlug - Project slug (human-readable identifier)
+     * @param {Latitude.UnignoreSignalsRequest} request
+     * @param {SignalsClient.RequestOptions} requestOptions - Request-specific configuration.
+     *
+     * @throws {@link Latitude.BadRequestError}
+     * @throws {@link Latitude.UnauthorizedError}
+     * @throws {@link Latitude.NotFoundError}
+     *
+     * @example
+     *     await client.signals.unignore("projectSlug", {
+     *         body: {
+     *             signalIds: ["signalIds"]
+     *         }
+     *     })
+     */
+    public unignore(
+        projectSlug: string,
+        request: Latitude.UnignoreSignalsRequest,
+        requestOptions?: SignalsClient.RequestOptions,
+    ): core.HttpResponsePromise<Latitude.SignalsLifecycleResponse> {
+        return core.HttpResponsePromise.fromPromise(this.__unignore(projectSlug, request, requestOptions));
+    }
+
+    private async __unignore(
+        projectSlug: string,
+        request: Latitude.UnignoreSignalsRequest,
+        requestOptions?: SignalsClient.RequestOptions,
+    ): Promise<core.WithRawResponse<Latitude.SignalsLifecycleResponse>> {
+        const { body: _body } = request;
+        const _authRequest: core.AuthRequest = await this._options.authProvider.getAuthRequest();
+        const _headers: core.Fetcher.Args["headers"] = mergeHeaders(
+            _authRequest.headers,
+            this._options?.headers,
+            requestOptions?.headers,
+        );
+        const _response = await core.fetcher({
+            url: core.url.join(
+                (await core.Supplier.get(this._options.baseUrl)) ??
+                    (await core.Supplier.get(this._options.environment)) ??
+                    environments.LatitudeEnvironment.Production,
+                `v1/projects/${core.url.encodePathParam(projectSlug)}/signals/unignore`,
+            ),
+            method: "POST",
+            headers: _headers,
+            contentType: "application/json",
+            queryString: core.url.queryBuilder().mergeAdditional(requestOptions?.queryParams).build(),
+            requestType: "json",
+            body: _body,
+            timeoutMs: (requestOptions?.timeoutInSeconds ?? this._options?.timeoutInSeconds ?? 60) * 1000,
+            maxRetries: requestOptions?.maxRetries ?? this._options?.maxRetries,
+            abortSignal: requestOptions?.abortSignal,
+            fetchFn: this._options?.fetch,
+            logging: this._options.logging,
+        });
+        if (_response.ok) {
+            return { data: _response.body as Latitude.SignalsLifecycleResponse, rawResponse: _response.rawResponse };
+        }
+
+        if (_response.error.reason === "status-code") {
+            switch (_response.error.statusCode) {
+                case 400:
+                    throw new Latitude.BadRequestError(_response.error.body as Latitude.Error_, _response.rawResponse);
+                case 401:
+                    throw new Latitude.UnauthorizedError(
+                        _response.error.body as Latitude.Error_,
+                        _response.rawResponse,
+                    );
+                case 404:
+                    throw new Latitude.NotFoundError(_response.error.body as Latitude.Error_, _response.rawResponse);
+                default:
+                    throw new errors.LatitudeError({
+                        statusCode: _response.error.statusCode,
+                        body: _response.error.body,
+                        rawResponse: _response.rawResponse,
+                    });
+            }
+        }
+
+        return handleNonStatusCodeError(
+            _response.error,
+            _response.rawResponse,
+            "POST",
+            "/v1/projects/{projectSlug}/signals/unignore",
+        );
+    }
+
+    /**
      * Starts (or realigns) monitoring for the signal. When the signal has no active evaluation, a new one is generated. When an active evaluation exists, the call realigns it. The work runs asynchronously and the response returns immediately. Returns 400 when monitoring is already in progress for this signal.
      *
      * @param {string} projectSlug - Project slug (human-readable identifier)

@@ -37,6 +37,8 @@ const makeSignal = (overrides: Partial<Signal> = {}): Signal => ({
   centroid: createSignalCentroid(),
   clusteredAt: new Date("2026-03-01T00:00:00.000Z"),
   mutedAt: null,
+  resolvedAt: null,
+  ignoredAt: null,
   deletedAt: null,
   createdAt: new Date("2026-03-01T00:00:00.000Z"),
   updatedAt: new Date("2026-03-01T00:00:00.000Z"),
@@ -233,7 +235,7 @@ describe("listSignalsUseCase", () => {
     const now = new Date("2026-04-10T00:00:00.000Z")
     const resolvedSignal = makeSignal({
       id: SignalId("r".repeat(24)),
-      mutedAt: new Date("2026-04-08T00:00:00.000Z"),
+      resolvedAt: new Date("2026-04-08T00:00:00.000Z"),
     })
     const { repository: signalRepository } = createFakeSignalRepository([resolvedSignal])
     const { repository: evaluationRepository, listBySignalIdsCalls } = createEvaluationRepository()
@@ -282,7 +284,7 @@ describe("listSignalsUseCase", () => {
     expect(result.items).toEqual([])
     expect(result.totalCount).toBe(0)
     expect(result.hasAnySignals).toBe(true)
-    expect(result.analytics.counts.ongoingSignals).toBe(1)
+    expect(result.analytics.counts.ongoingSignals).toBe(0)
     expect(listBySignalIdsCalls).toEqual([])
   })
 
@@ -302,7 +304,7 @@ describe("listSignalsUseCase", () => {
     })
     const ignoredSignal = makeSignal({
       id: SignalId("cccccccccccccccccccccccc"),
-      mutedAt: new Date("2026-04-02T12:00:00.000Z"),
+      ignoredAt: new Date("2026-04-02T12:00:00.000Z"),
       createdAt: new Date("2026-03-10T08:00:00.000Z"),
       updatedAt: new Date("2026-03-10T08:00:00.000Z"),
       clusteredAt: new Date("2026-03-10T08:00:00.000Z"),
@@ -571,12 +573,12 @@ describe("listSignalsUseCase", () => {
     const regressedSignal = makeSignal({
       id: SignalId("b".repeat(24)),
       name: "Regressed issue",
-      mutedAt: new Date("2026-04-05T00:00:00.000Z"),
+      resolvedAt: new Date("2026-04-05T00:00:00.000Z"),
     })
     const archivedSignal = makeSignal({
       id: SignalId("c".repeat(24)),
       name: "Archived issue",
-      mutedAt: new Date("2026-04-07T00:00:00.000Z"),
+      ignoredAt: new Date("2026-04-07T00:00:00.000Z"),
     })
 
     const { repository: signalRepository } = createFakeSignalRepository([activeSignal, regressedSignal, archivedSignal])
@@ -701,7 +703,7 @@ describe("listSignalsUseCase", () => {
     expect(calls).toEqual([])
     expect(result.analytics.counts.newSignals).toBe(0)
     expect(result.analytics.counts.escalatingSignals).toBe(0)
-    expect(result.analytics.counts.ongoingSignals).toBe(3)
+    expect(result.analytics.counts.ongoingSignals).toBe(1)
     expect(result.analytics.counts.seenOccurrences).toBe(16)
     expect(result.items.map((item) => item.states)).toEqual([[SignalState.Ongoing]])
     expect(result.items.map((item) => item.id)).toEqual([activeSignal.id])
@@ -1597,7 +1599,7 @@ describe("listSignalsUseCase", () => {
       const resolvedAssigned = makeSignal({
         id: SignalId("b".repeat(24)),
         assigneeId: userA,
-        mutedAt: new Date("2026-04-08T00:00:00.000Z"),
+        resolvedAt: new Date("2026-04-08T00:00:00.000Z"),
       })
 
       const result = await runTriageList({

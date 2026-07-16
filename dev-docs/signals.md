@@ -71,22 +71,31 @@ export type SignalState = (typeof SignalState)[keyof typeof SignalState];
 - `new`: first discovered less than 7 days ago
 - `escalating`: backed by an open signal-sourced incident
 - `ongoing`: existing, non-escalating signal activity
+- `resolved`: manually marked resolved (`signals.resolved_at`)
+- `ignored`: manually marked ignored (`signals.ignored_at`)
 
-An signal can be in multiple states at the same time, for example `new` and `escalating`.
+A signal can be in multiple states at the same time, for example `new` and `escalating`.
 
-Manual lifecycle control is **mute**, stored as `signals.muted_at`.
+Manual archive lifecycle is **resolve** / **ignore**, stored as `signals.resolved_at` and `signals.ignored_at`. The Active / Archived tabs filter on those stamps (archived = resolved or ignored).
 
-- muting a signal suppresses signal escalation notification fan-out
+- resolving sets `resolved_at` and closes any open escalation incident (`SignalEscalationEnded` reason `resolved`); linked evaluations soft-delete only when `keepMonitoring` is false
+- ignoring sets `ignored_at`, soft-deletes linked evaluations, and closes open escalation (`reason: ignored`)
+- unresolve / unignore clear the corresponding stamp without reactivating evaluations
+
+Notification mute is separate: **mute** / **unmute** via `signals.muted_at`.
+
+- muting suppresses signal escalation notification fan-out without archiving the signal
 - unmuting clears `muted_at`
 - discovery, score assignment, centroid updates, linked evaluations, and analytics continue while muted
 
-The `escalating` state is backed by an open incident with `source_type = "signal"` and `source_id = signal.id`. A seasonal detector opens/closes that row through `EscalationEngine`; closes fire on the absolute-rate backstop, a band-shape + dwell recovery, or a hard timeout. Signals with no seasonal history use the same band-shape + dwell exit on the close side, so they de-escalate shortly after going quiet.
+The `escalating` state is backed by an open incident with `source_type = "signal"` and `source_id = signal.id`. A seasonal detector opens/closes that row through `EscalationEngine`; closes fire on the absolute-rate backstop, a band-shape + dwell recovery, or a hard timeout. Signals with no seasonal history use the same band-shape + dwell exit on the close side, so they de-escalate shortly after going quiet. Manual resolve/ignore also end an open escalation. Re-entering escalation clears `resolved_at` so the signal leaves the resolved archive state.
 
 Important state timestamps:
 
 - `clusteredAt`: last centroid/cluster refresh
-- `escalatedAt`: latest escalation transition timestamp
-- `mutedAt`: manual mute timestamp, or `null`
+- `resolvedAt`: manual resolve timestamp, or `null`
+- `ignoredAt`: manual ignore timestamp, or `null`
+- `mutedAt`: manual notification-mute timestamp, or `null`
 
 ## Signal Source
 
@@ -433,7 +442,7 @@ Signal page behavior:
 
 - the dedicated route (`/projects/<slug>/signals/<signalId>`) is the single signal surface; it replaced the former right-side drawer. The list row click navigates here, and the legacy `?signalId=` deep link redirects to it
 - page-level time range and search controls do not apply on the page; signal reads use full history
-- the header shows the signal name + canonical status, mute/unmute action, the assignee + priority triage pickers, previous/next-signal navigation (buttons + `J`/`K`, cycling the default-sorted list), and a copyable slug; the description and tags sit in a full-width row below
+- the header shows the signal name + canonical status, resolve/ignore actions (plus mute as a secondary notification control), the assignee + priority triage pickers, previous/next-signal navigation (buttons + `J`/`K`, cycling the default-sorted list), and a copyable slug; the description and tags sit in a full-width row below
 - the command palette gains contextual `Assign to…` (Me / Unassigned / org members) and `Set priority…` drill-down commands while the page is open, running the same `updateSignalTriage` mutation as the pickers
 - triage fields are functional beyond the page: the signals list groups by priority and filters by assignee, incident notification payloads snapshot `assigneeId`/`priority` for email/Slack/in-app rendering, and changing the assignee emits `SignalAssigneeChanged` which notifies the new assignee (`issue.assigned`, in-app + email; see `dev-docs/notifications.md`)
 - the report body includes the impact summary band (occurrences, affected traces/sessions/users, cost), the Patterns section, a 14-day trend histogram, the linked-evaluations section, an Examples carousel (`H`/`L` cycling), and an infinitely paginated traces table; clicking a trace opens it in an overlay sheet on top of the page
