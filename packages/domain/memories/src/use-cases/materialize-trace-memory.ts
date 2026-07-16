@@ -224,9 +224,20 @@ export const materializeTraceMemoryUseCase = Effect.fn("memories.materializeTrac
 
     switch (span.operation) {
       case "search_memory": {
+        // One read event per returned record so reads attribute per record;
+        // falls back to a single event when the records payload is absent.
         const records = parseMemoryRecords(span.recordsRaw)
-        const tokens = records ? records.reduce((sum, record) => sum + countTokens(memoryRecordBody(record)), 0) : 0
-        pushSpanEvent(span, scope, "read", { recordId: span.recordId, tokenCount: tokens, queryText: span.queryText })
+        if (records && records.length > 0) {
+          for (const record of records) {
+            pushSpanEvent(span, scope, "read", {
+              recordId: record.id ?? span.recordId,
+              tokenCount: countTokens(memoryRecordBody(record)),
+              queryText: span.queryText,
+            })
+          }
+        } else {
+          pushSpanEvent(span, scope, "read", { recordId: span.recordId, tokenCount: 0, queryText: span.queryText })
+        }
         break
       }
 

@@ -43,8 +43,8 @@ export {
 export {
   type ComputeSessionMemorySummaryInput,
   computeSessionMemorySummaryUseCase,
+  type MemoryRecordSummary,
   type MemorySummaryTotals,
-  type ScopeMemorySummary,
   type SessionMemorySummary,
 } from "./use-cases/compute-session-memory-summary.ts"
 export {

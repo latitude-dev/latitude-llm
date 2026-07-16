@@ -92,10 +92,13 @@ describe("computeSessionMemorySummary", () => {
     )
 
     const summary = await summarize(memory, { sessionId: SessionId("sess1") })
-    expect(summary.scopes).toHaveLength(1)
+    expect(summary.records).toHaveLength(1)
+    const rec1 = summary.records[0]
+    expect(rec1?.recordId).toBe("rec1")
+    expect(rec1?.readTokens).toBeGreaterThan(0)
+    expect(rec1?.tokensAdded).toBeGreaterThan(0) // create→update nets to one add
+    expect(rec1?.tokensRemoved).toBe(0)
     expect(summary.total.readTokens).toBeGreaterThan(0)
-    expect(summary.total.recordsAdded).toBe(1) // create→update nets to one add
-    expect(summary.total.recordsUpdated).toBe(0)
     expect(summary.total.tokensAdded).toBeGreaterThan(0)
     expect(summary.total.tokensRemoved).toBe(0)
   })
@@ -128,8 +131,10 @@ describe("computeSessionMemorySummary", () => {
     )
 
     const summary = await summarize(memory, { sessionId: SessionId("sessNew") })
-    expect(summary.total.recordsAdded).toBe(0)
-    expect(summary.total.recordsUpdated).toBe(1)
+    expect(summary.records).toHaveLength(1)
+    expect(summary.records[0]?.readTokens).toBe(0)
+    expect(summary.records[0]?.tokensAdded).toBeGreaterThan(0)
+    expect(summary.records[0]?.tokensRemoved).toBeGreaterThan(0)
     expect(summary.total.tokensAdded).toBeGreaterThan(0)
     expect(summary.total.tokensRemoved).toBeGreaterThan(0)
   })
@@ -150,12 +155,11 @@ describe("computeSessionMemorySummary", () => {
     )
 
     const summary = await summarize(memory, { sessionId: SessionId("sess1") })
-    expect(summary.scopes).toHaveLength(0)
-    expect(summary.total.recordsAdded).toBe(0)
-    expect(summary.total.recordsRemoved).toBe(0)
+    expect(summary.records).toHaveLength(0)
+    expect(summary.total).toEqual({ readTokens: 0, tokensAdded: 0, tokensRemoved: 0 })
   })
 
-  it("splits the write diff across the scopes a session touched", async () => {
+  it("lists each touched record with its own scope across a multi-scope session", async () => {
     const memory = createFakeMemoryRepository()
     await materialize(
       [
@@ -171,9 +175,9 @@ describe("computeSessionMemorySummary", () => {
     )
 
     const summary = await summarize(memory, { sessionId: SessionId("sess1") })
-    expect(summary.scopes.map((s) => s.scope).sort()).toEqual(["team-x", "team-y"])
-    expect(summary.scopes.every((s) => s.recordsAdded === 1)).toBe(true)
-    expect(summary.total.recordsAdded).toBe(2)
+    expect(summary.records.map((r) => r.scope).sort()).toEqual(["team-x", "team-y"])
+    expect(summary.records.every((r) => r.tokensAdded > 0)).toBe(true)
+    expect(summary.total.tokensAdded).toBeGreaterThan(0)
   })
 
   it("counts a later session's whole-store wipe as removing the live records", async () => {
@@ -208,9 +212,10 @@ describe("computeSessionMemorySummary", () => {
     )
 
     const summary = await summarize(memory, { sessionId: SessionId("sessNew") })
-    expect(summary.total.recordsRemoved).toBe(2)
-    expect(summary.total.recordsAdded).toBe(0)
+    expect(summary.records).toHaveLength(2)
+    expect(summary.records.every((r) => r.tokensRemoved > 0 && r.tokensAdded === 0)).toBe(true)
     expect(summary.total.tokensRemoved).toBeGreaterThan(0)
+    expect(summary.total.tokensAdded).toBe(0)
   })
 
   it("restricts the summary to one trace when a trace id is given", async () => {
@@ -224,9 +229,10 @@ describe("computeSessionMemorySummary", () => {
     )
 
     const oneTrace = await summarize(memory, { sessionId: SessionId("sess1"), traceId: traceN(1) })
-    expect(oneTrace.total.recordsAdded).toBe(1)
+    expect(oneTrace.records).toHaveLength(1)
+    expect(oneTrace.total.tokensAdded).toBeGreaterThan(0)
 
     const whole = await summarize(memory, { sessionId: SessionId("sess1") })
-    expect(whole.total.recordsAdded).toBe(2)
+    expect(whole.records).toHaveLength(2)
   })
 })
