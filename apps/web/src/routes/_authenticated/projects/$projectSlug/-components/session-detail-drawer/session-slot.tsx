@@ -12,6 +12,7 @@ import type { SessionDetailRecord } from "../../../../../../domains/sessions/ses
 import type { TraceRecord } from "../../../../../../domains/traces/traces.functions.ts"
 import { useParamState } from "../../../../../../lib/hooks/useParamState.ts"
 import { AddTraceToDatasetAction } from "../add-trace-to-dataset-action.tsx"
+import { MemorySummaryChip } from "../memory-summary-chip.tsx"
 import type { OpenTraceOptions } from "../session-detail-drawer.tsx"
 import type { SpanTreeSelection } from "../trace-detail-drawer/tabs/spans-tab/span-tree/index.tsx"
 import { useSpanFilters } from "../trace-detail-drawer/tabs/spans-tab/use-span-filters.ts"
@@ -265,6 +266,7 @@ export function SessionSlot({
                 />
               </button>
             ) : null}
+            <MemorySummaryChip projectId={projectId} sessionId={session.sessionId} />
             {!isSandbox && datasetTraceId ? (
               <div className="ml-auto shrink-0">
                 <AddTraceToDatasetAction

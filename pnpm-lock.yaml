@@ -457,6 +457,9 @@ importers:
       '@domain/marketing':
         specifier: workspace:*
         version: link:../../packages/domain/marketing
+      '@domain/memories':
+        specifier: workspace:*
+        version: link:../../packages/domain/memories
       '@domain/monitors':
         specifier: workspace:*
         version: link:../../packages/domain/monitors
