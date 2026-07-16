@@ -137,11 +137,11 @@ function DetailsPanel({ span }: DetailsPanelProps<SpanType.Completion>) {
           {!!span.metadata.tokens && (
             <MetadataItem
               label='Tokens'
+              // prompt already includes cached, and completion already includes
+              // reasoning, so the total is prompt + completion (not the sum of
+              // all four, which would double-count the cached/reasoning subsets).
               value={(
-                span.metadata.tokens.prompt +
-                span.metadata.tokens.cached +
-                span.metadata.tokens.reasoning +
-                span.metadata.tokens.completion
+                span.metadata.tokens.prompt + span.metadata.tokens.completion
               ).toString()}
               tooltip={
                 <div className='w-full flex flex-col justify-between'>

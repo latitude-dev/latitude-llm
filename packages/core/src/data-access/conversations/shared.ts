@@ -23,7 +23,7 @@ export const conversationAggregateFields = {
     .mapWith(Number)
     .as('trace_count'),
   totalTokens:
-    sql<number>`COALESCE(SUM(COALESCE(${spans.tokensPrompt}, 0) + COALESCE(${spans.tokensCached}, 0) + COALESCE(${spans.tokensReasoning}, 0) + COALESCE(${spans.tokensCompletion}, 0)), 0)`
+    sql<number>`COALESCE(SUM(COALESCE(${spans.tokensPrompt}, 0) + COALESCE(${spans.tokensCompletion}, 0)), 0)`
       .mapWith(Number)
       .as('total_tokens'),
   totalDuration:

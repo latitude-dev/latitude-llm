@@ -31,12 +31,10 @@ export function AggregatedCompletionsDetails({
           )}
           <MetadataItem
             label='Tokens'
-            value={(
-              tokens.prompt +
-              tokens.cached +
-              tokens.reasoning +
-              tokens.completion
-            ).toString()}
+            // prompt already includes cached and completion already includes
+            // reasoning, so the total is prompt + completion (summing all four
+            // would double-count the cached/reasoning subsets).
+            value={(tokens.prompt + tokens.completion).toString()}
             tooltip={
               <div className='w-full flex flex-col justify-between'>
                 <div className='w-full flex flex-row justify-between items-center gap-4'>

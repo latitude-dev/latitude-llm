@@ -60,8 +60,6 @@ export async function computeDocumentTracesAggregations(
           coalesce(
             sum(
               coalesce(${spans.tokensPrompt}, 0) +
-              coalesce(${spans.tokensCached}, 0) +
-              coalesce(${spans.tokensReasoning}, 0) +
               coalesce(${spans.tokensCompletion}, 0)
             ),
             0
@@ -73,8 +71,6 @@ export async function computeDocumentTracesAggregations(
           coalesce(
             avg(
               coalesce(${spans.tokensPrompt}, 0) +
-              coalesce(${spans.tokensCached}, 0) +
-              coalesce(${spans.tokensReasoning}, 0) +
               coalesce(${spans.tokensCompletion}, 0)
             ),
             0

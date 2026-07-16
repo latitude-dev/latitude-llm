@@ -61,8 +61,6 @@ export const fetchConversation = scopedQuery(async function fetchConversation({
         countDistinct(trace_id) AS trace_count,
         sum(
           coalesce(tokens_prompt, 0) +
-          coalesce(tokens_cached, 0) +
-          coalesce(tokens_reasoning, 0) +
           coalesce(tokens_completion, 0)
         ) AS total_tokens,
         sum(duration_ms) FILTER (WHERE type IN ('prompt', 'chat', 'external')) AS total_duration,

@@ -55,39 +55,41 @@ function estimateBreakdownBasedOnTokenProportions({
   totalCost: number
 }): CostBreakdown {
   const key = costBreakdownKey(provider, model)
+
+  // cached is a subset of prompt and reasoning is a subset of completion, so
+  // split into disjoint buckets (prompt = non-cached, completion = non-reasoning)
+  // to avoid double-counting; the four then sum to prompt + completion.
+  const nonCachedPrompt = Math.max(0, tokens.prompt - tokens.cached)
+  const nonReasoningCompletion = Math.max(
+    0,
+    tokens.completion - tokens.reasoning,
+  )
   const totalTokens =
-    tokens.prompt + tokens.cached + tokens.reasoning + tokens.completion
+    nonCachedPrompt + tokens.cached + tokens.reasoning + nonReasoningCompletion
 
-  const promptTokensProportion = tokens.prompt / totalTokens
-  const cachedTokensProportion = tokens.cached / totalTokens
-  const reasoningTokensProportion = tokens.reasoning / totalTokens
-  const completionTokensProportion = tokens.completion / totalTokens
-
-  const promptCost = totalCost * promptTokensProportion
-  const cachedCost = totalCost * cachedTokensProportion
-  const reasoningCost = totalCost * reasoningTokensProportion
-  const completionCost = totalCost * completionTokensProportion
+  const proportion = (count: number) =>
+    totalTokens > 0 ? count / totalTokens : 0
 
   return {
     [key]: {
       input: {
         prompt: {
-          tokens: tokens.prompt,
-          cost: promptCost,
+          tokens: nonCachedPrompt,
+          cost: totalCost * proportion(nonCachedPrompt),
         },
         cached: {
           tokens: tokens.cached,
-          cost: cachedCost,
+          cost: totalCost * proportion(tokens.cached),
         },
       },
       output: {
         reasoning: {
           tokens: tokens.reasoning,
-          cost: reasoningCost,
+          cost: totalCost * proportion(tokens.reasoning),
         },
         completion: {
-          tokens: tokens.completion,
-          cost: completionCost,
+          tokens: nonReasoningCompletion,
+          cost: totalCost * proportion(nonReasoningCompletion),
         },
       },
     },
@@ -113,9 +115,18 @@ function estimateBreakdownBasedOnActualCost({
 }): CostBreakdown {
   const key = costBreakdownKey(provider, model)
 
+  // cached is a subset of prompt and reasoning is a subset of completion, so
+  // price only the non-overlapping remainder in the base buckets (matching
+  // estimateCost / estimateCostBreakdown) and report disjoint token counts.
+  const nonCachedPrompt = Math.max(0, tokens.prompt - tokens.cached)
+  const nonReasoningCompletion = Math.max(
+    0,
+    tokens.completion - tokens.reasoning,
+  )
+
   const inputExpectedCost = computeCost({
     costSpec,
-    tokens: tokens.prompt,
+    tokens: nonCachedPrompt,
     tokenType: 'input',
   })
 
@@ -133,7 +144,7 @@ function estimateBreakdownBasedOnActualCost({
 
   const completionExpectedCost = computeCost({
     costSpec,
-    tokens: tokens.completion,
+    tokens: nonReasoningCompletion,
     tokenType: 'output',
   })
 
@@ -143,13 +154,13 @@ function estimateBreakdownBasedOnActualCost({
     reasoningExpectedCost +
     completionExpectedCost
 
-  const difference = totalCost / totalExpectedCost
+  const difference = totalExpectedCost > 0 ? totalCost / totalExpectedCost : 0
 
   return {
     [key]: {
       input: {
         prompt: {
-          tokens: tokens.prompt,
+          tokens: nonCachedPrompt,
           cost: inputExpectedCost * difference,
         },
         cached: {
@@ -163,7 +174,7 @@ function estimateBreakdownBasedOnActualCost({
           cost: reasoningExpectedCost * difference,
         },
         completion: {
-          tokens: tokens.completion,
+          tokens: nonReasoningCompletion,
           cost: completionExpectedCost * difference,
         },
       },

@@ -158,11 +158,11 @@ function buildRow({
   }
 
   const tokenSource = completionSpan ?? span
+  // prompt already includes cached and completion already includes reasoning,
+  // so the total is prompt + completion (summing all four double-counts).
   const tokens =
     ((tokenSource as any).tokensPrompt ?? 0) +
-    ((tokenSource as any).tokensCompletion ?? 0) +
-    ((tokenSource as any).tokensCached ?? 0) +
-    ((tokenSource as any).tokensReasoning ?? 0)
+    ((tokenSource as any).tokensCompletion ?? 0)
 
   return {
     ...spanParameterColumns,

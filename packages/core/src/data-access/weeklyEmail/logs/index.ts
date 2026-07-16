@@ -61,7 +61,7 @@ async function getGlobalLogsStats(
 
   const completionStatsResult = await db
     .select({
-      totalTokens: sql<number>`COALESCE(SUM(${spans.tokensPrompt}), 0) + COALESCE(SUM(${spans.tokensCompletion}), 0) + COALESCE(SUM(${spans.tokensCached}), 0) + COALESCE(SUM(${spans.tokensReasoning}), 0)`,
+      totalTokens: sql<number>`COALESCE(SUM(${spans.tokensPrompt}), 0) + COALESCE(SUM(${spans.tokensCompletion}), 0)`,
       totalCost: sql<number>`COALESCE(SUM(${spans.cost}), 0)`,
     })
     .from(spans)
@@ -155,7 +155,7 @@ async function getTopProjectsLogsStats(
       projectId: projects.id,
       projectName: projects.name,
       logsCount: sql<number>`COUNT(DISTINCT ${spansInRangeSubquery.traceId})`,
-      totalTokens: sql<number>`COALESCE(SUM(CASE WHEN ${spansInRangeSubquery.type} = ${SpanType.Completion} THEN ${spansInRangeSubquery.tokensPrompt} ELSE 0 END), 0) + COALESCE(SUM(CASE WHEN ${spansInRangeSubquery.type} = ${SpanType.Completion} THEN ${spansInRangeSubquery.tokensCompletion} ELSE 0 END), 0) + COALESCE(SUM(CASE WHEN ${spansInRangeSubquery.type} = ${SpanType.Completion} THEN ${spansInRangeSubquery.tokensCached} ELSE 0 END), 0) + COALESCE(SUM(CASE WHEN ${spansInRangeSubquery.type} = ${SpanType.Completion} THEN ${spansInRangeSubquery.tokensReasoning} ELSE 0 END), 0)`,
+      totalTokens: sql<number>`COALESCE(SUM(CASE WHEN ${spansInRangeSubquery.type} = ${SpanType.Completion} THEN ${spansInRangeSubquery.tokensPrompt} ELSE 0 END), 0) + COALESCE(SUM(CASE WHEN ${spansInRangeSubquery.type} = ${SpanType.Completion} THEN ${spansInRangeSubquery.tokensCompletion} ELSE 0 END), 0)`,
       totalCost: sql<number>`COALESCE(SUM(CASE WHEN ${spansInRangeSubquery.type} = ${SpanType.Completion} THEN ${spansInRangeSubquery.cost} ELSE 0 END), 0)`,
     })
     .from(projects)
