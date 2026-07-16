@@ -36,6 +36,17 @@ describe("TraceFilterSetSchema", () => {
       expect(badPaths.sort()).toEqual(["finishedAt", "score.bogus"])
     }
   })
+
+  it("rejects gtePercentile on startTime/endTime (percentile resolution only covers duration/ttft/cost)", () => {
+    for (const field of ["startTime", "endTime"] as const) {
+      const result = TraceFilterSetSchema.safeParse({ [field]: [{ op: "gtePercentile", value: 95 }] })
+      expect(result.success).toBe(false)
+      if (!result.success) {
+        expect(result.error.issues[0]?.path).toEqual([field, 0, "op"])
+        expect(result.error.issues[0]?.message).toContain("gtePercentile")
+      }
+    }
+  })
 })
 
 describe("TraceRefSchema / TracesRefSchema filter validation", () => {
