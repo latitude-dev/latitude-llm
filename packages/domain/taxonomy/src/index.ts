@@ -218,11 +218,8 @@ export {
 export {
   type BuildHierarchicalTaxonomyInput,
   type BuildHierarchicalTaxonomyResult,
-  buildHierarchicalTaxonomyUseCase,
   type HierarchicalTaxonomyPlan,
-  type PersistHierarchicalTaxonomyPlanInput,
   type PlanHierarchicalTaxonomyInput,
-  persistHierarchicalTaxonomyPlanUseCase,
   planHierarchicalTaxonomyUseCase,
   type TaxonomyClusterBuilder,
 } from "./use-cases/build-hierarchical-taxonomy.ts"

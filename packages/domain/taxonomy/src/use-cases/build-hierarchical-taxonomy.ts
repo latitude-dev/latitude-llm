@@ -149,13 +149,6 @@ export interface HierarchicalTaxonomyPlan extends BuildHierarchicalTaxonomyResul
   readonly deprecatedClusterIds: readonly TaxonomyClusterId[]
 }
 
-export interface PersistHierarchicalTaxonomyPlanInput {
-  readonly organizationId: OrganizationId
-  readonly projectId: ProjectId
-  readonly plan: HierarchicalTaxonomyPlan
-  readonly now?: Date
-}
-
 const lookbackStart = (now: Date): Date =>
   new Date(now.getTime() - TAXONOMY_GARDENING_SAMPLE_LOOKBACK_DAYS * 24 * 60 * 60_000)
 
@@ -595,51 +588,3 @@ export const planHierarchicalTaxonomyUseCase = (input: PlanHierarchicalTaxonomyI
       deprecatedClusterIds,
     } satisfies HierarchicalTaxonomyPlan
   }).pipe(Effect.withSpan("taxonomy.planHierarchicalTaxonomy"))
-
-export const persistHierarchicalTaxonomyPlanUseCase = (input: PersistHierarchicalTaxonomyPlanInput) =>
-  Effect.gen(function* () {
-    const observationsRepo = yield* TaxonomyObservationRepository
-    const clustersRepo = yield* TaxonomyClusterRepository
-    const timestamp = input.now ?? new Date()
-
-    for (const cluster of input.plan.clusters) {
-      yield* clustersRepo.save(cluster)
-    }
-
-    if (input.plan.observationAssignments.length > 0) {
-      yield* observationsRepo.reassignManyById({
-        organizationId: input.organizationId,
-        projectId: input.projectId,
-        assignments: input.plan.observationAssignments,
-      })
-    }
-
-    for (const clusterId of input.plan.deprecatedClusterIds) {
-      yield* clustersRepo.markDeprecated({ clusterId, timestamp })
-    }
-
-    return {
-      observationsScanned: input.plan.observationsScanned,
-      observationsAvailable: input.plan.observationsAvailable,
-      observationsSampled: input.plan.observationsSampled,
-      sampleStrategy: input.plan.sampleStrategy,
-      sampleCap: input.plan.sampleCap,
-      clustersBorn: input.plan.clustersBorn,
-      clustersContinued: input.plan.clustersContinued,
-      clustersDeprecated: input.plan.clustersDeprecated,
-      leavesAssigned: input.plan.leavesAssigned,
-      maxDepthReached: input.plan.maxDepthReached,
-      lineage: input.plan.lineage,
-    } satisfies BuildHierarchicalTaxonomyResult
-  }).pipe(Effect.withSpan("taxonomy.persistHierarchicalTaxonomyPlan"))
-
-export const buildHierarchicalTaxonomyUseCase = (input: BuildHierarchicalTaxonomyInput) =>
-  Effect.gen(function* () {
-    const plan = yield* planHierarchicalTaxonomyUseCase(input)
-    return yield* persistHierarchicalTaxonomyPlanUseCase({
-      organizationId: input.organizationId,
-      projectId: input.projectId,
-      plan,
-      ...(input.now === undefined ? {} : { now: input.now }),
-    })
-  }).pipe(Effect.withSpan("taxonomy.buildHierarchicalTaxonomy"))

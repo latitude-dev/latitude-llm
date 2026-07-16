@@ -3,10 +3,10 @@ import { createFakeQueuePublisher } from "@domain/queue/testing"
 import { DistributedLockRepository, OrganizationId, ProjectId, SessionId, TaxonomyRunId } from "@domain/shared"
 import { createFakeDistributedLockRepository } from "@domain/shared/testing"
 import {
-  buildHierarchicalTaxonomyUseCase,
   CUSTOM_BEHAVIOR_GARDENING_MIN_INTERVAL_MS,
   emitLineageUseCase,
   nameClusterUseCase,
+  planHierarchicalTaxonomyUseCase,
   TAXONOMY_GARDENING_MIN_OBSERVATIONS,
   TAXONOMY_GARDENING_SWEEP_SPREAD_MS,
   TaxonomyClusterRepository,
@@ -185,16 +185,29 @@ const makeObservation = (
 const gardenOnce = (runId: ReturnType<typeof TaxonomyRunId>) =>
   Effect.runPromise(
     Effect.gen(function* () {
-      const built = yield* buildHierarchicalTaxonomyUseCase({
+      const plan = yield* planHierarchicalTaxonomyUseCase({
         organizationId: ORGANIZATION_ID,
         projectId: PROJECT_ID_E2E,
         runId,
         dimension: "topic",
       })
-      yield* emitLineageUseCase({ transitions: built.lineage })
       const clusters = yield* TaxonomyClusterRepository
+      const observations = yield* TaxonomyObservationRepository
+      // Persist the plan the way the split-build activities do: save clusters,
+      // reassign members, deprecate the clusters no node continued.
+      for (const cluster of plan.clusters) yield* clusters.save(cluster)
+      if (plan.observationAssignments.length > 0) {
+        yield* observations.reassignManyById({
+          organizationId: ORGANIZATION_ID,
+          projectId: PROJECT_ID_E2E,
+          assignments: plan.observationAssignments,
+        })
+      }
+      for (const clusterId of plan.deprecatedClusterIds)
+        yield* clusters.markDeprecated({ clusterId, timestamp: new Date() })
+      yield* emitLineageUseCase({ transitions: plan.lineage })
       const active = yield* clusters.listActiveByProject({ projectId: PROJECT_ID_E2E, dimension: "topic" })
-      const bornIds = new Set(built.lineage.flatMap((row) => (row.transitionType === "birth" ? row.toClusterIds : [])))
+      const bornIds = new Set(plan.lineage.flatMap((row) => (row.transitionType === "birth" ? row.toClusterIds : [])))
       // Name births and continuations that drifted enough to be left "Pending",
       // deepest-first so interior nodes see their children's final names.
       const toName = [...active]

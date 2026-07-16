@@ -21,11 +21,7 @@ import { TaxonomyClusterRepository } from "../ports/taxonomy-cluster-repository.
 import { TaxonomyObservationRepository } from "../ports/taxonomy-observation-repository.ts"
 import { createFakeTaxonomyClusterRepository } from "../testing/fake-taxonomy-cluster-repository.ts"
 import { createFakeTaxonomyObservationRepository } from "../testing/fake-taxonomy-observation-repository.ts"
-import {
-  buildHierarchicalTaxonomyUseCase,
-  computeSplitLinkThreshold,
-  planHierarchicalTaxonomyUseCase,
-} from "./build-hierarchical-taxonomy.ts"
+import { computeSplitLinkThreshold, planHierarchicalTaxonomyUseCase } from "./build-hierarchical-taxonomy.ts"
 
 const organizationId = OrganizationId("o".repeat(24))
 const projectId = ProjectId("p".repeat(24))
@@ -124,18 +120,28 @@ const makeCluster = (overrides: Partial<TaxonomyCluster>): TaxonomyCluster => ({
   ...overrides,
 })
 
+// Composes the production pass the way the workflow does — plan, then persist
+// (save the clusters, deprecate the ones no node continued) — so continuity is
+// exercised against the same use-case the gardening workflow drives.
 const runBuild = (
   observations: ReturnType<typeof createFakeTaxonomyObservationRepository>,
   clusters: ReturnType<typeof createFakeTaxonomyClusterRepository>,
   now: Date,
 ) =>
   Effect.runPromise(
-    buildHierarchicalTaxonomyUseCase({
-      organizationId,
-      projectId,
-      runId: TaxonomyRunId("r".repeat(24)),
-      dimension: "topic",
-      now,
+    Effect.gen(function* () {
+      const plan = yield* planHierarchicalTaxonomyUseCase({
+        organizationId,
+        projectId,
+        runId: TaxonomyRunId("r".repeat(24)),
+        dimension: "topic",
+        now,
+      })
+      const clustersRepo = yield* TaxonomyClusterRepository
+      for (const cluster of plan.clusters) yield* clustersRepo.save(cluster)
+      for (const clusterId of plan.deprecatedClusterIds)
+        yield* clustersRepo.markDeprecated({ clusterId, timestamp: now })
+      return plan
     }).pipe(
       Effect.provide(Layer.succeed(TaxonomyObservationRepository, observations.repository)),
       Effect.provide(Layer.succeed(TaxonomyClusterRepository, clusters.repository)),
@@ -144,7 +150,7 @@ const runBuild = (
     ),
   )
 
-describe("buildHierarchicalTaxonomyUseCase continuity matching", () => {
+describe("planHierarchicalTaxonomyUseCase continuity matching", () => {
   it("reuses the cluster id across passes when the topic is unchanged", async () => {
     const pass1At = new Date("2026-05-24T12:00:00.000Z")
     const observations = createFakeTaxonomyObservationRepository(
