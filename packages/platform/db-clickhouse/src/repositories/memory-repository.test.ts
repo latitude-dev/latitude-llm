@@ -38,7 +38,6 @@ const withRepo = <A>(f: (repo: MemoryRepositoryShape) => Effect.Effect<A, Reposi
 const makeEvent = (o: Partial<MemoryEvent> = {}): MemoryEvent => ({
   organizationId,
   projectId,
-  scope: "u1",
   storeId: "store1",
   recordId: "rec1",
   operation: "create_memory",
@@ -60,7 +59,6 @@ const makeEvent = (o: Partial<MemoryEvent> = {}): MemoryEvent => ({
 const makeCurrent = (o: Partial<MemoryCurrentEntry> = {}): MemoryCurrentEntry => ({
   organizationId,
   projectId,
-  scope: "u1",
   storeId: "store1",
   recordId: "rec1",
   contentHash: "hash-a",
@@ -119,10 +117,14 @@ describe("MemoryRepository", () => {
       ]),
     )
 
-    const atT2 = await withRepo((repo) => repo.readManifestAt({ organizationId, projectId, scope: "u1", at: at(2) }))
+    const atT2 = await withRepo((repo) =>
+      repo.readManifestAt({ organizationId, projectId, storeId: "store1", at: at(2) }),
+    )
     expect(sortedIds(atT2)).toEqual(["rec1", "rec2"])
 
-    const atT5 = await withRepo((repo) => repo.readManifestAt({ organizationId, projectId, scope: "u1", at: at(5) }))
+    const atT5 = await withRepo((repo) =>
+      repo.readManifestAt({ organizationId, projectId, storeId: "store1", at: at(5) }),
+    )
     expect(sortedIds(atT5)).toEqual(["rec1"])
     expect(atT5[0]?.contentHash).toBe("a1")
   })
@@ -135,7 +137,9 @@ describe("MemoryRepository", () => {
       ]),
     )
 
-    const snapshot = await withRepo((repo) => repo.readCurrentSnapshot({ organizationId, projectId, scope: "u1" }))
+    const snapshot = await withRepo((repo) =>
+      repo.readCurrentSnapshot({ organizationId, projectId, storeId: "store1" }),
+    )
     expect(sortedIds(snapshot)).toEqual(["rec1"])
     expect(snapshot[0]?.contentHash).toBe("a1")
     expect(snapshot[0]?.spanId).toBe(spanId)
@@ -150,7 +154,7 @@ describe("MemoryRepository", () => {
     )
 
     const wipes = await withRepo((repo) =>
-      repo.readLatestStoreWipes({ organizationId, projectId, scope: "u1", at: at(30) }),
+      repo.readLatestStoreWipes({ organizationId, projectId, storeId: "store1", at: at(30) }),
     )
     expect(wipes).toHaveLength(1)
     expect(wipes[0]?.storeId).toBe("store1")
@@ -223,7 +227,6 @@ describe("MemoryRepository", () => {
     await withRepo((repo) =>
       repo.insertEvents([
         makeEvent({
-          scope: "s",
           storeId: "store1",
           recordId: "recA",
           spanId: spanN(1),
@@ -232,7 +235,6 @@ describe("MemoryRepository", () => {
           endTime: at(0),
         }),
         makeEvent({
-          scope: "s",
           storeId: "store1",
           recordId: "recA",
           spanId: spanN(2),
@@ -241,7 +243,6 @@ describe("MemoryRepository", () => {
           endTime: at(3),
         }),
         makeEvent({
-          scope: "s",
           storeId: "store2",
           recordId: "recB",
           spanId: spanN(3),
@@ -251,7 +252,6 @@ describe("MemoryRepository", () => {
         }),
         // matches the IN cross-product (store1 × recB) but is not a requested pair
         makeEvent({
-          scope: "s",
           storeId: "store1",
           recordId: "recB",
           spanId: spanN(4),
@@ -261,7 +261,6 @@ describe("MemoryRepository", () => {
         }),
         // reads never enter a version chain
         makeEvent({
-          scope: "s",
           storeId: "store1",
           recordId: "recA",
           spanId: spanN(5),
@@ -276,16 +275,14 @@ describe("MemoryRepository", () => {
       { storeId: "store1", recordId: "recA" },
       { storeId: "store2", recordId: "recB" },
     ]
-    const chain = await withRepo((repo) => repo.readRecordVersions({ organizationId, projectId, scope: "s", records }))
+    const chain = await withRepo((repo) => repo.readRecordVersions({ organizationId, projectId, records }))
     expect(chain.map((v) => [v.storeId, v.recordId, v.contentHash])).toEqual([
       ["store1", "recA", "a0"],
       ["store1", "recA", "a1"],
       ["store2", "recB", "b0"],
     ])
 
-    const bounded = await withRepo((repo) =>
-      repo.readRecordVersions({ organizationId, projectId, scope: "s", records, at: at(1) }),
-    )
+    const bounded = await withRepo((repo) => repo.readRecordVersions({ organizationId, projectId, records, at: at(1) }))
     expect(bounded.map((v) => v.contentHash)).toEqual(["a0"])
   })
 })

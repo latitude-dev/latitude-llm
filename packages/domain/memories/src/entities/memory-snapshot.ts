@@ -2,7 +2,7 @@ import type { SessionId, SpanId, TraceId } from "@domain/shared"
 import type { MemoryChangeKind } from "./memory-event.ts"
 
 /**
- * The current version of one record within a scope's manifest. `(storeId,
+ * The current version of one record within a store's manifest. `(storeId,
  * recordId)` is the record identity (D3); the remaining fields point back at the
  * span that authored this version (blame target) and carry its token count.
  */
@@ -18,9 +18,9 @@ export interface MemoryRecordVersion {
   readonly endTime: Date
 }
 
-/** A scope's reconstructed state at a point in time — the manifest of records. */
+/** A store's reconstructed state at a point in time — the manifest of records. */
 export interface MemorySnapshot {
-  readonly scope: string
+  readonly storeId: string
   readonly at: Date
   readonly records: readonly MemoryRecordVersion[]
 }

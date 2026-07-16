@@ -29,13 +29,10 @@ const textEncoder = new TextEncoder()
 const sha256Hex = (body: string) => createHash("sha256").update(body).digest("hex")
 const byteLength = (body: string) => textEncoder.encode(body).length
 
-const resolveScope = (span: MemoryOperationSpan): string =>
-  span.scopeAttr || span.latitudeScopeAttr || (span.userId as string) || ""
-
 const isWholeStoreWipe = (span: MemoryOperationSpan): boolean =>
   span.operation === "delete_memory_store" || (span.operation === "delete_memory" && span.recordId === "")
 
-// Scopes whose pre-trace live-record set we need: upsert (add-vs-update) and
+// Stores whose pre-trace live-record set we need: upsert (add-vs-update) and
 // whole-store wipes (tombstoning the store's records).
 const needsPresentSeed = (span: MemoryOperationSpan): boolean =>
   span.operation === "upsert_memory" || isWholeStoreWipe(span)
@@ -66,30 +63,21 @@ export const materializeTraceMemoryUseCase = Effect.fn("memories.materializeTrac
     return { eventCount: 0, blobCount: 0, recordCount: 0 } satisfies MaterializeTraceMemoryResult
   }
 
-  // Live records per scope, per store. Seeded from the pre-trace snapshot for
-  // scopes with an upsert or a whole-store wipe (the snapshot already excludes
-  // records tombstoned by earlier wipes), then kept in step as spans apply.
-  const present = new Map<string, Map<string, Set<string>>>()
-  for (const scope of new Set(spans.filter(needsPresentSeed).map(resolveScope))) {
-    const snapshot = yield* memoryRepository.readCurrentSnapshot({ organizationId, projectId, scope })
-    const byStore = new Map<string, Set<string>>()
-    for (const version of snapshot) {
-      const records = byStore.get(version.storeId) ?? new Set<string>()
-      records.add(version.recordId)
-      byStore.set(version.storeId, records)
-    }
-    present.set(scope, byStore)
+  // Live records per store. Seeded from the pre-trace snapshot for stores with an
+  // upsert or a whole-store wipe (the snapshot already excludes records
+  // tombstoned by earlier wipes), then kept in step as spans apply.
+  const present = new Map<string, Set<string>>()
+  for (const storeId of new Set(spans.filter(needsPresentSeed).map((span) => span.storeId))) {
+    const snapshot = yield* memoryRepository.readCurrentSnapshot({ organizationId, projectId, storeId })
+    const records = new Set<string>()
+    for (const version of snapshot) records.add(version.recordId)
+    present.set(storeId, records)
   }
-  const liveRecords = (scope: string, storeId: string): Set<string> => {
-    let byStore = present.get(scope)
-    if (!byStore) {
-      byStore = new Map()
-      present.set(scope, byStore)
-    }
-    let records = byStore.get(storeId)
+  const liveRecords = (storeId: string): Set<string> => {
+    let records = present.get(storeId)
     if (!records) {
       records = new Set()
-      byStore.set(storeId, records)
+      present.set(storeId, records)
     }
     return records
   }
@@ -97,18 +85,16 @@ export const materializeTraceMemoryUseCase = Effect.fn("memories.materializeTrac
   const events: MemoryEvent[] = []
   const blobs = new Map<string, MemoryBlob>()
   const current = new Map<string, MemoryCurrentEntry>()
-  const currentKey = (scope: string, storeId: string, recordId: string) => JSON.stringify([scope, storeId, recordId])
+  const currentKey = (storeId: string, recordId: string) => JSON.stringify([storeId, recordId])
 
   const pushSpanEvent = (
     span: MemoryOperationSpan,
-    scope: string,
     changeKind: MemoryChangeKind,
     extra: { readonly recordId?: string; readonly tokenCount?: number; readonly queryText?: string } = {},
   ) => {
     events.push({
       organizationId,
       projectId,
-      scope,
       storeId: span.storeId,
       recordId: extra.recordId ?? "",
       operation: span.operation,
@@ -129,7 +115,6 @@ export const materializeTraceMemoryUseCase = Effect.fn("memories.materializeTrac
 
   const applyMutation = (
     span: MemoryOperationSpan,
-    scope: string,
     recordId: string,
     body: string | null,
     changeKind: MemoryChangeKind,
@@ -153,7 +138,6 @@ export const materializeTraceMemoryUseCase = Effect.fn("memories.materializeTrac
     events.push({
       organizationId,
       projectId,
-      scope,
       storeId: span.storeId,
       recordId,
       operation: span.operation,
@@ -170,10 +154,9 @@ export const materializeTraceMemoryUseCase = Effect.fn("memories.materializeTrac
       endTime: span.endTime,
       source: "otlp",
     })
-    current.set(currentKey(scope, span.storeId, recordId), {
+    current.set(currentKey(span.storeId, recordId), {
       organizationId,
       projectId,
-      scope,
       storeId: span.storeId,
       recordId,
       contentHash,
@@ -184,20 +167,19 @@ export const materializeTraceMemoryUseCase = Effect.fn("memories.materializeTrac
       sessionId,
       endTime: span.endTime,
     })
-    const records = liveRecords(scope, span.storeId)
+    const records = liveRecords(span.storeId)
     if (changeKind === "remove") records.delete(recordId)
     else records.add(recordId)
   }
 
   // Tombstone every live record in the wiped store: a `remove` projection row
   // (no ledger event — the store_delete event already records the operation).
-  const tombstoneStore = (span: MemoryOperationSpan, scope: string) => {
-    const records = liveRecords(scope, span.storeId)
+  const tombstoneStore = (span: MemoryOperationSpan) => {
+    const records = liveRecords(span.storeId)
     for (const recordId of [...records]) {
-      current.set(currentKey(scope, span.storeId, recordId), {
+      current.set(currentKey(span.storeId, recordId), {
         organizationId,
         projectId,
-        scope,
         storeId: span.storeId,
         recordId,
         contentHash: "",
@@ -212,16 +194,14 @@ export const materializeTraceMemoryUseCase = Effect.fn("memories.materializeTrac
     }
   }
 
-  const mutatingKind = (span: MemoryOperationSpan, scope: string, recordId: string): MemoryChangeKind => {
+  const mutatingKind = (span: MemoryOperationSpan, recordId: string): MemoryChangeKind => {
     if (span.operation === "create_memory") return "add"
     if (span.operation === "update_memory") return "update"
     // upsert_memory: exists in the current manifest → update, else add.
-    return liveRecords(scope, span.storeId).has(recordId) ? "update" : "add"
+    return liveRecords(span.storeId).has(recordId) ? "update" : "add"
   }
 
   for (const span of spans) {
-    const scope = resolveScope(span)
-
     switch (span.operation) {
       case "search_memory": {
         // One read event per returned record, keyed on the record's own id so
@@ -230,36 +210,36 @@ export const materializeTraceMemoryUseCase = Effect.fn("memories.materializeTrac
         const records = parseMemoryRecords(span.recordsRaw)
         if (records && records.length > 0) {
           for (const record of records) {
-            pushSpanEvent(span, scope, "read", {
+            pushSpanEvent(span, "read", {
               recordId: record.id ?? span.recordId,
               tokenCount: countTokens(memoryRecordBody(record)),
               queryText: span.queryText,
             })
           }
         } else {
-          pushSpanEvent(span, scope, "read", { recordId: span.recordId, tokenCount: 0, queryText: span.queryText })
+          pushSpanEvent(span, "read", { recordId: span.recordId, tokenCount: 0, queryText: span.queryText })
         }
         break
       }
 
       case "create_memory_store": {
-        pushSpanEvent(span, scope, "store_create")
+        pushSpanEvent(span, "store_create")
         break
       }
 
       case "delete_memory_store": {
-        pushSpanEvent(span, scope, "store_delete")
-        tombstoneStore(span, scope)
+        pushSpanEvent(span, "store_delete")
+        tombstoneStore(span)
         break
       }
 
       case "delete_memory": {
         if (span.recordId === "") {
           // Absent record id ⇒ whole-store wipe (D9).
-          pushSpanEvent(span, scope, "store_delete")
-          tombstoneStore(span, scope)
+          pushSpanEvent(span, "store_delete")
+          tombstoneStore(span)
         } else {
-          applyMutation(span, scope, span.recordId, null, "remove")
+          applyMutation(span, span.recordId, null, "remove")
         }
         break
       }
@@ -270,11 +250,11 @@ export const materializeTraceMemoryUseCase = Effect.fn("memories.materializeTrac
         if (records && records.length > 0) {
           for (const record of records) {
             const recordId = record.id ?? span.recordId
-            applyMutation(span, scope, recordId, memoryRecordBody(record), mutatingKind(span, scope, recordId))
+            applyMutation(span, recordId, memoryRecordBody(record), mutatingKind(span, recordId))
           }
         } else {
           // content opt-out: record the version keyed on the scalar record id, no body
-          applyMutation(span, scope, span.recordId, null, mutatingKind(span, scope, span.recordId))
+          applyMutation(span, span.recordId, null, mutatingKind(span, span.recordId))
         }
       }
     }
