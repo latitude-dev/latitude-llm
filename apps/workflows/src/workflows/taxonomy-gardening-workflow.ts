@@ -1,5 +1,5 @@
 import type { TaxonomyClusterLineage } from "@domain/taxonomy"
-import { CancellationScope, patched, proxyActivities, workflowInfo } from "@temporalio/workflow"
+import { CancellationScope, deprecatePatch, proxyActivities, workflowInfo } from "@temporalio/workflow"
 import type * as activities from "../activities/index.ts"
 import { defaultActivityRetryPolicy } from "./retry-policy.ts"
 
@@ -11,10 +11,18 @@ export type GardenTaxonomyWorkflowResult = activities.GardenTaxonomyActivityResu
  * tree, then per-cluster naming fills in human-readable names. There is no
  * sweep / merge / recurse loop — the build pass is internally hierarchical
  * and sibling-similarity-aware.
+ *
+ * One workflow, two scopes. Global gardening (no `customBehaviorId`) rebuilds
+ * the project-wide tree and writes membership to
+ * `taxonomy_observations.assigned_cluster_id`; a scoped run (a custom behavior's
+ * `customBehaviorId`) rebuilds that behavior's sub-tree and writes the
+ * `custom_behavior_assignments` slice. Scope is threaded as an optional field
+ * global omits, and every branch lives inside the activities/use-cases, so the
+ * global activity sequence, names, and serialized inputs are byte-identical to
+ * the pre-unification workflow.
  */
 const {
   assertGardenTaxonomyQualityActivity,
-  buildHierarchicalGardenTaxonomyActivity,
   completeGardenTaxonomyRunActivity,
   deprecateGardenTaxonomyClustersActivity,
   emitGardenTaxonomyLineageActivity,
@@ -73,16 +81,33 @@ export const gardenTaxonomyWorkflow = async (
 ): Promise<GardenTaxonomyWorkflowResult> => {
   const started = await startGardenTaxonomyRunActivity({ ...input, workflowRunId: workflowInfo().runId })
   try {
-    const useSplitBuild = patched("taxonomy-gardening-split-build-v1")
-    const built = useSplitBuild
-      ? await (async () => {
-          const plan = await planHierarchicalGardenTaxonomyActivity(started)
-          await saveGardenTaxonomyClustersActivity({ ...started, planKey: plan.planKey })
-          await reassignGardenTaxonomyObservationsActivity({ ...started, planKey: plan.planKey })
-          await deprecateGardenTaxonomyClustersActivity({ ...started, planKey: plan.planKey })
-          return plan
-        })()
-      : await buildHierarchicalGardenTaxonomyActivity(started)
+    // Split-build is unconditional now; deprecatePatch sits exactly where the old
+    // `patched("…-split-build-v1")` gate did (first statement in the try, after
+    // start) so replay of in-flight split-build histories reconciles the marker
+    // at the same position.
+    deprecatePatch("taxonomy-gardening-split-build-v1")
+    const built = await planHierarchicalGardenTaxonomyActivity(started)
+    // Scoped cold-start: the plan sampled below the gardening minimum and built
+    // no tree, so complete the run empty and leave any prior scoped tree serving
+    // (never reaching save/deprecate). Global stays on the full sequence — the
+    // sweep gates it on the same minimum before it ever starts.
+    if (started.customBehaviorId !== undefined && built.clustersBorn === 0 && built.clustersContinued === 0) {
+      return await completeGardenTaxonomyRunActivity({
+        ...started,
+        observationsScanned: built.observationsScanned,
+        observationsAvailable: built.observationsAvailable,
+        observationsSampled: built.observationsSampled,
+        sampleStrategy: built.sampleStrategy,
+        sampleCap: built.sampleCap,
+        noiseScanned: 0,
+        clustersBorn: 0,
+        clustersMerged: 0,
+        clustersDeprecated: 0,
+      })
+    }
+    await saveGardenTaxonomyClustersActivity({ ...started, planKey: built.planKey })
+    await reassignGardenTaxonomyObservationsActivity({ ...started, planKey: built.planKey })
+    await deprecateGardenTaxonomyClustersActivity({ ...started, planKey: built.planKey })
     const lineage: TaxonomyClusterLineage[] = [...built.lineage]
     const namingPlan = await planGardenTaxonomyNamingActivity({ ...started, lineage })
     // Name depth by depth, deepest first, and sequentially within a depth
@@ -94,12 +119,13 @@ export const gardenTaxonomyWorkflow = async (
           organizationId: started.organizationId,
           projectId: started.projectId,
           clusterId,
+          ...(started.customBehaviorId ? { customBehaviorId: started.customBehaviorId } : {}),
         }),
       )
     }
     await assertGardenTaxonomyQualityActivity(started)
     await emitGardenTaxonomyLineageActivity({ ...started, lineage })
-    return completeGardenTaxonomyRunActivity({
+    return await completeGardenTaxonomyRunActivity({
       ...started,
       observationsScanned: built.observationsAvailable ?? built.observationsScanned ?? 0,
       observationsAvailable: built.observationsAvailable ?? built.observationsScanned ?? 0,

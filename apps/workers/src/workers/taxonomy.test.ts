@@ -432,10 +432,11 @@ describe("taxonomy gardening worker", () => {
 
     expect(started).toEqual([
       {
-        workflow: "gardenCustomBehaviorWorkflow",
+        workflow: "gardenTaxonomyWorkflow",
         input: {
           organizationId: ORGANIZATION_ID,
           projectId: PROJECT_ID,
+          dimension: "topic",
           customBehaviorId: CUSTOM_BEHAVIOR_ID,
           trigger: "cron",
         },
@@ -465,7 +466,7 @@ describe("taxonomy gardening worker", () => {
         return Effect.fail(
           new WorkflowAlreadyStartedError({
             workflowId: `org:${ORGANIZATION_ID}:taxonomy:gardenCustomBehavior:${CUSTOM_BEHAVIOR_ID}`,
-            workflow: "gardenCustomBehaviorWorkflow",
+            workflow: "gardenTaxonomyWorkflow",
           }),
         )
       },

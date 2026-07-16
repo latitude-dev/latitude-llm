@@ -313,12 +313,15 @@ export const runGardenCustomBehaviorJob = (payload: GardenCustomBehaviorPayload,
     organizationId: OrganizationId(payload.organizationId),
     customBehaviorId: CustomBehaviorId(payload.customBehaviorId),
   })
+  // The unified gardenTaxonomyWorkflow does the scoped run when it carries a
+  // customBehaviorId; the start activity loads the behavior's FilterSet.
   return deps.workflowStarter
     .start(
-      "gardenCustomBehaviorWorkflow",
+      "gardenTaxonomyWorkflow",
       {
         organizationId: payload.organizationId,
         projectId: payload.projectId,
+        dimension: "topic",
         customBehaviorId: payload.customBehaviorId,
         trigger: payload.reason ?? "manual",
       },
@@ -327,7 +330,7 @@ export const runGardenCustomBehaviorJob = (payload: GardenCustomBehaviorPayload,
     .pipe(
       Effect.tap(() =>
         Effect.sync(() =>
-          logger.info("Started GardenCustomBehaviorWorkflow", {
+          logger.info("Started GardenTaxonomyWorkflow (scoped)", {
             metric: "taxonomy.gardenCustomBehavior.workflowStart",
             organizationId: payload.organizationId,
             projectId: payload.projectId,
@@ -338,7 +341,7 @@ export const runGardenCustomBehaviorJob = (payload: GardenCustomBehaviorPayload,
       ),
       Effect.catchTag("WorkflowAlreadyStartedError", () =>
         Effect.sync(() =>
-          logger.info("GardenCustomBehaviorWorkflow already running", {
+          logger.info("GardenTaxonomyWorkflow (scoped) already running", {
             metric: "taxonomy.gardenCustomBehavior.workflowStart",
             outcome: "already_running",
             organizationId: payload.organizationId,
