@@ -10,6 +10,7 @@ import {
   backupSettings,
   type ClaudeSettings,
   hasLatitudeStopHook,
+  latitudeStopHookCommand,
   readSettings,
   removeEnv,
   removeLatitudeStopHook,
@@ -259,8 +260,15 @@ async function applyChanges(args: ApplyArgs): Promise<void> {
   if (useLaunchctl || useSystemd) next = removeEnv(next, "BUN_OPTIONS")
   else next = setEnv(next, "BUN_OPTIONS", `--preload=${INTERCEPT_INSTALL_PATH}`)
 
-  const hookAlreadyThere = hasLatitudeStopHook(next)
+  const priorHookCommand = latitudeStopHookCommand(next)
   next = addLatitudeStopHook(next, DEFAULT_HOOK_COMMAND)
+
+  const hookNote =
+    priorHookCommand === undefined
+      ? "  + Stop hook installed"
+      : priorHookCommand === DEFAULT_HOOK_COMMAND
+        ? ""
+        : "  + Stop hook updated"
 
   const step = stepLogger(interactive)
 
@@ -270,7 +278,7 @@ async function applyChanges(args: ApplyArgs): Promise<void> {
   step.stop(
     [
       `~/.claude/settings.json updated`,
-      hookAlreadyThere ? "" : "  + Stop hook installed",
+      hookNote,
       backedUp ? pc.dim(`  (backup at ${SETTINGS_BACKUP_PATH})`) : pc.dim("  (new file)"),
     ]
       .filter(Boolean)
