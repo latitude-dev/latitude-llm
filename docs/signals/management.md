@@ -1,6 +1,6 @@
 ---
 title: Signal management
-description: Triage signals, monitor them with evaluations, mute noise, and keep your signal list focused.
+description: Triage signals, monitor them with evaluations, resolve or ignore finished work, and mute notification noise.
 ---
 
 # Signal management
@@ -40,7 +40,7 @@ From the signal you can:
 - Realign a generated evaluation after adding annotations.
 - Remove the evaluation to stop scoring new sessions.
 
-Unmute a signal before you generate an evaluation for it.
+Unresolve or unignore a signal before you generate an evaluation for it.
 
 See [Evaluations](../evaluations/overview) for how detectors work, and [Create a signal](./create) to define one yourself.
 
