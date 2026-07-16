@@ -32,11 +32,26 @@ const MAX_ROWS = 10
 
 const scopeLabel = (scope: string) => (scope === "" ? "unscoped" : scope)
 
-function Metric({ icon: Icon, value }: { readonly icon: LucideIcon; readonly value: number }) {
+const METRIC_TONE = {
+  read: { iconClass: "text-muted-foreground", textColor: "foregroundMuted" },
+  added: { iconClass: "text-success", textColor: "success" },
+  removed: { iconClass: "text-destructive", textColor: "destructive" },
+} as const
+
+function Metric({
+  icon: Icon,
+  value,
+  tone,
+}: {
+  readonly icon: LucideIcon
+  readonly value: number
+  readonly tone: keyof typeof METRIC_TONE
+}) {
+  const { iconClass, textColor } = METRIC_TONE[tone]
   return (
     <span className="inline-flex items-center gap-1">
-      <Icon className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
-      <Text.H6 color="foreground">{formatCount(value)}</Text.H6>
+      <Icon className={cn("h-3.5 w-3.5 shrink-0", iconClass)} />
+      <Text.H6 color={textColor}>{formatCount(value)}</Text.H6>
     </span>
   )
 }
@@ -44,9 +59,9 @@ function Metric({ icon: Icon, value }: { readonly icon: LucideIcon; readonly val
 function RecordMetrics({ record }: { readonly record: MemoryRecordSummary }) {
   return (
     <span className="flex shrink-0 flex-row items-center gap-2.5 tabular-nums">
-      {record.readTokens > 0 ? <Metric icon={EyeIcon} value={record.readTokens} /> : null}
-      {record.tokensAdded > 0 ? <Metric icon={PlusIcon} value={record.tokensAdded} /> : null}
-      {record.tokensRemoved > 0 ? <Metric icon={MinusIcon} value={record.tokensRemoved} /> : null}
+      {record.readTokens > 0 ? <Metric icon={EyeIcon} value={record.readTokens} tone="read" /> : null}
+      {record.tokensAdded > 0 ? <Metric icon={PlusIcon} value={record.tokensAdded} tone="added" /> : null}
+      {record.tokensRemoved > 0 ? <Metric icon={MinusIcon} value={record.tokensRemoved} tone="removed" /> : null}
     </span>
   )
 }
