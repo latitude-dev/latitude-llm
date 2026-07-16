@@ -178,7 +178,7 @@ export function TraceTab({
               isLoading={isSpansLoading}
             />
             <UsageSummary data={traceRecord} costBadges={costBadgesNode} />
-            <MemorySummary projectId={projectId} sessionId={traceRecord.sessionId} traceId={traceId} />
+            <MemorySummary projectId={projectId} sessionId={traceRecord.sessionId || traceId} traceId={traceId} />
           </div>
         )
       )}
