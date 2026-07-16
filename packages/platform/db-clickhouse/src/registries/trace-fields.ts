@@ -2,7 +2,7 @@ import type { SessionOnlyFilterFieldName, TraceFilterFieldName } from "@domain/s
 import type { ChFieldRegistry } from "../filter-builder.ts"
 import { buildCacheHitRateClause, buildStatusClause, dateTime64BestEffortExpression } from "./helpers.ts"
 
-type InternalField = "startTime"
+type InternalField = "startTime" | "endTime"
 
 export const TRACE_FIELD_REGISTRY: ChFieldRegistry<
   Exclude<TraceFilterFieldName, SessionOnlyFilterFieldName> | InternalField
@@ -31,4 +31,5 @@ export const TRACE_FIELD_REGISTRY: ChFieldRegistry<
   tokensOutput: { column: "tokens_output", chType: "UInt64" },
   cacheHitRate: { kind: "synthetic", buildClause: buildCacheHitRateClause },
   startTime: { column: "start_time", chType: "DateTime64(9, 'UTC')", valueExpression: dateTime64BestEffortExpression },
+  endTime: { column: "end_time", chType: "DateTime64(9, 'UTC')", valueExpression: dateTime64BestEffortExpression },
 }

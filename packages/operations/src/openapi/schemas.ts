@@ -1,9 +1,13 @@
 import {
   FILTER_OPERATORS,
+  SCORE_FILTER_FIELDS,
   SESSION_ID_LENGTH,
   SPAN_ID_LENGTH,
   SPAN_ROW_FILTER_GTE_PERCENTILE_MESSAGE,
   TRACE_ID_LENGTH,
+  TRACE_TELEMETRY_FILTER_FIELDS,
+  TRACE_TIME_FILTER_FIELDS,
+  unknownTraceFilterFields,
 } from "@domain/shared"
 import { z } from "@hono/zod-openapi"
 
@@ -76,6 +80,53 @@ export const SpanRowFilterSetSchema = FilterSetSchema.superRefine((filters, ctx)
   )
   .openapi("SpanRowFilterSet")
 
+export const TRACE_FILTER_SET_DESCRIPTION = `Filter set keyed by trace field. Each entry holds an array of conditions ANDed together for that field; field-level groups are ANDed across the set. Valid fields: ${TRACE_TELEMETRY_FILTER_FIELDS.join(", ")}; score-derived keys (${SCORE_FILTER_FIELDS.join(", ")}); and arbitrary metadata via \`metadata.<key>\`. \`startTime\`/\`endTime\` take ISO-8601 values (a trace's first span start / last span end). \`gtePercentile\` is only supported on duration/ttft/cost — not on time fields. Unknown fields are rejected rather than ignored.`
+
+const TRACE_TIME_FILTER_FIELD_SET: ReadonlySet<string> = new Set(TRACE_TIME_FILTER_FIELDS)
+
+const TRACE_TIME_GTE_PERCENTILE_MESSAGE =
+  "`gtePercentile` is not supported on `startTime`/`endTime`; use absolute `gte`/`lte` with ISO-8601 timestamps."
+
+const traceFilterFieldIssue = (field: string): string =>
+  `Unknown trace filter field "${field}". Valid fields: ${TRACE_TELEMETRY_FILTER_FIELDS.join(", ")}; score.* keys (e.g. ${SCORE_FILTER_FIELDS[0]}); or metadata.<key>.`
+
+/** Flags every filter-set key/operator the trace query cannot apply, so callers get a 400 instead of silently unfiltered results or a 500. */
+const addTraceFilterFieldIssues = (
+  filters: Readonly<Record<string, unknown>>,
+  ctx: z.RefinementCtx,
+  basePath: readonly (string | number)[] = [],
+): void => {
+  for (const field of unknownTraceFilterFields(filters)) {
+    ctx.addIssue({ code: "custom", message: traceFilterFieldIssue(field), path: [...basePath, field] })
+  }
+
+  // Percentile resolution only rewrites duration/ttft/cost. Leaving gtePercentile
+  // on a time field would reach buildClause and throw (500) for an unsupported op.
+  for (const [field, conditions] of Object.entries(filters)) {
+    if (!TRACE_TIME_FILTER_FIELD_SET.has(field) || !Array.isArray(conditions)) continue
+    conditions.forEach((cond, index) => {
+      if (
+        cond !== null &&
+        typeof cond === "object" &&
+        "op" in cond &&
+        (cond as { op?: unknown }).op === "gtePercentile"
+      ) {
+        ctx.addIssue({
+          code: "custom",
+          message: TRACE_TIME_GTE_PERCENTILE_MESSAGE,
+          path: [...basePath, field, index, "op"],
+        })
+      }
+    })
+  }
+}
+
+export const TraceFilterSetSchema = FilterSetSchema.superRefine((filters, ctx) => {
+  addTraceFilterFieldIssues(filters, ctx)
+})
+  .describe(TRACE_FILTER_SET_DESCRIPTION)
+  .openapi("TraceFilterSet")
+
 export const TraceRefSchema = z
   .discriminatedUnion("by", [
     z.object({
@@ -90,6 +141,11 @@ export const TraceRefSchema = z
     }),
   ])
   .openapi("TraceRef")
+  .superRefine((ref, ctx) => {
+    // Same allow-list as TraceFilterSetSchema — the filters branch resolves
+    // against the trace registry, which silently drops unknown keys.
+    if (ref.by === "filters") addTraceFilterFieldIssues(ref.filters, ctx, ["filters"])
+  })
 
 /**
  * Plural sibling of {@link TraceRefSchema} for bulk endpoints (export traces,
@@ -115,6 +171,9 @@ export const TracesRefSchema = z
     }),
   ])
   .openapi("TracesRef")
+  .superRefine((ref, ctx) => {
+    if (ref.by === "filters") addTraceFilterFieldIssues(ref.filters, ctx, ["filters"])
+  })
 
 // All protected endpoints are already org-scoped via the Bearer API key
 // (resolved by `createAuthMiddleware` + `createOrganizationContextMiddleware`),

@@ -859,7 +859,7 @@ client.traces.list(
 <dl>
 <dd>
 
-**filters:** `typing.Optional[FilterSet]` 
+**filters:** `typing.Optional[TraceFilterSet]` 
     
 </dd>
 </dl>

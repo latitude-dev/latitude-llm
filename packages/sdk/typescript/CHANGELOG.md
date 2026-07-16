@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [9.2.0] - 2026-07-16
+
+### Added
+
+- `listTraces` filters now document and validate a dedicated `TraceFilterSet` (including `endTime`). Unknown filter fields and `gtePercentile` on `startTime`/`endTime` are rejected with 400 instead of being silently ignored or failing as 500.
+
 ## [9.1.0] - 2026-07-14
 
 ### Added

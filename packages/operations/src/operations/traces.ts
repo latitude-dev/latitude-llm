@@ -32,11 +32,12 @@ import {
 import { TraceAnalyticsResponseSchema, toTraceAnalyticsResponse } from "../openapi/entities/trace-analytics.ts"
 import { Paginated, PaginatedQueryParamsSchema } from "../openapi/pagination.ts"
 import {
-  FilterSetSchema,
   jsonBody,
   PROTECTED_SECURITY,
   ProjectParamsSchema,
   spanIdSchema,
+  TRACE_FILTER_SET_DESCRIPTION,
+  TraceFilterSetSchema,
   TracesRefSchema,
   traceIdSchema,
   typedResponses,
@@ -67,7 +68,7 @@ const ListBodySchema = z
       .describe(
         "Free-text semantic search across the trace's input and output messages. Combined with `filters` via AND.",
       ),
-    filters: FilterSetSchema.optional(),
+    filters: TraceFilterSetSchema.optional().describe(TRACE_FILTER_SET_DESCRIPTION),
   })
   .openapi("ListTracesBody")
 

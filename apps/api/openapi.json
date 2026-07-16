@@ -1603,9 +1603,19 @@
             "description": "Free-text semantic search across the trace's input and output messages. Combined with `filters` via AND."
           },
           "filters": {
-            "$ref": "#/components/schemas/FilterSet"
+            "$ref": "#/components/schemas/TraceFilterSet"
           }
         }
+      },
+      "TraceFilterSet": {
+        "type": "object",
+        "additionalProperties": {
+          "type": "array",
+          "items": {
+            "$ref": "#/components/schemas/FilterCondition"
+          }
+        },
+        "description": "Filter set keyed by trace field. Each entry holds an array of conditions ANDed together for that field; field-level groups are ANDed across the set. Valid fields: status, name, traceId, sessionId, simulationId, userId, tags, models, providers, serviceNames, tools, definedTools, duration, ttft, cost, spanCount, errorCount, tokensInput, tokensOutput, cacheHitRate, startTime, endTime; score-derived keys (score.passed, score.errored, score.value, score.source, score.sourceId, score.annotatorId, score.signalId, score.simulationId); and arbitrary metadata via `metadata.<key>`. `startTime`/`endTime` take ISO-8601 values (a trace's first span start / last span end). `gtePercentile` is only supported on duration/ttft/cost — not on time fields. Unknown fields are rejected rather than ignored."
       },
       "TraceAnalyticsResponse": {
         "type": "object",
