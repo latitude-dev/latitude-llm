@@ -9,15 +9,16 @@ Once a signal exists, whether Latitude [discovered](./overview) it or you [creat
 
 ## Signal states
 
-A signal's status is one of three states:
+A signal's status includes:
 
 - New: discovered or created in the last 7 days.
 - Escalating: occurrences are rising faster than the normal pattern for this time of week. Escalation is detected automatically and surfaced by the Signal escalating [monitor](../monitors/overview).
 - Ongoing: the steady state, once a signal is neither new nor escalating.
+- Resolved / Ignored: manually archived after triage.
 
 A signal can be both New and Escalating at once. Separately, a signal with an active evaluation shows an Evaluated marker.
 
-The Signals page has two tabs, Active and Archived. Muting a signal moves it to Archived.
+The Signals page has two tabs, Active and Archived. Resolving or ignoring a signal moves it to Archived.
 
 ## Triage
 
@@ -26,7 +27,7 @@ When a signal appears:
 1. Read its description to understand the pattern.
 2. Open example sessions to see where it happened.
 3. Judge how much it matters: a safety risk, a quality problem, or a rare edge case.
-4. Act on it: assign an owner, set a priority, start monitoring, mute it, or delete it.
+4. Act on it: assign an owner, set a priority, start monitoring, resolve or ignore it, mute notifications, or delete it.
 
 Assign a signal to an org member and set its priority (Urgent, High, Medium, Low, or none) so the right person picks up the right thing first. You can filter the list by assignee.
 
@@ -53,13 +54,17 @@ For a signal worth digging into, review several example sessions and ask:
 - Are there shared patterns in context, tools, retrieval, model, or prompt behavior?
 - If an evaluation is attached, is it too strict, too lenient, or drifting from human review?
 
-## Mute noise
+## Resolve and ignore
 
-Mute a signal that isn't worth acting on. Muting stops its notifications and moves it to the Archived tab, though new occurrences still register. Unmute to bring it back to the active list. Use muting for noise, not for problems you have already fixed.
+Resolve a signal when the underlying problem is fixed. Ignore one that isn't worth acting on. Both move the signal to the Archived tab. Ignoring also stops linked evaluations; resolving can keep them active when "Monitor resolved signals" is enabled so regressions still get scored.
+
+## Mute notifications
+
+Mute stops escalation notifications without archiving the signal. New occurrences still register and discovery still matches. Unmute to resume notifications. Prefer resolve/ignore for triage; use mute when you only want quieter alerts.
 
 ## Delete a signal you created
 
-A signal you created can be renamed or deleted from its detail page. Deleting also archives its evaluation and can't be undone. Existing scores stay in analytics. Discovered signals can't be deleted; mute them instead.
+A signal you created can be renamed or deleted from its detail page. Deleting also archives its evaluation and can't be undone. Existing scores stay in analytics. Discovered signals can't be deleted; ignore them instead.
 
 ## Catching regressions
 
@@ -71,7 +76,8 @@ As your project matures:
 
 - Assign and prioritize signals so the important ones stand out.
 - Monitor the signals you need ongoing coverage for.
-- Mute noise so real problems stay visible.
+- Resolve or ignore finished work so the active list stays focused.
+- Mute notification noise when you still want the signal active.
 - Keep descriptions clear enough for the next teammate to understand.
 
 ## Next steps
