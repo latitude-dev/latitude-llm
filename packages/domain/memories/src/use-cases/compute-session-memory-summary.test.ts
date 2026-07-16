@@ -218,6 +218,29 @@ describe("computeSessionMemorySummary", () => {
     expect(summary.total.tokensAdded).toBe(0)
   })
 
+  it("does not re-count records an earlier wipe already removed", async () => {
+    const memory = createFakeMemoryRepository()
+    // rec1 lived then was wiped before the session; only rec2 is live going in.
+    await materialize(
+      [
+        makeSpan({ spanId: spanId("1"), recordsRaw: records({ id: "rec1", content: "a" }), endTime: at(0) }),
+        makeSpan({ spanId: spanId("2"), operation: "delete_memory", recordId: "", endTime: at(1) }),
+        makeSpan({ spanId: spanId("3"), recordsRaw: records({ id: "rec2", content: "b" }), endTime: at(2) }),
+      ],
+      memory,
+      SessionId("sessOld"),
+    )
+    await materialize(
+      [makeSpan({ spanId: spanId("9"), operation: "delete_memory", recordId: "", endTime: at(5) })],
+      memory,
+      SessionId("sessNew"),
+    )
+
+    const summary = await summarize(memory, { sessionId: SessionId("sessNew") })
+    expect(summary.records.map((record) => record.recordId)).toEqual(["rec2"]) // rec1 already gone at t1
+    expect(summary.total.tokensRemoved).toBeGreaterThan(0)
+  })
+
   it("restricts the summary to one trace when a trace id is given", async () => {
     const memory = createFakeMemoryRepository()
     await materialize(
