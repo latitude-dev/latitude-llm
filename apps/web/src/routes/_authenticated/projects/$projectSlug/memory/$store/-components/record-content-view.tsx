@@ -176,6 +176,7 @@ function usePanelResize(setOpen: (open: boolean) => void) {
     }
     if (upRef.current) {
       document.removeEventListener("pointerup", upRef.current)
+      document.removeEventListener("pointercancel", upRef.current)
       upRef.current = null
     }
     document.body.style.removeProperty("user-select")
@@ -230,6 +231,7 @@ function usePanelResize(setOpen: (open: boolean) => void) {
       upRef.current = onUp
       document.addEventListener("pointermove", onMove)
       document.addEventListener("pointerup", onUp)
+      document.addEventListener("pointercancel", onUp)
     },
     [height, maxHeight, cleanup, setOpen],
   )
