@@ -1,9 +1,9 @@
 /**
  * Calibrated adaptive depth schedule + rollout limits — the Phase-1 deliverable.
  *
- * These are the values Phase 2 lifts into `constants.ts`
- * (`TAXONOMY_TREE_DEPTH_SCHEDULE` gains the four adaptive fields) and Phases
- * 3–5 enforce. They are recorded here, proven by `calibration.test.ts`, and
+ * These are the values Phase 2 lifted into `constants.ts` as
+ * `TAXONOMY_TREE_RELATIVE_DEPTH_SCHEDULE`, and Phases 3–5 enforce. They are
+ * recorded here, proven by `calibration.test.ts`, and
  * documented with their measured basis in `BASELINES.md`. Nothing in production
  * imports this module yet.
  *

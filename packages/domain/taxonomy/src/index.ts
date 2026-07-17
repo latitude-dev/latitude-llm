@@ -1,8 +1,15 @@
 export {
-  type BuildHierarchicalClustersInput,
-  buildHierarchicalClusters,
+  type BuildRelativeHierarchicalClustersInput,
+  type BuildRelativeHierarchicalClustersResult,
+  type BuildStaticHierarchicalClustersInput,
+  buildRelativeHierarchicalClusters,
+  buildStaticHierarchicalClusters,
   type ClusteringTreeNode,
-  type DepthSchedule,
+  quantile,
+  type RelativeClusteringDiagnostics,
+  type RelativeClusteringRejectionReason,
+  type RelativeDepthSchedule,
+  type StaticDepthSchedule,
 } from "./clustering.ts"
 export {
   CUSTOM_BEHAVIOR_GARDENING_CRON_KEY,
@@ -22,6 +29,8 @@ export {
   TAXONOMY_CLUSTER_STATES,
   TAXONOMY_CLUSTERING_PROPOSAL_SAMPLE_MAX,
   TAXONOMY_CLUSTERING_SAMPLE_STRATEGY,
+  TAXONOMY_CLUSTERING_WORKER_MAX_OLD_GEN_MB,
+  TAXONOMY_CLUSTERING_WORKER_TIMEOUT_MS,
   TAXONOMY_CONTINUATION_THRESHOLD,
   TAXONOMY_DEFAULT_NAMING_MODEL,
   TAXONOMY_DIMENSIONS,
@@ -51,9 +60,11 @@ export {
   TAXONOMY_RUN_TRIGGERS,
   TAXONOMY_SEARCH_MIN_SCORE,
   TAXONOMY_SEARCH_MIN_VECTOR_SIMILARITY,
-  TAXONOMY_TREE_DEPTH_SCHEDULE,
+  TAXONOMY_TREE_RELATIVE_DEPTH_SCHEDULE,
+  TAXONOMY_TREE_STATIC_DEPTH_SCHEDULE,
   type TaxonomyObservationWeightScheme,
-  type TaxonomyTreeDepthSchedule,
+  type TaxonomyTreeRelativeDepthSchedule,
+  type TaxonomyTreeStaticDepthSchedule,
 } from "./constants.ts"
 export {
   type TaxonomyCentroid,
