@@ -8,6 +8,7 @@ import type { MemoryStoreListItem } from "../entities/memory-store.ts"
 import type { MemoryRepositoryShape } from "../ports/memory-repository.ts"
 
 const STORE_ACCESS_LIST_CAP = 1000
+const RECORD_READ_EVENTS_CAP = 200
 
 const recordKey = (storeId: string, recordId: string) => `${storeId}\u0000${recordId}`
 const blobKey = (organizationId: string, contentHash: string) => `${organizationId}\u0000${contentHash}`
@@ -216,7 +217,7 @@ export const createFakeMemoryRepository = (overrides?: Partial<MemoryRepositoryS
           deduped.set(`${event.spanId} ${event.storeId} ${event.recordId}`, event)
         }
         const sorted = [...deduped.values()].sort((a, b) => b.endTime.getTime() - a.endTime.getTime())
-        return limit !== undefined ? sorted.slice(0, limit) : sorted
+        return sorted.slice(0, limit ?? RECORD_READ_EVENTS_CAP)
       }),
     listRecordUsers: ({ organizationId, projectId, storeId, recordId }) =>
       Effect.sync(() => {
