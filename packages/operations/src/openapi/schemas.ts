@@ -96,10 +96,7 @@ const addTraceFilterFieldIssues = (
     ctx.addIssue({ code: "custom", message: traceFilterFieldIssue(field), path: [...basePath, field] })
   }
 
-  // Percentile resolution only rewrites duration/ttft/cost. Leaving gtePercentile
-  // on any other field (time fields, score.*, metadata.*, or any other telemetry
-  // field) would reach buildClause/buildMetadataClause and throw (500) for an
-  // unsupported operator instead of resolving.
+  // Percentile resolution only rewrites duration/ttft/cost; other gtePercentile ops would 500 in the filter builder.
   for (const [field, conditions] of Object.entries(filters)) {
     if (isPercentileTraceFilterField(field) || !Array.isArray(conditions)) continue
     conditions.forEach((cond, index) => {
