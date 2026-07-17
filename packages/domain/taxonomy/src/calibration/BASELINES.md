@@ -159,7 +159,10 @@ pair must exceed it, not every pair): narrow-domain **0.858–0.868**, pilot
 
 The adaptive-only work (O(n) member distances + O(K²) sibling distances per
 candidate, K ≤ 10) is dominated by the shared k-means, so the runtime ratio sits
-at ~1.0, comfortably inside the ≤ 25%-slower criterion. (Real 2048d embeddings
+at ~1.0, comfortably inside the ≤ 25%-slower criterion. The resource test asserts
+the build's own RSS growth stays within the 512 MB worker budget — a coarse
+tripwire for a gross allocation regression (absolute process RSS can't be
+asserted reliably in CI because it includes the node/vitest baseline). (Real 2048d embeddings
 converge more slowly — ~12 s for the 670-obs pilot build — but adaptive and
 static share that cost identically, so the ratio is unaffected.)
 
@@ -177,7 +180,7 @@ static share that cost identically, so the ratio is unaffected.)
 | Broad-domain quality within regression tolerance | ✅ | purity delta 0.00, ARI 1.000 (synthetic) |
 | Cross-sample stability above ARI floor (0.8) | ✅ | real pilot 0.850; synthetic 0.94–1.00 |
 | Runtime ≤ 25% slower than static | ✅ | ~0.98× |
-| Memory within worker limit | ✅ | ~300 MB vs 512 MB budget |
+| Memory within worker limit | ✅ | build RSS growth asserted ≤ 512 MB budget (measured ~tens of MB) |
 | Rollout values fixed | ✅ | node cap / churn / fallback / shadow / admission target above |
 
 Two criteria (labeled purity, per-group recall) remain **provisional**: they are

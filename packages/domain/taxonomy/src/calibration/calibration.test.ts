@@ -44,6 +44,7 @@ import {
   ADAPTIVE_ROLLOUT_LIMITS,
   ADAPTIVE_RUNTIME_RATIO_CEILING,
   ADAPTIVE_TREE_DEPTH_SCHEDULE,
+  ADAPTIVE_WORKER_MAX_OLD_GEN_MB,
 } from "./schedule.ts"
 
 const centroidOfLabel = (corpus: LabeledCorpus, label: string): number[] => {
@@ -267,6 +268,7 @@ describe("adaptive clustering — resource bounds at the 1,500-sample cap", () =
     })
     const staticMs = performance.now() - staticStart
 
+    const rssBeforeAdaptive = process.memoryUsage().rss
     const adaptiveStart = performance.now()
     const { root, diagnostics } = buildAdaptiveClusters({
       embeddings,
@@ -278,6 +280,7 @@ describe("adaptive clustering — resource bounds at the 1,500-sample cap", () =
       globalAbsoluteThreshold: ADAPTIVE_GLOBAL_ABSOLUTE_THRESHOLD,
     })
     const adaptiveMs = performance.now() - adaptiveStart
+    const adaptiveRssGrowthBytes = process.memoryUsage().rss - rssBeforeAdaptive
 
     expect(treeShape(root).nodeCount).toBeLessThanOrEqual(ADAPTIVE_ROLLOUT_LIMITS.nodeCap)
     expect(diagnostics.fellBackToStatic).toBe(false)
@@ -285,5 +288,11 @@ describe("adaptive clustering — resource bounds at the 1,500-sample cap", () =
     // (O(n) member distances + O(K²) sibling distances per candidate) is dominated
     // by shared k-means, so the ratio hovers around 1.0.
     expect(adaptiveMs / staticMs).toBeLessThanOrEqual(ADAPTIVE_RUNTIME_RATIO_CEILING)
+    // Memory gate: assert the *build's own* RSS growth (isolated from the node/vitest
+    // baseline, which absolute process RSS can't be) stays within the worker old-gen
+    // budget. The build is O(n·dims); this is a coarse tripwire for a gross
+    // (e.g. O(n²·dims)) allocation regression, with large headroom over the ~tens of MB
+    // a healthy 1,500×2,048 build actually adds.
+    expect(adaptiveRssGrowthBytes).toBeLessThanOrEqual(ADAPTIVE_WORKER_MAX_OLD_GEN_MB * 1024 * 1024)
   }, 120_000)
 })
