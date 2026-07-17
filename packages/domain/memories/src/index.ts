@@ -58,6 +58,18 @@ export {
   type SessionMemorySummary,
 } from "./use-cases/compute-session-memory-summary.ts"
 export {
+  type ListMemoryStoresInput,
+  listMemoryStoresUseCase,
+} from "./use-cases/list-memory-stores.ts"
+export {
+  type ListStoreUsersInput,
+  listStoreUsersUseCase,
+} from "./use-cases/list-store-users.ts"
+export {
+  type ListUserStoresInput,
+  listUserStoresUseCase,
+} from "./use-cases/list-user-stores.ts"
+export {
   type MaterializeTraceMemoryInput,
   type MaterializeTraceMemoryResult,
   materializeTraceMemoryUseCase,
