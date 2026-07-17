@@ -47,55 +47,44 @@ const workerEntryUrl = () => {
  *   - a single wall-clock deadline bounds the run and terminates a hung or
  *     looping worker. It covers the entire worker invocation — one build today,
  *     static plus adaptive shadow later — so shadow mode shares one budget.
- *   - `worker.terminate()` runs on every terminal path (success, error, exit,
- *     timeout) so no thread is left dangling once the promise settles.
+ *   - the timer and the thread are registered on a `using` DisposableStack, so
+ *     `clearTimeout` + `worker.terminate()` run exactly once when this scope
+ *     exits, on every terminal path (message, error, exit, timeout).
  */
-export const buildHierarchicalClustersInWorker = (
+export const buildHierarchicalClustersInWorker = async (
   input: BuildHierarchicalClustersInput,
-): Promise<BuildHierarchicalClustersResult> =>
-  new Promise((resolvePromise, rejectPromise) => {
-    const entry = workerEntryUrl()
-    const worker = new Worker(entry.url, {
-      workerData: input,
-      execArgv: entry.isTypeScriptSource ? ["--import", "tsx"] : [],
-      resourceLimits: { maxOldGenerationSizeMb: TAXONOMY_CLUSTERING_WORKER_MAX_OLD_GEN_MB },
-    })
+): Promise<BuildHierarchicalClustersResult> => {
+  const entry = workerEntryUrl()
+  // The deadline timer and the worker thread are torn down (LIFO) when this
+  // scope exits — i.e. once the awaited promise settles, on every terminal path
+  // (message, error, exit, timeout). Promise settlement is idempotent, so the
+  // first event wins and later ones are no-ops.
+  using stack = new DisposableStack()
+  const worker = new Worker(entry.url, {
+    workerData: input,
+    execArgv: entry.isTypeScriptSource ? ["--import", "tsx"] : [],
+    resourceLimits: { maxOldGenerationSizeMb: TAXONOMY_CLUSTERING_WORKER_MAX_OLD_GEN_MB },
+  })
+  stack.defer(() => void worker.terminate())
 
-    let settled = false
-    let timeout: ReturnType<typeof setTimeout> | undefined
-    const cleanup = () => {
-      if (timeout !== undefined) clearTimeout(timeout)
-      void worker.terminate()
-    }
-    const settle = (callback: () => void) => {
-      if (settled) return
-      settled = true
-      cleanup()
-      callback()
-    }
-
-    timeout = setTimeout(() => {
-      settle(() =>
-        rejectPromise(
-          new Error(`Taxonomy clustering worker timed out after ${TAXONOMY_CLUSTERING_WORKER_TIMEOUT_MS}ms`),
-        ),
-      )
+  return await new Promise<BuildHierarchicalClustersResult>((resolvePromise, rejectPromise) => {
+    const timeout = setTimeout(() => {
+      rejectPromise(new Error(`Taxonomy clustering worker timed out after ${TAXONOMY_CLUSTERING_WORKER_TIMEOUT_MS}ms`))
     }, TAXONOMY_CLUSTERING_WORKER_TIMEOUT_MS)
+    stack.defer(() => clearTimeout(timeout))
 
     worker.once("message", (message: WorkerMessage) => {
-      settle(() => {
-        if (message.ok) {
-          resolvePromise(message.result)
-          return
-        }
-        const error = new Error(message.error)
-        if (message.stack) error.stack = message.stack
-        rejectPromise(error)
-      })
+      if (message.ok) {
+        resolvePromise(message.result)
+        return
+      }
+      const error = new Error(message.error)
+      if (message.stack) error.stack = message.stack
+      rejectPromise(error)
     })
-    worker.once("error", (error) => settle(() => rejectPromise(error)))
+    worker.once("error", (error) => rejectPromise(error))
     worker.once("exit", (code) => {
-      if (code === 0) return
-      settle(() => rejectPromise(new Error(`Taxonomy clustering worker exited with code ${code}`)))
+      if (code !== 0) rejectPromise(new Error(`Taxonomy clustering worker exited with code ${code}`))
     })
   })
+}
