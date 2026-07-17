@@ -40,7 +40,7 @@ export class NotAdminError extends Data.TaggedError("NotAdminError")<{
   readonly userId: string
 }> {
   readonly httpStatus = 403
-  readonly httpMessage = "Only admins can change member roles"
+  readonly httpMessage = "Only admins or owners can perform this action"
 }
 
 export class CannotChangeOwnerRoleError extends Data.TaggedError("CannotChangeOwnerRoleError")<{

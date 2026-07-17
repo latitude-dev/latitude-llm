@@ -53,7 +53,6 @@ const buildLayers = () => {
     findByOrganizationAndUser: () =>
       Effect.succeed(createMembership({ organizationId: ORG_ID, userId: INVITER_USER_ID, role: "admin" })),
     findMemberByEmail: () => Effect.succeed(false),
-    isAdmin: () => Effect.succeed(true),
   })
   const { repository: orgRepo, organizations } = createFakeOrganizationRepository()
   organizations.set(
@@ -127,7 +126,6 @@ describe("inviteMemberUseCase — Better Auth parity", () => {
       findByOrganizationAndUser: () =>
         Effect.succeed(createMembership({ organizationId: ORG_ID, userId: INVITER_USER_ID, role: "admin" })),
       findMemberByEmail: () => Effect.succeed(true),
-      isAdmin: () => Effect.succeed(true),
     })
     const { repository: orgRepo, organizations } = createFakeOrganizationRepository()
     organizations.set(
