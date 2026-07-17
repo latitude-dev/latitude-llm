@@ -69,7 +69,9 @@ const seed = (memory: Fake, events: readonly MemoryEvent[], current: readonly Me
 
 const listStores = (memory: Fake, options?: MemoryStoreListOptions) =>
   Effect.runPromise(
-    listMemoryStoresUseCase({ organizationId, projectId, options }).pipe(Effect.provide(layerFor(memory))),
+    listMemoryStoresUseCase({ organizationId, projectId, ...(options ? { options } : {}) }).pipe(
+      Effect.provide(layerFor(memory)),
+    ),
   )
 
 const listStoreUsers = (memory: Fake, storeId: string) =>
