@@ -1,4 +1,4 @@
-import { CodeBlock, cn, Icon, Skeleton, Text } from "@repo/ui"
+import { CodeBlock, cn, Icon, Skeleton, Text, useMountEffect } from "@repo/ui"
 import { formatCount, relativeTime } from "@repo/utils"
 import {
   ChevronDownIcon,
@@ -9,7 +9,7 @@ import {
   PencilIcon,
   PlusIcon,
 } from "lucide-react"
-import { useState } from "react"
+import { useCallback, useRef, useState } from "react"
 import { useMemoryRecord } from "../../../../../../../domains/memories/memories.collection.ts"
 import type { MemoryRecordVersionRecord } from "../../../../../../../domains/memories/memories.functions.ts"
 import { recordDisplayLabel } from "../../-components/store-encoding.ts"
@@ -105,13 +105,137 @@ export function RecordContentView({
   )
 }
 
+const MIN_HISTORY_HEIGHT = 96
+const DEFAULT_HISTORY_HEIGHT = 160
+// Reserve this much for the editor header + code area + history header so the code never vanishes.
+const MIN_CONTENT_ABOVE = 200
+// Drag the list shorter than this and it closes instead of clamping to the minimum.
+const CLOSE_DRAG_THRESHOLD = 64
+const KEYBOARD_STEP = 24
+
+// Vertical sibling of the span-tree `useResizablePanel`: drags the history list taller/shorter.
+function useHistoryResize(setOpen: (open: boolean) => void) {
+  const footerRef = useRef<HTMLDivElement>(null)
+  const [height, setHeight] = useState(DEFAULT_HISTORY_HEIGHT)
+  const [isDragging, setIsDragging] = useState(false)
+  const drag = useRef<{ startY: number; startHeight: number; max: number } | null>(null)
+  const moveRef = useRef<((event: PointerEvent) => void) | null>(null)
+  const upRef = useRef<(() => void) | null>(null)
+
+  const cleanup = useCallback(() => {
+    if (moveRef.current) {
+      document.removeEventListener("pointermove", moveRef.current)
+      moveRef.current = null
+    }
+    if (upRef.current) {
+      document.removeEventListener("pointerup", upRef.current)
+      upRef.current = null
+    }
+    document.body.style.removeProperty("user-select")
+    document.body.style.removeProperty("cursor")
+  }, [])
+
+  const maxHeight = useCallback(() => {
+    const panel = footerRef.current?.parentElement
+    if (!panel) return DEFAULT_HISTORY_HEIGHT
+    return Math.max(MIN_HISTORY_HEIGHT, panel.offsetHeight - MIN_CONTENT_ABOVE)
+  }, [])
+
+  useMountEffect(() => {
+    const panel = footerRef.current?.parentElement
+    if (!panel) return
+    const observer = new ResizeObserver(() => setHeight((prev) => Math.min(prev, maxHeight())))
+    observer.observe(panel)
+    return () => {
+      observer.disconnect()
+      cleanup()
+    }
+  })
+
+  const onPointerDown = useCallback(
+    (event: React.PointerEvent) => {
+      event.preventDefault()
+      if (!footerRef.current?.parentElement) return
+      drag.current = { startY: event.clientY, startHeight: height, max: maxHeight() }
+      setIsDragging(true)
+      document.body.style.userSelect = "none"
+      document.body.style.cursor = "ns-resize"
+
+      const onMove = (moveEvent: PointerEvent) => {
+        const current = drag.current
+        if (!current) return
+        const raw = current.startHeight + (current.startY - moveEvent.clientY)
+        if (raw < CLOSE_DRAG_THRESHOLD) {
+          drag.current = null
+          setIsDragging(false)
+          cleanup()
+          setOpen(false)
+          return
+        }
+        setHeight(Math.max(MIN_HISTORY_HEIGHT, Math.min(current.max, raw)))
+      }
+      const onUp = () => {
+        drag.current = null
+        setIsDragging(false)
+        cleanup()
+      }
+      moveRef.current = onMove
+      upRef.current = onUp
+      document.addEventListener("pointermove", onMove)
+      document.addEventListener("pointerup", onUp)
+    },
+    [height, maxHeight, cleanup, setOpen],
+  )
+
+  const onKeyDown = useCallback(
+    (event: React.KeyboardEvent) => {
+      if (event.key !== "ArrowUp" && event.key !== "ArrowDown") return
+      event.preventDefault()
+      const delta = event.key === "ArrowUp" ? KEYBOARD_STEP : -KEYBOARD_STEP
+      setHeight((prev) => Math.max(MIN_HISTORY_HEIGHT, Math.min(maxHeight(), prev + delta)))
+    },
+    [maxHeight],
+  )
+
+  return { footerRef, height, isDragging, onPointerDown, onKeyDown }
+}
+
 function RecordHistoryPanel({ versions }: { readonly versions: readonly MemoryRecordVersionRecord[] }) {
   const [open, setOpen] = useState(true)
+  const { footerRef, height, isDragging, onPointerDown, onKeyDown } = useHistoryResize(setOpen)
   const mutating = versions.filter((version) => isMutating(version.changeKind))
   if (mutating.length === 0) return null
 
   return (
-    <div className="shrink-0 border-t">
+    <div ref={footerRef} className="relative shrink-0 border-t">
+      {open ? (
+        // biome-ignore lint/a11y/useSemanticElements: resize handle requires div for drag events
+        <div
+          role="separator"
+          aria-orientation="horizontal"
+          aria-label="Resize record history"
+          aria-valuenow={height}
+          aria-valuemin={MIN_HISTORY_HEIGHT}
+          aria-valuemax={
+            footerRef.current?.parentElement
+              ? Math.max(MIN_HISTORY_HEIGHT, footerRef.current.parentElement.offsetHeight - MIN_CONTENT_ABOVE)
+              : DEFAULT_HISTORY_HEIGHT
+          }
+          tabIndex={0}
+          onPointerDown={onPointerDown}
+          onKeyDown={onKeyDown}
+          className="group absolute inset-x-0 -top-1 z-10 flex h-2 cursor-ns-resize touch-none items-center justify-center focus-visible:outline-none"
+        >
+          <div
+            className={cn(
+              "h-1 w-10 rounded-full transition-opacity",
+              isDragging
+                ? "bg-muted-foreground/60 opacity-100"
+                : "bg-border opacity-0 group-hover:opacity-100 group-focus-visible:opacity-100",
+            )}
+          />
+        </div>
+      ) : null}
       <button
         type="button"
         onClick={() => setOpen((value) => !value)}
@@ -128,7 +252,7 @@ function RecordHistoryPanel({ versions }: { readonly versions: readonly MemoryRe
         <Icon icon={open ? ChevronDownIcon : ChevronUpIcon} size="sm" color="foregroundMuted" className="shrink-0" />
       </button>
       {open ? (
-        <div className="h-40 overflow-y-auto border-t px-1 py-1">
+        <div className="overflow-y-auto border-t px-1 py-1" style={{ height }}>
           {mutating.map((version) => {
             const meta = CHANGE_META[version.changeKind as MutatingKind]
             const ChangeIcon = meta.icon
