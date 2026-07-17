@@ -50,9 +50,9 @@ catalog:
   "@typescript/native-preview": 7.0.0-dev.20260705.1
   "@vitejs/plugin-react": 6.0.1
   better-auth: 1.6.13
-  "@better-auth/core": 1.6.9
-  "@better-auth/sso": 1.6.11
-  "@better-auth/stripe": 1.6.10
+  "@better-auth/core": 1.6.13
+  "@better-auth/sso": 1.6.13
+  "@better-auth/stripe": 1.6.13
   "@bull-board/api": 6.12.1
   "@bull-board/hono": 6.12.1
   bullmq: 5.76.2
@@ -79,7 +79,7 @@ catalog:
   typescript: 6.0.3
   vite: 8.0.16
   vitest: 4.1.8
-  zod: 4.3.6
+  zod: 4.4.3
   voyageai: 0.2.1
   "@modelcontextprotocol/sdk": 1.29.0
   "@modelcontextprotocol/inspector": 0.21.2
