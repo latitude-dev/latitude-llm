@@ -21,7 +21,7 @@ import {
   TAXONOMY_TREE_DEPTH_SCHEDULE,
 } from "../constants.ts"
 import { cosineSimilarity } from "../helpers.ts"
-import { buildAdaptiveClusters } from "./adaptive-clustering.ts"
+import { type AdaptiveTreeNode, buildAdaptiveClusters, quantile } from "./adaptive-clustering.ts"
 import {
   buildAirlineSupportCorpus,
   buildImbalancedLongTailCorpus,
@@ -168,6 +168,43 @@ describe("adaptive clustering — routing thresholds", () => {
       expect(threshold).toBeLessThanOrEqual(1)
     }
   })
+
+  // A finite in-range threshold is not enough: it must actually admit the target
+  // fraction of a child's known members. Assert the per-child quantile threshold
+  // (the `routingSimilarityQuantile`, before the global-floor override) realizes
+  // the configured admission target — this is the relationship the schedule
+  // promises (quantile 0.15 → admit ~85%). The stored descent gate additionally
+  // raises this to `globalAbsoluteThreshold`, which can intentionally admit fewer
+  // for a very diffuse child; that floor override is a separate, deliberate gate.
+  it.each([
+    ["narrow-domain", buildNarrowDomainCorpus()],
+    ["narrow-pilot", loadNarrowPilotCorpus()],
+  ] as const)("%s: each child's quantile threshold admits ≥ the per-child known-member target", (_name, corpus) => {
+    const { root } = adaptiveBuild(corpus)
+    const target = ADAPTIVE_ROLLOUT_LIMITS.perChildKnownMemberAdmissionTarget
+    const checked: number[] = []
+    const walk = (node: AdaptiveTreeNode): void => {
+      if (node.children.length === 0) return
+      const routingQuantile = ADAPTIVE_TREE_DEPTH_SCHEDULE[node.depth]?.routingSimilarityQuantile ?? 0.15
+      for (const child of node.children) {
+        const size = child.memberIndices.length
+        if (size === 0) continue
+        const similarities = child.memberIndices.map((memberIndex) =>
+          cosineSimilarity(corpus.embeddings[memberIndex] ?? [], child.centroid),
+        )
+        const threshold = quantile(similarities, routingQuantile)
+        const admitted = similarities.filter((s) => s >= threshold).length / size
+        checked.push(admitted)
+        // Interpolated-quantile + `>=` boundary realizes (1 - routingQuantile)
+        // only to one member's resolution, so allow a 1/size slack. Still catches
+        // a mis-wired quantile (e.g. 0.5 → ~50% admitted, far below the bound).
+        expect(admitted).toBeGreaterThanOrEqual(target - 1 / size - 1e-9)
+      }
+      for (const child of node.children) walk(child)
+    }
+    walk(root)
+    expect(checked.length).toBeGreaterThan(0)
+  })
 })
 
 describe("adaptive clustering — determinism", () => {
@@ -254,10 +291,7 @@ describe("adaptive clustering — resource bounds at the 1,500-sample cap", () =
     return embeddings
   }
 
-  it("adaptive is no more than 25% slower than static and stays within the node cap", () => {
-    const embeddings = makeBenchmarkCorpus()
-
-    const staticStart = performance.now()
+  const runStatic = (embeddings: readonly (readonly number[])[]) =>
     buildHierarchicalClusters({
       embeddings,
       depthSchedule: TAXONOMY_TREE_DEPTH_SCHEDULE,
@@ -266,11 +300,8 @@ describe("adaptive clustering — resource bounds at the 1,500-sample cap", () =
       tolerance: TAXONOMY_KMEANS_TOLERANCE,
       seed: 42,
     })
-    const staticMs = performance.now() - staticStart
-
-    const rssBeforeAdaptive = process.memoryUsage().rss
-    const adaptiveStart = performance.now()
-    const { root, diagnostics } = buildAdaptiveClusters({
+  const runAdaptive = (embeddings: readonly (readonly number[])[]) =>
+    buildAdaptiveClusters({
       embeddings,
       depthSchedule: ADAPTIVE_TREE_DEPTH_SCHEDULE,
       restarts: TAXONOMY_KMEANS_RESTARTS,
@@ -279,20 +310,43 @@ describe("adaptive clustering — resource bounds at the 1,500-sample cap", () =
       seed: 42,
       globalAbsoluteThreshold: ADAPTIVE_GLOBAL_ABSOLUTE_THRESHOLD,
     })
-    const adaptiveMs = performance.now() - adaptiveStart
-    const adaptiveRssGrowthBytes = process.memoryUsage().rss - rssBeforeAdaptive
 
-    expect(treeShape(root).nodeCount).toBeLessThanOrEqual(ADAPTIVE_ROLLOUT_LIMITS.nodeCap)
-    expect(diagnostics.fellBackToStatic).toBe(false)
-    // Ratio is measured back-to-back on the same machine; the extra adaptive work
-    // (O(n) member distances + O(K²) sibling distances per candidate) is dominated
-    // by shared k-means, so the ratio hovers around 1.0.
-    expect(adaptiveMs / staticMs).toBeLessThanOrEqual(ADAPTIVE_RUNTIME_RATIO_CEILING)
-    // Memory gate: assert the *build's own* RSS growth (isolated from the node/vitest
-    // baseline, which absolute process RSS can't be) stays within the worker old-gen
-    // budget. The build is O(n·dims); this is a coarse tripwire for a gross
-    // (e.g. O(n²·dims)) allocation regression, with large headroom over the ~tens of MB
-    // a healthy 1,500×2,048 build actually adds.
-    expect(adaptiveRssGrowthBytes).toBeLessThanOrEqual(ADAPTIVE_WORKER_MAX_OLD_GEN_MB * 1024 * 1024)
-  }, 120_000)
+  it("adaptive is no more than 25% slower than static, stays within the node cap, and holds the memory budget", () => {
+    const embeddings = makeBenchmarkCorpus()
+
+    // Alternate static/adaptive across several rounds and compare the *best* of
+    // each: after the first (warm-up) round both builders are equally JIT-warm,
+    // which removes the "static-first warms the single adaptive run" bias of a
+    // one-shot timing. Track the worst per-round RSS growth as the memory sample.
+    const ROUNDS = 3
+    let bestStaticMs = Number.POSITIVE_INFINITY
+    let bestAdaptiveMs = Number.POSITIVE_INFINITY
+    let maxAdaptiveRssGrowthBytes = 0
+    let lastRoot: AdaptiveTreeNode | null = null
+    let lastFellBack = true
+    for (let round = 0; round < ROUNDS; round++) {
+      const staticStart = performance.now()
+      runStatic(embeddings)
+      bestStaticMs = Math.min(bestStaticMs, performance.now() - staticStart)
+
+      const rssBefore = process.memoryUsage().rss
+      const adaptiveStart = performance.now()
+      const { root, diagnostics } = runAdaptive(embeddings)
+      bestAdaptiveMs = Math.min(bestAdaptiveMs, performance.now() - adaptiveStart)
+      maxAdaptiveRssGrowthBytes = Math.max(maxAdaptiveRssGrowthBytes, process.memoryUsage().rss - rssBefore)
+      lastRoot = root
+      lastFellBack = diagnostics.fellBackToStatic
+    }
+
+    expect(treeShape(lastRoot as AdaptiveTreeNode).nodeCount).toBeLessThanOrEqual(ADAPTIVE_ROLLOUT_LIMITS.nodeCap)
+    expect(lastFellBack).toBe(false)
+    expect(bestAdaptiveMs / bestStaticMs).toBeLessThanOrEqual(ADAPTIVE_RUNTIME_RATIO_CEILING)
+    // Memory gate: the *build's own* RSS growth (isolated from the node/vitest
+    // baseline, which absolute process RSS can't be), worst across rounds. The
+    // build is O(n·dims); this is a coarse tripwire for a gross (e.g. O(n²·dims))
+    // allocation regression. True peak-during-build sampling would need an isolated
+    // worker — a synchronous CPU build can't be sampled from the same event loop —
+    // which is out of scope for an offline calibration gate.
+    expect(maxAdaptiveRssGrowthBytes).toBeLessThanOrEqual(ADAPTIVE_WORKER_MAX_OLD_GEN_MB * 1024 * 1024)
+  }, 180_000)
 })
