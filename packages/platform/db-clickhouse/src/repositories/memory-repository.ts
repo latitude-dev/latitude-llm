@@ -7,7 +7,11 @@ import type {
   MemoryEventSource,
   MemoryRecordVersion,
   MemoryRepositoryShape,
+  MemoryStoreListItem,
+  MemoryStoreSortField,
+  MemoryStoreUser,
   MemoryStoreWipe,
+  MemoryUserStore,
 } from "@domain/memories"
 import { MemoryRepository } from "@domain/memories"
 import {
@@ -95,6 +99,89 @@ type MemoryBlobRow = {
   readonly content_file_key: string
   readonly byte_size: string | number
   readonly token_count: string | number
+}
+
+// Fixed map — never interpolate user input into ORDER BY. Values are the output
+// aliases of the store-list query below.
+const STORE_SORT_EXPRS: Record<MemoryStoreSortField, string> = {
+  lastUpdated: "last_updated_at",
+  lastRead: "last_read_at",
+  records: "record_count",
+  tokens: "token_count",
+  sessions: "session_count",
+  users: "user_count",
+}
+
+const STORE_ACCESS_LIST_CAP = 1000
+
+// The store set + current-derived metrics: latest version per record (removes
+// dropped), grouped by store. `store_id = ''` is kept (the unattributed bucket).
+const CURRENT_STORE_AGG = `
+  SELECT
+    store_id,
+    count()          AS record_count,
+    sum(token_count) AS token_count,
+    max(end_time)    AS last_updated_at
+  FROM (
+    SELECT store_id, record_id, token_count, change_kind, end_time
+    FROM memory_current
+    WHERE organization_id = {organizationId:String}
+      AND project_id = {projectId:String}
+    ORDER BY store_id, record_id, end_time DESC
+    LIMIT 1 BY store_id, record_id
+  )
+  WHERE change_kind != 'remove'
+  GROUP BY store_id
+`
+
+// Event-derived metrics across ALL change_kinds (reads count). No dedup subquery:
+// uniqExactIf / maxIf are idempotent to retried-projection duplicates, whose
+// (span_id, store_id, record_id) rows carry identical session/user/end_time.
+const EVENT_STORE_AGG = `
+  SELECT
+    store_id,
+    uniqExactIf(session_id, session_id != '') AS session_count,
+    uniqExactIf(user_id, user_id != '')       AS user_count,
+    maxIf(end_time, change_kind = 'read')      AS last_read_at
+  FROM memory_events
+  WHERE organization_id = {organizationId:String}
+    AND project_id = {projectId:String}
+  GROUP BY store_id
+`
+
+type MemoryStoreRow = {
+  readonly store_id: string
+  readonly record_count: string | number
+  readonly token_count: string | number
+  readonly last_updated_at: string
+  readonly session_count: string | number
+  readonly user_count: string | number
+  readonly last_read_at: string
+}
+
+type StoreUserRow = {
+  readonly user_id: string
+  readonly last_accessed_at: string
+}
+
+type UserStoreRow = {
+  readonly store_id: string
+  readonly last_accessed_at: string
+}
+
+const toStoreListItem = (row: MemoryStoreRow): MemoryStoreListItem => {
+  // The LEFT JOIN default (or `maxIf` with no matching read) yields the
+  // DateTime64 epoch, which we surface as "never read".
+  const lastRead = parseCHDate(row.last_read_at)
+  return {
+    storeId: row.store_id,
+    recordCount: Number(row.record_count),
+    tokenCount: Number(row.token_count),
+    lastUpdatedAt: parseCHDate(row.last_updated_at),
+    sessionCount: Number(row.session_count),
+    userCount: Number(row.user_count),
+    lastReadAt: lastRead.getTime() > 0 ? lastRead : null,
+  }
 }
 
 const toEvent =
@@ -455,6 +542,126 @@ export const MemoryRepositoryLive = Layer.effect(
           .pipe(Effect.mapError((error) => toRepositoryError(error, "MemoryRepository.readRecordVersions")))
       })
 
+    const listStores: MemoryRepositoryShape["listStores"] = ({ organizationId, projectId, options }) =>
+      Effect.gen(function* () {
+        const chSqlClient = (yield* ChSqlClient) as ChSqlClientShape<ClickHouseClient>
+        const limit = options?.limit ?? 50
+        const offset = options?.offset ?? 0
+        const sortExpr = STORE_SORT_EXPRS[options?.sortBy ?? "lastUpdated"]
+        const orderDir = options?.sortDirection === "asc" ? "ASC" : "DESC"
+        const params = { organizationId: organizationId as string, projectId: projectId as string }
+
+        const [rows, countRows] = yield* Effect.all(
+          [
+            chSqlClient.query(async (client) => {
+              const result = await client.query({
+                query: `SELECT
+                          c.store_id        AS store_id,
+                          c.record_count    AS record_count,
+                          c.token_count     AS token_count,
+                          c.last_updated_at AS last_updated_at,
+                          e.session_count   AS session_count,
+                          e.user_count      AS user_count,
+                          e.last_read_at    AS last_read_at
+                        FROM (${CURRENT_STORE_AGG}) AS c
+                        LEFT JOIN (${EVENT_STORE_AGG}) AS e ON c.store_id = e.store_id
+                        ORDER BY ${sortExpr} ${orderDir}, store_id ASC
+                        LIMIT {limit:UInt32} OFFSET {offset:UInt32}`,
+                query_params: { ...params, limit: limit + 1, offset },
+                format: "JSONEachRow",
+              })
+              return result.json<MemoryStoreRow>()
+            }),
+            chSqlClient.query(async (client) => {
+              const result = await client.query({
+                query: `SELECT count() AS total FROM (${CURRENT_STORE_AGG})`,
+                query_params: params,
+                format: "JSONEachRow",
+              })
+              return result.json<{ total: string | number }>()
+            }),
+          ],
+          { concurrency: 2 },
+        ).pipe(Effect.mapError((error) => toRepositoryError(error, "MemoryRepository.listStores")))
+
+        const hasMore = rows.length > limit
+        const pageRows = hasMore ? rows.slice(0, limit) : rows
+        return {
+          items: pageRows.map(toStoreListItem),
+          totalCount: Number(countRows[0]?.total ?? 0),
+          hasMore,
+          limit,
+          offset,
+        }
+      })
+
+    const listStoreUsers: MemoryRepositoryShape["listStoreUsers"] = ({ organizationId, projectId, storeId }) =>
+      Effect.gen(function* () {
+        const chSqlClient = (yield* ChSqlClient) as ChSqlClientShape<ClickHouseClient>
+        return yield* chSqlClient
+          .query(async (client) => {
+            const result = await client.query({
+              query: `SELECT user_id, max(end_time) AS last_accessed_at
+                      FROM memory_events
+                      WHERE organization_id = {organizationId:String}
+                        AND project_id = {projectId:String}
+                        AND store_id = {storeId:String}
+                        AND user_id != ''
+                      GROUP BY user_id
+                      ORDER BY last_accessed_at DESC, user_id ASC
+                      LIMIT {cap:UInt16}`,
+              query_params: {
+                organizationId: organizationId as string,
+                projectId: projectId as string,
+                storeId,
+                cap: STORE_ACCESS_LIST_CAP,
+              },
+              format: "JSONEachRow",
+            })
+            const rows = await result.json<StoreUserRow>()
+            return rows.map(
+              (row): MemoryStoreUser => ({
+                userId: ExternalUserId(normalizeCHString(row.user_id)),
+                lastAccessedAt: parseCHDate(row.last_accessed_at),
+              }),
+            )
+          })
+          .pipe(Effect.mapError((error) => toRepositoryError(error, "MemoryRepository.listStoreUsers")))
+      })
+
+    const listUserStores: MemoryRepositoryShape["listUserStores"] = ({ organizationId, projectId, userId }) =>
+      Effect.gen(function* () {
+        const chSqlClient = (yield* ChSqlClient) as ChSqlClientShape<ClickHouseClient>
+        return yield* chSqlClient
+          .query(async (client) => {
+            const result = await client.query({
+              query: `SELECT store_id, max(end_time) AS last_accessed_at
+                      FROM memory_events
+                      WHERE organization_id = {organizationId:String}
+                        AND project_id = {projectId:String}
+                        AND user_id = {userId:String}
+                      GROUP BY store_id
+                      ORDER BY last_accessed_at DESC, store_id ASC
+                      LIMIT {cap:UInt16}`,
+              query_params: {
+                organizationId: organizationId as string,
+                projectId: projectId as string,
+                userId: userId as string,
+                cap: STORE_ACCESS_LIST_CAP,
+              },
+              format: "JSONEachRow",
+            })
+            const rows = await result.json<UserStoreRow>()
+            return rows.map(
+              (row): MemoryUserStore => ({
+                storeId: row.store_id,
+                lastAccessedAt: parseCHDate(row.last_accessed_at),
+              }),
+            )
+          })
+          .pipe(Effect.mapError((error) => toRepositoryError(error, "MemoryRepository.listUserStores")))
+      })
+
     return {
       insertEvents,
       upsertBlobs,
@@ -465,6 +672,9 @@ export const MemoryRepositoryLive = Layer.effect(
       readBlobs,
       readSessionMemoryEvents,
       readRecordVersions,
+      listStores,
+      listStoreUsers,
+      listUserStores,
     }
   }),
 )
