@@ -61,7 +61,12 @@
       "hono": "4.12.16",
       "tslib": "2.8.1",
       "protobufjs": "8.0.2",
-      "srvx": "0.11.21"
+      "srvx": "0.11.21",
+      "better-auth>zod": "4.3.6",
+      "@better-auth/core>zod": "4.3.6",
+      "@better-auth/sso>zod": "4.3.6",
+      "@better-auth/stripe>zod": "4.3.6",
+      "@better-auth/telemetry>zod": "4.3.6"
     }
   }
 }
