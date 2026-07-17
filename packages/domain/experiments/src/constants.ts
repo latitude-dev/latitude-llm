@@ -394,3 +394,14 @@ export const POPULATION_DEVIATION_THRESHOLD = 0.25
 
 /** Entities whose comparison surfaces a top-N ranked list in addition to scalar metrics. */
 export const TOP_LIST_LIMIT = 5
+
+/**
+ * Entities that surface a ranked "top N" list alongside their scalar metrics, each keyed to a
+ * one-line description (no trailing period): the UI tooltip on the "Top …" row and the public API
+ * `top` field.
+ */
+export const ENTITY_TOP_LIST_DESCRIPTIONS = {
+  tools: "Top tools by call count",
+  signals: "Top signals by occurrence count",
+  behaviours: "Top behaviours by observation count",
+} as const satisfies Partial<Record<MetricEntity, string>>

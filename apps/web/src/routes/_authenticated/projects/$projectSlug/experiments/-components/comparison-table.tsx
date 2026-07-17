@@ -1,5 +1,6 @@
 import {
   DEFAULT_VARIANT_RANGE_SECONDS,
+  ENTITY_TOP_LIST_DESCRIPTIONS,
   EXPERIMENT_METRICS,
   type ExperimentMetricDef,
   type ExperimentMetricKey,
@@ -496,6 +497,8 @@ function MetricEntityRows({
   )
   const topLists = entries.map((entry) => topListFor(entity, entry.comparison))
   const hasTopList = topLists.some((list) => list.length > 0)
+  const topDescription = ENTITY_TOP_LIST_DESCRIPTIONS[entity as keyof typeof ENTITY_TOP_LIST_DESCRIPTIONS]
+  const topLabel = `Top ${ENTITY_LABEL[entity].toLowerCase()}`
   const headerIsLastRow = isLastEntity && !open
 
   return (
@@ -585,7 +588,21 @@ function MetricEntityRows({
                 className={bodyCellClass({ column, count, scrolled, isLastRow: isLastEntity })}
               >
                 <div className="flex flex-col gap-1 px-3 py-2">
-                  <Text.H6 color="foregroundMuted">Top {ENTITY_LABEL[entity].toLowerCase()}</Text.H6>
+                  {topDescription ? (
+                    <Tooltip
+                      asChild
+                      side="top"
+                      trigger={
+                        <span className="flex w-max cursor-default">
+                          <Text.H6 color="foregroundMuted">{topLabel}</Text.H6>
+                        </span>
+                      }
+                    >
+                      {topDescription}
+                    </Tooltip>
+                  ) : (
+                    <Text.H6 color="foregroundMuted">{topLabel}</Text.H6>
+                  )}
                   {topList.length === 0 ? (
                     <Text.H6 color="foregroundMuted">—</Text.H6>
                   ) : (
