@@ -542,21 +542,31 @@ function MetricEntityRows({
                           asChild
                           side="top"
                           trigger={
-                            <Text.H6 color="foregroundMuted" noWrap ellipsis className="min-w-0 cursor-default">
-                              {metric.label}
-                            </Text.H6>
+                            <span className="flex min-w-0 cursor-default">
+                              <Text.H6 color="foregroundMuted" noWrap ellipsis className="min-w-0">
+                                {metric.label}
+                              </Text.H6>
+                            </span>
                           }
                         >
                           {metric.description}
                         </Tooltip>
-                        <div className="flex shrink-0 items-baseline gap-1.5">
-                          {!entry.comparison.baseline ? (
-                            <MetricDelta change={delta} direction={metric.direction} />
-                          ) : null}
-                          <Text.H5M noWrap className="tabular-nums">
-                            {formatMetricValue(value, metric.unit)}
-                          </Text.H5M>
-                        </div>
+                        <Tooltip
+                          asChild
+                          side="top"
+                          trigger={
+                            <div className="flex shrink-0 items-baseline gap-1.5 cursor-default">
+                              {!entry.comparison.baseline ? (
+                                <MetricDelta change={delta} direction={metric.direction} />
+                              ) : null}
+                              <Text.H5M noWrap className="tabular-nums">
+                                {formatMetricValue(value, metric.unit)}
+                              </Text.H5M>
+                            </div>
+                          }
+                        >
+                          {metric.description}
+                        </Tooltip>
                       </div>
                     </td>
                   )
