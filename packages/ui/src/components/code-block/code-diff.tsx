@@ -11,9 +11,7 @@ export interface CodeDiffProps {
   readonly fillHeight?: boolean
 }
 
-const CodeMirrorMergeReadonly = lazy(() =>
-  import("./codemirror-merge-readonly.tsx").then((m) => ({ default: m.CodeMirrorMergeReadonly })),
-)
+const CodeDiffView = lazy(() => import("./code-diff-view.tsx").then((m) => ({ default: m.CodeDiffView })))
 
 function CodeDiffFallback({ className }: { readonly className?: string }) {
   return (
@@ -23,7 +21,7 @@ function CodeDiffFallback({ className }: { readonly className?: string }) {
   )
 }
 
-/** Read-only unified diff of two text bodies, syntax-highlighted per line. */
+/** Read-only, GitHub-style unified diff of two text bodies, syntax-highlighted per line. */
 export function CodeDiff({ before, after, language, className, fillHeight = false }: CodeDiffProps) {
   const [mounted, setMounted] = useState(false)
 
@@ -37,7 +35,7 @@ export function CodeDiff({ before, after, language, className, fillHeight = fals
 
   return (
     <Suspense fallback={<CodeDiffFallback {...(className != null && { className })} />}>
-      <CodeMirrorMergeReadonly
+      <CodeDiffView
         before={before}
         after={after}
         fillHeight={fillHeight}

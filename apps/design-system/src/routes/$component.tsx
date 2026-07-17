@@ -406,12 +406,14 @@ function CopyButtonDemo() {
 const CODE_DIFF_BEFORE = `{
   "model": "gpt-4",
   "temperature": 0.7,
+  "max_tokens": 1024,
   "tools": ["search"]
 }`
 const CODE_DIFF_AFTER = `{
   "model": "claude-opus-4",
   "temperature": 0.5,
-  "tools": ["search", "memory"]
+  "tools": ["search", "memory"],
+  "stream": true
 }`
 
 function CodeDiffDemo() {
