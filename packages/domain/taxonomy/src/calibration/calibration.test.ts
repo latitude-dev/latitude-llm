@@ -6,7 +6,7 @@
  * `specs/taxonomy-adaptive-clustering.md` → "Evaluation" against the calibrated
  * schedule in `schedule.ts`. The recorded numeric values live in `BASELINES.md`;
  * this test is what keeps them true. No production code path is exercised beyond
- * the static `buildHierarchicalClusters` baseline it regresses against.
+ * the static `buildStaticHierarchicalClusters` baseline it regresses against.
  */
 
 import { EMBEDDING_DIMENSIONS } from "@domain/ai"

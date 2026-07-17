@@ -56,7 +56,7 @@ const cohortA: CustomBehaviorQaCohort = {
   metadata: { seed: "custom-behavior-qa", cohort: "a" },
   filterSet: { userId: [{ op: "in", value: [CUSTOM_BEHAVIOR_QA_USER_ID] }] },
   // Two centroids of 25 — each root child stays clear of the depth-0 split floor
-  // (TAXONOMY_TREE_DEPTH_SCHEDULE[0].minClusterAbs = 20) with margin, so the
+  // (TAXONOMY_TREE_STATIC_DEPTH_SCHEDULE[0].minClusterAbs = 20) with margin, so the
   // scoped tree keeps splitting into multiple clusters even after a day or two of
   // observations age out of the sample window (the seeder also anchors them to
   // the recent part of the window so they decay slowly).

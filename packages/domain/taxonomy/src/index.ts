@@ -1,14 +1,14 @@
 export {
-  type BuildHierarchicalClustersInput,
-  type BuildHierarchicalClustersResult,
+  type BuildRelativeHierarchicalClustersInput,
+  type BuildRelativeHierarchicalClustersResult,
   type BuildStaticHierarchicalClustersInput,
-  buildHierarchicalClusters,
+  buildRelativeHierarchicalClusters,
   buildStaticHierarchicalClusters,
-  type ClusteringDiagnostics,
-  type ClusteringRejectionReason,
   type ClusteringTreeNode,
-  type DepthSchedule,
   quantile,
+  type RelativeClusteringDiagnostics,
+  type RelativeClusteringRejectionReason,
+  type RelativeDepthSchedule,
   type StaticDepthSchedule,
 } from "./clustering.ts"
 export {
@@ -60,10 +60,10 @@ export {
   TAXONOMY_RUN_TRIGGERS,
   TAXONOMY_SEARCH_MIN_SCORE,
   TAXONOMY_SEARCH_MIN_VECTOR_SIMILARITY,
-  TAXONOMY_TREE_DEPTH_SCHEDULE,
+  TAXONOMY_TREE_RELATIVE_DEPTH_SCHEDULE,
   TAXONOMY_TREE_STATIC_DEPTH_SCHEDULE,
   type TaxonomyObservationWeightScheme,
-  type TaxonomyTreeDepthSchedule,
+  type TaxonomyTreeRelativeDepthSchedule,
   type TaxonomyTreeStaticDepthSchedule,
 } from "./constants.ts"
 export {

@@ -16,7 +16,7 @@
  *      projection metadata does not round-trip through the workflow worker.
  *      The sample is deterministic (hash-ordered, no rand()) so a gardening
  *      pass replays identically under Temporal.
- *   2. Build the tree top-down with `buildHierarchicalClusters` using the
+ *   2. Build the tree top-down with `buildStaticHierarchicalClusters` using the
  *      per-depth schedule. The schedule encodes broad-at-the-root,
  *      narrow-at-the-leaves without per-corpus tuning.
  *   3. Persist clusters top-down so child rows always have a valid parent.
@@ -42,9 +42,8 @@
  *     the rows persisted here. We persist "Pending" names so the naming
  *     activity has a clear work queue.
  *   - Sibling merges and noise reassign. The top-down build cannot produce
- *     near-duplicate siblings (the node-relative separation gate rejects a split
- *     whose closest sibling pair sits inside the within-child spread) and every
- *     member is assigned to a leaf — there is no noise pool.
+ *     near-duplicate siblings (enforced by maxSiblingCosine in the schedule)
+ *     and every member is assigned to a leaf — there is no noise pool.
  */
 
 import { resolveEmbeddingConfig } from "@domain/ai"
@@ -60,13 +59,11 @@ import {
 } from "@domain/shared"
 import { Effect } from "effect"
 import {
-  type BuildHierarchicalClustersInput,
-  type BuildHierarchicalClustersResult,
-  buildHierarchicalClusters,
+  type BuildStaticHierarchicalClustersInput,
+  buildStaticHierarchicalClusters,
   type ClusteringTreeNode,
 } from "../clustering.ts"
 import {
-  TAXONOMY_ASSIGN_ABSOLUTE_THRESHOLD,
   TAXONOMY_CLUSTERING_PROPOSAL_SAMPLE_MAX,
   TAXONOMY_CLUSTERING_SAMPLE_STRATEGY,
   TAXONOMY_CONTINUATION_THRESHOLD,
@@ -78,7 +75,7 @@ import {
   TAXONOMY_NAME_REUSE_THRESHOLD,
   TAXONOMY_OBSERVATION_RETENTION_DAYS,
   TAXONOMY_PENDING_DISPLAY_NAME,
-  TAXONOMY_TREE_DEPTH_SCHEDULE,
+  TAXONOMY_TREE_STATIC_DEPTH_SCHEDULE,
 } from "../constants.ts"
 import type { TaxonomyCluster } from "../entities/cluster.ts"
 import type { CustomBehaviorAssignment } from "../entities/custom-behavior-assignment.ts"
@@ -124,8 +121,8 @@ export interface BuildHierarchicalTaxonomyResult {
 }
 
 export type TaxonomyClusterBuilder = (
-  input: BuildHierarchicalClustersInput,
-) => Effect.Effect<BuildHierarchicalClustersResult, Error, never>
+  input: BuildStaticHierarchicalClustersInput,
+) => Effect.Effect<ClusteringTreeNode, Error, never>
 
 export interface PlanHierarchicalTaxonomyInput extends BuildHierarchicalTaxonomyInput {
   readonly clusterBuilder?: TaxonomyClusterBuilder
@@ -407,15 +404,15 @@ export const planHierarchicalTaxonomyUseCase = (input: PlanHierarchicalTaxonomyI
     const normalizedEmbeddings = observations.map((observation) => normalizeTaxonomyEmbedding(observation.embedding))
     const clusterBuilder =
       input.clusterBuilder ??
-      ((builderInput: BuildHierarchicalClustersInput) => Effect.sync(() => buildHierarchicalClusters(builderInput)))
-    const { root: tree } = yield* clusterBuilder({
+      ((builderInput: BuildStaticHierarchicalClustersInput) =>
+        Effect.sync(() => buildStaticHierarchicalClusters(builderInput)))
+    const tree = yield* clusterBuilder({
       embeddings: normalizedEmbeddings,
-      depthSchedule: TAXONOMY_TREE_DEPTH_SCHEDULE,
+      depthSchedule: TAXONOMY_TREE_STATIC_DEPTH_SCHEDULE,
       restarts: TAXONOMY_KMEANS_RESTARTS,
       maxIter: TAXONOMY_KMEANS_MAX_ITER,
       tolerance: TAXONOMY_KMEANS_TOLERANCE,
       seed: seedFromProjectId(scopedBehaviorId ? `${input.projectId}:${scopedBehaviorId}` : input.projectId),
-      globalAbsoluteThreshold: TAXONOMY_ASSIGN_ABSOLUTE_THRESHOLD,
     })
 
     const descriptors: NodeDescriptor[] = []

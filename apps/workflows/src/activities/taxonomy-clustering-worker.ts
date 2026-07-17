@@ -3,15 +3,15 @@ import { dirname, extname, resolve } from "node:path"
 import { fileURLToPath, pathToFileURL } from "node:url"
 import { Worker } from "node:worker_threads"
 import {
-  type BuildHierarchicalClustersInput,
-  type BuildHierarchicalClustersResult,
+  type BuildStaticHierarchicalClustersInput,
+  type ClusteringTreeNode,
   TAXONOMY_CLUSTERING_WORKER_MAX_OLD_GEN_MB,
   TAXONOMY_CLUSTERING_WORKER_TIMEOUT_MS,
 } from "@domain/taxonomy"
 
 interface WorkerSuccessMessage {
   readonly ok: true
-  readonly result: BuildHierarchicalClustersResult
+  readonly tree: ClusteringTreeNode
 }
 
 interface WorkerErrorMessage {
@@ -46,14 +46,14 @@ const workerEntryUrl = () => {
  *     process.
  *   - a single wall-clock deadline bounds the run and terminates a hung or
  *     looping worker. It covers the entire worker invocation — one build today,
- *     static plus adaptive shadow later — so shadow mode shares one budget.
+ *     static plus relative shadow later — so shadow mode shares one budget.
  *   - the timer and the thread are registered on a `using` DisposableStack, so
  *     `clearTimeout` + `worker.terminate()` run exactly once when this scope
  *     exits, on every terminal path (message, error, exit, timeout).
  */
 export const buildHierarchicalClustersInWorker = async (
-  input: BuildHierarchicalClustersInput,
-): Promise<BuildHierarchicalClustersResult> => {
+  input: BuildStaticHierarchicalClustersInput,
+): Promise<ClusteringTreeNode> => {
   const entry = workerEntryUrl()
   // The deadline timer and the worker thread are torn down (LIFO) when this
   // scope exits — i.e. once the awaited promise settles, on every terminal path
@@ -67,7 +67,7 @@ export const buildHierarchicalClustersInWorker = async (
   })
   stack.defer(() => void worker.terminate())
 
-  return await new Promise<BuildHierarchicalClustersResult>((resolvePromise, rejectPromise) => {
+  return await new Promise<ClusteringTreeNode>((resolvePromise, rejectPromise) => {
     const timeout = setTimeout(() => {
       rejectPromise(new Error(`Taxonomy clustering worker timed out after ${TAXONOMY_CLUSTERING_WORKER_TIMEOUT_MS}ms`))
     }, TAXONOMY_CLUSTERING_WORKER_TIMEOUT_MS)
@@ -75,7 +75,7 @@ export const buildHierarchicalClustersInWorker = async (
 
     worker.once("message", (message: WorkerMessage) => {
       if (message.ok) {
-        resolvePromise(message.result)
+        resolvePromise(message.tree)
         return
       }
       const error = new Error(message.error)

@@ -189,24 +189,45 @@ export const TAXONOMY_OBSERVATION_RETENTION_DAYS = 30
 export const TAXONOMY_CLUSTER_LOCK_TTL_SECONDS = 30
 
 // ---------------------------------------------------------------------------
-// Divisive builder — per-depth schedule (adaptive, node-relative separation)
+// Divisive builder — per-depth schedules
 //
-// Each depth carries a scale-free split policy: broad-then-narrow child counts
-// and size floors, plus the node-relative separation gate. Absolute cosine
-// similarity is not comparable across projects, so acceptance is judged against
-// each node's own member spread rather than a fixed sibling-cosine ceiling.
+// Two schedules, one per builder gate. Neither is a "default"; the gardening
+// path picks explicitly (static today, relative once the rollout gate enables
+// it).
 //
-// Size/score/child-count limits are the original static tuning; the four
-// adaptive fields (dominance + relative separation + within/routing quantiles)
-// are calibrated in `src/calibration/` (see BASELINES.md): the root separation
-// 0.45 resolves the narrow-domain pilot's single production cluster into four
-// coherent intents, tightening with depth so deeper splits must be more clearly
-// separated. `withinDistanceQuantile` reads the spread from the upper bulk of
-// member distances (outliers can't wave a weak split through);
-// `routingSimilarityQuantile` admits ~85% of a child's known members.
+// Static (`TAXONOMY_TREE_STATIC_DEPTH_SCHEDULE`) is the current production
+// tuning: broad-then-narrow child counts + size floors + an absolute
+// sibling-cosine ceiling per depth.
+//
+// Relative (`TAXONOMY_TREE_RELATIVE_DEPTH_SCHEDULE`) carries the same
+// scale-free size/score/child-count limits but replaces the absolute ceiling
+// with the node-relative separation gate — absolute cosine similarity is not
+// comparable across projects, so acceptance is judged against each node's own
+// member spread. The four relative fields (dominance + relative separation +
+// within/routing quantiles) are calibrated in `src/calibration/` (see
+// BASELINES.md): the root separation 0.45 resolves the narrow-domain pilot's
+// single production cluster into four coherent intents, tightening with depth
+// so deeper splits must be more clearly separated; `withinDistanceQuantile`
+// reads the spread from the upper bulk of member distances (outliers can't wave
+// a weak split through); `routingSimilarityQuantile` admits ~85% of a child's
+// known members.
 // ---------------------------------------------------------------------------
 
-export interface TaxonomyTreeDepthSchedule {
+export interface TaxonomyTreeStaticDepthSchedule {
+  readonly maxChildren: number
+  readonly minClusterFraction: number
+  readonly minClusterAbs: number
+  readonly maxSiblingCosine: number
+  readonly minSplitScore: number
+}
+
+export const TAXONOMY_TREE_STATIC_DEPTH_SCHEDULE: readonly TaxonomyTreeStaticDepthSchedule[] = [
+  { maxChildren: 10, minClusterFraction: 0.01, minClusterAbs: 20, maxSiblingCosine: 0.85, minSplitScore: 1.5 },
+  { maxChildren: 8, minClusterFraction: 0.03, minClusterAbs: 10, maxSiblingCosine: 0.9, minSplitScore: 1.2 },
+  { maxChildren: 6, minClusterFraction: 0.05, minClusterAbs: 8, maxSiblingCosine: 0.93, minSplitScore: 1.1 },
+]
+
+export interface TaxonomyTreeRelativeDepthSchedule {
   readonly maxChildren: number
   readonly minClusterFraction: number
   readonly minClusterAbs: number
@@ -217,7 +238,7 @@ export interface TaxonomyTreeDepthSchedule {
   readonly routingSimilarityQuantile: number
 }
 
-export const TAXONOMY_TREE_DEPTH_SCHEDULE: readonly TaxonomyTreeDepthSchedule[] = [
+export const TAXONOMY_TREE_RELATIVE_DEPTH_SCHEDULE: readonly TaxonomyTreeRelativeDepthSchedule[] = [
   {
     maxChildren: 10,
     minClusterFraction: 0.01,
@@ -248,25 +269,6 @@ export const TAXONOMY_TREE_DEPTH_SCHEDULE: readonly TaxonomyTreeDepthSchedule[] 
     withinDistanceQuantile: 0.8,
     routingSimilarityQuantile: 0.15,
   },
-]
-
-/**
- * Pre-adaptive static schedule (absolute sibling-cosine gate). Retained as the
- * regression baseline for the calibration harness and the `off`-mode
- * publication path; removed once adaptive is the enforced default.
- */
-export interface TaxonomyTreeStaticDepthSchedule {
-  readonly maxChildren: number
-  readonly minClusterFraction: number
-  readonly minClusterAbs: number
-  readonly maxSiblingCosine: number
-  readonly minSplitScore: number
-}
-
-export const TAXONOMY_TREE_STATIC_DEPTH_SCHEDULE: readonly TaxonomyTreeStaticDepthSchedule[] = [
-  { maxChildren: 10, minClusterFraction: 0.01, minClusterAbs: 20, maxSiblingCosine: 0.85, minSplitScore: 1.5 },
-  { maxChildren: 8, minClusterFraction: 0.03, minClusterAbs: 10, maxSiblingCosine: 0.9, minSplitScore: 1.2 },
-  { maxChildren: 6, minClusterFraction: 0.05, minClusterAbs: 8, maxSiblingCosine: 0.93, minSplitScore: 1.1 },
 ]
 
 // ---------------------------------------------------------------------------

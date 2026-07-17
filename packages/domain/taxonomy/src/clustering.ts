@@ -8,16 +8,17 @@
  * deterministic given the input.
  *
  * Two builders share the same k-means core and differ only in the split-
- * acceptance gate:
+ * acceptance gate. Neither is a "default" — every caller picks explicitly:
  *
- *   - `buildHierarchicalClusters` (default) uses node-relative separation:
- *     each candidate split is judged against the spread of its own members, so
+ *   - `buildRelativeHierarchicalClusters` uses node-relative separation: each
+ *     candidate split is judged against the spread of its own members, so
  *     acceptance adapts to the semantic density of the corpus rather than a
  *     fixed absolute sibling-cosine. It also returns bounded diagnostics.
- *   - `buildStaticHierarchicalClusters` keeps the original absolute
- *     sibling-cosine gate. It is the pre-adaptive baseline the calibration
- *     harness regresses against and the `off`-mode path later phases fall back
- *     to; it is scheduled for removal once adaptive is the enforced default.
+ *   - `buildStaticHierarchicalClusters` keeps the absolute sibling-cosine gate.
+ *     It is the current production path and the baseline the calibration
+ *     harness regresses against; the rollout switches to the relative builder
+ *     through the mode gate, and the static path is removed once the relative
+ *     builder is the enforced default.
  *
  * Algorithm (high level):
  *   - At every tree node we sweep K = 2..maxChildrenAtThisDepth. For each K we
@@ -43,11 +44,11 @@ import { normalizeEmbedding } from "@domain/shared"
 import { cosineSimilarityNormalized } from "./helpers.ts"
 
 /**
- * Adaptive per-depth split policy. Scale-free: a broad support corpus and a
- * narrow specialized corpus are governed by the same numbers because acceptance
- * is judged relative to each node's own geometry.
+ * Node-relative split policy. Scale-free: a broad support corpus and a narrow
+ * specialized corpus are governed by the same numbers because acceptance is
+ * judged relative to each node's own geometry.
  */
-export interface DepthSchedule {
+export interface RelativeDepthSchedule {
   /** Maximum K to try at this depth. K=2..maxChildren is swept. */
   readonly maxChildren: number
   /** Minimum cluster size as a fraction of the parent's member count. */
@@ -72,8 +73,7 @@ export interface DepthSchedule {
 }
 
 /**
- * Original absolute-sibling-cosine split policy. Retained only for the static
- * baseline builder (`buildStaticHierarchicalClusters`).
+ * Absolute-sibling-cosine split policy for the static baseline builder.
  */
 export interface StaticDepthSchedule {
   readonly maxChildren: number
@@ -97,12 +97,12 @@ export interface ClusteringTreeNode {
   readonly depth: number
 }
 
-export interface BuildHierarchicalClustersInput {
+export interface BuildRelativeHierarchicalClustersInput {
   /** L2-normalized embeddings; all same dimension. */
   readonly embeddings: readonly (readonly number[])[]
   /** One entry per depth (depth 0 = root). When recursion exceeds the array
    *  length the node becomes a leaf. */
-  readonly depthSchedule: readonly DepthSchedule[]
+  readonly depthSchedule: readonly RelativeDepthSchedule[]
   /** K-means++ restarts per K sweep. */
   readonly restarts: number
   /** K-means iterations cap. */
@@ -124,14 +124,18 @@ export interface BuildStaticHierarchicalClustersInput {
   readonly seed: number
 }
 
-export type ClusteringRejectionReason = "undersizedChild" | "dominantChild" | "lowScore" | "lowRelativeSeparation"
+export type RelativeClusteringRejectionReason =
+  | "undersizedChild"
+  | "dominantChild"
+  | "lowScore"
+  | "lowRelativeSeparation"
 
 /**
- * Bounded, embedding-free summary of one build. Every field is either a scalar
- * or an array bounded by the node count (≤ the structural node cap), so it is
- * safe to log or thread through telemetry without leaking member data.
+ * Bounded, embedding-free summary of one relative build. Every field is either
+ * a scalar or an array bounded by the node count (≤ the structural node cap), so
+ * it is safe to log or thread through telemetry without leaking member data.
  */
-export interface ClusteringDiagnostics {
+export interface RelativeClusteringDiagnostics {
   /** Selected K per accepted split, keyed by depth (depth → [K, ...]). */
   readonly selectedKByDepth: Record<number, number[]>
   readonly nodeCount: number
@@ -139,18 +143,18 @@ export interface ClusteringDiagnostics {
   readonly maxDepth: number
   readonly acceptedSplits: number
   readonly rejectedCandidates: number
-  readonly rejectionReasonCounts: Record<ClusteringRejectionReason, number>
+  readonly rejectionReasonCounts: Record<RelativeClusteringRejectionReason, number>
   /** Relative separation of every accepted split — for percentile summaries. */
   readonly acceptedRelativeSeparations: number[]
   /** Member-confidence routing threshold of every accepted split. */
   readonly routingThresholds: number[]
-  /** True when a non-finite adaptive metric slipped through (fallback trigger for later phases). */
+  /** True when a non-finite relative metric slipped through (fallback trigger for later phases). */
   readonly fellBackToStatic: boolean
 }
 
-export interface BuildHierarchicalClustersResult {
+export interface BuildRelativeHierarchicalClustersResult {
   readonly root: ClusteringTreeNode
-  readonly diagnostics: ClusteringDiagnostics
+  readonly diagnostics: RelativeClusteringDiagnostics
 }
 
 // ---------------------------------------------------------------------------
@@ -358,7 +362,7 @@ const calinskiHarabaszScore = (
 }
 
 // ---------------------------------------------------------------------------
-// Adaptive metric helpers (spec "Adaptive split algorithm").
+// Relative-separation metric helpers (spec "Adaptive split algorithm").
 // ---------------------------------------------------------------------------
 
 /** Clamp a cosine distance (1 - cosine) to the valid [0, 2] range. */
@@ -384,7 +388,7 @@ export const quantile = (values: readonly number[], q: number): number => {
 }
 
 // ---------------------------------------------------------------------------
-// chooseBestAdaptiveK — sweep K, run multi-restart spherical k-means, accept
+// chooseBestRelativeK — sweep K, run multi-restart spherical k-means, accept
 // the K that maximizes CH score while satisfying the node-relative gate:
 // minimum child size, dominant-child protection, minimum split score, and
 // relative separation.
@@ -394,7 +398,7 @@ export const quantile = (values: readonly number[], q: number): number => {
 // exact CH tie keeps the lower K and, within a K, the earlier restart.
 // ---------------------------------------------------------------------------
 
-interface AdaptiveCandidate {
+interface RelativeCandidate {
   readonly k: number
   readonly assignments: readonly number[]
   readonly centroids: readonly (readonly number[])[]
@@ -404,19 +408,19 @@ interface AdaptiveCandidate {
   readonly clusterMemberIndices: readonly (readonly number[])[]
 }
 
-interface ChooseBestAdaptiveKInput {
+interface ChooseBestRelativeKInput {
   readonly embeddings: readonly (readonly number[])[]
   readonly memberIndices: readonly number[]
-  readonly schedule: DepthSchedule
+  readonly schedule: RelativeDepthSchedule
   readonly restarts: number
   readonly maxIter: number
   readonly tolerance: number
   readonly globalAbsoluteThreshold: number
   readonly rng: () => number
-  readonly onReject: (reason: ClusteringRejectionReason) => void
+  readonly onReject: (reason: RelativeClusteringRejectionReason) => void
 }
 
-const chooseBestAdaptiveK = (input: ChooseBestAdaptiveKInput): AdaptiveCandidate | null => {
+const chooseBestRelativeK = (input: ChooseBestRelativeKInput): RelativeCandidate | null => {
   const { embeddings, memberIndices, schedule, restarts, maxIter, tolerance, globalAbsoluteThreshold, rng, onReject } =
     input
   const n = memberIndices.length
@@ -424,7 +428,7 @@ const chooseBestAdaptiveK = (input: ChooseBestAdaptiveKInput): AdaptiveCandidate
   const minClusterSize = Math.max(schedule.minClusterAbs, minByFraction)
   if (n < minClusterSize * 2) return null
 
-  let best: AdaptiveCandidate | null = null
+  let best: RelativeCandidate | null = null
   const maxK = Math.min(schedule.maxChildren, Math.floor(n / minClusterSize))
   for (let k = 2; k <= maxK; k++) {
     for (let restart = 0; restart < restarts; restart++) {
@@ -529,10 +533,12 @@ const chooseBestAdaptiveK = (input: ChooseBestAdaptiveKInput): AdaptiveCandidate
 }
 
 // ---------------------------------------------------------------------------
-// Top-level recursive divisive builder — node-relative separation (default).
+// Divisive builder — node-relative separation.
 // ---------------------------------------------------------------------------
 
-export const buildHierarchicalClusters = (input: BuildHierarchicalClustersInput): BuildHierarchicalClustersResult => {
+export const buildRelativeHierarchicalClusters = (
+  input: BuildRelativeHierarchicalClustersInput,
+): BuildRelativeHierarchicalClustersResult => {
   const { embeddings, depthSchedule, restarts, maxIter, tolerance, seed, globalAbsoluteThreshold } = input
   const dimensions = embeddings[0]?.length ?? 0
   const allIndices = embeddings
@@ -541,7 +547,7 @@ export const buildHierarchicalClusters = (input: BuildHierarchicalClustersInput)
   const rng = createRng(seed)
 
   const selectedKByDepth: Record<number, number[]> = {}
-  const rejectionReasonCounts: Record<ClusteringRejectionReason, number> = {
+  const rejectionReasonCounts: Record<RelativeClusteringRejectionReason, number> = {
     undersizedChild: 0,
     dominantChild: 0,
     lowScore: 0,
@@ -564,7 +570,7 @@ export const buildHierarchicalClusters = (input: BuildHierarchicalClustersInput)
       leafCount++
       return { memberIndices, centroid, children: [], depth }
     }
-    const best = chooseBestAdaptiveK({
+    const best = chooseBestRelativeK({
       embeddings,
       memberIndices,
       schedule,
@@ -616,12 +622,11 @@ export const buildHierarchicalClusters = (input: BuildHierarchicalClustersInput)
 }
 
 // ---------------------------------------------------------------------------
-// Static baseline builder — absolute sibling-cosine gate.
+// Divisive builder — absolute sibling-cosine gate (static baseline).
 //
-// Preserved as the pre-adaptive regression baseline (calibration harness) and
-// the `off`-mode publication path; removed once adaptive is the enforced
-// default. Its k-means core is the shared primitive above; only the gate
-// differs.
+// The current production path and the calibration-harness baseline; removed
+// once the relative builder is the enforced default. Its k-means core is the
+// shared primitive above; only the gate differs.
 // ---------------------------------------------------------------------------
 
 interface ChooseBestStaticKInput {

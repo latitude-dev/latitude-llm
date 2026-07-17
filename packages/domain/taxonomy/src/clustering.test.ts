@@ -1,10 +1,10 @@
 /**
- * Direct tests of the production divisive builder on the shipped
- * `TAXONOMY_TREE_DEPTH_SCHEDULE` — the Phase-2 exit criteria (deterministic
- * output, narrow-domain separation, unimodal suppression, finite metrics,
- * bounded diagnostics). The calibration harness (`src/calibration/`) proves the
- * schedule *values*; this file proves the production builder honours them and
- * matches the calibrated candidate byte-for-byte on the partition signature.
+ * Direct tests of the relative divisive builder on the shipped
+ * `TAXONOMY_TREE_RELATIVE_DEPTH_SCHEDULE` — the Phase-2 exit criteria
+ * (deterministic output, narrow-domain separation, unimodal suppression, finite
+ * metrics, bounded diagnostics). The calibration harness (`src/calibration/`)
+ * proves the schedule *values*; this file proves the shipped builder honours them
+ * and matches the calibrated candidate byte-for-byte on the partition signature.
  */
 
 import { describe, expect, it } from "vitest"
@@ -21,19 +21,19 @@ import {
 } from "./calibration/fixtures.ts"
 import { partitionSignature, rootChildMajorityLabels, treeShape } from "./calibration/metrics.ts"
 import { ADAPTIVE_GLOBAL_ABSOLUTE_THRESHOLD, ADAPTIVE_TREE_DEPTH_SCHEDULE } from "./calibration/schedule.ts"
-import { buildHierarchicalClusters, quantile } from "./clustering.ts"
+import { buildRelativeHierarchicalClusters, quantile } from "./clustering.ts"
 import {
   TAXONOMY_ASSIGN_ABSOLUTE_THRESHOLD,
   TAXONOMY_KMEANS_MAX_ITER,
   TAXONOMY_KMEANS_RESTARTS,
   TAXONOMY_KMEANS_TOLERANCE,
-  TAXONOMY_TREE_DEPTH_SCHEDULE,
+  TAXONOMY_TREE_RELATIVE_DEPTH_SCHEDULE,
 } from "./constants.ts"
 
 const build = (corpus: LabeledCorpus) =>
-  buildHierarchicalClusters({
+  buildRelativeHierarchicalClusters({
     embeddings: corpus.embeddings,
-    depthSchedule: TAXONOMY_TREE_DEPTH_SCHEDULE,
+    depthSchedule: TAXONOMY_TREE_RELATIVE_DEPTH_SCHEDULE,
     restarts: TAXONOMY_KMEANS_RESTARTS,
     maxIter: TAXONOMY_KMEANS_MAX_ITER,
     tolerance: TAXONOMY_KMEANS_TOLERANCE,
@@ -49,7 +49,7 @@ const fixtures: readonly [string, LabeledCorpus][] = [
   ["unimodal", buildUnimodalCorpus()],
 ]
 
-describe("buildHierarchicalClusters — determinism", () => {
+describe("buildRelativeHierarchicalClusters — determinism", () => {
   it.each(fixtures)("%s: identical partition signature + selected K across repeated builds", (_name, corpus) => {
     const first = build(corpus)
     const second = build(corpus)
@@ -58,9 +58,9 @@ describe("buildHierarchicalClusters — determinism", () => {
   })
 
   it.each(fixtures)("%s: matches the calibrated candidate builder exactly", (_name, corpus) => {
-    // The production schedule/threshold are the calibrated values, so the
-    // promoted builder must reproduce the Phase-1 candidate's partition.
-    const production = build(corpus)
+    // The shipped schedule/threshold are the calibrated values, so the promoted
+    // builder must reproduce the Phase-1 candidate's partition.
+    const shipped = build(corpus)
     const calibrated = buildAdaptiveClusters({
       embeddings: corpus.embeddings,
       depthSchedule: ADAPTIVE_TREE_DEPTH_SCHEDULE,
@@ -70,12 +70,12 @@ describe("buildHierarchicalClusters — determinism", () => {
       seed: corpus.seed,
       globalAbsoluteThreshold: ADAPTIVE_GLOBAL_ABSOLUTE_THRESHOLD,
     })
-    expect(partitionSignature(production.root)).toBe(partitionSignature(calibrated.root))
-    expect(production.diagnostics.routingThresholds).toEqual(calibrated.diagnostics.routingThresholds)
+    expect(partitionSignature(shipped.root)).toBe(partitionSignature(calibrated.root))
+    expect(shipped.diagnostics.routingThresholds).toEqual(calibrated.diagnostics.routingThresholds)
   })
 })
 
-describe("buildHierarchicalClusters — narrow-domain separation", () => {
+describe("buildRelativeHierarchicalClusters — narrow-domain separation", () => {
   it.each([
     ["narrow-domain", buildNarrowDomainCorpus()],
     ["narrow-pilot", loadNarrowPilotCorpus()],
@@ -86,7 +86,7 @@ describe("buildHierarchicalClusters — narrow-domain separation", () => {
   })
 })
 
-describe("buildHierarchicalClusters — shape guarantees", () => {
+describe("buildRelativeHierarchicalClusters — shape guarantees", () => {
   it("keeps a unimodal corpus a single leaf", () => {
     const { root, diagnostics } = build(buildUnimodalCorpus())
     expect(root.children).toHaveLength(0)
@@ -105,7 +105,7 @@ describe("buildHierarchicalClusters — shape guarantees", () => {
   })
 })
 
-describe("buildHierarchicalClusters — bounded diagnostics", () => {
+describe("buildRelativeHierarchicalClusters — bounded diagnostics", () => {
   it("never emits a non-finite metric on duplicate-vector data", () => {
     const { diagnostics } = build(buildRareIntentDuplicateCorpus())
     expect(diagnostics.fellBackToStatic).toBe(false)

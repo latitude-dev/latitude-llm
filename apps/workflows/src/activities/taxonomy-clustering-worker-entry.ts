@@ -1,9 +1,9 @@
 import { parentPort, workerData } from "node:worker_threads"
-import { type BuildHierarchicalClustersInput, buildHierarchicalClusters } from "@domain/taxonomy"
+import { type BuildStaticHierarchicalClustersInput, buildStaticHierarchicalClusters } from "@domain/taxonomy"
 
 interface WorkerSuccessMessage {
   readonly ok: true
-  readonly result: ReturnType<typeof buildHierarchicalClusters>
+  readonly tree: ReturnType<typeof buildStaticHierarchicalClusters>
 }
 
 interface WorkerErrorMessage {
@@ -21,8 +21,8 @@ const errorMessage = (error: unknown): WorkerErrorMessage => {
 
 try {
   if (!parentPort) throw new Error("Taxonomy clustering worker started without a parent port")
-  const result = buildHierarchicalClusters(workerData as BuildHierarchicalClustersInput)
-  parentPort.postMessage({ ok: true, result } satisfies WorkerSuccessMessage)
+  const tree = buildStaticHierarchicalClusters(workerData as BuildStaticHierarchicalClustersInput)
+  parentPort.postMessage({ ok: true, tree } satisfies WorkerSuccessMessage)
 } catch (error) {
   parentPort?.postMessage(errorMessage(error))
 }
