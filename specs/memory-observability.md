@@ -228,7 +228,7 @@ Latest mutating version per record, for fast "current snapshot" reads (T = now).
 Mirrors `@domain/scores` layout (`package.json` `@domain/memories`, `main`/`types` → `src/index.ts`, `./testing` export; deps `@domain/spans`, `@domain/shared`, `@domain/events`, `effect`, `zod`, plus `diff` and the tokenizer):
 
 - `src/entities/` — `memory-event.ts`, `memory-record.ts`, `memory-snapshot.ts` (`{ storeId, at, records: Manifest }`), `memory-diff.ts` (`{ added, updated, removed, tokensAdded, tokensRemoved, recordsChanged }`), `memory-blame.ts` (`Array<{ line, spanId, traceId, sessionId, at }>`).
-- `src/ports/memory-repository.ts` — write side + reconstruction reads (`insertEvents`, `upsertBlobs`, `upsertCurrent`, `readCurrentSnapshot(store)`, `readManifestAt(store, at)`, `readLatestStoreWipes(store, at)`; Phase 1); `readBlobs(hashes)`, `readSessionMemoryEvents(session, trace?)`, `readRecordVersions(records[], at?)` (Phase 2); `listStores`, store-users / user-stores, and blame reads (Phase 3).
+- `src/ports/memory-repository.ts` — write side + reconstruction reads (`insertEvents`, `upsertBlobs`, `upsertCurrent`, `readCurrentSnapshot(store)`, `readManifestAt(store, at)`, `readLatestStoreWipes(store, at)`; Phase 1); `readBlobs(hashes)`, `readSessionMemoryEvents(session, trace?)`, `readRecordVersions(records[], at?)` (Phase 2); `listStores`, `listStoreUsers` / `listUserStores`, plus `readRecordReadEvents` + `listRecordUsers` for the record-detail activity panel (Phase 3, shipped in #4083); blame reads still pending (P3-3).
 - `src/use-cases/` — `materialize-trace-memory.ts`, `reconstruct-snapshot.ts`, `compute-memory-diff.ts`, `compute-memory-blame.ts`, `compute-session-memory-summary.ts`, `list-memory-stores.ts`.
 - `src/testing/` — fake repository (chdb testkit in integration tests).
 
@@ -312,12 +312,13 @@ Per record at T: load its mutating versions ordered by `end_time` (each carries 
 
 - **Nav + routes:** a "Memory" entry in `apps/web/src/domains/projects/project-sections.ts` (group `observe`, alongside Sessions / Users / Tools); routes:
   - `…/projects/$projectSlug/memory/index.tsx` — **store list**: one row per store (`store.id`, or `""` for the unattributed bucket), with record count, total tokens, last-updated, # sessions that wrote it, and the count of distinct users who accessed it. Backed by `list-memory-stores` over `memory_current` plus a `uniqExact(user_id)` roll-up over `memory_events`.
-  - `…/projects/$projectSlug/memory/$store/index.tsx` — **store detail**: left filetree (record ids split on `/`) for the latest snapshot; right pane shows the selected record's current body with a per-line **blame gutter** linking each line to the span/trace that last wrote it (`compute-memory-blame`); plus the list of users who accessed the store, each linking to that user's detail page.
+  - `…/projects/$projectSlug/memory/$store/index.tsx` — **store detail** (IDE-style): left filetree (record ids split on `/`) for the latest snapshot; center pane shows the selected record's current body (read-only, JSON-detected); a **Record Activity** panel (a resizable, collapsible VSCode-style bottom panel) with three tabs — **Changes** (write history: create/update/remove with per-version token deltas and the authoring user), **Reads** (retrieval events with the `search_memory` query, tokens returned, and the user), and **Users** (a per-record read/write roll-up linking to each user's page). Rows on Changes and Reads open the originating session in the session drawer. The store header lists the users who accessed the store, each linking to their detail page. The per-line **blame gutter** ([P3-3](#phase-3--the-memory-page-feature-3)) is deferred — the activity panel ships in its place ([D13](#decisions)).
 - **The end-user page gets a memory section.** The existing `…/users/$userId/` page gains a "memory stores accessed" section (a sibling of `user-behaviours-section` / `user-issues-section`), each store linking to `…/memory/$store`. `$userId` is the same `ExternalUserId` the ledger stores, so it filters `memory_events.user_id` directly — no id resolution.
+- **Feature flag.** The page is gated by `memoryObservability` ([D14](#decisions)): it hides the nav entry and the end-user section, and both routes check the flag (like the `sso` route), render an "unavailable" state when off, and disable their data queries — so a flag-off org cannot load the page or fetch memory data by URL.
 - **Store ↔ user access reads** are ledger set aggregations: `SELECT DISTINCT user_id … WHERE store_id = {store}` (users on a store) and `SELECT DISTINCT store_id … WHERE user_id = {user}` (stores for a user); reads (`search_memory`) count as access.
 - **Latest snapshot** uses `memory_current` (hot). The `""` store is listed explicitly.
 - Deleted records disappear from the tree; a "show deleted" toggle can surface tombstones (nice-to-have, not required for v1).
-- **URL:** `$store` is an encoded path segment (store ids are opaque and may contain `/`), with a sentinel for the `""` store.
+- **URL:** `$store` is an encoded path segment (store ids are opaque and may contain `/`) and the selected record rides a `?record=` param; both use `~`-prefixed sentinels for the `""` store / unnamed record, with real ids that start with `~` escaped so they never collide with a sentinel.
 
 ---
 
@@ -355,6 +356,9 @@ Per record at T: load its mutating versions ordered by `end_time` (each carries 
 - **D10 — Provider adapters out of scope**, but `memory_events.source` reserved so Mem0/Supermemory/Zep can write the same tables later.
 - **D11 — No billing change**; memory ops ride span metering.
 - **D12 — Tenancy:** all tables org+project scoped; blob dedup per-org.
+- **D13 — The record detail is an activity panel, not a blame gutter (v1).** The store-detail record pane ships a **Record Activity** panel with **Changes / Reads / Users** tabs (write history + token deltas, retrieval queries, per-record read/write roll-up) and click-through to the session drawer. Per-line blame ([P3-3](#phase-3--the-memory-page-feature-3)) is deferred — the panel covers "who changed this and when" without the version-walk line attribution. *(User call, #4083.)*
+- **D14 — `memoryObservability` gates the routes, not just the nav.** Both memory routes check the flag (following the `sso` convention — a component-level `useHasFeatureFlag` fallback, not a `beforeLoad` gate), render an unavailable state when off, and disable their queries. Server functions stay organization-scoped via `resolveOrgScope`; the flag is a rollout gate, and org-scoping (not the flag) is the tenancy boundary. *(#4083, after three reviewers flagged direct-URL reachability.)*
+- **D15 — Store-less reads bucket into the `""` (unattributed) store.** A `search_memory` span with no `gen_ai.memory.store.id` attributes its read to `store_id = ''`; since reads never materialize into `memory_current`, that store shows on user pages (reads count as access) but opens with no records. Expected behavior — the fix is emitter-side (set the store id on search spans). *(Observed during #4083 testing; keep as-is.)*
 
 ---
 
@@ -445,12 +449,16 @@ Before building the Memory page, `scope` was deleted from the engine so the page
 
 ### Phase 3 — The Memory page (Feature 3)
 
-- [ ] **P3-1**: Nav entry (`project-sections.ts`, group `observe`) + `/memory` store-list route (`list-memory-stores` over `memory_current` + a `uniqExact(user_id)` roll-up over `memory_events`): one row per store with record count, tokens, last-updated, # sessions, # users.
-- [ ] **P3-2**: `/memory/$store` store-detail: filetree (record ids split on `/`), content pane, per-line blame gutter linking to traces, and the list of users who accessed the store. New port read: users-per-store (`SELECT DISTINCT user_id … WHERE store_id`).
-- [ ] **P3-3**: `compute-memory-blame` (version-walk attribution to span/trace) — moved from Phase 2; built with its blame-gutter consumer. Reads via the existing `readRecordVersions` + `readBlobs`.
-- [ ] **P3-4**: A "memory stores accessed" section on the existing `…/users/$userId/` page (sibling of `user-behaviours-section`), each store linking to `/memory/$store`, backed by a stores-per-user read (`SELECT DISTINCT store_id … WHERE user_id`).
+**Status: merged in #4083.** Blame (P3-3) is the one deferred item; the record detail ships an activity panel in its place.
 
-**Exit gate:** a store with multiple records renders as a tree with correct current bodies and working per-line blame links; the store lists the users who accessed it, and a user lists the stores they accessed.
+- [x] **P3-1**: Nav entry (`project-sections.ts`, group `observe`) + `/memory` store-list route — one row per store (record count, tokens, last-updated, # sessions, # users, last read), server-sorted + offset-paginated. `listStores` is a single query: a `memory_current` per-store aggregate LEFT JOIN a `memory_events` per-store aggregate (`uniqExactIf` sessions/users, `maxIf` last-read).
+- [x] **P3-2**: `/memory/$store` store-detail — filetree (record ids split on `/`), read-only content pane (JSON-detected), and the store's accessor list (new port read `listStoreUsers`). **The per-line blame gutter was replaced by the Record Activity panel (P3-5); blame stays deferred to P3-3.**
+- [ ] **P3-3**: `compute-memory-blame` (version-walk attribution to span/trace) + per-line blame gutter. **Still deferred** — the Memory page shipped without it; the activity panel covers change history for now ([D13](#decisions)). Reads via the existing `readRecordVersions` + `readBlobs`.
+- [x] **P3-4**: "Memory stores accessed" section on `…/users/$userId/` (sibling of `user-behaviours-section`), each store linking to `/memory/$store`, backed by `listUserStores` (stores-per-user).
+- [x] **P3-5**: **Record Activity panel** — a resizable VSCode-style bottom panel with **Changes** / **Reads** / **Users** tabs and session-drawer click-through. New port reads `readRecordReadEvents` (per-record retrievals, deduped + capped at 200) and `listRecordUsers` (per-record read/write roll-up); `userId` added to `readRecordVersions` for the Changes tab.
+- [x] **P3-6**: Gate both routes behind `memoryObservability` ([D14](#decisions)) — render an unavailable state + disable queries when off; collision-free `~`-sentinel URL encoding for the `""` store and unnamed record.
+
+**Exit gate (met, minus blame):** a store with multiple records renders as a tree with correct current bodies; the record detail shows its change/read history and who accessed it, with click-through to sessions; the store lists its users and a user lists their stores. Per-line blame links (P3-3) remain the one outstanding Phase-3 item.
 
 ### Phase 4 — Commit-style session diff view (Feature 4)
 
