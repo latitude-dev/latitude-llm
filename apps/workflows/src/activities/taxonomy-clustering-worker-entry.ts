@@ -3,7 +3,7 @@ import { type BuildHierarchicalClustersInput, buildHierarchicalClusters } from "
 
 interface WorkerSuccessMessage {
   readonly ok: true
-  readonly tree: ReturnType<typeof buildHierarchicalClusters>
+  readonly result: ReturnType<typeof buildHierarchicalClusters>
 }
 
 interface WorkerErrorMessage {
@@ -21,8 +21,8 @@ const errorMessage = (error: unknown): WorkerErrorMessage => {
 
 try {
   if (!parentPort) throw new Error("Taxonomy clustering worker started without a parent port")
-  const tree = buildHierarchicalClusters(workerData as BuildHierarchicalClustersInput)
-  parentPort.postMessage({ ok: true, tree } satisfies WorkerSuccessMessage)
+  const result = buildHierarchicalClusters(workerData as BuildHierarchicalClustersInput)
+  parentPort.postMessage({ ok: true, result } satisfies WorkerSuccessMessage)
 } catch (error) {
   parentPort?.postMessage(errorMessage(error))
 }

@@ -5,12 +5,12 @@
  * run `compareOnCorpus` across the fixtures, and read the numbers back.
  */
 
-import { buildHierarchicalClusters, type ClusteringTreeNode, type DepthSchedule } from "../clustering.ts"
+import { buildStaticHierarchicalClusters, type ClusteringTreeNode, type StaticDepthSchedule } from "../clustering.ts"
 import {
   TAXONOMY_KMEANS_MAX_ITER,
   TAXONOMY_KMEANS_RESTARTS,
   TAXONOMY_KMEANS_TOLERANCE,
-  TAXONOMY_TREE_DEPTH_SCHEDULE,
+  TAXONOMY_TREE_STATIC_DEPTH_SCHEDULE,
 } from "../constants.ts"
 import { type AdaptiveDepthSchedule, type AdaptiveDiagnostics, buildAdaptiveClusters } from "./adaptive-clustering.ts"
 import type { LabeledCorpus } from "./fixtures.ts"
@@ -26,7 +26,7 @@ import {
 } from "./metrics.ts"
 import { ADAPTIVE_GLOBAL_ABSOLUTE_THRESHOLD, ADAPTIVE_TREE_DEPTH_SCHEDULE } from "./schedule.ts"
 
-const STATIC_SCHEDULE: readonly DepthSchedule[] = TAXONOMY_TREE_DEPTH_SCHEDULE
+const STATIC_SCHEDULE: readonly StaticDepthSchedule[] = TAXONOMY_TREE_STATIC_DEPTH_SCHEDULE
 
 export interface QualityScores {
   readonly shape: TreeShape
@@ -51,7 +51,7 @@ export interface CorpusComparison {
 }
 
 const staticBuild = (corpus: LabeledCorpus): ClusteringTreeNode =>
-  buildHierarchicalClusters({
+  buildStaticHierarchicalClusters({
     embeddings: corpus.embeddings,
     depthSchedule: STATIC_SCHEDULE,
     restarts: TAXONOMY_KMEANS_RESTARTS,

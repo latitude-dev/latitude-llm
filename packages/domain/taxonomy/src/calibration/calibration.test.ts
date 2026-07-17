@@ -12,13 +12,13 @@
 import { EMBEDDING_DIMENSIONS } from "@domain/ai"
 import { normalizeEmbedding } from "@domain/shared"
 import { describe, expect, it } from "vitest"
-import { buildHierarchicalClusters } from "../clustering.ts"
+import { buildStaticHierarchicalClusters } from "../clustering.ts"
 import {
   TAXONOMY_CLUSTERING_PROPOSAL_SAMPLE_MAX,
   TAXONOMY_KMEANS_MAX_ITER,
   TAXONOMY_KMEANS_RESTARTS,
   TAXONOMY_KMEANS_TOLERANCE,
-  TAXONOMY_TREE_DEPTH_SCHEDULE,
+  TAXONOMY_TREE_STATIC_DEPTH_SCHEDULE,
 } from "../constants.ts"
 import { cosineSimilarity } from "../helpers.ts"
 import { type AdaptiveTreeNode, buildAdaptiveClusters, quantile } from "./adaptive-clustering.ts"
@@ -292,9 +292,9 @@ describe("adaptive clustering — resource bounds at the 1,500-sample cap", () =
   }
 
   const runStatic = (embeddings: readonly (readonly number[])[]) =>
-    buildHierarchicalClusters({
+    buildStaticHierarchicalClusters({
       embeddings,
-      depthSchedule: TAXONOMY_TREE_DEPTH_SCHEDULE,
+      depthSchedule: TAXONOMY_TREE_STATIC_DEPTH_SCHEDULE,
       restarts: TAXONOMY_KMEANS_RESTARTS,
       maxIter: TAXONOMY_KMEANS_MAX_ITER,
       tolerance: TAXONOMY_KMEANS_TOLERANCE,

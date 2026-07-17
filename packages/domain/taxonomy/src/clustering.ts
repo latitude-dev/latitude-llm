@@ -7,16 +7,26 @@
  * k-means). No dependency on Effect or repositories — everything here is
  * deterministic given the input.
  *
+ * Two builders share the same k-means core and differ only in the split-
+ * acceptance gate:
+ *
+ *   - `buildHierarchicalClusters` (default) uses node-relative separation:
+ *     each candidate split is judged against the spread of its own members, so
+ *     acceptance adapts to the semantic density of the corpus rather than a
+ *     fixed absolute sibling-cosine. It also returns bounded diagnostics.
+ *   - `buildStaticHierarchicalClusters` keeps the original absolute
+ *     sibling-cosine gate. It is the pre-adaptive baseline the calibration
+ *     harness regresses against and the `off`-mode path later phases fall back
+ *     to; it is scheduled for removal once adaptive is the enforced default.
+ *
  * Algorithm (high level):
- *   - At every tree node we sweep K = 2..maxChildrenAtThisDepth.
- *     For each K we run spherical k-means++ a few times and keep the best
- *     restart by Calinski–Harabasz (variance-ratio criterion adapted to
- *     cosine similarity).
- *   - We reject Ks that violate per-depth invariants (min cluster size, max
- *     pairwise sibling-centroid cosine). If no K is valid we leave the node
- *     as a leaf.
- *   - We then recurse into each child cluster with depth+1 and the next
- *     entry in the depth schedule.
+ *   - At every tree node we sweep K = 2..maxChildrenAtThisDepth. For each K we
+ *     run spherical k-means++ a few times and keep the best restart by
+ *     Calinski–Harabasz (variance-ratio criterion adapted to cosine).
+ *   - We reject Ks that violate the per-depth gate. If no K is valid the node
+ *     stays a leaf.
+ *   - We then recurse into each child cluster with depth+1 and the next entry
+ *     in the depth schedule.
  *
  * Why bisecting K-means with auto-K instead of HDBSCAN / single-linkage:
  *   - We rebuild the whole tree per gardening pass over a bounded sample
@@ -25,13 +35,18 @@
  *     online assignment. Spherical k-means satisfies both. HDBSCAN is not
  *     ergonomic in JS and produces clusters that don't carry well-defined
  *     centroids for the online deepest-fit router we already ship.
- *   - Per-depth schedules are the cheapest way to express "broad at the
- *     root, narrow at the leaves" without per-corpus hand tuning.
+ *   - Per-depth schedules are the cheapest way to express "broad at the root,
+ *     narrow at the leaves" without per-corpus hand tuning.
  */
 
 import { normalizeEmbedding } from "@domain/shared"
 import { cosineSimilarityNormalized } from "./helpers.ts"
 
+/**
+ * Adaptive per-depth split policy. Scale-free: a broad support corpus and a
+ * narrow specialized corpus are governed by the same numbers because acceptance
+ * is judged relative to each node's own geometry.
+ */
 export interface DepthSchedule {
   /** Maximum K to try at this depth. K=2..maxChildren is swept. */
   readonly maxChildren: number
@@ -40,16 +55,35 @@ export interface DepthSchedule {
   /** Absolute floor on cluster size at this depth — overrides the fraction. */
   readonly minClusterAbs: number
   /**
-   * Two sibling centroids closer than this cosine cannot coexist at this
-   * depth. The full K is rejected when any pair exceeds it.
-   */
-  readonly maxSiblingCosine: number
-  /**
    * Minimum Calinski–Harabasz improvement (vs. K=1 / no split) required to
    * accept a split at this depth. Higher → more aggressive leaf-keeping.
    * Expressed as the variance-ratio criterion itself; a node is left a leaf
    * when the best K's score is below this.
    */
+  readonly minSplitScore: number
+  /** A split where one child holds more than this fraction of the parent is not a real split. */
+  readonly maxDominantChildFraction: number
+  /** Closest-sibling distance must be at least this multiple of the within-child spread. */
+  readonly minRelativeSeparation: number
+  /** Quantile of member-to-own-centroid distance used as the within-child spread. */
+  readonly withinDistanceQuantile: number
+  /** Lower-tail quantile of member-to-own-centroid similarity used to set the routing threshold. */
+  readonly routingSimilarityQuantile: number
+}
+
+/**
+ * Original absolute-sibling-cosine split policy. Retained only for the static
+ * baseline builder (`buildStaticHierarchicalClusters`).
+ */
+export interface StaticDepthSchedule {
+  readonly maxChildren: number
+  readonly minClusterFraction: number
+  readonly minClusterAbs: number
+  /**
+   * Two sibling centroids closer than this cosine cannot coexist at this depth.
+   * The full K is rejected when any pair exceeds it.
+   */
+  readonly maxSiblingCosine: number
   readonly minSplitScore: number
 }
 
@@ -77,6 +111,46 @@ export interface BuildHierarchicalClustersInput {
   readonly tolerance: number
   /** Random seed — pass a project-stable value for run-to-run stability. */
   readonly seed: number
+  /** Global absolute floor on the per-split routing threshold (mirrors TAXONOMY_ASSIGN_ABSOLUTE_THRESHOLD). */
+  readonly globalAbsoluteThreshold: number
+}
+
+export interface BuildStaticHierarchicalClustersInput {
+  readonly embeddings: readonly (readonly number[])[]
+  readonly depthSchedule: readonly StaticDepthSchedule[]
+  readonly restarts: number
+  readonly maxIter: number
+  readonly tolerance: number
+  readonly seed: number
+}
+
+export type ClusteringRejectionReason = "undersizedChild" | "dominantChild" | "lowScore" | "lowRelativeSeparation"
+
+/**
+ * Bounded, embedding-free summary of one build. Every field is either a scalar
+ * or an array bounded by the node count (≤ the structural node cap), so it is
+ * safe to log or thread through telemetry without leaking member data.
+ */
+export interface ClusteringDiagnostics {
+  /** Selected K per accepted split, keyed by depth (depth → [K, ...]). */
+  readonly selectedKByDepth: Record<number, number[]>
+  readonly nodeCount: number
+  readonly leafCount: number
+  readonly maxDepth: number
+  readonly acceptedSplits: number
+  readonly rejectedCandidates: number
+  readonly rejectionReasonCounts: Record<ClusteringRejectionReason, number>
+  /** Relative separation of every accepted split — for percentile summaries. */
+  readonly acceptedRelativeSeparations: number[]
+  /** Member-confidence routing threshold of every accepted split. */
+  readonly routingThresholds: number[]
+  /** True when a non-finite adaptive metric slipped through (fallback trigger for later phases). */
+  readonly fellBackToStatic: boolean
+}
+
+export interface BuildHierarchicalClustersResult {
+  readonly root: ClusteringTreeNode
+  readonly diagnostics: ClusteringDiagnostics
 }
 
 // ---------------------------------------------------------------------------
@@ -183,9 +257,6 @@ interface KmeansResult {
   /** assignments[localIndex] = clusterIndex */
   readonly assignments: readonly number[]
   readonly centroids: readonly (readonly number[])[]
-  /** Sum of cosine similarities to each point's assigned centroid — higher is tighter. */
-  readonly cohesion: number
-  readonly iterations: number
 }
 
 const sphericalKmeans = (input: {
@@ -200,11 +271,8 @@ const sphericalKmeans = (input: {
   const k = initialCentroids.length
   const assignments = new Array<number>(n).fill(0)
   let centroids = initialCentroids.map((vector) => [...vector])
-  let iteration = 0
-  let cohesion = 0
-  for (iteration = 0; iteration < maxIter; iteration++) {
+  for (let iteration = 0; iteration < maxIter; iteration++) {
     let changed = false
-    cohesion = 0
     for (let localIdx = 0; localIdx < n; localIdx++) {
       const vector = embeddings[memberIndices[localIdx] ?? -1]
       if (!vector) continue
@@ -223,7 +291,6 @@ const sphericalKmeans = (input: {
         assignments[localIdx] = bestCluster
         changed = true
       }
-      cohesion += bestSimilarity
     }
     const dimensions = centroids[0]?.length ?? 0
     const newCentroids: number[][] = []
@@ -249,7 +316,7 @@ const sphericalKmeans = (input: {
     centroids = newCentroids
     if (!changed || maxDrift <= tolerance) break
   }
-  return { assignments, centroids, cohesion, iterations: iteration }
+  return { assignments, centroids }
 }
 
 // ---------------------------------------------------------------------------
@@ -291,21 +358,283 @@ const calinskiHarabaszScore = (
 }
 
 // ---------------------------------------------------------------------------
-// chooseBestK — sweep K, run multi-restart spherical k-means, accept the K
-// that maximizes CH score while satisfying the depth invariants.
+// Adaptive metric helpers (spec "Adaptive split algorithm").
 // ---------------------------------------------------------------------------
 
-interface ChooseBestKInput {
+/** Clamp a cosine distance (1 - cosine) to the valid [0, 2] range. */
+const clampDistance = (distance: number): number => {
+  if (distance < 0) return 0
+  if (distance > 2) return 2
+  return distance
+}
+
+/** Quantile with linear interpolation at position (n - 1) * q. Input need not be sorted. */
+export const quantile = (values: readonly number[], q: number): number => {
+  const n = values.length
+  if (n === 0) return 0
+  if (n === 1) return values[0] ?? 0
+  const sorted = [...values].sort((a, b) => a - b)
+  const position = (n - 1) * Math.min(1, Math.max(0, q))
+  const lowerIndex = Math.floor(position)
+  const upperIndex = Math.ceil(position)
+  const lower = sorted[lowerIndex] ?? 0
+  const upper = sorted[upperIndex] ?? lower
+  if (lowerIndex === upperIndex) return lower
+  return lower + (upper - lower) * (position - lowerIndex)
+}
+
+// ---------------------------------------------------------------------------
+// chooseBestAdaptiveK — sweep K, run multi-restart spherical k-means, accept
+// the K that maximizes CH score while satisfying the node-relative gate:
+// minimum child size, dominant-child protection, minimum split score, and
+// relative separation.
+//
+// Tie-breaking is deterministic: K is swept ascending and restarts run in
+// order, and `best` is replaced only on a *strictly* greater score, so an
+// exact CH tie keeps the lower K and, within a K, the earlier restart.
+// ---------------------------------------------------------------------------
+
+interface AdaptiveCandidate {
+  readonly k: number
+  readonly assignments: readonly number[]
+  readonly centroids: readonly (readonly number[])[]
+  readonly score: number
+  readonly relativeSeparation: number
+  readonly splitLinkThreshold: number
+  readonly clusterMemberIndices: readonly (readonly number[])[]
+}
+
+interface ChooseBestAdaptiveKInput {
   readonly embeddings: readonly (readonly number[])[]
   readonly memberIndices: readonly number[]
   readonly schedule: DepthSchedule
   readonly restarts: number
   readonly maxIter: number
   readonly tolerance: number
+  readonly globalAbsoluteThreshold: number
+  readonly rng: () => number
+  readonly onReject: (reason: ClusteringRejectionReason) => void
+}
+
+const chooseBestAdaptiveK = (input: ChooseBestAdaptiveKInput): AdaptiveCandidate | null => {
+  const { embeddings, memberIndices, schedule, restarts, maxIter, tolerance, globalAbsoluteThreshold, rng, onReject } =
+    input
+  const n = memberIndices.length
+  const minByFraction = Math.ceil(n * schedule.minClusterFraction)
+  const minClusterSize = Math.max(schedule.minClusterAbs, minByFraction)
+  if (n < minClusterSize * 2) return null
+
+  let best: AdaptiveCandidate | null = null
+  const maxK = Math.min(schedule.maxChildren, Math.floor(n / minClusterSize))
+  for (let k = 2; k <= maxK; k++) {
+    for (let restart = 0; restart < restarts; restart++) {
+      const initial = kmeansPlusPlusInit(embeddings, memberIndices, k, rng)
+      if (initial.length !== k) continue
+      const { assignments, centroids } = sphericalKmeans({
+        embeddings,
+        memberIndices,
+        initialCentroids: initial,
+        maxIter,
+        tolerance,
+      })
+
+      const clusterMemberIndices: number[][] = Array.from({ length: k }, () => [])
+      for (let localIdx = 0; localIdx < n; localIdx++) {
+        const cluster = assignments[localIdx] ?? 0
+        clusterMemberIndices[cluster]?.push(memberIndices[localIdx] ?? -1)
+      }
+
+      let smallestChildSize = Number.POSITIVE_INFINITY
+      let largestChildSize = 0
+      for (const bucket of clusterMemberIndices) {
+        if (bucket.length < smallestChildSize) smallestChildSize = bucket.length
+        if (bucket.length > largestChildSize) largestChildSize = bucket.length
+      }
+      // Undersized child: a micro-cluster that should not be a sibling of the
+      // remaining mass at this depth.
+      if (smallestChildSize < minClusterSize) {
+        onReject("undersizedChild")
+        continue
+      }
+
+      // Dominant child: one child keeping most of the parent is not a partition.
+      const dominantChildFraction = largestChildSize / n
+      if (dominantChildFraction > schedule.maxDominantChildFraction) {
+        onReject("dominantChild")
+        continue
+      }
+
+      const score = calinskiHarabaszScore(embeddings, memberIndices, assignments, centroids)
+      if (score < schedule.minSplitScore) {
+        onReject("lowScore")
+        continue
+      }
+
+      // Node-relative separation: the closest sibling pair must sit clearly
+      // outside the within-child spread. O(n) member distances + O(K²) sibling
+      // distances, K ≤ maxChildren ≤ 10.
+      const memberDistances: number[] = []
+      for (let localIdx = 0; localIdx < n; localIdx++) {
+        const vector = embeddings[memberIndices[localIdx] ?? -1]
+        const centroid = centroids[assignments[localIdx] ?? 0]
+        if (!vector || !centroid) continue
+        memberDistances.push(clampDistance(1 - cosineSimilarityNormalized(vector, centroid)))
+      }
+      const withinDistance = quantile(memberDistances, schedule.withinDistanceQuantile)
+
+      let closestSiblingDistance = Number.POSITIVE_INFINITY
+      for (let i = 0; i < k; i++) {
+        const left = centroids[i]
+        if (!left) continue
+        for (let j = i + 1; j < k; j++) {
+          const right = centroids[j]
+          if (!right) continue
+          const distance = clampDistance(1 - cosineSimilarityNormalized(left, right))
+          if (distance < closestSiblingDistance) closestSiblingDistance = distance
+        }
+      }
+
+      const relativeSeparation = closestSiblingDistance / Math.max(withinDistance, 1e-6)
+      if (relativeSeparation < schedule.minRelativeSeparation) {
+        onReject("lowRelativeSeparation")
+        continue
+      }
+
+      // Per-child descent threshold: the lower-tail quantile of each child's
+      // member-to-own-centroid similarity, floored by the global absolute
+      // threshold. Taking the min across children stops a large/easy child from
+      // controlling the parent's descent gate.
+      const childThresholds: number[] = []
+      for (let clusterIdx = 0; clusterIdx < k; clusterIdx++) {
+        const centroid = centroids[clusterIdx]
+        if (!centroid) continue
+        const similarities: number[] = []
+        for (let localIdx = 0; localIdx < n; localIdx++) {
+          if (assignments[localIdx] !== clusterIdx) continue
+          const vector = embeddings[memberIndices[localIdx] ?? -1]
+          if (!vector) continue
+          similarities.push(cosineSimilarityNormalized(vector, centroid))
+        }
+        childThresholds.push(quantile(similarities, schedule.routingSimilarityQuantile))
+      }
+      const minChildThreshold = childThresholds.length > 0 ? Math.min(...childThresholds) : globalAbsoluteThreshold
+      const splitLinkThreshold = Math.max(globalAbsoluteThreshold, minChildThreshold)
+
+      if (!best || score > best.score) {
+        best = { k, assignments, centroids, score, relativeSeparation, splitLinkThreshold, clusterMemberIndices }
+      }
+    }
+  }
+  return best
+}
+
+// ---------------------------------------------------------------------------
+// Top-level recursive divisive builder — node-relative separation (default).
+// ---------------------------------------------------------------------------
+
+export const buildHierarchicalClusters = (input: BuildHierarchicalClustersInput): BuildHierarchicalClustersResult => {
+  const { embeddings, depthSchedule, restarts, maxIter, tolerance, seed, globalAbsoluteThreshold } = input
+  const dimensions = embeddings[0]?.length ?? 0
+  const allIndices = embeddings
+    .map((vector, index) => (vector && vector.length === dimensions ? index : -1))
+    .filter((index) => index >= 0)
+  const rng = createRng(seed)
+
+  const selectedKByDepth: Record<number, number[]> = {}
+  const rejectionReasonCounts: Record<ClusteringRejectionReason, number> = {
+    undersizedChild: 0,
+    dominantChild: 0,
+    lowScore: 0,
+    lowRelativeSeparation: 0,
+  }
+  const acceptedRelativeSeparations: number[] = []
+  const routingThresholds: number[] = []
+  let nodeCount = 0
+  let leafCount = 0
+  let maxDepth = 0
+  let acceptedSplits = 0
+  let rejectedCandidates = 0
+
+  const recurse = (memberIndices: readonly number[], depth: number): ClusteringTreeNode => {
+    nodeCount++
+    if (depth > maxDepth) maxDepth = depth
+    const centroid = meanOverIndices(embeddings, memberIndices, dimensions)
+    const schedule = depthSchedule[depth]
+    if (!schedule || memberIndices.length === 0) {
+      leafCount++
+      return { memberIndices, centroid, children: [], depth }
+    }
+    const best = chooseBestAdaptiveK({
+      embeddings,
+      memberIndices,
+      schedule,
+      restarts,
+      maxIter,
+      tolerance,
+      globalAbsoluteThreshold,
+      rng,
+      onReject: (reason) => {
+        rejectedCandidates++
+        rejectionReasonCounts[reason]++
+      },
+    })
+    if (!best) {
+      leafCount++
+      return { memberIndices, centroid, children: [], depth }
+    }
+    acceptedSplits++
+    const depthKs = selectedKByDepth[depth] ?? []
+    depthKs.push(best.k)
+    selectedKByDepth[depth] = depthKs
+    acceptedRelativeSeparations.push(best.relativeSeparation)
+    routingThresholds.push(best.splitLinkThreshold)
+    const children = best.clusterMemberIndices.map((childIndices) => recurse(childIndices, depth + 1))
+    return { memberIndices, centroid, children, depth }
+  }
+
+  const root = recurse(allIndices, 0)
+
+  const fellBackToStatic =
+    acceptedRelativeSeparations.some((value) => !Number.isFinite(value)) ||
+    routingThresholds.some((value) => !Number.isFinite(value))
+
+  return {
+    root,
+    diagnostics: {
+      selectedKByDepth,
+      nodeCount,
+      leafCount,
+      maxDepth,
+      acceptedSplits,
+      rejectedCandidates,
+      rejectionReasonCounts,
+      acceptedRelativeSeparations,
+      routingThresholds,
+      fellBackToStatic,
+    },
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Static baseline builder — absolute sibling-cosine gate.
+//
+// Preserved as the pre-adaptive regression baseline (calibration harness) and
+// the `off`-mode publication path; removed once adaptive is the enforced
+// default. Its k-means core is the shared primitive above; only the gate
+// differs.
+// ---------------------------------------------------------------------------
+
+interface ChooseBestStaticKInput {
+  readonly embeddings: readonly (readonly number[])[]
+  readonly memberIndices: readonly number[]
+  readonly schedule: StaticDepthSchedule
+  readonly restarts: number
+  readonly maxIter: number
+  readonly tolerance: number
   readonly rng: () => number
 }
 
-interface ChooseBestKResult {
+interface StaticCandidate {
   readonly k: number
   readonly assignments: readonly number[]
   readonly centroids: readonly (readonly number[])[]
@@ -313,14 +642,14 @@ interface ChooseBestKResult {
   readonly clusterMemberIndices: readonly (readonly number[])[]
 }
 
-const chooseBestK = (input: ChooseBestKInput): ChooseBestKResult | null => {
+const chooseBestStaticK = (input: ChooseBestStaticKInput): StaticCandidate | null => {
   const { embeddings, memberIndices, schedule, restarts, maxIter, tolerance, rng } = input
   const n = memberIndices.length
   const minByFraction = Math.ceil(n * schedule.minClusterFraction)
   const minClusterSize = Math.max(schedule.minClusterAbs, minByFraction)
   if (n < minClusterSize * 2) return null
 
-  let best: ChooseBestKResult | null = null
+  let best: StaticCandidate | null = null
   const maxK = Math.min(schedule.maxChildren, Math.floor(n / minClusterSize))
   for (let k = 2; k <= maxK; k++) {
     for (let restart = 0; restart < restarts; restart++) {
@@ -339,13 +668,8 @@ const chooseBestK = (input: ChooseBestKInput): ChooseBestKResult | null => {
         const bucket = clusterMemberIndices[cluster]
         if (bucket) bucket.push(memberIndices[localIdx] ?? -1)
       }
-      // Reject Ks that produced an undersized cluster — these are
-      // micro-clusters by definition; they should not be siblings of the
-      // remaining mass at this depth.
       const undersized = clusterMemberIndices.some((bucket) => bucket.length < minClusterSize)
       if (undersized) continue
-      // Reject Ks where two siblings are too close to be distinguishable
-      // topics at this depth.
       let pairwiseTooClose = false
       for (let i = 0; i < k && !pairwiseTooClose; i++) {
         const left = centroids[i]
@@ -367,11 +691,7 @@ const chooseBestK = (input: ChooseBestKInput): ChooseBestKResult | null => {
   return best
 }
 
-// ---------------------------------------------------------------------------
-// Top-level recursive divisive builder.
-// ---------------------------------------------------------------------------
-
-export const buildHierarchicalClusters = (input: BuildHierarchicalClustersInput): ClusteringTreeNode => {
+export const buildStaticHierarchicalClusters = (input: BuildStaticHierarchicalClustersInput): ClusteringTreeNode => {
   const { embeddings, depthSchedule, restarts, maxIter, tolerance, seed } = input
   const dimensions = embeddings[0]?.length ?? 0
   const allIndices = embeddings
@@ -385,7 +705,7 @@ export const buildHierarchicalClusters = (input: BuildHierarchicalClustersInput)
     if (!schedule || memberIndices.length === 0) {
       return { memberIndices, centroid, children: [], depth }
     }
-    const best = chooseBestK({
+    const best = chooseBestStaticK({
       embeddings,
       memberIndices,
       schedule,

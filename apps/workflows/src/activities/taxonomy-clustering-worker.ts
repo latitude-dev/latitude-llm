@@ -2,11 +2,16 @@ import { existsSync } from "node:fs"
 import { dirname, extname, resolve } from "node:path"
 import { fileURLToPath, pathToFileURL } from "node:url"
 import { Worker } from "node:worker_threads"
-import type { BuildHierarchicalClustersInput, ClusteringTreeNode } from "@domain/taxonomy"
+import {
+  type BuildHierarchicalClustersInput,
+  type BuildHierarchicalClustersResult,
+  TAXONOMY_CLUSTERING_WORKER_MAX_OLD_GEN_MB,
+  TAXONOMY_CLUSTERING_WORKER_TIMEOUT_MS,
+} from "@domain/taxonomy"
 
 interface WorkerSuccessMessage {
   readonly ok: true
-  readonly tree: ClusteringTreeNode
+  readonly result: BuildHierarchicalClustersResult
 }
 
 interface WorkerErrorMessage {
@@ -31,25 +36,56 @@ const workerEntryUrl = () => {
   return { url: pathToFileURL(entryFile), isTypeScriptSource }
 }
 
-export const buildHierarchicalClustersInWorker = (input: BuildHierarchicalClustersInput): Promise<ClusteringTreeNode> =>
+/**
+ * Run the (synchronous, CPU-bound) divisive build off the activity's event loop
+ * in a dedicated worker thread. The thread is resource-bounded so a pathological
+ * corpus cannot exhaust the activity process:
+ *
+ *   - `resourceLimits.maxOldGenerationSizeMb` caps the V8 heap; blowing it
+ *     crashes the worker (surfaced as a rejection) rather than the whole worker
+ *     process.
+ *   - a single wall-clock deadline bounds the run and terminates a hung or
+ *     looping worker. It covers the entire worker invocation — one build today,
+ *     static plus adaptive shadow later — so shadow mode shares one budget.
+ *   - `worker.terminate()` runs on every terminal path (success, error, exit,
+ *     timeout) so no thread is left dangling once the promise settles.
+ */
+export const buildHierarchicalClustersInWorker = (
+  input: BuildHierarchicalClustersInput,
+): Promise<BuildHierarchicalClustersResult> =>
   new Promise((resolvePromise, rejectPromise) => {
     const entry = workerEntryUrl()
     const worker = new Worker(entry.url, {
       workerData: input,
       execArgv: entry.isTypeScriptSource ? ["--import", "tsx"] : [],
+      resourceLimits: { maxOldGenerationSizeMb: TAXONOMY_CLUSTERING_WORKER_MAX_OLD_GEN_MB },
     })
 
     let settled = false
+    let timeout: ReturnType<typeof setTimeout> | undefined
+    const cleanup = () => {
+      if (timeout !== undefined) clearTimeout(timeout)
+      void worker.terminate()
+    }
     const settle = (callback: () => void) => {
       if (settled) return
       settled = true
+      cleanup()
       callback()
     }
+
+    timeout = setTimeout(() => {
+      settle(() =>
+        rejectPromise(
+          new Error(`Taxonomy clustering worker timed out after ${TAXONOMY_CLUSTERING_WORKER_TIMEOUT_MS}ms`),
+        ),
+      )
+    }, TAXONOMY_CLUSTERING_WORKER_TIMEOUT_MS)
 
     worker.once("message", (message: WorkerMessage) => {
       settle(() => {
         if (message.ok) {
-          resolvePromise(message.tree)
+          resolvePromise(message.result)
           return
         }
         const error = new Error(message.error)

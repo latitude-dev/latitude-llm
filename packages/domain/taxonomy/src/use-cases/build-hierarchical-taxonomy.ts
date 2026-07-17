@@ -42,8 +42,9 @@
  *     the rows persisted here. We persist "Pending" names so the naming
  *     activity has a clear work queue.
  *   - Sibling merges and noise reassign. The top-down build cannot produce
- *     near-duplicate siblings (enforced by maxSiblingCosine in the schedule)
- *     and every member is assigned to a leaf — there is no noise pool.
+ *     near-duplicate siblings (the node-relative separation gate rejects a split
+ *     whose closest sibling pair sits inside the within-child spread) and every
+ *     member is assigned to a leaf — there is no noise pool.
  */
 
 import { resolveEmbeddingConfig } from "@domain/ai"
@@ -60,10 +61,12 @@ import {
 import { Effect } from "effect"
 import {
   type BuildHierarchicalClustersInput,
+  type BuildHierarchicalClustersResult,
   buildHierarchicalClusters,
   type ClusteringTreeNode,
 } from "../clustering.ts"
 import {
+  TAXONOMY_ASSIGN_ABSOLUTE_THRESHOLD,
   TAXONOMY_CLUSTERING_PROPOSAL_SAMPLE_MAX,
   TAXONOMY_CLUSTERING_SAMPLE_STRATEGY,
   TAXONOMY_CONTINUATION_THRESHOLD,
@@ -122,7 +125,7 @@ export interface BuildHierarchicalTaxonomyResult {
 
 export type TaxonomyClusterBuilder = (
   input: BuildHierarchicalClustersInput,
-) => Effect.Effect<ClusteringTreeNode, Error, never>
+) => Effect.Effect<BuildHierarchicalClustersResult, Error, never>
 
 export interface PlanHierarchicalTaxonomyInput extends BuildHierarchicalTaxonomyInput {
   readonly clusterBuilder?: TaxonomyClusterBuilder
@@ -405,13 +408,14 @@ export const planHierarchicalTaxonomyUseCase = (input: PlanHierarchicalTaxonomyI
     const clusterBuilder =
       input.clusterBuilder ??
       ((builderInput: BuildHierarchicalClustersInput) => Effect.sync(() => buildHierarchicalClusters(builderInput)))
-    const tree = yield* clusterBuilder({
+    const { root: tree } = yield* clusterBuilder({
       embeddings: normalizedEmbeddings,
       depthSchedule: TAXONOMY_TREE_DEPTH_SCHEDULE,
       restarts: TAXONOMY_KMEANS_RESTARTS,
       maxIter: TAXONOMY_KMEANS_MAX_ITER,
       tolerance: TAXONOMY_KMEANS_TOLERANCE,
       seed: seedFromProjectId(scopedBehaviorId ? `${input.projectId}:${scopedBehaviorId}` : input.projectId),
+      globalAbsoluteThreshold: TAXONOMY_ASSIGN_ABSOLUTE_THRESHOLD,
     })
 
     const descriptors: NodeDescriptor[] = []
