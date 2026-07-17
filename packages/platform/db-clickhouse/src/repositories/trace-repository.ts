@@ -119,8 +119,8 @@ const dedupedSpanMessageRowsSubquery = (traceIdPredicate: string) => `(
   WHERE organization_id = {organizationId:String}
     AND project_id = {projectId:String}
     AND ${traceIdPredicate}
-  ORDER BY span_id, ingested_at DESC
-  LIMIT 1 BY span_id
+  ORDER BY trace_id, span_id, ingested_at DESC
+  LIMIT 1 BY trace_id, span_id
 )`
 
 const BOUNDED_READ_SETTINGS = {
