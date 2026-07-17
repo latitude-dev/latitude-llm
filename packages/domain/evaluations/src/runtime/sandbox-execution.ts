@@ -54,7 +54,12 @@ export const executeEvaluationScriptSandboxed = Effect.fn("evaluations.executeEv
 
     const llm: HostLlmFunction = async (call) => {
       const schema = buildSchemaFromDescriptor(call.schema)
-      const prompt = fitPromptToJudgeContextWindow(call.prompt, modelConfig.provider, modelConfig.model)
+      const prompt = fitPromptToJudgeContextWindow(
+        call.prompt,
+        modelConfig.provider,
+        modelConfig.model,
+        modelConfig.maxTokens,
+      )
       const result = await Effect.runPromiseWith(services)(
         ai.generate({
           ...modelConfig,
