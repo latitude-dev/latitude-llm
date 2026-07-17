@@ -46,3 +46,11 @@ export interface MemoryUserStore {
   readonly storeId: string
   readonly lastAccessedAt: Date
 }
+
+/** A user who touched one record, with reads and writes counted separately. */
+export interface MemoryRecordUser {
+  readonly userId: ExternalUserId
+  readonly readCount: number
+  readonly writeCount: number
+  readonly lastAccessedAt: Date
+}

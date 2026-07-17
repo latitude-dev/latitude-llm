@@ -23,6 +23,7 @@ const toVersion = (entry: MemoryCurrentEntry | MemoryEvent): MemoryRecordVersion
   spanId: entry.spanId,
   traceId: entry.traceId,
   sessionId: entry.sessionId,
+  userId: "userId" in entry ? entry.userId : ("" as ExternalUserId),
   endTime: entry.endTime,
 })
 
@@ -205,6 +206,44 @@ export const createFakeMemoryRepository = (overrides?: Partial<MemoryRepositoryS
         const rest = items.slice(offset)
         const hasMore = rest.length > limit
         return { items: hasMore ? rest.slice(0, limit) : rest, totalCount, hasMore, limit, offset }
+      }),
+    readRecordReadEvents: ({ organizationId, projectId, storeId, recordId, limit }) =>
+      Effect.sync(() => {
+        const deduped = new Map<string, MemoryEvent>()
+        for (const event of events) {
+          if (event.organizationId !== organizationId || event.projectId !== projectId) continue
+          if (event.storeId !== storeId || event.recordId !== recordId || event.changeKind !== "read") continue
+          deduped.set(`${event.spanId} ${event.storeId} ${event.recordId}`, event)
+        }
+        const sorted = [...deduped.values()].sort((a, b) => b.endTime.getTime() - a.endTime.getTime())
+        return limit !== undefined ? sorted.slice(0, limit) : sorted
+      }),
+    listRecordUsers: ({ organizationId, projectId, storeId, recordId }) =>
+      Effect.sync(() => {
+        const byUser = new Map<ExternalUserId, { readCount: number; writeCount: number; lastAccessedAt: Date }>()
+        const seenSpans = new Set<string>()
+        for (const event of events) {
+          if (event.organizationId !== organizationId || event.projectId !== projectId) continue
+          if (event.storeId !== storeId || event.recordId !== recordId || event.userId === "") continue
+          if (seenSpans.has(event.spanId)) continue
+          seenSpans.add(event.spanId)
+          let agg = byUser.get(event.userId)
+          if (!agg) {
+            agg = { readCount: 0, writeCount: 0, lastAccessedAt: event.endTime }
+            byUser.set(event.userId, agg)
+          }
+          if (event.changeKind === "read") agg.readCount += 1
+          else if (isMutating(event.changeKind)) agg.writeCount += 1
+          if (event.endTime > agg.lastAccessedAt) agg.lastAccessedAt = event.endTime
+        }
+        return [...byUser.entries()]
+          .map(([userId, agg]) => ({ userId, ...agg }))
+          .sort(
+            (a, b) =>
+              b.lastAccessedAt.getTime() - a.lastAccessedAt.getTime() ||
+              (a.userId < b.userId ? -1 : a.userId > b.userId ? 1 : 0),
+          )
+          .slice(0, STORE_ACCESS_LIST_CAP)
       }),
     listStoreUsers: ({ organizationId, projectId, storeId }) =>
       Effect.sync(() => {

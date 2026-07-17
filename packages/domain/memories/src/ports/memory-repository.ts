@@ -13,6 +13,7 @@ import type { MemoryCurrentEntry } from "../entities/memory-current.ts"
 import type { MemoryEvent } from "../entities/memory-event.ts"
 import type { MemoryRecordVersion, MemoryStoreWipe } from "../entities/memory-snapshot.ts"
 import type {
+  MemoryRecordUser,
   MemoryStoreListOptions,
   MemoryStoreListPage,
   MemoryStoreUser,
@@ -87,6 +88,23 @@ export interface MemoryRepositoryShape {
     readonly projectId: ProjectId
     readonly options?: MemoryStoreListOptions
   }): Effect.Effect<MemoryStoreListPage, RepositoryError, ChSqlClient>
+
+  /** Read (retrieval) events for one record, deduped, newest-first, capped by `limit`. */
+  readRecordReadEvents(input: {
+    readonly organizationId: OrganizationId
+    readonly projectId: ProjectId
+    readonly storeId: string
+    readonly recordId: string
+    readonly limit?: number
+  }): Effect.Effect<readonly MemoryEvent[], RepositoryError, ChSqlClient>
+
+  /** Per-user read/write roll-up for one record, newest access first. */
+  listRecordUsers(input: {
+    readonly organizationId: OrganizationId
+    readonly projectId: ProjectId
+    readonly storeId: string
+    readonly recordId: string
+  }): Effect.Effect<readonly MemoryRecordUser[], RepositoryError, ChSqlClient>
 
   /** Distinct users who touched one store (reads count as access), newest-first. */
   listStoreUsers(input: {

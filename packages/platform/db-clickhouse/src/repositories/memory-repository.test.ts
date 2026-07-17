@@ -546,3 +546,110 @@ describe("MemoryRepository store listing", () => {
     expect(stores[0]!.lastAccessedAt.getTime()).toBe(at(5).getTime())
   })
 })
+
+describe("MemoryRepository record activity", () => {
+  it("reads one record's retrieval events, newest first, deduped, capped by limit", async () => {
+    const dupRead = makeEvent({
+      recordId: "recA",
+      spanId: spanN(1),
+      changeKind: "read",
+      queryText: "q1",
+      userId: ExternalUserId("u1"),
+      tokenCount: 5,
+      endTime: at(2),
+    })
+    await withRepo((repo) =>
+      repo.insertEvents([
+        dupRead,
+        dupRead,
+        makeEvent({
+          recordId: "recA",
+          spanId: spanN(2),
+          changeKind: "read",
+          queryText: "q2",
+          userId: ExternalUserId("u2"),
+          endTime: at(5),
+        }),
+        makeEvent({ recordId: "recA", spanId: spanN(3), changeKind: "add", endTime: at(1) }),
+        makeEvent({ recordId: "recB", spanId: spanN(4), changeKind: "read", queryText: "other", endTime: at(9) }),
+      ]),
+    )
+    const reads = await withRepo((repo) =>
+      repo.readRecordReadEvents({ organizationId, projectId, storeId: "store1", recordId: "recA" }),
+    )
+    expect(reads.map((r) => [r.queryText, r.userId as string])).toEqual([
+      ["q2", "u2"],
+      ["q1", "u1"],
+    ])
+
+    const limited = await withRepo((repo) =>
+      repo.readRecordReadEvents({ organizationId, projectId, storeId: "store1", recordId: "recA", limit: 1 }),
+    )
+    expect(limited.map((r) => r.queryText)).toEqual(["q2"])
+  })
+
+  it("rolls up a record's users with read/write counts (deduped, '' excluded), newest access first", async () => {
+    await withRepo((repo) =>
+      repo.insertEvents([
+        makeEvent({
+          recordId: "recA",
+          spanId: spanN(1),
+          changeKind: "add",
+          userId: ExternalUserId("u1"),
+          endTime: at(1),
+        }),
+        makeEvent({
+          recordId: "recA",
+          spanId: spanN(2),
+          changeKind: "read",
+          userId: ExternalUserId("u1"),
+          endTime: at(4),
+        }),
+        // retried duplicate of spanN(2) → counted once
+        makeEvent({
+          recordId: "recA",
+          spanId: spanN(2),
+          changeKind: "read",
+          userId: ExternalUserId("u1"),
+          endTime: at(4),
+        }),
+        makeEvent({
+          recordId: "recA",
+          spanId: spanN(3),
+          changeKind: "read",
+          userId: ExternalUserId("u1"),
+          endTime: at(6),
+        }),
+        makeEvent({
+          recordId: "recA",
+          spanId: spanN(4),
+          changeKind: "read",
+          userId: ExternalUserId("u2"),
+          endTime: at(9),
+        }),
+        makeEvent({
+          recordId: "recA",
+          spanId: spanN(5),
+          changeKind: "update",
+          userId: ExternalUserId(""),
+          endTime: at(3),
+        }),
+        makeEvent({
+          recordId: "recB",
+          spanId: spanN(6),
+          changeKind: "read",
+          userId: ExternalUserId("u3"),
+          endTime: at(20),
+        }),
+      ]),
+    )
+    const users = await withRepo((repo) =>
+      repo.listRecordUsers({ organizationId, projectId, storeId: "store1", recordId: "recA" }),
+    )
+    expect(users.map((u) => [u.userId as string, u.readCount, u.writeCount])).toEqual([
+      ["u2", 1, 0],
+      ["u1", 2, 1],
+    ])
+    expect(users[0]!.lastAccessedAt.getTime()).toBe(at(9).getTime())
+  })
+})

@@ -77,7 +77,12 @@ function StoreDetailPage() {
         </Layout.Sidebar>
         <div className="flex min-h-0 min-w-0 flex-1 flex-col">
           {selectedRecordId !== undefined ? (
-            <RecordContentView projectId={project.id} storeId={storeId} recordId={selectedRecordId} />
+            <RecordContentView
+              projectId={project.id}
+              projectSlug={projectSlug}
+              storeId={storeId}
+              recordId={selectedRecordId}
+            />
           ) : (
             <div className="flex flex-1 items-center justify-center p-6">
               <Text.H5 color="foregroundMuted">Select a record to view its contents.</Text.H5>

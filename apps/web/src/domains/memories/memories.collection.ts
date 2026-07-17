@@ -4,8 +4,10 @@ import { useMemo } from "react"
 import { projectScopeData, projectScopeKey, useProjectScope } from "../projects/project-scope.tsx"
 import {
   getMemoryRecord,
+  getMemoryRecordReads,
   getMemoryStoreSnapshot,
   getSessionMemorySummary,
+  listMemoryRecordUsers,
   listMemoryStores,
   listMemoryStoreUsers,
   listUserMemoryStores,
@@ -119,6 +121,48 @@ export function useMemoryRecord({
     queryFn: () => getMemoryRecord({ data: { ...projectScopeData(scope), projectId, storeId, recordId } }),
     staleTime: 30_000,
     // No `recordId.length` guard: the unnamed record (id `''`) is a valid selection.
+    enabled: enabled && projectId.length > 0,
+  })
+}
+
+/** One record's retrieval (read) events for the Reads tab; gate with `enabled` so it loads on demand. */
+export function useMemoryRecordReads({
+  projectId,
+  storeId,
+  recordId,
+  enabled = true,
+}: {
+  readonly projectId: string
+  readonly storeId: string
+  readonly recordId: string
+  readonly enabled?: boolean
+}) {
+  const scope = useProjectScope()
+  return useQuery({
+    queryKey: [...projectScopeKey(scope), "memory-record-reads", projectId, storeId, recordId],
+    queryFn: () => getMemoryRecordReads({ data: { ...projectScopeData(scope), projectId, storeId, recordId } }),
+    staleTime: 30_000,
+    enabled: enabled && projectId.length > 0,
+  })
+}
+
+/** The end-users who accessed one record; gate with `enabled` so it loads on demand. */
+export function useMemoryRecordUsers({
+  projectId,
+  storeId,
+  recordId,
+  enabled = true,
+}: {
+  readonly projectId: string
+  readonly storeId: string
+  readonly recordId: string
+  readonly enabled?: boolean
+}) {
+  const scope = useProjectScope()
+  return useQuery({
+    queryKey: [...projectScopeKey(scope), "memory-record-users", projectId, storeId, recordId],
+    queryFn: () => listMemoryRecordUsers({ data: { ...projectScopeData(scope), projectId, storeId, recordId } }),
+    staleTime: 30_000,
     enabled: enabled && projectId.length > 0,
   })
 }

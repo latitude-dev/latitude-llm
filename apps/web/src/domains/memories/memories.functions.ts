@@ -1,10 +1,12 @@
 import {
   computeSessionMemorySummaryUseCase,
   listMemoryStoresUseCase,
+  listRecordUsersUseCase,
   listStoreUsersUseCase,
   listUserStoresUseCase,
   type MemoryChangeKind,
   MemoryRepository,
+  readRecordReadsUseCase,
   reconstructSnapshotUseCase,
   type SessionMemorySummary,
 } from "@domain/memories"
@@ -52,6 +54,7 @@ export interface MemoryRecordVersionRecord {
   readonly spanId: string
   readonly traceId: string
   readonly sessionId: string
+  readonly userId: string
   readonly endTime: string
 }
 
@@ -59,6 +62,23 @@ interface MemoryRecordDetailRecord {
   readonly body: string | null
   readonly tokenCount: number
   readonly versions: readonly MemoryRecordVersionRecord[]
+}
+
+export interface MemoryRecordReadRecord {
+  readonly spanId: string
+  readonly traceId: string
+  readonly sessionId: string
+  readonly userId: string
+  readonly queryText: string
+  readonly tokenCount: number
+  readonly endTime: string
+}
+
+export interface MemoryRecordUserRecord {
+  readonly userId: string
+  readonly readCount: number
+  readonly writeCount: number
+  readonly lastAccessedAt: string
 }
 
 interface MemoryStoreUserRecord {
@@ -191,10 +211,72 @@ export const getMemoryRecord = createServerFn({ method: "GET" })
             spanId: version.spanId as string,
             traceId: version.traceId as string,
             sessionId: version.sessionId as string,
+            userId: version.userId as string,
             endTime: version.endTime.toISOString(),
           })),
         } satisfies MemoryRecordDetailRecord
       }).pipe(withScopedClickHouse(MemoryRepositoryLive, getClickhouseClient(), orgId), withTracing),
+    )
+  })
+
+/** One record's retrieval (read) events — newest first, capped — for the Reads tab. */
+export const getMemoryRecordReads = createServerFn({ method: "GET" })
+  .inputValidator(z.object({ projectId: z.string(), storeId: z.string(), recordId: z.string() }))
+  .handler(async ({ data, context }): Promise<readonly MemoryRecordReadRecord[]> => {
+    const orgId = await resolveOrgScope(context)
+
+    return Effect.runPromise(
+      readRecordReadsUseCase({
+        organizationId: orgId,
+        projectId: ProjectId(data.projectId),
+        storeId: data.storeId,
+        recordId: data.recordId,
+      }).pipe(
+        Effect.map((events) =>
+          events.map(
+            (event): MemoryRecordReadRecord => ({
+              spanId: event.spanId as string,
+              traceId: event.traceId as string,
+              sessionId: event.sessionId as string,
+              userId: event.userId as string,
+              queryText: event.queryText,
+              tokenCount: event.tokenCount,
+              endTime: event.endTime.toISOString(),
+            }),
+          ),
+        ),
+        withScopedClickHouse(MemoryRepositoryLive, getClickhouseClient(), orgId),
+        withTracing,
+      ),
+    )
+  })
+
+/** The end-users who accessed one record (reads + writes counted), newest access first. */
+export const listMemoryRecordUsers = createServerFn({ method: "GET" })
+  .inputValidator(z.object({ projectId: z.string(), storeId: z.string(), recordId: z.string() }))
+  .handler(async ({ data, context }): Promise<readonly MemoryRecordUserRecord[]> => {
+    const orgId = await resolveOrgScope(context)
+
+    return Effect.runPromise(
+      listRecordUsersUseCase({
+        organizationId: orgId,
+        projectId: ProjectId(data.projectId),
+        storeId: data.storeId,
+        recordId: data.recordId,
+      }).pipe(
+        Effect.map((users) =>
+          users.map(
+            (user): MemoryRecordUserRecord => ({
+              userId: user.userId as string,
+              readCount: user.readCount,
+              writeCount: user.writeCount,
+              lastAccessedAt: user.lastAccessedAt.toISOString(),
+            }),
+          ),
+        ),
+        withScopedClickHouse(MemoryRepositoryLive, getClickhouseClient(), orgId),
+        withTracing,
+      ),
     )
   })
 

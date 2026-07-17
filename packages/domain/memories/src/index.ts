@@ -35,6 +35,7 @@ export type {
 export {
   isMemoryStoreSortField,
   MEMORY_STORE_SORT_FIELDS,
+  type MemoryRecordUser,
   type MemoryStoreListItem,
   type MemoryStoreListOptions,
   type MemoryStoreListPage,
@@ -62,6 +63,10 @@ export {
   listMemoryStoresUseCase,
 } from "./use-cases/list-memory-stores.ts"
 export {
+  type ListRecordUsersInput,
+  listRecordUsersUseCase,
+} from "./use-cases/list-record-users.ts"
+export {
   type ListStoreUsersInput,
   listStoreUsersUseCase,
 } from "./use-cases/list-store-users.ts"
@@ -74,6 +79,10 @@ export {
   type MaterializeTraceMemoryResult,
   materializeTraceMemoryUseCase,
 } from "./use-cases/materialize-trace-memory.ts"
+export {
+  type ReadRecordReadsInput,
+  readRecordReadsUseCase,
+} from "./use-cases/read-record-reads.ts"
 export {
   type ReconstructSnapshotInput,
   reconstructSnapshotUseCase,
