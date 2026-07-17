@@ -195,9 +195,10 @@ export const getMemoryRecord = createServerFn({ method: "GET" })
           projectId: ProjectId(data.projectId),
           records: [{ storeId: data.storeId, recordId: data.recordId }],
         })
-        // Version chain is end_time ASC; the current body is the newest non-remove version.
+        // Version chain is end_time ASC; the current body is the latest version, unless it removed the record.
         const newestFirst = [...versions].reverse()
-        const current = newestFirst.find((version) => version.changeKind !== "remove")
+        const latest = newestFirst[0]
+        const current = latest && latest.changeKind !== "remove" ? latest : undefined
         const blobs = current
           ? yield* memoryRepository.readBlobs({ organizationId: orgId, hashes: [current.contentHash] })
           : []
