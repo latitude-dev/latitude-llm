@@ -17,37 +17,37 @@ from .experiment_top_list_item import ExperimentTopListItem
 class ExperimentToolsMetrics(UniversalBaseModel):
     calls: ExperimentToolsMetricsCalls = pydantic.Field()
     """
-    Tool calls — count.
+    Total tool calls across the variant's sessions — count.
     """
 
     distinct: ExperimentToolsMetricsDistinct = pydantic.Field()
     """
-    Tools used — count.
+    Distinct tools called — count.
     """
 
     sessions_with_tools_rate: ExperimentToolsMetricsSessionsWithToolsRate = pydantic.Field()
     """
-    Usage rate — fraction (0–1).
+    Fraction of sessions that call at least one tool — fraction (0–1).
     """
 
     error_rate: ExperimentToolsMetricsErrorRate = pydantic.Field()
     """
-    Error rate — fraction (0–1); lower is better.
+    Fraction of tool calls that error — fraction (0–1); lower is better.
     """
 
     duration_p50: ExperimentToolsMetricsDurationP50 = pydantic.Field()
     """
-    Median duration — seconds; lower is better.
+    Median tool-call duration — seconds; lower is better.
     """
 
     duration_p90: ExperimentToolsMetricsDurationP90 = pydantic.Field()
     """
-    p90 duration — seconds; lower is better.
+    90th-percentile tool-call duration — seconds; lower is better.
     """
 
     duration_p95: ExperimentToolsMetricsDurationP95 = pydantic.Field()
     """
-    p95 duration — seconds; lower is better.
+    95th-percentile tool-call duration — seconds; lower is better.
     """
 
     top: typing.List[ExperimentTopListItem] = pydantic.Field()

@@ -363,6 +363,7 @@ function CompareSavedSearchModal({
       void navigate({
         to: "/projects/$projectSlug/experiments/$experimentSlug",
         params: { projectSlug, experimentSlug: experiment.slug },
+        search: { created: true },
       })
     } catch (error) {
       toast({ variant: "destructive", title: "Could not create experiment", description: toUserMessage(error) })

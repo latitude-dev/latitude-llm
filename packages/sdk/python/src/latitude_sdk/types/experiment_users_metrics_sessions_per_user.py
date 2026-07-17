@@ -9,7 +9,7 @@ from .metric_delta import MetricDelta
 
 class ExperimentUsersMetricsSessionsPerUser(UniversalBaseModel):
     """
-    Avg sessions — count.
+    Average sessions per user — count.
     """
 
     value: typing.Optional[float] = pydantic.Field(default=None)

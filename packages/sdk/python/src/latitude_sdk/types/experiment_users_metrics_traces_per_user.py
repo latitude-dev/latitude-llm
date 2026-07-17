@@ -9,7 +9,7 @@ from .metric_delta import MetricDelta
 
 class ExperimentUsersMetricsTracesPerUser(UniversalBaseModel):
     """
-    Avg traces — count.
+    Average traces per user — count.
     """
 
     value: typing.Optional[float] = pydantic.Field(default=None)

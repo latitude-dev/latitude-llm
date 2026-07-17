@@ -9,7 +9,7 @@ from .metric_delta import MetricDelta
 
 class ExperimentUsersMetricsErrorSessionRate(UniversalBaseModel):
     """
-    Avg error rate — fraction (0–1); lower is better.
+    Average fraction of a user's sessions that have an error — fraction (0–1); lower is better.
     """
 
     value: typing.Optional[float] = pydantic.Field(default=None)

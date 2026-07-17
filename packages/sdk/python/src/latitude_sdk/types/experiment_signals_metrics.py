@@ -16,32 +16,32 @@ from .experiment_top_list_item import ExperimentTopListItem
 class ExperimentSignalsMetrics(UniversalBaseModel):
     distinct: ExperimentSignalsMetricsDistinct = pydantic.Field()
     """
-    Signals — count; lower is better.
+    Distinct signals raised on the variant's sessions — count; lower is better.
     """
 
     occurrences: ExperimentSignalsMetricsOccurrences = pydantic.Field()
     """
-    Occurrences — count; lower is better.
+    Total signal occurrences — count; lower is better.
     """
 
     affected_sessions_rate: ExperimentSignalsMetricsAffectedSessionsRate = pydantic.Field()
     """
-    Affected sessions — fraction (0–1); lower is better.
+    Fraction of sessions with at least one signal — fraction (0–1); lower is better.
     """
 
     affected_traces_rate: ExperimentSignalsMetricsAffectedTracesRate = pydantic.Field()
     """
-    Affected traces — fraction (0–1); lower is better.
+    Fraction of traces with at least one signal — fraction (0–1); lower is better.
     """
 
     affected_users: ExperimentSignalsMetricsAffectedUsers = pydantic.Field()
     """
-    Affected users — fraction (0–1); lower is better.
+    Fraction of users with at least one signal — fraction (0–1); lower is better.
     """
 
     cost_impact: ExperimentSignalsMetricsCostImpact = pydantic.Field()
     """
-    Cost impact — USD; lower is better.
+    Total model cost of sessions carrying a signal — USD; lower is better.
     """
 
     top: typing.List[ExperimentTopListItem] = pydantic.Field()

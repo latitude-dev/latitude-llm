@@ -9,7 +9,7 @@ from .metric_delta import MetricDelta
 
 class ExperimentSignalsMetricsOccurrences(UniversalBaseModel):
     """
-    Occurrences — count; lower is better.
+    Total signal occurrences — count; lower is better.
     """
 
     value: typing.Optional[float] = pydantic.Field(default=None)

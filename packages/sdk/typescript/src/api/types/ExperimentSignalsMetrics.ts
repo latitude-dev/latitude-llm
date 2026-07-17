@@ -3,17 +3,17 @@
 import type * as Latitude from "../index.js";
 
 export interface ExperimentSignalsMetrics {
-    /** Signals — count; lower is better. */
+    /** Distinct signals raised on the variant's sessions — count; lower is better. */
     distinct: ExperimentSignalsMetrics.Distinct;
-    /** Occurrences — count; lower is better. */
+    /** Total signal occurrences — count; lower is better. */
     occurrences: ExperimentSignalsMetrics.Occurrences;
-    /** Affected sessions — fraction (0–1); lower is better. */
+    /** Fraction of sessions with at least one signal — fraction (0–1); lower is better. */
     affected_sessions_rate: ExperimentSignalsMetrics.AffectedSessionsRate;
-    /** Affected traces — fraction (0–1); lower is better. */
+    /** Fraction of traces with at least one signal — fraction (0–1); lower is better. */
     affected_traces_rate: ExperimentSignalsMetrics.AffectedTracesRate;
-    /** Affected users — fraction (0–1); lower is better. */
+    /** Fraction of users with at least one signal — fraction (0–1); lower is better. */
     affected_users: ExperimentSignalsMetrics.AffectedUsers;
-    /** Cost impact — USD; lower is better. */
+    /** Total model cost of sessions carrying a signal — USD; lower is better. */
     cost_impact: ExperimentSignalsMetrics.CostImpact;
     /** Top signals by occurrence count. */
     top: Latitude.ExperimentTopListItem[];
@@ -21,7 +21,7 @@ export interface ExperimentSignalsMetrics {
 
 export namespace ExperimentSignalsMetrics {
     /**
-     * Signals — count; lower is better.
+     * Distinct signals raised on the variant's sessions — count; lower is better.
      */
     export interface Distinct {
         /** Value in the metric's unit; `null` when empty or not computable. */
@@ -30,7 +30,7 @@ export namespace ExperimentSignalsMetrics {
     }
 
     /**
-     * Occurrences — count; lower is better.
+     * Total signal occurrences — count; lower is better.
      */
     export interface Occurrences {
         /** Value in the metric's unit; `null` when empty or not computable. */
@@ -39,7 +39,7 @@ export namespace ExperimentSignalsMetrics {
     }
 
     /**
-     * Affected sessions — fraction (0–1); lower is better.
+     * Fraction of sessions with at least one signal — fraction (0–1); lower is better.
      */
     export interface AffectedSessionsRate {
         /** Value in the metric's unit; `null` when empty or not computable. */
@@ -48,7 +48,7 @@ export namespace ExperimentSignalsMetrics {
     }
 
     /**
-     * Affected traces — fraction (0–1); lower is better.
+     * Fraction of traces with at least one signal — fraction (0–1); lower is better.
      */
     export interface AffectedTracesRate {
         /** Value in the metric's unit; `null` when empty or not computable. */
@@ -57,7 +57,7 @@ export namespace ExperimentSignalsMetrics {
     }
 
     /**
-     * Affected users — fraction (0–1); lower is better.
+     * Fraction of users with at least one signal — fraction (0–1); lower is better.
      */
     export interface AffectedUsers {
         /** Value in the metric's unit; `null` when empty or not computable. */
@@ -66,7 +66,7 @@ export namespace ExperimentSignalsMetrics {
     }
 
     /**
-     * Cost impact — USD; lower is better.
+     * Total model cost of sessions carrying a signal — USD; lower is better.
      */
     export interface CostImpact {
         /** Value in the metric's unit; `null` when empty or not computable. */

@@ -116,9 +116,9 @@ const METRIC_DIRECTION_HINT: Record<MetricDirection, string> = {
   neutral: "",
 }
 
-/** Self-describing label for one metric: its UI name, unit, and which delta direction is good. */
+/** Self-describing text for one metric: its explanation, unit, and which delta direction is good. */
 const metricDescription = (metric: (typeof EXPERIMENT_METRICS)[number]): string =>
-  `${metric.label} — ${METRIC_UNIT_LABEL[metric.unit]}${METRIC_DIRECTION_HINT[metric.direction]}.`
+  `${metric.description} — ${METRIC_UNIT_LABEL[metric.unit]}${METRIC_DIRECTION_HINT[metric.direction]}.`
 
 /** A metric's field name within its entity object — the part after `<entity>.`. */
 const metricField = (key: string): string => key.slice(key.indexOf(".") + 1)

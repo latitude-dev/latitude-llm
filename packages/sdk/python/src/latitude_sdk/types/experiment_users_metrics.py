@@ -17,42 +17,42 @@ from .experiment_users_metrics_traces_per_user import ExperimentUsersMetricsTrac
 class ExperimentUsersMetrics(UniversalBaseModel):
     distinct: ExperimentUsersMetricsDistinct = pydantic.Field()
     """
-    Users — count.
+    Distinct users in the variant's population — count.
     """
 
     sessions_per_user: ExperimentUsersMetricsSessionsPerUser = pydantic.Field()
     """
-    Avg sessions — count.
+    Average sessions per user — count.
     """
 
     traces_per_user: ExperimentUsersMetricsTracesPerUser = pydantic.Field()
     """
-    Avg traces — count.
+    Average traces per user — count.
     """
 
     cost_avg: ExperimentUsersMetricsCostAvg = pydantic.Field()
     """
-    Avg cost — USD; lower is better.
+    Average model cost per user — USD; lower is better.
     """
 
     duration_median: ExperimentUsersMetricsDurationMedian = pydantic.Field()
     """
-    Median duration — seconds; lower is better.
+    Median total session time per user — seconds; lower is better.
     """
 
     duration_p90: ExperimentUsersMetricsDurationP90 = pydantic.Field()
     """
-    p90 duration — seconds; lower is better.
+    90th-percentile total session time per user — seconds; lower is better.
     """
 
     duration_p95: ExperimentUsersMetricsDurationP95 = pydantic.Field()
     """
-    p95 duration — seconds; lower is better.
+    95th-percentile total session time per user — seconds; lower is better.
     """
 
     error_session_rate: ExperimentUsersMetricsErrorSessionRate = pydantic.Field()
     """
-    Avg error rate — fraction (0–1); lower is better.
+    Average fraction of a user's sessions that have an error — fraction (0–1); lower is better.
     """
 
     model_config: typing.ClassVar[pydantic.ConfigDict] = pydantic.ConfigDict(extra="allow", frozen=True)

@@ -13,6 +13,7 @@ import {
   Skeleton,
   Text,
   Tooltip,
+  useMountEffect,
 } from "@repo/ui"
 import { getRouteApi, Link, useNavigate } from "@tanstack/react-router"
 import {
@@ -57,7 +58,21 @@ export function ExperimentBreadcrumb() {
 export function ExperimentDetailPage() {
   const project = useRouteProject()
   const { experimentSlug } = detailRoute.useParams()
+  const { created } = detailRoute.useSearch()
   const navigate = useNavigate()
+  // The post-creation redirect sets `created` so we open every variant's filters once. Capture it at
+  // mount (before the comparison read resolves and the table mounts), then strip it from the URL so a
+  // refresh shows the default collapsed filters.
+  const [filtersInitiallyExpanded] = useState(() => created === true)
+  useMountEffect(() => {
+    if (!created) return
+    void navigate({
+      to: "/projects/$projectSlug/experiments/$experimentSlug",
+      params: { projectSlug: project.slug, experimentSlug },
+      search: {},
+      replace: true,
+    })
+  })
   const [renameOpen, setRenameOpen] = useState(false)
   const [deleteOpen, setDeleteOpen] = useState(false)
   const [importOpen, setImportOpen] = useState(false)
@@ -227,6 +242,7 @@ export function ExperimentDetailPage() {
               actions={actions}
               openEntities={openMetricEntities}
               onToggleEntity={toggleMetricEntity}
+              initialFiltersExpanded={filtersInitiallyExpanded}
             />
           )}
         </div>

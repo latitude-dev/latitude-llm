@@ -13,17 +13,17 @@ from .experiment_top_list_item import ExperimentTopListItem
 class ExperimentBehavioursMetrics(UniversalBaseModel):
     observations: ExperimentBehavioursMetricsObservations = pydantic.Field()
     """
-    Observations — count.
+    Total behaviour observations on the variant's sessions — count.
     """
 
     distinct_clusters: ExperimentBehavioursMetricsDistinctClusters = pydantic.Field()
     """
-    Clusters — count.
+    Distinct behaviour clusters observed — count.
     """
 
     moments: ExperimentBehavioursMetricsMoments = pydantic.Field()
     """
-    Moments — count.
+    Semantic moments detected on the variant's sessions — count.
     """
 
     top: typing.List[ExperimentTopListItem] = pydantic.Field()

@@ -3,39 +3,39 @@
 import type * as Latitude from "../index.js";
 
 export interface ExperimentSessionsMetrics {
-    /** Sessions — count. */
+    /** Number of sessions in the variant's population — count. */
     count: ExperimentSessionsMetrics.Count;
-    /** Users — count. */
+    /** Distinct users across the variant's sessions — count. */
     users: ExperimentSessionsMetrics.Users;
-    /** Total cost — USD; lower is better. */
+    /** Total model cost across the variant's sessions — USD; lower is better. */
     cost_total: ExperimentSessionsMetrics.CostTotal;
-    /** Total tokens — tokens. */
+    /** Total tokens across the variant's sessions — tokens. */
     tokens_total: ExperimentSessionsMetrics.TokensTotal;
-    /** Error rate — fraction (0–1); lower is better. */
+    /** Fraction of sessions with at least one error — fraction (0–1); lower is better. */
     error_rate: ExperimentSessionsMetrics.ErrorRate;
-    /** Cache hit rate — fraction (0–1); higher is better. */
+    /** Fraction of input tokens served from cache — fraction (0–1); higher is better. */
     cache_hit_rate: ExperimentSessionsMetrics.CacheHitRate;
-    /** Median duration — seconds; lower is better. */
+    /** Median session duration — seconds; lower is better. */
     duration_median: ExperimentSessionsMetrics.DurationMedian;
-    /** p90 duration — seconds; lower is better. */
+    /** 90th-percentile session duration — seconds; lower is better. */
     duration_p90: ExperimentSessionsMetrics.DurationP90;
-    /** p95 duration — seconds; lower is better. */
+    /** 95th-percentile session duration — seconds; lower is better. */
     duration_p95: ExperimentSessionsMetrics.DurationP95;
-    /** Avg cost — USD; lower is better. */
+    /** Average model cost per session — USD; lower is better. */
     cost_avg: ExperimentSessionsMetrics.CostAvg;
-    /** Avg tokens — tokens. */
+    /** Average tokens per session — tokens. */
     tokens_avg: ExperimentSessionsMetrics.TokensAvg;
-    /** Median time to first token — seconds; lower is better. */
+    /** Median time to first token across sessions — seconds; lower is better. */
     ttft_median: ExperimentSessionsMetrics.TtftMedian;
-    /** Avg spans — count. */
+    /** Average spans per session — count. */
     spans_avg: ExperimentSessionsMetrics.SpansAvg;
-    /** Avg traces — count. */
+    /** Average traces per session — count. */
     traces_avg: ExperimentSessionsMetrics.TracesAvg;
 }
 
 export namespace ExperimentSessionsMetrics {
     /**
-     * Sessions — count.
+     * Number of sessions in the variant's population — count.
      */
     export interface Count {
         /** Value in the metric's unit; `null` when empty or not computable. */
@@ -44,7 +44,7 @@ export namespace ExperimentSessionsMetrics {
     }
 
     /**
-     * Users — count.
+     * Distinct users across the variant's sessions — count.
      */
     export interface Users {
         /** Value in the metric's unit; `null` when empty or not computable. */
@@ -53,7 +53,7 @@ export namespace ExperimentSessionsMetrics {
     }
 
     /**
-     * Total cost — USD; lower is better.
+     * Total model cost across the variant's sessions — USD; lower is better.
      */
     export interface CostTotal {
         /** Value in the metric's unit; `null` when empty or not computable. */
@@ -62,7 +62,7 @@ export namespace ExperimentSessionsMetrics {
     }
 
     /**
-     * Total tokens — tokens.
+     * Total tokens across the variant's sessions — tokens.
      */
     export interface TokensTotal {
         /** Value in the metric's unit; `null` when empty or not computable. */
@@ -71,7 +71,7 @@ export namespace ExperimentSessionsMetrics {
     }
 
     /**
-     * Error rate — fraction (0–1); lower is better.
+     * Fraction of sessions with at least one error — fraction (0–1); lower is better.
      */
     export interface ErrorRate {
         /** Value in the metric's unit; `null` when empty or not computable. */
@@ -80,7 +80,7 @@ export namespace ExperimentSessionsMetrics {
     }
 
     /**
-     * Cache hit rate — fraction (0–1); higher is better.
+     * Fraction of input tokens served from cache — fraction (0–1); higher is better.
      */
     export interface CacheHitRate {
         /** Value in the metric's unit; `null` when empty or not computable. */
@@ -89,7 +89,7 @@ export namespace ExperimentSessionsMetrics {
     }
 
     /**
-     * Median duration — seconds; lower is better.
+     * Median session duration — seconds; lower is better.
      */
     export interface DurationMedian {
         /** Value in the metric's unit; `null` when empty or not computable. */
@@ -98,7 +98,7 @@ export namespace ExperimentSessionsMetrics {
     }
 
     /**
-     * p90 duration — seconds; lower is better.
+     * 90th-percentile session duration — seconds; lower is better.
      */
     export interface DurationP90 {
         /** Value in the metric's unit; `null` when empty or not computable. */
@@ -107,7 +107,7 @@ export namespace ExperimentSessionsMetrics {
     }
 
     /**
-     * p95 duration — seconds; lower is better.
+     * 95th-percentile session duration — seconds; lower is better.
      */
     export interface DurationP95 {
         /** Value in the metric's unit; `null` when empty or not computable. */
@@ -116,7 +116,7 @@ export namespace ExperimentSessionsMetrics {
     }
 
     /**
-     * Avg cost — USD; lower is better.
+     * Average model cost per session — USD; lower is better.
      */
     export interface CostAvg {
         /** Value in the metric's unit; `null` when empty or not computable. */
@@ -125,7 +125,7 @@ export namespace ExperimentSessionsMetrics {
     }
 
     /**
-     * Avg tokens — tokens.
+     * Average tokens per session — tokens.
      */
     export interface TokensAvg {
         /** Value in the metric's unit; `null` when empty or not computable. */
@@ -134,7 +134,7 @@ export namespace ExperimentSessionsMetrics {
     }
 
     /**
-     * Median time to first token — seconds; lower is better.
+     * Median time to first token across sessions — seconds; lower is better.
      */
     export interface TtftMedian {
         /** Value in the metric's unit; `null` when empty or not computable. */
@@ -143,7 +143,7 @@ export namespace ExperimentSessionsMetrics {
     }
 
     /**
-     * Avg spans — count.
+     * Average spans per session — count.
      */
     export interface SpansAvg {
         /** Value in the metric's unit; `null` when empty or not computable. */
@@ -152,7 +152,7 @@ export namespace ExperimentSessionsMetrics {
     }
 
     /**
-     * Avg traces — count.
+     * Average traces per session — count.
      */
     export interface TracesAvg {
         /** Value in the metric's unit; `null` when empty or not computable. */

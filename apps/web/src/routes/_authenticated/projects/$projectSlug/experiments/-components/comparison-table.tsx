@@ -172,6 +172,7 @@ export function ComparisonTable({
   actions,
   openEntities,
   onToggleEntity,
+  initialFiltersExpanded = false,
 }: {
   readonly projectId: string
   readonly projectSlug: string
@@ -180,6 +181,8 @@ export function ComparisonTable({
   /** Expanded metric sections, shared across all supercolumns so sections toggle in lockstep. */
   readonly openEntities: ReadonlySet<string>
   readonly onToggleEntity: (entity: string) => void
+  /** Start every variant's filter section expanded on mount (the post-creation redirect). */
+  readonly initialFiltersExpanded?: boolean
 }) {
   const count = entries.length
   const tableMinWidth = count * MIN_COLUMN_PX
@@ -274,6 +277,7 @@ export function ComparisonTable({
                       value={entry.variant.filterSet}
                       onChange={(next) => void actions.updateVariant(entry.variant.id, { filterSet: next })}
                       collapsible
+                      initialExpanded={initialFiltersExpanded}
                     />
                   </div>
                 </td>
@@ -534,9 +538,17 @@ function MetricEntityRows({
                       )}
                     >
                       <div className="flex items-center justify-between gap-2 px-3 py-2">
-                        <Text.H6 color="foregroundMuted" noWrap ellipsis className="min-w-0">
-                          {metric.label}
-                        </Text.H6>
+                        <Tooltip
+                          asChild
+                          side="top"
+                          trigger={
+                            <Text.H6 color="foregroundMuted" noWrap ellipsis className="min-w-0 cursor-default">
+                              {metric.label}
+                            </Text.H6>
+                          }
+                        >
+                          {metric.description}
+                        </Tooltip>
                         <div className="flex shrink-0 items-baseline gap-1.5">
                           {!entry.comparison.baseline ? (
                             <MetricDelta change={delta} direction={metric.direction} />

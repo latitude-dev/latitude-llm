@@ -9,7 +9,7 @@ from .metric_delta import MetricDelta
 
 class ExperimentSessionsMetricsCount(UniversalBaseModel):
     """
-    Sessions — count.
+    Number of sessions in the variant's population — count.
     """
 
     value: typing.Optional[float] = pydantic.Field(default=None)

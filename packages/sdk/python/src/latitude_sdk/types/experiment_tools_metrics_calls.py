@@ -9,7 +9,7 @@ from .metric_delta import MetricDelta
 
 class ExperimentToolsMetricsCalls(UniversalBaseModel):
     """
-    Tool calls — count.
+    Total tool calls across the variant's sessions — count.
     """
 
     value: typing.Optional[float] = pydantic.Field(default=None)

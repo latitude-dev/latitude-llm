@@ -9,7 +9,7 @@ from .metric_delta import MetricDelta
 
 class ExperimentBehavioursMetricsObservations(UniversalBaseModel):
     """
-    Observations — count.
+    Total behaviour observations on the variant's sessions — count.
     """
 
     value: typing.Optional[float] = pydantic.Field(default=None)

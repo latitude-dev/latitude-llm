@@ -9,7 +9,7 @@ from .metric_delta import MetricDelta
 
 class ExperimentSessionsMetricsTokensTotal(UniversalBaseModel):
     """
-    Total tokens — tokens.
+    Total tokens across the variant's sessions — tokens.
     """
 
     value: typing.Optional[float] = pydantic.Field(default=None)
