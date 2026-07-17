@@ -8,6 +8,7 @@ import {
   getSessionMemorySummary,
   listMemoryStores,
   listMemoryStoreUsers,
+  listUserMemoryStores,
   type MemoryStoreRecord,
   type SessionMemorySummaryRecord,
 } from "./memories.functions.ts"
@@ -138,5 +139,24 @@ export function useMemoryStoreUsers({
     queryFn: () => listMemoryStoreUsers({ data: { ...projectScopeData(scope), projectId, storeId } }),
     staleTime: 30_000,
     enabled: enabled && projectId.length > 0,
+  })
+}
+
+/** The memory stores one end-user accessed, for the user detail page. */
+export function useUserMemoryStores({
+  projectId,
+  userId,
+  enabled = true,
+}: {
+  readonly projectId: string
+  readonly userId: string
+  readonly enabled?: boolean
+}) {
+  const scope = useProjectScope()
+  return useQuery({
+    queryKey: [...projectScopeKey(scope), "user-memory-stores", projectId, userId],
+    queryFn: () => listUserMemoryStores({ data: { ...projectScopeData(scope), projectId, userId } }),
+    staleTime: 30_000,
+    enabled: enabled && projectId.length > 0 && userId.length > 0,
   })
 }

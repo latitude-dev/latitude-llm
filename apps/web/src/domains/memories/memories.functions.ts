@@ -2,12 +2,13 @@ import {
   computeSessionMemorySummaryUseCase,
   listMemoryStoresUseCase,
   listStoreUsersUseCase,
+  listUserStoresUseCase,
   type MemoryChangeKind,
   MemoryRepository,
   reconstructSnapshotUseCase,
   type SessionMemorySummary,
 } from "@domain/memories"
-import { ProjectId, SessionId, TraceId } from "@domain/shared"
+import { ExternalUserId, ProjectId, SessionId, TraceId } from "@domain/shared"
 import { MemoryRepositoryLive } from "@platform/db-clickhouse"
 import { withTracing } from "@repo/observability"
 import { createServerFn } from "@tanstack/react-start"
@@ -62,6 +63,11 @@ interface MemoryRecordDetailRecord {
 
 interface MemoryStoreUserRecord {
   readonly userId: string
+  readonly lastAccessedAt: string
+}
+
+interface MemoryUserStoreRecord {
+  readonly storeId: string
   readonly lastAccessedAt: string
 }
 
@@ -209,6 +215,32 @@ export const listMemoryStoreUsers = createServerFn({ method: "GET" })
             (user): MemoryStoreUserRecord => ({
               userId: user.userId as string,
               lastAccessedAt: user.lastAccessedAt.toISOString(),
+            }),
+          ),
+        ),
+        withScopedClickHouse(MemoryRepositoryLive, getClickhouseClient(), orgId),
+        withTracing,
+      ),
+    )
+  })
+
+/** The memory stores one end-user accessed (reads count), newest access first. */
+export const listUserMemoryStores = createServerFn({ method: "GET" })
+  .inputValidator(z.object({ projectId: z.string(), userId: z.string() }))
+  .handler(async ({ data, context }): Promise<readonly MemoryUserStoreRecord[]> => {
+    const orgId = await resolveOrgScope(context)
+
+    return Effect.runPromise(
+      listUserStoresUseCase({
+        organizationId: orgId,
+        projectId: ProjectId(data.projectId),
+        userId: ExternalUserId(data.userId),
+      }).pipe(
+        Effect.map((stores) =>
+          stores.map(
+            (store): MemoryUserStoreRecord => ({
+              storeId: store.storeId,
+              lastAccessedAt: store.lastAccessedAt.toISOString(),
             }),
           ),
         ),
