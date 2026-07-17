@@ -1,5 +1,6 @@
 import {
   DEFAULT_VARIANT_RANGE_SECONDS,
+  ENTITY_TOP_LIST_DESCRIPTIONS,
   EXPERIMENT_METRICS,
   type ExperimentMetricDef,
   type ExperimentMetricKey,
@@ -145,13 +146,15 @@ function bodyCellClass({
   )
 }
 
-/** The baseline header cell carries the shader ring at the shared z-level: the later rows' opaque
- * backgrounds then crop the ring's interior, leaving just the hairline and outer glow. */
+/** Header cells stick to the top so each column stays labelled with its variant while the metrics
+ * scroll; the baseline cell also pins sticky-left, sitting above the other header cells at the corner
+ * (z-30 > z-20) and above the sticky baseline body column (z-10). Every cell is opaque so scrolled
+ * rows don't show through. */
 function headerCellClass({ column, count, scrolled }: { column: number; count: number; scrolled: boolean }): string {
   return cn(
-    "border-b p-0 align-top",
+    "sticky top-0 border-b bg-background p-0 align-top",
     column < count - 1 && "border-r",
-    column === 0 && "sticky left-2 z-10 rounded-tl-xl bg-background",
+    column === 0 ? "left-2 z-30 rounded-tl-xl" : "z-20",
     column === 0 && scrolled && cn(STUCK_SHADOW, STUCK_LEFT_MASK),
   )
 }
@@ -172,6 +175,7 @@ export function ComparisonTable({
   actions,
   openEntities,
   onToggleEntity,
+  initialFiltersExpanded = false,
 }: {
   readonly projectId: string
   readonly projectSlug: string
@@ -180,6 +184,8 @@ export function ComparisonTable({
   /** Expanded metric sections, shared across all supercolumns so sections toggle in lockstep. */
   readonly openEntities: ReadonlySet<string>
   readonly onToggleEntity: (entity: string) => void
+  /** Start every variant's filter section expanded on mount (the post-creation redirect). */
+  readonly initialFiltersExpanded?: boolean
 }) {
   const count = entries.length
   const tableMinWidth = count * MIN_COLUMN_PX
@@ -188,10 +194,16 @@ export function ComparisonTable({
   // other columns and casts the stuck shadow.
   const gutterRef = useRef<HTMLDivElement | null>(null)
   const [scrolled, setScrolled] = useState(false)
+  // Vertically scrolled: the header is pinned over the body rows, so the baseline shader ring (which
+  // spans the definition rows scrolling away beneath it) is hidden, same as when scrolled sideways.
+  const [scrolledY, setScrolledY] = useState(false)
   useMountEffect(() => {
     const scroller = gutterRef.current?.parentElement
     if (!scroller) return
-    const onScroll = () => setScrolled(scroller.scrollLeft > 0)
+    const onScroll = () => {
+      setScrolled(scroller.scrollLeft > 0)
+      setScrolledY(scroller.scrollTop > 0)
+    }
     onScroll()
     scroller.addEventListener("scroll", onScroll, { passive: true })
     return () => scroller.removeEventListener("scroll", onScroll)
@@ -243,6 +255,7 @@ export function ComparisonTable({
                   column={column}
                   count={count}
                   scrolled={scrolled}
+                  scrolledY={scrolledY}
                   shaderHeight={shaderHeight}
                 />
               ))}
@@ -274,6 +287,7 @@ export function ComparisonTable({
                       value={entry.variant.filterSet}
                       onChange={(next) => void actions.updateVariant(entry.variant.id, { filterSet: next })}
                       collapsible
+                      initialExpanded={initialFiltersExpanded}
                     />
                   </div>
                 </td>
@@ -324,6 +338,7 @@ function VariantHeaderCell({
   column,
   count,
   scrolled,
+  scrolledY,
   shaderHeight,
 }: {
   readonly projectId: string
@@ -333,6 +348,7 @@ function VariantHeaderCell({
   readonly column: number
   readonly count: number
   readonly scrolled: boolean
+  readonly scrolledY: boolean
   /** Measured span of the header + editors + summaries rows the baseline shader ring wraps. */
   readonly shaderHeight: number | null
 }) {
@@ -366,13 +382,13 @@ function VariantHeaderCell({
           subtle treatment the old baseline card got from its opaque surface. */}
       {isBaseline && shaderHeight !== null ? (
         <>
-          {/* While the column is pinned the stuck shadow takes over: hide the ring instantly so it
-              never glows over the content sliding beneath, and fade it back in at rest. */}
+          {/* Once pinned in either direction the ring can't track the rows it wraps, so hide it
+              instantly and fade it back in at rest — the stuck shadow / sticky header take over. */}
           <div
             aria-hidden
             className={cn(
               "pointer-events-none absolute top-0 left-0 w-full",
-              scrolled ? "opacity-0" : "opacity-100 transition-opacity duration-300",
+              scrolled || scrolledY ? "opacity-0" : "opacity-100 transition-opacity duration-300",
             )}
             style={{ height: shaderHeight }}
           >
@@ -492,6 +508,8 @@ function MetricEntityRows({
   )
   const topLists = entries.map((entry) => topListFor(entity, entry.comparison))
   const hasTopList = topLists.some((list) => list.length > 0)
+  const topDescription = ENTITY_TOP_LIST_DESCRIPTIONS[entity as keyof typeof ENTITY_TOP_LIST_DESCRIPTIONS]
+  const topLabel = `Top ${ENTITY_LABEL[entity].toLowerCase()}`
   const headerIsLastRow = isLastEntity && !open
 
   return (
@@ -534,17 +552,35 @@ function MetricEntityRows({
                       )}
                     >
                       <div className="flex items-center justify-between gap-2 px-3 py-2">
-                        <Text.H6 color="foregroundMuted" noWrap ellipsis className="min-w-0">
-                          {metric.label}
-                        </Text.H6>
-                        <div className="flex shrink-0 items-baseline gap-1.5">
-                          {!entry.comparison.baseline ? (
-                            <MetricDelta change={delta} direction={metric.direction} />
-                          ) : null}
-                          <Text.H5M noWrap className="tabular-nums">
-                            {formatMetricValue(value, metric.unit)}
-                          </Text.H5M>
-                        </div>
+                        <Tooltip
+                          asChild
+                          side="top"
+                          trigger={
+                            <span className="flex min-w-0 cursor-default">
+                              <Text.H6 color="foregroundMuted" noWrap ellipsis className="min-w-0">
+                                {metric.label}
+                              </Text.H6>
+                            </span>
+                          }
+                        >
+                          {metric.description}
+                        </Tooltip>
+                        <Tooltip
+                          asChild
+                          side="top"
+                          trigger={
+                            <div className="flex shrink-0 items-baseline gap-1.5 cursor-default">
+                              {!entry.comparison.baseline ? (
+                                <MetricDelta change={delta} direction={metric.direction} />
+                              ) : null}
+                              <Text.H5M noWrap className="tabular-nums">
+                                {formatMetricValue(value, metric.unit)}
+                              </Text.H5M>
+                            </div>
+                          }
+                        >
+                          {metric.description}
+                        </Tooltip>
                       </div>
                     </td>
                   )
@@ -563,7 +599,21 @@ function MetricEntityRows({
                 className={bodyCellClass({ column, count, scrolled, isLastRow: isLastEntity })}
               >
                 <div className="flex flex-col gap-1 px-3 py-2">
-                  <Text.H6 color="foregroundMuted">Top {ENTITY_LABEL[entity].toLowerCase()}</Text.H6>
+                  {topDescription ? (
+                    <Tooltip
+                      asChild
+                      side="top"
+                      trigger={
+                        <span className="flex w-max cursor-default">
+                          <Text.H6 color="foregroundMuted">{topLabel}</Text.H6>
+                        </span>
+                      }
+                    >
+                      {topDescription}
+                    </Tooltip>
+                  ) : (
+                    <Text.H6 color="foregroundMuted">{topLabel}</Text.H6>
+                  )}
                   {topList.length === 0 ? (
                     <Text.H6 color="foregroundMuted">—</Text.H6>
                   ) : (

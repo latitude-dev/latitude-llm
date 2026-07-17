@@ -9,7 +9,7 @@ from .metric_delta import MetricDelta
 
 class ExperimentSignalsMetricsAffectedTracesRate(UniversalBaseModel):
     """
-    Affected traces — fraction (0–1); lower is better.
+    Fraction of traces with at least one signal — fraction (0–1); lower is better.
     """
 
     value: typing.Optional[float] = pydantic.Field(default=None)

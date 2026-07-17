@@ -9,7 +9,7 @@ from .metric_delta import MetricDelta
 
 class ExperimentToolsMetricsDistinct(UniversalBaseModel):
     """
-    Tools used — count.
+    Distinct tools called — count.
     """
 
     value: typing.Optional[float] = pydantic.Field(default=None)

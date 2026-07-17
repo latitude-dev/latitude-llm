@@ -32046,7 +32046,7 @@
                             "delta"
                           ],
                           "additionalProperties": false,
-                          "description": "Sessions — count."
+                          "description": "Number of sessions in the variant's population — count."
                         },
                         "users": {
                           "type": "object",
@@ -32086,7 +32086,7 @@
                             "delta"
                           ],
                           "additionalProperties": false,
-                          "description": "Users — count."
+                          "description": "Distinct users across the variant's sessions — count."
                         },
                         "cost_total": {
                           "type": "object",
@@ -32126,7 +32126,7 @@
                             "delta"
                           ],
                           "additionalProperties": false,
-                          "description": "Total cost — USD; lower is better."
+                          "description": "Total model cost across the variant's sessions — USD; lower is better."
                         },
                         "tokens_total": {
                           "type": "object",
@@ -32166,7 +32166,7 @@
                             "delta"
                           ],
                           "additionalProperties": false,
-                          "description": "Total tokens — tokens."
+                          "description": "Total tokens across the variant's sessions — tokens."
                         },
                         "error_rate": {
                           "type": "object",
@@ -32206,7 +32206,7 @@
                             "delta"
                           ],
                           "additionalProperties": false,
-                          "description": "Error rate — fraction (0–1); lower is better."
+                          "description": "Fraction of sessions with at least one error — fraction (0–1); lower is better."
                         },
                         "cache_hit_rate": {
                           "type": "object",
@@ -32246,7 +32246,7 @@
                             "delta"
                           ],
                           "additionalProperties": false,
-                          "description": "Cache hit rate — fraction (0–1); higher is better."
+                          "description": "Fraction of input tokens served from cache — fraction (0–1); higher is better."
                         },
                         "duration_median": {
                           "type": "object",
@@ -32286,7 +32286,7 @@
                             "delta"
                           ],
                           "additionalProperties": false,
-                          "description": "Median duration — seconds; lower is better."
+                          "description": "Median session duration — seconds; lower is better."
                         },
                         "duration_p90": {
                           "type": "object",
@@ -32326,7 +32326,7 @@
                             "delta"
                           ],
                           "additionalProperties": false,
-                          "description": "p90 duration — seconds; lower is better."
+                          "description": "90th-percentile session duration — seconds; lower is better."
                         },
                         "duration_p95": {
                           "type": "object",
@@ -32366,7 +32366,7 @@
                             "delta"
                           ],
                           "additionalProperties": false,
-                          "description": "p95 duration — seconds; lower is better."
+                          "description": "95th-percentile session duration — seconds; lower is better."
                         },
                         "cost_avg": {
                           "type": "object",
@@ -32406,7 +32406,7 @@
                             "delta"
                           ],
                           "additionalProperties": false,
-                          "description": "Avg cost — USD; lower is better."
+                          "description": "Average model cost per session — USD; lower is better."
                         },
                         "tokens_avg": {
                           "type": "object",
@@ -32446,7 +32446,7 @@
                             "delta"
                           ],
                           "additionalProperties": false,
-                          "description": "Avg tokens — tokens."
+                          "description": "Average tokens per session — tokens."
                         },
                         "ttft_median": {
                           "type": "object",
@@ -32486,7 +32486,7 @@
                             "delta"
                           ],
                           "additionalProperties": false,
-                          "description": "Median time to first token — seconds; lower is better."
+                          "description": "Median time to first token across sessions — seconds; lower is better."
                         },
                         "spans_avg": {
                           "type": "object",
@@ -32526,7 +32526,7 @@
                             "delta"
                           ],
                           "additionalProperties": false,
-                          "description": "Avg spans — count."
+                          "description": "Average spans per session — count."
                         },
                         "traces_avg": {
                           "type": "object",
@@ -32566,7 +32566,7 @@
                             "delta"
                           ],
                           "additionalProperties": false,
-                          "description": "Avg traces — count."
+                          "description": "Average traces per session — count."
                         }
                       },
                       "required": [
@@ -32628,7 +32628,7 @@
                             "delta"
                           ],
                           "additionalProperties": false,
-                          "description": "Users — count."
+                          "description": "Distinct users in the variant's population — count."
                         },
                         "sessions_per_user": {
                           "type": "object",
@@ -32668,7 +32668,7 @@
                             "delta"
                           ],
                           "additionalProperties": false,
-                          "description": "Avg sessions — count."
+                          "description": "Average sessions per user — count."
                         },
                         "traces_per_user": {
                           "type": "object",
@@ -32708,7 +32708,7 @@
                             "delta"
                           ],
                           "additionalProperties": false,
-                          "description": "Avg traces — count."
+                          "description": "Average traces per user — count."
                         },
                         "cost_avg": {
                           "type": "object",
@@ -32748,7 +32748,7 @@
                             "delta"
                           ],
                           "additionalProperties": false,
-                          "description": "Avg cost — USD; lower is better."
+                          "description": "Average model cost per user — USD; lower is better."
                         },
                         "duration_median": {
                           "type": "object",
@@ -32788,7 +32788,7 @@
                             "delta"
                           ],
                           "additionalProperties": false,
-                          "description": "Median duration — seconds; lower is better."
+                          "description": "Median total session time per user — seconds; lower is better."
                         },
                         "duration_p90": {
                           "type": "object",
@@ -32828,7 +32828,7 @@
                             "delta"
                           ],
                           "additionalProperties": false,
-                          "description": "p90 duration — seconds; lower is better."
+                          "description": "90th-percentile total session time per user — seconds; lower is better."
                         },
                         "duration_p95": {
                           "type": "object",
@@ -32868,7 +32868,7 @@
                             "delta"
                           ],
                           "additionalProperties": false,
-                          "description": "p95 duration — seconds; lower is better."
+                          "description": "95th-percentile total session time per user — seconds; lower is better."
                         },
                         "error_session_rate": {
                           "type": "object",
@@ -32908,7 +32908,7 @@
                             "delta"
                           ],
                           "additionalProperties": false,
-                          "description": "Avg error rate — fraction (0–1); lower is better."
+                          "description": "Average fraction of a user's sessions that have an error — fraction (0–1); lower is better."
                         }
                       },
                       "required": [
@@ -32964,7 +32964,7 @@
                             "delta"
                           ],
                           "additionalProperties": false,
-                          "description": "Tool calls — count."
+                          "description": "Total tool calls across the variant's sessions — count."
                         },
                         "distinct": {
                           "type": "object",
@@ -33004,7 +33004,7 @@
                             "delta"
                           ],
                           "additionalProperties": false,
-                          "description": "Tools used — count."
+                          "description": "Distinct tools called — count."
                         },
                         "sessions_with_tools_rate": {
                           "type": "object",
@@ -33044,7 +33044,7 @@
                             "delta"
                           ],
                           "additionalProperties": false,
-                          "description": "Usage rate — fraction (0–1)."
+                          "description": "Fraction of sessions that call at least one tool — fraction (0–1)."
                         },
                         "error_rate": {
                           "type": "object",
@@ -33084,7 +33084,7 @@
                             "delta"
                           ],
                           "additionalProperties": false,
-                          "description": "Error rate — fraction (0–1); lower is better."
+                          "description": "Fraction of tool calls that error — fraction (0–1); lower is better."
                         },
                         "duration_p50": {
                           "type": "object",
@@ -33124,7 +33124,7 @@
                             "delta"
                           ],
                           "additionalProperties": false,
-                          "description": "Median duration — seconds; lower is better."
+                          "description": "Median tool-call duration — seconds; lower is better."
                         },
                         "duration_p90": {
                           "type": "object",
@@ -33164,7 +33164,7 @@
                             "delta"
                           ],
                           "additionalProperties": false,
-                          "description": "p90 duration — seconds; lower is better."
+                          "description": "90th-percentile tool-call duration — seconds; lower is better."
                         },
                         "duration_p95": {
                           "type": "object",
@@ -33204,7 +33204,7 @@
                             "delta"
                           ],
                           "additionalProperties": false,
-                          "description": "p95 duration — seconds; lower is better."
+                          "description": "95th-percentile tool-call duration — seconds; lower is better."
                         },
                         "top": {
                           "type": "array",
@@ -33287,7 +33287,7 @@
                             "delta"
                           ],
                           "additionalProperties": false,
-                          "description": "Signals — count; lower is better."
+                          "description": "Distinct signals raised on the variant's sessions — count; lower is better."
                         },
                         "occurrences": {
                           "type": "object",
@@ -33327,7 +33327,7 @@
                             "delta"
                           ],
                           "additionalProperties": false,
-                          "description": "Occurrences — count; lower is better."
+                          "description": "Total signal occurrences — count; lower is better."
                         },
                         "affected_sessions_rate": {
                           "type": "object",
@@ -33367,7 +33367,7 @@
                             "delta"
                           ],
                           "additionalProperties": false,
-                          "description": "Affected sessions — fraction (0–1); lower is better."
+                          "description": "Fraction of sessions with at least one signal — fraction (0–1); lower is better."
                         },
                         "affected_traces_rate": {
                           "type": "object",
@@ -33407,7 +33407,7 @@
                             "delta"
                           ],
                           "additionalProperties": false,
-                          "description": "Affected traces — fraction (0–1); lower is better."
+                          "description": "Fraction of traces with at least one signal — fraction (0–1); lower is better."
                         },
                         "affected_users": {
                           "type": "object",
@@ -33447,7 +33447,7 @@
                             "delta"
                           ],
                           "additionalProperties": false,
-                          "description": "Affected users — fraction (0–1); lower is better."
+                          "description": "Fraction of users with at least one signal — fraction (0–1); lower is better."
                         },
                         "cost_impact": {
                           "type": "object",
@@ -33487,7 +33487,7 @@
                             "delta"
                           ],
                           "additionalProperties": false,
-                          "description": "Cost impact — USD; lower is better."
+                          "description": "Total model cost of sessions carrying a signal — USD; lower is better."
                         },
                         "top": {
                           "type": "array",
@@ -33569,7 +33569,7 @@
                             "delta"
                           ],
                           "additionalProperties": false,
-                          "description": "Observations — count."
+                          "description": "Total behaviour observations on the variant's sessions — count."
                         },
                         "distinct_clusters": {
                           "type": "object",
@@ -33609,7 +33609,7 @@
                             "delta"
                           ],
                           "additionalProperties": false,
-                          "description": "Clusters — count."
+                          "description": "Distinct behaviour clusters observed — count."
                         },
                         "moments": {
                           "type": "object",
@@ -33649,7 +33649,7 @@
                             "delta"
                           ],
                           "additionalProperties": false,
-                          "description": "Moments — count."
+                          "description": "Semantic moments detected on the variant's sessions — count."
                         },
                         "top": {
                           "type": "array",

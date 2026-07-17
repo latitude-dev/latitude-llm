@@ -9,7 +9,7 @@ from .metric_delta import MetricDelta
 
 class ExperimentToolsMetricsDurationP90(UniversalBaseModel):
     """
-    p90 duration — seconds; lower is better.
+    90th-percentile tool-call duration — seconds; lower is better.
     """
 
     value: typing.Optional[float] = pydantic.Field(default=None)

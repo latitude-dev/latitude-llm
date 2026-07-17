@@ -9,7 +9,7 @@ from .metric_delta import MetricDelta
 
 class ExperimentUsersMetricsDistinct(UniversalBaseModel):
     """
-    Users — count.
+    Distinct users in the variant's population — count.
     """
 
     value: typing.Optional[float] = pydantic.Field(default=None)

@@ -9,7 +9,7 @@ from .metric_delta import MetricDelta
 
 class ExperimentBehavioursMetricsMoments(UniversalBaseModel):
     """
-    Moments — count.
+    Semantic moments detected on the variant's sessions — count.
     """
 
     value: typing.Optional[float] = pydantic.Field(default=None)

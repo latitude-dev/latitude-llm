@@ -9,7 +9,7 @@ from .metric_delta import MetricDelta
 
 class ExperimentSessionsMetricsDurationMedian(UniversalBaseModel):
     """
-    Median duration — seconds; lower is better.
+    Median session duration — seconds; lower is better.
     """
 
     value: typing.Optional[float] = pydantic.Field(default=None)

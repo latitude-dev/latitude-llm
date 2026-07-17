@@ -9,7 +9,7 @@ from .metric_delta import MetricDelta
 
 class ExperimentUsersMetricsDurationP95(UniversalBaseModel):
     """
-    p95 duration — seconds; lower is better.
+    95th-percentile total session time per user — seconds; lower is better.
     """
 
     value: typing.Optional[float] = pydantic.Field(default=None)

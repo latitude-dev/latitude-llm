@@ -9,7 +9,7 @@ from .metric_delta import MetricDelta
 
 class ExperimentSessionsMetricsTokensAvg(UniversalBaseModel):
     """
-    Avg tokens — tokens.
+    Average tokens per session — tokens.
     """
 
     value: typing.Optional[float] = pydantic.Field(default=None)

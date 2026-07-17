@@ -9,7 +9,7 @@ from .metric_delta import MetricDelta
 
 class ExperimentSignalsMetricsDistinct(UniversalBaseModel):
     """
-    Signals — count; lower is better.
+    Distinct signals raised on the variant's sessions — count; lower is better.
     """
 
     value: typing.Optional[float] = pydantic.Field(default=None)

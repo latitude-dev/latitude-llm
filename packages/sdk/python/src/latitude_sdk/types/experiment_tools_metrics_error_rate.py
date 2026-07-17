@@ -9,7 +9,7 @@ from .metric_delta import MetricDelta
 
 class ExperimentToolsMetricsErrorRate(UniversalBaseModel):
     """
-    Error rate — fraction (0–1); lower is better.
+    Fraction of tool calls that error — fraction (0–1); lower is better.
     """
 
     value: typing.Optional[float] = pydantic.Field(default=None)

@@ -1,4 +1,5 @@
 import {
+  ENTITY_TOP_LIST_DESCRIPTIONS,
   EXPERIMENT_METRICS,
   type Experiment,
   type ExperimentComparison,
@@ -116,22 +117,15 @@ const METRIC_DIRECTION_HINT: Record<MetricDirection, string> = {
   neutral: "",
 }
 
-/** Self-describing label for one metric: its UI name, unit, and which delta direction is good. */
+/** Self-describing text for one metric: its explanation, unit, and which delta direction is good. */
 const metricDescription = (metric: (typeof EXPERIMENT_METRICS)[number]): string =>
-  `${metric.label} — ${METRIC_UNIT_LABEL[metric.unit]}${METRIC_DIRECTION_HINT[metric.direction]}.`
+  `${metric.description} — ${METRIC_UNIT_LABEL[metric.unit]}${METRIC_DIRECTION_HINT[metric.direction]}.`
 
 /** A metric's field name within its entity object — the part after `<entity>.`. */
 const metricField = (key: string): string => key.slice(key.indexOf(".") + 1)
 
 const entityComponent = (entity: MetricEntity): string =>
   `Experiment${entity.charAt(0).toUpperCase()}${entity.slice(1)}Metrics`
-
-/** Entities that rank a top-N list alongside their metrics, keyed to that list's description. */
-const ENTITY_TOP_LIST = {
-  tools: "Top tools by call count.",
-  signals: "Top signals by occurrence count.",
-  behaviours: "Top behaviours by observation count.",
-} as const satisfies Partial<Record<MetricEntity, string>>
 
 const MetricDeltaSchema = z
   .union([z.number(), z.literal("up-from-zero")])
@@ -172,8 +166,8 @@ const VariantMetricsSchema = z
             metricSchema(metric),
           ]),
         )
-        const topDescription = ENTITY_TOP_LIST[entity as keyof typeof ENTITY_TOP_LIST]
-        if (topDescription) fields.top = z.array(TopListItemSchema).describe(topDescription)
+        const topDescription = ENTITY_TOP_LIST_DESCRIPTIONS[entity as keyof typeof ENTITY_TOP_LIST_DESCRIPTIONS]
+        if (topDescription) fields.top = z.array(TopListItemSchema).describe(`${topDescription}.`)
         return [entity, z.object(fields).openapi(entityComponent(entity))]
       }),
     ),

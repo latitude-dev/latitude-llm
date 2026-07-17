@@ -9,7 +9,7 @@ from .metric_delta import MetricDelta
 
 class ExperimentSignalsMetricsAffectedSessionsRate(UniversalBaseModel):
     """
-    Affected sessions — fraction (0–1); lower is better.
+    Fraction of sessions with at least one signal — fraction (0–1); lower is better.
     """
 
     value: typing.Optional[float] = pydantic.Field(default=None)

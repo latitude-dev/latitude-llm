@@ -202,6 +202,8 @@ interface FilterBuilderProps {
   readonly portalContainer?: RefObject<HTMLElement | null>
   /** Render collapsed by default: a one-row summary of the applied-filter count, expandable via chevron. */
   readonly collapsible?: boolean
+  /** When `collapsible`, start expanded on mount rather than collapsed. */
+  readonly initialExpanded?: boolean
 }
 
 /**
@@ -218,12 +220,13 @@ export function FilterBuilder({
   emptyMessage = "No filters yet.",
   portalContainer,
   collapsible = false,
+  initialExpanded = false,
 }: FilterBuilderProps) {
   // Sections the user opened that don't (yet) have a value; kept local so opening one never
   // persists an empty/invalid condition.
   const [openFields, setOpenFields] = useState<ReadonlySet<string>>(new Set())
   const [metadataOpen, setMetadataOpen] = useState(false)
-  const [expanded, setExpanded] = useState(false)
+  const [expanded, setExpanded] = useState(initialExpanded)
 
   const textFields = useMemo(() => getTextFieldsForMode(mode), [mode])
   const multiSelectFields = useMemo(() => getMultiSelectFieldsForMode(mode), [mode])

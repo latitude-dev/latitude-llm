@@ -138,6 +138,7 @@ function CreateModal({
               void navigate({
                 to: "/projects/$projectSlug/experiments/$experimentSlug",
                 params: { projectSlug, experimentSlug: experiment.slug },
+                search: { created: true },
               })
               return
             } catch (error) {
