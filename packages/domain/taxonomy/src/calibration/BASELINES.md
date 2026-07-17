@@ -188,6 +188,38 @@ proven on synthetic labels and supported by human-eyeballed coherence of the fou
 real pilot clusters, but not yet against a human-labeled pilot set. Producing
 coarse human labels for the pilot (through a product-exposed export) closes them.
 
+## Considered alternative — the within-child spread denominator (Phase-2)
+
+The spec defines relative separation with a **pooled** within-child spread:
+`withinDistance = quantile(all members' distance-to-own-centroid, withinDistanceQuantile)`.
+A review (CodeRabbit) flagged that pooling is count-weighted and the 0.8-quantile
+drops the top tail, so a small, diffuse child can be masked by tight siblings and
+a weak split can slip through. Two alternatives were weighed:
+
+- **max-child (proposed by the reviewer):** divide the closest-sibling distance by
+  the *maximum* per-child spread.
+- **per-pair:** divide by the max spread of only the *closest sibling pair*.
+
+A controlled imbalanced-spread experiment (tight siblings + one diffuse child)
+compared all three, both on the gate in isolation and end-to-end:
+
+| case | pooled (spec) | max-child (reviewer) | per-pair |
+| --- | --- | --- | --- |
+| diffuse child **is** the closest pair (halo — should reject) | ACCEPT ✗ | reject ✓ | reject ✓ |
+| diffuse child far, closest pair is real (should accept) | ACCEPT ✓ | reject ✗ | ACCEPT ✓ |
+
+Pooling has the masking gap the reviewer described, but max-child introduces a
+symmetric over-rejection (a far, broad-but-real child vetoes a legitimate split);
+per-pair is correct in both. **However**, feeding the halo case through the full
+builder produced 4 children with the halo absorbed — Calinski–Harabasz
+K-selection preferred the correct K, so the masked gate never changed the tree.
+
+**Decision:** keep the spec's pooled metric for Phase 1. The masking is latent
+(CH-guarded; no demonstrated tree corruption) and max-child would be a net
+regression. **per-pair** is the preferred refinement *if* shadow data ever shows
+pooling biting — revisit against the spec (PR #4072) in Phase 2, not on
+theoretical grounds now.
+
 ## On the pilot data
 
 The pilot embeddings used for calibration were read from production ClickHouse
