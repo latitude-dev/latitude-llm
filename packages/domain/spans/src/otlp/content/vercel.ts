@@ -103,7 +103,13 @@ export function parseVercelOutput(attrs: readonly OtlpKeyValue[]): GenAIMessage[
     const toolCalls = parseJsonSafe(toolCallsJson)
     if (Array.isArray(toolCalls)) {
       for (const tc of toolCalls) {
-        contentParts.push({ type: "tool-call", toolCallId: tc.toolCallId, toolName: tc.toolName, args: tc.input })
+        contentParts.push({
+          type: "tool-call",
+          toolCallId: tc.toolCallId,
+          toolName: tc.toolName,
+          input: tc.input,
+          args: tc.input,
+        })
       }
     }
   }
