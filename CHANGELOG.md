@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+### Traces
+
+- Rejected `gtePercentile` on every trace filter field except `duration`, `ttft`, and `cost` (previously only `startTime`/`endTime` were rejected at the public API), so invalid filters return 400 instead of 500 (ref: #4086).
+
 ## v0.3.55 - 2026-07-17
 
 ### Evaluations

@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest"
-import { filterSetSchema, spanRowFilterSetSchema } from "./filter.ts"
+import { filterSetSchema, spanRowFilterSetSchema, traceFilterSetSchema } from "./filter.ts"
 
 describe("filterSetSchema", () => {
   it("parses a valid filter set", () => {
@@ -128,6 +128,41 @@ describe("spanRowFilterSetSchema", () => {
 
   it("accepts absolute duration thresholds", () => {
     const result = spanRowFilterSetSchema.safeParse({ duration: [{ op: "gte", value: 1_000_000_000 }] })
+    expect(result.success).toBe(true)
+  })
+})
+
+describe("traceFilterSetSchema", () => {
+  it("accepts gtePercentile on the percentile-eligible fields (duration/ttft/cost)", () => {
+    for (const field of ["duration", "ttft", "cost"] as const) {
+      const result = traceFilterSetSchema.safeParse({ [field]: [{ op: "gtePercentile", value: 95 }] })
+      expect(result.success).toBe(true)
+    }
+  })
+
+  it("rejects gtePercentile on a numeric field that isn't percentile-eligible", () => {
+    const result = traceFilterSetSchema.safeParse({ tokensInput: [{ op: "gtePercentile", value: 95 }] })
+    expect(result.success).toBe(false)
+    if (!result.success) {
+      expect(result.error.issues[0]?.path).toEqual(["tokensInput", 0, "op"])
+      expect(result.error.issues[0]?.message).toContain("gtePercentile is only supported on")
+    }
+  })
+
+  it("rejects gtePercentile on startTime/endTime", () => {
+    for (const field of ["startTime", "endTime"] as const) {
+      const result = traceFilterSetSchema.safeParse({ [field]: [{ op: "gtePercentile", value: 95 }] })
+      expect(result.success).toBe(false)
+    }
+  })
+
+  it("rejects gtePercentile on a metadata key", () => {
+    const result = traceFilterSetSchema.safeParse({ "metadata.env": [{ op: "gtePercentile", value: 95 }] })
+    expect(result.success).toBe(false)
+  })
+
+  it("accepts absolute thresholds on non-percentile-eligible fields", () => {
+    const result = traceFilterSetSchema.safeParse({ tokensInput: [{ op: "gte", value: 100 }] })
     expect(result.success).toBe(true)
   })
 })

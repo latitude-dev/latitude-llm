@@ -47,6 +47,24 @@ describe("TraceFilterSetSchema", () => {
       }
     }
   })
+
+  it("rejects gtePercentile on any other non-percentile-eligible field, not just time fields", () => {
+    for (const field of ["tokensInput", "spanCount", "cacheHitRate", "score.value"] as const) {
+      const result = TraceFilterSetSchema.safeParse({ [field]: [{ op: "gtePercentile", value: 95 }] })
+      expect(result.success).toBe(false)
+      if (!result.success) {
+        expect(result.error.issues[0]?.path).toEqual([field, 0, "op"])
+        expect(result.error.issues[0]?.message).toContain("gtePercentile is only supported on")
+      }
+    }
+  })
+
+  it("accepts gtePercentile on the percentile-eligible fields", () => {
+    for (const field of ["duration", "ttft", "cost"] as const) {
+      const result = TraceFilterSetSchema.safeParse({ [field]: [{ op: "gtePercentile", value: 95 }] })
+      expect(result.success).toBe(true)
+    }
+  })
 })
 
 describe("TraceRefSchema / TracesRefSchema filter validation", () => {

@@ -1,12 +1,12 @@
 import { listSessionMomentIntelligenceUseCase } from "@domain/conversation-intelligence"
 import { exportSelectionSchema } from "@domain/exports"
 import {
-  filterSetSchema,
   PERCENTILE_TRACE_FILTER_FIELDS,
   type PercentileTraceFilterField,
   ProjectId,
   SpanId,
   TraceId,
+  traceFilterSetSchema,
 } from "@domain/shared"
 import type {
   CohortSummary,
@@ -191,7 +191,7 @@ export const listTracesByProject = createServerFn({ method: "GET" })
       cursor: traceListCursorSchema.optional(),
       sortBy: z.string().optional(),
       sortDirection: z.enum(["asc", "desc"]).optional(),
-      filters: filterSetSchema.optional(),
+      filters: traceFilterSetSchema.optional(),
       searchQuery: z.string().max(500).optional(),
     }),
   )
@@ -234,7 +234,7 @@ export const countTracesByProject = createServerFn({ method: "GET" })
   .inputValidator(
     z.object({
       projectId: z.string(),
-      filters: filterSetSchema.optional(),
+      filters: traceFilterSetSchema.optional(),
       searchQuery: z.string().max(500).optional(),
     }),
   )
@@ -262,7 +262,7 @@ export const getProjectLastTraceAt = createServerFn({ method: "GET" })
   .inputValidator(
     z.object({
       projectId: z.string(),
-      filters: filterSetSchema.optional(),
+      filters: traceFilterSetSchema.optional(),
       searchQuery: z.string().max(500).optional(),
     }),
   )
@@ -308,7 +308,7 @@ export const getTraceMetricsByProject = createServerFn({ method: "GET" })
   .inputValidator(
     z.object({
       projectId: z.string(),
-      filters: filterSetSchema.optional(),
+      filters: traceFilterSetSchema.optional(),
       searchQuery: z.string().max(500).optional(),
     }),
   )
@@ -351,7 +351,7 @@ export const getTraceCohortSummary = createServerFn({ method: "GET" })
 
 const traceHistogramInputSchema = z.object({
   projectId: z.string(),
-  filters: filterSetSchema.optional(),
+  filters: traceFilterSetSchema.optional(),
   rangeStartIso: z.string(),
   rangeEndIso: z.string(),
   bucketSeconds: z
@@ -573,7 +573,7 @@ export const enqueueTracesExport = createServerFn({ method: "POST" })
   .inputValidator(
     z.object({
       projectId: z.string(),
-      filters: filterSetSchema.optional(),
+      filters: traceFilterSetSchema.optional(),
       selection: exportSelectionSchema.optional(),
       searchQuery: z.string().max(500).optional(),
     }),
