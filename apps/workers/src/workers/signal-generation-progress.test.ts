@@ -3,35 +3,37 @@ import { describe, expect, it } from "vitest"
 import { createSignalGenerationProgressWriter } from "./signal-generation-progress.ts"
 
 describe("createSignalGenerationProgressWriter", () => {
-  it("awaits in-flight pending writes before the caller writes a terminal result", async () => {
+  it("awaits in-flight pending writes before finalize resolves", async () => {
     const writes: SignalGenerationResult[] = []
     let releasePending: (() => void) | undefined
     const pendingGate = new Promise<void>((resolve) => {
       releasePending = resolve
     })
+    let pendingWriteSettled = false
 
     const progress = createSignalGenerationProgressWriter({
       setResult: async (value) => {
-        writes.push(value)
         if (value.status === "pending" && value.step === "late step") {
           await pendingGate
+          pendingWriteSettled = true
         }
+        writes.push(value)
       },
     })
 
     progress.writeStep("late step")
     const finalizePromise = progress.finalize()
+
+    await expect(
+      Promise.race([finalizePromise.then(() => "finalized" as const), Promise.resolve("still-waiting" as const)]),
+    ).resolves.toBe("still-waiting")
+    expect(pendingWriteSettled).toBe(false)
+
     releasePending?.()
     await finalizePromise
 
-    const terminal: SignalGenerationResult = {
-      status: "done",
-      signalId: "sig_1",
-      slug: "my-signal",
-    }
-    writes.push(terminal)
-
-    expect(writes.at(-1)).toEqual(terminal)
+    expect(pendingWriteSettled).toBe(true)
+    expect(writes).toEqual([{ status: "pending", step: "late step" }])
   })
 
   it("ignores step writes after finalize", async () => {

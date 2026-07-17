@@ -16,6 +16,7 @@ export function createSignalGenerationProgressWriter(params: {
     if (!enabled) {
       return
     }
+    // Model narrates a broad step as assistant text; clamp to one short line for the UI.
     const step = raw
       .split("\n")
       .map((line) => line.trim())
