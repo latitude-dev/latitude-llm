@@ -1,4 +1,5 @@
 import { z } from "zod"
+import { isPercentileTraceFilterField, PERCENTILE_TRACE_FILTER_FIELDS } from "./trace-filter-fields.ts"
 
 // ---------------------------------------------------------------------------
 // Operators
@@ -145,6 +146,31 @@ export const spanRowFilterSetSchema: z.ZodType<FilterSet> = filterSetSchema.supe
         ctx.addIssue({
           code: "custom",
           message: SPAN_ROW_FILTER_GTE_PERCENTILE_MESSAGE,
+          path: [field, index, "op"],
+        })
+      }
+    })
+  }
+})
+
+export const traceFilterGtePercentileMessage = (field: string): string =>
+  `gtePercentile is only supported on ${PERCENTILE_TRACE_FILTER_FIELDS.join("/")}; not on '${field}'. Use absolute gte/lte thresholds instead.`
+
+/**
+ * Trace filters restrict `gtePercentile` to the percentile-eligible fields
+ * (duration/ttft/cost). Percentile resolution only rewrites those fields into
+ * an absolute `gte` before the ClickHouse filter builder sees them; leaving
+ * `gtePercentile` on any other field would reach `buildClause`/`buildMetadataClause`
+ * unresolved and throw for an unsupported operator.
+ */
+export const traceFilterSetSchema: z.ZodType<FilterSet> = filterSetSchema.superRefine((filters, ctx) => {
+  for (const [field, conditions] of Object.entries(filters)) {
+    if (isPercentileTraceFilterField(field)) continue
+    conditions.forEach((cond, index) => {
+      if (cond.op === "gtePercentile") {
+        ctx.addIssue({
+          code: "custom",
+          message: traceFilterGtePercentileMessage(field),
           path: [field, index, "op"],
         })
       }
