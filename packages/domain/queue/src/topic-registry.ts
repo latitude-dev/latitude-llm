@@ -510,6 +510,7 @@ const _registry = {
       readonly organizationId: string
       readonly projectId: string
       readonly traceId: string
+      readonly sessionId: string
     }
   }>(),
 
@@ -600,13 +601,17 @@ const _registry = {
       readonly customBehaviorId: string
       readonly reason?: "manual" | "cron"
     }
+    gardenCustomBehaviorSweep: {
+      /** Optional override for ad-hoc runs; the repeatable sweep anchors at execution time instead. */
+      readonly triggeredAt?: string
+    }
   }>(),
 
   billing: payloads<{
     recordBillableAction: {
       readonly organizationId: string
       readonly projectId: string
-      readonly action: "trace" | "flagger-scan" | "live-eval-scan" | "eval-generation"
+      readonly action: "trace" | "flagger-scan" | "deterministic-eval-scan" | "live-eval-scan" | "eval-generation"
       readonly idempotencyKey: string
       readonly context: {
         readonly planSlug: "free" | "pro" | "enterprise"

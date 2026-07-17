@@ -12,6 +12,7 @@ import { reconstructSnapshotUseCase } from "./reconstruct-snapshot.ts"
 const organizationId = OrganizationId("o".repeat(24))
 const projectId = ProjectId("p".repeat(24))
 const traceId = TraceId("t".repeat(32))
+const traceSessionId = SessionId("trace-session")
 const base = new Date("2026-06-01T12:00:00.000Z").getTime()
 const at = (seconds: number) => new Date(base + seconds * 1000)
 const spanId = (char: string) => SpanId(char.repeat(16))
@@ -30,14 +31,12 @@ const makeSpan = (o: Partial<MemoryOperationSpan> = {}): MemoryOperationSpan => 
   recordCount: 1,
   queryText: "",
   recordsRaw: "",
-  scopeAttr: "",
-  latitudeScopeAttr: "",
   ...o,
 })
 
 type Fake = ReturnType<typeof createFakeMemoryRepository>
 
-const materialize = (spans: readonly MemoryOperationSpan[], memory: Fake) => {
+const materialize = (spans: readonly MemoryOperationSpan[], memory: Fake, sessionId: SessionId = traceSessionId) => {
   const spanRepo = createFakeSpanRepository({
     listMemoryOperationSpansByTraceId: () => Effect.succeed(spans),
   }).repository
@@ -47,17 +46,17 @@ const materialize = (spans: readonly MemoryOperationSpan[], memory: Fake) => {
     Layer.succeed(ChSqlClient, createFakeChSqlClient({ organizationId })),
   )
   return Effect.runPromise(
-    materializeTraceMemoryUseCase({ organizationId, projectId, traceId }).pipe(Effect.provide(layer)),
+    materializeTraceMemoryUseCase({ organizationId, projectId, traceId, sessionId }).pipe(Effect.provide(layer)),
   )
 }
 
-const reconstruct = (memory: Fake, scope: string, atTime?: Date) => {
+const reconstruct = (memory: Fake, storeId: string, atTime?: Date) => {
   const layer = Layer.mergeAll(
     Layer.succeed(MemoryRepository, memory.repository),
     Layer.succeed(ChSqlClient, createFakeChSqlClient({ organizationId })),
   )
   return Effect.runPromise(
-    reconstructSnapshotUseCase({ organizationId, projectId, scope, ...(atTime ? { at: atTime } : {}) }).pipe(
+    reconstructSnapshotUseCase({ organizationId, projectId, storeId, ...(atTime ? { at: atTime } : {}) }).pipe(
       Effect.provide(layer),
     ),
   )
@@ -110,6 +109,25 @@ describe("materializeTraceMemory", () => {
     expect(memory.events[0]?.changeKind).toBe("read")
     expect(memory.events[0]?.queryText).toBe("find alpha")
     expect(memory.events[0]?.tokenCount).toBeGreaterThan(0)
+    expect(memory.events[0]?.recordId).toBe("r1") // read attributes to the hit's own record id
+  })
+
+  it("emits one read per returned record and buckets id-less hits together", async () => {
+    const memory = createFakeMemoryRepository()
+    await materialize(
+      [
+        makeSpan({
+          operation: "search_memory",
+          recordCount: 2,
+          queryText: "q",
+          recordsRaw: JSON.stringify([{ id: "rec1", content: "alpha" }, { content: "beta" }]),
+        }),
+      ],
+      memory,
+    )
+
+    const reads = memory.events.filter((event) => event.changeKind === "read")
+    expect(reads.map((event) => event.recordId).sort()).toEqual(["", "rec1"])
   })
 
   it("resolves upsert to update for existing records and add for new ones", async () => {
@@ -152,27 +170,60 @@ describe("materializeTraceMemory", () => {
     expect(memory.events[0]?.recordId).toBe("")
   })
 
-  it("resolves scope from the scope attribute, else the user id, else empty", async () => {
+  it("stamps every event with the trace session id, ignoring the span's own", async () => {
     const memory = createFakeMemoryRepository()
     await materialize(
       [
-        makeSpan({ spanId: spanId("a"), recordsRaw: records({ id: "r1", content: "x" }), scopeAttr: "team-x" }),
-        makeSpan({ spanId: spanId("b"), storeId: "store2", recordsRaw: records({ id: "r2", content: "y" }) }),
         makeSpan({
-          spanId: spanId("c"),
-          storeId: "store3",
-          recordsRaw: records({ id: "r3", content: "z" }),
-          userId: ExternalUserId(""),
+          spanId: spanId("a"),
+          operation: "search_memory",
+          recordsRaw: records({ id: "r1", content: "alpha" }),
+          sessionId: SessionId(""),
+        }),
+        makeSpan({
+          spanId: spanId("b"),
+          operation: "create_memory",
+          recordsRaw: records({ id: "r2", content: "beta" }),
+          sessionId: SessionId("span-local"),
+        }),
+      ],
+      memory,
+      SessionId("conv-1"),
+    )
+
+    expect(memory.events.every((event) => event.sessionId === "conv-1")).toBe(true)
+  })
+
+  it("shares a store's live records across users, so a second user's upsert is an update", async () => {
+    const memory = createFakeMemoryRepository()
+    // user A creates rec1 in the shared store.
+    await materialize(
+      [
+        makeSpan({
+          spanId: spanId("a"),
+          userId: ExternalUserId("userA"),
+          operation: "create_memory",
+          recordsRaw: records({ id: "rec1", content: "v1" }),
+          endTime: at(0),
+        }),
+      ],
+      memory,
+    )
+    // user B upserts the same (store, record): store-keyed, so it is already live → update.
+    await materialize(
+      [
+        makeSpan({
+          spanId: spanId("b"),
+          userId: ExternalUserId("userB"),
+          operation: "upsert_memory",
+          recordsRaw: records({ id: "rec1", content: "v2" }),
+          endTime: at(5),
         }),
       ],
       memory,
     )
 
-    expect(Object.fromEntries(memory.events.map((event) => [event.recordId, event.scope]))).toEqual({
-      r1: "team-x",
-      r2: "user1",
-      r3: "",
-    })
+    expect(memory.events.find((event) => event.spanId === spanId("b"))?.changeKind).toBe("update")
   })
 
   it("reconstructs current state and point-in-time, honoring removes", async () => {
@@ -196,10 +247,10 @@ describe("materializeTraceMemory", () => {
       memory,
     )
 
-    const now = await reconstruct(memory, "user1")
+    const now = await reconstruct(memory, "store1")
     expect(now.records).toHaveLength(0)
 
-    const past = await reconstruct(memory, "user1", at(4))
+    const past = await reconstruct(memory, "store1", at(4))
     expect(past.records.map((record) => record.recordId)).toEqual(["rec1"])
     const updateHash = memory.events.find((event) => event.changeKind === "update")?.contentHash
     expect(past.records[0]?.contentHash).toBe(updateHash)
@@ -219,7 +270,7 @@ describe("materializeTraceMemory", () => {
       ],
       memory,
     )
-    expect((await reconstruct(memory, "user1")).records).toHaveLength(0)
+    expect((await reconstruct(memory, "store1")).records).toHaveLength(0)
 
     await materialize(
       [
@@ -232,7 +283,7 @@ describe("materializeTraceMemory", () => {
       ],
       memory,
     )
-    expect((await reconstruct(memory, "user1")).records.map((record) => record.recordId)).toEqual(["rec2"])
+    expect((await reconstruct(memory, "store1")).records.map((record) => record.recordId)).toEqual(["rec2"])
   })
 
   it("classifies an upsert of a wiped record as add, not update", async () => {
@@ -264,6 +315,6 @@ describe("materializeTraceMemory", () => {
     )
     const upsert = memory.events.find((event) => event.spanId === spanId("3"))
     expect(upsert?.changeKind).toBe("add")
-    expect((await reconstruct(memory, "user1")).records.map((record) => record.recordId)).toEqual(["rec1"])
+    expect((await reconstruct(memory, "store1")).records.map((record) => record.recordId)).toEqual(["rec1"])
   })
 })

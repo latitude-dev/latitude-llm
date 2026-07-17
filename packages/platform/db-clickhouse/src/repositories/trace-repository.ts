@@ -109,6 +109,26 @@ const SPAN_METADATA_MESSAGES_SELECT = `
   argMinIf(system_instructions, start_time, system_instructions != '' AND ${SYSTEM_INSTRUCTION_OPERATION_FILTER}) AS first_system_instructions
 `
 
+const DEDUPED_SPAN_MESSAGE_SOURCE_COLUMNS = `
+  trace_id, span_id, operation, input_messages, output_messages,
+  system_instructions, start_time, end_time, ingested_at
+`
+
+const dedupedSpanMessageRowsSubquery = (traceIdPredicate: string) => `(
+  SELECT ${DEDUPED_SPAN_MESSAGE_SOURCE_COLUMNS}
+  FROM spans
+  WHERE organization_id = {organizationId:String}
+    AND project_id = {projectId:String}
+    AND ${traceIdPredicate}
+  ORDER BY trace_id, span_id, ingested_at DESC
+  LIMIT 1 BY trace_id, span_id
+)`
+
+const BOUNDED_READ_SETTINGS = {
+  output_format_parallel_formatting: 0,
+  max_memory_usage: "4000000000",
+} as const
+
 type TraceListRow = {
   organization_id: string
   project_id: string
@@ -936,10 +956,7 @@ export const TraceRepositoryLive = Layer.effect(
         return yield* chSqlClient.query(async (client) => {
           const result = await client.query({
             query: `SELECT ${SPAN_MESSAGES_SELECT}
-                    FROM spans
-                    WHERE organization_id = {organizationId:String}
-                      AND project_id = {projectId:String}
-                      AND trace_id IN ({traceIds:Array(String)})
+                    FROM ${dedupedSpanMessageRowsSubquery("trace_id IN ({traceIds:Array(String)})")}
                     GROUP BY trace_id`,
             query_params: {
               organizationId: input.organizationId as string,
@@ -947,6 +964,7 @@ export const TraceRepositoryLive = Layer.effect(
               traceIds: Array.from(input.traceIds) as string[],
             },
             format: "JSONEachRow",
+            clickhouse_settings: BOUNDED_READ_SETTINGS,
           })
           return result.json<SpanMessagesRow>()
         })
@@ -964,10 +982,7 @@ export const TraceRepositoryLive = Layer.effect(
         return yield* chSqlClient.query(async (client) => {
           const result = await client.query({
             query: `SELECT ${SPAN_METADATA_MESSAGES_SELECT}
-                    FROM spans
-                    WHERE organization_id = {organizationId:String}
-                      AND project_id = {projectId:String}
-                      AND trace_id IN ({traceIds:Array(String)})
+                    FROM ${dedupedSpanMessageRowsSubquery("trace_id IN ({traceIds:Array(String)})")}
                     GROUP BY trace_id`,
             query_params: {
               organizationId: input.organizationId as string,
@@ -975,6 +990,7 @@ export const TraceRepositoryLive = Layer.effect(
               traceIds: Array.from(input.traceIds) as string[],
             },
             format: "JSONEachRow",
+            clickhouse_settings: BOUNDED_READ_SETTINGS,
           })
           return result.json<SpanMetadataMessagesRow>()
         })
@@ -1655,10 +1671,7 @@ export const TraceRepositoryLive = Layer.effect(
                               argMinIf(system_instructions, start_time, system_instructions != '' AND ${SYSTEM_INSTRUCTION_OPERATION_FILTER}) AS system_instructions_json,
                               argMaxIf(input_messages, end_time, output_messages != '' AND ${MESSAGE_OPERATION_FILTER}) AS last_input_messages_json,
                               argMaxIf(output_messages, end_time, output_messages != '' AND ${MESSAGE_OPERATION_FILTER}) AS output_messages_json
-                            FROM spans
-                            WHERE organization_id = {organizationId:String}
-                              AND project_id = {projectId:String}
-                              AND trace_id = {traceId:FixedString(32)}
+                            FROM ${dedupedSpanMessageRowsSubquery("trace_id = {traceId:FixedString(32)}")}
                             GROUP BY trace_id
                             LIMIT 1
                           )
@@ -1671,6 +1684,7 @@ export const TraceRepositoryLive = Layer.effect(
                   limit,
                 },
                 format: "JSONEachRow",
+                clickhouse_settings: BOUNDED_READ_SETTINGS,
               })
               return result.json<TraceConversationChunkRow>()
             })

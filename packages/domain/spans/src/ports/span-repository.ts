@@ -49,8 +49,7 @@ export interface SessionToolSpan {
  * (`attr_string['gen_ai.memory.…']`) so the potentially large
  * `gen_ai.memory.records` payload is fetched only for a trace's handful of
  * memory spans, never the whole attribute map. `recordsRaw` is the flattened
- * records JSON (empty when the opt-in content attribute is absent); the scope
- * attributes are resolved by the caller.
+ * records JSON (empty when the opt-in content attribute is absent).
  */
 export interface MemoryOperationSpan {
   readonly spanId: SpanId
@@ -65,8 +64,6 @@ export interface MemoryOperationSpan {
   readonly recordCount: number
   readonly queryText: string
   readonly recordsRaw: string
-  readonly scopeAttr: string
-  readonly latitudeScopeAttr: string
 }
 
 /**

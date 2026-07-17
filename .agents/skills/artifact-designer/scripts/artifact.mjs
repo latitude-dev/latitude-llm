@@ -325,12 +325,16 @@ async function publishCommand(args) {
     ({ deployDir, configPath } = await writeWranglerProject(cwd, id));
     updateMetadata = true;
   }
-  const npxArgs = ['--yes', 'wrangler@latest', 'deploy', '--config', configPath];
-  if (target === 'temporary') npxArgs.push('--temporary');
-  if (target === 'permanent' && args.domain) npxArgs.push('--domain', args.domain);
-  const tempHome = target === 'temporary' ? await mkdtemp(join(tmpdir(), 'artifact-skill-wrangler-home-')) : undefined;
+  const accountWrangler = await authenticatedWrangler(deployDir);
+  const useExistingAccount = Boolean(accountWrangler);
+  const wranglerArgs = ['deploy', '--config', configPath];
+  if (target === 'temporary' && !useExistingAccount) wranglerArgs.push('--temporary');
+  if (target === 'permanent' && args.domain) wranglerArgs.push('--domain', args.domain);
+  const tempHome = target === 'temporary' && !useExistingAccount ? await mkdtemp(join(tmpdir(), 'artifact-skill-wrangler-home-')) : undefined;
   try {
-    const result = await run('npx', npxArgs, deployDir, tempHome ? isolatedCloudflareEnv(tempHome) : process.env);
+    const command = useExistingAccount ? accountWrangler : 'npx';
+    const commandArgs = useExistingAccount ? wranglerArgs : ['--yes', 'wrangler@latest', ...wranglerArgs];
+    const result = await run(command, commandArgs, deployDir, tempHome ? isolatedCloudflareEnv(tempHome) : process.env);
     if (result.code !== 0) throw new Error(`Wrangler failed (${result.code})\n${result.output}`);
     const url = result.output.match(/https:\/\/[^\s]+\.workers\.dev[^\s]*/)?.[0];
     const claimUrl = result.output.match(/https:\/\/dash\.cloudflare\.com\/workers-and-pages\/claim\?[^\s]+/)?.[0];
@@ -339,14 +343,19 @@ async function publishCommand(args) {
       const meta = await readMetadata(cwd, id);
       meta.latestPublishedUrl = url;
       meta.versions ||= [];
-      meta.versions.push({ version: (meta.versions.at(-1)?.version || 0) + 1, createdAt: new Date().toISOString(), path: 'dist/index.html', published: { target, url, claimUrl } });
+      meta.versions.push({ version: (meta.versions.at(-1)?.version || 0) + 1, createdAt: new Date().toISOString(), path: 'dist/index.html', published: { target: useExistingAccount ? 'account' : target, url, claimUrl } });
       await writeMetadata(cwd, meta);
     }
-    console.log(`Published ${args.file ? 'HTML file' : 'artifact'}:\n${url}${claimUrl ? `\nClaim within 60 minutes: ${claimUrl}` : ''}`);
+    const destination = useExistingAccount ? '\nCloudflare account: existing Wrangler session' : '';
+    console.log(`Published ${args.file ? 'HTML file' : 'artifact'}:\n${url}${destination}${claimUrl ? `\nClaim within 60 minutes: ${claimUrl}` : ''}`);
   } finally {
     if (tempHome) await rm(tempHome, { recursive: true, force: true });
     if (cleanupDeployDir) await rm(deployDir, { recursive: true, force: true });
   }
+}
+async function authenticatedWrangler(cwd) {
+  const result = await runQuiet('wrangler', ['whoami'], cwd, process.env);
+  return result.code === 0 ? 'wrangler' : undefined;
 }
 async function writeWranglerProject(cwd, id) {
   const dir = artifactDir(cwd, id);
@@ -380,5 +389,12 @@ function run(cmd, argv, cwd, env) {
     child.stderr.on('data', c => { output += c; process.stderr.write(c); });
     child.on('error', reject);
     child.on('close', code => resolve({ code: code ?? 1, output }));
+  });
+}
+function runQuiet(cmd, argv, cwd, env) {
+  return new Promise(resolve => {
+    const child = spawn(cmd, argv, { cwd, env, stdio: 'ignore' });
+    child.on('error', () => resolve({ code: 1 }));
+    child.on('close', code => resolve({ code: code ?? 1 }));
   });
 }

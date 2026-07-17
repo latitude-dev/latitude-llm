@@ -2,7 +2,7 @@ import { ChSqlClient, type FilterSet, OrganizationId, ProjectId, SessionId } fro
 import { createFakeChSqlClient } from "@domain/shared/testing"
 import { Effect, Layer } from "effect"
 import { describe, expect, it } from "vitest"
-import { CUSTOM_BEHAVIOR_LOOKBACK_DAYS, TAXONOMY_GARDENING_MIN_OBSERVATIONS } from "../constants.ts"
+import { TAXONOMY_GARDENING_MIN_OBSERVATIONS, TAXONOMY_GARDENING_SAMPLE_LOOKBACK_DAYS } from "../constants.ts"
 import type { TaxonomyMomentObservation } from "../entities/observation.ts"
 import { CustomBehaviorFilterInvalidError } from "../errors.ts"
 import { TaxonomyObservationRepository } from "../ports/taxonomy-observation-repository.ts"
@@ -12,7 +12,7 @@ import { previewCustomBehaviorSampleUseCase } from "./preview-custom-behavior-sa
 const organizationId = OrganizationId("o".repeat(24))
 const projectId = ProjectId("p".repeat(24))
 const now = new Date("2026-07-14T00:00:00.000Z")
-const FILTER: FilterSet = { moments: [{ op: "in", value: ["escalation"] }] }
+const FILTER: FilterSet = { models: [{ op: "in", value: ["gpt-4o"] }] }
 const DAY_MS = 24 * 60 * 60 * 1000
 
 const makeObservation = (index: number, startTime: Date): TaxonomyMomentObservation => ({
@@ -63,10 +63,10 @@ describe("previewCustomBehaviorSampleUseCase", () => {
     expect(result.isReady).toBe(false)
   })
 
-  it("counts only observations inside the lookback window (since = now - CUSTOM_BEHAVIOR_LOOKBACK_DAYS)", async () => {
+  it("counts only observations inside the gardening sample window", async () => {
     const inWindow = Array.from({ length: 3 }, (_, i) => makeObservation(i, now))
     const outsideWindow = Array.from({ length: 5 }, (_, i) =>
-      makeObservation(100 + i, new Date(now.getTime() - (CUSTOM_BEHAVIOR_LOOKBACK_DAYS + 1) * DAY_MS)),
+      makeObservation(100 + i, new Date(now.getTime() - (TAXONOMY_GARDENING_SAMPLE_LOOKBACK_DAYS + 1) * DAY_MS)),
     )
     const result = await run({ filterSet: FILTER }, [...inWindow, ...outsideWindow])
     expect(result.observationCount).toBe(3)

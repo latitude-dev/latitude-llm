@@ -31,12 +31,14 @@ const provideDeps = <A, E>(
     Effect.provideService(ShowcaseRepository, showcaseRepository),
     Effect.provideService(OrganizationRepository, {
       findById: () => Effect.die(new Error("unused")),
+      findByIdForUpdate: () => Effect.die(new Error("unused")),
       listByUserId: () => Effect.die(new Error("unused")),
       save: (org) =>
         Effect.sync(() => {
           savedOrganizations.push(org)
         }),
       delete: () => Effect.die(new Error("unused")),
+      deleteIfExpiredUnclaimed: () => Effect.die(new Error("unused")),
       countBySlug: () => Effect.die(new Error("unused")),
       listExpiredUnclaimed: () => Effect.die(new Error("unused")),
     }),

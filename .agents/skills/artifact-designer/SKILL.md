@@ -102,7 +102,9 @@ Do not publish unless the user asks.
 
 Publishing creates a public URL. Do not publish secrets, credentials, customer data, or proprietary data unless the user confirms it is safe.
 
-Temporary publishing uses Wrangler with isolated Cloudflare auth and may expire unless claimed.
+Before publishing, the helper checks `wrangler whoami`. If Wrangler is installed and authenticated, publish to that existing Cloudflare account, including when the requested target is `temporary`. This creates a normal account-owned Worker and does not emit a claim URL.
+
+If no authenticated Wrangler session is available, temporary publishing uses isolated Cloudflare auth and may expire unless claimed. Permanent publishing still requires Cloudflare authentication.
 
 ## Helper commands
 

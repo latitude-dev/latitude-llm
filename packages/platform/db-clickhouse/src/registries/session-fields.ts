@@ -30,4 +30,5 @@ export const SESSION_FIELD_REGISTRY: ChFieldRegistry = {
   tokensOutput: { column: "tokens_output", chType: "UInt64" },
   cacheHitRate: { kind: "synthetic", buildClause: buildCacheHitRateClause },
   startTime: { column: "start_time", chType: "DateTime64(9, 'UTC')", valueExpression: dateTime64BestEffortExpression },
+  endTime: { column: "end_time", chType: "DateTime64(9, 'UTC')", valueExpression: dateTime64BestEffortExpression },
 }

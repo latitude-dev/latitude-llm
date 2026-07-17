@@ -4,7 +4,6 @@ import {
   type CustomBehaviorRecord,
   createCustomBehaviorFn,
   deleteCustomBehaviorFn,
-  generateCustomBehaviorFn,
   listCustomBehaviors,
   previewCustomBehaviorSample,
   updateCustomBehaviorFn,
@@ -53,14 +52,6 @@ export function useUpdateCustomBehavior(projectId: string) {
   return useMutation({
     mutationFn: (input: { id: string; name?: string; filterSet?: FilterSet }): Promise<CustomBehaviorRecord> =>
       updateCustomBehaviorFn({ data: input }),
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: listKey(projectId) }),
-  })
-}
-
-export function useGenerateCustomBehavior(projectId: string) {
-  const queryClient = useQueryClient()
-  return useMutation({
-    mutationFn: (id: string): Promise<CustomBehaviorRecord> => generateCustomBehaviorFn({ data: { id } }),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: listKey(projectId) }),
   })
 }

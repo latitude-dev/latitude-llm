@@ -55,12 +55,14 @@ const cohortA: CustomBehaviorQaCohort = {
   userId: CUSTOM_BEHAVIOR_QA_USER_ID,
   metadata: { seed: "custom-behavior-qa", cohort: "a" },
   filterSet: { userId: [{ op: "in", value: [CUSTOM_BEHAVIOR_QA_USER_ID] }] },
-  // Two centroids of 21 — each root child clears the depth-0 split floor
-  // (TAXONOMY_TREE_DEPTH_SCHEDULE[0].minClusterAbs = 20), so gardening yields a
-  // multi-cluster scoped tree instead of collapsing to a single leaf.
+  // Two centroids of 25 — each root child stays clear of the depth-0 split floor
+  // (TAXONOMY_TREE_DEPTH_SCHEDULE[0].minClusterAbs = 20) with margin, so the
+  // scoped tree keeps splitting into multiple clusters even after a day or two of
+  // observations age out of the sample window (the seeder also anchors them to
+  // the recent part of the window so they decay slowly).
   subTopics: [
-    { key: "a-order-status", summary: "Where is my order — delivery and tracking questions.", sessionCount: 21 },
-    { key: "a-returns", summary: "Return and refund eligibility for delivered items.", sessionCount: 21 },
+    { key: "a-order-status", summary: "Where is my order — delivery and tracking questions.", sessionCount: 25 },
+    { key: "a-returns", summary: "Return and refund eligibility for delivered items.", sessionCount: 25 },
   ],
 }
 
@@ -73,8 +75,8 @@ const cohortB: CustomBehaviorQaCohort = {
   metadata: { seed: "custom-behavior-qa", cohort: "b", domain: "retail" },
   filterSet: { serviceNames: [{ op: "in", value: [CUSTOM_BEHAVIOR_QA_SERVICE_NAME] }] },
   subTopics: [
-    { key: "b-exchange", summary: "Exchange a delivered item for a different size or colour.", sessionCount: 21 },
-    { key: "b-payment", summary: "Payment method updates and failed-charge troubleshooting.", sessionCount: 21 },
+    { key: "b-exchange", summary: "Exchange a delivered item for a different size or colour.", sessionCount: 25 },
+    { key: "b-payment", summary: "Payment method updates and failed-charge troubleshooting.", sessionCount: 25 },
   ],
 }
 

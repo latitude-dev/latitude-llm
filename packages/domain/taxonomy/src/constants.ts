@@ -62,15 +62,6 @@ export const CUSTOM_BEHAVIOR_STATUSES = ["pending", "generating", "ready", "fail
  */
 export const MAX_CUSTOM_BEHAVIORS_PER_PROJECT = 10
 
-/**
- * Fixed lookback window the scoped-sampling activity reads observations over
- * before clustering a custom behavior (LAT-746 Q2 = fixed 7d). Phase 2 passes
- * this as the sampling activity's *parameter* — never hardcoded inside the
- * query — so a future selectable window is an additive nullable-column swap
- * with no Temporal non-determinism risk.
- */
-export const CUSTOM_BEHAVIOR_LOOKBACK_DAYS = 7
-
 // ---------------------------------------------------------------------------
 // Embedding + summary
 // ---------------------------------------------------------------------------
@@ -115,6 +106,17 @@ export const TAXONOMY_GARDENING_CRON_KEY = "taxonomy:garden-sweep"
 export const TAXONOMY_GARDENING_CRON_PATTERN = "0 */6 * * *"
 export const TAXONOMY_GARDENING_SWEEP_SPREAD_MS = 5 * 60 * 60_000
 export const TAXONOMY_GARDENING_THROTTLE_MS = 60 * 60_000
+
+/**
+ * Scoped-gardening sweep: the periodic enqueue that keeps every custom behavior
+ * a *living* taxonomy (the scoped analogue of the global `gardenSweep`). Same 6h
+ * cadence as the global sweep. A behavior gardened within
+ * `CUSTOM_BEHAVIOR_GARDENING_MIN_INTERVAL_MS` is skipped so a create-time run or
+ * a prior sweep isn't redone every tick — eligibility reads `last_gardened_at`.
+ */
+export const CUSTOM_BEHAVIOR_GARDENING_CRON_KEY = "taxonomy:garden-custom-behavior-sweep"
+export const CUSTOM_BEHAVIOR_GARDENING_CRON_PATTERN = "0 */6 * * *"
+export const CUSTOM_BEHAVIOR_GARDENING_MIN_INTERVAL_MS = 5 * 60 * 60_000
 /**
  * Cold-start gate. Lowered from the spec's original `50` after the
  * adversarial-review pass concluded the first 2–4 weeks of empty-state UX
@@ -139,8 +141,14 @@ export const TAXONOMY_LIST_ALL_BY_CLUSTER_MAX = 10_000
 // Gardening sample window
 // ---------------------------------------------------------------------------
 
-/** Lookback window the divisive build day-stratifies its observation sample over. */
-export const TAXONOMY_NOISE_LOOKBACK_DAYS = 7
+/**
+ * The single gardening sample window: how far back a gardening pass day-
+ * stratifies its observation sample. Shared by BOTH the global divisive build
+ * and scoped custom-behavior sampling (and the sweep's eligibility count) so the
+ * two can never drift. Not per-behavior selectable — scoped gardening tracks the
+ * global gardening model.
+ */
+export const TAXONOMY_GARDENING_SAMPLE_LOOKBACK_DAYS = 7
 
 // ---------------------------------------------------------------------------
 // Hierarchy + naming

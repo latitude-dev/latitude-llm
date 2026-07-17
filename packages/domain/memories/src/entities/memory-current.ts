@@ -10,7 +10,6 @@ import { memoryChangeKindSchema } from "./memory-event.ts"
 export const memoryCurrentEntrySchema = z.object({
   organizationId: organizationIdSchema,
   projectId: projectIdSchema,
-  scope: z.string(),
   storeId: z.string(),
   recordId: z.string(),
   contentHash: z.string(),

@@ -162,6 +162,7 @@ export * from "./TraceAnalyticsTimeToFirstToken.js";
 export * from "./TraceAnalyticsTokens.js";
 export * from "./TraceAnalyticsTraces.js";
 export * from "./TraceDetail.js";
+export * from "./TraceFilterSet.js";
 export * from "./TraceRef.js";
 export * from "./TraceSpans.js";
 export * from "./TracesRef.js";

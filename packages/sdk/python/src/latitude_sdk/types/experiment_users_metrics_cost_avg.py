@@ -9,7 +9,7 @@ from .metric_delta import MetricDelta
 
 class ExperimentUsersMetricsCostAvg(UniversalBaseModel):
     """
-    Avg cost — USD; lower is better.
+    Average model cost per user — USD; lower is better.
     """
 
     value: typing.Optional[float] = pydantic.Field(default=None)

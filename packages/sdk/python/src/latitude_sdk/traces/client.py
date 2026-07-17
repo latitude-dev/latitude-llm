@@ -7,12 +7,12 @@ from ..core.client_wrapper import AsyncClientWrapper, SyncClientWrapper
 from ..core.request_options import RequestOptions
 from ..types.annotation import Annotation
 from ..types.export_traces_response import ExportTracesResponse
-from ..types.filter_set import FilterSet
 from ..types.paginated_trace_annotations import PaginatedTraceAnnotations
 from ..types.paginated_traces import PaginatedTraces
 from ..types.span_detail import SpanDetail
 from ..types.trace_analytics_response import TraceAnalyticsResponse
 from ..types.trace_detail import TraceDetail
+from ..types.trace_filter_set import TraceFilterSet
 from ..types.trace_spans import TraceSpans
 from ..types.traces_ref import TracesRef
 from .raw_client import AsyncRawTracesClient, RawTracesClient
@@ -47,7 +47,7 @@ class TracesClient:
         sort_by: typing.Optional[ListTracesBodySortBy] = OMIT,
         sort_direction: typing.Optional[ListTracesBodySortDirection] = OMIT,
         query: typing.Optional[str] = OMIT,
-        filters: typing.Optional[FilterSet] = OMIT,
+        filters: typing.Optional[TraceFilterSet] = OMIT,
         request_options: typing.Optional[RequestOptions] = None,
     ) -> PaginatedTraces:
         """
@@ -73,7 +73,7 @@ class TracesClient:
         query : typing.Optional[str]
             Free-text semantic search across the trace's input and output messages. Combined with `filters` via AND.
 
-        filters : typing.Optional[FilterSet]
+        filters : typing.Optional[TraceFilterSet]
 
         request_options : typing.Optional[RequestOptions]
             Request-specific configuration.
@@ -440,7 +440,7 @@ class AsyncTracesClient:
         sort_by: typing.Optional[ListTracesBodySortBy] = OMIT,
         sort_direction: typing.Optional[ListTracesBodySortDirection] = OMIT,
         query: typing.Optional[str] = OMIT,
-        filters: typing.Optional[FilterSet] = OMIT,
+        filters: typing.Optional[TraceFilterSet] = OMIT,
         request_options: typing.Optional[RequestOptions] = None,
     ) -> PaginatedTraces:
         """
@@ -466,7 +466,7 @@ class AsyncTracesClient:
         query : typing.Optional[str]
             Free-text semantic search across the trace's input and output messages. Combined with `filters` via AND.
 
-        filters : typing.Optional[FilterSet]
+        filters : typing.Optional[TraceFilterSet]
 
         request_options : typing.Optional[RequestOptions]
             Request-specific configuration.

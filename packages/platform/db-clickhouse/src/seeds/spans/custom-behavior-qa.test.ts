@@ -7,7 +7,7 @@ import {
 import { bootstrapSeedScope } from "@domain/shared/seeding"
 import {
   TAXONOMY_GARDENING_MIN_OBSERVATIONS,
-  TAXONOMY_NOISE_LOOKBACK_DAYS,
+  TAXONOMY_GARDENING_SAMPLE_LOOKBACK_DAYS,
   TaxonomyObservationRepository,
 } from "@domain/taxonomy"
 import { setupTestClickHouse } from "@platform/testkit"
@@ -22,7 +22,7 @@ const ch = setupTestClickHouse()
 const organizationId = bootstrapSeedScope.organizationId as OrganizationId
 const projectId = bootstrapSeedScope.projectId as ProjectId
 const NOW_MS = Date.parse("2026-07-14T12:00:00.000Z")
-const SINCE = new Date(NOW_MS - TAXONOMY_NOISE_LOOKBACK_DAYS * 24 * 60 * 60 * 1000)
+const SINCE = new Date(NOW_MS - TAXONOMY_GARDENING_SAMPLE_LOOKBACK_DAYS * 24 * 60 * 60 * 1000)
 
 const cohortSize = (cohort: (typeof CUSTOM_BEHAVIOR_QA_COHORTS)["a"]) =>
   cohort.subTopics.reduce((sum, topic) => sum + topic.sessionCount, 0)
@@ -52,6 +52,35 @@ describe("customBehaviorQa fixture", () => {
     // successful scoped generation resolves into more than one cluster.
     const clusterIds = new Set(observations.map((observation) => observation.assigned_cluster_id))
     expect(clusterIds.size).toBe(totalSubTopics)
+  })
+
+  it("emits an analysis and moment labels per session, joined by a shared analysis_hash", () => {
+    const { observations, analyses, momentLabels } = buildCustomBehaviorQaFixture(bootstrapSeedScope, NOW_MS)
+    const totalSessions = CUSTOM_BEHAVIOR_QA_COHORT_LIST.reduce((sum, cohort) => sum + cohortSize(cohort), 0)
+
+    expect(analyses).toHaveLength(totalSessions)
+    expect(momentLabels).toHaveLength(totalSessions * 2)
+    for (const analysis of analyses) {
+      expect(analysis.analysis_status).toBe("analyzed")
+      expect(analysis.analysis_hash.length).toBe(64)
+      expect(analysis.trace_ids).toHaveLength(1)
+    }
+
+    // The Behaviours drawer joins observations → analyses → moment labels on
+    // (session_id, analysis_hash), so all three must agree per session.
+    const analysisHashBySession = new Map(analyses.map((analysis) => [analysis.session_id, analysis.analysis_hash]))
+    for (const observation of observations) {
+      expect(analysisHashBySession.get(observation.session_id)).toBe(observation.analysis_hash)
+    }
+    for (const label of momentLabels) {
+      expect(analysisHashBySession.get(label.session_id)).toBe(label.analysis_hash)
+    }
+
+    // Every metric-bearing kind is present so the trajectory chart has data.
+    const kinds = new Set(momentLabels.map((label) => label.kind))
+    for (const kind of ["resolution", "escalation", "user_frustration", "user_satisfaction", "abandonment"]) {
+      expect(kinds.has(kind)).toBe(true)
+    }
   })
 
   it("previews ≥15 for the two full cohorts and <15 for the waiting cohort", async () => {

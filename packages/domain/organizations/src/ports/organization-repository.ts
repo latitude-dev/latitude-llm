@@ -6,9 +6,11 @@ export class OrganizationRepository extends Context.Service<
   OrganizationRepository,
   {
     findById: (id: OrganizationId) => Effect.Effect<Organization, NotFoundError | RepositoryError, SqlClient>
+    findByIdForUpdate: (id: OrganizationId) => Effect.Effect<Organization, NotFoundError | RepositoryError, SqlClient>
     listByUserId: (userId: UserId) => Effect.Effect<Organization[], RepositoryError, SqlClient>
     save: (org: Organization) => Effect.Effect<void, RepositoryError, SqlClient>
     delete: (id: OrganizationId) => Effect.Effect<void, RepositoryError, SqlClient>
+    deleteIfExpiredUnclaimed: (id: OrganizationId) => Effect.Effect<boolean, RepositoryError, SqlClient>
     /**
      * Number of organizations with this slug. Powers the `count` callback of
      * `generateSlug`. The DB has a global UNIQUE constraint so the result is

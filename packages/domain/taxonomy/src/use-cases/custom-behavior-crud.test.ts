@@ -4,7 +4,7 @@ import { CustomBehaviorId, type FilterSet, OrganizationId, ProjectId, SqlClient 
 import { createFakeSqlClient } from "@domain/shared/testing"
 import { Effect, Exit, Layer } from "effect"
 import { describe, expect, it } from "vitest"
-import { MAX_CUSTOM_BEHAVIORS_PER_PROJECT } from "../constants.ts"
+import { CUSTOM_BEHAVIOR_GARDENING_MIN_INTERVAL_MS, MAX_CUSTOM_BEHAVIORS_PER_PROJECT } from "../constants.ts"
 import { type CustomBehavior, CustomBehaviorStatus } from "../entities/custom-behavior.ts"
 import {
   CustomBehaviorFilterInvalidError,
@@ -22,7 +22,7 @@ import { updateCustomBehavior } from "./update-custom-behavior.ts"
 const ORG_ID = OrganizationId("o".repeat(24))
 const PROJECT_ID = ProjectId("p".repeat(24))
 const OTHER_PROJECT_ID = ProjectId("q".repeat(24))
-const FILTER: FilterSet = { moments: [{ op: "in", value: ["escalation"] }] }
+const FILTER: FilterSet = { models: [{ op: "in", value: ["gpt-4o"] }] }
 
 const makeBehavior = (overrides: Partial<CustomBehavior> = {}): CustomBehavior => ({
   id: CustomBehaviorId("b".repeat(24)),
@@ -39,26 +39,31 @@ const makeBehavior = (overrides: Partial<CustomBehavior> = {}): CustomBehavior =
 
 function makeLayer() {
   const { repository, rows } = createFakeCustomBehaviorRepository()
+  const queue = createFakeQueuePublisher()
   const layer = Layer.mergeAll(
     Layer.succeed(CustomBehaviorRepository, repository),
+    Layer.succeed(QueuePublisher, queue.publisher),
     Layer.succeed(SqlClient, createFakeSqlClient()),
   )
-  return { layer, rows }
+  return { layer, rows, queue }
 }
 
 describe("createCustomBehavior", () => {
-  it("creates a behavior with a slugified name and pending status", async () => {
-    const { layer } = makeLayer()
+  it("creates a behavior with a slugified name and auto-starts its first gardening run", async () => {
+    const { layer, queue } = makeLayer()
     const result = await Effect.runPromise(
       createCustomBehavior({
         projectId: PROJECT_ID,
         name: "Refund Requests",
-        filterSet: { moments: [{ op: "in", value: ["escalation"] }] },
+        filterSet: { models: [{ op: "in", value: ["gpt-4o"] }] },
       }).pipe(Effect.provide(layer)),
     )
     expect(result.slug).toBe("refund-requests")
     expect(result.name).toBe("Refund Requests")
-    expect(result.status).toBe(CustomBehaviorStatus.Pending)
+    // Creating a behavior kicks off gardening immediately, so it comes back generating.
+    expect(result.status).toBe(CustomBehaviorStatus.Generating)
+    expect(queue.published).toHaveLength(1)
+    expect(queue.published[0]).toMatchObject({ queue: "taxonomy", task: "gardenCustomBehavior" })
   })
 
   it("appends a random suffix on slug collision within the project", async () => {
@@ -231,6 +236,8 @@ describe("generateCustomBehavior", () => {
       },
       options: {
         dedupeKey: taxonomyGardenCustomBehaviorDedupeKey({ organizationId: ORG_ID, customBehaviorId: behavior.id }),
+        // TTL-based dedupe (not a bare/retained jobId) so re-gardening keeps recurring.
+        leadingThrottleMs: CUSTOM_BEHAVIOR_GARDENING_MIN_INTERVAL_MS,
       },
     })
   })

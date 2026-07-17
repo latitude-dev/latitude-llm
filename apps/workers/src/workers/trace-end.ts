@@ -110,8 +110,13 @@ export const runTraceEndJob =
           ),
         )
 
+      const canonicalSessionId =
+        traceDetail.sessionId && traceDetail.sessionId.length > 0 ? traceDetail.sessionId : traceDetail.traceId
+
       // Materialize the settled trace's memory-operation spans into the memory
       // ledger. Its own worker + failure domain, like deterministic-flaggers.
+      // Stamp the trace's canonical session id: memory spans often carry no
+      // session attribute even when sibling chat spans do.
       yield* publisher
         .publish(
           "memory-projection",
@@ -120,6 +125,7 @@ export const runTraceEndJob =
             organizationId: payload.organizationId,
             projectId: payload.projectId,
             traceId: payload.traceId,
+            sessionId: canonicalSessionId,
           },
           {
             dedupeKey: `org:${payload.organizationId}:memory-projection:${payload.projectId}:${payload.traceId}`,
@@ -143,9 +149,6 @@ export const runTraceEndJob =
         rootSpanName: traceDetail.rootSpanName,
         isSandbox: payload.isSandbox ?? false,
       })
-
-      const canonicalSessionId =
-        traceDetail.sessionId && traceDetail.sessionId.length > 0 ? traceDetail.sessionId : traceDetail.traceId
 
       // "Trace ends → session settles": hand session-level work (signals:match, session analysis) to
       // the session-end worker, debounced per session so repeated trace-ends collapse to one firing

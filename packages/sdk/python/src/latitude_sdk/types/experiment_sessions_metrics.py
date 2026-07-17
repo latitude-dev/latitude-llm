@@ -23,72 +23,72 @@ from .experiment_sessions_metrics_users import ExperimentSessionsMetricsUsers
 class ExperimentSessionsMetrics(UniversalBaseModel):
     count: ExperimentSessionsMetricsCount = pydantic.Field()
     """
-    Sessions — count.
+    Number of sessions in the variant's population — count.
     """
 
     users: ExperimentSessionsMetricsUsers = pydantic.Field()
     """
-    Users — count.
+    Distinct users across the variant's sessions — count.
     """
 
     cost_total: ExperimentSessionsMetricsCostTotal = pydantic.Field()
     """
-    Total cost — USD; lower is better.
+    Total model cost across the variant's sessions — USD; lower is better.
     """
 
     tokens_total: ExperimentSessionsMetricsTokensTotal = pydantic.Field()
     """
-    Total tokens — tokens.
+    Total tokens across the variant's sessions — tokens.
     """
 
     error_rate: ExperimentSessionsMetricsErrorRate = pydantic.Field()
     """
-    Error rate — fraction (0–1); lower is better.
+    Fraction of sessions with at least one error — fraction (0–1); lower is better.
     """
 
     cache_hit_rate: ExperimentSessionsMetricsCacheHitRate = pydantic.Field()
     """
-    Cache hit rate — fraction (0–1); higher is better.
+    Fraction of input tokens served from cache — fraction (0–1); higher is better.
     """
 
     duration_median: ExperimentSessionsMetricsDurationMedian = pydantic.Field()
     """
-    Median duration — seconds; lower is better.
+    Median session duration — seconds; lower is better.
     """
 
     duration_p90: ExperimentSessionsMetricsDurationP90 = pydantic.Field()
     """
-    p90 duration — seconds; lower is better.
+    90th-percentile session duration — seconds; lower is better.
     """
 
     duration_p95: ExperimentSessionsMetricsDurationP95 = pydantic.Field()
     """
-    p95 duration — seconds; lower is better.
+    95th-percentile session duration — seconds; lower is better.
     """
 
     cost_avg: ExperimentSessionsMetricsCostAvg = pydantic.Field()
     """
-    Avg cost — USD; lower is better.
+    Average model cost per session — USD; lower is better.
     """
 
     tokens_avg: ExperimentSessionsMetricsTokensAvg = pydantic.Field()
     """
-    Avg tokens — tokens.
+    Average tokens per session — tokens.
     """
 
     ttft_median: ExperimentSessionsMetricsTtftMedian = pydantic.Field()
     """
-    Median time to first token — seconds; lower is better.
+    Median time to first token across sessions — seconds; lower is better.
     """
 
     spans_avg: ExperimentSessionsMetricsSpansAvg = pydantic.Field()
     """
-    Avg spans — count.
+    Average spans per session — count.
     """
 
     traces_avg: ExperimentSessionsMetricsTracesAvg = pydantic.Field()
     """
-    Avg traces — count.
+    Average traces per session — count.
     """
 
     model_config: typing.ClassVar[pydantic.ConfigDict] = pydantic.ConfigDict(extra="allow", frozen=True)

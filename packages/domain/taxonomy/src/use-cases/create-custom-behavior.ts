@@ -22,6 +22,7 @@ import {
   CustomBehaviorNameInvalidError,
 } from "../errors.ts"
 import { CustomBehaviorRepository } from "../ports/custom-behavior-repository.ts"
+import { generateCustomBehavior } from "./generate-custom-behavior.ts"
 
 export interface CreateCustomBehaviorInput {
   readonly id?: CustomBehaviorId
@@ -64,7 +65,7 @@ export const createCustomBehavior = Effect.fn("taxonomy.createCustomBehavior")(f
   }
 
   const sqlClient = yield* SqlClient
-  return yield* sqlClient.transaction(
+  const created = yield* sqlClient.transaction(
     Effect.gen(function* () {
       const repo = yield* CustomBehaviorRepository
 
@@ -99,4 +100,11 @@ export const createCustomBehavior = Effect.fn("taxonomy.createCustomBehavior")(f
       return behavior
     }),
   )
+
+  // Custom behaviors garden automatically, like the global taxonomy: creating
+  // one kicks off its first run immediately, then the scoped cron sweep keeps it
+  // living. There is no manual trigger. Best-effort — the enqueue runs after the
+  // create commits, so if it fails the row stays `pending` and the next sweep
+  // gardens it (last_gardened_at is null).
+  return yield* generateCustomBehavior({ customBehaviorId: created.id }).pipe(Effect.orElseSucceed(() => created))
 })

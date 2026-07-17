@@ -132,7 +132,7 @@ export const CustomBehaviorAssignmentRepositoryLive = Layer.effect(
             )
         }),
 
-      getClusterAssignmentCounts: ({ organizationId, projectId, customBehaviorId }) =>
+      getClusterAssignmentCounts: ({ organizationId, projectId, customBehaviorId, startTimeFrom, startTimeTo }) =>
         Effect.gen(function* () {
           const chSqlClient = (yield* ChSqlClient) as ChSqlClientShape<ClickHouseClient>
           return yield* chSqlClient
@@ -144,12 +144,16 @@ export const CustomBehaviorAssignmentRepositoryLive = Layer.effect(
                           AND project_id = {projectId:String}
                           AND custom_behavior_id = {customBehaviorId:String}
                           AND assigned_cluster_id != ''
+                          ${startTimeFrom ? "AND start_time >= {startTimeFrom:DateTime64(9, 'UTC')}" : ""}
+                          ${startTimeTo ? "AND start_time < {startTimeTo:DateTime64(9, 'UTC')}" : ""}
                         GROUP BY assigned_cluster_id
                         ORDER BY count DESC, assigned_cluster_id ASC`,
                 query_params: {
                   organizationId: organizationId as string,
                   projectId: projectId as string,
                   customBehaviorId: customBehaviorId as string,
+                  ...(startTimeFrom ? { startTimeFrom: formatCHDate(startTimeFrom) } : {}),
+                  ...(startTimeTo ? { startTimeTo: formatCHDate(startTimeTo) } : {}),
                 },
                 format: "JSONEachRow",
               })
@@ -159,6 +163,68 @@ export const CustomBehaviorAssignmentRepositoryLive = Layer.effect(
             .pipe(
               Effect.mapError((error) =>
                 toRepositoryError(error, "CustomBehaviorAssignmentRepository.getClusterAssignmentCounts"),
+              ),
+            )
+        }),
+
+      // Scoped mirror of TaxonomyObservationRepository.getClusterTrendCounts:
+      // current (>= currentSince) vs baseline ([baselineSince, currentSince))
+      // counts over the accumulated `custom_behavior_assignments` slice.
+      getClusterTrendCounts: ({
+        organizationId,
+        projectId,
+        customBehaviorId,
+        clusterIds,
+        currentSince,
+        baselineSince,
+        baselineDays,
+      }) =>
+        Effect.gen(function* () {
+          if (clusterIds.length === 0) return []
+          const chSqlClient = (yield* ChSqlClient) as ChSqlClientShape<ClickHouseClient>
+          return yield* chSqlClient
+            .query(async (client) => {
+              const result = await client.query({
+                query: `SELECT
+                          assigned_cluster_id AS cluster_id,
+                          countIf(start_time >= {currentSince:DateTime64(9, 'UTC')}) AS current_count,
+                          countIf(start_time >= {baselineSince:DateTime64(9, 'UTC')} AND start_time < {currentSince:DateTime64(9, 'UTC')}) AS baseline_count
+                        FROM custom_behavior_assignments FINAL
+                        WHERE organization_id = {organizationId:String}
+                          AND project_id = {projectId:String}
+                          AND custom_behavior_id = {customBehaviorId:String}
+                          AND assigned_cluster_id IN {clusterIds:Array(String)}
+                          AND start_time >= {baselineSince:DateTime64(9, 'UTC')}
+                        GROUP BY assigned_cluster_id`,
+                query_params: {
+                  organizationId: organizationId as string,
+                  projectId: projectId as string,
+                  customBehaviorId: customBehaviorId as string,
+                  clusterIds: clusterIds as readonly string[],
+                  currentSince: formatCHDate(currentSince),
+                  baselineSince: formatCHDate(baselineSince),
+                },
+                format: "JSONEachRow",
+              })
+              const rows = await result.json<{
+                cluster_id: string
+                current_count: string | number
+                baseline_count: string | number
+              }>()
+              const rowByClusterId = new Map(rows.map((row) => [row.cluster_id, row]))
+              return clusterIds.map((clusterId) => {
+                const row = rowByClusterId.get(clusterId as string)
+                return {
+                  clusterId,
+                  currentCount: Number(row?.current_count ?? 0),
+                  baselineCount: Number(row?.baseline_count ?? 0),
+                  baselineDays,
+                }
+              })
+            })
+            .pipe(
+              Effect.mapError((error) =>
+                toRepositoryError(error, "CustomBehaviorAssignmentRepository.getClusterTrendCounts"),
               ),
             )
         }),

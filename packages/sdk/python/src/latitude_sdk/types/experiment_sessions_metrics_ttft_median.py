@@ -9,7 +9,7 @@ from .metric_delta import MetricDelta
 
 class ExperimentSessionsMetricsTtftMedian(UniversalBaseModel):
     """
-    Median time to first token — seconds; lower is better.
+    Median time to first token across sessions — seconds; lower is better.
     """
 
     value: typing.Optional[float] = pydantic.Field(default=None)

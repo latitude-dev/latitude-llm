@@ -12,7 +12,7 @@ export const MEMORY_CHANGE_KINDS = ["add", "update", "remove", "read", "store_cr
 export const memoryChangeKindSchema = z.enum(MEMORY_CHANGE_KINDS)
 export type MemoryChangeKind = z.infer<typeof memoryChangeKindSchema>
 
-/** Kinds that mutate a scope's manifest (reconstruction reads only these). */
+/** Kinds that mutate a store's manifest (reconstruction reads only these). */
 export const MEMORY_MUTATING_CHANGE_KINDS = ["add", "update", "remove"] as const satisfies readonly MemoryChangeKind[]
 
 export const MEMORY_EVENT_SOURCES = ["otlp"] as const
@@ -27,7 +27,6 @@ export type MemoryEventSource = z.infer<typeof memoryEventSourceSchema>
 export const memoryEventSchema = z.object({
   organizationId: organizationIdSchema,
   projectId: projectIdSchema,
-  scope: z.string(),
   storeId: z.string(),
   recordId: z.string(),
   operation: z.string(),

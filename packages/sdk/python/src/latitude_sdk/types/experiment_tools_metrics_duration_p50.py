@@ -9,7 +9,7 @@ from .metric_delta import MetricDelta
 
 class ExperimentToolsMetricsDurationP50(UniversalBaseModel):
     """
-    Median duration — seconds; lower is better.
+    Median tool-call duration — seconds; lower is better.
     """
 
     value: typing.Optional[float] = pydantic.Field(default=None)

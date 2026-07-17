@@ -749,6 +749,7 @@ if typing.TYPE_CHECKING:
     from .trace_analytics_tokens import TraceAnalyticsTokens
     from .trace_analytics_traces import TraceAnalyticsTraces
     from .trace_detail import TraceDetail
+    from .trace_filter_set import TraceFilterSet
     from .trace_ref import TraceRef, TraceRef_Filters, TraceRef_Id
     from .trace_ref_filters import TraceRefFilters
     from .trace_ref_id import TraceRefId
@@ -1471,6 +1472,7 @@ _dynamic_imports: typing.Dict[str, str] = {
     "TraceAnalyticsTokens": ".trace_analytics_tokens",
     "TraceAnalyticsTraces": ".trace_analytics_traces",
     "TraceDetail": ".trace_detail",
+    "TraceFilterSet": ".trace_filter_set",
     "TraceRef": ".trace_ref",
     "TraceRefFilters": ".trace_ref_filters",
     "TraceRefId": ".trace_ref_id",
@@ -2221,6 +2223,7 @@ __all__ = [
     "TraceAnalyticsTokens",
     "TraceAnalyticsTraces",
     "TraceDetail",
+    "TraceFilterSet",
     "TraceRef",
     "TraceRefFilters",
     "TraceRefId",

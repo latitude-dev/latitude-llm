@@ -136,3 +136,67 @@ export const isPercentileSessionFilterField = (value: string): value is Percenti
 
 export const STATUS_OPTIONS = ["ok", "error", "unset"] as const
 export type TraceStatus = (typeof STATUS_OPTIONS)[number]
+
+// ---------------------------------------------------------------------------
+// Filter-field allow-list (API/MCP boundary)
+// ---------------------------------------------------------------------------
+//
+// A trace `FilterSet` is keyed by field name, but the wire schema is an open
+// record — nothing stops a caller from keying on a field the backend can't
+// apply. The ClickHouse filter builder silently drops keys it doesn't
+// recognize, so an unrecognized field (e.g. `endTime` misremembered, a typo)
+// would return an unfiltered result set with no error. These names let the API
+// boundary reject unknown fields instead of silently ignoring them, and let the
+// generated SDK/MCP/CLI schemas document exactly what is filterable.
+
+/**
+ * Time-window filter fields. A trace's `startTime`/`endTime` are the min span
+ * start and max span end. Both are filterable through the API/MCP surface (and
+ * `startTime` additionally drives the web time picker); they are intentionally
+ * absent from the generic filter dropdown, which handles time via that picker.
+ */
+export const TRACE_TIME_FILTER_FIELDS = ["startTime", "endTime"] as const
+
+/**
+ * Score-derived filter keys, exposed under the `score.` prefix in a trace
+ * filter set. Kept in sync with the ClickHouse `SCORE_FIELD_REGISTRY` (guarded
+ * by a test in `@platform/db-clickhouse`).
+ */
+export const SCORE_FILTER_FIELDS = [
+  "score.passed",
+  "score.errored",
+  "score.value",
+  "score.source",
+  "score.sourceId",
+  "score.annotatorId",
+  "score.signalId",
+  "score.simulationId",
+] as const
+
+/**
+ * Telemetry (non-score) trace filter field names applicable at the API
+ * boundary: the generic non session-only fields plus the time-window fields.
+ * Kept in sync with the ClickHouse `TRACE_FIELD_REGISTRY` (guarded by a test in
+ * `@platform/db-clickhouse`).
+ */
+export const TRACE_TELEMETRY_FILTER_FIELDS = [
+  ...TRACE_FILTER_FIELDS.filter((f) => !("sessionOnly" in f && f.sessionOnly === true)).map((f) => f.field),
+  ...TRACE_TIME_FILTER_FIELDS,
+] as const
+
+const TRACE_FILTER_FIELD_NAME_SET: ReadonlySet<string> = new Set([
+  ...TRACE_TELEMETRY_FILTER_FIELDS,
+  ...SCORE_FILTER_FIELDS,
+])
+
+/** Prefix for arbitrary metadata keys (`metadata.<path>`) in a filter set. */
+const METADATA_FILTER_FIELD_PREFIX = "metadata."
+
+/** True when `key` is a filter field the trace query can actually apply (registry field, `score.*`, or `metadata.<path>`). */
+export const isTraceFilterFieldName = (key: string): boolean =>
+  TRACE_FILTER_FIELD_NAME_SET.has(key) ||
+  (key.startsWith(METADATA_FILTER_FIELD_PREFIX) && key.length > METADATA_FILTER_FIELD_PREFIX.length)
+
+/** Returns the filter-set keys the trace query cannot apply — empty when every key is valid. */
+export const unknownTraceFilterFields = (filters: Readonly<Record<string, unknown>>): string[] =>
+  Object.keys(filters).filter((key) => !isTraceFilterFieldName(key))

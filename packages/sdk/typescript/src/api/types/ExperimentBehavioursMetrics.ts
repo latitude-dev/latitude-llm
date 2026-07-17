@@ -3,11 +3,11 @@
 import type * as Latitude from "../index.js";
 
 export interface ExperimentBehavioursMetrics {
-    /** Observations — count. */
+    /** Total behaviour observations on the variant's sessions — count. */
     observations: ExperimentBehavioursMetrics.Observations;
-    /** Clusters — count. */
+    /** Distinct behaviour clusters observed — count. */
     distinct_clusters: ExperimentBehavioursMetrics.DistinctClusters;
-    /** Moments — count. */
+    /** Semantic moments detected on the variant's sessions — count. */
     moments: ExperimentBehavioursMetrics.Moments;
     /** Top behaviours by observation count. */
     top: Latitude.ExperimentTopListItem[];
@@ -15,7 +15,7 @@ export interface ExperimentBehavioursMetrics {
 
 export namespace ExperimentBehavioursMetrics {
     /**
-     * Observations — count.
+     * Total behaviour observations on the variant's sessions — count.
      */
     export interface Observations {
         /** Value in the metric's unit; `null` when empty or not computable. */
@@ -24,7 +24,7 @@ export namespace ExperimentBehavioursMetrics {
     }
 
     /**
-     * Clusters — count.
+     * Distinct behaviour clusters observed — count.
      */
     export interface DistinctClusters {
         /** Value in the metric's unit; `null` when empty or not computable. */
@@ -33,7 +33,7 @@ export namespace ExperimentBehavioursMetrics {
     }
 
     /**
-     * Moments — count.
+     * Semantic moments detected on the variant's sessions — count.
      */
     export interface Moments {
         /** Value in the metric's unit; `null` when empty or not computable. */

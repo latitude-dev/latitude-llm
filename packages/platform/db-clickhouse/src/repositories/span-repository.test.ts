@@ -1183,6 +1183,62 @@ describe("SpanRepository", () => {
 
       expect(spans.map((span) => span.spanId)).toEqual(["ee11111111111111"])
     })
+
+    it("keeps identical span ids from different traces while deduping re-ingestion within each trace", async () => {
+      const sharedSpanId = "abababababababab"
+      await runCh(
+        insertJsonEachRow(ch.client, "spans", [
+          makeSpanRow({
+            session_id: SESSION_ID,
+            trace_id: TRACE_A,
+            span_id: sharedSpanId,
+            operation: "chat",
+            output_messages: '[{"role":"assistant","parts":[{"type":"text","content":"trace-a-older"}]}]',
+            start_time: "2026-03-01 00:00:00.000000000",
+            end_time: "2026-03-01 00:00:01.000000000",
+            ingested_at: "2026-03-01 00:00:00.000",
+          }),
+          makeSpanRow({
+            session_id: SESSION_ID,
+            trace_id: TRACE_A,
+            span_id: sharedSpanId,
+            operation: "chat",
+            output_messages: '[{"role":"assistant","parts":[{"type":"text","content":"trace-a-newer"}]}]',
+            start_time: "2026-03-01 00:00:00.000000000",
+            end_time: "2026-03-01 00:00:01.000000000",
+            ingested_at: "2026-03-01 00:00:01.000",
+          }),
+          makeSpanRow({
+            session_id: SESSION_ID,
+            trace_id: TRACE_B,
+            span_id: sharedSpanId,
+            operation: "chat",
+            output_messages: '[{"role":"assistant","parts":[{"type":"text","content":"trace-b"}]}]',
+            start_time: "2026-03-01 00:00:02.000000000",
+            end_time: "2026-03-01 00:00:03.000000000",
+            ingested_at: "2026-03-01 00:00:02.000",
+          }),
+        ]),
+      )
+
+      const spans = await runCh(
+        repo.findMessagesForSession({
+          organizationId: ORG_ID,
+          projectId: PROJECT_ID,
+          sessionId: SESSION_ID,
+          startTimeFrom: new Date("2026-03-01T00:00:00.000Z"),
+          startTimeTo: new Date("2026-03-01T00:10:00.000Z"),
+        }),
+      )
+
+      expect(spans).toHaveLength(2)
+      expect(spans.map((span) => span.outputMessages[0]?.parts?.[0])).toEqual(
+        expect.arrayContaining([
+          expect.objectContaining({ content: "trace-a-newer" }),
+          expect.objectContaining({ content: "trace-b" }),
+        ]),
+      )
+    })
   })
 
   describe("listToolSpansBySessionId", () => {

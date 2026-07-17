@@ -2,6 +2,74 @@
 
 ## Unreleased
 
+## v0.3.55 - 2026-07-17
+
+### Evaluations
+
+- Truncated live-evaluation judge prompts to fit the model's context window so large sessions no longer fail both primary and Bedrock fallback calls (ref: #4081).
+
+### Signals
+
+- Prevented late signal-generation progress writes from overwriting the terminal done/error result and leaving the UI stuck pending (ref: #3943).
+
+### Agent dispatch
+
+- Scoped Cursor/Claude/Linear/Webhook connect from a project's integrations page to project overrides instead of org-wide dispatch defaults (ref: #3984).
+
+### Organizations
+
+- Stopped claimed temporary organizations from being reaped after claim failed to clear `expires_at` on upsert (ref: #3841).
+
+### Traces
+
+- Deduped span rows in session conversation and trace message queries, and stopped false onboarding gates when spans were duplicated (refs: #4005, #3986).
+
+### Memory observability
+
+- Re-keyed memory tables and APIs on `store_id` alone, dropping the derived `scope` field and the SDK `latitude.memory.scope` attribute (ref: #4074).
+
+## v0.3.54 - 2026-07-16
+
+### Navigation
+
+- Preserved project and organization names beginning with digits, `#`, or `*` instead of rendering their first character as an emoji in navigation and command palettes (ref: #4063).
+
+## v0.3.53 - 2026-07-16
+
+### Memory observability
+
+- Added per-record memory footprints to session and trace details, showing read, added, and removed tokens with a hover breakdown grouped by memory store (ref: #4053).
+
+### Billing
+
+- Charged deterministic live-evaluation scans at 1 credit instead of 30; evaluations that call `llm()` remain at 30 credits (ref: #4055).
+
+## v0.3.52 - 2026-07-16
+
+### Custom Behaviors
+
+- Unified global and custom-behavior taxonomy gardening into one workflow: scoped gardening with global-parity trends, auto-gardening on create, and custom behaviors merged into the Behaviours view (refs: #4037, #4052).
+
+### Traces
+
+- Validated trace filter fields at the API boundary and added an `endTime` filter (ref: #4021).
+
+### Signals
+
+- Skipped markdown links when validating flagger output schemas (ref: #4038).
+
+### Claude Code telemetry
+
+- Installed the Stop hook with `@latest` so it self-updates (ref: #4049).
+
+### Reliability
+
+- Raised the production web service minimum capacity (ref: #4045).
+
+### Documentation
+
+- Fixed the Detection Methods documentation page.
+
 ## v0.3.51 - 2026-07-15
 
 ### Experiments

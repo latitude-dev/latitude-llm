@@ -97,12 +97,8 @@ const _registry = {
     readonly projectId: string
     readonly dimension: "topic"
     readonly trigger: "cron" | "manual" | "threshold"
-  }>(),
-  gardenCustomBehaviorWorkflow: input<{
-    readonly organizationId: string
-    readonly projectId: string
-    readonly customBehaviorId: string
-    readonly trigger: "manual" | "cron"
+    /** Present ⇒ a custom behavior's scoped sub-tree; absent ⇒ project-wide global gardening. */
+    readonly customBehaviorId?: string
   }>(),
 }
 

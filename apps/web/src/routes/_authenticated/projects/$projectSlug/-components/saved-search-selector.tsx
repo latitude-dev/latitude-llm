@@ -82,9 +82,9 @@ export function SavedSearchSelector({
     const seed = stripCustomBehaviorExcludedFields(record.filterSet)
     setOpen(false)
     navigate({
-      to: "/projects/$projectSlug/custom-behaviours",
+      to: "/projects/$projectSlug/behaviours/new",
       params: { projectSlug },
-      search: { create: serializeFilters(seed) },
+      search: { filters: serializeFilters(seed) },
     })
   }
 
@@ -363,6 +363,7 @@ function CompareSavedSearchModal({
       void navigate({
         to: "/projects/$projectSlug/experiments/$experimentSlug",
         params: { projectSlug, experimentSlug: experiment.slug },
+        search: { created: true },
       })
     } catch (error) {
       toast({ variant: "destructive", title: "Could not create experiment", description: toUserMessage(error) })

@@ -9,7 +9,7 @@ from .metric_delta import MetricDelta
 
 class ExperimentSessionsMetricsCostTotal(UniversalBaseModel):
     """
-    Total cost — USD; lower is better.
+    Total model cost across the variant's sessions — USD; lower is better.
     """
 
     value: typing.Optional[float] = pydantic.Field(default=None)
