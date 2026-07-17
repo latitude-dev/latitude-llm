@@ -9,6 +9,8 @@ The tree is produced two ways that must be read separately:
 
 Domain code: `packages/domain/taxonomy`. Postgres adapters: `packages/platform/db-postgres/src/repositories/taxonomy-*.ts`. ClickHouse adapter: `packages/platform/db-clickhouse/src/repositories/taxonomy-observation-repository.ts`. Orchestration: `apps/workflows/src/workflows/taxonomy-gardening-workflow.ts` + `apps/workflows/src/activities/taxonomy-gardening-activities.ts`. Temporal is the **only** gardening orchestrator — a missing workflow starter is a logged misconfiguration, not a fallback.
 
+> **New to the ML terms here** (embeddings, cosine similarity, spherical k-means, Calinski–Harabasz, relative separation, ARI, purity)? See the [taxonomy glossary](./taxonomy-glossary.md) for plain-language definitions.
+
 ## Naming: behaviors, moments, and the *other* "signals"
 
 Three concepts here were renamed at the UI layer only (`#3704`), so a code identifier rarely matches the label a user sees. This is the biggest source of confusion in the area; keep it straight:

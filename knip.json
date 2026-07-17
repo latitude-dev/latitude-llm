@@ -82,6 +82,14 @@
         "src/**/*.tsx"
       ]
     },
+    "packages/domain/taxonomy": {
+      "project": [
+        "src/**/*.ts"
+      ],
+      "ignore": [
+        "src/calibration/**"
+      ]
+    },
     "packages/domain/*": {
       "project": [
         "src/**/*.ts"
