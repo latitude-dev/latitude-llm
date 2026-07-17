@@ -238,6 +238,44 @@ describe("computeSessionMemorySummary", () => {
     expect(summary.total.tokensRemoved).toBeGreaterThan(0)
   })
 
+  it("nets out a record created and whole-store wiped at the same end_time", async () => {
+    const memory = createFakeMemoryRepository()
+    await materialize(
+      [
+        makeSpan({
+          spanId: spanId("1"),
+          recordsRaw: records({ id: "rec1", content: "a" }),
+          endTime: at(0),
+        }),
+        makeSpan({ spanId: spanId("2"), operation: "delete_memory", recordId: "", endTime: at(0) }),
+      ],
+      memory,
+    )
+
+    const summary = await summarize(memory, { sessionId: SessionId("sess1") })
+    expect(summary.records).toHaveLength(0)
+    expect(summary.total).toEqual({ readTokens: 0, tokensAdded: 0, tokensRemoved: 0 })
+  })
+
+  it("counts a create after a same-timestamp whole-store wipe", async () => {
+    const memory = createFakeMemoryRepository()
+    await materialize(
+      [
+        makeSpan({ spanId: spanId("1"), operation: "delete_memory", recordId: "", endTime: at(0) }),
+        makeSpan({
+          spanId: spanId("2"),
+          recordsRaw: records({ id: "rec1", content: "a" }),
+          endTime: at(0),
+        }),
+      ],
+      memory,
+    )
+
+    const summary = await summarize(memory, { sessionId: SessionId("sess1") })
+    expect(summary.records).toHaveLength(1)
+    expect(summary.records[0]?.tokensAdded).toBeGreaterThan(0)
+  })
+
   it("restricts the summary to one trace when a trace id is given", async () => {
     const memory = createFakeMemoryRepository()
     await materialize(

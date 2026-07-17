@@ -132,6 +132,8 @@ export const computeSessionMemorySummaryUseCase = Effect.fn("memories.computeSes
     else chainByRecord.set(key, [version])
   }
 
+  const eventOrder = new Map(events.map((event, index) => [event, index]))
+
   for (const [key, list] of mutatingByRecord) {
     const first = list[0]!
     const last = list[list.length - 1]!
@@ -141,9 +143,15 @@ export const computeSessionMemorySummaryUseCase = Effect.fn("memories.computeSes
       if (version.endTime.getTime() < first.endTime.getTime()) before = version
     }
     const beforePresent = before !== undefined && before.changeKind !== "remove"
-    const wipeAt = wipeAtByStore.get(first.storeId)
-    const wipedAfter = wipeAt !== undefined && wipeAt.getTime() > last.endTime.getTime()
-    const afterPresent = wipedAfter ? false : last.changeKind !== "remove"
+    const storeWipedAfterLastTouch = events.some(
+      (event) =>
+        event.storeId === first.storeId &&
+        event.changeKind === "store_delete" &&
+        (event.endTime.getTime() > last.endTime.getTime() ||
+          (event.endTime.getTime() === last.endTime.getTime() &&
+            (eventOrder.get(event) ?? -1) > (eventOrder.get(last) ?? -1))),
+    )
+    const afterPresent = storeWipedAfterLastTouch ? false : last.changeKind !== "remove"
     addEndpoint({
       storeId: first.storeId,
       recordId: first.recordId,
