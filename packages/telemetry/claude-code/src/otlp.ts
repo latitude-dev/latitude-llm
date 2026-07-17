@@ -602,7 +602,7 @@ function capMessagesJson(messages: Message[], maxBytes: number): CapResult {
     start--
   }
 
-  const kept = messages.slice(start)
+  let kept = messages.slice(start)
   const notes: string[] = []
   if (kept.length === 0) {
     // Even the newest message alone exceeds the budget: shrink its parts instead.
@@ -615,7 +615,34 @@ function capMessagesJson(messages: Message[], maxBytes: number): CapResult {
     start = messages.length - 1
   }
   if (start > 0) notes.push(`dropped ${start} oldest of ${messages.length} messages`)
+  const stripped = stripOrphanToolResponses(kept)
+  if (stripped.length !== kept.length || stripped.some((m, i) => m.parts.length !== kept[i]!.parts.length)) {
+    notes.push("stripped orphan tool responses")
+  }
+  kept = stripped
   return { json: JSON.stringify(kept), note: notes.join("; ") }
+}
+
+function stripOrphanToolResponses(messages: Message[]): Message[] {
+  const knownIds = new Set<string>()
+  for (const message of messages) {
+    if (message.role !== "assistant") continue
+    for (const part of message.parts) {
+      if (part.type !== "tool_call") continue
+      const id = typeof part.id === "string" ? part.id.trim() : ""
+      if (id) knownIds.add(id)
+    }
+  }
+  return messages.flatMap((message) => {
+    if (message.role !== "tool") return [message]
+    const parts = message.parts.filter((part) => {
+      if (part.type !== "tool_call_response") return true
+      const id = typeof part.id === "string" ? part.id.trim() : ""
+      return id !== "" && knownIds.has(id)
+    })
+    if (parts.length === 0) return []
+    return [{ ...message, parts }]
+  })
 }
 
 function capPartsJson(parts: MessagePart[], maxBytes: number): CapResult {

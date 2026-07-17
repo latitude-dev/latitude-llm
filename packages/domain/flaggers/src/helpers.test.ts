@@ -146,13 +146,10 @@ describe("detectToolCallErrorsFlagger", () => {
     }
   })
 
-  it("matches tool responses that appear before any tool call", () => {
+  it("ignores tool responses with no tool calls anywhere (truncated telemetry)", () => {
     const result = detectToolCallErrorsFlagger(makeTrace([toolResponse("call-weather", { temp: 22 })]))
 
-    expect(result.matched).toBe(true)
-    if (result.matched) {
-      expect(result.feedback).toContain("unknown tool_call id")
-    }
+    expect(result).toEqual({ matched: false })
   })
 
   it("matches tool responses with unknown tool call ids", () => {
