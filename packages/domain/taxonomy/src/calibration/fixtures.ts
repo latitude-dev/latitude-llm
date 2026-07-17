@@ -1,8 +1,10 @@
 /**
  * Deterministic fixtures for the adaptive-clustering calibration harness
- * (Phase 1). Every corpus is generated from a seeded PRNG so the
+ * (Phase 1). Every synthetic corpus is generated from a seeded PRNG so the
  * partition signature and recorded baselines are reproducible run-to-run and
- * machine-to-machine — no `Math.random`, no wall-clock, no external data.
+ * machine-to-machine — no `Math.random`, no wall-clock, no network. The one
+ * optional external input is a committed anonymized pilot export read by
+ * `loadNarrowPilotCorpus` (see below).
  *
  * Geometry is controlled, not real text. Each labeled group is a von-Mises-like
  * blob: a group direction blended toward a shared corpus anchor (raising the
@@ -28,6 +30,8 @@
  * returns this reproducible synthetic model.
  */
 
+import { existsSync, readFileSync } from "node:fs"
+import { fileURLToPath } from "node:url"
 import { normalizeEmbedding } from "@domain/shared"
 
 export interface LabeledCorpus {
@@ -218,7 +222,38 @@ export const buildNarrowPilotSyntheticCorpus = (): LabeledCorpus =>
     ],
   })
 
-export const loadNarrowPilotCorpus = (): LabeledCorpus => buildNarrowPilotSyntheticCorpus()
+interface PilotFixtureRow {
+  readonly embedding: readonly number[]
+  readonly label: string
+}
+
+/**
+ * Where an anonymized pilot export is dropped (through a product read surface,
+ * never a raw DB dump). Shape: `PilotFixtureRow[]`.
+ */
+const NARROW_PILOT_FIXTURE_PATH = fileURLToPath(new URL("./fixtures-data/narrow-pilot.json", import.meta.url))
+
+/**
+ * Returns the real anonymized pilot corpus when `fixtures-data/narrow-pilot.json`
+ * is present, otherwise the reproducible synthetic model. A malformed file throws
+ * rather than silently falling back, so calibration never runs on bad data while
+ * appearing to use the real fixture.
+ */
+export const loadNarrowPilotCorpus = (): LabeledCorpus => {
+  if (!existsSync(NARROW_PILOT_FIXTURE_PATH)) return buildNarrowPilotSyntheticCorpus()
+  const rows = JSON.parse(readFileSync(NARROW_PILOT_FIXTURE_PATH, "utf8")) as PilotFixtureRow[]
+  if (!Array.isArray(rows) || rows.length === 0 || !rows[0]?.embedding?.length) {
+    throw new Error(`narrow-pilot fixture at ${NARROW_PILOT_FIXTURE_PATH} is empty or malformed`)
+  }
+  return {
+    name: "narrow-pilot",
+    description: "Real anonymized pilot embeddings from fixtures-data/narrow-pilot.json.",
+    embeddings: rows.map((row) => normalizeEmbedding(row.embedding)),
+    labels: rows.map((row) => row.label),
+    seed: 0x097e0,
+    dimensions: rows[0]?.embedding.length ?? 0,
+  }
+}
 
 // ---------------------------------------------------------------------------
 // Shape stressors.
