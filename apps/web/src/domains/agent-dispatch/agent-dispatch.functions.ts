@@ -545,6 +545,7 @@ export const connectCursorIntegration = createServerFn({ method: "POST" })
   .inputValidator(
     z.object({
       kind: z.literal("cursor"),
+      projectId: z.string(),
       cursorApiKey: z.string().min(1),
       repoUrl: z.string().url().optional(),
       startingRef: z.string().optional(),
@@ -563,8 +564,9 @@ export const connectCursorIntegration = createServerFn({ method: "POST" })
           organizationId: OrganizationId(organizationId),
           cursorApiKey: data.cursorApiKey,
         })
-        const config = yield* upsertOrgDefaultDispatchConfigUseCase({
+        const config = yield* upsertProjectDispatchOverrideUseCase({
           organizationId: OrganizationId(organizationId),
+          projectId: ProjectId(data.projectId),
           integrationId: integration.id,
           kind: "cursor",
           enabled: true,
@@ -583,6 +585,7 @@ export const connectClaudeIntegration = createServerFn({ method: "POST" })
   .inputValidator(
     z.object({
       kind: z.literal("claude_code"),
+      projectId: z.string(),
       claudeRoutineToken: z.string().min(1),
       routineTriggerId: z.string().min(1),
     }),
@@ -600,8 +603,9 @@ export const connectClaudeIntegration = createServerFn({ method: "POST" })
           organizationId: OrganizationId(organizationId),
           claudeRoutineToken: data.claudeRoutineToken,
         })
-        yield* upsertOrgDefaultDispatchConfigUseCase({
+        yield* upsertProjectDispatchOverrideUseCase({
           organizationId: OrganizationId(organizationId),
+          projectId: ProjectId(data.projectId),
           integrationId: integration.id,
           kind: "claude_code",
           enabled: true,
@@ -617,6 +621,7 @@ export const connectLinearIntegration = createServerFn({ method: "POST" })
   .inputValidator(
     z.object({
       kind: z.literal("linear"),
+      projectId: z.string(),
       linearApiKey: z.string().min(1),
       teamId: z.string().uuid(),
     }),
@@ -634,8 +639,9 @@ export const connectLinearIntegration = createServerFn({ method: "POST" })
           organizationId: OrganizationId(organizationId),
           linearApiKey: data.linearApiKey,
         })
-        yield* upsertOrgDefaultDispatchConfigUseCase({
+        yield* upsertProjectDispatchOverrideUseCase({
           organizationId: OrganizationId(organizationId),
+          projectId: ProjectId(data.projectId),
           integrationId: integration.id,
           kind: "linear",
           enabled: true,
@@ -651,6 +657,7 @@ export const connectWebhookIntegration = createServerFn({ method: "POST" })
   .inputValidator(
     z.object({
       kind: z.literal("webhook"),
+      projectId: z.string(),
       webhookUrl: z.string().url(),
     }),
   )
@@ -668,8 +675,9 @@ export const connectWebhookIntegration = createServerFn({ method: "POST" })
           organizationId: OrganizationId(organizationId),
           webhookSecret,
         })
-        yield* upsertOrgDefaultDispatchConfigUseCase({
+        yield* upsertProjectDispatchOverrideUseCase({
           organizationId: OrganizationId(organizationId),
+          projectId: ProjectId(data.projectId),
           integrationId: integration.id,
           kind: "webhook",
           enabled: true,

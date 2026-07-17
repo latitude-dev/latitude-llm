@@ -282,6 +282,28 @@ describe("requestAgentDispatchUseCase", () => {
     expect(result.requests[0]?.target).toEqual({ webhookUrl: "https://project.example.com/hook", kind: "webhook" })
   })
 
+  it("does not inherit another project's override when the current project has no config", async () => {
+    const otherProjectId = ProjectId(cuid("p2"))
+    const result = await Effect.runPromise(
+      requestAgentDispatchUseCase(input).pipe(
+        Effect.provide(
+          makeLayer({
+            signal: makeSignal({ origin: "system" }),
+            configs: [
+              makeConfig({
+                id: cuid("c2"),
+                projectId: otherProjectId,
+                target: { webhookUrl: "https://other-project.example.com/hook" },
+              }),
+            ],
+          }),
+        ),
+      ),
+    )
+
+    expect(result).toEqual({ status: "skipped", reason: "no-config" })
+  })
+
   it("skips configs whose effective target is incomplete", async () => {
     const result = await Effect.runPromise(
       requestAgentDispatchUseCase(input).pipe(

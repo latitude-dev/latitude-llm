@@ -851,6 +851,7 @@ function ConnectAgentDispatchModal({
           await connectCursorIntegration({
             data: {
               kind: "cursor",
+              projectId,
               cursorApiKey: parsed.cursorApiKey,
               ...(parsed.repoUrl ? { repoUrl: parsed.repoUrl } : {}),
               ...(parsed.startingRef ? { startingRef: parsed.startingRef } : {}),
@@ -872,6 +873,7 @@ function ConnectAgentDispatchModal({
           await connectClaudeIntegration({
             data: {
               kind: "claude_code",
+              projectId,
               claudeRoutineToken: parsed.claudeRoutineToken,
               routineTriggerId: extractClaudeRoutineTriggerId(parsed.routineUrl)!,
             },
@@ -879,23 +881,25 @@ function ConnectAgentDispatchModal({
         } else if (kind === "linear") {
           const parsed = z.object({ linearApiKey: z.string().min(1), teamId: z.string().uuid() }).parse(values)
           await connectLinearIntegration({
-            data: { kind: "linear", linearApiKey: parsed.linearApiKey, teamId: parsed.teamId },
+            data: { kind: "linear", projectId, linearApiKey: parsed.linearApiKey, teamId: parsed.teamId },
           })
         } else {
           const parsed = z.object({ webhookUrl: z.string().url() }).parse(values)
           const result = await connectWebhookIntegration({
-            data: { kind: "webhook", webhookUrl: parsed.webhookUrl },
+            data: { kind: "webhook", projectId, webhookUrl: parsed.webhookUrl },
           })
           setWebhookSecret(result.webhookSecret)
           onWebhookSecret(result.webhookSecret)
           await queryClient.invalidateQueries({ queryKey: AGENT_DISPATCH_INTEGRATIONS_QUERY_KEY })
           await queryClient.invalidateQueries({ queryKey: orgDefaultConfigQueryKey(kind) })
+          await queryClient.invalidateQueries({ queryKey: projectDispatchSettingsQueryKey(projectId, kind) })
           await queryClient.invalidateQueries({ queryKey: sendToDestinationsQueryKey(projectId) })
           toast({ description: `${KIND_LABELS[kind]} connected` })
           return
         }
         await queryClient.invalidateQueries({ queryKey: AGENT_DISPATCH_INTEGRATIONS_QUERY_KEY })
         await queryClient.invalidateQueries({ queryKey: orgDefaultConfigQueryKey(kind) })
+        await queryClient.invalidateQueries({ queryKey: projectDispatchSettingsQueryKey(projectId, kind) })
         await queryClient.invalidateQueries({ queryKey: sendToDestinationsQueryKey(projectId) })
         toast({ description: `${KIND_LABELS[kind]} connected` })
         onClose()
