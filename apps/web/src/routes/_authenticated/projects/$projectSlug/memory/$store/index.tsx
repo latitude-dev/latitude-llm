@@ -1,6 +1,6 @@
-import { Text } from "@repo/ui"
-import { createFileRoute, useParams } from "@tanstack/react-router"
-import { DatabaseIcon } from "lucide-react"
+import { Button, Text, Tooltip } from "@repo/ui"
+import { createFileRoute, Link, useParams } from "@tanstack/react-router"
+import { ArrowLeftIcon, DatabaseIcon } from "lucide-react"
 import { useMemoryStoreSnapshot } from "../../../../../../domains/memories/memories.collection.ts"
 import { ListingLayout as Layout } from "../../../../../../layouts/ListingLayout/index.tsx"
 import { useParamState } from "../../../../../../lib/hooks/useParamState.ts"
@@ -40,16 +40,31 @@ function StoreDetailPage() {
   const { data: snapshot, isLoading } = useMemoryStoreSnapshot({ projectId: project.id, storeId })
 
   return (
-    <Layout>
+    <Layout className="gap-0">
       <Layout.Header
+        className="border-b px-6 py-4"
         title={
-          <div className="flex min-w-0 items-center gap-2">
+          <div className="flex min-w-0 items-center gap-3">
+            <Tooltip
+              asChild
+              side="bottom"
+              trigger={
+                <Button asChild variant="ghost" className="h-8 w-8 shrink-0 p-0" aria-label="Back to memory stores">
+                  <Link to="/projects/$projectSlug/memory" params={{ projectSlug }}>
+                    <ArrowLeftIcon className="h-4 w-4 text-muted-foreground" />
+                  </Link>
+                </Button>
+              }
+            >
+              Back to stores
+            </Tooltip>
             <DatabaseIcon className="h-4 w-4 shrink-0 text-muted-foreground" />
             <Text.H4 className={storeId === "" ? "italic text-muted-foreground" : "font-mono"} noWrap ellipsis>
               {storeDisplayLabel(storeId)}
             </Text.H4>
           </div>
         }
+        description={<StoreUsersList projectId={project.id} projectSlug={projectSlug} storeId={storeId} />}
       />
       <Layout.Body>
         <Layout.Sidebar>
@@ -60,16 +75,15 @@ function StoreDetailPage() {
             onSelect={(recordId) => setRecordParam(encodeRecordParam(recordId))}
           />
         </Layout.Sidebar>
-        <Layout.List>
-          <StoreUsersList projectId={project.id} projectSlug={projectSlug} storeId={storeId} />
+        <div className="flex min-h-0 min-w-0 flex-1 flex-col">
           {selectedRecordId !== undefined ? (
             <RecordContentView projectId={project.id} storeId={storeId} recordId={selectedRecordId} />
           ) : (
-            <div className="flex flex-1 items-center justify-center">
+            <div className="flex flex-1 items-center justify-center p-6">
               <Text.H5 color="foregroundMuted">Select a record to view its contents.</Text.H5>
             </div>
           )}
-        </Layout.List>
+        </div>
       </Layout.Body>
     </Layout>
   )
