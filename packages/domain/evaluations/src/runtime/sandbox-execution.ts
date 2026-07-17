@@ -14,6 +14,7 @@ import {
   EVALUATION_SCRIPT_RUNTIME_SYSTEM_PROMPT,
   type EvaluationScriptExecution,
   estimateEvaluationScriptCostMicrocents,
+  fitPromptToJudgeContextWindow,
 } from "./evaluation-execution.ts"
 
 const toExecutionError = (error: { readonly message: string; readonly cause?: unknown }) =>
@@ -53,11 +54,12 @@ export const executeEvaluationScriptSandboxed = Effect.fn("evaluations.executeEv
 
     const llm: HostLlmFunction = async (call) => {
       const schema = buildSchemaFromDescriptor(call.schema)
+      const prompt = fitPromptToJudgeContextWindow(call.prompt, modelConfig.provider, modelConfig.model)
       const result = await Effect.runPromiseWith(services)(
         ai.generate({
           ...modelConfig,
           system: EVALUATION_SCRIPT_RUNTIME_SYSTEM_PROMPT,
-          prompt: call.prompt,
+          prompt,
           schema,
           ...(input.telemetry ? { telemetry: input.telemetry } : {}),
         }),

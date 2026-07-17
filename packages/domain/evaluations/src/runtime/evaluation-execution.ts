@@ -1,5 +1,5 @@
 import { type formatGenAIConversation, formatGenAIMessage } from "@domain/ai"
-import { estimateCost } from "@domain/models"
+import { estimateCost, getModelForProvider } from "@domain/models"
 import { z } from "zod"
 
 export const EVALUATION_DEFAULT_SCRIPT_RUNTIME_MODEL = {
@@ -7,6 +7,45 @@ export const EVALUATION_DEFAULT_SCRIPT_RUNTIME_MODEL = {
   model: "minimax.minimax-m2.5",
   reasoning: "low",
 } as const
+
+/**
+ * Context limit assumed for a judge model missing from the models.dev
+ * registry — smaller than any currently configured judge model, so the guard
+ * still truncates rather than skip fitting altogether.
+ */
+const FALLBACK_JUDGE_CONTEXT_LIMIT_TOKENS = 100_000
+
+/** Output + system-prompt headroom reserved out of the model's context window. */
+const EVALUATION_JUDGE_RESERVED_TOKENS = 9_000
+
+/** Conservative (over-)estimate of characters per token, so the guard truncates a bit early rather than not enough. */
+const CHARS_PER_TOKEN_ESTIMATE = 3
+
+const PROMPT_TRUNCATION_NOTICE = "\n\n[... middle truncated: input exceeded the judge model's context window ...]\n\n"
+
+/**
+ * Evaluation scripts build the judge prompt themselves out of `session.conversation`,
+ * which is unbounded — some sessions run to hundreds of thousands of tokens. Rather than
+ * let the provider reject the call outright (`AI_APICallError: Input length ... exceeds
+ * model's maximum context length`), fit the prompt to the resolved model's context window
+ * by trimming out its middle, keeping the head (usually the script's own criteria/instructions)
+ * and the tail (the most recent conversation turns) intact.
+ */
+export const fitPromptToJudgeContextWindow = (prompt: string, provider: string, model: string): string => {
+  const contextLimitTokens = getModelForProvider(provider, model)?.contextLimit ?? FALLBACK_JUDGE_CONTEXT_LIMIT_TOKENS
+  const budgetTokens = Math.max(contextLimitTokens - EVALUATION_JUDGE_RESERVED_TOKENS, 0)
+  const budgetChars = budgetTokens * CHARS_PER_TOKEN_ESTIMATE
+
+  if (prompt.length <= budgetChars) {
+    return prompt
+  }
+
+  const keepChars = Math.max(budgetChars - PROMPT_TRUNCATION_NOTICE.length, 0)
+  const headChars = Math.ceil(keepChars / 2)
+  const tailChars = keepChars - headChars
+
+  return `${prompt.slice(0, headChars)}${PROMPT_TRUNCATION_NOTICE}${tailChars > 0 ? prompt.slice(-tailChars) : ""}`
+}
 
 export const EVALUATION_SCRIPT_RUNTIME_SYSTEM_PROMPT = `You are executing a generated evaluation script on behalf of Latitude.
 
