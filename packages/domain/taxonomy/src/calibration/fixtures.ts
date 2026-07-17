@@ -242,7 +242,20 @@ const NARROW_PILOT_FIXTURE_PATH = fileURLToPath(new URL("./fixtures-data/narrow-
 export const loadNarrowPilotCorpus = (): LabeledCorpus => {
   if (!existsSync(NARROW_PILOT_FIXTURE_PATH)) return buildNarrowPilotSyntheticCorpus()
   const rows = JSON.parse(readFileSync(NARROW_PILOT_FIXTURE_PATH, "utf8")) as PilotFixtureRow[]
-  if (!Array.isArray(rows) || rows.length === 0 || !rows[0]?.embedding?.length) {
+  const dimensions = rows[0]?.embedding?.length ?? 0
+  const malformed =
+    !Array.isArray(rows) ||
+    rows.length === 0 ||
+    dimensions === 0 ||
+    rows.some(
+      (row) =>
+        !Array.isArray(row.embedding) ||
+        row.embedding.length !== dimensions ||
+        row.embedding.some((value) => typeof value !== "number" || !Number.isFinite(value)) ||
+        typeof row.label !== "string" ||
+        row.label.length === 0,
+    )
+  if (malformed) {
     throw new Error(`narrow-pilot fixture at ${NARROW_PILOT_FIXTURE_PATH} is empty or malformed`)
   }
   return {
@@ -251,7 +264,7 @@ export const loadNarrowPilotCorpus = (): LabeledCorpus => {
     embeddings: rows.map((row) => normalizeEmbedding(row.embedding)),
     labels: rows.map((row) => row.label),
     seed: 0x097e0,
-    dimensions: rows[0]?.embedding.length ?? 0,
+    dimensions,
   }
 }
 
