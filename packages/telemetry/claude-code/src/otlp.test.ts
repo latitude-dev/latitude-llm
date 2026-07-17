@@ -836,7 +836,7 @@ describe("span size capping", () => {
   })
 
   it("returns an empty message array when a lone oversized tool message is the only survivor", () => {
-    const giantOutput = "x".repeat(130_000)
+    const giantOutput = "x".repeat(200_000)
     const req = buildOtlpRequest({
       sessionId: "sess-cap",
       turnStartNumber: 1,
@@ -878,8 +878,9 @@ describe("span size capping", () => {
     const llmSpans = otlpSpans(req).filter((s) => s.name === "llm_request")
     const followUpLlm = unwrap(llmSpans[llmSpans.length - 1])
     const inputJson = unwrap(getAttr(followUpLlm.attributes, "gen_ai.input.messages"))
+    const truncation = unwrap(getAttr(followUpLlm.attributes, "latitude.truncation"))
+    expect(truncation).toContain("stripped orphan tool responses")
     expect(inputJson).toBe("[]")
-    expect(getAttr(followUpLlm.attributes, "latitude.truncation")).toContain("stripped orphan tool responses")
   })
 
   it("clamps oversized user prompts on the interaction span", () => {
