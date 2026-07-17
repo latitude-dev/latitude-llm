@@ -33,6 +33,16 @@ export type {
   MemoryStoreWipe,
 } from "./entities/memory-snapshot.ts"
 export {
+  isMemoryStoreSortField,
+  MEMORY_STORE_SORT_FIELDS,
+  type MemoryStoreListItem,
+  type MemoryStoreListOptions,
+  type MemoryStoreListPage,
+  type MemoryStoreSortField,
+  type MemoryStoreUser,
+  type MemoryUserStore,
+} from "./entities/memory-store.ts"
+export {
   MemoryRepository,
   type MemoryRepositoryShape,
 } from "./ports/memory-repository.ts"
