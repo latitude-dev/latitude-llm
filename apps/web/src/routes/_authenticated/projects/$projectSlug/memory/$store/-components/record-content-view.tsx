@@ -1,10 +1,12 @@
-import { CodeBlock, cn, Icon, Sheet, Skeleton, Text, useMountEffect } from "@repo/ui"
+import { CodeBlock, CodeDiff, cn, Icon, Sheet, Skeleton, Text, useMountEffect } from "@repo/ui"
 import { formatCount } from "@repo/utils"
 import { Link } from "@tanstack/react-router"
 import {
   ChevronDownIcon,
+  ChevronLeftIcon,
   ChevronRightIcon,
   ChevronUpIcon,
+  FileDiffIcon,
   FileTextIcon,
   HistoryIcon,
   type LucideIcon,
@@ -15,9 +17,10 @@ import {
   UserRoundIcon,
   UsersRoundIcon,
 } from "lucide-react"
-import { type ReactNode, useCallback, useMemo, useRef, useState } from "react"
+import { type ReactNode, useCallback, useEffect, useMemo, useRef, useState } from "react"
 import {
   useMemoryRecord,
+  useMemoryRecordChangeDiff,
   useMemoryRecordReads,
   useMemoryRecordUsers,
 } from "../../../../../../../domains/memories/memories.collection.ts"
@@ -72,6 +75,17 @@ export function RecordContentView({
 }) {
   const { data, isLoading } = useMemoryRecord({ projectId, storeId, recordId })
   const [openSessionId, setOpenSessionId] = useState<string | null>(null)
+  const [diffSpanId, setDiffSpanId] = useState<string | null>(null)
+
+  // Drop the diff view when the selected record changes.
+  useEffect(() => {
+    setDiffSpanId(null)
+  }, [recordId])
+
+  const toggleDiff = useCallback(
+    (spanId: string) => setDiffSpanId((current) => (current === spanId ? null : spanId)),
+    [],
+  )
 
   if (isLoading) {
     return (
@@ -90,43 +104,56 @@ export function RecordContentView({
   const body = data.body ?? ""
   const language = body !== "" && looksLikeJson(body) ? "json" : undefined
   const lineCount = body === "" ? 0 : body.split("\n").length
+  const activeVersion = diffSpanId !== null ? data.versions.find((version) => version.spanId === diffSpanId) : undefined
 
   return (
     <div className="flex min-h-0 flex-1 flex-col overflow-hidden bg-background">
-      <div className="flex h-11 shrink-0 items-center justify-between gap-3 border-b px-3">
-        <div className="flex min-w-0 items-center gap-2">
-          <FileTextIcon className="h-4 w-4 shrink-0 text-muted-foreground" />
-          <Text.H5M className="min-w-0 font-mono" noWrap ellipsis>
-            {recordDisplayLabel(recordId)}
-          </Text.H5M>
-        </div>
-        <div className="flex shrink-0 items-center gap-2">
-          {language === "json" ? (
-            <span className="rounded border px-1.5 py-0.5 font-mono text-[10px] uppercase leading-none tracking-wide text-muted-foreground">
-              JSON
-            </span>
-          ) : null}
-          {data.body !== null ? (
-            <Text.H6 color="foregroundMuted" noWrap>
-              {formatCount(lineCount)} {lineCount === 1 ? "line" : "lines"} · {formatCount(data.tokenCount)} tok
-            </Text.H6>
-          ) : (
-            <Text.H6 color="foregroundMuted" noWrap>
-              {formatCount(data.tokenCount)} tok
-            </Text.H6>
-          )}
-        </div>
-      </div>
-
-      <div className="min-h-0 flex-1">
-        {data.body !== null ? (
-          <CodeBlock value={body} fillHeight className="h-full rounded-none" {...(language ? { language } : {})} />
-        ) : (
-          <div className="flex h-full items-center justify-center">
-            <Text.H6 color="foregroundMuted">Content not captured</Text.H6>
+      {activeVersion ? (
+        <RecordChangeDiffView
+          projectId={projectId}
+          storeId={storeId}
+          recordId={recordId}
+          version={activeVersion}
+          onClose={() => setDiffSpanId(null)}
+        />
+      ) : (
+        <>
+          <div className="flex h-11 shrink-0 items-center justify-between gap-3 border-b px-3">
+            <div className="flex min-w-0 items-center gap-2">
+              <FileTextIcon className="h-4 w-4 shrink-0 text-muted-foreground" />
+              <Text.H5M className="min-w-0 font-mono" noWrap ellipsis>
+                {recordDisplayLabel(recordId)}
+              </Text.H5M>
+            </div>
+            <div className="flex shrink-0 items-center gap-2">
+              {language === "json" ? (
+                <span className="rounded border px-1.5 py-0.5 font-mono text-[10px] uppercase leading-none tracking-wide text-muted-foreground">
+                  JSON
+                </span>
+              ) : null}
+              {data.body !== null ? (
+                <Text.H6 color="foregroundMuted" noWrap>
+                  {formatCount(lineCount)} {lineCount === 1 ? "line" : "lines"} · {formatCount(data.tokenCount)} tok
+                </Text.H6>
+              ) : (
+                <Text.H6 color="foregroundMuted" noWrap>
+                  {formatCount(data.tokenCount)} tok
+                </Text.H6>
+              )}
+            </div>
           </div>
-        )}
-      </div>
+
+          <div className="min-h-0 flex-1">
+            {data.body !== null ? (
+              <CodeBlock value={body} fillHeight className="h-full rounded-none" {...(language ? { language } : {})} />
+            ) : (
+              <div className="flex h-full items-center justify-center">
+                <Text.H6 color="foregroundMuted">Content not captured</Text.H6>
+              </div>
+            )}
+          </div>
+        </>
+      )}
 
       <RecordActivityPanel
         projectId={projectId}
@@ -135,6 +162,8 @@ export function RecordContentView({
         recordId={recordId}
         versions={data.versions}
         onOpenSession={setOpenSessionId}
+        onShowDiff={toggleDiff}
+        activeDiffSpanId={diffSpanId}
       />
 
       <Sheet open={openSessionId !== null} onClose={() => setOpenSessionId(null)} closeAriaLabel="Close session panel">
@@ -149,6 +178,77 @@ export function RecordContentView({
         ) : null}
       </Sheet>
     </div>
+  )
+}
+
+function RecordChangeDiffView({
+  projectId,
+  storeId,
+  recordId,
+  version,
+  onClose,
+}: {
+  readonly projectId: string
+  readonly storeId: string
+  readonly recordId: string
+  readonly version: MemoryRecordVersionRecord
+  readonly onClose: () => void
+}) {
+  const { data, isLoading } = useMemoryRecordChangeDiff({ projectId, storeId, recordId, spanId: version.spanId })
+  const meta = CHANGE_META[version.changeKind as MutatingKind]
+  const ChangeIcon = meta.icon
+  const before = data?.beforeBody ?? ""
+  const after = data?.afterBody ?? ""
+  const language = looksLikeJson(after) || looksLikeJson(before) ? "json" : undefined
+  const unchanged = data != null && !data.degraded && before === after
+
+  return (
+    <>
+      <div className="flex h-11 shrink-0 items-center justify-between gap-3 border-b px-3">
+        <div className="flex min-w-0 items-center gap-2">
+          <button
+            type="button"
+            onClick={onClose}
+            aria-label="Back to current content"
+            className="flex h-6 w-6 shrink-0 items-center justify-center rounded transition-colors hover:bg-muted focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-inset focus-visible:ring-ring"
+          >
+            <Icon icon={ChevronLeftIcon} size="sm" color="foregroundMuted" />
+          </button>
+          <Text.H5M className="min-w-0 font-mono" noWrap ellipsis>
+            {recordDisplayLabel(recordId)}
+          </Text.H5M>
+          <span className="flex shrink-0 items-center gap-1">
+            <ChangeIcon className={cn("h-3.5 w-3.5 shrink-0", meta.className)} />
+            <Text.H6 className="whitespace-nowrap">{meta.label}</Text.H6>
+          </span>
+        </div>
+        <ActivityTime iso={version.endTime} />
+      </div>
+
+      <div className="min-h-0 flex-1">
+        {isLoading ? (
+          <div className="p-3">
+            <Skeleton className="h-full w-full" />
+          </div>
+        ) : data == null ? null : data.degraded ? (
+          <div className="flex h-full items-center justify-center">
+            <Text.H6 color="foregroundMuted">Content not captured for this change</Text.H6>
+          </div>
+        ) : unchanged ? (
+          <div className="flex h-full items-center justify-center">
+            <Text.H6 color="foregroundMuted">No content changes</Text.H6>
+          </div>
+        ) : (
+          <CodeDiff
+            before={before}
+            after={after}
+            fillHeight
+            className="h-full rounded-none"
+            {...(language ? { language } : {})}
+          />
+        )}
+      </div>
+    </>
   )
 }
 
@@ -263,6 +363,8 @@ function RecordActivityPanel({
   recordId,
   versions,
   onOpenSession,
+  onShowDiff,
+  activeDiffSpanId,
 }: {
   readonly projectId: string
   readonly projectSlug: string
@@ -270,6 +372,8 @@ function RecordActivityPanel({
   readonly recordId: string
   readonly versions: readonly MemoryRecordVersionRecord[]
   readonly onOpenSession: (sessionId: string) => void
+  readonly onShowDiff: (spanId: string) => void
+  readonly activeDiffSpanId: string | null
 }) {
   const [open, setOpen] = useState(true)
   const [activeTab, setActiveTab] = useState<TabId>("changes")
@@ -367,7 +471,12 @@ function RecordActivityPanel({
       {open ? (
         <div className="overflow-y-auto border-t px-1 py-1" style={{ height }}>
           {activeTab === "changes" ? (
-            <ChangesBody changes={changes} onOpenSession={onOpenSession} />
+            <ChangesBody
+              changes={changes}
+              onOpenSession={onOpenSession}
+              onShowDiff={onShowDiff}
+              activeDiffSpanId={activeDiffSpanId}
+            />
           ) : activeTab === "reads" ? (
             <ReadsBody isLoading={reads.isLoading} reads={reads.data ?? []} onOpenSession={onOpenSession} />
           ) : (
@@ -490,9 +599,13 @@ function LoadingRows() {
 function ChangesBody({
   changes,
   onOpenSession,
+  onShowDiff,
+  activeDiffSpanId,
 }: {
   readonly changes: readonly MemoryRecordVersionRecord[]
   readonly onOpenSession: (sessionId: string) => void
+  readonly onShowDiff: (spanId: string) => void
+  readonly activeDiffSpanId: string | null
 }) {
   if (changes.length === 0) return <EmptyRow>No changes recorded for this record.</EmptyRow>
   return (
@@ -501,12 +614,9 @@ function ChangesBody({
         const meta = CHANGE_META[version.changeKind as MutatingKind]
         const ChangeIcon = meta.icon
         const delta = version.tokenCount - (changes[index + 1]?.tokenCount ?? 0)
-        return (
-          <ActivityRow
-            key={`${version.spanId}-${version.endTime}`}
-            sessionId={version.sessionId}
-            onOpenSession={onOpenSession}
-          >
+        const isActive = activeDiffSpanId === version.spanId
+        const facts = (
+          <>
             <ActivityTime iso={version.endTime} />
             <span className="flex shrink-0 items-center gap-1.5">
               <ChangeIcon className={cn("h-3.5 w-3.5 shrink-0", meta.className)} />
@@ -516,7 +626,38 @@ function ChangesBody({
             <TokenDelta delta={delta} />
             <Sep />
             <UserMeta userId={version.userId} className="max-w-[14rem]" />
-          </ActivityRow>
+          </>
+        )
+        return (
+          <div key={`${version.spanId}-${version.endTime}`} className={cn(ROW_CLASS, isActive && "bg-muted")}>
+            {version.sessionId ? (
+              <button
+                type="button"
+                onClick={() => onOpenSession(version.sessionId)}
+                aria-label={`Open session ${version.sessionId}`}
+                className={cn("flex min-w-0 flex-1 items-center gap-1.5 rounded", ROW_INTERACTIVE)}
+              >
+                {facts}
+                <OpenHint />
+              </button>
+            ) : (
+              <div className="flex min-w-0 flex-1 items-center gap-1.5">{facts}</div>
+            )}
+            <button
+              type="button"
+              onClick={() => onShowDiff(version.spanId)}
+              aria-label="View diff"
+              aria-pressed={isActive}
+              className={cn(
+                "flex h-6 w-6 shrink-0 items-center justify-center rounded transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-inset focus-visible:ring-ring",
+                isActive
+                  ? "text-foreground"
+                  : "text-muted-foreground opacity-0 hover:bg-muted group-hover:opacity-100 focus-visible:opacity-100",
+              )}
+            >
+              <FileDiffIcon className="h-3.5 w-3.5" />
+            </button>
+          </div>
         )
       })}
     </>

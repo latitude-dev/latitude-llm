@@ -4,6 +4,7 @@ import { useMemo } from "react"
 import { projectScopeData, projectScopeKey, useProjectScope } from "../projects/project-scope.tsx"
 import {
   getMemoryRecord,
+  getMemoryRecordChangeDiff,
   getMemoryRecordReads,
   getMemoryStoreSnapshot,
   getSessionMemorySummary,
@@ -122,6 +123,30 @@ export function useMemoryRecord({
     staleTime: 30_000,
     // No `recordId.length` guard: the unnamed record (id `''`) is a valid selection.
     enabled: enabled && projectId.length > 0,
+  })
+}
+
+/** One change's before/after bodies for the diff view; keyed on the authoring span. */
+export function useMemoryRecordChangeDiff({
+  projectId,
+  storeId,
+  recordId,
+  spanId,
+  enabled = true,
+}: {
+  readonly projectId: string
+  readonly storeId: string
+  readonly recordId: string
+  readonly spanId: string
+  readonly enabled?: boolean
+}) {
+  const scope = useProjectScope()
+  return useQuery({
+    queryKey: [...projectScopeKey(scope), "memory-record-change-diff", projectId, storeId, recordId, spanId],
+    queryFn: () =>
+      getMemoryRecordChangeDiff({ data: { ...projectScopeData(scope), projectId, storeId, recordId, spanId } }),
+    staleTime: 30_000,
+    enabled: enabled && projectId.length > 0 && spanId.length > 0,
   })
 }
 

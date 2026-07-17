@@ -1,4 +1,5 @@
 import {
+  computeRecordChangeDiffUseCase,
   computeSessionMemorySummaryUseCase,
   listMemoryStoresUseCase,
   listRecordUsersUseCase,
@@ -6,11 +7,12 @@ import {
   listUserStoresUseCase,
   type MemoryChangeKind,
   MemoryRepository,
+  type RecordChangeDiff,
   readRecordReadsUseCase,
   reconstructSnapshotUseCase,
   type SessionMemorySummary,
 } from "@domain/memories"
-import { ExternalUserId, ProjectId, SessionId, TraceId } from "@domain/shared"
+import { ExternalUserId, ProjectId, SessionId, SpanId, TraceId } from "@domain/shared"
 import { MemoryRepositoryLive } from "@platform/db-clickhouse"
 import { withTracing } from "@repo/observability"
 import { createServerFn } from "@tanstack/react-start"
@@ -63,6 +65,8 @@ interface MemoryRecordDetailRecord {
   readonly tokenCount: number
   readonly versions: readonly MemoryRecordVersionRecord[]
 }
+
+type MemoryRecordChangeDiffRecord = RecordChangeDiff
 
 export interface MemoryRecordReadRecord {
   readonly spanId: string
@@ -216,6 +220,23 @@ export const getMemoryRecord = createServerFn({ method: "GET" })
             endTime: version.endTime.toISOString(),
           })),
         } satisfies MemoryRecordDetailRecord
+      }).pipe(withScopedClickHouse(MemoryRepositoryLive, getClickhouseClient(), orgId), withTracing),
+    )
+  })
+
+/** One change's before/after bodies (its authoring span vs. the prior snapshot) for the diff view. */
+export const getMemoryRecordChangeDiff = createServerFn({ method: "GET" })
+  .inputValidator(z.object({ projectId: z.string(), storeId: z.string(), recordId: z.string(), spanId: z.string() }))
+  .handler(async ({ data, context }): Promise<MemoryRecordChangeDiffRecord> => {
+    const orgId = await resolveOrgScope(context)
+
+    return Effect.runPromise(
+      computeRecordChangeDiffUseCase({
+        organizationId: orgId,
+        projectId: ProjectId(data.projectId),
+        storeId: data.storeId,
+        recordId: data.recordId,
+        spanId: SpanId(data.spanId),
       }).pipe(withScopedClickHouse(MemoryRepositoryLive, getClickhouseClient(), orgId), withTracing),
     )
   })
