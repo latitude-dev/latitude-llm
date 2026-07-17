@@ -23,6 +23,7 @@
     "@codemirror/lang-javascript": "6.2.4",
     "@codemirror/lang-json": "6.0.2",
     "@codemirror/language": "6.12.3",
+    "@codemirror/merge": "6.12.2",
     "@codemirror/state": "6.6.0",
     "@codemirror/view": "6.41.1",
     "@domain/models": "workspace:*",

@@ -8,6 +8,7 @@ import {
   BarChart,
   ChartSkeleton,
   Checkbox,
+  CodeDiff,
   CopyButton,
   type DateRange,
   DateRangePicker,
@@ -108,6 +109,20 @@ const COMPONENT_REGISTRY: Record<string, ComponentEntry> = {
       lines: ['import { Checkbox } from "@repo/ui"', "", "<Checkbox checked={checked} onCheckedChange={setChecked} />"],
     },
     Demo: CheckboxDemo,
+  },
+  "code-diff": {
+    title: "Code diff",
+    description: "Read-only unified diff of two text bodies, syntax-highlighted per line.",
+    usage: {
+      description:
+        "Pass before and after text; language enables syntax highlighting and fillHeight scrolls inside a bounded parent.",
+      lines: [
+        'import { CodeDiff } from "@repo/ui"',
+        "",
+        '<CodeDiff before={before} after={after} language="json" fillHeight />',
+      ],
+    },
+    Demo: CodeDiffDemo,
   },
   "copy-button": {
     title: "Copy button",
@@ -384,6 +399,27 @@ function CopyButtonDemo() {
   return (
     <ComponentDemoSection title="Copy button" description="Copies a value to the clipboard with feedback.">
       <CopyButton value="Hello, world!" />
+    </ComponentDemoSection>
+  )
+}
+
+const CODE_DIFF_BEFORE = `{
+  "model": "gpt-4",
+  "temperature": 0.7,
+  "tools": ["search"]
+}`
+const CODE_DIFF_AFTER = `{
+  "model": "claude-opus-4",
+  "temperature": 0.5,
+  "tools": ["search", "memory"]
+}`
+
+function CodeDiffDemo() {
+  return (
+    <ComponentDemoSection title="Code diff" description="Unified before/after diff, syntax-highlighted per line.">
+      <div className="h-64 w-full">
+        <CodeDiff before={CODE_DIFF_BEFORE} after={CODE_DIFF_AFTER} language="json" fillHeight />
+      </div>
     </ComponentDemoSection>
   )
 }
