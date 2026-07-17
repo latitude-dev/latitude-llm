@@ -53,15 +53,18 @@ export const fitPromptToJudgeContextWindow = (
     return prompt
   }
 
-  const noticeTokens = tokenizer().encode(PROMPT_TRUNCATION_NOTICE).length
-  const keepTokens = Math.max(budgetTokens - noticeTokens, 0)
+  // Cap the notice itself to the budget too — an operator-configured maxOutputTokens close to the
+  // context limit can leave less room than the notice needs, and the result must still fit.
+  const noticeTokens = tokenizer().encode(PROMPT_TRUNCATION_NOTICE).slice(0, budgetTokens)
+  const keepTokens = Math.max(budgetTokens - noticeTokens.length, 0)
   const headTokens = Math.ceil(keepTokens / 2)
   const tailTokens = keepTokens - headTokens
 
-  const head = tokenizer().decode(tokens.slice(0, headTokens))
+  const head = headTokens > 0 ? tokenizer().decode(tokens.slice(0, headTokens)) : ""
+  const notice = noticeTokens.length > 0 ? tokenizer().decode(noticeTokens) : ""
   const tail = tailTokens > 0 ? tokenizer().decode(tokens.slice(tokens.length - tailTokens)) : ""
 
-  return `${head}${PROMPT_TRUNCATION_NOTICE}${tail}`
+  return `${head}${notice}${tail}`
 }
 
 export const EVALUATION_SCRIPT_RUNTIME_SYSTEM_PROMPT = `You are executing a generated evaluation script on behalf of Latitude.

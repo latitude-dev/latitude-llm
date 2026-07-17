@@ -49,9 +49,28 @@ describe("fitPromptToJudgeContextWindow", () => {
     expect(countTokens(fitted)).toBeLessThan(8_000)
   })
 
-  it("never returns a prompt longer than the input", () => {
+  it("never returns a prompt longer than the input, even when the truncation notice itself doesn't fit the budget", () => {
     const prompt = "y".repeat(500)
-    const fitted = fitPromptToJudgeContextWindow(prompt, "amazon-bedrock", "minimax.minimax-m2.5")
+    // FALLBACK_JUDGE_CONTEXT_LIMIT_TOKENS (16k) minus this maxOutputTokens minus the safety margin
+    // (500) leaves a 5-token budget — smaller than the truncation notice itself.
+    const fitted = fitPromptToJudgeContextWindow(prompt, "custom", "not-a-real-model", 16_000 - 500 - 5)
     expect(fitted.length).toBeLessThanOrEqual(prompt.length)
+    expect(countTokens(fitted)).toBeLessThanOrEqual(5)
+  })
+
+  it("splits the retained budget evenly regardless of where the script's own instructions end (known limitation)", () => {
+    // fitPromptToJudgeContextWindow only sees an opaque string — there's no delimiter distinguishing
+    // an evaluation script's own instructions from the conversation it embeds — so a 50/50 head/tail
+    // split can cut into a long instruction preamble instead of just the conversation body. Preserving
+    // an arbitrary script's instruction section intact would require the sandbox's `llm()` contract to
+    // pass structured `{instructions, conversation}` input instead of a flat prompt string.
+    const longInstructions = "Follow this rubric carefully: ".repeat(200_000)
+    const tail = "\n[assistant] final resolution message"
+    const prompt = `${longInstructions}${tail}`
+
+    const fitted = fitPromptToJudgeContextWindow(prompt, "amazon-bedrock", "minimax.minimax-m2.5")
+
+    expect(fitted.length).toBeLessThan(prompt.length)
+    expect(fitted.startsWith(longInstructions)).toBe(false)
   })
 })
