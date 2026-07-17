@@ -835,6 +835,53 @@ describe("span size capping", () => {
     expect(getAttr(followUpLlm.attributes, "latitude.truncation")).toContain("stripped orphan tool responses")
   })
 
+  it("returns an empty message array when a lone oversized tool message is the only survivor", () => {
+    const giantOutput = "x".repeat(130_000)
+    const req = buildOtlpRequest({
+      sessionId: "sess-cap",
+      turnStartNumber: 1,
+      turns: [
+        baseTurn({
+          userText: "read file",
+          calls: [
+            {
+              messageId: "msg_tools",
+              model: "claude-opus-4-8",
+              text: "",
+              toolUses: [
+                {
+                  id: "toolu_only",
+                  name: "Read",
+                  input: { path: "/big.png" },
+                  output: giantOutput,
+                  startMs: 1_000,
+                  endMs: 2_000,
+                },
+              ],
+              tokens: { input_tokens: 100, output_tokens: 50 },
+              startMs: 1_000,
+              endMs: 2_000,
+            },
+            {
+              messageId: "msg_final",
+              model: "claude-opus-4-8",
+              text: "done",
+              toolUses: [],
+              tokens: { input_tokens: 100, output_tokens: 50 },
+              startMs: 2_000,
+              endMs: 3_000,
+            },
+          ],
+        }),
+      ],
+    })
+    const llmSpans = otlpSpans(req).filter((s) => s.name === "llm_request")
+    const followUpLlm = unwrap(llmSpans[llmSpans.length - 1])
+    const inputJson = unwrap(getAttr(followUpLlm.attributes, "gen_ai.input.messages"))
+    expect(inputJson).toBe("[]")
+    expect(getAttr(followUpLlm.attributes, "latitude.truncation")).toContain("stripped orphan tool responses")
+  })
+
   it("clamps oversized user prompts on the interaction span", () => {
     const req = buildOtlpRequest({
       sessionId: "sess-cap",
