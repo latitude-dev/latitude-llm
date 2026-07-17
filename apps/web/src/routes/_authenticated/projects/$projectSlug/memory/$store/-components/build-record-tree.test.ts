@@ -31,4 +31,16 @@ describe("buildRecordTree", () => {
     expect(tree[0]!.segment).toBe("")
     expect(tree[0]!.recordId).toBe("")
   })
+
+  it("preserves leading separators so a leading-slash id does not collide with a root id", () => {
+    const tree = buildRecordTree([{ recordId: "a" }, { recordId: "/a/c" }])
+    // "/a/c" splits to ["", "a", "c"]: an empty-segment root distinct from "a".
+    expect(tree.map((node) => node.segment)).toEqual(["", "a"])
+    const empty = tree.find((node) => node.segment === "")!
+    expect(empty.children.map((child) => child.path)).toEqual(["/a"])
+    expect(empty.children[0]!.children.map((child) => child.path)).toEqual(["/a/c"])
+    const rootA = tree.find((node) => node.segment === "a")!
+    expect(rootA.path).toBe("a")
+    expect(rootA.recordId).toBe("a")
+  })
 })

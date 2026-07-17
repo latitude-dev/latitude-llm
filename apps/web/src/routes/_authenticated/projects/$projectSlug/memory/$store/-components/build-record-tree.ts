@@ -21,8 +21,8 @@ export function buildRecordTree(records: readonly { readonly recordId: string }[
     let level = roots
     let prefix = ""
     let node: MutableNode | undefined
-    for (const segment of segments) {
-      prefix = prefix === "" ? segment : `${prefix}/${segment}`
+    for (const [index, segment] of segments.entries()) {
+      prefix = index === 0 ? segment : `${prefix}/${segment}`
       const existing = level.get(segment)
       node = existing ?? { segment, path: prefix, children: new Map() }
       if (!existing) level.set(segment, node)
