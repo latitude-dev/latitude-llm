@@ -146,13 +146,15 @@ function bodyCellClass({
   )
 }
 
-/** The baseline header cell carries the shader ring at the shared z-level: the later rows' opaque
- * backgrounds then crop the ring's interior, leaving just the hairline and outer glow. */
+/** Header cells stick to the top so each column stays labelled with its variant while the metrics
+ * scroll; the baseline cell also pins sticky-left, sitting above the other header cells at the corner
+ * (z-30 > z-20) and above the sticky baseline body column (z-10). Every cell is opaque so scrolled
+ * rows don't show through. */
 function headerCellClass({ column, count, scrolled }: { column: number; count: number; scrolled: boolean }): string {
   return cn(
-    "border-b p-0 align-top",
+    "sticky top-0 border-b bg-background p-0 align-top",
     column < count - 1 && "border-r",
-    column === 0 && "sticky left-2 z-10 rounded-tl-xl bg-background",
+    column === 0 ? "left-2 z-30 rounded-tl-xl" : "z-20",
     column === 0 && scrolled && cn(STUCK_SHADOW, STUCK_LEFT_MASK),
   )
 }
@@ -192,10 +194,16 @@ export function ComparisonTable({
   // other columns and casts the stuck shadow.
   const gutterRef = useRef<HTMLDivElement | null>(null)
   const [scrolled, setScrolled] = useState(false)
+  // Vertically scrolled: the header is pinned over the body rows, so the baseline shader ring (which
+  // spans the definition rows scrolling away beneath it) is hidden, same as when scrolled sideways.
+  const [scrolledY, setScrolledY] = useState(false)
   useMountEffect(() => {
     const scroller = gutterRef.current?.parentElement
     if (!scroller) return
-    const onScroll = () => setScrolled(scroller.scrollLeft > 0)
+    const onScroll = () => {
+      setScrolled(scroller.scrollLeft > 0)
+      setScrolledY(scroller.scrollTop > 0)
+    }
     onScroll()
     scroller.addEventListener("scroll", onScroll, { passive: true })
     return () => scroller.removeEventListener("scroll", onScroll)
@@ -247,6 +255,7 @@ export function ComparisonTable({
                   column={column}
                   count={count}
                   scrolled={scrolled}
+                  scrolledY={scrolledY}
                   shaderHeight={shaderHeight}
                 />
               ))}
@@ -329,6 +338,7 @@ function VariantHeaderCell({
   column,
   count,
   scrolled,
+  scrolledY,
   shaderHeight,
 }: {
   readonly projectId: string
@@ -338,6 +348,7 @@ function VariantHeaderCell({
   readonly column: number
   readonly count: number
   readonly scrolled: boolean
+  readonly scrolledY: boolean
   /** Measured span of the header + editors + summaries rows the baseline shader ring wraps. */
   readonly shaderHeight: number | null
 }) {
@@ -371,13 +382,13 @@ function VariantHeaderCell({
           subtle treatment the old baseline card got from its opaque surface. */}
       {isBaseline && shaderHeight !== null ? (
         <>
-          {/* While the column is pinned the stuck shadow takes over: hide the ring instantly so it
-              never glows over the content sliding beneath, and fade it back in at rest. */}
+          {/* Once pinned in either direction the ring can't track the rows it wraps, so hide it
+              instantly and fade it back in at rest — the stuck shadow / sticky header take over. */}
           <div
             aria-hidden
             className={cn(
               "pointer-events-none absolute top-0 left-0 w-full",
-              scrolled ? "opacity-0" : "opacity-100 transition-opacity duration-300",
+              scrolled || scrolledY ? "opacity-0" : "opacity-100 transition-opacity duration-300",
             )}
             style={{ height: shaderHeight }}
           >
