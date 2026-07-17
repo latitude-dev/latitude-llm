@@ -96,8 +96,9 @@ similar two proposed sibling centroids are (their cosine) and rejects the split
 if that similarity is above a fixed ceiling (e.g. 0.85). Problem: it can't tell
 "these are secretly the same topic" from "these are genuinely different topics
 that share specialized vocabulary." Narrow-domain products break it, because all
-their real topics sit very close together (cosine 0.97–0.98) and every split
-gets wrongly rejected.
+their real topics sit very close together (cosine well above the 0.85 ceiling —
+the real pilot's sibling pairs ran 0.84–0.89) and every split gets wrongly
+rejected.
 
 **Sibling centroid cosine.** The cosine similarity between the centers of two
 proposed sibling groups — i.e. how close the two candidate topics sit. High
@@ -168,8 +169,8 @@ identical groupings; ~0 = no better than random; negative = worse than random.
 The "adjusted" part is what stops trivial or lucky agreement from looking
 meaningful. Used two ways here: comparing adaptive vs static on easy corpora
 (should agree → recorded 1.000), and comparing adaptive against itself on
-overlapping subsamples (should be stable → ~0.99 on synthetic fixtures, **0.85 on
-the real pilot**; the floor is set to 0.8).
+overlapping subsamples (should be stable → 0.94–1.00 on synthetic fixtures, **0.85
+on the real pilot**; the floor is set to 0.8).
 
 **Partition.** Any way of dividing a set into non-overlapping groups. Both a
 clustering result and the ground-truth labels are partitions of the same
@@ -218,12 +219,17 @@ because the test suite asserts exact recorded numbers.
 **Anchor direction / `anchorWeight`.** The knob that generates narrow-domain
 geometry. Pick one shared "anchor" direction for the whole corpus, then blend
 each group's own random direction toward that anchor by `anchorWeight`. A higher
-weight pulls the groups' centers closer together — that's how they synthetically
-reproduce the 0.97–0.98 sibling-cosine crowding of a real narrow-domain product.
+weight pulls the groups' centers closer together — that's how the narrow-domain
+and pilot fixtures reproduce the ~0.86 sibling-cosine crowding measured on the
+real pilot (its pairs ran 0.84–0.89, above the fixed 0.85 ceiling).
 
 **Spread (fixture parameter).** How loosely scattered a generated group's points
-are around its center. Small spread = a tight blob; used to build the "tight
-blobs, small gap" shape that defeats the old gate but passes the new one.
+are around its center. Combined with `anchorWeight`, it sets the *relative*
+separation: the narrow-domain and pilot fixtures use a fairly large spread so
+their coherent splits land at relSep ~0.5 — matching the real pilot's messy
+geometry, not the wide gap that tight equal blobs would produce. This is what
+lets the committed test pin `minRelativeSeparation = 0.45` (the fixtures resolve
+at 0.45 and collapse at 0.60).
 
 **Cross-sample ARI.** Run the adaptive builder on two heavily-overlapping
 subsamples of the same corpus (split by index remainder, not randomly, to stay

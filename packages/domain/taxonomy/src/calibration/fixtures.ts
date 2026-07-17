@@ -11,13 +11,21 @@
  * fixture assert a known intent count at a known centroid-cosine separation,
  * which absolute-cosine gating cannot handle and relative separation can.
  *
- * The narrow-domain pilot fixture is a synthetic stand-in for the anonymized
- * narrow-domain pilot embeddings (identified in the private Linear project): its groups
- * sit in the 0.90–0.98 sibling-cosine band the pilot exhibits, with coarse human
- * labels. Real anonymized pilot vectors are exported through the product read
- * surface (never a raw ClickHouse/Postgres dump) into
- * `fixtures-data/narrow-pilot.json` when available; `loadNarrowPilotCorpus` reads
- * that file if present and otherwise returns this reproducible synthetic model.
+ * The narrow-domain and pilot fixtures are tuned to the geometry measured on the
+ * real narrow-domain pilot corpus (identified in the private Linear project), not
+ * to idealized blobs: sibling centroids sit in the ~0.86 cosine band (real
+ * pilot: 0.84–0.89) and members are loose enough that a coherent split's relative
+ * separation lands at ~0.5 — inside the real 0.45–0.90 range, not the ≥1.2 that
+ * clean equal blobs produce. The pilot fixture also carries the real dominant-blob
+ * + tail size imbalance (one ~360-member intent, four smaller ones). The upshot:
+ * these fixtures resolve into 3–5 coherent children at the calibrated
+ * `minRelativeSeparation` (0.45) and collapse at 0.60 — so the committed test can
+ * actually pin the calibrated value instead of passing for any threshold.
+ *
+ * Real anonymized pilot vectors are exported through the product read surface
+ * (never a raw ClickHouse/Postgres dump) into `fixtures-data/narrow-pilot.json`
+ * when available; `loadNarrowPilotCorpus` reads that file if present and otherwise
+ * returns this reproducible synthetic model.
  */
 
 import { normalizeEmbedding } from "@domain/shared"
@@ -180,13 +188,13 @@ export const buildAirlineSupportCorpus = (): LabeledCorpus =>
 export const buildNarrowDomainCorpus = (): LabeledCorpus =>
   buildCorpus({
     name: "narrow-domain",
-    description: "Four tight intents with sibling centroid cosines above 0.85.",
+    description: "Four intents at sibling cosine ~0.87, loose enough that splits sit at real relative separation.",
     seed: 0x0a44011,
     groups: [
-      { label: "keyword-quality", size: 120, anchorWeight: 0.82, spread: 0.015 },
-      { label: "bid-adjustments", size: 110, anchorWeight: 0.82, spread: 0.015 },
-      { label: "budget-pacing", size: 100, anchorWeight: 0.82, spread: 0.015 },
-      { label: "negative-keywords", size: 90, anchorWeight: 0.82, spread: 0.015 },
+      { label: "keyword-quality", size: 120, anchorWeight: 0.72, spread: 0.05 },
+      { label: "bid-adjustments", size: 110, anchorWeight: 0.72, spread: 0.05 },
+      { label: "budget-pacing", size: 100, anchorWeight: 0.72, spread: 0.05 },
+      { label: "negative-keywords", size: 90, anchorWeight: 0.72, spread: 0.05 },
     ],
   })
 
@@ -198,14 +206,15 @@ export const buildNarrowDomainCorpus = (): LabeledCorpus =>
 export const buildNarrowPilotSyntheticCorpus = (): LabeledCorpus =>
   buildCorpus({
     name: "narrow-pilot-synthetic",
-    description: "Synthetic model of the narrow-domain ads pilot: very tight sibling intents.",
+    description:
+      "Synthetic model of the ads pilot: sibling cosine ~0.86, dominant-blob + tail sizes, splits at real relative separation.",
     seed: 0x097e0,
     groups: [
-      { label: "search-terms-review", size: 140, anchorWeight: 0.86, spread: 0.012 },
-      { label: "quality-score-analysis", size: 120, anchorWeight: 0.86, spread: 0.012 },
-      { label: "budget-optimization", size: 110, anchorWeight: 0.86, spread: 0.012 },
-      { label: "bid-strategy", size: 95, anchorWeight: 0.86, spread: 0.012 },
-      { label: "ad-copy-testing", size: 80, anchorWeight: 0.86, spread: 0.012 },
+      { label: "performance-reporting", size: 360, anchorWeight: 0.71, spread: 0.05 },
+      { label: "search-terms-audit", size: 130, anchorWeight: 0.71, spread: 0.05 },
+      { label: "ad-creative", size: 110, anchorWeight: 0.71, spread: 0.05 },
+      { label: "improvement-review", size: 70, anchorWeight: 0.71, spread: 0.05 },
+      { label: "bid-strategy", size: 60, anchorWeight: 0.71, spread: 0.05 },
     ],
   })
 

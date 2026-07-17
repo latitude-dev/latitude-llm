@@ -69,13 +69,39 @@ const siblingCentroidCosines = (corpus: LabeledCorpus): number[] => {
   return cosines
 }
 
+// The committed schedule is `root + depth*0.1`; scheduleWithRoot(0.45) reproduces
+// it, scheduleWithRoot(0.60) is the stricter setting the real pilot ruled out.
+const scheduleWithRoot = (root: number) =>
+  ADAPTIVE_TREE_DEPTH_SCHEDULE.map((depth, index) => ({ ...depth, minRelativeSeparation: root + index * 0.1 }))
+
+describe("adaptive clustering — the calibrated separation is load-bearing", () => {
+  // Fixtures are tuned to the real pilot's messy geometry, so this pins the
+  // value: the committed 0.45 resolves them, and a synthetic-only ~0.60 (which
+  // the real pilot disproved) collapses them. Raising the committed schedule
+  // toward 0.60 would break the narrow-domain resolution test above.
+  it.each([
+    ["narrow-domain", buildNarrowDomainCorpus()],
+    ["pilot", loadNarrowPilotCorpus()],
+  ] as const)("%s: resolves at the calibrated 0.45 gate and collapses at 0.60", (_name, corpus) => {
+    const calibrated = adaptiveBuild(corpus, scheduleWithRoot(0.45))
+    const tooStrict = adaptiveBuild(corpus, scheduleWithRoot(0.6))
+    expect(calibrated.root.children.length).toBeGreaterThanOrEqual(3)
+    expect(calibrated.root.children.length).toBeLessThanOrEqual(5)
+    expect(tooStrict.root.children.length).toBeLessThan(3)
+  })
+})
+
 describe("adaptive clustering — narrow-domain resolution", () => {
   it.each([
     ["narrow-domain", buildNarrowDomainCorpus()],
     ["narrow-pilot", loadNarrowPilotCorpus()],
-  ] as const)("%s: sibling centroid cosines sit above 0.85 (the fixed-gate collapse zone)", (_name, corpus) => {
+  ] as const)("%s: closest sibling centroids sit above 0.85 (the fixed-gate collapse zone)", (_name, corpus) => {
+    // The static `maxSiblingCosine` (0.85) rejects a split when its *closest*
+    // sibling pair is above the ceiling, so the closest pair (max cosine) is the
+    // quantity that makes the fixed gate collapse the tree. Not every pair needs
+    // to exceed it — the real pilot's pairs ran 0.84–0.89.
     const cosines = siblingCentroidCosines(corpus)
-    expect(Math.min(...cosines)).toBeGreaterThan(0.85)
+    expect(Math.max(...cosines)).toBeGreaterThan(0.85)
   })
 
   it.each([

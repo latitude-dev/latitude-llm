@@ -41,17 +41,16 @@ new, plus dominant-child protection.
 ### Why these values
 
 * **`minRelativeSeparation` = 0.45 / 0.55 / 0.65 — calibrated on real pilot
-  data, not synthetic.** The synthetic fixtures put every coherent boundary at a
-  relative separation ≥ 1.2 and every spurious within-blob split ≤ 0.29, which
-  would suggest a gate anywhere in `[0.3, 1.2]`. **Real embeddings do not behave
-  that way**: on the pilot corpus the coherent intent boundaries sit at ~0.45–0.90
-  and there is no empty window. A synthetic-only value (~0.6) collapses the real
-  tree to a single split or nothing; 0.45 at the root resolves the pilot's one
-  production cluster into four human-recognizable intents (see below). It tightens
-  with depth so deeper splits must be more clearly separated to justify finer
-  granularity. The synthetic fixtures still pass at 0.45 (their signal is far
-  above it), so the value is consistent with both — but the *real* corpus is what
-  fixes it.
+  data.** The *broad* well-separated fixtures put coherent boundaries ≥ 1.2, which
+  alone would suggest a gate anywhere in `[0.3, 1.2]`. **Real embeddings do not
+  behave that way**: on the pilot corpus coherent intent boundaries sit at
+  ~0.45–0.90 with no empty window. A synthetic-only value (~0.6) collapses the
+  real tree; 0.45 resolves the pilot's one production cluster into four
+  human-recognizable intents (see below). The `narrow-domain` and `pilot`
+  fixtures are **tuned to reproduce that real geometry** (coherent splits at
+  relSep ~0.5, not ≥ 1.2), and the committed test *pins* the value: it requires
+  both to resolve at 0.45 **and collapse at 0.60**, so raising the schedule back
+  toward the synthetic-only ~0.6 fails CI. The gate tightens with depth.
 * **`withinDistanceQuantile` = 0.8.** The within-child spread is read from the
   upper bulk of member distances (not the max), so a few outliers cannot inflate
   the denominator and wave a weak split through.
@@ -127,7 +126,7 @@ agreement, `xSample` = cross-sample stability.
 | telecom-support | 600 | 5 | 5 / 5 / 1 / 1.00 | 5 / 5 / 1 / 1.00 / 1.00 | 1.000 | 1.000 |
 | airline-support | 690 | 6 | 2 / 6 / 3 / 1.00 | 2 / 6 / 3 / 1.00 / 1.00 | 1.000 | 1.000 |
 | **narrow-domain** | 420 | 4 | **0 / 1 / 0 / 0.29** | **4 / 4 / 1 / 1.00 / 1.00** | 0.000 | 1.000 |
-| **narrow-pilot (synthetic)** | 545 | 5 | **0 / 1 / 0 / 0.26** | **5 / 5 / 1 / 1.00 / 1.00** | 0.000 | 1.000 |
+| **narrow-pilot (synthetic)** | 730 | 5 | **0 / 1 / 0 / 0.49** | **4 / 4 / 1 / 0.92 / 1.00** | 0.000 | 0.943 |
 | unimodal | 300 | 1 | 0 / 1 / 0 / 1.00 | 0 / 1 / 0 / 1.00 / — | 1.000 | 1.000 |
 | diffuse-multi-topic | 480 | 8 | 2 / 8 / 3 / 1.00 | 2 / 8 / 3 / 1.00 / 1.00 | 1.000 | 1.000 |
 | imbalanced-long-tail | 675 | 6 | 3 / 3 / 1 / 0.98 | 3 / 3 / 1 / 0.98 / 0.80¹ | 1.000 | 0.990 |
@@ -137,10 +136,17 @@ agreement, `xSample` = cross-sample stability.
 groups (all 1.00). Sub-floor tail/rare/duplicate groups are absorbed, never
 promoted to root children.
 
-**Caveat on the synthetic fixtures:** their clean isotropic-blob geometry makes
-the adaptive win look easier than it is (purity/recall 1.00, an empty
-separation window). Real embeddings are messier — see the pilot section, which
-is the number that actually governs the schedule.
+The **narrow-domain** and **pilot** rows are tuned to the real pilot geometry:
+accepted-split relative separations are **0.57** and **0.52** (not ≥ 1.2), the
+pilot carries the dominant-blob + tail imbalance and lands at purity 0.92 (not
+1.00), and both **collapse to a single leaf at `minRelativeSeparation` 0.60** —
+which is what makes the calibrated 0.45 a CI-enforced value rather than a
+documented one. The broad support corpora keep their clean geometry (that is what
+broad well-separated topics look like).
+
+Closest sibling centroid cosines (what trips the fixed 0.85 gate — the closest
+pair must exceed it, not every pair): narrow-domain **0.858–0.868**, pilot
+**0.832–0.875**, matching the real pilot's 0.84–0.89.
 
 ## Resource measurement — max sample (1,500 × 2,048, synthetic)
 
@@ -161,14 +167,15 @@ static share that cost identically, so the ratio is unaffected.)
 
 | Criterion | Status | Evidence |
 | --- | --- | --- |
-| Narrow-domain root has 3–5 children | ✅ | real pilot 4 (after de-dup) at root 0.45; synthetic 4/5 |
-| Mean labeled purity ≥ 0.85 | ⚠️ synthetic only | 1.00 synthetic; no human labels on the pilot yet — real check is human-eyeballed coherence (four clean intents) |
-| Each intended group ≥ 0.85 recall in one child | ⚠️ synthetic only | 1.00 synthetic; pending human labels on the pilot |
+| Narrow-domain root has 3–5 children | ✅ | real pilot 4 (after de-dup) at root 0.45; synthetic narrow 4, pilot 4 |
+| Calibrated `minRelativeSeparation` is CI-enforced | ✅ | narrow + pilot fixtures resolve at 0.45 and collapse at 0.60 (pinning test) |
+| Mean labeled purity ≥ 0.85 | ⚠️ synthetic only | 1.00 narrow / 0.92 pilot synthetic; no human labels on the real pilot yet — real check is human-eyeballed coherence (four clean intents) |
+| Each intended group ≥ 0.85 recall in one child | ⚠️ synthetic only | 1.00 synthetic; pending human labels on the real pilot |
 | Unimodal fixture stays a leaf | ✅ | 0 accepted splits |
 | Rare/sub-floor groups do not become root children | ✅ | synthetic long-tail/rare fixtures |
 | Deterministic partition signature | ✅ | synthetic + real pilot |
 | Broad-domain quality within regression tolerance | ✅ | purity delta 0.00, ARI 1.000 (synthetic) |
-| Cross-sample stability above ARI floor (0.8) | ✅ | real pilot 0.850; synthetic ≥ 0.99 |
+| Cross-sample stability above ARI floor (0.8) | ✅ | real pilot 0.850; synthetic 0.94–1.00 |
 | Runtime ≤ 25% slower than static | ✅ | ~0.98× |
 | Memory within worker limit | ✅ | ~300 MB vs 512 MB budget |
 | Rollout values fixed | ✅ | node cap / churn / fallback / shadow / admission target above |
