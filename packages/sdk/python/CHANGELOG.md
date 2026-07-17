@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [9.2.1] - 2026-07-17
+
+### Changed
+
+- `list_traces` / trace-ref filters now reject `gtePercentile` on every field except `duration`, `ttft`, and `cost` (returns `400`). Previously only `start_time`/`end_time` were rejected at the API boundary; other fields could still reach the filter builder and fail as 500.
+
 ## [9.2.0] - 2026-07-16
 
 ### Added
