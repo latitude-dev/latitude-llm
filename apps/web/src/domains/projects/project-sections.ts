@@ -1,6 +1,7 @@
 import type { FeatureFlagId } from "@domain/feature-flags"
 import {
   BellRingIcon,
+  BrainIcon,
   Building2,
   CreditCard,
   DatabaseIcon,
@@ -61,6 +62,15 @@ const PROJECT_SECTIONS: readonly ProjectSection[] = [
     group: "observe",
     path: (slug) => `/projects/${slug}/tools`,
     isActive: (pathname, slug) => pathname.startsWith(`/projects/${slug}/tools`),
+  },
+  {
+    key: "memory",
+    label: "Memory",
+    icon: BrainIcon,
+    group: "observe",
+    path: (slug) => `/projects/${slug}/memory`,
+    isActive: (pathname, slug) => pathname.startsWith(`/projects/${slug}/memory`),
+    featureFlag: "memoryObservability",
   },
   {
     key: "signals",

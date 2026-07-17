@@ -1,4 +1,10 @@
-import type { MemoryBlob, MemoryCurrentEntry, MemoryEvent, MemoryRepositoryShape } from "@domain/memories"
+import type {
+  MemoryBlob,
+  MemoryCurrentEntry,
+  MemoryEvent,
+  MemoryRepositoryShape,
+  MemoryStoreListOptions,
+} from "@domain/memories"
 import { MemoryRepository } from "@domain/memories"
 import {
   type ChSqlClient,
@@ -284,5 +290,366 @@ describe("MemoryRepository", () => {
 
     const bounded = await withRepo((repo) => repo.readRecordVersions({ organizationId, projectId, records, at: at(1) }))
     expect(bounded.map((v) => v.contentHash)).toEqual(["a0"])
+  })
+})
+
+describe("MemoryRepository store listing", () => {
+  const storesById = async () => {
+    const page = await withRepo((repo) => repo.listStores({ organizationId, projectId }))
+    return new Map(page.items.map((s) => [s.storeId, s]))
+  }
+
+  it("rolls up per-store metrics: live records/tokens/lastUpdated + event sessions/users/lastRead", async () => {
+    await withRepo((repo) =>
+      repo.upsertCurrent([
+        makeCurrent({ recordId: "rec1", tokenCount: 10, endTime: at(1) }),
+        makeCurrent({ recordId: "rec2", tokenCount: 15, endTime: at(3) }),
+        makeCurrent({ recordId: "rec3", changeKind: "remove", tokenCount: 0, endTime: at(4) }),
+      ]),
+    )
+    await withRepo((repo) =>
+      repo.insertEvents([
+        makeEvent({
+          spanId: spanN(1),
+          recordId: "rec1",
+          sessionId: SessionId("s1"),
+          userId: ExternalUserId("u1"),
+          endTime: at(1),
+        }),
+        makeEvent({
+          spanId: spanN(2),
+          recordId: "rec2",
+          sessionId: SessionId("s2"),
+          userId: ExternalUserId("u2"),
+          endTime: at(3),
+        }),
+        makeEvent({
+          spanId: spanN(3),
+          recordId: "rec1",
+          changeKind: "read",
+          sessionId: SessionId("s3"),
+          userId: ExternalUserId("u3"),
+          endTime: at(9),
+        }),
+        // anonymous read: advances lastRead, excluded from distinct counts
+        makeEvent({
+          spanId: spanN(4),
+          recordId: "rec1",
+          changeKind: "read",
+          sessionId: SessionId(""),
+          userId: ExternalUserId(""),
+          endTime: at(20),
+        }),
+      ]),
+    )
+    const store = (await storesById()).get("store1")!
+    expect(store.recordCount).toBe(2)
+    expect(store.tokenCount).toBe(25)
+    expect(store.lastUpdatedAt.getTime()).toBe(at(3).getTime())
+    expect(store.sessionCount).toBe(3)
+    expect(store.userCount).toBe(3)
+    expect(store.lastReadAt?.getTime()).toBe(at(20).getTime())
+  })
+
+  it("lists the '' store and a live-but-eventless store; omits a store with no live records", async () => {
+    await withRepo((repo) =>
+      repo.upsertCurrent([
+        makeCurrent({ storeId: "", recordId: "r1", endTime: at(1) }),
+        makeCurrent({ storeId: "eventless", recordId: "r1", endTime: at(2) }),
+        makeCurrent({ storeId: "gone", recordId: "g1", changeKind: "remove", endTime: at(2) }),
+      ]),
+    )
+    await withRepo((repo) =>
+      repo.insertEvents([makeEvent({ storeId: "gone", recordId: "g1", spanId: spanN(1), endTime: at(1) })]),
+    )
+    const byId = await storesById()
+    expect([...byId.keys()].sort()).toEqual(["", "eventless"])
+    const eventless = byId.get("eventless")!
+    expect(eventless.sessionCount).toBe(0)
+    expect(eventless.userCount).toBe(0)
+    expect(eventless.lastReadAt).toBeNull()
+  })
+
+  const seedThreeStores = async () => {
+    await withRepo((repo) =>
+      repo.upsertCurrent([
+        makeCurrent({ storeId: "A", recordId: "r1", tokenCount: 100, endTime: at(10) }),
+        makeCurrent({ storeId: "B", recordId: "r1", tokenCount: 20, endTime: at(15) }),
+        makeCurrent({ storeId: "B", recordId: "r2", tokenCount: 20, endTime: at(20) }),
+        makeCurrent({ storeId: "B", recordId: "r3", tokenCount: 10, endTime: at(18) }),
+        makeCurrent({ storeId: "C", recordId: "r1", tokenCount: 150, endTime: at(3) }),
+        makeCurrent({ storeId: "C", recordId: "r2", tokenCount: 50, endTime: at(5) }),
+      ]),
+    )
+    await withRepo((repo) =>
+      repo.insertEvents([
+        makeEvent({
+          storeId: "A",
+          recordId: "r1",
+          spanId: spanN(1),
+          sessionId: SessionId("s1"),
+          userId: ExternalUserId("u1"),
+          endTime: at(10),
+        }),
+        makeEvent({
+          storeId: "A",
+          recordId: "r1",
+          spanId: spanN(2),
+          changeKind: "read",
+          sessionId: SessionId("s1"),
+          userId: ExternalUserId("u1"),
+          endTime: at(50),
+        }),
+        makeEvent({
+          storeId: "B",
+          recordId: "r1",
+          spanId: spanN(3),
+          sessionId: SessionId("s1"),
+          userId: ExternalUserId("u1"),
+          endTime: at(15),
+        }),
+        makeEvent({
+          storeId: "B",
+          recordId: "r2",
+          spanId: spanN(4),
+          sessionId: SessionId("s2"),
+          userId: ExternalUserId("u2"),
+          endTime: at(20),
+        }),
+        makeEvent({
+          storeId: "B",
+          recordId: "r3",
+          spanId: spanN(5),
+          sessionId: SessionId("s3"),
+          userId: ExternalUserId("u1"),
+          endTime: at(18),
+        }),
+        makeEvent({
+          storeId: "C",
+          recordId: "r1",
+          spanId: spanN(6),
+          sessionId: SessionId("s1"),
+          userId: ExternalUserId("u1"),
+          endTime: at(3),
+        }),
+        makeEvent({
+          storeId: "C",
+          recordId: "r2",
+          spanId: spanN(7),
+          sessionId: SessionId("s2"),
+          userId: ExternalUserId("u2"),
+          endTime: at(5),
+        }),
+        makeEvent({
+          storeId: "C",
+          recordId: "r2",
+          spanId: spanN(8),
+          changeKind: "read",
+          sessionId: SessionId("s2"),
+          userId: ExternalUserId("u3"),
+          endTime: at(30),
+        }),
+      ]),
+    )
+  }
+
+  const order = (options?: MemoryStoreListOptions) =>
+    withRepo((repo) => repo.listStores({ organizationId, projectId, ...(options ? { options } : {}) })).then((page) =>
+      page.items.map((s) => s.storeId),
+    )
+
+  it("sorts server-side by the requested column and direction, tie-broken on store_id", async () => {
+    await seedThreeStores()
+    // A: 1 rec/updated@10/1 user/read@50 · B: 3 rec/updated@20/2 user/never read · C: 2 rec/updated@5/3 user/read@30
+    expect(await order()).toEqual(["B", "A", "C"]) // default lastUpdated desc
+    expect(await order({ sortBy: "records", sortDirection: "desc" })).toEqual(["B", "C", "A"])
+    expect(await order({ sortBy: "users", sortDirection: "desc" })).toEqual(["C", "B", "A"])
+    expect(await order({ sortBy: "lastRead", sortDirection: "desc" })).toEqual(["A", "C", "B"]) // never-read last
+  })
+
+  it("paginates with limit/offset and a stable total count", async () => {
+    await withRepo((repo) =>
+      repo.upsertCurrent(
+        Array.from({ length: 5 }, (_, i) => makeCurrent({ storeId: `store${i}`, recordId: "r1", endTime: at(i) })),
+      ),
+    )
+    const p0 = await withRepo((repo) =>
+      repo.listStores({
+        organizationId,
+        projectId,
+        options: { limit: 2, offset: 0, sortBy: "lastUpdated", sortDirection: "asc" },
+      }),
+    )
+    expect(p0.items.map((s) => s.storeId)).toEqual(["store0", "store1"])
+    expect(p0.hasMore).toBe(true)
+    expect(p0.totalCount).toBe(5)
+    const p2 = await withRepo((repo) =>
+      repo.listStores({
+        organizationId,
+        projectId,
+        options: { limit: 2, offset: 4, sortBy: "lastUpdated", sortDirection: "asc" },
+      }),
+    )
+    expect(p2.items.map((s) => s.storeId)).toEqual(["store4"])
+    expect(p2.hasMore).toBe(false)
+    expect(p2.totalCount).toBe(5)
+  })
+
+  it("does not double-count a retried duplicate event", async () => {
+    const dup = makeEvent({
+      changeKind: "read",
+      sessionId: SessionId("s1"),
+      userId: ExternalUserId("u1"),
+      endTime: at(9),
+    })
+    await withRepo((repo) => repo.upsertCurrent([makeCurrent({ endTime: at(1) })]))
+    await withRepo((repo) => repo.insertEvents([dup, dup]))
+    const store = (await storesById()).get("store1")!
+    expect(store.sessionCount).toBe(1)
+    expect(store.userCount).toBe(1)
+    expect(store.lastReadAt?.getTime()).toBe(at(9).getTime())
+  })
+
+  it("lists distinct users of a store (reads count, '' excluded) and distinct stores of a user ('' kept)", async () => {
+    await withRepo((repo) =>
+      repo.insertEvents([
+        makeEvent({ storeId: "s", recordId: "r1", spanId: spanN(1), userId: ExternalUserId("u1"), endTime: at(1) }),
+        makeEvent({
+          storeId: "s",
+          recordId: "r1",
+          spanId: spanN(2),
+          changeKind: "read",
+          userId: ExternalUserId("u1"),
+          endTime: at(5),
+        }),
+        makeEvent({
+          storeId: "s",
+          recordId: "r2",
+          spanId: spanN(3),
+          changeKind: "read",
+          userId: ExternalUserId("u2"),
+          endTime: at(9),
+        }),
+        makeEvent({ storeId: "s", recordId: "r3", spanId: spanN(4), userId: ExternalUserId(""), endTime: at(3) }),
+        makeEvent({ storeId: "", recordId: "r1", spanId: spanN(5), userId: ExternalUserId("u1"), endTime: at(4) }),
+        makeEvent({ storeId: "other", recordId: "r1", spanId: spanN(6), userId: ExternalUserId("u3"), endTime: at(2) }),
+      ]),
+    )
+    const users = await withRepo((repo) => repo.listStoreUsers({ organizationId, projectId, storeId: "s" }))
+    expect(users.map((u) => u.userId as string)).toEqual(["u2", "u1"])
+    expect(users[0]!.lastAccessedAt.getTime()).toBe(at(9).getTime())
+
+    const stores = await withRepo((repo) =>
+      repo.listUserStores({ organizationId, projectId, userId: ExternalUserId("u1") }),
+    )
+    expect(stores.map((s) => s.storeId)).toEqual(["s", ""])
+    expect(stores[0]!.lastAccessedAt.getTime()).toBe(at(5).getTime())
+  })
+})
+
+describe("MemoryRepository record activity", () => {
+  it("reads one record's retrieval events, newest first, deduped, capped by limit", async () => {
+    const dupRead = makeEvent({
+      recordId: "recA",
+      spanId: spanN(1),
+      changeKind: "read",
+      queryText: "q1",
+      userId: ExternalUserId("u1"),
+      tokenCount: 5,
+      endTime: at(2),
+    })
+    await withRepo((repo) =>
+      repo.insertEvents([
+        dupRead,
+        dupRead,
+        makeEvent({
+          recordId: "recA",
+          spanId: spanN(2),
+          changeKind: "read",
+          queryText: "q2",
+          userId: ExternalUserId("u2"),
+          endTime: at(5),
+        }),
+        makeEvent({ recordId: "recA", spanId: spanN(3), changeKind: "add", endTime: at(1) }),
+        makeEvent({ recordId: "recB", spanId: spanN(4), changeKind: "read", queryText: "other", endTime: at(9) }),
+      ]),
+    )
+    const reads = await withRepo((repo) =>
+      repo.readRecordReadEvents({ organizationId, projectId, storeId: "store1", recordId: "recA" }),
+    )
+    expect(reads.map((r) => [r.queryText, r.userId as string])).toEqual([
+      ["q2", "u2"],
+      ["q1", "u1"],
+    ])
+
+    const limited = await withRepo((repo) =>
+      repo.readRecordReadEvents({ organizationId, projectId, storeId: "store1", recordId: "recA", limit: 1 }),
+    )
+    expect(limited.map((r) => r.queryText)).toEqual(["q2"])
+  })
+
+  it("rolls up a record's users with read/write counts (deduped, '' excluded), newest access first", async () => {
+    await withRepo((repo) =>
+      repo.insertEvents([
+        makeEvent({
+          recordId: "recA",
+          spanId: spanN(1),
+          changeKind: "add",
+          userId: ExternalUserId("u1"),
+          endTime: at(1),
+        }),
+        makeEvent({
+          recordId: "recA",
+          spanId: spanN(2),
+          changeKind: "read",
+          userId: ExternalUserId("u1"),
+          endTime: at(4),
+        }),
+        // retried duplicate of spanN(2) → counted once
+        makeEvent({
+          recordId: "recA",
+          spanId: spanN(2),
+          changeKind: "read",
+          userId: ExternalUserId("u1"),
+          endTime: at(4),
+        }),
+        makeEvent({
+          recordId: "recA",
+          spanId: spanN(3),
+          changeKind: "read",
+          userId: ExternalUserId("u1"),
+          endTime: at(6),
+        }),
+        makeEvent({
+          recordId: "recA",
+          spanId: spanN(4),
+          changeKind: "read",
+          userId: ExternalUserId("u2"),
+          endTime: at(9),
+        }),
+        makeEvent({
+          recordId: "recA",
+          spanId: spanN(5),
+          changeKind: "update",
+          userId: ExternalUserId(""),
+          endTime: at(3),
+        }),
+        makeEvent({
+          recordId: "recB",
+          spanId: spanN(6),
+          changeKind: "read",
+          userId: ExternalUserId("u3"),
+          endTime: at(20),
+        }),
+      ]),
+    )
+    const users = await withRepo((repo) =>
+      repo.listRecordUsers({ organizationId, projectId, storeId: "store1", recordId: "recA" }),
+    )
+    expect(users.map((u) => [u.userId as string, u.readCount, u.writeCount])).toEqual([
+      ["u2", 1, 0],
+      ["u1", 2, 1],
+    ])
+    expect(users[0]!.lastAccessedAt.getTime()).toBe(at(9).getTime())
   })
 })
