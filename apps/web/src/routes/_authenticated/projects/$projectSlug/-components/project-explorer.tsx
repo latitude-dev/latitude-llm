@@ -461,11 +461,7 @@ export function ProjectExplorer({ projectSlug }: { readonly projectSlug: string 
   // Skip while the count is loading or errored — default `0` would otherwise flash false onboarding.
   const orgHasConnectedProjects = allProjects.some((p) => p.id !== currentProject.id && p.firstTraceAt != null)
   const showConnectEmptyState =
-    !isTracesCountLoading &&
-    !isTracesCountError &&
-    totalTraceCount === 0 &&
-    !hasActiveFilters &&
-    !hasSearchQuery
+    !isTracesCountLoading && !isTracesCountError && totalTraceCount === 0 && !hasActiveFilters && !hasSearchQuery
 
   if (showConnectEmptyState) {
     return (
