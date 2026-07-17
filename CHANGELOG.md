@@ -2,6 +2,32 @@
 
 ## Unreleased
 
+## v0.3.55 - 2026-07-17
+
+### Evaluations
+
+- Truncated live-evaluation judge prompts to fit the model's context window so large sessions no longer fail both primary and Bedrock fallback calls (ref: #4081).
+
+### Signals
+
+- Prevented late signal-generation progress writes from overwriting the terminal done/error result and leaving the UI stuck pending (ref: #3943).
+
+### Agent dispatch
+
+- Scoped Cursor/Claude/Linear/Webhook connect from a project's integrations page to project overrides instead of org-wide dispatch defaults (ref: #3984).
+
+### Organizations
+
+- Stopped claimed temporary organizations from being reaped after claim failed to clear `expires_at` on upsert (ref: #3841).
+
+### Traces
+
+- Deduped span rows in session conversation and trace message queries, and stopped false onboarding gates when spans were duplicated (refs: #4005, #3986).
+
+### Memory observability
+
+- Re-keyed memory tables and APIs on `store_id` alone, dropping the derived `scope` field and the SDK `latitude.memory.scope` attribute (ref: #4074).
+
 ## v0.3.54 - 2026-07-16
 
 ### Navigation
