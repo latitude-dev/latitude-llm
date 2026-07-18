@@ -62,6 +62,8 @@
       "tslib": "2.8.1",
       "protobufjs": "8.0.2",
       "srvx": "0.11.21",
+      "undici@<7.0.0": "6.27.0",
+      "undici@>=7.0.0 <7.28.0": "7.28.0",
       "better-auth>zod": "4.3.6",
       "@better-auth/core>zod": "4.3.6",
       "@better-auth/sso>zod": "4.3.6",
