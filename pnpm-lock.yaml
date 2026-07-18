@@ -151,7 +151,7 @@ overrides:
   drizzle-orm: 1.0.0-beta.15-859cf75
   hono: 4.12.16
   tslib: 2.8.1
-  protobufjs: 8.0.2
+  protobufjs: 8.6.0
   srvx: 0.11.21
   better-auth>zod: 4.3.6
   '@better-auth/core>zod': 4.3.6
@@ -1921,8 +1921,8 @@ importers:
         specifier: 'catalog:'
         version: 4.0.0-beta.57
       protobufjs:
-        specifier: 8.0.2
-        version: 8.0.2
+        specifier: 8.6.0
+        version: 8.6.0
       rosetta-ai:
         specifier: 'catalog:'
         version: 2.2.0
@@ -12377,8 +12377,8 @@ packages:
     resolution: {integrity: sha512-SAzp/O4Yh02jGdRc+uIrGoe87dkN/XtwxfZ4ZyafJHymd79ozp5VG5nyZ7ygqPM5+cpLDjjGnYFUkngonyDPOQ==}
     engines: {node: '>=14.0.0'}
 
-  protobufjs@8.0.2:
-    resolution: {integrity: sha512-TNF0rhMsp+g21us9R2aj3iA7JY9pG7G/3zyRiULl6NS+AurvgQ7iWA203QcykDGSosHxMsV+K6GTR15RBWw1bA==}
+  protobufjs@8.6.0:
+    resolution: {integrity: sha512-PIOO89BMGMXGz2333TVv/OqPNVWm7w30ll/4FtLbtLBaonzJMYwTbAZSSlobjIy9MoUgIAxSVUpK7aP7EpTtkg==}
     engines: {node: '>=12.0.0'}
 
   proxy-addr@2.0.7:
@@ -15904,7 +15904,7 @@ snapshots:
     dependencies:
       google-auth-library: 10.6.2
       p-retry: 4.6.2
-      protobufjs: 8.0.2
+      protobufjs: 8.6.0
       ws: 8.21.0
     optionalDependencies:
       '@modelcontextprotocol/sdk': 1.29.0(@cfworker/json-schema@4.1.1)(zod@4.3.6)
@@ -15922,14 +15922,14 @@ snapshots:
     dependencies:
       lodash.camelcase: 4.3.0
       long: 5.3.2
-      protobufjs: 8.0.2
+      protobufjs: 8.6.0
       yargs: 17.7.2
 
   '@grpc/proto-loader@0.8.1':
     dependencies:
       lodash.camelcase: 4.3.0
       long: 5.3.2
-      protobufjs: 8.0.2
+      protobufjs: 8.6.0
       yargs: 17.7.2
 
   '@hono/node-server@1.19.13(hono@4.12.16)':
@@ -17525,7 +17525,7 @@ snapshots:
       '@opentelemetry/sdk-logs': 0.208.0(@opentelemetry/api@1.9.1)
       '@opentelemetry/sdk-metrics': 2.2.0(@opentelemetry/api@1.9.1)
       '@opentelemetry/sdk-trace-base': 2.2.0(@opentelemetry/api@1.9.1)
-      protobufjs: 8.0.2
+      protobufjs: 8.6.0
 
   '@opentelemetry/otlp-transformer@0.213.0(@opentelemetry/api@1.9.1)':
     dependencies:
@@ -17536,7 +17536,7 @@ snapshots:
       '@opentelemetry/sdk-logs': 0.213.0(@opentelemetry/api@1.9.1)
       '@opentelemetry/sdk-metrics': 2.6.0(@opentelemetry/api@1.9.1)
       '@opentelemetry/sdk-trace-base': 2.6.0(@opentelemetry/api@1.9.1)
-      protobufjs: 8.0.2
+      protobufjs: 8.6.0
 
   '@opentelemetry/otlp-transformer@0.217.0(@opentelemetry/api@1.9.1)':
     dependencies:
@@ -17547,7 +17547,7 @@ snapshots:
       '@opentelemetry/sdk-logs': 0.217.0(@opentelemetry/api@1.9.1)
       '@opentelemetry/sdk-metrics': 2.7.1(@opentelemetry/api@1.9.1)
       '@opentelemetry/sdk-trace-base': 2.7.1(@opentelemetry/api@1.9.1)
-      protobufjs: 8.0.2
+      protobufjs: 8.6.0
 
   '@opentelemetry/otlp-transformer@0.57.2(@opentelemetry/api@1.9.1)':
     dependencies:
@@ -17558,7 +17558,7 @@ snapshots:
       '@opentelemetry/sdk-logs': 0.57.2(@opentelemetry/api@1.9.1)
       '@opentelemetry/sdk-metrics': 1.30.1(@opentelemetry/api@1.9.1)
       '@opentelemetry/sdk-trace-base': 1.30.1(@opentelemetry/api@1.9.1)
-      protobufjs: 8.0.2
+      protobufjs: 8.6.0
 
   '@opentelemetry/propagator-b3@1.30.1(@opentelemetry/api@1.9.1)':
     dependencies:
@@ -20740,7 +20740,7 @@ snapshots:
   '@temporalio/proto@1.17.5':
     dependencies:
       long: 5.3.2
-      protobufjs: 8.0.2
+      protobufjs: 8.6.0
 
   '@temporalio/worker@1.17.5(esbuild@0.28.1)(tslib@2.8.1)':
     dependencies:
@@ -20758,7 +20758,7 @@ snapshots:
       memfs: 4.57.2(tslib@2.8.1)
       nexus-rpc: 0.0.2
       proto3-json-serializer: 2.0.2
-      protobufjs: 8.0.2
+      protobufjs: 8.6.0
       rxjs: 7.8.2
       source-map: 0.7.6
       source-map-loader: 4.0.2(webpack@5.106.2(@swc/core@1.15.30)(esbuild@0.28.1))
@@ -22828,7 +22828,7 @@ snapshots:
       node-fetch: 2.7.0
       object-hash: 3.0.0
       proto3-json-serializer: 2.0.2
-      protobufjs: 8.0.2
+      protobufjs: 8.6.0
       retry-request: 7.0.2
       uuid: 9.0.1
     transitivePeerDependencies:
@@ -24747,11 +24747,10 @@ snapshots:
 
   proto3-json-serializer@2.0.2:
     dependencies:
-      protobufjs: 8.0.2
+      protobufjs: 8.6.0
 
-  protobufjs@8.0.2:
+  protobufjs@8.6.0:
     dependencies:
-      '@types/node': 22.19.17
       long: 5.3.2
 
   proxy-addr@2.0.7:
