@@ -2,6 +2,7 @@ import { createMonitorUseCase, MonitorRepository } from "@domain/monitors"
 import { createFakeMonitorRepository } from "@domain/monitors/testing"
 import { SavedSearchRepository } from "@domain/saved-searches"
 import { createFakeSavedSearchRepository } from "@domain/saved-searches/testing"
+import type { MonitorMetric } from "@domain/shared"
 import { OrganizationId, ProjectId, SqlClient, ValidationError } from "@domain/shared"
 import { createFakeSqlClient } from "@domain/shared/testing"
 import { Effect, Layer } from "effect"
@@ -18,6 +19,37 @@ import { toolMonitorPresets, userMonitorPresets } from "./recommended-monitor-pr
 
 const organizationId = OrganizationId("o".repeat(24))
 const projectId = ProjectId("p".repeat(24))
+
+type MonitorTrigger = "threshold" | "escalating" | "match"
+
+interface PresetExpectation {
+  readonly trigger: MonitorTrigger
+  readonly metric: MonitorMetric
+}
+
+const SPECIFIC_TOOL_PRESET_EXPECTATIONS: Record<string, PresetExpectation> = {
+  failing: { trigger: "threshold", metric: { kind: "errorRate" } },
+  slow: { trigger: "threshold", metric: { kind: "median", field: "duration" } },
+  "usage-spike": { trigger: "escalating", metric: { kind: "count" } },
+  "usage-drop": { trigger: "escalating", metric: { kind: "count" } },
+  overusing: { trigger: "escalating", metric: { kind: "count" } },
+}
+
+const ALL_TOOLS_PRESET_EXPECTATIONS: Record<string, PresetExpectation> = {
+  "failures-increased": { trigger: "threshold", metric: { kind: "errorRate" } },
+  "latency-increased": { trigger: "threshold", metric: { kind: "median", field: "duration" } },
+  "usage-spike": { trigger: "escalating", metric: { kind: "count" } },
+  "usage-drop": { trigger: "escalating", metric: { kind: "count" } },
+  "cost-spike": { trigger: "threshold", metric: { kind: "sum", field: "cost" } },
+}
+
+const USER_PRESET_EXPECTATIONS: Record<string, PresetExpectation> = {
+  errors: { trigger: "escalating", metric: { kind: "count" } },
+  slow: { trigger: "threshold", metric: { kind: "median", field: "duration" } },
+  "activity-spike": { trigger: "escalating", metric: { kind: "count" } },
+  "activity-drop": { trigger: "escalating", metric: { kind: "count" } },
+  "cost-spike": { trigger: "threshold", metric: { kind: "sum", field: "cost" } },
+}
 
 const triggerForAlertKind = (kind: MonitorRuleDraft["kind"]) =>
   kind.includes("threshold")
@@ -84,62 +116,56 @@ const runCreateError = (effect: ReturnType<typeof createFromUiDraft>) => {
   )
 }
 
+const assertPresetsCreate = async (
+  presets: ReturnType<typeof toolMonitorPresets>,
+  expectations: Record<string, PresetExpectation>,
+  nameSuffix: string,
+) => {
+  expect(presets.map((preset) => preset.id).sort()).toEqual(Object.keys(expectations).sort())
+
+  for (const preset of presets) {
+    const expected = expectations[preset.id]
+    expect(expected, preset.id).toBeDefined()
+    if (!expected) continue
+
+    const rule = draftToAlertDraft(preset.draft)
+    const presetTarget = draftToTarget(preset.draft)
+    expect(presetTarget, preset.id).toBeDefined()
+    if (!presetTarget) continue
+
+    const monitor = await runCreate(
+      createFromUiDraft({
+        name: `${preset.name} — ${nameSuffix}`,
+        description: preset.description,
+        rule,
+        target: presetTarget,
+      }),
+    )
+
+    expect(monitor.rule.trigger, preset.id).toBe(expected.trigger)
+    expect(monitor.target.metric, preset.id).toEqual(expected.metric)
+    expect(rule.kind, preset.id).toBe(`monitor.${expected.trigger}`)
+  }
+}
+
 describe("recommended monitor presets", () => {
-  it.each([
-    ["specific tool", toolMonitorTarget("searchWeb")],
-    ["all tools", allToolsMonitorTarget()],
-  ] as const)("creates every tool recommended preset for %s", async (_label, target) => {
-    const presets = toolMonitorPresets(target)
-    expect(presets.length).toBeGreaterThan(0)
+  it("creates every specific-tool recommended preset", async () => {
+    await assertPresetsCreate(
+      toolMonitorPresets(toolMonitorTarget("searchWeb")),
+      SPECIFIC_TOOL_PRESET_EXPECTATIONS,
+      "searchWeb",
+    )
+  })
 
-    for (const preset of presets) {
-      const rule = draftToAlertDraft(preset.draft)
-      const presetTarget = draftToTarget(preset.draft)
-      expect(presetTarget, preset.id).toBeDefined()
-      if (!presetTarget) continue
-
-      const monitor = await runCreate(
-        createFromUiDraft({
-          name: `${preset.name} — searchWeb`,
-          description: preset.description,
-          rule,
-          target: presetTarget,
-        }),
-      )
-
-      const expectedTrigger = preset.draft.metric.kind === "count" ? "escalating" : "threshold"
-      expect(monitor.rule.trigger, preset.id).toBe(expectedTrigger)
-      expect(monitor.target.metric, preset.id).toEqual(preset.draft.metric)
-      expect(rule.kind, preset.id).toBe(`monitor.${expectedTrigger}`)
-    }
+  it("creates every all-tools recommended preset", async () => {
+    await assertPresetsCreate(toolMonitorPresets(allToolsMonitorTarget()), ALL_TOOLS_PRESET_EXPECTATIONS, "all tools")
   })
 
   it.each([
     ["specific user", userMonitorTarget("user-1")],
     ["all users", allUsersMonitorTarget()],
   ] as const)("creates every user recommended preset for %s", async (_label, target) => {
-    const presets = userMonitorPresets(target)
-    expect(presets.length).toBeGreaterThan(0)
-
-    for (const preset of presets) {
-      const rule = draftToAlertDraft(preset.draft)
-      const presetTarget = draftToTarget(preset.draft)
-      expect(presetTarget, preset.id).toBeDefined()
-      if (!presetTarget) continue
-
-      const monitor = await runCreate(
-        createFromUiDraft({
-          name: `${preset.name} — user`,
-          description: preset.description,
-          rule,
-          target: presetTarget,
-        }),
-      )
-
-      const expectedTrigger = preset.draft.metric.kind === "count" ? "escalating" : "threshold"
-      expect(monitor.rule.trigger, preset.id).toBe(expectedTrigger)
-      expect(monitor.target.metric, preset.id).toEqual(preset.draft.metric)
-    }
+    await assertPresetsCreate(userMonitorPresets(target), USER_PRESET_EXPECTATIONS, "user")
   })
 
   it("still rejects the pre-fix escalating + errorRate shape", async () => {
