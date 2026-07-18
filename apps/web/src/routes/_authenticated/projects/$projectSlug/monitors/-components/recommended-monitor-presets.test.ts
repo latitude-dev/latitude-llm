@@ -25,30 +25,34 @@ type MonitorTrigger = "threshold" | "escalating" | "match"
 interface PresetExpectation {
   readonly trigger: MonitorTrigger
   readonly metric: MonitorMetric
-  readonly hasErrorStatusFilter?: boolean
+  readonly hasErrorStatusFilter: boolean
 }
 
 const SPECIFIC_TOOL_PRESET_EXPECTATIONS: Record<string, PresetExpectation> = {
   failing: { trigger: "escalating", metric: { kind: "count" }, hasErrorStatusFilter: true },
-  slow: { trigger: "threshold", metric: { kind: "median", field: "duration" } },
-  "usage-spike": { trigger: "escalating", metric: { kind: "count" } },
-  "usage-drop": { trigger: "escalating", metric: { kind: "count" } },
-  overusing: { trigger: "escalating", metric: { kind: "count" } },
+  slow: { trigger: "threshold", metric: { kind: "median", field: "duration" }, hasErrorStatusFilter: false },
+  "usage-spike": { trigger: "escalating", metric: { kind: "count" }, hasErrorStatusFilter: false },
+  "usage-drop": { trigger: "escalating", metric: { kind: "count" }, hasErrorStatusFilter: false },
+  overusing: { trigger: "escalating", metric: { kind: "count" }, hasErrorStatusFilter: false },
 }
 
 const ALL_TOOLS_PRESET_EXPECTATIONS: Record<string, PresetExpectation> = {
   "failures-increased": { trigger: "escalating", metric: { kind: "count" }, hasErrorStatusFilter: true },
-  "latency-increased": { trigger: "threshold", metric: { kind: "median", field: "duration" } },
-  "usage-spike": { trigger: "escalating", metric: { kind: "count" } },
-  "usage-drop": { trigger: "escalating", metric: { kind: "count" } },
+  "latency-increased": {
+    trigger: "threshold",
+    metric: { kind: "median", field: "duration" },
+    hasErrorStatusFilter: false,
+  },
+  "usage-spike": { trigger: "escalating", metric: { kind: "count" }, hasErrorStatusFilter: false },
+  "usage-drop": { trigger: "escalating", metric: { kind: "count" }, hasErrorStatusFilter: false },
 }
 
 const USER_PRESET_EXPECTATIONS: Record<string, PresetExpectation> = {
   errors: { trigger: "escalating", metric: { kind: "count" }, hasErrorStatusFilter: true },
-  slow: { trigger: "threshold", metric: { kind: "median", field: "duration" } },
-  "activity-spike": { trigger: "escalating", metric: { kind: "count" } },
-  "activity-drop": { trigger: "escalating", metric: { kind: "count" } },
-  "cost-spike": { trigger: "threshold", metric: { kind: "sum", field: "cost" } },
+  slow: { trigger: "threshold", metric: { kind: "median", field: "duration" }, hasErrorStatusFilter: false },
+  "activity-spike": { trigger: "escalating", metric: { kind: "count" }, hasErrorStatusFilter: false },
+  "activity-drop": { trigger: "escalating", metric: { kind: "count" }, hasErrorStatusFilter: false },
+  "cost-spike": { trigger: "threshold", metric: { kind: "sum", field: "cost" }, hasErrorStatusFilter: false },
 }
 
 const triggerForAlertKind = (kind: MonitorRuleDraft["kind"]) =>
@@ -133,9 +137,9 @@ const assertPresetsCreate = async (
     expect(presetTarget, preset.id).toBeDefined()
     if (!presetTarget) continue
 
-    if (expected.hasErrorStatusFilter) {
-      expect(presetTarget.filterSet?.status, preset.id).toEqual([{ op: "eq", value: "error" }])
-    }
+    expect(presetTarget.filterSet?.status, preset.id).toEqual(
+      expected.hasErrorStatusFilter ? [{ op: "eq", value: "error" }] : undefined,
+    )
 
     const monitor = await runCreate(
       createFromUiDraft({
