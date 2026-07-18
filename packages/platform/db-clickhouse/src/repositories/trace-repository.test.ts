@@ -480,6 +480,61 @@ describe("TraceRepository", () => {
     })
   })
 
+  describe("findLastTraceAt", () => {
+    const LAST_AT_PROJECT_ID = ProjectId("last-at-project")
+
+    const makeLastAtRow = (opts: {
+      readonly traceId: string
+      readonly spanId: string
+      readonly startTime: Date
+      readonly costTotalMicrocents: number
+    }): SpanRow => ({
+      ...makeSpanRow({
+        ...opts,
+        tokensInput: 0,
+        tokensOutput: 0,
+      }),
+      project_id: LAST_AT_PROJECT_ID,
+    })
+
+    it("resolves gtePercentile filters instead of failing in the filter builder", async () => {
+      const start = new Date(Date.UTC(2026, 0, 10, 12, 0, 0))
+      await Effect.runPromise(
+        insertJsonEachRow(ch.client, "spans", [
+          makeLastAtRow({
+            traceId: `51${"a".repeat(30)}`,
+            spanId: `51${"b".repeat(14)}`,
+            startTime: start,
+            costTotalMicrocents: 100,
+          }),
+          makeLastAtRow({
+            traceId: `52${"a".repeat(30)}`,
+            spanId: `52${"b".repeat(14)}`,
+            startTime: new Date(start.getTime() + 60_000),
+            costTotalMicrocents: 500,
+          }),
+          makeLastAtRow({
+            traceId: `53${"a".repeat(30)}`,
+            spanId: `53${"b".repeat(14)}`,
+            startTime: new Date(start.getTime() + 120_000),
+            costTotalMicrocents: 900,
+          }),
+        ]),
+      )
+
+      const lastAt = await runCh(
+        repo.findLastTraceAt({
+          organizationId: ORG_ID,
+          projectId: LAST_AT_PROJECT_ID,
+          filters: { cost: [{ op: "gtePercentile", value: 50 }] },
+        }),
+      )
+
+      expect(lastAt).toBeInstanceOf(Date)
+      expect(lastAt?.getTime()).toBeGreaterThanOrEqual(start.getTime())
+    })
+  })
+
   describe("findSummaryByTraceId", () => {
     it("loads trace orchestration fields without conversation content", async () => {
       const summary = await runCh(
