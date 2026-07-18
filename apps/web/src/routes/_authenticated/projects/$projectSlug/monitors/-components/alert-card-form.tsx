@@ -121,16 +121,19 @@ function MetricSelector({
   stream,
   onChange,
   disabled,
+  countOnly = false,
 }: {
   readonly value: MonitorMetric
   readonly stream: NonNullable<AlertDraft["target"]>["stream"]
   readonly onChange: (metric: MonitorMetric, direction?: MetricDirection) => void
   readonly disabled?: boolean
+  readonly countOnly?: boolean
 }) {
   const options = targetMetricOptions(stream)
   const selectedDimension = metricDimension(value)
   const dimensions = (["count", "errorRate", "cacheHitRate", "duration", "cost", "tokens"] as const).filter(
-    (dimension) => options.some((option) => metricDimension(option.metric) === dimension),
+    (dimension) =>
+      (!countOnly || dimension === "count") && options.some((option) => metricDimension(option.metric) === dimension),
   )
   const aggregations = options.filter((option) => metricDimension(option.metric) === selectedDimension)
 
@@ -513,6 +516,7 @@ export function AlertCardForm({
         <MetricSelector
           value={value.metric}
           stream={value.target.stream}
+          countOnly={isEscalatingKind(value.kind)}
           onChange={(metric, direction) => set(direction ? { metric, direction } : { metric })}
           {...(disabled || metricReadonly ? { disabled: true } : {})}
         />

@@ -108,7 +108,7 @@ export const draftWithKind = (draft: AlertDraft, kind: UserAlertKind): AlertDraf
     kind,
     sourceId: draft.sourceId,
     target: draft.target,
-    metric: draft.metric,
+    metric: kind === "monitor.escalating" || kind === "savedSearch.escalating" ? { kind: "count" } : draft.metric,
     severity: draft.severity,
     direction: draft.direction,
   })
