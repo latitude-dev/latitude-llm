@@ -153,6 +153,7 @@ overrides:
   tslib: 2.8.1
   protobufjs: 8.0.2
   srvx: 0.11.21
+  tmp@<0.2.7: 0.2.7
   better-auth>zod: 4.3.6
   '@better-auth/core>zod': 4.3.6
   '@better-auth/sso>zod': 4.3.6
@@ -13212,8 +13213,8 @@ packages:
     resolution: {integrity: sha512-+Zg3vWhRUv8B1maGSTFdev9mjoo8Etn2Ayfs4cnjlD3CsGkxXX4QyW3j2WJ0wdjYcYmy7Lx2RDsZMhgCWafKIw==}
     hasBin: true
 
-  tmp@0.2.5:
-    resolution: {integrity: sha512-voyz6MApa1rQGUxT3E+BK7/ROe8itEx7vD8/HEvt4xwXucvQ5G5oeEiHkmHZJuBO21RpOf+YYm9MOivj709jow==}
+  tmp@0.2.7:
+    resolution: {integrity: sha512-e0votIpp4Uo2AJYSzVHV6xCcawuiez3DzqDAbrTc3YxBkplN6e+dM13ZeIcZnDg/QpSuU2zfZ3rzwY8ukEnaXw==}
     engines: {node: '>=14.14'}
 
   to-regex-range@5.0.1:
@@ -18079,7 +18080,7 @@ snapshots:
       require-from-string: 2.0.2
       semver: 7.8.1
       source-map-support: 0.5.21
-      tmp: 0.2.5
+      tmp: 0.2.7
       upath: 1.2.0
     optionalDependencies:
       ts-node: 10.9.2(@swc/core@1.15.30)(@types/node@22.19.17)(typescript@6.0.3)
@@ -25846,7 +25847,7 @@ snapshots:
     dependencies:
       tldts-core: 7.0.28
 
-  tmp@0.2.5: {}
+  tmp@0.2.7: {}
 
   to-regex-range@5.0.1:
     dependencies:
