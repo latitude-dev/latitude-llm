@@ -32,9 +32,13 @@ const targetWithFilter = (
   filterSet: { ...(target.filterSet ?? {}), ...filterSet },
 })
 
-const presetDraft = (target: MonitorTarget, overrides: Partial<AlertDraft>): AlertDraft =>
+const expectedRelativeDraft = (
+  target: MonitorTarget,
+  kind: "monitor.threshold" | "monitor.escalating",
+  overrides: Partial<AlertDraft>,
+): AlertDraft =>
   targetAlertDraft(target, {
-    kind: "monitor.escalating",
+    kind,
     comparison: "timesMoreThan",
     baselineKind: "expected",
     amount: 3,
@@ -52,17 +56,21 @@ const userMonitorPresets = (target: MonitorTarget): readonly UserMonitorPreset[]
       name: allUsers ? "Users are having errors" : "User is having errors",
       description: `Opens an incident when failed traces for ${subject} stay higher than expected.`,
       icon: AlertTriangleIcon,
-      draft: presetDraft(targetWithFilter(target, { status: [{ op: "eq", value: "error" }] }), {
-        metric: { kind: "count" },
-        severity: "high",
-      }),
+      draft: expectedRelativeDraft(
+        targetWithFilter(target, { status: [{ op: "eq", value: "error" }] }),
+        "monitor.escalating",
+        {
+          metric: { kind: "count" },
+          severity: "high",
+        },
+      ),
     },
     {
       id: "slow",
       name: allUsers ? "Users are seeing slow responses" : "User is seeing slow responses",
       description: `Opens an incident when median trace latency for ${subject} stays higher than expected.`,
       icon: GaugeIcon,
-      draft: presetDraft(target, {
+      draft: expectedRelativeDraft(target, "monitor.threshold", {
         metric: { kind: "median", field: "duration" },
         severity: "medium",
         windowAmount: 15,
@@ -73,14 +81,17 @@ const userMonitorPresets = (target: MonitorTarget): readonly UserMonitorPreset[]
       name: "Activity spiked",
       description: `Opens an incident when session volume for ${subject} stays higher than expected.`,
       icon: TrendingUpIcon,
-      draft: presetDraft(target, { metric: { kind: "count" }, severity: "medium" }),
+      draft: expectedRelativeDraft(target, "monitor.escalating", {
+        metric: { kind: "count" },
+        severity: "medium",
+      }),
     },
     {
       id: "activity-drop",
       name: "Activity dropped",
       description: `Opens an incident when session volume for ${subject} stays lower than expected.`,
       icon: TrendingDownIcon,
-      draft: presetDraft(target, {
+      draft: expectedRelativeDraft(target, "monitor.escalating", {
         metric: { kind: "count" },
         direction: "below",
         severity: "medium",
@@ -92,7 +103,10 @@ const userMonitorPresets = (target: MonitorTarget): readonly UserMonitorPreset[]
       name: "Cost spiked",
       description: `Opens an incident when total cost for ${subject} stays higher than expected.`,
       icon: CoinsIcon,
-      draft: presetDraft(target, { metric: { kind: "sum", field: "cost" }, severity: "medium" }),
+      draft: expectedRelativeDraft(target, "monitor.threshold", {
+        metric: { kind: "sum", field: "cost" },
+        severity: "medium",
+      }),
     },
   ]
 }

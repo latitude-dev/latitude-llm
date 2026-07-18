@@ -24,9 +24,13 @@ interface ToolMonitorPreset {
   readonly draft: AlertDraft
 }
 
-const presetDraft = (target: MonitorTarget, overrides: Partial<AlertDraft>): AlertDraft =>
+const expectedRelativeDraft = (
+  target: MonitorTarget,
+  kind: "monitor.threshold" | "monitor.escalating",
+  overrides: Partial<AlertDraft>,
+): AlertDraft =>
   targetAlertDraft(target, {
-    kind: "monitor.escalating",
+    kind,
     comparison: "timesMoreThan",
     baselineKind: "expected",
     amount: 3,
@@ -44,28 +48,38 @@ const toolMonitorPresets = (target: MonitorTarget): readonly ToolMonitorPreset[]
         name: "Tool failures increased",
         description: "Opens an incident when the overall tool error rate stays higher than expected.",
         icon: AlertTriangleIcon,
-        draft: presetDraft(target, { metric: { kind: "errorRate" }, severity: "high" }),
+        draft: expectedRelativeDraft(target, "monitor.threshold", {
+          metric: { kind: "errorRate" },
+          severity: "high",
+        }),
       },
       {
         id: "latency-increased",
         name: "Tool latency increased",
         description: "Opens an incident when median latency across tool calls stays higher than expected.",
         icon: GaugeIcon,
-        draft: presetDraft(target, { metric: { kind: "median", field: "duration" }, severity: "medium" }),
+        draft: expectedRelativeDraft(target, "monitor.threshold", {
+          metric: { kind: "median", field: "duration" },
+          severity: "medium",
+        }),
       },
       {
         id: "usage-spike",
         name: "Tool usage spiked",
         description: "Opens an incident when total tool call volume stays higher than expected.",
         icon: TrendingUpIcon,
-        draft: presetDraft(target, { metric: { kind: "count" }, severity: "medium", windowAmount: 30 }),
+        draft: expectedRelativeDraft(target, "monitor.escalating", {
+          metric: { kind: "count" },
+          severity: "medium",
+          windowAmount: 30,
+        }),
       },
       {
         id: "usage-drop",
         name: "Tool usage dropped",
         description: "Opens an incident when total tool call volume stays lower than expected.",
         icon: TrendingDownIcon,
-        draft: presetDraft(target, {
+        draft: expectedRelativeDraft(target, "monitor.escalating", {
           metric: { kind: "count" },
           direction: "below",
           severity: "medium",
@@ -77,7 +91,11 @@ const toolMonitorPresets = (target: MonitorTarget): readonly ToolMonitorPreset[]
         name: "Tool cost spiked",
         description: "Opens an incident when total tool-call cost stays higher than expected.",
         icon: ZapIcon,
-        draft: presetDraft(target, { metric: { kind: "sum", field: "cost" }, severity: "medium", windowAmount: 30 }),
+        draft: expectedRelativeDraft(target, "monitor.threshold", {
+          metric: { kind: "sum", field: "cost" },
+          severity: "medium",
+          windowAmount: 30,
+        }),
       },
     ]
   }
@@ -88,28 +106,37 @@ const toolMonitorPresets = (target: MonitorTarget): readonly ToolMonitorPreset[]
       name: "Tool is failing",
       description: "Opens an incident when the tool's error rate stays higher than expected.",
       icon: AlertTriangleIcon,
-      draft: presetDraft(target, { metric: { kind: "errorRate" }, severity: "high" }),
+      draft: expectedRelativeDraft(target, "monitor.threshold", {
+        metric: { kind: "errorRate" },
+        severity: "high",
+      }),
     },
     {
       id: "slow",
       name: "Tool is slow",
       description: "Opens an incident when median latency stays higher than expected.",
       icon: GaugeIcon,
-      draft: presetDraft(target, { metric: { kind: "median", field: "duration" }, severity: "medium" }),
+      draft: expectedRelativeDraft(target, "monitor.threshold", {
+        metric: { kind: "median", field: "duration" },
+        severity: "medium",
+      }),
     },
     {
       id: "usage-spike",
       name: "Usage spiked",
       description: "Opens an incident when call volume stays higher than expected.",
       icon: TrendingUpIcon,
-      draft: presetDraft(target, { metric: { kind: "count" }, severity: "medium" }),
+      draft: expectedRelativeDraft(target, "monitor.escalating", {
+        metric: { kind: "count" },
+        severity: "medium",
+      }),
     },
     {
       id: "usage-drop",
       name: "Usage dropped",
       description: "Opens an incident when call volume stays lower than expected.",
       icon: TrendingDownIcon,
-      draft: presetDraft(target, {
+      draft: expectedRelativeDraft(target, "monitor.escalating", {
         metric: { kind: "count" },
         direction: "below",
         severity: "medium",
@@ -121,7 +148,11 @@ const toolMonitorPresets = (target: MonitorTarget): readonly ToolMonitorPreset[]
       name: "Agent is overusing it",
       description: "Opens an incident when calls stay unusually elevated, a common sign of loops or retries.",
       icon: ZapIcon,
-      draft: presetDraft(target, { metric: { kind: "count" }, severity: "high", amount: 2 }),
+      draft: expectedRelativeDraft(target, "monitor.escalating", {
+        metric: { kind: "count" },
+        severity: "high",
+        amount: 2,
+      }),
     },
   ]
 }
