@@ -25,10 +25,11 @@ type MonitorTrigger = "threshold" | "escalating" | "match"
 interface PresetExpectation {
   readonly trigger: MonitorTrigger
   readonly metric: MonitorMetric
+  readonly hasErrorStatusFilter?: boolean
 }
 
 const SPECIFIC_TOOL_PRESET_EXPECTATIONS: Record<string, PresetExpectation> = {
-  failing: { trigger: "threshold", metric: { kind: "errorRate" } },
+  failing: { trigger: "escalating", metric: { kind: "count" }, hasErrorStatusFilter: true },
   slow: { trigger: "threshold", metric: { kind: "median", field: "duration" } },
   "usage-spike": { trigger: "escalating", metric: { kind: "count" } },
   "usage-drop": { trigger: "escalating", metric: { kind: "count" } },
@@ -36,15 +37,14 @@ const SPECIFIC_TOOL_PRESET_EXPECTATIONS: Record<string, PresetExpectation> = {
 }
 
 const ALL_TOOLS_PRESET_EXPECTATIONS: Record<string, PresetExpectation> = {
-  "failures-increased": { trigger: "threshold", metric: { kind: "errorRate" } },
+  "failures-increased": { trigger: "escalating", metric: { kind: "count" }, hasErrorStatusFilter: true },
   "latency-increased": { trigger: "threshold", metric: { kind: "median", field: "duration" } },
   "usage-spike": { trigger: "escalating", metric: { kind: "count" } },
   "usage-drop": { trigger: "escalating", metric: { kind: "count" } },
-  "cost-spike": { trigger: "threshold", metric: { kind: "sum", field: "cost" } },
 }
 
 const USER_PRESET_EXPECTATIONS: Record<string, PresetExpectation> = {
-  errors: { trigger: "escalating", metric: { kind: "count" } },
+  errors: { trigger: "escalating", metric: { kind: "count" }, hasErrorStatusFilter: true },
   slow: { trigger: "threshold", metric: { kind: "median", field: "duration" } },
   "activity-spike": { trigger: "escalating", metric: { kind: "count" } },
   "activity-drop": { trigger: "escalating", metric: { kind: "count" } },
@@ -133,6 +133,10 @@ const assertPresetsCreate = async (
     expect(presetTarget, preset.id).toBeDefined()
     if (!presetTarget) continue
 
+    if (expected.hasErrorStatusFilter) {
+      expect(presetTarget.filterSet?.status, preset.id).toEqual([{ op: "eq", value: "error" }])
+    }
+
     const monitor = await runCreate(
       createFromUiDraft({
         name: `${preset.name} — ${nameSuffix}`,
@@ -168,7 +172,7 @@ describe("recommended monitor presets", () => {
     await assertPresetsCreate(userMonitorPresets(target), USER_PRESET_EXPECTATIONS, "user")
   })
 
-  it("still rejects the pre-fix escalating + errorRate shape", async () => {
+  it("still rejects escalating + errorRate", async () => {
     const draft = targetAlertDraft(toolMonitorTarget("searchWeb"), {
       kind: "monitor.escalating",
       metric: { kind: "errorRate" },
@@ -197,16 +201,28 @@ describe("recommended monitor presets", () => {
     expect(error.message).toBe("Escalating monitors only support count metrics")
   })
 
-  it("maps Tool is failing to threshold + errorRate", () => {
+  it("maps Tool is failing to escalating error-call volume", () => {
     const failing = toolMonitorPresets(toolMonitorTarget("searchWeb")).find((preset) => preset.id === "failing")
     expect(failing).toBeDefined()
     if (!failing) return
-    expect(failing.draft.kind).toBe("monitor.threshold")
-    expect(failing.draft.metric).toEqual({ kind: "errorRate" })
+    expect(failing.draft.kind).toBe("monitor.escalating")
+    expect(failing.draft.metric).toEqual({ kind: "count" })
+    expect(failing.draft.target?.filterSet?.status).toEqual([{ op: "eq", value: "error" }])
     expect(draftToAlertDraft(failing.draft).condition).toMatchObject({
-      trigger: "threshold",
-      metric: { kind: "errorRate" },
+      trigger: "escalating",
+      metric: { kind: "count" },
       threshold: { mode: "expected", sensitivity: 3 },
+    })
+  })
+
+  it("maps Tool is slow to an absolute latency threshold", () => {
+    const slow = toolMonitorPresets(toolMonitorTarget("searchWeb")).find((preset) => preset.id === "slow")
+    expect(slow).toBeDefined()
+    if (!slow) return
+    expect(draftToAlertDraft(slow.draft).condition).toMatchObject({
+      trigger: "threshold",
+      metric: { kind: "median", field: "duration" },
+      threshold: { mode: "absolute", value: 2_000_000_000 },
     })
   })
 })

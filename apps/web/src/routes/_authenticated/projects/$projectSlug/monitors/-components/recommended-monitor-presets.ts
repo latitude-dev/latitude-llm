@@ -19,18 +19,24 @@ interface RecommendedMonitorPreset {
   readonly draft: AlertDraft
 }
 
-const expectedRelativeDraft = (
-  target: MonitorTarget,
-  kind: "monitor.threshold" | "monitor.escalating",
-  overrides: Partial<AlertDraft>,
-): AlertDraft =>
+const escalatingCountDraft = (target: MonitorTarget, overrides: Partial<AlertDraft> = {}): AlertDraft =>
   targetAlertDraft(target, {
-    kind,
+    kind: "monitor.escalating",
     comparison: "timesMoreThan",
     baselineKind: "expected",
     amount: 3,
     windowAmount: 15,
     windowUnit: "minutes",
+    metric: { kind: "count" },
+    ...overrides,
+  })
+
+const absoluteThresholdDraft = (target: MonitorTarget, overrides: Partial<AlertDraft>): AlertDraft =>
+  targetAlertDraft(target, {
+    kind: "monitor.threshold",
+    comparison: "times",
+    amount: 1,
+    direction: "above",
     ...overrides,
   })
 
@@ -42,6 +48,9 @@ const targetWithFilter = (
   filterSet: { ...(target.filterSet ?? {}), ...filterSet },
 })
 
+const failingToolTarget = (target: MonitorTarget): MonitorTarget =>
+  targetWithFilter(target, { status: [{ op: "eq", value: "error" }] })
+
 export const toolMonitorPresets = (target: MonitorTarget): readonly RecommendedMonitorPreset[] => {
   const allTools = describeMonitorTarget(target)?.kind === "allTools"
   if (allTools) {
@@ -49,20 +58,18 @@ export const toolMonitorPresets = (target: MonitorTarget): readonly RecommendedM
       {
         id: "failures-increased",
         name: "Tool failures increased",
-        description: "Opens an incident when the overall tool error rate stays higher than expected.",
+        description: "Opens an incident when failed tool calls stay higher than expected.",
         icon: AlertTriangleIcon,
-        draft: expectedRelativeDraft(target, "monitor.threshold", {
-          metric: { kind: "errorRate" },
-          severity: "high",
-        }),
+        draft: escalatingCountDraft(failingToolTarget(target), { severity: "high" }),
       },
       {
         id: "latency-increased",
         name: "Tool latency increased",
-        description: "Opens an incident when median latency across tool calls stays higher than expected.",
+        description: "Opens an incident when median latency across tool calls exceeds 2s.",
         icon: GaugeIcon,
-        draft: expectedRelativeDraft(target, "monitor.threshold", {
+        draft: absoluteThresholdDraft(target, {
           metric: { kind: "median", field: "duration" },
+          amount: 2,
           severity: "medium",
         }),
       },
@@ -71,33 +78,17 @@ export const toolMonitorPresets = (target: MonitorTarget): readonly RecommendedM
         name: "Tool usage spiked",
         description: "Opens an incident when total tool call volume stays higher than expected.",
         icon: TrendingUpIcon,
-        draft: expectedRelativeDraft(target, "monitor.escalating", {
-          metric: { kind: "count" },
-          severity: "medium",
-          windowAmount: 30,
-        }),
+        draft: escalatingCountDraft(target, { severity: "medium", windowAmount: 30 }),
       },
       {
         id: "usage-drop",
         name: "Tool usage dropped",
         description: "Opens an incident when total tool call volume stays lower than expected.",
         icon: TrendingDownIcon,
-        draft: expectedRelativeDraft(target, "monitor.escalating", {
-          metric: { kind: "count" },
+        draft: escalatingCountDraft(target, {
           direction: "below",
           severity: "medium",
           windowAmount: 60,
-        }),
-      },
-      {
-        id: "cost-spike",
-        name: "Tool cost spiked",
-        description: "Opens an incident when total tool-call cost stays higher than expected.",
-        icon: ZapIcon,
-        draft: expectedRelativeDraft(target, "monitor.threshold", {
-          metric: { kind: "sum", field: "cost" },
-          severity: "medium",
-          windowAmount: 30,
         }),
       },
     ]
@@ -107,20 +98,18 @@ export const toolMonitorPresets = (target: MonitorTarget): readonly RecommendedM
     {
       id: "failing",
       name: "Tool is failing",
-      description: "Opens an incident when the tool's error rate stays higher than expected.",
+      description: "Opens an incident when failed calls for this tool stay higher than expected.",
       icon: AlertTriangleIcon,
-      draft: expectedRelativeDraft(target, "monitor.threshold", {
-        metric: { kind: "errorRate" },
-        severity: "high",
-      }),
+      draft: escalatingCountDraft(failingToolTarget(target), { severity: "high" }),
     },
     {
       id: "slow",
       name: "Tool is slow",
-      description: "Opens an incident when median latency stays higher than expected.",
+      description: "Opens an incident when median latency exceeds 2s.",
       icon: GaugeIcon,
-      draft: expectedRelativeDraft(target, "monitor.threshold", {
+      draft: absoluteThresholdDraft(target, {
         metric: { kind: "median", field: "duration" },
+        amount: 2,
         severity: "medium",
       }),
     },
@@ -129,18 +118,14 @@ export const toolMonitorPresets = (target: MonitorTarget): readonly RecommendedM
       name: "Usage spiked",
       description: "Opens an incident when call volume stays higher than expected.",
       icon: TrendingUpIcon,
-      draft: expectedRelativeDraft(target, "monitor.escalating", {
-        metric: { kind: "count" },
-        severity: "medium",
-      }),
+      draft: escalatingCountDraft(target, { severity: "medium" }),
     },
     {
       id: "usage-drop",
       name: "Usage dropped",
       description: "Opens an incident when call volume stays lower than expected.",
       icon: TrendingDownIcon,
-      draft: expectedRelativeDraft(target, "monitor.escalating", {
-        metric: { kind: "count" },
+      draft: escalatingCountDraft(target, {
         direction: "below",
         severity: "medium",
         windowAmount: 30,
@@ -151,11 +136,7 @@ export const toolMonitorPresets = (target: MonitorTarget): readonly RecommendedM
       name: "Agent is overusing it",
       description: "Opens an incident when calls stay unusually elevated, a common sign of loops or retries.",
       icon: ZapIcon,
-      draft: expectedRelativeDraft(target, "monitor.escalating", {
-        metric: { kind: "count" },
-        severity: "high",
-        amount: 2,
-      }),
+      draft: escalatingCountDraft(target, { severity: "high", amount: 2 }),
     },
   ]
 }
@@ -169,25 +150,20 @@ export const userMonitorPresets = (target: MonitorTarget): readonly RecommendedM
       name: allUsers ? "Users are having errors" : "User is having errors",
       description: `Opens an incident when failed traces for ${subject} stay higher than expected.`,
       icon: AlertTriangleIcon,
-      draft: expectedRelativeDraft(
-        targetWithFilter(target, { status: [{ op: "eq", value: "error" }] }),
-        "monitor.escalating",
-        {
-          metric: { kind: "count" },
-          severity: "high",
-          windowAmount: 30,
-        },
-      ),
+      draft: escalatingCountDraft(targetWithFilter(target, { status: [{ op: "eq", value: "error" }] }), {
+        severity: "high",
+        windowAmount: 30,
+      }),
     },
     {
       id: "slow",
       name: allUsers ? "Users are seeing slow responses" : "User is seeing slow responses",
-      description: `Opens an incident when median trace latency for ${subject} stays higher than expected.`,
+      description: `Opens an incident when median trace latency for ${subject} exceeds 2s.`,
       icon: GaugeIcon,
-      draft: expectedRelativeDraft(target, "monitor.threshold", {
+      draft: absoluteThresholdDraft(target, {
         metric: { kind: "median", field: "duration" },
+        amount: 2,
         severity: "medium",
-        windowAmount: 15,
       }),
     },
     {
@@ -195,19 +171,14 @@ export const userMonitorPresets = (target: MonitorTarget): readonly RecommendedM
       name: "Activity spiked",
       description: `Opens an incident when session volume for ${subject} stays higher than expected.`,
       icon: TrendingUpIcon,
-      draft: expectedRelativeDraft(target, "monitor.escalating", {
-        metric: { kind: "count" },
-        severity: "medium",
-        windowAmount: 30,
-      }),
+      draft: escalatingCountDraft(target, { severity: "medium", windowAmount: 30 }),
     },
     {
       id: "activity-drop",
       name: "Activity dropped",
       description: `Opens an incident when session volume for ${subject} stays lower than expected.`,
       icon: TrendingDownIcon,
-      draft: expectedRelativeDraft(target, "monitor.escalating", {
-        metric: { kind: "count" },
+      draft: escalatingCountDraft(target, {
         direction: "below",
         severity: "medium",
         windowAmount: 60,
@@ -216,12 +187,12 @@ export const userMonitorPresets = (target: MonitorTarget): readonly RecommendedM
     {
       id: "cost-spike",
       name: "Cost spiked",
-      description: `Opens an incident when total cost for ${subject} stays higher than expected.`,
+      description: `Opens an incident when total cost for ${subject} exceeds $10 in the evaluation window.`,
       icon: CoinsIcon,
-      draft: expectedRelativeDraft(target, "monitor.threshold", {
+      draft: absoluteThresholdDraft(target, {
         metric: { kind: "sum", field: "cost" },
+        amount: 10,
         severity: "medium",
-        windowAmount: 30,
       }),
     },
   ]
