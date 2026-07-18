@@ -2,7 +2,13 @@
 
 from __future__ import annotations
 
-from latitude_telemetry_hermes.messages import _normalize_assistant, _normalize_messages
+from latitude_telemetry_hermes.builder import _last_user_text
+from latitude_telemetry_hermes.messages import (
+    _count_tool_calls,
+    _has_content,
+    _normalize_assistant,
+    _normalize_messages,
+)
 
 
 def test_normalize_messages_drops_empty_user_and_unknown_roles():
@@ -81,3 +87,21 @@ def test_normalize_assistant_keeps_tool_calls_without_empty_text():
         "role": "assistant",
         "parts": [{"type": "tool_call", "id": "c1", "name": "bash", "arguments": {"cmd": "ls"}}],
     }
+
+
+def test_count_tool_calls_includes_content_list_tool_use():
+    assistant = {
+        "content": [{"type": "tool_use", "id": "t1", "name": "read", "input": {"path": "a"}}],
+    }
+    assert _count_tool_calls(assistant) == 1
+    assert _has_content(assistant, 0) is False
+
+
+def test_last_user_text_does_not_backfill_from_older_prompt():
+    messages = [
+        {"role": "user", "content": "old prompt"},
+        {"role": "assistant", "content": "ok"},
+        {"role": "user", "content": "   "},
+    ]
+    assert _last_user_text(messages) is None
+    assert _last_user_text([{"role": "user", "content": "hello"}]) == "hello"

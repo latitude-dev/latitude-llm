@@ -170,7 +170,11 @@ def _system_prompt(messages: Any) -> Optional[str]:
 
 def _count_tool_calls(assistant: Any) -> int:
     tc = _get(assistant, "tool_calls")
-    return len(tc) if isinstance(tc, (list, tuple)) else 0
+    count = len(tc) if isinstance(tc, (list, tuple)) else 0
+    content = _get(assistant, "content")
+    if isinstance(content, list):
+        count += sum(1 for b in content if isinstance(b, dict) and b.get("type") == "tool_use")
+    return count
 
 
 def _has_content(assistant: Any, chars: int) -> bool:
@@ -180,5 +184,19 @@ def _has_content(assistant: Any, chars: int) -> bool:
     if isinstance(content, str):
         return bool(content.strip())
     if isinstance(content, list):
-        return len(content) > 0
+        for block in content:
+            if isinstance(block, str) and block.strip():
+                return True
+            if not isinstance(block, dict):
+                continue
+            btype = block.get("type") or "text"
+            if btype in ("tool_use", "tool_result"):
+                continue
+            if btype in ("thinking", "reasoning"):
+                text = block.get("thinking") or block.get("content") or ""
+            else:
+                text = block.get("content") or block.get("text") or ""
+            if isinstance(text, str) and text.strip():
+                return True
+        return False
     return (chars or 0) > 0

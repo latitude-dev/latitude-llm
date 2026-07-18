@@ -333,8 +333,7 @@ def _last_user_text(messages: Any) -> Optional[str]:
     for m in reversed(messages):
         if isinstance(m, dict) and m.get("role") == "user":
             text = _coerce_text(m.get("content"))
-            if text.strip():
-                return text
+            return text if text.strip() else None
     return None
 
 
