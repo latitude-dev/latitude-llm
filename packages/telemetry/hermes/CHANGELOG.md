@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.1.2]
+
+### Fixed
+
+- Stop exporting empty conversation placeholders. Blank or whitespace-only user/assistant turns no longer become `{ type: "text", content: "" }` parts that render as empty bubbles in Latitude. Tool-only assistant turns still export as `tool_call` parts. Content-list `tool_use` blocks now count toward keeping the interaction open so following `tool_execution` spans are not dropped. The interaction root only attaches `user_prompt` / `gen_ai.input.messages` when the current turn has real user text (blank trailing user turns are omitted, not backfilled from an earlier prompt).
+
 ## [0.1.1]
 
 ### Fixed

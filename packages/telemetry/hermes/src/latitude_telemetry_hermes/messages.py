@@ -41,10 +41,10 @@ def _normalize_message(m: Any) -> Optional[Dict[str, Any]]:
     return _content_message(role, m.get("content"), m)
 
 
-def _content_message(role: str, content: Any, envelope: Dict[str, Any]) -> Dict[str, Any]:
+def _content_message(role: str, content: Any, envelope: Dict[str, Any]) -> Optional[Dict[str, Any]]:
     parts: List[Dict[str, Any]] = []
     if isinstance(content, str):
-        if content:
+        if content.strip():
             parts.append({"type": "text", "content": content})
     elif isinstance(content, list):
         for block in content:
@@ -55,7 +55,7 @@ def _content_message(role: str, content: Any, envelope: Dict[str, Any]) -> Dict[
         parts.append({"type": "text", "content": _safe_json(content)})
     _append_tool_calls(parts, envelope.get("tool_calls"))
     if not parts:
-        parts = [{"type": "text", "content": ""}]
+        return None
     return {"role": role, "parts": parts}
 
 
@@ -64,30 +64,45 @@ def _normalize_assistant(obj: Any) -> Optional[Dict[str, Any]]:
     if obj is None:
         return None
     if isinstance(obj, str):
+        if not obj.strip():
+            return None
         return {"role": "assistant", "parts": [{"type": "text", "content": obj}]}
     parts: List[Dict[str, Any]] = []
     reasoning = _get(obj, "reasoning")
-    if isinstance(reasoning, str) and reasoning:
+    if isinstance(reasoning, str) and reasoning.strip():
         parts.append({"type": "reasoning", "content": reasoning})
     content = _get(obj, "content")
-    if isinstance(content, str) and content:
+    if isinstance(content, str) and content.strip():
         parts.append({"type": "text", "content": content})
+    elif isinstance(content, list):
+        for block in content:
+            p = _block(block)
+            if p:
+                parts.append(p)
     _append_tool_calls(parts, _get(obj, "tool_calls"))
     if not parts:
-        parts = [{"type": "text", "content": ""}]
+        return None
     return {"role": "assistant", "parts": parts}
 
 
 def _block(block: Any) -> Optional[Dict[str, Any]]:
     if isinstance(block, str):
+        if not block.strip():
+            return None
         return {"type": "text", "content": block}
     if not isinstance(block, dict):
         return None
     btype = block.get("type") or "text"
     if btype == "text":
-        return {"type": "text", "content": block.get("content") or block.get("text") or ""}
+        text = block.get("content") or block.get("text") or ""
+        if not isinstance(text, str) or not text.strip():
+            return None
+        return {"type": "text", "content": text}
     if btype in ("thinking", "reasoning"):
-        return {"type": "reasoning", "content": block.get("thinking") or block.get("content") or ""}
+        text = block.get("thinking") or block.get("content") or ""
+        if not isinstance(text, str) or not text.strip():
+            return None
+        return {"type": "reasoning", "content": text}
     if btype == "tool_use":
         return {
             "type": "tool_call",
@@ -155,7 +170,11 @@ def _system_prompt(messages: Any) -> Optional[str]:
 
 def _count_tool_calls(assistant: Any) -> int:
     tc = _get(assistant, "tool_calls")
-    return len(tc) if isinstance(tc, (list, tuple)) else 0
+    count = len(tc) if isinstance(tc, (list, tuple)) else 0
+    content = _get(assistant, "content")
+    if isinstance(content, list):
+        count += sum(1 for b in content if isinstance(b, dict) and b.get("type") == "tool_use")
+    return count
 
 
 def _has_content(assistant: Any, chars: int) -> bool:
@@ -165,5 +184,19 @@ def _has_content(assistant: Any, chars: int) -> bool:
     if isinstance(content, str):
         return bool(content.strip())
     if isinstance(content, list):
-        return len(content) > 0
+        for block in content:
+            if isinstance(block, str) and block.strip():
+                return True
+            if not isinstance(block, dict):
+                continue
+            btype = block.get("type") or "text"
+            if btype in ("tool_use", "tool_result"):
+                continue
+            if btype in ("thinking", "reasoning"):
+                text = block.get("thinking") or block.get("content") or ""
+            else:
+                text = block.get("content") or block.get("text") or ""
+            if isinstance(text, str) and text.strip():
+                return True
+        return False
     return (chars or 0) > 0
