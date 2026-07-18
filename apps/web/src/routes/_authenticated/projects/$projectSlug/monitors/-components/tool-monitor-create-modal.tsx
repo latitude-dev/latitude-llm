@@ -1,13 +1,11 @@
 import type { MonitorTarget } from "@domain/monitors"
 import { Button, cn, Icon, Modal, Text, useToast } from "@repo/ui"
-import { AlertTriangleIcon, GaugeIcon, TrendingDownIcon, TrendingUpIcon, ZapIcon } from "lucide-react"
 import { useState } from "react"
-import { describeMonitorTarget, monitorTargetName } from "../../../../../../domains/monitors/monitor-target.ts"
+import { monitorTargetName } from "../../../../../../domains/monitors/monitor-target.ts"
 import { useCreateMonitor } from "../../../../../../domains/monitors/monitors.collection.ts"
 import { extractFieldErrors, toUserMessage } from "../../../../../../lib/errors.ts"
 import { AdvancedMonitorCreateFields, type AdvancedMonitorCreateValue } from "./advanced-monitor-create-fields.tsx"
 import {
-  type AlertDraft,
   alertFieldErrorsFrom,
   draftToAlertDraft,
   draftToTarget,
@@ -15,147 +13,7 @@ import {
   targetAlertDraft,
 } from "./alert-form-helpers.ts"
 import { type MonitorCreateMode, MonitorModeSwitch } from "./monitor-mode-switch.tsx"
-
-interface ToolMonitorPreset {
-  readonly id: string
-  readonly name: string
-  readonly description: string
-  readonly icon: typeof AlertTriangleIcon
-  readonly draft: AlertDraft
-}
-
-const expectedRelativeDraft = (
-  target: MonitorTarget,
-  kind: "monitor.threshold" | "monitor.escalating",
-  overrides: Partial<AlertDraft>,
-): AlertDraft =>
-  targetAlertDraft(target, {
-    kind,
-    comparison: "timesMoreThan",
-    baselineKind: "expected",
-    amount: 3,
-    windowAmount: 15,
-    windowUnit: "minutes",
-    ...overrides,
-  })
-
-const toolMonitorPresets = (target: MonitorTarget): readonly ToolMonitorPreset[] => {
-  const allTools = describeMonitorTarget(target)?.kind === "allTools"
-  if (allTools) {
-    return [
-      {
-        id: "failures-increased",
-        name: "Tool failures increased",
-        description: "Opens an incident when the overall tool error rate stays higher than expected.",
-        icon: AlertTriangleIcon,
-        draft: expectedRelativeDraft(target, "monitor.threshold", {
-          metric: { kind: "errorRate" },
-          severity: "high",
-        }),
-      },
-      {
-        id: "latency-increased",
-        name: "Tool latency increased",
-        description: "Opens an incident when median latency across tool calls stays higher than expected.",
-        icon: GaugeIcon,
-        draft: expectedRelativeDraft(target, "monitor.threshold", {
-          metric: { kind: "median", field: "duration" },
-          severity: "medium",
-        }),
-      },
-      {
-        id: "usage-spike",
-        name: "Tool usage spiked",
-        description: "Opens an incident when total tool call volume stays higher than expected.",
-        icon: TrendingUpIcon,
-        draft: expectedRelativeDraft(target, "monitor.escalating", {
-          metric: { kind: "count" },
-          severity: "medium",
-          windowAmount: 30,
-        }),
-      },
-      {
-        id: "usage-drop",
-        name: "Tool usage dropped",
-        description: "Opens an incident when total tool call volume stays lower than expected.",
-        icon: TrendingDownIcon,
-        draft: expectedRelativeDraft(target, "monitor.escalating", {
-          metric: { kind: "count" },
-          direction: "below",
-          severity: "medium",
-          windowAmount: 60,
-        }),
-      },
-      {
-        id: "cost-spike",
-        name: "Tool cost spiked",
-        description: "Opens an incident when total tool-call cost stays higher than expected.",
-        icon: ZapIcon,
-        draft: expectedRelativeDraft(target, "monitor.threshold", {
-          metric: { kind: "sum", field: "cost" },
-          severity: "medium",
-          windowAmount: 30,
-        }),
-      },
-    ]
-  }
-
-  return [
-    {
-      id: "failing",
-      name: "Tool is failing",
-      description: "Opens an incident when the tool's error rate stays higher than expected.",
-      icon: AlertTriangleIcon,
-      draft: expectedRelativeDraft(target, "monitor.threshold", {
-        metric: { kind: "errorRate" },
-        severity: "high",
-      }),
-    },
-    {
-      id: "slow",
-      name: "Tool is slow",
-      description: "Opens an incident when median latency stays higher than expected.",
-      icon: GaugeIcon,
-      draft: expectedRelativeDraft(target, "monitor.threshold", {
-        metric: { kind: "median", field: "duration" },
-        severity: "medium",
-      }),
-    },
-    {
-      id: "usage-spike",
-      name: "Usage spiked",
-      description: "Opens an incident when call volume stays higher than expected.",
-      icon: TrendingUpIcon,
-      draft: expectedRelativeDraft(target, "monitor.escalating", {
-        metric: { kind: "count" },
-        severity: "medium",
-      }),
-    },
-    {
-      id: "usage-drop",
-      name: "Usage dropped",
-      description: "Opens an incident when call volume stays lower than expected.",
-      icon: TrendingDownIcon,
-      draft: expectedRelativeDraft(target, "monitor.escalating", {
-        metric: { kind: "count" },
-        direction: "below",
-        severity: "medium",
-        windowAmount: 30,
-      }),
-    },
-    {
-      id: "overusing",
-      name: "Agent is overusing it",
-      description: "Opens an incident when calls stay unusually elevated, a common sign of loops or retries.",
-      icon: ZapIcon,
-      draft: expectedRelativeDraft(target, "monitor.escalating", {
-        metric: { kind: "count" },
-        severity: "high",
-        amount: 2,
-      }),
-    },
-  ]
-}
+import { toolMonitorPresets } from "./recommended-monitor-presets.ts"
 
 export function ToolMonitorCreateModal({
   projectId,

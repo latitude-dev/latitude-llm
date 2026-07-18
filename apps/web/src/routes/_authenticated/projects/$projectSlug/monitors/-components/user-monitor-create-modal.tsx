@@ -1,13 +1,11 @@
 import type { MonitorTarget } from "@domain/monitors"
 import { Button, cn, Icon, Modal, Text, useToast } from "@repo/ui"
-import { AlertTriangleIcon, CoinsIcon, GaugeIcon, TrendingDownIcon, TrendingUpIcon } from "lucide-react"
 import { useState } from "react"
-import { describeMonitorTarget, monitorTargetName } from "../../../../../../domains/monitors/monitor-target.ts"
+import { monitorTargetName } from "../../../../../../domains/monitors/monitor-target.ts"
 import { useCreateMonitor } from "../../../../../../domains/monitors/monitors.collection.ts"
 import { extractFieldErrors, toUserMessage } from "../../../../../../lib/errors.ts"
 import { AdvancedMonitorCreateFields, type AdvancedMonitorCreateValue } from "./advanced-monitor-create-fields.tsx"
 import {
-  type AlertDraft,
   alertFieldErrorsFrom,
   draftToAlertDraft,
   draftToTarget,
@@ -15,101 +13,7 @@ import {
   targetAlertDraft,
 } from "./alert-form-helpers.ts"
 import { type MonitorCreateMode, MonitorModeSwitch } from "./monitor-mode-switch.tsx"
-
-interface UserMonitorPreset {
-  readonly id: string
-  readonly name: string
-  readonly description: string
-  readonly icon: typeof AlertTriangleIcon
-  readonly draft: AlertDraft
-}
-
-const targetWithFilter = (
-  target: MonitorTarget,
-  filterSet: NonNullable<MonitorTarget["filterSet"]>,
-): MonitorTarget => ({
-  ...target,
-  filterSet: { ...(target.filterSet ?? {}), ...filterSet },
-})
-
-const expectedRelativeDraft = (
-  target: MonitorTarget,
-  kind: "monitor.threshold" | "monitor.escalating",
-  overrides: Partial<AlertDraft>,
-): AlertDraft =>
-  targetAlertDraft(target, {
-    kind,
-    comparison: "timesMoreThan",
-    baselineKind: "expected",
-    amount: 3,
-    windowAmount: 30,
-    windowUnit: "minutes",
-    ...overrides,
-  })
-
-const userMonitorPresets = (target: MonitorTarget): readonly UserMonitorPreset[] => {
-  const allUsers = describeMonitorTarget(target)?.kind === "allUsers"
-  const subject = allUsers ? "users" : "this user"
-  return [
-    {
-      id: "errors",
-      name: allUsers ? "Users are having errors" : "User is having errors",
-      description: `Opens an incident when failed traces for ${subject} stay higher than expected.`,
-      icon: AlertTriangleIcon,
-      draft: expectedRelativeDraft(
-        targetWithFilter(target, { status: [{ op: "eq", value: "error" }] }),
-        "monitor.escalating",
-        {
-          metric: { kind: "count" },
-          severity: "high",
-        },
-      ),
-    },
-    {
-      id: "slow",
-      name: allUsers ? "Users are seeing slow responses" : "User is seeing slow responses",
-      description: `Opens an incident when median trace latency for ${subject} stays higher than expected.`,
-      icon: GaugeIcon,
-      draft: expectedRelativeDraft(target, "monitor.threshold", {
-        metric: { kind: "median", field: "duration" },
-        severity: "medium",
-        windowAmount: 15,
-      }),
-    },
-    {
-      id: "activity-spike",
-      name: "Activity spiked",
-      description: `Opens an incident when session volume for ${subject} stays higher than expected.`,
-      icon: TrendingUpIcon,
-      draft: expectedRelativeDraft(target, "monitor.escalating", {
-        metric: { kind: "count" },
-        severity: "medium",
-      }),
-    },
-    {
-      id: "activity-drop",
-      name: "Activity dropped",
-      description: `Opens an incident when session volume for ${subject} stays lower than expected.`,
-      icon: TrendingDownIcon,
-      draft: expectedRelativeDraft(target, "monitor.escalating", {
-        metric: { kind: "count" },
-        direction: "below",
-        severity: "medium",
-        windowAmount: 60,
-      }),
-    },
-    {
-      id: "cost-spike",
-      name: "Cost spiked",
-      description: `Opens an incident when total cost for ${subject} stays higher than expected.`,
-      icon: CoinsIcon,
-      draft: expectedRelativeDraft(target, "monitor.threshold", {
-        metric: { kind: "sum", field: "cost" },
-        severity: "medium",
-      }),
-    },
-  ]
-}
+import { userMonitorPresets } from "./recommended-monitor-presets.ts"
 
 export function UserMonitorCreateModal({
   projectId,

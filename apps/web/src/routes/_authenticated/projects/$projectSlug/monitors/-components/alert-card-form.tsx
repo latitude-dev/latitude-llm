@@ -133,8 +133,7 @@ function MetricSelector({
   const selectedDimension = metricDimension(value)
   const dimensions = (["count", "errorRate", "cacheHitRate", "duration", "cost", "tokens"] as const).filter(
     (dimension) =>
-      (!countOnly || dimension === "count") &&
-      options.some((option) => metricDimension(option.metric) === dimension),
+      (!countOnly || dimension === "count") && options.some((option) => metricDimension(option.metric) === dimension),
   )
   const aggregations = options.filter((option) => metricDimension(option.metric) === selectedDimension)
 

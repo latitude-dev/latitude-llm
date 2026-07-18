@@ -1,10 +1,5 @@
 import { describe, expect, it } from "vitest"
-import {
-  draftToAlertDraft,
-  draftWithKind,
-  emptyAlertDraft,
-  targetAlertDraft,
-} from "./alert-form-helpers.ts"
+import { draftToAlertDraft, draftWithKind, emptyAlertDraft, targetAlertDraft } from "./alert-form-helpers.ts"
 
 const toolTarget = {
   type: "tool" as const,
@@ -37,10 +32,7 @@ describe("draftWithKind", () => {
       metric: { kind: "count" },
     })
 
-    const next = draftWithKind(
-      { ...draft, metric: { kind: "median", field: "duration" } },
-      "monitor.threshold",
-    )
+    const next = draftWithKind({ ...draft, metric: { kind: "median", field: "duration" } }, "monitor.threshold")
 
     expect(next.kind).toBe("monitor.threshold")
     expect(next.metric).toEqual({ kind: "median", field: "duration" })
