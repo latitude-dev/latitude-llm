@@ -250,6 +250,11 @@ export function transformOtlpToSpans(
       const scopeVersion = scopeSpans.scope?.version ?? ""
       for (const span of scopeSpans.spans ?? []) {
         if (isDroppedSpan(scopeName, span.name ?? "")) continue
+        // OTLP/JSON bodies are cast, not validated, so `traceId` can arrive missing or non-string.
+        if (typeof span.traceId !== "string" || span.traceId.length === 0) {
+          rejectedSpans++
+          continue
+        }
         const projectId = resolveSpanProjectId(span.attributes ?? [], resourceAttrs, context)
         if (!projectId) {
           rejectedSpans++
