@@ -229,6 +229,34 @@ describe("MemoryRepository", () => {
     expect(oneTrace.map((e) => e.recordId)).toEqual(["rec1"])
   })
 
+  it("keeps same span_id rows from different traces when reading a session", async () => {
+    const sharedSpan = SpanId("sharedspan000001")
+    await withRepo((repo) =>
+      repo.insertEvents([
+        makeEvent({
+          recordId: "recA",
+          spanId: sharedSpan,
+          traceId: traceN(1),
+          sessionId: SessionId("sessA"),
+          endTime: at(1),
+        }),
+        makeEvent({
+          recordId: "recB",
+          spanId: sharedSpan,
+          traceId: traceN(2),
+          sessionId: SessionId("sessA"),
+          endTime: at(2),
+        }),
+      ]),
+    )
+
+    const events = await withRepo((repo) =>
+      repo.readSessionMemoryEvents({ organizationId, projectId, sessionId: SessionId("sessA") }),
+    )
+    expect(events.map((e) => e.recordId)).toEqual(["recA", "recB"])
+    expect(events.map((e) => e.traceId)).toEqual([traceN(1), traceN(2)])
+  })
+
   it("reads mutating version chains for the requested record set, honoring `at` and exact pairs", async () => {
     await withRepo((repo) =>
       repo.insertEvents([

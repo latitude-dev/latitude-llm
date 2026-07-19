@@ -481,7 +481,7 @@ export const MemoryRepositoryLive = Layer.effect(
           .query(async (client) => {
             const result = await client.query({
               // Dedup retried projection rows (append-only ledger) to one per
-              // (span_id, store_id, record_id), keeping the newest ingest.
+              // (trace_id, span_id, store_id, record_id), keeping the newest ingest.
               query: `SELECT ${EVENT_COLUMNS}
                       FROM (
                         SELECT ${EVENT_COLUMNS}, ingested_at
@@ -490,8 +490,8 @@ export const MemoryRepositoryLive = Layer.effect(
                           AND project_id = {projectId:String}
                           AND session_id = {sessionId:String}
                           ${traceId !== undefined ? "AND trace_id = {traceId:FixedString(32)}" : ""}
-                        ORDER BY span_id, store_id, record_id, ingested_at DESC
-                        LIMIT 1 BY span_id, store_id, record_id
+                        ORDER BY trace_id, span_id, store_id, record_id, ingested_at DESC
+                        LIMIT 1 BY trace_id, span_id, store_id, record_id
                       )
                       ORDER BY end_time ASC`,
               query_params: {
@@ -536,8 +536,8 @@ export const MemoryRepositoryLive = Layer.effect(
                           AND store_id IN {storeIds:Array(String)}
                           AND record_id IN {recordIds:Array(String)}
                           ${at !== undefined ? "AND end_time <= {at:DateTime64(6, 'UTC')}" : ""}
-                        ORDER BY span_id, store_id, record_id, ingested_at DESC
-                        LIMIT 1 BY span_id, store_id, record_id
+                        ORDER BY trace_id, span_id, store_id, record_id, ingested_at DESC
+                        LIMIT 1 BY trace_id, span_id, store_id, record_id
                       )
                       ORDER BY store_id, record_id, end_time ASC`,
               query_params: {
@@ -620,8 +620,8 @@ export const MemoryRepositoryLive = Layer.effect(
         return yield* chSqlClient
           .query(async (client) => {
             const result = await client.query({
-              // Dedup retried projection rows to one per span (store/record are
-              // pinned by the WHERE), then newest read first.
+              // Dedup retried projection rows to one per (trace_id, span_id)
+              // (store/record are pinned by the WHERE), then newest read first.
               query: `SELECT ${EVENT_COLUMNS}
                       FROM (
                         SELECT ${EVENT_COLUMNS}, ingested_at
@@ -631,8 +631,8 @@ export const MemoryRepositoryLive = Layer.effect(
                           AND store_id = {storeId:String}
                           AND record_id = {recordId:String}
                           AND change_kind = 'read'
-                        ORDER BY span_id, store_id, record_id, ingested_at DESC
-                        LIMIT 1 BY span_id, store_id, record_id
+                        ORDER BY trace_id, span_id, store_id, record_id, ingested_at DESC
+                        LIMIT 1 BY trace_id, span_id, store_id, record_id
                       )
                       ORDER BY end_time DESC
                       LIMIT {limit:UInt32}`,
@@ -662,22 +662,22 @@ export const MemoryRepositoryLive = Layer.effect(
         return yield* chSqlClient
           .query(async (client) => {
             const result = await client.query({
-              // Dedup retried projection rows to one per span before counting —
-              // `countIf` (unlike `maxIf`) is not idempotent to duplicates.
+              // Dedup retried projection rows to one per (trace_id, span_id)
+              // before counting — `countIf` (unlike `maxIf`) is not idempotent to duplicates.
               query: `SELECT user_id,
                              countIf(change_kind = 'read')                       AS read_count,
                              countIf(change_kind IN ('add', 'update', 'remove')) AS write_count,
                              max(end_time)                                       AS last_accessed_at
                       FROM (
-                        SELECT span_id, user_id, change_kind, end_time
+                        SELECT trace_id, span_id, user_id, change_kind, end_time
                         FROM memory_events
                         WHERE organization_id = {organizationId:String}
                           AND project_id = {projectId:String}
                           AND store_id = {storeId:String}
                           AND record_id = {recordId:String}
                           AND user_id != ''
-                        ORDER BY span_id, ingested_at DESC
-                        LIMIT 1 BY span_id
+                        ORDER BY trace_id, span_id, ingested_at DESC
+                        LIMIT 1 BY trace_id, span_id
                       )
                       GROUP BY user_id
                       ORDER BY last_accessed_at DESC, user_id ASC
