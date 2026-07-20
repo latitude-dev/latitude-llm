@@ -64,9 +64,15 @@ function MemoryChangesBody({
   readonly sessionId: string
   readonly traceId?: string
 }) {
-  const { data, isLoading } = useSessionMemoryDiff({ projectId, sessionId, ...(traceId ? { traceId } : {}) })
+  const { data, isLoading, isError } = useSessionMemoryDiff({ projectId, sessionId, ...(traceId ? { traceId } : {}) })
 
   if (isLoading) return <Skeleton className="h-7 w-48" />
+  if (isError)
+    return (
+      <Text.H6 color="foregroundMuted" italic>
+        Couldn't load memory changes
+      </Text.H6>
+    )
   if (!data || data.records.length === 0)
     return (
       <Text.H6 color="foregroundMuted" italic>
@@ -107,7 +113,7 @@ export function MemoryChangesSection({
   readonly traceId?: string
 }) {
   const { data: summary } = useMemorySummary({ projectId, sessionId, ...(traceId ? { traceId } : {}) })
-  const hasChanges = !!summary && (summary.total.tokensAdded > 0 || summary.total.tokensRemoved > 0)
+  const hasChanges = !!summary && summary.total.writeRecords > 0
   if (!hasChanges) return null
 
   return (

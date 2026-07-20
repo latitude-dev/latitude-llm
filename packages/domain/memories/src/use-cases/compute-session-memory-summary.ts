@@ -24,6 +24,8 @@ export interface MemorySummaryTotals {
   readonly readTokens: number
   readonly tokensAdded: number
   readonly tokensRemoved: number
+  /** Records the session wrote (added/updated/removed), including zero-token-delta writes. */
+  readonly writeRecords: number
 }
 
 /** A session's (or trace's) memory footprint: per-record read/write tokens plus the total. */
@@ -75,8 +77,9 @@ export const computeSessionMemorySummaryUseCase = Effect.fn("memories.computeSes
       readTokens: acc.readTokens + record.readTokens,
       tokensAdded: acc.tokensAdded + record.tokensAdded,
       tokensRemoved: acc.tokensRemoved + record.tokensRemoved,
+      writeRecords: acc.writeRecords,
     }),
-    { readTokens: 0, tokensAdded: 0, tokensRemoved: 0 },
+    { readTokens: 0, tokensAdded: 0, tokensRemoved: 0, writeRecords: endpoints.length },
   )
 
   return { records, total } satisfies SessionMemorySummary
