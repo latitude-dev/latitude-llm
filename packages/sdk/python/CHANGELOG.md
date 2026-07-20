@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [9.4.0] - 2026-07-20
+
+### Added
+
+- `client.sessions` group for reading sessions (the traces of one conversation, grouped by session id): `list` (cursor-paginated, with `filters` + free-text `query`), `analytics` (per-metric totals/medians and a 12-hour bucket series over whole sessions), `get` (session detail with its GenAI `conversation` and `latest_trace_id`), `list_traces` (cursor-paginated traces of the session), `list_signals` (signals recorded across the session's traces), and `get_signal` (one session-scoped signal by slug).
+
 ## [9.3.0] - 2026-07-16
 
 ### Added

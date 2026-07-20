@@ -13,6 +13,7 @@ import { OauthKeysClient } from "./api/resources/oauthKeys/client/Client.js";
 import { ProjectsClient } from "./api/resources/projects/client/Client.js";
 import { SavedSearchesClient } from "./api/resources/savedSearches/client/Client.js";
 import { ScoresClient } from "./api/resources/scores/client/Client.js";
+import { SessionsClient } from "./api/resources/sessions/client/Client.js";
 import { SignalsClient } from "./api/resources/signals/client/Client.js";
 import { SpansClient } from "./api/resources/spans/client/Client.js";
 import { ToolsClient } from "./api/resources/tools/client/Client.js";
@@ -48,6 +49,7 @@ export class LatitudeClient {
     protected _analytics: AnalyticsClient | undefined;
     protected _spans: SpansClient | undefined;
     protected _experiments: ExperimentsClient | undefined;
+    protected _sessions: SessionsClient | undefined;
 
     constructor(options: LatitudeClient.Options = {}) {
         this._options = normalizeClientOptionsWithAuth(options);
@@ -123,6 +125,10 @@ export class LatitudeClient {
 
     public get experiments(): ExperimentsClient {
         return (this._experiments ??= new ExperimentsClient(this._options));
+    }
+
+    public get sessions(): SessionsClient {
+        return (this._sessions ??= new SessionsClient(this._options));
     }
 
     /**

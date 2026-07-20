@@ -1,4 +1,3 @@
-import { ScoreAnalyticsRepository } from "@domain/scores"
 import {
   type FilterSet,
   filterSetSchema,
@@ -6,10 +5,9 @@ import {
   type PercentileSessionFilterField,
   ProjectId,
   SessionId,
-  TaxonomyClusterId,
   TraceId,
 } from "@domain/shared"
-import { deriveSignalLifecycleStates, SignalRepository } from "@domain/signals"
+import { listSessionSignalsUseCase } from "@domain/signals"
 import type {
   CohortSummary,
   Session,
@@ -26,7 +24,7 @@ import {
   SessionRepository,
   SpanRepository,
 } from "@domain/spans"
-import { TaxonomyClusterRepository } from "@domain/taxonomy"
+import { expandTopicFilterSetUseCase } from "@domain/taxonomy"
 import { AIEmbedLive, withAi } from "@platform/ai"
 import { RedisCacheStoreLive } from "@platform/cache-redis"
 import { ScoreAnalyticsRepositoryLive, SessionRepositoryLive, SpanRepositoryLive } from "@platform/db-clickhouse"
@@ -204,36 +202,17 @@ export const countSessionsByProject = createServerFn({ method: "GET" })
     },
   )
 
-/**
- * Selecting a topic means its whole subtree: tree nodes hold residue
- * observations directly while descendants hold the rest, so the filter
- * expands each selected node into its subtree ids before ClickHouse sees it.
- */
-const expandTopicFilters = async (
+const expandTopicFilters = (
   orgId: ScopedOrgId,
   projectId: ProjectId,
   filters: FilterSet | undefined,
-): Promise<FilterSet | undefined> => {
-  const inCondition = filters?.topics?.find((condition) => condition.op === "in")
-  const selected = Array.isArray(inCondition?.value) ? inCondition.value.map(String) : []
-  if (!filters || selected.length === 0) return filters
-  const expanded = await Effect.runPromise(
-    Effect.gen(function* () {
-      const clusters = yield* TaxonomyClusterRepository
-      const ids = new Set<string>()
-      for (const id of selected) {
-        const subtree = yield* clusters.listSubtreeIds({ projectId, clusterId: TaxonomyClusterId(id) })
-        for (const subtreeId of subtree) ids.add(subtreeId)
-      }
-      return [...ids]
-    }).pipe(withScopedPostgres(TaxonomyClusterRepositoryLive, getPostgresClient(), orgId), withTracing),
+): Promise<FilterSet | undefined> =>
+  Effect.runPromise(
+    expandTopicFilterSetUseCase({ projectId, filters }).pipe(
+      withScopedPostgres(TaxonomyClusterRepositoryLive, getPostgresClient(), orgId),
+      withTracing,
+    ),
   )
-  // A selection that expands to nothing (e.g. a persisted filter pointing at
-  // a since-merged cluster) must match ZERO sessions — an empty in-list would
-  // collapse to "no filter" downstream and silently show the whole project.
-  const NO_MATCH_CLUSTER_ID = "__no_matching_topic__"
-  return { ...filters, topics: [{ op: "in", value: expanded.length > 0 ? expanded : [NO_MATCH_CLUSTER_ID] }] }
-}
 
 const sessionHistogramInputSchema = z.object({
   projectId: z.string(),
@@ -400,56 +379,30 @@ export const listSessionSignals = createServerFn({ method: "GET" })
 
     const orgId = await resolveOrgScope(context)
     const projectId = ProjectId(data.projectId)
-    const now = new Date()
 
-    return Effect.runPromise(
-      Effect.gen(function* () {
-        const analytics = yield* ScoreAnalyticsRepository
-        const signalRepository = yield* SignalRepository
-
-        const rollups = yield* analytics.listSignalsByTraceIds({
-          organizationId: orgId,
-          projectId,
-          traceIds: data.traceIds.map(TraceId),
-        })
-        if (rollups.length === 0) return []
-
-        const issues = yield* signalRepository.findByIds({
-          projectId,
-          signalIds: rollups.map((rollup) => rollup.signalId),
-        })
-        const signalsById = new Map(issues.map((issue) => [issue.id, issue]))
-
-        // Preserve the CH last-seen ordering; drop any rollup whose issue was
-        // hard-deleted in PG but still has lingering score rows in CH.
-        return rollups.flatMap((rollup): SessionSignalRecord[] => {
-          const issue = signalsById.get(rollup.signalId)
-          if (!issue) return []
-          const states = deriveSignalLifecycleStates({
-            issue,
-            isEscalating: issue.lifecycle.isEscalating,
-            now,
-          })
-          return [
-            {
-              id: issue.id,
-              name: issue.name,
-              description: issue.description,
-              source: issue.source,
-              states: [...states],
-              occurrences: rollup.occurrences,
-              firstSeenAt: rollup.firstSeenAt.toISOString(),
-              lastSeenAt: rollup.lastSeenAt.toISOString(),
-              traceIds: rollup.traceIds,
-            },
-          ]
-        })
+    const signals = await Effect.runPromise(
+      listSessionSignalsUseCase({
+        organizationId: orgId,
+        projectId,
+        traceIds: data.traceIds.map(TraceId),
       }).pipe(
         withScopedPostgres(SignalRepositoryLive, getPostgresClient(), orgId),
         withScopedClickHouse(ScoreAnalyticsRepositoryLive, getClickhouseClient(), orgId),
         withTracing,
       ),
     )
+
+    return signals.map((signal) => ({
+      id: signal.signalId,
+      name: signal.name,
+      description: signal.description,
+      source: signal.source,
+      states: signal.states,
+      occurrences: signal.occurrences,
+      firstSeenAt: signal.firstSeenAt.toISOString(),
+      lastSeenAt: signal.lastSeenAt.toISOString(),
+      traceIds: signal.traceIds,
+    }))
   })
 
 export const getSessionDistribution = createServerFn({ method: "GET" })

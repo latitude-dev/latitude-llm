@@ -200,3 +200,31 @@ export const isTraceFilterFieldName = (key: string): boolean =>
 /** Returns the filter-set keys the trace query cannot apply — empty when every key is valid. */
 export const unknownTraceFilterFields = (filters: Readonly<Record<string, unknown>>): string[] =>
   Object.keys(filters).filter((key) => !isTraceFilterFieldName(key))
+
+/**
+ * Telemetry (non-score) session filter field names applicable at the API
+ * boundary. Unlike traces, sessions INCLUDE the session-only conversation-
+ * intelligence fields (`moments`, `topics`) — matching the web session filter
+ * dropdown (`FilterMode = "sessions"`), which shows those `sessionOnly` fields.
+ * Kept in sync with the ClickHouse `SESSION_FIELD_REGISTRY` (plus the
+ * session-intelligence `moments`/`topics` peel), guarded by a test in
+ * `@platform/db-clickhouse`.
+ */
+export const SESSION_TELEMETRY_FILTER_FIELDS = [
+  ...TRACE_FILTER_FIELDS.map((f) => f.field),
+  ...TRACE_TIME_FILTER_FIELDS,
+] as const
+
+const SESSION_FILTER_FIELD_NAME_SET: ReadonlySet<string> = new Set([
+  ...SESSION_TELEMETRY_FILTER_FIELDS,
+  ...SCORE_FILTER_FIELDS,
+])
+
+/** True when `key` is a filter field the session query can apply (registry field, `moments`/`topics`, `score.*`, or `metadata.<path>`). */
+export const isSessionFilterFieldName = (key: string): boolean =>
+  SESSION_FILTER_FIELD_NAME_SET.has(key) ||
+  (key.startsWith(METADATA_FILTER_FIELD_PREFIX) && key.length > METADATA_FILTER_FIELD_PREFIX.length)
+
+/** Returns the filter-set keys the session query cannot apply — empty when every key is valid. */
+export const unknownSessionFilterFields = (filters: Readonly<Record<string, unknown>>): string[] =>
+  Object.keys(filters).filter((key) => !isSessionFilterFieldName(key))

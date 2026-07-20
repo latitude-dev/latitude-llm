@@ -11450,6 +11450,818 @@
             "description": "Full replacement of the variants array. Each variant carries its own `baseline` flag."
           }
         }
+      },
+      "PaginatedSessions": {
+        "type": "object",
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Session"
+            },
+            "description": "Page of items, in the requested sort order."
+          },
+          "nextCursor": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "Opaque cursor for fetching the next page. `null` when there are no more pages. Pass it back in `cursor` to continue."
+          },
+          "hasMore": {
+            "type": "boolean",
+            "description": "`true` when there is at least one more page after this one."
+          }
+        },
+        "required": [
+          "items",
+          "nextCursor",
+          "hasMore"
+        ]
+      },
+      "Session": {
+        "type": "object",
+        "properties": {
+          "organizationId": {
+            "type": "string",
+            "description": "Organization that owns this session."
+          },
+          "projectId": {
+            "type": "string",
+            "description": "Project this session belongs to."
+          },
+          "sessionId": {
+            "type": "string",
+            "description": "Session identifier set by the SDK. Groups the traces of one conversation."
+          },
+          "traceCount": {
+            "type": "integer",
+            "minimum": 0,
+            "description": "Number of traces in the session."
+          },
+          "traceIds": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "Identifiers of the traces that make up the session."
+          },
+          "spanCount": {
+            "type": "integer",
+            "minimum": 0,
+            "description": "Total number of spans across the session's traces."
+          },
+          "errorCount": {
+            "type": "integer",
+            "minimum": 0,
+            "description": "Number of spans flagged with an error status."
+          },
+          "startTime": {
+            "type": "string",
+            "description": "ISO-8601 timestamp of the session's earliest span."
+          },
+          "endTime": {
+            "type": "string",
+            "description": "ISO-8601 timestamp of the session's latest span."
+          },
+          "lastActivityTime": {
+            "type": "string",
+            "description": "ISO-8601 timestamp of the most recent span start — the default sort key."
+          },
+          "durationNs": {
+            "type": "number",
+            "description": "Active execution time in nanoseconds (sum of the session's root-span durations), not wall-clock."
+          },
+          "timeToFirstTokenNs": {
+            "type": "number",
+            "description": "Nanoseconds from the start of the first LLM span to its first emitted token. `0` if not measured."
+          },
+          "tokensInput": {
+            "type": "number",
+            "description": "Total input tokens across the session's LLM spans."
+          },
+          "tokensOutput": {
+            "type": "number",
+            "description": "Total output tokens across the session's LLM spans."
+          },
+          "tokensCacheRead": {
+            "type": "number",
+            "description": "Total tokens served from the provider's prompt cache."
+          },
+          "tokensCacheCreate": {
+            "type": "number",
+            "description": "Total tokens written to the provider's prompt cache."
+          },
+          "tokensReasoning": {
+            "type": "number",
+            "description": "Total reasoning tokens reported by the model."
+          },
+          "tokensTotal": {
+            "type": "number",
+            "description": "Sum of all token counters."
+          },
+          "costInputMicrocents": {
+            "type": "number",
+            "description": "Cost of input tokens in microcents (1/1,000,000 USD)."
+          },
+          "costOutputMicrocents": {
+            "type": "number",
+            "description": "Cost of output tokens in microcents (1/1,000,000 USD)."
+          },
+          "costTotalMicrocents": {
+            "type": "number",
+            "description": "Total cost in microcents (1/1,000,000 USD)."
+          },
+          "userId": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "End-user identifier set by the SDK. `null` when absent."
+          },
+          "userEmail": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "End-user email set by the SDK. `null` when absent."
+          },
+          "simulationId": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "CUID of the simulation that produced this session. `null` when not a simulation."
+          },
+          "tags": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "Free-form tags attached at ingest time."
+          },
+          "metadata": {
+            "type": "object",
+            "additionalProperties": {
+              "type": "string"
+            },
+            "description": "Free-form metadata attached at ingest time."
+          },
+          "models": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "Model identifiers seen across the session's LLM spans."
+          },
+          "providers": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "LLM-provider identifiers seen across the session's spans."
+          },
+          "serviceNames": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "OpenTelemetry `service.name` values seen in the session."
+          },
+          "agentNames": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "Agent names seen across the session's spans."
+          },
+          "definedTools": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "Union of tool names declared available across the session's spans. Empty when none reported."
+          },
+          "rootSpanId": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "Identifier of the session's root span. `null` when no root span has been ingested."
+          },
+          "rootSpanName": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "`name` attribute of the root span. `null` when no root span has been ingested."
+          }
+        },
+        "required": [
+          "organizationId",
+          "projectId",
+          "sessionId",
+          "traceCount",
+          "traceIds",
+          "spanCount",
+          "errorCount",
+          "startTime",
+          "endTime",
+          "lastActivityTime",
+          "durationNs",
+          "timeToFirstTokenNs",
+          "tokensInput",
+          "tokensOutput",
+          "tokensCacheRead",
+          "tokensCacheCreate",
+          "tokensReasoning",
+          "tokensTotal",
+          "costInputMicrocents",
+          "costOutputMicrocents",
+          "costTotalMicrocents",
+          "userId",
+          "userEmail",
+          "simulationId",
+          "tags",
+          "metadata",
+          "models",
+          "providers",
+          "serviceNames",
+          "agentNames",
+          "definedTools",
+          "rootSpanId",
+          "rootSpanName"
+        ]
+      },
+      "ListSessionsBody": {
+        "type": "object",
+        "properties": {
+          "cursor": {
+            "type": "string",
+            "description": "Opaque cursor returned in a previous response's `nextCursor`. Omit on the first page."
+          },
+          "limit": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 200,
+            "default": 50,
+            "description": "Page size. Defaults to 50; max 200."
+          },
+          "sortBy": {
+            "type": "string",
+            "enum": [
+              "lastActivity",
+              "startTime",
+              "duration",
+              "ttft",
+              "cost",
+              "spans",
+              "traceCount"
+            ],
+            "default": "lastActivity",
+            "description": "Field to sort by. Defaults to `lastActivity` (most recently active first)."
+          },
+          "sortDirection": {
+            "type": "string",
+            "enum": [
+              "asc",
+              "desc"
+            ],
+            "default": "desc",
+            "description": "Sort direction. Defaults to `desc` (most recent first)."
+          },
+          "query": {
+            "type": "string",
+            "maxLength": 500,
+            "description": "Free-text semantic search across the sessions' traces (input and output messages). Combined with `filters` via AND."
+          },
+          "filters": {
+            "$ref": "#/components/schemas/SessionFilterSet"
+          }
+        }
+      },
+      "SessionFilterSet": {
+        "type": "object",
+        "additionalProperties": {
+          "type": "array",
+          "items": {
+            "$ref": "#/components/schemas/FilterCondition"
+          }
+        },
+        "description": "Filter set keyed by session field. Each entry holds an array of conditions ANDed together for that field; field-level groups are ANDed across the set. Valid fields: status, name, traceId, sessionId, simulationId, userId, tags, moments, topics, models, providers, serviceNames, tools, definedTools, duration, ttft, cost, spanCount, errorCount, tokensInput, tokensOutput, cacheHitRate, startTime, endTime; score-derived keys (score.passed, score.errored, score.value, score.source, score.sourceId, score.annotatorId, score.signalId, score.simulationId); and arbitrary metadata via `metadata.<key>`. `moments` filters by conversation-intelligence moment kind; `topics` filters by taxonomy topic id (a selected topic matches its whole subtree). `startTime`/`endTime` take ISO-8601 values (a session's first span start / last span end). `gtePercentile` is only supported on duration/ttft/cost. Unknown fields are rejected rather than ignored."
+      },
+      "SessionAnalyticsResponse": {
+        "type": "object",
+        "properties": {
+          "sessions": {
+            "$ref": "#/components/schemas/SessionAnalyticsSessions"
+          },
+          "traces": {
+            "$ref": "#/components/schemas/SessionAnalyticsTraces"
+          },
+          "cost": {
+            "$ref": "#/components/schemas/SessionAnalyticsCost"
+          },
+          "duration": {
+            "$ref": "#/components/schemas/SessionAnalyticsDuration"
+          },
+          "tokens": {
+            "$ref": "#/components/schemas/SessionAnalyticsTokens"
+          },
+          "timeToFirstToken": {
+            "$ref": "#/components/schemas/SessionAnalyticsTimeToFirstToken"
+          },
+          "spans": {
+            "$ref": "#/components/schemas/SessionAnalyticsSpans"
+          }
+        },
+        "required": [
+          "sessions",
+          "traces",
+          "cost",
+          "duration",
+          "tokens",
+          "timeToFirstToken",
+          "spans"
+        ]
+      },
+      "SessionAnalyticsSessions": {
+        "type": "object",
+        "properties": {
+          "total": {
+            "type": "number",
+            "description": "Number of sessions in the range."
+          },
+          "buckets": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/SessionAnalyticsBucket"
+            },
+            "description": "Number of sessions per bucket."
+          }
+        },
+        "required": [
+          "total",
+          "buckets"
+        ]
+      },
+      "SessionAnalyticsBucket": {
+        "type": "object",
+        "properties": {
+          "bucket": {
+            "type": "string",
+            "description": "ISO-8601 UTC timestamp of the bucket's start."
+          },
+          "value": {
+            "type": "number",
+            "description": "Metric value for this bucket."
+          }
+        },
+        "required": [
+          "bucket",
+          "value"
+        ]
+      },
+      "SessionAnalyticsTraces": {
+        "type": "object",
+        "properties": {
+          "total": {
+            "type": "number",
+            "description": "Number of traces across the range's sessions."
+          },
+          "buckets": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/SessionAnalyticsBucket"
+            },
+            "description": "Number of traces per bucket."
+          }
+        },
+        "required": [
+          "total",
+          "buckets"
+        ]
+      },
+      "SessionAnalyticsCost": {
+        "type": "object",
+        "properties": {
+          "total": {
+            "type": "number",
+            "description": "Total session cost in USD."
+          },
+          "buckets": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/SessionAnalyticsBucket"
+            },
+            "description": "Session cost per bucket in USD."
+          }
+        },
+        "required": [
+          "total",
+          "buckets"
+        ]
+      },
+      "SessionAnalyticsDuration": {
+        "type": "object",
+        "properties": {
+          "median": {
+            "type": "number",
+            "description": "Median session duration in seconds."
+          },
+          "buckets": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/SessionAnalyticsBucket"
+            },
+            "description": "Median session duration per bucket in seconds."
+          }
+        },
+        "required": [
+          "median",
+          "buckets"
+        ]
+      },
+      "SessionAnalyticsTokens": {
+        "type": "object",
+        "properties": {
+          "total": {
+            "type": "number",
+            "description": "Total tokens across all LLM spans."
+          },
+          "buckets": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/SessionAnalyticsBucket"
+            },
+            "description": "Tokens per bucket across all LLM spans."
+          }
+        },
+        "required": [
+          "total",
+          "buckets"
+        ]
+      },
+      "SessionAnalyticsTimeToFirstToken": {
+        "type": "object",
+        "properties": {
+          "median": {
+            "type": "number",
+            "description": "Median time-to-first-token across LLM spans, in seconds."
+          },
+          "buckets": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/SessionAnalyticsBucket"
+            },
+            "description": "Median time-to-first-token per bucket, in seconds."
+          }
+        },
+        "required": [
+          "median",
+          "buckets"
+        ]
+      },
+      "SessionAnalyticsSpans": {
+        "type": "object",
+        "properties": {
+          "total": {
+            "type": "number",
+            "description": "Total number of spans."
+          },
+          "buckets": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/SessionAnalyticsBucket"
+            },
+            "description": "Number of spans per bucket."
+          }
+        },
+        "required": [
+          "total",
+          "buckets"
+        ]
+      },
+      "SessionDetail": {
+        "type": "object",
+        "properties": {
+          "organizationId": {
+            "type": "string",
+            "description": "Organization that owns this session."
+          },
+          "projectId": {
+            "type": "string",
+            "description": "Project this session belongs to."
+          },
+          "sessionId": {
+            "type": "string",
+            "description": "Session identifier set by the SDK. Groups the traces of one conversation."
+          },
+          "traceCount": {
+            "type": "integer",
+            "minimum": 0,
+            "description": "Number of traces in the session."
+          },
+          "traceIds": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "Identifiers of the traces that make up the session."
+          },
+          "spanCount": {
+            "type": "integer",
+            "minimum": 0,
+            "description": "Total number of spans across the session's traces."
+          },
+          "errorCount": {
+            "type": "integer",
+            "minimum": 0,
+            "description": "Number of spans flagged with an error status."
+          },
+          "startTime": {
+            "type": "string",
+            "description": "ISO-8601 timestamp of the session's earliest span."
+          },
+          "endTime": {
+            "type": "string",
+            "description": "ISO-8601 timestamp of the session's latest span."
+          },
+          "lastActivityTime": {
+            "type": "string",
+            "description": "ISO-8601 timestamp of the most recent span start — the default sort key."
+          },
+          "durationNs": {
+            "type": "number",
+            "description": "Active execution time in nanoseconds (sum of the session's root-span durations), not wall-clock."
+          },
+          "timeToFirstTokenNs": {
+            "type": "number",
+            "description": "Nanoseconds from the start of the first LLM span to its first emitted token. `0` if not measured."
+          },
+          "tokensInput": {
+            "type": "number",
+            "description": "Total input tokens across the session's LLM spans."
+          },
+          "tokensOutput": {
+            "type": "number",
+            "description": "Total output tokens across the session's LLM spans."
+          },
+          "tokensCacheRead": {
+            "type": "number",
+            "description": "Total tokens served from the provider's prompt cache."
+          },
+          "tokensCacheCreate": {
+            "type": "number",
+            "description": "Total tokens written to the provider's prompt cache."
+          },
+          "tokensReasoning": {
+            "type": "number",
+            "description": "Total reasoning tokens reported by the model."
+          },
+          "tokensTotal": {
+            "type": "number",
+            "description": "Sum of all token counters."
+          },
+          "costInputMicrocents": {
+            "type": "number",
+            "description": "Cost of input tokens in microcents (1/1,000,000 USD)."
+          },
+          "costOutputMicrocents": {
+            "type": "number",
+            "description": "Cost of output tokens in microcents (1/1,000,000 USD)."
+          },
+          "costTotalMicrocents": {
+            "type": "number",
+            "description": "Total cost in microcents (1/1,000,000 USD)."
+          },
+          "userId": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "End-user identifier set by the SDK. `null` when absent."
+          },
+          "userEmail": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "End-user email set by the SDK. `null` when absent."
+          },
+          "simulationId": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "CUID of the simulation that produced this session. `null` when not a simulation."
+          },
+          "tags": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "Free-form tags attached at ingest time."
+          },
+          "metadata": {
+            "type": "object",
+            "additionalProperties": {
+              "type": "string"
+            },
+            "description": "Free-form metadata attached at ingest time."
+          },
+          "models": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "Model identifiers seen across the session's LLM spans."
+          },
+          "providers": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "LLM-provider identifiers seen across the session's spans."
+          },
+          "serviceNames": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "OpenTelemetry `service.name` values seen in the session."
+          },
+          "agentNames": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "Agent names seen across the session's spans."
+          },
+          "definedTools": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "Union of tool names declared available across the session's spans. Empty when none reported."
+          },
+          "rootSpanId": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "Identifier of the session's root span. `null` when no root span has been ingested."
+          },
+          "rootSpanName": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "`name` attribute of the root span. `null` when no root span has been ingested."
+          },
+          "latestTraceId": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "Identifier of the trace whose conversation is shown — the session's latest span that produced output. `null` when no trace produced output."
+          },
+          "conversation": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/GenAIMessage"
+            },
+            "description": "The session's canonical conversation, in OpenTelemetry GenAI format: the opening system instructions, then the messages of the latest responsive span, followed by that span's generated output."
+          }
+        },
+        "required": [
+          "organizationId",
+          "projectId",
+          "sessionId",
+          "traceCount",
+          "traceIds",
+          "spanCount",
+          "errorCount",
+          "startTime",
+          "endTime",
+          "lastActivityTime",
+          "durationNs",
+          "timeToFirstTokenNs",
+          "tokensInput",
+          "tokensOutput",
+          "tokensCacheRead",
+          "tokensCacheCreate",
+          "tokensReasoning",
+          "tokensTotal",
+          "costInputMicrocents",
+          "costOutputMicrocents",
+          "costTotalMicrocents",
+          "userId",
+          "userEmail",
+          "simulationId",
+          "tags",
+          "metadata",
+          "models",
+          "providers",
+          "serviceNames",
+          "agentNames",
+          "definedTools",
+          "rootSpanId",
+          "rootSpanName",
+          "latestTraceId",
+          "conversation"
+        ]
+      },
+      "SessionSignals": {
+        "type": "object",
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/SessionSignal"
+            },
+            "description": "Signals recorded across the session's traces, ordered by most recent occurrence first."
+          }
+        },
+        "required": [
+          "items"
+        ]
+      },
+      "SessionSignal": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "minLength": 24,
+            "maxLength": 24,
+            "description": "Stable signal identifier."
+          },
+          "slug": {
+            "type": "string",
+            "description": "URL-safe identifier; use it on the session's single-signal endpoint."
+          },
+          "name": {
+            "type": "string",
+            "description": "Human-readable signal name."
+          },
+          "description": {
+            "type": "string",
+            "description": "What this signal captures."
+          },
+          "source": {
+            "type": "string",
+            "enum": [
+              "annotation",
+              "flagger",
+              "custom"
+            ],
+            "description": "Where the signal originated from."
+          },
+          "states": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "enum": [
+                "new",
+                "escalating",
+                "ongoing"
+              ]
+            },
+            "description": "Lifecycle states currently active for the signal (e.g. `new`, `escalating`, `ongoing`)."
+          },
+          "occurrences": {
+            "type": "integer",
+            "minimum": 0,
+            "description": "Number of occurrences recorded across the session's traces."
+          },
+          "firstSeenAt": {
+            "type": "string",
+            "description": "ISO-8601 timestamp of the first occurrence within the session."
+          },
+          "lastSeenAt": {
+            "type": "string",
+            "description": "ISO-8601 timestamp of the most recent occurrence within the session."
+          },
+          "traceIds": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "Distinct traces in the session that contributed at least one score to this signal."
+          }
+        },
+        "required": [
+          "id",
+          "slug",
+          "name",
+          "description",
+          "source",
+          "states",
+          "occurrences",
+          "firstSeenAt",
+          "lastSeenAt",
+          "traceIds"
+        ]
       }
     },
     "parameters": {}
@@ -20216,6 +21028,574 @@
         "responses": {
           "204": {
             "description": "Experiment deleted"
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/projects/{projectSlug}/sessions/list": {
+      "post": {
+        "tags": [
+          "Sessions"
+        ],
+        "x-fern-sdk-group-name": "sessions",
+        "x-fern-sdk-method-name": "list",
+        "summary": "List project sessions",
+        "description": "Returns a cursor-paginated page of sessions in the project. A session groups the traces of one conversation. Combine `filters` with `query` (free-text semantic search) to narrow the result set. Session list rows exclude per-message LLM content — use `getSession` for the conversation view.",
+        "security": [
+          {
+            "ApiKeyAuth": []
+          }
+        ],
+        "operationId": "listSessions",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "description": "Project slug (human-readable identifier)"
+            },
+            "required": true,
+            "description": "Project slug (human-readable identifier)",
+            "name": "projectSlug",
+            "in": "path"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ListSessionsBody"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Page of sessions",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PaginatedSessions"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Validation error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/projects/{projectSlug}/sessions/analytics": {
+      "get": {
+        "tags": [
+          "Sessions"
+        ],
+        "x-fern-sdk-group-name": "sessions",
+        "x-fern-sdk-method-name": "analytics",
+        "summary": "Get project session analytics",
+        "description": "Returns session analytics for the project: a total (or median) per metric over the requested range, plus a per-bucket series for each metric. Metrics are computed over whole sessions, not individual traces. Buckets are 12-hour UTC-aligned. The range defaults to the trailing 7 days.",
+        "security": [
+          {
+            "ApiKeyAuth": []
+          }
+        ],
+        "operationId": "getSessionAnalytics",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "description": "Project slug (human-readable identifier)"
+            },
+            "required": true,
+            "description": "Project slug (human-readable identifier)",
+            "name": "projectSlug",
+            "in": "path"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "format": "date-time",
+              "description": "Lower bound (inclusive) of the time range. Defaults to 7 days before `toIso`."
+            },
+            "required": false,
+            "description": "Lower bound (inclusive) of the time range. Defaults to 7 days before `toIso`.",
+            "name": "fromIso",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "format": "date-time",
+              "description": "Upper bound (inclusive) of the time range. Defaults to now."
+            },
+            "required": false,
+            "description": "Upper bound (inclusive) of the time range. Defaults to now.",
+            "name": "toIso",
+            "in": "query"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Session analytics",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SessionAnalyticsResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Validation error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/projects/{projectSlug}/sessions/{sessionId}": {
+      "get": {
+        "tags": [
+          "Sessions"
+        ],
+        "x-fern-sdk-group-name": "sessions",
+        "x-fern-sdk-method-name": "get",
+        "summary": "Get project session",
+        "description": "Returns a single session by id, including its `conversation`: the opening system instructions and the messages of the session's latest responsive span, in OpenTelemetry GenAI format. `latestTraceId` points at the trace that produced that conversation.",
+        "security": [
+          {
+            "ApiKeyAuth": []
+          }
+        ],
+        "operationId": "getSession",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "description": "Project slug (human-readable identifier)"
+            },
+            "required": true,
+            "description": "Project slug (human-readable identifier)",
+            "name": "projectSlug",
+            "in": "path"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "maxLength": 128,
+              "description": "Session identifier lifted from instrumentation. Up to 128 characters."
+            },
+            "required": true,
+            "description": "Session identifier lifted from instrumentation. Up to 128 characters.",
+            "name": "sessionId",
+            "in": "path"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Session detail",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SessionDetail"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Validation error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/projects/{projectSlug}/sessions/{sessionId}/traces": {
+      "get": {
+        "tags": [
+          "Sessions"
+        ],
+        "x-fern-sdk-group-name": "sessions",
+        "x-fern-sdk-method-name": "listTraces",
+        "summary": "List session traces",
+        "description": "Returns a cursor-paginated page of the traces that belong to the session. Rows match the trace list shape and exclude per-message LLM content — use `getTrace` for the full conversation view.",
+        "security": [
+          {
+            "ApiKeyAuth": []
+          }
+        ],
+        "operationId": "listSessionTraces",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "description": "Project slug (human-readable identifier)"
+            },
+            "required": true,
+            "description": "Project slug (human-readable identifier)",
+            "name": "projectSlug",
+            "in": "path"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "maxLength": 128,
+              "description": "Session identifier lifted from instrumentation. Up to 128 characters."
+            },
+            "required": true,
+            "description": "Session identifier lifted from instrumentation. Up to 128 characters.",
+            "name": "sessionId",
+            "in": "path"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "description": "Opaque cursor returned in a previous response's `nextCursor`. Omit on the first page."
+            },
+            "required": false,
+            "description": "Opaque cursor returned in a previous response's `nextCursor`. Omit on the first page.",
+            "name": "cursor",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 200,
+              "default": 50,
+              "description": "Page size. Defaults to 50; max 200."
+            },
+            "required": false,
+            "description": "Page size. Defaults to 50; max 200.",
+            "name": "limit",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "enum": [
+                "startTime",
+                "endTime",
+                "durationNs",
+                "tokensTotal",
+                "costTotalMicrocents"
+              ],
+              "default": "startTime",
+              "description": "Field to sort by. Defaults to `startTime`."
+            },
+            "required": false,
+            "description": "Field to sort by. Defaults to `startTime`.",
+            "name": "sortBy",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "enum": [
+                "asc",
+                "desc"
+              ],
+              "default": "desc",
+              "description": "Sort direction. Defaults to `desc` (most recent first)."
+            },
+            "required": false,
+            "description": "Sort direction. Defaults to `desc` (most recent first).",
+            "name": "sortDirection",
+            "in": "query"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Page of traces",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PaginatedTraces"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Validation error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/projects/{projectSlug}/sessions/{sessionId}/signals": {
+      "get": {
+        "tags": [
+          "Sessions"
+        ],
+        "x-fern-sdk-group-name": "sessions",
+        "x-fern-sdk-method-name": "listSignals",
+        "summary": "List session signals",
+        "description": "Returns the signals recorded across the session's traces — one entry per signal with occurrence counts, first/last seen within the session, lifecycle `states`, and the affected traces. Ordered by most recent occurrence first.",
+        "security": [
+          {
+            "ApiKeyAuth": []
+          }
+        ],
+        "operationId": "listSessionSignals",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "description": "Project slug (human-readable identifier)"
+            },
+            "required": true,
+            "description": "Project slug (human-readable identifier)",
+            "name": "projectSlug",
+            "in": "path"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "maxLength": 128,
+              "description": "Session identifier lifted from instrumentation. Up to 128 characters."
+            },
+            "required": true,
+            "description": "Session identifier lifted from instrumentation. Up to 128 characters.",
+            "name": "sessionId",
+            "in": "path"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Signals of the session",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SessionSignals"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Validation error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/projects/{projectSlug}/sessions/{sessionId}/signals/{signalSlug}": {
+      "get": {
+        "tags": [
+          "Sessions"
+        ],
+        "x-fern-sdk-group-name": "sessions",
+        "x-fern-sdk-method-name": "getSignal",
+        "summary": "Get session signal",
+        "description": "Returns one signal, by slug, scoped to the session — occurrence counts, first/last seen, and affected traces within this session only. Returns 404 when the signal recorded no occurrences across the session's traces.",
+        "security": [
+          {
+            "ApiKeyAuth": []
+          }
+        ],
+        "operationId": "getSessionSignal",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "description": "Project slug (human-readable identifier)"
+            },
+            "required": true,
+            "description": "Project slug (human-readable identifier)",
+            "name": "projectSlug",
+            "in": "path"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "maxLength": 128,
+              "description": "Session identifier lifted from instrumentation. Up to 128 characters."
+            },
+            "required": true,
+            "description": "Session identifier lifted from instrumentation. Up to 128 characters.",
+            "name": "sessionId",
+            "in": "path"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "description": "Signal slug."
+            },
+            "required": true,
+            "description": "Signal slug.",
+            "name": "signalSlug",
+            "in": "path"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Session signal",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SessionSignal"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Validation error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
           },
           "401": {
             "description": "Unauthorized",

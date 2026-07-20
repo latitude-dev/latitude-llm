@@ -263,6 +263,7 @@ export {
 } from "./use-cases/decide-cluster-assignment.ts"
 export { deleteCustomBehavior } from "./use-cases/delete-custom-behavior.ts"
 export { type EmitLineageInput, emitLineageUseCase } from "./use-cases/emit-lineage.ts"
+export { expandTopicFilterSetUseCase } from "./use-cases/expand-topic-filter-set.ts"
 export { type GenerateCustomBehaviorInput, generateCustomBehavior } from "./use-cases/generate-custom-behavior.ts"
 export {
   type BehaviourTrajectoryCategoryRow,
