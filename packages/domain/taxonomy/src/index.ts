@@ -1,3 +1,4 @@
+export { adaptiveFallbackReason, type TaxonomyAdaptiveFallbackReason } from "./adaptive-fallback.ts"
 export {
   isAdaptiveModeActive,
   parseTaxonomyAdaptiveModeBaseline,
@@ -27,6 +28,8 @@ export {
   MAX_CUSTOM_BEHAVIORS_PER_PROJECT,
   TAXONOMY_ADAPTIVE_CLUSTERING_MODE_ENV,
   TAXONOMY_ADAPTIVE_CLUSTERING_MODES,
+  TAXONOMY_ADAPTIVE_POLICY_VERSION,
+  TAXONOMY_ADAPTIVE_STRUCTURAL_MAX_NODES,
   TAXONOMY_ASSIGN_ABSOLUTE_THRESHOLD,
   TAXONOMY_ASSIGN_RELATIVE_MARGIN,
   TAXONOMY_ASSIGN_TEMPERATURE,
@@ -217,6 +220,16 @@ export {
   type RoutedLeafAssignment,
   routeObservationsToLeaves,
 } from "./reassignment.ts"
+export {
+  adjustedRandIndex,
+  type BoundedPercentiles,
+  boundedPercentiles,
+  compareTaxonomyTrees,
+  leafPartitionLabels,
+  summarizeTreeShape,
+  type TaxonomyShadowComparison,
+  type TaxonomyTreeShape,
+} from "./shadow-comparison.ts"
 export {
   classifyClusterTrend,
   type GetLastRunInput,

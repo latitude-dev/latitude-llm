@@ -231,6 +231,36 @@ describe("taxonomy gardening workflow (divisive build)", () => {
     )
   })
 
+  it("issues a mode-independent command sequence (replay-safe across off/shadow/enforced)", async () => {
+    await gardenTaxonomyWorkflow(globalInput)
+
+    // The workflow never reads the rollout mode: mode resolution, shadow compute,
+    // and fallback selection all live in the plan activity, and the reassign /
+    // deprecate / cleanup activities branch on the staged plan internally. So the
+    // recorded command sequence is identical whatever the resolved mode, which is
+    // what makes an in-flight history replay deterministically across a mode flip.
+    // This locks that no mode-conditional command was added to the workflow.
+    const names = Object.keys(mockActivities) as Array<keyof typeof mockActivities>
+    const ordered = names
+      .flatMap((name) => mockActivities[name].mock.invocationCallOrder.map((order) => ({ order, name })))
+      .sort((left, right) => left.order - right.order)
+      .map((entry) => entry.name)
+
+    expect(ordered).toEqual([
+      "startGardenTaxonomyRunActivity",
+      "planHierarchicalGardenTaxonomyActivity",
+      "saveGardenTaxonomyClustersActivity",
+      "reassignGardenTaxonomyObservationsActivity",
+      "deprecateGardenTaxonomyClustersActivity",
+      "planGardenTaxonomyNamingActivity",
+      "nameTaxonomyClusterActivity",
+      "nameTaxonomyClusterActivity",
+      "assertGardenTaxonomyQualityActivity",
+      "emitGardenTaxonomyLineageActivity",
+      "completeGardenTaxonomyRunActivity",
+    ])
+  })
+
   it("records a failed run in a non-cancellable cleanup scope when cancellation interrupts a step", async () => {
     const cancellation = new Error("cancelled")
     cancellation.name = "CancelledFailure"
