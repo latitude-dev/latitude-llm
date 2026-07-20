@@ -228,9 +228,9 @@ describe("screenSessionFlaggersUseCase", () => {
       action: "dropped",
       reason: "flagger-input-skip",
     })
-    expect(result.classifications.filter((c) => c.flaggerSlug === "frustration" || c.flaggerSlug === "jailbreaking")).toEqual(
-      [],
-    )
+    expect(
+      result.classifications.filter((c) => c.flaggerSlug === "frustration" || c.flaggerSlug === "jailbreaking"),
+    ).toEqual([])
     // Assistant-centric strategies still screen flagger dogfood sessions.
     expect(decisionFor(result.decisions, "empty-response")).toEqual({
       slug: "empty-response",

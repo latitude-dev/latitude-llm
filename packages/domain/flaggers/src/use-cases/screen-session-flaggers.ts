@@ -278,10 +278,7 @@ const screenOneStrategy = (args: ScreenOneStrategyInput) =>
     // dogfood sessions the "user" text is Latitude's own prompt with nested
     // customer transcripts — skip so nested content cannot false-positive.
     if (
-      shouldSkipInputCentricReflag(
-        args.context.conversation.tags,
-        strategy.classifiesAssistantResponseOnly ?? true,
-      )
+      shouldSkipInputCentricReflag(args.context.conversation.tags, strategy.classifiesAssistantResponseOnly ?? true)
     ) {
       return { slug: args.slug, action: "dropped", reason: "flagger-input-skip" } satisfies SessionFlaggerDecision
     }
