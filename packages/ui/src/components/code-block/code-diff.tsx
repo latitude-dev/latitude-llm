@@ -9,6 +9,8 @@ export interface CodeDiffProps {
   readonly className?: string
   /** Fill a height-bounded parent and scroll inside the block instead of growing to fit content. */
   readonly fillHeight?: boolean
+  /** Collapse unchanged runs, keeping this many context lines around each change. Omit to show every line. */
+  readonly contextLines?: number
 }
 
 const CodeDiffView = lazy(() => import("./code-diff-view.tsx").then((m) => ({ default: m.CodeDiffView })))
@@ -22,7 +24,7 @@ function CodeDiffFallback({ className }: { readonly className?: string }) {
 }
 
 /** Read-only, GitHub-style unified diff of two text bodies, syntax-highlighted per line. */
-export function CodeDiff({ before, after, language, className, fillHeight = false }: CodeDiffProps) {
+export function CodeDiff({ before, after, language, className, fillHeight = false, contextLines }: CodeDiffProps) {
   const [mounted, setMounted] = useState(false)
 
   useMountEffect(() => {
@@ -41,6 +43,7 @@ export function CodeDiff({ before, after, language, className, fillHeight = fals
         fillHeight={fillHeight}
         {...(language != null && { language })}
         {...(className != null && { className })}
+        {...(contextLines != null && { contextLines })}
       />
     </Suspense>
   )

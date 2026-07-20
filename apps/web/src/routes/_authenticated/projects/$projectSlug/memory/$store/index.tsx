@@ -29,6 +29,12 @@ export const Route = createFileRoute("/_authenticated/projects/$projectSlug/memo
   staticData: {
     breadcrumb: StoreBreadcrumb,
   },
+  // `record` / `change` are read synchronously via useParamState; declaring them
+  // here lets cross-page links deep-link a record (and a specific change).
+  validateSearch: (search: Record<string, unknown>): { record?: string; change?: string } => ({
+    ...(typeof search.record === "string" ? { record: search.record } : {}),
+    ...(typeof search.change === "string" ? { change: search.change } : {}),
+  }),
   component: StoreDetailPage,
 })
 

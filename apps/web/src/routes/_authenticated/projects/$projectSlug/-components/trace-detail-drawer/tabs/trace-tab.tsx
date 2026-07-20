@@ -15,6 +15,7 @@ import { ArrowDownRightIcon, ArrowUpRightIcon, BrainIcon, FingerprintIcon, TextI
 import { useMemo } from "react"
 import type { SpanRecord } from "../../../../../../../domains/spans/spans.functions.ts"
 import type { TraceDetailRecord, TraceRecord } from "../../../../../../../domains/traces/traces.functions.ts"
+import { MemoryChangesSection } from "../../memory-changes/memory-changes-section.tsx"
 import { MemorySummary } from "../../memory-summary.tsx"
 import { AgentsBreakdown } from "../../session-detail-drawer/agents-breakdown/agents-breakdown.tsx"
 import { useAgentGraph } from "../../session-detail-drawer/agents-breakdown/use-agent-graph.ts"
@@ -213,6 +214,11 @@ export function TraceTab({
           )
         }
       </DetailSection>
+
+      {/* ── Memory changes ── */}
+      {traceRecord && (
+        <MemoryChangesSection projectId={projectId} sessionId={traceRecord.sessionId || traceId} traceId={traceId} />
+      )}
 
       {/* ── Metadata ── */}
       <DetailSection icon={<TextIcon className="w-4 h-4" />} label="Metadata" defaultOpen={false}>

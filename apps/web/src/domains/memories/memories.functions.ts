@@ -1,6 +1,7 @@
 import {
   computeRecordChangeDiffUseCase,
   computeRecordHistoryUseCase,
+  computeSessionMemoryDiffUseCase,
   computeSessionMemorySummaryUseCase,
   listMemoryStoresUseCase,
   listRecordUsersUseCase,
@@ -10,6 +11,7 @@ import {
   type RecordChangeDiff,
   readRecordReadsUseCase,
   reconstructSnapshotUseCase,
+  type SessionMemoryDiff,
   type SessionMemorySummary,
 } from "@domain/memories"
 import { ExternalUserId, ProjectId, SessionId, SpanId, TraceId } from "@domain/shared"
@@ -23,6 +25,7 @@ import { resolveOrgScope } from "../../server/resolve-org-scope.ts"
 import { withScopedClickHouse } from "../../server/scoped-clickhouse.ts"
 
 export type SessionMemorySummaryRecord = SessionMemorySummary
+export type SessionMemoryDiffRecord = SessionMemoryDiff
 
 export interface MemoryStoreRecord {
   readonly storeId: string
@@ -109,6 +112,25 @@ export const getSessionMemorySummary = createServerFn({ method: "GET" })
 
     return Effect.runPromise(
       computeSessionMemorySummaryUseCase({
+        organizationId: orgId,
+        projectId: ProjectId(data.projectId),
+        sessionId: SessionId(data.sessionId),
+        ...(data.traceId ? { traceId: TraceId(data.traceId) } : {}),
+      }).pipe(withScopedClickHouse(MemoryRepositoryLive, getClickhouseClient(), orgId), withTracing),
+    )
+  })
+
+/**
+ * A session's (or one trace's) memory writes as per-record before/after diffs,
+ * for the "Memory changes" section. Fetched only when the section is expanded.
+ */
+export const getSessionMemoryDiff = createServerFn({ method: "GET" })
+  .inputValidator(z.object({ projectId: z.string(), sessionId: z.string(), traceId: z.string().optional() }))
+  .handler(async ({ data, context }): Promise<SessionMemoryDiffRecord> => {
+    const orgId = await resolveOrgScope(context)
+
+    return Effect.runPromise(
+      computeSessionMemoryDiffUseCase({
         organizationId: orgId,
         projectId: ProjectId(data.projectId),
         sessionId: SessionId(data.sessionId),

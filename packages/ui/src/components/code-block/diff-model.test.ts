@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest"
-import { computeDiffRows, type DiffRow } from "./diff-model.ts"
+import { computeDiffRows, type DiffFoldItem, type DiffItem, type DiffRow, foldDiffRows } from "./diff-model.ts"
 
 describe("computeDiffRows", () => {
   it("numbers context lines by their real position on each side across a hunk", () => {
@@ -60,5 +60,61 @@ describe("computeDiffRows", () => {
     expect(rows.every((r) => r.emphases.length === 0)).toBe(true)
     expect([rows[0]?.oldLineNumber, rows[0]?.newLineNumber]).toEqual([1, null])
     expect([rows[1]?.oldLineNumber, rows[1]?.newLineNumber]).toEqual([null, 1])
+  })
+})
+
+const joined = (lines: string[]) => `${lines.join("\n")}\n`
+const range = (prefix: string, n: number) => Array.from({ length: n }, (_, i) => `${prefix}${i + 1}`)
+const folds = (items: DiffItem[]) => items.filter((item): item is DiffFoldItem => item.type === "fold")
+const contextTexts = (items: DiffItem[]) =>
+  items.flatMap((item) => (item.type === "line" && item.row.kind === "context" ? [item.row.text] : []))
+
+describe("foldDiffRows", () => {
+  it("folds a large interior gap, keeping context lines on both sides", () => {
+    const mid = range("m", 20)
+    const rows = computeDiffRows(joined(["A", ...mid, "B"]), joined(["A2", ...mid, "B2"]))
+    const items = foldDiffRows(rows, 3)
+
+    expect(folds(items)).toHaveLength(1)
+    expect(folds(items)[0]?.rows).toHaveLength(14) // 20 - 3 head - 3 tail
+    expect(contextTexts(items)).toEqual(["m1", "m2", "m3", "m18", "m19", "m20"])
+  })
+
+  it("does not fold a gap no larger than the context it would keep", () => {
+    const rows = computeDiffRows(joined(["A", ...range("m", 4), "B"]), joined(["A2", ...range("m", 4), "B2"]))
+    const items = foldDiffRows(rows, 3)
+
+    expect(folds(items)).toHaveLength(0)
+    expect(contextTexts(items)).toEqual(["m1", "m2", "m3", "m4"])
+  })
+
+  it("folds a leading gap, keeping only the context before the first change", () => {
+    const rows = computeDiffRows(joined([...range("h", 20), "X"]), joined([...range("h", 20), "Y"]))
+    const items = foldDiffRows(rows, 3)
+
+    expect(folds(items)).toHaveLength(1)
+    expect(folds(items)[0]?.rows).toHaveLength(17)
+    expect(contextTexts(items)).toEqual(["h18", "h19", "h20"])
+  })
+
+  it("folds a trailing gap, keeping only the context after the last change", () => {
+    const rows = computeDiffRows(joined(["X", ...range("t", 20)]), joined(["Y", ...range("t", 20)]))
+    const items = foldDiffRows(rows, 3)
+
+    expect(folds(items)).toHaveLength(1)
+    expect(folds(items)[0]?.rows).toHaveLength(17)
+    expect(contextTexts(items)).toEqual(["t1", "t2", "t3"])
+  })
+
+  it("never folds when there are no changes", () => {
+    const items = foldDiffRows(computeDiffRows(joined(range("x", 30)), joined(range("x", 30))), 3)
+    expect(folds(items)).toHaveLength(0)
+    expect(items).toHaveLength(30)
+  })
+
+  it("never folds a pure addition (no context rows)", () => {
+    const items = foldDiffRows(computeDiffRows("", joined(range("n", 10))), 3)
+    expect(folds(items)).toHaveLength(0)
+    expect(items).toHaveLength(10)
   })
 })

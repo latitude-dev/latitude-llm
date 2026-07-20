@@ -7,12 +7,14 @@ import {
   getMemoryRecordChangeDiff,
   getMemoryRecordReads,
   getMemoryStoreSnapshot,
+  getSessionMemoryDiff,
   getSessionMemorySummary,
   listMemoryRecordUsers,
   listMemoryStores,
   listMemoryStoreUsers,
   listUserMemoryStores,
   type MemoryStoreRecord,
+  type SessionMemoryDiffRecord,
   type SessionMemorySummaryRecord,
 } from "./memories.functions.ts"
 
@@ -42,6 +44,36 @@ export function useMemorySummary({
       })
       return result as SessionMemorySummaryRecord
     },
+    enabled: enabled && projectId.length > 0 && sessionId.length > 0,
+  })
+}
+
+/**
+ * A session's (or one trace's) memory writes as per-record before/after diffs
+ * for the "Memory changes" section. Heavier than the summary (fetches bodies), so
+ * it's fetched only when the section is expanded via `enabled`.
+ */
+export function useSessionMemoryDiff({
+  projectId,
+  sessionId,
+  traceId,
+  enabled = true,
+}: {
+  readonly projectId: string
+  readonly sessionId: string
+  readonly traceId?: string
+  readonly enabled?: boolean
+}) {
+  const scope = useProjectScope()
+  return useQuery({
+    queryKey: [...projectScopeKey(scope), "memory-changes-diff", projectId, sessionId, traceId ?? ""],
+    queryFn: async () => {
+      const result = await getSessionMemoryDiff({
+        data: { ...projectScopeData(scope), projectId, sessionId, ...(traceId ? { traceId } : {}) },
+      })
+      return result as SessionMemoryDiffRecord
+    },
+    staleTime: 30_000,
     enabled: enabled && projectId.length > 0 && sessionId.length > 0,
   })
 }
