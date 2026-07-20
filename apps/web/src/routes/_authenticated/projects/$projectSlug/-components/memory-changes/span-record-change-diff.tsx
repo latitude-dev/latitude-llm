@@ -3,12 +3,7 @@ import type { ReactNode } from "react"
 import { useMemoryRecordChangeDiff } from "../../../../../../domains/memories/memories.collection.ts"
 import { MemoryRecordDiff } from "./memory-record-diff.tsx"
 
-/**
- * One span's change to a record, diffed against its prior recorded snapshot (from
- * the ledger). Renders `fallback` while the change is not yet materialized,
- * unresolved, or degraded — the "after" body already lives on the span, so the
- * caller passes the full-content view as the fallback and the pane is never empty.
- */
+/** One span's change to a record vs its prior recorded snapshot; renders `fallback` until it resolves. */
 export function SpanRecordChangeDiff({
   projectId,
   spanId,

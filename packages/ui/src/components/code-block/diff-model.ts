@@ -152,12 +152,7 @@ export interface DiffFoldItem {
 /** A row-model item: either a rendered line or a collapsed fold of unchanged lines. */
 export type DiffItem = { readonly type: "line"; readonly row: DiffRow } | DiffFoldItem
 
-/**
- * Collapse runs of unchanged context into folds, keeping `contextLines` next to
- * every change (GitHub-style). A fold is emitted only when a run is longer than
- * the context it would keep, so nothing is hidden that wasn't worth hiding. With
- * no changes — or a pure add/remove, which has no context — every line is kept.
- */
+/** Collapse unchanged context into folds, keeping `contextLines` around each change (only when longer). */
 export function foldDiffRows(rows: readonly DiffRow[], contextLines: number): DiffItem[] {
   if (!rows.some((row) => row.kind !== "context")) return rows.map((row) => ({ type: "line", row }))
 

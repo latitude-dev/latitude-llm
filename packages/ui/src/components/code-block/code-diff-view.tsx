@@ -121,15 +121,27 @@ function FoldBar({
       <div className="flex min-w-[5rem] shrink-0 items-center justify-center gap-1 border-r border-border/60 py-0.5">
         {count > EXPAND_STEP ? (
           <>
-            <button type="button" title="Expand down" onClick={onExpandDown} className={FOLD_BUTTON}>
+            <button
+              type="button"
+              title="Expand down"
+              aria-label="Expand down"
+              onClick={onExpandDown}
+              className={FOLD_BUTTON}
+            >
               <ChevronDown className="h-3.5 w-3.5" />
             </button>
-            <button type="button" title="Expand up" onClick={onExpandUp} className={FOLD_BUTTON}>
+            <button type="button" title="Expand up" aria-label="Expand up" onClick={onExpandUp} className={FOLD_BUTTON}>
               <ChevronUp className="h-3.5 w-3.5" />
             </button>
           </>
         ) : (
-          <button type="button" title="Expand all" onClick={onExpandAll} className={FOLD_BUTTON}>
+          <button
+            type="button"
+            title="Expand all"
+            aria-label="Expand all"
+            onClick={onExpandAll}
+            className={FOLD_BUTTON}
+          >
             <UnfoldVertical className="h-3.5 w-3.5" />
           </button>
         )}
@@ -167,8 +179,7 @@ export function CodeDiffView({
     [before, after, language],
   )
   const items = useMemo(() => (contextLines == null ? null : foldDiffRows(rows, contextLines)), [rows, contextLines])
-  // Fold expansion resets when the diff content changes — this instance is reused
-  // across records in a master-detail — derived from props without a mount effect.
+  // Reset fold expansion when the diff content changes (this viewer is reused across records).
   const [store, setStore] = useState<{ before: string; after: string; folds: Record<string, FoldState> }>({
     before,
     after,

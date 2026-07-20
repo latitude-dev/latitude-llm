@@ -13,13 +13,7 @@ function Centered({ children }: { readonly children: ReactNode }) {
   )
 }
 
-/**
- * A read-only unified diff of one memory record change. `before`/`after` are the
- * bodies (`null` = an add's missing before or a remove's missing after). When the
- * change is `degraded` (a body was never captured or has been pruned) it renders
- * `fallback` if given, else an "unavailable" note — never a misleading whole-body
- * diff. Shared by the span detail and the session/trace "Memory changes" section.
- */
+/** Read-only unified diff of one record change; renders `fallback` (or an unavailable note) when `degraded`. */
 export function MemoryRecordDiff({
   before,
   after,
