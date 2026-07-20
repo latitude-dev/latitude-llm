@@ -2,11 +2,11 @@ import { CodeBlock, CodeDiff, cn, Icon, Sheet, Skeleton, Text, useMountEffect } 
 import { formatCount } from "@repo/utils"
 import { Link } from "@tanstack/react-router"
 import {
+  ArrowUpRightIcon,
   ChevronDownIcon,
   ChevronLeftIcon,
   ChevronRightIcon,
   ChevronUpIcon,
-  FileDiffIcon,
   FileTextIcon,
   HistoryIcon,
   type LucideIcon,
@@ -17,7 +17,7 @@ import {
   UserRoundIcon,
   UsersRoundIcon,
 } from "lucide-react"
-import { type ReactNode, useCallback, useEffect, useMemo, useRef, useState } from "react"
+import { type ReactNode, useCallback, useRef, useState } from "react"
 import {
   useMemoryRecord,
   useMemoryRecordChangeDiff,
@@ -67,24 +67,22 @@ export function RecordContentView({
   projectSlug,
   storeId,
   recordId,
+  changeSpanId,
+  onSelectChange,
 }: {
   readonly projectId: string
   readonly projectSlug: string
   readonly storeId: string
   readonly recordId: string
+  readonly changeSpanId?: string | undefined
+  readonly onSelectChange: (spanId: string | undefined) => void
 }) {
   const { data, isLoading } = useMemoryRecord({ projectId, storeId, recordId })
   const [openSessionId, setOpenSessionId] = useState<string | null>(null)
-  const [diffSpanId, setDiffSpanId] = useState<string | null>(null)
 
-  // Drop the diff view when the selected record changes.
-  useEffect(() => {
-    setDiffSpanId(null)
-  }, [recordId])
-
-  const toggleDiff = useCallback(
-    (spanId: string) => setDiffSpanId((current) => (current === spanId ? null : spanId)),
-    [],
+  const toggleChange = useCallback(
+    (spanId: string) => onSelectChange(changeSpanId === spanId ? undefined : spanId),
+    [changeSpanId, onSelectChange],
   )
 
   if (isLoading) {
@@ -104,7 +102,8 @@ export function RecordContentView({
   const body = data.body ?? ""
   const language = body !== "" && looksLikeJson(body) ? "json" : undefined
   const lineCount = body === "" ? 0 : body.split("\n").length
-  const activeVersion = diffSpanId !== null ? data.versions.find((version) => version.spanId === diffSpanId) : undefined
+  const changes = data.versions.filter((version) => isMutating(version.changeKind))
+  const activeVersion = changeSpanId != null ? changes.find((version) => version.spanId === changeSpanId) : undefined
 
   return (
     <div className="flex min-h-0 flex-1 flex-col overflow-hidden bg-background">
@@ -114,7 +113,10 @@ export function RecordContentView({
           storeId={storeId}
           recordId={recordId}
           version={activeVersion}
-          onClose={() => setDiffSpanId(null)}
+          changes={changes}
+          onSelectChange={onSelectChange}
+          onOpenSession={setOpenSessionId}
+          onClose={() => onSelectChange(undefined)}
         />
       ) : (
         <>
@@ -160,10 +162,10 @@ export function RecordContentView({
         projectSlug={projectSlug}
         storeId={storeId}
         recordId={recordId}
-        versions={data.versions}
+        changes={changes}
         onOpenSession={setOpenSessionId}
-        onShowDiff={toggleDiff}
-        activeDiffSpanId={diffSpanId}
+        onToggleDiff={toggleChange}
+        activeDiffSpanId={changeSpanId ?? null}
       />
 
       <Sheet open={openSessionId !== null} onClose={() => setOpenSessionId(null)} closeAriaLabel="Close session panel">
@@ -186,12 +188,18 @@ function RecordChangeDiffView({
   storeId,
   recordId,
   version,
+  changes,
+  onSelectChange,
+  onOpenSession,
   onClose,
 }: {
   readonly projectId: string
   readonly storeId: string
   readonly recordId: string
   readonly version: MemoryRecordVersionRecord
+  readonly changes: readonly MemoryRecordVersionRecord[]
+  readonly onSelectChange: (spanId: string | undefined) => void
+  readonly onOpenSession: (sessionId: string) => void
   readonly onClose: () => void
 }) {
   const { data, isLoading } = useMemoryRecordChangeDiff({ projectId, storeId, recordId, spanId: version.spanId })
@@ -201,6 +209,11 @@ function RecordChangeDiffView({
   const after = data?.afterBody ?? ""
   const language = looksLikeJson(after) || looksLikeJson(before) ? "json" : undefined
   const unchanged = data != null && !data.degraded && before === after
+
+  // Changes are newest-first: the newer neighbor sits above, the older below.
+  const index = changes.findIndex((change) => change.spanId === version.spanId)
+  const newer = index > 0 ? changes[index - 1] : undefined
+  const older = index >= 0 && index < changes.length - 1 ? changes[index + 1] : undefined
 
   return (
     <>
@@ -221,8 +234,23 @@ function RecordChangeDiffView({
             <ChangeIcon className={cn("h-3.5 w-3.5 shrink-0", meta.className)} />
             <Text.H6 className="whitespace-nowrap">{meta.label}</Text.H6>
           </span>
+          <Sep />
+          <ChangeTokens added={version.tokensAdded} removed={version.tokensRemoved} />
         </div>
-        <ActivityTime iso={version.endTime} />
+        <div className="flex shrink-0 items-center gap-1">
+          <ActivityTime iso={version.endTime} className="mr-1" />
+          <NavButton
+            icon={ChevronUpIcon}
+            label="Newer change"
+            onClick={newer ? () => onSelectChange(newer.spanId) : undefined}
+          />
+          <NavButton
+            icon={ChevronDownIcon}
+            label="Older change"
+            onClick={older ? () => onSelectChange(older.spanId) : undefined}
+          />
+          {version.sessionId ? <OpenSessionButton sessionId={version.sessionId} onOpenSession={onOpenSession} /> : null}
+        </div>
       </div>
 
       <div className="min-h-0 flex-1">
@@ -361,25 +389,24 @@ function RecordActivityPanel({
   projectSlug,
   storeId,
   recordId,
-  versions,
+  changes,
   onOpenSession,
-  onShowDiff,
+  onToggleDiff,
   activeDiffSpanId,
 }: {
   readonly projectId: string
   readonly projectSlug: string
   readonly storeId: string
   readonly recordId: string
-  readonly versions: readonly MemoryRecordVersionRecord[]
+  readonly changes: readonly MemoryRecordVersionRecord[]
   readonly onOpenSession: (sessionId: string) => void
-  readonly onShowDiff: (spanId: string) => void
+  readonly onToggleDiff: (spanId: string) => void
   readonly activeDiffSpanId: string | null
 }) {
   const [open, setOpen] = useState(true)
   const [activeTab, setActiveTab] = useState<TabId>("changes")
   const { footerRef, height, isDragging, onPointerDown, onKeyDown } = usePanelResize(setOpen)
 
-  const changes = useMemo(() => versions.filter((version) => isMutating(version.changeKind)), [versions])
   const reads = useMemoryRecordReads({ projectId, storeId, recordId, enabled: open })
   const users = useMemoryRecordUsers({ projectId, storeId, recordId, enabled: open })
 
@@ -474,7 +501,7 @@ function RecordActivityPanel({
             <ChangesBody
               changes={changes}
               onOpenSession={onOpenSession}
-              onShowDiff={onShowDiff}
+              onToggleDiff={onToggleDiff}
               activeDiffSpanId={activeDiffSpanId}
             />
           ) : activeTab === "reads" ? (
@@ -529,20 +556,43 @@ function UserMeta({ userId, className }: { readonly userId: string; readonly cla
   )
 }
 
-function TokenDelta({ delta }: { readonly delta: number }) {
-  if (delta === 0) {
+// The change's gross token churn, `+added −removed` (GitHub-style), not the net.
+function ChangeTokens({ added, removed }: { readonly added: number; readonly removed: number }) {
+  if (added === 0 && removed === 0) {
     return (
       <Text.H6 color="foregroundMuted" className="shrink-0 whitespace-nowrap tabular-nums">
         ±0 tok
       </Text.H6>
     )
   }
-  const positive = delta > 0
   return (
-    <Text.H6 className={cn("shrink-0 whitespace-nowrap tabular-nums", positive ? "text-success" : "text-destructive")}>
-      {positive ? "+" : "−"}
-      {formatCount(Math.abs(delta))} tok
-    </Text.H6>
+    <span className="flex shrink-0 items-center gap-1 whitespace-nowrap tabular-nums">
+      {added > 0 ? <Text.H6 className="text-success">+{formatCount(added)}</Text.H6> : null}
+      {removed > 0 ? <Text.H6 className="text-destructive">−{formatCount(removed)}</Text.H6> : null}
+      <Text.H6 color="foregroundMuted">tok</Text.H6>
+    </span>
+  )
+}
+
+function OpenSessionButton({
+  sessionId,
+  onOpenSession,
+}: {
+  readonly sessionId: string
+  readonly onOpenSession: (sessionId: string) => void
+}) {
+  return (
+    <button
+      type="button"
+      onClick={() => onOpenSession(sessionId)}
+      aria-label={`Open session ${sessionId}`}
+      className="flex h-6 shrink-0 items-center gap-1 rounded px-1.5 text-muted-foreground transition-colors hover:bg-muted hover:text-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-inset focus-visible:ring-ring"
+    >
+      <Text.H6 color="foregroundMuted" className="whitespace-nowrap">
+        Session
+      </Text.H6>
+      <ArrowUpRightIcon className="h-3 w-3 shrink-0" />
+    </button>
   )
 }
 
@@ -550,6 +600,28 @@ function TokenDelta({ delta }: { readonly delta: number }) {
 function OpenHint() {
   return (
     <ChevronRightIcon className="ml-auto h-3.5 w-3.5 shrink-0 text-muted-foreground opacity-0 transition-opacity group-hover:opacity-100" />
+  )
+}
+
+function NavButton({
+  icon: NavIcon,
+  label,
+  onClick,
+}: {
+  readonly icon: LucideIcon
+  readonly label: string
+  readonly onClick: (() => void) | undefined
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      disabled={onClick === undefined}
+      aria-label={label}
+      className="flex h-6 w-6 shrink-0 items-center justify-center rounded text-muted-foreground transition-colors hover:bg-muted hover:text-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-inset focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-30"
+    >
+      <NavIcon className="h-4 w-4" />
+    </button>
   )
 }
 
@@ -599,64 +671,43 @@ function LoadingRows() {
 function ChangesBody({
   changes,
   onOpenSession,
-  onShowDiff,
+  onToggleDiff,
   activeDiffSpanId,
 }: {
   readonly changes: readonly MemoryRecordVersionRecord[]
   readonly onOpenSession: (sessionId: string) => void
-  readonly onShowDiff: (spanId: string) => void
+  readonly onToggleDiff: (spanId: string) => void
   readonly activeDiffSpanId: string | null
 }) {
   if (changes.length === 0) return <EmptyRow>No changes recorded for this record.</EmptyRow>
   return (
     <>
-      {changes.map((version, index) => {
+      {changes.map((version) => {
         const meta = CHANGE_META[version.changeKind as MutatingKind]
         const ChangeIcon = meta.icon
-        const delta = version.tokenCount - (changes[index + 1]?.tokenCount ?? 0)
         const isActive = activeDiffSpanId === version.spanId
-        const facts = (
-          <>
-            <ActivityTime iso={version.endTime} />
-            <span className="flex shrink-0 items-center gap-1.5">
-              <ChangeIcon className={cn("h-3.5 w-3.5 shrink-0", meta.className)} />
-              <Text.H6 className="whitespace-nowrap">{meta.label}</Text.H6>
-            </span>
-            <Sep />
-            <TokenDelta delta={delta} />
-            <Sep />
-            <UserMeta userId={version.userId} className="max-w-[14rem]" />
-          </>
-        )
         return (
           <div key={`${version.spanId}-${version.endTime}`} className={cn(ROW_CLASS, isActive && "bg-muted")}>
-            {version.sessionId ? (
-              <button
-                type="button"
-                onClick={() => onOpenSession(version.sessionId)}
-                aria-label={`Open session ${version.sessionId}`}
-                className={cn("flex min-w-0 flex-1 items-center gap-1.5 rounded", ROW_INTERACTIVE)}
-              >
-                {facts}
-                <OpenHint />
-              </button>
-            ) : (
-              <div className="flex min-w-0 flex-1 items-center gap-1.5">{facts}</div>
-            )}
             <button
               type="button"
-              onClick={() => onShowDiff(version.spanId)}
-              aria-label="View diff"
+              onClick={() => onToggleDiff(version.spanId)}
+              aria-label="View this change's diff"
               aria-pressed={isActive}
-              className={cn(
-                "flex h-6 w-6 shrink-0 items-center justify-center rounded transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-inset focus-visible:ring-ring",
-                isActive
-                  ? "text-foreground"
-                  : "text-muted-foreground opacity-0 hover:bg-muted group-hover:opacity-100 focus-visible:opacity-100",
-              )}
+              className={cn("flex min-w-0 flex-1 items-center gap-1.5 rounded", ROW_INTERACTIVE)}
             >
-              <FileDiffIcon className="h-3.5 w-3.5" />
+              <ActivityTime iso={version.endTime} />
+              <span className="flex shrink-0 items-center gap-1.5">
+                <ChangeIcon className={cn("h-3.5 w-3.5 shrink-0", meta.className)} />
+                <Text.H6 className="whitespace-nowrap">{meta.label}</Text.H6>
+              </span>
+              <Sep />
+              <ChangeTokens added={version.tokensAdded} removed={version.tokensRemoved} />
+              <Sep />
+              <UserMeta userId={version.userId} className="max-w-[14rem]" />
             </button>
+            {version.sessionId ? (
+              <OpenSessionButton sessionId={version.sessionId} onOpenSession={onOpenSession} />
+            ) : null}
           </div>
         )
       })}

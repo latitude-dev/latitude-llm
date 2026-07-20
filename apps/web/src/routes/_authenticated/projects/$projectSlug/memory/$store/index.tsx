@@ -38,6 +38,7 @@ function StoreDetailPage() {
   const { projectSlug, store } = Route.useParams()
   const storeId = decodeStoreSegment(store)
   const [recordParam, setRecordParam] = useParamState("record", "")
+  const [changeParam, setChangeParam] = useParamState("change", "")
   const selectedRecordId = recordParam === "" ? undefined : decodeRecordParam(recordParam)
 
   const { data: snapshot, isLoading } = useMemoryStoreSnapshot({ projectId: project.id, storeId, enabled })
@@ -83,7 +84,10 @@ function StoreDetailPage() {
             records={snapshot?.records ?? []}
             isLoading={isLoading}
             selectedRecordId={selectedRecordId}
-            onSelect={(recordId) => setRecordParam(encodeRecordParam(recordId))}
+            onSelect={(recordId) => {
+              setRecordParam(encodeRecordParam(recordId))
+              setChangeParam("")
+            }}
           />
         </Layout.Sidebar>
         <div className="flex min-h-0 min-w-0 flex-1 flex-col">
@@ -93,6 +97,8 @@ function StoreDetailPage() {
               projectSlug={projectSlug}
               storeId={storeId}
               recordId={selectedRecordId}
+              changeSpanId={changeParam === "" ? undefined : changeParam}
+              onSelectChange={(spanId) => setChangeParam(spanId ?? "")}
             />
           ) : (
             <div className="flex flex-1 items-center justify-center p-6">
