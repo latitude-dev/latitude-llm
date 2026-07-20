@@ -4,7 +4,6 @@ import { Link } from "@tanstack/react-router"
 import {
   ArrowUpRightIcon,
   ChevronDownIcon,
-  ChevronLeftIcon,
   ChevronRightIcon,
   ChevronUpIcon,
   FileTextIcon,
@@ -101,60 +100,33 @@ export function RecordContentView({
 
   const body = data.body ?? ""
   const language = body !== "" && looksLikeJson(body) ? "json" : undefined
-  const lineCount = body === "" ? 0 : body.split("\n").length
   const changes = data.versions.filter((version) => isMutating(version.changeKind))
   const activeVersion = changeSpanId != null ? changes.find((version) => version.spanId === changeSpanId) : undefined
 
   return (
     <div className="flex min-h-0 flex-1 flex-col overflow-hidden bg-background">
-      {activeVersion ? (
-        <RecordChangeDiffView
-          projectId={projectId}
-          storeId={storeId}
-          recordId={recordId}
-          version={activeVersion}
-          changes={changes}
-          onSelectChange={onSelectChange}
-          onOpenSession={setOpenSessionId}
-          onClose={() => onSelectChange(undefined)}
-        />
-      ) : (
-        <>
-          <div className="flex h-11 shrink-0 items-center justify-between gap-3 border-b px-3">
-            <div className="flex min-w-0 items-center gap-2">
-              <FileTextIcon className="h-4 w-4 shrink-0 text-muted-foreground" />
-              <Text.H5M className="min-w-0 font-mono" noWrap ellipsis>
-                {recordDisplayLabel(recordId)}
-              </Text.H5M>
-            </div>
-            <div className="flex shrink-0 items-center gap-2">
-              {language === "json" ? (
-                <span className="rounded border px-1.5 py-0.5 font-mono text-[10px] uppercase leading-none tracking-wide text-muted-foreground">
-                  JSON
-                </span>
-              ) : null}
-              {data.body !== null ? (
-                <Text.H6 color="foregroundMuted" noWrap>
-                  {formatCount(lineCount)} {lineCount === 1 ? "line" : "lines"} · {formatCount(data.tokenCount)} tok
-                </Text.H6>
-              ) : (
-                <Text.H6 color="foregroundMuted" noWrap>
-                  {formatCount(data.tokenCount)} tok
-                </Text.H6>
-              )}
-            </div>
-          </div>
+      <RecordHeader
+        recordId={recordId}
+        tokenCount={data.tokenCount}
+        activeVersion={activeVersion}
+        changes={changes}
+        onSelectChange={onSelectChange}
+        onOpenSession={setOpenSessionId}
+        {...(language ? { language } : {})}
+      />
 
-          <div className="min-h-0 flex-1">
-            {data.body !== null ? (
-              <CodeBlock value={body} fillHeight className="h-full rounded-none" {...(language ? { language } : {})} />
-            ) : (
-              <div className="flex h-full items-center justify-center">
-                <Text.H6 color="foregroundMuted">Content not captured</Text.H6>
-              </div>
-            )}
-          </div>
-        </>
+      {activeVersion ? (
+        <RecordChangeDiffBody projectId={projectId} storeId={storeId} recordId={recordId} version={activeVersion} />
+      ) : (
+        <div className="min-h-0 flex-1">
+          {data.body !== null ? (
+            <CodeBlock value={body} fillHeight className="h-full rounded-none" {...(language ? { language } : {})} />
+          ) : (
+            <div className="flex h-full items-center justify-center">
+              <Text.H6 color="foregroundMuted">Content not captured</Text.H6>
+            </div>
+          )}
+        </div>
       )}
 
       <RecordActivityPanel
@@ -183,100 +155,131 @@ export function RecordContentView({
   )
 }
 
-function RecordChangeDiffView({
+// A stable header for both modes: record identity stays put on the left, the
+// selected change's facts (kind, churn, session) and the date + change
+// navigation sit together on the right. "Current" is the position above the
+// newest change, so ↑ from the newest change returns to it (and is disabled
+// while already viewing current); ↓ from current opens the newest change.
+function RecordHeader({
+  recordId,
+  tokenCount,
+  language,
+  activeVersion,
+  changes,
+  onSelectChange,
+  onOpenSession,
+}: {
+  readonly recordId: string
+  readonly tokenCount: number
+  readonly language?: string | undefined
+  readonly activeVersion: MemoryRecordVersionRecord | undefined
+  readonly changes: readonly MemoryRecordVersionRecord[]
+  readonly onSelectChange: (spanId: string | undefined) => void
+  readonly onOpenSession: (sessionId: string) => void
+}) {
+  const activeIndex = activeVersion ? changes.findIndex((change) => change.spanId === activeVersion.spanId) : -1
+  const canNewer = activeVersion != null
+  const canOlder = activeVersion ? activeIndex >= 0 && activeIndex < changes.length - 1 : changes.length > 0
+  const goNewer = () => onSelectChange(activeIndex <= 0 ? undefined : changes[activeIndex - 1]?.spanId)
+  const goOlder = () => onSelectChange(activeVersion ? changes[activeIndex + 1]?.spanId : changes[0]?.spanId)
+
+  const meta = activeVersion ? CHANGE_META[activeVersion.changeKind as MutatingKind] : undefined
+  const ChangeIcon = meta?.icon
+  // In the current view the date reflects the last update — the newest change.
+  const dateVersion = activeVersion ?? changes[0]
+
+  return (
+    <div className="flex h-11 shrink-0 items-center justify-between gap-3 border-b px-3">
+      <div className="flex min-w-0 items-center gap-2">
+        <FileTextIcon className="h-4 w-4 shrink-0 text-muted-foreground" />
+        <Text.H5M className="min-w-0 font-mono" noWrap ellipsis>
+          {recordDisplayLabel(recordId)}
+        </Text.H5M>
+        <Sep />
+        <Text.H6 color="foregroundMuted" className="shrink-0 whitespace-nowrap tabular-nums">
+          {formatCount(tokenCount)} tok
+        </Text.H6>
+        {language === "json" ? (
+          <span className="shrink-0 rounded border px-1.5 py-0.5 font-mono text-[10px] uppercase leading-none tracking-wide text-muted-foreground">
+            JSON
+          </span>
+        ) : null}
+      </div>
+
+      <div className="flex shrink-0 items-center gap-1.5">
+        {activeVersion && meta && ChangeIcon ? (
+          <>
+            <span className="flex items-center gap-1">
+              <ChangeIcon className={cn("h-3.5 w-3.5 shrink-0", meta.className)} />
+              <Text.H6 className="whitespace-nowrap">{meta.label}</Text.H6>
+            </span>
+            <Sep />
+            <ChangeTokens added={activeVersion.tokensAdded} removed={activeVersion.tokensRemoved} />
+            {activeVersion.sessionId ? (
+              <OpenSessionButton sessionId={activeVersion.sessionId} onOpenSession={onOpenSession} />
+            ) : null}
+            <span className="mx-0.5 h-4 w-px bg-border" aria-hidden />
+          </>
+        ) : null}
+        {dateVersion ? <ActivityTime iso={dateVersion.endTime} /> : null}
+        <span className="ml-0.5 flex items-center">
+          <NavButton
+            icon={ChevronUpIcon}
+            label={activeIndex === 0 ? "Back to current version" : "Newer change"}
+            onClick={canNewer ? goNewer : undefined}
+          />
+          <NavButton
+            icon={ChevronDownIcon}
+            label={activeVersion ? "Older change" : "View latest change"}
+            onClick={canOlder ? goOlder : undefined}
+          />
+        </span>
+      </div>
+    </div>
+  )
+}
+
+function RecordChangeDiffBody({
   projectId,
   storeId,
   recordId,
   version,
-  changes,
-  onSelectChange,
-  onOpenSession,
-  onClose,
 }: {
   readonly projectId: string
   readonly storeId: string
   readonly recordId: string
   readonly version: MemoryRecordVersionRecord
-  readonly changes: readonly MemoryRecordVersionRecord[]
-  readonly onSelectChange: (spanId: string | undefined) => void
-  readonly onOpenSession: (sessionId: string) => void
-  readonly onClose: () => void
 }) {
   const { data, isLoading } = useMemoryRecordChangeDiff({ projectId, storeId, recordId, spanId: version.spanId })
-  const meta = CHANGE_META[version.changeKind as MutatingKind]
-  const ChangeIcon = meta.icon
   const before = data?.beforeBody ?? ""
   const after = data?.afterBody ?? ""
   const language = looksLikeJson(after) || looksLikeJson(before) ? "json" : undefined
   const unchanged = data != null && !data.degraded && before === after
 
-  // Changes are newest-first: the newer neighbor sits above, the older below.
-  const index = changes.findIndex((change) => change.spanId === version.spanId)
-  const newer = index > 0 ? changes[index - 1] : undefined
-  const older = index >= 0 && index < changes.length - 1 ? changes[index + 1] : undefined
-
   return (
-    <>
-      <div className="flex h-11 shrink-0 items-center justify-between gap-3 border-b px-3">
-        <div className="flex min-w-0 items-center gap-2">
-          <button
-            type="button"
-            onClick={onClose}
-            aria-label="Back to current content"
-            className="flex h-6 w-6 shrink-0 items-center justify-center rounded transition-colors hover:bg-muted focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-inset focus-visible:ring-ring"
-          >
-            <Icon icon={ChevronLeftIcon} size="sm" color="foregroundMuted" />
-          </button>
-          <Text.H5M className="min-w-0 font-mono" noWrap ellipsis>
-            {recordDisplayLabel(recordId)}
-          </Text.H5M>
-          <span className="flex shrink-0 items-center gap-1">
-            <ChangeIcon className={cn("h-3.5 w-3.5 shrink-0", meta.className)} />
-            <Text.H6 className="whitespace-nowrap">{meta.label}</Text.H6>
-          </span>
-          <Sep />
-          <ChangeTokens added={version.tokensAdded} removed={version.tokensRemoved} />
+    <div className="min-h-0 flex-1">
+      {isLoading ? (
+        <div className="p-3">
+          <Skeleton className="h-full w-full" />
         </div>
-        <div className="flex shrink-0 items-center gap-1">
-          <ActivityTime iso={version.endTime} className="mr-1" />
-          <NavButton
-            icon={ChevronUpIcon}
-            label="Newer change"
-            onClick={newer ? () => onSelectChange(newer.spanId) : undefined}
-          />
-          <NavButton
-            icon={ChevronDownIcon}
-            label="Older change"
-            onClick={older ? () => onSelectChange(older.spanId) : undefined}
-          />
-          {version.sessionId ? <OpenSessionButton sessionId={version.sessionId} onOpenSession={onOpenSession} /> : null}
+      ) : data == null ? null : data.degraded ? (
+        <div className="flex h-full items-center justify-center">
+          <Text.H6 color="foregroundMuted">Content not captured for this change</Text.H6>
         </div>
-      </div>
-
-      <div className="min-h-0 flex-1">
-        {isLoading ? (
-          <div className="p-3">
-            <Skeleton className="h-full w-full" />
-          </div>
-        ) : data == null ? null : data.degraded ? (
-          <div className="flex h-full items-center justify-center">
-            <Text.H6 color="foregroundMuted">Content not captured for this change</Text.H6>
-          </div>
-        ) : unchanged ? (
-          <div className="flex h-full items-center justify-center">
-            <Text.H6 color="foregroundMuted">No content changes</Text.H6>
-          </div>
-        ) : (
-          <CodeDiff
-            before={before}
-            after={after}
-            fillHeight
-            className="h-full rounded-none"
-            {...(language ? { language } : {})}
-          />
-        )}
-      </div>
-    </>
+      ) : unchanged ? (
+        <div className="flex h-full items-center justify-center">
+          <Text.H6 color="foregroundMuted">No content changes</Text.H6>
+        </div>
+      ) : (
+        <CodeDiff
+          before={before}
+          after={after}
+          fillHeight
+          className="h-full rounded-none"
+          {...(language ? { language } : {})}
+        />
+      )}
+    </div>
   )
 }
 
