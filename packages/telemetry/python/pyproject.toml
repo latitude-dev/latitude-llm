@@ -35,7 +35,7 @@ dependencies = [
     "opentelemetry-instrumentation-sagemaker==0.62.1",
     "opentelemetry-instrumentation-together==0.62.1",
     "opentelemetry-instrumentation-threading==0.64b0",
-    "opentelemetry-instrumentation-transformers==0.61.0",
+    "opentelemetry-instrumentation-transformers==0.62.1",
     "opentelemetry-instrumentation-vertexai==0.61.0",
     "opentelemetry-instrumentation-watsonx==0.61.0",
     "pydantic==2.12.5",
