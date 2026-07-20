@@ -1,4 +1,4 @@
-import { CodeBlock, CodeDiff, cn, Icon, Sheet, Skeleton, Text, useMountEffect } from "@repo/ui"
+import { CodeBlock, cn, Icon, Sheet, Skeleton, Text, useMountEffect } from "@repo/ui"
 import { formatCount } from "@repo/utils"
 import { Link } from "@tanstack/react-router"
 import {
@@ -28,19 +28,10 @@ import type {
   MemoryRecordUserRecord,
   MemoryRecordVersionRecord,
 } from "../../../../../../../domains/memories/memories.functions.ts"
+import { looksLikeJson } from "../../../-components/memory-changes/looks-like-json.ts"
+import { MemoryRecordDiff } from "../../../-components/memory-changes/memory-record-diff.tsx"
 import { SessionDetailDrawer } from "../../../-components/session-detail-drawer.tsx"
 import { recordDisplayLabel } from "../../-components/store-encoding.ts"
-
-function looksLikeJson(body: string): boolean {
-  const trimmed = body.trim()
-  if (!(trimmed.startsWith("{") || trimmed.startsWith("["))) return false
-  try {
-    JSON.parse(trimmed)
-    return true
-  } catch {
-    return false
-  }
-}
 
 const CHANGE_META = {
   add: { icon: PlusIcon, className: "text-success", label: "Created" },
@@ -262,10 +253,6 @@ function RecordChangeDiffBody({
   readonly version: MemoryRecordVersionRecord
 }) {
   const { data, isLoading } = useMemoryRecordChangeDiff({ projectId, storeId, recordId, spanId: version.spanId })
-  const before = data?.beforeBody ?? ""
-  const after = data?.afterBody ?? ""
-  const language = looksLikeJson(after) || looksLikeJson(before) ? "json" : undefined
-  const unchanged = data != null && !data.degraded && before === after
 
   return (
     <div className="min-h-0 flex-1">
@@ -273,22 +260,8 @@ function RecordChangeDiffBody({
         <div className="p-3">
           <Skeleton className="h-full w-full" />
         </div>
-      ) : data == null ? null : data.degraded ? (
-        <div className="flex h-full items-center justify-center">
-          <Text.H6 color="foregroundMuted">Content not captured for this change</Text.H6>
-        </div>
-      ) : unchanged ? (
-        <div className="flex h-full items-center justify-center">
-          <Text.H6 color="foregroundMuted">No content changes</Text.H6>
-        </div>
-      ) : (
-        <CodeDiff
-          before={before}
-          after={after}
-          fillHeight
-          className="h-full rounded-none"
-          {...(language ? { language } : {})}
-        />
+      ) : data == null ? null : (
+        <MemoryRecordDiff before={data.beforeBody} after={data.afterBody} degraded={data.degraded} />
       )}
     </div>
   )

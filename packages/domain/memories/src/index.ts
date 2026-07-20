@@ -63,6 +63,12 @@ export {
   type RecordHistoryVersion,
 } from "./use-cases/compute-record-history.ts"
 export {
+  type ComputeSessionMemoryDiffInput,
+  computeSessionMemoryDiffUseCase,
+  type SessionMemoryDiff,
+  type SessionMemoryRecordDiff,
+} from "./use-cases/compute-session-memory-diff.ts"
+export {
   type ComputeSessionMemorySummaryInput,
   computeSessionMemorySummaryUseCase,
   type MemoryRecordSummary,

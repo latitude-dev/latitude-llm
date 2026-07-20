@@ -1,5 +1,6 @@
-import { Badge, CodeBlock, Icon, MasterDetail, type MasterDetailItem, Text } from "@repo/ui"
-import { DatabaseIcon } from "lucide-react"
+import { Badge, CodeBlock, MasterDetail, type MasterDetailItem, Text } from "@repo/ui"
+import { RecordsHeader } from "../../../../memory-changes/records-header.tsx"
+import { SpanRecordChangeDiff } from "../../../../memory-changes/span-record-change-diff.tsx"
 import { JsonBlock } from "./helpers.tsx"
 import type { MemoryRecord } from "./memory-records-parse.ts"
 
@@ -39,30 +40,22 @@ function RecordDetail({ record }: { readonly record: MemoryRecord }) {
   )
 }
 
-function RecordsHeader({ storeId, count }: { readonly storeId?: string; readonly count: number }) {
-  return (
-    <div className="flex flex-row items-center gap-2 bg-secondary px-3 py-2">
-      <Icon icon={DatabaseIcon} size="xs" color="foregroundMuted" />
-      {storeId ? (
-        <div className="flex min-w-0 flex-1">
-          <Text.H6 color="foregroundMuted" ellipsis noWrap>
-            {storeId}
-          </Text.H6>
-        </div>
-      ) : null}
-      <Text.H6 color="foregroundMuted" noWrap>{`(${count})`}</Text.H6>
-    </div>
-  )
-}
-
 export function MemoryRecordsView({
   records,
   isSearch,
   storeId,
+  projectId,
+  spanId,
+  diffable,
+  fallbackRecordId,
 }: {
   readonly records: readonly MemoryRecord[]
   readonly isSearch: boolean
   readonly storeId?: string
+  readonly projectId: string
+  readonly spanId: string
+  readonly diffable: boolean
+  readonly fallbackRecordId?: string
 }) {
   const ordered =
     isSearch && records.some((record) => record.score != null)
@@ -89,7 +82,21 @@ export function MemoryRecordsView({
       items={items}
       renderDetail={(key) => {
         const record = ordered[Number(key)]
-        return record ? <RecordDetail record={record} /> : null
+        if (!record) return null
+        if (!diffable) return <RecordDetail record={record} />
+        return (
+          <div className="flex h-full flex-col">
+            <div className="min-h-0 flex-1">
+              <SpanRecordChangeDiff
+                projectId={projectId}
+                spanId={spanId}
+                storeId={storeId ?? ""}
+                recordId={record.id ?? fallbackRecordId ?? ""}
+                fallback={<RecordDetail record={record} />}
+              />
+            </div>
+          </div>
+        )
       }}
       header={<RecordsHeader count={ordered.length} {...(storeId ? { storeId } : {})} />}
     />

@@ -15,6 +15,7 @@ import { ArrowDownRightIcon, ArrowUpRightIcon, BrainIcon, FingerprintIcon, TextI
 import { useMemo } from "react"
 import type { SessionDetailRecord } from "../../../../../../domains/sessions/sessions.functions.ts"
 import { useSpansBySessionCollection } from "../../../../../../domains/spans/spans.collection.ts"
+import { MemoryChangesSection } from "../memory-changes/memory-changes-section.tsx"
 import { MemorySummary } from "../memory-summary.tsx"
 import { SessionOutlierBadge, type SessionOutlierMetric } from "../session-outlier-badge.tsx"
 import { aggregateToolPills, ToolPillList } from "../tool-pills.tsx"
@@ -195,6 +196,8 @@ export function MetadataTab({
           )
         }
       </DetailSection>
+
+      <MemoryChangesSection projectId={session.projectId} sessionId={session.sessionId} />
 
       <DetailSection icon={<TextIcon className="h-4 w-4" />} label="Metadata" defaultOpen={false}>
         {() =>
