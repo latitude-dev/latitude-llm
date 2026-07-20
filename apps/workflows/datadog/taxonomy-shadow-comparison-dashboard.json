@@ -1,6 +1,7 @@
 {
   "title": "Taxonomy adaptive clustering — shadow comparison (LAT-773)",
   "description": "Reads the APM span `taxonomy.gardenTaxonomyWorkflow.shadow` emitted by the workflows service to compare the static (production) taxonomy tree against the adaptive candidate tree while shadow mode is enabled environment-wide. The app ships logs to CloudWatch only, so this dashboard uses the APM spans channel, not Datadog Logs. Requires a Datadog APM retention filter that keeps operation_name:taxonomy.gardenTaxonomyWorkflow.shadow and span facets on the @taxonomy.* numeric attributes charted here. Apply with the Datadog MCP upsert_datadog_dashboard (title/description/template_variables/widgets); the spans-source request syntax should be validated on first apply.",
+  "layout_type": "ordered",
   "template_variables": [
     { "name": "organization", "prefix": "@taxonomy.organizationId", "available_values": [], "default": "*" },
     { "name": "project", "prefix": "@taxonomy.projectId", "available_values": [], "default": "*" }

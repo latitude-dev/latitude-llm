@@ -20,8 +20,17 @@ DD=https://api.datadoghq.eu/api/v2/apm/config
 Q='service:workflows operation_name:taxonomy.gardenTaxonomyWorkflow.shadow'
 HDR=(-H "DD-API-KEY: ${DD_API_KEY}" -H "DD-APPLICATION-KEY: ${DD_APP_KEY}" -H 'Content-Type: application/json')
 
-post() { # <url> <json>  — prints response body + HTTP status, never aborts on 4xx
-  curl -sS -X POST "$1" "${HDR[@]}" -d "$2" -w '\n-> HTTP %{http_code}\n'
+FAILED=0
+post() { # <url> <json>  — prints body + status; 2xx or 409 (already exists) ok, else records a failure
+  local response status body
+  response="$(curl -sS -X POST "$1" "${HDR[@]}" -d "$2" -w $'\n%{http_code}')"
+  status="${response##*$'\n'}"
+  body="${response%$'\n'*}"
+  printf '%s\n-> HTTP %s\n' "${body}" "${status}"
+  case "${status}" in
+    2* | 409) ;; # created, or already exists on a rerun
+    *) FAILED=$((FAILED + 1)) ;;
+  esac
 }
 
 echo "== retention filter =="
@@ -48,4 +57,8 @@ METRICS
 echo "== fallback count metric =="
 post "${DD}/metrics" '{"data":{"type":"spans_metrics","id":"taxonomy.adaptive.fallback","attributes":{"compute":{"aggregation_type":"count"},"filter":{"query":"'"${Q}"' -@taxonomy.adaptive.fallbackReason:none"},"group_by":[{"path":"@taxonomy.projectId","tag_name":"project_id"},{"path":"@taxonomy.adaptive.fallbackReason","tag_name":"fallback_reason"}]}}}'
 
+if [ "${FAILED}" -gt 0 ]; then
+  echo "== ${FAILED} call(s) failed (non-2xx, non-409) — see statuses above =="
+  exit 1
+fi
 echo "== done =="

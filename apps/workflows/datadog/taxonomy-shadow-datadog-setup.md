@@ -6,7 +6,10 @@ go to CloudWatch, not Datadog, so the read path is APM spans. Do these **before*
 enabling shadow in prod (`LAT_TAXONOMY_ADAPTIVE_CLUSTERING_MODE=shadow`), since
 retention filters and span metrics are not retroactive.
 
-Site: `datadoghq.eu`. All calls need `DD-API-KEY` + `DD-APPLICATION-KEY` headers.
+Site: `datadoghq.eu`. All calls need `DD-API-KEY` + `DD-APPLICATION-KEY` headers,
+and the keys' role must carry the RBAC permissions for each write: the retention
+filter needs `apm_retention_filter_write`, the span metrics need
+`apm_generate_metrics`. A key without them returns 403.
 
 ## Gate 1 — ingestion (mostly handled in code)
 
@@ -34,6 +37,12 @@ Ingestion Controls) keeping `service:workflows` at 100%.
   }
 }
 ```
+
+Retention filters are evaluated **top-down**, and the first match makes the
+keep/drop decision — a broader filter above this one could sample the shadow
+spans out before it runs. After creating it, make sure it sits **above** any
+broad `service:workflows` / catch-all filter (APM → Retention Filters, drag to
+reorder, or the `retention-filters-execution-order` API).
 
 This keeps 100% of the shadow spans, searchable/aggregatable in Trace Explorer
 and the spans-source dashboard for 15 days.
