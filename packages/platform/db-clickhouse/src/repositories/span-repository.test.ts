@@ -1241,6 +1241,59 @@ describe("SpanRepository", () => {
     })
   })
 
+  describe("findLatestOutputTraceId", () => {
+    const TRACE_A = TraceId("aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa")
+    const TRACE_B = TraceId("bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb")
+    const SHARED_SPAN_ID = "sharedspan000001"
+
+    it("returns the trace with the latest output end_time across traces, deduping by (trace_id, span_id)", async () => {
+      await runCh(
+        insertJsonEachRow(ch.client, "spans", [
+          makeSpanRow({
+            trace_id: TRACE_A,
+            span_id: SHARED_SPAN_ID,
+            operation: "chat",
+            output_messages: '[{"role":"assistant","parts":[{"type":"text","content":"a"}]}]',
+            start_time: "2026-03-02 00:00:00.000000000",
+            end_time: "2026-03-02 00:00:01.000000000",
+            ingested_at: "2026-03-02 00:00:02.000",
+          }),
+          makeSpanRow({
+            trace_id: TRACE_B,
+            span_id: SHARED_SPAN_ID,
+            operation: "chat",
+            output_messages: '[{"role":"assistant","parts":[{"type":"text","content":"b"}]}]',
+            start_time: "2026-03-02 00:00:02.000000000",
+            end_time: "2026-03-02 00:00:03.000000000",
+            ingested_at: "2026-03-02 00:00:00.000",
+          }),
+        ]),
+      )
+
+      const latestTraceId = await runCh(
+        repo.findLatestOutputTraceId({
+          organizationId: ORG_ID,
+          projectId: PROJECT_ID,
+          traceIds: [TRACE_A, TRACE_B],
+        }),
+      )
+
+      expect(latestTraceId).toBe(TRACE_B)
+    })
+
+    it("returns null when no trace ids are provided", async () => {
+      const latestTraceId = await runCh(
+        repo.findLatestOutputTraceId({
+          organizationId: ORG_ID,
+          projectId: PROJECT_ID,
+          traceIds: [],
+        }),
+      )
+
+      expect(latestTraceId).toBeNull()
+    })
+  })
+
   describe("listToolSpansBySessionId", () => {
     const SESSION_ID = SessionId("tool-session")
     const TRACE_A = TraceId("11111111111111111111111111111111")

@@ -1260,8 +1260,8 @@ export const SpanRepositoryLive = Layer.effect(
                         WHERE organization_id = {organizationId:String}
                           AND project_id = {projectId:String}
                           AND trace_id IN ({traceIds:Array(String)})
-                        ORDER BY span_id, ingested_at DESC
-                        LIMIT 1 BY span_id
+                        ORDER BY trace_id, span_id, ingested_at DESC
+                        LIMIT 1 BY trace_id, span_id
                       )`,
                 query_params: {
                   organizationId: organizationId as string,
