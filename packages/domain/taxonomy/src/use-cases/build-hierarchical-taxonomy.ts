@@ -571,23 +571,33 @@ export const planHierarchicalTaxonomyUseCase = (input: PlanHierarchicalTaxonomyI
 
     // Adaptive is built for shadow (comparison only) and enforced (candidate to
     // persist). It runs in the same worker budget as static (see the worker).
+    // The adaptive build is best-effort: a builder failure (worker crash,
+    // timeout, thrown error) degrades to `null` rather than aborting the whole
+    // garden, so shadow stays a discardable comparison and enforced can still
+    // fall back to the static tree. A static build failure IS fatal (no tree to
+    // persist), so only the adaptive call is caught.
     const adaptiveTimed = computeAdaptive
-      ? yield* Effect.timed(clusterBuilder({ mode, embeddings: normalizedEmbeddings, seed }))
+      ? yield* Effect.timed(clusterBuilder({ mode, embeddings: normalizedEmbeddings, seed })).pipe(
+          Effect.orElseSucceed(() => null),
+        )
       : null
     const adaptiveBuild = adaptiveTimed?.[1] ?? null
     const adaptiveDurationMs = adaptiveTimed ? Duration.toMillis(adaptiveTimed[0]) : 0
 
     // Fallback selection, here in the planning use case BEFORE any staging/writes:
-    // only enforced can persist adaptive, and only when the output is finite and
-    // structurally sane. Shadow never persists adaptive; off never builds it.
-    const fallbackReason =
-      mode === "enforced" && adaptiveBuild
-        ? adaptiveFallbackReason({
-            root: adaptiveBuild.root,
-            diagnostics: adaptiveBuild.diagnostics,
-            maxDepth: TAXONOMY_TREE_RELATIVE_DEPTH_SCHEDULE.length,
-            maxNodes: TAXONOMY_ADAPTIVE_STRUCTURAL_MAX_NODES,
-          })
+    // only enforced can persist adaptive, and only when a finite, structurally
+    // sane tree was actually built. A missing adaptive build (builder failure) is
+    // `buildError`. Shadow never persists adaptive; off never builds it.
+    const fallbackReason: TaxonomyAdaptiveFallbackReason | null =
+      mode === "enforced"
+        ? adaptiveBuild
+          ? adaptiveFallbackReason({
+              root: adaptiveBuild.root,
+              diagnostics: adaptiveBuild.diagnostics,
+              maxDepth: TAXONOMY_TREE_RELATIVE_DEPTH_SCHEDULE.length,
+              maxNodes: TAXONOMY_ADAPTIVE_STRUCTURAL_MAX_NODES,
+            })
+          : "buildError"
         : null
 
     const persistAdaptive = mode === "enforced" && adaptiveBuild !== null && fallbackReason === null

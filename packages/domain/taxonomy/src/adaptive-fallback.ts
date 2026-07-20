@@ -13,11 +13,14 @@
  *                       (deeper than the schedule, or more nodes than the
  *                       calibrated cap) — a builder fault rather than a
  *                       legitimate corpus.
+ *   - `buildError`      the adaptive build never produced a tree (worker crash,
+ *                       timeout, thrown exception). Set by the caller, not by
+ *                       `adaptiveFallbackReason`, since there is no tree to test.
  */
 
 import type { ClusteringTreeNode, RelativeClusteringDiagnostics } from "./clustering.ts"
 
-export type TaxonomyAdaptiveFallbackReason = "nonFinite" | "structuralLimit"
+export type TaxonomyAdaptiveFallbackReason = "nonFinite" | "structuralLimit" | "buildError"
 
 const hasNonFiniteNode = (node: ClusteringTreeNode): boolean => {
   if (node.splitLinkThreshold !== undefined && !Number.isFinite(node.splitLinkThreshold)) return true

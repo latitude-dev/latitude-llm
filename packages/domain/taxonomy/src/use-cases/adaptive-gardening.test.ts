@@ -313,6 +313,43 @@ describe("planHierarchicalTaxonomyUseCase enforced falls back to static on unsaf
   })
 })
 
+describe("planHierarchicalTaxonomyUseCase degrades to static when the adaptive builder fails", () => {
+  const rejectingAdaptiveBuilder: TaxonomyClusterBuilder = (request) =>
+    isAdaptiveModeActive(request.mode)
+      ? Effect.fail(new Error("adaptive worker crashed"))
+      : Effect.sync(() => runTaxonomyClusterBuild(request))
+
+  it("shadow: persists static, no comparison, no fallbackReason (discardable branch failed)", async () => {
+    const plan = await runPlan(
+      createFakeTaxonomyObservationRepository(twoGroupCorpus(now)),
+      createFakeTaxonomyClusterRepository([]),
+      { now, mode: "shadow", clusterBuilder: rejectingAdaptiveBuilder },
+    )
+
+    expect(plan.clusters.length).toBeGreaterThan(0)
+    expect(plan.clusters.every((cluster) => cluster.state === "active")).toBe(true)
+    expect(plan.leafClusters).toEqual([])
+    expect(plan.comparison).toBeNull()
+    expect(plan.decisionMetadata).toBeNull()
+    expect(plan.fallbackReason).toBeNull()
+    expect(plan.observationAssignments.length).toBeGreaterThan(0)
+  })
+
+  it("enforced: falls back to static with fallbackReason=buildError", async () => {
+    const plan = await runPlan(
+      createFakeTaxonomyObservationRepository(twoGroupCorpus(now)),
+      createFakeTaxonomyClusterRepository([]),
+      { now, mode: "enforced", clusterBuilder: rejectingAdaptiveBuilder },
+    )
+
+    expect(plan.mode).toBe("enforced")
+    expect(plan.fallbackReason).toBe("buildError")
+    expect(plan.clusters.every((cluster) => cluster.state === "active")).toBe(true)
+    expect(plan.leafClusters).toEqual([])
+    expect(plan.observationAssignments.length).toBeGreaterThan(0)
+  })
+})
+
 describe("shadow guardrails hold across contrasting corpora", () => {
   it.each([
     ["two well-separated groups", twoGroupCorpus(now)],
