@@ -1,5 +1,5 @@
 import type { TaxonomyClusterLineage } from "@domain/taxonomy"
-import { CancellationScope, deprecatePatch, proxyActivities, workflowInfo } from "@temporalio/workflow"
+import { CancellationScope, patched, proxyActivities, workflowInfo } from "@temporalio/workflow"
 import type * as activities from "../activities/index.ts"
 import { defaultActivityRetryPolicy } from "./retry-policy.ts"
 
@@ -23,6 +23,7 @@ export type GardenTaxonomyWorkflowResult = activities.GardenTaxonomyActivityResu
  */
 const {
   assertGardenTaxonomyQualityActivity,
+  cleanupGardenTaxonomyStagingActivity,
   completeGardenTaxonomyRunActivity,
   deprecateGardenTaxonomyClustersActivity,
   emitGardenTaxonomyLineageActivity,
@@ -79,12 +80,21 @@ const errorMessage = (error: unknown): string => {
 export const gardenTaxonomyWorkflow = async (
   input: GardenTaxonomyWorkflowInput,
 ): Promise<GardenTaxonomyWorkflowResult> => {
+  // The staging + atomic-swap publish shape (the mode-gated reassign/deprecate
+  // activities and the failure-path staging cleanup) is a new activity shape.
+  // The command SEQUENCE stays mode-independent — activities branch on mode
+  // internally — so this single marker reconciles an in-flight pre-change
+  // history at a fixed position. Read once, before the try, so the catch path
+  // sees the same deterministic value.
+  let useStagingSwap = false
+  // Adaptive reassignment repoints the live window's observations onto the staging
+  // leaves BEFORE the swap. Once that has run, deleting staging would orphan those
+  // observations, so staging cleanup is only safe up to (and including) a failed
+  // reassignment — a later failure leaves staging for the swap retry / next pass.
+  let reassignmentStarted = false
   try {
     const started = await startGardenTaxonomyRunActivity({ ...input, workflowRunId: workflowInfo().runId })
-    // Split-build is unconditional now; deprecatePatch sits right after start
-    // (where the old `patched("…-split-build-v1")` gate did) so replay of in-flight
-    // split-build histories reconciles the marker at the same position.
-    deprecatePatch("taxonomy-gardening-split-build-v1")
+    useStagingSwap = patched("taxonomy-gardening-staging-swap-v1")
     const built = await planHierarchicalGardenTaxonomyActivity(started)
     // Scoped cold-start: the plan sampled below the gardening minimum and built
     // no tree, so complete the run empty and leave any prior scoped tree serving
@@ -105,6 +115,9 @@ export const gardenTaxonomyWorkflow = async (
       })
     }
     await saveGardenTaxonomyClustersActivity({ ...started, planKey: built.planKey })
+    // Mark before the call: a partial/failed reassignment may already have
+    // repointed some observations onto staging, so cleanup must not delete it.
+    reassignmentStarted = true
     await reassignGardenTaxonomyObservationsActivity({ ...started, planKey: built.planKey })
     await deprecateGardenTaxonomyClustersActivity({ ...started, planKey: built.planKey })
     const lineage: TaxonomyClusterLineage[] = [...built.lineage]
@@ -141,9 +154,16 @@ export const gardenTaxonomyWorkflow = async (
     // behavior to `generating` up front, so a start-activity failure must still
     // mark it failed instead of leaving it stuck generating. The fail activity
     // re-derives the (deterministic) run id from the input.
-    await CancellationScope.nonCancellable(() =>
-      failGardenTaxonomyRunActivity({ ...input, workflowRunId: workflowInfo().runId, error: errorMessage(error) }),
-    )
+    await CancellationScope.nonCancellable(async () => {
+      // Clean up an orphaned staging tree ONLY when reassignment never ran, so no
+      // observation can already point at a staging leaf we would delete. Once
+      // reassignment has started, the staging tree is left for the swap retry /
+      // next pass. No-op on off runs (guarded to state='staging').
+      if (useStagingSwap && !reassignmentStarted) {
+        await cleanupGardenTaxonomyStagingActivity({ ...input, workflowRunId: workflowInfo().runId })
+      }
+      await failGardenTaxonomyRunActivity({ ...input, workflowRunId: workflowInfo().runId, error: errorMessage(error) })
+    })
     throw error
   }
 }

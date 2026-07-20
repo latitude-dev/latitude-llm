@@ -103,6 +103,26 @@ export interface TaxonomyClusterRepositoryShape {
     readonly clusterId: TaxonomyClusterId
     readonly timestamp: Date
   }): Effect.Effect<void, RepositoryError, SqlClient>
+  /**
+   * Atomic tree publish. In one transaction, deprecate exactly
+   * `supersededClusterIds` (the old active tree) and activate
+   * `stagingClusterIds` (the freshly built + assigned staging tree). Active
+   * reads therefore never observe the old and new trees simultaneously.
+   * Idempotent: activating already-active staging rows and deprecating
+   * already-deprecated rows are no-ops, so an activity retry re-runs safely.
+   */
+  swapActiveTree(input: {
+    readonly supersededClusterIds: readonly TaxonomyClusterId[]
+    readonly stagingClusterIds: readonly TaxonomyClusterId[]
+    readonly timestamp: Date
+  }): Effect.Effect<void, RepositoryError, SqlClient>
+  /**
+   * Remove abandoned staging rows on a failed publish, leaving the old tree
+   * active. Guarded to `state = 'staging'` so it can never delete a live tree.
+   */
+  deleteStaging(input: {
+    readonly clusterIds: readonly TaxonomyClusterId[]
+  }): Effect.Effect<void, RepositoryError, SqlClient>
 }
 
 export class TaxonomyClusterRepository extends Context.Service<

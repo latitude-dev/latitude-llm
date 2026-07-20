@@ -21,7 +21,33 @@ export const TAXONOMY_PENDING_DISPLAY_NAME = "Pending"
  */
 export const TAXONOMY_DIMENSIONS = ["topic"] as const
 
-export const TAXONOMY_CLUSTER_STATES = ["active", "merged", "deprecated"] as const
+/**
+ * `staging` clusters are the freshly built tree awaiting the atomic swap: they
+ * are fully written and assigned but MUST be ignored by every active read and by
+ * online routing until the publish transaction flips them to `active` (and the
+ * old tree to `deprecated`) in one step. The column is already `varchar(16)`, so
+ * widening the domain contract needs no Postgres migration.
+ */
+export const TAXONOMY_CLUSTER_STATES = ["active", "merged", "deprecated", "staging"] as const
+
+// ---------------------------------------------------------------------------
+// Adaptive-clustering rollout gate (LAT_TAXONOMY_ADAPTIVE_CLUSTERING_MODE)
+//
+// The environment baseline for the divisive-build rollout, resolved once in the
+// planning activity (never in workflow code — Temporal determinism). `off` is a
+// guaranteed byte-identical no-op: static builder, `computeSplitLinkThreshold`,
+// sample-only reassignment, centroid-similarity naming, original publish
+// sequence. `shadow`/`enforced` exercise the new machinery (adaptive builder,
+// member-confidence routing thresholds, shape-aware naming, staging + atomic
+// swap, full-window reassignment). The per-organization enforcement flag that
+// can raise the baseline to `enforced` lands in Phase 4 (LAT-773).
+// ---------------------------------------------------------------------------
+
+export const TAXONOMY_ADAPTIVE_CLUSTERING_MODES = ["off", "shadow", "enforced"] as const
+export const TAXONOMY_ADAPTIVE_CLUSTERING_MODE_ENV = "LAT_TAXONOMY_ADAPTIVE_CLUSTERING_MODE"
+
+/** Batch size for bounded ClickHouse assignment writes during full-window reassignment. */
+export const TAXONOMY_REASSIGNMENT_BATCH_SIZE = 1_000
 
 /**
  * The divisive build emits exactly these three transitions:

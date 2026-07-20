@@ -16,7 +16,7 @@ import {
   TaxonomyDimension,
   taxonomyClusterSchema,
 } from "@domain/taxonomy"
-import { and, asc, desc, eq, getTableColumns, gte, inArray, isNotNull, isNull, like, or, sql } from "drizzle-orm"
+import { and, asc, desc, eq, getTableColumns, gte, inArray, isNotNull, isNull, like, ne, or, sql } from "drizzle-orm"
 import { Effect, Layer } from "effect"
 import type { Operator } from "../client.ts"
 import { taxonomyClusters } from "../schema/taxonomy-clusters.ts"
@@ -301,7 +301,9 @@ export const TaxonomyClusterRepositoryLive = Layer.effect(
             eq(taxonomyClusters.projectId, projectId),
             scopeCondition(customBehaviorId),
           ]
-          if (state) conditions.push(eq(taxonomyClusters.state, state))
+          // `staging` is an internal publish-time state; never surface it from
+          // list-clusters. An explicit `state` filter still narrows further.
+          conditions.push(state ? eq(taxonomyClusters.state, state) : ne(taxonomyClusters.state, "staging"))
 
           const orderBy = (() => {
             switch (sort ?? "observation_count_desc") {
@@ -389,6 +391,62 @@ export const TaxonomyClusterRepositoryLive = Layer.effect(
               .update(taxonomyClusters)
               .set({ state: "deprecated", updatedAt: timestamp })
               .where(and(eq(taxonomyClusters.organizationId, organizationId), eq(taxonomyClusters.id, clusterId))),
+          )
+        }),
+
+      swapActiveTree: ({ supersededClusterIds, stagingClusterIds, timestamp }) =>
+        Effect.gen(function* () {
+          const sqlClient = (yield* SqlClient) as SqlClientShape<Operator>
+          if (supersededClusterIds.length === 0 && stagingClusterIds.length === 0) return
+          yield* sqlClient.transaction(
+            Effect.gen(function* () {
+              if (supersededClusterIds.length > 0) {
+                yield* sqlClient.query((db, organizationId) =>
+                  db
+                    .update(taxonomyClusters)
+                    .set({ state: "deprecated", updatedAt: timestamp })
+                    .where(
+                      and(
+                        eq(taxonomyClusters.organizationId, organizationId),
+                        inArray(taxonomyClusters.id, supersededClusterIds as TaxonomyClusterId[]),
+                      ),
+                    ),
+                )
+              }
+              if (stagingClusterIds.length > 0) {
+                // Guard on `state = 'staging'` so a retry (rows already active)
+                // matches nothing and never resurrects a deprecated tree.
+                yield* sqlClient.query((db, organizationId) =>
+                  db
+                    .update(taxonomyClusters)
+                    .set({ state: "active", updatedAt: timestamp })
+                    .where(
+                      and(
+                        eq(taxonomyClusters.organizationId, organizationId),
+                        eq(taxonomyClusters.state, "staging"),
+                        inArray(taxonomyClusters.id, stagingClusterIds as TaxonomyClusterId[]),
+                      ),
+                    ),
+                )
+              }
+            }),
+          )
+        }),
+
+      deleteStaging: ({ clusterIds }) =>
+        Effect.gen(function* () {
+          const sqlClient = (yield* SqlClient) as SqlClientShape<Operator>
+          if (clusterIds.length === 0) return
+          yield* sqlClient.query((db, organizationId) =>
+            db
+              .delete(taxonomyClusters)
+              .where(
+                and(
+                  eq(taxonomyClusters.organizationId, organizationId),
+                  eq(taxonomyClusters.state, "staging"),
+                  inArray(taxonomyClusters.id, clusterIds as TaxonomyClusterId[]),
+                ),
+              ),
           )
         }),
     }

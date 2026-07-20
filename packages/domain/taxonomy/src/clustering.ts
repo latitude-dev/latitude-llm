@@ -95,6 +95,13 @@ export interface ClusteringTreeNode {
   /** Empty for leaves. */
   readonly children: readonly ClusteringTreeNode[]
   readonly depth: number
+  /**
+   * Member-confidence descent gate for this node's children, set only by the
+   * relative builder (undefined on static-builder nodes and on leaves). The
+   * planner persists it verbatim so the online router reads the derived
+   * threshold at descent time instead of recomputing from sibling centroids.
+   */
+  readonly splitLinkThreshold?: number
 }
 
 export interface BuildRelativeHierarchicalClustersInput {
@@ -595,7 +602,7 @@ export const buildRelativeHierarchicalClusters = (
     acceptedRelativeSeparations.push(best.relativeSeparation)
     routingThresholds.push(best.splitLinkThreshold)
     const children = best.clusterMemberIndices.map((childIndices) => recurse(childIndices, depth + 1))
-    return { memberIndices, centroid, children, depth }
+    return { memberIndices, centroid, children, depth, splitLinkThreshold: best.splitLinkThreshold }
   }
 
   const root = recurse(allIndices, 0)

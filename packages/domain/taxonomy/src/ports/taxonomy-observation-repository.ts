@@ -53,6 +53,19 @@ export interface TaxonomyClusteringObservation {
 }
 
 /**
+ * A slim live-window row for full-window reassignment: carries the current
+ * `assignedClusterId` so the invariant-confirm and catch-up passes can tell
+ * which observations still point at a soon-to-deprecate cluster.
+ */
+export interface TaxonomyReassignmentWindowObservation {
+  readonly observationId: string
+  readonly sessionId: SessionId
+  readonly embedding: readonly number[]
+  readonly startTime: Date
+  readonly assignedClusterId: string | null
+}
+
+/**
  * A clustering-sample observation carrying its `sessionId`, so scoped custom
  * behavior assignments (which live in the `custom_behavior_assignments` slice,
  * keyed by session) can be written without a second lookup.
@@ -150,6 +163,36 @@ export interface TaxonomyObservationRepositoryShape {
     readonly limit: number
     readonly filterSet: FilterSet
   }) => Effect.Effect<readonly TaxonomyScopedClusteringObservation[], RepositoryError, ChSqlClient>
+  /**
+   * The complete bounded live window (newest ≤ `limit`, no day-stratified
+   * sampling) as slim rows carrying the current assignment — the read the
+   * adaptive full-window reassignment and catch-up passes operate over. Optional
+   * `filterSet` scopes it to a custom behavior's sessions (the scoped write
+   * target); omit it for the global window. `excludeAssignedClusterIds` narrows
+   * the read to rows NOT already pointing at one of those clusters — the catch-up
+   * pass passes the current leaf ids so it only pays to pull embeddings for the
+   * stragglers indexed during reassignment, not the whole window.
+   */
+  readonly listWindowForReassignment: (input: {
+    readonly organizationId: OrganizationId
+    readonly projectId: ProjectId
+    readonly limit: number
+    readonly filterSet?: FilterSet
+    readonly excludeAssignedClusterIds?: readonly TaxonomyClusterId[]
+  }) => Effect.Effect<readonly TaxonomyReassignmentWindowObservation[], RepositoryError, ChSqlClient>
+  /**
+   * Server-side invariant-confirm counter: over the same bounded live window,
+   * how many rows still point at one of `clusterIds` (the soon-to-deprecate
+   * tree) and the window `total`. Aggregates in ClickHouse so the confirm never
+   * ships embeddings back to the activity.
+   */
+  readonly countWindowAssignedToClusters: (input: {
+    readonly organizationId: OrganizationId
+    readonly projectId: ProjectId
+    readonly limit: number
+    readonly clusterIds: readonly TaxonomyClusterId[]
+    readonly filterSet?: FilterSet
+  }) => Effect.Effect<{ readonly total: number; readonly matching: number }, RepositoryError, ChSqlClient>
   /**
    * True eligible totals for a custom behavior preview: the unsampled analogue
    * of `listForCustomBehaviorSample` (same `filterSet`/window scoping) counting
