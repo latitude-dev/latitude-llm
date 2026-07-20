@@ -51,6 +51,9 @@ const CHANGE_META = {
 type MutatingKind = keyof typeof CHANGE_META
 const isMutating = (kind: string): kind is MutatingKind => kind === "add" || kind === "update" || kind === "remove"
 
+type OpenSpanTarget = { readonly sessionId: string; readonly traceId: string; readonly spanId: string }
+type OpenSpan = (target: OpenSpanTarget) => void
+
 const DATETIME_FMT = new Intl.DateTimeFormat("en", {
   month: "short",
   day: "2-digit",
@@ -77,7 +80,7 @@ export function RecordContentView({
   readonly onSelectChange: (spanId: string | undefined) => void
 }) {
   const { data, isLoading } = useMemoryRecord({ projectId, storeId, recordId })
-  const [openSessionId, setOpenSessionId] = useState<string | null>(null)
+  const [openSpan, setOpenSpan] = useState<OpenSpanTarget | null>(null)
 
   const toggleChange = useCallback(
     (spanId: string) => onSelectChange(changeSpanId === spanId ? undefined : spanId),
@@ -111,7 +114,7 @@ export function RecordContentView({
         activeVersion={activeVersion}
         changes={changes}
         onSelectChange={onSelectChange}
-        onOpenSession={setOpenSessionId}
+        onOpenSpan={setOpenSpan}
         {...(language ? { language } : {})}
       />
 
@@ -135,19 +138,19 @@ export function RecordContentView({
         storeId={storeId}
         recordId={recordId}
         changes={changes}
-        onOpenSession={setOpenSessionId}
+        onOpenSpan={setOpenSpan}
         onToggleDiff={toggleChange}
         activeDiffSpanId={changeSpanId ?? null}
       />
 
-      <Sheet open={openSessionId !== null} onClose={() => setOpenSessionId(null)} closeAriaLabel="Close session panel">
-        {openSessionId ? (
+      <Sheet open={openSpan !== null} onClose={() => setOpenSpan(null)} closeAriaLabel="Close span panel">
+        {openSpan ? (
           <SessionDetailDrawer
-            key={openSessionId}
+            key={`${openSpan.sessionId}:${openSpan.spanId}`}
             projectId={projectId}
-            sessionId={openSessionId}
-            onClose={() => setOpenSessionId(null)}
-            defaultTab="session"
+            sessionId={openSpan.sessionId}
+            focusSpan={{ spanId: openSpan.spanId, traceId: openSpan.traceId }}
+            onClose={() => setOpenSpan(null)}
           />
         ) : null}
       </Sheet>
@@ -167,7 +170,7 @@ function RecordHeader({
   activeVersion,
   changes,
   onSelectChange,
-  onOpenSession,
+  onOpenSpan,
 }: {
   readonly recordId: string
   readonly tokenCount: number
@@ -175,7 +178,7 @@ function RecordHeader({
   readonly activeVersion: MemoryRecordVersionRecord | undefined
   readonly changes: readonly MemoryRecordVersionRecord[]
   readonly onSelectChange: (spanId: string | undefined) => void
-  readonly onOpenSession: (sessionId: string) => void
+  readonly onOpenSpan: OpenSpan
 }) {
   const activeIndex = activeVersion ? changes.findIndex((change) => change.spanId === activeVersion.spanId) : -1
   const canNewer = activeVersion != null
@@ -215,8 +218,16 @@ function RecordHeader({
             </span>
             <Sep />
             <ChangeTokens added={activeVersion.tokensAdded} removed={activeVersion.tokensRemoved} />
-            {activeVersion.sessionId ? (
-              <OpenSessionButton sessionId={activeVersion.sessionId} onOpenSession={onOpenSession} />
+            {activeVersion.spanId ? (
+              <OpenSpanButton
+                onOpen={() =>
+                  onOpenSpan({
+                    sessionId: activeVersion.sessionId,
+                    traceId: activeVersion.traceId,
+                    spanId: activeVersion.spanId,
+                  })
+                }
+              />
             ) : null}
             <span className="mx-0.5 h-4 w-px bg-border" aria-hidden />
           </>
@@ -393,7 +404,7 @@ function RecordActivityPanel({
   storeId,
   recordId,
   changes,
-  onOpenSession,
+  onOpenSpan,
   onToggleDiff,
   activeDiffSpanId,
 }: {
@@ -402,7 +413,7 @@ function RecordActivityPanel({
   readonly storeId: string
   readonly recordId: string
   readonly changes: readonly MemoryRecordVersionRecord[]
-  readonly onOpenSession: (sessionId: string) => void
+  readonly onOpenSpan: OpenSpan
   readonly onToggleDiff: (spanId: string) => void
   readonly activeDiffSpanId: string | null
 }) {
@@ -503,12 +514,12 @@ function RecordActivityPanel({
           {activeTab === "changes" ? (
             <ChangesBody
               changes={changes}
-              onOpenSession={onOpenSession}
+              onOpenSpan={onOpenSpan}
               onToggleDiff={onToggleDiff}
               activeDiffSpanId={activeDiffSpanId}
             />
           ) : activeTab === "reads" ? (
-            <ReadsBody isLoading={reads.isLoading} reads={reads.data ?? []} onOpenSession={onOpenSession} />
+            <ReadsBody isLoading={reads.isLoading} reads={reads.data ?? []} onOpenSpan={onOpenSpan} />
           ) : (
             <UsersBody isLoading={users.isLoading} users={users.data ?? []} projectSlug={projectSlug} />
           )}
@@ -577,22 +588,17 @@ function ChangeTokens({ added, removed }: { readonly added: number; readonly rem
   )
 }
 
-function OpenSessionButton({
-  sessionId,
-  onOpenSession,
-}: {
-  readonly sessionId: string
-  readonly onOpenSession: (sessionId: string) => void
-}) {
+// Opens the session drawer on the Spans tab with this operation's span selected.
+function OpenSpanButton({ onOpen }: { readonly onOpen: () => void }) {
   return (
     <button
       type="button"
-      onClick={() => onOpenSession(sessionId)}
-      aria-label={`Open session ${sessionId}`}
+      onClick={onOpen}
+      aria-label="Open span"
       className="flex h-6 shrink-0 items-center gap-1 rounded px-1.5 text-muted-foreground transition-colors hover:bg-muted hover:text-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-inset focus-visible:ring-ring"
     >
       <Text.H6 color="foregroundMuted" className="whitespace-nowrap">
-        Session
+        Span
       </Text.H6>
       <ArrowUpRightIcon className="h-3 w-3 shrink-0" />
     </button>
@@ -629,24 +635,17 @@ function NavButton({
 }
 
 function ActivityRow({
-  sessionId,
-  onOpenSession,
+  onOpen,
   children,
 }: {
-  readonly sessionId: string
-  readonly onOpenSession: (sessionId: string) => void
+  readonly onOpen: (() => void) | undefined
   readonly children: ReactNode
 }) {
-  if (!sessionId) {
+  if (!onOpen) {
     return <div className={ROW_CLASS}>{children}</div>
   }
   return (
-    <button
-      type="button"
-      onClick={() => onOpenSession(sessionId)}
-      aria-label={`Open session ${sessionId}`}
-      className={cn(ROW_CLASS, ROW_INTERACTIVE)}
-    >
+    <button type="button" onClick={onOpen} aria-label="Open span" className={cn(ROW_CLASS, ROW_INTERACTIVE)}>
       {children}
       <OpenHint />
     </button>
@@ -673,12 +672,12 @@ function LoadingRows() {
 
 function ChangesBody({
   changes,
-  onOpenSession,
+  onOpenSpan,
   onToggleDiff,
   activeDiffSpanId,
 }: {
   readonly changes: readonly MemoryRecordVersionRecord[]
-  readonly onOpenSession: (sessionId: string) => void
+  readonly onOpenSpan: OpenSpan
   readonly onToggleDiff: (spanId: string) => void
   readonly activeDiffSpanId: string | null
 }) {
@@ -708,8 +707,12 @@ function ChangesBody({
               <Sep />
               <UserMeta userId={version.userId} className="max-w-[14rem]" />
             </button>
-            {version.sessionId ? (
-              <OpenSessionButton sessionId={version.sessionId} onOpenSession={onOpenSession} />
+            {version.spanId ? (
+              <OpenSpanButton
+                onOpen={() =>
+                  onOpenSpan({ sessionId: version.sessionId, traceId: version.traceId, spanId: version.spanId })
+                }
+              />
             ) : null}
           </div>
         )
@@ -721,18 +724,25 @@ function ChangesBody({
 function ReadsBody({
   isLoading,
   reads,
-  onOpenSession,
+  onOpenSpan,
 }: {
   readonly isLoading: boolean
   readonly reads: readonly MemoryRecordReadRecord[]
-  readonly onOpenSession: (sessionId: string) => void
+  readonly onOpenSpan: OpenSpan
 }) {
   if (isLoading) return <LoadingRows />
   if (reads.length === 0) return <EmptyRow>This record hasn't been retrieved yet.</EmptyRow>
   return (
     <>
       {reads.map((read) => (
-        <ActivityRow key={`${read.spanId}-${read.endTime}`} sessionId={read.sessionId} onOpenSession={onOpenSession}>
+        <ActivityRow
+          key={`${read.spanId}-${read.endTime}`}
+          onOpen={
+            read.spanId
+              ? () => onOpenSpan({ sessionId: read.sessionId, traceId: read.traceId, spanId: read.spanId })
+              : undefined
+          }
+        >
           <ActivityTime iso={read.endTime} />
           {read.queryText ? (
             <Text.H6 className="min-w-0 flex-1 truncate">
