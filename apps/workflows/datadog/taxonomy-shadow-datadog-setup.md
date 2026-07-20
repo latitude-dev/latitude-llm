@@ -46,6 +46,23 @@ The exact metric list and payloads live in the script (the single source of
 truth), so the dashboard can read `data_source: metrics` for history beyond the
 15-day span window.
 
+## Why the read needs ~2 weeks
+
+Garden sweeps run every ~6h, but each run clusters a sample drawn from the
+**trailing 7-day** window, so consecutive runs share almost their entire input
+and are highly correlated — a dozen runs in a day is close to one independent
+data point, not a dozen. The first `shadow` event lands ~6–11h after enabling
+it, which is enough to confirm the pipeline, but not to judge the algorithm:
+
+- **~1 week (minimum)** for the 7-day window to fully turn over, so a later run
+  is a genuinely fresh sample rather than a re-clustering of the same traces.
+- **~2 weeks** to confirm the root-child delta and partition ARI **hold across
+  more than one turnover** — i.e. the adaptive shape is stable, not an artifact
+  of one week's traffic mix.
+
+So read the per-project trend of `@diff.rootChildDelta` / ARI over that span,
+not a single run. Fix the exact shadow duration as a calibrated Phase-1 value.
+
 ## Order of operations
 
 1. Run `setup-datadog.sh` (retention filter + span metrics), then reorder the
