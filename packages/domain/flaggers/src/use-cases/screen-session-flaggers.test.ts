@@ -188,6 +188,57 @@ describe("screenSessionFlaggersUseCase", () => {
     expect(scores.size).toBe(0)
   })
 
+  it("skips input-centric strategies on flagger.classify dogfood sessions (nested-content FP guard)", async () => {
+    // Mirrors a bluffing classify dogfood trace: the "user" message embeds nested
+    // customer assistant findings after tool failures. Frustration must not run.
+    const session = makeSessionDetail(
+      [
+        user(
+          [
+            "TRACE EVIDENCE:",
+            "<evaluated_trace_evidence>",
+            "FAILED TOOL CALLS (2 shown):",
+            "Assistant text after the failure:",
+            '<evaluated_trace_assistant_response index="40">',
+            "The comparison is showing one material conflict already: the budget carries a Division 21 NFPA 13 sprinkler allowance.",
+            "</evaluated_trace_assistant_response>",
+            "</evaluated_trace_evidence>",
+          ].join("\n"),
+        ),
+        assistant('{"feedback": null, "matched": false}'),
+      ],
+      {
+        tags: [...AI_GENERATE_TELEMETRY_TAGS.flaggerClassify],
+        errorCount: 2,
+      },
+    )
+    const { result } = await runScreening({
+      session,
+      flaggers: [makeFlagger("frustration", 0), makeFlagger("jailbreaking", 0), makeFlagger("empty-response", 0)],
+      deps: fakeDeps.deps,
+    })
+
+    expect(decisionFor(result.decisions, "frustration")).toEqual({
+      slug: "frustration",
+      action: "dropped",
+      reason: "flagger-input-skip",
+    })
+    expect(decisionFor(result.decisions, "jailbreaking")).toEqual({
+      slug: "jailbreaking",
+      action: "dropped",
+      reason: "flagger-input-skip",
+    })
+    expect(result.classifications.filter((c) => c.flaggerSlug === "frustration" || c.flaggerSlug === "jailbreaking")).toEqual(
+      [],
+    )
+    // Assistant-centric strategies still screen flagger dogfood sessions.
+    expect(decisionFor(result.decisions, "empty-response")).toEqual({
+      slug: "empty-response",
+      action: "dropped",
+      reason: "unmatched",
+    })
+  })
+
   it("writes a session-anchored score with contentHash on a deterministic match", async () => {
     const session = makeSessionDetail([user("Please help me with this."), assistant("")])
     const { result, scores } = await runScreening({

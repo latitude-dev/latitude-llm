@@ -12,7 +12,7 @@ import {
 } from "../flagger-strategies/index.ts"
 import { gatherSessionHintsUseCase } from "../hints/gatherers.ts"
 import { isPositiveSessionHintKind, type SessionHint, type SessionHintKind } from "../hints/types.ts"
-import { isReflagSuppressed } from "../reflag.ts"
+import { isReflagSuppressed, shouldSkipInputCentricReflag } from "../reflag.ts"
 import { loadFlaggerSessionContextUseCase } from "./classify-session-flagger.ts"
 import { type FlaggerCacheEntry, getProjectFlaggersUseCase } from "./get-project-flaggers.ts"
 import { upsertFlaggerAnnotationScore } from "./upsert-flagger-annotation-score.ts"
@@ -44,6 +44,7 @@ export type SessionFlaggerDroppedReason =
   | "rate-limited"
   | "disabled"
   | "missing-flagger"
+  | "flagger-input-skip"
 
 export type SessionFlaggerDecision =
   | { readonly slug: string; readonly action: "matched-issue" }
@@ -271,6 +272,18 @@ const screenOneStrategy = (args: ScreenOneStrategyInput) =>
 
     if (!flagger.enabled) {
       return { slug: args.slug, action: "dropped", reason: "disabled" } satisfies SessionFlaggerDecision
+    }
+
+    // Frustration / jailbreaking judge end-user wording. On flagger.classify
+    // dogfood sessions the "user" text is Latitude's own prompt with nested
+    // customer transcripts — skip so nested content cannot false-positive.
+    if (
+      shouldSkipInputCentricReflag(
+        args.context.conversation.tags,
+        strategy.classifiesAssistantResponseOnly ?? true,
+      )
+    ) {
+      return { slug: args.slug, action: "dropped", reason: "flagger-input-skip" } satisfies SessionFlaggerDecision
     }
 
     if (strategy.suppressedBy) {

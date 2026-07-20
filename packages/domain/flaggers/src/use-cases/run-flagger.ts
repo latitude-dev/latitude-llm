@@ -26,7 +26,7 @@ import { getFlaggerStrategy, isLlmCapableStrategy } from "../flagger-strategies/
 import { isRecord, iterMessageParts, truncateExcerpt } from "../flagger-strategies/shared.ts"
 import type { FlaggerStrategy } from "../flagger-strategies/types.ts"
 import type { SessionHint } from "../hints/types.ts"
-import { reflagSuppressionTags } from "../reflag.ts"
+import { reflagSuppressionTags, shouldSkipInputCentricReflag } from "../reflag.ts"
 
 export interface RunFlaggerResult {
   readonly matched: boolean
@@ -861,6 +861,11 @@ export const classifyConversationForFlaggerUseCase = Effect.fn("flaggers.classif
 
   if (!strategy || !isLlmCapableStrategy(strategy) || !strategy.hasRequiredContext(input.conversation)) {
     return { matched: false }
+  }
+
+  if (shouldSkipInputCentricReflag(input.conversation.tags, strategy.classifiesAssistantResponseOnly ?? true)) {
+    yield* Effect.annotateCurrentSpan("flagger.skipped", "flagger-input-skip")
+    return { matched: false } satisfies RunFlaggerResult
   }
 
   const ai = yield* AI

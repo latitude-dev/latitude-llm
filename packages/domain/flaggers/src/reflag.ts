@@ -1,7 +1,8 @@
 import { AI_GENERATE_TELEMETRY_TAGS } from "@domain/ai"
 
 /**
- * Reflag policy — bounds flagger-on-flagger recursion to a single level.
+ * Reflag policy — bounds flagger-on-flagger recursion to a single level, and
+ * keeps input-centric strategies off flagger-generated sessions.
  *
  * The "latitude" project collects the telemetry emitted by Latitude's own
  * production flaggers (every `flagger.classify` / `flagger.draft` LLM call). We
@@ -14,6 +15,11 @@ import { AI_GENERATE_TELEMETRY_TAGS } from "@domain/ai"
  * Flagging then skips any trace carrying that marker. The result is exactly one
  * level of meta-flagging — production flagger traces still get flagged, their
  * meta-flagging output does not.
+ *
+ * Input-centric strategies (frustration, jailbreaking) are also skipped on
+ * flagger-generated sessions: their "user" evidence is Latitude's classifier
+ * prompt, which embeds nested customer transcripts. Judging that as end-user
+ * wording produces nested-content false positives.
  */
 
 // Tags that identify a trace as the product of a flagger's own LLM calls.
@@ -44,3 +50,12 @@ export const isReflagSuppressed = (tags: readonly string[]): boolean => tags.inc
  */
 export const reflagSuppressionTags = (inputTraceTags: readonly string[]): readonly string[] =>
   isFlaggerGeneratedTrace(inputTraceTags) ? AI_GENERATE_TELEMETRY_TAGS.flaggerNoReflag : []
+
+/**
+ * True when an input-centric strategy should not run on this conversation.
+ * `classifiesAssistantResponseOnly` is the strategy field (default `true`).
+ */
+export const shouldSkipInputCentricReflag = (
+  tags: readonly string[],
+  classifiesAssistantResponseOnly: boolean,
+): boolean => isFlaggerGeneratedTrace(tags) && !classifiesAssistantResponseOnly

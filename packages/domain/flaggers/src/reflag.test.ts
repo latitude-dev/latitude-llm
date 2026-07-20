@@ -1,6 +1,11 @@
 import { AI_GENERATE_TELEMETRY_TAGS } from "@domain/ai"
 import { describe, expect, it } from "vitest"
-import { isFlaggerGeneratedTrace, isReflagSuppressed, reflagSuppressionTags } from "./reflag.ts"
+import {
+  isFlaggerGeneratedTrace,
+  isReflagSuppressed,
+  reflagSuppressionTags,
+  shouldSkipInputCentricReflag,
+} from "./reflag.ts"
 
 const CLASSIFY = AI_GENERATE_TELEMETRY_TAGS.flaggerClassify[0]
 const DRAFT = AI_GENERATE_TELEMETRY_TAGS.flaggerDraft[0]
@@ -48,5 +53,21 @@ describe("reflagSuppressionTags", () => {
     const levelTwoTags = [CLASSIFY, ...reflagSuppressionTags([CLASSIFY])]
     // Level 2: must not be flagged again.
     expect(isReflagSuppressed(levelTwoTags)).toBe(true)
+  })
+})
+
+describe("shouldSkipInputCentricReflag", () => {
+  it("skips input-centric strategies on flagger-generated traces", () => {
+    expect(shouldSkipInputCentricReflag([CLASSIFY], false)).toBe(true)
+    expect(shouldSkipInputCentricReflag([DRAFT], false)).toBe(true)
+  })
+
+  it("does not skip assistant-centric strategies on flagger-generated traces", () => {
+    expect(shouldSkipInputCentricReflag([CLASSIFY], true)).toBe(false)
+  })
+
+  it("does not skip input-centric strategies on ordinary production traces", () => {
+    expect(shouldSkipInputCentricReflag([], false)).toBe(false)
+    expect(shouldSkipInputCentricReflag(["eval:execute"], false)).toBe(false)
   })
 })
