@@ -63,6 +63,29 @@ it, which is enough to confirm the pipeline, but not to judge the algorithm:
 So read the per-project trend of `@diff.rootChildDelta` / ARI over that span,
 not a single run. Fix the exact shadow duration as a calibrated Phase-1 value.
 
+## How long / when to stop
+
+~2 weeks is the defensible **minimum**, not a target to always exceed. Running
+longer has real but **diminishing** value, and shadow costs ~2× clustering
+compute fleet-wide for the whole duration, so bound it deliberately. Shadow never
+changes production (it persists static), so the only cost of extending is that
+compute — there is no correctness risk.
+
+**Keep running while** any of these hold:
+
+- the per-project `@diff.rootChildDelta` / ARI are still moving (not yet flat
+  across ≥2 window turnovers);
+- the project hasn't yet been observed across a representative traffic period —
+  a full weekly cycle, a campaign, or month/quarter-end for bursty or seasonal
+  projects (e.g. the ads-analytics pilot), where a fortnight may be one regime;
+- `@taxonomy.adaptive.fallbackReason` fallbacks or guardrail anomalies are rare
+  and you want more evidence they don't spike.
+
+**Stop once** the delta/ARI are stable across ≥2 turnovers **and** a
+representative traffic period has been covered. Past that, extra weeks are
+near-duplicate evidence (consecutive 7-day windows overlap) — pay the 2× only
+while it's still teaching you something.
+
 ## Order of operations
 
 1. Run `setup-datadog.sh` (retention filter + span metrics), then reorder the
