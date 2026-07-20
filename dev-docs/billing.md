@@ -93,7 +93,7 @@ Trace ingestion splits enforcement (HTTP) from attribution (worker):
 Canonical charge points:
 
 - trace ingest metering: `apps/workers/src/workers/span-ingestion.ts` emits `TracesIngested`, `apps/workers/src/workers/domain-events.ts` routes billing work, and `apps/workers/src/workers/billing.ts` records once per distinct trace id using `trace:{organizationId}:{projectId}:{traceId}`
-- LLM flagger scans: `apps/workflows/src/activities/flagger-activities.ts` before `draftAnnotate`
+- LLM flagger scans: `apps/workflows/src/activities/flagger-session-activities.ts` before `draftSessionFlaggerAnnotation` — the anchor dedup runs first so a re-detected issue never charges, and the key is `flagger-scan:{organizationId}:{flaggerSlug}:{sessionId}:{contentHash}` (one charge per distinct flagged anchor)
 - live evaluations: `apps/workers/src/workers/live-evaluations.ts` immediately before execution; script capabilities select `deterministic-eval-scan` or `live-eval-scan`
 - eval generation: `apps/workflows/src/activities/evaluation-alignment-activities.ts` before expensive alignment generation/optimization work, keyed by `billingOperationId`
 

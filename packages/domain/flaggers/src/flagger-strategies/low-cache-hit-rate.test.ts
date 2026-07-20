@@ -47,7 +47,7 @@ describe("lowCacheHitRateStrategy.detectDeterministically", () => {
         tokensCacheRead: 0,
         tokensCacheCreate: 30_000,
       })
-      expect(lowCacheHitRateStrategy.detectDeterministically?.(trace)).toEqual({ kind: "no-match" })
+      expect(lowCacheHitRateStrategy.detectDeterministically?.(trace)).toEqual({ kind: "unmatched" })
     })
 
     it("no-match when total input is below the minimum (caching not worth it)", () => {
@@ -56,7 +56,7 @@ describe("lowCacheHitRateStrategy.detectDeterministically", () => {
         tokensCacheRead: 0,
         tokensCacheCreate: 1_000,
       })
-      expect(lowCacheHitRateStrategy.detectDeterministically?.(trace)).toEqual({ kind: "no-match" })
+      expect(lowCacheHitRateStrategy.detectDeterministically?.(trace)).toEqual({ kind: "unmatched" })
     })
 
     it("no-match when no cache was ever written (caching absent/unsupported)", () => {
@@ -65,7 +65,7 @@ describe("lowCacheHitRateStrategy.detectDeterministically", () => {
         tokensCacheRead: 0,
         tokensCacheCreate: 0,
       })
-      expect(lowCacheHitRateStrategy.detectDeterministically?.(trace)).toEqual({ kind: "no-match" })
+      expect(lowCacheHitRateStrategy.detectDeterministically?.(trace)).toEqual({ kind: "unmatched" })
     })
 
     it("no-match on a healthy hit rate", () => {
@@ -74,7 +74,7 @@ describe("lowCacheHitRateStrategy.detectDeterministically", () => {
         tokensCacheRead: 40_000,
         tokensCacheCreate: 5_000,
       })
-      expect(lowCacheHitRateStrategy.detectDeterministically?.(trace)).toEqual({ kind: "no-match" })
+      expect(lowCacheHitRateStrategy.detectDeterministically?.(trace)).toEqual({ kind: "unmatched" })
     })
 
     it("no-match exactly at the hit-rate threshold (30%)", () => {
@@ -83,11 +83,11 @@ describe("lowCacheHitRateStrategy.detectDeterministically", () => {
         tokensCacheRead: 30_000,
         tokensCacheCreate: 10_000,
       })
-      expect(lowCacheHitRateStrategy.detectDeterministically?.(trace)).toEqual({ kind: "no-match" })
+      expect(lowCacheHitRateStrategy.detectDeterministically?.(trace)).toEqual({ kind: "unmatched" })
     })
 
     it("no-match on an empty trace with no tokens", () => {
-      expect(lowCacheHitRateStrategy.detectDeterministically?.(makeTrace([]))).toEqual({ kind: "no-match" })
+      expect(lowCacheHitRateStrategy.detectDeterministically?.(makeTrace([]))).toEqual({ kind: "unmatched" })
     })
   })
 

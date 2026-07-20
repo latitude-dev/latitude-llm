@@ -9,6 +9,7 @@ export const flaggerAnnotateInputSchema = z.object({
   scoreId: z.string().min(1),
   sessionId: z.string().nullable().optional(),
   simulationId: z.string().nullable().optional(),
+  contentHash: z.string().optional(),
 })
 
 export type FlaggerAnnotateInput = z.infer<typeof flaggerAnnotateInputSchema>

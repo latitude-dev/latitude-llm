@@ -1,4 +1,5 @@
 import {
+  type AnalyzeSessionResult,
   analyzeSessionUseCase,
   CONVERSATION_INTELLIGENCE_DETECTOR_VERSION,
   CONVERSATION_INTELLIGENCE_MIN_CONTENT_LENGTH,
@@ -6,7 +7,7 @@ import {
   SessionAnalysisRepository,
 } from "@domain/conversation-intelligence"
 import { OrganizationId, ProjectId, SessionId } from "@domain/shared"
-import { SessionRepository } from "@domain/spans"
+import { SessionRepository, sessionConversationMessages } from "@domain/spans"
 import { AIEmbedLive, AIGenerateLive, withAi } from "@platform/ai"
 import {
   EmbedBudgetResolverLive,
@@ -26,7 +27,7 @@ import { TaxonomyClusterRepositoryLive, withPostgres } from "@platform/db-postgr
 import { createLogger, withTracing } from "@repo/observability"
 import { hash } from "@repo/utils"
 import { Effect, Layer } from "effect"
-import { getClickhouseClient, getPostgresClient, getRedisClient } from "../clients.ts"
+import { getClickhouseClient, getPostgresClient, getQueuePublisher, getRedisClient } from "../clients.ts"
 
 const logger = createLogger("analyze-session-workflow")
 
@@ -46,18 +47,6 @@ interface AnalyzeSessionMessage {
   readonly index: number
   readonly role: "user" | "assistant" | "tool" | "system" | "unknown"
   readonly text: string
-}
-
-const sessionConversationMessages = (session: {
-  readonly systemInstructions: unknown
-  readonly lastInputMessages: readonly unknown[]
-  readonly outputMessages: readonly unknown[]
-}): readonly unknown[] => {
-  const systemMessage =
-    Array.isArray(session.systemInstructions) && session.systemInstructions.length > 0
-      ? [{ role: "system", parts: session.systemInstructions }]
-      : []
-  return [...systemMessage, ...session.lastInputMessages, ...session.outputMessages]
 }
 
 export interface AnalyzeSessionLoadedActivityResult {
@@ -243,6 +232,49 @@ export const detectAnalyzeSessionLabelsActivity = async (
 
 export const persistAnalyzeSessionActivity = (input: AnalyzeSessionActivityInput) => analyzeSessionActivity(input)
 
+/**
+ * Chains flagger screening onto every recorded generation, including skipped/
+ * failed analyses (short sessions still deserve screening; hints degrade to
+ * none) — but not backfill/reprocess (would trigger a flagging/billing storm).
+ * Best-effort: a queue failure never fails the persist. The dedupe key MUST
+ * include the analysis hash — a bare per-session jobId shadows later generations.
+ */
+const publishFlaggerScreening = (
+  input: AnalyzeSessionActivityInput,
+  result: AnalyzeSessionResult,
+): Effect.Effect<void> =>
+  Effect.gen(function* () {
+    if (input.reason !== "trace_completed") return
+    if (result.action !== "recorded") return
+
+    const publisher = yield* Effect.promise(() => getQueuePublisher())
+    yield* publisher.publish(
+      "flagger-screening",
+      "start",
+      {
+        organizationId: input.organizationId,
+        projectId: input.projectId,
+        sessionId: input.sessionId,
+        analysisHash: result.analysisHash,
+      },
+      {
+        dedupeKey: `org:${input.organizationId}:flagger-screening:${input.projectId}:${input.sessionId}:${result.analysisHash}`,
+      },
+    )
+  }).pipe(
+    Effect.catch((error) =>
+      Effect.sync(() =>
+        logger.error("Failed to enqueue flagger screening", {
+          organizationId: input.organizationId,
+          projectId: input.projectId,
+          sessionId: input.sessionId,
+          reason: input.reason,
+          error,
+        }),
+      ),
+    ),
+  )
+
 export const analyzeSessionActivity = (input: AnalyzeSessionActivityInput) => {
   const startedAt = Date.now()
   return Effect.runPromise(
@@ -263,6 +295,7 @@ export const analyzeSessionActivity = (input: AnalyzeSessionActivityInput) => {
       Effect.provide(RedisDistributedLockRepositoryLive(getRedisClient())),
       withAnalyzeSessionEmbeddingBudget,
       withAi(Layer.mergeAll(AIGenerateLive, AIEmbedLive), getRedisClient()),
+      Effect.tap((result) => publishFlaggerScreening(input, result)),
       Effect.tap((result) =>
         Effect.sync(() =>
           logger.info("AnalyzeSessionWorkflow activity completed", {

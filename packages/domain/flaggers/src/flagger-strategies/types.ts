@@ -1,4 +1,5 @@
-import type { TraceDetail } from "@domain/spans"
+import type { FlaggerConversation } from "../conversation.ts"
+import type { SessionHint, SessionHintKind } from "../hints/types.ts"
 
 export const FLAGGER_STRATEGY_SLUGS = [
   "frustration",
@@ -10,6 +11,9 @@ export const FLAGGER_STRATEGY_SLUGS = [
   // Frozen slug (historical typo) — persisted in DB + exposed as a public API/SDK/MCP key.
   // Do NOT rename. Display this flagger as "Thrashing" in any UI / prompt text.
   "trashing",
+  "bluffing",
+  "pii-leakage",
+  "incompletion",
   "tool-call-errors",
   "output-schema-validation",
   "empty-response",
@@ -20,8 +24,7 @@ export type FlaggerSlug = (typeof FLAGGER_STRATEGY_SLUGS)[number]
 
 export type DetectionResult =
   | { readonly kind: "matched"; readonly feedback: string; readonly messageIndex?: number | undefined }
-  | { readonly kind: "no-match" }
-  | { readonly kind: "ambiguous" }
+  | { readonly kind: "unmatched" }
 
 export interface FlaggerAnnotatorContext {
   readonly name: string
@@ -31,14 +34,19 @@ export interface FlaggerAnnotatorContext {
 
 export type FlaggerDisplayDetails = Pick<FlaggerAnnotatorContext, "name" | "description">
 
+export type FlaggerSuppressor = string | { readonly slug: string; readonly whenHintedBy: readonly SessionHintKind[] }
+
+export const suppressorSlug = (suppressor: FlaggerSuppressor): string =>
+  typeof suppressor === "string" ? suppressor : suppressor.slug
+
 export interface FlaggerStrategy {
-  hasRequiredContext(trace: TraceDetail): boolean
+  hasRequiredContext(conversation: FlaggerConversation): boolean
 
-  detectDeterministically?(trace: TraceDetail): DetectionResult
+  detectDeterministically?(conversation: FlaggerConversation): DetectionResult
 
-  buildSystemPrompt?(trace: TraceDetail): string
+  buildSystemPrompt?(conversation: FlaggerConversation): string
 
-  buildPrompt?(trace: TraceDetail): string
+  buildPrompt?(conversation: FlaggerConversation): string
 
   readonly annotator?: FlaggerAnnotatorContext
 
@@ -62,19 +70,44 @@ export interface FlaggerStrategy {
   readonly classifiesAssistantResponseOnly?: boolean
 
   /**
-   * Slugs of strategies whose deterministic `matched` or `ambiguous` outcome makes
-   * this strategy non-applicable for the same trace. When any listed suppressor
-   * triggers, this strategy is skipped entirely (no det check, no LLM enqueue) and
-   * the use-case emits a `suppressed` decision tagged with the suppressor.
+   * Strategies whose outcome makes this strategy non-applicable for the same
+   * session. A bare slug triggers on the suppressor's deterministic `matched`
+   * or any `hinted` outcome; `{ slug, whenHintedBy }` restricts the hinted
+   * case to the listed suppressor hint kinds (a deterministic match always
+   * triggers) — use it when some of the suppressor's hints are weak escalation
+   * leads rather than direct evidence of its failure mode. When a suppressor
+   * triggers, this strategy is skipped entirely (no det check, no LLM
+   * classification) and the use-case emits a `suppressed` decision.
    *
-   * Strategies listed here MUST run in phase 1 (i.e. have no `suppressedBy` themselves)
-   * to keep the dependency graph acyclic.
+   * Suppressors MUST run in phase 1 (i.e. have no `suppressedBy` themselves)
+   * to keep the dependency graph acyclic; `whenHintedBy` kinds must be
+   * declared in the suppressor's `hintKinds`. Both are validated at load.
    */
-  readonly suppressedBy?: readonly string[]
+  readonly suppressedBy?: readonly FlaggerSuppressor[]
+
+  /**
+   * Negative hint kinds that escalate an `unmatched` session to `hinted`
+   * (LLM pass, rate-limited only — never sampled).
+   */
+  readonly hintKinds?: readonly SessionHintKind[]
+
+  /** Overrides the default any-of-`hintKinds` check. */
+  isHintedBy?(hints: readonly SessionHint[], conversation: FlaggerConversation): boolean
+
+  /**
+   * Structural gate on an LLM classification match, enforced in code after
+   * parsing and before the adversarial review. Return `false` to discard the
+   * match — e.g. when the cited `messageIndex` does not satisfy the strategy's
+   * evidence requirements. Prompt guidance alone cannot guarantee this.
+   */
+  validateMatch?(
+    conversation: FlaggerConversation,
+    result: { readonly feedback?: string | undefined; readonly messageIndex?: number | undefined },
+  ): boolean
 }
 
 export interface LlmCapableFlaggerStrategy extends FlaggerStrategy {
-  buildSystemPrompt(trace: TraceDetail): string
-  buildPrompt(trace: TraceDetail): string
+  buildSystemPrompt(conversation: FlaggerConversation): string
+  buildPrompt(conversation: FlaggerConversation): string
   readonly annotator: FlaggerAnnotatorContext
 }

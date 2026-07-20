@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest"
 
 import { assistant, assistantToolCall, makeTrace, user } from "./test-helpers.ts"
-import { trashingStrategy } from "./trashing.ts"
+import { extractToolCallSequence, findDominantToolUsage, trashingStrategy } from "./trashing.ts"
 
 describe("trashingStrategy.detectDeterministically", () => {
   describe("matched (≥3 identical tool+args signatures)", () => {
@@ -30,7 +30,14 @@ describe("trashingStrategy.detectDeterministically", () => {
         assistantToolCall("enable", { x: 1 }),
       ])
 
-      expect(trashingStrategy.detectDeterministically?.(trace)).toEqual({ kind: "ambiguous" })
+      // Oscillation is dominance-shaped suspicion: it now raises the `tool:loop`
+      // hint instead of a deterministic outcome.
+      expect(trashingStrategy.detectDeterministically?.(trace)).toEqual({ kind: "unmatched" })
+      expect(findDominantToolUsage(extractToolCallSequence(trace))).toMatchObject({
+        name: "enable",
+        count: 3,
+        total: 5,
+      })
     })
 
     it("reports the actual repeat count in feedback when >3", () => {
@@ -52,8 +59,8 @@ describe("trashingStrategy.detectDeterministically", () => {
     })
   })
 
-  describe("ambiguous (one tool ≥60% of ≥5 calls, no exact-3 repeat)", () => {
-    it("ambiguous at exactly 60% dominance of 5 calls with varying args", () => {
+  describe("tool:loop dominance (one tool ≥60% of ≥5 calls, no exact-3 repeat)", () => {
+    it("finds dominance at exactly 60% of 5 calls with varying args (det stays unmatched)", () => {
       const trace = makeTrace([
         assistantToolCall("read_file", { path: "a.ts" }),
         assistantToolCall("read_file", { path: "b.ts" }),
@@ -62,10 +69,11 @@ describe("trashingStrategy.detectDeterministically", () => {
         assistantToolCall("write_file", { path: "y.ts" }),
       ])
 
-      expect(trashingStrategy.detectDeterministically?.(trace)).toEqual({ kind: "ambiguous" })
+      expect(trashingStrategy.detectDeterministically?.(trace)).toEqual({ kind: "unmatched" })
+      expect(findDominantToolUsage(extractToolCallSequence(trace))).toMatchObject({ name: "read_file", count: 3 })
     })
 
-    it("no-match when total calls < 5 even with high dominance", () => {
+    it("no dominance when total calls < 5", () => {
       const trace = makeTrace([
         assistantToolCall("read_file", { path: "a" }),
         assistantToolCall("read_file", { path: "b" }),
@@ -73,10 +81,11 @@ describe("trashingStrategy.detectDeterministically", () => {
         assistantToolCall("write_file", { path: "x" }),
       ])
 
-      expect(trashingStrategy.detectDeterministically?.(trace)).toEqual({ kind: "no-match" })
+      expect(trashingStrategy.detectDeterministically?.(trace)).toEqual({ kind: "unmatched" })
+      expect(findDominantToolUsage(extractToolCallSequence(trace))).toBeNull()
     })
 
-    it("no-match when no single tool reaches 60% dominance", () => {
+    it("no dominance when no single tool reaches 60%", () => {
       const trace = makeTrace([
         assistantToolCall("read_file", { path: "a" }),
         assistantToolCall("read_file", { path: "b" }),
@@ -85,33 +94,34 @@ describe("trashingStrategy.detectDeterministically", () => {
         assistantToolCall("run_tests", {}),
       ])
 
-      expect(trashingStrategy.detectDeterministically?.(trace)).toEqual({ kind: "no-match" })
+      expect(trashingStrategy.detectDeterministically?.(trace)).toEqual({ kind: "unmatched" })
+      expect(findDominantToolUsage(extractToolCallSequence(trace))).toBeNull()
     })
   })
 
-  describe("no-match (insufficient evidence)", () => {
-    it("returns no-match when fewer than 3 tool calls", () => {
+  describe("unmatched (insufficient evidence)", () => {
+    it("returns unmatched when fewer than 3 tool calls", () => {
       const trace = makeTrace([assistantToolCall("search", { q: "a" }), assistantToolCall("search", { q: "b" })])
 
-      expect(trashingStrategy.detectDeterministically?.(trace)).toEqual({ kind: "no-match" })
+      expect(trashingStrategy.detectDeterministically?.(trace)).toEqual({ kind: "unmatched" })
     })
 
-    it("returns no-match for a trace with no tool calls at all", () => {
+    it("returns unmatched for a trace with no tool calls at all", () => {
       const trace = makeTrace([user("hi"), assistant("hello")])
-      expect(trashingStrategy.detectDeterministically?.(trace)).toEqual({ kind: "no-match" })
+      expect(trashingStrategy.detectDeterministically?.(trace)).toEqual({ kind: "unmatched" })
     })
 
-    it("returns no-match when same tool but 3 distinct argument sets (narrowing search)", () => {
+    it("returns unmatched when same tool but 3 distinct argument sets (narrowing search)", () => {
       const trace = makeTrace([
         assistantToolCall("search", { q: "a" }),
         assistantToolCall("search", { q: "b" }),
         assistantToolCall("search", { q: "c" }),
       ])
 
-      expect(trashingStrategy.detectDeterministically?.(trace)).toEqual({ kind: "no-match" })
+      expect(trashingStrategy.detectDeterministically?.(trace)).toEqual({ kind: "unmatched" })
     })
 
-    it("returns no-match when exact reads recur across separate work, not consecutively", () => {
+    it("returns unmatched when exact reads recur across separate work, not consecutively", () => {
       const trace = makeTrace([
         assistantToolCall("Read", { file_path: "/Users/paula/to-do/context/MARKETING-TODO.md" }),
         assistantToolCall("Write", { file_path: "/Users/paula/to-do/context/MARKETING-TODO.md", content: "initial" }),
@@ -126,7 +136,7 @@ describe("trashingStrategy.detectDeterministically", () => {
         assistantToolCall("Read", { file_path: "/Users/paula/to-do/context/MARKETING-TODO.md" }),
       ])
 
-      expect(trashingStrategy.detectDeterministically?.(trace)).toEqual({ kind: "no-match" })
+      expect(trashingStrategy.detectDeterministically?.(trace)).toEqual({ kind: "unmatched" })
     })
   })
 

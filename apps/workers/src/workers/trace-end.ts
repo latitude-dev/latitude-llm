@@ -36,7 +36,6 @@ interface RunTraceEndDeps {
 type TraceEndRunSummary = {
   readonly traceId: string
   readonly sessionId: string | null
-  readonly deterministicFlaggersEnqueued: boolean
 }
 
 type TraceEndRunResult =
@@ -78,43 +77,14 @@ export const runTraceEndJob =
 
       const traceDetail = loaded.traceDetail
 
-      // trace-end owns per-trace fan-out: deterministic flaggers, trace-search, and saved-search
-      // monitors. Session-level work (signals:match, session analysis) is delegated to session-end.
-
-      // Hand the deterministic-flagger fan-out to its own worker. Per-strategy
-      // isolation (Effect.catch) lives there, so a broken detector can't
-      // fail the whole trace-end job.
-      const deterministicFlaggersEnqueued = yield* publisher
-        .publish(
-          "deterministic-flaggers",
-          "run",
-          {
-            organizationId: payload.organizationId,
-            projectId: payload.projectId,
-            traceId: payload.traceId,
-          },
-          {
-            dedupeKey: `deterministic-flaggers:${payload.traceId}`,
-          },
-        )
-        .pipe(
-          Effect.map(() => true),
-          Effect.catch((error) =>
-            Effect.gen(function* () {
-              yield* Effect.logError("Failed to enqueue deterministic-flaggers", {
-                ...buildRunLogContext(payload),
-                error,
-              })
-              return false
-            }),
-          ),
-        )
+      // trace-end owns per-trace fan-out (trace-search, saved-search monitors);
+      // session-level work (signals:match, analysis, flagger screening) is session-end's.
 
       const canonicalSessionId =
         traceDetail.sessionId && traceDetail.sessionId.length > 0 ? traceDetail.sessionId : traceDetail.traceId
 
       // Materialize the settled trace's memory-operation spans into the memory
-      // ledger. Its own worker + failure domain, like deterministic-flaggers.
+      // ledger, in its own worker + failure domain.
       // Stamp the trace's canonical session id: memory spans often carry no
       // session attribute even when sibling chat spans do.
       yield* publisher
@@ -205,7 +175,6 @@ export const runTraceEndJob =
         summary: {
           traceId: traceDetail.traceId,
           sessionId: traceDetail.sessionId ?? null,
-          deterministicFlaggersEnqueued,
         },
       } satisfies TraceEndRunResult
     }).pipe(withClickHouse(TraceRepositoryLive, clickhouseClient, OrganizationId(payload.organizationId)), withTracing)
@@ -229,7 +198,6 @@ export const createRunHandler =
             ...buildRunLogContext(payload),
             outcome: result.action,
             sessionId: result.summary.sessionId,
-            deterministicFlaggersEnqueued: result.summary.deterministicFlaggersEnqueued,
           })
         }),
       ),

@@ -71,6 +71,7 @@ const makeSession = (sessionId: string, traceIds: readonly string[]): Session =>
   providers: [],
   serviceNames: [],
   agentNames: [],
+  definedTools: [],
   rootSpanId: "",
   rootSpanName: "",
 })

@@ -489,11 +489,8 @@ const _registry = {
     }
   }>(),
 
-  // Runs the deterministic portion of every registered flagger strategy against
-  // a trace. Matched strategies write a SYSTEM-authored score directly; strategies
-  // that return `no-match` are sampled and, if selected, routed to the LLM
-  // workflow; `ambiguous` strategies are rate-limited per {org, slug} and also
-  // routed to the LLM workflow. Per-strategy failures are isolated.
+  // Unpublished legacy per-trace fan-out, kept so in-flight jobs drain.
+  // TODO: remove after the flagger-screening flip has been deployed ≥1 day.
   "deterministic-flaggers": payloads<{
     run: {
       readonly organizationId: string
@@ -511,6 +508,18 @@ const _registry = {
       readonly projectId: string
       readonly traceId: string
       readonly sessionId: string
+    }
+  }>(),
+
+  // Starts the session flagger screening workflow, published by the moments
+  // persist activity per recorded generation. The dedupe key MUST include the
+  // analysis hash — a bare per-session jobId shadows later generations.
+  "flagger-screening": payloads<{
+    start: {
+      readonly organizationId: string
+      readonly projectId: string
+      readonly sessionId: string
+      readonly analysisHash: string
     }
   }>(),
 

@@ -120,6 +120,15 @@ export interface ScoreRepositoryShape {
     readonly feedback: string
   }): Effect.Effect<Score | null, RepositoryError, SqlClient>
   /**
+   * Published flagger-authored annotations for one session, newest first,
+   * bounded by `limit`. Backs the flagger anchor dedup.
+   */
+  listPublishedSystemAnnotationsBySession(input: {
+    readonly projectId: ProjectId
+    readonly sessionId: SessionId
+    readonly limit?: number
+  }): Effect.Effect<readonly Score[], RepositoryError, SqlClient>
+  /**
    * Returns the distinct `metadata.flaggerSlug` values found across an issue's
    * published flagger-authored annotation occurrences (i.e. `source =
    * "annotation"`, `sourceId = "SYSTEM"`, `draftedAt IS NULL`), ordered with

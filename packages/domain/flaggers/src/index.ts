@@ -1,14 +1,30 @@
 export {
-  AMBIGUOUS_FLAGGER_DEFAULT_RATE_LIMIT,
   FLAGGER_CONTEXT_WINDOW,
   FLAGGER_DEFAULT_ANNOTATOR_MODEL,
   FLAGGER_DEFAULT_CLASSIFIER_MODEL,
   FLAGGER_DEFAULT_INSTRUCTION_EXTRACTOR_MODEL,
   FLAGGER_DEFAULT_SAMPLING,
   FLAGGER_DRAFT_DEFAULTS,
+  FLAGGER_HINT_EVIDENCE_MAX_CHARS,
+  FLAGGER_HINTED_RATE_LIMIT,
+  FLAGGER_PROMPT_MAX_HINTS,
+  FLAGGER_SAMPLED_POSITIVE_RATE_LIMIT,
+  FLAGGER_SAMPLED_RATE_LIMIT,
 } from "./constants.ts"
+export {
+  buildFlaggerSessionContext,
+  computeFlaggerAnchorContentHash,
+  type FlaggerConversation,
+  type FlaggerSessionContext,
+} from "./conversation.ts"
 export { FLAGGER_DEFAULT_ENABLED, type Flagger, flaggerSchema } from "./entities/flagger.ts"
 export {
+  DETERMINISTIC_FLAGGER_INSTRUCTIONS,
+  FLAGGER_DISPLAY,
+  type FlaggerDisplay,
+} from "./flagger-strategies/display.ts"
+export {
+  bluffingStrategy,
   type ConversationStage,
   type DetectionResult,
   emptyResponseStrategy,
@@ -33,10 +49,12 @@ export {
   MAX_SUSPICIOUS_SNIPPETS,
   nsfwStrategy,
   outputSchemaValidationStrategy,
+  piiLeakageStrategy,
   rankStagesByRefusalLikelihood,
   refusalStrategy,
   type SuspiciousSnippet,
   scoreRefusalLikelihood,
+  suppressorSlug,
   toolCallErrorsStrategy,
   trashingStrategy,
   truncateExcerpt,
@@ -44,12 +62,29 @@ export {
 } from "./flagger-strategies/index.ts"
 export { FLAGGER_STRATEGY_SLUGS } from "./flagger-strategies/types.ts"
 export {
+  collectToolCallErrorFindings,
   type DeterministicFlaggerMatch,
   detectEmptyResponseFlagger,
   detectLowCacheHitRateFlagger,
   detectOutputSchemaValidationFlagger,
   detectToolCallErrorsFlagger,
+  type ToolCallErrorFinding,
 } from "./helpers.ts"
+export {
+  gatherSessionHintsUseCase,
+  SESSION_HINT_GATHERERS,
+  type SessionHintGatherEnv,
+} from "./hints/gatherers.ts"
+export {
+  isPositiveSessionHintKind,
+  POSITIVE_SESSION_HINT_KINDS,
+  SESSION_HINT_KINDS,
+  type SessionHint,
+  type SessionHintAnchor,
+  type SessionHintContext,
+  type SessionHintGatherer,
+  type SessionHintKind,
+} from "./hints/types.ts"
 export {
   type FindFlaggerByProjectAndSlugInput,
   FlaggerRepository,
@@ -60,6 +95,12 @@ export {
   type UpdateFlaggerInput as RepositoryUpdateFlaggerInput,
 } from "./ports/flagger-repository.ts"
 export { isFlaggerGeneratedTrace, isReflagSuppressed, reflagSuppressionTags } from "./reflag.ts"
+export {
+  type ClassifySessionFlaggerInput,
+  type ClassifySessionFlaggerResult,
+  classifySessionFlaggerUseCase,
+  loadFlaggerSessionContextUseCase,
+} from "./use-cases/classify-session-flagger.ts"
 export {
   type ConfigureProjectFlaggersForOnboardingError,
   type ConfigureProjectFlaggersForOnboardingInput,
@@ -74,6 +115,11 @@ export {
   type DraftFlaggerAnnotationWithBillingInput,
   draftFlaggerAnnotationWithBillingUseCase,
 } from "./use-cases/draft-flagger-annotation-with-billing.ts"
+export {
+  type DraftSessionFlaggerAnnotationInput,
+  type DraftSessionFlaggerAnnotationResult,
+  draftSessionFlaggerAnnotationWithBillingUseCase,
+} from "./use-cases/draft-session-flagger-annotation.ts"
 export {
   type FindOrCreateFlaggerError,
   type FindOrCreateFlaggerInput,
@@ -96,7 +142,6 @@ export {
   getProjectFlaggersUseCase,
 } from "./use-cases/get-project-flaggers.ts"
 export {
-  type CheckAmbiguousRateLimit,
   type DroppedReason,
   type EnqueueFlaggerWorkflowStart,
   type FlaggerEnqueueReason,
@@ -113,7 +158,9 @@ export {
   provisionFlaggersUseCase,
 } from "./use-cases/provision-flaggers.ts"
 export {
+  type ClassifyConversationForFlaggerInput,
   type ClassifyTraceForFlaggerInput,
+  classifyConversationForFlaggerUseCase,
   classifyTraceForFlaggerUseCase,
   type RunFlaggerError,
   type RunFlaggerInput,
@@ -121,7 +168,9 @@ export {
   runFlaggerUseCase,
 } from "./use-cases/run-flagger.ts"
 export {
+  type AnnotateConversationForFlaggerInput,
   type AnnotateTraceForFlaggerInput,
+  annotateConversationForFlaggerUseCase,
   annotateTraceForFlaggerUseCase,
   type RunFlaggerAnnotatorError,
   type RunFlaggerAnnotatorInput,
@@ -133,6 +182,18 @@ export {
   type SaveFlaggerAnnotationInput,
   saveFlaggerAnnotationUseCase,
 } from "./use-cases/save-flagger-annotation.ts"
+export {
+  type CheckFlaggerLlmRateLimit,
+  type FlaggerClassificationReason,
+  type FlaggerClassificationRequest,
+  type ScreenSessionFlaggersDeps,
+  type ScreenSessionFlaggersError,
+  type ScreenSessionFlaggersInput,
+  type ScreenSessionFlaggersResult,
+  type SessionFlaggerDecision,
+  type SessionFlaggerDroppedReason,
+  screenSessionFlaggersUseCase,
+} from "./use-cases/screen-session-flaggers.ts"
 export {
   type UpdateFlaggerError,
   type UpdateFlaggerInput,

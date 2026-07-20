@@ -105,6 +105,7 @@ const sessionDetail: SessionDetail = {
   providers: ["openai"],
   serviceNames: ["web"],
   agentNames: [],
+  definedTools: [],
   rootSpanId: "",
   rootSpanName: "root",
   systemInstructions: [],

@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [9.3.0] - 2026-07-16
+
+### Added
+
+- `client.projects.update` `flaggers` map accepts two new slugs: `bluffing` (the assistant proceeds past a failed tool call as if it succeeded) and `pii-leakage` (the assistant's output exposes personal data it should not have surfaced).
+
 ## [9.2.0] - 2026-07-16
 
 ### Added

@@ -533,6 +533,38 @@ export const ScoreRepositoryLive = Layer.effect(
             .pipe(Effect.map((rows) => (rows[0] ? toDomainScore(rows[0]) : null)))
         }),
 
+      listPublishedSystemAnnotationsBySession: ({
+        projectId,
+        sessionId,
+        limit = 200,
+      }: {
+        readonly projectId: ProjectId
+        readonly sessionId: SessionId
+        readonly limit?: number
+      }) =>
+        Effect.gen(function* () {
+          const sqlClient = yield* resolveSqlClient()
+          return yield* sqlClient
+            .query((db, organizationId) =>
+              db
+                .select()
+                .from(scores)
+                .where(
+                  and(
+                    eq(scores.organizationId, organizationId),
+                    eq(scores.projectId, projectId),
+                    eq(scores.sourceType, "annotation"),
+                    eq(scores.sourceId, "SYSTEM"),
+                    eq(scores.sessionId, sessionId as string),
+                    isNull(scores.draftedAt),
+                  ),
+                )
+                .orderBy(desc(scores.createdAt))
+                .limit(limit),
+            )
+            .pipe(Effect.map((rows) => rows.map(toDomainScore)))
+        }),
+
       listFlaggerSlugsBySignalId: ({
         projectId,
         signalId,

@@ -120,6 +120,41 @@ export const MOMENT_LABEL_ANCHORS: readonly MomentLabelAnchorConfig[] = [
     margin: 0.06,
     summary: "Moment resembles a clarification loop",
   },
+  {
+    kind: "user_correction",
+    actor: "user",
+    roles: ["user"],
+    positiveAnchors: [
+      "the user corrects the assistant saying it got something wrong or misunderstood what was asked",
+      "the user restates information they already provided because the assistant lost or ignored it",
+    ],
+    // clarification_loop is the confusable neighbour: there the ASSISTANT asks
+    // again; here the USER asserts the fix.
+    contrastAnchors: [
+      "the user provides new information the assistant had not been given before",
+      "the user answers a clarifying question from the assistant",
+    ],
+    threshold: 0.58,
+    margin: 0.06,
+    summary: "User corrects the assistant or restates lost information",
+  },
+  {
+    kind: "stalling",
+    actor: "assistant",
+    roles: ["assistant"],
+    positiveAnchors: [
+      "the assistant asks the user to wait says one moment or that it is still working without delivering a result",
+      "the assistant repeatedly says it is checking processing or looking into it without making progress",
+    ],
+    // hesitation is the user-side mirror of this assistant-actored kind.
+    contrastAnchors: [
+      "the assistant delivers the requested result or answer",
+      "the assistant asks a specific question needed to proceed",
+    ],
+    threshold: 0.58,
+    margin: 0.06,
+    summary: "Assistant stalls without delivering progress",
+  },
 ]
 
 export const embedAnchorText = (text: string) =>

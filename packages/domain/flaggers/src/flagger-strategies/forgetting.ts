@@ -1,4 +1,4 @@
-import type { TraceDetail } from "@domain/spans"
+import type { FlaggerConversation } from "../conversation.ts"
 import { type ConversationStage, extractConversationStages } from "./refusal.ts"
 import { MAX_SNIPPET_EXCERPT_LENGTH, truncateExcerpt } from "./shared.ts"
 import type { FlaggerStrategy } from "./types.ts"
@@ -98,17 +98,19 @@ export const forgettingStrategy: FlaggerStrategy = {
   // empty-response matched → no assistant text to evaluate for context loss.
   suppressedBy: [],
 
-  hasRequiredContext(trace: TraceDetail): boolean {
+  hintKinds: ["moment:clarification_loop", "moment:user_frustration", "moment:user_correction", "pattern:frustration"],
+
+  hasRequiredContext(conversation: FlaggerConversation): boolean {
     // Forgetting requires prior context to forget — need at least 2 stages
-    return extractConversationStages(trace).length >= 2
+    return extractConversationStages(conversation).length >= 2
   },
 
   buildSystemPrompt(): string {
     return FORGETTING_SYSTEM_PROMPT
   },
 
-  buildPrompt(trace: TraceDetail): string {
-    const stages = extractConversationStages(trace)
+  buildPrompt(conversation: FlaggerConversation): string {
+    const stages = extractConversationStages(conversation)
     // Keep the earliest stages (constraints/facts) and the most recent stages (where forgetting surfaces)
     const early = stages.slice(0, 2)
     const late = stages.length > 4 ? stages.slice(-Math.max(1, MAX_FORGETTING_STAGES - early.length)) : stages.slice(2)
