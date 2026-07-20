@@ -37,6 +37,9 @@ export namespace UpdateProjectBody {
         jailbreaking?: boolean | undefined;
         forgetting?: boolean | undefined;
         trashing?: boolean | undefined;
+        bluffing?: boolean | undefined;
+        "pii-leakage"?: boolean | undefined;
+        incompletion?: boolean | undefined;
         "tool-call-errors"?: boolean | undefined;
         "output-schema-validation"?: boolean | undefined;
         "empty-response"?: boolean | undefined;

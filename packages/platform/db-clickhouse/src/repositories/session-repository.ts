@@ -324,6 +324,7 @@ const toDomainSession = (row: SessionListRow): Session => ({
   providers: row.providers.map(normalizeCHString),
   serviceNames: row.service_names.map(normalizeCHString),
   agentNames: row.agent_names.map(normalizeCHString),
+  definedTools: row.defined_tools.map(normalizeCHString),
   rootSpanId: SpanId(normalizeCHString(row.root_span_id)),
   rootSpanName: normalizeCHString(row.root_span_name),
 })

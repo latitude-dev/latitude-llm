@@ -2,17 +2,18 @@
 
 Conversation intelligence turns raw session telemetry into semantic structure: **session analyses**, **session semantic moments**, **session moment labels** (signals like escalation or frustration), and **session-level taxonomy observations** that feed the topic tree documented in [`./taxonomy.md`](./taxonomy.md). It is the session-analysis half of the behaviours product; the clustering half lives in the taxonomy domain.
 
-Domain code: `packages/domain/conversation-intelligence`. ClickHouse adapters: `packages/platform/db-clickhouse/src/repositories/conversation-intelligence-repositories.ts`. Orchestration: `apps/workflows/src/workflows/analyze-session-workflow.ts` + `apps/workflows/src/activities/analyze-session-activities.ts`, started from the trace-end boundary (see [`./spans.md`](./spans.md)) with the deterministic workflow id `org:${organizationId}:conversation-intelligence:analyzeSession:${projectId}:${sessionId}`.
+Domain code: `packages/domain/conversation-intelligence`. ClickHouse adapters: `packages/platform/db-clickhouse/src/repositories/conversation-intelligence-repositories.ts`. Orchestration: `apps/workflows/src/workflows/analyze-session-workflow.ts` + `apps/workflows/src/activities/analyze-session-activities.ts`, started from the `session-end` worker (fed by trace-end, see [`./spans.md`](./spans.md)) with the deterministic workflow id `org:${organizationId}:conversation-intelligence:analyzeSession:${projectId}:${sessionId}`.
 
 ### Triggering, debounce, and re-analysis
 
-The trace-end boundary triggers analysis with **`signalWithStart`**, not a plain start: it targets the stable per-session workflow id, sends the `traceCompleted` signal, and uses `workflowIdReusePolicy: "ALLOW_DUPLICATE"` so a session whose previous analysis workflow already *completed* can be analyzed again when a later trace arrives. Because the workflow id is per session, every trace in a session converges on one workflow execution.
+The `session-end` worker triggers analysis with **`signalWithStart`**, not a plain start: it targets the stable per-session workflow id, sends the `traceCompleted` signal, and uses `workflowIdReusePolicy: "ALLOW_DUPLICATE"` so a session whose previous analysis workflow already *completed* can be analyzed again when a later trace arrives. Because the workflow id is per session, every trace in a session converges on one workflow execution. The settle debounce lives in the `session-end` queue job (`SESSION_END_DEBOUNCE_MS`, 5 min, last-write-wins per session); the workflow's old internal debounce was patched out.
 
 The workflow registers a `traceCompleted` signal handler on entry (so a signal delivered to an already-running execution is handled, never rejected as unknown), then:
 
-1. Debounces (`CONVERSATION_INTELLIGENCE_ANALYSIS_DEBOUNCE_MS`) so a burst of trailing traces collapses into one analysis. Signals received *during* the initial debounce need no extra pass — the first load after the debounce already sees the latest session state, so the rerun flag is cleared once before the loop.
-2. Runs one analysis pass (`runAnalyzeSessionPass`: load → hash → eligibility → embed → segment → label → persist).
-3. If a `traceCompleted` signal arrived *during or after* a pass, runs one more deterministic pass; the next pass reloads the latest session state before hashing, so it picks up traces that landed mid-analysis. The loop exits when a pass completes with no pending rerun. Each pass is independently idempotent, so the loop is safe under Temporal retry/replay.
+1. Runs one analysis pass (`runAnalyzeSessionPass`: load → hash → eligibility → embed → persist).
+2. If a `traceCompleted` signal arrived *during or after* a pass, runs one more deterministic pass; the next pass reloads the latest session state before hashing, so it picks up traces that landed mid-analysis. The loop exits when a pass completes with no pending rerun. Each pass is independently idempotent, so the loop is safe under Temporal retry/replay.
+
+The persist activity also chains the **flagger screening pass** (see [`./flaggers.md`](./flaggers.md)): it publishes `flagger-screening` for every recorded generation — including `skipped_*`/`failed` analyses — with a dedupe key that embeds the `analysis_hash`. Flaggers deliberately run after moments so labels can serve as detection hints.
 
 ## Design stance: embeddings-only in the hot path
 
@@ -25,7 +26,7 @@ The taxonomy and signal gates intentionally use fixed constants. This keeps QA t
 The Temporal workflow is split into deterministic orchestration plus cache warm-up activities. `loadAnalyzeSessionActivity`, `hashAnalyzeSessionActivity`, and `checkAnalyzeSessionEligibilityActivity` decide whether work is needed; for ordinary trace-completed runs the workflow then warms the turn-embedding and label-anchor caches before calling `persistAnalyzeSessionActivity`. The persisted state is still produced by the full `analyzeSessionUseCase`, so backfill/manual runs and trace-completed runs share the same write path:
 
 ```
-SessionRepository ──► occurrence-derived session spine
+SessionRepository ──► session conversation (latest responsive span window)
         │
         ▼
 turn extraction (tool telemetry stripped)
@@ -49,11 +50,11 @@ persist: taxonomy observation (CH, first) ──► centroid increments (PG, ret
 
 Sessions that are empty, too short, or not user/agent conversations short-circuit into explicit `skipped_*` statuses before any embedding or model cost. Failures record `analysis_status = 'failed'` with a zeroed hash that can never masquerade as a current analysis.
 
-### Session spine and turn extraction
+### Session conversation and turn extraction
 
-Messages come from `SessionRepository.findConversationSpineBySessionId`, not from the latest session detail alone. The preferred spine is derived from `trace_message_occurrences`: distinct message content hashes in first-seen order across the session. This makes compacted sessions analyzable as the full historical spine plus the compaction summary plus subsequent turns, instead of only the latest compacted trace payload. If occurrence rows are absent for an old session, the repository falls back to the legacy session-detail reconstruction.
+Messages come from `SessionRepository.findBySessionId` (a `SessionDetail`); the analyzer builds the conversation with `sessionConversationMessages` (`@domain/spans`): system instructions + the **latest responsive span's input window** + its output — the exact message list the session drawer renders. This is deliberate: label/segment message indices must address the same positions the UI anchors badges to (`data-message-index`), so a consolidated cross-trace spine (which would renumber messages) is rejected. The flagger domain builds its conversation from the same helper, so flagger `messageIndex` anchors share this index space.
 
-The analyzer reindexes the returned spine contiguously, so `firstMessageIndex` / `lastMessageIndex` on moments and labels are append-stable as the session grows. Compaction summary candidates stay in the conversation record and segmentation input, but anchor-label scoring skips them so a synthetic sentence like "the user was frustrated" does not create a frustration label by itself.
+Mid-session context compaction is handled implicitly, by construction: `lastInputMessages` is the model's context window at the last turn, so after a compaction the analyzed conversation is the compaction summary plus the post-compaction turns — exactly what the model was given. Pre-compaction turns are not re-fetched, and a summary message is embedded, segmented, and label-eligible like any other message.
 
 Tool-role messages and tool-call telemetry inside assistant messages are **stripped before any embedding** — tool names like `get_customer_by_phone` otherwise dominate moment embeddings and produce false labels. Empty-text messages are dropped. When a session has no 32-char trace id, moments reference a stable 32-hex surrogate hashed from the triggering id instead of failing schema validation.
 
@@ -68,11 +69,11 @@ Turns group into **semantic moments** by cosine continuity against the running m
 
 ### Moment labels (signals)
 
-`MOMENT_KINDS` (constants.ts): `escalation`, `hesitation`, `abandonment`, `user_frustration`, `user_satisfaction`, `resolution`, `policy_refusal`, `clarification_loop`.
+`MOMENT_KINDS` (constants.ts): `escalation`, `hesitation`, `abandonment`, `user_frustration`, `user_satisfaction`, `resolution`, `policy_refusal`, `clarification_loop`, `user_correction` (the user asserts the assistant got it wrong or restates lost information — distinct from `clarification_loop`, where the assistant asks again), and `stalling` (the assistant-side mirror of `hesitation`: "one moment", "still working" without progress). New kinds must be semantically distinct from the existing set (separable anchor sets), and adding one bumps `CONVERSATION_INTELLIGENCE_DETECTOR_VERSION` so sessions re-analyze on their next trace. Kinds flow automatically into the flagger hint union as `moment:<kind>` hints (declare positive kinds in the flaggers domain).
 
-Each kind has a set of anchor phrases (`anchors.ts`), embedded once per process and detector version. A turn fires a kind when its cosine to the kind's best anchor clears that kind's static gate (threshold + margin). Labels attach to the semantic moment containing their message range, falling back to the nearest moment by index distance — never blindly the session's first moment. Turns marked as compaction summary candidates are excluded from this anchor pass only.
+Each kind has a set of positive and contrast anchor phrases plus a role filter (`anchors.ts`), embedded once per process and detector version. A turn fires a kind when its cosine to the kind's best positive anchor clears that kind's static gate (threshold + margin over the contrast anchors). Labels attach to the semantic moment containing their message range, falling back to the nearest moment by index distance — never blindly the session's first moment.
 
-Labels are **behavioral signals, not topics**. They feed the Signals columns, the sessions-table moments filter, and per-cluster intelligence rollups; they intentionally do not create taxonomy clusters.
+Labels are **behavioral signals, not topics**. They feed the Signals columns, the sessions-table moments filter, per-cluster intelligence rollups, and the flagger hint catalog (as `moment:<kind>` hints — [`./flaggers.md`](./flaggers.md)); they intentionally do not create taxonomy clusters or scores.
 
 ### Topic projection and routing
 

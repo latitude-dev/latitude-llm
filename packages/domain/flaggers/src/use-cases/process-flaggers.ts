@@ -16,6 +16,7 @@ import {
   getFlaggerStrategy,
   isLlmCapableStrategy,
   listFlaggerStrategySlugs,
+  suppressorSlug,
 } from "../flagger-strategies/index.ts"
 import { isReflagSuppressed } from "../reflag.ts"
 import { type FlaggerCacheEntry, getProjectFlaggersUseCase } from "./get-project-flaggers.ts"
@@ -27,7 +28,7 @@ export interface ProcessFlaggersInput {
   readonly traceId: string
 }
 
-export type FlaggerEnqueueReason = "sampled" | "ambiguous"
+export type FlaggerEnqueueReason = "sampled"
 
 export type EnqueueFlaggerWorkflowStart = (args: {
   readonly organizationId: string
@@ -38,14 +39,8 @@ export type EnqueueFlaggerWorkflowStart = (args: {
   readonly reason: FlaggerEnqueueReason
 }) => Effect.Effect<void, QueuePublishError>
 
-export type CheckAmbiguousRateLimit = (args: {
-  readonly organizationId: string
-  readonly flaggerSlug: string
-}) => Effect.Effect<boolean>
-
 export interface ProcessFlaggersDeps {
   readonly enqueueWorkflowStart: EnqueueFlaggerWorkflowStart
-  readonly checkAmbiguousRateLimit: CheckAmbiguousRateLimit
 }
 
 export type StrategyDecision =
@@ -55,15 +50,7 @@ export type StrategyDecision =
   | { readonly slug: string; readonly action: "suppressed"; readonly suppressedBy: string }
   | { readonly slug: string; readonly action: "failed" }
 
-export type DroppedReason =
-  | "missing-context"
-  | "no-match"
-  | "sampled-out"
-  | "rate-limited"
-  | "no-llm-capability"
-  | "ambiguous-without-llm"
-  | "disabled"
-  | "missing-flagger"
+export type DroppedReason = "missing-context" | "unmatched" | "sampled-out" | "disabled" | "missing-flagger"
 
 export interface ProcessFlaggersResult {
   readonly decisions: readonly StrategyDecision[]
@@ -160,13 +147,9 @@ export const processFlaggersUseCase = Effect.fn("flaggers.processFlaggers")(func
 
 const EMPTY_SET: ReadonlySet<string> = new Set()
 
-const isSuppressingDecision = (decision: StrategyDecision): boolean => {
-  if (decision.action === "matched-issue") return true
-  if (decision.action === "enqueued" && decision.reason === "ambiguous") return true
-  if (decision.action !== "dropped") return false
-
-  return decision.reason === "rate-limited" || decision.reason === "ambiguous-without-llm"
-}
+// Only a deterministic match suppresses on this drain path — softer suspicion
+// lives in the session hint catalog, which this per-trace pass does not run.
+const isSuppressingDecision = (decision: StrategyDecision): boolean => decision.action === "matched-issue"
 
 interface ProcessOneStrategyInput {
   readonly slug: string
@@ -183,7 +166,7 @@ const processOneStrategy = (input: ProcessOneStrategyInput) =>
   Effect.gen(function* () {
     const strategy = getFlaggerStrategy(input.slug)
     if (!strategy) {
-      return { slug: input.slug, action: "dropped", reason: "no-match" } satisfies StrategyDecision
+      return { slug: input.slug, action: "dropped", reason: "unmatched" } satisfies StrategyDecision
     }
 
     const flagger = input.flagger
@@ -197,11 +180,12 @@ const processOneStrategy = (input: ProcessOneStrategyInput) =>
 
     if (strategy.suppressedBy) {
       for (const suppressor of strategy.suppressedBy) {
-        if (input.suppressorTriggeredSlugs.has(suppressor)) {
+        const slug = suppressorSlug(suppressor)
+        if (input.suppressorTriggeredSlugs.has(slug)) {
           return {
             slug: input.slug,
             action: "suppressed",
-            suppressedBy: suppressor,
+            suppressedBy: slug,
           } satisfies StrategyDecision
         }
       }
@@ -213,16 +197,13 @@ const processOneStrategy = (input: ProcessOneStrategyInput) =>
 
     const result = strategy.detectDeterministically
       ? strategy.detectDeterministically(input.trace)
-      : ({ kind: "no-match" } as const)
+      : ({ kind: "unmatched" } as const)
 
-    switch (result.kind) {
-      case "matched":
-        return yield* handleMatched(input, result.feedback, result.messageIndex)
-      case "no-match":
-        return yield* handleNoMatch(input, flagger, strategy)
-      case "ambiguous":
-        return yield* handleAmbiguous(input, flagger, strategy)
+    if (result.kind === "matched") {
+      return yield* handleMatched(input, result.feedback, result.messageIndex)
     }
+
+    return yield* handleUnmatched(input, flagger, strategy)
   })
 
 const handleMatched = (input: ProcessOneStrategyInput, feedback: string, messageIndex?: number) =>
@@ -242,10 +223,10 @@ const handleMatched = (input: ProcessOneStrategyInput, feedback: string, message
     return { slug: input.slug, action: "matched-issue" } satisfies StrategyDecision
   })
 
-const handleNoMatch = (input: ProcessOneStrategyInput, flagger: FlaggerCacheEntry, strategy: FlaggerStrategy) =>
+const handleUnmatched = (input: ProcessOneStrategyInput, flagger: FlaggerCacheEntry, strategy: FlaggerStrategy) =>
   Effect.gen(function* () {
     if (!isLlmCapableStrategy(strategy)) {
-      return { slug: input.slug, action: "dropped", reason: "no-match" } satisfies StrategyDecision
+      return { slug: input.slug, action: "dropped", reason: "unmatched" } satisfies StrategyDecision
     }
 
     const sampled = yield* Effect.promise(() =>
@@ -269,31 +250,4 @@ const handleNoMatch = (input: ProcessOneStrategyInput, flagger: FlaggerCacheEntr
     })
 
     return { slug: input.slug, action: "enqueued", reason: "sampled" } satisfies StrategyDecision
-  })
-
-const handleAmbiguous = (input: ProcessOneStrategyInput, flagger: FlaggerCacheEntry, strategy: FlaggerStrategy) =>
-  Effect.gen(function* () {
-    if (!isLlmCapableStrategy(strategy)) {
-      return { slug: input.slug, action: "dropped", reason: "ambiguous-without-llm" } satisfies StrategyDecision
-    }
-
-    const allowed = yield* input.deps.checkAmbiguousRateLimit({
-      organizationId: input.organizationId,
-      flaggerSlug: input.slug,
-    })
-
-    if (!allowed) {
-      return { slug: input.slug, action: "dropped", reason: "rate-limited" } satisfies StrategyDecision
-    }
-
-    yield* input.deps.enqueueWorkflowStart({
-      organizationId: input.organizationId,
-      projectId: input.projectId,
-      traceId: input.traceId,
-      flaggerId: flagger.flaggerId,
-      flaggerSlug: input.slug,
-      reason: "ambiguous",
-    })
-
-    return { slug: input.slug, action: "enqueued", reason: "ambiguous" } satisfies StrategyDecision
   })

@@ -26,7 +26,7 @@ export {
   TRACE_SEARCH_CHARS_PER_TOKEN_ESTIMATE,
 } from "./constants.ts"
 export type { Session, SessionDetail } from "./entities/session.ts"
-export { sessionDetailSchema, sessionSchema } from "./entities/session.ts"
+export { sessionConversationMessages, sessionDetailSchema, sessionSchema } from "./entities/session.ts"
 export type { SessionSearchMatch } from "./entities/session-search-match.ts"
 export type { Operation, Span, SpanDetail, SpanKind, SpanStatusCode, ToolDefinition } from "./entities/span.ts"
 export {

@@ -1423,6 +1423,9 @@ importers:
       '@domain/billing':
         specifier: workspace:*
         version: link:../billing
+      '@domain/conversation-intelligence':
+        specifier: workspace:*
+        version: link:../conversation-intelligence
       '@domain/events':
         specifier: workspace:*
         version: link:../events
@@ -1444,6 +1447,9 @@ importers:
       effect:
         specifier: 'catalog:'
         version: 4.0.0-beta.57
+      rosetta-ai:
+        specifier: 'catalog:'
+        version: 2.2.0
       zod:
         specifier: 'catalog:'
         version: 4.3.6

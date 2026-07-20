@@ -32,6 +32,7 @@ const annotationAnchorFields = {
   startOffset: z.number().int().nonnegative().optional(), // optional start offset for substring annotations within a textual part
   endOffset: z.number().int().nonnegative().optional(), // optional end offset for substring annotations within a textual part
   textFormat: z.enum(ANNOTATION_ANCHOR_TEXT_FORMATS).optional(), // optional UI-side text transform applied before the offsets were captured (e.g. prettified JSON); resolvers must apply the same transform before slicing
+  contentHash: z.string().optional(), // hash of the anchored message's content; flagger dedup key per (session, flaggerSlug) that survives compaction renumbering (flagger rows only)
 } as const
 
 function validateAnnotationAnchor(anchor: AnnotationAnchorInput, ctx: z.core.$RefinementCtx<unknown>) {

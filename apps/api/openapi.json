@@ -353,6 +353,15 @@
               "trashing": {
                 "type": "boolean"
               },
+              "bluffing": {
+                "type": "boolean"
+              },
+              "pii-leakage": {
+                "type": "boolean"
+              },
+              "incompletion": {
+                "type": "boolean"
+              },
               "tool-call-errors": {
                 "type": "boolean"
               },

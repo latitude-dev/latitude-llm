@@ -66,6 +66,7 @@ import { createUserDeletionWorker } from "./workers/domain-events/user-deletion.
 import { createDomainEventsWorker } from "./workers/domain-events.ts"
 import { createEvaluationsWorker } from "./workers/evaluations.ts"
 import { createExportsWorker } from "./workers/exports.ts"
+import { createFlaggerScreeningWorker } from "./workers/flagger-screening.ts"
 import { createLiveEvaluationsWorker } from "./workers/live-evaluations.ts"
 import { createMemoryProjectionWorker } from "./workers/memory-projection.ts"
 import { createMonitorsWorker } from "./workers/monitors.ts"
@@ -240,6 +241,8 @@ const bootstrap = async () => {
     createSignalsMatchWorker(ctx)
     createSignalsPreviewWorker(ctx)
     createSignalsGenerateSignalWorker(ctx)
+    createFlaggerScreeningWorker(ctx)
+    // TODO: remove the drain-only flagger workers + topics after the flip has been live ≥1 day.
     createDeterministicFlaggersWorker(ctx)
     createMemoryProjectionWorker(ctx)
     createStartFlaggerWorkflowWorker(ctx)

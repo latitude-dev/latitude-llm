@@ -5,8 +5,8 @@ import {
   hashMessageContent,
   MessageEmbeddingRepository,
   type MessageEmbeddingUpsert,
-  type SessionDetail,
   SessionRepository,
+  sessionConversationMessages,
   TRACE_SEARCH_CHARS_PER_TOKEN_ESTIMATE,
   TraceSearchBudget,
 } from "@domain/spans"
@@ -55,12 +55,24 @@ export interface AnalyzeSessionInput {
   readonly retentionDays?: number
 }
 
+// Deterministic across activity retries (same trigger → same key) while each
+// new trace that re-triggers a still-failing session gets a fresh screening job.
+const failedResultAnalysisKey = (triggeringTraceId: string): string => `failed-${triggeringTraceId}`
+
 export type AnalyzeSessionResult =
   | { readonly action: "skipped"; readonly reason: "session-not-found" | "hash-current" }
   | {
       readonly action: "recorded"
       readonly status: SessionAnalysis["analysisStatus"]
       readonly momentCount: number
+      /**
+       * Keys the flagger-screening dedupe. The persisted row of a `failed`
+       * analysis keeps the zeroed hash (it must never masquerade as a current
+       * generation), but the result carries a per-trigger key instead — an
+       * all-zero value would shadow every later failed generation's screening
+       * job behind the first one's persistent BullMQ job id.
+       */
+      readonly analysisHash: string
     }
 
 const extractionMomentSchema = z.object({
@@ -74,14 +86,6 @@ const extractionMomentSchema = z.object({
 })
 
 const TAXONOMY_DIRECT_PROJECTION_MAX_LENGTH = CONVERSATION_INTELLIGENCE_LLM_MAX_DOCUMENT_CHARS
-
-const sessionConversationMessages = (session: SessionDetail): readonly unknown[] => {
-  const systemMessage =
-    Array.isArray(session.systemInstructions) && session.systemInstructions.length > 0
-      ? [{ role: "system", parts: session.systemInstructions }]
-      : []
-  return [...systemMessage, ...session.lastInputMessages, ...session.outputMessages]
-}
 
 const middleTruncate = (value: string, maxLength: number): string => {
   if (value.length <= maxLength) return value
@@ -419,7 +423,12 @@ export const analyzeSessionUseCase = (input: AnalyzeSessionInput) =>
         retentionDays: input.retentionDays ?? CONVERSATION_INTELLIGENCE_RETENTION_DAYS,
         indexedAt,
       })
-      return { action: "recorded", status: "failed", momentCount: 0 } satisfies AnalyzeSessionResult
+      return {
+        action: "recorded",
+        status: "failed",
+        momentCount: 0,
+        analysisHash: failedResultAnalysisKey(input.triggeringTraceId),
+      } satisfies AnalyzeSessionResult
     }
 
     const traceIds = session.traceIds.filter((traceId) => traceId.length === 32).map(TraceId)
@@ -455,7 +464,12 @@ export const analyzeSessionUseCase = (input: AnalyzeSessionInput) =>
 
     if (normalizedMessages.length === 0 || document.length === 0) {
       yield* analyses.upsert({ ...baseAnalysis, analysisStatus: "skipped_empty", statusReason: "No semantic messages" })
-      return { action: "recorded", status: "skipped_empty", momentCount: 0 } satisfies AnalyzeSessionResult
+      return {
+        action: "recorded",
+        status: "skipped_empty",
+        momentCount: 0,
+        analysisHash,
+      } satisfies AnalyzeSessionResult
     }
     if (document.length < CONVERSATION_INTELLIGENCE_MIN_CONTENT_LENGTH) {
       yield* analyses.upsert({
@@ -467,6 +481,7 @@ export const analyzeSessionUseCase = (input: AnalyzeSessionInput) =>
         action: "recorded",
         status: "skipped_too_short",
         momentCount: 0,
+        analysisHash,
       } satisfies AnalyzeSessionResult
     }
     if (!canAnalyzeConversation) {
@@ -479,6 +494,7 @@ export const analyzeSessionUseCase = (input: AnalyzeSessionInput) =>
         action: "recorded",
         status: "skipped_non_conversation",
         momentCount: 0,
+        analysisHash,
       } satisfies AnalyzeSessionResult
     }
 
@@ -711,6 +727,7 @@ export const analyzeSessionUseCase = (input: AnalyzeSessionInput) =>
       action: "recorded",
       status: "analyzed",
       momentCount: validatedMoments.length,
+      analysisHash,
     } satisfies AnalyzeSessionResult
   }).pipe(
     Effect.catch((error: unknown) =>
@@ -734,7 +751,12 @@ export const analyzeSessionUseCase = (input: AnalyzeSessionInput) =>
           retentionDays: input.retentionDays ?? CONVERSATION_INTELLIGENCE_RETENTION_DAYS,
           indexedAt,
         })
-        return { action: "recorded", status: "failed", momentCount: 0 } satisfies AnalyzeSessionResult
+        return {
+          action: "recorded",
+          status: "failed",
+          momentCount: 0,
+          analysisHash: failedResultAnalysisKey(input.triggeringTraceId),
+        } satisfies AnalyzeSessionResult
       }),
     ),
     Effect.withSpan("conversationIntelligence.analyzeSession"),

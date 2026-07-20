@@ -1,15 +1,15 @@
-import type { TraceDetail } from "@domain/spans"
+import type { FlaggerConversation } from "../conversation.ts"
 import { isMessagePart, iterMessageParts, MAX_STAGES_PER_PROMPT } from "./shared.ts"
-import type { DetectionResult, FlaggerStrategy } from "./types.ts"
+import type { FlaggerStrategy } from "./types.ts"
 
 /**
- * Minimum `scoreRefusalLikelihood` value that promotes a trace from
- * `no-match` to `ambiguous`. The scorer weights deflection language
- * (`try`, `instead`) at 1 and the weakest actual-refusal pattern
- * (`inappropriate`, `not permitted`) at 2, so `>= 2` filters out pure
- * deflection noise while still catching every explicit refusal phrase.
+ * Minimum `scoreRefusalLikelihood` value that raises the `pattern:refusal`
+ * hint. The scorer weights deflection language (`try`, `instead`) at 1 and the
+ * weakest actual-refusal pattern (`inappropriate`, `not permitted`) at 2, so
+ * `>= 2` filters out pure deflection noise while still catching every explicit
+ * refusal phrase.
  */
-const REFUSAL_AMBIGUOUS_SCORE_THRESHOLD = 2
+export const REFUSAL_PATTERN_SCORE_THRESHOLD = 2
 
 // ---------------------------------------------------------------------------
 // Refusal Strategy - Multi-stage classifier
@@ -123,14 +123,16 @@ const MAX_MESSAGES_PER_STAGE = 4
  * Segment trace into conversation stages.
  * A stage is a contiguous user message block followed by an assistant response.
  */
-export function extractConversationStages(trace: Pick<TraceDetail, "allMessages">): readonly ConversationStage[] {
+export function extractConversationStages(
+  conversation: Pick<FlaggerConversation, "allMessages">,
+): readonly ConversationStage[] {
   const stages: ConversationStage[] = []
   let currentUserMessages: string[] = []
   let currentHasToolCalls = false
   const currentToolsUsed = new Set<string>()
   let stageIndex = 0
 
-  for (const message of trace.allMessages) {
+  for (const message of conversation.allMessages) {
     if (message.role === "user") {
       // Accumulate user messages
       for (const part of iterMessageParts(message.parts)) {
@@ -303,27 +305,19 @@ export const refusalStrategy: FlaggerStrategy = {
   // jailbreaking / nsfw matched → assistant's refusal is justified, not a defect.
   suppressedBy: ["jailbreaking", "nsfw"],
 
-  hasRequiredContext(trace: TraceDetail): boolean {
-    const stages = extractConversationStages(trace)
-    return stages.length > 0
-  },
+  hintKinds: ["pattern:refusal", "moment:policy_refusal"],
 
-  detectDeterministically(trace: TraceDetail): DetectionResult {
-    const stages = extractConversationStages(trace)
-    for (const stage of stages) {
-      if (scoreRefusalLikelihood(stage) >= REFUSAL_AMBIGUOUS_SCORE_THRESHOLD) {
-        return { kind: "ambiguous" }
-      }
-    }
-    return { kind: "no-match" }
+  hasRequiredContext(conversation: FlaggerConversation): boolean {
+    const stages = extractConversationStages(conversation)
+    return stages.length > 0
   },
 
   buildSystemPrompt(): string {
     return REFUSAL_SYSTEM_PROMPT
   },
 
-  buildPrompt(trace: TraceDetail): string {
-    const allStages = extractConversationStages(trace)
+  buildPrompt(conversation: FlaggerConversation): string {
+    const allStages = extractConversationStages(conversation)
     const topStages = rankStagesByRefusalLikelihood(allStages, MAX_STAGES_PER_PROMPT)
 
     if (topStages.length === 0) {

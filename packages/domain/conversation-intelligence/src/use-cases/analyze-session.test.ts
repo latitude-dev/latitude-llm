@@ -90,6 +90,7 @@ const makeSession = (overrides: Partial<SessionDetail> = {}): SessionDetail => (
   providers: ["openai"],
   serviceNames: ["chat-api"],
   agentNames: [],
+  definedTools: [],
   rootSpanId: SpanId("s".repeat(16)),
   rootSpanName: "chat",
   systemInstructions: { role: "system", parts: [] } as never,
@@ -304,7 +305,7 @@ describe("analyzeSessionUseCase", () => {
     const result = await Effect.runPromise(effect)
     const analysis = [...analyses.rows.values()][0]
 
-    expect(result).toEqual({ action: "recorded", status: "analyzed", momentCount: 0 })
+    expect(result).toMatchObject({ action: "recorded", status: "analyzed", momentCount: 0 })
     expect(analysis?.analysisStatus).toBe("analyzed")
     expect(semanticMoments.rows).toHaveLength(1)
     expect(taxonomyObservations.rows).toHaveLength(1)
@@ -397,7 +398,11 @@ describe("analyzeSessionUseCase", () => {
     const result = await Effect.runPromise(effect)
     const analysis = [...analyses.rows.values()][0]
 
-    expect(result).toEqual({ action: "recorded", status: "failed", momentCount: 0 })
+    expect(result).toMatchObject({ action: "recorded", status: "failed", momentCount: 0 })
+    // The persisted row keeps the zeroed hash (never a current generation), but
+    // the result carries a per-trigger key so repeated failures still screen.
+    expect(result.action === "recorded" && result.analysisHash).toBe(`failed-${traceId}`)
+    expect(analysis?.analysisHash).toBe("0".repeat(64))
     expect(analysis?.analysisStatus).toBe("failed")
     expect(analysis?.statusReason).toBe("Conversation intelligence embedding budget exhausted")
   })
@@ -603,7 +608,7 @@ describe("analyzeSessionUseCase", () => {
     const result = await Effect.runPromise(effect)
     const analysis = [...analyses.rows.values()][0]
 
-    expect(result).toEqual({ action: "recorded", status: "skipped_non_conversation", momentCount: 0 })
+    expect(result).toMatchObject({ action: "recorded", status: "skipped_non_conversation", momentCount: 0 })
     expect(generateCalls).toBe(0)
     expect(analysis?.analysisStatus).toBe("skipped_non_conversation")
   })
@@ -796,7 +801,8 @@ describe("analyzeSessionUseCase", () => {
     )
 
     const analysis = [...analyses.rows.values()][0]
-    expect(result).toEqual({ action: "recorded", status: "failed", momentCount: 0 })
+    expect(result).toMatchObject({ action: "recorded", status: "failed", momentCount: 0 })
+    expect(result.action === "recorded" && result.analysisHash).toBe(`failed-${traceId}`)
     expect(analysis?.analysisStatus).toBe("failed")
     expect(analysis?.statusReason).toBe("Session not found")
   })
@@ -818,7 +824,7 @@ describe("analyzeSessionUseCase", () => {
     const result = await Effect.runPromise(effect)
     const analysis = [...analyses.rows.values()][0]
 
-    expect(result).toEqual({ action: "recorded", status: "analyzed", momentCount: 0 })
+    expect(result).toMatchObject({ action: "recorded", status: "analyzed", momentCount: 0 })
     expect(analysis?.analysisStatus).toBe("analyzed")
     expect(generateCalls).toBe(0)
   })

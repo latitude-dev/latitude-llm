@@ -73,6 +73,15 @@ const _registry = {
     readonly periodEnd: string
     readonly snapshotOverageCredits: number
   }>(),
+  // Session flagger screening; its classification children start as Temporal
+  // child workflows, not through this registry.
+  flaggerScreeningWorkflow: input<{
+    readonly organizationId: string
+    readonly projectId: string
+    readonly sessionId: string
+    readonly analysisHash: string
+  }>(),
+  // TODO: remove with the deterministic-flaggers drain cleanup.
   flaggerWorkflow: input<{
     readonly organizationId: string
     readonly projectId: string

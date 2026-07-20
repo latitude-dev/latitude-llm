@@ -47,12 +47,9 @@ describe("system-role messages", () => {
         detect: () => outputSchemaValidationStrategy.detectDeterministically?.(SYSTEM_ONLY_TRACE),
       },
       { name: "tool-call-errors", detect: () => toolCallErrorsStrategy.detectDeterministically?.(SYSTEM_ONLY_TRACE) },
-      { name: "nsfw", detect: () => nsfwStrategy.detectDeterministically?.(SYSTEM_ONLY_TRACE) },
-      { name: "jailbreaking", detect: () => jailbreakingStrategy.detectDeterministically?.(SYSTEM_ONLY_TRACE) },
-      { name: "laziness", detect: () => lazinessStrategy.detectDeterministically?.(SYSTEM_ONLY_TRACE) },
       { name: "trashing", detect: () => trashingStrategy.detectDeterministically?.(SYSTEM_ONLY_TRACE) },
     ]) {
-      expect(detect(), name).toEqual({ kind: "no-match" })
+      expect(detect(), name).toEqual({ kind: "unmatched" })
     }
   })
 
@@ -67,6 +64,6 @@ describe("system-role messages", () => {
       },
     ])
 
-    expect(toolCallErrorsStrategy.detectDeterministically?.(trace)).toEqual({ kind: "no-match" })
+    expect(toolCallErrorsStrategy.detectDeterministically?.(trace)).toEqual({ kind: "unmatched" })
   })
 })

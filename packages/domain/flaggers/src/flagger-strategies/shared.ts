@@ -1,4 +1,4 @@
-import type { TraceDetail } from "@domain/spans"
+import type { FlaggerConversation } from "../conversation.ts"
 
 // Re-export shared constants from parent package for convenience
 export {
@@ -57,11 +57,11 @@ export function isRecord(value: unknown): value is Record<string, unknown> {
  * Filters out tool calls, tool responses, and system messages.
  */
 export function extractTextOnlyMessages(
-  trace: Pick<TraceDetail, "allMessages">,
+  conversation: Pick<FlaggerConversation, "allMessages">,
 ): Array<{ readonly role: "user" | "assistant"; readonly content: string }> {
   const result: Array<{ readonly role: "user" | "assistant"; readonly content: string }> = []
 
-  for (const message of trace.allMessages) {
+  for (const message of conversation.allMessages) {
     if (message.role !== "user" && message.role !== "assistant") continue
 
     const textParts: string[] = []
@@ -86,10 +86,10 @@ export function extractTextOnlyMessages(
  * Extract only user-authored text messages.
  * Used for frustration detection and user-focused analysis.
  */
-export function extractUserTextMessages(trace: Pick<TraceDetail, "allMessages">): string[] {
+export function extractUserTextMessages(conversation: Pick<FlaggerConversation, "allMessages">): string[] {
   const result: string[] = []
 
-  for (const message of trace.allMessages) {
+  for (const message of conversation.allMessages) {
     if (message.role !== "user") continue
 
     for (const part of iterMessageParts(message.parts)) {

@@ -1,11 +1,10 @@
 import {
   configureProjectFlaggersForOnboardingUseCase,
   FLAGGER_DEFAULT_SAMPLING,
+  FLAGGER_DISPLAY,
   FLAGGER_STRATEGY_SLUGS,
   FlaggerRepository,
   type FlaggerSlug,
-  getFlaggerStrategy,
-  isLlmCapableStrategy,
   updateFlaggerUseCase,
 } from "@domain/flaggers"
 import { ProjectId } from "@domain/shared"
@@ -32,24 +31,20 @@ const toFlaggerRecord = (flagger: {
   readonly createdAt: Date
   readonly updatedAt: Date
 }) => {
-  const strategy = getFlaggerStrategy(flagger.slug)
-  const details = strategy && isLlmCapableStrategy(strategy) ? strategy.annotator : strategy?.details
+  const display = FLAGGER_DISPLAY[flagger.slug]
 
   return {
     id: flagger.id,
     organizationId: flagger.organizationId,
     projectId: flagger.projectId,
     slug: flagger.slug,
-    name: details?.name ?? humanizeSlug(flagger.slug),
-    description: details?.description ?? "Flags matching trace behavior for review.",
-    instructions:
-      strategy && isLlmCapableStrategy(strategy)
-        ? strategy.annotator.instructions
-        : "Runs deterministically from telemetry data and does not call an LLM.",
+    name: display?.name ?? humanizeSlug(flagger.slug),
+    description: display?.description ?? "Flags matching trace behavior for review.",
+    instructions: display?.instructions ?? "Runs deterministically from telemetry data and does not call an LLM.",
     enabled: flagger.enabled,
     sampling: flagger.sampling,
-    mode: strategy && isLlmCapableStrategy(strategy) ? "llm" : "deterministic",
-    suppressedBy: strategy?.suppressedBy ?? [],
+    mode: display?.mode ?? "deterministic",
+    suppressedBy: [...(display?.suppressedBy ?? [])],
     createdAt: flagger.createdAt.toISOString(),
     updatedAt: flagger.updatedAt.toISOString(),
   }
@@ -61,8 +56,7 @@ export type FlaggerRecord = ReturnType<typeof toFlaggerRecord>
 // settings without writing to the DB. The placeholder id is the slug; the real
 // row (with a real id) replaces it on the next read once the user enables it.
 const toMissingFlaggerRecord = (slug: FlaggerSlug, organizationId: string, projectId: string): FlaggerRecord => {
-  const strategy = getFlaggerStrategy(slug)
-  const details = strategy && isLlmCapableStrategy(strategy) ? strategy.annotator : strategy?.details
+  const display = FLAGGER_DISPLAY[slug]
   const epoch = new Date(0).toISOString()
 
   return {
@@ -70,30 +64,26 @@ const toMissingFlaggerRecord = (slug: FlaggerSlug, organizationId: string, proje
     organizationId,
     projectId,
     slug,
-    name: details?.name ?? humanizeSlug(slug),
-    description: details?.description ?? "Flags matching trace behavior for review.",
-    instructions:
-      strategy && isLlmCapableStrategy(strategy)
-        ? strategy.annotator.instructions
-        : "Runs deterministically from telemetry data and does not call an LLM.",
+    name: display?.name ?? humanizeSlug(slug),
+    description: display?.description ?? "Flags matching trace behavior for review.",
+    instructions: display?.instructions ?? "Runs deterministically from telemetry data and does not call an LLM.",
     enabled: false,
     sampling: FLAGGER_DEFAULT_SAMPLING,
-    mode: strategy && isLlmCapableStrategy(strategy) ? "llm" : "deterministic",
-    suppressedBy: strategy?.suppressedBy ?? [],
+    mode: display?.mode ?? "deterministic",
+    suppressedBy: [...(display?.suppressedBy ?? [])],
     createdAt: epoch,
     updatedAt: epoch,
   }
 }
 
 const toAvailableFlaggerRecord = (slug: FlaggerSlug) => {
-  const strategy = getFlaggerStrategy(slug)
-  const details = strategy && isLlmCapableStrategy(strategy) ? strategy.annotator : strategy?.details
+  const display = FLAGGER_DISPLAY[slug]
 
   return {
     slug,
-    name: details?.name ?? humanizeSlug(slug),
-    description: details?.description ?? "Flags matching trace behavior for review.",
-    mode: strategy && isLlmCapableStrategy(strategy) ? "llm" : "deterministic",
+    name: display?.name ?? humanizeSlug(slug),
+    description: display?.description ?? "Flags matching trace behavior for review.",
+    mode: display?.mode ?? "deterministic",
   }
 }
 

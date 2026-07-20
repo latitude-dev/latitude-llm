@@ -165,6 +165,7 @@ const toOrphanSession = (row: SessionSearchRow): Session => {
     providers: [],
     serviceNames: [],
     agentNames: [],
+    definedTools: [],
     rootSpanId: "",
     rootSpanName: "",
   }

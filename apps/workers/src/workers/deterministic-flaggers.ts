@@ -1,12 +1,7 @@
-import {
-  AMBIGUOUS_FLAGGER_DEFAULT_RATE_LIMIT,
-  type CheckAmbiguousRateLimit,
-  type EnqueueFlaggerWorkflowStart,
-  processFlaggersUseCase,
-} from "@domain/flaggers"
+import { type EnqueueFlaggerWorkflowStart, processFlaggersUseCase } from "@domain/flaggers"
 import type { QueueConsumer, QueuePublisherShape } from "@domain/queue"
 import { OrganizationId } from "@domain/shared"
-import { checkRedisRateLimit, RedisCacheStoreLive, type RedisClient } from "@platform/cache-redis"
+import { RedisCacheStoreLive, type RedisClient } from "@platform/cache-redis"
 import {
   type ClickHouseClient,
   ScoreAnalyticsRepositoryLive,
@@ -53,18 +48,6 @@ const buildLogContext = (payload: RunPayload) => ({
   projectId: payload.projectId,
   traceId: payload.traceId,
 })
-
-const rateLimitKey = (organizationId: string, flaggerSlug: string) =>
-  `org:${organizationId}:ratelimit:flagger-ambiguous:${flaggerSlug}`
-
-const makeRateLimitChecker =
-  (redisClient: RedisClient): CheckAmbiguousRateLimit =>
-  ({ organizationId, flaggerSlug }) =>
-    checkRedisRateLimit(redisClient, {
-      key: rateLimitKey(organizationId, flaggerSlug),
-      maxRequests: AMBIGUOUS_FLAGGER_DEFAULT_RATE_LIMIT.maxRequests,
-      windowSeconds: AMBIGUOUS_FLAGGER_DEFAULT_RATE_LIMIT.windowSeconds,
-    }).pipe(Effect.map((result) => result.allowed))
 
 const makeEnqueueWorkflowStart =
   (publisher: QueuePublisherShape): EnqueueFlaggerWorkflowStart =>
@@ -123,7 +106,6 @@ export const createDeterministicFlaggersWorker = ({
 
   const deps = {
     enqueueWorkflowStart: makeEnqueueWorkflowStart(publisher),
-    checkAmbiguousRateLimit: makeRateLimitChecker(rdClient),
   }
 
   consumer.subscribe(QUEUE, {
