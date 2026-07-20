@@ -565,19 +565,30 @@ const planLeaves = (plan: StoredGardenTaxonomyPlan): ReassignmentLeaf[] =>
 // those up after the swap). More than this means the bulk write did not land.
 const STAGING_SNAPSHOT_STRAGGLER_FRACTION = 0.05
 
-const reassignFullWindowGlobal = (input: GardenTaxonomyReassignObservationsInput, plan: StoredGardenTaxonomyPlan) =>
+// Shared kernel of both full-window reassignment targets: read the bounded live
+// window (optionally scoped to the behavior's sessions) and route every row to
+// its nearest staging leaf. The caller maps the routed assignments onto its own
+// write-target shape — the two targets diverge only there.
+const routeWindowToStagingLeaves = (input: GardenTaxonomyReassignObservationsInput, plan: StoredGardenTaxonomyPlan) =>
   Effect.gen(function* () {
     const observations = yield* TaxonomyObservationRepository
-    const leaves = planLeaves(plan)
     const window = yield* observations.listWindowForReassignment({
       organizationId: OrganizationId(input.organizationId),
       projectId: ProjectId(input.projectId),
       limit: TAXONOMY_GARDENING_OBSERVATION_WINDOW_MAX,
+      ...(input.filterSet ? { filterSet: input.filterSet } : {}),
     })
     const routed = routeObservationsToLeaves(
       window.map((row) => ({ observationId: row.observationId, embedding: row.embedding })),
-      leaves,
+      planLeaves(plan),
     )
+    return { window, routed }
+  })
+
+const reassignFullWindowGlobal = (input: GardenTaxonomyReassignObservationsInput, plan: StoredGardenTaxonomyPlan) =>
+  Effect.gen(function* () {
+    const observations = yield* TaxonomyObservationRepository
+    const { window, routed } = yield* routeWindowToStagingLeaves(input, plan)
     const assignments: ReassignTaxonomyObservationByIdInput[] = routed.map((assignment) => ({
       observationId: assignment.observationId,
       assignedClusterId: assignment.assignedClusterId,
@@ -614,21 +625,10 @@ const reassignFullWindowGlobal = (input: GardenTaxonomyReassignObservationsInput
 
 const reassignFullWindowScoped = (input: GardenTaxonomyReassignObservationsInput, plan: StoredGardenTaxonomyPlan) =>
   Effect.gen(function* () {
-    const observations = yield* TaxonomyObservationRepository
     const assignmentsRepo = yield* CustomBehaviorAssignmentRepository
-    const leaves = planLeaves(plan)
-    const window = yield* observations.listWindowForReassignment({
-      organizationId: OrganizationId(input.organizationId),
-      projectId: ProjectId(input.projectId),
-      limit: TAXONOMY_GARDENING_OBSERVATION_WINDOW_MAX,
-      ...(input.filterSet ? { filterSet: input.filterSet } : {}),
-    })
-    const routedById = new Map(
-      routeObservationsToLeaves(
-        window.map((row) => ({ observationId: row.observationId, embedding: row.embedding })),
-        leaves,
-      ).map((assignment) => [assignment.observationId, assignment] as const),
-    )
+    const { window, routed } = yield* routeWindowToStagingLeaves(input, plan)
+    // Correlate routed results back to window rows for the slice's sessionId/startTime.
+    const routedById = new Map(routed.map((assignment) => [assignment.observationId, assignment] as const))
     const now = new Date(input.now)
     const assignments: CustomBehaviorAssignment[] = window.flatMap((row) => {
       const routed = routedById.get(row.observationId)
