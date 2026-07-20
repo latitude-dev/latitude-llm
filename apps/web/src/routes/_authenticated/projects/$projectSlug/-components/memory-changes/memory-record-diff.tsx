@@ -2,6 +2,9 @@ import { CodeDiff, Text } from "@repo/ui"
 import type { ReactNode } from "react"
 import { looksLikeJson } from "./looks-like-json.ts"
 
+/** Unchanged lines kept around each change; the rest fold behind an expander. */
+const DIFF_CONTEXT_LINES = 3
+
 function Centered({ children }: { readonly children: ReactNode }) {
   return (
     <div className="flex h-full items-center justify-center">
@@ -42,6 +45,7 @@ export function MemoryRecordDiff({
       before={beforeBody}
       after={afterBody}
       fillHeight
+      contextLines={DIFF_CONTEXT_LINES}
       className="h-full rounded-none"
       {...(language ? { language } : {})}
     />

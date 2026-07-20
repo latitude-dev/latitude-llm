@@ -1,6 +1,7 @@
-import { useMemo } from "react"
+import { ChevronDown, ChevronUp, UnfoldVertical } from "lucide-react"
+import { Fragment, useMemo, useState } from "react"
 import { cn } from "../../utils/cn.ts"
-import { computeDiffRows, type DiffRow, type DiffRowKind } from "./diff-model.ts"
+import { computeDiffRows, type DiffFoldItem, type DiffRow, type DiffRowKind, foldDiffRows } from "./diff-model.ts"
 import { highlightToLines, type LineToken } from "./highlight-lines.ts"
 
 interface CodeDiffViewProps {
@@ -9,7 +10,14 @@ interface CodeDiffViewProps {
   readonly className?: string
   readonly language?: string | undefined
   readonly fillHeight?: boolean
+  /** Collapse unchanged runs, keeping this many context lines around each change. Omit to show every line. */
+  readonly contextLines?: number | undefined
 }
+
+/** Rows revealed per click when expanding a fold from either end (GitHub's step). */
+const EXPAND_STEP = 20
+
+type FoldState = { readonly top: number; readonly bottom: number }
 
 interface RenderSegment {
   readonly text: string
@@ -94,8 +102,62 @@ function DiffLine({ row, segments }: { row: DiffRow; segments: RenderSegment[] }
   )
 }
 
+const FOLD_BUTTON = "rounded p-0.5 hover:bg-muted hover:text-foreground"
+
+function FoldBar({
+  count,
+  onExpandDown,
+  onExpandUp,
+  onExpandAll,
+}: {
+  readonly count: number
+  readonly onExpandDown: () => void
+  readonly onExpandUp: () => void
+  readonly onExpandAll: () => void
+}) {
+  const label = `${count} unchanged ${count === 1 ? "line" : "lines"}`
+  return (
+    <div className="flex select-none items-stretch bg-muted/40 text-muted-foreground/80">
+      <div className="flex min-w-[5rem] shrink-0 items-center justify-center gap-1 border-r border-border/60 py-0.5">
+        {count > EXPAND_STEP ? (
+          <>
+            <button type="button" title="Expand down" onClick={onExpandDown} className={FOLD_BUTTON}>
+              <ChevronDown className="h-3.5 w-3.5" />
+            </button>
+            <button type="button" title="Expand up" onClick={onExpandUp} className={FOLD_BUTTON}>
+              <ChevronUp className="h-3.5 w-3.5" />
+            </button>
+          </>
+        ) : (
+          <button type="button" title="Expand all" onClick={onExpandAll} className={FOLD_BUTTON}>
+            <UnfoldVertical className="h-3.5 w-3.5" />
+          </button>
+        )}
+      </div>
+      <button
+        type="button"
+        title="Expand all"
+        onClick={onExpandAll}
+        className="flex min-w-0 flex-1 items-center gap-2 py-0.5 pl-2 pr-3 text-left hover:text-foreground"
+      >
+        <span aria-hidden className="text-muted-foreground/50">
+          ⋯
+        </span>
+        <span className="truncate">{label}</span>
+      </button>
+    </div>
+  )
+}
+
 /** Read-only, GitHub-style unified diff of two text bodies, syntax-highlighted per line. */
-export function CodeDiffView({ before, after, className, language, fillHeight = false }: CodeDiffViewProps) {
+export function CodeDiffView({
+  before,
+  after,
+  className,
+  language,
+  fillHeight = false,
+  contextLines,
+}: CodeDiffViewProps) {
   const { rows, beforeLines, afterLines } = useMemo(
     () => ({
       rows: computeDiffRows(before, after),
@@ -104,6 +166,50 @@ export function CodeDiffView({ before, after, className, language, fillHeight = 
     }),
     [before, after, language],
   )
+  const items = useMemo(() => (contextLines == null ? null : foldDiffRows(rows, contextLines)), [rows, contextLines])
+  // Fold expansion resets when the diff content changes — this instance is reused
+  // across records in a master-detail — derived from props without a mount effect.
+  const [store, setStore] = useState<{ before: string; after: string; folds: Record<string, FoldState> }>({
+    before,
+    after,
+    folds: {},
+  })
+  const folds = store.before === before && store.after === after ? store.folds : {}
+  const setFold = (id: string, next: FoldState) =>
+    setStore((prev) => {
+      const base = prev.before === before && prev.after === after ? prev.folds : {}
+      return { before, after, folds: { ...base, [id]: next } }
+    })
+
+  const renderLine = (row: DiffRow, key: string) => {
+    const lineTokens =
+      row.kind === "remove"
+        ? (beforeLines[(row.oldLineNumber ?? 1) - 1] ?? [])
+        : (afterLines[(row.newLineNumber ?? 1) - 1] ?? [])
+    return <DiffLine key={key} row={row} segments={buildRenderSegments(lineTokens, row.emphases)} />
+  }
+
+  const renderFold = (fold: DiffFoldItem) => {
+    const total = fold.rows.length
+    const state = folds[fold.id] ?? { top: 0, bottom: 0 }
+    const top = Math.min(state.top, total)
+    const bottom = Math.min(state.bottom, total - top)
+    const remaining = total - top - bottom
+    return (
+      <Fragment key={fold.id}>
+        {fold.rows.slice(0, top).map((row, k) => renderLine(row, `${fold.id}-t-${k}`))}
+        {remaining > 0 && (
+          <FoldBar
+            count={remaining}
+            onExpandDown={() => setFold(fold.id, { top: Math.min(top + EXPAND_STEP, total - bottom), bottom })}
+            onExpandUp={() => setFold(fold.id, { top, bottom: Math.min(bottom + EXPAND_STEP, total - top) })}
+            onExpandAll={() => setFold(fold.id, { top: total, bottom: 0 })}
+          />
+        )}
+        {bottom > 0 && fold.rows.slice(total - bottom).map((row, k) => renderLine(row, `${fold.id}-b-${k}`))}
+      </Fragment>
+    )
+  }
 
   return (
     <div
@@ -113,13 +219,9 @@ export function CodeDiffView({ before, after, className, language, fillHeight = 
         className,
       )}
     >
-      {rows.map((row, index) => {
-        const lineTokens =
-          row.kind === "remove"
-            ? (beforeLines[(row.oldLineNumber ?? 1) - 1] ?? [])
-            : (afterLines[(row.newLineNumber ?? 1) - 1] ?? [])
-        return <DiffLine key={index} row={row} segments={buildRenderSegments(lineTokens, row.emphases)} />
-      })}
+      {items == null
+        ? rows.map((row, index) => renderLine(row, String(index)))
+        : items.map((item, index) => (item.type === "line" ? renderLine(item.row, String(index)) : renderFold(item)))}
     </div>
   )
 }

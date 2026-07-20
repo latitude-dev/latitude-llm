@@ -141,3 +141,48 @@ export function computeDiffRows(before: string, after: string): DiffRow[] {
 
   return rows
 }
+
+/** A run of unchanged rows collapsed by default; `rows` are hidden until expanded. */
+export interface DiffFoldItem {
+  readonly type: "fold"
+  readonly id: string
+  readonly rows: readonly DiffRow[]
+}
+
+/** A row-model item: either a rendered line or a collapsed fold of unchanged lines. */
+export type DiffItem = { readonly type: "line"; readonly row: DiffRow } | DiffFoldItem
+
+/**
+ * Collapse runs of unchanged context into folds, keeping `contextLines` next to
+ * every change (GitHub-style). A fold is emitted only when a run is longer than
+ * the context it would keep, so nothing is hidden that wasn't worth hiding. With
+ * no changes — or a pure add/remove, which has no context — every line is kept.
+ */
+export function foldDiffRows(rows: readonly DiffRow[], contextLines: number): DiffItem[] {
+  if (!rows.some((row) => row.kind !== "context")) return rows.map((row) => ({ type: "line", row }))
+
+  const items: DiffItem[] = []
+  let i = 0
+  while (i < rows.length) {
+    if (rows[i]!.kind !== "context") {
+      items.push({ type: "line", row: rows[i]! })
+      i++
+      continue
+    }
+
+    let end = i
+    while (end < rows.length && rows[end]!.kind === "context") end++
+    const head = i === 0 ? 0 : contextLines
+    const tail = end === rows.length ? 0 : contextLines
+
+    if (end - i > head + tail) {
+      for (let k = i; k < i + head; k++) items.push({ type: "line", row: rows[k]! })
+      items.push({ type: "fold", id: `fold-${i + head}`, rows: rows.slice(i + head, end - tail) })
+      for (let k = end - tail; k < end; k++) items.push({ type: "line", row: rows[k]! })
+    } else {
+      for (let k = i; k < end; k++) items.push({ type: "line", row: rows[k]! })
+    }
+    i = end
+  }
+  return items
+}
