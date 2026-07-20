@@ -2,9 +2,40 @@
 
 ## Unreleased
 
+## v0.3.56 - 2026-07-20
+
+### Memory observability
+
+- Added the project Memory page with store lists, record detail views, access views, and per-user memory store visibility (ref: #4083).
+
+### Experiments
+
+- Improved experiment creation and analysis with expanded presets, autofilled filter builders, metric tooltips, and updated experiment metric schemas in the API and SDKs (ref: #4085).
+
+### Monitors
+
+- Fixed recommended tool failure monitor creation by sharing preset and alert-form handling between tool and user monitor flows (ref: #4088).
+
+### Taxonomy
+
+- Reworked taxonomy clustering around a pure relative divisive builder for more consistent hierarchical taxonomy generation (ref: #4084).
+
+### Telemetry
+
+- Stripped orphan tool responses after input message truncation so telemetry exports do not retain invalid tool-only context (ref: #4044).
+- Updated the Hermes telemetry plugin to stop exporting empty conversation placeholders while preserving tool-only assistant turns (ref: #4089).
+
 ### Traces
 
-- Rejected `gtePercentile` on every trace filter field except `duration`, `ttft`, and `cost` (previously only `startTime`/`endTime` were rejected at the public API), so invalid filters return 400 instead of 500 (ref: #4086).
+- Rejected `gtePercentile` on every trace filter field except `duration`, `ttft`, and `cost`, so invalid filters return 400 instead of 500 (ref: #4086).
+
+### Security
+
+- Patched dependency advisories for Hono CORS, protobufjs denial of service, Next.js, Undici, ws, shell-quote, tmp, and form-data (refs: #4091, #4092, #4093, #4094, #4095, #4096, #4097, #4098).
+
+### Documentation
+
+- Added the self-healing agents documentation overview page (ref: #3951).
 
 ## v0.3.55 - 2026-07-17
 
