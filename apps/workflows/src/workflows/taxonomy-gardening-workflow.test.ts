@@ -55,7 +55,6 @@ vi.mock("@temporalio/workflow", () => ({
   CancellationScope: {
     nonCancellable: async <T>(fn: () => Promise<T>) => fn(),
   },
-  deprecatePatch: vi.fn(),
   patched: vi.fn(() => true),
   proxyActivities: () => mockActivities,
   workflowInfo: () => ({ runId: "test-workflow-run-id" }),

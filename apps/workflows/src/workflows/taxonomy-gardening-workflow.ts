@@ -1,5 +1,5 @@
 import type { TaxonomyClusterLineage } from "@domain/taxonomy"
-import { CancellationScope, deprecatePatch, patched, proxyActivities, workflowInfo } from "@temporalio/workflow"
+import { CancellationScope, patched, proxyActivities, workflowInfo } from "@temporalio/workflow"
 import type * as activities from "../activities/index.ts"
 import { defaultActivityRetryPolicy } from "./retry-policy.ts"
 
@@ -89,10 +89,6 @@ export const gardenTaxonomyWorkflow = async (
   let useStagingSwap = false
   try {
     const started = await startGardenTaxonomyRunActivity({ ...input, workflowRunId: workflowInfo().runId })
-    // Split-build is unconditional now; deprecatePatch sits right after start
-    // (where the old `patched("…-split-build-v1")` gate did) so replay of in-flight
-    // split-build histories reconciles the marker at the same position.
-    deprecatePatch("taxonomy-gardening-split-build-v1")
     useStagingSwap = patched("taxonomy-gardening-staging-swap-v1")
     const built = await planHierarchicalGardenTaxonomyActivity(started)
     // Scoped cold-start: the plan sampled below the gardening minimum and built
