@@ -605,20 +605,20 @@ const reassignFullWindowGlobal = (input: GardenTaxonomyReassignObservationsInput
       })
     }
     // Confirm the bounded snapshot no longer points at the old tree before we let
-    // the swap deprecate it.
-    const superseded = new Set(plan.supersededClusterIds ?? [])
-    const confirmation = yield* observations.listWindowForReassignment({
-      organizationId: OrganizationId(input.organizationId),
-      projectId: ProjectId(input.projectId),
-      limit: TAXONOMY_GARDENING_OBSERVATION_WINDOW_MAX,
-    })
-    const stragglers = confirmation.filter(
-      (row) => row.assignedClusterId !== null && superseded.has(row.assignedClusterId),
-    ).length
-    if (stragglers > Math.floor(confirmation.length * STAGING_SNAPSHOT_STRAGGLER_FRACTION)) {
-      return yield* new TaxonomyStagingInvariantError({
-        message: `Full-window reassignment left ${stragglers}/${confirmation.length} observations on the old tree`,
+    // the swap deprecate it. Counted server-side so no embeddings ship back.
+    const supersededClusterIds = (plan.supersededClusterIds ?? []).map((clusterId) => TaxonomyClusterId(clusterId))
+    if (supersededClusterIds.length > 0) {
+      const { total, matching } = yield* observations.countWindowAssignedToClusters({
+        organizationId: OrganizationId(input.organizationId),
+        projectId: ProjectId(input.projectId),
+        limit: TAXONOMY_GARDENING_OBSERVATION_WINDOW_MAX,
+        clusterIds: supersededClusterIds,
       })
+      if (matching > Math.floor(total * STAGING_SNAPSHOT_STRAGGLER_FRACTION)) {
+        return yield* new TaxonomyStagingInvariantError({
+          message: `Full-window reassignment left ${matching}/${total} observations on the old tree`,
+        })
+      }
     }
     return { observationsReassigned: assignments.length, windowSize: window.length }
   }).pipe((effect) => withTaxonomyClickHouse(effect, input.organizationId))
@@ -693,15 +693,15 @@ const catchUpGlobal = (input: GardenTaxonomyDeprecateClustersInput, plan: Stored
   Effect.gen(function* () {
     const observations = yield* TaxonomyObservationRepository
     const leaves = planLeaves(plan)
-    const leafIds = new Set(leaves.map((leaf) => leaf.clusterId as string))
-    const window = yield* observations.listWindowForReassignment({
+    // Narrow the read to rows NOT already on a current leaf — the tail indexed
+    // between the pre-swap snapshot and now — so we only pull embeddings for the
+    // stragglers, not the whole 10k window.
+    const stragglers = yield* observations.listWindowForReassignment({
       organizationId: OrganizationId(input.organizationId),
       projectId: ProjectId(input.projectId),
       limit: TAXONOMY_GARDENING_OBSERVATION_WINDOW_MAX,
+      excludeAssignedClusterIds: leaves.map((leaf) => leaf.clusterId),
     })
-    // Only observations not already pointing at a current leaf — the tail indexed
-    // between the pre-swap snapshot and now.
-    const stragglers = window.filter((row) => row.assignedClusterId === null || !leafIds.has(row.assignedClusterId))
     const routed = routeObservationsToLeaves(
       stragglers.map((row) => ({ observationId: row.observationId, embedding: row.embedding })),
       leaves,

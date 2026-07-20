@@ -547,7 +547,7 @@ export const TaxonomyObservationRepositoryLive = Layer.effect(
             )
         }),
 
-      listWindowForReassignment: ({ organizationId, projectId, limit, filterSet }) =>
+      listWindowForReassignment: ({ organizationId, projectId, limit, filterSet, excludeAssignedClusterIds }) =>
         Effect.gen(function* () {
           const chSqlClient = (yield* ChSqlClient) as ChSqlClientShape<ClickHouseClient>
           // Scoped reassignment restricts the window to the behavior's sessions
@@ -578,6 +578,12 @@ export const TaxonomyObservationRepositoryLive = Layer.effect(
                         )
                       )`
               }
+              // Catch-up narrows to rows NOT already on a current leaf, so only the
+              // stragglers pay to ship their embeddings back.
+              const excludeClause =
+                excludeAssignedClusterIds && excludeAssignedClusterIds.length > 0
+                  ? "AND assigned_cluster_id NOT IN {excludeAssignedClusterIds:Array(String)}"
+                  : ""
               const result = await client.query({
                 query: `SELECT
                           observation_id,
@@ -591,6 +597,7 @@ export const TaxonomyObservationRepositoryLive = Layer.effect(
                           AND ${validObservationIdClause}
                           AND length(embedding) > 0
                           ${matchingSessionsClause}
+                          ${excludeClause}
                         ORDER BY start_time DESC, observation_id ASC
                         LIMIT {limit:UInt32}`,
                 query_params: {
@@ -598,6 +605,9 @@ export const TaxonomyObservationRepositoryLive = Layer.effect(
                   projectId: projectId as string,
                   limit,
                   ...filterParams,
+                  ...(excludeClause
+                    ? { excludeAssignedClusterIds: (excludeAssignedClusterIds ?? []) as readonly string[] }
+                    : {}),
                 },
                 format: "JSONEachRow",
               })
@@ -607,6 +617,70 @@ export const TaxonomyObservationRepositoryLive = Layer.effect(
             .pipe(
               Effect.mapError((error) =>
                 toRepositoryError(error, "TaxonomyObservationRepository.listWindowForReassignment"),
+              ),
+            )
+        }),
+
+      countWindowAssignedToClusters: ({ organizationId, projectId, limit, clusterIds, filterSet }) =>
+        Effect.gen(function* () {
+          const chSqlClient = (yield* ChSqlClient) as ChSqlClientShape<ClickHouseClient>
+          const resolvedFilterSet = filterSet
+            ? yield* resolvePercentileFilters(organizationId, projectId, filterSet)
+            : undefined
+          return yield* chSqlClient
+            .query(async (client) => {
+              let matchingSessionsClause = ""
+              let filterParams: Record<string, unknown> = {}
+              if (resolvedFilterSet) {
+                const { havingClauses, whereClauses, params } = buildSessionFilterClauses(resolvedFilterSet)
+                filterParams = params
+                const extraWhere = whereClauses.length > 0 ? `AND ${whereClauses.join(" AND ")}` : ""
+                const havingClause = havingClauses.length > 0 ? `HAVING ${havingClauses.join(" AND ")}` : ""
+                matchingSessionsClause = `AND session_id IN (
+                        SELECT session_id
+                        FROM (
+                          SELECT ${LIST_SELECT}
+                          FROM sessions
+                          WHERE organization_id = {organizationId:String}
+                            AND project_id = {projectId:String}
+                            ${extraWhere}
+                          GROUP BY organization_id, project_id, session_id
+                          ${havingClause}
+                        )
+                      )`
+              }
+              // Count within the same newest-N window; aggregate server-side so no
+              // rows (and no embeddings) travel back to the activity.
+              const result = await client.query({
+                query: `SELECT
+                          count() AS total,
+                          countIf(assigned_cluster_id IN {clusterIds:Array(String)}) AS matching
+                        FROM (
+                          SELECT assigned_cluster_id
+                          FROM taxonomy_observations FINAL
+                          WHERE organization_id = {organizationId:String}
+                            AND project_id = {projectId:String}
+                            AND ${validObservationIdClause}
+                            AND length(embedding) > 0
+                            ${matchingSessionsClause}
+                          ORDER BY start_time DESC, observation_id ASC
+                          LIMIT {limit:UInt32}
+                        )`,
+                query_params: {
+                  organizationId: organizationId as string,
+                  projectId: projectId as string,
+                  limit,
+                  clusterIds: clusterIds as readonly string[],
+                  ...filterParams,
+                },
+                format: "JSONEachRow",
+              })
+              const [row] = await result.json<{ total: string | number; matching: string | number }>()
+              return { total: Number(row?.total ?? 0), matching: Number(row?.matching ?? 0) }
+            })
+            .pipe(
+              Effect.mapError((error) =>
+                toRepositoryError(error, "TaxonomyObservationRepository.countWindowAssignedToClusters"),
               ),
             )
         }),

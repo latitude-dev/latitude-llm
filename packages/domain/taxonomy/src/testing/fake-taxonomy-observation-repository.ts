@@ -375,11 +375,16 @@ export const createFakeTaxonomyObservationRepository = (
 
     // The fake does not compile `filterSet` (session-filter compilation is
     // ClickHouse-specific); it returns the full newest-N live window as slim
-    // reassignment rows carrying the current assignment.
-    listWindowForReassignment: ({ organizationId, projectId, limit }) =>
-      Effect.sync(() =>
-        latestProjectWindow(organizationId, projectId)
+    // reassignment rows carrying the current assignment. `excludeAssignedClusterIds`
+    // drops rows already pointing at one of those clusters (catch-up narrowing).
+    listWindowForReassignment: ({ organizationId, projectId, limit, excludeAssignedClusterIds }) =>
+      Effect.sync(() => {
+        const excluded = new Set((excludeAssignedClusterIds ?? []).map((id) => id as string))
+        return latestProjectWindow(organizationId, projectId)
           .filter((observation) => observation.embedding.length > 0)
+          .filter(
+            (observation) => observation.assignedClusterId === null || !excluded.has(observation.assignedClusterId),
+          )
           .slice(0, limit)
           .map((observation) => ({
             observationId: observation.observationId,
@@ -387,8 +392,20 @@ export const createFakeTaxonomyObservationRepository = (
             embedding: observation.embedding,
             startTime: observation.startTime,
             assignedClusterId: observation.assignedClusterId,
-          })),
-      ),
+          }))
+      }),
+
+    countWindowAssignedToClusters: ({ organizationId, projectId, limit, clusterIds }) =>
+      Effect.sync(() => {
+        const targets = new Set(clusterIds.map((id) => id as string))
+        const window = latestProjectWindow(organizationId, projectId)
+          .filter((observation) => observation.embedding.length > 0)
+          .slice(0, limit)
+        return {
+          total: window.length,
+          matching: window.filter((o) => o.assignedClusterId !== null && targets.has(o.assignedClusterId)).length,
+        }
+      }),
 
     getClusterCountsByUser: () => Effect.succeed([]),
 
