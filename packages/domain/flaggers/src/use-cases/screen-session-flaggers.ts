@@ -2,6 +2,7 @@ import type { ScoreDraftClosedError, ScoreDraftUpdateConflictError } from "@doma
 import { type BadRequestError, deterministicSampling, ProjectId, type RepositoryError, TraceId } from "@domain/shared"
 import { Effect } from "effect"
 import { computeFlaggerAnchorContentHash, type FlaggerSessionContext } from "../conversation.ts"
+import { shouldSkipUserCentricFlaggerForEmbeddedSamples } from "../embedded-samples.ts"
 import {
   type FlaggerStrategy,
   type FlaggerSuppressor,
@@ -10,7 +11,6 @@ import {
   listFlaggerStrategySlugs,
   suppressorSlug,
 } from "../flagger-strategies/index.ts"
-import { shouldSkipUserCentricFlaggerForEmbeddedSamples } from "../embedded-samples.ts"
 import { gatherSessionHintsUseCase } from "../hints/gatherers.ts"
 import { isPositiveSessionHintKind, type SessionHint, type SessionHintKind } from "../hints/types.ts"
 import { isReflagSuppressed } from "../reflag.ts"

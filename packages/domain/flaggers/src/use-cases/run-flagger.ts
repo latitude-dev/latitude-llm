@@ -22,11 +22,11 @@ import {
   FLAGGER_PROMPT_MAX_HINTS,
 } from "../constants.ts"
 import type { FlaggerConversation } from "../conversation.ts"
+import { shouldSkipUserCentricFlaggerForEmbeddedSamples } from "../embedded-samples.ts"
 import { getFlaggerStrategy, isLlmCapableStrategy } from "../flagger-strategies/index.ts"
 import { isRecord, iterMessageParts, truncateExcerpt } from "../flagger-strategies/shared.ts"
 import type { FlaggerStrategy } from "../flagger-strategies/types.ts"
 import type { SessionHint } from "../hints/types.ts"
-import { shouldSkipUserCentricFlaggerForEmbeddedSamples } from "../embedded-samples.ts"
 import { reflagSuppressionTags } from "../reflag.ts"
 
 export interface RunFlaggerResult {
