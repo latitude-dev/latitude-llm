@@ -50,4 +50,15 @@ describe("computeDiffRows", () => {
       { kind: "add", oldLineNumber: null, newLineNumber: 2, text: "world", emphases: [] },
     ])
   })
+
+  it("falls back to line-level (no word emphasis) for very large replacements", () => {
+    const before = `${"a".repeat(15_000)}\n`
+    const after = `${"b".repeat(15_000)}\n`
+    const rows = computeDiffRows(before, after)
+
+    expect(rows.map((r) => r.kind)).toEqual(["remove", "add"])
+    expect(rows.every((r) => r.emphases.length === 0)).toBe(true)
+    expect([rows[0]?.oldLineNumber, rows[0]?.newLineNumber]).toEqual([1, null])
+    expect([rows[1]?.oldLineNumber, rows[1]?.newLineNumber]).toEqual([null, 1])
+  })
 })

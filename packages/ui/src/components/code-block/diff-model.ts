@@ -68,6 +68,10 @@ function clampEmphases(
   return out
 }
 
+// Word-level diffing is ~O(n²); skip it for very large paired blocks (a full-body
+// replacement) so it can't block the render thread — those fall back to line-level.
+const WORD_DIFF_MAX_LEN = 20_000
+
 /**
  * Compute a GitHub-style unified diff row model. Removed lines carry their
  * before-file line number, added lines their after-file line number, and
@@ -97,7 +101,7 @@ export function computeDiffRows(before: string, after: string): DiffRow[] {
     }
 
     const next = parts[i + 1]
-    if (part.removed && next?.added) {
+    if (part.removed && next?.added && part.value.length + next.value.length <= WORD_DIFF_MAX_LEN) {
       const wordParts = diffWordsWithSpace(part.value, next.value)
       const removed = collectSide(wordParts, "removed")
       const added = collectSide(wordParts, "added")
