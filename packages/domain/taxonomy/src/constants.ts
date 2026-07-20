@@ -46,6 +46,21 @@ export const TAXONOMY_CLUSTER_STATES = ["active", "merged", "deprecated", "stagi
 export const TAXONOMY_ADAPTIVE_CLUSTERING_MODES = ["off", "shadow", "enforced"] as const
 export const TAXONOMY_ADAPTIVE_CLUSTERING_MODE_ENV = "LAT_TAXONOMY_ADAPTIVE_CLUSTERING_MODE"
 
+/**
+ * Tag stamped on every shadow/enforced telemetry event so a dashboard can slice
+ * by the policy that produced a run. Bump it whenever the relative schedule or
+ * routing constants change so old and new calibrations are separable in Logs.
+ */
+export const TAXONOMY_ADAPTIVE_POLICY_VERSION = "relative-v1"
+
+/**
+ * Structural node-count ceiling used as a fallback guardrail: an adaptive tree
+ * with more nodes than this cannot be a legitimate output of the depth schedule
+ * (max children 10 × 8 × 6 over three depths) and signals a builder fault, so
+ * the planning activity falls back to static rather than persist it.
+ */
+export const TAXONOMY_ADAPTIVE_STRUCTURAL_MAX_NODES = 1_024
+
 /** Batch size for bounded ClickHouse assignment writes during full-window reassignment. */
 export const TAXONOMY_REASSIGNMENT_BATCH_SIZE = 1_000
 

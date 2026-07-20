@@ -12,14 +12,25 @@ import {
 import { createFakeChSqlClient, createFakeSqlClient } from "@domain/shared/testing"
 import { Effect, Layer } from "effect"
 import { describe, expect, it } from "vitest"
-import { TAXONOMY_ASSIGN_ABSOLUTE_THRESHOLD } from "../constants.ts"
+import { isAdaptiveModeActive } from "../adaptive-mode.ts"
+import type { ClusteringTreeNode } from "../clustering.ts"
+import {
+  TAXONOMY_ADAPTIVE_STRUCTURAL_MAX_NODES,
+  TAXONOMY_ASSIGN_ABSOLUTE_THRESHOLD,
+  TAXONOMY_TREE_RELATIVE_DEPTH_SCHEDULE,
+} from "../constants.ts"
 import { type TaxonomyCluster, taxonomyClusterSchema } from "../entities/cluster.ts"
 import type { TaxonomyMomentObservation } from "../entities/observation.ts"
 import { TaxonomyClusterRepository } from "../ports/taxonomy-cluster-repository.ts"
 import { TaxonomyObservationRepository } from "../ports/taxonomy-observation-repository.ts"
 import { createFakeTaxonomyClusterRepository } from "../testing/fake-taxonomy-cluster-repository.ts"
 import { createFakeTaxonomyObservationRepository } from "../testing/fake-taxonomy-observation-repository.ts"
-import { type HierarchicalTaxonomyPlan, planHierarchicalTaxonomyUseCase } from "./build-hierarchical-taxonomy.ts"
+import {
+  type HierarchicalTaxonomyPlan,
+  planHierarchicalTaxonomyUseCase,
+  runTaxonomyClusterBuild,
+  type TaxonomyClusterBuilder,
+} from "./build-hierarchical-taxonomy.ts"
 
 const organizationId = OrganizationId("o".repeat(24))
 const projectId = ProjectId("p".repeat(24))
@@ -67,6 +78,7 @@ const runPlan = (
     readonly now: Date
     readonly mode?: "off" | "shadow" | "enforced"
     readonly customBehaviorId?: CustomBehaviorId
+    readonly clusterBuilder?: TaxonomyClusterBuilder
   },
 ): Promise<HierarchicalTaxonomyPlan> =>
   Effect.runPromise(
@@ -77,6 +89,7 @@ const runPlan = (
       dimension: "topic",
       now: args.now,
       ...(args.mode ? { mode: args.mode } : {}),
+      ...(args.clusterBuilder ? { clusterBuilder: args.clusterBuilder } : {}),
       ...(args.customBehaviorId
         ? { customBehaviorId: args.customBehaviorId, filterSet: { userId: [{ op: "in", value: ["u"] }] } }
         : {}),
@@ -196,6 +209,130 @@ describe("planHierarchicalTaxonomyUseCase off is a byte-identical no-op", () => 
     // Both write-target arrays stay empty; the scoped full-window pass writes the slice.
     expect(plan.observationAssignments).toEqual([])
     expect(plan.customAssignments).toEqual([])
+  })
+})
+
+const depthMultiset = (plan: HierarchicalTaxonomyPlan): number[] => plan.clusters.map((cluster) => cluster.depth).sort()
+
+const oneGroupCorpus = (at: Date): TaxonomyMomentObservation[] =>
+  Array.from({ length: 40 }, (_, index) => makeObservation(index, 0, at))
+
+describe("planHierarchicalTaxonomyUseCase shadow persists static and computes adaptive for comparison", () => {
+  it("persists the static tree while still computing adaptive diagnostics + comparison", async () => {
+    const observations = createFakeTaxonomyObservationRepository(twoGroupCorpus(now))
+    const clusters = createFakeTaxonomyClusterRepository([])
+
+    const plan = await runPlan(observations, clusters, { now, mode: "shadow" })
+
+    expect(plan.mode).toBe("shadow")
+    // Persisted tree is static: active clusters, sample-only assignments, no staging machinery.
+    expect(plan.clusters.every((cluster) => cluster.state === "active")).toBe(true)
+    expect(plan.leafClusters).toEqual([])
+    expect(plan.supersededClusterIds).toEqual([])
+    expect(plan.observationAssignments.length).toBeGreaterThan(0)
+    expect(plan.fallbackReason).toBeNull()
+    // Adaptive was still computed for comparison/telemetry.
+    expect(plan.decisionMetadata).not.toBeNull()
+    expect(plan.comparison).not.toBeNull()
+    expect(plan.comparison?.static.rootChildCount).toBeGreaterThanOrEqual(1)
+    expect(plan.comparison?.adaptive.rootChildCount).toBeGreaterThanOrEqual(1)
+    expect(plan.staticDurationMs).toBeGreaterThanOrEqual(0)
+    expect(plan.adaptiveDurationMs).toBeGreaterThanOrEqual(0)
+  })
+
+  it("persists a static tree with the same shape as off (deterministic static builder, no staging)", async () => {
+    const offPlan = await runPlan(
+      createFakeTaxonomyObservationRepository(twoGroupCorpus(now)),
+      createFakeTaxonomyClusterRepository([]),
+      { now },
+    )
+    const shadowPlan = await runPlan(
+      createFakeTaxonomyObservationRepository(twoGroupCorpus(now)),
+      createFakeTaxonomyClusterRepository([]),
+      { now, mode: "shadow" },
+    )
+
+    expect(shadowPlan.clusters.length).toBe(offPlan.clusters.length)
+    expect(depthMultiset(shadowPlan)).toEqual(depthMultiset(offPlan))
+    expect(shadowPlan.clusters.every((cluster) => cluster.state === "active")).toBe(true)
+    expect(shadowPlan.observationAssignments.length).toBe(offPlan.observationAssignments.length)
+  })
+})
+
+const badAdaptiveBuilder =
+  (kind: "nonFinite" | "structuralLimit"): TaxonomyClusterBuilder =>
+  (request) =>
+    Effect.sync(() => {
+      // Static baseline builds normally; only the adaptive candidate is corrupted.
+      if (!isAdaptiveModeActive(request.mode)) return runTaxonomyClusterBuild(request)
+      if (kind === "nonFinite") {
+        const badLeaf: ClusteringTreeNode = { memberIndices: [0], centroid: [Number.NaN, 0], children: [], depth: 1 }
+        return { root: { memberIndices: [0], centroid: [1, 0], children: [badLeaf], depth: 0 }, diagnostics: null }
+      }
+      const tooDeep = TAXONOMY_TREE_RELATIVE_DEPTH_SCHEDULE.length + 2
+      let node: ClusteringTreeNode = { memberIndices: [0], centroid: [1, 0], children: [], depth: tooDeep }
+      for (let depth = tooDeep - 1; depth >= 0; depth--) {
+        node = { memberIndices: [0], centroid: [1, 0], children: [node], depth }
+      }
+      return { root: node, diagnostics: null }
+    })
+
+describe("planHierarchicalTaxonomyUseCase enforced falls back to static on unsafe adaptive output", () => {
+  it.each([
+    "nonFinite",
+    "structuralLimit",
+  ] as const)("persists static and records fallbackReason=%s, before any staging/writes", async (kind) => {
+    const observations = createFakeTaxonomyObservationRepository(twoGroupCorpus(now))
+    const clusters = createFakeTaxonomyClusterRepository([])
+
+    const plan = await runPlan(observations, clusters, {
+      now,
+      mode: "enforced",
+      clusterBuilder: badAdaptiveBuilder(kind),
+    })
+
+    expect(plan.mode).toBe("enforced")
+    expect(plan.fallbackReason).toBe(kind)
+    // Fell back to the static publish path: active clusters, sample assignments, no staging.
+    expect(plan.clusters.length).toBeGreaterThan(0)
+    expect(plan.clusters.every((cluster) => cluster.state === "active")).toBe(true)
+    expect(plan.leafClusters).toEqual([])
+    expect(plan.supersededClusterIds).toEqual([])
+    expect(plan.observationAssignments.length).toBeGreaterThan(0)
+  })
+
+  it("persists adaptive (no fallback) when the real adaptive output is finite and sane", async () => {
+    const observations = createFakeTaxonomyObservationRepository(twoGroupCorpus(now))
+    const clusters = createFakeTaxonomyClusterRepository([])
+
+    const plan = await runPlan(observations, clusters, { now, mode: "enforced" })
+
+    expect(plan.fallbackReason).toBeNull()
+    expect(plan.clusters.every((cluster) => cluster.state === "staging")).toBe(true)
+    expect(plan.leafClusters.length).toBeGreaterThanOrEqual(2)
+  })
+})
+
+describe("shadow guardrails hold across contrasting corpora", () => {
+  it.each([
+    ["two well-separated groups", twoGroupCorpus(now)],
+    ["one tight unimodal group", oneGroupCorpus(now)],
+  ] as const)("keeps both trees within the node cap and schedule depth (%s)", async (_label, corpus) => {
+    const plan = await runPlan(
+      createFakeTaxonomyObservationRepository(corpus),
+      createFakeTaxonomyClusterRepository([]),
+      { now, mode: "shadow" },
+    )
+
+    const comparison = plan.comparison
+    expect(comparison).not.toBeNull()
+    for (const shape of [comparison?.static, comparison?.adaptive]) {
+      expect(shape?.maxDepth ?? 0).toBeLessThanOrEqual(TAXONOMY_TREE_RELATIVE_DEPTH_SCHEDULE.length)
+      expect(shape?.nodeCount ?? 0).toBeLessThanOrEqual(TAXONOMY_ADAPTIVE_STRUCTURAL_MAX_NODES)
+    }
+    // Shadow never persists adaptive, so it never falls back and never stages.
+    expect(plan.fallbackReason).toBeNull()
+    expect(plan.clusters.every((cluster) => cluster.state === "active")).toBe(true)
   })
 })
 

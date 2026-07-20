@@ -901,6 +901,9 @@ importers:
       '@domain/evaluations':
         specifier: workspace:*
         version: link:../../packages/domain/evaluations
+      '@domain/feature-flags':
+        specifier: workspace:*
+        version: link:../../packages/domain/feature-flags
       '@domain/flaggers':
         specifier: workspace:*
         version: link:../../packages/domain/flaggers

@@ -1,3 +1,4 @@
+import { hasFeatureFlagUseCase } from "@domain/feature-flags"
 import {
   CustomBehaviorId,
   type FilterSet,
@@ -8,12 +9,13 @@ import {
 } from "@domain/shared"
 import {
   assertTaxonomyQualityUseCase,
+  boundedPercentiles,
   type CustomBehaviorAssignment,
   CustomBehaviorAssignmentRepository,
   CustomBehaviorRepository,
   CustomBehaviorStatus,
   emitLineageUseCase,
-  isAdaptiveModeActive,
+  type HierarchicalTaxonomyPlan,
   isDisplayableTaxonomyName,
   parseTaxonomyAdaptiveModeBaseline,
   planHierarchicalTaxonomyUseCase,
@@ -23,6 +25,7 @@ import {
   routeObservationsToLeaves,
   type StagingLeafCluster,
   TAXONOMY_ADAPTIVE_CLUSTERING_MODE_ENV,
+  TAXONOMY_ADAPTIVE_POLICY_VERSION,
   TAXONOMY_CLUSTERING_PROPOSAL_SAMPLE_MAX,
   TAXONOMY_CLUSTERING_SAMPLE_STRATEGY,
   TAXONOMY_GARDENING_OBSERVATION_WINDOW_MAX,
@@ -30,6 +33,7 @@ import {
   TAXONOMY_OBSERVATION_RETENTION_DAYS,
   TAXONOMY_REASSIGNMENT_BATCH_SIZE,
   type TaxonomyAdaptiveClusteringMode,
+  type TaxonomyAdaptiveFallbackReason,
   type TaxonomyCluster,
   type TaxonomyClusterLineage,
   TaxonomyClusterRepository,
@@ -45,6 +49,7 @@ import {
 } from "@platform/db-clickhouse"
 import {
   CustomBehaviorRepositoryLive,
+  FeatureFlagRepositoryLive,
   TaxonomyClusterRepositoryLive,
   TaxonomyLineageRepositoryLive,
   TaxonomyRunRepositoryLive,
@@ -57,19 +62,24 @@ import { getClickhouseClient, getPostgresClient, getRedisClient } from "../clien
 import { buildHierarchicalClustersInWorker } from "./taxonomy-clustering-worker.ts"
 
 /**
- * Resolve the adaptive-clustering rollout mode. Read in the planning activity
- * ONLY (never workflow code — Temporal determinism), from the environment
- * baseline; the per-organization enforcement flag lands in Phase 4 (LAT-773) and
- * is passed as `false` until then. `off` (the default and any unrecognized
- * value) keeps the byte-identical pre-change path.
+ * Resolve the adaptive-clustering rollout mode from the environment baseline and
+ * the per-organization `adaptiveTaxonomyClustering` feature flag. Read in the
+ * planning activity ONLY (never workflow code — Temporal determinism): the env
+ * via `parseEnv`, the flag via `hasFeatureFlagUseCase` under the garden run's
+ * org id (server-side, no request context). The env `off` kill switch always
+ * wins and short-circuits the flag lookup, so the default path stays a
+ * byte-identical no-op with no extra Postgres round-trip.
  */
-const resolveAdaptiveMode = Effect.gen(function* () {
-  const raw = yield* parseEnv(TAXONOMY_ADAPTIVE_CLUSTERING_MODE_ENV, "string", "off")
-  return resolveTaxonomyAdaptiveMode({
-    envBaseline: parseTaxonomyAdaptiveModeBaseline(raw),
-    flagEnabledForOrg: false,
+const resolveAdaptiveMode = (organizationId: string) =>
+  Effect.gen(function* () {
+    const raw = yield* parseEnv(TAXONOMY_ADAPTIVE_CLUSTERING_MODE_ENV, "string", "off")
+    const envBaseline = parseTaxonomyAdaptiveModeBaseline(raw)
+    if (envBaseline === "off") return "off" as const
+    const flagEnabledForOrg = yield* hasFeatureFlagUseCase({ identifier: "adaptiveTaxonomyClustering" }).pipe(
+      withPostgres(FeatureFlagRepositoryLive, getPostgresClient(), OrganizationId(organizationId)),
+    )
+    return resolveTaxonomyAdaptiveMode({ envBaseline, flagEnabledForOrg })
   })
-})
 
 const logger = createLogger("taxonomy-gardening-workflow")
 
@@ -165,6 +175,13 @@ interface StoredGardenTaxonomyPlan {
    * code — treated as `off`.
    */
   readonly mode?: TaxonomyAdaptiveClusteringMode
+  /**
+   * Non-null ⇒ enforced planning fell back to static (structural/non-finite
+   * adaptive output), so this plan persists the static tree even though its mode
+   * is `enforced`. Drives `planPersistsAdaptive` so downstream never runs the
+   * staging path on a fallen-back plan.
+   */
+  readonly fallbackReason?: TaxonomyAdaptiveFallbackReason | null
   /** Adaptive-only: leaf id + centroid for full-window routing. Empty/absent on off. */
   readonly leafClusters?: readonly StagingLeafCluster[]
   /** Adaptive-only: the full old active tree the atomic swap deprecates. Empty/absent on off. */
@@ -172,6 +189,17 @@ interface StoredGardenTaxonomyPlan {
 }
 
 const planMode = (plan: StoredGardenTaxonomyPlan): TaxonomyAdaptiveClusteringMode => plan.mode ?? "off"
+
+/**
+ * Whether this plan actually stages an adaptive tree — the single gate every
+ * publish step branches on. Only `enforced` persists adaptive, and only when the
+ * planning activity did not fall back to static. `shadow` persists static (it
+ * merely *computes* adaptive for comparison), so it takes the off publish path
+ * here, and `off` always does. Read from the staged plan, never from env/flag
+ * state, so the whole publish path is a pure function of the plan artifact.
+ */
+const planPersistsAdaptive = (plan: StoredGardenTaxonomyPlan): boolean =>
+  planMode(plan) === "enforced" && (plan.fallbackReason ?? null) === null
 
 const chunk = <A>(items: readonly A[], size: number): A[][] => {
   const out: A[][] = []
@@ -467,12 +495,67 @@ export const startGardenTaxonomyRunActivity = (input: GardenTaxonomyActivityInpu
   return step.customBehaviorId ? startCustomBehaviorRun(step) : startGlobalRun(step)
 }
 
+/**
+ * One bounded, embedding-free event per adaptive garden run (`gardenRun`), plus
+ * — in shadow mode — a paired `shadowComparison` event carrying static-vs-adaptive
+ * shape counts, deltas, and partition ARI. Emitted through the workflow logger so
+ * it lands in Datadog Logs as trace-correlated, logs-based analytics; no separate
+ * metrics client. Off runs compute no adaptive tree and emit nothing here.
+ * Distributions are bounded percentiles, never raw arrays.
+ */
+const emitAdaptivePlanTelemetry = (input: GardenTaxonomyStepInput, plan: HierarchicalTaxonomyPlan): void => {
+  const mode = plan.mode
+  if (mode === "off") return
+  const diagnostics = plan.decisionMetadata
+  const relativeSeparation = boundedPercentiles(diagnostics?.acceptedRelativeSeparations ?? [])
+  const routingThreshold = boundedPercentiles(diagnostics?.routingThresholds ?? [])
+  const shared = {
+    policyVersion: TAXONOMY_ADAPTIVE_POLICY_VERSION,
+    mode,
+    organizationId: input.organizationId,
+    projectId: input.projectId,
+    customBehaviorId: input.customBehaviorId,
+    observationsSampled: plan.observationsSampled,
+    fallbackReason: plan.fallbackReason,
+    adaptiveDurationMs: plan.adaptiveDurationMs,
+    staticDurationMs: plan.staticDurationMs,
+    // Best-effort resident memory at plan time; worker threads share this process,
+    // so the build's footprint is reflected here (see the clustering worker).
+    peakRssBytes: process.memoryUsage().rss,
+    rejectionReason: diagnostics?.rejectionReasonCounts,
+    relativeSeparation,
+  }
+  logger.info("Taxonomy adaptive garden run", {
+    metric: "taxonomy.gardenTaxonomyWorkflow.gardenRun",
+    ...shared,
+    nodeCount: diagnostics?.nodeCount ?? 0,
+    leafCount: diagnostics?.leafCount ?? 0,
+    maxDepth: diagnostics?.maxDepth ?? 0,
+    selectedKByDepth: diagnostics?.selectedKByDepth,
+    acceptedSplits: diagnostics?.acceptedSplits ?? 0,
+    rejectedCandidates: diagnostics?.rejectedCandidates ?? 0,
+    routingThreshold,
+    clustersBorn: plan.clustersBorn,
+    clustersContinued: plan.clustersContinued,
+    clustersDeprecated: plan.clustersDeprecated,
+  })
+  if (mode === "shadow" && plan.comparison) {
+    logger.info("Taxonomy shadow comparison", {
+      metric: "taxonomy.gardenTaxonomyWorkflow.shadowComparison",
+      ...shared,
+      static: plan.comparison.static,
+      adaptive: plan.comparison.adaptive,
+      diff: plan.comparison.diff,
+    })
+  }
+}
+
 export const planHierarchicalGardenTaxonomyActivity = (input: GardenTaxonomyStepInput) =>
   runGardenStep(
     "GardenTaxonomyWorkflow plan hierarchical tree",
     input,
     Effect.gen(function* () {
-      const mode = yield* resolveAdaptiveMode
+      const mode = yield* resolveAdaptiveMode(input.organizationId)
       return yield* planHierarchicalTaxonomyUseCase({
         organizationId: OrganizationId(input.organizationId),
         projectId: ProjectId(input.projectId),
@@ -491,6 +574,7 @@ export const planHierarchicalGardenTaxonomyActivity = (input: GardenTaxonomyStep
     }).pipe(
       Effect.flatMap((plan) =>
         Effect.gen(function* () {
+          yield* Effect.sync(() => emitAdaptivePlanTelemetry(input, plan))
           const planKey = yield* storeGardenTaxonomyPlan(input, {
             clusters: plan.clusters,
             observationAssignments: plan.observationAssignments,
@@ -498,6 +582,7 @@ export const planHierarchicalGardenTaxonomyActivity = (input: GardenTaxonomyStep
             customBehaviorId: plan.customBehaviorId,
             deprecatedClusterIds: plan.deprecatedClusterIds.map((clusterId) => clusterId as string),
             mode: plan.mode,
+            fallbackReason: plan.fallbackReason,
             leafClusters: plan.leafClusters,
             supersededClusterIds: plan.supersededClusterIds.map((clusterId) => clusterId as string),
           })
@@ -667,7 +752,7 @@ export const reassignGardenTaxonomyObservationsActivity = (input: GardenTaxonomy
     // full bounded live window to the staging leaves.
     Effect.gen(function* () {
       const plan = yield* loadGardenTaxonomyPlan(input)
-      if (isAdaptiveModeActive(planMode(plan))) {
+      if (planPersistsAdaptive(plan)) {
         return yield* plan.customBehaviorId
           ? reassignFullWindowScoped(input, plan)
           : reassignFullWindowGlobal(input, plan)
@@ -756,9 +841,7 @@ export const deprecateGardenTaxonomyClustersActivity = (input: GardenTaxonomyDep
     input,
     Effect.gen(function* () {
       const plan = yield* loadGardenTaxonomyPlan(input)
-      return isAdaptiveModeActive(planMode(plan))
-        ? yield* swapAndCatchUp(input, plan)
-        : yield* deprecateOffClusters(input, plan)
+      return planPersistsAdaptive(plan) ? yield* swapAndCatchUp(input, plan) : yield* deprecateOffClusters(input, plan)
     }),
   )
 
@@ -954,7 +1037,7 @@ export const cleanupGardenTaxonomyStagingActivity = (input: GardenTaxonomyActivi
       const step = baseStepInput(input)
       const reference: GardenTaxonomyPlanReferenceInput = { ...step, planKey: gardenTaxonomyPlanKey(step) }
       const plan = yield* loadGardenTaxonomyPlan(reference).pipe(Effect.orElseSucceed(() => null))
-      if (plan === null || !isAdaptiveModeActive(planMode(plan))) return { stagingDeleted: 0 }
+      if (plan === null || !planPersistsAdaptive(plan)) return { stagingDeleted: 0 }
       const clusters = yield* TaxonomyClusterRepository
       yield* clusters.deleteStaging({ clusterIds: plan.clusters.map((cluster) => cluster.id) })
       return { stagingDeleted: plan.clusters.length }

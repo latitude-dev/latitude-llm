@@ -29,6 +29,12 @@ export const FEATURE_FLAGS = {
     description:
       "Adds the Memory page (stores browsed as records with update history) and the user-page memory-stores section.",
   },
+  adaptiveTaxonomyClustering: {
+    emoji: "🌳",
+    name: "Adaptive taxonomy clustering",
+    description:
+      "Enforces node-relative adaptive taxonomy clustering for every project in the organization, raising the environment baseline (shadow/enforced) to enforced. The env kill switch still overrides it.",
+  },
 } as const satisfies Record<
   string,
   {
