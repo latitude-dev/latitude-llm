@@ -2,6 +2,20 @@
 
 ## Unreleased
 
+## v0.3.58 - 2026-07-20
+
+### Flaggers
+
+- Moved automatic issue detection from per-trace to per-session: flaggers now judge the full conversation once a session settles and its semantic analysis has run, in two passes — free deterministic screening on every session, LLM classification only for session×flagger pairs that earn it (ref: #4078).
+- Added a shared hint catalog (tool errors, tool loops, cost/latency/token outliers vs the project baseline, semantic moment labels, and tuned text patterns): sessions with fired hints skip sampling and go straight to the LLM under per-flagger rate budgets, and all hints are shown to the classifier as leads. Positive signals (user satisfaction, resolution) never trigger and only shrink the sampled budget.
+- Added three flaggers: Bluffing (assistant proceeds past a failed tool call as if it succeeded), PII leakage (assistant output exposes personal data), and Incompletion (a task objectively not delivered, judged only on responses the user has reacted to). Tool call errors now also flags calls to tools missing from the declared toolset. New flagger rows are backfilled for existing projects, and the flagger enums are exposed through the public API and SDKs.
+- Deduplicated flags by anchored-message content hash so session re-screens, model re-wording, and context compaction never duplicate a flag or a charge; one flagger can still flag several distinct parts of a long conversation.
+- The old per-trace flagger pipeline remains registered drain-only and is removed in a follow-up once production has drained it.
+
+### Conversation intelligence
+
+- Added `user_correction` and `stalling` moment kinds; sessions re-analyze on their next trace after the detector version bump (ref: #4078).
+
 ## v0.3.57 - 2026-07-20
 
 ### Memory observability
