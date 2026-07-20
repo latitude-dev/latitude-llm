@@ -57,6 +57,12 @@ export {
   type RecordChangeDiff,
 } from "./use-cases/compute-record-change-diff.ts"
 export {
+  type ComputeRecordHistoryInput,
+  computeRecordHistoryUseCase,
+  type RecordHistory,
+  type RecordHistoryVersion,
+} from "./use-cases/compute-record-history.ts"
+export {
   type ComputeSessionMemorySummaryInput,
   computeSessionMemorySummaryUseCase,
   type MemoryRecordSummary,
