@@ -2,6 +2,25 @@
 
 ## Unreleased
 
+## v0.3.59 - 2026-07-20
+
+### Memory observability
+
+- Added memory-operation spans to the TypeScript and Python SDKs (both bumped to 3.7.0): OTEL GenAI memory operations (create/update/upsert/delete/search and store create/delete) with `gen_ai.memory.*` attributes, latency/error capture, and opt-in record-content capture (ref: #4128).
+- Added record change diffs to memory spans and a collapsible "Memory changes" section on session and trace detail: per-record before/after diffs grouped by store, with GitHub-style context folding and an "Open in Memory" deep link to the full record (ref: #4127).
+
+### Taxonomy
+
+- Added adaptive taxonomy clustering with `off`/`shadow`/`enforced` modes and a per-org `adaptiveTaxonomyClustering` flag; shadow mode computes the adaptive tree alongside static for comparison without changing persisted taxonomy, with bounded APM telemetry for a fleet-wide static-vs-adaptive view. Enabled in shadow mode on production; a no-op for staging and self-hosted deployments (ref: #4123).
+
+### Ingestion
+
+- Fixed a malformed or missing `traceId` crashing an entire span batch: invalid spans are now rejected individually via the existing partial-success path, both on transform and on the sampling-key fallback (ref: #4101).
+
+### Flaggers
+
+- Removed the old per-trace flagger pipeline, drained since the move to session-level flagging (ref: #4126).
+
 ## v0.3.58 - 2026-07-20
 
 ### Flaggers
