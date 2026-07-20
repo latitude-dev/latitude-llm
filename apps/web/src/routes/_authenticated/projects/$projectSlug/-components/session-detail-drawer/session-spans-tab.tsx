@@ -77,8 +77,7 @@ export function SessionSpansTab({
   }, [groups, isLoading, onSelectSpan, selectedSpanId, selectedSpanTraceId])
 
   // TODO(frontend-use-effect-policy): active filters can remove a URL-selected span from the rendered trees.
-  // Gate on `isLoading`: while the spans are still in flight `filteredGroups` is empty, which would
-  // otherwise read as "filtered out" and clear a freshly-selected span before its trees exist.
+  // Gate on `isLoading` so an empty in-flight `filteredGroups` doesn't read as "filtered out" and clear a freshly-selected span before its trees exist.
   useEffect(() => {
     if (!selectedSpan || isLoading) return
     const isVisible = filteredGroups.some(
