@@ -71,6 +71,7 @@ export {
 } from "./signal-discovery-activities.ts"
 export {
   assertGardenTaxonomyQualityActivity,
+  cleanupGardenTaxonomyStagingActivity,
   completeGardenTaxonomyRunActivity,
   deprecateGardenTaxonomyClustersActivity,
   emitGardenTaxonomyLineageActivity,

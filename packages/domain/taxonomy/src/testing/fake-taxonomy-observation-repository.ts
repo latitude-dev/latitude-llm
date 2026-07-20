@@ -373,6 +373,23 @@ export const createFakeTaxonomyObservationRepository = (
         return [...counts.entries()].map(([clusterId, count]) => ({ clusterId: clusterId as never, ...count }))
       }),
 
+    // The fake does not compile `filterSet` (session-filter compilation is
+    // ClickHouse-specific); it returns the full newest-N live window as slim
+    // reassignment rows carrying the current assignment.
+    listWindowForReassignment: ({ organizationId, projectId, limit }) =>
+      Effect.sync(() =>
+        latestProjectWindow(organizationId, projectId)
+          .filter((observation) => observation.embedding.length > 0)
+          .slice(0, limit)
+          .map((observation) => ({
+            observationId: observation.observationId,
+            sessionId: observation.sessionId,
+            embedding: observation.embedding,
+            startTime: observation.startTime,
+            assignedClusterId: observation.assignedClusterId,
+          })),
+      ),
+
     getClusterCountsByUser: () => Effect.succeed([]),
 
     getClusterTrendCounts: ({ organizationId, projectId, clusterIds, currentSince, baselineSince, baselineDays }) =>

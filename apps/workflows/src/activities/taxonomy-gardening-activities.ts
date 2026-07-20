@@ -13,12 +13,23 @@ import {
   CustomBehaviorRepository,
   CustomBehaviorStatus,
   emitLineageUseCase,
+  isAdaptiveModeActive,
   isDisplayableTaxonomyName,
+  parseTaxonomyAdaptiveModeBaseline,
   planHierarchicalTaxonomyUseCase,
+  type ReassignmentLeaf,
   type ReassignTaxonomyObservationByIdInput,
+  resolveTaxonomyAdaptiveMode,
+  routeObservationsToLeaves,
+  type StagingLeafCluster,
+  TAXONOMY_ADAPTIVE_CLUSTERING_MODE_ENV,
   TAXONOMY_CLUSTERING_PROPOSAL_SAMPLE_MAX,
   TAXONOMY_CLUSTERING_SAMPLE_STRATEGY,
+  TAXONOMY_GARDENING_OBSERVATION_WINDOW_MAX,
   TAXONOMY_GARDENING_SAMPLE_LOOKBACK_DAYS,
+  TAXONOMY_OBSERVATION_RETENTION_DAYS,
+  TAXONOMY_REASSIGNMENT_BATCH_SIZE,
+  type TaxonomyAdaptiveClusteringMode,
   type TaxonomyCluster,
   type TaxonomyClusterLineage,
   TaxonomyClusterRepository,
@@ -39,10 +50,26 @@ import {
   TaxonomyRunRepositoryLive,
   withPostgres,
 } from "@platform/db-postgres"
+import { parseEnv } from "@platform/env"
 import { createLogger, withTracing } from "@repo/observability"
 import { Data, Effect, Layer } from "effect"
 import { getClickhouseClient, getPostgresClient, getRedisClient } from "../clients.ts"
 import { buildHierarchicalClustersInWorker } from "./taxonomy-clustering-worker.ts"
+
+/**
+ * Resolve the adaptive-clustering rollout mode. Read in the planning activity
+ * ONLY (never workflow code — Temporal determinism), from the environment
+ * baseline; the per-organization enforcement flag lands in Phase 4 (LAT-773) and
+ * is passed as `false` until then. `off` (the default and any unrecognized
+ * value) keeps the byte-identical pre-change path.
+ */
+const resolveAdaptiveMode = Effect.gen(function* () {
+  const raw = yield* parseEnv(TAXONOMY_ADAPTIVE_CLUSTERING_MODE_ENV, "string", "off")
+  return resolveTaxonomyAdaptiveMode({
+    envBaseline: parseTaxonomyAdaptiveModeBaseline(raw),
+    flagEnabledForOrg: false,
+  })
+})
 
 const logger = createLogger("taxonomy-gardening-workflow")
 
@@ -131,7 +158,30 @@ interface StoredGardenTaxonomyPlan {
   /** Non-null ⇒ the plan is scoped to this custom behavior (drives the reassign write target). */
   readonly customBehaviorId: string | null
   readonly deprecatedClusterIds: readonly string[]
+  /**
+   * Rollout mode resolved at plan time. Downstream activities branch on THIS
+   * value (never re-reading env/flag state) so the publish path is a pure
+   * function of the staged plan artifact. Absent on plans staged by pre-change
+   * code — treated as `off`.
+   */
+  readonly mode?: TaxonomyAdaptiveClusteringMode
+  /** Adaptive-only: leaf id + centroid for full-window routing. Empty/absent on off. */
+  readonly leafClusters?: readonly StagingLeafCluster[]
+  /** Adaptive-only: the full old active tree the atomic swap deprecates. Empty/absent on off. */
+  readonly supersededClusterIds?: readonly string[]
 }
+
+const planMode = (plan: StoredGardenTaxonomyPlan): TaxonomyAdaptiveClusteringMode => plan.mode ?? "off"
+
+const chunk = <A>(items: readonly A[], size: number): A[][] => {
+  const out: A[][] = []
+  for (let offset = 0; offset < items.length; offset += size) out.push(items.slice(offset, offset + size))
+  return out
+}
+
+class TaxonomyStagingInvariantError extends Data.TaggedError("TaxonomyStagingInvariantError")<{
+  readonly message: string
+}> {}
 
 export interface GardenTaxonomyNamingPlanResult {
   readonly clusterIds: readonly string[]
@@ -281,6 +331,18 @@ const withCustomBehaviorClickHouse = <A, E, R>(effect: Effect.Effect<A, E, R>, o
     withClickHouse(CustomBehaviorAssignmentRepositoryLive, getClickhouseClient(), OrganizationId(organizationId)),
   )
 
+// Scoped full-window reassignment reads the global taxonomy window (filtered by
+// the behavior's sessions) and writes the scoped custom_behavior_assignments
+// slice, so it needs both ClickHouse repositories.
+const withScopedReassignClickHouse = <A, E, R>(effect: Effect.Effect<A, E, R>, organizationId: string) =>
+  effect.pipe(
+    withClickHouse(
+      Layer.mergeAll(TaxonomyObservationRepositoryLive, CustomBehaviorAssignmentRepositoryLive),
+      getClickhouseClient(),
+      OrganizationId(organizationId),
+    ),
+  )
+
 const runGardenStep = <A, E>(
   name: string,
   input: GardenTaxonomyStepInput | GardenTaxonomyActivityInput,
@@ -409,19 +471,23 @@ export const planHierarchicalGardenTaxonomyActivity = (input: GardenTaxonomyStep
   runGardenStep(
     "GardenTaxonomyWorkflow plan hierarchical tree",
     input,
-    planHierarchicalTaxonomyUseCase({
-      organizationId: OrganizationId(input.organizationId),
-      projectId: ProjectId(input.projectId),
-      runId: TaxonomyRunId(input.runId),
-      dimension: input.dimension,
-      now: new Date(input.now),
-      clusterBuilder: (builderInput) =>
-        Effect.tryPromise({
-          try: () => buildHierarchicalClustersInWorker(builderInput),
-          catch: (error) => (error instanceof Error ? error : new Error(String(error))),
-        }),
-      ...(input.customBehaviorId ? { customBehaviorId: CustomBehaviorId(input.customBehaviorId) } : {}),
-      ...(input.filterSet ? { filterSet: input.filterSet } : {}),
+    Effect.gen(function* () {
+      const mode = yield* resolveAdaptiveMode
+      return yield* planHierarchicalTaxonomyUseCase({
+        organizationId: OrganizationId(input.organizationId),
+        projectId: ProjectId(input.projectId),
+        runId: TaxonomyRunId(input.runId),
+        dimension: input.dimension,
+        now: new Date(input.now),
+        mode,
+        clusterBuilder: (builderInput) =>
+          Effect.tryPromise({
+            try: () => buildHierarchicalClustersInWorker(builderInput),
+            catch: (error) => (error instanceof Error ? error : new Error(String(error))),
+          }),
+        ...(input.customBehaviorId ? { customBehaviorId: CustomBehaviorId(input.customBehaviorId) } : {}),
+        ...(input.filterSet ? { filterSet: input.filterSet } : {}),
+      })
     }).pipe(
       Effect.flatMap((plan) =>
         Effect.gen(function* () {
@@ -431,6 +497,9 @@ export const planHierarchicalGardenTaxonomyActivity = (input: GardenTaxonomyStep
             customAssignments: plan.customAssignments,
             customBehaviorId: plan.customBehaviorId,
             deprecatedClusterIds: plan.deprecatedClusterIds.map((clusterId) => clusterId as string),
+            mode: plan.mode,
+            leafClusters: plan.leafClusters,
+            supersededClusterIds: plan.supersededClusterIds.map((clusterId) => clusterId as string),
           })
           return {
             observationsScanned: plan.observationsScanned,
@@ -466,6 +535,8 @@ export const saveGardenTaxonomyClustersActivity = (input: GardenTaxonomySaveClus
     }).pipe((effect) => withTaxonomyPostgres(effect, input.organizationId)),
   )
 
+// --- Off (sample-only) reassignment: byte-identical to the pre-change path. ---
+
 const reassignGlobalObservations = (input: GardenTaxonomyReassignObservationsInput, plan: StoredGardenTaxonomyPlan) =>
   Effect.gen(function* () {
     const observations = yield* TaxonomyObservationRepository
@@ -484,6 +555,107 @@ const reassignScopedAssignments = (input: GardenTaxonomyReassignObservationsInpu
     return { observationsReassigned: plan.customAssignments.length }
   }).pipe((effect) => withCustomBehaviorClickHouse(effect, input.organizationId))
 
+// --- Adaptive (full-window) reassignment into the staging leaves. ---
+
+const planLeaves = (plan: StoredGardenTaxonomyPlan): ReassignmentLeaf[] =>
+  (plan.leafClusters ?? []).map((leaf) => ({ clusterId: leaf.clusterId, centroid: leaf.centroid }))
+
+// Fraction of the window still pointing at a soon-to-deprecate cluster after the
+// bulk write that we tolerate as concurrent inserts (the catch-up pass mops
+// those up after the swap). More than this means the bulk write did not land.
+const STAGING_SNAPSHOT_STRAGGLER_FRACTION = 0.05
+
+const reassignFullWindowGlobal = (input: GardenTaxonomyReassignObservationsInput, plan: StoredGardenTaxonomyPlan) =>
+  Effect.gen(function* () {
+    const observations = yield* TaxonomyObservationRepository
+    const leaves = planLeaves(plan)
+    const window = yield* observations.listWindowForReassignment({
+      organizationId: OrganizationId(input.organizationId),
+      projectId: ProjectId(input.projectId),
+      limit: TAXONOMY_GARDENING_OBSERVATION_WINDOW_MAX,
+    })
+    const routed = routeObservationsToLeaves(
+      window.map((row) => ({ observationId: row.observationId, embedding: row.embedding })),
+      leaves,
+    )
+    const assignments: ReassignTaxonomyObservationByIdInput[] = routed.map((assignment) => ({
+      observationId: assignment.observationId,
+      assignedClusterId: assignment.assignedClusterId,
+      assignmentMethod: "gardening_reassign" as const,
+      assignmentConfidence: assignment.confidence,
+      reassignmentRunId: TaxonomyRunId(input.runId),
+      indexedAt: new Date(input.now),
+    }))
+    for (const batch of chunk(assignments, TAXONOMY_REASSIGNMENT_BATCH_SIZE)) {
+      yield* observations.reassignManyById({
+        organizationId: OrganizationId(input.organizationId),
+        projectId: ProjectId(input.projectId),
+        assignments: batch,
+      })
+    }
+    // Confirm the bounded snapshot no longer points at the old tree before we let
+    // the swap deprecate it.
+    const superseded = new Set(plan.supersededClusterIds ?? [])
+    const confirmation = yield* observations.listWindowForReassignment({
+      organizationId: OrganizationId(input.organizationId),
+      projectId: ProjectId(input.projectId),
+      limit: TAXONOMY_GARDENING_OBSERVATION_WINDOW_MAX,
+    })
+    const stragglers = confirmation.filter(
+      (row) => row.assignedClusterId !== null && superseded.has(row.assignedClusterId),
+    ).length
+    if (stragglers > Math.floor(confirmation.length * STAGING_SNAPSHOT_STRAGGLER_FRACTION)) {
+      return yield* new TaxonomyStagingInvariantError({
+        message: `Full-window reassignment left ${stragglers}/${confirmation.length} observations on the old tree`,
+      })
+    }
+    return { observationsReassigned: assignments.length, windowSize: window.length }
+  }).pipe((effect) => withTaxonomyClickHouse(effect, input.organizationId))
+
+const reassignFullWindowScoped = (input: GardenTaxonomyReassignObservationsInput, plan: StoredGardenTaxonomyPlan) =>
+  Effect.gen(function* () {
+    const observations = yield* TaxonomyObservationRepository
+    const assignmentsRepo = yield* CustomBehaviorAssignmentRepository
+    const leaves = planLeaves(plan)
+    const window = yield* observations.listWindowForReassignment({
+      organizationId: OrganizationId(input.organizationId),
+      projectId: ProjectId(input.projectId),
+      limit: TAXONOMY_GARDENING_OBSERVATION_WINDOW_MAX,
+      ...(input.filterSet ? { filterSet: input.filterSet } : {}),
+    })
+    const routedById = new Map(
+      routeObservationsToLeaves(
+        window.map((row) => ({ observationId: row.observationId, embedding: row.embedding })),
+        leaves,
+      ).map((assignment) => [assignment.observationId, assignment] as const),
+    )
+    const now = new Date(input.now)
+    const assignments: CustomBehaviorAssignment[] = window.flatMap((row) => {
+      const routed = routedById.get(row.observationId)
+      if (!routed) return []
+      return [
+        {
+          organizationId: OrganizationId(input.organizationId),
+          projectId: ProjectId(input.projectId),
+          customBehaviorId: CustomBehaviorId(plan.customBehaviorId as string),
+          observationId: row.observationId,
+          sessionId: row.sessionId,
+          assignedClusterId: routed.assignedClusterId,
+          assignmentConfidence: routed.confidence,
+          assignmentMethod: "gardening_reassign" as const,
+          reassignmentRunId: TaxonomyRunId(input.runId),
+          startTime: row.startTime,
+          retentionDays: TAXONOMY_OBSERVATION_RETENTION_DAYS,
+          indexedAt: now,
+        } satisfies CustomBehaviorAssignment,
+      ]
+    })
+    for (const batch of chunk(assignments, TAXONOMY_REASSIGNMENT_BATCH_SIZE)) {
+      yield* assignmentsRepo.upsertMany(batch)
+    }
+    return { observationsReassigned: assignments.length, windowSize: window.length }
+  }).pipe((effect) => withScopedReassignClickHouse(effect, input.organizationId))
+
 export const reassignGardenTaxonomyObservationsActivity = (input: GardenTaxonomyReassignObservationsInput) =>
   runGardenStep(
     "GardenTaxonomyWorkflow reassign observations",
@@ -491,13 +663,92 @@ export const reassignGardenTaxonomyObservationsActivity = (input: GardenTaxonomy
     // A plan staged by the pre-unification code has no `customBehaviorId` key
     // (undefined) — a truthy check keeps those, and every global run, on the
     // observation-reassign branch; only a real behavior id routes to the slice.
+    // Off does sample-only reassignment (byte-identical); adaptive routes the
+    // full bounded live window to the staging leaves.
     Effect.gen(function* () {
       const plan = yield* loadGardenTaxonomyPlan(input)
+      if (isAdaptiveModeActive(planMode(plan))) {
+        return yield* plan.customBehaviorId
+          ? reassignFullWindowScoped(input, plan)
+          : reassignFullWindowGlobal(input, plan)
+      }
       return yield* plan.customBehaviorId
         ? reassignScopedAssignments(input, plan)
         : reassignGlobalObservations(input, plan)
     }),
   )
+
+// Off: deprecate exactly the non-continued old clusters (byte-identical to the
+// pre-change path — continuations kept their ids via in-place upsert).
+const deprecateOffClusters = (input: GardenTaxonomyDeprecateClustersInput, plan: StoredGardenTaxonomyPlan) =>
+  Effect.gen(function* () {
+    const clusters = yield* TaxonomyClusterRepository
+    for (const clusterId of plan.deprecatedClusterIds) {
+      yield* clusters.markDeprecated({ clusterId: TaxonomyClusterId(clusterId), timestamp: new Date(input.now) })
+    }
+    return { clustersDeprecated: plan.deprecatedClusterIds.length }
+  }).pipe((effect) => withTaxonomyPostgres(effect, input.organizationId))
+
+const catchUpGlobal = (input: GardenTaxonomyDeprecateClustersInput, plan: StoredGardenTaxonomyPlan) =>
+  Effect.gen(function* () {
+    const observations = yield* TaxonomyObservationRepository
+    const leaves = planLeaves(plan)
+    const leafIds = new Set(leaves.map((leaf) => leaf.clusterId as string))
+    const window = yield* observations.listWindowForReassignment({
+      organizationId: OrganizationId(input.organizationId),
+      projectId: ProjectId(input.projectId),
+      limit: TAXONOMY_GARDENING_OBSERVATION_WINDOW_MAX,
+    })
+    // Only observations not already pointing at a current leaf — the tail indexed
+    // between the pre-swap snapshot and now.
+    const stragglers = window.filter((row) => row.assignedClusterId === null || !leafIds.has(row.assignedClusterId))
+    const routed = routeObservationsToLeaves(
+      stragglers.map((row) => ({ observationId: row.observationId, embedding: row.embedding })),
+      leaves,
+    )
+    const assignments: ReassignTaxonomyObservationByIdInput[] = routed.map((assignment) => ({
+      observationId: assignment.observationId,
+      assignedClusterId: assignment.assignedClusterId,
+      assignmentMethod: "gardening_reassign" as const,
+      assignmentConfidence: assignment.confidence,
+      reassignmentRunId: TaxonomyRunId(input.runId),
+      indexedAt: new Date(input.now),
+    }))
+    for (const batch of chunk(assignments, TAXONOMY_REASSIGNMENT_BATCH_SIZE)) {
+      yield* observations.reassignManyById({
+        organizationId: OrganizationId(input.organizationId),
+        projectId: ProjectId(input.projectId),
+        assignments: batch,
+      })
+    }
+    return assignments.length
+  }).pipe((effect) => withTaxonomyClickHouse(effect, input.organizationId))
+
+// Adaptive: atomically swap the staged tree in for the old one, then run one
+// bounded catch-up pass for observations indexed during reassignment.
+const swapAndCatchUp = (input: GardenTaxonomyDeprecateClustersInput, plan: StoredGardenTaxonomyPlan) =>
+  Effect.gen(function* () {
+    const supersededClusterIds = (plan.supersededClusterIds ?? []).map((clusterId) => TaxonomyClusterId(clusterId))
+    const stagingClusterIds = plan.clusters.map((cluster) => cluster.id)
+    yield* Effect.gen(function* () {
+      const clusters = yield* TaxonomyClusterRepository
+      yield* clusters.swapActiveTree({
+        supersededClusterIds,
+        stagingClusterIds,
+        timestamp: new Date(input.now),
+      })
+    }).pipe((effect) => withTaxonomyPostgres(effect, input.organizationId))
+
+    const caughtUp = plan.customBehaviorId
+      ? (yield* reassignFullWindowScoped(input, plan)).observationsReassigned
+      : yield* catchUpGlobal(input, plan)
+
+    return {
+      clustersDeprecated: supersededClusterIds.length,
+      clustersActivated: stagingClusterIds.length,
+      caughtUp,
+    }
+  })
 
 export const deprecateGardenTaxonomyClustersActivity = (input: GardenTaxonomyDeprecateClustersInput) =>
   runGardenStep(
@@ -505,12 +756,10 @@ export const deprecateGardenTaxonomyClustersActivity = (input: GardenTaxonomyDep
     input,
     Effect.gen(function* () {
       const plan = yield* loadGardenTaxonomyPlan(input)
-      const clusters = yield* TaxonomyClusterRepository
-      for (const clusterId of plan.deprecatedClusterIds) {
-        yield* clusters.markDeprecated({ clusterId: TaxonomyClusterId(clusterId), timestamp: new Date(input.now) })
-      }
-      return { clustersDeprecated: plan.deprecatedClusterIds.length }
-    }).pipe((effect) => withTaxonomyPostgres(effect, input.organizationId)),
+      return isAdaptiveModeActive(planMode(plan))
+        ? yield* swapAndCatchUp(input, plan)
+        : yield* deprecateOffClusters(input, plan)
+    }),
   )
 
 export const assertGardenTaxonomyQualityActivity = (input: GardenTaxonomyStepInput) =>
@@ -691,5 +940,25 @@ export const failGardenTaxonomyRunActivity = (input: GardenTaxonomyActivityInput
   const failInput: GardenTaxonomyFailInput = { ...baseStepInput(input), error: input.error }
   return failInput.customBehaviorId ? failCustomBehaviorRun(failInput) : failGlobalRun(failInput)
 }
+
+// Best-effort cleanup of abandoned staging rows when a publish fails before the
+// swap: leaves the old tree active and removes the orphaned staging tree. Safe
+// and idempotent — `deleteStaging` is guarded to `state = 'staging'`, so a swap
+// that already activated the tree makes this a no-op, and a missing plan
+// (start failed before staging) cleans nothing. Off runs are a no-op.
+export const cleanupGardenTaxonomyStagingActivity = (input: GardenTaxonomyActivityInput) =>
+  runGardenStep(
+    "GardenTaxonomyWorkflow cleanup staging",
+    input,
+    Effect.gen(function* () {
+      const step = baseStepInput(input)
+      const reference: GardenTaxonomyPlanReferenceInput = { ...step, planKey: gardenTaxonomyPlanKey(step) }
+      const plan = yield* loadGardenTaxonomyPlan(reference).pipe(Effect.orElseSucceed(() => null))
+      if (plan === null || !isAdaptiveModeActive(planMode(plan))) return { stagingDeleted: 0 }
+      const clusters = yield* TaxonomyClusterRepository
+      yield* clusters.deleteStaging({ clusterIds: plan.clusters.map((cluster) => cluster.id) })
+      return { stagingDeleted: plan.clusters.length }
+    }).pipe((effect) => withTaxonomyPostgres(effect, input.organizationId)),
+  )
 
 export { errorMessage as gardenTaxonomyErrorMessage }

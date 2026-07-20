@@ -46,6 +46,7 @@ const { mockActivities } = vi.hoisted(() => {
       status: "completed",
     })),
     failGardenTaxonomyRunActivity: vi.fn(async (input: Record<string, unknown>) => ({ ...input, status: "failed" })),
+    cleanupGardenTaxonomyStagingActivity: vi.fn(async () => ({ stagingDeleted: 0 })),
   }
   return { mockActivities }
 })
@@ -55,10 +56,12 @@ vi.mock("@temporalio/workflow", () => ({
     nonCancellable: async <T>(fn: () => Promise<T>) => fn(),
   },
   deprecatePatch: vi.fn(),
+  patched: vi.fn(() => true),
   proxyActivities: () => mockActivities,
   workflowInfo: () => ({ runId: "test-workflow-run-id" }),
 }))
 
+import { patched } from "@temporalio/workflow"
 import { gardenTaxonomyWorkflow } from "./taxonomy-gardening-workflow.ts"
 
 const globalInput = {
@@ -184,6 +187,36 @@ describe("taxonomy gardening workflow (divisive build)", () => {
       expect.objectContaining({ customBehaviorId: "b".repeat(24), error: "start exploded" }),
     )
     expect(mockActivities.planHierarchicalGardenTaxonomyActivity).not.toHaveBeenCalled()
+  })
+
+  it("carries the staging-swap patched marker and cleans up abandoned staging on a pre-swap failure", async () => {
+    mockActivities.reassignGardenTaxonomyObservationsActivity.mockRejectedValueOnce(new Error("reassign exploded"))
+
+    await expect(gardenTaxonomyWorkflow(globalInput)).rejects.toThrow("reassign exploded")
+
+    expect(patched).toHaveBeenCalledWith("taxonomy-gardening-staging-swap-v1")
+    // Save (staging) ran; reassign failed before the swap, so the orphaned
+    // staging tree is cleaned up and the run marked failed.
+    expect(mockActivities.saveGardenTaxonomyClustersActivity).toHaveBeenCalledTimes(1)
+    expect(mockActivities.deprecateGardenTaxonomyClustersActivity).not.toHaveBeenCalled()
+    expect(mockActivities.cleanupGardenTaxonomyStagingActivity).toHaveBeenCalledTimes(1)
+    expect(mockActivities.failGardenTaxonomyRunActivity).toHaveBeenCalledWith(
+      expect.objectContaining({ error: "reassign exploded" }),
+    )
+  })
+
+  it("skips staging cleanup when replaying an in-flight pre-change history (patched marker off)", async () => {
+    vi.mocked(patched).mockReturnValueOnce(false)
+    mockActivities.reassignGardenTaxonomyObservationsActivity.mockRejectedValueOnce(new Error("reassign exploded"))
+
+    await expect(gardenTaxonomyWorkflow(globalInput)).rejects.toThrow("reassign exploded")
+
+    // A pre-change history never staged a tree, so the new cleanup activity must
+    // not run — the marker reconciles the shape without changing old behavior.
+    expect(mockActivities.cleanupGardenTaxonomyStagingActivity).not.toHaveBeenCalled()
+    expect(mockActivities.failGardenTaxonomyRunActivity).toHaveBeenCalledWith(
+      expect.objectContaining({ error: "reassign exploded" }),
+    )
   })
 
   it("records a failed run in a non-cancellable cleanup scope when cancellation interrupts a step", async () => {

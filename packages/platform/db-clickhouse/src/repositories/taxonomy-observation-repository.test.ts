@@ -339,6 +339,44 @@ describe("TaxonomyObservationRepositoryLive", () => {
     const days = new Set(sample.map((observation) => observation.startTime.toISOString().slice(0, 10)))
     expect(days).toEqual(new Set(["2026-05-20", "2026-05-23"]))
   })
+
+  it("reads the full live window for reassignment carrying the current assignment", async () => {
+    const windowProjectId = ProjectId("w".repeat(24))
+    const assigned = makeObservation({
+      observationId: "1".repeat(24),
+      projectId: windowProjectId,
+      sessionId: SessionId("window-session-a"),
+      assignedClusterId: TaxonomyClusterId("c".repeat(24)),
+      startTime: new Date("2026-05-24T10:00:00.000Z"),
+    })
+    const unassigned = makeObservation({
+      observationId: "2".repeat(24),
+      projectId: windowProjectId,
+      sessionId: SessionId("window-session-b"),
+      assignedClusterId: null,
+      startTime: new Date("2026-05-24T11:00:00.000Z"),
+    })
+
+    const window = await runWithRepository(
+      Effect.gen(function* () {
+        const repo = yield* TaxonomyObservationRepository
+        yield* repo.upsertMany([assigned, unassigned])
+        return yield* repo.listWindowForReassignment({
+          organizationId,
+          projectId: windowProjectId,
+          limit: 10,
+        })
+      }),
+    )
+
+    // Newest first, both rows present, assignment surfaced (empty → null).
+    expect(window.map((row) => row.observationId)).toEqual(["2".repeat(24), "1".repeat(24)])
+    const byId = new Map(window.map((row) => [row.observationId, row]))
+    expect(byId.get("1".repeat(24))?.assignedClusterId).toBe("c".repeat(24))
+    expect(byId.get("2".repeat(24))?.assignedClusterId).toBeNull()
+    expect(byId.get("1".repeat(24))?.sessionId).toBe("window-session-a")
+    expect(byId.get("1".repeat(24))?.embedding.length).toBeGreaterThan(0)
+  })
 })
 
 const makeLlmSpanRow = (overrides: {

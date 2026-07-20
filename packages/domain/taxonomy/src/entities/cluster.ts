@@ -18,6 +18,8 @@ export const TaxonomyClusterState = {
   Active: "active",
   Merged: "merged",
   Deprecated: "deprecated",
+  /** Built and assigned, hidden from active reads until the atomic publish swap. */
+  Staging: "staging",
 } as const satisfies Record<string, TaxonomyClusterState>
 
 // ---------------------------------------------------------------------------

@@ -1,4 +1,11 @@
 export {
+  isAdaptiveModeActive,
+  parseTaxonomyAdaptiveModeBaseline,
+  resolveTaxonomyAdaptiveMode,
+  TAXONOMY_ADAPTIVE_CLUSTERING_MODE_DEFAULT,
+  type TaxonomyAdaptiveClusteringMode,
+} from "./adaptive-mode.ts"
+export {
   type BuildRelativeHierarchicalClustersInput,
   type BuildRelativeHierarchicalClustersResult,
   type BuildStaticHierarchicalClustersInput,
@@ -18,6 +25,8 @@ export {
   CUSTOM_BEHAVIOR_NAME_MAX_LENGTH,
   CUSTOM_BEHAVIOR_STATUSES,
   MAX_CUSTOM_BEHAVIORS_PER_PROJECT,
+  TAXONOMY_ADAPTIVE_CLUSTERING_MODE_ENV,
+  TAXONOMY_ADAPTIVE_CLUSTERING_MODES,
   TAXONOMY_ASSIGN_ABSOLUTE_THRESHOLD,
   TAXONOMY_ASSIGN_RELATIVE_MARGIN,
   TAXONOMY_ASSIGN_TEMPERATURE,
@@ -56,6 +65,7 @@ export {
   TAXONOMY_OBSERVATION_WEIGHT_SCHEME,
   TAXONOMY_PENDING_DISPLAY_NAME,
   TAXONOMY_PROJECTION_METHODS,
+  TAXONOMY_REASSIGNMENT_BATCH_SIZE,
   TAXONOMY_RUN_STATUSES,
   TAXONOMY_RUN_TRIGGERS,
   TAXONOMY_SEARCH_MIN_SCORE,
@@ -194,12 +204,19 @@ export {
   type TaxonomyObservationCounts,
   TaxonomyObservationRepository,
   type TaxonomyObservationRepositoryShape,
+  type TaxonomyReassignmentWindowObservation,
   type TaxonomyScopedClusteringObservation,
 } from "./ports/taxonomy-observation-repository.ts"
 export {
   TaxonomyRunRepository,
   type TaxonomyRunRepositoryShape,
 } from "./ports/taxonomy-run-repository.ts"
+export {
+  type ReassignmentLeaf,
+  type ReassignmentSourceObservation,
+  type RoutedLeafAssignment,
+  routeObservationsToLeaves,
+} from "./reassignment.ts"
 export {
   classifyClusterTrend,
   type GetLastRunInput,
@@ -229,10 +246,15 @@ export {
 export {
   type BuildHierarchicalTaxonomyInput,
   type BuildHierarchicalTaxonomyResult,
+  computeSplitLinkThreshold,
   type HierarchicalTaxonomyPlan,
   type PlanHierarchicalTaxonomyInput,
   planHierarchicalTaxonomyUseCase,
+  runTaxonomyClusterBuild,
+  type StagingLeafCluster,
   type TaxonomyClusterBuilder,
+  type TaxonomyClusterBuildRequest,
+  type TaxonomyClusterBuildResult,
 } from "./use-cases/build-hierarchical-taxonomy.ts"
 export { type CreateCustomBehaviorInput, createCustomBehavior } from "./use-cases/create-custom-behavior.ts"
 export {

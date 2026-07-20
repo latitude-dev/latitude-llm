@@ -223,10 +223,13 @@ describe("planHierarchicalTaxonomyUseCase continuity matching", () => {
         now,
         clusterBuilder: (input) =>
           Effect.succeed({
-            memberIndices: input.embeddings.map((_, index) => index),
-            centroid: input.embeddings[0] ?? [],
-            children: [],
-            depth: 0,
+            root: {
+              memberIndices: input.embeddings.map((_, index) => index),
+              centroid: input.embeddings[0] ?? [],
+              children: [],
+              depth: 0,
+            },
+            diagnostics: null,
           }),
       }).pipe(
         Effect.provide(Layer.succeed(TaxonomyObservationRepository, observations.repository)),

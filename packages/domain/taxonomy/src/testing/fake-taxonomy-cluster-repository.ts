@@ -93,7 +93,9 @@ export const createFakeTaxonomyClusterRepository = (
             (cluster) =>
               cluster.projectId === projectId &&
               (cluster.customBehaviorId ?? null) === (customBehaviorId ?? null) &&
-              (state ? cluster.state === state : true),
+              // `staging` is internal to the publish swap; never surface it unless
+              // explicitly requested (mirrors the Live repository).
+              (state ? cluster.state === state : cluster.state !== "staging"),
           )
           .sort((a, b) => {
             switch (sort ?? "observation_count_desc") {
@@ -138,6 +140,26 @@ export const createFakeTaxonomyClusterRepository = (
         const existing = clusters.get(clusterId)
         if (existing) {
           clusters.set(clusterId, { ...existing, state: "deprecated", updatedAt: timestamp })
+        }
+      }),
+
+    swapActiveTree: ({ supersededClusterIds, stagingClusterIds, timestamp }) =>
+      Effect.sync(() => {
+        for (const clusterId of supersededClusterIds) {
+          const existing = clusters.get(clusterId)
+          if (existing) clusters.set(clusterId, { ...existing, state: "deprecated", updatedAt: timestamp })
+        }
+        for (const clusterId of stagingClusterIds) {
+          const existing = clusters.get(clusterId)
+          if (existing) clusters.set(clusterId, { ...existing, state: "active", updatedAt: timestamp })
+        }
+      }),
+
+    deleteStaging: ({ clusterIds }) =>
+      Effect.sync(() => {
+        for (const clusterId of clusterIds) {
+          const existing = clusters.get(clusterId)
+          if (existing && existing.state === "staging") clusters.delete(clusterId)
         }
       }),
 
