@@ -12,7 +12,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Added
 
 - `createMemoryTelemetry()` emits OpenTelemetry GenAI memory-operation spans (`create_memory`, `update_memory`, `upsert_memory`, `delete_memory`, `search_memory`, `create_memory_store`, `delete_memory_store`). Each operation optionally wraps an `execute` callback — capturing latency, errors, and status — or emits a completed span. It sets `gen_ai.operation.name` and the `gen_ai.memory.*` attributes, stamps Latitude context, and maps a `search` result to the records it returned.
-- Record content (`gen_ai.memory.records`) is opt-in via `captureContent` (off by default), with a `redact` hook to scrub records before they are sent.
+- Content is opt-in via `captureContent` (off by default) and covers both record bodies (`gen_ai.memory.records`) and the search query (`gen_ai.memory.query.text`), with a `redact` hook to scrub records before they are sent.
 - `GEN_AI_MEMORY_ATTRIBUTES` and `MEMORY_OPERATIONS` constants are exported for raw OpenTelemetry instrumentation.
 
 ## [3.6.0] - 2026-07-10

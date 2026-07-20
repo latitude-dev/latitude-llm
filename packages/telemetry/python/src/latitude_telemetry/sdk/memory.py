@@ -3,7 +3,8 @@ First-party helper for emitting OpenTelemetry GenAI memory-operation spans.
 
 Mirrors the TypeScript `createMemoryTelemetry`: each operation optionally wraps an
 `execute` callable (capturing latency, errors, and status) or emits a completed span.
-Record content (`gen_ai.memory.records`) is opt-in via `capture_content`.
+Record content (`gen_ai.memory.records`) and the search query (`gen_ai.memory.query.text`)
+are opt-in via `capture_content`.
 """
 
 import inspect
@@ -90,10 +91,10 @@ class MemoryTelemetry:
         attributes[MEMORY_ATTRIBUTES.store_id] = store_id
         if record_id:
             attributes[MEMORY_ATTRIBUTES.record_id] = record_id
-        resolved_count = count if count is not None else (len(records) if records else None)
+        resolved_count = count if count is not None else (len(records) if records is not None else None)
         if resolved_count is not None:
             attributes[MEMORY_ATTRIBUTES.record_count] = resolved_count
-        if query:
+        if query and capture_content:
             attributes[MEMORY_ATTRIBUTES.query_text] = query
         if capture_content and records:
             redacted = self._redact(list(records), {"operation": operation, "store_id": store_id})
@@ -256,6 +257,8 @@ class MemoryTelemetry:
         execute: Callable[[], Any] | None = None,
     ) -> Any:
         """Omit `record_id` to signal a whole-store wipe."""
+        if record_id == "":
+            raise ValueError("memory.delete: record_id must be non-empty; omit it to wipe the whole store")
         return self._run(
             "delete_memory",
             store_id=store_id,

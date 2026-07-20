@@ -39,24 +39,23 @@ def _search(query: str) -> list[dict[str, object]]:
 
 
 def memory_conversation() -> list[dict[str, object]]:
-    # store_id = the user id -> this user's memory is its own store.
+    # store_id = the user id, so this user's memory is its own store.
     memory = create_memory_telemetry(latitude, store_id=USER_ID, capture_content=True)
 
-    # Wrap form: times the write, captures errors, and records the new body.
     memory.create(
         record_id="mem_pref_drink",
         records=[{"id": "mem_pref_drink", "content": "Prefers tea over coffee"}],
         execute=lambda: _add({"id": "mem_pref_drink", "content": "Prefers tea over coffee"}),
     )
 
-    # Search: the result maps to the records it returned (with scores) and sets the count.
     hits = memory.search(
         query="tea",
         execute=lambda: _search("tea"),
         records_from_result=lambda results: results,
     )
 
-    # Emit form: record an operation that already happened, no wrapping.
+    # Emit form: the write already happened (the caller mutated the store), so record it without wrapping.
+    _add({"id": "mem_pref_drink", "content": "Prefers green tea, no coffee"})
     memory.update(
         record_id="mem_pref_drink",
         records=[{"id": "mem_pref_drink", "content": "Prefers green tea, no coffee"}],

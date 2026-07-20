@@ -3,6 +3,7 @@
 import json
 from typing import Any
 
+import pytest
 from opentelemetry.sdk.trace import TracerProvider
 from opentelemetry.sdk.trace.export.in_memory_span_exporter import InMemorySpanExporter
 from opentelemetry.trace import StatusCode
@@ -145,7 +146,7 @@ class TestMemoryTelemetry:
 
         lat.shutdown()
 
-    def test_search_maps_results_and_always_sets_count(self):
+    def test_search_sets_count_but_gates_query_and_records_without_capture(self):
         exporter, lat = _new_latitude()
         memory = create_memory_telemetry(lat, store_id="prefs")
 
@@ -160,10 +161,50 @@ class TestMemoryTelemetry:
         span = _span(exporter, "search_memory")
         assert span is not None
         attrs = span.attributes or {}
-        assert attrs["gen_ai.memory.query.text"] == "preferences"
+        # Count is not content, so it rides even with capture off; query and records are gated.
         assert attrs["gen_ai.memory.record.count"] == 2
-        # Count is not content, so it rides even with capture off.
+        assert "gen_ai.memory.query.text" not in attrs
         assert "gen_ai.memory.records" not in attrs
+
+        lat.shutdown()
+
+    def test_search_sends_query_and_records_when_capture_on(self):
+        exporter, lat = _new_latitude()
+        memory = create_memory_telemetry(lat, store_id="prefs", capture_content=True)
+
+        hits = [{"id": "mem_1", "content": "likes tea", "score": 0.9}]
+        memory.search(query="preferences", execute=lambda: hits, records_from_result=lambda r: r)
+        lat.flush()
+
+        span = _span(exporter, "search_memory")
+        assert span is not None
+        attrs = span.attributes or {}
+        assert attrs["gen_ai.memory.query.text"] == "preferences"
+        raw = attrs["gen_ai.memory.records"]
+        assert isinstance(raw, str)
+        parsed: list[Any] = json.loads(raw)
+        assert len(parsed) == 1
+        assert parsed[0]["content"] == "likes tea"
+
+        lat.shutdown()
+
+    def test_delete_rejects_empty_record_id(self):
+        _exporter, lat = _new_latitude()
+        memory = create_memory_telemetry(lat, store_id="prefs")
+        with pytest.raises(ValueError, match="non-empty"):
+            memory.delete(record_id="")
+        lat.shutdown()
+
+    def test_empty_records_list_sets_count_zero(self):
+        exporter, lat = _new_latitude()
+        memory = create_memory_telemetry(lat, store_id="prefs")
+
+        memory.create(record_id="mem_1", records=[])
+        lat.flush()
+
+        span = _span(exporter, "create_memory")
+        assert span is not None
+        assert (span.attributes or {})["gen_ai.memory.record.count"] == 0
 
         lat.shutdown()
 

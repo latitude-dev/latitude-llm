@@ -38,28 +38,23 @@ const fakeStore = {
 }
 
 async function memoryConversation() {
-  // store.id = the user id → this user's memory is its own store.
-  const memory = createMemoryTelemetry({
-    latitude,
-    storeId: USER_ID,
-    captureContent: true,
-  })
+  // store.id = the user id, so this user's memory is its own store.
+  const memory = createMemoryTelemetry({ latitude, storeId: USER_ID, captureContent: true })
 
-  // Wrap form: times the write, captures errors, and records the new body.
   await memory.create({
     recordId: "mem_pref_drink",
     records: [{ id: "mem_pref_drink", content: "Prefers tea over coffee" }],
     execute: () => fakeStore.add({ id: "mem_pref_drink", content: "Prefers tea over coffee" }),
   })
 
-  // Search: the result maps to the records it returned (with scores) and sets the count.
   const hits = await memory.search({
     query: "tea",
     execute: () => fakeStore.search("tea"),
     recordsFromResult: (results) => results,
   })
 
-  // Emit form: record an operation that already happened, no wrapping.
+  // Emit form: the write already happened (the caller mutated the store), so record it without wrapping.
+  await fakeStore.add({ id: "mem_pref_drink", content: "Prefers green tea, no coffee" })
   await memory.update({
     recordId: "mem_pref_drink",
     records: [{ id: "mem_pref_drink", content: "Prefers green tea, no coffee" }],

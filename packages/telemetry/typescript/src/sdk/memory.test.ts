@@ -118,7 +118,7 @@ describe("createMemoryTelemetry", () => {
     await latitude.shutdown()
   })
 
-  it("maps search results to records and always sets the returned count", async () => {
+  it("sets the returned count but gates query and records without captureContent", async () => {
     const { exporter, latitude } = newLatitude()
     const memory = createMemoryTelemetry({ latitude, storeId: "prefs" })
 
@@ -136,11 +136,37 @@ describe("createMemoryTelemetry", () => {
     await latitude.flush()
 
     const span = exporter.getFinishedSpans().find((s) => s.name === "search_memory")
-    expect(span ? attr(span, "gen_ai.memory.query.text") : undefined).toBe("preferences")
+    // Count is not content, so it rides even with capture off; query and records are gated.
     expect(span ? attr(span, "gen_ai.memory.record.count") : undefined).toBe(2)
-    // Count of returned records is not content, so it rides even with capture off.
+    expect(span ? attr(span, "gen_ai.memory.query.text") : undefined).toBeUndefined()
     expect(span ? attr(span, "gen_ai.memory.records") : undefined).toBeUndefined()
 
+    await latitude.shutdown()
+  })
+
+  it("sends query text and records for search when captureContent is on", async () => {
+    const { exporter, latitude } = newLatitude()
+    const memory = createMemoryTelemetry({ latitude, storeId: "prefs", captureContent: true })
+
+    const hits = [{ id: "mem_1", content: "likes tea", score: 0.9 }]
+    await memory.search({ query: "preferences", execute: async () => hits, recordsFromResult: (r) => r })
+    await latitude.flush()
+
+    const span = exporter.getFinishedSpans().find((s) => s.name === "search_memory")
+    expect(span ? attr(span, "gen_ai.memory.query.text") : undefined).toBe("preferences")
+    const raw = span ? attr(span, "gen_ai.memory.records") : undefined
+    expect(typeof raw).toBe("string")
+    const parsed = JSON.parse(raw as string)
+    expect(parsed).toHaveLength(1)
+    expect(parsed[0].content).toBe("likes tea")
+
+    await latitude.shutdown()
+  })
+
+  it("rejects an empty recordId on delete to prevent an accidental whole-store wipe", async () => {
+    const { latitude } = newLatitude()
+    const memory = createMemoryTelemetry({ latitude, storeId: "prefs" })
+    expect(() => memory.delete({ recordId: "" })).toThrow(/non-empty/)
     await latitude.shutdown()
   })
 

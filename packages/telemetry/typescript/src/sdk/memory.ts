@@ -28,7 +28,10 @@ export type MemoryTelemetryOptions = {
   /** Default `gen_ai.memory.store.id` for every operation; per-call `storeId` overrides it. */
   readonly storeId?: string
   readonly context?: ContextOptions | (() => ContextOptions | undefined)
-  /** Send record bodies (`gen_ai.memory.records`). Off by default — opt-in per OTEL and to avoid shipping PII. */
+  /**
+   * Send potentially-PII content — record bodies (`gen_ai.memory.records`) and the search
+   * query (`gen_ai.memory.query.text`). Off by default; both are OTEL Opt-In attributes.
+   */
   readonly captureContent?: boolean
   readonly redact?: (records: readonly MemoryRecordInput[], info: MemoryRedactInfo) => readonly MemoryRecordInput[]
 }
@@ -130,7 +133,7 @@ export function createMemoryTelemetry(options: MemoryTelemetryOptions): MemoryTe
     if (params.recordId) attributes[GEN_AI_MEMORY_ATTRIBUTES.recordId] = params.recordId
     const count = params.count ?? params.records?.length
     if (count !== undefined) attributes[GEN_AI_MEMORY_ATTRIBUTES.recordCount] = count
-    if (params.query) attributes[GEN_AI_MEMORY_ATTRIBUTES.queryText] = params.query
+    if (params.query && params.captureContent) attributes[GEN_AI_MEMORY_ATTRIBUTES.queryText] = params.query
     if (params.captureContent && params.records && params.records.length > 0) {
       const redacted = redact(params.records, { operation: params.operation, storeId: params.storeId })
       attributes[GEN_AI_MEMORY_ATTRIBUTES.records] = stringifyAttribute(redacted)
@@ -214,6 +217,11 @@ export function createMemoryTelemetry(options: MemoryTelemetryOptions): MemoryTe
   function deleteOp<T>(options: WithExecute<MemoryDeleteOptions, T>): Promise<T>
   function deleteOp(options?: MemoryDeleteOptions): Promise<void>
   function deleteOp<T>(opts: MemoryDeleteOptions & { execute?: () => MaybePromise<T> } = {}): Promise<unknown> {
+    // An empty recordId reaches ingest as an absent id, which means "wipe the whole store" — reject it
+    // so a defaulted/derived "" can't erase a store's projection instead of deleting one record.
+    if (opts.recordId === "") {
+      throw new Error("memory.delete: recordId must be non-empty; omit it entirely to wipe the whole store")
+    }
     return run<T>({ operation: "delete_memory", ...opts })
   }
 
