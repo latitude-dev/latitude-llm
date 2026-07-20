@@ -103,7 +103,7 @@ describe("updateFlaggerUseCase", () => {
   it("evicts the project's flagger cache so the next read picks up the new value before TTL", async () => {
     // Cache eviction is the load-bearing behavior here: without it, callers
     // of `getProjectFlaggersUseCase` would see the stale `enabled` value for
-    // up to 5 minutes and `processFlaggersUseCase` would keep enqueueing
+    // up to 5 minutes and `screenSessionFlaggersUseCase` would keep routing
     // (or short-circuiting) against the old config.
     const { repository } = createFakeFlaggerRepository([makeFlagger("jailbreaking", true)])
     const { layer: cacheLayer, deletedKeys } = createCacheLayer()

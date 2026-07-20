@@ -1429,9 +1429,6 @@ importers:
       '@domain/events':
         specifier: workspace:*
         version: link:../events
-      '@domain/queue':
-        specifier: workspace:*
-        version: link:../queue
       '@domain/scores':
         specifier: workspace:*
         version: link:../scores
