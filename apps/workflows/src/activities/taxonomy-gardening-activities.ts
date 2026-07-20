@@ -621,6 +621,12 @@ const annotateAdaptiveTelemetrySpan = (input: GardenTaxonomyStepInput, plan: Hie
   plan.mode === "off"
     ? Effect.void
     : Effect.gen(function* () {
+        // Force the Datadog trace agent to keep this trace chunk at ingestion.
+        // Garden runs are low-volume (one span per project per ~6h), so agent-side
+        // APM sampling could otherwise drop them before the backend retention
+        // filter can index them. `manual.keep` is the ingestion half; the 100%
+        // retention filter on this operation is the indexing half.
+        yield* Effect.annotateCurrentSpan("manual.keep", true)
         for (const [key, value] of Object.entries(adaptiveSpanAttributes(input, plan))) {
           yield* Effect.annotateCurrentSpan(key, value)
         }
