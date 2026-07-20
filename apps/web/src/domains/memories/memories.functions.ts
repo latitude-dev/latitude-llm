@@ -1,16 +1,18 @@
 import {
+  computeRecordChangeDiffUseCase,
+  computeRecordHistoryUseCase,
   computeSessionMemorySummaryUseCase,
   listMemoryStoresUseCase,
   listRecordUsersUseCase,
   listStoreUsersUseCase,
   listUserStoresUseCase,
   type MemoryChangeKind,
-  MemoryRepository,
+  type RecordChangeDiff,
   readRecordReadsUseCase,
   reconstructSnapshotUseCase,
   type SessionMemorySummary,
 } from "@domain/memories"
-import { ExternalUserId, ProjectId, SessionId, TraceId } from "@domain/shared"
+import { ExternalUserId, ProjectId, SessionId, SpanId, TraceId } from "@domain/shared"
 import { MemoryRepositoryLive } from "@platform/db-clickhouse"
 import { withTracing } from "@repo/observability"
 import { createServerFn } from "@tanstack/react-start"
@@ -51,6 +53,8 @@ export interface MemoryStoreSnapshotRecord {
 export interface MemoryRecordVersionRecord {
   readonly changeKind: MemoryChangeKind
   readonly tokenCount: number
+  readonly tokensAdded: number
+  readonly tokensRemoved: number
   readonly spanId: string
   readonly traceId: string
   readonly sessionId: string
@@ -63,6 +67,8 @@ interface MemoryRecordDetailRecord {
   readonly tokenCount: number
   readonly versions: readonly MemoryRecordVersionRecord[]
 }
+
+type MemoryRecordChangeDiffRecord = RecordChangeDiff
 
 export interface MemoryRecordReadRecord {
   readonly spanId: string
@@ -188,34 +194,48 @@ export const getMemoryRecord = createServerFn({ method: "GET" })
     const orgId = await resolveOrgScope(context)
 
     return Effect.runPromise(
-      Effect.gen(function* () {
-        const memoryRepository = yield* MemoryRepository
-        const versions = yield* memoryRepository.readRecordVersions({
-          organizationId: orgId,
-          projectId: ProjectId(data.projectId),
-          records: [{ storeId: data.storeId, recordId: data.recordId }],
-        })
-        // Version chain is end_time ASC; the current body is the latest version, unless it removed the record.
-        const newestFirst = [...versions].reverse()
-        const latest = newestFirst[0]
-        const current = latest && latest.changeKind !== "remove" ? latest : undefined
-        const blobs = current
-          ? yield* memoryRepository.readBlobs({ organizationId: orgId, hashes: [current.contentHash] })
-          : []
-        const body = current ? (blobs.find((blob) => blob.contentHash === current.contentHash)?.content ?? null) : null
-        return {
-          body,
-          tokenCount: current?.tokenCount ?? 0,
-          versions: newestFirst.map((version) => ({
-            changeKind: version.changeKind,
-            tokenCount: version.tokenCount,
-            spanId: version.spanId as string,
-            traceId: version.traceId as string,
-            sessionId: version.sessionId as string,
-            userId: version.userId as string,
-            endTime: version.endTime.toISOString(),
-          })),
-        } satisfies MemoryRecordDetailRecord
+      computeRecordHistoryUseCase({
+        organizationId: orgId,
+        projectId: ProjectId(data.projectId),
+        storeId: data.storeId,
+        recordId: data.recordId,
+      }).pipe(
+        Effect.map(
+          (history): MemoryRecordDetailRecord => ({
+            body: history.body,
+            tokenCount: history.tokenCount,
+            versions: history.versions.map((version) => ({
+              changeKind: version.changeKind,
+              tokenCount: version.tokenCount,
+              tokensAdded: version.tokensAdded,
+              tokensRemoved: version.tokensRemoved,
+              spanId: version.spanId as string,
+              traceId: version.traceId as string,
+              sessionId: version.sessionId as string,
+              userId: version.userId as string,
+              endTime: version.endTime.toISOString(),
+            })),
+          }),
+        ),
+        withScopedClickHouse(MemoryRepositoryLive, getClickhouseClient(), orgId),
+        withTracing,
+      ),
+    )
+  })
+
+/** One change's before/after bodies (its authoring span vs. the prior snapshot) for the diff view. */
+export const getMemoryRecordChangeDiff = createServerFn({ method: "GET" })
+  .inputValidator(z.object({ projectId: z.string(), storeId: z.string(), recordId: z.string(), spanId: z.string() }))
+  .handler(async ({ data, context }): Promise<MemoryRecordChangeDiffRecord> => {
+    const orgId = await resolveOrgScope(context)
+
+    return Effect.runPromise(
+      computeRecordChangeDiffUseCase({
+        organizationId: orgId,
+        projectId: ProjectId(data.projectId),
+        storeId: data.storeId,
+        recordId: data.recordId,
+        spanId: SpanId(data.spanId),
       }).pipe(withScopedClickHouse(MemoryRepositoryLive, getClickhouseClient(), orgId), withTracing),
     )
   })

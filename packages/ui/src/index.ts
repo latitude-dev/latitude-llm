@@ -95,6 +95,10 @@ export {
   type CodeBlockControlsProps,
 } from "./components/code-block/code-block-controls.tsx"
 export {
+  CodeDiff,
+  type CodeDiffProps,
+} from "./components/code-block/code-diff.tsx"
+export {
   Combobox,
   ComboboxChip,
   ComboboxChips,

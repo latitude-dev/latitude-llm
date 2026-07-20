@@ -3262,6 +3262,9 @@ importers:
       date-fns:
         specifier: 3.6.0
         version: 3.6.0
+      diff:
+        specifier: 'catalog:'
+        version: 8.0.4
       echarts:
         specifier: 6.1.0
         version: 6.1.0

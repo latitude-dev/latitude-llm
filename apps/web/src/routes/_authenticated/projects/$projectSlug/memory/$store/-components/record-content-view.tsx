@@ -1,7 +1,8 @@
-import { CodeBlock, cn, Icon, Sheet, Skeleton, Text, useMountEffect } from "@repo/ui"
+import { CodeBlock, CodeDiff, cn, Icon, Sheet, Skeleton, Text, useMountEffect } from "@repo/ui"
 import { formatCount } from "@repo/utils"
 import { Link } from "@tanstack/react-router"
 import {
+  ArrowUpRightIcon,
   ChevronDownIcon,
   ChevronRightIcon,
   ChevronUpIcon,
@@ -15,9 +16,10 @@ import {
   UserRoundIcon,
   UsersRoundIcon,
 } from "lucide-react"
-import { type ReactNode, useCallback, useMemo, useRef, useState } from "react"
+import { type ReactNode, useCallback, useRef, useState } from "react"
 import {
   useMemoryRecord,
+  useMemoryRecordChangeDiff,
   useMemoryRecordReads,
   useMemoryRecordUsers,
 } from "../../../../../../../domains/memories/memories.collection.ts"
@@ -49,6 +51,9 @@ const CHANGE_META = {
 type MutatingKind = keyof typeof CHANGE_META
 const isMutating = (kind: string): kind is MutatingKind => kind === "add" || kind === "update" || kind === "remove"
 
+type OpenSpanTarget = { readonly sessionId: string; readonly traceId: string; readonly spanId: string }
+type OpenSpan = (target: OpenSpanTarget) => void
+
 const DATETIME_FMT = new Intl.DateTimeFormat("en", {
   month: "short",
   day: "2-digit",
@@ -64,14 +69,23 @@ export function RecordContentView({
   projectSlug,
   storeId,
   recordId,
+  changeSpanId,
+  onSelectChange,
 }: {
   readonly projectId: string
   readonly projectSlug: string
   readonly storeId: string
   readonly recordId: string
+  readonly changeSpanId?: string | undefined
+  readonly onSelectChange: (spanId: string | undefined) => void
 }) {
   const { data, isLoading } = useMemoryRecord({ projectId, storeId, recordId })
-  const [openSessionId, setOpenSessionId] = useState<string | null>(null)
+  const [openSpan, setOpenSpan] = useState<OpenSpanTarget | null>(null)
+
+  const toggleChange = useCallback(
+    (spanId: string) => onSelectChange(changeSpanId === spanId ? undefined : spanId),
+    [changeSpanId, onSelectChange],
+  )
 
   if (isLoading) {
     return (
@@ -89,65 +103,193 @@ export function RecordContentView({
 
   const body = data.body ?? ""
   const language = body !== "" && looksLikeJson(body) ? "json" : undefined
-  const lineCount = body === "" ? 0 : body.split("\n").length
+  const changes = data.versions.filter((version) => isMutating(version.changeKind))
+  const activeVersion = changeSpanId != null ? changes.find((version) => version.spanId === changeSpanId) : undefined
 
   return (
     <div className="flex min-h-0 flex-1 flex-col overflow-hidden bg-background">
-      <div className="flex h-11 shrink-0 items-center justify-between gap-3 border-b px-3">
-        <div className="flex min-w-0 items-center gap-2">
-          <FileTextIcon className="h-4 w-4 shrink-0 text-muted-foreground" />
-          <Text.H5M className="min-w-0 font-mono" noWrap ellipsis>
-            {recordDisplayLabel(recordId)}
-          </Text.H5M>
-        </div>
-        <div className="flex shrink-0 items-center gap-2">
-          {language === "json" ? (
-            <span className="rounded border px-1.5 py-0.5 font-mono text-[10px] uppercase leading-none tracking-wide text-muted-foreground">
-              JSON
-            </span>
-          ) : null}
+      <RecordHeader
+        recordId={recordId}
+        tokenCount={data.tokenCount}
+        activeVersion={activeVersion}
+        changes={changes}
+        onSelectChange={onSelectChange}
+        onOpenSpan={setOpenSpan}
+        {...(language ? { language } : {})}
+      />
+
+      {activeVersion ? (
+        <RecordChangeDiffBody projectId={projectId} storeId={storeId} recordId={recordId} version={activeVersion} />
+      ) : (
+        <div className="min-h-0 flex-1">
           {data.body !== null ? (
-            <Text.H6 color="foregroundMuted" noWrap>
-              {formatCount(lineCount)} {lineCount === 1 ? "line" : "lines"} · {formatCount(data.tokenCount)} tok
-            </Text.H6>
+            <CodeBlock value={body} fillHeight className="h-full rounded-none" {...(language ? { language } : {})} />
           ) : (
-            <Text.H6 color="foregroundMuted" noWrap>
-              {formatCount(data.tokenCount)} tok
-            </Text.H6>
+            <div className="flex h-full items-center justify-center">
+              <Text.H6 color="foregroundMuted">Content not captured</Text.H6>
+            </div>
           )}
         </div>
-      </div>
-
-      <div className="min-h-0 flex-1">
-        {data.body !== null ? (
-          <CodeBlock value={body} fillHeight className="h-full rounded-none" {...(language ? { language } : {})} />
-        ) : (
-          <div className="flex h-full items-center justify-center">
-            <Text.H6 color="foregroundMuted">Content not captured</Text.H6>
-          </div>
-        )}
-      </div>
+      )}
 
       <RecordActivityPanel
         projectId={projectId}
         projectSlug={projectSlug}
         storeId={storeId}
         recordId={recordId}
-        versions={data.versions}
-        onOpenSession={setOpenSessionId}
+        changes={changes}
+        onOpenSpan={setOpenSpan}
+        onToggleDiff={toggleChange}
+        activeDiffSpanId={changeSpanId ?? null}
       />
 
-      <Sheet open={openSessionId !== null} onClose={() => setOpenSessionId(null)} closeAriaLabel="Close session panel">
-        {openSessionId ? (
+      <Sheet open={openSpan !== null} onClose={() => setOpenSpan(null)} closeAriaLabel="Close span panel">
+        {openSpan ? (
           <SessionDetailDrawer
-            key={openSessionId}
+            key={`${openSpan.sessionId}:${openSpan.spanId}`}
             projectId={projectId}
-            sessionId={openSessionId}
-            onClose={() => setOpenSessionId(null)}
-            defaultTab="session"
+            sessionId={openSpan.sessionId}
+            focusSpan={{ spanId: openSpan.spanId, traceId: openSpan.traceId }}
+            onClose={() => setOpenSpan(null)}
           />
         ) : null}
       </Sheet>
+    </div>
+  )
+}
+
+// A stable header for both modes: record identity stays put on the left, the
+// selected change's facts (kind, churn, session) and the date + change
+// navigation sit together on the right. "Current" is the position above the
+// newest change, so ↑ from the newest change returns to it (and is disabled
+// while already viewing current); ↓ from current opens the newest change.
+function RecordHeader({
+  recordId,
+  tokenCount,
+  language,
+  activeVersion,
+  changes,
+  onSelectChange,
+  onOpenSpan,
+}: {
+  readonly recordId: string
+  readonly tokenCount: number
+  readonly language?: string | undefined
+  readonly activeVersion: MemoryRecordVersionRecord | undefined
+  readonly changes: readonly MemoryRecordVersionRecord[]
+  readonly onSelectChange: (spanId: string | undefined) => void
+  readonly onOpenSpan: OpenSpan
+}) {
+  const activeIndex = activeVersion ? changes.findIndex((change) => change.spanId === activeVersion.spanId) : -1
+  const canNewer = activeVersion != null
+  const canOlder = activeVersion ? activeIndex >= 0 && activeIndex < changes.length - 1 : changes.length > 0
+  const goNewer = () => onSelectChange(activeIndex <= 0 ? undefined : changes[activeIndex - 1]?.spanId)
+  const goOlder = () => onSelectChange(activeVersion ? changes[activeIndex + 1]?.spanId : changes[0]?.spanId)
+
+  const meta = activeVersion ? CHANGE_META[activeVersion.changeKind as MutatingKind] : undefined
+  const ChangeIcon = meta?.icon
+  // In the current view the date reflects the last update — the newest change.
+  const dateVersion = activeVersion ?? changes[0]
+
+  return (
+    <div className="flex h-11 shrink-0 items-center justify-between gap-3 border-b px-3">
+      <div className="flex min-w-0 items-center gap-2">
+        <FileTextIcon className="h-4 w-4 shrink-0 text-muted-foreground" />
+        <Text.H5M className="min-w-0 font-mono" noWrap ellipsis>
+          {recordDisplayLabel(recordId)}
+        </Text.H5M>
+        <Sep />
+        <Text.H6 color="foregroundMuted" className="shrink-0 whitespace-nowrap tabular-nums">
+          {formatCount(activeVersion?.tokenCount ?? tokenCount)} tok
+        </Text.H6>
+        {language === "json" ? (
+          <span className="shrink-0 rounded border px-1.5 py-0.5 font-mono text-[10px] uppercase leading-none tracking-wide text-muted-foreground">
+            JSON
+          </span>
+        ) : null}
+      </div>
+
+      <div className="flex shrink-0 items-center gap-1.5">
+        {activeVersion && meta && ChangeIcon ? (
+          <>
+            <span className="flex items-center gap-1">
+              <ChangeIcon className={cn("h-3.5 w-3.5 shrink-0", meta.className)} />
+              <Text.H6 className="whitespace-nowrap">{meta.label}</Text.H6>
+            </span>
+            <Sep />
+            <ChangeTokens added={activeVersion.tokensAdded} removed={activeVersion.tokensRemoved} />
+            {activeVersion.spanId ? (
+              <OpenSpanButton
+                onOpen={() =>
+                  onOpenSpan({
+                    sessionId: activeVersion.sessionId,
+                    traceId: activeVersion.traceId,
+                    spanId: activeVersion.spanId,
+                  })
+                }
+              />
+            ) : null}
+            <span className="mx-0.5 h-4 w-px bg-border" aria-hidden />
+          </>
+        ) : null}
+        {dateVersion ? <ActivityTime iso={dateVersion.endTime} /> : null}
+        <span className="ml-0.5 flex items-center">
+          <NavButton
+            icon={ChevronUpIcon}
+            label={activeIndex === 0 ? "Back to current version" : "Newer change"}
+            onClick={canNewer ? goNewer : undefined}
+          />
+          <NavButton
+            icon={ChevronDownIcon}
+            label={activeVersion ? "Older change" : "View latest change"}
+            onClick={canOlder ? goOlder : undefined}
+          />
+        </span>
+      </div>
+    </div>
+  )
+}
+
+function RecordChangeDiffBody({
+  projectId,
+  storeId,
+  recordId,
+  version,
+}: {
+  readonly projectId: string
+  readonly storeId: string
+  readonly recordId: string
+  readonly version: MemoryRecordVersionRecord
+}) {
+  const { data, isLoading } = useMemoryRecordChangeDiff({ projectId, storeId, recordId, spanId: version.spanId })
+  const before = data?.beforeBody ?? ""
+  const after = data?.afterBody ?? ""
+  const language = looksLikeJson(after) || looksLikeJson(before) ? "json" : undefined
+  const unchanged = data != null && !data.degraded && before === after
+
+  return (
+    <div className="min-h-0 flex-1">
+      {isLoading ? (
+        <div className="p-3">
+          <Skeleton className="h-full w-full" />
+        </div>
+      ) : data == null ? null : data.degraded ? (
+        <div className="flex h-full items-center justify-center">
+          <Text.H6 color="foregroundMuted">Content not captured for this change</Text.H6>
+        </div>
+      ) : unchanged ? (
+        <div className="flex h-full items-center justify-center">
+          <Text.H6 color="foregroundMuted">No content changes</Text.H6>
+        </div>
+      ) : (
+        <CodeDiff
+          before={before}
+          after={after}
+          fillHeight
+          className="h-full rounded-none"
+          {...(language ? { language } : {})}
+        />
+      )}
     </div>
   )
 }
@@ -261,21 +403,24 @@ function RecordActivityPanel({
   projectSlug,
   storeId,
   recordId,
-  versions,
-  onOpenSession,
+  changes,
+  onOpenSpan,
+  onToggleDiff,
+  activeDiffSpanId,
 }: {
   readonly projectId: string
   readonly projectSlug: string
   readonly storeId: string
   readonly recordId: string
-  readonly versions: readonly MemoryRecordVersionRecord[]
-  readonly onOpenSession: (sessionId: string) => void
+  readonly changes: readonly MemoryRecordVersionRecord[]
+  readonly onOpenSpan: OpenSpan
+  readonly onToggleDiff: (spanId: string) => void
+  readonly activeDiffSpanId: string | null
 }) {
   const [open, setOpen] = useState(true)
   const [activeTab, setActiveTab] = useState<TabId>("changes")
   const { footerRef, height, isDragging, onPointerDown, onKeyDown } = usePanelResize(setOpen)
 
-  const changes = useMemo(() => versions.filter((version) => isMutating(version.changeKind)), [versions])
   const reads = useMemoryRecordReads({ projectId, storeId, recordId, enabled: open })
   const users = useMemoryRecordUsers({ projectId, storeId, recordId, enabled: open })
 
@@ -367,9 +512,14 @@ function RecordActivityPanel({
       {open ? (
         <div className="overflow-y-auto border-t px-1 py-1" style={{ height }}>
           {activeTab === "changes" ? (
-            <ChangesBody changes={changes} onOpenSession={onOpenSession} />
+            <ChangesBody
+              changes={changes}
+              onOpenSpan={onOpenSpan}
+              onToggleDiff={onToggleDiff}
+              activeDiffSpanId={activeDiffSpanId}
+            />
           ) : activeTab === "reads" ? (
-            <ReadsBody isLoading={reads.isLoading} reads={reads.data ?? []} onOpenSession={onOpenSession} />
+            <ReadsBody isLoading={reads.isLoading} reads={reads.data ?? []} onOpenSpan={onOpenSpan} />
           ) : (
             <UsersBody isLoading={users.isLoading} users={users.data ?? []} projectSlug={projectSlug} />
           )}
@@ -420,20 +570,38 @@ function UserMeta({ userId, className }: { readonly userId: string; readonly cla
   )
 }
 
-function TokenDelta({ delta }: { readonly delta: number }) {
-  if (delta === 0) {
+// The change's gross token churn, `+added −removed` (GitHub-style), not the net.
+function ChangeTokens({ added, removed }: { readonly added: number; readonly removed: number }) {
+  if (added === 0 && removed === 0) {
     return (
       <Text.H6 color="foregroundMuted" className="shrink-0 whitespace-nowrap tabular-nums">
         ±0 tok
       </Text.H6>
     )
   }
-  const positive = delta > 0
   return (
-    <Text.H6 className={cn("shrink-0 whitespace-nowrap tabular-nums", positive ? "text-success" : "text-destructive")}>
-      {positive ? "+" : "−"}
-      {formatCount(Math.abs(delta))} tok
-    </Text.H6>
+    <span className="flex shrink-0 items-center gap-1 whitespace-nowrap tabular-nums">
+      {added > 0 ? <Text.H6 className="text-success">+{formatCount(added)}</Text.H6> : null}
+      {removed > 0 ? <Text.H6 className="text-destructive">−{formatCount(removed)}</Text.H6> : null}
+      <Text.H6 color="foregroundMuted">tok</Text.H6>
+    </span>
+  )
+}
+
+// Opens the session drawer on the Spans tab with this operation's span selected.
+function OpenSpanButton({ onOpen }: { readonly onOpen: () => void }) {
+  return (
+    <button
+      type="button"
+      onClick={onOpen}
+      aria-label="Open span"
+      className="flex h-6 shrink-0 cursor-pointer items-center gap-1 rounded px-1.5 text-muted-foreground transition-colors hover:bg-muted hover:text-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-inset focus-visible:ring-ring"
+    >
+      <Text.H6 color="foregroundMuted" className="whitespace-nowrap">
+        Span
+      </Text.H6>
+      <ArrowUpRightIcon className="h-3 w-3 shrink-0" />
+    </button>
   )
 }
 
@@ -444,25 +612,40 @@ function OpenHint() {
   )
 }
 
-function ActivityRow({
-  sessionId,
-  onOpenSession,
-  children,
+function NavButton({
+  icon: NavIcon,
+  label,
+  onClick,
 }: {
-  readonly sessionId: string
-  readonly onOpenSession: (sessionId: string) => void
-  readonly children: ReactNode
+  readonly icon: LucideIcon
+  readonly label: string
+  readonly onClick: (() => void) | undefined
 }) {
-  if (!sessionId) {
-    return <div className={ROW_CLASS}>{children}</div>
-  }
   return (
     <button
       type="button"
-      onClick={() => onOpenSession(sessionId)}
-      aria-label={`Open session ${sessionId}`}
-      className={cn(ROW_CLASS, ROW_INTERACTIVE)}
+      onClick={onClick}
+      disabled={onClick === undefined}
+      aria-label={label}
+      className="flex h-6 w-6 shrink-0 cursor-pointer items-center justify-center rounded text-muted-foreground transition-colors hover:bg-muted hover:text-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-inset focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-30"
     >
+      <NavIcon className="h-4 w-4" />
+    </button>
+  )
+}
+
+function ActivityRow({
+  onOpen,
+  children,
+}: {
+  readonly onOpen: (() => void) | undefined
+  readonly children: ReactNode
+}) {
+  if (!onOpen) {
+    return <div className={ROW_CLASS}>{children}</div>
+  }
+  return (
+    <button type="button" onClick={onOpen} aria-label="Open span" className={cn(ROW_CLASS, ROW_INTERACTIVE)}>
       {children}
       <OpenHint />
     </button>
@@ -489,34 +672,49 @@ function LoadingRows() {
 
 function ChangesBody({
   changes,
-  onOpenSession,
+  onOpenSpan,
+  onToggleDiff,
+  activeDiffSpanId,
 }: {
   readonly changes: readonly MemoryRecordVersionRecord[]
-  readonly onOpenSession: (sessionId: string) => void
+  readonly onOpenSpan: OpenSpan
+  readonly onToggleDiff: (spanId: string) => void
+  readonly activeDiffSpanId: string | null
 }) {
   if (changes.length === 0) return <EmptyRow>No changes recorded for this record.</EmptyRow>
   return (
     <>
-      {changes.map((version, index) => {
+      {changes.map((version) => {
         const meta = CHANGE_META[version.changeKind as MutatingKind]
         const ChangeIcon = meta.icon
-        const delta = version.tokenCount - (changes[index + 1]?.tokenCount ?? 0)
+        const isActive = activeDiffSpanId === version.spanId
         return (
-          <ActivityRow
-            key={`${version.spanId}-${version.endTime}`}
-            sessionId={version.sessionId}
-            onOpenSession={onOpenSession}
-          >
-            <ActivityTime iso={version.endTime} />
-            <span className="flex shrink-0 items-center gap-1.5">
-              <ChangeIcon className={cn("h-3.5 w-3.5 shrink-0", meta.className)} />
-              <Text.H6 className="whitespace-nowrap">{meta.label}</Text.H6>
-            </span>
-            <Sep />
-            <TokenDelta delta={delta} />
-            <Sep />
-            <UserMeta userId={version.userId} className="max-w-[14rem]" />
-          </ActivityRow>
+          <div key={`${version.spanId}-${version.endTime}`} className={cn(ROW_CLASS, isActive && "bg-muted")}>
+            <button
+              type="button"
+              onClick={() => onToggleDiff(version.spanId)}
+              aria-label="View this change's diff"
+              aria-pressed={isActive}
+              className={cn("flex min-w-0 flex-1 items-center gap-1.5 rounded", ROW_INTERACTIVE)}
+            >
+              <ActivityTime iso={version.endTime} />
+              <span className="flex shrink-0 items-center gap-1.5">
+                <ChangeIcon className={cn("h-3.5 w-3.5 shrink-0", meta.className)} />
+                <Text.H6 className="whitespace-nowrap">{meta.label}</Text.H6>
+              </span>
+              <Sep />
+              <ChangeTokens added={version.tokensAdded} removed={version.tokensRemoved} />
+              <Sep />
+              <UserMeta userId={version.userId} className="max-w-[14rem]" />
+            </button>
+            {version.spanId ? (
+              <OpenSpanButton
+                onOpen={() =>
+                  onOpenSpan({ sessionId: version.sessionId, traceId: version.traceId, spanId: version.spanId })
+                }
+              />
+            ) : null}
+          </div>
         )
       })}
     </>
@@ -526,18 +724,25 @@ function ChangesBody({
 function ReadsBody({
   isLoading,
   reads,
-  onOpenSession,
+  onOpenSpan,
 }: {
   readonly isLoading: boolean
   readonly reads: readonly MemoryRecordReadRecord[]
-  readonly onOpenSession: (sessionId: string) => void
+  readonly onOpenSpan: OpenSpan
 }) {
   if (isLoading) return <LoadingRows />
   if (reads.length === 0) return <EmptyRow>This record hasn't been retrieved yet.</EmptyRow>
   return (
     <>
       {reads.map((read) => (
-        <ActivityRow key={`${read.spanId}-${read.endTime}`} sessionId={read.sessionId} onOpenSession={onOpenSession}>
+        <ActivityRow
+          key={`${read.spanId}-${read.endTime}`}
+          onOpen={
+            read.spanId
+              ? () => onOpenSpan({ sessionId: read.sessionId, traceId: read.traceId, spanId: read.spanId })
+              : undefined
+          }
+        >
           <ActivityTime iso={read.endTime} />
           {read.queryText ? (
             <Text.H6 className="min-w-0 flex-1 truncate">
