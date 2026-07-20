@@ -91,6 +91,7 @@ describe("computeSessionMemoryDiff", () => {
     expect(rec1?.degraded).toBe(false)
     expect(rec1?.tokensAdded).toBeGreaterThan(0)
     expect(rec1?.tokensRemoved).toBe(0)
+    expect(rec1?.lastChangeSpanId).toBe(spanId("2")) // the session's last touch (the update)
   })
 
   it("diffs against the pre-session version when another session wrote the record earlier", async () => {
@@ -128,6 +129,7 @@ describe("computeSessionMemoryDiff", () => {
     expect(rec1?.afterBody).toBe("hello world")
     expect(rec1?.degraded).toBe(false)
     expect(rec1?.tokensAdded).toBeGreaterThan(0)
+    expect(rec1?.lastChangeSpanId).toBe(spanId("2"))
   })
 
   it("omits a record added and removed within the same session", async () => {
@@ -184,6 +186,7 @@ describe("computeSessionMemoryDiff", () => {
     expect(result.records).toHaveLength(2)
     expect(result.records.every((r) => r.kind === "removed" && r.afterBody === null && r.beforeBody != null)).toBe(true)
     expect(result.records.every((r) => r.tokensRemoved > 0 && r.tokensAdded === 0)).toBe(true)
+    expect(result.records.every((r) => r.lastChangeSpanId === null)).toBe(true) // wipe the session didn't otherwise touch
   })
 
   it("flags a change as degraded when the body is unavailable", async () => {

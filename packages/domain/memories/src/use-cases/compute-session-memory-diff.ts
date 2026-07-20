@@ -26,6 +26,8 @@ export interface SessionMemoryRecordDiff {
   readonly tokensAdded: number
   readonly tokensRemoved: number
   readonly degraded: boolean
+  /** Span of the session's last change to this record, for deep-linking to that change; `null` if none. */
+  readonly lastChangeSpanId: string | null
 }
 
 /** A session's (or trace's) memory writes as per-record before/after diffs. */
@@ -65,6 +67,7 @@ export const computeSessionMemoryDiffUseCase = Effect.fn("memories.computeSessio
       tokensAdded: delta.tokensAdded,
       tokensRemoved: delta.tokensRemoved,
       degraded: delta.degraded,
+      lastChangeSpanId: endpoint.afterSpanId,
     }
   })
 

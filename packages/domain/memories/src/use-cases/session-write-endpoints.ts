@@ -23,6 +23,8 @@ interface SessionWriteEndpoint {
   readonly beforeTokens: number
   readonly afterTokens: number
   readonly afterPresent: boolean
+  /** Span of the session's last mutating touch on this record; `null` for a wipe the session didn't otherwise touch. */
+  readonly afterSpanId: string | null
 }
 
 /**
@@ -145,6 +147,7 @@ export const computeSessionWriteEndpoints = Effect.fn("memories.computeSessionWr
       afterHash: afterPresent ? last.contentHash : "",
       afterTokens: afterPresent ? last.tokenCount : 0,
       afterPresent,
+      afterSpanId: last.spanId,
     })
   }
 
@@ -168,6 +171,7 @@ export const computeSessionWriteEndpoints = Effect.fn("memories.computeSessionWr
         afterHash: "",
         afterTokens: 0,
         afterPresent: false,
+        afterSpanId: null,
       })
     }
   }

@@ -1,4 +1,5 @@
 import { Badge, CodeBlock, MasterDetail, type MasterDetailItem, Text } from "@repo/ui"
+import { RecordPaneHeader } from "../../../../memory-changes/record-pane-header.tsx"
 import { RecordsHeader } from "../../../../memory-changes/records-header.tsx"
 import { SpanRecordChangeDiff } from "../../../../memory-changes/span-record-change-diff.tsx"
 import { JsonBlock } from "./helpers.tsx"
@@ -83,17 +84,26 @@ export function MemoryRecordsView({
       renderDetail={(key) => {
         const record = ordered[Number(key)]
         if (!record) return null
-        if (!diffable) return <RecordDetail record={record} />
+        const recordId = record.id ?? fallbackRecordId ?? ""
         return (
           <div className="flex h-full flex-col">
+            <RecordPaneHeader
+              storeId={storeId ?? ""}
+              recordId={recordId}
+              {...(diffable ? { changeSpanId: spanId } : {})}
+            />
             <div className="min-h-0 flex-1">
-              <SpanRecordChangeDiff
-                projectId={projectId}
-                spanId={spanId}
-                storeId={storeId ?? ""}
-                recordId={record.id ?? fallbackRecordId ?? ""}
-                fallback={<RecordDetail record={record} />}
-              />
+              {diffable ? (
+                <SpanRecordChangeDiff
+                  projectId={projectId}
+                  spanId={spanId}
+                  storeId={storeId ?? ""}
+                  recordId={recordId}
+                  fallback={<RecordDetail record={record} />}
+                />
+              ) : (
+                <RecordDetail record={record} />
+              )}
             </div>
           </div>
         )

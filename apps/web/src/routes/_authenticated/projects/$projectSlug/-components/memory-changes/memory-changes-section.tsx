@@ -3,6 +3,7 @@ import { DatabaseIcon, type LucideIcon, MinusIcon, PencilIcon, PlusIcon } from "
 import { useMemorySummary, useSessionMemoryDiff } from "../../../../../../domains/memories/memories.collection.ts"
 import type { SessionMemoryDiffRecord } from "../../../../../../domains/memories/memories.functions.ts"
 import { MemoryRecordDiff } from "./memory-record-diff.tsx"
+import { RecordPaneHeader } from "./record-pane-header.tsx"
 import { RecordsHeader } from "./records-header.tsx"
 
 type RecordDiff = SessionMemoryDiffRecord["records"][number]
@@ -39,6 +40,11 @@ function StoreChangesBlock({
         if (!record) return null
         return (
           <div className="flex h-full flex-col">
+            <RecordPaneHeader
+              storeId={storeId}
+              recordId={record.recordId}
+              {...(record.lastChangeSpanId ? { changeSpanId: record.lastChangeSpanId } : {})}
+            />
             <div className="min-h-0 flex-1">
               <MemoryRecordDiff before={record.beforeBody} after={record.afterBody} degraded={record.degraded} />
             </div>
