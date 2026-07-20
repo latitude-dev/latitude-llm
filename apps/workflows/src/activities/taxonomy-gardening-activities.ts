@@ -188,18 +188,20 @@ interface StoredGardenTaxonomyPlan {
   readonly supersededClusterIds?: readonly string[]
 }
 
-const planMode = (plan: StoredGardenTaxonomyPlan): TaxonomyAdaptiveClusteringMode => plan.mode ?? "off"
-
 /**
  * Whether this plan actually stages an adaptive tree — the single gate every
- * publish step branches on. Only `enforced` persists adaptive, and only when the
- * planning activity did not fall back to static. `shadow` persists static (it
- * merely *computes* adaptive for comparison), so it takes the off publish path
- * here, and `off` always does. Read from the staged plan, never from env/flag
- * state, so the whole publish path is a pure function of the plan artifact.
+ * publish step branches on. Keyed on the plan SHAPE (are there staging leaves?),
+ * not the mode: a persisted adaptive tree is exactly one that produced staging
+ * `leafClusters` for full-window routing. `off`, `shadow`, and an enforced run
+ * that fell back to static all leave `leafClusters` empty, so they take the off
+ * publish path; only a genuinely-staged adaptive tree has them.
+ *
+ * Shape beats mode here because the plan artifact carries no code version: a
+ * plan staged by one deploy can be published by the next (Temporal activities
+ * run current code), and shape stays correct across that skew where a
+ * mode+fallback check would misroute a differently-gated plan.
  */
-const planPersistsAdaptive = (plan: StoredGardenTaxonomyPlan): boolean =>
-  planMode(plan) === "enforced" && (plan.fallbackReason ?? null) === null
+const planPersistsAdaptive = (plan: StoredGardenTaxonomyPlan): boolean => (plan.leafClusters ?? []).length > 0
 
 const chunk = <A>(items: readonly A[], size: number): A[][] => {
   const out: A[][] = []
