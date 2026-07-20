@@ -169,6 +169,7 @@
           "observability/sessions",
           "observability/users",
           "observability/tools",
+          "observability/memory",
           "observability/traces",
           "observability/spans",
           "observability/tool-calls",
