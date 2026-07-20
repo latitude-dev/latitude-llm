@@ -151,4 +151,73 @@ describe("nameClusterUseCase", () => {
     expect(prompts.join("\n")).not.toContain(momentId)
     expect(clusters.clusters.get(clusterId)?.name).toBe("Roaming Troubleshooting")
   })
+
+  it("keeps hierarchical naming constraints in the system message, not the user prompt", async () => {
+    const parentId = TaxonomyClusterId("d".repeat(24))
+    const siblingId = TaxonomyClusterId("e".repeat(24))
+    const prompts: Array<{ readonly system?: string; readonly prompt: string }> = []
+    const summary = "user: Can we move today's viewing to Friday?\n\nassistant: Sure, Friday works."
+    const clusters = createFakeTaxonomyClusterRepository([
+      cluster({
+        id: parentId,
+        name: "Visit Rescheduling",
+        description: "Users are trying to reschedule property viewing appointments.",
+        depth: 0,
+      }),
+      cluster({
+        id: siblingId,
+        name: "Same-Day Visit Rescheduling",
+        description: "Users reschedule a viewing that was scheduled for today.",
+        parentClusterId: parentId,
+        depth: 1,
+      }),
+      cluster({
+        id: clusterId,
+        name: "Pending",
+        description: "",
+        parentClusterId: parentId,
+        depth: 1,
+      }),
+    ])
+    const observations = createFakeTaxonomyObservationRepository([observation({ projectionMetadata: { summary } })])
+    const effect = nameClusterUseCase({ organizationId, projectId, clusterId, now }).pipe(
+      Effect.provide(Layer.succeed(TaxonomyClusterRepository, clusters.repository)),
+      Effect.provide(Layer.succeed(TaxonomyObservationRepository, observations.repository)),
+      Effect.provide(
+        Layer.succeed(AI, {
+          generate: <T>(input: GenerateInput<T>) => {
+            prompts.push({ system: input.system, prompt: input.prompt })
+            const object = input.prompt.includes("Candidates:")
+              ? {
+                  name: "Rescheduling Today's Property Viewing",
+                  description: "Users cannot attend today's viewing and ask to move it to another day.",
+                }
+              : { candidates: [{ theme: "reschedule today viewing", examples: [0] }] }
+            return Effect.succeed({ object: object as T, tokens: 10, duration: 1 } satisfies GenerateResult<T>)
+          },
+          embed: () => Effect.die("embed not used"),
+          rerank: () => Effect.die("rerank not used"),
+        }),
+      ),
+      Effect.provide(Layer.succeed(ChSqlClient, createFakeChSqlClient())),
+      Effect.provide(Layer.succeed(SqlClient, createFakeSqlClient())),
+      Effect.provide(Layer.succeed(DistributedLockRepository, createFakeDistributedLockRepository().repository)),
+    )
+
+    await expect(Effect.runPromise(effect)).resolves.toMatchObject({
+      name: "Rescheduling Today's Property Viewing",
+    })
+
+    expect(prompts.length).toBe(2)
+    for (const call of prompts) {
+      expect(call.system).toContain("Visit Rescheduling")
+      expect(call.system).toContain("Same-Day Visit Rescheduling")
+      expect(call.system).toContain("strictly more specific")
+      expect(call.prompt).toContain("Samples:")
+      expect(call.prompt).toContain(summary)
+      expect(call.prompt).not.toContain("FORBIDDEN")
+      expect(call.prompt).not.toContain("strictly more specific")
+      expect(call.prompt).not.toContain("Visit Rescheduling")
+    }
+  })
 })

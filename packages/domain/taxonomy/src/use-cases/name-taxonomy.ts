@@ -98,16 +98,17 @@ const generateClusterName = (input: GenerateInput) =>
       const parentContext = input.parentName
         ? `These conversations are a sub-topic WITHIN the broader topic "${input.parentName}"${
             input.parentDescription && input.parentDescription.length > 0 ? ` (${input.parentDescription})` : ""
-          }. Your name MUST be strictly more specific than "${input.parentName}" — never restate or paraphrase it.\n\n`
+          }. Your name MUST be strictly more specific than "${input.parentName}" — never restate or paraphrase it. `
         : ""
       const forbidden = [...new Set(input.forbiddenNames.filter((name) => name.trim().length > 0))]
       const forbiddenContext =
         forbidden.length > 0
-          ? `FORBIDDEN names — your "name" field must not match or paraphrase any of these (they're already used by the parent, siblings, or your own children):\n${forbidden.map((name) => `- ${name}`).join("\n")}\n\n`
+          ? `Do not use these reserved names (already used by the parent, siblings, or children) — the "name" field must not match or paraphrase any of them: ${forbidden.map((name) => `"${name}"`).join(", ")}. `
           : ""
       const retryContext = input.retryForbiddenName
-        ? `Previous attempt returned "${input.retryForbiddenName}" which is forbidden. Pick a DIFFERENT name.\n\n`
+        ? `Previous attempt returned "${input.retryForbiddenName}" which is reserved. Pick a DIFFERENT name. `
         : ""
+      const namingConstraints = `${parentContext}${forbiddenContext}${retryContext}`
       const modeContext =
         input.mode === "root"
           ? "These are NOT raw conversation samples — they are the names and descriptions of the TOP-LEVEL categories in this entire project's taxonomy. Your job is to produce a SHORT umbrella label that captures the WHOLE project. It MUST cover EVERY listed top-level category — never name something that fits one branch but excludes the others. A correct label feels like 'Customer Support Conversations', 'Internal Helpdesk Tickets', or '<Company> Customer Interactions' — broad and category-neutral. The label must not be identical to or paraphrase any listed category."
@@ -126,8 +127,8 @@ const generateClusterName = (input: GenerateInput) =>
             { clusterId: input.clusterId, mode: input.mode },
           ),
         },
-        system: `proposeCandidateThemes: propose concise candidate conversation TOPIC themes for this cluster. ${TOPIC_POLICY} ${modeContext} Return only schema-valid JSON.`,
-        prompt: `${parentContext}${forbiddenContext}${retryContext}Samples:\n${sampleLines}`,
+        system: `proposeCandidateThemes: propose concise candidate conversation TOPIC themes for this cluster. ${TOPIC_POLICY} ${modeContext} ${namingConstraints}Return only schema-valid JSON.`,
+        prompt: `Samples:\n${sampleLines}`,
         schema: candidateThemesSchema,
       })
       const reduced = yield* ai.generate({
@@ -141,8 +142,8 @@ const generateClusterName = (input: GenerateInput) =>
             { clusterId: input.clusterId, mode: input.mode },
           ),
         },
-        system: `Collapse candidate themes into ONE conversation TOPIC name (2-5 words) and a one-sentence description of what the user is trying to do. ${TOPIC_POLICY} ${modeContext} The name MUST be clearly distinct from any forbidden names provided. Return only schema-valid JSON with BOTH required string keys: name and description.`,
-        prompt: `${parentContext}${forbiddenContext}${retryContext}Samples:\n${sampleLines}\n\nCandidates:\n${JSON.stringify(map.object.candidates)}\n\nReturn JSON exactly like {"name":"Short topic label","description":"One sentence describing what these conversations are about."}`,
+        system: `Collapse candidate themes into ONE conversation TOPIC name (2-5 words) and a one-sentence description of what the user is trying to do. ${TOPIC_POLICY} ${modeContext} ${namingConstraints}The name MUST be clearly distinct from any reserved names provided. Return only schema-valid JSON with BOTH required string keys: name and description.`,
+        prompt: `Samples:\n${sampleLines}\n\nCandidates:\n${JSON.stringify(map.object.candidates)}`,
         schema: finalNameSchema,
       })
       return reduced.object
