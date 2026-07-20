@@ -103,7 +103,7 @@ The split build path keeps CPU/read planning separate from the write activities.
 2. **Build the tree top-down** with `buildHierarchicalClusters` (see "Clustering primitives") inside a Node `worker_threads` worker so synchronous k-means CPU does not block the Temporal worker event loop or health checks. All sampled members end up on leaves.
 3. **Save clusters top-down** (clusters sorted by depth ascending) in its own write activity so a child save never references a missing parent. Interior nodes are stored with `observation_count = 0` and a `split_link_threshold` derived from their children's tightest sibling separation.
 4. **Match new nodes against the previous tree** with the continuity matcher (see "Cross-run continuity"): a confident 1:1 centroid match reuses the old cluster's id, so trends that key on the id stay continuous across passes.
-5. **Reassign every member to its leaf** in bulk (`reassignManyById`, `assignment_method = "gardening_birth"`), confidence = cosine to the leaf centroid clamped to `[0,1]`. Reassignment copies unchanged observation columns with ClickHouse-side `INSERT … SELECT`, keyed by observation id, so large metadata and embedding payloads do not round-trip through Node after clustering.
+5. **Reassign every member to its leaf** in bulk (`reassignManyById`, `assignment_method = "gardening_birth"`), confidence = cosine to the leaf centroid clamped to `[0,1]`. On the static path this reassigns the clustering sample only; enforced adaptive uses full-window reassignment into staging leaves (see "Adaptive clustering rollout"). Reassignment copies unchanged observation columns with ClickHouse-side `INSERT … SELECT`, keyed by observation id, so large metadata and embedding payloads do not round-trip through Node after clustering.
 6. **Deprecate every previously-active cluster** that no new node continued.
 7. **Emit lineage**: a `continuation` row per reused id, a `birth` row per genuinely new node, a `death` row per deprecated cluster.
 
@@ -139,12 +139,47 @@ A two-call map-reduce (`TAXONOMY_NAMING_MODEL`) proposes candidate themes then c
 
 `assertGardenTaxonomyQualityActivity` fails the run on structural defects — notably **duplicate sibling names** (same parent, normalized-equal name) and active leaf rows whose Postgres direct `observation_count` is zero. Parents with children may have zero direct count because their members live in descendants. A failed gate surfaces as a failed run for Temporal retry rather than shipping a broken tree.
 
+### Adaptive clustering rollout
+
+The divisive build has two implementations behind a rollout gate: the **static** builder (fixed per-depth `maxSiblingCosine` schedule, sample-only reassignment, in-place id reuse on continuations) and the **adaptive** builder (node-relative separation thresholds, shape-aware naming, staging + atomic swap, full-window reassignment). Mode is resolved once per garden run in the planning activity — never in workflow code (Temporal determinism).
+
+| Input | Role |
+| --- | --- |
+| `LAT_TAXONOMY_ADAPTIVE_CLUSTERING_MODE` | Environment baseline: `off` (default), `shadow`, or `enforced`. Parsed in the activity via `parseEnv`; invalid values fall back to `off`. |
+| `adaptiveTaxonomyClustering` feature flag | Per-organization raise to `enforced` when the env baseline is `shadow` or `enforced`. Read via `hasFeatureFlagUseCase` under the garden run's org id. |
+
+Resolution (`resolveTaxonomyAdaptiveMode` in `packages/domain/taxonomy/src/adaptive-mode.ts`):
+
+- `off` always wins — the env kill switch short-circuits the flag lookup, so the default deploy path stays a byte-identical no-op with no extra Postgres round-trip.
+- When the env is `shadow` or `enforced`, the flag can raise an org to `enforced`; the flag never lowers the mode.
+
+| Mode | Builds adaptive? | Persists | User-visible tree |
+| --- | --- | --- | --- |
+| `off` | no | static (active clusters, sample-only reassignment) | static |
+| `shadow` | yes (in memory) | static | static — adaptive is comparison-only |
+| `enforced` | yes | adaptive when fallback checks pass; otherwise static with `fallbackReason` recorded | adaptive on success, static on fallback |
+
+`computeAdaptive` (`mode !== "off"`) and `persistAdaptive` (`mode === "enforced"` and adaptive build succeeded with no fallback) are distinct: shadow always persists static; enforced may fall back before any staging write.
+
+**Enforced publish path** (when `persistAdaptive` is true):
+
+1. New clusters are saved with `state = "staging"` — ignored by every active read and by online routing until the atomic swap.
+2. **Full-window reassignment** routes every observation in the bounded live window onto staging leaves (not just the clustering sample). Sample assignments from the plan are unused on this path.
+3. **Atomic swap** activates staging clusters and deprecates the superseded active tree in one step. Staging nodes get fresh cuids; continuity is carried by lineage rows, not id reuse (reusing an old id on a staging upsert would collapse the prior tree before the swap).
+4. On failure before reassignment starts, `cleanupGardenTaxonomyStagingActivity` deletes orphaned staging rows. Once reassignment has run, cleanup is skipped — observations may already point at staging leaves.
+
+**Fallback** (`adaptiveFallbackReason`, resolved before staging/writes): `nonFinite` (NaN/Infinity in centroids or thresholds), `structuralLimit` (node count above `TAXONOMY_ADAPTIVE_STRUCTURAL_MAX_NODES` or deeper than the depth schedule allows), or `buildError` (adaptive build never produced a tree). Any fallback forces the static publish path and records the reason on the plan.
+
+**Shadow telemetry** (shadow and enforced runs that compute adaptive): bounded, embedding-free comparison via `compareTaxonomyTrees` — static vs adaptive shape counts, deltas, and partition ARI on the shared sample. Emitted on APM span `taxonomy.gardenTaxonomyWorkflow.shadow` (service `workflows`) with `@taxonomy.*` attributes; production logs go to CloudWatch, so fleet dashboards read APM, not application logs. Setup and interpretation: `apps/workflows/datadog/taxonomy-shadow-datadog-setup.md`. Policy version tag: `TAXONOMY_ADAPTIVE_POLICY_VERSION`.
+
+Production ships `LAT_TAXONOMY_ADAPTIVE_CLUSTERING_MODE=shadow`; staging and self-hosted defaults stay `off`. Per-org enforcement is a separate backoffice step (`adaptiveTaxonomyClustering` flag).
+
 ### Cross-run continuity (`lineage.ts`)
 
 The divisive build rebuilds the whole tree from scratch every pass, so without intervention every node would get a fresh cuid — the previous pass's clusters all "die", the new ones are all "born", and any chart or trend that keys on `taxonomy_clusters.id` resets every 6 hours. The **continuity matcher** (`matchTaxonomyLineage`, a pure function) closes that gap between tree assembly and persistence:
 
 - It builds a cosine-similarity matrix of the new nodes × the previously-active clusters, **masking cross-depth pairs** (a tight leaf must not inherit a broad root's identity — depth stability matters to the UI).
-- It solves a one-shot **Hungarian (Kuhn–Munkres) assignment** that maximizes total similarity under a strict 1:1 constraint, then accepts each assigned pair as a `continuation` only when its cosine clears `TAXONOMY_CONTINUATION_THRESHOLD` (0.92). Continuations reuse the old cluster's id — `save` upserts, so the row updates in place with the new centroid while preserving its age (`firstObservedAt` / `createdAt`).
+- It solves a one-shot **Hungarian (Kuhn–Munkres) assignment** that maximizes total similarity under a strict 1:1 constraint, then accepts each assigned pair as a `continuation` only when its cosine clears `TAXONOMY_CONTINUATION_THRESHOLD` (0.92). On the static-persist path (`off`, `shadow`, or enforced fallback), continuations reuse the old cluster's id — `save` upserts, so the row updates in place with the new centroid while preserving its age (`firstObservedAt` / `createdAt`). On a persisted adaptive tree, every staging node gets a fresh id; continuity is recorded only in lineage rows.
 - **Name stability**: when the topic barely moved (cosine ≥ `TAXONOMY_NAME_REUSE_THRESHOLD`, 0.95) the continuation carries the old name, so the naming step skips it (it names only `birth` rows and continuations left `Pending`). This avoids cosmetic name churn across passes.
 - Everything else stays as before: an unmatched new node is a `birth`, an uncontinued old cluster is a `death`.
 

@@ -134,3 +134,9 @@ Span ingestion is the canonical trace-billing boundary.
 Span persistence also stamps `retention_days` onto each stored span using the effective organization billing plan at write time.
 
 The `traces` materialized view carries forward `max(retention_days)` from its source spans, and ClickHouse TTL applies a storage grace buffer of `30` additional days beyond the stamped retention value before physically deleting `spans` and `traces`. See `./billing.md` for the billing-period and downgrade semantics behind that rule.
+
+## Memory-operation spans
+
+Seven OpenTelemetry GenAI memory operations (`create_memory`, `update_memory`, `upsert_memory`, `delete_memory`, `search_memory`, `create_memory_store`, `delete_memory_store`) are classified during OTLP transform and stored in the same `spans` table as chat/tool spans. Structured `gen_ai.memory.*` attributes survive in `attr_string` (JSON-flattened).
+
+After trace-end debounce, the `memory-projection` worker materializes mutating spans into the memory ledger (`memory_blobs`, `memory_events`, `memory_current`). Read paths, diffs, and the Memory page live in `@domain/memories` — see [`./memory-observability.md`](./memory-observability.md).

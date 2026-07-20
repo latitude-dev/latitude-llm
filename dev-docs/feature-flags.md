@@ -12,6 +12,17 @@ Per-organization runtime switches that gate code paths. The **catalog** lives in
 
 The DB never needs to know about a flag in advance — it only gains rows when someone toggles the flag in the backoffice. Identifiers that exist in the DB but no longer in the registry are inert at runtime and can be cleaned up later.
 
+## Current catalog
+
+Registry: `packages/domain/feature-flags/src/registry.ts`. Keys are camelCase identifiers used at call sites.
+
+| Identifier | Gates |
+| --- | --- |
+| `sso` | Enterprise SAML/OIDC single sign-on configuration |
+| `customBehaviors` | Project-scoped filter-defined behavior taxonomies (cohorts UI) |
+| `memoryObservability` | Memory page and user-page memory stores section |
+| `adaptiveTaxonomyClustering` | Per-org raise to enforced adaptive taxonomy clustering (env baseline must be `shadow` or `enforced`; env `off` always wins) |
+
 ## Lifecycle
 
 ### 1. Add the flag to the registry

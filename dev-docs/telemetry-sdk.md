@@ -99,3 +99,13 @@ For manual setups, applications can still add `LatitudeSpanProcessor` directly t
 ## Python compatibility
 
 `init_latitude()` remains available in the Python package as a backwards-compatible wrapper. New docs and examples should prefer `Latitude(...)`; legacy code using `init_latitude()` receives the previous dict shape containing `provider`, `flush`, and `shutdown`.
+
+## Memory telemetry
+
+`createMemoryTelemetry()` (TypeScript) and `create_memory_telemetry()` (Python) emit OpenTelemetry GenAI memory-operation spans for agent memory libraries. Each helper wraps a memory call with a span named after the operation and sets `gen_ai.operation.name` plus the `gen_ai.memory.*` attributes Latitude ingests.
+
+- **Store id is required for useful attribution.** Set `store.id` (e.g. `user/${userId}`) on every operation; spans without it land in the unattributed store.
+- **Content is opt-in.** Pass `records` (or enable content capture in the helper options) when you want the Memory page to show bodies, diffs, and token counts. Without content, Latitude still records that a change happened.
+- **Search results:** include an `id` on each record in `gen_ai.memory.records` so reads attribute to the correct record.
+
+Examples: `packages/telemetry/typescript/examples/test_memory_instrumentation.ts`, `packages/telemetry/python/tests/telemetry/memory_test.py`. Ingestion and ledger behavior: [`./memory-observability.md`](./memory-observability.md).
