@@ -260,7 +260,11 @@ function RecordChangeDiffBody({
         <div className="p-3">
           <Skeleton className="h-full w-full" />
         </div>
-      ) : data == null ? null : (
+      ) : data == null ? (
+        <div className="flex h-full items-center justify-center">
+          <Text.H6 color="foregroundMuted">Diff unavailable</Text.H6>
+        </div>
+      ) : (
         <MemoryRecordDiff before={data.beforeBody} after={data.afterBody} degraded={data.degraded} />
       )}
     </div>
