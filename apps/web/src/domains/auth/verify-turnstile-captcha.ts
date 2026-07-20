@@ -1,6 +1,7 @@
 import { BadRequestError } from "@domain/shared"
 
 const TURNSTILE_SITEVERIFY_URL = "https://challenges.cloudflare.com/turnstile/v0/siteverify"
+const TURNSTILE_SITEVERIFY_TIMEOUT_MS = 5_000
 
 interface TurnstileSiteverifyResponse {
   success: boolean
@@ -16,6 +17,7 @@ export async function verifyTurnstileToken(
       method: "POST",
       headers: { "Content-Type": "application/x-www-form-urlencoded" },
       body: new URLSearchParams({ secret: secretKey, response: captchaToken }),
+      signal: AbortSignal.timeout(TURNSTILE_SITEVERIFY_TIMEOUT_MS),
     })
 
     if (!response.ok) return false

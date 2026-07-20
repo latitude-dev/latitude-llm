@@ -56,6 +56,7 @@ describe("verifyTurnstileToken", () => {
       method: "POST",
       headers: { "Content-Type": "application/x-www-form-urlencoded" },
       body: expect.any(URLSearchParams),
+      signal: expect.any(AbortSignal),
     })
     const firstCall = fetchImpl.mock.calls.at(0)
     if (!firstCall) throw new Error("Expected fetch to be called")
@@ -82,6 +83,12 @@ describe("verifyTurnstileToken", () => {
 
   it("returns false when siteverify cannot be reached", async () => {
     const fetchImpl = vi.fn().mockRejectedValue(new Error("network down"))
+
+    await expect(verifyTurnstileToken("token", "secret", fetchImpl)).resolves.toBe(false)
+  })
+
+  it("returns false when siteverify times out", async () => {
+    const fetchImpl = vi.fn().mockRejectedValue(new DOMException("The operation was aborted.", "TimeoutError"))
 
     await expect(verifyTurnstileToken("token", "secret", fetchImpl)).resolves.toBe(false)
   })
