@@ -26,6 +26,7 @@ import { getFlaggerStrategy, isLlmCapableStrategy } from "../flagger-strategies/
 import { isRecord, iterMessageParts, truncateExcerpt } from "../flagger-strategies/shared.ts"
 import type { FlaggerStrategy } from "../flagger-strategies/types.ts"
 import type { SessionHint } from "../hints/types.ts"
+import { shouldSkipUserCentricFlaggerForEmbeddedSamples } from "../embedded-samples.ts"
 import { reflagSuppressionTags } from "../reflag.ts"
 
 export interface RunFlaggerResult {
@@ -154,6 +155,10 @@ const ANNOTATION_REVIEWER_ASSISTANT_ONLY_CLAUSE = `
 Approve only when the proposed annotation describes a problem in the evaluated agent's own assistant response. Reject annotations whose evidence is only quoted/source content inside a user message, or whose evidence is that the evaluated agent found a problem in some other content.
 `.trim()
 
+const ANNOTATION_REVIEWER_NESTED_CONTENT_CLAUSE = `
+Reject annotations whose only evidence is nested transcripts, conversation samples, examples, or source material that the evaluated agent was asked to analyze, classify, name, cluster, summarize, evaluate, or transform. Problems described inside that supplied material are not problems with the evaluated agent.
+`.trim()
+
 const ANNOTATION_REVIEWER_REJECTION_CLAUSE = `
 Reject annotations that contradict the match, describe normal or allowed behavior, say no issue was found, switch to another issue category, describe only a schema/format/contract violation for a non-schema flagger, or rely on facts not present in the evidence.
 
@@ -164,6 +169,7 @@ const buildAnnotationReviewerSystemPrompt = (strategy: FlaggerStrategy): string 
   [
     ANNOTATION_REVIEWER_BASE_SYSTEM_PROMPT,
     ...(classifiesAssistantResponseOnly(strategy) ? [ANNOTATION_REVIEWER_ASSISTANT_ONLY_CLAUSE] : []),
+    ANNOTATION_REVIEWER_NESTED_CONTENT_CLAUSE,
     ANNOTATION_REVIEWER_REJECTION_CLAUSE,
   ].join("\n\n")
 
@@ -646,7 +652,7 @@ const ASSISTANT_ONLY_PROMPT_FOOTER =
 // agent was merely asked to analyze, without restricting the judgement to the
 // assistant response.
 const NESTED_CONTENT_PROMPT_FOOTER =
-  "Judge the evaluated agent's conversation for this issue as defined above. Do not flag nested transcripts, examples, or source material that the evaluated agent was merely asked to analyze, classify, or transform — that content is the agent's input, not its behavior. Return structured output only."
+  "Judge the evaluated agent's conversation for this issue as defined above. Do not flag nested transcripts, labeled Samples blocks, examples, or source material that the evaluated agent was merely asked to analyze, classify, name, cluster, summarize, evaluate, or transform — that content is the agent's input, not its behavior. Return structured output only."
 
 const renderHintAnchor = (hint: SessionHint): string => {
   const anchor = hint.anchor
@@ -706,7 +712,8 @@ const buildFlaggerPrompt = (
 // never the agent's own behavior. Applies to every strategy.
 const EVALUATED_TRACE_NESTED_CONTENT_GUIDANCE = `
 Evaluation target:
-The evidence may contain nested transcripts, examples, quoted instructions, or source material that the evaluated agent was asked to analyze, classify, or transform. That nested content is the evaluated agent's input, not its behavior — do not flag content solely because it appears in such supplied material.
+The evidence may contain nested transcripts, labeled Samples blocks, examples, quoted instructions, or source material that the evaluated agent was asked to analyze, classify, name, cluster, summarize, evaluate, or transform. That nested content is the evaluated agent's input, not its behavior — do not flag content solely because it appears in such supplied material.
+For user-centric issues, only flag when the evaluated agent's actual user expressed the issue outside nested sample/transcript blocks. Frustration, jailbreak attempts, or other user wording that appears only inside nested "user:"/"assistant:" turns or Samples sections must not match.
 Do not treat a malformed or incomplete structured response as this issue unless this flagger is specifically about output format or schema validity.
 `.trim()
 
@@ -861,6 +868,11 @@ export const classifyConversationForFlaggerUseCase = Effect.fn("flaggers.classif
 
   if (!strategy || !isLlmCapableStrategy(strategy) || !strategy.hasRequiredContext(input.conversation)) {
     return { matched: false }
+  }
+
+  if (shouldSkipUserCentricFlaggerForEmbeddedSamples(strategy, input.conversation.tags)) {
+    yield* Effect.annotateCurrentSpan("flagger.skipped", "embedded-samples")
+    return { matched: false } satisfies RunFlaggerResult
   }
 
   const ai = yield* AI

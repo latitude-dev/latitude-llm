@@ -10,6 +10,7 @@ import {
   listFlaggerStrategySlugs,
   suppressorSlug,
 } from "../flagger-strategies/index.ts"
+import { shouldSkipUserCentricFlaggerForEmbeddedSamples } from "../embedded-samples.ts"
 import { gatherSessionHintsUseCase } from "../hints/gatherers.ts"
 import { isPositiveSessionHintKind, type SessionHint, type SessionHintKind } from "../hints/types.ts"
 import { isReflagSuppressed } from "../reflag.ts"
@@ -44,6 +45,7 @@ export type SessionFlaggerDroppedReason =
   | "rate-limited"
   | "disabled"
   | "missing-flagger"
+  | "embedded-samples"
 
 export type SessionFlaggerDecision =
   | { readonly slug: string; readonly action: "matched-issue" }
@@ -289,6 +291,10 @@ const screenOneStrategy = (args: ScreenOneStrategyInput) =>
 
     if (!strategy.hasRequiredContext(args.context.conversation)) {
       return { slug: args.slug, action: "dropped", reason: "missing-context" } satisfies SessionFlaggerDecision
+    }
+
+    if (shouldSkipUserCentricFlaggerForEmbeddedSamples(strategy, args.context.conversation.tags)) {
+      return { slug: args.slug, action: "dropped", reason: "embedded-samples" } satisfies SessionFlaggerDecision
     }
 
     const result = strategy.detectDeterministically

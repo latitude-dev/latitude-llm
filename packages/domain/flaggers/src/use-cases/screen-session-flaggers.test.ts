@@ -188,6 +188,36 @@ describe("screenSessionFlaggersUseCase", () => {
     expect(scores.size).toBe(0)
   })
 
+  it("drops user-centric flaggers on taxonomy name-cluster sessions that embed foreign samples", async () => {
+    const session = makeSessionDetail(
+      [
+        user(
+          "FORBIDDEN names:\n- Other Topic\n\nSamples:\n0: user: I did not get any email\nassistant: I didn't actually send it",
+        ),
+        assistant('{"name":"Email Delivery","description":"User asks the assistant to send an email."}'),
+      ],
+      { tags: [...AI_GENERATE_TELEMETRY_TAGS.taxonomyNameCluster] },
+    )
+    const { result, scores } = await runScreening({
+      session,
+      flaggers: [makeFlagger("frustration", 100), makeFlagger("empty-response", 0)],
+      deps: fakeDeps.deps,
+    })
+
+    expect(decisionFor(result.decisions, "frustration")).toEqual({
+      slug: "frustration",
+      action: "dropped",
+      reason: "embedded-samples",
+    })
+    expect(decisionFor(result.decisions, "empty-response")).toEqual({
+      slug: "empty-response",
+      action: "dropped",
+      reason: "unmatched",
+    })
+    expect(result.classifications).toEqual([])
+    expect(scores.size).toBe(0)
+  })
+
   it("writes a session-anchored score with contentHash on a deterministic match", async () => {
     const session = makeSessionDetail([user("Please help me with this."), assistant("")])
     const { result, scores } = await runScreening({

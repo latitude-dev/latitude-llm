@@ -1071,6 +1071,65 @@ ${"Detailed grounding, workflow, callout, and formatting rules. ".repeat(120)}`.
     expect(calls.generate[1].system).not.toContain(
       "Approve only when the proposed annotation describes a problem in the evaluated agent's own assistant response",
     )
+    // User-centric strategies still get nested-sample rejection in the reviewer.
+    expect(calls.generate[1].system).toContain(
+      "Reject annotations whose only evidence is nested transcripts, conversation samples",
+    )
+  })
+
+  it("skips frustration classification when the conversation is a taxonomy naming sample dump", async () => {
+    const { repository } = createFakeTraceRepository({
+      findByTraceId: () =>
+        Effect.succeed(
+          makeTraceDetail(
+            [
+              {
+                role: "user",
+                parts: [
+                  {
+                    type: "text",
+                    content:
+                      "Samples:\n0: user: I did not get any email\nassistant: I didn't actually send it. Let me try again.",
+                  },
+                ],
+              },
+              {
+                role: "assistant",
+                parts: [
+                  {
+                    type: "text",
+                    content:
+                      '{"name":"SkillFlow Architecture Adoption","description":"User wants an explanatory email comparing skills vs skill flows."}',
+                  },
+                ],
+              },
+            ],
+            [...AI_GENERATE_TELEMETRY_TAGS.taxonomyNameCluster],
+          ),
+        ),
+    })
+
+    const { calls, layer: aiLayer } = createFakeAI({
+      generate: () => Effect.die("AI should not run for taxonomy embedded-sample frustration"),
+    })
+
+    const result = await Effect.runPromise(
+      runFlaggerUseCase({ ...INPUT, flaggerSlug: "frustration" }).pipe(
+        Effect.provide(
+          Layer.mergeAll(
+            Layer.succeed(TraceRepository, repository),
+            Layer.succeed(ChSqlClient, createFakeChSqlClient({ organizationId: OrganizationId(INPUT.organizationId) })),
+            Layer.succeed(SqlClient, createFakeSqlClient({ organizationId: OrganizationId(INPUT.organizationId) })),
+            Layer.succeed(FlaggerRepository, defaultFlaggerRepo),
+            aiLayer,
+            defaultCacheLayer,
+          ),
+        ),
+      ),
+    )
+
+    expect(result).toEqual({ matched: false })
+    expect(calls.generate).toHaveLength(0)
   })
 
   it("does not call the LLM flagger for frustration when there are no user messages", async () => {

@@ -49,6 +49,7 @@ DO NOT FLAG
 - Profanity inside content being discussed (e.g., a log file the user pasted)
 - Mild expressive interjections ("ugh", "hmm") without complaint context
 - Questions phrased firmly but not angrily
+- Frustration expressed only inside nested conversation samples, transcripts, or examples the evaluated agent was asked to name, cluster, classify, summarize, or evaluate (e.g. labeled Samples blocks with nested user:/assistant: turns) — that is source material, not the evaluated agent's user
 
 ================================================================================
 DECISION RULE
