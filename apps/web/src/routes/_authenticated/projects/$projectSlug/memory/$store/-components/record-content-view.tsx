@@ -197,7 +197,7 @@ function RecordHeader({
         </Text.H5M>
         <Sep />
         <Text.H6 color="foregroundMuted" className="shrink-0 whitespace-nowrap tabular-nums">
-          {formatCount(tokenCount)} tok
+          {formatCount(activeVersion?.tokenCount ?? tokenCount)} tok
         </Text.H6>
         {language === "json" ? (
           <span className="shrink-0 rounded border px-1.5 py-0.5 font-mono text-[10px] uppercase leading-none tracking-wide text-muted-foreground">
