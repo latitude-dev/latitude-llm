@@ -102,15 +102,24 @@ export const requestAgentDispatchUseCase = (input: {
 }) =>
   Effect.gen(function* () {
     const organizations = yield* OrganizationRepository
-    const organization = yield* organizations.findById(input.source.organizationId)
+    const organization = yield* organizations
+      .findById(input.source.organizationId)
+      .pipe(Effect.catchTag("NotFoundError", () => Effect.succeed(null)))
+    if (organization === null) return { status: "skipped", reason: "organization-not-found" } as const
     if (isSandbox(organization)) return { status: "skipped", reason: "sandbox" } as const
 
     const configRepo = yield* AgentDispatchConfigRepository
     const incidents = yield* IncidentRepository
-    const projectId =
-      input.source.type === "signal"
-        ? input.source.projectId
-        : (yield* incidents.findById(AlertIncidentId(input.source.alertIncidentId))).projectId
+    let projectId: ProjectId
+    if (input.source.type === "signal") {
+      projectId = input.source.projectId
+    } else {
+      const incidentForProject = yield* incidents
+        .findById(AlertIncidentId(input.source.alertIncidentId))
+        .pipe(Effect.catchTag("NotFoundError", () => Effect.succeed(null)))
+      if (incidentForProject === null) return { status: "skipped", reason: "incident-not-found" } as const
+      projectId = incidentForProject.projectId
+    }
     const rows = yield* configRepo.listByProjectIncludingDefaults(projectId)
     const configs = resolveEffectiveConfigsForProject(projectId, rows).filter((config) => config.enabled)
     if (configs.length === 0) return { status: "skipped", reason: "no-config" } as const
@@ -157,7 +166,10 @@ export const requestAgentDispatchUseCase = (input: {
       return { status: "ok", requests } as const
     }
 
-    const incident = yield* incidents.findById(AlertIncidentId(input.source.alertIncidentId))
+    const incident = yield* incidents
+      .findById(AlertIncidentId(input.source.alertIncidentId))
+      .pipe(Effect.catchTag("NotFoundError", () => Effect.succeed(null)))
+    if (incident === null) return { status: "skipped", reason: "incident-not-found" } as const
     const trigger = resolveIncidentTrigger(incident)
     if (trigger === null) return { status: "skipped", reason: "unsupported-source" } as const
 
