@@ -46,6 +46,37 @@ The exact metric list and payloads live in the script (the single source of
 truth), so the dashboard can read `data_source: metrics` for history beyond the
 15-day span window.
 
+## Interpreting the dashboard
+
+Every widget reads the `taxonomy.gardenTaxonomyWorkflow.shadow` span; one span
+per garden run per project. Shadow **persists the static (production) tree** — so
+`adaptive.*` and `diff.*` describe the tree that *would* be built, never what
+users see. The whole point is the `static` vs `adaptive` contrast per project.
+
+The tree is a hidden depth-0 root over `rootChildCount` top-level clusters; the
+production bug is that the fixed 0.85 sibling-cosine gate collapses some projects
+to ~1 root child, and node-relative adaptive should recover the real intents.
+
+| Metric (attribute) | What it is | Good | Bad / watch |
+| --- | --- | --- | --- |
+| `static.rootChildCount` vs `adaptive.rootChildCount` | Top-level clusters each builder puts under the root | Pilot/collapsed projects: static ≈ 1, adaptive **3–5**. Already-separated broad projects: the two roughly **agree** | Adaptive ≫ static *everywhere* (over-splitting), or adaptive ≈ static on a collapsed pilot (adaptive isn't fixing anything) |
+| `diff.rootChildDelta` (adaptive − static) | Net change in top-level cluster count | Small **positive** where static collapsed, ~**0** where static was already fine, and **steady** run-to-run | Large positive across all projects (fragmentation); oscillating run-to-run (instability) |
+| `diff.partitionAri` | Adjusted Rand Index of the two leaf partitions on the shared sample: **1 = identical**, ~0 = unrelated | **< 1** on projects static gets wrong (adaptive reorganized them); **near 1** where static was already good (no needless churn); **stable** per project | ≈ 1 on the pilot (collapse *not* fixed); ≈ 0 everywhere (adaptive reshuffles even good taxonomies); jumps between runs |
+| `relativeSeparation.p50` (+ p10/p90) | How far accepted splits clear the node-relative gate (threshold 0.45 at root → 0.65 deep) | Comfortably **above** the depth threshold — accepted splits are genuinely separated | Hugging the threshold → marginal, fragile splits a small schedule change would flip |
+| `rejectionReason.*` counts (undersizedChild / dominantChild / lowScore / lowRelativeSeparation) | Why candidate splits were rejected — the "explain every collapse" layer | Mixed/low; a collapse is explainable by the reason that dominates | `lowRelativeSeparation` dominating a project you *expect* to split → the separation gate is the binding constraint (possibly too strict); `dominantChild` → one child hogging the parent |
+| `adaptiveDurationMs` vs `staticDurationMs` | Per-build wall-clock | Adaptive within **~25%** of static (the calibrated ceiling) | Adaptive ≳ 2× static → perf regression / calibration issue |
+| `peakRssBytes` (max) | Process RSS around the build | Comfortably **under** the worker limit (512 MB old-gen heap) | Approaching it → OOM risk, which itself trips a `buildError` fallback |
+| `fallbacks` (`fallbackReason:*` count) | Runs that fell back to static: `nonFinite` / `structuralLimit` / `buildError` | **0** | Any. `nonFinite`/`structuralLimit` = a builder correctness bug; frequent `buildError` = worker instability. This is the primary "is adaptive safe to enforce" gate |
+| `observationsSampled` | Sample size feeding the build (min 15, cap 1,500) | Context only | Near 15 → thin sample; treat that project's row with lower confidence |
+| `mode`, `policyVersion` | Slicing dimensions | `mode` = `shadow` fleet-wide this phase; `policyVersion` separates calibrations | A stray `enforced`/`off` row means the env baseline/flag isn't what you think |
+
+**The pilot verdict** (Phase-5 go/no-go) reads as: the pilot project's row shows
+`static.rootChildCount` ≈ 1 and `adaptive.rootChildCount` **3–5**, `diff.partitionAri`
+sits below 1 and is **stable** across ≥2 turnovers, `fallbacks` is **0**,
+`adaptiveDurationMs` is within ~25% of static, and `peakRssBytes` stays under the
+worker limit — with every collapsed node on any project explainable from its
+`rejectionReason` mix. If all hold, adaptive is safe to enforce for that org.
+
 ## Why the read needs ~2 weeks
 
 Garden sweeps run every ~6h, but each run clusters a sample drawn from the
