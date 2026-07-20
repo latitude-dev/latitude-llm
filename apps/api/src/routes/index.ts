@@ -1,28 +1,14 @@
 import { OpenAPIHono } from "@hono/zod-openapi"
+import { mountOperationModules, operationModules } from "@repo/operations"
 import { API_VERSION } from "../constants.ts"
-import { registerMcpRoute } from "../mcp/index.ts"
+import { registerMcpRoute } from "../mcp/server.ts"
 import { createAuthMiddleware } from "../middleware/auth.ts"
 import { createOrganizationContextMiddleware } from "../middleware/organization-context.ts"
+import { createTierRateLimiter } from "../middleware/rate-limiter.ts"
 import { validationErrorMiddleware } from "../middleware/validation.ts"
 import type { ApiOptions, AppEnv, ProtectedEnv } from "../types.ts"
-import { accountPath, createAccountRoutes, registerBootstrapRoute } from "./account.ts"
-import { analyticsPath, createAnalyticsRoutes } from "./analytics.ts"
-import { annotationsPath, createAnnotationsRoutes } from "./annotations.ts"
-import { apiKeysPath, createApiKeysRoutes } from "./api-keys.ts"
-import { createDatasetsRoutes, datasetsPath } from "./datasets.ts"
+import { registerBootstrapRoute } from "./bootstrap.ts"
 import { registerHealthRoute } from "./health.ts"
-import { createIncidentsRoutes, incidentsPath } from "./incidents.ts"
-import { createMembersRoutes, membersPath } from "./members.ts"
-import { createMonitorsRoutes, monitorsPath } from "./monitors.ts"
-import { createOAuthKeysRoutes, oauthKeysPath } from "./oauth-keys.ts"
-import { createProjectsRoutes, projectsPath } from "./projects.ts"
-import { createSavedSearchesRoutes, savedSearchesPath } from "./saved-searches.ts"
-import { createScoresRoutes, scoresPath } from "./scores.ts"
-import { createSignalsRoutes, signalsPath } from "./signals.ts"
-import { createSpansRoutes, spansPath } from "./spans.ts"
-import { createToolsRoutes, toolsPath } from "./tools.ts"
-import { createTracesRoutes, tracesPath } from "./traces.ts"
-import { createUsersRoutes, usersPath } from "./users.ts"
 import { registerWellKnownRoutes } from "./well-known.ts"
 
 /**
@@ -59,23 +45,7 @@ export const registerRoutes = (app: OpenAPIHono<AppEnv>, options: ApiOptions) =>
   )
   routes.use("*", createOrganizationContextMiddleware())
 
-  routes.route(projectsPath, createProjectsRoutes())
-  routes.route(scoresPath, createScoresRoutes())
-  routes.route(annotationsPath, createAnnotationsRoutes())
-  routes.route(tracesPath, createTracesRoutes())
-  routes.route(toolsPath, createToolsRoutes())
-  routes.route(usersPath, createUsersRoutes())
-  routes.route(savedSearchesPath, createSavedSearchesRoutes())
-  routes.route(signalsPath, createSignalsRoutes())
-  routes.route(incidentsPath, createIncidentsRoutes())
-  routes.route(datasetsPath, createDatasetsRoutes())
-  routes.route(apiKeysPath, createApiKeysRoutes())
-  routes.route(oauthKeysPath, createOAuthKeysRoutes())
-  routes.route(accountPath, createAccountRoutes())
-  routes.route(membersPath, createMembersRoutes())
-  routes.route(monitorsPath, createMonitorsRoutes())
-  routes.route(analyticsPath, createAnalyticsRoutes())
-  routes.route(spansPath, createSpansRoutes())
+  mountOperationModules(routes, operationModules, { middlewareForTier: createTierRateLimiter })
 
   // Back-compat: the Issues API moved to /signals. 307 preserves method + body so
   // already-published SDKs calling /issues keep working at runtime.

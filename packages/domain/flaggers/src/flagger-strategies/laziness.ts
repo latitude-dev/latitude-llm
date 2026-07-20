@@ -5,7 +5,7 @@ import {
   formatStageAssistantResponseForPrompt,
   formatStageUserMessagesForPrompt,
 } from "./refusal.ts"
-import { MAX_STAGES_PER_PROMPT } from "./shared.ts"
+import { isMessagePart, iterMessageParts, MAX_STAGES_PER_PROMPT } from "./shared.ts"
 import type { DetectionResult, FlaggerStrategy } from "./types.ts"
 
 /**
@@ -217,7 +217,8 @@ export function extractWorkSignals(trace: Pick<TraceDetail, "allMessages">): Wor
   for (const message of trace.allMessages) {
     if (message.role === "assistant") {
       assistantMessages++
-      for (const part of message.parts) {
+      for (const part of iterMessageParts(message.parts)) {
+        if (!isMessagePart(part)) continue
         if (part.type === "text" && typeof part.content === "string") {
           totalAssistantLength += part.content.length
         } else if (part.type === "tool_call") {

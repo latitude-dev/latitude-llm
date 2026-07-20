@@ -4,6 +4,8 @@ import {
   ArrowUpDownIcon,
   BotIcon,
   BoxesIcon,
+  BrainIcon,
+  DatabaseIcon,
   LinkIcon,
   ListTodoIcon,
   type LucideProps,
@@ -37,6 +39,13 @@ const OPERATION_ICON: Record<string, React.ComponentType<LucideProps>> = {
   retrieval: SearchIcon,
   guardrail: ShieldCheckIcon,
   evaluator: ScaleIcon,
+  create_memory: BrainIcon,
+  update_memory: BrainIcon,
+  upsert_memory: BrainIcon,
+  delete_memory: BrainIcon,
+  search_memory: SearchIcon,
+  create_memory_store: DatabaseIcon,
+  delete_memory_store: DatabaseIcon,
 } satisfies Record<Exclude<Operation, "unspecified" | (string & {})>, React.ComponentType<LucideProps>>
 
 export function SpanIcon({ span }: { readonly span: SpanRecord }) {

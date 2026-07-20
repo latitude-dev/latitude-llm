@@ -4,7 +4,7 @@ import {
   SIGNAL_PRIORITY_META,
   type SignalPriorityValue,
 } from "../../../../../../components/signals/signal-priority-meta.tsx"
-import { useMemberByUserIdMap } from "../../../../../../domains/members/members.collection.ts"
+import { useProjectMemberByUserIdMap } from "../../../../../../domains/members/members.collection.ts"
 
 /**
  * Compact "this is the issue this notification is about" card. Shown
@@ -28,7 +28,7 @@ export function SignalSummaryCard({
   readonly priority?: SignalPriorityValue | null | undefined
   readonly assigneeId?: string | null | undefined
 }) {
-  const memberByUserId = useMemberByUserIdMap()
+  const memberByUserId = useProjectMemberByUserIdMap()
   const assignee = assigneeId ? memberByUserId.get(assigneeId) : undefined
   const assigneeName = assignee
     ? assignee.name?.trim() && assignee.name.trim().length > 0

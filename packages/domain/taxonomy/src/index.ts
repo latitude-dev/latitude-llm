@@ -1,10 +1,23 @@
 export {
-  type BuildHierarchicalClustersInput,
-  buildHierarchicalClusters,
+  type BuildRelativeHierarchicalClustersInput,
+  type BuildRelativeHierarchicalClustersResult,
+  type BuildStaticHierarchicalClustersInput,
+  buildRelativeHierarchicalClusters,
+  buildStaticHierarchicalClusters,
   type ClusteringTreeNode,
-  type DepthSchedule,
+  quantile,
+  type RelativeClusteringDiagnostics,
+  type RelativeClusteringRejectionReason,
+  type RelativeDepthSchedule,
+  type StaticDepthSchedule,
 } from "./clustering.ts"
 export {
+  CUSTOM_BEHAVIOR_GARDENING_CRON_KEY,
+  CUSTOM_BEHAVIOR_GARDENING_CRON_PATTERN,
+  CUSTOM_BEHAVIOR_GARDENING_MIN_INTERVAL_MS,
+  CUSTOM_BEHAVIOR_NAME_MAX_LENGTH,
+  CUSTOM_BEHAVIOR_STATUSES,
+  MAX_CUSTOM_BEHAVIORS_PER_PROJECT,
   TAXONOMY_ASSIGN_ABSOLUTE_THRESHOLD,
   TAXONOMY_ASSIGN_RELATIVE_MARGIN,
   TAXONOMY_ASSIGN_TEMPERATURE,
@@ -16,6 +29,8 @@ export {
   TAXONOMY_CLUSTER_STATES,
   TAXONOMY_CLUSTERING_PROPOSAL_SAMPLE_MAX,
   TAXONOMY_CLUSTERING_SAMPLE_STRATEGY,
+  TAXONOMY_CLUSTERING_WORKER_MAX_OLD_GEN_MB,
+  TAXONOMY_CLUSTERING_WORKER_TIMEOUT_MS,
   TAXONOMY_CONTINUATION_THRESHOLD,
   TAXONOMY_DEFAULT_NAMING_MODEL,
   TAXONOMY_DIMENSIONS,
@@ -25,6 +40,7 @@ export {
   TAXONOMY_GARDENING_CRON_PATTERN,
   TAXONOMY_GARDENING_MIN_OBSERVATIONS,
   TAXONOMY_GARDENING_OBSERVATION_WINDOW_MAX,
+  TAXONOMY_GARDENING_SAMPLE_LOOKBACK_DAYS,
   TAXONOMY_GARDENING_SWEEP_SPREAD_MS,
   TAXONOMY_GARDENING_THROTTLE_MS,
   TAXONOMY_KMEANS_MAX_ITER,
@@ -34,7 +50,6 @@ export {
   TAXONOMY_LIST_ALL_BY_CLUSTER_MAX,
   TAXONOMY_NAME_REUSE_THRESHOLD,
   TAXONOMY_NAMING_REFRESH_OBSERVATIONS,
-  TAXONOMY_NOISE_LOOKBACK_DAYS,
   TAXONOMY_OBSERVATION_ASSIGNMENT_METHODS,
   TAXONOMY_OBSERVATION_DEBOUNCE_MS,
   TAXONOMY_OBSERVATION_RETENTION_DAYS,
@@ -45,9 +60,11 @@ export {
   TAXONOMY_RUN_TRIGGERS,
   TAXONOMY_SEARCH_MIN_SCORE,
   TAXONOMY_SEARCH_MIN_VECTOR_SIMILARITY,
-  TAXONOMY_TREE_DEPTH_SCHEDULE,
+  TAXONOMY_TREE_RELATIVE_DEPTH_SCHEDULE,
+  TAXONOMY_TREE_STATIC_DEPTH_SCHEDULE,
   type TaxonomyObservationWeightScheme,
-  type TaxonomyTreeDepthSchedule,
+  type TaxonomyTreeRelativeDepthSchedule,
+  type TaxonomyTreeStaticDepthSchedule,
 } from "./constants.ts"
 export {
   type TaxonomyCentroid,
@@ -57,6 +74,22 @@ export {
   taxonomyClusterSchema,
   taxonomyClusterStateSchema,
 } from "./entities/cluster.ts"
+export {
+  CUSTOM_BEHAVIOR_EMPTY_FILTER_MESSAGE,
+  CUSTOM_BEHAVIOR_EXCLUDED_FILTER_FIELDS,
+  CUSTOM_BEHAVIOR_EXCLUDED_FILTER_MESSAGE,
+  type CustomBehavior,
+  CustomBehaviorStatus,
+  customBehaviorFilterSetHasConditions,
+  customBehaviorFilterSetSchema,
+  customBehaviorSchema,
+  customBehaviorStatusSchema,
+  stripCustomBehaviorExcludedFields,
+} from "./entities/custom-behavior.ts"
+export {
+  type CustomBehaviorAssignment,
+  customBehaviorAssignmentSchema,
+} from "./entities/custom-behavior-assignment.ts"
 export { TaxonomyDimension, taxonomyDimensionSchema } from "./entities/dimension.ts"
 export {
   type TaxonomyClusterLineage,
@@ -79,6 +112,9 @@ export {
   taxonomyProjectionMethodSchema,
 } from "./entities/observation.ts"
 export {
+  CustomBehaviorFilterInvalidError,
+  CustomBehaviorLimitReachedError,
+  CustomBehaviorNameInvalidError,
   TaxonomyClusterLockUnavailableError,
   TaxonomyClusterNotFoundError,
   TaxonomyQualityGateError,
@@ -107,10 +143,27 @@ export {
 } from "./lineage.ts"
 export { taxonomyClusterLockKey, withTaxonomyClusterLock } from "./locks.ts"
 export {
+  type CustomBehaviorAssignmentClusterCount,
+  CustomBehaviorAssignmentRepository,
+  type CustomBehaviorAssignmentRepositoryShape,
+} from "./ports/custom-behavior-assignment-repository.ts"
+export {
+  CustomBehaviorRepository,
+  type CustomBehaviorRepositoryShape,
+  type FindCustomBehaviorBySlugInput,
+} from "./ports/custom-behavior-repository.ts"
+export {
   type ClusterAnalysisAggregate,
   type ClusterRepresentativeExample,
+  type ClusterSessionHistogramBucket,
   type ClusterSessionMomentRange,
+  type ClusterSessionRow,
+  type ClusterSessionsPage,
   type ClusterSessionTraceIdsInput,
+  type ClusterTrajectoryAxis,
+  type ClusterTrajectoryRow,
+  type GetClusterTrajectoryInput,
+  type ListClusterSessionsInput,
   TaxonomyClusterIntelligenceRepository,
   type TaxonomyClusterIntelligenceRepositoryShape,
 } from "./ports/taxonomy-cluster-intelligence-repository.ts"
@@ -129,6 +182,7 @@ export {
   type TaxonomyLineageRepositoryShape,
 } from "./ports/taxonomy-lineage-repository.ts"
 export {
+  type CustomBehaviorSampleCounts,
   type ListTaxonomyNoiseInput,
   type ListTaxonomyObservationClusterInput,
   type ReassignTaxonomyObservationByIdInput,
@@ -140,6 +194,7 @@ export {
   type TaxonomyObservationCounts,
   TaxonomyObservationRepository,
   type TaxonomyObservationRepositoryShape,
+  type TaxonomyScopedClusteringObservation,
 } from "./ports/taxonomy-observation-repository.ts"
 export {
   TaxonomyRunRepository,
@@ -174,19 +229,25 @@ export {
 export {
   type BuildHierarchicalTaxonomyInput,
   type BuildHierarchicalTaxonomyResult,
-  buildHierarchicalTaxonomyUseCase,
   type HierarchicalTaxonomyPlan,
-  type PersistHierarchicalTaxonomyPlanInput,
   type PlanHierarchicalTaxonomyInput,
-  persistHierarchicalTaxonomyPlanUseCase,
   planHierarchicalTaxonomyUseCase,
   type TaxonomyClusterBuilder,
 } from "./use-cases/build-hierarchical-taxonomy.ts"
+export { type CreateCustomBehaviorInput, createCustomBehavior } from "./use-cases/create-custom-behavior.ts"
 export {
   type ClusterAssignmentDecision,
   decideClusterAssignment,
 } from "./use-cases/decide-cluster-assignment.ts"
+export { deleteCustomBehavior } from "./use-cases/delete-custom-behavior.ts"
 export { type EmitLineageInput, emitLineageUseCase } from "./use-cases/emit-lineage.ts"
+export { type GenerateCustomBehaviorInput, generateCustomBehavior } from "./use-cases/generate-custom-behavior.ts"
+export {
+  type BehaviourTrajectoryCategoryRow,
+  type BehaviourTrajectoryResult,
+  type GetBehaviourTrajectoryInput,
+  getBehaviourTrajectoryUseCase,
+} from "./use-cases/get-behaviour-trajectory.ts"
 export {
   type GetClusterSessionIntelligenceInput,
   type GetClusterSessionIntelligenceResult,
@@ -197,6 +258,10 @@ export {
   type GetClusterDetailsResult,
   getClusterDetailsUseCase,
 } from "./use-cases/get-details.ts"
+export {
+  type ListBehaviourSessionsInput,
+  listBehaviourSessionsUseCase,
+} from "./use-cases/list-behaviour-sessions.ts"
 export {
   type ListClusterSessionTraceIdsInput,
   listClusterSessionTraceIdsUseCase,
@@ -228,14 +293,25 @@ export {
   type UserBehaviourItem,
 } from "./use-cases/list-user-behaviours.ts"
 export {
+  type NameCustomBehaviorClusterInput,
+  nameCustomBehaviorClusterUseCase,
+} from "./use-cases/name-custom-behavior-cluster.ts"
+export {
   type NameClusterInput,
   type NameTaxonomyResult,
   nameClusterUseCase,
 } from "./use-cases/name-taxonomy.ts"
+export {
+  type PreviewCustomBehaviorSampleInput,
+  type PreviewCustomBehaviorSampleResult,
+  previewCustomBehaviorSampleUseCase,
+} from "./use-cases/preview-custom-behavior-sample.ts"
 export { type RouteToDeepestClusterInput, routeToDeepestClusterUseCase } from "./use-cases/route-to-deepest-cluster.ts"
 export {
   type TriggerProjectGardeningInput,
   type TriggerProjectGardeningResult,
+  taxonomyGardenCustomBehaviorDedupeKey,
   taxonomyGardenProjectDedupeKey,
   triggerProjectGardeningUseCase,
 } from "./use-cases/trigger-project-gardening.ts"
+export { type UpdateCustomBehaviorInput, updateCustomBehavior } from "./use-cases/update-custom-behavior.ts"

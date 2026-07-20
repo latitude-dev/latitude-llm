@@ -25,7 +25,43 @@ class _Builder:
         self._runs: Dict[str, _Run] = {}
         self._lock = threading.Lock()
 
-    def on_pre_llm_request(self, **kw: Any) -> None:
+    def on_pre_llm_call(self, **kw: Any) -> None:
+        """Turn-level framing: open the interaction run at the start of a turn.
+
+        Fires once per turn, before any API call. Carries the conversation but
+        no per-call request payload, so it only seeds the interaction root; the
+        llm_request child spans are created by on_pre_api_request.
+        """
+        messages = _pick_messages(kw)
+        if not messages:
+            return
+        key = _trace_key(
+            kw.get("task_id", ""), kw.get("session_id", ""), kw.get("turn_id", ""), kw.get("api_request_id", "")
+        )
+        now = _now_ms()
+        with self._lock:
+            run = self._runs.get(key)
+            if run is None:
+                run = self._start_run(key, kw, messages, now)
+                self._runs[key] = run
+            run.updated_at = time.time()
+
+    def on_post_llm_call(self, **kw: Any) -> Optional[Dict[str, Any]]:
+        """Turn-level framing: finalize and ship the run when the turn ends.
+
+        No-op when on_post_api_request already finished the run on a final
+        content answer (the run is gone); otherwise (turn ended on a tool call
+        or was cut short) this ships the trace so nothing leaks past turn end.
+        """
+        key = _trace_key(
+            kw.get("task_id", ""), kw.get("session_id", ""), kw.get("turn_id", ""), kw.get("api_request_id", "")
+        )
+        with self._lock:
+            if key not in self._runs:
+                return None
+            return self._finish_locked(key)
+
+    def on_pre_api_request(self, **kw: Any) -> None:
         messages = _pick_messages(kw)
         if not messages:  # not a request-shaped call (e.g. context injection)
             return
@@ -75,7 +111,7 @@ class _Builder:
             run.generations[req_key] = span
             run.llm_calls += 1
 
-    def on_post_llm_call(self, **kw: Any) -> Optional[Dict[str, Any]]:
+    def on_post_api_request(self, **kw: Any) -> Optional[Dict[str, Any]]:
         key = _trace_key(
             kw.get("task_id", ""), kw.get("session_id", ""), kw.get("turn_id", ""), kw.get("api_request_id", "")
         )
@@ -95,6 +131,7 @@ class _Builder:
             output = _normalize_assistant(assistant)
             if output:
                 span.attrs["gen_ai.output.messages:gated"] = [output]
+                run.last_output = output
             model = kw.get("model")
             provider = kw.get("provider")
             if model:
@@ -186,26 +223,30 @@ class _Builder:
         task_id = kw.get("task_id") or ""
         trace_id = _trace_id()
         first_user = _last_user_text(messages) or _coerce_text(kw.get("user_message"))
+        root_attrs: Dict[str, Any] = {
+            "span.type": "interaction",
+            "interaction.kind": "user",
+            "session.id": session_id,
+            "gen_ai.session.id": session_id,
+            "hermes.task_id": task_id or None,
+            "hermes.turn_id": kw.get("turn_id") or None,
+            "latitude.tags": ["hermes"],
+            "latitude.metadata": {"hermes.session.id": session_id, "hermes.task_id": task_id}
+            if task_id
+            else {"hermes.session.id": session_id},
+        }
+        if isinstance(first_user, str) and first_user.strip():
+            root_attrs["user_prompt:gated"] = first_user
+            root_attrs["gen_ai.input.messages:gated"] = [
+                {"role": "user", "parts": [{"type": "text", "content": first_user}]}
+            ]
         root = _Span(
             trace_id=trace_id,
             span_id=_span_id(),
             parent_span_id="",
             name="interaction",
             start_ms=now,
-            attrs={
-                "span.type": "interaction",
-                "interaction.kind": "user",
-                "session.id": session_id,
-                "gen_ai.session.id": session_id,
-                "hermes.task_id": task_id or None,
-                "hermes.turn_id": kw.get("turn_id") or None,
-                "latitude.tags": ["hermes"],
-                "latitude.metadata": {"hermes.session.id": session_id, "hermes.task_id": task_id}
-                if task_id
-                else {"hermes.session.id": session_id},
-                "user_prompt:gated": first_user,
-                "gen_ai.input.messages:gated": [{"role": "user", "parts": [{"type": "text", "content": first_user}]}],
-            },
+            attrs=root_attrs,
         )
         self._evict_locked()
         return _Run(trace_key=key, trace_id=trace_id, root=root, session_id=session_id, task_id=task_id)
@@ -221,13 +262,33 @@ class _Builder:
             "service.instance.id": run.session_id,
         }
 
+    def finish_scoped(self, session_id: str, task_id: str) -> List[Dict[str, Any]]:
+        """Finalize the still-open runs of one ending session and return their payloads.
+
+        Called on session end so short/one-shot runs that never hit a clean
+        finish still ship before the process exits. Scoped to the ending
+        session so a gateway teardown of one session never pops or abandons
+        runs still live in a concurrent session. With no session identifier
+        (single CLI session) it finalizes every open run.
+        """
+        with self._lock:
+            keys = [key for key, run in self._runs.items() if _run_in_scope(run, session_id, task_id)]
+            payloads: List[Dict[str, Any]] = []
+            for key in keys:
+                payload = self._finish_locked(key)
+                if payload is not None:
+                    payloads.append(payload)
+            return payloads
+
     def _finish_locked(self, key: str) -> Optional[Dict[str, Any]]:
         run = self._runs.pop(key, None)
         if run is None:
             return None
         now = _now_ms()
+        if "gen_ai.output.messages:gated" not in run.root.attrs and run.last_output:
+            run.root.attrs["gen_ai.output.messages:gated"] = [run.last_output]
         for span in run.generations.values():
-            _abandon(span, "llm_request abandoned before post_llm_call", now)
+            _abandon(span, "llm_request abandoned before post_api_request", now)
             run.closed.append(span)
         for span in run.open_tools.values():
             _abandon(span, "tool_execution abandoned before post_tool_call", now)
@@ -243,6 +304,16 @@ class _Builder:
             return
         oldest = min(self._runs, key=lambda k: self._runs[k].updated_at)
         self._runs.pop(oldest, None)
+
+
+def _run_in_scope(run: _Run, session_id: str, task_id: str) -> bool:
+    if not session_id and not task_id:  # single CLI session: no id to scope by
+        return True
+    if session_id and run.session_id == session_id:
+        return True
+    if task_id and run.task_id == task_id:
+        return True
+    return False
 
 
 def _pick_messages(kw: Dict[str, Any]) -> List[Any]:
@@ -261,7 +332,8 @@ def _last_user_text(messages: Any) -> Optional[str]:
         return None
     for m in reversed(messages):
         if isinstance(m, dict) and m.get("role") == "user":
-            return _coerce_text(m.get("content"))
+            text = _coerce_text(m.get("content"))
+            return text if text.strip() else None
     return None
 
 

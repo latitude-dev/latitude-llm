@@ -1,12 +1,14 @@
-import { hasFeatureFlagUseCase } from "@domain/feature-flags"
 import { IncidentRepository } from "@domain/incidents"
 import { IncidentMonitorReader } from "@domain/notifications"
 import { isSandbox, OrganizationRepository } from "@domain/organizations"
 import { AlertIncidentId, type OrganizationId, type ProjectId, SignalId, type SqlClient } from "@domain/shared"
 import { SignalRepository } from "@domain/signals"
 import { Effect } from "effect"
-import { AGENT_DISPATCH_FLAG } from "../constants.ts"
-import type { AgentDispatchConfig } from "../entities/agent-dispatch-config.ts"
+import type {
+  AgentDispatchKind,
+  EffectiveAgentDispatchConfig,
+  ResolvedDispatchTarget,
+} from "../entities/agent-dispatch-config.ts"
 import type { AgentDispatchContext, AgentDispatchTrigger } from "../entities/agent-dispatch-context.ts"
 import {
   buildDispatchContextFromIncident,
@@ -17,6 +19,7 @@ import {
 } from "../helpers/build-dispatch-context.ts"
 import { buildDispatchIdempotencyKey } from "../helpers/idempotency-key.ts"
 import { renderDispatchPrompt } from "../helpers/render-prompt.ts"
+import { checkTargetReadiness, resolveEffectiveConfigsForProject } from "../helpers/resolve-effective-config.ts"
 import { AgentDispatchConfigRepository } from "../ports/repositories.ts"
 
 export type AgentDispatchRequestSource =
@@ -33,24 +36,25 @@ export interface AgentDispatchSendRequest {
   readonly projectId: ProjectId
   readonly configId: string
   readonly integrationId: string
-  readonly kind: AgentDispatchConfig["kind"]
+  readonly kind: AgentDispatchKind
   readonly idempotencyKey: string
   readonly trigger: AgentDispatchTrigger
   readonly sourceType: "signal" | "monitor"
   readonly sourceId: string
   readonly prompt: string
   readonly context: AgentDispatchContext
+  readonly target: ResolvedDispatchTarget
 }
 
 export type RequestAgentDispatchResult =
   | { readonly status: "skipped"; readonly reason: string }
   | { readonly status: "ok"; readonly requests: readonly AgentDispatchSendRequest[] }
 
-const passesTriggerGate = (config: AgentDispatchConfig, trigger: AgentDispatchTrigger): boolean =>
+const passesTriggerGate = (config: EffectiveAgentDispatchConfig, trigger: AgentDispatchTrigger): boolean =>
   config.triggers.includes(trigger)
 
 const passesGuardrails = (
-  config: AgentDispatchConfig,
+  config: EffectiveAgentDispatchConfig,
   checks: { readonly count24h: number; readonly recentForSource: boolean },
 ): string | null => {
   if (checks.count24h >= config.guardrails.maxDispatchesPerDay) return "max-dispatches-per-day"
@@ -61,7 +65,8 @@ const passesGuardrails = (
 const dispatchWindow = (date: Date): string => date.toISOString().slice(0, 10)
 
 const buildSendRequest = (input: {
-  readonly config: AgentDispatchConfig
+  readonly config: EffectiveAgentDispatchConfig
+  readonly target: ResolvedDispatchTarget
   readonly trigger: AgentDispatchTrigger
   readonly sourceType: "signal" | "monitor"
   readonly sourceId: string
@@ -87,6 +92,7 @@ const buildSendRequest = (input: {
     sourceId: input.sourceId,
     prompt: renderDispatchPrompt({ context: input.context, template: input.config.promptTemplate }),
     context: input.context,
+    target: input.target,
   }
 }
 
@@ -95,9 +101,6 @@ export const requestAgentDispatchUseCase = (input: {
   readonly webAppUrl: string
 }) =>
   Effect.gen(function* () {
-    const enabled = yield* hasFeatureFlagUseCase({ identifier: AGENT_DISPATCH_FLAG })
-    if (!enabled) return { status: "skipped", reason: "feature-disabled" } as const
-
     const organizations = yield* OrganizationRepository
     const organization = yield* organizations.findById(input.source.organizationId)
     if (isSandbox(organization)) return { status: "skipped", reason: "sandbox" } as const
@@ -108,7 +111,8 @@ export const requestAgentDispatchUseCase = (input: {
       input.source.type === "signal"
         ? input.source.projectId
         : (yield* incidents.findById(AlertIncidentId(input.source.alertIncidentId))).projectId
-    const configs = yield* configRepo.listEnabledByProject(projectId)
+    const rows = yield* configRepo.listByProjectIncludingDefaults(projectId)
+    const configs = resolveEffectiveConfigsForProject(projectId, rows).filter((config) => config.enabled)
     if (configs.length === 0) return { status: "skipped", reason: "no-config" } as const
 
     if (input.source.type === "signal") {
@@ -120,6 +124,7 @@ export const requestAgentDispatchUseCase = (input: {
         return { status: "skipped", reason: "signal-not-found" } as const
       }
       if (signal.mutedAt !== null) return { status: "skipped", reason: "signal-muted" } as const
+      if (signal.origin === "user") return { status: "skipped", reason: "user-origin-signal" } as const
 
       const context = yield* buildDispatchContextFromSignal({
         organizationId: input.source.organizationId,
@@ -132,11 +137,14 @@ export const requestAgentDispatchUseCase = (input: {
       const requests: AgentDispatchSendRequest[] = []
       for (const config of configs) {
         if (!passesTriggerGate(config, "signal.discovered")) continue
+        const readiness = checkTargetReadiness(config.kind, config.target)
+        if (!readiness.ready) continue
         const guardrailReason = yield* checkGuardrails(config, signal.id)
         if (guardrailReason !== null) continue
         requests.push(
           buildSendRequest({
             config,
+            target: readiness.target,
             trigger: "signal.discovered",
             sourceType: "signal",
             sourceId: signal.id,
@@ -178,11 +186,14 @@ export const requestAgentDispatchUseCase = (input: {
     const requests: AgentDispatchSendRequest[] = []
     for (const config of configs) {
       if (!passesTriggerGate(config, trigger)) continue
+      const readiness = checkTargetReadiness(config.kind, config.target)
+      if (!readiness.ready) continue
       const guardrailReason = yield* checkGuardrails(config, sourceId)
       if (guardrailReason !== null) continue
       requests.push(
         buildSendRequest({
           config,
+          target: readiness.target,
           trigger,
           sourceType,
           sourceId,
@@ -205,15 +216,16 @@ export const requestAgentDispatchUseCase = (input: {
   >
 
 const checkGuardrails = (
-  config: AgentDispatchConfig,
+  config: EffectiveAgentDispatchConfig,
   sourceId: string,
 ): Effect.Effect<string | null, unknown, AgentDispatchConfigRepository | SqlClient> =>
   Effect.gen(function* () {
     const configRepo = yield* AgentDispatchConfigRepository
     const [count24h, recentForSource] = yield* Effect.all([
-      configRepo.countDispatchesInLast24h(config.id),
+      configRepo.countDispatchesInLast24h({ configId: config.id, projectId: config.projectId }),
       configRepo.hasRecentDispatchForSource({
         configId: config.id,
+        projectId: config.projectId,
         sourceId,
         cooldownMinutes: config.guardrails.cooldownMinutes,
       }),

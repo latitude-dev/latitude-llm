@@ -2,7 +2,7 @@ import { parseEnv } from "@platform/env"
 import { Effect } from "effect"
 
 const PRODUCTION_TRACE_RATE_LIMIT_DEFAULTS = {
-  maxRequests: 600,
+  maxRequests: 1_000,
   maxBytes: 64 * 1024 * 1024,
   windowSeconds: 60,
 } as const

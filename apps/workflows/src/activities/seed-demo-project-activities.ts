@@ -29,9 +29,9 @@ import { importDemoProjectDerivedSnapshot } from "./demo-project-snapshot.ts"
 
 /**
  * Plain-data input that the workflow hands every activity. Workflow code
- * must be deterministic across replays, so the random queue assignee +
- * api-key lookup happen in the request handler (server function →
- * use-case) and arrive here as plain strings.
+ * must be deterministic across replays, so the api-key lookup happens in
+ * the request handler (server function → use-case) and arrives here as a
+ * plain string.
  *
  * `timelineAnchorIso` is captured at workflow-start time so both
  * datastores end up with seeded rows pinned to the same "now". Using
@@ -40,7 +40,6 @@ import { importDemoProjectDerivedSnapshot } from "./demo-project-snapshot.ts"
 export interface SeedDemoProjectActivityInput {
   readonly organizationId: string
   readonly projectId: string
-  readonly queueAssigneeUserIds: readonly string[]
   readonly apiKeyId: string
   readonly timelineAnchorIso: string
 }
@@ -50,13 +49,12 @@ const buildScope = (input: SeedDemoProjectActivityInput): SeedScope =>
     organizationId: OrganizationId(input.organizationId),
     projectId: ProjectId(input.projectId),
     timelineAnchor: new Date(input.timelineAnchorIso),
-    queueAssigneeUserIds: [...input.queueAssigneeUserIds],
     apiKeyId: ApiKeyId(input.apiKeyId),
   })
 
 /**
  * Postgres content seed: datasets, evaluations, issues, simulations,
- * scores, annotation queues + items.
+ * scores.
  *
  * Bootstrap-only seeders (org/users/api-keys/projects rows) are
  * intentionally skipped — the demo path operates on an existing org

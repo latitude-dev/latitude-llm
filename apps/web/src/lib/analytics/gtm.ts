@@ -25,6 +25,21 @@ export const TRACKING_PARAM_KEYS = [
   "baker_session_id",
 ] as const
 
+// Search shape for the auth/onboarding routes: the `signup` method plus the
+// marketing tracking params, all optional strings. `SignupCompleteWatcher` reads
+// `signup` and the tracking params flow through so redirects keep attribution.
+type TrackingSearch = Partial<Record<(typeof TRACKING_PARAM_KEYS)[number] | "signup", string>>
+
+export const validateTrackingSearch = (raw: Record<string, unknown>): TrackingSearch => {
+  const out: TrackingSearch = {}
+  if (typeof raw.signup === "string") out.signup = raw.signup
+  for (const key of TRACKING_PARAM_KEYS) {
+    const value = raw[key]
+    if (typeof value === "string") out[key] = value
+  }
+  return out
+}
+
 export const pickTrackingParams = (search: URLSearchParams | string): Record<string, string> => {
   const params = typeof search === "string" ? new URLSearchParams(search) : search
   const out: Record<string, string> = {}

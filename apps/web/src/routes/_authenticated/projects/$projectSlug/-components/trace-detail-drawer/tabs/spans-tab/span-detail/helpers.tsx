@@ -15,9 +15,17 @@ export function isNonEmptyJson(json: string): boolean {
   return json !== "" && json !== "[]" && json !== "{}" && json !== "null"
 }
 
-export function JsonBlock({ value }: { readonly value: unknown }) {
+export function JsonBlock({
+  value,
+  className = "bg-secondary",
+  fillHeight = false,
+}: {
+  readonly value: unknown
+  readonly className?: string
+  readonly fillHeight?: boolean
+}) {
   const formatted = useMemo(() => JSON.stringify(value, null, 2), [value])
-  return <CodeBlock value={formatted} className="bg-secondary" />
+  return <CodeBlock value={formatted} className={className} fillHeight={fillHeight} />
 }
 
 export function StatusBadge({

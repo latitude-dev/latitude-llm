@@ -3,8 +3,6 @@ import type { ToolSummaryRecord } from "../../../../../../domains/tools/tools.fu
 export const TOOL_FAILING_ERROR_RATE = 0.05
 export const TOOL_CRITICAL_ERROR_RATE = 0.25
 
-export const DEFAULT_TOOLS_RANGE_SECONDS = 30 * 24 * 60 * 60 // last 30 days
-
 export const TOOL_DETAIL_ROW_GRID = "grid grid-cols-1 gap-4 xl:grid-cols-[minmax(0,1fr)_400px]"
 export const TOOL_DETAIL_PANEL_MAX_HEIGHT = "xl:max-h-[420px]"
 

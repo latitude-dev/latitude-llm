@@ -398,8 +398,6 @@ Claim-then-act ordering (stamp `claimed_at` before POST) means a crash mid-POST 
 3. **MCP checklist (informational, non-enforcing)**: "Latitude MCP connected on this Cursor environment / Claude routine?" — a reminder, since MCP provisioning is the customer's responsibility ([D1](#decisions)). The dispatcher does not verify it.
 4. **Dispatch history (MVP)**: the `agent_dispatches` ledger rendered as an audit log — trigger, signal/incident, time, status, and a deep link ("View in Cursor" / "View in Claude" / "View Linear issue"). This ships in the MVP, not later.
 
-A feature flag (`AGENT_DISPATCH_FLAG = "agent-dispatch"`, off by default, per-org) gates the producer fan-out and the settings page, exactly like `SLACK_FLAG`.
-
 ---
 
 ## Security and tenancy
@@ -441,7 +439,7 @@ A feature flag (`AGENT_DISPATCH_FLAG = "agent-dispatch"`, off by default, per-or
 
 - [x] **P1-1**: `@domain/agent-dispatch` package — entities, `AgentDispatchContext`, ports (`AgentDispatchAdapter`, repositories), errors (`Data.TaggedError` per `dev-docs/effect-and-errors`).
 - [x] **P1-2**: PG migration — `agent_dispatch_configs`, `agent_dispatch_credentials`, `agent_dispatches`; extend `integrations.kind` enum; RLS policies (api-keys/slack template); no FKs.
-- [x] **P1-3**: Domain-events fan-out — publish `agent-dispatch:request` from `SignalCreated` and `IncidentCreated`, parallel to notifications, dedupe-keyed; behind `AGENT_DISPATCH_FLAG`.
+- [x] **P1-3**: Domain-events fan-out — publish `agent-dispatch:request` from `SignalCreated` and `IncidentCreated`, parallel to notifications, dedupe-keyed.
 - [x] **P1-4**: `requestAgentDispatchUseCase` (producer) — config lookup, trigger/mute/guardrail gates, prompt-context snapshot (reuse the incident-notification snapshot source), enqueue `agent-dispatch:send`.
 - [x] **P1-5**: `sendAgentDispatchUseCase` (consumer) — ledger claim, adapter dispatch, record success/failure, failure-category mapping.
 - [x] **P1-6**: Webhook adapter — HMAC signing, idempotency header, retry/backoff. Encrypted `webhook_secret`.

@@ -2,15 +2,20 @@ export const SESSION_ID_MAX_LENGTH = 128
 export const TRACE_ID_LENGTH = 32
 export const SPAN_ID_LENGTH = 16
 
+/** Hard ceiling on parent-chain walks in `buildAgentGraph` — guards against cyclic/self-referential parent links. */
+export const MAX_AGENT_GRAPH_DEPTH = 1000
+
+/** Node-id prefix for the synthetic (unbacked) main agent of a trace. Suffixed with the trace id. */
+export const AGENT_GRAPH_MAIN_ID = "__main__"
+
 /** Debounce window for trace end detection (1:30 minutes in milliseconds). */
 export const TRACE_END_DEBOUNCE_MS = 90 * 1000
 
+/** Debounce window for session end detection: session-level work fires once a session has been quiet this long (5 minutes). */
+export const SESSION_END_DEBOUNCE_MS = 5 * 60 * 1000
+
 /** TTL for cached tag-scoped cohort baseline summaries (1 hour in seconds). Shared by traces and sessions. */
 export const COHORT_SUMMARY_CACHE_TTL_SECONDS = 60 * 60
-
-// ═══════════════════════════════════════════════════════════════════════════════
-// Trace Search Constants
-// ═══════════════════════════════════════════════════════════════════════════════
 
 /** Character-to-token estimate used for trace-search embedding budget enforcement. */
 export const TRACE_SEARCH_CHARS_PER_TOKEN_ESTIMATE = 4
@@ -21,63 +26,6 @@ export const TRACE_SEARCH_DOCUMENT_MAX_ESTIMATED_TOKENS = 5_000
 /** Maximum length of searchable conversation text before truncation. */
 export const TRACE_SEARCH_DOCUMENT_MAX_LENGTH =
   TRACE_SEARCH_DOCUMENT_MAX_ESTIMATED_TOKENS * TRACE_SEARCH_CHARS_PER_TOKEN_ESTIMATE
-
-/**
- * Per-chunk soft cap (~500 tokens at 4 chars/token). One conversation turn
- * fits in one chunk if it's under this size; longer turns split into multiple
- * chunks with overlap; multiple short turns greedily pack into one chunk.
- */
-export const TRACE_SEARCH_CHUNK_MAX_CHARS = 2_000
-
-/**
- * Overlap applied only when a single turn exceeds `TRACE_SEARCH_CHUNK_MAX_CHARS`
- * and has to be sliced. Keeps cross-boundary phrases inside at least one chunk.
- */
-export const TRACE_SEARCH_CHUNK_OVERLAP_CHARS = 200
-
-/**
- * Soft cap for the **tail** half of a long-trace head+tail split. The tail is
- * the bigger half because it carries more retrieval signal (resolution,
- * handoff, final answer) than the head (the user's framing).
- *
- * Walked tail-first; the turn that crosses the threshold is still embedded
- * fully (atomic-turn rule) before the walk stops.
- */
-export const TRACE_SEARCH_CHUNK_TAIL_BUDGET_CHARS = 12_000
-
-/**
- * Soft cap for the **head** half of a long-trace head+tail split. Combined
- * with `TRACE_SEARCH_CHUNK_TAIL_BUDGET_CHARS` it sums to
- * `TRACE_SEARCH_DOCUMENT_MAX_LENGTH` so total chunked text per trace stays
- * roughly bounded.
- *
- * The head walk runs second and stops before revisiting any turn already
- * claimed by the tail walk.
- */
-export const TRACE_SEARCH_CHUNK_HEAD_BUDGET_CHARS = 8_000
-
-/**
- * Retention window for embeddings. Enforced via ClickHouse TTL on the
- * `trace_search_embeddings` table (see the migration). Shorter than the
- * document window because embeddings are the expensive side.
- */
-export const TRACE_SEARCH_EMBEDDING_LOOKBACK_DAYS = 30
-
-/**
- * Retention window for lexical documents. Longer than embeddings because
- * lexical storage is cheap and lets recently-evicted-from-semantic traces
- * still surface via `ILIKE` match.
- */
-export const TRACE_SEARCH_DOCUMENT_LOOKBACK_DAYS = 90
-
-/**
- * Minimum search-document length (chars) before a trace is eligible for
- * semantic embedding. Avoids burning Voyage credits on near-empty traces
- * (single-turn classifier prompts, "hi", etc.) where embeddings add no
- * meaningful retrieval signal and tend to cluster at similar distances
- * from every query.
- */
-export const TRACE_SEARCH_EMBEDDING_MIN_LENGTH = 100
 
 /**
  * Default per-organization embedding-token budget. Enforced as three tiered
@@ -115,9 +63,7 @@ export const TRACE_SEARCH_DEFAULT_MONTHLY_EMBED_BUDGET_TOKENS = 5_000_000_000
  * single best-matching message.
  *
  * Tuned empirically against the seeded demo corpus on 2026-06-12 for the
- * shared message-embedding read path (per-message vectors score hotter than
- * the legacy per-chunk vectors on both signal and noise, so the legacy 0.30
- * floor let garbage through):
+ * shared message-embedding read path:
  *   - Off-topic queries ("totally unrelated banana", "recipe for sourdough
  *     bread starter") top out at 0.24–0.25; lexically-adjacent garbage
  *     ("rocket skates malfunction" → skateboard returns) reaches 0.32 —
@@ -131,9 +77,7 @@ export const TRACE_SEARCH_DEFAULT_MONTHLY_EMBED_BUDGET_TOKENS = 5_000_000_000
  * broad-query matches (return/cancel conversations score 0.39–0.40 for
  * "refund request"). History: 0.20 (single mean vector per trace), 0.30
  * (trace-document chunks + max-pool, 2026-05-08), 0.35 (shared per-message
- * embeddings + max-pool). The legacy chunk path shares this floor until it
- * is removed — on legacy distributions 0.35 only trims the weakest band
- * (legacy noise ceiling is 0.29).
+ * embeddings + max-pool).
  *
  * Re-tune against production if the noise / signal distribution shifts.
  */
@@ -176,14 +120,11 @@ export const TRACE_SEARCH_BOILERPLATE_MIN_TRACES = 50
 
 /**
  * Per-session cap on the `matching_trace_ids` / `matching_trace_scores`
- * arrays returned by the session-search rollup. The CTE-side `groupArray`
- * is bounded only by the upstream `SEMANTIC_SCAN_LIMIT = 30_000` candidate
- * set — a pathological single-session project could otherwise materialize
- * a 30k-element tuple array per row (≈ 1.2 MB × 2 arrays per row from the
- * parallel id/score split). The UI only renders a handful of matching
- * turns per session card, and `best_trace_id` + `matching_trace_count`
- * carry the rest of the signal, so capping at 50 keeps the worst case
- * bounded without changing user-visible behavior.
+ * arrays returned by the session-search rollup. A pathological single-session
+ * project could otherwise materialize huge tuple arrays per row. The UI only
+ * renders a handful of matching turns per session card, and `best_trace_id` +
+ * `matching_trace_count` carry the rest of the signal, so capping at 50 keeps
+ * the worst case bounded without changing user-visible behavior.
  *
  * Note: `matching_trace_count` continues to reflect the **true** count of
  * matching traces per session — the cap only limits the materialized

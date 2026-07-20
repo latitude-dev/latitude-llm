@@ -18,11 +18,18 @@ import {
   TraceId,
 } from "@domain/shared"
 import { type TraceDetail, TraceRepository } from "@domain/spans"
-import { hash } from "@repo/utils"
+import { hammingDistance64, hash, simhash64 } from "@repo/utils"
 import { Effect, Option } from "effect"
 import { z } from "zod"
-import { FLAGGER_DEFAULT_CLASSIFIER_MODEL, FLAGGER_DEFAULT_INSTRUCTION_EXTRACTOR_MODEL } from "../constants.ts"
+import {
+  FLAGGER_DEFAULT_CLASSIFIER_MODEL,
+  FLAGGER_DEFAULT_INSTRUCTION_EXTRACTOR_MODEL,
+  FLAGGER_INSPECTED_AGENT_INDEX_MAX_ENTRIES,
+  FLAGGER_INSPECTED_AGENT_SIMILARITY_MAX_HAMMING,
+  FLAGGER_INSPECTED_AGENT_VERBATIM_MAX_CHARS,
+} from "../constants.ts"
 import { getFlaggerStrategy, hasFlaggerStrategy, isLlmCapableStrategy } from "../flagger-strategies/index.ts"
+import { isRecord, iterMessageParts } from "../flagger-strategies/shared.ts"
 import type { FlaggerSlug, FlaggerStrategy } from "../flagger-strategies/types.ts"
 import { FlaggerRepository } from "../ports/flagger-repository.ts"
 import { reflagSuppressionTags } from "../reflag.ts"
@@ -64,46 +71,65 @@ export interface ClassifyTraceForFlaggerInput {
 }
 
 const FLAGGER_MESSAGE_INDEX_MAX = 10_000
+// Bedrock/Anthropic object generation runs away on open-ended numeric fields: at
+// temperature 0 it keeps emitting digits for messageIndex until the output-token
+// cap, which truncates the JSON and makes the whole object fail to parse. Bounding
+// messageIndex to a finite enum of the trace's real indices makes the field a
+// choice among a small set of exact literals, so it cannot run away. Cap the enum
+// size so a very long trace can't compile to a grammar Bedrock rejects.
+const FLAGGER_MESSAGE_INDEX_ENUM_LIMIT = 200
 
 const isValidMessageIndex = (value: number | undefined): value is number =>
   value !== undefined && Number.isInteger(value) && value >= 0 && value <= FLAGGER_MESSAGE_INDEX_MAX
 
-const providerFlaggerOutputSchema = z.object({
+const baseFlaggerOutputFields = {
   matched: z.boolean().optional().default(false),
   feedback: z.string().min(1).nullable().optional(),
-  // Ask providers for a string instead of a JSON number. Claude/Bedrock can
-  // otherwise produce runaway decimal literals for this field under structured
-  // generation, which makes the whole object fail to materialize.
-  messageIndex: z.string().regex(/^\d+$/).optional(),
-})
+}
 
-const flaggerOutputSchema = providerFlaggerOutputSchema.superRefine((value, ctx) => {
-  const feedback = value.feedback?.trim()
+// Generation schema, rebuilt per classify call so messageIndex is an enum of the
+// trace's valid transcript indices (as strings). Traces with no messages omit the
+// field entirely (z.enum needs a non-empty set).
+export const buildProviderFlaggerOutputSchema = (messageCount: number) => {
+  const usable = Math.min(Math.max(messageCount, 0), FLAGGER_MESSAGE_INDEX_ENUM_LIMIT)
+  if (usable === 0) return z.object(baseFlaggerOutputFields)
 
-  if (value.matched) {
-    if (!feedback) {
+  const indices = Array.from({ length: usable }, (_, index) => String(index)) as [string, ...string[]]
+  return z.object({ ...baseFlaggerOutputFields, messageIndex: z.enum(indices).optional() })
+}
+
+// Parsing schema, kept lenient: a model that ignores the offered enum and emits
+// any numeric string is still parsed, and out-of-range values are dropped in
+// parseFlaggerOutput rather than failing the whole classification.
+const flaggerOutputSchema = z
+  .object({ ...baseFlaggerOutputFields, messageIndex: z.string().regex(/^\d+$/).optional() })
+  .superRefine((value, ctx) => {
+    const feedback = value.feedback?.trim()
+
+    if (value.matched) {
+      if (!feedback) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          path: ["feedback"],
+          message: "matched=true requires positive annotation feedback",
+        })
+        return
+      }
+    } else if (feedback) {
       ctx.addIssue({
         code: z.ZodIssueCode.custom,
         path: ["feedback"],
-        message: "matched=true requires positive annotation feedback",
+        message: "matched=false must not include annotation feedback",
       })
-      return
     }
-  } else if (feedback) {
-    ctx.addIssue({
-      code: z.ZodIssueCode.custom,
-      path: ["feedback"],
-      message: "matched=false must not include annotation feedback",
-    })
-  }
-})
+  })
 
 const FLAGGER_OUTPUT_CONTRACT = `
 Structured output contract:
 - Set matched=false when the trace does not belong to this flagger; in that case feedback must be null or omitted.
 - Set matched=true only when the trace belongs to this flagger; in that case feedback is required.
-- For matched=true, feedback must be the final human-readable annotation: one or two short sentences describing the issue and concrete evidence.
-- Include messageIndex only when one transcript line is clearly the best evidence. messageIndex must be exactly one quoted integer string like "0" or "12"; never output it as a JSON number, decimal, exponent, comma-separated list, range, or unquoted value.
+- For matched=true, feedback must be the final human-readable annotation: one or two short sentences (under 300 characters) describing the issue and concrete evidence.
+- Include messageIndex only when one transcript line is clearly the best evidence. messageIndex must be a quoted integer string naming an existing transcript line, e.g. "0" or "12"; pick one of the offered indices, and never output it as a JSON number, decimal, exponent, list, or range.
 `.trim()
 
 // Whether a strategy classifies only the evaluated agent's own assistant
@@ -144,16 +170,25 @@ const annotationReviewOutputSchema = z.object({
   reason: z.string().optional(),
 })
 
-const INSPECTED_AGENT_VERBATIM_MAX_CHARS = 1_200
 const INSPECTED_AGENT_EXTRACTED_TRUE_TTL_SECONDS = 30 * 24 * 60 * 60
 const INSPECTED_AGENT_EXTRACTED_FALSE_TTL_SECONDS = 24 * 60 * 60
-const INSPECTED_AGENT_CONTEXT_CACHE_VERSION = 1
-const INSPECTED_AGENT_CONTEXT_CACHE_PREFIX = `flaggers:inspected-agent-context:v${INSPECTED_AGENT_CONTEXT_CACHE_VERSION}:sha256:`
+const INSPECTED_AGENT_CONTEXT_CACHE_VERSION = 2
+const INSPECTED_AGENT_CONTEXT_CACHE_BASE = `flaggers:inspected-agent-context:v${INSPECTED_AGENT_CONTEXT_CACHE_VERSION}`
+const INSPECTED_AGENT_CONTEXT_CACHE_PREFIX = `${INSPECTED_AGENT_CONTEXT_CACHE_BASE}:sha256:`
 const FALLBACK_SYSTEM_PROMPT_CHARS = 600
 
-function isRecord(value: unknown): value is Record<string, unknown> {
-  return typeof value === "object" && value !== null
-}
+const INSPECTED_AGENT_CONTEXT_INDEX_TTL_SECONDS = INSPECTED_AGENT_EXTRACTED_TRUE_TTL_SECONDS
+
+type InspectedAgentContextSource = "verbatim" | "exact-hit" | "similar-hit" | "extracted" | "fallback" | "missing"
+
+const inspectedAgentContextIndexEntrySchema = z.object({
+  sketch: z.string().min(1),
+  contentKey: z.string().min(1),
+})
+
+const inspectedAgentContextIndexSchema = z.array(inspectedAgentContextIndexEntrySchema)
+
+type InspectedAgentContextIndexEntry = z.infer<typeof inspectedAgentContextIndexEntrySchema>
 
 function extractTextFromParts(parts: readonly unknown[]): string[] {
   return parts.flatMap((part) => {
@@ -173,7 +208,7 @@ function extractInspectedSystemPrompt(trace: TraceDetail): string {
   return (
     extractTextFromParts(trace.systemInstructions).join("\n\n") ||
     trace.allMessages
-      .flatMap((message) => (message.role === "system" ? extractTextFromParts(message.parts) : []))
+      .flatMap((message) => (message.role === "system" ? extractTextFromParts(iterMessageParts(message.parts)) : []))
       .join("\n\n")
   )
 }
@@ -207,16 +242,57 @@ type InspectedAgentContext =
   | { readonly available: true; readonly text: string }
   | { readonly available: false; readonly reason: string }
 
-const buildCacheKey = (organizationId: string, systemPrompt: string): Effect.Effect<string, never> =>
-  hash(systemPrompt).pipe(
+const UUID_PATTERN = /\b[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}\b/gi
+const ISO_DATETIME_PATTERN = /\d{4}-\d{2}-\d{2}(?:[T ]\d{2}:\d{2}:\d{2}(?:\.\d+)?(?:Z|[+-]\d{2}:?\d{2})?)?/g
+const TIME_PATTERN = /\b\d{1,2}:\d{2}(?::\d{2})?\b/g
+const EMAIL_PATTERN = /[\w.+-]+@[\w-]+(?:\.[\w-]+)+/g
+const HEX_RUN_PATTERN = /\b[0-9a-f]{16,}\b/gi
+const DIGIT_RUN_PATTERN = /\d{4,}/g
+
+export function normalizeSystemPromptForCacheKey(systemPrompt: string): string {
+  return systemPrompt
+    .replace(UUID_PATTERN, "<uuid>")
+    .replace(ISO_DATETIME_PATTERN, "<datetime>")
+    .replace(TIME_PATTERN, "<time>")
+    .replace(EMAIL_PATTERN, "<email>")
+    .replace(HEX_RUN_PATTERN, "<hex>")
+    .replace(DIGIT_RUN_PATTERN, "<num>")
+    .replace(/\s+/g, " ")
+    .trim()
+}
+
+const buildCacheKey = (organizationId: string, normalizedSystemPrompt: string): Effect.Effect<string, never> =>
+  hash(normalizedSystemPrompt).pipe(
     Effect.map((digest) => `org:${organizationId}:${INSPECTED_AGENT_CONTEXT_CACHE_PREFIX}${digest}`),
-    Effect.catch(() => Effect.succeed(`org:${organizationId}:${INSPECTED_AGENT_CONTEXT_CACHE_PREFIX}${systemPrompt}`)),
+    Effect.catch(() =>
+      Effect.succeed(`org:${organizationId}:${INSPECTED_AGENT_CONTEXT_CACHE_PREFIX}${normalizedSystemPrompt}`),
+    ),
   )
+
+const buildInspectedAgentContextIndexKey = (organizationId: string, projectId: string): string =>
+  `org:${organizationId}:${INSPECTED_AGENT_CONTEXT_CACHE_BASE}:index:${projectId}`
 
 function parseCachedExtraction(value: string): InstructionExtractorOutput | null {
   try {
     const parsed = JSON.parse(value) as unknown
     return instructionExtractorOutputSchema.parse(parsed)
+  } catch {
+    return null
+  }
+}
+
+function parseInspectedAgentContextIndex(value: string): InspectedAgentContextIndexEntry[] {
+  try {
+    const parsed = JSON.parse(value) as unknown
+    return inspectedAgentContextIndexSchema.parse(parsed)
+  } catch {
+    return []
+  }
+}
+
+function parseSketchHex(hex: string): bigint | null {
+  try {
+    return BigInt(`0x${hex}`)
   } catch {
     return null
   }
@@ -344,6 +420,161 @@ function setCachedExtraction(cacheKey: string, result: InstructionExtractorOutpu
   )
 }
 
+function getInspectedAgentContextIndex(
+  indexKey: string,
+): Effect.Effect<InspectedAgentContextIndexEntry[], never, CacheStore> {
+  return Effect.serviceOption(CacheStore).pipe(
+    Effect.flatMap(
+      Option.match({
+        onNone: () => Effect.succeed([] as InspectedAgentContextIndexEntry[]),
+        onSome: (cache) =>
+          cache.get(indexKey).pipe(
+            Effect.map((value) => (value ? parseInspectedAgentContextIndex(value) : [])),
+            Effect.catchTag("CacheError", () => Effect.succeed([] as InspectedAgentContextIndexEntry[])),
+          ),
+      }),
+    ),
+  )
+}
+
+function setInspectedAgentContextIndex(
+  indexKey: string,
+  entries: readonly InspectedAgentContextIndexEntry[],
+): Effect.Effect<void, never, CacheStore> {
+  return Effect.serviceOption(CacheStore).pipe(
+    Effect.flatMap(
+      Option.match({
+        onNone: () => Effect.void,
+        onSome: (cache) =>
+          cache
+            .set(indexKey, JSON.stringify(entries), { ttlSeconds: INSPECTED_AGENT_CONTEXT_INDEX_TTL_SECONDS })
+            .pipe(Effect.catchTag("CacheError", () => Effect.void)),
+      }),
+    ),
+  )
+}
+
+function upsertInspectedAgentContextIndexEntry(
+  indexKey: string,
+  normalizedSystemPrompt: string,
+  contentKey: string,
+): Effect.Effect<void, never, CacheStore> {
+  const sketch = simhash64(normalizedSystemPrompt).toString(16)
+
+  return getInspectedAgentContextIndex(indexKey).pipe(
+    Effect.flatMap((entries) => {
+      // Lossy by design: concurrent classifications can race this read-modify-write and
+      // clobber each other's entry, worst case costing one extra extraction later.
+      const nextEntries = [{ sketch, contentKey }, ...entries.filter((entry) => entry.contentKey !== contentKey)].slice(
+        0,
+        FLAGGER_INSPECTED_AGENT_INDEX_MAX_ENTRIES,
+      )
+
+      return setInspectedAgentContextIndex(indexKey, nextEntries)
+    }),
+  )
+}
+
+function findSimilarInspectedAgentContext(input: {
+  readonly indexKey: string
+  readonly cacheKey: string
+  readonly normalizedSystemPrompt: string
+}): Effect.Effect<InstructionExtractorOutput | null, never, CacheStore> {
+  return getInspectedAgentContextIndex(input.indexKey).pipe(
+    Effect.flatMap((entries) => {
+      if (entries.length === 0) return Effect.succeed(null)
+
+      const sketch = simhash64(input.normalizedSystemPrompt)
+      const match = entries.find((entry) => {
+        const entrySketch = parseSketchHex(entry.sketch)
+        return (
+          entrySketch !== null &&
+          hammingDistance64(sketch, entrySketch) <= FLAGGER_INSPECTED_AGENT_SIMILARITY_MAX_HAMMING
+        )
+      })
+      if (!match) return Effect.succeed(null)
+
+      return getCachedExtraction(match.contentKey).pipe(
+        Effect.flatMap((cached) => {
+          if (!cached || !cached.understood) return Effect.succeed(null)
+
+          return setCachedExtraction(input.cacheKey, cached).pipe(Effect.as(cached))
+        }),
+      )
+    }),
+  )
+}
+
+const annotateInspectedAgentContextSource = (source: InspectedAgentContextSource) =>
+  Effect.annotateCurrentSpan("flagger.inspectedAgentContextSource", source)
+
+function runInstructionExtraction(input: {
+  readonly trace: TraceDetail
+  readonly ai: AIShape
+  readonly organizationId: string
+  readonly projectId: string
+  readonly traceId: string
+  readonly flaggerSlug: string
+  readonly systemPrompt: string
+  readonly normalizedSystemPrompt: string
+  readonly cacheKey: string
+  readonly indexKey: string
+}): Effect.Effect<InspectedAgentContext, never, CacheStore> {
+  return resolveGenerationConfig("FLAGGER_EXTRACTOR", FLAGGER_DEFAULT_INSTRUCTION_EXTRACTOR_MODEL).pipe(
+    Effect.flatMap((modelConfig) =>
+      input.ai
+        .generate({
+          ...modelConfig,
+          system: INSTRUCTION_EXTRACTOR_SYSTEM_PROMPT,
+          prompt: buildInstructionExtractorPrompt(input.systemPrompt),
+          schema: instructionExtractorOutputSchema,
+          telemetry: {
+            spanName: AI_GENERATE_TELEMETRY_SPAN_NAMES.flaggerExtractInstructions,
+            project: LATITUDE_TELEMETRY_PROJECT_SLUGS.flaggers,
+            tags: [
+              ...AI_GENERATE_TELEMETRY_TAGS.flaggerExtractInstructions,
+              ...reflagSuppressionTags(input.trace.tags),
+            ],
+            metadata: buildProjectScopedAiMetadata(
+              { organizationId: input.organizationId, projectId: input.projectId },
+              { traceId: input.traceId, flaggerSlug: input.flaggerSlug, stage: "instruction-extraction" },
+            ),
+          },
+        })
+        .pipe(
+          Effect.flatMap((result) =>
+            Effect.try({
+              try: () => instructionExtractorOutputSchema.parse(result.object),
+              catch: (error) =>
+                new AIError({
+                  message: "Instruction extractor returned invalid structured output.",
+                  cause: error,
+                }),
+            }),
+          ),
+          Effect.tap((result) => setCachedExtraction(input.cacheKey, result)),
+          Effect.tap((result) =>
+            result.understood
+              ? upsertInspectedAgentContextIndexEntry(input.indexKey, input.normalizedSystemPrompt, input.cacheKey)
+              : Effect.void,
+          ),
+          Effect.flatMap((result) => annotateInspectedAgentContextSource("extracted").pipe(Effect.as(result))),
+          Effect.map((result) => renderExtractionResult(result)),
+        ),
+    ),
+    Effect.catch(() =>
+      Effect.gen(function* () {
+        yield* Effect.annotateCurrentSpan("flagger.instructionExtractionFallback", true)
+        yield* annotateInspectedAgentContextSource("fallback")
+        return {
+          available: true,
+          text: renderFallbackAgentContext(input.systemPrompt),
+        } satisfies InspectedAgentContext
+      }),
+    ),
+  )
+}
+
 function getInspectedAgentContext(input: {
   readonly trace: TraceDetail
   readonly ai: AIShape
@@ -355,64 +586,38 @@ function getInspectedAgentContext(input: {
   const systemPrompt = extractInspectedSystemPrompt(input.trace)
 
   if (!systemPrompt) {
-    return Effect.succeed({ available: false, reason: "missing inspected agent system prompt" })
+    return annotateInspectedAgentContextSource("missing").pipe(
+      Effect.as({ available: false, reason: "missing inspected agent system prompt" }),
+    )
   }
 
-  if (systemPrompt.length <= INSPECTED_AGENT_VERBATIM_MAX_CHARS) {
-    return Effect.succeed({ available: true, text: renderShortSystemPromptContext(systemPrompt) })
+  if (systemPrompt.length <= FLAGGER_INSPECTED_AGENT_VERBATIM_MAX_CHARS) {
+    return annotateInspectedAgentContextSource("verbatim").pipe(
+      Effect.as({ available: true, text: renderShortSystemPromptContext(systemPrompt) }),
+    )
   }
 
-  return buildCacheKey(input.organizationId, systemPrompt).pipe(
+  const normalizedSystemPrompt = normalizeSystemPromptForCacheKey(systemPrompt)
+  const indexKey = buildInspectedAgentContextIndexKey(input.organizationId, input.projectId)
+
+  return buildCacheKey(input.organizationId, normalizedSystemPrompt).pipe(
     Effect.flatMap((cacheKey) =>
       getCachedExtraction(cacheKey).pipe(
         Effect.flatMap((cached) => {
-          if (cached) return Effect.succeed(renderExtractionResult(cached))
+          if (cached) {
+            return annotateInspectedAgentContextSource("exact-hit").pipe(Effect.as(renderExtractionResult(cached)))
+          }
 
-          return resolveGenerationConfig("FLAGGER_EXTRACTOR", FLAGGER_DEFAULT_INSTRUCTION_EXTRACTOR_MODEL).pipe(
-            Effect.flatMap((modelConfig) =>
-              input.ai
-                .generate({
-                  ...modelConfig,
-                  system: INSTRUCTION_EXTRACTOR_SYSTEM_PROMPT,
-                  prompt: buildInstructionExtractorPrompt(systemPrompt),
-                  schema: instructionExtractorOutputSchema,
-                  telemetry: {
-                    spanName: AI_GENERATE_TELEMETRY_SPAN_NAMES.flaggerExtractInstructions,
-                    project: LATITUDE_TELEMETRY_PROJECT_SLUGS.flaggers,
-                    tags: [
-                      ...AI_GENERATE_TELEMETRY_TAGS.flaggerExtractInstructions,
-                      ...reflagSuppressionTags(input.trace.tags),
-                    ],
-                    metadata: buildProjectScopedAiMetadata(
-                      { organizationId: input.organizationId, projectId: input.projectId },
-                      { traceId: input.traceId, flaggerSlug: input.flaggerSlug, stage: "instruction-extraction" },
-                    ),
-                  },
-                })
-                .pipe(
-                  Effect.flatMap((result) =>
-                    Effect.try({
-                      try: () => instructionExtractorOutputSchema.parse(result.object),
-                      catch: (error) =>
-                        new AIError({
-                          message: "Instruction extractor returned invalid structured output.",
-                          cause: error,
-                        }),
-                    }),
-                  ),
-                  Effect.tap((result) => setCachedExtraction(cacheKey, result)),
-                  Effect.map((result) => renderExtractionResult(result)),
-                ),
-            ),
-            Effect.catch(() =>
-              Effect.gen(function* () {
-                yield* Effect.annotateCurrentSpan("flagger.instructionExtractionFallback", true)
-                return {
-                  available: true,
-                  text: renderFallbackAgentContext(systemPrompt),
-                } satisfies InspectedAgentContext
-              }),
-            ),
+          return findSimilarInspectedAgentContext({ indexKey, cacheKey, normalizedSystemPrompt }).pipe(
+            Effect.flatMap((similar) => {
+              if (similar) {
+                return annotateInspectedAgentContextSource("similar-hit").pipe(
+                  Effect.as(renderExtractionResult(similar)),
+                )
+              }
+
+              return runInstructionExtraction({ ...input, systemPrompt, normalizedSystemPrompt, cacheKey, indexKey })
+            }),
           )
         }),
       ),
@@ -474,7 +679,7 @@ const buildClassificationSystemPrompt = (strategy: FlaggerStrategy, trace: Trace
 function renderAssistantResponsesForReview(trace: TraceDetail): string {
   const assistantResponses = trace.allMessages.flatMap((message, index) => {
     if (message.role !== "assistant") return []
-    const content = extractTextFromParts(message.parts).join("\n\n")
+    const content = extractTextFromParts(iterMessageParts(message.parts)).join("\n\n")
     if (!content) return []
 
     return [
@@ -580,15 +785,22 @@ const loadTraceDetail = (input: RunFlaggerInput) =>
   })
 
 // The Vercel AI SDK raises `NoObjectGeneratedError` / `NoOutputGeneratedError`
-// when the model returns output that does not materialize as the requested schema.
-// The flagger treats this as a "no match" signal instead of propagating the failure
-// — the model effectively failed to classify, which for a triage flagger is
-// indistinguishable from matched=false.
+// when the model returns output that does not materialize as the requested schema,
+// and `AI_APICallError` with a "prompt is too long" message when the trace evidence
+// exceeds the model's context window. The flagger treats both as a "no match" signal
+// instead of propagating the failure — the model effectively failed to classify,
+// which for a triage flagger is indistinguishable from matched=false.
 const isSchemaMismatchCause = (cause: unknown): boolean => {
   if (!(cause instanceof Error)) return false
   if (cause.name === "AI_NoObjectGeneratedError" || cause.name === "AI_NoOutputGeneratedError") return true
   return typeof cause.message === "string" && cause.message.includes("response did not match schema")
 }
+
+const isPromptTooLongCause = (cause: unknown): boolean =>
+  cause instanceof Error && typeof cause.message === "string" && cause.message.includes("prompt is too long")
+
+const isUnclassifiableModelFailureCause = (cause: unknown): boolean =>
+  isSchemaMismatchCause(cause) || isPromptTooLongCause(cause)
 
 /**
  * LLM classification for an already-loaded trace.
@@ -632,7 +844,7 @@ export const classifyTraceForFlaggerUseCase = Effect.fn("flaggers.classifyTraceF
       ...flaggerModelConfig,
       system: classificationSystemPrompt,
       prompt: classificationPrompt,
-      schema: providerFlaggerOutputSchema,
+      schema: buildProviderFlaggerOutputSchema(input.trace.allMessages.length),
       telemetry: {
         spanName: AI_GENERATE_TELEMETRY_SPAN_NAMES.flaggerClassify,
         project: LATITUDE_TELEMETRY_PROJECT_SLUGS.flaggers,
@@ -648,7 +860,7 @@ export const classifyTraceForFlaggerUseCase = Effect.fn("flaggers.classifyTraceF
     .pipe(
       Effect.map((result) => parseFlaggerOutput(result.object)),
       Effect.catchIf(
-        (error): error is AIError => error instanceof AIError && isSchemaMismatchCause(error.cause),
+        (error): error is AIError => error instanceof AIError && isUnclassifiableModelFailureCause(error.cause),
         () =>
           Effect.gen(function* () {
             yield* Effect.annotateCurrentSpan("flagger.flaggerSchemaMismatch", true)
@@ -680,7 +892,7 @@ export const classifyTraceForFlaggerUseCase = Effect.fn("flaggers.classifyTraceF
     .pipe(
       Effect.map((result) => result.object),
       Effect.catchIf(
-        (error): error is AIError => error instanceof AIError && isSchemaMismatchCause(error.cause),
+        (error): error is AIError => error instanceof AIError && isUnclassifiableModelFailureCause(error.cause),
         () =>
           Effect.gen(function* () {
             yield* Effect.annotateCurrentSpan("flagger.annotationReviewSchemaMismatch", true)

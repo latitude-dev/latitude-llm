@@ -1,12 +1,14 @@
 import {
   cancelInvitationUseCase,
   inviteMemberUseCase,
+  type ListMembersResult,
   listMembersUseCase,
+  MembershipRepository,
   removeMemberUseCase,
   transferOwnershipUseCase,
   updateMemberRoleUseCase,
 } from "@domain/organizations"
-import { InvitationId, MembershipId, UserId } from "@domain/shared"
+import { ForbiddenError, InvitationId, MembershipId, UserId } from "@domain/shared"
 import { UserRepository } from "@domain/users"
 import {
   InvitationRepositoryLive,
@@ -22,6 +24,8 @@ import { Effect, Layer } from "effect"
 import { z } from "zod"
 import { requireSession } from "../../server/auth.ts"
 import { getPostgresClient } from "../../server/clients.ts"
+import { resolveOrgScope } from "../../server/resolve-org-scope.ts"
+import { withScopedPostgres } from "../../server/scoped-postgres.ts"
 
 export type MemberStatus = "active" | "invited"
 
@@ -44,17 +48,7 @@ const requireWebUrl = (): string => {
   return url
 }
 
-export const listMembers = createServerFn({ method: "GET" }).handler(async (): Promise<MemberRecord[]> => {
-  const { organizationId } = await requireSession()
-  const client = getPostgresClient()
-
-  const { members, invitations } = await Effect.runPromise(
-    listMembersUseCase({ organizationId }).pipe(
-      withPostgres(Layer.mergeAll(MembershipRepositoryLive, InvitationRepositoryLive), client, organizationId),
-      withTracing,
-    ),
-  )
-
+const toMemberRecords = ({ members, invitations }: ListMembersResult): MemberRecord[] => {
   const activeMembers: MemberRecord[] = members.map((m) => ({
     id: m.id,
     userId: m.userId,
@@ -81,7 +75,52 @@ export const listMembers = createServerFn({ method: "GET" }).handler(async (): P
   }))
 
   return [...activeMembers, ...invitedMembers]
+}
+
+/**
+ * The viewer's own organization members + invitations, for the Members /
+ * Organization / SSO **settings** surfaces and every member-management mutation.
+ * Always the session org (never the ambient project scope): managing members is
+ * an own-org operation, so this stays on `requireSession` and out of
+ * `resolveOrgScope` — hence `members` remains on the `withPostgres` exclude-list.
+ * The project-scoped read below serves the assignee/attribution surfaces.
+ */
+export const listMembers = createServerFn({ method: "GET" }).handler(async (): Promise<MemberRecord[]> => {
+  const { organizationId } = await requireSession()
+  const client = getPostgresClient()
+
+  const result = await Effect.runPromise(
+    listMembersUseCase({ organizationId }).pipe(
+      withPostgres(Layer.mergeAll(MembershipRepositoryLive, InvitationRepositoryLive), client, organizationId),
+      withTracing,
+    ),
+  )
+
+  return toMemberRecords(result)
 })
+
+/**
+ * Members of the **current project's** organization, resolved from the request
+ * scope (live → session org, sandbox → sandbox org, showcase → showcase org).
+ * Read-only: it feeds assignee filters and `userId → member` attribution maps on
+ * project data (signals, annotations, timelines), where the names must belong to
+ * the org that owns that data — not the viewer's own org.
+ */
+export const listProjectMembers = createServerFn({ method: "GET" }).handler(
+  async ({ context }): Promise<MemberRecord[]> => {
+    const organizationId = await resolveOrgScope(context)
+    const client = getPostgresClient()
+
+    const result = await Effect.runPromise(
+      listMembersUseCase({ organizationId }).pipe(
+        withScopedPostgres(Layer.mergeAll(MembershipRepositoryLive, InvitationRepositoryLive), client, organizationId),
+        withTracing,
+      ),
+    )
+
+    return toMemberRecords(result)
+  },
+)
 
 export const removeMember = createServerFn({ method: "POST" })
   .inputValidator(z.object({ membershipId: z.string() }))
@@ -101,6 +140,7 @@ export const invite = createServerFn({ method: "POST" })
   .inputValidator(
     z.object({
       email: z.email(),
+      role: z.enum(["admin", "member"]),
     }),
   )
   .handler(async ({ data }): Promise<{ invitationId: string }> => {
@@ -110,6 +150,12 @@ export const invite = createServerFn({ method: "POST" })
 
     const invitation = await Effect.runPromise(
       Effect.gen(function* () {
+        const membershipRepo = yield* MembershipRepository
+        const isAdmin = yield* membershipRepo.isAdmin(organizationId, userId)
+        if (!isAdmin) {
+          return yield* new ForbiddenError({ message: "Only organization owners and admins can invite members" })
+        }
+
         const userRepo = yield* UserRepository
         const inviter = yield* userRepo.findById(UserId(userId))
         const inviterName =
@@ -118,6 +164,7 @@ export const invite = createServerFn({ method: "POST" })
         return yield* inviteMemberUseCase({
           organizationId,
           email: data.email,
+          role: data.role,
           inviterUserId: UserId(userId),
           inviterName,
           webUrl,

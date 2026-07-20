@@ -17,7 +17,7 @@ import { useHotkeys } from "@tanstack/react-hotkeys"
 import { useParams } from "@tanstack/react-router"
 import { ChevronLeftIcon, ChevronRightIcon, ListTreeIcon, Maximize2Icon, MessageSquareTextIcon } from "lucide-react"
 import { type RefObject, useEffect, useMemo, useRef, useState } from "react"
-import { useMemberByUserIdMap } from "../../../../../../../domains/members/members.collection.ts"
+import { useProjectMemberByUserIdMap } from "../../../../../../../domains/members/members.collection.ts"
 import { pickUserFromMembersMap } from "../../../../../../../domains/members/pick-users-from-members.ts"
 import { useSignalOccurrences } from "../../../../../../../domains/signals/signals.collection.ts"
 import type { SignalOccurrenceRecord } from "../../../../../../../domains/signals/signals.functions.ts"
@@ -212,7 +212,7 @@ function OccurrenceAnnotation({
   readonly occurrence: SignalOccurrenceRecord
 }) {
   const { projectSlug } = useParams({ strict: false })
-  const memberByUserId = useMemberByUserIdMap()
+  const memberByUserId = useProjectMemberByUserIdMap()
   const annotator = pickUserFromMembersMap(memberByUserId, occurrence.annotatorId)
 
   return (

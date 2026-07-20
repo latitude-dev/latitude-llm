@@ -17,11 +17,17 @@ export const FEATURE_FLAGS = {
     description:
       "Lets org owners/admins configure SAML or OIDC single sign-on and (optionally) enforce it for their verified email domain.",
   },
-  "agent-dispatch": {
-    emoji: "🤖",
-    name: "Agent Dispatch",
+  customBehaviors: {
+    emoji: "🎛️",
+    name: "Custom behaviors",
     description:
-      "Wake a hosted coding agent when a signal escalates or is discovered — Cursor, Claude Code, Linear, or webhook.",
+      "Project-scoped, filter-defined behavior taxonomies with their own authoring UI. Hidden until the Generate flow ships.",
+  },
+  memoryObservability: {
+    emoji: "🧠",
+    name: "Memory observability",
+    description:
+      "Adds the Memory page (stores browsed as records with update history) and the user-page memory-stores section.",
   },
 } as const satisfies Record<
   string,

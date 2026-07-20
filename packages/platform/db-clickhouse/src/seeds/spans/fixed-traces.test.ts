@@ -6,7 +6,6 @@ const scope = createSeedScope({
   organizationId: SEED_ORG_ID,
   projectId: SEED_PROJECT_ID,
   timelineAnchor: new Date("2026-06-16T12:00:00.000Z"),
-  queueAssigneeUserIds: [],
   apiKeyId: SEED_API_KEY_ID,
 })
 

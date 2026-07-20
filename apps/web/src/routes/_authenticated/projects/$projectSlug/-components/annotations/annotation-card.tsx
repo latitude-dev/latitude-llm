@@ -6,7 +6,7 @@ import { EllipsisIcon, GlobeIcon, ShieldAlertIcon, ThumbsDownIcon, ThumbsUpIcon 
 import { useMemo, useState } from "react"
 import { useDeleteAnnotation } from "../../../../../../domains/annotations/annotations.collection.ts"
 import type { AnnotationRecord } from "../../../../../../domains/annotations/annotations.functions.ts"
-import { useMemberByUserIdMap } from "../../../../../../domains/members/members.collection.ts"
+import { useProjectMemberByUserIdMap } from "../../../../../../domains/members/members.collection.ts"
 import { pickUserFromMembersMap } from "../../../../../../domains/members/pick-users-from-members.ts"
 import { useSignal } from "../../../../../../domains/signals/signals.collection.ts"
 import { FlaggerBadge } from "../flaggers/flagger-badge.tsx"
@@ -33,7 +33,7 @@ export function AnnotationCard({
 }: AnnotationCardProps) {
   const { projectSlug } = useParams({ strict: false })
   const [isEditing, setIsEditing] = useState(false)
-  const memberByUserId = useMemberByUserIdMap()
+  const memberByUserId = useProjectMemberByUserIdMap()
   const annotator = pickUserFromMembersMap(memberByUserId, annotation.annotatorId)
   const deleteMutation = useDeleteAnnotation()
   const { data: linkedSignal } = useSignal({

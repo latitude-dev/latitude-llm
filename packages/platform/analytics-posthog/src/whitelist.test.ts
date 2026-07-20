@@ -5,7 +5,6 @@ describe("PostHog whitelist", () => {
   it("includes lifecycle and adoption events", () => {
     expect(POSTHOG_TRACKED_EVENTS.has("OrganizationCreated")).toBe(true)
     expect(POSTHOG_TRACKED_EVENTS.has("ProjectCreated")).toBe(true)
-    expect(POSTHOG_TRACKED_EVENTS.has("SampleProjectCreated")).toBe(true)
     expect(POSTHOG_TRACKED_EVENTS.has("UserSignedUp")).toBe(true)
     expect(POSTHOG_TRACKED_EVENTS.has("MemberJoined")).toBe(true)
     expect(POSTHOG_TRACKED_EVENTS.has("MemberInvited")).toBe(true)
@@ -14,7 +13,6 @@ describe("PostHog whitelist", () => {
     expect(POSTHOG_TRACKED_EVENTS.has("DatasetCreated")).toBe(true)
     expect(POSTHOG_TRACKED_EVENTS.has("EvaluationCreated")).toBe(true)
     expect(POSTHOG_TRACKED_EVENTS.has("EvaluationAligned")).toBe(true)
-    expect(POSTHOG_TRACKED_EVENTS.has("AnnotationQueueItemCompleted")).toBe(true)
     expect(POSTHOG_TRACKED_EVENTS.has("ProjectDeleted")).toBe(true)
     expect(POSTHOG_TRACKED_EVENTS.has("FirstTraceReceived")).toBe(true)
   })

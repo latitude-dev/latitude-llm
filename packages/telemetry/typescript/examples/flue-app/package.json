@@ -8,13 +8,13 @@
   },
   "dependencies": {
     "@flue/opentelemetry": "1.0.0-beta.1",
-    "@flue/runtime": "1.0.0-beta.2",
+    "@flue/runtime": "1.0.0-beta.9",
     "@latitude-data/telemetry": "3.1.1",
     "@opentelemetry/api": "1.9.1",
-    "hono": "4.12.26",
+    "hono": "4.12.30",
     "valibot": "1.4.1"
   },
   "devDependencies": {
-    "@flue/cli": "1.0.0-beta.1"
+    "@flue/cli": "1.0.0-beta.9"
   }
 }

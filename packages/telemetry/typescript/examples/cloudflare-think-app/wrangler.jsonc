@@ -8,9 +8,11 @@
     "not_found_handling": "single-page-application",
     "run_worker_first": ["/agents/*"]
   },
-  "ai": {
-    "binding": "AI"
-  },
+  "worker_loaders": [
+    {
+      "binding": "LOADER"
+    }
+  ],
   "durable_objects": {
     "bindings": [
       {
@@ -26,7 +28,7 @@
     }
   ],
   "vars": {
-    "LATITUDE_PROJECT_SLUG": "default-project",
+    "LATITUDE_PROJECT_SLUG": "cloudflare-think-test",
     "LATITUDE_TELEMETRY_URL": "http://localhost:3002"
   }
 }

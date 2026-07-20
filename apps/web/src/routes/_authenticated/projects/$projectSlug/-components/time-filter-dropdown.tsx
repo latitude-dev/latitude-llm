@@ -1,6 +1,6 @@
 import { type DateRange, DateRangePicker, type DateRangePickerPreset } from "@repo/ui"
 
-const TIME_PRESETS = [
+export const TIME_PRESETS = [
   { id: "last-30-seconds", label: "Last 30 seconds", seconds: 30 },
   { id: "last-15-minutes", label: "Last 15 minutes", seconds: 15 * 60 },
   { id: "last-30-minutes", label: "Last 30 minutes", seconds: 30 * 60 },
@@ -22,11 +22,17 @@ function buildPresetRange(seconds: number): DateRange {
 }
 
 function buildPickerRange(startTimeFrom?: string, startTimeTo?: string): DateRange | undefined {
-  if (!startTimeFrom && !startTimeTo) return undefined
+  // Bounds come from the URL and may be unparseable (hand-crafted). Drop invalid dates so an
+  // `Invalid Date` never reaches the picker, where `date-fns` `format()` would throw a RangeError.
+  const from = startTimeFrom ? new Date(startTimeFrom) : undefined
+  const to = startTimeTo ? new Date(startTimeTo) : undefined
+  const validFrom = from && Number.isFinite(from.getTime()) ? from : undefined
+  const validTo = to && Number.isFinite(to.getTime()) ? to : undefined
+  if (!validFrom && !validTo) return undefined
 
   return {
-    ...(startTimeFrom ? { from: new Date(startTimeFrom) } : {}),
-    ...(startTimeTo ? { to: new Date(startTimeTo) } : {}),
+    ...(validFrom ? { from: validFrom } : {}),
+    ...(validTo ? { to: validTo } : {}),
   }
 }
 

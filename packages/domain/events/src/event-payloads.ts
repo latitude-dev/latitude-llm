@@ -315,13 +315,6 @@ export interface EventPayloads {
     readonly errors: number
     readonly windowSeconds: number
   }
-  AnnotationQueueItemCompleted: {
-    readonly organizationId: string
-    readonly actorUserId: string
-    readonly projectId: string
-    readonly queueId: string
-    readonly itemId: string
-  }
   FirstTraceReceived: {
     readonly organizationId: string
     readonly projectId: string
@@ -432,30 +425,7 @@ export interface EventPayloads {
     readonly targetUserId: string
     readonly sessionId: string
   }
-  /**
-   * Emitted when a platform admin creates a new "demo project" on an
-   * organization via the backoffice. The project row is written
-   * synchronously by the use-case; the actual seeding (datasets,
-   * evaluations, issues, queues, scores, ~30 days of telemetry) runs
-   * in a background Temporal workflow — the audit event records the
-   * admin's intent at the moment the project was created, not the
-   * outcome of the workflow. Reconcile against the workflow handle
-   * when investigating a half-seeded project.
-   */
-  AdminDemoProjectSeeded: {
-    readonly adminUserId: string
-    readonly organizationId: string
-    readonly projectId: string
-    readonly projectName: string
-  }
-  SampleProjectCreated: {
-    readonly organizationId: string
-    readonly projectId: string
-    readonly queueAssigneeUserIds: readonly string[]
-    readonly apiKeyId: string
-    readonly timelineAnchorIso: string
-  }
-  /** Emitted by `claimOrganizationUseCase` after claim; drives background sample-project seeding. */
+  /** Emitted by `claimOrganizationUseCase` after a temp org is adopted. */
   OrganizationClaimed: {
     readonly organizationId: string
     readonly ownerUserId: string

@@ -18,7 +18,7 @@ Project
 ├─ Understand
 │  ├─ Search and Behaviours over traces
 │  ├─ Scores attached to traces
-│  └─ Signals grouped from failed scores
+│  └─ Signals grouped from failed scores, or defined by you
 └─ Refine
    ├─ Evaluations that score live traffic
    └─ Monitors that alert on signals, searches, or raw traffic
@@ -113,7 +113,7 @@ Failed, eligible scores are the primary input for signal discovery. Scores also 
 
 ## Signals
 
-A **signal** is a recurring failure pattern Latitude tracks. Instead of leaving failures as isolated examples, Latitude groups similar failed scores into named signals with example traces, trends, affected users, lifecycle states, and linked evaluations.
+A **signal** is a recurring failure pattern Latitude tracks. Instead of leaving failures as isolated examples, Latitude groups similar failed scores into named signals with example traces, trends, affected users, lifecycle states, and linked evaluations. You can also define a signal yourself when you already know the behavior to track. See [Create a signal](../signals/create).
 
 Signals created from negative human annotations are also called **issues**; the word is still used in that narrower context.
 
@@ -125,7 +125,7 @@ Signals help teams:
 - generate evaluations that monitor the same failure mode on future traces
 - catch regressions after a fix ships
 
-Signal states include **new**, **escalating**, **resolved**, **regressed**, and **ignored**. A signal can have multiple states at once, such as new and escalating.
+Signal states are **new**, **escalating**, and **ongoing**. A signal can have more than one at once, such as new and escalating.
 
 ## Evaluations
 
@@ -152,7 +152,7 @@ A **monitor** watches a target, such as a signal, a saved search, a tool, or you
 3. Related spans form completed **traces**, and related traces group into **sessions**.
 4. **Search** and **Behaviours** help you find the traces and topics that matter; **Users** and **Tools** break the same activity down by end user and by tool.
 5. Annotations, flaggers, **evaluations**, and custom checks create **scores** on traces.
-6. Failed scores cluster into **signals** you can triage, monitor, and fix. Signals from negative annotations are called issues.
+6. Failed scores cluster into **signals** you can triage, monitor, and fix, and you can also define a signal yourself. Signals from negative annotations are called issues.
 7. **Monitors** watch signals (and searches, tools, or raw traffic) and open incidents that alert you when something needs attention.
 
 ## Next steps

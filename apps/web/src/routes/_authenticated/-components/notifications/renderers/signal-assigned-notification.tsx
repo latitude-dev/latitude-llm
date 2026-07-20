@@ -1,7 +1,7 @@
 import { signalAssignedPayloadSchema } from "@domain/notifications"
 import { Text } from "@repo/ui"
 import { UserRoundPlusIcon } from "lucide-react"
-import { useMemberByUserIdMap } from "../../../../../domains/members/members.collection.ts"
+import { useProjectMemberByUserIdMap } from "../../../../../domains/members/members.collection.ts"
 import type { NotificationRecord } from "../../../../../domains/notifications/notifications.functions.ts"
 import { BaseNotification } from "../base-notification.tsx"
 import { useLiveSignalSummary, useSignalUrl } from "./incident/-incident-helpers.ts"
@@ -19,7 +19,7 @@ export function SignalAssignedNotification({ notification }: { readonly notifica
   const target = { projectId: notification.projectId, sourceId: parsed.success ? parsed.data.signalId : "" }
   const live = useLiveSignalSummary(target)
   const url = useSignalUrl(target)
-  const memberByUserId = useMemberByUserIdMap()
+  const memberByUserId = useProjectMemberByUserIdMap()
 
   if (!parsed.success) {
     return (

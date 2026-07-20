@@ -1,5 +1,3 @@
-export const AGENT_DISPATCH_FLAG = "agent-dispatch" as const
-
 export const AGENT_DISPATCH_KINDS = ["cursor", "claude_code", "linear", "webhook"] as const
 
 export const AGENT_DISPATCH_TRIGGERS = ["incident.opened", "signal.discovered", "monitor.incident", "manual"] as const

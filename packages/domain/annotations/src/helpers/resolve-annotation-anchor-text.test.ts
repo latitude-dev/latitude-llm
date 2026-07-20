@@ -55,6 +55,16 @@ describe("resolveAnnotationAnchorText", () => {
     ).toBeUndefined()
   })
 
+  it("returns undefined instead of throwing when the message is missing parts", () => {
+    const malformed: GenAIMessage[] = [{ role: "system" } as GenAIMessage]
+    expect(resolveAnnotationAnchorText(malformed, { messageIndex: 0, partIndex: 0 })).toBeUndefined()
+  })
+
+  it("returns an empty string instead of throwing when joining parts of a message missing parts", () => {
+    const malformed: GenAIMessage[] = [{ role: "system" } as GenAIMessage]
+    expect(resolveAnnotationAnchorText(malformed, { messageIndex: 0 })).toBe("")
+  })
+
   it("slices against prettified JSON when textFormat is 'pretty-json'", () => {
     const raw = '[{"id":"rel-2026-17"},{"id":"rel-2026-18"}]'
     const prettified = JSON.stringify(JSON.parse(raw), null, 2)

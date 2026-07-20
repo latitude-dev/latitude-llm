@@ -66,7 +66,10 @@ structure and timing without prompt/response/tool content, set `LATITUDE_NO_CONT
 Hermes loads pip-installed plugins via the `hermes_agent.plugins` entry point and calls
 the module's `register(ctx)` function, which subscribes to the lifecycle hooks
 (`pre_api_request` / `post_api_request`, `pre_llm_call` / `post_llm_call`,
-`pre_tool_call` / `post_tool_call`) — the same hooks the bundled `langfuse` plugin uses.
+`pre_tool_call` / `post_tool_call`, and `on_session_end` / `on_session_finalize`) — the
+same hooks the bundled `langfuse` and `nemo_relay` plugins use. The `*_api_request` pair is
+the LLM-call span boundary; the `*_llm_call` pair frames the turn; the session hooks flush
+the exporter so short / one-shot runs (`hermes -z "…"`) ship before the process exits.
 
 The plugin owns the **OTLP mapping** for that hook stream. It assembles one trace per
 turn:

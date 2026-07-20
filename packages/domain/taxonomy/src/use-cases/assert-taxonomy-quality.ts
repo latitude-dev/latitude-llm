@@ -1,4 +1,4 @@
-import type { OrganizationId, ProjectId } from "@domain/shared"
+import type { CustomBehaviorId, OrganizationId, ProjectId } from "@domain/shared"
 import { Effect } from "effect"
 import { TaxonomyDimension, type TaxonomyDimension as TaxonomyDimensionType } from "../entities/dimension.ts"
 import { TaxonomyQualityGateError } from "../errors.ts"
@@ -8,6 +8,8 @@ export interface AssertTaxonomyQualityInput {
   readonly organizationId?: OrganizationId
   readonly projectId: ProjectId
   readonly dimension?: TaxonomyDimensionType
+  /** Omit/null asserts the global tree; an id asserts that custom behavior's scoped tree. */
+  readonly customBehaviorId?: CustomBehaviorId | null
 }
 
 export interface AssertTaxonomyQualityResult {
@@ -34,7 +36,11 @@ export const assertTaxonomyQualityUseCase = (input: AssertTaxonomyQualityInput) 
   Effect.gen(function* () {
     const dimension = input.dimension ?? TaxonomyDimension.Topic
     const clusters = yield* TaxonomyClusterRepository
-    const active = yield* clusters.listActiveByProject({ projectId: input.projectId, dimension })
+    const active = yield* clusters.listActiveByProject({
+      projectId: input.projectId,
+      dimension,
+      customBehaviorId: input.customBehaviorId ?? null,
+    })
     const parentsWithChildren = new Set(
       active.flatMap((cluster) => (cluster.parentClusterId ? [cluster.parentClusterId] : [])),
     )

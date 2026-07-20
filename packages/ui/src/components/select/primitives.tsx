@@ -26,7 +26,7 @@ const SelectTriggerSurface = React.forwardRef<HTMLDivElement, SelectTriggerSurfa
       // biome-ignore lint/a11y/noNoninteractiveTabindex: Radix Trigger uses asChild and merges combobox role, aria-*, and keyboard behavior onto this div.
       tabIndex={0}
       className={cn(
-        "flex w-full min-w-0 cursor-pointer items-center justify-between rounded-md border border-input bg-transparent text-left",
+        "flex w-full min-w-0 cursor-pointer items-center justify-between rounded-lg border border-input bg-transparent text-left",
         "px-3 shadow-sm ring-offset-background placeholder:text-muted-foreground outline-none focus:ring-1 focus:ring-ring",
         "data-disabled:cursor-not-allowed data-disabled:opacity-50 [&>span]:line-clamp-1",
         font.size.h5,

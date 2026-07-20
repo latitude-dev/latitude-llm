@@ -80,6 +80,7 @@ const createWorkflowQuerier = (running: ReadonlySet<string> = new Set()) => {
           runId: "run-1",
           startTime: new Date("2026-04-01T00:00:00.000Z"),
           closeTime: null,
+          failure: null,
         }
       }),
     query: () => Effect.die("Unexpected query"),

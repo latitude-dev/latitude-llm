@@ -1,6 +1,7 @@
 import { OutboxEventWriter } from "@domain/events"
 import {
   type ConcurrentSqlTransactionError,
+  causesIncludePostgresLockNotAvailable,
   type OrganizationId,
   type RepositoryError,
   SqlClient,
@@ -53,7 +54,13 @@ export const claimOrganizationUseCase = Effect.fn("organizations.claimOrganizati
       const membershipRepo = yield* MembershipRepository
       const outboxEventWriter = yield* OutboxEventWriter
 
-      const claim = yield* claimRepo.findByTokenHash(tokenHash)
+      const claim = yield* claimRepo
+        .findByTokenHashForUpdate(tokenHash)
+        .pipe(
+          Effect.catchTag("RepositoryError", (error) =>
+            Effect.fail(causesIncludePostgresLockNotAvailable(error.cause) ? new ClaimAlreadyUsedError() : error),
+          ),
+        )
       if (!claim) return yield* new ClaimTokenInvalidError()
       if (claim.claimedAt !== null) return yield* new ClaimAlreadyUsedError()
       if (claim.expiresAt.getTime() <= Date.now()) return yield* new ClaimExpiredError()
@@ -74,11 +81,21 @@ export const claimOrganizationUseCase = Effect.fn("organizations.claimOrganizati
       const members = yield* membershipRepo.listByOrganizationId(organizationId)
       if (members.length > 0) return yield* new OrganizationNotClaimableError()
 
-      yield* membershipRepo.save(createMembership({ organizationId, userId: input.userId, role: "owner" }))
-      yield* organizationRepo.save({ ...organization, expiresAt: null })
-      yield* claimRepo.markClaimed(claim.id, new Date())
+      yield* membershipRepo.save(
+        createMembership({
+          organizationId,
+          userId: input.userId,
+          role: "owner",
+        }),
+      )
+      yield* organizationRepo.save({
+        ...organization,
+        expiresAt: null,
+        settings: { ...organization.settings, wantsShowcase: true },
+      })
+      const marked = yield* claimRepo.markClaimed(claim.id, new Date())
+      if (!marked) return yield* new ClaimAlreadyUsedError()
 
-      // Background sample-project seeding (domain-events worker) so the claimed org matches a normal one.
       yield* outboxEventWriter
         .write({
           eventName: "OrganizationClaimed",
@@ -90,7 +107,10 @@ export const claimOrganizationUseCase = Effect.fn("organizations.claimOrganizati
         .pipe(Effect.mapError((error) => toRepositoryError(error, "write")))
 
       return {
-        organization: { id: organization.id as string, slug: organization.slug },
+        organization: {
+          id: organization.id as string,
+          slug: organization.slug,
+        },
       } satisfies ClaimOrganizationResult
     }),
   )

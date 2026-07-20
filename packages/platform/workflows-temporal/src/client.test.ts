@@ -4,9 +4,40 @@ import type { Client } from "@temporalio/client"
 import { Connection, WorkflowExecutionAlreadyStartedError } from "@temporalio/client"
 import { Cause, Effect } from "effect"
 import { describe, expect, it, vi } from "vitest"
-import { createTemporalClientEffect, createWorkflowStarter, TemporalConnectionError } from "./client.ts"
+import {
+  createTemporalClientEffect,
+  createWorkflowStarter,
+  resolveWorkflowFailureReason,
+  TemporalConnectionError,
+} from "./client.ts"
 
 silenceLoggerInTests()
+
+describe("resolveWorkflowFailureReason", () => {
+  it("unwraps Temporal's wrapper chain to the innermost activity failure message", () => {
+    // Mirrors WorkflowFailedError -> ActivityFailure -> ApplicationFailure.
+    const applicationFailure = new Error(
+      'Cannot generate an evaluation for signal "X": at least 1 of its traces must be annotated by a human first.',
+    )
+    const activityFailure = new Error("Activity task failed", { cause: applicationFailure })
+    const workflowFailure = new Error("Workflow execution failed", { cause: activityFailure })
+
+    expect(resolveWorkflowFailureReason(workflowFailure)).toBe(
+      'Cannot generate an evaluation for signal "X": at least 1 of its traces must be annotated by a human first.',
+    )
+  })
+
+  it("keeps the last meaningful message when the innermost error has none", () => {
+    const inner = new Error("", { cause: undefined })
+    const outer = new Error("the real reason", { cause: inner })
+
+    expect(resolveWorkflowFailureReason(outer)).toBe("the real reason")
+  })
+
+  it("returns null for a non-error value", () => {
+    expect(resolveWorkflowFailureReason(undefined)).toBeNull()
+  })
+})
 
 describe("createTemporalClientEffect", () => {
   it("maps connection failures to TemporalConnectionError", async () => {

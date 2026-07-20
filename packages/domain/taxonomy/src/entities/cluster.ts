@@ -1,4 +1,4 @@
-import { cuidSchema, taxonomyClusterIdSchema } from "@domain/shared"
+import { cuidSchema, customBehaviorIdSchema, taxonomyClusterIdSchema } from "@domain/shared"
 import { z } from "zod"
 import {
   TAXONOMY_CLUSTER_DESCRIPTION_MAX_LENGTH,
@@ -46,6 +46,8 @@ export const taxonomyClusterSchema = z.object({
   id: taxonomyClusterIdSchema,
   organizationId: cuidSchema,
   projectId: cuidSchema,
+  // NULL = global taxonomy; non-null scopes the row to a custom behavior's sub-tree.
+  customBehaviorId: customBehaviorIdSchema.nullable().default(null),
   dimension: taxonomyDimensionSchema,
   /** Tree parent. Null = root node (the coarsest density level). */
   parentClusterId: taxonomyClusterIdSchema.nullable(),

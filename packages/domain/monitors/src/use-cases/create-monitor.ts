@@ -15,7 +15,7 @@ import {
 } from "@domain/shared"
 import { Effect } from "effect"
 import type { Monitor, MonitorTarget } from "../entities/monitor.ts"
-import { monitorStreamForTargetType } from "../entities/monitor.ts"
+import { monitorStreamForTargetType, monitorTargetSchema } from "../entities/monitor.ts"
 import { MonitorRepository } from "../ports/monitor-repository.ts"
 import { assertMonitorableSavedSearch } from "./assert-monitorable-saved-search.ts"
 
@@ -96,6 +96,25 @@ export const createMonitorUseCase = (
     yield* validateRule(input.rule)
     if (input.target.type === "savedSearch" && input.target.id !== null) {
       yield* assertMonitorableSavedSearch(input.target.id)
+    }
+
+    const targetCandidate = {
+      type: input.target.type,
+      id: input.target.id,
+      ...(input.target.filterSet !== undefined ? { filterSet: input.target.filterSet } : {}),
+      kind: input.target.type,
+      stream: monitorStreamForTargetType(input.target.type),
+      query: input.target.query ?? null,
+      savedSearchId: input.target.type === "savedSearch" ? input.target.id : null,
+      metric: input.rule.config.metric ?? { kind: "count" },
+    }
+    const parsedTarget = monitorTargetSchema.safeParse(targetCandidate)
+    if (!parsedTarget.success) {
+      const issue = parsedTarget.error.issues[0]
+      return yield* new ValidationError({
+        field: issue?.path.length ? issue.path.map(String).join(".") : "target",
+        message: issue?.message ?? "Invalid monitor target",
+      })
     }
 
     const sqlClient = yield* SqlClient

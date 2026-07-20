@@ -83,7 +83,12 @@ const _registry = {
   seedDemoProjectWorkflow: input<{
     readonly organizationId: string
     readonly projectId: string
-    readonly queueAssigneeUserIds: readonly string[]
+    readonly apiKeyId: string
+    readonly timelineAnchorIso: string
+  }>(),
+  regenerateShowcaseWorkflow: input<{
+    readonly organizationId: string
+    readonly projectId: string
     readonly apiKeyId: string
     readonly timelineAnchorIso: string
   }>(),
@@ -92,6 +97,8 @@ const _registry = {
     readonly projectId: string
     readonly dimension: "topic"
     readonly trigger: "cron" | "manual" | "threshold"
+    /** Present ⇒ a custom behavior's scoped sub-tree; absent ⇒ project-wide global gardening. */
+    readonly customBehaviorId?: string
   }>(),
 }
 

@@ -61,5 +61,16 @@ export class AdminOrganizationRepository extends Context.Service<
      * for the degenerate "org with no api keys" case.
      */
     findFirstApiKeyId(organizationId: OrganizationId): Effect.Effect<ApiKeyId | null, RepositoryError>
+
+    /**
+     * Flip the org's `wantsShowcase` settings flag — the backoffice
+     * counterpart to the user-facing "Remove demo" dismiss. Merges into the
+     * existing `settings` JSON (never clobbering sibling keys) and bumps
+     * `updated_at`. Fails `NotFoundError` when no org matches.
+     */
+    setWantsShowcase(
+      organizationId: OrganizationId,
+      enabled: boolean,
+    ): Effect.Effect<void, NotFoundError | RepositoryError>
   }
 >()("@domain/admin/AdminOrganizationRepository") {}

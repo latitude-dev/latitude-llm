@@ -4,6 +4,7 @@ import { getWrappedPageData } from "../../domains/wrapped/wrapped.functions.ts"
 import { TITLE_FOR_KIND } from "./-components/claude-code/v1/personality-copy.ts"
 import { WrappedReportV1 } from "./-components/claude-code/v1/WrappedReportV1.tsx"
 import { WrappedReportV2 } from "./-components/claude-code/v2/WrappedReportV2.tsx"
+import { WrappedReportV3 } from "./-components/claude-code/v3/WrappedReportV3.tsx"
 
 /**
  * Public Wrapped report. The CUID `$id` is the access token for *seeing
@@ -74,7 +75,7 @@ export const Route = createFileRoute("/wrapped/$id")({
  * with their frozen renderer.
  */
 const RENDERER_BY_TYPE_VERSION = {
-  claude_code: { 1: WrappedReportV1, 2: WrappedReportV2 },
+  claude_code: { 1: WrappedReportV1, 2: WrappedReportV2, 3: WrappedReportV3 },
 } as const satisfies Record<
   WrappedReportType,
   Record<ReportVersion, (props: { record: WrappedReportRecord; isMember: boolean }) => React.ReactNode>

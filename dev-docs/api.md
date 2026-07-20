@@ -6,14 +6,14 @@ For the step-by-step "how to add or change a route" recipe, see the [`api-endpoi
 
 ## One declaration, four surfaces
 
-Every endpoint is a single call to `defineApiEndpoint({ route, handler })` that fans out to:
+Every endpoint is a single call to `defineOperation({ route, execute })` (or legacy `handler`-form) in `packages/operations` that fans out to:
 
 - An HTTP route on the Hono router.
 - An OpenAPI operation in `apps/api/openapi.json`.
 - An MCP tool in `apps/api/mcp.json` (registered automatically; opt out with `tool: false`).
 - A TypeScript SDK method (Fern reads the OpenAPI doc and emits one method per operation).
 
-There is no second registration step for any of those surfaces. The `defineApiEndpoint` factory and the manifest emitters in `apps/api/src/mcp/*` derive them all from the same Zod schemas. Schema descriptions (`.describe(...)`) propagate to both SDK JSDoc and MCP tool metadata — every field's description is product copy seen by SDK users *and* AI agents.
+There is no second registration step for any of those surfaces. The `defineOperation` factory (`packages/operations/src/core/*`) and the manifest emitters derive them all from the same Zod schemas. Execute-form operations are additionally selectable as in-process agent tools via `defineToolset`. Schema descriptions (`.describe(...)`) propagate to both SDK JSDoc and MCP tool metadata — every field's description is product copy seen by SDK users *and* AI agents.
 
 ## Authentication
 
@@ -77,14 +77,15 @@ Public routes are bodyless metadata documents — never product data. Everything
 
 ## Per-route rate limiting
 
-`createTierRateLimiter(tier)` is keyed on `c.var.organization.id`, so one tenant's traffic can't eat another's quota. Tiers are attached per `(method, path)` pair via the variadic argument to `mountHttp`, not via `app.use(prefix, …)` — the latter is path-matched (not method-matched) and stacks unpredictably.
+`createTierRateLimiter(tier)` is keyed on `c.var.organization.id`, so one tenant's traffic can't eat another's quota. Tiers are declared per operation via the `rateLimitTier` field; `mountOperationModules` attaches the middleware per `(method, path)` pair and throws on a missing tier at mount (and emit) time.
 
 | Tier | Quota (per org/min) | Typical use |
 | --- | --- | --- |
 | `low` | 100 | Default. ID-keyed CRUD, simple lookups, account/settings reads. |
 | `medium` | 60 | Mutations with non-trivial side effects (email, fan-out writes). |
 | `high` | 15 | Bulk reads with filter/search/vector load. |
-| `critical` | 3 | Imports, exports, monitor-signal — anything that enqueues a heavy job or sends email. |
+| `ultra` | 3 | Imports, exports, monitor-signal — anything that enqueues a heavy job or sends email. |
+| `max` | 1 | Unauthenticated or abuse-prone surfaces (paired with a global limiter). |
 
 Default to `low`. Pick a tighter tier only when an endpoint genuinely warrants it.
 
@@ -101,7 +102,7 @@ CI guards drift via `.github/workflows/api-manifests.yml`: on every PR, both emi
 
 ## Sharing logic with the web
 
-`apps/web` and `apps/api` both orchestrate the same domain use-cases — they're parallel consumers of `packages/domain/*`, not nested (the web does not call through to the API for its own product features). When you add an endpoint that mirrors a web action, reuse the existing `@domain/<entity>/use-cases/*` use-case rather than reimplementing the policy in the API route. If the web has the logic inline in a server fn, extract it to a use-case first.
+`apps/web` and `@repo/operations` both orchestrate the same domain use-cases — they're parallel consumers of `packages/domain/*`, not nested (the web does not call through to the API for its own product features). When you add an endpoint that mirrors a web action, reuse the existing `@domain/<entity>/use-cases/*` use-case rather than reimplementing the policy in the API route. If the web has the logic inline in a server fn, extract it to a use-case first.
 
 The domain use-case is the shared seam. Anything that duplicates business rules in both surfaces is drift waiting to happen.
 
@@ -117,9 +118,11 @@ The test harness (`apps/api/src/test-utils/create-test-app.ts`) boots the full a
 
 | | Path |
 | --- | --- |
-| Routes | `apps/api/src/routes/` |
-| `defineApiEndpoint`, registry, MCP server | `apps/api/src/mcp/` |
-| Shared OpenAPI primitives (`Paginated`, `PROTECTED_SECURITY`, `jsonBody`) | `apps/api/src/openapi/` |
+| Operation modules | `packages/operations/src/operations/` |
+| `defineOperation`, registry, execute/mount/toolset machinery | `packages/operations/src/core/` |
+| MCP HTTP transport | `apps/api/src/mcp/server.ts` |
+| Shared OpenAPI primitives (`Paginated`, `PROTECTED_SECURITY`, `jsonBody`, `typedResponses`) | `packages/operations/src/openapi/` |
+| Non-operation routes (health, well-known, bootstrap) | `apps/api/src/routes/` |
 | Auth + rate-limit middleware | `apps/api/src/middleware/` |
 | Manifest emitters | `apps/api/scripts/{emit-openapi,emit-mcp}.ts` |
 | API-key validator | `packages/platform/api-key-auth/` |

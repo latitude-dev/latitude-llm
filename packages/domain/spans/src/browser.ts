@@ -15,7 +15,9 @@ export {
   type MetricPercentiles,
 } from "./cohort-baselines.ts"
 export {
+  AGENT_GRAPH_MAIN_ID,
   COHORT_SUMMARY_CACHE_TTL_SECONDS,
+  MAX_AGENT_GRAPH_DEPTH,
   SESSION_ID_MAX_LENGTH,
   SESSION_SEARCH_MAX_MATCHING_TRACES_PER_ROW,
   SPAN_ID_LENGTH,
@@ -131,6 +133,15 @@ export {
 export type { TraceSearchBudgetShape } from "./ports/trace-search-budget.ts"
 export { TraceSearchBudget } from "./ports/trace-search-budget.ts"
 export type {
+  AgentGraph,
+  AgentGraphSpanInput,
+  AgentMetrics,
+  AgentNode,
+  AgentNodeKind,
+  AgentTrigger,
+} from "./use-cases/build-agent-graph.ts"
+export { agentGraphSpanKey, agentGraphToolCallKey, buildAgentGraph } from "./use-cases/build-agent-graph.ts"
+export type {
   TraceHighlight,
   TraceSearchHighlightsResult,
 } from "./use-cases/compute-trace-search-highlights.ts"
@@ -147,7 +158,7 @@ export type {
   LoadTraceForTraceEndSkipped,
 } from "./use-cases/load-trace-for-trace-end.ts"
 export { loadTraceForTraceEndUseCase } from "./use-cases/load-trace-for-trace-end.ts"
-export { buildConversationSpanMaps } from "./use-cases/map-conversation-to-spans.ts"
+export { buildConversationSpanMaps, type ConversationSpanRef } from "./use-cases/map-conversation-to-spans.ts"
 export type { ParsedSearchQuery } from "./use-cases/parse-search-query.ts"
 export { parseSearchQuery } from "./use-cases/parse-search-query.ts"
 export type {

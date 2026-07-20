@@ -19,10 +19,8 @@ import {
   TraceId,
   toRepositoryError,
 } from "@domain/shared"
+import { formatCHDate, parseCHDate } from "@repo/utils"
 import { Effect, Layer } from "effect"
-
-const toClickhouseDateTime = (date: Date): string => date.toISOString().replace("Z", "")
-const parseClickhouseDate = (value: string): Date => new Date(`${value.replace(" ", "T")}Z`)
 
 type AnalysisRow = {
   readonly organization_id: string
@@ -128,14 +126,14 @@ const toAnalysisInsertRow = (analysis: SessionAnalysis) => ({
   organization_id: analysis.organizationId as string,
   project_id: analysis.projectId as string,
   session_id: analysis.sessionId as string,
-  start_time: toClickhouseDateTime(analysis.startTime),
-  end_time: toClickhouseDateTime(analysis.endTime),
+  start_time: formatCHDate(analysis.startTime),
+  end_time: formatCHDate(analysis.endTime),
   trace_ids: [...analysis.traceIds],
   analysis_hash: analysis.analysisHash,
   analysis_status: analysis.analysisStatus,
   status_reason: analysis.statusReason,
   retention_days: analysis.retentionDays,
-  indexed_at: toClickhouseDateTime(analysis.indexedAt),
+  indexed_at: formatCHDate(analysis.indexedAt),
 })
 
 const toSemanticMomentInsertRow = (moment: SessionSemanticMoment) => ({
@@ -145,15 +143,15 @@ const toSemanticMomentInsertRow = (moment: SessionSemanticMoment) => ({
   analysis_hash: moment.analysisHash,
   moment_id: moment.momentId,
   trace_id: moment.traceId as string,
-  start_time: toClickhouseDateTime(moment.startTime),
-  end_time: toClickhouseDateTime(moment.endTime),
+  start_time: formatCHDate(moment.startTime),
+  end_time: formatCHDate(moment.endTime),
   first_message_index: moment.firstMessageIndex,
   last_message_index: moment.lastMessageIndex,
   boundary_reason: moment.boundaryReason,
   embedding: [...moment.embedding],
   coherence_score: moment.coherenceScore,
   retention_days: moment.retentionDays,
-  indexed_at: toClickhouseDateTime(moment.indexedAt),
+  indexed_at: formatCHDate(moment.indexedAt),
 })
 
 const toMomentLabelInsertRow = (label: SessionMomentLabel) => ({
@@ -171,7 +169,7 @@ const toMomentLabelInsertRow = (label: SessionMomentLabel) => ({
   evidence: label.evidence,
   confidence: label.confidence,
   retention_days: label.retentionDays,
-  indexed_at: toClickhouseDateTime(label.indexedAt),
+  indexed_at: formatCHDate(label.indexedAt),
 })
 
 const toDomainAnalysis = (row: AnalysisRow): SessionAnalysis =>
@@ -179,14 +177,14 @@ const toDomainAnalysis = (row: AnalysisRow): SessionAnalysis =>
     organizationId: OrganizationId(row.organization_id),
     projectId: ProjectId(row.project_id),
     sessionId: SessionId(row.session_id),
-    startTime: parseClickhouseDate(row.start_time),
-    endTime: parseClickhouseDate(row.end_time),
+    startTime: parseCHDate(row.start_time),
+    endTime: parseCHDate(row.end_time),
     traceIds: row.trace_ids.map(TraceId),
     analysisHash: row.analysis_hash,
     analysisStatus: row.analysis_status,
     statusReason: row.status_reason,
     retentionDays: row.retention_days,
-    indexedAt: parseClickhouseDate(row.indexed_at),
+    indexedAt: parseCHDate(row.indexed_at),
   })
 
 const toDomainSemanticMoment = (row: SemanticMomentRow): SessionSemanticMoment =>
@@ -197,15 +195,15 @@ const toDomainSemanticMoment = (row: SemanticMomentRow): SessionSemanticMoment =
     analysisHash: row.analysis_hash,
     momentId: row.moment_id,
     traceId: TraceId(row.trace_id),
-    startTime: parseClickhouseDate(row.start_time),
-    endTime: parseClickhouseDate(row.end_time),
+    startTime: parseCHDate(row.start_time),
+    endTime: parseCHDate(row.end_time),
     firstMessageIndex: row.first_message_index,
     lastMessageIndex: row.last_message_index,
     boundaryReason: row.boundary_reason,
     embedding: row.embedding,
     coherenceScore: row.coherence_score,
     retentionDays: row.retention_days,
-    indexedAt: parseClickhouseDate(row.indexed_at),
+    indexedAt: parseCHDate(row.indexed_at),
   })
 
 const toDomainMomentLabel = (row: MomentLabelRow): SessionMomentLabel =>
@@ -224,7 +222,7 @@ const toDomainMomentLabel = (row: MomentLabelRow): SessionMomentLabel =>
     evidence: row.evidence,
     confidence: row.confidence,
     retentionDays: row.retention_days,
-    indexedAt: parseClickhouseDate(row.indexed_at),
+    indexedAt: parseCHDate(row.indexed_at),
   })
 
 export const SessionAnalysisRepositoryLive = Layer.effect(

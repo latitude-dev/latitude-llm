@@ -54,9 +54,9 @@ export interface AIProviderModelConfig {
 
 /**
  * Embedding dimensionality is a deployment-wide invariant, never configurable:
- * pgvector columns and the ClickHouse trace_search_embeddings table bake it
- * into migrations. Whatever embedding model is configured must emit vectors
- * of exactly this size.
+ * pgvector columns and the ClickHouse message_embeddings table bake it into
+ * migrations. Whatever embedding model is configured must emit vectors of
+ * exactly this size.
  */
 export const EMBEDDING_DIMENSIONS = 2048
 

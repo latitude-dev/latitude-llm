@@ -54,7 +54,7 @@ export const collectAlignmentExamplesUseCase = Effect.fn("evaluations.collectAli
 
   if (positiveExamples.length === 0 && input.requirePositiveExamples !== false) {
     return yield* new BadRequestError({
-      message: `Signal ${input.signalId} has no positive alignment examples yet`,
+      message: "At least 1 of the signal's traces must be annotated by a human before an evaluation can be generated.",
     })
   }
 

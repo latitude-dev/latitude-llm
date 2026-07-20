@@ -1,8 +1,9 @@
-import type { OrganizationId, ProjectId } from "@domain/shared"
-import { Effect } from "effect"
+import { type CustomBehaviorId, type OrganizationId, type ProjectId, RepositoryError } from "@domain/shared"
+import { Effect, Option } from "effect"
 import type { TaxonomyCluster } from "../entities/cluster.ts"
 import { TaxonomyDimension, type TaxonomyDimension as TaxonomyDimensionType } from "../entities/dimension.ts"
 import { isDisplayableTaxonomyName } from "../helpers.ts"
+import { CustomBehaviorAssignmentRepository } from "../ports/custom-behavior-assignment-repository.ts"
 import { TaxonomyClusterRepository } from "../ports/taxonomy-cluster-repository.ts"
 import { TaxonomyObservationRepository } from "../ports/taxonomy-observation-repository.ts"
 import { classifyClusterTrend, type TaxonomyClusterTrendSummary } from "./analytics.ts"
@@ -25,6 +26,15 @@ export interface ListProjectBehavioursInput {
   readonly segment?: BehaviourSegment
   readonly sortBy?: BehaviourSortBy
   readonly limit?: number
+  /**
+   * Omit/null = global taxonomy tree. An id scopes the whole read to that
+   * behavior's sub-tree: scoped clusters from Postgres and per-cluster counts +
+   * start_time-windowed trend from the ClickHouse `custom_behavior_assignments`
+   * slice (never the global `taxonomy_observations.assigned_cluster_id`). Scoped
+   * gardening runs on a schedule and accumulates assignments across runs with
+   * stable cluster ids, so trend/novelty/spiking read the same as the global tree.
+   */
+  readonly customBehaviorId?: CustomBehaviorId | null
 }
 
 /**
@@ -148,8 +158,30 @@ export const listProjectBehavioursUseCase = (input: ListProjectBehavioursInput) 
 
     const clusterRepository = yield* TaxonomyClusterRepository
     const observationRepository = yield* TaxonomyObservationRepository
+    const customBehaviorId = input.customBehaviorId ?? null
+    // Scoped counts live in the ClickHouse custom_behavior_assignments slice.
+    // Kept out of this use-case's required services (via serviceOption) so the
+    // global Behaviours read contract is unchanged; scoped callers provide it.
+    const assignmentRepositoryOption = yield* Effect.serviceOption(CustomBehaviorAssignmentRepository)
+    const scopedAssignmentRepository =
+      customBehaviorId != null
+        ? yield* Option.match(assignmentRepositoryOption, {
+            onNone: () =>
+              Effect.fail(
+                new RepositoryError({
+                  cause: new Error("CustomBehaviorAssignmentRepository is required to read a scoped behavior tree"),
+                  operation: "listProjectBehaviours.scopedAssignmentRepository",
+                }),
+              ),
+            onSome: (repository) => Effect.succeed(repository),
+          })
+        : null
 
-    const allActiveClusters = yield* clusterRepository.listActiveByProject({ projectId: input.projectId, dimension })
+    const allActiveClusters = yield* clusterRepository.listActiveByProject({
+      projectId: input.projectId,
+      dimension,
+      customBehaviorId,
+    })
     const displayable = allActiveClusters.filter((cluster) => isDisplayableTaxonomyName(cluster.name))
     const childrenByParentId = new Map<string, TaxonomyCluster[]>()
     for (const cluster of displayable) {
@@ -159,23 +191,53 @@ export const listProjectBehavioursUseCase = (input: ListProjectBehavioursInput) 
       childrenByParentId.set(cluster.parentClusterId, siblings)
     }
 
-    const assignmentCounts = yield* observationRepository.getClusterAssignmentCounts({
-      organizationId: input.organizationId,
-      projectId: input.projectId,
-      clusterIds: displayable.map((cluster) => cluster.id),
-      ...(input.startTimeFrom ? { startTimeFrom: input.startTimeFrom } : {}),
-      ...(input.startTimeTo ? { startTimeTo: input.startTimeTo } : {}),
-    })
+    // Scoped trees read their per-cluster counts from the custom-behavior
+    // assignment slice (never global observations); a global tree reads the
+    // time-windowed global assignment counts.
+    const assignmentCounts =
+      scopedAssignmentRepository != null && customBehaviorId != null
+        ? yield* scopedAssignmentRepository.getClusterAssignmentCounts({
+            organizationId: input.organizationId,
+            projectId: input.projectId,
+            customBehaviorId,
+            ...(input.startTimeFrom ? { startTimeFrom: input.startTimeFrom } : {}),
+            ...(input.startTimeTo ? { startTimeTo: input.startTimeTo } : {}),
+          })
+        : yield* observationRepository.getClusterAssignmentCounts({
+            organizationId: input.organizationId,
+            projectId: input.projectId,
+            clusterIds: displayable.map((cluster) => cluster.id),
+            ...(input.startTimeFrom ? { startTimeFrom: input.startTimeFrom } : {}),
+            ...(input.startTimeTo ? { startTimeTo: input.startTimeTo } : {}),
+          })
     const directCountByClusterId = new Map(assignmentCounts.map((count) => [count.clusterId, count.count] as const))
 
-    const trendCounts = yield* observationRepository.getClusterTrendCounts({
-      organizationId: input.organizationId,
-      projectId: input.projectId,
-      clusterIds: displayable.map((cluster) => cluster.id),
-      currentSince: new Date(now.getTime() - TREND_CURRENT_DAYS * MS_PER_DAY),
-      baselineSince: new Date(now.getTime() - trendWindowDays * MS_PER_DAY),
-      baselineDays: Math.max(trendWindowDays - TREND_CURRENT_DAYS, 1),
-    })
+    // Scoped gardening accumulates rows across runs (no truncate) and keeps
+    // stable cluster ids via the Hungarian lineage matcher, so the same
+    // start_time-windowed born/continue/die trend the global tree derives is
+    // computable over the custom_behavior_assignments slice.
+    const currentSince = new Date(now.getTime() - TREND_CURRENT_DAYS * MS_PER_DAY)
+    const baselineSince = new Date(now.getTime() - trendWindowDays * MS_PER_DAY)
+    const baselineDays = Math.max(trendWindowDays - TREND_CURRENT_DAYS, 1)
+    const trendCounts =
+      scopedAssignmentRepository != null && customBehaviorId != null
+        ? yield* scopedAssignmentRepository.getClusterTrendCounts({
+            organizationId: input.organizationId,
+            projectId: input.projectId,
+            customBehaviorId,
+            clusterIds: displayable.map((cluster) => cluster.id),
+            currentSince,
+            baselineSince,
+            baselineDays,
+          })
+        : yield* observationRepository.getClusterTrendCounts({
+            organizationId: input.organizationId,
+            projectId: input.projectId,
+            clusterIds: displayable.map((cluster) => cluster.id),
+            currentSince,
+            baselineSince,
+            baselineDays,
+          })
     const trendByClusterId = new Map(
       trendCounts.map((trend) => [trend.clusterId, classifyClusterTrend(trend)] as const),
     )

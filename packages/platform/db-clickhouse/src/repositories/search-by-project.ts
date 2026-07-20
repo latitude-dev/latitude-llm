@@ -164,6 +164,7 @@ const toOrphanSession = (row: SessionSearchRow): Session => {
     models: [],
     providers: [],
     serviceNames: [],
+    agentNames: [],
     rootSpanId: "",
     rootSpanName: "",
   }
@@ -225,8 +226,7 @@ type SearchCandidate = { trace_id: string; relevance_score: number }
  * can surface before `trace_search_documents` (a `ReplacingMergeTree`) has
  * merged. The outer `LIMIT {candidateCap:UInt32}` caps how many candidates
  * the application materializes, protecting the Node worker from broad
- * lexical phrases on XL projects — semantic plans already cap server-side
- * via `SEMANTIC_SCAN_LIMIT`, lexical/hybrid plans don't.
+ * lexical phrases on XL projects.
  */
 const fetchSearchCandidates = ({
   organizationId,

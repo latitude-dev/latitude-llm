@@ -1,13 +1,14 @@
 import { ProjectId, SessionId, SpanId, TraceId } from "@domain/shared"
 import type { Operation, Span, SpanDetail, SpanKind, SpanMessagesData, SpanStatusCode } from "@domain/spans"
 import { SpanRepository } from "@domain/spans"
-import { SpanRepositoryLive, withClickHouse } from "@platform/db-clickhouse"
+import { SpanRepositoryLive } from "@platform/db-clickhouse"
 import { withTracing } from "@repo/observability"
 import { createServerFn } from "@tanstack/react-start"
 import { Effect } from "effect"
 import { z } from "zod"
 import { getClickhouseClient } from "../../server/clients.ts"
 import { resolveOrgScope } from "../../server/resolve-org-scope.ts"
+import { withScopedClickHouse } from "../../server/scoped-clickhouse.ts"
 
 const dateTimeParamSchema = z
   .string()
@@ -29,8 +30,10 @@ export interface SpanRecord {
   readonly operation: Operation
   readonly provider: string
   readonly model: string
+  readonly agentName: string
   readonly toolName: string
   readonly toolNames: readonly string[]
+  readonly toolCallId: string
   readonly tokensInput: number
   readonly tokensOutput: number
   readonly costTotalMicrocents: number
@@ -73,7 +76,6 @@ export interface SpanDetailRecord extends SpanRecord {
   readonly outputMessages: readonly object[]
   readonly systemInstructions: readonly object[]
   readonly toolDefinitions: readonly object[]
-  readonly toolCallId: string
   readonly toolInput: string
   readonly toolOutput: string
 }
@@ -93,8 +95,10 @@ const serializeSpan = (span: Span): SpanRecord => ({
   operation: span.operation,
   provider: span.provider,
   model: span.model,
+  agentName: span.agentName,
   toolName: span.toolName,
   toolNames: span.toolNames,
+  toolCallId: span.toolCallId,
   tokensInput: span.tokensInput,
   tokensOutput: span.tokensOutput,
   costTotalMicrocents: span.costTotalMicrocents,
@@ -138,7 +142,6 @@ const serializeSpanDetail = (span: SpanDetail): SpanDetailRecord => ({
   outputMessages: span.outputMessages as readonly object[],
   systemInstructions: span.systemInstructions as readonly object[],
   toolDefinitions: span.toolDefinitions as readonly object[],
-  toolCallId: span.toolCallId,
   toolInput: span.toolInput,
   toolOutput: span.toolOutput,
 })
@@ -146,15 +149,14 @@ const serializeSpanDetail = (span: SpanDetail): SpanDetailRecord => ({
 export const listSpansByTrace = createServerFn({ method: "GET" })
   .inputValidator(
     z.object({
-      sandboxOrgId: z.string().optional(),
       projectId: z.string(),
       traceId: z.string(),
       startTimeFrom: dateTimeParamSchema.optional(),
       startTimeTo: dateTimeParamSchema.optional(),
     }),
   )
-  .handler(async ({ data }): Promise<SpanRecord[]> => {
-    const orgId = await resolveOrgScope(data)
+  .handler(async ({ data, context }): Promise<SpanRecord[]> => {
+    const orgId = await resolveOrgScope(context)
     const spans = await Effect.runPromise(
       Effect.gen(function* () {
         const repo = yield* SpanRepository
@@ -165,39 +167,43 @@ export const listSpansByTrace = createServerFn({ method: "GET" })
           ...(data.startTimeFrom ? { startTimeFrom: data.startTimeFrom } : {}),
           ...(data.startTimeTo ? { startTimeTo: data.startTimeTo } : {}),
         })
-      }).pipe(withClickHouse(SpanRepositoryLive, getClickhouseClient(), orgId), withTracing),
+      }).pipe(withScopedClickHouse(SpanRepositoryLive, getClickhouseClient(), orgId), withTracing),
     )
     return spans.map(serializeSpan)
   })
 
+// Reads by the session's authoritative `traceIds` rather than `session_id`
+// membership, so subagent spans that override `session_id` to the child's own
+// value still surface in the session's Spans tab and breakdowns.
 export const listSpansBySession = createServerFn({ method: "GET" })
   .inputValidator(
     z.object({
-      sandboxOrgId: z.string().optional(),
       projectId: z.string(),
-      sessionId: z.string(),
+      traceIds: z.array(z.string().length(32)).max(500),
       startTimeFrom: dateTimeParamSchema.optional(),
       startTimeTo: dateTimeParamSchema.optional(),
     }),
   )
-  .handler(async ({ data }): Promise<SpanRecord[]> => {
-    const orgId = await resolveOrgScope(data)
+  .handler(async ({ data, context }): Promise<SpanRecord[]> => {
+    if (data.traceIds.length === 0) return []
+    const orgId = await resolveOrgScope(context)
     const spans = await Effect.runPromise(
       Effect.gen(function* () {
         const repo = yield* SpanRepository
-        return yield* repo.listBySessionId({
+        return yield* repo.listByTraceIds({
           organizationId: orgId,
           projectId: ProjectId(data.projectId),
-          sessionId: SessionId(data.sessionId),
+          traceIds: data.traceIds.map(TraceId),
           ...(data.startTimeFrom ? { startTimeFrom: data.startTimeFrom } : {}),
           ...(data.startTimeTo ? { startTimeTo: data.startTimeTo } : {}),
         })
-      }).pipe(withClickHouse(SpanRepositoryLive, getClickhouseClient(), orgId), withTracing),
+      }).pipe(withScopedClickHouse(SpanRepositoryLive, getClickhouseClient(), orgId), withTracing),
     )
     return spans.map(serializeSpan)
   })
 
 export interface SpanMessagesRecord {
+  readonly traceId: string
   readonly spanId: string
   readonly operation: Operation
   readonly toolCallId: string
@@ -208,6 +214,7 @@ export interface SpanMessagesRecord {
 }
 
 const serializeSpanMessages = (span: SpanMessagesData): SpanMessagesRecord => ({
+  traceId: span.traceId as string,
   spanId: span.spanId as string,
   operation: span.operation,
   toolCallId: span.toolCallId,
@@ -224,14 +231,13 @@ const serializeSpanMessages = (span: SpanMessagesData): SpanMessagesRecord => ({
 export const listConversationMessageSpans = createServerFn({ method: "GET" })
   .inputValidator(
     z.object({
-      sandboxOrgId: z.string().optional(),
       projectId: z.string(),
       traceId: z.string(),
       startTime: dateTimeParamSchema,
     }),
   )
-  .handler(async ({ data }): Promise<SpanMessagesRecord[]> => {
-    const orgId = await resolveOrgScope(data)
+  .handler(async ({ data, context }): Promise<SpanMessagesRecord[]> => {
+    const orgId = await resolveOrgScope(context)
     const spans = await Effect.runPromise(
       Effect.gen(function* () {
         const spanRepo = yield* SpanRepository
@@ -242,7 +248,7 @@ export const listConversationMessageSpans = createServerFn({ method: "GET" })
           startTimeFrom: new Date(data.startTime.getTime() - 60 * 1000),
           startTimeTo: new Date(data.startTime.getTime() + 24 * 60 * 60 * 1000),
         })
-      }).pipe(withClickHouse(SpanRepositoryLive, getClickhouseClient(), orgId), withTracing),
+      }).pipe(withScopedClickHouse(SpanRepositoryLive, getClickhouseClient(), orgId), withTracing),
     )
     return spans.map(serializeSpanMessages)
   })
@@ -250,15 +256,14 @@ export const listConversationMessageSpans = createServerFn({ method: "GET" })
 export const listSessionConversationMessageSpans = createServerFn({ method: "GET" })
   .inputValidator(
     z.object({
-      sandboxOrgId: z.string().optional(),
       projectId: z.string(),
       sessionId: z.string(),
       sessionStartTime: dateTimeParamSchema,
       sessionEndTime: dateTimeParamSchema,
     }),
   )
-  .handler(async ({ data }): Promise<SpanMessagesRecord[]> => {
-    const orgId = await resolveOrgScope(data)
+  .handler(async ({ data, context }): Promise<SpanMessagesRecord[]> => {
+    const orgId = await resolveOrgScope(context)
     const spans = await Effect.runPromise(
       Effect.gen(function* () {
         const spanRepo = yield* SpanRepository
@@ -269,7 +274,7 @@ export const listSessionConversationMessageSpans = createServerFn({ method: "GET
           startTimeFrom: new Date(data.sessionStartTime.getTime() - 60 * 1000),
           startTimeTo: new Date(data.sessionEndTime.getTime() + 24 * 60 * 60 * 1000),
         })
-      }).pipe(withClickHouse(SpanRepositoryLive, getClickhouseClient(), orgId), withTracing),
+      }).pipe(withScopedClickHouse(SpanRepositoryLive, getClickhouseClient(), orgId), withTracing),
     )
     return spans.map(serializeSpanMessages)
   })
@@ -277,7 +282,6 @@ export const listSessionConversationMessageSpans = createServerFn({ method: "GET
 export const getSpanDetail = createServerFn({ method: "GET" })
   .inputValidator(
     z.object({
-      sandboxOrgId: z.string().optional(),
       projectId: z.string(),
       traceId: z.string(),
       spanId: z.string(),
@@ -285,8 +289,8 @@ export const getSpanDetail = createServerFn({ method: "GET" })
       startTimeTo: dateTimeParamSchema.optional(),
     }),
   )
-  .handler(async ({ data }): Promise<SpanDetailRecord> => {
-    const orgId = await resolveOrgScope(data)
+  .handler(async ({ data, context }): Promise<SpanDetailRecord> => {
+    const orgId = await resolveOrgScope(context)
     const span = await Effect.runPromise(
       Effect.gen(function* () {
         const repo = yield* SpanRepository
@@ -298,7 +302,7 @@ export const getSpanDetail = createServerFn({ method: "GET" })
           ...(data.startTimeFrom ? { startTimeFrom: data.startTimeFrom } : {}),
           ...(data.startTimeTo ? { startTimeTo: data.startTimeTo } : {}),
         })
-      }).pipe(withClickHouse(SpanRepositoryLive, getClickhouseClient(), orgId), withTracing),
+      }).pipe(withScopedClickHouse(SpanRepositoryLive, getClickhouseClient(), orgId), withTracing),
     )
     return serializeSpanDetail(span)
   })

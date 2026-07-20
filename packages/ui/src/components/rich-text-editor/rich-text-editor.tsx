@@ -7,6 +7,7 @@ export interface RichTextEditorProps {
   readOnly?: boolean
   className?: string
   minHeight?: string
+  placeholder?: string
 }
 
 const CodeMirrorEditor = lazy(() => import("./codemirror-editor.tsx").then((m) => ({ default: m.CodeMirrorEditor })))

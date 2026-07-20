@@ -1,5 +1,6 @@
 import type { MonitorTarget } from "@domain/monitors"
 import type { FilterSet } from "@domain/shared"
+import { stripCustomBehaviorExcludedFields } from "@domain/taxonomy"
 import { Button, Icon, type InfiniteTableSorting, type SortDirection, Tabs, Tooltip, toast } from "@repo/ui"
 import { eq } from "@tanstack/react-db"
 import { useHotkeys } from "@tanstack/react-hotkeys"
@@ -12,6 +13,7 @@ import {
   FilterXIcon,
   MessagesSquareIcon,
   ShieldAlertIcon,
+  SlidersHorizontalIcon,
   TextIcon,
   XIcon,
 } from "lucide-react"
@@ -23,11 +25,11 @@ import {
   addTracesToDatasetFunction,
   createDatasetFromTracesFunction,
 } from "../../../../../domains/datasets/datasets.functions.ts"
+import { useFeatureFlags } from "../../../../../domains/feature-flags/feature-flags.collection.ts"
 import { useMonitors } from "../../../../../domains/monitors/monitors.collection.ts"
 import { useProjectsCollection } from "../../../../../domains/projects/projects.collection.ts"
 import { useSavedSearchBySlug } from "../../../../../domains/saved-searches/saved-searches.collection.ts"
 import type { SavedSearchRecord } from "../../../../../domains/saved-searches/saved-searches.functions.ts"
-import { withSessionDefaults } from "../../../../../domains/sessions/sessions.collection.ts"
 import { useTracesCount } from "../../../../../domains/traces/traces.collection.ts"
 import { enqueueTracesExport } from "../../../../../domains/traces/traces.functions.ts"
 import { ListingLayout as Layout } from "../../../../../layouts/ListingLayout/index.tsx"
@@ -60,22 +62,12 @@ import {
 import { useTableColumnSettings } from "./table-column-settings.ts"
 import { TimeFilterDropdown } from "./time-filter-dropdown.tsx"
 import { TraceDetailDrawer } from "./trace-detail-drawer.tsx"
-import {
-  DEFAULT_SEARCH_SORTING,
-  DEFAULT_TRACE_SORTING,
-  getTimeFilterValue,
-  parseFilters,
-  serializeFilters,
-} from "./trace-page-state.ts"
+import { DEFAULT_SEARCH_SORTING, DEFAULT_TRACE_SORTING, parseFilters, serializeFilters } from "./trace-page-state.ts"
 import { TracesEmptyOnboarding } from "./traces-empty-onboarding.tsx"
-import { TracesEmptyState } from "./traces-empty-state.tsx"
 import { TracesView } from "./traces-view.tsx"
+import { useProjectTimeWindow } from "./use-project-time-window.ts"
 
 export type ExplorerMode = "traces" | "sessions"
-
-/** Default Sessions time window when none is set — keeps listing, counts, and
- * metrics scoped to what the time filter shows (matches the Signals page). */
-const DEFAULT_SESSION_RANGE_SECONDS = 30 * 24 * 60 * 60
 
 export function ProjectExplorer({ projectSlug }: { readonly projectSlug: string }) {
   const routeProject = useRouteProject()
@@ -93,6 +85,7 @@ export function ProjectExplorer({ projectSlug }: { readonly projectSlug: string 
   const [activeTraceId, setActiveTraceId] = useParamState("traceId", "")
   const [activeSessionId, setActiveSessionId] = useParamState("sessionId", "")
   const [, setSelectedSpanId] = useParamState("spanId", "")
+  const [, setSelectedSpanTraceId] = useParamState("spanTraceId", "")
   const [rawFilters, setRawFilters] = useParamState("filters", "")
   const [query, setQuery] = useParamState("query", "")
   const [savedSearchSlug, setSavedSearchSlug] = useParamState("savedSearch", "")
@@ -105,8 +98,9 @@ export function ProjectExplorer({ projectSlug }: { readonly projectSlug: string 
       setActiveSessionId("")
       setActiveTraceId("")
       setSelectedSpanId("")
+      setSelectedSpanTraceId("")
     },
-    [activeTab, setActiveTab, setActiveSessionId, setActiveTraceId, setSelectedSpanId],
+    [activeTab, setActiveTab, setActiveSessionId, setActiveTraceId, setSelectedSpanId, setSelectedSpanTraceId],
   )
   const hasSearchQuery = query.length > 0
   const hasSemanticSearchQuery = searchHasSemanticPart(query)
@@ -223,27 +217,23 @@ export function ProjectExplorer({ projectSlug }: { readonly projectSlug: string 
   const traceIdsRef = useRef<string[]>([])
 
   const filters = useMemo(() => parseFilters(rawFilters || undefined), [rawFilters])
-  // In Sessions mode, default the time range to the last month when the user
-  // hasn't set one, so listing, counts, metrics, and the time dropdown all stay
-  // scoped to the same visible window (matches the Signals page). Traces mode
-  // keeps the raw filter set untouched.
-  const sessionFilters = useMemo(() => {
-    if (!isSessions || filters.startTime) return filters
-    // Match how the time dropdown stores a "Last month" preset: an open-ended
-    // `gte` (no `lte`), so the dropdown shows "Last month" instead of a custom
-    // absolute range, and the data still scopes to the last 30 days.
-    const fromMs = Date.now() - DEFAULT_SESSION_RANGE_SECONDS * 1000
-    return {
-      ...filters,
-      startTime: [{ op: "gte" as const, value: new Date(fromMs).toISOString() }],
-    }
-  }, [filters, isSessions])
-  // Sessions hooks apply `withSessionDefaults` internally so orphan-fragment
-  // sessions stay hidden unless the user opts out. Trace-side surfaces here
-  // (count, export, add-to-dataset) need the same default in Sessions mode.
-  // In Traces mode `hasLlmActivity` is session-only and isn't in the trace
-  // filter registry, so we keep the raw filter set there.
-  const effectiveFilters = useMemo(() => (isSessions ? withSessionDefaults(filters) : filters), [filters, isSessions])
+  // Sessions/Traces date filter: default is "All time"; a picked range lives in `filters.startTime`,
+  // and the histogram stays clamped (anchored to latest activity when All time). See the hook.
+  const {
+    filtersWithDefaultTime,
+    effectiveFilters,
+    timeFrom,
+    timeTo,
+    histogramRangeOverride,
+    onTimeFilterChange,
+    onTimeRangeSelect,
+  } = useProjectTimeWindow({
+    project: currentProject,
+    filters,
+    setRawFilters,
+    isSessions,
+    ...(hasSearchQuery ? { searchQuery: query } : {}),
+  })
   const traceColumnSettings = useTableColumnSettings<TraceColumnId>({
     storageKey: "projects.traces.columns.v1",
     columns: TRACE_COLUMN_OPTIONS,
@@ -256,10 +246,22 @@ export function ProjectExplorer({ projectSlug }: { readonly projectSlug: string 
     storageKey: "projects.sessions.columns.v3",
     columns: getSessionColumnOptions(hasSearchQuery),
   })
-  const hasActiveFilters = Object.keys(filters).length > 0
+  // A cleared time filter persists as `startTime: []` (explicit "All time"); an empty
+  // condition array is not a user-applied filter, so ignore empties here.
+  const hasActiveFilters = Object.values(filters).some((conds) => conds.length > 0)
   const hasSelectedSavedSearch = savedSearchSlug.length > 0
-  const timeFrom = getTimeFilterValue(sessionFilters, "gte")
-  const timeTo = getTimeFilterValue(sessionFilters, "lte")
+  const featureFlags = useFeatureFlags()
+  // A custom behavior copies the current filter minus topics (a behavior scoped
+  // on behaviors is circular). Only offer it when a non-topics filter exists.
+  const customBehaviorSeedFilters = useMemo(() => stripCustomBehaviorExcludedFields(filters), [filters])
+  const canCreateCustomBehavior =
+    featureFlags.has("customBehaviors") && Object.keys(customBehaviorSeedFilters).length > 0
+  const createCustomBehaviorFromFilters = () =>
+    navigate({
+      to: "/projects/$projectSlug/behaviours/new",
+      params: { projectSlug },
+      search: { filters: serializeFilters(customBehaviorSeedFilters) },
+    })
   const sessionsMonitorTarget = useMemo<MonitorTarget>(
     () => ({
       type: "session",
@@ -288,7 +290,11 @@ export function ProjectExplorer({ projectSlug }: { readonly projectSlug: string 
   const [exportModalOpen, setExportModalOpen] = useState(false)
   const [exporting, setExporting] = useState(false)
 
-  const { totalCount: totalTraceCount, isLoading: isTracesCountLoading } = useTracesCount({
+  const {
+    totalCount: totalTraceCount,
+    isLoading: isTracesCountLoading,
+    isError: isTracesCountError,
+  } = useTracesCount({
     projectId: currentProject.id,
     filters: effectiveFilters,
     ...(hasSearchQuery ? { searchQuery: query } : {}),
@@ -311,22 +317,6 @@ export function ProjectExplorer({ projectSlug }: { readonly projectSlug: string 
     setRawFilters(serializeFilters({ ...filters, hasLlmActivity: [{ op: "eq", value: false as const }] }) ?? "")
   }, [filters, setRawFilters])
 
-  const onTimeRangeSelect = useCallback((range: { from: string; to: string } | null) => {
-    setRawFilters((prev) => {
-      const current = parseFilters(prev || undefined)
-      const next = { ...current }
-      if (range) {
-        next.startTime = [
-          { op: "gte" as const, value: range.from },
-          { op: "lte" as const, value: range.to },
-        ]
-      } else {
-        delete next.startTime
-      }
-      return serializeFilters(next) ?? ""
-    })
-  }, [])
-
   // "Clear all" resets the whole search bar: filters, query, and the selected saved search.
   // Also drop an explicit sort so a `relevance` sort doesn't linger in the header after
   // the query is gone — the backend ignores relevance without a search and falls back to
@@ -342,7 +332,8 @@ export function ProjectExplorer({ projectSlug }: { readonly projectSlug: string 
   const closeTraceDrawer = useCallback(() => {
     setActiveTraceId("")
     setSelectedSpanId("")
-  }, [setActiveTraceId, setSelectedSpanId])
+    setSelectedSpanTraceId("")
+  }, [setActiveTraceId, setSelectedSpanId, setSelectedSpanTraceId])
 
   const onActiveTraceChange = (traceId: string | undefined) => {
     if (!traceId) {
@@ -359,15 +350,18 @@ export function ProjectExplorer({ projectSlug }: { readonly projectSlug: string 
     (sessionId: string, traceId?: string) => {
       setActiveSessionId(sessionId)
       setActiveTraceId(traceId ?? "")
+      setSelectedSpanId("")
+      setSelectedSpanTraceId("")
     },
-    [setActiveSessionId, setActiveTraceId],
+    [setActiveSessionId, setActiveTraceId, setSelectedSpanId, setSelectedSpanTraceId],
   )
 
   const closeSessionPanel = useCallback(() => {
     setActiveSessionId("")
     setActiveTraceId("")
     setSelectedSpanId("")
-  }, [setActiveSessionId, setActiveTraceId, setSelectedSpanId])
+    setSelectedSpanTraceId("")
+  }, [setActiveSessionId, setActiveTraceId, setSelectedSpanId, setSelectedSpanTraceId])
 
   // Submitting a new query invalidates any open drawer context against the new result set.
   // The `savedSearch` slug is intentionally kept so the Save button can surface drift.
@@ -461,25 +455,15 @@ export function ProjectExplorer({ projectSlug }: { readonly projectSlug: string 
     },
   ])
 
-  const hasNoTraces = totalTraceCount === 0 && !hasActiveFilters && !hasSearchQuery
-  // `firstTraceAt` is the canonical "this project has ever received a trace"
-  // signal (set once by the checkFirstTrace worker). A null value means the
-  // project is genuinely unconnected — distinct from a connected project whose
-  // traces aged out, or an empty filtered result.
-  const isConnected = currentProject.firstTraceAt != null
-  const onboardingCompleted = currentProject.settings.onboardingCompleted === true
+  // Reads default to All time, so `totalTraceCount` is the unwindowed count — `=== 0` (once loaded)
+  // means the project has no traces at all, a robust "empty project" signal. `firstTraceAt` is
+  // best-effort (null on backfilled/old-data projects), so it must not gate the onboarding.
+  // Skip while the count is loading or errored — default `0` would otherwise flash false onboarding.
   const orgHasConnectedProjects = allProjects.some((p) => p.id !== currentProject.id && p.firstTraceAt != null)
+  const showConnectEmptyState =
+    !isTracesCountLoading && !isTracesCountError && totalTraceCount === 0 && !hasActiveFilters && !hasSearchQuery
 
-  if (isTracesCountLoading && !hasActiveFilters && !hasSearchQuery) {
-    return (
-      <Layout>
-        <TracesEmptyState isLoading />
-      </Layout>
-    )
-  }
-
-  // Never connected + nothing to show → onboarding-style connect experience.
-  if (!isConnected && hasNoTraces && !onboardingCompleted) {
+  if (showConnectEmptyState) {
     return (
       <Layout>
         <TracesEmptyOnboarding
@@ -491,18 +475,9 @@ export function ProjectExplorer({ projectSlug }: { readonly projectSlug: string 
     )
   }
 
-  // Connected before, or onboarding was completed by exploring the sample project → minimal placeholder.
-  if ((isConnected || onboardingCompleted) && hasNoTraces) {
-    return (
-      <Layout>
-        <TracesEmptyState />
-      </Layout>
-    )
-  }
-
   const sharedViewProps = {
     projectId: currentProject.id,
-    filters,
+    filters: filtersWithDefaultTime,
     filtersOpen,
     activeTraceId: activeTraceId || undefined,
     activeDrawerTab: traceDetailTab,
@@ -525,19 +500,7 @@ export function ProjectExplorer({ projectSlug }: { readonly projectSlug: string 
             <TimeFilterDropdown
               {...(timeFrom ? { startTimeFrom: timeFrom } : {})}
               {...(timeTo ? { startTimeTo: timeTo } : {})}
-              onChange={(from, to) => {
-                const next = { ...filters }
-                if (from || to) {
-                  const conditions = [
-                    ...(from ? [{ op: "gte" as const, value: from }] : []),
-                    ...(to ? [{ op: "lte" as const, value: to }] : []),
-                  ]
-                  next.startTime = conditions
-                } else {
-                  delete next.startTime
-                }
-                setRawFilters(serializeFilters(next) ?? "")
-              }}
+              onChange={onTimeFilterChange}
             />
             {isSessions ? (
               <ColumnsSelector
@@ -616,6 +579,24 @@ export function ProjectExplorer({ projectSlug }: { readonly projectSlug: string 
                 />
               )
             ) : null}
+            {isSessions && canCreateCustomBehavior ? (
+              <Tooltip
+                asChild
+                trigger={
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="h-8 w-auto"
+                    onClick={() => void createCustomBehaviorFromFilters()}
+                  >
+                    <Icon icon={SlidersHorizontalIcon} size="sm" />
+                    Create custom behavior
+                  </Button>
+                }
+              >
+                Cluster the sessions matching these filters into their own behavior tree.
+              </Tooltip>
+            ) : null}
             <Tabs
               variant="bordered"
               size="sm"
@@ -645,6 +626,7 @@ export function ProjectExplorer({ projectSlug }: { readonly projectSlug: string 
             <div className="group/searchbar flex h-10 min-w-0 flex-1 items-center overflow-hidden rounded-lg border border-input transition-colors focus-within:ring-1 focus-within:ring-ring">
               <SavedSearchSelector
                 projectId={currentProject.id}
+                projectSlug={currentProject.slug}
                 selectedSlug={savedSearchSlug}
                 onSelect={applySavedSearch}
                 onSelectedSlugChange={setSavedSearchSlug}
@@ -682,16 +664,17 @@ export function ProjectExplorer({ projectSlug }: { readonly projectSlug: string 
         <TraceAggregationsPanel
           projectId={currentProject.id}
           projectSlug={currentProject.slug}
-          filters={sessionFilters}
+          filters={filtersWithDefaultTime}
           mode={activeTab}
           onTimeRangeSelect={onTimeRangeSelect}
+          {...(histogramRangeOverride ? { histogramRangeOverride } : {})}
         />
       </div>
 
       {isSessions ? (
         <SessionsView
           projectId={currentProject.id}
-          filters={sessionFilters}
+          filters={filtersWithDefaultTime}
           filtersOpen={filtersOpen}
           activeSessionId={activeSessionId || undefined}
           activeTraceId={activeTraceId || undefined}
@@ -724,7 +707,7 @@ export function ProjectExplorer({ projectSlug }: { readonly projectSlug: string 
             key={activeTraceId}
             traceId={activeTraceId}
             projectId={currentProject.id}
-            filters={filters}
+            filters={filtersWithDefaultTime}
             onFiltersChange={onFiltersChange}
             onClose={closeTraceDrawer}
             onNextTrace={onNextTrace}
@@ -743,7 +726,7 @@ export function ProjectExplorer({ projectSlug }: { readonly projectSlug: string 
             projectId={currentProject.id}
             sessionId={activeSessionId}
             onClose={closeSessionPanel}
-            filters={filters}
+            filters={filtersWithDefaultTime}
             onFiltersChange={onFiltersChange}
             {...(hasSearchQuery ? { searchQuery: query } : {})}
           />

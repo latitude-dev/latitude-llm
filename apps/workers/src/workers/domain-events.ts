@@ -56,9 +56,6 @@ export const createDomainEventsWorker = ({
           dedupeKey: `annotation-scores:publish-human:${payload.scoreId}`,
           debounceMs: SCORE_PUBLICATION_DEBOUNCE,
         }),
-        pub.publish("annotation-scores", "markReviewStarted", payload, {
-          dedupeKey: `annotation-scores:mark-review-started:${payload.scoreId}`,
-        }),
       ],
       { concurrency: "unbounded" },
     ).pipe(Effect.asVoid)
@@ -109,11 +106,13 @@ export const createDomainEventsWorker = ({
                   traceId,
                 }),
                 debounceMs: TRACE_END_DEBOUNCE_MS,
+                attempts: 10,
+                backoff: { type: "exponential", delayMs: 1_000 },
               },
             ),
           ),
-          // signals:match is now published from the trace-end job itself ("trace ends → match
-          // signals"), so it runs on the settled trace after trace-end's own debounce.
+          // Session-level work (signals:match, session analysis) is published downstream via the
+          // trace-end → session-end chain, not here.
           // Not gated on `isSandbox`: first-trace detection is onboarding/marketing
           // telemetry, not LLM work. Outbound marketing/notification suppression for
           // sandbox orgs is AGE-113's concern (handled downstream), not this PR's.
@@ -358,17 +357,9 @@ export const createDomainEventsWorker = ({
     // applied automatically below because both events are on the whitelist.
     OrganizationCreated: () => Effect.void,
 
-    SampleProjectCreated: (event) =>
-      pub.publish("projects", "seedDemo", event.payload, {
-        dedupeKey: `projects:seed-demo:${event.payload.projectId}`,
-        attempts: 10,
-        backoff: { type: "exponential", delayMs: 1_000 },
-      }),
-
-    OrganizationClaimed: (event) =>
-      pub.publish("projects", "createDemo", event.payload, {
-        dedupeKey: `projects:create-demo:${event.payload.organizationId}`,
-      }),
+    // No longer seeds a per-org demo on claim (C1 cutover); the demo is the shared
+    // showcase, which `claimOrganizationUseCase` opts the org into via `wantsShowcase`.
+    OrganizationClaimed: () => Effect.void,
 
     ClaimEmailRequested: (event) =>
       hash(event.payload.claimUrl).pipe(
@@ -463,7 +454,6 @@ export const createDomainEventsWorker = ({
     // the durable surfacing until a notification kind lands with the signals
     // rollout (specs/sandbox-runtime.md P1-2).
     EvaluationDetectorDegraded: () => Effect.void,
-    AnnotationQueueItemCompleted: () => Effect.void,
     ProjectDeleted: (event) =>
       Effect.all(
         [
@@ -505,7 +495,6 @@ export const createDomainEventsWorker = ({
     AdminUserEmailChanged: () => Effect.void,
     AdminUserSessionsRevoked: () => Effect.void,
     AdminUserSessionRevoked: () => Effect.void,
-    AdminDemoProjectSeeded: () => Effect.void,
   }
 
   consumer.subscribe("domain-events", {

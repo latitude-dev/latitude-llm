@@ -1,4 +1,4 @@
-import type { TraceSearchHighlightsResult } from "@domain/spans"
+import type { AgentGraph, AgentNode, TraceSearchHighlightsResult } from "@domain/spans"
 import {
   Button,
   Conversation,
@@ -13,11 +13,24 @@ import {
 import { formatBytes } from "@repo/utils"
 import { useHotkeys } from "@tanstack/react-hotkeys"
 import { DownloadIcon } from "lucide-react"
-import { type ReactNode, type RefObject, useCallback, useEffect, useMemo, useRef, useState } from "react"
+import {
+  type ReactNode,
+  type RefObject,
+  startTransition,
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react"
 import type { GenAIMessage } from "rosetta-ai"
 import { HotkeyBadge } from "../../../../../../../components/hotkey-badge.tsx"
 import { useAuthSession } from "../../../../../../../domains/sessions/session.collection.ts"
-import { useConversationSpanMaps } from "../../../../../../../domains/spans/spans.collection.ts"
+import {
+  useConversationSpanMaps,
+  useSessionConversationSpanMaps,
+  useSpansByTraceCollection,
+} from "../../../../../../../domains/spans/spans.collection.ts"
 import {
   useTraceConversationMessages,
   useTraceSearchHighlights,
@@ -32,6 +45,7 @@ import {
   visibleRangeToBand,
 } from "../../../../../../../lib/conversation-timeline/message-windows.ts"
 import { wallToTimeline } from "../../../../../../../lib/conversation-timeline/timeline-scale.ts"
+import { useParamState } from "../../../../../../../lib/hooks/useParamState.ts"
 import { AnnotationPopover } from "../../annotations/annotation-popover.tsx"
 import {
   type TextSelectionPopoverControls,
@@ -42,6 +56,10 @@ import { MessageAnnotationTrigger } from "../../annotations/message-annotation-t
 import { findNearestMessageAnchor, flashElement } from "../../conversation-timeline/flash-highlight.ts"
 import { TimelineBar } from "../../conversation-timeline/timeline-bar.tsx"
 import { useViewportBand } from "../../conversation-timeline/use-viewport-band.ts"
+import { buildSubagentToolCalls } from "../../session-detail-drawer/agents-breakdown/agent-decorations.ts"
+import { SubagentConversationView } from "../../session-detail-drawer/agents-breakdown/subagent-conversation-view.tsx"
+import { useAgentGraph } from "../../session-detail-drawer/agents-breakdown/use-agent-graph.ts"
+import { useSubagentPreviews } from "../../session-detail-drawer/agents-breakdown/use-subagent-previews.ts"
 import {
   computeLoadedConversationHighlights,
   formatConversationSearchForBackend,
@@ -94,6 +112,7 @@ function ConversationContent({
   traceDetail,
   messages,
   navigateToSpan,
+  sessionSpanScope,
   projectId,
   isActive,
   annotationsEnabled,
@@ -109,10 +128,21 @@ function ConversationContent({
   hasMoreMessages,
   isLoadingMoreMessages,
   onLoadMoreMessages,
+  onSelectAgent,
+  agentGraph: agentGraphOverride,
 }: {
   readonly traceDetail: TraceDetailRecord
   readonly messages: readonly GenAIMessage[]
-  readonly navigateToSpan?: ((spanId: string) => void) | undefined
+  readonly navigateToSpan?: ((spanId: string, traceId?: string) => void) | undefined
+  /** When set, message/tool-call navigation links resolve against ALL session spans
+   *  (not just this trace); annotations still anchor to this trace. */
+  readonly sessionSpanScope?:
+    | {
+        readonly sessionId: string
+        readonly sessionStartTime: string
+        readonly sessionEndTime: string
+      }
+    | undefined
   readonly projectId: string
   readonly isActive: boolean
   /** Off under a sandbox scope — hides the inline annotate affordances and skips annotation fetches. */
@@ -131,6 +161,10 @@ function ConversationContent({
   readonly hasMoreMessages: boolean
   readonly isLoadingMoreMessages: boolean
   readonly onLoadMoreMessages: () => unknown
+  /** Opens a subagent's conversation in place (from a decorated tool call). */
+  readonly onSelectAgent?: ((node: AgentNode) => void) | undefined
+  /** Session-wide agent graph. When set, replaces the trace-local graph so tool calls from every trace in the accumulated conversation decorate, not just the latest. */
+  readonly agentGraph?: AgentGraph | undefined
 }) {
   const internalScrollRef = useRef<HTMLDivElement>(null)
   const scrollRef = scrollContainerRef ?? internalScrollRef
@@ -145,8 +179,30 @@ function ConversationContent({
     traceId: traceDetail.traceId,
     startTime: traceDetail.startTime,
     allMessages: messages,
-    enabled: messages.length > 0 && (annotationsEnabled || navigateToSpan !== undefined),
+    enabled: messages.length > 0 && (annotationsEnabled || (navigateToSpan !== undefined && sessionSpanScope == null)),
   })
+
+  const { data: sessionSpanMaps } = useSessionConversationSpanMaps({
+    projectId,
+    sessionId: sessionSpanScope?.sessionId ?? "",
+    latestTraceId: traceDetail.traceId,
+    sessionStartTime: sessionSpanScope?.sessionStartTime ?? "",
+    sessionEndTime: sessionSpanScope?.sessionEndTime ?? "",
+    allMessages: messages,
+    enabled: sessionSpanScope != null && messages.length > 0 && navigateToSpan !== undefined,
+  })
+
+  const navSpanMaps = sessionSpanScope ? sessionSpanMaps : spanMaps
+
+  const { data: agentSpans } = useSpansByTraceCollection({
+    projectId,
+    traceId: traceDetail.traceId,
+    startTimeFrom: traceDetail.startTime,
+    startTimeTo: traceDetail.endTime,
+  })
+  const traceAgentGraph = useAgentGraph(agentSpans)
+  // A session passes the session-wide graph so tool calls from every trace decorate; a plain trace uses its own.
+  const agentGraph = agentGraphOverride ?? traceAgentGraph
 
   const band = useViewportBand({ scrollRef, timeline: timeline ?? null, isActive })
 
@@ -159,7 +215,10 @@ function ConversationContent({
     [timeline, hoveredMessageIndex],
   )
 
-  const getSpanIdForMessage = useCallback((messageIndex: number) => spanMaps?.messageSpanMap[messageIndex], [spanMaps])
+  const getSpanIdForMessage = useCallback(
+    (messageIndex: number) => spanMaps?.messageSpanMap[messageIndex]?.spanId,
+    [spanMaps],
+  )
 
   const { messageLevelAnnotations, isCreatePending, isUpdatePending } = useTraceAnnotationsData({
     projectId,
@@ -275,6 +334,18 @@ function ConversationContent({
           const index =
             marker.firstMessageIndex ?? messageIndexAtTime(timeline, wallToTimeline(timeline.scale, marker.atMs))
           scrollToMessageAnchor(index ?? 0)
+          return
+        }
+        case "subagentSpawned": {
+          const el = marker.toolCallId
+            ? container.querySelector<HTMLElement>(`[data-tool-call-id="${marker.toolCallId}"]`)
+            : null
+          if (el) {
+            el.scrollIntoView({ block: "center", behavior: "smooth" })
+            flashElement(el)
+            return
+          }
+          handleTrackClick(wallToTimeline(timeline.scale, marker.atMs))
           return
         }
       }
@@ -467,21 +538,31 @@ function ConversationContent({
   }
 
   const messageActions =
-    navigateToSpan && spanMaps && Object.keys(spanMaps.messageSpanMap).length > 0
+    navigateToSpan && navSpanMaps && Object.keys(navSpanMaps.messageSpanMap).length > 0
       ? new Map(
-          Object.entries(spanMaps.messageSpanMap).map(([idx, spanId]) => [Number(idx), () => navigateToSpan(spanId)]),
+          Object.entries(navSpanMaps.messageSpanMap).map(([idx, ref]) => [
+            Number(idx),
+            () => navigateToSpan(ref.spanId, ref.traceId),
+          ]),
         )
       : undefined
 
   const toolCallActions =
-    navigateToSpan && spanMaps && Object.keys(spanMaps.toolCallSpanMap).length > 0
+    navigateToSpan && navSpanMaps && Object.keys(navSpanMaps.toolCallSpanMap).length > 0
       ? new Map(
-          Object.entries(spanMaps.toolCallSpanMap).map(([toolCallId, spanId]) => [
+          Object.entries(navSpanMaps.toolCallSpanMap).map(([toolCallId, ref]) => [
             toolCallId,
-            () => navigateToSpan(spanId),
+            () => navigateToSpan(ref.spanId, ref.traceId),
           ]),
         )
       : undefined
+
+  const subagentPreviews = useSubagentPreviews({ projectId, graph: agentGraph })
+  const subagentToolCalls = useMemo(
+    () => buildSubagentToolCalls({ graph: agentGraph, onOpenConversation: onSelectAgent, previews: subagentPreviews }),
+    [agentGraph, onSelectAgent, subagentPreviews],
+  )
+  const subagentToolCallsProp = subagentToolCalls && subagentToolCalls.size > 0 ? subagentToolCalls : undefined
 
   // A "successful" result part from a failed execution span should always
   // render as failed.
@@ -561,7 +642,7 @@ function ConversationContent({
                       messageRole={role}
                       projectId={projectId}
                       traceId={traceDetail.traceId}
-                      spanId={spanMaps?.messageSpanMap[messageIndex]}
+                      spanId={spanMaps?.messageSpanMap[messageIndex]?.spanId}
                       annotations={data?.annotations ?? []}
                       annotators={data?.annotators ?? []}
                       onClose={onPopoverClose}
@@ -575,6 +656,7 @@ function ConversationContent({
             : {})}
           {...(messageActions ? { messageActions } : {})}
           {...(toolCallActions ? { toolCallActions } : {})}
+          {...(subagentToolCallsProp ? { subagentToolCalls: subagentToolCallsProp } : {})}
           {...(messageTrailingSlot ? { messageTrailingSlot } : {})}
         />
         {hasMoreMessages ? (
@@ -628,6 +710,7 @@ export function ConversationTab({
   traceDetail,
   isDetailLoading,
   navigateToSpan,
+  sessionSpanScope,
   projectId,
   isActive,
   annotationsEnabled = true,
@@ -638,11 +721,21 @@ export function ConversationTab({
   messageTrailingSlot,
   timeline,
   focusMessageIndex,
+  agentGraph,
 }: {
   readonly traceDetail: TraceDetailRecord | null | undefined
   readonly isDetailLoading: boolean
   /** Optional callback to navigate to a span. If not provided, message/tool call actions are hidden. */
-  readonly navigateToSpan?: ((spanId: string) => void) | undefined
+  readonly navigateToSpan?: ((spanId: string, traceId?: string) => void) | undefined
+  /** When set, message/tool-call navigation links resolve against ALL session spans
+   *  (not just this trace); annotations still anchor to this trace. */
+  readonly sessionSpanScope?:
+    | {
+        readonly sessionId: string
+        readonly sessionStartTime: string
+        readonly sessionEndTime: string
+      }
+    | undefined
   readonly projectId: string
   readonly isActive: boolean
   /** Off under a sandbox scope — hides inline annotate affordances and skips annotation fetches. Defaults on. */
@@ -658,12 +751,50 @@ export function ConversationTab({
   /** Timeline for the minimap bar: null while loading, undefined when the feature is off. */
   readonly timeline?: ConversationTimeline | null | undefined
   readonly focusMessageIndex?: number | undefined
+  /** Session-wide agent graph for decoration; when omitted the conversation derives a trace-local one. */
+  readonly agentGraph?: AgentGraph | undefined
 }) {
   const conversation = useTraceConversationMessages({
     projectId,
     traceId: traceDetail?.traceId ?? "",
     enabled: traceDetail != null,
   })
+
+  const [agentTraceId, setAgentTraceId] = useParamState("agentTraceId", "", { history: "push" })
+  const [agentSpanId, setAgentSpanId] = useParamState("agentSpanId", "", { history: "push" })
+  const [mountedAgent, setMountedAgent] = useState<{ readonly traceId: string; readonly spanId: string } | null>(null)
+  const [subagentSlidIn, setSubagentSlidIn] = useState(false)
+
+  const selectAgent = useCallback(
+    (node: AgentNode | null) => {
+      if (!node?.ref.spanId) {
+        setSubagentSlidIn(false)
+        setAgentTraceId("")
+        setAgentSpanId("")
+        return
+      }
+      // Flip the transform in the same tick as the click so the slide starts
+      // immediately; the pane's content mounts a beat later (see the effect below).
+      setSubagentSlidIn(true)
+      setAgentTraceId(node.ref.traceId)
+      setAgentSpanId(node.ref.spanId)
+    },
+    [setAgentTraceId, setAgentSpanId],
+  )
+  const showSubagent = agentSpanId.length > 0 && agentTraceId.length > 0
+
+  // Reconcile the slide with the URL (browser back/forward, or the drawer
+  // clearing the params) and mount the pane's content off the critical path via
+  // startTransition so the transform can start animating right away.
+  // TODO(frontend-use-effect-policy): coordinates URL-driven mount/animate with the DOM transition.
+  useEffect(() => {
+    if (showSubagent) {
+      setSubagentSlidIn(true)
+      startTransition(() => setMountedAgent({ traceId: agentTraceId, spanId: agentSpanId }))
+    } else {
+      setSubagentSlidIn(false)
+    }
+  }, [showSubagent, agentTraceId, agentSpanId])
 
   if (isDetailLoading || (traceDetail && conversation.isLoading)) {
     return (
@@ -684,25 +815,55 @@ export function ConversationTab({
   }
 
   return (
-    <ConversationContent
-      isActive={isActive}
-      annotationsEnabled={annotationsEnabled}
-      traceDetail={traceDetail}
-      messages={conversation.messages}
-      navigateToSpan={navigateToSpan}
-      projectId={projectId}
-      scrollContainerRef={scrollContainerRef}
-      textSelectionPopoverControlsRef={textSelectionPopoverControlsRef}
-      onPopoverClose={onPopoverClose}
-      searchQuery={searchQuery}
-      messageTrailingSlot={messageTrailingSlot}
-      timeline={timeline}
-      focusMessageIndex={focusMessageIndex}
-      totalMessages={conversation.totalMessages}
-      payloadBytes={conversation.payloadBytes}
-      hasMoreMessages={conversation.hasNextPage}
-      isLoadingMoreMessages={conversation.isFetchingNextPage}
-      onLoadMoreMessages={() => conversation.fetchNextPage()}
-    />
+    <div className="flex min-h-0 flex-1 flex-col">
+      <div className="relative flex min-h-0 flex-1 overflow-hidden">
+        <div
+          className="flex h-full w-full transition-transform duration-300 ease-out"
+          style={{ transform: subagentSlidIn ? "translateX(-100%)" : "translateX(0)" }}
+          onTransitionEnd={(e) => {
+            // Unmount the subagent pane only after it has slid fully back out.
+            if (e.target === e.currentTarget && !showSubagent) setMountedAgent(null)
+          }}
+        >
+          {/* Main conversation — stays mounted through the slide so its scroll position survives. */}
+          <div className="flex min-h-0 w-full shrink-0 flex-col">
+            <ConversationContent
+              isActive={isActive && !showSubagent}
+              annotationsEnabled={annotationsEnabled}
+              traceDetail={traceDetail}
+              messages={conversation.messages}
+              navigateToSpan={navigateToSpan}
+              sessionSpanScope={sessionSpanScope}
+              projectId={projectId}
+              scrollContainerRef={scrollContainerRef}
+              textSelectionPopoverControlsRef={textSelectionPopoverControlsRef}
+              onPopoverClose={onPopoverClose}
+              searchQuery={searchQuery}
+              messageTrailingSlot={messageTrailingSlot}
+              timeline={timeline}
+              focusMessageIndex={focusMessageIndex}
+              totalMessages={conversation.totalMessages}
+              payloadBytes={conversation.payloadBytes}
+              hasMoreMessages={conversation.hasNextPage}
+              isLoadingMoreMessages={conversation.isFetchingNextPage}
+              onLoadMoreMessages={() => conversation.fetchNextPage()}
+              onSelectAgent={selectAgent}
+              agentGraph={agentGraph}
+            />
+          </div>
+          {/* Subagent conversation — lazily mounted to the right, then slid into view. */}
+          <div className="flex min-h-0 w-full shrink-0 flex-col">
+            {mountedAgent && (
+              <SubagentConversationView
+                projectId={projectId}
+                agentTraceId={mountedAgent.traceId}
+                agentSpanId={mountedAgent.spanId}
+                onSelectAgent={selectAgent}
+              />
+            )}
+          </div>
+        </div>
+      </div>
+    </div>
   )
 }

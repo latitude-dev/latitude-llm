@@ -1,0 +1,1 @@
+ALTER TABLE "latitude"."custom_behaviors" ADD COLUMN "last_gardened_at" timestamp with time zone;

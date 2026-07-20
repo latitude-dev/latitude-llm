@@ -99,6 +99,19 @@ export const modelCandidates: Candidate<string>[] = [
   }, // Claude Code (strips ANSI escape codes)
 ]
 
+// Agent name (subagent/agent identity), names preferred over ids. Resolved ungated like
+// `model`: several sources stamp it on every span in scope, which is what feeds the rollup.
+export const agentNameCandidates: Candidate<string>[] = [
+  fromString("gen_ai.agent.name"), // OTEL GenAI semconv (Vercel AI SDK v7, generic OTEL)
+  fromString("openai.agents.name"), // OpenAI Agents SDK bridge
+  fromString("subagent.name"), // Claude Code
+  fromString("subagent.type"), // Claude Code
+  fromString("subagent.id", (v) => v.split(":")[0]?.trim() || undefined), // Claude Code
+  fromString("openclaw.subagent.label"), // OpenClaw wrapper span
+  fromString("openclaw.agent.name"), // OpenClaw agent span + children
+  fromString("latitude.capture.name"), // Latitude capture wrapper
+]
+
 export const responseModelCandidates = [
   fromString("gen_ai.response.model"), // OTEL GenAI semconv
   fromString("ai.response.model"), // Vercel AI SDK

@@ -33,7 +33,10 @@ notifications:request-{incident,wrapped-report,signal-assigned}-notifications
         endedAt > startedAt → incident.closed)
      – gate (incidents only): projectSettings.notifications.incidents[incidentNotificationKey]
      – mute gate (incidents only): skip muted monitor or muted signal sources
-     – resolveRecipients (today: all org members)
+     – signal-related notifications target the signal assignee when present;
+       unassigned signals and non-signal notifications use the existing
+       project-member fan-out
+     – assignee-targeted signal notifications do not fan out to shared Slack routes
      – signal-assigned: single recipient (the new assignee); router +
        producer both skip cleared assignments and self-assignments
      – snapshot trend window (signal-sourced sustained kinds: 14d ending at the
@@ -203,7 +206,7 @@ A new group is a new user-visible category. Adding one requires schema edits at 
    - Define `deploymentNotificationsSettingSchema` with whatever inner shape is useful at the project level (per-kind, per-target-env, single boolean, etc.). The leaf granularity differs per group based on what users want to dial.
    - Add a project-level helper next to `isIncidentNotificationEnabled` (e.g. `isDeploymentNotificationEnabled`) that reads `settings?.notifications?.deployments?.<leaf> ?? true`.
    - Apply the gate in the matching `requestXxxNotificationsUseCase` before fan-out.
-   - Update the API schema in `apps/api/src/routes/projects.ts` to surface the new sub-shape (`DeploymentNotificationsSettingSchema`, etc.). Regenerate `openapi.json` + `mcp.json` via `pnpm --filter @app/api openapi:emit` + `mcp:emit`.
+   - Update the API schema in `packages/operations/src/operations/projects.ts` to surface the new sub-shape (`DeploymentNotificationsSettingSchema`, etc.). Regenerate `openapi.json` + `mcp.json` via `pnpm --filter @app/api openapi:emit` + `mcp:emit`.
    - Wire the new toggles into `apps/web/src/routes/_authenticated/projects/$projectSlug/settings.tsx`.
 5. **Tests**:
    - Update `request-incident-notifications.test.ts`-style suites for the new group's producer.

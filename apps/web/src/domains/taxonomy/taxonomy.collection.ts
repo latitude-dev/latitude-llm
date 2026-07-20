@@ -20,35 +20,58 @@ const timeRangeKey = (timeRange: BehaviourTimeRangeRecord | undefined) =>
 const momentRangeKey = (momentRange: BehaviourMomentRangeRecord | undefined) =>
   momentRange ? `${momentRange.metric}:${momentRange.fromTurn}:${momentRange.toTurn}` : ""
 
+const scopeKey = (customBehaviorId: string | undefined) => customBehaviorId ?? "global"
+
 const clusterProfileQueryKey = (
   projectId: string,
   clusterId: string,
   timeRange: BehaviourTimeRangeRecord | undefined,
-) => ["taxonomyClusterProfile", projectId, clusterId, timeRangeKey(timeRange)] as const
+  customBehaviorId: string | undefined,
+) => ["taxonomyClusterProfile", projectId, scopeKey(customBehaviorId), clusterId, timeRangeKey(timeRange)] as const
 const behaviourSessionsQueryKey = (
   projectId: string,
   clusterId: string,
   filter: BehaviourSessionFilter,
   timeRange: BehaviourTimeRangeRecord | undefined,
   momentRange: BehaviourMomentRangeRecord | undefined,
-) => ["behaviourSessions", projectId, clusterId, filter, timeRangeKey(timeRange), momentRangeKey(momentRange)] as const
+  customBehaviorId: string | undefined,
+) =>
+  [
+    "behaviourSessions",
+    projectId,
+    scopeKey(customBehaviorId),
+    clusterId,
+    filter,
+    timeRangeKey(timeRange),
+    momentRangeKey(momentRange),
+  ] as const
 const behaviourTrajectoryQueryKey = (
   projectId: string,
   categoryClusterIds: readonly string[],
   axis: BehaviourTrajectoryAxis,
   timeRange: BehaviourTimeRangeRecord | undefined,
+  customBehaviorId: string | undefined,
 ) =>
-  ["behaviourTrajectory", projectId, [...categoryClusterIds].sort().join(","), axis, timeRangeKey(timeRange)] as const
+  [
+    "behaviourTrajectory",
+    projectId,
+    scopeKey(customBehaviorId),
+    [...categoryClusterIds].sort().join(","),
+    axis,
+    timeRangeKey(timeRange),
+  ] as const
 const projectBehavioursQueryKey = (input: {
   readonly projectId: string
   readonly dimension: BehaviourDimension
   readonly segment: BehaviourSegment
   readonly sortBy: BehaviourSortBy
   readonly timeRange: BehaviourTimeRangeRecord | undefined
+  readonly customBehaviorId: string | undefined
 }) =>
   [
     "projectBehaviours",
     input.projectId,
+    scopeKey(input.customBehaviorId),
     input.dimension,
     input.segment,
     input.sortBy,
@@ -59,11 +82,19 @@ export function useClusterProfile(
   projectId: string,
   clusterId: string | undefined,
   timeRange: BehaviourTimeRangeRecord | undefined,
+  customBehaviorId?: string,
 ) {
   return useQuery({
-    queryKey: clusterProfileQueryKey(projectId, clusterId ?? "", timeRange),
+    queryKey: clusterProfileQueryKey(projectId, clusterId ?? "", timeRange, customBehaviorId),
     queryFn: () =>
-      getClusterProfile({ data: { projectId, clusterId: clusterId ?? "", ...(timeRange ? { timeRange } : {}) } }),
+      getClusterProfile({
+        data: {
+          projectId,
+          clusterId: clusterId ?? "",
+          ...(timeRange ? { timeRange } : {}),
+          ...(customBehaviorId ? { customBehaviorId } : {}),
+        },
+      }),
     staleTime: 30_000,
     enabled: projectId.length > 0 && Boolean(clusterId),
   })
@@ -75,9 +106,10 @@ export function useBehaviourSessions(
   filter: BehaviourSessionFilter,
   timeRange: BehaviourTimeRangeRecord | undefined,
   momentRange: BehaviourMomentRangeRecord | undefined,
+  customBehaviorId?: string,
 ) {
   return useInfiniteQuery({
-    queryKey: behaviourSessionsQueryKey(projectId, clusterId ?? "", filter, timeRange, momentRange),
+    queryKey: behaviourSessionsQueryKey(projectId, clusterId ?? "", filter, timeRange, momentRange, customBehaviorId),
     queryFn: ({ pageParam }) =>
       getBehaviourSessions({
         data: {
@@ -88,6 +120,7 @@ export function useBehaviourSessions(
           limit: 50,
           ...(timeRange ? { timeRange } : {}),
           ...(momentRange ? { momentRange } : {}),
+          ...(customBehaviorId ? { customBehaviorId } : {}),
         },
       }),
     initialPageParam: 0,
@@ -102,12 +135,19 @@ export function useBehaviourTrajectory(
   categoryClusterIds: readonly string[],
   axis: BehaviourTrajectoryAxis,
   timeRange: BehaviourTimeRangeRecord | undefined,
+  customBehaviorId?: string,
 ) {
   return useQuery({
-    queryKey: behaviourTrajectoryQueryKey(projectId, categoryClusterIds, axis, timeRange),
+    queryKey: behaviourTrajectoryQueryKey(projectId, categoryClusterIds, axis, timeRange, customBehaviorId),
     queryFn: () =>
       getBehaviourTrajectory({
-        data: { projectId, categoryClusterIds: [...categoryClusterIds], axis, ...(timeRange ? { timeRange } : {}) },
+        data: {
+          projectId,
+          categoryClusterIds: [...categoryClusterIds],
+          axis,
+          ...(timeRange ? { timeRange } : {}),
+          ...(customBehaviorId ? { customBehaviorId } : {}),
+        },
       }),
     staleTime: 30_000,
     enabled: projectId.length > 0 && categoryClusterIds.length > 0,
@@ -121,6 +161,8 @@ export function useProjectBehaviours({
   sortBy,
   timeRange,
   pollUntilTopics,
+  poll,
+  customBehaviorId,
 }: {
   readonly projectId: string
   readonly dimension: BehaviourDimension
@@ -128,14 +170,30 @@ export function useProjectBehaviours({
   readonly sortBy: BehaviourSortBy
   readonly timeRange?: BehaviourTimeRangeRecord
   readonly pollUntilTopics?: boolean
+  /** Force a refetch loop regardless of current topics — used while a scoped
+   * behavior is generating so the tree appears as soon as the run writes it. */
+  readonly poll?: boolean
+  readonly customBehaviorId?: string
 }) {
   return useQuery({
-    queryKey: projectBehavioursQueryKey({ projectId, dimension, segment, sortBy, timeRange }),
+    queryKey: projectBehavioursQueryKey({ projectId, dimension, segment, sortBy, timeRange, customBehaviorId }),
     queryFn: () =>
-      getProjectBehaviours({ data: { projectId, dimension, segment, sortBy, ...(timeRange ? { timeRange } : {}) } }),
+      getProjectBehaviours({
+        data: {
+          projectId,
+          dimension,
+          segment,
+          sortBy,
+          ...(timeRange ? { timeRange } : {}),
+          ...(customBehaviorId ? { customBehaviorId } : {}),
+        },
+      }),
     staleTime: 30_000,
     enabled: projectId.length > 0,
-    refetchInterval: (query) => (pollUntilTopics && (query.state.data?.topics.length ?? 0) === 0 ? 5_000 : false),
+    refetchInterval: (query) => {
+      if (poll) return 4_000
+      return pollUntilTopics && (query.state.data?.topics.length ?? 0) === 0 ? 5_000 : false
+    },
   })
 }
 

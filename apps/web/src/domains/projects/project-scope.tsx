@@ -1,3 +1,4 @@
+import { isShowcaseProjectSlug } from "@domain/shared"
 import { createContext, type ReactNode, use } from "react"
 
 /**
@@ -26,6 +27,9 @@ export type ProjectScope =
 /** The default scope. A stable reference so Live consumers keep memo identity. */
 export const LIVE_SCOPE: ProjectScope = { kind: "live" }
 
+/** The shared read-only Showcase scope. A stable reference (its org is resolved server-side). */
+export const SHOWCASE_SCOPE: ProjectScope = { kind: "showcase" }
+
 /** The scope context. Read it with {@link useProjectScope} (defaults to {@link LIVE_SCOPE}). */
 const ProjectScopeContext = createContext<ProjectScope>(LIVE_SCOPE)
 
@@ -36,6 +40,10 @@ export function ProjectScopeProvider({ scope, children }: { scope: ProjectScope;
 /** The current scope; `live` when no provider is mounted above. */
 export function useProjectScope(): ProjectScope {
   return use(ProjectScopeContext)
+}
+
+export function useIsReadOnlyProjectScope(): boolean {
+  return isReadOnlyScope(use(ProjectScopeContext))
 }
 
 /**
@@ -60,7 +68,9 @@ export function projectScopeKey(scope: ProjectScope): readonly unknown[] {
  * `showcase` adds nothing here. Spread into the payload:
  * `{ ...projectScopeData(scope), projectId, … }`.
  */
-export function projectScopeData(scope: ProjectScope): { sandboxOrgId?: string } {
+export function projectScopeData(scope: ProjectScope): {
+  sandboxOrgId?: string
+} {
   return scope.kind === "sandbox" ? { sandboxOrgId: scope.orgId } : {}
 }
 
@@ -82,12 +92,26 @@ export function isReadOnlyScope(scope: ProjectScope): boolean {
   return scope.kind === "showcase"
 }
 
+const SANDBOX_PATH = /^\/sandbox\/([^/]+)(?:\/|$)/
+const PROJECT_PATH = /^\/projects\/([^/]+)(?:\/|$)/
+
 /**
  * The current scope for consumers that run outside React and so cannot read it
  * via {@link useProjectScope} — notably the client-side write-gate middleware,
- * which stamps the scope onto outgoing server-fn requests. Defaults to
- * {@link LIVE_SCOPE}.
+ * which stamps the scope onto outgoing server-fn requests.
+ *
+ * Derived from the URL (the same source of truth the `$projectSlug` loader uses:
+ * the reserved showcase slug), so it's stateless and always current at request
+ * time — no mounted-provider mirror to keep in sync. **Client-only**: it reads
+ * `window.location`, and the server never calls this — it reads the per-request
+ * `context.projectScope` the write-gate stamps. Defaults to {@link LIVE_SCOPE}.
  */
 export function getCurrentProjectScope(): ProjectScope {
+  if (typeof window === "undefined") return LIVE_SCOPE
+  const path = window.location.pathname
+  const sandbox = SANDBOX_PATH.exec(path)
+  if (sandbox) return { kind: "sandbox", orgId: decodeURIComponent(sandbox[1]) }
+  const project = PROJECT_PATH.exec(path)
+  if (project && isShowcaseProjectSlug(decodeURIComponent(project[1]))) return SHOWCASE_SCOPE
   return LIVE_SCOPE
 }

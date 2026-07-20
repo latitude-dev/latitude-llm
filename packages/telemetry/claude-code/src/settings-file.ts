@@ -78,27 +78,39 @@ function isLatitudeHookCommand(command: string | undefined): boolean {
 }
 
 export function hasLatitudeStopHook(settings: ClaudeSettings): boolean {
-  const groups = settings.hooks?.Stop ?? []
-  for (const group of groups) {
-    for (const hook of group.hooks ?? []) {
-      if (isLatitudeHookCommand(hook.command)) return true
-    }
-  }
-  return false
+  return latitudeStopHookCommand(settings) !== undefined
 }
 
+// The command of the first existing Latitude Stop hook, if any — lets the installer
+// tell "fresh install" from "upgrade an older command" (e.g. a bare `npx` hook).
+export function latitudeStopHookCommand(settings: ClaudeSettings): string | undefined {
+  for (const group of settings.hooks?.Stop ?? []) {
+    for (const hook of group.hooks ?? []) {
+      if (isLatitudeHookCommand(hook.command)) return hook.command
+    }
+  }
+  return undefined
+}
+
+// Ensure a Latitude Stop hook runs `command`. An existing Latitude hook (including
+// an older bare-`npx` command or a dev dist path) is rewritten to `command` and
+// forced async, so re-running install upgrades stale hooks instead of leaving them
+// as-is. Only adds a new entry when none is present.
 export function addLatitudeStopHook(
   settings: ClaudeSettings,
-  command = "npx -y @latitude-data/claude-code-telemetry",
+  command = "npx -y @latitude-data/claude-code-telemetry@latest",
 ): ClaudeSettings {
-  if (hasLatitudeStopHook(settings)) return settings
-  const hooks = { ...(settings.hooks ?? {}) }
-  const stop = [...(hooks.Stop ?? [])]
-  stop.push({
-    hooks: [{ type: "command", command, async: true }],
-  })
-  hooks.Stop = stop
-  return { ...settings, hooks }
+  let found = false
+  const stop: HookGroup[] = (settings.hooks?.Stop ?? []).map((group) => ({
+    ...group,
+    hooks: (group.hooks ?? []).map((hook) => {
+      if (!isLatitudeHookCommand(hook.command)) return hook
+      found = true
+      return { ...hook, type: "command", command, async: true }
+    }),
+  }))
+  if (!found) stop.push({ hooks: [{ type: "command", command, async: true }] })
+  return { ...settings, hooks: { ...(settings.hooks ?? {}), Stop: stop } }
 }
 
 export function removeLatitudeStopHook(settings: ClaudeSettings): ClaudeSettings {

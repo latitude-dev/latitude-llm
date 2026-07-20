@@ -121,16 +121,19 @@ function MetricSelector({
   stream,
   onChange,
   disabled,
+  countOnly = false,
 }: {
   readonly value: MonitorMetric
   readonly stream: NonNullable<AlertDraft["target"]>["stream"]
   readonly onChange: (metric: MonitorMetric, direction?: MetricDirection) => void
   readonly disabled?: boolean
+  readonly countOnly?: boolean
 }) {
   const options = targetMetricOptions(stream)
   const selectedDimension = metricDimension(value)
   const dimensions = (["count", "errorRate", "cacheHitRate", "duration", "cost", "tokens"] as const).filter(
-    (dimension) => options.some((option) => metricDimension(option.metric) === dimension),
+    (dimension) =>
+      (!countOnly || dimension === "count") && options.some((option) => metricDimension(option.metric) === dimension),
   )
   const aggregations = options.filter((option) => metricDimension(option.metric) === selectedDimension)
 
@@ -147,10 +150,10 @@ function MetricSelector({
               type="button"
               disabled={disabled}
               className={cn(
-                "flex min-w-0 cursor-pointer items-start gap-2 rounded-lg border border-border p-3 text-left transition-colors disabled:cursor-not-allowed disabled:opacity-60",
+                "flex min-w-0 cursor-pointer items-start gap-2 rounded-lg border border-border p-3 text-left transition-colors disabled:cursor-not-allowed disabled:opacity-60 disabled:hover:bg-transparent",
                 {
                   "border-primary bg-primary/5": active,
-                  "hover:bg-muted": !active,
+                  "hover:bg-muted": !active && !disabled,
                 },
               )}
               onClick={() => {
@@ -173,6 +176,7 @@ function MetricSelector({
           <Tabs<string>
             variant="bordered"
             size="sm"
+            {...(disabled ? { disabled: true } : {})}
             options={aggregations.map((option) => ({
               id: option.id,
               label: aggregationLabel(option.metric),
@@ -180,7 +184,7 @@ function MetricSelector({
             active={metricOptionId(value)}
             onSelect={(id) => {
               const next = aggregations.find((option) => option.id === id)
-              if (next && !disabled) onChange(next.metric)
+              if (next) onChange(next.metric)
             }}
           />
         </div>
@@ -324,11 +328,10 @@ function ThresholdWindowForm({
           <Tabs<ComparisonMode>
             variant="bordered"
             size="sm"
+            {...(disabled ? { disabled: true } : {})}
             options={COMPARISON_TABS}
             active={value.comparison}
-            onSelect={(comparison) => {
-              if (!disabled) onComparisonChange(comparison)
-            }}
+            onSelect={onComparisonChange}
           />
         </div>
         <div className="flex flex-wrap items-center gap-2">
@@ -452,6 +455,7 @@ export function AlertCardForm({
   showSourcePicker = true,
   sourceName,
   metricReadonly = false,
+  conditionsReadonly = false,
 }: {
   readonly value: AlertDraft
   readonly onChange: (next: AlertDraft) => void
@@ -466,8 +470,11 @@ export function AlertCardForm({
   readonly sourceName?: string
   /** Lock the metric (set at creation; the firing path reads it off the monitor target). Used when editing an existing unified monitor. */
   readonly metricReadonly?: boolean
+  /** Lock trigger type and threshold/window fields. Used when editing an existing monitor — only severity stays editable. */
+  readonly conditionsReadonly?: boolean
 }) {
   const targetMode = value.target !== null
+  const conditionsLocked = disabled || conditionsReadonly
   const { data: savedSearches } = useSavedSearchesList(projectId, {
     enabled: showSourcePicker && !targetMode,
   })
@@ -495,11 +502,10 @@ export function AlertCardForm({
           <Tabs<UserAlertKind>
             variant="secondary"
             size="sm"
+            {...(conditionsLocked ? { disabled: true } : {})}
             options={kindTabs}
             active={value.kind}
-            onSelect={(kind) => {
-              if (!disabled) onChange(draftWithKind(value, kind))
-            }}
+            onSelect={(kind) => onChange(draftWithKind(value, kind))}
           />
           {onRemove ? removeButton : null}
         </div>
@@ -510,6 +516,7 @@ export function AlertCardForm({
         <MetricSelector
           value={value.metric}
           stream={value.target.stream}
+          countOnly={isEscalatingKind(value.kind)}
           onChange={(metric, direction) => set(direction ? { metric, direction } : { metric })}
           {...(disabled || metricReadonly ? { disabled: true } : {})}
         />
@@ -527,7 +534,12 @@ export function AlertCardForm({
       ) : null}
 
       {!isMatchKind(value.kind) ? (
-        <ThresholdWindowForm value={value} onChange={set} errors={errors} {...(disabled ? { disabled: true } : {})} />
+        <ThresholdWindowForm
+          value={value}
+          onChange={set}
+          errors={errors}
+          {...(conditionsLocked ? { disabled: true } : {})}
+        />
       ) : null}
 
       <div className="rounded-lg bg-muted/80 px-3 py-2 flex justify-start items-center">

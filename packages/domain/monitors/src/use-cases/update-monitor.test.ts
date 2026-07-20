@@ -4,7 +4,7 @@ import { type Monitor, MonitorRepository, updateMonitorUseCase } from "@domain/m
 import { createFakeMonitorRepository } from "@domain/monitors/testing"
 import { SavedSearchRepository } from "@domain/saved-searches"
 import { createFakeSavedSearchRepository } from "@domain/saved-searches/testing"
-import { AlertIncidentId, MonitorId, OrganizationId, ProjectId, SqlClient, ValidationError } from "@domain/shared"
+import { type AlertIncidentId, MonitorId, OrganizationId, ProjectId, SqlClient, ValidationError } from "@domain/shared"
 import { createFakeSqlClient } from "@domain/shared/testing"
 import { Effect, Layer } from "effect"
 import { describe, expect, it } from "vitest"
@@ -109,9 +109,53 @@ const runError = <A, E>(
 ) => Effect.runPromise(effect.pipe(Effect.flip, Effect.provide(provide(repo))))
 
 describe("updateMonitorUseCase", () => {
-  it("rejects editing a system monitor", async () => {
+  it("rejects editing a system monitor name", async () => {
     const { repo } = createFakeMonitorRepository([makeMonitor({ system: true })])
     const error = await runError(updateMonitorUseCase({ id: monitorId, name: "New" }), repo)
+    expect(error._tag).toBe("SystemMonitorForbiddenError")
+  })
+
+  it("allows editing severity on a system monitor", async () => {
+    const { repo } = createFakeMonitorRepository([
+      makeMonitor({ system: true, rule: { trigger: "match", config: {}, severity: "low" } }),
+    ])
+    const result = await run(
+      updateMonitorUseCase({ id: monitorId, rule: { trigger: "match", config: {}, severity: "high" } }),
+      repo,
+    )
+    expect(result.rule.severity).toBe("high")
+  })
+
+  it("rejects editing monitor conditions on a system monitor", async () => {
+    const escalatingRule = {
+      trigger: "escalating" as const,
+      severity: "high" as const,
+      config: {
+        metric: { kind: "count" as const },
+        condition: {
+          trigger: "escalating" as const,
+          metric: { kind: "count" as const },
+          threshold: { mode: "expected" as const, sensitivity: 3 },
+        },
+      },
+    }
+    const { repo } = createFakeMonitorRepository([makeMonitor({ system: true, rule: escalatingRule })])
+    const error = await runError(
+      updateMonitorUseCase({
+        id: monitorId,
+        rule: {
+          ...escalatingRule,
+          config: {
+            ...escalatingRule.config,
+            condition: {
+              ...escalatingRule.config.condition,
+              threshold: { mode: "expected" as const, sensitivity: 5 },
+            },
+          },
+        },
+      }),
+      repo,
+    )
     expect(error._tag).toBe("SystemMonitorForbiddenError")
   })
 
@@ -143,38 +187,38 @@ describe("updateMonitorUseCase", () => {
     expect(monitors[0]?.slug).toBe("my-monitor")
   })
 
-  it("rejects unsupported escalating metric and threshold shapes", async () => {
-    const { repo } = createFakeMonitorRepository([makeMonitor()])
+  it("rejects unsupported escalating metric and threshold shapes on create-like payloads", async () => {
+    const escalatingRule = {
+      trigger: "escalating" as const,
+      severity: "high" as const,
+      config: {
+        metric: { kind: "count" as const },
+        condition: { trigger: "escalating" as const, metric: { kind: "count" as const } },
+      },
+    }
+    const { repo } = createFakeMonitorRepository([makeMonitor({ rule: escalatingRule })])
+
     const metricError = await runError(
       updateMonitorUseCase({
         id: monitorId,
         target: { ...target, metric: { kind: "avg", field: "duration" } },
-        rule: {
-          trigger: "escalating",
-          severity: "high",
-          config: {
-            metric: { kind: "avg", field: "duration" },
-            condition: { trigger: "escalating", metric: { kind: "avg", field: "duration" } },
-          },
-        },
       }),
       repo,
     )
     expect(metricError).toBeInstanceOf(ValidationError)
-    expect(metricError.message).toBe("Escalating monitors only support count metrics")
+    expect(metricError.message).toBe("Monitor target cannot be changed after creation")
 
     const thresholdError = await runError(
       updateMonitorUseCase({
         id: monitorId,
         rule: {
-          trigger: "escalating",
-          severity: "high",
+          ...escalatingRule,
           config: {
-            metric: { kind: "count" },
+            ...escalatingRule.config,
             condition: {
-              trigger: "escalating",
-              metric: { kind: "count" },
-              threshold: { mode: "absolute", value: 10 },
+              trigger: "escalating" as const,
+              metric: { kind: "count" as const },
+              threshold: { mode: "absolute" as const, value: 10 },
             },
           },
         },
@@ -182,7 +226,7 @@ describe("updateMonitorUseCase", () => {
       repo,
     )
     expect(thresholdError).toBeInstanceOf(ValidationError)
-    expect(thresholdError.message).toBe("Escalating monitors only support expected thresholds")
+    expect(thresholdError.message).toBe("Monitor conditions cannot be changed after creation")
   })
 
   it("rejects target metric edits that would make an escalating monitor inert", async () => {
@@ -205,13 +249,88 @@ describe("updateMonitorUseCase", () => {
     )
 
     expect(error).toBeInstanceOf(ValidationError)
-    expect(error.message).toBe("Escalating monitors only support count metrics")
+    expect(error.message).toBe("Monitor target cannot be changed after creation")
   })
 
-  it("preserves inline target query on rule-only edits", async () => {
+  it("rejects trigger changes after creation", async () => {
+    const { repo } = createFakeMonitorRepository([makeMonitor()])
+    const error = await runError(
+      updateMonitorUseCase({
+        id: monitorId,
+        rule: {
+          trigger: "threshold",
+          severity: "medium",
+          config: {
+            metric: { kind: "count" },
+            condition: {
+              trigger: "threshold",
+              metric: { kind: "count" },
+              threshold: { mode: "absolute", value: 2 },
+            },
+          },
+        },
+      }),
+      repo,
+    )
+    expect(error).toBeInstanceOf(ValidationError)
+    expect(error.message).toBe("Monitor trigger cannot be changed after creation")
+  })
+
+  it("rejects condition changes after creation", async () => {
+    const { repo } = createFakeMonitorRepository([
+      makeMonitor({
+        rule: {
+          trigger: "threshold",
+          severity: "medium",
+          config: {
+            metric: { kind: "count" },
+            condition: {
+              trigger: "threshold",
+              metric: { kind: "count" },
+              threshold: { mode: "absolute", value: 2 },
+            },
+          },
+        },
+      }),
+    ])
+    const error = await runError(
+      updateMonitorUseCase({
+        id: monitorId,
+        rule: {
+          trigger: "threshold",
+          severity: "medium",
+          config: {
+            metric: { kind: "count" },
+            condition: {
+              trigger: "threshold",
+              metric: { kind: "count" },
+              threshold: { mode: "absolute", value: 5 },
+            },
+          },
+        },
+      }),
+      repo,
+    )
+    expect(error).toBeInstanceOf(ValidationError)
+    expect(error.message).toBe("Monitor conditions cannot be changed after creation")
+  })
+
+  it("allows severity changes without touching target query", async () => {
     const { repo } = createFakeMonitorRepository([
       makeMonitor({
         target: { ...target, query: "payment failed", filterSet: { userId: [{ op: "eq", value: "user-1" }] } },
+        rule: {
+          trigger: "threshold",
+          severity: "low",
+          config: {
+            metric: { kind: "count" },
+            condition: {
+              trigger: "threshold",
+              metric: { kind: "count" },
+              threshold: { mode: "absolute", value: 2 },
+            },
+          },
+        },
       }),
     ])
 
@@ -234,13 +353,14 @@ describe("updateMonitorUseCase", () => {
       repo,
     )
 
+    expect(result.rule.severity).toBe("medium")
     expect(result.target.query).toBe("payment failed")
   })
 
-  it("replaces inline target query on target edits", async () => {
+  it("rejects target edits after creation", async () => {
     const { repo } = createFakeMonitorRepository([makeMonitor({ target: { ...target, query: "old query" } })])
 
-    const result = await run(
+    const error = await runError(
       updateMonitorUseCase({
         id: monitorId,
         target: { ...target, query: "new query", filterSet: { userId: [{ op: "eq", value: "user-2" }] } },
@@ -248,42 +368,7 @@ describe("updateMonitorUseCase", () => {
       repo,
     )
 
-    expect(result.target).toMatchObject({
-      query: "new query",
-      filterSet: { userId: [{ op: "eq", value: "user-2" }] },
-    })
-  })
-
-  it("closes an open escalating incident when the rule becomes point-in-time", async () => {
-    const incidentId = AlertIncidentId("i".repeat(24))
-    const incidentRepo = createIncidentRepo(incidentId)
-    const outbox = createOutbox()
-    const escalatingRule = {
-      trigger: "escalating" as const,
-      severity: "high" as const,
-      config: {
-        metric: { kind: "count" as const },
-        condition: { trigger: "escalating" as const, metric: { kind: "count" as const } },
-      },
-    }
-    const { repo } = createFakeMonitorRepository([makeMonitor({ rule: escalatingRule })])
-
-    await run(
-      updateMonitorUseCase({
-        id: monitorId,
-        rule: { trigger: "match", severity: "high", config: {} },
-      }),
-      repo,
-      incidentRepo.repo,
-      outbox.writer,
-    )
-
-    expect(incidentRepo.closeOpenCalls).toMatchObject([{ sourceType: "monitor", sourceId: monitorId }])
-    expect(outbox.events).toHaveLength(1)
-    expect(outbox.events[0]).toMatchObject({
-      eventName: "IncidentClosed",
-      aggregateId: incidentId,
-      payload: { alertIncidentId: incidentId, reason: "resolved", sourceType: "monitor", sourceId: monitorId },
-    })
+    expect(error).toBeInstanceOf(ValidationError)
+    expect(error.message).toBe("Monitor target cannot be changed after creation")
   })
 })

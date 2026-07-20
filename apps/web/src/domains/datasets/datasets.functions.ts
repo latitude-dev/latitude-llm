@@ -28,12 +28,13 @@ import {
   updateRow,
 } from "@domain/datasets"
 import {
+  CustomBehaviorId,
   DatasetId,
   DatasetRowId,
   DatasetVersionId,
   filterSetSchema,
   isValidId,
-  OrganizationId,
+  type OrganizationId,
   ProjectId,
   putInDisk,
   SignalId,
@@ -49,14 +50,8 @@ import {
   ScoreAnalyticsRepositoryLive,
   TaxonomyClusterIntelligenceRepositoryLive,
   TraceRepositoryLive,
-  withClickHouse,
 } from "@platform/db-clickhouse"
-import {
-  DatasetRepositoryLive,
-  OutboxEventWriterLive,
-  TaxonomyClusterRepositoryLive,
-  withPostgres,
-} from "@platform/db-postgres"
+import { DatasetRepositoryLive, OutboxEventWriterLive, TaxonomyClusterRepositoryLive } from "@platform/db-postgres"
 import { withTracing } from "@repo/observability"
 import { createServerFn } from "@tanstack/react-start"
 import { Effect, Layer } from "effect"
@@ -71,6 +66,9 @@ import {
   getRedisClient,
   getStorageDisk,
 } from "../../server/clients.ts"
+import { resolveOrgScope } from "../../server/resolve-org-scope.ts"
+import { withScopedClickHouse } from "../../server/scoped-clickhouse.ts"
+import { withScopedPostgres } from "../../server/scoped-postgres.ts"
 import { applyMapping } from "./column-mapping.ts"
 
 const rowSelectionSchema = z.discriminatedUnion("mode", [
@@ -194,9 +192,8 @@ export const listDatasetsByProject = createServerFn({ method: "GET" })
         },
       ),
   )
-  .handler(async ({ data }): Promise<DatasetListResult> => {
-    const { organizationId } = await requireSession()
-    const orgId = OrganizationId(organizationId)
+  .handler(async ({ data, context }): Promise<DatasetListResult> => {
+    const orgId = await resolveOrgScope(context)
 
     const page = await Effect.runPromise(
       listDatasets({
@@ -207,7 +204,7 @@ export const listDatasetsByProject = createServerFn({ method: "GET" })
           ...(data.sortBy ? { sortBy: data.sortBy } : {}),
           ...(data.sortDirection ? { sortDirection: data.sortDirection } : {}),
         },
-      }).pipe(withPostgres(DatasetRepositoryLive, getPostgresClient(), orgId), withTracing),
+      }).pipe(withScopedPostgres(DatasetRepositoryLive, getPostgresClient(), orgId), withTracing),
     )
 
     const datasets = page.datasets.map(toDatasetRecord)
@@ -239,16 +236,15 @@ export const searchDatasetsOrgWide = createServerFn({ method: "GET" })
       limit: z.number().int().min(1).max(25).optional(),
     }),
   )
-  .handler(async ({ data }): Promise<readonly DatasetSearchRecord[]> => {
-    const { organizationId } = await requireSession()
-    const orgId = OrganizationId(organizationId)
+  .handler(async ({ data, context }): Promise<readonly DatasetSearchRecord[]> => {
+    const orgId = await resolveOrgScope(context)
 
     const results = await Effect.runPromise(
       searchDatasets({
         ...(data.searchQuery !== undefined ? { searchQuery: data.searchQuery } : {}),
         ...(data.preferProjectId !== undefined ? { preferProjectId: ProjectId(data.preferProjectId) } : {}),
         ...(data.limit !== undefined ? { limit: data.limit } : {}),
-      }).pipe(withPostgres(DatasetRepositoryLive, getPostgresClient(), orgId), withTracing),
+      }).pipe(withScopedPostgres(DatasetRepositoryLive, getPostgresClient(), orgId), withTracing),
     )
 
     return results.map(
@@ -265,9 +261,8 @@ export const searchDatasetsOrgWide = createServerFn({ method: "GET" })
 
 export const getDatasetQuery = createServerFn({ method: "GET" })
   .inputValidator(z.object({ datasetId: z.string() }))
-  .handler(async ({ data }): Promise<DatasetRecord | null> => {
-    const { organizationId } = await requireSession()
-    const orgId = OrganizationId(organizationId)
+  .handler(async ({ data, context }): Promise<DatasetRecord | null> => {
+    const orgId = await resolveOrgScope(context)
 
     return Effect.runPromise(
       Effect.gen(function* () {
@@ -276,7 +271,7 @@ export const getDatasetQuery = createServerFn({ method: "GET" })
         return toDatasetRecord(dataset)
       }).pipe(
         Effect.catchTag("DatasetNotFoundError", () => Effect.succeed(null)),
-        withPostgres(DatasetRepositoryLive, getPostgresClient(), orgId),
+        withScopedPostgres(DatasetRepositoryLive, getPostgresClient(), orgId),
         withTracing,
       ),
     )
@@ -305,13 +300,13 @@ export const listRowsQuery = createServerFn({ method: "GET" })
   .handler(
     async ({
       data,
+      context,
     }): Promise<{
       rows: DatasetRowRecord[]
       total?: number
       nextCursor?: { createdAt: string; rowId: string }
     }> => {
-      const { organizationId } = await requireSession()
-      const orgId = OrganizationId(organizationId)
+      const orgId = await resolveOrgScope(context)
 
       const sortBy = data.sortBy ?? "createdAt"
       const sortDirection = data.sortDirection ?? "desc"
@@ -333,8 +328,8 @@ export const listRowsQuery = createServerFn({ method: "GET" })
               }
             : { offset: data.offset }),
         }).pipe(
-          withPostgres(DatasetRepositoryLive, getPostgresClient(), orgId),
-          withClickHouse(DatasetRowRepositoryLive, getClickhouseClient(), orgId),
+          withScopedPostgres(DatasetRepositoryLive, getPostgresClient(), orgId),
+          withScopedClickHouse(DatasetRowRepositoryLive, getClickhouseClient(), orgId),
           withTracing,
         ),
       )
@@ -355,9 +350,8 @@ export const getRowQuery = createServerFn({ method: "GET" })
       versionId: z.string().optional(),
     }),
   )
-  .handler(async ({ data }): Promise<DatasetRowRecord | null> => {
-    const { organizationId } = await requireSession()
-    const orgId = OrganizationId(organizationId)
+  .handler(async ({ data, context }): Promise<DatasetRowRecord | null> => {
+    const orgId = await resolveOrgScope(context)
 
     return Effect.runPromise(
       getRowDetail({
@@ -367,8 +361,8 @@ export const getRowQuery = createServerFn({ method: "GET" })
       }).pipe(
         Effect.map(toRowRecord),
         Effect.catchTag("RowNotFoundError", () => Effect.succeed(null)),
-        withPostgres(DatasetRepositoryLive, getPostgresClient(), orgId),
-        withClickHouse(DatasetRowRepositoryLive, getClickhouseClient(), orgId),
+        withScopedPostgres(DatasetRepositoryLive, getPostgresClient(), orgId),
+        withScopedClickHouse(DatasetRowRepositoryLive, getClickhouseClient(), orgId),
         withTracing,
       ),
     )
@@ -382,16 +376,15 @@ export const updateDataset = createServerFn({ method: "POST" })
       description: z.string().nullable().optional(),
     }),
   )
-  .handler(async ({ data }): Promise<DatasetRecord> => {
-    const { organizationId } = await requireSession()
-    const orgId = OrganizationId(organizationId)
+  .handler(async ({ data, context }): Promise<DatasetRecord> => {
+    const orgId = await resolveOrgScope(context)
 
     const dataset = await Effect.runPromise(
       updateDatasetDetails({
         datasetId: DatasetId(data.datasetId),
         name: data.name,
         description: data.description ?? null,
-      }).pipe(withPostgres(DatasetRepositoryLive, getPostgresClient(), orgId), withTracing),
+      }).pipe(withScopedPostgres(DatasetRepositoryLive, getPostgresClient(), orgId), withTracing),
     )
 
     return toDatasetRecord(dataset)
@@ -399,14 +392,13 @@ export const updateDataset = createServerFn({ method: "POST" })
 
 export const deleteDatasetFunction = createServerFn({ method: "POST" })
   .inputValidator(z.object({ datasetId: z.string() }))
-  .handler(async ({ data }): Promise<void> => {
-    const { organizationId } = await requireSession()
-    const orgId = OrganizationId(organizationId)
+  .handler(async ({ data, context }): Promise<void> => {
+    const orgId = await resolveOrgScope(context)
 
     await Effect.runPromise(
       deleteDataset({
         datasetId: DatasetId(data.datasetId),
-      }).pipe(withPostgres(DatasetRepositoryLive, getPostgresClient(), orgId), withTracing),
+      }).pipe(withScopedPostgres(DatasetRepositoryLive, getPostgresClient(), orgId), withTracing),
     )
   })
 
@@ -421,7 +413,7 @@ export const downloadDatasetExport = createServerFn({ method: "POST" })
       selection: rowSelectionSchema,
     }),
   )
-  .handler(async ({ data }): Promise<DownloadDatasetExportResult> => {
+  .handler(async ({ data, context }): Promise<DownloadDatasetExportResult> => {
     const session = await ensureSession()
     const email = session?.user?.email
     const organizationId = getSessionOrganizationId(session)
@@ -430,18 +422,18 @@ export const downloadDatasetExport = createServerFn({ method: "POST" })
       throw new UnauthorizedError({ message: "Unauthorized" })
     }
 
-    const orgId = OrganizationId(organizationId)
+    const orgId = await resolveOrgScope(context)
     const datasetId = DatasetId(data.datasetId)
 
     const result = await Effect.runPromise(
       prepareDatasetExportUseCase({
         datasetId,
         selection: data.selection,
-        organizationId,
+        organizationId: orgId,
         recipientEmail: email,
       }).pipe(
-        withPostgres(DatasetRepositoryLive, getPostgresClient(), orgId),
-        withClickHouse(DatasetRowRepositoryLive, getClickhouseClient(), orgId),
+        withScopedPostgres(DatasetRepositoryLive, getPostgresClient(), orgId),
+        withScopedClickHouse(DatasetRowRepositoryLive, getClickhouseClient(), orgId),
         withTracing,
       ),
     )
@@ -477,9 +469,9 @@ export const createDatasetFunction = createServerFn({ method: "POST" })
       name: z.string(),
     }),
   )
-  .handler(async ({ data }): Promise<DatasetRecord> => {
-    const { organizationId, userId } = await requireSession()
-    const orgId = OrganizationId(organizationId)
+  .handler(async ({ data, context }): Promise<DatasetRecord> => {
+    const { userId } = await requireSession()
+    const orgId = await resolveOrgScope(context)
 
     const dataset = await Effect.runPromise(
       createDataset({
@@ -488,8 +480,8 @@ export const createDatasetFunction = createServerFn({ method: "POST" })
         name: data.name,
         actorUserId: userId,
       }).pipe(
-        withPostgres(Layer.mergeAll(DatasetRepositoryLive, OutboxEventWriterLive), getPostgresClient(), orgId),
-        withClickHouse(DatasetRowRepositoryLive, getClickhouseClient(), orgId),
+        withScopedPostgres(Layer.mergeAll(DatasetRepositoryLive, OutboxEventWriterLive), getPostgresClient(), orgId),
+        withScopedClickHouse(DatasetRowRepositoryLive, getClickhouseClient(), orgId),
         withTracing,
       ),
     )
@@ -507,9 +499,8 @@ export const saveDatasetCsv = createServerFn({ method: "POST" })
     const data = saveDatasetCsvDataSchema.parse(JSON.parse(dataRaw))
     return { file, data }
   })
-  .handler(async ({ data: { file, data } }): Promise<{ version: number; rowCount: number }> => {
-    const { organizationId } = await requireSession()
-    const orgId = OrganizationId(organizationId)
+  .handler(async ({ data: { file, data }, context }): Promise<{ version: number; rowCount: number }> => {
+    const orgId = await resolveOrgScope(context)
     const { datasetId, projectId, mapping, options } = data
 
     const content = await file.text()
@@ -530,7 +521,7 @@ export const saveDatasetCsv = createServerFn({ method: "POST" })
           id: DatasetId(datasetId),
           fileKey,
         })
-      }).pipe(withPostgres(DatasetRepositoryLive, getPostgresClient(), orgId), withTracing),
+      }).pipe(withScopedPostgres(DatasetRepositoryLive, getPostgresClient(), orgId), withTracing),
     )
 
     const { rows } = parseDatasetCsv(content)
@@ -546,8 +537,8 @@ export const saveDatasetCsv = createServerFn({ method: "POST" })
         rows: mappedRows,
         source: "csv",
       }).pipe(
-        withPostgres(DatasetRepositoryLive, getPostgresClient(), orgId),
-        withClickHouse(DatasetRowRepositoryLive, getClickhouseClient(), orgId),
+        withScopedPostgres(DatasetRepositoryLive, getPostgresClient(), orgId),
+        withScopedClickHouse(DatasetRowRepositoryLive, getClickhouseClient(), orgId),
         withTracing,
       ),
     )
@@ -569,13 +560,13 @@ export const insertDatasetRow = createServerFn({ method: "POST" })
   .handler(
     async ({
       data,
+      context,
     }): Promise<{
       readonly versionId: string
       readonly version: number
       readonly rowId: string
     }> => {
-      const { organizationId } = await requireSession()
-      const orgId = OrganizationId(organizationId)
+      const orgId = await resolveOrgScope(context)
 
       const result = await Effect.runPromise(
         insertRows({
@@ -591,8 +582,8 @@ export const insertDatasetRow = createServerFn({ method: "POST" })
           ],
           source: "web",
         }).pipe(
-          withPostgres(DatasetRepositoryLive, getPostgresClient(), orgId),
-          withClickHouse(DatasetRowRepositoryLive, getClickhouseClient(), orgId),
+          withScopedPostgres(DatasetRepositoryLive, getPostgresClient(), orgId),
+          withScopedClickHouse(DatasetRowRepositoryLive, getClickhouseClient(), orgId),
           withTracing,
         ),
       )
@@ -622,9 +613,8 @@ export const updateDatasetRow = createServerFn({ method: "POST" })
       custom: z.record(z.string(), z.string()).optional(),
     }),
   )
-  .handler(async ({ data }) => {
-    const { organizationId } = await requireSession()
-    const orgId = OrganizationId(organizationId)
+  .handler(async ({ data, context }) => {
+    const orgId = await resolveOrgScope(context)
 
     const result = await Effect.runPromise(
       updateRow({
@@ -636,8 +626,8 @@ export const updateDatasetRow = createServerFn({ method: "POST" })
         metadata: data.metadata,
         ...(data.custom ? { custom: data.custom } : {}),
       }).pipe(
-        withPostgres(DatasetRepositoryLive, getPostgresClient(), orgId),
-        withClickHouse(DatasetRowRepositoryLive, getClickhouseClient(), orgId),
+        withScopedPostgres(DatasetRepositoryLive, getPostgresClient(), orgId),
+        withScopedClickHouse(DatasetRowRepositoryLive, getClickhouseClient(), orgId),
         withTracing,
       ),
     )
@@ -652,9 +642,8 @@ export const deleteDatasetRows = createServerFn({ method: "POST" })
       selection: rowSelectionSchema,
     }),
   )
-  .handler(async ({ data }): Promise<{ versionId: string; version: number }> => {
-    const { organizationId } = await requireSession()
-    const orgId = OrganizationId(organizationId)
+  .handler(async ({ data, context }): Promise<{ versionId: string; version: number }> => {
+    const orgId = await resolveOrgScope(context)
 
     const selection: DeleteRowsSelection =
       data.selection.mode === "all"
@@ -669,8 +658,8 @@ export const deleteDatasetRows = createServerFn({ method: "POST" })
         datasetId: DatasetId(data.datasetId),
         selection,
       }).pipe(
-        withPostgres(DatasetRepositoryLive, getPostgresClient(), orgId),
-        withClickHouse(DatasetRowRepositoryLive, getClickhouseClient(), orgId),
+        withScopedPostgres(DatasetRepositoryLive, getPostgresClient(), orgId),
+        withScopedClickHouse(DatasetRowRepositoryLive, getClickhouseClient(), orgId),
         withTracing,
       ),
     )
@@ -698,9 +687,8 @@ export const addTracesToDatasetFunction = createServerFn({ method: "POST" })
       filters: filterSetSchema.optional(),
     }),
   )
-  .handler(async ({ data }): Promise<{ versionId: string; version: number; rowCount: number }> => {
-    const { organizationId } = await requireSession()
-    const orgId = OrganizationId(organizationId)
+  .handler(async ({ data, context }): Promise<{ versionId: string; version: number; rowCount: number }> => {
+    const orgId = await resolveOrgScope(context)
     const chClient = getClickhouseClient()
 
     const result = await Effect.runPromise(
@@ -712,10 +700,10 @@ export const addTracesToDatasetFunction = createServerFn({ method: "POST" })
         ...(data.searchQuery ? { searchQuery: data.searchQuery } : {}),
         ...(data.filters ? { filters: data.filters } : {}),
       }).pipe(
-        withPostgres(DatasetRepositoryLive, getPostgresClient(), orgId),
-        withClickHouse(DatasetRowRepositoryLive, chClient, orgId),
-        withClickHouse(TraceRepositoryLive, chClient, orgId),
-        withClickHouse(ScoreAnalyticsRepositoryLive, chClient, orgId),
+        withScopedPostgres(DatasetRepositoryLive, getPostgresClient(), orgId),
+        withScopedClickHouse(DatasetRowRepositoryLive, chClient, orgId),
+        withScopedClickHouse(TraceRepositoryLive, chClient, orgId),
+        withScopedClickHouse(ScoreAnalyticsRepositoryLive, chClient, orgId),
         withAi(AIEmbedLive, getRedisClient()),
         withTracing,
       ),
@@ -750,14 +738,14 @@ export const createDatasetFromTracesFunction = createServerFn({
   .handler(
     async ({
       data,
+      context,
     }): Promise<{
       datasetId: string
       versionId: string
       version: number
       rowCount: number
     }> => {
-      const { organizationId } = await requireSession()
-      const orgId = OrganizationId(organizationId)
+      const orgId = await resolveOrgScope(context)
       const pgClient = getPostgresClient()
       const chClient = getClickhouseClient()
 
@@ -771,10 +759,10 @@ export const createDatasetFromTracesFunction = createServerFn({
           ...(data.searchQuery ? { searchQuery: data.searchQuery } : {}),
           ...(data.filters ? { filters: data.filters } : {}),
         }).pipe(
-          withPostgres(Layer.mergeAll(DatasetRepositoryLive, OutboxEventWriterLive), pgClient, orgId),
-          withClickHouse(DatasetRowRepositoryLive, chClient, orgId),
-          withClickHouse(TraceRepositoryLive, chClient, orgId),
-          withClickHouse(ScoreAnalyticsRepositoryLive, chClient, orgId),
+          withScopedPostgres(Layer.mergeAll(DatasetRepositoryLive, OutboxEventWriterLive), pgClient, orgId),
+          withScopedClickHouse(DatasetRowRepositoryLive, chClient, orgId),
+          withScopedClickHouse(TraceRepositoryLive, chClient, orgId),
+          withScopedClickHouse(ScoreAnalyticsRepositoryLive, chClient, orgId),
           withAi(AIEmbedLive, getRedisClient()),
           withTracing,
         ),
@@ -801,6 +789,9 @@ const clusterSourceSchema = z.object({
     .optional(),
   timeFromIso: z.string().optional(),
   timeToIso: z.string().optional(),
+  // Present → resolve sessions from the behavior's scoped assignment slice
+  // instead of the global taxonomy subtree.
+  customBehaviorId: z.string().optional(),
 })
 
 export type ClusterSource = z.infer<typeof clusterSourceSchema>
@@ -827,6 +818,7 @@ function resolveClusterTraceIds(
       ...(cluster.momentRange ? { momentRange: cluster.momentRange } : {}),
       ...(cluster.timeFromIso ? { startTimeFrom: new Date(cluster.timeFromIso) } : {}),
       ...(cluster.timeToIso ? { startTimeTo: new Date(cluster.timeToIso) } : {}),
+      ...(cluster.customBehaviorId ? { customBehaviorId: CustomBehaviorId(cluster.customBehaviorId) } : {}),
       limit: MAX_TRACES_PER_DATASET_IMPORT + 1,
     })
     if (selection.mode === "all") return all
@@ -844,9 +836,8 @@ export const addClusterSessionsToDatasetFunction = createServerFn({ method: "POS
       selection: rowSelectionSchema,
     }),
   )
-  .handler(async ({ data }): Promise<{ versionId: string; version: number; rowCount: number }> => {
-    const { organizationId } = await requireSession()
-    const orgId = OrganizationId(organizationId)
+  .handler(async ({ data, context }): Promise<{ versionId: string; version: number; rowCount: number }> => {
+    const orgId = await resolveOrgScope(context)
     const projectId = ProjectId(data.projectId)
     const chClient = getClickhouseClient()
 
@@ -860,8 +851,12 @@ export const addClusterSessionsToDatasetFunction = createServerFn({ method: "POS
           selection: { mode: "selected", traceIds },
         })
       }).pipe(
-        withPostgres(Layer.mergeAll(DatasetRepositoryLive, TaxonomyClusterRepositoryLive), getPostgresClient(), orgId),
-        withClickHouse(
+        withScopedPostgres(
+          Layer.mergeAll(DatasetRepositoryLive, TaxonomyClusterRepositoryLive),
+          getPostgresClient(),
+          orgId,
+        ),
+        withScopedClickHouse(
           Layer.mergeAll(
             DatasetRowRepositoryLive,
             TraceRepositoryLive,
@@ -892,59 +887,59 @@ export const createDatasetFromClusterSessionsFunction = createServerFn({ method:
       selection: rowSelectionSchema,
     }),
   )
-  .handler(async ({ data }): Promise<{ datasetId: string; versionId: string; version: number; rowCount: number }> => {
-    const { organizationId } = await requireSession()
-    const orgId = OrganizationId(organizationId)
-    const projectId = ProjectId(data.projectId)
-    const chClient = getClickhouseClient()
+  .handler(
+    async ({ data, context }): Promise<{ datasetId: string; versionId: string; version: number; rowCount: number }> => {
+      const orgId = await resolveOrgScope(context)
+      const projectId = ProjectId(data.projectId)
+      const chClient = getClickhouseClient()
 
-    const result = await Effect.runPromise(
-      Effect.gen(function* () {
-        const traceIds = yield* resolveClusterTraceIds(orgId, projectId, data.cluster, data.selection)
-        return yield* createDatasetFromTraces({
-          projectId,
-          name: data.name,
-          source: { kind: "project" },
-          selection: { mode: "selected", traceIds },
-        })
-      }).pipe(
-        withPostgres(
-          Layer.mergeAll(DatasetRepositoryLive, OutboxEventWriterLive, TaxonomyClusterRepositoryLive),
-          getPostgresClient(),
-          orgId,
-        ),
-        withClickHouse(
-          Layer.mergeAll(
-            DatasetRowRepositoryLive,
-            TraceRepositoryLive,
-            ScoreAnalyticsRepositoryLive,
-            TaxonomyClusterIntelligenceRepositoryLive,
+      const result = await Effect.runPromise(
+        Effect.gen(function* () {
+          const traceIds = yield* resolveClusterTraceIds(orgId, projectId, data.cluster, data.selection)
+          return yield* createDatasetFromTraces({
+            projectId,
+            name: data.name,
+            source: { kind: "project" },
+            selection: { mode: "selected", traceIds },
+          })
+        }).pipe(
+          withScopedPostgres(
+            Layer.mergeAll(DatasetRepositoryLive, OutboxEventWriterLive, TaxonomyClusterRepositoryLive),
+            getPostgresClient(),
+            orgId,
           ),
-          chClient,
-          orgId,
+          withScopedClickHouse(
+            Layer.mergeAll(
+              DatasetRowRepositoryLive,
+              TraceRepositoryLive,
+              ScoreAnalyticsRepositoryLive,
+              TaxonomyClusterIntelligenceRepositoryLive,
+            ),
+            chClient,
+            orgId,
+          ),
+          withAi(AIEmbedLive, getRedisClient()),
+          withTracing,
         ),
-        withAi(AIEmbedLive, getRedisClient()),
-        withTracing,
-      ),
-    )
+      )
 
-    return {
-      datasetId: result.datasetId as string,
-      versionId: result.versionId as string,
-      version: result.version,
-      rowCount: result.rowIds.length,
-    }
-  })
+      return {
+        datasetId: result.datasetId as string,
+        versionId: result.versionId as string,
+        version: result.version,
+        rowCount: result.rowIds.length,
+      }
+    },
+  )
 
 export const addDatasetColumn = createServerFn({ method: "POST" })
   .inputValidator(z.object({ datasetId: z.string(), name: z.string().min(1) }))
-  .handler(async ({ data }): Promise<DatasetColumn> => {
-    const { organizationId } = await requireSession()
-    const orgId = OrganizationId(organizationId)
+  .handler(async ({ data, context }): Promise<DatasetColumn> => {
+    const orgId = await resolveOrgScope(context)
 
     return Effect.runPromise(
       addColumn({ datasetId: DatasetId(data.datasetId), name: data.name }).pipe(
-        withPostgres(DatasetRepositoryLive, getPostgresClient(), orgId),
+        withScopedPostgres(DatasetRepositoryLive, getPostgresClient(), orgId),
         withTracing,
       ),
     )
@@ -952,13 +947,12 @@ export const addDatasetColumn = createServerFn({ method: "POST" })
 
 export const updateDatasetColumn = createServerFn({ method: "POST" })
   .inputValidator(z.object({ datasetId: z.string(), identifier: z.string().min(1), name: z.string().min(1) }))
-  .handler(async ({ data }): Promise<DatasetColumn> => {
-    const { organizationId } = await requireSession()
-    const orgId = OrganizationId(organizationId)
+  .handler(async ({ data, context }): Promise<DatasetColumn> => {
+    const orgId = await resolveOrgScope(context)
 
     return Effect.runPromise(
       updateColumn({ datasetId: DatasetId(data.datasetId), identifier: data.identifier, name: data.name }).pipe(
-        withPostgres(DatasetRepositoryLive, getPostgresClient(), orgId),
+        withScopedPostgres(DatasetRepositoryLive, getPostgresClient(), orgId),
         withTracing,
       ),
     )
@@ -966,13 +960,12 @@ export const updateDatasetColumn = createServerFn({ method: "POST" })
 
 export const removeDatasetColumn = createServerFn({ method: "POST" })
   .inputValidator(z.object({ datasetId: z.string(), identifier: z.string().min(1) }))
-  .handler(async ({ data }): Promise<{ ok: true }> => {
-    const { organizationId } = await requireSession()
-    const orgId = OrganizationId(organizationId)
+  .handler(async ({ data, context }): Promise<{ ok: true }> => {
+    const orgId = await resolveOrgScope(context)
 
     await Effect.runPromise(
       removeColumn({ datasetId: DatasetId(data.datasetId), identifier: data.identifier }).pipe(
-        withPostgres(DatasetRepositoryLive, getPostgresClient(), orgId),
+        withScopedPostgres(DatasetRepositoryLive, getPostgresClient(), orgId),
         withTracing,
       ),
     )
@@ -981,13 +974,12 @@ export const removeDatasetColumn = createServerFn({ method: "POST" })
 
 export const reorderDatasetColumns = createServerFn({ method: "POST" })
   .inputValidator(z.object({ datasetId: z.string(), order: z.array(z.string().min(1)) }))
-  .handler(async ({ data }): Promise<DatasetColumn[]> => {
-    const { organizationId } = await requireSession()
-    const orgId = OrganizationId(organizationId)
+  .handler(async ({ data, context }): Promise<DatasetColumn[]> => {
+    const orgId = await resolveOrgScope(context)
 
     return Effect.runPromise(
       reorderColumns({ datasetId: DatasetId(data.datasetId), order: data.order }).pipe(
-        withPostgres(DatasetRepositoryLive, getPostgresClient(), orgId),
+        withScopedPostgres(DatasetRepositoryLive, getPostgresClient(), orgId),
         withTracing,
       ),
     )
@@ -995,13 +987,12 @@ export const reorderDatasetColumns = createServerFn({ method: "POST" })
 
 export const restoreDatasetColumn = createServerFn({ method: "POST" })
   .inputValidator(z.object({ datasetId: z.string(), identifier: z.string().min(1) }))
-  .handler(async ({ data }): Promise<DatasetColumn> => {
-    const { organizationId } = await requireSession()
-    const orgId = OrganizationId(organizationId)
+  .handler(async ({ data, context }): Promise<DatasetColumn> => {
+    const orgId = await resolveOrgScope(context)
 
     return Effect.runPromise(
       restoreColumn({ datasetId: DatasetId(data.datasetId), identifier: data.identifier }).pipe(
-        withPostgres(DatasetRepositoryLive, getPostgresClient(), orgId),
+        withScopedPostgres(DatasetRepositoryLive, getPostgresClient(), orgId),
         withTracing,
       ),
     )

@@ -71,13 +71,13 @@ Annotations support the same fields as custom scores, plus optional anchor field
 | `value` | number | Yes | Normalized score between 0 and 1 |
 | `passed` | boolean | Yes | Pass/fail verdict |
 | `feedback` | string | Yes | The reviewer's feedback text |
-| `issueId` | string | No | Link to an existing issue |
+| `signalId` | string | No | Link to an existing signal |
 
 ## How Scores Feed the System
 
 Once submitted, custom scores and annotations flow through the same reliability pipeline as internally generated scores:
 
-1. **Issue discovery**: Failed scores automatically enter the discovery pipeline, where Latitude clusters similar failures into issues
+1. **Signal discovery**: Failed scores automatically enter the discovery pipeline, where Latitude clusters similar failures into signals
 2. **Analytics**: Finalized scores appear in time-series dashboards
 3. **Alignment**: Annotation scores are compared against evaluation scores for the same traces to compute alignment metrics
 
@@ -87,4 +87,4 @@ Custom scores and annotations are first-class citizens. They appear alongside ev
 
 - [Scores Overview](./overview): How the score model works
 - [Annotations](../annotations/overview): How the annotation workflow works
-- [Issues](../signals/overview): How failed scores become trackable issues
+- [Signals](../signals/overview): How failed scores become trackable signals

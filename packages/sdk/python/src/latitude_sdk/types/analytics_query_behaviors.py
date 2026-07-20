@@ -25,11 +25,6 @@ class AnalyticsQueryBehaviors(UniversalBaseModel):
     The metric: `count`, or `{avg|min|max|median}` of the 0–1 assignment `confidence`.
     """
 
-    filters: typing.Optional[typing.Dict[str, typing.List[FilterCondition]]] = pydantic.Field(default=None)
-    """
-    Structured filter set applied to the stream (same DSL as `listTraces`).
-    """
-
     time_bucket: typing_extensions.Annotated[
         typing.Optional[AnalyticsQueryBehaviorsTimeBucket],
         FieldMetadata(alias="timeBucket"),
@@ -52,6 +47,11 @@ class AnalyticsQueryBehaviors(UniversalBaseModel):
     limit: typing.Optional[int] = pydantic.Field(default=None)
     """
     Maximum rows returned. Defaults to 50; max 500.
+    """
+
+    filters: typing.Optional[typing.Dict[str, typing.List[FilterCondition]]] = pydantic.Field(default=None)
+    """
+    Structured filter set applied to the stream (same DSL as `listTraces`).
     """
 
     model_config: typing.ClassVar[pydantic.ConfigDict] = pydantic.ConfigDict(extra="allow", frozen=True)

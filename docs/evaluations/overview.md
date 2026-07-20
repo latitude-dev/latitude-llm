@@ -1,63 +1,63 @@
 ---
-title: Evaluations Overview
-description: Understand how evaluations monitor your agent's quality over time
+title: Evaluations overview
+description: Understand how evaluations score traffic to monitor your agent's quality over time.
 ---
 
-# Evaluations Overview
+# Evaluations overview
 
-Evaluations are automated monitors that score incoming traces. They track known signal patterns, catch regressions, and show whether a production problem is getting better or worse.
+An evaluation is an automated detector that scores sessions as they arrive. It watches for one behavior or quality criterion, runs on completed traffic, and produces a [score](../scores/overview) each time it checks a session. Those scores feed the same analytics, signal, and alignment workflows as annotations and flaggers.
 
-Latitude can use different strategies depending on the signal. Some monitors check structural signals, while others use LLM judgment for behavior that requires semantic understanding. For signal-generated evaluations, Latitude chooses the strategy from the available examples and feedback.
+Every signal is backed by an evaluation. When a signal's evaluation matches a session, that session joins the signal.
 
-## What Is an Evaluation
+## What an evaluation has
 
-An evaluation defines a quality check for traces. Each evaluation has:
+- A name and description: the behavior being detected.
+- A detection method: how it decides whether a session matches. See [Detection methods](./detection-methods).
+- A trigger: which sessions it runs on, and at what sampling rate. See [Triggers](./triggers).
 
-- **A name**: The signal or behavior being monitored
-- **A description**: What the evaluation is trying to detect
-- **A detection strategy**: How Latitude decides whether a trace matches the signal
-- **A trigger configuration**: Which traces to monitor and at what sample rate
+## How an evaluation runs
 
-Most evaluations are created from signals. When you generate an evaluation from a signal, Latitude uses the signal description, example traces, annotations, and scores to build the monitor.
+1. A session completes in your project.
+2. Latitude checks it against each active evaluation's scope and sampling.
+3. Matching evaluations score the session.
+4. Each returns a pass or fail verdict with feedback, stored as a score.
+5. A passing score adds the session to the evaluation's signal.
 
-## How Evaluations Work
+`passed = true` means the behavior is present, not that the session was good. A signal for a bad behavior passes when that behavior happens.
 
-1. A trace completes in your project.
-2. Latitude checks whether it matches each active evaluation's trigger configuration.
-3. Matching evaluations analyze the trace.
-4. Each evaluation returns a pass/fail verdict with feedback.
-5. Latitude creates a score attached to the trace.
-6. Failed scores feed back into [signal discovery](../signals/overview).
+## Where evaluations come from
 
-## Evaluation Strategies
+An evaluation can be created two ways.
 
-Clear structural failures, such as tool errors or empty responses, can often be monitored directly. Semantic behavior, such as relevance, refusal quality, or whether an answer resolved the user's request, may need LLM judgment.
+### Generated from a signal
 
-You do not need to choose the strategy manually for signal-generated evaluations. Latitude builds a monitor from the signal's traces and scores.
+When Latitude discovers a signal, or when you choose to monitor one, it can generate an evaluation from the signal's description, example traces, annotations, and scores. You don't pick the method. Latitude builds a detector from the evidence and keeps it aligned to human judgment over time.
 
-## Realignment
+### Defined by you
 
-Evaluations improve as more evidence arrives. New annotations, flagger matches, evaluation results, and custom scores help Latitude keep monitors calibrated to recent examples and human judgment. See [Alignment](./alignment).
+When you [create a signal](../signals/create) yourself, you define its evaluation directly. You choose one of three [detection methods](./detection-methods):
 
-## Creating Evaluations
+- Set of conditions: deterministic checks, free and instant.
+- LLM as judge: describe the behavior and let an LLM decide.
+- Custom script: JavaScript for anything the other two can't express.
 
-### From Signals
+A detector you define runs exactly as written. It is not automatically realigned to annotations the way a generated one is. See [Alignment](./alignment).
 
-Generate an evaluation from an [signal](../signals/overview) to monitor that failure pattern on future traces.
+## Choosing a detection method
 
-### From Known Requirements
+Clear structural failures, such as tool errors, empty responses, or latency over a limit, are a good fit for a set of conditions. Semantic behavior, such as relevance, tone, or whether an answer resolved the request, usually needs an LLM judge. When neither fits, a custom script gives you full control. See [Detection methods](./detection-methods) for the full catalog.
 
-You can also create evaluations for behaviors you already know you want to enforce, such as answer completeness, policy compliance, formatting requirements, or task success.
+## Evaluation lifecycle
 
-## Evaluation Lifecycle
+- Active: scoring matching sessions in real time.
+- Paused: sampling set to `0`, configuration preserved.
+- Archived: read-only and no longer scoring new sessions.
+- Deleted: removed from management views, while historical results stay in analytics.
 
-- **Active**: Monitoring matching traces in real time
-- **Paused**: Temporarily disabled by setting sampling to `0`; configuration is preserved
-- **Archived**: Read-only and no longer monitoring new traces
-- **Deleted**: Removed from management views while historical results remain represented in analytics
+## Next steps
 
-## Next Steps
-
-- [Triggers](./triggers): Configure which traces an evaluation monitors
-- [Alignment](./alignment): Understand how evaluations stay calibrated to human judgment
-- [Signals](../signals/overview): How evaluation failures become trackable signals
+- [Detection methods](./detection-methods): the three ways an evaluation decides
+- [Custom scripts](./custom-scripts): the scripting reference
+- [Triggers](./triggers): scope and sampling
+- [Alignment](./alignment): how evaluations stay calibrated to human judgment
+- [Signals](../signals/overview): how evaluation matches become tracked signals

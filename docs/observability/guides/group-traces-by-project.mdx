@@ -1,11 +1,11 @@
 ---
 title: Group traces by project
-description: Keep issue detection scoped to the right agent by routing traces into separate Latitude projects.
+description: Keep signal detection scoped to the right agent by routing traces into separate Latitude projects.
 ---
 
 # Group traces by project
 
-Latitude runs issue detection across all traces inside a project. That is the right default when one project represents one agent, application, or product surface.
+Latitude runs signal detection across all traces inside a project. That is the right default when one project represents one agent, application, or product surface.
 
 If the same workspace receives traces from multiple unrelated agents, their failure modes can mix together. For example, a customer-support agent and a code-review agent should usually not share signal discovery, because frustration, tool failures, refusals, or hallucinations mean different things in each context.
 
@@ -19,9 +19,9 @@ Use separate projects when agents have different:
 - users, workflows, or product surfaces
 - quality standards or failure definitions
 - owners or triage workflows
-- issue detection and evaluation needs
+- signal detection and evaluation needs
 
-Keep traces in the same project when they belong to the same agent experience and should share signal discovery, search, scores, evaluations, and issue trends.
+Keep traces in the same project when they belong to the same agent experience and should share signal discovery, search, scores, evaluations, and signal trends.
 
 ## How Latitude resolves the project
 

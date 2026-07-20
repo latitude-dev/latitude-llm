@@ -9,9 +9,16 @@ import { createServerFn } from "@tanstack/react-start"
 import { Effect } from "effect"
 import { z } from "zod"
 import { CHANGELOG_UI_ENABLED } from "../../../domains/changelog/changelog.collection.ts"
+import {
+  ProjectScopeProvider,
+  SHOWCASE_SCOPE,
+  useIsReadOnlyProjectScope,
+} from "../../../domains/projects/project-scope.tsx"
 import { PROJECT_SETTINGS_SECTION, useVisibleProjectSectionGroups } from "../../../domains/projects/project-sections.ts"
 import { useProjectsCollection } from "../../../domains/projects/projects.collection.ts"
 import { type ProjectRecord, rememberLastProjectSlug, toRecord } from "../../../domains/projects/projects.functions.ts"
+import { loadProjectRouteData } from "../../../domains/projects/showcase-project.ts"
+import { getShowcaseProjectRecord } from "../../../domains/showcase/showcase.functions.ts"
 import { getLatestWrappedReportForProject } from "../../../domains/wrapped/wrapped.functions.ts"
 import { AppSidebar, NavItem } from "../../../layouts/AppSidebar/index.tsx"
 import { ContentErrorBoundary } from "../../../lib/client-error-reporting.tsx"
@@ -20,6 +27,7 @@ import { getPostgresClient } from "../../../server/clients.ts"
 import { ChangelogSidebarEntry } from "../-components/changelog/changelog-sidebar-entry.tsx"
 import { ProjectBreadcrumbSegment } from "../-components/project-breadcrumb-segment.tsx"
 import { SandboxSwitcher } from "../-components/sandbox-switcher.tsx"
+import { ShowcaseBanner } from "./-components/showcase-banner.tsx"
 
 const getProjectBySlug = createServerFn({ method: "GET" })
   .inputValidator(z.object({ slug: z.string() }))
@@ -47,13 +55,16 @@ export const Route = createFileRoute("/_authenticated/projects/$projectSlug")({
   // Keep the rendered project record in `loader` so TanStack Router can cache
   // it across same-route search-param navigations. `beforeLoad` is better for
   // middleware-only checks, while descendants can read cached loader data with
-  // `useLoaderData({ select })`.
+  // `useLoaderData({ select })`. The reserved showcase slug resolves cross-org
+  // via the showcase resolver and marks the data `isShowcase` so the layout
+  // scopes descendant reads to the showcase org.
   loader: async ({ params }) => {
     try {
-      const project = await getProjectBySlug({
-        data: { slug: params.projectSlug },
+      return await loadProjectRouteData({
+        slug: params.projectSlug,
+        loadShowcaseProject: () => getShowcaseProjectRecord(),
+        loadProjectBySlug: (slug) => getProjectBySlug({ data: { slug } }),
       })
-      return { project }
     } catch {
       throw redirect({ to: "/" })
     }
@@ -72,6 +83,13 @@ function ProjectSidebar({ project, projectSlug }: { project: ProjectRecord; proj
   const pathname = useRouterState({ select: (state) => state.location.pathname })
   const sectionGroups = useVisibleProjectSectionGroups()
 
+  // The footer extras (Wrapped shortcut, sandbox switcher, Settings) are all
+  // full-product chrome that makes no sense in the read-only demo: the sandbox
+  // mirrors the *current* project (a foreign showcase-org project here),
+  // Settings would be the showcase org's settings, and a Wrapped report on the
+  // demo isn't the viewer's. One scope check hides all three.
+  const isReadOnly = useIsReadOnlyProjectScope()
+
   // Fire-and-forget client-side fetch: surfaces a sidebar shortcut to this
   // week's Wrapped report when one exists. Returns null for the typical
   // case (no report or report > 7 days old) and we just render nothing.
@@ -80,6 +98,7 @@ function ProjectSidebar({ project, projectSlug }: { project: ProjectRecord; proj
     queryFn: () => getLatestWrappedReportForProject({ data: { projectId: project.id, type: "claude_code" } }),
     staleTime: WRAPPED_REPORT_STALE_TIME_MS,
     retry: false,
+    enabled: !isReadOnly,
   })
 
   return (
@@ -89,23 +108,27 @@ function ProjectSidebar({ project, projectSlug }: { project: ProjectRecord; proj
       footer={({ collapsed }) => (
         <>
           {CHANGELOG_UI_ENABLED ? <ChangelogSidebarEntry collapsed={collapsed} /> : null}
-          {latestWrapped ? (
-            <NavItem
-              icon={ClaudeCodeIcon}
-              label="Claude Code Wrapped"
-              to={`/wrapped/${latestWrapped.id}`}
-              external
-              collapsed={collapsed}
-            />
-          ) : null}
-          <SandboxSwitcher collapsed={collapsed} projectId={project.id} />
-          <NavItem
-            icon={PROJECT_SETTINGS_SECTION.icon}
-            label={PROJECT_SETTINGS_SECTION.label}
-            to={PROJECT_SETTINGS_SECTION.path(projectSlug)}
-            active={PROJECT_SETTINGS_SECTION.isActive(pathname, projectSlug)}
-            collapsed={collapsed}
-          />
+          {isReadOnly ? null : (
+            <>
+              {latestWrapped ? (
+                <NavItem
+                  icon={ClaudeCodeIcon}
+                  label="Claude Code Wrapped"
+                  to={`/wrapped/${latestWrapped.id}`}
+                  external
+                  collapsed={collapsed}
+                />
+              ) : null}
+              <SandboxSwitcher collapsed={collapsed} projectId={project.id} />
+              <NavItem
+                icon={PROJECT_SETTINGS_SECTION.icon}
+                label={PROJECT_SETTINGS_SECTION.label}
+                to={PROJECT_SETTINGS_SECTION.path(projectSlug)}
+                active={PROJECT_SETTINGS_SECTION.isActive(pathname, projectSlug)}
+                collapsed={collapsed}
+              />
+            </>
+          )}
         </>
       )}
     >
@@ -152,6 +175,18 @@ function SampleProjectStrip() {
 }
 
 function ProjectLayout() {
+  const isShowcase = Route.useLoaderData({ select: (data) => data.isShowcase })
+  if (isShowcase) {
+    return (
+      <ProjectScopeProvider scope={SHOWCASE_SCOPE}>
+        <ProjectLayoutContent isShowcase />
+      </ProjectScopeProvider>
+    )
+  }
+  return <ProjectLayoutContent isShowcase={false} />
+}
+
+function ProjectLayoutContent({ isShowcase }: { isShowcase: boolean }) {
   const { projectSlug } = Route.useParams()
   const projectFromLoader = Route.useLoaderData({ select: (data) => data.project })
   const { data: projectFromCollection } = useProjectsCollection(
@@ -170,6 +205,22 @@ function ProjectLayout() {
     return (
       <div className="flex min-h-0 w-full min-w-0 flex-1 flex-col">
         <Outlet />
+      </div>
+    )
+  }
+
+  if (isShowcase) {
+    return (
+      <div className="flex h-full min-h-0 flex-col overflow-hidden bg-primary">
+        <ShowcaseBanner />
+        <div className="relative flex min-h-0 flex-1 overflow-hidden rounded-t-2xl bg-background">
+          <ProjectSidebar project={project} projectSlug={projectSlug} />
+          <main className="flex-1 min-w-0 overflow-y-auto">
+            <ContentErrorBoundary>
+              <Outlet />
+            </ContentErrorBoundary>
+          </main>
+        </div>
       </div>
     )
   }

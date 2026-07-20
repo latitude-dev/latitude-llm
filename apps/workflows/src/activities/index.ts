@@ -56,6 +56,12 @@ export {
   waitForTaxonomyObservationStabilityActivity,
 } from "./session-intelligence-backfill-activities.ts"
 export {
+  assertShowcaseNextQualityActivity,
+  enqueueShowcaseCleanupActivity,
+  markShowcaseNextReadyActivity,
+  swapShowcaseActivity,
+} from "./showcase-regeneration-activities.ts"
+export {
   assignOrCreateSignal,
   assignScoreToSignal,
   checkEligibility,
@@ -65,7 +71,6 @@ export {
 } from "./signal-discovery-activities.ts"
 export {
   assertGardenTaxonomyQualityActivity,
-  buildHierarchicalGardenTaxonomyActivity,
   completeGardenTaxonomyRunActivity,
   deprecateGardenTaxonomyClustersActivity,
   emitGardenTaxonomyLineageActivity,
@@ -78,7 +83,6 @@ export {
   type GardenTaxonomyQualityResult,
   type GardenTaxonomyReassignObservationsInput,
   type GardenTaxonomySaveClustersInput,
-  nameGardenTaxonomyActivity,
   planGardenTaxonomyNamingActivity,
   planHierarchicalGardenTaxonomyActivity,
   reassignGardenTaxonomyObservationsActivity,

@@ -7,6 +7,36 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [9.2.0] - 2026-07-16
+
+### Added
+
+- `list_traces` filters now document and validate a dedicated `TraceFilterSet` (including `end_time`). Unknown filter fields and `gte_percentile` on `start_time`/`end_time` are rejected with 400 instead of being silently ignored or failing as 500.
+
+## [9.1.0] - 2026-07-14
+
+### Added
+
+- `client.experiments` — manage project experiments that compare two or more variants against a baseline: `list`, `create`, `get`, `update`, `delete`. Each variant is a population defined by a `filter_set`, an optional search `query`, and a `time_range`; exactly one variant carries the `baseline` flag. `client.experiments.get` returns the full comparison — per-variant metrics grouped by entity (`sessions`, `users`, `tools`, `signals`, `behaviours`), where every metric is a `{ "value": ..., "delta": ... }` pair whose `delta` is the signed change versus the baseline (`None` on the baseline variant itself). `tools`, `signals`, and `behaviours` also carry a `top` ranked list.
+
+## [9.0.0] - 2026-07-10
+
+### Changed (breaking)
+
+- `client.monitors.update` no longer accepts `target`, `trigger`, `metric`, or `condition`. Monitor target, trigger, metric, and incident-launching conditions are fixed after creation; use this call for `name`, `description`, and `severity` only.
+
+## [8.1.0] - 2026-07-08
+
+### Added
+
+- `SignalDetail.monitoring_state` gains a `failed` variant, returned when the most recent evaluation generation or realignment workflow for the signal ended in failure. It carries `phase` (`"generate"` or `"realign"`), an optional `evaluation_id` (present only for `realign`), and a nullable `reason` with the resolved failure message. A later successful workflow supersedes an older failure, so `failed` only reflects the latest run.
+
+## [8.0.1] - 2026-07-07
+
+### Changed
+
+- `client.spans.query` and `client.analytics.query` with `stream: "spans"` now use `SpanRowFilterSet` for `filters` — span row filters reject the `gtePercentile` operator (returns `400`). Use `client.analytics.query` with `{ "kind": "percentile", "field": ..., "p": ... }` for span percentile metrics instead.
+
 ## [8.0.0] - 2026-07-06
 
 ### Changed (breaking)

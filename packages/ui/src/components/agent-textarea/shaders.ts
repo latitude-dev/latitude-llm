@@ -18,7 +18,7 @@ uniform float u_coverage;
 uniform float u_intensity;
 uniform float u_focus;
 uniform float u_light;
-uniform float u_radius;
+uniform vec4 u_radii;
 uniform float u_bleed;
 
 const float PI = 3.14159265359;
@@ -51,6 +51,16 @@ const HELPERS = `
 float sdRoundedRect(vec2 p, vec2 halfSize, float r) {
   vec2 q = abs(p) - halfSize + r;
   return length(max(q, 0.0)) + min(max(q.x, q.y), 0.0) - r;
+}
+
+// u_radii is CSS-ordered (top-left, top-right, bottom-right, bottom-left); gl_FragCoord's
+// y axis points up, so p.y > 0 is the top half.
+float cornerRadius(vec2 p) {
+  return p.y > 0.0 ? (p.x < 0.0 ? u_radii.x : u_radii.y) : (p.x < 0.0 ? u_radii.w : u_radii.z);
+}
+
+float maxCornerRadius() {
+  return max(max(u_radii.x, u_radii.y), max(u_radii.z, u_radii.w));
 }
 
 float hash21(vec2 p) {
@@ -220,8 +230,11 @@ vec4 pulsingBorder(vec2 p, vec2 halfSize, float d, float px1) {
   smoke *= mix(1.0, pulse, PULSE);
   band = clamp(band + smoke, 0.0, 1.0);
 
-  vec2 inner = max(halfSize - vec2(u_radius), vec2(0.001));
-  float angle = perimeterCoord(p, inner, max(u_radius + d, 0.5));
+  // The perimeter parameterization assumes one radius; the max keeps spot travel smooth and
+  // only drifts slightly near mixed-radius corners.
+  float rMax = maxCornerRadius();
+  vec2 inner = max(halfSize - vec2(rMax), vec2(0.001));
+  float angle = perimeterCoord(p, inner, max(rMax + d, 0.5));
   float spotSizeBase = (0.05 + 0.6 * pow(mix(SPOT_SIZE_IDLE, SPOT_SIZE_FOCUS, u_focus), 2.0)) * shrink;
 
   vec3 rgbSum = vec3(0.0);
@@ -271,7 +284,7 @@ void main() {
   float px1 = u_bleed / 8.0;
   vec2 p = gl_FragCoord.xy - 0.5 * u_resolution;
   vec2 halfSize = 0.5 * u_resolution - vec2(u_bleed);
-  float d = sdRoundedRect(p, halfSize, u_radius);
+  float d = sdRoundedRect(p, halfSize, cornerRadius(p));
 
   // Loading floods in as a tide rising from the bottom border while the whole fill also
   // fades in; the waterline undulates only mid-transition.

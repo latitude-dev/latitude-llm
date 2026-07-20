@@ -1193,7 +1193,7 @@
                 "maxLength": 24
               }
             ],
-            "description": "Origin marker. Sentinel `\"UI\"` / `\"API\"` / `\"SYSTEM\"` for drafts and automation, or an annotation-queue CUID for queue-authored rows."
+            "description": "Origin marker. Sentinel `\"UI\"` / `\"API\"` / `\"SYSTEM\"` for drafts and automation, or a CUID for authored rows."
           },
           "metadata": {
             "$ref": "#/components/schemas/AnnotationMetadata"
@@ -1603,9 +1603,19 @@
             "description": "Free-text semantic search across the trace's input and output messages. Combined with `filters` via AND."
           },
           "filters": {
-            "$ref": "#/components/schemas/FilterSet"
+            "$ref": "#/components/schemas/TraceFilterSet"
           }
         }
+      },
+      "TraceFilterSet": {
+        "type": "object",
+        "additionalProperties": {
+          "type": "array",
+          "items": {
+            "$ref": "#/components/schemas/FilterCondition"
+          }
+        },
+        "description": "Filter set keyed by trace field. Each entry holds an array of conditions ANDed together for that field; field-level groups are ANDed across the set. Valid fields: status, name, traceId, sessionId, simulationId, userId, tags, models, providers, serviceNames, tools, definedTools, duration, ttft, cost, spanCount, errorCount, tokensInput, tokensOutput, cacheHitRate, startTime, endTime; score-derived keys (score.passed, score.errored, score.value, score.source, score.sourceId, score.annotatorId, score.signalId, score.simulationId); and arbitrary metadata via `metadata.<key>`. `startTime`/`endTime` take ISO-8601 values (a trace's first span start / last span end). `gtePercentile` is only supported on duration/ttft/cost — not on time fields. Unknown fields are rejected rather than ignored."
       },
       "TraceAnalyticsResponse": {
         "type": "object",
@@ -5123,9 +5133,47 @@
               "evaluationId"
             ],
             "description": "An active evaluation is being realigned."
+          },
+          {
+            "type": "object",
+            "properties": {
+              "kind": {
+                "type": "string",
+                "enum": [
+                  "failed"
+                ]
+              },
+              "phase": {
+                "type": "string",
+                "enum": [
+                  "generate",
+                  "realign"
+                ],
+                "description": "Which workflow failed: `generate` (creating the evaluation) or `realign` (updating it)."
+              },
+              "evaluationId": {
+                "type": "string",
+                "minLength": 24,
+                "maxLength": 24,
+                "description": "Id of the evaluation whose realignment failed. Absent when the failure was during `generate`."
+              },
+              "reason": {
+                "type": [
+                  "string",
+                  "null"
+                ],
+                "description": "Resolved failure message, or `null` once Temporal has dropped the failed run."
+              }
+            },
+            "required": [
+              "kind",
+              "phase",
+              "reason"
+            ],
+            "description": "The most recent generation or realignment workflow for this signal ended in failure."
           }
         ],
-        "description": "Whether the signal is currently being monitored: `automatic`, `idle`, `generating`, or `realigning`."
+        "description": "Whether the signal is currently being monitored: `automatic`, `idle`, `generating`, `realigning`, or `failed`."
       },
       "SignalHistogram": {
         "type": "object",
@@ -7962,45 +8010,6 @@
             "maxLength": 2000,
             "description": "New description."
           },
-          "target": {
-            "allOf": [
-              {
-                "$ref": "#/components/schemas/MonitorTarget"
-              },
-              {
-                "description": "Replacement target watched by the monitor."
-              }
-            ]
-          },
-          "trigger": {
-            "type": "string",
-            "enum": [
-              "match",
-              "threshold",
-              "escalating"
-            ],
-            "description": "Replacement incident trigger for the monitor rule."
-          },
-          "metric": {
-            "allOf": [
-              {
-                "$ref": "#/components/schemas/MonitorMetric"
-              },
-              {
-                "description": "Replacement metric evaluated by the monitor."
-              }
-            ]
-          },
-          "condition": {
-            "allOf": [
-              {
-                "$ref": "#/components/schemas/AlertCondition"
-              },
-              {
-                "description": "Replacement condition for threshold or escalating monitors."
-              }
-            ]
-          },
           "severity": {
             "type": "string",
             "enum": [
@@ -8390,16 +8399,6 @@
                 ],
                 "description": "The metric: `count`, `errorRate`, `cacheHitRate`, `{sum|min|max|avg|median}` over `duration`/`cost`/`tokens`, or `{kind:'percentile',field,p}` for an arbitrary percentile (`p` in [1,99]; e.g. `p:95`)."
               },
-              "filters": {
-                "allOf": [
-                  {
-                    "$ref": "#/components/schemas/FilterSet"
-                  },
-                  {
-                    "description": "Structured filter set applied to the stream (same DSL as `listTraces`)."
-                  }
-                ]
-              },
               "timeBucket": {
                 "type": "object",
                 "properties": {
@@ -8479,6 +8478,16 @@
                 "maximum": 500,
                 "default": 50,
                 "description": "Maximum rows returned. Defaults to 50; max 500."
+              },
+              "filters": {
+                "allOf": [
+                  {
+                    "$ref": "#/components/schemas/FilterSet"
+                  },
+                  {
+                    "description": "Structured filter set applied to the stream (same DSL as `listTraces`)."
+                  }
+                ]
               }
             },
             "required": [
@@ -8707,16 +8716,6 @@
                 ],
                 "description": "The metric: `count`, `errorRate`, `cacheHitRate`, `{sum|min|max|avg|median}` over `duration`/`cost`/`tokens`, or `{kind:'percentile',field,p}` for an arbitrary percentile (`p` in [1,99]; e.g. `p:95`)."
               },
-              "filters": {
-                "allOf": [
-                  {
-                    "$ref": "#/components/schemas/FilterSet"
-                  },
-                  {
-                    "description": "Structured filter set applied to the stream (same DSL as `listTraces`)."
-                  }
-                ]
-              },
               "timeBucket": {
                 "type": "object",
                 "properties": {
@@ -8796,6 +8795,16 @@
                 "maximum": 500,
                 "default": 50,
                 "description": "Maximum rows returned. Defaults to 50; max 500."
+              },
+              "filters": {
+                "allOf": [
+                  {
+                    "$ref": "#/components/schemas/FilterSet"
+                  },
+                  {
+                    "description": "Structured filter set applied to the stream (same DSL as `listTraces`)."
+                  }
+                ]
               }
             },
             "required": [
@@ -9018,16 +9027,6 @@
                 ],
                 "description": "The metric: `count`, `errorRate`, `cacheHitRate`, `{sum|min|max|avg|median}` over `duration`/`cost`/`tokens`, or `{kind:'percentile',field,p}` for an arbitrary percentile (`p` in [1,99]; e.g. `p:95`)."
               },
-              "filters": {
-                "allOf": [
-                  {
-                    "$ref": "#/components/schemas/FilterSet"
-                  },
-                  {
-                    "description": "Structured filter set applied to the stream (same DSL as `listTraces`)."
-                  }
-                ]
-              },
               "timeBucket": {
                 "type": "object",
                 "properties": {
@@ -9107,6 +9106,9 @@
                 "maximum": 500,
                 "default": 50,
                 "description": "Maximum rows returned. Defaults to 50; max 500."
+              },
+              "filters": {
+                "$ref": "#/components/schemas/SpanRowFilterSet"
               }
             },
             "required": [
@@ -9270,16 +9272,6 @@
                 ],
                 "description": "The metric: `count`, `passRate`, `errorRate`, or `{avg|min|max|median}` of the 0–1 score `value`."
               },
-              "filters": {
-                "allOf": [
-                  {
-                    "$ref": "#/components/schemas/FilterSet"
-                  },
-                  {
-                    "description": "Structured filter set applied to the stream (same DSL as `listTraces`)."
-                  }
-                ]
-              },
               "timeBucket": {
                 "type": "object",
                 "properties": {
@@ -9359,6 +9351,16 @@
                 "maximum": 500,
                 "default": 50,
                 "description": "Maximum rows returned. Defaults to 50; max 500."
+              },
+              "filters": {
+                "allOf": [
+                  {
+                    "$ref": "#/components/schemas/FilterSet"
+                  },
+                  {
+                    "description": "Structured filter set applied to the stream (same DSL as `listTraces`)."
+                  }
+                ]
               }
             },
             "required": [
@@ -9490,16 +9492,6 @@
                 ],
                 "description": "The metric: `count`, or `{avg|min|max|median}` of the 0–1 assignment `confidence`."
               },
-              "filters": {
-                "allOf": [
-                  {
-                    "$ref": "#/components/schemas/FilterSet"
-                  },
-                  {
-                    "description": "Structured filter set applied to the stream (same DSL as `listTraces`)."
-                  }
-                ]
-              },
               "timeBucket": {
                 "type": "object",
                 "properties": {
@@ -9579,6 +9571,16 @@
                 "maximum": 500,
                 "default": 50,
                 "description": "Maximum rows returned. Defaults to 50; max 500."
+              },
+              "filters": {
+                "allOf": [
+                  {
+                    "$ref": "#/components/schemas/FilterSet"
+                  },
+                  {
+                    "description": "Structured filter set applied to the stream (same DSL as `listTraces`)."
+                  }
+                ]
               }
             },
             "required": [
@@ -9714,16 +9716,6 @@
                 ],
                 "description": "The metric: `count`, or `{avg|min|max|median}` of the 0–1 label `confidence` or moment `coherence`."
               },
-              "filters": {
-                "allOf": [
-                  {
-                    "$ref": "#/components/schemas/FilterSet"
-                  },
-                  {
-                    "description": "Structured filter set applied to the stream (same DSL as `listTraces`)."
-                  }
-                ]
-              },
               "timeBucket": {
                 "type": "object",
                 "properties": {
@@ -9803,6 +9795,16 @@
                 "maximum": 500,
                 "default": 50,
                 "description": "Maximum rows returned. Defaults to 50; max 500."
+              },
+              "filters": {
+                "allOf": [
+                  {
+                    "$ref": "#/components/schemas/FilterSet"
+                  },
+                  {
+                    "description": "Structured filter set applied to the stream (same DSL as `listTraces`)."
+                  }
+                ]
               }
             },
             "required": [
@@ -9813,6 +9815,16 @@
             "additionalProperties": false
           }
         ]
+      },
+      "SpanRowFilterSet": {
+        "type": "object",
+        "additionalProperties": {
+          "type": "array",
+          "items": {
+            "$ref": "#/components/schemas/FilterCondition"
+          }
+        },
+        "description": "Structured filter set over span row fields. `gtePercentile` is not supported — use absolute thresholds or a percentile metric."
       },
       "QuerySpans": {
         "type": "object",
@@ -9848,10 +9860,10 @@
           "filters": {
             "allOf": [
               {
-                "$ref": "#/components/schemas/FilterSet"
+                "$ref": "#/components/schemas/SpanRowFilterSet"
               },
               {
-                "description": "Row-local span filter set (same DSL as `listTraces`) over span fields — `operation`, `toolName`, `model`, `provider`, `sessionId`, `traceId`, `tags`, `status` (`error`/`ok`/`unset`), `duration`, `cost`, `tokensInput`/`tokensOutput`."
+                "description": "Row-local span filter set (same DSL as `listTraces`) over span fields — `operation`, `toolName`, `model`, `provider`, `sessionId`, `traceId`, `tags`, `status` (`error`/`ok`/`unset`), `duration`, `cost`, `tokensInput`/`tokensOutput`. `gtePercentile` is not supported — use absolute thresholds or a percentile metric."
               }
             ]
           },
@@ -9912,6 +9924,1521 @@
             "maximum": 200,
             "default": 50,
             "description": "Page size. Defaults to 50; max 200."
+          }
+        }
+      },
+      "PaginatedExperiments": {
+        "type": "object",
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ExperimentListItem"
+            },
+            "description": "Page of items, in the requested sort order."
+          },
+          "nextCursor": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "Opaque cursor for fetching the next page. `null` when there are no more pages. Pass it back in `cursor` to continue."
+          },
+          "hasMore": {
+            "type": "boolean",
+            "description": "`true` when there is at least one more page after this one."
+          }
+        },
+        "required": [
+          "items",
+          "nextCursor",
+          "hasMore"
+        ]
+      },
+      "ExperimentListItem": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "minLength": 24,
+            "maxLength": 24,
+            "description": "Stable experiment identifier."
+          },
+          "organizationId": {
+            "type": "string",
+            "minLength": 24,
+            "maxLength": 24,
+            "description": "Organization that owns this experiment."
+          },
+          "projectId": {
+            "type": "string",
+            "minLength": 24,
+            "maxLength": 24,
+            "description": "Project this experiment belongs to."
+          },
+          "slug": {
+            "type": "string",
+            "description": "URL-safe slug derived from `name`. Unique within the project."
+          },
+          "name": {
+            "type": "string",
+            "description": "Human-readable name."
+          },
+          "description": {
+            "type": "string",
+            "description": "Free-form description. Empty string when not set."
+          },
+          "variants": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ExperimentVariant"
+            },
+            "description": "Ordered variants. Exactly one carries the baseline flag when the list is non-empty."
+          },
+          "createdAt": {
+            "type": "string",
+            "description": "ISO-8601 timestamp of creation."
+          },
+          "updatedAt": {
+            "type": "string",
+            "description": "ISO-8601 timestamp of the last update."
+          },
+          "variantCount": {
+            "type": "integer",
+            "description": "Number of variants in the experiment."
+          },
+          "sessionsDistinct": {
+            "type": "integer",
+            "description": "Distinct sessions across the union of every variant's population (a session in several variants counts once)."
+          },
+          "usersDistinct": {
+            "type": "integer",
+            "description": "Distinct users across the union of every variant's population (a user in several variants counts once)."
+          }
+        },
+        "required": [
+          "id",
+          "organizationId",
+          "projectId",
+          "slug",
+          "name",
+          "description",
+          "variants",
+          "createdAt",
+          "updatedAt",
+          "variantCount",
+          "sessionsDistinct",
+          "usersDistinct"
+        ]
+      },
+      "ExperimentVariant": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "minLength": 24,
+            "maxLength": 24,
+            "description": "Stable variant identifier, unique within the experiment."
+          },
+          "name": {
+            "type": "string",
+            "description": "Human-readable variant name (e.g. \"Variant A\"). Unique within the experiment."
+          },
+          "baseline": {
+            "type": "boolean",
+            "description": "`true` for the single baseline variant that every other variant is compared against."
+          },
+          "filterSet": {
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/FilterSet"
+              },
+              {
+                "description": "Session filters selecting this variant's population."
+              }
+            ]
+          },
+          "query": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "Free-text / semantic search applied to the population, or `null`."
+          },
+          "timeRange": {
+            "$ref": "#/components/schemas/VariantTimeRange"
+          }
+        },
+        "required": [
+          "id",
+          "name",
+          "baseline",
+          "filterSet",
+          "query",
+          "timeRange"
+        ]
+      },
+      "VariantTimeRange": {
+        "oneOf": [
+          {
+            "$ref": "#/components/schemas/RelativeVariantTimeRange"
+          },
+          {
+            "$ref": "#/components/schemas/AbsoluteVariantTimeRange"
+          },
+          {
+            "type": "null"
+          }
+        ],
+        "description": "Time window the variant is measured over. `null` uses the default last-30-days window."
+      },
+      "RelativeVariantTimeRange": {
+        "type": "object",
+        "properties": {
+          "type": {
+            "type": "string",
+            "enum": [
+              "relative"
+            ],
+            "description": "A live window ending now, spanning the last `seconds`."
+          },
+          "seconds": {
+            "type": "integer",
+            "exclusiveMinimum": 0,
+            "description": "Length of the live window in seconds (e.g. 2592000 for the last 30 days)."
+          }
+        },
+        "required": [
+          "type",
+          "seconds"
+        ]
+      },
+      "AbsoluteVariantTimeRange": {
+        "type": "object",
+        "properties": {
+          "type": {
+            "type": "string",
+            "enum": [
+              "absolute"
+            ],
+            "description": "A fixed window between two instants."
+          },
+          "fromIso": {
+            "type": "string",
+            "description": "ISO-8601 start of the window (inclusive)."
+          },
+          "toIso": {
+            "type": "string",
+            "description": "ISO-8601 end of the window (inclusive)."
+          }
+        },
+        "required": [
+          "type",
+          "fromIso",
+          "toIso"
+        ]
+      },
+      "Experiment": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "minLength": 24,
+            "maxLength": 24,
+            "description": "Stable experiment identifier."
+          },
+          "organizationId": {
+            "type": "string",
+            "minLength": 24,
+            "maxLength": 24,
+            "description": "Organization that owns this experiment."
+          },
+          "projectId": {
+            "type": "string",
+            "minLength": 24,
+            "maxLength": 24,
+            "description": "Project this experiment belongs to."
+          },
+          "slug": {
+            "type": "string",
+            "description": "URL-safe slug derived from `name`. Unique within the project."
+          },
+          "name": {
+            "type": "string",
+            "description": "Human-readable name."
+          },
+          "description": {
+            "type": "string",
+            "description": "Free-form description. Empty string when not set."
+          },
+          "variants": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ExperimentVariant"
+            },
+            "description": "Ordered variants. Exactly one carries the baseline flag when the list is non-empty."
+          },
+          "createdAt": {
+            "type": "string",
+            "description": "ISO-8601 timestamp of creation."
+          },
+          "updatedAt": {
+            "type": "string",
+            "description": "ISO-8601 timestamp of the last update."
+          }
+        },
+        "required": [
+          "id",
+          "organizationId",
+          "projectId",
+          "slug",
+          "name",
+          "description",
+          "variants",
+          "createdAt",
+          "updatedAt"
+        ]
+      },
+      "CreateExperimentBody": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 128,
+            "description": "Human-readable name. Used to derive the slug."
+          },
+          "description": {
+            "type": "string",
+            "maxLength": 2000,
+            "description": "Optional free-form description."
+          },
+          "variants": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "id": {
+                  "type": "string",
+                  "description": "Existing variant id to preserve. Omit to mint a new variant."
+                },
+                "name": {
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 128,
+                  "description": "Variant name. Unique within the experiment."
+                },
+                "baseline": {
+                  "type": "boolean",
+                  "description": "`true` for the baseline variant. Exactly one variant must be the baseline."
+                },
+                "filterSet": {
+                  "allOf": [
+                    {
+                      "$ref": "#/components/schemas/FilterSet"
+                    },
+                    {
+                      "description": "Session filters selecting this variant's population."
+                    }
+                  ]
+                },
+                "query": {
+                  "type": [
+                    "string",
+                    "null"
+                  ],
+                  "maxLength": 500,
+                  "description": "Free-text / semantic search, or `null`."
+                },
+                "timeRange": {
+                  "oneOf": [
+                    {
+                      "type": "object",
+                      "properties": {
+                        "type": {
+                          "type": "string",
+                          "enum": [
+                            "relative"
+                          ]
+                        },
+                        "seconds": {
+                          "type": "integer",
+                          "exclusiveMinimum": 0,
+                          "description": "Length of the live window in seconds."
+                        }
+                      },
+                      "required": [
+                        "type",
+                        "seconds"
+                      ]
+                    },
+                    {
+                      "type": "object",
+                      "properties": {
+                        "type": {
+                          "type": "string",
+                          "enum": [
+                            "absolute"
+                          ]
+                        },
+                        "fromIso": {
+                          "type": "string",
+                          "description": "ISO-8601 start of the window (inclusive)."
+                        },
+                        "toIso": {
+                          "type": "string",
+                          "description": "ISO-8601 end of the window (inclusive)."
+                        }
+                      },
+                      "required": [
+                        "type",
+                        "fromIso",
+                        "toIso"
+                      ]
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ],
+                  "description": "Time window, or `null` for the default last-30-days window."
+                }
+              },
+              "required": [
+                "name",
+                "baseline",
+                "filterSet",
+                "query",
+                "timeRange"
+              ]
+            },
+            "maxItems": 10,
+            "description": "Variant definitions. Omit to seed two default variants (`Variant A` baseline + `Variant B`); pass `[]` to create an empty experiment."
+          }
+        },
+        "required": [
+          "name"
+        ]
+      },
+      "ExperimentComparison": {
+        "type": "object",
+        "properties": {
+          "experiment": {
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/Experiment"
+              },
+              {
+                "description": "The experiment, including its variant definitions."
+              }
+            ]
+          },
+          "variants": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/VariantComparison"
+            },
+            "description": "One entry per variant, in the experiment's stored variant order. The baseline is the entry whose `baseline` field is `true` — identify it by that flag, never by array position."
+          }
+        },
+        "required": [
+          "experiment",
+          "variants"
+        ]
+      },
+      "VariantComparison": {
+        "type": "object",
+        "properties": {
+          "variantId": {
+            "type": "string",
+            "description": "Id of the variant these metrics belong to."
+          },
+          "baseline": {
+            "type": "boolean",
+            "description": "`true` when this is the baseline variant; every metric's `delta` is `null`."
+          },
+          "approximate": {
+            "type": "boolean",
+            "description": "`true` when the variant's query has a semantic component, making its population a best-effort sample."
+          },
+          "resolvedRange": {
+            "$ref": "#/components/schemas/ResolvedRange"
+          },
+          "metrics": {
+            "$ref": "#/components/schemas/VariantMetrics"
+          },
+          "deviatingPopulationKeys": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "Population keys (a subset of `sessions.count` / `sessions.users`) that deviate from the baseline by more than 25%."
+          }
+        },
+        "required": [
+          "variantId",
+          "baseline",
+          "approximate",
+          "resolvedRange",
+          "metrics",
+          "deviatingPopulationKeys"
+        ]
+      },
+      "ResolvedRange": {
+        "type": "object",
+        "properties": {
+          "fromIso": {
+            "type": "string",
+            "description": "ISO-8601 start of the resolved window."
+          },
+          "toIso": {
+            "type": "string",
+            "description": "ISO-8601 end of the resolved window."
+          }
+        },
+        "required": [
+          "fromIso",
+          "toIso"
+        ],
+        "description": "The absolute window the metrics were computed over."
+      },
+      "VariantMetrics": {
+        "type": "object",
+        "properties": {
+          "sessions": {
+            "$ref": "#/components/schemas/ExperimentSessionsMetrics"
+          },
+          "users": {
+            "$ref": "#/components/schemas/ExperimentUsersMetrics"
+          },
+          "tools": {
+            "$ref": "#/components/schemas/ExperimentToolsMetrics"
+          },
+          "signals": {
+            "$ref": "#/components/schemas/ExperimentSignalsMetrics"
+          },
+          "behaviours": {
+            "$ref": "#/components/schemas/ExperimentBehavioursMetrics"
+          }
+        },
+        "required": [
+          "sessions",
+          "users",
+          "tools",
+          "signals",
+          "behaviours"
+        ],
+        "description": "Population-scoped metrics grouped by entity. Each metric is a `{ value, delta }` pair; `delta` is the change vs the baseline (`null` on the baseline itself). `tools`, `signals`, and `behaviours` also carry a `top` ranked list."
+      },
+      "ExperimentSessionsMetrics": {
+        "type": "object",
+        "properties": {
+          "count": {
+            "type": "object",
+            "properties": {
+              "value": {
+                "type": [
+                  "number",
+                  "null"
+                ],
+                "description": "Value in the metric's unit; `null` when empty or not computable."
+              },
+              "delta": {
+                "$ref": "#/components/schemas/MetricDelta"
+              }
+            },
+            "required": [
+              "value",
+              "delta"
+            ],
+            "description": "Number of sessions in the variant's population — count."
+          },
+          "users": {
+            "type": "object",
+            "properties": {
+              "value": {
+                "type": [
+                  "number",
+                  "null"
+                ],
+                "description": "Value in the metric's unit; `null` when empty or not computable."
+              },
+              "delta": {
+                "$ref": "#/components/schemas/MetricDelta"
+              }
+            },
+            "required": [
+              "value",
+              "delta"
+            ],
+            "description": "Distinct users across the variant's sessions — count."
+          },
+          "cost_total": {
+            "type": "object",
+            "properties": {
+              "value": {
+                "type": [
+                  "number",
+                  "null"
+                ],
+                "description": "Value in the metric's unit; `null` when empty or not computable."
+              },
+              "delta": {
+                "$ref": "#/components/schemas/MetricDelta"
+              }
+            },
+            "required": [
+              "value",
+              "delta"
+            ],
+            "description": "Total model cost across the variant's sessions — USD; lower is better."
+          },
+          "tokens_total": {
+            "type": "object",
+            "properties": {
+              "value": {
+                "type": [
+                  "number",
+                  "null"
+                ],
+                "description": "Value in the metric's unit; `null` when empty or not computable."
+              },
+              "delta": {
+                "$ref": "#/components/schemas/MetricDelta"
+              }
+            },
+            "required": [
+              "value",
+              "delta"
+            ],
+            "description": "Total tokens across the variant's sessions — tokens."
+          },
+          "error_rate": {
+            "type": "object",
+            "properties": {
+              "value": {
+                "type": [
+                  "number",
+                  "null"
+                ],
+                "description": "Value in the metric's unit; `null` when empty or not computable."
+              },
+              "delta": {
+                "$ref": "#/components/schemas/MetricDelta"
+              }
+            },
+            "required": [
+              "value",
+              "delta"
+            ],
+            "description": "Fraction of sessions with at least one error — fraction (0–1); lower is better."
+          },
+          "cache_hit_rate": {
+            "type": "object",
+            "properties": {
+              "value": {
+                "type": [
+                  "number",
+                  "null"
+                ],
+                "description": "Value in the metric's unit; `null` when empty or not computable."
+              },
+              "delta": {
+                "$ref": "#/components/schemas/MetricDelta"
+              }
+            },
+            "required": [
+              "value",
+              "delta"
+            ],
+            "description": "Fraction of input tokens served from cache — fraction (0–1); higher is better."
+          },
+          "duration_median": {
+            "type": "object",
+            "properties": {
+              "value": {
+                "type": [
+                  "number",
+                  "null"
+                ],
+                "description": "Value in the metric's unit; `null` when empty or not computable."
+              },
+              "delta": {
+                "$ref": "#/components/schemas/MetricDelta"
+              }
+            },
+            "required": [
+              "value",
+              "delta"
+            ],
+            "description": "Median session duration — seconds; lower is better."
+          },
+          "duration_p90": {
+            "type": "object",
+            "properties": {
+              "value": {
+                "type": [
+                  "number",
+                  "null"
+                ],
+                "description": "Value in the metric's unit; `null` when empty or not computable."
+              },
+              "delta": {
+                "$ref": "#/components/schemas/MetricDelta"
+              }
+            },
+            "required": [
+              "value",
+              "delta"
+            ],
+            "description": "90th-percentile session duration — seconds; lower is better."
+          },
+          "duration_p95": {
+            "type": "object",
+            "properties": {
+              "value": {
+                "type": [
+                  "number",
+                  "null"
+                ],
+                "description": "Value in the metric's unit; `null` when empty or not computable."
+              },
+              "delta": {
+                "$ref": "#/components/schemas/MetricDelta"
+              }
+            },
+            "required": [
+              "value",
+              "delta"
+            ],
+            "description": "95th-percentile session duration — seconds; lower is better."
+          },
+          "cost_avg": {
+            "type": "object",
+            "properties": {
+              "value": {
+                "type": [
+                  "number",
+                  "null"
+                ],
+                "description": "Value in the metric's unit; `null` when empty or not computable."
+              },
+              "delta": {
+                "$ref": "#/components/schemas/MetricDelta"
+              }
+            },
+            "required": [
+              "value",
+              "delta"
+            ],
+            "description": "Average model cost per session — USD; lower is better."
+          },
+          "tokens_avg": {
+            "type": "object",
+            "properties": {
+              "value": {
+                "type": [
+                  "number",
+                  "null"
+                ],
+                "description": "Value in the metric's unit; `null` when empty or not computable."
+              },
+              "delta": {
+                "$ref": "#/components/schemas/MetricDelta"
+              }
+            },
+            "required": [
+              "value",
+              "delta"
+            ],
+            "description": "Average tokens per session — tokens."
+          },
+          "ttft_median": {
+            "type": "object",
+            "properties": {
+              "value": {
+                "type": [
+                  "number",
+                  "null"
+                ],
+                "description": "Value in the metric's unit; `null` when empty or not computable."
+              },
+              "delta": {
+                "$ref": "#/components/schemas/MetricDelta"
+              }
+            },
+            "required": [
+              "value",
+              "delta"
+            ],
+            "description": "Median time to first token across sessions — seconds; lower is better."
+          },
+          "spans_avg": {
+            "type": "object",
+            "properties": {
+              "value": {
+                "type": [
+                  "number",
+                  "null"
+                ],
+                "description": "Value in the metric's unit; `null` when empty or not computable."
+              },
+              "delta": {
+                "$ref": "#/components/schemas/MetricDelta"
+              }
+            },
+            "required": [
+              "value",
+              "delta"
+            ],
+            "description": "Average spans per session — count."
+          },
+          "traces_avg": {
+            "type": "object",
+            "properties": {
+              "value": {
+                "type": [
+                  "number",
+                  "null"
+                ],
+                "description": "Value in the metric's unit; `null` when empty or not computable."
+              },
+              "delta": {
+                "$ref": "#/components/schemas/MetricDelta"
+              }
+            },
+            "required": [
+              "value",
+              "delta"
+            ],
+            "description": "Average traces per session — count."
+          }
+        },
+        "required": [
+          "count",
+          "users",
+          "cost_total",
+          "tokens_total",
+          "error_rate",
+          "cache_hit_rate",
+          "duration_median",
+          "duration_p90",
+          "duration_p95",
+          "cost_avg",
+          "tokens_avg",
+          "ttft_median",
+          "spans_avg",
+          "traces_avg"
+        ]
+      },
+      "MetricDelta": {
+        "anyOf": [
+          {
+            "type": "number"
+          },
+          {
+            "type": "string",
+            "enum": [
+              "up-from-zero"
+            ]
+          },
+          {
+            "type": "null"
+          }
+        ],
+        "description": "Change vs the baseline: a signed fraction `(value - baseline) / baseline`, `\"up-from-zero\"` for an unbounded increase from a zero baseline, or `null` when incomparable or on the baseline variant itself."
+      },
+      "ExperimentUsersMetrics": {
+        "type": "object",
+        "properties": {
+          "distinct": {
+            "type": "object",
+            "properties": {
+              "value": {
+                "type": [
+                  "number",
+                  "null"
+                ],
+                "description": "Value in the metric's unit; `null` when empty or not computable."
+              },
+              "delta": {
+                "$ref": "#/components/schemas/MetricDelta"
+              }
+            },
+            "required": [
+              "value",
+              "delta"
+            ],
+            "description": "Distinct users in the variant's population — count."
+          },
+          "sessions_per_user": {
+            "type": "object",
+            "properties": {
+              "value": {
+                "type": [
+                  "number",
+                  "null"
+                ],
+                "description": "Value in the metric's unit; `null` when empty or not computable."
+              },
+              "delta": {
+                "$ref": "#/components/schemas/MetricDelta"
+              }
+            },
+            "required": [
+              "value",
+              "delta"
+            ],
+            "description": "Average sessions per user — count."
+          },
+          "traces_per_user": {
+            "type": "object",
+            "properties": {
+              "value": {
+                "type": [
+                  "number",
+                  "null"
+                ],
+                "description": "Value in the metric's unit; `null` when empty or not computable."
+              },
+              "delta": {
+                "$ref": "#/components/schemas/MetricDelta"
+              }
+            },
+            "required": [
+              "value",
+              "delta"
+            ],
+            "description": "Average traces per user — count."
+          },
+          "cost_avg": {
+            "type": "object",
+            "properties": {
+              "value": {
+                "type": [
+                  "number",
+                  "null"
+                ],
+                "description": "Value in the metric's unit; `null` when empty or not computable."
+              },
+              "delta": {
+                "$ref": "#/components/schemas/MetricDelta"
+              }
+            },
+            "required": [
+              "value",
+              "delta"
+            ],
+            "description": "Average model cost per user — USD; lower is better."
+          },
+          "duration_median": {
+            "type": "object",
+            "properties": {
+              "value": {
+                "type": [
+                  "number",
+                  "null"
+                ],
+                "description": "Value in the metric's unit; `null` when empty or not computable."
+              },
+              "delta": {
+                "$ref": "#/components/schemas/MetricDelta"
+              }
+            },
+            "required": [
+              "value",
+              "delta"
+            ],
+            "description": "Median total session time per user — seconds; lower is better."
+          },
+          "duration_p90": {
+            "type": "object",
+            "properties": {
+              "value": {
+                "type": [
+                  "number",
+                  "null"
+                ],
+                "description": "Value in the metric's unit; `null` when empty or not computable."
+              },
+              "delta": {
+                "$ref": "#/components/schemas/MetricDelta"
+              }
+            },
+            "required": [
+              "value",
+              "delta"
+            ],
+            "description": "90th-percentile total session time per user — seconds; lower is better."
+          },
+          "duration_p95": {
+            "type": "object",
+            "properties": {
+              "value": {
+                "type": [
+                  "number",
+                  "null"
+                ],
+                "description": "Value in the metric's unit; `null` when empty or not computable."
+              },
+              "delta": {
+                "$ref": "#/components/schemas/MetricDelta"
+              }
+            },
+            "required": [
+              "value",
+              "delta"
+            ],
+            "description": "95th-percentile total session time per user — seconds; lower is better."
+          },
+          "error_session_rate": {
+            "type": "object",
+            "properties": {
+              "value": {
+                "type": [
+                  "number",
+                  "null"
+                ],
+                "description": "Value in the metric's unit; `null` when empty or not computable."
+              },
+              "delta": {
+                "$ref": "#/components/schemas/MetricDelta"
+              }
+            },
+            "required": [
+              "value",
+              "delta"
+            ],
+            "description": "Average fraction of a user's sessions that have an error — fraction (0–1); lower is better."
+          }
+        },
+        "required": [
+          "distinct",
+          "sessions_per_user",
+          "traces_per_user",
+          "cost_avg",
+          "duration_median",
+          "duration_p90",
+          "duration_p95",
+          "error_session_rate"
+        ]
+      },
+      "ExperimentToolsMetrics": {
+        "type": "object",
+        "properties": {
+          "calls": {
+            "type": "object",
+            "properties": {
+              "value": {
+                "type": [
+                  "number",
+                  "null"
+                ],
+                "description": "Value in the metric's unit; `null` when empty or not computable."
+              },
+              "delta": {
+                "$ref": "#/components/schemas/MetricDelta"
+              }
+            },
+            "required": [
+              "value",
+              "delta"
+            ],
+            "description": "Total tool calls across the variant's sessions — count."
+          },
+          "distinct": {
+            "type": "object",
+            "properties": {
+              "value": {
+                "type": [
+                  "number",
+                  "null"
+                ],
+                "description": "Value in the metric's unit; `null` when empty or not computable."
+              },
+              "delta": {
+                "$ref": "#/components/schemas/MetricDelta"
+              }
+            },
+            "required": [
+              "value",
+              "delta"
+            ],
+            "description": "Distinct tools called — count."
+          },
+          "sessions_with_tools_rate": {
+            "type": "object",
+            "properties": {
+              "value": {
+                "type": [
+                  "number",
+                  "null"
+                ],
+                "description": "Value in the metric's unit; `null` when empty or not computable."
+              },
+              "delta": {
+                "$ref": "#/components/schemas/MetricDelta"
+              }
+            },
+            "required": [
+              "value",
+              "delta"
+            ],
+            "description": "Fraction of sessions that call at least one tool — fraction (0–1)."
+          },
+          "error_rate": {
+            "type": "object",
+            "properties": {
+              "value": {
+                "type": [
+                  "number",
+                  "null"
+                ],
+                "description": "Value in the metric's unit; `null` when empty or not computable."
+              },
+              "delta": {
+                "$ref": "#/components/schemas/MetricDelta"
+              }
+            },
+            "required": [
+              "value",
+              "delta"
+            ],
+            "description": "Fraction of tool calls that error — fraction (0–1); lower is better."
+          },
+          "duration_p50": {
+            "type": "object",
+            "properties": {
+              "value": {
+                "type": [
+                  "number",
+                  "null"
+                ],
+                "description": "Value in the metric's unit; `null` when empty or not computable."
+              },
+              "delta": {
+                "$ref": "#/components/schemas/MetricDelta"
+              }
+            },
+            "required": [
+              "value",
+              "delta"
+            ],
+            "description": "Median tool-call duration — seconds; lower is better."
+          },
+          "duration_p90": {
+            "type": "object",
+            "properties": {
+              "value": {
+                "type": [
+                  "number",
+                  "null"
+                ],
+                "description": "Value in the metric's unit; `null` when empty or not computable."
+              },
+              "delta": {
+                "$ref": "#/components/schemas/MetricDelta"
+              }
+            },
+            "required": [
+              "value",
+              "delta"
+            ],
+            "description": "90th-percentile tool-call duration — seconds; lower is better."
+          },
+          "duration_p95": {
+            "type": "object",
+            "properties": {
+              "value": {
+                "type": [
+                  "number",
+                  "null"
+                ],
+                "description": "Value in the metric's unit; `null` when empty or not computable."
+              },
+              "delta": {
+                "$ref": "#/components/schemas/MetricDelta"
+              }
+            },
+            "required": [
+              "value",
+              "delta"
+            ],
+            "description": "95th-percentile tool-call duration — seconds; lower is better."
+          },
+          "top": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ExperimentTopListItem"
+            },
+            "description": "Top tools by call count."
+          }
+        },
+        "required": [
+          "calls",
+          "distinct",
+          "sessions_with_tools_rate",
+          "error_rate",
+          "duration_p50",
+          "duration_p90",
+          "duration_p95",
+          "top"
+        ]
+      },
+      "ExperimentTopListItem": {
+        "type": "object",
+        "properties": {
+          "key": {
+            "type": "string",
+            "description": "Stable identity: tool name, signal id, or cluster id."
+          },
+          "label": {
+            "type": "string",
+            "description": "Human-readable label (resolved name; falls back to `key` when unresolved)."
+          },
+          "value": {
+            "type": "number",
+            "description": "Ranking value: tool calls / signal occurrences / behaviour observations."
+          }
+        },
+        "required": [
+          "key",
+          "label",
+          "value"
+        ]
+      },
+      "ExperimentSignalsMetrics": {
+        "type": "object",
+        "properties": {
+          "distinct": {
+            "type": "object",
+            "properties": {
+              "value": {
+                "type": [
+                  "number",
+                  "null"
+                ],
+                "description": "Value in the metric's unit; `null` when empty or not computable."
+              },
+              "delta": {
+                "$ref": "#/components/schemas/MetricDelta"
+              }
+            },
+            "required": [
+              "value",
+              "delta"
+            ],
+            "description": "Distinct signals raised on the variant's sessions — count; lower is better."
+          },
+          "occurrences": {
+            "type": "object",
+            "properties": {
+              "value": {
+                "type": [
+                  "number",
+                  "null"
+                ],
+                "description": "Value in the metric's unit; `null` when empty or not computable."
+              },
+              "delta": {
+                "$ref": "#/components/schemas/MetricDelta"
+              }
+            },
+            "required": [
+              "value",
+              "delta"
+            ],
+            "description": "Total signal occurrences — count; lower is better."
+          },
+          "affected_sessions_rate": {
+            "type": "object",
+            "properties": {
+              "value": {
+                "type": [
+                  "number",
+                  "null"
+                ],
+                "description": "Value in the metric's unit; `null` when empty or not computable."
+              },
+              "delta": {
+                "$ref": "#/components/schemas/MetricDelta"
+              }
+            },
+            "required": [
+              "value",
+              "delta"
+            ],
+            "description": "Fraction of sessions with at least one signal — fraction (0–1); lower is better."
+          },
+          "affected_traces_rate": {
+            "type": "object",
+            "properties": {
+              "value": {
+                "type": [
+                  "number",
+                  "null"
+                ],
+                "description": "Value in the metric's unit; `null` when empty or not computable."
+              },
+              "delta": {
+                "$ref": "#/components/schemas/MetricDelta"
+              }
+            },
+            "required": [
+              "value",
+              "delta"
+            ],
+            "description": "Fraction of traces with at least one signal — fraction (0–1); lower is better."
+          },
+          "affected_users": {
+            "type": "object",
+            "properties": {
+              "value": {
+                "type": [
+                  "number",
+                  "null"
+                ],
+                "description": "Value in the metric's unit; `null` when empty or not computable."
+              },
+              "delta": {
+                "$ref": "#/components/schemas/MetricDelta"
+              }
+            },
+            "required": [
+              "value",
+              "delta"
+            ],
+            "description": "Fraction of users with at least one signal — fraction (0–1); lower is better."
+          },
+          "cost_impact": {
+            "type": "object",
+            "properties": {
+              "value": {
+                "type": [
+                  "number",
+                  "null"
+                ],
+                "description": "Value in the metric's unit; `null` when empty or not computable."
+              },
+              "delta": {
+                "$ref": "#/components/schemas/MetricDelta"
+              }
+            },
+            "required": [
+              "value",
+              "delta"
+            ],
+            "description": "Total model cost of sessions carrying a signal — USD; lower is better."
+          },
+          "top": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ExperimentTopListItem"
+            },
+            "description": "Top signals by occurrence count."
+          }
+        },
+        "required": [
+          "distinct",
+          "occurrences",
+          "affected_sessions_rate",
+          "affected_traces_rate",
+          "affected_users",
+          "cost_impact",
+          "top"
+        ]
+      },
+      "ExperimentBehavioursMetrics": {
+        "type": "object",
+        "properties": {
+          "observations": {
+            "type": "object",
+            "properties": {
+              "value": {
+                "type": [
+                  "number",
+                  "null"
+                ],
+                "description": "Value in the metric's unit; `null` when empty or not computable."
+              },
+              "delta": {
+                "$ref": "#/components/schemas/MetricDelta"
+              }
+            },
+            "required": [
+              "value",
+              "delta"
+            ],
+            "description": "Total behaviour observations on the variant's sessions — count."
+          },
+          "distinct_clusters": {
+            "type": "object",
+            "properties": {
+              "value": {
+                "type": [
+                  "number",
+                  "null"
+                ],
+                "description": "Value in the metric's unit; `null` when empty or not computable."
+              },
+              "delta": {
+                "$ref": "#/components/schemas/MetricDelta"
+              }
+            },
+            "required": [
+              "value",
+              "delta"
+            ],
+            "description": "Distinct behaviour clusters observed — count."
+          },
+          "moments": {
+            "type": "object",
+            "properties": {
+              "value": {
+                "type": [
+                  "number",
+                  "null"
+                ],
+                "description": "Value in the metric's unit; `null` when empty or not computable."
+              },
+              "delta": {
+                "$ref": "#/components/schemas/MetricDelta"
+              }
+            },
+            "required": [
+              "value",
+              "delta"
+            ],
+            "description": "Semantic moments detected on the variant's sessions — count."
+          },
+          "top": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ExperimentTopListItem"
+            },
+            "description": "Top behaviours by observation count."
+          }
+        },
+        "required": [
+          "observations",
+          "distinct_clusters",
+          "moments",
+          "top"
+        ]
+      },
+      "UpdateExperimentBody": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 128,
+            "description": "New name. Renaming may regenerate the slug — re-read the response or rely on `id`."
+          },
+          "description": {
+            "type": "string",
+            "maxLength": 2000,
+            "description": "New description."
+          },
+          "variants": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "id": {
+                  "type": "string",
+                  "description": "Existing variant id to preserve. Omit to mint a new variant."
+                },
+                "name": {
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 128,
+                  "description": "Variant name. Unique within the experiment."
+                },
+                "baseline": {
+                  "type": "boolean",
+                  "description": "`true` for the baseline variant. Exactly one variant must be the baseline."
+                },
+                "filterSet": {
+                  "allOf": [
+                    {
+                      "$ref": "#/components/schemas/FilterSet"
+                    },
+                    {
+                      "description": "Session filters selecting this variant's population."
+                    }
+                  ]
+                },
+                "query": {
+                  "type": [
+                    "string",
+                    "null"
+                  ],
+                  "maxLength": 500,
+                  "description": "Free-text / semantic search, or `null`."
+                },
+                "timeRange": {
+                  "oneOf": [
+                    {
+                      "type": "object",
+                      "properties": {
+                        "type": {
+                          "type": "string",
+                          "enum": [
+                            "relative"
+                          ]
+                        },
+                        "seconds": {
+                          "type": "integer",
+                          "exclusiveMinimum": 0,
+                          "description": "Length of the live window in seconds."
+                        }
+                      },
+                      "required": [
+                        "type",
+                        "seconds"
+                      ]
+                    },
+                    {
+                      "type": "object",
+                      "properties": {
+                        "type": {
+                          "type": "string",
+                          "enum": [
+                            "absolute"
+                          ]
+                        },
+                        "fromIso": {
+                          "type": "string",
+                          "description": "ISO-8601 start of the window (inclusive)."
+                        },
+                        "toIso": {
+                          "type": "string",
+                          "description": "ISO-8601 end of the window (inclusive)."
+                        }
+                      },
+                      "required": [
+                        "type",
+                        "fromIso",
+                        "toIso"
+                      ]
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ],
+                  "description": "Time window, or `null` for the default last-30-days window."
+                }
+              },
+              "required": [
+                "name",
+                "baseline",
+                "filterSet",
+                "query",
+                "timeRange"
+              ]
+            },
+            "maxItems": 10,
+            "description": "Full replacement of the variants array. Each variant carries its own `baseline` flag."
           }
         }
       }
@@ -17706,7 +19233,7 @@
         "x-fern-sdk-group-name": "monitors",
         "x-fern-sdk-method-name": "update",
         "summary": "Update monitor",
-        "description": "Updates a monitor's metadata, target, and rule. System monitor edits are restricted.",
+        "description": "Updates a monitor's metadata and incident severity. Target, trigger, metric, and conditions are fixed after creation. System monitor edits are restricted.",
         "security": [
           {
             "ApiKeyAuth": []
@@ -18265,6 +19792,421 @@
                 }
               }
             }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/projects/{projectSlug}/experiments": {
+      "get": {
+        "tags": [
+          "Experiments"
+        ],
+        "x-fern-sdk-group-name": "experiments",
+        "x-fern-sdk-method-name": "list",
+        "summary": "List experiments",
+        "description": "Returns the project's experiments with cheap summary metrics (variant count, distinct sessions and users across all variant populations). Excludes per-variant comparison metrics — fetch a single experiment for those.",
+        "security": [
+          {
+            "ApiKeyAuth": []
+          }
+        ],
+        "operationId": "listExperiments",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "description": "Project slug (human-readable identifier)"
+            },
+            "required": true,
+            "description": "Project slug (human-readable identifier)",
+            "name": "projectSlug",
+            "in": "path"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "description": "Opaque cursor returned in a previous response's `nextCursor`. Omit on the first page."
+            },
+            "required": false,
+            "description": "Opaque cursor returned in a previous response's `nextCursor`. Omit on the first page.",
+            "name": "cursor",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 100,
+              "default": 50,
+              "description": "Page size. Defaults to 50; max 100."
+            },
+            "required": false,
+            "description": "Page size. Defaults to 50; max 100.",
+            "name": "limit",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "description": "Filter by name (case-insensitive substring)."
+            },
+            "required": false,
+            "description": "Filter by name (case-insensitive substring).",
+            "name": "search",
+            "in": "query"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Page of experiments",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PaginatedExperiments"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Validation error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "Experiments"
+        ],
+        "x-fern-sdk-group-name": "experiments",
+        "x-fern-sdk-method-name": "create",
+        "summary": "Create experiment",
+        "description": "Creates an experiment. The slug is derived from `name`. Omit `variants` to seed two defaults.",
+        "security": [
+          {
+            "ApiKeyAuth": []
+          }
+        ],
+        "operationId": "createExperiment",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "description": "Project slug (human-readable identifier)"
+            },
+            "required": true,
+            "description": "Project slug (human-readable identifier)",
+            "name": "projectSlug",
+            "in": "path"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateExperimentBody"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Experiment created",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Experiment"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Validation error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/projects/{projectSlug}/experiments/{experimentSlug}": {
+      "get": {
+        "tags": [
+          "Experiments"
+        ],
+        "x-fern-sdk-group-name": "experiments",
+        "x-fern-sdk-method-name": "get",
+        "summary": "Get experiment",
+        "description": "Returns a single experiment plus its comparison: per-variant metrics, deltas vs the baseline, and population-deviation flags.",
+        "security": [
+          {
+            "ApiKeyAuth": []
+          }
+        ],
+        "operationId": "getExperiment",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "description": "Project slug (human-readable identifier)"
+            },
+            "required": true,
+            "description": "Project slug (human-readable identifier)",
+            "name": "projectSlug",
+            "in": "path"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "description": "Experiment slug (human-readable identifier within the project)."
+            },
+            "required": true,
+            "description": "Experiment slug (human-readable identifier within the project).",
+            "name": "experimentSlug",
+            "in": "path"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Experiment comparison",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ExperimentComparison"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Validation error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      },
+      "put": {
+        "tags": [
+          "Experiments"
+        ],
+        "x-fern-sdk-group-name": "experiments",
+        "x-fern-sdk-method-name": "update",
+        "summary": "Update experiment",
+        "description": "Replaces an experiment's mutable fields. `variants`, when supplied, fully replaces the array (each variant carries its own `baseline` flag). Renaming may regenerate the slug.",
+        "security": [
+          {
+            "ApiKeyAuth": []
+          }
+        ],
+        "operationId": "updateExperiment",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "description": "Project slug (human-readable identifier)"
+            },
+            "required": true,
+            "description": "Project slug (human-readable identifier)",
+            "name": "projectSlug",
+            "in": "path"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "description": "Experiment slug (human-readable identifier within the project)."
+            },
+            "required": true,
+            "description": "Experiment slug (human-readable identifier within the project).",
+            "name": "experimentSlug",
+            "in": "path"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateExperimentBody"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Updated experiment",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Experiment"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Validation error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "Experiments"
+        ],
+        "x-fern-sdk-group-name": "experiments",
+        "x-fern-sdk-method-name": "delete",
+        "summary": "Delete experiment",
+        "description": "Deletes an experiment. Its slug becomes reusable.",
+        "security": [
+          {
+            "ApiKeyAuth": []
+          }
+        ],
+        "operationId": "deleteExperiment",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "description": "Project slug (human-readable identifier)"
+            },
+            "required": true,
+            "description": "Project slug (human-readable identifier)",
+            "name": "projectSlug",
+            "in": "path"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "description": "Experiment slug (human-readable identifier within the project)."
+            },
+            "required": true,
+            "description": "Experiment slug (human-readable identifier within the project).",
+            "name": "experimentSlug",
+            "in": "path"
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Experiment deleted"
           },
           "401": {
             "description": "Unauthorized",

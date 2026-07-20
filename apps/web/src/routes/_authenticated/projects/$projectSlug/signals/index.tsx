@@ -15,7 +15,9 @@ import {
 import { eq } from "@tanstack/react-db"
 import { createFileRoute, redirect, useParams } from "@tanstack/react-router"
 import { useProjectFlaggers } from "../../../../../domains/flaggers/flaggers.collection.ts"
+import { defaultProjectTimeWindowDays } from "../../../../../domains/projects/default-time-window.ts"
 import { useProjectsCollection } from "../../../../../domains/projects/projects.collection.ts"
+import { useAnalyticsTimeWindow } from "../../../../../domains/projects/use-analytics-time-window.ts"
 import { BreadcrumbText } from "../../../-components/breadcrumb-ui.tsx"
 
 function SignalsBreadcrumb() {
@@ -72,7 +74,6 @@ import { type SignalsTableSorting, SignalsView } from "./-components/signals-vie
 
 const DEFAULT_SORTING: SignalsTableSorting = { column: "lastSeen", direction: "desc" }
 const SIGNAL_SEARCH_DEBOUNCE_MS = 300
-const DEFAULT_SIGNALS_RANGE_SECONDS = 30 * 24 * 60 * 60
 const SORT_COLUMNS = [
   "lastSeen",
   "occurrences",
@@ -147,8 +148,11 @@ function SignalsPage() {
   const [lifecycleGroup, setLifecycleGroup] = useParamState("signalsLifecycle", "active", {
     validate: (value): value is "active" | "archived" => value === "active" || value === "archived",
   })
-  const [timeFrom, setTimeFrom] = useParamState("signalsTimeFrom", "")
-  const [timeTo, setTimeTo] = useParamState("signalsTimeTo", "")
+  const tw = useAnalyticsTimeWindow({
+    project,
+    fromKey: "signalsTimeFrom",
+    toKey: "signalsTimeTo",
+  })
   const [assigneesParam, setAssigneesParam] = useParamState("signalsAssignees", "")
   const [searchQuery, setSearchQuery] = useParamState("signalsSearch", "")
   const [searchInput, setSearchInput] = useValueWithDefault(searchQuery)
@@ -194,18 +198,9 @@ function SignalsPage() {
     [searchInput, searchQuery, setSearchQuery],
   )
 
-  const timeRange = useMemo(() => {
-    const toMs = timeTo ? Date.parse(timeTo) : Date.now()
-    const fromMs = timeFrom ? Date.parse(timeFrom) : toMs - DEFAULT_SIGNALS_RANGE_SECONDS * 1000
-    return {
-      fromIso: new Date(fromMs).toISOString(),
-      toIso: new Date(toMs).toISOString(),
-    }
-  }, [timeFrom, timeTo])
-
   useEffect(() => {
     setFocusedSignalId(undefined)
-  }, [lifecycleGroup, searchQuery, rawSorting, assigneesParam, timeFrom, timeTo])
+  }, [lifecycleGroup, searchQuery, rawSorting, assigneesParam, tw.timeFrom, tw.timeTo])
 
   const assigneeIds = useMemo(() => parseAssignees(assigneesParam), [assigneesParam])
   const setAssigneeIds = useCallback(
@@ -231,7 +226,8 @@ function SignalsPage() {
     sorting,
     ...(assigneeIds.length > 0 ? { assigneeIds } : {}),
     ...(searchQuery ? { searchQuery } : {}),
-    ...(timeRange ? { timeRange } : {}),
+    timeRange: tw.listRange,
+    histogramMaxSpanDays: defaultProjectTimeWindowDays(project),
   })
 
   // While a filter/sort change is in flight we hide the (now stale) previous
@@ -266,7 +262,7 @@ function SignalsPage() {
           },
           ...(assigneeIds.length > 0 ? { assigneeIds: [...assigneeIds] } : {}),
           ...(searchQuery ? { searchQuery } : {}),
-          ...(timeRange ? { timeRange } : {}),
+          timeRange: tw.listRange,
         },
       })
       toast({
@@ -283,7 +279,7 @@ function SignalsPage() {
     } finally {
       setExporting(false)
     }
-  }, [lifecycleGroup, project.id, searchQuery, selection, sorting.column, sorting.direction, timeRange])
+  }, [lifecycleGroup, project.id, searchQuery, selection, sorting.column, sorting.direction, tw.listRange])
 
   const handleBulkMute = useCallback(async () => {
     const bulkSelection = selection.bulkSelection
@@ -303,7 +299,7 @@ function SignalsPage() {
           },
           ...(assigneeIds.length > 0 ? { assigneeIds: [...assigneeIds] } : {}),
           ...(searchQuery ? { searchQuery } : {}),
-          ...(timeRange ? { timeRange } : {}),
+          timeRange: tw.listRange,
         },
       })
       const changedCount = result.items.filter((item) => item.changed).length
@@ -327,10 +323,10 @@ function SignalsPage() {
     } finally {
       setBulkActionLoading(false)
     }
-  }, [archived, lifecycleGroup, project.id, searchQuery, selection, sorting.column, sorting.direction, timeRange])
+  }, [archived, lifecycleGroup, project.id, searchQuery, selection, sorting.column, sorting.direction, tw.listRange])
 
   const hasActiveFilters =
-    lifecycleGroup !== "active" || searchQuery !== "" || Boolean(timeFrom || timeTo) || assigneeIds.length > 0
+    lifecycleGroup !== "active" || searchQuery !== "" || tw.hasExplicitRange || assigneeIds.length > 0
   // Derived from the un-substituted data so a placeholder reload (which forces
   // `issues` to []) does not falsely trigger the empty state.
   const hasNoSignals = !hasAnySignals && !hasActiveFilters
@@ -372,12 +368,9 @@ function SignalsPage() {
           <Layout.ActionsRow>
             <Layout.ActionRowItem>
               <TimeFilterDropdown
-                startTimeFrom={timeFrom || timeRange.fromIso}
-                {...(timeTo ? { startTimeTo: timeTo } : {})}
-                onChange={(from, to) => {
-                  setTimeFrom(from ?? "")
-                  setTimeTo(to ?? "")
-                }}
+                {...(tw.pickerStartFrom ? { startTimeFrom: tw.pickerStartFrom } : {})}
+                {...(tw.pickerStartTo ? { startTimeTo: tw.pickerStartTo } : {})}
+                onChange={tw.onTimeChange}
               />
             </Layout.ActionRowItem>
             <Layout.ActionRowItem>
@@ -410,9 +403,9 @@ function SignalsPage() {
                 active={lifecycleGroup}
                 onSelect={(value) => setLifecycleGroup(value)}
               />
-              <Button size="sm" onClick={() => openCreate(null)}>
+              <Button onClick={() => openCreate(null)}>
                 <Icon icon={PlusIcon} size="sm" />
-                New signal
+                Signal
               </Button>
             </Layout.ActionRowItem>
           </Layout.ActionsRow>
@@ -435,10 +428,8 @@ function SignalsPage() {
             projectSlug={project.slug}
             analytics={analytics}
             isLoading={isAnalyticsLoading}
-            onRangeSelect={(range) => {
-              setTimeFrom(range?.from ?? "")
-              setTimeTo(range?.to ?? "")
-            }}
+            isAllTime={tw.isAllTime}
+            onRangeSelect={tw.onBrushSelect}
           />
         </div>
         <SignalsView

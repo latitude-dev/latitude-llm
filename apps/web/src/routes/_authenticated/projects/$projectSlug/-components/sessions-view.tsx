@@ -126,6 +126,8 @@ interface SessionsViewProps {
   readonly hasUserAppliedFilters: boolean
   readonly selectable?: boolean
   readonly searchQuery?: string
+  /** Filter fields to hide in the built-in sidebar (e.g. `topics`). */
+  readonly excludeFilterFields?: readonly string[]
 }
 
 export function SessionsView({
@@ -149,6 +151,7 @@ export function SessionsView({
   hasUserAppliedFilters,
   searchQuery,
   selectable = true,
+  excludeFilterFields,
 }: SessionsViewProps) {
   // Annotations are an LLM-feedback feature — off under a sandbox scope. Skip
   // the counts fetch so the Indicators column shows errors only (mirrors the
@@ -702,6 +705,7 @@ export function SessionsView({
           filters={filters}
           onFiltersChange={onFiltersChange}
           onClose={onFiltersClose}
+          {...(excludeFilterFields ? { excludeFields: excludeFilterFields } : {})}
         />
       )}
       <Layout.List>

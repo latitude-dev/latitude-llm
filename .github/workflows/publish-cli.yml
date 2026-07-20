@@ -87,13 +87,13 @@ jobs:
           targets: ${{ matrix.target }}
 
       - name: Install cargo-edit
-        uses: taiki-e/install-action@v2
+        uses: taiki-e/install-action@v2.82.9
         with:
           tool: cargo-edit
 
       - name: Install cross
         if: matrix.cross
-        uses: taiki-e/install-action@v2
+        uses: taiki-e/install-action@v2.82.9
         with:
           tool: cross
 
@@ -137,7 +137,7 @@ jobs:
           fi
 
       - name: Upload target artifact
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: ${{ matrix.asset }}
           path: ${{ env.ASSET }}

@@ -9,8 +9,14 @@ import {
 } from "@domain/destinations"
 import { SAVED_SEARCH_MONITORS_SWEEPER_KEY, SAVED_SEARCH_MONITORS_SWEEPER_PATTERN } from "@domain/monitors"
 import { SANDBOX_IDLE_SWEEPER_KEY, SANDBOX_IDLE_SWEEPER_PATTERN } from "@domain/sandboxes"
+import { SHOWCASE_CLEANUP_CRON_KEY, SHOWCASE_CLEANUP_CRON_PATTERN } from "@domain/showcase"
 import { ESCALATION_SWEEPER_KEY, ESCALATION_SWEEPER_PATTERN } from "@domain/signals"
-import { TAXONOMY_GARDENING_CRON_KEY, TAXONOMY_GARDENING_CRON_PATTERN } from "@domain/taxonomy"
+import {
+  CUSTOM_BEHAVIOR_GARDENING_CRON_KEY,
+  CUSTOM_BEHAVIOR_GARDENING_CRON_PATTERN,
+  TAXONOMY_GARDENING_CRON_KEY,
+  TAXONOMY_GARDENING_CRON_PATTERN,
+} from "@domain/taxonomy"
 import { serve } from "@hono/node-server"
 import { serveStatic } from "@hono/node-server/serve-static"
 import { createPollingOutboxConsumer } from "@platform/db-postgres"
@@ -45,7 +51,6 @@ import {
   getWorkflowStarter,
 } from "./clients.ts"
 import { createAgentDispatchWorker } from "./workers/agent-dispatch.ts"
-import { createAnnotationQueuesWorker } from "./workers/annotation-queues.ts"
 import { createAnnotationScoresWorker } from "./workers/annotation-scores.ts"
 import { createApiKeysWorker } from "./workers/api-keys.ts"
 import { createBillingWorker } from "./workers/billing.ts"
@@ -62,6 +67,7 @@ import { createDomainEventsWorker } from "./workers/domain-events.ts"
 import { createEvaluationsWorker } from "./workers/evaluations.ts"
 import { createExportsWorker } from "./workers/exports.ts"
 import { createLiveEvaluationsWorker } from "./workers/live-evaluations.ts"
+import { createMemoryProjectionWorker } from "./workers/memory-projection.ts"
 import { createMonitorsWorker } from "./workers/monitors.ts"
 import { createNotificationEmailerWorker } from "./workers/notification-emailer.ts"
 import { createNotificationSlackWorker } from "./workers/notification-slack.ts"
@@ -72,6 +78,8 @@ import { createProductFeedbackWorker } from "./workers/product-feedback.ts"
 import { createProjectsWorker } from "./workers/projects.ts"
 import { createSandboxesWorker } from "./workers/sandboxes.ts"
 import { createScoresWorker } from "./workers/scores.ts"
+import { createSessionEndWorker } from "./workers/session-end.ts"
+import { createShowcaseWorker } from "./workers/showcase.ts"
 import { createSignalsWorker } from "./workers/signals.ts"
 import { createSignalsGenerateSignalWorker } from "./workers/signals-generate-signal.ts"
 import { createSignalsMatchWorker } from "./workers/signals-match.ts"
@@ -227,15 +235,17 @@ const bootstrap = async () => {
     createEvaluationsWorker(ctx)
     createAnnotationScoresWorker(ctx)
     createLiveEvaluationsWorker(ctx)
-    createAnnotationQueuesWorker(ctx)
     createTraceEndWorker(ctx)
+    createSessionEndWorker(ctx)
     createSignalsMatchWorker(ctx)
     createSignalsPreviewWorker(ctx)
     createSignalsGenerateSignalWorker(ctx)
     createDeterministicFlaggersWorker(ctx)
+    createMemoryProjectionWorker(ctx)
     createStartFlaggerWorkflowWorker(ctx)
     createProjectsWorker(ctx)
     createScoresWorker(ctx)
+    createShowcaseWorker(ctx)
     createPostHogAnalyticsWorker(ctx)
     createProductFeedbackWorker(ctx)
     createTraceSearchWorker({
@@ -291,6 +301,35 @@ const bootstrap = async () => {
         .pipe(withTracing),
     )
 
+    // Daily off-peak Showcase regeneration (S4): build a fresh `next`, gate it,
+    // and auto-swap the pointer. The handler no-ops when no showcase exists / a
+    // build is already in flight, so this is safe to register on every boot.
+    await Effect.runPromise(
+      queuePublisher
+        .scheduleRepeatable(
+          "showcase",
+          "regenerate",
+          {},
+          { key: "showcase:regenerate:daily", pattern: "0 4 * * *", tz: "UTC" },
+        )
+        .pipe(withTracing),
+    )
+
+    // Daily Showcase cleanup / self-heal (S5), an hour before regeneration:
+    // reclaim a wedged `building` pointer and retire showcase-org projects that
+    // are neither `current` nor `next` (PG soft-delete + background CH delete).
+    // No-ops when no showcase exists / nothing is stale, so safe on every boot.
+    await Effect.runPromise(
+      queuePublisher
+        .scheduleRepeatable(
+          "showcase",
+          "cleanup",
+          {},
+          { key: SHOWCASE_CLEANUP_CRON_KEY, pattern: SHOWCASE_CLEANUP_CRON_PATTERN, tz: "UTC" },
+        )
+        .pipe(withTracing),
+    )
+
     // Hourly escalation sweep. Backs up the `ScoreAssignedToSignal`-driven
     // throttled check by reconsidering every open signal escalation
     // incident once an hour — closes incidents whose burst has aged out of
@@ -328,6 +367,21 @@ const bootstrap = async () => {
           "gardenSweep",
           { triggeredAt: new Date().toISOString() },
           { key: TAXONOMY_GARDENING_CRON_KEY, pattern: TAXONOMY_GARDENING_CRON_PATTERN, tz: "UTC" },
+        )
+        .pipe(withTracing),
+    )
+
+    // Scoped-gardening sweep: keeps every eligible custom behavior a living
+    // taxonomy, the scoped analogue of the global gardenSweep above.
+    await Effect.runPromise(
+      queuePublisher
+        .scheduleRepeatable(
+          "taxonomy",
+          "gardenCustomBehaviorSweep",
+          // No triggeredAt: repeatable payloads are frozen at boot, so the handler
+          // anchors its throttle window at execution time instead.
+          {},
+          { key: CUSTOM_BEHAVIOR_GARDENING_CRON_KEY, pattern: CUSTOM_BEHAVIOR_GARDENING_CRON_PATTERN, tz: "UTC" },
         )
         .pipe(withTracing),
     )

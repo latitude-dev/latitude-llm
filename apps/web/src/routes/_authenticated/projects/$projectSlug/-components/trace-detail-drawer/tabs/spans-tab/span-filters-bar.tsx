@@ -1,6 +1,6 @@
 import { cn, Icon, Select, type SelectOption, Text } from "@repo/ui"
 import { formatCount } from "@repo/utils"
-import { AlertTriangleIcon, WrenchIcon, XIcon } from "lucide-react"
+import { AlertTriangleIcon, DatabaseIcon, WrenchIcon, XIcon } from "lucide-react"
 import type { ReactNode } from "react"
 import type { SpanRecord } from "../../../../../../../../domains/spans/spans.functions.ts"
 import { collectSpanModels, countMatchingSpans, hasActiveSpanFilters, type SpanFilters } from "./span-filters.ts"
@@ -10,6 +10,7 @@ type SpanFiltersBarProps = {
   readonly filters: SpanFilters
   readonly onToggleErrors: () => void
   readonly onToggleTools: () => void
+  readonly onToggleMemory: () => void
   readonly onSelectModel: (model: string) => void
   readonly onClearFilters: () => void
 }
@@ -51,6 +52,7 @@ export function SpanFiltersBar({
   filters,
   onToggleErrors,
   onToggleTools,
+  onToggleMemory,
   onSelectModel,
   onClearFilters,
 }: SpanFiltersBarProps) {
@@ -86,6 +88,17 @@ export function SpanFiltersBar({
           >
             <Icon icon={WrenchIcon} size="xs" color={filters.tools ? "accentForeground" : "foregroundMuted"} />
             <span>Tools</span>
+          </FilterToggle>
+
+          <FilterToggle
+            active={filters.memory}
+            activeClassName="border-warning-muted-foreground/30 bg-warning-muted text-warning-muted-foreground"
+            inactiveClassName="border-border bg-secondary text-muted-foreground hover:bg-muted"
+            onClick={onToggleMemory}
+            ariaLabel={filters.memory ? "Show all spans" : "Show only memory spans"}
+          >
+            <Icon icon={DatabaseIcon} size="xs" color={filters.memory ? "warningMutedForeground" : "foregroundMuted"} />
+            <span>Memory</span>
           </FilterToggle>
 
           {models.length > 0 ? (

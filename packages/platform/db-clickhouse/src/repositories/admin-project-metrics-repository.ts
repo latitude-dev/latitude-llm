@@ -23,10 +23,9 @@ import { Effect, Layer } from "effect"
  * the AggregatingMergeTree, outer bucket aggregation. `scores` is a
  * plain MergeTree, no partial-row reconciliation needed.
  *
- * Bound `DateTime64` parameters reject `toISOString()`'s trailing `Z` —
- * we normalise to `YYYY-MM-DD HH:MM:SS.sss` (same shape used elsewhere
- * in this package; see `mapDateTime64UtcQueryParam`). Note: scores
- * uses precision 3, traces uses precision 9.
+ * Bound `DateTime64` parameters reject `toISOString()`'s trailing `Z`, so
+ * this query normalises to `YYYY-MM-DD HH:MM:SS.sss`. Note: scores uses
+ * precision 3, traces uses precision 9.
  */
 export const AdminProjectMetricsRepositoryLive = Layer.effect(
   AdminProjectMetricsRepository,

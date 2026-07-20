@@ -1,6 +1,6 @@
 import { alertIncidentSeeders } from "./alert-incidents/index.ts"
-import { annotationQueueSeeders } from "./annotation-queues/index.ts"
 import { apiKeySeeders } from "./api-keys/index.ts"
+import { customBehaviorQaSeeders } from "./custom-behaviors/index.ts"
 import { datasetSeeders } from "./datasets/index.ts"
 import { evaluationSeeders } from "./evaluations/index.ts"
 import { bootstrapTelemetryFlaggerSeeders, flaggerSeeders } from "./flaggers/index.ts"
@@ -16,7 +16,7 @@ import { wrappedReportSeeders } from "./wrapped-reports/index.ts"
 
 /**
  * Per-project ("content") seeders — datasets, evaluations, signals,
- * simulations, scores, annotation queues. Re-used by the runtime
+ * simulations, scores. Re-used by the runtime
  * "Create Demo Project" Temporal activity, which threads a per-project
  * `SeedScope` so all entity ids derive fresh under the new project.
  *
@@ -31,7 +31,6 @@ export const contentSeeders: readonly Seeder[] = [
   ...evaluationSeeders,
   ...simulationSeeders,
   ...scoreSeeders,
-  ...annotationQueueSeeders,
   ...flaggerSeeders,
   // Runs after signals + scores so it can derive "currently escalating"
   // from real occurrence patterns in the seeded data via the same
@@ -60,4 +59,9 @@ export const allSeeders: readonly Seeder[] = [
   // and the public Wrapped share URLs. All created "today" so they appear
   // in the backoffice list and form a single leaderboard cohort.
   ...wrappedReportSeeders,
+  // Bootstrap-only: QA custom behaviors on the seed project. Excluded from
+  // `contentSeeders` so the demo workflow never provisions them; their backing
+  // sessions + observations come from the ClickHouse `spans/custom-behavior-qa`
+  // seeder.
+  ...customBehaviorQaSeeders,
 ]

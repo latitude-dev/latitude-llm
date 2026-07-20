@@ -118,6 +118,7 @@ function makeTraceDetail(
     models: ["gpt-4o-mini"],
     providers: ["openai"],
     serviceNames: ["web"],
+    agentNames: [],
     rootSpanId: SpanId("r".repeat(16)),
     rootSpanName: "root",
     systemInstructions: [{ type: "text", text: "You are a careful assistant." }],
@@ -890,6 +891,8 @@ describe("runLiveEvaluationUseCase", () => {
     })
     const evaluationRepository = createEvaluationRepository(() => Effect.succeed(evaluation))
     const signalRepository = createSignalRepository(() => Effect.succeed(issue))
+    const { repository: billingUsageEventRepository, eventsByPeriodAndIdempotencyKey } =
+      createFakeBillingUsageEventRepository()
     const operations: string[] = []
     const { layer: aiLayer } = createFakeAI()
     const scriptRuntime = createFakeScriptRuntime({
@@ -922,7 +925,7 @@ describe("runLiveEvaluationUseCase", () => {
             evaluationRepository,
             signalRepository,
             aiLayer,
-            billingLayer: createBillingLayer(),
+            billingLayer: createBillingLayer({ billingUsageEventRepository }),
             scoreWriteLayer,
             scriptRuntimeLayer: scriptRuntime.layer,
           }),
@@ -932,6 +935,9 @@ describe("runLiveEvaluationUseCase", () => {
 
     expect(result.action).toBe("persisted")
     expect(operations).toEqual(["script-run", "billing-outbox-write", "score-outbox-write"])
+    expect([...eventsByPeriodAndIdempotencyKey.values()]).toEqual([
+      expect.objectContaining({ action: "live-eval-scan", credits: 30 }),
+    ])
     expect(scriptRuntime.calls.run).toHaveLength(1)
   })
 
@@ -1426,6 +1432,8 @@ describe("runLiveEvaluationUseCase", () => {
     })
     const evaluationRepository = createEvaluationRepository(() => Effect.succeed(evaluation))
     const signalRepository = createSignalRepository(() => Effect.succeed(issue))
+    const { repository: billingUsageEventRepository, eventsByPeriodAndIdempotencyKey } =
+      createFakeBillingUsageEventRepository()
     const scriptRuntime = createFakeScriptRuntime({
       run: () => Effect.succeed({ value: 1, feedback: "no exhibition", duration: 9_000, tokens: 0, cost: 0 }),
     })
@@ -1439,6 +1447,7 @@ describe("runLiveEvaluationUseCase", () => {
             evaluationRepository,
             signalRepository,
             aiLayer,
+            billingLayer: createBillingLayer({ billingUsageEventRepository }),
             scriptRuntimeLayer: scriptRuntime.layer,
           }),
         ),
@@ -1457,6 +1466,9 @@ describe("runLiveEvaluationUseCase", () => {
     expect(scriptRuntime.calls.run).toHaveLength(1)
     expect(scriptRuntime.calls.run[0]?.script.source).toBe(evaluation.script)
     expect(calls.generate).toHaveLength(0)
+    expect([...eventsByPeriodAndIdempotencyKey.values()]).toEqual([
+      expect.objectContaining({ action: "deterministic-eval-scan", credits: 1 }),
+    ])
   })
 
   it("records detector health per run and surfaces the degraded transition through the outbox once", async () => {

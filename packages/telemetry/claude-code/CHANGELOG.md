@@ -7,6 +7,24 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.0.11] - 2026-07-16
+
+### Changed
+
+- The installer now writes the Stop-hook command with the `@latest` tag (`npx -y @latitude-data/claude-code-telemetry@latest`) instead of a bare package name. A bare `npx <pkg>` reuses whatever version the npx cache first fetched and never updates, so users could silently stay on an old build; `@latest` re-resolves the newest published version each run (a cheap etag-revalidated check, off the critical path thanks to `async: true`), so fixes ship without a re-install. Docs updated to match.
+- Re-running `install` now **upgrades** an existing Latitude Stop hook to the current command (and forces `async: true`) instead of no-opping when any hook is already present. Previously the installer left older hooks — the exact bare-`npx` installs this release targets — untouched, so `install` prints "Stop hook updated" and rewrites them in place.
+
+## [0.0.10] - 2026-07-14
+
+### Fixed
+
+- **Parallel subagents now each get their own trace subtree.** When one turn spawned several `Agent` subagents at once, only one `tool:Agent` span received a nested `interaction` — the others showed no children. The stitcher matched subagents to their parent `Agent` call by `promptId`, which parallel calls share, so they collapsed onto a single call. Subagents are now matched by the `toolUseId` recorded in each subagent's `.meta.json` (unique per invocation), with `promptId` kept as a fallback for older transcripts.
+- **A subagent's final `llm_request` is no longer dropped.** A subagent's transcript usually finishes flushing after its parent turn was already shipped (the final synthesis lands last), and the one-shot incremental read froze each subagent's offset before that row arrived, with no way to re-attach it. Subagents now emit as a standalone pass keyed off the parent `Agent` call's persisted span link: each subagent file is re-read every Stop and its spans are emitted **incrementally, exactly once** — a call once a later call closes it, and the trailing call plus interaction span once the file stops growing. Emitting each span once (rather than re-sending the whole subtree) keeps the additive `traces` rollup correct, since that view has no per-span dedup unlike the raw `spans` table.
+
+### Added
+
+- `subagent.name` attribute (the agent type, e.g. `Explore`) on subagent spans, alongside the existing `subagent.id` and `subagent.type`.
+
 ## [0.0.9] - 2026-06-18
 
 ### Added

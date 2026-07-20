@@ -50,6 +50,25 @@ const _registry = {
     reapExpired: Record<string, never>
   }>(),
 
+  showcase: payloads<{
+    /**
+     * Fired by a daily off-peak cron — builds a fresh `next` showcase project,
+     * gates it, and auto-swaps the pointer (S4). No payload: the handler reads
+     * the pointer to resolve the showcase org and re-anchors to "now".
+     */
+    regenerate: Record<string, never>
+    /**
+     * Retire + self-heal (S5). Reclaims a wedged `building` pointer and retires
+     * every showcase-org project that is neither `current` nor `next` via the
+     * standard PG soft-delete + `ProjectDeleted` path (ClickHouse telemetry ages
+     * out via the retention TTL, as for any deleted project). Fired both by a
+     * daily cron and by the regeneration workflow right after a swap (to promptly
+     * retire the just-swapped-out `current`). No payload: the handler reads the
+     * pointer.
+     */
+    cleanup: Record<string, never>
+  }>(),
+
   "user-deletion": payloads<{
     delete: {
       readonly organizationId: string
@@ -382,11 +401,6 @@ const _registry = {
       readonly projectId: string
       readonly scoreId: string
     }
-    markReviewStarted: {
-      readonly organizationId: string
-      readonly projectId: string
-      readonly scoreId: string
-    }
   }>(),
 
   scores: payloads<{
@@ -415,6 +429,21 @@ const _registry = {
       readonly organizationId: string
       readonly projectId: string
       readonly traceId: string
+      readonly isSandbox?: boolean
+    }
+  }>(),
+
+  // Session-level dispatch: each settled trace-end enqueues this with a session-keyed dedupeKey and a
+  // debounce, so repeated trace-ends collapse to one firing once the session goes quiet. Carries the
+  // latest trace of the session (debounce replaces the pending payload) for the trace-scoped work it
+  // fans out (signals:match, session analysis).
+  "session-end": payloads<{
+    run: {
+      readonly organizationId: string
+      readonly projectId: string
+      readonly sessionId: string
+      readonly latestTraceId: string
+      readonly latestTraceStartTime: string
       readonly isSandbox?: boolean
     }
   }>(),
@@ -473,6 +502,18 @@ const _registry = {
     }
   }>(),
 
+  // Materializes a settled trace's memory-operation spans into the memory ledger
+  // (memory_events / memory_blobs / memory_current). Fanned out from trace-end as
+  // an isolated failure domain, mirroring deterministic-flaggers.
+  "memory-projection": payloads<{
+    run: {
+      readonly organizationId: string
+      readonly projectId: string
+      readonly traceId: string
+      readonly sessionId: string
+    }
+  }>(),
+
   // Thin start-workflow job. Separates the Temporal `start()` call out of the
   // deterministic-flaggers hot path so transient Temporal unavailability retries
   // with bounded BullMQ backoff instead of re-running the whole deterministic fan-out.
@@ -499,39 +540,12 @@ const _registry = {
       readonly projectId: string
       readonly traceId: string
     }
-    seedDemo: {
-      readonly organizationId: string
-      readonly projectId: string
-      readonly queueAssigneeUserIds: readonly string[]
-      readonly apiKeyId: string
-      readonly timelineAnchorIso: string
-    }
-    createDemo: {
-      readonly organizationId: string
-      readonly ownerUserId: string
-    }
   }>(),
 
   "api-keys": payloads<{
     create: {
       readonly organizationId: string
       readonly name: string
-    }
-  }>(),
-
-  "annotation-queues": payloads<{
-    bulkImport: {
-      readonly organizationId: string
-      readonly projectId: string
-      readonly queueId: string
-      readonly selection:
-        | { readonly mode: "selected"; readonly traceIds: readonly string[] }
-        | { readonly mode: "all"; readonly filters?: Record<string, unknown> }
-        | {
-            readonly mode: "allExcept"
-            readonly traceIds: readonly string[]
-            readonly filters?: Record<string, unknown>
-          }
     }
   }>(),
 
@@ -581,13 +595,23 @@ const _registry = {
     gardenSweep: {
       readonly triggeredAt: string
     }
+    gardenCustomBehavior: {
+      readonly organizationId: string
+      readonly projectId: string
+      readonly customBehaviorId: string
+      readonly reason?: "manual" | "cron"
+    }
+    gardenCustomBehaviorSweep: {
+      /** Optional override for ad-hoc runs; the repeatable sweep anchors at execution time instead. */
+      readonly triggeredAt?: string
+    }
   }>(),
 
   billing: payloads<{
     recordBillableAction: {
       readonly organizationId: string
       readonly projectId: string
-      readonly action: "trace" | "flagger-scan" | "live-eval-scan" | "eval-generation"
+      readonly action: "trace" | "flagger-scan" | "deterministic-eval-scan" | "live-eval-scan" | "eval-generation"
       readonly idempotencyKey: string
       readonly context: {
         readonly planSlug: "free" | "pro" | "enterprise"

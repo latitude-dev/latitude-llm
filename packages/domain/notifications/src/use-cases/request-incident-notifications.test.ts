@@ -195,6 +195,7 @@ describe("requestIncidentNotificationsUseCase", () => {
     if (result.status !== "ok") throw new Error("expected ok")
     expect(result.requests).toHaveLength(2)
     expect(result.requests[0]?.kind).toBe("incident.opened")
+    expect(result.requests[0]?.slackEligible).toBe(true)
     expect(result.requests[0]?.idempotencyKey).toBe(`incident.opened:${incident.id}`)
     expect(result.requests[0]?.payload).toMatchObject({
       alertIncidentId: incident.id,
@@ -204,6 +205,23 @@ describe("requestIncidentNotificationsUseCase", () => {
       severity: "high",
       condition: escalatingCondition,
     })
+  })
+
+  it("sends signal escalation incidents only to the assignee when assigned", async () => {
+    const incident = makeIncident()
+    const assigneeId = UserId(cuid("u2"))
+    const result = await Effect.runPromise(
+      requestIncidentNotificationsUseCase({
+        alertIncidentId: incident.id,
+        transition: "created",
+      }).pipe(Effect.provide(makeLayer({ incident, signal: makeSignal({ assigneeId }) }))),
+    )
+
+    expect(result.status).toBe("ok")
+    if (result.status !== "ok") throw new Error("expected ok")
+    expect(result.requests).toHaveLength(1)
+    expect(result.requests[0]?.userId).toBe(assigneeId)
+    expect(result.requests[0]?.slackEligible).toBe(false)
   })
 
   it("skips signal incidents when the signal is muted", async () => {
@@ -256,12 +274,15 @@ describe("requestIncidentNotificationsUseCase", () => {
     })
   })
 
-  it("fans out monitor threshold incidents and applies the monitor threshold gate", async () => {
+  it("fans out monitor threshold incidents as one-shot events and applies the monitor threshold gate", async () => {
+    // Threshold incidents are now sustained (open, endedAt=null) but still alert once with the
+    // one-shot `incident.event` kind, not `incident.opened` — no recovery email on close.
     const incident = makeIncident({
       sourceType: "monitor",
       sourceId: monitorId,
       severity: "medium",
-      endedAt: startedAt,
+      endedAt: null,
+      entrySignals: { evaluatedThreshold: 10 },
       condition: thresholdCondition,
     })
 
@@ -274,6 +295,8 @@ describe("requestIncidentNotificationsUseCase", () => {
 
     expect(allowed.status).toBe("ok")
     if (allowed.status !== "ok") throw new Error("expected ok")
+    expect(allowed.requests[0]?.kind).toBe("incident.event")
+    expect(allowed.requests[0]?.idempotencyKey).toBe(`incident.event:${incident.id}`)
     expect(allowed.requests[0]?.payload).toMatchObject({
       incidentKind: "monitor.threshold" satisfies IncidentNotificationKey,
       condition: thresholdCondition,

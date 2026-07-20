@@ -35,6 +35,8 @@ interface DateRangePickerProps {
   readonly clearLabel?: string
   readonly disabled?: boolean
   readonly align?: "start" | "center" | "end"
+  /** Fill the available width, pushing the chevron to the far end (defaults to sizing to content). */
+  readonly fullWidth?: boolean
   readonly onChange: (change: DateRangePickerChange) => void
 }
 
@@ -210,6 +212,7 @@ export function DateRangePicker({
   clearLabel = "Clear dates",
   disabled = false,
   align = "start",
+  fullWidth = false,
   onChange,
 }: DateRangePickerProps) {
   const [open, setOpen] = useState(false)
@@ -271,7 +274,9 @@ export function DateRangePicker({
           variant="outline"
           size="default"
           disabled={disabled}
-          className="w-auto justify-start gap-2"
+          // `[&>div]` targets Button's inner content wrapper so the chevron sits at the far end;
+          // Button packs its children into one content-width row, so plain `justify-between` can't.
+          className={cn("gap-2", fullWidth ? "w-full [&>div]:w-full [&>div]:justify-between" : "w-auto justify-start")}
         >
           <span className="flex items-center gap-2">
             <Icon icon={CalendarIcon} size="sm" color={selection.selected ? "accentForeground" : "foreground"} />

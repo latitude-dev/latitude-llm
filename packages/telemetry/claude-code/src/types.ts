@@ -114,6 +114,17 @@ export interface SubagentFile {
   metaPath: string
 }
 
+// Links a parent Agent tool_use to the span it was emitted as, so a subagent's
+// spans can be (re-)parented under it on a later turn — after the Agent call has
+// scrolled out of the freshly-read window. toolUseId is unique per invocation;
+// promptId is a lossy fallback for transcripts whose meta predates toolUseId.
+export interface AgentSpanLink {
+  toolUseId: string
+  promptId?: string | undefined
+  traceId: string
+  parentSpanId: string
+}
+
 export interface OtlpAnyValue {
   stringValue?: string
   intValue?: string

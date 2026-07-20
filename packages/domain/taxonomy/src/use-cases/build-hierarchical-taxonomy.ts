@@ -16,7 +16,7 @@
  *      projection metadata does not round-trip through the workflow worker.
  *      The sample is deterministic (hash-ordered, no rand()) so a gardening
  *      pass replays identically under Temporal.
- *   2. Build the tree top-down with `buildHierarchicalClusters` using the
+ *   2. Build the tree top-down with `buildStaticHierarchicalClusters` using the
  *      per-depth schedule. The schedule encodes broad-at-the-root,
  *      narrow-at-the-leaves without per-corpus tuning.
  *   3. Persist clusters top-down so child rows always have a valid parent.
@@ -48,6 +48,8 @@
 
 import { resolveEmbeddingConfig } from "@domain/ai"
 import {
+  type CustomBehaviorId,
+  type FilterSet,
   generateId,
   type OrganizationId,
   type ProjectId,
@@ -57,8 +59,8 @@ import {
 } from "@domain/shared"
 import { Effect } from "effect"
 import {
-  type BuildHierarchicalClustersInput,
-  buildHierarchicalClusters,
+  type BuildStaticHierarchicalClustersInput,
+  buildStaticHierarchicalClusters,
   type ClusteringTreeNode,
 } from "../clustering.ts"
 import {
@@ -66,15 +68,17 @@ import {
   TAXONOMY_CLUSTERING_SAMPLE_STRATEGY,
   TAXONOMY_CONTINUATION_THRESHOLD,
   TAXONOMY_GARDENING_MIN_OBSERVATIONS,
+  TAXONOMY_GARDENING_SAMPLE_LOOKBACK_DAYS,
   TAXONOMY_KMEANS_MAX_ITER,
   TAXONOMY_KMEANS_RESTARTS,
   TAXONOMY_KMEANS_TOLERANCE,
   TAXONOMY_NAME_REUSE_THRESHOLD,
-  TAXONOMY_NOISE_LOOKBACK_DAYS,
+  TAXONOMY_OBSERVATION_RETENTION_DAYS,
   TAXONOMY_PENDING_DISPLAY_NAME,
-  TAXONOMY_TREE_DEPTH_SCHEDULE,
+  TAXONOMY_TREE_STATIC_DEPTH_SCHEDULE,
 } from "../constants.ts"
 import type { TaxonomyCluster } from "../entities/cluster.ts"
+import type { CustomBehaviorAssignment } from "../entities/custom-behavior-assignment.ts"
 import { TaxonomyDimension, type TaxonomyDimension as TaxonomyDimensionType } from "../entities/dimension.ts"
 import type { TaxonomyClusterLineage } from "../entities/lineage.ts"
 import {
@@ -84,11 +88,12 @@ import {
   normalizeTaxonomyEmbedding,
   updateTaxonomyCentroid,
 } from "../helpers.ts"
-import { matchTaxonomyLineage } from "../lineage.ts"
+import { type LineageDecision, matchTaxonomyLineage } from "../lineage.ts"
 import { TaxonomyClusterRepository } from "../ports/taxonomy-cluster-repository.ts"
 import {
   type ReassignTaxonomyObservationByIdInput,
   TaxonomyObservationRepository,
+  type TaxonomyScopedClusteringObservation,
 } from "../ports/taxonomy-observation-repository.ts"
 
 export interface BuildHierarchicalTaxonomyInput {
@@ -116,28 +121,36 @@ export interface BuildHierarchicalTaxonomyResult {
 }
 
 export type TaxonomyClusterBuilder = (
-  input: BuildHierarchicalClustersInput,
+  input: BuildStaticHierarchicalClustersInput,
 ) => Effect.Effect<ClusteringTreeNode, Error, never>
 
 export interface PlanHierarchicalTaxonomyInput extends BuildHierarchicalTaxonomyInput {
   readonly clusterBuilder?: TaxonomyClusterBuilder
+  /**
+   * Scope. Absent ⇒ global gardening (project-wide sample, membership written to
+   * `taxonomy_observations.assigned_cluster_id`). Present ⇒ a custom behavior's
+   * scoped sub-tree (FilterSet session slice, membership written to the
+   * `custom_behavior_assignments` slice). Global callers omit both so their
+   * serialized payloads are byte-identical to the pre-unification workflow.
+   */
+  readonly customBehaviorId?: CustomBehaviorId
+  readonly filterSet?: FilterSet
 }
 
 export interface HierarchicalTaxonomyPlan extends BuildHierarchicalTaxonomyResult {
   /** Depth-ascending; write boundaries must preserve order so children are not saved before parents. */
   readonly clusters: readonly TaxonomyCluster[]
+  /** Global write target: reassign `assigned_cluster_id`. Empty on the scoped path. */
   readonly observationAssignments: readonly ReassignTaxonomyObservationByIdInput[]
+  /** Scoped write target: the `custom_behavior_assignments` slice. Empty on the global path. */
+  readonly customAssignments: readonly CustomBehaviorAssignment[]
+  /** Non-null ⇒ the plan is scoped to this custom behavior (drives the write target). */
+  readonly customBehaviorId: CustomBehaviorId | null
   readonly deprecatedClusterIds: readonly TaxonomyClusterId[]
 }
 
-export interface PersistHierarchicalTaxonomyPlanInput {
-  readonly organizationId: OrganizationId
-  readonly projectId: ProjectId
-  readonly plan: HierarchicalTaxonomyPlan
-  readonly now?: Date
-}
-
-const lookbackStart = (now: Date): Date => new Date(now.getTime() - TAXONOMY_NOISE_LOOKBACK_DAYS * 24 * 60 * 60_000)
+const lookbackStart = (now: Date): Date =>
+  new Date(now.getTime() - TAXONOMY_GARDENING_SAMPLE_LOOKBACK_DAYS * 24 * 60 * 60_000)
 
 const seedFromProjectId = (projectId: string): number => {
   let hash = 0
@@ -152,6 +165,8 @@ const buildPersistedCluster = (input: {
   readonly id: string
   readonly organizationId: OrganizationId
   readonly projectId: ProjectId
+  /** NULL = global taxonomy; non-null scopes the row to a custom behavior's sub-tree. */
+  readonly customBehaviorId?: CustomBehaviorId | null
   readonly dimension: TaxonomyDimensionType
   readonly parentId: string | null
   readonly path: string
@@ -196,6 +211,7 @@ const buildPersistedCluster = (input: {
     id: TaxonomyClusterId(input.id),
     organizationId: input.organizationId,
     projectId: input.projectId,
+    customBehaviorId: input.customBehaviorId ?? null,
     dimension: input.dimension,
     parentClusterId: input.parentId === null ? null : TaxonomyClusterId(input.parentId),
     depth: input.depth,
@@ -221,7 +237,7 @@ const buildPersistedCluster = (input: {
  * are still distinguishable from each other, which is what the online router
  * uses as a per-level descent gate.
  */
-const computeSplitLinkThreshold = (children: readonly ClusteringTreeNode[]): number | null => {
+export const computeSplitLinkThreshold = (children: readonly ClusteringTreeNode[]): number | null => {
   if (children.length < 2) return null
   let minPair = Number.POSITIVE_INFINITY
   for (let i = 0; i < children.length; i++) {
@@ -234,7 +250,9 @@ const computeSplitLinkThreshold = (children: readonly ClusteringTreeNode[]): num
       if (similarity < minPair) minPair = similarity
     }
   }
-  return Number.isFinite(minPair) ? minPair : null
+  // Cosine similarity is [-1, 1], but the stored threshold contract is [0, 1];
+  // near-orthogonal centroids can dip just below 0, so clamp to keep it valid.
+  return Number.isFinite(minPair) ? Math.min(1, Math.max(0, minPair)) : null
 }
 
 interface PersistedLeaf {
@@ -281,6 +299,43 @@ const collectNodes = (
   return tempId
 }
 
+/**
+ * Match the freshly built nodes 1:1 against the previously-active clusters and
+ * resolve every node's final id: a confident continuation reuses its
+ * predecessor's id (keeping id-keyed trends continuous), everything else gets a
+ * fresh cuid. Shared by the global and custom-behavior builds — the scope of
+ * `previouslyActive` is the only thing that differs, and the caller chooses it.
+ */
+interface ResolvedTaxonomyLineage {
+  readonly oldById: ReadonlyMap<string, TaxonomyCluster>
+  readonly decisionByTempId: ReadonlyMap<string, LineageDecision>
+  readonly finalIdByTempId: ReadonlyMap<string, string>
+}
+
+const resolveTaxonomyLineage = (input: {
+  readonly descriptors: readonly NodeDescriptor[]
+  readonly previouslyActive: readonly TaxonomyCluster[]
+}): ResolvedTaxonomyLineage => {
+  const oldById = new Map(input.previouslyActive.map((cluster) => [cluster.id as string, cluster] as const))
+  const match = matchTaxonomyLineage({
+    newNodes: input.descriptors.map((node) => ({ tempId: node.tempId, depth: node.depth, centroid: node.centroid })),
+    oldClusters: input.previouslyActive.map((cluster) => ({
+      id: cluster.id,
+      depth: cluster.depth,
+      centroid: normalizeTaxonomyCentroid(cluster.centroid),
+    })),
+    continuationThreshold: TAXONOMY_CONTINUATION_THRESHOLD,
+    nameReuseThreshold: TAXONOMY_NAME_REUSE_THRESHOLD,
+  })
+  const decisionByTempId = new Map(match.decisions.map((decision) => [decision.tempId, decision] as const))
+  const finalIdByTempId = new Map<string, string>()
+  for (const node of input.descriptors) {
+    const decision = decisionByTempId.get(node.tempId)
+    finalIdByTempId.set(node.tempId, decision?.transition === "continuation" ? decision.reuseId : generateId())
+  }
+  return { oldById, decisionByTempId, finalIdByTempId }
+}
+
 export const planHierarchicalTaxonomyUseCase = (input: PlanHierarchicalTaxonomyInput) =>
   Effect.gen(function* () {
     yield* Effect.annotateCurrentSpan("taxonomy.projectId", input.projectId)
@@ -290,22 +345,40 @@ export const planHierarchicalTaxonomyUseCase = (input: PlanHierarchicalTaxonomyI
     const embeddingConfig = yield* resolveEmbeddingConfig()
     const observationsRepo = yield* TaxonomyObservationRepository
     const clustersRepo = yield* TaxonomyClusterRepository
+    const scopedBehaviorId = input.customBehaviorId ?? null
+    // A scoped run without a filter would sample the whole project yet tag the
+    // clusters/assignments to the behavior — silently wrong. Custom behaviors
+    // always carry a non-empty filter, so fail fast rather than fall back to `{}`.
+    if (scopedBehaviorId !== null && (!input.filterSet || Object.keys(input.filterSet).length === 0)) {
+      return yield* Effect.die(
+        new Error(`planHierarchicalTaxonomy: scoped run for ${scopedBehaviorId} requires a non-empty filterSet`),
+      )
+    }
     const since = lookbackStart(now)
-    const counts = yield* observationsRepo.getCounts({
-      organizationId: input.organizationId,
-      projectId: input.projectId,
-      since,
-    })
-    const observations = yield* observationsRepo.listForClusteringSample({
-      organizationId: input.organizationId,
-      projectId: input.projectId,
-      since,
-      limit: TAXONOMY_CLUSTERING_PROPOSAL_SAMPLE_MAX,
-    })
+    // Scoped gardening samples the behavior's FilterSet session slice (rows carry
+    // sessionId for the assignment write); global samples the project-wide window.
+    const observations = scopedBehaviorId
+      ? yield* observationsRepo.listForCustomBehaviorSample({
+          organizationId: input.organizationId,
+          projectId: input.projectId,
+          since,
+          limit: TAXONOMY_CLUSTERING_PROPOSAL_SAMPLE_MAX,
+          filterSet: input.filterSet ?? {},
+        })
+      : yield* observationsRepo.listForClusteringSample({
+          organizationId: input.organizationId,
+          projectId: input.projectId,
+          since,
+          limit: TAXONOMY_CLUSTERING_PROPOSAL_SAMPLE_MAX,
+        })
+    const observationsAvailable = scopedBehaviorId
+      ? observations.length
+      : (yield* observationsRepo.getCounts({ organizationId: input.organizationId, projectId: input.projectId, since }))
+          .total
 
     const baseResult = {
       observationsScanned: observations.length,
-      observationsAvailable: counts.total,
+      observationsAvailable,
       observationsSampled: observations.length,
       sampleStrategy: TAXONOMY_CLUSTERING_SAMPLE_STRATEGY,
       sampleCap: TAXONOMY_CLUSTERING_PROPOSAL_SAMPLE_MAX,
@@ -322,6 +395,8 @@ export const planHierarchicalTaxonomyUseCase = (input: PlanHierarchicalTaxonomyI
         lineage: [],
         clusters: [],
         observationAssignments: [],
+        customAssignments: [],
+        customBehaviorId: scopedBehaviorId,
         deprecatedClusterIds: [],
       } satisfies HierarchicalTaxonomyPlan
     }
@@ -329,37 +404,26 @@ export const planHierarchicalTaxonomyUseCase = (input: PlanHierarchicalTaxonomyI
     const normalizedEmbeddings = observations.map((observation) => normalizeTaxonomyEmbedding(observation.embedding))
     const clusterBuilder =
       input.clusterBuilder ??
-      ((builderInput: BuildHierarchicalClustersInput) => Effect.sync(() => buildHierarchicalClusters(builderInput)))
+      ((builderInput: BuildStaticHierarchicalClustersInput) =>
+        Effect.sync(() => buildStaticHierarchicalClusters(builderInput)))
     const tree = yield* clusterBuilder({
       embeddings: normalizedEmbeddings,
-      depthSchedule: TAXONOMY_TREE_DEPTH_SCHEDULE,
+      depthSchedule: TAXONOMY_TREE_STATIC_DEPTH_SCHEDULE,
       restarts: TAXONOMY_KMEANS_RESTARTS,
       maxIter: TAXONOMY_KMEANS_MAX_ITER,
       tolerance: TAXONOMY_KMEANS_TOLERANCE,
-      seed: seedFromProjectId(input.projectId),
+      seed: seedFromProjectId(scopedBehaviorId ? `${input.projectId}:${scopedBehaviorId}` : input.projectId),
     })
 
     const descriptors: NodeDescriptor[] = []
     collectNodes(tree, null, { value: 0 }, descriptors)
 
-    const previouslyActive = yield* clustersRepo.listActiveByProject({ projectId: input.projectId, dimension })
-    const oldById = new Map(previouslyActive.map((cluster) => [cluster.id as string, cluster] as const))
-    const match = matchTaxonomyLineage({
-      newNodes: descriptors.map((node) => ({ tempId: node.tempId, depth: node.depth, centroid: node.centroid })),
-      oldClusters: previouslyActive.map((cluster) => ({
-        id: cluster.id,
-        depth: cluster.depth,
-        centroid: normalizeTaxonomyCentroid(cluster.centroid),
-      })),
-      continuationThreshold: TAXONOMY_CONTINUATION_THRESHOLD,
-      nameReuseThreshold: TAXONOMY_NAME_REUSE_THRESHOLD,
+    const previouslyActive = yield* clustersRepo.listActiveByProject({
+      projectId: input.projectId,
+      dimension,
+      ...(input.customBehaviorId ? { customBehaviorId: input.customBehaviorId } : {}),
     })
-    const decisionByTempId = new Map(match.decisions.map((decision) => [decision.tempId, decision] as const))
-    const finalIdByTempId = new Map<string, string>()
-    for (const node of descriptors) {
-      const decision = decisionByTempId.get(node.tempId)
-      finalIdByTempId.set(node.tempId, decision?.transition === "continuation" ? decision.reuseId : generateId())
-    }
+    const { oldById, decisionByTempId, finalIdByTempId } = resolveTaxonomyLineage({ descriptors, previouslyActive })
 
     const orderedDescriptors = [...descriptors].sort((a, b) => a.depth - b.depth)
     const pathByTempId = new Map<string, string>()
@@ -387,6 +451,7 @@ export const planHierarchicalTaxonomyUseCase = (input: PlanHierarchicalTaxonomyI
         id: finalId,
         organizationId: input.organizationId,
         projectId: input.projectId,
+        customBehaviorId: input.customBehaviorId ?? null,
         dimension,
         parentId: parentFinalId,
         path,
@@ -440,24 +505,55 @@ export const planHierarchicalTaxonomyUseCase = (input: PlanHierarchicalTaxonomyI
       }
     }
 
-    const observationAssignments = bornLeaves.flatMap((leaf) =>
+    const leafMembers = bornLeaves.flatMap((leaf) =>
       leaf.observationIndices.flatMap((index) => {
         const observation = observations[index]
         const embedding = normalizedEmbeddings[index]
         if (!observation || !embedding) return []
         const confidence = Math.max(0, Math.min(1, cosineSimilarityNormalized(embedding, leaf.centroid)))
-        return [
-          {
-            observationId: observation.observationId,
-            assignedClusterId: leaf.clusterId,
-            assignmentMethod: "gardening_birth" as const,
-            assignmentConfidence: confidence,
-            reassignmentRunId: input.runId,
-            indexedAt: now,
-          },
-        ]
+        return [{ leaf, observation, confidence }]
       }),
     )
+
+    // Two write targets, picked by scope: global reassigns the observation's
+    // `assigned_cluster_id`; a scoped run writes the `custom_behavior_assignments`
+    // slice (carrying sessionId + customBehaviorId), never the global column.
+    const observationAssignments: ReassignTaxonomyObservationByIdInput[] = scopedBehaviorId
+      ? []
+      : leafMembers.map(({ leaf, observation, confidence }) => ({
+          observationId: observation.observationId,
+          assignedClusterId: leaf.clusterId,
+          assignmentMethod: "gardening_birth" as const,
+          assignmentConfidence: confidence,
+          reassignmentRunId: input.runId,
+          indexedAt: now,
+        }))
+    const customAssignments: CustomBehaviorAssignment[] = scopedBehaviorId
+      ? leafMembers.flatMap(({ leaf, observation, confidence }) => {
+          // Scoped samples come from listForCustomBehaviorSample and carry a
+          // sessionId; guard at runtime (via a widening cast, not an unchecked
+          // one) so a non-scoped observation can never yield a `sessionId:
+          // undefined` assignment.
+          const sessionId = (observation as Partial<TaxonomyScopedClusteringObservation>).sessionId
+          if (sessionId === undefined) return []
+          return [
+            {
+              organizationId: input.organizationId,
+              projectId: input.projectId,
+              customBehaviorId: scopedBehaviorId,
+              observationId: observation.observationId,
+              sessionId,
+              assignedClusterId: leaf.clusterId,
+              assignmentConfidence: confidence,
+              assignmentMethod: "gardening_birth" as const,
+              reassignmentRunId: input.runId,
+              startTime: observation.startTime,
+              retentionDays: TAXONOMY_OBSERVATION_RETENTION_DAYS,
+              indexedAt: now,
+            } satisfies CustomBehaviorAssignment,
+          ]
+        })
+      : []
 
     const finalIds = new Set(finalIdByTempId.values())
     const deprecatedClusterIds: TaxonomyClusterId[] = []
@@ -488,54 +584,8 @@ export const planHierarchicalTaxonomyUseCase = (input: PlanHierarchicalTaxonomyI
       lineage,
       clusters: bornClusters,
       observationAssignments,
+      customAssignments,
+      customBehaviorId: scopedBehaviorId,
       deprecatedClusterIds,
     } satisfies HierarchicalTaxonomyPlan
   }).pipe(Effect.withSpan("taxonomy.planHierarchicalTaxonomy"))
-
-export const persistHierarchicalTaxonomyPlanUseCase = (input: PersistHierarchicalTaxonomyPlanInput) =>
-  Effect.gen(function* () {
-    const observationsRepo = yield* TaxonomyObservationRepository
-    const clustersRepo = yield* TaxonomyClusterRepository
-    const timestamp = input.now ?? new Date()
-
-    for (const cluster of input.plan.clusters) {
-      yield* clustersRepo.save(cluster)
-    }
-
-    if (input.plan.observationAssignments.length > 0) {
-      yield* observationsRepo.reassignManyById({
-        organizationId: input.organizationId,
-        projectId: input.projectId,
-        assignments: input.plan.observationAssignments,
-      })
-    }
-
-    for (const clusterId of input.plan.deprecatedClusterIds) {
-      yield* clustersRepo.markDeprecated({ clusterId, timestamp })
-    }
-
-    return {
-      observationsScanned: input.plan.observationsScanned,
-      observationsAvailable: input.plan.observationsAvailable,
-      observationsSampled: input.plan.observationsSampled,
-      sampleStrategy: input.plan.sampleStrategy,
-      sampleCap: input.plan.sampleCap,
-      clustersBorn: input.plan.clustersBorn,
-      clustersContinued: input.plan.clustersContinued,
-      clustersDeprecated: input.plan.clustersDeprecated,
-      leavesAssigned: input.plan.leavesAssigned,
-      maxDepthReached: input.plan.maxDepthReached,
-      lineage: input.plan.lineage,
-    } satisfies BuildHierarchicalTaxonomyResult
-  }).pipe(Effect.withSpan("taxonomy.persistHierarchicalTaxonomyPlan"))
-
-export const buildHierarchicalTaxonomyUseCase = (input: BuildHierarchicalTaxonomyInput) =>
-  Effect.gen(function* () {
-    const plan = yield* planHierarchicalTaxonomyUseCase(input)
-    return yield* persistHierarchicalTaxonomyPlanUseCase({
-      organizationId: input.organizationId,
-      projectId: input.projectId,
-      plan,
-      ...(input.now === undefined ? {} : { now: input.now }),
-    })
-  }).pipe(Effect.withSpan("taxonomy.buildHierarchicalTaxonomy"))

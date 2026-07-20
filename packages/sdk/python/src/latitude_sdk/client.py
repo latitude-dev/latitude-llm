@@ -16,6 +16,7 @@ if typing.TYPE_CHECKING:
     from .annotations.client import AnnotationsClient, AsyncAnnotationsClient
     from .api_keys.client import ApiKeysClient, AsyncApiKeysClient
     from .datasets.client import AsyncDatasetsClient, DatasetsClient
+    from .experiments.client import AsyncExperimentsClient, ExperimentsClient
     from .incidents.client import AsyncIncidentsClient, IncidentsClient
     from .members.client import AsyncMembersClient, MembersClient
     from .monitors.client import AsyncMonitorsClient, MonitorsClient
@@ -133,6 +134,7 @@ class LatitudeClient:
         self._monitors: typing.Optional[MonitorsClient] = None
         self._analytics: typing.Optional[AnalyticsClient] = None
         self._spans: typing.Optional[SpansClient] = None
+        self._experiments: typing.Optional[ExperimentsClient] = None
 
     @property
     def account(self):
@@ -270,6 +272,14 @@ class LatitudeClient:
             self._spans = SpansClient(client_wrapper=self._client_wrapper)
         return self._spans
 
+    @property
+    def experiments(self):
+        if self._experiments is None:
+            from .experiments.client import ExperimentsClient  # noqa: E402
+
+            self._experiments = ExperimentsClient(client_wrapper=self._client_wrapper)
+        return self._experiments
+
 
 def _make_default_async_client(
     timeout: typing.Optional[float],
@@ -395,6 +405,7 @@ class AsyncLatitudeClient:
         self._monitors: typing.Optional[AsyncMonitorsClient] = None
         self._analytics: typing.Optional[AsyncAnalyticsClient] = None
         self._spans: typing.Optional[AsyncSpansClient] = None
+        self._experiments: typing.Optional[AsyncExperimentsClient] = None
 
     @property
     def account(self):
@@ -531,6 +542,14 @@ class AsyncLatitudeClient:
 
             self._spans = AsyncSpansClient(client_wrapper=self._client_wrapper)
         return self._spans
+
+    @property
+    def experiments(self):
+        if self._experiments is None:
+            from .experiments.client import AsyncExperimentsClient  # noqa: E402
+
+            self._experiments = AsyncExperimentsClient(client_wrapper=self._client_wrapper)
+        return self._experiments
 
 
 def _get_base_url(*, base_url: typing.Optional[str] = None, environment: LatitudeEnvironment) -> str:

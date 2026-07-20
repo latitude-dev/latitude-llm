@@ -24,7 +24,7 @@ export function SpansTab({
   readonly onSelectSpan: (spanId: string) => void
   readonly isActive: boolean
 }) {
-  const { filters, clearFilters, toggleErrors, toggleTools, selectModel } = useSpanFilters()
+  const { filters, clearFilters, toggleErrors, toggleTools, toggleMemory, selectModel } = useSpanFilters()
   // Shares the cached spans collection with the Trace tab's fetch (same key → one fetch).
   const { data: spans, isLoading } = useSpansByTraceCollection({ projectId, traceId, startTimeFrom, startTimeTo })
   const [isMinimized, setIsMinimized] = useState(() => selectedSpanId !== "")
@@ -94,6 +94,7 @@ export function SpansTab({
           filters={filters}
           onToggleErrors={toggleErrors}
           onToggleTools={toggleTools}
+          onToggleMemory={toggleMemory}
           onSelectModel={selectModel}
           onClearFilters={clearFilters}
         />
@@ -111,6 +112,7 @@ export function SpansTab({
         filters={filters}
         onToggleErrors={toggleErrors}
         onToggleTools={toggleTools}
+        onToggleMemory={toggleMemory}
         onSelectModel={selectModel}
         onClearFilters={clearFilters}
       />

@@ -26,9 +26,8 @@ import { Effect, Layer } from "effect"
  * `trace-repository`); the outer aggregation then counts traces and
  * picks the most recent end time per organisation.
  *
- * Bound DateTime64 params reject `toISOString()`'s trailing `Z` —
- * we normalise to `YYYY-MM-DD HH:MM:SS.sss` (same shape used by
- * `mapDateTime64UtcQueryParam` in the trace-fields registry).
+ * Bound DateTime64 params reject `toISOString()`'s trailing `Z`, so
+ * this query normalises to `YYYY-MM-DD HH:MM:SS.sss`.
  */
 export const AdminOrganizationUsageRepositoryLive = Layer.effect(
   AdminOrganizationUsageRepository,

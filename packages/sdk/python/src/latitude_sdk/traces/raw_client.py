@@ -19,12 +19,12 @@ from ..errors.unauthorized_error import UnauthorizedError
 from ..types.annotation import Annotation
 from ..types.error import Error
 from ..types.export_traces_response import ExportTracesResponse
-from ..types.filter_set import FilterSet
 from ..types.paginated_trace_annotations import PaginatedTraceAnnotations
 from ..types.paginated_traces import PaginatedTraces
 from ..types.span_detail import SpanDetail
 from ..types.trace_analytics_response import TraceAnalyticsResponse
 from ..types.trace_detail import TraceDetail
+from ..types.trace_filter_set import TraceFilterSet
 from ..types.trace_spans import TraceSpans
 from ..types.traces_ref import TracesRef
 from .types.list_traces_body_sort_by import ListTracesBodySortBy
@@ -48,7 +48,7 @@ class RawTracesClient:
         sort_by: typing.Optional[ListTracesBodySortBy] = OMIT,
         sort_direction: typing.Optional[ListTracesBodySortDirection] = OMIT,
         query: typing.Optional[str] = OMIT,
-        filters: typing.Optional[FilterSet] = OMIT,
+        filters: typing.Optional[TraceFilterSet] = OMIT,
         request_options: typing.Optional[RequestOptions] = None,
     ) -> HttpResponse[PaginatedTraces]:
         """
@@ -74,7 +74,7 @@ class RawTracesClient:
         query : typing.Optional[str]
             Free-text semantic search across the trace's input and output messages. Combined with `filters` via AND.
 
-        filters : typing.Optional[FilterSet]
+        filters : typing.Optional[TraceFilterSet]
 
         request_options : typing.Optional[RequestOptions]
             Request-specific configuration.
@@ -94,7 +94,7 @@ class RawTracesClient:
                 "sortDirection": sort_direction,
                 "query": query,
                 "filters": convert_and_respect_annotation_metadata(
-                    object_=filters, annotation=FilterSet, direction="write"
+                    object_=filters, annotation=TraceFilterSet, direction="write"
                 ),
             },
             headers={
@@ -778,7 +778,7 @@ class AsyncRawTracesClient:
         sort_by: typing.Optional[ListTracesBodySortBy] = OMIT,
         sort_direction: typing.Optional[ListTracesBodySortDirection] = OMIT,
         query: typing.Optional[str] = OMIT,
-        filters: typing.Optional[FilterSet] = OMIT,
+        filters: typing.Optional[TraceFilterSet] = OMIT,
         request_options: typing.Optional[RequestOptions] = None,
     ) -> AsyncHttpResponse[PaginatedTraces]:
         """
@@ -804,7 +804,7 @@ class AsyncRawTracesClient:
         query : typing.Optional[str]
             Free-text semantic search across the trace's input and output messages. Combined with `filters` via AND.
 
-        filters : typing.Optional[FilterSet]
+        filters : typing.Optional[TraceFilterSet]
 
         request_options : typing.Optional[RequestOptions]
             Request-specific configuration.
@@ -824,7 +824,7 @@ class AsyncRawTracesClient:
                 "sortDirection": sort_direction,
                 "query": query,
                 "filters": convert_and_respect_annotation_metadata(
-                    object_=filters, annotation=FilterSet, direction="write"
+                    object_=filters, annotation=TraceFilterSet, direction="write"
                 ),
             },
             headers={

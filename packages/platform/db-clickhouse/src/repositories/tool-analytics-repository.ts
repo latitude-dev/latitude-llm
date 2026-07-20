@@ -20,15 +20,12 @@ import type {
   ToolUsageMetrics,
 } from "@domain/spans"
 import { ToolAnalyticsRepository, toolDefinitionSchema } from "@domain/spans"
-import { normalizeCHString, parseCHDate } from "@repo/utils"
+import { formatCHDate, normalizeCHString, parseCHDate } from "@repo/utils"
 import { Effect, Layer } from "effect"
 
 // ---------------------------------------------------------------------------
 // Constants & helpers
 // ---------------------------------------------------------------------------
-
-// ClickHouse DateTime64(9, 'UTC') rejects trailing 'Z'; strip it.
-const toClickhouseDateTime = (date: Date): string => date.toISOString().replace("Z", "")
 
 // Safety bound on the unified tool list; more distinct names is pathological.
 const TOOL_LIST_LIMIT = 500
@@ -73,8 +70,8 @@ const CALLS_FILTER = `${SCOPE_FILTER}
 const scopeParams = (scope: ToolAnalyticsScope) => ({
   organizationId: scope.organizationId as string,
   projectId: scope.projectId as string,
-  from: toClickhouseDateTime(scope.from),
-  to: toClickhouseDateTime(scope.to),
+  from: formatCHDate(scope.from),
+  to: formatCHDate(scope.to),
 })
 
 const errorsClause = (errorsOnly: boolean | undefined): string => (errorsOnly ? " AND status_code = 2" : "")
@@ -852,7 +849,7 @@ export const ToolAnalyticsRepositoryLive = Layer.effect(
                   limitPlusOne: limit + 1,
                   ...(input.cursor
                     ? {
-                        cursorStartTime: toClickhouseDateTime(input.cursor.startTime),
+                        cursorStartTime: formatCHDate(input.cursor.startTime),
                         cursorSpanId: input.cursor.spanId,
                       }
                     : {}),
@@ -902,7 +899,7 @@ export const ToolAnalyticsRepositoryLive = Layer.effect(
                   limitPlusOne: limit + 1,
                   ...(input.cursor
                     ? {
-                        cursorStartTime: toClickhouseDateTime(input.cursor.startTime),
+                        cursorStartTime: formatCHDate(input.cursor.startTime),
                         cursorSpanId: input.cursor.spanId,
                       }
                     : {}),

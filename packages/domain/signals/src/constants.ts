@@ -297,8 +297,16 @@ export const SIGNAL_GENERATION_DEFAULT_MODEL = {
   reasoning: "medium",
 } as const
 
-/** Hard cap on `ai.generate` calls per generation: first draft + repair turns + one review turn. */
-export const SIGNAL_GENERATION_MAX_GENERATE_CALLS = 4
+/** Hard cap on agent steps per generation: research + preview + create, with room for repair retries. */
+export const SIGNAL_GENERATION_MAX_STEPS = 14
+
+/**
+ * Wall-clock deadline for one agentic generation run, in milliseconds. Kept
+ * below the 300s browser poll timeout so an overrun still surfaces as a
+ * terminal error in the modal rather than a silent hang; the 1800s claim TTL
+ * covers redelivery well beyond this.
+ */
+export const SIGNAL_GENERATION_DEADLINE_MS = 240_000
 
 /** Maximum length of the user's describe prompt, enforced at the endpoint and the intro textarea. */
 export const SIGNAL_GENERATION_PROMPT_MAX_LENGTH = 2000

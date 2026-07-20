@@ -86,13 +86,13 @@ Available `<SETTING>`:
 
 ### Embeddings
 
-Embeddings are configured globally through `LAT_AI_EMBEDDING_PROVIDER` and `LAT_AI_EMBEDDING_MODEL`. It defaults to `voyage` / `voyage-4-large`, and powers semantic trace/issue search, search highlights, and issue clustering. Without a working embeddings provider, search falls back to lexical.
+Embeddings are configured globally through `LAT_AI_EMBEDDING_PROVIDER` and `LAT_AI_EMBEDDING_MODEL`. It defaults to `voyage` / `voyage-4-large`, and powers semantic trace/signal search, search highlights, and signal clustering. Without a working embeddings provider, search falls back to lexical.
 
 <Warning>
   The embedding model is a **one-time choice — pick it at install time and keep it**.
 </Warning>
 
-Once an embedding model is used on a live deployment, changing it is a difficult task. Different models produce incompatible vector spaces and existing data is never re-embedded, so switching breaks semantic search, issue matching, and clustering.
+Once an embedding model is used on a live deployment, changing it is a difficult task. Different models produce incompatible vector spaces and existing data is never re-embedded, so switching breaks semantic search, signal matching, and clustering.
 
 The model must also **emit 2048-dimensional vectors** — the dimension is fixed by the database schema and is not configurable.
 
@@ -133,6 +133,7 @@ These wire Latitude to its datastores, depending on your chosen [deployment opti
 | `LAT_WEB_PORT`, `LAT_API_PORT`, `LAT_INGEST_PORT` | Host bind ports (default `3000` / `3001` / `3002`). |
 | `LAT_WORKERS_HEALTH_PORT`, `LAT_WORKFLOWS_HEALTH_PORT` | Health-check ports for the background workers (default `9090` / `9091`). |
 | `LAT_IMAGE_TAG` | Image tag the stack pulls (default `latest`; pin `X.Y.Z` in production). |
+| `LAT_OSS_TELEMETRY_ENABLED` | Anonymous OSS deployment heartbeat sent to Latitude's PostHog project (default `true` in production, `false` in development). Set `false` to opt out. |
 | `LAT_EXPORT_RATE_LIMIT_*`, `LAT_INGEST_TRACE_RATE_LIMIT_*` | Rate-limit tuning for exports and trace ingestion. |
 
 ### Postgres

@@ -1,5 +1,4 @@
 export {
-  AGENT_DISPATCH_FLAG,
   AGENT_DISPATCH_KINDS,
   AGENT_DISPATCH_TRIGGERS,
   DEFAULT_COOLDOWN_MINUTES,
@@ -14,20 +13,24 @@ export {
   dispatchErrorCategorySchema,
 } from "./entities/agent-dispatch.ts"
 export type {
-  AgentDispatchConfig,
+  AgentDispatchConfigRow,
   AgentDispatchGuardrails,
   AgentDispatchKind,
   AgentDispatchTarget,
+  EffectiveAgentDispatchConfig,
   ResolvedDispatchTarget,
+  StoredAgentDispatchTarget,
 } from "./entities/agent-dispatch-config.ts"
 export {
-  agentDispatchConfigSchema,
+  agentDispatchConfigRowSchema,
   agentDispatchGuardrailsSchema,
   agentDispatchKindSchema,
   agentDispatchTargetSchema,
   claudeDispatchTargetSchema,
   cursorDispatchTargetSchema,
   linearDispatchTargetSchema,
+  storedAgentDispatchTargetSchema,
+  storedCursorDispatchTargetSchema,
   webhookDispatchTargetSchema,
 } from "./entities/agent-dispatch-config.ts"
 export type { AgentDispatchContext, AgentDispatchTrigger } from "./entities/agent-dispatch-context.ts"
@@ -40,6 +43,13 @@ export {
 export { buildDispatchContextFromSignal } from "./helpers/build-dispatch-context.ts"
 export { buildDispatchIdempotencyKey, buildManualDispatchIdempotencyKey } from "./helpers/idempotency-key.ts"
 export { defaultDispatchPromptTemplate, renderDispatchPrompt } from "./helpers/render-prompt.ts"
+export type { ResolveEffectiveConfigInput, TargetReadiness } from "./helpers/resolve-effective-config.ts"
+export {
+  checkTargetReadiness,
+  parseResolvedDispatchTarget,
+  resolveEffectiveConfig,
+  resolveEffectiveConfigsForProject,
+} from "./helpers/resolve-effective-config.ts"
 export type { AgentDispatchAdapter, DecryptedCredential, DispatchResult } from "./ports/agent-dispatch-adapter.ts"
 export { AgentDispatchAdapters } from "./ports/agent-dispatch-adapter.ts"
 export type {
@@ -67,7 +77,11 @@ export type {
   RequestAgentDispatchResult,
 } from "./use-cases/request-agent-dispatch.ts"
 export { requestAgentDispatchUseCase } from "./use-cases/request-agent-dispatch.ts"
+export { resetProjectDispatchOverrideUseCase } from "./use-cases/reset-project-dispatch-override.ts"
 export type { SendAgentDispatchInput, SendAgentDispatchOutcome } from "./use-cases/send-agent-dispatch.ts"
 export { sendAgentDispatchUseCase } from "./use-cases/send-agent-dispatch.ts"
-export type { UpsertAgentDispatchConfigInput } from "./use-cases/upsert-agent-dispatch-config.ts"
-export { upsertAgentDispatchConfigUseCase } from "./use-cases/upsert-agent-dispatch-config.ts"
+export { setProjectDispatchRepoUseCase } from "./use-cases/set-project-dispatch-repo.ts"
+export type { UpsertOrgDefaultDispatchConfigInput } from "./use-cases/upsert-org-default-dispatch-config.ts"
+export { upsertOrgDefaultDispatchConfigUseCase } from "./use-cases/upsert-org-default-dispatch-config.ts"
+export type { UpsertProjectDispatchOverrideInput } from "./use-cases/upsert-project-dispatch-override.ts"
+export { upsertProjectDispatchOverrideUseCase } from "./use-cases/upsert-project-dispatch-override.ts"

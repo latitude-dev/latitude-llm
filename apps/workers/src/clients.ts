@@ -1,6 +1,6 @@
 import type { MarketingContactsPort } from "@domain/marketing"
 import type { ProductFeedbackClientShape } from "@domain/product-feedback"
-import type { WorkflowStarterShape } from "@domain/queue"
+import type { QueuePublisherShape, WorkflowQuerierShape, WorkflowStarterShape } from "@domain/queue"
 import type { StorageDiskPort } from "@domain/shared"
 import { createPostHogClient, loadPostHogConfig, type PostHogClientShape } from "@platform/analytics-posthog"
 import { createRedisClient, createRedisConnection, type RedisClient } from "@platform/cache-redis"
@@ -9,8 +9,15 @@ import { createPostgresClient, type PostgresClient } from "@platform/db-postgres
 import { parseEnv } from "@platform/env"
 import { createLatitudeApiClient, loadLatitudeApiConfig } from "@platform/latitude-api"
 import { createLoopsContactsSender, loadLoopsConfig } from "@platform/loops"
+import { createBullMqQueuePublisher, loadBullMqConfig } from "@platform/queue-bullmq"
 import { createStorageDisk } from "@platform/storage-object"
-import { createTemporalClient, createWorkflowStarter, loadTemporalConfig } from "@platform/workflows-temporal"
+import {
+  createTemporalClient,
+  createWorkflowQuerier,
+  createWorkflowStarter,
+  loadTemporalConfig,
+} from "@platform/workflows-temporal"
+import { withTracing } from "@repo/observability"
 import { Effect } from "effect"
 
 let pgClientInstance: PostgresClient | undefined
@@ -18,7 +25,10 @@ let adminPostgresClientInstance: PostgresClient | undefined
 let clickhouseInstance: ClickHouseClient | undefined
 let storageDiskInstance: StorageDiskPort | undefined
 let redisInstance: RedisClient | undefined
+let temporalClientPromise: ReturnType<typeof createTemporalClient> | undefined
 let workflowStarterPromise: Promise<WorkflowStarterShape> | undefined
+let workflowQuerierPromise: Promise<WorkflowQuerierShape> | undefined
+let queuePublisherPromise: Promise<QueuePublisherShape> | undefined
 let posthogClientInstance: PostHogClientShape | undefined
 let productFeedbackClientInstance: ProductFeedbackClientShape | undefined
 let marketingContactsSenderInstance: MarketingContactsPort | undefined
@@ -67,6 +77,19 @@ export const getRedisClient = (): RedisClient => {
   return redisInstance
 }
 
+export const getQueuePublisher = (): Promise<QueuePublisherShape> => {
+  if (!queuePublisherPromise) {
+    queuePublisherPromise = (async () => {
+      const config = Effect.runSync(loadBullMqConfig())
+      return Effect.runPromise(createBullMqQueuePublisher({ redis: config }).pipe(withTracing))
+    })().catch((error) => {
+      queuePublisherPromise = undefined
+      throw error
+    })
+  }
+  return queuePublisherPromise
+}
+
 export const getPostHogClient = (): PostHogClientShape => {
   if (!posthogClientInstance) {
     const config = Effect.runSync(loadPostHogConfig)
@@ -101,10 +124,24 @@ export const getProductFeedbackClient = (): ProductFeedbackClientShape => {
   return productFeedbackClientInstance
 }
 
+// One Temporal client, shared by the starter and the querier — each is just a
+// thin wrapper over the same connection, so creating the client per-getter would
+// open a redundant second connection.
+function getTemporalClient(): ReturnType<typeof createTemporalClient> {
+  if (!temporalClientPromise) {
+    temporalClientPromise = createTemporalClient(loadTemporalConfig()).catch((error) => {
+      temporalClientPromise = undefined
+      throw error
+    })
+  }
+
+  return temporalClientPromise
+}
+
 export function getWorkflowStarter(): Promise<WorkflowStarterShape> {
   if (!workflowStarterPromise) {
     const config = loadTemporalConfig()
-    workflowStarterPromise = createTemporalClient(config)
+    workflowStarterPromise = getTemporalClient()
       .then((client) => createWorkflowStarter(client, config))
       .catch((error) => {
         workflowStarterPromise = undefined
@@ -113,4 +150,17 @@ export function getWorkflowStarter(): Promise<WorkflowStarterShape> {
   }
 
   return workflowStarterPromise
+}
+
+export function getWorkflowQuerier(): Promise<WorkflowQuerierShape> {
+  if (!workflowQuerierPromise) {
+    workflowQuerierPromise = getTemporalClient()
+      .then((client) => createWorkflowQuerier(client))
+      .catch((error) => {
+        workflowQuerierPromise = undefined
+        throw error
+      })
+  }
+
+  return workflowQuerierPromise
 }

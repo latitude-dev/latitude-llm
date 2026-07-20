@@ -18,7 +18,7 @@ interface ReadResult {
   newBuffer: string
 }
 
-export function readAllTurns(path: string, opts: { includeSidechain?: boolean } = {}): Turn[] {
+export function readAllRows(path: string): TranscriptRow[] {
   if (!existsSync(path)) return []
   const raw = readFileSync(path, "utf-8")
   const rows: TranscriptRow[] = []
@@ -31,7 +31,11 @@ export function readAllTurns(path: string, opts: { includeSidechain?: boolean } 
       // skip malformed line
     }
   }
-  return buildTurns(rows, opts)
+  return rows
+}
+
+export function readAllTurns(path: string, opts: { includeSidechain?: boolean } = {}): Turn[] {
+  return buildTurns(readAllRows(path), opts)
 }
 
 export function readIncremental(path: string, offset: number, buffer: string): ReadResult {
@@ -319,6 +323,7 @@ export function discoverSubagentFiles(mainTranscriptPath: string): SubagentFile[
 interface SubagentMeta {
   agentType: string
   description: string
+  toolUseId?: string | undefined
 }
 
 export function readSubagentMeta(metaPath: string): SubagentMeta | undefined {
@@ -330,6 +335,7 @@ export function readSubagentMeta(metaPath: string): SubagentMeta | undefined {
     return {
       agentType: obj.agentType,
       description: typeof obj.description === "string" ? obj.description : "",
+      toolUseId: typeof obj.toolUseId === "string" ? obj.toolUseId : undefined,
     }
   } catch {
     return undefined

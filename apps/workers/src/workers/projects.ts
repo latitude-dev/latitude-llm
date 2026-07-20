@@ -1,18 +1,11 @@
 import { OutboxEventWriter } from "@domain/events"
-import { createSampleProjectUseCase } from "@domain/organizations"
 import { ProjectRepository } from "@domain/projects"
 import type { QueueConsumer } from "@domain/queue"
 import { OrganizationId, ProjectId } from "@domain/shared"
-import {
-  ApiKeyRepositoryLive,
-  OutboxEventWriterLive,
-  type PostgresClient,
-  ProjectRepositoryLive,
-  withPostgres,
-} from "@platform/db-postgres"
+import { OutboxEventWriterLive, type PostgresClient, ProjectRepositoryLive, withPostgres } from "@platform/db-postgres"
 import { createLogger, withTracing } from "@repo/observability"
 import { Data, Effect, Layer } from "effect"
-import { getPostgresClient, getWorkflowStarter } from "../clients.ts"
+import { getPostgresClient } from "../clients.ts"
 import { provisionFlaggers } from "../services/provisioning.ts"
 
 const logger = createLogger("projects")
@@ -47,29 +40,6 @@ export const createProjectsWorker = ({ consumer, postgresClient }: ProjectsDeps)
           durationMs: Date.now() - startTime,
           flaggersProvisioned: results.length,
           results: results.map((r) => r.slug),
-        })
-      }).pipe(withTracing),
-
-    seedDemo: (payload) =>
-      Effect.gen(function* () {
-        const workflowStarter = yield* Effect.promise(() => getWorkflowStarter())
-        yield* workflowStarter
-          .start(
-            "seedDemoProjectWorkflow",
-            {
-              organizationId: payload.organizationId,
-              projectId: payload.projectId,
-              queueAssigneeUserIds: payload.queueAssigneeUserIds,
-              apiKeyId: payload.apiKeyId,
-              timelineAnchorIso: payload.timelineAnchorIso,
-            },
-            { workflowId: `projects:seed-demo:${payload.projectId}` },
-          )
-          .pipe(Effect.catchTag("WorkflowAlreadyStartedError", () => Effect.void))
-
-        logger.info("Demo project seed workflow started", {
-          organizationId: payload.organizationId,
-          projectId: payload.projectId,
         })
       }).pipe(withTracing),
 
@@ -122,19 +92,6 @@ export const createProjectsWorker = ({ consumer, postgresClient }: ProjectsDeps)
         ),
         withTracing,
         Effect.ignore,
-      ),
-
-    createDemo: (payload) =>
-      createSampleProjectUseCase({
-        organizationId: OrganizationId(payload.organizationId),
-        actorUserId: payload.ownerUserId,
-      }).pipe(
-        withPostgres(
-          Layer.mergeAll(ProjectRepositoryLive, ApiKeyRepositoryLive, OutboxEventWriterLive),
-          pgClient,
-          OrganizationId(payload.organizationId),
-        ),
-        withTracing,
       ),
   })
 }

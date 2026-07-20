@@ -1,41 +1,12 @@
-import type { WorkflowStarterShape } from "@domain/queue"
 import { createFakeQueuePublisher } from "@domain/queue/testing"
-import type { FilterSet } from "@domain/shared"
-import type { RedisClient } from "@platform/cache-redis"
-import { annotationQueueItems, annotationQueues } from "@platform/db-postgres/schema/annotation-queues"
-import { setupTestClickHouse, setupTestPostgres } from "@platform/testkit"
+import { SESSION_END_DEBOUNCE_MS } from "@domain/spans"
+import { setupTestClickHouse } from "@platform/testkit"
 import { Effect } from "effect"
-import { describe, expect, it, vi } from "vitest"
+import { describe, expect, it } from "vitest"
 
 import { createMockLogger, TestQueueConsumer } from "../testing/index.ts"
-
-// vi.hoisted runs before imports, so we can't reference a constant here;
-// the literal 2048 matches TRACE_SEARCH_EMBEDDING_DIMENSIONS (voyage-4-large).
-const { mockAi } = vi.hoisted(() => ({
-  mockAi: {
-    generate: vi.fn(),
-    embed: vi.fn().mockReturnValue({ embedding: new Array(2048).fill(0.1) }),
-    rerank: vi.fn(),
-  },
-}))
-
-vi.mock("@platform/ai", async () => {
-  const { AI } = (await vi.importActual("@domain/ai")) as typeof import("@domain/ai")
-  const { Effect: Eff, Layer } = (await vi.importActual("effect")) as typeof import("effect")
-
-  // Matches the real signature: returning `Effect.provide(...)` directly
-  // removes `AI` from the requirement channel, so call sites don't need casts.
-  return {
-    AIEmbedLive: {},
-    AIGenerateLive: {},
-    AIRerankLive: {},
-    withAi: (_layer?: unknown, _redisClient?: unknown) => Eff.provide(Layer.succeed(AI, mockAi)),
-  }
-})
-
 import { createRunHandler, createTraceEndWorker, runTraceEndJob } from "./trace-end.ts"
 
-const pg = setupTestPostgres()
 const ch = setupTestClickHouse()
 
 const ORGANIZATION_ID = "o".repeat(24)
@@ -51,26 +22,6 @@ const toMessageJson = (role: "user" | "assistant", content: string) =>
   JSON.stringify([{ role, parts: [{ type: "text", content }] }])
 
 const toSystemJson = (content: string) => JSON.stringify([{ type: "text", content }])
-
-const createFakeWorkflowStarter = () => {
-  const started: Array<{
-    readonly workflow: string
-    readonly input: unknown
-    readonly options: unknown
-    readonly mode: "start" | "signalWithStart"
-  }> = []
-  const workflowStarter: WorkflowStarterShape = {
-    start: (workflow, input, options) =>
-      Effect.sync(() => {
-        started.push({ workflow, input, options, mode: "start" })
-      }) as never,
-    signalWithStart: (workflow, input, options) =>
-      Effect.sync(() => {
-        started.push({ workflow, input, options, mode: "signalWithStart" })
-      }),
-  }
-  return { workflowStarter, started }
-}
 
 const makeTraceRow = (input?: {
   readonly traceId?: string
@@ -134,34 +85,6 @@ const makeTraceRow = (input?: {
   scope_version: "1.0.0",
 })
 
-const makeQueueRow = (input: {
-  readonly id: string
-  readonly slug: string
-  readonly system: boolean
-  readonly filter?: FilterSet
-  readonly sampling?: number
-  readonly projectId?: string
-}): typeof annotationQueues.$inferInsert => ({
-  id: input.id,
-  organizationId: ORGANIZATION_ID,
-  projectId: input.projectId ?? PROJECT_ID,
-  system: input.system,
-  name: `queue-${input.slug}`,
-  slug: input.slug,
-  description: "Trace-end worker queue",
-  instructions: "Review traces",
-  settings: {
-    ...(input.filter ? { filter: input.filter } : {}),
-    ...(input.sampling !== undefined ? { sampling: input.sampling } : {}),
-  },
-  assignees: [],
-  totalItems: 0,
-  completedItems: 0,
-  deletedAt: null,
-  createdAt: TIMESTAMP,
-  updatedAt: TIMESTAMP,
-})
-
 const insertTraceRows = async (rows: Array<Record<string, unknown>>) => {
   await ch.client.insert({
     table: "spans",
@@ -170,63 +93,15 @@ const insertTraceRows = async (rows: Array<Record<string, unknown>>) => {
   })
 }
 
-const createFakeRedisClient = (): RedisClient => {
-  const values = new Map<string, string>()
-  const sets = new Map<string, Set<string>>()
-
-  return {
-    get: async (key: string) => values.get(key) ?? null,
-    set: async (key: string, value: string) => {
-      values.set(key, value)
-      return "OK"
-    },
-    del: async (key: string) => {
-      values.delete(key)
-      sets.delete(key)
-      return 1
-    },
-    sismember: async (key: string, member: string) => (sets.get(key)?.has(member) ? 1 : 0),
-    scard: async (key: string) => sets.get(key)?.size ?? 0,
-    smembers: async (key: string) => [...(sets.get(key) ?? new Set<string>())],
-    multi: () => {
-      const operations: Array<() => void> = []
-      const multi = {
-        sadd: (key: string, member: string) => {
-          operations.push(() => {
-            const existing = sets.get(key) ?? new Set<string>()
-            existing.add(member)
-            sets.set(key, existing)
-          })
-          return multi
-        },
-        expire: () => multi,
-        exec: async () => {
-          for (const operation of operations) {
-            operation()
-          }
-          return []
-        },
-      }
-
-      return multi
-    },
-  } as unknown as RedisClient
-}
-
 describe("createTraceEndWorker", () => {
   it("registers the trace-end run task", () => {
     const consumer = new TestQueueConsumer()
     const { publisher } = createFakeQueuePublisher()
-    const redisClient = createFakeRedisClient()
-    const { workflowStarter } = createFakeWorkflowStarter()
 
     createTraceEndWorker({
       consumer,
       publisher,
-      postgresClient: pg.appPostgresClient,
       clickhouseClient: ch.client,
-      redisClient,
-      workflowStarter,
     })
 
     expect(consumer.getRegisteredTasks("trace-end")).toEqual(["run"])
@@ -236,16 +111,11 @@ describe("createTraceEndWorker", () => {
 describe("runTraceEndJob", () => {
   it("skips when the trace no longer exists", async () => {
     const { publisher, published } = createFakeQueuePublisher()
-    const redisClient = createFakeRedisClient()
-    const { workflowStarter } = createFakeWorkflowStarter()
 
     const result = await Effect.runPromise(
       runTraceEndJob({
         publisher,
-        postgresClient: pg.appPostgresClient,
         clickhouseClient: ch.client,
-        redisClient,
-        workflowStarter,
       })({
         organizationId: ORGANIZATION_ID,
         projectId: PROJECT_ID,
@@ -263,16 +133,11 @@ describe("runTraceEndJob", () => {
 
   it("skips all LLM work for sandbox traces (before loading the trace)", async () => {
     const { publisher, published } = createFakeQueuePublisher()
-    const redisClient = createFakeRedisClient()
-    const { workflowStarter, started } = createFakeWorkflowStarter()
 
     const result = await Effect.runPromise(
       runTraceEndJob({
         publisher,
-        postgresClient: pg.appPostgresClient,
         clickhouseClient: ch.client,
-        redisClient,
-        workflowStarter,
       })({
         organizationId: ORGANIZATION_ID,
         projectId: PROJECT_ID,
@@ -283,41 +148,17 @@ describe("runTraceEndJob", () => {
 
     expect(result).toEqual({ action: "skipped", reason: "sandbox", traceId: TRACE_ID })
     expect(published).toEqual([])
-    expect(started).toEqual([])
   })
-})
 
-describe("runTraceEndJob", () => {
-  it("materializes live queues and enqueues deterministic flaggers", async () => {
+  it("enqueues deterministic flaggers, trace-search, and session-end", async () => {
     await insertTraceRows([makeTraceRow()])
-    await pg.db.insert(annotationQueues).values([
-      makeQueueRow({
-        id: "q".repeat(24),
-        slug: "live-selected",
-        system: false,
-        filter: { tags: [{ op: "in", value: ["lifecycle"] }] },
-        sampling: 100,
-      }),
-      makeQueueRow({
-        id: "r".repeat(24),
-        slug: "live-miss",
-        system: false,
-        filter: { tags: [{ op: "in", value: ["annotation"] }] },
-        sampling: 100,
-      }),
-    ])
 
     const { publisher, published } = createFakeQueuePublisher()
-    const redisClient = createFakeRedisClient()
-    const { workflowStarter, started } = createFakeWorkflowStarter()
 
     const result = await Effect.runPromise(
       runTraceEndJob({
         publisher,
-        postgresClient: pg.appPostgresClient,
         clickhouseClient: ch.client,
-        redisClient,
-        workflowStarter,
       })({
         organizationId: ORGANIZATION_ID,
         projectId: PROJECT_ID,
@@ -330,13 +171,6 @@ describe("runTraceEndJob", () => {
       summary: {
         traceId: TRACE_ID,
         sessionId: SESSION_ID,
-        liveQueues: {
-          liveQueuesScanned: 2,
-          selectedCount: 1,
-          sampledOutCount: 0,
-          filterMissCount: 1,
-          insertedItemCount: 1,
-        },
         deterministicFlaggersEnqueued: true,
       },
     })
@@ -358,38 +192,6 @@ describe("runTraceEndJob", () => {
       ]),
     )
 
-    expect(started).toEqual([
-      {
-        workflow: "analyzeSessionWorkflow",
-        mode: "signalWithStart",
-        input: {
-          organizationId: ORGANIZATION_ID,
-          projectId: PROJECT_ID,
-          sessionId: SESSION_ID,
-          triggeringTraceId: TRACE_ID,
-          triggeringStartTime: TIMESTAMP.toISOString(),
-          reason: "trace_completed",
-          debounceMs: 5 * 60_000,
-        },
-        options: {
-          workflowId: `org:${ORGANIZATION_ID}:conversation-intelligence:analyzeSession:${PROJECT_ID}:${SESSION_ID}`,
-          signal: "traceCompleted",
-          signalArgs: [{ debounceMs: 5 * 60_000 }],
-        },
-      },
-    ])
-
-    const queueItems = await pg.db.select().from(annotationQueueItems)
-    expect(queueItems).toHaveLength(1)
-    expect(queueItems[0]?.queueId).toBe("q".repeat(24))
-    expect(queueItems[0]?.traceId).toBe(TRACE_ID)
-
-    const persistedQueues = await pg.db.select().from(annotationQueues)
-    const selectedQueue = persistedQueues.find((queue) => queue.id === "q".repeat(24))
-    const missedQueue = persistedQueues.find((queue) => queue.id === "r".repeat(24))
-    expect(selectedQueue?.totalItems).toBe(1)
-    expect(missedQueue?.totalItems).toBe(0)
-
     // Verify trace-search refresh task was published
     const traceSearchPublish = published.find((p) => p.queue === "trace-search")
     expect(traceSearchPublish?.task).toBe("refreshTrace")
@@ -399,17 +201,22 @@ describe("runTraceEndJob", () => {
       traceId: TRACE_ID,
     })
 
-    // trace-end now owns the signals:match publish ("trace ends → match signals")
-    const signalsMatchPublish = published.find((p) => p.queue === "signals")
-    expect(signalsMatchPublish?.task).toBe("match")
-    expect(signalsMatchPublish?.payload).toMatchObject({
+    // Session-level work (signals:match, session analysis) is handed to session-end, debounced per
+    // session and carrying the session's latest trace. trace-end no longer publishes signals:match.
+    expect(published.find((p) => p.queue === "signals")).toBeUndefined()
+    const sessionEndPublish = published.find((p) => p.queue === "session-end")
+    expect(sessionEndPublish?.task).toBe("run")
+    expect(sessionEndPublish?.payload).toMatchObject({
       organizationId: ORGANIZATION_ID,
       projectId: PROJECT_ID,
-      traceId: TRACE_ID,
-      reason: "ingest",
+      sessionId: SESSION_ID,
+      latestTraceId: TRACE_ID,
+      latestTraceStartTime: TIMESTAMP.toISOString(),
+      isSandbox: false,
     })
-    expect(signalsMatchPublish?.options).toMatchObject({
-      dedupeKey: `org:${ORGANIZATION_ID}:signals-match:${PROJECT_ID}:${TRACE_ID}`,
+    expect(sessionEndPublish?.options).toMatchObject({
+      dedupeKey: `org:${ORGANIZATION_ID}:session-end:${PROJECT_ID}:${SESSION_ID}`,
+      debounceMs: SESSION_END_DEBOUNCE_MS,
     })
   })
 })
@@ -427,30 +234,15 @@ describe("createRunHandler", () => {
         sessionId,
       }),
     ])
-    await pg.db.insert(annotationQueues).values([
-      makeQueueRow({
-        id: "m".repeat(24),
-        slug: "live-selected",
-        system: false,
-        filter: { tags: [{ op: "in", value: ["lifecycle"] }] },
-        sampling: 100,
-        projectId,
-      }),
-    ])
 
     const { publisher } = createFakeQueuePublisher()
-    const redisClient = createFakeRedisClient()
-    const { workflowStarter } = createFakeWorkflowStarter()
     const log = createMockLogger()
 
     await Effect.runPromise(
       createRunHandler({
         log,
         publisher,
-        postgresClient: pg.appPostgresClient,
         clickhouseClient: ch.client,
-        redisClient,
-        workflowStarter,
       })({
         organizationId: ORGANIZATION_ID,
         projectId,
@@ -466,13 +258,6 @@ describe("createRunHandler", () => {
       traceId,
       outcome: "completed",
       sessionId,
-      liveQueues: {
-        liveQueuesScanned: 1,
-        selectedCount: 1,
-        sampledOutCount: 0,
-        filterMissCount: 0,
-        insertedItemCount: 1,
-      },
       deterministicFlaggersEnqueued: true,
     })
   })

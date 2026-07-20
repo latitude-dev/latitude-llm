@@ -2,6 +2,388 @@
 
 ## Unreleased
 
+## v0.3.56 - 2026-07-20
+
+### Memory observability
+
+- Added the project Memory page with store lists, record detail views, access views, and per-user memory store visibility (ref: #4083).
+
+### Experiments
+
+- Improved experiment creation and analysis with expanded presets, autofilled filter builders, metric tooltips, and updated experiment metric schemas in the API and SDKs (ref: #4085).
+
+### Monitors
+
+- Fixed recommended tool failure monitor creation by sharing preset and alert-form handling between tool and user monitor flows (ref: #4088).
+
+### Taxonomy
+
+- Reworked taxonomy clustering around a pure relative divisive builder for more consistent hierarchical taxonomy generation (ref: #4084).
+
+### Telemetry
+
+- Stripped orphan tool responses after input message truncation so telemetry exports do not retain invalid tool-only context (ref: #4044).
+- Updated the Hermes telemetry plugin to stop exporting empty conversation placeholders while preserving tool-only assistant turns (ref: #4089).
+
+### Traces
+
+- Rejected `gtePercentile` on every trace filter field except `duration`, `ttft`, and `cost`, so invalid filters return 400 instead of 500 (ref: #4086).
+
+### Security
+
+- Patched dependency advisories for Hono CORS, protobufjs denial of service, Next.js, Undici, ws, shell-quote, tmp, and form-data (refs: #4091, #4092, #4093, #4094, #4095, #4096, #4097, #4098).
+
+### Documentation
+
+- Added the self-healing agents documentation overview page (ref: #3951).
+
+## v0.3.55 - 2026-07-17
+
+### Evaluations
+
+- Truncated live-evaluation judge prompts to fit the model's context window so large sessions no longer fail both primary and Bedrock fallback calls (ref: #4081).
+
+### Signals
+
+- Prevented late signal-generation progress writes from overwriting the terminal done/error result and leaving the UI stuck pending (ref: #3943).
+
+### Agent dispatch
+
+- Scoped Cursor/Claude/Linear/Webhook connect from a project's integrations page to project overrides instead of org-wide dispatch defaults (ref: #3984).
+
+### Organizations
+
+- Stopped claimed temporary organizations from being reaped after claim failed to clear `expires_at` on upsert (ref: #3841).
+
+### Traces
+
+- Deduped span rows in session conversation and trace message queries, and stopped false onboarding gates when spans were duplicated (refs: #4005, #3986).
+
+### Memory observability
+
+- Re-keyed memory tables and APIs on `store_id` alone, dropping the derived `scope` field and the SDK `latitude.memory.scope` attribute (ref: #4074).
+
+## v0.3.54 - 2026-07-16
+
+### Navigation
+
+- Preserved project and organization names beginning with digits, `#`, or `*` instead of rendering their first character as an emoji in navigation and command palettes (ref: #4063).
+
+## v0.3.53 - 2026-07-16
+
+### Memory observability
+
+- Added per-record memory footprints to session and trace details, showing read, added, and removed tokens with a hover breakdown grouped by memory store (ref: #4053).
+
+### Billing
+
+- Charged deterministic live-evaluation scans at 1 credit instead of 30; evaluations that call `llm()` remain at 30 credits (ref: #4055).
+
+## v0.3.52 - 2026-07-16
+
+### Custom Behaviors
+
+- Unified global and custom-behavior taxonomy gardening into one workflow: scoped gardening with global-parity trends, auto-gardening on create, and custom behaviors merged into the Behaviours view (refs: #4037, #4052).
+
+### Traces
+
+- Validated trace filter fields at the API boundary and added an `endTime` filter (ref: #4021).
+
+### Signals
+
+- Skipped markdown links when validating flagger output schemas (ref: #4038).
+
+### Claude Code telemetry
+
+- Installed the Stop hook with `@latest` so it self-updates (ref: #4049).
+
+### Reliability
+
+- Raised the production web service minimum capacity (ref: #4045).
+
+### Documentation
+
+- Fixed the Detection Methods documentation page.
+
+## v0.3.51 - 2026-07-15
+
+### Experiments
+
+- Added project-scoped Experiments: a container that compares up to 10 variants (each a filter set, search query, and time range) against a baseline across every session, user, tool, signal, and behaviour metric Latitude computes, with a variant-comparison table, shared population editors, and list/create/rename/delete/import flows (ref: #4017).
+- Let users create experiments straight from a saved search, added a "Compare this search" toggle and Monitor/Compare row actions to the saved-search UI, and added creation presets (A/B test, versions, seasonal, failures, outliers) to the experiment create modal (ref: #4034).
+
+### Signals
+
+- Introduced a session-end trigger so signal matching and conversation analysis run once per session after it settles, collapsing a session's trace-ends into a single firing against its latest trace instead of dispatching per trace (ref: #4040).
+- Moved the signal edit button beside the signal title (ref: #4039).
+
+### Custom Behaviors
+
+- Wired up the Generate flow for custom behaviors and the per-behavior scoped taxonomy tree, added a generation status indicator, and added entry points to create a custom behavior from the Sessions view or a saved search (ref: #4027).
+
+### Memory observability
+
+- Added ingest support for GenAI memory operation spans and a git-style, content-addressed memory ledger that materializes memory events into ClickHouse at the settled trace boundary, with point-in-time snapshot reconstruction (groundwork, refs: #4035, #4041).
+
+### Claude Code telemetry
+
+- Recovered subagent spans that were previously lost for parallel subagents and on the final llm_request of a turn (ref: #4028).
+- Made the Hermes plugin flush on session end and split its api_request and llm_call hooks (refs: #4029, #4030).
+
+### Authentication
+
+- Protected magic links from being consumed by email link scanners (ref: #4026).
+
+### Reliability
+
+- Tolerated non-array OTLP span attributes during ingest instead of failing (ref: #4031).
+
+## v0.3.50 - 2026-07-14
+
+### Subagent visibility
+
+- Detected Claude Code subagents by classifying interaction spans as agent invocations, so the agent graph roots each turn on a real boundary and surfaces Task subagents with proper names (ref: #4022).
+
+### Spans
+
+- Colored the span-tree waterfall bars by operation: agent invocations use the accent color, chat spans a muted accent, and successful tool calls green, with errored spans still red (ref: #4023).
+
+### Custom Behaviors
+
+- Added the project custom-behaviors authoring UI (list, create/edit modal, live eligible-session preview, active-filter summaries), gated behind a feature flag and hidden by default until the Generate flow ships (ref: #4018).
+
+### Reliability
+
+- Bounded ClickHouse memory usage for project span queries to prevent out-of-memory failures (ref: #4019).
+
+## v0.3.49 - 2026-07-14
+
+### Subagent visibility
+
+- Added agent breakdowns and nested conversation cards that show subagent handoffs, activity, costs, duration, models, and runs, with in-place navigation between parent and subagent conversations (ref: #4014).
+
+### Organization members
+
+- Let owners and admins choose whether an invited organization member joins as a member or admin (ref: #4013).
+
+### Custom Behaviors
+
+- Added scoped taxonomy gardening for custom behaviors, building and refreshing behavior-specific trees from matching session samples without changing the global taxonomy (ref: #4010).
+
+### Reliability
+
+- Prevented annotation formatting from failing when malformed GenAI messages are missing their parts (ref: #4011).
+
+## v0.3.48 - 2026-07-13
+
+### Monitors
+
+- Made monitor targets and incident conditions immutable after creation across the web, API, CLI, and SDKs. Existing monitors can still update their name, description, and severity (ref: #3947).
+
+### Notifications
+
+- Routed signal notifications to the assigned user when present and kept targeted notifications out of shared Slack channels (ref: #4009).
+
+### Claude Code Wrapped
+
+- Added skill usage totals, top skills, and per-workspace skill breakdowns to Claude Code Wrapped reports and emails (ref: #3978).
+
+### Reliability
+
+- Fixed classifier flaggers producing truncated structured output that could fail JSON parsing (ref: #3910).
+- Fixed trace, session, and session-intelligence time filters for timestamps containing timezone offsets (ref: #4007).
+- Fixed newly created datasets temporarily hiding their imported rows (ref: #4006).
+
+### API and ingestion
+
+- Raised public API and trace-ingestion rate limits to support higher normal throughput (ref: 1deab1b9f, ebff4940f).
+- Rejected OAuth access tokens as soon as their user no longer belongs to the authorized organization (ref: #3917).
+
+### Models
+
+- Refreshed the bundled models.dev model catalog (ref: #3987).
+
+## v0.3.47 - 2026-07-13
+
+### Traces
+
+- Defaulted Sessions/Traces and Tools/Signals/Users time filters to All time, with bounded chart windows so older project data is visible without expensive trend scans (ref: #3955).
+- Fixed "Clear dates" so it removes date bounds instead of restoring the previous default window, and stopped showing false onboarding states for projects that only have older traces (ref: #3955).
+- Added session-wide span links in the Conversation tab so messages and tool calls can jump to spans from earlier traces in the same session (ref: #3965).
+- Reduced ClickHouse memory usage for trace detail reads by loading trace summaries separately from source-span message content (ref: ad54c4154).
+
+### Telemetry
+
+- Released `@latitude-data/telemetry` 3.6.0 with `createCodemodeTelemetry()` for Cloudflare Think Codemode tracing, including nested tool-call spans, capture/redaction options, and error recording (ref: #3956).
+- Updated the Cloudflare Think telemetry guide and example app for Codemode tracing and local verification (ref: #3956).
+
+### Models
+
+- Refreshed the bundled models.dev model catalog (ref: #3983).
+
+## v0.3.46 - 2026-07-10
+
+### Traces
+
+- Added a session-wide grouped Spans tab in the session detail drawer (ref: #3962).
+- Fixed the "Waiting for your first trace" screen getting stuck on projects that have only older traces (or a backfilled `first_trace_at`): the onboarding now confirms emptiness with an unwindowed trace count instead of trusting the best-effort `first_trace_at` flag (ref: #3964).
+
+## v0.3.45 - 2026-07-10
+
+### Traces
+
+- Stopped showing the "Waiting for your first trace" onboarding for projects whose traces all predate the default 30-day window. They now open the normal Sessions/Traces view with the time filter available, so the range can be widened to reveal older data (ref: #3961).
+
+### Behaviours
+
+- Removed the breadcrumb row (Back button + topic-path chips) above the behaviours trajectory chart (ref: #3958).
+
+### Models
+
+- Refreshed the bundled models.dev model catalog (ref: #3957).
+
+## v0.3.44 - 2026-07-09
+
+### Agent Dispatch
+
+- Added org-default dispatch configuration with per-project overrides: dispatch repos now resolve from an org-wide default that any project can override or reset, replacing the single flat config (ref: #3952).
+
+### Signals
+
+- Showed freshly created signals immediately even before they have any occurrences (ref: #3945).
+- Removed the ghost modal left behind after confirming a mute-signal action (ref: #3946).
+- Removed the redundant "Me" option from assignee selectors (ref: #3948).
+
+## v0.3.43 - 2026-07-09
+
+### Monitors
+
+- Gave threshold monitors an open/close incident lifecycle: a sustained breach now opens a single incident and dedups until a 30-minute exit dwell closes it, instead of emailing on every ~5-minute sweep. Editing a monitor with an open incident now evicts the stale incident (ref: #3949).
+
+### Showcase
+
+- Flipped onboarding to the shared read-only showcase: new orgs get only their real empty default project and land on `/projects/lat-demo` when the showcase resolves, with a fallback to their own default project. Retired the old per-signup/claim demo-project seeding machinery (ref: #3940).
+
+## v0.3.42 - 2026-07-09
+
+### Signals
+
+- Generated signals with a research agent instead of a fixed prompt loop, giving richer investigation output (ref: #3922).
+
+### Agent Dispatch
+
+- Skipped agent dispatch for user-created signals on `signal.discovered` so only auto-discovered signals trigger dispatch (ref: #3925).
+- Improved the signal dispatch prompt fallback (ref: #3913).
+
+### Notifications
+
+- Enriched signal discovery notification messages (ref: #3937).
+
+### Evaluations
+
+- Surfaced GEPA optimization failures and added support for single-example signals (ref: #3935).
+
+### Showcase
+
+- Added read-only UI variance and org-wide showcase dismissal (S6) (ref: #3918).
+- Added a backoffice showcase section for managing the demo project (S7) (ref: #3919).
+- Scoped project-section Postgres domains onto `withScopedPostgres` (ref: #3909).
+
+### API
+
+- Restored `getApiKey` as a tool and converted all handler-form operations to execute-form (ref: #3938, #3934).
+- Rejected `gtePercentile` on span row filters and fractional values on integer ClickHouse filter fields (ref: #3839, #3924).
+
+### Performance
+
+- Reused instruction extractions across similar system prompts, normalized the instruction-extractor cache key, and raised the verbatim threshold to cut flagger work (ref: #3928, #3926).
+
+### Web
+
+- Optimized the public design system (ref: #3929).
+
+### Telemetry
+
+- Tracked self-hosted deployments in PostHog.
+
+### Infra
+
+- Tuned production ECS memory and autoscaling.
+
+### Maintenance
+
+- Updated bundled models.dev data, refreshed the knip configuration, and bumped `@temporalio/*` to 1.17.5 for a workflow isolation fix (ref: #3895, #3921).
+
+## v0.3.41 - 2026-07-07
+
+### Agent Dispatch
+
+- Enabled dispatching agents directly from monitor incidents, building the dispatch context and prompt from incident data.
+
+### Showcase
+
+- Added a reserved-slug loader and client-collection merge for the showcase project, tightening org-scope resolution across web data domains (ref: #3897).
+
+### API
+
+- Extracted API operation definitions into a transport-neutral `@repo/operations` package shared across HTTP, MCP, SDK, and CLI consumers (ref: #3890).
+
+### Docs
+
+- Documented manual signal creation and aligned the "Issues" terminology to "Signals" across the public docs (ref: #3906).
+
+## v0.3.40 - 2026-07-07
+
+### Search
+
+- Removed the legacy trace-search chunk embedding path and its feature flag, making semantic trace search and highlights use shared message embeddings exclusively (ref: #3904).
+
+### Web
+
+- Kept empty or loading trace lists on the animated connection blank slate so unconnected projects consistently guide users toward instrumentation, even after onboarding has been marked complete (ref: #3905).
+
+### Agent Dispatch
+
+- Updated Cursor dispatch to the v1 agents API payload, deterministic Cursor agent IDs, and immediate config cache updates after connecting a Cursor integration (ref: #3907).
+
+## v0.3.39 - 2026-07-07
+
+### Showcase
+
+- Added automated showcase project regeneration, atomic project swaps, daily cron scheduling, stale-project retirement, and self-healing cleanup so the demo project can refresh safely without leaving old generated projects behind (ref: #3887, #3898).
+
+### Telemetry
+
+- Added Pydantic AI telemetry onboarding, docs, and provider icon support for users instrumenting Python agents with Latitude (ref: #3893).
+
+### Reliability
+
+- Hardened flagger execution so prompt-too-long model failures are treated as no-match results and malformed message parts are skipped instead of crashing flagger runs (ref: #3889, #3874).
+- Serialized concurrent claim-token redemption to prevent duplicate organization-claim races (ref: #3899).
+
+### Web
+
+- Fixed searchable selects and rich-text interactions inside modals, including the members role modal, so popovers and editor focus remain usable while dialogs are open (ref: #3901, #3903).
+- Removed the agent-dispatch feature flag now that manual dispatch is generally available (ref: #3877).
+
+### Maintenance
+
+- Updated CI, Docker build, npm, Python telemetry, and OpenTelemetry dependency versions used by the workspace and release pipelines (ref: #3775, #3853, #3854, #3856, #3857, #3858, #3859, #3860, #3861, #3862, #3864, #3865).
+
+## v0.3.38 - 2026-07-06
+
+### Signals
+
+- Added a "Send to agent" action on the signal detail page, letting users copy an investigation prompt for local coding agents or manually dispatch the signal to configured cloud integrations such as Cursor Cloud, Claude Code Cloud, Linear, and webhooks (ref: #3845).
+
+### Agent Dispatch
+
+- Added the manual dispatch trigger path for signals, including prompt generation, per-send idempotency keys, dispatch-history labeling, project/config validation, and typed failure results for manual cloud sends (ref: #3845).
+
+### Web
+
+- Polished the integration settings and shared select/modal primitives used by agent-dispatch flows, including searchable selects inside modals, keyboard navigation helpers, provider icons for Cursor/Codex, and copyable dispatch-history errors (ref: #3845).
+
 ## v0.3.37 - 2026-07-06
 
 ### API and SDK

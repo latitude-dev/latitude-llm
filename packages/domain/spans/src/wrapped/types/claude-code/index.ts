@@ -17,14 +17,19 @@ export {
   type Report,
   type ReportV1,
   type ReportV2,
+  type ReportV3,
   type ReportVersion,
   reportV2Schema,
+  reportV3Schema,
   SCHEMA_BY_VERSION,
+  type SkillCount,
+  type Skills,
   TOOL_BUCKETS,
   type ToolBucket,
   type ToolMix,
   type TopBashCommand,
   type WorkspaceDeepDive,
+  type WorkspaceDeepDiveV3,
 } from "./entities/report.ts"
 export { pickReadAnchor, pickWrittenAnchor } from "./helpers/anchors.ts"
 export {
@@ -40,6 +45,8 @@ export {
   type OrgProjectPair,
   type ProjectWindowInput,
   type SessionDurationStatsRow,
+  type SkillCountRow,
+  type SkillUsageRow,
   type ToolMixRow,
   type WindowInput,
   type WorkspaceDeepDiveRow,

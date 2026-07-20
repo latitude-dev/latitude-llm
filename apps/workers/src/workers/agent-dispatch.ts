@@ -7,6 +7,7 @@ import {
   agentDispatchContextSchema,
   DISPATCH_ERROR_CATEGORIES,
   type DispatchErrorCategory,
+  parseResolvedDispatchTarget,
   requestAgentDispatchUseCase,
   sendAgentDispatchUseCase,
 } from "@domain/agent-dispatch"
@@ -19,7 +20,6 @@ import {
   AgentDispatchConfigRepositoryLive,
   AgentDispatchCredentialRepositoryLive,
   AgentDispatchRepositoryLive,
-  FeatureFlagRepositoryLive,
   IncidentMonitorReaderLive,
   IncidentRepositoryLive,
   OrganizationRepositoryLive,
@@ -57,7 +57,6 @@ const requestLayer = Layer.mergeAll(
   ProjectRepositoryLive,
   SignalRepositoryLive,
   ScoreRepositoryLive,
-  FeatureFlagRepositoryLive,
 )
 
 const sendLayer = Layer.mergeAll(
@@ -129,7 +128,7 @@ export const createAgentDispatchWorker = ({
                   sourceId: request.sourceId,
                   prompt: request.prompt,
                   context: request.context as Record<string, unknown>,
-                  target: {},
+                  target: request.target as Record<string, unknown>,
                 },
                 {
                   dedupeKey: `agent-dispatch:send:${request.idempotencyKey}`,
@@ -162,9 +161,18 @@ export const createAgentDispatchWorker = ({
         const projectId = ProjectId(payload.projectId)
 
         return Effect.gen(function* () {
-          const configRepo = yield* AgentDispatchConfigRepository
-          const config = yield* configRepo.findById(payload.configId)
           const context = agentDispatchContextSchema.parse(payload.context)
+          // In-flight jobs published before targets rode the payload carry {};
+          // fall back to deriving from the (pre-migration, full) config row.
+          let target = parseResolvedDispatchTarget({ ...payload.target, kind: payload.kind })
+          if (target === null) {
+            const configRepo = yield* AgentDispatchConfigRepository
+            const config = yield* configRepo.findById(payload.configId)
+            target = parseResolvedDispatchTarget({ ...config.target, kind: config.kind })
+          }
+          if (target === null) {
+            return yield* Effect.fail(new Error(`agent-dispatch.send unresolvable target configId=${payload.configId}`))
+          }
 
           const outcome = yield* sendAgentDispatchUseCase({
             configId: payload.configId,
@@ -177,7 +185,7 @@ export const createAgentDispatchWorker = ({
             sourceId: payload.sourceId,
             prompt: payload.prompt,
             context,
-            target: { ...config.target, kind: config.kind },
+            target,
           }).pipe(
             Effect.catchTag("DispatchAdapterError", (error) => {
               if (error.reason === "rate_limited" || error.reason === "transport") {

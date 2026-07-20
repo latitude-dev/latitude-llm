@@ -1,6 +1,6 @@
 import { useMemo } from "react"
 import { useAnnotationsBySession } from "../../../../../../domains/annotations/annotations.collection.ts"
-import { useMemberByUserIdMap } from "../../../../../../domains/members/members.collection.ts"
+import { useProjectMemberByUserIdMap } from "../../../../../../domains/members/members.collection.ts"
 import type { SessionDetailRecord } from "../../../../../../domains/sessions/sessions.functions.ts"
 import {
   useSessionConversationSpanMaps,
@@ -12,8 +12,16 @@ import {
   buildConversationTimeline,
   type ConversationTimeline,
   type TimelineMomentInput,
+  toSpanIdMap,
 } from "../../../../../../lib/conversation-timeline/build-conversation-timeline.ts"
-import { annotatorNameFor, toTimelineAnnotation, toTimelineSpan, toTimelineTrace } from "./timeline-adapters.ts"
+import { useAgentGraph } from "../session-detail-drawer/agents-breakdown/use-agent-graph.ts"
+import {
+  annotatorNameFor,
+  toTimelineAnnotation,
+  toTimelineSpan,
+  toTimelineSubagents,
+  toTimelineTrace,
+} from "./timeline-adapters.ts"
 
 export function useSessionTimeline({
   projectId,
@@ -40,6 +48,7 @@ export function useSessionTimeline({
   const { data: spans } = useSpansBySessionCollection({
     projectId,
     sessionId: session.sessionId,
+    traceIds: session.traceIds,
     startTimeFrom: session.startTime,
     startTimeTo: session.endTime,
   })
@@ -57,20 +66,32 @@ export function useSessionTimeline({
     traceIds: session.traceIds,
     enabled: annotationsEnabled,
   })
-  const memberByUserId = useMemberByUserIdMap()
+  const memberByUserId = useProjectMemberByUserIdMap()
+  const agentGraph = useAgentGraph(spans)
 
   return useMemo(() => {
     if (!traceDetail || !spanMaps || conversation.messages.length === 0) return null
     return buildConversationTimeline({
       messages: conversation.messages,
       spans: (spans ?? []).map(toTimelineSpan),
-      messageSpanMap: spanMaps.messageSpanMap,
-      toolCallSpanMap: spanMaps.toolCallSpanMap,
+      messageSpanMap: toSpanIdMap(spanMaps.messageSpanMap),
+      toolCallSpanMap: toSpanIdMap(spanMaps.toolCallSpanMap),
       traces: traces.map(toTimelineTrace),
       annotations: (annotationsData?.items ?? []).map((a) =>
         toTimelineAnnotation(a, annotatorNameFor(a, memberByUserId)),
       ),
       moments,
+      subagents: toTimelineSubagents(agentGraph),
     })
-  }, [traceDetail, spans, spanMaps, traces, annotationsData, moments, memberByUserId, conversation.messages])
+  }, [
+    traceDetail,
+    spans,
+    spanMaps,
+    traces,
+    annotationsData,
+    moments,
+    memberByUserId,
+    agentGraph,
+    conversation.messages,
+  ])
 }

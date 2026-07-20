@@ -1,4 +1,4 @@
-import { Button, cn, Icon, Text, type TextColor } from "@repo/ui"
+import { Button, cn, Icon, Text } from "@repo/ui"
 import { Minus } from "lucide-react"
 
 /** Default cover when an entry has no image (Figma `type=no-cover`). */
@@ -29,7 +29,6 @@ export function ChangelogBanner({
   className,
 }: ChangelogBannerProps) {
   const coverSrc = hasCover(coverUrl) ? coverUrl : CHANGELOG_FALLBACK_COVER_URL
-  const collapseIconColor: TextColor = hasCover(coverUrl) ? "foreground" : "white"
 
   return (
     <article className={cn("relative flex w-full flex-col overflow-hidden rounded-2xl bg-secondary", className)}>
@@ -64,7 +63,7 @@ export function ChangelogBanner({
           onClick={onCollapse}
           aria-label="Collapse changelog"
         >
-          <Icon icon={Minus} size="sm" color={collapseIconColor} />
+          <Icon icon={Minus} size="sm" color="foreground" />
         </Button>
       </div>
     </article>

@@ -1,70 +1,73 @@
 ---
 name: api-endpoints
-description: Adding or changing routes in `apps/api`. One source of truth (`defineApiEndpoint` + a Zod schema) becomes an HTTP endpoint, an OpenAPI operation, an MCP tool, TS + Python SDK methods, and a `latitude` CLI command — descriptions and contracts must be written with all of these readers in mind.
+description: Adding or changing API operations in `@repo/operations`. One source of truth (`defineOperation` + a Zod schema) becomes an HTTP endpoint, an OpenAPI operation, an MCP tool, TS + Python SDK methods, a `latitude` CLI command, and an in-process agent tool — descriptions and contracts must be written with all of these readers in mind.
 ---
 
-# Adding API endpoints
+# Adding API operations
 
-**When to use:** Adding a new endpoint to `apps/api`, changing an existing one, or wondering why `mcp.json` / `openapi.json` / the SDK aren't in sync.
+**When to use:** Adding a new operation to the public API, changing an existing one, or wondering why `mcp.json` / `openapi.json` / the SDK aren't in sync.
 
 ## Before you start — reuse the UI's logic via the domain layer
 
-When you add a new API endpoint, check whether the same action or read is already available in the web UI. The plan only ships a specific list of API endpoints (see the inventory in `plans/mcp-oauth-api-expansion.md`); the goal isn't full surface parity, it's not duplicating logic that the web already implements.
+When you add a new operation, check whether the same action or read is already available in the web UI. The goal isn't full surface parity, it's not duplicating logic that the web already implements.
 
-For each new endpoint, open **`apps/web/src/domains/<entity>/<entity>.functions.ts`**. Three cases:
+For each new operation, open **`apps/web/src/domains/<entity>/<entity>.functions.ts`**. Three cases:
 
-- **The web's server fn already calls a domain use-case** (imports `*UseCase` from `@domain/*`): reuse that use-case in the API route handler. Don't reimplement the logic in `apps/api`.
-- **The web's server fn has the logic inline** (raw repository calls, validation, side effects in the server fn body itself): **extract it into a new domain use-case first**, then have both the web server fn AND your API route call it. The domain use-case becomes the shared seam.
-- **The web's server fn delegates to a third-party API** like `getBetterAuth().api.*`: the API process can't reach the same in-process instance. Write a domain use-case that replicates that behavior (carefully — read the third-party source so your use-case matches its rules), then point both the web and API at the use-case. Adds parity tests so the migration doesn't silently drift.
+- **The web's server fn already calls a domain use-case** (imports `*UseCase` from `@domain/*`): reuse that use-case in the operation. Don't reimplement the logic.
+- **The web's server fn has the logic inline** (raw repository calls, validation, side effects in the server fn body itself): **extract it into a new domain use-case first**, then have both the web server fn AND your operation call it. The domain use-case becomes the shared seam.
+- **The web's server fn delegates to a third-party API** like `getBetterAuth().api.*`: the API process can't reach the same in-process instance. Write a domain use-case that replicates that behavior (carefully — read the third-party source so your use-case matches its rules), then point both the web and the operation at the use-case. Adds parity tests so the migration doesn't silently drift.
 
 The domain use-case is the shared seam between web and API. Duplicating logic in both surfaces creates drift — one gets a bug fix the other doesn't.
 
-If the entity doesn't have a `.functions.ts` because the UI doesn't expose this action yet, you're designing fresh. That's fine; just don't lose the option to share later — put the business logic in a `@domain/*` use-case from the start rather than inline in the route handler.
+If the entity doesn't have a `.functions.ts` because the UI doesn't expose this action yet, you're designing fresh. That's fine; just don't lose the option to share later — put the business logic in a `@domain/*` use-case from the start rather than inline in the operation.
 
 ## What you're really doing
 
-Every endpoint in `apps/api` is **one declaration that fans out into every generated surface**:
+Every operation in `packages/operations` is **one declaration that fans out into every generated surface**:
 
 | Surface | Generated from | Consumed by |
 | --- | --- | --- |
-| HTTP route (Hono) | `route.method` + `route.path` + handler | curl, internal services |
-| OpenAPI operation | `route.name` (→ `operationId`), `route.description`, request/response schemas | `apps/api/openapi.json` — the source Fern reads for everything below |
+| HTTP route (Hono) | `route.method` + `route.path` + `execute`/`handler` | curl, internal services — mounted by `apps/api` |
+| OpenAPI operation | `route.name` (→ `operationId`), `route.description`, request/response schemas | `apps/api/openapi.json` — the source Fern reads for the SDKs + CLI |
 | MCP tool | `route.name`, `route.description`, flattened input + 2xx-JSON output schema | `apps/api/mcp.json`, runtime `/v1/mcp` transport |
-| TS + Python SDK methods | Fern reads `openapi.json` | end-user TypeScript (`@latitude-data/sdk`) and Python (`latitude-sdk`) code |
+| TS + Python SDK methods | Fern reads `openapi.json`; `group`/`sdkMethod` name the method | end-user TypeScript (`@latitude-data/sdk`) and Python (`latitude-sdk`) code |
 | `latitude` CLI command | Fern reads `openapi.json` | shell users + AI agents (`latitude <resource> <verb>`, `--help`, `--schema`) |
+| In-process agent tool | `defineToolset({ groups })` selection over execute-form operations | internal AI agents (e.g. the signal-creation agent) — no HTTP, no tokens |
 
-You don't write these configs separately. You write one. The infra in `apps/api/src/mcp/*` derives the MCP tool, and Fern derives the SDKs + CLI from `openapi.json`.
+You don't write these configs separately. You write one. The machinery in `packages/operations/src/core/*` derives the MCP tool and agent tools, and Fern derives the SDKs + CLI from `openapi.json`.
 
-This means: **the descriptions you put on routes and on schema fields are read by SDK users, by AI agents calling the MCP, AND by CLI users (as `--help`/`--schema` text)**. Treat every `description` as user-facing copy. Vague or absent descriptions are bugs.
+This means: **the descriptions you put on routes and on schema fields are read by SDK users, by AI agents calling the MCP or an internal toolset, AND by CLI users (as `--help`/`--schema` text)**. Treat every `description` as user-facing copy. Vague or absent descriptions are bugs.
 
-## Recipe: add a new route file
+## Recipe: add a new operation module
 
-### 1. Create `apps/api/src/routes/<resource>.ts`
+### 1. Create `packages/operations/src/operations/<resource>.ts`
+
+Prefer **execute-form** (`execute` + `typedResponses`) for new operations — it's transport-neutral, so the operation is eligible for in-process agent toolsets and gets a typed status/body union. `handler`-form (a raw Hono handler + `openApiResponses`) still exists on unconverted modules; convert opportunistically when touching one.
 
 ```ts
-import { createRoute, OpenAPIHono, z } from "@hono/zod-openapi"
-import { defineApiEndpoint } from "../mcp/index.ts"
-import { errorResponse, jsonBody, jsonResponse, openApiResponses, PROTECTED_SECURITY } from "../openapi/schemas.ts"
+import { createRoute, z } from "@hono/zod-openapi"
+import { Effect } from "effect"
+import { defineOperation } from "../core/define-operation.ts"
+import type { OperationModule } from "../core/mount.ts"
+import { jsonBody, PROTECTED_SECURITY, typedResponses } from "../openapi/schemas.ts"
 import type { OrganizationScopedEnv } from "../types.ts"
 
-// Step 1: export the mount path as a const. `routes/index.ts` imports this so
-// the path is declared exactly once.
-export const widgetsPath = "/widgets"
+// Step 1: declare the mount path once; the module carries it.
+const widgetsPath = "/widgets"
 
-// Step 2: bind the endpoint factory to the Env type AND the path.
-const widgetEndpoint = defineApiEndpoint<OrganizationScopedEnv>(widgetsPath)
+// Step 2: bind the operation factory to the Env type AND the path.
+const widgetOperation = defineOperation<OrganizationScopedEnv>(widgetsPath)
 
 // Step 3: define the boundary schemas. EVERY field gets `.describe(...)` if its
-// purpose isn't obvious from the name. Descriptions land in BOTH `openapi.json`
-// (visible to SDK users via Fern-generated docstrings) and `mcp.json` (visible
-// to AI agents listing the tools). See the schema-description rules below.
+// purpose isn't obvious from the name. Descriptions land in `openapi.json`
+// (SDK docstrings), `mcp.json` (MCP tools), and agent toolsets.
 const WidgetSchema = z
   .object({
     id: z.string().describe("Stable identifier; safe to use as a primary key in client storage."),
     name: z.string().describe("Human-readable label, unique within an organization."),
     createdAt: z.string().describe("ISO-8601 timestamp of creation."),
   })
-  .openapi("Widget") // ← this `.openapi("Name")` registers the schema as a named OpenAPI component. Different from `.openapi({ description })`.
+  .openapi("Widget") // ← registers a named OpenAPI component (needed by Fern). Different from `.openapi({ description })`.
 
 const CreateWidgetBody = z
   .object({
@@ -72,67 +75,50 @@ const CreateWidgetBody = z
   })
   .openapi("CreateWidgetBody")
 
-// Step 4: declare each operation with `defineApiEndpoint`.
-const createWidget = widgetEndpoint({
+// Step 4: declare each operation.
+const createWidget = widgetOperation({
   route: createRoute({
     method: "post",
     path: "/",
     name: "createWidget", // ← camelCase. Becomes OpenAPI `operationId` AND MCP tool name.
+    tags: ["Widgets"],
+    group: "widgets", // ← SDK group (x-fern-sdk-group-name) AND agent-toolset selector. Declare right after `tags`.
+    sdkMethod: "create", // ← SDK method name inside the group (x-fern-sdk-method-name).
     summary: "Create widget", // ← short label; falls through to MCP tool `title`.
     description: "Creates a widget in the caller's organization. Returns the persisted record.",
-    annotations: { readOnlyHint: false, destructiveHint: false }, // ← required for MCP tools; see "Tool annotations" below.
-    tags: ["Widgets"],
     security: PROTECTED_SECURITY,
     request: { body: jsonBody(CreateWidgetBody) },
-    responses: openApiResponses({ status: 201, schema: WidgetSchema, description: "Widget created" }),
+    responses: typedResponses({ status: 201, schema: WidgetSchema, description: "Widget created" }),
   }),
-  handler: async (c) => {
-    const { name } = c.req.valid("json")
-    // ... use-case call ...
-    return c.json({ id: "...", name, createdAt: new Date().toISOString() }, 201)
-  },
+  access: "write", // ← required: "read-only" | "write" | "destructive". See "Access" below.
+  rateLimitTier: "low", // ← declarative; apps/api maps it to middleware at mount time.
+  execute: (input, ctx) =>
+    Effect.gen(function* () {
+      // input.body / input.params / input.query are pre-validated; ctx carries
+      // organization, auth, and clients. Pipe your layers exactly as before:
+      // .pipe(withPostgres(..., ctx.postgresClient, ctx.organization.id), withTracing)
+      const widget = yield* createWidgetUseCase({ name: input.body.name })
+      return { status: 201, body: toResponse(widget) } as const
+    }).pipe(/* withPostgres(...), withTracing */),
 })
 
-const listWidgets = widgetEndpoint({
-  route: createRoute({
-    method: "get",
-    path: "/",
-    name: "listWidgets",
-    summary: "List widgets",
-    description: "Returns every widget in the caller's organization, ordered by creation date.",
-    annotations: { readOnlyHint: true, destructiveHint: false },
-    tags: ["Widgets"],
-    security: PROTECTED_SECURITY,
-    responses: {
-      200: jsonResponse(z.object({ widgets: z.array(WidgetSchema) }).openapi("WidgetList"), "List of widgets"),
-      401: errorResponse("Unauthorized"),
-    },
-  }),
-  handler: async (c) => c.json({ widgets: [] }, 200),
-})
-
-// Step 5: export a factory that mounts every endpoint onto a fresh sub-app.
-// `mountHttp(app, ...middlewares)` accepts variadic Hono middleware that's
-// attached to *this exact endpoint only* (method + path) — pass the per-
-// endpoint rate-limit tier here. MCP registration is a side effect of
-// `mountHttp` using the prefix baked in at factory time (step 2).
-export const createWidgetsRoutes = () => {
-  const app = new OpenAPIHono<OrganizationScopedEnv>()
-  createWidget.mountHttp(app, createTierRateLimiter("low"))
-  listWidgets.mountHttp(app, createTierRateLimiter("low"))
-  return app
+// Step 5: export the module — mount order within `operations` is meaningful
+// (Hono matches static-before-param routes in registration order).
+export const widgetsModule: OperationModule = {
+  path: widgetsPath,
+  operations: [createWidget],
 }
 ```
 
-### 2. Wire it up in `apps/api/src/routes/index.ts`
+Execute-form notes:
 
-```ts
-import { createWidgetsRoutes, widgetsPath } from "./widgets.ts"
-// ...
-routes.route(widgetsPath, createWidgetsRoutes())
-```
+- **`typedResponses`** is the literal-keyed twin of `openApiResponses` (identical runtime output). It makes the `{ status, body }` union checkable: declared non-2xx variants (400/401/404) are returnable values; domain failures left in the Effect error channel re-throw and reach `honoErrorHandler` exactly as in handler-form. Keep its response keys literal — deriving them from a generic collapses the inference under tsgo (see the comment on `typedResponses`).
+- **`ctx`** (`OperationContext`) carries `organization`, `auth`, and the platform clients — everything the old `c.var` provided. Tenancy is baked in: the organization is resolved before `execute` runs and is never part of the input.
+- **`input`** contains only the sections the route declares (`params` / `query` / `body`), already validated.
 
-Just the mount — **no** `routes.use(prefix, createTierRateLimiter(...))` here. Tier middleware lives next to each endpoint inside `createWidgetsRoutes()` (see "Rate limiting" below).
+### 2. Register the module in `packages/operations/src/operations/index.ts`
+
+Add the import and one entry to `operationModules`. **Position = mount position**: `openapi.json` path order and `mcp.json` tool order derive from it, so append new modules at the end unless there's a routing reason not to.
 
 ### 3. Regenerate manifests
 
@@ -141,25 +127,27 @@ pnpm openapi:emit   # rewrites apps/api/openapi.json
 pnpm mcp:emit       # rewrites apps/api/mcp.json
 ```
 
-Both files are checked in. CI guards against drift, so commit them alongside the route file.
+Both files are checked in. CI guards against drift, so commit them alongside the module.
 
 The TS + Python SDKs and the `latitude` CLI all regenerate from `openapi.json` via Fern — `pnpm generate:sdk` (both SDKs), `pnpm generate:cli` (CLI), or `pnpm generate:all` (all three; needs Docker + a Rust toolchain for the CLI). CI (`api-manifests.yml`) regenerates all of them and fails on drift, so run `pnpm generate:all` and commit the results when your PR changes the surface — otherwise the drift check goes red.
 
 **Always use these `pnpm` scripts — never run `fern generate` directly.** The `generate:sdk:*` scripts pin `--version` (from the SDK's `package.json` / `pyproject.toml`) so the version Fern bakes into the generated Python `client_wrapper.py` `User-Agent` is deterministic; a bare `fern generate` omits it and re-stamps a registry-derived version ("last published + a patch"), which flaps the drift check on every SDK publish. See [`fern/README.md`](../../../fern/README.md).
 
-**Publishing the regenerated surface is version-gated per package — and the CLI is the easy one to miss.** Regeneration only rewrites the generated *source*; each package publishes on push to `development` only when its version advances, and the three track it differently. The SDKs read a manifest: bump `version` in `packages/sdk/typescript/package.json` (TS → npm; publishes when it differs from `npm view`) and in `packages/sdk/python/pyproject.toml` (Python → PyPI; publishes when the version isn't on PyPI). **The CLI has no manifest to bump — its version is the top `## [X.Y.Z]` entry in `packages/cli/CHANGELOG.md`** (its `Cargo.toml` ships `0.0.0`, patched at build via `cargo set-version`), and `publish-cli.yml` no-ops unless that top version has no `cli-<version>` release yet. Since new endpoints add SDK methods *and* CLI commands, **whenever you bump the SDK versions for new surface, add a matching new `## [X.Y.Z]` entry to `packages/cli/CHANGELOG.md` in the same change** — otherwise the CLI regenerates with the new commands but never ships.
+**Publishing the regenerated surface is version-gated per package — and the CLI is the easy one to miss.** Regeneration only rewrites the generated *source*; each package publishes on push to `development` only when its version advances, and the three track it differently. The SDKs read a manifest: bump `version` in `packages/sdk/typescript/package.json` (TS → npm; publishes when it differs from `npm view`) and in `packages/sdk/python/pyproject.toml` (Python → PyPI; publishes when the version isn't on PyPI). **The CLI has no manifest to bump — its version is the top `## [X.Y.Z]` entry in `packages/cli/CHANGELOG.md`** (its `Cargo.toml` ships `0.0.0`, patched at build via `cargo set-version`), and `publish-cli.yml` no-ops unless that top version has no `cli-<version>` release yet. Since new operations add SDK methods *and* CLI commands, **whenever you bump the SDK versions for new surface, add a matching new `## [X.Y.Z]` entry to `packages/cli/CHANGELOG.md` in the same change** — otherwise the CLI regenerates with the new commands but never ships.
 
 ### 4. Tests
 
-- HTTP-level integration tests live in `apps/api/src/routes/<resource>.test.ts`. Test through `app.fetch()` so middleware runs end-to-end.
-- MCP-level integration tests for new tools live in `apps/api/src/mcp/server.test.ts` (see the existing `createApiKey` / `listApiKeys` / `revokeApiKey` cases). Add a case there if the route exposes behavior worth pinning at the MCP layer too.
+- HTTP-level integration tests live in `apps/api/src/routes/<resource>.test.ts` — they stay in `apps/api` on purpose, testing through `registerRoutes` + `app.fetch()` so the full middleware chain (auth, org context, rate limiting, error mapping) runs end-to-end.
+- MCP-level integration tests for new tools live in `apps/api/src/mcp/server.test.ts`. Add a case there if the operation exposes behavior worth pinning at the MCP layer too.
+- The operation machinery itself (factory, execute wrapper, mount, toolsets) is unit-tested in `packages/operations/src/core/*.test.ts`.
+- If the operation joins an agent toolset's group, the toolset's manifest snapshot (`packages/operations/src/toolsets/__snapshots__/*.manifest.json`) will change — review and commit the diff deliberately; that diff IS the "this operation now flows to an agent" review surface.
 
 ## Schema descriptions — the rule that matters most
 
-**Every field in every request/response schema needs a description unless the field name is self-explanatory.** Descriptions reach three distinct audiences:
+**Every field in every request/response schema needs a description unless the field name is self-explanatory.** Descriptions reach four distinct audiences:
 
 - **SDK users** read them as TypeScript JSDoc / Python docstrings on the generated SDK methods (Fern emits them as `@param` / property comments).
-- **AI agents** read them via the MCP tool's `inputSchema` / `outputSchema` to decide what to put in a tool call.
+- **AI agents** read them via the MCP tool's `inputSchema` / `outputSchema` — and internal agents read the same schemas through toolsets — to decide what to put in a tool call.
 - **CLI users** read them as `--help` text and machine-readable `--schema` output on the generated `latitude` commands.
 
 Write each description as one short sentence in present tense, like a microcopy label. Examples:
@@ -194,7 +182,7 @@ If you find yourself writing `.openapi({ description })`, replace it with `.desc
 
 ### Don't leak internal implementation into descriptions
 
-User-facing descriptions (route `description`, schema `.describe()`, `openApiResponses({ description })`) are read by SDK users and AI agents. They aren't release notes for our backend. Keep them about the *contract*, not how we implement it.
+User-facing descriptions (route `description`, schema `.describe()`, response `description`) are read by SDK users and AI agents. They aren't release notes for our backend. Keep them about the *contract*, not how we implement it.
 
 Concretely, avoid:
 
@@ -215,90 +203,78 @@ description: "Deletes a project by slug."
 description: "Revokes an API key by setting deletedAt and busting the Redis cache."
 // Good
 description: "Revokes an API key."
-
-// Bad — leaks that we don't actually delete the row
-deletedAt: z.string().nullable().describe("ISO-8601 timestamp at which the project was soft-deleted...")
-// Good
-deletedAt: z.string().nullable().describe("ISO-8601 timestamp at which the project was deleted...")
 ```
 
 Same rule for the verbs used in route/operation `summary`: "Delete project" beats "Soft-delete project".
 
-## Rate limiting — every endpoint needs its own tier
+## Rate limiting — every operation declares its own tier
 
-`createTierRateLimiter(tier)` is keyed on the authenticated org id (not IP), so one tenant's traffic doesn't eat another's quota. Pass it as a variadic middleware argument to `mountHttp(app, ...middlewares)` — the middleware is attached to **this exact (method, path) pair only**, so a stricter tier on `DELETE /:id` doesn't fire on `GET /:id`:
-
-```ts
-export const createWidgetsRoutes = () => {
-  const app = new OpenAPIHono<OrganizationScopedEnv>()
-  createWidget.mountHttp(app, createTierRateLimiter("low"))
-  getWidget.mountHttp(app, createTierRateLimiter("low"))
-  updateWidget.mountHttp(app, createTierRateLimiter("low"))
-  deleteWidget.mountHttp(app, createTierRateLimiter("medium"))
-  exportWidgets.mountHttp(app, createTierRateLimiter("critical"))
-  return app
-}
-```
-
-Under the hood, `mountHttp` injects the middleware via the OpenAPIHono route config's `middleware` field, which Hono scopes to that single endpoint. Don't use `app.use(path, mw)` for tiers — it's path-matched (not method-matched), so it ends up running for every method that shares the path and stacks when called multiple times for the same path.
+`rateLimitTier` is a **required-in-practice** field on the operation args: `mountOperationModules` throws at mount time on a missing tier, and the emit scripts boot the same assembly, so an undeclared tier can't ship. `apps/api` maps the tier to `createTierRateLimiter(tier)` middleware attached to **this exact (method, path) pair only**, keyed on the authenticated org id (not IP), so one tenant's traffic doesn't eat another's quota and a stricter tier on `DELETE /:id` doesn't fire on `GET /:id`.
 
 ### Picking a tier
 
-Default to `low`. Most CRUD endpoints don't need more — `low` is 100 req/min/org, which comfortably covers SDK polling, MCP tool calls, and human-driven dashboards. Step up only when the endpoint genuinely warrants tighter limits.
+Default to `low`. Most CRUD operations don't need more — `low` is 1,000 req/min/org, which comfortably covers SDK polling, MCP tool calls, and human-driven dashboards. Step up only when the operation genuinely warrants tighter limits.
 
 | Tier | Quota (per org / min) | Pick this when… |
 | --- | --- | --- |
-| `low` | 100 | **The default**: id-keyed CRUD, list of bounded size, simple lookups, account/settings reads. Most endpoints land here. |
-| `medium` | 60 | Mutations with non-trivial side effects (sending email, fan-out writes, destructive ops that cascade across user surfaces). |
-| `high` | 15 | Bulk reads with filter / search / semantic / vector load that scan large data sets per request. |
-| `critical` | 3 | Workflow-kicking ops: imports, exports, monitor-issue, anything that sends email or enqueues a heavy job. |
+| `low` | 1,000 | **The default**: id-keyed CRUD, list of bounded size, simple lookups, account/settings reads. Most operations land here. |
+| `medium` | 600 | Mutations with non-trivial side effects, and moderate analytics reads. |
+| `high` | 150 | Bulk reads with filter / search / semantic / vector load that scan large data sets per request. |
+| `ultra` | 30 | Workflow-kicking ops: imports, exports, monitor-signal, anything that sends email or enqueues a heavy job. |
+| `max` | 10 | Unauthenticated or abuse-prone surfaces (used with extra global limiting; see `routes/bootstrap.ts`). |
 
-Don't be harsh. A tighter tier doesn't make the API safer in any meaningful way for cheap endpoints — it just frustrates legitimate callers. When in doubt, pick `low` and bump it later if a specific endpoint shows up in incident traffic.
-
-### Always pass a tier
-
-`mountHttp(app)` without a tier middleware means the endpoint inherits no per-route limit at all — only the global IP-keyed brute-force guard. The tier belongs in the same line; an unparented `mountHttp(app)` is an easy oversight in PR review.
+Don't be harsh. A tighter tier doesn't make the API safer in any meaningful way for cheap operations — it just frustrates legitimate callers. When in doubt, pick `low` and bump it later if a specific operation shows up in incident traffic.
 
 ## Choosing route names and shapes
 
 - **`name`** is camelCase, verb-first, and reads like an SDK method: `createApiKey`, `listProjects`, `assignSavedSearch`. Avoid resource-prefixed names that read awkwardly as SDK calls (`apiKeysList` → use `listApiKeys`).
+- **`group` / `sdkMethod`** name the Fern SDK surface (`client.<group>.<sdkMethod>()`) and are renamed in place to the `x-fern-*` extensions — declare them right after `tags` (emitted key order follows declaration order, and the checked-in `openapi.json` is diffed byte-for-byte in CI). `group` doubles as the agent-toolset selector.
 - **`description`** on the route is the single-line tool/method blurb. Treat it as the first sentence an SDK user or AI agent sees when discovering the operation.
 - **`summary`** is optional, shorter, and becomes the MCP tool `title`. Falls back to `name` when omitted.
 
-## Tool annotations — declare read/destructive intent
+## Access — declare what the operation does to data
 
-Every tool-eligible endpoint **must** carry an `annotations` object on its `createRoute` config (alongside `name` / `summary` / `description`). It maps to the MCP spec's [`ToolAnnotations`](https://modelcontextprotocol.io/specification) and tells MCP clients how cautious to be before calling the tool. `readOnlyHint` and `destructiveHint` are **required** — TypeScript won't let you define an endpoint without them; the other two hints are optional. (`title` is intentionally not settable here — it's already derived from `summary`/`name`.)
+Every operation **must** declare an `access` field on its `defineOperation` args (a sibling of `rateLimitTier`, not inside `createRoute`). It's a single value — `"read-only" | "write" | "destructive"` — and TypeScript won't let you define an operation without it. `access` is the authoring surface for two things: the MCP tool annotations (translated to the spec's [`ToolAnnotations`](https://modelcontextprotocol.io/specification) `readOnlyHint`/`destructiveHint` by `accessToAnnotations`, the single translation point) and the agent-toolset access ceiling (below).
 
 ```ts
-annotations: { readOnlyHint: false, destructiveHint: true },
+const deleteWidget = widgetOperation({
+  route: createRoute({ /* method, path, name, group, sdkMethod, … */ }),
+  access: "destructive",
+  rateLimitTier: "medium",
+  execute: (input, ctx) => /* … */,
+})
 ```
 
-**The spec's framing for `destructiveHint`.** The MCP spec splits writes into **additive** vs **destructive**: a write is *destructive* if it can **delete or overwrite** existing values (the prior value is lost), and *additive* if it only adds without touching what's already there. That's why an in-place `update*` is `destructiveHint: true` even though it isn't a delete — overwriting a stored name/settings/cell replaces the previous value. The spec also says `destructiveHint` is **only meaningful when `readOnlyHint` is `false`**, and it **defaults to `true`** — so when you're unsure about a non-additive write, prefer `true`.
+**Write vs destructive.** Mirrors the MCP spec's additive/destructive split: a write is *destructive* if it can **delete or overwrite** an existing value (the prior value is lost), and just `"write"` if it only adds without touching what's there. An in-place `update*` is `"destructive"` even though it isn't a delete — overwriting a stored name/settings/cell replaces the previous value. When unsure about a non-additive write, prefer `"destructive"`.
 
-| Hint | Meaning | Set it to… |
+| Value | Wire annotations | Use for |
 | --- | --- | --- |
-| `readOnlyHint` (required) | The tool only reads; it never writes/mutates anything. | `true` for pure reads (GET lists, gets, analytics, histograms — even when the request uses POST for a complex query body). `false` for anything with a side effect: writes, deletes, enqueued jobs, emails, generated export artifacts. |
-| `destructiveHint` (required) | A write may delete or overwrite existing data. Only meaningful when `readOnlyHint` is `false`. | `true` for deletes/revokes/removes and in-place updates that overwrite prior values. `false` for purely additive creates/inserts, and for reversible state toggles (mute/unmute, monitor/unmonitor, resolve, restore, reorder). For read-only tools, set `false`. |
-| `idempotentHint` (optional) | Repeating an identical call has no effect beyond the first. | Usually omit. |
-| `openWorldHint` (optional) | The tool touches entities outside the caller's Latitude organization. | Usually omit (our surface is org-scoped). |
+| `"read-only"` | `{ readOnlyHint: true, destructiveHint: false }` | Pure reads: GET lists, gets, analytics, histograms — even when the request uses POST to carry a complex query body. |
+| `"write"` | `{ readOnlyHint: false, destructiveHint: false }` | Additive or reversible: `create*`/`insert*`/`add*`/`invite*`/`import*`, and state toggles (`mute*`/`unmute*`, `monitor*`/`unmonitor*`, `resolve*`, `restore*`, `reorder*`). Exports that enqueue a job or send email are `"write"` (they're not read-only). |
+| `"destructive"` | `{ readOnlyHint: false, destructiveHint: true }` | `delete*`/`revoke*`/`remove*`, and in-place `update*` that overwrites stored values. |
 
-Rules of thumb:
+Set `access` to match what the implementation actually does — a wrong value misstates risk to MCP clients and is **load-bearing for agent toolsets** (`defineToolset` refuses operations above its access ceiling, so an over-broad `access` can leak a mutation to an agent and a too-narrow one blocks a legitimate read). `access` is stripped before the route reaches the OpenAPI generator, so it surfaces only in `mcp.json` and the live MCP transport, never in `openapi.json`.
 
-- **Reads** (`GET`, or `POST` used only to carry a search/filter body) → `{ readOnlyHint: true, destructiveHint: false }`.
-- **Creates / inserts / additive actions** (`create*`, `insert*`, `add*`, `invite*`, `import*`) → `{ readOnlyHint: false, destructiveHint: false }`.
-- **In-place updates** (`update*`, edits that overwrite stored values) → `{ readOnlyHint: false, destructiveHint: true }`.
-- **Deletes / revokes / removes** → `{ readOnlyHint: false, destructiveHint: true }`.
-- **Reversible state toggles** (`mute*`/`unmute*`, `monitor*`/`unmonitor*`, `resolve*`, `restore*`, `reorder*`) → `{ readOnlyHint: false, destructiveHint: false }` — they change state but don't destroy data.
-- **Exports** that enqueue a job, send an email, or write an artifact are **not** read-only → `{ readOnlyHint: false, destructiveHint: false }`.
+## Agent toolsets — exposing operations to internal AI agents
 
-When you add or modify a tool endpoint, set these to match what the handler actually does — a wrong `readOnlyHint`/`destructiveHint` misleads agents about how risky the call is. The annotations are stripped before the route reaches the OpenAPI generator, so they appear only in `mcp.json` and the live MCP transport, never in `openapi.json`.
+`defineToolset` (in `packages/operations/src/core/toolset.ts`) selects operations and shapes them as in-process tools (`invoke(rawFlatInput, ctx)` — validate, split, `execute`; no HTTP, no tokens). Selection is a **filter**: an operation is included when it's tool-eligible, execute-form (invocable in-process), within the access ceiling, and in `spec.groups` if given. Everything else is silently dropped — so an op joins a toolset automatically once it's converted to execute-form, and writes never reach a read-only toolset by construction. Only genuine misconfiguration throws: a `groups` entry matching no operation (typo), or a stale `exclude`. Concrete toolsets live in `packages/operations/src/toolsets/` (they can't live in `@domain/*` — that would create a package cycle, since `@repo/operations` imports domain packages).
+
+**Access ceiling.** `ToolsetSpec.access` (default `"read-only"`) is the highest `access` the toolset admits, and it's **cumulative**: a `"write"` ceiling admits read-only *and* write operations; `"destructive"` admits everything. Operations above the ceiling are filtered out, so an agent gets no mutations unless the toolset explicitly opts up; the default keeps research agents read-only. **`groups` is optional** — omit it to span the whole registry, e.g. the shipped `readOnlyToolset`:
+
+```ts
+export const readOnlyToolset = defineToolset({ name: "read-only", access: "read-only" }, operationModules)
+// or scope + raise the ceiling:
+defineToolset({ name: "signal-writer", groups: ["signals"], access: "write" }, operationModules)
+```
+
+Tenancy note for toolset consumers: build `OperationContext` from an already-resolved organization; the model-visible input never carries org identity.
 
 ## Opting out of MCP per-route
 
-Some routes shouldn't be tools — they make sense for HTTP/SDK clients but not for AI agents (e.g. internal lifecycle endpoints, web-only callbacks). Pass `tool: false`:
+Some operations shouldn't be tools — they make sense for HTTP/SDK clients but not for AI agents (e.g. internal lifecycle endpoints, web-only callbacks). Pass `tool: false`:
 
 ```ts
-const internalReindex = widgetEndpoint({
+const internalReindex = widgetOperation({
   route: createRoute({ ... }),
   handler: async (c) => { ... },
   tool: false, // ← HTTP route is mounted, MCP tool is skipped
@@ -310,25 +286,28 @@ const internalReindex = widgetEndpoint({
 Run before opening the PR:
 
 ```bash
+pnpm --filter @repo/operations typecheck && pnpm --filter @repo/operations test
 pnpm --filter @app/api typecheck
 pnpm --filter @app/api test
 pnpm openapi:emit && git diff --exit-code apps/api/openapi.json   # no drift
 pnpm mcp:emit && git diff --exit-code apps/api/mcp.json           # no drift
 ```
 
-Spot-check both manifests by hand: open `apps/api/mcp.json` and `apps/api/openapi.json`, find your operation, confirm every field has a `description`. If something is missing, it'll silently degrade SDK docs and agent UX — fix it at the Zod schema, not in the JSON output. In `mcp.json`, also confirm your tool's `annotations.readOnlyHint` / `annotations.destructiveHint` match what the handler actually does (see "Tool annotations" above).
-
-And glance at your `createXxxRoutes()` factory — every `mountHttp(app, …)` call should pass a `createTierRateLimiter("…")` as its second argument. A bare `ep.mountHttp(app)` leaves the endpoint uncapped per-org.
+Spot-check both manifests by hand: open `apps/api/mcp.json` and `apps/api/openapi.json`, find your operation, confirm every field has a `description`. If something is missing, it'll silently degrade SDK docs and agent UX — fix it at the Zod schema, not in the JSON output. In `mcp.json`, also confirm your tool's `annotations` (translated from `access`) match what the implementation actually does (see "Access" above).
 
 ## Where the machinery lives
 
 If you need to debug the auto-generation pipeline:
 
-- `apps/api/src/mcp/define-endpoint.ts` — `defineApiEndpoint` factory; baked-in `prefix`, `mountHttp` registers with the MCP registry on tool-eligible mounts.
-- `apps/api/src/mcp/registry.ts` — module-global endpoint registry; `collectToolDescriptors()` emits the snapshot used by both the runtime MCP transport and `mcp:emit`.
+- `packages/operations/src/core/define-operation.ts` — `defineOperation` factory; baked-in `prefix`, dual `execute`/`handler` form, in-place `group`/`sdkMethod` → x-fern rename, `mountHttp` registers with the MCP registry on tool-eligible mounts.
+- `packages/operations/src/core/execute.ts` — `OperationInput`/`OperationOutput` inference and the generated Hono handler around `execute`.
+- `packages/operations/src/core/mount.ts` — `mountOperationModules`; applies `rateLimitTier` middleware, throws on missing tiers.
+- `packages/operations/src/core/registry.ts` — module-global operation registry; `collectToolDescriptors()` emits the snapshot used by both the runtime MCP transport and `mcp:emit`.
+- `packages/operations/src/core/toolset.ts` / `core/invoke.ts` — agent toolset selection + in-process invocation.
+- `packages/operations/src/operations/index.ts` — the ordered module manifest (mount order lives here).
 - `apps/api/src/mcp/server.ts` — per-request MCP server, dispatches each tool call back through `rootApp.fetch()` so the full middleware chain (auth, rate-limit, org-context, validation) re-runs on every inner call.
 - `apps/api/scripts/emit-openapi.ts` / `apps/api/scripts/emit-mcp.ts` — boot the route registry with stub clients and serialize the manifests.
-- `apps/api/src/openapi/schemas.ts` and `apps/api/src/openapi/pagination.ts` — shared boundary primitives (security scheme, `Paginated(...)`, common param schemas).
+- `packages/operations/src/openapi/schemas.ts` and `openapi/pagination.ts` — shared boundary primitives (security scheme, `typedResponses`, `Paginated(...)`, common param schemas).
 
 ## Related skills
 

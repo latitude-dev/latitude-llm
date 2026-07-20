@@ -30,10 +30,11 @@ export interface SignalDiscoveredNotificationRequest {
   readonly payload: SignalDiscoveredPayload
   readonly notificationId: NotificationId
   readonly projectId: ProjectId
+  readonly slackEligible: boolean
 }
 
 export type RequestSignalDiscoveredNotificationsResult =
-  | { readonly status: "skipped"; readonly reason: "signal-not-found" | "no-recipients" }
+  | { readonly status: "skipped"; readonly reason: "signal-not-found" | "user-origin-signal" | "no-recipients" }
   | { readonly status: "ok"; readonly requests: readonly SignalDiscoveredNotificationRequest[] }
 
 export type RequestSignalDiscoveredNotificationsError = RepositoryError
@@ -50,12 +51,22 @@ export const requestSignalDiscoveredNotificationsUseCase = (input: RequestSignal
       yield* Effect.annotateCurrentSpan("skipped", "signal-not-found")
       return { status: "skipped", reason: "signal-not-found" } as const
     }
+    if (signal.origin === "user") {
+      yield* Effect.annotateCurrentSpan("skipped", "user-origin-signal")
+      return { status: "skipped", reason: "user-origin-signal" } as const
+    }
 
-    const recipients = yield* resolveRecipients({
-      organizationId: input.organizationId,
-      projectId: input.projectId,
-      kind: "signal.discovered",
-    })
+    const hasSignalAssignee = Boolean(signal.assigneeId)
+    let recipients: readonly UserId[]
+    if (signal.assigneeId) {
+      recipients = [UserId(signal.assigneeId)]
+    } else {
+      recipients = yield* resolveRecipients({
+        organizationId: input.organizationId,
+        projectId: input.projectId,
+        kind: "signal.discovered",
+      })
+    }
     if (recipients.length === 0) {
       return { status: "skipped", reason: "no-recipients" } as const
     }
@@ -74,6 +85,7 @@ export const requestSignalDiscoveredNotificationsUseCase = (input: RequestSignal
         payload,
         notificationId: NotificationId(generateId()),
         projectId: input.projectId,
+        slackEligible: !hasSignalAssignee,
       }),
     )
 

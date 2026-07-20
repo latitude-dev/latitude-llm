@@ -1,6 +1,15 @@
+import { createHash } from "node:crypto"
 import type { AgentDispatchAdapter } from "@domain/agent-dispatch"
 import { DispatchAdapterError } from "@domain/agent-dispatch"
 import { Effect } from "effect"
+
+const buildCursorAgentId = (idempotencyKey: string): string => {
+  const bytes = createHash("sha256").update(idempotencyKey).digest().subarray(0, 16)
+  bytes[6] = (bytes[6]! & 0x0f) | 0x50
+  bytes[8] = (bytes[8]! & 0x3f) | 0x80
+  const hex = bytes.toString("hex")
+  return `bc-${hex.slice(0, 8)}-${hex.slice(8, 12)}-${hex.slice(12, 16)}-${hex.slice(16, 20)}-${hex.slice(20)}`
+}
 
 export const createCursorAdapter = (): AgentDispatchAdapter => ({
   kind: "cursor",
@@ -21,21 +30,17 @@ export const createCursorAdapter = (): AgentDispatchAdapter => ({
         startingRef?: string
         autoCreatePR?: boolean
       }
+      const agentId = buildCursorAgentId(idempotencyKey)
       const body = {
-        agentId: idempotencyKey,
+        agentId,
         prompt: { text: prompt },
-        source: {
-          repository: target.repoUrl,
-          ...(target.startingRef ? { ref: target.startingRef } : {}),
-        },
-        target: {
-          autoCreatePr: target.autoCreatePR ?? true,
-        },
+        repos: [{ url: target.repoUrl, ...(target.startingRef ? { startingRef: target.startingRef } : {}) }],
+        autoCreatePR: target.autoCreatePR ?? true,
       }
 
       const response = yield* Effect.tryPromise({
         try: () =>
-          fetch("https://api.cursor.com/v0/agents", {
+          fetch("https://api.cursor.com/v1/agents", {
             method: "POST",
             headers: {
               Authorization: `Basic ${btoa(`${apiKey}:`)}`,
@@ -60,13 +65,13 @@ export const createCursorAdapter = (): AgentDispatchAdapter => ({
             ? { externalAgentId: responseBody.id }
             : responseBody.agent?.id !== undefined
               ? { externalAgentId: responseBody.agent.id }
-              : {}),
+              : { externalAgentId: agentId }),
           ...(responseBody.run?.id !== undefined ? { externalRunId: responseBody.run.id } : {}),
           ...(responseBody.target?.url !== undefined
             ? { deepLinkUrl: responseBody.target.url }
             : responseBody.agent?.url !== undefined
               ? { deepLinkUrl: responseBody.agent.url }
-              : {}),
+              : { deepLinkUrl: `https://cursor.com/agents/${agentId}` }),
         }
       }
 

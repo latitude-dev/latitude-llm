@@ -1,11 +1,20 @@
-import { SpanId } from "@domain/shared"
+import { SpanId, TraceId } from "@domain/shared"
 import type { GenAIMessage } from "rosetta-ai"
 import { describe, expect, it } from "vitest"
 import type { SpanMessagesData } from "../ports/span-repository.ts"
-import { buildConversationSpanMaps } from "./map-conversation-to-spans.ts"
+import { buildConversationSpanMaps, type ConversationSpanRef } from "./map-conversation-to-spans.ts"
+
+const TRACE = "trace-1"
 
 function textMsg(role: "user" | "assistant", content: string): GenAIMessage {
   return { role, parts: [{ type: "text", content }] }
+}
+
+/** Flatten a ref-valued map to `key → spanId` for concise equality assertions. */
+function spanIds<K extends string | number>(map: Record<K, ConversationSpanRef>): Record<K, string> {
+  const out = {} as Record<K, string>
+  for (const key in map) out[key] = map[key].spanId
+  return out
 }
 
 function makeSpan(
@@ -13,8 +22,10 @@ function makeSpan(
   output: GenAIMessage,
   inputs: readonly GenAIMessage[] = [],
   toolCallId = "",
+  traceId = TRACE,
 ): SpanMessagesData {
   return {
+    traceId: TraceId(traceId),
     spanId: SpanId(spanId),
     operation: "llm",
     toolCallId,
@@ -27,6 +38,7 @@ function makeSpan(
 
 function makeExecuteToolSpan(spanId: string, toolName: string, toolInput: string, toolCallId = ""): SpanMessagesData {
   return {
+    traceId: TraceId(TRACE),
     spanId: SpanId(spanId),
     operation: "execute_tool",
     toolCallId,
@@ -56,7 +68,7 @@ describe("buildConversationSpanMaps", () => {
       const messages: GenAIMessage[] = [textMsg("user", "Hi"), assistantMsg]
       const { messageSpanMap } = buildConversationSpanMaps(messages, [span])
 
-      expect(messageSpanMap).toEqual({ 1: "span-1" })
+      expect(messageSpanMap).toEqual({ 1: { traceId: TRACE, spanId: "span-1" } })
     })
 
     it("does not map user messages", () => {
@@ -87,12 +99,12 @@ describe("buildConversationSpanMaps", () => {
       // First occurrence: preceded by "First question" → should match span1
       const messages1: GenAIMessage[] = [textMsg("user", "First question"), sharedOutput]
       const { messageSpanMap: map1 } = buildConversationSpanMaps(messages1, [span1, span2])
-      expect(map1[1]).toBe("span-1")
+      expect(map1[1]?.spanId).toBe("span-1")
 
       // Second occurrence: preceded by "Second question" → should match span2
       const messages2: GenAIMessage[] = [textMsg("user", "Second question"), sharedOutput]
       const { messageSpanMap: map2 } = buildConversationSpanMaps(messages2, [span1, span2])
-      expect(map2[1]).toBe("span-2")
+      expect(map2[1]?.spanId).toBe("span-2")
     })
 
     it("maps repeated identical assistant text to different spans when inputs differ (multi-turn chain)", () => {
@@ -112,8 +124,8 @@ describe("buildConversationSpanMaps", () => {
       const allMessages: GenAIMessage[] = [msgA, msgB, ok, msgC, msgD, ok, msgE, msgF]
       const { messageSpanMap } = buildConversationSpanMaps(allMessages, [span1, span2])
 
-      expect(messageSpanMap[2]).toBe("span-first")
-      expect(messageSpanMap[5]).toBe("span-second")
+      expect(messageSpanMap[2]?.spanId).toBe("span-first")
+      expect(messageSpanMap[5]?.spanId).toBe("span-second")
     })
 
     it("fingerprints are case- and whitespace-insensitive for text parts", () => {
@@ -122,7 +134,7 @@ describe("buildConversationSpanMaps", () => {
 
       const messages: GenAIMessage[] = [outputVariant]
       const { messageSpanMap } = buildConversationSpanMaps(messages, [span])
-      expect(messageSpanMap[0]).toBe("span-1")
+      expect(messageSpanMap[0]?.spanId).toBe("span-1")
     })
   })
 
@@ -130,7 +142,7 @@ describe("buildConversationSpanMaps", () => {
     it("maps toolCallId to spanId for spans with a toolCallId", () => {
       const span = makeSpan("span-tool", textMsg("assistant", "tool result"), [], "call-abc")
       const { toolCallSpanMap } = buildConversationSpanMaps([], [span])
-      expect(toolCallSpanMap).toEqual({ "call-abc": "span-tool" })
+      expect(spanIds(toolCallSpanMap)).toEqual({ "call-abc": "span-tool" })
     })
 
     it("ignores spans without a toolCallId", () => {
@@ -143,7 +155,7 @@ describe("buildConversationSpanMaps", () => {
       const spanA = makeSpan("span-a", textMsg("assistant", "a"), [], "call-1")
       const spanB = makeSpan("span-b", textMsg("assistant", "b"), [], "call-2")
       const { toolCallSpanMap } = buildConversationSpanMaps([], [spanA, spanB])
-      expect(toolCallSpanMap).toEqual({ "call-1": "span-a", "call-2": "span-b" })
+      expect(spanIds(toolCallSpanMap)).toEqual({ "call-1": "span-a", "call-2": "span-b" })
     })
   })
 
@@ -155,8 +167,8 @@ describe("buildConversationSpanMaps", () => {
 
       const { toolCallSpanMap } = buildConversationSpanMaps(messages, [execSpan])
 
-      expect(toolCallSpanMap["adk-123"]).toBe("span-exec")
-      expect(toolCallSpanMap.call_2_0).toBe("span-exec")
+      expect(toolCallSpanMap["adk-123"]?.spanId).toBe("span-exec")
+      expect(toolCallSpanMap.call_2_0?.spanId).toBe("span-exec")
     })
 
     it("disambiguates same-named tool calls by arguments", () => {
@@ -169,8 +181,8 @@ describe("buildConversationSpanMaps", () => {
 
       const { toolCallSpanMap } = buildConversationSpanMaps(messages, [execBcn, execMad])
 
-      expect(toolCallSpanMap.call_a).toBe("span-mad")
-      expect(toolCallSpanMap.call_b).toBe("span-bcn")
+      expect(toolCallSpanMap.call_a?.spanId).toBe("span-mad")
+      expect(toolCallSpanMap.call_b?.spanId).toBe("span-bcn")
     })
 
     it("does not override a tool_call whose id already resolves to a span", () => {
@@ -179,7 +191,7 @@ describe("buildConversationSpanMaps", () => {
 
       const { toolCallSpanMap } = buildConversationSpanMaps(messages, [execSpan])
 
-      expect(toolCallSpanMap).toEqual({ "real-id": "span-exec" })
+      expect(spanIds(toolCallSpanMap)).toEqual({ "real-id": "span-exec" })
     })
   })
 })

@@ -54,11 +54,26 @@ const MAX_ATTEMPTS = 100
 const RANDOM_SUFFIX_CHARS = "abcdefghijklmnopqrstuvwxyz0123456789"
 const RANDOM_SUFFIX_LENGTH = 4
 
+/**
+ * The stable, user-visible slug the shared read-only Showcase project is
+ * always addressed by (`/projects/lat-demo`). It is a route sentinel resolved
+ * through the showcase pointer, so the URL stays constant even as blue/green
+ * regeneration rotates the underlying project id. `lat-demo` (over a generic
+ * `demo`) minimizes the odds a user already picked it, shrinking the
+ * reservation's collision/migration risk.
+ */
+export const SHOWCASE_PROJECT_SLUG = "lat-demo"
+
+export const SHOWCASE_ORG_CACHE_KEY = `${SHOWCASE_PROJECT_SLUG}-org`
+
 /** Slug bases reserved for the product; enforced app-layer for every {@link generateSlug} caller. */
-export const RESERVED_PROJECT_SLUGS = ["lat-demo"] as const
+export const RESERVED_PROJECT_SLUGS = [SHOWCASE_PROJECT_SLUG] as const
 
 export const isReservedProjectSlug = (slug: string): boolean =>
   (RESERVED_PROJECT_SLUGS as readonly string[]).includes(slug)
+
+/** Whether `slug` addresses the shared Showcase project (the reserved route sentinel). */
+export const isShowcaseProjectSlug = (slug: string): boolean => slug === SHOWCASE_PROJECT_SLUG
 
 export class InvalidSlugInputError extends Data.TaggedError("InvalidSlugInputError")<{
   readonly name: string

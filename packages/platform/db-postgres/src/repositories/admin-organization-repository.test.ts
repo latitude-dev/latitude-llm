@@ -128,6 +128,8 @@ describe("AdminOrganizationRepositoryLive.findById", () => {
     expect(result.id).toBe(ORG)
     expect(result.name).toBe("Acme")
     expect(result.stripeCustomerId).toBe("cus_test_123")
+    // No settings seeded → defaults to false.
+    expect(result.wantsShowcase).toBe(false)
 
     expect(result.members).toHaveLength(2)
     const ownerMember = result.members.find((m) => m.user.id === OWNER)
@@ -208,5 +210,44 @@ describe("AdminOrganizationRepositoryLive.findById", () => {
     expect(summaries.has(OrganizationId(ORG))).toBe(true)
     expect(summaries.has(OrganizationId(SANDBOX_ACTIVE_ORG))).toBe(false)
     expect(summaries.has(OrganizationId(SANDBOX_ARCHIVED_ORG))).toBe(false)
+  })
+})
+
+describe("AdminOrganizationRepositoryLive.setWantsShowcase", () => {
+  const readFlag = (orgId: string) =>
+    runWithLive(
+      Effect.gen(function* () {
+        const repo = yield* AdminOrganizationRepository
+        return yield* repo.findById(OrganizationId(orgId))
+      }),
+    ).then((details) => details.wantsShowcase)
+
+  it("toggles the flag and merges into existing settings", async () => {
+    await runWithLive(
+      Effect.gen(function* () {
+        const repo = yield* AdminOrganizationRepository
+        yield* repo.setWantsShowcase(OrganizationId(ORG), true)
+      }),
+    )
+    expect(await readFlag(ORG)).toBe(true)
+
+    await runWithLive(
+      Effect.gen(function* () {
+        const repo = yield* AdminOrganizationRepository
+        yield* repo.setWantsShowcase(OrganizationId(ORG), false)
+      }),
+    )
+    expect(await readFlag(ORG)).toBe(false)
+  })
+
+  it("fails with NotFoundError for a non-existent organisation id", async () => {
+    await expect(
+      runWithLive(
+        Effect.gen(function* () {
+          const repo = yield* AdminOrganizationRepository
+          yield* repo.setWantsShowcase(OrganizationId(makeId("org-missing")), true)
+        }),
+      ),
+    ).rejects.toMatchObject({ _tag: "NotFoundError", entity: "Organization" })
   })
 })

@@ -21,7 +21,10 @@ export {
   type MetricPercentiles,
 } from "./cohort-baselines.ts"
 export {
+  AGENT_GRAPH_MAIN_ID,
   COHORT_SUMMARY_CACHE_TTL_SECONDS,
+  MAX_AGENT_GRAPH_DEPTH,
+  SESSION_END_DEBOUNCE_MS,
   SESSION_ID_MAX_LENGTH,
   SESSION_SEARCH_MAX_MATCHING_TRACES_PER_ROW,
   SPAN_ID_LENGTH,
@@ -30,18 +33,11 @@ export {
   TRACE_SEARCH_BOILERPLATE_MIN_TRACES,
   TRACE_SEARCH_BOILERPLATE_TRACE_FRACTION,
   TRACE_SEARCH_CHARS_PER_TOKEN_ESTIMATE,
-  TRACE_SEARCH_CHUNK_HEAD_BUDGET_CHARS,
-  TRACE_SEARCH_CHUNK_MAX_CHARS,
-  TRACE_SEARCH_CHUNK_OVERLAP_CHARS,
-  TRACE_SEARCH_CHUNK_TAIL_BUDGET_CHARS,
   TRACE_SEARCH_DEFAULT_DAILY_EMBED_BUDGET_TOKENS,
   TRACE_SEARCH_DEFAULT_MONTHLY_EMBED_BUDGET_TOKENS,
   TRACE_SEARCH_DEFAULT_WEEKLY_EMBED_BUDGET_TOKENS,
-  TRACE_SEARCH_DOCUMENT_LOOKBACK_DAYS,
   TRACE_SEARCH_DOCUMENT_MAX_ESTIMATED_TOKENS,
   TRACE_SEARCH_DOCUMENT_MAX_LENGTH,
-  TRACE_SEARCH_EMBEDDING_LOOKBACK_DAYS,
-  TRACE_SEARCH_EMBEDDING_MIN_LENGTH,
   TRACE_SEARCH_MIN_RELEVANCE_SCORE,
 } from "./constants.ts"
 export type { Session, SessionDetail } from "./entities/session.ts"
@@ -49,6 +45,8 @@ export { sessionDetailSchema, sessionSchema } from "./entities/session.ts"
 export type { SessionSearchMatch } from "./entities/session-search-match.ts"
 export type { Operation, Span, SpanDetail, SpanKind, SpanStatusCode, ToolDefinition } from "./entities/span.ts"
 export {
+  isMemoryOperation,
+  MEMORY_OPERATIONS,
   operationSchema,
   spanDetailSchema,
   spanKindSchema,
@@ -109,6 +107,7 @@ export type {
 } from "./ports/session-repository.ts"
 export { emptySessionMetrics, SessionRepository } from "./ports/session-repository.ts"
 export type {
+  MemoryOperationSpan,
   SessionToolSpan,
   SpanIngestedAtWindow,
   SpanIngestionCursor,
@@ -172,7 +171,6 @@ export type {
   TraceMessageOccurrenceContent,
   TraceMessageOccurrenceRow,
   TraceSearchDocumentRow,
-  TraceSearchEmbeddingRow,
   TraceSearchRepositoryShape,
   TraceSemanticHighlightMatch,
 } from "./ports/trace-search-repository.ts"
@@ -197,7 +195,15 @@ export { isUserSortField, USER_SORT_FIELDS, UserAnalyticsRepository } from "./po
 export { deterministicSample } from "./sampling/deterministic-sampler.ts"
 export { extractSamplingKey } from "./sampling/extract-sampling-key.ts"
 export type {
-  TraceSearchChunk,
+  AgentGraph,
+  AgentGraphSpanInput,
+  AgentMetrics,
+  AgentNode,
+  AgentNodeKind,
+  AgentTrigger,
+} from "./use-cases/build-agent-graph.ts"
+export { agentGraphSpanKey, agentGraphToolCallKey, buildAgentGraph } from "./use-cases/build-agent-graph.ts"
+export type {
   TraceSearchDocument,
   TraceSearchDocumentInput,
   TraceSearchEmbeddingMessage,
@@ -219,6 +225,8 @@ export type {
 export { computeTraceSearchHighlights } from "./use-cases/compute-trace-search-highlights.ts"
 export type { GetSessionCohortSummaryInput } from "./use-cases/get-session-cohort-summary.ts"
 export { getSessionCohortSummaryUseCase } from "./use-cases/get-session-cohort-summary.ts"
+export type { GetSpanConversationChunkInput } from "./use-cases/get-span-conversation-chunk.ts"
+export { getSpanConversationChunkUseCase } from "./use-cases/get-span-conversation-chunk.ts"
 export type {
   GetTraceAnalyticsError,
   GetTraceAnalyticsInput,
@@ -242,7 +250,7 @@ export type {
   LoadTraceForTraceEndSkipped,
 } from "./use-cases/load-trace-for-trace-end.ts"
 export { loadTraceForTraceEndUseCase } from "./use-cases/load-trace-for-trace-end.ts"
-export { buildConversationSpanMaps } from "./use-cases/map-conversation-to-spans.ts"
+export { buildConversationSpanMaps, type ConversationSpanRef } from "./use-cases/map-conversation-to-spans.ts"
 export type { ParsedSearchQuery } from "./use-cases/parse-search-query.ts"
 export { parseSearchQuery } from "./use-cases/parse-search-query.ts"
 export type { ProcessIngestedSpansDeps, ProcessIngestedSpansInput } from "./use-cases/process-ingested-spans.ts"
@@ -295,14 +303,20 @@ export {
   type Report,
   type ReportV1,
   type ReportV2,
+  type ReportV3,
   type ReportVersion,
   type RunWrappedInput,
   type RunWrappedResult,
   type RunWrappedSkippedReason,
   reportV2Schema,
+  reportV3Schema,
   runWrappedUseCase,
   SCHEMA_BY_VERSION,
   type SessionDurationStatsRow,
+  type SkillCount,
+  type SkillCountRow,
+  type Skills,
+  type SkillUsageRow,
   scholarGatePasses,
   shipperGatePasses,
   strategistGatePasses,
@@ -316,6 +330,7 @@ export {
   type WindowInput,
   type WorkspaceDeepDive,
   type WorkspaceDeepDiveRow,
+  type WorkspaceDeepDiveV3,
   type WorkspaceRow,
   WRAPPED_REPORT_TYPES,
   type WrappedReportRecord,

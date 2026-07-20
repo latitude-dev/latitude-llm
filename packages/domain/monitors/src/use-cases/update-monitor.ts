@@ -15,11 +15,18 @@ import {
 } from "@domain/shared"
 import { Effect } from "effect"
 import type { Monitor, MonitorRule, MonitorTarget } from "../entities/monitor.ts"
+import { monitorTargetSchema } from "../entities/monitor.ts"
 import { SystemMonitorForbiddenError } from "../errors.ts"
 import { MonitorRepository } from "../ports/monitor-repository.ts"
 import { assertMonitorableSavedSearch } from "./assert-monitorable-saved-search.ts"
 
 const NAME_MAX_LENGTH = 128
+
+const configsEqual = (left: MonitorConfig, right: MonitorConfig): boolean =>
+  JSON.stringify(left) === JSON.stringify(right)
+
+const targetsEqual = (left: MonitorTarget, right: MonitorTarget): boolean =>
+  JSON.stringify(left) === JSON.stringify(right)
 
 export interface UpdateMonitorInput {
   readonly id: MonitorId
@@ -102,12 +109,32 @@ export const updateMonitorUseCase = (
         const repository = yield* MonitorRepository
         const monitor = yield* repository.findById(input.id)
         const editsMetadata = input.name !== undefined || input.description !== undefined
-        const editsTarget = input.target !== undefined
+        const editsTarget = input.target !== undefined && !targetsEqual(input.target, monitor.target)
         const editsLockedSystemRule =
           input.rule !== undefined &&
-          (input.rule.trigger !== monitor.rule.trigger || input.rule.severity !== monitor.rule.severity)
+          (input.rule.trigger !== monitor.rule.trigger || !configsEqual(input.rule.config, monitor.rule.config))
         if (monitor.system && (editsMetadata || editsTarget || editsLockedSystemRule)) {
           return yield* new SystemMonitorForbiddenError({ monitorId: input.id, operation: "edited" })
+        }
+        if (editsTarget) {
+          return yield* new ValidationError({
+            field: "target",
+            message: "Monitor target cannot be changed after creation",
+          })
+        }
+        if (input.rule !== undefined) {
+          if (input.rule.trigger !== monitor.rule.trigger) {
+            return yield* new ValidationError({
+              field: "rule.trigger",
+              message: "Monitor trigger cannot be changed after creation",
+            })
+          }
+          if (!configsEqual(input.rule.config, monitor.rule.config)) {
+            return yield* new ValidationError({
+              field: "rule.config",
+              message: "Monitor conditions cannot be changed after creation",
+            })
+          }
         }
 
         let nextName = monitor.name
@@ -144,6 +171,15 @@ export const updateMonitorUseCase = (
           yield* assertMonitorableSavedSearch(nextTarget.id)
         }
 
+        const parsedTarget = monitorTargetSchema.safeParse(nextTarget)
+        if (!parsedTarget.success) {
+          const issue = parsedTarget.error.issues[0]
+          return yield* new ValidationError({
+            field: issue?.path.length ? issue.path.map(String).join(".") : "target",
+            message: issue?.message ?? "Invalid monitor target",
+          })
+        }
+
         const now = new Date()
         const nextMonitor = {
           ...monitor,
@@ -154,8 +190,12 @@ export const updateMonitorUseCase = (
           rule: nextRule,
           updatedAt: now,
         }
+        // `escalating` and `threshold` are the triggers that open a sustained incident; a target/rule
+        // edit must evict the stale open row so the next sweep can't reuse it (or leave it dangling if
+        // the trigger switched to point-based `match`). `IncidentClosed` with `reason: "resolved"` is
+        // silent for both, so no recovery email fires — the incident was reconfigured, not recovered.
         const closesOpenIncident =
-          monitor.rule.trigger === "escalating" &&
+          (monitor.rule.trigger === "escalating" || monitor.rule.trigger === "threshold") &&
           (JSON.stringify(monitor.target) !== JSON.stringify(nextTarget) ||
             monitor.rule.trigger !== nextRule.trigger ||
             JSON.stringify(monitor.rule.config) !== JSON.stringify(nextRule.config))

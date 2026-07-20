@@ -1,4 +1,5 @@
 import { PRO_PLAN_CONFIG, SELF_SERVE_PLAN_SLUGS } from "@domain/billing"
+import { stashSignupAttribution } from "@domain/marketing"
 import type { QueuePublisherShape, WorkflowQuerierShape, WorkflowStarterShape } from "@domain/queue"
 import { generateId, OrganizationId, type StorageDiskPort } from "@domain/shared"
 import { isSsoEnforcedForEmailUseCase } from "@domain/sso"
@@ -28,6 +29,8 @@ import { withTracing } from "@repo/observability"
 import { mcp } from "better-auth/plugins"
 import { tanstackStartCookies } from "better-auth/tanstack-start"
 import { Effect } from "effect"
+import { parseSignupAttributionCookie } from "../lib/analytics/signup-attribution-cookie.ts"
+import { createMagicLinkConfirmationUrl } from "../lib/auth/magic-link.ts"
 
 let postgresClientInstance: PostgresClient | undefined
 let adminPostgresClientInstance: PostgresClient | undefined
@@ -251,6 +254,20 @@ export const getBetterAuth = () => {
         // framework (BA logs a warning when it isn't last).
         tanstackStartCookies(),
       ],
+      onBeforeUserCreate: async (user, request) => {
+        const attribution = parseSignupAttributionCookie(request?.headers.get("cookie"))
+        if (!attribution) return
+        try {
+          await Effect.runPromise(
+            stashSignupAttribution({ email: user.email, attribution }).pipe(
+              Effect.provide(RedisCacheStoreLive(getRedisClient())),
+              withTracing,
+            ),
+          )
+        } catch {
+          // Never block account creation on attribution.
+        }
+      },
       onUserCreated: async (user) => {
         await Effect.runPromise(
           outboxWriter
@@ -291,7 +308,7 @@ export const getBetterAuth = () => {
               organizationId: "system",
               payload: {
                 email,
-                magicLinkUrl: url,
+                magicLinkUrl: createMagicLinkConfirmationUrl({ verificationUrl: url, webUrl }),
                 organizationId: "system",
               },
             })

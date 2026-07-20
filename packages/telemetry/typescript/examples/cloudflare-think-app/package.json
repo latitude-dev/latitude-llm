@@ -7,24 +7,26 @@
     "verify:local": "node scripts/verify-local.mjs"
   },
   "dependencies": {
+    "@ai-sdk/anthropic": "^3.0.95",
     "@ai-sdk/react": "^3.0.216",
-    "@cloudflare/think": "^0.11.1",
+    "@cloudflare/codemode": "^0.4.2",
+    "@cloudflare/think": "^0.12.1",
     "@latitude-data/telemetry": "file:../..",
+    "@opentelemetry/api": "^1.9.1",
     "agents": "^0.17.1",
     "ai": "^6.0.214",
     "react": "^19.2.7",
     "react-dom": "^19.2.7",
-    "workers-ai-provider": "^3.2.1",
     "zod": "^4.3.6"
   },
   "devDependencies": {
     "@cloudflare/vite-plugin": "^1.42.3",
+    "@types/node": "^22.10.0",
     "@types/react": "^19.2.7",
     "@types/react-dom": "^19.2.3",
     "@vitejs/plugin-react": "^6.0.3",
-    "@types/node": "^22.10.0",
     "typescript": "^5.7.2",
-    "vite": "^8.1.0",
+    "vite": "^8.0.16",
     "wrangler": "^4.105.0"
   }
 }

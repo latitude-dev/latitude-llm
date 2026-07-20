@@ -35,6 +35,7 @@ export const makeTrace = (allMessages: readonly TraceMessage[]): TraceDetail => 
   models: [],
   providers: [],
   serviceNames: [],
+  agentNames: [],
   rootSpanId: SpanId("r".repeat(16)),
   rootSpanName: "root",
   systemInstructions: [],

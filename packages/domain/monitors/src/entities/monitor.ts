@@ -16,23 +16,41 @@ import {
   monitorTriggerSchema,
   organizationIdSchema,
   projectIdSchema,
+  spanRowFilterSetSchema,
 } from "@domain/shared"
 import { z } from "zod"
 
-export const monitorTargetSchema = z.object({
-  type: monitorTargetTypeSchema,
-  id: cuidSchema.nullable(),
-  filterSet: filterSetSchema.nullable().optional(),
-  kind: monitorTargetTypeSchema.default("user"),
-  stream: monitorStreamSchema.default("traces"),
-  query: z.string().nullable().default(null),
-  savedSearchId: cuidSchema.nullable().default(null),
-  metric: monitorMetricSchema.default({ kind: "count" }),
-})
-export type MonitorTarget = z.infer<typeof monitorTargetSchema>
-
 export const monitorStreamForTargetType = (type: MonitorTargetType): MonitorStream =>
   type === "tool" ? "spans" : type === "session" ? "sessions" : "traces"
+
+const validateSpanStreamFilterSet = (
+  stream: MonitorStream,
+  filterSet: FilterSet | null | undefined,
+  ctx: z.RefinementCtx,
+) => {
+  if (stream !== "spans" || filterSet == null) return
+  const parsed = spanRowFilterSetSchema.safeParse(filterSet)
+  if (parsed.success) return
+  for (const issue of parsed.error.issues) {
+    ctx.addIssue({ ...issue, path: ["filterSet", ...issue.path] })
+  }
+}
+
+export const monitorTargetSchema = z
+  .object({
+    type: monitorTargetTypeSchema,
+    id: cuidSchema.nullable(),
+    filterSet: filterSetSchema.nullable().optional(),
+    kind: monitorTargetTypeSchema.default("user"),
+    stream: monitorStreamSchema.default("traces"),
+    query: z.string().nullable().default(null),
+    savedSearchId: cuidSchema.nullable().default(null),
+    metric: monitorMetricSchema.default({ kind: "count" }),
+  })
+  .superRefine((target, ctx) => {
+    validateSpanStreamFilterSet(target.stream ?? monitorStreamForTargetType(target.type), target.filterSet, ctx)
+  })
+export type MonitorTarget = z.infer<typeof monitorTargetSchema>
 
 export const monitorRuleSchema = z.object({
   trigger: monitorTriggerSchema,
@@ -72,8 +90,8 @@ export const monitorConfigFilterSet = (config: MonitorConfig): FilterSet | null 
  * `@domain/notifications`). `deletedAt` soft-deletes (hidden + stops firing).
  *
  * `system` monitors are auto-provisioned, not deletable, and structurally
- * locked: name/slug and the alert set (kind/source/severity) are fixed, but
- * `mutedAt` and the predefined alerts' `condition` values stay editable.
+ * locked: name/slug, target, trigger, and conditions are fixed; only severity
+ * and `mutedAt` stay editable.
  */
 export const monitorSchema = z.object({
   id: monitorIdSchema,

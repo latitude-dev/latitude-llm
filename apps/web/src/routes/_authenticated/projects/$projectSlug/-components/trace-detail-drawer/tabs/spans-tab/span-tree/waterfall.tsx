@@ -12,7 +12,7 @@ export function WaterfallBar({ span, timeRange }: { readonly span: SpanRecord; r
   if (timeRange.totalDuration === 0) {
     return (
       <div className="absolute inset-y-1 left-0 right-0">
-        <div className={cn("h-full rounded-sm", statusBarColor(span.statusCode))} />
+        <div className={cn("h-full rounded-sm", statusBarColor(span.statusCode, span.operation))} />
       </div>
     )
   }
@@ -22,7 +22,7 @@ export function WaterfallBar({ span, timeRange }: { readonly span: SpanRecord; r
 
   return (
     <div className="absolute inset-y-1.5" style={{ left: `${leftPct}%`, width: `${widthPct}%` }}>
-      <div className={cn("h-full rounded-sm min-w-[2px]", statusBarColor(span.statusCode))} />
+      <div className={cn("h-full rounded-sm min-w-[2px]", statusBarColor(span.statusCode, span.operation))} />
     </div>
   )
 }

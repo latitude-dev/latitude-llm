@@ -1,6 +1,6 @@
 {
   "name": "@latitude-data/telemetry",
-  "version": "3.5.0",
+  "version": "3.6.0",
   "description": "Latitude Telemetry for TypeScript",
   "author": "Latitude Data SL <hello@latitude.so>",
   "license": "MIT",
@@ -33,6 +33,17 @@
         "types": "./dist/index.d.cts",
         "default": "./dist/index.cjs"
       }
+    },
+    "./cloudflare": {
+      "source": "./src/cloudflare.ts",
+      "import": {
+        "types": "./dist/cloudflare.d.ts",
+        "default": "./dist/cloudflare.js"
+      },
+      "require": {
+        "types": "./dist/cloudflare.d.cts",
+        "default": "./dist/cloudflare.cjs"
+      }
     }
   },
   "scripts": {
@@ -46,7 +57,7 @@
     "@arizeai/openinference-instrumentation-langchain": "4.0.12",
     "@opentelemetry/api": "catalog:",
     "@opentelemetry/context-async-hooks": "2.7.1",
-    "@opentelemetry/core": "2.8.0",
+    "@opentelemetry/core": "2.9.0",
     "@opentelemetry/exporter-trace-otlp-http": "0.213.0",
     "@opentelemetry/instrumentation": "0.213.0",
     "@opentelemetry/resources": "2.7.1",

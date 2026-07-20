@@ -4,18 +4,14 @@ import { createFileRoute, getRouteApi, Link } from "@tanstack/react-router"
 import { ArrowLeftIcon, TextAlignStartIcon, WrenchIcon } from "lucide-react"
 import { type ReactNode, useMemo, useState } from "react"
 import { toolMonitorTarget } from "../../../../../../domains/monitors/monitor-target.ts"
+import { defaultProjectTimeWindowSeconds } from "../../../../../../domains/projects/default-time-window.ts"
 import { useToolDetail } from "../../../../../../domains/tools/tools.collection.ts"
 import { ListingLayout as Layout } from "../../../../../../layouts/ListingLayout/index.tsx"
 import { useParamState } from "../../../../../../lib/hooks/useParamState.ts"
 import { BreadcrumbLink, BreadcrumbSeparator, BreadcrumbText } from "../../../../-components/breadcrumb-ui.tsx"
 import { useRouteProject } from "../../-route-data.ts"
 import { TargetMonitorsMenu } from "../../monitors/-components/target-monitors-menu.tsx"
-import {
-  DEFAULT_TOOLS_RANGE_SECONDS,
-  formatPercent,
-  pickToolTrendBucketSeconds,
-  TOOL_DETAIL_ROW_GRID,
-} from "../-components/tool-formatters.ts"
+import { formatPercent, pickToolTrendBucketSeconds, TOOL_DETAIL_ROW_GRID } from "../-components/tool-formatters.ts"
 import { ToolActivityRow } from "./-components/tool-activity-row.tsx"
 import { ToolContextPanel } from "./-components/tool-context-panel.tsx"
 import { ToolDefiningTraces } from "./-components/tool-defining-traces.tsx"
@@ -97,9 +93,9 @@ function ToolDetailPageContent() {
 
   const range = useMemo(() => {
     const toMs = timeTo ? Date.parse(timeTo) : Date.now()
-    const fromMs = timeFrom ? Date.parse(timeFrom) : toMs - DEFAULT_TOOLS_RANGE_SECONDS * 1000
+    const fromMs = timeFrom ? Date.parse(timeFrom) : toMs - defaultProjectTimeWindowSeconds(project) * 1000
     return { fromIso: new Date(fromMs).toISOString(), toIso: new Date(toMs).toISOString() }
-  }, [timeFrom, timeTo])
+  }, [timeFrom, timeTo, project])
   const trendBucketSeconds = useMemo(
     () => pickToolTrendBucketSeconds(Date.parse(range.toIso) - Date.parse(range.fromIso)),
     [range],

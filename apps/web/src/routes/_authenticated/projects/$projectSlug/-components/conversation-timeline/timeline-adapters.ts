@@ -1,4 +1,5 @@
 import { getAnnotationProvenance } from "@domain/annotations"
+import type { AgentGraph } from "@domain/spans"
 import type { AnnotationRecord } from "../../../../../../domains/annotations/annotations.functions.ts"
 import type { MemberRecord } from "../../../../../../domains/members/members.functions.ts"
 import { pickUserFromMembersMap } from "../../../../../../domains/members/pick-users-from-members.ts"
@@ -7,6 +8,7 @@ import type { TraceRecord } from "../../../../../../domains/traces/traces.functi
 import type {
   TimelineAnnotationInput,
   TimelineSpanInput,
+  TimelineSubagentInput,
   TimelineTraceInput,
 } from "../../../../../../lib/conversation-timeline/build-conversation-timeline.ts"
 
@@ -41,6 +43,25 @@ export function annotatorNameFor(
 ): string | null {
   if (annotation.annotatorId) return pickUserFromMembersMap(memberByUserId, annotation.annotatorId)?.name ?? null
   return getAnnotationProvenance(annotation) === "agent" ? "Latitude Agent" : null
+}
+
+/** Direct subagents of every main root, as spawn markers for the timeline minimap. */
+export function toTimelineSubagents(graph: AgentGraph): TimelineSubagentInput[] {
+  const out: TimelineSubagentInput[] = []
+  for (const root of graph.roots) {
+    for (const child of root.children) {
+      if (child.kind !== "subagent" || child.ref.spanId === null) continue
+      out.push({
+        traceId: child.ref.traceId,
+        spanId: child.ref.spanId,
+        label: child.label,
+        toolName: child.trigger.type === "tool" ? child.trigger.toolName : null,
+        toolCallId: child.trigger.type === "tool" ? (child.trigger.toolCallId ?? null) : null,
+        startMs: child.startTime,
+      })
+    }
+  }
+  return out
 }
 
 export function toTimelineAnnotation(

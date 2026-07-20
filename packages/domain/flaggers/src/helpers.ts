@@ -1,5 +1,6 @@
 import type { TraceDetail } from "@domain/spans"
 import { cacheHitRate, formatCount, formatPercentage } from "@repo/utils"
+import { isRecord, iterMessageParts } from "./flagger-strategies/shared.ts"
 
 type TraceMessagesOnly = Pick<TraceDetail, "allMessages">
 
@@ -34,12 +35,22 @@ const match = (feedback: string, messageIndex?: number): DeterministicFlaggerMat
 
 export function detectToolCallErrorsFlagger(trace: TraceMessagesOnly): DeterministicFlaggerMatch {
   const callById = new Map<string, { name: string; messageIndex: number }>()
+  const hasAnyToolCall = trace.allMessages.some((message) => {
+    if (message.role !== "assistant") return false
+    for (const rawPart of iterMessageParts(message.parts)) {
+      if (isRecord(rawPart) && rawPart.type === "tool_call") return true
+    }
+    return false
+  })
 
   for (let msgIdx = 0; msgIdx < trace.allMessages.length; msgIdx++) {
     const message = trace.allMessages[msgIdx]!
     if (message.role !== "assistant" && message.role !== "tool" && message.role !== "function") continue
 
-    for (const part of message.parts) {
+    for (const rawPart of iterMessageParts(message.parts)) {
+      if (!isRecord(rawPart) || typeof rawPart.type !== "string") continue
+      const part = rawPart
+
       if (part.type === "tool_call") {
         if (message.role !== "assistant") continue
         const toolCallId = typeof part.id === "string" ? part.id.trim() : ""
@@ -63,6 +74,7 @@ export function detectToolCallErrorsFlagger(trace: TraceMessagesOnly): Determini
       const toolCallId = typeof part.id === "string" ? part.id.trim() : ""
       const call = toolCallId ? callById.get(toolCallId) : undefined
       if (!call) {
+        if (!hasAnyToolCall) continue
         return match(`Tool response references an unknown tool_call id "${toolCallId || "<empty>"}"`, msgIdx)
       }
 
@@ -77,10 +89,6 @@ export function detectToolCallErrorsFlagger(trace: TraceMessagesOnly): Determini
   }
 
   return NO_MATCH
-}
-
-function isRecord(value: unknown): value is Record<string, unknown> {
-  return typeof value === "object" && value !== null
 }
 
 function toNonEmptyString(value: unknown): string | null {
@@ -189,14 +197,28 @@ function responseIndicatesFailure(response: unknown): boolean {
   return Array.isArray(response.errors) && response.errors.length > 0
 }
 
+function looksLikeStructuredJsonOutput(content: string): boolean {
+  if (content.startsWith("{")) return true
+  if (!content.startsWith("[")) return false
+  if (/^\[[^\]]+\]\(/.test(content)) return false
+
+  const afterBracket = content.slice(1).trimStart()
+  if (afterBracket.length === 0) return true
+
+  const first = afterBracket[0]!
+  if (first === "]" || first === "{" || first === "[" || first === '"' || first === "-") return true
+  if (first >= "0" && first <= "9") return true
+  return afterBracket.startsWith("true") || afterBracket.startsWith("false") || afterBracket.startsWith("null")
+}
+
 export function detectOutputSchemaValidationFlagger(trace: TraceDetail): DeterministicFlaggerMatch {
   for (let msgIdx = 0; msgIdx < trace.allMessages.length; msgIdx++) {
     const message = trace.allMessages[msgIdx]!
     if (message.role !== "assistant") continue
-    for (const part of message.parts) {
-      if (part.type !== "text") continue
-      const content = typeof part.content === "string" ? part.content.trim() : ""
-      if (!content || (!content.startsWith("{") && !content.startsWith("["))) continue
+    for (const rawPart of iterMessageParts(message.parts)) {
+      if (!isRecord(rawPart) || rawPart.type !== "text") continue
+      const content = typeof rawPart.content === "string" ? rawPart.content.trim() : ""
+      if (!content || !looksLikeStructuredJsonOutput(content)) continue
 
       if (content.endsWith(","))
         return match("Assistant output ended with a trailing comma, suggesting truncated JSON", msgIdx)
@@ -247,13 +269,15 @@ export function detectEmptyResponseFlagger(trace: TraceDetail): DeterministicFla
   let hasNonTextProduction = false
   const textParts: string[] = []
 
-  for (const part of message.parts) {
+  for (const rawPart of iterMessageParts(message.parts)) {
+    if (!isRecord(rawPart) || typeof rawPart.type !== "string") continue
+    const part = rawPart
     if (part.type === "tool_call" || part.type === "reasoning") {
       hasNonTextProduction = true
       continue
     }
     if (part.type === "text") {
-      const content = (part as { content?: unknown }).content
+      const content = part.content
       if (typeof content === "string") textParts.push(content)
     }
   }

@@ -2,13 +2,11 @@ import { describe, expect, it } from "vitest"
 import { bootstrapSeedScope } from "./bootstrap-seed-scope.ts"
 import {
   SEED_ANNOTATION_DEMO_TRACE_ID,
-  SEED_ANNOTATION_QUEUE_WARRANTY_ID,
   SEED_DATASET_ID,
   SEED_EVALUATION_ID,
   SEED_EXTRA_SIGNAL_IDS,
   SEED_EXTRA_SIGNAL_UUIDS,
   SEED_LIFECYCLE_TRACE_IDS,
-  SEED_MANUAL_QUEUE_ASSIGNEES,
   SEED_ORG_ID,
   SEED_PROJECT_ID,
   SEED_SCORE_PASSED_ID,
@@ -27,11 +25,10 @@ import {
  * threaded through the seeders so the bootstrap path stays byte-identical.
  */
 describe("bootstrapSeedScope — invariance with seeds.ts literals", () => {
-  it("carries the canonical org / project / anchor / queue assignees", () => {
+  it("carries the canonical org / project / anchor", () => {
     expect(bootstrapSeedScope.organizationId).toBe(SEED_ORG_ID)
     expect(bootstrapSeedScope.projectId).toBe(SEED_PROJECT_ID)
     expect(bootstrapSeedScope.timelineAnchor).toBe(SEED_TIMELINE_ANCHOR)
-    expect(bootstrapSeedScope.queueAssigneeUserIds).toEqual([...SEED_MANUAL_QUEUE_ASSIGNEES])
   })
 
   it("resolves dataset cuids to seeds.ts literals", () => {
@@ -55,8 +52,7 @@ describe("bootstrapSeedScope — invariance with seeds.ts literals", () => {
     }
   })
 
-  it("resolves queue / simulation / score cuids", () => {
-    expect(bootstrapSeedScope.cuid("queue:warranty")).toBe(SEED_ANNOTATION_QUEUE_WARRANTY_ID)
+  it("resolves simulation / score cuids", () => {
     expect(bootstrapSeedScope.cuid("simulation:warranty")).toBe(SEED_WARRANTY_SIMULATION_ID)
     expect(bootstrapSeedScope.cuid("score:passed")).toBe(SEED_SCORE_PASSED_ID)
     expect(bootstrapSeedScope.cuid("score:ui-polish:human-draft-1")).toBe(SEED_UI_POLISH_SCORE_IDS.humanDraft1)

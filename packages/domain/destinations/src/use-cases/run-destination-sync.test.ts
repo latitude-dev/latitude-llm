@@ -106,6 +106,7 @@ const stubSpan = (spanId: string, ingestedAt: Date): SpanDetail => ({
   operation: "chat",
   provider: "openai",
   model: "gpt-4o",
+  agentName: "",
   responseModel: "",
   tokensInput: 10,
   tokensOutput: 5,

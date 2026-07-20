@@ -19,7 +19,7 @@ Annotations can come from:
 
 ## How to Annotate
 
-Every annotation has a **verdict**, **feedback**, and an optional **issue link**.
+Every annotation has a **verdict**, **feedback**, and an optional **signal link**.
 
 1. **Choose a scope**: conversation, message, or text range.
 2. **Give a verdict**: thumbs up for good behavior, thumbs down when something went wrong.
@@ -30,7 +30,7 @@ Human annotations save as drafts while you edit. Once finalized, they become par
 
 ## Where to Annotate
 
-Open any trace detail view—from Traces, Search, Issues, or Sessions—and use the annotation panel on the right. For batch review, start with a [saved search](../search/saved-searches), then work through the matching traces one at a time.
+Open any trace detail view—from Traces, Search, Signals, or Sessions—and use the annotation panel on the right. For batch review, start with a [saved search](../search/saved-searches), then work through the matching traces one at a time.
 
 If you want automatic coverage for known failure categories, use [flaggers](./flaggers). If you are building your own feedback UI, submit annotations through the [Annotations API](../scores/api).
 
@@ -39,7 +39,7 @@ If you want automatic coverage for known failure categories, use [flaggers](./fl
 Annotations are the foundation of Latitude's reliability loop. They help you:
 
 - **Calibrate evaluations** by comparing automated scores with human judgment. See [Alignment](../evaluations/alignment).
-- **Validate issues** by confirming whether discovered failure patterns are real problems.
+- **Validate signals** by confirming whether discovered failure patterns are real problems.
 - **Capture qualitative feedback** that explains why something was good or bad.
 
 ## How Annotations Connect to Other Features
@@ -47,7 +47,7 @@ Annotations are the foundation of Latitude's reliability loop. They help you:
 | Feature | Relationship |
 | --- | --- |
 | **[Scores](../scores/overview)** | Each finalized annotation becomes a score for analytics and dashboards. |
-| **[Issues](../signals/overview)** | Failed annotations can cluster into trackable issues. |
+| **[Signals](../signals/overview)** | Failed annotations can cluster into trackable signals. |
 | **[Evaluations](../evaluations/overview)** | Annotations provide ground truth for measuring evaluation accuracy. |
 | **[Search](../search/overview)** | Search and saved searches help you find trace cohorts to review. |
 | **[Flaggers](./flaggers)** | Flaggers create automatic annotations for common failure categories. |

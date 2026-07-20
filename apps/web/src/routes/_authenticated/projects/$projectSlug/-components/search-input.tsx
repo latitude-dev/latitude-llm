@@ -23,9 +23,12 @@ const SEMANTIC_SEARCH_PLACEHOLDERS = [
 export function SearchInput({
   initialValue,
   onSubmit,
+  placeholder,
 }: {
   readonly initialValue: string
   readonly onSubmit: (value: string) => void
+  /** Static placeholder for the first semantic segment. Omit to cycle the animated semantic hints. */
+  readonly placeholder?: string
 }) {
   const {
     segments,
@@ -40,10 +43,11 @@ export function SearchInput({
   } = useSearchSegments(initialValue, onSubmit, SEARCH_QUERY_MAX_LENGTH)
 
   const [legendOpen, setLegendOpen] = useState(false)
-  const [semanticPlaceholder, setSemanticPlaceholder] = useState<string>(SEMANTIC_SEARCH_PLACEHOLDERS[0])
+  const [semanticPlaceholder, setSemanticPlaceholder] = useState<string>(placeholder ?? SEMANTIC_SEARCH_PLACEHOLDERS[0])
   const active = segments.some((segment) => segment.text.length > 0) || legendOpen
 
   useMountEffect(() => {
+    if (placeholder !== undefined) return
     if (typeof window.matchMedia === "function" && window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
       return
     }
@@ -112,7 +116,7 @@ export function SearchInput({
         {segments.map((segment, index) => {
           const isSemantic = segment.kind === "semantic"
           const label = segment.kind === "literal" ? "Literal" : "Phrase"
-          const placeholder = isSemantic && index === 0 ? semanticPlaceholder : ""
+          const segmentPlaceholder = isSemantic && index === 0 ? semanticPlaceholder : ""
           return (
             <span
               key={segment.id}
@@ -155,7 +159,7 @@ export function SearchInput({
                     focusAdjacentSegment(segment, "next")
                   }
                 }}
-                placeholder={placeholder}
+                placeholder={segmentPlaceholder}
                 maxLength={SEARCH_QUERY_MAX_LENGTH}
                 className={cn(
                   "bg-transparent outline-none field-sizing-content placeholder:text-muted-foreground h-5",

@@ -206,7 +206,10 @@ export class ReadOnlyProjectError extends Data.TaggedError("ReadOnlyProjectError
 }> {
   readonly httpStatus = 403
   get httpMessage() {
-    return this.message ?? "This project is read-only"
+    // `||` not `??`: Data.TaggedError sets `this.message` to "" (not undefined)
+    // when constructed without a message, so the nullish fallback would leak an
+    // empty string across the server→client boundary. Empty must fall back too.
+    return this.message || "This project is read-only"
   }
 }
 
@@ -236,6 +239,22 @@ export const causesIncludePostgresUniqueViolation = (error: unknown): boolean =>
   while (current !== null && current !== undefined && !seen.has(current)) {
     seen.add(current)
     if (isRecord(current) && current.code === "23505") {
+      return true
+    }
+    current = isRecord(current) ? current.cause : undefined
+  }
+
+  return false
+}
+
+/** Walks nested `cause` chains for Postgres SQLSTATE `55P03` (lock_not_available). */
+export const causesIncludePostgresLockNotAvailable = (error: unknown): boolean => {
+  const seen = new Set<unknown>()
+  let current: unknown = error
+
+  while (current !== null && current !== undefined && !seen.has(current)) {
+    seen.add(current)
+    if (isRecord(current) && current.code === "55P03") {
       return true
     }
     current = isRecord(current) ? current.cause : undefined
