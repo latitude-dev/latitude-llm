@@ -14,6 +14,8 @@ export {
   type FlaggerScreeningWorkflowInput,
   flaggerScreeningWorkflow,
 } from "./flagger-screening-workflow.ts"
+// TODO: remove with the deterministic-flaggers drain cleanup.
+export { flaggerWorkflow } from "./flagger-workflow.ts"
 export {
   type OptimizeEvaluationWorkflowResult,
   optimizeEvaluationWorkflow,

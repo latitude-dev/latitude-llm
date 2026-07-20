@@ -2,13 +2,22 @@ import {
   AI,
   AI_GENERATE_TELEMETRY_SPAN_NAMES,
   AI_GENERATE_TELEMETRY_TAGS,
+  type AICredentialError,
   AIError,
   type AIShape,
   buildProjectScopedAiMetadata,
   resolveGenerationConfig,
 } from "@domain/ai"
-import { CacheStore, LATITUDE_TELEMETRY_PROJECT_SLUGS } from "@domain/shared"
-import type { TraceDetail } from "@domain/spans"
+import {
+  CacheStore,
+  LATITUDE_TELEMETRY_PROJECT_SLUGS,
+  type NotFoundError,
+  OrganizationId,
+  ProjectId,
+  type RepositoryError,
+  TraceId,
+} from "@domain/shared"
+import { type TraceDetail, TraceRepository } from "@domain/spans"
 import { hammingDistance64, hash, simhash64 } from "@repo/utils"
 import { Effect, Option } from "effect"
 import { z } from "zod"
@@ -22,17 +31,27 @@ import {
   FLAGGER_PROMPT_MAX_HINTS,
 } from "../constants.ts"
 import type { FlaggerConversation } from "../conversation.ts"
-import { getFlaggerStrategy, isLlmCapableStrategy } from "../flagger-strategies/index.ts"
+import { getFlaggerStrategy, hasFlaggerStrategy, isLlmCapableStrategy } from "../flagger-strategies/index.ts"
 import { isRecord, iterMessageParts, truncateExcerpt } from "../flagger-strategies/shared.ts"
-import type { FlaggerStrategy } from "../flagger-strategies/types.ts"
+import type { FlaggerSlug, FlaggerStrategy } from "../flagger-strategies/types.ts"
 import type { SessionHint } from "../hints/types.ts"
+import { FlaggerRepository } from "../ports/flagger-repository.ts"
 import { reflagSuppressionTags } from "../reflag.ts"
+
+export interface RunFlaggerInput {
+  readonly organizationId: string
+  readonly projectId: string
+  readonly traceId: string
+  readonly flaggerSlug: string
+}
 
 export interface RunFlaggerResult {
   readonly matched: boolean
   readonly feedback?: string | undefined
   readonly messageIndex?: number | undefined
 }
+
+export type RunFlaggerError = NotFoundError | RepositoryError | AIError | AICredentialError
 
 /**
  * Input for the pure classifier (no repository dependency). `traceId`/`sessionId`
@@ -832,6 +851,17 @@ const parseFlaggerOutput = (input: unknown): Effect.Effect<RunFlaggerResult> => 
   })
 }
 
+const loadTraceDetail = (input: RunFlaggerInput) =>
+  Effect.gen(function* () {
+    const traceRepository = yield* TraceRepository
+
+    return yield* traceRepository.findByTraceId({
+      organizationId: OrganizationId(input.organizationId),
+      projectId: ProjectId(input.projectId),
+      traceId: TraceId(input.traceId),
+    })
+  })
+
 // The Vercel AI SDK raises `NoObjectGeneratedError` / `NoOutputGeneratedError`
 // when the model returns output that does not materialize as the requested schema,
 // and `AI_APICallError` with a "prompt is too long" message when the trace evidence
@@ -968,3 +998,38 @@ export const classifyTraceForFlaggerUseCase = (input: ClassifyTraceForFlaggerInp
     traceId: input.traceId,
     ...(input.strategyOverride ? { strategyOverride: input.strategyOverride } : {}),
   })
+
+/**
+ * Load the trace via the repository, then classify it.
+ *
+ * Production entry point for the Temporal activity. Short-circuits BEFORE
+ * hitting ClickHouse if the flagger slug has no registered strategy, no LLM
+ * capability, or context is missing.
+ */
+export const runFlaggerUseCase = Effect.fn("flaggers.runFlagger")(function* (input: RunFlaggerInput) {
+  yield* Effect.annotateCurrentSpan("flagger.organizationId", input.organizationId)
+  yield* Effect.annotateCurrentSpan("flagger.projectId", input.projectId)
+  yield* Effect.annotateCurrentSpan("flagger.traceId", input.traceId)
+  yield* Effect.annotateCurrentSpan("flagger.flaggerSlug", input.flaggerSlug)
+
+  if (!hasFlaggerStrategy(input.flaggerSlug)) {
+    return { matched: false }
+  }
+
+  const strategy = getFlaggerStrategy(input.flaggerSlug)
+  if (!strategy || !isLlmCapableStrategy(strategy)) {
+    return { matched: false }
+  }
+
+  const flaggerRepo = yield* FlaggerRepository
+  const flagger = yield* flaggerRepo.findByProjectAndSlug({
+    projectId: ProjectId(input.projectId),
+    slug: input.flaggerSlug as FlaggerSlug,
+  })
+  if (!flagger || !flagger.enabled) {
+    return { matched: false }
+  }
+
+  const trace = yield* loadTraceDetail(input)
+  return yield* classifyTraceForFlaggerUseCase({ ...input, trace })
+})

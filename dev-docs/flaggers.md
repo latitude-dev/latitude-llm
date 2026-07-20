@@ -48,7 +48,7 @@ Strategy modules embed multi-KB system prompts, so they are **server-only**: the
 
 `incompletion` judges **closed task episodes** only: an assistant response with a *later user reaction* evidencing whether the task was delivered. Session-end is arbitrary (the session may keep growing after a screen), so the latest assistant response is structurally unflaggable — its `validateMatch` rejects any match not citing a closed episode's assistant index, which also blocks the index-less anchor fallback (the last assistant message). A later re-screen judges that turn once the user has reacted, and the content-anchor dedup keeps repeat convictions single.
 
-**Suppression** (`suppressedBy`): declared on the suppressed strategy; each entry is a suppressor slug or `{ slug, whenHintedBy }`. A suppressor triggers when it is `matched`, or `hinted` (started or rate-limited) — for qualified entries only when one of the edge's `whenHintedBy` kinds fired, so a weak escalation lead does not mute the suppressed strategy. Validated by `assertFlaggerRegistryValid` (run from tests, not at module load): one level deep (suppressors run in phase 1, suppressed strategies in phase 2) and `whenHintedBy` ⊆ the suppressor's `hintKinds`. Edges: `refusal` ← `jailbreaking`/`nsfw` (any hint — their single pattern hint is direct evidence of the ask being adversarial); `laziness` ← `trashing` `whenHintedBy: [tool:loop]` (a stuck loop is a different failure than punting work, but a lone `tool:error` or a `moment:stalling` — also laziness's own hint — is not loop evidence).
+**Suppression** (`suppressedBy`): declared on the suppressed strategy; each entry is a suppressor slug or `{ slug, whenHintedBy }`. A suppressor triggers when it is `matched`, or `hinted` (started or rate-limited) — for qualified entries only when one of the edge's `whenHintedBy` kinds fired, so a weak escalation lead does not mute the suppressed strategy. Validated at module load: one level deep (suppressors run in phase 1, suppressed strategies in phase 2) and `whenHintedBy` ⊆ the suppressor's `hintKinds`. Edges: `refusal` ← `jailbreaking`/`nsfw` (any hint — their single pattern hint is direct evidence of the ask being adversarial); `laziness` ← `trashing` `whenHintedBy: [tool:loop]` (a stuck loop is a different failure than punting work, but a lone `tool:error` or a `moment:stalling` — also laziness's own hint — is not loop evidence).
 
 ## Trigger chain
 
@@ -179,3 +179,7 @@ Every production flagger LLM call is traced into the `latitude-flaggers` dogfood
 | `FLAGGER_INSPECTED_AGENT_VERBATIM_MAX_CHARS` | 6,000 | verbatim vs extracted agent context |
 | `SESSION_END_DEBOUNCE_MS` (`spans`) | 5 min | session settle window upstream |
 | `flagger-scan` (`billing`) | 30 credits | LLM scan price |
+
+## Transitional
+
+The pre-session per-trace pipeline (`deterministic-flaggers` + `start-flagger-workflow` workers/topics, `flaggerWorkflow`, `processFlaggersUseCase`) is registered drain-only — no longer fed by trace-end — and is deleted once the session flip has been deployed for a day (tracked as a follow-up PR).

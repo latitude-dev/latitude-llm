@@ -56,6 +56,7 @@ import { createApiKeysWorker } from "./workers/api-keys.ts"
 import { createBillingWorker } from "./workers/billing.ts"
 import { createBillingOverageWorker } from "./workers/billing-overage.ts"
 import { createDestinationsWorker } from "./workers/destinations.ts"
+import { createDeterministicFlaggersWorker } from "./workers/deterministic-flaggers.ts"
 import { createIncidentsWorker } from "./workers/domain-events/incidents.ts"
 import { createInvitationEmailWorker } from "./workers/domain-events/invitation-email.ts"
 import { createMagicLinkEmailWorker } from "./workers/domain-events/magic-link-email.ts"
@@ -85,6 +86,7 @@ import { createSignalsGenerateSignalWorker } from "./workers/signals-generate-si
 import { createSignalsMatchWorker } from "./workers/signals-match.ts"
 import { createSignalsPreviewWorker } from "./workers/signals-preview.ts"
 import { createSpanIngestionWorker } from "./workers/span-ingestion.ts"
+import { createStartFlaggerWorkflowWorker } from "./workers/start-flagger-workflow.ts"
 import { createTaxonomyWorker } from "./workers/taxonomy.ts"
 import { createTraceEndWorker } from "./workers/trace-end.ts"
 import { createTraceSearchWorker } from "./workers/trace-search.ts"
@@ -240,7 +242,10 @@ const bootstrap = async () => {
     createSignalsPreviewWorker(ctx)
     createSignalsGenerateSignalWorker(ctx)
     createFlaggerScreeningWorker(ctx)
+    // TODO: remove the drain-only flagger workers + topics after the flip has been live ≥1 day.
+    createDeterministicFlaggersWorker(ctx)
     createMemoryProjectionWorker(ctx)
+    createStartFlaggerWorkflowWorker(ctx)
     createProjectsWorker(ctx)
     createScoresWorker(ctx)
     createShowcaseWorker(ctx)

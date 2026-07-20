@@ -31,6 +31,7 @@ export {
   recordEvaluationGenerationUsage,
 } from "./evaluation-alignment-activities.ts"
 export { optimizeEvaluationDraft } from "./evaluation-optimization-activities.ts"
+export { draftAnnotate, runFlagger, saveAnnotation } from "./flagger-activities.ts"
 export {
   type ClassifySessionFlaggerActivityInput,
   classifySessionFlagger,

@@ -174,6 +174,10 @@ describe("runTraceEndJob", () => {
       },
     })
 
+    // Flagging is session-level now: screening is chained off the moments
+    // persist activity, never enqueued from trace-end.
+    expect(published.find((p) => p.queue === "deterministic-flaggers")).toBeUndefined()
+
     // Verify trace-search refresh task was published
     const traceSearchPublish = published.find((p) => p.queue === "trace-search")
     expect(traceSearchPublish?.task).toBe("refreshTrace")

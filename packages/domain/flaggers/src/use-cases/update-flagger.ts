@@ -20,7 +20,7 @@ export type UpdateFlaggerError = RepositoryError
 
 /**
  * Updates a flagger row and evicts the project's flagger cache entry so
- * `screenSessionFlaggersUseCase` picks up the new `enabled` or `sampling` value on
+ * `processFlaggersUseCase` picks up the new `enabled` or `sampling` value on
  * the next run (otherwise the 5-minute cache TTL would gate the change).
  * Eviction is folded in here so callers can't forget —
  * `evictProjectFlaggersUseCase` is permissive (no-op when `CacheStore` isn't

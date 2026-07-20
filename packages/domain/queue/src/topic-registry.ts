@@ -489,9 +489,19 @@ const _registry = {
     }
   }>(),
 
+  // Unpublished legacy per-trace fan-out, kept so in-flight jobs drain.
+  // TODO: remove after the flagger-screening flip has been deployed ≥1 day.
+  "deterministic-flaggers": payloads<{
+    run: {
+      readonly organizationId: string
+      readonly projectId: string
+      readonly traceId: string
+    }
+  }>(),
+
   // Materializes a settled trace's memory-operation spans into the memory ledger
   // (memory_events / memory_blobs / memory_current). Fanned out from trace-end as
-  // an isolated failure domain.
+  // an isolated failure domain, mirroring deterministic-flaggers.
   "memory-projection": payloads<{
     run: {
       readonly organizationId: string
@@ -510,6 +520,20 @@ const _registry = {
       readonly projectId: string
       readonly sessionId: string
       readonly analysisHash: string
+    }
+  }>(),
+
+  // Thin start-workflow job. Separates the Temporal `start()` call out of the
+  // deterministic-flaggers hot path so transient Temporal unavailability retries
+  // with bounded BullMQ backoff instead of re-running the whole deterministic fan-out.
+  "start-flagger-workflow": payloads<{
+    start: {
+      readonly organizationId: string
+      readonly projectId: string
+      readonly traceId: string
+      readonly flaggerId: string
+      readonly flaggerSlug: string
+      readonly reason: "sampled" | "ambiguous"
     }
   }>(),
 
