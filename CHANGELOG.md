@@ -2,6 +2,28 @@
 
 ## Unreleased
 
+## v0.3.57 - 2026-07-20
+
+### Memory observability
+
+- Added memory record history and JSON diff views so changes to a record can be reviewed directly from the Memory page (ref: #4120).
+
+### Taxonomy
+
+- Added adaptive taxonomy gardening with staged observation swaps, full-window reassignment, and lineage updates to keep generated taxonomy clusters current (ref: #4121).
+
+### Telemetry
+
+- Rejected oversized OTLP trace and span IDs before ClickHouse insertion so invalid telemetry is handled cleanly at ingestion (ref: #4020).
+
+### Traces
+
+- Deduped ClickHouse reads for memory ledger rows and latest output trace IDs when duplicate span rows exist (refs: #4100, #4122).
+
+### Agent dispatch
+
+- Skipped dispatch work gracefully when the related organization or incident has already been deleted (ref: #4099).
+
 ## v0.3.56 - 2026-07-20
 
 ### Memory observability
