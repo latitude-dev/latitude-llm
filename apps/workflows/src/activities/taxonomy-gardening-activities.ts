@@ -550,6 +550,82 @@ const emitAdaptivePlanTelemetry = (input: GardenTaxonomyStepInput, plan: Hierarc
   }
 }
 
+// Flattened, embedding-free attributes for the APM span. Datadog span tags are
+// flat scalars, so nested comparison objects are dotted out. This is the channel
+// the shadow dashboard actually reads: the app ships logs only to CloudWatch,
+// but the workflows service already exports these spans to Datadog APM.
+const adaptiveSpanAttributes = (
+  input: GardenTaxonomyStepInput,
+  plan: HierarchicalTaxonomyPlan,
+): Record<string, string | number> => {
+  const diagnostics = plan.decisionMetadata
+  const relativeSeparation = boundedPercentiles(diagnostics?.acceptedRelativeSeparations ?? [])
+  const routingThreshold = boundedPercentiles(diagnostics?.routingThresholds ?? [])
+  const attributes: Record<string, string | number> = {
+    "taxonomy.adaptive.policyVersion": TAXONOMY_ADAPTIVE_POLICY_VERSION,
+    "taxonomy.adaptive.mode": plan.mode,
+    "taxonomy.organizationId": input.organizationId,
+    "taxonomy.projectId": input.projectId,
+    "taxonomy.customBehaviorId": input.customBehaviorId ?? "none",
+    "taxonomy.adaptive.observationsSampled": plan.observationsSampled,
+    "taxonomy.adaptive.fallbackReason": plan.fallbackReason ?? "none",
+    "taxonomy.adaptive.durationMs": plan.adaptiveDurationMs,
+    "taxonomy.adaptive.staticDurationMs": plan.staticDurationMs,
+    "taxonomy.adaptive.peakRssBytes": process.memoryUsage().rss,
+    "taxonomy.adaptive.clustersBorn": plan.clustersBorn,
+    "taxonomy.adaptive.clustersContinued": plan.clustersContinued,
+    "taxonomy.adaptive.clustersDeprecated": plan.clustersDeprecated,
+    "taxonomy.adaptive.relSep.p10": relativeSeparation.p10,
+    "taxonomy.adaptive.relSep.p50": relativeSeparation.p50,
+    "taxonomy.adaptive.relSep.p90": relativeSeparation.p90,
+    "taxonomy.adaptive.routing.p10": routingThreshold.p10,
+    "taxonomy.adaptive.routing.p50": routingThreshold.p50,
+    "taxonomy.adaptive.routing.p90": routingThreshold.p90,
+  }
+  if (diagnostics) {
+    attributes["taxonomy.adaptive.nodeCount"] = diagnostics.nodeCount
+    attributes["taxonomy.adaptive.leafCount"] = diagnostics.leafCount
+    attributes["taxonomy.adaptive.maxDepth"] = diagnostics.maxDepth
+    attributes["taxonomy.adaptive.acceptedSplits"] = diagnostics.acceptedSplits
+    attributes["taxonomy.adaptive.rejectedCandidates"] = diagnostics.rejectedCandidates
+    attributes["taxonomy.adaptive.rejection.undersizedChild"] = diagnostics.rejectionReasonCounts.undersizedChild
+    attributes["taxonomy.adaptive.rejection.dominantChild"] = diagnostics.rejectionReasonCounts.dominantChild
+    attributes["taxonomy.adaptive.rejection.lowScore"] = diagnostics.rejectionReasonCounts.lowScore
+    attributes["taxonomy.adaptive.rejection.lowRelativeSeparation"] =
+      diagnostics.rejectionReasonCounts.lowRelativeSeparation
+  }
+  const comparison = plan.comparison
+  if (comparison) {
+    attributes["taxonomy.shadow.static.rootChildCount"] = comparison.static.rootChildCount
+    attributes["taxonomy.shadow.static.nodeCount"] = comparison.static.nodeCount
+    attributes["taxonomy.shadow.static.leafCount"] = comparison.static.leafCount
+    attributes["taxonomy.shadow.static.maxDepth"] = comparison.static.maxDepth
+    attributes["taxonomy.shadow.adaptive.rootChildCount"] = comparison.adaptive.rootChildCount
+    attributes["taxonomy.shadow.adaptive.nodeCount"] = comparison.adaptive.nodeCount
+    attributes["taxonomy.shadow.adaptive.leafCount"] = comparison.adaptive.leafCount
+    attributes["taxonomy.shadow.adaptive.maxDepth"] = comparison.adaptive.maxDepth
+    attributes["taxonomy.shadow.diff.rootChildDelta"] = comparison.diff.rootChildDelta
+    attributes["taxonomy.shadow.diff.nodeCountDelta"] = comparison.diff.nodeCountDelta
+    attributes["taxonomy.shadow.diff.leafCountDelta"] = comparison.diff.leafCountDelta
+    attributes["taxonomy.shadow.diff.maxDepthDelta"] = comparison.diff.maxDepthDelta
+    attributes["taxonomy.shadow.diff.partitionAri"] = comparison.diff.partitionAri
+  }
+  return attributes
+}
+
+// Mirror the comparison onto a dedicated APM span so the shadow dashboard has a
+// channel that reaches Datadog (logs go only to CloudWatch here). Off runs emit
+// nothing. `annotateCurrentSpan`/`withSpan` are no-ops without a live tracer, so
+// this is inert in tests and under the pre-change (off) default.
+const annotateAdaptiveTelemetrySpan = (input: GardenTaxonomyStepInput, plan: HierarchicalTaxonomyPlan) =>
+  plan.mode === "off"
+    ? Effect.void
+    : Effect.gen(function* () {
+        for (const [key, value] of Object.entries(adaptiveSpanAttributes(input, plan))) {
+          yield* Effect.annotateCurrentSpan(key, value)
+        }
+      }).pipe(Effect.withSpan("taxonomy.gardenTaxonomyWorkflow.shadow"))
+
 export const planHierarchicalGardenTaxonomyActivity = (input: GardenTaxonomyStepInput) =>
   runGardenStep(
     "GardenTaxonomyWorkflow plan hierarchical tree",
@@ -575,6 +651,7 @@ export const planHierarchicalGardenTaxonomyActivity = (input: GardenTaxonomyStep
       Effect.flatMap((plan) =>
         Effect.gen(function* () {
           yield* Effect.sync(() => emitAdaptivePlanTelemetry(input, plan))
+          yield* annotateAdaptiveTelemetrySpan(input, plan)
           const planKey = yield* storeGardenTaxonomyPlan(input, {
             clusters: plan.clusters,
             observationAssignments: plan.observationAssignments,
