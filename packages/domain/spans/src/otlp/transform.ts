@@ -1,4 +1,14 @@
-import { ExternalUserId, OrganizationId, ProjectId, SessionId, SimulationId, SpanId, TraceId } from "@domain/shared"
+import {
+  ExternalUserId,
+  OrganizationId,
+  ProjectId,
+  SessionId,
+  SimulationId,
+  SPAN_ID_LENGTH,
+  SpanId,
+  TRACE_ID_LENGTH,
+  TraceId,
+} from "@domain/shared"
 import type { SpanDetail, SpanKind, SpanStatusCode } from "../entities/span.ts"
 import { anyValueToPlain } from "./any-value.ts"
 import { attrArray, stringAttr } from "./attributes.ts"
@@ -109,8 +119,18 @@ function resolveSpanProjectId(
   return context.defaultProjectId
 }
 
+/**
+ * ClickHouse's `spans` table stores `trace_id`/`span_id` as `FixedString(32)`/`FixedString(16)` — a
+ * value longer than that fails the whole async-insert batch, not just the offending row, so an
+ * oversized ID (a non-conformant exporter, e.g. a wider `bytes` protobuf field) must be rejected here.
+ */
+function hasValidIdLengths(normalizedTraceId: string, spanId: string): boolean {
+  return normalizedTraceId.length <= TRACE_ID_LENGTH && spanId.length <= SPAN_ID_LENGTH
+}
+
 function transformSpan({
   span,
+  traceId,
   resource,
   scopeName,
   scopeVersion,
@@ -119,6 +139,7 @@ function transformSpan({
   ingestedAt,
 }: {
   span: OtlpSpan
+  traceId: string
   resource: OtlpResource | undefined
   scopeName: string
   scopeVersion: string
@@ -177,7 +198,7 @@ function transformSpan({
     sessionId: SessionId(resolved.sessionId),
     userId: ExternalUserId(resolved.userId),
     userEmail: resolved.userEmail,
-    traceId: TraceId(span.traceId.replace(/-/g, "")),
+    traceId: TraceId(traceId),
     spanId: SpanId(span.spanId),
     parentSpanId: span.parentSpanId ?? "",
     apiKeyId: context.apiKeyId,
@@ -255,7 +276,12 @@ export function transformOtlpToSpans(
           rejectedSpans++
           continue
         }
-        spans.push(transformSpan({ span, resource, scopeName, scopeVersion, context, projectId, ingestedAt }))
+        const traceId = span.traceId.replace(/-/g, "")
+        if (!hasValidIdLengths(traceId, span.spanId)) {
+          rejectedSpans++
+          continue
+        }
+        spans.push(transformSpan({ span, traceId, resource, scopeName, scopeVersion, context, projectId, ingestedAt }))
       }
     }
   }
