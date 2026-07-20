@@ -34,16 +34,28 @@ import {
   buildProviderFlaggerOutputSchema,
   classifyTraceForFlaggerUseCase,
   normalizeSystemPromptForCacheKey,
-  type RunFlaggerInput,
-  runFlaggerUseCase,
 } from "./run-flagger.ts"
 
-const INPUT: RunFlaggerInput = {
+const INPUT = {
   organizationId: "a".repeat(24),
   projectId: "b".repeat(24),
   flaggerSlug: "jailbreaking",
   traceId: "c".repeat(32),
 }
+
+// Stand-in for the deleted trace-based entry point (drain path): resolve the
+// trace through the provided TraceRepository layer, then classify — the same
+// wiring trace-shaped callers (eval harness, benchmarks) do themselves.
+const runFlaggerUseCase = (input: typeof INPUT) =>
+  Effect.gen(function* () {
+    const traceRepository = yield* TraceRepository
+    const trace = yield* traceRepository.findByTraceId({
+      organizationId: OrganizationId(input.organizationId),
+      projectId: ProjectId(input.projectId),
+      traceId: TraceId(input.traceId),
+    })
+    return yield* classifyTraceForFlaggerUseCase({ ...input, trace })
+  })
 
 const DEFAULT_SYSTEM_INSTRUCTIONS = [
   { type: "text", content: "You are a helpful assistant. Answer the user's request directly." },
@@ -1086,101 +1098,6 @@ ${"Detailed grounding, workflow, callout, and formatting rules. ".repeat(120)}`.
             Layer.succeed(ChSqlClient, createFakeChSqlClient({ organizationId: OrganizationId(INPUT.organizationId) })),
             Layer.succeed(SqlClient, createFakeSqlClient({ organizationId: OrganizationId(INPUT.organizationId) })),
             Layer.succeed(FlaggerRepository, defaultFlaggerRepo),
-            aiLayer,
-            defaultCacheLayer,
-          ),
-        ),
-      ),
-    )
-
-    expect(result).toEqual({ matched: false })
-    expect(calls.generate).toHaveLength(0)
-  })
-
-  it("returns { matched: false } for the legacy resource-outliers slug without loading the trace or calling AI", async () => {
-    const { repository } = createFakeTraceRepository({
-      findByTraceId: () => Effect.die("trace must not be loaded for the removed resource-outliers slug"),
-    })
-    const { calls, layer: aiLayer } = createFakeAI({
-      generate: () => Effect.die("AI must not be called for the removed resource-outliers slug"),
-    })
-
-    const result = await Effect.runPromise(
-      runFlaggerUseCase({ ...INPUT, flaggerSlug: "resource-outliers" }).pipe(
-        Effect.provide(
-          Layer.mergeAll(
-            Layer.succeed(TraceRepository, repository),
-            Layer.succeed(ChSqlClient, createFakeChSqlClient({ organizationId: OrganizationId(INPUT.organizationId) })),
-            Layer.succeed(SqlClient, createFakeSqlClient({ organizationId: OrganizationId(INPUT.organizationId) })),
-            Layer.succeed(FlaggerRepository, defaultFlaggerRepo),
-            aiLayer,
-            defaultCacheLayer,
-          ),
-        ),
-      ),
-    )
-
-    expect(result).toEqual({ matched: false })
-    expect(calls.generate).toHaveLength(0)
-  })
-
-  it("returns { matched: false } for any unknown slug without side-effects", async () => {
-    const { repository } = createFakeTraceRepository({
-      findByTraceId: () => Effect.die("trace must not be loaded for unknown slugs"),
-    })
-    const { calls, layer: aiLayer } = createFakeAI({
-      generate: () => Effect.die("AI must not be called for unknown slugs"),
-    })
-
-    const result = await Effect.runPromise(
-      runFlaggerUseCase({ ...INPUT, flaggerSlug: "not-a-real-flagger" }).pipe(
-        Effect.provide(
-          Layer.mergeAll(
-            Layer.succeed(TraceRepository, repository),
-            Layer.succeed(ChSqlClient, createFakeChSqlClient({ organizationId: OrganizationId(INPUT.organizationId) })),
-            Layer.succeed(SqlClient, createFakeSqlClient({ organizationId: OrganizationId(INPUT.organizationId) })),
-            Layer.succeed(FlaggerRepository, defaultFlaggerRepo),
-            aiLayer,
-            defaultCacheLayer,
-          ),
-        ),
-      ),
-    )
-
-    expect(result).toEqual({ matched: false })
-    expect(calls.generate).toHaveLength(0)
-  })
-
-  it("returns { matched: false } when the flagger is disabled without loading the trace or calling AI", async () => {
-    const { repository } = createFakeTraceRepository({
-      findByTraceId: () => Effect.die("trace must not be loaded when flagger is disabled"),
-    })
-    const { calls, layer: aiLayer } = createFakeAI({
-      generate: () => Effect.die("AI must not be called when flagger is disabled"),
-    })
-
-    const { repository: disabledFlaggerRepo } = createFakeFlaggerRepository([], {
-      findByProjectAndSlug: () =>
-        Effect.succeed({
-          id: FlaggerId(generateId()),
-          organizationId: INPUT.organizationId,
-          projectId: INPUT.projectId,
-          slug: "jailbreaking",
-          enabled: false,
-          sampling: 10,
-          createdAt: new Date(),
-          updatedAt: new Date(),
-        } as Flagger),
-    })
-
-    const result = await Effect.runPromise(
-      runFlaggerUseCase({ ...INPUT, flaggerSlug: "jailbreaking" }).pipe(
-        Effect.provide(
-          Layer.mergeAll(
-            Layer.succeed(TraceRepository, repository),
-            Layer.succeed(ChSqlClient, createFakeChSqlClient({ organizationId: OrganizationId(INPUT.organizationId) })),
-            Layer.succeed(SqlClient, createFakeSqlClient({ organizationId: OrganizationId(INPUT.organizationId) })),
-            Layer.succeed(FlaggerRepository, disabledFlaggerRepo),
             aiLayer,
             defaultCacheLayer,
           ),
