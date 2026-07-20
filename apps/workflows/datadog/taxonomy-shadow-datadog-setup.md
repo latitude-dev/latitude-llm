@@ -21,95 +21,35 @@ Ingestion Controls) keeping `service:workflows` at 100%.
 
 ## Gate 2 — retention filter (indexes ingested spans for 15 days)
 
-`POST https://api.datadoghq.eu/api/v2/apm/config/retention-filters`
-
-```json
-{
-  "data": {
-    "type": "apm_retention_filter",
-    "attributes": {
-      "name": "Taxonomy adaptive shadow spans",
-      "filter_type": "spans-sampling-processor",
-      "filter": { "query": "service:workflows operation_name:taxonomy.gardenTaxonomyWorkflow.shadow" },
-      "rate": "1.0",
-      "enabled": true
-    }
-  }
-}
-```
+`setup-datadog.sh` creates a 100%-keep retention filter over
+`operation_name:taxonomy.gardenTaxonomyWorkflow.shadow`
+(`POST .../apm/config/retention-filters`; exact body in the script). It keeps
+100% of the shadow spans, searchable/aggregatable in Trace Explorer and the
+spans-source dashboard for 15 days.
 
 Retention filters are evaluated **top-down**, and the first match makes the
 keep/drop decision — a broader filter above this one could sample the shadow
-spans out before it runs. After creating it, make sure it sits **above** any
-broad `service:workflows` / catch-all filter (APM → Retention Filters, drag to
-reorder, or the `retention-filters-execution-order` API).
-
-This keeps 100% of the shadow spans, searchable/aggregatable in Trace Explorer
-and the spans-source dashboard for 15 days.
+spans out before it runs. After running the script, make sure this filter sits
+**above** any broad `service:workflows` / catch-all filter (APM → Retention
+Filters, drag to reorder, or the `retention-filters-execution-order` API); the
+script can't set ordering.
 
 ## Durable history — span-based metrics (retained 15 months)
 
-Indexed spans expire after 15 days; the decision window is ~1–2 weeks, so also
-generate span metrics for durable, cheap aggregation (and so the dashboard can
-optionally read `data_source: metrics` instead of raw spans).
-
-`POST https://api.datadoghq.eu/api/v2/apm/config/metrics` — one call per metric.
-
-Distribution metric (percentiles) — repeat with the `id`/`path` from the table:
-
-```json
-{
-  "data": {
-    "type": "spans_metrics",
-    "id": "taxonomy.shadow.partition_ari",
-    "attributes": {
-      "compute": { "aggregation_type": "distribution", "include_percentiles": true, "path": "@taxonomy.shadow.diff.partitionAri" },
-      "filter": { "query": "service:workflows operation_name:taxonomy.gardenTaxonomyWorkflow.shadow" },
-      "group_by": [
-        { "path": "@taxonomy.projectId", "tag_name": "project_id" },
-        { "path": "@taxonomy.organizationId", "tag_name": "organization_id" },
-        { "path": "@taxonomy.customBehaviorId", "tag_name": "custom_behavior_id" }
-      ]
-    }
-  }
-}
-```
-
-Fallback rate — a `count` metric over the fallback filter:
-
-```json
-{
-  "data": {
-    "type": "spans_metrics",
-    "id": "taxonomy.adaptive.fallback",
-    "attributes": {
-      "compute": { "aggregation_type": "count" },
-      "filter": { "query": "service:workflows operation_name:taxonomy.gardenTaxonomyWorkflow.shadow -@taxonomy.adaptive.fallbackReason:none" },
-      "group_by": [
-        { "path": "@taxonomy.projectId", "tag_name": "project_id" },
-        { "path": "@taxonomy.adaptive.fallbackReason", "tag_name": "fallback_reason" }
-      ]
-    }
-  }
-}
-```
-
-Distribution metrics to create (all with the same `filter` + `group_by` as the first):
-
-| metric `id`                             | `path`                                   |
-| --------------------------------------- | ---------------------------------------- |
-| `taxonomy.shadow.partition_ari`         | `@taxonomy.shadow.diff.partitionAri`     |
-| `taxonomy.shadow.static_root_children`  | `@taxonomy.shadow.static.rootChildCount` |
-| `taxonomy.shadow.adaptive_root_children`| `@taxonomy.shadow.adaptive.rootChildCount`|
-| `taxonomy.shadow.root_child_delta`      | `@taxonomy.shadow.diff.rootChildDelta`   |
-| `taxonomy.adaptive.duration_ms`         | `@taxonomy.adaptive.durationMs`          |
-| `taxonomy.adaptive.static_duration_ms`  | `@taxonomy.adaptive.staticDurationMs`    |
-| `taxonomy.adaptive.peak_rss_bytes`      | `@taxonomy.adaptive.peakRssBytes`        |
-| `taxonomy.adaptive.rel_sep_p50`         | `@taxonomy.adaptive.relSep.p50`          |
+Indexed spans expire after 15 days; the decision window is ~1–2 weeks, so
+`setup-datadog.sh` also generates span-based metrics
+(`POST .../apm/config/metrics`) for durable, cheap aggregation: distributions
+(percentiles) of the shadow shape counts, ARI, deltas, durations, peak RSS, and
+relative-separation p50, plus a `count` metric for fallbacks — all grouped by
+`@taxonomy.projectId` / `@taxonomy.organizationId` / `@taxonomy.customBehaviorId`.
+The exact metric list and payloads live in the script (the single source of
+truth), so the dashboard can read `data_source: metrics` for history beyond the
+15-day span window.
 
 ## Order of operations
 
-1. Create the retention filter (+ span metrics) — above.
+1. Run `setup-datadog.sh` (retention filter + span metrics), then reorder the
+   filter to the top per Gate 2.
 2. Release the Phase-4 code to prod, then `pulumi up` to set
    `LAT_TAXONOMY_ADAPTIVE_CLUSTERING_MODE=shadow` (never the var before the code).
 3. Trigger a garden run (or wait ~6h) → confirm spans via Trace Explorer:

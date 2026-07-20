@@ -500,10 +500,13 @@ export const startGardenTaxonomyRunActivity = (input: GardenTaxonomyActivityInpu
 /**
  * One bounded, embedding-free event per adaptive garden run (`gardenRun`), plus
  * — in shadow mode — a paired `shadowComparison` event carrying static-vs-adaptive
- * shape counts, deltas, and partition ARI. Emitted through the workflow logger so
- * it lands in Datadog Logs as trace-correlated, logs-based analytics; no separate
- * metrics client. Off runs compute no adaptive tree and emit nothing here.
- * Distributions are bounded percentiles, never raw arrays.
+ * shape counts, deltas, and partition ARI. This goes to stdout → CloudWatch (the
+ * workflows service does not forward logs to Datadog), so it is the un-sampled,
+ * always-there record and a debugging breadcrumb alongside the rest of the
+ * service's logs. The Datadog dashboard reads the APM span mirror
+ * (`annotateAdaptiveTelemetrySpan`), which is sampled, not these logs. Off runs
+ * compute no adaptive tree and emit nothing. Distributions are bounded
+ * percentiles, never raw arrays.
  */
 const emitAdaptivePlanTelemetry = (input: GardenTaxonomyStepInput, plan: HierarchicalTaxonomyPlan): void => {
   const mode = plan.mode
