@@ -2,19 +2,11 @@ import {
   AI,
   AI_GENERATE_TELEMETRY_SPAN_NAMES,
   AI_GENERATE_TELEMETRY_TAGS,
-  type AICredentialError,
-  type AIError,
   buildProjectScopedAiMetadata,
   resolveGenerationConfig,
 } from "@domain/ai"
-import {
-  LATITUDE_TELEMETRY_PROJECT_SLUGS,
-  OrganizationId,
-  ProjectId,
-  type RepositoryError,
-  TraceId,
-} from "@domain/shared"
-import { type TraceDetail, TraceRepository } from "@domain/spans"
+import { LATITUDE_TELEMETRY_PROJECT_SLUGS } from "@domain/shared"
+import type { TraceDetail } from "@domain/spans"
 import { Effect } from "effect"
 import { FLAGGER_DEFAULT_ANNOTATOR_MODEL } from "../constants.ts"
 import type { FlaggerConversation } from "../conversation.ts"
@@ -22,24 +14,6 @@ import { getFlaggerStrategy } from "../flagger-strategies/index.ts"
 import { isRecord, iterMessageParts } from "../flagger-strategies/shared.ts"
 import { reflagSuppressionTags } from "../reflag.ts"
 import { flaggerAnnotatorOutputSchema } from "./flagger-annotator-contracts.ts"
-
-export interface RunFlaggerAnnotatorInput {
-  readonly organizationId: string
-  readonly projectId: string
-  readonly flaggerSlug: string
-  readonly traceId: string
-  readonly scoreId: string
-}
-
-export interface RunFlaggerAnnotatorResult {
-  readonly feedback: string
-  readonly traceCreatedAt: string
-  readonly sessionId: string | null
-  readonly simulationId: string | null
-  readonly messageIndex?: number | undefined
-}
-
-export type RunFlaggerAnnotatorError = RepositoryError | AIError | AICredentialError
 
 /**
  * Input for the pure annotator (no repository dependency).
@@ -262,17 +236,6 @@ const formatConversationForAnnotator = (messages: readonly { role: string; parts
   return truncateMiddle(lines.join("\n"), ANNOTATOR_TRANSCRIPT_MAX_CHARS, "chars from the middle of the transcript")
 }
 
-const loadTraceDetail = (input: RunFlaggerAnnotatorInput) =>
-  Effect.gen(function* () {
-    const traceRepository = yield* TraceRepository
-
-    return yield* traceRepository.findByTraceId({
-      organizationId: OrganizationId(input.organizationId),
-      projectId: ProjectId(input.projectId),
-      traceId: TraceId(input.traceId),
-    })
-  })
-
 // Pure annotator — no repository dependency, no data loading.
 export const annotateConversationForFlaggerUseCase = Effect.fn("flaggers.annotateConversationForFlagger")(function* (
   input: AnnotateConversationForFlaggerInput,
@@ -335,7 +298,7 @@ Return structured data with a single "feedback" field per the system instruction
   }
 })
 
-// Trace-shaped adapter for the legacy drain path and eval harnesses.
+// Trace-shaped adapter for eval harnesses and tests.
 export const annotateTraceForFlaggerUseCase = Effect.fn("flaggers.annotateTraceForFlagger")(function* (
   input: AnnotateTraceForFlaggerInput,
 ) {
@@ -360,22 +323,4 @@ export const annotateTraceForFlaggerUseCase = Effect.fn("flaggers.annotateTraceF
     simulationId: input.trace.simulationId === "" ? null : input.trace.simulationId,
     messageIndex: result.messageIndex,
   }
-})
-
-/**
- * Load the trace via the repository, then draft its annotation.
- *
- * Production entry point — used by the Temporal activity in
- * `flaggerWorkflow` after a match.
- */
-export const runFlaggerAnnotatorUseCase = Effect.fn("flaggers.runFlaggerAnnotator")(function* (
-  input: RunFlaggerAnnotatorInput,
-) {
-  yield* Effect.annotateCurrentSpan("flagger.organizationId", input.organizationId)
-  yield* Effect.annotateCurrentSpan("flagger.projectId", input.projectId)
-  yield* Effect.annotateCurrentSpan("flagger.traceId", input.traceId)
-  yield* Effect.annotateCurrentSpan("flagger.flaggerSlug", input.flaggerSlug)
-
-  const trace = yield* loadTraceDetail(input)
-  return yield* annotateTraceForFlaggerUseCase({ ...input, trace })
 })

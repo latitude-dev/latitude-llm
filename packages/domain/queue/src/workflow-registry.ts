@@ -81,14 +81,6 @@ const _registry = {
     readonly sessionId: string
     readonly analysisHash: string
   }>(),
-  // TODO: remove with the deterministic-flaggers drain cleanup.
-  flaggerWorkflow: input<{
-    readonly organizationId: string
-    readonly projectId: string
-    readonly traceId: string
-    readonly flaggerId: string
-    readonly flaggerSlug: string
-  }>(),
   seedDemoProjectWorkflow: input<{
     readonly organizationId: string
     readonly projectId: string
