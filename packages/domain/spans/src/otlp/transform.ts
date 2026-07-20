@@ -85,7 +85,7 @@ export interface TransformContext {
 
 interface TransformResult {
   readonly spans: readonly SpanDetail[]
-  /** Spans skipped because no `projectId` could be resolved for them. */
+  /** Spans skipped for lacking a resolvable `projectId` or a valid `traceId`. */
   readonly rejectedSpans: number
 }
 
