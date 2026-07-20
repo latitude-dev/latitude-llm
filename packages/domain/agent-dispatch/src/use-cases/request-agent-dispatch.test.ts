@@ -7,7 +7,7 @@ import { createProject, ProjectRepository } from "@domain/projects"
 import { createFakeProjectRepository } from "@domain/projects/testing"
 import { ScoreAnalyticsRepository, ScoreRepository } from "@domain/scores"
 import { createFakeScoreAnalyticsRepository, createFakeScoreRepository } from "@domain/scores/testing"
-import { AlertIncidentId, OrganizationId, ProjectId, SignalId, SqlClient } from "@domain/shared"
+import { AlertIncidentId, NotFoundError, OrganizationId, ProjectId, SignalId, SqlClient } from "@domain/shared"
 import { createFakeSqlClient } from "@domain/shared/testing"
 import { type Signal, SignalRepository } from "@domain/signals"
 import { createFakeSignalRepository } from "@domain/signals/testing"
@@ -101,11 +101,12 @@ const makeLayer = (opts: {
   configs?: readonly AgentDispatchConfigRow[]
   incident?: Incident | null
   guardrailCalls?: Array<{ configId: string; projectId: string }>
+  seedOrganization?: boolean
 }) => {
   const organization = createOrganization({ id: orgId, name: "Acme", slug: "acme" })
   const project = createProject({ id: projectId, organizationId: orgId, name: "Demo", slug: "demo" })
   const { repository: organizationRepository, organizations } = createFakeOrganizationRepository()
-  organizations.set(orgId, organization)
+  if (opts.seedOrganization ?? true) organizations.set(orgId, organization)
   const { repository: projectRepository } = createFakeProjectRepository([project])
   const { repository: signalRepository } = createFakeSignalRepository([opts.signal])
   const { repository: scoreRepository } = createFakeScoreRepository()
@@ -145,7 +146,7 @@ const makeLayer = (opts: {
     findById: (id) => {
       const incident = opts.incident
       if (incident === null || incident === undefined || incident.id !== id) {
-        return Effect.die(new Error("incident not found"))
+        return Effect.fail(new NotFoundError({ entity: "Incident", id }))
       }
       return Effect.succeed(incident)
     },
@@ -344,5 +345,37 @@ describe("requestAgentDispatchUseCase", () => {
     expect(result.requests).toHaveLength(1)
     expect(result.requests[0]?.trigger).toBe("incident.opened")
     expect(result.requests[0]?.sourceId).toBe(signalId)
+  })
+
+  it("skips when the organization has already been deleted", async () => {
+    const result = await Effect.runPromise(
+      requestAgentDispatchUseCase(input).pipe(
+        Effect.provide(makeLayer({ signal: makeSignal({ origin: "system" }), seedOrganization: false })),
+      ),
+    )
+
+    expect(result).toEqual({ status: "skipped", reason: "organization-not-found" })
+  })
+
+  it("skips incident-sourced dispatches when the incident has already been deleted", async () => {
+    const result = await Effect.runPromise(
+      requestAgentDispatchUseCase({
+        source: {
+          type: "incident",
+          organizationId: orgId,
+          alertIncidentId: incidentId,
+        },
+        webAppUrl: "https://console.latitude.so",
+      }).pipe(
+        Effect.provide(
+          makeLayer({
+            signal: makeSignal({ origin: "system" }),
+            incident: null,
+          }),
+        ),
+      ),
+    )
+
+    expect(result).toEqual({ status: "skipped", reason: "incident-not-found" })
   })
 })
