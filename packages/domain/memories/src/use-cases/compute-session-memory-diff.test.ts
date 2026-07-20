@@ -226,6 +226,40 @@ describe("computeSessionMemoryDiff", () => {
     expect(rec1?.afterBody).toBeNull()
   })
 
+  it("does not deep-link a record wiped after it was changed in the same session", async () => {
+    const memory = createFakeMemoryRepository()
+    await materialize(
+      [
+        makeSpan({
+          spanId: spanId("1"),
+          operation: "create_memory",
+          recordsRaw: records({ id: "rec1", content: "hi" }),
+          endTime: at(0),
+        }),
+      ],
+      memory,
+      SessionId("sessOld"),
+    )
+    await materialize(
+      [
+        makeSpan({
+          spanId: spanId("2"),
+          operation: "update_memory",
+          recordsRaw: records({ id: "rec1", content: "hi there" }),
+          endTime: at(5),
+        }),
+        makeSpan({ spanId: spanId("3"), operation: "delete_memory", recordId: "", endTime: at(6) }),
+      ],
+      memory,
+      SessionId("sessNew"),
+    )
+
+    const result = await diff(memory, { sessionId: SessionId("sessNew") })
+    expect(result.records).toHaveLength(1)
+    expect(result.records[0]?.kind).toBe("removed")
+    expect(result.records[0]?.lastChangeSpanId).toBeNull() // not the pre-wipe update span
+  })
+
   it("restricts the diff to one trace when a trace id is given", async () => {
     const memory = createFakeMemoryRepository()
     await materialize(

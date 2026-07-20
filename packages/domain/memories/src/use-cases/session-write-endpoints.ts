@@ -147,7 +147,8 @@ export const computeSessionWriteEndpoints = Effect.fn("memories.computeSessionWr
       afterHash: afterPresent ? last.contentHash : "",
       afterTokens: afterPresent ? last.tokenCount : 0,
       afterPresent,
-      afterSpanId: last.spanId,
+      // A wipe removal has no per-record version to deep-link; linking the pre-wipe change would mislead.
+      afterSpanId: wipedAfter ? null : last.spanId,
     })
   }
 
