@@ -87,6 +87,11 @@ export const gardenTaxonomyWorkflow = async (
   // history at a fixed position. Read once, before the try, so the catch path
   // sees the same deterministic value.
   let useStagingSwap = false
+  // Adaptive reassignment repoints the live window's observations onto the staging
+  // leaves BEFORE the swap. Once that has run, deleting staging would orphan those
+  // observations, so staging cleanup is only safe up to (and including) a failed
+  // reassignment — a later failure leaves staging for the swap retry / next pass.
+  let reassignmentStarted = false
   try {
     const started = await startGardenTaxonomyRunActivity({ ...input, workflowRunId: workflowInfo().runId })
     useStagingSwap = patched("taxonomy-gardening-staging-swap-v1")
@@ -110,6 +115,9 @@ export const gardenTaxonomyWorkflow = async (
       })
     }
     await saveGardenTaxonomyClustersActivity({ ...started, planKey: built.planKey })
+    // Mark before the call: a partial/failed reassignment may already have
+    // repointed some observations onto staging, so cleanup must not delete it.
+    reassignmentStarted = true
     await reassignGardenTaxonomyObservationsActivity({ ...started, planKey: built.planKey })
     await deprecateGardenTaxonomyClustersActivity({ ...started, planKey: built.planKey })
     const lineage: TaxonomyClusterLineage[] = [...built.lineage]
@@ -147,10 +155,11 @@ export const gardenTaxonomyWorkflow = async (
     // mark it failed instead of leaving it stuck generating. The fail activity
     // re-derives the (deterministic) run id from the input.
     await CancellationScope.nonCancellable(async () => {
-      // A publish that failed before the swap leaves an orphaned staging tree;
-      // remove it so the old tree stays the only active one. No-op on off runs
-      // and when the swap already completed (guarded to state='staging').
-      if (useStagingSwap) {
+      // Clean up an orphaned staging tree ONLY when reassignment never ran, so no
+      // observation can already point at a staging leaf we would delete. Once
+      // reassignment has started, the staging tree is left for the swap retry /
+      // next pass. No-op on off runs (guarded to state='staging').
+      if (useStagingSwap && !reassignmentStarted) {
         await cleanupGardenTaxonomyStagingActivity({ ...input, workflowRunId: workflowInfo().runId })
       }
       await failGardenTaxonomyRunActivity({ ...input, workflowRunId: workflowInfo().runId, error: errorMessage(error) })

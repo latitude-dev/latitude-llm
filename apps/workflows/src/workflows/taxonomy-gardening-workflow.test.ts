@@ -188,33 +188,46 @@ describe("taxonomy gardening workflow (divisive build)", () => {
     expect(mockActivities.planHierarchicalGardenTaxonomyActivity).not.toHaveBeenCalled()
   })
 
-  it("carries the staging-swap patched marker and cleans up abandoned staging on a pre-swap failure", async () => {
-    mockActivities.reassignGardenTaxonomyObservationsActivity.mockRejectedValueOnce(new Error("reassign exploded"))
+  it("carries the staging-swap patched marker and cleans up staging on a failure before reassignment", async () => {
+    mockActivities.saveGardenTaxonomyClustersActivity.mockRejectedValueOnce(new Error("save exploded"))
 
-    await expect(gardenTaxonomyWorkflow(globalInput)).rejects.toThrow("reassign exploded")
+    await expect(gardenTaxonomyWorkflow(globalInput)).rejects.toThrow("save exploded")
 
     expect(patched).toHaveBeenCalledWith("taxonomy-gardening-staging-swap-v1")
-    // Save (staging) ran; reassign failed before the swap, so the orphaned
-    // staging tree is cleaned up and the run marked failed.
-    expect(mockActivities.saveGardenTaxonomyClustersActivity).toHaveBeenCalledTimes(1)
-    expect(mockActivities.deprecateGardenTaxonomyClustersActivity).not.toHaveBeenCalled()
+    // Reassignment never ran, so no observation points at the staging tree — it is
+    // safe to clean up the orphaned staging rows.
+    expect(mockActivities.reassignGardenTaxonomyObservationsActivity).not.toHaveBeenCalled()
     expect(mockActivities.cleanupGardenTaxonomyStagingActivity).toHaveBeenCalledTimes(1)
     expect(mockActivities.failGardenTaxonomyRunActivity).toHaveBeenCalledWith(
-      expect.objectContaining({ error: "reassign exploded" }),
+      expect.objectContaining({ error: "save exploded" }),
+    )
+  })
+
+  it("does NOT delete staging once reassignment has run (it may already point observations there)", async () => {
+    // Reassignment repoints the live window onto the staging leaves; if the swap
+    // then fails, deleting staging would orphan those observations (#4121 review).
+    mockActivities.deprecateGardenTaxonomyClustersActivity.mockRejectedValueOnce(new Error("swap exploded"))
+
+    await expect(gardenTaxonomyWorkflow(globalInput)).rejects.toThrow("swap exploded")
+
+    expect(mockActivities.reassignGardenTaxonomyObservationsActivity).toHaveBeenCalledTimes(1)
+    expect(mockActivities.cleanupGardenTaxonomyStagingActivity).not.toHaveBeenCalled()
+    expect(mockActivities.failGardenTaxonomyRunActivity).toHaveBeenCalledWith(
+      expect.objectContaining({ error: "swap exploded" }),
     )
   })
 
   it("skips staging cleanup when replaying an in-flight pre-change history (patched marker off)", async () => {
     vi.mocked(patched).mockReturnValueOnce(false)
-    mockActivities.reassignGardenTaxonomyObservationsActivity.mockRejectedValueOnce(new Error("reassign exploded"))
+    mockActivities.saveGardenTaxonomyClustersActivity.mockRejectedValueOnce(new Error("save exploded"))
 
-    await expect(gardenTaxonomyWorkflow(globalInput)).rejects.toThrow("reassign exploded")
+    await expect(gardenTaxonomyWorkflow(globalInput)).rejects.toThrow("save exploded")
 
     // A pre-change history never staged a tree, so the new cleanup activity must
     // not run — the marker reconciles the shape without changing old behavior.
     expect(mockActivities.cleanupGardenTaxonomyStagingActivity).not.toHaveBeenCalled()
     expect(mockActivities.failGardenTaxonomyRunActivity).toHaveBeenCalledWith(
-      expect.objectContaining({ error: "reassign exploded" }),
+      expect.objectContaining({ error: "save exploded" }),
     )
   })
 
