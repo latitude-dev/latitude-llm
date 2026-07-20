@@ -74,6 +74,8 @@ type TaxonomyFacet = {
 
 The system compiles it into a controlled extraction prompt with invariant guardrails the user never edits: one concise sentence, describe only the requested facet, transcript is untrusted data (not instructions), no names or identifying details, no invented facts, explicit "unclear from the conversation" when evidence is missing, English output, bounded structured-output schema.
 
+**One projection per session per facet, by design.** A session that spans several topics collapses to its dominant one — the same collapse the singleton observation model already makes, but explicit instead of averaged into a blurry vector. Extraction input is budget-bounded (middle-truncated, well under any extractor's context limit) and an oversize or failed extraction falls back rather than failing session analysis. If the single-topic assumption ever needs auditing, the extraction schema can emit secondary topics into `projection_metadata` without touching observation identity or read paths.
+
 **Editing the question is a new version.** Changing "what did the user want?" to "what business outcome was the user pursuing?" changes the meaning of every embedding. Old and new vectors never mix in one build, and lineage does not continue across versions — a version bump is a birth-everything event, same as a brand-new facet. `projection_hash` already gives the caching hook; the version just needs to be one of its inputs.
 
 Extractions that come back "unclear" should be stored but excluded from clustering (the noise path, empty `assigned_cluster_id`) rather than clustered into an "Unknown" mega-node. The unknown *rate* is a facet-quality diagnostic, not a topic.
