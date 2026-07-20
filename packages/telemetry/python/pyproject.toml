@@ -19,7 +19,7 @@ dependencies = [
     "opentelemetry-instrumentation-alephalpha==0.61.0",
     "opentelemetry-instrumentation-anthropic==0.61.0",
     "opentelemetry-instrumentation-bedrock==0.62.1",
-    "opentelemetry-instrumentation-cohere==0.61.0",
+    "opentelemetry-instrumentation-cohere==0.62.1",
     "openinference-instrumentation-crewai==1.1.10",
     "openinference-instrumentation-google-adk==0.1.15",
     "openinference-instrumentation-google-genai==1.1.0",
