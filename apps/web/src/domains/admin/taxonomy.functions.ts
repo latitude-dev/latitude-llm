@@ -1,12 +1,14 @@
-import { type AdminProjectTaxonomy, getProjectTaxonomyUseCase } from "@domain/admin"
-import { ProjectId } from "@domain/shared"
-import { AdminTaxonomyRepositoryLive, withPostgres } from "@platform/db-postgres"
+import { type AdminProjectTaxonomy, getProjectDetailsUseCase, getProjectTaxonomyUseCase } from "@domain/admin"
+import { QueuePublisher } from "@domain/queue"
+import { OrganizationId, ProjectId } from "@domain/shared"
+import { triggerProjectGardeningUseCase } from "@domain/taxonomy"
+import { AdminProjectRepositoryLive, AdminTaxonomyRepositoryLive, withPostgres } from "@platform/db-postgres"
 import { withTracing } from "@repo/observability"
 import { createServerFn } from "@tanstack/react-start"
 import { Effect } from "effect"
 import { z } from "zod"
 import { adminMiddleware } from "../../server/admin-middleware.ts"
-import { getAdminPostgresClient } from "../../server/clients.ts"
+import { getAdminPostgresClient, getQueuePublisher } from "../../server/clients.ts"
 
 export interface AdminTaxonomySubcategoryDto {
   id: string
@@ -91,4 +93,29 @@ export const adminGetProjectTaxonomy = createServerFn({ method: "GET" })
     )
 
     return toDto(taxonomy)
+  })
+
+export const adminTriggerProjectGardeningInputSchema = z.object({
+  projectId: z.string().min(1).max(256),
+})
+
+export const adminTriggerProjectGardening = createServerFn({ method: "POST" })
+  .middleware([adminMiddleware])
+  .inputValidator(adminTriggerProjectGardeningInputSchema)
+  .handler(async ({ data }): Promise<{ queued: true }> => {
+    const project = await Effect.runPromise(
+      getProjectDetailsUseCase({ projectId: ProjectId(data.projectId) }).pipe(
+        withPostgres(AdminProjectRepositoryLive, getAdminPostgresClient()),
+        withTracing,
+      ),
+    )
+    const publisher = await getQueuePublisher()
+
+    return await Effect.runPromise(
+      triggerProjectGardeningUseCase({
+        organizationId: OrganizationId(project.organization.id),
+        projectId: ProjectId(project.id),
+        reason: "manual",
+      }).pipe(Effect.provideService(QueuePublisher, publisher), withTracing),
+    )
   })

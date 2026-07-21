@@ -11,7 +11,7 @@ import {
   getRedisClient,
   getWorkflowStarter,
 } from "../clients.ts"
-import { runGardenProjectJob } from "../workers/taxonomy.ts"
+import { readObservationCounts, runGardenProjectJob } from "../workers/taxonomy.ts"
 
 const DEFAULT_LIMIT_PER_PROJECT = 200
 
@@ -326,7 +326,10 @@ void Effect.runPromise(
         console.log(`Gardening taxonomy for project ${project.project_id}`)
         yield* runGardenProjectJob(
           { organizationId: project.organization_id, projectId: project.project_id, reason: "manual" },
-          { clickhouseClient: clickhouse, postgresClient: getPostgresClient(), redisClient: redis, workflowStarter },
+          {
+            workflowStarter,
+            readObservationCounts: (input) => readObservationCounts(clickhouse, input),
+          },
         )
       }
     }

@@ -1,7 +1,7 @@
 import { ClaudeCodeIcon, Icon, Text } from "@repo/ui"
 import { extractLeadingEmoji, relativeTime } from "@repo/utils"
 import { createFileRoute, Link, notFound } from "@tanstack/react-router"
-import { ArrowRightIcon, BrainCircuitIcon, CheckIcon, MinusIcon } from "lucide-react"
+import { ArrowRightIcon, BrainCircuitIcon, CheckIcon, MinusIcon, SproutIcon } from "lucide-react"
 import { adminGetProject } from "../../../domains/admin/projects.functions.ts"
 import { adminGetProjectTaxonomy } from "../../../domains/admin/taxonomy.functions.ts"
 import { ActionRow, ActionsSection } from "../-components/actions-section/section.tsx"
@@ -15,6 +15,7 @@ import {
 import { useTrackRecentBackofficeView } from "../-lib/recently-viewed.ts"
 import { MetricsSection } from "./-components/metrics-section.tsx"
 import { SessionIntelligenceBackfillButton } from "./-components/session-intelligence-backfill-button.tsx"
+import { TaxonomyGardeningButton } from "./-components/taxonomy-gardening-button.tsx"
 import { TaxonomySection } from "./-components/taxonomy-section.tsx"
 import { WrappedTriggerButton } from "./-components/wrapped-trigger-button.tsx"
 
@@ -144,6 +145,12 @@ function BackofficeProjectDetailPage() {
           title="Reset and backfill session intelligence"
           description="Delete this project's existing taxonomy and session-intelligence rows, then start AnalyzeSessionWorkflow for the latest 1,500 sessions. Requires typed confirmation."
           action={<SessionIntelligenceBackfillButton projectId={project.id} projectName={project.name} />}
+        />
+        <ActionRow
+          icon={SproutIcon}
+          title="Garden behavior taxonomy"
+          description="Use recent behavior observations to update the taxonomy when the project is eligible."
+          action={<TaxonomyGardeningButton projectId={project.id} projectName={project.name} />}
         />
       </ActionsSection>
 

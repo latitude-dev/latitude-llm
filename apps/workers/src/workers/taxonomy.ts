@@ -65,6 +65,11 @@ interface TaxonomyRuntimeDeps {
   readonly workflowStarter?: WorkflowStarterShape
 }
 
+interface GardenProjectDeps {
+  readonly workflowStarter?: WorkflowStarterShape
+  readonly readObservationCounts: (input: ObservationCountsInput) => Effect.Effect<TaxonomyObservationCounts, unknown>
+}
+
 interface ActiveProjectRow {
   readonly organization_id: string
   readonly project_id: string
@@ -117,7 +122,7 @@ const listGardenableCustomBehaviorsEffect = (adminPostgresClient: PostgresClient
     catch: (cause) => cause,
   })
 
-const readObservationCounts = (clickhouseClient: ClickHouseClient, input: ObservationCountsInput) =>
+export const readObservationCounts = (clickhouseClient: ClickHouseClient, input: ObservationCountsInput) =>
   Effect.gen(function* () {
     const repo = yield* TaxonomyObservationRepository
     return yield* repo.getCounts(input)
@@ -250,35 +255,66 @@ export const runGardenCustomBehaviorSweepJob = (
     Effect.asVoid,
   )
 
-export const runGardenProjectJob = (payload: GardenProjectPayload, deps: TaxonomyRuntimeDeps) => {
+export const runGardenProjectJob = (payload: GardenProjectPayload, deps: GardenProjectDeps) => {
   if (deps.workflowStarter) {
-    const workflowId = `org:${payload.organizationId}:taxonomy:garden:${payload.projectId}`
-    return deps.workflowStarter
-      .start(
-        "gardenTaxonomyWorkflow",
-        {
+    const workflowStarter = deps.workflowStarter
+    const organizationId = OrganizationId(payload.organizationId)
+    const projectId = ProjectId(payload.projectId)
+    const workflowId = taxonomyGardenProjectDedupeKey({ organizationId, projectId })
+    return Effect.gen(function* () {
+      const counts = yield* deps.readObservationCounts({
+        organizationId,
+        projectId,
+        since: lookbackStart(new Date()),
+      })
+      if (counts.total < TAXONOMY_GARDENING_MIN_OBSERVATIONS) {
+        yield* Effect.sync(() =>
+          logger.info("Taxonomy gardening skipped: insufficient recent observations", {
+            metric: "taxonomy.gardenProject.workflowStart",
+            outcome: "skipped",
+            organizationId: payload.organizationId,
+            projectId: payload.projectId,
+            observations: counts.total,
+          }),
+        )
+        return
+      }
+
+      const started = yield* workflowStarter
+        .start(
+          "gardenTaxonomyWorkflow",
+          {
+            organizationId: payload.organizationId,
+            projectId: payload.projectId,
+            dimension: "topic",
+            trigger: payload.reason,
+          },
+          { workflowId },
+        )
+        .pipe(
+          Effect.as(true),
+          Effect.catchTag("WorkflowAlreadyStartedError", () =>
+            Effect.sync(() => {
+              logger.info("GardenTaxonomyWorkflow already running", {
+                metric: "taxonomy.gardenProject.workflowStart",
+                outcome: "already_running",
+                organizationId: payload.organizationId,
+                projectId: payload.projectId,
+                workflowId,
+              })
+            }).pipe(Effect.as(false)),
+          ),
+        )
+      if (!started) return
+      yield* Effect.sync(() =>
+        logger.info("Started GardenTaxonomyWorkflow", {
+          metric: "taxonomy.gardenProject.workflowStart",
           organizationId: payload.organizationId,
           projectId: payload.projectId,
-          dimension: "topic",
-          trigger: payload.reason,
-        },
-        { workflowId },
+          workflowId,
+        }),
       )
-      .pipe(
-        Effect.tap(() =>
-          Effect.sync(() =>
-            logger.info("Started GardenTaxonomyWorkflow", {
-              metric: "taxonomy.gardenProject.workflowStart",
-              organizationId: payload.organizationId,
-              projectId: payload.projectId,
-              workflowId,
-            }),
-          ),
-        ),
-        withTracing,
-        Effect.withSpan("taxonomy.gardenProject.startWorkflow"),
-        Effect.asVoid,
-      )
+    }).pipe(withTracing, Effect.withSpan("taxonomy.gardenProject.startWorkflow"), Effect.asVoid)
   }
 
   // The Temporal workflow is the only gardening orchestrator; without a
@@ -368,11 +404,8 @@ export const createTaxonomyWorker = ({
   consumer.subscribe("taxonomy", {
     gardenProject: (payload) =>
       runGardenProjectJob(payload as GardenProjectPayload, {
-        clickhouseClient,
-        postgresClient,
-        redisClient,
-        publisher,
         workflowStarter,
+        readObservationCounts: (input) => readObservationCounts(clickhouseClient, input),
       }),
     gardenSweep: (payload) =>
       runGardenSweepJob(payload as GardenSweepPayload, {

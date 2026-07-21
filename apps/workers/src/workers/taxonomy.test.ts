@@ -133,24 +133,6 @@ const enoughObservationCounts = () =>
     noise: TAXONOMY_GARDENING_MIN_OBSERVATIONS,
   })
 
-const createFakeRedisClient = () => {
-  const values = new Map<string, string>()
-  return {
-    get: async (key: string) => values.get(key) ?? null,
-    set: async (key: string, value: string, ...args: unknown[]) => {
-      if (args.includes("NX") && values.has(key)) return null
-      values.set(key, value)
-      return "OK"
-    },
-    del: async (key: string) => values.delete(key),
-    eval: async (_script: string, _keyCount: number, key: string, token: string) => {
-      if (values.get(key) !== token) return 0
-      values.delete(key)
-      return 1
-    },
-  }
-}
-
 const makeObservation = (
   index: number,
   projectId = PROJECT_ID,
@@ -411,10 +393,8 @@ describe("taxonomy gardening worker", () => {
       runGardenProjectJob(
         { organizationId: ORGANIZATION_ID, projectId: PROJECT_ID, reason: "manual" },
         {
-          clickhouseClient: ch.client,
-          postgresClient: pg.appPostgresClient,
-          redisClient: createFakeRedisClient() as never,
           workflowStarter: workflowStarter as never,
+          readObservationCounts: enoughObservationCounts,
         },
       ),
     )
@@ -423,9 +403,56 @@ describe("taxonomy gardening worker", () => {
       {
         workflow: "gardenTaxonomyWorkflow",
         input: { organizationId: ORGANIZATION_ID, projectId: PROJECT_ID, dimension: "topic", trigger: "manual" },
-        workflowId: `org:${ORGANIZATION_ID}:taxonomy:garden:${PROJECT_ID}`,
+        workflowId: `org:${ORGANIZATION_ID}:taxonomy:gardenProject:${PROJECT_ID}`,
       },
     ])
+  })
+
+  it("does not start the garden workflow below the recent-observation minimum", async () => {
+    const { started, starter } = recordingWorkflowStarter()
+
+    await Effect.runPromise(
+      runGardenProjectJob(
+        { organizationId: ORGANIZATION_ID, projectId: PROJECT_ID, reason: "manual" },
+        {
+          workflowStarter: starter as never,
+          readObservationCounts: () =>
+            Effect.succeed({
+              total: TAXONOMY_GARDENING_MIN_OBSERVATIONS - 1,
+              assigned: 0,
+              noise: TAXONOMY_GARDENING_MIN_OBSERVATIONS - 1,
+            }),
+        },
+      ),
+    )
+
+    expect(started).toHaveLength(0)
+  })
+
+  it("collapses WorkflowAlreadyStartedError from an already-running global workflow into a no-op", async () => {
+    let calls = 0
+    const starter = {
+      start: () => {
+        calls += 1
+        return Effect.fail(
+          new WorkflowAlreadyStartedError({
+            workflowId: `org:${ORGANIZATION_ID}:taxonomy:gardenProject:${PROJECT_ID}`,
+            workflow: "gardenTaxonomyWorkflow",
+          }),
+        )
+      },
+      signalWithStart: () => Effect.void,
+    }
+
+    await expect(
+      Effect.runPromise(
+        runGardenProjectJob(
+          { organizationId: ORGANIZATION_ID, projectId: PROJECT_ID, reason: "manual" },
+          { workflowStarter: starter as never, readObservationCounts: enoughObservationCounts },
+        ),
+      ),
+    ).resolves.toBeUndefined()
+    expect(calls).toBe(1)
   })
 
   it("starts the scoped workflow deduped on the behavior, passing the job reason as trigger", async () => {
