@@ -7,6 +7,7 @@ import { loadConfig } from "./config.ts"
 import { collectTraceContext } from "./context.ts"
 import type { Logger } from "./logger.ts"
 import { createLogger } from "./logger.ts"
+import { memoryDirFromTranscript } from "./memory.ts"
 import { buildOtlpRequest, buildSubagentSpans, chunkOtlpRequest } from "./otlp.ts"
 import type { RedactConfig } from "./redaction.ts"
 import { deleteRequest, loadRequestsByMessageId, pruneStaleRequests } from "./request-store.ts"
@@ -21,7 +22,15 @@ import {
   readIncremental,
   readSubagentMeta,
 } from "./transcript.ts"
-import type { AgentSpanLink, HookPayload, OtlpSpan, SubagentInvocation, TraceContext, Turn } from "./types.ts"
+import type {
+  AgentSpanLink,
+  HookPayload,
+  MemoryEmitOptions,
+  OtlpSpan,
+  SubagentInvocation,
+  TraceContext,
+  Turn,
+} from "./types.ts"
 
 type AgentLinkMap = Record<string, { traceId: string; parentSpanId: string }>
 
@@ -101,6 +110,10 @@ async function main(): Promise<void> {
     const context = collectTraceContext(payload)
     logger.debug(`context tags=${context.tags.length} metadata=${Object.keys(context.metadata).length}`)
 
+    const memory: MemoryEmitOptions | undefined = config.memory
+      ? { dir: memoryDirFromTranscript(transcriptPath), captureContent: config.memoryContent }
+      : undefined
+
     const { rows, newOffset, newBuffer } = readIncremental(transcriptPath, prior.offset, prior.buffer)
     const turns = buildTurns(rows)
     logger.debug(`read ${rows.length} row(s); ${turns.length} new turn(s); newOffset=${newOffset}`)
@@ -123,6 +136,7 @@ async function main(): Promise<void> {
       requestsByMessageId: mainRequests,
       redact: config.redact,
       agentLinks,
+      memory,
     })
 
     const linkMap: AgentLinkMap = { ...(prior.agentLinks ?? {}) }
@@ -142,6 +156,7 @@ async function main(): Promise<void> {
       linkMap,
       context,
       redact: config.redact,
+      memory,
       logger,
     })
 
@@ -253,9 +268,10 @@ function emitSubagents(args: {
   linkMap: AgentLinkMap
   context: TraceContext
   redact?: RedactConfig | undefined
+  memory?: MemoryEmitOptions | undefined
   logger: Logger
 }): SubagentEmission {
-  const { sessionId, mainTranscriptPath, linkMap, context, redact, logger } = args
+  const { sessionId, mainTranscriptPath, linkMap, context, redact, memory, logger } = args
   const spans: OtlpSpan[] = []
   const saves: Array<{ key: string; state: SubagentSave }> = []
 
@@ -325,6 +341,7 @@ function emitSubagents(args: {
         context,
         requestsByMessageId,
         redact,
+        memory,
       }),
     )
     saves.push({
