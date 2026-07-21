@@ -22,25 +22,14 @@ export function MemoryUnavailableState() {
   )
 }
 
-/**
- * Empty state for a project with no memory captured. Memory is opt-in — no
- * auto-instrumentation emits it — so unlike Tools/Users this is a "you must
- * instrument it" onboarding, not a "wait for data" notice. A skeleton of a
- * populated store (filetree + a record diff) sits behind a compact card whose
- * primary action is a copy-paste coding-agent prompt. Mirrors the layering of
- * `TracesEmptyOnboarding`.
- */
 export function MemoryEmptyState() {
   return (
     <div className="relative h-full w-full overflow-hidden">
       <MemoryPreviewBackdrop />
-      {/* Fade the skeleton into the page background top-to-bottom. */}
       <div
         aria-hidden
         className="pointer-events-none absolute inset-0 bg-gradient-to-b from-transparent via-background/60 to-background"
       />
-      {/* Solid background masked to a center ellipse — grounds the card by
-          dissolving the skeleton behind it with no card/modal edge. */}
       <div
         aria-hidden
         className="pointer-events-none absolute inset-0 bg-background [-webkit-mask-image:radial-gradient(ellipse_70%_55%_at_50%_50%,black_35%,transparent_72%)] [mask-image:radial-gradient(ellipse_70%_55%_at_50%_50%,black_35%,transparent_72%)]"
@@ -73,17 +62,16 @@ function MemoryConnectCard() {
         <CodeBlock value={prompt} copyable wrapLines />
       </div>
 
-      <a href={MEMORY_DOCS_HREF} target="_blank" rel="noopener noreferrer">
-        <Button variant="outline">
+      <Button asChild variant="outline">
+        <a href={MEMORY_DOCS_HREF} target="_blank" rel="noopener noreferrer">
           <Icon size="sm" icon={ExternalLinkIcon} />
           Read the docs
-        </Button>
-      </a>
+        </a>
+      </Button>
     </div>
   )
 }
 
-/** Indent + bar width per faux filetree row; one row reads as the selected record. */
 const TREE_ROWS: readonly { readonly indent: string; readonly width: string; readonly selected?: boolean }[] = [
   { indent: "pl-2", width: "w-24" },
   { indent: "pl-8", width: "w-20", selected: true },
@@ -96,7 +84,6 @@ const TREE_ROWS: readonly { readonly indent: string; readonly width: string; rea
   { indent: "pl-2", width: "w-24" },
 ]
 
-/** Kind + bar width per faux unified-diff line. */
 const DIFF_ROWS: readonly { readonly kind: "context" | "add" | "remove"; readonly width: string }[] = [
   { kind: "context", width: "w-16" },
   { kind: "remove", width: "w-52" },
@@ -112,20 +99,20 @@ const DIFF_ROWS: readonly { readonly kind: "context" | "add" | "remove"; readonl
   { kind: "context", width: "w-16" },
 ]
 
-/** A static (non-pulsing) skeleton bar — this is a decorative preview, not loading. */
 function Shape({ className }: { readonly className?: string }) {
   return <Skeleton animate={false} className={className} />
 }
 
-/** Non-interactive skeleton of a populated store — the filetree beside a record diff. */
 function MemoryPreviewBackdrop() {
   return (
     <div aria-hidden className="pointer-events-none absolute inset-0 overflow-hidden">
       <div className="flex h-full flex-col">
-        <div className="flex h-14 shrink-0 items-center gap-2.5 border-b px-6">
-          <Shape className="h-4 w-4 rounded" />
-          <Shape className="h-4 w-40" />
-          <div className="ml-auto flex items-center gap-1.5">
+        <div className="flex h-14 shrink-0 items-center justify-between border-b px-6">
+          <div className="flex items-center gap-2.5">
+            <Shape className="h-4 w-4 rounded" />
+            <Shape className="h-4 w-40" />
+          </div>
+          <div className="flex items-center gap-1.5">
             <Shape className="h-5 w-5 rounded-full" />
             <Shape className="h-5 w-5 rounded-full" />
             <Shape className="h-5 w-5 rounded-full" />
@@ -140,7 +127,7 @@ function MemoryPreviewBackdrop() {
               {TREE_ROWS.map((row, i) => (
                 <div
                   key={`tree-${i}`}
-                  className={cn("flex h-7 items-center gap-2 rounded pr-2", row.indent, row.selected && "bg-accent")}
+                  className={cn("flex h-7 items-center gap-2 rounded pr-2", row.indent, { "bg-accent": row.selected })}
                 >
                   <Shape className="h-3.5 w-3.5 shrink-0 rounded" />
                   <Shape className={cn("h-3", row.width)} />
@@ -149,25 +136,26 @@ function MemoryPreviewBackdrop() {
             </div>
           </div>
           <div className="flex min-h-0 min-w-0 flex-1 flex-col">
-            <div className="flex h-11 shrink-0 items-center gap-2 border-b px-4">
-              <Shape className="h-3.5 w-3.5 rounded" />
-              <Shape className="h-3.5 w-28" />
-              <Shape className="h-4 w-10 rounded" />
-              <Shape className="ml-auto h-3 w-12" />
+            <div className="flex h-11 shrink-0 items-center justify-between border-b px-4">
+              <div className="flex items-center gap-2">
+                <Shape className="h-3.5 w-3.5 rounded" />
+                <Shape className="h-3.5 w-28" />
+                <Shape className="h-4 w-10 rounded" />
+              </div>
+              <Shape className="h-3 w-12" />
             </div>
             <div className="flex min-h-0 flex-1 flex-col p-3">
               {DIFF_ROWS.map((row, i) => (
                 <div
                   key={`diff-${i}`}
-                  className={cn(
-                    "flex h-[22px] items-center gap-2 px-1",
-                    row.kind === "add" && "bg-success/10",
-                    row.kind === "remove" && "bg-destructive/10",
-                  )}
+                  className={cn("flex h-[22px] items-center gap-2 px-1", {
+                    "bg-success/10": row.kind === "add",
+                    "bg-destructive/10": row.kind === "remove",
+                  })}
                 >
                   <Shape className="h-2.5 w-5 shrink-0" />
                   <Shape className="h-2.5 w-5 shrink-0" />
-                  <Shape className={cn("ml-1 h-3", row.width)} />
+                  <Shape className={cn("h-3", row.width)} />
                 </div>
               ))}
             </div>
