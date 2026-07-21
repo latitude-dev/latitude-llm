@@ -10,6 +10,7 @@ import {
   ScoreRepository,
   type SignalDimension,
   type SignalEscalationThresholdBucket,
+  type SignalWindowMetric,
 } from "@domain/scores"
 import {
   evaluationDraftSchema,
@@ -177,12 +178,32 @@ const signalRowMetricsInputSchema = z.object({
 
 export interface SignalRowMetricRecord {
   readonly occurrences: number
+  readonly firstSeenAt: string | null
+  readonly lastSeenAt: string | null
   readonly affectedSessionsPercent: number
   readonly trend: readonly ReturnType<typeof toSignalsBucketRecord>[]
 }
 
 export interface SignalRowMetricsRecord {
   readonly metricsBySignalId: Readonly<Record<string, SignalRowMetricRecord>>
+}
+
+export function toSignalRowMetricRecord({
+  metric,
+  totalSessions,
+  trend,
+}: {
+  readonly metric: SignalWindowMetric | undefined
+  readonly totalSessions: number
+  readonly trend: readonly ReturnType<typeof toSignalsBucketRecord>[]
+}): SignalRowMetricRecord {
+  return {
+    occurrences: metric?.occurrences ?? 0,
+    firstSeenAt: metric?.firstSeenAt.toISOString() ?? null,
+    lastSeenAt: metric?.lastSeenAt.toISOString() ?? null,
+    affectedSessionsPercent: !metric || totalSessions === 0 ? 0 : Math.min(metric.affectedSessions / totalSessions, 1),
+    trend,
+  }
 }
 
 const signalInputSchema = z.object({
@@ -510,16 +531,13 @@ export const getSignalRowMetrics = createServerFn({ method: "GET" })
               const metric = metricsBySignalId.get(signalId)
               return [
                 signalId,
-                {
-                  occurrences: metric?.occurrences ?? 0,
-                  affectedSessionsPercent:
-                    !metric || sessionCount.totalCount === 0
-                      ? 0
-                      : Math.min(metric.affectedSessions / sessionCount.totalCount, 1),
+                toSignalRowMetricRecord({
+                  metric,
+                  totalSessions: sessionCount.totalCount,
                   trend:
                     trendBySignalId.get(signalId) ??
                     fillBuckets({ scaffold: trendScaffold, buckets: [] }).map(toSignalsBucketRecord),
-                },
+                }),
               ]
             }),
           ),
