@@ -7,7 +7,9 @@ description: Watch how your agents' persistent memory evolves, with per-record h
 
 If your agents keep persistent memory, Latitude records every memory operation they run and treats each write like a commit. The **Memory** page shows the current contents of every store, the full history of each record, who read and wrote it, and a diff for every change, each one linked back to the session that caused it.
 
-{/* Media needed: the Memory page store detail, showing the record filetree, a record's current body, and the Record Activity panel */}
+<Frame>
+  <img src="/images/observability/memory-store-detail.png" alt="Memory store detail with the record filetree, a record's current body, and the Record Activity panel" />
+</Frame>
 
 <Note>
   Not emitting memory operations yet? See [Memory tracing](../telemetry/memory)
@@ -22,7 +24,9 @@ Memory operations arrive as ordinary spans through your existing tracing setup. 
 
 The **Memory** page lists every store, one row per store, with its record count, total tokens, when it was last updated and last read, the number of sessions that wrote to it, and the number of distinct users who accessed it.
 
-{/* Media needed: the Memory store list, showing one row per store with its columns */}
+<Frame>
+  <img src="/images/observability/memory-overview.png" alt="The Memory page listing every store with its record count, tokens, last updated and last read times, sessions, and users" />
+</Frame>
 
 Open a store to browse it like a repository. The left sidebar shows its records as a tree, with record ids split on `/` to form folders, the center pane shows the selected record's current body, rendered as JSON when it parses as JSON, and the header lists the users who accessed the store, each linking to their user page.
 
@@ -38,17 +42,31 @@ Below a record's content, the **Record Activity** panel shows everything that ha
 
 Selecting a change on the **Changes** tab swaps the content pane for a GitHub-style unified diff of that version against the previous one, with per-word highlighting and a `+added −removed` token summary. Arrow controls step to newer and older changes, and the selected change is shareable by URL, so you can link a teammate straight to the write that corrupted a record.
 
-{/* Media needed: a record change diff, showing the unified before/after view and the token summary */}
+<Frame>
+  <img src="/images/observability/memory-change-diff.png" alt="A memory record change shown as a unified diff with per-word highlighting and a token summary" />
+</Frame>
 
 ## Memory on traces and sessions
 
-Trace and session detail views include a **Memory** row summarizing the interaction's memory footprint: tokens read, added, and removed. Hovering it expands a per-record breakdown grouped by store. The added and removed numbers compare each record's body before and after the interaction, so a record written twice in the same session counts once, by its net change. A collapsible **Memory changes** section below lists the per-record diffs the interaction produced.
+Trace and session detail views include a **Memory** row summarizing the interaction's memory footprint: tokens read, added, and removed. Hovering it expands a per-record breakdown grouped by store. The added and removed numbers compare each record's body before and after the interaction, so a record written twice in the same session counts once, by its net change.
 
-{/* Media needed: the Memory summary row on a trace or session detail, with the hover breakdown expanded */}
+<Frame>
+  <img src="/images/observability/memory-summary.png" alt="The Memory footprint row on a session detail, showing tokens read, added, and removed" />
+</Frame>
+
+A collapsible **Memory changes** section below lists the per-record diffs the interaction produced, grouped by store.
+
+<Frame>
+  <img src="/images/observability/memory-changes.png" alt="The Memory changes panel on a session detail, showing per-record diffs grouped by store" />
+</Frame>
 
 ## Memory spans on the Spans tab
 
 Memory operations are first-class spans. They get their own color in the trace waterfall, a **Memory** filter on the Spans tab, and a detail panel showing the operation's store, query, and records. Search results include each record's relevance score. When content capture is off, the panel shows record ids and counts with a `Content not captured` note in place of the bodies.
+
+<Frame>
+  <img src="/images/observability/memory-span.png" alt="A search_memory span on the Spans tab, showing the query and the records it returned with relevance scores" />
+</Frame>
 
 ## Memory on user pages
 
