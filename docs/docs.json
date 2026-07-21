@@ -98,6 +98,7 @@
         "group": "Getting Started",
         "pages": [
           "telemetry/start-tracing",
+          "telemetry/memory",
           {
             "group": "SDKs",
             "pages": [
