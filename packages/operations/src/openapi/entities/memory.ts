@@ -8,6 +8,8 @@ import {
   type MemoryStoreUser,
   type RecordChangeDiff,
   type RecordHistory,
+  type SessionMemoryDiff,
+  type SessionMemorySummary,
 } from "@domain/memories"
 import { z } from "@hono/zod-openapi"
 import { Paginated } from "../pagination.ts"
@@ -284,5 +286,99 @@ export const toMemoryRecordUsersResponse = (users: readonly MemoryRecordUser[]) 
     readCount: user.readCount,
     writeCount: user.writeCount,
     lastAccessedAt: user.lastAccessedAt.toISOString(),
+  })),
+})
+
+const MemoryRecordSummarySchema = z
+  .object({
+    storeId: z.string().describe("Store the record belongs to."),
+    recordId: z.string().describe("Record the metrics are for."),
+    readTokens: z
+      .number()
+      .int()
+      .nonnegative()
+      .describe("Tokens read from this record across the session's retrievals."),
+    tokensAdded: z.number().int().nonnegative().describe("Tokens the session added to this record (endpoint diff)."),
+    tokensRemoved: z
+      .number()
+      .int()
+      .nonnegative()
+      .describe("Tokens the session removed from this record (endpoint diff)."),
+  })
+  .openapi("MemoryRecordSummary")
+
+export const SessionMemorySummarySchema = z
+  .object({
+    records: z
+      .array(MemoryRecordSummarySchema)
+      .describe("Per-record read/write token footprint for the session (or a single trace)."),
+    total: z
+      .object({
+        readTokens: z.number().int().nonnegative().describe("Total tokens read across the session."),
+        tokensAdded: z.number().int().nonnegative().describe("Total tokens added across the session."),
+        tokensRemoved: z.number().int().nonnegative().describe("Total tokens removed across the session."),
+        writeRecords: z
+          .number()
+          .int()
+          .nonnegative()
+          .describe("Number of records the session wrote, including zero-delta writes."),
+      })
+      .describe("Session-wide totals."),
+  })
+  .openapi("SessionMemorySummary")
+
+export const toSessionMemorySummaryResponse = (summary: SessionMemorySummary) => ({
+  records: summary.records.map((record) => ({
+    storeId: record.storeId,
+    recordId: record.recordId,
+    readTokens: record.readTokens,
+    tokensAdded: record.tokensAdded,
+    tokensRemoved: record.tokensRemoved,
+  })),
+  total: {
+    readTokens: summary.total.readTokens,
+    tokensAdded: summary.total.tokensAdded,
+    tokensRemoved: summary.total.tokensRemoved,
+    writeRecords: summary.total.writeRecords,
+  },
+})
+
+const SessionMemoryChangeSchema = z
+  .object({
+    storeId: z.string().describe("Store the changed record belongs to."),
+    recordId: z.string().describe("Record that changed."),
+    kind: z.enum(["added", "updated", "removed"]).describe("How the session changed the record."),
+    beforeBody: nullableString().describe(
+      "The record's body before the session's writes. `null` when added or when the prior body was not captured.",
+    ),
+    afterBody: nullableString().describe(
+      "The record's body after the session's writes. `null` when removed or when the body was not captured.",
+    ),
+    tokensAdded: z.number().int().nonnegative().describe("Tokens added by the session's writes."),
+    tokensRemoved: z.number().int().nonnegative().describe("Tokens removed by the session's writes."),
+    degraded: z.boolean().describe("`true` when a side's body was unavailable, so the diff is incomplete."),
+    lastChangeSpanId: nullableString().describe(
+      "Span of the session's last write to this record. `null` when unknown.",
+    ),
+  })
+  .openapi("SessionMemoryChange")
+
+export const SessionMemoryChangesSchema = z
+  .object({
+    records: z.array(SessionMemoryChangeSchema).describe("Per-record before/after diffs for what the session changed."),
+  })
+  .openapi("SessionMemoryChanges")
+
+export const toSessionMemoryChangesResponse = (diff: SessionMemoryDiff) => ({
+  records: diff.records.map((record) => ({
+    storeId: record.storeId,
+    recordId: record.recordId,
+    kind: record.kind,
+    beforeBody: record.beforeBody,
+    afterBody: record.afterBody,
+    tokensAdded: record.tokensAdded,
+    tokensRemoved: record.tokensRemoved,
+    degraded: record.degraded,
+    lastChangeSpanId: record.lastChangeSpanId,
   })),
 })

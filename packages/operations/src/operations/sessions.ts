@@ -1,3 +1,4 @@
+import { computeSessionMemoryDiffUseCase, computeSessionMemorySummaryUseCase } from "@domain/memories"
 import { ProjectRepository } from "@domain/projects"
 import {
   BadRequestError,
@@ -14,6 +15,7 @@ import { expandTopicFilterSetUseCase } from "@domain/taxonomy"
 import { createRoute, z } from "@hono/zod-openapi"
 import { AIEmbedLive, withAi } from "@platform/ai"
 import {
+  MemoryRepositoryLive,
   ScoreAnalyticsRepositoryLive,
   SessionRepositoryLive,
   SpanRepositoryLive,
@@ -31,6 +33,12 @@ import { withTracing } from "@repo/observability"
 import { Effect, Layer } from "effect"
 import { defineOperation } from "../core/define-operation.ts"
 import type { OperationModule } from "../core/mount.ts"
+import {
+  SessionMemoryChangesSchema,
+  SessionMemorySummarySchema,
+  toSessionMemoryChangesResponse,
+  toSessionMemorySummaryResponse,
+} from "../openapi/entities/memory.ts"
 import {
   decodeSessionCursor,
   encodeSessionCursor,
@@ -61,6 +69,7 @@ import {
   SESSION_FILTER_SET_DESCRIPTION,
   SessionFilterSetSchema,
   sessionIdSchema,
+  traceIdSchema,
   typedResponses,
 } from "../openapi/schemas.ts"
 import type { OrganizationScopedEnv } from "../types.ts"
@@ -486,7 +495,108 @@ const getSessionSignal = sessionEndpoint({
     ),
 })
 
+const SessionMemoryQuerySchema = z.object({
+  traceId: traceIdSchema
+    .optional()
+    .describe("Restrict the memory footprint to this trace of the session. Omit for the whole session."),
+})
+
+const getSessionMemory = sessionEndpoint({
+  route: createRoute({
+    method: "get",
+    path: "/{sessionId}/memory",
+    name: "getSessionMemory",
+    tags: ["Sessions"],
+    group: "sessions",
+    sdkMethod: "getMemory",
+    summary: "Get session memory footprint",
+    description:
+      "Returns the session's memory footprint: per-record read, added, and removed token metrics plus session-wide totals. Pass `traceId` to restrict the footprint to a single trace of the session.",
+    security: PROTECTED_SECURITY,
+    request: { params: SessionParamsSchema, query: SessionMemoryQuerySchema },
+    responses: typedResponses({
+      status: 200,
+      schema: SessionMemorySummarySchema,
+      description: "Session memory footprint",
+    }),
+  }),
+  access: "read-only",
+  rateLimitTier: "medium",
+  execute: (input, ctx) =>
+    Effect.gen(function* () {
+      const { projectSlug, sessionId } = input.params
+      const { traceId } = input.query
+
+      const projectRepo = yield* ProjectRepository
+      const project = yield* projectRepo.findBySlug(projectSlug)
+
+      const summary = yield* computeSessionMemorySummaryUseCase({
+        organizationId: OrganizationId(ctx.organization.id as string),
+        projectId: ProjectId(project.id as string),
+        sessionId: SessionId(sessionId),
+        ...(traceId ? { traceId: TraceId(traceId) } : {}),
+      })
+      return { status: 200, body: toSessionMemorySummaryResponse(summary) } as const
+    }).pipe(
+      withPostgres(ProjectRepositoryLive, ctx.postgresClient, ctx.organization.id),
+      withClickHouse(MemoryRepositoryLive, ctx.clickhouse, ctx.organization.id),
+      withTracing,
+    ),
+})
+
+const getSessionMemoryChanges = sessionEndpoint({
+  route: createRoute({
+    method: "get",
+    path: "/{sessionId}/memory/changes",
+    name: "getSessionMemoryChanges",
+    tags: ["Sessions"],
+    group: "sessions",
+    sdkMethod: "getMemoryChanges",
+    summary: "Get session memory changes",
+    description:
+      "Returns the memory writes the session made as per-record before/after diffs. Pass `traceId` to restrict to a single trace of the session.",
+    security: PROTECTED_SECURITY,
+    request: { params: SessionParamsSchema, query: SessionMemoryQuerySchema },
+    responses: typedResponses({
+      status: 200,
+      schema: SessionMemoryChangesSchema,
+      description: "Session memory changes",
+    }),
+  }),
+  access: "read-only",
+  rateLimitTier: "medium",
+  execute: (input, ctx) =>
+    Effect.gen(function* () {
+      const { projectSlug, sessionId } = input.params
+      const { traceId } = input.query
+
+      const projectRepo = yield* ProjectRepository
+      const project = yield* projectRepo.findBySlug(projectSlug)
+
+      const diff = yield* computeSessionMemoryDiffUseCase({
+        organizationId: OrganizationId(ctx.organization.id as string),
+        projectId: ProjectId(project.id as string),
+        sessionId: SessionId(sessionId),
+        ...(traceId ? { traceId: TraceId(traceId) } : {}),
+      })
+      return { status: 200, body: toSessionMemoryChangesResponse(diff) } as const
+    }).pipe(
+      withPostgres(ProjectRepositoryLive, ctx.postgresClient, ctx.organization.id),
+      withClickHouse(MemoryRepositoryLive, ctx.clickhouse, ctx.organization.id),
+      withTracing,
+    ),
+})
+
 export const sessionsModule: OperationModule = {
   path: sessionsPath,
-  operations: [listSessions, getSessionAnalytics, getSession, listSessionTraces, listSessionSignals, getSessionSignal],
+  operations: [
+    listSessions,
+    getSessionAnalytics,
+    getSession,
+    listSessionTraces,
+    listSessionSignals,
+    getSessionSignal,
+    getSessionMemory,
+    getSessionMemoryChanges,
+  ],
 }

@@ -12456,6 +12456,172 @@
           "traceIds"
         ]
       },
+      "SessionMemorySummary": {
+        "type": "object",
+        "properties": {
+          "records": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/MemoryRecordSummary"
+            },
+            "description": "Per-record read/write token footprint for the session (or a single trace)."
+          },
+          "total": {
+            "type": "object",
+            "properties": {
+              "readTokens": {
+                "type": "integer",
+                "minimum": 0,
+                "description": "Total tokens read across the session."
+              },
+              "tokensAdded": {
+                "type": "integer",
+                "minimum": 0,
+                "description": "Total tokens added across the session."
+              },
+              "tokensRemoved": {
+                "type": "integer",
+                "minimum": 0,
+                "description": "Total tokens removed across the session."
+              },
+              "writeRecords": {
+                "type": "integer",
+                "minimum": 0,
+                "description": "Number of records the session wrote, including zero-delta writes."
+              }
+            },
+            "required": [
+              "readTokens",
+              "tokensAdded",
+              "tokensRemoved",
+              "writeRecords"
+            ],
+            "description": "Session-wide totals."
+          }
+        },
+        "required": [
+          "records",
+          "total"
+        ]
+      },
+      "MemoryRecordSummary": {
+        "type": "object",
+        "properties": {
+          "storeId": {
+            "type": "string",
+            "description": "Store the record belongs to."
+          },
+          "recordId": {
+            "type": "string",
+            "description": "Record the metrics are for."
+          },
+          "readTokens": {
+            "type": "integer",
+            "minimum": 0,
+            "description": "Tokens read from this record across the session's retrievals."
+          },
+          "tokensAdded": {
+            "type": "integer",
+            "minimum": 0,
+            "description": "Tokens the session added to this record (endpoint diff)."
+          },
+          "tokensRemoved": {
+            "type": "integer",
+            "minimum": 0,
+            "description": "Tokens the session removed from this record (endpoint diff)."
+          }
+        },
+        "required": [
+          "storeId",
+          "recordId",
+          "readTokens",
+          "tokensAdded",
+          "tokensRemoved"
+        ]
+      },
+      "SessionMemoryChanges": {
+        "type": "object",
+        "properties": {
+          "records": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/SessionMemoryChange"
+            },
+            "description": "Per-record before/after diffs for what the session changed."
+          }
+        },
+        "required": [
+          "records"
+        ]
+      },
+      "SessionMemoryChange": {
+        "type": "object",
+        "properties": {
+          "storeId": {
+            "type": "string",
+            "description": "Store the changed record belongs to."
+          },
+          "recordId": {
+            "type": "string",
+            "description": "Record that changed."
+          },
+          "kind": {
+            "type": "string",
+            "enum": [
+              "added",
+              "updated",
+              "removed"
+            ],
+            "description": "How the session changed the record."
+          },
+          "beforeBody": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "The record's body before the session's writes. `null` when added or when the prior body was not captured."
+          },
+          "afterBody": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "The record's body after the session's writes. `null` when removed or when the body was not captured."
+          },
+          "tokensAdded": {
+            "type": "integer",
+            "minimum": 0,
+            "description": "Tokens added by the session's writes."
+          },
+          "tokensRemoved": {
+            "type": "integer",
+            "minimum": 0,
+            "description": "Tokens removed by the session's writes."
+          },
+          "degraded": {
+            "type": "boolean",
+            "description": "`true` when a side's body was unavailable, so the diff is incomplete."
+          },
+          "lastChangeSpanId": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "Span of the session's last write to this record. `null` when unknown."
+          }
+        },
+        "required": [
+          "storeId",
+          "recordId",
+          "kind",
+          "beforeBody",
+          "afterBody",
+          "tokensAdded",
+          "tokensRemoved",
+          "degraded",
+          "lastChangeSpanId"
+        ]
+      },
       "PaginatedMemoryStores": {
         "type": "object",
         "properties": {
@@ -22580,6 +22746,194 @@
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/SessionSignal"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Validation error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/projects/{projectSlug}/sessions/{sessionId}/memory": {
+      "get": {
+        "tags": [
+          "Sessions"
+        ],
+        "x-fern-sdk-group-name": "sessions",
+        "x-fern-sdk-method-name": "getMemory",
+        "summary": "Get session memory footprint",
+        "description": "Returns the session's memory footprint: per-record read, added, and removed token metrics plus session-wide totals. Pass `traceId` to restrict the footprint to a single trace of the session.",
+        "security": [
+          {
+            "ApiKeyAuth": []
+          }
+        ],
+        "operationId": "getSessionMemory",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "description": "Project slug (human-readable identifier)"
+            },
+            "required": true,
+            "description": "Project slug (human-readable identifier)",
+            "name": "projectSlug",
+            "in": "path"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "maxLength": 128,
+              "description": "Session identifier lifted from instrumentation. Up to 128 characters."
+            },
+            "required": true,
+            "description": "Session identifier lifted from instrumentation. Up to 128 characters.",
+            "name": "sessionId",
+            "in": "path"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "minLength": 32,
+              "maxLength": 32,
+              "description": "Restrict the memory footprint to this trace of the session. Omit for the whole session."
+            },
+            "required": false,
+            "description": "Restrict the memory footprint to this trace of the session. Omit for the whole session.",
+            "name": "traceId",
+            "in": "query"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Session memory footprint",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SessionMemorySummary"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Validation error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/projects/{projectSlug}/sessions/{sessionId}/memory/changes": {
+      "get": {
+        "tags": [
+          "Sessions"
+        ],
+        "x-fern-sdk-group-name": "sessions",
+        "x-fern-sdk-method-name": "getMemoryChanges",
+        "summary": "Get session memory changes",
+        "description": "Returns the memory writes the session made as per-record before/after diffs. Pass `traceId` to restrict to a single trace of the session.",
+        "security": [
+          {
+            "ApiKeyAuth": []
+          }
+        ],
+        "operationId": "getSessionMemoryChanges",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "description": "Project slug (human-readable identifier)"
+            },
+            "required": true,
+            "description": "Project slug (human-readable identifier)",
+            "name": "projectSlug",
+            "in": "path"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "maxLength": 128,
+              "description": "Session identifier lifted from instrumentation. Up to 128 characters."
+            },
+            "required": true,
+            "description": "Session identifier lifted from instrumentation. Up to 128 characters.",
+            "name": "sessionId",
+            "in": "path"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "minLength": 32,
+              "maxLength": 32,
+              "description": "Restrict the memory footprint to this trace of the session. Omit for the whole session."
+            },
+            "required": false,
+            "description": "Restrict the memory footprint to this trace of the session. Omit for the whole session.",
+            "name": "traceId",
+            "in": "query"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Session memory changes",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SessionMemoryChanges"
                 }
               }
             }
