@@ -31,11 +31,8 @@ const GENAI_OPERATION: Record<string, Operation> = {
   rerank: "reranker",
 }
 
-// Bare ai.generateText/streamText/generateObject/streamObject wrappers carry a lossy
-// summary (no tool results); the per-leaf .doGenerate/.doStream `chat` turns hold the real
-// conversation. A wrapper nested under an agent is one step of that agent (agent_step), kept
-// out of the rollup and off the agent graph; only a trace-root wrapper stands alone as the
-// agent itself (invoke_agent, applied in resolveOperation).
+// Vercel wrappers duplicate their leaves' usage; agent_step keeps them out of the rollup,
+// while a trace-root wrapper is the agent itself (invoke_agent, in resolveOperation).
 const VERCEL_OPERATION: Record<string, Operation> = {
   "ai.generateText": "agent_step",
   "ai.generateText.doGenerate": "chat",

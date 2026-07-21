@@ -415,13 +415,10 @@ describe("resolveAttributes", () => {
 
     it("maps Vercel operation IDs (nested wrappers → agent_step, leaves → chat)", () => {
       const cases: [string, string][] = [
-        // Nested wrappers carry a lossy summary and are one step of the agent —
-        // classified agent_step so the rollup excludes them.
         ["ai.generateText", "agent_step"],
         ["ai.streamText", "agent_step"],
         ["ai.generateObject", "agent_step"],
         ["ai.streamObject", "agent_step"],
-        // Leaves hold the faithful per-call exchange.
         ["ai.generateText.doGenerate", "chat"],
         ["ai.streamText.doStream", "chat"],
         ["ai.generateObject.doGenerate", "chat"],

@@ -583,10 +583,6 @@ describe("TravelPlanner trace — Vercel AI SDK", () => {
     })
 
     it("resolves nested generateText/streamText wrappers to 'agent_step' and inner leaves to 'chat'", () => {
-      // The bare `ai.generateText` / `ai.streamText` wrappers carry a lossy
-      // summary; nested under an agent they are one step of it (`agent_step`),
-      // excluded from the conversation/usage rollup and off the agent graph. The
-      // inner `.doGenerate` / `.doStream` leaves hold the real turn.
       expect(findSpan("llm1Outer").operation).toBe("agent_step")
       expect(findSpan("llm2Outer").operation).toBe("agent_step")
       expect(findSpan("llm1Inner").operation).toBe("chat")
