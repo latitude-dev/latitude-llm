@@ -2,6 +2,12 @@
 
 ## Unreleased
 
+## v0.3.60 - 2026-07-21
+
+### API
+
+- Added a `sessions` endpoint group mirroring `traces`, mounted under `/v1/projects/{projectSlug}/sessions`: list sessions (filters + semantic query, cursor-paginated), session analytics (per-metric totals/medians with a 12h bucket series), session detail, the session's traces, and session-scoped signals (list and by-slug). Session `filters` match the web session UI via a new `SessionFilterSet` that adds the session-only `moments`/`topics` fields with taxonomy topic-subtree expansion. Exposed across HTTP, MCP, and the TypeScript/Python SDKs (9.4.0) and CLI (7.4.0) (ref: #4133).
+
 ## v0.3.59 - 2026-07-20
 
 ### Memory observability
