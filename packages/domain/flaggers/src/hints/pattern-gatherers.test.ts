@@ -60,6 +60,25 @@ describe("frustrationPatternGatherer", () => {
     )
   })
 
+  it("does not fire on domain/metric complaints that only look lexically negative", async () => {
+    for (const message of [
+      "This volume is ridiculous.",
+      "The lead quality is terrible.",
+      "Our CPA is awful right now.",
+      "Google Ads is broken for franchise leads.",
+    ]) {
+      expect(await runGatherer(frustrationPatternGatherer, ctx([user(message)]))).toEqual([])
+    }
+  })
+
+  it("still fires when the negative predicate targets the assistant turn", async () => {
+    for (const message of ["This is ridiculous.", "That answer is useless.", "Your suggestion is terrible."]) {
+      const hints = await runGatherer(frustrationPatternGatherer, ctx([user(message)]))
+      expect(hints).toHaveLength(1)
+      expect(hints[0]?.kind).toBe("pattern:frustration")
+    }
+  })
+
   it("does not fire on all-caps log pastes (no frustration lexical signal)", async () => {
     expect(
       await runGatherer(frustrationPatternGatherer, ctx([user("ERROR: UNAUTHORIZED — what does that mean?")])),

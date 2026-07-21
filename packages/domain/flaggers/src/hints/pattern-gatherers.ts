@@ -28,10 +28,12 @@ const FRUSTRATION_USER_PATTERNS: readonly RegExp[] = [
   /\bfor the (?:second|third|fourth|fifth|nth|last) time\b/i,
   /\bi (?:keep|have to keep) (?:telling|saying|asking|repeating)\b/i,
 
-  // Direct dissatisfaction with the assistant's output.
-  // Two shapes: "X is/are/was useless" (linking verb) and "X's useless" (contraction).
-  /\b(?:is|are|was|were)\s+(?:useless|garbage|broken|terrible|awful|ridiculous|pointless|worthless)\b/i,
+  // Direct dissatisfaction with the assistant's output. Constrain the subject so
+  // domain complaints ("this volume is ridiculous", "the API is broken") do not
+  // raise a hint — the LLM still judges target of frustration when other hints fire.
+  /\b(?:this|that|it)\s+(?:is|are|was|were)\s+(?:useless|garbage|broken|terrible|awful|ridiculous|pointless|worthless)\b/i,
   /\b(?:you|this|that|it)'?s\s+(?:useless|garbage|broken|terrible|awful|ridiculous|pointless|worthless)\b/i,
+  /\b(?:the )?(?:answer|response|output|suggestion|advice|result)\s+(?:is|are|was|were)\s+(?:useless|garbage|broken|terrible|awful|ridiculous|pointless|worthless)\b/i,
   /\byou'?re\s+(?:not (?:listening|reading|helping|understanding)|making (?:things|this) up|hallucinating|guessing)\b/i,
   /\bstop (?:hallucinating|guessing|making (?:things|stuff) up)\b/i,
 

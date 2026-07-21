@@ -1054,6 +1054,8 @@ ${"Detailed grounding, workflow, callout, and formatting rules. ".repeat(120)}`.
     expect(calls.generate).toHaveLength(2)
     expect(calls.generate[0].system).toContain("USER'S OWN WORDING")
     expect(calls.generate[0].system).toContain("Judge only the user-authored messages")
+    expect(calls.generate[0].system).toContain("target of the frustration must be the assistant")
+    expect(calls.generate[0].system).toContain("Lead volume/quality")
     expect(calls.generate[0].prompt).toContain("USER MESSAGES")
     expect(calls.generate[0].prompt).toContain("This still isn't working")
     expect(calls.generate[0].prompt).toContain("You're not listening")
@@ -1070,6 +1072,9 @@ ${"Detailed grounding, workflow, callout, and formatting rules. ".repeat(120)}`.
     // The annotation reviewer must likewise drop the assistant-only clause.
     expect(calls.generate[1].system).not.toContain(
       "Approve only when the proposed annotation describes a problem in the evaluated agent's own assistant response",
+    )
+    expect(calls.generate[1].system).toContain(
+      "Reject when the evidence is only dissatisfaction with an external factor",
     )
   })
 

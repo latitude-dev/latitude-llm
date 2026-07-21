@@ -23,7 +23,7 @@ export const FLAGGER_DISPLAY: Record<FlaggerSlug, FlaggerDisplay> = {
     name: "Frustration",
     description: "The conversation shows clear user frustration or dissatisfaction",
     instructions:
-      "Use this flagger when the user expresses annoyance, disappointment, repeated dissatisfaction, loss of trust, or has to restate/correct themselves because the assistant is not helping. Do not use it for neutral clarifications or isolated terse replies without real evidence of frustration.",
+      "Use this flagger when the user expresses annoyance, disappointment, repeated dissatisfaction, loss of trust, or has to restate/correct themselves because the assistant is not helping. Do not use it for neutral clarifications, isolated terse replies, or frustration aimed at external factors (campaigns, ads platforms, business metrics, third-party tools, the user's own code/manager) rather than the assistant.",
     mode: "llm",
     suppressedBy: [],
   },
