@@ -10,6 +10,7 @@ import { getFlaggerStrategy, isLlmCapableStrategy } from "../flagger-strategies/
 import type { FlaggerSlug } from "../flagger-strategies/types.ts"
 import type { SessionHint } from "../hints/types.ts"
 import { FlaggerRepository } from "../ports/flagger-repository.ts"
+import { isUserCentricReflagInapplicable } from "../reflag.ts"
 import { classifyConversationForFlaggerUseCase } from "./run-flagger.ts"
 
 export interface ClassifySessionFlaggerInput {
@@ -101,6 +102,14 @@ export const classifySessionFlaggerUseCase = Effect.fn("flaggers.classifySession
     ),
   )
   if (context === null) {
+    return { matched: false } satisfies ClassifySessionFlaggerResult
+  }
+
+  if (
+    isUserCentricReflagInapplicable(context.conversation.tags, strategy.classifiesAssistantResponseOnly) ||
+    !strategy.hasRequiredContext(context.conversation)
+  ) {
+    yield* Effect.annotateCurrentSpan("flagger.skipped", "missing-context")
     return { matched: false } satisfies ClassifySessionFlaggerResult
   }
 

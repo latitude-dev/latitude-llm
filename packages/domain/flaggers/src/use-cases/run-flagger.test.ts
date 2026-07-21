@@ -1071,6 +1071,11 @@ ${"Detailed grounding, workflow, callout, and formatting rules. ".repeat(120)}`.
     expect(calls.generate[1].system).not.toContain(
       "Approve only when the proposed annotation describes a problem in the evaluated agent's own assistant response",
     )
+    // Nested-content rejection still applies so quoted corrections in supplied
+    // evaluation evidence are not approved as frustration of the evaluated agent.
+    expect(calls.generate[1].system).toContain(
+      "Reject annotations whose evidence is only nested transcripts, examples, quoted instructions",
+    )
   })
 
   it("does not call the LLM flagger for frustration when there are no user messages", async () => {

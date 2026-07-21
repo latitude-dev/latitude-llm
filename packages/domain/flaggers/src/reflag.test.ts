@@ -1,6 +1,11 @@
 import { AI_GENERATE_TELEMETRY_TAGS } from "@domain/ai"
 import { describe, expect, it } from "vitest"
-import { isFlaggerGeneratedTrace, isReflagSuppressed, reflagSuppressionTags } from "./reflag.ts"
+import {
+  isFlaggerGeneratedTrace,
+  isReflagSuppressed,
+  isUserCentricReflagInapplicable,
+  reflagSuppressionTags,
+} from "./reflag.ts"
 
 const CLASSIFY = AI_GENERATE_TELEMETRY_TAGS.flaggerClassify[0]
 const DRAFT = AI_GENERATE_TELEMETRY_TAGS.flaggerDraft[0]
@@ -48,5 +53,22 @@ describe("reflagSuppressionTags", () => {
     const levelTwoTags = [CLASSIFY, ...reflagSuppressionTags([CLASSIFY])]
     // Level 2: must not be flagged again.
     expect(isReflagSuppressed(levelTwoTags)).toBe(true)
+  })
+})
+
+describe("isUserCentricReflagInapplicable", () => {
+  it("skips user-centric strategies on flagger.classify / flagger.draft traces", () => {
+    expect(isUserCentricReflagInapplicable([CLASSIFY], false)).toBe(true)
+    expect(isUserCentricReflagInapplicable([DRAFT], false)).toBe(true)
+  })
+
+  it("still allows assistant-response-centric strategies on flagger-generated traces", () => {
+    expect(isUserCentricReflagInapplicable([CLASSIFY], true)).toBe(false)
+    expect(isUserCentricReflagInapplicable([CLASSIFY], undefined)).toBe(false)
+  })
+
+  it("does not skip user-centric strategies on ordinary production traces", () => {
+    expect(isUserCentricReflagInapplicable([], false)).toBe(false)
+    expect(isUserCentricReflagInapplicable(["live"], false)).toBe(false)
   })
 })

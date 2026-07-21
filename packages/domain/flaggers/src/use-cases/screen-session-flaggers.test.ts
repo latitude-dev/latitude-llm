@@ -174,6 +174,53 @@ describe("screenSessionFlaggersUseCase", () => {
     expect(result.classifications).toEqual([])
   })
 
+  it("drops user-centric strategies on a flagger.classify reflag session (nested evidence is not a real user)", async () => {
+    const nestedEvidence = [
+      "EVALUATED AGENT CONTEXT:",
+      "<evaluated_trace_evidence>",
+      "USER MESSAGES:",
+      "Okay, all poses are stored in the asanas folder. Now make sure you run the model through all the poses, and for each pose, as I already asked you previously, how to get into the pose.",
+      "Okay, all poses are stored in the asanas folder. Now make sure you run the model through all the poses, and for each pose, as I already asked you previously, how to get into the pose.",
+      "</evaluated_trace_evidence>",
+    ].join("\n")
+    const session = makeSessionDetail(
+      [
+        user(nestedEvidence),
+        assistant('{"matched":true,"feedback":"user repeated prior instruction","messageIndex":"2"}'),
+      ],
+      { tags: [...AI_GENERATE_TELEMETRY_TAGS.flaggerClassify] },
+    )
+    const { result, scores } = await runScreening({
+      session,
+      flaggers: [makeFlagger("frustration", 100), makeFlagger("jailbreaking", 100), makeFlagger("laziness", 100)],
+      momentLabels: [makeMomentLabel("user_frustration"), makeMomentLabel("stalling")],
+      analyses: [analyzedAnalysis()],
+      deps: fakeDeps.deps,
+    })
+
+    expect(decisionFor(result.decisions, "frustration")).toEqual({
+      slug: "frustration",
+      action: "dropped",
+      reason: "missing-context",
+    })
+    expect(decisionFor(result.decisions, "jailbreaking")).toEqual({
+      slug: "jailbreaking",
+      action: "dropped",
+      reason: "missing-context",
+    })
+    // Assistant-response-centric strategies still screen — bad classifications are the point of reflag.
+    expect(decisionFor(result.decisions, "laziness")).toEqual({
+      slug: "laziness",
+      action: "classify",
+      reason: "hinted",
+      hintKinds: ["moment:stalling"],
+    })
+    expect(result.classifications.some((c) => c.flaggerSlug === "frustration")).toBe(false)
+    expect(result.classifications.some((c) => c.flaggerSlug === "jailbreaking")).toBe(false)
+    expect(result.classifications.some((c) => c.flaggerSlug === "laziness")).toBe(true)
+    expect(scores.size).toBe(0)
+  })
+
   it("skips entirely for a no-reflag session, even on a deterministic match (recursion break)", async () => {
     const session = makeSessionDetail([user("Please help."), assistant("")], {
       tags: [...AI_GENERATE_TELEMETRY_TAGS.flaggerClassify, ...AI_GENERATE_TELEMETRY_TAGS.flaggerNoReflag],

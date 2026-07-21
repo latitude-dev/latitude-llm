@@ -95,7 +95,12 @@ export {
   type UpdateFlaggerEnabledForProjectInput,
   type UpdateFlaggerInput as RepositoryUpdateFlaggerInput,
 } from "./ports/flagger-repository.ts"
-export { isFlaggerGeneratedTrace, isReflagSuppressed, reflagSuppressionTags } from "./reflag.ts"
+export {
+  isFlaggerGeneratedTrace,
+  isReflagSuppressed,
+  isUserCentricReflagInapplicable,
+  reflagSuppressionTags,
+} from "./reflag.ts"
 export {
   type ClassifySessionFlaggerInput,
   type ClassifySessionFlaggerResult,
