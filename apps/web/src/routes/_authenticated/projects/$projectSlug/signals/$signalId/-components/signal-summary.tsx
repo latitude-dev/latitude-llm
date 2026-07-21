@@ -173,7 +173,7 @@ export function SignalSummary({ projectId, signalId }: { readonly projectId: str
           signalOrigin={issue?.origin ?? "system"}
           evaluations={issue?.evaluations ?? []}
           flaggerSlugs={issue?.flaggerSlugs ?? []}
-          canMonitorSignal={issue ? issue.mutedAt === null : false}
+          canMonitorSignal={issue ? issue.resolvedAt === null && issue.ignoredAt === null : false}
           isSignalLoading={isLoading}
         />
       </div>

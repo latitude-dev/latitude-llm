@@ -127,6 +127,9 @@ const toSignalRecord = (issue: SignalListItem) => ({
   priority: issue.priority,
   createdAt: issue.createdAt.toISOString(),
   updatedAt: issue.updatedAt.toISOString(),
+  resolvedAt: issue.resolvedAt?.toISOString() ?? null,
+  ignoredAt: issue.ignoredAt?.toISOString() ?? null,
+  regressedAt: issue.regressedAt?.toISOString() ?? null,
   mutedAt: issue.mutedAt?.toISOString() ?? null,
   firstSeenAt: issue.firstSeenAt.toISOString(),
   lastSeenAt: issue.lastSeenAt.toISOString(),
@@ -198,6 +201,8 @@ const toSignalSummaryRecord = (issue: Signal) => ({
   source: issue.source,
   createdAt: issue.createdAt.toISOString(),
   updatedAt: issue.updatedAt.toISOString(),
+  resolvedAt: issue.resolvedAt?.toISOString() ?? null,
+  ignoredAt: issue.ignoredAt?.toISOString() ?? null,
   mutedAt: issue.mutedAt?.toISOString() ?? null,
 })
 
@@ -303,6 +308,9 @@ const toSignalDetailRecord = (input: {
   states: input.states,
   createdAt: input.issue.createdAt.toISOString(),
   updatedAt: input.issue.updatedAt.toISOString(),
+  resolvedAt: input.issue.resolvedAt?.toISOString() ?? null,
+  ignoredAt: input.issue.ignoredAt?.toISOString() ?? null,
+  regressedAt: input.issue.regressedAt?.toISOString() ?? null,
   mutedAt: input.issue.mutedAt?.toISOString() ?? null,
   firstSeenAt: input.firstSeenAt?.toISOString() ?? null,
   lastSeenAt: input.lastSeenAt?.toISOString() ?? null,
@@ -331,6 +339,9 @@ const toSignalLifecycleCommandRecord = (result: ApplySignalLifecycleCommandResul
   keepMonitoring: result.keepMonitoring,
   items: result.items.map((item) => ({
     signalId: item.signalId,
+    resolvedAt: item.resolvedAt?.toISOString() ?? null,
+    ignoredAt: item.ignoredAt?.toISOString() ?? null,
+    regressedAt: item.regressedAt?.toISOString() ?? null,
     mutedAt: item.mutedAt?.toISOString() ?? null,
     updatedAt: item.updatedAt.toISOString(),
     changed: item.changed,
@@ -1219,7 +1230,7 @@ export const applyBulkSignalLifecycleAction = createServerFn({ method: "POST" })
     if (signalIds.length === 0) {
       return {
         command: data.command,
-        keepMonitoring: true,
+        keepMonitoring: null,
         items: [],
       }
     }

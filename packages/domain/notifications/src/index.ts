@@ -16,6 +16,7 @@ export type {
   NotificationKind,
   SignalAssignedPayload,
   SignalDiscoveredPayload,
+  SignalRegressedPayload,
   WrappedReportPayload,
 } from "./entities/notification.ts"
 export {
@@ -38,6 +39,7 @@ export {
   payloadSchemaFor,
   signalAssignedPayloadSchema,
   signalDiscoveredPayloadSchema,
+  signalRegressedPayloadSchema,
   wrappedReportPayloadSchema,
 } from "./entities/notification.ts"
 export { shouldSendEmail } from "./entities/notification-preferences.ts"
@@ -121,6 +123,13 @@ export type {
   SignalDiscoveredNotificationRequest,
 } from "./use-cases/request-signal-discovered-notifications.ts"
 export { requestSignalDiscoveredNotificationsUseCase } from "./use-cases/request-signal-discovered-notifications.ts"
+export type {
+  RequestSignalRegressedNotificationsError,
+  RequestSignalRegressedNotificationsInput,
+  RequestSignalRegressedNotificationsResult,
+  SignalRegressedNotificationRequest,
+} from "./use-cases/request-signal-regressed-notifications.ts"
+export { requestSignalRegressedNotificationsUseCase } from "./use-cases/request-signal-regressed-notifications.ts"
 export type {
   RequestWrappedReportNotificationsError,
   RequestWrappedReportNotificationsInput,

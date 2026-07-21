@@ -104,6 +104,8 @@ function runCollect(exampleRepository: EvaluationAlignmentExamplesRepositoryShap
     projectId: PROJECT_ID as string,
     name: "Signal",
     description: "Desc",
+    resolvedAt: null,
+    ignoredAt: null,
   }
 
   const { repository: traceRepository } = createFakeTraceRepository({
@@ -121,6 +123,7 @@ function runCollect(exampleRepository: EvaluationAlignmentExamplesRepositoryShap
         Layer.mergeAll(
           Layer.succeed(EvaluationSignalRepository, {
             findById: () => Effect.succeed(issue),
+            claimReopenOnOccurrence: () => Effect.succeed(false),
           }),
           Layer.succeed(EvaluationAlignmentExamplesRepository, exampleRepository),
           Layer.succeed(TraceRepository, traceRepository),

@@ -124,6 +124,8 @@ export const SEED_WARRANTY_ARCHIVED_EVALUATION_HASH = "bb11cc22dd33ee44ff55aa66b
 export const SEED_COMBINATION_EVALUATION_HASH = "cc11dd22ee33ff44aa55bb66cc77dd88ee99ff00"
 export const SEED_RETURNS_EVALUATION_HASH = "dd11ee22ff33aa44bb55cc66dd77ee88ff99aa00"
 export const SEED_ACCESS_EVALUATION_HASH = "ee11ff22aa33bb44cc55dd66ee77ff88aa99bb00"
+export const SEED_GROUNDING_EVALUATION_HASH = "ff11aa22bb33cc44dd55ee66ff77aa88bb99cc00"
+export const SEED_RECALL_EVALUATION_HASH = "ab12cd34ef56ab78cd90ef12ab34cd56ef78ab90"
 
 // ---------------------------------------------------------------------------
 // Simulations

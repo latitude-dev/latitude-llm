@@ -3747,7 +3747,7 @@ client.signals.list(
 <dl>
 <dd>
 
-**lifecycle_group:** `typing.Optional[ListSignalsRequestLifecycleGroup]` — `"active"` for unmuted signals; `"archived"` for muted signals. Omit to include both.
+**lifecycle_group:** `typing.Optional[ListSignalsRequestLifecycleGroup]` — `"active"` for signals that are neither resolved nor ignored; `"archived"` for resolved or ignored signals. Omit to include both.
     
 </dd>
 </dl>
@@ -4475,6 +4475,350 @@ client.signals.list_traces(
 </dl>
 </details>
 
+<details><summary><code>client.signals.<a href="src/latitude_sdk/signals/client.py">resolve</a>(...) -> SignalsLifecycleResponse</code></summary>
+<dl>
+<dd>
+
+#### 📝 Description
+
+<dl>
+<dd>
+
+<dl>
+<dd>
+
+Marks each signal in `signalIds` as resolved, archiving it and re-enabling its notifications. Unless `keepMonitoring` is `false`, linked evaluations keep running so a new occurrence reopens the signal as regressed.
+</dd>
+</dl>
+</dd>
+</dl>
+
+#### 🔌 Usage
+
+<dl>
+<dd>
+
+<dl>
+<dd>
+
+```python
+from latitude_sdk import LatitudeClient
+from latitude_sdk.environment import LatitudeClientEnvironment
+
+client = LatitudeClient(
+    api_key="<token>",
+    environment=LatitudeClientEnvironment.PRODUCTION,
+)
+
+client.signals.resolve(
+    project_slug="projectSlug",
+    signal_ids=[
+        "signalIds"
+    ],
+)
+
+```
+</dd>
+</dl>
+</dd>
+</dl>
+
+#### ⚙️ Parameters
+
+<dl>
+<dd>
+
+<dl>
+<dd>
+
+**project_slug:** `str` — Project slug (human-readable identifier)
+    
+</dd>
+</dl>
+
+<dl>
+<dd>
+
+**signal_ids:** `typing.List[str]` — Non-empty list of signal ids. Operations are idempotent — already-applied signals are unchanged.
+    
+</dd>
+</dl>
+
+<dl>
+<dd>
+
+**keep_monitoring:** `typing.Optional[bool]` — Whether linked evaluations keep running after the resolve, so regressions are detected. Defaults to the project setting.
+    
+</dd>
+</dl>
+
+<dl>
+<dd>
+
+**request_options:** `typing.Optional[RequestOptions]` — Request-specific configuration.
+    
+</dd>
+</dl>
+</dd>
+</dl>
+
+
+</dd>
+</dl>
+</details>
+
+<details><summary><code>client.signals.<a href="src/latitude_sdk/signals/client.py">unresolve</a>(...) -> SignalsLifecycleResponse</code></summary>
+<dl>
+<dd>
+
+#### 📝 Description
+
+<dl>
+<dd>
+
+<dl>
+<dd>
+
+Reopens each signal in `signalIds` without marking it as regressed, re-enabling its notifications.
+</dd>
+</dl>
+</dd>
+</dl>
+
+#### 🔌 Usage
+
+<dl>
+<dd>
+
+<dl>
+<dd>
+
+```python
+from latitude_sdk import LatitudeClient
+from latitude_sdk.environment import LatitudeClientEnvironment
+
+client = LatitudeClient(
+    api_key="<token>",
+    environment=LatitudeClientEnvironment.PRODUCTION,
+)
+
+client.signals.unresolve(
+    project_slug="projectSlug",
+    signal_ids=[
+        "signalIds"
+    ],
+)
+
+```
+</dd>
+</dl>
+</dd>
+</dl>
+
+#### ⚙️ Parameters
+
+<dl>
+<dd>
+
+<dl>
+<dd>
+
+**project_slug:** `str` — Project slug (human-readable identifier)
+    
+</dd>
+</dl>
+
+<dl>
+<dd>
+
+**request:** `SignalsLifecycleBody` 
+    
+</dd>
+</dl>
+
+<dl>
+<dd>
+
+**request_options:** `typing.Optional[RequestOptions]` — Request-specific configuration.
+    
+</dd>
+</dl>
+</dd>
+</dl>
+
+
+</dd>
+</dl>
+</details>
+
+<details><summary><code>client.signals.<a href="src/latitude_sdk/signals/client.py">ignore</a>(...) -> SignalsLifecycleResponse</code></summary>
+<dl>
+<dd>
+
+#### 📝 Description
+
+<dl>
+<dd>
+
+<dl>
+<dd>
+
+Marks each signal in `signalIds` as ignored, archiving it. Monitoring is stopped and notifications are also muted.
+</dd>
+</dl>
+</dd>
+</dl>
+
+#### 🔌 Usage
+
+<dl>
+<dd>
+
+<dl>
+<dd>
+
+```python
+from latitude_sdk import LatitudeClient
+from latitude_sdk.environment import LatitudeClientEnvironment
+
+client = LatitudeClient(
+    api_key="<token>",
+    environment=LatitudeClientEnvironment.PRODUCTION,
+)
+
+client.signals.ignore(
+    project_slug="projectSlug",
+    signal_ids=[
+        "signalIds"
+    ],
+)
+
+```
+</dd>
+</dl>
+</dd>
+</dl>
+
+#### ⚙️ Parameters
+
+<dl>
+<dd>
+
+<dl>
+<dd>
+
+**project_slug:** `str` — Project slug (human-readable identifier)
+    
+</dd>
+</dl>
+
+<dl>
+<dd>
+
+**request:** `SignalsLifecycleBody` 
+    
+</dd>
+</dl>
+
+<dl>
+<dd>
+
+**request_options:** `typing.Optional[RequestOptions]` — Request-specific configuration.
+    
+</dd>
+</dl>
+</dd>
+</dl>
+
+
+</dd>
+</dl>
+</details>
+
+<details><summary><code>client.signals.<a href="src/latitude_sdk/signals/client.py">unignore</a>(...) -> SignalsLifecycleResponse</code></summary>
+<dl>
+<dd>
+
+#### 📝 Description
+
+<dl>
+<dd>
+
+<dl>
+<dd>
+
+Returns each signal in `signalIds` to the active list and re-enables its notifications.
+</dd>
+</dl>
+</dd>
+</dl>
+
+#### 🔌 Usage
+
+<dl>
+<dd>
+
+<dl>
+<dd>
+
+```python
+from latitude_sdk import LatitudeClient
+from latitude_sdk.environment import LatitudeClientEnvironment
+
+client = LatitudeClient(
+    api_key="<token>",
+    environment=LatitudeClientEnvironment.PRODUCTION,
+)
+
+client.signals.unignore(
+    project_slug="projectSlug",
+    signal_ids=[
+        "signalIds"
+    ],
+)
+
+```
+</dd>
+</dl>
+</dd>
+</dl>
+
+#### ⚙️ Parameters
+
+<dl>
+<dd>
+
+<dl>
+<dd>
+
+**project_slug:** `str` — Project slug (human-readable identifier)
+    
+</dd>
+</dl>
+
+<dl>
+<dd>
+
+**request:** `SignalsLifecycleBody` 
+    
+</dd>
+</dl>
+
+<dl>
+<dd>
+
+**request_options:** `typing.Optional[RequestOptions]` — Request-specific configuration.
+    
+</dd>
+</dl>
+</dd>
+</dl>
+
+
+</dd>
+</dl>
+</details>
+
 <details><summary><code>client.signals.<a href="src/latitude_sdk/signals/client.py">mute</a>(...) -> SignalsLifecycleResponse</code></summary>
 <dl>
 <dd>
@@ -4487,7 +4831,7 @@ client.signals.list_traces(
 <dl>
 <dd>
 
-Mutes each signal in `signalIds`.
+Silences notifications for each signal in `signalIds`. Muted signals keep tracking occurrences and opening incidents; only notifications stop.
 </dd>
 </dl>
 </dd>
@@ -4571,7 +4915,7 @@ client.signals.mute(
 <dl>
 <dd>
 
-Reverts each signal in `signalIds` to an unmuted state.
+Re-enables notifications for each signal in `signalIds`.
 </dd>
 </dl>
 </dd>

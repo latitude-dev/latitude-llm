@@ -75,7 +75,7 @@ class SignalsClient:
             Free-text semantic search across the signals' names and descriptions.
 
         lifecycle_group : typing.Optional[ListSignalsRequestLifecycleGroup]
-            `"active"` for unmuted signals; `"archived"` for muted signals. Omit to include both.
+            `"active"` for signals that are neither resolved nor ignored; `"archived"` for resolved or ignored signals. Omit to include both.
 
         sort_by : typing.Optional[ListSignalsRequestSortBy]
             Sort field. `lastSeen` orders by most recent occurrence; `occurrences` by total count in the time window; `state` by lifecycle priority.
@@ -478,6 +478,176 @@ class SignalsClient:
         )
         return _response.data
 
+    def resolve(
+        self,
+        project_slug: str,
+        *,
+        signal_ids: typing.Sequence[str],
+        keep_monitoring: typing.Optional[bool] = OMIT,
+        request_options: typing.Optional[RequestOptions] = None,
+    ) -> SignalsLifecycleResponse:
+        """
+        Marks each signal in `signalIds` as resolved, archiving it and re-enabling its notifications. Unless `keepMonitoring` is `false`, linked evaluations keep running so a new occurrence reopens the signal as regressed.
+
+        Parameters
+        ----------
+        project_slug : str
+            Project slug (human-readable identifier)
+
+        signal_ids : typing.Sequence[str]
+            Non-empty list of signal ids. Operations are idempotent — already-applied signals are unchanged.
+
+        keep_monitoring : typing.Optional[bool]
+            Whether linked evaluations keep running after the resolve, so regressions are detected. Defaults to the project setting.
+
+        request_options : typing.Optional[RequestOptions]
+            Request-specific configuration.
+
+        Returns
+        -------
+        SignalsLifecycleResponse
+            Per-signal result
+
+        Examples
+        --------
+        from latitude_sdk import LatitudeClient
+
+        client = LatitudeClient(
+            api_key="YOUR_API_KEY",
+        )
+        client.signals.resolve(
+            project_slug="projectSlug",
+            signal_ids=["signalIds"],
+        )
+        """
+        _response = self._raw_client.resolve(
+            project_slug, signal_ids=signal_ids, keep_monitoring=keep_monitoring, request_options=request_options
+        )
+        return _response.data
+
+    def unresolve(
+        self,
+        project_slug: str,
+        *,
+        signal_ids: typing.Sequence[str],
+        request_options: typing.Optional[RequestOptions] = None,
+    ) -> SignalsLifecycleResponse:
+        """
+        Reopens each signal in `signalIds` without marking it as regressed, re-enabling its notifications.
+
+        Parameters
+        ----------
+        project_slug : str
+            Project slug (human-readable identifier)
+
+        signal_ids : typing.Sequence[str]
+            Non-empty list of signal ids. Operations are idempotent — already-applied signals are unchanged.
+
+        request_options : typing.Optional[RequestOptions]
+            Request-specific configuration.
+
+        Returns
+        -------
+        SignalsLifecycleResponse
+            Per-signal result
+
+        Examples
+        --------
+        from latitude_sdk import LatitudeClient
+
+        client = LatitudeClient(
+            api_key="YOUR_API_KEY",
+        )
+        client.signals.unresolve(
+            project_slug="projectSlug",
+            signal_ids=["signalIds"],
+        )
+        """
+        _response = self._raw_client.unresolve(project_slug, signal_ids=signal_ids, request_options=request_options)
+        return _response.data
+
+    def ignore(
+        self,
+        project_slug: str,
+        *,
+        signal_ids: typing.Sequence[str],
+        request_options: typing.Optional[RequestOptions] = None,
+    ) -> SignalsLifecycleResponse:
+        """
+        Marks each signal in `signalIds` as ignored, archiving it. Monitoring is stopped and notifications are also muted.
+
+        Parameters
+        ----------
+        project_slug : str
+            Project slug (human-readable identifier)
+
+        signal_ids : typing.Sequence[str]
+            Non-empty list of signal ids. Operations are idempotent — already-applied signals are unchanged.
+
+        request_options : typing.Optional[RequestOptions]
+            Request-specific configuration.
+
+        Returns
+        -------
+        SignalsLifecycleResponse
+            Per-signal result
+
+        Examples
+        --------
+        from latitude_sdk import LatitudeClient
+
+        client = LatitudeClient(
+            api_key="YOUR_API_KEY",
+        )
+        client.signals.ignore(
+            project_slug="projectSlug",
+            signal_ids=["signalIds"],
+        )
+        """
+        _response = self._raw_client.ignore(project_slug, signal_ids=signal_ids, request_options=request_options)
+        return _response.data
+
+    def unignore(
+        self,
+        project_slug: str,
+        *,
+        signal_ids: typing.Sequence[str],
+        request_options: typing.Optional[RequestOptions] = None,
+    ) -> SignalsLifecycleResponse:
+        """
+        Returns each signal in `signalIds` to the active list and re-enables its notifications.
+
+        Parameters
+        ----------
+        project_slug : str
+            Project slug (human-readable identifier)
+
+        signal_ids : typing.Sequence[str]
+            Non-empty list of signal ids. Operations are idempotent — already-applied signals are unchanged.
+
+        request_options : typing.Optional[RequestOptions]
+            Request-specific configuration.
+
+        Returns
+        -------
+        SignalsLifecycleResponse
+            Per-signal result
+
+        Examples
+        --------
+        from latitude_sdk import LatitudeClient
+
+        client = LatitudeClient(
+            api_key="YOUR_API_KEY",
+        )
+        client.signals.unignore(
+            project_slug="projectSlug",
+            signal_ids=["signalIds"],
+        )
+        """
+        _response = self._raw_client.unignore(project_slug, signal_ids=signal_ids, request_options=request_options)
+        return _response.data
+
     def mute(
         self,
         project_slug: str,
@@ -486,7 +656,7 @@ class SignalsClient:
         request_options: typing.Optional[RequestOptions] = None,
     ) -> SignalsLifecycleResponse:
         """
-        Mutes each signal in `signalIds`.
+        Silences notifications for each signal in `signalIds`. Muted signals keep tracking occurrences and opening incidents; only notifications stop.
 
         Parameters
         ----------
@@ -527,7 +697,7 @@ class SignalsClient:
         request_options: typing.Optional[RequestOptions] = None,
     ) -> SignalsLifecycleResponse:
         """
-        Reverts each signal in `signalIds` to an unmuted state.
+        Re-enables notifications for each signal in `signalIds`.
 
         Parameters
         ----------
@@ -736,7 +906,7 @@ class AsyncSignalsClient:
             Free-text semantic search across the signals' names and descriptions.
 
         lifecycle_group : typing.Optional[ListSignalsRequestLifecycleGroup]
-            `"active"` for unmuted signals; `"archived"` for muted signals. Omit to include both.
+            `"active"` for signals that are neither resolved nor ignored; `"archived"` for resolved or ignored signals. Omit to include both.
 
         sort_by : typing.Optional[ListSignalsRequestSortBy]
             Sort field. `lastSeen` orders by most recent occurrence; `occurrences` by total count in the time window; `state` by lifecycle priority.
@@ -1203,6 +1373,212 @@ class AsyncSignalsClient:
         )
         return _response.data
 
+    async def resolve(
+        self,
+        project_slug: str,
+        *,
+        signal_ids: typing.Sequence[str],
+        keep_monitoring: typing.Optional[bool] = OMIT,
+        request_options: typing.Optional[RequestOptions] = None,
+    ) -> SignalsLifecycleResponse:
+        """
+        Marks each signal in `signalIds` as resolved, archiving it and re-enabling its notifications. Unless `keepMonitoring` is `false`, linked evaluations keep running so a new occurrence reopens the signal as regressed.
+
+        Parameters
+        ----------
+        project_slug : str
+            Project slug (human-readable identifier)
+
+        signal_ids : typing.Sequence[str]
+            Non-empty list of signal ids. Operations are idempotent — already-applied signals are unchanged.
+
+        keep_monitoring : typing.Optional[bool]
+            Whether linked evaluations keep running after the resolve, so regressions are detected. Defaults to the project setting.
+
+        request_options : typing.Optional[RequestOptions]
+            Request-specific configuration.
+
+        Returns
+        -------
+        SignalsLifecycleResponse
+            Per-signal result
+
+        Examples
+        --------
+        import asyncio
+
+        from latitude_sdk import AsyncLatitudeClient
+
+        client = AsyncLatitudeClient(
+            api_key="YOUR_API_KEY",
+        )
+
+
+        async def main() -> None:
+            await client.signals.resolve(
+                project_slug="projectSlug",
+                signal_ids=["signalIds"],
+            )
+
+
+        asyncio.run(main())
+        """
+        _response = await self._raw_client.resolve(
+            project_slug, signal_ids=signal_ids, keep_monitoring=keep_monitoring, request_options=request_options
+        )
+        return _response.data
+
+    async def unresolve(
+        self,
+        project_slug: str,
+        *,
+        signal_ids: typing.Sequence[str],
+        request_options: typing.Optional[RequestOptions] = None,
+    ) -> SignalsLifecycleResponse:
+        """
+        Reopens each signal in `signalIds` without marking it as regressed, re-enabling its notifications.
+
+        Parameters
+        ----------
+        project_slug : str
+            Project slug (human-readable identifier)
+
+        signal_ids : typing.Sequence[str]
+            Non-empty list of signal ids. Operations are idempotent — already-applied signals are unchanged.
+
+        request_options : typing.Optional[RequestOptions]
+            Request-specific configuration.
+
+        Returns
+        -------
+        SignalsLifecycleResponse
+            Per-signal result
+
+        Examples
+        --------
+        import asyncio
+
+        from latitude_sdk import AsyncLatitudeClient
+
+        client = AsyncLatitudeClient(
+            api_key="YOUR_API_KEY",
+        )
+
+
+        async def main() -> None:
+            await client.signals.unresolve(
+                project_slug="projectSlug",
+                signal_ids=["signalIds"],
+            )
+
+
+        asyncio.run(main())
+        """
+        _response = await self._raw_client.unresolve(
+            project_slug, signal_ids=signal_ids, request_options=request_options
+        )
+        return _response.data
+
+    async def ignore(
+        self,
+        project_slug: str,
+        *,
+        signal_ids: typing.Sequence[str],
+        request_options: typing.Optional[RequestOptions] = None,
+    ) -> SignalsLifecycleResponse:
+        """
+        Marks each signal in `signalIds` as ignored, archiving it. Monitoring is stopped and notifications are also muted.
+
+        Parameters
+        ----------
+        project_slug : str
+            Project slug (human-readable identifier)
+
+        signal_ids : typing.Sequence[str]
+            Non-empty list of signal ids. Operations are idempotent — already-applied signals are unchanged.
+
+        request_options : typing.Optional[RequestOptions]
+            Request-specific configuration.
+
+        Returns
+        -------
+        SignalsLifecycleResponse
+            Per-signal result
+
+        Examples
+        --------
+        import asyncio
+
+        from latitude_sdk import AsyncLatitudeClient
+
+        client = AsyncLatitudeClient(
+            api_key="YOUR_API_KEY",
+        )
+
+
+        async def main() -> None:
+            await client.signals.ignore(
+                project_slug="projectSlug",
+                signal_ids=["signalIds"],
+            )
+
+
+        asyncio.run(main())
+        """
+        _response = await self._raw_client.ignore(project_slug, signal_ids=signal_ids, request_options=request_options)
+        return _response.data
+
+    async def unignore(
+        self,
+        project_slug: str,
+        *,
+        signal_ids: typing.Sequence[str],
+        request_options: typing.Optional[RequestOptions] = None,
+    ) -> SignalsLifecycleResponse:
+        """
+        Returns each signal in `signalIds` to the active list and re-enables its notifications.
+
+        Parameters
+        ----------
+        project_slug : str
+            Project slug (human-readable identifier)
+
+        signal_ids : typing.Sequence[str]
+            Non-empty list of signal ids. Operations are idempotent — already-applied signals are unchanged.
+
+        request_options : typing.Optional[RequestOptions]
+            Request-specific configuration.
+
+        Returns
+        -------
+        SignalsLifecycleResponse
+            Per-signal result
+
+        Examples
+        --------
+        import asyncio
+
+        from latitude_sdk import AsyncLatitudeClient
+
+        client = AsyncLatitudeClient(
+            api_key="YOUR_API_KEY",
+        )
+
+
+        async def main() -> None:
+            await client.signals.unignore(
+                project_slug="projectSlug",
+                signal_ids=["signalIds"],
+            )
+
+
+        asyncio.run(main())
+        """
+        _response = await self._raw_client.unignore(
+            project_slug, signal_ids=signal_ids, request_options=request_options
+        )
+        return _response.data
+
     async def mute(
         self,
         project_slug: str,
@@ -1211,7 +1587,7 @@ class AsyncSignalsClient:
         request_options: typing.Optional[RequestOptions] = None,
     ) -> SignalsLifecycleResponse:
         """
-        Mutes each signal in `signalIds`.
+        Silences notifications for each signal in `signalIds`. Muted signals keep tracking occurrences and opening incidents; only notifications stop.
 
         Parameters
         ----------
@@ -1260,7 +1636,7 @@ class AsyncSignalsClient:
         request_options: typing.Optional[RequestOptions] = None,
     ) -> SignalsLifecycleResponse:
         """
-        Reverts each signal in `signalIds` to an unmuted state.
+        Re-enables notifications for each signal in `signalIds`.
 
         Parameters
         ----------

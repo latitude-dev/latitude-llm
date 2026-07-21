@@ -173,6 +173,19 @@ const _registry = {
       readonly discoveredAt: string
     }
     /**
+     * Producer step for signal regression. Fired by the domain-events router
+     * on `SignalRegressed` (a new occurrence reopened a resolved signal); the
+     * consumer skips muted signals, resolves recipients (assignee-first), and
+     * emits one `create-notification` task per recipient.
+     */
+    "request-signal-regressed-notifications": {
+      readonly organizationId: string
+      readonly projectId: string
+      readonly signalId: string
+      readonly regressedAt: string
+      readonly triggerScoreId: string
+    }
+    /**
      * Producer step for destination quarantine. Fired directly by the
      * destinations worker when a `(destination, source)` sync flip
      * quarantines the destination (5 consecutive terminal failures). The
@@ -275,6 +288,8 @@ const _registry = {
       readonly signalId?: string
       readonly alertIncidentId?: string
       readonly source: "signal" | "incident"
+      /** Signal-source trigger; omitted means `signal.discovered`. */
+      readonly trigger?: "signal.discovered" | "signal.regressed"
     }
     send: {
       readonly organizationId: string

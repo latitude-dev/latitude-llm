@@ -226,6 +226,41 @@ export const createDomainEventsWorker = ({
         dedupeKey: `alert-incidents:signal.escalating:${event.payload.signalId}:${event.payload.escalatedAt}`,
       }),
 
+    SignalRegressed: (event) =>
+      Effect.all(
+        [
+          pub.publish(
+            "notifications",
+            "request-signal-regressed-notifications",
+            {
+              organizationId: event.payload.organizationId,
+              projectId: event.payload.projectId,
+              signalId: event.payload.signalId,
+              regressedAt: event.payload.regressedAt,
+              triggerScoreId: event.payload.triggerScoreId,
+            },
+            {
+              dedupeKey: `notifications:request-signal-regressed:${event.payload.signalId}:${event.payload.triggerScoreId}`,
+            },
+          ),
+          pub.publish(
+            "agent-dispatch",
+            "request",
+            {
+              organizationId: event.payload.organizationId,
+              projectId: event.payload.projectId,
+              signalId: event.payload.signalId,
+              source: "signal",
+              trigger: "signal.regressed",
+            },
+            {
+              dedupeKey: `agent-dispatch:request-signal-regressed:${event.payload.signalId}:${event.payload.triggerScoreId}`,
+            },
+          ),
+        ],
+        { concurrency: "unbounded" },
+      ).pipe(Effect.asVoid),
+
     SignalEscalationEnded: (event) =>
       pub.publish("alert-incidents", "signal-escalation-ended", event.payload, {
         dedupeKey: `alert-incidents:signal.escalation-ended:${event.payload.signalId}:${event.payload.endedAt}`,

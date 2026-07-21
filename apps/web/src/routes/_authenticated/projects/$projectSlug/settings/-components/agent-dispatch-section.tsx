@@ -164,11 +164,17 @@ const INTEGRATION_DOC_URLS: Record<AgentDispatchKindKey, string> = {
   webhook: "https://docs.latitude.so/agent-dispatch/webhooks",
 }
 
-const ACTIVE_DISPATCH_TRIGGERS = ["signal.discovered", "incident.opened", "monitor.incident"] as const
+const ACTIVE_DISPATCH_TRIGGERS = [
+  "signal.discovered",
+  "incident.opened",
+  "signal.regressed",
+  "monitor.incident",
+] as const
 
 const DISPATCH_TRIGGER_TITLES: Record<string, string> = {
   "signal.discovered": "New signal",
   "incident.opened": "Escalating signal",
+  "signal.regressed": "Regressed signal",
   "monitor.incident": "Monitor incident",
   manual: "Manual send",
 }
@@ -181,6 +187,10 @@ const TRIGGER_LABELS: Record<(typeof ACTIVE_DISPATCH_TRIGGERS)[number], { title:
   "incident.opened": {
     title: "Escalating signal",
     description: "Dispatch when a signal escalates into an incident.",
+  },
+  "signal.regressed": {
+    title: "Regressed signal",
+    description: "Dispatch when a resolved signal starts occurring again.",
   },
   "monitor.incident": {
     title: "Monitor incident",

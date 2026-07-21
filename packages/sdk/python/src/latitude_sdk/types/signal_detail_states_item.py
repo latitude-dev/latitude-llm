@@ -2,4 +2,6 @@
 
 import typing
 
-SignalDetailStatesItem = typing.Union[typing.Literal["new", "escalating", "ongoing"], typing.Any]
+SignalDetailStatesItem = typing.Union[
+    typing.Literal["new", "escalating", "ongoing", "resolved", "regressed", "ignored"], typing.Any
+]

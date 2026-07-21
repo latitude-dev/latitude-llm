@@ -134,6 +134,8 @@ const makeSignal = (): EvaluationSignal => ({
   projectId: projectId as string,
   name: SIGNAL_NAME,
   description: SIGNAL_DESCRIPTION,
+  resolvedAt: null,
+  ignoredAt: null,
 })
 
 const makeEvaluation = (overrides: Partial<Evaluation> = {}): Evaluation =>
@@ -164,6 +166,7 @@ const makeSignalRepoLayer = () =>
       String(id) === String(signalId)
         ? Effect.succeed(makeSignal())
         : Effect.fail(new NotFoundError({ entity: "EvaluationSignal", id: String(id) })),
+    claimReopenOnOccurrence: () => Effect.succeed(false),
   })
 
 const makeEvaluationRepoLayer = (overrides?: Partial<EvaluationRepositoryShape>) => {

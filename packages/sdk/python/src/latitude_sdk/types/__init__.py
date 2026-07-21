@@ -699,9 +699,11 @@ if typing.TYPE_CHECKING:
     from .signal import Signal
     from .signal_analytics_bucket import SignalAnalyticsBucket
     from .signal_analytics_escalating import SignalAnalyticsEscalating
+    from .signal_analytics_ignored import SignalAnalyticsIgnored
     from .signal_analytics_new import SignalAnalyticsNew
     from .signal_analytics_occurrences import SignalAnalyticsOccurrences
     from .signal_analytics_ongoing import SignalAnalyticsOngoing
+    from .signal_analytics_resolved import SignalAnalyticsResolved
     from .signal_analytics_response import SignalAnalyticsResponse
     from .signal_detail import SignalDetail
     from .signal_detail_source import SignalDetailSource
@@ -1441,9 +1443,11 @@ _dynamic_imports: typing.Dict[str, str] = {
     "Signal": ".signal",
     "SignalAnalyticsBucket": ".signal_analytics_bucket",
     "SignalAnalyticsEscalating": ".signal_analytics_escalating",
+    "SignalAnalyticsIgnored": ".signal_analytics_ignored",
     "SignalAnalyticsNew": ".signal_analytics_new",
     "SignalAnalyticsOccurrences": ".signal_analytics_occurrences",
     "SignalAnalyticsOngoing": ".signal_analytics_ongoing",
+    "SignalAnalyticsResolved": ".signal_analytics_resolved",
     "SignalAnalyticsResponse": ".signal_analytics_response",
     "SignalDetail": ".signal_detail",
     "SignalDetailSource": ".signal_detail_source",
@@ -2209,9 +2213,11 @@ __all__ = [
     "Signal",
     "SignalAnalyticsBucket",
     "SignalAnalyticsEscalating",
+    "SignalAnalyticsIgnored",
     "SignalAnalyticsNew",
     "SignalAnalyticsOccurrences",
     "SignalAnalyticsOngoing",
+    "SignalAnalyticsResolved",
     "SignalAnalyticsResponse",
     "SignalDetail",
     "SignalDetailSource",

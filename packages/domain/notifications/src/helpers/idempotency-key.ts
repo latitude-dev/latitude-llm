@@ -7,6 +7,7 @@ import type {
   IncidentOpenedPayload,
   SignalAssignedPayload,
   SignalDiscoveredPayload,
+  SignalRegressedPayload,
   WrappedReportPayload,
 } from "../entities/notification.ts"
 
@@ -35,6 +36,7 @@ export type BuildIdempotencyKeyInput =
   | { readonly kind: "custom.message"; readonly payload: CustomMessagePayload }
   | { readonly kind: "issue.assigned"; readonly payload: SignalAssignedPayload }
   | { readonly kind: "signal.discovered"; readonly payload: SignalDiscoveredPayload }
+  | { readonly kind: "signal.regressed"; readonly payload: SignalRegressedPayload }
   | {
       readonly kind: "destination.quarantined"
       readonly payload: DestinationQuarantinedPayload
@@ -56,6 +58,10 @@ export const buildIdempotencyKey = (input: BuildIdempotencyKeyInput): string => 
       return `${input.kind}:${input.payload.signalId}:${input.payload.assignedAt}`
     case "signal.discovered":
       return `${input.kind}:${input.payload.signalId}`
+    case "signal.regressed":
+      // Per regression cycle: the reopen claim guarantees one trigger score
+      // per cycle, so the score id discriminates repeat regressions.
+      return `${input.kind}:${input.payload.signalId}:${input.payload.triggerScoreId}`
     case "destination.quarantined":
       // Per-occurrence: a destination recovered then re-quarantined is a new
       // event the permanent index must not suppress, so the flip timestamp

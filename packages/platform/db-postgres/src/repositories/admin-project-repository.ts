@@ -108,14 +108,14 @@ export const AdminProjectRepositoryLive = Layer.effect(
             db
               .select({
                 resolved: sql<number>`COUNT(*) FILTER (
-                  WHERE ${signals.mutedAt} IS NOT NULL
+                  WHERE ${signals.resolvedAt} IS NOT NULL OR ${signals.ignoredAt} IS NOT NULL
                 )::int`,
                 tracked: sql<number>`COUNT(*) FILTER (
-                  WHERE ${signals.mutedAt} IS NULL
+                  WHERE ${signals.resolvedAt} IS NULL AND ${signals.ignoredAt} IS NULL
                     AND ${hasEvaluation}
                 )::int`,
                 untracked: sql<number>`COUNT(*) FILTER (
-                  WHERE ${signals.mutedAt} IS NULL
+                  WHERE ${signals.resolvedAt} IS NULL AND ${signals.ignoredAt} IS NULL
                     AND NOT ${hasEvaluation}
                 )::int`,
               })
@@ -146,7 +146,8 @@ export const AdminProjectRepositoryLive = Layer.effect(
               .select({
                 signalId: signals.id,
                 createdAt: signals.createdAt,
-                mutedAt: signals.mutedAt,
+                resolvedAt: signals.resolvedAt,
+                ignoredAt: signals.ignoredAt,
                 firstEvalAttachedAt: sql<Date | null>`(
                   SELECT MIN(${evaluations.createdAt})
                   FROM ${evaluations}
@@ -160,7 +161,8 @@ export const AdminProjectRepositoryLive = Layer.effect(
                   eq(signals.projectId, projectId),
                   or(
                     gte(signals.createdAt, since),
-                    and(isNotNull(signals.mutedAt), gte(signals.mutedAt, since)),
+                    and(isNotNull(signals.resolvedAt), gte(signals.resolvedAt, since)),
+                    and(isNotNull(signals.ignoredAt), gte(signals.ignoredAt, since)),
                     sql`EXISTS (
                       SELECT 1 FROM ${evaluations}
                       WHERE ${evaluations.signalId} = ${signals.id}
@@ -177,8 +179,8 @@ export const AdminProjectRepositoryLive = Layer.effect(
               signalId: SignalId(row.signalId),
               createdAt: row.createdAt,
               firstEvalAttachedAt: row.firstEvalAttachedAt ? new Date(row.firstEvalAttachedAt) : null,
-              resolvedAt: null,
-              ignoredAt: row.mutedAt,
+              resolvedAt: row.resolvedAt,
+              ignoredAt: row.ignoredAt,
             }),
           )
         }),
@@ -192,7 +194,8 @@ export const AdminProjectRepositoryLive = Layer.effect(
               .select({
                 id: signals.id,
                 name: signals.name,
-                mutedAt: signals.mutedAt,
+                resolvedAt: signals.resolvedAt,
+                ignoredAt: signals.ignoredAt,
                 hasEval: exists(
                   db
                     .select({ one: sql`1` })
@@ -206,7 +209,7 @@ export const AdminProjectRepositoryLive = Layer.effect(
           const out = new Map<SignalId, ProjectSignalDetails>()
           for (const row of rows) {
             const state: ProjectSignalDetails["state"] =
-              row.mutedAt !== null ? "resolved" : row.hasEval ? "tracked" : "untracked"
+              row.resolvedAt !== null || row.ignoredAt !== null ? "resolved" : row.hasEval ? "tracked" : "untracked"
             out.set(SignalId(row.id), { name: row.name, state })
           }
           return out
