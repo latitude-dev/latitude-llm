@@ -259,6 +259,8 @@ const latitude = new Latitude({
 })
 ```
 
+If Sentry's automatic OpenTelemetry setup conflicts with Latitude tracing, setting `skipOpenTelemetrySetup: true` in `Sentry.init()` can help by preventing Sentry from configuring OpenTelemetry itself. This disables Sentry's automatic tracing and span emission; error reporting remains available, but sending traces to Sentry requires manually wiring Sentry's OpenTelemetry components.
+
 ### With New Relic (TypeScript)
 
 Enable New Relic's OpenTelemetry bridge first, then construct `new Latitude()`. New Relic registers an OpenTelemetry provider that Latitude can reuse.

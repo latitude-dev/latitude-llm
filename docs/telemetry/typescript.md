@@ -127,6 +127,8 @@ const latitude = new Latitude({
 })
 ```
 
+If Sentry's automatic OpenTelemetry setup conflicts with Latitude tracing, setting `skipOpenTelemetrySetup: true` in `Sentry.init()` can help by preventing Sentry from configuring OpenTelemetry itself. This disables Sentry's automatic tracing and span emission; error reporting remains available, but sending traces to Sentry requires manually wiring Sentry's OpenTelemetry components.
+
 `latitude.shutdown()` only shuts down Latitude-owned processing. It does not shut down your existing observability SDK.
 
 If you need lower-level OpenTelemetry wiring or a non-TypeScript runtime, see the [OpenTelemetry Exporter](/telemetry/otel-exporter) guide.
