@@ -11232,7 +11232,7 @@
         "properties": {
           "key": {
             "type": "string",
-            "description": "Stable identity: tool name, signal id, or cluster id."
+            "description": "Stable identity: tool name, signal slug, or cluster id."
           },
           "label": {
             "type": "string",

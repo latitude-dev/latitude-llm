@@ -20,6 +20,7 @@ import { ScoreAnalyticsRepositoryLive, withClickHouse } from "@platform/db-click
 import {
   EvaluationRepositoryLive,
   OutboxEventWriterLive,
+  ProjectRepositoryLive,
   ScoreRepositoryLive,
   SignalRepositoryLive,
   withPostgres,
@@ -71,7 +72,7 @@ export const createSignalFromScore = async (input: CreateSignalFromScoreInput) =
   Effect.runPromise(
     createSignalFromScoreUseCase(input).pipe(
       withPostgres(
-        Layer.mergeAll(ScoreRepositoryLive, SignalRepositoryLive, EvaluationRepositoryLive),
+        Layer.mergeAll(ProjectRepositoryLive, ScoreRepositoryLive, SignalRepositoryLive, EvaluationRepositoryLive),
         getPostgresClient(),
         OrganizationId(input.organizationId),
       ),
@@ -84,7 +85,13 @@ export const assignOrCreateSignal = async (input: AssignOrCreateSignalInput) =>
   Effect.runPromise(
     assignOrCreateSignalUseCase(input).pipe(
       withPostgres(
-        Layer.mergeAll(ScoreRepositoryLive, SignalRepositoryLive, OutboxEventWriterLive, EvaluationRepositoryLive),
+        Layer.mergeAll(
+          ProjectRepositoryLive,
+          ScoreRepositoryLive,
+          SignalRepositoryLive,
+          OutboxEventWriterLive,
+          EvaluationRepositoryLive,
+        ),
         getPostgresClient(),
         OrganizationId(input.organizationId),
       ),

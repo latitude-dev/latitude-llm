@@ -4,7 +4,7 @@ import { createFileRoute, getRouteApi, Link } from "@tanstack/react-router"
 import { ArrowLeftIcon, PencilIcon } from "lucide-react"
 import { useState } from "react"
 import { useProjectsCollection } from "../../../../../../domains/projects/projects.collection.ts"
-import { useSignalDetail } from "../../../../../../domains/signals/signals.collection.ts"
+import { useSignalDetail, useSignalIdBySlug } from "../../../../../../domains/signals/signals.collection.ts"
 import { ListingLayout as Layout } from "../../../../../../layouts/ListingLayout/index.tsx"
 import { BreadcrumbLink, BreadcrumbSeparator, BreadcrumbText } from "../../../../-components/breadcrumb-ui.tsx"
 import { useRouteProject } from "../../-route-data.ts"
@@ -21,15 +21,18 @@ import { SignalSummary } from "./-components/signal-summary.tsx"
 import { SignalTriageControls } from "./-components/signal-triage-controls.tsx"
 import { useSignalTriageCommands } from "./-components/use-signal-triage-commands.tsx"
 
-const signalDetailRoute = getRouteApi("/_authenticated/projects/$projectSlug/signals/$signalId/")
+const signalDetailRoute = getRouteApi("/_authenticated/projects/$projectSlug/signals/$signalSlug/")
 
 function SignalDetailBreadcrumb() {
-  const { projectSlug, signalId } = signalDetailRoute.useParams()
+  const { projectSlug, signalSlug } = signalDetailRoute.useParams()
   const { data: project } = useProjectsCollection(
     (projects) => projects.where(({ project: p }) => eq(p.slug, projectSlug ?? "")).findOne(),
     [projectSlug],
   )
-  const { data: signal } = useSignalDetail({ projectId: project?.id ?? "", signalId, enabled: Boolean(project?.id) })
+  const projectId = project?.id ?? ""
+  const { data: resolved } = useSignalIdBySlug({ projectId, signalSlug, enabled: projectId.length > 0 })
+  const signalId = resolved?.signalId ?? ""
+  const { data: signal } = useSignalDetail({ projectId, signalId, enabled: signalId.length > 0 })
 
   return (
     <>
@@ -42,7 +45,7 @@ function SignalDetailBreadcrumb() {
   )
 }
 
-export const Route = createFileRoute("/_authenticated/projects/$projectSlug/signals/$signalId/")({
+export const Route = createFileRoute("/_authenticated/projects/$projectSlug/signals/$signalSlug/")({
   staticData: {
     breadcrumb: SignalDetailBreadcrumb,
   },
@@ -50,9 +53,18 @@ export const Route = createFileRoute("/_authenticated/projects/$projectSlug/sign
 })
 
 function SignalDetailPage() {
-  const { projectSlug, signalId } = Route.useParams()
+  const { projectSlug, signalSlug } = Route.useParams()
   const project = useRouteProject()
-  const { data: signal, isLoading } = useSignalDetail({ projectId: project.id, signalId })
+  // The URL carries the slug; resolve it to the stable id once, then key every
+  // child query on the id exactly as before.
+  const { data: resolved, isLoading: isResolving } = useSignalIdBySlug({ projectId: project.id, signalSlug })
+  const signalId = resolved?.signalId ?? ""
+  const { data: signal, isLoading: isSignalLoading } = useSignalDetail({
+    projectId: project.id,
+    signalId,
+    enabled: signalId.length > 0,
+  })
+  const isLoading = isResolving || (signalId.length > 0 && isSignalLoading)
   // Palette: "Assign to…" / "Set priority…" live while this page is mounted.
   useSignalTriageCommands({ projectId: project.id, signalId })
   // A trace sheet (from Examples or the Traces table) being open suppresses the
@@ -85,7 +97,7 @@ function SignalDetailPage() {
                 <SignalNeighborNav
                   projectId={project.id}
                   projectSlug={projectSlug}
-                  signalId={signalId}
+                  signalSlug={signalSlug}
                   lifecycleGroup={lifecycleGroup}
                   overlayActive={overlayActive}
                 />

@@ -63,7 +63,7 @@ function IncidentRow({
   // Signals link to the issue; everything else with a monitor (saved-search AND
   // unified target-on-monitor incidents) links to that monitor's page.
   const isSignal = incident.sourceType === "signal"
-  const signalTarget = isSignal && incident.sourceId !== null ? incident.sourceId : null
+  const signalTarget = isSignal ? incident.signalSlug : null
   const monitorTarget = !isSignal && incident.monitorSlug !== null ? incident.monitorSlug : null
   const primaryLabel = isSignal ? incident.signalName : incident.savedSearchName
   const navigable = signalTarget !== null || monitorTarget !== null
@@ -109,8 +109,8 @@ function IncidentRow({
   if (signalTarget !== null) {
     return (
       <Link
-        to="/projects/$projectSlug/signals/$signalId"
-        params={{ projectSlug, signalId: signalTarget }}
+        to="/projects/$projectSlug/signals/$signalSlug"
+        params={{ projectSlug, signalSlug: signalTarget }}
         onClick={onNavigate}
         className={ROW_CLASS}
       >

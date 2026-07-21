@@ -9,7 +9,7 @@ from ..core.pydantic_utilities import UniversalBaseModel
 class ExperimentTopListItem(UniversalBaseModel):
     key: str = pydantic.Field()
     """
-    Stable identity: tool name, signal id, or cluster id.
+    Stable identity: tool name, signal slug, or cluster id.
     """
 
     label: str = pydantic.Field()
