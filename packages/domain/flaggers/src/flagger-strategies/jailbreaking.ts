@@ -127,10 +127,29 @@ Return no explanation outside the structured output.
 // Jailbreak-specific helpers
 // ---------------------------------------------------------------------------
 
-/**
- * Detect adversarial suffix patterns (GCG-style).
- * Uses simple char-code counting — no regex, no backtracking risk.
- */
+const ADVERSARIAL_SPECIAL_CHARS = new Set([
+  123, 125, 91, 93, 92, 36, 94, 126, 124, 34, 40, 41, 61, 60, 62, 96, 64,
+])
+
+// Single-code-point check only — \p{L}/\p{N} has no backtracking risk.
+const UNICODE_LETTER_OR_NUMBER = /\p{L}|\p{N}/u
+
+function isAsciiAlnum(codePoint: number): boolean {
+  return (
+    (codePoint >= 48 && codePoint <= 57) ||
+    (codePoint >= 65 && codePoint <= 90) ||
+    (codePoint >= 97 && codePoint <= 122)
+  )
+}
+
+function isLetterOrNumber(char: string, codePoint: number): boolean {
+  return isAsciiAlnum(codePoint) || UNICODE_LETTER_OR_NUMBER.test(char)
+}
+
+function isAsciiSpace(codePoint: number): boolean {
+  return codePoint === 32 || codePoint === 9 || codePoint === 10 || codePoint === 13
+}
+
 function looksLikeAdversarialSuffix(text: string): boolean {
   if (text.length < 40) return false
 
@@ -138,32 +157,13 @@ function looksLikeAdversarialSuffix(text: string): boolean {
   let maxPuncRun = 0
   let puncRun = 0
 
-  for (let i = 0; i < text.length; i++) {
-    const c = text.charCodeAt(i)
-    if (
-      c === 123 ||
-      c === 125 ||
-      c === 91 ||
-      c === 93 ||
-      c === 92 ||
-      c === 36 ||
-      c === 94 ||
-      c === 126 ||
-      c === 124 ||
-      c === 34 ||
-      c === 40 ||
-      c === 41 ||
-      c === 61 ||
-      c === 60 ||
-      c === 62 ||
-      c === 96 ||
-      c === 64
-    ) {
+  for (const char of text) {
+    const codePoint = char.codePointAt(0)
+    if (codePoint === undefined) continue
+    if (ADVERSARIAL_SPECIAL_CHARS.has(codePoint)) {
       special++
     }
-    const isAlnum = (c >= 48 && c <= 57) || (c >= 65 && c <= 90) || (c >= 97 && c <= 122)
-    const isSpace = c === 32 || c === 9 || c === 10 || c === 13
-    if (!isAlnum && !isSpace) {
+    if (!isLetterOrNumber(char, codePoint) && !isAsciiSpace(codePoint)) {
       puncRun++
       if (puncRun > maxPuncRun) maxPuncRun = puncRun
     } else {
@@ -180,7 +180,7 @@ function looksLikeAdversarialSuffix(text: string): boolean {
   let wordStart = 0
   for (let i = 0; i <= text.length; i++) {
     const c = i < text.length ? text.charCodeAt(i) : 32
-    const isSep = c === 32 || c === 9 || c === 10 || c === 13
+    const isSep = isAsciiSpace(c)
     if (isSep || i === text.length) {
       const wLen = i - wordStart
       if (wLen > 8) {
@@ -195,7 +195,9 @@ function looksLikeAdversarialSuffix(text: string): boolean {
             if (prev >= 97 && prev <= 122 && wc >= 65 && wc <= 90) lcToUc++
           }
         }
-        if (allAlpha && wLen > 11) longConcatWords++
+        // Require a camelCase seam so ordinary long words (NOTIFICATION,
+        // acknowledgement) are not treated as concatenated gibberish.
+        if (allAlpha && wLen > 11 && lcToUc >= 1) longConcatWords++
         if (lcToUc >= 1 && wLen > 8) camelCaseWords++
       }
       wordStart = i + 1

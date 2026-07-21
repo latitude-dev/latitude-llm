@@ -256,6 +256,18 @@ describe("injectionPatternGatherer", () => {
     )
     expect(hints.length).toBeGreaterThan(0)
   })
+
+  it("does not fire on benign Thai text or Claude Code system notifications", async () => {
+    const thai =
+      "พอจะตรวตสอบได้ไหมว่าตอนนี้ full_refresh ทำงานถึงไหนแล้ว ใกล้เสร็จหรือยัง หรือติดอะไร"
+    const notification = `[SYSTEM NOTIFICATION - NOT USER INPUT]
+This is an automated background-task event, NOT a message from the user.
+Do NOT interpret this as user acknowledgement, confirmation, or response to any pending question.
+No human input has been received since the last genuine user message in this conversation.`
+
+    expect(await runGatherer(injectionPatternGatherer, ctx([user(thai)]))).toEqual([])
+    expect(await runGatherer(injectionPatternGatherer, ctx([user(notification)]))).toEqual([])
+  })
 })
 
 describe("nsfwPatternGatherer", () => {
