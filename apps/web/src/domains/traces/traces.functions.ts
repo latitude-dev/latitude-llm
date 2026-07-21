@@ -37,13 +37,13 @@ import {
   TraceRepositoryLive,
   TraceSearchRepositoryLive,
 } from "@platform/db-clickhouse"
+import { enforceExportRequestRateLimit } from "@platform/cache-redis"
 import { withTracing } from "@repo/observability"
 import { cacheHitRate } from "@repo/utils"
 import { createServerFn } from "@tanstack/react-start"
 import { Effect, Layer } from "effect"
 import type { GenAIMessage, GenAISystem } from "rosetta-ai"
 import { z } from "zod"
-import { enforceExportRequestRateLimit } from "../../domains/exports/export-rate-limit.ts"
 import { ensureSession } from "../../domains/sessions/session.functions.ts"
 import { getSessionOrganizationId } from "../../server/auth.ts"
 import { getClickhouseClient, getQueuePublisher, getRedisClient } from "../../server/clients.ts"

@@ -28,6 +28,7 @@ import {
 } from "@domain/signals"
 import { createRoute, z } from "@hono/zod-openapi"
 import { AIEmbedLive, withAi } from "@platform/ai"
+import { enforceExportRequestRateLimit } from "@platform/cache-redis"
 import {
   ScoreAnalyticsRepositoryLive,
   SessionRepositoryLive,
@@ -624,6 +625,17 @@ const exportSignals = signalEndpoint({
           message: "`recipient` must belong to a member of this organization.",
         })
       }
+
+      yield* Effect.tryPromise({
+        try: () =>
+          enforceExportRequestRateLimit({
+            redis: ctx.redis,
+            organizationId: ctx.organization.id as string,
+            projectId: project.id as string,
+            recipientEmail: body.recipient,
+          }),
+        catch: (cause) => cause,
+      })
 
       yield* ctx.queuePublisher.publish("exports", "generate", {
         // KEEP: the export queue kind is a wire token retained until Phase 9.

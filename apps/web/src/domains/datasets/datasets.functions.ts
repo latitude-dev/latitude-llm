@@ -51,12 +51,12 @@ import {
   TaxonomyClusterIntelligenceRepositoryLive,
   TraceRepositoryLive,
 } from "@platform/db-clickhouse"
+import { enforceExportRequestRateLimit } from "@platform/cache-redis"
 import { DatasetRepositoryLive, OutboxEventWriterLive, TaxonomyClusterRepositoryLive } from "@platform/db-postgres"
 import { withTracing } from "@repo/observability"
 import { createServerFn } from "@tanstack/react-start"
 import { Effect, Layer } from "effect"
 import { z } from "zod"
-import { enforceExportRequestRateLimit } from "../../domains/exports/export-rate-limit.ts"
 import { ensureSession } from "../../domains/sessions/session.functions.ts"
 import { getSessionOrganizationId, requireSession } from "../../server/auth.ts"
 import {

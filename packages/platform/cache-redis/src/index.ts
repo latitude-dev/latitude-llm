@@ -7,6 +7,7 @@ export { EmbedBudgetResolverLive } from "./embed-budget-resolver.ts"
 export { SandboxSignalsLive } from "./sandbox-signals.ts"
 export { RedisSlackRefreshLockRepositoryLive } from "./slack-refresh-lock.ts"
 export { TraceSearchBudgetLive } from "./trace-search-budget.ts"
+export { enforceExportRequestRateLimit } from "./export-rate-limit.ts"
 
 import { Context } from "effect"
 

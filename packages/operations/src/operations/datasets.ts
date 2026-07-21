@@ -33,6 +33,7 @@ import {
 } from "@domain/shared"
 import { resolveTraceIdsFromRef, type TracesRef } from "@domain/spans"
 import { createRoute, z } from "@hono/zod-openapi"
+import { enforceExportRequestRateLimit } from "@platform/cache-redis"
 import {
   DatasetRowRepositoryLive,
   ScoreAnalyticsRepositoryLive,
@@ -957,6 +958,17 @@ const exportDatasetRowsEndpoint = datasetEndpoint({
           },
         } as const
       }
+
+      yield* Effect.tryPromise({
+        try: () =>
+          enforceExportRequestRateLimit({
+            redis: ctx.redis,
+            organizationId: ctx.organization.id as string,
+            projectId: projectId as string,
+            recipientEmail: body.recipient,
+          }),
+        catch: (cause) => cause,
+      })
 
       yield* ctx.queuePublisher
         .publish("exports", "generate", {
