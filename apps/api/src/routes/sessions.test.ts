@@ -226,4 +226,46 @@ describe("Sessions Routes Integration", () => {
     )
     expect(res.status).toBe(404)
   })
+
+  it<ApiTestContext>("GET /{sessionId}/memory returns an empty footprint when the session touched no memory", async ({
+    app,
+    database,
+  }) => {
+    const tenant = await createTenantSetup(database)
+    const slug = await createProjectRecord(database, tenant.organizationId, "666666666666666666666666")
+
+    const res = await app.fetch(
+      new Request(`http://localhost/v1/projects/${slug}/sessions/unknown-session/memory`, {
+        headers: createApiKeyAuthHeaders(tenant.apiKeyToken),
+      }),
+    )
+
+    expect(res.status).toBe(200)
+    const body = (await res.json()) as { records: unknown[]; total: { writeRecords: number } }
+    expect(body.records).toEqual([])
+    expect(body.total.writeRecords).toBe(0)
+  })
+
+  it<ApiTestContext>("GET /{sessionId}/memory rejects unauthenticated requests with 401", async ({ app }) => {
+    const res = await app.fetch(new Request("http://localhost/v1/projects/foo/sessions/some-session/memory"))
+    expect(res.status).toBe(401)
+  })
+
+  it<ApiTestContext>("GET /{sessionId}/memory/changes returns an empty change set when the session wrote no memory", async ({
+    app,
+    database,
+  }) => {
+    const tenant = await createTenantSetup(database)
+    const slug = await createProjectRecord(database, tenant.organizationId, "777777777777777777777777")
+
+    const res = await app.fetch(
+      new Request(`http://localhost/v1/projects/${slug}/sessions/unknown-session/memory/changes`, {
+        headers: createApiKeyAuthHeaders(tenant.apiKeyToken),
+      }),
+    )
+
+    expect(res.status).toBe(200)
+    const body = (await res.json()) as { records: unknown[] }
+    expect(body.records).toEqual([])
+  })
 })
