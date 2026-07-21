@@ -7,6 +7,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.0.13] - 2026-07-21
+
+### Added
+
+- **Memory observability for Claude Code auto memory.** Claude Code writes its own persistent [auto memory](https://code.claude.com/docs/en/memory) (per-repository markdown under `~/.claude/projects/<project>/memory/`) through ordinary `Read`/`Write`/`Edit` tools. The hook now emits a child memory-operation span under the `tool_execution` span whenever such a tool targets a file inside that directory, using the OpenTelemetry `gen_ai.memory.*` conventions — so auto memory shows up on Latitude's Memory page with per-record change history and diffs. `Write` → `upsert_memory`, `Edit`/`MultiEdit` → `update_memory`, `Read` → `search_memory`; `gen_ai.memory.store.id` is the `<project>` slug and `gen_ai.memory.record.id` is the file path within the memory dir. Edit bodies are read from disk at hook time (the tool call carries only a diff); subagent auto memory is covered via the same path.
+- `LATITUDE_CLAUDE_CODE_MEMORY` (default `1`) to disable memory-operation spans, and `LATITUDE_CLAUDE_CODE_MEMORY_CONTENT` (default `1`) to emit them without record bodies (structure and counts only). Bodies also honor `LATITUDE_REDACT_ATTRIBUTES` via the `gen_ai.memory.records` key.
+
 ## [0.0.12] - 2026-07-21
 
 ### Fixed

@@ -1,10 +1,13 @@
 import { createHash } from "node:crypto"
 import { arch, hostname, platform, release } from "node:os"
+import { classifyMemoryTool } from "./memory.ts"
 import { type RedactConfig, redactAttributes } from "./redaction.ts"
 import type { AnthropicMessage, AnthropicMessageBlock, AnthropicSystem, StoredRequest } from "./request-store.ts"
 import type {
   AgentSpanLink,
   AssistantCall,
+  MemoryEmitOptions,
+  MemoryOp,
   OtlpExportRequest,
   OtlpKeyValue,
   OtlpResourceSpans,
@@ -33,6 +36,7 @@ const SYSTEM_CAP = 16 * 1024
 const TOOL_DEFS_CAP = 16 * 1024
 const TOOL_ARGS_CAP = 16 * 1024
 const USER_PROMPT_CAP = 64 * 1024
+const MEMORY_RECORDS_CAP = 64 * 1024
 // Each POST is kept under this size so it completes well inside the client
 // timeout even on modest uplinks; one logical trace may span several POSTs
 // (the server groups spans by trace_id, so splitting is transparent).
@@ -50,6 +54,7 @@ export function buildOtlpRequest(opts: {
   // Out-param: populated with one link per parent Agent tool call emitted, so the
   // caller can (re-)attach subagent spans under it on later turns.
   agentLinks?: AgentSpanLink[]
+  memory?: MemoryEmitOptions | undefined
 }): OtlpExportRequest {
   const contextAttrs = buildContextAttrs(opts.context)
   const history = opts.conversationHistory ?? []
@@ -68,6 +73,7 @@ export function buildOtlpRequest(opts: {
         priorTurns,
         requestsByMessageId,
         opts.agentLinks,
+        opts.memory,
       ),
     )
   })
@@ -100,6 +106,7 @@ function buildTurnSpans(
   priorTurns: Turn[],
   requestsByMessageId: Map<string, StoredRequest>,
   agentLinks: AgentSpanLink[] | undefined,
+  memory: MemoryEmitOptions | undefined,
 ): OtlpSpan[] {
   const traceId = hashHex(`${sessionId}:${turnNum}`, 32)
   const turnSpanId = hashHex(`${traceId}:turn`, 16)
@@ -121,6 +128,7 @@ function buildTurnSpans(
     priorTurns,
     requestsByMessageId,
     agentLinks,
+    memory,
   })
   return out
 }
@@ -142,6 +150,7 @@ interface TreeCtx {
   priorTurns: Turn[]
   requestsByMessageId: Map<string, StoredRequest>
   agentLinks: AgentSpanLink[] | undefined
+  memory: MemoryEmitOptions | undefined
   // Emission window (subagent incremental re-emission). Defaults emit everything.
   emitInteraction?: boolean
   callFrom?: number
@@ -294,6 +303,16 @@ function emitCallAndTools(out: OtlpSpan[], ctx: TreeCtx, call: AssistantCall, ca
     // interaction so the timeline reads as: llm_request → tool → llm_request → tool → ...
     out.push(buildToolSpan(traceId, ctx.turnSpanId, toolSpanId, sessionId, userId, tool, ctx.contextAttrs))
 
+    // Claude Code auto memory rides ordinary file tools; a successful Read/Write/Edit on a
+    // path inside the memory dir gets a child memory-operation span for the ledger.
+    if (ctx.memory && !tool.isError) {
+      const op = classifyMemoryTool(tool, ctx.memory)
+      if (op) {
+        const memSpanId = hashHex(`${traceId}:${callSalt}:tool:${idx}:${tool.id}:mem`, 16)
+        out.push(buildMemorySpan(traceId, toolSpanId, memSpanId, sessionId, userId, tool, op, ctx.contextAttrs))
+      }
+    }
+
     if (!isSubagent && tool.name === "Agent") {
       ctx.agentLinks?.push({ toolUseId: tool.id, promptId: tool.promptId, traceId, parentSpanId: toolSpanId })
     }
@@ -307,6 +326,7 @@ function emitCallAndTools(out: OtlpSpan[], ctx: TreeCtx, call: AssistantCall, ca
         userId,
         subagent: tool.subagent,
         contextAttrs: ctx.contextAttrs,
+        memory: ctx.memory,
         requestsByMessageId: ctx.requestsByMessageId,
         emitInteraction: true,
         fromCall: 0,
@@ -324,6 +344,7 @@ interface SubagentTreeCtx {
   subagent: SubagentInvocation
   contextAttrs: OtlpKeyValue[]
   requestsByMessageId: Map<string, StoredRequest>
+  memory: MemoryEmitOptions | undefined
   // Emission window over the subagent's calls, flattened across its turns. The
   // interaction span is emitted only when emitInteraction is set. Defaults emit all.
   emitInteraction: boolean
@@ -361,6 +382,7 @@ function emitSubagentTree(out: OtlpSpan[], ctx: SubagentTreeCtx): void {
       priorTurns: subagent.turns.slice(0, subIdx),
       requestsByMessageId: ctx.requestsByMessageId,
       agentLinks: undefined,
+      memory: ctx.memory,
       emitInteraction: ctx.emitInteraction,
       callFrom: Math.max(0, ctx.fromCall - globalIdx),
       callTo: Math.min(count, ctx.toCall - globalIdx),
@@ -386,6 +408,7 @@ export function buildSubagentSpans(opts: {
   context?: TraceContext | undefined
   requestsByMessageId?: Map<string, StoredRequest> | undefined
   redact?: RedactConfig | undefined
+  memory?: MemoryEmitOptions | undefined
 }): OtlpSpan[] {
   const out: OtlpSpan[] = []
   const totalCalls = opts.subagent.turns.reduce((sum, t) => sum + t.calls.length, 0)
@@ -397,6 +420,7 @@ export function buildSubagentSpans(opts: {
     subagent: opts.subagent,
     contextAttrs: buildContextAttrs(opts.context),
     requestsByMessageId: opts.requestsByMessageId ?? new Map<string, StoredRequest>(),
+    memory: opts.memory,
     emitInteraction: opts.emitInteraction ?? true,
     fromCall: opts.fromCall ?? 0,
     toCall: opts.toCall ?? totalCalls,
@@ -461,6 +485,43 @@ function buildToolSpan(
       ...contextAttrs,
     ]),
     status: { code: call.isError ? 2 : 1 },
+  }
+}
+
+// A child of the tool span, shaped to match the SDK memory helper (CLIENT kind, the
+// gen_ai.memory.* attributes) so the consume side classifies and materializes it with
+// no special-casing. Emitted only for a successful memory-dir file op.
+function buildMemorySpan(
+  traceId: string,
+  parentSpanId: string,
+  spanId: string,
+  sessionId: string,
+  userId: string | undefined,
+  tool: ToolCall,
+  op: MemoryOp,
+  contextAttrs: OtlpKeyValue[],
+): OtlpSpan {
+  const recordsJson =
+    op.body !== undefined ? clamp(safeJson([{ id: op.recordId, content: op.body }]), MEMORY_RECORDS_CAP) : undefined
+  return {
+    traceId,
+    spanId,
+    parentSpanId,
+    name: op.operation,
+    kind: 3,
+    startTimeUnixNano: msToNs(tool.startMs),
+    endTimeUnixNano: msToNs(tool.endMs),
+    attributes: stripUndef([
+      str("gen_ai.operation.name", op.operation),
+      str("gen_ai.memory.store.id", op.storeId),
+      str("gen_ai.memory.record.id", op.recordId),
+      int("gen_ai.memory.record.count", op.count),
+      recordsJson !== undefined ? str("gen_ai.memory.records", recordsJson) : undefined,
+      str("session.id", sessionId),
+      userId ? str("user.id", userId) : undefined,
+      ...contextAttrs,
+    ]),
+    status: { code: 1 },
   }
 }
 

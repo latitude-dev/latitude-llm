@@ -1,7 +1,16 @@
 import { describe, expect, it } from "vitest"
 import { buildOtlpRequest, buildSubagentSpans, chunkOtlpRequest } from "./otlp.ts"
 import type { StoredRequest } from "./request-store.ts"
-import type { AgentSpanLink, AssistantCall, OtlpKeyValue, SubagentInvocation, ToolCall, Turn, Usage } from "./types.ts"
+import type {
+  AgentSpanLink,
+  AssistantCall,
+  MemoryEmitOptions,
+  OtlpKeyValue,
+  SubagentInvocation,
+  ToolCall,
+  Turn,
+  Usage,
+} from "./types.ts"
 
 function unwrap<T>(value: T | undefined | null): T {
   expect(value).toBeDefined()
@@ -1159,5 +1168,104 @@ describe("buildSubagentSpans", () => {
     for (const s of [...stop1, ...stop2]) {
       expect(s.startTimeUnixNano).toBe(fullStart.get(s.spanId))
     }
+  })
+})
+
+describe("memory operation child spans", () => {
+  const MEM = "/home/u/.claude/projects/-proj/memory"
+  const MEM_OPS = ["upsert_memory", "update_memory", "search_memory"]
+
+  function memory(overrides: Partial<MemoryEmitOptions> = {}): MemoryEmitOptions {
+    return { dir: MEM, captureContent: true, readFile: () => "disk body", ...overrides }
+  }
+
+  function build(
+    toolCalls: (Partial<ToolCall> & Pick<ToolCall, "id" | "name" | "input">)[],
+    mem: MemoryEmitOptions | undefined,
+  ) {
+    return otlpSpans(
+      buildOtlpRequest({ sessionId: "s1", turnStartNumber: 1, turns: [baseTurn({ toolCalls })], memory: mem }),
+    )
+  }
+
+  it("emits an upsert_memory child under a Write to the memory dir", () => {
+    const spans = build(
+      [
+        {
+          id: "tu1",
+          name: "Write",
+          input: { file_path: `${MEM}/MEMORY.md`, content: "hello" },
+          output: "File created",
+        },
+      ],
+      memory(),
+    )
+    const toolSpan = unwrap(spans.find((s) => s.name === "tool:Write"))
+    const mem = unwrap(spans.find((s) => s.name === "upsert_memory"))
+    expect(mem.parentSpanId).toBe(toolSpan.spanId)
+    expect(mem.kind).toBe(3)
+    expect(getAttr(mem.attributes, "gen_ai.memory.store.id")).toBe("-proj")
+    expect(getAttr(mem.attributes, "gen_ai.memory.record.id")).toBe("MEMORY.md")
+    expect(getAttr(mem.attributes, "gen_ai.memory.record.count")).toBe("1")
+    expect(JSON.parse(unwrap(getAttr(mem.attributes, "gen_ai.memory.records")))).toEqual([
+      { id: "MEMORY.md", content: "hello" },
+    ])
+  })
+
+  it("emits update_memory carrying the disk body for an Edit", () => {
+    const spans = build(
+      [{ id: "tu1", name: "Edit", input: { file_path: `${MEM}/topic.md`, old_string: "a", new_string: "b" } }],
+      memory(),
+    )
+    const mem = unwrap(spans.find((s) => s.name === "update_memory"))
+    expect(JSON.parse(unwrap(getAttr(mem.attributes, "gen_ai.memory.records")))).toEqual([
+      { id: "topic.md", content: "disk body" },
+    ])
+  })
+
+  it("emits search_memory for a Read", () => {
+    const spans = build(
+      [{ id: "tu1", name: "Read", input: { file_path: `${MEM}/topic.md` }, output: "1\thi" }],
+      memory(),
+    )
+    expect(spans.some((s) => s.name === "search_memory")).toBe(true)
+  })
+
+  it("ignores files outside the memory dir", () => {
+    const spans = build(
+      [{ id: "tu1", name: "Write", input: { file_path: "/home/u/repo/a.ts", content: "x" } }],
+      memory(),
+    )
+    expect(spans.some((s) => MEM_OPS.includes(s.name))).toBe(false)
+  })
+
+  it("emits structure only when captureContent is off", () => {
+    const spans = build(
+      [{ id: "tu1", name: "Write", input: { file_path: `${MEM}/x.md`, content: "hi" } }],
+      memory({ captureContent: false }),
+    )
+    const mem = unwrap(spans.find((s) => s.name === "upsert_memory"))
+    expect(getAttr(mem.attributes, "gen_ai.memory.record.id")).toBe("x.md")
+    expect(getAttr(mem.attributes, "gen_ai.memory.records")).toBeUndefined()
+  })
+
+  it("skips the memory span when the tool call errored", () => {
+    const spans = build(
+      [
+        {
+          id: "tu1",
+          name: "Edit",
+          input: { file_path: `${MEM}/x.md`, old_string: "a", new_string: "b" },
+          isError: true,
+        },
+      ],
+      memory(),
+    )
+    expect(spans.some((s) => s.name === "update_memory")).toBe(false)
+  })
+
+  it("emits no memory spans when memory is not configured", () => {
+    const spans = build([{ id: "tu1", name: "Write", input: { file_path: `${MEM}/x.md`, content: "hi" } }], undefined)
+    expect(spans.some((s) => MEM_OPS.includes(s.name))).toBe(false)
   })
 })
