@@ -27,7 +27,7 @@ import {
   TraceRepository,
 } from "@domain/spans"
 import { AIEmbedLive, withAi } from "@platform/ai"
-import { RedisCacheStoreLive } from "@platform/cache-redis"
+import { enforceExportRequestRateLimit, RedisCacheStoreLive } from "@platform/cache-redis"
 import {
   SessionAnalysisRepositoryLive,
   SessionMomentLabelRepositoryLive,
@@ -37,7 +37,6 @@ import {
   TraceRepositoryLive,
   TraceSearchRepositoryLive,
 } from "@platform/db-clickhouse"
-import { enforceExportRequestRateLimit } from "@platform/cache-redis"
 import { withTracing } from "@repo/observability"
 import { cacheHitRate } from "@repo/utils"
 import { createServerFn } from "@tanstack/react-start"
