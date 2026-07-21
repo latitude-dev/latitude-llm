@@ -75,6 +75,13 @@ new, plus dominant-child protection.
 
 ## Validation on the real pilot corpus
 
+> **Re-baselined 2026-07-21 against the current builder.** The figures in this
+> section were originally measured with the LAT-770 prototype builder; the
+> LAT-771 "pure relative divisive" rewrite (plus Phase 3/4 integration) changed
+> the tree, so the shape, root-child sizes, sweep, and cross-sample ARI below are
+> re-measured on the same 670-obs corpus. See "Cross-sample ARI is not a usable
+> point estimate" at the end of this section.
+
 The binding calibration evidence. Real anonymized pilot embeddings (voyage
 2048d) were pulled from production ClickHouse via the CH MCP for offline
 calibration and are **not committed** (they live only in a local scratchpad
@@ -91,25 +98,43 @@ schedule above:
 | Metric | Static (production path) | Adaptive |
 | --- | --- | --- |
 | Root children | **0 (collapses to one leaf)** | **4** |
-| Leaves | 1 | 8 (max depth 3) |
-| Deterministic partition | — | yes (identical signature across builds) |
-| Cross-sample ARI | — | **0.850** |
-| Root sibling centroid cosines | — | 0.838–0.889 |
-| Routing thresholds | — | 0.685–0.882 |
+| Leaves | 1 | 5 (max depth 2) |
+| Deterministic partition | — | yes (identical signature at a fixed sample) |
+| Cross-sample ARI (single 90/90 split) | — | ~0.75 — unreliable; see note below |
+| Root sibling centroid cosines | — | 0.84–0.89 (prototype run; not re-measured) |
+| Routing thresholds | — | 0.685–0.882 (prototype run; not re-measured) |
 
-The four adaptive root children are human-coherent, distinct ad-ops intents:
+The four adaptive root children are human-coherent, distinct ad-ops intents
+(sizes shift with the sample; current-builder run):
 
 | Root child | Obs | Intent (from representative session text) |
 | --- | --- | --- |
-| #0 | 109 | **Ad creative** — RSA asset performance, replacement copy, running-ad review |
-| #1 | 68 | **Improvement review** — "analyse the attached improvement" |
-| #2 | 130 | **Search-term audits → negative keywords** — irrelevancy audits, Sheets exports |
-| #3 | 363 | **Performance analysis & client reporting** — 90-day reports, talking points |
+| #0 | 369 | **Performance analysis & client reporting** — budget pacing, CPC drivers, account health checks, month-over-month reports |
+| #1 | 160 | **Improvement & search-term review** — "analyse the attached improvement", high-spend search-term audits |
+| #2 | 77 | **Landing-page & ad review** — landing-page copy analysis, running-ad performance, campaign underperformance |
+| #3 | 64 | **Keyword research & account Q&A** — keyword/QS analysis, capability questions, ad-hoc account queries |
 
-The `minRelativeSeparation` sweep on this corpus: root 0.30 → 2 children /
-7 leaves; 0.40 → 3 children; **0.45 → 4 children / 8 leaves**; 0.50 → 4 children;
-0.60 → collapses to a leaf. 0.45 is the setting that reproduces the target 3–5
-coherent root children.
+The `minRelativeSeparation` sweep on this corpus (current builder): root 0.65 →
+collapses to a leaf; **0.45 → 4 children / 5 leaves**; 0.55 → 5 children / 11
+leaves; 0.35 and below → 2 children with a larger dominant blob. 0.45 remains the
+setting that reproduces the target 3–5 coherent root children; lowering it does
+not split the dominant cluster — it grows it.
+
+### Cross-sample ARI is not a usable point estimate
+
+`crossSampleAri` returns the ARI of a single order-dependent 90/90 split. On this
+corpus it ranges across **[0.00, 0.92]** purely by observation ordering (24 seeded
+permutations: p25 0.00, median 0.74, p75 0.83, max 0.92, mean 0.53). The originally
+recorded **0.850** was one high draw from that distribution on the prototype
+builder; a current single draw reads ~0.75. Neither is a stable measurement, and
+the **0.8 floor** (`ADAPTIVE_CROSS_SAMPLE_ARI_FLOOR`) was derived from that single
+0.850 — so as written it is not a valid gate.
+
+The heavy low tail (a quarter of orderings collapse to ARI ≈ 0) is itself the
+signal: the adaptive partition on the pilot is genuinely sensitive to which ~10%
+of observations are dropped, consistent with the observed live 3→2 root-child
+wobble. Before it gates enforcement rollout, `crossSampleAri` should be reworked
+to **average over many splits** and the floor re-derived from that averaged metric.
 
 ## Synthetic fixtures — static vs adaptive (committed regression)
 
@@ -119,6 +144,12 @@ are the committed regression guard, not the calibration authority.
 `rc` = root children, `lf` = leaves, `d` = max depth, `pur` = leaf purity,
 `minRec` = min per-group recall in one root child, `ARI` = static-vs-adaptive
 agreement, `xSample` = cross-sample stability.
+
+> These rows predate the LAT-771 builder rewrite and use the same single-split
+> `xSample` metric flagged above. Their shape/purity are range-enforced by
+> `calibration.test.ts` (which runs the **synthetic** pilot, since the real dump
+> is uncommitted), but the exact figures — and `xSample` in particular — should
+> be regenerated with the averaged metric in the same follow-up.
 
 | Fixture | members | groups | static rc/lf/d/pur | adaptive rc/lf/d/pur/minRec | ARI | xSample |
 | --- | --- | --- | --- | --- | --- | --- |
