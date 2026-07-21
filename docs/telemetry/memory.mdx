@@ -180,18 +180,18 @@ Two identifiers carry the whole model, and getting them right is the entire job,
             ],
             execute: () => store.upsert("preferences/tone", nextValue),
           })
-        })
 
-        // Emit form: the read or write already happened elsewhere.
-        await memory.update({
-          recordId: "preferences/tone",
-          records: [
-            { id: "preferences/tone", content: "Prefers concise answers with code." },
-          ],
-        })
+          // Emit form: record a completed span when the read or write already happened.
+          await memory.update({
+            recordId: "preferences/tone",
+            records: [
+              { id: "preferences/tone", content: "Prefers concise answers with code." },
+            ],
+          })
 
-        // Omit recordId to wipe the whole store.
-        await memory.delete({ recordId: "preferences/tone" })
+          // Delete one record. Omit recordId to wipe the whole store.
+          await memory.delete({ recordId: "preferences/tone" })
+        })
         ```
       </Tab>
       <Tab title="Python">
@@ -217,18 +217,18 @@ Two identifiers carry the whole model, and getting them right is the entire job,
                 execute=lambda: store.upsert("preferences/tone", next_value),
             )
 
+            # Emit form: record a completed span when the read or write already happened.
+            memory.update(
+                record_id="preferences/tone",
+                records=[
+                    {"id": "preferences/tone", "content": "Prefers concise answers with code."}
+                ],
+            )
+
+            # Delete one record. Omit record_id to wipe the whole store.
+            memory.delete(record_id="preferences/tone")
+
         capture("support-agent-turn", handle_turn)
-
-        # Emit form: the read or write already happened elsewhere.
-        memory.update(
-            record_id="preferences/tone",
-            records=[
-                {"id": "preferences/tone", "content": "Prefers concise answers with code."}
-            ],
-        )
-
-        # Omit record_id to wipe the whole store.
-        memory.delete(record_id="preferences/tone")
         ```
       </Tab>
     </Tabs>

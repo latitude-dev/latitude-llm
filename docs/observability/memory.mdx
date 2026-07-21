@@ -20,6 +20,8 @@ If your agents keep persistent memory, Latitude records every memory operation t
 
 Memory operations arrive as ordinary spans through your existing tracing setup. Shortly after a trace completes, Latitude materializes them into a versioned ledger: each write stores the record's full new body, versions are ordered by span end time, and the most recent write wins. Diffs and token counts are derived from those versions, so you get history and diffs without your memory provider having to support them.
 
+Record bodies, diffs, and token counts appear when your instrumentation captures content. With content capture off, Latitude still records each operation with its store, record, and counts, but not the bodies or diffs.
+
 ## The Memory page
 
 The **Memory** page lists every store, one row per store, with its record count, total tokens, when it was last updated and last read, the number of sessions that wrote to it, and the number of distinct users who accessed it.
@@ -34,7 +36,7 @@ Open a store to browse it like a repository. The left sidebar shows its records 
 
 Below a record's content, the **Record Activity** panel shows everything that happened to it, across three tabs:
 
-- **Changes**: the record's write history. Each row shows when it was created, updated, or removed, the token delta of that change, and the user behind it. Clicking a row opens the change's diff, and each row links to the span and session that made it.
+- **Changes**: the record's write history. Each row shows when it was created, updated, or removed, the token delta of that change, and the user behind it. Clicking a row opens the change's diff, and each row links to the span, and to the session or trace it belongs to.
 - **Reads**: every time the record was retrieved, with the search query that matched it, the tokens returned, and the user.
 - **Users**: a per-user roll-up of reads and writes on this record, each row linking to the user's page.
 
