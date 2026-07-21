@@ -192,7 +192,7 @@ describe("screenSessionFlaggersUseCase", () => {
     const nestedEvidence = [
       "EVALUATED AGENT CONTEXT:",
       "<evaluated_trace_evidence>",
-      'Task: give me a random fact you find in the memory',
+      "Task: give me a random fact you find in the memory",
       "Assistant: you once went by PVC Poncho",
       "User reaction: no but read the memory first",
       "</evaluated_trace_evidence>",
