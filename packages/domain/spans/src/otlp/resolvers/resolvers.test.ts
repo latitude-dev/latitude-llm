@@ -413,14 +413,14 @@ describe("resolveAttributes", () => {
       }
     })
 
-    it("maps Vercel operation IDs (bare wrappers → invoke_agent, leaves → chat)", () => {
+    it("maps Vercel operation IDs (nested wrappers → agent_step, leaves → chat)", () => {
       const cases: [string, string][] = [
-        // Bare wrappers carry a lossy summary and end after their leaves —
-        // classified as inert wrappers so the rollup excludes them.
-        ["ai.generateText", "invoke_agent"],
-        ["ai.streamText", "invoke_agent"],
-        ["ai.generateObject", "invoke_agent"],
-        ["ai.streamObject", "invoke_agent"],
+        // Nested wrappers carry a lossy summary and are one step of the agent —
+        // classified agent_step so the rollup excludes them.
+        ["ai.generateText", "agent_step"],
+        ["ai.streamText", "agent_step"],
+        ["ai.generateObject", "agent_step"],
+        ["ai.streamObject", "agent_step"],
         // Leaves hold the faithful per-call exchange.
         ["ai.generateText.doGenerate", "chat"],
         ["ai.streamText.doStream", "chat"],
@@ -435,6 +435,15 @@ describe("resolveAttributes", () => {
         const attrs: OtlpKeyValue[] = [strAttr("ai.operationId", opId)]
         const result = resolveAttributes({ spanAttrs: attrs, statusCode: "unset" })
         expect(result.operation).toBe(expected)
+      }
+    })
+
+    it("maps a trace-root Vercel wrapper (no parent) → invoke_agent", () => {
+      const wrappers = ["ai.generateText", "ai.streamText", "ai.generateObject", "ai.streamObject"]
+      for (const opId of wrappers) {
+        const attrs: OtlpKeyValue[] = [strAttr("ai.operationId", opId)]
+        const result = resolveAttributes({ spanAttrs: attrs, statusCode: "unset", hasParent: false })
+        expect(result.operation).toBe("invoke_agent")
       }
     })
 

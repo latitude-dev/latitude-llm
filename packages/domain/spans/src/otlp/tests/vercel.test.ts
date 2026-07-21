@@ -582,13 +582,13 @@ describe("TravelPlanner trace — Vercel AI SDK", () => {
       expect(findSpan("llm1Outer").model).toBe("")
     })
 
-    it("resolves bare generateText/streamText wrappers to 'invoke_agent' and inner leaves to 'chat'", () => {
+    it("resolves nested generateText/streamText wrappers to 'agent_step' and inner leaves to 'chat'", () => {
       // The bare `ai.generateText` / `ai.streamText` wrappers carry a lossy
-      // summary and end after their leaves, so they are classified as inert
-      // wrappers (`invoke_agent`) and excluded from the conversation/usage
-      // rollup; the inner `.doGenerate` / `.doStream` leaves hold the real turn.
-      expect(findSpan("llm1Outer").operation).toBe("invoke_agent")
-      expect(findSpan("llm2Outer").operation).toBe("invoke_agent")
+      // summary; nested under an agent they are one step of it (`agent_step`),
+      // excluded from the conversation/usage rollup and off the agent graph. The
+      // inner `.doGenerate` / `.doStream` leaves hold the real turn.
+      expect(findSpan("llm1Outer").operation).toBe("agent_step")
+      expect(findSpan("llm2Outer").operation).toBe("agent_step")
       expect(findSpan("llm1Inner").operation).toBe("chat")
       expect(findSpan("llm2Inner").operation).toBe("chat")
     })
@@ -1008,6 +1008,50 @@ describe("Vercel AI SDK streamObject / generateObject output", () => {
     const textPart = parts.find((p) => p.type === "text")
     expect(textPart).toBeDefined()
     expect((textPart as { content: string }).content).toContain("Barcelona")
+  })
+})
+
+describe("Vercel AI SDK wrapper operation by tree position", () => {
+  function buildWrapper(spanId: string, parentSpanId?: string): OtlpSpan {
+    return {
+      traceId: TRACE_ID,
+      spanId,
+      ...(parentSpanId ? { parentSpanId } : {}),
+      name: "ai.generateText",
+      kind: 1,
+      startTimeUnixNano: "1710590600000000000",
+      endTimeUnixNano: "1710590601000000000",
+      attributes: [str("ai.operationId", "ai.generateText")],
+      status: { code: 1 },
+    }
+  }
+
+  function transformWrappers(...wrappers: OtlpSpan[]) {
+    return transformOtlpToSpans(
+      {
+        resourceSpans: [
+          {
+            resource: { attributes: [str("service.name", SERVICE_NAME)] },
+            scopeSpans: [{ scope: { name: SCOPE_NAME, version: SCOPE_VERSION }, spans: wrappers }],
+          },
+        ],
+      },
+      CONTEXT,
+    ).spans
+  }
+
+  it("resolves a trace-root ai.generateText wrapper to 'invoke_agent'", () => {
+    const spans = transformWrappers(buildWrapper("c0c0c0c0c0c00001", undefined))
+    expect(spans[0]?.operation).toBe("invoke_agent")
+  })
+
+  it("resolves a nested ai.generateText wrapper to 'agent_step'", () => {
+    const spans = transformWrappers(
+      buildWrapper("c0c0c0c0c0c00001", undefined),
+      buildWrapper("c0c0c0c0c0c00002", "c0c0c0c0c0c00001"),
+    )
+    const nested = spans.find((s) => s.spanId === "c0c0c0c0c0c00002")
+    expect(nested?.operation).toBe("agent_step")
   })
 })
 

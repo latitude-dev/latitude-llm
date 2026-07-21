@@ -337,7 +337,7 @@ describe("createSpanIngestionWorker", () => {
     }
   })
 
-  it("persists Vercel outer wrappers faithfully as invoke_agent (rollup gating, not zeroing, prevents double-count)", async () => {
+  it("persists a trace-root Vercel wrapper as invoke_agent (rollup gating, not zeroing, prevents double-count)", async () => {
     const consumer = new TestQueueConsumer()
     const disk = new FakeStorageDisk()
     const pub = createFakeEventsPublisher()
@@ -398,10 +398,10 @@ describe("createSpanIngestionWorker", () => {
 
     expect(rows).toHaveLength(2)
 
-    // The wrapper is classified `invoke_agent` and keeps its SDK-reported usage
-    // verbatim — the trace/session rollup excludes non-billable operations, so
-    // there is no double-count and no need to zero the span (which would destroy
-    // the reported values).
+    // The root wrapper is classified `invoke_agent` and keeps its SDK-reported
+    // usage verbatim — the trace/session rollup excludes non-billable operations,
+    // so there is no double-count and no need to zero the span (which would
+    // destroy the reported values). Nested wrappers resolve to `agent_step`.
     expect(rows[0]?.name).toBe("ai.generateText")
     expect(rows[0]?.trace_id).toBe("11111111111111111111111111111111")
     expect(rows[0]?.operation).toBe("invoke_agent")
