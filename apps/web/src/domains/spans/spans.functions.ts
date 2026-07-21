@@ -150,7 +150,7 @@ export const listSpansByTrace = createServerFn({ method: "GET" })
   .inputValidator(
     z.object({
       projectId: z.string(),
-      traceId: z.string(),
+      traceId: z.string().length(32),
       startTimeFrom: dateTimeParamSchema.optional(),
       startTimeTo: dateTimeParamSchema.optional(),
     }),
@@ -232,7 +232,7 @@ export const listConversationMessageSpans = createServerFn({ method: "GET" })
   .inputValidator(
     z.object({
       projectId: z.string(),
-      traceId: z.string(),
+      traceId: z.string().length(32),
       startTime: dateTimeParamSchema,
     }),
   )
@@ -283,7 +283,7 @@ export const getSpanDetail = createServerFn({ method: "GET" })
   .inputValidator(
     z.object({
       projectId: z.string(),
-      traceId: z.string(),
+      traceId: z.string().length(32),
       spanId: z.string(),
       startTimeFrom: dateTimeParamSchema.optional(),
       startTimeTo: dateTimeParamSchema.optional(),

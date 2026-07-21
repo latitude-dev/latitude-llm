@@ -170,7 +170,7 @@ export interface TraceConversationChunkRecord {
 const traceListCursorSchema = z.object({
   sortValue: z.string(),
   secondaryValue: z.string().optional(),
-  traceId: z.string(),
+  traceId: z.string().length(32),
 })
 
 interface TraceListResult {
@@ -397,7 +397,7 @@ export const getTraceSearchHighlights = createServerFn({ method: "GET" })
   .inputValidator(
     z.object({
       projectId: z.string(),
-      traceId: z.string(),
+      traceId: z.string().length(32),
       searchQuery: z.string().max(500),
     }),
   )
@@ -480,7 +480,7 @@ export const getSessionMomentIntelligence = createServerFn({ method: "GET" })
   })
 
 export const getTraceDetail = createServerFn({ method: "GET" })
-  .inputValidator(z.object({ projectId: z.string(), traceId: z.string() }))
+  .inputValidator(z.object({ projectId: z.string(), traceId: z.string().length(32) }))
   .handler(async ({ data, context }) => {
     const orgId = await resolveOrgScope(context)
 
@@ -509,7 +509,7 @@ export const getTraceConversationChunk = createServerFn({ method: "GET" })
   .inputValidator(
     z.object({
       projectId: z.string(),
-      traceId: z.string(),
+      traceId: z.string().length(32),
       offset: z.number().int().nonnegative().optional(),
       limit: z.number().int().positive().max(100).optional(),
     }),
@@ -538,7 +538,7 @@ export const getSpanConversationChunk = createServerFn({ method: "GET" })
   .inputValidator(
     z.object({
       projectId: z.string(),
-      traceId: z.string(),
+      traceId: z.string().length(32),
       spanId: z.string(),
       offset: z.number().int().nonnegative().optional(),
       limit: z.number().int().positive().max(100).optional(),

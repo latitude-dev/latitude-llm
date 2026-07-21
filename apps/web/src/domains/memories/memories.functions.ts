@@ -106,7 +106,7 @@ interface MemoryUserStoreRecord {
  * batched blob fetch.
  */
 export const getSessionMemorySummary = createServerFn({ method: "GET" })
-  .inputValidator(z.object({ projectId: z.string(), sessionId: z.string(), traceId: z.string().optional() }))
+  .inputValidator(z.object({ projectId: z.string(), sessionId: z.string(), traceId: z.string().length(32).optional() }))
   .handler(async ({ data, context }): Promise<SessionMemorySummaryRecord> => {
     const orgId = await resolveOrgScope(context)
 
@@ -125,7 +125,7 @@ export const getSessionMemorySummary = createServerFn({ method: "GET" })
  * for the "Memory changes" section. Fetched only when the section is expanded.
  */
 export const getSessionMemoryDiff = createServerFn({ method: "GET" })
-  .inputValidator(z.object({ projectId: z.string(), sessionId: z.string(), traceId: z.string().optional() }))
+  .inputValidator(z.object({ projectId: z.string(), sessionId: z.string(), traceId: z.string().length(32).optional() }))
   .handler(async ({ data, context }): Promise<SessionMemoryDiffRecord> => {
     const orgId = await resolveOrgScope(context)
 
