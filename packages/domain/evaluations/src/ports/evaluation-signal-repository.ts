@@ -10,11 +10,25 @@ export interface EvaluationSignal {
   readonly projectId: string
   readonly name: string
   readonly description: string
+  /** Non-null while the signal is manually resolved; pre-gates the reopen-on-occurrence claim. */
+  readonly resolvedAt: Date | null
+  /** Non-null while the signal is manually ignored; blocks monitoring. */
+  readonly ignoredAt: Date | null
 }
 
 export class EvaluationSignalRepository extends Context.Service<
   EvaluationSignalRepository,
   {
     findById(id: SignalId): Effect.Effect<EvaluationSignal, NotFoundError | RepositoryError, SqlClient>
+    /**
+     * Atomic reopen-on-occurrence claim; see `SignalRepositoryShape.claimReopenOnOccurrence`
+     * (this port is structurally served by the same implementation). Returns whether this
+     * call performed the reopen, so exactly one writer emits `SignalRegressed` per cycle.
+     */
+    claimReopenOnOccurrence(input: {
+      readonly signalId: SignalId
+      readonly occurredAt: Date
+      readonly now: Date
+    }): Effect.Effect<boolean, RepositoryError, SqlClient>
   }
 >()("@domain/evaluations/EvaluationSignalRepository") {}

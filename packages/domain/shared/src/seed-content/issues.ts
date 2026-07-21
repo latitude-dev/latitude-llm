@@ -47,6 +47,8 @@ export type SeedSignalFixture = {
   readonly escalatedDaysAgo: number | null
   readonly resolvedDaysAgo: number | null
   readonly ignoredDaysAgo: number | null
+  readonly regressedDaysAgo: number | null
+  readonly mutedDaysAgo: number | null
 }
 
 const baseSignalFixtures: SeedSignalFixture[] = [
@@ -65,6 +67,8 @@ const baseSignalFixtures: SeedSignalFixture[] = [
     escalatedDaysAgo: 0,
     resolvedDaysAgo: null,
     ignoredDaysAgo: null,
+    regressedDaysAgo: null,
+    mutedDaysAgo: null,
   },
   {
     id: SEED_COMBINATION_SIGNAL_ID,
@@ -81,6 +85,8 @@ const baseSignalFixtures: SeedSignalFixture[] = [
     escalatedDaysAgo: 0,
     resolvedDaysAgo: 8,
     ignoredDaysAgo: null,
+    regressedDaysAgo: null,
+    mutedDaysAgo: null,
   },
   {
     id: SEED_GENERATE_SIGNAL_ID,
@@ -97,6 +103,9 @@ const baseSignalFixtures: SeedSignalFixture[] = [
     escalatedDaysAgo: 0,
     resolvedDaysAgo: null,
     ignoredDaysAgo: null,
+    // Resolved and reopened within its first week: demos "new" + "regressed" together.
+    regressedDaysAgo: 2,
+    mutedDaysAgo: null,
   },
   {
     id: SEED_RETURNS_SIGNAL_ID,
@@ -113,6 +122,9 @@ const baseSignalFixtures: SeedSignalFixture[] = [
     escalatedDaysAgo: 45,
     resolvedDaysAgo: 9,
     ignoredDaysAgo: null,
+    regressedDaysAgo: null,
+    // Muted after resolving: demos the notification toggle on an archived signal.
+    mutedDaysAgo: 3,
   },
   {
     id: SEED_BILLING_SIGNAL_ID,
@@ -129,6 +141,8 @@ const baseSignalFixtures: SeedSignalFixture[] = [
     escalatedDaysAgo: 18,
     resolvedDaysAgo: null,
     ignoredDaysAgo: 9,
+    regressedDaysAgo: null,
+    mutedDaysAgo: 9,
   },
   {
     id: SEED_ACCESS_SIGNAL_ID,
@@ -145,6 +159,8 @@ const baseSignalFixtures: SeedSignalFixture[] = [
     escalatedDaysAgo: 0,
     resolvedDaysAgo: null,
     ignoredDaysAgo: null,
+    regressedDaysAgo: null,
+    mutedDaysAgo: null,
   },
   {
     id: SEED_INSTALLATION_SIGNAL_ID,
@@ -159,8 +175,11 @@ const baseSignalFixtures: SeedSignalFixture[] = [
     clusteredDaysAgo: 2,
     updatedDaysAgo: 2,
     escalatedDaysAgo: null,
-    resolvedDaysAgo: 7,
+    resolvedDaysAgo: null,
     ignoredDaysAgo: null,
+    // Was resolved a week ago; a fresh occurrence reopened it as regressed.
+    regressedDaysAgo: 3,
+    mutedDaysAgo: null,
   },
   {
     id: SEED_FLAGGER_SIGNAL_ID,
@@ -177,6 +196,9 @@ const baseSignalFixtures: SeedSignalFixture[] = [
     escalatedDaysAgo: 0,
     resolvedDaysAgo: null,
     ignoredDaysAgo: null,
+    // Regression on an auto-monitored signal: no evaluation needed to reopen it.
+    regressedDaysAgo: 4,
+    mutedDaysAgo: null,
   },
 ]
 
@@ -191,6 +213,8 @@ const curatedExtraSignalBlueprints: Omit<SeedSignalFixture, "id" | "uuid">[] = [
     escalatedDaysAgo: 70,
     resolvedDaysAgo: null,
     ignoredDaysAgo: null,
+    regressedDaysAgo: null,
+    mutedDaysAgo: null,
     source: "annotation",
   },
   {
@@ -203,6 +227,8 @@ const curatedExtraSignalBlueprints: Omit<SeedSignalFixture, "id" | "uuid">[] = [
     escalatedDaysAgo: null,
     resolvedDaysAgo: 45,
     ignoredDaysAgo: null,
+    regressedDaysAgo: null,
+    mutedDaysAgo: null,
     source: "annotation",
   },
   {
@@ -215,6 +241,8 @@ const curatedExtraSignalBlueprints: Omit<SeedSignalFixture, "id" | "uuid">[] = [
     escalatedDaysAgo: 54,
     resolvedDaysAgo: null,
     ignoredDaysAgo: 22,
+    regressedDaysAgo: null,
+    mutedDaysAgo: 22,
     source: "annotation",
   },
   {
@@ -227,6 +255,9 @@ const curatedExtraSignalBlueprints: Omit<SeedSignalFixture, "id" | "uuid">[] = [
     escalatedDaysAgo: 49,
     resolvedDaysAgo: null,
     ignoredDaysAgo: null,
+    regressedDaysAgo: null,
+    // Muted while still active: incidents keep opening, notifications stay silent.
+    mutedDaysAgo: 12,
     source: "annotation",
   },
   {
@@ -239,6 +270,8 @@ const curatedExtraSignalBlueprints: Omit<SeedSignalFixture, "id" | "uuid">[] = [
     escalatedDaysAgo: 41,
     resolvedDaysAgo: null,
     ignoredDaysAgo: null,
+    regressedDaysAgo: null,
+    mutedDaysAgo: null,
     source: "annotation",
   },
   {
@@ -251,6 +284,8 @@ const curatedExtraSignalBlueprints: Omit<SeedSignalFixture, "id" | "uuid">[] = [
     escalatedDaysAgo: null,
     resolvedDaysAgo: 30,
     ignoredDaysAgo: null,
+    regressedDaysAgo: null,
+    mutedDaysAgo: null,
     source: "annotation",
   },
   {
@@ -263,6 +298,8 @@ const curatedExtraSignalBlueprints: Omit<SeedSignalFixture, "id" | "uuid">[] = [
     escalatedDaysAgo: 32,
     resolvedDaysAgo: null,
     ignoredDaysAgo: null,
+    regressedDaysAgo: null,
+    mutedDaysAgo: null,
     source: "annotation",
   },
   {
@@ -275,6 +312,8 @@ const curatedExtraSignalBlueprints: Omit<SeedSignalFixture, "id" | "uuid">[] = [
     escalatedDaysAgo: null,
     resolvedDaysAgo: null,
     ignoredDaysAgo: 11,
+    regressedDaysAgo: null,
+    mutedDaysAgo: 11,
     source: "annotation",
   },
   {
@@ -287,6 +326,8 @@ const curatedExtraSignalBlueprints: Omit<SeedSignalFixture, "id" | "uuid">[] = [
     escalatedDaysAgo: 29,
     resolvedDaysAgo: null,
     ignoredDaysAgo: null,
+    regressedDaysAgo: null,
+    mutedDaysAgo: null,
     source: "annotation",
   },
   {
@@ -299,6 +340,8 @@ const curatedExtraSignalBlueprints: Omit<SeedSignalFixture, "id" | "uuid">[] = [
     escalatedDaysAgo: 24,
     resolvedDaysAgo: null,
     ignoredDaysAgo: null,
+    regressedDaysAgo: null,
+    mutedDaysAgo: null,
     source: "annotation",
   },
   {
@@ -311,6 +354,8 @@ const curatedExtraSignalBlueprints: Omit<SeedSignalFixture, "id" | "uuid">[] = [
     escalatedDaysAgo: null,
     resolvedDaysAgo: 14,
     ignoredDaysAgo: null,
+    regressedDaysAgo: null,
+    mutedDaysAgo: null,
     source: "annotation",
   },
   {
@@ -323,6 +368,8 @@ const curatedExtraSignalBlueprints: Omit<SeedSignalFixture, "id" | "uuid">[] = [
     escalatedDaysAgo: 15,
     resolvedDaysAgo: null,
     ignoredDaysAgo: null,
+    regressedDaysAgo: null,
+    mutedDaysAgo: null,
     source: "annotation",
   },
   {
@@ -335,6 +382,8 @@ const curatedExtraSignalBlueprints: Omit<SeedSignalFixture, "id" | "uuid">[] = [
     escalatedDaysAgo: 18,
     resolvedDaysAgo: null,
     ignoredDaysAgo: null,
+    regressedDaysAgo: null,
+    mutedDaysAgo: null,
     source: "annotation",
   },
   {
@@ -347,6 +396,8 @@ const curatedExtraSignalBlueprints: Omit<SeedSignalFixture, "id" | "uuid">[] = [
     escalatedDaysAgo: 12,
     resolvedDaysAgo: null,
     ignoredDaysAgo: null,
+    regressedDaysAgo: null,
+    mutedDaysAgo: null,
     source: "annotation",
   },
   {
@@ -359,6 +410,8 @@ const curatedExtraSignalBlueprints: Omit<SeedSignalFixture, "id" | "uuid">[] = [
     escalatedDaysAgo: null,
     resolvedDaysAgo: null,
     ignoredDaysAgo: 7,
+    regressedDaysAgo: null,
+    mutedDaysAgo: 7,
     source: "annotation",
   },
   {
@@ -371,6 +424,8 @@ const curatedExtraSignalBlueprints: Omit<SeedSignalFixture, "id" | "uuid">[] = [
     escalatedDaysAgo: 8,
     resolvedDaysAgo: null,
     ignoredDaysAgo: null,
+    regressedDaysAgo: null,
+    mutedDaysAgo: null,
     source: "annotation",
   },
   {
@@ -383,6 +438,8 @@ const curatedExtraSignalBlueprints: Omit<SeedSignalFixture, "id" | "uuid">[] = [
     escalatedDaysAgo: null,
     resolvedDaysAgo: 6,
     ignoredDaysAgo: null,
+    regressedDaysAgo: null,
+    mutedDaysAgo: null,
     source: "annotation",
   },
   {
@@ -395,6 +452,8 @@ const curatedExtraSignalBlueprints: Omit<SeedSignalFixture, "id" | "uuid">[] = [
     escalatedDaysAgo: 5,
     resolvedDaysAgo: null,
     ignoredDaysAgo: null,
+    regressedDaysAgo: null,
+    mutedDaysAgo: null,
     source: "annotation",
   },
 ] as const
@@ -489,6 +548,8 @@ function buildGeneratedExtraSignalBlueprint(index: number): Omit<SeedSignalFixtu
     escalatedDaysAgo,
     resolvedDaysAgo: null,
     ignoredDaysAgo: null,
+    regressedDaysAgo: null,
+    mutedDaysAgo: null,
   }
 }
 
@@ -550,6 +611,18 @@ if (
   )
 ) {
   throw new Error("Seed issue fixtures must stay within the rolling issue timeline window.")
+}
+
+for (const issue of SEED_SIGNAL_FIXTURES) {
+  if (issue.ignoredDaysAgo !== null && issue.mutedDaysAgo !== issue.ignoredDaysAgo) {
+    throw new Error(`Seed issue "${issue.name}" is ignored, so it must carry the same-day auto-mute stamp.`)
+  }
+  if (issue.regressedDaysAgo !== null && issue.resolvedDaysAgo !== null) {
+    throw new Error(`Seed issue "${issue.name}" cannot be resolved and regressed at once; regression reopens.`)
+  }
+  if (issue.resolvedDaysAgo !== null && issue.ignoredDaysAgo !== null) {
+    throw new Error(`Seed issue "${issue.name}" cannot be resolved and ignored at once.`)
+  }
 }
 
 export const SEED_EVALUATION_HASHES = {
@@ -2386,15 +2459,4 @@ export const SEED_ADDITIONAL_SIGNAL_OCCURRENCES: readonly SeedSignalOccurrenceFi
   ...curatedSignalTodayBurstRows,
   ...curatedSignalRecentRegressionRows,
   ...extraSignalOccurrenceRows,
-] as const
-
-/**
- * Signal ids that the alert-incidents seeder treats as "currently regressed":
- * the issues seeder forces `resolvedAt = null` for these, and an
- * `issue.regressed` row is inserted so the read path derives Regressed.
- */
-export const SEED_REGRESSED_SIGNAL_IDS: readonly string[] = [
-  SEED_GENERATE_SIGNAL_ID,
-  SEED_INSTALLATION_SIGNAL_ID,
-  SEED_FLAGGER_SIGNAL_ID,
 ] as const

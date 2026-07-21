@@ -84,7 +84,11 @@ export const checkSignalEscalationUseCase = (input: CheckSignalEscalationInput) 
     const wasEscalating = signalWithLifecycle.lifecycle.isEscalating
     const now = new Date()
 
-    if (signalWithLifecycle.mutedAt !== null) {
+    // Ignored signals no longer drive escalation transitions — occurrences may
+    // keep accruing, but the user opted out of the automated lifecycle. Muted
+    // signals ARE still checked: mute is a notification barrier, so incidents
+    // open/close normally and only the fan-out is suppressed.
+    if (signalWithLifecycle.ignoredAt !== null) {
       return { transition: "none", currentlyEscalating: wasEscalating } satisfies CheckSignalEscalationResult
     }
 
@@ -123,6 +127,14 @@ export const checkSignalEscalationUseCase = (input: CheckSignalEscalationInput) 
     if (decision.transition === "enter") {
       yield* sqlClient.transaction(
         Effect.gen(function* () {
+          // A resolved signal that re-enters escalation has regressed: reopen
+          // it so the archive can't hide an actively escalating signal. The
+          // escalation notification announces the recurrence, so no separate
+          // SignalRegressed event is emitted on this path.
+          if (signalWithLifecycle.resolvedAt !== null) {
+            const { lifecycle: _lifecycle, ...signal } = signalWithLifecycle
+            yield* signalRepository.save({ ...signal, resolvedAt: null, regressedAt: now, updatedAt: now })
+          }
           yield* outboxEventWriter.write({
             eventName: "SignalEscalated",
             aggregateType: "issue",

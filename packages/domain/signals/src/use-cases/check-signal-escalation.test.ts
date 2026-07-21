@@ -45,6 +45,9 @@ const makeSignal = (overrides: Partial<Signal> = {}): Signal => {
       weights: { annotation: 1, custom: 0, evaluation: 0 },
     },
     clusteredAt: now,
+    resolvedAt: null,
+    ignoredAt: null,
+    regressedAt: null,
     mutedAt: null,
     deletedAt: null,
     createdAt: new Date("2026-04-01T10:00:00.000Z"),
@@ -130,15 +133,32 @@ const runUseCase = async (input: {
     checkSignalEscalationUseCase({ organizationId, projectId, signalId }).pipe(Effect.provide(layer)),
   )
 
-  return { result, events: outbox.events, incidents: incidents.incidents }
+  return { result, events: outbox.events, incidents: incidents.incidents, issues: signals.issues }
+}
+
+const ENTRY_SERIES = {
+  escalationSignalsBySignals: () =>
+    Effect.succeed([
+      {
+        signalId,
+        recent1h: 80,
+        recent6h: 360,
+        recent24h: 900,
+        expected1h: 5,
+        expected6hPerHour: 5,
+        stddev1h: 1,
+        stddev6hPerHour: 1,
+        samplesCount: 8,
+      },
+    ]),
 }
 
 describe("checkSignalEscalationUseCase", () => {
-  it("does not read series or emit events for muted signals", async () => {
+  it("does not read series or emit events for ignored signals", async () => {
     const { result, events } = await runUseCase({
-      signal: makeSignal({ mutedAt: new Date("2026-05-07T09:00:00.000Z") }),
+      signal: makeSignal({ ignoredAt: new Date("2026-05-07T09:00:00.000Z") }),
       series: {
-        escalationSignalsBySignals: () => Effect.die("muted signal should not read analytics"),
+        escalationSignalsBySignals: () => Effect.die("ignored signal should not read analytics"),
       },
     })
 
@@ -146,26 +166,37 @@ describe("checkSignalEscalationUseCase", () => {
     expect(events).toEqual([])
   })
 
+  it("still checks muted signals — mute gates notification fan-out, not incidents", async () => {
+    const { result, events } = await runUseCase({
+      signal: makeSignal({ mutedAt: new Date("2026-05-07T09:00:00.000Z") }),
+      series: ENTRY_SERIES,
+    })
+
+    expect(result).toEqual({ transition: "entered", currentlyEscalating: true })
+    expect(events).toHaveLength(1)
+    expect(events[0]).toMatchObject({ eventName: "SignalEscalated" })
+  })
+
+  it("reopens a resolved signal when escalation enters", async () => {
+    const resolvedAt = new Date("2026-05-01T00:00:00.000Z")
+    const { result, events, issues } = await runUseCase({
+      signal: makeSignal({ resolvedAt }),
+      series: ENTRY_SERIES,
+    })
+
+    expect(result).toEqual({ transition: "entered", currentlyEscalating: true })
+    expect(issues.get(signalId)?.resolvedAt).toBeNull()
+    expect(issues.get(signalId)?.regressedAt).not.toBeNull()
+    // The escalation notification announces the recurrence; no separate
+    // SignalRegressed event on this path.
+    expect(events.map((event) => event.eventName)).toEqual(["SignalEscalated"])
+  })
+
   it("enters escalation through the shared engine using project sensitivity", async () => {
     const { result, events } = await runUseCase({
       signal: makeSignal(),
       projectSettings: { escalation: { sensitivity: 2 } },
-      series: {
-        escalationSignalsBySignals: () =>
-          Effect.succeed([
-            {
-              signalId,
-              recent1h: 80,
-              recent6h: 360,
-              recent24h: 900,
-              expected1h: 5,
-              expected6hPerHour: 5,
-              stddev1h: 1,
-              stddev6hPerHour: 1,
-              samplesCount: 8,
-            },
-          ]),
-      },
+      series: ENTRY_SERIES,
     })
 
     expect(result).toEqual({ transition: "entered", currentlyEscalating: true })

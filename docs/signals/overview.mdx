@@ -96,20 +96,25 @@ The signal page shows the signal description, lifecycle state, impact (affected 
 
 ## Signal lifecycle
 
-A signal's status is one of three states, shown as a chip on the signal:
+A signal's status is shown as chips on the signal:
 
 | State | Meaning |
 | --- | --- |
 | New | Discovered or created within the last 7 days |
 | Escalating | Occurrences are rising faster than the normal pattern for this time of week |
-| Ongoing | The steady state, once a signal is neither new nor escalating |
+| Ongoing | The steady state, once no other state applies |
+| Resolved | Marked as fixed; archived but still watching for recurrences |
+| Regressed | A resolved signal started occurring again and was reopened |
+| Ignored | Marked as noise; archived, unmonitored, and muted |
 
 A signal can hold more than one state at once. A signal created this week that is also spiking shows as both New and Escalating.
 
 Two more markers appear alongside the state:
 
 - Evaluated: the signal has an active evaluation checking new sessions. See [Evaluations](../evaluations/overview).
-- Archived: the signal has been muted and moved out of the active list. See [Signal management](./management).
+- Muted: notifications are silenced; the signal keeps tracking occurrences and opening incidents. See [Signal management](./management).
+
+Resolved and ignored signals live in the Archived tab; everything else is Active.
 
 ## Common workflows
 
@@ -121,15 +126,15 @@ Use the signal's example sessions to understand common user intents, missing con
 
 Choose Generate an evaluation to attach an automated detector to the signal. It scores new sessions and tracks whether the behavior is still happening. See [Signal management](./management).
 
-### Triage and mute
+### Triage, resolve, and ignore
 
-Assign an owner and a priority so the right person picks it up. Mute a signal that isn't worth acting on: muting stops its notifications and moves it to the Archived tab. For a signal you created that you no longer need, delete it.
+Assign an owner and a priority so the right person picks it up. Resolve a signal once the underlying problem is fixed — Latitude reopens it and alerts you if it comes back. Ignore a signal that isn't worth acting on: it moves to Archived, monitoring stops, and notifications are muted. Mute a signal you want to keep watching without the pings. For a signal you created that you no longer need, delete it.
 
 ## Related pages
 
 - [Create a signal](./create): Define a signal yourself
-- [Signal management](./management): Triage, monitor, mute, and manage signals
-- [Monitors](../monitors/overview): Get notified when signals are discovered, regress, or escalate
+- [Signal management](./management): Triage, monitor, resolve, ignore, and manage signals
+- [Monitors](../monitors/overview): Watch saved searches, tools, users, and sessions
 - [Annotations](../annotations/overview): Leave human feedback on traces
 - [Flaggers](../annotations/flaggers): Detect common failure categories automatically
 - [Evaluations](../evaluations/overview): Monitor known failure patterns

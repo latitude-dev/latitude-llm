@@ -86,6 +86,21 @@ export interface EventPayloads {
     readonly assignedAt: string
   }
   /**
+   * Emitted when a new occurrence reopens a manually resolved signal: the
+   * reopen claim clears `resolved_at` and stamps `regressed_at`, and exactly
+   * one writer per regression cycle emits this (the conditional claim
+   * serializes concurrent occurrences). `triggerScoreId` identifies the
+   * occurrence that tripped the reopen and discriminates regression cycles
+   * for notification idempotency. Drives the `signal.regressed` notification.
+   */
+  SignalRegressed: {
+    readonly organizationId: string
+    readonly projectId: string
+    readonly signalId: string
+    readonly regressedAt: string
+    readonly triggerScoreId: string
+  }
+  /**
    * Emitted by `checkSignalEscalationUseCase` when a signal transitions into
    * the escalating state. The use case does not write the incident itself —
    * idempotency comes from `SignalRepository`'s joined `lifecycle.isEscalating`

@@ -163,12 +163,14 @@ function makeEvaluation(
   })
 }
 
-function makeSignal(overrides?: Partial<Pick<EvaluationSignal, "id" | "projectId" | "name" | "description">>) {
+function makeSignal(overrides?: Partial<EvaluationSignal>) {
   return {
     id: overrides?.id ?? SignalId("i".repeat(24)),
     projectId: overrides?.projectId ?? INPUT.projectId,
     name: overrides?.name ?? "Deployment checklist omission",
     description: overrides?.description ?? "The assistant fails to mention key deployment steps.",
+    resolvedAt: overrides?.resolvedAt ?? null,
+    ignoredAt: overrides?.ignoredAt ?? null,
   } satisfies EvaluationSignal
 }
 
@@ -188,9 +190,15 @@ function createEvaluationRepository(findById: EvaluationRepositoryShape["findByI
 
 function createSignalRepository(
   findById: (id: ReturnType<typeof SignalId>) => Effect.Effect<EvaluationSignal, NotFoundError>,
+  claimReopenOnOccurrence: (input: {
+    readonly signalId: ReturnType<typeof SignalId>
+    readonly occurredAt: Date
+    readonly now: Date
+  }) => Effect.Effect<boolean> = () => Effect.succeed(false),
 ) {
   return {
     findById,
+    claimReopenOnOccurrence,
   }
 }
 
@@ -1227,6 +1235,131 @@ describe("runLiveEvaluationUseCase", () => {
     ])
     expect(scriptRuntime.calls.run).toHaveLength(1)
     expectImmutableAnalyticsSyncOrder(operations)
+  })
+
+  it("reopens a resolved signal and emits SignalRegressed on a present verdict", async () => {
+    const evaluation = makeEvaluation({ script: VALID_SCRIPT })
+    const resolvedAt = new Date("2026-05-01T00:00:00.000Z")
+    const issue = makeSignal({ id: SignalId(evaluation.signalId), resolvedAt })
+    const traceDetail = makeTraceDetail()
+    const { repository: traceRepository } = createFakeTraceRepository({
+      findByTraceId: () => Effect.succeed(traceDetail),
+    })
+    const evaluationRepository = createEvaluationRepository(() => Effect.succeed(evaluation))
+    const claimCalls: { readonly signalId: string; readonly occurredAt: Date }[] = []
+    const signalRepository = createSignalRepository(
+      () => Effect.succeed(issue),
+      (claimInput) =>
+        Effect.sync(() => {
+          claimCalls.push({ signalId: String(claimInput.signalId), occurredAt: claimInput.occurredAt })
+          return true
+        }),
+    )
+    const { outboxEvents, scoreWriteLayer } = createTrackedScoreWriteFixture()
+    const scriptRuntime = createFakeScriptRuntime({
+      run: () => Effect.succeed({ value: 1, feedback: "Present.", duration: 1, tokens: 0, cost: 0 }),
+    })
+
+    const result = await Effect.runPromise(
+      runLiveEvaluationUseCase(INPUT).pipe(
+        Effect.provide(
+          createUseCaseLayer({
+            traceRepository,
+            evaluationRepository,
+            scoreWriteLayer,
+            signalRepository,
+            scriptRuntimeLayer: scriptRuntime.layer,
+          }),
+        ),
+      ),
+    )
+
+    expect(result.action).toBe("persisted")
+    if (result.action !== "persisted") throw new Error("Expected a persisted live evaluation result")
+    expect(claimCalls).toEqual([{ signalId: String(evaluation.signalId), occurredAt: result.context.score.createdAt }])
+    const regressed = outboxEvents.find((event) => (event as { eventName: string }).eventName === "SignalRegressed") as
+      | { payload: Record<string, unknown> }
+      | undefined
+    expect(regressed?.payload).toMatchObject({
+      signalId: evaluation.signalId,
+      triggerScoreId: result.context.score.id,
+    })
+  })
+
+  it("does not emit SignalRegressed when the reopen claim loses the race", async () => {
+    const evaluation = makeEvaluation({ script: VALID_SCRIPT })
+    const issue = makeSignal({
+      id: SignalId(evaluation.signalId),
+      resolvedAt: new Date("2026-05-01T00:00:00.000Z"),
+    })
+    const traceDetail = makeTraceDetail()
+    const { repository: traceRepository } = createFakeTraceRepository({
+      findByTraceId: () => Effect.succeed(traceDetail),
+    })
+    const evaluationRepository = createEvaluationRepository(() => Effect.succeed(evaluation))
+    const signalRepository = createSignalRepository(
+      () => Effect.succeed(issue),
+      () => Effect.succeed(false),
+    )
+    const { outboxEvents, scoreWriteLayer } = createTrackedScoreWriteFixture()
+    const scriptRuntime = createFakeScriptRuntime({
+      run: () => Effect.succeed({ value: 1, feedback: "Present.", duration: 1, tokens: 0, cost: 0 }),
+    })
+
+    const result = await Effect.runPromise(
+      runLiveEvaluationUseCase(INPUT).pipe(
+        Effect.provide(
+          createUseCaseLayer({
+            traceRepository,
+            evaluationRepository,
+            scoreWriteLayer,
+            signalRepository,
+            scriptRuntimeLayer: scriptRuntime.layer,
+          }),
+        ),
+      ),
+    )
+
+    expect(result.action).toBe("persisted")
+    expect(outboxEvents.map((event) => (event as { eventName: string }).eventName)).not.toContain("SignalRegressed")
+  })
+
+  it("skips the reopen claim entirely for absent verdicts", async () => {
+    const evaluation = makeEvaluation({ script: VALID_SCRIPT })
+    const issue = makeSignal({
+      id: SignalId(evaluation.signalId),
+      resolvedAt: new Date("2026-05-01T00:00:00.000Z"),
+    })
+    const traceDetail = makeTraceDetail()
+    const { repository: traceRepository } = createFakeTraceRepository({
+      findByTraceId: () => Effect.succeed(traceDetail),
+    })
+    const evaluationRepository = createEvaluationRepository(() => Effect.succeed(evaluation))
+    const signalRepository = createSignalRepository(
+      () => Effect.succeed(issue),
+      () => Effect.die("absent verdicts must not attempt a reopen claim"),
+    )
+    const { outboxEvents, scoreWriteLayer } = createTrackedScoreWriteFixture()
+    const scriptRuntime = createFakeScriptRuntime({
+      run: () => Effect.succeed({ value: 0, feedback: "Absent.", duration: 1, tokens: 0, cost: 0 }),
+    })
+
+    const result = await Effect.runPromise(
+      runLiveEvaluationUseCase(INPUT).pipe(
+        Effect.provide(
+          createUseCaseLayer({
+            traceRepository,
+            evaluationRepository,
+            scoreWriteLayer,
+            signalRepository,
+            scriptRuntimeLayer: scriptRuntime.layer,
+          }),
+        ),
+      ),
+    )
+
+    expect(result.action).toBe("persisted")
+    expect(outboxEvents.map((event) => (event as { eventName: string }).eventName)).not.toContain("SignalRegressed")
   })
 
   it("leaves the score unassigned for a failing live evaluation result", async () => {

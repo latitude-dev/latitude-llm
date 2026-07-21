@@ -15,9 +15,15 @@ export interface SessionSignal {
     description: string;
     /** Where the signal originated from. */
     source: SessionSignal.Source;
-    /** Active lifecycle states. A signal may carry multiple states at once (e.g. `escalating` + `ongoing`). */
+    /** Active lifecycle states. A signal may carry multiple states at once (e.g. `escalating` + `new`). */
     states: SessionSignal.States.Item[];
-    /** ISO-8601 timestamp at which the signal was muted, or `null`. */
+    /** ISO-8601 timestamp at which the signal was resolved, or `null`. */
+    resolvedAt: string | null;
+    /** ISO-8601 timestamp at which the signal was ignored, or `null`. */
+    ignoredAt: string | null;
+    /** ISO-8601 timestamp at which a new occurrence reopened the resolved signal, or `null`. */
+    regressedAt: string | null;
+    /** ISO-8601 timestamp at which notifications were muted, or `null`. Muting only silences notifications; incidents still open. */
     mutedAt: string | null;
     /** ISO-8601 timestamp of creation. */
     createdAt: string;
@@ -48,6 +54,9 @@ export namespace SessionSignal {
             New: "new",
             Escalating: "escalating",
             Ongoing: "ongoing",
+            Resolved: "resolved",
+            Regressed: "regressed",
+            Ignored: "ignored",
         } as const;
         export type Item = (typeof Item)[keyof typeof Item];
     }

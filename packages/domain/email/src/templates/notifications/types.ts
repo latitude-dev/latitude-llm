@@ -61,6 +61,7 @@ export type RenderDepsByKind = {
   readonly "custom.message": never
   readonly "issue.assigned": SignalRepository | UserRepository | SqlClient
   readonly "signal.discovered": SignalRepository | SqlClient
+  readonly "signal.regressed": SignalRepository | SqlClient
   readonly "destination.quarantined": never
 }
 

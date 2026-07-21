@@ -14,6 +14,9 @@ export interface SessionSignal {
   readonly description: string
   readonly source: Signal["source"]
   readonly states: readonly string[]
+  readonly resolvedAt: Date | null
+  readonly ignoredAt: Date | null
+  readonly regressedAt: Date | null
   readonly mutedAt: Date | null
   readonly createdAt: Date
   readonly updatedAt: Date
@@ -84,6 +87,9 @@ export const listSessionSignalsUseCase = (
           description: issue.description,
           source: issue.source,
           states: [...states],
+          resolvedAt: issue.resolvedAt,
+          ignoredAt: issue.ignoredAt,
+          regressedAt: issue.regressedAt,
           mutedAt: issue.mutedAt,
           createdAt: issue.createdAt,
           updatedAt: issue.updatedAt,

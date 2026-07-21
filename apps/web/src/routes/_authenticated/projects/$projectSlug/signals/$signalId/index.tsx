@@ -59,7 +59,7 @@ function SignalDetailPage() {
   // J/K prev/next-signal hotkeys so paging a trace never swaps the signal under it.
   const [overlayActive, setOverlayActive] = useState(false)
   const [renameOpen, setRenameOpen] = useState(false)
-  const lifecycleGroup = signal?.mutedAt ? "archived" : "active"
+  const lifecycleGroup = signal?.resolvedAt || signal?.ignoredAt ? "archived" : "active"
 
   return (
     <Layout>

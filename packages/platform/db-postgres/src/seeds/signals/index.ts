@@ -169,6 +169,9 @@ function signalFixtureDates(scope: SeedScope, issue: (typeof SEED_SIGNAL_FIXTURE
     escalatedAt: issue.escalatedDaysAgo === null ? null : scope.dateDaysAgo(issue.escalatedDaysAgo, 9, 0),
     resolvedAt: issue.resolvedDaysAgo === null ? null : scope.dateDaysAgo(issue.resolvedDaysAgo, 11, 30),
     ignoredAt: issue.ignoredDaysAgo === null ? null : scope.dateDaysAgo(issue.ignoredDaysAgo, 13, 10),
+    regressedAt: issue.regressedDaysAgo === null ? null : scope.dateDaysAgo(issue.regressedDaysAgo, 10, 20),
+    // Ignored fixtures share their ignored day, so the auto-mute lands on the same instant.
+    mutedAt: issue.mutedDaysAgo === null ? null : scope.dateDaysAgo(issue.mutedDaysAgo, 13, 10),
   }
 }
 
@@ -200,6 +203,8 @@ function buildSignalRow(input: {
       fixtureDates.escalatedAt,
       fixtureDates.resolvedAt,
       fixtureDates.ignoredAt,
+      fixtureDates.regressedAt,
+      fixtureDates.mutedAt,
     ].filter((date): date is Date => date !== null),
   )
 
@@ -216,7 +221,10 @@ function buildSignalRow(input: {
     source: input.issue.source,
     centroid,
     clusteredAt: centroid.clusteredAt,
-    mutedAt: fixtureDates.ignoredAt,
+    resolvedAt: fixtureDates.resolvedAt,
+    ignoredAt: fixtureDates.ignoredAt,
+    regressedAt: fixtureDates.regressedAt,
+    mutedAt: fixtureDates.mutedAt,
     createdAt,
     updatedAt,
   }

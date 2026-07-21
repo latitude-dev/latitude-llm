@@ -3,7 +3,7 @@ import { DEFAULT_ESCALATION_SENSITIVITY } from "@domain/shared"
 
 export const SIGNAL_NAME_MAX_LENGTH = 128
 
-export const SIGNAL_STATES = ["new", "escalating", "ongoing"] as const
+export const SIGNAL_STATES = ["new", "escalating", "ongoing", "resolved", "regressed", "ignored"] as const
 
 export const SIGNAL_SOURCES = ["annotation", "flagger", "custom"] as const
 

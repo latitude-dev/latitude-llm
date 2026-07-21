@@ -56,6 +56,8 @@ const EMPTY_ISSUES_ANALYTICS: SignalsListResultRecord["analytics"] = {
     newSignals: 0,
     escalatingSignals: 0,
     ongoingSignals: 0,
+    resolvedSignals: 0,
+    ignoredSignals: 0,
     seenOccurrences: 0,
   },
   histogram: [],

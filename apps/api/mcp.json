@@ -7664,7 +7664,7 @@
             "maxLength": 500
           },
           "lifecycleGroup": {
-            "description": "`\"active\"` for unmuted signals; `\"archived\"` for muted signals. Omit to include both.",
+            "description": "`\"active\"` for signals that are neither resolved nor ignored; `\"archived\"` for resolved or ignored signals. Omit to include both.",
             "type": "string",
             "enum": [
               "active",
@@ -7766,10 +7766,46 @@
                     "enum": [
                       "new",
                       "escalating",
-                      "ongoing"
+                      "ongoing",
+                      "resolved",
+                      "regressed",
+                      "ignored"
                     ]
                   },
-                  "description": "Active lifecycle states. A signal may carry multiple states at once (e.g. `escalating` + `ongoing`)."
+                  "description": "Active lifecycle states. A signal may carry multiple states at once (e.g. `escalating` + `new`)."
+                },
+                "resolvedAt": {
+                  "anyOf": [
+                    {
+                      "type": "string"
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ],
+                  "description": "ISO-8601 timestamp at which the signal was resolved, or `null`."
+                },
+                "ignoredAt": {
+                  "anyOf": [
+                    {
+                      "type": "string"
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ],
+                  "description": "ISO-8601 timestamp at which the signal was ignored, or `null`."
+                },
+                "regressedAt": {
+                  "anyOf": [
+                    {
+                      "type": "string"
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ],
+                  "description": "ISO-8601 timestamp at which a new occurrence reopened the resolved signal, or `null`."
                 },
                 "mutedAt": {
                   "anyOf": [
@@ -7780,7 +7816,7 @@
                       "type": "null"
                     }
                   ],
-                  "description": "ISO-8601 timestamp at which the signal was muted, or `null`."
+                  "description": "ISO-8601 timestamp at which notifications were muted, or `null`. Muting only silences notifications; incidents still open."
                 },
                 "createdAt": {
                   "type": "string",
@@ -7851,6 +7887,9 @@
                 "description",
                 "source",
                 "states",
+                "resolvedAt",
+                "ignoredAt",
+                "regressedAt",
                 "mutedAt",
                 "createdAt",
                 "updatedAt",
@@ -8671,6 +8710,36 @@
             ],
             "additionalProperties": false
           },
+          "resolved": {
+            "type": "object",
+            "properties": {
+              "total": {
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 9007199254740991,
+                "description": "Number of resolved signals."
+              }
+            },
+            "required": [
+              "total"
+            ],
+            "additionalProperties": false
+          },
+          "ignored": {
+            "type": "object",
+            "properties": {
+              "total": {
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 9007199254740991,
+                "description": "Number of ignored signals."
+              }
+            },
+            "required": [
+              "total"
+            ],
+            "additionalProperties": false
+          },
           "occurrences": {
             "type": "object",
             "properties": {
@@ -8716,6 +8785,8 @@
           "ongoing",
           "new",
           "escalating",
+          "resolved",
+          "ignored",
           "occurrences"
         ],
         "additionalProperties": false
@@ -8798,10 +8869,46 @@
               "enum": [
                 "new",
                 "escalating",
-                "ongoing"
+                "ongoing",
+                "resolved",
+                "regressed",
+                "ignored"
               ]
             },
-            "description": "Active lifecycle states. A signal may carry multiple states at once (e.g. `escalating` + `ongoing`)."
+            "description": "Active lifecycle states. A signal may carry multiple states at once (e.g. `escalating` + `new`)."
+          },
+          "resolvedAt": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "ISO-8601 timestamp at which the signal was resolved, or `null`."
+          },
+          "ignoredAt": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "ISO-8601 timestamp at which the signal was ignored, or `null`."
+          },
+          "regressedAt": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "ISO-8601 timestamp at which a new occurrence reopened the resolved signal, or `null`."
           },
           "mutedAt": {
             "anyOf": [
@@ -8812,7 +8919,7 @@
                 "type": "null"
               }
             ],
-            "description": "ISO-8601 timestamp at which the signal was muted, or `null`."
+            "description": "ISO-8601 timestamp at which notifications were muted, or `null`. Muting only silences notifications; incidents still open."
           },
           "createdAt": {
             "type": "string",
@@ -9139,6 +9246,10 @@
               }
             ],
             "description": "Whether the signal is currently being monitored: `automatic`, `idle`, `generating`, `realigning`, or `failed`."
+          },
+          "keepMonitoringDefault": {
+            "type": "boolean",
+            "description": "Project-level default for `resolveSignals`' `keepMonitoring` when the request omits it."
           }
         },
         "required": [
@@ -9150,6 +9261,9 @@
           "description",
           "source",
           "states",
+          "resolvedAt",
+          "ignoredAt",
+          "regressedAt",
           "mutedAt",
           "createdAt",
           "updatedAt",
@@ -9160,7 +9274,8 @@
           "occurrences",
           "affectedSessionsPercent",
           "evaluations",
-          "monitoringState"
+          "monitoringState",
+          "keepMonitoringDefault"
         ],
         "additionalProperties": false
       },
@@ -9523,9 +9638,134 @@
       }
     },
     {
-      "name": "muteSignals",
-      "title": "Mute signals",
-      "description": "Mutes each signal in `signalIds`.",
+      "name": "resolveSignals",
+      "title": "Resolve signals",
+      "description": "Marks each signal in `signalIds` as resolved, archiving it and re-enabling its notifications. Unless `keepMonitoring` is `false`, linked evaluations keep running so a new occurrence reopens the signal as regressed.",
+      "inputSchema": {
+        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "type": "object",
+        "properties": {
+          "projectSlug": {
+            "type": "string",
+            "description": "Project slug (human-readable identifier)"
+          },
+          "signalIds": {
+            "minItems": 1,
+            "type": "array",
+            "items": {
+              "type": "string",
+              "minLength": 24,
+              "maxLength": 24
+            },
+            "description": "Non-empty list of signal ids. Operations are idempotent — already-applied signals are unchanged."
+          },
+          "keepMonitoring": {
+            "description": "Whether linked evaluations keep running after the resolve, so regressions are detected. Defaults to the project setting.",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "projectSlug",
+          "signalIds"
+        ],
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "type": "object",
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "signalId": {
+                  "type": "string",
+                  "minLength": 24,
+                  "maxLength": 24,
+                  "description": "Signal this entry applies to."
+                },
+                "resolvedAt": {
+                  "anyOf": [
+                    {
+                      "type": "string"
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ],
+                  "description": "ISO-8601 timestamp at which the signal was resolved, or `null`."
+                },
+                "ignoredAt": {
+                  "anyOf": [
+                    {
+                      "type": "string"
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ],
+                  "description": "ISO-8601 timestamp at which the signal was ignored, or `null`."
+                },
+                "regressedAt": {
+                  "anyOf": [
+                    {
+                      "type": "string"
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ],
+                  "description": "ISO-8601 timestamp at which a new occurrence reopened the resolved signal, or `null`."
+                },
+                "mutedAt": {
+                  "anyOf": [
+                    {
+                      "type": "string"
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ],
+                  "description": "ISO-8601 timestamp at which notifications were muted, or `null`. Ignoring a signal also mutes it."
+                },
+                "updatedAt": {
+                  "type": "string",
+                  "description": "ISO-8601 timestamp of the last update."
+                },
+                "changed": {
+                  "type": "boolean",
+                  "description": "`true` when this call changed the signal, `false` when it was already in that state."
+                }
+              },
+              "required": [
+                "signalId",
+                "resolvedAt",
+                "ignoredAt",
+                "regressedAt",
+                "mutedAt",
+                "updatedAt",
+                "changed"
+              ],
+              "additionalProperties": false
+            },
+            "description": "Per-signal result, in the order requested."
+          }
+        },
+        "required": [
+          "items"
+        ],
+        "additionalProperties": false
+      },
+      "annotations": {
+        "readOnlyHint": false,
+        "destructiveHint": false
+      }
+    },
+    {
+      "name": "unresolveSignals",
+      "title": "Unresolve signals",
+      "description": "Reopens each signal in `signalIds` without marking it as regressed, re-enabling its notifications.",
       "inputSchema": {
         "$schema": "https://json-schema.org/draft/2020-12/schema",
         "type": "object",
@@ -9566,6 +9806,39 @@
                   "maxLength": 24,
                   "description": "Signal this entry applies to."
                 },
+                "resolvedAt": {
+                  "anyOf": [
+                    {
+                      "type": "string"
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ],
+                  "description": "ISO-8601 timestamp at which the signal was resolved, or `null`."
+                },
+                "ignoredAt": {
+                  "anyOf": [
+                    {
+                      "type": "string"
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ],
+                  "description": "ISO-8601 timestamp at which the signal was ignored, or `null`."
+                },
+                "regressedAt": {
+                  "anyOf": [
+                    {
+                      "type": "string"
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ],
+                  "description": "ISO-8601 timestamp at which a new occurrence reopened the resolved signal, or `null`."
+                },
                 "mutedAt": {
                   "anyOf": [
                     {
@@ -9575,7 +9848,7 @@
                       "type": "null"
                     }
                   ],
-                  "description": "ISO-8601 timestamp at which the signal was muted, or `null`."
+                  "description": "ISO-8601 timestamp at which notifications were muted, or `null`. Ignoring a signal also mutes it."
                 },
                 "updatedAt": {
                   "type": "string",
@@ -9588,6 +9861,372 @@
               },
               "required": [
                 "signalId",
+                "resolvedAt",
+                "ignoredAt",
+                "regressedAt",
+                "mutedAt",
+                "updatedAt",
+                "changed"
+              ],
+              "additionalProperties": false
+            },
+            "description": "Per-signal result, in the order requested."
+          }
+        },
+        "required": [
+          "items"
+        ],
+        "additionalProperties": false
+      },
+      "annotations": {
+        "readOnlyHint": false,
+        "destructiveHint": false
+      }
+    },
+    {
+      "name": "ignoreSignals",
+      "title": "Ignore signals",
+      "description": "Marks each signal in `signalIds` as ignored, archiving it. Monitoring is stopped and notifications are also muted.",
+      "inputSchema": {
+        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "type": "object",
+        "properties": {
+          "projectSlug": {
+            "type": "string",
+            "description": "Project slug (human-readable identifier)"
+          },
+          "signalIds": {
+            "minItems": 1,
+            "type": "array",
+            "items": {
+              "type": "string",
+              "minLength": 24,
+              "maxLength": 24
+            },
+            "description": "Non-empty list of signal ids. Operations are idempotent — already-applied signals are unchanged."
+          }
+        },
+        "required": [
+          "projectSlug",
+          "signalIds"
+        ],
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "type": "object",
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "signalId": {
+                  "type": "string",
+                  "minLength": 24,
+                  "maxLength": 24,
+                  "description": "Signal this entry applies to."
+                },
+                "resolvedAt": {
+                  "anyOf": [
+                    {
+                      "type": "string"
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ],
+                  "description": "ISO-8601 timestamp at which the signal was resolved, or `null`."
+                },
+                "ignoredAt": {
+                  "anyOf": [
+                    {
+                      "type": "string"
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ],
+                  "description": "ISO-8601 timestamp at which the signal was ignored, or `null`."
+                },
+                "regressedAt": {
+                  "anyOf": [
+                    {
+                      "type": "string"
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ],
+                  "description": "ISO-8601 timestamp at which a new occurrence reopened the resolved signal, or `null`."
+                },
+                "mutedAt": {
+                  "anyOf": [
+                    {
+                      "type": "string"
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ],
+                  "description": "ISO-8601 timestamp at which notifications were muted, or `null`. Ignoring a signal also mutes it."
+                },
+                "updatedAt": {
+                  "type": "string",
+                  "description": "ISO-8601 timestamp of the last update."
+                },
+                "changed": {
+                  "type": "boolean",
+                  "description": "`true` when this call changed the signal, `false` when it was already in that state."
+                }
+              },
+              "required": [
+                "signalId",
+                "resolvedAt",
+                "ignoredAt",
+                "regressedAt",
+                "mutedAt",
+                "updatedAt",
+                "changed"
+              ],
+              "additionalProperties": false
+            },
+            "description": "Per-signal result, in the order requested."
+          }
+        },
+        "required": [
+          "items"
+        ],
+        "additionalProperties": false
+      },
+      "annotations": {
+        "readOnlyHint": false,
+        "destructiveHint": false
+      }
+    },
+    {
+      "name": "unignoreSignals",
+      "title": "Unignore signals",
+      "description": "Returns each signal in `signalIds` to the active list and re-enables its notifications.",
+      "inputSchema": {
+        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "type": "object",
+        "properties": {
+          "projectSlug": {
+            "type": "string",
+            "description": "Project slug (human-readable identifier)"
+          },
+          "signalIds": {
+            "minItems": 1,
+            "type": "array",
+            "items": {
+              "type": "string",
+              "minLength": 24,
+              "maxLength": 24
+            },
+            "description": "Non-empty list of signal ids. Operations are idempotent — already-applied signals are unchanged."
+          }
+        },
+        "required": [
+          "projectSlug",
+          "signalIds"
+        ],
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "type": "object",
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "signalId": {
+                  "type": "string",
+                  "minLength": 24,
+                  "maxLength": 24,
+                  "description": "Signal this entry applies to."
+                },
+                "resolvedAt": {
+                  "anyOf": [
+                    {
+                      "type": "string"
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ],
+                  "description": "ISO-8601 timestamp at which the signal was resolved, or `null`."
+                },
+                "ignoredAt": {
+                  "anyOf": [
+                    {
+                      "type": "string"
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ],
+                  "description": "ISO-8601 timestamp at which the signal was ignored, or `null`."
+                },
+                "regressedAt": {
+                  "anyOf": [
+                    {
+                      "type": "string"
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ],
+                  "description": "ISO-8601 timestamp at which a new occurrence reopened the resolved signal, or `null`."
+                },
+                "mutedAt": {
+                  "anyOf": [
+                    {
+                      "type": "string"
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ],
+                  "description": "ISO-8601 timestamp at which notifications were muted, or `null`. Ignoring a signal also mutes it."
+                },
+                "updatedAt": {
+                  "type": "string",
+                  "description": "ISO-8601 timestamp of the last update."
+                },
+                "changed": {
+                  "type": "boolean",
+                  "description": "`true` when this call changed the signal, `false` when it was already in that state."
+                }
+              },
+              "required": [
+                "signalId",
+                "resolvedAt",
+                "ignoredAt",
+                "regressedAt",
+                "mutedAt",
+                "updatedAt",
+                "changed"
+              ],
+              "additionalProperties": false
+            },
+            "description": "Per-signal result, in the order requested."
+          }
+        },
+        "required": [
+          "items"
+        ],
+        "additionalProperties": false
+      },
+      "annotations": {
+        "readOnlyHint": false,
+        "destructiveHint": false
+      }
+    },
+    {
+      "name": "muteSignals",
+      "title": "Mute signals",
+      "description": "Silences notifications for each signal in `signalIds`. Muted signals keep tracking occurrences and opening incidents; only notifications stop.",
+      "inputSchema": {
+        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "type": "object",
+        "properties": {
+          "projectSlug": {
+            "type": "string",
+            "description": "Project slug (human-readable identifier)"
+          },
+          "signalIds": {
+            "minItems": 1,
+            "type": "array",
+            "items": {
+              "type": "string",
+              "minLength": 24,
+              "maxLength": 24
+            },
+            "description": "Non-empty list of signal ids. Operations are idempotent — already-applied signals are unchanged."
+          }
+        },
+        "required": [
+          "projectSlug",
+          "signalIds"
+        ],
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "type": "object",
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "signalId": {
+                  "type": "string",
+                  "minLength": 24,
+                  "maxLength": 24,
+                  "description": "Signal this entry applies to."
+                },
+                "resolvedAt": {
+                  "anyOf": [
+                    {
+                      "type": "string"
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ],
+                  "description": "ISO-8601 timestamp at which the signal was resolved, or `null`."
+                },
+                "ignoredAt": {
+                  "anyOf": [
+                    {
+                      "type": "string"
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ],
+                  "description": "ISO-8601 timestamp at which the signal was ignored, or `null`."
+                },
+                "regressedAt": {
+                  "anyOf": [
+                    {
+                      "type": "string"
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ],
+                  "description": "ISO-8601 timestamp at which a new occurrence reopened the resolved signal, or `null`."
+                },
+                "mutedAt": {
+                  "anyOf": [
+                    {
+                      "type": "string"
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ],
+                  "description": "ISO-8601 timestamp at which notifications were muted, or `null`. Ignoring a signal also mutes it."
+                },
+                "updatedAt": {
+                  "type": "string",
+                  "description": "ISO-8601 timestamp of the last update."
+                },
+                "changed": {
+                  "type": "boolean",
+                  "description": "`true` when this call changed the signal, `false` when it was already in that state."
+                }
+              },
+              "required": [
+                "signalId",
+                "resolvedAt",
+                "ignoredAt",
+                "regressedAt",
                 "mutedAt",
                 "updatedAt",
                 "changed"
@@ -9610,7 +10249,7 @@
     {
       "name": "unmuteSignals",
       "title": "Unmute signals",
-      "description": "Reverts each signal in `signalIds` to an unmuted state.",
+      "description": "Re-enables notifications for each signal in `signalIds`.",
       "inputSchema": {
         "$schema": "https://json-schema.org/draft/2020-12/schema",
         "type": "object",
@@ -9651,6 +10290,39 @@
                   "maxLength": 24,
                   "description": "Signal this entry applies to."
                 },
+                "resolvedAt": {
+                  "anyOf": [
+                    {
+                      "type": "string"
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ],
+                  "description": "ISO-8601 timestamp at which the signal was resolved, or `null`."
+                },
+                "ignoredAt": {
+                  "anyOf": [
+                    {
+                      "type": "string"
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ],
+                  "description": "ISO-8601 timestamp at which the signal was ignored, or `null`."
+                },
+                "regressedAt": {
+                  "anyOf": [
+                    {
+                      "type": "string"
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ],
+                  "description": "ISO-8601 timestamp at which a new occurrence reopened the resolved signal, or `null`."
+                },
                 "mutedAt": {
                   "anyOf": [
                     {
@@ -9660,7 +10332,7 @@
                       "type": "null"
                     }
                   ],
-                  "description": "ISO-8601 timestamp at which the signal was muted, or `null`."
+                  "description": "ISO-8601 timestamp at which notifications were muted, or `null`. Ignoring a signal also mutes it."
                 },
                 "updatedAt": {
                   "type": "string",
@@ -9673,6 +10345,9 @@
               },
               "required": [
                 "signalId",
+                "resolvedAt",
+                "ignoredAt",
+                "regressedAt",
                 "mutedAt",
                 "updatedAt",
                 "changed"
@@ -35565,10 +36240,46 @@
                     "enum": [
                       "new",
                       "escalating",
-                      "ongoing"
+                      "ongoing",
+                      "resolved",
+                      "regressed",
+                      "ignored"
                     ]
                   },
-                  "description": "Active lifecycle states. A signal may carry multiple states at once (e.g. `escalating` + `ongoing`)."
+                  "description": "Active lifecycle states. A signal may carry multiple states at once (e.g. `escalating` + `new`)."
+                },
+                "resolvedAt": {
+                  "anyOf": [
+                    {
+                      "type": "string"
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ],
+                  "description": "ISO-8601 timestamp at which the signal was resolved, or `null`."
+                },
+                "ignoredAt": {
+                  "anyOf": [
+                    {
+                      "type": "string"
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ],
+                  "description": "ISO-8601 timestamp at which the signal was ignored, or `null`."
+                },
+                "regressedAt": {
+                  "anyOf": [
+                    {
+                      "type": "string"
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ],
+                  "description": "ISO-8601 timestamp at which a new occurrence reopened the resolved signal, or `null`."
                 },
                 "mutedAt": {
                   "anyOf": [
@@ -35579,7 +36290,7 @@
                       "type": "null"
                     }
                   ],
-                  "description": "ISO-8601 timestamp at which the signal was muted, or `null`."
+                  "description": "ISO-8601 timestamp at which notifications were muted, or `null`. Muting only silences notifications; incidents still open."
                 },
                 "createdAt": {
                   "type": "string",
@@ -35620,6 +36331,9 @@
                 "description",
                 "source",
                 "states",
+                "resolvedAt",
+                "ignoredAt",
+                "regressedAt",
                 "mutedAt",
                 "createdAt",
                 "updatedAt",
@@ -35722,10 +36436,46 @@
               "enum": [
                 "new",
                 "escalating",
-                "ongoing"
+                "ongoing",
+                "resolved",
+                "regressed",
+                "ignored"
               ]
             },
-            "description": "Active lifecycle states. A signal may carry multiple states at once (e.g. `escalating` + `ongoing`)."
+            "description": "Active lifecycle states. A signal may carry multiple states at once (e.g. `escalating` + `new`)."
+          },
+          "resolvedAt": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "ISO-8601 timestamp at which the signal was resolved, or `null`."
+          },
+          "ignoredAt": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "ISO-8601 timestamp at which the signal was ignored, or `null`."
+          },
+          "regressedAt": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "ISO-8601 timestamp at which a new occurrence reopened the resolved signal, or `null`."
           },
           "mutedAt": {
             "anyOf": [
@@ -35736,7 +36486,7 @@
                 "type": "null"
               }
             ],
-            "description": "ISO-8601 timestamp at which the signal was muted, or `null`."
+            "description": "ISO-8601 timestamp at which notifications were muted, or `null`. Muting only silences notifications; incidents still open."
           },
           "createdAt": {
             "type": "string",
@@ -35777,6 +36527,9 @@
           "description",
           "source",
           "states",
+          "resolvedAt",
+          "ignoredAt",
+          "regressedAt",
           "mutedAt",
           "createdAt",
           "updatedAt",

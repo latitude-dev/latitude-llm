@@ -18,7 +18,13 @@ const pg = setupTestPostgres()
 const run = <A, E>(effect: Effect.Effect<A, E, SignalRepository | SqlClient>) =>
   Effect.runPromise(effect.pipe(withPostgres(SignalRepositoryLive, pg.adminPostgresClient, ORG_ID)))
 
-const seedSignal = (input: { readonly id: string; readonly slug: string; readonly createdAt: Date }) =>
+const seedSignal = (input: {
+  readonly id: string
+  readonly slug: string
+  readonly createdAt: Date
+  readonly resolvedAt?: Date | null
+  readonly ignoredAt?: Date | null
+}) =>
   pg.db.insert(signals).values({
     id: input.id,
     organizationId: ORG_ID,
@@ -28,6 +34,8 @@ const seedSignal = (input: { readonly id: string; readonly slug: string; readonl
     description: `${input.slug} description`,
     source: "custom",
     origin: "user",
+    resolvedAt: input.resolvedAt ?? null,
+    ignoredAt: input.ignoredAt ?? null,
     createdAt: input.createdAt,
     updatedAt: input.createdAt,
   })
@@ -80,6 +88,57 @@ describe("SignalRepositoryLive.listTableRows zero-occurrence membership", () => 
 
     expect(page.totalCount).toBe(2)
     expect(page.items.map((issue) => issue.id).sort()).toEqual([CREATED_IN_WINDOW.id, CREATED_BEFORE_WINDOW.id].sort())
+  })
+})
+
+describe("SignalRepositoryLive.claimReopenOnOccurrence", () => {
+  const RESOLVED_AT = new Date("2026-03-10T00:00:00.000Z")
+  const OCCURRED_AFTER = new Date("2026-03-20T00:00:00.000Z")
+  const NOW = new Date("2026-03-20T00:00:01.000Z")
+  const SIGNAL = { id: "sig-claim".padEnd(24, "c"), slug: "claim", createdAt: new Date("2026-01-01T00:00:00.000Z") }
+
+  const claim = (occurredAt: Date) =>
+    run(
+      Effect.gen(function* () {
+        const repo = yield* SignalRepository
+        return yield* repo.claimReopenOnOccurrence({ signalId: SignalId(SIGNAL.id), occurredAt, now: NOW })
+      }),
+    )
+
+  beforeEach(async () => {
+    await pg.db.delete(signals)
+  })
+
+  it("reopens a resolved signal exactly once per cycle", async () => {
+    await seedSignal({ ...SIGNAL, resolvedAt: RESOLVED_AT })
+
+    await expect(claim(OCCURRED_AFTER)).resolves.toBe(true)
+
+    const [row] = await pg.db.select().from(signals)
+    expect(row?.resolvedAt).toBeNull()
+    expect(row?.regressedAt).toEqual(NOW)
+
+    // The next occurrence in the same cycle sees resolved_at IS NULL and loses.
+    await expect(claim(OCCURRED_AFTER)).resolves.toBe(false)
+  })
+
+  it("does not reopen for occurrences at or before the resolve timestamp", async () => {
+    await seedSignal({ ...SIGNAL, resolvedAt: RESOLVED_AT })
+
+    await expect(claim(RESOLVED_AT)).resolves.toBe(false)
+    await expect(claim(new Date("2026-03-01T00:00:00.000Z"))).resolves.toBe(false)
+
+    const [row] = await pg.db.select().from(signals)
+    expect(row?.resolvedAt).toEqual(RESOLVED_AT)
+  })
+
+  it("never reopens ignored or unresolved signals", async () => {
+    await seedSignal({ ...SIGNAL, resolvedAt: RESOLVED_AT, ignoredAt: RESOLVED_AT })
+    await expect(claim(OCCURRED_AFTER)).resolves.toBe(false)
+
+    await pg.db.delete(signals)
+    await seedSignal(SIGNAL)
+    await expect(claim(OCCURRED_AFTER)).resolves.toBe(false)
   })
 })
 

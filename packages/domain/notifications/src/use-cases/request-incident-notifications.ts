@@ -74,7 +74,7 @@ export interface IncidentNotificationRequest {
 export type RequestIncidentNotificationsResult =
   | {
       readonly status: "skipped"
-      readonly reason: "kind-disabled" | "no-recipients" | "monitor-muted" | "signal-muted"
+      readonly reason: "kind-disabled" | "no-recipients" | "monitor-muted" | "signal-muted" | "signal-ignored"
     }
   | { readonly status: "ok"; readonly requests: readonly IncidentNotificationRequest[] }
 
@@ -507,6 +507,12 @@ export const requestIncidentNotificationsUseCase = (input: RequestIncidentNotifi
     if (signal?.mutedAt !== null && signal?.mutedAt !== undefined) {
       yield* Effect.annotateCurrentSpan("skipped", "signal-muted")
       return { status: "skipped", reason: "signal-muted" } as const
+    }
+    // Ignored signals normally never open incidents; this covers the race
+    // where an ignore lands between the incident opening and this fan-out.
+    if (signal?.ignoredAt !== null && signal?.ignoredAt !== undefined) {
+      yield* Effect.annotateCurrentSpan("skipped", "signal-ignored")
+      return { status: "skipped", reason: "signal-ignored" } as const
     }
 
     const notificationKind = resolveKind(incident, input.transition)

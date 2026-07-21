@@ -99,6 +99,7 @@ export const createAgentDispatchWorker = ({
                 organizationId: orgId,
                 projectId: ProjectId(payload.projectId!),
                 signalId: SignalId(payload.signalId!),
+                ...(payload.trigger !== undefined ? { trigger: payload.trigger } : {}),
               }
             : {
                 type: "incident" as const,

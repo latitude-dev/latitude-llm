@@ -78,8 +78,19 @@ export const signalIdentityFields = {
   source: z.enum(SIGNAL_SOURCES).describe("Where the signal originated from."),
   states: z
     .array(z.enum(SIGNAL_STATES))
-    .describe("Active lifecycle states. A signal may carry multiple states at once (e.g. `escalating` + `ongoing`)."),
-  mutedAt: z.string().nullable().describe("ISO-8601 timestamp at which the signal was muted, or `null`."),
+    .describe("Active lifecycle states. A signal may carry multiple states at once (e.g. `escalating` + `new`)."),
+  resolvedAt: z.string().nullable().describe("ISO-8601 timestamp at which the signal was resolved, or `null`."),
+  ignoredAt: z.string().nullable().describe("ISO-8601 timestamp at which the signal was ignored, or `null`."),
+  regressedAt: z
+    .string()
+    .nullable()
+    .describe("ISO-8601 timestamp at which a new occurrence reopened the resolved signal, or `null`."),
+  mutedAt: z
+    .string()
+    .nullable()
+    .describe(
+      "ISO-8601 timestamp at which notifications were muted, or `null`. Muting only silences notifications; incidents still open.",
+    ),
   createdAt: z.string().describe("ISO-8601 timestamp of creation."),
   updatedAt: z.string().describe("ISO-8601 timestamp of the last update."),
 } as const
@@ -130,6 +141,9 @@ const signalDetailFields = {
   monitoringState: SignalMonitoringStateSchema.describe(
     "Whether the signal is currently being monitored: `automatic`, `idle`, `generating`, `realigning`, or `failed`.",
   ),
+  keepMonitoringDefault: z
+    .boolean()
+    .describe("Project-level default for `resolveSignals`' `keepMonitoring` when the request omits it."),
 } as const
 
 const SignalSchema = z.object(signalListFields).openapi("Signal")
@@ -147,6 +161,9 @@ export const toSignalResponse = (item: SignalListItem, organizationId: string) =
   description: item.description,
   source: item.source,
   states: [...item.states] as (typeof SIGNAL_STATES)[number][],
+  resolvedAt: item.resolvedAt ? item.resolvedAt.toISOString() : null,
+  ignoredAt: item.ignoredAt ? item.ignoredAt.toISOString() : null,
+  regressedAt: item.regressedAt ? item.regressedAt.toISOString() : null,
   mutedAt: item.mutedAt ? item.mutedAt.toISOString() : null,
   createdAt: item.createdAt.toISOString(),
   updatedAt: item.updatedAt.toISOString(),
@@ -158,7 +175,11 @@ export const toSignalResponse = (item: SignalListItem, organizationId: string) =
   tags: [...item.tags],
 })
 
-export const toSignalDetailResponse = (details: SignalDetails, organizationId: string) => ({
+export const toSignalDetailResponse = (
+  details: SignalDetails,
+  organizationId: string,
+  keepMonitoringDefault: boolean,
+) => ({
   id: details.issue.id as string,
   organizationId,
   projectId: details.issue.projectId as string,
@@ -167,6 +188,9 @@ export const toSignalDetailResponse = (details: SignalDetails, organizationId: s
   description: details.issue.description,
   source: details.issue.source,
   states: [...details.states],
+  resolvedAt: details.issue.resolvedAt ? details.issue.resolvedAt.toISOString() : null,
+  ignoredAt: details.issue.ignoredAt ? details.issue.ignoredAt.toISOString() : null,
+  regressedAt: details.issue.regressedAt ? details.issue.regressedAt.toISOString() : null,
   mutedAt: details.issue.mutedAt ? details.issue.mutedAt.toISOString() : null,
   createdAt: details.issue.createdAt.toISOString(),
   updatedAt: details.issue.updatedAt.toISOString(),
@@ -178,6 +202,7 @@ export const toSignalDetailResponse = (details: SignalDetails, organizationId: s
   trend: details.trend.map((bucket) => ({ bucket: bucket.bucket, count: bucket.count })),
   evaluations: details.evaluations.map(toEvaluationResponse),
   monitoringState: toMonitoringStateResponse(details.alignmentState),
+  keepMonitoringDefault,
 })
 
 const toMonitoringStateResponse = (state: SignalDetails["alignmentState"]) => {

@@ -247,6 +247,14 @@ export const signalDiscoveredPayloadSchema = z.object({
 })
 export type SignalDiscoveredPayload = z.infer<typeof signalDiscoveredPayloadSchema>
 
+export const signalRegressedPayloadSchema = z.object({
+  signalId: cuidSchema,
+  regressedAt: z.iso.datetime(),
+  /** Occurrence that reopened the resolved signal; discriminates regression cycles. */
+  triggerScoreId: cuidSchema,
+})
+export type SignalRegressedPayload = z.infer<typeof signalRegressedPayloadSchema>
+
 /**
  * A data destination flipped to `quarantined` (5 consecutive terminal sync
  * failures) and stopped exporting. Fans out to org members so someone
@@ -292,6 +300,7 @@ export const NOTIFICATION_KIND_META = {
   },
   "issue.assigned": { group: "personal", payload: signalAssignedPayloadSchema },
   "signal.discovered": { group: "incidents", payload: signalDiscoveredPayloadSchema },
+  "signal.regressed": { group: "incidents", payload: signalRegressedPayloadSchema },
   "destination.quarantined": {
     group: "destinations",
     payload: destinationQuarantinedPayloadSchema,

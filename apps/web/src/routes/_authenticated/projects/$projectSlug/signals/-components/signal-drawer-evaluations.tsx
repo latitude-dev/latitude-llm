@@ -526,7 +526,9 @@ export function SignalDrawerEvaluations({
           </div>
           {monitorBlockedByLifecycle ? (
             <Tooltip asChild trigger={<span className="inline-flex">{monitorButton}</span>}>
-              <Text.H6 color="foregroundMuted">Unmute this signal first to generate an evaluation</Text.H6>
+              <Text.H6 color="foregroundMuted">
+                Unresolve or unignore this signal first to generate an evaluation
+              </Text.H6>
             </Tooltip>
           ) : (
             monitorButton

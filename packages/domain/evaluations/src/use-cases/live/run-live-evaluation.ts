@@ -34,7 +34,7 @@ import {
   type RepositoryError,
   type SettingsReader,
   SignalId,
-  type SqlClient,
+  SqlClient,
   TraceId,
 } from "@domain/shared"
 import {
@@ -468,6 +468,41 @@ export const runLiveEvaluationUseCase = (input: RunLiveEvaluationInput) =>
         evaluationId: input.evaluationId,
         traceId: input.traceId,
       } satisfies RunLiveEvaluationResult
+    }
+
+    // A present verdict on a manually resolved signal is a regression: reopen
+    // it. The `issue` snapshot predates execution, so it only pre-gates; the
+    // conditional claim re-checks current state and exactly one writer per
+    // regression cycle wins and emits `SignalRegressed`.
+    if (persistedSignalId !== null && issue.resolvedAt !== null) {
+      const persistedScore = score
+      const reopenedAt = new Date()
+      const sqlClient = yield* SqlClient
+      yield* sqlClient.transaction(
+        Effect.gen(function* () {
+          const reopened = yield* signalRepository.claimReopenOnOccurrence({
+            signalId: SignalId(evaluation.signalId),
+            occurredAt: persistedScore.createdAt,
+            now: reopenedAt,
+          })
+          if (!reopened) return
+
+          const outboxEventWriter = yield* OutboxEventWriter
+          yield* outboxEventWriter.write({
+            eventName: "SignalRegressed",
+            aggregateType: "issue",
+            aggregateId: evaluation.signalId,
+            organizationId: input.organizationId,
+            payload: {
+              organizationId: input.organizationId,
+              projectId: input.projectId,
+              signalId: evaluation.signalId,
+              regressedAt: reopenedAt.toISOString(),
+              triggerScoreId: persistedScore.id,
+            },
+          })
+        }),
+      )
     }
 
     return {

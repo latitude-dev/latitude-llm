@@ -7,6 +7,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [7.5.0] - 2026-07-21
+
+### Added
+
+- `latitude signals resolve` / `unresolve` / `ignore` / `unignore` lifecycle commands. Resolving archives a signal while its evaluations keep watching for regressions (`--keep-monitoring` controls this); ignoring archives it, stops monitoring, and mutes notifications.
+- Signal responses now carry `resolvedAt`, `ignoredAt`, and `regressedAt`, and `states` can include `resolved`, `regressed`, and `ignored`.
+- Signal analytics now include `resolved` and `ignored` counts.
+
+### Changed
+
+- Muting a signal is now a pure notification toggle: incidents keep opening while muted.
+
 ## [7.4.0] - 2026-07-20
 
 ### Added

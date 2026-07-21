@@ -7,6 +7,13 @@ export class EvaluationNotFoundError extends Data.TaggedError("EvaluationNotFoun
   readonly httpMessage = "Evaluation not found"
 }
 
+export class SignalNotActiveForMonitoringError extends Data.TaggedError("SignalNotActiveForMonitoringError")<{
+  readonly signalId: string
+}> {
+  readonly httpStatus = 422
+  readonly httpMessage = "Unresolve or unignore this signal before monitoring it"
+}
+
 export class EvaluationDeletedError extends Data.TaggedError("EvaluationDeletedError")<{
   readonly evaluationId: string
 }> {

@@ -3,6 +3,8 @@ import { EvaluationId, SignalId } from "@domain/shared"
 import {
   SEED_ACCESS_EVALUATION_HASH,
   SEED_COMBINATION_EVALUATION_HASH,
+  SEED_GROUNDING_EVALUATION_HASH,
+  SEED_RECALL_EVALUATION_HASH,
   SEED_RETURNS_EVALUATION_HASH,
   SEED_WARRANTY_ARCHIVED_EVALUATION_HASH,
   SEED_WARRANTY_EVALUATION_HASH,
@@ -116,6 +118,26 @@ const returnsTrigger: EvaluationTrigger = {
   sampling: 30,
 }
 
+const groundingMonitorScript = buildJudgeScript(
+  [
+    "You are judging whether the banking support agent recommended products without grounding in policy.",
+    "Fail the conversation when the assistant recommends a financial product without checking customer constraints,",
+    "subscription status, fee policy, or the knowledge documents the recommendation must be grounded in.",
+    "Pass the conversation when the assistant grounds the recommendation in retrieved policy, states its limits,",
+    "or declines to recommend until the required account checks complete.",
+  ].join("\n"),
+)
+
+const recallScopeMonitorScript = buildJudgeScript(
+  [
+    "You are judging whether the Acme support agent overcommitted recall reimbursement scope.",
+    "Fail the conversation when the assistant promises shipping, labor, or incidental-damage reimbursement",
+    "that the documented recall campaign does not cover.",
+    "Pass the conversation when the assistant keeps reimbursement within the campaign's documented scope",
+    "or escalates out-of-scope requests for review.",
+  ].join("\n"),
+)
+
 const accessTrigger: EvaluationTrigger = {
   filter: {
     serviceNames: [{ op: "eq", value: "acme-support-agent" }],
@@ -172,6 +194,44 @@ const accessAlignment: EvaluationAlignment = {
     falsePositives: 1,
     falseNegatives: 1,
     trueNegatives: 34,
+  },
+}
+
+const groundingTrigger: EvaluationTrigger = {
+  filter: {
+    serviceNames: [{ op: "eq", value: "acme-support-agent" }],
+  },
+  turn: "every",
+  debounce: 40,
+  sampling: 30,
+}
+
+const recallScopeTrigger: EvaluationTrigger = {
+  filter: {
+    serviceNames: [{ op: "eq", value: "acme-support-agent" }],
+  },
+  turn: "last",
+  debounce: 60,
+  sampling: 20,
+}
+
+const groundingAlignment: EvaluationAlignment = {
+  evaluationHash: SEED_GROUNDING_EVALUATION_HASH,
+  confusionMatrix: {
+    truePositives: 12,
+    falsePositives: 2,
+    falseNegatives: 2,
+    trueNegatives: 26,
+  },
+}
+
+const recallScopeAlignment: EvaluationAlignment = {
+  evaluationHash: SEED_RECALL_EVALUATION_HASH,
+  confusionMatrix: {
+    truePositives: 10,
+    falsePositives: 2,
+    falseNegatives: 3,
+    trueNegatives: 24,
   },
 }
 
@@ -267,6 +327,44 @@ const buildEvaluationRows = (scope: SeedScope) => {
       deletedAt: null,
       createdAt: at(24, 8, 20),
       updatedAt: at(2, 9, 40),
+    },
+    {
+      id: EvaluationId(scope.cuid("evaluation:grounding")),
+      organizationId: scope.organizationId,
+      projectId: scope.projectId,
+      signalId: SignalId(scope.cuid("issue:installation")),
+      name: "Product Recommendation Grounding Monitor",
+      description:
+        "Detects when the banking support agent recommends financial products without grounding the answer in " +
+        "customer constraints, fee policy, or the available knowledge documents. It kept running after the signal " +
+        "was first resolved and is what caught the current regression.",
+      script: groundingMonitorScript,
+      trigger: groundingTrigger,
+      alignment: groundingAlignment,
+      alignedAt: at(5, 14, 0),
+      archivedAt: null,
+      deletedAt: null,
+      createdAt: at(20, 9, 30),
+      updatedAt: at(5, 14, 0),
+    },
+    {
+      id: EvaluationId(scope.cuid("evaluation:recall-scope")),
+      organizationId: scope.organizationId,
+      projectId: scope.projectId,
+      // issue:extra:4 = "Agent overcommits recall reimbursement scope" (curated extra index 4).
+      signalId: SignalId(scope.cuid("issue:extra:4")),
+      name: "Recall Reimbursement Scope Monitor",
+      description:
+        "Detects when the support agent extends recall reimbursement to shipping, labor, or incidental damages " +
+        "that the documented recall campaign does not cover.",
+      script: recallScopeMonitorScript,
+      trigger: recallScopeTrigger,
+      alignment: recallScopeAlignment,
+      alignedAt: at(4, 10, 30),
+      archivedAt: null,
+      deletedAt: null,
+      createdAt: at(28, 11, 0),
+      updatedAt: at(4, 10, 30),
     },
   ] as const
 }

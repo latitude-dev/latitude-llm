@@ -56,7 +56,12 @@ const renderDefaultPrompt = (context: AgentDispatchContext): string => {
     return lines.join("\n")
   }
 
-  const lines: string[] = [`A Latitude signal needs investigation in project "${context.projectName}".`, ""]
+  const lines: string[] = [
+    context.trigger === "signal.regressed"
+      ? `A previously resolved Latitude signal has regressed in project "${context.projectName}".`
+      : `A Latitude signal needs investigation in project "${context.projectName}".`,
+    "",
+  ]
 
   if (context.signal) {
     lines.push(`Signal: ${context.signal.name} (${context.signal.source})   ID: ${context.signal.id}`)
