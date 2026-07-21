@@ -141,9 +141,6 @@ const signalDetailFields = {
   monitoringState: SignalMonitoringStateSchema.describe(
     "Whether the signal is currently being monitored: `automatic`, `idle`, `generating`, `realigning`, or `failed`.",
   ),
-  keepMonitoringDefault: z
-    .boolean()
-    .describe("Project-level default for `resolveSignals`' `keepMonitoring` when the request omits it."),
 } as const
 
 const SignalSchema = z.object(signalListFields).openapi("Signal")
@@ -175,11 +172,7 @@ export const toSignalResponse = (item: SignalListItem, organizationId: string) =
   tags: [...item.tags],
 })
 
-export const toSignalDetailResponse = (
-  details: SignalDetails,
-  organizationId: string,
-  keepMonitoringDefault: boolean,
-) => ({
+export const toSignalDetailResponse = (details: SignalDetails, organizationId: string) => ({
   id: details.issue.id as string,
   organizationId,
   projectId: details.issue.projectId as string,
@@ -202,7 +195,6 @@ export const toSignalDetailResponse = (
   trend: details.trend.map((bucket) => ({ bucket: bucket.bucket, count: bucket.count })),
   evaluations: details.evaluations.map(toEvaluationResponse),
   monitoringState: toMonitoringStateResponse(details.alignmentState),
-  keepMonitoringDefault,
 })
 
 const toMonitoringStateResponse = (state: SignalDetails["alignmentState"]) => {

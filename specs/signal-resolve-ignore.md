@@ -281,7 +281,7 @@ All decisions are settled (design review with Alex, 2026-07-20).
 
 **API + artifacts**
 
-- [x] **T-s** `packages/operations/src/operations/signals.ts`: four `buildLifecycleEndpoint` operations (6.6) registered in `signalsModule`; lifecycle item + `Signal`/`SignalDetail` schemas gain `resolvedAt`/`ignoredAt`/`regressedAt`; `states` enum widened; `lifecycleGroup` + `muteSignals`/`ignoreSignals` descriptions per 6.6; detail response carries `keepMonitoringDefault`; `getSignalAnalytics` response gains the new counts.
+- [x] **T-s** `packages/operations/src/operations/signals.ts`: four `buildLifecycleEndpoint` operations (6.6) registered in `signalsModule`; lifecycle item + `Signal`/`SignalDetail` schemas gain `resolvedAt`/`ignoredAt`/`regressedAt`; `states` enum widened; `lifecycleGroup` + `muteSignals`/`ignoreSignals` descriptions per 6.6; `getSignalAnalytics` response gains the new counts. (The public detail response does **not** carry `keepMonitoringDefault` — a machine caller omits `keepMonitoring` for the default or sets it explicitly; the resolve-toggle seed is a web-only concern computed in `signals.functions.ts`.)
 - [x] **T-t** ~~`signal-agent.ts` toolset gains the lifecycle verbs~~ — kept read-only; see the 6.6 note (the verbs reach agents via MCP; the generator's research toolset must not admit mutations).
 - [x] **T-u** `pnpm generate:all` — openapi.json, mcp.json, TS SDK, Python SDK, CLI reference — committed in this PR.
 

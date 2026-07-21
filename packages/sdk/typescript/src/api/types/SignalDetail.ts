@@ -46,8 +46,6 @@ export interface SignalDetail {
     /** Active evaluations monitoring the signal. Archived and deleted evaluations are excluded. */
     evaluations: Latitude.Evaluation[];
     monitoringState: Latitude.SignalMonitoringState;
-    /** Project-level default for `resolveSignals`' `keepMonitoring` when the request omits it. */
-    keepMonitoringDefault: boolean;
 }
 
 export namespace SignalDetail {

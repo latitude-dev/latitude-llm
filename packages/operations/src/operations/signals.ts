@@ -8,7 +8,6 @@ import {
   evaluationSettingsSchema,
   OrganizationId,
   ProjectId,
-  resolveSettings,
   SignalId,
   UserId,
 } from "@domain/shared"
@@ -526,14 +525,13 @@ const getSignal = signalEndpoint({
         projectId: project.id,
         signalId: SignalId(signal.id as string),
       })
-      const settings = yield* resolveSettings({ projectId: project.id })
       return {
         status: 200,
-        body: toSignalDetailResponse(details, ctx.organization.id as string, settings.keepMonitoring),
+        body: toSignalDetailResponse(details, ctx.organization.id as string),
       } as const
     }).pipe(
       withPostgres(
-        Layer.mergeAll(ProjectRepositoryLive, SignalRepositoryLive, EvaluationRepositoryLive, SettingsReaderLive),
+        Layer.mergeAll(ProjectRepositoryLive, SignalRepositoryLive, EvaluationRepositoryLive),
         ctx.postgresClient,
         ctx.organization.id,
       ),

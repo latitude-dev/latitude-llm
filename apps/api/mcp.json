@@ -9246,10 +9246,6 @@
               }
             ],
             "description": "Whether the signal is currently being monitored: `automatic`, `idle`, `generating`, `realigning`, or `failed`."
-          },
-          "keepMonitoringDefault": {
-            "type": "boolean",
-            "description": "Project-level default for `resolveSignals`' `keepMonitoring` when the request omits it."
           }
         },
         "required": [
@@ -9274,8 +9270,7 @@
           "occurrences",
           "affectedSessionsPercent",
           "evaluations",
-          "monitoringState",
-          "keepMonitoringDefault"
+          "monitoringState"
         ],
         "additionalProperties": false
       },

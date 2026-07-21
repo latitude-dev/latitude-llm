@@ -149,13 +149,5 @@ class SignalDetail(UniversalBaseModel):
     monitoring_state: typing_extensions.Annotated[
         SignalMonitoringState, FieldMetadata(alias="monitoringState"), pydantic.Field(alias="monitoringState")
     ]
-    keep_monitoring_default: typing_extensions.Annotated[
-        bool,
-        FieldMetadata(alias="keepMonitoringDefault"),
-        pydantic.Field(
-            alias="keepMonitoringDefault",
-            description="Project-level default for `resolveSignals`' `keepMonitoring` when the request omits it.",
-        ),
-    ]
 
     model_config: typing.ClassVar[pydantic.ConfigDict] = pydantic.ConfigDict(extra="allow", frozen=True)

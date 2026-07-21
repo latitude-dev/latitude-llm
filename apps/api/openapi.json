@@ -5010,10 +5010,6 @@
           },
           "monitoringState": {
             "$ref": "#/components/schemas/SignalMonitoringState"
-          },
-          "keepMonitoringDefault": {
-            "type": "boolean",
-            "description": "Project-level default for `resolveSignals`' `keepMonitoring` when the request omits it."
           }
         },
         "required": [
@@ -5038,8 +5034,7 @@
           "occurrences",
           "affectedSessionsPercent",
           "evaluations",
-          "monitoringState",
-          "keepMonitoringDefault"
+          "monitoringState"
         ]
       },
       "Evaluation": {
