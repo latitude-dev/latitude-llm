@@ -47,6 +47,12 @@ import {
   ADAPTIVE_WORKER_MAX_OLD_GEN_MB,
 } from "./schedule.ts"
 
+// Adaptive builds are heavy (k-means restarts on real-dimension vectors) and run
+// past Vitest's 5s default: crossSampleAri does ten leave-one-tenth-out builds per
+// fixture; the resource benchmark does one full 1,500×2048 build.
+const CROSS_SAMPLE_ARI_TIMEOUT_MS = 60_000
+const RESOURCE_BOUNDS_TIMEOUT_MS = 180_000
+
 const centroidOfLabel = (corpus: LabeledCorpus, label: string): number[] => {
   const sum = new Array<number>(corpus.dimensions).fill(0)
   corpus.embeddings.forEach((vector, index) => {
@@ -267,9 +273,7 @@ describe("adaptive clustering — broad-domain regression + cross-sample stabili
     (_name, corpus) => {
       expect(crossSampleAri(corpus)).toBeGreaterThanOrEqual(ADAPTIVE_CROSS_SAMPLE_ARI_FLOOR)
     },
-    // Averaged crossSampleAri builds all ten leave-one-tenth-out folds; ten
-    // clustering builds per fixture runs well past Vitest's 5s default on CI.
-    60_000,
+    CROSS_SAMPLE_ARI_TIMEOUT_MS,
   )
 })
 
@@ -317,42 +321,46 @@ describe("adaptive clustering — resource bounds at the 1,500-sample cap", () =
       globalAbsoluteThreshold: ADAPTIVE_GLOBAL_ABSOLUTE_THRESHOLD,
     })
 
-  it("adaptive is no more than 25% slower than static, stays within the node cap, and holds the memory budget", () => {
-    const embeddings = makeBenchmarkCorpus()
+  it(
+    "adaptive is no more than 25% slower than static, stays within the node cap, and holds the memory budget",
+    () => {
+      const embeddings = makeBenchmarkCorpus()
 
-    // Alternate static/adaptive across several rounds and compare the *best* of
-    // each: after the first (warm-up) round both builders are equally JIT-warm,
-    // which removes the "static-first warms the single adaptive run" bias of a
-    // one-shot timing. Track the worst per-round RSS growth as the memory sample.
-    const ROUNDS = 3
-    let bestStaticMs = Number.POSITIVE_INFINITY
-    let bestAdaptiveMs = Number.POSITIVE_INFINITY
-    let maxAdaptiveRssGrowthBytes = 0
-    let lastRoot: AdaptiveTreeNode | null = null
-    let lastFellBack = true
-    for (let round = 0; round < ROUNDS; round++) {
-      const staticStart = performance.now()
-      runStatic(embeddings)
-      bestStaticMs = Math.min(bestStaticMs, performance.now() - staticStart)
+      // Alternate static/adaptive across several rounds and compare the *best* of
+      // each: after the first (warm-up) round both builders are equally JIT-warm,
+      // which removes the "static-first warms the single adaptive run" bias of a
+      // one-shot timing. Track the worst per-round RSS growth as the memory sample.
+      const ROUNDS = 3
+      let bestStaticMs = Number.POSITIVE_INFINITY
+      let bestAdaptiveMs = Number.POSITIVE_INFINITY
+      let maxAdaptiveRssGrowthBytes = 0
+      let lastRoot: AdaptiveTreeNode | null = null
+      let lastFellBack = true
+      for (let round = 0; round < ROUNDS; round++) {
+        const staticStart = performance.now()
+        runStatic(embeddings)
+        bestStaticMs = Math.min(bestStaticMs, performance.now() - staticStart)
 
-      const rssBefore = process.memoryUsage().rss
-      const adaptiveStart = performance.now()
-      const { root, diagnostics } = runAdaptive(embeddings)
-      bestAdaptiveMs = Math.min(bestAdaptiveMs, performance.now() - adaptiveStart)
-      maxAdaptiveRssGrowthBytes = Math.max(maxAdaptiveRssGrowthBytes, process.memoryUsage().rss - rssBefore)
-      lastRoot = root
-      lastFellBack = diagnostics.fellBackToStatic
-    }
+        const rssBefore = process.memoryUsage().rss
+        const adaptiveStart = performance.now()
+        const { root, diagnostics } = runAdaptive(embeddings)
+        bestAdaptiveMs = Math.min(bestAdaptiveMs, performance.now() - adaptiveStart)
+        maxAdaptiveRssGrowthBytes = Math.max(maxAdaptiveRssGrowthBytes, process.memoryUsage().rss - rssBefore)
+        lastRoot = root
+        lastFellBack = diagnostics.fellBackToStatic
+      }
 
-    expect(treeShape(lastRoot as AdaptiveTreeNode).nodeCount).toBeLessThanOrEqual(ADAPTIVE_ROLLOUT_LIMITS.nodeCap)
-    expect(lastFellBack).toBe(false)
-    expect(bestAdaptiveMs / bestStaticMs).toBeLessThanOrEqual(ADAPTIVE_RUNTIME_RATIO_CEILING)
-    // Memory gate: the *build's own* RSS growth (isolated from the node/vitest
-    // baseline, which absolute process RSS can't be), worst across rounds. The
-    // build is O(n·dims); this is a coarse tripwire for a gross (e.g. O(n²·dims))
-    // allocation regression. True peak-during-build sampling would need an isolated
-    // worker — a synchronous CPU build can't be sampled from the same event loop —
-    // which is out of scope for an offline calibration gate.
-    expect(maxAdaptiveRssGrowthBytes).toBeLessThanOrEqual(ADAPTIVE_WORKER_MAX_OLD_GEN_MB * 1024 * 1024)
-  }, 180_000)
+      expect(treeShape(lastRoot as AdaptiveTreeNode).nodeCount).toBeLessThanOrEqual(ADAPTIVE_ROLLOUT_LIMITS.nodeCap)
+      expect(lastFellBack).toBe(false)
+      expect(bestAdaptiveMs / bestStaticMs).toBeLessThanOrEqual(ADAPTIVE_RUNTIME_RATIO_CEILING)
+      // Memory gate: the *build's own* RSS growth (isolated from the node/vitest
+      // baseline, which absolute process RSS can't be), worst across rounds. The
+      // build is O(n·dims); this is a coarse tripwire for a gross (e.g. O(n²·dims))
+      // allocation regression. True peak-during-build sampling would need an isolated
+      // worker — a synchronous CPU build can't be sampled from the same event loop —
+      // which is out of scope for an offline calibration gate.
+      expect(maxAdaptiveRssGrowthBytes).toBeLessThanOrEqual(ADAPTIVE_WORKER_MAX_OLD_GEN_MB * 1024 * 1024)
+    },
+    RESOURCE_BOUNDS_TIMEOUT_MS,
+  )
 })
