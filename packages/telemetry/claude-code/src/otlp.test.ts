@@ -905,8 +905,7 @@ describe("span size capping", () => {
       description: fatDescription,
       input_schema: { type: "object", properties: { q: { type: "string" } } },
     }))
-    // Captured payloads replace transcript reconstruction, so the span only exceeds
-    // SPAN_BYTE_BUDGET when the captured request itself is oversized.
+    // Captured payloads replace reconstruction — oversize the captured request to hit the budget.
     const captured: StoredRequest = {
       messageId: "msg_tools_cap",
       capturedAt: "2026-07-21T12:00:00.000Z",

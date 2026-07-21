@@ -34,7 +34,10 @@ const match = (feedback: string, messageIndex?: number): DeterministicFlaggerMat
   ...(messageIndex !== undefined ? { messageIndex } : {}),
 })
 
+export type ToolCallErrorFindingKind = "malformed" | "duplicate" | "undeclared" | "unknown-id" | "error"
+
 export interface ToolCallErrorFinding {
+  readonly kind: ToolCallErrorFindingKind
   readonly feedback: string
   readonly messageIndex: number
   readonly toolName?: string | undefined
@@ -76,6 +79,7 @@ export function collectToolCallErrorFindings(conversation: ToolErrorConversation
         if (!toolCallId || !toolName) {
           const label = toolName ? `tool "${toolName}"` : "an unnamed tool"
           findings.push({
+            kind: "malformed",
             feedback: `Malformed tool call: ${label} with missing or empty tool_call id`,
             messageIndex: msgIdx,
             ...(toolName ? { toolName } : {}),
@@ -85,6 +89,7 @@ export function collectToolCallErrorFindings(conversation: ToolErrorConversation
 
         if (callById.has(toolCallId)) {
           findings.push({
+            kind: "duplicate",
             feedback: `Duplicate tool_call id emitted for tool "${toolName}"`,
             messageIndex: msgIdx,
             toolName,
@@ -97,6 +102,7 @@ export function collectToolCallErrorFindings(conversation: ToolErrorConversation
 
         if (definedTools && !definedTools.has(toolName)) {
           findings.push({
+            kind: "undeclared",
             feedback: `Assistant called tool "${toolName}" which is not in the declared toolset`,
             messageIndex: msgIdx,
             toolName,
@@ -116,6 +122,7 @@ export function collectToolCallErrorFindings(conversation: ToolErrorConversation
         // survived in the window.
         if (!hasAnyToolCall) continue
         findings.push({
+          kind: "unknown-id",
           feedback: `Tool response references an unknown tool_call id "${toolCallId || "<empty>"}"`,
           messageIndex: msgIdx,
           ...(toolCallId ? { toolCallId } : {}),
@@ -126,6 +133,7 @@ export function collectToolCallErrorFindings(conversation: ToolErrorConversation
       if (toolResponseIndicatesFailure(part.response)) {
         const snippet = extractToolErrorSnippet(part.response)
         findings.push({
+          kind: "error",
           feedback: snippet
             ? `Tool "${call.name}" returned error: ${snippet}`
             : `Tool "${call.name}" returned an error`,
@@ -142,12 +150,7 @@ export function collectToolCallErrorFindings(conversation: ToolErrorConversation
 
   if (successfulCallIds.size === 0) return findings
   return findings.filter(
-    (finding) =>
-      !(
-        finding.toolCallId &&
-        successfulCallIds.has(finding.toolCallId) &&
-        finding.feedback.includes("which is not in the declared toolset")
-      ),
+    (finding) => !(finding.kind === "undeclared" && finding.toolCallId && successfulCallIds.has(finding.toolCallId)),
   )
 }
 

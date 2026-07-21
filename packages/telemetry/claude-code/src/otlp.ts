@@ -658,8 +658,7 @@ function toolNameStub(tool: unknown): unknown {
   return typeof name === "string" ? { name } : tool
 }
 
-// Never drop tool names when capping — definedTools / undeclared-tool detection key
-// off names alone; only schemas are optional under the byte budget.
+// Never drop tool names when capping — definedTools keys off names; only schemas are optional.
 function capToolDefinitions(tools: unknown[], maxBytes: number): CapResult {
   const full = JSON.stringify(tools)
   if (full.length <= maxBytes) return { json: full }
@@ -700,10 +699,7 @@ function capToolDefinitions(tools: unknown[], maxBytes: number): CapResult {
   const stubCount = out.length - fullCount
   return {
     json: JSON.stringify(out),
-    note:
-      stubCount > 0
-        ? `kept all ${tools.length} names (${fullCount} full schemas, ${stubCount} name-only)`
-        : `kept ${fullCount} of ${tools.length} entries`,
+    note: `kept all ${tools.length} names (${fullCount} full schemas, ${stubCount} name-only)`,
   }
 }
 
