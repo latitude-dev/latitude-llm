@@ -1809,6 +1809,11 @@ export function getCodingAgentTelemetryPrompt(): string {
   return "Install the `latitude-telemetry` skill from `github.com/latitude-dev/skills`, and use it to add Latitude tracing to this app following best practices."
 }
 
+/** Mirrors the memory-tracing docs prompt (docs.latitude.so/telemetry/memory). */
+export function getMemoryTelemetryPrompt(): string {
+  return "Install the `latitude-telemetry` skill from `github.com/latitude-dev/skills`, and use it to add Latitude memory observability to this app's long-term memory, following best practices."
+}
+
 export type CodingMachineAgentId = "claude-code" | "openclaw" | "hermes" | "pi"
 
 export function getCodingMachineTelemetryInstallCommand(agent: CodingMachineAgentId): string {

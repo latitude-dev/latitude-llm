@@ -78,7 +78,7 @@ function MemoryPage() {
   return (
     <Layout>
       {showEmptyState ? (
-        <MemoryEmptyState isLoading={isLoading} />
+        <MemoryEmptyState />
       ) : (
         <MemoryStoresView
           stores={stores}
