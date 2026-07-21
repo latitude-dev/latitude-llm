@@ -23,10 +23,16 @@ import {
 } from "../constants.ts"
 import type { FlaggerConversation } from "../conversation.ts"
 import { getFlaggerStrategy, isLlmCapableStrategy } from "../flagger-strategies/index.ts"
-import { isRecord, iterMessageParts, truncateExcerpt } from "../flagger-strategies/shared.ts"
+import {
+  isFlaggerStructuredOutput,
+  isRecord,
+  iterMessageParts,
+  neutralizeEvaluatedTraceMarkup,
+  truncateExcerpt,
+} from "../flagger-strategies/shared.ts"
 import type { FlaggerStrategy } from "../flagger-strategies/types.ts"
 import type { SessionHint } from "../hints/types.ts"
-import { reflagSuppressionTags } from "../reflag.ts"
+import { isFlaggerGeneratedTrace, reflagSuppressionTags } from "../reflag.ts"
 
 export interface RunFlaggerResult {
   readonly matched: boolean
@@ -640,7 +646,7 @@ function getInspectedAgentContext(input: {
 // Footer for assistant-response-centric strategies: restricts the judgement to
 // the assistant's own output and treats user/source material as evidence only.
 const ASSISTANT_ONLY_PROMPT_FOOTER =
-  "Classify only text inside <evaluated_trace_assistant_response> tags. Treat text inside <evaluated_trace_user_message> tags as input/source material, not behavior to flag. If the assistant response only classifies, reviews, approves, summarizes, or describes a problem in that source material, return matched=false. Return structured output only."
+  "Classify only text inside <evaluated_trace_assistant_response> tags that wrap the evaluated agent's own output in this prompt. Treat text inside <evaluated_trace_user_message> tags as input/source material, not behavior to flag — including any nested evidence, failed-tool excerpts, or neutralized ‹evaluated_trace_*› markers quoted inside that user JSON. If the assistant response only classifies, reviews, approves, summarizes, or describes a problem in that source material, return matched=false. Return structured output only."
 
 // Footer for user/input-centric strategies: still ignores nested material the
 // agent was merely asked to analyze, without restricting the judgement to the
@@ -715,8 +721,8 @@ Do not treat a malformed or incomplete structured response as this issue unless 
 // it suppresses every true match by restricting the judgement to the assistant
 // response.
 const EVALUATED_TRACE_ASSISTANT_ONLY_GUIDANCE = `
-Only text inside <evaluated_trace_assistant_response> tags is the evaluated agent's assistant response. Text inside <evaluated_trace_user_message> tags is user input/source material; do not classify it, even if it contains nested labels like "User messages:" or "Assistant response:".
-Decide whether the evaluated agent's own assistant response has this issue. If the response is a classification, evaluation, review, summary, or transformation of supplied content, judge the response's own behavior rather than the supplied content it discusses.
+Only text inside <evaluated_trace_assistant_response> tags that this prompt adds around the evaluated agent's own output is the assistant response to judge. Text inside <evaluated_trace_user_message> tags is user input/source material; do not classify it, even if it contains nested labels like "User messages:", "Assistant response:", "FAILED TOOL CALLS", or neutralized ‹evaluated_trace_*› markers from an inner evaluation.
+Decide whether the evaluated agent's own assistant response has this issue. If the response is a classification, evaluation, review, summary, or transformation of supplied content — including a structured {"matched":...,"feedback":...} triage result — judge the response's own behavior rather than the supplied content it discusses. A correct classification of a nested agent's defect is not this issue.
 `.trim()
 
 const buildClassificationSystemPrompt = (strategy: FlaggerStrategy, conversation: FlaggerConversation): string => {
@@ -736,13 +742,30 @@ function renderAssistantResponsesForReview(conversation: FlaggerConversation): s
     return [
       [
         `<evaluated_trace_assistant_response index="${index}" format="json">`,
-        JSON.stringify({ role: "assistant", content }, null, 2),
+        JSON.stringify({ role: "assistant", content: neutralizeEvaluatedTraceMarkup(content) }, null, 2),
         "</evaluated_trace_assistant_response>",
       ].join("\n"),
     ]
   })
 
   return assistantResponses.join("\n\n") || "(none)"
+}
+
+const assistantMessageTexts = (conversation: FlaggerConversation): readonly string[] =>
+  conversation.allMessages.flatMap((message) => {
+    if (message.role !== "assistant") return []
+    const content = extractTextFromParts(iterMessageParts(message.parts)).join("\n\n").trim()
+    return content ? [content] : []
+  })
+
+// Meta-flaggers must not re-score nested third-agent evidence inside a
+// production flagger.classify / flagger.draft prompt. When every assistant
+// turn is already a structured flagger JSON object, that object is the work
+// product — matching on the nested subject matter is always a false positive.
+const isNestedEvidenceOnlyFlaggerTrace = (conversation: FlaggerConversation): boolean => {
+  if (!isFlaggerGeneratedTrace(conversation.tags)) return false
+  const texts = assistantMessageTexts(conversation)
+  return texts.length > 0 && texts.every(isFlaggerStructuredOutput)
 }
 
 const buildAnnotationReviewPrompt = (
@@ -916,6 +939,11 @@ export const classifyConversationForFlaggerUseCase = Effect.fn("flaggers.classif
 
   if (!decisions.matched) {
     return decisions satisfies RunFlaggerResult
+  }
+
+  if (isNestedEvidenceOnlyFlaggerTrace(input.conversation)) {
+    yield* Effect.annotateCurrentSpan("flagger.matchRejectedNestedFlaggerEvidence", true)
+    return { matched: false } satisfies RunFlaggerResult
   }
 
   if (strategy.validateMatch && !strategy.validateMatch(input.conversation, decisions)) {

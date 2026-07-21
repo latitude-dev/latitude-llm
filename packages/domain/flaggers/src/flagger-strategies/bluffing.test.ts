@@ -39,6 +39,27 @@ describe("extractFailedToolEvents", () => {
     ])
     expect(extractFailedToolEvents(conversation)).toEqual([])
   })
+
+  it("surfaces sibling successful tool results from the same batch", () => {
+    const conversation = makeTrace([
+      {
+        role: "assistant",
+        parts: [
+          { type: "tool_call", id: "call-ok", name: "code", arguments: { sheet: "A200" } },
+          { type: "tool_call", id: "call-fail", name: "code", arguments: { sheet: "A102" } },
+        ],
+      },
+      tool("call-ok", { ok: true, quotes: ["demolition plan"] }),
+      tool("call-fail", { error: "Dynamic worker concurrency limit exceeded" }),
+      assistant("I've organized the drawing-backed scope into packages using A200."),
+    ])
+
+    const events = extractFailedToolEvents(conversation)
+    expect(events).toHaveLength(1)
+    expect(events[0]?.siblingSuccessSnippets).toEqual([
+      expect.stringContaining('code: {"ok":true,"quotes":["demolition plan"]}'),
+    ])
+  })
 })
 
 describe("bluffingStrategy", () => {
@@ -54,6 +75,26 @@ describe("bluffingStrategy", () => {
     expect(prompt).toContain("update_record")
     expect(prompt).toContain("permission denied")
     expect(prompt).toContain("Done! The record is updated.")
+    expect(prompt).toContain("Sibling successful tool results before the assistant continued: none observed")
+  })
+
+  it("renders sibling successes into the prompt when present", () => {
+    const conversation = makeTrace([
+      {
+        role: "assistant",
+        parts: [
+          { type: "tool_call", id: "call-ok", name: "code", arguments: {} },
+          { type: "tool_call", id: "call-fail", name: "code", arguments: {} },
+        ],
+      },
+      tool("call-ok", { ok: true, sheet: "A200" }),
+      tool("call-fail", { error: "concurrency limit exceeded" }),
+      assistant("Package 1 uses sheet A200."),
+    ])
+
+    const prompt = bluffingStrategy.buildPrompt?.(conversation)
+    expect(prompt).toContain("Sibling successful tool results before the assistant continued (may ground the reply):")
+    expect(prompt).toContain('"sheet":"A200"')
   })
 
   it("is hinted by tool errors and has no deterministic detector", () => {

@@ -1,5 +1,10 @@
 import type { FlaggerConversation } from "../conversation.ts"
-import { isMessagePart, iterMessageParts, MAX_STAGES_PER_PROMPT } from "./shared.ts"
+import {
+  isMessagePart,
+  iterMessageParts,
+  MAX_STAGES_PER_PROMPT,
+  neutralizeEvaluatedTraceMarkup,
+} from "./shared.ts"
 import type { FlaggerStrategy } from "./types.ts"
 
 /**
@@ -179,7 +184,7 @@ export function extractConversationStages(
 // ---------------------------------------------------------------------------
 
 function renderMessageJson(role: "user" | "assistant", content: string): string {
-  return JSON.stringify({ role, content }, null, 2)
+  return JSON.stringify({ role, content: neutralizeEvaluatedTraceMarkup(content) }, null, 2)
 }
 
 export function formatStageUserMessagesForPrompt(userMessages: readonly string[]): string {

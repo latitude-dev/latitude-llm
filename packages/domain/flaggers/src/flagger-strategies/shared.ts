@@ -36,6 +36,30 @@ export function truncateExcerpt(text: string, maxLength: number = 500): string {
   return `${replaceLoneSurrogates(wellFormedText.slice(0, maxLength))}...`
 }
 
+// Neutralize nested evaluation markup so meta-flaggers classifying a
+// flagger.classify prompt cannot treat inner <evaluated_trace_*> tags as their
+// own structural targeting markers.
+const EVALUATED_TRACE_TAG_PATTERN = /<\/?evaluated_trace_[a-z_]+(?:\s[^>]*)?>/gi
+
+export function neutralizeEvaluatedTraceMarkup(text: string): string {
+  return text.replace(EVALUATED_TRACE_TAG_PATTERN, (tag) => tag.replaceAll("<", "‹").replaceAll(">", "›"))
+}
+
+/** True when text is a Latitude flagger structured classify/draft JSON object. */
+export function isFlaggerStructuredOutput(text: string): boolean {
+  const trimmed = text.trim()
+  if (!trimmed.startsWith("{")) return false
+  try {
+    const parsed: unknown = JSON.parse(trimmed)
+    if (!isRecord(parsed) || typeof parsed.matched !== "boolean") return false
+    if (!("feedback" in parsed)) return false
+    const feedback = parsed.feedback
+    return feedback === null || typeof feedback === "string"
+  } catch {
+    return false
+  }
+}
+
 // ---------------------------------------------------------------------------
 // Text extraction helpers used across strategies
 // ---------------------------------------------------------------------------

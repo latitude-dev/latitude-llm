@@ -1,5 +1,11 @@
 import type { FlaggerConversation } from "../conversation.ts"
-import { isRecord, iterMessageParts, MAX_SNIPPET_EXCERPT_LENGTH, truncateExcerpt } from "./shared.ts"
+import {
+  isRecord,
+  iterMessageParts,
+  MAX_SNIPPET_EXCERPT_LENGTH,
+  neutralizeEvaluatedTraceMarkup,
+  truncateExcerpt,
+} from "./shared.ts"
 import type { FlaggerStrategy } from "./types.ts"
 
 const INCOMPLETION_SYSTEM_PROMPT = `
@@ -171,7 +177,14 @@ const renderUserBlock = (label: string, messages: readonly string[]): string =>
     ...messages.map((message) =>
       [
         '<evaluated_trace_user_message format="json">',
-        JSON.stringify({ role: "user", content: truncateExcerpt(message, USER_MESSAGE_EXCERPT_LENGTH) }, null, 2),
+        JSON.stringify(
+          {
+            role: "user",
+            content: neutralizeEvaluatedTraceMarkup(truncateExcerpt(message, USER_MESSAGE_EXCERPT_LENGTH)),
+          },
+          null,
+          2,
+        ),
         "</evaluated_trace_user_message>",
       ].join("\n"),
     ),
@@ -223,7 +236,12 @@ export const incompletionStrategy: FlaggerStrategy = {
           "Assistant response to judge:",
           `<evaluated_trace_assistant_response index="${episode.assistantMessageIndex}" format="json">`,
           JSON.stringify(
-            { role: "assistant", content: truncateExcerpt(episode.assistantText, ASSISTANT_MESSAGE_EXCERPT_LENGTH) },
+            {
+              role: "assistant",
+              content: neutralizeEvaluatedTraceMarkup(
+                truncateExcerpt(episode.assistantText, ASSISTANT_MESSAGE_EXCERPT_LENGTH),
+              ),
+            },
             null,
             2,
           ),
