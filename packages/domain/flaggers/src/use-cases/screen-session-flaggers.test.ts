@@ -196,7 +196,7 @@ describe("screenSessionFlaggersUseCase", () => {
       '<evaluated_trace_user_message format="json">',
       JSON.stringify({
         role: "user",
-        content: 'it\'s already shipped, so still needs to be fixed — the editing form is broken',
+        content: "it's already shipped, so still needs to be fixed — the editing form is broken",
       }),
       "</evaluated_trace_user_message>",
       "</evaluated_trace_evidence>",
