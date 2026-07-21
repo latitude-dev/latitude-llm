@@ -303,8 +303,7 @@ function emitCallAndTools(out: OtlpSpan[], ctx: TreeCtx, call: AssistantCall, ca
     // interaction so the timeline reads as: llm_request → tool → llm_request → tool → ...
     out.push(buildToolSpan(traceId, ctx.turnSpanId, toolSpanId, sessionId, userId, tool, ctx.contextAttrs))
 
-    // Claude Code auto memory rides ordinary file tools; a successful Read/Write/Edit on a
-    // path inside the memory dir gets a child memory-operation span for the ledger.
+    // A successful file op inside the auto-memory dir gets a child memory span for the ledger.
     if (ctx.memory && !tool.isError) {
       const op = classifyMemoryTool(tool, ctx.memory)
       if (op) {
@@ -488,9 +487,7 @@ function buildToolSpan(
   }
 }
 
-// A child of the tool span, shaped to match the SDK memory helper (CLIENT kind, the
-// gen_ai.memory.* attributes) so the consume side classifies and materializes it with
-// no special-casing. Emitted only for a successful memory-dir file op.
+// Child of the tool span, matching the SDK memory helper's gen_ai.memory.* shape.
 function buildMemorySpan(
   traceId: string,
   parentSpanId: string,
@@ -501,8 +498,9 @@ function buildMemorySpan(
   op: MemoryOp,
   contextAttrs: OtlpKeyValue[],
 ): OtlpSpan {
-  const recordsJson =
-    op.body !== undefined ? clamp(safeJson([{ id: op.recordId, content: op.body }]), MEMORY_RECORDS_CAP) : undefined
+  // Cap the body, not the serialized array, so the attribute stays valid JSON for the materializer.
+  const body = op.body !== undefined ? clamp(op.body, MEMORY_RECORDS_CAP) : undefined
+  const recordsJson = body !== undefined ? safeJson([{ id: op.recordId, content: body }]) : undefined
   return {
     traceId,
     spanId,

@@ -2,9 +2,7 @@ import { readFileSync } from "node:fs"
 import { basename, dirname, isAbsolute, join, relative, resolve, sep } from "node:path"
 import type { MemoryEmitOptions, MemoryOp, ToolCall } from "./types.ts"
 
-// Claude Code auto memory is written through ordinary file tools, not the structured
-// memory tool — the only marker is the file path being inside the auto-memory dir.
-// Write overwrites-or-creates, so it maps to upsert (the ledger decides add vs update).
+// Auto memory rides ordinary file tools, so operations are keyed by tool name, not a memory tool.
 const MEMORY_TOOL_OPERATIONS: Record<string, MemoryOp["operation"]> = {
   Write: "upsert_memory",
   Edit: "update_memory",

@@ -1268,4 +1268,15 @@ describe("memory operation child spans", () => {
     const spans = build([{ id: "tu1", name: "Write", input: { file_path: `${MEM}/x.md`, content: "hi" } }], undefined)
     expect(spans.some((s) => MEM_OPS.includes(s.name))).toBe(false)
   })
+
+  it("keeps gen_ai.memory.records valid JSON when a huge body is capped", () => {
+    const huge = "x".repeat(200_000)
+    const spans = build([{ id: "tu1", name: "Write", input: { file_path: `${MEM}/big.md`, content: huge } }], memory())
+    const mem = unwrap(spans.find((s) => s.name === "upsert_memory"))
+    const raw = unwrap(getAttr(mem.attributes, "gen_ai.memory.records"))
+    const parsed = JSON.parse(raw) as Array<{ id: string; content: string }>
+    expect(parsed[0]?.id).toBe("big.md")
+    expect(parsed[0]?.content).toContain("[latitude: truncated")
+    expect(parsed[0]?.content.length).toBeLessThan(huge.length)
+  })
 })
