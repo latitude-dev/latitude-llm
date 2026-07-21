@@ -34,7 +34,7 @@ post() { # <url> <json>  — prints body + status; 2xx or 409 (already exists) o
 }
 
 echo "== retention filter =="
-post "${DD}/retention-filters" '{"data":{"type":"apm_retention_filter","attributes":{"name":"Taxonomy adaptive shadow spans","filter_type":"spans-sampling-processor","filter":{"query":"'"${Q}"'"},"rate":"1.0","enabled":true}}}'
+post "${DD}/retention-filters" '{"data":{"type":"apm_retention_filter","attributes":{"name":"Taxonomy adaptive shadow spans","filter_type":"spans-sampling-processor","filter":{"query":"'"${Q}"'"},"rate":1.0,"enabled":true}}}'
 
 GRP='[{"path":"@taxonomy.projectId","tag_name":"project_id"},{"path":"@taxonomy.organizationId","tag_name":"organization_id"},{"path":"@taxonomy.customBehaviorId","tag_name":"custom_behavior_id"}]'
 
