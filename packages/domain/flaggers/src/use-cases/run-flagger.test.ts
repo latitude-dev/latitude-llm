@@ -1109,6 +1109,60 @@ ${"Detailed grounding, workflow, callout, and formatting rules. ".repeat(120)}`.
     expect(calls.generate).toHaveLength(0)
   })
 
+  it("does not call the LLM flagger for frustration on flagger.classify reflag sessions", async () => {
+    const { repository } = createFakeTraceRepository({
+      findByTraceId: () =>
+        Effect.succeed(
+          makeTraceDetail(
+            [
+              {
+                role: "user",
+                parts: [
+                  {
+                    type: "text",
+                    content:
+                      "TOOL CALL SEQUENCE: code x6 then web_search. The agent abandoned the code path after API failures.",
+                  },
+                ],
+              },
+              {
+                role: "assistant",
+                parts: [
+                  {
+                    type: "text",
+                    content: '{"matched":true,"feedback":"Agent thrashed on code tool calls.","messageIndex":"6"}',
+                  },
+                ],
+              },
+            ],
+            [...AI_GENERATE_TELEMETRY_TAGS.flaggerClassify],
+          ),
+        ),
+    })
+
+    const { calls, layer: aiLayer } = createFakeAI({
+      generate: () => Effect.die("AI should not be called for frustration on flagger-generated sessions"),
+    })
+
+    const result = await Effect.runPromise(
+      runFlaggerUseCase({ ...INPUT, flaggerSlug: "frustration" }).pipe(
+        Effect.provide(
+          Layer.mergeAll(
+            Layer.succeed(TraceRepository, repository),
+            Layer.succeed(ChSqlClient, createFakeChSqlClient({ organizationId: OrganizationId(INPUT.organizationId) })),
+            Layer.succeed(SqlClient, createFakeSqlClient({ organizationId: OrganizationId(INPUT.organizationId) })),
+            Layer.succeed(FlaggerRepository, defaultFlaggerRepo),
+            aiLayer,
+            defaultCacheLayer,
+          ),
+        ),
+      ),
+    )
+
+    expect(result).toEqual({ matched: false })
+    expect(calls.generate).toHaveLength(0)
+  })
+
   it("propagates AI generation errors for LLM-classified flaggers", async () => {
     const { repository } = createFakeTraceRepository({
       findByTraceId: () =>

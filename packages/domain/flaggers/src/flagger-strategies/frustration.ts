@@ -1,4 +1,5 @@
 import type { FlaggerConversation } from "../conversation.ts"
+import { isFlaggerGeneratedTrace } from "../reflag.ts"
 import { extractUserTextMessages } from "./shared.ts"
 import type { FlaggerStrategy } from "./types.ts"
 
@@ -36,8 +37,9 @@ FRUSTRATION SIGNALS (flag when the user's wording clearly shows these)
    • "I can't trust anything you say"
 
 5. ABANDONMENT / GIVE-UP
-   User states they will stop using the assistant for this task.
+   The USER states they will stop using the assistant for this task.
    • "I'll do it myself", "never mind", "forget it"
+   The assistant abandoning a tool/code path after errors is not this signal.
 
 ================================================================================
 DO NOT FLAG
@@ -49,6 +51,8 @@ DO NOT FLAG
 - Profanity inside content being discussed (e.g., a log file the user pasted)
 - Mild expressive interjections ("ugh", "hmm") without complaint context
 - Questions phrased firmly but not angrily
+- An agent thrashing on tools, retrying failed API/code calls, or abandoning a code path — that is not user frustration
+- Classifier / evaluation prompts whose user-role text only supplies nested tool-call evidence about another agent
 
 ================================================================================
 DECISION RULE
@@ -80,6 +84,8 @@ export const frustrationStrategy: FlaggerStrategy = {
   ],
 
   hasRequiredContext(conversation: FlaggerConversation): boolean {
+    // Reflag sessions put the classifier prompt in the user role — never end-user wording.
+    if (isFlaggerGeneratedTrace(conversation.tags)) return false
     return extractUserTextMessages(conversation).length > 0
   },
 
