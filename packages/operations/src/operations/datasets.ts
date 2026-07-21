@@ -959,13 +959,15 @@ const exportDatasetRowsEndpoint = datasetEndpoint({
         } as const
       }
 
+      const recipient = body.recipient
+
       yield* Effect.tryPromise({
         try: () =>
           enforceExportRequestRateLimit({
             redis: ctx.redis,
             organizationId: ctx.organization.id as string,
             projectId: projectId as string,
-            recipientEmail: body.recipient,
+            recipientEmail: recipient,
           }),
         catch: (cause) => cause,
       })
@@ -976,7 +978,7 @@ const exportDatasetRowsEndpoint = datasetEndpoint({
           organizationId: ctx.organization.id as string,
           projectId: projectId as string,
           datasetId: datasetId as string,
-          recipientEmail: body.recipient,
+          recipientEmail: recipient,
           selection,
         })
         .pipe(withTracing)
