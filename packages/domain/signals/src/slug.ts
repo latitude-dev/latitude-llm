@@ -16,7 +16,7 @@ const SUFFIX_LENGTH = 4
  * collision past the first attempt is astronomically unlikely; the cap only
  * stops a misbehaving `count` callback from looping forever.
  */
-const MAX_ATTEMPTS = 100
+const MAX_ATTEMPTS = 10
 
 const createSuffix = init({ length: SUFFIX_LENGTH })
 

@@ -72,7 +72,13 @@ export const createSignalFromScore = async (input: CreateSignalFromScoreInput) =
   Effect.runPromise(
     createSignalFromScoreUseCase(input).pipe(
       withPostgres(
-        Layer.mergeAll(ProjectRepositoryLive, ScoreRepositoryLive, SignalRepositoryLive, EvaluationRepositoryLive),
+        Layer.mergeAll(
+          ProjectRepositoryLive,
+          ScoreRepositoryLive,
+          SignalRepositoryLive,
+          OutboxEventWriterLive,
+          EvaluationRepositoryLive,
+        ),
         getPostgresClient(),
         OrganizationId(input.organizationId),
       ),
