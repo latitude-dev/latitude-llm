@@ -24,6 +24,7 @@ const seedSignal = (input: {
   readonly createdAt: Date
   readonly resolvedAt?: Date | null
   readonly ignoredAt?: Date | null
+  readonly regressedAt?: Date | null
 }) =>
   pg.db.insert(signals).values({
     id: input.id,
@@ -36,6 +37,7 @@ const seedSignal = (input: {
     origin: "user",
     resolvedAt: input.resolvedAt ?? null,
     ignoredAt: input.ignoredAt ?? null,
+    regressedAt: input.regressedAt ?? null,
     createdAt: input.createdAt,
     updatedAt: input.createdAt,
   })
@@ -88,6 +90,45 @@ describe("SignalRepositoryLive.listTableRows zero-occurrence membership", () => 
 
     expect(page.totalCount).toBe(2)
     expect(page.items.map((issue) => issue.id).sort()).toEqual([CREATED_IN_WINDOW.id, CREATED_BEFORE_WINDOW.id].sort())
+  })
+})
+
+describe("SignalRepositoryLive.listTableRows state sort", () => {
+  const OLD = new Date("2026-01-01T00:00:00.000Z")
+  const STAMP = new Date("2026-03-10T00:00:00.000Z")
+  const REGRESSED = { id: "sig-regressed".padEnd(24, "r"), slug: "regressed", createdAt: OLD, regressedAt: STAMP }
+  const ONGOING = { id: "sig-ongoing".padEnd(24, "o"), slug: "ongoing", createdAt: OLD }
+  const RESOLVED = { id: "sig-resolved".padEnd(24, "d"), slug: "resolved", createdAt: OLD, resolvedAt: STAMP }
+  const IGNORED = { id: "sig-ignored".padEnd(24, "i"), slug: "ignored", createdAt: OLD, ignoredAt: STAMP }
+
+  const listIds = (direction: "asc" | "desc") =>
+    run(
+      Effect.gen(function* () {
+        const repo = yield* SignalRepository
+        const page = yield* repo.listTableRows({
+          projectId: PROJECT_ID,
+          limit: 50,
+          offset: 0,
+          sort: { field: "state", direction },
+        })
+        return page.items.map((issue) => issue.id)
+      }),
+    )
+
+  beforeEach(async () => {
+    await pg.db.delete(signals)
+    await seedSignal(IGNORED)
+    await seedSignal(RESOLVED)
+    await seedSignal(ONGOING)
+    await seedSignal(REGRESSED)
+  })
+
+  it("puts the most severe states first on desc, matching the analytics path", async () => {
+    await expect(listIds("desc")).resolves.toEqual([REGRESSED.id, ONGOING.id, RESOLVED.id, IGNORED.id])
+  })
+
+  it("puts the least severe states first on asc", async () => {
+    await expect(listIds("asc")).resolves.toEqual([IGNORED.id, RESOLVED.id, ONGOING.id, REGRESSED.id])
   })
 })
 

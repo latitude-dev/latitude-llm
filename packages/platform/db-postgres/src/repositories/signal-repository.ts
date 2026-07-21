@@ -353,9 +353,13 @@ const signalRepositoryCoreLive = Layer.effect(
                 when ${signals.ignoredAt} is not null then 5
                 else 3
               end`
+              // `stateRank` counts up from most severe (0 = escalating), so the
+              // user's "desc = most severe first" maps to ascending rank —
+              // mirrors the analytics path's inverted compare in `sortCandidates`.
+              const stateRankDirection = sort?.direction === "asc" ? desc : asc
               const secondaryOrderBy =
                 sort?.field === "state"
-                  ? [direction(stateRank), direction(signals.updatedAt)]
+                  ? [stateRankDirection(stateRank), direction(signals.updatedAt)]
                   : sort?.field === "occurrences"
                     ? [direction(occurrencesSort), desc(lastSeenSort), asc(signals.id)]
                     : sort?.field === "affectedSessions"

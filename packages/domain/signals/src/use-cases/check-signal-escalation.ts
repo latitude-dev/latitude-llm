@@ -130,10 +130,15 @@ export const checkSignalEscalationUseCase = (input: CheckSignalEscalationInput) 
           // A resolved signal that re-enters escalation has regressed: reopen
           // it so the archive can't hide an actively escalating signal. The
           // escalation notification announces the recurrence, so no separate
-          // SignalRegressed event is emitted on this path.
+          // SignalRegressed event is emitted on this path. The conditional
+          // claim (not a save of the earlier unlocked read) leaves concurrent
+          // lifecycle writes intact and can't reopen a just-ignored signal.
           if (signalWithLifecycle.resolvedAt !== null) {
-            const { lifecycle: _lifecycle, ...signal } = signalWithLifecycle
-            yield* signalRepository.save({ ...signal, resolvedAt: null, regressedAt: now, updatedAt: now })
+            yield* signalRepository.claimReopenOnOccurrence({
+              signalId: SignalId(signalWithLifecycle.id),
+              occurredAt: now,
+              now,
+            })
           }
           yield* outboxEventWriter.write({
             eventName: "SignalEscalated",

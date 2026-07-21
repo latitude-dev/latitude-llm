@@ -514,6 +514,12 @@ export const requestIncidentNotificationsUseCase = (input: RequestIncidentNotifi
       yield* Effect.annotateCurrentSpan("skipped", "signal-ignored")
       return { status: "skipped", reason: "signal-ignored" } as const
     }
+    // Same race for resolve: the manual close already suppressed the recovery
+    // notification, so a still-queued open must not ping for an archived signal.
+    if (signal?.resolvedAt !== null && signal?.resolvedAt !== undefined) {
+      yield* Effect.annotateCurrentSpan("skipped", "signal-resolved")
+      return { status: "skipped", reason: "signal-resolved" } as const
+    }
 
     const notificationKind = resolveKind(incident, input.transition)
     yield* Effect.annotateCurrentSpan("kind", notificationKind)

@@ -103,7 +103,7 @@ export const SIGNAL_STATES = ["new", "escalating", "ongoing", "resolved", "regre
 
 Stored on `signals`: `resolved_at`, `ignored_at`, `regressed_at` — nullable timestamptz, no actor attribution (parity; revisit if audit needs arise), all added in one migration. `deriveSignalLifecycleStates` grows:
 
-```
+```text
 if isSignalNew(createdAt, now)            → add "new"
 if lifecycle.isEscalating                 → add "escalating"
 if regressedAt !== null                   → add "regressed"
@@ -259,7 +259,7 @@ All decisions are settled (design review with Alex, 2026-07-20).
 - [x] **T-d** `deriveSignalLifecycleStates` adds the three branches (6.1); update `helpers.test.ts`.
 - [x] **T-e** `apply-signal-lifecycle-command.ts`: widen the enum to all six commands; `applyCommandToSignal` with D2 cross-clearing (resolve/ignore clear each other **and** `regressedAt`) and the ignore **auto-mute** (`mutedAt = now` if null; unignore leaves `mutedAt`); `keepMonitoring` input ?? `resolveSettings({projectId})` cascade (remove the stale "deprecated" TODO in `packages/domain/shared/src/settings.ts:9`); `shouldSoftDeleteLinkedEvaluations` (ignore always; resolve when effective `keepMonitoring === false`) → `evaluationRepository.softDeleteBySignalId`; emit `SignalEscalationEnded(reason)` per changed resolve/ignore; result items carry all four timestamps. No `as Effect.Effect` cast.
 - [x] **T-f** Fresh use-case tests (do not port #4071's): per-command idempotency; D2 cross-clearing both directions (+ `regressedAt`); ignore auto-mutes / doesn't overwrite an existing `mutedAt` / unignore leaves mute; `keepMonitoring` settings cascade + soft-delete matrix; un-commands never resurrect evaluations; cross-project rejection; one `SignalEscalationEnded` per changed signal on bulk, none on no-ops or un-commands; mute/unmute touch nothing else.
-- [x] **T-g** `check-signal-escalation.ts`: **remove the `mutedAt` short-circuit**; skip only when `ignoredAt !== null`; on `enter`, clear `resolvedAt` + set `regressedAt` in the transaction. Tests: muted signal opens an incident; muted+resolved reopens on enter; ignored is skipped.
+- [x] **T-g** `check-signal-escalation.ts`: **remove the `mutedAt` short-circuit**; skip only when `ignoredAt !== null`; on `enter`, reopen via the `claimReopenOnOccurrence` conditional claim in the transaction (PR review: a save of the earlier unlocked read could clobber concurrent lifecycle writes or reopen a just-ignored signal). Tests: muted signal opens an incident; muted+resolved reopens on enter; ignored is skipped.
 - [x] **T-h** `reopenSignalOnOccurrenceUseCase`: the conditional-claim UPDATE (6.4) + `SignalRegressed` outbox emit on claim; tests (idempotency within a cycle, `resolved_at < score.created_at` guard, ignored never reopens).
 - [x] **T-i** Hook the discovery path: `assignScoreToSignalUseCase` calls the reopen use-case (the old inline `isRegression` logic, adapted).
 - [x] **T-j** Hook the evaluation path: the `signal_id`-stamping writer (`runLiveEvaluationUseCase`) triggers reopen on present verdicts (only when stamping; the conditional UPDATE keeps the hot path cheap).
@@ -271,7 +271,7 @@ All decisions are settled (design review with Alex, 2026-07-20).
 **Events + notifications**
 
 - [x] **T-o** `SignalRegressed` payload in `event-payloads.ts` + dispatcher handler + notification kind `signal.regressed` (NOTIFICATION_KIND_META, group, project gate, in-app + email templates, web renderer — follow the notifications skill); fan-out gated on `signal.mutedAt`. Event and handler land together (dead-letter rule).
-- [x] **T-p** Fan-out gates: `request-incident-notifications.ts` keeps the `mutedAt` skip (now the live, sole mute effect) and adds `ignoredAt`; `request-agent-dispatch.ts` likewise, plus a `resolvedAt` skip on both dispatch paths (PR review: a delayed request must not automate an archived signal). Tests: muted signal's incident notifies nobody but the incident row exists.
+- [x] **T-p** Fan-out gates: `request-incident-notifications.ts` keeps the `mutedAt` skip (now the live, sole mute effect) and adds `ignoredAt` + `resolvedAt`; `request-agent-dispatch.ts` likewise on both dispatch paths (PR review: a delayed job must not notify or automate an archived signal). Tests: muted signal's incident notifies nobody but the incident row exists; ignored/resolved skip races covered.
 - [x] **T-ac** Agent-dispatch `signal.regressed` trigger: new `AGENT_DISPATCH_TRIGGERS` entry, `SignalRegressed` → `agent-dispatch request` publish (deduped on `signalId:triggerScoreId`), trigger threaded through the signal-source path (discovery's user-origin skip does not apply to regressions), regressed prompt framing, settings-UI checkbox, docs.
 
 **Guards + consumers**
