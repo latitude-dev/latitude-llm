@@ -140,4 +140,31 @@ describe("incompletionStrategy.buildPrompt", () => {
 
     expect(prompt).toContain("You did not do task 7, try again")
   })
+
+  it("keeps contradicted ticket-coverage reactions when capping a long session", () => {
+    const filler = Array.from({ length: 8 }, (_, i) => [user(`Task ${i}`), assistant(`Result ${i}`)]).flat()
+    const trace = makeTrace([
+      ...filler,
+      user('pagepage/showcase - replace references to "Page Fab" with "Showcase"'),
+      assistant("This is covered by #870 — no new ticket needed."),
+      user("it's already shipped, so still needs to be fixed"),
+      assistant("Logging a follow-up."),
+      user("ok"),
+    ])
+
+    const prompt = incompletionStrategy.buildPrompt!(trace)
+
+    expect(prompt).toContain("already shipped")
+    expect(prompt).toContain("covered by #870")
+  })
+})
+
+describe("incompletionStrategy.buildSystemPrompt", () => {
+  it("teaches contradicted ticket-coverage claims as incompletion evidence", () => {
+    const prompt = incompletionStrategy.buildSystemPrompt!(makeTrace([user("x"), assistant("y"), user("z")]))
+
+    expect(prompt).toContain("existing ticket/PR already covers")
+    expect(prompt).toContain("already shipped")
+    expect(prompt).toContain("Pointing at an existing ticket is fine ONLY when the user does not contradict coverage")
+  })
 })

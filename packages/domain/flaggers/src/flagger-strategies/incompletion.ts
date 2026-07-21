@@ -26,6 +26,8 @@ INCOMPLETION EVIDENCE (flag when the user's reaction shows the task was not deli
 3. CONTRADICTED COMPLETION CLAIM
    The response claimed the task was done and the user's reaction shows it was not.
    • "I've updated it" followed by "nothing changed"
+   • Claiming an existing ticket/PR already covers the request, followed by the user saying that work already shipped or still needs to be fixed
+   • For capture/relay agents: declining to log a request because it is "already covered", when the user then says coverage was wrong — logging was the deliverable
 
 Later recovery does NOT erase the incident: if the assistant fulfilled the task only after the user demanded a retry, flag the original failing response — needing to ask twice is the issue.
 
@@ -40,6 +42,7 @@ DO NOT FLAG
 - Legitimate clarifying questions on a genuinely ambiguous ask, answered by the user — the task was still being specified
 - Reactions that are follow-up questions about the delivered result rather than complaints about non-delivery
 - Progress-narration or tool-only turns during multi-step work — judge the response that presented itself as the outcome
+- Pointing at an existing ticket is fine ONLY when the user does not contradict coverage; "already shipped / still needs to be fixed" after a coverage claim is non-delivery
 
 ================================================================================
 ANALYSIS APPROACH
@@ -141,6 +144,8 @@ const NON_FULFILLMENT_REACTION_PATTERNS = [
   /\b(?:wrong|incorrect|that'?s not)\b/i,
   /\bactually do\b/i,
   /\bi asked (?:for|you)\b/i,
+  /\balready shipped\b/i,
+  /\bstill needs (?:to be )?(?:fixed|done|addressed|logged)\b/i,
 ]
 
 function scoreNonFulfillmentLikelihood(episode: TaskEpisode): number {

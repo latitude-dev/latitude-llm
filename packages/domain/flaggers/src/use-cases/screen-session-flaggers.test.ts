@@ -188,6 +188,53 @@ describe("screenSessionFlaggersUseCase", () => {
     expect(scores.size).toBe(0)
   })
 
+  it("drops user-centric strategies on first-level flagger classify sessions but still screens assistant-centric ones", async () => {
+    // Nested evaluated-trace wording that would otherwise hint frustration / jailbreaking.
+    const nestedPrompt = [
+      "TRACE EVIDENCE:",
+      "<evaluated_trace_evidence>",
+      '<evaluated_trace_user_message format="json">',
+      JSON.stringify({
+        role: "user",
+        content: 'it\'s already shipped, so still needs to be fixed — the editing form is broken',
+      }),
+      "</evaluated_trace_user_message>",
+      "</evaluated_trace_evidence>",
+    ].join("\n")
+    const session = makeSessionDetail([user(nestedPrompt), assistant('{"matched":false,"feedback":null}')], {
+      tags: [...AI_GENERATE_TELEMETRY_TAGS.flaggerClassify],
+    })
+    const { result, scores } = await runScreening({
+      session,
+      flaggers: [
+        makeFlagger("frustration", 100),
+        makeFlagger("jailbreaking", 100),
+        makeFlagger("incompletion", 100),
+        makeFlagger("empty-response", 0),
+      ],
+      deps: fakeDeps.deps,
+    })
+
+    expect(result.skipped).toBeUndefined()
+    expect(decisionFor(result.decisions, "frustration")).toEqual({
+      slug: "frustration",
+      action: "dropped",
+      reason: "reflag-user-centric",
+    })
+    expect(decisionFor(result.decisions, "jailbreaking")).toEqual({
+      slug: "jailbreaking",
+      action: "dropped",
+      reason: "reflag-user-centric",
+    })
+    expect(decisionFor(result.decisions, "incompletion")).not.toMatchObject({
+      action: "dropped",
+      reason: "reflag-user-centric",
+    })
+    expect(fakeDeps.rateLimitCalls.some((call) => call.flaggerSlug === "frustration")).toBe(false)
+    expect(fakeDeps.rateLimitCalls.some((call) => call.flaggerSlug === "jailbreaking")).toBe(false)
+    expect(scores.size).toBe(0)
+  })
+
   it("writes a session-anchored score with contentHash on a deterministic match", async () => {
     const session = makeSessionDetail([user("Please help me with this."), assistant("")])
     const { result, scores } = await runScreening({

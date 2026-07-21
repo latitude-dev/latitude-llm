@@ -12,7 +12,7 @@ import {
 } from "../flagger-strategies/index.ts"
 import { gatherSessionHintsUseCase } from "../hints/gatherers.ts"
 import { isPositiveSessionHintKind, type SessionHint, type SessionHintKind } from "../hints/types.ts"
-import { isReflagSuppressed } from "../reflag.ts"
+import { isReflagSuppressed, isUserCentricReflagInapplicable } from "../reflag.ts"
 import { loadFlaggerSessionContextUseCase } from "./classify-session-flagger.ts"
 import { type FlaggerCacheEntry, getProjectFlaggersUseCase } from "./get-project-flaggers.ts"
 import { upsertFlaggerAnnotationScore } from "./upsert-flagger-annotation-score.ts"
@@ -44,6 +44,7 @@ export type SessionFlaggerDroppedReason =
   | "rate-limited"
   | "disabled"
   | "missing-flagger"
+  | "reflag-user-centric"
 
 export type SessionFlaggerDecision =
   | { readonly slug: string; readonly action: "matched-issue" }
@@ -271,6 +272,10 @@ const screenOneStrategy = (args: ScreenOneStrategyInput) =>
 
     if (!flagger.enabled) {
       return { slug: args.slug, action: "dropped", reason: "disabled" } satisfies SessionFlaggerDecision
+    }
+
+    if (isUserCentricReflagInapplicable(args.context.conversation.tags, strategy)) {
+      return { slug: args.slug, action: "dropped", reason: "reflag-user-centric" } satisfies SessionFlaggerDecision
     }
 
     if (strategy.suppressedBy) {
