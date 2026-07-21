@@ -3955,6 +3955,38 @@
           "lastObservedAt"
         ]
       },
+      "UserMemoryStores": {
+        "type": "object",
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/MemoryUserStore"
+            },
+            "description": "Memory stores the user accessed, most recent access first."
+          }
+        },
+        "required": [
+          "items"
+        ]
+      },
+      "MemoryUserStore": {
+        "type": "object",
+        "properties": {
+          "storeId": {
+            "type": "string",
+            "description": "Store the user accessed. The empty string is the unattributed bucket."
+          },
+          "lastAccessedAt": {
+            "type": "string",
+            "description": "ISO-8601 timestamp of the user's most recent access to the store."
+          }
+        },
+        "required": [
+          "storeId",
+          "lastAccessedAt"
+        ]
+      },
       "UserProfileResponse": {
         "type": "object",
         "properties": {
@@ -16257,6 +16289,89 @@
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/UserBehavioursResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Validation error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/projects/{projectSlug}/users/{userId}/memory": {
+      "get": {
+        "tags": [
+          "Users"
+        ],
+        "x-fern-sdk-group-name": "users",
+        "x-fern-sdk-method-name": "memoryStores",
+        "summary": "List memory stores an end-user accessed",
+        "description": "Returns the memory stores the end-user accessed (reads and writes both count as access), most recent access first. Each store links to the memory browsing operations under the `memory` group.",
+        "security": [
+          {
+            "ApiKeyAuth": []
+          }
+        ],
+        "operationId": "listUserMemoryStores",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "description": "Project slug (human-readable identifier)"
+            },
+            "required": true,
+            "description": "Project slug (human-readable identifier)",
+            "name": "projectSlug",
+            "in": "path"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 512,
+              "description": "End-user identifier. URL-encode values containing special characters."
+            },
+            "required": true,
+            "description": "End-user identifier. URL-encode values containing special characters.",
+            "name": "userId",
+            "in": "path"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Memory stores accessed",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UserMemoryStores"
                 }
               }
             }

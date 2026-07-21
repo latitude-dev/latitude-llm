@@ -6,6 +6,7 @@ import {
   type MemorySnapshot,
   type MemoryStoreListItem,
   type MemoryStoreUser,
+  type MemoryUserStore,
   type RecordChangeDiff,
   type RecordHistory,
   type SessionMemoryDiff,
@@ -380,5 +381,25 @@ export const toSessionMemoryChangesResponse = (diff: SessionMemoryDiff) => ({
     tokensRemoved: record.tokensRemoved,
     degraded: record.degraded,
     lastChangeSpanId: record.lastChangeSpanId,
+  })),
+})
+
+const MemoryUserStoreSchema = z
+  .object({
+    storeId: z.string().describe("Store the user accessed. The empty string is the unattributed bucket."),
+    lastAccessedAt: z.string().describe("ISO-8601 timestamp of the user's most recent access to the store."),
+  })
+  .openapi("MemoryUserStore")
+
+export const UserMemoryStoresSchema = z
+  .object({
+    items: z.array(MemoryUserStoreSchema).describe("Memory stores the user accessed, most recent access first."),
+  })
+  .openapi("UserMemoryStores")
+
+export const toUserMemoryStoresResponse = (stores: readonly MemoryUserStore[]) => ({
+  items: stores.map((store) => ({
+    storeId: store.storeId,
+    lastAccessedAt: store.lastAccessedAt.toISOString(),
   })),
 })
