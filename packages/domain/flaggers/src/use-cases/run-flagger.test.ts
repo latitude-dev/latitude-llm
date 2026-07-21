@@ -1033,7 +1033,11 @@ ${"Detailed grounding, workflow, callout, and formatting rules. ".repeat(120)}`.
         ),
     })
 
-    const { calls, layer: aiLayer } = createClassifyAndApproveAI()
+    const { calls, layer: aiLayer } = createClassifyAndApproveAI({
+      matched: true,
+      feedback: "Flagger matched with concrete evidence.",
+      messageIndex: "2",
+    })
 
     const result = await Effect.runPromise(
       runFlaggerUseCase({ ...INPUT, flaggerSlug: "frustration" }).pipe(
@@ -1050,7 +1054,11 @@ ${"Detailed grounding, workflow, callout, and formatting rules. ".repeat(120)}`.
       ),
     )
 
-    expect(result).toEqual({ matched: true, feedback: "Flagger matched with concrete evidence." })
+    expect(result).toEqual({
+      matched: true,
+      feedback: "Flagger matched with concrete evidence.",
+      messageIndex: 2,
+    })
     expect(calls.generate).toHaveLength(2)
     expect(calls.generate[0].system).toContain("USER'S OWN WORDING")
     expect(calls.generate[0].system).toContain("Judge only the user-authored messages")

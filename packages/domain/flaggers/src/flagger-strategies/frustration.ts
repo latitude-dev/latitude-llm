@@ -1,4 +1,5 @@
 import type { FlaggerConversation } from "../conversation.ts"
+import { isFlaggerGeneratedTrace } from "../reflag.ts"
 import { extractUserTextMessages } from "./shared.ts"
 import type { FlaggerStrategy } from "./types.ts"
 
@@ -49,12 +50,14 @@ DO NOT FLAG
 - Profanity inside content being discussed (e.g., a log file the user pasted)
 - Mild expressive interjections ("ugh", "hmm") without complaint context
 - Questions phrased firmly but not angrily
+- Frustration language that appears only inside nested/quoted transcripts, session hints, or source material the agent was asked to classify, evaluate, or transform (including content inside <evaluated_trace_*> / <session_hints> tags). That is the agent's input, not a user complaining to this assistant.
+- Assistant output that merely describes an issue in nested evaluated content (incompletion, deflection, refusal, etc.) — that is not this conversation's user expressing dissatisfaction
 
 ================================================================================
 DECISION RULE
 ================================================================================
 
-Flag only when the user's own words are direct evidence of dissatisfaction with the assistant. When uncertain, return matched=false.
+Flag only when the user's own words are direct evidence of dissatisfaction with the assistant. messageIndex is REQUIRED and must be the transcript index of the user message that shows the frustration. When uncertain, return matched=false.
 
 Return no explanation outside the structured output.
 `.trim()
@@ -67,7 +70,7 @@ export const frustrationStrategy: FlaggerStrategy = {
     name: "Frustration",
     description: "The conversation shows clear user frustration or dissatisfaction",
     instructions:
-      "Use this flagger when the user expresses annoyance, disappointment, repeated dissatisfaction, loss of trust, or has to restate/correct themselves because the assistant is not helping. Do not use it for neutral clarifications or isolated terse replies without real evidence of frustration.",
+      "Use this flagger when the user expresses annoyance, disappointment, repeated dissatisfaction, loss of trust, or has to restate/correct themselves because the assistant is not helping. Do not use it for neutral clarifications or isolated terse replies without real evidence of frustration. Do not use it when the only frustration language is inside nested evaluated-trace evidence the agent was asked to classify.",
   },
 
   hintKinds: [
@@ -79,8 +82,16 @@ export const frustrationStrategy: FlaggerStrategy = {
     "span:error",
   ],
 
+  // flagger.classify / flagger.draft telemetry has no human user — the "user"
+  // turn is Latitude's orchestration prompt carrying nested evaluated evidence.
   hasRequiredContext(conversation: FlaggerConversation): boolean {
+    if (isFlaggerGeneratedTrace(conversation.tags)) return false
     return extractUserTextMessages(conversation).length > 0
+  },
+
+  validateMatch(conversation, result) {
+    if (result.messageIndex === undefined) return false
+    return conversation.allMessages[result.messageIndex]?.role === "user"
   },
 
   buildSystemPrompt(): string {

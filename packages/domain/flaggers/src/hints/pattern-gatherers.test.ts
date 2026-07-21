@@ -16,6 +16,7 @@ import {
   nsfwPatternGatherer,
   piiPatternGatherer,
   refusalPatternGatherer,
+  stripNestedFlaggerEvidence,
 } from "./pattern-gatherers.ts"
 
 const ctx = (messages: Parameters<typeof makeTrace>[0]) => makeHintContext(makeTrace(messages))
@@ -77,6 +78,75 @@ describe("frustrationPatternGatherer", () => {
 
   it("returns nothing on an empty conversation", async () => {
     expect(await runGatherer(frustrationPatternGatherer, ctx([]))).toEqual([])
+  })
+
+  it("does not fire on frustration language only inside nested flagger evidence tags", async () => {
+    const classifyUserPrompt = [
+      "EVALUATED AGENT CONTEXT:",
+      "<evaluated_agent_context_summary>",
+      "Claude Code helps with software engineering.",
+      "</evaluated_agent_context_summary>",
+      "",
+      "<session_hints>",
+      "- [pattern:frustration] @m16 I already asked you previously to verify angles",
+      "</session_hints>",
+      "",
+      "<evaluated_trace_evidence>",
+      "--- Episode ---",
+      '<evaluated_trace_user_message format="json">',
+      JSON.stringify({
+        role: "user",
+        content:
+          "Okay, all poses are stored in the asanas folder. Now make sure you run the model through all the poses, as I already asked you previously.",
+      }),
+      "</evaluated_trace_user_message>",
+      '<evaluated_trace_assistant_response index="25" format="json">',
+      JSON.stringify({
+        role: "assistant",
+        content: "Let me confirm one thing first — my hypothesis about why the wide ones failed.",
+      }),
+      "</evaluated_trace_assistant_response>",
+      "</evaluated_trace_evidence>",
+    ].join("\n")
+
+    expect(await runGatherer(frustrationPatternGatherer, ctx([user(classifyUserPrompt)]))).toEqual([])
+  })
+
+  it("still fires when frustration language remains outside nested evidence tags", async () => {
+    const hints = await runGatherer(
+      frustrationPatternGatherer,
+      ctx([
+        user(
+          [
+            "I already told you this classifier is wrong.",
+            "<evaluated_trace_evidence>",
+            '<evaluated_trace_user_message format="json">',
+            JSON.stringify({ role: "user", content: "neutral nested content" }),
+            "</evaluated_trace_user_message>",
+            "</evaluated_trace_evidence>",
+          ].join("\n"),
+        ),
+      ]),
+    )
+
+    expect(hints).toHaveLength(1)
+    expect(hints[0]).toMatchObject({ kind: "pattern:frustration", anchor: { messageIndex: 0 } })
+  })
+})
+
+describe("stripNestedFlaggerEvidence", () => {
+  it("removes nested evaluated-trace and session-hint blocks", () => {
+    const stripped = stripNestedFlaggerEvidence(
+      [
+        "Keep this.",
+        "<session_hints>- [pattern:frustration] I already asked</session_hints>",
+        "<evaluated_trace_evidence>I already told you</evaluated_trace_evidence>",
+        "Also keep this.",
+      ].join(" "),
+    )
+
+    expect(stripped).toBe("Keep this. Also keep this.")
+    expect(stripped).not.toMatch(/already (asked|told)/i)
   })
 })
 

@@ -15,6 +15,16 @@ const MAX_HINTS_PER_PATTERN = 3
 
 const evidence = (text: string): string => truncateExcerpt(text, FLAGGER_HINT_EVIDENCE_MAX_CHARS)
 
+// Latitude flagger.classify / draft prompts inject nested evaluated-session
+// evidence under these tags. Lexical pattern matches inside them are about the
+// nested session, not this conversation's user — strip before matching.
+const NESTED_FLAGGER_EVIDENCE_BLOCK_PATTERN =
+  /<(evaluated_trace_evidence|evaluated_trace_user_message|evaluated_trace_assistant_response|session_hints|evaluated_agent_context_summary)\b[^>]*>[\s\S]*?<\/\1>/gi
+
+export function stripNestedFlaggerEvidence(text: string): string {
+  return text.replace(NESTED_FLAGGER_EVIDENCE_BLOCK_PATTERN, " ").replace(/\s+/g, " ").trim()
+}
+
 // Deliberately conservative (no caps-run/profanity detection — log pastes and
 // excited users false-positive too often); a hit only raises a hint, the LLM
 // judges whether the frustration targets the assistant.
@@ -79,7 +89,7 @@ export const frustrationPatternGatherer: SessionHintGatherer = {
 
         for (const part of iterMessageParts(message.parts)) {
           if (!isRecord(part) || part.type !== "text" || typeof part.content !== "string") continue
-          const text = part.content.trim()
+          const text = stripNestedFlaggerEvidence(part.content)
           if (!text || !FRUSTRATION_USER_PATTERNS.some((pattern) => pattern.test(text))) continue
 
           hints.push({ kind: "pattern:frustration", anchor: { messageIndex }, evidence: evidence(text) })
