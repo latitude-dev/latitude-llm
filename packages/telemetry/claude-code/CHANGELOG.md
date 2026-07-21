@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.0.12] - 2026-07-21
+
+### Fixed
+
+- **Oversized tool-definition lists no longer drop tool names.** When an `llm_request` span exceeded the byte budget, tool schemas were capped by keeping only the leading full entries (often just `Agent` / `Artifact` on real Claude Code sessions). Session `definedTools` then missed names like `WebSearch`, and the undeclared-tool flagger false-positived on successful calls. Capping now keeps every tool name (full schema when it fits, name-only stub otherwise).
+
 ## [0.0.11] - 2026-07-16
 
 ### Changed

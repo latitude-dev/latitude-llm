@@ -69,6 +69,7 @@ export {
   detectOutputSchemaValidationFlagger,
   detectToolCallErrorsFlagger,
   type ToolCallErrorFinding,
+  type ToolCallErrorFindingKind,
 } from "./helpers.ts"
 export {
   gatherSessionHintsUseCase,

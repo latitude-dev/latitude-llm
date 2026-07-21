@@ -75,6 +75,17 @@ describe("toolErrorsGatherer", () => {
     expect(flagged[0]?.evidence).toContain("not in the declared toolset")
   })
 
+  it("emits nothing when an undeclared tool executed successfully", async () => {
+    const conversation = {
+      ...makeTrace([
+        { role: "assistant", parts: [{ type: "tool_call", id: "call-1", name: "WebSearch", arguments: {} }] },
+        tool("call-1", { results: ["ok"] }),
+      ]),
+      definedTools: ["search"],
+    }
+    expect(await runGatherer(toolErrorsGatherer, { ...makeHintContext(makeTrace([])), conversation })).toEqual([])
+  })
+
   it("emits nothing for healthy tool traffic", async () => {
     const conversation = makeTrace([
       { role: "assistant", parts: [{ type: "tool_call", id: "call-1", name: "fetch", arguments: {} }] },

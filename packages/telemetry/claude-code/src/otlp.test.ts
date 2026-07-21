@@ -896,6 +896,58 @@ describe("span size capping", () => {
     expect(getAttr(interaction.attributes, "user_prompt_length")).toBe("200000")
     expect(getAttr(interaction.attributes, "latitude.truncation")).toBe("user prompt clamped")
   })
+
+  it("preserves every tool name when tool-definition schemas exceed the byte budget", () => {
+    const fatDescription = "d".repeat(8_000)
+    const toolNames = ["Agent", "Artifact", "Bash", "Read", "ToolSearch", "WebFetch", "WebSearch"]
+    const tools = toolNames.map((name) => ({
+      name,
+      description: fatDescription,
+      input_schema: { type: "object", properties: { q: { type: "string" } } },
+    }))
+    // Captured payloads replace reconstruction — oversize the captured request to hit the budget.
+    const captured: StoredRequest = {
+      messageId: "msg_tools_cap",
+      capturedAt: "2026-07-21T12:00:00.000Z",
+      url: "https://api.anthropic.com/v1/messages",
+      request: {
+        model: "claude-opus-4-8",
+        max_tokens: 32000,
+        system: [{ type: "text", text: "s".repeat(80_000) }],
+        tools,
+        messages: Array.from({ length: 20 }, (_, i) => ({
+          role: "user" as const,
+          content: `prompt ${i} ${"h".repeat(4_000)}`,
+        })),
+      },
+    }
+    const req = buildOtlpRequest({
+      sessionId: "sess-cap",
+      turnStartNumber: 1,
+      turns: [
+        baseTurn({
+          messageId: "msg_tools_cap",
+          userText: "search the web",
+          toolCalls: [
+            {
+              id: "toolu_web",
+              name: "WebSearch",
+              input: { query: "AI agents" },
+              output: "results",
+            },
+          ],
+        }),
+      ],
+      requestsByMessageId: new Map([["msg_tools_cap", captured]]),
+    })
+    const llm = unwrap(otlpSpans(req).find((s) => s.name === "llm_request"))
+    const truncation = unwrap(getAttr(llm.attributes, "latitude.truncation"))
+    expect(truncation).toContain("tool definitions:")
+    expect(truncation).toMatch(/name-only|names/)
+    const defs = JSON.parse(unwrap(getAttr(llm.attributes, "gen_ai.tool.definitions"))) as Array<{ name: string }>
+    expect(defs.map((d) => d.name)).toEqual(toolNames)
+    expect(JSON.stringify(defs).length).toBeLessThanOrEqual(16 * 1024)
+  })
 })
 
 describe("redaction", () => {
