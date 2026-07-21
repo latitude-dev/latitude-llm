@@ -2,7 +2,9 @@ import type { RedisClient } from "@platform/cache-redis"
 
 export const createFakeRedis = (): RedisClient => {
   const store = new Map<string, string>()
+  const ttls = new Map<string, number>()
   return {
+    status: "ready",
     get: async (key: string) => store.get(key) ?? null,
     set: async (key: string, value: string) => {
       store.set(key, value)
@@ -18,6 +20,36 @@ export const createFakeRedis = (): RedisClient => {
         if (store.delete(key)) count++
       }
       return count
+    },
+    expire: async (key: string, seconds: number) => {
+      if (!store.has(key)) return 0
+      ttls.set(key, seconds)
+      return 1
+    },
+    pipeline: () => {
+      const commands: Array<"incr" | "ttl"> = []
+      let key = ""
+      return {
+        incr: (nextKey: string) => {
+          key = nextKey
+          commands.push("incr")
+        },
+        ttl: (nextKey: string) => {
+          key = nextKey
+          commands.push("ttl")
+        },
+        exec: async () =>
+          commands.map((command) => {
+            if (command === "incr") {
+              const count = Number.parseInt(store.get(key) ?? "0", 10) + 1
+              store.set(key, String(count))
+              return [null, count] as [null, number]
+            }
+
+            if (!store.has(key)) return [null, -2] as [null, number]
+            return [null, ttls.get(key) ?? -1] as [null, number]
+          }),
+      }
     },
   } as unknown as RedisClient
 }
