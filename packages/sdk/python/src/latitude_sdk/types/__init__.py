@@ -664,6 +664,7 @@ if typing.TYPE_CHECKING:
     from .paginated_monitors import PaginatedMonitors
     from .paginated_projects import PaginatedProjects
     from .paginated_saved_searches import PaginatedSavedSearches
+    from .paginated_sessions import PaginatedSessions
     from .paginated_signals import PaginatedSignals
     from .paginated_tool_calls import PaginatedToolCalls
     from .paginated_trace_annotations import PaginatedTraceAnnotations
@@ -679,6 +680,22 @@ if typing.TYPE_CHECKING:
     from .resolved_range import ResolvedRange
     from .saved_search import SavedSearch
     from .score_response import ScoreResponse, ScoreResponse_Custom, ScoreResponse_Evaluation
+    from .session import Session
+    from .session_analytics_bucket import SessionAnalyticsBucket
+    from .session_analytics_cost import SessionAnalyticsCost
+    from .session_analytics_duration import SessionAnalyticsDuration
+    from .session_analytics_response import SessionAnalyticsResponse
+    from .session_analytics_sessions import SessionAnalyticsSessions
+    from .session_analytics_spans import SessionAnalyticsSpans
+    from .session_analytics_time_to_first_token import SessionAnalyticsTimeToFirstToken
+    from .session_analytics_tokens import SessionAnalyticsTokens
+    from .session_analytics_traces import SessionAnalyticsTraces
+    from .session_detail import SessionDetail
+    from .session_filter_set import SessionFilterSet
+    from .session_signal import SessionSignal
+    from .session_signal_source import SessionSignalSource
+    from .session_signal_states_item import SessionSignalStatesItem
+    from .session_signals import SessionSignals
     from .signal import Signal
     from .signal_analytics_bucket import SignalAnalyticsBucket
     from .signal_analytics_escalating import SignalAnalyticsEscalating
@@ -1387,6 +1404,7 @@ _dynamic_imports: typing.Dict[str, str] = {
     "PaginatedMonitors": ".paginated_monitors",
     "PaginatedProjects": ".paginated_projects",
     "PaginatedSavedSearches": ".paginated_saved_searches",
+    "PaginatedSessions": ".paginated_sessions",
     "PaginatedSignals": ".paginated_signals",
     "PaginatedToolCalls": ".paginated_tool_calls",
     "PaginatedTraceAnnotations": ".paginated_trace_annotations",
@@ -1404,6 +1422,22 @@ _dynamic_imports: typing.Dict[str, str] = {
     "ScoreResponse": ".score_response",
     "ScoreResponse_Custom": ".score_response",
     "ScoreResponse_Evaluation": ".score_response",
+    "Session": ".session",
+    "SessionAnalyticsBucket": ".session_analytics_bucket",
+    "SessionAnalyticsCost": ".session_analytics_cost",
+    "SessionAnalyticsDuration": ".session_analytics_duration",
+    "SessionAnalyticsResponse": ".session_analytics_response",
+    "SessionAnalyticsSessions": ".session_analytics_sessions",
+    "SessionAnalyticsSpans": ".session_analytics_spans",
+    "SessionAnalyticsTimeToFirstToken": ".session_analytics_time_to_first_token",
+    "SessionAnalyticsTokens": ".session_analytics_tokens",
+    "SessionAnalyticsTraces": ".session_analytics_traces",
+    "SessionDetail": ".session_detail",
+    "SessionFilterSet": ".session_filter_set",
+    "SessionSignal": ".session_signal",
+    "SessionSignalSource": ".session_signal_source",
+    "SessionSignalStatesItem": ".session_signal_states_item",
+    "SessionSignals": ".session_signals",
     "Signal": ".signal",
     "SignalAnalyticsBucket": ".signal_analytics_bucket",
     "SignalAnalyticsEscalating": ".signal_analytics_escalating",
@@ -2138,6 +2172,7 @@ __all__ = [
     "PaginatedMonitors",
     "PaginatedProjects",
     "PaginatedSavedSearches",
+    "PaginatedSessions",
     "PaginatedSignals",
     "PaginatedToolCalls",
     "PaginatedTraceAnnotations",
@@ -2155,6 +2190,22 @@ __all__ = [
     "ScoreResponse",
     "ScoreResponse_Custom",
     "ScoreResponse_Evaluation",
+    "Session",
+    "SessionAnalyticsBucket",
+    "SessionAnalyticsCost",
+    "SessionAnalyticsDuration",
+    "SessionAnalyticsResponse",
+    "SessionAnalyticsSessions",
+    "SessionAnalyticsSpans",
+    "SessionAnalyticsTimeToFirstToken",
+    "SessionAnalyticsTokens",
+    "SessionAnalyticsTraces",
+    "SessionDetail",
+    "SessionFilterSet",
+    "SessionSignal",
+    "SessionSignalSource",
+    "SessionSignalStatesItem",
+    "SessionSignals",
     "Signal",
     "SignalAnalyticsBucket",
     "SignalAnalyticsEscalating",

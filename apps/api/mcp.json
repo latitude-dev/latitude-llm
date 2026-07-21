@@ -34182,6 +34182,1615 @@
         "readOnlyHint": false,
         "destructiveHint": true
       }
+    },
+    {
+      "name": "listSessions",
+      "title": "List project sessions",
+      "description": "Returns a cursor-paginated page of sessions in the project. A session groups the traces of one conversation. Combine `filters` with `query` (free-text semantic search) to narrow the result set. Session list rows exclude per-message LLM content — use `getSession` for the conversation view.",
+      "inputSchema": {
+        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "type": "object",
+        "properties": {
+          "projectSlug": {
+            "type": "string",
+            "description": "Project slug (human-readable identifier)"
+          },
+          "cursor": {
+            "description": "Opaque cursor returned in a previous response's `nextCursor`. Omit on the first page.",
+            "type": "string"
+          },
+          "limit": {
+            "default": 50,
+            "description": "Page size. Defaults to 50; max 200.",
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 200
+          },
+          "sortBy": {
+            "default": "lastActivity",
+            "description": "Field to sort by. Defaults to `lastActivity` (most recently active first).",
+            "type": "string",
+            "enum": [
+              "lastActivity",
+              "startTime",
+              "duration",
+              "ttft",
+              "cost",
+              "spans",
+              "traceCount"
+            ]
+          },
+          "sortDirection": {
+            "default": "desc",
+            "description": "Sort direction. Defaults to `desc` (most recent first).",
+            "type": "string",
+            "enum": [
+              "asc",
+              "desc"
+            ]
+          },
+          "query": {
+            "description": "Free-text semantic search across the sessions' traces (input and output messages). Combined with `filters` via AND.",
+            "type": "string",
+            "maxLength": 500
+          },
+          "filters": {
+            "description": "Filter set keyed by session field. Each entry holds an array of conditions ANDed together for that field; field-level groups are ANDed across the set. Valid fields: status, name, traceId, sessionId, simulationId, userId, tags, moments, topics, models, providers, serviceNames, tools, definedTools, duration, ttft, cost, spanCount, errorCount, tokensInput, tokensOutput, cacheHitRate, startTime, endTime; score-derived keys (score.passed, score.errored, score.value, score.source, score.sourceId, score.annotatorId, score.signalId, score.simulationId); and arbitrary metadata via `metadata.<key>`. `moments` filters by conversation moment kind and `topics` by behavior topic id (a topic matches its whole subtree). `startTime`/`endTime` take ISO-8601 values (a session's first span start / last span end). `gtePercentile` is only supported on duration/ttft/cost. Unknown fields are rejected rather than ignored.",
+            "type": "object",
+            "propertyNames": {
+              "type": "string"
+            },
+            "additionalProperties": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "properties": {
+                  "op": {
+                    "type": "string",
+                    "enum": [
+                      "eq",
+                      "neq",
+                      "gt",
+                      "gte",
+                      "lt",
+                      "lte",
+                      "in",
+                      "notIn",
+                      "contains",
+                      "notContains",
+                      "gtePercentile"
+                    ],
+                    "description": "Comparison operator applied to the field's value (e.g. `eq`, `neq`, `in`). The full operator list lives in the API reference."
+                  },
+                  "value": {
+                    "anyOf": [
+                      {
+                        "type": "string"
+                      },
+                      {
+                        "type": "number"
+                      },
+                      {
+                        "type": "boolean"
+                      },
+                      {
+                        "type": "array",
+                        "items": {
+                          "anyOf": [
+                            {
+                              "type": "string"
+                            },
+                            {
+                              "type": "number"
+                            }
+                          ]
+                        }
+                      }
+                    ],
+                    "description": "Right-hand value compared against the field. Arrays are required for `in` / `notIn`-style operators."
+                  }
+                },
+                "required": [
+                  "op",
+                  "value"
+                ],
+                "additionalProperties": false
+              }
+            }
+          }
+        },
+        "required": [
+          "projectSlug",
+          "limit",
+          "sortBy",
+          "sortDirection"
+        ],
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "type": "object",
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "organizationId": {
+                  "type": "string",
+                  "description": "Organization that owns this session."
+                },
+                "projectId": {
+                  "type": "string",
+                  "description": "Project this session belongs to."
+                },
+                "sessionId": {
+                  "type": "string",
+                  "description": "Session identifier set by the SDK. Groups the traces of one conversation."
+                },
+                "traceCount": {
+                  "type": "integer",
+                  "minimum": 0,
+                  "maximum": 9007199254740991,
+                  "description": "Number of traces in the session."
+                },
+                "traceIds": {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  },
+                  "description": "Identifiers of the traces that make up the session."
+                },
+                "spanCount": {
+                  "type": "integer",
+                  "minimum": 0,
+                  "maximum": 9007199254740991,
+                  "description": "Total number of spans across the session's traces."
+                },
+                "errorCount": {
+                  "type": "integer",
+                  "minimum": 0,
+                  "maximum": 9007199254740991,
+                  "description": "Number of spans flagged with an error status."
+                },
+                "startTime": {
+                  "type": "string",
+                  "description": "ISO-8601 timestamp of the session's earliest span."
+                },
+                "endTime": {
+                  "type": "string",
+                  "description": "ISO-8601 timestamp of the session's latest span."
+                },
+                "lastActivityTime": {
+                  "type": "string",
+                  "description": "ISO-8601 timestamp of the session's most recent span start."
+                },
+                "durationNs": {
+                  "type": "number",
+                  "description": "Active execution time of the session in nanoseconds, not wall-clock."
+                },
+                "timeToFirstTokenNs": {
+                  "type": "number",
+                  "description": "Nanoseconds from the start of the first LLM span to its first emitted token. `0` if not measured."
+                },
+                "tokensInput": {
+                  "type": "number",
+                  "description": "Total input tokens across the session's LLM spans."
+                },
+                "tokensOutput": {
+                  "type": "number",
+                  "description": "Total output tokens across the session's LLM spans."
+                },
+                "tokensCacheRead": {
+                  "type": "number",
+                  "description": "Total tokens served from the provider's prompt cache."
+                },
+                "tokensCacheCreate": {
+                  "type": "number",
+                  "description": "Total tokens written to the provider's prompt cache."
+                },
+                "tokensReasoning": {
+                  "type": "number",
+                  "description": "Total reasoning tokens reported by the model."
+                },
+                "tokensTotal": {
+                  "type": "number",
+                  "description": "Sum of all token counters."
+                },
+                "costInputMicrocents": {
+                  "type": "number",
+                  "description": "Cost of input tokens in microcents (1/1,000,000 USD)."
+                },
+                "costOutputMicrocents": {
+                  "type": "number",
+                  "description": "Cost of output tokens in microcents (1/1,000,000 USD)."
+                },
+                "costTotalMicrocents": {
+                  "type": "number",
+                  "description": "Total cost in microcents (1/1,000,000 USD)."
+                },
+                "userId": {
+                  "anyOf": [
+                    {
+                      "type": "string"
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ],
+                  "description": "End-user identifier set by the SDK. `null` when absent."
+                },
+                "userEmail": {
+                  "anyOf": [
+                    {
+                      "type": "string"
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ],
+                  "description": "End-user email set by the SDK. `null` when absent."
+                },
+                "simulationId": {
+                  "anyOf": [
+                    {
+                      "type": "string"
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ],
+                  "description": "CUID of the simulation that produced this session. `null` when not a simulation."
+                },
+                "tags": {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  },
+                  "description": "Free-form tags attached at ingest time."
+                },
+                "metadata": {
+                  "type": "object",
+                  "propertyNames": {
+                    "type": "string"
+                  },
+                  "additionalProperties": {
+                    "type": "string"
+                  },
+                  "description": "Free-form metadata attached at ingest time."
+                },
+                "models": {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  },
+                  "description": "Model identifiers seen across the session's LLM spans."
+                },
+                "providers": {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  },
+                  "description": "LLM-provider identifiers seen across the session's spans."
+                },
+                "serviceNames": {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  },
+                  "description": "OpenTelemetry `service.name` values seen in the session."
+                },
+                "agentNames": {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  },
+                  "description": "Agent names seen across the session's spans."
+                },
+                "definedTools": {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  },
+                  "description": "Tool names declared available across the session's spans."
+                },
+                "rootSpanId": {
+                  "anyOf": [
+                    {
+                      "type": "string"
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ],
+                  "description": "Identifier of the session's root span. `null` when no root span has been ingested."
+                },
+                "rootSpanName": {
+                  "anyOf": [
+                    {
+                      "type": "string"
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ],
+                  "description": "`name` attribute of the root span. `null` when no root span has been ingested."
+                }
+              },
+              "required": [
+                "organizationId",
+                "projectId",
+                "sessionId",
+                "traceCount",
+                "traceIds",
+                "spanCount",
+                "errorCount",
+                "startTime",
+                "endTime",
+                "lastActivityTime",
+                "durationNs",
+                "timeToFirstTokenNs",
+                "tokensInput",
+                "tokensOutput",
+                "tokensCacheRead",
+                "tokensCacheCreate",
+                "tokensReasoning",
+                "tokensTotal",
+                "costInputMicrocents",
+                "costOutputMicrocents",
+                "costTotalMicrocents",
+                "userId",
+                "userEmail",
+                "simulationId",
+                "tags",
+                "metadata",
+                "models",
+                "providers",
+                "serviceNames",
+                "agentNames",
+                "definedTools",
+                "rootSpanId",
+                "rootSpanName"
+              ],
+              "additionalProperties": false
+            },
+            "description": "Page of items, in the requested sort order."
+          },
+          "nextCursor": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Opaque cursor for fetching the next page. `null` when there are no more pages. Pass it back in `cursor` to continue."
+          },
+          "hasMore": {
+            "type": "boolean",
+            "description": "`true` when there is at least one more page after this one."
+          }
+        },
+        "required": [
+          "items",
+          "nextCursor",
+          "hasMore"
+        ],
+        "additionalProperties": false
+      },
+      "annotations": {
+        "readOnlyHint": true,
+        "destructiveHint": false
+      }
+    },
+    {
+      "name": "getSessionAnalytics",
+      "title": "Get project session analytics",
+      "description": "Returns session analytics for the project: a total (or median) per metric over the requested range, plus a per-bucket series for each metric. Buckets are 12-hour UTC-aligned. The range defaults to the trailing 7 days.",
+      "inputSchema": {
+        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "type": "object",
+        "properties": {
+          "projectSlug": {
+            "type": "string",
+            "description": "Project slug (human-readable identifier)"
+          },
+          "fromIso": {
+            "description": "Lower bound (inclusive) of the time range. Defaults to 7 days before `toIso`.",
+            "type": "string",
+            "format": "date-time",
+            "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d(?::[0-5]\\d(?:\\.\\d+)?)?(?:Z))$"
+          },
+          "toIso": {
+            "description": "Upper bound (inclusive) of the time range. Defaults to now.",
+            "type": "string",
+            "format": "date-time",
+            "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d(?::[0-5]\\d(?:\\.\\d+)?)?(?:Z))$"
+          }
+        },
+        "required": [
+          "projectSlug"
+        ],
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "type": "object",
+        "properties": {
+          "sessions": {
+            "type": "object",
+            "properties": {
+              "total": {
+                "type": "number",
+                "description": "Number of sessions in the range."
+              },
+              "buckets": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "properties": {
+                    "bucket": {
+                      "type": "string",
+                      "description": "ISO-8601 UTC timestamp of the bucket's start."
+                    },
+                    "value": {
+                      "type": "number",
+                      "description": "Metric value for this bucket."
+                    }
+                  },
+                  "required": [
+                    "bucket",
+                    "value"
+                  ],
+                  "additionalProperties": false
+                },
+                "description": "Number of sessions per bucket."
+              }
+            },
+            "required": [
+              "total",
+              "buckets"
+            ],
+            "additionalProperties": false
+          },
+          "traces": {
+            "type": "object",
+            "properties": {
+              "total": {
+                "type": "number",
+                "description": "Number of traces across the range's sessions."
+              },
+              "buckets": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "properties": {
+                    "bucket": {
+                      "type": "string",
+                      "description": "ISO-8601 UTC timestamp of the bucket's start."
+                    },
+                    "value": {
+                      "type": "number",
+                      "description": "Metric value for this bucket."
+                    }
+                  },
+                  "required": [
+                    "bucket",
+                    "value"
+                  ],
+                  "additionalProperties": false
+                },
+                "description": "Number of traces per bucket."
+              }
+            },
+            "required": [
+              "total",
+              "buckets"
+            ],
+            "additionalProperties": false
+          },
+          "cost": {
+            "type": "object",
+            "properties": {
+              "total": {
+                "type": "number",
+                "description": "Total session cost in USD."
+              },
+              "buckets": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "properties": {
+                    "bucket": {
+                      "type": "string",
+                      "description": "ISO-8601 UTC timestamp of the bucket's start."
+                    },
+                    "value": {
+                      "type": "number",
+                      "description": "Metric value for this bucket."
+                    }
+                  },
+                  "required": [
+                    "bucket",
+                    "value"
+                  ],
+                  "additionalProperties": false
+                },
+                "description": "Session cost per bucket in USD."
+              }
+            },
+            "required": [
+              "total",
+              "buckets"
+            ],
+            "additionalProperties": false
+          },
+          "duration": {
+            "type": "object",
+            "properties": {
+              "median": {
+                "type": "number",
+                "description": "Median session duration in seconds."
+              },
+              "buckets": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "properties": {
+                    "bucket": {
+                      "type": "string",
+                      "description": "ISO-8601 UTC timestamp of the bucket's start."
+                    },
+                    "value": {
+                      "type": "number",
+                      "description": "Metric value for this bucket."
+                    }
+                  },
+                  "required": [
+                    "bucket",
+                    "value"
+                  ],
+                  "additionalProperties": false
+                },
+                "description": "Median session duration per bucket in seconds."
+              }
+            },
+            "required": [
+              "median",
+              "buckets"
+            ],
+            "additionalProperties": false
+          },
+          "tokens": {
+            "type": "object",
+            "properties": {
+              "total": {
+                "type": "number",
+                "description": "Total tokens across all LLM spans."
+              },
+              "buckets": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "properties": {
+                    "bucket": {
+                      "type": "string",
+                      "description": "ISO-8601 UTC timestamp of the bucket's start."
+                    },
+                    "value": {
+                      "type": "number",
+                      "description": "Metric value for this bucket."
+                    }
+                  },
+                  "required": [
+                    "bucket",
+                    "value"
+                  ],
+                  "additionalProperties": false
+                },
+                "description": "Tokens per bucket across all LLM spans."
+              }
+            },
+            "required": [
+              "total",
+              "buckets"
+            ],
+            "additionalProperties": false
+          },
+          "timeToFirstToken": {
+            "type": "object",
+            "properties": {
+              "median": {
+                "type": "number",
+                "description": "Median time-to-first-token across LLM spans, in seconds."
+              },
+              "buckets": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "properties": {
+                    "bucket": {
+                      "type": "string",
+                      "description": "ISO-8601 UTC timestamp of the bucket's start."
+                    },
+                    "value": {
+                      "type": "number",
+                      "description": "Metric value for this bucket."
+                    }
+                  },
+                  "required": [
+                    "bucket",
+                    "value"
+                  ],
+                  "additionalProperties": false
+                },
+                "description": "Median time-to-first-token per bucket, in seconds."
+              }
+            },
+            "required": [
+              "median",
+              "buckets"
+            ],
+            "additionalProperties": false
+          },
+          "spans": {
+            "type": "object",
+            "properties": {
+              "total": {
+                "type": "number",
+                "description": "Total number of spans."
+              },
+              "buckets": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "properties": {
+                    "bucket": {
+                      "type": "string",
+                      "description": "ISO-8601 UTC timestamp of the bucket's start."
+                    },
+                    "value": {
+                      "type": "number",
+                      "description": "Metric value for this bucket."
+                    }
+                  },
+                  "required": [
+                    "bucket",
+                    "value"
+                  ],
+                  "additionalProperties": false
+                },
+                "description": "Number of spans per bucket."
+              }
+            },
+            "required": [
+              "total",
+              "buckets"
+            ],
+            "additionalProperties": false
+          }
+        },
+        "required": [
+          "sessions",
+          "traces",
+          "cost",
+          "duration",
+          "tokens",
+          "timeToFirstToken",
+          "spans"
+        ],
+        "additionalProperties": false
+      },
+      "annotations": {
+        "readOnlyHint": true,
+        "destructiveHint": false
+      }
+    },
+    {
+      "name": "getSession",
+      "title": "Get project session",
+      "description": "Returns a single session by id, including its `conversation`: the system instructions and the messages of the session's latest LLM completion, in OpenTelemetry GenAI format.",
+      "inputSchema": {
+        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "type": "object",
+        "properties": {
+          "projectSlug": {
+            "type": "string",
+            "description": "Project slug (human-readable identifier)"
+          },
+          "sessionId": {
+            "type": "string",
+            "maxLength": 128,
+            "description": "Session identifier lifted from instrumentation. Up to 128 characters."
+          }
+        },
+        "required": [
+          "projectSlug",
+          "sessionId"
+        ],
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "type": "object",
+        "properties": {
+          "organizationId": {
+            "type": "string",
+            "description": "Organization that owns this session."
+          },
+          "projectId": {
+            "type": "string",
+            "description": "Project this session belongs to."
+          },
+          "sessionId": {
+            "type": "string",
+            "description": "Session identifier set by the SDK. Groups the traces of one conversation."
+          },
+          "traceCount": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 9007199254740991,
+            "description": "Number of traces in the session."
+          },
+          "traceIds": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "Identifiers of the traces that make up the session."
+          },
+          "spanCount": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 9007199254740991,
+            "description": "Total number of spans across the session's traces."
+          },
+          "errorCount": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 9007199254740991,
+            "description": "Number of spans flagged with an error status."
+          },
+          "startTime": {
+            "type": "string",
+            "description": "ISO-8601 timestamp of the session's earliest span."
+          },
+          "endTime": {
+            "type": "string",
+            "description": "ISO-8601 timestamp of the session's latest span."
+          },
+          "lastActivityTime": {
+            "type": "string",
+            "description": "ISO-8601 timestamp of the session's most recent span start."
+          },
+          "durationNs": {
+            "type": "number",
+            "description": "Active execution time of the session in nanoseconds, not wall-clock."
+          },
+          "timeToFirstTokenNs": {
+            "type": "number",
+            "description": "Nanoseconds from the start of the first LLM span to its first emitted token. `0` if not measured."
+          },
+          "tokensInput": {
+            "type": "number",
+            "description": "Total input tokens across the session's LLM spans."
+          },
+          "tokensOutput": {
+            "type": "number",
+            "description": "Total output tokens across the session's LLM spans."
+          },
+          "tokensCacheRead": {
+            "type": "number",
+            "description": "Total tokens served from the provider's prompt cache."
+          },
+          "tokensCacheCreate": {
+            "type": "number",
+            "description": "Total tokens written to the provider's prompt cache."
+          },
+          "tokensReasoning": {
+            "type": "number",
+            "description": "Total reasoning tokens reported by the model."
+          },
+          "tokensTotal": {
+            "type": "number",
+            "description": "Sum of all token counters."
+          },
+          "costInputMicrocents": {
+            "type": "number",
+            "description": "Cost of input tokens in microcents (1/1,000,000 USD)."
+          },
+          "costOutputMicrocents": {
+            "type": "number",
+            "description": "Cost of output tokens in microcents (1/1,000,000 USD)."
+          },
+          "costTotalMicrocents": {
+            "type": "number",
+            "description": "Total cost in microcents (1/1,000,000 USD)."
+          },
+          "userId": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "End-user identifier set by the SDK. `null` when absent."
+          },
+          "userEmail": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "End-user email set by the SDK. `null` when absent."
+          },
+          "simulationId": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "CUID of the simulation that produced this session. `null` when not a simulation."
+          },
+          "tags": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "Free-form tags attached at ingest time."
+          },
+          "metadata": {
+            "type": "object",
+            "propertyNames": {
+              "type": "string"
+            },
+            "additionalProperties": {
+              "type": "string"
+            },
+            "description": "Free-form metadata attached at ingest time."
+          },
+          "models": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "Model identifiers seen across the session's LLM spans."
+          },
+          "providers": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "LLM-provider identifiers seen across the session's spans."
+          },
+          "serviceNames": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "OpenTelemetry `service.name` values seen in the session."
+          },
+          "agentNames": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "Agent names seen across the session's spans."
+          },
+          "definedTools": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "Tool names declared available across the session's spans."
+          },
+          "rootSpanId": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Identifier of the session's root span. `null` when no root span has been ingested."
+          },
+          "rootSpanName": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "`name` attribute of the root span. `null` when no root span has been ingested."
+          },
+          "latestTraceId": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Identifier of the trace that produced the session's latest output. `null` when no trace produced output."
+          },
+          "conversation": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "propertyNames": {
+                "type": "string"
+              },
+              "additionalProperties": {},
+              "description": "Message in OpenTelemetry GenAI format (`role` + content parts + optional tool calls)."
+            },
+            "description": "Conversation of the session, in OpenTelemetry GenAI format: the system instructions, then the messages of the session's latest LLM completion, followed by its generated output."
+          }
+        },
+        "required": [
+          "organizationId",
+          "projectId",
+          "sessionId",
+          "traceCount",
+          "traceIds",
+          "spanCount",
+          "errorCount",
+          "startTime",
+          "endTime",
+          "lastActivityTime",
+          "durationNs",
+          "timeToFirstTokenNs",
+          "tokensInput",
+          "tokensOutput",
+          "tokensCacheRead",
+          "tokensCacheCreate",
+          "tokensReasoning",
+          "tokensTotal",
+          "costInputMicrocents",
+          "costOutputMicrocents",
+          "costTotalMicrocents",
+          "userId",
+          "userEmail",
+          "simulationId",
+          "tags",
+          "metadata",
+          "models",
+          "providers",
+          "serviceNames",
+          "agentNames",
+          "definedTools",
+          "rootSpanId",
+          "rootSpanName",
+          "latestTraceId",
+          "conversation"
+        ],
+        "additionalProperties": false
+      },
+      "annotations": {
+        "readOnlyHint": true,
+        "destructiveHint": false
+      }
+    },
+    {
+      "name": "listSessionTraces",
+      "title": "List session traces",
+      "description": "Returns a cursor-paginated page of the traces that belong to the session. Rows match the trace list shape and exclude per-message LLM content — use `getTrace` for the full conversation view.",
+      "inputSchema": {
+        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "type": "object",
+        "properties": {
+          "projectSlug": {
+            "type": "string",
+            "description": "Project slug (human-readable identifier)"
+          },
+          "sessionId": {
+            "type": "string",
+            "maxLength": 128,
+            "description": "Session identifier lifted from instrumentation. Up to 128 characters."
+          },
+          "cursor": {
+            "description": "Opaque cursor returned in a previous response's `nextCursor`. Omit on the first page.",
+            "type": "string"
+          },
+          "limit": {
+            "default": 50,
+            "description": "Page size. Defaults to 50; max 200.",
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 200
+          },
+          "sortBy": {
+            "default": "startTime",
+            "description": "Field to sort by. Defaults to `startTime`.",
+            "type": "string",
+            "enum": [
+              "startTime",
+              "endTime",
+              "durationNs",
+              "tokensTotal",
+              "costTotalMicrocents"
+            ]
+          },
+          "sortDirection": {
+            "default": "desc",
+            "description": "Sort direction. Defaults to `desc` (most recent first).",
+            "type": "string",
+            "enum": [
+              "asc",
+              "desc"
+            ]
+          }
+        },
+        "required": [
+          "projectSlug",
+          "sessionId",
+          "limit",
+          "sortBy",
+          "sortDirection"
+        ],
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "type": "object",
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "organizationId": {
+                  "type": "string",
+                  "description": "Organization that owns this trace."
+                },
+                "projectId": {
+                  "type": "string",
+                  "description": "Project this trace belongs to."
+                },
+                "traceId": {
+                  "type": "string",
+                  "description": "32-character trace identifier."
+                },
+                "spanCount": {
+                  "type": "integer",
+                  "minimum": 0,
+                  "maximum": 9007199254740991,
+                  "description": "Total number of spans in the trace."
+                },
+                "errorCount": {
+                  "type": "integer",
+                  "minimum": 0,
+                  "maximum": 9007199254740991,
+                  "description": "Number of spans flagged with an error status."
+                },
+                "startTime": {
+                  "type": "string",
+                  "description": "ISO-8601 timestamp of the trace's earliest span."
+                },
+                "endTime": {
+                  "type": "string",
+                  "description": "ISO-8601 timestamp of the trace's latest span."
+                },
+                "durationNs": {
+                  "type": "number",
+                  "description": "Wall-clock duration of the trace in nanoseconds."
+                },
+                "timeToFirstTokenNs": {
+                  "type": "number",
+                  "description": "Nanoseconds from the start of the first LLM span to its first emitted token. `0` if not measured."
+                },
+                "tokensInput": {
+                  "type": "number",
+                  "description": "Total input tokens across LLM spans."
+                },
+                "tokensOutput": {
+                  "type": "number",
+                  "description": "Total output tokens across LLM spans."
+                },
+                "tokensCacheRead": {
+                  "type": "number",
+                  "description": "Total tokens served from the provider's prompt cache."
+                },
+                "tokensCacheCreate": {
+                  "type": "number",
+                  "description": "Total tokens written to the provider's prompt cache."
+                },
+                "tokensReasoning": {
+                  "type": "number",
+                  "description": "Total reasoning tokens reported by the model."
+                },
+                "tokensTotal": {
+                  "type": "number",
+                  "description": "Sum of all token counters."
+                },
+                "costInputMicrocents": {
+                  "type": "number",
+                  "description": "Cost of input tokens in microcents (1/1,000,000 USD)."
+                },
+                "costOutputMicrocents": {
+                  "type": "number",
+                  "description": "Cost of output tokens in microcents (1/1,000,000 USD)."
+                },
+                "costTotalMicrocents": {
+                  "type": "number",
+                  "description": "Total cost in microcents (1/1,000,000 USD)."
+                },
+                "sessionId": {
+                  "anyOf": [
+                    {
+                      "type": "string"
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ],
+                  "description": "Conversation/session identifier set by the SDK. `null` when absent."
+                },
+                "userId": {
+                  "anyOf": [
+                    {
+                      "type": "string"
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ],
+                  "description": "End-user identifier set by the SDK. `null` when absent."
+                },
+                "simulationId": {
+                  "anyOf": [
+                    {
+                      "type": "string"
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ],
+                  "description": "CUID of the simulation that produced this trace. `null` when not a simulation."
+                },
+                "tags": {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  },
+                  "description": "Free-form tags attached at ingest time."
+                },
+                "models": {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  },
+                  "description": "Model identifiers seen across the trace's LLM spans."
+                },
+                "providers": {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  },
+                  "description": "LLM-provider identifiers seen across the trace's spans."
+                },
+                "serviceNames": {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  },
+                  "description": "OpenTelemetry `service.name` values seen in the trace."
+                },
+                "rootSpanId": {
+                  "anyOf": [
+                    {
+                      "type": "string"
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ],
+                  "description": "Identifier of the trace's root span. `null` when no root span has been ingested."
+                },
+                "rootSpanName": {
+                  "anyOf": [
+                    {
+                      "type": "string"
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ],
+                  "description": "`name` attribute of the root span. `null` when no root span has been ingested."
+                },
+                "positiveAnnotationCount": {
+                  "type": "integer",
+                  "minimum": 0,
+                  "maximum": 9007199254740991,
+                  "description": "Number of `passed = true` annotations attached to this trace."
+                },
+                "negativeAnnotationCount": {
+                  "type": "integer",
+                  "minimum": 0,
+                  "maximum": 9007199254740991,
+                  "description": "Number of `passed = false` annotations attached to this trace."
+                }
+              },
+              "required": [
+                "organizationId",
+                "projectId",
+                "traceId",
+                "spanCount",
+                "errorCount",
+                "startTime",
+                "endTime",
+                "durationNs",
+                "timeToFirstTokenNs",
+                "tokensInput",
+                "tokensOutput",
+                "tokensCacheRead",
+                "tokensCacheCreate",
+                "tokensReasoning",
+                "tokensTotal",
+                "costInputMicrocents",
+                "costOutputMicrocents",
+                "costTotalMicrocents",
+                "sessionId",
+                "userId",
+                "simulationId",
+                "tags",
+                "models",
+                "providers",
+                "serviceNames",
+                "rootSpanId",
+                "rootSpanName",
+                "positiveAnnotationCount",
+                "negativeAnnotationCount"
+              ],
+              "additionalProperties": false
+            },
+            "description": "Page of items, in the requested sort order."
+          },
+          "nextCursor": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Opaque cursor for fetching the next page. `null` when there are no more pages. Pass it back in `cursor` to continue."
+          },
+          "hasMore": {
+            "type": "boolean",
+            "description": "`true` when there is at least one more page after this one."
+          }
+        },
+        "required": [
+          "items",
+          "nextCursor",
+          "hasMore"
+        ],
+        "additionalProperties": false
+      },
+      "annotations": {
+        "readOnlyHint": true,
+        "destructiveHint": false
+      }
+    },
+    {
+      "name": "listSessionSignals",
+      "title": "List session signals",
+      "description": "Returns the signals that occurred in the session, with occurrence stats scoped to the session's traces. Ordered by most recent occurrence first.",
+      "inputSchema": {
+        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "type": "object",
+        "properties": {
+          "projectSlug": {
+            "type": "string",
+            "description": "Project slug (human-readable identifier)"
+          },
+          "sessionId": {
+            "type": "string",
+            "maxLength": 128,
+            "description": "Session identifier lifted from instrumentation. Up to 128 characters."
+          }
+        },
+        "required": [
+          "projectSlug",
+          "sessionId"
+        ],
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "type": "object",
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "id": {
+                  "type": "string",
+                  "minLength": 24,
+                  "maxLength": 24,
+                  "description": "Stable signal identifier."
+                },
+                "organizationId": {
+                  "type": "string",
+                  "minLength": 24,
+                  "maxLength": 24,
+                  "description": "Organization that owns this signal."
+                },
+                "projectId": {
+                  "type": "string",
+                  "minLength": 24,
+                  "maxLength": 24,
+                  "description": "Project this signal belongs to."
+                },
+                "slug": {
+                  "type": "string",
+                  "description": "URL-safe slug derived from `name`. Unique within the project."
+                },
+                "name": {
+                  "type": "string",
+                  "description": "Human-readable name."
+                },
+                "description": {
+                  "type": "string",
+                  "description": "Description of the signal."
+                },
+                "source": {
+                  "type": "string",
+                  "enum": [
+                    "annotation",
+                    "flagger",
+                    "custom"
+                  ],
+                  "description": "Where the signal originated from."
+                },
+                "states": {
+                  "type": "array",
+                  "items": {
+                    "type": "string",
+                    "enum": [
+                      "new",
+                      "escalating",
+                      "ongoing"
+                    ]
+                  },
+                  "description": "Active lifecycle states. A signal may carry multiple states at once (e.g. `escalating` + `ongoing`)."
+                },
+                "mutedAt": {
+                  "anyOf": [
+                    {
+                      "type": "string"
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ],
+                  "description": "ISO-8601 timestamp at which the signal was muted, or `null`."
+                },
+                "createdAt": {
+                  "type": "string",
+                  "description": "ISO-8601 timestamp of creation."
+                },
+                "updatedAt": {
+                  "type": "string",
+                  "description": "ISO-8601 timestamp of the last update."
+                },
+                "occurrences": {
+                  "type": "integer",
+                  "minimum": 0,
+                  "maximum": 9007199254740991,
+                  "description": "Number of occurrences within the session."
+                },
+                "firstSeenAt": {
+                  "type": "string",
+                  "description": "ISO-8601 timestamp of the earliest occurrence in the session."
+                },
+                "lastSeenAt": {
+                  "type": "string",
+                  "description": "ISO-8601 timestamp of the latest occurrence in the session."
+                },
+                "traceIds": {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  },
+                  "description": "Traces of the session where the signal occurred."
+                }
+              },
+              "required": [
+                "id",
+                "organizationId",
+                "projectId",
+                "slug",
+                "name",
+                "description",
+                "source",
+                "states",
+                "mutedAt",
+                "createdAt",
+                "updatedAt",
+                "occurrences",
+                "firstSeenAt",
+                "lastSeenAt",
+                "traceIds"
+              ],
+              "additionalProperties": false
+            },
+            "description": "Signals that occurred in the session, ordered by most recent occurrence first."
+          }
+        },
+        "required": [
+          "items"
+        ],
+        "additionalProperties": false
+      },
+      "annotations": {
+        "readOnlyHint": true,
+        "destructiveHint": false
+      }
+    },
+    {
+      "name": "getSessionSignal",
+      "title": "Get session signal",
+      "description": "Returns one signal by slug, with occurrence stats scoped to the session. Returns 404 when the signal has no occurrences in the session.",
+      "inputSchema": {
+        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "type": "object",
+        "properties": {
+          "projectSlug": {
+            "type": "string",
+            "description": "Project slug (human-readable identifier)"
+          },
+          "sessionId": {
+            "type": "string",
+            "maxLength": 128,
+            "description": "Session identifier lifted from instrumentation. Up to 128 characters."
+          },
+          "signalSlug": {
+            "type": "string",
+            "description": "Signal slug."
+          }
+        },
+        "required": [
+          "projectSlug",
+          "sessionId",
+          "signalSlug"
+        ],
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "minLength": 24,
+            "maxLength": 24,
+            "description": "Stable signal identifier."
+          },
+          "organizationId": {
+            "type": "string",
+            "minLength": 24,
+            "maxLength": 24,
+            "description": "Organization that owns this signal."
+          },
+          "projectId": {
+            "type": "string",
+            "minLength": 24,
+            "maxLength": 24,
+            "description": "Project this signal belongs to."
+          },
+          "slug": {
+            "type": "string",
+            "description": "URL-safe slug derived from `name`. Unique within the project."
+          },
+          "name": {
+            "type": "string",
+            "description": "Human-readable name."
+          },
+          "description": {
+            "type": "string",
+            "description": "Description of the signal."
+          },
+          "source": {
+            "type": "string",
+            "enum": [
+              "annotation",
+              "flagger",
+              "custom"
+            ],
+            "description": "Where the signal originated from."
+          },
+          "states": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "enum": [
+                "new",
+                "escalating",
+                "ongoing"
+              ]
+            },
+            "description": "Active lifecycle states. A signal may carry multiple states at once (e.g. `escalating` + `ongoing`)."
+          },
+          "mutedAt": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "ISO-8601 timestamp at which the signal was muted, or `null`."
+          },
+          "createdAt": {
+            "type": "string",
+            "description": "ISO-8601 timestamp of creation."
+          },
+          "updatedAt": {
+            "type": "string",
+            "description": "ISO-8601 timestamp of the last update."
+          },
+          "occurrences": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 9007199254740991,
+            "description": "Number of occurrences within the session."
+          },
+          "firstSeenAt": {
+            "type": "string",
+            "description": "ISO-8601 timestamp of the earliest occurrence in the session."
+          },
+          "lastSeenAt": {
+            "type": "string",
+            "description": "ISO-8601 timestamp of the latest occurrence in the session."
+          },
+          "traceIds": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "Traces of the session where the signal occurred."
+          }
+        },
+        "required": [
+          "id",
+          "organizationId",
+          "projectId",
+          "slug",
+          "name",
+          "description",
+          "source",
+          "states",
+          "mutedAt",
+          "createdAt",
+          "updatedAt",
+          "occurrences",
+          "firstSeenAt",
+          "lastSeenAt",
+          "traceIds"
+        ],
+        "additionalProperties": false
+      },
+      "annotations": {
+        "readOnlyHint": true,
+        "destructiveHint": false
+      }
     }
   ]
 }

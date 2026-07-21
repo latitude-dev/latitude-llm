@@ -223,6 +223,15 @@ export type {
   TraceSearchHighlightsResult,
 } from "./use-cases/compute-trace-search-highlights.ts"
 export { computeTraceSearchHighlights } from "./use-cases/compute-trace-search-highlights.ts"
+export type {
+  GetSessionAnalyticsError,
+  GetSessionAnalyticsInput,
+  GetSessionAnalyticsResult,
+  SessionAnalyticsBucket,
+  SessionAnalyticsMedianMetric,
+  SessionAnalyticsTotalMetric,
+} from "./use-cases/get-session-analytics.ts"
+export { getSessionAnalyticsUseCase } from "./use-cases/get-session-analytics.ts"
 export type { GetSessionCohortSummaryInput } from "./use-cases/get-session-cohort-summary.ts"
 export { getSessionCohortSummaryUseCase } from "./use-cases/get-session-cohort-summary.ts"
 export type { GetSpanConversationChunkInput } from "./use-cases/get-span-conversation-chunk.ts"

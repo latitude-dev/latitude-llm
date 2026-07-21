@@ -219,6 +219,12 @@ export {
   getSignalTrendUseCase,
 } from "./use-cases/get-signal-trend.ts"
 export {
+  type ListSessionSignalsError,
+  type ListSessionSignalsInput,
+  listSessionSignalsUseCase,
+  type SessionSignal,
+} from "./use-cases/list-session-signals.ts"
+export {
   type ListSignalTracesError,
   type ListSignalTracesInput,
   type ListSignalTracesResult,

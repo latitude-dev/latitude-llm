@@ -24,6 +24,7 @@ if typing.TYPE_CHECKING:
     from .projects.client import AsyncProjectsClient, ProjectsClient
     from .saved_searches.client import AsyncSavedSearchesClient, SavedSearchesClient
     from .scores.client import AsyncScoresClient, ScoresClient
+    from .sessions.client import AsyncSessionsClient, SessionsClient
     from .signals.client import AsyncSignalsClient, SignalsClient
     from .spans.client import AsyncSpansClient, SpansClient
     from .tools.client import AsyncToolsClient, ToolsClient
@@ -135,6 +136,7 @@ class LatitudeClient:
         self._analytics: typing.Optional[AnalyticsClient] = None
         self._spans: typing.Optional[SpansClient] = None
         self._experiments: typing.Optional[ExperimentsClient] = None
+        self._sessions: typing.Optional[SessionsClient] = None
 
     @property
     def account(self):
@@ -280,6 +282,14 @@ class LatitudeClient:
             self._experiments = ExperimentsClient(client_wrapper=self._client_wrapper)
         return self._experiments
 
+    @property
+    def sessions(self):
+        if self._sessions is None:
+            from .sessions.client import SessionsClient  # noqa: E402
+
+            self._sessions = SessionsClient(client_wrapper=self._client_wrapper)
+        return self._sessions
+
 
 def _make_default_async_client(
     timeout: typing.Optional[float],
@@ -406,6 +416,7 @@ class AsyncLatitudeClient:
         self._analytics: typing.Optional[AsyncAnalyticsClient] = None
         self._spans: typing.Optional[AsyncSpansClient] = None
         self._experiments: typing.Optional[AsyncExperimentsClient] = None
+        self._sessions: typing.Optional[AsyncSessionsClient] = None
 
     @property
     def account(self):
@@ -550,6 +561,14 @@ class AsyncLatitudeClient:
 
             self._experiments = AsyncExperimentsClient(client_wrapper=self._client_wrapper)
         return self._experiments
+
+    @property
+    def sessions(self):
+        if self._sessions is None:
+            from .sessions.client import AsyncSessionsClient  # noqa: E402
+
+            self._sessions = AsyncSessionsClient(client_wrapper=self._client_wrapper)
+        return self._sessions
 
 
 def _get_base_url(*, base_url: typing.Optional[str] = None, environment: LatitudeEnvironment) -> str:

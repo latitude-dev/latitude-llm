@@ -17,6 +17,7 @@ Full command reference for `latitude`.
 - [`latitude projects`](#latitude-projects)
 - [`latitude saved-searches`](#latitude-saved-searches)
 - [`latitude scores`](#latitude-scores)
+- [`latitude sessions`](#latitude-sessions)
 - [`latitude signals`](#latitude-signals)
 - [`latitude spans`](#latitude-spans)
 - [`latitude tools`](#latitude-tools)
@@ -760,6 +761,82 @@ Creates a score against a target trace. The trace is resolved by explicit id (`t
 |------|------|----------|-------------|
 | `--project-slug` | `string` | Yes | Project slug (human-readable identifier) |
 | `--json` | `JSON` | Yes | Request body as JSON (or use individual body-field flags) |
+
+---
+
+### `latitude sessions`
+
+#### `latitude sessions analytics`
+
+Returns session analytics for the project: a total (or median) per metric over the requested range, plus a per-bucket series for each metric. Buckets are 12-hour UTC-aligned. The range defaults to the trailing 7 days.
+
+`GET /v1/projects/{projectSlug}/sessions/analytics`
+
+| Flag | Type | Required | Description |
+|------|------|----------|-------------|
+| `--project-slug` | `string` | Yes | Project slug (human-readable identifier) |
+| `--from-iso` | `string (date-time)` | No | Lower bound (inclusive) of the time range. Defaults to 7 days before `toIso`. |
+| `--to-iso` | `string (date-time)` | No | Upper bound (inclusive) of the time range. Defaults to now. |
+
+#### `latitude sessions get`
+
+Returns a single session by id, including its `conversation`: the system instructions and the messages of the session's latest LLM completion, in OpenTelemetry GenAI format.
+
+`GET /v1/projects/{projectSlug}/sessions/{sessionId}`
+
+| Flag | Type | Required | Description |
+|------|------|----------|-------------|
+| `--project-slug` | `string` | Yes | Project slug (human-readable identifier) |
+| `--session-id` | `string` | Yes | Session identifier lifted from instrumentation. Up to 128 characters. |
+
+#### `latitude sessions get-signal`
+
+Returns one signal by slug, with occurrence stats scoped to the session. Returns 404 when the signal has no occurrences in the session.
+
+`GET /v1/projects/{projectSlug}/sessions/{sessionId}/signals/{signalSlug}`
+
+| Flag | Type | Required | Description |
+|------|------|----------|-------------|
+| `--project-slug` | `string` | Yes | Project slug (human-readable identifier) |
+| `--session-id` | `string` | Yes | Session identifier lifted from instrumentation. Up to 128 characters. |
+| `--signal-slug` | `string` | Yes | Signal slug. |
+
+#### `latitude sessions list`
+
+Returns a cursor-paginated page of sessions in the project. A session groups the traces of one conversation. Combine `filters` with `query` (free-text semantic search) to narrow the result set. Session list rows exclude per-message LLM content — use `getSession` for the conversation view.
+
+`POST /v1/projects/{projectSlug}/sessions/list`
+
+| Flag | Type | Required | Description |
+|------|------|----------|-------------|
+| `--project-slug` | `string` | Yes | Project slug (human-readable identifier) |
+| `--json` | `JSON` | Yes | Request body as JSON (or use individual body-field flags) |
+
+#### `latitude sessions list-signals`
+
+Returns the signals that occurred in the session, with occurrence stats scoped to the session's traces. Ordered by most recent occurrence first.
+
+`GET /v1/projects/{projectSlug}/sessions/{sessionId}/signals`
+
+| Flag | Type | Required | Description |
+|------|------|----------|-------------|
+| `--project-slug` | `string` | Yes | Project slug (human-readable identifier) |
+| `--session-id` | `string` | Yes | Session identifier lifted from instrumentation. Up to 128 characters. |
+
+#### `latitude sessions list-traces`
+
+Returns a cursor-paginated page of the traces that belong to the session. Rows match the trace list shape and exclude per-message LLM content — use `getTrace` for the full conversation view.
+
+`GET /v1/projects/{projectSlug}/sessions/{sessionId}/traces`
+
+| Flag | Type | Required | Description |
+|------|------|----------|-------------|
+| `--project-slug` | `string` | Yes | Project slug (human-readable identifier) |
+| `--session-id` | `string` | Yes | Session identifier lifted from instrumentation. Up to 128 characters. |
+| `--cursor` | `string` | No | Opaque cursor returned in a previous response's `nextCursor`. Omit on the first page. |
+| `--limit` | `integer` | No | Page size. Defaults to 50; max 200. |
+| `--sort-by` | `startTime | endTime | durationNs | tokensTotal | costTotalMicrocents` | No | Field to sort by. Defaults to `startTime`. |
+| `--sort-direction` | `asc | desc` | No | Sort direction. Defaults to `desc` (most recent first). |
 
 ---
 
