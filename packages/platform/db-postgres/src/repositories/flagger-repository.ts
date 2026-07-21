@@ -1,6 +1,7 @@
 import {
   FLAGGER_DEFAULT_ENABLED,
   FLAGGER_DEFAULT_SAMPLING,
+  FLAGGER_STRATEGY_SLUGS,
   type Flagger,
   FlaggerRepository,
   type FlaggerRepositoryShape,
@@ -14,12 +15,20 @@ import type { Operator } from "../client.ts"
 import { flaggers } from "../schema/flaggers.ts"
 
 const logger = createLogger("db-postgres/flagger-repository")
+const knownFlaggerSlugs = new Set<string>(FLAGGER_STRATEGY_SLUGS)
 
-// A row's slug can be ahead of this build's FLAGGER_STRATEGY_SLUGS during a rollout — e.g. a
-// backfill migration provisions a newly added strategy before the app code that recognizes it
-// deploys. Skip such rows instead of failing the whole batch so unrelated flaggers keep working.
+// Unknown strategy slugs are skipped so a newer DB row cannot fail reads of known flaggers.
 const toDomainFlagger = (row: typeof flaggers.$inferSelect): Flagger | null => {
-  const parsed = flaggerSchema.safeParse({
+  if (!knownFlaggerSlugs.has(row.slug)) {
+    logger.warn("Skipping unrecognized flagger row", {
+      flaggerId: row.id,
+      projectId: row.projectId,
+      slug: row.slug,
+    })
+    return null
+  }
+
+  return flaggerSchema.parse({
     id: row.id,
     organizationId: row.organizationId,
     projectId: row.projectId,
@@ -29,17 +38,6 @@ const toDomainFlagger = (row: typeof flaggers.$inferSelect): Flagger | null => {
     createdAt: row.createdAt,
     updatedAt: row.updatedAt,
   })
-
-  if (!parsed.success) {
-    logger.warn("Skipping unrecognized flagger row", {
-      flaggerId: row.id,
-      projectId: row.projectId,
-      slug: row.slug,
-    })
-    return null
-  }
-
-  return parsed.data
 }
 
 const toDomainFlaggers = (rows: readonly (typeof flaggers.$inferSelect)[]): Flagger[] =>
