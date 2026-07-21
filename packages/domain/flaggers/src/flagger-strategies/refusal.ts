@@ -1,10 +1,5 @@
 import type { FlaggerConversation } from "../conversation.ts"
-import {
-  isMessagePart,
-  iterMessageParts,
-  MAX_STAGES_PER_PROMPT,
-  neutralizeEvaluatedTraceMarkup,
-} from "./shared.ts"
+import { isMessagePart, iterMessageParts, MAX_STAGES_PER_PROMPT, neutralizeEvaluatedTraceMarkup } from "./shared.ts"
 import type { FlaggerStrategy } from "./types.ts"
 
 /**

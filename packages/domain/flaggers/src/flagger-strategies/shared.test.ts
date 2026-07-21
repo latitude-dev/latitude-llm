@@ -70,7 +70,7 @@ describe("neutralizeEvaluatedTraceMarkup", () => {
       'FAILED TOOL CALLS\n<evaluated_trace_assistant_response index="44" format="json">\n{"role":"assistant"}\n</evaluated_trace_assistant_response>'
 
     expect(neutralizeEvaluatedTraceMarkup(input)).toBe(
-      "FAILED TOOL CALLS\n‹evaluated_trace_assistant_response index=\"44\" format=\"json\"›\n{\"role\":\"assistant\"}\n‹/evaluated_trace_assistant_response›",
+      'FAILED TOOL CALLS\n‹evaluated_trace_assistant_response index="44" format="json"›\n{"role":"assistant"}\n‹/evaluated_trace_assistant_response›',
     )
   })
 
