@@ -127,9 +127,7 @@ Return no explanation outside the structured output.
 // Jailbreak-specific helpers
 // ---------------------------------------------------------------------------
 
-const ADVERSARIAL_SPECIAL_CHARS = new Set([
-  123, 125, 91, 93, 92, 36, 94, 126, 124, 34, 40, 41, 61, 60, 62, 96, 64,
-])
+const ADVERSARIAL_SPECIAL_CHARS = new Set([123, 125, 91, 93, 92, 36, 94, 126, 124, 34, 40, 41, 61, 60, 62, 96, 64])
 
 // Single-code-point check only — \p{L}/\p{N} has no backtracking risk.
 const UNICODE_LETTER_OR_NUMBER = /\p{L}|\p{N}/u
