@@ -44,3 +44,18 @@ export const isReflagSuppressed = (tags: readonly string[]): boolean => tags.inc
  */
 export const reflagSuppressionTags = (inputTraceTags: readonly string[]): readonly string[] =>
   isFlaggerGeneratedTrace(inputTraceTags) ? AI_GENERATE_TELEMETRY_TAGS.flaggerNoReflag : []
+
+/**
+ * User/input-centric strategies (`classifiesAssistantResponseOnly: false`) judge
+ * the evaluated agent's conversation partner — real end-user wording, injection
+ * attempts, and similar. On a `flagger.classify` / `flagger.draft` trace the "user"
+ * turn is Latitude-built prompt scaffolding that embeds nested evaluated evidence
+ * (task episodes, quoted corrections, jailbreak examples from the *original*
+ * session). Those look like true positives to frustration/jailbreaking. Skip
+ * user-centric strategies on flagger-generated traces; assistant-response-centric
+ * strategies still run so we can catch bad classifications.
+ */
+export const isUserCentricReflagInapplicable = (
+  tags: readonly string[],
+  classifiesAssistantResponseOnly: boolean | undefined,
+): boolean => isFlaggerGeneratedTrace(tags) && classifiesAssistantResponseOnly === false
