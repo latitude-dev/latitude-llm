@@ -558,7 +558,7 @@ function capLlmRequestPayload(args: {
 
   const notes: string[] = []
   if (args.toolDefs && toolDefsJson && toolDefsJson.length > TOOL_DEFS_CAP) {
-    const r = capArrayJson(args.toolDefs, TOOL_DEFS_CAP)
+    const r = capToolDefinitions(args.toolDefs, TOOL_DEFS_CAP)
     toolDefsJson = r.json
     if (r.note) notes.push(`tool definitions: ${r.note}`)
   }
@@ -652,20 +652,59 @@ function capPartsJson(parts: MessagePart[], maxBytes: number): CapResult {
   return { json: JSON.stringify(parts.map((p) => shrinkPart(p, perPart))), note: `shrunk ${parts.length} part(s)` }
 }
 
-// Keeps whole leading entries that fit the budget. Used for tool definitions, where
-// each entry is self-contained and order carries no recency meaning.
-function capArrayJson(items: unknown[], maxBytes: number): CapResult {
-  const full = JSON.stringify(items)
+function toolNameStub(tool: unknown): unknown {
+  if (!tool || typeof tool !== "object") return tool
+  const name = (tool as { name?: unknown }).name
+  return typeof name === "string" ? { name } : tool
+}
+
+// Never drop tool names when capping — definedTools / undeclared-tool detection key
+// off names alone; only schemas are optional under the byte budget.
+function capToolDefinitions(tools: unknown[], maxBytes: number): CapResult {
+  const full = JSON.stringify(tools)
   if (full.length <= maxBytes) return { json: full }
-  let budget = maxBytes - 2
-  let end = 0
-  while (end < items.length) {
-    const cost = JSON.stringify(items[end]).length + 1
-    if (cost > budget) break
-    budget -= cost
-    end++
+
+  const stubs = tools.map(toolNameStub)
+  const stubCosts = stubs.map((stub) => JSON.stringify(stub).length + 1)
+  const suffixStubBytes = new Array<number>(tools.length + 1)
+  suffixStubBytes[tools.length] = 0
+  for (let i = tools.length - 1; i >= 0; i--) {
+    suffixStubBytes[i] = suffixStubBytes[i + 1]! + stubCosts[i]!
   }
-  return { json: JSON.stringify(items.slice(0, end)), note: `kept ${end} of ${items.length} entries` }
+
+  let budget = maxBytes - 2
+  const out: unknown[] = []
+  let fullCount = 0
+  for (let i = 0; i < tools.length; i++) {
+    const fullCost = JSON.stringify(tools[i]).length + 1
+    if (fullCost + suffixStubBytes[i + 1]! <= budget) {
+      out.push(tools[i])
+      budget -= fullCost
+      fullCount++
+      continue
+    }
+    for (let j = i; j < tools.length; j++) {
+      const stubCost = stubCosts[j]!
+      if (stubCost > budget) {
+        return {
+          json: JSON.stringify(out),
+          note: `kept ${out.length} of ${tools.length} names (${fullCount} full schemas, ${out.length - fullCount} name-only)`,
+        }
+      }
+      out.push(stubs[j])
+      budget -= stubCost
+    }
+    break
+  }
+
+  const stubCount = out.length - fullCount
+  return {
+    json: JSON.stringify(out),
+    note:
+      stubCount > 0
+        ? `kept all ${tools.length} names (${fullCount} full schemas, ${stubCount} name-only)`
+        : `kept ${fullCount} of ${tools.length} entries`,
+  }
 }
 
 function shrinkPart(part: MessagePart, maxBytes: number): MessagePart {

@@ -55,6 +55,7 @@ const conversationHasAnyToolCall = (conversation: ConversationMessagesOnly): boo
 export function collectToolCallErrorFindings(conversation: ToolErrorConversation): readonly ToolCallErrorFinding[] {
   const findings: ToolCallErrorFinding[] = []
   const callById = new Map<string, { name: string; messageIndex: number }>()
+  const successfulCallIds = new Set<string>()
   const hasAnyToolCall = conversationHasAnyToolCall(conversation)
   const definedTools =
     conversation.definedTools && conversation.definedTools.length > 0 ? new Set(conversation.definedTools) : null
@@ -132,11 +133,22 @@ export function collectToolCallErrorFindings(conversation: ToolErrorConversation
           toolName: call.name,
           toolCallId,
         })
+      } else if (toolCallId) {
+        // Successful execution proves availability; incomplete definedTools must not flag it.
+        successfulCallIds.add(toolCallId)
       }
     }
   }
 
-  return findings
+  if (successfulCallIds.size === 0) return findings
+  return findings.filter(
+    (finding) =>
+      !(
+        finding.toolCallId &&
+        successfulCallIds.has(finding.toolCallId) &&
+        finding.feedback.includes("which is not in the declared toolset")
+      ),
+  )
 }
 
 export function detectToolCallErrorsFlagger(conversation: ToolErrorConversation): DeterministicFlaggerMatch {

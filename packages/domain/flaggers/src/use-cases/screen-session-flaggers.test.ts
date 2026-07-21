@@ -527,6 +527,23 @@ describe("screenSessionFlaggersUseCase", () => {
     expect(written[0]?.feedback).toContain("not in the declared toolset")
   })
 
+  it("does not flag an undeclared tool that executed successfully", async () => {
+    const call = assistantToolCall("WebSearch", { query: "x" })
+    const callId = (call.parts[0] as { id: string }).id
+    const session = makeSessionDetail(
+      [user("Search the web."), call, tool(callId, { results: ["ok"] }), assistant("Here are the results.")],
+      { definedTools: ["search", "read_file"] },
+    )
+    const { result, scores } = await runScreening({
+      session,
+      flaggers: [makeFlagger("tool-call-errors", 0)],
+      deps: fakeDeps.deps,
+    })
+
+    expect(decisionFor(result.decisions, "tool-call-errors")?.action).toBe("dropped")
+    expect([...scores.values()]).toEqual([])
+  })
+
   it("hints trashing (tool:error) from a failed tool response", async () => {
     const session = makeSessionDetail([
       user("Fetch the data."),
