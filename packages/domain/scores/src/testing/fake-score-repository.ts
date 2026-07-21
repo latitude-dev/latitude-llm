@@ -52,14 +52,14 @@ export const createFakeScoreRepository = (overrides?: Partial<ScoreRepositorySha
           return score.traceId === traceId
         }),
       ),
-    existsByEvaluationIdAndTraceId: ({ projectId, evaluationId, traceId }) =>
+    findByEvaluationIdAndTraceId: ({ projectId, evaluationId, traceId }) =>
       Effect.succeed(
-        [...scores.values()].some(
+        [...scores.values()].find(
           (score) =>
             score.projectId === projectId &&
             isCanonicalEvaluationScore(score, evaluationId) &&
             score.traceId === traceId,
-        ),
+        ) ?? null,
       ),
     listByProjectId: () => Effect.succeed(EMPTY_PAGE),
     listBySourceId: () => Effect.succeed(EMPTY_PAGE),

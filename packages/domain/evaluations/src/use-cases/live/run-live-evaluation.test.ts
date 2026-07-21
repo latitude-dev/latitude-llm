@@ -19,7 +19,7 @@ import { OutboxEventWriter, type OutboxEventWriterShape } from "@domain/events"
 import { QueuePublisher, type QueuePublisherShape } from "@domain/queue"
 import { type DetectorHealthTracker, type ScriptRuntime, ScriptRuntimeError } from "@domain/sandbox"
 import { createFakeDetectorHealthTracker, createFakeScriptRuntime } from "@domain/sandbox/testing"
-import { ScoreAnalyticsRepository, ScoreRepository } from "@domain/scores"
+import { type EvaluationScore, ScoreAnalyticsRepository, ScoreRepository } from "@domain/scores"
 import { createFakeScoreAnalyticsRepository, createFakeScoreRepository } from "@domain/scores/testing"
 import {
   CacheError,
@@ -28,6 +28,7 @@ import {
   OrganizationId,
   ProjectId,
   RepositoryError,
+  ScoreId,
   SessionId,
   SettingsReader,
   SignalId,
@@ -185,6 +186,35 @@ function createEvaluationRepository(findById: EvaluationRepositoryShape["findByI
     unarchive: () => Effect.die("Unexpected call to unarchive"),
     softDelete: () => Effect.die("Unexpected call to softDelete"),
     softDeleteBySignalId: () => Effect.die("Unexpected call to softDeleteBySignalId"),
+  }
+}
+
+function makePersistedScore(overrides: Partial<EvaluationScore> = {}): EvaluationScore {
+  return {
+    id: ScoreId("e".repeat(24)),
+    organizationId: INPUT.organizationId,
+    projectId: INPUT.projectId,
+    sessionId: null,
+    traceId: TraceId(INPUT.traceId),
+    spanId: null,
+    simulationId: null,
+    signalId: null,
+    sourceType: "evaluation",
+    sourceId: INPUT.evaluationId,
+    metadata: { evaluationHash: "hash-v1" },
+    value: 0.1,
+    passed: true,
+    feedback: "Prior persisted verdict.",
+    error: null,
+    errored: false,
+    duration: 0,
+    tokens: 0,
+    cost: 0,
+    draftedAt: null,
+    annotatorId: null,
+    createdAt: new Date("2026-06-17T10:00:00.000Z"),
+    updatedAt: new Date("2026-06-17T10:00:00.000Z"),
+    ...overrides,
   }
 }
 
@@ -593,12 +623,12 @@ describe("runLiveEvaluationUseCase", () => {
     })
     const operations: string[] = []
     const duplicateFixture = createFakeScoreRepository({
-      existsByEvaluationIdAndTraceId: ({ projectId, evaluationId, traceId }) => {
+      findByEvaluationIdAndTraceId: ({ projectId, evaluationId, traceId }) => {
         duplicateCheckCalls += 1
         expect(projectId).toEqual(ProjectId(INPUT.projectId))
         expect(evaluationId).toBe(evaluation.id)
         expect(traceId).toEqual(TraceId(INPUT.traceId))
-        return Effect.succeed(true)
+        return Effect.succeed(makePersistedScore())
       },
     })
     const scoreRepository = {
@@ -682,12 +712,12 @@ describe("runLiveEvaluationUseCase", () => {
     })
     const operations: string[] = []
     const duplicateFixture = createFakeScoreRepository({
-      existsByEvaluationIdAndTraceId: ({ projectId, evaluationId, traceId }) => {
+      findByEvaluationIdAndTraceId: ({ projectId, evaluationId, traceId }) => {
         duplicateCheckCalls += 1
         expect(projectId).toEqual(ProjectId(INPUT.projectId))
         expect(evaluationId).toBe(evaluation.id)
         expect(traceId).toEqual(TraceId(INPUT.traceId))
-        return Effect.succeed(duplicateCommitted)
+        return Effect.succeed(duplicateCommitted ? makePersistedScore() : null)
       },
     })
     const scoreRepository = {
@@ -774,6 +804,59 @@ describe("runLiveEvaluationUseCase", () => {
       "BillingUsagePeriodUpdated",
     ])
     expect(operations).toEqual(["billing-outbox-write", "score-save"])
+  })
+
+  it("re-claims the regression reopen when a retry finds the score already persisted", async () => {
+    const evaluation = makeEvaluation()
+    const persisted = makePersistedScore({ signalId: SignalId(evaluation.signalId) })
+    const claimCalls: Array<{ signalId: string; occurredAt: Date }> = []
+    const signalRepository = createSignalRepository(
+      () => Effect.die("Signal detail is not needed on the dedupe path"),
+      ({ signalId, occurredAt }) =>
+        Effect.sync(() => {
+          claimCalls.push({ signalId, occurredAt })
+          return true
+        }),
+    )
+    const outboxEvents: Array<{ eventName: string; payload: Record<string, unknown> }> = []
+    const scoreWriteLayer = createScoreWriteLayer({
+      scoreRepository: createFakeScoreRepository({
+        findByEvaluationIdAndTraceId: () => Effect.succeed(persisted),
+      }).repository,
+      outboxEventWriter: {
+        write: (event: Parameters<OutboxEventWriterShape["write"]>[0]) =>
+          Effect.sync(() => {
+            outboxEvents.push({ eventName: event.eventName, payload: event.payload as Record<string, unknown> })
+          }),
+      },
+    })
+    const { repository: traceRepository } = createFakeTraceRepository({
+      findByTraceId: () => Effect.die("Trace should not be loaded when a canonical result already exists"),
+    })
+    const evaluationRepository = createEvaluationRepository(() => Effect.succeed(evaluation))
+
+    const result = await Effect.runPromise(
+      runLiveEvaluationUseCase(INPUT).pipe(
+        Effect.provide(
+          createUseCaseLayer({
+            traceRepository,
+            evaluationRepository,
+            scoreWriteLayer,
+            signalRepository,
+          }),
+        ),
+      ),
+    )
+
+    expect(result).toEqual({
+      action: "skipped",
+      reason: "result-already-exists",
+      evaluationId: INPUT.evaluationId,
+      traceId: INPUT.traceId,
+    })
+    expect(claimCalls).toEqual([{ signalId: SignalId(evaluation.signalId), occurredAt: persisted.createdAt }])
+    expect(outboxEvents.map((event) => event.eventName)).toEqual(["SignalRegressed"])
+    expect(outboxEvents[0]?.payload.triggerScoreId).toBe(persisted.id)
   })
 
   it("skips when the trace no longer exists", async () => {

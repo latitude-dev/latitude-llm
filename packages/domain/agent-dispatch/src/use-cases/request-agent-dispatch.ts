@@ -137,8 +137,7 @@ export const requestAgentDispatchUseCase = (input: {
       if (signal.mutedAt !== null) return { status: "skipped", reason: "signal-muted" } as const
       if (signal.ignoredAt !== null) return { status: "skipped", reason: "signal-ignored" } as const
       if (signal.resolvedAt !== null) return { status: "skipped", reason: "signal-resolved" } as const
-      // Discovery dispatches skip signals the user created themselves; runtime
-      // conditions (regression) dispatch regardless of origin, like escalation.
+      // Discovery skips user-created signals; runtime triggers (regression) dispatch regardless of origin.
       if (trigger === "signal.discovered" && signal.origin === "user") {
         return { status: "skipped", reason: "user-origin-signal" } as const
       }
