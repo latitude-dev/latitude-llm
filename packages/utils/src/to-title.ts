@@ -10,5 +10,9 @@
  * non-letter (numbers, punctuation, whitespace) is left untouched.
  */
 export function toTitle(str: string): string {
-  return str.replace(/[A-Za-z]+('[A-Za-z]+)?/g, (word) => word.charAt(0).toUpperCase() + word.slice(1))
+  return str.replace(/[A-Za-z]+('[A-Za-z]+)?/g, (word) =>
+    // A word that already carries an uppercase letter is intentionally cased
+    // ("iPhone", "iOS", "MacOS") - promoting its first letter would mangle it.
+    /[A-Z]/.test(word) ? word : word.charAt(0).toUpperCase() + word.slice(1),
+  )
 }
