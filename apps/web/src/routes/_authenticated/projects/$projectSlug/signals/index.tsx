@@ -91,7 +91,8 @@ const BULK_LIFECYCLE_MODAL: Record<
     label: "Resolve",
     icon: CheckIcon,
     destructive: false,
-    description: (target) => `Resolve ${target}. If a signal starts occurring again we'll reopen it and alert you.`,
+    description: (target) =>
+      `Mark ${target} as resolved. If a signal starts occurring again we will alert you and promote it as regressed.`,
   },
   unresolve: {
     title: "Unresolve signals",
@@ -105,15 +106,14 @@ const BULK_LIFECYCLE_MODAL: Record<
     label: "Ignore",
     icon: EyeOffIcon,
     destructive: true,
-    description: (target) =>
-      `Ignore ${target}. Evaluations are archived, notifications are muted, and the signals move to Archived.`,
+    description: (target) => `Mark ${target} as ignored. We won't monitor or alert you about new occurrences anymore.`,
   },
   unignore: {
     title: "Unignore signals",
     label: "Unignore",
     icon: EyeIcon,
     destructive: false,
-    description: (target) => `Return ${target} to the active list with notifications re-enabled.`,
+    description: (target) => `Stop ignoring ${target}. New occurrences will surface them again.`,
   },
   mute: {
     title: "Mute signals",
@@ -121,14 +121,14 @@ const BULK_LIFECYCLE_MODAL: Record<
     icon: BellOffIcon,
     destructive: true,
     description: (target) =>
-      `Mute ${target}. New occurrences still start incidents, but they won't send notifications.`,
+      `Silence ${target}. New occurrences still start incidents, but they won't send notifications.`,
   },
   unmute: {
     title: "Unmute signals",
     label: "Unmute",
     icon: BellIcon,
     destructive: false,
-    description: (target) => `Unmute ${target}. New occurrences can trigger notifications again.`,
+    description: (target) => `Unmute ${target}. New occurrences will be notified again.`,
   },
 }
 
