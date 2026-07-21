@@ -7,6 +7,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [7.6.0] - 2026-07-21
+
+### Added
+
+- `latitude memory` commands for reading memory observability: `list-stores` (cursor-paginated store roll-up), `get-store` (current snapshot, optional point-in-time `at`), `get-store-diff` (per-record diff between two timestamps), `list-store-users`, `get-record` (body + version history), `get-record-change` (one change's before/after diff), `list-record-reads`, and `list-record-users`. Stores and records are addressed by opaque id query params, so the unattributed (`""`) store and the unnamed record are reachable.
+- `latitude sessions get-memory` / `get-memory-changes` and `latitude traces get-memory` / `get-memory-changes` — a session's or trace's memory footprint (per-record read/added/removed token metrics and totals) and its per-record before/after write diffs.
+- `latitude users memory-stores` — the memory stores an end-user accessed.
+
 ## [7.5.0] - 2026-07-21
 
 ### Added

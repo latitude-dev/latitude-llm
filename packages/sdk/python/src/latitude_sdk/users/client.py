@@ -8,6 +8,7 @@ from ..core.request_options import RequestOptions
 from ..types.user_activity_response import UserActivityResponse
 from ..types.user_behaviours_response import UserBehavioursResponse
 from ..types.user_list_response import UserListResponse
+from ..types.user_memory_stores import UserMemoryStores
 from ..types.user_profile_response import UserProfileResponse
 from ..types.user_signals_response import UserSignalsResponse
 from ..types.user_usage_response import UserUsageResponse
@@ -365,6 +366,43 @@ class UsersClient:
         )
         """
         _response = self._raw_client.behaviours(project_slug, user_id, limit=limit, request_options=request_options)
+        return _response.data
+
+    def memory_stores(
+        self, project_slug: str, user_id: str, *, request_options: typing.Optional[RequestOptions] = None
+    ) -> UserMemoryStores:
+        """
+        Returns the memory stores the end-user accessed (reads and writes both count as access), most recent access first. Each store links to the memory browsing operations under the `memory` group.
+
+        Parameters
+        ----------
+        project_slug : str
+            Project slug (human-readable identifier)
+
+        user_id : str
+            End-user identifier. URL-encode values containing special characters.
+
+        request_options : typing.Optional[RequestOptions]
+            Request-specific configuration.
+
+        Returns
+        -------
+        UserMemoryStores
+            Memory stores accessed
+
+        Examples
+        --------
+        from latitude_sdk import LatitudeClient
+
+        client = LatitudeClient(
+            api_key="YOUR_API_KEY",
+        )
+        client.users.memory_stores(
+            project_slug="projectSlug",
+            user_id="userId",
+        )
+        """
+        _response = self._raw_client.memory_stores(project_slug, user_id, request_options=request_options)
         return _response.data
 
     def get(
@@ -809,6 +847,51 @@ class AsyncUsersClient:
         _response = await self._raw_client.behaviours(
             project_slug, user_id, limit=limit, request_options=request_options
         )
+        return _response.data
+
+    async def memory_stores(
+        self, project_slug: str, user_id: str, *, request_options: typing.Optional[RequestOptions] = None
+    ) -> UserMemoryStores:
+        """
+        Returns the memory stores the end-user accessed (reads and writes both count as access), most recent access first. Each store links to the memory browsing operations under the `memory` group.
+
+        Parameters
+        ----------
+        project_slug : str
+            Project slug (human-readable identifier)
+
+        user_id : str
+            End-user identifier. URL-encode values containing special characters.
+
+        request_options : typing.Optional[RequestOptions]
+            Request-specific configuration.
+
+        Returns
+        -------
+        UserMemoryStores
+            Memory stores accessed
+
+        Examples
+        --------
+        import asyncio
+
+        from latitude_sdk import AsyncLatitudeClient
+
+        client = AsyncLatitudeClient(
+            api_key="YOUR_API_KEY",
+        )
+
+
+        async def main() -> None:
+            await client.users.memory_stores(
+                project_slug="projectSlug",
+                user_id="userId",
+            )
+
+
+        asyncio.run(main())
+        """
+        _response = await self._raw_client.memory_stores(project_slug, user_id, request_options=request_options)
         return _response.data
 
     async def get(

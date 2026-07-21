@@ -563,6 +563,26 @@ if typing.TYPE_CHECKING:
     from .list_incidents_response import ListIncidentsResponse
     from .member import Member, Member_Active, Member_Invited
     from .member_list import MemberList
+    from .memory_record_change_diff import MemoryRecordChangeDiff
+    from .memory_record_change_diff_change_kind import MemoryRecordChangeDiffChangeKind
+    from .memory_record_detail import MemoryRecordDetail
+    from .memory_record_read import MemoryRecordRead
+    from .memory_record_reads import MemoryRecordReads
+    from .memory_record_summary import MemoryRecordSummary
+    from .memory_record_user import MemoryRecordUser
+    from .memory_record_users import MemoryRecordUsers
+    from .memory_record_version import MemoryRecordVersion
+    from .memory_record_version_change_kind import MemoryRecordVersionChangeKind
+    from .memory_store import MemoryStore
+    from .memory_store_change import MemoryStoreChange
+    from .memory_store_change_kind import MemoryStoreChangeKind
+    from .memory_store_diff import MemoryStoreDiff
+    from .memory_store_diff_records_changed import MemoryStoreDiffRecordsChanged
+    from .memory_store_record import MemoryStoreRecord
+    from .memory_store_snapshot import MemoryStoreSnapshot
+    from .memory_store_user import MemoryStoreUser
+    from .memory_store_users import MemoryStoreUsers
+    from .memory_user_store import MemoryUserStore
     from .metric_delta import MetricDelta
     from .metric_delta_one import MetricDeltaOne
     from .monitor import Monitor
@@ -660,6 +680,7 @@ if typing.TYPE_CHECKING:
     from .paginated_dataset_rows import PaginatedDatasetRows
     from .paginated_datasets import PaginatedDatasets
     from .paginated_experiments import PaginatedExperiments
+    from .paginated_memory_stores import PaginatedMemoryStores
     from .paginated_monitor_incidents import PaginatedMonitorIncidents
     from .paginated_monitors import PaginatedMonitors
     from .paginated_projects import PaginatedProjects
@@ -692,6 +713,11 @@ if typing.TYPE_CHECKING:
     from .session_analytics_traces import SessionAnalyticsTraces
     from .session_detail import SessionDetail
     from .session_filter_set import SessionFilterSet
+    from .session_memory_change import SessionMemoryChange
+    from .session_memory_change_kind import SessionMemoryChangeKind
+    from .session_memory_changes import SessionMemoryChanges
+    from .session_memory_summary import SessionMemorySummary
+    from .session_memory_summary_total import SessionMemorySummaryTotal
     from .session_signal import SessionSignal
     from .session_signal_source import SessionSignalSource
     from .session_signal_states_item import SessionSignalStatesItem
@@ -784,6 +810,7 @@ if typing.TYPE_CHECKING:
     from .user_behaviours_response import UserBehavioursResponse
     from .user_cost_rollup import UserCostRollup
     from .user_list_response import UserListResponse
+    from .user_memory_stores import UserMemoryStores
     from .user_profile_response import UserProfileResponse
     from .user_signal import UserSignal
     from .user_signals_response import UserSignalsResponse
@@ -1311,6 +1338,26 @@ _dynamic_imports: typing.Dict[str, str] = {
     "MemberList": ".member_list",
     "Member_Active": ".member",
     "Member_Invited": ".member",
+    "MemoryRecordChangeDiff": ".memory_record_change_diff",
+    "MemoryRecordChangeDiffChangeKind": ".memory_record_change_diff_change_kind",
+    "MemoryRecordDetail": ".memory_record_detail",
+    "MemoryRecordRead": ".memory_record_read",
+    "MemoryRecordReads": ".memory_record_reads",
+    "MemoryRecordSummary": ".memory_record_summary",
+    "MemoryRecordUser": ".memory_record_user",
+    "MemoryRecordUsers": ".memory_record_users",
+    "MemoryRecordVersion": ".memory_record_version",
+    "MemoryRecordVersionChangeKind": ".memory_record_version_change_kind",
+    "MemoryStore": ".memory_store",
+    "MemoryStoreChange": ".memory_store_change",
+    "MemoryStoreChangeKind": ".memory_store_change_kind",
+    "MemoryStoreDiff": ".memory_store_diff",
+    "MemoryStoreDiffRecordsChanged": ".memory_store_diff_records_changed",
+    "MemoryStoreRecord": ".memory_store_record",
+    "MemoryStoreSnapshot": ".memory_store_snapshot",
+    "MemoryStoreUser": ".memory_store_user",
+    "MemoryStoreUsers": ".memory_store_users",
+    "MemoryUserStore": ".memory_user_store",
     "MetricDelta": ".metric_delta",
     "MetricDeltaOne": ".metric_delta_one",
     "Monitor": ".monitor",
@@ -1402,6 +1449,7 @@ _dynamic_imports: typing.Dict[str, str] = {
     "PaginatedDatasetRows": ".paginated_dataset_rows",
     "PaginatedDatasets": ".paginated_datasets",
     "PaginatedExperiments": ".paginated_experiments",
+    "PaginatedMemoryStores": ".paginated_memory_stores",
     "PaginatedMonitorIncidents": ".paginated_monitor_incidents",
     "PaginatedMonitors": ".paginated_monitors",
     "PaginatedProjects": ".paginated_projects",
@@ -1436,6 +1484,11 @@ _dynamic_imports: typing.Dict[str, str] = {
     "SessionAnalyticsTraces": ".session_analytics_traces",
     "SessionDetail": ".session_detail",
     "SessionFilterSet": ".session_filter_set",
+    "SessionMemoryChange": ".session_memory_change",
+    "SessionMemoryChangeKind": ".session_memory_change_kind",
+    "SessionMemoryChanges": ".session_memory_changes",
+    "SessionMemorySummary": ".session_memory_summary",
+    "SessionMemorySummaryTotal": ".session_memory_summary_total",
     "SessionSignal": ".session_signal",
     "SessionSignalSource": ".session_signal_source",
     "SessionSignalStatesItem": ".session_signal_states_item",
@@ -1530,6 +1583,7 @@ _dynamic_imports: typing.Dict[str, str] = {
     "UserBehavioursResponse": ".user_behaviours_response",
     "UserCostRollup": ".user_cost_rollup",
     "UserListResponse": ".user_list_response",
+    "UserMemoryStores": ".user_memory_stores",
     "UserProfileResponse": ".user_profile_response",
     "UserSignal": ".user_signal",
     "UserSignalsResponse": ".user_signals_response",
@@ -2081,6 +2135,26 @@ __all__ = [
     "MemberList",
     "Member_Active",
     "Member_Invited",
+    "MemoryRecordChangeDiff",
+    "MemoryRecordChangeDiffChangeKind",
+    "MemoryRecordDetail",
+    "MemoryRecordRead",
+    "MemoryRecordReads",
+    "MemoryRecordSummary",
+    "MemoryRecordUser",
+    "MemoryRecordUsers",
+    "MemoryRecordVersion",
+    "MemoryRecordVersionChangeKind",
+    "MemoryStore",
+    "MemoryStoreChange",
+    "MemoryStoreChangeKind",
+    "MemoryStoreDiff",
+    "MemoryStoreDiffRecordsChanged",
+    "MemoryStoreRecord",
+    "MemoryStoreSnapshot",
+    "MemoryStoreUser",
+    "MemoryStoreUsers",
+    "MemoryUserStore",
     "MetricDelta",
     "MetricDeltaOne",
     "Monitor",
@@ -2172,6 +2246,7 @@ __all__ = [
     "PaginatedDatasetRows",
     "PaginatedDatasets",
     "PaginatedExperiments",
+    "PaginatedMemoryStores",
     "PaginatedMonitorIncidents",
     "PaginatedMonitors",
     "PaginatedProjects",
@@ -2206,6 +2281,11 @@ __all__ = [
     "SessionAnalyticsTraces",
     "SessionDetail",
     "SessionFilterSet",
+    "SessionMemoryChange",
+    "SessionMemoryChangeKind",
+    "SessionMemoryChanges",
+    "SessionMemorySummary",
+    "SessionMemorySummaryTotal",
     "SessionSignal",
     "SessionSignalSource",
     "SessionSignalStatesItem",
@@ -2300,6 +2380,7 @@ __all__ = [
     "UserBehavioursResponse",
     "UserCostRollup",
     "UserListResponse",
+    "UserMemoryStores",
     "UserProfileResponse",
     "UserSignal",
     "UserSignalsResponse",

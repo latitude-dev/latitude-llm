@@ -22,6 +22,8 @@ from ..types.paginated_traces import PaginatedTraces
 from ..types.session_analytics_response import SessionAnalyticsResponse
 from ..types.session_detail import SessionDetail
 from ..types.session_filter_set import SessionFilterSet
+from ..types.session_memory_changes import SessionMemoryChanges
+from ..types.session_memory_summary import SessionMemorySummary
 from ..types.session_signal import SessionSignal
 from ..types.session_signals import SessionSignals
 from .types.list_sessions_body_sort_by import ListSessionsBodySortBy
@@ -595,6 +597,186 @@ class RawSessionsClient:
             )
         raise ApiError(status_code=_response.status_code, headers=dict(_response.headers), body=_response_json)
 
+    def get_memory(
+        self,
+        project_slug: str,
+        session_id: str,
+        *,
+        trace_id: typing.Optional[str] = None,
+        request_options: typing.Optional[RequestOptions] = None,
+    ) -> HttpResponse[SessionMemorySummary]:
+        """
+        Returns the session's memory footprint: per-record read, added, and removed token metrics plus session-wide totals. Pass `traceId` to restrict the footprint to a single trace of the session.
+
+        Parameters
+        ----------
+        project_slug : str
+            Project slug (human-readable identifier)
+
+        session_id : str
+            Session identifier lifted from instrumentation. Up to 128 characters.
+
+        trace_id : typing.Optional[str]
+            Restrict the memory footprint to this trace of the session. Omit for the whole session.
+
+        request_options : typing.Optional[RequestOptions]
+            Request-specific configuration.
+
+        Returns
+        -------
+        HttpResponse[SessionMemorySummary]
+            Session memory footprint
+        """
+        _response = self._client_wrapper.httpx_client.request(
+            f"v1/projects/{encode_path_param(project_slug)}/sessions/{encode_path_param(session_id)}/memory",
+            method="GET",
+            params={
+                "traceId": trace_id,
+            },
+            request_options=request_options,
+        )
+        try:
+            if 200 <= _response.status_code < 300:
+                _data = typing.cast(
+                    SessionMemorySummary,
+                    parse_obj_as(
+                        type_=SessionMemorySummary,  # type: ignore
+                        object_=_response.json(),
+                    ),
+                )
+                return HttpResponse(response=_response, data=_data)
+            if _response.status_code == 400:
+                raise BadRequestError(
+                    headers=dict(_response.headers),
+                    body=typing.cast(
+                        Error,
+                        parse_obj_as(
+                            type_=Error,  # type: ignore
+                            object_=_response.json(),
+                        ),
+                    ),
+                )
+            if _response.status_code == 401:
+                raise UnauthorizedError(
+                    headers=dict(_response.headers),
+                    body=typing.cast(
+                        Error,
+                        parse_obj_as(
+                            type_=Error,  # type: ignore
+                            object_=_response.json(),
+                        ),
+                    ),
+                )
+            if _response.status_code == 404:
+                raise NotFoundError(
+                    headers=dict(_response.headers),
+                    body=typing.cast(
+                        Error,
+                        parse_obj_as(
+                            type_=Error,  # type: ignore
+                            object_=_response.json(),
+                        ),
+                    ),
+                )
+            _response_json = _response.json()
+        except JSONDecodeError:
+            raise ApiError(status_code=_response.status_code, headers=dict(_response.headers), body=_response.text)
+        except ValidationError as e:
+            raise ParsingError(
+                status_code=_response.status_code, headers=dict(_response.headers), body=_response.json(), cause=e
+            )
+        raise ApiError(status_code=_response.status_code, headers=dict(_response.headers), body=_response_json)
+
+    def get_memory_changes(
+        self,
+        project_slug: str,
+        session_id: str,
+        *,
+        trace_id: typing.Optional[str] = None,
+        request_options: typing.Optional[RequestOptions] = None,
+    ) -> HttpResponse[SessionMemoryChanges]:
+        """
+        Returns the memory writes the session made as per-record before/after diffs. Pass `traceId` to restrict to a single trace of the session.
+
+        Parameters
+        ----------
+        project_slug : str
+            Project slug (human-readable identifier)
+
+        session_id : str
+            Session identifier lifted from instrumentation. Up to 128 characters.
+
+        trace_id : typing.Optional[str]
+            Restrict the memory footprint to this trace of the session. Omit for the whole session.
+
+        request_options : typing.Optional[RequestOptions]
+            Request-specific configuration.
+
+        Returns
+        -------
+        HttpResponse[SessionMemoryChanges]
+            Session memory changes
+        """
+        _response = self._client_wrapper.httpx_client.request(
+            f"v1/projects/{encode_path_param(project_slug)}/sessions/{encode_path_param(session_id)}/memory/changes",
+            method="GET",
+            params={
+                "traceId": trace_id,
+            },
+            request_options=request_options,
+        )
+        try:
+            if 200 <= _response.status_code < 300:
+                _data = typing.cast(
+                    SessionMemoryChanges,
+                    parse_obj_as(
+                        type_=SessionMemoryChanges,  # type: ignore
+                        object_=_response.json(),
+                    ),
+                )
+                return HttpResponse(response=_response, data=_data)
+            if _response.status_code == 400:
+                raise BadRequestError(
+                    headers=dict(_response.headers),
+                    body=typing.cast(
+                        Error,
+                        parse_obj_as(
+                            type_=Error,  # type: ignore
+                            object_=_response.json(),
+                        ),
+                    ),
+                )
+            if _response.status_code == 401:
+                raise UnauthorizedError(
+                    headers=dict(_response.headers),
+                    body=typing.cast(
+                        Error,
+                        parse_obj_as(
+                            type_=Error,  # type: ignore
+                            object_=_response.json(),
+                        ),
+                    ),
+                )
+            if _response.status_code == 404:
+                raise NotFoundError(
+                    headers=dict(_response.headers),
+                    body=typing.cast(
+                        Error,
+                        parse_obj_as(
+                            type_=Error,  # type: ignore
+                            object_=_response.json(),
+                        ),
+                    ),
+                )
+            _response_json = _response.json()
+        except JSONDecodeError:
+            raise ApiError(status_code=_response.status_code, headers=dict(_response.headers), body=_response.text)
+        except ValidationError as e:
+            raise ParsingError(
+                status_code=_response.status_code, headers=dict(_response.headers), body=_response.json(), cause=e
+            )
+        raise ApiError(status_code=_response.status_code, headers=dict(_response.headers), body=_response_json)
+
 
 class AsyncRawSessionsClient:
     def __init__(self, *, client_wrapper: AsyncClientWrapper):
@@ -1111,6 +1293,186 @@ class AsyncRawSessionsClient:
                     SessionSignal,
                     parse_obj_as(
                         type_=SessionSignal,  # type: ignore
+                        object_=_response.json(),
+                    ),
+                )
+                return AsyncHttpResponse(response=_response, data=_data)
+            if _response.status_code == 400:
+                raise BadRequestError(
+                    headers=dict(_response.headers),
+                    body=typing.cast(
+                        Error,
+                        parse_obj_as(
+                            type_=Error,  # type: ignore
+                            object_=_response.json(),
+                        ),
+                    ),
+                )
+            if _response.status_code == 401:
+                raise UnauthorizedError(
+                    headers=dict(_response.headers),
+                    body=typing.cast(
+                        Error,
+                        parse_obj_as(
+                            type_=Error,  # type: ignore
+                            object_=_response.json(),
+                        ),
+                    ),
+                )
+            if _response.status_code == 404:
+                raise NotFoundError(
+                    headers=dict(_response.headers),
+                    body=typing.cast(
+                        Error,
+                        parse_obj_as(
+                            type_=Error,  # type: ignore
+                            object_=_response.json(),
+                        ),
+                    ),
+                )
+            _response_json = _response.json()
+        except JSONDecodeError:
+            raise ApiError(status_code=_response.status_code, headers=dict(_response.headers), body=_response.text)
+        except ValidationError as e:
+            raise ParsingError(
+                status_code=_response.status_code, headers=dict(_response.headers), body=_response.json(), cause=e
+            )
+        raise ApiError(status_code=_response.status_code, headers=dict(_response.headers), body=_response_json)
+
+    async def get_memory(
+        self,
+        project_slug: str,
+        session_id: str,
+        *,
+        trace_id: typing.Optional[str] = None,
+        request_options: typing.Optional[RequestOptions] = None,
+    ) -> AsyncHttpResponse[SessionMemorySummary]:
+        """
+        Returns the session's memory footprint: per-record read, added, and removed token metrics plus session-wide totals. Pass `traceId` to restrict the footprint to a single trace of the session.
+
+        Parameters
+        ----------
+        project_slug : str
+            Project slug (human-readable identifier)
+
+        session_id : str
+            Session identifier lifted from instrumentation. Up to 128 characters.
+
+        trace_id : typing.Optional[str]
+            Restrict the memory footprint to this trace of the session. Omit for the whole session.
+
+        request_options : typing.Optional[RequestOptions]
+            Request-specific configuration.
+
+        Returns
+        -------
+        AsyncHttpResponse[SessionMemorySummary]
+            Session memory footprint
+        """
+        _response = await self._client_wrapper.httpx_client.request(
+            f"v1/projects/{encode_path_param(project_slug)}/sessions/{encode_path_param(session_id)}/memory",
+            method="GET",
+            params={
+                "traceId": trace_id,
+            },
+            request_options=request_options,
+        )
+        try:
+            if 200 <= _response.status_code < 300:
+                _data = typing.cast(
+                    SessionMemorySummary,
+                    parse_obj_as(
+                        type_=SessionMemorySummary,  # type: ignore
+                        object_=_response.json(),
+                    ),
+                )
+                return AsyncHttpResponse(response=_response, data=_data)
+            if _response.status_code == 400:
+                raise BadRequestError(
+                    headers=dict(_response.headers),
+                    body=typing.cast(
+                        Error,
+                        parse_obj_as(
+                            type_=Error,  # type: ignore
+                            object_=_response.json(),
+                        ),
+                    ),
+                )
+            if _response.status_code == 401:
+                raise UnauthorizedError(
+                    headers=dict(_response.headers),
+                    body=typing.cast(
+                        Error,
+                        parse_obj_as(
+                            type_=Error,  # type: ignore
+                            object_=_response.json(),
+                        ),
+                    ),
+                )
+            if _response.status_code == 404:
+                raise NotFoundError(
+                    headers=dict(_response.headers),
+                    body=typing.cast(
+                        Error,
+                        parse_obj_as(
+                            type_=Error,  # type: ignore
+                            object_=_response.json(),
+                        ),
+                    ),
+                )
+            _response_json = _response.json()
+        except JSONDecodeError:
+            raise ApiError(status_code=_response.status_code, headers=dict(_response.headers), body=_response.text)
+        except ValidationError as e:
+            raise ParsingError(
+                status_code=_response.status_code, headers=dict(_response.headers), body=_response.json(), cause=e
+            )
+        raise ApiError(status_code=_response.status_code, headers=dict(_response.headers), body=_response_json)
+
+    async def get_memory_changes(
+        self,
+        project_slug: str,
+        session_id: str,
+        *,
+        trace_id: typing.Optional[str] = None,
+        request_options: typing.Optional[RequestOptions] = None,
+    ) -> AsyncHttpResponse[SessionMemoryChanges]:
+        """
+        Returns the memory writes the session made as per-record before/after diffs. Pass `traceId` to restrict to a single trace of the session.
+
+        Parameters
+        ----------
+        project_slug : str
+            Project slug (human-readable identifier)
+
+        session_id : str
+            Session identifier lifted from instrumentation. Up to 128 characters.
+
+        trace_id : typing.Optional[str]
+            Restrict the memory footprint to this trace of the session. Omit for the whole session.
+
+        request_options : typing.Optional[RequestOptions]
+            Request-specific configuration.
+
+        Returns
+        -------
+        AsyncHttpResponse[SessionMemoryChanges]
+            Session memory changes
+        """
+        _response = await self._client_wrapper.httpx_client.request(
+            f"v1/projects/{encode_path_param(project_slug)}/sessions/{encode_path_param(session_id)}/memory/changes",
+            method="GET",
+            params={
+                "traceId": trace_id,
+            },
+            request_options=request_options,
+        )
+        try:
+            if 200 <= _response.status_code < 300:
+                _data = typing.cast(
+                    SessionMemoryChanges,
+                    parse_obj_as(
+                        type_=SessionMemoryChanges,  # type: ignore
                         object_=_response.json(),
                     ),
                 )

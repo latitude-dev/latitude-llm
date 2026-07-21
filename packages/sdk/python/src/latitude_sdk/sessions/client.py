@@ -10,6 +10,8 @@ from ..types.paginated_traces import PaginatedTraces
 from ..types.session_analytics_response import SessionAnalyticsResponse
 from ..types.session_detail import SessionDetail
 from ..types.session_filter_set import SessionFilterSet
+from ..types.session_memory_changes import SessionMemoryChanges
+from ..types.session_memory_summary import SessionMemorySummary
 from ..types.session_signal import SessionSignal
 from ..types.session_signals import SessionSignals
 from .raw_client import AsyncRawSessionsClient, RawSessionsClient
@@ -334,6 +336,100 @@ class SessionsClient:
         )
         """
         _response = self._raw_client.get_signal(project_slug, session_id, signal_slug, request_options=request_options)
+        return _response.data
+
+    def get_memory(
+        self,
+        project_slug: str,
+        session_id: str,
+        *,
+        trace_id: typing.Optional[str] = None,
+        request_options: typing.Optional[RequestOptions] = None,
+    ) -> SessionMemorySummary:
+        """
+        Returns the session's memory footprint: per-record read, added, and removed token metrics plus session-wide totals. Pass `traceId` to restrict the footprint to a single trace of the session.
+
+        Parameters
+        ----------
+        project_slug : str
+            Project slug (human-readable identifier)
+
+        session_id : str
+            Session identifier lifted from instrumentation. Up to 128 characters.
+
+        trace_id : typing.Optional[str]
+            Restrict the memory footprint to this trace of the session. Omit for the whole session.
+
+        request_options : typing.Optional[RequestOptions]
+            Request-specific configuration.
+
+        Returns
+        -------
+        SessionMemorySummary
+            Session memory footprint
+
+        Examples
+        --------
+        from latitude_sdk import LatitudeClient
+
+        client = LatitudeClient(
+            api_key="YOUR_API_KEY",
+        )
+        client.sessions.get_memory(
+            project_slug="projectSlug",
+            session_id="sessionId",
+        )
+        """
+        _response = self._raw_client.get_memory(
+            project_slug, session_id, trace_id=trace_id, request_options=request_options
+        )
+        return _response.data
+
+    def get_memory_changes(
+        self,
+        project_slug: str,
+        session_id: str,
+        *,
+        trace_id: typing.Optional[str] = None,
+        request_options: typing.Optional[RequestOptions] = None,
+    ) -> SessionMemoryChanges:
+        """
+        Returns the memory writes the session made as per-record before/after diffs. Pass `traceId` to restrict to a single trace of the session.
+
+        Parameters
+        ----------
+        project_slug : str
+            Project slug (human-readable identifier)
+
+        session_id : str
+            Session identifier lifted from instrumentation. Up to 128 characters.
+
+        trace_id : typing.Optional[str]
+            Restrict the memory footprint to this trace of the session. Omit for the whole session.
+
+        request_options : typing.Optional[RequestOptions]
+            Request-specific configuration.
+
+        Returns
+        -------
+        SessionMemoryChanges
+            Session memory changes
+
+        Examples
+        --------
+        from latitude_sdk import LatitudeClient
+
+        client = LatitudeClient(
+            api_key="YOUR_API_KEY",
+        )
+        client.sessions.get_memory_changes(
+            project_slug="projectSlug",
+            session_id="sessionId",
+        )
+        """
+        _response = self._raw_client.get_memory_changes(
+            project_slug, session_id, trace_id=trace_id, request_options=request_options
+        )
         return _response.data
 
 
@@ -698,5 +794,115 @@ class AsyncSessionsClient:
         """
         _response = await self._raw_client.get_signal(
             project_slug, session_id, signal_slug, request_options=request_options
+        )
+        return _response.data
+
+    async def get_memory(
+        self,
+        project_slug: str,
+        session_id: str,
+        *,
+        trace_id: typing.Optional[str] = None,
+        request_options: typing.Optional[RequestOptions] = None,
+    ) -> SessionMemorySummary:
+        """
+        Returns the session's memory footprint: per-record read, added, and removed token metrics plus session-wide totals. Pass `traceId` to restrict the footprint to a single trace of the session.
+
+        Parameters
+        ----------
+        project_slug : str
+            Project slug (human-readable identifier)
+
+        session_id : str
+            Session identifier lifted from instrumentation. Up to 128 characters.
+
+        trace_id : typing.Optional[str]
+            Restrict the memory footprint to this trace of the session. Omit for the whole session.
+
+        request_options : typing.Optional[RequestOptions]
+            Request-specific configuration.
+
+        Returns
+        -------
+        SessionMemorySummary
+            Session memory footprint
+
+        Examples
+        --------
+        import asyncio
+
+        from latitude_sdk import AsyncLatitudeClient
+
+        client = AsyncLatitudeClient(
+            api_key="YOUR_API_KEY",
+        )
+
+
+        async def main() -> None:
+            await client.sessions.get_memory(
+                project_slug="projectSlug",
+                session_id="sessionId",
+            )
+
+
+        asyncio.run(main())
+        """
+        _response = await self._raw_client.get_memory(
+            project_slug, session_id, trace_id=trace_id, request_options=request_options
+        )
+        return _response.data
+
+    async def get_memory_changes(
+        self,
+        project_slug: str,
+        session_id: str,
+        *,
+        trace_id: typing.Optional[str] = None,
+        request_options: typing.Optional[RequestOptions] = None,
+    ) -> SessionMemoryChanges:
+        """
+        Returns the memory writes the session made as per-record before/after diffs. Pass `traceId` to restrict to a single trace of the session.
+
+        Parameters
+        ----------
+        project_slug : str
+            Project slug (human-readable identifier)
+
+        session_id : str
+            Session identifier lifted from instrumentation. Up to 128 characters.
+
+        trace_id : typing.Optional[str]
+            Restrict the memory footprint to this trace of the session. Omit for the whole session.
+
+        request_options : typing.Optional[RequestOptions]
+            Request-specific configuration.
+
+        Returns
+        -------
+        SessionMemoryChanges
+            Session memory changes
+
+        Examples
+        --------
+        import asyncio
+
+        from latitude_sdk import AsyncLatitudeClient
+
+        client = AsyncLatitudeClient(
+            api_key="YOUR_API_KEY",
+        )
+
+
+        async def main() -> None:
+            await client.sessions.get_memory_changes(
+                project_slug="projectSlug",
+                session_id="sessionId",
+            )
+
+
+        asyncio.run(main())
+        """
+        _response = await self._raw_client.get_memory_changes(
+            project_slug, session_id, trace_id=trace_id, request_options=request_options
         )
         return _response.data

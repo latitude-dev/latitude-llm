@@ -12,6 +12,7 @@ Full command reference for `latitude`.
 - [`latitude experiments`](#latitude-experiments)
 - [`latitude incidents`](#latitude-incidents)
 - [`latitude members`](#latitude-members)
+- [`latitude memory`](#latitude-memory)
 - [`latitude monitors`](#latitude-monitors)
 - [`latitude oauth-keys`](#latitude-oauth-keys)
 - [`latitude projects`](#latitude-projects)
@@ -486,6 +487,110 @@ Updates a member of the caller's organization. Today only the role is mutable. T
 
 ---
 
+### `latitude memory`
+
+#### `latitude memory get-record`
+
+Returns one record's current body plus its mutating version history (newest first), each version carrying the authoring span/trace/session/user and per-version token deltas.
+
+`GET /v1/projects/{projectSlug}/memory/record`
+
+| Flag | Type | Required | Description |
+|------|------|----------|-------------|
+| `--project-slug` | `string` | Yes | Project slug (human-readable identifier) |
+| `--store-id` | `string` | Yes | Store identifier (`gen_ai.memory.store.id`). Pass an empty string to address the unattributed ("") store. |
+| `--record-id` | `string` | Yes | Record identifier (`gen_ai.memory.record.id`). Pass an empty string to address the unnamed record. |
+
+#### `latitude memory get-record-change`
+
+Returns the before/after bodies for one change — the version authored by `spanId` against its predecessor in the record's mutating chain. Returns 404 when the span is not a recorded change of the record.
+
+`GET /v1/projects/{projectSlug}/memory/record/change`
+
+| Flag | Type | Required | Description |
+|------|------|----------|-------------|
+| `--project-slug` | `string` | Yes | Project slug (human-readable identifier) |
+| `--store-id` | `string` | Yes | Store identifier (`gen_ai.memory.store.id`). Pass an empty string to address the unattributed ("") store. |
+| `--record-id` | `string` | Yes | Record identifier (`gen_ai.memory.record.id`). Pass an empty string to address the unnamed record. |
+| `--span-id` | `string` | Yes | Span that authored the change (the `after` side). |
+
+#### `latitude memory get-store`
+
+Returns the store's current records (ids, token counts, last-updated) as a snapshot. Pass `at` (ISO-8601) to reconstruct the store as of a past point in time. Record bodies are fetched separately via `getMemoryRecord`.
+
+`GET /v1/projects/{projectSlug}/memory/store`
+
+| Flag | Type | Required | Description |
+|------|------|----------|-------------|
+| `--project-slug` | `string` | Yes | Project slug (human-readable identifier) |
+| `--store-id` | `string` | Yes | Store identifier (`gen_ai.memory.store.id`). Pass an empty string to address the unattributed ("") store. |
+| `--at` | `string (date-time)` | No | Reconstruct the store as of this ISO-8601 timestamp. Defaults to the current state. |
+
+#### `latitude memory get-store-diff`
+
+Returns a per-record diff of the store between two points in time — added, updated, and removed records with token deltas. `from` defaults to the empty state (everything counts as added); `to` defaults to the current state. Unchanged records are pruned.
+
+`GET /v1/projects/{projectSlug}/memory/store/diff`
+
+| Flag | Type | Required | Description |
+|------|------|----------|-------------|
+| `--project-slug` | `string` | Yes | Project slug (human-readable identifier) |
+| `--store-id` | `string` | Yes | Store identifier (`gen_ai.memory.store.id`). Pass an empty string to address the unattributed ("") store. |
+| `--from` | `string (date-time)` | No | Lower bound (inclusive) of the diff, ISO-8601. Defaults to the empty state. |
+| `--to` | `string (date-time)` | No | Upper bound (inclusive) of the diff, ISO-8601. Defaults to the current state. |
+
+#### `latitude memory list-record-reads`
+
+Returns the retrieval (`search_memory`) events for one record, newest first and capped, each with the query text (when captured), tokens returned, and the accessing span/trace/session/user.
+
+`GET /v1/projects/{projectSlug}/memory/record/reads`
+
+| Flag | Type | Required | Description |
+|------|------|----------|-------------|
+| `--project-slug` | `string` | Yes | Project slug (human-readable identifier) |
+| `--store-id` | `string` | Yes | Store identifier (`gen_ai.memory.store.id`). Pass an empty string to address the unattributed ("") store. |
+| `--record-id` | `string` | Yes | Record identifier (`gen_ai.memory.record.id`). Pass an empty string to address the unnamed record. |
+| `--limit` | `integer` | No | Maximum number of read events to return. Capped at 200. |
+
+#### `latitude memory list-record-users`
+
+Returns the end-users who accessed one record with per-user read and write counts, most recent access first.
+
+`GET /v1/projects/{projectSlug}/memory/record/users`
+
+| Flag | Type | Required | Description |
+|------|------|----------|-------------|
+| `--project-slug` | `string` | Yes | Project slug (human-readable identifier) |
+| `--store-id` | `string` | Yes | Store identifier (`gen_ai.memory.store.id`). Pass an empty string to address the unattributed ("") store. |
+| `--record-id` | `string` | Yes | Record identifier (`gen_ai.memory.record.id`). Pass an empty string to address the unnamed record. |
+
+#### `latitude memory list-store-users`
+
+Returns the end-users who accessed the store (reads and writes both count as access), most recent access first.
+
+`GET /v1/projects/{projectSlug}/memory/store/users`
+
+| Flag | Type | Required | Description |
+|------|------|----------|-------------|
+| `--project-slug` | `string` | Yes | Project slug (human-readable identifier) |
+| `--store-id` | `string` | Yes | Store identifier (`gen_ai.memory.store.id`). Pass an empty string to address the unattributed ("") store. |
+
+#### `latitude memory list-stores`
+
+Returns a cursor-paginated page of the project's memory stores, one roll-up row each (record count, tokens, last-updated, sessions, users). A store groups records under `gen_ai.memory.store.id`; the empty-string store is the unattributed bucket.
+
+`GET /v1/projects/{projectSlug}/memory/stores`
+
+| Flag | Type | Required | Description |
+|------|------|----------|-------------|
+| `--project-slug` | `string` | Yes | Project slug (human-readable identifier) |
+| `--cursor` | `string` | No | Opaque cursor returned in a previous response's `nextCursor`. Omit on the first page. |
+| `--limit` | `integer` | No | Page size. Defaults to 50; max 200. |
+| `--sort` | `lastUpdated | lastRead | records | tokens | sessions | users` | No | Field to sort by. Defaults to `lastUpdated` (most recently written first). |
+| `--direction` | `asc | desc` | No | Sort direction. Defaults to `desc`. |
+
+---
+
 ### `latitude monitors`
 
 #### `latitude monitors create`
@@ -788,6 +893,30 @@ Returns a single session by id, including its `conversation`: the system instruc
 |------|------|----------|-------------|
 | `--project-slug` | `string` | Yes | Project slug (human-readable identifier) |
 | `--session-id` | `string` | Yes | Session identifier lifted from instrumentation. Up to 128 characters. |
+
+#### `latitude sessions get-memory`
+
+Returns the session's memory footprint: per-record read, added, and removed token metrics plus session-wide totals. Pass `traceId` to restrict the footprint to a single trace of the session.
+
+`GET /v1/projects/{projectSlug}/sessions/{sessionId}/memory`
+
+| Flag | Type | Required | Description |
+|------|------|----------|-------------|
+| `--project-slug` | `string` | Yes | Project slug (human-readable identifier) |
+| `--session-id` | `string` | Yes | Session identifier lifted from instrumentation. Up to 128 characters. |
+| `--trace-id` | `string` | No | Restrict the memory footprint to this trace of the session. Omit for the whole session. |
+
+#### `latitude sessions get-memory-changes`
+
+Returns the memory writes the session made as per-record before/after diffs. Pass `traceId` to restrict to a single trace of the session.
+
+`GET /v1/projects/{projectSlug}/sessions/{sessionId}/memory/changes`
+
+| Flag | Type | Required | Description |
+|------|------|----------|-------------|
+| `--project-slug` | `string` | Yes | Project slug (human-readable identifier) |
+| `--session-id` | `string` | Yes | Session identifier lifted from instrumentation. Up to 128 characters. |
+| `--trace-id` | `string` | No | Restrict the memory footprint to this trace of the session. Omit for the whole session. |
 
 #### `latitude sessions get-signal`
 
@@ -1229,6 +1358,28 @@ Returns one annotation by id pinned to the trace.
 | `--trace-id` | `string` | Yes | 32-character trace identifier. |
 | `--annotation-id` | `string` | Yes | Stable annotation identifier. |
 
+#### `latitude traces get-memory`
+
+Returns the trace's memory footprint: per-record read, added, and removed token metrics plus totals, scoped to this trace.
+
+`GET /v1/projects/{projectSlug}/traces/{traceId}/memory`
+
+| Flag | Type | Required | Description |
+|------|------|----------|-------------|
+| `--project-slug` | `string` | Yes | Project slug (human-readable identifier) |
+| `--trace-id` | `string` | Yes | 32-character trace identifier. |
+
+#### `latitude traces get-memory-changes`
+
+Returns the memory writes the trace made as per-record before/after diffs, scoped to this trace.
+
+`GET /v1/projects/{projectSlug}/traces/{traceId}/memory/changes`
+
+| Flag | Type | Required | Description |
+|------|------|----------|-------------|
+| `--project-slug` | `string` | Yes | Project slug (human-readable identifier) |
+| `--trace-id` | `string` | Yes | 32-character trace identifier. |
+
 #### `latitude traces get-span`
 
 Returns one span by id, including the LLM conversation (system instructions, input messages, output messages), tool data (definitions, call id, input, output), and the full OpenTelemetry payload (attributes, resource, events, links) that's excluded from the lighter list shape.
@@ -1334,6 +1485,17 @@ Returns a page of the project's identified end-users over the range, each with t
 | `--sort-by` | `lastSeen | firstSeen | traces | sessions | errors | tokens | cost | costAvg | costMedian` | No | Field to sort by. Defaults to most recently seen. |
 | `--sort-direction` | `asc | desc` | No | Sort direction. Defaults to descending. |
 | `--search-query` | `string` | No | Case-insensitive substring match on the user's id or email. |
+
+#### `latitude users memory-stores`
+
+Returns the memory stores the end-user accessed (reads and writes both count as access), most recent access first. Each store links to the memory browsing operations under the `memory` group.
+
+`GET /v1/projects/{projectSlug}/users/{userId}/memory`
+
+| Flag | Type | Required | Description |
+|------|------|----------|-------------|
+| `--project-slug` | `string` | Yes | Project slug (human-readable identifier) |
+| `--user-id` | `string` | Yes | End-user identifier. URL-encode values containing special characters. |
 
 #### `latitude users overview`
 
