@@ -114,21 +114,17 @@ export const compareOnCorpus = (
 }
 
 /**
- * Cross-sample stability: draw two overlapping subsamples of a corpus, adaptively
- * cluster each, and return the ARI on the members shared by both subsamples.
- * Deterministic — the split is by index residue, not random.
+ * Cross-sample stability: how much the adaptive partition agrees with itself
+ * across overlapping subsamples. Builds the ten leave-one-tenth-out folds once
+ * and returns the MEAN adjusted Rand index over all 45 fold pairs (ARI is scored
+ * on the members each pair shares). Averaging over every pair replaces the old
+ * single-split estimate, which swung across ~[0, 0.9] purely by fold choice on a
+ * cohesive real corpus. Deterministic — folds are by index residue, not random.
  */
 export const crossSampleAri = (
   corpus: LabeledCorpus,
   schedule: readonly AdaptiveDepthSchedule[] = ADAPTIVE_TREE_DEPTH_SCHEDULE,
 ): number => {
-  const indicesA: number[] = []
-  const indicesB: number[] = []
-  corpus.embeddings.forEach((_, index) => {
-    if (index % 10 !== 0) indicesA.push(index) // drops residue 0 (90%)
-    if (index % 10 !== 5) indicesB.push(index) // drops residue 5 (90%)
-  })
-
   const subsample = (indices: readonly number[]): LabeledCorpus => ({
     ...corpus,
     embeddings: indices.map((index) => corpus.embeddings[index] ?? []),
@@ -146,5 +142,18 @@ export const crossSampleAri = (
     return global
   }
 
-  return adjustedRandIndex(buildFor(indicesA), buildFor(indicesB))
+  const all = corpus.embeddings.map((_, index) => index)
+  // One adaptive build per leave-one-tenth-out fold (drop residue r); reused
+  // across every pair below so the mean costs 10 builds, not 45.
+  const folds = Array.from({ length: 10 }, (_, r) => buildFor(all.filter((index) => index % 10 !== r)))
+
+  const empty = new Map<number, string>()
+  const aris: number[] = []
+  for (let a = 0; a < folds.length; a++) {
+    for (let b = a + 1; b < folds.length; b++) {
+      // adjustedRandIndex scores the members the two folds share (residue ∉ {a, b}).
+      aris.push(adjustedRandIndex(folds[a] ?? empty, folds[b] ?? empty))
+    }
+  }
+  return aris.reduce((sum, value) => sum + value, 0) / aris.length
 }
