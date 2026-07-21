@@ -1,7 +1,9 @@
 import { type Evaluation, EvaluationRepository } from "@domain/evaluations"
 import { OutboxEventWriter, type OutboxWriteEvent } from "@domain/events"
+import { createProject, ProjectRepository } from "@domain/projects"
+import { createFakeProjectRepository } from "@domain/projects/testing"
 import { createFakeScriptRuntime } from "@domain/sandbox/testing"
-import { OrganizationId, SqlClient, type SqlClientShape } from "@domain/shared"
+import { OrganizationId, ProjectId, SqlClient, type SqlClientShape } from "@domain/shared"
 import { Effect, Layer } from "effect"
 import { describe, expect, it } from "vitest"
 import { SignalRepository } from "../ports/signal-repository.ts"
@@ -10,6 +12,7 @@ import { createSignalUseCase } from "./create-signal.ts"
 
 const organizationId = "oooooooooooooooooooooooo"
 const projectId = "pppppppppppppppppppppppp"
+const projectSlug = "acme-signals"
 
 const createPassthroughSqlClient = (): SqlClientShape => {
   const sqlClient: SqlClientShape = {
@@ -48,6 +51,14 @@ const createFakeEvaluationRepository = () => {
 const buildLayer = () => {
   const { repository: signalRepository, issues } = createFakeSignalRepository()
   const evaluationRepo = createFakeEvaluationRepository()
+  const { repository: projectRepository } = createFakeProjectRepository([
+    createProject({
+      id: ProjectId(projectId),
+      organizationId: OrganizationId(organizationId),
+      name: "Acme",
+      slug: projectSlug,
+    }),
+  ])
   const events: OutboxWriteEvent[] = []
   const outboxEventWriter = OutboxEventWriter.of({
     write: (event) => Effect.sync(() => void events.push(event)),
@@ -56,6 +67,7 @@ const buildLayer = () => {
     Layer.succeed(SignalRepository, signalRepository),
     Layer.succeed(EvaluationRepository, evaluationRepo.service),
     Layer.succeed(OutboxEventWriter, outboxEventWriter),
+    Layer.succeed(ProjectRepository, projectRepository),
     createFakeScriptRuntime().layer,
   )
   return { layer, issues, evaluations: evaluationRepo.evaluations, events }
@@ -82,6 +94,8 @@ describe("createSignalUseCase", () => {
     expect(signal?.source).toBe("custom")
     expect(signal?.centroid).toBeNull()
     expect(signal?.clusteredAt).toBeNull()
+    // JIRA-style slug: 3-char uppercase project prefix ("acme-signals" → "ACM") + 4-char cuid.
+    expect(result.slug).toMatch(/^ACM-[A-Z0-9]{4}$/)
 
     const evaluation = evaluations.get(result.evaluationId)
     expect(evaluation?.signalId).toBe(result.signalId)

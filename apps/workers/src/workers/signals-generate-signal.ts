@@ -108,6 +108,7 @@ type DomainServices =
   | SignalRepository
   | EvaluationRepository
   | OutboxEventWriter
+  | ProjectRepository
   | SessionRepository
   | SpanRepository
   | TraceRepository
@@ -206,7 +207,7 @@ const runAgenticGeneration = async (params: {
     const provideDomain = <A, E>(effect: Effect.Effect<A, E, DomainServices>): Effect.Effect<A, E> =>
       effect.pipe(
         withPostgres(
-          Layer.mergeAll(EvaluationRepositoryLive, OutboxEventWriterLive, SignalRepositoryLive),
+          Layer.mergeAll(EvaluationRepositoryLive, OutboxEventWriterLive, ProjectRepositoryLive, SignalRepositoryLive),
           deps.postgresClient,
           orgId,
         ),

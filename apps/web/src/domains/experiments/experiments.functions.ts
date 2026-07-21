@@ -204,9 +204,18 @@ const withResolvedTopListLabels = <E, R>(
       const clusters = clusterIds.size ? yield* clusterRepository.listByIds([...clusterIds].map(TaxonomyClusterId)) : []
 
       const signalNames = new Map(signals.map((signal) => [signal.id as string, signal.name]))
+      const signalSlugs = new Map(signals.map((signal) => [signal.id as string, signal.slug]))
       const clusterNames = new Map(clusters.map((cluster) => [cluster.id as string, cluster.name]))
       const relabel = <T extends { key: string; label: string }>(items: readonly T[], names: Map<string, string>) =>
         items.map((item) => ({ ...item, label: names.get(item.key) ?? item.label }))
+      // Signals are addressed by slug across the public surface (API/MCP/URLs), so the
+      // top-signals key is the slug — matching what the signal tools consume.
+      const relabelSignals = <T extends { key: string; label: string }>(items: readonly T[]) =>
+        items.map((item) => ({
+          ...item,
+          key: signalSlugs.get(item.key) ?? item.key,
+          label: signalNames.get(item.key) ?? item.label,
+        }))
 
       return {
         ...result,
@@ -214,7 +223,7 @@ const withResolvedTopListLabels = <E, R>(
           ...variant,
           metrics: {
             ...variant.metrics,
-            topSignals: relabel(variant.metrics.topSignals, signalNames),
+            topSignals: relabelSignals(variant.metrics.topSignals),
             topBehaviours: relabel(variant.metrics.topBehaviours, clusterNames),
           },
         })),

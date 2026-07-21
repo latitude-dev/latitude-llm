@@ -43,6 +43,7 @@ export function AnnotationCard({
   })
 
   const linkedSignalName = linkedSignal?.name ?? null
+  const linkedSignalSlug = linkedSignal?.slug ?? null
   const linkedSignalDescription = linkedSignal?.description?.trim()
   const provenance = getAnnotationProvenance(annotation)
   const flaggerSlug = (annotation.metadata as { flaggerSlug?: string })?.flaggerSlug?.trim() || undefined
@@ -190,11 +191,11 @@ export function AnnotationCard({
                 </Badge>
               )
               const trigger =
-                projectSlug && annotation.signalId ? (
+                projectSlug && linkedSignalSlug ? (
                   <Link
                     data-no-navigate
-                    to="/projects/$projectSlug/signals/$signalId"
-                    params={{ projectSlug, signalId: annotation.signalId }}
+                    to="/projects/$projectSlug/signals/$signalSlug"
+                    params={{ projectSlug, signalSlug: linkedSignalSlug }}
                     aria-label={`Open issue ${linkedSignalName}`}
                     onClick={(event) => event.stopPropagation()}
                     className="inline-flex min-w-0"

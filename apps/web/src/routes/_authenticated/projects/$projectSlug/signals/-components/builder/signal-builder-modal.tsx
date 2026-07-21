@@ -258,13 +258,13 @@ export function SignalBuilderModal({
     setCriteria("")
   }
 
-  const handleGenerated = ({ signalId }: { readonly signalId: string }) => {
+  const handleGenerated = ({ slug }: { readonly slug: string }) => {
     toast({ description: "Signal created." })
     void invalidateSignalQueries(projectId)
     onClose()
     void navigate({
-      to: "/projects/$projectSlug/signals/$signalId",
-      params: { projectSlug, signalId },
+      to: "/projects/$projectSlug/signals/$signalSlug",
+      params: { projectSlug, signalSlug: slug },
     })
   }
 
@@ -289,7 +289,7 @@ export function SignalBuilderModal({
       .then((result) => {
         if (controller.signal.aborted) return
         if (result.status === "done") {
-          handleGenerated({ signalId: result.signalId })
+          handleGenerated({ slug: result.slug })
           return
         }
         if (result.status === "error") setGenerationError(result.error)
@@ -352,8 +352,8 @@ export function SignalBuilderModal({
       toast({ description: "Signal created." })
       onClose()
       void navigate({
-        to: "/projects/$projectSlug/signals/$signalId",
-        params: { projectSlug, signalId: result.signalId },
+        to: "/projects/$projectSlug/signals/$signalSlug",
+        params: { projectSlug, signalSlug: result.slug },
       })
     } catch (error) {
       toast({ variant: "destructive", description: toUserMessage(error) })
