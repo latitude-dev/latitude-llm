@@ -393,7 +393,7 @@ export const listSessionSignals = createServerFn({ method: "GET" })
     )
 
     return signals.map((signal) => ({
-      id: signal.signalId,
+      id: signal.id,
       name: signal.name,
       description: signal.description,
       source: signal.source,

@@ -21,9 +21,9 @@ export interface SessionDetail {
     startTime: string;
     /** ISO-8601 timestamp of the session's latest span. */
     endTime: string;
-    /** ISO-8601 timestamp of the most recent span start — the default sort key. */
+    /** ISO-8601 timestamp of the session's most recent span start. */
     lastActivityTime: string;
-    /** Active execution time in nanoseconds (sum of the session's root-span durations), not wall-clock. */
+    /** Active execution time of the session in nanoseconds, not wall-clock. */
     durationNs: number;
     /** Nanoseconds from the start of the first LLM span to its first emitted token. `0` if not measured. */
     timeToFirstTokenNs: number;
@@ -63,14 +63,14 @@ export interface SessionDetail {
     serviceNames: string[];
     /** Agent names seen across the session's spans. */
     agentNames: string[];
-    /** Union of tool names declared available across the session's spans. Empty when none reported. */
+    /** Tool names declared available across the session's spans. */
     definedTools: string[];
     /** Identifier of the session's root span. `null` when no root span has been ingested. */
     rootSpanId: string | null;
     /** `name` attribute of the root span. `null` when no root span has been ingested. */
     rootSpanName: string | null;
-    /** Identifier of the trace whose conversation is shown — the session's latest span that produced output. `null` when no trace produced output. */
+    /** Identifier of the trace that produced the session's latest output. `null` when no trace produced output. */
     latestTraceId: string | null;
-    /** The session's canonical conversation, in OpenTelemetry GenAI format: the opening system instructions, then the messages of the latest responsive span, followed by that span's generated output. */
+    /** Conversation of the session, in OpenTelemetry GenAI format: the system instructions, then the messages of the session's latest LLM completion, followed by its generated output. */
     conversation: Latitude.GenAiMessage[];
 }

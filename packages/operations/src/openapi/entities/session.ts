@@ -65,10 +65,8 @@ const sessionFields = {
   errorCount: z.number().int().nonnegative().describe("Number of spans flagged with an error status."),
   startTime: z.string().describe("ISO-8601 timestamp of the session's earliest span."),
   endTime: z.string().describe("ISO-8601 timestamp of the session's latest span."),
-  lastActivityTime: z.string().describe("ISO-8601 timestamp of the most recent span start — the default sort key."),
-  durationNs: z
-    .number()
-    .describe("Active execution time in nanoseconds (sum of the session's root-span durations), not wall-clock."),
+  lastActivityTime: z.string().describe("ISO-8601 timestamp of the session's most recent span start."),
+  durationNs: z.number().describe("Active execution time of the session in nanoseconds, not wall-clock."),
   timeToFirstTokenNs: z
     .number()
     .describe("Nanoseconds from the start of the first LLM span to its first emitted token. `0` if not measured."),
@@ -92,9 +90,7 @@ const sessionFields = {
   providers: z.array(z.string()).describe("LLM-provider identifiers seen across the session's spans."),
   serviceNames: z.array(z.string()).describe("OpenTelemetry `service.name` values seen in the session."),
   agentNames: z.array(z.string()).describe("Agent names seen across the session's spans."),
-  definedTools: z
-    .array(z.string())
-    .describe("Union of tool names declared available across the session's spans. Empty when none reported."),
+  definedTools: z.array(z.string()).describe("Tool names declared available across the session's spans."),
   rootSpanId: nullableString().describe(
     "Identifier of the session's root span. `null` when no root span has been ingested.",
   ),
@@ -111,12 +107,12 @@ export const SessionDetailSchema = z
   .object({
     ...sessionFields,
     latestTraceId: nullableString().describe(
-      "Identifier of the trace whose conversation is shown — the session's latest span that produced output. `null` when no trace produced output.",
+      "Identifier of the trace that produced the session's latest output. `null` when no trace produced output.",
     ),
     conversation: z
       .array(GenAIMessageSchema)
       .describe(
-        "The session's canonical conversation, in OpenTelemetry GenAI format: the opening system instructions, then the messages of the latest responsive span, followed by that span's generated output.",
+        "Conversation of the session, in OpenTelemetry GenAI format: the system instructions, then the messages of the session's latest LLM completion, followed by its generated output.",
       ),
   })
   .openapi("SessionDetail")

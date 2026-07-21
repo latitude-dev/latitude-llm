@@ -3,6 +3,6 @@
 import type * as Latitude from "../index.js";
 
 export interface SessionSignals {
-    /** Signals recorded across the session's traces, ordered by most recent occurrence first. */
+    /** Signals that occurred in the session, ordered by most recent occurrence first. */
     items: Latitude.SessionSignal[];
 }

@@ -61,16 +61,14 @@ class SessionDetail(UniversalBaseModel):
         str,
         FieldMetadata(alias="lastActivityTime"),
         pydantic.Field(
-            alias="lastActivityTime",
-            description="ISO-8601 timestamp of the most recent span start — the default sort key.",
+            alias="lastActivityTime", description="ISO-8601 timestamp of the session's most recent span start."
         ),
     ]
     duration_ns: typing_extensions.Annotated[
         float,
         FieldMetadata(alias="durationNs"),
         pydantic.Field(
-            alias="durationNs",
-            description="Active execution time in nanoseconds (sum of the session's root-span durations), not wall-clock.",
+            alias="durationNs", description="Active execution time of the session in nanoseconds, not wall-clock."
         ),
     ]
     time_to_first_token_ns: typing_extensions.Annotated[
@@ -186,10 +184,7 @@ class SessionDetail(UniversalBaseModel):
     defined_tools: typing_extensions.Annotated[
         typing.List[str],
         FieldMetadata(alias="definedTools"),
-        pydantic.Field(
-            alias="definedTools",
-            description="Union of tool names declared available across the session's spans. Empty when none reported.",
-        ),
+        pydantic.Field(alias="definedTools", description="Tool names declared available across the session's spans."),
     ]
     root_span_id: typing_extensions.Annotated[
         typing.Optional[str],
@@ -215,12 +210,12 @@ class SessionDetail(UniversalBaseModel):
         pydantic.Field(
             alias="latestTraceId",
             default=None,
-            description="Identifier of the trace whose conversation is shown — the session's latest span that produced output. `null` when no trace produced output.",
+            description="Identifier of the trace that produced the session's latest output. `null` when no trace produced output.",
         ),
     ]
     conversation: typing.List[GenAiMessage] = pydantic.Field()
     """
-    The session's canonical conversation, in OpenTelemetry GenAI format: the opening system instructions, then the messages of the latest responsive span, followed by that span's generated output.
+    Conversation of the session, in OpenTelemetry GenAI format: the system instructions, then the messages of the session's latest LLM completion, followed by its generated output.
     """
 
     model_config: typing.ClassVar[pydantic.ConfigDict] = pydantic.ConfigDict(extra="allow", frozen=True)

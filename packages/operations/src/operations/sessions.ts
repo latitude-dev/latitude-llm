@@ -199,7 +199,7 @@ const getSessionAnalytics = sessionEndpoint({
     sdkMethod: "analytics",
     summary: "Get project session analytics",
     description:
-      "Returns session analytics for the project: a total (or median) per metric over the requested range, plus a per-bucket series for each metric. Metrics are computed over whole sessions, not individual traces. Buckets are 12-hour UTC-aligned. The range defaults to the trailing 7 days.",
+      "Returns session analytics for the project: a total (or median) per metric over the requested range, plus a per-bucket series for each metric. Buckets are 12-hour UTC-aligned. The range defaults to the trailing 7 days.",
     security: PROTECTED_SECURITY,
     request: { params: ProjectParamsSchema, query: AnalyticsQuerySchema },
     responses: typedResponses({
@@ -246,7 +246,7 @@ const getSession = sessionEndpoint({
     sdkMethod: "get",
     summary: "Get project session",
     description:
-      "Returns a single session by id, including its `conversation`: the opening system instructions and the messages of the session's latest responsive span, in OpenTelemetry GenAI format. `latestTraceId` points at the trace that produced that conversation.",
+      "Returns a single session by id, including its `conversation`: the system instructions and the messages of the session's latest LLM completion, in OpenTelemetry GenAI format.",
     security: PROTECTED_SECURITY,
     request: { params: SessionParamsSchema },
     responses: typedResponses({ status: 200, schema: SessionDetailSchema, description: "Session detail" }),
@@ -366,8 +366,7 @@ const listSessionTraces = sessionEndpoint({
     ),
 })
 
-// A session's `traceIds` gives the trace set; signals are rolled up over those
-// traces. `listBySessionIds` is the light existence check (no message payloads).
+// `listBySessionIds` keeps the heavy message payloads off this path.
 const resolveSessionTraceIds = (input: {
   readonly organizationId: OrganizationId
   readonly projectId: ProjectId
@@ -395,7 +394,7 @@ const listSessionSignals = sessionEndpoint({
     sdkMethod: "listSignals",
     summary: "List session signals",
     description:
-      "Returns the signals recorded across the session's traces — one entry per signal with occurrence counts, first/last seen within the session, lifecycle `states`, and the affected traces. Ordered by most recent occurrence first.",
+      "Returns the signals that occurred in the session, with occurrence stats scoped to the session's traces. Ordered by most recent occurrence first.",
     security: PROTECTED_SECURITY,
     request: { params: SessionParamsSchema },
     responses: typedResponses({ status: 200, schema: SessionSignalsSchema, description: "Signals of the session" }),
@@ -415,7 +414,10 @@ const listSessionSignals = sessionEndpoint({
 
       const signals = yield* listSessionSignalsUseCase({ organizationId: orgId, projectId, traceIds })
 
-      return { status: 200, body: { items: signals.map(toSessionSignalResponse) } } as const
+      return {
+        status: 200,
+        body: { items: signals.map((s) => toSessionSignalResponse(s, ctx.organization.id as string)) },
+      } as const
     }).pipe(
       withPostgres(
         Layer.mergeAll(ProjectRepositoryLive, SignalRepositoryLive),
@@ -441,7 +443,7 @@ const getSessionSignal = sessionEndpoint({
     sdkMethod: "getSignal",
     summary: "Get session signal",
     description:
-      "Returns one signal, by slug, scoped to the session — occurrence counts, first/last seen, and affected traces within this session only. Returns 404 when the signal recorded no occurrences across the session's traces.",
+      "Returns one signal by slug, with occurrence stats scoped to the session. Returns 404 when the signal has no occurrences in the session.",
     security: PROTECTED_SECURITY,
     request: {
       params: SessionParamsSchema.extend({ signalSlug: z.string().describe("Signal slug.") }),
@@ -465,10 +467,10 @@ const getSessionSignal = sessionEndpoint({
       const signal = yield* signalRepo.findBySlug({ projectId, slug: signalSlug })
 
       const signals = yield* listSessionSignalsUseCase({ organizationId: orgId, projectId, traceIds })
-      const match = signals.find((s) => s.signalId === (signal.id as string))
+      const match = signals.find((s) => s.id === (signal.id as string))
       if (!match) return yield* new NotFoundError({ entity: "Session signal", id: signalSlug })
 
-      return { status: 200, body: toSessionSignalResponse(match) } as const
+      return { status: 200, body: toSessionSignalResponse(match, ctx.organization.id as string) } as const
     }).pipe(
       withPostgres(
         Layer.mergeAll(ProjectRepositoryLive, SignalRepositoryLive),

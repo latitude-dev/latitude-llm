@@ -1,21 +1,25 @@
 import { ScoreAnalyticsRepository } from "@domain/scores"
 import type { ChSqlClient, OrganizationId, ProjectId, RepositoryError, SqlClient, TraceId } from "@domain/shared"
 import { Effect } from "effect"
+import type { Signal } from "../entities/signal.ts"
 import { deriveSignalLifecycleStates } from "../helpers.ts"
 import { SignalRepository } from "../ports/signal-repository.ts"
 
-/** One issue that recorded at least one score across a session's traces. */
+/** A signal with occurrence stats scoped to one session. */
 export interface SessionSignal {
-  readonly signalId: string
+  readonly id: string
+  readonly projectId: string
   readonly slug: string
   readonly name: string
   readonly description: string
-  readonly source: string
+  readonly source: Signal["source"]
   readonly states: readonly string[]
+  readonly mutedAt: Date | null
+  readonly createdAt: Date
+  readonly updatedAt: Date
   readonly occurrences: number
   readonly firstSeenAt: Date
   readonly lastSeenAt: Date
-  /** Distinct traces in the session that contributed a score to this issue. */
   readonly traceIds: readonly string[]
 }
 
@@ -34,11 +38,8 @@ export interface ListSessionSignalsInput {
 export type ListSessionSignalsError = RepositoryError
 
 /**
- * Returns one row per issue that recorded at least one score across the
- * session's traces — occurrence counts, first/last seen, lifecycle `states`,
- * and the affected traces, all scoped to those traces. Ordered by last-seen
- * descending. The name/description/lifecycle come from Postgres; the rollup
- * comes from ClickHouse.
+ * Returns one row per signal that occurred across the session's traces, with
+ * occurrence stats scoped to those traces. Ordered by last-seen descending.
  */
 export const listSessionSignalsUseCase = (
   input: ListSessionSignalsInput,
@@ -76,12 +77,16 @@ export const listSessionSignalsUseCase = (
       const states = deriveSignalLifecycleStates({ issue, isEscalating: issue.lifecycle.isEscalating, now })
       return [
         {
-          signalId: issue.id as string,
+          id: issue.id as string,
+          projectId: issue.projectId,
           slug: issue.slug,
           name: issue.name,
           description: issue.description,
           source: issue.source,
           states: [...states],
+          mutedAt: issue.mutedAt,
+          createdAt: issue.createdAt,
+          updatedAt: issue.updatedAt,
           occurrences: rollup.occurrences,
           firstSeenAt: rollup.firstSeenAt,
           lastSeenAt: rollup.lastSeenAt,

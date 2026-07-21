@@ -11526,11 +11526,11 @@
           },
           "lastActivityTime": {
             "type": "string",
-            "description": "ISO-8601 timestamp of the most recent span start — the default sort key."
+            "description": "ISO-8601 timestamp of the session's most recent span start."
           },
           "durationNs": {
             "type": "number",
-            "description": "Active execution time in nanoseconds (sum of the session's root-span durations), not wall-clock."
+            "description": "Active execution time of the session in nanoseconds, not wall-clock."
           },
           "timeToFirstTokenNs": {
             "type": "number",
@@ -11640,7 +11640,7 @@
             "items": {
               "type": "string"
             },
-            "description": "Union of tool names declared available across the session's spans. Empty when none reported."
+            "description": "Tool names declared available across the session's spans."
           },
           "rootSpanId": {
             "type": [
@@ -11748,7 +11748,7 @@
             "$ref": "#/components/schemas/FilterCondition"
           }
         },
-        "description": "Filter set keyed by session field. Each entry holds an array of conditions ANDed together for that field; field-level groups are ANDed across the set. Valid fields: status, name, traceId, sessionId, simulationId, userId, tags, moments, topics, models, providers, serviceNames, tools, definedTools, duration, ttft, cost, spanCount, errorCount, tokensInput, tokensOutput, cacheHitRate, startTime, endTime; score-derived keys (score.passed, score.errored, score.value, score.source, score.sourceId, score.annotatorId, score.signalId, score.simulationId); and arbitrary metadata via `metadata.<key>`. `moments` filters by conversation-intelligence moment kind; `topics` filters by taxonomy topic id (a selected topic matches its whole subtree). `startTime`/`endTime` take ISO-8601 values (a session's first span start / last span end). `gtePercentile` is only supported on duration/ttft/cost. Unknown fields are rejected rather than ignored."
+        "description": "Filter set keyed by session field. Each entry holds an array of conditions ANDed together for that field; field-level groups are ANDed across the set. Valid fields: status, name, traceId, sessionId, simulationId, userId, tags, moments, topics, models, providers, serviceNames, tools, definedTools, duration, ttft, cost, spanCount, errorCount, tokensInput, tokensOutput, cacheHitRate, startTime, endTime; score-derived keys (score.passed, score.errored, score.value, score.source, score.sourceId, score.annotatorId, score.signalId, score.simulationId); and arbitrary metadata via `metadata.<key>`. `moments` filters by conversation moment kind and `topics` by behavior topic id (a topic matches its whole subtree). `startTime`/`endTime` take ISO-8601 values (a session's first span start / last span end). `gtePercentile` is only supported on duration/ttft/cost. Unknown fields are rejected rather than ignored."
       },
       "SessionAnalyticsResponse": {
         "type": "object",
@@ -11989,11 +11989,11 @@
           },
           "lastActivityTime": {
             "type": "string",
-            "description": "ISO-8601 timestamp of the most recent span start — the default sort key."
+            "description": "ISO-8601 timestamp of the session's most recent span start."
           },
           "durationNs": {
             "type": "number",
-            "description": "Active execution time in nanoseconds (sum of the session's root-span durations), not wall-clock."
+            "description": "Active execution time of the session in nanoseconds, not wall-clock."
           },
           "timeToFirstTokenNs": {
             "type": "number",
@@ -12103,7 +12103,7 @@
             "items": {
               "type": "string"
             },
-            "description": "Union of tool names declared available across the session's spans. Empty when none reported."
+            "description": "Tool names declared available across the session's spans."
           },
           "rootSpanId": {
             "type": [
@@ -12124,14 +12124,14 @@
               "string",
               "null"
             ],
-            "description": "Identifier of the trace whose conversation is shown — the session's latest span that produced output. `null` when no trace produced output."
+            "description": "Identifier of the trace that produced the session's latest output. `null` when no trace produced output."
           },
           "conversation": {
             "type": "array",
             "items": {
               "$ref": "#/components/schemas/GenAIMessage"
             },
-            "description": "The session's canonical conversation, in OpenTelemetry GenAI format: the opening system instructions, then the messages of the latest responsive span, followed by that span's generated output."
+            "description": "Conversation of the session, in OpenTelemetry GenAI format: the system instructions, then the messages of the session's latest LLM completion, followed by its generated output."
           }
         },
         "required": [
@@ -12180,7 +12180,7 @@
             "items": {
               "$ref": "#/components/schemas/SessionSignal"
             },
-            "description": "Signals recorded across the session's traces, ordered by most recent occurrence first."
+            "description": "Signals that occurred in the session, ordered by most recent occurrence first."
           }
         },
         "required": [
@@ -12196,17 +12196,29 @@
             "maxLength": 24,
             "description": "Stable signal identifier."
           },
+          "organizationId": {
+            "type": "string",
+            "minLength": 24,
+            "maxLength": 24,
+            "description": "Organization that owns this signal."
+          },
+          "projectId": {
+            "type": "string",
+            "minLength": 24,
+            "maxLength": 24,
+            "description": "Project this signal belongs to."
+          },
           "slug": {
             "type": "string",
-            "description": "URL-safe identifier; use it on the session's single-signal endpoint."
+            "description": "URL-safe slug derived from `name`. Unique within the project."
           },
           "name": {
             "type": "string",
-            "description": "Human-readable signal name."
+            "description": "Human-readable name."
           },
           "description": {
             "type": "string",
-            "description": "What this signal captures."
+            "description": "Description of the signal."
           },
           "source": {
             "type": "string",
@@ -12227,36 +12239,56 @@
                 "ongoing"
               ]
             },
-            "description": "Lifecycle states currently active for the signal (e.g. `new`, `escalating`, `ongoing`)."
+            "description": "Active lifecycle states. A signal may carry multiple states at once (e.g. `escalating` + `ongoing`)."
+          },
+          "mutedAt": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "ISO-8601 timestamp at which the signal was muted, or `null`."
+          },
+          "createdAt": {
+            "type": "string",
+            "description": "ISO-8601 timestamp of creation."
+          },
+          "updatedAt": {
+            "type": "string",
+            "description": "ISO-8601 timestamp of the last update."
           },
           "occurrences": {
             "type": "integer",
             "minimum": 0,
-            "description": "Number of occurrences recorded across the session's traces."
+            "description": "Number of occurrences within the session."
           },
           "firstSeenAt": {
             "type": "string",
-            "description": "ISO-8601 timestamp of the first occurrence within the session."
+            "description": "ISO-8601 timestamp of the earliest occurrence in the session."
           },
           "lastSeenAt": {
             "type": "string",
-            "description": "ISO-8601 timestamp of the most recent occurrence within the session."
+            "description": "ISO-8601 timestamp of the latest occurrence in the session."
           },
           "traceIds": {
             "type": "array",
             "items": {
               "type": "string"
             },
-            "description": "Distinct traces in the session that contributed at least one score to this signal."
+            "description": "Traces of the session where the signal occurred."
           }
         },
         "required": [
           "id",
+          "organizationId",
+          "projectId",
           "slug",
           "name",
           "description",
           "source",
           "states",
+          "mutedAt",
+          "createdAt",
+          "updatedAt",
           "occurrences",
           "firstSeenAt",
           "lastSeenAt",
@@ -21141,7 +21173,7 @@
         "x-fern-sdk-group-name": "sessions",
         "x-fern-sdk-method-name": "analytics",
         "summary": "Get project session analytics",
-        "description": "Returns session analytics for the project: a total (or median) per metric over the requested range, plus a per-bucket series for each metric. Metrics are computed over whole sessions, not individual traces. Buckets are 12-hour UTC-aligned. The range defaults to the trailing 7 days.",
+        "description": "Returns session analytics for the project: a total (or median) per metric over the requested range, plus a per-bucket series for each metric. Buckets are 12-hour UTC-aligned. The range defaults to the trailing 7 days.",
         "security": [
           {
             "ApiKeyAuth": []
@@ -21234,7 +21266,7 @@
         "x-fern-sdk-group-name": "sessions",
         "x-fern-sdk-method-name": "get",
         "summary": "Get project session",
-        "description": "Returns a single session by id, including its `conversation`: the opening system instructions and the messages of the session's latest responsive span, in OpenTelemetry GenAI format. `latestTraceId` points at the trace that produced that conversation.",
+        "description": "Returns a single session by id, including its `conversation`: the system instructions and the messages of the session's latest LLM completion, in OpenTelemetry GenAI format.",
         "security": [
           {
             "ApiKeyAuth": []
@@ -21454,7 +21486,7 @@
         "x-fern-sdk-group-name": "sessions",
         "x-fern-sdk-method-name": "listSignals",
         "summary": "List session signals",
-        "description": "Returns the signals recorded across the session's traces — one entry per signal with occurrence counts, first/last seen within the session, lifecycle `states`, and the affected traces. Ordered by most recent occurrence first.",
+        "description": "Returns the signals that occurred in the session, with occurrence stats scoped to the session's traces. Ordered by most recent occurrence first.",
         "security": [
           {
             "ApiKeyAuth": []
@@ -21536,7 +21568,7 @@
         "x-fern-sdk-group-name": "sessions",
         "x-fern-sdk-method-name": "getSignal",
         "summary": "Get session signal",
-        "description": "Returns one signal, by slug, scoped to the session — occurrence counts, first/last seen, and affected traces within this session only. Returns 404 when the signal recorded no occurrences across the session's traces.",
+        "description": "Returns one signal by slug, with occurrence stats scoped to the session. Returns 404 when the signal has no occurrences in the session.",
         "security": [
           {
             "ApiKeyAuth": []

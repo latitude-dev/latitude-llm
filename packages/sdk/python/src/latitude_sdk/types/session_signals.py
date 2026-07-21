@@ -10,7 +10,7 @@ from .session_signal import SessionSignal
 class SessionSignals(UniversalBaseModel):
     items: typing.List[SessionSignal] = pydantic.Field()
     """
-    Signals recorded across the session's traces, ordered by most recent occurrence first.
+    Signals that occurred in the session, ordered by most recent occurrence first.
     """
 
     model_config: typing.ClassVar[pydantic.ConfigDict] = pydantic.ConfigDict(extra="allow", frozen=True)

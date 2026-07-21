@@ -79,9 +79,7 @@ const toTotalBuckets = (
 /**
  * Returns session analytics for `[from, to]` — one object per metric carrying a
  * `total` or `median` plus a 12-hour UTC-aligned bucket series. Range defaults
- * to the trailing 7 days. Parallels `getTraceAnalyticsUseCase` but computed over
- * the session aggregate, so `sessions`/`traces` counts and the per-session
- * cost/duration/token rollups reflect whole conversations, not individual traces.
+ * to the trailing 7 days.
  */
 export const getSessionAnalyticsUseCase = (
   input: GetSessionAnalyticsInput,

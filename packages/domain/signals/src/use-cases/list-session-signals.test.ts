@@ -100,12 +100,15 @@ describe("listSessionSignalsUseCase", () => {
 
     expect(result).toHaveLength(1)
     expect(result[0]).toMatchObject({
-      signalId: signal.id,
+      id: signal.id,
       slug: "repeated-failure",
       name: "Repeated failure",
       source: "annotation",
       occurrences: 4,
       states: ["ongoing"],
+      mutedAt: null,
+      createdAt: signal.createdAt,
+      updatedAt: signal.updatedAt,
     })
     expect(result[0]?.traceIds).toEqual([traceId("a"), traceId("b")])
   })

@@ -66,8 +66,9 @@ const SignalMonitoringStateSchema = z
   ])
   .openapi("SignalMonitoringState")
 
-// Fields shared by the list-row (`Signal`) and the detail (`SignalDetail`) shapes.
-const signalCoreFields = {
+// Identity fields shared by every signal-returning shape, including the
+// session-scoped `SessionSignal`.
+export const signalIdentityFields = {
   id: cuidSchema.describe("Stable signal identifier."),
   organizationId: cuidSchema.describe("Organization that owns this signal."),
   projectId: cuidSchema.describe("Project this signal belongs to."),
@@ -81,6 +82,11 @@ const signalCoreFields = {
   mutedAt: z.string().nullable().describe("ISO-8601 timestamp at which the signal was muted, or `null`."),
   createdAt: z.string().describe("ISO-8601 timestamp of creation."),
   updatedAt: z.string().describe("ISO-8601 timestamp of the last update."),
+} as const
+
+// Fields shared by the list-row (`Signal`) and the detail (`SignalDetail`) shapes.
+const signalCoreFields = {
+  ...signalIdentityFields,
   trend: z.array(TrendBucketSchema).describe("Daily occurrence counts over the past 14 days."),
   tags: z.array(z.string()).describe("Tags seen on the signal's occurrences."),
 } as const

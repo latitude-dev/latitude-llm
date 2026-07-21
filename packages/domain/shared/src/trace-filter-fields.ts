@@ -203,12 +203,9 @@ export const unknownTraceFilterFields = (filters: Readonly<Record<string, unknow
 
 /**
  * Telemetry (non-score) session filter field names applicable at the API
- * boundary. Unlike traces, sessions INCLUDE the session-only conversation-
- * intelligence fields (`moments`, `topics`) — matching the web session filter
- * dropdown (`FilterMode = "sessions"`), which shows those `sessionOnly` fields.
- * Kept in sync with the ClickHouse `SESSION_FIELD_REGISTRY` (plus the
- * session-intelligence `moments`/`topics` peel), guarded by a test in
- * `@platform/db-clickhouse`.
+ * boundary: every generic field — sessions include the session-only fields,
+ * unlike traces — plus the time-window fields. Kept in sync with the ClickHouse
+ * `SESSION_FIELD_REGISTRY` (guarded by a test in `@platform/db-clickhouse`).
  */
 export const SESSION_TELEMETRY_FILTER_FIELDS = [
   ...TRACE_FILTER_FIELDS.map((f) => f.field),

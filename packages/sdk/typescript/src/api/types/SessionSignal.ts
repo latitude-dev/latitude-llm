@@ -3,23 +3,33 @@
 export interface SessionSignal {
     /** Stable signal identifier. */
     id: string;
-    /** URL-safe identifier; use it on the session's single-signal endpoint. */
+    /** Organization that owns this signal. */
+    organizationId: string;
+    /** Project this signal belongs to. */
+    projectId: string;
+    /** URL-safe slug derived from `name`. Unique within the project. */
     slug: string;
-    /** Human-readable signal name. */
+    /** Human-readable name. */
     name: string;
-    /** What this signal captures. */
+    /** Description of the signal. */
     description: string;
     /** Where the signal originated from. */
     source: SessionSignal.Source;
-    /** Lifecycle states currently active for the signal (e.g. `new`, `escalating`, `ongoing`). */
+    /** Active lifecycle states. A signal may carry multiple states at once (e.g. `escalating` + `ongoing`). */
     states: SessionSignal.States.Item[];
-    /** Number of occurrences recorded across the session's traces. */
+    /** ISO-8601 timestamp at which the signal was muted, or `null`. */
+    mutedAt: string | null;
+    /** ISO-8601 timestamp of creation. */
+    createdAt: string;
+    /** ISO-8601 timestamp of the last update. */
+    updatedAt: string;
+    /** Number of occurrences within the session. */
     occurrences: number;
-    /** ISO-8601 timestamp of the first occurrence within the session. */
+    /** ISO-8601 timestamp of the earliest occurrence in the session. */
     firstSeenAt: string;
-    /** ISO-8601 timestamp of the most recent occurrence within the session. */
+    /** ISO-8601 timestamp of the latest occurrence in the session. */
     lastSeenAt: string;
-    /** Distinct traces in the session that contributed at least one score to this signal. */
+    /** Traces of the session where the signal occurred. */
     traceIds: string[];
 }
 

@@ -19,9 +19,9 @@ export interface Session {
     startTime: string;
     /** ISO-8601 timestamp of the session's latest span. */
     endTime: string;
-    /** ISO-8601 timestamp of the most recent span start — the default sort key. */
+    /** ISO-8601 timestamp of the session's most recent span start. */
     lastActivityTime: string;
-    /** Active execution time in nanoseconds (sum of the session's root-span durations), not wall-clock. */
+    /** Active execution time of the session in nanoseconds, not wall-clock. */
     durationNs: number;
     /** Nanoseconds from the start of the first LLM span to its first emitted token. `0` if not measured. */
     timeToFirstTokenNs: number;
@@ -61,7 +61,7 @@ export interface Session {
     serviceNames: string[];
     /** Agent names seen across the session's spans. */
     agentNames: string[];
-    /** Union of tool names declared available across the session's spans. Empty when none reported. */
+    /** Tool names declared available across the session's spans. */
     definedTools: string[];
     /** Identifier of the session's root span. `null` when no root span has been ingested. */
     rootSpanId: string | null;

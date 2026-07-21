@@ -163,7 +163,7 @@ class RawSessionsClient:
         request_options: typing.Optional[RequestOptions] = None,
     ) -> HttpResponse[SessionAnalyticsResponse]:
         """
-        Returns session analytics for the project: a total (or median) per metric over the requested range, plus a per-bucket series for each metric. Metrics are computed over whole sessions, not individual traces. Buckets are 12-hour UTC-aligned. The range defaults to the trailing 7 days.
+        Returns session analytics for the project: a total (or median) per metric over the requested range, plus a per-bucket series for each metric. Buckets are 12-hour UTC-aligned. The range defaults to the trailing 7 days.
 
         Parameters
         ----------
@@ -249,7 +249,7 @@ class RawSessionsClient:
         self, project_slug: str, session_id: str, *, request_options: typing.Optional[RequestOptions] = None
     ) -> HttpResponse[SessionDetail]:
         """
-        Returns a single session by id, including its `conversation`: the opening system instructions and the messages of the session's latest responsive span, in OpenTelemetry GenAI format. `latestTraceId` points at the trace that produced that conversation.
+        Returns a single session by id, including its `conversation`: the system instructions and the messages of the session's latest LLM completion, in OpenTelemetry GenAI format.
 
         Parameters
         ----------
@@ -433,7 +433,7 @@ class RawSessionsClient:
         self, project_slug: str, session_id: str, *, request_options: typing.Optional[RequestOptions] = None
     ) -> HttpResponse[SessionSignals]:
         """
-        Returns the signals recorded across the session's traces — one entry per signal with occurrence counts, first/last seen within the session, lifecycle `states`, and the affected traces. Ordered by most recent occurrence first.
+        Returns the signals that occurred in the session, with occurrence stats scoped to the session's traces. Ordered by most recent occurrence first.
 
         Parameters
         ----------
@@ -517,7 +517,7 @@ class RawSessionsClient:
         request_options: typing.Optional[RequestOptions] = None,
     ) -> HttpResponse[SessionSignal]:
         """
-        Returns one signal, by slug, scoped to the session — occurrence counts, first/last seen, and affected traces within this session only. Returns 404 when the signal recorded no occurrences across the session's traces.
+        Returns one signal by slug, with occurrence stats scoped to the session. Returns 404 when the signal has no occurrences in the session.
 
         Parameters
         ----------
@@ -725,7 +725,7 @@ class AsyncRawSessionsClient:
         request_options: typing.Optional[RequestOptions] = None,
     ) -> AsyncHttpResponse[SessionAnalyticsResponse]:
         """
-        Returns session analytics for the project: a total (or median) per metric over the requested range, plus a per-bucket series for each metric. Metrics are computed over whole sessions, not individual traces. Buckets are 12-hour UTC-aligned. The range defaults to the trailing 7 days.
+        Returns session analytics for the project: a total (or median) per metric over the requested range, plus a per-bucket series for each metric. Buckets are 12-hour UTC-aligned. The range defaults to the trailing 7 days.
 
         Parameters
         ----------
@@ -811,7 +811,7 @@ class AsyncRawSessionsClient:
         self, project_slug: str, session_id: str, *, request_options: typing.Optional[RequestOptions] = None
     ) -> AsyncHttpResponse[SessionDetail]:
         """
-        Returns a single session by id, including its `conversation`: the opening system instructions and the messages of the session's latest responsive span, in OpenTelemetry GenAI format. `latestTraceId` points at the trace that produced that conversation.
+        Returns a single session by id, including its `conversation`: the system instructions and the messages of the session's latest LLM completion, in OpenTelemetry GenAI format.
 
         Parameters
         ----------
@@ -995,7 +995,7 @@ class AsyncRawSessionsClient:
         self, project_slug: str, session_id: str, *, request_options: typing.Optional[RequestOptions] = None
     ) -> AsyncHttpResponse[SessionSignals]:
         """
-        Returns the signals recorded across the session's traces — one entry per signal with occurrence counts, first/last seen within the session, lifecycle `states`, and the affected traces. Ordered by most recent occurrence first.
+        Returns the signals that occurred in the session, with occurrence stats scoped to the session's traces. Ordered by most recent occurrence first.
 
         Parameters
         ----------
@@ -1079,7 +1079,7 @@ class AsyncRawSessionsClient:
         request_options: typing.Optional[RequestOptions] = None,
     ) -> AsyncHttpResponse[SessionSignal]:
         """
-        Returns one signal, by slug, scoped to the session — occurrence counts, first/last seen, and affected traces within this session only. Returns 404 when the signal recorded no occurrences across the session's traces.
+        Returns one signal by slug, with occurrence stats scoped to the session. Returns 404 when the signal has no occurrences in the session.
 
         Parameters
         ----------
