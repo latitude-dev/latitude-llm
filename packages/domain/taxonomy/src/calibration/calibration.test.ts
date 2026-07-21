@@ -262,9 +262,15 @@ describe("adaptive clustering — broad-domain regression + cross-sample stabili
     ["narrow-domain", buildNarrowDomainCorpus()],
     ["narrow-pilot", loadNarrowPilotCorpus()],
     ["imbalanced-long-tail", buildImbalancedLongTailCorpus()],
-  ] as const)("%s: cross-sample partition stability is above the ARI floor", (_name, corpus) => {
-    expect(crossSampleAri(corpus)).toBeGreaterThanOrEqual(ADAPTIVE_CROSS_SAMPLE_ARI_FLOOR)
-  })
+  ] as const)(
+    "%s: cross-sample partition stability is above the ARI floor",
+    (_name, corpus) => {
+      expect(crossSampleAri(corpus)).toBeGreaterThanOrEqual(ADAPTIVE_CROSS_SAMPLE_ARI_FLOOR)
+    },
+    // Averaged crossSampleAri builds all ten leave-one-tenth-out folds; ten
+    // clustering builds per fixture runs well past Vitest's 5s default on CI.
+    60_000,
+  )
 })
 
 describe("adaptive clustering — resource bounds at the 1,500-sample cap", () => {
