@@ -528,10 +528,10 @@ export const runLiveEvaluationUseCase = (input: RunLiveEvaluationInput) =>
     }
 
     // A present verdict on a manually resolved signal is a regression: reopen
-    // it. The `issue` snapshot predates execution, so it only pre-gates; the
-    // conditional claim re-checks current state and exactly one writer per
-    // regression cycle wins and emits `SignalRegressed`.
-    if (persistedSignalId !== null && issue.resolvedAt !== null) {
+    // it. The `issue` snapshot predates execution; the conditional claim
+    // re-checks current DB state and exactly one writer per regression cycle
+    // wins and emits `SignalRegressed`.
+    if (persistedSignalId !== null) {
       yield* claimRegressionForPersistedScore({
         organizationId: input.organizationId,
         projectId: input.projectId,

@@ -95,7 +95,7 @@ export interface TransformContext {
 
 interface TransformResult {
   readonly spans: readonly SpanDetail[]
-  /** Spans skipped for lacking a resolvable `projectId` or a valid `traceId`. */
+  /** Spans skipped for lacking a resolvable `projectId` or valid `traceId`/`spanId`. */
   readonly rejectedSpans: number
 }
 
@@ -276,8 +276,12 @@ export function transformOtlpToSpans(
       const scopeVersion = scopeSpans.scope?.version ?? ""
       for (const span of scopeSpans.spans ?? []) {
         if (isDroppedSpan(scopeName, span.name ?? "")) continue
-        // OTLP/JSON bodies are cast, not validated, so `traceId` can arrive missing or non-string.
+        // OTLP/JSON bodies are cast, not validated, so IDs can arrive missing or non-string.
         if (typeof span.traceId !== "string" || span.traceId.length === 0) {
+          rejectedSpans++
+          continue
+        }
+        if (typeof span.spanId !== "string" || span.spanId.length === 0) {
           rejectedSpans++
           continue
         }

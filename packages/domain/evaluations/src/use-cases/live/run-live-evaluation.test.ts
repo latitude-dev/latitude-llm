@@ -1369,6 +1369,48 @@ describe("runLiveEvaluationUseCase", () => {
     })
   })
 
+  it("claims regression reopen when the signal was resolved after the pre-execution snapshot", async () => {
+    const evaluation = makeEvaluation({ script: VALID_SCRIPT })
+    const issue = makeSignal({ id: SignalId(evaluation.signalId), resolvedAt: null })
+    const traceDetail = makeTraceDetail()
+    const { repository: traceRepository } = createFakeTraceRepository({
+      findByTraceId: () => Effect.succeed(traceDetail),
+    })
+    const evaluationRepository = createEvaluationRepository(() => Effect.succeed(evaluation))
+    const claimCalls: { readonly signalId: string; readonly occurredAt: Date }[] = []
+    const signalRepository = createSignalRepository(
+      () => Effect.succeed(issue),
+      (claimInput) =>
+        Effect.sync(() => {
+          claimCalls.push({ signalId: String(claimInput.signalId), occurredAt: claimInput.occurredAt })
+          return true
+        }),
+    )
+    const { outboxEvents, scoreWriteLayer } = createTrackedScoreWriteFixture()
+    const scriptRuntime = createFakeScriptRuntime({
+      run: () => Effect.succeed({ value: 1, feedback: "Present.", duration: 1, tokens: 0, cost: 0 }),
+    })
+
+    const result = await Effect.runPromise(
+      runLiveEvaluationUseCase(INPUT).pipe(
+        Effect.provide(
+          createUseCaseLayer({
+            traceRepository,
+            evaluationRepository,
+            scoreWriteLayer,
+            signalRepository,
+            scriptRuntimeLayer: scriptRuntime.layer,
+          }),
+        ),
+      ),
+    )
+
+    expect(result.action).toBe("persisted")
+    if (result.action !== "persisted") throw new Error("Expected a persisted live evaluation result")
+    expect(claimCalls).toEqual([{ signalId: String(evaluation.signalId), occurredAt: result.context.score.createdAt }])
+    expect(outboxEvents.map((event) => (event as { eventName: string }).eventName)).toContain("SignalRegressed")
+  })
+
   it("does not emit SignalRegressed when the reopen claim loses the race", async () => {
     const evaluation = makeEvaluation({ script: VALID_SCRIPT })
     const issue = makeSignal({
