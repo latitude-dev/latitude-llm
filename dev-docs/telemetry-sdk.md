@@ -20,7 +20,7 @@ The bootstrap class is responsible for:
 
 `project` is the preferred option name. `projectSlug` / `project_slug` remain accepted for backwards compatibility; when both are set, `project` wins and a deprecation warning is logged.
 
-TypeScript provider and framework instrumentations are opt-in subpath exports. Each `@latitude-data/telemetry/instrumentations/<name>` entry exports a factory that accepts the consumer's LLM SDK module and returns an OpenTelemetry instrumentation. `LatitudeOptions.instrumentations` is a readonly array of these instances. Provider implementations are optional peer dependencies, so the core entry neither installs nor bundles unused integrations. The main entry must not import or re-export provider instrumentation implementations.
+TypeScript provider and framework instrumentations are opt-in subpath exports. Each `@latitude-data/telemetry/instrumentations/<name>` entry exports a factory that accepts the consumer's LLM SDK module and returns an OpenTelemetry instrumentation. `LatitudeOptions.instrumentations` is a readonly array of these instances. Provider implementations are package dependencies, but only their dedicated subpath entry points import them, allowing bundlers to exclude unused integrations. The main entry must not import or re-export provider instrumentation implementations.
 
 ## Capture
 

@@ -15,7 +15,7 @@
  * - DD_API_KEY (for the Datadog agent)
  * - OPENAI_API_KEY
  *
- * Install: npm install openai dd-trace @traceloop/instrumentation-openai
+ * Install: npm install openai dd-trace
  */
 
 import { randomUUID } from "node:crypto"

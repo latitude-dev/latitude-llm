@@ -6,7 +6,7 @@
  * - LATITUDE_PROJECT_SLUG
  * - COHERE_API_KEY
  *
- * Install: npm install cohere-ai @traceloop/instrumentation-cohere
+ * Install: npm install cohere-ai
  */
 
 import { randomUUID } from "node:crypto"

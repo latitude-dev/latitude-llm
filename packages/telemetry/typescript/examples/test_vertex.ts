@@ -7,7 +7,7 @@
  * - GOOGLE_APPLICATION_CREDENTIALS (path to service account JSON)
  * - GOOGLE_CLOUD_PROJECT
  *
- * Install: npm install @google-cloud/vertexai @traceloop/instrumentation-vertexai
+ * Install: npm install @google-cloud/vertexai
  */
 
 import { randomUUID } from "node:crypto"

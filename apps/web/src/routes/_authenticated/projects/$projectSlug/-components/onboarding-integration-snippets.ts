@@ -158,22 +158,22 @@ function pyInstallPackages(pm: PyPackageManager, packages: string): string {
 /** Extra packages beyond `@latitude-data/telemetry` / `latitude-telemetry` (docs install them separately). */
 export function getProviderSdkTsInstallCommand(id: OnboardingProviderId, pm: TsPackageManager): string | null {
   const map: Partial<Record<OnboardingProviderId, string>> = {
-    openai: "openai @traceloop/instrumentation-openai",
-    anthropic: "@anthropic-ai/sdk @traceloop/instrumentation-anthropic",
-    bedrock: "@aws-sdk/client-bedrock-runtime @traceloop/instrumentation-bedrock",
-    cohere: "cohere-ai @traceloop/instrumentation-cohere",
-    togetherai: "together-ai @traceloop/instrumentation-together",
-    vertexai: "@google-cloud/vertexai @traceloop/instrumentation-vertexai",
-    aiplatform: "@google-cloud/aiplatform @traceloop/instrumentation-vertexai",
-    "azure-openai": "openai @traceloop/instrumentation-openai",
+    openai: "openai",
+    anthropic: "@anthropic-ai/sdk",
+    bedrock: "@aws-sdk/client-bedrock-runtime",
+    cohere: "cohere-ai",
+    togetherai: "together-ai",
+    vertexai: "@google-cloud/vertexai",
+    aiplatform: "@google-cloud/aiplatform",
+    "azure-openai": "openai",
     "vercel-ai-sdk": "ai @ai-sdk/openai",
     "vercel-ai-sdk-v7": "ai @ai-sdk/otel @ai-sdk/openai",
-    langchain: "langchain @langchain/openai @langchain/core @arizeai/openinference-instrumentation-langchain",
-    llamaindex: "llamaindex @llamaindex/openai @llamaindex/workflow @traceloop/instrumentation-llamaindex",
+    langchain: "langchain @langchain/openai @langchain/core",
+    llamaindex: "llamaindex @llamaindex/openai @llamaindex/workflow",
     "openai-agents": "@openai/agents zod",
     eve: "@vercel/otel @opentelemetry/exporter-trace-otlp-http",
     flue: "@flue/opentelemetry @opentelemetry/api",
-    elevenlabs: "openai express @traceloop/instrumentation-openai",
+    elevenlabs: "openai express",
   }
   const pkgs = map[id]
   return pkgs ? tsInstallPackages(pm, pkgs) : null

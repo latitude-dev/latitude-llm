@@ -6,10 +6,10 @@
  * - LATITUDE_PROJECT_SLUG
  * - OPENAI_API_KEY
  *
- * Install: npm install together-ai @traceloop/instrumentation-together
+ * Install: npm install together-ai
  *
  * No Together key on hand, so we point the (OpenAI-wire-compatible) together-ai SDK at OpenAI's
- * endpoint with an OpenAI model. This still exercises the real @traceloop/instrumentation-together
+ * endpoint with an OpenAI model. This still exercises the real
  * + Latitude's parse/display; only gen_ai.system / model won't reflect a real Together backend.
  */
 

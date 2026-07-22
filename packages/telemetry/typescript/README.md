@@ -5,10 +5,10 @@ Instrument your AI application and send traces to [Latitude](https://latitude.so
 ## Installation
 
 ```sh
-npm install @latitude-data/telemetry openai @traceloop/instrumentation-openai
+npm install @latitude-data/telemetry openai
 ```
 
-Instrumentation implementations are opt-in peer dependencies. Install only the implementation packages for the subpaths you use.
+Instrumentation implementations are included with the package but isolated behind opt-in subpath exports, so application bundles include only the instrumentations they import.
 
 ## Quick Start
 
@@ -493,26 +493,22 @@ The object-map API is removed. Import a factory for each selected instrumentatio
   });
 ```
 
-```sh
-npm install @traceloop/instrumentation-openai
-```
-
 Passing the removed object-map shape rejects `latitude.ready` with migration guidance.
 
 ## Supported AI Providers
 
-| Subpath | Factory | LLM SDK | Instrumentation peer |
-| --- | --- | --- | --- |
-| `instrumentations/openai` | `createOpenAIInstrumentation` | `openai` | `@traceloop/instrumentation-openai` |
-| `instrumentations/openai-agents` | `createOpenAIAgentsInstrumentation` | `@openai/agents` | Built in |
-| `instrumentations/anthropic` | `createAnthropicInstrumentation` | `@anthropic-ai/sdk` | `@traceloop/instrumentation-anthropic` |
-| `instrumentations/bedrock` | `createBedrockInstrumentation` | `@aws-sdk/client-bedrock-runtime` | `@traceloop/instrumentation-bedrock` |
-| `instrumentations/cohere` | `createCohereInstrumentation` | `cohere-ai` | `@traceloop/instrumentation-cohere` |
-| `instrumentations/langchain` | `createLangChainInstrumentation` | `@langchain/core` | `@arizeai/openinference-instrumentation-langchain` |
-| `instrumentations/llamaindex` | `createLlamaIndexInstrumentation` | `llamaindex` | `@traceloop/instrumentation-llamaindex` |
-| `instrumentations/togetherai` | `createTogetherAIInstrumentation` | `together-ai` | `@traceloop/instrumentation-together` |
-| `instrumentations/vertexai` | `createVertexAIInstrumentation` | `@google-cloud/vertexai` | `@traceloop/instrumentation-vertexai` |
-| `instrumentations/aiplatform` | `createAIPlatformInstrumentation` | `@google-cloud/aiplatform` | `@traceloop/instrumentation-vertexai` |
+| Subpath | Factory | LLM SDK |
+| --- | --- | --- |
+| `instrumentations/openai` | `createOpenAIInstrumentation` | `openai` |
+| `instrumentations/openai-agents` | `createOpenAIAgentsInstrumentation` | `@openai/agents` |
+| `instrumentations/anthropic` | `createAnthropicInstrumentation` | `@anthropic-ai/sdk` |
+| `instrumentations/bedrock` | `createBedrockInstrumentation` | `@aws-sdk/client-bedrock-runtime` |
+| `instrumentations/cohere` | `createCohereInstrumentation` | `cohere-ai` |
+| `instrumentations/langchain` | `createLangChainInstrumentation` | `@langchain/core` |
+| `instrumentations/llamaindex` | `createLlamaIndexInstrumentation` | `llamaindex` |
+| `instrumentations/togetherai` | `createTogetherAIInstrumentation` | `together-ai` |
+| `instrumentations/vertexai` | `createVertexAIInstrumentation` | `@google-cloud/vertexai` |
+| `instrumentations/aiplatform` | `createAIPlatformInstrumentation` | `@google-cloud/aiplatform` |
 
 ## Context Options
 

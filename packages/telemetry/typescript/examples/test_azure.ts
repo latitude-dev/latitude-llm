@@ -8,7 +8,7 @@
  * - AZURE_OPENAI_ENDPOINT
  * - AZURE_OPENAI_DEPLOYMENT (optional, default: gpt-4o-mini)
  *
- * Install: npm install openai @traceloop/instrumentation-openai
+ * Install: npm install openai
  */
 
 import { randomUUID } from "node:crypto"

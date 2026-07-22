@@ -22,7 +22,7 @@ function collectModuleGraph(entry: string, modules = new Map<string, string>()):
 }
 
 describe("core bundle isolation", () => {
-  it("does not reference optional instrumentation dependency graphs", () => {
+  it("does not reference provider instrumentation dependency graphs", () => {
     const entry = fileURLToPath(new URL("./index.ts", import.meta.url))
     const graph = collectModuleGraph(entry)
     const imports = [...graph.values()].flatMap((source) =>

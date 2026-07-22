@@ -15,7 +15,7 @@
  * - SENTRY_DSN
  * - OPENAI_API_KEY
  *
- * Install: npm install openai @sentry/node @traceloop/instrumentation-openai
+ * Install: npm install openai @sentry/node
  */
 
 import { randomUUID } from "node:crypto"

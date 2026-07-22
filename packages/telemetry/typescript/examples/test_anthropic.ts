@@ -6,7 +6,7 @@
  * - LATITUDE_PROJECT_SLUG
  * - ANTHROPIC_API_KEY
  *
- * Install: npm install @anthropic-ai/sdk @traceloop/instrumentation-anthropic
+ * Install: npm install @anthropic-ai/sdk
  */
 
 import { randomUUID } from "node:crypto"

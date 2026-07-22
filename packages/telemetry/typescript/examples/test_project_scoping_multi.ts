@@ -18,7 +18,7 @@
  * - LATITUDE_PRIMARY_PROJECT_SLUG    (defaults to "primary")
  * - LATITUDE_SECONDARY_PROJECT_SLUG  (defaults to "secondary")
  *
- * Install: npm install openai @traceloop/instrumentation-openai
+ * Install: npm install openai
  */
 
 import { randomUUID } from "node:crypto"

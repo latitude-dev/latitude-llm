@@ -17,7 +17,7 @@
  * Optional env vars:
  * - OTEL_EXISTING_BACKEND_URL  (your existing OTLP backend; defaults to http://localhost:4318/v1/traces)
  *
- * Install: npm install openai @opentelemetry/sdk-trace-node @traceloop/instrumentation-openai
+ * Install: npm install openai @opentelemetry/sdk-trace-node
  */
 
 import { randomUUID } from "node:crypto"

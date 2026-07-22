@@ -7,7 +7,7 @@
  * - AWS credentials via the default chain (env vars, shared config, SSO, instance role…)
  * - AWS_REGION (default: eu-central-1)
  *
- * Install: npm install @aws-sdk/client-bedrock-runtime @traceloop/instrumentation-bedrock
+ * Install: npm install @aws-sdk/client-bedrock-runtime
  */
 
 import { randomUUID } from "node:crypto"

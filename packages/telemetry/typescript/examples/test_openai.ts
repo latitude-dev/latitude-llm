@@ -6,7 +6,7 @@
  * - LATITUDE_PROJECT_SLUG
  * - OPENAI_API_KEY
  *
- * Install: npm install openai @traceloop/instrumentation-openai
+ * Install: npm install openai
  */
 
 import { randomUUID } from "node:crypto"

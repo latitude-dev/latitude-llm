@@ -61,7 +61,7 @@ See `test_openai.ts` for a complete working example.
 
 3. **Install the provider SDK** you want to test:
    ```bash
-   npm install openai @traceloop/instrumentation-openai
+   npm install openai
    ```
 
 4. **Run an example:**

@@ -6,7 +6,7 @@
  * - LATITUDE_PROJECT_SLUG
  * - OPENAI_API_KEY
  *
- * Install: npm install openai @traceloop/instrumentation-openai
+ * Install: npm install openai
  *
  * The Responses API delivers the system prompt out-of-band via the top-level
  * `instructions` field (not a `role:"system"` message), so this example also

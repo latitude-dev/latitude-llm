@@ -12,7 +12,7 @@ The build-time `neverBundle` setting only keeps instrumentation packages out of 
 
 - Keep the main `@latitude-data/telemetry` entry free of references to provider and framework instrumentation implementations.
 - Make each instrumentation an explicit subpath import.
-- Ensure consumers install and bundle only the instrumentation dependencies they choose.
+- Ensure consumer application bundles include only the instrumentation dependencies they choose.
 - Preserve instrumentation behavior, module normalization, token enrichment, provider registration, and `latitude.ready` ordering.
 - Make the breaking migration explicit in types, runtime validation, examples, and documentation.
 - Add automated bundle-isolation coverage so the package cannot silently regress.
@@ -66,7 +66,7 @@ Passing the removed object-map shape must produce a clear runtime migration erro
 
 ## Dependency isolation
 
-Provider and framework instrumentation packages move from regular dependencies to optional peer dependencies. The package README and product docs must list the additional package required by each subpath. Consumers explicitly install the selected instrumentation package alongside `@latitude-data/telemetry`.
+Provider and framework instrumentation packages remain regular dependencies so consumers do not install implementation packages separately. Each implementation is imported only by its dedicated subpath entry point, allowing consumer bundlers to tree-shake instrumentations that the application does not import.
 
 `@opentelemetry/instrumentation` remains a core dependency because the main entry registers supplied instances. Other OpenTelemetry dependencies used by core exporting and tracing remain unchanged.
 
@@ -105,8 +105,6 @@ const latitude = new Latitude({
 })
 ```
 
-The migration also requires installing the implementation package documented for the selected instrumentation, for example `@traceloop/instrumentation-openai` for OpenAI.
-
 All repository examples, public product docs, QA references, and tests using the old object map must migrate in the same change. The changelog must call out the major-version break and provide the before/after form.
 
 ## Verification
@@ -127,7 +125,7 @@ All repository examples, public product docs, QA references, and tests using the
 - [x] **P1-1**: Replace the object-map instrumentation contract with an instrumentation array.
 - [x] **P1-2**: Add one independent subpath factory for every supported instrumentation.
 - [x] **P1-3**: Add package exports and build entries for every subpath.
-- [x] **P1-4**: Move instrumentation implementations to optional peer dependencies.
+- [x] **P1-4**: Keep instrumentation implementations as package dependencies while isolating them behind subpath entry points.
 - [x] **P1-5**: Preserve clear runtime validation for callers using the removed API.
 
 **Exit gate**:

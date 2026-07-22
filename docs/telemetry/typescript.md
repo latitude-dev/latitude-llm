@@ -10,12 +10,14 @@ Use `@latitude-data/telemetry` to send LLM traces from TypeScript and JavaScript
 ## Installation
 
 ```bash
-npm install @latitude-data/telemetry openai @traceloop/instrumentation-openai
+npm install @latitude-data/telemetry openai
 ```
+
+Provider instrumentation implementations are included with `@latitude-data/telemetry`. Importing a factory from an opt-in subpath keeps unused instrumentations out of your application bundle.
 
 ## Bootstrap
 
-Initialize Latitude once before your LLM calls run. Import an instrumentation factory from its opt-in subpath, install the corresponding instrumentation peer, and pass the created instance through `instrumentations`.
+Initialize Latitude once before your LLM calls run. Import an instrumentation factory from its opt-in subpath and pass the created instance through `instrumentations`.
 
 ```ts
 import { createOpenAIInstrumentation } from "@latitude-data/telemetry/instrumentations/openai"

@@ -22,7 +22,7 @@
  * Optional env vars:
  * - LATITUDE_OVERRIDE_PROJECT_SLUG  (defaults to "evaluation-runs")
  *
- * Install: npm install openai @traceloop/instrumentation-openai
+ * Install: npm install openai
  */
 
 import { randomUUID } from "node:crypto"

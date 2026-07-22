@@ -6,7 +6,7 @@
  * - LATITUDE_PROJECT_SLUG
  * - OPENAI_API_KEY
  *
- * Install: npm install llamaindex @llamaindex/openai @llamaindex/workflow zod @traceloop/instrumentation-llamaindex
+ * Install: npm install llamaindex @llamaindex/openai @llamaindex/workflow zod
  *
  * NOTE: LLM spans are NOT captured here — the upstream Traceloop instrumentor only instruments the
  * OpenAI LLM when @llamaindex/openai is passed as a second `manuallyInstrument` arg (it lives in its

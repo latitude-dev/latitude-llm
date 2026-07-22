@@ -6,7 +6,7 @@
  * - LATITUDE_PROJECT_SLUG
  * - OPENAI_API_KEY
  *
- * Install: npm install @langchain/openai @langchain/core zod @arizeai/openinference-instrumentation-langchain
+ * Install: npm install @langchain/openai @langchain/core zod
  *
  * LangChain is instrumented via OpenInference, whose patch targets the
  * `@langchain/core/callbacks/manager` module — pass that module as the
