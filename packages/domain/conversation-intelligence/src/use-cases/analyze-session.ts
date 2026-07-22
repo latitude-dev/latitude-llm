@@ -516,11 +516,6 @@ const validateMomentCandidates = (input: {
     }
     const acceptedCandidateIds = parsed.data.acceptedCandidateIds
     const acceptedCandidateIdSet = new Set(acceptedCandidateIds)
-    if (acceptedCandidateIdSet.size !== acceptedCandidateIds.length) {
-      return yield* Effect.fail(
-        new MomentClassifierError({ message: "Moment classifier returned duplicate candidate IDs" }),
-      )
-    }
     const candidatesById = new Map(candidates.map(({ id, candidate }) => [id, candidate] as const))
     for (const id of acceptedCandidateIds) {
       if (!candidatesById.has(id)) {
