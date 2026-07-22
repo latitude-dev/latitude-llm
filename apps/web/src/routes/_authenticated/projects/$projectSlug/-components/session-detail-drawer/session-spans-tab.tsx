@@ -1,6 +1,6 @@
 import { Button, Icon, Text } from "@repo/ui"
 import { ArrowUpRightIcon } from "lucide-react"
-import { useEffect, useMemo, useRef, useState } from "react"
+import { useEffect, useMemo, useRef } from "react"
 import type { SessionDetailRecord } from "../../../../../../domains/sessions/sessions.functions.ts"
 import { useSpansBySessionCollection } from "../../../../../../domains/spans/spans.collection.ts"
 import type { TraceRecord } from "../../../../../../domains/traces/traces.functions.ts"
@@ -53,7 +53,6 @@ export function SessionSpansTab({
     startTimeFrom: session.startTime,
     startTimeTo: session.endTime,
   })
-  const [isMinimized, setIsMinimized] = useState(() => selectedSpanId !== "")
   const treeContainerRef = useRef<HTMLDivElement | null>(null)
   const groups = useMemo(() => groupSessionSpans(spans ?? [], traces), [spans, traces])
   const filteredGroups = useMemo(() => filterSessionSpanGroups(groups, filters), [filters, groups])
@@ -84,16 +83,12 @@ export function SessionSpansTab({
       (group) =>
         group.traceId === selectedSpan.traceId && group.spans.some((span) => span.spanId === selectedSpan.spanId),
     )
-    if (!isVisible) {
-      onSelectSpan(null)
-      setIsMinimized(false)
-    }
+    if (!isVisible) onSelectSpan(null)
   }, [filteredGroups, isLoading, onSelectSpan, selectedSpan])
 
   // TODO(frontend-use-effect-policy): external conversation/deep-link selection needs imperative scrolling after load.
   useEffect(() => {
     if (!selectedSpan || groups.length === 0) return
-    setIsMinimized(true)
     requestAnimationFrame(() => {
       scrollSpanIntoView(treeContainerRef.current, selectedSpan.spanId, selectedSpan.traceId)
     })
@@ -102,7 +97,6 @@ export function SessionSpansTab({
   function handleSelectSpan(selection: SpanTreeSelection | null) {
     if (!selection || (selectedSpan && spanSelectionKey(selection) === spanSelectionKey(selectedSpan))) {
       onSelectSpan(null)
-      setIsMinimized(false)
       return
     }
     onSelectSpan(selection)
@@ -110,7 +104,6 @@ export function SessionSpansTab({
 
   function handleOpenTrace(traceId: string) {
     onSelectSpan(null)
-    setIsMinimized(false)
     onOpenTrace(traceId, { targetTab: "trace" })
   }
 
@@ -198,8 +191,6 @@ export function SessionSpansTab({
         }))}
         selectedSpan={selectedSpan}
         onSelectSpan={handleSelectSpan}
-        isMinimized={isMinimized && selectedSpan !== null}
-        onToggleMinimized={() => setIsMinimized((current) => !current)}
         isActive={isActive}
       />
       {selectedSpan && selectedGroup && (
