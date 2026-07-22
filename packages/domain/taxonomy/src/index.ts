@@ -26,6 +26,7 @@ export {
   CUSTOM_BEHAVIOR_NAME_MAX_LENGTH,
   CUSTOM_BEHAVIOR_STATUSES,
   FACET_DESCRIPTION_MAX_LENGTH,
+  FACET_EXTRACTION_CONCURRENCY,
   FACET_EXTRACTION_INPUT_CHAR_CAP,
   FACET_GARDENING_CRON_KEY,
   FACET_GARDENING_CRON_PATTERN,
@@ -54,6 +55,7 @@ export {
   TAXONOMY_CLUSTERING_WORKER_MAX_OLD_GEN_MB,
   TAXONOMY_CLUSTERING_WORKER_TIMEOUT_MS,
   TAXONOMY_CONTINUATION_THRESHOLD,
+  TAXONOMY_DEFAULT_FACET_EXTRACTION_MODEL,
   TAXONOMY_DEFAULT_NAMING_MODEL,
   TAXONOMY_DIMENSIONS,
   TAXONOMY_FPS_SAMPLE_BUDGET_MAX,
@@ -302,6 +304,12 @@ export {
 export { deleteCustomBehavior } from "./use-cases/delete-custom-behavior.ts"
 export { type EmitLineageInput, emitLineageUseCase } from "./use-cases/emit-lineage.ts"
 export { expandTopicFilterSetUseCase } from "./use-cases/expand-topic-filter-set.ts"
+export {
+  type ExtractFacetProjectionsInput,
+  type ExtractFacetProjectionsResult,
+  extractFacetProjectionsUseCase,
+  type FacetExtractionSample,
+} from "./use-cases/extract-facet-projections.ts"
 export { type GenerateCustomBehaviorInput, generateCustomBehavior } from "./use-cases/generate-custom-behavior.ts"
 export {
   type BehaviourTrajectoryCategoryRow,

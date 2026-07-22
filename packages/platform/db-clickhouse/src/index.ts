@@ -16,6 +16,7 @@ export { AdminProjectMetricsRepositoryLive } from "./repositories/admin-project-
 export { AnalyticsQueryReaderLive } from "./repositories/analytics-query-repository.ts"
 export { ClaudeCodeSpanReaderLive } from "./repositories/claude-code-span-reader.ts"
 export { DatasetRowRepositoryLive } from "./repositories/dataset-row-repository.ts"
+export { FacetProjectionRepositoryLive } from "./repositories/facet-projection-repository.ts"
 export { MemoryRepositoryLive } from "./repositories/memory-repository.ts"
 export { MessageEmbeddingRepositoryLive } from "./repositories/message-embedding-repository.ts"
 export { MetricSeriesReaderLive } from "./repositories/metric-series-reader.ts"
