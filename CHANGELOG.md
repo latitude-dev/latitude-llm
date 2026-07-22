@@ -2,6 +2,24 @@
 
 ## Unreleased
 
+## v0.3.64 - 2026-07-22
+
+### Taxonomy
+
+- Added storage and a lazy extraction engine for custom taxonomy facets, caching one-sentence session projections and embedding clear answers. Facets remain unavailable in the app and are not yet connected to taxonomy gardening (refs: #4186, #4192).
+
+### Flaggers
+
+- Stopped frustration, jailbreaking, and NSFW flaggers from running on first-level flagger-generated sessions, and rejected annotation matches based only on nested source material to prevent false signals in Latitude's own flagger telemetry (ref: #4149).
+
+### Traces
+
+- Validated trace and span IDs before affected ClickHouse reads so malformed values return validation errors instead of 500s (ref: #4151).
+
+### Signals
+
+- Restored signal links from email, Slack, and in-app notifications after signal detail pages moved to slugs, including compatibility with previously delivered links that used signal IDs (ref: #4193).
+
 ## v0.3.63 - 2026-07-22
 
 ### App
