@@ -40,8 +40,11 @@ def export_trace(
             env=env,
         )
         _ship(otlp, kind="traces")
-        for score in scores:
-            _ship(score, kind="score")
+        if scores:
+            # Scores look up the target trace server-side; wait for OTLP delivery first.
+            _flush()
+            for score in scores:
+                _ship(score, kind="score")
         if flush:
             _flush()
         spans = otlp["resourceSpans"][0]["scopeSpans"][0]["spans"]

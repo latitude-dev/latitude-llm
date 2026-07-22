@@ -40,14 +40,22 @@ def test_export_trace_ships_otlp_and_scores(monkeypatch):
     _reset_config_for_tests()
 
     shipped: List[tuple[str, Dict[str, Any]]] = []
-    monkeypatch.setattr(export_mod, "_ship", lambda payload, kind="traces": shipped.append((kind, payload)))
-    monkeypatch.setattr(export_mod, "_flush", lambda *a, **k: None)
+    flushes: List[str] = []
+
+    def ship(payload: Dict[str, Any], kind: str = "traces") -> None:
+        shipped.append((kind, payload))
+
+    monkeypatch.setattr(export_mod, "_ship", ship)
+    monkeypatch.setattr(export_mod, "_flush", lambda *a, **k: flushes.append("flush"))
 
     tid = export_trace(_sample_trace(), flush=True)
     assert tid == "b" * 32
     kinds = [k for k, _ in shipped]
-    assert "traces" in kinds
+    assert kinds[0] == "traces"
     assert "score" in kinds
+    # Trace OTLP is flushed before score posts so the API can resolve the trace.
+    assert flushes
+    assert kinds.index("score") > 0
 
 
 def test_export_trace_noop_without_credentials(monkeypatch):
