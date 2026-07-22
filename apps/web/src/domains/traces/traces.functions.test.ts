@@ -1,47 +1,47 @@
 import { describe, expect, it } from "vitest"
-import { z } from "zod"
+import { spanIdSchema, traceIdSchema } from "./traces.functions.ts"
 
-// Mirrors the `traceId` input validator shared by traces.functions.ts server
-// functions that key a ClickHouse lookup off a single trace: the column is
-// `FixedString(32)`, so any other length reaches the driver unguarded and
-// throws a raw RepositoryError instead of a clean validation error.
-const traceIdInputSchema = z.object({
-  projectId: z.string(),
-  traceId: z.string().length(32),
-})
-
-describe("traceId input validation", () => {
+describe("traceIdSchema", () => {
   const VALID_TRACE_ID = "d8e03a7d206b83271ef46dcc21cb0a3e"
 
-  it("accepts a well-formed 32-character trace id", () => {
-    const result = traceIdInputSchema.safeParse({ projectId: "proj-123", traceId: VALID_TRACE_ID })
-    expect(result.success).toBe(true)
+  it("accepts a well-formed 32-character hex trace id", () => {
+    expect(traceIdSchema.safeParse(VALID_TRACE_ID).success).toBe(true)
   })
 
   it("rejects a UUID-formatted trace id (36 characters, the production failure case)", () => {
-    const result = traceIdInputSchema.safeParse({
-      projectId: "proj-123",
-      traceId: "98670045-9d02-48ad-9397-5571547579ba",
-    })
+    const result = traceIdSchema.safeParse("98670045-9d02-48ad-9397-5571547579ba")
     expect(result.success).toBe(false)
-    if (!result.success) {
-      expect(result.error.issues[0].path).toEqual(["traceId"])
-    }
   })
 
   it("rejects a too-short trace id", () => {
-    const result = traceIdInputSchema.safeParse({ projectId: "proj-123", traceId: "abc123" })
-    expect(result.success).toBe(false)
-    if (!result.success) {
-      expect(result.error.issues[0].path).toEqual(["traceId"])
-    }
+    expect(traceIdSchema.safeParse("abc123").success).toBe(false)
   })
 
   it("rejects an empty trace id", () => {
-    const result = traceIdInputSchema.safeParse({ projectId: "proj-123", traceId: "" })
-    expect(result.success).toBe(false)
-    if (!result.success) {
-      expect(result.error.issues[0].path).toEqual(["traceId"])
-    }
+    expect(traceIdSchema.safeParse("").success).toBe(false)
+  })
+
+  it("rejects a non-ASCII trace id with 32 UTF-16 code units but more than 32 bytes", () => {
+    expect(traceIdSchema.safeParse("é".repeat(32)).success).toBe(false)
+  })
+
+  it("rejects uppercase hex", () => {
+    expect(traceIdSchema.safeParse(VALID_TRACE_ID.toUpperCase()).success).toBe(false)
+  })
+})
+
+describe("spanIdSchema", () => {
+  const VALID_SPAN_ID = "13713341029516"
+
+  it("rejects a too-short span id", () => {
+    expect(spanIdSchema.safeParse(VALID_SPAN_ID).success).toBe(false)
+  })
+
+  it("accepts a well-formed 16-character hex span id", () => {
+    expect(spanIdSchema.safeParse("a1b2c3d4e5f60718").success).toBe(true)
+  })
+
+  it("rejects a non-hex span id of the right length", () => {
+    expect(spanIdSchema.safeParse("not-a-hex-value!").success).toBe(false)
   })
 })

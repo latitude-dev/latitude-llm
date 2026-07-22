@@ -15,6 +15,12 @@ const dateTimeParamSchema = z
   .datetime()
   .transform((value) => new Date(value))
 
+// ClickHouse binds these as FixedString(32)/FixedString(16), which are byte-
+// sized, so `.length(N)` (UTF-16 code units) alone lets a same-length
+// non-ASCII value slip through; trace/span ids are always lowercase hex.
+const traceIdSchema = z.string().regex(/^[0-9a-f]{32}$/, "must be a 32-character hex string")
+const spanIdSchema = z.string().regex(/^[0-9a-f]{16}$/, "must be a 16-character hex string")
+
 export interface SpanRecord {
   readonly organizationId: string
   readonly projectId: string
@@ -150,7 +156,7 @@ export const listSpansByTrace = createServerFn({ method: "GET" })
   .inputValidator(
     z.object({
       projectId: z.string(),
-      traceId: z.string().length(32),
+      traceId: traceIdSchema,
       startTimeFrom: dateTimeParamSchema.optional(),
       startTimeTo: dateTimeParamSchema.optional(),
     }),
@@ -232,7 +238,7 @@ export const listConversationMessageSpans = createServerFn({ method: "GET" })
   .inputValidator(
     z.object({
       projectId: z.string(),
-      traceId: z.string().length(32),
+      traceId: traceIdSchema,
       startTime: dateTimeParamSchema,
     }),
   )
@@ -283,8 +289,8 @@ export const getSpanDetail = createServerFn({ method: "GET" })
   .inputValidator(
     z.object({
       projectId: z.string(),
-      traceId: z.string().length(32),
-      spanId: z.string(),
+      traceId: traceIdSchema,
+      spanId: spanIdSchema,
       startTimeFrom: dateTimeParamSchema.optional(),
       startTimeTo: dateTimeParamSchema.optional(),
     }),

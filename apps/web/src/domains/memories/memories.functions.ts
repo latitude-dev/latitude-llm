@@ -24,6 +24,11 @@ import { getClickhouseClient } from "../../server/clients.ts"
 import { resolveOrgScope } from "../../server/resolve-org-scope.ts"
 import { withScopedClickHouse } from "../../server/scoped-clickhouse.ts"
 
+// ClickHouse binds this as FixedString(32), which is byte-sized, so
+// `.length(32)` (UTF-16 code units) alone lets a same-length non-ASCII value
+// slip through; trace ids are always lowercase hex.
+const traceIdSchema = z.string().regex(/^[0-9a-f]{32}$/, "must be a 32-character hex string")
+
 export type SessionMemorySummaryRecord = SessionMemorySummary
 export type SessionMemoryDiffRecord = SessionMemoryDiff
 
@@ -106,7 +111,7 @@ interface MemoryUserStoreRecord {
  * batched blob fetch.
  */
 export const getSessionMemorySummary = createServerFn({ method: "GET" })
-  .inputValidator(z.object({ projectId: z.string(), sessionId: z.string(), traceId: z.string().length(32).optional() }))
+  .inputValidator(z.object({ projectId: z.string(), sessionId: z.string(), traceId: traceIdSchema.optional() }))
   .handler(async ({ data, context }): Promise<SessionMemorySummaryRecord> => {
     const orgId = await resolveOrgScope(context)
 
@@ -125,7 +130,7 @@ export const getSessionMemorySummary = createServerFn({ method: "GET" })
  * for the "Memory changes" section. Fetched only when the section is expanded.
  */
 export const getSessionMemoryDiff = createServerFn({ method: "GET" })
-  .inputValidator(z.object({ projectId: z.string(), sessionId: z.string(), traceId: z.string().length(32).optional() }))
+  .inputValidator(z.object({ projectId: z.string(), sessionId: z.string(), traceId: traceIdSchema.optional() }))
   .handler(async ({ data, context }): Promise<SessionMemoryDiffRecord> => {
     const orgId = await resolveOrgScope(context)
 

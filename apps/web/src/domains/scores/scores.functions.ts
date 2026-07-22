@@ -15,6 +15,10 @@ import { getPostgresClient } from "../../server/clients.ts"
 import { resolveOrgScope } from "../../server/resolve-org-scope.ts"
 import { withScopedPostgres } from "../../server/scoped-postgres.ts"
 
+// Trace ids are always 32-character lowercase hex; `.length(32)` alone counts
+// UTF-16 code units, so a same-length non-ASCII value would still pass.
+const traceIdSchema = z.string().regex(/^[0-9a-f]{32}$/, "must be a 32-character hex string")
+
 export interface ScoreRecord {
   readonly id: string
   readonly organizationId: string
@@ -82,7 +86,7 @@ export const listScoresByTrace = createServerFn({ method: "GET" })
   .inputValidator(
     z.object({
       projectId: z.string(),
-      traceId: z.string().length(32),
+      traceId: traceIdSchema,
       limit: z.number().optional(),
       offset: z.number().optional(),
       draftMode: scoreDraftModeSchema.optional(),
