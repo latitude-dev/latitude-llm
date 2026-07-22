@@ -552,7 +552,7 @@ Five phases, **one PR each** (repo convention: each phase maps to its own PR int
 
 ### Phase 1 — App foundation: install flow, receiver, worker skeleton
 
-- [ ] **P1-0** *(manual — Alex)*: **register the GitHub Apps** (one for staging, one for production; repeat these steps twice). Latitude's GitHub org → **Settings → Developer settings → GitHub Apps → New GitHub App**:
+- [x] **P1-0** *(manual — Alex)*: **register the GitHub Apps** (one for staging, one for production; repeat these steps twice). Latitude's GitHub org → **Settings → Developer settings → GitHub Apps → New GitHub App**:
   1. **GitHub App name**: `Latitude` (production) / `Latitude Staging`. **Homepage URL**: `https://latitude.so`.
   2. **Identifying and authorizing users** — **Callback URL**: `https://console.latitude.so/integrations/github/setup/callback` (staging: same path on the staging web host). Check **"Request user authorization (OAuth) during installation"** (required for the anti-spoofing claim check, 5.2). Leave "Expire user authorization tokens" checked (default; we use the token once).
   3. **Post installation** — **Setup URL**: the same callback URL as step 2. Check **"Redirect on update"**.
