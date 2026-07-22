@@ -7,7 +7,7 @@ import { loadConfig } from "./config.ts"
 import { collectTraceContext } from "./context.ts"
 import type { Logger } from "./logger.ts"
 import { createLogger } from "./logger.ts"
-import { memoryDirFromTranscript } from "./memory.ts"
+import { memoryProjectsRoot } from "./memory.ts"
 import { buildOtlpRequest, buildSubagentSpans, chunkOtlpRequest } from "./otlp.ts"
 import type { RedactConfig } from "./redaction.ts"
 import { deleteRequest, loadRequestsByMessageId, pruneStaleRequests } from "./request-store.ts"
@@ -111,7 +111,7 @@ async function main(): Promise<void> {
     logger.debug(`context tags=${context.tags.length} metadata=${Object.keys(context.metadata).length}`)
 
     const memory: MemoryEmitOptions | undefined = config.memory
-      ? { dir: memoryDirFromTranscript(transcriptPath), captureContent: config.memoryContent }
+      ? { projectsRoot: memoryProjectsRoot(transcriptPath), captureContent: config.memoryContent }
       : undefined
 
     const { rows, newOffset, newBuffer } = readIncremental(transcriptPath, prior.offset, prior.buffer)
