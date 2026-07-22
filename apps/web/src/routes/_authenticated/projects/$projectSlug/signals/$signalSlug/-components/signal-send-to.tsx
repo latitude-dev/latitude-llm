@@ -1,5 +1,6 @@
 import {
   Button,
+  ButtonGroup,
   CloseTrigger,
   CopyButton,
   DropdownMenuContent,
@@ -20,16 +21,18 @@ import {
 } from "@repo/ui"
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 import { Link } from "@tanstack/react-router"
-import { Clipboard, Loader2, Plus, Sparkles } from "lucide-react"
+import { ChevronDown, Clipboard, Loader2, Plus, Sparkles } from "lucide-react"
 import { useState } from "react"
 import {
   getSignalDispatchPrompt,
   listCursorRepositories,
   listSendToDestinations,
+  listSignalAgentDispatches,
   type SendToDestinationRecord,
   sendSignalToIntegration,
   sendToDestinationsQueryKey,
   setProjectDispatchRepo,
+  signalAgentDispatchesQueryKey,
 } from "../../../../../../../domains/agent-dispatch/agent-dispatch.functions.ts"
 import { toUserMessage } from "../../../../../../../lib/errors.ts"
 import {
@@ -37,6 +40,7 @@ import {
   AGENT_DISPATCH_KIND_LABELS,
   projectDispatchSettingsQueryKey,
 } from "../../../settings/-components/agent-dispatch-section.tsx"
+import { SignalDispatchHistory } from "./signal-dispatch-history.tsx"
 
 const MCP_DOCS_URL = "https://docs.latitude.so/getting-started/mcp"
 
@@ -75,8 +79,15 @@ export function SignalSendTo({
   readonly disabled?: boolean
 }) {
   const { toast } = useToast()
+  const queryClient = useQueryClient()
   const [promptModalOpen, setPromptModalOpen] = useState(false)
   const [cursorRepoModal, setCursorRepoModal] = useState<SendToDestinationRecord | null>(null)
+
+  const { data: dispatches } = useQuery({
+    queryKey: signalAgentDispatchesQueryKey(projectId, signalId),
+    queryFn: () => listSignalAgentDispatches({ data: { projectId, signalId } }),
+    enabled: !disabled && signalId.length > 0,
+  })
 
   const { data: destinations, isLoading: destinationsLoading } = useQuery({
     queryKey: sendToDestinationsQueryKey(projectId),
@@ -88,6 +99,7 @@ export function SignalSendTo({
       sendSignalToIntegration({
         data: { projectId, signalId, kind: destination.kind, sendId: crypto.randomUUID() },
       }),
+    onSettled: () => queryClient.invalidateQueries({ queryKey: signalAgentDispatchesQueryKey(projectId, signalId) }),
     onSuccess: (result, destination) => {
       const label = AGENT_DISPATCH_KIND_LABELS[destination.kind]
       if (result.status === "dispatched") {
@@ -135,78 +147,68 @@ export function SignalSendTo({
   const sendingKind = sendMutation.isPending ? sendMutation.variables?.kind : undefined
 
   const hasCloudDestinations = (destinations?.length ?? 0) > 0
+  const hasDispatches = !disabled && !!dispatches && dispatches.length > 0
 
-  return (
-    <>
-      <DropdownMenuRoot modal={false}>
-        <DropdownMenuTrigger asChild>
-          <Button variant="outline" size="sm" className="text-sm" disabled={disabled || sendMutation.isPending}>
-            {sendMutation.isPending ? (
-              <Loader2 className="h-4 w-4 animate-spin" aria-hidden />
-            ) : (
-              <Icon icon={Sparkles} size="sm" />
-            )}
-            {sendMutation.isPending ? "Sending…" : "Send to agent"}
-          </Button>
-        </DropdownMenuTrigger>
-        <DropdownMenuPortal>
-          <DropdownMenuContent align="end" className="w-56">
-            <DropdownMenuLabel className="font-medium text-muted-foreground">Cloud agents</DropdownMenuLabel>
-            {destinationsLoading ? (
-              <DropdownMenuItem disabled className="items-center gap-2">
-                <Text.H5 color="foregroundMuted">Loading integrations…</Text.H5>
-              </DropdownMenuItem>
-            ) : hasCloudDestinations ? (
-              destinations?.map((destination) =>
-                !destination.ready && destination.kind !== "cursor" ? (
-                  <DropdownMenuItem key={destination.kind} asChild className="cursor-pointer items-center gap-2">
-                    <Link to="/projects/$projectSlug/settings/signals" params={{ projectSlug }} hash={destination.kind}>
-                      <Icon icon={AGENT_DISPATCH_KIND_ICONS[destination.kind]} size="sm" />
-                      <Text.H5>{`Finish setting up ${AGENT_DISPATCH_KIND_LABELS[destination.kind]}`}</Text.H5>
-                    </Link>
-                  </DropdownMenuItem>
-                ) : (
-                  <DropdownMenuItem
-                    key={destination.kind}
-                    disabled={sendMutation.isPending}
-                    className="cursor-pointer items-center gap-2"
-                    onSelect={() => {
-                      if (sendMutation.isPending) return
-                      if (!destination.ready) {
-                        setCursorRepoModal(destination)
-                        return
-                      }
-                      sendMutation.mutate(destination)
-                    }}
-                  >
-                    {sendingKind === destination.kind ? (
-                      <Loader2 className="h-4 w-4 shrink-0 animate-spin opacity-70" aria-hidden />
-                    ) : (
-                      <Icon icon={AGENT_DISPATCH_KIND_ICONS[destination.kind]} size="sm" />
-                    )}
-                    <Text.H5>
-                      {sendingKind === destination.kind ? "Sending…" : AGENT_DISPATCH_KIND_LABELS[destination.kind]}
-                    </Text.H5>
-                  </DropdownMenuItem>
-                ),
-              )
-            ) : (
-              <DropdownMenuItem asChild className="cursor-pointer items-center gap-2">
-                <Link to="/projects/$projectSlug/settings/integrations" params={{ projectSlug }}>
-                  <Icon icon={Plus} size="sm" />
-                  <Text.H5>Set up cloud agents</Text.H5>
-                </Link>
-              </DropdownMenuItem>
-            )}
-            <DropdownMenuSeparator />
-            <DropdownMenuLabel className="font-medium text-muted-foreground">Local agents</DropdownMenuLabel>
-            <DropdownMenuItem className="cursor-pointer items-center gap-2" onSelect={() => setPromptModalOpen(true)}>
-              <Icon icon={Clipboard} size="sm" />
-              <Text.H5>Copy prompt</Text.H5>
+  const menuContent = (
+    <DropdownMenuContent align="end" className="w-56">
+      <DropdownMenuLabel className="font-medium text-muted-foreground">Cloud agents</DropdownMenuLabel>
+      {destinationsLoading ? (
+        <DropdownMenuItem disabled className="items-center gap-2">
+          <Text.H5 color="foregroundMuted">Loading integrations…</Text.H5>
+        </DropdownMenuItem>
+      ) : hasCloudDestinations ? (
+        destinations?.map((destination) =>
+          !destination.ready && destination.kind !== "cursor" ? (
+            <DropdownMenuItem key={destination.kind} asChild className="cursor-pointer items-center gap-2">
+              <Link to="/projects/$projectSlug/settings/signals" params={{ projectSlug }} hash={destination.kind}>
+                <Icon icon={AGENT_DISPATCH_KIND_ICONS[destination.kind]} size="sm" />
+                <Text.H5>{`Finish setting up ${AGENT_DISPATCH_KIND_LABELS[destination.kind]}`}</Text.H5>
+              </Link>
             </DropdownMenuItem>
-          </DropdownMenuContent>
-        </DropdownMenuPortal>
-      </DropdownMenuRoot>
+          ) : (
+            <DropdownMenuItem
+              key={destination.kind}
+              disabled={sendMutation.isPending}
+              className="cursor-pointer items-center gap-2"
+              onSelect={() => {
+                if (sendMutation.isPending) return
+                if (!destination.ready) {
+                  setCursorRepoModal(destination)
+                  return
+                }
+                sendMutation.mutate(destination)
+              }}
+            >
+              {sendingKind === destination.kind ? (
+                <Loader2 className="h-4 w-4 shrink-0 animate-spin opacity-70" aria-hidden />
+              ) : (
+                <Icon icon={AGENT_DISPATCH_KIND_ICONS[destination.kind]} size="sm" />
+              )}
+              <Text.H5>
+                {sendingKind === destination.kind ? "Sending…" : AGENT_DISPATCH_KIND_LABELS[destination.kind]}
+              </Text.H5>
+            </DropdownMenuItem>
+          ),
+        )
+      ) : (
+        <DropdownMenuItem asChild className="cursor-pointer items-center gap-2">
+          <Link to="/projects/$projectSlug/settings/integrations" params={{ projectSlug }}>
+            <Icon icon={Plus} size="sm" />
+            <Text.H5>Set up cloud agents</Text.H5>
+          </Link>
+        </DropdownMenuItem>
+      )}
+      <DropdownMenuSeparator />
+      <DropdownMenuLabel className="font-medium text-muted-foreground">Local agents</DropdownMenuLabel>
+      <DropdownMenuItem className="cursor-pointer items-center gap-2" onSelect={() => setPromptModalOpen(true)}>
+        <Icon icon={Clipboard} size="sm" />
+        <Text.H5>Copy prompt</Text.H5>
+      </DropdownMenuItem>
+    </DropdownMenuContent>
+  )
+
+  const modals = (
+    <>
       {promptModalOpen ? (
         <CopyPromptModal projectId={projectId} signalId={signalId} onClose={() => setPromptModalOpen(false)} />
       ) : null}
@@ -222,6 +224,60 @@ export function SignalSendTo({
           destination={cursorRepoModal}
         />
       ) : null}
+    </>
+  )
+
+  // Already dispatched: the primary button opens the dispatch-history popover;
+  // the resend menu tucks behind the chevron as a joined split button.
+  if (hasDispatches) {
+    return (
+      <>
+        <ButtonGroup>
+          <SignalDispatchHistory
+            dispatches={dispatches}
+            projectSlug={projectSlug}
+            triggerClassName="rounded-r-none border-r-0"
+          />
+          <DropdownMenuRoot modal={false}>
+            <DropdownMenuTrigger asChild>
+              <Button
+                variant="outline"
+                size="sm"
+                className="rounded-l-none px-1.5"
+                aria-label="Send again to agent"
+                disabled={sendMutation.isPending}
+              >
+                {sendMutation.isPending ? (
+                  <Loader2 className="h-4 w-4 animate-spin" aria-hidden />
+                ) : (
+                  <Icon icon={ChevronDown} size="sm" />
+                )}
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuPortal>{menuContent}</DropdownMenuPortal>
+          </DropdownMenuRoot>
+        </ButtonGroup>
+        {modals}
+      </>
+    )
+  }
+
+  return (
+    <>
+      <DropdownMenuRoot modal={false}>
+        <DropdownMenuTrigger asChild>
+          <Button variant="outline" size="sm" className="text-sm" disabled={disabled || sendMutation.isPending}>
+            {sendMutation.isPending ? (
+              <Loader2 className="h-4 w-4 animate-spin" aria-hidden />
+            ) : (
+              <Icon icon={Sparkles} size="sm" />
+            )}
+            {sendMutation.isPending ? "Sending…" : "Send to agent"}
+          </Button>
+        </DropdownMenuTrigger>
+        <DropdownMenuPortal>{menuContent}</DropdownMenuPortal>
+      </DropdownMenuRoot>
+      {modals}
     </>
   )
 }

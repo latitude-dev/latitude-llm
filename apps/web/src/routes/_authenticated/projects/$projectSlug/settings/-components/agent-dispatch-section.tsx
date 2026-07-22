@@ -88,7 +88,7 @@ const DEEP_LINK_LABELS: Record<AgentDispatchKindKey, string> = {
   webhook: "View delivery",
 }
 
-const DISPATCH_ERROR_TITLES: Record<string, string> = {
+export const DISPATCH_ERROR_TITLES: Record<string, string> = {
   auth: "Authentication error",
   config: "Dispatch request rejected",
   rate_limited: "Rate limited",
@@ -171,7 +171,7 @@ const ACTIVE_DISPATCH_TRIGGERS = [
   "monitor.incident",
 ] as const
 
-const DISPATCH_TRIGGER_TITLES: Record<string, string> = {
+export const DISPATCH_TRIGGER_TITLES: Record<string, string> = {
   "signal.discovered": "New signal",
   "incident.opened": "Escalating signal",
   "signal.regressed": "Regressed signal",
