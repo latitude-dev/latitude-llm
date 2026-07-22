@@ -12,9 +12,7 @@
     "check": "biome check src",
     "format": "biome format --write src && biome check --fix src",
     "typecheck": "tsgo -p tsconfig.json --noEmit",
-    "test": "vitest run --passWithNoTests --dir src",
-    "storybook": "storybook dev -p 6006",
-    "build-storybook": "storybook build"
+    "test": "vitest run --passWithNoTests --dir src"
   },
   "dependencies": {
     "@better-auth/sso": "catalog:",
@@ -110,16 +108,6 @@
     "postcss": "8.5.14",
     "rollup-plugin-visualizer": "7.0.1",
     "vite": "catalog:",
-    "vitest": "catalog:",
-    "storybook": "^10.5.3",
-    "@storybook/tanstack-react": "^10.5.3",
-    "@chromatic-com/storybook": "^5.2.1",
-    "@storybook/addon-vitest": "^10.5.3",
-    "@storybook/addon-a11y": "^10.5.3",
-    "@storybook/addon-docs": "^10.5.3",
-    "@storybook/addon-onboarding": "^10.5.3",
-    "@vitest/browser-playwright": "catalog:",
-    "@vitest/coverage-v8": "catalog:",
-    "playwright": "^1.61.1"
+    "vitest": "catalog:"
   }
 }

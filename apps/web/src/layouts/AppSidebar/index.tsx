@@ -12,7 +12,7 @@ type NavItemIcon = React.ComponentType<React.SVGProps<SVGSVGElement>>
 function SidebarBrandLogo() {
   const initialTheme = useRootThemePreference()
   const { theme } = useThemePreference(initialTheme)
-  const src = theme === "dark" ? "/latitude-logo-dark.png" : "/latitude-logo.png"
+  const src = theme === "dark" ? "/latitude-logo-dark.svg" : "/latitude-logo.png"
 
   return <img src={src} alt="Latitude" className="h-5 w-auto shrink-0" />
 }

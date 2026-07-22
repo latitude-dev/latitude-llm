@@ -74,9 +74,6 @@
       "@better-auth/sso>zod": "4.3.6",
       "@better-auth/stripe>zod": "4.3.6",
       "@better-auth/telemetry>zod": "4.3.6"
-    },
-    "patchedDependencies": {
-      "@storybook/tanstack-react@10.5.3": "patches/@storybook__tanstack-react@10.5.3.patch"
     }
   }
 }
