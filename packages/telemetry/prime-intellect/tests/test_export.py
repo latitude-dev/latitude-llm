@@ -4,9 +4,9 @@ import json
 from pathlib import Path
 from typing import Any, Dict, List
 
-import latitude_telemetry_verifiers.export as export_mod
-from latitude_telemetry_verifiers import export_episode, export_results_dir, export_trace, make_on_complete
-from latitude_telemetry_verifiers.config import _reset_config_for_tests
+import latitude_telemetry_prime_intellect.export as export_mod
+from latitude_telemetry_prime_intellect import export_episode, export_results_dir, export_trace, make_on_complete
+from latitude_telemetry_prime_intellect.config import _reset_config_for_tests
 
 
 def _sample_trace() -> Dict[str, Any]:

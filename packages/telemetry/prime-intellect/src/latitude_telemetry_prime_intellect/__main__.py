@@ -1,4 +1,4 @@
-"""CLI: ``python -m latitude_telemetry_verifiers export <results_dir>``."""
+"""CLI: ``python -m latitude_telemetry_prime_intellect export <results_dir>``."""
 
 from __future__ import annotations
 
@@ -11,7 +11,7 @@ from .export import export_results_dir
 
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(
-        prog="latitude-verifiers-export",
+        prog="latitude-prime-intellect-export",
         description="Export Verifiers eval results (JSONL) to Latitude as OTLP traces.",
     )
     sub = parser.add_subparsers(dest="command", required=True)

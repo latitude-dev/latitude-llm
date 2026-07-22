@@ -44,7 +44,7 @@ def _resource_attrs() -> List[Dict[str, Any]]:
     import socket
 
     return [
-        {"key": "service.name", "value": {"stringValue": "verifiers"}},
+        {"key": "service.name", "value": {"stringValue": "prime-intellect"}},
         {"key": "service.version", "value": {"stringValue": PKG_VERSION}},
         {"key": "telemetry.sdk.name", "value": {"stringValue": SCOPE_NAME}},
         {"key": "telemetry.sdk.version", "value": {"stringValue": PKG_VERSION}},

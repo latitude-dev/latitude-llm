@@ -34,7 +34,7 @@ wheels = [
 ]
 
 [[package]]
-name = "latitude-telemetry-verifiers"
+name = "latitude-telemetry-prime-intellect"
 version = "0.1.0"
 source = { editable = "." }
 dependencies = [

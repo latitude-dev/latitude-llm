@@ -2,8 +2,8 @@ from __future__ import annotations
 
 from typing import Any, Dict, List
 
-from latitude_telemetry_verifiers.mapper import map_trace
-from latitude_telemetry_verifiers.otlp import _encode_attrs, _otlp_value
+from latitude_telemetry_prime_intellect.mapper import map_trace
+from latitude_telemetry_prime_intellect.otlp import _encode_attrs, _otlp_value
 
 
 def _attr_map(attrs: List[Dict[str, Any]]) -> Dict[str, Any]:

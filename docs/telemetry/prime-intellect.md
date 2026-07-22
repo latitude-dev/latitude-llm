@@ -1,4 +1,4 @@
-# Verifiers (Prime Intellect) telemetry
+# Prime Intellect (Verifiers) telemetry
 
 Stream [Prime Intellect Verifiers](https://github.com/PrimeIntellect-ai/verifiers) eval rollouts into Latitude as traces. After setup, each rollout appears in your project's **Traces** view with prompts, model calls, tool calls, token usage, timing, and rewards — optionally as Latitude custom scores.
 
@@ -15,8 +15,8 @@ Stream [Prime Intellect Verifiers](https://github.com/PrimeIntellect-ai/verifier
 3. Install the package into the env that runs Verifiers:
 
 ```bash
-pip install latitude-telemetry-verifiers
-# or: uv pip install latitude-telemetry-verifiers
+pip install latitude-telemetry-prime-intellect
+# or: uv pip install latitude-telemetry-prime-intellect
 ```
 
 4. Set credentials:
@@ -35,7 +35,7 @@ export LATITUDE_PROJECT=your-project-slug
 ### From a Python eval script
 
 ```python
-from latitude_telemetry_verifiers import export_episodes
+from latitude_telemetry_prime_intellect import export_episodes
 
 episodes = await run_eval(env, config)
 export_episodes(episodes)
@@ -44,7 +44,7 @@ export_episodes(episodes)
 Or attach an `on_complete` callback to `Env.run_slot`:
 
 ```python
-from latitude_telemetry_verifiers import make_on_complete
+from latitude_telemetry_prime_intellect import make_on_complete
 
 on_complete = make_on_complete(next=your_persist_callback)
 await env.run_slot(slot, ctx, semaphore, on_complete)
@@ -55,7 +55,7 @@ await env.run_slot(slot, ctx, semaphore, on_complete)
 Run your eval as usual, then export the results directory:
 
 ```bash
-latitude-verifiers-export export ./outputs/<run-dir>
+latitude-prime-intellect-export export ./outputs/<run-dir>
 ```
 
 The CLI looks for `traces.jsonl`, `episodes.jsonl`, or `results.jsonl`.
@@ -78,7 +78,7 @@ Structural-only traces still include timing, model, token usage, and span struct
 
 ```bash
 export LATITUDE_EXPORT_SCORES=false
-# or: latitude-verifiers-export export ./outputs/<run-dir> --no-scores
+# or: latitude-prime-intellect-export export ./outputs/<run-dir> --no-scores
 ```
 
 ## Configuration
@@ -90,7 +90,7 @@ export LATITUDE_EXPORT_SCORES=false
 | `LATITUDE_BASE_URL` | `https://ingest.latitude.so` | Ingest origin (appends `/v1/traces`) |
 | `LATITUDE_API_BASE_URL` | `https://api.latitude.so` | Public API origin for scores |
 | `LATITUDE_EXPORT_SCORES` | `true` | POST rewards/metrics as custom scores |
-| `LATITUDE_VERIFIERS_TELEMETRY_ENABLED` / `LATITUDE_TELEMETRY_ENABLED` | `true` | Master switch |
+| `LATITUDE_PRIME_INTELLECT_TELEMETRY_ENABLED` / `LATITUDE_TELEMETRY_ENABLED` | `true` | Master switch |
 | `LATITUDE_NO_CONTENT` | `false` | Structure/timing only |
 | `LATITUDE_DEBUG` | `false` | Verbose logging |
 

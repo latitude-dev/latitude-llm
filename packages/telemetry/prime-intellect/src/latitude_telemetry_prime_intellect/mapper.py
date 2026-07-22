@@ -86,7 +86,7 @@ def _map_trace_to_run(
     if info:
         metadata["verifiers.info"] = info
 
-    tags = ["verifiers", "prime-intellect"]
+    tags = ["prime-intellect", "verifiers"]
     if env:
         tags.append(f"env:{env}")
     if task_type:

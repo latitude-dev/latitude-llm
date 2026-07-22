@@ -1,4 +1,4 @@
-name: Publish Verifiers Telemetry
+name: Publish Prime Intellect Telemetry
 
 on:
   workflow_call:
@@ -31,14 +31,14 @@ jobs:
       - name: Get current version
         id: get_version
         run: |
-          CURRENT_VERSION=$(grep -m1 '^version' packages/telemetry/verifiers/pyproject.toml | sed -E 's/version *= *"([^"]+)"/\1/')
+          CURRENT_VERSION=$(grep -m1 '^version' packages/telemetry/prime-intellect/pyproject.toml | sed -E 's/version *= *"([^"]+)"/\1/')
           echo "version=$CURRENT_VERSION" >> $GITHUB_OUTPUT
 
       - name: Check version on PyPI
         id: check_version
         run: |
           CURRENT_VERSION="${{ steps.get_version.outputs.version }}"
-          if curl -s "https://pypi.org/pypi/latitude-telemetry-verifiers/$CURRENT_VERSION/json" | grep -q '"version"'; then
+          if curl -s "https://pypi.org/pypi/latitude-telemetry-prime-intellect/$CURRENT_VERSION/json" | grep -q '"version"'; then
             echo "should_publish=false" >> $GITHUB_OUTPUT
           else
             echo "should_publish=true" >> $GITHUB_OUTPUT
@@ -59,20 +59,20 @@ jobs:
       - name: Install dependencies
         if: steps.check_version.outputs.should_publish == 'true'
         run: |
-          cd packages/telemetry/verifiers
+          cd packages/telemetry/prime-intellect
           uv venv
           uv sync --all-extras --all-groups
 
       - name: Run tests
         if: steps.check_version.outputs.should_publish == 'true'
         run: |
-          cd packages/telemetry/verifiers
+          cd packages/telemetry/prime-intellect
           uv run pytest tests/ -x
 
       - name: Build package
         if: steps.check_version.outputs.should_publish == 'true'
         run: |
-          cd packages/telemetry/verifiers
+          cd packages/telemetry/prime-intellect
           uv build
 
       - name: Extract changelog
@@ -80,7 +80,7 @@ jobs:
         id: changelog
         run: |
           VERSION="${{ steps.get_version.outputs.version }}"
-          CHANGELOG="packages/telemetry/verifiers/CHANGELOG.md"
+          CHANGELOG="packages/telemetry/prime-intellect/CHANGELOG.md"
           if [ ! -f "$CHANGELOG" ]; then
             echo "Missing changelog: ${CHANGELOG}"
             exit 1
@@ -105,15 +105,15 @@ jobs:
       - name: Publish to PyPI
         if: steps.check_version.outputs.should_publish == 'true'
         run: |
-          cd packages/telemetry/verifiers
+          cd packages/telemetry/prime-intellect
           uv publish --username __token__ --password ${{ secrets.PYPI_TOKEN }}
 
       - name: Create GitHub Release
         if: steps.check_version.outputs.should_publish == 'true'
         uses: softprops/action-gh-release@v3
         with:
-          tag_name: verifiers-telemetry-${{ steps.get_version.outputs.version }}
-          name: Verifiers Telemetry v${{ steps.get_version.outputs.version }}
+          tag_name: prime-intellect-telemetry-${{ steps.get_version.outputs.version }}
+          name: Prime Intellect Telemetry v${{ steps.get_version.outputs.version }}
           body: ${{ steps.changelog.outputs.body }}
           target_commitish: ${{ inputs.ref || github.sha }}
           draft: false

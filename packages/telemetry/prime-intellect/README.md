@@ -1,10 +1,10 @@
-# latitude-telemetry-verifiers
+# latitude-telemetry-prime-intellect
 
 Export [Prime Intellect Verifiers](https://github.com/PrimeIntellect-ai/verifiers) eval
 rollouts to [Latitude](https://latitude.so) as OTLP traces (and optional custom scores
 from rewards/metrics).
 
-This is the Verifiers counterpart to the other harness integrations
+This is the Prime Intellect counterpart to the other harness integrations
 ([`latitude-telemetry-hermes`](../hermes), Claude Code, Pi, OpenClaw). Verifiers has no
 host plugin entry point for observability, so this package ships as a **library + CLI**
 you call from your eval script or after a run.
@@ -12,7 +12,7 @@ you call from your eval script or after a run.
 ## Install
 
 ```bash
-pip install latitude-telemetry-verifiers
+pip install latitude-telemetry-prime-intellect
 ```
 
 ```bash
@@ -26,7 +26,7 @@ export LATITUDE_PROJECT=my-project
 
 ```python
 from verifiers.v1.cli.eval.runner import run_eval
-from latitude_telemetry_verifiers import export_episodes
+from latitude_telemetry_prime_intellect import export_episodes
 
 episodes = await run_eval(env, config)
 export_episodes(episodes)  # ships traces + reward scores, then flushes
@@ -35,7 +35,7 @@ export_episodes(episodes)  # ships traces + reward scores, then flushes
 ### As `Env.run_slot` `on_complete`
 
 ```python
-from latitude_telemetry_verifiers import make_on_complete
+from latitude_telemetry_prime_intellect import make_on_complete
 
 on_complete = make_on_complete(next=persist_episode)  # chain your append_episode
 await env.run_slot(slot, ctx, semaphore, on_complete)
@@ -46,9 +46,9 @@ await env.run_slot(slot, ctx, semaphore, on_complete)
 After `uv run eval …` / `prime eval …`:
 
 ```bash
-latitude-verifiers-export export ./outputs/<run-dir>
+latitude-prime-intellect-export export ./outputs/<run-dir>
 # or
-python -m latitude_telemetry_verifiers export ./outputs/<run-dir>
+python -m latitude_telemetry_prime_intellect export ./outputs/<run-dir>
 ```
 
 Reads `traces.jsonl`, `episodes.jsonl`, or `results.jsonl` when present.
@@ -64,7 +64,7 @@ Reads `traces.jsonl`, `episodes.jsonl`, or `results.jsonl` when present.
 | `LATITUDE_EXPORT_SCORES` | `true` | POST rewards/metrics as custom scores |
 | `LATITUDE_NO_CONTENT` | `false` | Structure/timing only |
 | `LATITUDE_DEBUG` | `false` | Verbose logging |
-| `LATITUDE_VERIFIERS_TELEMETRY_ENABLED` / `LATITUDE_TELEMETRY_ENABLED` | `true` | Master switch |
+| `LATITUDE_PRIME_INTELLECT_TELEMETRY_ENABLED` / `LATITUDE_TELEMETRY_ENABLED` | `true` | Master switch |
 
 Telemetry stays off until both `LATITUDE_API_KEY` and a project are set. Export is
 fail-open: a Latitude error never fails your eval.
@@ -85,7 +85,7 @@ trace id (Verifiers' 32-hex `Trace.id`).
 ## Development
 
 ```bash
-cd packages/telemetry/verifiers
+cd packages/telemetry/prime-intellect
 uv sync --all-groups
 uv run pytest tests/ -x
 ```
