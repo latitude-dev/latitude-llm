@@ -1,5 +1,5 @@
 import type { LucideProps } from "lucide-react"
-import { createContext, memo, type ReactNode, type Ref, useContext } from "react"
+import { memo, type Ref } from "react"
 
 import { colors, type TextColor } from "../../tokens/colors.ts"
 import { cn } from "../../utils/cn.ts"
@@ -34,29 +34,22 @@ export interface IconProps extends Omit<LucideProps, "size"> {
   ref?: Ref<SVGSVGElement>
 }
 
-interface IconDefaults {
-  readonly size?: IconSize | undefined
-  readonly weight?: IconWeight | undefined
-}
-
-const IconDefaultsContext = createContext<IconDefaults | null>(null)
-
-/** Fallback icon size/weight for descendants that don't set their own — an explicit prop always wins. */
-export function IconDefaultsProvider({ size, weight, children }: IconDefaults & { children: ReactNode }) {
-  return <IconDefaultsContext.Provider value={{ size, weight }}>{children}</IconDefaultsContext.Provider>
-}
-
-const Icon = memo(function Icon({ icon: IconComponent, size, color, weight, className, ref, ...props }: IconProps) {
-  const defaults = useContext(IconDefaultsContext)
-  const resolvedSize = size ?? defaults?.size ?? "default"
-  const resolvedWeight = weight ?? defaults?.weight
+const Icon = memo(function Icon({
+  icon: IconComponent,
+  size = "default",
+  color,
+  weight,
+  className,
+  ref,
+  ...props
+}: IconProps) {
   const colorClass = color ? colors.textColors[color] : ""
 
   return (
     <IconComponent
       ref={ref}
-      className={cn(sizeMap[resolvedSize], colorClass, className)}
-      {...(resolvedWeight ? { strokeWidth: weightMap[resolvedWeight] } : {})}
+      className={cn(sizeMap[size], colorClass, className)}
+      {...(weight ? { strokeWidth: weightMap[weight] } : {})}
       {...props}
     />
   )
