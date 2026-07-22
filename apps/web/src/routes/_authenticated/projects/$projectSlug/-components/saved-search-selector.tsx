@@ -25,6 +25,7 @@ import {
   SearchIcon,
   SlidersHorizontalIcon,
   Trash2Icon,
+  XIcon,
 } from "lucide-react"
 import { useMemo, useState } from "react"
 import { useCreateExperimentFromSearch } from "../../../../../domains/experiments/experiments.collection.ts"
@@ -102,24 +103,43 @@ export function SavedSearchSelector({
   return (
     <>
       <Popover open={open} onOpenChange={setOpen}>
-        <PopoverTrigger asChild>
-          <button
-            type="button"
-            aria-label="Saved searches"
+        {selected ? (
+          <div
             // pl-3 ≈ pr-2 + the chevron glyph's ~4px empty right inset, so both sides read even.
-            className="flex h-full min-w-0 cursor-pointer items-center gap-1 self-stretch border-r border-input bg-secondary pl-3 pr-2 text-secondary-foreground transition-colors hover:bg-secondary/80"
+            className="flex h-full min-w-0 items-center gap-1 self-stretch border-r border-input bg-secondary pl-3 pr-2 text-secondary-foreground transition-colors hover:bg-secondary/80"
           >
-            {selected ? (
-              <span className="min-w-0 max-w-40 truncate text-sm">{selected.name}</span>
-            ) : (
-              <>
-                <Icon icon={BookmarkIcon} size="sm" color="foregroundMuted" className="shrink-0" />
-                <span className="text-muted-foreground text-sm">Searches</span>
-              </>
-            )}
-            <Icon icon={ChevronDownIcon} size="sm" color="foregroundMuted" className="shrink-0" />
-          </button>
-        </PopoverTrigger>
+            <PopoverTrigger asChild>
+              <button
+                type="button"
+                aria-label="Change saved search"
+                className="flex h-full min-w-0 flex-1 cursor-pointer items-center"
+              >
+                <span className="min-w-0 max-w-40 truncate text-sm">{selected.name}</span>
+              </button>
+            </PopoverTrigger>
+            <button
+              type="button"
+              aria-label="Clear saved search"
+              onClick={() => onSelectedSlugChange("")}
+              className="flex shrink-0 cursor-pointer items-center"
+            >
+              <Icon icon={XIcon} size="sm" color="foregroundMuted" />
+            </button>
+          </div>
+        ) : (
+          <PopoverTrigger asChild>
+            <button
+              type="button"
+              aria-label="Saved searches"
+              // pl-3 ≈ pr-2 + the chevron glyph's ~4px empty right inset, so both sides read even.
+              className="flex h-full min-w-0 cursor-pointer items-center gap-1 self-stretch border-r border-input bg-secondary pl-3 pr-2 text-secondary-foreground transition-colors hover:bg-secondary/80"
+            >
+              <Icon icon={BookmarkIcon} size="sm" color="foregroundMuted" className="shrink-0" />
+              <span className="text-muted-foreground text-sm">Searches</span>
+              <Icon icon={ChevronDownIcon} size="sm" color="foregroundMuted" className="shrink-0" />
+            </button>
+          </PopoverTrigger>
+        )}
         <PopoverContent align="start" sideOffset={6} className="w-80 p-0">
           <div className="border-b border-border p-2">
             <div className="relative">

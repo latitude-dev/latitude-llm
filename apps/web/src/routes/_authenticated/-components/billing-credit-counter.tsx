@@ -85,7 +85,7 @@ export function BillingCreditCounter({
       <Tooltip
         asChild
         trigger={
-          <div className="flex items-center justify-between gap-2">
+          <div className="flex items-center justify-between gap-2 px-2">
             <span className="flex items-center gap-1 text-muted-foreground">
               <Icon icon={Flame} size="xs" weight="L" />
               <Text.H6 color="foregroundMuted" weight="medium">

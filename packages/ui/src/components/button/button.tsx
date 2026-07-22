@@ -4,6 +4,7 @@ import { type ButtonHTMLAttributes, Children, isValidElement, type ReactNode, ty
 
 import { font } from "../../tokens/font.ts"
 import { cn } from "../../utils/cn.ts"
+import { IconDefaultsProvider, type IconSize, type IconWeight } from "../icons/icons.tsx"
 
 const outerElevation = "border-0 shadow-sm transition-shadow duration-200 hover:shadow-lg"
 
@@ -126,6 +127,20 @@ export interface ButtonProps
   isLoading?: boolean
 }
 
+/**
+ * Default `Icon` size/weight per button size, scaling icons to feel
+ * proportionate to the button's own text/height. Any `Icon` that sets its
+ * own `size`/`weight` overrides this — see `IconDefaultsProvider`.
+ */
+const BUTTON_ICON_DEFAULTS: Record<NonNullable<ButtonProps["size"]>, { size: IconSize; weight?: IconWeight }> = {
+  default: { size: "sm" },
+  sm: { size: "xs", weight: "S" },
+  lg: { size: "md", weight: "L" },
+  icon: { size: "sm" },
+  "icon-xs": { size: "xs", weight: "S" },
+  full: { size: "sm" },
+}
+
 function getElementDisplayName(type: unknown): string {
   if (typeof type === "string") {
     return type
@@ -197,42 +212,47 @@ function Button({
   ...props
 }: ButtonProps) {
   const visibleChildren = isLoading ? stripLeadingIconChild(children) : children
+  const iconDefaults = BUTTON_ICON_DEFAULTS[size ?? "default"]
 
   if (asChild) {
     return (
-      <Slot
-        ref={ref}
-        className={cn(
-          degroupSelectors(cn(buttonContainerVariants({ variant }), buttonVariantsConfig({ variant, size }))),
-          // Slot can't add the inner wrapper that normally spaces icon and label.
-          "gap-x-1.5",
-          className,
-          isLoading && "animate-pulse",
-        )}
-        {...props}
-      >
-        {visibleChildren}
-      </Slot>
+      <IconDefaultsProvider size={iconDefaults.size} weight={iconDefaults.weight}>
+        <Slot
+          ref={ref}
+          className={cn(
+            degroupSelectors(cn(buttonContainerVariants({ variant }), buttonVariantsConfig({ variant, size }))),
+            // Slot can't add the inner wrapper that normally spaces icon and label.
+            "gap-x-1.5",
+            className,
+            isLoading && "animate-pulse",
+          )}
+          {...props}
+        >
+          {visibleChildren}
+        </Slot>
+      </IconDefaultsProvider>
     )
   }
 
   return (
-    <button
-      ref={ref}
-      {...props}
-      className={cn(buttonContainerVariants({ variant }), isLoading && "animate-pulse")}
-      disabled={disabled || isLoading}
-      aria-busy={isLoading ? "true" : undefined}
-    >
-      <div className={cn(buttonVariantsConfig({ variant, size }), "relative z-1", className)}>
-        <div className="relative z-1 flex max-w-full flex-row items-center gap-x-1.5">
-          {isLoading && (
-            <span className="h-4 w-4 shrink-0 animate-spin rounded-full border-2 border-current border-t-transparent" />
-          )}
-          {visibleChildren}
+    <IconDefaultsProvider size={iconDefaults.size} weight={iconDefaults.weight}>
+      <button
+        ref={ref}
+        {...props}
+        className={cn(buttonContainerVariants({ variant }), isLoading && "animate-pulse")}
+        disabled={disabled || isLoading}
+        aria-busy={isLoading ? "true" : undefined}
+      >
+        <div className={cn(buttonVariantsConfig({ variant, size }), "relative z-1", className)}>
+          <div className="relative z-1 flex max-w-full flex-row items-center gap-x-1.5">
+            {isLoading && (
+              <span className="h-4 w-4 shrink-0 animate-spin rounded-full border-2 border-current border-t-transparent" />
+            )}
+            {visibleChildren}
+          </div>
         </div>
-      </div>
-    </button>
+      </button>
+    </IconDefaultsProvider>
   )
 }
 
