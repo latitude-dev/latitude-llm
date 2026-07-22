@@ -158,7 +158,8 @@
               "telemetry/claude-code",
               "telemetry/hermes",
               "telemetry/openclaw",
-              "telemetry/pi-coding-agent"
+              "telemetry/pi-coding-agent",
+              "telemetry/prime-intellect"
             ]
           }
         ]
