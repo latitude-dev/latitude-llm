@@ -1071,8 +1071,6 @@ ${"Detailed grounding, workflow, callout, and formatting rules. ".repeat(120)}`.
     expect(calls.generate[1].system).not.toContain(
       "Approve only when the proposed annotation describes a problem in the evaluated agent's own assistant response",
     )
-    // Nested-content rejection still applies so quoted corrections in supplied
-    // evaluation evidence are not approved as frustration of the evaluated agent.
     expect(calls.generate[1].system).toContain(
       "Reject annotations whose evidence is only nested transcripts, examples, quoted instructions",
     )
@@ -1776,8 +1774,9 @@ ${"Detailed grounding, workflow, callout, and formatting rules. ".repeat(120)}`.
     expect(calls.generate).toHaveLength(1)
     expect(calls.generate[0].system).toContain("NSFW")
     expect(calls.generate[0].system).toContain("workplace-inappropriate")
-    // NSFW prompt includes suspicious excerpts
+    expect(calls.generate[0].system).not.toContain("the evaluated agent's assistant response")
     expect(calls.generate[0].prompt).toContain("SUSPICIOUS TEXT EXCERPTS")
+    expect(calls.generate[0].prompt).toContain("Judge the evaluated agent's conversation for this issue")
   })
 
   it("schema: empty object {} is parsed as matched=false via Zod default", () => {

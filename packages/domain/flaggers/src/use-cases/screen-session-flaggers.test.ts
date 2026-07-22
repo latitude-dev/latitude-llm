@@ -203,7 +203,12 @@ describe("screenSessionFlaggersUseCase", () => {
     )
     const { result, scores } = await runScreening({
       session,
-      flaggers: [makeFlagger("frustration", 100), makeFlagger("jailbreaking", 100), makeFlagger("laziness", 100)],
+      flaggers: [
+        makeFlagger("frustration", 100),
+        makeFlagger("jailbreaking", 100),
+        makeFlagger("nsfw", 100),
+        makeFlagger("laziness", 100),
+      ],
       momentLabels: [makeMomentLabel("user_frustration"), makeMomentLabel("stalling")],
       analyses: [analyzedAnalysis()],
       deps: fakeDeps.deps,
@@ -219,6 +224,11 @@ describe("screenSessionFlaggersUseCase", () => {
       action: "dropped",
       reason: "missing-context",
     })
+    expect(decisionFor(result.decisions, "nsfw")).toEqual({
+      slug: "nsfw",
+      action: "dropped",
+      reason: "missing-context",
+    })
     // Assistant-response-centric strategies still screen — bad classifications are the point of reflag.
     expect(decisionFor(result.decisions, "laziness")).toEqual({
       slug: "laziness",
@@ -228,6 +238,7 @@ describe("screenSessionFlaggersUseCase", () => {
     })
     expect(result.classifications.some((c) => c.flaggerSlug === "frustration")).toBe(false)
     expect(result.classifications.some((c) => c.flaggerSlug === "jailbreaking")).toBe(false)
+    expect(result.classifications.some((c) => c.flaggerSlug === "nsfw")).toBe(false)
     expect(result.classifications.some((c) => c.flaggerSlug === "laziness")).toBe(true)
     expect(scores.size).toBe(0)
   })
