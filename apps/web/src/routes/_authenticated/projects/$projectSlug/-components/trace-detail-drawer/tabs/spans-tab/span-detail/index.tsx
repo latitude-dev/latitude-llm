@@ -1,8 +1,12 @@
 import { cn, Skeleton, Text } from "@repo/ui"
 import { XIcon } from "lucide-react"
 import { useSpanDetail } from "../../../../../../../../../domains/spans/spans.collection.ts"
+import { useResizablePanelHeight } from "../../../../../../../../../lib/hooks/useResizablePanelHeight.ts"
 import { SpanDetailContent } from "./span-detail-content.tsx"
-import { MIN_CONTENT_ABOVE, MIN_PANEL_HEIGHT, useDetailResize } from "./use-detail-resize.ts"
+
+const MIN_PANEL_HEIGHT = 140
+const MIN_CONTENT_ABOVE = 160
+const CLOSE_DRAG_THRESHOLD = 96
 
 export function SpanDetail({
   projectId,
@@ -20,7 +24,13 @@ export function SpanDetail({
   readonly onClose: () => void
 }) {
   const { data: span, isLoading } = useSpanDetail({ projectId, traceId, spanId, startTimeFrom, startTimeTo })
-  const { panelRef, height, isDragging, onPointerDown, onKeyDown } = useDetailResize(onClose)
+  const { panelRef, height, isDragging, onPointerDown, onKeyDown } = useResizablePanelHeight({
+    minHeight: MIN_PANEL_HEIGHT,
+    minContentAbove: MIN_CONTENT_ABOVE,
+    closeThreshold: CLOSE_DRAG_THRESHOLD,
+    defaultHeight: "half",
+    onClose,
+  })
   const maxHeight = panelRef.current?.parentElement
     ? Math.max(MIN_PANEL_HEIGHT, panelRef.current.parentElement.offsetHeight - MIN_CONTENT_ABOVE)
     : height

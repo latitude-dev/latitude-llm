@@ -1,20 +1,37 @@
 import { useMountEffect } from "@repo/ui"
 import { useCallback, useRef, useState } from "react"
 
-export const MIN_PANEL_HEIGHT = 140
-const DEFAULT_PANEL_HEIGHT = 320
-// Reserve this much above the detail panel so the filters bar and a few tree rows stay visible.
-export const MIN_CONTENT_ABOVE = 160
-// Drag the panel shorter than this and it closes instead of clamping to the minimum.
-const CLOSE_DRAG_THRESHOLD = 96
-const KEYBOARD_STEP = 24
+const DEFAULT_KEYBOARD_STEP = 24
 
-// Vertical sibling of the span-tree `useResizablePanel`: drags the span detail panel taller/shorter.
-export function useDetailResize(onClose: () => void) {
+interface Options {
+  readonly minHeight: number
+  readonly minContentAbove: number
+  readonly closeThreshold: number
+  readonly defaultHeight: number | "half"
+  readonly onClose: () => void
+  readonly keyboardStep?: number
+}
+
+/**
+ * Drag/keyboard resize for a panel pinned to the bottom of a flex container.
+ *
+ * Attach `panelRef` to the panel root (its `parentElement` is the sizing
+ * container) and apply `height` where the panel's resizable area lives.
+ * `minContentAbove` reserves space so the content above never collapses;
+ * dragging shorter than `closeThreshold` calls `onClose` instead of clamping.
+ */
+export function useResizablePanelHeight({
+  minHeight,
+  minContentAbove,
+  closeThreshold,
+  defaultHeight,
+  onClose,
+  keyboardStep = DEFAULT_KEYBOARD_STEP,
+}: Options) {
   const panelRef = useRef<HTMLDivElement>(null)
-  const [height, setHeight] = useState(DEFAULT_PANEL_HEIGHT)
+  const [height, setHeight] = useState(typeof defaultHeight === "number" ? defaultHeight : minHeight)
   const [isDragging, setIsDragging] = useState(false)
-  const drag = useRef<{ startY: number; startHeight: number; max: number } | null>(null)
+  const drag = useRef<{ startY: number; startHeight: number } | null>(null)
   const moveRef = useRef<((event: PointerEvent) => void) | null>(null)
   const upRef = useRef<(() => void) | null>(null)
 
@@ -34,14 +51,16 @@ export function useDetailResize(onClose: () => void) {
 
   const maxHeight = useCallback(() => {
     const panel = panelRef.current?.parentElement
-    if (!panel) return DEFAULT_PANEL_HEIGHT
-    return Math.max(MIN_PANEL_HEIGHT, panel.offsetHeight - MIN_CONTENT_ABOVE)
-  }, [])
+    if (!panel) return Number.POSITIVE_INFINITY
+    return Math.max(minHeight, panel.offsetHeight - minContentAbove)
+  }, [minHeight, minContentAbove])
 
   useMountEffect(() => {
     const panel = panelRef.current?.parentElement
     if (!panel) return
-    setHeight(Math.max(MIN_PANEL_HEIGHT, Math.min(maxHeight(), Math.round(panel.offsetHeight / 2))))
+    if (defaultHeight === "half") {
+      setHeight(Math.max(minHeight, Math.min(maxHeight(), Math.round(panel.offsetHeight / 2))))
+    }
     const observer = new ResizeObserver(() => setHeight((prev) => Math.min(prev, maxHeight())))
     observer.observe(panel)
     return () => {
@@ -54,7 +73,7 @@ export function useDetailResize(onClose: () => void) {
     (event: React.PointerEvent) => {
       event.preventDefault()
       if (!panelRef.current?.parentElement) return
-      drag.current = { startY: event.clientY, startHeight: height, max: maxHeight() }
+      drag.current = { startY: event.clientY, startHeight: height }
       setIsDragging(true)
       document.body.style.userSelect = "none"
       document.body.style.cursor = "ns-resize"
@@ -63,14 +82,14 @@ export function useDetailResize(onClose: () => void) {
         const current = drag.current
         if (!current) return
         const raw = current.startHeight + (current.startY - moveEvent.clientY)
-        if (raw < CLOSE_DRAG_THRESHOLD) {
+        if (raw < closeThreshold) {
           drag.current = null
           setIsDragging(false)
           cleanup()
           onClose()
           return
         }
-        setHeight(Math.max(MIN_PANEL_HEIGHT, Math.min(current.max, raw)))
+        setHeight(Math.max(minHeight, Math.min(maxHeight(), raw)))
       }
       const onUp = () => {
         drag.current = null
@@ -83,17 +102,17 @@ export function useDetailResize(onClose: () => void) {
       document.addEventListener("pointerup", onUp)
       document.addEventListener("pointercancel", onUp)
     },
-    [height, maxHeight, cleanup, onClose],
+    [height, minHeight, maxHeight, closeThreshold, cleanup, onClose],
   )
 
   const onKeyDown = useCallback(
     (event: React.KeyboardEvent) => {
       if (event.key !== "ArrowUp" && event.key !== "ArrowDown") return
       event.preventDefault()
-      const delta = event.key === "ArrowUp" ? KEYBOARD_STEP : -KEYBOARD_STEP
-      setHeight((prev) => Math.max(MIN_PANEL_HEIGHT, Math.min(maxHeight(), prev + delta)))
+      const delta = event.key === "ArrowUp" ? keyboardStep : -keyboardStep
+      setHeight((prev) => Math.max(minHeight, Math.min(maxHeight(), prev + delta)))
     },
-    [maxHeight],
+    [minHeight, maxHeight, keyboardStep],
   )
 
   return { panelRef, height, isDragging, onPointerDown, onKeyDown }
