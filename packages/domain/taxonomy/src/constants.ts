@@ -155,6 +155,12 @@ export const FACET_PROJECTION_TEXT_MAX_LENGTH = 500
  * ~$1/$5). Low temperature keeps a single session's answer stable across passes;
  * `maxTokens` need only cover a one-sentence answer bounded to
  * `FACET_PROJECTION_TEXT_MAX_LENGTH` plus a small JSON envelope.
+ *
+ * `temperature` is 0.1, NOT 0: the MiniMax family caps temperature to the open
+ * range (0, 1] (0 is rejected) and greedy decoding falls into repetition loops on
+ * these checkpoints. MiniMax's own recommendation is 1.0 (it is RL-trained there);
+ * 0.1 is the low-variance floor we accept for a stable extraction — if quality is
+ * poor, raising toward 1.0 is a lever alongside the Haiku fallback.
  */
 export const TAXONOMY_DEFAULT_FACET_EXTRACTION_MODEL = {
   provider: "amazon-bedrock",
