@@ -28,6 +28,7 @@ export {
   GitHubIcon,
   GoogleIcon,
   LatitudeLogo,
+  LatitudeWordmark,
 } from "./components/brand-icons/index.tsx"
 export {
   Button,
@@ -106,6 +107,8 @@ export {
   ComboboxCollection,
   ComboboxContent,
   ComboboxEmpty,
+  ComboboxFooterAction,
+  type ComboboxFooterActionProps,
   ComboboxGroup,
   ComboboxInput,
   ComboboxItem,

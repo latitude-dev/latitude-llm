@@ -173,6 +173,8 @@ function ToolsPageContent() {
               <Tabs
                 variant="bordered"
                 size="sm"
+                className="border-none bg-muted"
+                indicatorClassName="border-none"
                 options={[
                   { id: "all", label: "All", icon: <LayoutGridIcon className="w-4 h-4" /> },
                   {
