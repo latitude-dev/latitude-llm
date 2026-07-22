@@ -100,7 +100,7 @@ schedule above:
 | Root children | **0 (collapses to one leaf)** | **4** |
 | Leaves | 1 | 5 (max depth 2) |
 | Deterministic partition | — | yes (identical signature at a fixed sample) |
-| Cross-sample ARI (single 90/90 split) | — | ~0.75 — unreliable; see note below |
+| Cross-sample ARI | — | averaged over fold pairs; see note below |
 | Root sibling centroid cosines | — | 0.84–0.89 (prototype run; not re-measured) |
 | Routing thresholds | — | 0.685–0.882 (prototype run; not re-measured) |
 
@@ -120,21 +120,24 @@ leaves; 0.35 and below → 2 children with a larger dominant blob. 0.45 remains 
 setting that reproduces the target 3–5 coherent root children; lowering it does
 not split the dominant cluster — it grows it.
 
-### Cross-sample ARI is not a usable point estimate
+### Cross-sample ARI — averaged, and the floor re-derived
 
-`crossSampleAri` returns the ARI of a single order-dependent 90/90 split. On this
-corpus it ranges across **[0.00, 0.92]** purely by observation ordering (24 seeded
-permutations: p25 0.00, median 0.74, p75 0.83, max 0.92, mean 0.53). The originally
-recorded **0.850** was one high draw from that distribution on the prototype
-builder; a current single draw reads ~0.75. Neither is a stable measurement, and
-the **0.8 floor** (`ADAPTIVE_CROSS_SAMPLE_ARI_FLOOR`) was derived from that single
-0.850 — so as written it is not a valid gate.
+`crossSampleAri` originally returned a single order-dependent 90/90 split, which
+swung across **[0.00, 0.92]** on this corpus purely by fold choice (24 seeded
+permutations: p25 0.00, median 0.74, max 0.92) — the recorded 0.850 was one high
+draw on the prototype builder. It now returns the **mean over all 45
+leave-one-tenth-out fold pairs** (10 builds), a reproducible number, and
+`ADAPTIVE_CROSS_SAMPLE_ARI_FLOOR` is re-derived from it: **0.8 → 0.75**, below the
+averaged synthetic worst case (narrow-pilot ~0.79, the dominant-blob shape).
 
-The heavy low tail (a quarter of orderings collapse to ARI ≈ 0) is itself the
-signal: the adaptive partition on the pilot is genuinely sensitive to which ~10%
-of observations are dropped, consistent with the observed live 3→2 root-child
-wobble. Before it gates enforcement rollout, `crossSampleAri` should be reworked
-to **average over many splits** and the floor re-derived from that averaged metric.
+A fresh 1,500-obs pull of the current 7-day window (2026-07-21) still collapses
+under static (1 leaf) and resolves 3 adaptive root children / 8 leaves, with a
+~63% dominant cluster, and its **averaged xSample is 0.695 — below even the 0.75
+synthetic floor**. That dominance is why the pilot is the least-stable corpus and
+genuinely sample-sensitive (matching the live 3→2 root-child wobble) — the real
+enforcement-readiness signal for the ads pilot, tracked separately from this
+synthetic regression floor (do not gate the ads-pilot rollout on the synthetic
+0.75).
 
 ## Synthetic fixtures — static vs adaptive (committed regression)
 
@@ -145,11 +148,10 @@ are the committed regression guard, not the calibration authority.
 `minRec` = min per-group recall in one root child, `ARI` = static-vs-adaptive
 agreement, `xSample` = cross-sample stability.
 
-> These rows predate the LAT-771 builder rewrite and use the same single-split
-> `xSample` metric flagged above. Their shape/purity are range-enforced by
-> `calibration.test.ts` (which runs the **synthetic** pilot, since the real dump
-> is uncommitted), but the exact figures — and `xSample` in particular — should
-> be regenerated with the averaged metric in the same follow-up.
+> `xSample` is now the **averaged** cross-sample ARI (mean over all 45
+> leave-one-tenth-out fold pairs). The shape/purity columns predate the LAT-771
+> rewrite and stay range-enforced by `calibration.test.ts` (which runs the
+> **synthetic** pilot, since the real dump is uncommitted).
 
 | Fixture | members | groups | static rc/lf/d/pur | adaptive rc/lf/d/pur/minRec | ARI | xSample |
 | --- | --- | --- | --- | --- | --- | --- |
@@ -157,11 +159,11 @@ agreement, `xSample` = cross-sample stability.
 | telecom-support | 600 | 5 | 5 / 5 / 1 / 1.00 | 5 / 5 / 1 / 1.00 / 1.00 | 1.000 | 1.000 |
 | airline-support | 690 | 6 | 2 / 6 / 3 / 1.00 | 2 / 6 / 3 / 1.00 / 1.00 | 1.000 | 1.000 |
 | **narrow-domain** | 420 | 4 | **0 / 1 / 0 / 0.29** | **4 / 4 / 1 / 1.00 / 1.00** | 0.000 | 1.000 |
-| **narrow-pilot (synthetic)** | 730 | 5 | **0 / 1 / 0 / 0.49** | **4 / 4 / 1 / 0.92 / 1.00** | 0.000 | 0.943 |
+| **narrow-pilot (synthetic)** | 730 | 5 | **0 / 1 / 0 / 0.49** | **4 / 4 / 1 / 0.92 / 1.00** | 0.000 | 0.790 |
 | unimodal | 300 | 1 | 0 / 1 / 0 / 1.00 | 0 / 1 / 0 / 1.00 / — | 1.000 | 1.000 |
 | diffuse-multi-topic | 480 | 8 | 2 / 8 / 3 / 1.00 | 2 / 8 / 3 / 1.00 / 1.00 | 1.000 | 1.000 |
-| imbalanced-long-tail | 675 | 6 | 3 / 3 / 1 / 0.98 | 3 / 3 / 1 / 0.98 / 0.80¹ | 1.000 | 0.990 |
-| rare-intent-duplicate | 487 | 4 | 2 / 3 / 2 / 0.99 | 2 / 3 / 2 / 0.99 / — | 1.000 | 0.990 |
+| imbalanced-long-tail | 675 | 6 | 3 / 3 / 1 / 0.98 | 3 / 3 / 1 / 0.98 / 0.80¹ | 1.000 | 0.995 |
+| rare-intent-duplicate | 487 | 4 | 2 / 3 / 2 / 0.99 | 2 / 3 / 2 / 0.99 / — | 1.000 | 0.996 |
 
 ¹ Sub-floor tail group; the recall criterion applies to intended narrow-domain
 groups (all 1.00). Sub-floor tail/rare/duplicate groups are absorbed, never

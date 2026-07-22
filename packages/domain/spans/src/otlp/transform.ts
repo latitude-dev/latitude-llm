@@ -128,6 +128,10 @@ function hasValidIdLengths(normalizedTraceId: string, spanId: string): boolean {
   return normalizedTraceId.length <= TRACE_ID_LENGTH && spanId.length <= SPAN_ID_LENGTH
 }
 
+function hasParentSpan(parentSpanId: string | undefined): boolean {
+  return !!parentSpanId && !/^0+$/.test(parentSpanId)
+}
+
 function transformSpan({
   span,
   traceId,
@@ -158,6 +162,7 @@ function transformSpan({
     statusCode,
     spanName: span.name ?? "",
     scopeName,
+    hasParent: hasParentSpan(span.parentSpanId),
   })
   const content = parseContent(spanAttrs)
   const serviceName = stringAttr(resourceAttrs, "service.name") ?? ""

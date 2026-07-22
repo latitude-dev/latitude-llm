@@ -31,17 +31,16 @@ const GENAI_OPERATION: Record<string, Operation> = {
   rerank: "reranker",
 }
 
-// Bare ai.generateText/streamText/generateObject/streamObject wrappers carry a lossy
-// summary (no tool results); classify them invoke_agent so the rollup excludes them and
-// the per-leaf .doGenerate/.doStream `chat` turns hold the real conversation.
+// Vercel wrappers duplicate their leaves' usage; agent_step keeps them out of the rollup,
+// while a trace-root wrapper is the agent itself (invoke_agent, in resolveOperation).
 const VERCEL_OPERATION: Record<string, Operation> = {
-  "ai.generateText": "invoke_agent",
+  "ai.generateText": "agent_step",
   "ai.generateText.doGenerate": "chat",
-  "ai.streamText": "invoke_agent",
+  "ai.streamText": "agent_step",
   "ai.streamText.doStream": "chat",
-  "ai.generateObject": "invoke_agent",
+  "ai.generateObject": "agent_step",
   "ai.generateObject.doGenerate": "chat",
-  "ai.streamObject": "invoke_agent",
+  "ai.streamObject": "agent_step",
   "ai.streamObject.doStream": "chat",
   "ai.embed": "embeddings",
   "ai.embed.doEmbed": "embeddings",
@@ -49,6 +48,13 @@ const VERCEL_OPERATION: Record<string, Operation> = {
   "ai.embedMany.doEmbed": "embeddings",
   "ai.toolCall": "execute_tool",
 }
+
+const VERCEL_ROOT_AGENT_OPERATION_IDS: ReadonlySet<string> = new Set([
+  "ai.generateText",
+  "ai.streamText",
+  "ai.generateObject",
+  "ai.streamObject",
+])
 
 // Latitude's openai-agents TS bridge tags non-LLM spans with latitude.span.kind=agents.*
 // (its LLM span already sets gen_ai.operation.name=chat). Map only these wrapper/tool spans.
@@ -104,7 +110,12 @@ const operationCandidates = [
 // CrewAI's OpenInference instrumentor carries the whole conversation on the AGENT span (no
 // LLM leaf), so classify those `chat` for the rollup; other frameworks' AGENT spans keep
 // `invoke_agent` (they have real LLM leaves).
-export function resolveOperation(spanAttrs: readonly OtlpKeyValue[], spanName: string, scopeName = ""): string {
+export function resolveOperation(
+  spanAttrs: readonly OtlpKeyValue[],
+  spanName: string,
+  scopeName = "",
+  hasParent = true,
+): string {
   if (
     scopeName.startsWith(CREWAI_OPENINFERENCE_SCOPE) &&
     stringAttr(spanAttrs, "openinference.span.kind") === "AGENT"
@@ -114,6 +125,9 @@ export function resolveOperation(spanAttrs: readonly OtlpKeyValue[], spanName: s
   if (scopeName === OPENCLAW_TELEMETRY_SCOPE) {
     const mapped = OPENCLAW_SPAN_OPERATION[spanName]
     if (mapped) return mapped
+  }
+  if (!hasParent && VERCEL_ROOT_AGENT_OPERATION_IDS.has(stringAttr(spanAttrs, "ai.operationId") ?? "")) {
+    return "invoke_agent"
   }
   return first(operationCandidates, spanAttrs) ?? operationFromClaudeCodeNativeSpanName(spanName) ?? "unspecified"
 }

@@ -1371,14 +1371,14 @@ function AgentDispatchHistorySection({
       header: "Source",
       width: 260,
       render: (dispatch) =>
-        dispatch.sourceType === "signal" ? (
+        dispatch.sourceType === "signal" && dispatch.sourceSlug ? (
           <Link
-            to="/projects/$projectSlug/signals/$signalId"
-            params={{ projectSlug, signalId: dispatch.sourceId }}
-            aria-label={`Open signal ${dispatch.sourceName ?? dispatch.sourceId}`}
+            to="/projects/$projectSlug/signals/$signalSlug"
+            params={{ projectSlug, signalSlug: dispatch.sourceSlug }}
+            aria-label={`Open signal ${dispatch.sourceName ?? dispatch.sourceSlug}`}
             className="flex min-w-0 items-center gap-1 text-xs font-semibold text-foreground hover:underline"
           >
-            <span className="truncate">{dispatch.sourceName ?? "Deleted signal"}</span>
+            <span className="truncate">{dispatch.sourceName ?? dispatch.sourceSlug}</span>
             <Icon icon={ExternalLink} size="xs" />
           </Link>
         ) : dispatch.sourceType === "monitor" && dispatch.sourceSlug ? (

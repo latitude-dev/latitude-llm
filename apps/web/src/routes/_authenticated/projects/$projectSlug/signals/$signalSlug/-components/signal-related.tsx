@@ -70,8 +70,8 @@ function ReasonChips({ row }: { readonly row: RelatedSignalRecord }) {
 function RelatedSignalCard({ projectSlug, row }: { readonly projectSlug: string; readonly row: RelatedSignalRecord }) {
   return (
     <Link
-      to="/projects/$projectSlug/signals/$signalId"
-      params={{ projectSlug, signalId: row.signalId }}
+      to="/projects/$projectSlug/signals/$signalSlug"
+      params={{ projectSlug, signalSlug: row.slug }}
       aria-label={`Open the ${row.name} issue`}
       className="group flex flex-col gap-2 rounded-lg bg-secondary p-4 hover:bg-accent"
     >

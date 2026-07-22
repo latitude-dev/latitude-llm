@@ -804,10 +804,11 @@ function TopListRow({
     )
   }
   if (entity === "signals") {
+    // For the signals entity `item.key` is the signal slug (see the experiments relabel).
     return (
       <Link
-        to="/projects/$projectSlug/signals/$signalId"
-        params={{ projectSlug, signalId: item.key }}
+        to="/projects/$projectSlug/signals/$signalSlug"
+        params={{ projectSlug, signalSlug: item.key }}
         className={className}
       >
         {children}

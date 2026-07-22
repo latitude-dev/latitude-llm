@@ -26,6 +26,7 @@ export function ReadOnlyScoreCard({ score, projectId }: ScoreCardProps) {
   })
 
   const linkedSignalName = linkedSignal?.name ?? null
+  const linkedSignalSlug = linkedSignal?.slug ?? null
   const linkedSignalDescription = linkedSignal?.description?.trim()
   const sourceLabel = SOURCE_LABELS[score.source]
   const feedback = score.feedback?.trim()
@@ -89,11 +90,11 @@ export function ReadOnlyScoreCard({ score, projectId }: ScoreCardProps) {
               </Badge>
             )
             const trigger =
-              projectSlug && score.signalId ? (
+              projectSlug && linkedSignalSlug ? (
                 <Link
                   data-no-navigate
-                  to="/projects/$projectSlug/signals/$signalId"
-                  params={{ projectSlug, signalId: score.signalId }}
+                  to="/projects/$projectSlug/signals/$signalSlug"
+                  params={{ projectSlug, signalSlug: linkedSignalSlug }}
                   aria-label={`Open signal ${linkedSignalName}`}
                   onClick={(event) => event.stopPropagation()}
                   className="inline-flex min-w-0"

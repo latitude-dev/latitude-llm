@@ -117,12 +117,12 @@ export function MonitorIncidentsTable({
   // Rows whose producer was deleted (or can't be deep-linked) return null and aren't navigable.
   const renderRowLink = useCallback(
     (incident: MonitorIncidentRecord, props: { className: string }): ReactNode => {
-      if (incident.sourceType === "signal" && incident.sourceName) {
+      if (incident.sourceType === "signal" && incident.sourceSlug) {
         return (
           <Link
-            to="/projects/$projectSlug/signals/$signalId"
-            params={{ projectSlug, signalId: incident.sourceId }}
-            aria-label={`Open signal ${incident.sourceName}`}
+            to="/projects/$projectSlug/signals/$signalSlug"
+            params={{ projectSlug, signalSlug: incident.sourceSlug }}
+            aria-label={`Open signal ${incident.sourceName ?? incident.sourceSlug}`}
             {...props}
           />
         )

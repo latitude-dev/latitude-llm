@@ -1853,6 +1853,9 @@ importers:
       '@domain/organizations':
         specifier: workspace:*
         version: link:../organizations
+      '@domain/projects':
+        specifier: workspace:*
+        version: link:../projects
       '@domain/queue':
         specifier: workspace:*
         version: link:../queue
@@ -1868,6 +1871,9 @@ importers:
       '@domain/spans':
         specifier: workspace:*
         version: link:../spans
+      '@paralleldrive/cuid2':
+        specifier: 'catalog:'
+        version: 3.3.0
       '@repo/utils':
         specifier: workspace:*
         version: link:../../utils

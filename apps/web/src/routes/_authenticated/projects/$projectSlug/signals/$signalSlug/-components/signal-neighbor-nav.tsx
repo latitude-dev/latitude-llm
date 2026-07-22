@@ -21,44 +21,47 @@ import { useSignals } from "../../../../../../../domains/signals/signals.collect
 export function SignalNeighborNav({
   projectId,
   projectSlug,
-  signalId,
+  signalSlug,
   lifecycleGroup,
   overlayActive,
 }: {
   readonly projectId: string
   readonly projectSlug: string
-  readonly signalId: string
+  readonly signalSlug: string
   readonly lifecycleGroup: "active" | "archived"
   readonly overlayActive: boolean
 }) {
   const navigate = useNavigate()
   const { data: issues } = useSignals({ projectId, lifecycleGroup, enabled: projectId.length > 0 })
 
-  const { prevId, nextId } = useMemo(() => {
-    const ids = issues.map((issue) => issue.id)
-    const index = ids.indexOf(signalId)
-    if (index < 0) return { prevId: undefined, nextId: undefined }
+  const { prevSlug, nextSlug } = useMemo(() => {
+    const slugs = issues.map((issue) => issue.slug)
+    const index = slugs.indexOf(signalSlug)
+    if (index < 0) return { prevSlug: undefined, nextSlug: undefined }
     return {
-      prevId: index > 0 ? ids[index - 1] : undefined,
-      nextId: index < ids.length - 1 ? ids[index + 1] : undefined,
+      prevSlug: index > 0 ? slugs[index - 1] : undefined,
+      nextSlug: index < slugs.length - 1 ? slugs[index + 1] : undefined,
     }
-  }, [issues, signalId])
+  }, [issues, signalSlug])
 
-  const goToSignal = (targetId: string | undefined) => {
-    if (!targetId) return
-    void navigate({ to: "/projects/$projectSlug/signals/$signalId", params: { projectSlug, signalId: targetId } })
+  const goToSignal = (targetSlug: string | undefined) => {
+    if (!targetSlug) return
+    void navigate({
+      to: "/projects/$projectSlug/signals/$signalSlug",
+      params: { projectSlug, signalSlug: targetSlug },
+    })
   }
 
   useHotkeys([
     {
       hotkey: "J",
-      callback: () => goToSignal(nextId),
-      options: { enabled: !!nextId && !overlayActive, ignoreInputs: true },
+      callback: () => goToSignal(nextSlug),
+      options: { enabled: !!nextSlug && !overlayActive, ignoreInputs: true },
     },
     {
       hotkey: "K",
-      callback: () => goToSignal(prevId),
-      options: { enabled: !!prevId && !overlayActive, ignoreInputs: true },
+      callback: () => goToSignal(prevSlug),
+      options: { enabled: !!prevSlug && !overlayActive, ignoreInputs: true },
     },
   ])
 
@@ -71,8 +74,8 @@ export function SignalNeighborNav({
           <Button
             variant="ghost"
             className="h-8 w-8 p-0"
-            disabled={!prevId}
-            onClick={() => goToSignal(prevId)}
+            disabled={!prevSlug}
+            onClick={() => goToSignal(prevSlug)}
             type="button"
             aria-label="Previous issue"
           >
@@ -89,8 +92,8 @@ export function SignalNeighborNav({
           <Button
             variant="ghost"
             className="h-8 w-8 p-0"
-            disabled={!nextId}
-            onClick={() => goToSignal(nextId)}
+            disabled={!nextSlug}
+            onClick={() => goToSignal(nextSlug)}
             type="button"
             aria-label="Next issue"
           >

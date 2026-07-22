@@ -357,6 +357,7 @@ export const listAgentDispatches = createServerFn({ method: "GET" })
           .map((dispatch) => SignalId(dispatch.sourceId))
         const signals = signalIds.length > 0 ? yield* signalRepository.findByIds({ projectId, signalIds }) : []
         const signalNameById = new Map<string, string>(signals.map((signal) => [signal.id, signal.name]))
+        const signalSlugById = new Map<string, string>(signals.map((signal) => [signal.id, signal.slug]))
         const monitorIds = [
           ...new Set(
             dispatches.filter((dispatch) => dispatch.sourceType === "monitor").map((dispatch) => dispatch.sourceId),
@@ -390,7 +391,12 @@ export const listAgentDispatches = createServerFn({ method: "GET" })
                 : dispatch.sourceType === "monitor"
                   ? (monitor?.name ?? null)
                   : null,
-            sourceSlug: dispatch.sourceType === "monitor" ? (monitor?.slug ?? null) : null,
+            sourceSlug:
+              dispatch.sourceType === "signal"
+                ? (signalSlugById.get(dispatch.sourceId) ?? null)
+                : dispatch.sourceType === "monitor"
+                  ? (monitor?.slug ?? null)
+                  : null,
             routineUrl,
           }
         })
