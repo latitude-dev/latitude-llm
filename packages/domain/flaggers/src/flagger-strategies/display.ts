@@ -71,7 +71,7 @@ export const FLAGGER_DISPLAY: Record<FlaggerSlug, FlaggerDisplay> = {
     name: "Thrashing",
     description: "The agent cycles between tools without making progress",
     instructions:
-      "Use this queue when the agent repeatedly invokes the same tools or tool sequences, oscillates between states, or accumulates tool calls without advancing toward the goal. Do not use this queue for legitimate retries after transient errors or for iterative refinement that is visibly converging.",
+      "Use this queue when the agent repeatedly invokes the same tools or tool sequences, oscillates between states, or accumulates tool calls without advancing toward the goal. Do not use this queue for legitimate retries after transient errors, a single fail→remediate→retry recovery, or iterative refinement that is visibly converging.",
     mode: "llm",
     suppressedBy: [],
   },

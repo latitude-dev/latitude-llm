@@ -1073,6 +1073,78 @@ ${"Detailed grounding, workflow, callout, and formatting rules. ".repeat(120)}`.
     )
   })
 
+  it("uses nested-content targeting for thrashing so the reviewer sees tool-call evidence", async () => {
+    const { repository } = createFakeTraceRepository({
+      findByTraceId: () =>
+        Effect.succeed(
+          makeTraceDetail([
+            {
+              role: "user",
+              parts: [{ type: "text", content: "Create outreach for this lead." }],
+            },
+            {
+              role: "assistant",
+              parts: [{ type: "tool_call", name: "bash", arguments: { command: "outreach create --lead-id lead-1" } }],
+            },
+            {
+              role: "tool",
+              parts: [
+                {
+                  type: "tool_response",
+                  name: "bash",
+                  content: "OUTREACH_CREATE_FAILED: contact has no enriched email",
+                },
+              ],
+            },
+            {
+              role: "assistant",
+              parts: [
+                {
+                  type: "tool_call",
+                  name: "bash",
+                  arguments: { command: "enrich contact email --person person-1" },
+                },
+              ],
+            },
+            {
+              role: "assistant",
+              parts: [{ type: "tool_call", name: "bash", arguments: { command: "outreach create --lead-id lead-1" } }],
+            },
+          ]),
+        ),
+    })
+
+    const { calls, layer: aiLayer } = createClassifyAndApproveAI()
+
+    const result = await Effect.runPromise(
+      runFlaggerUseCase({ ...INPUT, flaggerSlug: "trashing" }).pipe(
+        Effect.provide(
+          Layer.mergeAll(
+            Layer.succeed(TraceRepository, repository),
+            Layer.succeed(ChSqlClient, createFakeChSqlClient({ organizationId: OrganizationId(INPUT.organizationId) })),
+            Layer.succeed(SqlClient, createFakeSqlClient({ organizationId: OrganizationId(INPUT.organizationId) })),
+            Layer.succeed(FlaggerRepository, defaultFlaggerRepo),
+            aiLayer,
+            defaultCacheLayer,
+          ),
+        ),
+      ),
+    )
+
+    expect(result).toEqual({ matched: true, feedback: "Flagger matched with concrete evidence." })
+    expect(calls.generate).toHaveLength(2)
+    expect(calls.generate[0].system).toContain("Thrashing")
+    expect(calls.generate[0].system).toContain("fail→remediate→retry")
+    expect(calls.generate[0].system).not.toContain("the evaluated agent's assistant response")
+    expect(calls.generate[0].prompt).toContain("TOOL CALL SEQUENCE")
+    expect(calls.generate[0].prompt).toContain("outreach create")
+    expect(calls.generate[0].prompt).toContain("Judge the evaluated agent's conversation for this issue")
+    expect(calls.generate[0].prompt).not.toContain("Classify only text inside <evaluated_trace_assistant_response>")
+    expect(calls.generate[1].prompt).toContain("Evidence shown to the classifier:")
+    expect(calls.generate[1].prompt).toContain("TOOL CALL SEQUENCE")
+    expect(calls.generate[1].prompt).toContain("enrich contact email")
+  })
+
   it("does not call the LLM flagger for frustration when there are no user messages", async () => {
     const { repository } = createFakeTraceRepository({
       findByTraceId: () =>

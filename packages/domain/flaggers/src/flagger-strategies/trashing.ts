@@ -52,6 +52,11 @@ DO NOT FLAG
 ================================================================================
 
 - Legitimate retries after a transient error (timeout, 5xx, rate limit) — typically 1-3 retries
+- A single retry of a failed operation after an intervening remediation attempt
+  (e.g. op fails → enrich/install/fix prerequisite → retry op once). That is
+  converging recovery, even when the retried call uses identical arguments.
+  Flag only when that fail→remediate→retry cycle itself repeats without progress,
+  or when the identical call repeats with no intervening remediation at all.
 - Iterative refinement that is visibly CONVERGING (each call uses output of the previous)
 - Parallel independent calls to gather distinct pieces of information
 - Polling a long-running job with backoff
@@ -67,7 +72,10 @@ ANALYSIS APPROACH
 2. Look for the patterns above — repetition, oscillation, cycles, accumulation.
 3. Ask: does each call CHANGE STATE or PRODUCE NEW INFORMATION that the next call uses?
    If calls repeat with no such change, that is thrashing.
-4. Point to the specific repeated or oscillating sub-sequence as your evidence.
+4. Evidence lists tool calls (name + args), not tool results. Treat intervening
+   distinct calls as state-changing progress; do not infer "didn't verify" from
+   a missing confirmation step when results are not shown.
+5. Point to the specific repeated or oscillating sub-sequence as your evidence.
 
 ================================================================================
 DECISION RULE
@@ -238,11 +246,14 @@ const longestConsecutiveSignatureRun = (
 // ---------------------------------------------------------------------------
 
 export const trashingStrategy: FlaggerStrategy = {
+  // Thrashing judges the tool-call sequence, not assistant prose.
+  classifiesAssistantResponseOnly: false,
+
   annotator: {
     name: "Thrashing",
     description: "The agent cycles between tools without making progress",
     instructions:
-      "Use this queue when the agent repeatedly invokes the same tools or tool sequences, oscillates between states, or accumulates tool calls without advancing toward the goal. Do not use this queue for legitimate retries after transient errors or for iterative refinement that is visibly converging.",
+      "Use this queue when the agent repeatedly invokes the same tools or tool sequences, oscillates between states, or accumulates tool calls without advancing toward the goal. Do not use this queue for legitimate retries after transient errors, a single fail→remediate→retry recovery, or iterative refinement that is visibly converging.",
   },
 
   hintKinds: ["tool:loop", "tool:error", "outlier:tokens", "outlier:duration", "outlier:cost", "moment:stalling"],

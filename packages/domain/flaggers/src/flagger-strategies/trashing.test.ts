@@ -3,6 +3,19 @@ import { describe, expect, it } from "vitest"
 import { assistant, assistantToolCall, makeTrace, user } from "./test-helpers.ts"
 import { extractToolCallSequence, findDominantToolUsage, trashingStrategy } from "./trashing.ts"
 
+describe("trashingStrategy targeting", () => {
+  it("does not use assistant-only targeting (tool-call sequence evidence)", () => {
+    expect(trashingStrategy.classifiesAssistantResponseOnly).toBe(false)
+  })
+
+  it("excludes single fail→remediate→retry recovery from thrashing matches", () => {
+    const prompt = trashingStrategy.buildSystemPrompt?.(makeTrace([])) ?? ""
+    expect(prompt).toContain("fail→remediate→retry")
+    expect(prompt).toContain("do not infer \"didn't verify\"")
+    expect(trashingStrategy.annotator?.instructions).toContain("fail→remediate→retry")
+  })
+})
+
 describe("trashingStrategy.detectDeterministically", () => {
   describe("matched (≥3 identical tool+args signatures)", () => {
     it("matches when the same tool+args appears exactly 3 times", () => {
