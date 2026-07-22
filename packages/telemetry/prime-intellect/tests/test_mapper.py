@@ -88,6 +88,7 @@ def test_map_trace_builds_interaction_and_llm_spans():
     assert llm_attrs["gen_ai.usage.input_tokens"] == 12
     assert llm_attrs["gen_ai.usage.output_tokens"] == 2
     assert llm_attrs["gen_ai.response.finish_reasons"] == ["stop"]
+    assert llm_attrs["session.id"] == "eval-run-1"
 
     assert len(scores) == 1
     assert scores[0]["trace"] == {"by": "id", "id": "a" * 32}

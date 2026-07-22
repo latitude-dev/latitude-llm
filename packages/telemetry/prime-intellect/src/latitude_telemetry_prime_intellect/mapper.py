@@ -134,8 +134,12 @@ def _map_trace_to_run(
     )
 
     closed: List[_Span] = []
-    closed.extend(_llm_spans(trace_id, root.span_id, calls, messages, tags, metadata, model))
-    closed.extend(_tool_spans(trace_id, root.span_id, messages, tags, metadata, start_ms, end_ms))
+    closed.extend(
+        _llm_spans(trace_id, root.span_id, calls, messages, tags, metadata, model, resolved_session)
+    )
+    closed.extend(
+        _tool_spans(trace_id, root.span_id, messages, tags, metadata, start_ms, end_ms, resolved_session)
+    )
 
     run = _Run(trace_id=trace_id, root=root, closed=closed)
     if rewards:
@@ -218,6 +222,7 @@ def _llm_spans(
     tags: List[str],
     metadata: Dict[str, Any],
     default_model: Any,
+    session_id: str,
 ) -> List[_Span]:
     spans: List[_Span] = []
     for index, call in enumerate(calls):
@@ -238,7 +243,8 @@ def _llm_spans(
             "llm_request.call_index": index,
             "latitude.tags": tags,
             "latitude.metadata": metadata,
-            "session.id": metadata.get("verifiers.trace.id"),
+            "session.id": session_id,
+            "gen_ai.session.id": session_id,
         }
         if model:
             attrs["model"] = model
@@ -302,6 +308,7 @@ def _tool_spans(
     metadata: Dict[str, Any],
     start_ms: int,
     end_ms: int,
+    session_id: str,
 ) -> List[_Span]:
     spans: List[_Span] = []
     pending_calls: Dict[str, Dict[str, Any]] = {}
@@ -350,6 +357,8 @@ def _tool_spans(
                         "gen_ai.tool.call.result:gated": _tool_result(content),
                         "latitude.tags": tags,
                         "latitude.metadata": metadata,
+                        "session.id": session_id,
+                        "gen_ai.session.id": session_id,
                         "success": "true",
                     },
                 )
