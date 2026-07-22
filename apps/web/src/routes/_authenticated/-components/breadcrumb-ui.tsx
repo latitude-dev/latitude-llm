@@ -1,8 +1,25 @@
 import { cn, Text } from "@repo/ui"
 import { type CreateLinkProps, Link } from "@tanstack/react-router"
+import { ChevronsUpDown } from "lucide-react"
 import type { ReactNode } from "react"
 
 const linkClass = "inline-flex items-center min-w-0 px-2 py-1 rounded hover:bg-muted transition-colors cursor-pointer"
+
+/**
+ * Shared trigger style for the org and project switchers (both `Combobox`-based),
+ * matching the org switcher's original design — the reference both were unified to:
+ * same padding/radius/hover surface, same emoji sizing, same label color/weight,
+ * and the same chevron glyph (passed as `ComboboxTrigger`'s `icon` override, since
+ * its built-in default is a different single-chevron icon).
+ */
+export const breadcrumbSwitcherTriggerClassName =
+  "flex min-w-0 max-w-48 items-center gap-1.5 px-2 py-1 rounded hover:bg-muted transition-colors cursor-pointer"
+
+export const breadcrumbSwitcherEmojiClassName = "text-base leading-none shrink-0"
+
+export function BreadcrumbSwitcherChevron() {
+  return <ChevronsUpDown className="h-4 w-4 shrink-0 text-muted-foreground" />
+}
 
 export type BreadcrumbLinkProps = Omit<CreateLinkProps, "children"> & {
   children: ReactNode

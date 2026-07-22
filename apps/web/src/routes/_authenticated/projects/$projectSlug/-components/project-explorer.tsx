@@ -556,7 +556,7 @@ export function ProjectExplorer({ projectSlug }: { readonly projectSlug: string 
                   asChild
                   trigger={
                     <span className="inline-flex">
-                      <Button variant="outline" size="sm" className="h-8 w-auto" disabled>
+                      <Button variant="outline" size="default" className="h-8 w-auto" disabled>
                         <Icon icon={BellPlusIcon} size="sm" />
                         Monitor sessions
                       </Button>
@@ -585,7 +585,7 @@ export function ProjectExplorer({ projectSlug }: { readonly projectSlug: string 
                 trigger={
                   <Button
                     variant="outline"
-                    size="sm"
+                    size="default"
                     className="h-8 w-auto"
                     onClick={() => void createCustomBehaviorFromFilters()}
                   >
@@ -600,6 +600,8 @@ export function ProjectExplorer({ projectSlug }: { readonly projectSlug: string 
             <Tabs
               variant="bordered"
               size="sm"
+              className="border-none bg-muted"
+              indicatorClassName="border-none"
               options={[
                 {
                   id: "sessions",

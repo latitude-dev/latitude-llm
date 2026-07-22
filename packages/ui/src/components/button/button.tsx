@@ -147,6 +147,22 @@ function getElementDisplayName(type: unknown): string {
   return ""
 }
 
+/**
+ * `asChild` merges the container and inner variant classes onto a single
+ * element — `Slot` has no room for the button/div split the default render
+ * uses to separate "has `.group`" from "reacts to `group-*`". `group-hover:` /
+ * `group-active:` / `group-disabled:` need an ANCESTOR carrying `.group`, not
+ * the same element, so they silently never match once merged. Rewriting them
+ * to their plain self-referencing pseudo-class equivalents keeps the exact
+ * same variant visuals working when applied to a single node.
+ */
+function degroupSelectors(classNames: string): string {
+  return classNames
+    .replace(/\bgroup-hover:/g, "hover:")
+    .replace(/\bgroup-active:/g, "active:")
+    .replace(/\bgroup-disabled:/g, "disabled:")
+}
+
 function isLeadingIconLikeChild(child: unknown): boolean {
   if (!isValidElement(child)) {
     return false
@@ -187,8 +203,7 @@ function Button({
       <Slot
         ref={ref}
         className={cn(
-          buttonContainerVariants({ variant }),
-          buttonVariantsConfig({ variant, size }),
+          degroupSelectors(cn(buttonContainerVariants({ variant }), buttonVariantsConfig({ variant, size }))),
           // Slot can't add the inner wrapper that normally spaces icon and label.
           "gap-x-1.5",
           className,

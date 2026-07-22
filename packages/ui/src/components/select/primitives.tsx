@@ -27,7 +27,7 @@ const SelectTriggerSurface = React.forwardRef<HTMLDivElement, SelectTriggerSurfa
       tabIndex={0}
       className={cn(
         "flex w-full min-w-0 cursor-pointer items-center justify-between rounded-lg border border-input bg-transparent text-left",
-        "px-3 shadow-sm ring-offset-background placeholder:text-muted-foreground outline-none focus:ring-1 focus:ring-ring",
+        "px-3 shadow-none ring-offset-background placeholder:text-muted-foreground outline-none focus:ring-1 focus:ring-ring",
         "data-disabled:cursor-not-allowed data-disabled:opacity-50 [&>span]:line-clamp-1",
         font.size.h5,
         {

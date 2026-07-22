@@ -6,23 +6,34 @@ import { TagBadge, TagBadgeList } from "./tag-badge.tsx"
 /** Gap between flex items in pixels (matches gap-1 / 0.25rem at 16px base). */
 const GAP_PX = 4
 
+/** Below this width a truncated badge would be an unreadable sliver — collapse to "+N" instead. */
+const MIN_TRUNCATED_PX = 28
+
 export interface TagListProps {
   readonly tags: readonly string[]
   readonly wrap?: boolean
 }
 
+interface Layout {
+  readonly visibleCount: number
+  readonly truncatedWidth: number | null
+}
+
 /**
  * Renders a horizontal list of tag badges left-to-right.
  *
- * By default, when the list overflows the container it truncates to the largest
- * prefix that fits alongside a "+N" overflow badge, so nothing is ever clipped
- * or scrolled. Hovering the overflow badge shows the full tag list in a
- * tooltip. When `wrap` is true, all tags are rendered and wrap onto new lines
- * as needed instead of collapsing into "+N".
+ * By default, when the list overflows the container it shows the largest
+ * prefix of full-width badges that fits alongside a "+N" overflow badge. If
+ * even the next badge can't fit at full width, it's shown ellipsis-truncated
+ * to whatever space remains instead of being clipped outright; if there isn't
+ * even room for a readable sliver, it collapses into the "+N" count instead.
+ * Nothing is ever hard-clipped or scrolled. Hovering the overflow badge shows
+ * the full tag list in a tooltip. When `wrap` is true, all tags are rendered
+ * and wrap onto new lines as needed instead of collapsing into "+N".
  */
 export const TagList = memo(function TagList({ tags, wrap = false }: TagListProps) {
   const containerRef = useRef<HTMLDivElement>(null)
-  const [visibleCount, setVisibleCount] = useState(tags.length)
+  const [layout, setLayout] = useState<Layout>({ visibleCount: tags.length, truncatedWidth: null })
   const sorted = useMemo(() => [...tags].sort(), [tags])
 
   useLayoutEffect(() => {
@@ -34,51 +45,71 @@ export const TagList = memo(function TagList({ tags, wrap = false }: TagListProp
       const tagEls = Array.from(container.querySelectorAll<HTMLElement>("[data-tag-item]"))
       const overflowEl = container.querySelector<HTMLElement>("[data-overflow]")
 
-      // Temporarily reveal everything so we can measure natural widths.
+      // Temporarily reveal everything at natural width so we can measure it.
       tagEls.forEach((el) => {
         el.style.display = ""
+        const badgeEl = el.firstElementChild as HTMLElement | null
+        if (badgeEl) badgeEl.style.maxWidth = ""
       })
       if (overflowEl) overflowEl.style.display = "inline-flex"
 
       const containerWidth = container.offsetWidth
+      const tagWidths = tagEls.map((el) => el.offsetWidth)
       // Include the gap that would precede the overflow badge.
       const overflowWidth = overflowEl ? overflowEl.offsetWidth + GAP_PX : 0
 
-      const totalWidth = tagEls.reduce((acc, el, i) => acc + (i > 0 ? GAP_PX : 0) + el.offsetWidth, 0)
+      const totalWidth = tagWidths.reduce((acc, w, i) => acc + (i > 0 ? GAP_PX : 0) + w, 0)
 
-      let newCount = tags.length
+      let fullCount = tags.length
+      let truncatedWidth: number | null = null
 
       if (totalWidth > containerWidth) {
-        // Find the largest prefix that leaves room for the overflow badge.
+        // Find the largest prefix of full-width badges that leaves room for the overflow badge.
         let usedWidth = 0
-        newCount = 0
+        fullCount = 0
 
-        for (let i = 0; i < tagEls.length; i++) {
+        for (let i = 0; i < tagWidths.length; i++) {
           const gap = i > 0 ? GAP_PX : 0
-          const tagWidth = tagEls[i].offsetWidth
+          const tagWidth = tagWidths[i]
 
           if (usedWidth + gap + tagWidth + overflowWidth <= containerWidth) {
             usedWidth += gap + tagWidth
-            newCount = i + 1
+            fullCount = i + 1
           } else {
             break
           }
         }
 
-        // Always show at least one tag — showing only "+N" with no visible
-        // tags is confusing, especially when there is a single tag.
-        if (newCount === 0) newCount = 1
+        if (fullCount < tags.length) {
+          // Whatever comes right after the last full badge: is it the only
+          // tag left (no overflow badge needed) or are there more behind it?
+          const pillNeeded = fullCount < tags.length - 1
+          const gapBeforeNext = fullCount > 0 ? GAP_PX : 0
+          const budget = containerWidth - usedWidth - gapBeforeNext - (pillNeeded ? overflowWidth : 0)
+
+          if (budget >= MIN_TRUNCATED_PX) truncatedWidth = budget
+        }
       }
 
-      // Apply visibility directly so React doesn't need another paint cycle.
+      const visibleCount = truncatedWidth != null ? fullCount + 1 : fullCount
+
+      // Apply visibility/width directly so React doesn't need another paint cycle.
       tagEls.forEach((el, i) => {
-        el.style.display = i >= newCount ? "none" : ""
+        const badgeEl = el.firstElementChild as HTMLElement | null
+        if (i < fullCount) {
+          el.style.display = ""
+        } else if (truncatedWidth != null && i === fullCount) {
+          el.style.display = ""
+          if (badgeEl) badgeEl.style.maxWidth = `${truncatedWidth}px`
+        } else {
+          el.style.display = "none"
+        }
       })
       if (overflowEl) {
-        overflowEl.style.display = newCount < tags.length ? "inline-flex" : "none"
+        overflowEl.style.display = visibleCount < tags.length ? "inline-flex" : "none"
       }
 
-      setVisibleCount(newCount)
+      setLayout({ visibleCount, truncatedWidth })
     }
 
     const observer = new ResizeObserver(measure)
@@ -100,6 +131,7 @@ export const TagList = memo(function TagList({ tags, wrap = false }: TagListProp
     )
   }
 
+  const { visibleCount, truncatedWidth } = layout
   const hasOverflow = visibleCount < sorted.length
   const hiddenTags = sorted.slice(visibleCount)
 
@@ -107,7 +139,11 @@ export const TagList = memo(function TagList({ tags, wrap = false }: TagListProp
     <div ref={containerRef} className="flex items-center gap-1 overflow-hidden min-w-0">
       {sorted.map((tag, i) => (
         <span key={tag} data-tag-item="" style={{ display: i >= visibleCount ? "none" : undefined }}>
-          <TagBadge tag={tag} />
+          {truncatedWidth != null && i === visibleCount - 1 ? (
+            <TagBadge tag={tag} maxWidthPx={truncatedWidth} />
+          ) : (
+            <TagBadge tag={tag} />
+          )}
         </span>
       ))}
       <Tooltip

@@ -8,6 +8,7 @@ import { useProjectsCollection } from "../../../../domains/projects/projects.col
 import { useSandboxLifecycleMutations } from "../../../../domains/sandbox/sandbox.collection.ts"
 import { useSandboxProjects } from "../../../../domains/sandbox/sandbox-projects.collection.ts"
 import { AppSidebar, NavItem } from "../../../../layouts/AppSidebar/index.tsx"
+import { SidebarCollapseProvider } from "../../../../layouts/AppSidebar/sidebar-collapse.tsx"
 import { ContentErrorBoundary } from "../../../../lib/client-error-reporting.tsx"
 import { toUserMessage } from "../../../../lib/errors.ts"
 import { SandboxConfigModal } from "./sandbox-config-modal.tsx"
@@ -164,36 +165,38 @@ export function SandboxShell() {
           <div className="absolute inset-0 z-20 cursor-not-allowed bg-background/50" aria-hidden="true" />
         ) : null}
         <SandboxNavHeader sandboxOrgId={sandboxOrgId} sandboxName={sandbox.name} />
-        <div className="flex min-h-0 flex-1">
-          <AppSidebar
-            title={currentProject?.name ?? sandbox.name}
-            subtitle={
-              currentProject ? (
-                <CopyableText value={currentProject.slug} size="sm" tooltip="Copy project slug" ellipsis />
-              ) : (
-                <Text.H6 color="foregroundMuted">Sandbox</Text.H6>
-              )
-            }
-            footer={({ collapsed }) => (
-              <SandboxToggle collapsed={collapsed} checked loading={isExiting} onToggle={() => void exitToLive()} />
-            )}
-          >
-            {({ collapsed }) => (
-              <NavItem
-                icon={MessagesSquareIcon}
-                label="Sessions"
-                to={sessionsTo}
-                active={sessionsActive}
-                collapsed={collapsed}
-              />
-            )}
-          </AppSidebar>
-          <main className="min-w-0 flex-1 overflow-y-auto">
-            <ContentErrorBoundary>
-              <Outlet />
-            </ContentErrorBoundary>
-          </main>
-        </div>
+        <SidebarCollapseProvider>
+          <div className="flex min-h-0 flex-1">
+            <AppSidebar
+              title={currentProject?.name ?? sandbox.name}
+              subtitle={
+                currentProject ? (
+                  <CopyableText value={currentProject.slug} size="sm" tooltip="Copy project slug" ellipsis />
+                ) : (
+                  <Text.H6 color="foregroundMuted">Sandbox</Text.H6>
+                )
+              }
+              footer={({ collapsed }) => (
+                <SandboxToggle collapsed={collapsed} checked loading={isExiting} onToggle={() => void exitToLive()} />
+              )}
+            >
+              {({ collapsed }) => (
+                <NavItem
+                  icon={MessagesSquareIcon}
+                  label="Sessions"
+                  to={sessionsTo}
+                  active={sessionsActive}
+                  collapsed={collapsed}
+                />
+              )}
+            </AppSidebar>
+            <main className="min-w-0 flex-1 overflow-y-auto">
+              <ContentErrorBoundary>
+                <Outlet />
+              </ContentErrorBoundary>
+            </main>
+          </div>
+        </SidebarCollapseProvider>
       </div>
     </div>
   )

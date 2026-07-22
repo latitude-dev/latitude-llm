@@ -4,16 +4,22 @@ import { cn } from "../../utils/cn.ts"
 
 export interface TagBadgeProps {
   readonly tag: string
+  /** When set, the badge shrinks to this width and ellipsizes its text instead of overflowing. */
+  readonly maxWidthPx?: number
 }
 
 const tagBadgeClassName = "inline-flex items-center rounded-md px-1.5 py-0.5 text-xs font-medium"
 
-export const TagBadge = memo(function TagBadge({ tag }: TagBadgeProps) {
+export const TagBadge = memo(function TagBadge({ tag, maxWidthPx }: TagBadgeProps) {
   const { style, className } = useHashColor(tag)
+  const truncate = maxWidthPx != null
 
   return (
-    <span className={cn(tagBadgeClassName, className)} style={style}>
-      {tag}
+    <span
+      className={cn(tagBadgeClassName, className, { "min-w-0": truncate })}
+      style={truncate ? { ...style, maxWidth: maxWidthPx } : style}
+    >
+      <span className={cn({ truncate })}>{tag}</span>
     </span>
   )
 })

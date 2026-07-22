@@ -1,13 +1,21 @@
-import { Button, cn, Icon, Text, Tooltip, useLocalStorage, useValueWithDefault } from "@repo/ui"
+import { Button, cn, Icon, LatitudeLogo, Text, Tooltip } from "@repo/ui"
 import { extractLeadingEmoji } from "@repo/utils"
-import { useHotkeys } from "@tanstack/react-hotkeys"
 import { Link } from "@tanstack/react-router"
-import { ChevronDown, ChevronRight, ChevronsUp, PanelLeft, PanelLeftClose } from "lucide-react"
+import { ChevronDown, ChevronRight, ChevronsUp } from "lucide-react"
 import { type ReactElement, type ReactNode, useState } from "react"
-import { HotkeyBadge } from "../../components/hotkey-badge.tsx"
-import { useHasMatchStaticData } from "../../lib/hooks/use-router-selectors.ts"
+import { useThemePreference } from "../../lib/theme.ts"
+import { useRootThemePreference } from "../../routes/-root-route-data.ts"
+import { SidebarCollapseToggleButton, useSidebarCollapse } from "./sidebar-collapse.tsx"
 
 type NavItemIcon = React.ComponentType<React.SVGProps<SVGSVGElement>>
+
+function SidebarBrandLogo() {
+  const initialTheme = useRootThemePreference()
+  const { theme } = useThemePreference(initialTheme)
+  const src = theme === "dark" ? "/latitude-logo-dark.png" : "/latitude-logo.png"
+
+  return <img src={src} alt="Latitude" className="h-5 w-auto shrink-0" />
+}
 
 function ProjectEmoji({ name }: { name: string }) {
   const [emoji] = extractLeadingEmoji(name)
@@ -240,38 +248,22 @@ export function NavItem({
   )
 }
 
-function useShouldCollapseSidebar() {
-  return useHasMatchStaticData((staticData) => staticData?.collapseSidebar === true)
-}
-
 export function AppSidebar({
   title,
   subtitle,
+  brand = false,
   children,
   footer,
 }: {
-  title: string
+  title?: string
   subtitle?: ReactNode
+  /** When true, renders the Latitude brand lockup instead of `title`/`subtitle`, and hides the collapse toggle while collapsed (an equivalent toggle is expected elsewhere, e.g. the top bar). */
+  brand?: boolean
   children: (props: { collapsed: boolean }) => ReactNode
   footer?: (props: { collapsed: boolean }) => ReactNode
 }) {
-  const autoCollapse = useShouldCollapseSidebar()
-  const { value: storedCollapsed, setValue: setStoredCollapsed } = useLocalStorage<boolean | null>({
-    key: "app-sidebar-collapsed",
-    defaultValue: null,
-  })
-
-  const defaultCollapseToken = autoCollapse ? "narrow" : storedCollapsed === true ? "narrow" : "wide"
-
-  const [collapseToken, setCollapseToken] = useValueWithDefault(defaultCollapseToken)
-  const collapsed = collapseToken === "narrow"
-
-  const toggleCollapsed = () => {
-    const nextCollapsed = !collapsed
-    setCollapseToken(nextCollapsed ? "narrow" : "wide")
-    setStoredCollapsed(nextCollapsed)
-  }
-  useHotkeys([{ hotkey: "Mod+B", callback: toggleCollapsed }])
+  const { collapsed } = useSidebarCollapse()
+  const showToggle = !brand || !collapsed
 
   return (
     <aside
@@ -281,48 +273,54 @@ export function AppSidebar({
       })}
     >
       <div className="flex min-h-0 flex-1 flex-col">
-        <div
-          className={cn("flex shrink-0 flex-col gap-0.5 border-b border-border p-4", {
-            "items-center": collapsed,
-          })}
-        >
+        {brand ? (
           <div
-            className={cn("flex items-center gap-3", {
-              "w-full justify-between": !collapsed,
+            className={cn("flex h-12 shrink-0 items-center border-b border-border px-4", {
+              "justify-center": collapsed,
+              "justify-between": !collapsed,
             })}
           >
-            {!collapsed && (
-              <div className="min-w-0 flex-1">
-                <div className="flex items-center gap-2 min-w-0">
-                  <ProjectEmoji name={title} />
-                  <Text.H5M ellipsis className="flex-1 min-w-0">
-                    {extractLeadingEmoji(title)[1]}
-                  </Text.H5M>
-                </div>
+            {collapsed ? (
+              <LatitudeLogo className="h-5 w-5 shrink-0" />
+            ) : (
+              <div className="flex min-w-0 flex-1 items-center">
+                <SidebarBrandLogo />
               </div>
             )}
-            <Tooltip
-              asChild
-              side="right"
-              trigger={
-                <Button variant="outline" size="icon" onClick={toggleCollapsed} className="h-8 w-8 shrink-0">
-                  <Icon icon={collapsed ? PanelLeft : PanelLeftClose} size="sm" color="foregroundMuted" />
-                </Button>
-              }
-            >
-              <div className="flex items-center gap-1">
-                {collapsed ? "Expand" : "Collapse"} <HotkeyBadge hotkey="Mod+B" />
-              </div>
-            </Tooltip>
+            {showToggle && <SidebarCollapseToggleButton />}
           </div>
-          {!collapsed && subtitle ? <div className="min-w-0">{subtitle}</div> : null}
-        </div>
+        ) : (
+          <div
+            className={cn("flex shrink-0 flex-col gap-0.5 border-b border-border p-4", {
+              "items-center": collapsed,
+            })}
+          >
+            <div
+              className={cn("flex items-center gap-3", {
+                "w-full justify-between": !collapsed,
+              })}
+            >
+              {!collapsed && (
+                <div className="min-w-0 flex-1">
+                  <div className="flex items-center gap-2 min-w-0">
+                    <ProjectEmoji name={title ?? ""} />
+                    <Text.H5M ellipsis className="flex-1 min-w-0">
+                      {extractLeadingEmoji(title ?? "")[1]}
+                    </Text.H5M>
+                  </div>
+                </div>
+              )}
+              {showToggle && <SidebarCollapseToggleButton />}
+            </div>
+            {!collapsed && subtitle ? <div className="min-w-0">{subtitle}</div> : null}
+          </div>
+        )}
 
         <div className="flex min-h-0 flex-1 flex-col">
           <nav
             className={cn("flex min-h-0 flex-1 flex-col gap-1 overflow-y-auto py-6", {
               "items-center px-2": collapsed,
-              "px-6": !collapsed,
+              "px-4": !collapsed,
             })}
           >
             {children({ collapsed })}
@@ -331,7 +329,7 @@ export function AppSidebar({
             <nav
               className={cn("flex shrink-0 flex-col gap-1 pb-6", {
                 "items-center px-2": collapsed,
-                "px-6": !collapsed,
+                "px-4": !collapsed,
               })}
             >
               {footer({ collapsed })}

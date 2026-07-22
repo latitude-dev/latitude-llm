@@ -1,6 +1,7 @@
 import { PRO_PLAN_CONFIG } from "@domain/billing"
-import { Button, cn, Text, Tooltip, useToast } from "@repo/ui"
+import { Button, cn, Icon, Text, Tooltip, useToast } from "@repo/ui"
 import { useQuery } from "@tanstack/react-query"
+import { Flame } from "lucide-react"
 import { useState } from "react"
 import { createBillingCheckoutSession, getBillingOverview } from "../../../domains/billing/billing.functions.ts"
 import { toUserMessage } from "../../../lib/errors.ts"
@@ -18,9 +19,12 @@ type BillingOverview = Awaited<ReturnType<typeof getBillingOverview>>
 export function BillingCreditCounter({
   organizationId,
   initialOverview,
+  collapsed = false,
 }: {
   readonly organizationId: string
   readonly initialOverview?: BillingOverview | null
+  /** Hides the row entirely — there's no room for it in the collapsed sidebar rail. */
+  readonly collapsed?: boolean
 }) {
   const { toast } = useToast()
   const [isUpgradePending, setIsUpgradePending] = useState(false)
@@ -33,7 +37,7 @@ export function BillingCreditCounter({
     ...(initialOverview ? { initialData: initialOverview } : {}),
   })
 
-  if (!overview) return null
+  if (!overview || collapsed) return null
 
   const includedCredits = overview.includedCredits
   const totalUsedCredits = overview.consumedCredits + overview.overageCredits
@@ -45,8 +49,7 @@ export function BillingCreditCounter({
   const strokeOffset = BILLING_COUNTER_CIRCUMFERENCE * (1 - progress)
   const consumedLabel = numberFormatter.format(totalUsedCredits)
   const includedLabel = includedCredits === null ? "custom" : numberFormatter.format(includedCredits)
-  const usageLabel =
-    includedCredits === null ? `${consumedLabel} credits` : `${consumedLabel} / ${includedLabel} credits`
+  const usageLabel = includedCredits === null ? consumedLabel : `${consumedLabel}/${includedLabel}`
   const tooltip = isOverage
     ? `${numberFormatter.format(totalUsedCredits)} credits used: ${numberFormatter.format(overview.consumedCredits)} included credits plus ${numberFormatter.format(overview.overageCredits)} metered overage credits. Usage can exceed the included limit because this plan allows overage billing.`
     : `${numberFormatter.format(overview.consumedCredits)} of ${includedLabel} credits used this period`
@@ -73,49 +76,55 @@ export function BillingCreditCounter({
   }
 
   return (
-    <div className="flex items-center gap-2">
+    <div className="flex flex-col gap-2">
       {showUpgradeCta ? (
-        <Button size="sm" isLoading={isUpgradePending} onClick={() => void openUpgrade()}>
+        <Button size="sm" className="w-full" isLoading={isUpgradePending} onClick={() => void openUpgrade()}>
           Upgrade now
         </Button>
       ) : null}
       <Tooltip
         asChild
         trigger={
-          <div className="flex items-center gap-2 rounded-md px-2 py-1 text-sm text-foreground">
-            <span className="relative flex h-5 w-5 items-center justify-center" aria-hidden="true">
-              <svg aria-hidden="true" className="h-5 w-5 -rotate-90" viewBox="0 0 20 20">
-                <circle
-                  cx="10"
-                  cy="10"
-                  r={BILLING_COUNTER_RADIUS}
-                  fill="none"
-                  stroke="currentColor"
-                  strokeWidth="2"
-                  className="text-muted"
-                />
-                <circle
-                  cx="10"
-                  cy="10"
-                  r={BILLING_COUNTER_RADIUS}
-                  fill="none"
-                  stroke="currentColor"
-                  strokeWidth="2"
-                  strokeLinecap="round"
-                  strokeDasharray={BILLING_COUNTER_CIRCUMFERENCE}
-                  strokeDashoffset={strokeOffset}
-                  className={cn("transition-colors", {
-                    "text-primary": !showLimitState,
-                    "text-destructive": showLimitState,
-                  })}
-                />
-              </svg>
+          <div className="flex items-center justify-between gap-2">
+            <span className="flex items-center gap-1 text-muted-foreground">
+              <Icon icon={Flame} size="xs" weight="L" />
+              <Text.H6 color="foregroundMuted" weight="medium">
+                Usage
+              </Text.H6>
             </span>
-            <div className="hidden items-baseline gap-1 md:flex">
+            <span className="flex items-center gap-2">
+              <span className="relative flex h-3.5 w-3.5 items-center justify-center" aria-hidden="true">
+                <svg aria-hidden="true" className="h-3.5 w-3.5 -rotate-90" viewBox="0 0 20 20">
+                  <circle
+                    cx="10"
+                    cy="10"
+                    r={BILLING_COUNTER_RADIUS}
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="2"
+                    className="text-muted"
+                  />
+                  <circle
+                    cx="10"
+                    cy="10"
+                    r={BILLING_COUNTER_RADIUS}
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="2"
+                    strokeLinecap="round"
+                    strokeDasharray={BILLING_COUNTER_CIRCUMFERENCE}
+                    strokeDashoffset={strokeOffset}
+                    className={cn("transition-colors", {
+                      "text-primary": !showLimitState,
+                      "text-destructive": showLimitState,
+                    })}
+                  />
+                </svg>
+              </span>
               <Text.H6 weight="medium" color={showLimitState ? "destructive" : "foreground"}>
                 {usageLabel}
               </Text.H6>
-            </div>
+            </span>
           </div>
         }
       >

@@ -106,6 +106,8 @@ export {
   ComboboxCollection,
   ComboboxContent,
   ComboboxEmpty,
+  ComboboxFooterAction,
+  type ComboboxFooterActionProps,
   ComboboxGroup,
   ComboboxInput,
   ComboboxItem,
