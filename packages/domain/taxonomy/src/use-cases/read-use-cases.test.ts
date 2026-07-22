@@ -16,16 +16,16 @@ import { describe, expect, it } from "vitest"
 import type { TaxonomyCluster } from "../entities/cluster.ts"
 import type { TaxonomyMomentObservation } from "../entities/observation.ts"
 import { createTaxonomyCentroid, updateTaxonomyCentroid } from "../helpers.ts"
-import { CustomBehaviorAssignmentRepository } from "../ports/custom-behavior-assignment-repository.ts"
 import { TaxonomyClusterRepository } from "../ports/taxonomy-cluster-repository.ts"
 import { TaxonomyLineageRepository } from "../ports/taxonomy-lineage-repository.ts"
 import { TaxonomyObservationRepository } from "../ports/taxonomy-observation-repository.ts"
 import { TaxonomyRunRepository } from "../ports/taxonomy-run-repository.ts"
-import { createFakeCustomBehaviorAssignmentRepository } from "../testing/fake-custom-behavior-assignment-repository.ts"
+import { TaxonomyViewAssignmentRepository } from "../ports/taxonomy-view-assignment-repository.ts"
 import { createFakeTaxonomyClusterRepository } from "../testing/fake-taxonomy-cluster-repository.ts"
 import { createFakeTaxonomyLineageRepository } from "../testing/fake-taxonomy-lineage-repository.ts"
 import { createFakeTaxonomyObservationRepository } from "../testing/fake-taxonomy-observation-repository.ts"
 import { createFakeTaxonomyRunRepository } from "../testing/fake-taxonomy-run-repository.ts"
+import { createFakeTaxonomyViewAssignmentRepository } from "../testing/fake-taxonomy-view-assignment-repository.ts"
 import { getLastRunUseCase, getTaxonomyAnalyticsUseCase } from "./analytics.ts"
 import { getClusterDetailsUseCase } from "./get-details.ts"
 import { listClustersUseCase } from "./list-clusters.ts"
@@ -613,7 +613,7 @@ describe("listProjectBehavioursUseCase (custom behavior scope)", () => {
     // Global observation counts must NOT be the source for a scoped read; seed
     // the global cluster with observations to prove they are ignored here.
     const observations = createFakeTaxonomyObservationRepository([makeObservation(1, globalId)])
-    const assignments = createFakeCustomBehaviorAssignmentRepository(
+    const assignments = createFakeTaxonomyViewAssignmentRepository(
       {},
       {
         getClusterAssignmentCounts: () =>
@@ -628,7 +628,7 @@ describe("listProjectBehavioursUseCase (custom behavior scope)", () => {
       listProjectBehavioursUseCase({ organizationId, projectId, now, customBehaviorId: behaviorId }).pipe(
         Effect.provide(Layer.succeed(TaxonomyClusterRepository, clusters.repository)),
         Effect.provide(Layer.succeed(TaxonomyObservationRepository, observations.repository)),
-        Effect.provide(Layer.succeed(CustomBehaviorAssignmentRepository, assignments.repository)),
+        Effect.provide(Layer.succeed(TaxonomyViewAssignmentRepository, assignments.repository)),
         Effect.provide(Layer.succeed(SqlClient, createFakeSqlClient())),
         Effect.provide(Layer.succeed(ChSqlClient, createFakeChSqlClient())),
       ),
@@ -642,7 +642,7 @@ describe("listProjectBehavioursUseCase (custom behavior scope)", () => {
   it("derives per-cluster trend from the windowed assignment slice (not steady)", async () => {
     const clusters = seededClusters()
     const observations = createFakeTaxonomyObservationRepository([])
-    const assignments = createFakeCustomBehaviorAssignmentRepository(
+    const assignments = createFakeTaxonomyViewAssignmentRepository(
       {},
       {
         getClusterAssignmentCounts: () =>
@@ -664,7 +664,7 @@ describe("listProjectBehavioursUseCase (custom behavior scope)", () => {
       listProjectBehavioursUseCase({ organizationId, projectId, now, customBehaviorId: behaviorId }).pipe(
         Effect.provide(Layer.succeed(TaxonomyClusterRepository, clusters.repository)),
         Effect.provide(Layer.succeed(TaxonomyObservationRepository, observations.repository)),
-        Effect.provide(Layer.succeed(CustomBehaviorAssignmentRepository, assignments.repository)),
+        Effect.provide(Layer.succeed(TaxonomyViewAssignmentRepository, assignments.repository)),
         Effect.provide(Layer.succeed(SqlClient, createFakeSqlClient())),
         Effect.provide(Layer.succeed(ChSqlClient, createFakeChSqlClient())),
       ),

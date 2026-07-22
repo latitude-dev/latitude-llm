@@ -1,18 +1,18 @@
 import type { TaxonomyClusterId } from "@domain/shared"
 import { Effect } from "effect"
-import type { CustomBehaviorAssignment } from "../entities/custom-behavior-assignment.ts"
 import type { TaxonomyMomentObservation } from "../entities/observation.ts"
-import type { CustomBehaviorAssignmentRepositoryShape } from "../ports/custom-behavior-assignment-repository.ts"
+import type { TaxonomyViewAssignment } from "../entities/taxonomy-view-assignment.ts"
+import type { TaxonomyViewAssignmentRepositoryShape } from "../ports/taxonomy-view-assignment-repository.ts"
 
-export const createFakeCustomBehaviorAssignmentRepository = (
+export const createFakeTaxonomyViewAssignmentRepository = (
   /** Member observation rows returned by `listClusterMemberObservations`, keyed by cluster id. */
   membersByClusterId: Readonly<Record<string, readonly TaxonomyMomentObservation[]>> = {},
-  overrides?: Partial<CustomBehaviorAssignmentRepositoryShape>,
+  overrides?: Partial<TaxonomyViewAssignmentRepositoryShape>,
 ) => {
-  const assignments: CustomBehaviorAssignment[] = []
+  const assignments: TaxonomyViewAssignment[] = []
   const members = new Map<string, readonly TaxonomyMomentObservation[]>(Object.entries(membersByClusterId))
 
-  const repository: CustomBehaviorAssignmentRepositoryShape = {
+  const repository: TaxonomyViewAssignmentRepositoryShape = {
     upsertMany: (rows) =>
       Effect.sync(() => {
         assignments.push(...rows)

@@ -10,15 +10,16 @@ import { Effect, Layer } from "effect"
 
 // Which observations belong to the requested clusters. Global reads match the
 // observation's own `assigned_cluster_id`; a scoped custom-behavior read never
-// touches that column and instead intersects with the behavior's
-// `custom_behavior_assignments` slice (keyed by custom_behavior_id).
+// touches that column and instead intersects with the behavior's topic edges in
+// the `taxonomy_view_assignments` slice (keyed by custom_behavior_id, facet_id='').
 const GLOBAL_CLUSTER_MEMBERSHIP = "o.assigned_cluster_id IN {clusterIds:Array(String)}"
 const SCOPED_CLUSTER_MEMBERSHIP = `o.observation_id IN (
     SELECT observation_id
-    FROM custom_behavior_assignments FINAL
+    FROM taxonomy_view_assignments FINAL
     WHERE organization_id = {organizationId:String}
       AND project_id = {projectId:String}
       AND custom_behavior_id = {customBehaviorId:String}
+      AND facet_id = ''
       AND assigned_cluster_id IN {clusterIds:Array(String)}
   )`
 const clusterMembership = (customBehaviorId: CustomBehaviorId | null | undefined) =>

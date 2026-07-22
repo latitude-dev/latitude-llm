@@ -1,6 +1,7 @@
 import {
   cuidSchema,
   customBehaviorIdSchema,
+  facetIdSchema,
   organizationIdSchema,
   projectIdSchema,
   sessionIdSchema,
@@ -11,18 +12,21 @@ import { z } from "zod"
 import { taxonomyObservationAssignmentMethodSchema } from "./observation.ts"
 
 /**
- * One observation's assignment to a scoped cluster within a custom behavior.
+ * One session's edge to a cluster within a single analysis view — a
+ * `(scope, facet)` pair. The ClickHouse `taxonomy_view_assignments` slice holds
+ * every non-online tree's memberships, so a scoped tree never mutates the global
+ * `taxonomy_observations.assigned_cluster_id`.
  *
- * The ClickHouse `custom_behavior_assignments` slice mirrors the
- * `taxonomy_observations` layout but is keyed by `custom_behavior_id`, so a
- * behavior's scoped tree never mutates the global
- * `taxonomy_observations.assigned_cluster_id`. Phase 2 writes it; Phase 3 reads
- * it.
+ * `customBehaviorId` names the scope (a cohort); `facetId` names the lens.
+ * `facetId = null` = the topic lens, whose edges resolve against
+ * `taxonomy_observations`; a set `facetId` resolves against
+ * `taxonomy_facet_projections`.
  */
-export const customBehaviorAssignmentSchema = z.object({
+export const taxonomyViewAssignmentSchema = z.object({
   organizationId: organizationIdSchema,
   projectId: projectIdSchema,
   customBehaviorId: customBehaviorIdSchema,
+  facetId: facetIdSchema.nullable(),
   observationId: cuidSchema,
   sessionId: sessionIdSchema,
   assignedClusterId: taxonomyClusterIdSchema.nullable(),
@@ -34,4 +38,4 @@ export const customBehaviorAssignmentSchema = z.object({
   indexedAt: z.date(),
 })
 
-export type CustomBehaviorAssignment = z.infer<typeof customBehaviorAssignmentSchema>
+export type TaxonomyViewAssignment = z.infer<typeof taxonomyViewAssignmentSchema>

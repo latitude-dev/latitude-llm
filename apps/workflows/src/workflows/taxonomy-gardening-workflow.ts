@@ -16,7 +16,7 @@ export type GardenTaxonomyWorkflowResult = activities.GardenTaxonomyActivityResu
  * the project-wide tree and writes membership to
  * `taxonomy_observations.assigned_cluster_id`; a scoped run (a custom behavior's
  * `customBehaviorId`) rebuilds that behavior's sub-tree and writes the
- * `custom_behavior_assignments` slice. Scope is threaded as an optional field
+ * `taxonomy_view_assignments` slice. Scope is threaded as an optional field
  * global omits, and every branch lives inside the activities/use-cases, so the
  * global activity sequence, names, and serialized inputs are byte-identical to
  * the pre-unification workflow.

@@ -64,6 +64,7 @@ export type TaxonomyClusterId = Id<"TaxonomyClusterId">
 export type TaxonomyRunId = Id<"TaxonomyRunId">
 export type TaxonomyLineageId = Id<"TaxonomyLineageId">
 export type CustomBehaviorId = Id<"CustomBehaviorId">
+export type FacetId = Id<"FacetId">
 
 // Integration-related IDs
 export type SlackIntegrationId = Id<"SlackIntegrationId">
@@ -109,6 +110,7 @@ export const TaxonomyClusterId = (value: string): TaxonomyClusterId => value as 
 export const TaxonomyRunId = (value: string): TaxonomyRunId => value as TaxonomyRunId
 export const TaxonomyLineageId = (value: string): TaxonomyLineageId => value as TaxonomyLineageId
 export const CustomBehaviorId = (value: string): CustomBehaviorId => value as CustomBehaviorId
+export const FacetId = (value: string): FacetId => value as FacetId
 export const SlackIntegrationId = (value: string): SlackIntegrationId => value as SlackIntegrationId
 export const SlackDeliveryId = (value: string): SlackDeliveryId => value as SlackDeliveryId
 export const DestinationId = (value: string): DestinationId => value as DestinationId
@@ -148,6 +150,7 @@ export const taxonomyClusterIdSchema = cuidSchema.transform(TaxonomyClusterId)
 export const taxonomyRunIdSchema = cuidSchema.transform(TaxonomyRunId)
 export const taxonomyLineageIdSchema = cuidSchema.transform(TaxonomyLineageId)
 export const customBehaviorIdSchema = cuidSchema.transform(CustomBehaviorId)
+export const facetIdSchema = cuidSchema.transform(FacetId)
 export const slackIntegrationIdSchema = cuidSchema.transform(SlackIntegrationId)
 export const slackDeliveryIdSchema = cuidSchema.transform(SlackDeliveryId)
 export const destinationIdSchema = cuidSchema.transform(DestinationId)

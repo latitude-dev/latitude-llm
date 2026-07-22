@@ -82,7 +82,7 @@ export const customBehaviorFilterSetHasConditions = (filterSet: FilterSet): bool
  * A named, project-scoped exploration scope. Its `filterSet` selects the
  * sessions the Phase 2 workflow samples and clusters into a scoped behavior
  * sub-tree (mirrored by `custom_behavior_id`-tagged rows in Postgres and the
- * ClickHouse `custom_behavior_assignments` slice).
+ * ClickHouse `taxonomy_view_assignments` slice).
  */
 export const customBehaviorSchema = z.object({
   id: customBehaviorIdSchema,

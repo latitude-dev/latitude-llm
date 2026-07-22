@@ -11,6 +11,8 @@ export const taxonomyRuns = latitudeSchema.table(
     projectId: cuid("project_id").notNull(),
     // NULL = global gardening run; non-null scopes the run to a custom behavior.
     customBehaviorId: cuid("custom_behavior_id", { default: false }),
+    // NULL = topic lens; non-null scopes the run to a facet.
+    facetId: cuid("facet_id", { default: false }),
     trigger: varchar("trigger", { length: 16 }).$type<TaxonomyRunTrigger>().notNull(),
     status: varchar("status", { length: 16 }).$type<TaxonomyRunStatus>().notNull(),
     startedAt: tzTimestamp("started_at").notNull(),

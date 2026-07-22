@@ -3,8 +3,8 @@ import { nameClusterUseCase, nameCustomBehaviorClusterUseCase } from "@domain/ta
 import { AIEmbedLive, AIGenerateLive, withAi } from "@platform/ai"
 import { RedisCacheStoreLive, RedisDistributedLockRepositoryLive } from "@platform/cache-redis"
 import {
-  CustomBehaviorAssignmentRepositoryLive,
   TaxonomyObservationRepositoryLive,
+  TaxonomyViewAssignmentRepositoryLive,
   withClickHouse,
 } from "@platform/db-clickhouse"
 import { TaxonomyClusterRepositoryLive, withPostgres } from "@platform/db-postgres"
@@ -23,7 +23,7 @@ export const nameTaxonomyClusterActivity = (input: NameTaxonomyClusterActivityIn
   const organizationId = OrganizationId(input.organizationId)
   const projectId = ProjectId(input.projectId)
   const clusterId = TaxonomyClusterId(input.clusterId)
-  const clickHouse = Layer.mergeAll(TaxonomyObservationRepositoryLive, CustomBehaviorAssignmentRepositoryLive)
+  const clickHouse = Layer.mergeAll(TaxonomyObservationRepositoryLive, TaxonomyViewAssignmentRepositoryLive)
   const cache = Layer.mergeAll(
     RedisCacheStoreLive(getRedisClient()),
     RedisDistributedLockRepositoryLive(getRedisClient()),

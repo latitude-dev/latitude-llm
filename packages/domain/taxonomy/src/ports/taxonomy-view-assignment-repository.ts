@@ -7,20 +7,20 @@ import type {
   TaxonomyClusterId,
 } from "@domain/shared"
 import { Context, type Effect } from "effect"
-import type { CustomBehaviorAssignment } from "../entities/custom-behavior-assignment.ts"
 import type { TaxonomyMomentObservation } from "../entities/observation.ts"
+import type { TaxonomyViewAssignment } from "../entities/taxonomy-view-assignment.ts"
 
-export interface CustomBehaviorAssignmentClusterCount {
+export interface TaxonomyViewAssignmentClusterCount {
   readonly clusterId: TaxonomyClusterId
   readonly count: number
 }
 
 /**
- * Per-cluster current-vs-baseline counts over `custom_behavior_assignments.start_time`.
+ * Per-cluster current-vs-baseline counts over `taxonomy_view_assignments.start_time`.
  * Same shape the global `TaxonomyObservationRepository.getClusterTrendCounts`
  * returns, so both feed `classifyClusterTrend` identically.
  */
-export interface CustomBehaviorAssignmentClusterTrendCount {
+export interface TaxonomyViewAssignmentClusterTrendCount {
   readonly clusterId: TaxonomyClusterId
   readonly currentCount: number
   readonly baselineCount: number
@@ -28,20 +28,21 @@ export interface CustomBehaviorAssignmentClusterTrendCount {
 }
 
 /**
- * ClickHouse-backed `custom_behavior_assignments` slice — the shared boundary
- * Phase 2 writes and Phase 3 reads. It never touches global
- * `taxonomy_observations.assigned_cluster_id`.
+ * ClickHouse-backed `taxonomy_view_assignments` slice — the shared edges table
+ * for every non-online tree. It never touches global
+ * `taxonomy_observations.assigned_cluster_id`. These reads target the topic slice
+ * (`facet_id = ''`); the facet reads are wired in a later phase.
  */
-export interface CustomBehaviorAssignmentRepositoryShape {
+export interface TaxonomyViewAssignmentRepositoryShape {
   readonly upsertMany: (
-    assignments: readonly CustomBehaviorAssignment[],
+    assignments: readonly TaxonomyViewAssignment[],
   ) => Effect.Effect<void, RepositoryError, ChSqlClient>
   readonly listByBehavior: (input: {
     readonly organizationId: OrganizationId
     readonly projectId: ProjectId
     readonly customBehaviorId: CustomBehaviorId
     readonly limit: number
-  }) => Effect.Effect<readonly CustomBehaviorAssignment[], RepositoryError, ChSqlClient>
+  }) => Effect.Effect<readonly TaxonomyViewAssignment[], RepositoryError, ChSqlClient>
   readonly getClusterAssignmentCounts: (input: {
     readonly organizationId: OrganizationId
     readonly projectId: ProjectId
@@ -49,10 +50,10 @@ export interface CustomBehaviorAssignmentRepositoryShape {
     /** Optional window over `start_time`; omit for the whole retained slice. */
     readonly startTimeFrom?: Date
     readonly startTimeTo?: Date
-  }) => Effect.Effect<readonly CustomBehaviorAssignmentClusterCount[], RepositoryError, ChSqlClient>
+  }) => Effect.Effect<readonly TaxonomyViewAssignmentClusterCount[], RepositoryError, ChSqlClient>
   /**
    * Current-vs-baseline per-cluster counts windowed over
-   * `custom_behavior_assignments.start_time` — the scoped mirror of the global
+   * `taxonomy_view_assignments.start_time` — the scoped mirror of the global
    * `getClusterTrendCounts`. Because scoped gardening accumulates rows across
    * runs (ReplacingMergeTree, no truncate) and keeps stable cluster ids via the
    * Hungarian lineage matcher, these deltas carry born/continue/die trend just
@@ -66,12 +67,11 @@ export interface CustomBehaviorAssignmentRepositoryShape {
     readonly currentSince: Date
     readonly baselineSince: Date
     readonly baselineDays: number
-  }) => Effect.Effect<readonly CustomBehaviorAssignmentClusterTrendCount[], RepositoryError, ChSqlClient>
+  }) => Effect.Effect<readonly TaxonomyViewAssignmentClusterTrendCount[], RepositoryError, ChSqlClient>
   /**
    * Full observation rows assigned to one scoped cluster, resolved by joining
-   * the behavior's assignment slice back to global `taxonomy_observations` for
-   * the embeddings + summaries the naming step needs. Read-only on the global
-   * table.
+   * the view's assignment slice back to global `taxonomy_observations` for the
+   * embeddings + summaries the naming step needs. Read-only on the global table.
    */
   readonly listClusterMemberObservations: (input: {
     readonly organizationId: OrganizationId
@@ -88,7 +88,7 @@ export interface CustomBehaviorAssignmentRepositoryShape {
   }) => Effect.Effect<void, RepositoryError, ChSqlClient>
 }
 
-export class CustomBehaviorAssignmentRepository extends Context.Service<
-  CustomBehaviorAssignmentRepository,
-  CustomBehaviorAssignmentRepositoryShape
->()("@domain/taxonomy/CustomBehaviorAssignmentRepository") {}
+export class TaxonomyViewAssignmentRepository extends Context.Service<
+  TaxonomyViewAssignmentRepository,
+  TaxonomyViewAssignmentRepositoryShape
+>()("@domain/taxonomy/TaxonomyViewAssignmentRepository") {}

@@ -88,9 +88,9 @@ import {
   TAXONOMY_TREE_STATIC_DEPTH_SCHEDULE,
 } from "../constants.ts"
 import type { TaxonomyCluster, TaxonomyClusterState } from "../entities/cluster.ts"
-import type { CustomBehaviorAssignment } from "../entities/custom-behavior-assignment.ts"
 import { TaxonomyDimension, type TaxonomyDimension as TaxonomyDimensionType } from "../entities/dimension.ts"
 import type { TaxonomyClusterLineage } from "../entities/lineage.ts"
+import type { TaxonomyViewAssignment } from "../entities/taxonomy-view-assignment.ts"
 import {
   cosineSimilarityNormalized,
   createTaxonomyCentroid,
@@ -184,7 +184,7 @@ export interface PlanHierarchicalTaxonomyInput extends BuildHierarchicalTaxonomy
    * Scope. Absent ⇒ global gardening (project-wide sample, membership written to
    * `taxonomy_observations.assigned_cluster_id`). Present ⇒ a custom behavior's
    * scoped sub-tree (FilterSet session slice, membership written to the
-   * `custom_behavior_assignments` slice). Global callers omit both so their
+   * `taxonomy_view_assignments` slice). Global callers omit both so their
    * serialized payloads are byte-identical to the pre-unification workflow.
    */
   readonly customBehaviorId?: CustomBehaviorId
@@ -213,8 +213,8 @@ export interface HierarchicalTaxonomyPlan extends BuildHierarchicalTaxonomyResul
    * path AND on the adaptive path (which reassigns the full window separately).
    */
   readonly observationAssignments: readonly ReassignTaxonomyObservationByIdInput[]
-  /** Scoped write target: the `custom_behavior_assignments` slice. Empty on the global/adaptive path. */
-  readonly customAssignments: readonly CustomBehaviorAssignment[]
+  /** Scoped write target: the `taxonomy_view_assignments` slice. Empty on the global/adaptive path. */
+  readonly customAssignments: readonly TaxonomyViewAssignment[]
   /** Leaf id + centroid for adaptive full-window routing. Empty on the off path. */
   readonly leafClusters: readonly StagingLeafCluster[]
   /** Non-null ⇒ the plan is scoped to this custom behavior (drives the write target). */
@@ -731,7 +731,7 @@ export const planHierarchicalTaxonomyUseCase = (input: PlanHierarchicalTaxonomyI
       : []
 
     // Two write targets, picked by scope: global reassigns the observation's
-    // `assigned_cluster_id`; a scoped run writes the `custom_behavior_assignments`
+    // `assigned_cluster_id`; a scoped run writes the `taxonomy_view_assignments`
     // slice (carrying sessionId + customBehaviorId), never the global column.
     const observationAssignments: ReassignTaxonomyObservationByIdInput[] =
       adaptive || scopedBehaviorId
@@ -744,7 +744,7 @@ export const planHierarchicalTaxonomyUseCase = (input: PlanHierarchicalTaxonomyI
             reassignmentRunId: input.runId,
             indexedAt: now,
           }))
-    const customAssignments: CustomBehaviorAssignment[] =
+    const customAssignments: TaxonomyViewAssignment[] =
       !adaptive && scopedBehaviorId
         ? leafMembers.flatMap(({ leaf, observation, confidence }) => {
             // Scoped samples come from listForCustomBehaviorSample and carry a
@@ -758,6 +758,7 @@ export const planHierarchicalTaxonomyUseCase = (input: PlanHierarchicalTaxonomyI
                 organizationId: input.organizationId,
                 projectId: input.projectId,
                 customBehaviorId: scopedBehaviorId,
+                facetId: null,
                 observationId: observation.observationId,
                 sessionId,
                 assignedClusterId: leaf.clusterId,
@@ -767,7 +768,7 @@ export const planHierarchicalTaxonomyUseCase = (input: PlanHierarchicalTaxonomyI
                 startTime: observation.startTime,
                 retentionDays: TAXONOMY_OBSERVATION_RETENTION_DAYS,
                 indexedAt: now,
-              } satisfies CustomBehaviorAssignment,
+              } satisfies TaxonomyViewAssignment,
             ]
           })
         : []
