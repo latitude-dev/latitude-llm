@@ -83,6 +83,14 @@ jobs:
       ref: ${{ github.sha }}
     secrets: inherit
 
+  publish-verifiers-telemetry:
+    permissions:
+      contents: write
+    uses: ./.github/workflows/publish-verifiers-telemetry.yml
+    with:
+      ref: ${{ github.sha }}
+    secrets: inherit
+
   publish-python-sdk:
     permissions:
       contents: write
