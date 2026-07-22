@@ -145,8 +145,9 @@ LAT_GITHUB_APP_ID              # App id (JWT issuer for installation tokens + re
 LAT_GITHUB_APP_SLUG            # for the install URL github.com/apps/<slug>/installations/new
 LAT_GITHUB_APP_PRIVATE_KEY     # PEM (base64-encoded in env), signs App JWTs
 LAT_GITHUB_WEBHOOK_SECRET      # HMAC secret for X-Hub-Signature-256
-LAT_GITHUB_CLIENT_ID           # OAuth pair for the install-claim verification
-LAT_GITHUB_CLIENT_SECRET
+LAT_GITHUB_APP_CLIENT_ID       # the GitHub App's OWN OAuth client (install-claim verification, 5.2).
+LAT_GITHUB_APP_CLIENT_SECRET   #   MUST NOT reuse LAT_GITHUB_CLIENT_ID/_SECRET — those are the existing
+                               #   GitHub SSO sign-in OAuth app (create-better-auth.ts); a different client.
 LAT_GITHUB_BASE_URL            # optional, default https://github.com — set to a GHES host to point
                                #   every constructed URL at it (API base derived: api.github.com for
                                #   github.com, {base}/api/v3 for GHES)
@@ -560,9 +561,9 @@ Five phases, **one PR each** (repo convention: each phase maps to its own PR int
   6. **Subscribe to events**: check **Pull request** and **Push** (Installation events are always delivered; they have no checkbox).
   7. **Where can this GitHub App be installed?** → **Any account** (customers install it on their own orgs).
   8. Create the app, then on its settings page: note the **App ID** and the **slug** (from the public link `github.com/apps/<slug>`), note the **Client ID**, click **"Generate a new client secret"**, and under Private keys click **"Generate a private key"** (downloads a `.pem`).
-  9. **Hand over per environment** (to the deploy secrets store / `.env`): `LAT_GITHUB_APP_ID` (App ID), `LAT_GITHUB_APP_SLUG` (slug), `LAT_GITHUB_APP_PRIVATE_KEY` (the `.pem` contents, base64-encoded), `LAT_GITHUB_WEBHOOK_SECRET` (step 4 secret), `LAT_GITHUB_CLIENT_ID`, `LAT_GITHUB_CLIENT_SECRET`. For local dev, either point a third throwaway app's webhook at a `smee.io` proxy or test the receiver with fixture deliveries only.
+  9. **Hand over per environment** (to the deploy secrets store / `.env`): `LAT_GITHUB_APP_ID` (App ID), `LAT_GITHUB_APP_SLUG` (slug), `LAT_GITHUB_APP_PRIVATE_KEY` (the `.pem` contents, base64-encoded), `LAT_GITHUB_WEBHOOK_SECRET` (step 4 secret), `LAT_GITHUB_APP_CLIENT_ID`, `LAT_GITHUB_APP_CLIENT_SECRET` (the GitHub App's own Client ID / secret — **not** the SSO `LAT_GITHUB_CLIENT_ID`). For local dev, either point a third throwaway app's webhook at a `smee.io` proxy or test the receiver with fixture deliveries only.
 - [ ] **P1-1**: `@platform/github` package — `verifyGithubSignature` (raw-body HMAC-SHA256, constant-time; modeled on `packages/platform/slack/src/signature.ts`), App JWT signing, installation-token mint + Redis cache, REST client (`getInstallation`, `listUserInstallations`, `exchangeOAuthCode`, `listInstallationRepositories`), tagged errors mapping to ack-vs-retry categories.
-- [ ] **P1-2**: env plumbing — `LAT_GITHUB_APP_ID/APP_SLUG/APP_PRIVATE_KEY/WEBHOOK_SECRET/CLIENT_ID/CLIENT_SECRET` + optional `LAT_GITHUB_BASE_URL` (GHES) in `.env.example`; `parseEnvOptional` config helper (`isGithubIntegrationConfigured`) + URL builders (web/API/OAuth bases derived from the base URL).
+- [ ] **P1-2**: env plumbing — `LAT_GITHUB_APP_ID/APP_SLUG/APP_PRIVATE_KEY/WEBHOOK_SECRET/APP_CLIENT_ID/APP_CLIENT_SECRET` + optional `LAT_GITHUB_BASE_URL` (GHES) in `.env.example` (the `APP_CLIENT_*` pair is distinct from the SSO `LAT_GITHUB_CLIENT_*`); `parseEnvOptional` config helper (`isGithubIntegrationConfigured`) + URL builders (web/API/OAuth bases derived from the base URL); infra wiring in `infra/lib/secrets.ts` + `infra/lib/ecs.ts` for api/web/workers.
 - [ ] **P1-3**: PG migration — extend `integrations.kind` with `"github"`; new `github_integration_details`, `github_sync_configs` (org-default + project-row uniques), and `github_deliveries` (incl. the attribution stamp columns); RLS policies; no FKs.
 - [ ] **P1-4**: `@domain/github` install lifecycle — entities, ports (`GithubIntegrationRepository`, `GithubSyncConfigRepository`, `GithubDeliveryRepository`), use-cases `claimGithubInstallation` (seeds the org-default `github_sync_configs` row with the built-ins) / `disconnectGithubIntegration` / `syncInstallationFromWebhook` (suspend/unsuspend/deleted/repos-changed); db-postgres repositories + `/testing` fakes.
 - [ ] **P1-5**: install flow web routes — `integrations/github/install.ts` (nonce state in Redis, 302 to the install URL) and `integrations/github/setup/callback.ts` (state validation, OAuth user-token verification via `GET /user/installations`, claim use-case, redirect to settings with success/error), mirroring the Slack OAuth routes.
