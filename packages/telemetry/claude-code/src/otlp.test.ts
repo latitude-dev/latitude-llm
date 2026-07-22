@@ -1172,11 +1172,12 @@ describe("buildSubagentSpans", () => {
 })
 
 describe("memory operation child spans", () => {
-  const MEM = "/home/u/.claude/projects/-proj/memory"
+  const ROOT = "/home/u/.claude/projects"
+  const MEM = `${ROOT}/-proj/memory`
   const MEM_OPS = ["upsert_memory", "update_memory", "search_memory"]
 
   function memory(overrides: Partial<MemoryEmitOptions> = {}): MemoryEmitOptions {
-    return { dir: MEM, captureContent: true, readFile: () => "disk body", ...overrides }
+    return { projectsRoot: ROOT, captureContent: true, readFile: () => "disk body", ...overrides }
   }
 
   function build(
@@ -1231,12 +1232,24 @@ describe("memory operation child spans", () => {
     expect(spans.some((s) => s.name === "search_memory")).toBe(true)
   })
 
-  it("ignores files outside the memory dir", () => {
+  it("ignores files outside the projects root", () => {
     const spans = build(
       [{ id: "tu1", name: "Write", input: { file_path: "/home/u/repo/a.ts", content: "x" } }],
       memory(),
     )
     expect(spans.some((s) => MEM_OPS.includes(s.name))).toBe(false)
+  })
+
+  it("emits the child span for a store under a different slug than the session (git worktree)", () => {
+    const spans = build(
+      [{ id: "tu1", name: "Write", input: { file_path: `${ROOT}/-main-worktree/memory/x.md`, content: "hi" } }],
+      memory(),
+    )
+    const toolSpan = unwrap(spans.find((s) => s.name === "tool:Write"))
+    const mem = unwrap(spans.find((s) => s.name === "upsert_memory"))
+    expect(mem.parentSpanId).toBe(toolSpan.spanId)
+    expect(getAttr(mem.attributes, "gen_ai.memory.store.id")).toBe("-main-worktree")
+    expect(getAttr(mem.attributes, "gen_ai.memory.record.id")).toBe("x.md")
   })
 
   it("emits structure only when captureContent is off", () => {

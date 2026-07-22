@@ -93,7 +93,7 @@ export interface MemoryOp {
 }
 
 export interface MemoryEmitOptions {
-  dir: string
+  projectsRoot: string
   captureContent: boolean
   readFile?: (path: string) => string | undefined
 }
