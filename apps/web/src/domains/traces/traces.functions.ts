@@ -47,6 +47,7 @@ import { enforceExportRequestRateLimit } from "../../domains/exports/export-rate
 import { ensureSession } from "../../domains/sessions/session.functions.ts"
 import { getSessionOrganizationId } from "../../server/auth.ts"
 import { getClickhouseClient, getQueuePublisher, getRedisClient } from "../../server/clients.ts"
+import { spanIdSchema, traceIdSchema } from "../../server/id-validation.ts"
 import { resolveOrgScope } from "../../server/resolve-org-scope.ts"
 import { withScopedClickHouse } from "../../server/scoped-clickhouse.ts"
 
@@ -166,12 +167,6 @@ export interface TraceConversationChunkRecord {
   readonly hasMore: boolean
   readonly payloadBytes: number
 }
-
-// ClickHouse binds these as FixedString(32)/FixedString(16), which are byte-
-// sized, so `.length(N)` (UTF-16 code units) alone lets a same-length
-// non-ASCII value slip through; trace/span ids are always lowercase hex.
-export const traceIdSchema = z.string().regex(/^[0-9a-f]{32}$/, "must be a 32-character hex string")
-export const spanIdSchema = z.string().regex(/^[0-9a-f]{16}$/, "must be a 16-character hex string")
 
 const traceListCursorSchema = z.object({
   sortValue: z.string(),

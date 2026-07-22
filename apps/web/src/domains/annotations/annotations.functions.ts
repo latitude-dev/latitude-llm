@@ -25,13 +25,10 @@ import {
   getRedisClient,
   getWorkflowStarter,
 } from "../../server/clients.ts"
+import { spanIdSchema, traceIdSchema } from "../../server/id-validation.ts"
 import { resolveOrgScope } from "../../server/resolve-org-scope.ts"
 import { withScopedClickHouse } from "../../server/scoped-clickhouse.ts"
 import { withScopedPostgres } from "../../server/scoped-postgres.ts"
-
-// Trace ids are always 32-character lowercase hex; `.length(32)` alone counts
-// UTF-16 code units, so a same-length non-ASCII value would still pass.
-const traceIdSchema = z.string().regex(/^[0-9a-f]{32}$/, "must be a 32-character hex string")
 
 const toRecord = (score: AnnotationScore) => ({
   id: score.id as string,
@@ -93,7 +90,7 @@ export const createAnnotation = createServerFn({ method: "POST" })
     z.object({
       projectId: z.string(),
       traceId: traceIdSchema,
-      spanId: z.string().optional(),
+      spanId: spanIdSchema.optional(),
       sessionId: z.string().optional(),
       queueId: z.string().optional(),
       value: z.number(),

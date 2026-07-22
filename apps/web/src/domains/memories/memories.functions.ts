@@ -21,13 +21,9 @@ import { createServerFn } from "@tanstack/react-start"
 import { Effect } from "effect"
 import { z } from "zod"
 import { getClickhouseClient } from "../../server/clients.ts"
+import { traceIdSchema } from "../../server/id-validation.ts"
 import { resolveOrgScope } from "../../server/resolve-org-scope.ts"
 import { withScopedClickHouse } from "../../server/scoped-clickhouse.ts"
-
-// ClickHouse binds this as FixedString(32), which is byte-sized, so
-// `.length(32)` (UTF-16 code units) alone lets a same-length non-ASCII value
-// slip through; trace ids are always lowercase hex.
-const traceIdSchema = z.string().regex(/^[0-9a-f]{32}$/, "must be a 32-character hex string")
 
 export type SessionMemorySummaryRecord = SessionMemorySummary
 export type SessionMemoryDiffRecord = SessionMemoryDiff

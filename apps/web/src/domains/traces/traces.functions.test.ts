@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest"
-import { spanIdSchema, traceIdSchema } from "./traces.functions.ts"
+import { spanIdSchema, traceIdSchema } from "../../server/id-validation.ts"
 
 describe("traceIdSchema", () => {
   const VALID_TRACE_ID = "d8e03a7d206b83271ef46dcc21cb0a3e"
