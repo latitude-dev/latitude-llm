@@ -1034,6 +1034,95 @@ describe("analyzeSessionUseCase", () => {
     ).toBe(false)
   })
 
+  it("anchors clarification loops to the assistant's repeated request, not the user's frustration", async () => {
+    const repeatedRequest = "Please provide the full details again so I can continue."
+    const userComplaint = "This is incredibly frustrating. I already gave you the full details."
+    const { ai, generated } = createAdjudicationAi({
+      embeddingForText: (text) => {
+        if (text.includes("conversation is stuck in repeated clarification questions or missing information"))
+          return [1, 0]
+        if (text.includes("repeatedly asks the user to clarify or provide the same information again")) return [1, 0]
+        if (text.includes("assistant has enough information and proceeds directly")) return [0.96, 0.28]
+        if (text === `assistant: ${repeatedRequest}`) return [1, 0]
+        return [-1, 0]
+      },
+      acceptedCandidateIds: (prompt) =>
+        candidatesFromPrompt(prompt)
+          .filter((candidate) => candidate.kind === "clarification_loop")
+          .map((candidate) => candidate.id),
+    })
+    const { effect, momentLabels } = runUseCase({
+      session: makeSessionWithMessages([
+        message("user", "My request includes the full account details you need."),
+        message("assistant", "Please provide the full details so I can continue."),
+        message("user", userComplaint),
+        message("assistant", repeatedRequest),
+      ]),
+      ai,
+    })
+
+    await Effect.runPromise(effect)
+
+    const candidates = candidatesFromPrompt(generated[0]?.prompt ?? "")
+    const clarification = candidates.find((candidate) => candidate.kind === "clarification_loop")
+    expect(clarification).toMatchObject({
+      firstMessageIndex: 3,
+      lastMessageIndex: 3,
+      actor: "assistant",
+      evidence: repeatedRequest,
+    })
+    expect(
+      candidates.some((candidate) => candidate.kind === "clarification_loop" && candidate.evidence === userComplaint),
+    ).toBe(false)
+    expect(momentLabels.rows).toHaveLength(1)
+    expect(momentLabels.rows[0]).toMatchObject({
+      kind: "clarification_loop",
+      firstMessageIndex: 3,
+      lastMessageIndex: 3,
+      actor: "assistant",
+      evidence: repeatedRequest,
+    })
+  })
+
+  it("rejects redundant information requests nominated as stalling", async () => {
+    const repeatedRequest = "Please provide the full details again so I can continue."
+    let rejectedStallingCandidate = false
+    const { ai, generated } = createAdjudicationAi({
+      embeddingForText: (text) => {
+        if (text.includes("asks the user to wait says one moment or that it is still working")) return [1, 0]
+        if (text === `assistant: ${repeatedRequest}`) return [1, 0]
+        return [-1, 0]
+      },
+      acceptedCandidateIds: (prompt) => {
+        const candidates = candidatesFromPrompt(prompt)
+        rejectedStallingCandidate = candidates.some((candidate) => candidate.kind === "stalling")
+        return candidates.filter((candidate) => candidate.kind !== "stalling").map((candidate) => candidate.id)
+      },
+    })
+    const { effect, momentLabels } = runUseCase({
+      session: makeSessionWithMessages([
+        message("user", "I already provided the full details for this request."),
+        message("assistant", repeatedRequest),
+        message("user", "This is incredibly frustrating because I already gave you that information."),
+      ]),
+      ai,
+    })
+
+    await Effect.runPromise(effect)
+
+    const candidates = candidatesFromPrompt(generated[0]?.prompt ?? "")
+    const stalling = candidates.find((candidate) => candidate.kind === "stalling")
+    expect(generated[0]?.system).toContain("asking for information, even redundantly, is not stalling")
+    expect(stalling).toMatchObject({
+      firstMessageIndex: 1,
+      lastMessageIndex: 1,
+      actor: "assistant",
+      evidence: repeatedRequest,
+    })
+    expect(rejectedStallingCandidate).toBe(true)
+    expect(momentLabels.rows.some((label) => label.kind === "stalling")).toBe(false)
+  })
+
   it("retries without persisting labels or failed analyses for duplicate or unknown adjudication IDs", async () => {
     for (const acceptedCandidateIds of [
       (prompt: string) => {
