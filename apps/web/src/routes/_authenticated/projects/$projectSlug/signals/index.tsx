@@ -15,7 +15,7 @@ import {
   useValueWithDefault,
 } from "@repo/ui"
 import { eq } from "@tanstack/react-db"
-import { createFileRoute, redirect, useParams } from "@tanstack/react-router"
+import { createFileRoute, useParams } from "@tanstack/react-router"
 import { useProjectFlaggers } from "../../../../../domains/flaggers/flaggers.collection.ts"
 import { defaultProjectTimeWindowDays } from "../../../../../domains/projects/default-time-window.ts"
 import { useProjectsCollection } from "../../../../../domains/projects/projects.collection.ts"
@@ -204,21 +204,9 @@ function serializeAssignees(tokens: readonly string[]): string {
 }
 
 export const Route = createFileRoute("/_authenticated/projects/$projectSlug/signals/")({
-  // Preserve every list search param (lifecycle/time/search/sort live in the URL via
-  // `useParamState`, not here); we only inspect `signalId`/legacy `issueId` so the drawer
-  // deep link — still live in already-sent emails/Slack messages — redirects to the full page.
+  // List search params (lifecycle/time/search/sort) live in the URL via `useParamState`,
+  // so keep a permissive passthrough rather than a typed schema.
   validateSearch: (search: Record<string, unknown>): Record<string, unknown> => search,
-  beforeLoad: ({ params, search }) => {
-    const signalId = search.signalId ?? search.issueId
-    if (typeof signalId === "string" && signalId.length > 0) {
-      const example = search.example
-      throw redirect({
-        to: "/projects/$projectSlug/signals/$signalId",
-        params: { projectSlug: params.projectSlug, signalId },
-        ...(typeof example === "string" && example.length > 0 ? { search: { example } } : {}),
-      })
-    }
-  },
   staticData: {
     breadcrumb: SignalsBreadcrumb,
   },

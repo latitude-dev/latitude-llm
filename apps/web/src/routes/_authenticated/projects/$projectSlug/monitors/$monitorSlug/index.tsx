@@ -275,10 +275,10 @@ function MonitorDetailPage() {
                     ) : null}
                     {rule ? (
                       <ConfigField label="Trigger">
-                        <SeverityStatus
-                          severity={rule.severity}
-                          label={`${INCIDENT_NOTIFICATION_KEY_LABEL[rule.kind]} · ${rule.severity}`}
-                        />
+                        <div className="flex items-center gap-2">
+                          <Text.H5 color="foreground">{INCIDENT_NOTIFICATION_KEY_LABEL[rule.kind]}</Text.H5>
+                          <SeverityStatus severity={rule.severity} />
+                        </div>
                       </ConfigField>
                     ) : null}
                     <ConfigField label="Incidents">

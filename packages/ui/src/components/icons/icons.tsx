@@ -1,5 +1,5 @@
 import type { LucideProps } from "lucide-react"
-import { forwardRef, memo } from "react"
+import { memo, type Ref } from "react"
 
 import { colors, type TextColor } from "../../tokens/colors.ts"
 import { cn } from "../../utils/cn.ts"
@@ -31,24 +31,29 @@ export interface IconProps extends Omit<LucideProps, "size"> {
   color?: TextColor
   weight?: IconWeight
   className?: string
+  ref?: Ref<SVGSVGElement>
 }
 
-const Icon = memo(
-  forwardRef<SVGSVGElement, IconProps>(
-    ({ icon: IconComponent, size = "default", color, weight, className, ...props }, ref) => {
-      const colorClass = color ? colors.textColors[color] : ""
+const Icon = memo(function Icon({
+  icon: IconComponent,
+  size = "default",
+  color,
+  weight,
+  className,
+  ref,
+  ...props
+}: IconProps) {
+  const colorClass = color ? colors.textColors[color] : ""
 
-      return (
-        <IconComponent
-          ref={ref}
-          className={cn(sizeMap[size], colorClass, className)}
-          {...(weight ? { strokeWidth: weightMap[weight] } : {})}
-          {...props}
-        />
-      )
-    },
-  ),
-)
+  return (
+    <IconComponent
+      ref={ref}
+      className={cn(sizeMap[size], colorClass, className)}
+      {...(weight ? { strokeWidth: weightMap[weight] } : {})}
+      {...props}
+    />
+  )
+})
 
 Icon.displayName = "Icon"
 

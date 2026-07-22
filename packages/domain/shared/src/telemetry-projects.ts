@@ -19,6 +19,7 @@ export const LATITUDE_TELEMETRY_PROJECT_SLUGS = {
   signalGeneration: "latitude-signal-generation",
   optimizations: "latitude-optimizations",
   taxonomy: "latitude-taxonomy",
+  conversationIntelligence: "latitude-conversation-intelligence",
 } as const satisfies Record<string, string>
 
 export type LatitudeTelemetryProjectSlug =

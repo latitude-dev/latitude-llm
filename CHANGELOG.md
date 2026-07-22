@@ -2,6 +2,79 @@
 
 ## Unreleased
 
+## v0.3.63 - 2026-07-22
+
+### App
+
+- Refreshed authenticated navigation with a collapsible sidebar, reorganized search and usage controls, and improved organization and project switchers. Project switches no longer reload the page, and project slugs can be copied from the header (ref: #4185).
+
+### Telemetry
+
+- Released TypeScript Telemetry 4.0.0 with opt-in provider instrumentation subpaths so consumers only bundle the integrations they import. This breaking release replaced the `instrumentations` object map with an array of factory-created instances and made registration failures observable through `latitude.ready` (refs: #4178, #4189).
+
+### Session intelligence
+
+- Made session-intelligence backfills continue after individual session failures, report completed and failed counts with bounded failed-session IDs, and keep new analysis payloads out of Temporal history (ref: #4190).
+
+## v0.3.62 - 2026-07-22
+
+### Memory
+
+- Shipped Memory observability to every organization by removing the `memoryObservability` feature flag; the Memory page and its surfaces are now public (ref: #4180).
+- Exposed memory observability reads across the public API, MCP, TypeScript/Python SDKs (9.6.0), and CLI (7.6.0): store roll-ups and snapshots (point-in-time and diff), per-record bodies with version history and change diffs, record read/user listings, and per-session and per-trace memory footprints (ref: #4157).
+
+### Signals
+
+- Added agent-dispatch history to the signal detail page (ref: #4182).
+
+### Sessions
+
+- Validated session moment labels with a contextual MiniMax classification pass, with tenant-safe classifier retries (ref: #4167).
+
+### Telemetry
+
+- Added a Prime Intellect telemetry export package for shipping Prime Intellect traces to Latitude (ref: #4164).
+- Fixed Claude Code memory-directory resolution when running inside a git worktree so auto-memory spans still attribute to the right project (ref: #4176).
+
+### Traces
+
+- Added drag-to-resize to the span detail panel in the Spans tab (ref: #4165).
+
+### Chore
+
+- Refreshed the bundled models.dev catalog data (ref: #4087).
+- Added a DNS record for the `jobs` subdomain (ref: #4177).
+
+## v0.3.61 - 2026-07-22
+
+### Signals
+
+- Restored the manual resolve/ignore lifecycle that the monitors-incidents consolidation had collapsed into mute, with regression detection: a new occurrence on a resolved signal reopens it and emits a `signal.regressed` notification (assignee-first, in-app + email + Slack). Mute now only gates notification fan-out and agent dispatch, ignoring auto-mutes, and the Archived tab lists resolved-or-ignored signals (ref: #4132).
+- Switched signal slugs to short JIRA-style `LAT-XY9Z` codes with slug-addressed detail pages (`/signals/$signalSlug`); slugs are assigned once at creation and never regenerated. Experiment top-signals now expose the slug as their `key` across the public API, MCP, and web so an agent can feed it straight into the signal tools (ref: #4154).
+- Used occurrence timestamps in the signals seen column (ref: #4145).
+
+### Flaggers
+
+- Fixed the `process deterministic-flaggers` job failing for every project in production: a forward-incompatible flagger row (from the new-slug backfill migration running ahead of the app deploy) made the whole batch throw. Unrecognized rows are now skipped with a warning, making staged rollouts of new flagger strategies safe regardless of migration/deploy ordering (ref: #4129).
+- Stopped undeclared-tool false positives from truncated Claude Code toolsets: all tool names are preserved when capping oversized schemas, and a call whose response succeeded no longer flags as undeclared (ref: #4141).
+
+### Telemetry
+
+- Added memory-operation spans for Claude Code's own persistent auto memory: Read/Write/Edit tools targeting the auto-memory directory now emit `gen_ai.memory.*` spans (search/upsert/update) into the same ledger and Memory-page surfaces as the SDK memory helper, gated by `LATITUDE_CLAUDE_CODE_MEMORY` (default on) (ref: #4140).
+
+### Traces
+
+- Classified nested Vercel AI SDK wrappers as `agent_step` (excluded from the cost/token rollup, not an agent-graph candidate) while a trace-root wrapper stays `invoke_agent`, fixing false subagent detection and overstated single-response spans (ref: #4147).
+
+### Memory
+
+- Added an onboarding empty state to the Memory page (ref: #4152).
+
+### Taxonomy
+
+- Averaged `crossSampleAri` over all 45 leave-one-tenth-out fold pairs for a reproducible, order-robust metric and re-derived the stability floor (0.8 → 0.75); calibration/offline only, the production shadow path is unaffected (ref: #4156).
+- Fixed the shadow-span Datadog config to target `resource_name` (ref: #4148).
+
 ## v0.3.60 - 2026-07-21
 
 ### API

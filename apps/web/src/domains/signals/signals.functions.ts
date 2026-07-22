@@ -10,6 +10,7 @@ import {
   ScoreRepository,
   type SignalDimension,
   type SignalEscalationThresholdBucket,
+  type SignalWindowMetric,
 } from "@domain/scores"
 import {
   evaluationDraftSchema,
@@ -66,6 +67,7 @@ import {
   EvaluationRepositoryLive,
   MembershipRepositoryLive,
   OutboxEventWriterLive,
+  ProjectRepositoryLive,
   ScoreRepositoryLive,
   SettingsReaderLive,
   SignalRepositoryLive,
@@ -118,6 +120,7 @@ const toSignalsBucketRecord = (bucket: { readonly bucket: string; readonly count
 
 const toSignalRecord = (issue: SignalListItem) => ({
   id: issue.id,
+  slug: issue.slug,
   projectId: issue.projectId,
   name: issue.name,
   description: issue.description,
@@ -180,12 +183,32 @@ const signalRowMetricsInputSchema = z.object({
 
 export interface SignalRowMetricRecord {
   readonly occurrences: number
+  readonly firstSeenAt: string | null
+  readonly lastSeenAt: string | null
   readonly affectedSessionsPercent: number
   readonly trend: readonly ReturnType<typeof toSignalsBucketRecord>[]
 }
 
 export interface SignalRowMetricsRecord {
   readonly metricsBySignalId: Readonly<Record<string, SignalRowMetricRecord>>
+}
+
+export function toSignalRowMetricRecord({
+  metric,
+  totalSessions,
+  trend,
+}: {
+  readonly metric: SignalWindowMetric | undefined
+  readonly totalSessions: number
+  readonly trend: readonly ReturnType<typeof toSignalsBucketRecord>[]
+}): SignalRowMetricRecord {
+  return {
+    occurrences: metric?.occurrences ?? 0,
+    firstSeenAt: metric?.firstSeenAt.toISOString() ?? null,
+    lastSeenAt: metric?.lastSeenAt.toISOString() ?? null,
+    affectedSessionsPercent: !metric || totalSessions === 0 ? 0 : Math.min(metric.affectedSessions / totalSessions, 1),
+    trend,
+  }
 }
 
 const signalInputSchema = z.object({
@@ -195,6 +218,7 @@ const signalInputSchema = z.object({
 
 const toSignalSummaryRecord = (issue: Signal) => ({
   id: issue.id,
+  slug: issue.slug,
   projectId: issue.projectId,
   name: issue.name,
   description: issue.description,
@@ -521,16 +545,13 @@ export const getSignalRowMetrics = createServerFn({ method: "GET" })
               const metric = metricsBySignalId.get(signalId)
               return [
                 signalId,
-                {
-                  occurrences: metric?.occurrences ?? 0,
-                  affectedSessionsPercent:
-                    !metric || sessionCount.totalCount === 0
-                      ? 0
-                      : Math.min(metric.affectedSessions / sessionCount.totalCount, 1),
+                toSignalRowMetricRecord({
+                  metric,
+                  totalSessions: sessionCount.totalCount,
                   trend:
                     trendBySignalId.get(signalId) ??
                     fillBuckets({ scaffold: trendScaffold, buckets: [] }).map(toSignalsBucketRecord),
-                },
+                }),
               ]
             }),
           ),
@@ -626,6 +647,32 @@ export const getSignal = createServerFn({ method: "GET" })
         const issue = issues[0]
 
         return issue ? toSignalSummaryRecord(issue) : null
+      }).pipe(withScopedPostgres(SignalRepositoryLive, pgClient, orgId), withTracing),
+    )
+  })
+
+/**
+ * Resolves the URL's signal `slug` to its stable CUID id. The detail route is
+ * addressed by the human-facing slug, but the detail data lives in ClickHouse
+ * keyed by the id, the page's many child queries share one id-keyed cache entry,
+ * and `SignalDetailBody`/`SignalLifecycleActions` are also reused in the session
+ * drawer with only a CUID — so the route resolves the slug once here and threads
+ * the id down (the same slug→entity→id shape projects use).
+ */
+export const getSignalIdBySlug = createServerFn({ method: "GET" })
+  .inputValidator(z.object({ projectId: z.string(), signalSlug: z.string() }))
+  .handler(async ({ data, context }): Promise<{ readonly signalId: string } | null> => {
+    const orgId = await resolveOrgScope(context)
+    const pgClient = getPostgresClient()
+    const projectId = ProjectId(data.projectId)
+
+    return Effect.runPromise(
+      Effect.gen(function* () {
+        const signalRepository = yield* SignalRepository
+        return yield* signalRepository.findBySlug({ projectId, slug: data.signalSlug }).pipe(
+          Effect.map((issue) => ({ signalId: issue.id })),
+          Effect.catchTag("NotFoundError", () => Effect.succeed(null)),
+        )
       }).pipe(withScopedPostgres(SignalRepositoryLive, pgClient, orgId), withTracing),
     )
   })
@@ -1360,7 +1407,7 @@ export const createSignal = createServerFn({ method: "POST" })
         evaluation: data.evaluation,
       }).pipe(
         withScopedPostgres(
-          Layer.mergeAll(SignalRepositoryLive, EvaluationRepositoryLive, OutboxEventWriterLive),
+          Layer.mergeAll(ProjectRepositoryLive, SignalRepositoryLive, EvaluationRepositoryLive, OutboxEventWriterLive),
           client,
           organizationId,
         ),

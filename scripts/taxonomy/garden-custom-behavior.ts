@@ -5,7 +5,7 @@
  * gardening is automatic (auto-enqueue on create + cron cadence); this is only
  * for local QA — run it, then watch the workflow in the Temporal UI
  * (http://localhost:8080) and inspect `taxonomy_clusters` (custom_behavior_id) +
- * `custom_behavior_assignments`.
+ * `taxonomy_view_assignments`.
  *
  * The `taxonomy` worker must be running to consume the job
  * (`pnpm --filter @app/workers dev`).

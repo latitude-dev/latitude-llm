@@ -67,7 +67,7 @@ export interface TaxonomyReassignmentWindowObservation {
 
 /**
  * A clustering-sample observation carrying its `sessionId`, so scoped custom
- * behavior assignments (which live in the `custom_behavior_assignments` slice,
+ * behavior assignments (which live in the `taxonomy_view_assignments` slice,
  * keyed by session) can be written without a second lookup.
  */
 export interface TaxonomyScopedClusteringObservation extends TaxonomyClusteringObservation {

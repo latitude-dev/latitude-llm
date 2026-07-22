@@ -14,9 +14,9 @@ import {
   type TaxonomyClusterTrendSummary,
 } from "@domain/taxonomy"
 import {
-  CustomBehaviorAssignmentRepositoryLive,
   TaxonomyClusterIntelligenceRepositoryLive,
   TaxonomyObservationRepositoryLive,
+  TaxonomyViewAssignmentRepositoryLive,
 } from "@platform/db-clickhouse"
 import { TaxonomyClusterRepositoryLive } from "@platform/db-postgres"
 import { withTracing } from "@repo/observability"
@@ -180,7 +180,7 @@ const clickHouseTaxonomyIntelligenceLayer = Layer.mergeAll(
   TaxonomyClusterIntelligenceRepositoryLive,
   // Provides scoped per-cluster counts to listProjectBehavioursUseCase when a
   // customBehaviorId is passed; unused (never resolved) on the global path.
-  CustomBehaviorAssignmentRepositoryLive,
+  TaxonomyViewAssignmentRepositoryLive,
 )
 
 const postgresTaxonomyReadLayer = Layer.mergeAll(TaxonomyClusterRepositoryLive)

@@ -41,8 +41,8 @@ export function UserSignalsSection({
         return (
           <Link
             key={issue.signalId}
-            to="/projects/$projectSlug/signals/$signalId"
-            params={{ projectSlug, signalId: issue.signalId }}
+            to="/projects/$projectSlug/signals/$signalSlug"
+            params={{ projectSlug, signalSlug: issue.slug }}
             aria-label={`Open issue ${issue.name}`}
             className="-mx-2 flex items-center gap-3 rounded-md px-2 py-2.5 transition-colors hover:bg-background"
           >

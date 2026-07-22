@@ -11,7 +11,6 @@ import { IntercomProvider } from "../lib/intercom/intercom-provider.tsx"
 import { isLatitudeStaffEmail } from "../lib/posthog/posthog-client.ts"
 import { PostHogIdentity } from "../lib/posthog/posthog-provider.tsx"
 import { ImpersonationBanner } from "./_authenticated/-components/impersonation-banner.tsx"
-import { NavHeader } from "./_authenticated/-components/nav-header.tsx"
 import { isProjectOnboardingPathname } from "./_authenticated/-lib/is-project-onboarding-pathname.ts"
 import { authenticatedLoader } from "./_authenticated/-lib/loader.ts"
 
@@ -74,7 +73,6 @@ function AuthenticatedLayout() {
             excludeFromAnalytics={isLatitudeStaffEmail(user.email) || impersonatedBy != null}
           />
           {impersonatedBy && <ImpersonationBanner impersonatedUserEmail={user.email} />}
-          {isProjectOnboarding ? null : <NavHeader />}
           <main
             className={
               isProjectOnboarding

@@ -103,6 +103,11 @@ export interface AgentDispatchRepositoryShape {
     readonly errorDetail: string
   }) => Effect.Effect<boolean, RepositoryError, SqlClient>
   readonly listByProject: (projectId: ProjectId) => Effect.Effect<readonly AgentDispatch[], RepositoryError, SqlClient>
+  readonly listBySource: (input: {
+    readonly projectId: ProjectId
+    readonly sourceType: "signal" | "monitor"
+    readonly sourceId: string
+  }) => Effect.Effect<readonly AgentDispatch[], RepositoryError, SqlClient>
 }
 
 export class AgentDispatchRepository extends Context.Service<AgentDispatchRepository, AgentDispatchRepositoryShape>()(

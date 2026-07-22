@@ -31,19 +31,19 @@ This guide shows you how to integrate **Latitude Telemetry** into an application
       <Tab title="TypeScript">
         <CodeGroup>
           ```bash npm
-          npm install @latitude-data/telemetry
+          npm install @latitude-data/telemetry llamaindex @llamaindex/openai @llamaindex/workflow
           ```
 
           ```bash pnpm
-          pnpm add @latitude-data/telemetry
+          pnpm add @latitude-data/telemetry llamaindex @llamaindex/openai @llamaindex/workflow
           ```
 
           ```bash yarn
-          yarn add @latitude-data/telemetry
+          yarn add @latitude-data/telemetry llamaindex @llamaindex/openai @llamaindex/workflow
           ```
 
           ```bash bun
-          bun add @latitude-data/telemetry
+          bun add @latitude-data/telemetry llamaindex @llamaindex/openai @llamaindex/workflow
           ```
         </CodeGroup>
       </Tab>
@@ -69,6 +69,7 @@ This guide shows you how to integrate **Latitude Telemetry** into an application
     <Tabs>
       <Tab title="TypeScript">
         ```ts
+        import { createLlamaIndexInstrumentation } from "@latitude-data/telemetry/instrumentations/llamaindex"
         import { Latitude, capture } from "@latitude-data/telemetry"
         import { Settings } from "llamaindex"
         import * as LlamaIndex from "llamaindex"
@@ -78,10 +79,10 @@ This guide shows you how to integrate **Latitude Telemetry** into an application
         const latitude = new Latitude({
           apiKey: process.env.LATITUDE_API_KEY!,
           project: process.env.LATITUDE_PROJECT_SLUG!,
-          instrumentations: { llamaindex: LlamaIndex },
+          instrumentations: [createLlamaIndexInstrumentation(LlamaIndex)],
         })
 
-
+        await latitude.ready
         Settings.llm = openai({ model: "gpt-4o" })
         const myAgent = agent({ tools: [] })
 

@@ -293,13 +293,17 @@ export function SignalDrawerEvaluations({
   })
 
   useEffect(() => {
-    let cancelled = false
     mountedRef.current = true
     trackedRef.current = null
     setTracked(null)
     setAlignmentState(null)
     setHasAlignmentStateSynced(false)
 
+    // The detail route resolves the slug to the signal id asynchronously; don't
+    // poll until it's available (an empty id 404s the signal lookup).
+    if (signalId.length === 0) return
+
+    let cancelled = false
     const poll = async () => {
       try {
         const state = await getSignalAlignmentState({

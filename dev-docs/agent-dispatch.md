@@ -55,6 +55,8 @@ The signal detail page has a **Send to** button (`signal-send-to.tsx`) with two 
 
 Manual sends keep the feature flag, config-enabled check, org RLS, and ledger idempotency (`<vendor>:<configId>:manual:<signalId>:<sendId>`; each click mints a new `sendId`), but deliberately bypass trigger subscription, signal mute, and guardrails — an explicit human click is its own approval. Transport failures are returned to the user without background retry.
 
+Once a signal has any ledger rows (`AgentDispatchRepository.listBySource` via the `listSignalAgentDispatches` server fn — signal or monitor, automatic or manual), the detail page swaps the plain **Send to** button for a **dispatch-history** button plus a **Send again to agent** dropdown (the same selector). The history button opens a popover listing that signal's dispatches — kind, trigger, status, relative time, and deep link — so a run can be correlated back to the signal that triggered it; a single dispatch labels the button with its target, multiple show a count.
+
 Guardrails: `maxDispatchesPerDay`, `cooldownMinutes` per config. The current UI uses defaults and does not expose these controls.
 
 ## Data model

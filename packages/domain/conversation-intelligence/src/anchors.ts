@@ -113,11 +113,14 @@ export const MOMENT_LABEL_ANCHORS: readonly MomentLabelAnchorConfig[] = [
   {
     kind: "clarification_loop",
     actor: "assistant",
-    roles: ["user", "assistant"],
-    positiveAnchors: ["the conversation is stuck in repeated clarification questions or missing information"],
+    roles: ["assistant"],
+    positiveAnchors: [
+      "the conversation is stuck in repeated clarification questions or missing information",
+      "the assistant repeatedly asks the user to clarify or provide the same information again",
+    ],
     contrastAnchors: ["the assistant has enough information and proceeds directly"],
     threshold: 0.58,
-    margin: 0.06,
+    margin: 0.03,
     summary: "Moment resembles a clarification loop",
   },
   {
@@ -150,6 +153,7 @@ export const MOMENT_LABEL_ANCHORS: readonly MomentLabelAnchorConfig[] = [
     contrastAnchors: [
       "the assistant delivers the requested result or answer",
       "the assistant asks a specific question needed to proceed",
+      "the assistant asks the user to repeat information needed to proceed",
     ],
     threshold: 0.58,
     margin: 0.06,

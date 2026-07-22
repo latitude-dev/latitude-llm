@@ -2,9 +2,11 @@ import type { GenerateInput, GenerateResult } from "@domain/ai"
 import { EMBEDDING_DIMENSIONS } from "@domain/ai"
 import { createFakeAI } from "@domain/ai/testing"
 import { OutboxEventWriter, type OutboxWriteEvent } from "@domain/events"
+import { createProject, ProjectRepository } from "@domain/projects"
+import { createFakeProjectRepository } from "@domain/projects/testing"
 import { type AnnotationScore, type Score, ScoreRepository } from "@domain/scores"
 import { createFakeScoreRepository } from "@domain/scores/testing"
-import { OrganizationId, ScoreId, SignalId, SqlClient, type SqlClientShape } from "@domain/shared"
+import { OrganizationId, ProjectId, ScoreId, SignalId, SqlClient, type SqlClientShape } from "@domain/shared"
 import { Effect } from "effect"
 import { describe, expect, it } from "vitest"
 import { SignalRepository } from "../ports/signal-repository.ts"
@@ -24,6 +26,16 @@ const createFakeOutboxEventWriter = () => {
 
 const organizationId = "oooooooooooooooooooooooo"
 const projectId = "pppppppppppppppppppppppp"
+const projectSlug = "acme-signals"
+
+const { repository: projectRepository } = createFakeProjectRepository([
+  createProject({
+    id: ProjectId(projectId),
+    organizationId: OrganizationId(organizationId),
+    name: "Acme",
+    slug: projectSlug,
+  }),
+])
 
 const makeEmbedding = (): number[] =>
   Array.from({ length: EMBEDDING_DIMENSIONS }, (_, index) => {
@@ -109,6 +121,7 @@ describe("createSignalFromScoreUseCase", () => {
         Effect.provide(aiLayer),
         Effect.provideService(ScoreRepository, scoreRepository),
         Effect.provideService(SignalRepository, signalRepository),
+        Effect.provideService(ProjectRepository, projectRepository),
         Effect.provideService(SqlClient, createPassthroughSqlClient(organizationId)),
         Effect.provideService(OutboxEventWriter, outbox.service),
       ),
@@ -151,6 +164,7 @@ describe("createSignalFromScoreUseCase", () => {
         Effect.provide(aiLayer),
         Effect.provideService(ScoreRepository, scoreRepository),
         Effect.provideService(SignalRepository, signalRepository),
+        Effect.provideService(ProjectRepository, projectRepository),
         Effect.provideService(SqlClient, createPassthroughSqlClient(organizationId)),
         Effect.provideService(OutboxEventWriter, createFakeOutboxEventWriter().service),
       ),
@@ -199,6 +213,7 @@ describe("createSignalFromScoreUseCase", () => {
         Effect.provide(aiLayer),
         Effect.provideService(ScoreRepository, scoreRepository),
         Effect.provideService(SignalRepository, signalRepository),
+        Effect.provideService(ProjectRepository, projectRepository),
         Effect.provideService(SqlClient, createPassthroughSqlClient(organizationId)),
         Effect.provideService(OutboxEventWriter, createFakeOutboxEventWriter().service),
       ),
@@ -258,6 +273,7 @@ describe("createSignalFromScoreUseCase", () => {
             Effect.provide(aiLayer),
             Effect.provideService(ScoreRepository, scoreRepository),
             Effect.provideService(SignalRepository, signalRepository),
+            Effect.provideService(ProjectRepository, projectRepository),
             Effect.provideService(SqlClient, createPassthroughSqlClient(organizationId)),
             Effect.provideService(OutboxEventWriter, createFakeOutboxEventWriter().service),
           ),

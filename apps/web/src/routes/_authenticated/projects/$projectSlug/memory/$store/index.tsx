@@ -1,13 +1,11 @@
 import { Button, Text, Tooltip } from "@repo/ui"
 import { createFileRoute, Link, useParams } from "@tanstack/react-router"
 import { ArrowLeftIcon, DatabaseIcon } from "lucide-react"
-import { useHasFeatureFlag } from "../../../../../../domains/feature-flags/feature-flags.collection.ts"
 import { useMemoryStoreSnapshot } from "../../../../../../domains/memories/memories.collection.ts"
 import { ListingLayout as Layout } from "../../../../../../layouts/ListingLayout/index.tsx"
 import { useParamState } from "../../../../../../lib/hooks/useParamState.ts"
 import { BreadcrumbText } from "../../../../-components/breadcrumb-ui.tsx"
 import { useRouteProject } from "../../-route-data.ts"
-import { MemoryUnavailableState } from "../-components/memory-empty-state.tsx"
 import {
   decodeRecordParam,
   decodeStoreSegment,
@@ -39,7 +37,6 @@ export const Route = createFileRoute("/_authenticated/projects/$projectSlug/memo
 })
 
 function StoreDetailPage() {
-  const enabled = useHasFeatureFlag("memoryObservability")
   const project = useRouteProject()
   const { projectSlug, store } = Route.useParams()
   const storeId = decodeStoreSegment(store)
@@ -47,15 +44,7 @@ function StoreDetailPage() {
   const [changeParam, setChangeParam] = useParamState("change", "")
   const selectedRecordId = recordParam === "" ? undefined : decodeRecordParam(recordParam)
 
-  const { data: snapshot, isLoading } = useMemoryStoreSnapshot({ projectId: project.id, storeId, enabled })
-
-  if (!enabled) {
-    return (
-      <Layout>
-        <MemoryUnavailableState />
-      </Layout>
-    )
-  }
+  const { data: snapshot, isLoading } = useMemoryStoreSnapshot({ projectId: project.id, storeId })
 
   return (
     <Layout className="gap-0">

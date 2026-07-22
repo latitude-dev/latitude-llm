@@ -9,6 +9,8 @@ from ..types.annotation import Annotation
 from ..types.export_traces_response import ExportTracesResponse
 from ..types.paginated_trace_annotations import PaginatedTraceAnnotations
 from ..types.paginated_traces import PaginatedTraces
+from ..types.session_memory_changes import SessionMemoryChanges
+from ..types.session_memory_summary import SessionMemorySummary
 from ..types.span_detail import SpanDetail
 from ..types.trace_analytics_response import TraceAnalyticsResponse
 from ..types.trace_detail import TraceDetail
@@ -364,6 +366,80 @@ class TracesClient:
         _response = self._raw_client.get_annotation(
             project_slug, trace_id, annotation_id, request_options=request_options
         )
+        return _response.data
+
+    def get_memory(
+        self, project_slug: str, trace_id: str, *, request_options: typing.Optional[RequestOptions] = None
+    ) -> SessionMemorySummary:
+        """
+        Returns the trace's memory footprint: per-record read, added, and removed token metrics plus totals, scoped to this trace.
+
+        Parameters
+        ----------
+        project_slug : str
+            Project slug (human-readable identifier)
+
+        trace_id : str
+            32-character trace identifier.
+
+        request_options : typing.Optional[RequestOptions]
+            Request-specific configuration.
+
+        Returns
+        -------
+        SessionMemorySummary
+            Trace memory footprint
+
+        Examples
+        --------
+        from latitude_sdk import LatitudeClient
+
+        client = LatitudeClient(
+            api_key="YOUR_API_KEY",
+        )
+        client.traces.get_memory(
+            project_slug="projectSlug",
+            trace_id="traceId",
+        )
+        """
+        _response = self._raw_client.get_memory(project_slug, trace_id, request_options=request_options)
+        return _response.data
+
+    def get_memory_changes(
+        self, project_slug: str, trace_id: str, *, request_options: typing.Optional[RequestOptions] = None
+    ) -> SessionMemoryChanges:
+        """
+        Returns the memory writes the trace made as per-record before/after diffs, scoped to this trace.
+
+        Parameters
+        ----------
+        project_slug : str
+            Project slug (human-readable identifier)
+
+        trace_id : str
+            32-character trace identifier.
+
+        request_options : typing.Optional[RequestOptions]
+            Request-specific configuration.
+
+        Returns
+        -------
+        SessionMemoryChanges
+            Trace memory changes
+
+        Examples
+        --------
+        from latitude_sdk import LatitudeClient
+
+        client = LatitudeClient(
+            api_key="YOUR_API_KEY",
+        )
+        client.traces.get_memory_changes(
+            project_slug="projectSlug",
+            trace_id="traceId",
+        )
+        """
+        _response = self._raw_client.get_memory_changes(project_slug, trace_id, request_options=request_options)
         return _response.data
 
     def export(
@@ -813,6 +889,96 @@ class AsyncTracesClient:
         _response = await self._raw_client.get_annotation(
             project_slug, trace_id, annotation_id, request_options=request_options
         )
+        return _response.data
+
+    async def get_memory(
+        self, project_slug: str, trace_id: str, *, request_options: typing.Optional[RequestOptions] = None
+    ) -> SessionMemorySummary:
+        """
+        Returns the trace's memory footprint: per-record read, added, and removed token metrics plus totals, scoped to this trace.
+
+        Parameters
+        ----------
+        project_slug : str
+            Project slug (human-readable identifier)
+
+        trace_id : str
+            32-character trace identifier.
+
+        request_options : typing.Optional[RequestOptions]
+            Request-specific configuration.
+
+        Returns
+        -------
+        SessionMemorySummary
+            Trace memory footprint
+
+        Examples
+        --------
+        import asyncio
+
+        from latitude_sdk import AsyncLatitudeClient
+
+        client = AsyncLatitudeClient(
+            api_key="YOUR_API_KEY",
+        )
+
+
+        async def main() -> None:
+            await client.traces.get_memory(
+                project_slug="projectSlug",
+                trace_id="traceId",
+            )
+
+
+        asyncio.run(main())
+        """
+        _response = await self._raw_client.get_memory(project_slug, trace_id, request_options=request_options)
+        return _response.data
+
+    async def get_memory_changes(
+        self, project_slug: str, trace_id: str, *, request_options: typing.Optional[RequestOptions] = None
+    ) -> SessionMemoryChanges:
+        """
+        Returns the memory writes the trace made as per-record before/after diffs, scoped to this trace.
+
+        Parameters
+        ----------
+        project_slug : str
+            Project slug (human-readable identifier)
+
+        trace_id : str
+            32-character trace identifier.
+
+        request_options : typing.Optional[RequestOptions]
+            Request-specific configuration.
+
+        Returns
+        -------
+        SessionMemoryChanges
+            Trace memory changes
+
+        Examples
+        --------
+        import asyncio
+
+        from latitude_sdk import AsyncLatitudeClient
+
+        client = AsyncLatitudeClient(
+            api_key="YOUR_API_KEY",
+        )
+
+
+        async def main() -> None:
+            await client.traces.get_memory_changes(
+                project_slug="projectSlug",
+                trace_id="traceId",
+            )
+
+
+        asyncio.run(main())
+        """
+        _response = await self._raw_client.get_memory_changes(project_slug, trace_id, request_options=request_options)
         return _response.data
 
     async def export(

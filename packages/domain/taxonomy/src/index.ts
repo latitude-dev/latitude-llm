@@ -25,7 +25,17 @@ export {
   CUSTOM_BEHAVIOR_GARDENING_MIN_INTERVAL_MS,
   CUSTOM_BEHAVIOR_NAME_MAX_LENGTH,
   CUSTOM_BEHAVIOR_STATUSES,
+  FACET_DESCRIPTION_MAX_LENGTH,
+  FACET_EXTRACTION_INPUT_CHAR_CAP,
+  FACET_GARDENING_CRON_KEY,
+  FACET_GARDENING_CRON_PATTERN,
+  FACET_GARDENING_MIN_INTERVAL_MS,
+  FACET_INSTRUCTIONS_MAX_LENGTH,
+  FACET_NAME_MAX_LENGTH,
+  FACET_PROJECTION_TEXT_MAX_LENGTH,
+  FACET_STATUSES,
   MAX_CUSTOM_BEHAVIORS_PER_PROJECT,
+  MAX_FACETS_PER_PROJECT,
   TAXONOMY_ADAPTIVE_CLUSTERING_MODE_ENV,
   TAXONOMY_ADAPTIVE_CLUSTERING_MODES,
   TAXONOMY_ADAPTIVE_POLICY_VERSION,
@@ -99,11 +109,17 @@ export {
   customBehaviorStatusSchema,
   stripCustomBehaviorExcludedFields,
 } from "./entities/custom-behavior.ts"
-export {
-  type CustomBehaviorAssignment,
-  customBehaviorAssignmentSchema,
-} from "./entities/custom-behavior-assignment.ts"
 export { TaxonomyDimension, taxonomyDimensionSchema } from "./entities/dimension.ts"
+export {
+  FacetStatus,
+  facetStatusSchema,
+  type TaxonomyFacet,
+  taxonomyFacetSchema,
+} from "./entities/facet.ts"
+export {
+  type TaxonomyFacetProjection,
+  taxonomyFacetProjectionSchema,
+} from "./entities/facet-projection.ts"
 export {
   type TaxonomyClusterLineage,
   TaxonomyLineageTransitionType,
@@ -124,6 +140,10 @@ export {
   taxonomyObservationAssignmentMethodSchema,
   taxonomyProjectionMethodSchema,
 } from "./entities/observation.ts"
+export {
+  type TaxonomyViewAssignment,
+  taxonomyViewAssignmentSchema,
+} from "./entities/taxonomy-view-assignment.ts"
 export {
   CustomBehaviorFilterInvalidError,
   CustomBehaviorLimitReachedError,
@@ -156,15 +176,15 @@ export {
 } from "./lineage.ts"
 export { taxonomyClusterLockKey, withTaxonomyClusterLock } from "./locks.ts"
 export {
-  type CustomBehaviorAssignmentClusterCount,
-  CustomBehaviorAssignmentRepository,
-  type CustomBehaviorAssignmentRepositoryShape,
-} from "./ports/custom-behavior-assignment-repository.ts"
-export {
   CustomBehaviorRepository,
   type CustomBehaviorRepositoryShape,
   type FindCustomBehaviorBySlugInput,
 } from "./ports/custom-behavior-repository.ts"
+export {
+  FacetProjectionRepository,
+  type FacetProjectionRepositoryShape,
+} from "./ports/facet-projection-repository.ts"
+export { FacetRepository, type FacetRepositoryShape, type FindFacetBySlugInput } from "./ports/facet-repository.ts"
 export {
   type ClusterAnalysisAggregate,
   type ClusterRepresentativeExample,
@@ -214,6 +234,11 @@ export {
   TaxonomyRunRepository,
   type TaxonomyRunRepositoryShape,
 } from "./ports/taxonomy-run-repository.ts"
+export {
+  type TaxonomyViewAssignmentClusterCount,
+  TaxonomyViewAssignmentRepository,
+  type TaxonomyViewAssignmentRepositoryShape,
+} from "./ports/taxonomy-view-assignment-repository.ts"
 export {
   type ReassignmentLeaf,
   type ReassignmentSourceObservation,

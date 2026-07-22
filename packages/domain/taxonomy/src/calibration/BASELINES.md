@@ -75,6 +75,13 @@ new, plus dominant-child protection.
 
 ## Validation on the real pilot corpus
 
+> **Re-baselined 2026-07-21 against the current builder.** The figures in this
+> section were originally measured with the LAT-770 prototype builder; the
+> LAT-771 "pure relative divisive" rewrite (plus Phase 3/4 integration) changed
+> the tree, so the shape, root-child sizes, sweep, and cross-sample ARI below are
+> re-measured on the same 670-obs corpus. See "Cross-sample ARI is not a usable
+> point estimate" at the end of this section.
+
 The binding calibration evidence. Real anonymized pilot embeddings (voyage
 2048d) were pulled from production ClickHouse via the CH MCP for offline
 calibration and are **not committed** (they live only in a local scratchpad
@@ -91,25 +98,46 @@ schedule above:
 | Metric | Static (production path) | Adaptive |
 | --- | --- | --- |
 | Root children | **0 (collapses to one leaf)** | **4** |
-| Leaves | 1 | 8 (max depth 3) |
-| Deterministic partition | — | yes (identical signature across builds) |
-| Cross-sample ARI | — | **0.850** |
-| Root sibling centroid cosines | — | 0.838–0.889 |
-| Routing thresholds | — | 0.685–0.882 |
+| Leaves | 1 | 5 (max depth 2) |
+| Deterministic partition | — | yes (identical signature at a fixed sample) |
+| Cross-sample ARI | — | averaged over fold pairs; see note below |
+| Root sibling centroid cosines | — | 0.84–0.89 (prototype run; not re-measured) |
+| Routing thresholds | — | 0.685–0.882 (prototype run; not re-measured) |
 
-The four adaptive root children are human-coherent, distinct ad-ops intents:
+The four adaptive root children are human-coherent, distinct ad-ops intents
+(sizes shift with the sample; current-builder run):
 
 | Root child | Obs | Intent (from representative session text) |
 | --- | --- | --- |
-| #0 | 109 | **Ad creative** — RSA asset performance, replacement copy, running-ad review |
-| #1 | 68 | **Improvement review** — "analyse the attached improvement" |
-| #2 | 130 | **Search-term audits → negative keywords** — irrelevancy audits, Sheets exports |
-| #3 | 363 | **Performance analysis & client reporting** — 90-day reports, talking points |
+| #0 | 369 | **Performance analysis & client reporting** — budget pacing, CPC drivers, account health checks, month-over-month reports |
+| #1 | 160 | **Improvement & search-term review** — "analyse the attached improvement", high-spend search-term audits |
+| #2 | 77 | **Landing-page & ad review** — landing-page copy analysis, running-ad performance, campaign underperformance |
+| #3 | 64 | **Keyword research & account Q&A** — keyword/QS analysis, capability questions, ad-hoc account queries |
 
-The `minRelativeSeparation` sweep on this corpus: root 0.30 → 2 children /
-7 leaves; 0.40 → 3 children; **0.45 → 4 children / 8 leaves**; 0.50 → 4 children;
-0.60 → collapses to a leaf. 0.45 is the setting that reproduces the target 3–5
-coherent root children.
+The `minRelativeSeparation` sweep on this corpus (current builder): root 0.65 →
+collapses to a leaf; **0.45 → 4 children / 5 leaves**; 0.55 → 5 children / 11
+leaves; 0.35 and below → 2 children with a larger dominant blob. 0.45 remains the
+setting that reproduces the target 3–5 coherent root children; lowering it does
+not split the dominant cluster — it grows it.
+
+### Cross-sample ARI — averaged, and the floor re-derived
+
+`crossSampleAri` originally returned a single order-dependent 90/90 split, which
+swung across **[0.00, 0.92]** on this corpus purely by fold choice (24 seeded
+permutations: p25 0.00, median 0.74, max 0.92) — the recorded 0.850 was one high
+draw on the prototype builder. It now returns the **mean over all 45
+leave-one-tenth-out fold pairs** (10 builds), a reproducible number, and
+`ADAPTIVE_CROSS_SAMPLE_ARI_FLOOR` is re-derived from it: **0.8 → 0.75**, below the
+averaged synthetic worst case (narrow-pilot ~0.79, the dominant-blob shape).
+
+A fresh 1,500-obs pull of the current 7-day window (2026-07-21) still collapses
+under static (1 leaf) and resolves 3 adaptive root children / 8 leaves, with a
+~63% dominant cluster, and its **averaged xSample is 0.695 — below even the 0.75
+synthetic floor**. That dominance is why the pilot is the least-stable corpus and
+genuinely sample-sensitive (matching the live 3→2 root-child wobble) — the real
+enforcement-readiness signal for the ads pilot, tracked separately from this
+synthetic regression floor (do not gate the ads-pilot rollout on the synthetic
+0.75).
 
 ## Synthetic fixtures — static vs adaptive (committed regression)
 
@@ -120,17 +148,22 @@ are the committed regression guard, not the calibration authority.
 `minRec` = min per-group recall in one root child, `ARI` = static-vs-adaptive
 agreement, `xSample` = cross-sample stability.
 
+> `xSample` is now the **averaged** cross-sample ARI (mean over all 45
+> leave-one-tenth-out fold pairs). The shape/purity columns predate the LAT-771
+> rewrite and stay range-enforced by `calibration.test.ts` (which runs the
+> **synthetic** pilot, since the real dump is uncommitted).
+
 | Fixture | members | groups | static rc/lf/d/pur | adaptive rc/lf/d/pur/minRec | ARI | xSample |
 | --- | --- | --- | --- | --- | --- | --- |
 | retail-support | 780 | 6 | 6 / 6 / 1 / 1.00 | 6 / 6 / 1 / 1.00 / 1.00 | 1.000 | 1.000 |
 | telecom-support | 600 | 5 | 5 / 5 / 1 / 1.00 | 5 / 5 / 1 / 1.00 / 1.00 | 1.000 | 1.000 |
 | airline-support | 690 | 6 | 2 / 6 / 3 / 1.00 | 2 / 6 / 3 / 1.00 / 1.00 | 1.000 | 1.000 |
 | **narrow-domain** | 420 | 4 | **0 / 1 / 0 / 0.29** | **4 / 4 / 1 / 1.00 / 1.00** | 0.000 | 1.000 |
-| **narrow-pilot (synthetic)** | 730 | 5 | **0 / 1 / 0 / 0.49** | **4 / 4 / 1 / 0.92 / 1.00** | 0.000 | 0.943 |
+| **narrow-pilot (synthetic)** | 730 | 5 | **0 / 1 / 0 / 0.49** | **4 / 4 / 1 / 0.92 / 1.00** | 0.000 | 0.790 |
 | unimodal | 300 | 1 | 0 / 1 / 0 / 1.00 | 0 / 1 / 0 / 1.00 / — | 1.000 | 1.000 |
 | diffuse-multi-topic | 480 | 8 | 2 / 8 / 3 / 1.00 | 2 / 8 / 3 / 1.00 / 1.00 | 1.000 | 1.000 |
-| imbalanced-long-tail | 675 | 6 | 3 / 3 / 1 / 0.98 | 3 / 3 / 1 / 0.98 / 0.80¹ | 1.000 | 0.990 |
-| rare-intent-duplicate | 487 | 4 | 2 / 3 / 2 / 0.99 | 2 / 3 / 2 / 0.99 / — | 1.000 | 0.990 |
+| imbalanced-long-tail | 675 | 6 | 3 / 3 / 1 / 0.98 | 3 / 3 / 1 / 0.98 / 0.80¹ | 1.000 | 0.995 |
+| rare-intent-duplicate | 487 | 4 | 2 / 3 / 2 / 0.99 | 2 / 3 / 2 / 0.99 / — | 1.000 | 0.996 |
 
 ¹ Sub-floor tail group; the recall criterion applies to intended narrow-domain
 groups (all 1.00). Sub-floor tail/rare/duplicate groups are absorbed, never

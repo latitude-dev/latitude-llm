@@ -1,4 +1,4 @@
-import { CodeBlock, cn, Icon, Sheet, Skeleton, Text, useMountEffect } from "@repo/ui"
+import { CodeBlock, cn, Icon, Sheet, Skeleton, Text } from "@repo/ui"
 import { formatCount } from "@repo/utils"
 import { Link } from "@tanstack/react-router"
 import {
@@ -16,7 +16,7 @@ import {
   UserRoundIcon,
   UsersRoundIcon,
 } from "lucide-react"
-import { type ReactNode, useCallback, useRef, useState } from "react"
+import { type ReactNode, useCallback, useState } from "react"
 import {
   useMemoryRecord,
   useMemoryRecordChangeDiff,
@@ -28,6 +28,7 @@ import type {
   MemoryRecordUserRecord,
   MemoryRecordVersionRecord,
 } from "../../../../../../../domains/memories/memories.functions.ts"
+import { useResizablePanelHeight } from "../../../../../../../lib/hooks/useResizablePanelHeight.ts"
 import { looksLikeJson } from "../../../-components/memory-changes/looks-like-json.ts"
 import { MemoryRecordDiff } from "../../../-components/memory-changes/memory-record-diff.tsx"
 import { SessionDetailDrawer } from "../../../-components/session-detail-drawer.tsx"
@@ -275,98 +276,7 @@ const MIN_PANEL_HEIGHT = 96
 const DEFAULT_PANEL_HEIGHT = 160
 // Reserve this much for the editor header + code area + panel header so the code never vanishes.
 const MIN_CONTENT_ABOVE = 200
-// Drag the list shorter than this and it closes instead of clamping to the minimum.
 const CLOSE_DRAG_THRESHOLD = 64
-const KEYBOARD_STEP = 24
-
-// Vertical sibling of the span-tree `useResizablePanel`: drags the activity list taller/shorter.
-function usePanelResize(setOpen: (open: boolean) => void) {
-  const footerRef = useRef<HTMLDivElement>(null)
-  const [height, setHeight] = useState(DEFAULT_PANEL_HEIGHT)
-  const [isDragging, setIsDragging] = useState(false)
-  const drag = useRef<{ startY: number; startHeight: number; max: number } | null>(null)
-  const moveRef = useRef<((event: PointerEvent) => void) | null>(null)
-  const upRef = useRef<(() => void) | null>(null)
-
-  const cleanup = useCallback(() => {
-    if (moveRef.current) {
-      document.removeEventListener("pointermove", moveRef.current)
-      moveRef.current = null
-    }
-    if (upRef.current) {
-      document.removeEventListener("pointerup", upRef.current)
-      document.removeEventListener("pointercancel", upRef.current)
-      upRef.current = null
-    }
-    document.body.style.removeProperty("user-select")
-    document.body.style.removeProperty("cursor")
-  }, [])
-
-  const maxHeight = useCallback(() => {
-    const panel = footerRef.current?.parentElement
-    if (!panel) return DEFAULT_PANEL_HEIGHT
-    return Math.max(MIN_PANEL_HEIGHT, panel.offsetHeight - MIN_CONTENT_ABOVE)
-  }, [])
-
-  useMountEffect(() => {
-    const panel = footerRef.current?.parentElement
-    if (!panel) return
-    const observer = new ResizeObserver(() => setHeight((prev) => Math.min(prev, maxHeight())))
-    observer.observe(panel)
-    return () => {
-      observer.disconnect()
-      cleanup()
-    }
-  })
-
-  const onPointerDown = useCallback(
-    (event: React.PointerEvent) => {
-      event.preventDefault()
-      if (!footerRef.current?.parentElement) return
-      drag.current = { startY: event.clientY, startHeight: height, max: maxHeight() }
-      setIsDragging(true)
-      document.body.style.userSelect = "none"
-      document.body.style.cursor = "ns-resize"
-
-      const onMove = (moveEvent: PointerEvent) => {
-        const current = drag.current
-        if (!current) return
-        const raw = current.startHeight + (current.startY - moveEvent.clientY)
-        if (raw < CLOSE_DRAG_THRESHOLD) {
-          drag.current = null
-          setIsDragging(false)
-          cleanup()
-          setOpen(false)
-          return
-        }
-        setHeight(Math.max(MIN_PANEL_HEIGHT, Math.min(current.max, raw)))
-      }
-      const onUp = () => {
-        drag.current = null
-        setIsDragging(false)
-        cleanup()
-      }
-      moveRef.current = onMove
-      upRef.current = onUp
-      document.addEventListener("pointermove", onMove)
-      document.addEventListener("pointerup", onUp)
-      document.addEventListener("pointercancel", onUp)
-    },
-    [height, maxHeight, cleanup, setOpen],
-  )
-
-  const onKeyDown = useCallback(
-    (event: React.KeyboardEvent) => {
-      if (event.key !== "ArrowUp" && event.key !== "ArrowDown") return
-      event.preventDefault()
-      const delta = event.key === "ArrowUp" ? KEYBOARD_STEP : -KEYBOARD_STEP
-      setHeight((prev) => Math.max(MIN_PANEL_HEIGHT, Math.min(maxHeight(), prev + delta)))
-    },
-    [maxHeight],
-  )
-
-  return { footerRef, height, isDragging, onPointerDown, onKeyDown }
-}
 
 type TabId = "changes" | "reads" | "users"
 const TABS: readonly { readonly id: TabId; readonly label: string; readonly icon: LucideIcon }[] = [
@@ -396,7 +306,13 @@ function RecordActivityPanel({
 }) {
   const [open, setOpen] = useState(true)
   const [activeTab, setActiveTab] = useState<TabId>("changes")
-  const { footerRef, height, isDragging, onPointerDown, onKeyDown } = usePanelResize(setOpen)
+  const { panelRef, height, isDragging, onPointerDown, onKeyDown } = useResizablePanelHeight({
+    minHeight: MIN_PANEL_HEIGHT,
+    minContentAbove: MIN_CONTENT_ABOVE,
+    closeThreshold: CLOSE_DRAG_THRESHOLD,
+    defaultHeight: DEFAULT_PANEL_HEIGHT,
+    onClose: () => setOpen(false),
+  })
 
   const reads = useMemoryRecordReads({ projectId, storeId, recordId, enabled: open })
   const users = useMemoryRecordUsers({ projectId, storeId, recordId, enabled: open })
@@ -412,12 +328,12 @@ function RecordActivityPanel({
     if (!open) setOpen(true)
   }
 
-  const maxHeight = footerRef.current?.parentElement
-    ? Math.max(MIN_PANEL_HEIGHT, footerRef.current.parentElement.offsetHeight - MIN_CONTENT_ABOVE)
+  const maxHeight = panelRef.current?.parentElement
+    ? Math.max(MIN_PANEL_HEIGHT, panelRef.current.parentElement.offsetHeight - MIN_CONTENT_ABOVE)
     : DEFAULT_PANEL_HEIGHT
 
   return (
-    <div ref={footerRef} className="relative shrink-0 border-t bg-background">
+    <div ref={panelRef} className="relative shrink-0 border-t bg-background">
       {open ? (
         // biome-ignore lint/a11y/useSemanticElements: resize handle requires div for drag events
         <div
