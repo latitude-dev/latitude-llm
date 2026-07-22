@@ -19,18 +19,7 @@ interface Layout {
   readonly truncatedWidth: number | null
 }
 
-/**
- * Renders a horizontal list of tag badges left-to-right.
- *
- * By default, when the list overflows the container it shows the largest
- * prefix of full-width badges that fits alongside a "+N" overflow badge. If
- * even the next badge can't fit at full width, it's shown ellipsis-truncated
- * to whatever space remains instead of being clipped outright; if there isn't
- * even room for a readable sliver, it collapses into the "+N" count instead.
- * Nothing is ever hard-clipped or scrolled. Hovering the overflow badge shows
- * the full tag list in a tooltip. When `wrap` is true, all tags are rendered
- * and wrap onto new lines as needed instead of collapsing into "+N".
- */
+/** Tag badges left-to-right; overflow truncates the last visible badge or collapses into "+N" instead of ever clipping — nothing scrolls. `wrap` renders every tag and wraps lines instead. */
 export const TagList = memo(function TagList({ tags, wrap = false }: TagListProps) {
   const containerRef = useRef<HTMLDivElement>(null)
   const [layout, setLayout] = useState<Layout>({ visibleCount: tags.length, truncatedWidth: null })

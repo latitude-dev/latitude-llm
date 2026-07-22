@@ -19,12 +19,9 @@ type BillingOverview = Awaited<ReturnType<typeof getBillingOverview>>
 export function BillingCreditCounter({
   organizationId,
   initialOverview,
-  collapsed = false,
 }: {
   readonly organizationId: string
   readonly initialOverview?: BillingOverview | null
-  /** Hides the row entirely — there's no room for it in the collapsed sidebar rail. */
-  readonly collapsed?: boolean
 }) {
   const { toast } = useToast()
   const [isUpgradePending, setIsUpgradePending] = useState(false)
@@ -37,7 +34,7 @@ export function BillingCreditCounter({
     ...(initialOverview ? { initialData: initialOverview } : {}),
   })
 
-  if (!overview || collapsed) return null
+  if (!overview) return null
 
   const includedCredits = overview.includedCredits
   const totalUsedCredits = overview.consumedCredits + overview.overageCredits
@@ -76,12 +73,7 @@ export function BillingCreditCounter({
   }
 
   return (
-    <div className="flex flex-col gap-2">
-      {showUpgradeCta ? (
-        <Button size="sm" className="w-full" isLoading={isUpgradePending} onClick={() => void openUpgrade()}>
-          Upgrade now
-        </Button>
-      ) : null}
+    <div className="flex flex-col gap-4">
       <Tooltip
         asChild
         trigger={
@@ -130,6 +122,11 @@ export function BillingCreditCounter({
       >
         {tooltip}
       </Tooltip>
+      {showUpgradeCta ? (
+        <Button size="sm" className="w-full" isLoading={isUpgradePending} onClick={() => void openUpgrade()}>
+          Upgrade now
+        </Button>
+      ) : null}
     </div>
   )
 }

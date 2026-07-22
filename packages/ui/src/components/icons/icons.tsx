@@ -1,5 +1,5 @@
 import type { LucideProps } from "lucide-react"
-import { createContext, forwardRef, memo, type ReactNode, useContext } from "react"
+import { createContext, memo, type ReactNode, type Ref, useContext } from "react"
 
 import { colors, type TextColor } from "../../tokens/colors.ts"
 import { cn } from "../../utils/cn.ts"
@@ -31,6 +31,7 @@ export interface IconProps extends Omit<LucideProps, "size"> {
   color?: TextColor
   weight?: IconWeight
   className?: string
+  ref?: Ref<SVGSVGElement>
 }
 
 interface IconDefaults {
@@ -40,32 +41,26 @@ interface IconDefaults {
 
 const IconDefaultsContext = createContext<IconDefaults | null>(null)
 
-/**
- * Lets an ancestor (e.g. `Button`) set a fallback icon size/weight for any
- * `Icon` rendered inside it. Only applies when the `Icon` itself doesn't
- * specify its own `size`/`weight` — an explicit prop always wins.
- */
+/** Fallback icon size/weight for descendants that don't set their own — an explicit prop always wins. */
 export function IconDefaultsProvider({ size, weight, children }: IconDefaults & { children: ReactNode }) {
   return <IconDefaultsContext.Provider value={{ size, weight }}>{children}</IconDefaultsContext.Provider>
 }
 
-const Icon = memo(
-  forwardRef<SVGSVGElement, IconProps>(({ icon: IconComponent, size, color, weight, className, ...props }, ref) => {
-    const defaults = useContext(IconDefaultsContext)
-    const resolvedSize = size ?? defaults?.size ?? "default"
-    const resolvedWeight = weight ?? defaults?.weight
-    const colorClass = color ? colors.textColors[color] : ""
+const Icon = memo(function Icon({ icon: IconComponent, size, color, weight, className, ref, ...props }: IconProps) {
+  const defaults = useContext(IconDefaultsContext)
+  const resolvedSize = size ?? defaults?.size ?? "default"
+  const resolvedWeight = weight ?? defaults?.weight
+  const colorClass = color ? colors.textColors[color] : ""
 
-    return (
-      <IconComponent
-        ref={ref}
-        className={cn(sizeMap[resolvedSize], colorClass, className)}
-        {...(resolvedWeight ? { strokeWidth: weightMap[resolvedWeight] } : {})}
-        {...props}
-      />
-    )
-  }),
-)
+  return (
+    <IconComponent
+      ref={ref}
+      className={cn(sizeMap[resolvedSize], colorClass, className)}
+      {...(resolvedWeight ? { strokeWidth: weightMap[resolvedWeight] } : {})}
+      {...props}
+    />
+  )
+})
 
 Icon.displayName = "Icon"
 

@@ -1,21 +1,11 @@
-import { Button, cn, Icon, LatitudeLogo, Text, Tooltip } from "@repo/ui"
+import { Button, cn, Icon, LatitudeLogo, LatitudeWordmark, Text, Tooltip } from "@repo/ui"
 import { extractLeadingEmoji } from "@repo/utils"
 import { Link } from "@tanstack/react-router"
 import { ChevronDown, ChevronRight, ChevronsUp } from "lucide-react"
 import { type ReactElement, type ReactNode, useState } from "react"
-import { useThemePreference } from "../../lib/theme.ts"
-import { useRootThemePreference } from "../../routes/-root-route-data.ts"
 import { SidebarCollapseToggleButton, useSidebarCollapse } from "./sidebar-collapse.tsx"
 
 type NavItemIcon = React.ComponentType<React.SVGProps<SVGSVGElement>>
-
-function SidebarBrandLogo() {
-  const initialTheme = useRootThemePreference()
-  const { theme } = useThemePreference(initialTheme)
-  const src = theme === "dark" ? "/latitude-logo-dark.svg" : "/latitude-logo.png"
-
-  return <img src={src} alt="Latitude" className="h-5 w-auto shrink-0" />
-}
 
 function ProjectEmoji({ name }: { name: string }) {
   const [emoji] = extractLeadingEmoji(name)
@@ -284,7 +274,7 @@ export function AppSidebar({
               <LatitudeLogo className="h-5 w-5 shrink-0" />
             ) : (
               <div className="flex min-w-0 flex-1 items-center">
-                <SidebarBrandLogo />
+                <LatitudeWordmark className="h-5 w-auto shrink-0" />
               </div>
             )}
             {showToggle && <SidebarCollapseToggleButton />}

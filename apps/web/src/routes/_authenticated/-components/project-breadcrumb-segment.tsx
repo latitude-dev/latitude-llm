@@ -13,6 +13,7 @@ import {
 } from "@repo/ui"
 import { extractLeadingEmoji } from "@repo/utils"
 import { eq } from "@tanstack/react-db"
+import { useNavigate } from "@tanstack/react-router"
 import { Plus } from "lucide-react"
 import { useMemo, useRef, useState } from "react"
 import { useProjectsCollection } from "../../../domains/projects/projects.collection.ts"
@@ -45,6 +46,7 @@ interface ProjectOption {
  * of scroll position or the current search query.
  */
 export function ProjectBreadcrumbSegment() {
+  const navigate = useNavigate()
   const routeProject = useRouteProject()
   const [createOpen, setCreateOpen] = useState(false)
   const [inputValue, setInputValue] = useState("")
@@ -89,7 +91,7 @@ export function ProjectBreadcrumbSegment() {
           onValueChange={(picked: ProjectOption | null) => {
             setInputValue("")
             if (!picked || picked.isActive || !picked.slug) return
-            window.location.href = `/projects/${picked.slug}`
+            void navigate({ to: "/projects/$projectSlug", params: { projectSlug: picked.slug } })
           }}
           items={items}
           itemToStringValue={(item: ProjectOption) => item.searchText}

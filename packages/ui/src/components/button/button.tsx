@@ -127,11 +127,7 @@ export interface ButtonProps
   isLoading?: boolean
 }
 
-/**
- * Default `Icon` size/weight per button size, scaling icons to feel
- * proportionate to the button's own text/height. Any `Icon` that sets its
- * own `size`/`weight` overrides this — see `IconDefaultsProvider`.
- */
+/** Default `Icon` size/weight per button size — an `Icon` with its own `size`/`weight` overrides this. */
 const BUTTON_ICON_DEFAULTS: Record<NonNullable<ButtonProps["size"]>, { size: IconSize; weight?: IconWeight }> = {
   default: { size: "sm" },
   sm: { size: "xs", weight: "S" },
@@ -162,15 +158,7 @@ function getElementDisplayName(type: unknown): string {
   return ""
 }
 
-/**
- * `asChild` merges the container and inner variant classes onto a single
- * element — `Slot` has no room for the button/div split the default render
- * uses to separate "has `.group`" from "reacts to `group-*`". `group-hover:` /
- * `group-active:` / `group-disabled:` need an ANCESTOR carrying `.group`, not
- * the same element, so they silently never match once merged. Rewriting them
- * to their plain self-referencing pseudo-class equivalents keeps the exact
- * same variant visuals working when applied to a single node.
- */
+/** `asChild` merges container+variant classes onto one element, so `group-*` selectors (which need a separate ancestor `.group`) never match — rewrite them to plain self-referencing pseudo-classes. */
 function degroupSelectors(classNames: string): string {
   return classNames
     .replace(/\bgroup-hover:/g, "hover:")

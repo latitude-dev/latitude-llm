@@ -28,6 +28,7 @@ export {
   GitHubIcon,
   GoogleIcon,
   LatitudeLogo,
+  LatitudeWordmark,
 } from "./components/brand-icons/index.tsx"
 export {
   Button,

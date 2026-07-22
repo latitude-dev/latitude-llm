@@ -15,11 +15,10 @@ export const TagBadge = memo(function TagBadge({ tag, maxWidthPx }: TagBadgeProp
   const truncate = maxWidthPx != null
 
   return (
-    <span
-      className={cn(tagBadgeClassName, className, { "min-w-0": truncate })}
-      style={truncate ? { ...style, maxWidth: maxWidthPx } : style}
-    >
-      <span className={cn({ truncate })}>{tag}</span>
+    <span className={cn(tagBadgeClassName, className)} style={truncate ? { ...style, maxWidth: maxWidthPx } : style}>
+      <span title={truncate ? tag : undefined} className={cn("min-w-0", { truncate })}>
+        {tag}
+      </span>
     </span>
   )
 })

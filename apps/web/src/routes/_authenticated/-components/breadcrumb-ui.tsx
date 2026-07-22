@@ -1,4 +1,4 @@
-import { cn, Text } from "@repo/ui"
+import { cn, Icon, Text } from "@repo/ui"
 import { type CreateLinkProps, Link } from "@tanstack/react-router"
 import { ChevronsUpDown } from "lucide-react"
 import type { ReactNode } from "react"
@@ -18,7 +18,7 @@ export const breadcrumbSwitcherTriggerClassName =
 export const breadcrumbSwitcherEmojiClassName = "text-base leading-none shrink-0"
 
 export function BreadcrumbSwitcherChevron() {
-  return <ChevronsUpDown className="h-4 w-4 shrink-0 text-muted-foreground" />
+  return <Icon icon={ChevronsUpDown} size="sm" color="foregroundMuted" className="shrink-0" />
 }
 
 export type BreadcrumbLinkProps = Omit<CreateLinkProps, "children"> & {

@@ -177,13 +177,7 @@ export interface ComboboxFooterActionProps {
   readonly onClick: () => void
 }
 
-/**
- * A "Create new…" row pinned below the (scrollable, search-filtered) `ComboboxList`.
- * Render as a sibling right after `</ComboboxList>`, inside `ComboboxContent` — it
- * lives outside the list's own scroll container, so it's always visible regardless
- * of scroll position or the current search query. Styled to match a plain
- * `ComboboxItem` row so it reads as part of the same list, not a separate control.
- */
+/** Pin as a sibling right after `</ComboboxList>` — stays visible outside the list's own scroll/filter, styled to match a plain `ComboboxItem` row. */
 function ComboboxFooterAction({ label, icon, onClick }: ComboboxFooterActionProps) {
   return (
     <div className="sticky bottom-0 border-t border-border bg-popover p-1">
