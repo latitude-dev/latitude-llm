@@ -130,6 +130,39 @@ describe("materializeTraceMemory", () => {
     expect(reads.map((event) => event.recordId).sort()).toEqual(["", "rec1"])
   })
 
+  it("stamps the returned body's hash on read events; zero-hit reads stay hash-less", async () => {
+    const memory = createFakeMemoryRepository()
+    await materialize(
+      [
+        makeSpan({ operation: "create_memory", recordsRaw: records({ id: "r1", content: "alpha" }), endTime: at(0) }),
+        makeSpan({
+          spanId: spanId("r"),
+          operation: "search_memory",
+          recordCount: 1,
+          queryText: "q",
+          recordsRaw: records({ id: "r1", content: "alpha", score: 0.9 }),
+          endTime: at(1),
+        }),
+        makeSpan({
+          spanId: spanId("z"),
+          operation: "search_memory",
+          recordCount: 0,
+          queryText: "miss",
+          endTime: at(2),
+        }),
+      ],
+      memory,
+    )
+
+    const add = memory.events.find((event) => event.changeKind === "add")
+    const reads = memory.events.filter((event) => event.changeKind === "read")
+    const hit = reads.find((event) => event.recordId === "r1")
+    const miss = reads.find((event) => event.recordCount === 0)
+    expect(hit?.contentHash).not.toBe("")
+    expect(hit?.contentHash).toBe(add?.contentHash)
+    expect(miss?.contentHash).toBe("")
+  })
+
   it("resolves upsert to update for existing records and add for new ones", async () => {
     const memory = createFakeMemoryRepository()
     await materialize(

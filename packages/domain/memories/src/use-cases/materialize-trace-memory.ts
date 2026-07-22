@@ -90,7 +90,12 @@ export const materializeTraceMemoryUseCase = Effect.fn("memories.materializeTrac
   const pushSpanEvent = (
     span: MemoryOperationSpan,
     changeKind: MemoryChangeKind,
-    extra: { readonly recordId?: string; readonly tokenCount?: number; readonly queryText?: string } = {},
+    extra: {
+      readonly recordId?: string
+      readonly tokenCount?: number
+      readonly queryText?: string
+      readonly contentHash?: string
+    } = {},
   ) => {
     events.push({
       organizationId,
@@ -99,7 +104,7 @@ export const materializeTraceMemoryUseCase = Effect.fn("memories.materializeTrac
       recordId: extra.recordId ?? "",
       operation: span.operation,
       changeKind,
-      contentHash: "",
+      contentHash: extra.contentHash ?? "",
       tokenCount: extra.tokenCount ?? 0,
       recordCount: span.recordCount,
       queryText: extra.queryText ?? "",
@@ -206,14 +211,18 @@ export const materializeTraceMemoryUseCase = Effect.fn("memories.materializeTrac
       case "search_memory": {
         // One read event per returned record, keyed on the record's own id so
         // the read attributes to that record; id-less hits fall back to the
-        // span's (usually empty) record id and bucket together.
+        // span's (usually empty) record id and bucket together. The returned
+        // body's hash rides the event for read→version attribution — no blob
+        // is stored for reads.
         const records = parseMemoryRecords(span.recordsRaw)
         if (records && records.length > 0) {
           for (const record of records) {
+            const body = memoryRecordBody(record)
             pushSpanEvent(span, "read", {
               recordId: record.id ?? span.recordId,
-              tokenCount: countTokens(memoryRecordBody(record)),
+              tokenCount: countTokens(body),
               queryText: span.queryText,
+              ...(body ? { contentHash: sha256Hex(body) } : {}),
             })
           }
         } else {
