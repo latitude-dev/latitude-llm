@@ -148,6 +148,31 @@ export const FACET_EXTRACTION_INPUT_CHAR_CAP = 12_000
 export const FACET_PROJECTION_TEXT_MAX_LENGTH = 500
 
 /**
+ * Extraction model for `FACET_EXTRACTION` (overridable via `LAT_AI_FACET_EXTRACTION_*`).
+ * Starts on the cheap Bedrock `minimax.minimax-m2.5` (already our naming model,
+ * ~$0.30/1M in · $1.20/1M out); if intent-extraction quality proves poor, point
+ * the override at Claude Haiku 4.5 (`amazon-bedrock` / `anthropic.claude-haiku-4-5`,
+ * ~$1/$5). Low temperature keeps a single session's answer stable across passes;
+ * `maxTokens` need only cover a one-sentence answer bounded to
+ * `FACET_PROJECTION_TEXT_MAX_LENGTH` plus a small JSON envelope.
+ *
+ * `temperature` is 0.1, NOT 0: the MiniMax family caps temperature to the open
+ * range (0, 1] (0 is rejected) and greedy decoding falls into repetition loops on
+ * these checkpoints. MiniMax's own recommendation is 1.0 (it is RL-trained there);
+ * 0.1 is the low-variance floor we accept for a stable extraction — if quality is
+ * poor, raising toward 1.0 is a lever alongside the Haiku fallback.
+ */
+export const TAXONOMY_DEFAULT_FACET_EXTRACTION_MODEL = {
+  provider: "amazon-bedrock",
+  model: "minimax.minimax-m2.5",
+  temperature: 0.1,
+  maxTokens: 400,
+} as const
+
+/** Bounded concurrency for the per-session extraction fan-out (misses only). */
+export const FACET_EXTRACTION_CONCURRENCY = 8
+
+/**
  * Facet-gardening sweep: the periodic enqueue that keeps every created facet
  * view a living taxonomy, the facet analogue of `gardenCustomBehaviorSweep`.
  * Same 6h cadence; a facet gardened within `FACET_GARDENING_MIN_INTERVAL_MS` is
