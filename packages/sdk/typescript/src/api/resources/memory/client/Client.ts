@@ -115,7 +115,7 @@ export class MemoryClient {
     }
 
     /**
-     * Returns the store's current records (ids, token counts, last-updated) as a snapshot. Pass `at` (ISO-8601) to reconstruct the store as of a past point in time. Record bodies are fetched separately via `getMemoryRecord`.
+     * Returns the store's current records (ids, token counts, last-updated) as a snapshot. Pass `at` (ISO-8601) to reconstruct the store as of a past point in time. Record bodies are fetched separately, one record at a time.
      *
      * @param {string} projectSlug - Project slug (human-readable identifier)
      * @param {Latitude.GetStoreMemoryRequest} request
@@ -300,7 +300,7 @@ export class MemoryClient {
     }
 
     /**
-     * Returns the end-users who accessed the store (reads and writes both count as access), most recent access first.
+     * Returns the end-users who accessed the store (reads and writes both count as access), most recent access first. Capped at the 1000 most recent accessors.
      *
      * @param {string} projectSlug - Project slug (human-readable identifier)
      * @param {Latitude.ListStoreUsersMemoryRequest} request
@@ -673,7 +673,7 @@ export class MemoryClient {
     }
 
     /**
-     * Returns the end-users who accessed one record with per-user read and write counts, most recent access first.
+     * Returns the end-users who accessed one record with per-user read and write counts, most recent access first. Capped at the 1000 most recent accessors.
      *
      * @param {string} projectSlug - Project slug (human-readable identifier)
      * @param {Latitude.ListRecordUsersMemoryRequest} request

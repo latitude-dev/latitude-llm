@@ -516,7 +516,7 @@ Returns the before/after bodies for one change — the version authored by `span
 
 #### `latitude memory get-store`
 
-Returns the store's current records (ids, token counts, last-updated) as a snapshot. Pass `at` (ISO-8601) to reconstruct the store as of a past point in time. Record bodies are fetched separately via `getMemoryRecord`.
+Returns the store's current records (ids, token counts, last-updated) as a snapshot. Pass `at` (ISO-8601) to reconstruct the store as of a past point in time. Record bodies are fetched separately, one record at a time.
 
 `GET /v1/projects/{projectSlug}/memory/store`
 
@@ -554,7 +554,7 @@ Returns the retrieval (`search_memory`) events for one record, newest first and 
 
 #### `latitude memory list-record-users`
 
-Returns the end-users who accessed one record with per-user read and write counts, most recent access first.
+Returns the end-users who accessed one record with per-user read and write counts, most recent access first. Capped at the 1000 most recent accessors.
 
 `GET /v1/projects/{projectSlug}/memory/record/users`
 
@@ -566,7 +566,7 @@ Returns the end-users who accessed one record with per-user read and write count
 
 #### `latitude memory list-store-users`
 
-Returns the end-users who accessed the store (reads and writes both count as access), most recent access first.
+Returns the end-users who accessed the store (reads and writes both count as access), most recent access first. Capped at the 1000 most recent accessors.
 
 `GET /v1/projects/{projectSlug}/memory/store/users`
 
@@ -916,7 +916,7 @@ Returns the memory writes the session made as per-record before/after diffs. Pas
 |------|------|----------|-------------|
 | `--project-slug` | `string` | Yes | Project slug (human-readable identifier) |
 | `--session-id` | `string` | Yes | Session identifier lifted from instrumentation. Up to 128 characters. |
-| `--trace-id` | `string` | No | Restrict the memory footprint to this trace of the session. Omit for the whole session. |
+| `--trace-id` | `string` | No | Restrict the memory changes to this trace of the session. Omit for the whole session. |
 
 #### `latitude sessions get-signal`
 

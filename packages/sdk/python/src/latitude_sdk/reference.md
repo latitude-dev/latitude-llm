@@ -10511,7 +10511,7 @@ client.sessions.get_memory_changes(
 <dl>
 <dd>
 
-**trace_id:** `typing.Optional[str]` — Restrict the memory footprint to this trace of the session. Omit for the whole session.
+**trace_id:** `typing.Optional[str]` — Restrict the memory changes to this trace of the session. Omit for the whole session.
     
 </dd>
 </dl>
@@ -10649,7 +10649,7 @@ client.memory.list_stores(
 <dl>
 <dd>
 
-Returns the store's current records (ids, token counts, last-updated) as a snapshot. Pass `at` (ISO-8601) to reconstruct the store as of a past point in time. Record bodies are fetched separately via `getMemoryRecord`.
+Returns the store's current records (ids, token counts, last-updated) as a snapshot. Pass `at` (ISO-8601) to reconstruct the store as of a past point in time. Record bodies are fetched separately, one record at a time.
 </dd>
 </dl>
 </dd>
@@ -10837,7 +10837,7 @@ client.memory.get_store_diff(
 <dl>
 <dd>
 
-Returns the end-users who accessed the store (reads and writes both count as access), most recent access first.
+Returns the end-users who accessed the store (reads and writes both count as access), most recent access first. Capped at the 1000 most recent accessors.
 </dd>
 </dl>
 </dd>
@@ -11209,7 +11209,7 @@ client.memory.list_record_reads(
 <dl>
 <dd>
 
-Returns the end-users who accessed one record with per-user read and write counts, most recent access first.
+Returns the end-users who accessed one record with per-user read and write counts, most recent access first. Capped at the 1000 most recent accessors.
 </dd>
 </dl>
 </dd>

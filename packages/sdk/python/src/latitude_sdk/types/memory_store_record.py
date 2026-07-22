@@ -14,7 +14,7 @@ class MemoryStoreRecord(UniversalBaseModel):
         FieldMetadata(alias="recordId"),
         pydantic.Field(
             alias="recordId",
-            description="Record identifier (`gen_ai.memory.record.id`), split on `/` for the Memory-page tree. The empty string is the unnamed record.",
+            description="Record identifier (`gen_ai.memory.record.id`); opaque. The empty string is the unnamed record.",
         ),
     ]
     token_count: typing_extensions.Annotated[

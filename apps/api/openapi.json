@@ -12751,7 +12751,7 @@
         "properties": {
           "recordId": {
             "type": "string",
-            "description": "Record identifier (`gen_ai.memory.record.id`), split on `/` for the Memory-page tree. The empty string is the unnamed record."
+            "description": "Record identifier (`gen_ai.memory.record.id`); opaque. The empty string is the unnamed record."
           },
           "tokenCount": {
             "type": "integer",
@@ -23200,10 +23200,10 @@
               "type": "string",
               "minLength": 32,
               "maxLength": 32,
-              "description": "Restrict the memory footprint to this trace of the session. Omit for the whole session."
+              "description": "Restrict the memory changes to this trace of the session. Omit for the whole session."
             },
             "required": false,
-            "description": "Restrict the memory footprint to this trace of the session. Omit for the whole session.",
+            "description": "Restrict the memory changes to this trace of the session. Omit for the whole session.",
             "name": "traceId",
             "in": "query"
           }
@@ -23388,7 +23388,7 @@
         "x-fern-sdk-group-name": "memory",
         "x-fern-sdk-method-name": "getStore",
         "summary": "Get memory store snapshot",
-        "description": "Returns the store's current records (ids, token counts, last-updated) as a snapshot. Pass `at` (ISO-8601) to reconstruct the store as of a past point in time. Record bodies are fetched separately via `getMemoryRecord`.",
+        "description": "Returns the store's current records (ids, token counts, last-updated) as a snapshot. Pass `at` (ISO-8601) to reconstruct the store as of a past point in time. Record bodies are fetched separately, one record at a time.",
         "security": [
           {
             "ApiKeyAuth": []
@@ -23583,7 +23583,7 @@
         "x-fern-sdk-group-name": "memory",
         "x-fern-sdk-method-name": "listStoreUsers",
         "summary": "List users who accessed a memory store",
-        "description": "Returns the end-users who accessed the store (reads and writes both count as access), most recent access first.",
+        "description": "Returns the end-users who accessed the store (reads and writes both count as access), most recent access first. Capped at the 1000 most recent accessors.",
         "security": [
           {
             "ApiKeyAuth": []
@@ -23961,7 +23961,7 @@
         "x-fern-sdk-group-name": "memory",
         "x-fern-sdk-method-name": "listRecordUsers",
         "summary": "List users who accessed a memory record",
-        "description": "Returns the end-users who accessed one record with per-user read and write counts, most recent access first.",
+        "description": "Returns the end-users who accessed one record with per-user read and write counts, most recent access first. Capped at the 1000 most recent accessors.",
         "security": [
           {
             "ApiKeyAuth": []

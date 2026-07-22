@@ -405,7 +405,7 @@ class SessionsClient:
             Session identifier lifted from instrumentation. Up to 128 characters.
 
         trace_id : typing.Optional[str]
-            Restrict the memory footprint to this trace of the session. Omit for the whole session.
+            Restrict the memory changes to this trace of the session. Omit for the whole session.
 
         request_options : typing.Optional[RequestOptions]
             Request-specific configuration.
@@ -872,7 +872,7 @@ class AsyncSessionsClient:
             Session identifier lifted from instrumentation. Up to 128 characters.
 
         trace_id : typing.Optional[str]
-            Restrict the memory footprint to this trace of the session. Omit for the whole session.
+            Restrict the memory changes to this trace of the session. Omit for the whole session.
 
         request_options : typing.Optional[RequestOptions]
             Request-specific configuration.

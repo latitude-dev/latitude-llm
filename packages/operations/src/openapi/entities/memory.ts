@@ -23,9 +23,7 @@ const memoryChangeKindSchema = z
     "Kind of memory operation: `add`/`update`/`remove` (mutations), `read` (retrieval), or `store_create`/`store_delete` (store lifecycle).",
   )
 
-// Offset-as-opaque-cursor — the store-list use-case is offset-based; encoding
-// offset as a base64url JSON cursor keeps the public `{ items, nextCursor,
-// hasMore }` shape consistent with the rest of the API surface.
+// Offset wrapped as an opaque base64url cursor to keep the `{ items, nextCursor, hasMore }` shape.
 export const encodeMemoryStoreOffsetCursor = (offset: number): string =>
   Buffer.from(JSON.stringify({ offset }), "utf8").toString("base64url")
 
@@ -33,16 +31,17 @@ export const decodeMemoryStoreOffsetCursor = (raw: string): number | null => {
   try {
     const json = Buffer.from(raw, "base64url").toString("utf8")
     const parsed = JSON.parse(json) as unknown
+    const offset = (parsed as { offset?: unknown }).offset
     if (
       parsed === null ||
       typeof parsed !== "object" ||
-      typeof (parsed as { offset?: unknown }).offset !== "number" ||
-      !Number.isInteger((parsed as { offset: number }).offset) ||
-      (parsed as { offset: number }).offset < 0
+      typeof offset !== "number" ||
+      !Number.isSafeInteger(offset) ||
+      offset < 0
     ) {
       return null
     }
-    return (parsed as { offset: number }).offset
+    return offset
   } catch {
     return null
   }
@@ -80,9 +79,7 @@ const MemoryStoreRecordSchema = z
   .object({
     recordId: z
       .string()
-      .describe(
-        "Record identifier (`gen_ai.memory.record.id`), split on `/` for the Memory-page tree. The empty string is the unnamed record.",
-      ),
+      .describe("Record identifier (`gen_ai.memory.record.id`); opaque. The empty string is the unnamed record."),
     tokenCount: z.number().int().nonnegative().describe("Tokens in the record's current body."),
     lastUpdatedAt: z.string().describe("ISO-8601 timestamp of the version that produced the current body."),
   })

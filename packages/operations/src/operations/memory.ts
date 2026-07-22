@@ -45,9 +45,7 @@ const memoryPath = "/projects/:projectSlug/memory"
 
 const memoryEndpoint = defineOperation<OrganizationScopedEnv>(memoryPath)
 
-// Store and record ids are opaque, may contain `/`, and may be empty (the `""`
-// unattributed store / unnamed record) — so they ride query params rather than
-// path segments, where an empty value or a slash would break routing.
+// Opaque store/record ids can contain "/" or be empty, so they ride query params, not path segments.
 const storeIdQuery = z
   .string()
   .describe('Store identifier (`gen_ai.memory.store.id`). Pass an empty string to address the unattributed ("") store.')
@@ -136,7 +134,7 @@ const getMemoryStore = memoryEndpoint({
     sdkMethod: "getStore",
     summary: "Get memory store snapshot",
     description:
-      "Returns the store's current records (ids, token counts, last-updated) as a snapshot. Pass `at` (ISO-8601) to reconstruct the store as of a past point in time. Record bodies are fetched separately via `getMemoryRecord`.",
+      "Returns the store's current records (ids, token counts, last-updated) as a snapshot. Pass `at` (ISO-8601) to reconstruct the store as of a past point in time. Record bodies are fetched separately, one record at a time.",
     security: PROTECTED_SECURITY,
     request: {
       params: ProjectParamsSchema,
@@ -209,7 +207,9 @@ const getMemoryStoreDiff = memoryEndpoint({
       const { projectSlug } = input.params
       const { storeId, from, to } = input.query
 
-      if (from && to && Date.parse(to) < Date.parse(from)) {
+      // `to` defaults to now, so validate an omitted `to` against the current time.
+      const effectiveTo = to ? Date.parse(to) : Date.now()
+      if (from && effectiveTo < Date.parse(from)) {
         return { status: 400, body: { error: "`to` must be greater than or equal to `from`." } } as const
       }
 
@@ -241,7 +241,7 @@ const listMemoryStoreUsers = memoryEndpoint({
     sdkMethod: "listStoreUsers",
     summary: "List users who accessed a memory store",
     description:
-      "Returns the end-users who accessed the store (reads and writes both count as access), most recent access first.",
+      "Returns the end-users who accessed the store (reads and writes both count as access), most recent access first. Capped at the 1000 most recent accessors.",
     security: PROTECTED_SECURITY,
     request: { params: ProjectParamsSchema, query: z.object({ storeId: storeIdQuery }) },
     responses: typedResponses({ status: 200, schema: MemoryStoreUsersSchema, description: "Users of the store" }),
@@ -422,7 +422,7 @@ const listMemoryRecordUsers = memoryEndpoint({
     sdkMethod: "listRecordUsers",
     summary: "List users who accessed a memory record",
     description:
-      "Returns the end-users who accessed one record with per-user read and write counts, most recent access first.",
+      "Returns the end-users who accessed one record with per-user read and write counts, most recent access first. Capped at the 1000 most recent accessors.",
     security: PROTECTED_SECURITY,
     request: { params: ProjectParamsSchema, query: z.object({ storeId: storeIdQuery, recordId: recordIdQuery }) },
     responses: typedResponses({ status: 200, schema: MemoryRecordUsersSchema, description: "Users of the record" }),

@@ -5,6 +5,6 @@
  *     {}
  */
 export interface GetMemoryChangesSessionsRequest {
-    /** Restrict the memory footprint to this trace of the session. Omit for the whole session. */
+    /** Restrict the memory changes to this trace of the session. Omit for the whole session. */
     traceId?: string;
 }

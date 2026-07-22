@@ -501,6 +501,12 @@ const SessionMemoryQuerySchema = z.object({
     .describe("Restrict the memory footprint to this trace of the session. Omit for the whole session."),
 })
 
+const SessionMemoryChangesQuerySchema = z.object({
+  traceId: traceIdSchema
+    .optional()
+    .describe("Restrict the memory changes to this trace of the session. Omit for the whole session."),
+})
+
 const getSessionMemory = sessionEndpoint({
   route: createRoute({
     method: "get",
@@ -556,7 +562,7 @@ const getSessionMemoryChanges = sessionEndpoint({
     description:
       "Returns the memory writes the session made as per-record before/after diffs. Pass `traceId` to restrict to a single trace of the session.",
     security: PROTECTED_SECURITY,
-    request: { params: SessionParamsSchema, query: SessionMemoryQuerySchema },
+    request: { params: SessionParamsSchema, query: SessionMemoryChangesQuerySchema },
     responses: typedResponses({
       status: 200,
       schema: SessionMemoryChangesSchema,

@@ -96,7 +96,7 @@ class MemoryClient:
         request_options: typing.Optional[RequestOptions] = None,
     ) -> MemoryStoreSnapshot:
         """
-        Returns the store's current records (ids, token counts, last-updated) as a snapshot. Pass `at` (ISO-8601) to reconstruct the store as of a past point in time. Record bodies are fetched separately via `getMemoryRecord`.
+        Returns the store's current records (ids, token counts, last-updated) as a snapshot. Pass `at` (ISO-8601) to reconstruct the store as of a past point in time. Record bodies are fetched separately, one record at a time.
 
         Parameters
         ----------
@@ -187,7 +187,7 @@ class MemoryClient:
         self, project_slug: str, *, store_id: str, request_options: typing.Optional[RequestOptions] = None
     ) -> MemoryStoreUsers:
         """
-        Returns the end-users who accessed the store (reads and writes both count as access), most recent access first.
+        Returns the end-users who accessed the store (reads and writes both count as access), most recent access first. Capped at the 1000 most recent accessors.
 
         Parameters
         ----------
@@ -382,7 +382,7 @@ class MemoryClient:
         request_options: typing.Optional[RequestOptions] = None,
     ) -> MemoryRecordUsers:
         """
-        Returns the end-users who accessed one record with per-user read and write counts, most recent access first.
+        Returns the end-users who accessed one record with per-user read and write counts, most recent access first. Capped at the 1000 most recent accessors.
 
         Parameters
         ----------
@@ -508,7 +508,7 @@ class AsyncMemoryClient:
         request_options: typing.Optional[RequestOptions] = None,
     ) -> MemoryStoreSnapshot:
         """
-        Returns the store's current records (ids, token counts, last-updated) as a snapshot. Pass `at` (ISO-8601) to reconstruct the store as of a past point in time. Record bodies are fetched separately via `getMemoryRecord`.
+        Returns the store's current records (ids, token counts, last-updated) as a snapshot. Pass `at` (ISO-8601) to reconstruct the store as of a past point in time. Record bodies are fetched separately, one record at a time.
 
         Parameters
         ----------
@@ -617,7 +617,7 @@ class AsyncMemoryClient:
         self, project_slug: str, *, store_id: str, request_options: typing.Optional[RequestOptions] = None
     ) -> MemoryStoreUsers:
         """
-        Returns the end-users who accessed the store (reads and writes both count as access), most recent access first.
+        Returns the end-users who accessed the store (reads and writes both count as access), most recent access first. Capped at the 1000 most recent accessors.
 
         Parameters
         ----------
@@ -846,7 +846,7 @@ class AsyncMemoryClient:
         request_options: typing.Optional[RequestOptions] = None,
     ) -> MemoryRecordUsers:
         """
-        Returns the end-users who accessed one record with per-user read and write counts, most recent access first.
+        Returns the end-users who accessed one record with per-user read and write counts, most recent access first. Capped at the 1000 most recent accessors.
 
         Parameters
         ----------
