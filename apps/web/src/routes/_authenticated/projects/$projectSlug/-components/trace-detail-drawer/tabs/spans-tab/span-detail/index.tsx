@@ -1,7 +1,8 @@
-import { Skeleton, Text } from "@repo/ui"
+import { cn, Skeleton, Text } from "@repo/ui"
 import { XIcon } from "lucide-react"
 import { useSpanDetail } from "../../../../../../../../../domains/spans/spans.collection.ts"
 import { SpanDetailContent } from "./span-detail-content.tsx"
+import { MIN_CONTENT_ABOVE, MIN_PANEL_HEIGHT, useDetailResize } from "./use-detail-resize.ts"
 
 export function SpanDetail({
   projectId,
@@ -19,9 +20,39 @@ export function SpanDetail({
   readonly onClose: () => void
 }) {
   const { data: span, isLoading } = useSpanDetail({ projectId, traceId, spanId, startTimeFrom, startTimeTo })
+  const { panelRef, height, isDragging, onPointerDown, onKeyDown } = useDetailResize(onClose)
+  const maxHeight = panelRef.current?.parentElement
+    ? Math.max(MIN_PANEL_HEIGHT, panelRef.current.parentElement.offsetHeight - MIN_CONTENT_ABOVE)
+    : height
 
   return (
-    <div className="flex flex-col flex-1 overflow-hidden border-t border-border">
+    <div
+      ref={panelRef}
+      className="relative flex shrink-0 flex-col overflow-hidden border-t border-border"
+      style={{ height }}
+    >
+      {/* biome-ignore lint/a11y/useSemanticElements: resize handle requires div for drag events */}
+      <div
+        role="separator"
+        aria-orientation="horizontal"
+        aria-label="Resize span detail"
+        aria-valuenow={height}
+        aria-valuemin={MIN_PANEL_HEIGHT}
+        aria-valuemax={maxHeight}
+        tabIndex={0}
+        onPointerDown={onPointerDown}
+        onKeyDown={onKeyDown}
+        className="group absolute inset-x-0 -top-1 z-10 flex h-2 cursor-ns-resize touch-none items-center justify-center focus-visible:outline-none"
+      >
+        <div
+          className={cn(
+            "h-1 w-10 rounded-full transition-opacity",
+            isDragging
+              ? "bg-muted-foreground/60 opacity-100"
+              : "bg-border opacity-0 group-hover:opacity-100 group-focus-visible:opacity-100",
+          )}
+        />
+      </div>
       <div className="flex flex-row items-center justify-between shrink-0 px-4 py-2 border-b border-border">
         {isLoading ? (
           <Skeleton className="h-5 w-40" />
