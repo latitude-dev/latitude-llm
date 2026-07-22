@@ -113,11 +113,9 @@ jobs:
 
       - name: Publish to PyPI
         if: steps.check_version.outputs.should_publish == 'true'
-        env:
-          UV_PUBLISH_TOKEN: ${{ secrets.PYPI_TOKEN }}
         run: |
           cd packages/telemetry/prime-intellect
-          uv publish --username __token__ --password "$UV_PUBLISH_TOKEN"
+          uv publish --username __token__ --password ${{ secrets.PYPI_TOKEN }}
 
       - name: Create GitHub Release
         if: steps.check_version.outputs.should_publish == 'true'
