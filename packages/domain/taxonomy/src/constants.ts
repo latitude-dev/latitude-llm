@@ -97,11 +97,65 @@ export const CUSTOM_BEHAVIOR_STATUSES = ["pending", "generating", "ready", "fail
 /**
  * Per-project cap on custom behaviors (LAT-746 Q1 = flat 10), enforced in the
  * create use-case. Each behavior spawns its own scoped clusters, a ClickHouse
- * `custom_behavior_assignments` slice, and a workflow run, so the cap bounds
+ * `taxonomy_view_assignments` slice, and a workflow run, so the cap bounds
  * CH storage + LLM naming cost. Deliberately a single constant: raising it is a
  * one-line change, no per-plan machinery.
  */
 export const MAX_CUSTOM_BEHAVIORS_PER_PROJECT = 10
+
+// ---------------------------------------------------------------------------
+// Facets (custom lenses)
+//
+// A facet clusters sessions by an extracted answer to a question rather than by
+// the raw transcript. Projections are facet-global (extracted once per
+// `(facet, session)`, cached in `taxonomy_facet_projections`); clusters and
+// assignments are per-view. Editing the question bumps `version` = reset tree.
+// ---------------------------------------------------------------------------
+
+export const FACET_NAME_MAX_LENGTH = 80
+
+/** UI help text shown in the lens picker — why this lens is useful for your sessions. Required for every facet. */
+export const FACET_DESCRIPTION_MAX_LENGTH = 300
+
+/**
+ * Length ceiling on a facet's free-text extraction instructions. Presets fill it
+ * with curated guidance; custom facets are user-written. Generous on purpose —
+ * it is prompt guidance, not the transcript (that input is bounded separately by
+ * `FACET_EXTRACTION_INPUT_CHAR_CAP`). Instructions are write-once: to change what
+ * a lens means, create a new facet.
+ */
+export const FACET_INSTRUCTIONS_MAX_LENGTH = 4_000
+
+export const FACET_STATUSES = ["pending", "generating", "ready", "failed"] as const
+
+/**
+ * Per-project cap on facets, enforced in the create use-case. Each facet spawns
+ * its own `taxonomy_facet_projections` slice (one extraction + embedding per
+ * sampled session, cached) plus per-view clusters and edges, so the cap bounds
+ * extraction cost and CH storage. A single flat constant like
+ * `MAX_CUSTOM_BEHAVIORS_PER_PROJECT`; raising it is a one-line change.
+ */
+export const MAX_FACETS_PER_PROJECT = 10
+
+/**
+ * Character ceiling on the conversation fed to a single facet extraction. Input
+ * tokens are the dominant cost lever after adoption and intent is usually
+ * apparent early, so the extractor (Phase 2) truncates its input to this bound.
+ */
+export const FACET_EXTRACTION_INPUT_CHAR_CAP = 12_000
+
+/** Max length of the one-sentence extracted answer stored + embedded per facet projection. */
+export const FACET_PROJECTION_TEXT_MAX_LENGTH = 500
+
+/**
+ * Facet-gardening sweep: the periodic enqueue that keeps every created facet
+ * view a living taxonomy, the facet analogue of `gardenCustomBehaviorSweep`.
+ * Same 6h cadence; a facet gardened within `FACET_GARDENING_MIN_INTERVAL_MS` is
+ * skipped so a create-time run or a prior sweep isn't redone every tick.
+ */
+export const FACET_GARDENING_CRON_KEY = "taxonomy:garden-facet-sweep"
+export const FACET_GARDENING_CRON_PATTERN = "0 */6 * * *"
+export const FACET_GARDENING_MIN_INTERVAL_MS = 5 * 60 * 60_000
 
 // ---------------------------------------------------------------------------
 // Embedding + summary

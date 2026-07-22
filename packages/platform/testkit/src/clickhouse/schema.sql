@@ -628,11 +628,12 @@ GROUP BY
     project_id,
     trace_id;
 
-CREATE TABLE custom_behavior_assignments
+CREATE TABLE taxonomy_view_assignments
 (
     `organization_id` LowCardinality(String) CODEC(ZSTD(1)),
     `project_id` LowCardinality(String) CODEC(ZSTD(1)),
     `custom_behavior_id` LowCardinality(String) CODEC(ZSTD(1)),
+    `facet_id` LowCardinality(String) DEFAULT '' CODEC(ZSTD(1)),
     `observation_id` String CODEC(ZSTD(1)),
     `session_id` String CODEC(ZSTD(1)),
     `assigned_cluster_id` String DEFAULT '' CODEC(ZSTD(1)),
@@ -642,14 +643,37 @@ CREATE TABLE custom_behavior_assignments
     `start_time` DateTime64(9, 'UTC') CODEC(Delta(8), ZSTD(1)),
     `retention_days` UInt16 DEFAULT 90 CODEC(T64, ZSTD(1)),
     `indexed_at` DateTime64(3, 'UTC') DEFAULT now64(3) CODEC(Delta(8), LZ4),
-    INDEX idx_custom_behavior_assignments_session_id session_id TYPE bloom_filter(0.01) GRANULARITY 4,
-    INDEX idx_custom_behavior_assignments_observation_id observation_id TYPE bloom_filter(0.01) GRANULARITY 4,
-    INDEX idx_custom_behavior_assignments_cluster_id assigned_cluster_id TYPE bloom_filter(0.01) GRANULARITY 4
+    INDEX idx_taxonomy_view_assignments_session_id session_id TYPE bloom_filter(0.01) GRANULARITY 4,
+    INDEX idx_taxonomy_view_assignments_observation_id observation_id TYPE bloom_filter(0.01) GRANULARITY 4,
+    INDEX idx_taxonomy_view_assignments_cluster_id assigned_cluster_id TYPE bloom_filter(0.01) GRANULARITY 4
 )
 ENGINE = ReplacingMergeTree(indexed_at)
 PARTITION BY toYYYYMM(start_time)
-PRIMARY KEY (organization_id, project_id, custom_behavior_id, observation_id)
-ORDER BY (organization_id, project_id, custom_behavior_id, observation_id)
+PRIMARY KEY (organization_id, project_id, custom_behavior_id, facet_id, observation_id)
+ORDER BY (organization_id, project_id, custom_behavior_id, facet_id, observation_id)
+SETTINGS index_granularity = 8192;
+
+CREATE TABLE taxonomy_facet_projections
+(
+    `organization_id` LowCardinality(String) CODEC(ZSTD(1)),
+    `project_id` LowCardinality(String) CODEC(ZSTD(1)),
+    `facet_id` LowCardinality(String) CODEC(ZSTD(1)),
+    `session_observation_id` String CODEC(ZSTD(1)),
+    `session_id` String CODEC(ZSTD(1)),
+    `extracted_text` String DEFAULT '' CODEC(ZSTD(3)),
+    `analysis_hash` FixedString(64) CODEC(ZSTD(1)),
+    `embedding` Array(Float32) CODEC(ZSTD(1)),
+    `start_time` DateTime64(9, 'UTC') CODEC(Delta(8), ZSTD(1)),
+    `retention_days` UInt16 DEFAULT 90 CODEC(T64, ZSTD(1)),
+    `indexed_at` DateTime64(3, 'UTC') DEFAULT now64(3) CODEC(Delta(8), LZ4),
+    INDEX idx_taxonomy_facet_projections_session_id session_id TYPE bloom_filter(0.01) GRANULARITY 4,
+    INDEX idx_taxonomy_facet_projections_session_observation_id session_observation_id TYPE bloom_filter(0.01) GRANULARITY 4,
+    INDEX idx_taxonomy_facet_projections_analysis_hash analysis_hash TYPE bloom_filter(0.01) GRANULARITY 4
+)
+ENGINE = ReplacingMergeTree(indexed_at)
+PARTITION BY toYYYYMM(start_time)
+PRIMARY KEY (organization_id, project_id, facet_id, session_observation_id)
+ORDER BY (organization_id, project_id, facet_id, session_observation_id)
 SETTINGS index_granularity = 8192;
 
 CREATE TABLE memory_blobs

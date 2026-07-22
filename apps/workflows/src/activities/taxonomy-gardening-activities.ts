@@ -10,8 +10,6 @@ import {
 import {
   assertTaxonomyQualityUseCase,
   boundedPercentiles,
-  type CustomBehaviorAssignment,
-  CustomBehaviorAssignmentRepository,
   CustomBehaviorRepository,
   CustomBehaviorStatus,
   emitLineageUseCase,
@@ -41,10 +39,12 @@ import {
   TaxonomyObservationRepository,
   type TaxonomyRun,
   TaxonomyRunRepository,
+  type TaxonomyViewAssignment,
+  TaxonomyViewAssignmentRepository,
 } from "@domain/taxonomy"
 import {
-  CustomBehaviorAssignmentRepositoryLive,
   TaxonomyObservationRepositoryLive,
+  TaxonomyViewAssignmentRepositoryLive,
   withClickHouse,
 } from "@platform/db-clickhouse"
 import {
@@ -164,7 +164,7 @@ interface StoredGardenTaxonomyPlan {
   readonly clusters: readonly TaxonomyCluster[]
   readonly observationAssignments: readonly ReassignTaxonomyObservationByIdInput[]
   /** Scoped write target; empty on the global path. */
-  readonly customAssignments: readonly CustomBehaviorAssignment[]
+  readonly customAssignments: readonly TaxonomyViewAssignment[]
   /** Non-null ⇒ the plan is scoped to this custom behavior (drives the reassign write target). */
   readonly customBehaviorId: string | null
   readonly deprecatedClusterIds: readonly string[]
@@ -329,7 +329,7 @@ const reviveAssignment = (assignment: ReassignTaxonomyObservationByIdInput): Rea
   indexedAt: reviveDate(assignment.indexedAt),
 })
 
-const reviveCustomAssignment = (assignment: CustomBehaviorAssignment): CustomBehaviorAssignment => ({
+const reviveCustomAssignment = (assignment: TaxonomyViewAssignment): TaxonomyViewAssignment => ({
   ...assignment,
   startTime: reviveDate(assignment.startTime),
   indexedAt: reviveDate(assignment.indexedAt),
@@ -358,16 +358,16 @@ const withTaxonomyClickHouse = <A, E, R>(effect: Effect.Effect<A, E, R>, organiz
 
 const withCustomBehaviorClickHouse = <A, E, R>(effect: Effect.Effect<A, E, R>, organizationId: string) =>
   effect.pipe(
-    withClickHouse(CustomBehaviorAssignmentRepositoryLive, getClickhouseClient(), OrganizationId(organizationId)),
+    withClickHouse(TaxonomyViewAssignmentRepositoryLive, getClickhouseClient(), OrganizationId(organizationId)),
   )
 
 // Scoped full-window reassignment reads the global taxonomy window (filtered by
-// the behavior's sessions) and writes the scoped custom_behavior_assignments
+// the behavior's sessions) and writes the scoped taxonomy_view_assignments
 // slice, so it needs both ClickHouse repositories.
 const withScopedReassignClickHouse = <A, E, R>(effect: Effect.Effect<A, E, R>, organizationId: string) =>
   effect.pipe(
     withClickHouse(
-      Layer.mergeAll(TaxonomyObservationRepositoryLive, CustomBehaviorAssignmentRepositoryLive),
+      Layer.mergeAll(TaxonomyObservationRepositoryLive, TaxonomyViewAssignmentRepositoryLive),
       getClickhouseClient(),
       OrganizationId(organizationId),
     ),
@@ -723,7 +723,7 @@ const reassignGlobalObservations = (input: GardenTaxonomyReassignObservationsInp
 
 const reassignScopedAssignments = (input: GardenTaxonomyReassignObservationsInput, plan: StoredGardenTaxonomyPlan) =>
   Effect.gen(function* () {
-    const assignments = yield* CustomBehaviorAssignmentRepository
+    const assignments = yield* TaxonomyViewAssignmentRepository
     yield* assignments.upsertMany(plan.customAssignments.map(reviveCustomAssignment))
     return { observationsReassigned: plan.customAssignments.length }
   }).pipe((effect) => withCustomBehaviorClickHouse(effect, input.organizationId))
@@ -798,12 +798,12 @@ const reassignFullWindowGlobal = (input: GardenTaxonomyReassignObservationsInput
 
 const reassignFullWindowScoped = (input: GardenTaxonomyReassignObservationsInput, plan: StoredGardenTaxonomyPlan) =>
   Effect.gen(function* () {
-    const assignmentsRepo = yield* CustomBehaviorAssignmentRepository
+    const assignmentsRepo = yield* TaxonomyViewAssignmentRepository
     const { window, routed } = yield* routeWindowToStagingLeaves(input, plan)
     // Correlate routed results back to window rows for the slice's sessionId/startTime.
     const routedById = new Map(routed.map((assignment) => [assignment.observationId, assignment] as const))
     const now = new Date(input.now)
-    const assignments: CustomBehaviorAssignment[] = window.flatMap((row) => {
+    const assignments: TaxonomyViewAssignment[] = window.flatMap((row) => {
       const routed = routedById.get(row.observationId)
       if (!routed) return []
       return [
@@ -811,6 +811,7 @@ const reassignFullWindowScoped = (input: GardenTaxonomyReassignObservationsInput
           organizationId: OrganizationId(input.organizationId),
           projectId: ProjectId(input.projectId),
           customBehaviorId: CustomBehaviorId(plan.customBehaviorId as string),
+          facetId: null,
           observationId: row.observationId,
           sessionId: row.sessionId,
           assignedClusterId: routed.assignedClusterId,
@@ -820,7 +821,7 @@ const reassignFullWindowScoped = (input: GardenTaxonomyReassignObservationsInput
           startTime: row.startTime,
           retentionDays: TAXONOMY_OBSERVATION_RETENTION_DAYS,
           indexedAt: now,
-        } satisfies CustomBehaviorAssignment,
+        } satisfies TaxonomyViewAssignment,
       ]
     })
     for (const batch of chunk(assignments, TAXONOMY_REASSIGNMENT_BATCH_SIZE)) {

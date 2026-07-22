@@ -2,6 +2,7 @@ import type { ClickHouseClient } from "@clickhouse/client"
 import {
   ChSqlClient,
   type ChSqlClientShape,
+  FacetId,
   OrganizationId,
   ProjectId,
   SessionId,
@@ -10,9 +11,9 @@ import {
   toRepositoryError,
 } from "@domain/shared"
 import {
-  type CustomBehaviorAssignment,
-  CustomBehaviorAssignmentRepository,
-  customBehaviorAssignmentSchema,
+  type TaxonomyViewAssignment,
+  TaxonomyViewAssignmentRepository,
+  taxonomyViewAssignmentSchema,
 } from "@domain/taxonomy"
 import { formatCHDate, parseCHDate } from "@repo/utils"
 import { Effect, Layer } from "effect"
@@ -23,10 +24,11 @@ import {
   validObservationIdClause,
 } from "./taxonomy-observation-repository.ts"
 
-type CustomBehaviorAssignmentRow = {
+type TaxonomyViewAssignmentRow = {
   readonly organization_id: string
   readonly project_id: string
   readonly custom_behavior_id: string
+  readonly facet_id: string
   readonly observation_id: string
   readonly session_id: string
   readonly assigned_cluster_id: string
@@ -42,6 +44,7 @@ const selectColumns = `
   organization_id,
   project_id,
   custom_behavior_id,
+  facet_id,
   observation_id,
   session_id,
   assigned_cluster_id,
@@ -53,10 +56,11 @@ const selectColumns = `
   indexed_at
 `
 
-const toInsertRow = (assignment: CustomBehaviorAssignment) => ({
+const toInsertRow = (assignment: TaxonomyViewAssignment) => ({
   organization_id: assignment.organizationId as string,
   project_id: assignment.projectId as string,
   custom_behavior_id: assignment.customBehaviorId as string,
+  facet_id: (assignment.facetId ?? "") as string,
   observation_id: assignment.observationId,
   session_id: assignment.sessionId as string,
   assigned_cluster_id: assignment.assignedClusterId ?? "",
@@ -68,11 +72,12 @@ const toInsertRow = (assignment: CustomBehaviorAssignment) => ({
   indexed_at: formatCHDate(assignment.indexedAt),
 })
 
-const toDomain = (row: CustomBehaviorAssignmentRow): CustomBehaviorAssignment =>
-  customBehaviorAssignmentSchema.parse({
+const toDomain = (row: TaxonomyViewAssignmentRow): TaxonomyViewAssignment =>
+  taxonomyViewAssignmentSchema.parse({
     organizationId: OrganizationId(row.organization_id),
     projectId: ProjectId(row.project_id),
     customBehaviorId: row.custom_behavior_id,
+    facetId: row.facet_id === "" ? null : FacetId(row.facet_id),
     observationId: row.observation_id,
     sessionId: SessionId(row.session_id),
     assignedClusterId: row.assigned_cluster_id === "" ? null : TaxonomyClusterId(row.assigned_cluster_id),
@@ -84,8 +89,8 @@ const toDomain = (row: CustomBehaviorAssignmentRow): CustomBehaviorAssignment =>
     indexedAt: parseCHDate(row.indexed_at),
   })
 
-export const CustomBehaviorAssignmentRepositoryLive = Layer.effect(
-  CustomBehaviorAssignmentRepository,
+export const TaxonomyViewAssignmentRepositoryLive = Layer.effect(
+  TaxonomyViewAssignmentRepository,
   Effect.gen(function* () {
     return {
       upsertMany: (assignments) =>
@@ -95,12 +100,12 @@ export const CustomBehaviorAssignmentRepositoryLive = Layer.effect(
           yield* chSqlClient
             .query(async (client) => {
               await client.insert({
-                table: "custom_behavior_assignments",
+                table: "taxonomy_view_assignments",
                 values: assignments.map(toInsertRow),
                 format: "JSONEachRow",
               })
             })
-            .pipe(Effect.mapError((error) => toRepositoryError(error, "CustomBehaviorAssignmentRepository.upsertMany")))
+            .pipe(Effect.mapError((error) => toRepositoryError(error, "TaxonomyViewAssignmentRepository.upsertMany")))
         }),
 
       listByBehavior: ({ organizationId, projectId, customBehaviorId, limit }) =>
@@ -110,10 +115,11 @@ export const CustomBehaviorAssignmentRepositoryLive = Layer.effect(
             .query(async (client) => {
               const result = await client.query({
                 query: `SELECT ${selectColumns}
-                        FROM custom_behavior_assignments FINAL
+                        FROM taxonomy_view_assignments FINAL
                         WHERE organization_id = {organizationId:String}
                           AND project_id = {projectId:String}
                           AND custom_behavior_id = {customBehaviorId:String}
+                          AND facet_id = ''
                         ORDER BY start_time DESC, observation_id ASC
                         LIMIT {limit:UInt32}`,
                 query_params: {
@@ -124,11 +130,11 @@ export const CustomBehaviorAssignmentRepositoryLive = Layer.effect(
                 },
                 format: "JSONEachRow",
               })
-              const rows = await result.json<CustomBehaviorAssignmentRow>()
+              const rows = await result.json<TaxonomyViewAssignmentRow>()
               return rows.map(toDomain)
             })
             .pipe(
-              Effect.mapError((error) => toRepositoryError(error, "CustomBehaviorAssignmentRepository.listByBehavior")),
+              Effect.mapError((error) => toRepositoryError(error, "TaxonomyViewAssignmentRepository.listByBehavior")),
             )
         }),
 
@@ -139,10 +145,11 @@ export const CustomBehaviorAssignmentRepositoryLive = Layer.effect(
             .query(async (client) => {
               const result = await client.query({
                 query: `SELECT assigned_cluster_id AS cluster_id, count() AS count
-                        FROM custom_behavior_assignments FINAL
+                        FROM taxonomy_view_assignments FINAL
                         WHERE organization_id = {organizationId:String}
                           AND project_id = {projectId:String}
                           AND custom_behavior_id = {customBehaviorId:String}
+                          AND facet_id = ''
                           AND assigned_cluster_id != ''
                           ${startTimeFrom ? "AND start_time >= {startTimeFrom:DateTime64(9, 'UTC')}" : ""}
                           ${startTimeTo ? "AND start_time < {startTimeTo:DateTime64(9, 'UTC')}" : ""}
@@ -162,14 +169,14 @@ export const CustomBehaviorAssignmentRepositoryLive = Layer.effect(
             })
             .pipe(
               Effect.mapError((error) =>
-                toRepositoryError(error, "CustomBehaviorAssignmentRepository.getClusterAssignmentCounts"),
+                toRepositoryError(error, "TaxonomyViewAssignmentRepository.getClusterAssignmentCounts"),
               ),
             )
         }),
 
       // Scoped mirror of TaxonomyObservationRepository.getClusterTrendCounts:
       // current (>= currentSince) vs baseline ([baselineSince, currentSince))
-      // counts over the accumulated `custom_behavior_assignments` slice.
+      // counts over the accumulated `taxonomy_view_assignments` slice.
       getClusterTrendCounts: ({
         organizationId,
         projectId,
@@ -189,10 +196,11 @@ export const CustomBehaviorAssignmentRepositoryLive = Layer.effect(
                           assigned_cluster_id AS cluster_id,
                           countIf(start_time >= {currentSince:DateTime64(9, 'UTC')}) AS current_count,
                           countIf(start_time >= {baselineSince:DateTime64(9, 'UTC')} AND start_time < {currentSince:DateTime64(9, 'UTC')}) AS baseline_count
-                        FROM custom_behavior_assignments FINAL
+                        FROM taxonomy_view_assignments FINAL
                         WHERE organization_id = {organizationId:String}
                           AND project_id = {projectId:String}
                           AND custom_behavior_id = {customBehaviorId:String}
+                          AND facet_id = ''
                           AND assigned_cluster_id IN {clusterIds:Array(String)}
                           AND start_time >= {baselineSince:DateTime64(9, 'UTC')}
                         GROUP BY assigned_cluster_id`,
@@ -224,7 +232,7 @@ export const CustomBehaviorAssignmentRepositoryLive = Layer.effect(
             })
             .pipe(
               Effect.mapError((error) =>
-                toRepositoryError(error, "CustomBehaviorAssignmentRepository.getClusterTrendCounts"),
+                toRepositoryError(error, "TaxonomyViewAssignmentRepository.getClusterTrendCounts"),
               ),
             )
         }),
@@ -245,10 +253,11 @@ export const CustomBehaviorAssignmentRepositoryLive = Layer.effect(
                           AND ${validObservationIdClause}
                           AND observation_id IN (
                             SELECT observation_id
-                            FROM custom_behavior_assignments FINAL
+                            FROM taxonomy_view_assignments FINAL
                             WHERE organization_id = {organizationId:String}
                               AND project_id = {projectId:String}
                               AND custom_behavior_id = {customBehaviorId:String}
+                              AND facet_id = ''
                               AND assigned_cluster_id = {clusterId:String}
                           )
                         ORDER BY start_time DESC, observation_id ASC
@@ -267,7 +276,7 @@ export const CustomBehaviorAssignmentRepositoryLive = Layer.effect(
             })
             .pipe(
               Effect.mapError((error) =>
-                toRepositoryError(error, "CustomBehaviorAssignmentRepository.listClusterMemberObservations"),
+                toRepositoryError(error, "TaxonomyViewAssignmentRepository.listClusterMemberObservations"),
               ),
             )
         }),
@@ -278,10 +287,11 @@ export const CustomBehaviorAssignmentRepositoryLive = Layer.effect(
           yield* chSqlClient
             .query(async (client) => {
               await client.command({
-                query: `DELETE FROM custom_behavior_assignments
+                query: `DELETE FROM taxonomy_view_assignments
                         WHERE organization_id = {organizationId:String}
                           AND project_id = {projectId:String}
-                          AND custom_behavior_id = {customBehaviorId:String}`,
+                          AND custom_behavior_id = {customBehaviorId:String}
+                          AND facet_id = ''`,
                 query_params: {
                   organizationId: organizationId as string,
                   projectId: projectId as string,
@@ -290,9 +300,7 @@ export const CustomBehaviorAssignmentRepositoryLive = Layer.effect(
               })
             })
             .pipe(
-              Effect.mapError((error) =>
-                toRepositoryError(error, "CustomBehaviorAssignmentRepository.deleteByBehavior"),
-              ),
+              Effect.mapError((error) => toRepositoryError(error, "TaxonomyViewAssignmentRepository.deleteByBehavior")),
             )
         }),
     }
