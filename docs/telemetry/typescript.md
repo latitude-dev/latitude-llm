@@ -10,23 +10,27 @@ Use `@latitude-data/telemetry` to send LLM traces from TypeScript and JavaScript
 ## Installation
 
 ```bash
-npm install @latitude-data/telemetry
+npm install @latitude-data/telemetry openai
 ```
+
+Provider instrumentation implementations are included with `@latitude-data/telemetry`. Importing a factory from an opt-in subpath keeps unused instrumentations out of your application bundle.
 
 ## Bootstrap
 
-Initialize Latitude once, before your LLM calls run. Pass the LLM SDK modules your app uses through `instrumentations` so Latitude can auto-instrument them.
+Initialize Latitude once before your LLM calls run. Import an instrumentation factory from its opt-in subpath and pass the created instance through `instrumentations`.
 
 ```ts
+import { createOpenAIInstrumentation } from "@latitude-data/telemetry/instrumentations/openai"
 import { Latitude } from "@latitude-data/telemetry"
 import OpenAI from "openai"
 
 const latitude = new Latitude({
   apiKey: process.env.LATITUDE_API_KEY!,
   project: process.env.LATITUDE_PROJECT_SLUG!,
-  instrumentations: { openai: OpenAI },
+  instrumentations: [createOpenAIInstrumentation(OpenAI)],
 })
 
+await latitude.ready
 const client = new OpenAI()
 
 const response = await client.chat.completions.create({
@@ -37,7 +41,7 @@ const response = await client.chat.completions.create({
 await latitude.shutdown()
 ```
 
-`new Latitude()` starts instrumentation in the background and returns immediately. You can start using your LLM clients right away.
+`new Latitude()` returns immediately. Await `latitude.ready` before creating LLM clients or making calls.
 
 ## Add context with `capture()`
 
@@ -52,15 +56,17 @@ You can use `capture()` to:
 - mark the boundary of an agent run
 
 ```ts
+import { createOpenAIInstrumentation } from "@latitude-data/telemetry/instrumentations/openai"
 import { Latitude, capture } from "@latitude-data/telemetry"
 import OpenAI from "openai"
 
 const latitude = new Latitude({
   apiKey: process.env.LATITUDE_API_KEY!,
   project: process.env.LATITUDE_PROJECT_SLUG!,
-  instrumentations: { openai: OpenAI },
+  instrumentations: [createOpenAIInstrumentation(OpenAI)],
 })
 
+await latitude.ready
 const client = new OpenAI()
 
 await capture(
@@ -111,6 +117,7 @@ Nested `capture()` calls inherit parent context and can override local values. M
 If your app already uses Sentry, Datadog, New Relic, Honeycomb, or another OpenTelemetry-compatible SDK, initialize that SDK first and construct `Latitude` second. Latitude will attach its span processor to the existing provider when possible.
 
 ```ts
+import { createOpenAIInstrumentation } from "@latitude-data/telemetry/instrumentations/openai"
 import { Latitude } from "@latitude-data/telemetry"
 import * as Sentry from "@sentry/node"
 import OpenAI from "openai"
@@ -123,7 +130,7 @@ Sentry.init({
 const latitude = new Latitude({
   apiKey: process.env.LATITUDE_API_KEY!,
   project: process.env.LATITUDE_PROJECT_SLUG!,
-  instrumentations: { openai: OpenAI },
+  instrumentations: [createOpenAIInstrumentation(OpenAI)],
 })
 ```
 
@@ -166,7 +173,7 @@ Make sure both values are present in the runtime where your app is executing:
 const latitude = new Latitude({
   apiKey: process.env.LATITUDE_API_KEY!,
   project: process.env.LATITUDE_PROJECT_SLUG!,
-  instrumentations: { openai: OpenAI },
+  instrumentations: [createOpenAIInstrumentation(OpenAI)],
 })
 ```
 
@@ -177,15 +184,17 @@ If either value is missing or points to the wrong organization/project, Latitude
 The module passed to `instrumentations` should be the same package import used for the actual LLM call.
 
 ```ts
+import { createOpenAIInstrumentation } from "@latitude-data/telemetry/instrumentations/openai"
 import { Latitude } from "@latitude-data/telemetry"
 import OpenAI from "openai"
 
 const latitude = new Latitude({
   apiKey: process.env.LATITUDE_API_KEY!,
   project: process.env.LATITUDE_PROJECT_SLUG!,
-  instrumentations: { openai: OpenAI },
+  instrumentations: [createOpenAIInstrumentation(OpenAI)],
 })
 
+await latitude.ready
 const client = new OpenAI()
 
 await client.chat.completions.create({

@@ -31,7 +31,7 @@ import { buildInputMessages, buildOutputMessages, deriveFinishReason, type Respo
 
 export type { ResponseObject } from "./messages.ts"
 
-export interface ResponsesParams {
+interface ResponsesParams {
   model?: string
   input?: string | unknown[]
   instructions?: string

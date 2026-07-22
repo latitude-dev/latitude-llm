@@ -342,13 +342,16 @@ export function getOnboardingSnippet(
 
 function snippetTsOpenai() {
   return `import { Latitude, capture } from "@latitude-data/telemetry"
+import { createOpenAIInstrumentation } from "@latitude-data/telemetry/instrumentations/openai"
 import OpenAI from "openai"
 
 const latitude = new Latitude({
   apiKey: process.env.LATITUDE_API_KEY!,
   project: process.env.LATITUDE_PROJECT_SLUG!,
-  instrumentations: { openai: OpenAI },
+  instrumentations: [createOpenAIInstrumentation(OpenAI)],
 })
+
+await latitude.ready
 
 const openai = new OpenAI()
 
@@ -393,13 +396,16 @@ latitude.shutdown()
 
 function snippetTsAnthropic() {
   return `import { Latitude, capture } from "@latitude-data/telemetry"
+import { createAnthropicInstrumentation } from "@latitude-data/telemetry/instrumentations/anthropic"
 import Anthropic, * as AnthropicSDK from "@anthropic-ai/sdk"
 
 const latitude = new Latitude({
   apiKey: process.env.LATITUDE_API_KEY!,
   project: process.env.LATITUDE_PROJECT_SLUG!,
-  instrumentations: { anthropic: AnthropicSDK },
+  instrumentations: [createAnthropicInstrumentation(AnthropicSDK)],
 })
+
+await latitude.ready
 
 const client = new Anthropic()
 
@@ -446,6 +452,7 @@ latitude.shutdown()
 
 function snippetTsBedrock() {
   return `import { Latitude, capture } from "@latitude-data/telemetry"
+import { createBedrockInstrumentation } from "@latitude-data/telemetry/instrumentations/bedrock"
 import {
   BedrockRuntimeClient,
   InvokeModelCommand,
@@ -455,8 +462,10 @@ import * as BedrockSDK from "@aws-sdk/client-bedrock-runtime"
 const latitude = new Latitude({
   apiKey: process.env.LATITUDE_API_KEY!,
   project: process.env.LATITUDE_PROJECT_SLUG!,
-  instrumentations: { bedrock: BedrockSDK },
+  instrumentations: [createBedrockInstrumentation(BedrockSDK)],
 })
+
+await latitude.ready
 
 const client = new BedrockRuntimeClient({ region: "eu-central-1" })
 
@@ -512,14 +521,17 @@ latitude.shutdown()
 
 function snippetTsCohere() {
   return `import { Latitude, capture } from "@latitude-data/telemetry"
+import { createCohereInstrumentation } from "@latitude-data/telemetry/instrumentations/cohere"
 import { CohereClient } from "cohere-ai"
 import * as CohereSDK from "cohere-ai"
 
 const latitude = new Latitude({
   apiKey: process.env.LATITUDE_API_KEY!,
   project: process.env.LATITUDE_PROJECT_SLUG!,
-  instrumentations: { cohere: CohereSDK },
+  instrumentations: [createCohereInstrumentation(CohereSDK)],
 })
+
+await latitude.ready
 
 const client = new CohereClient({ token: process.env.COHERE_API_KEY! })
 
@@ -563,13 +575,16 @@ latitude.shutdown()
 
 function snippetTsTogether() {
   return `import { Latitude, capture } from "@latitude-data/telemetry"
+import { createTogetherAIInstrumentation } from "@latitude-data/telemetry/instrumentations/togetherai"
 import Together, * as TogetherSDK from "together-ai"
 
 const latitude = new Latitude({
   apiKey: process.env.LATITUDE_API_KEY!,
   project: process.env.LATITUDE_PROJECT_SLUG!,
-  instrumentations: { togetherai: TogetherSDK },
+  instrumentations: [createTogetherAIInstrumentation(TogetherSDK)],
 })
+
+await latitude.ready
 
 const client = new Together()
 
@@ -614,14 +629,17 @@ latitude.shutdown()
 
 function snippetTsVertex() {
   return `import { Latitude, capture } from "@latitude-data/telemetry"
+import { createVertexAIInstrumentation } from "@latitude-data/telemetry/instrumentations/vertexai"
 import { VertexAI } from "@google-cloud/vertexai"
 import * as VertexAISDK from "@google-cloud/vertexai"
 
 const latitude = new Latitude({
   apiKey: process.env.LATITUDE_API_KEY!,
   project: process.env.LATITUDE_PROJECT_SLUG!,
-  instrumentations: { vertexai: VertexAISDK },
+  instrumentations: [createVertexAIInstrumentation(VertexAISDK)],
 })
+
+await latitude.ready
 
 const vertexAI = new VertexAI({
   project: process.env.GCP_PROJECT_ID!,
@@ -665,14 +683,17 @@ latitude.shutdown()
 
 function snippetTsAiplatform() {
   return `import { Latitude, capture } from "@latitude-data/telemetry"
+import { createAIPlatformInstrumentation } from "@latitude-data/telemetry/instrumentations/aiplatform"
 import { PredictionServiceClient } from "@google-cloud/aiplatform"
 import * as AIPlatformSDK from "@google-cloud/aiplatform"
 
 const latitude = new Latitude({
   apiKey: process.env.LATITUDE_API_KEY!,
   project: process.env.LATITUDE_PROJECT_SLUG!,
-  instrumentations: { aiplatform: AIPlatformSDK },
+  instrumentations: [createAIPlatformInstrumentation(AIPlatformSDK)],
 })
+
+await latitude.ready
 
 const client = new PredictionServiceClient()
 
@@ -715,13 +736,16 @@ latitude.shutdown()
 
 function snippetTsAzureOpenai() {
   return `import { Latitude, capture } from "@latitude-data/telemetry"
+import { createOpenAIInstrumentation } from "@latitude-data/telemetry/instrumentations/openai"
 import { AzureOpenAI, OpenAI } from "openai"
 
 const latitude = new Latitude({
   apiKey: process.env.LATITUDE_API_KEY!,
   project: process.env.LATITUDE_PROJECT_SLUG!,
-  instrumentations: { openai: OpenAI },
+  instrumentations: [createOpenAIInstrumentation(OpenAI)],
 })
+
+await latitude.ready
 
 const client = new AzureOpenAI({
   endpoint: process.env.AZURE_OPENAI_ENDPOINT,
@@ -782,6 +806,8 @@ const latitude = new Latitude({
   project: process.env.LATITUDE_PROJECT_SLUG!,
 })
 
+await latitude.ready
+
 await capture("generate-support-reply", async () => {
   const { text } = await generateText({
     model: openai("gpt-4o"),
@@ -828,15 +854,18 @@ await latitude.shutdown()
 
 function snippetTsLangchain() {
   return `import { Latitude, capture } from "@latitude-data/telemetry"
+import { createLangChainInstrumentation } from "@latitude-data/telemetry/instrumentations/langchain"
 import { ChatOpenAI } from "@langchain/openai"
+import * as CallbackManagerModule from "@langchain/core/callbacks/manager"
 import { HumanMessage } from "@langchain/core/messages"
-import * as LangChain from "langchain"
 
 const latitude = new Latitude({
   apiKey: process.env.LATITUDE_API_KEY!,
   project: process.env.LATITUDE_PROJECT_SLUG!,
-  instrumentations: { langchain: LangChain },
+  instrumentations: [createLangChainInstrumentation(CallbackManagerModule)],
 })
+
+await latitude.ready
 
 const llm = new ChatOpenAI({ modelName: "gpt-4o" })
 
@@ -876,6 +905,7 @@ latitude.shutdown()
 
 function snippetTsLlamaindex() {
   return `import { Latitude, capture } from "@latitude-data/telemetry"
+import { createLlamaIndexInstrumentation } from "@latitude-data/telemetry/instrumentations/llamaindex"
 import { Settings } from "llamaindex"
 import { openai } from "@llamaindex/openai"
 import { agent } from "@llamaindex/workflow"
@@ -884,8 +914,10 @@ import * as LlamaIndex from "llamaindex"
 const latitude = new Latitude({
   apiKey: process.env.LATITUDE_API_KEY!,
   project: process.env.LATITUDE_PROJECT_SLUG!,
-  instrumentations: { llamaindex: LlamaIndex },
+  instrumentations: [createLlamaIndexInstrumentation(LlamaIndex)],
 })
+
+await latitude.ready
 
 Settings.llm = openai({ model: "gpt-4o" })
 const myAgent = agent({ tools: [] })
@@ -927,14 +959,17 @@ latitude.shutdown()
 
 function snippetTsOpenaiAgents() {
   return `import { Latitude, capture } from "@latitude-data/telemetry"
+import { createOpenAIAgentsInstrumentation } from "@latitude-data/telemetry/instrumentations/openai-agents"
 import { Agent, run } from "@openai/agents"
 import * as OpenAIAgentsSDK from "@openai/agents"
 
 const latitude = new Latitude({
   apiKey: process.env.LATITUDE_API_KEY!,
   project: process.env.LATITUDE_PROJECT_SLUG!,
-  instrumentations: { "openai-agents": OpenAIAgentsSDK },
+  instrumentations: [createOpenAIAgentsInstrumentation(OpenAIAgentsSDK)],
 })
+
+await latitude.ready
 
 const agent = new Agent({
   name: "Greeter",
@@ -1494,11 +1529,13 @@ function snippetTsFlue() {
 import { createOpenTelemetryObserver } from "@flue/opentelemetry"
 import { observe } from "@flue/runtime"
 
-new Latitude({
+const latitude = new Latitude({
   apiKey: process.env.LATITUDE_API_KEY!,
   project: process.env.LATITUDE_PROJECT_SLUG!,
   serviceName: "flue-app",
 })
+
+await latitude.ready
 
 // Flue emits OpenTelemetry spans itself — no instrumentations entry needed.
 observe(createOpenTelemetryObserver())
@@ -1514,13 +1551,15 @@ function snippetTsElevenlabs() {
   return `import express from "express"
 import OpenAI from "openai"
 import { Latitude } from "@latitude-data/telemetry"
+import { createOpenAIInstrumentation } from "@latitude-data/telemetry/instrumentations/openai"
 
-new Latitude({
+const latitude = new Latitude({
   apiKey: process.env.LATITUDE_API_KEY!,
   project: process.env.LATITUDE_PROJECT_SLUG!,
-  instrumentations: { openai: OpenAI },
+  instrumentations: [createOpenAIInstrumentation(OpenAI)],
 })
 
+await latitude.ready
 const app = express()
 app.use(express.json())
 const client = new OpenAI()

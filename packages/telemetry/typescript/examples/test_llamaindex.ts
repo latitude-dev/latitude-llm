@@ -21,12 +21,13 @@ import * as LlamaIndex from "llamaindex"
 import { type ChatMessage, tool } from "llamaindex"
 import { z } from "zod"
 import { capture, Latitude } from "../src"
+import { createLlamaIndexInstrumentation } from "../src/instrumentations/llamaindex.ts"
 
 const latitude = new Latitude({
   apiKey: process.env.LATITUDE_API_KEY!,
   project: process.env.LATITUDE_PROJECT_SLUG!,
   disableBatch: true,
-  instrumentations: { llamaindex: LlamaIndex },
+  instrumentations: [createLlamaIndexInstrumentation(LlamaIndex)],
 })
 
 const PROVIDER = "llamaindex"
