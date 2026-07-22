@@ -143,6 +143,9 @@ export function extractNsfwSuspiciousSnippets(
 // ---------------------------------------------------------------------------
 
 export const nsfwStrategy: FlaggerStrategy = {
+  // User + assistant text; default assistant-only guidance would suppress real user NSFW.
+  classifiesAssistantResponseOnly: false,
+
   annotator: {
     name: "NSFW",
     description: "Workplace-inappropriate or toxic content appears",

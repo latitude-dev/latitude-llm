@@ -12,7 +12,7 @@ import {
 } from "../flagger-strategies/index.ts"
 import { gatherSessionHintsUseCase } from "../hints/gatherers.ts"
 import { isPositiveSessionHintKind, type SessionHint, type SessionHintKind } from "../hints/types.ts"
-import { isReflagSuppressed } from "../reflag.ts"
+import { isReflagSuppressed, isUserCentricReflagInapplicable } from "../reflag.ts"
 import { loadFlaggerSessionContextUseCase } from "./classify-session-flagger.ts"
 import { type FlaggerCacheEntry, getProjectFlaggersUseCase } from "./get-project-flaggers.ts"
 import { upsertFlaggerAnnotationScore } from "./upsert-flagger-annotation-score.ts"
@@ -287,7 +287,10 @@ const screenOneStrategy = (args: ScreenOneStrategyInput) =>
       }
     }
 
-    if (!strategy.hasRequiredContext(args.context.conversation)) {
+    if (
+      isUserCentricReflagInapplicable(args.context.conversation.tags, strategy.classifiesAssistantResponseOnly) ||
+      !strategy.hasRequiredContext(args.context.conversation)
+    ) {
       return { slug: args.slug, action: "dropped", reason: "missing-context" } satisfies SessionFlaggerDecision
     }
 

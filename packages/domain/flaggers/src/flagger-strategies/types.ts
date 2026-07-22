@@ -61,11 +61,10 @@ export interface FlaggerStrategy {
    * assistant's output).
    *
    * Set to `false` for strategies that judge user-authored or injected input
-   * content (e.g. frustration judges the user's wording, jailbreaking judges
-   * user/tool injection attempts). For those, the assistant-only guidance would
-   * suppress every true match, so they instead get nested-content guidance that
-   * still ignores material the agent was merely asked to analyze without
-   * restricting the judgement to the assistant response.
+   * content (e.g. frustration, jailbreaking, nsfw). For those, the assistant-only
+   * guidance would suppress every true match, so they instead get nested-content
+   * guidance that still ignores material the agent was merely asked to analyze
+   * without restricting the judgement to the assistant response.
    */
   readonly classifiesAssistantResponseOnly?: boolean
 

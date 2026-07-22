@@ -158,6 +158,8 @@ Context compaction mirrors the moments stance: the analyzed window is the last r
 
 Every production flagger LLM call is traced into the `latitude-flaggers` dogfood project, and the flaggers run on that project too. To bound recursion to one level (`src/reflag.ts`): a flagger running on a flagger-generated session stamps its own LLM output with the no-reflag tag, and screening skips any session whose tags carry it. Session tags are the union of span tags, and flagger telemetry sessions are effectively per-trace, so the union semantics are safe.
 
+User/input-centric strategies (`classifiesAssistantResponseOnly: false` — today `frustration`, `jailbreaking`, and `nsfw`) are also dropped on first-level flagger-generated sessions (`isUserCentricReflagInapplicable`). Their evidence includes Latitude prompt scaffolding that embeds nested evaluated content from the original session, which looks like a true positive for those categories. Assistant-response-centric strategies still run so reflag can catch bad classifications.
+
 ## Quality tooling
 
 - **Offline benchmark harness** (`tools/ai-benchmarks`): replays public datasets through the real classifier (no deterministic routing, no sampling, no hints) — measures classifier accuracy in isolation. Registered targets: `flaggers:jailbreaking` (JailbreakBench) and `flaggers:refusal` (XSTest) with committed baselines; the other strategies have none.
