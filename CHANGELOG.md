@@ -2,6 +2,20 @@
 
 ## Unreleased
 
+## v0.3.63 - 2026-07-22
+
+### App
+
+- Refreshed authenticated navigation with a collapsible sidebar, reorganized search and usage controls, and improved organization and project switchers. Project switches no longer reload the page, and project slugs can be copied from the header (ref: #4185).
+
+### Telemetry
+
+- Released TypeScript Telemetry 4.0.0 with opt-in provider instrumentation subpaths so consumers only bundle the integrations they import. This breaking release replaced the `instrumentations` object map with an array of factory-created instances and made registration failures observable through `latitude.ready` (refs: #4178, #4189).
+
+### Session intelligence
+
+- Made session-intelligence backfills continue after individual session failures, report completed and failed counts with bounded failed-session IDs, and keep new analysis payloads out of Temporal history (ref: #4190).
+
 ## v0.3.62 - 2026-07-22
 
 ### Memory
