@@ -86,12 +86,16 @@ describe("TaxonomyFacet contracts", () => {
 })
 
 describe("TaxonomyFacetProjection fake", () => {
-  it("replaces on re-upsert of the same (facet, session) key — ReplacingMergeTree semantics", async () => {
+  it("keeps the greatest-indexedAt row on re-upsert — ReplacingMergeTree(indexed_at) semantics", async () => {
     const { repository, rows } = createFakeFacetProjectionRepository()
     const sessionObservationId = "obs".padEnd(24, "0")
+    const older = new Date("2026-07-22T10:00:00.000Z")
+    const newer = new Date("2026-07-22T11:00:00.000Z")
 
-    await run(repository.upsertMany([makeProjection({ sessionObservationId, extractedText: "first" })]))
-    await run(repository.upsertMany([makeProjection({ sessionObservationId, extractedText: "second" })]))
+    await run(repository.upsertMany([makeProjection({ sessionObservationId, extractedText: "first", indexedAt: older })]))
+    await run(repository.upsertMany([makeProjection({ sessionObservationId, extractedText: "second", indexedAt: newer })]))
+    // An older indexed_at arriving after a newer one is a no-op, as in ClickHouse.
+    await run(repository.upsertMany([makeProjection({ sessionObservationId, extractedText: "stale", indexedAt: older })]))
 
     expect(rows.size).toBe(1)
     expect([...rows.values()][0]?.extractedText).toBe("second")

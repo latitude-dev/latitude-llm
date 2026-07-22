@@ -3,8 +3,10 @@ import type { TaxonomyFacetProjection } from "../entities/facet-projection.ts"
 import type { FacetProjectionRepositoryShape } from "../ports/facet-projection-repository.ts"
 
 /**
- * In-memory `taxonomy_facet_projections` fake with ReplacingMergeTree semantics:
- * a re-upsert on the same `(facetId, sessionObservationId)` key replaces the prior row.
+ * In-memory `taxonomy_facet_projections` fake with ReplacingMergeTree(indexed_at)
+ * semantics: a re-upsert on the same `(facetId, sessionObservationId)` key keeps
+ * the row with the greatest `indexedAt`, so writing an older row after a newer one
+ * is a no-op (matching real ClickHouse, not insertion order).
  */
 export const createFakeFacetProjectionRepository = (
   seed: readonly TaxonomyFacetProjection[] = [],
@@ -18,8 +20,12 @@ export const createFakeFacetProjectionRepository = (
   const repository: FacetProjectionRepositoryShape = {
     upsertMany: (projections) =>
       Effect.sync(() => {
-        for (const projection of projections)
-          rows.set(key(projection.facetId, projection.sessionObservationId), projection)
+        for (const projection of projections) {
+          const rowKey = key(projection.facetId, projection.sessionObservationId)
+          const existing = rows.get(rowKey)
+          // ReplacingMergeTree(indexed_at): the greatest indexed_at wins, not the last write.
+          if (!existing || projection.indexedAt >= existing.indexedAt) rows.set(rowKey, projection)
+        }
       }),
 
     listBySessionObservationIds: ({ facetId, sessionObservationIds }) =>
