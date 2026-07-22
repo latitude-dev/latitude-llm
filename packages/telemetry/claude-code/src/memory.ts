@@ -10,10 +10,7 @@ const MEMORY_TOOL_OPERATIONS: Record<string, MemoryOp["operation"]> = {
   Read: "search_memory",
 }
 
-// The transcript lives at <projectsRoot>/<project>/<session>.jsonl, so its grandparent is the
-// shared projects root. Auto memory is NOT necessarily the transcript's sibling: with git
-// worktrees (e.g. Conductor) each session runs in a linked worktree, but Claude Code keeps one
-// memory store under the repo's main worktree — a different <project> dir under the same root.
+// Grandparent of the transcript: git worktrees keep memory under the repo's main worktree, not the session's own project dir.
 export function memoryProjectsRoot(transcriptPath: string): string {
   return dirname(dirname(transcriptPath))
 }
@@ -45,9 +42,7 @@ export function classifyMemoryTool(tool: ToolCall, opts: MemoryEmitOptions): Mem
   return op
 }
 
-// Matches <projectsRoot>/<store>/memory/<record...>, keyed on any project's memory dir so a
-// worktree session writing the repo's main-worktree store still resolves. store = the project
-// slug that owns the memory (one store per repo); record = the path under that store's memory dir.
+// Match <projectsRoot>/<store>/memory/<record> for any store slug, so a worktree writing the repo's main-worktree store resolves.
 function memoryLocation(projectsRoot: string, resolvedPath: string): { storeId: string; recordId: string } | null {
   const rel = relative(projectsRoot, resolvedPath)
   if (rel === "" || rel.startsWith("..") || isAbsolute(rel)) return null

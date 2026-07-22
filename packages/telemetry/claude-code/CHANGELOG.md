@@ -11,7 +11,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
-- **Memory spans now emit from git worktrees (e.g. Conductor).** The hook derived the auto-memory directory as the transcript's sibling (`dirname(transcript)/memory`), but Claude Code keeps one memory store per repository under the **main worktree**, while a linked worktree's session transcript lives under that worktree's own project directory. The two paths differ, so every memory operation from a worktree session was silently skipped. The classifier now recognizes any `~/.claude/projects/<store>/memory/<record>` path under the shared projects root, setting `gen_ai.memory.store.id` to the owning `<store>` slug — so a worktree session writing the repo's main-worktree store is captured. Sessions run directly in the repo root are unaffected.
+- **Memory spans now emit from git worktrees.** The hook derived the auto-memory directory as the transcript's sibling (`dirname(transcript)/memory`), but Claude Code keeps one memory store per repository under the **main worktree**, while a linked worktree's session transcript lives under that worktree's own project directory. The two paths differ, so every memory operation from a worktree session was silently skipped. The classifier now recognizes any `~/.claude/projects/<store>/memory/<record>` path under the shared projects root, setting `gen_ai.memory.store.id` to the owning `<store>` slug — so a worktree session writing the repo's main-worktree store is captured. Sessions run directly in the repo root are unaffected.
 
 ## [0.0.13] - 2026-07-21
 
