@@ -94,7 +94,15 @@ const invalidGenerateResult = (source: "cached" | "provider", cause: unknown) =>
     cause,
   })
 
-const validateGenerateResult = <T>(input: GenerateInput<T>, result: GenerateResult<unknown>) => {
+type GenerateResultForValidation = Omit<GenerateResult<unknown>, "tokenUsage"> & {
+  readonly tokenUsage?: GenerateResult<unknown>["tokenUsage"] | undefined
+}
+
+const validateGenerateResult = <T>(
+  source: "cached" | "provider",
+  input: GenerateInput<T>,
+  result: GenerateResultForValidation,
+) => {
   const parsed = input.schema.safeParse(result.object)
   return parsed.success
     ? Effect.succeed({
@@ -103,7 +111,7 @@ const validateGenerateResult = <T>(input: GenerateInput<T>, result: GenerateResu
         duration: result.duration,
         ...(result.tokenUsage === undefined ? {} : { tokenUsage: result.tokenUsage }),
       } satisfies GenerateResult<T>)
-    : Effect.fail(invalidGenerateResult("provider", parsed.error))
+    : Effect.fail(invalidGenerateResult(source, parsed.error))
 }
 
 /**
@@ -132,19 +140,7 @@ export const withAICache = (ai: AIShape, cache: CacheStoreShape, options?: AICac
           try: () => Schema.decodeUnknownSync(generateResultFromJsonStringSchema)(cached),
           catch: toAIError("read"),
         })
-          .pipe(
-            Effect.flatMap((result) => {
-              const parsed = input.schema.safeParse(result.object)
-              return parsed.success
-                ? Effect.succeed({
-                    object: parsed.data,
-                    tokens: result.tokens,
-                    duration: result.duration,
-                    ...(result.tokenUsage === undefined ? {} : { tokenUsage: result.tokenUsage }),
-                  } satisfies GenerateResult<T>)
-                : Effect.fail(invalidGenerateResult("cached", parsed.error))
-            }),
-          )
+          .pipe(Effect.flatMap((result) => validateGenerateResult("cached", input, result)))
           .pipe(
             Effect.catch((error) =>
               Effect.gen(function* () {
@@ -158,7 +154,7 @@ export const withAICache = (ai: AIShape, cache: CacheStoreShape, options?: AICac
       }
 
       const providerResult = yield* ai.generate(input)
-      const result = yield* validateGenerateResult(input, providerResult)
+      const result = yield* validateGenerateResult("provider", input, providerResult)
       const encoded = yield* Effect.try({
         try: () => Schema.encodeSync(generateResultFromJsonStringSchema)(result as GenerateResult<unknown>),
         catch: toAIError("write"),

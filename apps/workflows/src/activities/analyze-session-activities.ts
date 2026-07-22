@@ -294,7 +294,7 @@ export const analyzeSessionActivity = (input: AnalyzeSessionActivityInput) => {
       withPostgres(TaxonomyClusterRepositoryLive, getPostgresClient(), OrganizationId(input.organizationId)),
       Effect.provide(RedisDistributedLockRepositoryLive(getRedisClient())),
       withAnalyzeSessionEmbeddingBudget,
-      withAi(Layer.mergeAll(AIGenerateLive, AIEmbedLive), getRedisClient(), { organizationId: input.organizationId }),
+      (effect) => withAnalyzeSessionAi(effect, input.organizationId),
       Effect.tap((result) => publishFlaggerScreening(input, result)),
       Effect.tap((result) =>
         Effect.sync(() =>
