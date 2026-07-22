@@ -7,6 +7,26 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [9.6.0] - 2026-07-22
+
+### Added
+
+- `client.memory` group for reading memory observability: `listStores` (cursor-paginated store roll-up), `getStore` (current snapshot, optional point-in-time `at`), `getStoreDiff` (per-record diff between two timestamps), `listStoreUsers`, `getRecord` (body plus version history), `getRecordChange` (one change's before/after diff), `listRecordReads`, and `listRecordUsers`. Store and record ids are opaque query params, so the unattributed (`""`) store and the unnamed record are reachable.
+- `client.sessions.getMemory` / `getMemoryChanges` and `client.traces.getMemory` / `getMemoryChanges` — a session's or trace's memory footprint (per-record read/added/removed token metrics and totals) and its per-record before/after write diffs.
+- `client.users.memoryStores` — the memory stores an end-user accessed.
+
+## [9.5.0] - 2026-07-21
+
+### Added
+
+- `client.signals` lifecycle methods `resolve` / `unresolve` / `ignore` / `unignore`. Resolving archives a signal while its evaluations keep watching for regressions; ignoring archives it, stops monitoring, and mutes notifications.
+- Signal responses now carry `resolvedAt`, `ignoredAt`, and `regressedAt`, and `states` can include `resolved`, `regressed`, and `ignored`.
+- Signal analytics now include `resolved` and `ignored` counts.
+
+### Changed
+
+- Muting a signal is now a pure notification toggle: incidents keep opening while muted.
+
 ## [9.4.0] - 2026-07-20
 
 ### Added
