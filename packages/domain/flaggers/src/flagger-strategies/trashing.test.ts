@@ -11,7 +11,7 @@ describe("trashingStrategy targeting", () => {
   it("excludes single fail→remediate→retry recovery from thrashing matches", () => {
     const prompt = trashingStrategy.buildSystemPrompt?.(makeTrace([])) ?? ""
     expect(prompt).toContain("fail→remediate→retry")
-    expect(prompt).toContain("do not infer \"didn't verify\"")
+    expect(prompt).toContain('do not infer "didn\'t verify"')
     expect(trashingStrategy.annotator?.instructions).toContain("fail→remediate→retry")
   })
 })
