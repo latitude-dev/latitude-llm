@@ -4,24 +4,6 @@ import { getMemoryTelemetryPrompt } from "../../-components/onboarding-integrati
 
 const MEMORY_DOCS_HREF = "https://docs.latitude.so/telemetry/memory"
 
-export function MemoryUnavailableState() {
-  return (
-    <div className="h-full w-full flex items-center justify-center p-8">
-      <div className="max-w-lg flex flex-col items-center gap-6 text-center">
-        <div className="h-14 w-14 rounded-xl bg-muted flex items-center justify-center">
-          <Icon icon={BrainIcon} size="lg" color="foregroundMuted" />
-        </div>
-        <div className="flex flex-col items-center gap-2">
-          <Text.H3 centered>Memory isn't available</Text.H3>
-          <Text.H5 color="foregroundMuted" centered>
-            Memory observability isn't enabled for this project.
-          </Text.H5>
-        </div>
-      </div>
-    </div>
-  )
-}
-
 export function MemoryEmptyState() {
   return (
     <div className="relative h-full w-full overflow-hidden">

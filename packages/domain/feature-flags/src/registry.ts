@@ -23,12 +23,6 @@ export const FEATURE_FLAGS = {
     description:
       "Project-scoped, filter-defined behavior taxonomies with their own authoring UI. Hidden until the Generate flow ships.",
   },
-  memoryObservability: {
-    emoji: "🧠",
-    name: "Memory observability",
-    description:
-      "Adds the Memory page (stores browsed as records with update history) and the user-page memory-stores section.",
-  },
   adaptiveTaxonomyClustering: {
     emoji: "🌳",
     name: "Adaptive taxonomy clustering",

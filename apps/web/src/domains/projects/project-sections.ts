@@ -70,7 +70,6 @@ const PROJECT_SECTIONS: readonly ProjectSection[] = [
     group: "observe",
     path: (slug) => `/projects/${slug}/memory`,
     isActive: (pathname, slug) => pathname.startsWith(`/projects/${slug}/memory`),
-    featureFlag: "memoryObservability",
   },
   {
     key: "signals",
