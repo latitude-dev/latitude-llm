@@ -1488,7 +1488,7 @@ Returns a page of the project's identified end-users over the range, each with t
 
 #### `latitude users memory-stores`
 
-Returns the memory stores the end-user accessed (reads and writes both count as access), most recent access first. Each store links to the memory browsing operations under the `memory` group.
+Returns the memory stores the end-user accessed (reads and writes both count as access), most recent access first. Capped at the 1000 most recent stores. Each store links to the memory browsing operations under the `memory` group.
 
 `GET /v1/projects/{projectSlug}/users/{userId}/memory`
 

@@ -386,7 +386,7 @@ const listUserMemoryStores = userEndpoint({
     sdkMethod: "memoryStores",
     summary: "List memory stores an end-user accessed",
     description:
-      "Returns the memory stores the end-user accessed (reads and writes both count as access), most recent access first. Each store links to the memory browsing operations under the `memory` group.",
+      "Returns the memory stores the end-user accessed (reads and writes both count as access), most recent access first. Capped at the 1000 most recent stores. Each store links to the memory browsing operations under the `memory` group.",
     security: PROTECTED_SECURITY,
     request: { params: UserParamsSchema },
     responses: typedResponses({ status: 200, schema: UserMemoryStoresSchema, description: "Memory stores accessed" }),

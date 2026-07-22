@@ -628,7 +628,7 @@ class RawUsersClient:
         self, project_slug: str, user_id: str, *, request_options: typing.Optional[RequestOptions] = None
     ) -> HttpResponse[UserMemoryStores]:
         """
-        Returns the memory stores the end-user accessed (reads and writes both count as access), most recent access first. Each store links to the memory browsing operations under the `memory` group.
+        Returns the memory stores the end-user accessed (reads and writes both count as access), most recent access first. Capped at the 1000 most recent stores. Each store links to the memory browsing operations under the `memory` group.
 
         Parameters
         ----------
@@ -1389,7 +1389,7 @@ class AsyncRawUsersClient:
         self, project_slug: str, user_id: str, *, request_options: typing.Optional[RequestOptions] = None
     ) -> AsyncHttpResponse[UserMemoryStores]:
         """
-        Returns the memory stores the end-user accessed (reads and writes both count as access), most recent access first. Each store links to the memory browsing operations under the `memory` group.
+        Returns the memory stores the end-user accessed (reads and writes both count as access), most recent access first. Capped at the 1000 most recent stores. Each store links to the memory browsing operations under the `memory` group.
 
         Parameters
         ----------
