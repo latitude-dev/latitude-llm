@@ -7,7 +7,7 @@
  * - AWS credentials via the default chain (env vars, shared config, SSO, instance role…)
  * - AWS_REGION (default: eu-central-1)
  *
- * Install: npm install @aws-sdk/client-bedrock-runtime
+ * Install: npm install @aws-sdk/client-bedrock-runtime @traceloop/instrumentation-bedrock
  */
 
 import { randomUUID } from "node:crypto"
@@ -18,12 +18,13 @@ import {
   InvokeModelWithResponseStreamCommand,
 } from "@aws-sdk/client-bedrock-runtime"
 import { capture, Latitude } from "../src"
+import { createBedrockInstrumentation } from "../src/instrumentations/bedrock.ts"
 
 const latitude = new Latitude({
   apiKey: process.env.LATITUDE_API_KEY!,
   project: process.env.LATITUDE_PROJECT_SLUG!,
   disableBatch: true,
-  instrumentations: { bedrock: BedrockSDK },
+  instrumentations: [createBedrockInstrumentation(BedrockSDK)],
 })
 
 const PROVIDER = "bedrock"
@@ -120,7 +121,13 @@ async function toolConversation() {
     },
   ]
 
-  const first = await invoke({ anthropic_version: ANTHROPIC_VERSION, max_tokens: MAX_TOKENS, system: SYSTEM, tools, messages })
+  const first = await invoke({
+    anthropic_version: ANTHROPIC_VERSION,
+    max_tokens: MAX_TOKENS,
+    system: SYSTEM,
+    tools,
+    messages,
+  })
   const toolUse = first.content.find((b) => b.type === "tool_use")
   messages.push({ role: "assistant", content: first.content })
   messages.push({
@@ -134,7 +141,13 @@ async function toolConversation() {
     ],
   })
 
-  const second = await invoke({ anthropic_version: ANTHROPIC_VERSION, max_tokens: MAX_TOKENS, system: SYSTEM, tools, messages })
+  const second = await invoke({
+    anthropic_version: ANTHROPIC_VERSION,
+    max_tokens: MAX_TOKENS,
+    system: SYSTEM,
+    tools,
+    messages,
+  })
   return second.content.find((b) => b.type === "text")?.text
 }
 

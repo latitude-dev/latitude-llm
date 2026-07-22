@@ -74,7 +74,7 @@ export class Latitude {
   private readonly ownsProvider: boolean
 
   constructor(options: LatitudeOptions) {
-    const { apiKey, project, projectSlug, instrumentations = {}, tracerProvider, ...processorOptionsRaw } = options
+    const { apiKey, project, projectSlug, instrumentations = [], tracerProvider, ...processorOptionsRaw } = options
 
     if (!apiKey || apiKey.trim() === "") {
       throw new Error("[Latitude] apiKey is required and cannot be empty")
@@ -149,12 +149,12 @@ export class Latitude {
       this.provider = latitudeProvider
     }
 
-    this.ready = registerLatitudeInstrumentations({
-      instrumentations,
-      tracerProvider: this.provider,
-    }).catch((err) => {
-      console.warn("[Latitude] Failed to register instrumentations:", err)
-    })
+    this.ready = Promise.resolve().then(() =>
+      registerLatitudeInstrumentations({
+        instrumentations,
+        tracerProvider: this.provider,
+      }),
+    )
 
     if (!shutdownHandlersRegistered) {
       process.once("SIGTERM", () => void this.handleShutdown())

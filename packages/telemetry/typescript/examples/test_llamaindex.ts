@@ -6,7 +6,7 @@
  * - LATITUDE_PROJECT_SLUG
  * - OPENAI_API_KEY
  *
- * Install: npm install llamaindex @llamaindex/openai @llamaindex/workflow zod
+ * Install: npm install llamaindex @llamaindex/openai @llamaindex/workflow zod @traceloop/instrumentation-llamaindex
  *
  * NOTE: LLM spans are NOT captured here — the upstream Traceloop instrumentor only instruments the
  * OpenAI LLM when @llamaindex/openai is passed as a second `manuallyInstrument` arg (it lives in its
@@ -21,12 +21,13 @@ import * as LlamaIndex from "llamaindex"
 import { type ChatMessage, tool } from "llamaindex"
 import { z } from "zod"
 import { capture, Latitude } from "../src"
+import { createLlamaIndexInstrumentation } from "../src/instrumentations/llamaindex.ts"
 
 const latitude = new Latitude({
   apiKey: process.env.LATITUDE_API_KEY!,
   project: process.env.LATITUDE_PROJECT_SLUG!,
   disableBatch: true,
-  instrumentations: { llamaindex: LlamaIndex },
+  instrumentations: [createLlamaIndexInstrumentation(LlamaIndex)],
 })
 
 const PROVIDER = "llamaindex"

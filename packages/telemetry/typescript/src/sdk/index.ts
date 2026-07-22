@@ -1,7 +1,7 @@
 export { GEN_AI_MEMORY_ATTRIBUTES, MEMORY_OPERATIONS } from "../constants/attributes.ts"
 export { type CaptureScope, capture } from "./context.ts"
 export { initLatitude, Latitude } from "./init.ts"
-export type { InstrumentationName, InstrumentationsInput } from "./instrumentations.ts"
+export type { InstrumentationsInput } from "./instrumentations.ts"
 export { registerLatitudeInstrumentations } from "./instrumentations.ts"
 export {
   createMemoryTelemetry,

@@ -31,19 +31,19 @@ This guide shows you how to integrate **Latitude Telemetry** into an application
       <Tab title="TypeScript">
         <CodeGroup>
           ```bash npm
-          npm install @latitude-data/telemetry
+          npm install @latitude-data/telemetry @traceloop/instrumentation-together
           ```
 
           ```bash pnpm
-          pnpm add @latitude-data/telemetry
+          pnpm add @latitude-data/telemetry @traceloop/instrumentation-together
           ```
 
           ```bash yarn
-          yarn add @latitude-data/telemetry
+          yarn add @latitude-data/telemetry @traceloop/instrumentation-together
           ```
 
           ```bash bun
-          bun add @latitude-data/telemetry
+          bun add @latitude-data/telemetry @traceloop/instrumentation-together
           ```
         </CodeGroup>
       </Tab>
@@ -69,16 +69,17 @@ This guide shows you how to integrate **Latitude Telemetry** into an application
     <Tabs>
       <Tab title="TypeScript">
         ```ts
+        import { createTogetherAIInstrumentation } from "@latitude-data/telemetry/instrumentations/togetherai"
         import { Latitude, capture } from "@latitude-data/telemetry"
         import Together, * as TogetherSDK from "together-ai"
 
         const latitude = new Latitude({
           apiKey: process.env.LATITUDE_API_KEY!,
           project: process.env.LATITUDE_PROJECT_SLUG!,
-          instrumentations: { togetherai: TogetherSDK },
+          instrumentations: [createTogetherAIInstrumentation(TogetherSDK)],
         })
 
-
+        await latitude.ready
         const client = new Together()
 
         await capture("generate-reply", async () => {

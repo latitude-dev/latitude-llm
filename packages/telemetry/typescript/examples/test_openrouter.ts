@@ -11,13 +11,14 @@
 import { randomUUID } from "node:crypto"
 import OpenAI from "openai"
 import { capture, Latitude } from "../src"
+import { createOpenAIInstrumentation } from "../src/instrumentations/openai.ts"
 
 const latitude = new Latitude({
   apiKey: process.env.LATITUDE_API_KEY!,
   project: process.env.LATITUDE_PROJECT_SLUG!,
   serviceName: "openrouter-qa",
   disableBatch: true,
-  instrumentations: { openai: OpenAI },
+  instrumentations: [createOpenAIInstrumentation(OpenAI)],
 })
 
 const MODEL = process.env.OPENROUTER_MODEL ?? "openai/gpt-4o-mini"
@@ -78,7 +79,13 @@ async function toolConversation() {
     { role: "user", content: "Use get_weather for Paris, then answer in one sentence." },
   ]
 
-  const first = await client.chat.completions.create({ model: MODEL, messages, tools, tool_choice: "auto", max_tokens: 120 })
+  const first = await client.chat.completions.create({
+    model: MODEL,
+    messages,
+    tools,
+    tool_choice: "auto",
+    max_tokens: 120,
+  })
   const toolCall = first.choices[0]?.message.tool_calls?.[0]
   messages.push(first.choices[0]!.message)
 

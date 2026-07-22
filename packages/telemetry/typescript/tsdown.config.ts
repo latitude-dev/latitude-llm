@@ -1,7 +1,13 @@
 import { defineConfig } from "tsdown"
 
 export default defineConfig({
-  entry: ["src/index.ts", "src/cloudflare.ts"],
+  entry: [
+    "src/index.ts",
+    "src/cloudflare.ts",
+    "src/instrumentations/*.ts",
+    "!src/instrumentations/shared.ts",
+    "!src/instrumentations/*.test.ts",
+  ],
   format: ["esm", "cjs"],
   dts: true,
   sourcemap: true,

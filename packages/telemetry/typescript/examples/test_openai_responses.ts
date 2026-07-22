@@ -6,7 +6,7 @@
  * - LATITUDE_PROJECT_SLUG
  * - OPENAI_API_KEY
  *
- * Install: npm install openai
+ * Install: npm install openai @traceloop/instrumentation-openai
  *
  * The Responses API delivers the system prompt out-of-band via the top-level
  * `instructions` field (not a `role:"system"` message), so this example also
@@ -16,12 +16,13 @@
 import { randomUUID } from "node:crypto"
 import OpenAI from "openai"
 import { capture, Latitude } from "../src"
+import { createOpenAIInstrumentation } from "../src/instrumentations/openai.ts"
 
 const latitude = new Latitude({
   apiKey: process.env.LATITUDE_API_KEY!,
   project: process.env.LATITUDE_PROJECT_SLUG!,
   disableBatch: true,
-  instrumentations: { openai: OpenAI },
+  instrumentations: [createOpenAIInstrumentation(OpenAI)],
 })
 
 const PROVIDER = "openai-responses"

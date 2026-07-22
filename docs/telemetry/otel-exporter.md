@@ -229,6 +229,7 @@ Latitude works alongside your existing observability tools. In TypeScript, `new 
 ```ts
 import OpenAI from "openai"
 import tracer from "dd-trace"
+import { createOpenAIInstrumentation } from "@latitude-data/telemetry/instrumentations/openai"
 import { Latitude } from "@latitude-data/telemetry"
 
 tracer.init({ service: "my-app", env: "production" })
@@ -236,7 +237,7 @@ tracer.init({ service: "my-app", env: "production" })
 const latitude = new Latitude({
   apiKey: process.env.LATITUDE_API_KEY!,
   project: process.env.LATITUDE_PROJECT_SLUG!,
-  instrumentations: { openai: OpenAI },
+  instrumentations: [createOpenAIInstrumentation(OpenAI)],
 })
 ```
 
@@ -245,6 +246,7 @@ const latitude = new Latitude({
 ```ts
 import OpenAI from "openai"
 import * as Sentry from "@sentry/node"
+import { createOpenAIInstrumentation } from "@latitude-data/telemetry/instrumentations/openai"
 import { Latitude } from "@latitude-data/telemetry"
 
 Sentry.init({
@@ -255,7 +257,7 @@ Sentry.init({
 const latitude = new Latitude({
   apiKey: process.env.LATITUDE_API_KEY!,
   project: process.env.LATITUDE_PROJECT_SLUG!,
-  instrumentations: { openai: OpenAI },
+  instrumentations: [createOpenAIInstrumentation(OpenAI)],
 })
 ```
 
@@ -268,12 +270,13 @@ Enable New Relic's OpenTelemetry bridge first, then construct `new Latitude()`. 
 ```ts
 import "newrelic"
 import OpenAI from "openai"
+import { createOpenAIInstrumentation } from "@latitude-data/telemetry/instrumentations/openai"
 import { Latitude } from "@latitude-data/telemetry"
 
 const latitude = new Latitude({
   apiKey: process.env.LATITUDE_API_KEY!,
   project: process.env.LATITUDE_PROJECT_SLUG!,
-  instrumentations: { openai: OpenAI },
+  instrumentations: [createOpenAIInstrumentation(OpenAI)],
 })
 ```
 
@@ -284,6 +287,7 @@ Start Honeycomb's `HoneycombSDK` first, then construct `new Latitude()`. Honeyco
 ```ts
 import OpenAI from "openai"
 import { HoneycombSDK } from "@honeycombio/opentelemetry-node"
+import { createOpenAIInstrumentation } from "@latitude-data/telemetry/instrumentations/openai"
 import { Latitude } from "@latitude-data/telemetry"
 
 const honeycomb = new HoneycombSDK({ serviceName: "my-app" })
@@ -292,7 +296,7 @@ honeycomb.start()
 const latitude = new Latitude({
   apiKey: process.env.LATITUDE_API_KEY!,
   project: process.env.LATITUDE_PROJECT_SLUG!,
-  instrumentations: { openai: OpenAI },
+  instrumentations: [createOpenAIInstrumentation(OpenAI)],
 })
 ```
 

@@ -18,18 +18,19 @@
  * - LATITUDE_PRIMARY_PROJECT_SLUG    (defaults to "primary")
  * - LATITUDE_SECONDARY_PROJECT_SLUG  (defaults to "secondary")
  *
- * Install: npm install openai
+ * Install: npm install openai @traceloop/instrumentation-openai
  */
 
 import { randomUUID } from "node:crypto"
 import OpenAI from "openai"
 import { capture, Latitude } from "../src"
+import { createOpenAIInstrumentation } from "../src/instrumentations/openai.ts"
 
 // No default `project` here — each capture() must declare its own.
 const latitude = new Latitude({
   apiKey: process.env.LATITUDE_API_KEY!,
   disableBatch: true,
-  instrumentations: { openai: OpenAI },
+  instrumentations: [createOpenAIInstrumentation(OpenAI)],
 })
 
 const openai = new OpenAI()
@@ -70,10 +71,18 @@ async function fullStackAgent() {
   ]
   const messages: OpenAI.Chat.ChatCompletionMessageParam[] = [
     { role: "system", content: SYSTEM },
-    { role: "user", content: "What's the weather in San Francisco? Use get_weather, then answer in one short sentence." },
+    {
+      role: "user",
+      content: "What's the weather in San Francisco? Use get_weather, then answer in one short sentence.",
+    },
   ]
 
-  const first = await openai.chat.completions.create({ model: MODEL, messages, tools, max_completion_tokens: MAX_TOKENS })
+  const first = await openai.chat.completions.create({
+    model: MODEL,
+    messages,
+    tools,
+    max_completion_tokens: MAX_TOKENS,
+  })
   const toolCall = first.choices[0]?.message?.tool_calls?.[0]
   messages.push(first.choices[0]!.message)
   messages.push({
@@ -82,7 +91,12 @@ async function fullStackAgent() {
     content: JSON.stringify({ city: "San Francisco", temperatureC: 21, conditions: "sunny" }),
   })
 
-  const second = await openai.chat.completions.create({ model: MODEL, messages, tools, max_completion_tokens: MAX_TOKENS })
+  const second = await openai.chat.completions.create({
+    model: MODEL,
+    messages,
+    tools,
+    max_completion_tokens: MAX_TOKENS,
+  })
   return second.choices[0]?.message?.content
 }
 
@@ -102,8 +116,14 @@ async function main() {
   await latitude.ready
 
   // Each capture routes to a DIFFERENT project via its own `project` option.
-  console.log(`${PRIMARY_SLUG} →`, await capture("full-stack-agent-run", fullStackAgent, ctx(PRIMARY_SLUG, "tools", "tools", "agent:full-stack")))
-  console.log(`${SECONDARY_SLUG} →`, await capture("call-summariser-run", callSummariser, ctx(SECONDARY_SLUG, "chat", "agent:summariser")))
+  console.log(
+    `${PRIMARY_SLUG} →`,
+    await capture("full-stack-agent-run", fullStackAgent, ctx(PRIMARY_SLUG, "tools", "tools", "agent:full-stack")),
+  )
+  console.log(
+    `${SECONDARY_SLUG} →`,
+    await capture("call-summariser-run", callSummariser, ctx(SECONDARY_SLUG, "chat", "agent:summariser")),
+  )
 
   // A span with neither a per-capture `project` nor a constructor default is rejected at ingest.
 

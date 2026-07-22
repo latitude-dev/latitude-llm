@@ -6,18 +6,19 @@
  * - LATITUDE_PROJECT_SLUG
  * - ANTHROPIC_API_KEY
  *
- * Install: npm install @anthropic-ai/sdk
+ * Install: npm install @anthropic-ai/sdk @traceloop/instrumentation-anthropic
  */
 
 import { randomUUID } from "node:crypto"
 import Anthropic, * as AnthropicSDK from "@anthropic-ai/sdk"
 import { capture, Latitude } from "../src"
+import { createAnthropicInstrumentation } from "../src/instrumentations/anthropic.ts"
 
 const latitude = new Latitude({
   apiKey: process.env.LATITUDE_API_KEY!,
   project: process.env.LATITUDE_PROJECT_SLUG!,
   disableBatch: true,
-  instrumentations: { anthropic: AnthropicSDK },
+  instrumentations: [createAnthropicInstrumentation(AnthropicSDK)],
 })
 
 const PROVIDER = "anthropic"

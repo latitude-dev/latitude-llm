@@ -15,13 +15,14 @@
  * - SENTRY_DSN
  * - OPENAI_API_KEY
  *
- * Install: npm install openai @sentry/node
+ * Install: npm install openai @sentry/node @traceloop/instrumentation-openai
  */
 
 import { randomUUID } from "node:crypto"
 import * as Sentry from "@sentry/node"
 import OpenAI from "openai"
 import { capture, Latitude } from "../src"
+import { createOpenAIInstrumentation } from "../src/instrumentations/openai.ts"
 
 const MODEL = "gpt-5.5"
 // gpt-5.5 is a reasoning model — budget for reasoning + the answer.
@@ -39,7 +40,7 @@ Sentry.init({
 const latitude = new Latitude({
   apiKey: process.env.LATITUDE_API_KEY!,
   project: process.env.LATITUDE_PROJECT_SLUG!,
-  instrumentations: { openai: OpenAI },
+  instrumentations: [createOpenAIInstrumentation(OpenAI)],
   disableBatch: true,
 })
 

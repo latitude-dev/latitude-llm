@@ -8,19 +8,20 @@
  * - AZURE_OPENAI_ENDPOINT
  * - AZURE_OPENAI_DEPLOYMENT (optional, default: gpt-4o-mini)
  *
- * Install: npm install openai
+ * Install: npm install openai @traceloop/instrumentation-openai
  */
 
 import { randomUUID } from "node:crypto"
 import { AzureOpenAI, OpenAI } from "openai"
 import { capture, Latitude } from "../src"
+import { createOpenAIInstrumentation } from "../src/instrumentations/openai.ts"
 
 // Note: Azure OpenAI uses the same OpenAI instrumentor
 const latitude = new Latitude({
   apiKey: process.env.LATITUDE_API_KEY!,
   project: process.env.LATITUDE_PROJECT_SLUG!,
   disableBatch: true,
-  instrumentations: { openai: OpenAI },
+  instrumentations: [createOpenAIInstrumentation(OpenAI)],
 })
 
 const PROVIDER = "azure"

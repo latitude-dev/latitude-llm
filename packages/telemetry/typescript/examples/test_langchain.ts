@@ -6,7 +6,7 @@
  * - LATITUDE_PROJECT_SLUG
  * - OPENAI_API_KEY
  *
- * Install: npm install @langchain/openai @langchain/core zod
+ * Install: npm install @langchain/openai @langchain/core zod @arizeai/openinference-instrumentation-langchain
  *
  * LangChain is instrumented via OpenInference, whose patch targets the
  * `@langchain/core/callbacks/manager` module — pass that module as the
@@ -20,12 +20,13 @@ import { tool } from "@langchain/core/tools"
 import { ChatOpenAI } from "@langchain/openai"
 import { z } from "zod"
 import { capture, Latitude } from "../src"
+import { createLangChainInstrumentation } from "../src/instrumentations/langchain.ts"
 
 const latitude = new Latitude({
   apiKey: process.env.LATITUDE_API_KEY!,
   project: process.env.LATITUDE_PROJECT_SLUG!,
   disableBatch: true,
-  instrumentations: { langchain: CallbackManagerModule },
+  instrumentations: [createLangChainInstrumentation(CallbackManagerModule)],
 })
 
 const PROVIDER = "langchain"

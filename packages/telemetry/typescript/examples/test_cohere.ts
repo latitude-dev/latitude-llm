@@ -6,19 +6,20 @@
  * - LATITUDE_PROJECT_SLUG
  * - COHERE_API_KEY
  *
- * Install: npm install cohere-ai
+ * Install: npm install cohere-ai @traceloop/instrumentation-cohere
  */
 
 import { randomUUID } from "node:crypto"
 import * as CohereSDK from "cohere-ai"
 import { CohereClient } from "cohere-ai"
 import { capture, Latitude } from "../src"
+import { createCohereInstrumentation } from "../src/instrumentations/cohere.ts"
 
 const latitude = new Latitude({
   apiKey: process.env.LATITUDE_API_KEY!,
   project: process.env.LATITUDE_PROJECT_SLUG!,
   disableBatch: true,
-  instrumentations: { cohere: CohereSDK },
+  instrumentations: [createCohereInstrumentation(CohereSDK)],
 })
 
 const PROVIDER = "cohere"

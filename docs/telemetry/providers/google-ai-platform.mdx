@@ -31,19 +31,19 @@ This guide shows you how to integrate **Latitude Telemetry** into an application
       <Tab title="TypeScript">
         <CodeGroup>
           ```bash npm
-          npm install @latitude-data/telemetry
+          npm install @latitude-data/telemetry @traceloop/instrumentation-vertexai
           ```
 
           ```bash pnpm
-          pnpm add @latitude-data/telemetry
+          pnpm add @latitude-data/telemetry @traceloop/instrumentation-vertexai
           ```
 
           ```bash yarn
-          yarn add @latitude-data/telemetry
+          yarn add @latitude-data/telemetry @traceloop/instrumentation-vertexai
           ```
 
           ```bash bun
-          bun add @latitude-data/telemetry
+          bun add @latitude-data/telemetry @traceloop/instrumentation-vertexai
           ```
         </CodeGroup>
       </Tab>
@@ -69,6 +69,7 @@ This guide shows you how to integrate **Latitude Telemetry** into an application
     <Tabs>
       <Tab title="TypeScript">
         ```ts
+        import { createAIPlatformInstrumentation } from "@latitude-data/telemetry/instrumentations/aiplatform"
         import { Latitude, capture } from "@latitude-data/telemetry"
         import { PredictionServiceClient } from "@google-cloud/aiplatform"
         import * as AIPlatformSDK from "@google-cloud/aiplatform"
@@ -76,10 +77,10 @@ This guide shows you how to integrate **Latitude Telemetry** into an application
         const latitude = new Latitude({
           apiKey: process.env.LATITUDE_API_KEY!,
           project: process.env.LATITUDE_PROJECT_SLUG!,
-          instrumentations: { aiplatform: AIPlatformSDK },
+          instrumentations: [createAIPlatformInstrumentation(AIPlatformSDK)],
         })
 
-
+        await latitude.ready
         const client = new PredictionServiceClient()
 
         await capture("generate-prediction", async () => {

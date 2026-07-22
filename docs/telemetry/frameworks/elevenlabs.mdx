@@ -58,15 +58,15 @@ The way in is ElevenLabs' [**Custom LLM**](https://elevenlabs.io/docs/eleven-age
       <Tab title="TypeScript">
         <CodeGroup>
           ```bash npm
-          npm install @latitude-data/telemetry openai express
+          npm install @latitude-data/telemetry openai express @traceloop/instrumentation-openai
           ```
 
           ```bash pnpm
-          pnpm add @latitude-data/telemetry openai express
+          pnpm add @latitude-data/telemetry openai express @traceloop/instrumentation-openai
           ```
 
           ```bash yarn
-          yarn add @latitude-data/telemetry openai express
+          yarn add @latitude-data/telemetry openai express @traceloop/instrumentation-openai
           ```
         </CodeGroup>
       </Tab>
@@ -119,12 +119,13 @@ The way in is ElevenLabs' [**Custom LLM**](https://elevenlabs.io/docs/eleven-age
         ```ts
         import express from "express"
         import OpenAI from "openai"
+        import { createOpenAIInstrumentation } from "@latitude-data/telemetry/instrumentations/openai"
         import { Latitude } from "@latitude-data/telemetry"
 
         const latitude = new Latitude({
           apiKey: process.env.LATITUDE_API_KEY!,
           project: process.env.LATITUDE_PROJECT_SLUG!,
-          instrumentations: { openai: OpenAI },
+          instrumentations: [createOpenAIInstrumentation(OpenAI)],
         })
 
         const app = express()
