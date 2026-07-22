@@ -42,11 +42,6 @@ export const LatitudeLogo = ({ className }: BrandIconProps) => (
   </svg>
 )
 
-/**
- * Latitude full logo (mark + wordmark). The wordmark and the icon's middle arc
- * flip color via `dark:` classes, so this single asset works in both themes —
- * no separate light/dark files or theme-detection JS needed.
- */
 export const LatitudeWordmark = ({ className }: BrandIconProps) => (
   <svg className={cn("h-5 w-auto", className)} viewBox="0 0 458 86" fill="none" aria-label="Latitude">
     <title>Latitude</title>
