@@ -417,6 +417,45 @@ export const listAgentDispatches = createServerFn({ method: "GET" })
     return rows
   })
 
+export const signalAgentDispatchesQueryKey = (projectId: string, signalId: string) =>
+  ["signal-agent-dispatches", projectId, signalId] as const
+
+export const listSignalAgentDispatches = createServerFn({ method: "GET" })
+  .inputValidator(z.object({ projectId: z.string(), signalId: z.string() }))
+  .handler(async ({ data }): Promise<readonly AgentDispatchRecord[]> => {
+    const { organizationId } = await requireSession()
+    const projectId = ProjectId(data.projectId)
+    return Effect.runPromise(
+      Effect.gen(function* () {
+        const dispatchRepo = yield* AgentDispatchRepository
+        const configRepo = yield* AgentDispatchConfigRepository
+        const dispatches = yield* dispatchRepo.listBySource({
+          projectId,
+          sourceType: "signal",
+          sourceId: data.signalId,
+        })
+        const configs = yield* configRepo.listByProjectIncludingDefaults(projectId)
+        const configById = new Map(configs.map((config) => [config.id, config]))
+
+        return dispatches.map((dispatch) => {
+          const config = configById.get(dispatch.configId)
+          const routineUrl =
+            config?.kind === "claude_code" && config.target && "routineTriggerId" in config.target
+              ? `https://claude.ai/code/routines/${config.target.routineTriggerId}`
+              : null
+          return { ...toDispatchRecord(dispatch), routineUrl }
+        })
+      }).pipe(
+        withPostgres(
+          Layer.mergeAll(AgentDispatchRepositoryLive, AgentDispatchConfigRepositoryLive),
+          getPostgresClient(),
+          organizationId,
+        ),
+        withTracing,
+      ),
+    )
+  })
+
 export const listCursorRepositories = createServerFn({ method: "GET" })
   .inputValidator(z.object({ integrationId: z.string() }))
   .handler(async ({ data }) => {
