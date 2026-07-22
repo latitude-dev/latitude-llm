@@ -1,3 +1,4 @@
+import { listUserStoresUseCase } from "@domain/memories"
 import { ProjectRepository } from "@domain/projects"
 import { ExternalUserId, OrganizationId, ProjectId } from "@domain/shared"
 import { buildHistogramBucketScaffold, listUserSignalsUseCase } from "@domain/signals"
@@ -5,6 +6,7 @@ import { USER_SORT_FIELDS, UserAnalyticsRepository } from "@domain/spans"
 import { listUserBehavioursUseCase } from "@domain/taxonomy"
 import { createRoute, z } from "@hono/zod-openapi"
 import {
+  MemoryRepositoryLive,
   ScoreAnalyticsRepositoryLive,
   TaxonomyObservationRepositoryLive,
   UserAnalyticsRepositoryLive,
@@ -20,6 +22,7 @@ import { withTracing } from "@repo/observability"
 import { Effect, Layer } from "effect"
 import { defineOperation } from "../core/define-operation.ts"
 import type { OperationModule } from "../core/mount.ts"
+import { toUserMemoryStoresResponse, UserMemoryStoresSchema } from "../openapi/entities/memory.ts"
 import {
   bucketSecondsForRange,
   resolveUserRange,
@@ -373,6 +376,43 @@ const listUserBehaviours = userEndpoint({
     ),
 })
 
+const listUserMemoryStores = userEndpoint({
+  route: createRoute({
+    method: "get",
+    path: "/{userId}/memory",
+    name: "listUserMemoryStores",
+    tags: ["Users"],
+    group: "users",
+    sdkMethod: "memoryStores",
+    summary: "List memory stores an end-user accessed",
+    description:
+      "Returns the memory stores the end-user accessed (reads and writes both count as access), most recent access first. Capped at the 1000 most recent stores. Each store links to the memory browsing operations under the `memory` group.",
+    security: PROTECTED_SECURITY,
+    request: { params: UserParamsSchema },
+    responses: typedResponses({ status: 200, schema: UserMemoryStoresSchema, description: "Memory stores accessed" }),
+  }),
+  access: "read-only",
+  rateLimitTier: "low",
+  execute: (input, ctx) =>
+    Effect.gen(function* () {
+      const { projectSlug, userId } = input.params
+
+      const projectRepo = yield* ProjectRepository
+      const project = yield* projectRepo.findBySlug(projectSlug)
+
+      const stores = yield* listUserStoresUseCase({
+        organizationId: OrganizationId(ctx.organization.id as string),
+        projectId: ProjectId(project.id as string),
+        userId: ExternalUserId(userId),
+      })
+      return { status: 200, body: toUserMemoryStoresResponse(stores) } as const
+    }).pipe(
+      withPostgres(ProjectRepositoryLive, ctx.postgresClient, ctx.organization.id),
+      withClickHouse(MemoryRepositoryLive, ctx.clickhouse, ctx.organization.id),
+      withTracing,
+    ),
+})
+
 const getUser = userEndpoint({
   route: createRoute({
     method: "get",
@@ -427,6 +467,7 @@ export const usersModule: OperationModule = {
     getUserUsage,
     listUserSignals,
     listUserBehaviours,
+    listUserMemoryStores,
     getUser,
   ],
 }

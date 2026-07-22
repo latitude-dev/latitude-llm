@@ -19,6 +19,7 @@ if typing.TYPE_CHECKING:
     from .experiments.client import AsyncExperimentsClient, ExperimentsClient
     from .incidents.client import AsyncIncidentsClient, IncidentsClient
     from .members.client import AsyncMembersClient, MembersClient
+    from .memory.client import AsyncMemoryClient, MemoryClient
     from .monitors.client import AsyncMonitorsClient, MonitorsClient
     from .oauth_keys.client import AsyncOauthKeysClient, OauthKeysClient
     from .projects.client import AsyncProjectsClient, ProjectsClient
@@ -137,6 +138,7 @@ class LatitudeClient:
         self._spans: typing.Optional[SpansClient] = None
         self._experiments: typing.Optional[ExperimentsClient] = None
         self._sessions: typing.Optional[SessionsClient] = None
+        self._memory: typing.Optional[MemoryClient] = None
 
     @property
     def account(self):
@@ -290,6 +292,14 @@ class LatitudeClient:
             self._sessions = SessionsClient(client_wrapper=self._client_wrapper)
         return self._sessions
 
+    @property
+    def memory(self):
+        if self._memory is None:
+            from .memory.client import MemoryClient  # noqa: E402
+
+            self._memory = MemoryClient(client_wrapper=self._client_wrapper)
+        return self._memory
+
 
 def _make_default_async_client(
     timeout: typing.Optional[float],
@@ -417,6 +427,7 @@ class AsyncLatitudeClient:
         self._spans: typing.Optional[AsyncSpansClient] = None
         self._experiments: typing.Optional[AsyncExperimentsClient] = None
         self._sessions: typing.Optional[AsyncSessionsClient] = None
+        self._memory: typing.Optional[AsyncMemoryClient] = None
 
     @property
     def account(self):
@@ -569,6 +580,14 @@ class AsyncLatitudeClient:
 
             self._sessions = AsyncSessionsClient(client_wrapper=self._client_wrapper)
         return self._sessions
+
+    @property
+    def memory(self):
+        if self._memory is None:
+            from .memory.client import AsyncMemoryClient  # noqa: E402
+
+            self._memory = AsyncMemoryClient(client_wrapper=self._client_wrapper)
+        return self._memory
 
 
 def _get_base_url(*, base_url: typing.Optional[str] = None, environment: LatitudeEnvironment) -> str:

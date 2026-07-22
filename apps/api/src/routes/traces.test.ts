@@ -488,4 +488,33 @@ describe("Traces Routes Integration", () => {
     expect(body.traces.buckets.length).toBeLessThanOrEqual(4)
     expect(body.traces.buckets[0]?.bucket.startsWith("2026-04-15")).toBe(true)
   })
+
+  it<ApiTestContext>("GET /{traceId}/memory returns 404 for an unknown trace", async ({ app, database }) => {
+    const tenant = await createTenantSetup(database)
+    const slug = await createProjectRecord(database, tenant.organizationId, "777777777777777777777777")
+
+    const res = await app.fetch(
+      new Request(`http://localhost/v1/projects/${slug}/traces/${"0".repeat(32)}/memory`, {
+        headers: createApiKeyAuthHeaders(tenant.apiKeyToken),
+      }),
+    )
+    expect(res.status).toBe(404)
+  })
+
+  it<ApiTestContext>("GET /{traceId}/memory rejects unauthenticated requests with 401", async ({ app }) => {
+    const res = await app.fetch(new Request(`http://localhost/v1/projects/foo/traces/${"0".repeat(32)}/memory`))
+    expect(res.status).toBe(401)
+  })
+
+  it<ApiTestContext>("GET /{traceId}/memory/changes returns 404 for an unknown trace", async ({ app, database }) => {
+    const tenant = await createTenantSetup(database)
+    const slug = await createProjectRecord(database, tenant.organizationId, "888888888888888888888888")
+
+    const res = await app.fetch(
+      new Request(`http://localhost/v1/projects/${slug}/traces/${"0".repeat(32)}/memory/changes`, {
+        headers: createApiKeyAuthHeaders(tenant.apiKeyToken),
+      }),
+    )
+    expect(res.status).toBe(404)
+  })
 })
