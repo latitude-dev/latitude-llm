@@ -168,7 +168,7 @@ export function getProviderSdkTsInstallCommand(id: OnboardingProviderId, pm: TsP
     "azure-openai": "openai",
     "vercel-ai-sdk": "ai @ai-sdk/openai",
     "vercel-ai-sdk-v7": "ai @ai-sdk/otel @ai-sdk/openai",
-    langchain: "langchain @langchain/openai @langchain/core",
+    langchain: "@langchain/openai @langchain/core",
     llamaindex: "llamaindex @llamaindex/openai @llamaindex/workflow",
     "openai-agents": "@openai/agents zod",
     eve: "@vercel/otel @opentelemetry/exporter-trace-otlp-http",
@@ -856,13 +856,13 @@ function snippetTsLangchain() {
   return `import { Latitude, capture } from "@latitude-data/telemetry"
 import { createLangChainInstrumentation } from "@latitude-data/telemetry/instrumentations/langchain"
 import { ChatOpenAI } from "@langchain/openai"
+import * as CallbackManagerModule from "@langchain/core/callbacks/manager"
 import { HumanMessage } from "@langchain/core/messages"
-import * as LangChain from "langchain"
 
 const latitude = new Latitude({
   apiKey: process.env.LATITUDE_API_KEY!,
   project: process.env.LATITUDE_PROJECT_SLUG!,
-  instrumentations: [createLangChainInstrumentation(LangChain)],
+  instrumentations: [createLangChainInstrumentation(CallbackManagerModule)],
 })
 
 await latitude.ready
