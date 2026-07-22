@@ -21,6 +21,7 @@ import { createServerFn } from "@tanstack/react-start"
 import { Effect } from "effect"
 import { z } from "zod"
 import { getClickhouseClient } from "../../server/clients.ts"
+import { traceIdSchema } from "../../server/id-validation.ts"
 import { resolveOrgScope } from "../../server/resolve-org-scope.ts"
 import { withScopedClickHouse } from "../../server/scoped-clickhouse.ts"
 
@@ -106,7 +107,7 @@ interface MemoryUserStoreRecord {
  * batched blob fetch.
  */
 export const getSessionMemorySummary = createServerFn({ method: "GET" })
-  .inputValidator(z.object({ projectId: z.string(), sessionId: z.string(), traceId: z.string().optional() }))
+  .inputValidator(z.object({ projectId: z.string(), sessionId: z.string(), traceId: traceIdSchema.optional() }))
   .handler(async ({ data, context }): Promise<SessionMemorySummaryRecord> => {
     const orgId = await resolveOrgScope(context)
 
@@ -125,7 +126,7 @@ export const getSessionMemorySummary = createServerFn({ method: "GET" })
  * for the "Memory changes" section. Fetched only when the section is expanded.
  */
 export const getSessionMemoryDiff = createServerFn({ method: "GET" })
-  .inputValidator(z.object({ projectId: z.string(), sessionId: z.string(), traceId: z.string().optional() }))
+  .inputValidator(z.object({ projectId: z.string(), sessionId: z.string(), traceId: traceIdSchema.optional() }))
   .handler(async ({ data, context }): Promise<SessionMemoryDiffRecord> => {
     const orgId = await resolveOrgScope(context)
 

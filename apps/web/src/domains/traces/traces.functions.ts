@@ -47,6 +47,7 @@ import { enforceExportRequestRateLimit } from "../../domains/exports/export-rate
 import { ensureSession } from "../../domains/sessions/session.functions.ts"
 import { getSessionOrganizationId } from "../../server/auth.ts"
 import { getClickhouseClient, getQueuePublisher, getRedisClient } from "../../server/clients.ts"
+import { spanIdSchema, traceIdSchema } from "../../server/id-validation.ts"
 import { resolveOrgScope } from "../../server/resolve-org-scope.ts"
 import { withScopedClickHouse } from "../../server/scoped-clickhouse.ts"
 
@@ -170,7 +171,7 @@ export interface TraceConversationChunkRecord {
 const traceListCursorSchema = z.object({
   sortValue: z.string(),
   secondaryValue: z.string().optional(),
-  traceId: z.string(),
+  traceId: traceIdSchema,
 })
 
 interface TraceListResult {
@@ -397,7 +398,7 @@ export const getTraceSearchHighlights = createServerFn({ method: "GET" })
   .inputValidator(
     z.object({
       projectId: z.string(),
-      traceId: z.string(),
+      traceId: traceIdSchema,
       searchQuery: z.string().max(500),
     }),
   )
@@ -480,7 +481,7 @@ export const getSessionMomentIntelligence = createServerFn({ method: "GET" })
   })
 
 export const getTraceDetail = createServerFn({ method: "GET" })
-  .inputValidator(z.object({ projectId: z.string(), traceId: z.string() }))
+  .inputValidator(z.object({ projectId: z.string(), traceId: traceIdSchema }))
   .handler(async ({ data, context }) => {
     const orgId = await resolveOrgScope(context)
 
@@ -509,7 +510,7 @@ export const getTraceConversationChunk = createServerFn({ method: "GET" })
   .inputValidator(
     z.object({
       projectId: z.string(),
-      traceId: z.string(),
+      traceId: traceIdSchema,
       offset: z.number().int().nonnegative().optional(),
       limit: z.number().int().positive().max(100).optional(),
     }),
@@ -538,8 +539,8 @@ export const getSpanConversationChunk = createServerFn({ method: "GET" })
   .inputValidator(
     z.object({
       projectId: z.string(),
-      traceId: z.string(),
-      spanId: z.string(),
+      traceId: traceIdSchema,
+      spanId: spanIdSchema,
       offset: z.number().int().nonnegative().optional(),
       limit: z.number().int().positive().max(100).optional(),
     }),
