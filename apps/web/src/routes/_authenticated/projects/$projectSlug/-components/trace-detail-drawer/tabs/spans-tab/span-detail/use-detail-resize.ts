@@ -41,6 +41,7 @@ export function useDetailResize(onClose: () => void) {
   useMountEffect(() => {
     const panel = panelRef.current?.parentElement
     if (!panel) return
+    setHeight(Math.max(MIN_PANEL_HEIGHT, Math.min(maxHeight(), Math.round(panel.offsetHeight / 2))))
     const observer = new ResizeObserver(() => setHeight((prev) => Math.min(prev, maxHeight())))
     observer.observe(panel)
     return () => {
