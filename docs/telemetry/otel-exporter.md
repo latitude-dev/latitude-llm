@@ -239,6 +239,8 @@ const latitude = new Latitude({
   project: process.env.LATITUDE_PROJECT_SLUG!,
   instrumentations: [createOpenAIInstrumentation(OpenAI)],
 })
+
+await latitude.ready
 ```
 
 ### With Sentry (TypeScript)
@@ -259,6 +261,8 @@ const latitude = new Latitude({
   project: process.env.LATITUDE_PROJECT_SLUG!,
   instrumentations: [createOpenAIInstrumentation(OpenAI)],
 })
+
+await latitude.ready
 ```
 
 If Sentry's automatic OpenTelemetry setup conflicts with Latitude tracing, setting `skipOpenTelemetrySetup: true` in `Sentry.init()` can help by preventing Sentry from configuring OpenTelemetry itself. This disables Sentry's automatic tracing and span emission; error reporting remains available, but sending traces to Sentry requires manually wiring Sentry's OpenTelemetry components.
@@ -278,6 +282,8 @@ const latitude = new Latitude({
   project: process.env.LATITUDE_PROJECT_SLUG!,
   instrumentations: [createOpenAIInstrumentation(OpenAI)],
 })
+
+await latitude.ready
 ```
 
 ### With Honeycomb (TypeScript)
@@ -298,6 +304,8 @@ const latitude = new Latitude({
   project: process.env.LATITUDE_PROJECT_SLUG!,
   instrumentations: [createOpenAIInstrumentation(OpenAI)],
 })
+
+await latitude.ready
 ```
 
 ### Other Platforms

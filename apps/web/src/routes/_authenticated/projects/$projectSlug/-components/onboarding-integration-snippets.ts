@@ -806,6 +806,8 @@ const latitude = new Latitude({
   project: process.env.LATITUDE_PROJECT_SLUG!,
 })
 
+await latitude.ready
+
 await capture("generate-support-reply", async () => {
   const { text } = await generateText({
     model: openai("gpt-4o"),
@@ -1527,11 +1529,13 @@ function snippetTsFlue() {
 import { createOpenTelemetryObserver } from "@flue/opentelemetry"
 import { observe } from "@flue/runtime"
 
-new Latitude({
+const latitude = new Latitude({
   apiKey: process.env.LATITUDE_API_KEY!,
   project: process.env.LATITUDE_PROJECT_SLUG!,
   serviceName: "flue-app",
 })
+
+await latitude.ready
 
 // Flue emits OpenTelemetry spans itself — no instrumentations entry needed.
 observe(createOpenTelemetryObserver())
