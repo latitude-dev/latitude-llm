@@ -2,6 +2,36 @@
 
 ## Unreleased
 
+## v0.3.61 - 2026-07-22
+
+### Signals
+
+- Restored the manual resolve/ignore lifecycle that the monitors-incidents consolidation had collapsed into mute, with regression detection: a new occurrence on a resolved signal reopens it and emits a `signal.regressed` notification (assignee-first, in-app + email + Slack). Mute now only gates notification fan-out and agent dispatch, ignoring auto-mutes, and the Archived tab lists resolved-or-ignored signals (ref: #4132).
+- Switched signal slugs to short JIRA-style `LAT-XY9Z` codes with slug-addressed detail pages (`/signals/$signalSlug`); slugs are assigned once at creation and never regenerated. Experiment top-signals now expose the slug as their `key` across the public API, MCP, and web so an agent can feed it straight into the signal tools (ref: #4154).
+- Used occurrence timestamps in the signals seen column (ref: #4145).
+
+### Flaggers
+
+- Fixed the `process deterministic-flaggers` job failing for every project in production: a forward-incompatible flagger row (from the new-slug backfill migration running ahead of the app deploy) made the whole batch throw. Unrecognized rows are now skipped with a warning, making staged rollouts of new flagger strategies safe regardless of migration/deploy ordering (ref: #4129).
+- Stopped undeclared-tool false positives from truncated Claude Code toolsets: all tool names are preserved when capping oversized schemas, and a call whose response succeeded no longer flags as undeclared (ref: #4141).
+
+### Telemetry
+
+- Added memory-operation spans for Claude Code's own persistent auto memory: Read/Write/Edit tools targeting the auto-memory directory now emit `gen_ai.memory.*` spans (search/upsert/update) into the same ledger and Memory-page surfaces as the SDK memory helper, gated by `LATITUDE_CLAUDE_CODE_MEMORY` (default on) (ref: #4140).
+
+### Traces
+
+- Classified nested Vercel AI SDK wrappers as `agent_step` (excluded from the cost/token rollup, not an agent-graph candidate) while a trace-root wrapper stays `invoke_agent`, fixing false subagent detection and overstated single-response spans (ref: #4147).
+
+### Memory
+
+- Added an onboarding empty state to the Memory page (ref: #4152).
+
+### Taxonomy
+
+- Averaged `crossSampleAri` over all 45 leave-one-tenth-out fold pairs for a reproducible, order-robust metric and re-derived the stability floor (0.8 → 0.75); calibration/offline only, the production shadow path is unaffected (ref: #4156).
+- Fixed the shadow-span Datadog config to target `resource_name` (ref: #4148).
+
 ## v0.3.60 - 2026-07-21
 
 ### API
