@@ -332,6 +332,11 @@ export const SEED_LATITUDE_SIGNAL_GENERATION_PROJECT_ID = ProjectId("signalgen00
 export const SEED_LATITUDE_SIGNAL_GENERATION_PROJECT_NAME = "Latitude Signal Generation"
 export const SEED_LATITUDE_SIGNAL_GENERATION_PROJECT_SLUG = LATITUDE_TELEMETRY_PROJECT_SLUGS.signalGeneration
 
+export const SEED_LATITUDE_CONVERSATION_INTELLIGENCE_PROJECT_ID = ProjectId("convintel009afjbcb7gzwli")
+export const SEED_LATITUDE_CONVERSATION_INTELLIGENCE_PROJECT_NAME = "Latitude Conversation Intelligence"
+export const SEED_LATITUDE_CONVERSATION_INTELLIGENCE_PROJECT_SLUG =
+  LATITUDE_TELEMETRY_PROJECT_SLUGS.conversationIntelligence
+
 // ---------------------------------------------------------------------------
 // Test Mode — second org (empty-sandbox state) and Acme sandboxes
 // ---------------------------------------------------------------------------

@@ -25,6 +25,7 @@ export const AI_GENERATE_TELEMETRY_TAGS = {
   taxonomyProposeThemes: ["taxonomy:propose-themes"],
   // Second taxonomy-naming LLM call: collapses the candidates into one cluster name + description.
   taxonomyNameCluster: ["taxonomy:name-cluster"],
+  momentClassifier: ["conversation-intelligence:moment-classifier"],
 } as const satisfies Record<string, readonly string[]>
 
 export const AI_GENERATE_TELEMETRY_SPAN_NAMES = {
@@ -40,6 +41,7 @@ export const AI_GENERATE_TELEMETRY_SPAN_NAMES = {
   evaluationProposeOptimization: "evaluation.propose.optimization",
   taxonomyProposeThemes: "taxonomy.propose-themes",
   taxonomyNameCluster: "taxonomy.name-cluster",
+  momentClassifier: "conversation-intelligence.moment-classifier",
 } as const satisfies Record<string, string>
 
 export type ProjectScopedAiIds = {
