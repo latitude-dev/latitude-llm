@@ -16,6 +16,7 @@ import { useLayoutEffect, useMemo, useState } from "react"
 import { useApiKeysCollection } from "../../../../../../../domains/api-keys/api-keys.collection.ts"
 import {
   type CodingMachineAgentId,
+  cloudflareAiGatewayConfigSnippet,
   getCodingAgentTelemetryPrompt,
   getCodingMachineInstallDescription,
   getCodingMachineTelemetryInstallCommand,
@@ -98,6 +99,7 @@ const PROVIDER_ENTRIES: ReadonlyArray<ProviderEntry> = [
   { id: "flue", name: "Flue", icon: "flue" },
   { id: "elevenlabs", name: "ElevenLabs", icon: "elevenlabs" },
   { id: "pydantic-ai", name: "Pydantic AI", icon: "pydantic-ai" },
+  { id: "cloudflare-ai-gateway", name: "Cloudflare AI Gateway", icon: "cloudflare-ai-gateway" },
 ]
 
 function ProviderChipIcon({ provider }: { readonly provider: ProviderEntry }) {
@@ -376,6 +378,55 @@ function CodingMachineInstructions({
 }
 
 /**
+ * Cloudflare AI Gateway exports OTLP itself — no SDK. Set up the exporter in the Cloudflare
+ * dashboard pointing at Latitude, so this panel shows the config to paste rather than code.
+ */
+function CloudflareAiGatewayInstructions({
+  slug,
+  defaultApiKeyToken,
+}: {
+  readonly slug: string
+  readonly defaultApiKeyToken: string | null
+}) {
+  return (
+    <div className="flex flex-col gap-4">
+      <div className="flex flex-col gap-2">
+        <Text.H5M>Cloudflare AI Gateway</Text.H5M>
+        <Text.H5 color="foregroundMuted">
+          Cloudflare AI Gateway exports OpenTelemetry spans for every request it proxies — no SDK needed. In your
+          gateway's <span className="font-medium">Settings → OpenTelemetry</span>, add an exporter pointing at Latitude.{" "}
+          {defaultApiKeyToken ? (
+            "The header below is prefilled with your default Latitude API key."
+          ) : (
+            <>
+              Replace <code className="text-xs">YOUR_API_KEY</code> with a Latitude API key from Settings.
+            </>
+          )}
+        </Text.H5>
+      </div>
+
+      <div className="flex flex-col gap-2">
+        <Text.H5M>Exporter configuration</Text.H5M>
+        <CodeBlock value={cloudflareAiGatewayConfigSnippet(slug, defaultApiKeyToken)} copyable />
+      </div>
+
+      <Text.H5 color="foregroundMuted">
+        See{" "}
+        <a
+          href="https://developers.cloudflare.com/ai-gateway/observability/otel-integration/"
+          target="_blank"
+          rel="noopener noreferrer"
+          className="text-primary underline-offset-2 hover:underline"
+        >
+          Cloudflare's OpenTelemetry docs
+        </a>{" "}
+        for where to add the exporter. Traces appear in Latitude within a few seconds of your next request.
+      </Text.H5>
+    </div>
+  )
+}
+
+/**
  * Install / connect instructions shared between the onboarding telemetry step and the
  * Traces page empty-project experience. Renders the body only (no heading or footer) so
  * each host can frame it with its own surrounding copy and actions.
@@ -512,65 +563,72 @@ export function TelemetryInstructions({ projectSlug }: { readonly projectSlug: s
               />
 
               {integrationPanel === "opentelemetry" ? (
-                <div className="flex flex-col gap-4">
-                  <div className="flex flex-col gap-2">
-                    <Text.H5M>OpenTelemetry (OTLP)</Text.H5M>
-                    <Text.H5 color="foregroundMuted">
-                      Send a standard OTLP <code className="text-xs">ExportTraceServiceRequest</code> over HTTP.
-                      Successful ingest returns <code className="text-xs">202</code> with{" "}
-                      <code className="text-xs">{"{}"}</code>.
-                    </Text.H5>
-                  </div>
-
-                  <div className="flex flex-col gap-2 rounded-lg border border-border bg-muted/40 p-2 font-mono text-xs leading-relaxed text-muted-foreground">
-                    <div>
-                      <span className="text-foreground">POST</span>{" "}
-                      <span className="break-all">https://ingest.latitude.so/v1/traces</span>
-                    </div>
-                    <div>
-                      <span className="text-foreground">Authorization:</span> Bearer {defaultApiKeyToken ?? "<api-key>"}
-                    </div>
-                    <div>
-                      <span className="text-foreground">X-Latitude-Project:</span> {slugForSnippets}
-                    </div>
-                    <div>
-                      <span className="text-foreground">Content-Type:</span> application/json or application/x-protobuf
-                    </div>
-                  </div>
-
-                  <div className="flex flex-col gap-6">
+                selectedProvider.id === "cloudflare-ai-gateway" ? (
+                  <CloudflareAiGatewayInstructions slug={slugForSnippets} defaultApiKeyToken={defaultApiKeyToken} />
+                ) : (
+                  <div className="flex flex-col gap-4">
                     <div className="flex flex-col gap-2">
-                      <Text.H5M>Verify with cURL</Text.H5M>
+                      <Text.H5M>OpenTelemetry (OTLP)</Text.H5M>
                       <Text.H5 color="foregroundMuted">
-                        POST a minimal OTLP JSON trace.{" "}
-                        {defaultApiKeyToken ? (
-                          "The authorization header is prefilled with your default Latitude API key."
-                        ) : (
-                          <>
-                            Replace <code className="text-xs">YOUR_API_KEY</code> with a Latitude API key from Settings.
-                          </>
-                        )}{" "}
-                        Expect <code className="text-xs">202</code> and an empty JSON body on success. Project slug is
-                        prefilled on the header line.
+                        Send a standard OTLP <code className="text-xs">ExportTraceServiceRequest</code> over HTTP.
+                        Successful ingest returns <code className="text-xs">202</code> with{" "}
+                        <code className="text-xs">{"{}"}</code>.
                       </Text.H5>
-                      <CodeBlock value={getOtelCurlVerifySnippet(slugForSnippets, defaultApiKeyToken)} copyable />
                     </div>
 
-                    <div className="flex flex-col gap-2">
-                      <Text.H5M>Language examples</Text.H5M>
-                      <Text.H5 color="foregroundMuted">Configure an OTLP HTTP exporter in your stack.</Text.H5>
-                      <OtelExporterLanguageChips active={otelExporterLanguage} onSelect={setOtelExporterLanguage} />
-                      <CodeBlock
-                        value={getOtelExporterLanguageSnippet(
-                          otelExporterLanguage,
-                          slugForSnippets,
-                          defaultApiKeyToken,
-                        )}
-                        copyable
-                      />
+                    <div className="flex flex-col gap-2 rounded-lg border border-border bg-muted/40 p-2 font-mono text-xs leading-relaxed text-muted-foreground">
+                      <div>
+                        <span className="text-foreground">POST</span>{" "}
+                        <span className="break-all">https://ingest.latitude.so/v1/traces</span>
+                      </div>
+                      <div>
+                        <span className="text-foreground">Authorization:</span> Bearer{" "}
+                        {defaultApiKeyToken ?? "<api-key>"}
+                      </div>
+                      <div>
+                        <span className="text-foreground">X-Latitude-Project:</span> {slugForSnippets}
+                      </div>
+                      <div>
+                        <span className="text-foreground">Content-Type:</span> application/json or
+                        application/x-protobuf
+                      </div>
+                    </div>
+
+                    <div className="flex flex-col gap-6">
+                      <div className="flex flex-col gap-2">
+                        <Text.H5M>Verify with cURL</Text.H5M>
+                        <Text.H5 color="foregroundMuted">
+                          POST a minimal OTLP JSON trace.{" "}
+                          {defaultApiKeyToken ? (
+                            "The authorization header is prefilled with your default Latitude API key."
+                          ) : (
+                            <>
+                              Replace <code className="text-xs">YOUR_API_KEY</code> with a Latitude API key from
+                              Settings.
+                            </>
+                          )}{" "}
+                          Expect <code className="text-xs">202</code> and an empty JSON body on success. Project slug is
+                          prefilled on the header line.
+                        </Text.H5>
+                        <CodeBlock value={getOtelCurlVerifySnippet(slugForSnippets, defaultApiKeyToken)} copyable />
+                      </div>
+
+                      <div className="flex flex-col gap-2">
+                        <Text.H5M>Language examples</Text.H5M>
+                        <Text.H5 color="foregroundMuted">Configure an OTLP HTTP exporter in your stack.</Text.H5>
+                        <OtelExporterLanguageChips active={otelExporterLanguage} onSelect={setOtelExporterLanguage} />
+                        <CodeBlock
+                          value={getOtelExporterLanguageSnippet(
+                            otelExporterLanguage,
+                            slugForSnippets,
+                            defaultApiKeyToken,
+                          )}
+                          copyable
+                        />
+                      </div>
                     </div>
                   </div>
-                </div>
+                )
               ) : (
                 <SdkIntegrationInstructions
                   selectedProviderId={selectedProvider.id}

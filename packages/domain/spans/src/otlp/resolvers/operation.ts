@@ -107,6 +107,18 @@ const operationCandidates = [
   fromString("span.type", (v) => CLAUDE_CODE_OPERATION[v]), // Claude Code
 ]
 
+const CLOUDFLARE_AIG_SPAN_NAME = "cf.aig.request"
+
+// Cloudflare AI Gateway hardcodes gen_ai.operation.name=chat for every request, including
+// embeddings. Detect the embedding response shape ({data,shape}, no chat envelope) and
+// reclassify so it isn't miscounted as a generation.
+function isCloudflareEmbeddingsSpan(attrs: readonly OtlpKeyValue[], spanName: string): boolean {
+  if (spanName !== CLOUDFLARE_AIG_SPAN_NAME) return false
+  const out = stringAttr(attrs, "gen_ai.output.messages")
+  if (!out) return false
+  return out.includes('"data"') && out.includes('"shape"') && !out.includes('"choices"') && !out.includes('"content"')
+}
+
 // CrewAI's OpenInference instrumentor carries the whole conversation on the AGENT span (no
 // LLM leaf), so classify those `chat` for the rollup; other frameworks' AGENT spans keep
 // `invoke_agent` (they have real LLM leaves).
@@ -129,5 +141,8 @@ export function resolveOperation(
   if (!hasParent && VERCEL_ROOT_AGENT_OPERATION_IDS.has(stringAttr(spanAttrs, "ai.operationId") ?? "")) {
     return "invoke_agent"
   }
-  return first(operationCandidates, spanAttrs) ?? operationFromClaudeCodeNativeSpanName(spanName) ?? "unspecified"
+  const operation =
+    first(operationCandidates, spanAttrs) ?? operationFromClaudeCodeNativeSpanName(spanName) ?? "unspecified"
+  if (operation === "chat" && isCloudflareEmbeddingsSpan(spanAttrs, spanName)) return "embeddings"
+  return operation
 }

@@ -31,6 +31,7 @@ const PROVIDER_ALIASES: Record<string, string> = {
   fireworks_ai: "fireworks-ai",
   workersai: "cloudflare-workers-ai",
   "workersai.chat": "cloudflare-workers-ai",
+  "internal-workers-ai": "cloudflare-workers-ai", // Cloudflare AI Gateway (Workers AI upstream)
   // OTel GenAI well-known names from Vercel AI SDK v7's @ai-sdk/otel.
   "gcp.vertex_ai": "google-vertex",
   "gcp.gemini": "google",

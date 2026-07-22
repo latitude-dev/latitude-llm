@@ -44,6 +44,7 @@ export type OnboardingProviderId =
   | "flue"
   | "elevenlabs"
   | "pydantic-ai"
+  | "cloudflare-ai-gateway"
 
 export type TsPackageManager = "npm" | "pnpm" | "yarn" | "bun"
 
@@ -62,6 +63,9 @@ interface OnboardingProviderSnippetConfig {
 const crossTsPy = { supportsTypescript: true, supportsPython: true } as const
 const tsOnly = { supportsTypescript: true, supportsPython: false } as const
 const pyOnly = { supportsTypescript: false, supportsPython: true } as const
+// Gateways / proxies with no Latitude SDK — they export OTLP directly, so only the
+// OpenTelemetry panel applies.
+const otelOnly = { supportsTypescript: false, supportsPython: false } as const
 
 export const ONBOARDING_PROVIDER_SNIPPET_CONFIG: Record<OnboardingProviderId, OnboardingProviderSnippetConfig> = {
   openai: { id: "openai", ...crossTsPy },
@@ -95,6 +99,7 @@ export const ONBOARDING_PROVIDER_SNIPPET_CONFIG: Record<OnboardingProviderId, On
   flue: { id: "flue", ...tsOnly },
   elevenlabs: { id: "elevenlabs", ...crossTsPy },
   "pydantic-ai": { id: "pydantic-ai", ...pyOnly },
+  "cloudflare-ai-gateway": { id: "cloudflare-ai-gateway", ...otelOnly },
 }
 
 // Eve ships its telemetry through @vercel/otel directly, so it does NOT install
@@ -1798,6 +1803,17 @@ export function getOtelExporterLanguageSnippet(
     case "dotnet":
       return dotnetOtelSnippet(projectSlug, apiKey)
   }
+}
+
+/**
+ * Cloudflare AI Gateway is configured in the Cloudflare dashboard (Settings → OpenTelemetry),
+ * not in code — so its onboarding shows the exporter URL + headers to paste there rather than
+ * an SDK snippet. Values prefilled with the project slug and API key.
+ */
+export function cloudflareAiGatewayConfigSnippet(projectSlug: string, apiKey: string | null): string {
+  return `URL: ${OTLP_TRACES_ENDPOINT}
+Authorization: Bearer ${apiKey ?? "YOUR_API_KEY"}
+X-Latitude-Project: ${projectSlug}`
 }
 
 /**

@@ -1,0 +1,98 @@
+---
+title: Cloudflare AI Gateway
+description: Connect Cloudflare AI Gateway to Latitude for observability.
+---
+
+## Overview
+
+[Cloudflare AI Gateway](https://developers.cloudflare.com/ai-gateway/) proxies requests to your
+LLM providers and can export an OpenTelemetry span for every request it handles. Those spans
+follow the OpenTelemetry [GenAI semantic conventions](https://opentelemetry.io/docs/specs/semconv/gen-ai/),
+so Latitude ingests them directly over OTLP — no SDK or code change in your application.
+
+You configure the exporter once in the AI Gateway dashboard, pointing it at Latitude's OTLP
+endpoint. Every model call routed through the gateway then shows up in Latitude with its model,
+token usage, cost, and prompt/response messages.
+
+---
+
+## Requirements
+
+- A Latitude API key
+- A Latitude project slug
+- A Cloudflare AI Gateway with OpenTelemetry export available in its settings
+
+---
+
+## Setup
+
+<Steps>
+  <Step title="Open your gateway's OpenTelemetry settings">
+    In the Cloudflare dashboard, go to **AI → AI Gateway**, select your gateway, and open
+    **Settings → OpenTelemetry**.
+  </Step>
+
+  <Step title="Add a Latitude exporter">
+    Add an OTLP exporter with the following URL and headers:
+
+    ```text
+    URL: https://ingest.latitude.so/v1/traces
+    Authorization: Bearer <LATITUDE_API_KEY>
+    X-Latitude-Project: <PROJECT_SLUG>
+    ```
+
+    Replace `<LATITUDE_API_KEY>` with a Latitude API key (Settings → API Keys) and
+    `<PROJECT_SLUG>` with your project's slug. AI Gateway supports both OTLP/JSON and
+    OTLP/protobuf; either works.
+
+    <Note>
+      To keep the API key out of the exporter config, store it in Cloudflare
+      [Secrets Store](https://developers.cloudflare.com/secrets-store/) and reference it from the
+      exporter's authorization field.
+    </Note>
+  </Step>
+
+  <Step title="Send a request">
+    Route a request through your gateway. The trace appears in Latitude within a few seconds.
+  </Step>
+</Steps>
+
+---
+
+## What gets captured
+
+Latitude resolves the standard GenAI attributes AI Gateway emits:
+
+- **Provider** — `gen_ai.provider.name`
+- **Model** — `gen_ai.request.model`
+- **Token usage** — `gen_ai.usage.input_tokens`, `gen_ai.usage.output_tokens`
+- **Cost** — `gen_ai.usage.cost`
+- **Messages** — `gen_ai.input.messages` / `gen_ai.output.messages`. AI Gateway puts the raw
+  request body and the upstream provider's native response in these fields; Latitude unwraps
+  them into a normal conversation view.
+
+AI Gateway reports `gen_ai.operation.name` as `chat` for every request, including embeddings.
+Latitude reclassifies embedding requests to `embeddings` automatically, so they're counted and
+displayed correctly.
+
+---
+
+## Linking gateway spans to your app traces
+
+If your application already emits OpenTelemetry traces, you can stitch the gateway span into
+them by passing trace context on the request:
+
+- `cf-aig-otel-trace-id` — a 32-character hex trace ID
+- `cf-aig-otel-parent-span-id` — a 16-character hex parent span ID
+
+The gateway span is then created as a child of the span you identify.
+
+---
+
+## Seeing your traces
+
+Once connected, traces appear automatically in Latitude:
+
+1. Open your project in the Latitude dashboard
+2. Send a request through your AI Gateway
+3. The request appears with its model, messages, latency, token usage, and cost
