@@ -34,6 +34,7 @@ export {
   semanticMomentBoundaryReasonSchema,
   sessionSemanticMomentSchema,
 } from "./entities/session-semantic-moment.ts"
+export { MomentClassifierError } from "./errors.ts"
 export {
   documentFromMessages,
   type NormalizedMessage,

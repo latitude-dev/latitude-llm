@@ -35,6 +35,7 @@ export const GENERATION_FEATURES = [
   "SIGNAL_GENERATOR",
   "TAXONOMY_NAMING",
   "GEPA_PROPOSER",
+  "MOMENT_CLASSIFIER",
 ] as const
 
 export type GenerationFeature = (typeof GENERATION_FEATURES)[number]

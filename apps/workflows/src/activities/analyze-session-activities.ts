@@ -141,8 +141,8 @@ const withAnalyzeSessionClickHouse = <A, E, R>(effect: Effect.Effect<A, E, R>, o
     ),
   )
 
-const withAnalyzeSessionAi = <A, E, R>(effect: Effect.Effect<A, E, R>) =>
-  effect.pipe(withAi(Layer.mergeAll(AIGenerateLive, AIEmbedLive), getRedisClient()))
+const withAnalyzeSessionAi = <A, E, R>(effect: Effect.Effect<A, E, R>, organizationId: string) =>
+  effect.pipe(withAi(Layer.mergeAll(AIGenerateLive, AIEmbedLive), getRedisClient(), { organizationId }))
 
 const withAnalyzeSessionEmbeddingBudget = <A, E, R>(effect: Effect.Effect<A, E, R>) =>
   effect.pipe(Effect.provide(Layer.provide(TraceSearchBudgetLive(getRedisClient()), EmbedBudgetResolverLive)))
@@ -210,7 +210,7 @@ export const embedAnalyzeSessionTurnsActivity = (
       return { turns } satisfies AnalyzeSessionEmbeddingActivityResult
     }).pipe(
       (effect) => withAnalyzeSessionClickHouse(effect, input.organizationId),
-      withAnalyzeSessionAi,
+      (effect) => withAnalyzeSessionAi(effect, input.organizationId),
       withAnalyzeSessionEmbeddingBudget,
       withTracing,
     ),
@@ -294,7 +294,7 @@ export const analyzeSessionActivity = (input: AnalyzeSessionActivityInput) => {
       withPostgres(TaxonomyClusterRepositoryLive, getPostgresClient(), OrganizationId(input.organizationId)),
       Effect.provide(RedisDistributedLockRepositoryLive(getRedisClient())),
       withAnalyzeSessionEmbeddingBudget,
-      withAi(Layer.mergeAll(AIGenerateLive, AIEmbedLive), getRedisClient()),
+      (effect) => withAnalyzeSessionAi(effect, input.organizationId),
       Effect.tap((result) => publishFlaggerScreening(input, result)),
       Effect.tap((result) =>
         Effect.sync(() =>
