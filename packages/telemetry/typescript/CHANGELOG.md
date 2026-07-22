@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [4.0.0] - 2026-07-23
+
 ### Changed
 
 - **Breaking:** `instrumentations` now accepts an array of instances created by opt-in `@latitude-data/telemetry/instrumentations/*` factories instead of an integration-name object map.
