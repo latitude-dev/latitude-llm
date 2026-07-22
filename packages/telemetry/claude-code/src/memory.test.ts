@@ -2,22 +2,23 @@ import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs"
 import { tmpdir } from "node:os"
 import { join } from "node:path"
 import { afterAll, describe, expect, it } from "vitest"
-import { classifyMemoryTool, memoryDirFromTranscript } from "./memory.ts"
+import { classifyMemoryTool, memoryProjectsRoot } from "./memory.ts"
 import type { MemoryEmitOptions, ToolCall } from "./types.ts"
 
-const DIR = "/home/u/.claude/projects/-home-u-repo/memory"
+const ROOT = "/home/u/.claude/projects"
+const DIR = `${ROOT}/-home-u-repo/memory`
 
 function tool(partial: Partial<ToolCall> & Pick<ToolCall, "name" | "input">): ToolCall {
   return { id: "t1", startMs: 1, endMs: 2, ...partial }
 }
 
 function opts(overrides: Partial<MemoryEmitOptions> = {}): MemoryEmitOptions {
-  return { dir: DIR, captureContent: false, ...overrides }
+  return { projectsRoot: ROOT, captureContent: false, ...overrides }
 }
 
-describe("memoryDirFromTranscript", () => {
-  it("resolves the sibling memory dir of the transcript", () => {
-    expect(memoryDirFromTranscript("/home/u/.claude/projects/-home-u-repo/sess.jsonl")).toBe(DIR)
+describe("memoryProjectsRoot", () => {
+  it("resolves the shared projects root above the transcript's project dir", () => {
+    expect(memoryProjectsRoot("/home/u/.claude/projects/-home-u-repo/sess.jsonl")).toBe(ROOT)
   })
 })
 
@@ -26,8 +27,24 @@ describe("classifyMemoryTool", () => {
     expect(classifyMemoryTool(tool({ name: "Bash", input: { command: "ls" } }), opts())).toBeNull()
   })
 
-  it("returns null for a file outside the memory dir", () => {
+  it("returns null for a file outside the projects root", () => {
     expect(classifyMemoryTool(tool({ name: "Edit", input: { file_path: "/home/u/repo/src/a.ts" } }), opts())).toBeNull()
+  })
+
+  it("returns null for a non-memory subdirectory of a project", () => {
+    const op = classifyMemoryTool(
+      tool({ name: "Edit", input: { file_path: `${ROOT}/-home-u-repo/todos/x.md` } }),
+      opts(),
+    )
+    expect(op).toBeNull()
+  })
+
+  it("classifies a store under a different project slug than the session (git worktree)", () => {
+    const op = classifyMemoryTool(
+      tool({ name: "Edit", input: { file_path: `${ROOT}/-home-u-src-repo/memory/topic.md` } }),
+      opts(),
+    )
+    expect(op).toMatchObject({ operation: "update_memory", storeId: "-home-u-src-repo", recordId: "topic.md" })
   })
 
   it("maps Write to upsert_memory with the store slug and record path", () => {
@@ -94,16 +111,16 @@ describe("classifyMemoryTool", () => {
 })
 
 describe("classifyMemoryTool default disk read", () => {
-  const root = mkdtempSync(join(tmpdir(), "cc-memory-"))
-  const memDir = join(root, "proj", "memory")
+  const projectsRoot = mkdtempSync(join(tmpdir(), "cc-memory-"))
+  const memDir = join(projectsRoot, "proj", "memory")
   mkdirSync(memDir, { recursive: true })
   writeFileSync(join(memDir, "topic.md"), "real disk content")
-  afterAll(() => rmSync(root, { recursive: true, force: true }))
+  afterAll(() => rmSync(projectsRoot, { recursive: true, force: true }))
 
   it("reads the edited file from disk when no readFile is injected", () => {
     const op = classifyMemoryTool(
       tool({ name: "Edit", input: { file_path: join(memDir, "topic.md"), old_string: "a", new_string: "b" } }),
-      { dir: memDir, captureContent: true },
+      { projectsRoot, captureContent: true },
     )
     expect(op).toMatchObject({ operation: "update_memory", storeId: "proj", recordId: "topic.md" })
     expect(op?.body).toBe("real disk content")

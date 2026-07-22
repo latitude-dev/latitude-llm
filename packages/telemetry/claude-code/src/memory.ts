@@ -1,5 +1,5 @@
 import { readFileSync } from "node:fs"
-import { basename, dirname, isAbsolute, join, relative, resolve, sep } from "node:path"
+import { dirname, isAbsolute, relative, resolve, sep } from "node:path"
 import type { MemoryEmitOptions, MemoryOp, ToolCall } from "./types.ts"
 
 // Auto memory rides ordinary file tools, so operations are keyed by tool name, not a memory tool.
@@ -10,10 +10,12 @@ const MEMORY_TOOL_OPERATIONS: Record<string, MemoryOp["operation"]> = {
   Read: "search_memory",
 }
 
-// The transcript lives at ~/.claude/projects/<project>/<session>.jsonl; the auto-memory
-// directory is its sibling.
-export function memoryDirFromTranscript(transcriptPath: string): string {
-  return join(dirname(transcriptPath), "memory")
+// The transcript lives at <projectsRoot>/<project>/<session>.jsonl, so its grandparent is the
+// shared projects root. Auto memory is NOT necessarily the transcript's sibling: with git
+// worktrees (e.g. Conductor) each session runs in a linked worktree, but Claude Code keeps one
+// memory store under the repo's main worktree — a different <project> dir under the same root.
+export function memoryProjectsRoot(transcriptPath: string): string {
+  return dirname(dirname(transcriptPath))
 }
 
 export function classifyMemoryTool(tool: ToolCall, opts: MemoryEmitOptions): MemoryOp | null {
@@ -25,13 +27,13 @@ export function classifyMemoryTool(tool: ToolCall, opts: MemoryEmitOptions): Mem
   if (!filePath) return null
 
   const resolved = resolve(filePath)
-  const rel = relative(opts.dir, resolved)
-  if (rel === "" || rel.startsWith("..") || isAbsolute(rel)) return null
+  const location = memoryLocation(opts.projectsRoot, resolved)
+  if (!location) return null
 
   const op: MemoryOp = {
     operation,
-    storeId: basename(dirname(opts.dir)),
-    recordId: rel.split(sep).join("/"),
+    storeId: location.storeId,
+    recordId: location.recordId,
     count: 1,
   }
 
@@ -41,6 +43,17 @@ export function classifyMemoryTool(tool: ToolCall, opts: MemoryEmitOptions): Mem
   }
 
   return op
+}
+
+// Matches <projectsRoot>/<store>/memory/<record...>, keyed on any project's memory dir so a
+// worktree session writing the repo's main-worktree store still resolves. store = the project
+// slug that owns the memory (one store per repo); record = the path under that store's memory dir.
+function memoryLocation(projectsRoot: string, resolvedPath: string): { storeId: string; recordId: string } | null {
+  const rel = relative(projectsRoot, resolvedPath)
+  if (rel === "" || rel.startsWith("..") || isAbsolute(rel)) return null
+  const [storeId, memoryDir, ...record] = rel.split(sep)
+  if (!storeId || memoryDir !== "memory" || record.length === 0) return null
+  return { storeId, recordId: record.join("/") }
 }
 
 function extractBody(
