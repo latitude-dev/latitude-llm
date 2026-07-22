@@ -2063,6 +2063,9 @@ importers:
       '@domain/incidents':
         specifier: workspace:*
         version: link:../domain/incidents
+      '@domain/memories':
+        specifier: workspace:*
+        version: link:../domain/memories
       '@domain/monitors':
         specifier: workspace:*
         version: link:../domain/monitors

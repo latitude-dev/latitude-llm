@@ -2702,6 +2702,172 @@
           "hasMore"
         ]
       },
+      "SessionMemorySummary": {
+        "type": "object",
+        "properties": {
+          "records": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/MemoryRecordSummary"
+            },
+            "description": "Per-record read/write token footprint for the session (or a single trace)."
+          },
+          "total": {
+            "type": "object",
+            "properties": {
+              "readTokens": {
+                "type": "integer",
+                "minimum": 0,
+                "description": "Total tokens read across the session."
+              },
+              "tokensAdded": {
+                "type": "integer",
+                "minimum": 0,
+                "description": "Total tokens added across the session."
+              },
+              "tokensRemoved": {
+                "type": "integer",
+                "minimum": 0,
+                "description": "Total tokens removed across the session."
+              },
+              "writeRecords": {
+                "type": "integer",
+                "minimum": 0,
+                "description": "Number of records the session wrote, including zero-delta writes."
+              }
+            },
+            "required": [
+              "readTokens",
+              "tokensAdded",
+              "tokensRemoved",
+              "writeRecords"
+            ],
+            "description": "Session-wide totals."
+          }
+        },
+        "required": [
+          "records",
+          "total"
+        ]
+      },
+      "MemoryRecordSummary": {
+        "type": "object",
+        "properties": {
+          "storeId": {
+            "type": "string",
+            "description": "Store the record belongs to."
+          },
+          "recordId": {
+            "type": "string",
+            "description": "Record the metrics are for."
+          },
+          "readTokens": {
+            "type": "integer",
+            "minimum": 0,
+            "description": "Tokens read from this record across the session's retrievals."
+          },
+          "tokensAdded": {
+            "type": "integer",
+            "minimum": 0,
+            "description": "Tokens the session added to this record (endpoint diff)."
+          },
+          "tokensRemoved": {
+            "type": "integer",
+            "minimum": 0,
+            "description": "Tokens the session removed from this record (endpoint diff)."
+          }
+        },
+        "required": [
+          "storeId",
+          "recordId",
+          "readTokens",
+          "tokensAdded",
+          "tokensRemoved"
+        ]
+      },
+      "SessionMemoryChanges": {
+        "type": "object",
+        "properties": {
+          "records": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/SessionMemoryChange"
+            },
+            "description": "Per-record before/after diffs for what the session changed."
+          }
+        },
+        "required": [
+          "records"
+        ]
+      },
+      "SessionMemoryChange": {
+        "type": "object",
+        "properties": {
+          "storeId": {
+            "type": "string",
+            "description": "Store the changed record belongs to."
+          },
+          "recordId": {
+            "type": "string",
+            "description": "Record that changed."
+          },
+          "kind": {
+            "type": "string",
+            "enum": [
+              "added",
+              "updated",
+              "removed"
+            ],
+            "description": "How the session changed the record."
+          },
+          "beforeBody": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "The record's body before the session's writes. `null` when added or when the prior body was not captured."
+          },
+          "afterBody": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "The record's body after the session's writes. `null` when removed or when the body was not captured."
+          },
+          "tokensAdded": {
+            "type": "integer",
+            "minimum": 0,
+            "description": "Tokens added by the session's writes."
+          },
+          "tokensRemoved": {
+            "type": "integer",
+            "minimum": 0,
+            "description": "Tokens removed by the session's writes."
+          },
+          "degraded": {
+            "type": "boolean",
+            "description": "`true` when a side's body was unavailable, so the diff is incomplete."
+          },
+          "lastChangeSpanId": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "Span of the session's last write to this record. `null` when unknown."
+          }
+        },
+        "required": [
+          "storeId",
+          "recordId",
+          "kind",
+          "beforeBody",
+          "afterBody",
+          "tokensAdded",
+          "tokensRemoved",
+          "degraded",
+          "lastChangeSpanId"
+        ]
+      },
       "ExportTracesResponse": {
         "type": "object",
         "properties": {
@@ -3787,6 +3953,38 @@
           "observationCount",
           "firstObservedAt",
           "lastObservedAt"
+        ]
+      },
+      "UserMemoryStores": {
+        "type": "object",
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/MemoryUserStore"
+            },
+            "description": "Memory stores the user accessed, most recent access first."
+          }
+        },
+        "required": [
+          "items"
+        ]
+      },
+      "MemoryUserStore": {
+        "type": "object",
+        "properties": {
+          "storeId": {
+            "type": "string",
+            "description": "Store the user accessed. The empty string is the unattributed bucket."
+          },
+          "lastAccessedAt": {
+            "type": "string",
+            "description": "ISO-8601 timestamp of the user's most recent access to the store."
+          }
+        },
+        "required": [
+          "storeId",
+          "lastAccessedAt"
         ]
       },
       "UserProfileResponse": {
@@ -12455,6 +12653,486 @@
           "lastSeenAt",
           "traceIds"
         ]
+      },
+      "PaginatedMemoryStores": {
+        "type": "object",
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/MemoryStore"
+            },
+            "description": "Page of items, in the requested sort order."
+          },
+          "nextCursor": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "Opaque cursor for fetching the next page. `null` when there are no more pages. Pass it back in `cursor` to continue."
+          },
+          "hasMore": {
+            "type": "boolean",
+            "description": "`true` when there is at least one more page after this one."
+          }
+        },
+        "required": [
+          "items",
+          "nextCursor",
+          "hasMore"
+        ]
+      },
+      "MemoryStore": {
+        "type": "object",
+        "properties": {
+          "storeId": {
+            "type": "string",
+            "description": "Store identifier (`gen_ai.memory.store.id`). The empty string is the unattributed bucket."
+          },
+          "recordCount": {
+            "type": "integer",
+            "minimum": 0,
+            "description": "Number of live (non-deleted) records in the store."
+          },
+          "tokenCount": {
+            "type": "integer",
+            "minimum": 0,
+            "description": "Total tokens across the store's live record bodies."
+          },
+          "lastUpdatedAt": {
+            "type": "string",
+            "description": "ISO-8601 timestamp of the store's most recent mutating write."
+          },
+          "lastReadAt": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "ISO-8601 timestamp of the store's most recent read. `null` when never read."
+          },
+          "sessionCount": {
+            "type": "integer",
+            "minimum": 0,
+            "description": "Number of distinct sessions that wrote to the store."
+          },
+          "userCount": {
+            "type": "integer",
+            "minimum": 0,
+            "description": "Number of distinct end-users who accessed the store."
+          }
+        },
+        "required": [
+          "storeId",
+          "recordCount",
+          "tokenCount",
+          "lastUpdatedAt",
+          "lastReadAt",
+          "sessionCount",
+          "userCount"
+        ]
+      },
+      "MemoryStoreSnapshot": {
+        "type": "object",
+        "properties": {
+          "records": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/MemoryStoreRecord"
+            },
+            "description": "The store's current records (ids plus light metadata), one per live record."
+          }
+        },
+        "required": [
+          "records"
+        ]
+      },
+      "MemoryStoreRecord": {
+        "type": "object",
+        "properties": {
+          "recordId": {
+            "type": "string",
+            "description": "Record identifier (`gen_ai.memory.record.id`); opaque. The empty string is the unnamed record."
+          },
+          "tokenCount": {
+            "type": "integer",
+            "minimum": 0,
+            "description": "Tokens in the record's current body."
+          },
+          "lastUpdatedAt": {
+            "type": "string",
+            "description": "ISO-8601 timestamp of the version that produced the current body."
+          }
+        },
+        "required": [
+          "recordId",
+          "tokenCount",
+          "lastUpdatedAt"
+        ]
+      },
+      "MemoryStoreDiff": {
+        "type": "object",
+        "properties": {
+          "storeId": {
+            "type": "string",
+            "description": "Store the diff was computed for."
+          },
+          "changes": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/MemoryStoreChange"
+            },
+            "description": "Per-record changes between the two points; unchanged records are pruned."
+          },
+          "tokensAdded": {
+            "type": "integer",
+            "minimum": 0,
+            "description": "Total tokens added across all changed records."
+          },
+          "tokensRemoved": {
+            "type": "integer",
+            "minimum": 0,
+            "description": "Total tokens removed across all changed records."
+          },
+          "recordsChanged": {
+            "type": "object",
+            "properties": {
+              "added": {
+                "type": "integer",
+                "minimum": 0,
+                "description": "Number of records added."
+              },
+              "updated": {
+                "type": "integer",
+                "minimum": 0,
+                "description": "Number of records updated."
+              },
+              "removed": {
+                "type": "integer",
+                "minimum": 0,
+                "description": "Number of records removed."
+              }
+            },
+            "required": [
+              "added",
+              "updated",
+              "removed"
+            ],
+            "description": "Count of changed records per bucket."
+          }
+        },
+        "required": [
+          "storeId",
+          "changes",
+          "tokensAdded",
+          "tokensRemoved",
+          "recordsChanged"
+        ]
+      },
+      "MemoryStoreChange": {
+        "type": "object",
+        "properties": {
+          "recordId": {
+            "type": "string",
+            "description": "Record that changed between the two points."
+          },
+          "kind": {
+            "type": "string",
+            "enum": [
+              "added",
+              "updated",
+              "removed"
+            ],
+            "description": "How the record changed: `added` (only at `to`), `removed` (only at `from`), or `updated` (present at both with a different body)."
+          },
+          "tokensAdded": {
+            "type": "integer",
+            "minimum": 0,
+            "description": "Tokens inserted by this change."
+          },
+          "tokensRemoved": {
+            "type": "integer",
+            "minimum": 0,
+            "description": "Tokens deleted by this change."
+          },
+          "degraded": {
+            "type": "boolean",
+            "description": "`true` when a body was unavailable and token counts fall back to record-level estimates."
+          }
+        },
+        "required": [
+          "recordId",
+          "kind",
+          "tokensAdded",
+          "tokensRemoved",
+          "degraded"
+        ]
+      },
+      "MemoryStoreUsers": {
+        "type": "object",
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/MemoryStoreUser"
+            },
+            "description": "End-users who accessed the store, most recent access first."
+          }
+        },
+        "required": [
+          "items"
+        ]
+      },
+      "MemoryStoreUser": {
+        "type": "object",
+        "properties": {
+          "userId": {
+            "type": "string",
+            "description": "End-user identifier that accessed the store."
+          },
+          "lastAccessedAt": {
+            "type": "string",
+            "description": "ISO-8601 timestamp of the user's most recent access (read or write)."
+          }
+        },
+        "required": [
+          "userId",
+          "lastAccessedAt"
+        ]
+      },
+      "MemoryRecordDetail": {
+        "type": "object",
+        "properties": {
+          "body": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "The record's current body. `null` when the record is deleted or its body was not captured."
+          },
+          "tokenCount": {
+            "type": "integer",
+            "minimum": 0,
+            "description": "Tokens in the current body."
+          },
+          "versions": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/MemoryRecordVersion"
+            },
+            "description": "The record's mutating version chain, newest first."
+          }
+        },
+        "required": [
+          "body",
+          "tokenCount",
+          "versions"
+        ]
+      },
+      "MemoryRecordVersion": {
+        "type": "object",
+        "properties": {
+          "changeKind": {
+            "type": "string",
+            "enum": [
+              "add",
+              "update",
+              "remove",
+              "read",
+              "store_create",
+              "store_delete"
+            ],
+            "description": "Kind of memory operation: `add`/`update`/`remove` (mutations), `read` (retrieval), or `store_create`/`store_delete` (store lifecycle)."
+          },
+          "tokenCount": {
+            "type": "integer",
+            "minimum": 0,
+            "description": "Tokens in the body produced by this version."
+          },
+          "tokensAdded": {
+            "type": "integer",
+            "minimum": 0,
+            "description": "Tokens added by this version versus its predecessor."
+          },
+          "tokensRemoved": {
+            "type": "integer",
+            "minimum": 0,
+            "description": "Tokens removed by this version versus its predecessor."
+          },
+          "spanId": {
+            "type": "string",
+            "description": "Span that authored this version."
+          },
+          "traceId": {
+            "type": "string",
+            "description": "Trace the authoring span belongs to."
+          },
+          "sessionId": {
+            "type": "string",
+            "description": "Session the authoring trace belongs to."
+          },
+          "userId": {
+            "type": "string",
+            "description": "End-user attributed to the authoring span. Empty when none."
+          },
+          "endTime": {
+            "type": "string",
+            "description": "ISO-8601 timestamp of the authoring span's end (the version ordering key)."
+          }
+        },
+        "required": [
+          "changeKind",
+          "tokenCount",
+          "tokensAdded",
+          "tokensRemoved",
+          "spanId",
+          "traceId",
+          "sessionId",
+          "userId",
+          "endTime"
+        ]
+      },
+      "MemoryRecordChangeDiff": {
+        "type": "object",
+        "properties": {
+          "changeKind": {
+            "type": "string",
+            "enum": [
+              "add",
+              "update",
+              "remove",
+              "read",
+              "store_create",
+              "store_delete"
+            ],
+            "description": "Kind of memory operation: `add`/`update`/`remove` (mutations), `read` (retrieval), or `store_create`/`store_delete` (store lifecycle)."
+          },
+          "beforeBody": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "The record's body before the change. `null` for the record's first version, a re-create after removal, or when the prior body was not captured."
+          },
+          "afterBody": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "The record's body after the change. `null` for a `remove`, or when the body was not captured."
+          },
+          "degraded": {
+            "type": "boolean",
+            "description": "`true` when a side's body was unavailable, so the diff is incomplete."
+          }
+        },
+        "required": [
+          "changeKind",
+          "beforeBody",
+          "afterBody",
+          "degraded"
+        ]
+      },
+      "MemoryRecordReads": {
+        "type": "object",
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/MemoryRecordRead"
+            },
+            "description": "Retrieval events for the record, newest first, capped."
+          }
+        },
+        "required": [
+          "items"
+        ]
+      },
+      "MemoryRecordRead": {
+        "type": "object",
+        "properties": {
+          "spanId": {
+            "type": "string",
+            "description": "Span that performed the read (`search_memory`)."
+          },
+          "traceId": {
+            "type": "string",
+            "description": "Trace the read span belongs to."
+          },
+          "sessionId": {
+            "type": "string",
+            "description": "Session the read trace belongs to."
+          },
+          "userId": {
+            "type": "string",
+            "description": "End-user attributed to the read. Empty when none."
+          },
+          "queryText": {
+            "type": "string",
+            "description": "The search query text, when captured (opt-in). Empty otherwise."
+          },
+          "tokenCount": {
+            "type": "integer",
+            "minimum": 0,
+            "description": "Tokens in the record returned by the read."
+          },
+          "endTime": {
+            "type": "string",
+            "description": "ISO-8601 timestamp of the read span's end."
+          }
+        },
+        "required": [
+          "spanId",
+          "traceId",
+          "sessionId",
+          "userId",
+          "queryText",
+          "tokenCount",
+          "endTime"
+        ]
+      },
+      "MemoryRecordUsers": {
+        "type": "object",
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/MemoryRecordUser"
+            },
+            "description": "End-users who accessed the record, most recent access first."
+          }
+        },
+        "required": [
+          "items"
+        ]
+      },
+      "MemoryRecordUser": {
+        "type": "object",
+        "properties": {
+          "userId": {
+            "type": "string",
+            "description": "End-user identifier that accessed the record."
+          },
+          "readCount": {
+            "type": "integer",
+            "minimum": 0,
+            "description": "Number of reads the user made on the record."
+          },
+          "writeCount": {
+            "type": "integer",
+            "minimum": 0,
+            "description": "Number of writes the user made to the record."
+          },
+          "lastAccessedAt": {
+            "type": "string",
+            "description": "ISO-8601 timestamp of the user's most recent access."
+          }
+        },
+        "required": [
+          "userId",
+          "readCount",
+          "writeCount",
+          "lastAccessedAt"
+        ]
       }
     },
     "parameters": {}
@@ -13651,6 +14329,172 @@
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/Annotation"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Validation error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/projects/{projectSlug}/traces/{traceId}/memory": {
+      "get": {
+        "tags": [
+          "Traces"
+        ],
+        "x-fern-sdk-group-name": "traces",
+        "x-fern-sdk-method-name": "getMemory",
+        "summary": "Get trace memory footprint",
+        "description": "Returns the trace's memory footprint: per-record read, added, and removed token metrics plus totals, scoped to this trace.",
+        "security": [
+          {
+            "ApiKeyAuth": []
+          }
+        ],
+        "operationId": "getTraceMemory",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "description": "Project slug (human-readable identifier)"
+            },
+            "required": true,
+            "description": "Project slug (human-readable identifier)",
+            "name": "projectSlug",
+            "in": "path"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "minLength": 32,
+              "maxLength": 32,
+              "description": "32-character trace identifier."
+            },
+            "required": true,
+            "description": "32-character trace identifier.",
+            "name": "traceId",
+            "in": "path"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Trace memory footprint",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SessionMemorySummary"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Validation error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/projects/{projectSlug}/traces/{traceId}/memory/changes": {
+      "get": {
+        "tags": [
+          "Traces"
+        ],
+        "x-fern-sdk-group-name": "traces",
+        "x-fern-sdk-method-name": "getMemoryChanges",
+        "summary": "Get trace memory changes",
+        "description": "Returns the memory writes the trace made as per-record before/after diffs, scoped to this trace.",
+        "security": [
+          {
+            "ApiKeyAuth": []
+          }
+        ],
+        "operationId": "getTraceMemoryChanges",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "description": "Project slug (human-readable identifier)"
+            },
+            "required": true,
+            "description": "Project slug (human-readable identifier)",
+            "name": "projectSlug",
+            "in": "path"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "minLength": 32,
+              "maxLength": 32,
+              "description": "32-character trace identifier."
+            },
+            "required": true,
+            "description": "32-character trace identifier.",
+            "name": "traceId",
+            "in": "path"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Trace memory changes",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SessionMemoryChanges"
                 }
               }
             }
@@ -15445,6 +16289,89 @@
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/UserBehavioursResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Validation error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/projects/{projectSlug}/users/{userId}/memory": {
+      "get": {
+        "tags": [
+          "Users"
+        ],
+        "x-fern-sdk-group-name": "users",
+        "x-fern-sdk-method-name": "memoryStores",
+        "summary": "List memory stores an end-user accessed",
+        "description": "Returns the memory stores the end-user accessed (reads and writes both count as access), most recent access first. Capped at the 1000 most recent stores. Each store links to the memory browsing operations under the `memory` group.",
+        "security": [
+          {
+            "ApiKeyAuth": []
+          }
+        ],
+        "operationId": "listUserMemoryStores",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "description": "Project slug (human-readable identifier)"
+            },
+            "required": true,
+            "description": "Project slug (human-readable identifier)",
+            "name": "projectSlug",
+            "in": "path"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 512,
+              "description": "End-user identifier. URL-encode values containing special characters."
+            },
+            "required": true,
+            "description": "End-user identifier. URL-encode values containing special characters.",
+            "name": "userId",
+            "in": "path"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Memory stores accessed",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UserMemoryStores"
                 }
               }
             }
@@ -22100,6 +23027,986 @@
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/SessionSignal"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Validation error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/projects/{projectSlug}/sessions/{sessionId}/memory": {
+      "get": {
+        "tags": [
+          "Sessions"
+        ],
+        "x-fern-sdk-group-name": "sessions",
+        "x-fern-sdk-method-name": "getMemory",
+        "summary": "Get session memory footprint",
+        "description": "Returns the session's memory footprint: per-record read, added, and removed token metrics plus session-wide totals. Pass `traceId` to restrict the footprint to a single trace of the session.",
+        "security": [
+          {
+            "ApiKeyAuth": []
+          }
+        ],
+        "operationId": "getSessionMemory",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "description": "Project slug (human-readable identifier)"
+            },
+            "required": true,
+            "description": "Project slug (human-readable identifier)",
+            "name": "projectSlug",
+            "in": "path"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "maxLength": 128,
+              "description": "Session identifier lifted from instrumentation. Up to 128 characters."
+            },
+            "required": true,
+            "description": "Session identifier lifted from instrumentation. Up to 128 characters.",
+            "name": "sessionId",
+            "in": "path"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "minLength": 32,
+              "maxLength": 32,
+              "description": "Restrict the memory footprint to this trace of the session. Omit for the whole session."
+            },
+            "required": false,
+            "description": "Restrict the memory footprint to this trace of the session. Omit for the whole session.",
+            "name": "traceId",
+            "in": "query"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Session memory footprint",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SessionMemorySummary"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Validation error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/projects/{projectSlug}/sessions/{sessionId}/memory/changes": {
+      "get": {
+        "tags": [
+          "Sessions"
+        ],
+        "x-fern-sdk-group-name": "sessions",
+        "x-fern-sdk-method-name": "getMemoryChanges",
+        "summary": "Get session memory changes",
+        "description": "Returns the memory writes the session made as per-record before/after diffs. Pass `traceId` to restrict to a single trace of the session.",
+        "security": [
+          {
+            "ApiKeyAuth": []
+          }
+        ],
+        "operationId": "getSessionMemoryChanges",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "description": "Project slug (human-readable identifier)"
+            },
+            "required": true,
+            "description": "Project slug (human-readable identifier)",
+            "name": "projectSlug",
+            "in": "path"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "maxLength": 128,
+              "description": "Session identifier lifted from instrumentation. Up to 128 characters."
+            },
+            "required": true,
+            "description": "Session identifier lifted from instrumentation. Up to 128 characters.",
+            "name": "sessionId",
+            "in": "path"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "minLength": 32,
+              "maxLength": 32,
+              "description": "Restrict the memory changes to this trace of the session. Omit for the whole session."
+            },
+            "required": false,
+            "description": "Restrict the memory changes to this trace of the session. Omit for the whole session.",
+            "name": "traceId",
+            "in": "query"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Session memory changes",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SessionMemoryChanges"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Validation error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/projects/{projectSlug}/memory/stores": {
+      "get": {
+        "tags": [
+          "Memory"
+        ],
+        "x-fern-sdk-group-name": "memory",
+        "x-fern-sdk-method-name": "listStores",
+        "summary": "List memory stores",
+        "description": "Returns a cursor-paginated page of the project's memory stores, one roll-up row each (record count, tokens, last-updated, sessions, users). A store groups records under `gen_ai.memory.store.id`; the empty-string store is the unattributed bucket.",
+        "security": [
+          {
+            "ApiKeyAuth": []
+          }
+        ],
+        "operationId": "listMemoryStores",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "description": "Project slug (human-readable identifier)"
+            },
+            "required": true,
+            "description": "Project slug (human-readable identifier)",
+            "name": "projectSlug",
+            "in": "path"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "description": "Opaque cursor returned in a previous response's `nextCursor`. Omit on the first page."
+            },
+            "required": false,
+            "description": "Opaque cursor returned in a previous response's `nextCursor`. Omit on the first page.",
+            "name": "cursor",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 200,
+              "default": 50,
+              "description": "Page size. Defaults to 50; max 200."
+            },
+            "required": false,
+            "description": "Page size. Defaults to 50; max 200.",
+            "name": "limit",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "enum": [
+                "lastUpdated",
+                "lastRead",
+                "records",
+                "tokens",
+                "sessions",
+                "users"
+              ],
+              "default": "lastUpdated",
+              "description": "Field to sort by. Defaults to `lastUpdated` (most recently written first)."
+            },
+            "required": false,
+            "description": "Field to sort by. Defaults to `lastUpdated` (most recently written first).",
+            "name": "sort",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "enum": [
+                "asc",
+                "desc"
+              ],
+              "default": "desc",
+              "description": "Sort direction. Defaults to `desc`."
+            },
+            "required": false,
+            "description": "Sort direction. Defaults to `desc`.",
+            "name": "direction",
+            "in": "query"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Page of memory stores",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PaginatedMemoryStores"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Validation error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/projects/{projectSlug}/memory/store": {
+      "get": {
+        "tags": [
+          "Memory"
+        ],
+        "x-fern-sdk-group-name": "memory",
+        "x-fern-sdk-method-name": "getStore",
+        "summary": "Get memory store snapshot",
+        "description": "Returns the store's current records (ids, token counts, last-updated) as a snapshot. Pass `at` (ISO-8601) to reconstruct the store as of a past point in time. Record bodies are fetched separately, one record at a time.",
+        "security": [
+          {
+            "ApiKeyAuth": []
+          }
+        ],
+        "operationId": "getMemoryStore",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "description": "Project slug (human-readable identifier)"
+            },
+            "required": true,
+            "description": "Project slug (human-readable identifier)",
+            "name": "projectSlug",
+            "in": "path"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "description": "Store identifier (`gen_ai.memory.store.id`). Pass an empty string to address the unattributed (\"\") store."
+            },
+            "required": true,
+            "description": "Store identifier (`gen_ai.memory.store.id`). Pass an empty string to address the unattributed (\"\") store.",
+            "name": "storeId",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "format": "date-time",
+              "description": "Reconstruct the store as of this ISO-8601 timestamp. Defaults to the current state."
+            },
+            "required": false,
+            "description": "Reconstruct the store as of this ISO-8601 timestamp. Defaults to the current state.",
+            "name": "at",
+            "in": "query"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Memory store snapshot",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MemoryStoreSnapshot"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Validation error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/projects/{projectSlug}/memory/store/diff": {
+      "get": {
+        "tags": [
+          "Memory"
+        ],
+        "x-fern-sdk-group-name": "memory",
+        "x-fern-sdk-method-name": "getStoreDiff",
+        "summary": "Diff a memory store between two points in time",
+        "description": "Returns a per-record diff of the store between two points in time — added, updated, and removed records with token deltas. `from` defaults to the empty state (everything counts as added); `to` defaults to the current state. Unchanged records are pruned.",
+        "security": [
+          {
+            "ApiKeyAuth": []
+          }
+        ],
+        "operationId": "getMemoryStoreDiff",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "description": "Project slug (human-readable identifier)"
+            },
+            "required": true,
+            "description": "Project slug (human-readable identifier)",
+            "name": "projectSlug",
+            "in": "path"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "description": "Store identifier (`gen_ai.memory.store.id`). Pass an empty string to address the unattributed (\"\") store."
+            },
+            "required": true,
+            "description": "Store identifier (`gen_ai.memory.store.id`). Pass an empty string to address the unattributed (\"\") store.",
+            "name": "storeId",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "format": "date-time",
+              "description": "Lower bound (inclusive) of the diff, ISO-8601. Defaults to the empty state."
+            },
+            "required": false,
+            "description": "Lower bound (inclusive) of the diff, ISO-8601. Defaults to the empty state.",
+            "name": "from",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "format": "date-time",
+              "description": "Upper bound (inclusive) of the diff, ISO-8601. Defaults to the current state."
+            },
+            "required": false,
+            "description": "Upper bound (inclusive) of the diff, ISO-8601. Defaults to the current state.",
+            "name": "to",
+            "in": "query"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Memory store diff",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MemoryStoreDiff"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Validation error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/projects/{projectSlug}/memory/store/users": {
+      "get": {
+        "tags": [
+          "Memory"
+        ],
+        "x-fern-sdk-group-name": "memory",
+        "x-fern-sdk-method-name": "listStoreUsers",
+        "summary": "List users who accessed a memory store",
+        "description": "Returns the end-users who accessed the store (reads and writes both count as access), most recent access first. Capped at the 1000 most recent accessors.",
+        "security": [
+          {
+            "ApiKeyAuth": []
+          }
+        ],
+        "operationId": "listMemoryStoreUsers",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "description": "Project slug (human-readable identifier)"
+            },
+            "required": true,
+            "description": "Project slug (human-readable identifier)",
+            "name": "projectSlug",
+            "in": "path"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "description": "Store identifier (`gen_ai.memory.store.id`). Pass an empty string to address the unattributed (\"\") store."
+            },
+            "required": true,
+            "description": "Store identifier (`gen_ai.memory.store.id`). Pass an empty string to address the unattributed (\"\") store.",
+            "name": "storeId",
+            "in": "query"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Users of the store",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MemoryStoreUsers"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Validation error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/projects/{projectSlug}/memory/record": {
+      "get": {
+        "tags": [
+          "Memory"
+        ],
+        "x-fern-sdk-group-name": "memory",
+        "x-fern-sdk-method-name": "getRecord",
+        "summary": "Get a memory record",
+        "description": "Returns one record's current body plus its mutating version history (newest first), each version carrying the authoring span/trace/session/user and per-version token deltas.",
+        "security": [
+          {
+            "ApiKeyAuth": []
+          }
+        ],
+        "operationId": "getMemoryRecord",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "description": "Project slug (human-readable identifier)"
+            },
+            "required": true,
+            "description": "Project slug (human-readable identifier)",
+            "name": "projectSlug",
+            "in": "path"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "description": "Store identifier (`gen_ai.memory.store.id`). Pass an empty string to address the unattributed (\"\") store."
+            },
+            "required": true,
+            "description": "Store identifier (`gen_ai.memory.store.id`). Pass an empty string to address the unattributed (\"\") store.",
+            "name": "storeId",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "description": "Record identifier (`gen_ai.memory.record.id`). Pass an empty string to address the unnamed record."
+            },
+            "required": true,
+            "description": "Record identifier (`gen_ai.memory.record.id`). Pass an empty string to address the unnamed record.",
+            "name": "recordId",
+            "in": "query"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Memory record detail",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MemoryRecordDetail"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Validation error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/projects/{projectSlug}/memory/record/change": {
+      "get": {
+        "tags": [
+          "Memory"
+        ],
+        "x-fern-sdk-group-name": "memory",
+        "x-fern-sdk-method-name": "getRecordChange",
+        "summary": "Diff a single memory record change",
+        "description": "Returns the before/after bodies for one change — the version authored by `spanId` against its predecessor in the record's mutating chain. Returns 404 when the span is not a recorded change of the record.",
+        "security": [
+          {
+            "ApiKeyAuth": []
+          }
+        ],
+        "operationId": "getMemoryRecordChange",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "description": "Project slug (human-readable identifier)"
+            },
+            "required": true,
+            "description": "Project slug (human-readable identifier)",
+            "name": "projectSlug",
+            "in": "path"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "description": "Store identifier (`gen_ai.memory.store.id`). Pass an empty string to address the unattributed (\"\") store."
+            },
+            "required": true,
+            "description": "Store identifier (`gen_ai.memory.store.id`). Pass an empty string to address the unattributed (\"\") store.",
+            "name": "storeId",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "description": "Record identifier (`gen_ai.memory.record.id`). Pass an empty string to address the unnamed record."
+            },
+            "required": true,
+            "description": "Record identifier (`gen_ai.memory.record.id`). Pass an empty string to address the unnamed record.",
+            "name": "recordId",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "minLength": 16,
+              "maxLength": 16,
+              "description": "Span that authored the change (the `after` side)."
+            },
+            "required": true,
+            "description": "Span that authored the change (the `after` side).",
+            "name": "spanId",
+            "in": "query"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Memory record change diff",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MemoryRecordChangeDiff"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Validation error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/projects/{projectSlug}/memory/record/reads": {
+      "get": {
+        "tags": [
+          "Memory"
+        ],
+        "x-fern-sdk-group-name": "memory",
+        "x-fern-sdk-method-name": "listRecordReads",
+        "summary": "List reads of a memory record",
+        "description": "Returns the retrieval (`search_memory`) events for one record, newest first and capped, each with the query text (when captured), tokens returned, and the accessing span/trace/session/user.",
+        "security": [
+          {
+            "ApiKeyAuth": []
+          }
+        ],
+        "operationId": "listMemoryRecordReads",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "description": "Project slug (human-readable identifier)"
+            },
+            "required": true,
+            "description": "Project slug (human-readable identifier)",
+            "name": "projectSlug",
+            "in": "path"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "description": "Store identifier (`gen_ai.memory.store.id`). Pass an empty string to address the unattributed (\"\") store."
+            },
+            "required": true,
+            "description": "Store identifier (`gen_ai.memory.store.id`). Pass an empty string to address the unattributed (\"\") store.",
+            "name": "storeId",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "description": "Record identifier (`gen_ai.memory.record.id`). Pass an empty string to address the unnamed record."
+            },
+            "required": true,
+            "description": "Record identifier (`gen_ai.memory.record.id`). Pass an empty string to address the unnamed record.",
+            "name": "recordId",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 200,
+              "description": "Maximum number of read events to return. Capped at 200."
+            },
+            "required": false,
+            "description": "Maximum number of read events to return. Capped at 200.",
+            "name": "limit",
+            "in": "query"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Reads of the record",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MemoryRecordReads"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Validation error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/projects/{projectSlug}/memory/record/users": {
+      "get": {
+        "tags": [
+          "Memory"
+        ],
+        "x-fern-sdk-group-name": "memory",
+        "x-fern-sdk-method-name": "listRecordUsers",
+        "summary": "List users who accessed a memory record",
+        "description": "Returns the end-users who accessed one record with per-user read and write counts, most recent access first. Capped at the 1000 most recent accessors.",
+        "security": [
+          {
+            "ApiKeyAuth": []
+          }
+        ],
+        "operationId": "listMemoryRecordUsers",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "description": "Project slug (human-readable identifier)"
+            },
+            "required": true,
+            "description": "Project slug (human-readable identifier)",
+            "name": "projectSlug",
+            "in": "path"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "description": "Store identifier (`gen_ai.memory.store.id`). Pass an empty string to address the unattributed (\"\") store."
+            },
+            "required": true,
+            "description": "Store identifier (`gen_ai.memory.store.id`). Pass an empty string to address the unattributed (\"\") store.",
+            "name": "storeId",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "description": "Record identifier (`gen_ai.memory.record.id`). Pass an empty string to address the unnamed record."
+            },
+            "required": true,
+            "description": "Record identifier (`gen_ai.memory.record.id`). Pass an empty string to address the unnamed record.",
+            "name": "recordId",
+            "in": "query"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Users of the record",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MemoryRecordUsers"
                 }
               }
             }
