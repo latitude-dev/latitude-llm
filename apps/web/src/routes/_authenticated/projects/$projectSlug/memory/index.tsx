@@ -1,12 +1,11 @@
 import { createFileRoute } from "@tanstack/react-router"
 import { useCallback, useMemo } from "react"
-import { useHasFeatureFlag } from "../../../../../domains/feature-flags/feature-flags.collection.ts"
 import { useMemoryStores } from "../../../../../domains/memories/memories.collection.ts"
 import { ListingLayout as Layout } from "../../../../../layouts/ListingLayout/index.tsx"
 import { useParamState } from "../../../../../lib/hooks/useParamState.ts"
 import { BreadcrumbText } from "../../../-components/breadcrumb-ui.tsx"
 import { useRouteProject } from "../-route-data.ts"
-import { MemoryEmptyState, MemoryUnavailableState } from "./-components/memory-empty-state.tsx"
+import { MemoryEmptyState } from "./-components/memory-empty-state.tsx"
 import {
   DEFAULT_MEMORY_SORTING,
   type MemoryStoresSorting,
@@ -49,7 +48,6 @@ export const Route = createFileRoute("/_authenticated/projects/$projectSlug/memo
 })
 
 function MemoryPage() {
-  const enabled = useHasFeatureFlag("memoryObservability")
   const project = useRouteProject()
   const { projectSlug } = Route.useParams()
   const [rawSorting, setRawSorting] = useParamState("memorySort", serializeSorting(DEFAULT_MEMORY_SORTING), {
@@ -62,16 +60,7 @@ function MemoryPage() {
     projectId: project.id,
     sort: sorting.column,
     direction: sorting.direction,
-    enabled,
   })
-
-  if (!enabled) {
-    return (
-      <Layout>
-        <MemoryUnavailableState />
-      </Layout>
-    )
-  }
 
   const showEmptyState = !isLoading && stores.length === 0
 
