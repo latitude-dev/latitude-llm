@@ -11,6 +11,7 @@ from .config import _SSL_CONTEXT, _config, _debug
 
 _INFLIGHT: set[threading.Thread] = set()
 _INFLIGHT_LOCK = threading.Lock()
+_DELIVERY_SLOTS = threading.Semaphore(8)
 
 
 def _post_json(
@@ -34,8 +35,8 @@ def _post_json(
             body = ""
             try:
                 body = exc.read().decode("utf-8", errors="replace")[:300]
-            except Exception:
-                pass
+            except Exception as read_exc:
+                _debug(f"failed to read HTTP error body from {url}: {read_exc}")
             if attempt < retries and exc.code in retry_statuses:
                 attempt += 1
                 _debug(f"HTTP {exc.code} {url} (retry {attempt}/{retries}): {body}")
@@ -86,6 +87,7 @@ def _deliver(kind: str, payload: Dict[str, Any]) -> None:
         elif kind == "score":
             _post_score(payload)
     finally:
+        _DELIVERY_SLOTS.release()
         with _INFLIGHT_LOCK:
             _INFLIGHT.discard(threading.current_thread())
 
@@ -93,6 +95,7 @@ def _deliver(kind: str, payload: Dict[str, Any]) -> None:
 def _ship(result: Optional[Dict[str, Any]], kind: str = "traces") -> None:
     if not result:
         return
+    _DELIVERY_SLOTS.acquire()
     thread = threading.Thread(target=lambda: _deliver(kind, result), daemon=True)
     with _INFLIGHT_LOCK:
         _INFLIGHT.add(thread)

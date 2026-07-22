@@ -73,7 +73,7 @@ fail-open: a Latitude error never fails your eval.
 
 Each Verifiers `Trace` becomes one Latitude trace:
 
-```
+```text
 interaction (rollout root; session = eval/episode id)
 ├── llm_request      (one per ModelCall: model, usage, finish reason, messages)
 └── tool_call:<name> (tool_execution; one per tool result)

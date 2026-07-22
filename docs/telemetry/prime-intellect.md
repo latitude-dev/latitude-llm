@@ -100,7 +100,7 @@ Telemetry stays off until both `LATITUDE_API_KEY` and a project are set.
 
 Verifiers v1 records each rollout as a typed `Trace` (messages, `ModelCall`s, tools, rewards, timing). This package maps that record to OTLP:
 
-```
+```text
 interaction (one rollout; session = eval/episode id)
 ├── llm_request      (one per model call)
 └── tool_call:<name> (tool_execution; one per tool result)

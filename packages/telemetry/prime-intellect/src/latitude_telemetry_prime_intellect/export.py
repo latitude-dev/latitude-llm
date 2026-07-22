@@ -158,6 +158,9 @@ def _export_jsonl(path: Path, *, export_scores: Optional[bool]) -> List[str]:
             except json.JSONDecodeError as exc:
                 _debug(f"{path}:{line_no} invalid JSON: {exc}")
                 continue
+            if not isinstance(row, dict):
+                _debug(f"{path}:{line_no} expected a JSON object")
+                continue
             if _looks_like_episode(row):
                 ids.extend(export_episode(row, export_scores=export_scores, flush=False))
             else:

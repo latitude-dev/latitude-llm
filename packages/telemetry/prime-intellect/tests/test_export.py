@@ -34,10 +34,17 @@ def _sample_trace() -> Dict[str, Any]:
     }
 
 
-def test_export_trace_ships_otlp_and_scores(monkeypatch):
+def _enable_export_env(monkeypatch) -> None:
     monkeypatch.setenv("LATITUDE_API_KEY", "lat_test")
     monkeypatch.setenv("LATITUDE_PROJECT", "demo")
+    monkeypatch.setenv("LATITUDE_TELEMETRY_ENABLED", "true")
+    monkeypatch.setenv("LATITUDE_PRIME_INTELLECT_TELEMETRY_ENABLED", "true")
+    monkeypatch.setenv("LATITUDE_EXPORT_SCORES", "true")
     _reset_config_for_tests()
+
+
+def test_export_trace_ships_otlp_and_scores(monkeypatch):
+    _enable_export_env(monkeypatch)
 
     shipped: List[tuple[str, Dict[str, Any]]] = []
     flushes: List[str] = []
@@ -62,6 +69,8 @@ def test_export_trace_noop_without_credentials(monkeypatch):
     monkeypatch.delenv("LATITUDE_API_KEY", raising=False)
     monkeypatch.delenv("LATITUDE_PROJECT", raising=False)
     monkeypatch.delenv("LATITUDE_PROJECT_SLUG", raising=False)
+    monkeypatch.setenv("LATITUDE_TELEMETRY_ENABLED", "true")
+    monkeypatch.setenv("LATITUDE_PRIME_INTELLECT_TELEMETRY_ENABLED", "true")
     _reset_config_for_tests()
 
     shipped: List[Any] = []
@@ -71,9 +80,7 @@ def test_export_trace_noop_without_credentials(monkeypatch):
 
 
 def test_export_episode_uses_episode_session(monkeypatch):
-    monkeypatch.setenv("LATITUDE_API_KEY", "lat_test")
-    monkeypatch.setenv("LATITUDE_PROJECT", "demo")
-    _reset_config_for_tests()
+    _enable_export_env(monkeypatch)
 
     shipped: List[Dict[str, Any]] = []
     monkeypatch.setattr(
@@ -92,9 +99,7 @@ def test_export_episode_uses_episode_session(monkeypatch):
 
 
 def test_make_on_complete_chains_next(monkeypatch):
-    monkeypatch.setenv("LATITUDE_API_KEY", "lat_test")
-    monkeypatch.setenv("LATITUDE_PROJECT", "demo")
-    _reset_config_for_tests()
+    _enable_export_env(monkeypatch)
     monkeypatch.setattr(export_mod, "_ship", lambda *a, **k: None)
     monkeypatch.setattr(export_mod, "_flush", lambda *a, **k: None)
 
@@ -111,9 +116,7 @@ def test_make_on_complete_chains_next(monkeypatch):
 
 
 def test_export_results_dir_reads_jsonl(monkeypatch, tmp_path: Path):
-    monkeypatch.setenv("LATITUDE_API_KEY", "lat_test")
-    monkeypatch.setenv("LATITUDE_PROJECT", "demo")
-    _reset_config_for_tests()
+    _enable_export_env(monkeypatch)
 
     shipped: List[str] = []
     monkeypatch.setattr(

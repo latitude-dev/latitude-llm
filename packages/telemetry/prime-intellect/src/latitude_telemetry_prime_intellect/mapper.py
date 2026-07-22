@@ -359,7 +359,6 @@ def _tool_spans(
                         "latitude.metadata": metadata,
                         "session.id": session_id,
                         "gen_ai.session.id": session_id,
-                        "success": "true",
                     },
                 )
             )
