@@ -10,7 +10,7 @@ Use `@latitude-data/telemetry` to send LLM traces from TypeScript and JavaScript
 ## Installation
 
 ```bash
-npm install @latitude-data/telemetry @traceloop/instrumentation-openai @traceloop/instrumentation-openai
+npm install @latitude-data/telemetry openai @traceloop/instrumentation-openai
 ```
 
 ## Bootstrap

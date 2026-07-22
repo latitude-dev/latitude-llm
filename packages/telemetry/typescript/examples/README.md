@@ -61,7 +61,7 @@ See `test_openai.ts` for a complete working example.
 
 3. **Install the provider SDK** you want to test:
    ```bash
-   npm install openai
+   npm install openai @traceloop/instrumentation-openai
    ```
 
 4. **Run an example:**
@@ -136,6 +136,7 @@ Use composable mode when:
 import OpenAI from "openai"
 import { NodeTracerProvider } from "@opentelemetry/sdk-trace-node"
 import { LatitudeSpanProcessor, registerLatitudeInstrumentations } from "@latitude-data/telemetry"
+import { createOpenAIInstrumentation } from "@latitude-data/telemetry/instrumentations/openai"
 
 const provider = new NodeTracerProvider({
   spanProcessors: [

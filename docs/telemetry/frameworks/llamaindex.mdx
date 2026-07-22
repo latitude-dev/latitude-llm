@@ -82,7 +82,7 @@ This guide shows you how to integrate **Latitude Telemetry** into an application
           instrumentations: [createLlamaIndexInstrumentation(LlamaIndex)],
         })
 
-
+        await latitude.ready
         Settings.llm = openai({ model: "gpt-4o" })
         const myAgent = agent({ tools: [] })
 

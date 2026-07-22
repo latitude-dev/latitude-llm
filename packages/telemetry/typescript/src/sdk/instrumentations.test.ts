@@ -33,4 +33,14 @@ describe("registerLatitudeInstrumentations", () => {
       }),
     ).toThrow(/must be an array.*instrumentations\/\*/)
   })
+
+  it("rejects the removed string-array API with migration guidance", () => {
+    expect(() =>
+      registerLatitudeInstrumentations({
+        // @ts-expect-error testing the runtime migration guard
+        instrumentations: ["openai"],
+        tracerProvider: noopProvider,
+      }),
+    ).toThrow(/must be an array.*instrumentations\/\*/)
+  })
 })

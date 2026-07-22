@@ -5,7 +5,7 @@ Instrument your AI application and send traces to [Latitude](https://latitude.so
 ## Installation
 
 ```sh
-npm install @latitude-data/telemetry @traceloop/instrumentation-openai
+npm install @latitude-data/telemetry openai @traceloop/instrumentation-openai
 ```
 
 Instrumentation implementations are opt-in peer dependencies. Install only the implementation packages for the subpaths you use.
@@ -163,6 +163,8 @@ const latitude = new Latitude({
   project: process.env.LATITUDE_PROJECT_SLUG!,
   instrumentations: [createOpenAIInstrumentation(OpenAI)],
 });
+
+await latitude.ready;
 
 // Wrap a request or agent run to add context
 await capture(

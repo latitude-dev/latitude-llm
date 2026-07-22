@@ -22,8 +22,7 @@ const latitude = new Latitude({
   apiKey: process.env.LATITUDE_API_KEY!,
   project: process.env.LATITUDE_PROJECT_SLUG!,
   disableBatch: true,
-  // The Traceloop instrumentor patches Together.Chat.Completions / Together.Completions — pass the
-  // client class, not the module namespace (which has no Chat/Completions statics).
+  // Traceloop patches Together.Chat.Completions / Together.Completions on the client class, not the module namespace.
   instrumentations: [createTogetherAIInstrumentation(Together)],
 })
 

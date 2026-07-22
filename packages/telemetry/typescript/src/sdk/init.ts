@@ -155,6 +155,9 @@ export class Latitude {
         tracerProvider: this.provider,
       }),
     )
+    void this.ready.catch((err) => {
+      console.error("[Latitude] Failed to register instrumentations:", err)
+    })
 
     if (!shutdownHandlersRegistered) {
       process.once("SIGTERM", () => void this.handleShutdown())

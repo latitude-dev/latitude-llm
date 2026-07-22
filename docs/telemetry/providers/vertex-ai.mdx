@@ -80,7 +80,7 @@ This guide shows you how to integrate **Latitude Telemetry** into an application
           instrumentations: [createVertexAIInstrumentation(VertexAISDK)],
         })
 
-
+        await latitude.ready
         const vertexAI = new VertexAI({
           project: process.env.GCP_PROJECT_ID!,
           location: "us-central1",

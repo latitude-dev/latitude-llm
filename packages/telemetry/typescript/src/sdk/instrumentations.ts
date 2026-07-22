@@ -11,7 +11,17 @@ export function registerLatitudeInstrumentations(options: {
   instrumentations: InstrumentationsInput
   tracerProvider: TracerProvider
 }): void {
-  if (!Array.isArray(options.instrumentations)) throw new TypeError(MIGRATION_MESSAGE)
+  if (
+    !Array.isArray(options.instrumentations) ||
+    options.instrumentations.some(
+      (instrumentation) =>
+        typeof instrumentation !== "object" ||
+        instrumentation === null ||
+        typeof instrumentation.setTracerProvider !== "function",
+    )
+  ) {
+    throw new TypeError(MIGRATION_MESSAGE)
+  }
 
   registerInstrumentations({
     instrumentations: [...options.instrumentations],

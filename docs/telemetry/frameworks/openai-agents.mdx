@@ -83,7 +83,7 @@ Latitude includes dedicated instrumentation for the OpenAI Agents SDK, so agent 
           instrumentations: [createOpenAIAgentsInstrumentation(OpenAIAgentsSDK)],
         })
 
-
+        await latitude.ready
         const getWeather = tool({
           name: "get_weather",
           description: "Returns the current weather for a city.",
