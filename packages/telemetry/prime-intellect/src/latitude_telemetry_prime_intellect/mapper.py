@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import json
 from typing import Any, Dict, List, Optional, Tuple
 
 from .messages import (
@@ -158,24 +159,39 @@ def _map_trace_to_run(
     return run
 
 
-def _main_branch_messages(trace: Any) -> List[Any]:
+def _parse_tool_args(args: Any) -> Any:
+    if not isinstance(args, str):
+        return args
+    try:
+        return json.loads(args)
+    except json.JSONDecodeError:
+        return args
+
+
+def _messages_from_branches(trace: Any) -> Optional[List[Any]]:
     try:
         branches = getattr(trace, "branches", None)
         if callable(branches):
             branches = branches()
-        elif branches is None and not isinstance(trace, dict):
-            branches = None
-        if branches:
-            last = branches[-1]
-            msgs = getattr(last, "messages", None)
-            if callable(msgs):
-                msgs = msgs()
-            elif msgs is None:
-                msgs = _get(last, "messages")
-            if isinstance(msgs, (list, tuple)) and msgs:
-                return list(msgs)
+        if not branches:
+            return None
+        last = branches[-1]
+        msgs = getattr(last, "messages", None)
+        if callable(msgs):
+            msgs = msgs()
+        elif msgs is None:
+            msgs = _get(last, "messages")
+        if isinstance(msgs, (list, tuple)) and msgs:
+            return list(msgs)
     except Exception:
-        pass
+        return None
+    return None
+
+
+def _main_branch_messages(trace: Any) -> List[Any]:
+    from_branches = _messages_from_branches(trace)
+    if from_branches is not None:
+        return from_branches
 
     nodes = list(_get(trace, "nodes") or [])
     if not nodes:
@@ -300,13 +316,7 @@ def _tool_spans(
                 fn = _get(tc, "function")
                 name = _get(fn, "name") if fn is not None else _get(tc, "name")
                 args = _get(fn, "arguments") if fn is not None else _get(tc, "arguments")
-                if isinstance(args, str):
-                    try:
-                        import json
-
-                        args = json.loads(args)
-                    except Exception:
-                        pass
+                args = _parse_tool_args(args)
                 tc_id = str(_get(tc, "id") or "")
                 pending_calls[tc_id or f"anon-{len(pending_calls)}"] = {
                     "name": name or "unknown",

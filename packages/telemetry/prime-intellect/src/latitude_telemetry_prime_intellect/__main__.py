@@ -12,7 +12,7 @@ from .export import export_results_dir
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(
         prog="latitude-prime-intellect-export",
-        description="Export Verifiers eval results (JSONL) to Latitude as OTLP traces.",
+        description="Export Prime Intellect Verifiers eval results (JSONL) to Latitude as OTLP traces.",
     )
     sub = parser.add_subparsers(dest="command", required=True)
 

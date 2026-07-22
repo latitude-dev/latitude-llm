@@ -105,6 +105,15 @@ def _block(block: Any) -> Optional[Dict[str, Any]]:
     return {"type": btype, "content": _safe_json(block)}
 
 
+def _parse_json_object(args: Any) -> Any:
+    if not isinstance(args, str):
+        return args
+    try:
+        return json.loads(args)
+    except json.JSONDecodeError:
+        return args
+
+
 def _append_tool_calls(parts: List[Dict[str, Any]], raw: Any) -> None:
     if not isinstance(raw, (list, tuple)):
         return
@@ -114,11 +123,7 @@ def _append_tool_calls(parts: List[Dict[str, Any]], raw: Any) -> None:
         args = _get(fn, "arguments") if fn is not None else None
         if args is None:
             args = _get(tc, "arguments")
-        if isinstance(args, str):
-            try:
-                args = json.loads(args)
-            except Exception:
-                pass
+        args = _parse_json_object(args)
         parts.append(
             {
                 "type": "tool_call",
