@@ -671,7 +671,12 @@ export const getSignalIdBySlug = createServerFn({ method: "GET" })
         const signalRepository = yield* SignalRepository
         return yield* signalRepository.findBySlug({ projectId, slug: data.signalSlug }).pipe(
           Effect.map((issue) => ({ signalId: issue.id })),
-          Effect.catchTag("NotFoundError", () => Effect.succeed(null)),
+          Effect.catchTag("NotFoundError", () =>
+            signalRepository.findById(SignalId(data.signalSlug)).pipe(
+              Effect.map((issue) => (issue.projectId === data.projectId ? { signalId: issue.id } : null)),
+              Effect.catchTag("NotFoundError", () => Effect.succeed(null)),
+            ),
+          ),
         )
       }).pipe(withScopedPostgres(SignalRepositoryLive, pgClient, orgId), withTracing),
     )

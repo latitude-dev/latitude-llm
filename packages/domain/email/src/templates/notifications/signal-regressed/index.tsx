@@ -14,9 +14,11 @@ const loadError = (cause: unknown) => ({
   cause,
 })
 
-const buildSignalUrl = (ctx: NotificationEmailRenderContext, signalId: string): string | undefined => {
+const buildSignalUrl = (ctx: NotificationEmailRenderContext, slug: string | null): string | undefined => {
   if (!ctx.project) return undefined
-  return `${ctx.webAppUrl}/projects/${ctx.project.slug}/signals/${encodeURIComponent(signalId)}`
+  return slug
+    ? `${ctx.webAppUrl}/projects/${ctx.project.slug}/signals/${encodeURIComponent(slug)}`
+    : `${ctx.webAppUrl}/projects/${ctx.project.slug}/signals`
 }
 
 export const signalRegressedRenderer: NotificationEmailRenderer<"signal.regressed"> = (payload, ctx) =>
@@ -28,7 +30,7 @@ export const signalRegressedRenderer: NotificationEmailRenderer<"signal.regresse
     )
 
     const signalName = signal?.name ?? "a signal"
-    const signalUrl = buildSignalUrl(ctx, payload.signalId)
+    const signalUrl = buildSignalUrl(ctx, signal?.slug ?? null)
     const subject = `Signal regressed: ${signalName}`
     const html = yield* Effect.tryPromise({
       try: () =>

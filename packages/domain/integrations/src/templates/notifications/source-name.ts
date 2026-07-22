@@ -3,12 +3,12 @@ import { SignalRepository } from "@domain/signals"
 import { UserRepository } from "@domain/users"
 import { Effect } from "effect"
 
-export const resolveSourceName = (input: { readonly sourceType: string; readonly sourceId: string }) =>
+export const resolveSource = (input: { readonly sourceType: string; readonly sourceId: string }) =>
   Effect.gen(function* () {
     if (input.sourceType !== "signal") return null
     const repo = yield* SignalRepository
     return yield* repo.findById(SignalId(input.sourceId)).pipe(
-      Effect.map((i): string | null => i.name),
+      Effect.map((i): { name: string; slug: string } | null => ({ name: i.name, slug: i.slug })),
       Effect.catchTag("NotFoundError", () => Effect.succeed(null)),
       Effect.catchTag("RepositoryError", () => Effect.succeed(null)),
     )
