@@ -92,10 +92,16 @@ describe("TaxonomyFacetProjection fake", () => {
     const older = new Date("2026-07-22T10:00:00.000Z")
     const newer = new Date("2026-07-22T11:00:00.000Z")
 
-    await run(repository.upsertMany([makeProjection({ sessionObservationId, extractedText: "first", indexedAt: older })]))
-    await run(repository.upsertMany([makeProjection({ sessionObservationId, extractedText: "second", indexedAt: newer })]))
+    await run(
+      repository.upsertMany([makeProjection({ sessionObservationId, extractedText: "first", indexedAt: older })]),
+    )
+    await run(
+      repository.upsertMany([makeProjection({ sessionObservationId, extractedText: "second", indexedAt: newer })]),
+    )
     // An older indexed_at arriving after a newer one is a no-op, as in ClickHouse.
-    await run(repository.upsertMany([makeProjection({ sessionObservationId, extractedText: "stale", indexedAt: older })]))
+    await run(
+      repository.upsertMany([makeProjection({ sessionObservationId, extractedText: "stale", indexedAt: older })]),
+    )
 
     expect(rows.size).toBe(1)
     expect([...rows.values()][0]?.extractedText).toBe("second")
