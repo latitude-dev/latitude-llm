@@ -6,6 +6,15 @@ import { defaultActivityRetryPolicy } from "./retry-policy.ts"
 const DEFAULT_LOOKBACK_DAYS = 3
 const DEFAULT_PROJECT_CONCURRENCY = 2
 const DEFAULT_SESSION_CONCURRENCY_PER_PROJECT = 10
+const MAX_FAILED_SESSION_IDS = 100
+
+type BackfillChildResult = {
+  readonly sessionsFound?: number
+  readonly sessionsCompleted?: number
+  readonly sessionsFailed?: number
+  readonly failedSessionIds?: readonly unknown[]
+  readonly failedSessionIdsTruncated?: boolean
+}
 
 const { listSessionIntelligenceBackfillProjectsActivity } = proxyActivities<typeof activities>({
   startToCloseTimeout: "10 minutes",
@@ -31,6 +40,10 @@ export interface BackfillRecentSessionIntelligenceForProjectsWorkflowResult {
   readonly action: "completed"
   readonly projectsFound: number
   readonly sessionsFound: number
+  readonly sessionsCompleted: number
+  readonly sessionsFailed: number
+  readonly failedSessionIds: readonly string[]
+  readonly failedSessionIdsTruncated: boolean
 }
 
 const startedAfterForInput = (input: BackfillRecentSessionIntelligenceForProjectsWorkflowInput): string => {
@@ -49,7 +62,11 @@ export const backfillRecentSessionIntelligenceForProjectsWorkflow = async (
   })
 
   const projectConcurrency = Math.max(1, input.projectConcurrency ?? DEFAULT_PROJECT_CONCURRENCY)
+  const failedSessionIds: string[] = []
+  let failedSessionIdsTruncated = false
   let sessionsFound = 0
+  let sessionsCompleted = 0
+  let sessionsFailed = 0
   for (let index = 0; index < projects.length; index += projectConcurrency) {
     const batch = projects.slice(index, index + projectConcurrency)
     const results = await Promise.all(
@@ -70,8 +87,29 @@ export const backfillRecentSessionIntelligenceForProjectsWorkflow = async (
         }),
       ),
     )
-    sessionsFound += results.reduce((sum, result) => sum + result.sessionsFound, 0)
+    for (const result of results) {
+      const childResult = result as BackfillChildResult
+      const childSessionsFound = childResult.sessionsFound ?? 0
+      const childSessionsFailed = childResult.sessionsFailed ?? 0
+      sessionsFound += childSessionsFound
+      sessionsCompleted += childResult.sessionsCompleted ?? childSessionsFound - childSessionsFailed
+      sessionsFailed += childSessionsFailed
+      failedSessionIdsTruncated ||= childResult.failedSessionIdsTruncated === true
+      if (!Array.isArray(childResult.failedSessionIds)) continue
+      for (const sessionId of childResult.failedSessionIds) {
+        if (failedSessionIds.length === MAX_FAILED_SESSION_IDS) break
+        if (typeof sessionId === "string") failedSessionIds.push(sessionId)
+      }
+    }
   }
 
-  return { action: "completed", projectsFound: projects.length, sessionsFound }
+  return {
+    action: "completed",
+    projectsFound: projects.length,
+    sessionsFound,
+    sessionsCompleted,
+    sessionsFailed,
+    failedSessionIds,
+    failedSessionIdsTruncated: failedSessionIdsTruncated || sessionsFailed > failedSessionIds.length,
+  }
 }
