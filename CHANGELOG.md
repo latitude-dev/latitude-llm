@@ -2,6 +2,35 @@
 
 ## Unreleased
 
+## v0.3.62 - 2026-07-22
+
+### Memory
+
+- Shipped Memory observability to every organization by removing the `memoryObservability` feature flag; the Memory page and its surfaces are now public (ref: #4180).
+- Exposed memory observability reads across the public API, MCP, TypeScript/Python SDKs (9.6.0), and CLI (7.6.0): store roll-ups and snapshots (point-in-time and diff), per-record bodies with version history and change diffs, record read/user listings, and per-session and per-trace memory footprints (ref: #4157).
+
+### Signals
+
+- Added agent-dispatch history to the signal detail page (ref: #4182).
+
+### Sessions
+
+- Validated session moment labels with a contextual MiniMax classification pass, with tenant-safe classifier retries (ref: #4167).
+
+### Telemetry
+
+- Added a Prime Intellect telemetry export package for shipping Prime Intellect traces to Latitude (ref: #4164).
+- Fixed Claude Code memory-directory resolution when running inside a git worktree so auto-memory spans still attribute to the right project (ref: #4176).
+
+### Traces
+
+- Added drag-to-resize to the span detail panel in the Spans tab (ref: #4165).
+
+### Chore
+
+- Refreshed the bundled models.dev catalog data (ref: #4087).
+- Added a DNS record for the `jobs` subdomain (ref: #4177).
+
 ## v0.3.61 - 2026-07-22
 
 ### Signals
