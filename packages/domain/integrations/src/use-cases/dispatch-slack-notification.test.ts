@@ -219,7 +219,7 @@ describe("dispatchSlackNotificationUseCase", () => {
       blocks: expect.arrayContaining([
         expect.objectContaining({
           text: expect.objectContaining({
-            text: "A new signal was discovered: *<https://app.example.com/projects/frontend/signals/ssssssssssssssssssssssss|Bad JSON output>*.",
+            text: "A new signal was discovered: *<https://app.example.com/projects/frontend/signals/bad-json-output|Bad JSON output>*.",
           }),
         }),
         expect.objectContaining({
@@ -231,7 +231,7 @@ describe("dispatchSlackNotificationUseCase", () => {
         expect.objectContaining({
           elements: expect.arrayContaining([
             expect.objectContaining({
-              url: "https://app.example.com/projects/frontend/signals/ssssssssssssssssssssssss",
+              url: "https://app.example.com/projects/frontend/signals/bad-json-output",
             }),
           ]),
         }),
