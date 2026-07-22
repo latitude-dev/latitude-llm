@@ -1,4 +1,11 @@
-import { AI, type AIShape, DEFAULT_EMBEDDING_CONFIG, type GenerateInput, type GenerateResult } from "@domain/ai"
+import {
+  AI,
+  AIError,
+  type AIShape,
+  DEFAULT_EMBEDDING_CONFIG,
+  type GenerateInput,
+  type GenerateResult,
+} from "@domain/ai"
 import {
   ChSqlClient,
   DistributedLockRepository,
@@ -1027,7 +1034,7 @@ describe("analyzeSessionUseCase", () => {
     ).toBe(false)
   })
 
-  it("fails closed without labels for duplicate or unknown adjudication IDs", async () => {
+  it("retries without persisting labels or failed analyses for duplicate or unknown adjudication IDs", async () => {
     for (const acceptedCandidateIds of [
       (prompt: string) => {
         const [candidate] = candidatesFromPrompt(prompt)
@@ -1051,10 +1058,50 @@ describe("analyzeSessionUseCase", () => {
         ai,
       })
 
-      const result = await Effect.runPromise(effect)
+      await expect(Effect.runPromise(effect)).rejects.toMatchObject({ _tag: "MomentClassifierError" })
 
-      expect(result).toMatchObject({ action: "recorded", status: "failed", momentCount: 0 })
-      expect([...analyses.rows.values()][0]?.analysisStatus).toBe("failed")
+      expect([...analyses.rows.values()]).toHaveLength(0)
+      expect(momentLabels.rows).toHaveLength(0)
+    }
+  })
+
+  it("retries without persisting classifier provider or schema failures", async () => {
+    const classifierFailures: readonly AIShape[] = [
+      {
+        generate: () => Effect.fail(new AIError({ message: "provider unavailable" })),
+        embed: (input) =>
+          Effect.succeed({
+            embedding:
+              input.text.includes("frustration annoyance or anger") || input.text === "user: This is frustrating."
+                ? [1, 0]
+                : [-1, 0],
+          }),
+        rerank: () => Effect.die("rerank not used"),
+      },
+      {
+        generate: <T>() => Effect.succeed({ object: {} as T, tokens: 0, duration: 0 }),
+        embed: (input) =>
+          Effect.succeed({
+            embedding:
+              input.text.includes("frustration annoyance or anger") || input.text === "user: This is frustrating."
+                ? [1, 0]
+                : [-1, 0],
+          }),
+        rerank: () => Effect.die("rerank not used"),
+      },
+    ]
+
+    for (const ai of classifierFailures) {
+      const { effect, analyses, momentLabels } = runUseCase({
+        session: makeSessionWithMessages([
+          message("user", "This is frustrating."),
+          message("assistant", "I am sorry this has been difficult."),
+        ]),
+        ai,
+      })
+
+      await expect(Effect.runPromise(effect)).rejects.toMatchObject({ _tag: "MomentClassifierError" })
+      expect([...analyses.rows.values()]).toHaveLength(0)
       expect(momentLabels.rows).toHaveLength(0)
     }
   })

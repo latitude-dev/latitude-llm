@@ -50,6 +50,7 @@ import {
 import type { SessionAnalysis } from "../entities/session-analysis.ts"
 import type { MomentLabelKind as MomentKind, SessionMomentLabel } from "../entities/session-moment-label.ts"
 import type { SessionSemanticMoment } from "../entities/session-semantic-moment.ts"
+import { MomentClassifierError } from "../errors.ts"
 import {
   documentFromMessages,
   type NormalizedMessage,
@@ -98,10 +99,6 @@ const extractionMomentSchema = z.object({
   summary: z.string(),
   evidence: z.string(),
   confidence: z.number().min(0).max(1),
-})
-
-const momentCandidateSelectionSchema = z.object({
-  acceptedCandidateIds: z.array(z.string()),
 })
 
 const MOMENT_CLASSIFIER_DEFAULT_MODEL = {
@@ -457,44 +454,79 @@ const validateMomentCandidates = (input: {
       candidateDetails.length -
       labelDefinitions.length -
       MOMENT_CLASSIFIER_PROMPT_OVERHEAD
-    if (transcriptLength <= 0) {
-      return yield* Effect.fail(new Error("Moment classifier candidates exceed the conversation intelligence limit"))
-    }
+    if (transcriptLength <= 0)
+      return yield* Effect.fail(
+        new MomentClassifierError({
+          message: "Moment classifier candidates exceed the conversation intelligence limit",
+        }),
+      )
 
     const transcript = renderMomentClassifierTranscript(input.messages, selectedCandidates, transcriptLength)
-    if (transcript === null) {
-      return yield* Effect.fail(new Error("Moment classifier candidates exceed the conversation intelligence limit"))
-    }
-    const modelConfig = yield* resolveGenerationConfig("MOMENT_CLASSIFIER", MOMENT_CLASSIFIER_DEFAULT_MODEL)
-    const ai = yield* AI
-    const result = yield* ai.generate({
-      ...modelConfig,
-      telemetry: {
-        spanName: AI_GENERATE_TELEMETRY_SPAN_NAMES.momentClassifier,
-        project: LATITUDE_TELEMETRY_PROJECT_SLUGS.conversationIntelligence,
-        tags: [...AI_GENERATE_TELEMETRY_TAGS.momentClassifier],
-        metadata: buildProjectScopedAiMetadata(
-          { organizationId: input.organizationId, projectId: input.projectId },
-          {
-            sessionId: input.sessionId,
-            candidateCount: candidates.length,
-            nominatedCandidateCount: input.candidates.length,
-          },
-        ),
-      },
-      system: MOMENT_CLASSIFIER_SYSTEM_PROMPT,
-      prompt: `<conversation_data>\n${transcript}\n</conversation_data>\n\n<label_definitions>\n${labelDefinitions}\n</label_definitions>\n\n<candidates>\n${candidateDetails}\n</candidates>`,
-      schema: momentCandidateSelectionSchema,
+    if (transcript === null)
+      return yield* Effect.fail(
+        new MomentClassifierError({
+          message: "Moment classifier candidates exceed the conversation intelligence limit",
+        }),
+      )
+    const candidateIds = candidates.map(({ id }) => id) as [string, ...string[]]
+    const candidateSelectionSchema = z.object({
+      acceptedCandidateIds: z.array(z.enum(candidateIds)).superRefine((ids, context) => {
+        if (new Set(ids).size !== ids.length) {
+          context.addIssue({ code: "custom", message: "Moment classifier returned duplicate candidate IDs" })
+        }
+      }),
     })
-    const acceptedCandidateIds = result.object.acceptedCandidateIds
+    const modelConfig = yield* resolveGenerationConfig("MOMENT_CLASSIFIER", MOMENT_CLASSIFIER_DEFAULT_MODEL).pipe(
+      Effect.mapError(
+        (cause) => new MomentClassifierError({ message: "Moment classifier configuration failed", cause }),
+      ),
+    )
+    const ai = yield* AI
+    const result = yield* ai
+      .generate({
+        ...modelConfig,
+        telemetry: {
+          spanName: AI_GENERATE_TELEMETRY_SPAN_NAMES.momentClassifier,
+          project: LATITUDE_TELEMETRY_PROJECT_SLUGS.conversationIntelligence,
+          tags: [...AI_GENERATE_TELEMETRY_TAGS.momentClassifier],
+          metadata: buildProjectScopedAiMetadata(
+            { organizationId: input.organizationId, projectId: input.projectId },
+            {
+              sessionId: input.sessionId,
+              candidateCount: candidates.length,
+              nominatedCandidateCount: input.candidates.length,
+            },
+          ),
+        },
+        system: MOMENT_CLASSIFIER_SYSTEM_PROMPT,
+        prompt: `<conversation_data>\n${transcript}\n</conversation_data>\n\n<label_definitions>\n${labelDefinitions}\n</label_definitions>\n\n<candidates>\n${candidateDetails}\n</candidates>`,
+        schema: candidateSelectionSchema,
+      })
+      .pipe(
+        Effect.mapError((cause) => new MomentClassifierError({ message: "Moment classifier provider failed", cause })),
+      )
+    const parsed = candidateSelectionSchema.safeParse(result.object)
+    if (!parsed.success) {
+      return yield* Effect.fail(
+        new MomentClassifierError({
+          message: "Moment classifier output failed schema validation",
+          cause: parsed.error,
+        }),
+      )
+    }
+    const acceptedCandidateIds = parsed.data.acceptedCandidateIds
     const acceptedCandidateIdSet = new Set(acceptedCandidateIds)
     if (acceptedCandidateIdSet.size !== acceptedCandidateIds.length) {
-      return yield* Effect.fail(new Error("Moment classifier returned duplicate candidate IDs"))
+      return yield* Effect.fail(
+        new MomentClassifierError({ message: "Moment classifier returned duplicate candidate IDs" }),
+      )
     }
     const candidatesById = new Map(candidates.map(({ id, candidate }) => [id, candidate] as const))
     for (const id of acceptedCandidateIds) {
       if (!candidatesById.has(id)) {
-        return yield* Effect.fail(new Error(`Moment classifier returned unknown candidate ID: ${id}`))
+        return yield* Effect.fail(
+          new MomentClassifierError({ message: `Moment classifier returned unknown candidate ID: ${id}` }),
+        )
       }
     }
     return candidates.filter(({ id }) => acceptedCandidateIdSet.has(id)).map(({ candidate }) => candidate)
@@ -908,6 +940,7 @@ export const analyzeSessionUseCase = (input: AnalyzeSessionInput) =>
   }).pipe(
     Effect.catch((error: unknown) =>
       Effect.gen(function* () {
+        if (error instanceof MomentClassifierError) return yield* Effect.fail(error)
         const analyses = yield* SessionAnalysisRepository
         const organizationId = OrganizationId(input.organizationId)
         const projectId = ProjectId(input.projectId)
