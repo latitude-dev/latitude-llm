@@ -31,6 +31,7 @@ const PROVIDER_ALIASES: Record<string, string> = {
   fireworks_ai: "fireworks-ai",
   workersai: "cloudflare-workers-ai",
   "workersai.chat": "cloudflare-workers-ai",
+  "internal-workers-ai": "cloudflare-workers-ai", // Cloudflare AI Gateway (Workers AI upstream)
   // OTel GenAI well-known names from Vercel AI SDK v7's @ai-sdk/otel.
   "gcp.vertex_ai": "google-vertex",
   "gcp.gemini": "google",
@@ -63,6 +64,7 @@ function providerFromOpenInferenceMetadata(attrs: readonly OtlpKeyValue[]): stri
 
 const providerCandidates: Candidate<string>[] = [
   fromString("gen_ai.provider.name", aliasProvider), // OTEL GenAI v1.37+
+  fromString("gen_ai.model.provider", aliasProvider), // Cloudflare AI Gateway OTEL export
   fromString("gen_ai.system", aliasProvider), // OTEL GenAI v1.36 deprecated
   fromString("llm.system", aliasProvider), // OpenInference / Arize Phoenix
   fromString("llm.provider", aliasProvider), // OpenInference (DSPy, LiteLLM) — no llm.system

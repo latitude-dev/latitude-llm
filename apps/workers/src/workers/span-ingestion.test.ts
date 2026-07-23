@@ -145,6 +145,62 @@ const vercelWrapperRequest = {
   ],
 }
 
+// Cloudflare AI Gateway OTLP export (captured live). Standard gen_ai.* metadata, but content
+// lives in non-standard envelopes under the standard keys: input = request body {messages},
+// output = the upstream provider's native response (here OpenAI-compat {choices:[{message}]}).
+const cloudflareAiGatewayRequest = {
+  resourceSpans: [
+    {
+      resource: {
+        attributes: [{ key: "service.name", value: { stringValue: "ai-gateway" } }],
+      },
+      scopeSpans: [
+        {
+          scope: { name: "ai" },
+          spans: [
+            {
+              traceId: "22222222222222222222222222222222",
+              spanId: "cccccccccccccccc",
+              name: "cf.aig.request",
+              kind: 1,
+              startTimeUnixNano: "1710590400000000000",
+              endTimeUnixNano: "1710590401000000000",
+              attributes: [
+                { key: "gen_ai.operation.name", value: { stringValue: "chat" } },
+                { key: "gen_ai.request.model", value: { stringValue: "@cf/openai/gpt-oss-120b" } },
+                { key: "gen_ai.provider.name", value: { stringValue: "internal-workers-ai" } },
+                { key: "gen_ai.usage.input_tokens", value: { intValue: "73" } },
+                { key: "gen_ai.usage.output_tokens", value: { intValue: "41" } },
+                { key: "gen_ai.usage.cost", value: { doubleValue: 0.0000563 } },
+                {
+                  key: "gen_ai.input.messages",
+                  value: {
+                    stringValue: JSON.stringify({
+                      messages: [{ role: "user", content: "Say hi in one sentence." }],
+                      max_tokens: 128,
+                    }),
+                  },
+                },
+                {
+                  key: "gen_ai.output.messages",
+                  value: {
+                    stringValue: JSON.stringify({
+                      choices: [{ finish_reason: "stop", index: 0, message: { role: "assistant", content: "Hello!" } }],
+                      object: "chat.completion",
+                      model: "@cf/openai/gpt-oss-120b",
+                    }),
+                  },
+                },
+              ],
+              status: { code: 1 },
+            },
+          ],
+        },
+      ],
+    },
+  ],
+}
+
 describe("createSpanIngestionWorker", () => {
   it("ingests JSON OTLP messages and inserts spans into ClickHouse", async () => {
     const consumer = new TestQueueConsumer()
@@ -429,6 +485,83 @@ describe("createSpanIngestionWorker", () => {
         organizationId: "org_vercel_wrapper_test",
         projectId: "proj_vercel_wrapper_test",
         traceIds: ["11111111111111111111111111111111"],
+      },
+    })
+  })
+
+  it("resolves a Cloudflare AI Gateway span end-to-end into a stored chat generation", async () => {
+    const consumer = new TestQueueConsumer()
+    const disk = new FakeStorageDisk()
+    const pub = createFakeEventsPublisher()
+    const fileKey = "span-ingestion/test-cloudflare-ai-gateway.json"
+    disk.putBytes(fileKey, Buffer.from(JSON.stringify(cloudflareAiGatewayRequest), "utf-8"))
+
+    createSpanIngestionWorker({
+      consumer,
+      eventsPublisher: pub,
+      clickhouseClient: ch.client,
+      disk,
+      postgresClient: pg.appPostgresClient,
+      redisClient: testRedisClient,
+    })
+
+    await consumer.dispatchTask("span-ingestion", "ingest", {
+      fileKey,
+      inlinePayload: null,
+      contentType: "application/json",
+      organizationId: "org_cf_ai_gateway_test",
+      apiKeyId: "api_key_cf_ai_gateway_test",
+      ingestedAt: "2026-03-18T10:00:00.000Z",
+      defaultProjectId: "proj_cf_ai_gateway_test",
+      projectIdBySlug: {},
+    })
+
+    const rows = await Effect.runPromise(
+      queryClickhouse<{
+        operation: string
+        provider: string
+        model: string
+        tokens_input: string
+        tokens_output: string
+        cost_total_microcents: string
+        input_messages: string
+        output_messages: string
+      }>(
+        ch.client,
+        `SELECT
+           operation,
+           provider,
+           model,
+           tokens_input,
+           tokens_output,
+           cost_total_microcents,
+           input_messages,
+           output_messages
+         FROM spans
+         WHERE organization_id = {organizationId:String}`,
+        { organizationId: "org_cf_ai_gateway_test" },
+      ),
+    )
+
+    expect(rows).toHaveLength(1)
+    expect(rows[0]?.operation).toBe("chat")
+    expect(rows[0]?.provider).toBe("cloudflare-workers-ai")
+    expect(rows[0]?.model).toBe("@cf/openai/gpt-oss-120b")
+    expect(Number(rows[0]?.tokens_input ?? 0)).toBe(73)
+    expect(Number(rows[0]?.tokens_output ?? 0)).toBe(41)
+    // gen_ai.usage.cost = 0.0000563 USD → 5630 microcents.
+    expect(Number(rows[0]?.cost_total_microcents ?? 0)).toBe(5_630)
+    // Content recovered from the non-standard envelopes.
+    expect(rows[0]?.input_messages).toContain("Say hi in one sentence.")
+    expect(rows[0]?.output_messages).toContain("Hello!")
+
+    expect(pub.published).toHaveLength(1)
+    expect(pub.published[0]).toMatchObject({
+      name: "TracesIngested",
+      payload: {
+        organizationId: "org_cf_ai_gateway_test",
+        projectId: "proj_cf_ai_gateway_test",
+        traceIds: ["22222222222222222222222222222222"],
       },
     })
   })

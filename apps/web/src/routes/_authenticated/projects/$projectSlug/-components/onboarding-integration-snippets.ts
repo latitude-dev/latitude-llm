@@ -44,6 +44,7 @@ export type OnboardingProviderId =
   | "flue"
   | "elevenlabs"
   | "pydantic-ai"
+  | "cloudflare-ai-gateway"
 
 export type TsPackageManager = "npm" | "pnpm" | "yarn" | "bun"
 
@@ -62,6 +63,8 @@ interface OnboardingProviderSnippetConfig {
 const crossTsPy = { supportsTypescript: true, supportsPython: true } as const
 const tsOnly = { supportsTypescript: true, supportsPython: false } as const
 const pyOnly = { supportsTypescript: false, supportsPython: true } as const
+// Gateways/proxies with no Latitude SDK — they export OTLP directly, so only the OpenTelemetry panel applies.
+const otelOnly = { supportsTypescript: false, supportsPython: false } as const
 
 export const ONBOARDING_PROVIDER_SNIPPET_CONFIG: Record<OnboardingProviderId, OnboardingProviderSnippetConfig> = {
   openai: { id: "openai", ...crossTsPy },
@@ -95,6 +98,7 @@ export const ONBOARDING_PROVIDER_SNIPPET_CONFIG: Record<OnboardingProviderId, On
   flue: { id: "flue", ...tsOnly },
   elevenlabs: { id: "elevenlabs", ...crossTsPy },
   "pydantic-ai": { id: "pydantic-ai", ...pyOnly },
+  "cloudflare-ai-gateway": { id: "cloudflare-ai-gateway", ...otelOnly },
 }
 
 // Eve ships its telemetry through @vercel/otel directly, so it does NOT install
@@ -1836,6 +1840,18 @@ export function getOtelExporterLanguageSnippet(
       return rubyOtelSnippet(projectSlug, apiKey)
     case "dotnet":
       return dotnetOtelSnippet(projectSlug, apiKey)
+  }
+}
+
+// Field values for Cloudflare's "Add Otel Destination" dialog: endpoint, content type, and the two custom headers.
+export function cloudflareAiGatewayConfig(projectSlug: string, apiKey: string | null) {
+  return {
+    endpoint: OTLP_TRACES_ENDPOINT,
+    contentType: "JSON",
+    headers: [
+      { key: "x-latitude-project", value: projectSlug },
+      { key: "Authorization", value: `Bearer ${apiKey ?? "YOUR_API_KEY"}` },
+    ],
   }
 }
 

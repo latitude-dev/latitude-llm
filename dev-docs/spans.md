@@ -145,3 +145,16 @@ Span ingestion is the canonical trace-billing boundary.
 Span persistence also stamps `retention_days` onto each stored span using the effective organization billing plan at write time.
 
 The `traces` materialized view carries forward `max(retention_days)` from its source spans, and ClickHouse TTL applies a storage grace buffer of `30` additional days beyond the stamped retention value before physically deleting `spans` and `traces`. See `./billing.md` for the billing-period and downgrade semantics behind that rule.
+
+## OTLP Attribute Resolution
+
+Incoming OTLP spans are normalized into the canonical span model by the resolvers under `packages/domain/spans/src/otlp/`. Metadata (operation, provider, model, token usage, cost, identity) resolves from a prioritized list of attribute candidates spanning the conventions each supported source emits (OTEL GenAI semconv, OpenInference, OpenLLMetry/Traceloop, Vercel AI SDK, Claude Code, and others). Message content is parsed by a first-match chain of content parsers keyed on the attributes a source uses.
+
+### Cloudflare AI Gateway
+
+Cloudflare AI Gateway is ingested as a plain OTLP GenAI source; there is no SDK. Its spans carry standard `gen_ai.*` metadata (`gen_ai.provider.name` or `gen_ai.model.provider`, `gen_ai.request.model`, `gen_ai.usage.input_tokens`/`output_tokens`, `gen_ai.usage.cost`, `gen_ai.operation.name`), so provider, model, tokens, and cost resolve through the normal candidate lists. Two source-specific behaviors are deliberate:
+
+- **Content lives in non-standard envelopes under the standard keys.** The gateway puts the raw request body in `gen_ai.input.messages` (`{messages:[…]}`, or `{text}` for embeddings) and the upstream provider's native response in `gen_ai.output.messages` (the OpenAI-compatible `{choices:[{message}]}`, the Anthropic `{state,result:{role,content[]}}` wrapper, or an embeddings `{data,shape}` body); its documented OTEL export names these `gen_ai.prompt_json` / `gen_ai.completion_json`, which resolve the same way. The standard array parser yields nothing for these, so `parseGenAICurrent` recovers them by **structural detection of the response shape** — not by trusting the provider name, whose value (for example `internal-workers-ai`) does not reliably identify the response schema. Unrecognized shapes resolve metadata only and leave messages empty rather than rendering non-conversational data such as embedding vectors.
+- **The gateway hardcodes `gen_ai.operation.name=chat` for every request, including embeddings.** Spans whose response is an embedding body (`{data,shape}` with no chat envelope) are reclassified from `chat` to `embeddings` so they are categorized and rolled up correctly.
+
+The `internal-workers-ai` provider name is aliased to `cloudflare-workers-ai`.
