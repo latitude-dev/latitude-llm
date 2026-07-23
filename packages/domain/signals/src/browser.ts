@@ -26,6 +26,9 @@ export {
   SIGNAL_DISCOVERY_RERANK_CANDIDATES,
   SIGNAL_DISCOVERY_SEARCH_CANDIDATES,
   SIGNAL_DISCOVERY_SEARCH_RATIO,
+  SIGNAL_GENERATION_DEADLINE_MS,
+  SIGNAL_GENERATION_DEFAULT_MODEL,
+  SIGNAL_GENERATION_MAX_STEPS,
   SIGNAL_GENERATION_PROMPT_MAX_LENGTH,
   SIGNAL_PRIORITIES,
   SIGNAL_PRIORITY_GROUPS,
@@ -215,6 +218,12 @@ export {
   type GetSignalTrendResult,
   getSignalTrendUseCase,
 } from "./use-cases/get-signal-trend.ts"
+export {
+  type ListSessionSignalsError,
+  type ListSessionSignalsInput,
+  listSessionSignalsUseCase,
+  type SessionSignal,
+} from "./use-cases/list-session-signals.ts"
 export {
   type ListSignalTracesError,
   type ListSignalTracesInput,

@@ -21,13 +21,13 @@ import { defineOperation } from "../core/define-operation.ts"
 import type { OperationModule } from "../core/mount.ts"
 import {
   jsonBody,
-  openApiResponses,
   PROTECTED_SECURITY,
   ProjectParamsSchema,
   sessionIdSchema,
   spanIdSchema,
   TraceRefSchema,
   traceIdSchema,
+  typedResponses,
 } from "../openapi/schemas.ts"
 import type { OrganizationScopedEnv } from "../types.ts"
 
@@ -201,6 +201,7 @@ const toResponse = (score: ApiScore) => {
     tokens: score.tokens,
     cost: score.cost,
     draftedAt: score.draftedAt ? score.draftedAt.toISOString() : null,
+    annotatorId: score.annotatorId,
     createdAt: score.createdAt.toISOString(),
     updatedAt: score.updatedAt.toISOString(),
   }
@@ -242,7 +243,7 @@ const createScore = scoreEndpoint({
       params: ProjectParamsSchema,
       body: jsonBody(RequestSchema),
     },
-    responses: openApiResponses({
+    responses: typedResponses({
       status: 201,
       schema: ResponseSchema,
       description: "Score created",
@@ -250,58 +251,55 @@ const createScore = scoreEndpoint({
   }),
   access: "write",
   rateLimitTier: "low",
-  handler: async (c) => {
-    const body = c.req.valid("json")
-    const { projectSlug } = c.req.valid("param")
-    const organizationId = c.var.organization.id
+  execute: (input, ctx) => {
+    const body = input.body
+    const { projectSlug } = input.params
+    const organizationId = ctx.organization.id
 
-    const score = await Effect.runPromise(
-      Effect.gen(function* () {
-        const projectRepository = yield* ProjectRepository
-        const project = yield* projectRepository.findBySlug(projectSlug)
+    return Effect.gen(function* () {
+      const projectRepository = yield* ProjectRepository
+      const project = yield* projectRepository.findBySlug(projectSlug)
 
-        // The route exposes `_evaluation: boolean` for the public OpenAPI shape;
-        // the use case takes the discriminated `source` shape used internally.
-        // The variant fields (`source`/`sourceId`/`metadata`) live inside the
-        // ternary so TypeScript keeps each branch's discriminator narrowed; the
-        // rest of the body is shared.
-        const variantFields =
-          body._evaluation === true
-            ? { source: "evaluation" as const, sourceId: body.sourceId, metadata: body.metadata }
-            : { source: "custom" as const, sourceId: body.sourceId, metadata: body.metadata }
+      // The route exposes `_evaluation: boolean` for the public OpenAPI shape;
+      // the use case takes the discriminated `source` shape used internally.
+      // The variant fields (`source`/`sourceId`/`metadata`) live inside the
+      // ternary so TypeScript keeps each branch's discriminator narrowed; the
+      // rest of the body is shared.
+      const variantFields =
+        body._evaluation === true
+          ? { source: "evaluation" as const, sourceId: body.sourceId, metadata: body.metadata }
+          : { source: "custom" as const, sourceId: body.sourceId, metadata: body.metadata }
 
-        const submitInput: SubmitApiScoreInput & { organizationId: string; projectId: typeof project.id } = {
-          ...variantFields,
-          trace: body.trace,
-          simulationId: body.simulationId,
-          value: body.value,
-          passed: body.passed,
-          feedback: body.feedback,
-          error: body.error,
-          duration: body.duration,
-          tokens: body.tokens,
-          cost: body.cost,
-          organizationId,
-          projectId: project.id,
-        }
+      const submitInput: SubmitApiScoreInput & { organizationId: string; projectId: typeof project.id } = {
+        ...variantFields,
+        trace: body.trace,
+        simulationId: body.simulationId,
+        value: body.value,
+        passed: body.passed,
+        feedback: body.feedback,
+        error: body.error,
+        duration: body.duration,
+        tokens: body.tokens,
+        cost: body.cost,
+        organizationId,
+        projectId: project.id,
+      }
 
-        return (yield* submitApiScoreUseCase(submitInput)) as ApiScore
-      }).pipe(
-        withPostgres(
-          Layer.mergeAll(ProjectRepositoryLive, ScoreRepositoryLive, OutboxEventWriterLive),
-          c.var.postgresClient,
-          organizationId,
-        ),
-        withClickHouse(
-          Layer.mergeAll(ScoreAnalyticsRepositoryLive, TraceRepositoryLive, SpanRepositoryLive),
-          c.var.clickhouse,
-          organizationId,
-        ),
-        withTracing,
+      const score = (yield* submitApiScoreUseCase(submitInput)) as ApiScore
+      return { status: 201, body: toResponse(score) } as const
+    }).pipe(
+      withPostgres(
+        Layer.mergeAll(ProjectRepositoryLive, ScoreRepositoryLive, OutboxEventWriterLive),
+        ctx.postgresClient,
+        organizationId,
       ),
+      withClickHouse(
+        Layer.mergeAll(ScoreAnalyticsRepositoryLive, TraceRepositoryLive, SpanRepositoryLive),
+        ctx.clickhouse,
+        organizationId,
+      ),
+      withTracing,
     )
-
-    return c.json(toResponse(score), 201)
   },
 })
 

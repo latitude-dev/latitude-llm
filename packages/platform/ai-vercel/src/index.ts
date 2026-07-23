@@ -1,7 +1,9 @@
 export {
+  AIAgentLive,
   AIGenerateLive,
   createProviderModel,
   embedWithVercel,
+  loosenSchemaForBedrock,
   rerankWithVercel,
   SUPPORTED_EMBEDDING_PROVIDERS,
   SUPPORTED_GENERATION_PROVIDERS,

@@ -13,7 +13,8 @@ import {
 import { useCreateMonitor } from "../../../../../../domains/monitors/monitors.collection.ts"
 import { useSavedSearchesList } from "../../../../../../domains/saved-searches/saved-searches.collection.ts"
 import { useProjectTools } from "../../../../../../domains/tools/tools.collection.ts"
-import { extractFieldErrors, toUserMessage } from "../../../../../../lib/errors.ts"
+import { handleMutationError } from "../../../../../../lib/data/handle-mutation-error.ts"
+import { extractFieldErrors } from "../../../../../../lib/errors.ts"
 import { AlertCardForm } from "./alert-card-form.tsx"
 import {
   type AlertDraft,
@@ -103,7 +104,10 @@ export function MonitorCreateModal({
     trendBucketSeconds: TARGET_TREND_BUCKET_SECONDS,
   })
   const { data: savedSearches, isLoading: savedSearchesLoading } = useSavedSearchesList(projectId)
-  const { data: users, isLoading: usersLoading } = useProjectUsers({ projectId, limit: 50 })
+  const { data: users, isLoading: usersLoading } = useProjectUsers({
+    projectId,
+    limit: 50,
+  })
 
   const sourceLocked = Boolean(initialAlert?.target)
   const targetName = alert.target ? monitorTargetName(alert.target) : null
@@ -182,7 +186,6 @@ export function MonitorCreateModal({
       onClose()
       onCreated?.(monitor.slug)
     } catch (error) {
-      // Surface Zod field errors under the offending control; toast non-field errors.
       const fieldErrors = extractFieldErrors(error)
       const nameErr = fieldErrors?.name?.[0]
       const errors = alertFieldErrorsFrom(fieldErrors, null)
@@ -191,7 +194,7 @@ export function MonitorCreateModal({
         setAlertErrors(errors)
         return
       }
-      toast({ variant: "destructive", description: toUserMessage(error) })
+      handleMutationError(error)
     }
   }
 
@@ -239,7 +242,8 @@ export function MonitorCreateModal({
             <Text.H5M>Source</Text.H5M>
             <Select<MonitorSource>
               name="monitor-source"
-              width="auto"
+              width="full"
+              contentWidth="trigger"
               options={SOURCE_OPTIONS}
               value={source}
               onChange={onSourceChange}
@@ -251,8 +255,12 @@ export function MonitorCreateModal({
             <Text.H5M>Saved search</Text.H5M>
             <Select<string>
               name="monitor-saved-search"
-              width="auto"
-              options={savedSearches.map((search) => ({ label: search.name, value: search.id }))}
+              width="full"
+              contentWidth="trigger"
+              options={savedSearches.map((search) => ({
+                label: search.name,
+                value: search.id,
+              }))}
               value={selectedSavedSearchId}
               placeholder="Select a saved search"
               onChange={onSavedSearchChange}
@@ -269,8 +277,12 @@ export function MonitorCreateModal({
             <Text.H5M>Tool</Text.H5M>
             <Select<string>
               name="monitor-tool"
-              width="auto"
-              options={(toolsData?.tools ?? []).map((tool) => ({ label: tool.name, value: tool.name }))}
+              width="full"
+              contentWidth="trigger"
+              options={(toolsData?.tools ?? []).map((tool) => ({
+                label: tool.name,
+                value: tool.name,
+              }))}
               value={selectedToolName || undefined}
               placeholder="All tools"
               onChange={onToolChange}
@@ -287,8 +299,12 @@ export function MonitorCreateModal({
             <Text.H5M>User</Text.H5M>
             <Select<string>
               name="monitor-user"
-              width="auto"
-              options={users.map((user) => ({ label: userLabel(user), value: user.userId }))}
+              width="full"
+              contentWidth="trigger"
+              options={users.map((user) => ({
+                label: userLabel(user),
+                value: user.userId,
+              }))}
               value={selectedUserId || undefined}
               placeholder="All users"
               onChange={onUserChange}

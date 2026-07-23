@@ -1,13 +1,31 @@
 import type { ClickHouseClient } from "@clickhouse/client"
-import { ChSqlClient, type ChSqlClientShape, TraceId, toRepositoryError } from "@domain/shared"
+import { ChSqlClient, type ChSqlClientShape, type CustomBehaviorId, TraceId, toRepositoryError } from "@domain/shared"
 import {
   type ClusterAnalysisAggregate,
   type ClusterRepresentativeExample,
   TaxonomyClusterIntelligenceRepository,
 } from "@domain/taxonomy"
+import { formatCHDate } from "@repo/utils"
 import { Effect, Layer } from "effect"
 
-const toClickhouseDateTime = (date: Date): string => date.toISOString().replace("Z", "")
+// Which observations belong to the requested clusters. Global reads match the
+// observation's own `assigned_cluster_id`; a scoped custom-behavior read never
+// touches that column and instead intersects with the behavior's topic edges in
+// the `taxonomy_view_assignments` slice (keyed by custom_behavior_id, facet_id='').
+const GLOBAL_CLUSTER_MEMBERSHIP = "o.assigned_cluster_id IN {clusterIds:Array(String)}"
+const SCOPED_CLUSTER_MEMBERSHIP = `o.observation_id IN (
+    SELECT observation_id
+    FROM taxonomy_view_assignments FINAL
+    WHERE organization_id = {organizationId:String}
+      AND project_id = {projectId:String}
+      AND custom_behavior_id = {customBehaviorId:String}
+      AND facet_id = ''
+      AND assigned_cluster_id IN {clusterIds:Array(String)}
+  )`
+const clusterMembership = (customBehaviorId: CustomBehaviorId | null | undefined) =>
+  customBehaviorId == null ? GLOBAL_CLUSTER_MEMBERSHIP : SCOPED_CLUSTER_MEMBERSHIP
+const scopeParams = (customBehaviorId: CustomBehaviorId | null | undefined) =>
+  customBehaviorId == null ? {} : { customBehaviorId: customBehaviorId as string }
 
 const behaviourSessionFilterSql = `
   ({filter:String} = 'all'
@@ -34,7 +52,12 @@ const behaviourMomentRangeSql = `
 // analysis generations are never deleted, so an unscoped read unions every
 // re-analysis and `any(analysis_hash)` could pick a stale hash, breaking the
 // trace link and silently dropping every moment label.
-const behaviourClusterSessionsCte = (timeFromClause: string, timeToClause: string, hasMomentRange: boolean) => `
+const behaviourClusterSessionsCte = (
+  timeFromClause: string,
+  timeToClause: string,
+  hasMomentRange: boolean,
+  membershipClause: string,
+) => `
   WITH latest_analyses AS (
     SELECT organization_id, project_id, session_id, analysis_hash, trace_ids
     FROM session_analyses FINAL
@@ -48,6 +71,8 @@ const behaviourClusterSessionsCte = (timeFromClause: string, timeToClause: strin
       o.session_id AS session_id,
       any(a.analysis_hash) AS analysisHash,
       arrayElement(any(a.trace_ids), 1) AS traceId,
+      argMin(o.moment_id, o.start_time) AS momentId,
+      any(JSONExtractString(o.projection_metadata, 'summary')) AS summary,
       min(o.start_time) AS startTime,
       max(o.end_time) AS endTime
     FROM taxonomy_observations AS o FINAL
@@ -58,7 +83,7 @@ const behaviourClusterSessionsCte = (timeFromClause: string, timeToClause: strin
      AND o.analysis_hash = a.analysis_hash
     WHERE o.organization_id = {organizationId:String}
       AND o.project_id = {projectId:String}
-      AND o.assigned_cluster_id IN {clusterIds:Array(String)}
+      AND ${membershipClause}
       ${timeFromClause}
       ${timeToClause}
     GROUP BY o.organization_id, o.project_id, o.session_id
@@ -67,6 +92,10 @@ const behaviourClusterSessionsCte = (timeFromClause: string, timeToClause: strin
     SELECT
       cs.session_id AS sessionId,
       any(cs.traceId) AS traceId,
+      ${hasMomentRange ? `argMinIf(m.moment_id, m.first_message_index, ${behaviourMomentRangeSql})` : "any(cs.momentId)"}
+        AS momentId,
+      any(cs.summary) AS summary,
+      any(cs.startTime) AS startTime,
       any(cs.endTime) AS endTime,
       ${hasMomentRange ? `countIf(${behaviourMomentRangeSql})` : "toUInt64(0)"} AS selectedMomentCount,
       groupUniqArrayIf(m.kind, m.kind != '') AS momentKinds
@@ -102,21 +131,68 @@ type ExampleRow = {
 const distributionFromRows = (rows: readonly DistributionRow[]) =>
   Object.fromEntries(rows.filter((row) => row.key.length > 0).map((row) => [row.key, row.count]))
 
+const trajectoryBucketExpression = (axis: "day" | "turn") =>
+  axis === "day" ? "toString(toDate(cs.startTime))" : "toString(m.first_message_index)"
+
+const parseNumber = (value: unknown): number => {
+  if (typeof value === "number") return value
+  if (typeof value === "string") return Number(value)
+  return 0
+}
+
+type SessionRow = {
+  readonly sessionId: string
+  readonly traceId: string
+  readonly momentId: string
+  readonly summary: string
+  readonly startTime: string
+  readonly endTime: string
+  readonly momentKinds: readonly string[]
+}
+
+type SessionHistogramRow = {
+  readonly startTime: string
+  readonly count: number | string
+}
+
+type TrajectoryRow = {
+  readonly bucket: string
+  readonly frequency: number | string
+  readonly escalation: number | string
+  readonly resolution: number | string
+  readonly churnRisk: number | string
+  readonly wins: number | string
+  readonly maxLastMessageIndex: number | string
+  readonly maxEscalationLastMessageIndex: number | string
+  readonly maxResolutionLastMessageIndex: number | string
+  readonly maxChurnRiskLastMessageIndex: number | string
+  readonly maxWinsLastMessageIndex: number | string
+}
+
 export const TaxonomyClusterIntelligenceRepositoryLive = Layer.effect(
   TaxonomyClusterIntelligenceRepository,
   Effect.gen(function* () {
     return {
-      getClusterAggregate: ({ organizationId, projectId, clusterIds, sourceWindowStart, sourceWindowEnd }) =>
+      getClusterAggregate: ({
+        organizationId,
+        projectId,
+        clusterIds,
+        sourceWindowStart,
+        sourceWindowEnd,
+        customBehaviorId,
+      }) =>
         Effect.gen(function* () {
           const chSqlClient = (yield* ChSqlClient) as ChSqlClientShape<ClickHouseClient>
+          const membership = clusterMembership(customBehaviorId)
           return yield* chSqlClient
             .query(async (client) => {
               const params = {
                 organizationId: organizationId as string,
                 projectId: projectId as string,
                 clusterIds: clusterIds as readonly string[],
-                sourceWindowStart: toClickhouseDateTime(sourceWindowStart),
-                sourceWindowEnd: toClickhouseDateTime(sourceWindowEnd),
+                sourceWindowStart: formatCHDate(sourceWindowStart),
+                sourceWindowEnd: formatCHDate(sourceWindowEnd),
+                ...scopeParams(customBehaviorId),
               }
               const aggregateResult = await client.query({
                 // Superseded analysis generations are never deleted; pinning
@@ -136,7 +212,7 @@ export const TaxonomyClusterIntelligenceRepositoryLive = Layer.effect(
                          AND o.session_id = a.session_id
                         WHERE o.organization_id = {organizationId:String}
                           AND o.project_id = {projectId:String}
-                          AND o.assigned_cluster_id IN {clusterIds:Array(String)}
+                          AND ${membership}
                           AND (a.analysis_hash = '' OR o.analysis_hash = a.analysis_hash)
                           AND o.start_time >= {sourceWindowStart:DateTime64(9, 'UTC')}
                           AND o.start_time < {sourceWindowEnd:DateTime64(9, 'UTC')}`,
@@ -165,7 +241,7 @@ export const TaxonomyClusterIntelligenceRepositoryLive = Layer.effect(
                          AND a.analysis_hash = m.analysis_hash
                         WHERE o.organization_id = {organizationId:String}
                           AND o.project_id = {projectId:String}
-                          AND o.assigned_cluster_id IN {clusterIds:Array(String)}
+                          AND ${membership}
                           AND o.analysis_hash = a.analysis_hash
                           AND a.analysis_status = 'analyzed'
                           AND o.start_time >= {sourceWindowStart:DateTime64(9, 'UTC')}
@@ -201,6 +277,7 @@ export const TaxonomyClusterIntelligenceRepositoryLive = Layer.effect(
         sourceWindowStart,
         sourceWindowEnd,
         limit,
+        customBehaviorId,
       }) =>
         Effect.gen(function* () {
           const chSqlClient = (yield* ChSqlClient) as ChSqlClientShape<ClickHouseClient>
@@ -213,7 +290,7 @@ export const TaxonomyClusterIntelligenceRepositoryLive = Layer.effect(
                         FROM taxonomy_observations AS o FINAL
                         WHERE o.organization_id = {organizationId:String}
                           AND o.project_id = {projectId:String}
-                          AND o.assigned_cluster_id IN {clusterIds:Array(String)}
+                          AND ${clusterMembership(customBehaviorId)}
                           AND o.start_time >= {sourceWindowStart:DateTime64(9, 'UTC')}
                           AND o.start_time < {sourceWindowEnd:DateTime64(9, 'UTC')}
                         ORDER BY o.start_time DESC
@@ -222,9 +299,10 @@ export const TaxonomyClusterIntelligenceRepositoryLive = Layer.effect(
                   organizationId: organizationId as string,
                   projectId: projectId as string,
                   clusterIds: clusterIds as readonly string[],
-                  sourceWindowStart: toClickhouseDateTime(sourceWindowStart),
-                  sourceWindowEnd: toClickhouseDateTime(sourceWindowEnd),
+                  sourceWindowStart: formatCHDate(sourceWindowStart),
+                  sourceWindowEnd: formatCHDate(sourceWindowEnd),
                   limit,
+                  ...scopeParams(customBehaviorId),
                 },
                 format: "JSONEachRow",
               })
@@ -250,6 +328,7 @@ export const TaxonomyClusterIntelligenceRepositoryLive = Layer.effect(
         startTimeFrom,
         startTimeTo,
         limit,
+        customBehaviorId,
       }) =>
         Effect.gen(function* () {
           const chSqlClient = (yield* ChSqlClient) as ChSqlClientShape<ClickHouseClient>
@@ -260,7 +339,7 @@ export const TaxonomyClusterIntelligenceRepositoryLive = Layer.effect(
           return yield* chSqlClient
             .query(async (client) => {
               const result = await client.query({
-                query: `${behaviourClusterSessionsCte(timeFromClause, timeToClause, Boolean(momentRange))}
+                query: `${behaviourClusterSessionsCte(timeFromClause, timeToClause, Boolean(momentRange), clusterMembership(customBehaviorId))}
                         SELECT traceId
                         FROM enriched_sessions
                         WHERE traceId != ''
@@ -274,11 +353,12 @@ export const TaxonomyClusterIntelligenceRepositoryLive = Layer.effect(
                   clusterIds: clusterIds as readonly string[],
                   filter,
                   limit,
-                  ...(startTimeFrom ? { startTimeFrom: toClickhouseDateTime(startTimeFrom) } : {}),
-                  ...(startTimeTo ? { startTimeTo: toClickhouseDateTime(startTimeTo) } : {}),
+                  ...(startTimeFrom ? { startTimeFrom: formatCHDate(startTimeFrom) } : {}),
+                  ...(startTimeTo ? { startTimeTo: formatCHDate(startTimeTo) } : {}),
                   ...(momentRange
                     ? { momentMetric: momentRange.metric, turnFrom: momentRange.fromTurn, turnTo: momentRange.toTurn }
                     : {}),
+                  ...scopeParams(customBehaviorId),
                 },
                 format: "JSONEachRow",
               })
@@ -287,6 +367,196 @@ export const TaxonomyClusterIntelligenceRepositoryLive = Layer.effect(
             .pipe(
               Effect.mapError((error) =>
                 toRepositoryError(error, "TaxonomyClusterIntelligenceRepository.listSessionTraceIds"),
+              ),
+            )
+        }),
+      listClusterSessions: ({
+        organizationId,
+        projectId,
+        clusterIds,
+        filter,
+        momentRange,
+        startTimeFrom,
+        startTimeTo,
+        offset,
+        limit,
+        customBehaviorId,
+      }) =>
+        Effect.gen(function* () {
+          const chSqlClient = (yield* ChSqlClient) as ChSqlClientShape<ClickHouseClient>
+          if (clusterIds.length === 0) return { sessions: [], histogram: [], hasMore: false, nextOffset: null }
+          const timeFromClause = startTimeFrom ? "AND o.start_time >= {startTimeFrom:DateTime64(9, 'UTC')}" : ""
+          const timeToClause = startTimeTo ? "AND o.start_time < {startTimeTo:DateTime64(9, 'UTC')}" : ""
+          const momentRangeClause = momentRange ? "AND selectedMomentCount > 0" : ""
+          const cte = behaviourClusterSessionsCte(
+            timeFromClause,
+            timeToClause,
+            Boolean(momentRange),
+            clusterMembership(customBehaviorId),
+          )
+          const queryParams = {
+            organizationId: organizationId as string,
+            projectId: projectId as string,
+            clusterIds: clusterIds as readonly string[],
+            filter,
+            ...(startTimeFrom ? { startTimeFrom: formatCHDate(startTimeFrom) } : {}),
+            ...(startTimeTo ? { startTimeTo: formatCHDate(startTimeTo) } : {}),
+            ...(momentRange
+              ? { momentMetric: momentRange.metric, turnFrom: momentRange.fromTurn, turnTo: momentRange.toTurn }
+              : {}),
+            ...scopeParams(customBehaviorId),
+          }
+          // Short windows (≤2 days) bucket hourly; longer windows daily.
+          const histogramInterval =
+            startTimeFrom && (!startTimeTo || startTimeTo.getTime() - startTimeFrom.getTime() <= 2 * 24 * 60 * 60_000)
+              ? "1 HOUR"
+              : "1 DAY"
+          return yield* chSqlClient
+            .query(async (client) => {
+              const sessionsResult = await client.query({
+                query: `${cte}
+                        SELECT sessionId, traceId, momentId, summary, startTime, endTime, momentKinds
+                        FROM enriched_sessions
+                        WHERE ${behaviourSessionFilterSql}
+                        ${momentRangeClause}
+                        ORDER BY endTime DESC
+                        LIMIT {pageSize:UInt32}
+                        OFFSET {offset:UInt32}`,
+                query_params: { ...queryParams, pageSize: limit + 1, offset },
+                format: "JSONEachRow",
+              })
+              const rows = (await sessionsResult.json()) as SessionRow[]
+              const histogramResult = await client.query({
+                query: `${cte}
+                        SELECT
+                          toStartOfInterval(endTime, INTERVAL ${histogramInterval}) AS startTime,
+                          count() AS count
+                        FROM enriched_sessions
+                        WHERE ${behaviourSessionFilterSql}
+                        ${momentRangeClause}
+                        GROUP BY startTime
+                        ORDER BY startTime ASC`,
+                query_params: queryParams,
+                format: "JSONEachRow",
+              })
+              const histogramRows = (await histogramResult.json()) as SessionHistogramRow[]
+              const hasMore = rows.length > limit
+              return {
+                sessions: rows.slice(0, limit).map((row) => ({
+                  sessionId: row.sessionId,
+                  traceId: row.traceId,
+                  momentId: row.momentId,
+                  summary: row.summary,
+                  startTime: new Date(row.startTime),
+                  endTime: new Date(row.endTime),
+                  momentKinds: row.momentKinds,
+                })),
+                histogram: histogramRows.map((bucket) => ({
+                  startTime: new Date(bucket.startTime),
+                  count: Number(bucket.count),
+                })),
+                hasMore,
+                nextOffset: hasMore ? offset + limit : null,
+              }
+            })
+            .pipe(
+              Effect.mapError((error) =>
+                toRepositoryError(error, "TaxonomyClusterIntelligenceRepository.listClusterSessions"),
+              ),
+            )
+        }),
+      getClusterTrajectory: ({
+        organizationId,
+        projectId,
+        clusterIds,
+        axis,
+        startTimeFrom,
+        startTimeTo,
+        customBehaviorId,
+      }) =>
+        Effect.gen(function* () {
+          const chSqlClient = (yield* ChSqlClient) as ChSqlClientShape<ClickHouseClient>
+          if (clusterIds.length === 0) return []
+          const timeFromClause = startTimeFrom ? "AND o.start_time >= {startTimeFrom:DateTime64(9, 'UTC')}" : ""
+          const timeToClause = startTimeTo ? "AND o.start_time < {startTimeTo:DateTime64(9, 'UTC')}" : ""
+          const bucketExpression = trajectoryBucketExpression(axis)
+          return yield* chSqlClient
+            .query(async (client) => {
+              const result = await client.query({
+                query: `
+                  WITH latest_analyses AS (
+                    SELECT organization_id, project_id, session_id, analysis_hash
+                    FROM session_analyses FINAL
+                    WHERE organization_id = {organizationId:String}
+                      AND project_id = {projectId:String}
+                  ),
+                  cluster_sessions AS (
+                    SELECT
+                      o.organization_id AS organization_id,
+                      o.project_id AS project_id,
+                      o.session_id AS session_id,
+                      any(a.analysis_hash) AS analysisHash,
+                      min(o.start_time) AS startTime
+                    FROM taxonomy_observations AS o FINAL
+                    INNER JOIN latest_analyses AS a
+                      ON o.organization_id = a.organization_id
+                     AND o.project_id = a.project_id
+                     AND o.session_id = a.session_id
+                     AND o.analysis_hash = a.analysis_hash
+                    WHERE o.organization_id = {organizationId:String}
+                      AND o.project_id = {projectId:String}
+                      AND ${clusterMembership(customBehaviorId)}
+                      ${timeFromClause}
+                      ${timeToClause}
+                    GROUP BY o.organization_id, o.project_id, o.session_id
+                  )
+                  SELECT
+                    ${bucketExpression} AS bucket,
+                    count() AS frequency,
+                    countIf(m.kind = 'escalation') AS escalation,
+                    countIf(m.kind = 'resolution') AS resolution,
+                    countIf(m.kind IN ('abandonment', 'user_frustration')) AS churnRisk,
+                    countIf(m.kind IN ('resolution', 'user_satisfaction')) AS wins,
+                    max(m.last_message_index) AS maxLastMessageIndex,
+                    maxIf(m.last_message_index, m.kind = 'escalation') AS maxEscalationLastMessageIndex,
+                    maxIf(m.last_message_index, m.kind = 'resolution') AS maxResolutionLastMessageIndex,
+                    maxIf(m.last_message_index, m.kind IN ('abandonment', 'user_frustration')) AS maxChurnRiskLastMessageIndex,
+                    maxIf(m.last_message_index, m.kind IN ('resolution', 'user_satisfaction')) AS maxWinsLastMessageIndex
+                  FROM cluster_sessions AS cs
+                  INNER JOIN session_moment_labels AS m FINAL
+                    ON cs.organization_id = m.organization_id
+                   AND cs.project_id = m.project_id
+                   AND cs.session_id = m.session_id
+                   AND cs.analysisHash = m.analysis_hash
+                  GROUP BY bucket
+                  ORDER BY ${axis === "day" ? "bucket ASC" : "toUInt16(bucket) ASC"}`,
+                query_params: {
+                  organizationId: organizationId as string,
+                  projectId: projectId as string,
+                  clusterIds: clusterIds as readonly string[],
+                  ...(startTimeFrom ? { startTimeFrom: formatCHDate(startTimeFrom) } : {}),
+                  ...(startTimeTo ? { startTimeTo: formatCHDate(startTimeTo) } : {}),
+                  ...scopeParams(customBehaviorId),
+                },
+                format: "JSONEachRow",
+              })
+              return ((await result.json()) as TrajectoryRow[]).map((row) => ({
+                bucket: row.bucket,
+                frequency: parseNumber(row.frequency),
+                escalation: parseNumber(row.escalation),
+                resolution: parseNumber(row.resolution),
+                churnRisk: parseNumber(row.churnRisk),
+                wins: parseNumber(row.wins),
+                maxLastMessageIndex: parseNumber(row.maxLastMessageIndex),
+                maxEscalationLastMessageIndex: parseNumber(row.maxEscalationLastMessageIndex),
+                maxResolutionLastMessageIndex: parseNumber(row.maxResolutionLastMessageIndex),
+                maxChurnRiskLastMessageIndex: parseNumber(row.maxChurnRiskLastMessageIndex),
+                maxWinsLastMessageIndex: parseNumber(row.maxWinsLastMessageIndex),
+              }))
+            })
+            .pipe(
+              Effect.mapError((error) =>
+                toRepositoryError(error, "TaxonomyClusterIntelligenceRepository.getClusterTrajectory"),
               ),
             )
         }),

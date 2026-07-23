@@ -1,6 +1,7 @@
-import type { ChSqlClient, RepositoryError, TraceBreakdownField } from "@domain/shared"
+import type { ChSqlClient, RepositoryError, TraceBreakdownField, ValidationError } from "@domain/shared"
 import { parseSearchQuery } from "@domain/spans"
 import { Effect } from "effect"
+import { runFilterBuild } from "../../filter-builder.ts"
 import { isActiveSearch, planSearch } from "../../repositories/search-plan.ts"
 import { buildTraceFilterClauses, LIST_SELECT, resolvePercentileFilters } from "../../repositories/trace-repository.ts"
 import { type TraceFamilyColumns, traceFamilyAggregate, windowParams } from "../helpers.ts"
@@ -32,10 +33,14 @@ const BREAKDOWN = {
  * The grouped per-trace subquery: filters + percentile resolution + an optional
  * semantic-query prefilter, windowed on the aggregated `start_time`.
  */
-const buildInner = (input: MetricSqlInput): Effect.Effect<InnerQuery, RepositoryError, ChSqlClient> =>
+const buildInner = (input: MetricSqlInput): Effect.Effect<InnerQuery, RepositoryError | ValidationError, ChSqlClient> =>
   Effect.gen(function* () {
     const filterSet = yield* resolvePercentileFilters(input.organizationId, input.projectId, input.filterSet)
-    const { havingClauses, whereClauses, params: filterParams } = buildTraceFilterClauses(filterSet)
+    const {
+      havingClauses,
+      whereClauses,
+      params: filterParams,
+    } = yield* runFilterBuild(() => buildTraceFilterClauses(filterSet))
     const extraWhere = whereClauses.length > 0 ? `AND ${whereClauses.join(" AND ")}` : ""
 
     const parsed = input.query ? parseSearchQuery(input.query) : undefined

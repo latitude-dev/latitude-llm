@@ -7,6 +7,68 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [9.6.0] - 2026-07-22
+
+### Added
+
+- `client.memory` group for reading memory observability: `list_stores` (cursor-paginated store roll-up), `get_store` (current snapshot, optional point-in-time `at`), `get_store_diff` (per-record diff between two timestamps), `list_store_users`, `get_record` (body plus version history), `get_record_change` (one change's before/after diff), `list_record_reads`, and `list_record_users`. Store and record ids are opaque query params, so the unattributed (`""`) store and the unnamed record are reachable.
+- `client.sessions.get_memory` / `get_memory_changes` and `client.traces.get_memory` / `get_memory_changes` — a session's or trace's memory footprint (per-record read/added/removed token metrics and totals) and its per-record before/after write diffs.
+- `client.users.memory_stores` — the memory stores an end-user accessed.
+
+## [9.5.0] - 2026-07-21
+
+### Added
+
+- `client.signals` lifecycle methods `resolve` / `unresolve` / `ignore` / `unignore`. Resolving archives a signal while its evaluations keep watching for regressions; ignoring archives it, stops monitoring, and mutes notifications.
+- Signal responses now carry `resolved_at`, `ignored_at`, and `regressed_at`, and `states` can include `resolved`, `regressed`, and `ignored`.
+- Signal analytics now include `resolved` and `ignored` counts.
+
+### Changed
+
+- Muting a signal is now a pure notification toggle: incidents keep opening while muted.
+
+## [9.4.0] - 2026-07-20
+
+### Added
+
+- `client.sessions` group for reading sessions (the traces of one conversation, grouped by session id): `list` (cursor-paginated, with `filters` + free-text `query`), `analytics` (per-metric totals/medians and a 12-hour bucket series over whole sessions), `get` (session detail with its GenAI `conversation` and `latest_trace_id`), `list_traces` (cursor-paginated traces of the session), `list_signals` (signals recorded across the session's traces), and `get_signal` (one session-scoped signal by slug).
+
+## [9.3.0] - 2026-07-16
+
+### Added
+
+- `client.projects.update` `flaggers` map accepts two new slugs: `bluffing` (the assistant proceeds past a failed tool call as if it succeeded) and `pii-leakage` (the assistant's output exposes personal data it should not have surfaced).
+
+## [9.2.0] - 2026-07-16
+
+### Added
+
+- `list_traces` filters now document and validate a dedicated `TraceFilterSet` (including `end_time`). Unknown filter fields and `gte_percentile` on `start_time`/`end_time` are rejected with 400 instead of being silently ignored or failing as 500.
+
+## [9.1.0] - 2026-07-14
+
+### Added
+
+- `client.experiments` — manage project experiments that compare two or more variants against a baseline: `list`, `create`, `get`, `update`, `delete`. Each variant is a population defined by a `filter_set`, an optional search `query`, and a `time_range`; exactly one variant carries the `baseline` flag. `client.experiments.get` returns the full comparison — per-variant metrics grouped by entity (`sessions`, `users`, `tools`, `signals`, `behaviours`), where every metric is a `{ "value": ..., "delta": ... }` pair whose `delta` is the signed change versus the baseline (`None` on the baseline variant itself). `tools`, `signals`, and `behaviours` also carry a `top` ranked list.
+
+## [9.0.0] - 2026-07-10
+
+### Changed (breaking)
+
+- `client.monitors.update` no longer accepts `target`, `trigger`, `metric`, or `condition`. Monitor target, trigger, metric, and incident-launching conditions are fixed after creation; use this call for `name`, `description`, and `severity` only.
+
+## [8.1.0] - 2026-07-08
+
+### Added
+
+- `SignalDetail.monitoring_state` gains a `failed` variant, returned when the most recent evaluation generation or realignment workflow for the signal ended in failure. It carries `phase` (`"generate"` or `"realign"`), an optional `evaluation_id` (present only for `realign`), and a nullable `reason` with the resolved failure message. A later successful workflow supersedes an older failure, so `failed` only reflects the latest run.
+
+## [8.0.1] - 2026-07-07
+
+### Changed
+
+- `client.spans.query` and `client.analytics.query` with `stream: "spans"` now use `SpanRowFilterSet` for `filters` — span row filters reject the `gtePercentile` operator (returns `400`). Use `client.analytics.query` with `{ "kind": "percentile", "field": ..., "p": ... }` for span percentile metrics instead.
+
 ## [8.0.0] - 2026-07-06
 
 ### Changed (breaking)

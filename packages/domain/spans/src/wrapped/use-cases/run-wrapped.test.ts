@@ -92,6 +92,7 @@ const makeReader = (overrides?: Partial<ClaudeCodeSpanReaderShape>): ClaudeCodeS
   getBiggestWrite: () => Effect.succeed(null),
   getToolMix: () => Effect.succeed([]),
   getTopFiles: () => Effect.succeed([]),
+  getSkillUsage: () => Effect.succeed({ distinctUsed: 0, totalUses: 0, top: [] }),
   getTopBashCommands: () => Effect.succeed([]),
   getTopWorkspaces: () => Effect.succeed([]),
   getTopBranches: () => Effect.succeed([]),
@@ -104,6 +105,7 @@ const makeReader = (overrides?: Partial<ClaudeCodeSpanReaderShape>): ClaudeCodeS
       topFiles: [],
       topBranches: [],
       topBashCommands: [],
+      skills: [],
       dominantTool: null,
     }),
   getHeatmap: () => Effect.succeed([]),
@@ -129,9 +131,14 @@ const makeOrganizationRepository = (organization: Organization): (typeof Organiz
     id === organization.id
       ? Effect.succeed(organization)
       : Effect.fail(new NotFoundError({ entity: "Organization", id })),
+  findByIdForUpdate: (id) =>
+    id === organization.id
+      ? Effect.succeed(organization)
+      : Effect.fail(new NotFoundError({ entity: "Organization", id })),
   listByUserId: () => Effect.die("listByUserId not used"),
   save: () => Effect.die("save not used"),
   delete: () => Effect.die("delete not used"),
+  deleteIfExpiredUnclaimed: () => Effect.die("deleteIfExpiredUnclaimed not used"),
   countBySlug: () => Effect.die("countBySlug not used"),
   listExpiredUnclaimed: () => Effect.die("listExpiredUnclaimed not used"),
 })

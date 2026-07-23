@@ -1,5 +1,5 @@
 import { Text } from "@repo/ui"
-import { useEffect, useMemo, useRef, useState } from "react"
+import { useEffect, useMemo, useRef } from "react"
 import { useSpansByTraceCollection } from "../../../../../../../domains/spans/spans.collection.ts"
 import { SpanDetail } from "./spans-tab/span-detail/index.tsx"
 import { filterSpansWithAncestors } from "./spans-tab/span-filters.ts"
@@ -24,10 +24,9 @@ export function SpansTab({
   readonly onSelectSpan: (spanId: string) => void
   readonly isActive: boolean
 }) {
-  const { filters, clearFilters, toggleErrors, toggleTools, selectModel } = useSpanFilters()
+  const { filters, clearFilters, toggleErrors, toggleTools, toggleMemory, selectModel } = useSpanFilters()
   // Shares the cached spans collection with the Trace tab's fetch (same key → one fetch).
   const { data: spans, isLoading } = useSpansByTraceCollection({ projectId, traceId, startTimeFrom, startTimeTo })
-  const [isMinimized, setIsMinimized] = useState(() => selectedSpanId !== "")
   const treeContainerRef = useRef<HTMLDivElement | null>(null)
   const filteredSpans = useMemo(() => (spans ? filterSpansWithAncestors(spans, filters) : []), [filters, spans])
 
@@ -46,7 +45,6 @@ export function SpansTab({
   // alone is not sufficient.
   useEffect(() => {
     if (!selectedSpanId || !spans || spans.length === 0) return
-    setIsMinimized(true)
     requestAnimationFrame(() => {
       scrollSpanIntoView(treeContainerRef.current, selectedSpanId)
     })
@@ -55,7 +53,6 @@ export function SpansTab({
   function handleSelectSpan(spanId: string) {
     if (spanId === "" || spanId === selectedSpanId) {
       onSelectSpan("")
-      setIsMinimized(false)
       return
     }
     onSelectSpan(spanId)
@@ -63,11 +60,6 @@ export function SpansTab({
 
   function handleCloseDetail() {
     onSelectSpan("")
-    setIsMinimized(false)
-  }
-
-  function handleToggleMinimized() {
-    setIsMinimized((prev) => !prev)
   }
 
   if (isLoading) {
@@ -94,6 +86,7 @@ export function SpansTab({
           filters={filters}
           onToggleErrors={toggleErrors}
           onToggleTools={toggleTools}
+          onToggleMemory={toggleMemory}
           onSelectModel={selectModel}
           onClearFilters={clearFilters}
         />
@@ -111,6 +104,7 @@ export function SpansTab({
         filters={filters}
         onToggleErrors={toggleErrors}
         onToggleTools={toggleTools}
+        onToggleMemory={toggleMemory}
         onSelectModel={selectModel}
         onClearFilters={clearFilters}
       />
@@ -118,8 +112,6 @@ export function SpansTab({
         spans={filteredSpans}
         selectedSpanId={selectedSpanId}
         onSelectSpan={handleSelectSpan}
-        isMinimized={isMinimized && selectedSpanId !== ""}
-        onToggleMinimized={handleToggleMinimized}
         isActive={isActive}
       />
       {selectedSpanId !== "" && (

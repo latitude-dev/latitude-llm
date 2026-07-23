@@ -80,11 +80,12 @@ export {
   cleanupUserMembershipsUseCase,
 } from "./use-cases/cleanup-user-memberships.ts"
 export {
-  type CreateSampleProjectError,
-  type CreateSampleProjectInput,
-  type CreateSampleProjectResult,
-  createSampleProjectUseCase,
-} from "./use-cases/create-sample-project.ts"
+  type CompleteOnboardingError,
+  type CompleteOnboardingInput,
+  type CompleteOnboardingResult,
+  completeOnboardingUseCase,
+} from "./use-cases/complete-onboarding.ts"
+export { dismissShowcaseUseCase } from "./use-cases/dismiss-showcase.ts"
 export {
   type GenerateOrganizationClaimError,
   type GenerateOrganizationClaimInput,
@@ -99,12 +100,6 @@ export {
   type ListMembersResult,
   listMembersUseCase,
 } from "./use-cases/list-members.ts"
-export {
-  type ProvisionOrganizationWorkspaceError,
-  type ProvisionOrganizationWorkspaceInput,
-  type ProvisionOrganizationWorkspaceResult,
-  provisionOrganizationWorkspaceUseCase,
-} from "./use-cases/provision-organization-workspace.ts"
 export { type RemoveMemberInput, removeMemberUseCase } from "./use-cases/remove-member.ts"
 export {
   type TransferOwnershipInput,

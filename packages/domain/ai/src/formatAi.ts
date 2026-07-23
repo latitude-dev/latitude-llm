@@ -57,7 +57,7 @@ function formatLooseGenAIPart(part: GenAIPart): string {
 
 /** Concatenates all parts of a GenAI message */
 export function formatGenAIMessage(message: GenAIMessage): string {
-  return message.parts
+  return (message.parts ?? [])
     .map((p) => formatGenAIPart(p))
     .join("\n")
     .trim()

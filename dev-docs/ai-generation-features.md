@@ -17,6 +17,7 @@ Each feature is dogfooded into its own Latitude project (one project per AI feat
 | Signal Generation | `latitude-signal-generation` |
 | Optimization Proposal (GEPA) | `latitude-optimizations` |
 | Taxonomy Naming (propose themes / name cluster) | `latitude-taxonomy` |
+| Conversation Intelligence Moment Classification | `latitude-conversation-intelligence` |
 
 ## Issues
 
@@ -208,6 +209,27 @@ Each feature is dogfooded into its own Latitude project (one project per AI feat
 >
 > - `packages/domain/signals/src/use-cases/create-signal-from-prompt.ts`
 
+## Conversation intelligence
+
+> **Moment Classification**
+> Validates embedding-anchor moment candidates against one normalized session transcript. The model returns only the accepted compact candidate IDs; it cannot create, relabel, or alter persisted moment fields. Model resolves under feature `MOMENT_CLASSIFIER`.
+> **Tags:** `conversation-intelligence:moment-classifier`
+> **Metadata:**
+>
+> ```json
+> {
+>   "organizationId": "",
+>   "projectId": "",
+>   "sessionId": "",
+>   "candidateCount": 3,
+>   "nominatedCandidateCount": 5
+> }
+> ```
+>
+> **Called from:**
+>
+> - `packages/domain/conversation-intelligence/src/use-cases/analyze-session.ts`
+
 ## GEPA / optimization
 
 > **Optimization Proposal**
@@ -253,6 +275,24 @@ Two LLM calls name a taxonomy cluster; both route to `latitude-taxonomy`. The be
 >
 > - `packages/domain/taxonomy/src/use-cases/name-taxonomy.ts` (`generateClusterName`)
 
+> **Facet Extraction**
+> Compiles a facet's free-text `instructions` into a controlled prompt (system-owned guardrails the facet cannot override: one sentence, untrusted transcript, no PII, English, explicit "unclear", bounded length) and extracts a one-sentence answer per sampled session for a custom lens. Answers are embedded (`AI.embed`, not captured) and cached in `taxonomy_facet_projections` keyed `(facetId, sessionObservationId)`. Model resolves under feature `FACET_EXTRACTION` (default Bedrock `minimax.minimax-m2.5`).
+> **Tags:** `taxonomy:facet-extract`
+> **Metadata:**
+>
+> ```json
+> {
+>   "organizationId": "",
+>   "projectId": "",
+>   "facetId": "",
+>   "sessionObservationId": ""
+> }
+> ```
+>
+> **Called from:**
+>
+> - `packages/domain/taxonomy/src/use-cases/extract-facet-projections.ts` (`extractFacetProjectionsUseCase`)
+
 > **Name Cluster**
 > Collapses the candidate themes into one cluster topic name (2–5 words) and a one-sentence description.
 > **Tags:** `taxonomy:name-cluster`
@@ -270,4 +310,3 @@ Two LLM calls name a taxonomy cluster; both route to `latitude-taxonomy`. The be
 > **Called from:**
 >
 > - `packages/domain/taxonomy/src/use-cases/name-taxonomy.ts` (`generateClusterName`)
-

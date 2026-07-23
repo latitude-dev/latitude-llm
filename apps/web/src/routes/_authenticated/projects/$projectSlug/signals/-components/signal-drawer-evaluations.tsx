@@ -14,7 +14,7 @@ import {
 } from "@repo/ui"
 import { useForm } from "@tanstack/react-form"
 import { useNavigate, useParams } from "@tanstack/react-router"
-import { PencilIcon, RotateCwIcon, ShieldCheckIcon, Trash2Icon, XIcon } from "lucide-react"
+import { PencilIcon, RotateCwIcon, ShieldCheckIcon, Trash2Icon, TriangleAlertIcon, XIcon } from "lucide-react"
 import { type ReactNode, useEffect, useRef, useState } from "react"
 import {
   type EvaluationSummaryRecord,
@@ -227,6 +227,23 @@ const toTracked = (state: SignalAlignmentStateRecord): TrackedWorkflow | null =>
   return null
 }
 
+function AlignmentFailureNote({
+  phase,
+  reason,
+}: {
+  readonly phase: "generate" | "realign"
+  readonly reason: string | null
+}) {
+  return (
+    <div className="flex w-full items-start gap-2 px-1">
+      <Icon icon={TriangleAlertIcon} size="sm" color="destructive" className="shrink-0" />
+      <Text.H6 color="destructive">
+        {reason || `The ${phase === "generate" ? "generation" : "realignment"} failed for an unknown reason`}
+      </Text.H6>
+    </div>
+  )
+}
+
 export function SignalDrawerEvaluations({
   projectId,
   signalId,
@@ -252,6 +269,7 @@ export function SignalDrawerEvaluations({
   const deleteSignal = useDeleteSignal(projectId)
   const { data: signalDetail } = useSignalDetail({ projectId, signalId })
   const [tracked, setTracked] = useState<TrackedWorkflow | null>(null)
+  const [alignmentState, setAlignmentState] = useState<SignalAlignmentStateRecord | null>(null)
   const [monitorModalOpen, setMonitorModalOpen] = useState(false)
   const [realignEvaluationId, setRealignEvaluationId] = useState<string | null>(null)
   const [deleteEvaluationId, setDeleteEvaluationId] = useState<string | null>(null)
@@ -275,10 +293,17 @@ export function SignalDrawerEvaluations({
   })
 
   useEffect(() => {
-    let cancelled = false
     mountedRef.current = true
+    trackedRef.current = null
+    setTracked(null)
+    setAlignmentState(null)
     setHasAlignmentStateSynced(false)
 
+    // The detail route resolves the slug to the signal id asynchronously; don't
+    // poll until it's available (an empty id 404s the signal lookup).
+    if (signalId.length === 0) return
+
+    let cancelled = false
     const poll = async () => {
       try {
         const state = await getSignalAlignmentState({
@@ -294,13 +319,22 @@ export function SignalDrawerEvaluations({
 
         if (previous !== null && next === null) {
           await invalidateSignalQueries(projectId, signalId)
-          toast({
-            description:
-              previous.kind === "initial" ? "An evaluation has been generated" : "An evaluation has been realigned",
-          })
+          if (state.kind === "failed") {
+            toast({
+              variant: "destructive",
+              title: previous.kind === "initial" ? "Evaluation generation failed" : "Evaluation realignment failed",
+              description: state.reason ?? "The workflow failed for an unknown reason.",
+            })
+          } else {
+            toast({
+              description:
+                previous.kind === "initial" ? "An evaluation has been generated" : "An evaluation has been realigned",
+            })
+          }
         }
 
         setTracked(next)
+        setAlignmentState(state)
         setHasAlignmentStateSynced(true)
       } catch {
         // Transient failures keep the last known state until the next tick.
@@ -392,6 +426,7 @@ export function SignalDrawerEvaluations({
   }
 
   const isBusy = tracked !== null
+  const alignmentFailure = alignmentState?.kind === "failed" ? alignmentState : null
   const visibleEvaluations = evaluations.filter(
     (evaluation) => evaluation.archivedAt === null && evaluation.deletedAt === null,
   )
@@ -495,12 +530,17 @@ export function SignalDrawerEvaluations({
           </div>
           {monitorBlockedByLifecycle ? (
             <Tooltip asChild trigger={<span className="inline-flex">{monitorButton}</span>}>
-              <Text.H6 color="foregroundMuted">Unmute this signal first to generate an evaluation</Text.H6>
+              <Text.H6 color="foregroundMuted">
+                Unresolve or unignore this signal first to generate an evaluation
+              </Text.H6>
             </Tooltip>
           ) : (
             monitorButton
           )}
         </div>
+        {alignmentFailure?.phase === "generate" ? (
+          <AlignmentFailureNote phase="generate" reason={alignmentFailure.reason} />
+        ) : null}
         <Modal
           open={monitorModalOpen}
           onOpenChange={setMonitorModalOpen}
@@ -606,7 +646,7 @@ export function SignalDrawerEvaluations({
                   isLoading={isPrimaryEvaluationRealigning}
                 >
                   <Icon icon={RotateCwIcon} size="sm" />
-                  {isPrimaryEvaluationRealigning ? "Realigning" : "Realign"}
+                  {isPrimaryEvaluationRealigning ? "Realigning" : "Realign evaluation"}
                 </Button>
               </div>
             ) : editableDetector !== null ? (
@@ -634,6 +674,9 @@ export function SignalDrawerEvaluations({
               </div>
             ) : null}
           </div>
+        ) : null}
+        {alignmentFailure?.phase === "realign" ? (
+          <AlignmentFailureNote phase="realign" reason={alignmentFailure.reason} />
         ) : null}
         {hiddenEvaluationCount > 0 ? (
           <Text.H6 className="self-center text-center" color="foregroundMuted">

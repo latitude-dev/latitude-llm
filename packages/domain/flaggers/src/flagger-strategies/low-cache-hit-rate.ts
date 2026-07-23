@@ -1,4 +1,4 @@
-import type { TraceDetail } from "@domain/spans"
+import type { FlaggerConversation } from "../conversation.ts"
 import { detectLowCacheHitRateFlagger } from "../helpers.ts"
 import type { DetectionResult, FlaggerStrategy } from "./types.ts"
 
@@ -15,12 +15,12 @@ export const lowCacheHitRateStrategy: FlaggerStrategy = {
       "Flags large multi-turn traces where caching is active but fewer than 30% of input tokens were served from cache, signaling broken caching, without calling an LLM.",
   },
 
-  hasRequiredContext(trace: TraceDetail): boolean {
-    return trace.tokensInput + trace.tokensCacheRead + trace.tokensCacheCreate > 0
+  hasRequiredContext(conversation: FlaggerConversation): boolean {
+    return conversation.tokensInput + conversation.tokensCacheRead + conversation.tokensCacheCreate > 0
   },
 
-  detectDeterministically(trace: TraceDetail): DetectionResult {
-    const result = detectLowCacheHitRateFlagger(trace)
-    return result.matched ? { kind: "matched", feedback: result.feedback } : { kind: "no-match" }
+  detectDeterministically(conversation: FlaggerConversation): DetectionResult {
+    const result = detectLowCacheHitRateFlagger(conversation)
+    return result.matched ? { kind: "matched", feedback: result.feedback } : { kind: "unmatched" }
   },
 }

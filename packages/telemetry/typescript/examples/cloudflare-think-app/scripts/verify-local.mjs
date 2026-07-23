@@ -43,11 +43,22 @@ function makeThinkModel() {
               },
               {
                 type: "tool-call",
-                toolCallId: "call_get_weather",
-                toolName: "getWeather",
-                input: JSON.stringify({ city: "Barcelona" }),
+                toolCallId: "call_execute_codemode",
+                toolName: "execute",
+                input: JSON.stringify({
+                  code: `async () => {
+  const weather = await tools.getWeather({ city: "Barcelona" })
+  const budget = await tools.estimateTripBudget({ city: "Barcelona", days: 2, travelers: 1 })
+  const highlights = await tools.listCityHighlights({ city: "Barcelona" })
+  return { weather, budget, highlights }
+}`,
+                }),
               },
-              { type: "finish", finishReason: "tool-calls", usage: { inputTokens: 12, outputTokens: 3, totalTokens: 15 } },
+              {
+                type: "finish",
+                finishReason: "tool-calls",
+                usage: { inputTokens: 18, outputTokens: 8, totalTokens: 26 },
+              },
             ]
           : [
               { type: "stream-start", warnings: [] },
@@ -58,9 +69,13 @@ function makeThinkModel() {
                 timestamp: new Date(),
               },
               { type: "text-start", id: "text-1" },
-              { type: "text-delta", id: "text-1", delta: "Barcelona is sunny and 21C." },
+              {
+                type: "text-delta",
+                id: "text-1",
+                delta: "Barcelona is sunny, estimated at 190 EUR, with three local highlights.",
+              },
               { type: "text-end", id: "text-1" },
-              { type: "finish", finishReason: "stop", usage: { inputTokens: 20, outputTokens: 7, totalTokens: 27 } },
+              { type: "finish", finishReason: "stop", usage: { inputTokens: 30, outputTokens: 12, totalTokens: 42 } },
             ]
 
       return {
@@ -70,16 +85,57 @@ function makeThinkModel() {
   })
 }
 
-const getWeather = tool({
-  description: "Get the current weather for a city.",
+const codemodeTools = {
+  getWeather: tool({
+    description: "Get the current weather for a city.",
+    inputSchema: z.object({
+      city: z.string(),
+    }),
+    execute: async ({ city }) => ({
+      city,
+      temperatureC: 21,
+      conditions: "sunny",
+    }),
+  }),
+  estimateTripBudget: tool({
+    description: "Estimate a simple trip budget for a city.",
+    inputSchema: z.object({
+      city: z.string(),
+      days: z.number().int().positive(),
+      travelers: z.number().int().positive(),
+    }),
+    execute: async ({ city, days, travelers }) => ({
+      city,
+      estimatedEur: days * travelers * 95,
+    }),
+  }),
+  listCityHighlights: tool({
+    description: "List deterministic city highlights.",
+    inputSchema: z.object({
+      city: z.string(),
+    }),
+    execute: async ({ city }) => ({
+      city,
+      highlights: ["old town walk", "local market", "sunset viewpoint"],
+    }),
+  }),
+}
+
+const execute = tool({
+  description: "Mock the Cloudflare Think execute codemode tool for Node-local verification.",
   inputSchema: z.object({
-    city: z.string(),
+    code: z.string(),
   }),
-  execute: async ({ city }) => ({
-    city,
-    temperatureC: 21,
-    conditions: "sunny",
-  }),
+  execute: async ({ code }) => {
+    const weather = await codemodeTools.getWeather.execute({ city: "Barcelona" })
+    const budget = await codemodeTools.estimateTripBudget.execute({ city: "Barcelona", days: 2, travelers: 1 })
+    const highlights = await codemodeTools.listCityHighlights.execute({ city: "Barcelona" })
+    return {
+      code,
+      result: { weather, budget, highlights },
+      logs: ["mocked codemode execution with tools"],
+    }
+  },
 })
 
 async function runThinkTurn() {
@@ -88,8 +144,8 @@ async function runThinkTurn() {
   try {
     const result = streamText({
       model: makeThinkModel(),
-      messages: [{ role: "user", content: "What is the weather in Barcelona? Use the weather tool." }],
-      tools: { getWeather },
+      messages: [{ role: "user", content: "Use codemode and tools to plan a sunny weekend in Barcelona." }],
+      tools: { execute },
       stopWhen: stepCountIs(2),
       experimental_telemetry: {
         isEnabled: true,
@@ -101,6 +157,7 @@ async function runThinkTurn() {
             verifier: "cloudflare-think-app",
             continuation: false,
             messageCount: 1,
+            codemode: true,
           },
         }),
         functionId: "think-turn",
@@ -112,8 +169,6 @@ async function runThinkTurn() {
     for await (const delta of result.textStream) text += delta
 
     return { sessionId, text }
-  } catch (error) {
-    throw error
   } finally {
     await latitude.flush()
   }
@@ -144,6 +199,7 @@ async function waitForSpans(sessionId) {
     SELECT
       count(),
       countIf(name ILIKE '%tool%'),
+      countIf(tool_name = 'execute'),
       countIf(user_id = 'local-think-user'),
       countIf(provider != '')
     FROM spans
@@ -154,23 +210,37 @@ async function waitForSpans(sessionId) {
   `
 
   for (let attempt = 1; attempt <= 20; attempt += 1) {
-    const [spanCountRaw, toolSpanCountRaw, identifiedSpanCountRaw, providerSpanCountRaw] = (
+    const [spanCountRaw, toolSpanCountRaw, codemodeSpanCountRaw, identifiedSpanCountRaw, providerSpanCountRaw] = (
       await queryClickHouse(sql)
     ).split("\t")
     const spanCount = Number(spanCountRaw)
     const toolSpanCount = Number(toolSpanCountRaw)
+    const codemodeSpanCount = Number(codemodeSpanCountRaw)
     const identifiedSpanCount = Number(identifiedSpanCountRaw)
     const providerSpanCount = Number(providerSpanCountRaw)
-    if (spanCount > 0 && toolSpanCount > 0 && identifiedSpanCount === spanCount && providerSpanCount > 0) {
-      return { spanCount, toolSpanCount, identifiedSpanCount, providerSpanCount }
+    if (
+      spanCount > 0 &&
+      toolSpanCount > 0 &&
+      codemodeSpanCount > 0 &&
+      identifiedSpanCount === spanCount &&
+      providerSpanCount > 0
+    ) {
+      return { spanCount, toolSpanCount, codemodeSpanCount, identifiedSpanCount, providerSpanCount }
     }
     await sleep(500)
   }
 
-  throw new Error(`Expected identified model and tool spans in ClickHouse for session ${sessionId}`)
+  throw new Error(`Expected identified model and codemode tool spans in ClickHouse for session ${sessionId}`)
 }
 
 const { sessionId, text } = await runThinkTurn()
-const { spanCount, toolSpanCount, identifiedSpanCount, providerSpanCount } = await waitForSpans(sessionId)
+const { spanCount, toolSpanCount, codemodeSpanCount, identifiedSpanCount, providerSpanCount } =
+  await waitForSpans(sessionId)
 
-console.log(JSON.stringify({ ok: true, sessionId, text, spanCount, toolSpanCount, identifiedSpanCount, providerSpanCount }, null, 2))
+console.log(
+  JSON.stringify(
+    { ok: true, sessionId, text, spanCount, toolSpanCount, codemodeSpanCount, identifiedSpanCount, providerSpanCount },
+    null,
+    2,
+  ),
+)

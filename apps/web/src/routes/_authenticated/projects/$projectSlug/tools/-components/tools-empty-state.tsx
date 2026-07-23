@@ -13,7 +13,7 @@ export function ToolsEmptyState({ isLoading = false }: { readonly isLoading?: bo
           <Text.H5 color="foregroundMuted" centered>
             {isLoading
               ? "Preparing your tools view."
-              : "Tools appear automatically when your traces include tool definitions on LLM spans or tool-call spans. Instrument your agent with one of the Latitude telemetry SDKs and they will show up here."}
+              : "Tools appear automatically when your traces include tool definitions on LLM spans or tool-call spans."}
           </Text.H5>
         </div>
         {!isLoading ? (

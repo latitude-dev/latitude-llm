@@ -5,7 +5,14 @@ import {
   buildProjectScopedAiMetadata,
   resolveGenerationConfig,
 } from "@domain/ai"
-import { LATITUDE_TELEMETRY_PROJECT_SLUGS, type OrganizationId, type ProjectId } from "@domain/shared"
+import {
+  type ChSqlClient,
+  type CustomBehaviorId,
+  LATITUDE_TELEMETRY_PROJECT_SLUGS,
+  type OrganizationId,
+  type ProjectId,
+  type RepositoryError,
+} from "@domain/shared"
 import { Effect } from "effect"
 import { z } from "zod"
 import {
@@ -17,6 +24,7 @@ import {
   TAXONOMY_NAMING_TIMEOUT_MS,
 } from "../constants.ts"
 import type { TaxonomyCluster } from "../entities/cluster.ts"
+import type { TaxonomyMomentObservation } from "../entities/observation.ts"
 import { clamp, farthestPointSample } from "../helpers.ts"
 import { withTaxonomyClusterLock } from "../locks.ts"
 import { TaxonomyClusterRepository } from "../ports/taxonomy-cluster-repository.ts"
@@ -170,115 +178,183 @@ const generateWithCollisionGuard = (input: Omit<GenerateInput, "retryForbiddenNa
     }
   })
 
-export const nameClusterUseCase = (input: NameClusterInput) =>
-  Effect.gen(function* () {
-    yield* Effect.annotateCurrentSpan("taxonomy.projectId", input.projectId)
-    yield* Effect.annotateCurrentSpan("taxonomy.clusterId", input.clusterId)
-    const now = input.now ?? new Date()
-    const clusters = yield* TaxonomyClusterRepository
-    const observations = yield* TaxonomyObservationRepository
-    const cluster = yield* clusters.findById(input.clusterId)
+/**
+ * The scope a cluster is named within. The global taxonomy and each custom
+ * behavior share the same prompts, collision guard, and deepest-first ordering
+ * and differ only here: which sub-tree the siblings/children come from
+ * (`customBehaviorId`), and where the member embeddings/summaries are read from
+ * (`listMembers`). `nameClusterCore` owns everything else.
+ */
+interface ClusterNamingSource {
+  /** Omit for the global taxonomy; set to scope the cluster tree to a behavior. */
+  readonly customBehaviorId?: CustomBehaviorId
+  readonly listMembers: (input: {
+    readonly organizationId: OrganizationId
+    readonly projectId: ProjectId
+    readonly clusterId: TaxonomyCluster["id"]
+    readonly limit: number
+  }) => Effect.Effect<readonly TaxonomyMomentObservation[], RepositoryError, ChSqlClient>
+}
 
+interface NamingContext {
+  readonly cluster: TaxonomyCluster
+  readonly parent: TaxonomyCluster | null
+  readonly siblings: readonly TaxonomyCluster[]
+  readonly children: readonly TaxonomyCluster[]
+}
+
+interface MemberSummary {
+  readonly embedding: readonly number[]
+  readonly summary: string
+}
+
+const hasName = (cluster: TaxonomyCluster | null): cluster is TaxonomyCluster =>
+  cluster !== null && cluster.name !== "Pending"
+
+const loadNamingContext = (input: NameClusterInput, source: ClusterNamingSource) =>
+  Effect.gen(function* () {
+    const clusters = yield* TaxonomyClusterRepository
+    const cluster = yield* clusters.findById(input.clusterId)
     const parent =
       cluster.parentClusterId === null
         ? null
         : yield* clusters.findById(cluster.parentClusterId).pipe(Effect.orElseSucceed(() => null))
+    const scope = source.customBehaviorId ? { customBehaviorId: source.customBehaviorId } : {}
     const siblings = (yield* clusters.listActiveByProject({
       projectId: input.projectId,
       dimension: cluster.dimension,
       parentClusterId: cluster.parentClusterId,
+      ...scope,
     })).filter((candidate) => candidate.id !== cluster.id && candidate.name !== "Pending")
     const children = (yield* clusters.listActiveByProject({
       projectId: input.projectId,
       dimension: cluster.dimension,
       parentClusterId: cluster.id,
+      ...scope,
     })).filter((child) => child.name !== "Pending" && child.description.trim().length > 0)
+    return { cluster, parent, siblings, children } satisfies NamingContext
+  })
 
-    const rows = yield* observations.listAllByCluster({
+const loadMemberSummaries = (input: NameClusterInput, source: ClusterNamingSource) =>
+  Effect.gen(function* () {
+    const rows = yield* source.listMembers({
       organizationId: input.organizationId,
       projectId: input.projectId,
       clusterId: input.clusterId,
       limit: TAXONOMY_LIST_ALL_BY_CLUSTER_MAX,
     })
     const ranked = [...rows].sort((a, b) => b.startTime.getTime() - a.startTime.getTime())
-    const memberSummaries = ranked.flatMap((row) => {
+    return ranked.flatMap((row) => {
       const summary = readableObservationSummary(row.projectionMetadata.summary)
-      return summary === null ? [] : [{ embedding: row.embedding, summary }]
+      return summary === null ? [] : [{ embedding: row.embedding, summary } satisfies MemberSummary]
     })
+  })
 
-    let generated: NameTaxonomyResult
-    if (memberSummaries.length > 0) {
+const forbiddenNames = ({ parent, siblings, children }: NamingContext): readonly string[] => [
+  ...(hasName(parent) ? [parent.name] : []),
+  ...siblings.map((sibling) => sibling.name),
+  ...children.map((child) => child.name),
+]
+
+const parentContext = (parent: TaxonomyCluster | null) => ({
+  ...(hasName(parent) ? { parentName: parent.name } : {}),
+  ...(parent && parent.description.trim().length > 0 ? { parentDescription: parent.description } : {}),
+})
+
+const generateName = (input: NameClusterInput, context: NamingContext, members: readonly MemberSummary[]) =>
+  Effect.gen(function* () {
+    const { cluster, parent, children } = context
+    const shared = {
+      organizationId: input.organizationId,
+      projectId: input.projectId,
+      clusterId: input.clusterId,
+      forbiddenNames: forbiddenNames(context),
+      ...parentContext(parent),
+    }
+
+    if (members.length > 0) {
       // Leaf path (or interior with residue): name from direct member text.
       const selected = farthestPointSample(
-        memberSummaries.map((row) => row.embedding),
+        members.map((row) => row.embedding),
         sampleBudget(cluster.observationCount),
       )
       const samples = selected.flatMap((index) => {
-        const row = memberSummaries[index]
+        const row = members[index]
         return row === undefined ? [] : [row.summary]
       })
-      generated = yield* generateWithCollisionGuard({
-        organizationId: input.organizationId,
-        projectId: input.projectId,
-        clusterId: input.clusterId,
-        mode: "leaf",
-        samples,
-        forbiddenNames: [
-          ...(parent && parent.name !== "Pending" ? [parent.name] : []),
-          ...siblings.map((sibling) => sibling.name),
-          ...children.map((child) => child.name),
-        ],
-        ...(parent && parent.name !== "Pending" ? { parentName: parent.name } : {}),
-        ...(parent && parent.description.trim().length > 0 ? { parentDescription: parent.description } : {}),
-      })
-    } else if (children.length > 0) {
+      return yield* generateWithCollisionGuard({ ...shared, mode: "leaf", samples })
+    }
+
+    if (children.length > 0) {
       // Interior path: collapse already-named children into a broader umbrella.
       // Naming is run deepest-first by the workflow so children are stable.
       // The root cluster (no parent) uses a different mode because the LLM
       // tends to pick a name that fits its biggest child instead of a true
       // project-wide superset when run through the regular "interior" prompt.
-      const isRoot = parent === null
-      generated = yield* generateWithCollisionGuard({
-        organizationId: input.organizationId,
-        projectId: input.projectId,
-        clusterId: input.clusterId,
-        mode: isRoot ? "root" : "interior",
+      return yield* generateWithCollisionGuard({
+        ...shared,
+        mode: parent === null ? "root" : "interior",
         samples: children
           .slice(0, sampleBudget(children.reduce((sum, child) => sum + child.observationCount, 0)))
           .map((child) => `${child.name}: ${child.description}`),
-        forbiddenNames: [
-          ...(parent && parent.name !== "Pending" ? [parent.name] : []),
-          ...siblings.map((sibling) => sibling.name),
-          ...children.map((child) => child.name),
-        ],
-        ...(parent && parent.name !== "Pending" ? { parentName: parent.name } : {}),
-        ...(parent && parent.description.trim().length > 0 ? { parentDescription: parent.description } : {}),
       })
-    } else {
-      // No members, no named children — leave Pending so a later pass can
-      // try again once children are named.
-      return { name: cluster.name, description: cluster.description } satisfies NameTaxonomyResult
     }
 
-    // Save under the cluster lock against a fresh read: the LLM call above
-    // takes seconds, during which live online assignment mutates centroid/
-    // counters on the same row. A stale full-row upsert would clobber them.
-    yield* withTaxonomyClusterLock(
-      {
-        organizationId: input.organizationId,
-        clusterId: input.clusterId,
-        ttlSeconds: TAXONOMY_CLUSTER_LOCK_TTL_SECONDS,
-      },
-      Effect.gen(function* () {
-        const fresh = yield* clusters.findById(input.clusterId)
-        yield* clusters.save({
-          ...fresh,
-          name: generated.name,
-          description: generated.description,
-          clusteredAt: now,
-          updatedAt: now,
-        })
-      }),
-    )
+    // No members, no named children — leave Pending so a later pass can try
+    // again once children are named.
+    return null
+  })
+
+const persistName = (input: NameClusterInput, generated: NameTaxonomyResult, now: Date) =>
+  // Save under the cluster lock against a fresh read: the LLM call above takes
+  // seconds, during which live online assignment mutates centroid/counters on
+  // the same row. A stale full-row upsert would clobber them.
+  withTaxonomyClusterLock(
+    {
+      organizationId: input.organizationId,
+      clusterId: input.clusterId,
+      ttlSeconds: TAXONOMY_CLUSTER_LOCK_TTL_SECONDS,
+    },
+    Effect.gen(function* () {
+      const clusters = yield* TaxonomyClusterRepository
+      const fresh = yield* clusters.findById(input.clusterId)
+      yield* clusters.save({
+        ...fresh,
+        name: generated.name,
+        description: generated.description,
+        clusteredAt: now,
+        updatedAt: now,
+      })
+    }),
+  )
+
+export const nameClusterCore = (input: NameClusterInput, source: ClusterNamingSource) =>
+  Effect.gen(function* () {
+    yield* Effect.annotateCurrentSpan("taxonomy.projectId", input.projectId)
+    if (source.customBehaviorId) {
+      yield* Effect.annotateCurrentSpan("taxonomy.customBehaviorId", source.customBehaviorId)
+    }
+    yield* Effect.annotateCurrentSpan("taxonomy.clusterId", input.clusterId)
+    const now = input.now ?? new Date()
+
+    const context = yield* loadNamingContext(input, source)
+    const members = yield* loadMemberSummaries(input, source)
+    const generated = yield* generateName(input, context, members)
+    if (generated === null) {
+      return {
+        name: context.cluster.name,
+        description: context.cluster.description,
+      } satisfies NameTaxonomyResult
+    }
+
+    yield* persistName(input, generated, now)
     return generated satisfies NameTaxonomyResult
+  })
+
+export const nameClusterUseCase = (input: NameClusterInput) =>
+  Effect.gen(function* () {
+    const observations = yield* TaxonomyObservationRepository
+    return yield* nameClusterCore(input, {
+      listMembers: (params) => observations.listAllByCluster(params),
+    })
   }).pipe(Effect.withSpan("taxonomy.nameCluster"))

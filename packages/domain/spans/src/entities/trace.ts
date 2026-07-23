@@ -49,6 +49,7 @@ export const traceSchema = z.object({
   models: z.array(z.string()).readonly(),
   providers: z.array(z.string()).readonly(),
   serviceNames: z.array(z.string()).readonly(),
+  agentNames: z.array(z.string()).readonly(),
 
   rootSpanId: z.union([z.literal(""), spanIdSchema]), // root span id, empty string when no root span has been ingested
   rootSpanName: z.string(),

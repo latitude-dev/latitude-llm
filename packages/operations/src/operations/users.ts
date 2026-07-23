@@ -1,3 +1,4 @@
+import { listUserStoresUseCase } from "@domain/memories"
 import { ProjectRepository } from "@domain/projects"
 import { ExternalUserId, OrganizationId, ProjectId } from "@domain/shared"
 import { buildHistogramBucketScaffold, listUserSignalsUseCase } from "@domain/signals"
@@ -5,6 +6,7 @@ import { USER_SORT_FIELDS, UserAnalyticsRepository } from "@domain/spans"
 import { listUserBehavioursUseCase } from "@domain/taxonomy"
 import { createRoute, z } from "@hono/zod-openapi"
 import {
+  MemoryRepositoryLive,
   ScoreAnalyticsRepositoryLive,
   TaxonomyObservationRepositoryLive,
   UserAnalyticsRepositoryLive,
@@ -20,6 +22,7 @@ import { withTracing } from "@repo/observability"
 import { Effect, Layer } from "effect"
 import { defineOperation } from "../core/define-operation.ts"
 import type { OperationModule } from "../core/mount.ts"
+import { toUserMemoryStoresResponse, UserMemoryStoresSchema } from "../openapi/entities/memory.ts"
 import {
   bucketSecondsForRange,
   resolveUserRange,
@@ -38,7 +41,7 @@ import {
   UsersOverviewResponseSchema,
   UserUsageResponseSchema,
 } from "../openapi/entities/user.ts"
-import { openApiResponses, PROTECTED_SECURITY, ProjectParamsSchema } from "../openapi/schemas.ts"
+import { PROTECTED_SECURITY, ProjectParamsSchema, typedResponses } from "../openapi/schemas.ts"
 import type { OrganizationScopedEnv } from "../types.ts"
 
 const usersPath = "/projects/:projectSlug/users"
@@ -102,43 +105,38 @@ const listUsers = userEndpoint({
           .describe("Case-insensitive substring match on the user's id or email."),
       }),
     },
-    responses: openApiResponses({ status: 200, schema: UserListResponseSchema, description: "Page of end-users" }),
+    responses: typedResponses({ status: 200, schema: UserListResponseSchema, description: "Page of end-users" }),
   }),
   access: "read-only",
   rateLimitTier: "high",
-  handler: async (c) => {
-    const { projectSlug } = c.req.valid("param")
-    const { fromIso, toIso, limit, offset, sortBy, sortDirection, searchQuery } = c.req.valid("query")
-    const organizationId = c.var.organization.id
-    if (isInvalidRange(fromIso, toIso)) return c.json({ error: INVALID_RANGE_MESSAGE }, 400)
-    const { from, to } = resolveUserRange(fromIso, toIso)
-    const trimmedSearch = searchQuery?.trim() || undefined
+  execute: (input, ctx) =>
+    Effect.gen(function* () {
+      const { projectSlug } = input.params
+      const { fromIso, toIso, limit, offset, sortBy, sortDirection, searchQuery } = input.query
+      if (isInvalidRange(fromIso, toIso)) return { status: 400, body: { error: INVALID_RANGE_MESSAGE } } as const
+      const { from, to } = resolveUserRange(fromIso, toIso)
+      const trimmedSearch = searchQuery?.trim() || undefined
 
-    const page = await Effect.runPromise(
-      Effect.gen(function* () {
-        const projectRepo = yield* ProjectRepository
-        const project = yield* projectRepo.findBySlug(projectSlug)
-        const repo = yield* UserAnalyticsRepository
-        return yield* repo.listByProjectId({
-          organizationId: OrganizationId(organizationId as string),
-          projectId: ProjectId(project.id as string),
-          options: {
-            ...(limit !== undefined ? { limit } : {}),
-            ...(offset !== undefined ? { offset } : {}),
-            ...(sortBy ? { sortBy, sortDirection: sortDirection ?? "desc" } : {}),
-            ...(trimmedSearch ? { searchQuery: trimmedSearch } : {}),
-            timeRange: { from, to },
-          },
-        })
-      }).pipe(
-        withPostgres(ProjectRepositoryLive, c.var.postgresClient, organizationId),
-        withClickHouse(UserAnalyticsRepositoryLive, c.var.clickhouse, organizationId),
-        withTracing,
-      ),
-    )
-
-    return c.json(toUserListResponse(page), 200)
-  },
+      const projectRepo = yield* ProjectRepository
+      const project = yield* projectRepo.findBySlug(projectSlug)
+      const repo = yield* UserAnalyticsRepository
+      const page = yield* repo.listByProjectId({
+        organizationId: OrganizationId(ctx.organization.id as string),
+        projectId: ProjectId(project.id as string),
+        options: {
+          ...(limit !== undefined ? { limit } : {}),
+          ...(offset !== undefined ? { offset } : {}),
+          ...(sortBy ? { sortBy, sortDirection: sortDirection ?? "desc" } : {}),
+          ...(trimmedSearch ? { searchQuery: trimmedSearch } : {}),
+          timeRange: { from, to },
+        },
+      })
+      return { status: 200, body: toUserListResponse(page) } as const
+    }).pipe(
+      withPostgres(ProjectRepositoryLive, ctx.postgresClient, ctx.organization.id),
+      withClickHouse(UserAnalyticsRepositoryLive, ctx.clickhouse, ctx.organization.id),
+      withTracing,
+    ),
 })
 
 const getUsersOverview = userEndpoint({
@@ -157,38 +155,33 @@ const getUsersOverview = userEndpoint({
       params: ProjectParamsSchema,
       query: z.object({ ...rangeQuery }),
     },
-    responses: openApiResponses({ status: 200, schema: UsersOverviewResponseSchema, description: "Users overview" }),
+    responses: typedResponses({ status: 200, schema: UsersOverviewResponseSchema, description: "Users overview" }),
   }),
   access: "read-only",
   rateLimitTier: "medium",
-  handler: async (c) => {
-    const { projectSlug } = c.req.valid("param")
-    const { fromIso, toIso } = c.req.valid("query")
-    const organizationId = c.var.organization.id
-    if (isInvalidRange(fromIso, toIso)) return c.json({ error: INVALID_RANGE_MESSAGE }, 400)
-    const { from, to } = resolveUserRange(fromIso, toIso)
-    const bucketSeconds = bucketSecondsForRange(from, to)
+  execute: (input, ctx) =>
+    Effect.gen(function* () {
+      const { projectSlug } = input.params
+      const { fromIso, toIso } = input.query
+      if (isInvalidRange(fromIso, toIso)) return { status: 400, body: { error: INVALID_RANGE_MESSAGE } } as const
+      const { from, to } = resolveUserRange(fromIso, toIso)
+      const bucketSeconds = bucketSecondsForRange(from, to)
 
-    const overview = await Effect.runPromise(
-      Effect.gen(function* () {
-        const projectRepo = yield* ProjectRepository
-        const project = yield* projectRepo.findBySlug(projectSlug)
-        const repo = yield* UserAnalyticsRepository
-        return yield* repo.getOverviewByProjectId({
-          organizationId: OrganizationId(organizationId as string),
-          projectId: ProjectId(project.id as string),
-          timeRange: { from, to },
-          bucketSeconds,
-        })
-      }).pipe(
-        withPostgres(ProjectRepositoryLive, c.var.postgresClient, organizationId),
-        withClickHouse(UserAnalyticsRepositoryLive, c.var.clickhouse, organizationId),
-        withTracing,
-      ),
-    )
-
-    return c.json(toUsersOverviewResponse(overview, { from, to, bucketSeconds }), 200)
-  },
+      const projectRepo = yield* ProjectRepository
+      const project = yield* projectRepo.findBySlug(projectSlug)
+      const repo = yield* UserAnalyticsRepository
+      const overview = yield* repo.getOverviewByProjectId({
+        organizationId: OrganizationId(ctx.organization.id as string),
+        projectId: ProjectId(project.id as string),
+        timeRange: { from, to },
+        bucketSeconds,
+      })
+      return { status: 200, body: toUsersOverviewResponse(overview, { from, to, bucketSeconds }) } as const
+    }).pipe(
+      withPostgres(ProjectRepositoryLive, ctx.postgresClient, ctx.organization.id),
+      withClickHouse(UserAnalyticsRepositoryLive, ctx.clickhouse, ctx.organization.id),
+      withTracing,
+    ),
 })
 
 const getUserActivity = userEndpoint({
@@ -207,42 +200,37 @@ const getUserActivity = userEndpoint({
       params: UserParamsSchema,
       query: z.object({ ...rangeQuery, ...errorsOnlyQuery }),
     },
-    responses: openApiResponses({ status: 200, schema: UserActivityResponseSchema, description: "Activity histogram" }),
+    responses: typedResponses({ status: 200, schema: UserActivityResponseSchema, description: "Activity histogram" }),
   }),
   access: "read-only",
   rateLimitTier: "medium",
-  handler: async (c) => {
-    const { projectSlug, userId } = c.req.valid("param")
-    const { fromIso, toIso, errorsOnly } = c.req.valid("query")
-    const organizationId = c.var.organization.id
-    if (isInvalidRange(fromIso, toIso)) return c.json({ error: INVALID_RANGE_MESSAGE }, 400)
-    const { from, to } = resolveUserRange(fromIso, toIso)
-    const bucketSeconds = bucketSecondsForRange(from, to)
-    const scaffold = buildHistogramBucketScaffold({ from, to, bucketSeconds })
-    const errors = coerceErrorsOnly(errorsOnly)
+  execute: (input, ctx) =>
+    Effect.gen(function* () {
+      const { projectSlug, userId } = input.params
+      const { fromIso, toIso, errorsOnly } = input.query
+      if (isInvalidRange(fromIso, toIso)) return { status: 400, body: { error: INVALID_RANGE_MESSAGE } } as const
+      const { from, to } = resolveUserRange(fromIso, toIso)
+      const bucketSeconds = bucketSecondsForRange(from, to)
+      const scaffold = buildHistogramBucketScaffold({ from, to, bucketSeconds })
+      const errors = coerceErrorsOnly(errorsOnly)
 
-    const series = await Effect.runPromise(
-      Effect.gen(function* () {
-        const projectRepo = yield* ProjectRepository
-        const project = yield* projectRepo.findBySlug(projectSlug)
-        const repo = yield* UserAnalyticsRepository
-        return yield* repo.activityByUserIds({
-          organizationId: OrganizationId(organizationId as string),
-          projectId: ProjectId(project.id as string),
-          userIds: [ExternalUserId(userId)],
-          timeRange: { from, to },
-          bucketSeconds,
-          ...(errors === undefined ? {} : { errorsOnly: errors }),
-        })
-      }).pipe(
-        withPostgres(ProjectRepositoryLive, c.var.postgresClient, organizationId),
-        withClickHouse(UserAnalyticsRepositoryLive, c.var.clickhouse, organizationId),
-        withTracing,
-      ),
-    )
-
-    return c.json(toUserActivityResponse(series, scaffold, { from, to, bucketSeconds }), 200)
-  },
+      const projectRepo = yield* ProjectRepository
+      const project = yield* projectRepo.findBySlug(projectSlug)
+      const repo = yield* UserAnalyticsRepository
+      const series = yield* repo.activityByUserIds({
+        organizationId: OrganizationId(ctx.organization.id as string),
+        projectId: ProjectId(project.id as string),
+        userIds: [ExternalUserId(userId)],
+        timeRange: { from, to },
+        bucketSeconds,
+        ...(errors === undefined ? {} : { errorsOnly: errors }),
+      })
+      return { status: 200, body: toUserActivityResponse(series, scaffold, { from, to, bucketSeconds }) } as const
+    }).pipe(
+      withPostgres(ProjectRepositoryLive, ctx.postgresClient, ctx.organization.id),
+      withClickHouse(UserAnalyticsRepositoryLive, ctx.clickhouse, ctx.organization.id),
+      withTracing,
+    ),
 })
 
 const getUserUsage = userEndpoint({
@@ -265,38 +253,33 @@ const getUserUsage = userEndpoint({
         ...errorsOnlyQuery,
       }),
     },
-    responses: openApiResponses({ status: 200, schema: UserUsageResponseSchema, description: "Usage breakdown" }),
+    responses: typedResponses({ status: 200, schema: UserUsageResponseSchema, description: "Usage breakdown" }),
   }),
   access: "read-only",
   rateLimitTier: "medium",
-  handler: async (c) => {
-    const { projectSlug, userId } = c.req.valid("param")
-    const { dimension, limit, errorsOnly } = c.req.valid("query")
-    const organizationId = c.var.organization.id
-    const errors = coerceErrorsOnly(errorsOnly)
+  execute: (input, ctx) =>
+    Effect.gen(function* () {
+      const { projectSlug, userId } = input.params
+      const { dimension, limit, errorsOnly } = input.query
+      const errors = coerceErrorsOnly(errorsOnly)
 
-    const slices = await Effect.runPromise(
-      Effect.gen(function* () {
-        const projectRepo = yield* ProjectRepository
-        const project = yield* projectRepo.findBySlug(projectSlug)
-        const repo = yield* UserAnalyticsRepository
-        return yield* repo.usageBreakdownByUserId({
-          organizationId: OrganizationId(organizationId as string),
-          projectId: ProjectId(project.id as string),
-          userId: ExternalUserId(userId),
-          dimension,
-          ...(limit === undefined ? {} : { limit }),
-          ...(errors === undefined ? {} : { errorsOnly: errors }),
-        })
-      }).pipe(
-        withPostgres(ProjectRepositoryLive, c.var.postgresClient, organizationId),
-        withClickHouse(UserAnalyticsRepositoryLive, c.var.clickhouse, organizationId),
-        withTracing,
-      ),
-    )
-
-    return c.json(toUserUsageResponse(slices), 200)
-  },
+      const projectRepo = yield* ProjectRepository
+      const project = yield* projectRepo.findBySlug(projectSlug)
+      const repo = yield* UserAnalyticsRepository
+      const slices = yield* repo.usageBreakdownByUserId({
+        organizationId: OrganizationId(ctx.organization.id as string),
+        projectId: ProjectId(project.id as string),
+        userId: ExternalUserId(userId),
+        dimension,
+        ...(limit === undefined ? {} : { limit }),
+        ...(errors === undefined ? {} : { errorsOnly: errors }),
+      })
+      return { status: 200, body: toUserUsageResponse(slices) } as const
+    }).pipe(
+      withPostgres(ProjectRepositoryLive, ctx.postgresClient, ctx.organization.id),
+      withClickHouse(UserAnalyticsRepositoryLive, ctx.clickhouse, ctx.organization.id),
+      withTracing,
+    ),
 })
 
 const listUserSignals = userEndpoint({
@@ -317,34 +300,33 @@ const listUserSignals = userEndpoint({
         limit: z.coerce.number().int().min(1).max(100).optional().describe("Maximum number of signals to return."),
       }),
     },
-    responses: openApiResponses({ status: 200, schema: UserSignalsResponseSchema, description: "User signals" }),
+    responses: typedResponses({ status: 200, schema: UserSignalsResponseSchema, description: "User signals" }),
   }),
   access: "read-only",
   rateLimitTier: "low",
-  handler: async (c) => {
-    const { projectSlug, userId } = c.req.valid("param")
-    const { limit } = c.req.valid("query")
-    const organizationId = c.var.organization.id
+  execute: (input, ctx) =>
+    Effect.gen(function* () {
+      const { projectSlug, userId } = input.params
+      const { limit } = input.query
 
-    const items = await Effect.runPromise(
-      Effect.gen(function* () {
-        const projectRepo = yield* ProjectRepository
-        const project = yield* projectRepo.findBySlug(projectSlug)
-        return yield* listUserSignalsUseCase({
-          organizationId: OrganizationId(organizationId as string),
-          projectId: ProjectId(project.id as string),
-          userId: ExternalUserId(userId),
-          ...(limit === undefined ? {} : { limit }),
-        })
-      }).pipe(
-        withPostgres(Layer.mergeAll(ProjectRepositoryLive, SignalRepositoryLive), c.var.postgresClient, organizationId),
-        withClickHouse(ScoreAnalyticsRepositoryLive, c.var.clickhouse, organizationId),
-        withTracing,
+      const projectRepo = yield* ProjectRepository
+      const project = yield* projectRepo.findBySlug(projectSlug)
+      const items = yield* listUserSignalsUseCase({
+        organizationId: OrganizationId(ctx.organization.id as string),
+        projectId: ProjectId(project.id as string),
+        userId: ExternalUserId(userId),
+        ...(limit === undefined ? {} : { limit }),
+      })
+      return { status: 200, body: { items: items.map(toUserSignalResponse) } } as const
+    }).pipe(
+      withPostgres(
+        Layer.mergeAll(ProjectRepositoryLive, SignalRepositoryLive),
+        ctx.postgresClient,
+        ctx.organization.id,
       ),
-    )
-
-    return c.json({ items: items.map(toUserSignalResponse) }, 200)
-  },
+      withClickHouse(ScoreAnalyticsRepositoryLive, ctx.clickhouse, ctx.organization.id),
+      withTracing,
+    ),
 })
 
 const listUserBehaviours = userEndpoint({
@@ -365,38 +347,70 @@ const listUserBehaviours = userEndpoint({
         limit: z.coerce.number().int().min(1).max(100).optional().describe("Maximum number of behaviours to return."),
       }),
     },
-    responses: openApiResponses({ status: 200, schema: UserBehavioursResponseSchema, description: "User behaviours" }),
+    responses: typedResponses({ status: 200, schema: UserBehavioursResponseSchema, description: "User behaviours" }),
   }),
   access: "read-only",
   rateLimitTier: "low",
-  handler: async (c) => {
-    const { projectSlug, userId } = c.req.valid("param")
-    const { limit } = c.req.valid("query")
-    const organizationId = c.var.organization.id
+  execute: (input, ctx) =>
+    Effect.gen(function* () {
+      const { projectSlug, userId } = input.params
+      const { limit } = input.query
 
-    const items = await Effect.runPromise(
-      Effect.gen(function* () {
-        const projectRepo = yield* ProjectRepository
-        const project = yield* projectRepo.findBySlug(projectSlug)
-        return yield* listUserBehavioursUseCase({
-          organizationId: OrganizationId(organizationId as string),
-          projectId: ProjectId(project.id as string),
-          userId: ExternalUserId(userId),
-          ...(limit === undefined ? {} : { limit }),
-        })
-      }).pipe(
-        withPostgres(
-          Layer.mergeAll(ProjectRepositoryLive, TaxonomyClusterRepositoryLive),
-          c.var.postgresClient,
-          organizationId,
-        ),
-        withClickHouse(TaxonomyObservationRepositoryLive, c.var.clickhouse, organizationId),
-        withTracing,
+      const projectRepo = yield* ProjectRepository
+      const project = yield* projectRepo.findBySlug(projectSlug)
+      const items = yield* listUserBehavioursUseCase({
+        organizationId: OrganizationId(ctx.organization.id as string),
+        projectId: ProjectId(project.id as string),
+        userId: ExternalUserId(userId),
+        ...(limit === undefined ? {} : { limit }),
+      })
+      return { status: 200, body: { items: items.map(toUserBehaviourResponse) } } as const
+    }).pipe(
+      withPostgres(
+        Layer.mergeAll(ProjectRepositoryLive, TaxonomyClusterRepositoryLive),
+        ctx.postgresClient,
+        ctx.organization.id,
       ),
-    )
+      withClickHouse(TaxonomyObservationRepositoryLive, ctx.clickhouse, ctx.organization.id),
+      withTracing,
+    ),
+})
 
-    return c.json({ items: items.map(toUserBehaviourResponse) }, 200)
-  },
+const listUserMemoryStores = userEndpoint({
+  route: createRoute({
+    method: "get",
+    path: "/{userId}/memory",
+    name: "listUserMemoryStores",
+    tags: ["Users"],
+    group: "users",
+    sdkMethod: "memoryStores",
+    summary: "List memory stores an end-user accessed",
+    description:
+      "Returns the memory stores the end-user accessed (reads and writes both count as access), most recent access first. Capped at the 1000 most recent stores. Each store links to the memory browsing operations under the `memory` group.",
+    security: PROTECTED_SECURITY,
+    request: { params: UserParamsSchema },
+    responses: typedResponses({ status: 200, schema: UserMemoryStoresSchema, description: "Memory stores accessed" }),
+  }),
+  access: "read-only",
+  rateLimitTier: "low",
+  execute: (input, ctx) =>
+    Effect.gen(function* () {
+      const { projectSlug, userId } = input.params
+
+      const projectRepo = yield* ProjectRepository
+      const project = yield* projectRepo.findBySlug(projectSlug)
+
+      const stores = yield* listUserStoresUseCase({
+        organizationId: OrganizationId(ctx.organization.id as string),
+        projectId: ProjectId(project.id as string),
+        userId: ExternalUserId(userId),
+      })
+      return { status: 200, body: toUserMemoryStoresResponse(stores) } as const
+    }).pipe(
+      withPostgres(ProjectRepositoryLive, ctx.postgresClient, ctx.organization.id),
+      withClickHouse(MemoryRepositoryLive, ctx.clickhouse, ctx.organization.id),
+      withTracing,
+    ),
 })
 
 const getUser = userEndpoint({
@@ -415,36 +429,31 @@ const getUser = userEndpoint({
       params: UserParamsSchema,
       query: z.object({ ...errorsOnlyQuery }),
     },
-    responses: openApiResponses({ status: 200, schema: UserProfileResponseSchema, description: "User profile" }),
+    responses: typedResponses({ status: 200, schema: UserProfileResponseSchema, description: "User profile" }),
   }),
   access: "read-only",
   rateLimitTier: "low",
-  handler: async (c) => {
-    const { projectSlug, userId } = c.req.valid("param")
-    const { errorsOnly } = c.req.valid("query")
-    const organizationId = c.var.organization.id
-    const errors = coerceErrorsOnly(errorsOnly)
+  execute: (input, ctx) =>
+    Effect.gen(function* () {
+      const { projectSlug, userId } = input.params
+      const { errorsOnly } = input.query
+      const errors = coerceErrorsOnly(errorsOnly)
 
-    const profile = await Effect.runPromise(
-      Effect.gen(function* () {
-        const projectRepo = yield* ProjectRepository
-        const project = yield* projectRepo.findBySlug(projectSlug)
-        const repo = yield* UserAnalyticsRepository
-        return yield* repo.findByUserId({
-          organizationId: OrganizationId(organizationId as string),
-          projectId: ProjectId(project.id as string),
-          userId: ExternalUserId(userId),
-          ...(errors === undefined ? {} : { errorsOnly: errors }),
-        })
-      }).pipe(
-        withPostgres(ProjectRepositoryLive, c.var.postgresClient, organizationId),
-        withClickHouse(UserAnalyticsRepositoryLive, c.var.clickhouse, organizationId),
-        withTracing,
-      ),
-    )
-
-    return c.json(toUserProfileResponse(profile), 200)
-  },
+      const projectRepo = yield* ProjectRepository
+      const project = yield* projectRepo.findBySlug(projectSlug)
+      const repo = yield* UserAnalyticsRepository
+      const profile = yield* repo.findByUserId({
+        organizationId: OrganizationId(ctx.organization.id as string),
+        projectId: ProjectId(project.id as string),
+        userId: ExternalUserId(userId),
+        ...(errors === undefined ? {} : { errorsOnly: errors }),
+      })
+      return { status: 200, body: toUserProfileResponse(profile) } as const
+    }).pipe(
+      withPostgres(ProjectRepositoryLive, ctx.postgresClient, ctx.organization.id),
+      withClickHouse(UserAnalyticsRepositoryLive, ctx.clickhouse, ctx.organization.id),
+      withTracing,
+    ),
 })
 
 export const usersModule: OperationModule = {
@@ -458,6 +467,7 @@ export const usersModule: OperationModule = {
     getUserUsage,
     listUserSignals,
     listUserBehaviours,
+    listUserMemoryStores,
     getUser,
   ],
 }

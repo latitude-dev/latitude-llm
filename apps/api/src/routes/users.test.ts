@@ -154,6 +154,21 @@ describe("Users Routes Integration", () => {
     expect(body.items).toEqual([])
   })
 
+  it<ApiTestContext>("GET /{userId}/memory returns an empty list for a never-seen user", async ({ app, database }) => {
+    const tenant = await createTenantSetup(database)
+    const slug = await createProjectRecord(database, tenant.organizationId, "111111111111111111111111")
+
+    const res = await get(app, `${slug}/users/never-seen-user/memory`, tenant.apiKeyToken)
+    expect(res.status).toBe(200)
+    const body = (await res.json()) as { items: unknown[] }
+    expect(body.items).toEqual([])
+  })
+
+  it<ApiTestContext>("GET /{userId}/memory rejects unauthenticated requests with 401", async ({ app }) => {
+    const res = await get(app, "foo/users/some-user/memory")
+    expect(res.status).toBe(401)
+  })
+
   it<ApiTestContext>("GET / returns 404 for an unknown project slug", async ({ app, database }) => {
     const tenant = await createTenantSetup(database)
     const res = await get(app, "does-not-exist/users", tenant.apiKeyToken)

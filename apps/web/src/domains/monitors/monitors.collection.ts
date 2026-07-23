@@ -412,13 +412,8 @@ export function useMonitorRuleActions(projectId: string) {
   const onSuccess = () => invalidateMonitorQueries(queryClient, projectId)
 
   const editRule = useMutation({
-    mutationFn: (input: {
-      readonly monitorId: string
-      readonly kind?: MonitorRuleDraft["kind"]
-      readonly source?: { readonly type: "savedSearch" | "monitor" | "signal"; readonly id: string | null }
-      readonly condition?: AlertIncidentCondition | null
-      readonly severity?: AlertSeverity
-    }) => updateMonitorRule({ data: input }),
+    mutationFn: (input: { readonly monitorId: string; readonly severity?: AlertSeverity }) =>
+      updateMonitorRule({ data: input }),
     onSuccess,
   })
 

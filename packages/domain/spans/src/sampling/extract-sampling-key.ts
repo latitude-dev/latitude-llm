@@ -20,7 +20,9 @@ export function extractSamplingKey(request: OtlpExportTraceServiceRequest): stri
         if (fromSpan) return fromSpan
         const fromResource = first(sessionIdCandidates, resourceAttrs)
         if (fromResource) return fromResource
-        return span.traceId || null
+        // OTLP/JSON bodies are cast, not validated, so `traceId` can arrive missing or non-string;
+        // a non-string key would crash `deterministicSample`'s hash update.
+        return typeof span.traceId === "string" && span.traceId ? span.traceId : null
       }
     }
   }

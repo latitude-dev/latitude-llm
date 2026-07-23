@@ -36,6 +36,9 @@ const makeSignal = (overrides: Partial<Signal> = {}): Signal => ({
   priority: null,
   centroid: createSignalCentroid(),
   clusteredAt: new Date("2026-03-01T00:00:00.000Z"),
+  resolvedAt: null,
+  ignoredAt: null,
+  regressedAt: null,
   mutedAt: null,
   deletedAt: null,
   createdAt: new Date("2026-03-01T00:00:00.000Z"),
@@ -233,7 +236,7 @@ describe("listSignalsUseCase", () => {
     const now = new Date("2026-04-10T00:00:00.000Z")
     const resolvedSignal = makeSignal({
       id: SignalId("r".repeat(24)),
-      mutedAt: new Date("2026-04-08T00:00:00.000Z"),
+      resolvedAt: new Date("2026-04-08T00:00:00.000Z"),
     })
     const { repository: signalRepository } = createFakeSignalRepository([resolvedSignal])
     const { repository: evaluationRepository, listBySignalIdsCalls } = createEvaluationRepository()
@@ -282,7 +285,8 @@ describe("listSignalsUseCase", () => {
     expect(result.items).toEqual([])
     expect(result.totalCount).toBe(0)
     expect(result.hasAnySignals).toBe(true)
-    expect(result.analytics.counts.ongoingSignals).toBe(1)
+    expect(result.analytics.counts.ongoingSignals).toBe(0)
+    expect(result.analytics.counts.resolvedSignals).toBe(1)
     expect(listBySignalIdsCalls).toEqual([])
   })
 
@@ -302,6 +306,7 @@ describe("listSignalsUseCase", () => {
     })
     const ignoredSignal = makeSignal({
       id: SignalId("cccccccccccccccccccccccc"),
+      ignoredAt: new Date("2026-04-02T12:00:00.000Z"),
       mutedAt: new Date("2026-04-02T12:00:00.000Z"),
       createdAt: new Date("2026-03-10T08:00:00.000Z"),
       updatedAt: new Date("2026-03-10T08:00:00.000Z"),
@@ -492,24 +497,95 @@ describe("listSignalsUseCase", () => {
     expect(result.hasAnySignals).toBe(true)
   })
 
+  it("includes a signal created in the selected window with zero occurrences in the analytics counts and items", async () => {
+    const now = new Date("2026-04-10T00:00:00.000Z")
+    const timeRange = { from: new Date("2026-03-11T00:00:00.000Z"), to: now }
+    const activeSignal = makeSignal({
+      id: SignalId("aaaaaaaaaaaaaaaaaaaaaaaa"),
+      priority: "high",
+      createdAt: new Date("2026-03-20T08:00:00.000Z"),
+      updatedAt: new Date("2026-03-20T08:00:00.000Z"),
+      clusteredAt: new Date("2026-03-20T08:00:00.000Z"),
+    })
+    // A freshly created user signal with no scores yet: no ClickHouse window
+    // metric, but its createdAt falls in the window, so it must still surface in
+    // the analytics path that drives the counts, public API list, and export.
+    const freshSignal = makeSignal({
+      id: SignalId("ffffffffffffffffffffffff"),
+      origin: "user",
+      source: "custom",
+      priority: "urgent",
+      centroid: null,
+      clusteredAt: null,
+      createdAt: new Date("2026-04-09T08:00:00.000Z"),
+      updatedAt: new Date("2026-04-09T08:00:00.000Z"),
+    })
+
+    const { repository: signalRepository } = createFakeSignalRepository([activeSignal, freshSignal])
+    const { repository: evaluationRepository } = createEvaluationRepository()
+    const { repository: scoreAnalyticsRepository } = createFakeScoreAnalyticsRepository({
+      listSignalWindowMetrics: () =>
+        Effect.succeed([
+          makeWindowMetric({
+            signalId: activeSignal.id,
+            occurrences: 5,
+            firstSeenAt: new Date("2026-04-01T00:00:00.000Z"),
+            lastSeenAt: new Date("2026-04-05T00:00:00.000Z"),
+          }),
+        ]),
+      aggregateBySignals: aggregateOccurrences([
+        makeOccurrence({
+          signalId: activeSignal.id,
+          totalOccurrences: 5,
+          firstSeenAt: new Date("2026-04-01T00:00:00.000Z"),
+          lastSeenAt: new Date("2026-04-05T00:00:00.000Z"),
+        }),
+      ]),
+    })
+
+    const result = await Effect.runPromise(
+      listSignalsUseCase({ organizationId, projectId, now, timeRange }).pipe(
+        Effect.provide(
+          Layer.mergeAll(
+            Layer.succeed(SignalRepository, signalRepository),
+            Layer.succeed(EvaluationRepository, evaluationRepository),
+            Layer.succeed(ScoreAnalyticsRepository, scoreAnalyticsRepository),
+            Layer.succeed(SqlClient, createFakeSqlClient({ organizationId })),
+            Layer.succeed(ChSqlClient, createFakeChSqlClient({ organizationId })),
+            provideSessionRepository,
+          ),
+        ),
+      ),
+    )
+
+    expect(result.totalCount).toBe(2)
+    // Priority-grouped: urgent (fresh) before high (active).
+    expect(result.items.map((issue) => issue.id)).toEqual([freshSignal.id, activeSignal.id])
+    const fresh = result.items.find((issue) => issue.id === freshSignal.id)
+    expect(fresh?.occurrences).toBe(0)
+    expect(result.priorityCounts.urgent).toBe(1)
+    expect(result.priorityCounts.high).toBe(1)
+  })
+
   it("keeps analytics independent from the lifecycle tab and hydrates only visible signal ids", async () => {
     const now = new Date("2026-04-10T12:00:00.000Z")
     const activeSignal = makeSignal({
       id: SignalId("a".repeat(24)),
       name: "Active issue",
     })
-    const regressedSignal = makeSignal({
+    const ignoredSignal = makeSignal({
       id: SignalId("b".repeat(24)),
-      name: "Regressed issue",
+      name: "Ignored issue",
+      ignoredAt: new Date("2026-04-05T00:00:00.000Z"),
       mutedAt: new Date("2026-04-05T00:00:00.000Z"),
     })
     const archivedSignal = makeSignal({
       id: SignalId("c".repeat(24)),
       name: "Archived issue",
-      mutedAt: new Date("2026-04-07T00:00:00.000Z"),
+      resolvedAt: new Date("2026-04-07T00:00:00.000Z"),
     })
 
-    const { repository: signalRepository } = createFakeSignalRepository([activeSignal, regressedSignal, archivedSignal])
+    const { repository: signalRepository } = createFakeSignalRepository([activeSignal, ignoredSignal, archivedSignal])
     const { repository: evaluationRepository, listBySignalIdsCalls } = createEvaluationRepository([
       makeEvaluation({
         id: EvaluationId("1".repeat(24)),
@@ -548,7 +624,7 @@ describe("listSignalsUseCase", () => {
             lastSeenAt: new Date("2026-04-09T00:00:00.000Z"),
           }),
           makeWindowMetric({
-            signalId: regressedSignal.id,
+            signalId: ignoredSignal.id,
             occurrences: 4,
             firstSeenAt: new Date("2026-03-02T00:00:00.000Z"),
             lastSeenAt: new Date("2026-04-08T00:00:00.000Z"),
@@ -568,7 +644,7 @@ describe("listSignalsUseCase", () => {
           lastSeenAt: new Date("2026-04-09T00:00:00.000Z"),
         }),
         makeOccurrence({
-          signalId: regressedSignal.id,
+          signalId: ignoredSignal.id,
           recentOccurrences: 1,
           baselineAvgOccurrences: 0,
           lastSeenAt: new Date("2026-04-08T00:00:00.000Z"),
@@ -601,7 +677,7 @@ describe("listSignalsUseCase", () => {
           })
           return [
             { signalId: activeSignal.id, buckets: [{ bucket: "2026-04-09", count: 5 }] },
-            { signalId: regressedSignal.id, buckets: [{ bucket: "2026-04-08", count: 4 }] },
+            { signalId: ignoredSignal.id, buckets: [{ bucket: "2026-04-08", count: 4 }] },
           ]
         }),
     })
@@ -631,7 +707,9 @@ describe("listSignalsUseCase", () => {
     expect(calls).toEqual([])
     expect(result.analytics.counts.newSignals).toBe(0)
     expect(result.analytics.counts.escalatingSignals).toBe(0)
-    expect(result.analytics.counts.ongoingSignals).toBe(3)
+    expect(result.analytics.counts.ongoingSignals).toBe(1)
+    expect(result.analytics.counts.resolvedSignals).toBe(1)
+    expect(result.analytics.counts.ignoredSignals).toBe(1)
     expect(result.analytics.counts.seenOccurrences).toBe(16)
     expect(result.items.map((item) => item.states)).toEqual([[SignalState.Ongoing]])
     expect(result.items.map((item) => item.id)).toEqual([activeSignal.id])
@@ -644,12 +722,13 @@ describe("listSignalsUseCase", () => {
     // Per-issue trend in the list keeps the daily 14-bar mini-bar.
     expect(result.items[0]?.trend).toHaveLength(14)
     expect(listBySignalIdsCalls).toEqual([[activeSignal.id]])
-    expect(histogramInputs[0]?.signalIds).toEqual([activeSignal.id, regressedSignal.id, archivedSignal.id])
-    expect(histogramInputs[0]?.from.toISOString()).toBe("2026-04-04T00:00:00.000Z")
-    expect(histogramInputs[0]?.to.toISOString()).toBe("2026-04-10T23:59:59.999Z")
+    expect(histogramInputs[0]?.signalIds).toEqual([activeSignal.id, ignoredSignal.id, archivedSignal.id])
+    // All-time window anchors to the latest occurrence (2026-04-09), not today (2026-04-10).
+    expect(histogramInputs[0]?.from.toISOString()).toBe("2026-04-03T00:00:00.000Z")
+    expect(histogramInputs[0]?.to.toISOString()).toBe("2026-04-09T23:59:59.999Z")
     expect(trendInputs[0]?.signalIds).toEqual([activeSignal.id])
-    expect(trendInputs[0]?.from.toISOString()).toBe("2026-03-28T00:00:00.000Z")
-    expect(trendInputs[0]?.to.toISOString()).toBe("2026-04-10T23:59:59.999Z")
+    expect(trendInputs[0]?.from.toISOString()).toBe("2026-03-27T00:00:00.000Z")
+    expect(trendInputs[0]?.to.toISOString()).toBe("2026-04-09T23:59:59.999Z")
   })
 
   it("attaches per-issue tag aggregates to the visible page", async () => {
@@ -922,6 +1001,73 @@ describe("listSignalsUseCase", () => {
       for (const [index, bucket] of histogram.entries()) {
         expect(Date.parse(bucket.bucket)).toBe(firstMs + index * widthMs)
       }
+    })
+
+    it("anchors the All-time histogram and trend to the latest activity when data predates today", async () => {
+      const now = new Date("2026-04-10T12:00:00.000Z")
+      const issue = makeSignal({ id: SignalId("o".repeat(24)), name: "Old-data issue" })
+      // Latest occurrence is three weeks before today: the window must end here, not at `now`.
+      const latestOccurrence = new Date("2026-03-20T00:00:00.000Z")
+
+      const { repository: signalRepository } = createFakeSignalRepository([issue])
+      const { repository: evaluationRepository } = createEvaluationRepository()
+      const histogramInputs: Array<{ from: Date; to: Date }> = []
+      const trendInputs: Array<{ from: Date; to: Date }> = []
+      const { repository: scoreAnalyticsRepository } = createFakeScoreAnalyticsRepository({
+        listSignalWindowMetrics: () =>
+          Effect.succeed([
+            makeWindowMetric({
+              signalId: issue.id,
+              occurrences: 4,
+              firstSeenAt: new Date("2026-03-01T00:00:00.000Z"),
+              lastSeenAt: latestOccurrence,
+            }),
+          ]),
+        aggregateBySignals: aggregateOccurrences([
+          makeOccurrence({
+            signalId: issue.id,
+            totalOccurrences: 4,
+            recentOccurrences: 4,
+            baselineAvgOccurrences: 1,
+            firstSeenAt: new Date("2026-03-01T00:00:00.000Z"),
+            lastSeenAt: latestOccurrence,
+          }),
+        ]),
+        histogramBySignals: ({ timeRange }) =>
+          Effect.sync(() => {
+            histogramInputs.push({ from: timeRange.from ?? new Date(0), to: timeRange.to ?? new Date(0) })
+            return []
+          }),
+        trendBySignals: ({ timeRange }) =>
+          Effect.sync(() => {
+            trendInputs.push({ from: timeRange.from ?? new Date(0), to: timeRange.to ?? new Date(0) })
+            return []
+          }),
+      })
+      createSignalSearch([])
+      sessionCount = 4
+
+      await Effect.runPromise(
+        listSignalsUseCase({ organizationId, projectId, now }).pipe(
+          Effect.provide(
+            Layer.mergeAll(
+              Layer.succeed(SignalRepository, signalRepository),
+              Layer.succeed(EvaluationRepository, evaluationRepository),
+              Layer.succeed(ScoreAnalyticsRepository, scoreAnalyticsRepository),
+              Layer.succeed(SqlClient, createFakeSqlClient({ organizationId })),
+              Layer.succeed(ChSqlClient, createFakeChSqlClient({ organizationId })),
+              provideSessionRepository,
+            ),
+          ),
+        ),
+      )
+
+      // Histogram: last 7 days ending at the latest occurrence (2026-03-20), not today.
+      expect(histogramInputs[0]?.from.toISOString()).toBe("2026-03-14T00:00:00.000Z")
+      expect(histogramInputs[0]?.to.toISOString()).toBe("2026-03-20T23:59:59.999Z")
+      // Trend: 14 days ending at the latest occurrence.
+      expect(trendInputs[0]?.from.toISOString()).toBe("2026-03-07T00:00:00.000Z")
+      expect(trendInputs[0]?.to.toISOString()).toBe("2026-03-20T23:59:59.999Z")
     })
   })
 
@@ -1459,7 +1605,7 @@ describe("listSignalsUseCase", () => {
       const resolvedAssigned = makeSignal({
         id: SignalId("b".repeat(24)),
         assigneeId: userA,
-        mutedAt: new Date("2026-04-08T00:00:00.000Z"),
+        resolvedAt: new Date("2026-04-08T00:00:00.000Z"),
       })
 
       const result = await runTriageList({

@@ -68,12 +68,13 @@ export interface IncidentNotificationRequest {
   readonly notificationId: NotificationId
   /** Project anchor for cascade-delete on `ProjectDeleted`. */
   readonly projectId: ProjectId
+  readonly slackEligible: boolean
 }
 
 export type RequestIncidentNotificationsResult =
   | {
       readonly status: "skipped"
-      readonly reason: "kind-disabled" | "no-recipients" | "monitor-muted" | "signal-muted"
+      readonly reason: "kind-disabled" | "no-recipients" | "monitor-muted" | "signal-muted" | "signal-ignored"
     }
   | { readonly status: "ok"; readonly requests: readonly IncidentNotificationRequest[] }
 
@@ -120,6 +121,10 @@ const TAGS_LOOKBACK_DAYS = 30
 
 const resolveKind = (incident: Incident, transition: IncidentTransition): IncidentNotificationKind => {
   if (transition === "closed") return "incident.closed"
+  // Monitor threshold incidents are sustained (open, `endedAt = null`) for dedup + tracking,
+  // but alert once on open with no recovery email — the same one-shot copy as a point event.
+  // So they emit `incident.event` despite being open; the close is silent (no IncidentClosed).
+  if (incident.sourceType === "monitor" && incident.condition?.trigger === "threshold") return "incident.event"
   // "created" — the incident is freshly inserted. `endedAt = startedAt`
   // means an eventful kind that collapsed
   // to a point in time; otherwise it's the open side of a sustained
@@ -503,6 +508,18 @@ export const requestIncidentNotificationsUseCase = (input: RequestIncidentNotifi
       yield* Effect.annotateCurrentSpan("skipped", "signal-muted")
       return { status: "skipped", reason: "signal-muted" } as const
     }
+    // Ignored signals normally never open incidents; this covers the race
+    // where an ignore lands between the incident opening and this fan-out.
+    if (signal?.ignoredAt !== null && signal?.ignoredAt !== undefined) {
+      yield* Effect.annotateCurrentSpan("skipped", "signal-ignored")
+      return { status: "skipped", reason: "signal-ignored" } as const
+    }
+    // Same race for resolve: the manual close already suppressed the recovery
+    // notification, so a still-queued open must not ping for an archived signal.
+    if (signal?.resolvedAt !== null && signal?.resolvedAt !== undefined) {
+      yield* Effect.annotateCurrentSpan("skipped", "signal-resolved")
+      return { status: "skipped", reason: "signal-resolved" } as const
+    }
 
     const notificationKind = resolveKind(incident, input.transition)
     yield* Effect.annotateCurrentSpan("kind", notificationKind)
@@ -539,11 +556,17 @@ export const requestIncidentNotificationsUseCase = (input: RequestIncidentNotifi
       { concurrency: "unbounded" },
     )
 
-    const recipients = yield* resolveRecipients({
-      organizationId: incident.organizationId,
-      projectId: incident.projectId,
-      kind: incidentNotificationKey,
-    })
+    const hasSignalAssignee = Boolean(signal?.assigneeId)
+    let recipients: readonly UserId[]
+    if (signal?.assigneeId) {
+      recipients = [UserId(signal.assigneeId)]
+    } else {
+      recipients = yield* resolveRecipients({
+        organizationId: incident.organizationId,
+        projectId: incident.projectId,
+        kind: incidentNotificationKey,
+      })
+    }
 
     if (recipients.length === 0) {
       return { status: "skipped", reason: "no-recipients" } as const
@@ -582,6 +605,7 @@ export const requestIncidentNotificationsUseCase = (input: RequestIncidentNotifi
       payload,
       notificationId: NotificationId(generateId()),
       projectId: incident.projectId,
+      slackEligible: !hasSignalAssignee,
     }))
 
     return { status: "ok", requests } as const

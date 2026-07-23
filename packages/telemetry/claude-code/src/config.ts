@@ -7,6 +7,8 @@ interface Config {
   enabled: boolean
   debug: boolean
   redact: RedactConfig | undefined
+  memory: boolean
+  memoryContent: boolean
 }
 
 export function loadConfig(env: NodeJS.ProcessEnv = process.env): Config {
@@ -16,5 +18,7 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): Config {
   const enabled = (env.LATITUDE_CLAUDE_CODE_ENABLED ?? "1") !== "0" && apiKey !== "" && project !== ""
   const debug = env.LATITUDE_DEBUG === "1"
   const redact = parseRedactEnv(env)
-  return { apiKey, baseUrl, project, enabled, debug, redact }
+  const memory = (env.LATITUDE_CLAUDE_CODE_MEMORY ?? "1") !== "0"
+  const memoryContent = (env.LATITUDE_CLAUDE_CODE_MEMORY_CONTENT ?? "1") !== "0"
+  return { apiKey, baseUrl, project, enabled, debug, redact, memory, memoryContent }
 }

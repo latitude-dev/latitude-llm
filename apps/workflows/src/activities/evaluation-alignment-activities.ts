@@ -16,7 +16,7 @@ import {
   type PersistEvaluationAlignmentResult,
   persistAlignmentResultUseCase,
 } from "@domain/evaluations"
-import { OrganizationId } from "@domain/shared"
+import { BadRequestError, OrganizationId } from "@domain/shared"
 import { AIEmbedLive, AIGenerateLive, withAi } from "@platform/ai"
 import { RedisBillingSpendReservationLive } from "@platform/cache-redis"
 import { TraceRepositoryLive, withClickHouse } from "@platform/db-clickhouse"
@@ -36,6 +36,7 @@ import { QuickJsScriptRuntimeLive } from "@platform/sandbox-quickjs"
 import { createLogger, withTracing } from "@repo/observability"
 import { Data, Effect, Layer } from "effect"
 import { getClickhouseClient, getPostgresClient, getRedisClient } from "../clients.ts"
+import { describeActivityCause, logActivityFailure } from "./activity-error.ts"
 import { withActivityAIMetering } from "./ai-metering.ts"
 
 const logger = createLogger("workflows-evaluation-alignment")
@@ -43,13 +44,19 @@ const logger = createLogger("workflows-evaluation-alignment")
 class EvaluationAlignmentActivityError extends Data.TaggedError("EvaluationAlignmentActivityError")<{
   readonly activity: string
   readonly cause: unknown
+  readonly message: string
 }> {
   readonly httpStatus = 500
 
   get httpMessage() {
-    return `Evaluation alignment activity "${this.activity}" failed`
+    return `Evaluation alignment activity "${this.activity}" failed: ${this.message}`
   }
 }
+
+const toAlignmentActivityError = (activity: string, cause: unknown): EvaluationAlignmentActivityError =>
+  cause instanceof EvaluationAlignmentActivityError
+    ? cause
+    : new EvaluationAlignmentActivityError({ activity, cause, message: describeActivityCause(cause) })
 
 const evaluationAlignmentRepositoriesLive = Layer.mergeAll(
   EvaluationRepositoryLive,
@@ -117,6 +124,9 @@ const buildEvaluationGenerationIdempotencyKey = (input: {
   readonly billingOperationId: string
 }) => buildBillingIdempotencyKey("llm-call", [input.organizationId, input.billingOperationId, "authorize"])
 
+const EVALUATION_GENERATION_NO_CREDITS_MESSAGE =
+  "Not enough credits to generate this evaluation. Upgrade your plan or wait for your billing period to reset."
+
 const authorizeEvaluationGenerationBillingEffect = Effect.fn("workflows.authorizeEvaluationGenerationBilling")(
   function* (input: {
     readonly organizationId: string
@@ -132,7 +142,20 @@ const authorizeEvaluationGenerationBillingEffect = Effect.fn("workflows.authoriz
       idempotencyKey,
     })
 
-    return authorization.allowed
+    if (authorization.allowed) {
+      return
+    }
+
+    yield* Effect.sync(() =>
+      logger.info("Evaluation generation blocked — billing limit reached", {
+        organizationId: input.organizationId,
+        projectId: input.projectId,
+        evaluationId: input.evaluationId,
+        billingOperationId: input.billingOperationId,
+      }),
+    )
+
+    return yield* new BadRequestError({ message: EVALUATION_GENERATION_NO_CREDITS_MESSAGE })
   },
 )
 
@@ -141,7 +164,7 @@ export const authorizeEvaluationGenerationBilling = (input: {
   readonly projectId: string
   readonly evaluationId: string | null
   readonly billingOperationId: string
-}): Promise<boolean> =>
+}): Promise<void> =>
   Effect.runPromise(
     authorizeEvaluationGenerationBillingEffect(input).pipe(
       withPostgres(
@@ -151,17 +174,10 @@ export const authorizeEvaluationGenerationBilling = (input: {
       ),
       Effect.provide(RedisBillingSpendReservationLive(getRedisClient())),
       withTracing,
-      Effect.tap((result) =>
-        result
-          ? Effect.void
-          : Effect.sync(() =>
-              logger.info("Evaluation generation blocked — billing limit reached", {
-                organizationId: input.organizationId,
-                projectId: input.projectId,
-                evaluationId: input.evaluationId,
-                billingOperationId: input.billingOperationId,
-              }),
-            ),
+      Effect.mapError((cause) =>
+        cause instanceof BadRequestError
+          ? cause
+          : toAlignmentActivityError("authorizeEvaluationGenerationBilling", cause),
       ),
     ),
   )
@@ -188,12 +204,9 @@ export const generateBaselineEvaluationDraft = (input: {
   Effect.runPromise(
     generateBaselineDraftUseCase(input).pipe(
       withTracing,
-      Effect.mapError(
-        (cause) =>
-          new EvaluationAlignmentActivityError({
-            activity: "generateBaselineEvaluationDraft",
-            cause,
-          }),
+      Effect.tapError((cause) => logActivityFailure("generateBaselineEvaluationDraft", cause)),
+      Effect.mapError((cause) =>
+        cause instanceof BadRequestError ? cause : toAlignmentActivityError("generateBaselineEvaluationDraft", cause),
       ),
     ),
   )
@@ -239,12 +252,9 @@ export const evaluateBaselineEvaluationDraft = (input: {
       ),
       Effect.provide(RedisBillingSpendReservationLive(getRedisClient())),
       withTracing,
-      Effect.mapError(
-        (cause) =>
-          new EvaluationAlignmentActivityError({
-            activity: "evaluateBaselineEvaluationDraft",
-            cause,
-          }),
+      Effect.tapError((cause) => logActivityFailure("evaluateBaselineEvaluationDraft", cause)),
+      Effect.mapError((cause) =>
+        cause instanceof BadRequestError ? cause : toAlignmentActivityError("evaluateBaselineEvaluationDraft", cause),
       ),
     ),
   )
@@ -292,12 +302,11 @@ export const evaluateIncrementalEvaluationDraft = (input: {
       ),
       Effect.provide(RedisBillingSpendReservationLive(getRedisClient())),
       withTracing,
-      Effect.mapError(
-        (cause) =>
-          new EvaluationAlignmentActivityError({
-            activity: "evaluateIncrementalEvaluationDraft",
-            cause,
-          }),
+      Effect.tapError((cause) => logActivityFailure("evaluateIncrementalEvaluationDraft", cause)),
+      Effect.mapError((cause) =>
+        cause instanceof BadRequestError
+          ? cause
+          : toAlignmentActivityError("evaluateIncrementalEvaluationDraft", cause),
       ),
     ),
   )

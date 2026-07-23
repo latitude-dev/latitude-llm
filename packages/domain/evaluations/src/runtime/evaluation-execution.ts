@@ -1,5 +1,6 @@
 import { type formatGenAIConversation, formatGenAIMessage } from "@domain/ai"
-import { estimateCost } from "@domain/models"
+import { estimateCost, getModelForProvider } from "@domain/models"
+import { getEncoding, type Tiktoken } from "js-tiktoken"
 import { z } from "zod"
 
 export const EVALUATION_DEFAULT_SCRIPT_RUNTIME_MODEL = {
@@ -7,6 +8,64 @@ export const EVALUATION_DEFAULT_SCRIPT_RUNTIME_MODEL = {
   model: "minimax.minimax-m2.5",
   reasoning: "low",
 } as const
+
+/** Mirrors ai-vercel's `DEFAULT_MAX_OUTPUT_TOKENS`; used when a judge config doesn't override `maxTokens`. */
+const DEFAULT_JUDGE_MAX_OUTPUT_TOKENS = 8_192
+
+/** Mirrors the minimax → gpt-oss-120b fallback pairing in `resolveGenerateFallback` (`@platform/ai-vercel`'s ai.ts). */
+const BEDROCK_MINIMAX_MODEL_ID = "minimax.minimax-m2.5"
+const BEDROCK_MINIMAX_FALLBACK_MODEL = { provider: "amazon-bedrock", model: "openai.gpt-oss-120b-1:0" } as const
+
+/** Assumed context for a judge model missing from the models.dev registry (e.g. a self-hosted `custom` model). */
+const FALLBACK_JUDGE_CONTEXT_LIMIT_TOKENS = 16_000
+
+/** Extra headroom on top of the reserved output budget, absorbing tokenizer drift across providers. */
+const CONTEXT_SAFETY_MARGIN_TOKENS = 500
+
+const PROMPT_TRUNCATION_NOTICE = "\n\n[... middle truncated: input exceeded the judge model's context window ...]\n\n"
+
+let encoder: Tiktoken | null = null
+const tokenizer = (): Tiktoken => (encoder ??= getEncoding("o200k_base"))
+
+const resolveJudgeContextLimitTokens = (provider: string, model: string): number => {
+  const primaryLimit = getModelForProvider(provider, model)?.contextLimit ?? FALLBACK_JUDGE_CONTEXT_LIMIT_TOKENS
+  if (provider !== BEDROCK_MINIMAX_FALLBACK_MODEL.provider || model !== BEDROCK_MINIMAX_MODEL_ID) {
+    return primaryLimit
+  }
+  const fallbackLimit =
+    getModelForProvider(BEDROCK_MINIMAX_FALLBACK_MODEL.provider, BEDROCK_MINIMAX_FALLBACK_MODEL.model)?.contextLimit ??
+    primaryLimit
+  return Math.min(primaryLimit, fallbackLimit)
+}
+
+/** Trims an unbounded evaluation-script judge prompt to fit the resolved model's (and its Bedrock fallback's) context window, keeping the head and tail intact. */
+export const fitPromptToJudgeContextWindow = (
+  prompt: string,
+  provider: string,
+  model: string,
+  maxOutputTokens: number = DEFAULT_JUDGE_MAX_OUTPUT_TOKENS,
+): string => {
+  const contextLimitTokens = resolveJudgeContextLimitTokens(provider, model)
+  const budgetTokens = Math.max(contextLimitTokens - maxOutputTokens - CONTEXT_SAFETY_MARGIN_TOKENS, 0)
+
+  const tokens = tokenizer().encode(prompt)
+  if (tokens.length <= budgetTokens) {
+    return prompt
+  }
+
+  // Cap the notice itself to the budget too — an operator-configured maxOutputTokens close to the
+  // context limit can leave less room than the notice needs, and the result must still fit.
+  const noticeTokens = tokenizer().encode(PROMPT_TRUNCATION_NOTICE).slice(0, budgetTokens)
+  const keepTokens = Math.max(budgetTokens - noticeTokens.length, 0)
+  const headTokens = Math.ceil(keepTokens / 2)
+  const tailTokens = keepTokens - headTokens
+
+  const head = headTokens > 0 ? tokenizer().decode(tokens.slice(0, headTokens)) : ""
+  const notice = noticeTokens.length > 0 ? tokenizer().decode(noticeTokens) : ""
+  const tail = tailTokens > 0 ? tokenizer().decode(tokens.slice(tokens.length - tailTokens)) : ""
+
+  return `${head}${notice}${tail}`
+}
 
 export const EVALUATION_SCRIPT_RUNTIME_SYSTEM_PROMPT = `You are executing a generated evaluation script on behalf of Latitude.
 

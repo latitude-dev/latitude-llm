@@ -158,12 +158,39 @@ export interface SignalRepositoryShape {
     readonly excludeSignalId?: SignalId
   }): Effect.Effect<number, RepositoryError, SqlClient>
   save(issue: Signal): Effect.Effect<void, RepositoryError, SqlClient>
+  /**
+   * Atomic reopen-on-occurrence claim: clears `resolved_at` and stamps
+   * `regressed_at` in one conditional UPDATE guarded on "currently resolved,
+   * not ignored, and resolved before the occurrence" (so replayed historical
+   * scores cannot reopen). Returns whether THIS call performed the reopen —
+   * exactly one concurrent caller per regression cycle wins and emits the
+   * follow-up `SignalRegressed` event; the rest see `false` and no-op.
+   */
+  claimReopenOnOccurrence(input: {
+    readonly signalId: SignalId
+    readonly occurredAt: Date
+    readonly now: Date
+  }): Effect.Effect<boolean, RepositoryError, SqlClient>
   /** Soft-delete: stamps `deleted_at` so the signal is excluded read-side and frees its slug. No-op if already deleted. */
   softDelete(id: SignalId): Effect.Effect<void, RepositoryError, SqlClient>
   list(input: ListSignalsRepositoryInput): Effect.Effect<SignalListPage, RepositoryError, SqlClient>
   listTableRows(
     input: ListSignalTableRowsRepositoryInput,
   ): Effect.Effect<SignalTableRowsPage, RepositoryError, SqlClient>
+  /**
+   * Ids of non-deleted signals created within the window. The analytics path
+   * seeds its candidate set from ClickHouse activity metrics, which never
+   * include zero-occurrence signals; feeding these ids in keeps the counts,
+   * public API list, and export consistent with the table (which lists a
+   * signal that fired in OR was created in the window).
+   */
+  listIdsCreatedInTimeRange(input: {
+    readonly projectId: ProjectId
+    readonly timeRange: {
+      readonly from?: Date
+      readonly to?: Date
+    }
+  }): Effect.Effect<readonly SignalId[], RepositoryError, SqlClient>
 }
 
 export class SignalRepository extends Context.Service<SignalRepository, SignalRepositoryShape>()(

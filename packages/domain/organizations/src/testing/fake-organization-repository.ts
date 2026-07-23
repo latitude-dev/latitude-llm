@@ -15,6 +15,12 @@ export const createFakeOrganizationRepository = (overrides?: Partial<Organizatio
       return Effect.succeed(org)
     },
 
+    findByIdForUpdate: (id) => {
+      const org = organizations.get(id)
+      if (!org) return Effect.fail(new NotFoundError({ entity: "Organization", id }))
+      return Effect.succeed(org)
+    },
+
     listByUserId: () => Effect.succeed([]),
 
     save: (org) =>
@@ -25,6 +31,14 @@ export const createFakeOrganizationRepository = (overrides?: Partial<Organizatio
     delete: (id) =>
       Effect.sync(() => {
         organizations.delete(id)
+      }),
+
+    deleteIfExpiredUnclaimed: (id) =>
+      Effect.sync(() => {
+        const org = organizations.get(id)
+        if (!org || org.expiresAt === null) return false
+        organizations.delete(id)
+        return true
       }),
 
     countBySlug: (slug) => Effect.succeed([...organizations.values()].filter((o) => o.slug === slug).length),

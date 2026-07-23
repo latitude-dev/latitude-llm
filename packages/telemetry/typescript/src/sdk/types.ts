@@ -43,11 +43,7 @@ export type LatitudeOptions = SmartFilterOptions & {
    * removed in a future release. When both are set, `project` wins.
    */
   projectSlug?: string
-  /**
-   * Map of integration name → LLM SDK module reference the user imports in app code.
-   * Example: `{ openai: OpenAI, anthropic: AnthropicSDK }`. The patch lands on the same
-   * prototype the consumer's code calls.
-   */
+  /** Instrumentations created by the opt-in `@latitude-data/telemetry/instrumentations/*` factories. */
   instrumentations?: InstrumentationsInput
   disableRedact?: boolean
   redact?: RedactSpanProcessorOptions

@@ -362,6 +362,12 @@ function createTaskDefinition(
       secrets["google-oauth-client-secret"].arn,
       secrets["github-oauth-client-id"].arn,
       secrets["github-oauth-client-secret"].arn,
+      secrets["github-app-id"].arn,
+      secrets["github-app-slug"].arn,
+      secrets["github-app-private-key"].arn,
+      secrets["github-app-webhook-secret"].arn,
+      secrets["github-app-client-id"].arn,
+      secrets["github-app-client-secret"].arn,
       secrets["stripe-secret-key"].arn,
       secrets["stripe-webhook-secret"].arn,
       secrets["stripe-pro-price-id"].arn,
@@ -407,6 +413,12 @@ function createTaskDefinition(
         googleOauthClientSecretArn,
         githubOauthClientIdArn,
         githubOauthClientSecretArn,
+        githubAppIdArn,
+        githubAppSlugArn,
+        githubAppPrivateKeyArn,
+        githubAppWebhookSecretArn,
+        githubAppClientIdArn,
+        githubAppClientSecretArn,
         stripeSecretKeyArn,
         stripeWebhookSecretArn,
         stripeProPriceIdArn,
@@ -469,7 +481,9 @@ function createTaskDefinition(
           { name: "DD_AGENT_HOST", value: "localhost" },
           { name: "LAT_OBSERVABILITY_ENABLED", value: "true" },
           { name: "LAT_OBSERVABILITY_OTLP_TRACES_ENDPOINT", value: "http://localhost:4318/v1/traces" },
+          { name: "LAT_OSS_TELEMETRY_ENABLED", value: "false" },
           { name: "LAT_POSTHOG_HOST", value: "https://eu.i.posthog.com" },
+          { name: "LAT_TAXONOMY_ADAPTIVE_CLUSTERING_MODE", value: config.name === "production" ? "shadow" : "off" },
         ]
 
         const baseSecrets: { name: string; valueFrom: string }[] = [
@@ -506,19 +520,23 @@ function createTaskDefinition(
           { name: "LAT_TEMPORAL_TASK_QUEUE", value: temporalCloud.taskQueue },
         ]
 
-        const nodeMaxOldSpaceMb = Math.max(384, Math.floor(serviceConfig.memory * 0.7))
+        const nodeOptions = {
+          name: "NODE_OPTIONS",
+          value: `--max-old-space-size=${Math.max(384, Math.floor(serviceConfig.memory * 0.7))}`,
+        }
 
         const serviceSpecificEnvVars: Record<string, { name: string; value: string }[]> = {
           // The API and web app start/query workflows (e.g. issue monitoring).
-          api: [{ name: "NODE_OPTIONS", value: `--max-old-space-size=${nodeMaxOldSpaceMb}` }, ...temporalEnvVars],
-          web: temporalEnvVars,
+          api: [nodeOptions, ...temporalEnvVars],
+          ingest: [nodeOptions],
+          web: [nodeOptions, ...temporalEnvVars],
           workflows: [
             { name: "LAT_WORKFLOWS_HEALTH_PORT", value: "8080" },
             { name: "LAT_TEMPORAL_MAX_CONCURRENT_ACTIVITY_TASKS", value: "4" },
-            { name: "NODE_OPTIONS", value: `--max-old-space-size=${nodeMaxOldSpaceMb}` },
+            nodeOptions,
             ...temporalEnvVars,
           ],
-          workers: temporalEnvVars,
+          workers: [nodeOptions, ...temporalEnvVars],
         }
 
         const environment = [...baseEnvironment, ...(serviceSpecificEnvVars[serviceConfig.name] ?? [])]
@@ -529,6 +547,15 @@ function createTaskDefinition(
           { name: "LAT_GOOGLE_CLIENT_SECRET", valueFrom: googleOauthClientSecretArn },
           { name: "LAT_GITHUB_CLIENT_ID", valueFrom: githubOauthClientIdArn },
           { name: "LAT_GITHUB_CLIENT_SECRET", valueFrom: githubOauthClientSecretArn },
+        ]
+
+        const githubAppSecrets = [
+          { name: "LAT_GITHUB_APP_ID", valueFrom: githubAppIdArn },
+          { name: "LAT_GITHUB_APP_SLUG", valueFrom: githubAppSlugArn },
+          { name: "LAT_GITHUB_APP_PRIVATE_KEY", valueFrom: githubAppPrivateKeyArn },
+          { name: "LAT_GITHUB_WEBHOOK_SECRET", valueFrom: githubAppWebhookSecretArn },
+          { name: "LAT_GITHUB_APP_CLIENT_ID", valueFrom: githubAppClientIdArn },
+          { name: "LAT_GITHUB_APP_CLIENT_SECRET", valueFrom: githubAppClientSecretArn },
         ]
 
         const temporalSecret = { name: "LAT_TEMPORAL_API_KEY", valueFrom: temporalApiKeyArn }
@@ -556,10 +583,10 @@ function createTaskDefinition(
         ]
 
         const serviceSpecificSecrets: Record<string, { name: string; valueFrom: string }[]> = {
-          api: [temporalSecret],
-          web: [...oauthSecrets, ...stripeSelfServeSecrets, temporalSecret, ...supportSecrets],
+          api: [temporalSecret, ...githubAppSecrets],
+          web: [...oauthSecrets, ...stripeSelfServeSecrets, temporalSecret, ...supportSecrets, ...githubAppSecrets],
           workflows: [temporalSecret, ...stripeOverageSecrets],
-          workers: [temporalSecret, ...bullBoardSecrets],
+          workers: [temporalSecret, ...bullBoardSecrets, ...githubAppSecrets],
         }
 
         const secrets = [...baseSecrets, ...(serviceSpecificSecrets[serviceConfig.name] ?? [])]

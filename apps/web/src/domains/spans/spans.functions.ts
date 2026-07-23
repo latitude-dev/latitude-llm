@@ -7,6 +7,7 @@ import { createServerFn } from "@tanstack/react-start"
 import { Effect } from "effect"
 import { z } from "zod"
 import { getClickhouseClient } from "../../server/clients.ts"
+import { spanIdSchema, traceIdSchema } from "../../server/id-validation.ts"
 import { resolveOrgScope } from "../../server/resolve-org-scope.ts"
 import { withScopedClickHouse } from "../../server/scoped-clickhouse.ts"
 
@@ -30,8 +31,10 @@ export interface SpanRecord {
   readonly operation: Operation
   readonly provider: string
   readonly model: string
+  readonly agentName: string
   readonly toolName: string
   readonly toolNames: readonly string[]
+  readonly toolCallId: string
   readonly tokensInput: number
   readonly tokensOutput: number
   readonly costTotalMicrocents: number
@@ -74,7 +77,6 @@ export interface SpanDetailRecord extends SpanRecord {
   readonly outputMessages: readonly object[]
   readonly systemInstructions: readonly object[]
   readonly toolDefinitions: readonly object[]
-  readonly toolCallId: string
   readonly toolInput: string
   readonly toolOutput: string
 }
@@ -94,8 +96,10 @@ const serializeSpan = (span: Span): SpanRecord => ({
   operation: span.operation,
   provider: span.provider,
   model: span.model,
+  agentName: span.agentName,
   toolName: span.toolName,
   toolNames: span.toolNames,
+  toolCallId: span.toolCallId,
   tokensInput: span.tokensInput,
   tokensOutput: span.tokensOutput,
   costTotalMicrocents: span.costTotalMicrocents,
@@ -139,7 +143,6 @@ const serializeSpanDetail = (span: SpanDetail): SpanDetailRecord => ({
   outputMessages: span.outputMessages as readonly object[],
   systemInstructions: span.systemInstructions as readonly object[],
   toolDefinitions: span.toolDefinitions as readonly object[],
-  toolCallId: span.toolCallId,
   toolInput: span.toolInput,
   toolOutput: span.toolOutput,
 })
@@ -148,7 +151,7 @@ export const listSpansByTrace = createServerFn({ method: "GET" })
   .inputValidator(
     z.object({
       projectId: z.string(),
-      traceId: z.string(),
+      traceId: traceIdSchema,
       startTimeFrom: dateTimeParamSchema.optional(),
       startTimeTo: dateTimeParamSchema.optional(),
     }),
@@ -170,24 +173,28 @@ export const listSpansByTrace = createServerFn({ method: "GET" })
     return spans.map(serializeSpan)
   })
 
+// Reads by the session's authoritative `traceIds` rather than `session_id`
+// membership, so subagent spans that override `session_id` to the child's own
+// value still surface in the session's Spans tab and breakdowns.
 export const listSpansBySession = createServerFn({ method: "GET" })
   .inputValidator(
     z.object({
       projectId: z.string(),
-      sessionId: z.string(),
+      traceIds: z.array(traceIdSchema).max(500),
       startTimeFrom: dateTimeParamSchema.optional(),
       startTimeTo: dateTimeParamSchema.optional(),
     }),
   )
   .handler(async ({ data, context }): Promise<SpanRecord[]> => {
+    if (data.traceIds.length === 0) return []
     const orgId = await resolveOrgScope(context)
     const spans = await Effect.runPromise(
       Effect.gen(function* () {
         const repo = yield* SpanRepository
-        return yield* repo.listBySessionId({
+        return yield* repo.listByTraceIds({
           organizationId: orgId,
           projectId: ProjectId(data.projectId),
-          sessionId: SessionId(data.sessionId),
+          traceIds: data.traceIds.map(TraceId),
           ...(data.startTimeFrom ? { startTimeFrom: data.startTimeFrom } : {}),
           ...(data.startTimeTo ? { startTimeTo: data.startTimeTo } : {}),
         })
@@ -197,6 +204,7 @@ export const listSpansBySession = createServerFn({ method: "GET" })
   })
 
 export interface SpanMessagesRecord {
+  readonly traceId: string
   readonly spanId: string
   readonly operation: Operation
   readonly toolCallId: string
@@ -207,6 +215,7 @@ export interface SpanMessagesRecord {
 }
 
 const serializeSpanMessages = (span: SpanMessagesData): SpanMessagesRecord => ({
+  traceId: span.traceId as string,
   spanId: span.spanId as string,
   operation: span.operation,
   toolCallId: span.toolCallId,
@@ -224,7 +233,7 @@ export const listConversationMessageSpans = createServerFn({ method: "GET" })
   .inputValidator(
     z.object({
       projectId: z.string(),
-      traceId: z.string(),
+      traceId: traceIdSchema,
       startTime: dateTimeParamSchema,
     }),
   )
@@ -275,8 +284,8 @@ export const getSpanDetail = createServerFn({ method: "GET" })
   .inputValidator(
     z.object({
       projectId: z.string(),
-      traceId: z.string(),
-      spanId: z.string(),
+      traceId: traceIdSchema,
+      spanId: spanIdSchema,
       startTimeFrom: dateTimeParamSchema.optional(),
       startTimeTo: dateTimeParamSchema.optional(),
     }),

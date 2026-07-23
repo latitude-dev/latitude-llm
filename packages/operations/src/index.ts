@@ -14,4 +14,5 @@ export { collectToolDescriptors, resetOperationRegistry } from "./core/registry.
 export { defineToolset, type Toolset, type ToolsetSpec, type ToolsetTool } from "./core/toolset.ts"
 export { operationModules } from "./operations/index.ts"
 export { readOnlyToolset } from "./toolsets/read-only.ts"
+export { signalAgentToolset } from "./toolsets/signal-agent.ts"
 export type { AppEnv, AuthContext, OrganizationScopedEnv, ProtectedEnv } from "./types.ts"

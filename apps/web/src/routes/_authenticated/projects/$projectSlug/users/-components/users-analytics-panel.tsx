@@ -3,6 +3,7 @@ import { formatCount } from "@repo/utils"
 import { ChevronDown, ChevronUp, UsersRoundIcon } from "lucide-react"
 import { useMemo, useState } from "react"
 import type { UsersOverviewRecord } from "../../../../../../domains/end-users/end-users.functions.ts"
+import { ChartHeader } from "../../-components/chart-header.tsx"
 import { formatBucketLabel } from "./user-formatters.ts"
 
 const OK_SESSIONS_COLOR = "hsl(217 91% 60%)"
@@ -50,10 +51,16 @@ function formatCoverage(identified: number, total: number): string {
 export function UsersAnalyticsPanel({
   overview,
   isLoading,
+  rangeFromIso,
+  rangeToIso,
+  isAllTime,
   onRangeSelect,
 }: {
   readonly overview: UsersOverviewRecord | undefined
   readonly isLoading: boolean
+  readonly rangeFromIso: string
+  readonly rangeToIso: string
+  readonly isAllTime: boolean
   readonly onRangeSelect?: ((range: { from: string; to: string } | null) => void) | undefined
 }) {
   const [collapsed, setCollapsed] = useState(false)
@@ -185,16 +192,24 @@ export function UsersAnalyticsPanel({
             <Text.H6 color="foregroundMuted">No user sessions in this time window</Text.H6>
           </div>
         ) : (
-          <div className="px-4 py-3">
-            <Chart
-              categories={categories}
-              series={series}
-              height={160}
-              xAxisLabelFontSize={10}
-              ariaLabel="User sessions over time"
-              {...(onRangeSelect ? { onSelect: handleSelect } : {})}
+          <>
+            <ChartHeader
+              title="User sessions over time"
+              fromIso={rangeFromIso}
+              toIso={rangeToIso}
+              isAllTime={isAllTime}
             />
-          </div>
+            <div className="px-4 py-3">
+              <Chart
+                categories={categories}
+                series={series}
+                height={160}
+                xAxisLabelFontSize={10}
+                ariaLabel="User sessions over time"
+                {...(onRangeSelect ? { onSelect: handleSelect } : {})}
+              />
+            </div>
+          </>
         )}
       </div>
     </div>

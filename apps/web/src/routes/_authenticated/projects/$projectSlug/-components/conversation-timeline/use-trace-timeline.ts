@@ -1,6 +1,6 @@
 import { useMemo } from "react"
 import { useAnnotationsByTrace } from "../../../../../../domains/annotations/annotations.collection.ts"
-import { useMemberByUserIdMap } from "../../../../../../domains/members/members.collection.ts"
+import { useProjectMemberByUserIdMap } from "../../../../../../domains/members/members.collection.ts"
 import { useConversationSpanMaps } from "../../../../../../domains/spans/spans.collection.ts"
 import type { SpanRecord } from "../../../../../../domains/spans/spans.functions.ts"
 import { useTraceConversationMessages } from "../../../../../../domains/traces/traces.collection.ts"
@@ -8,8 +8,16 @@ import type { TraceDetailRecord, TraceRecord } from "../../../../../../domains/t
 import {
   buildConversationTimeline,
   type ConversationTimeline,
+  toSpanIdMap,
 } from "../../../../../../lib/conversation-timeline/build-conversation-timeline.ts"
-import { annotatorNameFor, toTimelineAnnotation, toTimelineSpan, toTimelineTrace } from "./timeline-adapters.ts"
+import { useAgentGraph } from "../session-detail-drawer/agents-breakdown/use-agent-graph.ts"
+import {
+  annotatorNameFor,
+  toTimelineAnnotation,
+  toTimelineSpan,
+  toTimelineSubagents,
+  toTimelineTrace,
+} from "./timeline-adapters.ts"
 
 export function useTraceTimeline({
   projectId,
@@ -44,20 +52,22 @@ export function useTraceTimeline({
     draftMode: "include",
     enabled: annotationsEnabled,
   })
-  const memberByUserId = useMemberByUserIdMap()
+  const memberByUserId = useProjectMemberByUserIdMap()
+  const agentGraph = useAgentGraph(spans)
 
   return useMemo(() => {
     if (!traceDetail || !spanMaps || conversation.messages.length === 0) return null
     return buildConversationTimeline({
       messages: conversation.messages,
       spans: (spans ?? []).map(toTimelineSpan),
-      messageSpanMap: spanMaps.messageSpanMap,
-      toolCallSpanMap: spanMaps.toolCallSpanMap,
+      messageSpanMap: toSpanIdMap(spanMaps.messageSpanMap),
+      toolCallSpanMap: toSpanIdMap(spanMaps.toolCallSpanMap),
       traces: [toTimelineTrace(traceRecord ?? traceDetail)],
       annotations: (annotationsData?.items ?? []).map((a) =>
         toTimelineAnnotation(a, annotatorNameFor(a, memberByUserId)),
       ),
       moments: [],
+      subagents: toTimelineSubagents(agentGraph),
     })
-  }, [traceDetail, traceRecord, spans, spanMaps, annotationsData, memberByUserId, conversation.messages])
+  }, [traceDetail, traceRecord, spans, spanMaps, annotationsData, memberByUserId, agentGraph, conversation.messages])
 }

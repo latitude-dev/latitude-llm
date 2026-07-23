@@ -1,13 +1,12 @@
-import { CONVERSATION_INTELLIGENCE_ANALYSIS_DEBOUNCE_MS } from "@domain/conversation-intelligence"
 import { SAVED_SEARCH_MONITORS_THROTTLE_MS, savedSearchMonitorsCheckDedupeKey } from "@domain/monitors"
-import type { QueueConsumer, QueuePublisherShape, WorkflowStarterShape } from "@domain/queue"
+import type { QueueConsumer, QueuePublisherShape } from "@domain/queue"
 import { OrganizationId } from "@domain/shared"
-import { loadTraceForTraceEndUseCase } from "@domain/spans"
+import { loadTraceForTraceEndUseCase, SESSION_END_DEBOUNCE_MS } from "@domain/spans"
 import { type ClickHouseClient, TraceRepositoryLive, withClickHouse } from "@platform/db-clickhouse"
 import { createLogger, withTracing } from "@repo/observability"
 import { Effect } from "effect"
 
-import { getClickhouseClient, getWorkflowStarter } from "../clients.ts"
+import { getClickhouseClient } from "../clients.ts"
 
 const logger = createLogger("trace-end")
 const TRACE_END_QUEUE = "trace-end" as const
@@ -27,19 +26,16 @@ interface TraceEndDeps {
   publisher: QueuePublisherShape
   clickhouseClient?: ClickHouseClient
   logger?: TraceEndLogger
-  workflowStarter?: WorkflowStarterShape
 }
 
 interface RunTraceEndDeps {
   readonly publisher: QueuePublisherShape
   readonly clickhouseClient: ClickHouseClient
-  readonly workflowStarter: WorkflowStarterShape
 }
 
 type TraceEndRunSummary = {
   readonly traceId: string
   readonly sessionId: string | null
-  readonly deterministicFlaggersEnqueued: boolean
 }
 
 type TraceEndRunResult =
@@ -62,7 +58,7 @@ const buildRunLogContext = (payload: TraceEndPayload) => ({
 })
 
 export const runTraceEndJob =
-  ({ publisher, clickhouseClient, workflowStarter }: RunTraceEndDeps) =>
+  ({ publisher, clickhouseClient }: RunTraceEndDeps) =>
   (payload: TraceEndPayload) =>
     Effect.gen(function* () {
       if (payload.isSandbox) {
@@ -81,34 +77,35 @@ export const runTraceEndJob =
 
       const traceDetail = loaded.traceDetail
 
-      // Evaluation selection + execution moved to the signals:match worker. trace-end now owns only
-      // flaggers, saved-search monitors, trace-search, and conversation intelligence.
+      // trace-end owns per-trace fan-out (trace-search, saved-search monitors);
+      // session-level work (signals:match, analysis, flagger screening) is session-end's.
 
-      // Hand the deterministic-flagger fan-out to its own worker. Per-strategy
-      // isolation (Effect.catch) lives there, so a broken detector can't
-      // fail the whole trace-end job.
-      const deterministicFlaggersEnqueued = yield* publisher
+      const canonicalSessionId =
+        traceDetail.sessionId && traceDetail.sessionId.length > 0 ? traceDetail.sessionId : traceDetail.traceId
+
+      // Materialize the settled trace's memory-operation spans into the memory
+      // ledger, in its own worker + failure domain.
+      // Stamp the trace's canonical session id: memory spans often carry no
+      // session attribute even when sibling chat spans do.
+      yield* publisher
         .publish(
-          "deterministic-flaggers",
+          "memory-projection",
           "run",
           {
             organizationId: payload.organizationId,
             projectId: payload.projectId,
             traceId: payload.traceId,
+            sessionId: canonicalSessionId,
           },
           {
-            dedupeKey: `deterministic-flaggers:${payload.traceId}`,
+            dedupeKey: `org:${payload.organizationId}:memory-projection:${payload.projectId}:${payload.traceId}`,
           },
         )
         .pipe(
-          Effect.map(() => true),
           Effect.catch((error) =>
-            Effect.gen(function* () {
-              yield* Effect.logError("Failed to enqueue deterministic-flaggers", {
-                ...buildRunLogContext(payload),
-                error,
-              })
-              return false
+            Effect.logError("Failed to enqueue memory-projection", {
+              ...buildRunLogContext(payload),
+              error,
             }),
           ),
         )
@@ -123,28 +120,30 @@ export const runTraceEndJob =
         isSandbox: payload.isSandbox ?? false,
       })
 
-      // "Trace ends → match signals": run every active evaluation against the now-settled trace.
-      // The sandbox early-return above means this never fires for sandbox traces.
-      yield* publisher
-        .publish(
-          "signals",
-          "match",
-          {
-            organizationId: payload.organizationId,
-            projectId: payload.projectId,
-            traceId: payload.traceId,
-            isSandbox: payload.isSandbox ?? false,
-            reason: "ingest",
-          },
-          {
-            dedupeKey: `org:${payload.organizationId}:signals-match:${payload.projectId}:${payload.traceId}`,
-          },
-        )
-        .pipe(
-          Effect.catch((error) =>
-            Effect.logError("Failed to enqueue signals match", { ...buildRunLogContext(payload), error }),
-          ),
-        )
+      // "Trace ends → session settles": hand session-level work (signals:match, session analysis) to
+      // the session-end worker, debounced per session so repeated trace-ends collapse to one firing
+      // once the session goes quiet. The debounce replaces the pending payload, so the surviving job
+      // carries the session's latest trace. Never fires for sandbox traces (sandbox returns early).
+      //
+      // Not caught: session-end is the single entry point for both signals:match and session analysis,
+      // so a dropped enqueue would silently lose all session-level work. Let it fail the trace-end job
+      // so its retry re-enqueues; the job's other publishes are idempotent under retry via dedupe keys.
+      yield* publisher.publish(
+        "session-end",
+        "run",
+        {
+          organizationId: payload.organizationId,
+          projectId: payload.projectId,
+          sessionId: canonicalSessionId,
+          latestTraceId: payload.traceId,
+          latestTraceStartTime: traceDetail.startTime.toISOString(),
+          isSandbox: payload.isSandbox ?? false,
+        },
+        {
+          dedupeKey: `org:${payload.organizationId}:session-end:${payload.projectId}:${canonicalSessionId}`,
+          debounceMs: SESSION_END_DEBOUNCE_MS,
+        },
+      )
 
       // Saved-search firing check, throttled to one run per project per 5 min.
       // Leading-edge: runs immediately so its trailing evaluation window covers
@@ -171,44 +170,11 @@ export const runTraceEndJob =
           ),
         )
 
-      const canonicalSessionId =
-        traceDetail.sessionId && traceDetail.sessionId.length > 0 ? traceDetail.sessionId : traceDetail.traceId
-      const analyzeSessionWorkflowId = `org:${payload.organizationId}:conversation-intelligence:analyzeSession:${payload.projectId}:${canonicalSessionId}`
-      yield* workflowStarter
-        .signalWithStart(
-          "analyzeSessionWorkflow",
-          {
-            organizationId: payload.organizationId,
-            projectId: payload.projectId,
-            sessionId: canonicalSessionId,
-            triggeringTraceId: payload.traceId,
-            triggeringStartTime: traceDetail.startTime.toISOString(),
-            reason: "trace_completed",
-            debounceMs: CONVERSATION_INTELLIGENCE_ANALYSIS_DEBOUNCE_MS,
-          },
-          {
-            workflowId: analyzeSessionWorkflowId,
-            signal: "traceCompleted",
-            signalArgs: [{ debounceMs: CONVERSATION_INTELLIGENCE_ANALYSIS_DEBOUNCE_MS }],
-          },
-        )
-        .pipe(
-          Effect.catch((error) =>
-            Effect.logError("Failed to start conversation intelligence AnalyzeSessionWorkflow", {
-              ...buildRunLogContext(payload),
-              sessionId: canonicalSessionId,
-              workflowId: analyzeSessionWorkflowId,
-              error,
-            }),
-          ),
-        )
-
       return {
         action: "completed",
         summary: {
           traceId: traceDetail.traceId,
           sessionId: traceDetail.sessionId ?? null,
-          deterministicFlaggersEnqueued,
         },
       } satisfies TraceEndRunResult
     }).pipe(withClickHouse(TraceRepositoryLive, clickhouseClient, OrganizationId(payload.organizationId)), withTracing)
@@ -232,7 +198,6 @@ export const createRunHandler =
             ...buildRunLogContext(payload),
             outcome: result.action,
             sessionId: result.summary.sessionId,
-            deterministicFlaggersEnqueued: result.summary.deterministicFlaggersEnqueued,
           })
         }),
       ),
@@ -253,25 +218,15 @@ export const createTraceEndWorker = ({
   publisher,
   clickhouseClient,
   logger: injectedLogger,
-  workflowStarter,
 }: TraceEndDeps) => {
   const chClient = clickhouseClient ?? getClickhouseClient()
   const traceEndLogger = injectedLogger ?? logger
-  const temporalStarter =
-    workflowStarter ??
-    ({
-      start: (...args) =>
-        Effect.promise(() => getWorkflowStarter()).pipe(Effect.flatMap((starter) => starter.start(...args))),
-      signalWithStart: (...args) =>
-        Effect.promise(() => getWorkflowStarter()).pipe(Effect.flatMap((starter) => starter.signalWithStart(...args))),
-    } satisfies WorkflowStarterShape)
 
   consumer.subscribe(TRACE_END_QUEUE, {
     run: createRunHandler({
       log: traceEndLogger,
       publisher,
       clickhouseClient: chClient,
-      workflowStarter: temporalStarter,
     }),
   })
 }

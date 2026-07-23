@@ -4,6 +4,7 @@ import { XIcon } from "lucide-react"
 import { type RefObject, useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore } from "react"
 import { useProjectScope } from "../../../../../../domains/projects/project-scope.tsx"
 import type { SessionDetailRecord } from "../../../../../../domains/sessions/sessions.functions.ts"
+import { useSpansBySessionCollection } from "../../../../../../domains/spans/spans.collection.ts"
 import { useSessionMomentIntelligence } from "../../../../../../domains/traces/traces.collection.ts"
 import type { SessionMomentIntelligenceRecord, TraceRecord } from "../../../../../../domains/traces/traces.functions.ts"
 import { useParamState } from "../../../../../../lib/hooks/useParamState.ts"
@@ -11,6 +12,7 @@ import { useConversationAnnotationFocus } from "../annotations/hooks/use-convers
 import { findNearestMessageAnchor } from "../conversation-timeline/flash-highlight.ts"
 import { useSessionTimeline } from "../conversation-timeline/use-session-timeline.ts"
 import { ConversationTab as TraceConversationTab } from "../trace-detail-drawer/tabs/conversation-tab.tsx"
+import { useAgentGraph } from "./agents-breakdown/use-agent-graph.ts"
 
 const MOMENT_FOCUS_OBSERVER_TIMEOUT_MS = 2000
 
@@ -286,13 +288,25 @@ export function ConversationTab({
   readonly focusMomentKind?: MomentKind | undefined
   /** Scrolls to this semantic moment when no label kind is focused. */
   readonly focusMomentId?: string | undefined
-  /** Navigates to a span in the session's single-trace Spans tab; enables the conversation's span-link affordances. */
+  /** Navigates to a span in the session Spans tab; enables the conversation's span-link affordances. */
   readonly navigateToSpan?: ((spanId: string) => void) | undefined
 }) {
   const sessionId = session.sessionId
   // Annotations are an LLM-feedback feature — off under a sandbox scope.
   const annotationsEnabled = useProjectScope().kind === "live"
   const { data: moments } = useSessionMomentIntelligence({ projectId, sessionId })
+
+  // The conversation is the latest trace's accumulated history, but it shows tool
+  // calls from every trace in the session — so decoration needs the session-wide
+  // agent graph, not just the latest trace's. Shares the Spans-tab collection key.
+  const { data: sessionSpans } = useSpansBySessionCollection({
+    projectId,
+    sessionId,
+    traceIds: session.traceIds,
+    startTimeFrom: session.startTime,
+    startTimeTo: session.endTime,
+  })
+  const agentGraph = useAgentGraph(sessionSpans)
 
   const timelineMoments = useMemo(
     () =>
@@ -402,6 +416,12 @@ export function ConversationTab({
       textSelectionPopoverControlsRef={textSelectionPopoverControlsRef}
       timeline={timeline}
       focusMessageIndex={focusMessageIndex}
+      sessionSpanScope={{
+        sessionId,
+        sessionStartTime: session.startTime,
+        sessionEndTime: session.endTime,
+      }}
+      agentGraph={agentGraph}
       {...(navigateToSpan ? { navigateToSpan } : {})}
       {...(labelsByMessageIndex.size > 0 ? { messageTrailingSlot } : {})}
       {...(searchQuery ? { searchQuery } : {})}

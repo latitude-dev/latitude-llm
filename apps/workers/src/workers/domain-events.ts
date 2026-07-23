@@ -106,11 +106,13 @@ export const createDomainEventsWorker = ({
                   traceId,
                 }),
                 debounceMs: TRACE_END_DEBOUNCE_MS,
+                attempts: 10,
+                backoff: { type: "exponential", delayMs: 1_000 },
               },
             ),
           ),
-          // signals:match is now published from the trace-end job itself ("trace ends → match
-          // signals"), so it runs on the settled trace after trace-end's own debounce.
+          // Session-level work (signals:match, session analysis) is published downstream via the
+          // trace-end → session-end chain, not here.
           // Not gated on `isSandbox`: first-trace detection is onboarding/marketing
           // telemetry, not LLM work. Outbound marketing/notification suppression for
           // sandbox orgs is AGE-113's concern (handled downstream), not this PR's.
@@ -223,6 +225,41 @@ export const createDomainEventsWorker = ({
       pub.publish("alert-incidents", "signal-escalated", event.payload, {
         dedupeKey: `alert-incidents:signal.escalating:${event.payload.signalId}:${event.payload.escalatedAt}`,
       }),
+
+    SignalRegressed: (event) =>
+      Effect.all(
+        [
+          pub.publish(
+            "notifications",
+            "request-signal-regressed-notifications",
+            {
+              organizationId: event.payload.organizationId,
+              projectId: event.payload.projectId,
+              signalId: event.payload.signalId,
+              regressedAt: event.payload.regressedAt,
+              triggerScoreId: event.payload.triggerScoreId,
+            },
+            {
+              dedupeKey: `notifications:request-signal-regressed:${event.payload.signalId}:${event.payload.triggerScoreId}`,
+            },
+          ),
+          pub.publish(
+            "agent-dispatch",
+            "request",
+            {
+              organizationId: event.payload.organizationId,
+              projectId: event.payload.projectId,
+              signalId: event.payload.signalId,
+              source: "signal",
+              trigger: "signal.regressed",
+            },
+            {
+              dedupeKey: `agent-dispatch:request-signal-regressed:${event.payload.signalId}:${event.payload.triggerScoreId}`,
+            },
+          ),
+        ],
+        { concurrency: "unbounded" },
+      ).pipe(Effect.asVoid),
 
     SignalEscalationEnded: (event) =>
       pub.publish("alert-incidents", "signal-escalation-ended", event.payload, {
@@ -355,17 +392,9 @@ export const createDomainEventsWorker = ({
     // applied automatically below because both events are on the whitelist.
     OrganizationCreated: () => Effect.void,
 
-    SampleProjectCreated: (event) =>
-      pub.publish("projects", "seedDemo", event.payload, {
-        dedupeKey: `projects:seed-demo:${event.payload.projectId}`,
-        attempts: 10,
-        backoff: { type: "exponential", delayMs: 1_000 },
-      }),
-
-    OrganizationClaimed: (event) =>
-      pub.publish("projects", "createDemo", event.payload, {
-        dedupeKey: `projects:create-demo:${event.payload.organizationId}`,
-      }),
+    // No longer seeds a per-org demo on claim (C1 cutover); the demo is the shared
+    // showcase, which `claimOrganizationUseCase` opts the org into via `wantsShowcase`.
+    OrganizationClaimed: () => Effect.void,
 
     ClaimEmailRequested: (event) =>
       hash(event.payload.claimUrl).pipe(
@@ -501,7 +530,6 @@ export const createDomainEventsWorker = ({
     AdminUserEmailChanged: () => Effect.void,
     AdminUserSessionsRevoked: () => Effect.void,
     AdminUserSessionRevoked: () => Effect.void,
-    AdminDemoProjectSeeded: () => Effect.void,
   }
 
   consumer.subscribe("domain-events", {

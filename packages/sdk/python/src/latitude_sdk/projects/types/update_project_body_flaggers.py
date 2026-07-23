@@ -20,6 +20,11 @@ class UpdateProjectBodyFlaggers(UniversalBaseModel):
     jailbreaking: typing.Optional[bool] = None
     forgetting: typing.Optional[bool] = None
     trashing: typing.Optional[bool] = None
+    bluffing: typing.Optional[bool] = None
+    pii_leakage: typing_extensions.Annotated[
+        typing.Optional[bool], FieldMetadata(alias="pii-leakage"), pydantic.Field(alias="pii-leakage", default=None)
+    ]
+    incompletion: typing.Optional[bool] = None
     tool_call_errors: typing_extensions.Annotated[
         typing.Optional[bool],
         FieldMetadata(alias="tool-call-errors"),

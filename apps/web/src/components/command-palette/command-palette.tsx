@@ -14,6 +14,7 @@ import { useHotkeys } from "@tanstack/react-hotkeys"
 import { ChevronLeftIcon, Loader2Icon } from "lucide-react"
 import { useMemo, useState } from "react"
 import { useCommandPalette, useCommandPaletteState } from "./command-palette-provider.tsx"
+import { useExperimentSearchCommands } from "./commands/use-experiment-search-commands.ts"
 import { useGlobalCommands } from "./commands/use-global-commands.tsx"
 import { useMonitorSearchCommands } from "./commands/use-monitor-search-commands.ts"
 import { useNavigationCommands } from "./commands/use-navigation-commands.ts"
@@ -82,6 +83,7 @@ export function CommandPalette() {
   const globalCommands = useGlobalCommands()
   const { commands: signalResults, isLoading: signalsLoading } = useSignalSearchCommands(search)
   const monitorResults = useMonitorSearchCommands(search)
+  const experimentResults = useExperimentSearchCommands(search)
   const {
     datasets: datasetResults,
     savedSearches: savedSearchResults,
@@ -107,6 +109,8 @@ export function CommandPalette() {
     if (signalResults.length > 0) entityGroups.push({ key: "issues", label: "Signals", commands: signalResults })
     const monitors = monitorResults.filter(matches)
     if (monitors.length > 0) entityGroups.push({ key: "monitors", label: "Monitors", commands: monitors })
+    const experiments = experimentResults.filter(matches)
+    if (experiments.length > 0) entityGroups.push({ key: "experiments", label: "Experiments", commands: experiments })
     const datasets = datasetResults.filter(matches)
     if (datasets.length > 0) entityGroups.push({ key: "datasets", label: "Datasets", commands: datasets })
     const saved = savedSearchResults.filter(matches)
@@ -130,6 +134,7 @@ export function CommandPalette() {
     registeredCommands,
     signalResults,
     monitorResults,
+    experimentResults,
     datasetResults,
     savedSearchResults,
     tracesFallback,

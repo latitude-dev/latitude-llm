@@ -29,5 +29,6 @@ class _Run:
     open_tools: Dict[str, _Span] = field(default_factory=dict)
     closed: List[_Span] = field(default_factory=list)
     system_prompt: Optional[str] = None
+    last_output: Optional[Dict[str, Any]] = None
     llm_calls: int = 0
     updated_at: float = field(default_factory=time.time)

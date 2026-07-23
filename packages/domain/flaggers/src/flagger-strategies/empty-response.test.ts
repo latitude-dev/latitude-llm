@@ -45,12 +45,12 @@ describe("emptyResponseStrategy.detectDeterministically", () => {
   describe("no-match on valid responses", () => {
     it("no-match on normal text response", () => {
       const trace = makeTrace([user("hi"), assistant("Hello! How can I help?")])
-      expect(emptyResponseStrategy.detectDeterministically?.(trace)).toEqual({ kind: "no-match" })
+      expect(emptyResponseStrategy.detectDeterministically?.(trace)).toEqual({ kind: "unmatched" })
     })
 
     it("no-match when assistant only emits a tool call (no text part)", () => {
       const trace = makeTrace([user("check the weather"), assistantToolCall("get_weather", { city: "NYC" })])
-      expect(emptyResponseStrategy.detectDeterministically?.(trace)).toEqual({ kind: "no-match" })
+      expect(emptyResponseStrategy.detectDeterministically?.(trace)).toEqual({ kind: "unmatched" })
     })
 
     it("no-match when assistant has tool call WITH empty text part", () => {
@@ -59,7 +59,7 @@ describe("emptyResponseStrategy.detectDeterministically", () => {
         user("check the weather"),
         assistantToolCallWithText("get_weather", { city: "NYC" }, ""),
       ])
-      expect(emptyResponseStrategy.detectDeterministically?.(trace)).toEqual({ kind: "no-match" })
+      expect(emptyResponseStrategy.detectDeterministically?.(trace)).toEqual({ kind: "unmatched" })
     })
 
     it("no-match when assistant has tool call with whitespace-only text part", () => {
@@ -67,16 +67,16 @@ describe("emptyResponseStrategy.detectDeterministically", () => {
         user("check the weather"),
         assistantToolCallWithText("get_weather", { city: "NYC" }, "   "),
       ])
-      expect(emptyResponseStrategy.detectDeterministically?.(trace)).toEqual({ kind: "no-match" })
+      expect(emptyResponseStrategy.detectDeterministically?.(trace)).toEqual({ kind: "unmatched" })
     })
 
     it("no-match on empty conversation", () => {
-      expect(emptyResponseStrategy.detectDeterministically?.(makeTrace([]))).toEqual({ kind: "no-match" })
+      expect(emptyResponseStrategy.detectDeterministically?.(makeTrace([]))).toEqual({ kind: "unmatched" })
     })
 
     it("no-match when the final assistant message has only reasoning (no text, no tool_call)", () => {
       const trace = makeTrace([user("solve this"), assistantReasoning("Let me think through the steps…")])
-      expect(emptyResponseStrategy.detectDeterministically?.(trace)).toEqual({ kind: "no-match" })
+      expect(emptyResponseStrategy.detectDeterministically?.(trace)).toEqual({ kind: "unmatched" })
     })
 
     it("no-match when the final assistant message has reasoning + tool_call (typical agentic step)", () => {
@@ -84,7 +84,7 @@ describe("emptyResponseStrategy.detectDeterministically", () => {
         user("check the weather"),
         assistantReasoningAndToolCall("Need current weather; call the tool.", "get_weather", { city: "NYC" }),
       ])
-      expect(emptyResponseStrategy.detectDeterministically?.(trace)).toEqual({ kind: "no-match" })
+      expect(emptyResponseStrategy.detectDeterministically?.(trace)).toEqual({ kind: "unmatched" })
     })
 
     it("no-match when the final assistant message has reasoning + a real text answer", () => {
@@ -92,7 +92,7 @@ describe("emptyResponseStrategy.detectDeterministically", () => {
         user("hi"),
         assistantReasoningAndText("They greeted me; respond warmly.", "Hello! How can I help?"),
       ])
-      expect(emptyResponseStrategy.detectDeterministically?.(trace)).toEqual({ kind: "no-match" })
+      expect(emptyResponseStrategy.detectDeterministically?.(trace)).toEqual({ kind: "unmatched" })
     })
 
     it("no-match when a reasoning-only intermediate precedes a real final text response", () => {
@@ -101,7 +101,7 @@ describe("emptyResponseStrategy.detectDeterministically", () => {
         assistantReasoning("Let me think this through…"),
         assistant("Here's the answer: 42"),
       ])
-      expect(emptyResponseStrategy.detectDeterministically?.(trace)).toEqual({ kind: "no-match" })
+      expect(emptyResponseStrategy.detectDeterministically?.(trace)).toEqual({ kind: "unmatched" })
     })
 
     it("no-match when an empty-text intermediate assistant precedes a real final response", () => {
@@ -111,7 +111,7 @@ describe("emptyResponseStrategy.detectDeterministically", () => {
         user("did you hear me?"),
         assistant("Hello! How can I help?"),
       ])
-      expect(emptyResponseStrategy.detectDeterministically?.(trace)).toEqual({ kind: "no-match" })
+      expect(emptyResponseStrategy.detectDeterministically?.(trace)).toEqual({ kind: "unmatched" })
     })
 
     it("matches when an empty final response follows several valid tool-call iterations", () => {

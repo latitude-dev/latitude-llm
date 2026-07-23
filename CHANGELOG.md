@@ -2,6 +2,476 @@
 
 ## Unreleased
 
+## v0.3.65 - 2026-07-23
+
+### Ingestion
+
+- Protected trace ingestion memory by rejecting payloads over 32 MiB and limiting each ingest process to 64 MiB across 16 in-flight payloads; capacity exhaustion now returns a retryable response (ref: #4195).
+
+## v0.3.64 - 2026-07-22
+
+### Taxonomy
+
+- Added storage and a lazy extraction engine for custom taxonomy facets, caching one-sentence session projections and embedding clear answers. Facets remain unavailable in the app and are not yet connected to taxonomy gardening (refs: #4186, #4192).
+
+### Flaggers
+
+- Stopped frustration, jailbreaking, and NSFW flaggers from running on first-level flagger-generated sessions, and rejected annotation matches based only on nested source material to prevent false signals in Latitude's own flagger telemetry (ref: #4149).
+
+### Traces
+
+- Validated trace and span IDs before affected ClickHouse reads so malformed values return validation errors instead of 500s (ref: #4151).
+
+### Signals
+
+- Restored signal links from email, Slack, and in-app notifications after signal detail pages moved to slugs, including compatibility with previously delivered links that used signal IDs (ref: #4193).
+
+## v0.3.63 - 2026-07-22
+
+### App
+
+- Refreshed authenticated navigation with a collapsible sidebar, reorganized search and usage controls, and improved organization and project switchers. Project switches no longer reload the page, and project slugs can be copied from the header (ref: #4185).
+
+### Telemetry
+
+- Released TypeScript Telemetry 4.0.0 with opt-in provider instrumentation subpaths so consumers only bundle the integrations they import. This breaking release replaced the `instrumentations` object map with an array of factory-created instances and made registration failures observable through `latitude.ready` (refs: #4178, #4189).
+
+### Session intelligence
+
+- Made session-intelligence backfills continue after individual session failures, report completed and failed counts with bounded failed-session IDs, and keep new analysis payloads out of Temporal history (ref: #4190).
+
+## v0.3.62 - 2026-07-22
+
+### Memory
+
+- Shipped Memory observability to every organization by removing the `memoryObservability` feature flag; the Memory page and its surfaces are now public (ref: #4180).
+- Exposed memory observability reads across the public API, MCP, TypeScript/Python SDKs (9.6.0), and CLI (7.6.0): store roll-ups and snapshots (point-in-time and diff), per-record bodies with version history and change diffs, record read/user listings, and per-session and per-trace memory footprints (ref: #4157).
+
+### Signals
+
+- Added agent-dispatch history to the signal detail page (ref: #4182).
+
+### Sessions
+
+- Validated session moment labels with a contextual MiniMax classification pass, with tenant-safe classifier retries (ref: #4167).
+
+### Telemetry
+
+- Added a Prime Intellect telemetry export package for shipping Prime Intellect traces to Latitude (ref: #4164).
+- Fixed Claude Code memory-directory resolution when running inside a git worktree so auto-memory spans still attribute to the right project (ref: #4176).
+
+### Traces
+
+- Added drag-to-resize to the span detail panel in the Spans tab (ref: #4165).
+
+### Chore
+
+- Refreshed the bundled models.dev catalog data (ref: #4087).
+- Added a DNS record for the `jobs` subdomain (ref: #4177).
+
+## v0.3.61 - 2026-07-22
+
+### Signals
+
+- Restored the manual resolve/ignore lifecycle that the monitors-incidents consolidation had collapsed into mute, with regression detection: a new occurrence on a resolved signal reopens it and emits a `signal.regressed` notification (assignee-first, in-app + email + Slack). Mute now only gates notification fan-out and agent dispatch, ignoring auto-mutes, and the Archived tab lists resolved-or-ignored signals (ref: #4132).
+- Switched signal slugs to short JIRA-style `LAT-XY9Z` codes with slug-addressed detail pages (`/signals/$signalSlug`); slugs are assigned once at creation and never regenerated. Experiment top-signals now expose the slug as their `key` across the public API, MCP, and web so an agent can feed it straight into the signal tools (ref: #4154).
+- Used occurrence timestamps in the signals seen column (ref: #4145).
+
+### Flaggers
+
+- Fixed the `process deterministic-flaggers` job failing for every project in production: a forward-incompatible flagger row (from the new-slug backfill migration running ahead of the app deploy) made the whole batch throw. Unrecognized rows are now skipped with a warning, making staged rollouts of new flagger strategies safe regardless of migration/deploy ordering (ref: #4129).
+- Stopped undeclared-tool false positives from truncated Claude Code toolsets: all tool names are preserved when capping oversized schemas, and a call whose response succeeded no longer flags as undeclared (ref: #4141).
+
+### Telemetry
+
+- Added memory-operation spans for Claude Code's own persistent auto memory: Read/Write/Edit tools targeting the auto-memory directory now emit `gen_ai.memory.*` spans (search/upsert/update) into the same ledger and Memory-page surfaces as the SDK memory helper, gated by `LATITUDE_CLAUDE_CODE_MEMORY` (default on) (ref: #4140).
+
+### Traces
+
+- Classified nested Vercel AI SDK wrappers as `agent_step` (excluded from the cost/token rollup, not an agent-graph candidate) while a trace-root wrapper stays `invoke_agent`, fixing false subagent detection and overstated single-response spans (ref: #4147).
+
+### Memory
+
+- Added an onboarding empty state to the Memory page (ref: #4152).
+
+### Taxonomy
+
+- Averaged `crossSampleAri` over all 45 leave-one-tenth-out fold pairs for a reproducible, order-robust metric and re-derived the stability floor (0.8 → 0.75); calibration/offline only, the production shadow path is unaffected (ref: #4156).
+- Fixed the shadow-span Datadog config to target `resource_name` (ref: #4148).
+
+## v0.3.60 - 2026-07-21
+
+### API
+
+- Added a `sessions` endpoint group mirroring `traces`, mounted under `/v1/projects/{projectSlug}/sessions`: list sessions (filters + semantic query, cursor-paginated), session analytics (per-metric totals/medians with a 12h bucket series), session detail, the session's traces, and session-scoped signals (list and by-slug). Session `filters` match the web session UI via a new `SessionFilterSet` that adds the session-only `moments`/`topics` fields with taxonomy topic-subtree expansion. Exposed across HTTP, MCP, and the TypeScript/Python SDKs (9.4.0) and CLI (7.4.0) (ref: #4133).
+
+## v0.3.59 - 2026-07-20
+
+### Memory observability
+
+- Added memory-operation spans to the TypeScript and Python SDKs (both bumped to 3.7.0): OTEL GenAI memory operations (create/update/upsert/delete/search and store create/delete) with `gen_ai.memory.*` attributes, latency/error capture, and opt-in record-content capture (ref: #4128).
+- Added record change diffs to memory spans and a collapsible "Memory changes" section on session and trace detail: per-record before/after diffs grouped by store, with GitHub-style context folding and an "Open in Memory" deep link to the full record (ref: #4127).
+
+### Taxonomy
+
+- Added adaptive taxonomy clustering with `off`/`shadow`/`enforced` modes and a per-org `adaptiveTaxonomyClustering` flag; shadow mode computes the adaptive tree alongside static for comparison without changing persisted taxonomy, with bounded APM telemetry for a fleet-wide static-vs-adaptive view. Enabled in shadow mode on production; a no-op for staging and self-hosted deployments (ref: #4123).
+
+### Ingestion
+
+- Fixed a malformed or missing `traceId` crashing an entire span batch: invalid spans are now rejected individually via the existing partial-success path, both on transform and on the sampling-key fallback (ref: #4101).
+
+### Flaggers
+
+- Removed the old per-trace flagger pipeline, drained since the move to session-level flagging (ref: #4126).
+
+## v0.3.58 - 2026-07-20
+
+### Flaggers
+
+- Moved automatic issue detection from per-trace to per-session: flaggers now judge the full conversation once a session settles and its semantic analysis has run, in two passes — free deterministic screening on every session, LLM classification only for session×flagger pairs that earn it (ref: #4078).
+- Added a shared hint catalog (tool errors, tool loops, cost/latency/token outliers vs the project baseline, semantic moment labels, and tuned text patterns): sessions with fired hints skip sampling and go straight to the LLM under per-flagger rate budgets, and all hints are shown to the classifier as leads. Positive signals (user satisfaction, resolution) never trigger and only shrink the sampled budget.
+- Added three flaggers: Bluffing (assistant proceeds past a failed tool call as if it succeeded), PII leakage (assistant output exposes personal data), and Incompletion (a task objectively not delivered, judged only on responses the user has reacted to). Tool call errors now also flags calls to tools missing from the declared toolset. New flagger rows are backfilled for existing projects, and the flagger enums are exposed through the public API and SDKs.
+- Deduplicated flags by anchored-message content hash so session re-screens, model re-wording, and context compaction never duplicate a flag or a charge; one flagger can still flag several distinct parts of a long conversation.
+- The old per-trace flagger pipeline remains registered drain-only and is removed in a follow-up once production has drained it.
+
+### Conversation intelligence
+
+- Added `user_correction` and `stalling` moment kinds; sessions re-analyze on their next trace after the detector version bump (ref: #4078).
+
+## v0.3.57 - 2026-07-20
+
+### Memory observability
+
+- Added memory record history and JSON diff views so changes to a record can be reviewed directly from the Memory page (ref: #4120).
+
+### Taxonomy
+
+- Added adaptive taxonomy gardening with staged observation swaps, full-window reassignment, and lineage updates to keep generated taxonomy clusters current (ref: #4121).
+
+### Telemetry
+
+- Rejected oversized OTLP trace and span IDs before ClickHouse insertion so invalid telemetry is handled cleanly at ingestion (ref: #4020).
+
+### Traces
+
+- Deduped ClickHouse reads for memory ledger rows and latest output trace IDs when duplicate span rows exist (refs: #4100, #4122).
+
+### Agent dispatch
+
+- Skipped dispatch work gracefully when the related organization or incident has already been deleted (ref: #4099).
+
+## v0.3.56 - 2026-07-20
+
+### Memory observability
+
+- Added the project Memory page with store lists, record detail views, access views, and per-user memory store visibility (ref: #4083).
+
+### Experiments
+
+- Improved experiment creation and analysis with expanded presets, autofilled filter builders, metric tooltips, and updated experiment metric schemas in the API and SDKs (ref: #4085).
+
+### Monitors
+
+- Fixed recommended tool failure monitor creation by sharing preset and alert-form handling between tool and user monitor flows (ref: #4088).
+
+### Taxonomy
+
+- Reworked taxonomy clustering around a pure relative divisive builder for more consistent hierarchical taxonomy generation (ref: #4084).
+
+### Telemetry
+
+- Stripped orphan tool responses after input message truncation so telemetry exports do not retain invalid tool-only context (ref: #4044).
+- Updated the Hermes telemetry plugin to stop exporting empty conversation placeholders while preserving tool-only assistant turns (ref: #4089).
+
+### Traces
+
+- Rejected `gtePercentile` on every trace filter field except `duration`, `ttft`, and `cost`, so invalid filters return 400 instead of 500 (ref: #4086).
+
+### Security
+
+- Patched dependency advisories for Hono CORS, protobufjs denial of service, Next.js, Undici, ws, shell-quote, tmp, and form-data (refs: #4091, #4092, #4093, #4094, #4095, #4096, #4097, #4098).
+
+### Documentation
+
+- Added the self-healing agents documentation overview page (ref: #3951).
+
+## v0.3.55 - 2026-07-17
+
+### Evaluations
+
+- Truncated live-evaluation judge prompts to fit the model's context window so large sessions no longer fail both primary and Bedrock fallback calls (ref: #4081).
+
+### Signals
+
+- Prevented late signal-generation progress writes from overwriting the terminal done/error result and leaving the UI stuck pending (ref: #3943).
+
+### Agent dispatch
+
+- Scoped Cursor/Claude/Linear/Webhook connect from a project's integrations page to project overrides instead of org-wide dispatch defaults (ref: #3984).
+
+### Organizations
+
+- Stopped claimed temporary organizations from being reaped after claim failed to clear `expires_at` on upsert (ref: #3841).
+
+### Traces
+
+- Deduped span rows in session conversation and trace message queries, and stopped false onboarding gates when spans were duplicated (refs: #4005, #3986).
+
+### Memory observability
+
+- Re-keyed memory tables and APIs on `store_id` alone, dropping the derived `scope` field and the SDK `latitude.memory.scope` attribute (ref: #4074).
+
+## v0.3.54 - 2026-07-16
+
+### Navigation
+
+- Preserved project and organization names beginning with digits, `#`, or `*` instead of rendering their first character as an emoji in navigation and command palettes (ref: #4063).
+
+## v0.3.53 - 2026-07-16
+
+### Memory observability
+
+- Added per-record memory footprints to session and trace details, showing read, added, and removed tokens with a hover breakdown grouped by memory store (ref: #4053).
+
+### Billing
+
+- Charged deterministic live-evaluation scans at 1 credit instead of 30; evaluations that call `llm()` remain at 30 credits (ref: #4055).
+
+## v0.3.52 - 2026-07-16
+
+### Custom Behaviors
+
+- Unified global and custom-behavior taxonomy gardening into one workflow: scoped gardening with global-parity trends, auto-gardening on create, and custom behaviors merged into the Behaviours view (refs: #4037, #4052).
+
+### Traces
+
+- Validated trace filter fields at the API boundary and added an `endTime` filter (ref: #4021).
+
+### Signals
+
+- Skipped markdown links when validating flagger output schemas (ref: #4038).
+
+### Claude Code telemetry
+
+- Installed the Stop hook with `@latest` so it self-updates (ref: #4049).
+
+### Reliability
+
+- Raised the production web service minimum capacity (ref: #4045).
+
+### Documentation
+
+- Fixed the Detection Methods documentation page.
+
+## v0.3.51 - 2026-07-15
+
+### Experiments
+
+- Added project-scoped Experiments: a container that compares up to 10 variants (each a filter set, search query, and time range) against a baseline across every session, user, tool, signal, and behaviour metric Latitude computes, with a variant-comparison table, shared population editors, and list/create/rename/delete/import flows (ref: #4017).
+- Let users create experiments straight from a saved search, added a "Compare this search" toggle and Monitor/Compare row actions to the saved-search UI, and added creation presets (A/B test, versions, seasonal, failures, outliers) to the experiment create modal (ref: #4034).
+
+### Signals
+
+- Introduced a session-end trigger so signal matching and conversation analysis run once per session after it settles, collapsing a session's trace-ends into a single firing against its latest trace instead of dispatching per trace (ref: #4040).
+- Moved the signal edit button beside the signal title (ref: #4039).
+
+### Custom Behaviors
+
+- Wired up the Generate flow for custom behaviors and the per-behavior scoped taxonomy tree, added a generation status indicator, and added entry points to create a custom behavior from the Sessions view or a saved search (ref: #4027).
+
+### Memory observability
+
+- Added ingest support for GenAI memory operation spans and a git-style, content-addressed memory ledger that materializes memory events into ClickHouse at the settled trace boundary, with point-in-time snapshot reconstruction (groundwork, refs: #4035, #4041).
+
+### Claude Code telemetry
+
+- Recovered subagent spans that were previously lost for parallel subagents and on the final llm_request of a turn (ref: #4028).
+- Made the Hermes plugin flush on session end and split its api_request and llm_call hooks (refs: #4029, #4030).
+
+### Authentication
+
+- Protected magic links from being consumed by email link scanners (ref: #4026).
+
+### Reliability
+
+- Tolerated non-array OTLP span attributes during ingest instead of failing (ref: #4031).
+
+## v0.3.50 - 2026-07-14
+
+### Subagent visibility
+
+- Detected Claude Code subagents by classifying interaction spans as agent invocations, so the agent graph roots each turn on a real boundary and surfaces Task subagents with proper names (ref: #4022).
+
+### Spans
+
+- Colored the span-tree waterfall bars by operation: agent invocations use the accent color, chat spans a muted accent, and successful tool calls green, with errored spans still red (ref: #4023).
+
+### Custom Behaviors
+
+- Added the project custom-behaviors authoring UI (list, create/edit modal, live eligible-session preview, active-filter summaries), gated behind a feature flag and hidden by default until the Generate flow ships (ref: #4018).
+
+### Reliability
+
+- Bounded ClickHouse memory usage for project span queries to prevent out-of-memory failures (ref: #4019).
+
+## v0.3.49 - 2026-07-14
+
+### Subagent visibility
+
+- Added agent breakdowns and nested conversation cards that show subagent handoffs, activity, costs, duration, models, and runs, with in-place navigation between parent and subagent conversations (ref: #4014).
+
+### Organization members
+
+- Let owners and admins choose whether an invited organization member joins as a member or admin (ref: #4013).
+
+### Custom Behaviors
+
+- Added scoped taxonomy gardening for custom behaviors, building and refreshing behavior-specific trees from matching session samples without changing the global taxonomy (ref: #4010).
+
+### Reliability
+
+- Prevented annotation formatting from failing when malformed GenAI messages are missing their parts (ref: #4011).
+
+## v0.3.48 - 2026-07-13
+
+### Monitors
+
+- Made monitor targets and incident conditions immutable after creation across the web, API, CLI, and SDKs. Existing monitors can still update their name, description, and severity (ref: #3947).
+
+### Notifications
+
+- Routed signal notifications to the assigned user when present and kept targeted notifications out of shared Slack channels (ref: #4009).
+
+### Claude Code Wrapped
+
+- Added skill usage totals, top skills, and per-workspace skill breakdowns to Claude Code Wrapped reports and emails (ref: #3978).
+
+### Reliability
+
+- Fixed classifier flaggers producing truncated structured output that could fail JSON parsing (ref: #3910).
+- Fixed trace, session, and session-intelligence time filters for timestamps containing timezone offsets (ref: #4007).
+- Fixed newly created datasets temporarily hiding their imported rows (ref: #4006).
+
+### API and ingestion
+
+- Raised public API and trace-ingestion rate limits to support higher normal throughput (ref: 1deab1b9f, ebff4940f).
+- Rejected OAuth access tokens as soon as their user no longer belongs to the authorized organization (ref: #3917).
+
+### Models
+
+- Refreshed the bundled models.dev model catalog (ref: #3987).
+
+## v0.3.47 - 2026-07-13
+
+### Traces
+
+- Defaulted Sessions/Traces and Tools/Signals/Users time filters to All time, with bounded chart windows so older project data is visible without expensive trend scans (ref: #3955).
+- Fixed "Clear dates" so it removes date bounds instead of restoring the previous default window, and stopped showing false onboarding states for projects that only have older traces (ref: #3955).
+- Added session-wide span links in the Conversation tab so messages and tool calls can jump to spans from earlier traces in the same session (ref: #3965).
+- Reduced ClickHouse memory usage for trace detail reads by loading trace summaries separately from source-span message content (ref: ad54c4154).
+
+### Telemetry
+
+- Released `@latitude-data/telemetry` 3.6.0 with `createCodemodeTelemetry()` for Cloudflare Think Codemode tracing, including nested tool-call spans, capture/redaction options, and error recording (ref: #3956).
+- Updated the Cloudflare Think telemetry guide and example app for Codemode tracing and local verification (ref: #3956).
+
+### Models
+
+- Refreshed the bundled models.dev model catalog (ref: #3983).
+
+## v0.3.46 - 2026-07-10
+
+### Traces
+
+- Added a session-wide grouped Spans tab in the session detail drawer (ref: #3962).
+- Fixed the "Waiting for your first trace" screen getting stuck on projects that have only older traces (or a backfilled `first_trace_at`): the onboarding now confirms emptiness with an unwindowed trace count instead of trusting the best-effort `first_trace_at` flag (ref: #3964).
+
+## v0.3.45 - 2026-07-10
+
+### Traces
+
+- Stopped showing the "Waiting for your first trace" onboarding for projects whose traces all predate the default 30-day window. They now open the normal Sessions/Traces view with the time filter available, so the range can be widened to reveal older data (ref: #3961).
+
+### Behaviours
+
+- Removed the breadcrumb row (Back button + topic-path chips) above the behaviours trajectory chart (ref: #3958).
+
+### Models
+
+- Refreshed the bundled models.dev model catalog (ref: #3957).
+
+## v0.3.44 - 2026-07-09
+
+### Agent Dispatch
+
+- Added org-default dispatch configuration with per-project overrides: dispatch repos now resolve from an org-wide default that any project can override or reset, replacing the single flat config (ref: #3952).
+
+### Signals
+
+- Showed freshly created signals immediately even before they have any occurrences (ref: #3945).
+- Removed the ghost modal left behind after confirming a mute-signal action (ref: #3946).
+- Removed the redundant "Me" option from assignee selectors (ref: #3948).
+
+## v0.3.43 - 2026-07-09
+
+### Monitors
+
+- Gave threshold monitors an open/close incident lifecycle: a sustained breach now opens a single incident and dedups until a 30-minute exit dwell closes it, instead of emailing on every ~5-minute sweep. Editing a monitor with an open incident now evicts the stale incident (ref: #3949).
+
+### Showcase
+
+- Flipped onboarding to the shared read-only showcase: new orgs get only their real empty default project and land on `/projects/lat-demo` when the showcase resolves, with a fallback to their own default project. Retired the old per-signup/claim demo-project seeding machinery (ref: #3940).
+
+## v0.3.42 - 2026-07-09
+
+### Signals
+
+- Generated signals with a research agent instead of a fixed prompt loop, giving richer investigation output (ref: #3922).
+
+### Agent Dispatch
+
+- Skipped agent dispatch for user-created signals on `signal.discovered` so only auto-discovered signals trigger dispatch (ref: #3925).
+- Improved the signal dispatch prompt fallback (ref: #3913).
+
+### Notifications
+
+- Enriched signal discovery notification messages (ref: #3937).
+
+### Evaluations
+
+- Surfaced GEPA optimization failures and added support for single-example signals (ref: #3935).
+
+### Showcase
+
+- Added read-only UI variance and org-wide showcase dismissal (S6) (ref: #3918).
+- Added a backoffice showcase section for managing the demo project (S7) (ref: #3919).
+- Scoped project-section Postgres domains onto `withScopedPostgres` (ref: #3909).
+
+### API
+
+- Restored `getApiKey` as a tool and converted all handler-form operations to execute-form (ref: #3938, #3934).
+- Rejected `gtePercentile` on span row filters and fractional values on integer ClickHouse filter fields (ref: #3839, #3924).
+
+### Performance
+
+- Reused instruction extractions across similar system prompts, normalized the instruction-extractor cache key, and raised the verbatim threshold to cut flagger work (ref: #3928, #3926).
+
+### Web
+
+- Optimized the public design system (ref: #3929).
+
+### Telemetry
+
+- Tracked self-hosted deployments in PostHog.
+
+### Infra
+
+- Tuned production ECS memory and autoscaling.
+
+### Maintenance
+
+- Updated bundled models.dev data, refreshed the knip configuration, and bumped `@temporalio/*` to 1.17.5 for a workflow isolation fix (ref: #3895, #3921).
+
 ## v0.3.41 - 2026-07-07
 
 ### Agent Dispatch

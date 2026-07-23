@@ -85,6 +85,7 @@ function SandboxTracesContent({ sandboxOrgId, projectSlug }: { sandboxOrgId: str
   const [activeTraceId, setActiveTraceId] = useParamState("traceId", "")
   const [activeSessionId, setActiveSessionId] = useParamState("sessionId", "")
   const [, setSelectedSpanId] = useParamState("spanId", "")
+  const [, setSelectedSpanTraceId] = useParamState("spanTraceId", "")
 
   const tabDefaultSorting = activeTab === "sessions" ? DEFAULT_SESSION_SORTING : DEFAULT_TRACE_SORTING
   const [sortBy, setSortBy] = useParamState("sortBy", tabDefaultSorting.column)
@@ -114,7 +115,11 @@ function SandboxTracesContent({ sandboxOrgId, projectSlug }: { sandboxOrgId: str
 
   const projectId = project?.id ?? ""
   const hasActiveFilters = Object.keys(filters).length > 0
-  const { totalCount, isLoading: countLoading } = useTracesCount({
+  const {
+    totalCount,
+    isLoading: countLoading,
+    isError: countError,
+  } = useTracesCount({
     projectId,
     ...(hasActiveFilters ? { filters } : {}),
   })
@@ -138,7 +143,8 @@ function SandboxTracesContent({ sandboxOrgId, projectSlug }: { sandboxOrgId: str
   const closeTraceDrawer = useCallback(() => {
     setActiveTraceId("")
     setSelectedSpanId("")
-  }, [setActiveTraceId, setSelectedSpanId])
+    setSelectedSpanTraceId("")
+  }, [setActiveTraceId, setSelectedSpanId, setSelectedSpanTraceId])
 
   const onActiveTraceChange = (traceId: string | undefined) => {
     if (!traceId) {
@@ -154,15 +160,18 @@ function SandboxTracesContent({ sandboxOrgId, projectSlug }: { sandboxOrgId: str
     (sessionId: string, traceId?: string) => {
       setActiveSessionId(sessionId)
       setActiveTraceId(traceId ?? "")
+      setSelectedSpanId("")
+      setSelectedSpanTraceId("")
     },
-    [setActiveSessionId, setActiveTraceId],
+    [setActiveSessionId, setActiveTraceId, setSelectedSpanId, setSelectedSpanTraceId],
   )
 
   const closeSessionPanel = useCallback(() => {
     setActiveSessionId("")
     setActiveTraceId("")
     setSelectedSpanId("")
-  }, [setActiveSessionId, setActiveTraceId, setSelectedSpanId])
+    setSelectedSpanTraceId("")
+  }, [setActiveSessionId, setActiveTraceId, setSelectedSpanId, setSelectedSpanTraceId])
 
   // Next/prev trace navigation off the loaded list (Traces tab drawer).
   const navigateTrace = useCallback(
@@ -225,7 +234,15 @@ function SandboxTracesContent({ sandboxOrgId, projectSlug }: { sandboxOrgId: str
 
   // Never received a trace → reuse the production onboarding empty state (scoped
   // to the sandbox; it polls for and transitions on the sandbox's first trace).
-  if (project && project.firstTraceAt == null && totalCount === 0 && !hasActiveFilters && !countLoading) {
+  // Skip while the count is loading or errored — default `0` would otherwise flash false onboarding.
+  if (
+    project &&
+    project.firstTraceAt == null &&
+    totalCount === 0 &&
+    !hasActiveFilters &&
+    !countLoading &&
+    !countError
+  ) {
     return (
       <Layout>
         <TracesEmptyOnboarding

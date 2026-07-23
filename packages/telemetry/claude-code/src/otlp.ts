@@ -1,9 +1,13 @@
 import { createHash } from "node:crypto"
 import { arch, hostname, platform, release } from "node:os"
+import { classifyMemoryTool } from "./memory.ts"
 import { type RedactConfig, redactAttributes } from "./redaction.ts"
 import type { AnthropicMessage, AnthropicMessageBlock, AnthropicSystem, StoredRequest } from "./request-store.ts"
 import type {
+  AgentSpanLink,
   AssistantCall,
+  MemoryEmitOptions,
+  MemoryOp,
   OtlpExportRequest,
   OtlpKeyValue,
   OtlpResourceSpans,
@@ -32,6 +36,7 @@ const SYSTEM_CAP = 16 * 1024
 const TOOL_DEFS_CAP = 16 * 1024
 const TOOL_ARGS_CAP = 16 * 1024
 const USER_PROMPT_CAP = 64 * 1024
+const MEMORY_RECORDS_CAP = 64 * 1024
 // Each POST is kept under this size so it completes well inside the client
 // timeout even on modest uplinks; one logical trace may span several POSTs
 // (the server groups spans by trace_id, so splitting is transparent).
@@ -46,6 +51,10 @@ export function buildOtlpRequest(opts: {
   conversationHistory?: Turn[] | undefined
   requestsByMessageId?: Map<string, StoredRequest> | undefined
   redact?: RedactConfig | undefined
+  // Out-param: populated with one link per parent Agent tool call emitted, so the
+  // caller can (re-)attach subagent spans under it on later turns.
+  agentLinks?: AgentSpanLink[]
+  memory?: MemoryEmitOptions | undefined
 }): OtlpExportRequest {
   const contextAttrs = buildContextAttrs(opts.context)
   const history = opts.conversationHistory ?? []
@@ -55,7 +64,17 @@ export function buildOtlpRequest(opts: {
     const turnNum = opts.turnStartNumber + i
     const priorTurns = [...history, ...opts.turns.slice(0, i)]
     spans.push(
-      ...buildTurnSpans(opts.sessionId, opts.userId, turnNum, turn, contextAttrs, priorTurns, requestsByMessageId),
+      ...buildTurnSpans(
+        opts.sessionId,
+        opts.userId,
+        turnNum,
+        turn,
+        contextAttrs,
+        priorTurns,
+        requestsByMessageId,
+        opts.agentLinks,
+        opts.memory,
+      ),
     )
   })
 
@@ -86,6 +105,8 @@ function buildTurnSpans(
   contextAttrs: OtlpKeyValue[],
   priorTurns: Turn[],
   requestsByMessageId: Map<string, StoredRequest>,
+  agentLinks: AgentSpanLink[] | undefined,
+  memory: MemoryEmitOptions | undefined,
 ): OtlpSpan[] {
   const traceId = hashHex(`${sessionId}:${turnNum}`, 32)
   const turnSpanId = hashHex(`${traceId}:turn`, 16)
@@ -99,12 +120,15 @@ function buildTurnSpans(
     turn,
     isSubagent: false,
     subagentLabel: undefined,
+    subagentName: undefined,
     turnNum,
     interactionIdSalt: "turn",
     genIdSalt: "gen",
     contextAttrs,
     priorTurns,
     requestsByMessageId,
+    agentLinks,
+    memory,
   })
   return out
 }
@@ -118,16 +142,23 @@ interface TreeCtx {
   turn: Turn
   isSubagent: boolean
   subagentLabel: string | undefined
+  subagentName: string | undefined
   turnNum: number | undefined
   interactionIdSalt: string
   genIdSalt: string
   contextAttrs: OtlpKeyValue[]
   priorTurns: Turn[]
   requestsByMessageId: Map<string, StoredRequest>
+  agentLinks: AgentSpanLink[] | undefined
+  memory: MemoryEmitOptions | undefined
+  // Emission window (subagent incremental re-emission). Defaults emit everything.
+  emitInteraction?: boolean
+  callFrom?: number
+  callTo?: number
 }
 
 function buildInteractionTree(out: OtlpSpan[], ctx: TreeCtx): void {
-  const { traceId, sessionId, userId, turn, isSubagent, subagentLabel, turnNum } = ctx
+  const { traceId, sessionId, userId, turn, isSubagent, subagentLabel, subagentName, turnNum } = ctx
   const startNs = msToNs(turn.startMs)
   const endNs = msToNs(turn.endMs)
   const durationMs = Math.max(0, turn.endMs - turn.startMs)
@@ -155,6 +186,7 @@ function buildInteractionTree(out: OtlpSpan[], ctx: TreeCtx): void {
       int("interaction.tool_call_count", totalToolCalls),
       turnNum !== undefined ? int("turn.number", turnNum) : undefined,
       isSubagent && subagentLabel ? str("subagent.id", subagentLabel) : undefined,
+      isSubagent && subagentName ? str("subagent.name", subagentName) : undefined,
       str("gen_ai.input.messages", JSON.stringify([messagePart("user", promptText)])),
       promptText.length < turn.userText.length ? str("latitude.truncation", "user prompt clamped") : undefined,
       // Diagnostic: per-interaction snapshot of what the hook saw from the intercept.
@@ -173,15 +205,18 @@ function buildInteractionTree(out: OtlpSpan[], ctx: TreeCtx): void {
     ]),
     status: { code: 1 },
   }
-  out.push(interactionSpan)
+  if (ctx.emitInteraction ?? true) out.push(interactionSpan)
 
+  const callFrom = ctx.callFrom ?? 0
+  const callTo = ctx.callTo ?? turn.calls.length
   turn.calls.forEach((call, callIdx) => {
+    if (callIdx < callFrom || callIdx >= callTo) return
     emitCallAndTools(out, ctx, call, callIdx)
   })
 }
 
 function emitCallAndTools(out: OtlpSpan[], ctx: TreeCtx, call: AssistantCall, callIdx: number): void {
-  const { traceId, sessionId, userId, turn, isSubagent, subagentLabel } = ctx
+  const { traceId, sessionId, userId, turn, isSubagent, subagentLabel, subagentName } = ctx
   const callStartNs = msToNs(call.startMs)
   const callEndNs = msToNs(call.endMs)
 
@@ -246,6 +281,7 @@ function emitCallAndTools(out: OtlpSpan[], ctx: TreeCtx, call: AssistantCall, ca
         : undefined,
       str("success", "true"),
       isSubagent && subagentLabel ? str("subagent.id", subagentLabel) : undefined,
+      isSubagent && subagentName ? str("subagent.name", subagentName) : undefined,
       payloads.systemJson ? str("gen_ai.system_instructions", payloads.systemJson) : undefined,
       payloads.toolDefsJson ? str("gen_ai.tool.definitions", payloads.toolDefsJson) : undefined,
       str("gen_ai.input.messages", payloads.inputJson),
@@ -267,28 +303,128 @@ function emitCallAndTools(out: OtlpSpan[], ctx: TreeCtx, call: AssistantCall, ca
     // interaction so the timeline reads as: llm_request → tool → llm_request → tool → ...
     out.push(buildToolSpan(traceId, ctx.turnSpanId, toolSpanId, sessionId, userId, tool, ctx.contextAttrs))
 
-    const subagent = tool.subagent
-    if (!subagent) return
-    subagent.turns.forEach((subTurn, subIdx) => {
-      const subSalt = `sub:${subagent.agentId}:${subIdx}`
-      buildInteractionTree(out, {
+    // A successful file op inside the auto-memory dir gets a child memory span for the ledger.
+    if (ctx.memory && !tool.isError) {
+      const op = classifyMemoryTool(tool, ctx.memory)
+      if (op) {
+        const memSpanId = hashHex(`${traceId}:${callSalt}:tool:${idx}:${tool.id}:mem`, 16)
+        out.push(buildMemorySpan(traceId, toolSpanId, memSpanId, sessionId, userId, tool, op, ctx.contextAttrs))
+      }
+    }
+
+    if (!isSubagent && tool.name === "Agent") {
+      ctx.agentLinks?.push({ toolUseId: tool.id, promptId: tool.promptId, traceId, parentSpanId: toolSpanId })
+    }
+
+    if (tool.subagent) {
+      const totalCalls = tool.subagent.turns.reduce((sum, t) => sum + t.calls.length, 0)
+      emitSubagentTree(out, {
         traceId,
-        turnSpanId: hashHex(`${traceId}:${subSalt}:turn`, 16),
         parentSpanId: toolSpanId,
         sessionId,
         userId,
-        turn: subTurn,
-        isSubagent: true,
-        subagentLabel: subagentAttr(subagent),
-        turnNum: undefined,
-        interactionIdSalt: `${subSalt}:turn`,
-        genIdSalt: `${subSalt}:gen`,
+        subagent: tool.subagent,
         contextAttrs: ctx.contextAttrs,
-        priorTurns: subagent.turns.slice(0, subIdx),
+        memory: ctx.memory,
         requestsByMessageId: ctx.requestsByMessageId,
+        emitInteraction: true,
+        fromCall: 0,
+        toCall: totalCalls,
       })
-    })
+    }
   })
+}
+
+interface SubagentTreeCtx {
+  traceId: string
+  parentSpanId: string
+  sessionId: string
+  userId: string | undefined
+  subagent: SubagentInvocation
+  contextAttrs: OtlpKeyValue[]
+  requestsByMessageId: Map<string, StoredRequest>
+  memory: MemoryEmitOptions | undefined
+  // Emission window over the subagent's calls, flattened across its turns. The
+  // interaction span is emitted only when emitInteraction is set. Defaults emit all.
+  emitInteraction: boolean
+  fromCall: number
+  toCall: number
+}
+
+// Emits a subagent's interaction/llm_request/tool subtree under `parentSpanId`.
+// Span ids are salted only by traceId, agentId, and turn/call index — never by how
+// many calls exist yet — so emitting calls incrementally across turns produces the
+// same ids a single full emission would. Each span is therefore inserted at most
+// once, which keeps the additive trace-level aggregates (span_count, tokens, cost)
+// correct: those come from a plain per-insert GROUP BY with no dedup, unlike the
+// spans table's ReplacingMergeTree.
+function emitSubagentTree(out: OtlpSpan[], ctx: SubagentTreeCtx): void {
+  const { subagent } = ctx
+  let globalIdx = 0
+  subagent.turns.forEach((subTurn, subIdx) => {
+    const subSalt = `sub:${subagent.agentId}:${subIdx}`
+    const count = subTurn.calls.length
+    buildInteractionTree(out, {
+      traceId: ctx.traceId,
+      turnSpanId: hashHex(`${ctx.traceId}:${subSalt}:turn`, 16),
+      parentSpanId: ctx.parentSpanId,
+      sessionId: ctx.sessionId,
+      userId: ctx.userId,
+      turn: subTurn,
+      isSubagent: true,
+      subagentLabel: subagentAttr(subagent),
+      subagentName: subagent.agentType,
+      turnNum: undefined,
+      interactionIdSalt: `${subSalt}:turn`,
+      genIdSalt: `${subSalt}:gen`,
+      contextAttrs: ctx.contextAttrs,
+      priorTurns: subagent.turns.slice(0, subIdx),
+      requestsByMessageId: ctx.requestsByMessageId,
+      agentLinks: undefined,
+      memory: ctx.memory,
+      emitInteraction: ctx.emitInteraction,
+      callFrom: Math.max(0, ctx.fromCall - globalIdx),
+      callTo: Math.min(count, ctx.toCall - globalIdx),
+    })
+    globalIdx += count
+  })
+}
+
+// Standalone subagent subtree for re-emission on a later turn: builds context
+// attrs and applies redaction itself (it does not pass through buildOtlpRequest).
+// `fromCall`/`toCall` bound which calls (flattened across the subagent's turns) are
+// emitted this pass, and `emitInteraction` controls the one-time interaction span,
+// so a growing transcript sends each span exactly once.
+export function buildSubagentSpans(opts: {
+  sessionId: string
+  userId?: string | undefined
+  traceId: string
+  parentSpanId: string
+  subagent: SubagentInvocation
+  emitInteraction?: boolean
+  fromCall?: number
+  toCall?: number
+  context?: TraceContext | undefined
+  requestsByMessageId?: Map<string, StoredRequest> | undefined
+  redact?: RedactConfig | undefined
+  memory?: MemoryEmitOptions | undefined
+}): OtlpSpan[] {
+  const out: OtlpSpan[] = []
+  const totalCalls = opts.subagent.turns.reduce((sum, t) => sum + t.calls.length, 0)
+  emitSubagentTree(out, {
+    traceId: opts.traceId,
+    parentSpanId: opts.parentSpanId,
+    sessionId: opts.sessionId,
+    userId: opts.userId,
+    subagent: opts.subagent,
+    contextAttrs: buildContextAttrs(opts.context),
+    requestsByMessageId: opts.requestsByMessageId ?? new Map<string, StoredRequest>(),
+    memory: opts.memory,
+    emitInteraction: opts.emitInteraction ?? true,
+    fromCall: opts.fromCall ?? 0,
+    toCall: opts.toCall ?? totalCalls,
+  })
+  return opts.redact ? out.map((span) => redactSpan(span, opts.redact as RedactConfig)) : out
 }
 
 function subagentAttr(sub: SubagentInvocation): string {
@@ -342,11 +478,48 @@ function buildToolSpan(
       bool("tool.is_error", call.isError === true),
       str("success", call.isError ? "false" : "true"),
       call.subagent ? str("subagent.id", subagentAttr(call.subagent)) : undefined,
+      call.subagent ? str("subagent.name", call.subagent.agentType) : undefined,
       call.subagent ? str("subagent.type", call.subagent.agentType) : undefined,
       call.subagent ? int("subagent.turn_count", call.subagent.turns.length) : undefined,
       ...contextAttrs,
     ]),
     status: { code: call.isError ? 2 : 1 },
+  }
+}
+
+// Child of the tool span, matching the SDK memory helper's gen_ai.memory.* shape.
+function buildMemorySpan(
+  traceId: string,
+  parentSpanId: string,
+  spanId: string,
+  sessionId: string,
+  userId: string | undefined,
+  tool: ToolCall,
+  op: MemoryOp,
+  contextAttrs: OtlpKeyValue[],
+): OtlpSpan {
+  // Cap the body, not the serialized array, so the attribute stays valid JSON for the materializer.
+  const body = op.body !== undefined ? clamp(op.body, MEMORY_RECORDS_CAP) : undefined
+  const recordsJson = body !== undefined ? safeJson([{ id: op.recordId, content: body }]) : undefined
+  return {
+    traceId,
+    spanId,
+    parentSpanId,
+    name: op.operation,
+    kind: 3,
+    startTimeUnixNano: msToNs(tool.startMs),
+    endTimeUnixNano: msToNs(tool.endMs),
+    attributes: stripUndef([
+      str("gen_ai.operation.name", op.operation),
+      str("gen_ai.memory.store.id", op.storeId),
+      str("gen_ai.memory.record.id", op.recordId),
+      int("gen_ai.memory.record.count", op.count),
+      recordsJson !== undefined ? str("gen_ai.memory.records", recordsJson) : undefined,
+      str("session.id", sessionId),
+      userId ? str("user.id", userId) : undefined,
+      ...contextAttrs,
+    ]),
+    status: { code: 1 },
   }
 }
 
@@ -444,7 +617,7 @@ function capLlmRequestPayload(args: {
 
   const notes: string[] = []
   if (args.toolDefs && toolDefsJson && toolDefsJson.length > TOOL_DEFS_CAP) {
-    const r = capArrayJson(args.toolDefs, TOOL_DEFS_CAP)
+    const r = capToolDefinitions(args.toolDefs, TOOL_DEFS_CAP)
     toolDefsJson = r.json
     if (r.note) notes.push(`tool definitions: ${r.note}`)
   }
@@ -488,7 +661,7 @@ function capMessagesJson(messages: Message[], maxBytes: number): CapResult {
     start--
   }
 
-  const kept = messages.slice(start)
+  let kept = messages.slice(start)
   const notes: string[] = []
   if (kept.length === 0) {
     // Even the newest message alone exceeds the budget: shrink its parts instead.
@@ -501,7 +674,34 @@ function capMessagesJson(messages: Message[], maxBytes: number): CapResult {
     start = messages.length - 1
   }
   if (start > 0) notes.push(`dropped ${start} oldest of ${messages.length} messages`)
+  const stripped = stripOrphanToolResponses(kept)
+  if (stripped.length !== kept.length || stripped.some((m, i) => m.parts.length !== kept[i]!.parts.length)) {
+    notes.push("stripped orphan tool responses")
+  }
+  kept = stripped
   return { json: JSON.stringify(kept), note: notes.join("; ") }
+}
+
+function stripOrphanToolResponses(messages: Message[]): Message[] {
+  const knownIds = new Set<string>()
+  for (const message of messages) {
+    if (message.role !== "assistant") continue
+    for (const part of message.parts) {
+      if (part.type !== "tool_call") continue
+      const id = typeof part.id === "string" ? part.id.trim() : ""
+      if (id) knownIds.add(id)
+    }
+  }
+  return messages.flatMap((message) => {
+    if (message.role !== "tool") return [message]
+    const parts = message.parts.filter((part) => {
+      if (part.type !== "tool_call_response") return true
+      const id = typeof part.id === "string" ? part.id.trim() : ""
+      return id !== "" && knownIds.has(id)
+    })
+    if (parts.length === 0) return []
+    return [{ ...message, parts }]
+  })
 }
 
 function capPartsJson(parts: MessagePart[], maxBytes: number): CapResult {
@@ -511,20 +711,55 @@ function capPartsJson(parts: MessagePart[], maxBytes: number): CapResult {
   return { json: JSON.stringify(parts.map((p) => shrinkPart(p, perPart))), note: `shrunk ${parts.length} part(s)` }
 }
 
-// Keeps whole leading entries that fit the budget. Used for tool definitions, where
-// each entry is self-contained and order carries no recency meaning.
-function capArrayJson(items: unknown[], maxBytes: number): CapResult {
-  const full = JSON.stringify(items)
+function toolNameStub(tool: unknown): unknown {
+  if (!tool || typeof tool !== "object") return tool
+  const name = (tool as { name?: unknown }).name
+  return typeof name === "string" ? { name } : tool
+}
+
+// Never drop tool names when capping — definedTools keys off names; only schemas are optional.
+function capToolDefinitions(tools: unknown[], maxBytes: number): CapResult {
+  const full = JSON.stringify(tools)
   if (full.length <= maxBytes) return { json: full }
-  let budget = maxBytes - 2
-  let end = 0
-  while (end < items.length) {
-    const cost = JSON.stringify(items[end]).length + 1
-    if (cost > budget) break
-    budget -= cost
-    end++
+
+  const stubs = tools.map(toolNameStub)
+  const stubCosts = stubs.map((stub) => JSON.stringify(stub).length + 1)
+  const suffixStubBytes = new Array<number>(tools.length + 1)
+  suffixStubBytes[tools.length] = 0
+  for (let i = tools.length - 1; i >= 0; i--) {
+    suffixStubBytes[i] = suffixStubBytes[i + 1]! + stubCosts[i]!
   }
-  return { json: JSON.stringify(items.slice(0, end)), note: `kept ${end} of ${items.length} entries` }
+
+  let budget = maxBytes - 2
+  const out: unknown[] = []
+  let fullCount = 0
+  for (let i = 0; i < tools.length; i++) {
+    const fullCost = JSON.stringify(tools[i]).length + 1
+    if (fullCost + suffixStubBytes[i + 1]! <= budget) {
+      out.push(tools[i])
+      budget -= fullCost
+      fullCount++
+      continue
+    }
+    for (let j = i; j < tools.length; j++) {
+      const stubCost = stubCosts[j]!
+      if (stubCost > budget) {
+        return {
+          json: JSON.stringify(out),
+          note: `kept ${out.length} of ${tools.length} names (${fullCount} full schemas, ${out.length - fullCount} name-only)`,
+        }
+      }
+      out.push(stubs[j])
+      budget -= stubCost
+    }
+    break
+  }
+
+  const stubCount = out.length - fullCount
+  return {
+    json: JSON.stringify(out),
+    note: `kept all ${tools.length} names (${fullCount} full schemas, ${stubCount} name-only)`,
+  }
 }
 
 function shrinkPart(part: MessagePart, maxBytes: number): MessagePart {

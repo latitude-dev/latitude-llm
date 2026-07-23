@@ -206,7 +206,10 @@ export class ReadOnlyProjectError extends Data.TaggedError("ReadOnlyProjectError
 }> {
   readonly httpStatus = 403
   get httpMessage() {
-    return this.message ?? "This project is read-only"
+    // `||` not `??`: Data.TaggedError sets `this.message` to "" (not undefined)
+    // when constructed without a message, so the nullish fallback would leak an
+    // empty string across the server→client boundary. Empty must fall back too.
+    return this.message || "This project is read-only"
   }
 }
 

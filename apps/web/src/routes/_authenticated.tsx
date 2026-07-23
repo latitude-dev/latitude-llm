@@ -1,366 +1,41 @@
-import { PRO_PLAN_CONFIG } from "@domain/billing"
-import { show as showIntercom } from "@intercom/messenger-js-sdk"
-import { Avatar, Button, cn, DropdownMenu, Icon, LatitudeLogo, Text, Tooltip, useToast } from "@repo/ui"
-import { extractLeadingEmoji } from "@repo/utils"
-import { useQuery } from "@tanstack/react-query"
-import { createFileRoute, Outlet, redirect, useRouter, useRouterState } from "@tanstack/react-router"
-import { ChevronsUpDown, HatGlassesIcon, LifeBuoy, Moon, Plus, SearchIcon, ShieldAlertIcon, Sun } from "lucide-react"
-import { useState } from "react"
+import { createFileRoute, Outlet, useRouterState } from "@tanstack/react-router"
 import { CommandPalette } from "../components/command-palette/command-palette.tsx"
-import { CommandPaletteProvider, useCommandPalette } from "../components/command-palette/command-palette-provider.tsx"
-import { createBillingCheckoutSession, getBillingOverview } from "../domains/billing/billing.functions.ts"
+import { CommandPaletteProvider } from "../components/command-palette/command-palette-provider.tsx"
+import { getBillingOverview } from "../domains/billing/billing.functions.ts"
 import { useOrganizationsCollection } from "../domains/organizations/organizations.collection.ts"
 import { createProject, listProjects } from "../domains/projects/projects.functions.ts"
 import { getSession } from "../domains/sessions/session.functions.ts"
 import { getSupportUserIdentity } from "../domains/support/support.functions.ts"
-import { authClient } from "../lib/auth-client.ts"
-import { toUserMessage } from "../lib/errors.ts"
+import { resolveEntryDestination } from "../lib/entry-destination.ts"
 import { IntercomProvider } from "../lib/intercom/intercom-provider.tsx"
-import { isLatitudeStaffEmail, resetPostHog } from "../lib/posthog/posthog-client.ts"
+import { isLatitudeStaffEmail } from "../lib/posthog/posthog-client.ts"
 import { PostHogIdentity } from "../lib/posthog/posthog-provider.tsx"
-import { useThemePreference } from "../lib/theme.ts"
-import { BreadcrumbTrail } from "./_authenticated/-components/breadcrumb-trail.tsx"
-import { CreateOrganizationModal } from "./_authenticated/-components/create-organization-modal.tsx"
 import { ImpersonationBanner } from "./_authenticated/-components/impersonation-banner.tsx"
-import { NotificationBell } from "./_authenticated/-components/notifications/notification-bell.tsx"
 import { isProjectOnboardingPathname } from "./_authenticated/-lib/is-project-onboarding-pathname.ts"
-import { useRootThemePreference } from "./-root-route-data.ts"
+import { authenticatedLoader } from "./_authenticated/-lib/loader.ts"
 
 const projectOnboardingRouteId = "/_authenticated/projects/$projectSlug/onboarding" as const
-const numberFormatter = new Intl.NumberFormat("en-US", { notation: "compact", maximumFractionDigits: 1 })
-const BILLING_COUNTER_RADIUS = 8
-const BILLING_COUNTER_CIRCUMFERENCE = 2 * Math.PI * BILLING_COUNTER_RADIUS
-const FREE_PLAN_UPGRADE_USAGE_THRESHOLD = 0.8
 
 export const Route = createFileRoute("/_authenticated")({
   ssr: "data-only",
   staleTime: Infinity,
   remountDeps: () => "authenticated-layout",
-  // Session + org bootstrap. New organizations are provisioned during creation,
-  // but this fallback still repairs older orgs that somehow have no projects.
-  loader: async ({ location }) => {
-    const session = await getSession()
-    if (!session) {
-      throw redirect({ to: "/login" })
-    }
-
-    const sessionData = session.session as Record<string, unknown>
-    const organizationId =
-      typeof sessionData.activeOrganizationId === "string" ? sessionData.activeOrganizationId : null
-    if (!organizationId) {
-      throw redirect({ to: "/welcome" })
-    }
-
-    // Set by the Better Auth `admin` plugin when an admin is impersonating
-    // another user. The impersonation banner reads this to announce the
-    // active impersonation on every authenticated page.
-    const impersonatedBy = typeof sessionData.impersonatedBy === "string" ? sessionData.impersonatedBy : null
-
-    const projects = await listProjects()
-    if (projects.length === 0 && !isProjectOnboardingPathname(location.pathname)) {
-      const created = await createProject({ data: { name: "My project" } })
-      throw redirect({
-        to: "/projects/$projectSlug/onboarding",
-        params: { projectSlug: created.slug },
-      })
-    }
-
-    const supportIdentity = await getSupportUserIdentity()
-
-    // Plan tags the PostHog org group. Resolve it server-side here (rather than
-    // a client billing query) and skip it for sessions we don't track anyway
-    // (staff / impersonation), which never read it.
-    const excludeFromAnalytics = isLatitudeStaffEmail(session.user.email) || impersonatedBy != null
-    let organizationPlan: string | null = null
-    if (!excludeFromAnalytics) {
-      try {
-        organizationPlan = (await getBillingOverview()).planSlug
-      } catch {
-        organizationPlan = null
-      }
-    }
-
-    return {
-      user: session.user,
-      organizationId,
-      impersonatedBy,
-      supportIdentity,
-      organizationPlan,
-    }
-  },
+  loader: ({ location }) =>
+    authenticatedLoader(
+      {
+        getSession,
+        resolveEntryDestination,
+        listProjects,
+        createProject,
+        getSupportUserIdentity,
+        getBillingOverview,
+        isLatitudeStaffEmail,
+        isProjectOnboardingPathname,
+      },
+      location,
+    ),
   component: AuthenticatedLayout,
 })
-
-function BillingCreditCounter({ organizationId }: { readonly organizationId: string }) {
-  const { toast } = useToast()
-  const [isUpgradePending, setIsUpgradePending] = useState(false)
-  const { data: overview } = useQuery({
-    queryKey: ["billing", "overview", organizationId],
-    queryFn: () => getBillingOverview(),
-    staleTime: 30_000,
-  })
-
-  if (!overview) return null
-
-  const includedCredits = overview.includedCredits
-  const totalUsedCredits = overview.consumedCredits + overview.overageCredits
-  const hasIncludedCredits = includedCredits !== null && includedCredits > 0
-  const progress = hasIncludedCredits ? Math.min(totalUsedCredits / includedCredits, 1) : 1
-  const isOverage = overview.overageCredits > 0
-  const isAtIncludedLimit = hasIncludedCredits && totalUsedCredits >= includedCredits
-  const showLimitState = isOverage || (overview.planSlug === "free" && isAtIncludedLimit)
-  const strokeOffset = BILLING_COUNTER_CIRCUMFERENCE * (1 - progress)
-  const consumedLabel = numberFormatter.format(totalUsedCredits)
-  const includedLabel = includedCredits === null ? "custom" : numberFormatter.format(includedCredits)
-  const usageLabel =
-    includedCredits === null ? `${consumedLabel} credits` : `${consumedLabel} / ${includedLabel} credits`
-  const tooltip = isOverage
-    ? `${numberFormatter.format(totalUsedCredits)} credits used: ${numberFormatter.format(overview.consumedCredits)} included credits plus ${numberFormatter.format(overview.overageCredits)} metered overage credits. Usage can exceed the included limit because this plan allows overage billing.`
-    : `${numberFormatter.format(overview.consumedCredits)} of ${includedLabel} credits used this period`
-  const showUpgradeCta =
-    overview.planSlug === "free" &&
-    hasIncludedCredits &&
-    totalUsedCredits / includedCredits >= FREE_PLAN_UPGRADE_USAGE_THRESHOLD
-
-  const openUpgrade = async () => {
-    setIsUpgradePending(true)
-    try {
-      const data = await createBillingCheckoutSession({
-        data: { plan: PRO_PLAN_CONFIG.slug, returnUrl: "/" },
-      })
-
-      if (data.url) {
-        window.location.href = data.url
-      }
-    } catch (error) {
-      toast({ variant: "destructive", description: toUserMessage(error) })
-    } finally {
-      setIsUpgradePending(false)
-    }
-  }
-
-  return (
-    <div className="flex items-center gap-2">
-      {showUpgradeCta ? (
-        <Button size="sm" isLoading={isUpgradePending} onClick={() => void openUpgrade()}>
-          Upgrade now
-        </Button>
-      ) : null}
-      <Tooltip
-        asChild
-        trigger={
-          <div className="flex items-center gap-2 rounded-md px-2 py-1 text-sm text-foreground">
-            <span className="relative flex h-5 w-5 items-center justify-center" aria-hidden="true">
-              <svg aria-hidden="true" className="h-5 w-5 -rotate-90" viewBox="0 0 20 20">
-                <circle
-                  cx="10"
-                  cy="10"
-                  r={BILLING_COUNTER_RADIUS}
-                  fill="none"
-                  stroke="currentColor"
-                  strokeWidth="2"
-                  className="text-muted"
-                />
-                <circle
-                  cx="10"
-                  cy="10"
-                  r={BILLING_COUNTER_RADIUS}
-                  fill="none"
-                  stroke="currentColor"
-                  strokeWidth="2"
-                  strokeLinecap="round"
-                  strokeDasharray={BILLING_COUNTER_CIRCUMFERENCE}
-                  strokeDashoffset={strokeOffset}
-                  className={cn("transition-colors", {
-                    "text-primary": !showLimitState,
-                    "text-destructive": showLimitState,
-                  })}
-                />
-              </svg>
-            </span>
-            <div className="hidden items-baseline gap-1 md:flex">
-              <Text.H6 weight="medium" color={showLimitState ? "destructive" : "foreground"}>
-                {usageLabel}
-              </Text.H6>
-            </div>
-          </div>
-        }
-      >
-        {tooltip}
-      </Tooltip>
-    </div>
-  )
-}
-
-function NavHeader() {
-  const user = Route.useLoaderData({ select: (data) => data.user })
-  const organizationId = Route.useLoaderData({
-    select: (data) => data.organizationId,
-  })
-  const impersonatedBy = Route.useLoaderData({
-    select: (data) => data.impersonatedBy,
-  })
-  const supportEnabled = Route.useLoaderData({
-    select: (data) => data.supportIdentity !== null,
-  })
-  const { data: allOrgs } = useOrganizationsCollection()
-  const org = allOrgs?.find((o) => o.id === organizationId)
-  const router = useRouter()
-  const isAdmin = (user as { role?: string }).role === "admin"
-  const initialTheme = useRootThemePreference()
-  const { theme, setTheme } = useThemePreference(initialTheme)
-  const nextTheme = theme === "dark" ? "light" : "dark"
-  const [createOrgModalOpen, setCreateOrgModalOpen] = useState(false)
-  const commandPalette = useCommandPalette()
-
-  if (!org) return null
-
-  const handleOrgSwitch = async (newOrgId: string) => {
-    if (newOrgId === organizationId) return
-    await authClient.organization.setActive({
-      organizationId: newOrgId,
-    })
-    window.location.href = "/"
-  }
-
-  const orgOptions = (allOrgs ?? []).map((o) => {
-    const [emoji, rest] = extractLeadingEmoji(o.name)
-    return {
-      label: rest || o.name,
-      leading: emoji ? <span className="text-base leading-none">{emoji}</span> : null,
-      selected: o.id === organizationId,
-      onClick: () => void handleOrgSwitch(o.id),
-    }
-  })
-
-  const [activeOrgEmoji, activeOrgName] = extractLeadingEmoji(org.name)
-
-  return (
-    <header className="w-full bg-background border-b border-border h-12 flex items-center gap-4 px-4 shrink-0">
-      <div className="flex items-center gap-2 flex-1 min-w-0">
-        <LatitudeLogo className="h-5 w-5 shrink-0" />
-        <span className="text-muted-foreground text-sm select-none shrink-0">/</span>
-        <DropdownMenu
-          side="bottom"
-          align="start"
-          options={[
-            ...orgOptions,
-            { type: "separator" },
-            {
-              label: "Create new organization",
-              iconProps: { icon: Plus, size: "sm" as const },
-              onClick: () => setCreateOrgModalOpen(true),
-            },
-          ]}
-          trigger={() => (
-            <button
-              type="button"
-              className="flex min-w-0 max-w-48 items-center gap-1.5 px-2 py-1 rounded hover:bg-muted transition-colors cursor-pointer"
-            >
-              {activeOrgEmoji ? <span className="text-base leading-none shrink-0">{activeOrgEmoji}</span> : null}
-              <span className="text-sm font-medium text-foreground truncate">{activeOrgName || org.name}</span>
-              <ChevronsUpDown className="h-4 w-4 shrink-0 text-muted-foreground" />
-            </button>
-          )}
-        />
-        <CreateOrganizationModal open={createOrgModalOpen} onOpenChange={setCreateOrgModalOpen} />
-        <BreadcrumbTrail />
-      </div>
-      <div className="flex shrink-0 items-center gap-4">
-        <button
-          type="button"
-          onClick={() => commandPalette.setOpen(true)}
-          aria-label="Search"
-          className="flex items-center gap-2 rounded-md border border-border px-2 py-1 transition-colors hover:bg-muted"
-        >
-          <Icon icon={SearchIcon} size="sm" color="foregroundMuted" />
-          <span className="hidden items-center gap-2 md:flex">
-            <Text.H6 color="foregroundMuted">Search</Text.H6>
-            <kbd className="rounded bg-muted px-1 font-mono text-xs text-muted-foreground">⌘K</kbd>
-          </span>
-        </button>
-        <BillingCreditCounter organizationId={organizationId} />
-        <NotificationBell />
-        {supportEnabled && (
-          <button
-            type="button"
-            onClick={() => showIntercom()}
-            aria-label="Help"
-            className="flex items-center gap-1.5 hover:text-muted-foreground transition-colors cursor-pointer"
-          >
-            <Icon icon={LifeBuoy} size="sm" />
-            <span className="hidden md:block">
-              <Text.H5>Help</Text.H5>
-            </span>
-          </button>
-        )}
-        <a
-          href="https://docs.latitude.so"
-          target="_blank"
-          rel="noopener noreferrer"
-          className="hidden text-sm text-foreground hover:text-muted-foreground transition-colors md:block"
-        >
-          Docs
-        </a>
-        <DropdownMenu
-          side="bottom"
-          align="end"
-          options={[
-            {
-              label: `Switch theme`,
-              iconProps: { icon: theme === "dark" ? Sun : Moon, size: "sm" as const },
-              onClick: () => setTheme(nextTheme),
-            },
-            ...(isAdmin
-              ? [
-                  {
-                    label: "Backoffice",
-                    iconProps: { icon: ShieldAlertIcon, size: "sm" as const },
-                    onClick: () => {
-                      void router.navigate({ to: "/backoffice" })
-                    },
-                  },
-                ]
-              : []),
-            {
-              label: "Log out",
-              type: "destructive",
-              onClick: () => {
-                void authClient.signOut().then(async () => {
-                  // Reset PostHog AFTER sign-out so events captured during the
-                  // logout flow stay attributed. The next user starts anonymous
-                  // until PostHogIdentity remounts with a new key.
-                  await resetPostHog()
-                  void router.navigate({ to: "/login" })
-                })
-              },
-            },
-          ]}
-          trigger={() => (
-            <button type="button" className="flex items-center cursor-pointer">
-              <span className="relative inline-flex">
-                <Avatar
-                  name={user.name?.trim() ? user.name : user.email}
-                  size="sm"
-                  imageSrc={user.image ?? undefined}
-                />
-                {impersonatedBy && (
-                  // Small hat glasses icon overlaid on the user's avatar whenever the session is an impersonation.
-                  <span
-                    aria-hidden="true"
-                    className="absolute -top-1/2 -right-1/2 transform -translate-x-1/2 translate-y-1 items-center justify-center"
-                  >
-                    <Icon icon={HatGlassesIcon} size="md" />
-                  </span>
-                )}
-              </span>
-            </button>
-          )}
-        />
-      </div>
-    </header>
-  )
-}
 
 function AuthenticatedLayout() {
   const user = Route.useLoaderData({ select: (data) => data.user })
@@ -374,11 +49,11 @@ function AuthenticatedLayout() {
     select: (data) => data.supportIdentity,
   })
   const isProjectOnboarding = useRouterState({
-    // `match.id` is unique per match instance (`routeId` + path + loader deps hash);
-    // `routeId` is the stable file-route id from `createFileRoute(...)`.
     select: (s) => s.matches.some((m) => m.routeId === projectOnboardingRouteId),
   })
-  const organizationPlan = Route.useLoaderData({ select: (data) => data.organizationPlan })
+  const organizationPlan = Route.useLoaderData({
+    select: (data) => data.organizationBilling?.planSlug ?? null,
+  })
   const { data: allOrgs } = useOrganizationsCollection()
   const org = allOrgs?.find((o) => o.id === organizationId)
 
@@ -398,7 +73,6 @@ function AuthenticatedLayout() {
             excludeFromAnalytics={isLatitudeStaffEmail(user.email) || impersonatedBy != null}
           />
           {impersonatedBy && <ImpersonationBanner impersonatedUserEmail={user.email} />}
-          {isProjectOnboarding ? null : <NavHeader />}
           <main
             className={
               isProjectOnboarding

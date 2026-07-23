@@ -97,11 +97,11 @@ const createRedisRateLimiter = (config: RateLimitConfig) => {
 type RateLimitTier = "low" | "medium" | "high" | "ultra" | "max"
 
 const TIER_LIMITS: Record<RateLimitTier, { readonly maxRequests: number; readonly windowSeconds: number }> = {
-  low: { maxRequests: 100, windowSeconds: 60 },
-  medium: { maxRequests: 60, windowSeconds: 60 },
-  high: { maxRequests: 15, windowSeconds: 60 },
-  ultra: { maxRequests: 3, windowSeconds: 60 },
-  max: { maxRequests: 1, windowSeconds: 60 },
+  low: { maxRequests: 1_000, windowSeconds: 60 },
+  medium: { maxRequests: 600, windowSeconds: 60 },
+  high: { maxRequests: 150, windowSeconds: 60 },
+  ultra: { maxRequests: 30, windowSeconds: 60 },
+  max: { maxRequests: 10, windowSeconds: 60 },
 }
 
 // Bucket key: org id when authenticated, else client IP (first `X-Forwarded-For` hop), else `unknown`.
@@ -120,11 +120,11 @@ const rateLimitScope = (c: Context): string => {
  * Per-route rate-limit tiers, keyed by organization → client IP → `unknown`.
  *
  * Tiers are sized so that one greedy tenant can't starve another's quota:
- * - `low` ............ 100 req / min — list/get reads, the cheap stuff
- * - `medium` (default) 60 req / min — most mutations and single-row writes
- * - `high` ............ 15 req / min — bulk reads with filter/search/semantic load
- * - `ultra` ............ 3 req / min — bulk imports, exports, monitor-signal (workflow-kicking)
- * - `max` ............... 1 req / min — the unauthenticated bootstrap surface (IP-keyed)
+ * - `low` ........... 1,000 req / min — list/get reads, the cheap stuff
+ * - `medium` (default) 600 req / min — most mutations and single-row writes
+ * - `high` ............ 150 req / min — bulk reads with filter/search/semantic load
+ * - `ultra` ............ 30 req / min — bulk imports, exports, monitor-signal (workflow-kicking)
+ * - `max` .............. 10 req / min — the unauthenticated bootstrap surface (IP-keyed)
  *
  * Apply at the routing site, before the matching subrouter is mounted, e.g.
  * `routes.use("/projects/:projectSlug/traces", createTierRateLimiter("high"))`.

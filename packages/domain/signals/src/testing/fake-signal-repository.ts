@@ -98,11 +98,12 @@ export const createFakeSignalRepository = (
     searchOrgWide: ({ query, preferProjectId, limit }) =>
       Effect.sync(() => {
         // Default fake behavior: org-wide case-insensitive name match, embedding-agnostic, with the
-        // preferred project's issues first. Tests that need distinct lexical vs semantic tiers
-        // override this method.
+        // preferred project's issues first. Resolved/ignored signals are excluded like the real
+        // adapter. Tests that need distinct lexical vs semantic tiers override this method.
         const q = query.trim().toLowerCase()
         const prefer = (projectId: string) => (preferProjectId && projectId === preferProjectId ? 1 : 0)
         return [...issues.values()]
+          .filter((issue) => issue.resolvedAt === null && issue.ignoredAt === null)
           .filter((issue) => issue.name.toLowerCase().includes(q))
           .sort((a, b) => prefer(b.projectId) - prefer(a.projectId))
           .slice(0, limit)
@@ -127,6 +128,22 @@ export const createFakeSignalRepository = (
     save: (issue) =>
       Effect.sync(() => {
         issues.set(issue.id, issue)
+      }),
+
+    claimReopenOnOccurrence: ({ signalId, occurredAt, now }) =>
+      Effect.sync(() => {
+        const issue = issues.get(signalId)
+        if (
+          !issue ||
+          issue.deletedAt != null ||
+          issue.resolvedAt === null ||
+          issue.ignoredAt !== null ||
+          issue.resolvedAt.getTime() >= occurredAt.getTime()
+        ) {
+          return false
+        }
+        issues.set(signalId, { ...issue, resolvedAt: null, regressedAt: now, updatedAt: now })
+        return true
       }),
 
     softDelete: (id) =>
@@ -167,12 +184,15 @@ export const createFakeSignalRepository = (
           .filter((issue) => issue.projectId === projectId)
           .map(withLifecycle)
           .filter((issue) => {
-            const archived = issue.mutedAt !== null
+            const archived = issue.resolvedAt !== null || issue.ignoredAt !== null
             if (lifecycleGroup === "active" && archived) return false
             if (lifecycleGroup === "archived" && !archived) return false
             if (assigneeIds?.length && !assigneeIds.includes(issue.assigneeId ?? "unassigned")) return false
-            if (timeRange?.from && issue.updatedAt < timeRange.from) return false
-            if (timeRange?.to && issue.updatedAt > timeRange.to) return false
+            if (timeRange?.from || timeRange?.to) {
+              const inWindow = (date: Date) =>
+                (!timeRange.from || date >= timeRange.from) && (!timeRange.to || date <= timeRange.to)
+              if (!inWindow(issue.updatedAt) && !inWindow(issue.createdAt)) return false
+            }
             if (
               query &&
               !issue.name.toLowerCase().includes(query) &&
@@ -199,6 +219,18 @@ export const createFakeSignalRepository = (
           offset,
         }
       }),
+
+    listIdsCreatedInTimeRange: ({ projectId, timeRange }) =>
+      Effect.sync(() =>
+        [...issues.values()]
+          .filter((issue) => issue.projectId === projectId && issue.deletedAt === null)
+          .filter(
+            (issue) =>
+              (!timeRange.from || issue.createdAt >= timeRange.from) &&
+              (!timeRange.to || issue.createdAt <= timeRange.to),
+          )
+          .map((issue) => issue.id),
+      ),
 
     ...overrides,
   }

@@ -29,6 +29,7 @@
     "@hono/swagger-ui": "0.5.3",
     "@hono/zod-openapi": "1.3.0",
     "@modelcontextprotocol/sdk": "catalog:",
+    "@platform/analytics-posthog": "workspace:*",
     "@platform/api-key-auth": "workspace:*",
     "@platform/cache-redis": "workspace:*",
     "@platform/db-clickhouse": "workspace:*",

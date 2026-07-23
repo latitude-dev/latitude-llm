@@ -93,6 +93,7 @@ function makeSpanRow(opts: {
     operation: opts.operation,
     provider: "",
     model: "",
+    agent_name: "",
     response_model: "",
     tokens_input: opts.tokensInput ?? 0,
     tokens_output: opts.tokensOutput ?? 0,

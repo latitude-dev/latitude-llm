@@ -1,6 +1,17 @@
-import { ExternalUserId, OrganizationId, ProjectId, SessionId, SimulationId, SpanId, TraceId } from "@domain/shared"
+import {
+  ExternalUserId,
+  OrganizationId,
+  ProjectId,
+  SessionId,
+  SimulationId,
+  SPAN_ID_LENGTH,
+  SpanId,
+  TRACE_ID_LENGTH,
+  TraceId,
+} from "@domain/shared"
 import type { SpanDetail, SpanKind, SpanStatusCode } from "../entities/span.ts"
-import { stringAttr } from "./attributes.ts"
+import { anyValueToPlain } from "./any-value.ts"
+import { attrArray, stringAttr } from "./attributes.ts"
 import { parseContent } from "./content/index.ts"
 import { isDroppedSpan } from "./dropped-spans.ts"
 import { resolveAttributes } from "./resolvers/index.ts"
@@ -38,13 +49,16 @@ function resolveAnyValue(
   if (value.boolValue !== undefined) return { type: "bool", value: value.boolValue }
   if (value.intValue !== undefined) return { type: "int", value: Number(value.intValue) }
   if (value.doubleValue !== undefined) return { type: "float", value: value.doubleValue }
+  // Structured OTLP values (e.g. gen_ai.memory.records) are flattened to a JSON string so they survive in attr_string.
+  if (value.arrayValue !== undefined || value.kvlistValue !== undefined) {
+    return { type: "string", value: JSON.stringify(anyValueToPlain(value)) }
+  }
   return null
 }
 
 function extractResourceString(resource: OtlpResource | undefined): Record<string, string> {
-  if (!resource?.attributes) return {}
   const result: Record<string, string> = {}
-  for (const attr of resource.attributes) {
+  for (const attr of attrArray(resource?.attributes)) {
     if (attr.value?.stringValue !== undefined) {
       result[attr.key] = attr.value.stringValue
     }
@@ -81,7 +95,7 @@ export interface TransformContext {
 
 interface TransformResult {
   readonly spans: readonly SpanDetail[]
-  /** Spans skipped because no `projectId` could be resolved for them. */
+  /** Spans skipped for lacking a resolvable `projectId` or a valid `traceId`. */
   readonly rejectedSpans: number
 }
 
@@ -105,8 +119,22 @@ function resolveSpanProjectId(
   return context.defaultProjectId
 }
 
+/**
+ * ClickHouse's `spans` table stores `trace_id`/`span_id` as `FixedString(32)`/`FixedString(16)` — a
+ * value longer than that fails the whole async-insert batch, not just the offending row, so an
+ * oversized ID (a non-conformant exporter, e.g. a wider `bytes` protobuf field) must be rejected here.
+ */
+function hasValidIdLengths(normalizedTraceId: string, spanId: string): boolean {
+  return normalizedTraceId.length <= TRACE_ID_LENGTH && spanId.length <= SPAN_ID_LENGTH
+}
+
+function hasParentSpan(parentSpanId: string | undefined): boolean {
+  return !!parentSpanId && !/^0+$/.test(parentSpanId)
+}
+
 function transformSpan({
   span,
+  traceId,
   resource,
   scopeName,
   scopeVersion,
@@ -115,6 +143,7 @@ function transformSpan({
   ingestedAt,
 }: {
   span: OtlpSpan
+  traceId: string
   resource: OtlpResource | undefined
   scopeName: string
   scopeVersion: string
@@ -122,9 +151,9 @@ function transformSpan({
   projectId: string
   ingestedAt: Date
 }): SpanDetail {
-  const spanAttrs = span.attributes ?? []
+  const spanAttrs = attrArray(span.attributes)
   const spanEvents = span.events ?? []
-  const resourceAttrs = resource?.attributes ?? []
+  const resourceAttrs = attrArray(resource?.attributes)
   const otelStatusCode = INT_TO_STATUS_CODE[span.status?.code ?? 0] ?? "unset"
   const statusCode = resolveStatusCode(spanAttrs, otelStatusCode, scopeName)
 
@@ -133,6 +162,7 @@ function transformSpan({
     statusCode,
     spanName: span.name ?? "",
     scopeName,
+    hasParent: hasParentSpan(span.parentSpanId),
   })
   const content = parseContent(spanAttrs)
   const serviceName = stringAttr(resourceAttrs, "service.name") ?? ""
@@ -173,7 +203,7 @@ function transformSpan({
     sessionId: SessionId(resolved.sessionId),
     userId: ExternalUserId(resolved.userId),
     userEmail: resolved.userEmail,
-    traceId: TraceId(span.traceId.replace(/-/g, "")),
+    traceId: TraceId(traceId),
     spanId: SpanId(span.spanId),
     parentSpanId: span.parentSpanId ?? "",
     apiKeyId: context.apiKeyId,
@@ -195,6 +225,7 @@ function transformSpan({
     operation: resolved.operation,
     provider: resolved.provider,
     model: resolved.model,
+    agentName: resolved.agentName,
     responseModel: resolved.responseModel,
     tokensInput: resolved.tokensInput,
     tokensOutput: resolved.tokensOutput,
@@ -245,12 +276,22 @@ export function transformOtlpToSpans(
       const scopeVersion = scopeSpans.scope?.version ?? ""
       for (const span of scopeSpans.spans ?? []) {
         if (isDroppedSpan(scopeName, span.name ?? "")) continue
+        // OTLP/JSON bodies are cast, not validated, so `traceId` can arrive missing or non-string.
+        if (typeof span.traceId !== "string" || span.traceId.length === 0) {
+          rejectedSpans++
+          continue
+        }
         const projectId = resolveSpanProjectId(span.attributes ?? [], resourceAttrs, context)
         if (!projectId) {
           rejectedSpans++
           continue
         }
-        spans.push(transformSpan({ span, resource, scopeName, scopeVersion, context, projectId, ingestedAt }))
+        const traceId = span.traceId.replace(/-/g, "")
+        if (!hasValidIdLengths(traceId, span.spanId)) {
+          rejectedSpans++
+          continue
+        }
+        spans.push(transformSpan({ span, traceId, resource, scopeName, scopeVersion, context, projectId, ingestedAt }))
       }
     }
   }

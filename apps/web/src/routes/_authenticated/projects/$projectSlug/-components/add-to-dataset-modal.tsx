@@ -7,6 +7,7 @@ import { useDatasetsList } from "../../../../../domains/datasets/datasets.collec
 import type { DatasetRecord } from "../../../../../domains/datasets/datasets.functions.ts"
 import { getQueryClient } from "../../../../../lib/data/query-client.tsx"
 import { toUserMessage } from "../../../../../lib/errors.ts"
+import { useRouteProject } from "../-route-data.ts"
 
 /**
  * Generic "add the current selection to a dataset" modal. It owns only the
@@ -45,6 +46,7 @@ export function AddToDatasetModal({
   const [submitting, setSubmitting] = useState(false)
   const { toast } = useToast()
   const navigate = useNavigate()
+  const project = useRouteProject()
   const { data: datasets } = useDatasetsList(projectId)
 
   const datasetOptions = useMemo<SelectOption<string>[]>(
@@ -75,12 +77,21 @@ export function AddToDatasetModal({
           title: "Dataset created",
           description: `"${newDatasetName.trim()}" created with ${result.rowCount} row${result.rowCount === 1 ? "" : "s"}.`,
         })
-        getQueryClient().invalidateQueries({ queryKey: ["datasets", projectId] })
+        const queryClient = getQueryClient()
+        await Promise.all([
+          queryClient.invalidateQueries({ queryKey: ["datasets", projectId] }),
+          queryClient.invalidateQueries({ queryKey: ["dataset", result.datasetId] }),
+          queryClient.invalidateQueries({ queryKey: ["datasetRows", result.datasetId] }),
+        ])
+        queryClient.setQueryData(["datasetRowCount", result.datasetId], {
+          rows: [],
+          total: result.rowCount,
+        })
         onSuccess()
         onOpenChange(false)
         navigate({
           to: "/projects/$projectSlug/datasets/$datasetId",
-          params: { projectId, datasetId: result.datasetId },
+          params: { projectSlug: project.slug, datasetId: result.datasetId },
         })
       } else {
         if (!selectedDatasetId) return
@@ -89,9 +100,12 @@ export function AddToDatasetModal({
           title: `${itemLabelTitle} added to dataset`,
           description: `${result.rowCount} row${result.rowCount === 1 ? "" : "s"} added (version ${result.version}).`,
         })
-        getQueryClient().invalidateQueries({ queryKey: ["datasets", projectId] })
-        getQueryClient().invalidateQueries({ queryKey: ["datasetRows", selectedDatasetId] })
-        getQueryClient().invalidateQueries({ queryKey: ["datasetRowCount", selectedDatasetId] })
+        const queryClient = getQueryClient()
+        await Promise.all([
+          queryClient.invalidateQueries({ queryKey: ["datasets", projectId] }),
+          queryClient.invalidateQueries({ queryKey: ["datasetRows", selectedDatasetId] }),
+          queryClient.invalidateQueries({ queryKey: ["datasetRowCount", selectedDatasetId] }),
+        ])
         onSuccess()
         onOpenChange(false)
       }
@@ -117,6 +131,7 @@ export function AddToDatasetModal({
     navigate,
     onSuccess,
     onOpenChange,
+    project.slug,
   ])
 
   const exceedsLimit = selectedCount > MAX_TRACES_PER_DATASET_IMPORT

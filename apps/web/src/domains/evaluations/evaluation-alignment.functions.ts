@@ -9,20 +9,16 @@ import {
   updateEvaluationSampling,
 } from "@domain/evaluations"
 import { WorkflowQuerier, WorkflowStarter } from "@domain/queue"
-import { BadRequestError, EvaluationId, OrganizationId, ProjectId, SignalId, UserId } from "@domain/shared"
+import { BadRequestError, EvaluationId, ProjectId, SignalId, UserId } from "@domain/shared"
 import { SignalRepository } from "@domain/signals"
-import {
-  EvaluationRepositoryLive,
-  OutboxEventWriterLive,
-  SignalRepositoryLive,
-  withPostgres,
-} from "@platform/db-postgres"
+import { EvaluationRepositoryLive, OutboxEventWriterLive, SignalRepositoryLive } from "@platform/db-postgres"
 import { withTracing } from "@repo/observability"
 import { createServerFn } from "@tanstack/react-start"
 import { Effect, Layer } from "effect"
 import { z } from "zod"
-import { requireSession } from "../../server/auth.ts"
 import { getPostgresClient, getWorkflowQuerier, getWorkflowStarter } from "../../server/clients.ts"
+import { requireScopedSession, resolveOrgScope } from "../../server/resolve-org-scope.ts"
+import { withScopedPostgres } from "../../server/scoped-postgres.ts"
 
 const signalOpInputSchema = z.object({
   projectId: z.string(),
@@ -78,12 +74,11 @@ export type EvaluationSummaryRecord = ReturnType<typeof toEvaluationSummaryRecor
  */
 export const monitorSignal = createServerFn({ method: "POST" })
   .inputValidator(signalOpInputSchema)
-  .handler(async ({ data }): Promise<MonitorSignalResponse> => {
-    const { organizationId, userId } = await requireSession()
+  .handler(async ({ data, context }): Promise<MonitorSignalResponse> => {
+    const { userId, organizationId: orgId } = await requireScopedSession(context)
     const client = getPostgresClient()
     const workflowStarter = await getWorkflowStarter()
     const workflowQuerier = await getWorkflowQuerier()
-    const orgId = OrganizationId(organizationId)
     const projectId = ProjectId(data.projectId)
     const signalId = SignalId(data.signalId)
 
@@ -107,7 +102,7 @@ export const monitorSignal = createServerFn({ method: "POST" })
           signalOrigin: issue.origin,
         })
       }).pipe(
-        withPostgres(
+        withScopedPostgres(
           Layer.mergeAll(SignalRepositoryLive, EvaluationRepositoryLive, OutboxEventWriterLive),
           client,
           orgId,
@@ -127,22 +122,22 @@ export const monitorSignal = createServerFn({ method: "POST" })
  */
 export const unmonitorSignal = createServerFn({ method: "POST" })
   .inputValidator(signalOpInputSchema)
-  .handler(async ({ data }): Promise<void> => {
-    const { organizationId } = await requireSession()
+  .handler(async ({ data, context }): Promise<void> => {
+    const organizationId = await resolveOrgScope(context)
     const client = getPostgresClient()
 
     await Effect.runPromise(
       unmonitorSignalUseCase({
         projectId: ProjectId(data.projectId),
         signalId: SignalId(data.signalId),
-      }).pipe(withPostgres(EvaluationRepositoryLive, client, OrganizationId(organizationId)), withTracing),
+      }).pipe(withScopedPostgres(EvaluationRepositoryLive, client, organizationId), withTracing),
     )
   })
 
 export const getSignalAlignmentState = createServerFn({ method: "GET" })
   .inputValidator(signalOpInputSchema)
-  .handler(async ({ data }): Promise<SignalAlignmentStateRecord> => {
-    const { organizationId } = await requireSession()
+  .handler(async ({ data, context }): Promise<SignalAlignmentStateRecord> => {
+    const organizationId = await resolveOrgScope(context)
     const client = getPostgresClient()
     const workflowQuerier = await getWorkflowQuerier()
     const projectId = ProjectId(data.projectId)
@@ -158,11 +153,7 @@ export const getSignalAlignmentState = createServerFn({ method: "GET" })
           isAutomaticallyMonitored: issue.source === "flagger",
         })
       }).pipe(
-        withPostgres(
-          Layer.mergeAll(SignalRepositoryLive, EvaluationRepositoryLive),
-          client,
-          OrganizationId(organizationId),
-        ),
+        withScopedPostgres(Layer.mergeAll(SignalRepositoryLive, EvaluationRepositoryLive), client, organizationId),
         Effect.provide(Layer.succeed(WorkflowQuerier, workflowQuerier)),
         withTracing,
       ),
@@ -171,8 +162,8 @@ export const getSignalAlignmentState = createServerFn({ method: "GET" })
 
 export const updateSignalEvaluationSampling = createServerFn({ method: "POST" })
   .inputValidator(updateEvaluationSamplingInputSchema)
-  .handler(async ({ data }): Promise<EvaluationSummaryRecord> => {
-    const { organizationId } = await requireSession()
+  .handler(async ({ data, context }): Promise<EvaluationSummaryRecord> => {
+    const organizationId = await resolveOrgScope(context)
     const client = getPostgresClient()
     const projectId = ProjectId(data.projectId)
     const signalId = SignalId(data.signalId)
@@ -192,6 +183,6 @@ export const updateSignalEvaluationSampling = createServerFn({ method: "POST" })
         yield* repository.save(updatedEvaluation)
 
         return toEvaluationSummaryRecord(updatedEvaluation)
-      }).pipe(withPostgres(EvaluationRepositoryLive, client, OrganizationId(organizationId)), withTracing),
+      }).pipe(withScopedPostgres(EvaluationRepositoryLive, client, organizationId), withTracing),
     )
   })

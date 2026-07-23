@@ -1,4 +1,6 @@
 import type { FilterCondition, FilterOperator, FilterSet } from "@domain/shared"
+import { isValidationError, ValidationError } from "@domain/shared"
+import { Effect } from "effect"
 
 // ---------------------------------------------------------------------------
 // ClickHouse-specific field mapping
@@ -10,6 +12,7 @@ export interface ScalarFieldMapping {
   readonly isArray?: boolean
   readonly arrayContains?: boolean
   readonly mapValue?: (value: FilterCondition["value"]) => FilterCondition["value"]
+  readonly valueExpression?: (paramName: string, options: { readonly array: boolean }) => string
 }
 
 export interface SyntheticFieldMapping {
@@ -27,6 +30,22 @@ function isSyntheticMapping(mapping: ChFieldMapping): mapping is SyntheticFieldM
 }
 
 export type ChFieldRegistry<K extends string = string> = Readonly<Record<K, ChFieldMapping>>
+
+const INTEGER_CH_TYPE = /^(?:U?Int(?:8|16|32|64))$/
+
+const isIntegerChType = (chType: string): boolean => INTEGER_CH_TYPE.test(chType)
+
+const assertIntegerFilterValue = (field: string, value: FilterCondition["value"]): void => {
+  const values = Array.isArray(value) ? value : [value]
+  for (const item of values) {
+    if (typeof item === "number" && !Number.isInteger(item)) {
+      throw new ValidationError({
+        field,
+        message: `Filter value for '${field}' must be an integer (got ${item}). Numeric filters use storage units (for example cost in microcents, duration in nanoseconds).`,
+      })
+    }
+  }
+}
 
 // ---------------------------------------------------------------------------
 // Operator -> SQL mapping
@@ -111,6 +130,9 @@ export function buildClickHouseWhere(
     for (const cond of conditions) {
       const p = `${prefix}_${paramIdx++}`
       let value: FilterCondition["value"] = mapping.mapValue ? mapping.mapValue(cond.value) : cond.value
+      if (isIntegerChType(mapping.chType)) {
+        assertIntegerFilterValue(field, value)
+      }
       const ilikeWrap =
         (cond.op === "contains" || cond.op === "notContains") && !(mapping.isArray && mapping.arrayContains)
       if (ilikeWrap && typeof value === "string") {
@@ -124,31 +146,42 @@ export function buildClickHouseWhere(
   return { clauses, params }
 }
 
+/** Run synchronous filter SQL building inside Effect, surfacing `ValidationError` as a typed failure. */
+export const runFilterBuild = <A>(build: () => A): Effect.Effect<A, ValidationError> =>
+  Effect.try({
+    try: build,
+    catch: (cause) => {
+      if (isValidationError(cause)) return cause
+      throw cause
+    },
+  })
+
 // ---------------------------------------------------------------------------
 // Internal helpers
 // ---------------------------------------------------------------------------
 
 function buildClause(mapping: ScalarFieldMapping, paramName: string, cond: FilterCondition): string {
   const { column, chType, isArray, arrayContains } = mapping
+  const scalarValue = mapping.valueExpression?.(paramName, { array: false }) ?? `{${paramName}:${chType}}`
+  const arrayValue = mapping.valueExpression?.(paramName, { array: true }) ?? `{${paramName}:Array(${chType})}`
 
   // Array fields: in/notIn use hasAny
   if (isArray && (cond.op === "in" || cond.op === "notIn")) {
-    return cond.op === "in"
-      ? `hasAny(${column}, {${paramName}:Array(${chType})})`
-      : `NOT hasAny(${column}, {${paramName}:Array(${chType})})`
+    return cond.op === "in" ? `hasAny(${column}, ${arrayValue})` : `NOT hasAny(${column}, ${arrayValue})`
   }
 
   if (isArray && arrayContains && (cond.op === "eq" || cond.op === "contains")) {
-    return `has(${column}, {${paramName}:${chType}})`
+    return `has(${column}, ${scalarValue})`
   }
   if (isArray && arrayContains && (cond.op === "neq" || cond.op === "notContains")) {
-    return `NOT has(${column}, {${paramName}:${chType}})`
+    return `NOT has(${column}, ${scalarValue})`
   }
 
   // Scalar in/notIn
   if (cond.op === "in" || cond.op === "notIn") {
     const not = cond.op === "notIn" ? "NOT " : ""
-    return `${column} ${not}IN ({${paramName}:Array(${chType})})`
+    if (mapping.valueExpression) return `${not}has(${arrayValue}, ${column})`
+    return `${column} ${not}IN (${arrayValue})`
   }
 
   // contains/notContains use ILIKE
@@ -162,7 +195,7 @@ function buildClause(mapping: ScalarFieldMapping, paramName: string, cond: Filte
   // Scalar comparison operators
   const sqlOp = SCALAR_OPS[cond.op as ScalarOp]
   if (sqlOp) {
-    return `${column} ${sqlOp} {${paramName}:${chType}}`
+    return `${column} ${sqlOp} ${scalarValue}`
   }
 
   throw new Error(`Unsupported filter operator: ${cond.op}`)

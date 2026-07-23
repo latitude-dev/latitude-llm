@@ -49,6 +49,10 @@ export function toUserMessage(err: unknown): string {
   return parseServerError(err).message
 }
 
+export function isReadOnlyProjectError(err: unknown): boolean {
+  return parseServerError(err)._tag === "ReadOnlyProjectError"
+}
+
 /**
  * Zod issue structure (subset of ZodIssue)
  */

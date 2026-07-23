@@ -1,10 +1,12 @@
-import type { AIShape, GenerateResult } from "@domain/ai"
+import type { AIShape, EmbedResult, GenerateResult } from "@domain/ai"
 import { AIError } from "@domain/ai"
 import {
   AIMeteringRecordError,
   AIMeteringScope,
   type AIMeteringScopeShape,
   creditsForLlmGenerationCost,
+  creditsForSemanticQueryCost,
+  semanticQueryEmbedCostUsd,
 } from "@domain/billing"
 import { estimateTotalCost, getCostSpec } from "@domain/models"
 import { Effect } from "effect"
@@ -16,6 +18,7 @@ const EMBED_RESULT = { embedding: [1, 0, 0] }
 const createFakeAI = (options?: {
   readonly failGenerate?: boolean
   readonly generateResult?: GenerateResult<unknown>
+  readonly embedResult?: EmbedResult
 }): AIShape => ({
   generate: <T>() =>
     options?.failGenerate
@@ -27,7 +30,7 @@ const createFakeAI = (options?: {
             duration: number
           },
         ),
-  embed: () => Effect.succeed(EMBED_RESULT),
+  embed: () => Effect.succeed(options?.embedResult ?? EMBED_RESULT),
   rerank: () => Effect.succeed([]),
 })
 
@@ -149,9 +152,9 @@ describe("withAIMetering", () => {
     expect(result).toEqual({ object: { ok: true }, tokens: 10, duration: 1 })
   })
 
-  it("records one semantic-query per query-time embedding and none for document embeds", async () => {
+  it("bills a query-time embedding its estimated cost with a 2x margin and none for document embeds", async () => {
     const { scope, recorded } = createScope()
-    const ai = withAIMetering(createFakeAI())
+    const ai = withAIMetering(createFakeAI({ embedResult: { embedding: [1, 0, 0], tokens: 20_000 } }))
 
     await Effect.runPromise(
       Effect.all([
@@ -161,10 +164,36 @@ describe("withAIMetering", () => {
       ]).pipe(Effect.provideService(AIMeteringScope, scope)),
     )
 
+    const estimatedCostUsd = semanticQueryEmbedCostUsd(20_000)
     expect(recorded).toEqual([
       {
         action: "semantic-query",
-        metadata: { provider: "voyage", model: "voyage-4-large" },
+        credits: creditsForSemanticQueryCost(estimatedCostUsd),
+        metadata: {
+          provider: "voyage",
+          model: "voyage-4-large",
+          pricing: "cost-based",
+          estimatedCostUsd,
+          tokens: 20_000,
+        },
+      },
+    ])
+  })
+
+  it("falls back to the flat semantic-query price when the embed adapter reports no token count", async () => {
+    const { scope, recorded } = createScope()
+    const ai = withAIMetering(createFakeAI())
+
+    await Effect.runPromise(
+      ai
+        .embed({ text: "q", provider: "voyage", model: "voyage-4-large", inputType: "query" })
+        .pipe(Effect.provideService(AIMeteringScope, scope)),
+    )
+
+    expect(recorded).toEqual([
+      {
+        action: "semantic-query",
+        metadata: { provider: "voyage", model: "voyage-4-large", pricing: "flat-fallback" },
       },
     ])
   })
@@ -194,5 +223,19 @@ describe("creditsForLlmGenerationCost", () => {
   it("floors at one credit for near-zero costs", () => {
     expect(creditsForLlmGenerationCost(0)).toBe(1)
     expect(creditsForLlmGenerationCost(0.000001)).toBe(1)
+  })
+})
+
+describe("creditsForSemanticQueryCost", () => {
+  it("applies a 2x margin at the overage credit value, rounding up", () => {
+    // 32k-token worst-case query embed: 32_000 x $0.12/M = $0.00384, x2 margin = 7.68 mills → 4 credits
+    expect(creditsForSemanticQueryCost(semanticQueryEmbedCostUsd(32_000))).toBe(4)
+    // $0.01 x 2 = $0.02 → 10 credits exactly
+    expect(creditsForSemanticQueryCost(0.01)).toBe(10)
+  })
+
+  it("floors at one credit for near-zero costs", () => {
+    expect(creditsForSemanticQueryCost(0)).toBe(1)
+    expect(creditsForSemanticQueryCost(semanticQueryEmbedCostUsd(50))).toBe(1)
   })
 })

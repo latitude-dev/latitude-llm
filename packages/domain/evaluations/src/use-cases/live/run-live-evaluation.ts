@@ -8,6 +8,7 @@ import {
   buildBillingIdempotencyKey,
   makeAIMeteringScope,
   provideAIMeteringScope,
+  recordBillableActionUseCase,
   type StripeSubscriptionLookup,
   type UnknownStripePlanError,
 } from "@domain/billing"
@@ -16,7 +17,9 @@ import { type QueuePublishError, QueuePublisher } from "@domain/queue"
 import {
   DETECTOR_HEALTH_WINDOW_SECONDS,
   DetectorHealthTracker,
-  requiresEmbedding,
+  detectScriptCapabilities,
+  hasEmbeddingCapability,
+  hasLlmCapability,
   type ScriptRuntime,
 } from "@domain/sandbox"
 import {
@@ -33,7 +36,7 @@ import {
   type RepositoryError,
   type SettingsReader,
   SignalId,
-  type SqlClient,
+  SqlClient,
   TraceId,
 } from "@domain/shared"
 import {
@@ -62,7 +65,7 @@ import {
  * Readiness gate for scripts that call `semanticSimilarity()`: `trace-search` (which writes
  * `message_embeddings`) runs after the eval first fires, so embeddings usually aren't indexed yet.
  * Defer with a bounded delayed re-publish; once attempts are exhausted, skip WITHOUT persisting a
- * score — a persisted 0 would block every future retry via `existsByEvaluationIdAndTraceId`. The
+ * score — a persisted 0 would block every future retry via `findByEvaluationIdAndTraceId`. The
  * primary recovery is `trace-search` re-triggering `signals:match` once embeddings land; this timed
  * backstop covers a lost re-trigger.
  */
@@ -158,6 +161,48 @@ const toErroredExecution = (message: string, startedAtMs: number): RunLiveEvalua
   tokens: 0,
   cost: 0,
 })
+// The claim is a conditional UPDATE (resolved, not ignored, resolved before the
+// occurrence), so re-running it on dedupe paths is safe: a retry that died
+// between the score commit and this transaction still converges, and the loser
+// of a claim race emits nothing.
+const claimRegressionForPersistedScore = (input: {
+  readonly organizationId: string
+  readonly projectId: string
+  readonly score: Pick<EvaluationScore, "id" | "signalId" | "createdAt">
+}) =>
+  Effect.gen(function* () {
+    const signalId = input.score.signalId
+    if (signalId === null) return
+    const signalRepository = yield* EvaluationSignalRepository
+    const sqlClient = yield* SqlClient
+    const reopenedAt = new Date()
+    yield* sqlClient.transaction(
+      Effect.gen(function* () {
+        const reopened = yield* signalRepository.claimReopenOnOccurrence({
+          signalId: SignalId(signalId),
+          occurredAt: input.score.createdAt,
+          now: reopenedAt,
+        })
+        if (!reopened) return
+
+        const outboxEventWriter = yield* OutboxEventWriter
+        yield* outboxEventWriter.write({
+          eventName: "SignalRegressed",
+          aggregateType: "issue",
+          aggregateId: signalId,
+          organizationId: input.organizationId,
+          payload: {
+            organizationId: input.organizationId,
+            projectId: input.projectId,
+            signalId,
+            regressedAt: reopenedAt.toISOString(),
+            triggerScoreId: input.score.id,
+          },
+        })
+      }),
+    )
+  })
+
 export const runLiveEvaluationUseCase = (input: RunLiveEvaluationInput) =>
   Effect.gen(function* () {
     yield* Effect.annotateCurrentSpan("evaluation.id", input.evaluationId)
@@ -186,6 +231,7 @@ export const runLiveEvaluationUseCase = (input: RunLiveEvaluationInput) =>
     }
 
     const liveEvaluationEligibility = getLiveEvaluationEligibility(evaluation)
+    const scriptCapabilities = detectScriptCapabilities(evaluation.script)
 
     if (!liveEvaluationEligibility.eligible) {
       return {
@@ -196,13 +242,20 @@ export const runLiveEvaluationUseCase = (input: RunLiveEvaluationInput) =>
       } satisfies RunLiveEvaluationResult
     }
 
-    const resultAlreadyExists = yield* scoreRepository.existsByEvaluationIdAndTraceId({
+    const existingScore = yield* scoreRepository.findByEvaluationIdAndTraceId({
       projectId,
       evaluationId: evaluation.id,
       traceId: TraceId(input.traceId),
     })
 
-    if (resultAlreadyExists) {
+    if (existingScore !== null) {
+      // A prior attempt may have died between persisting this score and
+      // claiming the regression reopen; re-claim so retries converge.
+      yield* claimRegressionForPersistedScore({
+        organizationId: input.organizationId,
+        projectId: input.projectId,
+        score: existingScore,
+      })
       return {
         action: "skipped",
         reason: "result-already-exists",
@@ -232,7 +285,7 @@ export const runLiveEvaluationUseCase = (input: RunLiveEvaluationInput) =>
     // Readiness gate — only for scripts that call semanticSimilarity(), before any billing or execution
     // work. We check the triggering trace: it's the one whose embeddings race this run, and older traces
     // in the session were embedded on their own ingest cycles.
-    if (requiresEmbedding(evaluation.script)) {
+    if (hasEmbeddingCapability(scriptCapabilities)) {
       const embeddingsReady = yield* hasSessionEmbeddings({
         organizationId: OrganizationId(input.organizationId),
         projectId,
@@ -298,11 +351,16 @@ export const runLiveEvaluationUseCase = (input: RunLiveEvaluationInput) =>
     } satisfies LiveEvaluationSignalContext
 
     const billingOrganizationId = OrganizationId(input.organizationId)
+    // LLM-capable scripts bill their generations (and query embeds) at cost through
+    // the metering scope; rules-only scripts bill a flat 1-credit scan below.
+    const billingAction = hasLlmCapability(scriptCapabilities)
+      ? ("llm-call" as const)
+      : ("deterministic-eval-scan" as const)
     const authorization = yield* authorizeBillableAction({
       organizationId: billingOrganizationId,
-      action: "llm-call",
+      action: billingAction,
       skipIfBlocked: true,
-      idempotencyKey: buildBillingIdempotencyKey("llm-call", [
+      idempotencyKey: buildBillingIdempotencyKey(billingAction, [
         input.organizationId,
         "live-eval",
         evaluation.id,
@@ -366,6 +424,26 @@ export const runLiveEvaluationUseCase = (input: RunLiveEvaluationInput) =>
         LiveEvaluationExecutionError: (error) => Effect.succeed(toErroredExecution(error.message, executionStartedAt)),
       }),
     )
+
+    // LLM-capable scripts already billed each generation through the metering scope.
+    // Rules-only scripts record their flat scan AFTER the work has been attempted so a
+    // crash between authorization and execution does not charge the customer for work
+    // that never ran. Both completed and errored executions are recorded — work was
+    // attempted — but not skips that returned earlier.
+    if (billingAction === "deterministic-eval-scan") {
+      yield* recordBillableActionUseCase({
+        organizationId: billingOrganizationId,
+        projectId: ProjectId(input.projectId),
+        action: billingAction,
+        idempotencyKey: buildBillingIdempotencyKey(billingAction, [input.organizationId, evaluation.id, input.traceId]),
+        context: authorization.context,
+        traceId: TraceId(input.traceId),
+        metadata: {
+          evaluationId: evaluation.id,
+          traceId: input.traceId,
+        },
+      })
+    }
 
     // A failed run is a silent false negative, so runs/errors are counted per
     // owner as detector health. Accounting is best-effort: a cache hiccup
@@ -440,15 +518,23 @@ export const runLiveEvaluationUseCase = (input: RunLiveEvaluationInput) =>
         return yield* scoreWriteExit
       }
 
-      const resultNowExists = yield* scoreRepository.existsByEvaluationIdAndTraceId({
+      const persistedByWinner = yield* scoreRepository.findByEvaluationIdAndTraceId({
         projectId,
         evaluationId: evaluation.id,
         traceId: TraceId(input.traceId),
       })
 
-      if (!resultNowExists) {
+      if (persistedByWinner === null) {
         return yield* scoreWriteExit
       }
+
+      // The winner normally claims the reopen itself; re-claiming covers a
+      // winner that died between its score commit and its claim transaction.
+      yield* claimRegressionForPersistedScore({
+        organizationId: input.organizationId,
+        projectId: input.projectId,
+        score: persistedByWinner,
+      })
     }
 
     if (score === null) {
@@ -458,6 +544,18 @@ export const runLiveEvaluationUseCase = (input: RunLiveEvaluationInput) =>
         evaluationId: input.evaluationId,
         traceId: input.traceId,
       } satisfies RunLiveEvaluationResult
+    }
+
+    // A present verdict on a manually resolved signal is a regression: reopen
+    // it. The `issue` snapshot predates execution, so it only pre-gates; the
+    // conditional claim re-checks current state and exactly one writer per
+    // regression cycle wins and emits `SignalRegressed`.
+    if (persistedSignalId !== null && issue.resolvedAt !== null) {
+      yield* claimRegressionForPersistedScore({
+        organizationId: input.organizationId,
+        projectId: input.projectId,
+        score,
+      })
     }
 
     return {

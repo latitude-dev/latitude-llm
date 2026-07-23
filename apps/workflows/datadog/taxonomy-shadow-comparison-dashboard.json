@@ -1,0 +1,330 @@
+{
+  "title": "Taxonomy adaptive clustering — shadow comparison (LAT-773)",
+  "description": "Reads the APM span `taxonomy.gardenTaxonomyWorkflow.shadow` emitted by the workflows service to compare the static (production) taxonomy tree against the adaptive candidate tree while shadow mode is enabled environment-wide. The app ships logs to CloudWatch only, so this dashboard uses the APM spans channel, not Datadog Logs. Requires a Datadog APM retention filter that keeps resource_name:taxonomy.gardenTaxonomyWorkflow.shadow and span facets on the @taxonomy.* numeric attributes charted here. Apply with the Datadog MCP upsert_datadog_dashboard (title/description/template_variables/widgets); the spans-source request syntax should be validated on first apply.",
+  "layout_type": "ordered",
+  "template_variables": [
+    { "name": "organization", "prefix": "@taxonomy.organizationId", "available_values": [], "default": "*" },
+    { "name": "project", "prefix": "@taxonomy.projectId", "available_values": [], "default": "*" }
+  ],
+  "widgets": [
+    {
+      "definition": {
+        "type": "note",
+        "content": "## Taxonomy adaptive clustering — shadow comparison\n\nInternal engineering view over the `taxonomy.gardenTaxonomyWorkflow.shadow` APM span emitted by the **workflows** service. Each span carries the static (production) tree shape, the adaptive (candidate) tree shape, and their diff, so we can compare the two clustering algorithms without swapping what gets persisted.\n\n**Pilot tell:** a project row where `static.rootChildCount` ≈ 1 while adaptive is 3–5 — static collapsed everything under one root child, adaptive split it into real top-level clusters.\n\n**Decision-grade reads need ~1–2 weeks of turnover** — gardening runs are infrequent per project, so give the window time to accumulate representative runs.\n\n> Requires a Datadog APM retention filter keeping `resource_name:taxonomy.gardenTaxonomyWorkflow.shadow` and span facets on these numeric attributes.",
+        "background_color": "yellow",
+        "font_size": "14",
+        "text_align": "left",
+        "vertical_align": "top",
+        "has_padding": true,
+        "show_tick": false,
+        "tick_pos": "50%",
+        "tick_edge": "left"
+      },
+      "layout": { "width": 12, "height": 4 }
+    },
+    {
+      "definition": {
+        "type": "group",
+        "layout_type": "ordered",
+        "title": "Shadow comparison — static vs adaptive tree shape",
+        "show_title": true,
+        "widgets": [
+          {
+            "definition": {
+              "type": "query_table",
+              "title": "Static vs adaptive rootChildCount, partition ARI, observations sampled by project / custom behavior",
+              "requests": [
+                {
+                  "queries": [
+                    {
+                      "data_source": "spans",
+                      "name": "static_root",
+                      "search": {
+                        "query": "service:workflows resource_name:taxonomy.gardenTaxonomyWorkflow.shadow $organization $project"
+                      },
+                      "compute": { "aggregation": "avg", "metric": "@taxonomy.shadow.static.rootChildCount" },
+                      "group_by": [
+                        { "facet": "@taxonomy.projectId", "limit": 50 },
+                        { "facet": "@taxonomy.customBehaviorId", "limit": 50 }
+                      ]
+                    },
+                    {
+                      "data_source": "spans",
+                      "name": "adaptive_root",
+                      "search": {
+                        "query": "service:workflows resource_name:taxonomy.gardenTaxonomyWorkflow.shadow $organization $project"
+                      },
+                      "compute": { "aggregation": "avg", "metric": "@taxonomy.shadow.adaptive.rootChildCount" },
+                      "group_by": [
+                        { "facet": "@taxonomy.projectId", "limit": 50 },
+                        { "facet": "@taxonomy.customBehaviorId", "limit": 50 }
+                      ]
+                    },
+                    {
+                      "data_source": "spans",
+                      "name": "partition_ari",
+                      "search": {
+                        "query": "service:workflows resource_name:taxonomy.gardenTaxonomyWorkflow.shadow $organization $project"
+                      },
+                      "compute": { "aggregation": "avg", "metric": "@taxonomy.shadow.diff.partitionAri" },
+                      "group_by": [
+                        { "facet": "@taxonomy.projectId", "limit": 50 },
+                        { "facet": "@taxonomy.customBehaviorId", "limit": 50 }
+                      ]
+                    },
+                    {
+                      "data_source": "spans",
+                      "name": "obs_sampled",
+                      "search": {
+                        "query": "service:workflows resource_name:taxonomy.gardenTaxonomyWorkflow.shadow $organization $project"
+                      },
+                      "compute": { "aggregation": "avg", "metric": "@taxonomy.adaptive.observationsSampled" },
+                      "group_by": [
+                        { "facet": "@taxonomy.projectId", "limit": 50 },
+                        { "facet": "@taxonomy.customBehaviorId", "limit": 50 }
+                      ]
+                    }
+                  ],
+                  "formulas": [
+                    { "formula": "static_root", "alias": "avg static rootChildCount" },
+                    { "formula": "adaptive_root", "alias": "avg adaptive rootChildCount" },
+                    { "formula": "partition_ari", "alias": "avg partition ARI" },
+                    { "formula": "obs_sampled", "alias": "avg observations sampled" }
+                  ],
+                  "response_format": "scalar",
+                  "sort": { "count": 100, "order_by": [{ "type": "formula", "index": 1, "order": "desc" }] }
+                }
+              ]
+            },
+            "layout": { "width": 12, "height": 4 }
+          },
+          {
+            "definition": {
+              "type": "timeseries",
+              "title": "avg rootChildDelta (adaptive − static) by project",
+              "show_legend": true,
+              "legend_layout": "auto",
+              "requests": [
+                {
+                  "queries": [
+                    {
+                      "data_source": "spans",
+                      "name": "root_child_delta",
+                      "search": {
+                        "query": "service:workflows resource_name:taxonomy.gardenTaxonomyWorkflow.shadow $organization $project"
+                      },
+                      "compute": { "aggregation": "avg", "metric": "@taxonomy.shadow.diff.rootChildDelta" },
+                      "group_by": [{ "facet": "@taxonomy.projectId", "limit": 50 }]
+                    }
+                  ],
+                  "formulas": [{ "formula": "root_child_delta", "alias": "avg rootChildDelta" }],
+                  "response_format": "timeseries",
+                  "display_type": "line",
+                  "style": { "palette": "dog_classic", "line_type": "solid", "line_width": "normal" }
+                }
+              ]
+            },
+            "layout": { "width": 12, "height": 4 }
+          }
+        ]
+      },
+      "layout": { "width": 12, "height": 9 }
+    },
+    {
+      "definition": {
+        "type": "group",
+        "layout_type": "ordered",
+        "title": "Adaptive engine internals — rejections, cost, separation, safety",
+        "show_title": true,
+        "widgets": [
+          {
+            "definition": {
+              "type": "timeseries",
+              "title": "Adaptive split rejections by reason (sum)",
+              "show_legend": true,
+              "legend_layout": "auto",
+              "requests": [
+                {
+                  "queries": [
+                    {
+                      "data_source": "spans",
+                      "name": "rej_undersized",
+                      "search": {
+                        "query": "service:workflows resource_name:taxonomy.gardenTaxonomyWorkflow.shadow $organization $project"
+                      },
+                      "compute": { "aggregation": "sum", "metric": "@taxonomy.adaptive.rejection.undersizedChild" }
+                    },
+                    {
+                      "data_source": "spans",
+                      "name": "rej_dominant",
+                      "search": {
+                        "query": "service:workflows resource_name:taxonomy.gardenTaxonomyWorkflow.shadow $organization $project"
+                      },
+                      "compute": { "aggregation": "sum", "metric": "@taxonomy.adaptive.rejection.dominantChild" }
+                    },
+                    {
+                      "data_source": "spans",
+                      "name": "rej_low_score",
+                      "search": {
+                        "query": "service:workflows resource_name:taxonomy.gardenTaxonomyWorkflow.shadow $organization $project"
+                      },
+                      "compute": { "aggregation": "sum", "metric": "@taxonomy.adaptive.rejection.lowScore" }
+                    },
+                    {
+                      "data_source": "spans",
+                      "name": "rej_low_relsep",
+                      "search": {
+                        "query": "service:workflows resource_name:taxonomy.gardenTaxonomyWorkflow.shadow $organization $project"
+                      },
+                      "compute": {
+                        "aggregation": "sum",
+                        "metric": "@taxonomy.adaptive.rejection.lowRelativeSeparation"
+                      }
+                    }
+                  ],
+                  "formulas": [
+                    { "formula": "rej_undersized", "alias": "undersizedChild" },
+                    { "formula": "rej_dominant", "alias": "dominantChild" },
+                    { "formula": "rej_low_score", "alias": "lowScore" },
+                    { "formula": "rej_low_relsep", "alias": "lowRelativeSeparation" }
+                  ],
+                  "response_format": "timeseries",
+                  "display_type": "bars"
+                }
+              ]
+            },
+            "layout": { "width": 6, "height": 4 }
+          },
+          {
+            "definition": {
+              "type": "timeseries",
+              "title": "avg adaptive vs static clustering duration (ms)",
+              "show_legend": true,
+              "legend_layout": "auto",
+              "requests": [
+                {
+                  "queries": [
+                    {
+                      "data_source": "spans",
+                      "name": "adaptive_dur",
+                      "search": {
+                        "query": "service:workflows resource_name:taxonomy.gardenTaxonomyWorkflow.shadow $organization $project"
+                      },
+                      "compute": { "aggregation": "avg", "metric": "@taxonomy.adaptive.durationMs" }
+                    },
+                    {
+                      "data_source": "spans",
+                      "name": "static_dur",
+                      "search": {
+                        "query": "service:workflows resource_name:taxonomy.gardenTaxonomyWorkflow.shadow $organization $project"
+                      },
+                      "compute": { "aggregation": "avg", "metric": "@taxonomy.adaptive.staticDurationMs" }
+                    }
+                  ],
+                  "formulas": [
+                    { "formula": "adaptive_dur", "alias": "avg adaptive durationMs" },
+                    { "formula": "static_dur", "alias": "avg static durationMs" }
+                  ],
+                  "response_format": "timeseries",
+                  "display_type": "line",
+                  "style": { "palette": "dog_classic", "line_type": "solid", "line_width": "normal" }
+                }
+              ]
+            },
+            "layout": { "width": 6, "height": 4 }
+          },
+          {
+            "definition": {
+              "type": "query_value",
+              "title": "avg relative separation p50",
+              "autoscale": true,
+              "precision": 2,
+              "requests": [
+                {
+                  "queries": [
+                    {
+                      "data_source": "spans",
+                      "name": "rel_sep_p50",
+                      "search": {
+                        "query": "service:workflows resource_name:taxonomy.gardenTaxonomyWorkflow.shadow $organization $project"
+                      },
+                      "compute": { "aggregation": "avg", "metric": "@taxonomy.adaptive.relSep.p50" }
+                    }
+                  ],
+                  "formulas": [{ "formula": "rel_sep_p50" }],
+                  "response_format": "scalar",
+                  "aggregator": "avg"
+                }
+              ]
+            },
+            "layout": { "width": 4, "height": 3 }
+          },
+          {
+            "definition": {
+              "type": "query_value",
+              "title": "Adaptive fallbacks (excludes fallbackReason:none) — target 0",
+              "autoscale": true,
+              "precision": 0,
+              "requests": [
+                {
+                  "queries": [
+                    {
+                      "data_source": "spans",
+                      "name": "fallbacks",
+                      "search": {
+                        "query": "service:workflows resource_name:taxonomy.gardenTaxonomyWorkflow.shadow $organization $project -@taxonomy.adaptive.fallbackReason:none"
+                      },
+                      "compute": { "aggregation": "count", "metric": "count" }
+                    }
+                  ],
+                  "formulas": [{ "formula": "fallbacks" }],
+                  "response_format": "scalar",
+                  "aggregator": "sum",
+                  "conditional_formats": [
+                    { "comparator": ">", "value": 0, "palette": "white_on_red" },
+                    { "comparator": "<=", "value": 0, "palette": "white_on_green" }
+                  ]
+                }
+              ]
+            },
+            "layout": { "width": 4, "height": 3 }
+          },
+          {
+            "definition": {
+              "type": "query_value",
+              "title": "max adaptive peak RSS",
+              "autoscale": true,
+              "precision": 2,
+              "requests": [
+                {
+                  "queries": [
+                    {
+                      "data_source": "spans",
+                      "name": "peak_rss",
+                      "search": {
+                        "query": "service:workflows resource_name:taxonomy.gardenTaxonomyWorkflow.shadow $organization $project"
+                      },
+                      "compute": { "aggregation": "max", "metric": "@taxonomy.adaptive.peakRssBytes" }
+                    }
+                  ],
+                  "formulas": [
+                    {
+                      "formula": "peak_rss",
+                      "number_format": {
+                        "unit": { "type": "canonical_unit", "unit_name": "byte_in_binary_bytes_family" }
+                      }
+                    }
+                  ],
+                  "response_format": "scalar",
+                  "aggregator": "max"
+                }
+              ]
+            },
+            "layout": { "width": 4, "height": 3 }
+          }
+        ]
+      },
+      "layout": { "width": 12, "height": 8 }
+    }
+  ]
+}

@@ -173,6 +173,19 @@ const _registry = {
       readonly discoveredAt: string
     }
     /**
+     * Producer step for signal regression. Fired by the domain-events router
+     * on `SignalRegressed` (a new occurrence reopened a resolved signal); the
+     * consumer skips muted signals, resolves recipients (assignee-first), and
+     * emits one `create-notification` task per recipient.
+     */
+    "request-signal-regressed-notifications": {
+      readonly organizationId: string
+      readonly projectId: string
+      readonly signalId: string
+      readonly regressedAt: string
+      readonly triggerScoreId: string
+    }
+    /**
      * Producer step for destination quarantine. Fired directly by the
      * destinations worker when a `(destination, source)` sync flip
      * quarantines the destination (5 consecutive terminal failures). The
@@ -275,6 +288,8 @@ const _registry = {
       readonly signalId?: string
       readonly alertIncidentId?: string
       readonly source: "signal" | "incident"
+      /** Signal-source trigger; omitted means `signal.discovered`. */
+      readonly trigger?: "signal.discovered" | "signal.regressed"
     }
     send: {
       readonly organizationId: string
@@ -433,6 +448,21 @@ const _registry = {
     }
   }>(),
 
+  // Session-level dispatch: each settled trace-end enqueues this with a session-keyed dedupeKey and a
+  // debounce, so repeated trace-ends collapse to one firing once the session goes quiet. Carries the
+  // latest trace of the session (debounce replaces the pending payload) for the trace-scoped work it
+  // fans out (signals:match, session analysis).
+  "session-end": payloads<{
+    run: {
+      readonly organizationId: string
+      readonly projectId: string
+      readonly sessionId: string
+      readonly latestTraceId: string
+      readonly latestTraceStartTime: string
+      readonly isSandbox?: boolean
+    }
+  }>(),
+
   // The unified evaluation matching pipeline: runs a project's active evaluations against an
   // ingested trace (sampling/turn/filter selection) and fans out live-evaluations:execute jobs.
   // Replaces trace-end's evaluation fan-out for all signals. Never enqueued for sandbox traces.
@@ -474,30 +504,27 @@ const _registry = {
     }
   }>(),
 
-  // Runs the deterministic portion of every registered flagger strategy against
-  // a trace. Matched strategies write a SYSTEM-authored score directly; strategies
-  // that return `no-match` are sampled and, if selected, routed to the LLM
-  // workflow; `ambiguous` strategies are rate-limited per {org, slug} and also
-  // routed to the LLM workflow. Per-strategy failures are isolated.
-  "deterministic-flaggers": payloads<{
+  // Materializes a settled trace's memory-operation spans into the memory ledger
+  // (memory_events / memory_blobs / memory_current). Fanned out from trace-end as
+  // an isolated failure domain.
+  "memory-projection": payloads<{
     run: {
       readonly organizationId: string
       readonly projectId: string
       readonly traceId: string
+      readonly sessionId: string
     }
   }>(),
 
-  // Thin start-workflow job. Separates the Temporal `start()` call out of the
-  // deterministic-flaggers hot path so transient Temporal unavailability retries
-  // with bounded BullMQ backoff instead of re-running the whole deterministic fan-out.
-  "start-flagger-workflow": payloads<{
+  // Starts the session flagger screening workflow, published by the moments
+  // persist activity per recorded generation. The dedupe key MUST include the
+  // analysis hash — a bare per-session jobId shadows later generations.
+  "flagger-screening": payloads<{
     start: {
       readonly organizationId: string
       readonly projectId: string
-      readonly traceId: string
-      readonly flaggerId: string
-      readonly flaggerSlug: string
-      readonly reason: "sampled" | "ambiguous"
+      readonly sessionId: string
+      readonly analysisHash: string
     }
   }>(),
 
@@ -512,16 +539,6 @@ const _registry = {
       readonly organizationId: string
       readonly projectId: string
       readonly traceId: string
-    }
-    seedDemo: {
-      readonly organizationId: string
-      readonly projectId: string
-      readonly apiKeyId: string
-      readonly timelineAnchorIso: string
-    }
-    createDemo: {
-      readonly organizationId: string
-      readonly ownerUserId: string
     }
   }>(),
 
@@ -578,13 +595,23 @@ const _registry = {
     gardenSweep: {
       readonly triggeredAt: string
     }
+    gardenCustomBehavior: {
+      readonly organizationId: string
+      readonly projectId: string
+      readonly customBehaviorId: string
+      readonly reason?: "manual" | "cron"
+    }
+    gardenCustomBehaviorSweep: {
+      /** Optional override for ad-hoc runs; the repeatable sweep anchors at execution time instead. */
+      readonly triggeredAt?: string
+    }
   }>(),
 
   billing: payloads<{
     recordBillableAction: {
       readonly organizationId: string
       readonly projectId: string
-      readonly action: "trace" | "semantic-query" | "llm-call"
+      readonly action: "trace" | "deterministic-eval-scan" | "semantic-query" | "llm-call"
       readonly idempotencyKey: string
       readonly context: {
         readonly planSlug: "free" | "pro" | "enterprise"

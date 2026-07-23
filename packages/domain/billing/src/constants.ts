@@ -10,7 +10,7 @@ export const BILLING_OVERAGE_SYNC_THROTTLE_MS = 5 * 60_000 // 5 minutes
 
 export const SELF_SERVE_PLAN_SLUGS: readonly PlanSlug[] = ["pro"] as const
 
-export const CHARGEABLE_ACTIONS = ["trace", "semantic-query", "llm-call"] as const
+export const CHARGEABLE_ACTIONS = ["trace", "deterministic-eval-scan", "semantic-query", "llm-call"] as const
 
 export type ChargeableAction = (typeof CHARGEABLE_ACTIONS)[number]
 
@@ -22,6 +22,7 @@ export type ChargeableAction = (typeof CHARGEABLE_ACTIONS)[number]
  */
 export const ACTION_CREDITS: Record<ChargeableAction, number> = {
   trace: 1,
+  "deterministic-eval-scan": 1,
   "semantic-query": 15,
   "llm-call": 30,
 } as const
@@ -102,7 +103,19 @@ export const CREDIT_VALUE_MILLS =
 
 export const LLM_GENERATION_BILLING_MARGIN = 1.3
 
+export const SEMANTIC_QUERY_BILLING_MARGIN = 2
+
+/**
+ * voyage-4-large embed rate. Voyage models are absent from the `@domain/models`
+ * registry, so query-embed cost is priced with this constant against the
+ * adapter-reported token count.
+ */
+export const SEMANTIC_QUERY_EMBED_USD_PER_MILLION_TOKENS = 0.12
+
 const USD_TO_MILLS = 1_000
+
+const creditsForCostWithMargin = (costUsd: number, margin: number): number =>
+  Math.max(1, Math.ceil((costUsd * USD_TO_MILLS * margin) / CREDIT_VALUE_MILLS))
 
 /**
  * Credits billed for one LLM generation from its estimated provider cost: a 1.3x
@@ -110,7 +123,18 @@ const USD_TO_MILLS = 1_000
  * with a 1-credit floor.
  */
 export const creditsForLlmGenerationCost = (costUsd: number): number =>
-  Math.max(1, Math.ceil((costUsd * USD_TO_MILLS * LLM_GENERATION_BILLING_MARGIN) / CREDIT_VALUE_MILLS))
+  creditsForCostWithMargin(costUsd, LLM_GENERATION_BILLING_MARGIN)
+
+/**
+ * Credits billed for one semantic query from its estimated embed cost: same
+ * conversion as LLM generations but at a 2x margin.
+ */
+export const creditsForSemanticQueryCost = (costUsd: number): number =>
+  creditsForCostWithMargin(costUsd, SEMANTIC_QUERY_BILLING_MARGIN)
+
+/** Estimated provider cost of one query embed from the adapter-reported token count. */
+export const semanticQueryEmbedCostUsd = (tokens: number): number =>
+  (tokens * SEMANTIC_QUERY_EMBED_USD_PER_MILLION_TOKENS) / 1_000_000
 
 export const calculateOverageAmountMills = (planSlug: PlanSlug, overageCredits: number) => {
   if (planSlug !== "pro") return 0

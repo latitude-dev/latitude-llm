@@ -15,6 +15,10 @@ import { ArrowDownRightIcon, ArrowUpRightIcon, BrainIcon, FingerprintIcon, TextI
 import { useMemo } from "react"
 import type { SpanRecord } from "../../../../../../../domains/spans/spans.functions.ts"
 import type { TraceDetailRecord, TraceRecord } from "../../../../../../../domains/traces/traces.functions.ts"
+import { MemoryChangesSection } from "../../memory-changes/memory-changes-section.tsx"
+import { MemorySummary } from "../../memory-summary.tsx"
+import { AgentsBreakdown } from "../../session-detail-drawer/agents-breakdown/agents-breakdown.tsx"
+import { useAgentGraph } from "../../session-detail-drawer/agents-breakdown/use-agent-graph.ts"
 import { aggregateToolPills, ToolPillList } from "../../tool-pills.tsx"
 import { TraceOutlierBadge, type TraceOutlierMetric } from "../../trace-outlier-badge.tsx"
 import { DurationBar } from "../duration-bar.tsx"
@@ -90,6 +94,7 @@ export function TraceTab({
 
   // Falls back to the record total until spans load, so the duration always renders.
   const durationBreakdown = useMemo(() => computeDurationBreakdown(spans ?? []), [spans])
+  const agentGraph = useAgentGraph(spans)
   const toolPills = useMemo(() => aggregateToolPills(spans), [spans])
   const fallbackDurationMs = traceRecord ? traceRecord.durationNs / 1_000_000 : 0
   const durationWallClockMs = durationBreakdown.wallClockMs > 0 ? durationBreakdown.wallClockMs : fallbackDurationMs
@@ -174,9 +179,12 @@ export function TraceTab({
               isLoading={isSpansLoading}
             />
             <UsageSummary data={traceRecord} costBadges={costBadgesNode} />
+            <MemorySummary projectId={projectId} sessionId={traceRecord.sessionId || traceId} traceId={traceId} />
           </div>
         )
       )}
+
+      <AgentsBreakdown graph={agentGraph} />
 
       {/* ── Tags ── */}
       <div className="flex flex-col gap-1">
@@ -206,6 +214,11 @@ export function TraceTab({
           )
         }
       </DetailSection>
+
+      {/* ── Memory changes ── */}
+      {traceRecord && (
+        <MemoryChangesSection projectId={projectId} sessionId={traceRecord.sessionId || traceId} traceId={traceId} />
+      )}
 
       {/* ── Metadata ── */}
       <DetailSection icon={<TextIcon className="w-4 h-4" />} label="Metadata" defaultOpen={false}>

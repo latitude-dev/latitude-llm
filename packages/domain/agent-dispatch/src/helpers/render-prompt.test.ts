@@ -42,6 +42,9 @@ describe("renderDispatchPrompt", () => {
     expect(prompt).not.toContain("Severity:")
     expect(prompt).not.toContain("Tags:")
     expect(prompt).toContain("If Latitude MCP tools are available")
+    expect(prompt).toContain("suggest installing the Latitude MCP server")
+    expect(prompt).toContain("do not make speculative code changes")
+    expect(prompt).toContain("Do not mute or resolve the signal")
   })
 
   it("includes sample conversation excerpts", () => {

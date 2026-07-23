@@ -6,13 +6,15 @@ import {
   type ScoreSourceType,
   scoreDraftModeSchema,
 } from "@domain/scores"
-import { ScoreRepositoryLive, withPostgres } from "@platform/db-postgres"
+import { ScoreRepositoryLive } from "@platform/db-postgres"
 import { withTracing } from "@repo/observability"
 import { createServerFn } from "@tanstack/react-start"
 import { Effect } from "effect"
 import { z } from "zod"
-import { requireSession } from "../../server/auth.ts"
 import { getPostgresClient } from "../../server/clients.ts"
+import { traceIdSchema } from "../../server/id-validation.ts"
+import { resolveOrgScope } from "../../server/resolve-org-scope.ts"
+import { withScopedPostgres } from "../../server/scoped-postgres.ts"
 
 export interface ScoreRecord {
   readonly id: string
@@ -81,14 +83,14 @@ export const listScoresByTrace = createServerFn({ method: "GET" })
   .inputValidator(
     z.object({
       projectId: z.string(),
-      traceId: z.string(),
+      traceId: traceIdSchema,
       limit: z.number().optional(),
       offset: z.number().optional(),
       draftMode: scoreDraftModeSchema.optional(),
     }),
   )
-  .handler(async ({ data }): Promise<ScoreListResult> => {
-    const { organizationId } = await requireSession()
+  .handler(async ({ data, context }): Promise<ScoreListResult> => {
+    const organizationId = await resolveOrgScope(context)
     const client = getPostgresClient()
 
     const result = await Effect.runPromise(
@@ -98,7 +100,7 @@ export const listScoresByTrace = createServerFn({ method: "GET" })
         limit: data.limit,
         offset: data.offset,
         draftMode: data.draftMode ?? "include",
-      }).pipe(withPostgres(ScoreRepositoryLive, client, organizationId), withTracing),
+      }).pipe(withScopedPostgres(ScoreRepositoryLive, client, organizationId), withTracing),
     )
 
     return toListResult(result)
@@ -113,18 +115,18 @@ export const listScoresBySession = createServerFn({ method: "GET" })
   .inputValidator(
     z.object({
       projectId: z.string(),
-      traceIds: z.array(z.string().length(32)).max(500),
+      traceIds: z.array(traceIdSchema).max(500),
       limit: z.number().optional(),
       offset: z.number().optional(),
       draftMode: scoreDraftModeSchema.optional(),
     }),
   )
-  .handler(async ({ data }): Promise<ScoreListResult> => {
+  .handler(async ({ data, context }): Promise<ScoreListResult> => {
     if (data.traceIds.length === 0) {
       return { items: [], hasMore: false, limit: data.limit ?? 50, offset: data.offset ?? 0 }
     }
 
-    const { organizationId } = await requireSession()
+    const organizationId = await resolveOrgScope(context)
     const client = getPostgresClient()
 
     const result = await Effect.runPromise(
@@ -134,7 +136,7 @@ export const listScoresBySession = createServerFn({ method: "GET" })
         limit: data.limit,
         offset: data.offset,
         draftMode: data.draftMode ?? "include",
-      }).pipe(withPostgres(ScoreRepositoryLive, client, organizationId), withTracing),
+      }).pipe(withScopedPostgres(ScoreRepositoryLive, client, organizationId), withTracing),
     )
 
     return toListResult(result)

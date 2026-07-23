@@ -48,11 +48,27 @@ const SignalMonitoringStateSchema = z
         evaluationId: cuidSchema.describe("Id of the evaluation currently being realigned."),
       })
       .describe("An active evaluation is being realigned."),
+    z
+      .object({
+        kind: z.literal("failed"),
+        phase: z
+          .enum(["generate", "realign"])
+          .describe("Which workflow failed: `generate` (creating the evaluation) or `realign` (updating it)."),
+        evaluationId: cuidSchema
+          .optional()
+          .describe("Id of the evaluation whose realignment failed. Absent when the failure was during `generate`."),
+        reason: z
+          .string()
+          .nullable()
+          .describe("Resolved failure message, or `null` once Temporal has dropped the failed run."),
+      })
+      .describe("The most recent generation or realignment workflow for this signal ended in failure."),
   ])
   .openapi("SignalMonitoringState")
 
-// Fields shared by the list-row (`Signal`) and the detail (`SignalDetail`) shapes.
-const signalCoreFields = {
+// Identity fields shared by every signal-returning shape, including the
+// session-scoped `SessionSignal`.
+export const signalIdentityFields = {
   id: cuidSchema.describe("Stable signal identifier."),
   organizationId: cuidSchema.describe("Organization that owns this signal."),
   projectId: cuidSchema.describe("Project this signal belongs to."),
@@ -62,10 +78,26 @@ const signalCoreFields = {
   source: z.enum(SIGNAL_SOURCES).describe("Where the signal originated from."),
   states: z
     .array(z.enum(SIGNAL_STATES))
-    .describe("Active lifecycle states. A signal may carry multiple states at once (e.g. `escalating` + `ongoing`)."),
-  mutedAt: z.string().nullable().describe("ISO-8601 timestamp at which the signal was muted, or `null`."),
+    .describe("Active lifecycle states. A signal may carry multiple states at once (e.g. `escalating` + `new`)."),
+  resolvedAt: z.string().nullable().describe("ISO-8601 timestamp at which the signal was resolved, or `null`."),
+  ignoredAt: z.string().nullable().describe("ISO-8601 timestamp at which the signal was ignored, or `null`."),
+  regressedAt: z
+    .string()
+    .nullable()
+    .describe("ISO-8601 timestamp at which a new occurrence reopened the resolved signal, or `null`."),
+  mutedAt: z
+    .string()
+    .nullable()
+    .describe(
+      "ISO-8601 timestamp at which notifications were muted, or `null`. Muting only silences notifications; incidents still open.",
+    ),
   createdAt: z.string().describe("ISO-8601 timestamp of creation."),
   updatedAt: z.string().describe("ISO-8601 timestamp of the last update."),
+} as const
+
+// Fields shared by the list-row (`Signal`) and the detail (`SignalDetail`) shapes.
+const signalCoreFields = {
+  ...signalIdentityFields,
   trend: z.array(TrendBucketSchema).describe("Daily occurrence counts over the past 14 days."),
   tags: z.array(z.string()).describe("Tags seen on the signal's occurrences."),
 } as const
@@ -107,7 +139,7 @@ const signalDetailFields = {
     .array(EvaluationSchema)
     .describe("Active evaluations monitoring the signal. Archived and deleted evaluations are excluded."),
   monitoringState: SignalMonitoringStateSchema.describe(
-    "Whether the signal is currently being monitored: `automatic`, `idle`, `generating`, or `realigning`.",
+    "Whether the signal is currently being monitored: `automatic`, `idle`, `generating`, `realigning`, or `failed`.",
   ),
 } as const
 
@@ -125,7 +157,10 @@ export const toSignalResponse = (item: SignalListItem, organizationId: string) =
   name: item.name,
   description: item.description,
   source: item.source,
-  states: [...item.states],
+  states: [...item.states] as (typeof SIGNAL_STATES)[number][],
+  resolvedAt: item.resolvedAt ? item.resolvedAt.toISOString() : null,
+  ignoredAt: item.ignoredAt ? item.ignoredAt.toISOString() : null,
+  regressedAt: item.regressedAt ? item.regressedAt.toISOString() : null,
   mutedAt: item.mutedAt ? item.mutedAt.toISOString() : null,
   createdAt: item.createdAt.toISOString(),
   updatedAt: item.updatedAt.toISOString(),
@@ -146,6 +181,9 @@ export const toSignalDetailResponse = (details: SignalDetails, organizationId: s
   description: details.issue.description,
   source: details.issue.source,
   states: [...details.states],
+  resolvedAt: details.issue.resolvedAt ? details.issue.resolvedAt.toISOString() : null,
+  ignoredAt: details.issue.ignoredAt ? details.issue.ignoredAt.toISOString() : null,
+  regressedAt: details.issue.regressedAt ? details.issue.regressedAt.toISOString() : null,
   mutedAt: details.issue.mutedAt ? details.issue.mutedAt.toISOString() : null,
   createdAt: details.issue.createdAt.toISOString(),
   updatedAt: details.issue.updatedAt.toISOString(),
@@ -156,8 +194,21 @@ export const toSignalDetailResponse = (details: SignalDetails, organizationId: s
   tags: [...details.tags],
   trend: details.trend.map((bucket) => ({ bucket: bucket.bucket, count: bucket.count })),
   evaluations: details.evaluations.map(toEvaluationResponse),
-  monitoringState:
-    details.alignmentState.kind === "realigning"
-      ? { kind: "realigning" as const, evaluationId: details.alignmentState.evaluationId }
-      : { kind: details.alignmentState.kind as "automatic" | "idle" | "generating" },
+  monitoringState: toMonitoringStateResponse(details.alignmentState),
 })
+
+const toMonitoringStateResponse = (state: SignalDetails["alignmentState"]) => {
+  switch (state.kind) {
+    case "realigning":
+      return { kind: "realigning" as const, evaluationId: state.evaluationId }
+    case "failed":
+      return {
+        kind: "failed" as const,
+        phase: state.phase,
+        ...(state.evaluationId !== undefined ? { evaluationId: state.evaluationId } : {}),
+        reason: state.reason,
+      }
+    default:
+      return { kind: state.kind }
+  }
+}

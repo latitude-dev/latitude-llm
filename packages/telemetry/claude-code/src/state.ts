@@ -26,6 +26,20 @@ interface SessionState {
   buffer: string
   turnCount: number
   traceId?: string | undefined
+  // Main-session entries only: accumulated parent Agent tool_use -> span links,
+  // keyed by toolUseId (and promptId as a fallback), so subagents can re-parent on
+  // later turns.
+  agentLinks?: Record<string, { traceId: string; parentSpanId: string }> | undefined
+  // Subagent-file entries only: incremental emission progress. Each subagent span
+  // is emitted exactly once (the trace-level aggregates are additive per insert, so
+  // re-sending would double-count). `emittedCalls` is how many of the subagent's
+  // calls have been emitted, `interactionEmitted` whether its interaction span has,
+  // `lastSize` the file size at the previous Stop (a growth check gates the trailing
+  // call until the transcript settles), and `subDone` marks it fully emitted.
+  emittedCalls?: number | undefined
+  interactionEmitted?: boolean | undefined
+  lastSize?: number | undefined
+  subDone?: boolean | undefined
   updated?: string | undefined
 }
 
@@ -47,6 +61,11 @@ export function load(key: string): SessionState {
       buffer: typeof entry.buffer === "string" ? entry.buffer : "",
       turnCount: Number(entry.turnCount) || 0,
       traceId: typeof entry.traceId === "string" ? entry.traceId : undefined,
+      agentLinks: entry.agentLinks && typeof entry.agentLinks === "object" ? entry.agentLinks : undefined,
+      emittedCalls: typeof entry.emittedCalls === "number" ? entry.emittedCalls : undefined,
+      interactionEmitted: typeof entry.interactionEmitted === "boolean" ? entry.interactionEmitted : undefined,
+      lastSize: typeof entry.lastSize === "number" ? entry.lastSize : undefined,
+      subDone: typeof entry.subDone === "boolean" ? entry.subDone : undefined,
     }
   } catch {
     return empty()

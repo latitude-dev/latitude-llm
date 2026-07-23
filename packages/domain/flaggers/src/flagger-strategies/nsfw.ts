@@ -1,12 +1,13 @@
-import type { TraceDetail } from "@domain/spans"
+import type { FlaggerConversation } from "../conversation.ts"
 import {
   extractTextOnlyMessages,
   MAX_SNIPPET_EXCERPT_LENGTH,
+  MAX_STAGES_PER_PROMPT,
   MAX_SUSPICIOUS_SNIPPETS,
   type SuspiciousSnippet,
   truncateExcerpt,
 } from "./shared.ts"
-import type { DetectionResult, FlaggerStrategy } from "./types.ts"
+import type { FlaggerStrategy } from "./types.ts"
 
 // ---------------------------------------------------------------------------
 // NSFW Strategy - Hybrid deterministic + LLM fallback
@@ -82,9 +83,11 @@ Return no explanation outside the structured output.
  * Extract suspicious snippets for NSFW detection.
  * Looks for profanity, sexual content, slurs, etc.
  */
-function extractNsfwSuspiciousSnippets(trace: Pick<TraceDetail, "allMessages">): readonly SuspiciousSnippet[] {
+export function extractNsfwSuspiciousSnippets(
+  conversation: Pick<FlaggerConversation, "allMessages">,
+): readonly SuspiciousSnippet[] {
   const snippets: SuspiciousSnippet[] = []
-  const textMessages = extractTextOnlyMessages(trace)
+  const textMessages = extractTextOnlyMessages(conversation)
 
   // Profanity/obscenity patterns
   const explicitPatterns = [
@@ -140,6 +143,9 @@ function extractNsfwSuspiciousSnippets(trace: Pick<TraceDetail, "allMessages">):
 // ---------------------------------------------------------------------------
 
 export const nsfwStrategy: FlaggerStrategy = {
+  // User + assistant text; default assistant-only guidance would suppress real user NSFW.
+  classifiesAssistantResponseOnly: false,
+
   annotator: {
     name: "NSFW",
     description: "Workplace-inappropriate or toxic content appears",
@@ -147,37 +153,31 @@ export const nsfwStrategy: FlaggerStrategy = {
       "Use this flagger when the trace contains explicit profanity, sexual content, abusive harassment, hate speech, identity-based slurs, or graphic violent language. Do not use it for benign anatomy or health discussion, mild romance, neutral policy/safety discussion about unsafe content, or non-abusive colloquial language without clear toxicity.",
   },
 
-  hasRequiredContext(trace: TraceDetail): boolean {
-    return extractTextOnlyMessages(trace).length > 0
-  },
+  hintKinds: ["pattern:nsfw"],
 
-  detectDeterministically(trace: TraceDetail): DetectionResult {
-    // A deterministic NSFW pattern can only ever raise an `ambiguous` signal —
-    // never a direct `matched`. A real annotation always requires the LLM
-    // confirmation pass in run-flagger. Blunt token matches (e.g. the Latin
-    // "Cum hoc, ergo propter hoc" tripping the sexual-slang pattern, or a slur
-    // quoted in source material the agent was asked to analyze) must never
-    // annotate a trace on their own — only the LLM can tell use from mention.
-    if (extractTextOnlyMessages(trace).length === 0) {
-      return { kind: "no-match" }
-    }
-
-    if (extractNsfwSuspiciousSnippets(trace).length > 0) {
-      return { kind: "ambiguous" }
-    }
-
-    return { kind: "no-match" }
+  hasRequiredContext(conversation: FlaggerConversation): boolean {
+    return extractTextOnlyMessages(conversation).length > 0
   },
 
   buildSystemPrompt(): string {
     return NSFW_SYSTEM_PROMPT
   },
 
-  buildPrompt(trace: TraceDetail): string {
-    const snippets = extractNsfwSuspiciousSnippets(trace).slice(0, MAX_SUSPICIOUS_SNIPPETS)
+  buildPrompt(conversation: FlaggerConversation): string {
+    const snippets = extractNsfwSuspiciousSnippets(conversation).slice(0, MAX_SUSPICIOUS_SNIPPETS)
 
+    // No regex hit ≠ nothing to judge: the keyword list has recall gaps, so fall
+    // back to the real conversation text (this flagger judges both user and
+    // assistant content) instead of an empty evidence block.
     if (snippets.length === 0) {
-      return "No suspicious text excerpts found. Review the conversation for workplace-inappropriate content."
+      const messages = extractTextOnlyMessages(conversation).slice(-MAX_STAGES_PER_PROMPT)
+      if (messages.length === 0) {
+        return "No suspicious text excerpts found. Review the conversation for workplace-inappropriate content."
+      }
+      const formatted = messages
+        .map((m, i) => `[${i + 1}] Source: ${m.role}\nText: ${truncateExcerpt(m.content, MAX_SNIPPET_EXCERPT_LENGTH)}`)
+        .join("\n\n")
+      return `No keyword-matched excerpts; review this conversation text directly for workplace-inappropriate or toxic content:\n${formatted}`
     }
 
     const formattedSnippets = snippets

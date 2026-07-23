@@ -23,13 +23,15 @@ Plan semantics:
 Chargeable actions:
 
 - `trace = 1 credit`
-- `semantic-query = 15 credits`
+- `deterministic-eval-scan = 1 credit`
+- `semantic-query = cost-based` (flat `15 credits` as authorization estimate and fallback)
 - `llm-call = cost-based` (flat `30 credits` as authorization estimate and fallback)
 
 AI work is billed per primitive produced, not per feature-level scan: every hosted LLM
-generation is one `llm-call` and every query-time semantic operation (query embedding
-against the search index, or a `semanticSimilarity()` comparison in an evaluation run)
-is one `semantic-query`, wherever they are produced.
+generation is one `llm-call` and every query-time semantic embedding (a query embed
+against the search index) is one `semantic-query`, wherever they are produced.
+Rules-only evaluation scans, which cost no provider tokens beyond ingest-time
+embeddings, bill the flat `deterministic-eval-scan` credit per scan instead.
 
 ### Credit price grounding
 
@@ -49,12 +51,18 @@ One credit is worth `2` mills at the Pro overage rate (`$20` per `10,000` credit
   provider reported no usage (including errored calls), the flat
   `ACTION_CREDITS["llm-call"] = 30` applies and a warning is logged — keep the
   registry data current for every model configured via `LAT_AI_*`.
-- `semantic-query`: flat-priced at 2x its worst case: one voyage-4-large query
-  embedding (32k-token context ceiling ≈ `$0.004`) plus a rerank pass (≈ `$0.01`)
-  ≈ `$0.015` → `15 credits = $0.03`. Flat rather than cost-based because the embed
-  adapter does not report token usage. Reranking and document-side embeddings ride
-  on this charge (document embeds are part of trace ingest and are covered by the
-  `trace` credit).
+- `semantic-query`: each query embedding bills its **estimated provider cost with a
+  `2x` margin** (`SEMANTIC_QUERY_BILLING_MARGIN`), converted and rounded the same way
+  (`creditsForSemanticQueryCost`). Voyage models are not in the `@domain/models`
+  registry, so cost uses the adapter-reported token count priced at the hardcoded
+  voyage-4-large rate (`$0.12` per 1M tokens, `SEMANTIC_QUERY_EMBED_USD_PER_TOKEN`).
+  **Fallback**: when the adapter reports no token usage, the flat
+  `ACTION_CREDITS["semantic-query"] = 15` applies (2x the worst case: a 32k-token
+  query embed ≈ `$0.004` plus a rerank pass ≈ `$0.01`). Reranking and document-side
+  embeddings ride on this charge (document embeds are part of trace ingest and are
+  covered by the `trace` credit).
+- `deterministic-eval-scan`: flat 1 credit per rules-only evaluation scan — no
+  provider tokens are consumed at scan time, so the credit prices orchestration.
 - `trace`: unchanged; ingest-side document embedding for a typical trace costs well
   under one credit's overage value.
 
@@ -131,11 +139,10 @@ LLM calls and semantic queries are metered at the AI layer, not per feature. The
   when registry pricing or provider usage is unavailable), recorded on success and on
   `AIError` (the provider call was attempted, tokens may have been consumed — flat
   price, no usage to bill) but not on `AICredentialError`
-- `embed` with `inputType: "query"` → one `semantic-query`; document embeds and rerank
-  are never charged directly
-- the `semanticSimilarity()` evaluation host verb records one `semantic-query` per
-  executed comparison (its query embed is content-addressed as a document embed, so the
-  charge lives on the comparison, not the embed)
+- `embed` with `inputType: "query"` → one `semantic-query` billed at estimated cost x 2
+  (flat 15-credit fallback when the adapter reports no token usage); document embeds and
+  rerank are never charged directly — `semanticSimilarity()` in evaluation scripts embeds
+  content-addressed documents, so its cost rides on the scan's flat credit
 
 The metering decorator sits **under** `withAICache`, so AI cache hits — which cost no
 provider tokens — are never charged.
@@ -157,8 +164,8 @@ fan-out) rely on the 24h AI cache to make retried calls free instead.
 Canonical charge points:
 
 - trace ingest metering: `apps/workers/src/workers/span-ingestion.ts` emits `TracesIngested`, `apps/workers/src/workers/domain-events.ts` routes billing work, and `apps/workers/src/workers/billing.ts` records once per distinct trace id using `trace:{organizationId}:{projectId}:{traceId}`
-- LLM flagger classification and annotation: `apps/workflows/src/activities/flagger-activities.ts`, metered per call under `flagger-run`/`flagger` scopes
-- live evaluations: `packages/domain/evaluations/src/use-cases/live/run-live-evaluation.ts`, metered per call under a `live-eval` scope
+- LLM flagger classification and annotation: `apps/workflows/src/activities/flagger-session-activities.ts` meters the classifier per call under a `flagger-classify` activity scope; `draftSessionFlaggerAnnotation` runs the anchor dedup first so a re-detected issue never authorizes, then meters the fallback annotator per call under a `flagger:{flaggerSlug}:{sessionId}:{contentHash}` scope
+- live evaluations: `packages/domain/evaluations/src/use-cases/live/run-live-evaluation.ts` — script capabilities select the action: `llm()`-capable scripts authorize one `llm-call` and meter each generation and query embed under a `live-eval` scope; rules-only scripts record one flat `deterministic-eval-scan`
 - evaluation alignment and GEPA optimization: `apps/workflows/src/activities/evaluation-alignment-activities.ts` and `evaluation-optimization-activities.ts`, metered per call under per-activity scopes
 
 Expensive flows still authorize (and cap-reserve) **one** flat-estimate `llm-call` at
@@ -175,7 +182,7 @@ Free organizations are hard capped.
 
 Enforcement rules:
 
-- chargeable AI work (`llm-call`, `semantic-query`) is skipped before execution once no credits remain: expensive flows authorize one `llm-call` at their boundary and bail before doing AI work
+- chargeable scan and AI work (`llm-call`, `semantic-query`, `deterministic-eval-scan`) is skipped before execution once no credits remain: expensive flows authorize one `llm-call` at their boundary and bail before doing AI work
 - ingest: the **ingest HTTP route** rejects over-limit payloads with **`402`**. Accepted payloads persist first; metering runs afterward inside the ingest worker (`402` semantics use `NoCreditsRemainingError` aligned with metering domain errors).
 
 The system never partially accepts only part of one ingest payload. Do **not** bypass the ingest billing gate—other producers must enqueue `span-ingestion` only after applying the **same credit checks**.

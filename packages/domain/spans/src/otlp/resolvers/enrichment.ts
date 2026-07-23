@@ -1,3 +1,4 @@
+import { anyValueToPlain } from "../any-value.ts"
 import type { OtlpKeyValue } from "../types.ts"
 import { type Candidate, fromString, fromStringArray } from "./utils.ts"
 
@@ -42,23 +43,6 @@ function toStringValue(val: unknown): string | undefined {
   return JSON.stringify(val)
 }
 
-function otlpValueToPlain(value: OtlpKeyValue["value"]): unknown {
-  if (!value) return undefined
-  if (value.stringValue !== undefined) return value.stringValue
-  if (value.boolValue !== undefined) return value.boolValue
-  if (value.intValue !== undefined) return Number(value.intValue)
-  if (value.doubleValue !== undefined) return value.doubleValue
-  if (value.arrayValue?.values) return value.arrayValue.values.map(otlpValueToPlain)
-  if (value.kvlistValue?.values) {
-    const result: Record<string, unknown> = {}
-    for (const entry of value.kvlistValue.values) {
-      result[entry.key] = otlpValueToPlain(entry.value)
-    }
-    return result
-  }
-  return undefined
-}
-
 function fromJsonString(key: string): Candidate<Record<string, string>> {
   return {
     resolve: (attrs) => {
@@ -91,7 +75,7 @@ function fromDotFlattened(prefix: string): Candidate<Record<string, string>> {
       for (const attr of attrs) {
         if (!attr.key.startsWith(prefixDot)) continue
         const subKey = attr.key.slice(prefixDot.length)
-        const value = toStringValue(otlpValueToPlain(attr.value))
+        const value = toStringValue(anyValueToPlain(attr.value))
         if (subKey && value !== undefined) result[subKey] = value
       }
       return Object.keys(result).length > 0 ? result : undefined

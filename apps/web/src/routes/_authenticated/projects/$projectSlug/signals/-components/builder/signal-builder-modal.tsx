@@ -55,15 +55,9 @@ const EDIT_TAB_OPTIONS: { readonly id: EditTab; readonly label: string }[] = [
   { id: "test", label: "Test" },
 ]
 
-// Mocked progress timeline while generation does not stream steps; a real worker step,
-// when one arrives, overrides it.
-const GENERATION_STAGES = [
-  { atSeconds: 0, label: "Reading your description" },
-  { atSeconds: 4, label: "Drafting the evaluation" },
-  { atSeconds: 12, label: "Choosing scope and sampling" },
-  { atSeconds: 20, label: "Testing it against recent sessions" },
-  { atSeconds: 28, label: "Creating the signal" },
-]
+// Fallback shown only until the agent's first real goal narration arrives (which is fast now
+// that the worker streams goal-level steps). A real worker step overrides it immediately.
+const GENERATION_STAGES = [{ atSeconds: 0, label: "Starting" }]
 
 const emptyRuleDraft: RuleDraft = { match: "all", conditions: [] }
 const DEFAULT_ADVANCED_SCRIPT_PLACEHOLDER = compileSettingsToScript({
@@ -264,13 +258,13 @@ export function SignalBuilderModal({
     setCriteria("")
   }
 
-  const handleGenerated = ({ signalId }: { readonly signalId: string }) => {
+  const handleGenerated = ({ slug }: { readonly slug: string }) => {
     toast({ description: "Signal created." })
     void invalidateSignalQueries(projectId)
     onClose()
     void navigate({
-      to: "/projects/$projectSlug/signals/$signalId",
-      params: { projectSlug, signalId },
+      to: "/projects/$projectSlug/signals/$signalSlug",
+      params: { projectSlug, signalSlug: slug },
     })
   }
 
@@ -295,7 +289,7 @@ export function SignalBuilderModal({
       .then((result) => {
         if (controller.signal.aborted) return
         if (result.status === "done") {
-          handleGenerated({ signalId: result.signalId })
+          handleGenerated({ slug: result.slug })
           return
         }
         if (result.status === "error") setGenerationError(result.error)
@@ -358,8 +352,8 @@ export function SignalBuilderModal({
       toast({ description: "Signal created." })
       onClose()
       void navigate({
-        to: "/projects/$projectSlug/signals/$signalId",
-        params: { projectSlug, signalId: result.signalId },
+        to: "/projects/$projectSlug/signals/$signalSlug",
+        params: { projectSlug, signalSlug: result.slug },
       })
     } catch (error) {
       toast({ variant: "destructive", description: toUserMessage(error) })

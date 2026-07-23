@@ -97,13 +97,17 @@ function decodeAndTransform(
       return []
     }
 
-    const { spans } = transformOtlpToSpans(request, {
+    const { spans, rejectedSpans } = transformOtlpToSpans(request, {
       organizationId: input.organizationId,
       apiKeyId: input.apiKeyId,
       ingestedAt: input.ingestedAt,
       defaultProjectId: input.defaultProjectId,
       projectIdBySlug: new Map(Object.entries(input.projectIdBySlug)),
     })
+
+    if (rejectedSpans > 0) {
+      yield* Effect.annotateCurrentSpan("rejectedSpans", rejectedSpans)
+    }
 
     return spans
   })

@@ -1,4 +1,11 @@
-import type { NotFoundError, ProjectId, RepositoryError, SqlClient, TaxonomyClusterId } from "@domain/shared"
+import type {
+  CustomBehaviorId,
+  NotFoundError,
+  ProjectId,
+  RepositoryError,
+  SqlClient,
+  TaxonomyClusterId,
+} from "@domain/shared"
 import { Context, type Effect } from "effect"
 import type { TaxonomyCluster } from "../entities/cluster.ts"
 import type { TaxonomyDimension } from "../entities/dimension.ts"
@@ -25,6 +32,8 @@ export interface ListClustersInput {
   readonly sort?: TaxonomyClusterSort
   readonly limit: number
   readonly offset: number
+  /** Omit/null = global taxonomy (custom_behavior_id IS NULL); an id scopes to that behavior's sub-tree. */
+  readonly customBehaviorId?: CustomBehaviorId | null
 }
 
 export interface TaxonomyClusterListPage {
@@ -48,11 +57,15 @@ export interface TaxonomyClusterRepositoryShape {
     readonly dimension: TaxonomyDimension
     /** Omit for all nodes; null for roots; an id for that node's children. */
     readonly parentClusterId?: TaxonomyClusterId | null
+    /** Omit/null = global taxonomy (custom_behavior_id IS NULL); an id scopes to that behavior's sub-tree. */
+    readonly customBehaviorId?: CustomBehaviorId | null
   }): Effect.Effect<readonly TaxonomyCluster[], RepositoryError, SqlClient>
   /** Active ids of the node plus all its descendants (path prefix match). */
   listSubtreeIds(input: {
     readonly projectId: ProjectId
     readonly clusterId: TaxonomyClusterId
+    /** Omit/null = global taxonomy (custom_behavior_id IS NULL); an id scopes to that behavior's sub-tree. */
+    readonly customBehaviorId?: CustomBehaviorId | null
   }): Effect.Effect<readonly TaxonomyClusterId[], RepositoryError, SqlClient>
   /**
    * Exact pgvector cosine over `(organization_id, project_id)` for state =
@@ -89,6 +102,26 @@ export interface TaxonomyClusterRepositoryShape {
   markDeprecated(input: {
     readonly clusterId: TaxonomyClusterId
     readonly timestamp: Date
+  }): Effect.Effect<void, RepositoryError, SqlClient>
+  /**
+   * Atomic tree publish. In one transaction, deprecate exactly
+   * `supersededClusterIds` (the old active tree) and activate
+   * `stagingClusterIds` (the freshly built + assigned staging tree). Active
+   * reads therefore never observe the old and new trees simultaneously.
+   * Idempotent: activating already-active staging rows and deprecating
+   * already-deprecated rows are no-ops, so an activity retry re-runs safely.
+   */
+  swapActiveTree(input: {
+    readonly supersededClusterIds: readonly TaxonomyClusterId[]
+    readonly stagingClusterIds: readonly TaxonomyClusterId[]
+    readonly timestamp: Date
+  }): Effect.Effect<void, RepositoryError, SqlClient>
+  /**
+   * Remove abandoned staging rows on a failed publish, leaving the old tree
+   * active. Guarded to `state = 'staging'` so it can never delete a live tree.
+   */
+  deleteStaging(input: {
+    readonly clusterIds: readonly TaxonomyClusterId[]
   }): Effect.Effect<void, RepositoryError, SqlClient>
 }
 

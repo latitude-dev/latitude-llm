@@ -11,7 +11,12 @@ import { SAVED_SEARCH_MONITORS_SWEEPER_KEY, SAVED_SEARCH_MONITORS_SWEEPER_PATTER
 import { SANDBOX_IDLE_SWEEPER_KEY, SANDBOX_IDLE_SWEEPER_PATTERN } from "@domain/sandboxes"
 import { SHOWCASE_CLEANUP_CRON_KEY, SHOWCASE_CLEANUP_CRON_PATTERN } from "@domain/showcase"
 import { ESCALATION_SWEEPER_KEY, ESCALATION_SWEEPER_PATTERN } from "@domain/signals"
-import { TAXONOMY_GARDENING_CRON_KEY, TAXONOMY_GARDENING_CRON_PATTERN } from "@domain/taxonomy"
+import {
+  CUSTOM_BEHAVIOR_GARDENING_CRON_KEY,
+  CUSTOM_BEHAVIOR_GARDENING_CRON_PATTERN,
+  TAXONOMY_GARDENING_CRON_KEY,
+  TAXONOMY_GARDENING_CRON_PATTERN,
+} from "@domain/taxonomy"
 import { serve } from "@hono/node-server"
 import { serveStatic } from "@hono/node-server/serve-static"
 import { createPollingOutboxConsumer } from "@platform/db-postgres"
@@ -51,7 +56,6 @@ import { createApiKeysWorker } from "./workers/api-keys.ts"
 import { createBillingWorker } from "./workers/billing.ts"
 import { createBillingOverageWorker } from "./workers/billing-overage.ts"
 import { createDestinationsWorker } from "./workers/destinations.ts"
-import { createDeterministicFlaggersWorker } from "./workers/deterministic-flaggers.ts"
 import { createIncidentsWorker } from "./workers/domain-events/incidents.ts"
 import { createInvitationEmailWorker } from "./workers/domain-events/invitation-email.ts"
 import { createMagicLinkEmailWorker } from "./workers/domain-events/magic-link-email.ts"
@@ -61,7 +65,9 @@ import { createUserDeletionWorker } from "./workers/domain-events/user-deletion.
 import { createDomainEventsWorker } from "./workers/domain-events.ts"
 import { createEvaluationsWorker } from "./workers/evaluations.ts"
 import { createExportsWorker } from "./workers/exports.ts"
+import { createFlaggerScreeningWorker } from "./workers/flagger-screening.ts"
 import { createLiveEvaluationsWorker } from "./workers/live-evaluations.ts"
+import { createMemoryProjectionWorker } from "./workers/memory-projection.ts"
 import { createMonitorsWorker } from "./workers/monitors.ts"
 import { createNotificationEmailerWorker } from "./workers/notification-emailer.ts"
 import { createNotificationSlackWorker } from "./workers/notification-slack.ts"
@@ -72,13 +78,13 @@ import { createProductFeedbackWorker } from "./workers/product-feedback.ts"
 import { createProjectsWorker } from "./workers/projects.ts"
 import { createSandboxesWorker } from "./workers/sandboxes.ts"
 import { createScoresWorker } from "./workers/scores.ts"
+import { createSessionEndWorker } from "./workers/session-end.ts"
 import { createShowcaseWorker } from "./workers/showcase.ts"
 import { createSignalsWorker } from "./workers/signals.ts"
 import { createSignalsGenerateSignalWorker } from "./workers/signals-generate-signal.ts"
 import { createSignalsMatchWorker } from "./workers/signals-match.ts"
 import { createSignalsPreviewWorker } from "./workers/signals-preview.ts"
 import { createSpanIngestionWorker } from "./workers/span-ingestion.ts"
-import { createStartFlaggerWorkflowWorker } from "./workers/start-flagger-workflow.ts"
 import { createTaxonomyWorker } from "./workers/taxonomy.ts"
 import { createTraceEndWorker } from "./workers/trace-end.ts"
 import { createTraceSearchWorker } from "./workers/trace-search.ts"
@@ -229,11 +235,12 @@ const bootstrap = async () => {
     createAnnotationScoresWorker(ctx)
     createLiveEvaluationsWorker(ctx)
     createTraceEndWorker(ctx)
+    createSessionEndWorker(ctx)
     createSignalsMatchWorker(ctx)
     createSignalsPreviewWorker(ctx)
     createSignalsGenerateSignalWorker(ctx)
-    createDeterministicFlaggersWorker(ctx)
-    createStartFlaggerWorkflowWorker(ctx)
+    createFlaggerScreeningWorker(ctx)
+    createMemoryProjectionWorker(ctx)
     createProjectsWorker(ctx)
     createScoresWorker(ctx)
     createShowcaseWorker(ctx)
@@ -358,6 +365,21 @@ const bootstrap = async () => {
           "gardenSweep",
           { triggeredAt: new Date().toISOString() },
           { key: TAXONOMY_GARDENING_CRON_KEY, pattern: TAXONOMY_GARDENING_CRON_PATTERN, tz: "UTC" },
+        )
+        .pipe(withTracing),
+    )
+
+    // Scoped-gardening sweep: keeps every eligible custom behavior a living
+    // taxonomy, the scoped analogue of the global gardenSweep above.
+    await Effect.runPromise(
+      queuePublisher
+        .scheduleRepeatable(
+          "taxonomy",
+          "gardenCustomBehaviorSweep",
+          // No triggeredAt: repeatable payloads are frozen at boot, so the handler
+          // anchors its throttle window at execution time instead.
+          {},
+          { key: CUSTOM_BEHAVIOR_GARDENING_CRON_KEY, pattern: CUSTOM_BEHAVIOR_GARDENING_CRON_PATTERN, tz: "UTC" },
         )
         .pipe(withTracing),
     )

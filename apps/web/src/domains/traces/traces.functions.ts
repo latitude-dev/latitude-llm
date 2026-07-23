@@ -1,11 +1,12 @@
 import { listSessionMomentIntelligenceUseCase } from "@domain/conversation-intelligence"
 import { exportSelectionSchema } from "@domain/exports"
 import {
-  filterSetSchema,
   PERCENTILE_TRACE_FILTER_FIELDS,
   type PercentileTraceFilterField,
   ProjectId,
+  SpanId,
   TraceId,
+  traceFilterSetSchema,
 } from "@domain/shared"
 import type {
   CohortSummary,
@@ -18,6 +19,7 @@ import type {
   TraceTimeHistogramBucket,
 } from "@domain/spans"
 import {
+  getSpanConversationChunkUseCase,
   getTraceCohortSummaryUseCase,
   getTraceConversationChunkUseCase,
   getTraceSearchHighlightsUseCase,
@@ -30,6 +32,7 @@ import {
   SessionAnalysisRepositoryLive,
   SessionMomentLabelRepositoryLive,
   SessionSemanticMomentRepositoryLive,
+  SpanRepositoryLive,
   TaxonomyObservationRepositoryLive,
   TraceRepositoryLive,
   TraceSearchRepositoryLive,
@@ -44,6 +47,7 @@ import { enforceExportRequestRateLimit } from "../../domains/exports/export-rate
 import { ensureSession } from "../../domains/sessions/session.functions.ts"
 import { getSessionOrganizationId } from "../../server/auth.ts"
 import { getClickhouseClient, getQueuePublisher, getRedisClient } from "../../server/clients.ts"
+import { spanIdSchema, traceIdSchema } from "../../server/id-validation.ts"
 import { resolveOrgScope } from "../../server/resolve-org-scope.ts"
 import { withScopedClickHouse } from "../../server/scoped-clickhouse.ts"
 
@@ -167,7 +171,7 @@ export interface TraceConversationChunkRecord {
 const traceListCursorSchema = z.object({
   sortValue: z.string(),
   secondaryValue: z.string().optional(),
-  traceId: z.string(),
+  traceId: traceIdSchema,
 })
 
 interface TraceListResult {
@@ -188,7 +192,7 @@ export const listTracesByProject = createServerFn({ method: "GET" })
       cursor: traceListCursorSchema.optional(),
       sortBy: z.string().optional(),
       sortDirection: z.enum(["asc", "desc"]).optional(),
-      filters: filterSetSchema.optional(),
+      filters: traceFilterSetSchema.optional(),
       searchQuery: z.string().max(500).optional(),
     }),
   )
@@ -231,7 +235,7 @@ export const countTracesByProject = createServerFn({ method: "GET" })
   .inputValidator(
     z.object({
       projectId: z.string(),
-      filters: filterSetSchema.optional(),
+      filters: traceFilterSetSchema.optional(),
       searchQuery: z.string().max(500).optional(),
     }),
   )
@@ -255,11 +259,57 @@ export const countTracesByProject = createServerFn({ method: "GET" })
     )
   })
 
+export const getProjectLastTraceAt = createServerFn({ method: "GET" })
+  .inputValidator(
+    z.object({
+      projectId: z.string(),
+      filters: traceFilterSetSchema.optional(),
+      searchQuery: z.string().max(500).optional(),
+    }),
+  )
+  .handler(async ({ data, context }): Promise<string | null> => {
+    const orgId = await resolveOrgScope(context)
+
+    return Effect.runPromise(
+      Effect.gen(function* () {
+        const repo = yield* TraceRepository
+        const lastAt = yield* repo.findLastTraceAt({
+          organizationId: orgId,
+          projectId: ProjectId(data.projectId),
+          ...(data.filters ? { filters: data.filters } : {}),
+          ...(data.searchQuery ? { searchQuery: data.searchQuery } : {}),
+        })
+        return lastAt ? lastAt.toISOString() : null
+      }).pipe(
+        withScopedClickHouse(TraceRepositoryLive, getClickhouseClient(), orgId),
+        withAi(AIEmbedLive, getRedisClient()),
+        withTracing,
+      ),
+    )
+  })
+
+export const getProjectFirstTraceAt = createServerFn({ method: "GET" })
+  .inputValidator(z.object({ projectId: z.string() }))
+  .handler(async ({ data, context }): Promise<string | null> => {
+    const orgId = await resolveOrgScope(context)
+
+    return Effect.runPromise(
+      Effect.gen(function* () {
+        const repo = yield* TraceRepository
+        const firstAt = yield* repo.findFirstTraceAt({
+          organizationId: orgId,
+          projectId: ProjectId(data.projectId),
+        })
+        return firstAt ? firstAt.toISOString() : null
+      }).pipe(withScopedClickHouse(TraceRepositoryLive, getClickhouseClient(), orgId), withTracing),
+    )
+  })
+
 export const getTraceMetricsByProject = createServerFn({ method: "GET" })
   .inputValidator(
     z.object({
       projectId: z.string(),
-      filters: filterSetSchema.optional(),
+      filters: traceFilterSetSchema.optional(),
       searchQuery: z.string().max(500).optional(),
     }),
   )
@@ -302,7 +352,7 @@ export const getTraceCohortSummary = createServerFn({ method: "GET" })
 
 const traceHistogramInputSchema = z.object({
   projectId: z.string(),
-  filters: filterSetSchema.optional(),
+  filters: traceFilterSetSchema.optional(),
   rangeStartIso: z.string(),
   rangeEndIso: z.string(),
   bucketSeconds: z
@@ -348,7 +398,7 @@ export const getTraceSearchHighlights = createServerFn({ method: "GET" })
   .inputValidator(
     z.object({
       projectId: z.string(),
-      traceId: z.string(),
+      traceId: traceIdSchema,
       searchQuery: z.string().max(500),
     }),
   )
@@ -431,7 +481,7 @@ export const getSessionMomentIntelligence = createServerFn({ method: "GET" })
   })
 
 export const getTraceDetail = createServerFn({ method: "GET" })
-  .inputValidator(z.object({ projectId: z.string(), traceId: z.string() }))
+  .inputValidator(z.object({ projectId: z.string(), traceId: traceIdSchema }))
   .handler(async ({ data, context }) => {
     const orgId = await resolveOrgScope(context)
 
@@ -460,7 +510,7 @@ export const getTraceConversationChunk = createServerFn({ method: "GET" })
   .inputValidator(
     z.object({
       projectId: z.string(),
-      traceId: z.string(),
+      traceId: traceIdSchema,
       offset: z.number().int().nonnegative().optional(),
       limit: z.number().int().positive().max(100).optional(),
     }),
@@ -483,6 +533,37 @@ export const getTraceConversationChunk = createServerFn({ method: "GET" })
     return result as never
   })
 
+// The conversation of a single span (subagent boundary), paginated. Twin of
+// getTraceConversationChunk over SpanRepository.findSpanConversationChunk.
+export const getSpanConversationChunk = createServerFn({ method: "GET" })
+  .inputValidator(
+    z.object({
+      projectId: z.string(),
+      traceId: traceIdSchema,
+      spanId: spanIdSchema,
+      offset: z.number().int().nonnegative().optional(),
+      limit: z.number().int().positive().max(100).optional(),
+    }),
+  )
+  .handler(async ({ data, context }) => {
+    const orgId = await resolveOrgScope(context)
+    const offset = data.offset ?? 0
+    const limit = data.limit ?? 25
+
+    const result = await Effect.runPromise(
+      getSpanConversationChunkUseCase({
+        organizationId: orgId,
+        projectId: ProjectId(data.projectId),
+        traceId: TraceId(data.traceId),
+        spanId: SpanId(data.spanId),
+        offset,
+        limit,
+      }).pipe(withScopedClickHouse(SpanRepositoryLive, getClickhouseClient(), orgId), withTracing),
+    )
+
+    return result as never
+  })
+
 const DISTINCT_COLUMNS = ["userId", "tags", "models", "providers", "serviceNames", "tools", "definedTools"] as const
 
 interface EnqueuedExportResult {
@@ -493,7 +574,7 @@ export const enqueueTracesExport = createServerFn({ method: "POST" })
   .inputValidator(
     z.object({
       projectId: z.string(),
-      filters: filterSetSchema.optional(),
+      filters: traceFilterSetSchema.optional(),
       selection: exportSelectionSchema.optional(),
       searchQuery: z.string().max(500).optional(),
     }),

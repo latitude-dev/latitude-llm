@@ -8,10 +8,13 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
   Icon,
+  Text,
 } from "@repo/ui"
 import { CheckIcon, ChevronDown, CircleDashedIcon, UserRoundIcon } from "lucide-react"
 import { useMemo } from "react"
-import { useMembersCollection } from "../../../../../../domains/members/members.collection.ts"
+import { useProjectMembersCollection } from "../../../../../../domains/members/members.collection.ts"
+import { compareMemberLabelsCurrentUserFirst } from "../../../../../../domains/members/pick-users-from-members.ts"
+import { useAuthenticatedUser } from "../../../../../../routes/_authenticated/-route-data.ts"
 
 /** Signals-list assignee filter token: a member userId or the unassigned sentinel. */
 export const UNASSIGNED_FILTER_TOKEN = "unassigned"
@@ -20,6 +23,7 @@ interface AssigneeFilterOption {
   readonly token: string
   readonly label: string
   readonly imageSrc: string | null
+  readonly isMe: boolean
 }
 
 /**
@@ -34,7 +38,8 @@ export function AssigneeFilter({
   readonly value: readonly string[]
   readonly onChange: (next: readonly string[]) => void
 }) {
-  const { data: members } = useMembersCollection()
+  const me = useAuthenticatedUser()
+  const { data: members } = useProjectMembersCollection()
 
   const memberOptions = useMemo<AssigneeFilterOption[]>(() => {
     const rows = members ?? []
@@ -42,10 +47,20 @@ export function AssigneeFilter({
       .filter((m) => m.status === "active" && m.userId)
       .map((m) => {
         const displayName = m.name?.trim() && m.name.trim().length > 0 ? m.name.trim() : m.email
-        return { token: m.userId as string, label: displayName, imageSrc: m.image }
+        const userId = m.userId as string
+        return { token: userId, label: displayName, imageSrc: m.image, isMe: userId === me.id }
       })
-      .sort((a, b) => a.label.localeCompare(b.label))
-  }, [members])
+      .sort((a, b) =>
+        compareMemberLabelsCurrentUserFirst(
+          me.id,
+          { memberUserId: a.token, label: a.label },
+          {
+            memberUserId: b.token,
+            label: b.label,
+          },
+        ),
+      )
+  }, [members, me.id])
 
   const selected = useMemo(() => new Set(value), [value])
 
@@ -70,7 +85,7 @@ export function AssigneeFilter({
   return (
     <DropdownMenuRoot>
       <DropdownMenuTrigger asChild>
-        <Button variant={selected.size > 0 ? "secondary" : "outline"} size="sm">
+        <Button variant={selected.size > 0 ? "secondary" : "outline"}>
           <Icon icon={UserRoundIcon} size="sm" />
           {triggerLabel}
           <Icon icon={ChevronDown} size="sm" />
@@ -81,6 +96,7 @@ export function AssigneeFilter({
         <DropdownMenuSeparator />
         <AssigneeFilterRow
           label="Unassigned"
+          isMe={false}
           leading={<Icon icon={CircleDashedIcon} size="sm" color="foregroundMuted" />}
           checked={selected.has(UNASSIGNED_FILTER_TOKEN)}
           onToggle={() => toggle(UNASSIGNED_FILTER_TOKEN)}
@@ -89,6 +105,7 @@ export function AssigneeFilter({
           <AssigneeFilterRow
             key={option.token}
             label={option.label}
+            isMe={option.isMe}
             leading={<Avatar size="xs" name={option.label} imageSrc={option.imageSrc} />}
             checked={selected.has(option.token)}
             onToggle={() => toggle(option.token)}
@@ -109,11 +126,13 @@ export function AssigneeFilter({
 
 function AssigneeFilterRow({
   label,
+  isMe,
   leading,
   checked,
   onToggle,
 }: {
   readonly label: string
+  readonly isMe: boolean
   readonly leading: React.ReactNode
   readonly checked: boolean
   readonly onToggle: () => void
@@ -130,6 +149,7 @@ function AssigneeFilterRow({
     >
       {leading}
       <span className="min-w-0 flex-1 truncate">{label}</span>
+      {isMe ? <Text.H6 color="foregroundMuted">(You)</Text.H6> : null}
       {checked && <Icon icon={CheckIcon} size="sm" />}
     </DropdownMenuItem>
   )

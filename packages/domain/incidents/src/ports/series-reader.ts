@@ -1,4 +1,4 @@
-import type { ChSqlClient, OrganizationId, ProjectId, RepositoryError } from "@domain/shared"
+import type { ChSqlClient, OrganizationId, ProjectId, RepositoryError, ValidationError } from "@domain/shared"
 import { Context, type Effect } from "effect"
 
 export interface SeasonalSeriesSignals {
@@ -47,8 +47,10 @@ export interface CrossingBuckets {
 export interface SeriesReaderShape {
   readSeasonalSeries(
     input: ReadSeasonalSeriesInput,
-  ): Effect.Effect<SeasonalSeriesSignals | null, RepositoryError, ChSqlClient>
-  readCrossingBuckets(input: ReadCrossingBucketsInput): Effect.Effect<CrossingBuckets, RepositoryError, ChSqlClient>
+  ): Effect.Effect<SeasonalSeriesSignals | null, RepositoryError | ValidationError, ChSqlClient>
+  readCrossingBuckets(
+    input: ReadCrossingBucketsInput,
+  ): Effect.Effect<CrossingBuckets, RepositoryError | ValidationError, ChSqlClient>
 }
 
 export class SeriesReader extends Context.Service<SeriesReader, SeriesReaderShape>()(

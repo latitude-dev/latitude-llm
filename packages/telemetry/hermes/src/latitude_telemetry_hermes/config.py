@@ -52,7 +52,7 @@ _SSL_CONTEXT = _ssl_context()
 logger = logging.getLogger(__name__)
 
 SCOPE_NAME = "latitude-telemetry-hermes"
-PKG_VERSION = "0.1.0"
+PKG_VERSION = "0.1.2"
 
 # Bound on live trace state, so turns that never reach a clean finish
 # (interrupted / tool-only final step) can't leak forever.

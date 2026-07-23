@@ -80,7 +80,7 @@ These consequences carry through the rest of the spec:
 - an optional **`filters`** (a `FilterSet`): a cheap, row-local pre-gate restricting which traces the evaluation is even run against ("only `service = checkout`", "only traces above p90 latency"). Empty/absent = all traces. `filters` is only meaningful alongside an evaluation — it gates evaluation execution.
 - an optional **`evaluation`** (an `evaluations` row linked 1:1 via `evaluations.signal_id`, **one active per signal**): the membership detector, run at write time. With no linked evaluation there is no write-time detection — membership comes only from annotations. Having or not having an evaluation is a *state*, not a kind: a system-created signal starts with no evaluation and can later gain one (when tracked) while keeping `origin = 'system'`. Tell auto-generated from hand-built by `origin`, never by the presence of an evaluation.
 - **triage metadata**: priority and a single assignee, carried over from issues (multi-assignee deferred).
-- a **status** derived from age, activity, and signal-sourced incidents: `new`, `ongoing`, and `escalating`. Manual noise control is `muted_at`, not a resolved/ignored lifecycle.
+- a **status** derived from age, activity, and signal-sourced incidents: `new`, `ongoing`, and `escalating`. Manual noise control is `muted_at`, not a resolved/ignored lifecycle. *(Superseded 2026-07: the resolved/ignored lifecycle was restored, with regression, by [`specs/signal-resolve-ignore.md`](signal-resolve-ignore.md); mute became a pure notification barrier that no longer stops incidents.)*
 
 Constraints:
 
@@ -495,7 +495,7 @@ Signals are exposed as a public REST surface under `/v1/projects/{projectSlug}/s
 4. **One evaluation per signal, on the existing `evaluations` table, always a script** — not a separate detector entity, not a jsonb column on the signal, no `type`/`capability` columns. A `settings` object optionally compiles to the `script`; the script is what executes. Exactly one *active* evaluation per signal (archived predecessors kept for lineage); a system-created signal may have none. → [Evaluation](#evaluation-the-detector)
 5. **Evaluations write every run** (present and absent), mirroring how judges persist pass and fail today; occurrences are the rows carrying `signal_id`. **All scores are stored the same way** — Postgres-canonical + ClickHouse mirror, no per-type or per-capability split. → [Score](#score--the-membership-ledger)
 6. **Users cannot create evaluation-less signals** — only `system`-origin signals may have no evaluation, which removes the pure-filter write-amplification footgun; `filters` is only an evaluation pre-gate; plain filter tracking stays saved searches + monitors. → [Signal](#signal)
-7. **Mute stays on the signal row** for the MVP; escalation is represented by source-keyed incidents, not by a default monitor. → [Signal](#signal)
+7. **Mute stays on the signal row** for the MVP; escalation is represented by source-keyed incidents, not by a default monitor. → [Signal](#signal) *(Amended by [`specs/signal-resolve-ignore.md`](signal-resolve-ignore.md): mute no longer short-circuits escalation checks — incidents open while muted and only fan-out is gated.)*
 8. **Script evaluations are the MVP detector; the judge is a generated script that calls `llm()`.** Both arise from the builder (settings → script, or raw script) and from the discovery → tracking path. **There is no tunable threshold**: the script returns `Passed`/`Failed`, so the cutoff is written into the script; `value` is only confidence/sort. **Semantic similarity** is deferred to [R3](#r3--semantic-similarity-for-rule-evals-future) — the `semantic_similarity` rule condition plus an open-design sandbox execution model (PR4b shipped only pure conditions). **Custom-source scores** (`/scores` accepting `signal_id`) are POST-MVP.
 9. **No per-project signal cap.** Evaluation matching cost and score write volume are bounded by the shared selection pre-gate (sampling / turn / filter) and the single `signals:match` pipeline, not by an arbitrary count limit.
 10. **A signal's behavior is present when `passed = true`.** Membership is `signal_id`; the writer stamps it when an evaluation's verdict is present (`passed = true`), and the generated-judge convention (baseline prompt + GEPA proposer) sets `passed = true` when the behavior is present. `passed` is host-derived per run, so the convention lives in the runtime sites (writer, discovery eligibility, alignment scoring) and the judge prompt — no stored flag, no `scores` migration. → [Evaluation](#evaluation-the-detector) / [Score](#score--the-membership-ledger) / [Phase 2 PR2](#phase-2--evaluation-substrate--script-evaluations-mvp)
@@ -611,7 +611,7 @@ The builder UI shipped (and expanded — it absorbs the former judge-builder pha
 - [x] **P4-a** Signal escalation uses the shared `EscalationEngine` and score occurrence series instead of default per-signal monitor provisioning.
 - [x] **P4-b** Signal incidents use `(source_type, source_id) = ("signal", signal.id)` and no monitor-alert join.
 - [x] **P4-c** Signal mute is `signals.muted_at`; mute gates notification fan-out and does not stop discovery or score assignment.
-- [x] **P4-d** Signal UI exposes mute/unmute, not resolve/ignore/regression actions.
+- [x] **P4-d** Signal UI exposes mute/unmute, not resolve/ignore/regression actions. *(Reversed 2026-07 by [`specs/signal-resolve-ignore.md`](signal-resolve-ignore.md) — resolve/ignore/regression are back, alongside mute.)*
 - [x] **P4-e** Notification settings gate `signal.escalating`, while monitor settings gate `monitor.match`, `monitor.threshold`, and `monitor.escalating`.
 
 **Exit gate:** a signal escalation opens/closes a `signal` incident, respects signal mute, and fans out under the `signal.escalating` gate.
@@ -631,7 +631,7 @@ The builder UI shipped (and expanded — it absorbs the former judge-builder pha
 - [x] **P6-a** Incident sources are `monitor | signal`.
 - [x] **P6-b** Incident notification keys are `monitor.match`, `monitor.threshold`, `monitor.escalating`, and `signal.escalating`.
 - [x] **P6-c** Monitor UI/API use a single `rule`, with target-mode drafts mapped to `monitor.*`.
-- [x] **P6-d** Signal lifecycle actions are mute/unmute; resolved/ignored/regressed UI copy is retired.
+- [x] **P6-d** Signal lifecycle actions are mute/unmute; resolved/ignored/regressed UI copy is retired. *(Reversed 2026-07 by [`specs/signal-resolve-ignore.md`](signal-resolve-ignore.md).)*
 - **P6-e** → moved to the [Cleanup](#cleanup--legacy-storage-retirement-post-mvp) roadmap item: dropping dormant storage from the rename (`scores.issue_id`, retired `issue.*` kinds) as a compatibility-only migration.
 
 **Exit gate:** monitor and signal incidents use the final source taxonomy; the old alert-kind axis is absent from the shipped monitor/signal UI and notification producer.

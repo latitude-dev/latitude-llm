@@ -4,13 +4,16 @@ import { analyticsModule } from "./analytics.ts"
 import { annotationsModule } from "./annotations.ts"
 import { apiKeysModule } from "./api-keys.ts"
 import { datasetsModule } from "./datasets.ts"
+import { experimentsModule } from "./experiments.ts"
 import { incidentsModule } from "./incidents.ts"
 import { membersModule } from "./members.ts"
+import { memoryModule } from "./memory.ts"
 import { monitorsModule } from "./monitors.ts"
 import { oauthKeysModule } from "./oauth-keys.ts"
 import { projectsModule } from "./projects.ts"
 import { savedSearchesModule } from "./saved-searches.ts"
 import { scoresModule } from "./scores.ts"
+import { sessionsModule } from "./sessions.ts"
 import { signalsModule } from "./signals.ts"
 import { spansModule } from "./spans.ts"
 import { toolsModule } from "./tools.ts"
@@ -37,4 +40,7 @@ export const operationModules: ReadonlyArray<OperationModule> = [
   monitorsModule,
   analyticsModule,
   spansModule,
+  experimentsModule,
+  sessionsModule,
+  memoryModule,
 ]

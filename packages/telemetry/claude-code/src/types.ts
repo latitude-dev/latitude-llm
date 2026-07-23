@@ -84,6 +84,20 @@ export interface ToolCall {
   endMs: number
 }
 
+export interface MemoryOp {
+  operation: "upsert_memory" | "update_memory" | "search_memory"
+  storeId: string
+  recordId: string
+  count: number
+  body?: string
+}
+
+export interface MemoryEmitOptions {
+  projectsRoot: string
+  captureContent: boolean
+  readFile?: (path: string) => string | undefined
+}
+
 export interface SubagentInvocation {
   agentId: string
   agentType: string
@@ -112,6 +126,17 @@ export interface SubagentFile {
   agentId: string
   filePath: string
   metaPath: string
+}
+
+// Links a parent Agent tool_use to the span it was emitted as, so a subagent's
+// spans can be (re-)parented under it on a later turn — after the Agent call has
+// scrolled out of the freshly-read window. toolUseId is unique per invocation;
+// promptId is a lossy fallback for transcripts whose meta predates toolUseId.
+export interface AgentSpanLink {
+  toolUseId: string
+  promptId?: string | undefined
+  traceId: string
+  parentSpanId: string
 }
 
 export interface OtlpAnyValue {

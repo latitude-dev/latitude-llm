@@ -270,7 +270,7 @@ function ProjectFlaggersSettingsPage() {
                               </div>
                             </div>
                             {isDeterministic ? (
-                              <Text.H6 color="foregroundMuted">Free · Runs on 100% of eligible traces</Text.H6>
+                              <Text.H6 color="foregroundMuted">Free · Runs on 100% of eligible sessions</Text.H6>
                             ) : (
                               <div className="flex flex-row flex-wrap items-center gap-x-4 gap-y-2">
                                 <div className="flex flex-row items-center gap-3">
@@ -288,7 +288,7 @@ function ProjectFlaggersSettingsPage() {
                                   <Text.H5 className="w-10 tabular-nums">{row.viewSampling}%</Text.H5>
                                 </div>
                                 <Text.H6 color="foregroundMuted">
-                                  30 credits per scan · runs on {row.viewSampling}% of eligible traces
+                                  30 credits per scan · runs on {row.viewSampling}% of eligible sessions
                                 </Text.H6>
                               </div>
                             )}

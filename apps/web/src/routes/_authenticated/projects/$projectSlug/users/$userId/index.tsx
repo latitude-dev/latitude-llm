@@ -19,6 +19,7 @@ import { ArrowLeftIcon, TextAlignStartIcon } from "lucide-react"
 import { useMemo, useState } from "react"
 import { useUserActivity, useUserProfile } from "../../../../../../domains/end-users/end-users.collection.ts"
 import { userMonitorTarget } from "../../../../../../domains/monitors/monitor-target.ts"
+import { defaultProjectTimeWindowDays } from "../../../../../../domains/projects/default-time-window.ts"
 import { useSessionsCount, useSessionsInfiniteScroll } from "../../../../../../domains/sessions/sessions.collection.ts"
 import { ListingLayout as Layout } from "../../../../../../layouts/ListingLayout/index.tsx"
 import { useParamState } from "../../../../../../lib/hooks/useParamState.ts"
@@ -34,6 +35,7 @@ import {
 } from "../-components/user-formatters.ts"
 import { UserBehavioursSection } from "./-components/user-behaviours-section.tsx"
 import { UserSignalsSection } from "./-components/user-issues-section.tsx"
+import { UserMemoryStoresSection } from "./-components/user-memory-stores-section.tsx"
 import { UserNeighborNav } from "./-components/user-neighbor-nav.tsx"
 import { UserSessionsTable } from "./-components/user-sessions-table.tsx"
 import { UserStatStrip } from "./-components/user-stat-strip.tsx"
@@ -61,12 +63,21 @@ function UserActivityChart({
   projectId,
   userId,
   errorsOnly,
+  windowDays,
 }: {
   readonly projectId: string
   readonly userId: string
   readonly errorsOnly: boolean
+  readonly windowDays: number
 }) {
-  const { data: activity, isLoading } = useUserActivity({ projectId, userId, errorsOnly })
+  const timeRange = useMemo(() => {
+    const toMs = Date.now()
+    return {
+      fromIso: new Date(toMs - windowDays * 24 * 60 * 60 * 1000).toISOString(),
+      toIso: new Date(toMs).toISOString(),
+    }
+  }, [windowDays])
+  const { data: activity, isLoading } = useUserActivity({ projectId, userId, timeRange, errorsOnly })
   const bucketSeconds = activity?.bucketSeconds ?? 24 * 60 * 60
   const buckets = activity?.buckets ?? []
 
@@ -134,7 +145,7 @@ function UserActivityChart({
     return (
       <div className="flex min-h-[80px] items-center justify-center">
         <Text.H6 color="foregroundMuted">
-          {errorsOnly ? "No errors in the last 30 days" : "No activity in the last 30 days"}
+          {errorsOnly ? `No errors in the last ${windowDays} days` : `No activity in the last ${windowDays} days`}
         </Text.H6>
       </div>
     )
@@ -154,6 +165,7 @@ function UserActivityChart({
 
 function UserDetailPage() {
   const project = useRouteProject()
+  const activityWindowDays = defaultProjectTimeWindowDays(project)
   const { projectSlug, userId } = Route.useParams()
   const [activeSessionId, setActiveSessionId] = useParamState("sessionId", "")
   const [errorsParam, setErrorsParam] = useParamState("errors", "")
@@ -270,9 +282,16 @@ function UserDetailPage() {
 
               <div className="flex min-w-0 flex-col gap-3 rounded-lg bg-secondary p-4">
                 <Text.H6 color="foregroundMuted">
-                  {errorsOnly ? "Errors · last 30 days" : "Activity · last 30 days"}
+                  {errorsOnly
+                    ? `Errors · last ${activityWindowDays} days`
+                    : `Activity · last ${activityWindowDays} days`}
                 </Text.H6>
-                <UserActivityChart projectId={project.id} userId={userId} errorsOnly={errorsOnly} />
+                <UserActivityChart
+                  projectId={project.id}
+                  userId={userId}
+                  errorsOnly={errorsOnly}
+                  windowDays={activityWindowDays}
+                />
               </div>
 
               <div className="grid grid-cols-1 gap-4 xl:grid-cols-2">
@@ -287,6 +306,11 @@ function UserDetailPage() {
               </div>
 
               <UserUsageSection projectId={project.id} userId={userId} errorsOnly={errorsOnly} />
+
+              <div className="flex min-w-0 flex-col gap-3 rounded-lg bg-secondary p-4">
+                <Text.H6 color="foregroundMuted">Memory stores</Text.H6>
+                <UserMemoryStoresSection projectId={project.id} projectSlug={projectSlug} userId={userId} />
+              </div>
 
               <div className="flex min-w-0 flex-col gap-3">
                 <div className="flex items-center justify-between gap-2">

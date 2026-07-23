@@ -1,19 +1,34 @@
 import {
   FLAGGER_DEFAULT_ENABLED,
   FLAGGER_DEFAULT_SAMPLING,
+  FLAGGER_STRATEGY_SLUGS,
   type Flagger,
   FlaggerRepository,
   type FlaggerRepositoryShape,
   flaggerSchema,
 } from "@domain/flaggers"
 import { RepositoryError, SqlClient, type SqlClientShape } from "@domain/shared"
+import { createLogger } from "@repo/observability"
 import { and, asc, eq, inArray, sql } from "drizzle-orm"
 import { Effect, Layer } from "effect"
 import type { Operator } from "../client.ts"
 import { flaggers } from "../schema/flaggers.ts"
 
-const toDomainFlagger = (row: typeof flaggers.$inferSelect): Flagger =>
-  flaggerSchema.parse({
+const logger = createLogger("db-postgres/flagger-repository")
+const knownFlaggerSlugs = new Set<string>(FLAGGER_STRATEGY_SLUGS)
+
+// Unknown strategy slugs are skipped so a newer DB row cannot fail reads of known flaggers.
+const toDomainFlagger = (row: typeof flaggers.$inferSelect): Flagger | null => {
+  if (!knownFlaggerSlugs.has(row.slug)) {
+    logger.warn("Skipping unrecognized flagger row", {
+      flaggerId: row.id,
+      projectId: row.projectId,
+      slug: row.slug,
+    })
+    return null
+  }
+
+  return flaggerSchema.parse({
     id: row.id,
     organizationId: row.organizationId,
     projectId: row.projectId,
@@ -23,6 +38,10 @@ const toDomainFlagger = (row: typeof flaggers.$inferSelect): Flagger =>
     createdAt: row.createdAt,
     updatedAt: row.updatedAt,
   })
+}
+
+const toDomainFlaggers = (rows: readonly (typeof flaggers.$inferSelect)[]): Flagger[] =>
+  rows.map(toDomainFlagger).filter((flagger): flagger is Flagger => flagger !== null)
 
 export const FlaggerRepositoryLive = Layer.effect(
   FlaggerRepository,
@@ -40,7 +59,7 @@ export const FlaggerRepositoryLive = Layer.effect(
                 .orderBy(asc(flaggers.slug)),
             )
             .pipe(
-              Effect.map((rows) => rows.map(toDomainFlagger)),
+              Effect.map(toDomainFlaggers),
               Effect.mapError((cause) => new RepositoryError({ operation: "listByProject", cause })),
             )
         }),
@@ -97,12 +116,7 @@ export const FlaggerRepositoryLive = Layer.effect(
                 .returning(),
             )
             .pipe(
-              Effect.map((rows) =>
-                rows
-                  .map(toDomainFlagger)
-                  .slice()
-                  .sort((a, b) => a.slug.localeCompare(b.slug)),
-              ),
+              Effect.map((rows) => toDomainFlaggers(rows).sort((a, b) => a.slug.localeCompare(b.slug))),
               Effect.mapError((cause) => new RepositoryError({ operation: "saveManyForProject", cause })),
             )
         }),
@@ -142,12 +156,7 @@ export const FlaggerRepositoryLive = Layer.effect(
                 .returning(),
             )
             .pipe(
-              Effect.map((rows) =>
-                rows
-                  .map(toDomainFlagger)
-                  .slice()
-                  .sort((a, b) => a.slug.localeCompare(b.slug)),
-              ),
+              Effect.map((rows) => toDomainFlaggers(rows).sort((a, b) => a.slug.localeCompare(b.slug))),
               Effect.mapError((cause) => new RepositoryError({ operation: "updateEnabledForProject", cause })),
             )
         }),

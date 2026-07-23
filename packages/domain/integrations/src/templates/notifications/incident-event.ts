@@ -10,7 +10,7 @@ import {
   severityColor,
   triageContextSuffix,
 } from "./blocks.ts"
-import { resolveAssigneeName, resolveSourceName } from "./source-name.ts"
+import { resolveAssigneeName, resolveSource } from "./source-name.ts"
 import type { SlackNotificationRenderer } from "./types.ts"
 
 export const incidentEventRenderer: SlackNotificationRenderer<"incident.event"> = (payload, ctx) =>
@@ -18,14 +18,17 @@ export const incidentEventRenderer: SlackNotificationRenderer<"incident.event"> 
     const name = INCIDENT_NOTIFICATION_KEY_LABEL[payload.incidentKind] ?? "Incident"
     const color = severityColor(payload.severity)
     const isMonitorIncident = payload.sourceType === "monitor"
-    const signalUrl = ctx.project
-      ? `${ctx.webAppUrl}/projects/${ctx.project.slug}/signals/${payload.sourceId}`
-      : ctx.webAppUrl
     const monitorUrl =
       monitorDeepLink({ webAppUrl: ctx.webAppUrl, projectSlug: ctx.project?.slug, monitorSlug: payload.monitorSlug }) ??
       ctx.webAppUrl
 
-    const sourceName = yield* resolveSourceName(payload)
+    const source = yield* resolveSource(payload)
+    const sourceName = source?.name ?? null
+    const signalUrl = ctx.project
+      ? source
+        ? `${ctx.webAppUrl}/projects/${ctx.project.slug}/signals/${encodeURIComponent(source.slug)}`
+        : `${ctx.webAppUrl}/projects/${ctx.project.slug}/signals`
+      : ctx.webAppUrl
     const assigneeName = yield* resolveAssigneeName(payload.assigneeId)
 
     const attribution = monitorAttributionBlocks({

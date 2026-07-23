@@ -38,14 +38,24 @@ export const signals = latitudeSchema.table(
       )
       .notNull(),
     clusteredAt: tzTimestamp("clustered_at"), // nullable; last time the centroid/cluster state was refreshed (discovered signals only). Authoritative decay anchor (not updatedAt).
-    mutedAt: tzTimestamp("muted_at"),
+    resolvedAt: tzTimestamp("resolved_at"), // manual resolve; archived, detector keeps running unless keepMonitoring was declined
+    ignoredAt: tzTimestamp("ignored_at"), // manual ignore; archived + auto-muted, detector archived
+    regressedAt: tzTimestamp("regressed_at"), // set when a new occurrence reopens a resolved signal; cleared by resolve/ignore
+    mutedAt: tzTimestamp("muted_at"), // notification barrier only; incidents still open while muted
     deletedAt: tzTimestamp("deleted_at"), // soft-delete: signals are soft-deleted by the delete flow; excluded read-side
     ...timestamps(),
   },
   (t) => [
     organizationRLSPolicy("signals"),
     // project-scoped lifecycle filtering and management actions.
-    index("signals_project_lifecycle_idx").on(t.organizationId, t.projectId, t.mutedAt, t.createdAt),
+    index("signals_project_lifecycle_idx").on(
+      t.organizationId,
+      t.projectId,
+      t.ignoredAt,
+      t.resolvedAt,
+      t.mutedAt,
+      t.createdAt,
+    ),
     index("signals_search_document_idx").using("gin", t.searchDocument),
     // Soft-delete-aware: a deleted signal frees its slug for reuse.
     uniqueIndex("signals_unique_slug_per_project_idx")

@@ -144,6 +144,18 @@ export const deriveSignalLifecycleStates = ({
     states.add(SignalState.Escalating)
   }
 
+  if (issue.regressedAt !== null) {
+    states.add(SignalState.Regressed)
+  }
+
+  if (issue.resolvedAt !== null) {
+    states.add(SignalState.Resolved)
+  }
+
+  if (issue.ignoredAt !== null) {
+    states.add(SignalState.Ignored)
+  }
+
   if (states.size === 0) {
     states.add(SignalState.Ongoing)
   }

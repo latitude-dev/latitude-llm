@@ -6,9 +6,9 @@ import {
   AvatarGroup,
   Badge,
   BarChart,
-  Button,
   ChartSkeleton,
   Checkbox,
+  CodeDiff,
   CopyButton,
   type DateRange,
   DateRangePicker,
@@ -16,6 +16,7 @@ import {
   HistogramSkeleton,
   Input,
   Label,
+  MasterDetail,
   RichTextEditor,
   Status,
   Text,
@@ -109,6 +110,20 @@ const COMPONENT_REGISTRY: Record<string, ComponentEntry> = {
     },
     Demo: CheckboxDemo,
   },
+  "code-diff": {
+    title: "Code diff",
+    description: "Read-only unified diff of two text bodies, syntax-highlighted per line.",
+    usage: {
+      description:
+        "Pass before and after text; language enables syntax highlighting and fillHeight scrolls inside a bounded parent.",
+      lines: [
+        'import { CodeDiff } from "@repo/ui"',
+        "",
+        '<CodeDiff before={before} after={after} language="json" fillHeight />',
+      ],
+    },
+    Demo: CodeDiffDemo,
+  },
   "copy-button": {
     title: "Copy button",
     description: "Clipboard copy with feedback.",
@@ -151,6 +166,24 @@ const COMPONENT_REGISTRY: Record<string, ComponentEntry> = {
       ],
     },
     Demo: FormsDemo,
+  },
+  "master-detail": {
+    title: "Master detail",
+    description: "Two-pane list and content layout with a selectable rail.",
+    usage: {
+      description:
+        "Pass items for the rail and renderDetail for the right pane. Selection is uncontrolled unless you pass selectedKey. Set a height via className so the panes scroll.",
+      lines: [
+        'import { MasterDetail } from "@repo/ui"',
+        "",
+        "<MasterDetail",
+        '  className="h-72"',
+        '  items={[{ key: "1", label: "user/preferences" }]}',
+        "  renderDetail={(key) => <Text.H5>{details[key]}</Text.H5>}",
+        "/>",
+      ],
+    },
+    Demo: MasterDetailDemo,
   },
   "rich-text-editor": {
     title: "Rich text editor",
@@ -215,46 +248,59 @@ const AGENT_TEXTAREA_STAGES = [
   { atSeconds: 26, label: "Refining the result" },
 ]
 
-const AGENT_TEXTAREA_SIMULATION_MS = 32_000
-
 function AgentTextareaDemo() {
-  const [simulating, setSimulating] = useState(false)
-  const timeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const focusedRef = useRef<HTMLTextAreaElement>(null)
 
-  useMountEffect(() => () => {
-    if (timeoutRef.current !== null) clearTimeout(timeoutRef.current)
+  useMountEffect(() => {
+    focusedRef.current?.focus()
   })
 
-  const status = useStagedStatus(AGENT_TEXTAREA_STAGES, simulating)
-
-  const toggleSimulation = () => {
-    if (timeoutRef.current !== null) clearTimeout(timeoutRef.current)
-    if (simulating) {
-      setSimulating(false)
-      return
-    }
-    setSimulating(true)
-    timeoutRef.current = setTimeout(() => setSimulating(false), AGENT_TEXTAREA_SIMULATION_MS)
-  }
+  const status = useStagedStatus(AGENT_TEXTAREA_STAGES, true)
 
   return (
-    <ComponentDemoSection
-      title="Idle, focused, and loading"
-      description="Focus the field to see the focused border; run the simulation for the loading fill."
-      frameClassName="block"
-    >
-      <div className="mx-auto flex w-full max-w-2xl flex-col gap-4">
-        <AgentTextarea
-          label="This script should check whether…"
-          minRows={3}
-          placeholder='"the session took over 30 seconds and the assistant apologized at any point."'
-          status={status}
-        />
-        <Button className="w-fit" onClick={toggleSimulation}>
-          {simulating ? "Stop simulation" : "Simulate generation"}
-        </Button>
-      </div>
-    </ComponentDemoSection>
+    <>
+      <ComponentDemoSection
+        title="Idle"
+        description="Default state before the field has been touched."
+        frameClassName="block"
+      >
+        <div className="mx-auto w-full max-w-lg">
+          <AgentTextarea
+            label="This script should check whether…"
+            minRows={3}
+            placeholder='"the session took over 30 seconds and the assistant apologized at any point."'
+          />
+        </div>
+      </ComponentDemoSection>
+      <ComponentDemoSection
+        title="Focused"
+        description="Border intensifies once the field has focus."
+        frameClassName="block"
+      >
+        <div className="mx-auto w-full max-w-lg">
+          <AgentTextarea
+            ref={focusedRef}
+            label="This script should check whether…"
+            minRows={3}
+            placeholder='"the session took over 30 seconds and the assistant apologized at any point."'
+          />
+        </div>
+      </ComponentDemoSection>
+      <ComponentDemoSection
+        title="Loading"
+        description="Field locks and the shader fill takes over while the agent works."
+        frameClassName="block"
+      >
+        <div className="mx-auto w-full max-w-lg">
+          <AgentTextarea
+            label="This script should check whether…"
+            minRows={3}
+            placeholder='"the session took over 30 seconds and the assistant apologized at any point."'
+            status={status}
+          />
+        </div>
+      </ComponentDemoSection>
+    </>
   )
 }
 
@@ -357,6 +403,29 @@ function CopyButtonDemo() {
   )
 }
 
+const CODE_DIFF_BEFORE = `{
+  "model": "gpt-4",
+  "temperature": 0.7,
+  "max_tokens": 1024,
+  "tools": ["search"]
+}`
+const CODE_DIFF_AFTER = `{
+  "model": "claude-opus-4",
+  "temperature": 0.5,
+  "tools": ["search", "memory"],
+  "stream": true
+}`
+
+function CodeDiffDemo() {
+  return (
+    <ComponentDemoSection title="Code diff" description="Unified before/after diff, syntax-highlighted per line.">
+      <div className="h-64 w-full">
+        <CodeDiff before={CODE_DIFF_BEFORE} after={CODE_DIFF_AFTER} language="json" fillHeight />
+      </div>
+    </ComponentDemoSection>
+  )
+}
+
 function FormsDemo() {
   const inputId = "design-system-forms-manual"
 
@@ -419,6 +488,92 @@ function StatusDemo() {
         <Status label="Destructive" variant="destructive" />
       </div>
     </ComponentDemoSection>
+  )
+}
+
+function MasterDetailDemo() {
+  const details: Record<string, string> = {
+    "1": "The user prefers dark mode and concise responses.",
+    "2": "Europe/Madrid (UTC+1).",
+    "3": "Currently working on the memory-observability feature.",
+  }
+  const items = [
+    { key: "1", label: "user/preferences" },
+    { key: "2", label: "user/timezone" },
+    { key: "3", label: "user/projects" },
+  ]
+  const scored = [
+    {
+      key: "1",
+      label: "mem_9f2a",
+      trailing: (
+        <Badge variant="secondary" size="small">
+          0.95
+        </Badge>
+      ),
+    },
+    {
+      key: "2",
+      label: "mem_1c04",
+      trailing: (
+        <Badge variant="secondary" size="small">
+          0.82
+        </Badge>
+      ),
+    },
+    {
+      key: "3",
+      label: "mem_77be",
+      trailing: (
+        <Badge variant="secondary" size="small">
+          0.61
+        </Badge>
+      ),
+    },
+  ]
+
+  return (
+    <>
+      <ComponentDemoSection
+        title="List and detail"
+        description="Selectable rail on the left, the selected item's content on the right."
+        frameClassName="block"
+      >
+        <div className="mx-auto w-full max-w-2xl">
+          <MasterDetail
+            className="h-64"
+            items={items}
+            renderDetail={(key) => (
+              <div className="p-3">
+                <Text.H5>{details[key]}</Text.H5>
+              </div>
+            )}
+          />
+        </div>
+      </ComponentDemoSection>
+      <ComponentDemoSection
+        title="Header and trailing"
+        description="Optional header bar and per-row trailing content, e.g. a relevance score."
+        frameClassName="block"
+      >
+        <div className="mx-auto w-full max-w-2xl">
+          <MasterDetail
+            className="h-64"
+            header={
+              <div className="bg-secondary px-3 py-2">
+                <Text.H6 color="foregroundMuted">Search results</Text.H6>
+              </div>
+            }
+            items={scored}
+            renderDetail={(key) => (
+              <div className="p-3">
+                <Text.H5>Content for {key}</Text.H5>
+              </div>
+            )}
+          />
+        </div>
+      </ComponentDemoSection>
+    </>
   )
 }
 

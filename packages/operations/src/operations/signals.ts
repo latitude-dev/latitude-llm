@@ -63,9 +63,9 @@ import { PaginatedQueryParamsSchema } from "../openapi/pagination.ts"
 import {
   FilterSetSchema,
   jsonBody,
-  openApiResponses,
   PROTECTED_SECURITY,
   ProjectParamsSchema,
+  typedResponses,
 } from "../openapi/schemas.ts"
 import type { OrganizationScopedEnv } from "../types.ts"
 
@@ -129,10 +129,34 @@ const LifecycleBodySchema = z
   })
   .openapi("SignalsLifecycleBody")
 
+const ResolveSignalsBodySchema = z
+  .object({
+    signalIds: z
+      .array(cuidSchema)
+      .min(1)
+      .describe("Non-empty list of signal ids. Operations are idempotent — already-applied signals are unchanged."),
+    keepMonitoring: z
+      .boolean()
+      .optional()
+      .describe(
+        "Whether linked evaluations keep running after the resolve, so regressions are detected. Defaults to the project setting.",
+      ),
+  })
+  .openapi("ResolveSignalsBody")
+
 const LifecycleItemSchema = z
   .object({
     signalId: cuidSchema.describe("Signal this entry applies to."),
-    mutedAt: z.string().nullable().describe("ISO-8601 timestamp at which the signal was muted, or `null`."),
+    resolvedAt: z.string().nullable().describe("ISO-8601 timestamp at which the signal was resolved, or `null`."),
+    ignoredAt: z.string().nullable().describe("ISO-8601 timestamp at which the signal was ignored, or `null`."),
+    regressedAt: z
+      .string()
+      .nullable()
+      .describe("ISO-8601 timestamp at which a new occurrence reopened the resolved signal, or `null`."),
+    mutedAt: z
+      .string()
+      .nullable()
+      .describe("ISO-8601 timestamp at which notifications were muted, or `null`. Ignoring a signal also mutes it."),
     updatedAt: z.string().describe("ISO-8601 timestamp of the last update."),
     changed: z
       .boolean()
@@ -163,10 +187,10 @@ const buildLifecycleEndpoint = ({
   command: SignalLifecycleCommand
   name: string
   fernMethod: string
-  pathSuffix: "/mute" | "/unmute"
+  pathSuffix: "/resolve" | "/unresolve" | "/ignore" | "/unignore" | "/mute" | "/unmute"
   summary: string
   description: string
-  bodySchema: typeof LifecycleBodySchema
+  bodySchema: typeof LifecycleBodySchema | typeof ResolveSignalsBodySchema
   rateLimitTier: RateLimitTier
 }) =>
   signalEndpoint({
@@ -181,54 +205,99 @@ const buildLifecycleEndpoint = ({
       description,
       security: PROTECTED_SECURITY,
       request: { params: ProjectParamsSchema, body: jsonBody(bodySchema) },
-      responses: openApiResponses({ status: 200, schema: LifecycleResponseSchema, description: "Per-signal result" }),
+      responses: typedResponses({ status: 200, schema: LifecycleResponseSchema, description: "Per-signal result" }),
     }),
     access: "write",
     rateLimitTier,
-    handler: async (c) => {
-      const { projectSlug } = c.req.valid("param")
-      const body = c.req.valid("json")
-      const organizationId = c.var.organization.id
+    execute: (input, ctx) =>
+      Effect.gen(function* () {
+        const { projectSlug } = input.params
+        const body: z.infer<typeof ResolveSignalsBodySchema> = input.body
 
-      const result = await Effect.runPromise(
-        Effect.gen(function* () {
-          const projectRepo = yield* ProjectRepository
-          const project = yield* projectRepo.findBySlug(projectSlug)
+        const projectRepo = yield* ProjectRepository
+        const project = yield* projectRepo.findBySlug(projectSlug)
 
-          return yield* applySignalLifecycleCommandUseCase({
-            projectId: project.id,
-            signalIds: body.signalIds.map((id) => SignalId(id)),
-            command,
-          })
-        }).pipe(
-          withPostgres(
-            Layer.mergeAll(
-              ProjectRepositoryLive,
-              SignalRepositoryLive,
-              EvaluationRepositoryLive,
-              OutboxEventWriterLive,
-              SettingsReaderLive,
-            ),
-            c.var.postgresClient,
-            organizationId,
+        const result = yield* applySignalLifecycleCommandUseCase({
+          projectId: project.id,
+          signalIds: body.signalIds.map((id) => SignalId(id)),
+          command,
+          ...(body.keepMonitoring !== undefined ? { keepMonitoring: body.keepMonitoring } : {}),
+        })
+        return {
+          status: 200,
+          body: {
+            items: result.items.map((item) => ({
+              signalId: item.signalId,
+              resolvedAt: item.resolvedAt ? item.resolvedAt.toISOString() : null,
+              ignoredAt: item.ignoredAt ? item.ignoredAt.toISOString() : null,
+              regressedAt: item.regressedAt ? item.regressedAt.toISOString() : null,
+              mutedAt: item.mutedAt ? item.mutedAt.toISOString() : null,
+              updatedAt: item.updatedAt.toISOString(),
+              changed: item.changed,
+            })),
+          },
+        } as const
+      }).pipe(
+        withPostgres(
+          Layer.mergeAll(
+            ProjectRepositoryLive,
+            SignalRepositoryLive,
+            EvaluationRepositoryLive,
+            OutboxEventWriterLive,
+            SettingsReaderLive,
           ),
-          withTracing,
+          ctx.postgresClient,
+          ctx.organization.id,
         ),
-      )
-
-      return c.json(
-        {
-          items: result.items.map((item) => ({
-            signalId: item.signalId,
-            mutedAt: item.mutedAt ? item.mutedAt.toISOString() : null,
-            updatedAt: item.updatedAt.toISOString(),
-            changed: item.changed,
-          })),
-        },
-        200,
-      )
-    },
+        withTracing,
+      ),
   })
+
+const resolveSignals = buildLifecycleEndpoint({
+  command: "resolve",
+  name: "resolveSignals",
+  fernMethod: "resolve",
+  pathSuffix: "/resolve",
+  summary: "Resolve signals",
+  description:
+    "Marks each signal in `signalIds` as resolved, archiving it and re-enabling its notifications. Unless `keepMonitoring` is `false`, linked evaluations keep running so a new occurrence reopens the signal as regressed.",
+  bodySchema: ResolveSignalsBodySchema,
+  rateLimitTier: "medium",
+})
+
+const unresolveSignals = buildLifecycleEndpoint({
+  command: "unresolve",
+  name: "unresolveSignals",
+  fernMethod: "unresolve",
+  pathSuffix: "/unresolve",
+  summary: "Unresolve signals",
+  description: "Reopens each signal in `signalIds` without marking it as regressed, re-enabling its notifications.",
+  bodySchema: LifecycleBodySchema,
+  rateLimitTier: "medium",
+})
+
+const ignoreSignals = buildLifecycleEndpoint({
+  command: "ignore",
+  name: "ignoreSignals",
+  fernMethod: "ignore",
+  pathSuffix: "/ignore",
+  summary: "Ignore signals",
+  description:
+    "Marks each signal in `signalIds` as ignored, archiving it. Monitoring is stopped and notifications are also muted.",
+  bodySchema: LifecycleBodySchema,
+  rateLimitTier: "medium",
+})
+
+const unignoreSignals = buildLifecycleEndpoint({
+  command: "unignore",
+  name: "unignoreSignals",
+  fernMethod: "unignore",
+  pathSuffix: "/unignore",
+  summary: "Unignore signals",
+  description: "Returns each signal in `signalIds` to the active list and re-enables its notifications.",
+  bodySchema: LifecycleBodySchema,
+  rateLimitTier: "medium",
+})
 
 const muteSignals = buildLifecycleEndpoint({
   command: "mute",
@@ -236,7 +305,8 @@ const muteSignals = buildLifecycleEndpoint({
   fernMethod: "mute",
   pathSuffix: "/mute",
   summary: "Mute signals",
-  description: "Mutes each signal in `signalIds`.",
+  description:
+    "Silences notifications for each signal in `signalIds`. Muted signals keep tracking occurrences and opening incidents; only notifications stop.",
   bodySchema: LifecycleBodySchema,
   rateLimitTier: "medium",
 })
@@ -247,7 +317,7 @@ const unmuteSignals = buildLifecycleEndpoint({
   fernMethod: "unmute",
   pathSuffix: "/unmute",
   summary: "Unmute signals",
-  description: "Reverts each signal in `signalIds` to an unmuted state.",
+  description: "Re-enables notifications for each signal in `signalIds`.",
   bodySchema: LifecycleBodySchema,
   rateLimitTier: "medium",
 })
@@ -265,7 +335,9 @@ const ListSignalsQuerySchema = PaginatedQueryParamsSchema.extend({
   lifecycleGroup: z
     .enum(SIGNAL_LIFECYCLE_GROUP_VALUES)
     .optional()
-    .describe('`"active"` for unmuted signals; `"archived"` for muted signals. Omit to include both.'),
+    .describe(
+      '`"active"` for signals that are neither resolved nor ignored; `"archived"` for resolved or ignored signals. Omit to include both.',
+    ),
   sortBy: z
     .enum(ISSUES_SORT_FIELDS)
     .default("lastSeen")
@@ -290,82 +362,76 @@ const listSignals = signalEndpoint({
       "Returns a cursor-paginated page of signals in the project. Each item includes lifecycle `states` plus time-window stats: `firstSeenAt`, `lastSeenAt`, `occurrences`, `affectedSessionsPercent`, `trend`, and `tags`.",
     security: PROTECTED_SECURITY,
     request: { params: ProjectParamsSchema, query: ListSignalsQuerySchema },
-    responses: openApiResponses({ status: 200, schema: PaginatedSignalsSchema, description: "Page of signals" }),
+    responses: typedResponses({ status: 200, schema: PaginatedSignalsSchema, description: "Page of signals" }),
   }),
   access: "read-only",
   rateLimitTier: "low",
-  handler: async (c) => {
-    const { projectSlug } = c.req.valid("param")
-    const query = c.req.valid("query")
-    const organizationId = c.var.organization.id
-    const orgId = OrganizationId(organizationId as string)
+  execute: (input, ctx) =>
+    Effect.gen(function* () {
+      const { projectSlug } = input.params
+      const query = input.query
+      const orgId = OrganizationId(ctx.organization.id as string)
 
-    const page = await Effect.runPromise(
-      Effect.gen(function* () {
-        let offset = 0
-        if (query.cursor) {
-          const decoded = decodeSignalOffsetCursor(query.cursor)
-          if (decoded === null) {
-            return yield* new BadRequestError({ message: "Invalid `cursor` value." })
-          }
-          offset = decoded
+      let offset = 0
+      if (query.cursor) {
+        const decoded = decodeSignalOffsetCursor(query.cursor)
+        if (decoded === null) {
+          return yield* new BadRequestError({ message: "Invalid `cursor` value." })
         }
+        offset = decoded
+      }
 
-        const projectRepo = yield* ProjectRepository
-        const project = yield* projectRepo.findBySlug(projectSlug)
+      const projectRepo = yield* ProjectRepository
+      const project = yield* projectRepo.findBySlug(projectSlug)
 
-        const timeRange =
-          query.fromIso || query.toIso
-            ? {
-                ...(query.fromIso ? { from: new Date(query.fromIso) } : {}),
-                ...(query.toIso ? { to: new Date(query.toIso) } : {}),
-              }
-            : undefined
-
-        const search = query.query
-          ? yield* embedSignalSearchQueryUseCase({
-              organizationId: orgId,
-              projectId: project.id,
-              query: query.query,
-            })
+      const timeRange =
+        query.fromIso || query.toIso
+          ? {
+              ...(query.fromIso ? { from: new Date(query.fromIso) } : {}),
+              ...(query.toIso ? { to: new Date(query.toIso) } : {}),
+            }
           : undefined
 
-        const result = yield* listSignalsUseCase({
-          organizationId: orgId,
-          projectId: project.id,
-          limit: query.limit,
-          offset,
-          sort: { field: query.sortBy, direction: query.sortDirection },
-          ...(query.lifecycleGroup ? { lifecycleGroup: query.lifecycleGroup } : {}),
-          ...(timeRange ? { timeRange } : {}),
-          ...(search ? { search } : {}),
-        })
-        return { result, offset }
-      }).pipe(
-        withPostgres(
-          Layer.mergeAll(ProjectRepositoryLive, SignalRepositoryLive, EvaluationRepositoryLive),
-          c.var.postgresClient,
-          organizationId,
-        ),
-        withClickHouse(
-          Layer.mergeAll(ScoreAnalyticsRepositoryLive, SessionRepositoryLive, TraceRepositoryLive),
-          c.var.clickhouse,
-          organizationId,
-        ),
-        withAi(AIEmbedLive, c.var.redis),
-        withTracing,
-      ),
-    )
+      const search = query.query
+        ? yield* embedSignalSearchQueryUseCase({
+            organizationId: orgId,
+            projectId: project.id,
+            query: query.query,
+          })
+        : undefined
 
-    return c.json(
-      {
-        items: page.result.items.map((item) => toSignalResponse(item, organizationId as string)),
-        nextCursor: page.result.hasMore ? encodeSignalOffsetCursor(page.offset + page.result.items.length) : null,
-        hasMore: page.result.hasMore,
-      },
-      200,
-    )
-  },
+      const result = yield* listSignalsUseCase({
+        organizationId: orgId,
+        projectId: project.id,
+        limit: query.limit,
+        offset,
+        sort: { field: query.sortBy, direction: query.sortDirection },
+        ...(query.lifecycleGroup ? { lifecycleGroup: query.lifecycleGroup } : {}),
+        ...(timeRange ? { timeRange } : {}),
+        ...(search ? { search } : {}),
+      })
+      return {
+        status: 200,
+        body: {
+          items: result.items.map((item) => toSignalResponse(item, ctx.organization.id as string)),
+          nextCursor: result.hasMore ? encodeSignalOffsetCursor(offset + result.items.length) : null,
+          hasMore: result.hasMore,
+        },
+      } as const
+    }).pipe(
+      withPostgres(
+        Layer.mergeAll(ProjectRepositoryLive, SignalRepositoryLive, EvaluationRepositoryLive),
+        ctx.postgresClient,
+        ctx.organization.id,
+      ),
+      withClickHouse(
+        Layer.mergeAll(ScoreAnalyticsRepositoryLive, SessionRepositoryLive, TraceRepositoryLive),
+        ctx.clickhouse,
+        ctx.organization.id,
+      ),
+      withAi(AIEmbedLive, ctx.redis),
+      withTracing,
+    ),
 })
 
 const SignalAnalyticsQuerySchema = z.object({
@@ -389,7 +455,7 @@ const getSignalAnalytics = signalEndpoint({
       "Returns signal analytics for the project: counts of ongoing, new, and escalating signals, plus total occurrences and a per-bucket occurrence series. Buckets are 12-hour UTC-aligned. The range defaults to the trailing 7 days.",
     security: PROTECTED_SECURITY,
     request: { params: ProjectParamsSchema, query: SignalAnalyticsQuerySchema },
-    responses: openApiResponses({
+    responses: typedResponses({
       status: 200,
       schema: SignalAnalyticsResponseSchema,
       description: "Signal analytics",
@@ -397,35 +463,34 @@ const getSignalAnalytics = signalEndpoint({
   }),
   access: "read-only",
   rateLimitTier: "medium",
-  handler: async (c) => {
-    const { projectSlug } = c.req.valid("param")
-    const { fromIso, toIso } = c.req.valid("query")
-    const organizationId = c.var.organization.id
+  execute: (input, ctx) =>
+    Effect.gen(function* () {
+      const { projectSlug } = input.params
+      const { fromIso, toIso } = input.query
 
-    if (fromIso && toIso && Date.parse(toIso) < Date.parse(fromIso)) {
-      return c.json({ error: "`toIso` must be greater than or equal to `fromIso`." }, 400)
-    }
+      if (fromIso && toIso && Date.parse(toIso) < Date.parse(fromIso)) {
+        return { status: 400, body: { error: "`toIso` must be greater than or equal to `fromIso`." } } as const
+      }
 
-    const analytics = await Effect.runPromise(
-      Effect.gen(function* () {
-        const projectRepo = yield* ProjectRepository
-        const project = yield* projectRepo.findBySlug(projectSlug)
+      const projectRepo = yield* ProjectRepository
+      const project = yield* projectRepo.findBySlug(projectSlug)
 
-        return yield* getSignalAnalyticsUseCase({
-          organizationId: OrganizationId(organizationId as string),
-          projectId: ProjectId(project.id as string),
-          ...(fromIso ? { from: new Date(fromIso) } : {}),
-          ...(toIso ? { to: new Date(toIso) } : {}),
-        })
-      }).pipe(
-        withPostgres(Layer.mergeAll(ProjectRepositoryLive, SignalRepositoryLive), c.var.postgresClient, organizationId),
-        withClickHouse(ScoreAnalyticsRepositoryLive, c.var.clickhouse, organizationId),
-        withTracing,
+      const analytics = yield* getSignalAnalyticsUseCase({
+        organizationId: OrganizationId(ctx.organization.id as string),
+        projectId: ProjectId(project.id as string),
+        ...(fromIso ? { from: new Date(fromIso) } : {}),
+        ...(toIso ? { to: new Date(toIso) } : {}),
+      })
+      return { status: 200, body: toSignalAnalyticsResponse(analytics) } as const
+    }).pipe(
+      withPostgres(
+        Layer.mergeAll(ProjectRepositoryLive, SignalRepositoryLive),
+        ctx.postgresClient,
+        ctx.organization.id,
       ),
-    )
-
-    return c.json(toSignalAnalyticsResponse(analytics), 200)
-  },
+      withClickHouse(ScoreAnalyticsRepositoryLive, ctx.clickhouse, ctx.organization.id),
+      withTracing,
+    ),
 })
 
 const getSignal = signalEndpoint({
@@ -441,45 +506,43 @@ const getSignal = signalEndpoint({
       "Returns the full-history detail view of one signal: lifecycle `states`, lifetime activity stats (`firstSeenAt`, `lastSeenAt`, `occurrences`, `affectedSessionsPercent`, `tags`), a 14-day occurrence `trend`, the active `evaluations` monitoring it, and the current `monitoringState`.",
     security: PROTECTED_SECURITY,
     request: { params: SignalSlugParamsSchema },
-    responses: openApiResponses({ status: 200, schema: SignalDetailSchema, description: "Signal" }),
+    responses: typedResponses({ status: 200, schema: SignalDetailSchema, description: "Signal" }),
   }),
   access: "read-only",
   rateLimitTier: "low",
-  handler: async (c) => {
-    const { projectSlug, signalSlug } = c.req.valid("param")
-    const organizationId = c.var.organization.id
+  execute: (input, ctx) =>
+    Effect.gen(function* () {
+      const { projectSlug, signalSlug } = input.params
 
-    const details = await Effect.runPromise(
-      Effect.gen(function* () {
-        const projectRepo = yield* ProjectRepository
-        const project = yield* projectRepo.findBySlug(projectSlug)
+      const projectRepo = yield* ProjectRepository
+      const project = yield* projectRepo.findBySlug(projectSlug)
 
-        const signalRepo = yield* SignalRepository
-        const signal = yield* signalRepo.findBySlug({ projectId: project.id, slug: signalSlug })
+      const signalRepo = yield* SignalRepository
+      const signal = yield* signalRepo.findBySlug({ projectId: project.id, slug: signalSlug })
 
-        return yield* getSignalDetailsUseCase({
-          organizationId: OrganizationId(organizationId as string),
-          projectId: project.id,
-          signalId: SignalId(signal.id as string),
-        })
-      }).pipe(
-        withPostgres(
-          Layer.mergeAll(ProjectRepositoryLive, SignalRepositoryLive, EvaluationRepositoryLive),
-          c.var.postgresClient,
-          organizationId,
-        ),
-        withClickHouse(
-          Layer.mergeAll(ScoreAnalyticsRepositoryLive, SessionRepositoryLive),
-          c.var.clickhouse,
-          organizationId,
-        ),
-        Effect.provide(Layer.succeed(WorkflowQuerier, c.var.workflowQuerier)),
-        withTracing,
+      const details = yield* getSignalDetailsUseCase({
+        organizationId: OrganizationId(ctx.organization.id as string),
+        projectId: project.id,
+        signalId: SignalId(signal.id as string),
+      })
+      return {
+        status: 200,
+        body: toSignalDetailResponse(details, ctx.organization.id as string),
+      } as const
+    }).pipe(
+      withPostgres(
+        Layer.mergeAll(ProjectRepositoryLive, SignalRepositoryLive, EvaluationRepositoryLive),
+        ctx.postgresClient,
+        ctx.organization.id,
       ),
-    )
-
-    return c.json(toSignalDetailResponse(details, organizationId as string), 200)
-  },
+      withClickHouse(
+        Layer.mergeAll(ScoreAnalyticsRepositoryLive, SessionRepositoryLive),
+        ctx.clickhouse,
+        ctx.organization.id,
+      ),
+      Effect.provide(Layer.succeed(WorkflowQuerier, ctx.workflowQuerier)),
+      withTracing,
+    ),
 })
 
 const TimeRangeQuerySchema = z.object({
@@ -500,39 +563,38 @@ const getSignalTrend = signalEndpoint({
       "Returns the occurrence histogram for one signal over `[fromIso, toIso]`. The default range is the trailing 14 days. Buckets are 12-hour wide and UTC-aligned.",
     security: PROTECTED_SECURITY,
     request: { params: SignalSlugParamsSchema, query: TimeRangeQuerySchema },
-    responses: openApiResponses({ status: 200, schema: SignalHistogramSchema, description: "Occurrence histogram" }),
+    responses: typedResponses({ status: 200, schema: SignalHistogramSchema, description: "Occurrence histogram" }),
   }),
   access: "read-only",
   rateLimitTier: "medium",
-  handler: async (c) => {
-    const { projectSlug, signalSlug } = c.req.valid("param")
-    const { fromIso, toIso } = c.req.valid("query")
-    const organizationId = c.var.organization.id
+  execute: (input, ctx) =>
+    Effect.gen(function* () {
+      const { projectSlug, signalSlug } = input.params
+      const { fromIso, toIso } = input.query
 
-    const trend = await Effect.runPromise(
-      Effect.gen(function* () {
-        const projectRepo = yield* ProjectRepository
-        const project = yield* projectRepo.findBySlug(projectSlug)
+      const projectRepo = yield* ProjectRepository
+      const project = yield* projectRepo.findBySlug(projectSlug)
 
-        const signalRepo = yield* SignalRepository
-        const signal = yield* signalRepo.findBySlug({ projectId: project.id, slug: signalSlug })
+      const signalRepo = yield* SignalRepository
+      const signal = yield* signalRepo.findBySlug({ projectId: project.id, slug: signalSlug })
 
-        return yield* getSignalTrendUseCase({
-          organizationId: OrganizationId(organizationId as string),
-          projectId: project.id,
-          signalId: SignalId(signal.id as string),
-          ...(fromIso ? { from: new Date(fromIso) } : {}),
-          ...(toIso ? { to: new Date(toIso) } : {}),
-        })
-      }).pipe(
-        withPostgres(Layer.mergeAll(ProjectRepositoryLive, SignalRepositoryLive), c.var.postgresClient, organizationId),
-        withClickHouse(ScoreAnalyticsRepositoryLive, c.var.clickhouse, organizationId),
-        withTracing,
+      const trend = yield* getSignalTrendUseCase({
+        organizationId: OrganizationId(ctx.organization.id as string),
+        projectId: project.id,
+        signalId: SignalId(signal.id as string),
+        ...(fromIso ? { from: new Date(fromIso) } : {}),
+        ...(toIso ? { to: new Date(toIso) } : {}),
+      })
+      return { status: 200, body: toSignalHistogramResponse(trend) } as const
+    }).pipe(
+      withPostgres(
+        Layer.mergeAll(ProjectRepositoryLive, SignalRepositoryLive),
+        ctx.postgresClient,
+        ctx.organization.id,
       ),
-    )
-
-    return c.json(toSignalHistogramResponse(trend), 200)
-  },
+      withClickHouse(ScoreAnalyticsRepositoryLive, ctx.clickhouse, ctx.organization.id),
+      withTracing,
+    ),
 })
 
 const ListSignalTracesQuerySchema = PaginatedQueryParamsSchema
@@ -550,70 +612,64 @@ const listSignalTraces = signalEndpoint({
       "Returns the page of distinct traces that contributed at least one occurrence of the signal, ordered by most recent activity first.",
     security: PROTECTED_SECURITY,
     request: { params: SignalSlugParamsSchema, query: ListSignalTracesQuerySchema },
-    responses: openApiResponses({ status: 200, schema: PaginatedTracesSchema, description: "Page of traces" }),
+    responses: typedResponses({ status: 200, schema: PaginatedTracesSchema, description: "Page of traces" }),
   }),
   access: "read-only",
   rateLimitTier: "medium",
-  handler: async (c) => {
-    const { projectSlug, signalSlug } = c.req.valid("param")
-    const query = c.req.valid("query")
-    const organizationId = c.var.organization.id
+  execute: (input, ctx) =>
+    Effect.gen(function* () {
+      const { projectSlug, signalSlug } = input.params
+      const query = input.query
 
-    const page = await Effect.runPromise(
-      Effect.gen(function* () {
-        let offset = 0
-        if (query.cursor) {
-          const decoded = decodeSignalOffsetCursor(query.cursor)
-          if (decoded === null) {
-            return yield* new BadRequestError({ message: "Invalid `cursor` value." })
-          }
-          offset = decoded
+      let offset = 0
+      if (query.cursor) {
+        const decoded = decodeSignalOffsetCursor(query.cursor)
+        if (decoded === null) {
+          return yield* new BadRequestError({ message: "Invalid `cursor` value." })
         }
+        offset = decoded
+      }
 
-        const projectRepo = yield* ProjectRepository
-        const project = yield* projectRepo.findBySlug(projectSlug)
+      const projectRepo = yield* ProjectRepository
+      const project = yield* projectRepo.findBySlug(projectSlug)
 
-        const signalRepo = yield* SignalRepository
-        const signal = yield* signalRepo.findBySlug({ projectId: project.id, slug: signalSlug })
+      const signalRepo = yield* SignalRepository
+      const signal = yield* signalRepo.findBySlug({ projectId: project.id, slug: signalSlug })
 
-        const result = yield* listSignalTracesUseCase({
-          organizationId: OrganizationId(organizationId as string),
-          projectId: project.id,
-          signalId: SignalId(signal.id as string),
-          limit: query.limit,
-          offset,
-        })
+      const result = yield* listSignalTracesUseCase({
+        organizationId: OrganizationId(ctx.organization.id as string),
+        projectId: project.id,
+        signalId: SignalId(signal.id as string),
+        limit: query.limit,
+        offset,
+      })
 
-        const indicators = yield* fetchTraceIndicators({
-          projectId: project.id,
-          traceIds: result.items.map((trace) => trace.traceId),
-        })
+      const indicators = yield* fetchTraceIndicators({
+        projectId: project.id,
+        traceIds: result.items.map((trace) => trace.traceId),
+      })
 
-        return { result, offset, indicators }
-      }).pipe(
-        withPostgres(
-          Layer.mergeAll(ProjectRepositoryLive, SignalRepositoryLive, ScoreRepositoryLive),
-          c.var.postgresClient,
-          organizationId,
-        ),
-        withClickHouse(
-          Layer.mergeAll(ScoreAnalyticsRepositoryLive, TraceRepositoryLive),
-          c.var.clickhouse,
-          organizationId,
-        ),
-        withTracing,
+      return {
+        status: 200,
+        body: {
+          items: result.items.map((trace) => toTraceResponse(trace, indicators)),
+          nextCursor: result.hasMore ? encodeSignalOffsetCursor(offset + result.items.length) : null,
+          hasMore: result.hasMore,
+        },
+      } as const
+    }).pipe(
+      withPostgres(
+        Layer.mergeAll(ProjectRepositoryLive, SignalRepositoryLive, ScoreRepositoryLive),
+        ctx.postgresClient,
+        ctx.organization.id,
       ),
-    )
-
-    return c.json(
-      {
-        items: page.result.items.map((trace) => toTraceResponse(trace, page.indicators)),
-        nextCursor: page.result.hasMore ? encodeSignalOffsetCursor(page.offset + page.result.items.length) : null,
-        hasMore: page.result.hasMore,
-      },
-      200,
-    )
-  },
+      withClickHouse(
+        Layer.mergeAll(ScoreAnalyticsRepositoryLive, TraceRepositoryLive),
+        ctx.clickhouse,
+        ctx.organization.id,
+      ),
+      withTracing,
+    ),
 })
 
 const exportSignals = signalEndpoint({
@@ -629,51 +685,46 @@ const exportSignals = signalEndpoint({
       "Enqueues an asynchronous CSV export. The response returns immediately; the download link is emailed to `recipient` when the file is ready. The recipient must be a member of the requesting organization.",
     security: PROTECTED_SECURITY,
     request: { params: ProjectParamsSchema, body: jsonBody(ExportBodySchema) },
-    responses: openApiResponses({ status: 202, schema: ExportResponseSchema, description: "Export enqueued" }),
+    responses: typedResponses({ status: 202, schema: ExportResponseSchema, description: "Export enqueued" }),
   }),
   access: "write",
   rateLimitTier: "ultra",
-  handler: async (c) => {
-    const { projectSlug } = c.req.valid("param")
-    const body = c.req.valid("json")
-    const organizationId = c.var.organization.id
+  execute: (input, ctx) =>
+    Effect.gen(function* () {
+      const { projectSlug } = input.params
+      const body = input.body
 
-    await Effect.runPromise(
-      Effect.gen(function* () {
-        const projectRepo = yield* ProjectRepository
-        const project = yield* projectRepo.findBySlug(projectSlug)
+      const projectRepo = yield* ProjectRepository
+      const project = yield* projectRepo.findBySlug(projectSlug)
 
-        const membershipRepo = yield* MembershipRepository
-        const isMember = yield* membershipRepo.findMemberByEmail(body.recipient)
-        if (!isMember) {
-          return yield* new BadRequestError({
-            message: "`recipient` must belong to a member of this organization.",
-          })
-        }
-
-        yield* c.var.queuePublisher.publish("exports", "generate", {
-          // KEEP: the export queue kind is a wire token retained until Phase 9.
-          kind: "issues",
-          organizationId: organizationId as string,
-          projectId: project.id as string,
-          recipientEmail: body.recipient,
-          ...(body.signalIds && body.signalIds.length > 0
-            ? { selection: { mode: "selected" as const, rowIds: body.signalIds as readonly string[] } }
-            : {}),
-          ...(body.lifecycleGroup ? { lifecycleGroup: body.lifecycleGroup } : {}),
+      const membershipRepo = yield* MembershipRepository
+      const isMember = yield* membershipRepo.findMemberByEmail(body.recipient)
+      if (!isMember) {
+        return yield* new BadRequestError({
+          message: "`recipient` must belong to a member of this organization.",
         })
-      }).pipe(
-        withPostgres(
-          Layer.mergeAll(ProjectRepositoryLive, MembershipRepositoryLive),
-          c.var.postgresClient,
-          organizationId,
-        ),
-        withTracing,
-      ),
-    )
+      }
 
-    return c.json({ status: "queued" as const }, 202)
-  },
+      yield* ctx.queuePublisher.publish("exports", "generate", {
+        // KEEP: the export queue kind is a wire token retained until Phase 9.
+        kind: "issues",
+        organizationId: ctx.organization.id as string,
+        projectId: project.id as string,
+        recipientEmail: body.recipient,
+        ...(body.signalIds && body.signalIds.length > 0
+          ? { selection: { mode: "selected" as const, rowIds: body.signalIds as readonly string[] } }
+          : {}),
+        ...(body.lifecycleGroup ? { lifecycleGroup: body.lifecycleGroup } : {}),
+      })
+      return { status: 202, body: { status: "queued" as const } } as const
+    }).pipe(
+      withPostgres(
+        Layer.mergeAll(ProjectRepositoryLive, MembershipRepositoryLive),
+        ctx.postgresClient,
+        ctx.organization.id,
+      ),
+      withTracing,
+    ),
 })
 
 const MonitorResponseSchema = z
@@ -698,45 +749,40 @@ const monitorSignal = signalEndpoint({
       "Starts (or realigns) monitoring for the signal. When the signal has no active evaluation, a new one is generated. When an active evaluation exists, the call realigns it. The work runs asynchronously and the response returns immediately. Returns 400 when monitoring is already in progress for this signal.",
     security: PROTECTED_SECURITY,
     request: { params: SignalSlugParamsSchema },
-    responses: openApiResponses({ status: 202, schema: MonitorResponseSchema, description: "Monitor job enqueued" }),
+    responses: typedResponses({ status: 202, schema: MonitorResponseSchema, description: "Monitor job enqueued" }),
   }),
   access: "write",
   rateLimitTier: "ultra",
-  handler: async (c) => {
-    const { projectSlug, signalSlug } = c.req.valid("param")
-    const organizationId = c.var.organization.id
-    const actorUserId = c.var.auth?.method === "oauth" ? UserId(c.var.auth.userId as string) : undefined
+  execute: (input, ctx) =>
+    Effect.gen(function* () {
+      const { projectSlug, signalSlug } = input.params
+      const actorUserId = ctx.auth.method === "oauth" ? UserId(ctx.auth.userId as string) : undefined
 
-    const result = await Effect.runPromise(
-      Effect.gen(function* () {
-        const projectRepo = yield* ProjectRepository
-        const project = yield* projectRepo.findBySlug(projectSlug)
+      const projectRepo = yield* ProjectRepository
+      const project = yield* projectRepo.findBySlug(projectSlug)
 
-        const signalRepo = yield* SignalRepository
-        const signal = yield* signalRepo.findBySlug({ projectId: project.id, slug: signalSlug })
+      const signalRepo = yield* SignalRepository
+      const signal = yield* signalRepo.findBySlug({ projectId: project.id, slug: signalSlug })
 
-        return yield* monitorSignalUseCase({
-          organizationId: OrganizationId(organizationId as string),
-          projectId: ProjectId(project.id as string),
-          signalId: SignalId(signal.id as string),
-          isAutomaticallyMonitored: signal.source === "flagger",
-          signalOrigin: signal.origin,
-          ...(actorUserId !== undefined ? { actorUserId } : {}),
-        })
-      }).pipe(
-        withPostgres(
-          Layer.mergeAll(ProjectRepositoryLive, SignalRepositoryLive, EvaluationRepositoryLive, OutboxEventWriterLive),
-          c.var.postgresClient,
-          organizationId,
-        ),
-        Effect.provide(Layer.succeed(WorkflowStarter, c.var.workflowStarter)),
-        Effect.provide(Layer.succeed(WorkflowQuerier, c.var.workflowQuerier)),
-        withTracing,
+      const result = yield* monitorSignalUseCase({
+        organizationId: OrganizationId(ctx.organization.id as string),
+        projectId: ProjectId(project.id as string),
+        signalId: SignalId(signal.id as string),
+        isAutomaticallyMonitored: signal.source === "flagger",
+        signalOrigin: signal.origin,
+        ...(actorUserId !== undefined ? { actorUserId } : {}),
+      })
+      return { status: 202, body: { jobId: result.jobId, evaluationId: result.evaluationId } } as const
+    }).pipe(
+      withPostgres(
+        Layer.mergeAll(ProjectRepositoryLive, SignalRepositoryLive, EvaluationRepositoryLive, OutboxEventWriterLive),
+        ctx.postgresClient,
+        ctx.organization.id,
       ),
-    )
-
-    return c.json({ jobId: result.jobId, evaluationId: result.evaluationId }, 202)
-  },
+      Effect.provide(Layer.succeed(WorkflowStarter, ctx.workflowStarter)),
+      Effect.provide(Layer.succeed(WorkflowQuerier, ctx.workflowQuerier)),
+      withTracing,
+    ),
 })
 
 const unmonitorSignal = signalEndpoint({
@@ -756,34 +802,29 @@ const unmonitorSignal = signalEndpoint({
   }),
   access: "write",
   rateLimitTier: "medium",
-  handler: async (c) => {
-    const { projectSlug, signalSlug } = c.req.valid("param")
-    const organizationId = c.var.organization.id
+  execute: (input, ctx) =>
+    Effect.gen(function* () {
+      const { projectSlug, signalSlug } = input.params
 
-    await Effect.runPromise(
-      Effect.gen(function* () {
-        const projectRepo = yield* ProjectRepository
-        const project = yield* projectRepo.findBySlug(projectSlug)
+      const projectRepo = yield* ProjectRepository
+      const project = yield* projectRepo.findBySlug(projectSlug)
 
-        const signalRepo = yield* SignalRepository
-        const signal = yield* signalRepo.findBySlug({ projectId: project.id, slug: signalSlug })
+      const signalRepo = yield* SignalRepository
+      const signal = yield* signalRepo.findBySlug({ projectId: project.id, slug: signalSlug })
 
-        yield* unmonitorSignalUseCase({
-          projectId: ProjectId(project.id as string),
-          signalId: SignalId(signal.id as string),
-        })
-      }).pipe(
-        withPostgres(
-          Layer.mergeAll(ProjectRepositoryLive, SignalRepositoryLive, EvaluationRepositoryLive),
-          c.var.postgresClient,
-          organizationId,
-        ),
-        withTracing,
+      yield* unmonitorSignalUseCase({
+        projectId: ProjectId(project.id as string),
+        signalId: SignalId(signal.id as string),
+      })
+      return { status: 204 } as const
+    }).pipe(
+      withPostgres(
+        Layer.mergeAll(ProjectRepositoryLive, SignalRepositoryLive, EvaluationRepositoryLive),
+        ctx.postgresClient,
+        ctx.organization.id,
       ),
-    )
-
-    return c.body(null, 204)
-  },
+      withTracing,
+    ),
 })
 
 const SignalEvaluationBodySchema = z
@@ -853,41 +894,39 @@ const createSignal = signalEndpoint({
       "Creates a user-defined signal with its membership detector — from `settings` (a `judge` LLM detector or a deterministic `rule`), or a raw `script` (advanced). The script is validated at save time (422 on a compile error). Detectors collect forward from creation; there is no historical backfill.",
     security: PROTECTED_SECURITY,
     request: { params: ProjectParamsSchema, body: jsonBody(CreateSignalBodySchema) },
-    responses: openApiResponses({ status: 201, schema: CreateSignalResponseSchema, description: "Signal created" }),
+    responses: typedResponses({ status: 201, schema: CreateSignalResponseSchema, description: "Signal created" }),
   }),
   access: "write",
   rateLimitTier: "ultra",
-  handler: async (c) => {
-    const { projectSlug } = c.req.valid("param")
-    const body = c.req.valid("json")
-    const organizationId = c.var.organization.id
+  execute: (input, ctx) =>
+    Effect.gen(function* () {
+      const { projectSlug } = input.params
+      const body = input.body
 
-    const result = await Effect.runPromise(
-      Effect.gen(function* () {
-        const projectRepo = yield* ProjectRepository
-        const project = yield* projectRepo.findBySlug(projectSlug)
-        return yield* createSignalUseCase({
-          organizationId: organizationId as string,
-          projectId: project.id as string,
-          name: body.name,
-          description: body.description,
-          ...(body.priority != null ? { priority: body.priority } : {}),
-          ...(body.filters != null ? { filters: body.filters } : {}),
-          evaluation: body.evaluation,
-        })
-      }).pipe(
-        withPostgres(
-          Layer.mergeAll(ProjectRepositoryLive, SignalRepositoryLive, EvaluationRepositoryLive, OutboxEventWriterLive),
-          c.var.postgresClient,
-          organizationId,
-        ),
-        Effect.provide(QuickJsScriptRuntimeLive),
-        withTracing,
+      const projectRepo = yield* ProjectRepository
+      const project = yield* projectRepo.findBySlug(projectSlug)
+      const result = yield* createSignalUseCase({
+        organizationId: ctx.organization.id as string,
+        projectId: project.id as string,
+        name: body.name,
+        description: body.description,
+        ...(body.priority != null ? { priority: body.priority } : {}),
+        ...(body.filters != null ? { filters: body.filters } : {}),
+        evaluation: body.evaluation,
+      })
+      return {
+        status: 201,
+        body: { id: result.signalId, slug: result.slug, evaluationId: result.evaluationId },
+      } as const
+    }).pipe(
+      withPostgres(
+        Layer.mergeAll(ProjectRepositoryLive, SignalRepositoryLive, EvaluationRepositoryLive, OutboxEventWriterLive),
+        ctx.postgresClient,
+        ctx.organization.id,
       ),
-    )
-
-    return c.json({ id: result.signalId, slug: result.slug, evaluationId: result.evaluationId }, 201)
-  },
+      Effect.provide(QuickJsScriptRuntimeLive),
+      withTracing,
+    ),
 })
 
 const updateSignal = signalEndpoint({
@@ -903,40 +942,35 @@ const updateSignal = signalEndpoint({
       "Updates a signal's name, description, and evaluation pre-gate `filters`. Filter changes apply forward-only — existing membership is never re-evaluated. The slug is stable.",
     security: PROTECTED_SECURITY,
     request: { params: SignalSlugParamsSchema, body: jsonBody(UpdateSignalBodySchema) },
-    responses: openApiResponses({ status: 200, schema: UpdateSignalResponseSchema, description: "Signal updated" }),
+    responses: typedResponses({ status: 200, schema: UpdateSignalResponseSchema, description: "Signal updated" }),
   }),
   access: "destructive",
   rateLimitTier: "medium",
-  handler: async (c) => {
-    const { projectSlug, signalSlug } = c.req.valid("param")
-    const body = c.req.valid("json")
-    const organizationId = c.var.organization.id
+  execute: (input, ctx) =>
+    Effect.gen(function* () {
+      const { projectSlug, signalSlug } = input.params
+      const body = input.body
 
-    const result = await Effect.runPromise(
-      Effect.gen(function* () {
-        const projectRepo = yield* ProjectRepository
-        const project = yield* projectRepo.findBySlug(projectSlug)
-        const signalRepo = yield* SignalRepository
-        const signal = yield* signalRepo.findBySlug({ projectId: project.id, slug: signalSlug })
-        return yield* updateSignalUseCase({
-          projectId: project.id as string,
-          signalId: SignalId(signal.id as string),
-          ...(body.name !== undefined ? { name: body.name } : {}),
-          ...(body.description !== undefined ? { description: body.description } : {}),
-          ...(body.filters !== undefined ? { filters: body.filters } : {}),
-        })
-      }).pipe(
-        withPostgres(
-          Layer.mergeAll(ProjectRepositoryLive, SignalRepositoryLive, EvaluationRepositoryLive),
-          c.var.postgresClient,
-          organizationId,
-        ),
-        withTracing,
+      const projectRepo = yield* ProjectRepository
+      const project = yield* projectRepo.findBySlug(projectSlug)
+      const signalRepo = yield* SignalRepository
+      const signal = yield* signalRepo.findBySlug({ projectId: project.id, slug: signalSlug })
+      const result = yield* updateSignalUseCase({
+        projectId: project.id as string,
+        signalId: SignalId(signal.id as string),
+        ...(body.name !== undefined ? { name: body.name } : {}),
+        ...(body.description !== undefined ? { description: body.description } : {}),
+        ...(body.filters !== undefined ? { filters: body.filters } : {}),
+      })
+      return { status: 200, body: { id: result.signalId, slug: signalSlug, changed: result.changed } } as const
+    }).pipe(
+      withPostgres(
+        Layer.mergeAll(ProjectRepositoryLive, SignalRepositoryLive, EvaluationRepositoryLive),
+        ctx.postgresClient,
+        ctx.organization.id,
       ),
-    )
-
-    return c.json({ id: result.signalId, slug: signalSlug, changed: result.changed }, 200)
-  },
+      withTracing,
+    ),
 })
 
 const deleteSignal = signalEndpoint({
@@ -956,29 +990,24 @@ const deleteSignal = signalEndpoint({
   }),
   access: "destructive",
   rateLimitTier: "medium",
-  handler: async (c) => {
-    const { projectSlug, signalSlug } = c.req.valid("param")
-    const organizationId = c.var.organization.id
+  execute: (input, ctx) =>
+    Effect.gen(function* () {
+      const { projectSlug, signalSlug } = input.params
 
-    await Effect.runPromise(
-      Effect.gen(function* () {
-        const projectRepo = yield* ProjectRepository
-        const project = yield* projectRepo.findBySlug(projectSlug)
-        const signalRepo = yield* SignalRepository
-        const signal = yield* signalRepo.findBySlug({ projectId: project.id, slug: signalSlug })
-        yield* deleteSignalUseCase({ projectId: project.id as string, signalId: SignalId(signal.id as string) })
-      }).pipe(
-        withPostgres(
-          Layer.mergeAll(ProjectRepositoryLive, SignalRepositoryLive, EvaluationRepositoryLive),
-          c.var.postgresClient,
-          organizationId,
-        ),
-        withTracing,
+      const projectRepo = yield* ProjectRepository
+      const project = yield* projectRepo.findBySlug(projectSlug)
+      const signalRepo = yield* SignalRepository
+      const signal = yield* signalRepo.findBySlug({ projectId: project.id, slug: signalSlug })
+      yield* deleteSignalUseCase({ projectId: project.id as string, signalId: SignalId(signal.id as string) })
+      return { status: 204 } as const
+    }).pipe(
+      withPostgres(
+        Layer.mergeAll(ProjectRepositoryLive, SignalRepositoryLive, EvaluationRepositoryLive),
+        ctx.postgresClient,
+        ctx.organization.id,
       ),
-    )
-
-    return c.body(null, 204)
-  },
+      withTracing,
+    ),
 })
 
 export const signalsModule: OperationModule = {
@@ -992,6 +1021,10 @@ export const signalsModule: OperationModule = {
     getSignal,
     getSignalTrend,
     listSignalTraces,
+    resolveSignals,
+    unresolveSignals,
+    ignoreSignals,
+    unignoreSignals,
     muteSignals,
     unmuteSignals,
     monitorSignal,

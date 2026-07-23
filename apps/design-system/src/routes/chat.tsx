@@ -1,4 +1,4 @@
-import { Conversation, type GenAIMessage } from "@repo/ui"
+import { Conversation, type GenAIMessage, type SubagentToolCallInfo } from "@repo/ui"
 import { createFileRoute } from "@tanstack/react-router"
 import { ComponentDemoSection } from "./-components/demo-frame.tsx"
 import { DesignSystemPage } from "./-components/design-system-page.tsx"
@@ -47,12 +47,7 @@ const JSON_SAMPLE = JSON.stringify(
   2,
 )
 
-// Long enough (> ~3000 chars) to trigger the large-markdown "show more" split.
-const LONG_TEXT = Array.from(
-  { length: 14 },
-  () =>
-    `This is a long assistant response used to demonstrate how the renderer collapses oversized content behind a "show more" affordance, snapping to paragraph boundaries so the head and tail stay readable while the middle is hidden until expanded.`,
-).join("\n\n")
+const LONG_TEXT = `This is a long assistant response used to demonstrate how the renderer collapses oversized content behind a "show more" affordance, snapping to paragraph boundaries so the head and tail stay readable while the middle is hidden until expanded.`
 
 // `as GenAIMessage[]` — the schema is permissive (z.core.$loose) and we want to exercise
 // edge cases (unknown part types/roles, refusals) that aren't in the strict TS unions.
@@ -71,7 +66,6 @@ const TEXT_MESSAGES = [
   { role: "assistant", parts: [{ type: "text", content: MARKDOWN_SAMPLE }] },
   // JSON-block text part — renders via JsonContent (syntax-highlighted).
   { role: "assistant", parts: [{ type: "text", content: JSON_SAMPLE }] },
-  // Long content — renders with the "show more" middle collapse.
   { role: "assistant", parts: [{ type: "text", content: LONG_TEXT }] },
 ] as GenAIMessage[]
 
@@ -223,7 +217,7 @@ const EDGE_CASE_MESSAGES = [
 const SECTIONS: { title: string; description: string; messages: GenAIMessage[] }[] = [
   {
     title: "Text & markdown",
-    description: "System, plain text, rich markdown, JSON blocks, long-content collapse.",
+    description: "System, plain text, rich markdown, JSON blocks.",
     messages: TEXT_MESSAGES,
   },
   {
@@ -247,6 +241,18 @@ const SECTIONS: { title: string; description: string; messages: GenAIMessage[] }
     messages: EDGE_CASE_MESSAGES,
   },
 ]
+
+const SUBAGENT_TOOL_CALLS: ReadonlyMap<string, SubagentToolCallInfo> = new Map([
+  [
+    "call_metrics_1",
+    {
+      label: "metrics-analyst",
+      taskPreview: "Summarize p95 latency across providers for the last 7 days.",
+      resultPreview: "OpenAI p95 is 412ms (above 400ms); Anthropic 380ms and the rest are within budget.",
+      onOpenConversation: () => {},
+    },
+  ],
+])
 
 function ChatPage() {
   return (
@@ -272,6 +278,16 @@ function ChatPage() {
           </div>
         </ComponentDemoSection>
       ))}
+
+      <ComponentDemoSection
+        title="Subagent tool call"
+        description="A tool call that spawned a subagent renders as a nested sub-conversation: the agent's request and reply as a chat peek, with an Open conversation affordance."
+        frameClassName="block"
+      >
+        <div className="mx-auto w-full max-w-3xl">
+          <Conversation messages={TOOL_MESSAGES} subagentToolCalls={SUBAGENT_TOOL_CALLS} />
+        </div>
+      </ComponentDemoSection>
     </DesignSystemPage>
   )
 }

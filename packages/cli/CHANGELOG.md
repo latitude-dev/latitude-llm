@@ -7,6 +7,62 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [7.6.0] - 2026-07-21
+
+### Added
+
+- `latitude memory` commands for reading memory observability: `list-stores` (cursor-paginated store roll-up), `get-store` (current snapshot, optional point-in-time `at`), `get-store-diff` (per-record diff between two timestamps), `list-store-users`, `get-record` (body + version history), `get-record-change` (one change's before/after diff), `list-record-reads`, and `list-record-users`. Stores and records are addressed by opaque id query params, so the unattributed (`""`) store and the unnamed record are reachable.
+- `latitude sessions get-memory` / `get-memory-changes` and `latitude traces get-memory` / `get-memory-changes` — a session's or trace's memory footprint (per-record read/added/removed token metrics and totals) and its per-record before/after write diffs.
+- `latitude users memory-stores` — the memory stores an end-user accessed.
+
+## [7.5.0] - 2026-07-21
+
+### Added
+
+- `latitude signals resolve` / `unresolve` / `ignore` / `unignore` lifecycle commands. Resolving archives a signal while its evaluations keep watching for regressions (`--keep-monitoring` controls this); ignoring archives it, stops monitoring, and mutes notifications.
+- Signal responses now carry `resolvedAt`, `ignoredAt`, and `regressedAt`, and `states` can include `resolved`, `regressed`, and `ignored`.
+- Signal analytics now include `resolved` and `ignored` counts.
+
+### Changed
+
+- Muting a signal is now a pure notification toggle: incidents keep opening while muted.
+
+## [7.4.0] - 2026-07-20
+
+### Added
+
+- `latitude sessions` commands for reading sessions (the traces of one conversation, grouped by session id): `list` (cursor-paginated, with `filters` + free-text `query`), `analytics` (per-metric totals/medians and a 12-hour bucket series over whole sessions), `get` (session detail with its GenAI conversation and latest trace id), `list-traces` (cursor-paginated traces of the session), `list-signals` (signals recorded across the session's traces), and `get-signal` (one session-scoped signal by slug).
+
+## [7.3.0] - 2026-07-16
+
+### Added
+
+- `latitude projects update --flaggers` accepts two new slugs: `bluffing` (the assistant proceeds past a failed tool call as if it succeeded) and `pii-leakage` (the assistant's output exposes personal data it should not have surfaced).
+
+## [7.2.0] - 2026-07-16
+
+### Added
+
+- `latitude traces list` documents a dedicated `TraceFilterSet` (including `endTime`). Unknown filter fields and `gtePercentile` on `startTime`/`endTime` are rejected with 400 instead of being silently ignored or failing as 500.
+
+## [7.1.0] - 2026-07-14
+
+### Added
+
+- `latitude experiments list/get/create/update/delete` — manage project experiments that compare two or more variants (a filter set + search query + time range) against a baseline. `get` returns the full comparison: per-variant metrics across sessions, users, tools, signals, and behaviours, each with its signed change versus the baseline.
+
+## [7.0.0] - 2026-07-10
+
+### Changed (breaking)
+
+- `latitude monitors update` no longer accepts `--target`, `--trigger`, `--metric`, or `--condition`. Monitor target, trigger, metric, and incident-launching conditions are fixed after creation; use this command for `name`, `description`, and `severity` only.
+
+## [6.1.0] - 2026-07-08
+
+### Added
+
+- `latitude signals get` can now return a `failed` `monitoringState`, surfaced when the signal's most recent evaluation generation or realignment workflow ended in failure. It includes `phase` (`generate` or `realign`), an optional `evaluationId` (for `realign`), and a nullable `reason`. A later successful workflow supersedes an older failure.
+
 ## [6.0.0] - 2026-07-06
 
 ### Changed

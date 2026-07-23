@@ -38,6 +38,7 @@ export { ApiKeyRepositoryLive } from "./repositories/api-key-repository.ts"
 export { BillingOverrideRepositoryLive } from "./repositories/billing-override-repository.ts"
 export { BillingUsageEventRepositoryLive } from "./repositories/billing-usage-event-repository.ts"
 export { BillingUsagePeriodRepositoryLive } from "./repositories/billing-usage-period-repository.ts"
+export { CustomBehaviorRepositoryLive } from "./repositories/custom-behavior-repository.ts"
 export { DatasetRepositoryLive } from "./repositories/dataset-repository.ts"
 export { DestinationRepositoryLive } from "./repositories/destination-repository.ts"
 export { DestinationSourceStateRepositoryLive } from "./repositories/destination-source-state-repository.ts"
@@ -45,8 +46,13 @@ export { DestinationSyncRunRepositoryLive } from "./repositories/destination-syn
 // Repository implementations
 export { EvaluationAlignmentExamplesRepositoryLive } from "./repositories/evaluation-alignment-examples-repository.ts"
 export { EvaluationRepositoryLive } from "./repositories/evaluation-repository.ts"
+export { ExperimentRepositoryLive } from "./repositories/experiment-repository.ts"
 export { FeatureFlagRepositoryLive } from "./repositories/feature-flag-repository.ts"
 export { FlaggerRepositoryLive } from "./repositories/flagger-repository.ts"
+export {
+  type GardenableCustomBehaviorRef,
+  listGardenableCustomBehaviors,
+} from "./repositories/gardenable-custom-behaviors.ts"
 export { type GardenableProjectRef, listGardenableProjectRefs } from "./repositories/gardenable-projects.ts"
 export { IncidentMonitorReaderLive } from "./repositories/incident-monitor-reader.ts"
 export { InvitationRepositoryLive } from "./repositories/invitation-repository.ts"

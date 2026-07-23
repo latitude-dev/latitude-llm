@@ -25,6 +25,11 @@ const {
 })
 
 const runAnalyzeSessionPass = async (input: AnalyzeSessionWorkflowInput): Promise<AnalyzeSessionWorkflowResult> => {
+  // Keep the legacy activity sequence for histories recorded before this marker.
+  if (patched("analyze-session-persist-only-v1")) {
+    return persistAnalyzeSessionActivity(input)
+  }
+
   const loaded = await loadAnalyzeSessionActivity(input)
   const hashed = await hashAnalyzeSessionActivity({ ...input, ...loaded })
   const eligibility = await checkAnalyzeSessionEligibilityActivity({ ...input, ...loaded, ...hashed })
@@ -69,7 +74,7 @@ export const analyzeSessionWorkflow = async (
 ): Promise<AnalyzeSessionWorkflowResult> => {
   let rerunRequested = false
 
-  // `trace-end` uses signalWithStart so a trace completed while the stable
+  // `session-end` uses signalWithStart so a trace completed while the stable
   // per-session workflow id is already running is delivered here instead of
   // failing as an unknown signal. Signals that arrive during an analysis pass
   // request one more deterministic pass after the current pass completes; the
@@ -78,12 +83,17 @@ export const analyzeSessionWorkflow = async (
     rerunRequested = true
   })
 
-  if (input.debounceMs !== undefined && input.debounceMs > 0) {
-    await sleep(input.debounceMs)
+  // The settle-debounce now lives in the session-end queue job. Pre-patch executions recorded a
+  // debounce timer and must replay it to stay deterministic across the deploy; new runs go straight
+  // to the first pass. Remove with `deprecatePatch` once no pre-patch executions remain.
+  if (!patched("analyze-session-drop-internal-debounce-v1")) {
+    if (input.debounceMs !== undefined && input.debounceMs > 0) {
+      await sleep(input.debounceMs)
+    }
   }
 
-  // Signals received during the initial debounce are already covered by the
-  // first load after the debounce. Only signals received during/after a pass
+  // Discard the signal the initiating signalWithStart delivers (and any that arrived during a
+  // pre-patch debounce); the first pass already reflects them. Only signals during/after a pass
   // need another pass.
   rerunRequested = false
 

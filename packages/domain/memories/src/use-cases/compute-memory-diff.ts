@@ -1,0 +1,116 @@
+import type { OrganizationId, ProjectId } from "@domain/shared"
+import { Effect } from "effect"
+import type { MemoryDiff, MemoryRecordChange } from "../entities/memory-diff.ts"
+import type { MemoryRecordVersion } from "../entities/memory-snapshot.ts"
+import { MemoryRepository } from "../ports/memory-repository.ts"
+import { recordTokenDelta } from "./diff-record-bodies.ts"
+import { reconstructSnapshotUseCase } from "./reconstruct-snapshot.ts"
+
+export interface ComputeMemoryDiffInput {
+  readonly organizationId: OrganizationId
+  readonly projectId: ProjectId
+  readonly storeId: string
+  /** Start point; omit for an empty manifest (everything in `to` is an add). */
+  readonly from?: Date
+  /** End point; omit for the current state (T = now). */
+  readonly to?: Date
+}
+
+const recordKey = (record: { readonly storeId: string; readonly recordId: string }) =>
+  `${record.storeId}\u0000${record.recordId}`
+
+type PendingChange = {
+  readonly kind: MemoryRecordChange["kind"]
+  readonly from?: MemoryRecordVersion
+  readonly to?: MemoryRecordVersion
+}
+
+/**
+ * Diff a store between two points: reconstruct both manifests, join by record,
+ * prune records whose content hash is unchanged, and line-diff the survivors for
+ * token deltas. Equal-hash records are provably unchanged and skipped, so cost
+ * is proportional to what changed (git's hash prune).
+ */
+export const computeMemoryDiffUseCase = Effect.fn("memories.computeMemoryDiff")(function* (
+  input: ComputeMemoryDiffInput,
+) {
+  const { organizationId, projectId, storeId, from, to } = input
+  const memoryRepository = yield* MemoryRepository
+
+  const fromRecords =
+    from === undefined
+      ? []
+      : (yield* reconstructSnapshotUseCase({ organizationId, projectId, storeId, at: from })).records
+  const toRecords = (yield* reconstructSnapshotUseCase({
+    organizationId,
+    projectId,
+    storeId,
+    ...(to !== undefined ? { at: to } : {}),
+  })).records
+
+  const fromMap = new Map(fromRecords.map((record) => [recordKey(record), record]))
+  const toMap = new Map(toRecords.map((record) => [recordKey(record), record]))
+
+  const pending: PendingChange[] = []
+  const hashes = new Set<string>()
+  const want = (hash: string) => {
+    if (hash !== "") hashes.add(hash)
+  }
+
+  for (const [key, toRecord] of toMap) {
+    const fromRecord = fromMap.get(key)
+    if (fromRecord === undefined) {
+      pending.push({ kind: "added", to: toRecord })
+      want(toRecord.contentHash)
+    } else if (fromRecord.contentHash !== toRecord.contentHash) {
+      pending.push({ kind: "updated", from: fromRecord, to: toRecord })
+      want(fromRecord.contentHash)
+      want(toRecord.contentHash)
+    }
+  }
+  for (const [key, fromRecord] of fromMap) {
+    if (toMap.has(key)) continue
+    pending.push({ kind: "removed", from: fromRecord })
+    want(fromRecord.contentHash)
+  }
+
+  const blobs = yield* memoryRepository.readBlobs({ organizationId, hashes: [...hashes] })
+  const bodyByHash = new Map(blobs.map((blob) => [blob.contentHash, blob.content]))
+  const body = (hash: string): string | null => (hash === "" ? null : (bodyByHash.get(hash) ?? null))
+
+  const changes: MemoryRecordChange[] = []
+  let tokensAdded = 0
+  let tokensRemoved = 0
+  const recordsChanged = { added: 0, updated: 0, removed: 0 }
+
+  for (const change of pending) {
+    const beforeHash = change.from?.contentHash ?? ""
+    const afterHash = change.to?.contentHash ?? ""
+    const delta = recordTokenDelta({
+      kind: change.kind,
+      beforeHash,
+      afterHash,
+      beforeBody: body(beforeHash),
+      afterBody: body(afterHash),
+      beforeTokens: change.from?.tokenCount ?? 0,
+      afterTokens: change.to?.tokenCount ?? 0,
+    })
+
+    const record = change.to ?? change.from
+    changes.push({
+      storeId: record?.storeId ?? "",
+      recordId: record?.recordId ?? "",
+      kind: change.kind,
+      tokensAdded: delta.tokensAdded,
+      tokensRemoved: delta.tokensRemoved,
+      beforeHash,
+      afterHash,
+      degraded: delta.degraded,
+    })
+    tokensAdded += delta.tokensAdded
+    tokensRemoved += delta.tokensRemoved
+    recordsChanged[change.kind] += 1
+  }
+
+  return { storeId, changes, tokensAdded, tokensRemoved, recordsChanged } satisfies MemoryDiff
+})

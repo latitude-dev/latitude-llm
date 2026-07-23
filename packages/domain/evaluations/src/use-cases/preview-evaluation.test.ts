@@ -70,6 +70,8 @@ const makeSession = (sessionId: string, traceIds: readonly string[]): Session =>
   models: [],
   providers: [],
   serviceNames: [],
+  agentNames: [],
+  definedTools: [],
   rootSpanId: "",
   rootSpanName: "",
 })
@@ -102,6 +104,7 @@ const makeTraceDetail = (traceId: string, sessionId: string): TraceDetail => ({
   models: [],
   providers: [],
   serviceNames: [],
+  agentNames: [],
   rootSpanId: SpanId("r".repeat(16)),
   rootSpanName: "root",
   systemInstructions: [],
@@ -280,5 +283,20 @@ describe("previewEvaluationUseCase", () => {
     )
 
     expect(received).toEqual(filters)
+  })
+
+  it("evaluates the supplied traceIds and does not query the latest sessions", async () => {
+    let listed = false
+    const traceIds = ["ta".padEnd(32, "a"), "tb".padEnd(32, "b")]
+
+    const result = await Effect.runPromise(
+      previewEvaluationUseCase({ organizationId, projectId, evaluation: ruleEvaluation, traceIds }).pipe(
+        Effect.provide(buildLayer({ sessions: [], listSpy: () => (listed = true) })),
+      ),
+    )
+
+    expect(listed).toBe(false)
+    expect(result.items.map((row) => row.traceId)).toEqual(traceIds)
+    expect(result.items.every((row) => row.passed === true)).toBe(true)
   })
 })

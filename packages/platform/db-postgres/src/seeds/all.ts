@@ -1,5 +1,7 @@
+import { agentDispatchSeeders } from "./agent-dispatch/index.ts"
 import { alertIncidentSeeders } from "./alert-incidents/index.ts"
 import { apiKeySeeders } from "./api-keys/index.ts"
+import { customBehaviorQaSeeders } from "./custom-behaviors/index.ts"
 import { datasetSeeders } from "./datasets/index.ts"
 import { evaluationSeeders } from "./evaluations/index.ts"
 import { bootstrapTelemetryFlaggerSeeders, flaggerSeeders } from "./flaggers/index.ts"
@@ -43,6 +45,9 @@ export const contentSeeders: readonly Seeder[] = [
   // Must run after notificationSeeders so it fully controls which of its own
   // incidents read as "Notified" vs "Muted".
   ...monitorSeeders,
+  // Attaches agent-dispatch ledger rows to seeded signals; only depends on
+  // signalSeeders having run.
+  ...agentDispatchSeeders,
 ]
 
 export const allSeeders: readonly Seeder[] = [
@@ -58,4 +63,9 @@ export const allSeeders: readonly Seeder[] = [
   // and the public Wrapped share URLs. All created "today" so they appear
   // in the backoffice list and form a single leaderboard cohort.
   ...wrappedReportSeeders,
+  // Bootstrap-only: QA custom behaviors on the seed project. Excluded from
+  // `contentSeeders` so the demo workflow never provisions them; their backing
+  // sessions + observations come from the ClickHouse `spans/custom-behavior-qa`
+  // seeder.
+  ...customBehaviorQaSeeders,
 ]

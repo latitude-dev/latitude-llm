@@ -17,6 +17,18 @@ export const FEATURE_FLAGS = {
     description:
       "Lets org owners/admins configure SAML or OIDC single sign-on and (optionally) enforce it for their verified email domain.",
   },
+  customBehaviors: {
+    emoji: "🎛️",
+    name: "Custom behaviors",
+    description:
+      "Project-scoped, filter-defined behavior taxonomies with their own authoring UI. Hidden until the Generate flow ships.",
+  },
+  adaptiveTaxonomyClustering: {
+    emoji: "🌳",
+    name: "Adaptive taxonomy clustering",
+    description:
+      "Enforces node-relative adaptive taxonomy clustering for every project in the organization, raising the environment baseline (shadow/enforced) to enforced. The env kill switch still overrides it.",
+  },
 } as const satisfies Record<
   string,
   {

@@ -34,7 +34,9 @@ export const GENERATION_FEATURES = [
   "EVALUATION_JUDGE",
   "SIGNAL_GENERATOR",
   "TAXONOMY_NAMING",
+  "FACET_EXTRACTION",
   "GEPA_PROPOSER",
+  "MOMENT_CLASSIFIER",
 ] as const
 
 export type GenerationFeature = (typeof GENERATION_FEATURES)[number]

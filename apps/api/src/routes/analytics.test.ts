@@ -56,6 +56,15 @@ describe("Analytics Routes Integration", () => {
         body: { stream: "spans", metric: { kind: "count" }, query: "refund", range: RANGE },
       },
       {
+        name: "gtePercentile on spans stream row filters",
+        body: {
+          stream: "spans",
+          metric: { kind: "count" },
+          filters: { duration: [{ op: "gtePercentile", value: 90 }] },
+          range: RANGE,
+        },
+      },
+      {
         name: "inverted range",
         body: { stream: "traces", metric: { kind: "count" }, range: { fromIso: RANGE.toIso, toIso: RANGE.fromIso } },
       },
@@ -78,5 +87,21 @@ describe("Analytics Routes Integration", () => {
         expect(res.status).toBe(400)
       })
     }
+
+    it<ApiTestContext>("accepts gtePercentile on traces stream row filters", async ({ app, database }) => {
+      const tenant = await createTenantSetup(database)
+      const res = await post(
+        app,
+        "any-project",
+        {
+          stream: "traces",
+          metric: { kind: "count" },
+          filters: { duration: [{ op: "gtePercentile", value: 90 }] },
+          range: RANGE,
+        },
+        tenant.apiKeyToken,
+      )
+      expect(res.status).not.toBe(400)
+    })
   })
 })

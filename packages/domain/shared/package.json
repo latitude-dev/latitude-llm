@@ -9,6 +9,7 @@
     ".": "./src/index.ts",
     "./seeding": "./src/seeding.ts",
     "./seed-content/tau2-trajectories": "./src/seed-content/tau2-trajectories.ts",
+    "./seed-content/custom-behavior-qa": "./src/seed-content/custom-behavior-qa.ts",
     "./testing": "./src/testing/index.ts"
   },
   "scripts": {

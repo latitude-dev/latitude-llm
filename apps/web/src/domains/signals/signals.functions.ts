@@ -10,6 +10,7 @@ import {
   ScoreRepository,
   type SignalDimension,
   type SignalEscalationThresholdBucket,
+  type SignalWindowMetric,
 } from "@domain/scores"
 import {
   evaluationDraftSchema,
@@ -66,6 +67,7 @@ import {
   EvaluationRepositoryLive,
   MembershipRepositoryLive,
   OutboxEventWriterLive,
+  ProjectRepositoryLive,
   ScoreRepositoryLive,
   SettingsReaderLive,
   SignalRepositoryLive,
@@ -108,6 +110,7 @@ const listSignalsInputSchema = z.object({
       toIso: z.iso.datetime().optional(),
     })
     .optional(),
+  histogramMaxSpanDays: z.number().int().positive().optional(),
 })
 
 const toSignalsBucketRecord = (bucket: { readonly bucket: string; readonly count: number }) => ({
@@ -117,6 +120,7 @@ const toSignalsBucketRecord = (bucket: { readonly bucket: string; readonly count
 
 const toSignalRecord = (issue: SignalListItem) => ({
   id: issue.id,
+  slug: issue.slug,
   projectId: issue.projectId,
   name: issue.name,
   description: issue.description,
@@ -126,6 +130,9 @@ const toSignalRecord = (issue: SignalListItem) => ({
   priority: issue.priority,
   createdAt: issue.createdAt.toISOString(),
   updatedAt: issue.updatedAt.toISOString(),
+  resolvedAt: issue.resolvedAt?.toISOString() ?? null,
+  ignoredAt: issue.ignoredAt?.toISOString() ?? null,
+  regressedAt: issue.regressedAt?.toISOString() ?? null,
   mutedAt: issue.mutedAt?.toISOString() ?? null,
   firstSeenAt: issue.firstSeenAt.toISOString(),
   lastSeenAt: issue.lastSeenAt.toISOString(),
@@ -176,12 +183,32 @@ const signalRowMetricsInputSchema = z.object({
 
 export interface SignalRowMetricRecord {
   readonly occurrences: number
+  readonly firstSeenAt: string | null
+  readonly lastSeenAt: string | null
   readonly affectedSessionsPercent: number
   readonly trend: readonly ReturnType<typeof toSignalsBucketRecord>[]
 }
 
 export interface SignalRowMetricsRecord {
   readonly metricsBySignalId: Readonly<Record<string, SignalRowMetricRecord>>
+}
+
+export function toSignalRowMetricRecord({
+  metric,
+  totalSessions,
+  trend,
+}: {
+  readonly metric: SignalWindowMetric | undefined
+  readonly totalSessions: number
+  readonly trend: readonly ReturnType<typeof toSignalsBucketRecord>[]
+}): SignalRowMetricRecord {
+  return {
+    occurrences: metric?.occurrences ?? 0,
+    firstSeenAt: metric?.firstSeenAt.toISOString() ?? null,
+    lastSeenAt: metric?.lastSeenAt.toISOString() ?? null,
+    affectedSessionsPercent: !metric || totalSessions === 0 ? 0 : Math.min(metric.affectedSessions / totalSessions, 1),
+    trend,
+  }
 }
 
 const signalInputSchema = z.object({
@@ -191,12 +218,15 @@ const signalInputSchema = z.object({
 
 const toSignalSummaryRecord = (issue: Signal) => ({
   id: issue.id,
+  slug: issue.slug,
   projectId: issue.projectId,
   name: issue.name,
   description: issue.description,
   source: issue.source,
   createdAt: issue.createdAt.toISOString(),
   updatedAt: issue.updatedAt.toISOString(),
+  resolvedAt: issue.resolvedAt?.toISOString() ?? null,
+  ignoredAt: issue.ignoredAt?.toISOString() ?? null,
   mutedAt: issue.mutedAt?.toISOString() ?? null,
 })
 
@@ -302,6 +332,9 @@ const toSignalDetailRecord = (input: {
   states: input.states,
   createdAt: input.issue.createdAt.toISOString(),
   updatedAt: input.issue.updatedAt.toISOString(),
+  resolvedAt: input.issue.resolvedAt?.toISOString() ?? null,
+  ignoredAt: input.issue.ignoredAt?.toISOString() ?? null,
+  regressedAt: input.issue.regressedAt?.toISOString() ?? null,
   mutedAt: input.issue.mutedAt?.toISOString() ?? null,
   firstSeenAt: input.firstSeenAt?.toISOString() ?? null,
   lastSeenAt: input.lastSeenAt?.toISOString() ?? null,
@@ -330,6 +363,9 @@ const toSignalLifecycleCommandRecord = (result: ApplySignalLifecycleCommandResul
   keepMonitoring: result.keepMonitoring,
   items: result.items.map((item) => ({
     signalId: item.signalId,
+    resolvedAt: item.resolvedAt?.toISOString() ?? null,
+    ignoredAt: item.ignoredAt?.toISOString() ?? null,
+    regressedAt: item.regressedAt?.toISOString() ?? null,
     mutedAt: item.mutedAt?.toISOString() ?? null,
     updatedAt: item.updatedAt.toISOString(),
     changed: item.changed,
@@ -401,6 +437,7 @@ const runSignalsList = async (
         ...(data.assigneeIds?.length ? { assigneeIds: data.assigneeIds } : {}),
         ...(data.sort ? { sort: data.sort } : {}),
         ...(timeRange ? { timeRange } : {}),
+        ...(data.histogramMaxSpanDays ? { histogramMaxSpanDays: data.histogramMaxSpanDays } : {}),
         ...(directMatch
           ? { signalIds: [directMatch.id] }
           : search
@@ -508,16 +545,13 @@ export const getSignalRowMetrics = createServerFn({ method: "GET" })
               const metric = metricsBySignalId.get(signalId)
               return [
                 signalId,
-                {
-                  occurrences: metric?.occurrences ?? 0,
-                  affectedSessionsPercent:
-                    !metric || sessionCount.totalCount === 0
-                      ? 0
-                      : Math.min(metric.affectedSessions / sessionCount.totalCount, 1),
+                toSignalRowMetricRecord({
+                  metric,
+                  totalSessions: sessionCount.totalCount,
                   trend:
                     trendBySignalId.get(signalId) ??
                     fillBuckets({ scaffold: trendScaffold, buckets: [] }).map(toSignalsBucketRecord),
-                },
+                }),
               ]
             }),
           ),
@@ -613,6 +647,37 @@ export const getSignal = createServerFn({ method: "GET" })
         const issue = issues[0]
 
         return issue ? toSignalSummaryRecord(issue) : null
+      }).pipe(withScopedPostgres(SignalRepositoryLive, pgClient, orgId), withTracing),
+    )
+  })
+
+/**
+ * Resolves the URL's signal `slug` to its stable CUID id. The detail route is
+ * addressed by the human-facing slug, but the detail data lives in ClickHouse
+ * keyed by the id, the page's many child queries share one id-keyed cache entry,
+ * and `SignalDetailBody`/`SignalLifecycleActions` are also reused in the session
+ * drawer with only a CUID — so the route resolves the slug once here and threads
+ * the id down (the same slug→entity→id shape projects use).
+ */
+export const getSignalIdBySlug = createServerFn({ method: "GET" })
+  .inputValidator(z.object({ projectId: z.string(), signalSlug: z.string() }))
+  .handler(async ({ data, context }): Promise<{ readonly signalId: string } | null> => {
+    const orgId = await resolveOrgScope(context)
+    const pgClient = getPostgresClient()
+    const projectId = ProjectId(data.projectId)
+
+    return Effect.runPromise(
+      Effect.gen(function* () {
+        const signalRepository = yield* SignalRepository
+        return yield* signalRepository.findBySlug({ projectId, slug: data.signalSlug }).pipe(
+          Effect.map((issue) => ({ signalId: issue.id })),
+          Effect.catchTag("NotFoundError", () =>
+            signalRepository.findById(SignalId(data.signalSlug)).pipe(
+              Effect.map((issue) => (issue.projectId === data.projectId ? { signalId: issue.id } : null)),
+              Effect.catchTag("NotFoundError", () => Effect.succeed(null)),
+            ),
+          ),
+        )
       }).pipe(withScopedPostgres(SignalRepositoryLive, pgClient, orgId), withTracing),
     )
   })
@@ -1217,7 +1282,7 @@ export const applyBulkSignalLifecycleAction = createServerFn({ method: "POST" })
     if (signalIds.length === 0) {
       return {
         command: data.command,
-        keepMonitoring: true,
+        keepMonitoring: null,
         items: [],
       }
     }
@@ -1347,7 +1412,7 @@ export const createSignal = createServerFn({ method: "POST" })
         evaluation: data.evaluation,
       }).pipe(
         withScopedPostgres(
-          Layer.mergeAll(SignalRepositoryLive, EvaluationRepositoryLive, OutboxEventWriterLive),
+          Layer.mergeAll(ProjectRepositoryLive, SignalRepositoryLive, EvaluationRepositoryLive, OutboxEventWriterLive),
           client,
           organizationId,
         ),

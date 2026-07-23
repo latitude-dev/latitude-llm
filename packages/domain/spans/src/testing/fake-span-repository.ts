@@ -14,11 +14,15 @@ export const createFakeSpanRepository = (overrides?: Partial<SpanRepositoryShape
       return Effect.void
     },
     listByTraceId: () => Effect.succeed([]),
+    listByTraceIds: () => Effect.succeed([]),
     listBySessionId: () => Effect.succeed([]),
     listToolSpansBySessionId: () => Effect.succeed([]),
+    listMemoryOperationSpansByTraceId: () => Effect.succeed([]),
     listByProjectId: () => Effect.succeed({ items: [], nextCursor: null }),
     findBySpanId: () => Effect.fail(new NotFoundError({ entity: "Span", id: "" })),
     findMessagesForTrace: () => Effect.succeed([]),
+    findSpanConversationChunk: () =>
+      Effect.succeed({ messages: [], offset: 0, limit: 0, totalMessages: 0, hasMore: false, payloadBytes: 0 }),
     findMessagesForSession: () => Effect.succeed([]),
     findLatestOutputTraceId: () => Effect.succeed(null),
     listByIngestedAtWindow: () => Effect.succeed({ spans: [], nextCursor: null }),

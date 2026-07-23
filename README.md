@@ -180,6 +180,9 @@ Contributions are welcome. Read the [Contributing Guide](CONTRIBUTING.md) to get
   <a href="https://github.com/buweiyuqi" title="buweiyuqi"><img src="https://avatars.githubusercontent.com/u/57198914?v=4&s=128" width="64" height="64" alt="buweiyuqi" /></a>
   <a href="https://github.com/monotykamary" title="monotykamary"><img src="https://avatars.githubusercontent.com/u/1130103?v=4&s=128" width="64" height="64" alt="monotykamary" /></a>
   <a href="https://github.com/wnor543" title="wnor543"><img src="https://avatars.githubusercontent.com/u/23494178?v=4&s=128" width="64" height="64" alt="wnor543" /></a>
+  <a href="https://github.com/eeshsaxena" title="eeshsaxena"><img src="https://avatars.githubusercontent.com/u/139802361?v=4&s=128" width="64" height="64" alt="eeshsaxena" /></a>
+  <a href="https://github.com/Osamaali313" title="Osamaali313"><img src="https://avatars.githubusercontent.com/u/86572800?v=4&s=128" width="64" height="64" alt="Osamaali313" /></a>
+  <a href="https://github.com/GouravSingal-code" title="GouravSingal-code"><img src="https://avatars.githubusercontent.com/u/60310438?v=4&s=128" width="64" height="64" alt="GouravSingal-code" /></a>
 </p>
 
 ## 🔗 Links

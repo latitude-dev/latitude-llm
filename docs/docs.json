@@ -90,13 +90,15 @@
         "group": "Overview",
         "pages": [
           "getting-started/introduction",
-          "getting-started/how-to-use-latitude"
+          "getting-started/how-to-use-latitude",
+          "getting-started/self-healing-agents"
         ]
       },
       {
         "group": "Getting Started",
         "pages": [
           "telemetry/start-tracing",
+          "telemetry/memory",
           {
             "group": "SDKs",
             "pages": [
@@ -133,6 +135,7 @@
               "telemetry/frameworks/vercel-ai-sdk",
               "telemetry/frameworks/vercel-ai-sdk-v7",
               "telemetry/frameworks/cloudflare-think",
+              "telemetry/frameworks/cloudflare-ai-gateway",
               "telemetry/frameworks/openai-agents",
               "telemetry/frameworks/google-adk",
               "telemetry/frameworks/langchain",
@@ -156,7 +159,8 @@
               "telemetry/claude-code",
               "telemetry/hermes",
               "telemetry/openclaw",
-              "telemetry/pi-coding-agent"
+              "telemetry/pi-coding-agent",
+              "telemetry/prime-intellect"
             ]
           }
         ]
@@ -168,6 +172,7 @@
           "observability/sessions",
           "observability/users",
           "observability/tools",
+          "observability/memory",
           "observability/traces",
           "observability/spans",
           "observability/tool-calls",
@@ -214,6 +219,7 @@
           "signals/create",
           "signals/management",
           "search/behaviours",
+          "experiments/overview",
           {
             "group": "Annotations",
             "pages": [

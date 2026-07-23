@@ -7,7 +7,7 @@ See also: [`agent-data-access.md`](agent-data-access.md) (the inbound counterpar
 ## Architecture
 
 ```
-SignalCreated / IncidentCreated (domain-events worker)
+SignalCreated / SignalRegressed / IncidentCreated (domain-events worker)
    ├──→ notifications:* (email / in-app / Slack)
    └──→ agent-dispatch:request
             │  config lookup, trigger/mute/guardrail gates, prompt snapshot
@@ -44,7 +44,7 @@ Settings → Integrations:
 2. Per-project dispatch config: enable, triggers, target mapping, guardrails
 3. Dispatch history audit log
 
-The settings UI exposes `signal.discovered` (new signal), `incident.opened` (escalating signal), and `monitor.incident` (threshold or escalating monitor) for hosted agent/webhook targets. Linear only exposes `signal.discovered` so it creates follow-up issues for new signals rather than every escalation. Muted signals/monitors suppress dispatch (same as notifications).
+The settings UI exposes `signal.discovered` (new signal), `incident.opened` (escalating signal), `signal.regressed` (a resolved signal started occurring again), and `monitor.incident` (threshold or escalating monitor) for hosted agent/webhook targets. Linear only exposes `signal.discovered` so it creates follow-up issues for new signals rather than every escalation. `signal.discovered` fires only for `origin = 'system'` signals (auto-discovered); hand-built `origin = 'user'` signals are skipped on creation — humans already chose to create them. Runtime conditions dispatch for any signal origin: `incident.opened` when the signal opens an incident, `signal.regressed` when a `SignalRegressed` claim reopens it. Muted, ignored, or resolved signals (and muted monitors) suppress dispatch (same as notifications) — resolved matters because a delayed request can land after the user archived the signal.
 
 ## Manual sends ("Send to")
 
@@ -54,6 +54,8 @@ The signal detail page has a **Send to** button (`signal-send-to.tsx`) with two 
 - **Send to integration** — behind the `agent-dispatch` flag; lists kinds with an enabled config for the project (`listSendToDestinations`) and runs `sendAgentDispatchUseCase` synchronously in the `sendSignalToIntegration` server fn with trigger `manual`.
 
 Manual sends keep the feature flag, config-enabled check, org RLS, and ledger idempotency (`<vendor>:<configId>:manual:<signalId>:<sendId>`; each click mints a new `sendId`), but deliberately bypass trigger subscription, signal mute, and guardrails — an explicit human click is its own approval. Transport failures are returned to the user without background retry.
+
+Once a signal has any ledger rows (`AgentDispatchRepository.listBySource` via the `listSignalAgentDispatches` server fn — signal or monitor, automatic or manual), the detail page swaps the plain **Send to** button for a **dispatch-history** button plus a **Send again to agent** dropdown (the same selector). The history button opens a popover listing that signal's dispatches — kind, trigger, status, relative time, and deep link — so a run can be correlated back to the signal that triggered it; a single dispatch labels the button with its target, multiple show a count.
 
 Guardrails: `maxDispatchesPerDay`, `cooldownMinutes` per config. The current UI uses defaults and does not expose these controls.
 

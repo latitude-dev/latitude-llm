@@ -245,6 +245,79 @@ describe("resolveAttributes", () => {
     })
   })
 
+  describe("agent name resolution", () => {
+    it("resolves from OTEL gen_ai.agent.name", () => {
+      const attrs: OtlpKeyValue[] = [strAttr("gen_ai.agent.name", "npc_actor")]
+      const result = resolveAttributes({ spanAttrs: attrs, statusCode: "unset" })
+      expect(result.agentName).toBe("npc_actor")
+    })
+
+    it("resolves from OpenAI Agents openai.agents.name", () => {
+      const attrs: OtlpKeyValue[] = [strAttr("openai.agents.name", "researcher")]
+      const result = resolveAttributes({ spanAttrs: attrs, statusCode: "unset" })
+      expect(result.agentName).toBe("researcher")
+    })
+
+    it("resolves from Claude Code subagent.name", () => {
+      const attrs: OtlpKeyValue[] = [strAttr("subagent.name", "Explore")]
+      const result = resolveAttributes({ spanAttrs: attrs, statusCode: "unset" })
+      expect(result.agentName).toBe("Explore")
+    })
+
+    it("resolves from Claude Code subagent.type", () => {
+      const attrs: OtlpKeyValue[] = [strAttr("subagent.type", "general-purpose")]
+      const result = resolveAttributes({ spanAttrs: attrs, statusCode: "unset" })
+      expect(result.agentName).toBe("general-purpose")
+    })
+
+    it("resolves from OpenClaw openclaw.subagent.label", () => {
+      const attrs: OtlpKeyValue[] = [strAttr("openclaw.subagent.label", "planner")]
+      const result = resolveAttributes({ spanAttrs: attrs, statusCode: "unset" })
+      expect(result.agentName).toBe("planner")
+    })
+
+    it("resolves from OpenClaw openclaw.agent.name", () => {
+      const attrs: OtlpKeyValue[] = [strAttr("openclaw.agent.name", "main-agent")]
+      const result = resolveAttributes({ spanAttrs: attrs, statusCode: "unset" })
+      expect(result.agentName).toBe("main-agent")
+    })
+
+    it("resolves from Latitude latitude.capture.name", () => {
+      const attrs: OtlpKeyValue[] = [strAttr("latitude.capture.name", "capture-agent")]
+      const result = resolveAttributes({ spanAttrs: attrs, statusCode: "unset" })
+      expect(result.agentName).toBe("capture-agent")
+    })
+
+    it("resolves the name half of Claude Code subagent.id as a last resort", () => {
+      const attrs: OtlpKeyValue[] = [strAttr("subagent.id", "Explore:ab6332237989040a9")]
+      const result = resolveAttributes({ spanAttrs: attrs, statusCode: "unset" })
+      expect(result.agentName).toBe("Explore")
+    })
+
+    it("prefers subagent.type over the id-embedded subagent.id name", () => {
+      const attrs: OtlpKeyValue[] = [
+        strAttr("subagent.id", "Explore:ab6332237989040a9"),
+        strAttr("subagent.type", "general-purpose"),
+      ]
+      const result = resolveAttributes({ spanAttrs: attrs, statusCode: "unset" })
+      expect(result.agentName).toBe("general-purpose")
+    })
+
+    it("prefers gen_ai.agent.name over lower-ranked candidates", () => {
+      const attrs: OtlpKeyValue[] = [
+        strAttr("subagent.type", "general-purpose"),
+        strAttr("gen_ai.agent.name", "npc_actor"),
+      ]
+      const result = resolveAttributes({ spanAttrs: attrs, statusCode: "unset" })
+      expect(result.agentName).toBe("npc_actor")
+    })
+
+    it("defaults to empty string when no candidate present", () => {
+      const result = resolveAttributes({ spanAttrs: [], statusCode: "unset" })
+      expect(result.agentName).toBe("")
+    })
+  })
+
   describe("response model resolution", () => {
     it("resolves from gen_ai.response.model", () => {
       const attrs: OtlpKeyValue[] = [strAttr("gen_ai.response.model", "gpt-4o-2024-05-13")]
@@ -340,15 +413,12 @@ describe("resolveAttributes", () => {
       }
     })
 
-    it("maps Vercel operation IDs (bare wrappers → invoke_agent, leaves → chat)", () => {
+    it("maps Vercel operation IDs (nested wrappers → agent_step, leaves → chat)", () => {
       const cases: [string, string][] = [
-        // Bare wrappers carry a lossy summary and end after their leaves —
-        // classified as inert wrappers so the rollup excludes them.
-        ["ai.generateText", "invoke_agent"],
-        ["ai.streamText", "invoke_agent"],
-        ["ai.generateObject", "invoke_agent"],
-        ["ai.streamObject", "invoke_agent"],
-        // Leaves hold the faithful per-call exchange.
+        ["ai.generateText", "agent_step"],
+        ["ai.streamText", "agent_step"],
+        ["ai.generateObject", "agent_step"],
+        ["ai.streamObject", "agent_step"],
         ["ai.generateText.doGenerate", "chat"],
         ["ai.streamText.doStream", "chat"],
         ["ai.generateObject.doGenerate", "chat"],
@@ -362,6 +432,15 @@ describe("resolveAttributes", () => {
         const attrs: OtlpKeyValue[] = [strAttr("ai.operationId", opId)]
         const result = resolveAttributes({ spanAttrs: attrs, statusCode: "unset" })
         expect(result.operation).toBe(expected)
+      }
+    })
+
+    it("maps a trace-root Vercel wrapper (no parent) → invoke_agent", () => {
+      const wrappers = ["ai.generateText", "ai.streamText", "ai.generateObject", "ai.streamObject"]
+      for (const opId of wrappers) {
+        const attrs: OtlpKeyValue[] = [strAttr("ai.operationId", opId)]
+        const result = resolveAttributes({ spanAttrs: attrs, statusCode: "unset", hasParent: false })
+        expect(result.operation).toBe("invoke_agent")
       }
     })
 

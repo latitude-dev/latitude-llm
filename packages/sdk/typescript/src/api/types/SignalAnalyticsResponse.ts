@@ -6,5 +6,7 @@ export interface SignalAnalyticsResponse {
     ongoing: Latitude.SignalAnalyticsOngoing;
     "new": Latitude.SignalAnalyticsNew;
     escalating: Latitude.SignalAnalyticsEscalating;
+    resolved: Latitude.SignalAnalyticsResolved;
+    ignored: Latitude.SignalAnalyticsIgnored;
     occurrences: Latitude.SignalAnalyticsOccurrences;
 }

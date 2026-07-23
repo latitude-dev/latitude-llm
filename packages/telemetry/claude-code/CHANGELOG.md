@@ -7,6 +7,43 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.0.14] - 2026-07-22
+
+### Fixed
+
+- **Memory spans now emit from git worktrees.** The hook derived the auto-memory directory as the transcript's sibling (`dirname(transcript)/memory`), but Claude Code keeps one memory store per repository under the **main worktree**, while a linked worktree's session transcript lives under that worktree's own project directory. The two paths differ, so every memory operation from a worktree session was silently skipped. The classifier now recognizes any `~/.claude/projects/<store>/memory/<record>` path under the shared projects root, setting `gen_ai.memory.store.id` to the owning `<store>` slug — so a worktree session writing the repo's main-worktree store is captured. Sessions run directly in the repo root are unaffected.
+
+## [0.0.13] - 2026-07-21
+
+### Added
+
+- **Memory observability for Claude Code auto memory.** Claude Code writes its own persistent [auto memory](https://code.claude.com/docs/en/memory) (per-repository markdown under `~/.claude/projects/<project>/memory/`) through ordinary `Read`/`Write`/`Edit` tools. The hook now emits a child memory-operation span under the `tool_execution` span whenever such a tool targets a file inside that directory, using the OpenTelemetry `gen_ai.memory.*` conventions — so auto memory shows up on Latitude's Memory page with per-record change history and diffs. `Write` → `upsert_memory`, `Edit`/`MultiEdit` → `update_memory`, `Read` → `search_memory`; `gen_ai.memory.store.id` is the `<project>` slug and `gen_ai.memory.record.id` is the file path within the memory dir. Edit bodies are read from disk at hook time (the tool call carries only a diff); subagent auto memory is covered via the same path.
+- `LATITUDE_CLAUDE_CODE_MEMORY` (default `1`) emits memory-operation spans; set it to `0` to disable them. `LATITUDE_CLAUDE_CODE_MEMORY_CONTENT` (default `1`) includes record bodies; set it to `0` to emit structure and counts only. Bodies also honor `LATITUDE_REDACT_ATTRIBUTES` via the `gen_ai.memory.records` key.
+
+## [0.0.12] - 2026-07-21
+
+### Fixed
+
+- **Oversized tool-definition lists no longer drop tool names.** When an `llm_request` span exceeded the byte budget, tool schemas were capped by keeping only the leading full entries (often just `Agent` / `Artifact` on real Claude Code sessions). Session `definedTools` then missed names like `WebSearch`, and the undeclared-tool flagger false-positived on successful calls. Capping now keeps every tool name (full schema when it fits, name-only stub otherwise).
+
+## [0.0.11] - 2026-07-16
+
+### Changed
+
+- The installer now writes the Stop-hook command with the `@latest` tag (`npx -y @latitude-data/claude-code-telemetry@latest`) instead of a bare package name. A bare `npx <pkg>` reuses whatever version the npx cache first fetched and never updates, so users could silently stay on an old build; `@latest` re-resolves the newest published version each run (a cheap etag-revalidated check, off the critical path thanks to `async: true`), so fixes ship without a re-install. Docs updated to match.
+- Re-running `install` now **upgrades** an existing Latitude Stop hook to the current command (and forces `async: true`) instead of no-opping when any hook is already present. Previously the installer left older hooks — the exact bare-`npx` installs this release targets — untouched, so `install` prints "Stop hook updated" and rewrites them in place.
+
+## [0.0.10] - 2026-07-14
+
+### Fixed
+
+- **Parallel subagents now each get their own trace subtree.** When one turn spawned several `Agent` subagents at once, only one `tool:Agent` span received a nested `interaction` — the others showed no children. The stitcher matched subagents to their parent `Agent` call by `promptId`, which parallel calls share, so they collapsed onto a single call. Subagents are now matched by the `toolUseId` recorded in each subagent's `.meta.json` (unique per invocation), with `promptId` kept as a fallback for older transcripts.
+- **A subagent's final `llm_request` is no longer dropped.** A subagent's transcript usually finishes flushing after its parent turn was already shipped (the final synthesis lands last), and the one-shot incremental read froze each subagent's offset before that row arrived, with no way to re-attach it. Subagents now emit as a standalone pass keyed off the parent `Agent` call's persisted span link: each subagent file is re-read every Stop and its spans are emitted **incrementally, exactly once** — a call once a later call closes it, and the trailing call plus interaction span once the file stops growing. Emitting each span once (rather than re-sending the whole subtree) keeps the additive `traces` rollup correct, since that view has no per-span dedup unlike the raw `spans` table.
+
+### Added
+
+- `subagent.name` attribute (the agent type, e.g. `Explore`) on subagent spans, alongside the existing `subagent.id` and `subagent.type`.
+
 ## [0.0.9] - 2026-06-18
 
 ### Added

@@ -2,43 +2,18 @@ import {
   AI,
   AI_GENERATE_TELEMETRY_SPAN_NAMES,
   AI_GENERATE_TELEMETRY_TAGS,
-  type AICredentialError,
-  type AIError,
   buildProjectScopedAiMetadata,
   resolveGenerationConfig,
 } from "@domain/ai"
-import {
-  LATITUDE_TELEMETRY_PROJECT_SLUGS,
-  OrganizationId,
-  ProjectId,
-  type RepositoryError,
-  TraceId,
-} from "@domain/shared"
-import { type TraceDetail, TraceRepository } from "@domain/spans"
+import { LATITUDE_TELEMETRY_PROJECT_SLUGS } from "@domain/shared"
+import type { TraceDetail } from "@domain/spans"
 import { Effect } from "effect"
 import { FLAGGER_DEFAULT_ANNOTATOR_MODEL } from "../constants.ts"
+import type { FlaggerConversation } from "../conversation.ts"
 import { getFlaggerStrategy } from "../flagger-strategies/index.ts"
 import { isRecord, iterMessageParts } from "../flagger-strategies/shared.ts"
 import { reflagSuppressionTags } from "../reflag.ts"
 import { flaggerAnnotatorOutputSchema } from "./flagger-annotator-contracts.ts"
-
-export interface RunFlaggerAnnotatorInput {
-  readonly organizationId: string
-  readonly projectId: string
-  readonly flaggerSlug: string
-  readonly traceId: string
-  readonly scoreId: string
-}
-
-export interface RunFlaggerAnnotatorResult {
-  readonly feedback: string
-  readonly traceCreatedAt: string
-  readonly sessionId: string | null
-  readonly simulationId: string | null
-  readonly messageIndex?: number | undefined
-}
-
-export type RunFlaggerAnnotatorError = RepositoryError | AIError | AICredentialError
 
 /**
  * Input for the pure annotator (no repository dependency).
@@ -53,6 +28,21 @@ export interface AnnotateTraceForFlaggerInput {
   readonly traceId: string
   readonly scoreId: string
   readonly trace: TraceDetail
+}
+
+export interface AnnotateConversationForFlaggerInput {
+  readonly organizationId: string
+  readonly projectId: string
+  readonly flaggerSlug: string
+  readonly scoreId: string
+  readonly conversation: FlaggerConversation
+  readonly summary: {
+    readonly durationNs: number
+    readonly spanCount: number
+    readonly errorCount: number
+  }
+  readonly traceId?: string | undefined
+  readonly sessionId?: string | undefined
 }
 
 const ANNOTATOR_SYSTEM_PROMPT_TEMPLATE = `
@@ -246,46 +236,28 @@ const formatConversationForAnnotator = (messages: readonly { role: string; parts
   return truncateMiddle(lines.join("\n"), ANNOTATOR_TRANSCRIPT_MAX_CHARS, "chars from the middle of the transcript")
 }
 
-const loadTraceDetail = (input: RunFlaggerAnnotatorInput) =>
-  Effect.gen(function* () {
-    const traceRepository = yield* TraceRepository
-
-    return yield* traceRepository.findByTraceId({
-      organizationId: OrganizationId(input.organizationId),
-      projectId: ProjectId(input.projectId),
-      traceId: TraceId(input.traceId),
-    })
-  })
-
-/**
- * Draft annotation feedback from an already-loaded trace.
- *
- * Pure annotator — no repository dependency, no data loading. Callers that
- * already hold a `TraceDetail` (eval harnesses, experiment runners) use this
- * directly; production paths use {@link runFlaggerAnnotatorUseCase}, which
- * fetches the trace and delegates here.
- */
-export const annotateTraceForFlaggerUseCase = Effect.fn("flaggers.annotateTraceForFlagger")(function* (
-  input: AnnotateTraceForFlaggerInput,
+// Pure annotator — no repository dependency, no data loading.
+export const annotateConversationForFlaggerUseCase = Effect.fn("flaggers.annotateConversationForFlagger")(function* (
+  input: AnnotateConversationForFlaggerInput,
 ) {
   const ai = yield* AI
 
   const systemPrompt = buildAnnotatorSystemPrompt(input.flaggerSlug)
 
   const conversationText =
-    input.trace.allMessages.length > 0
-      ? formatConversationForAnnotator(input.trace.allMessages)
+    input.conversation.allMessages.length > 0
+      ? formatConversationForAnnotator(input.conversation.allMessages)
       : "<no conversation messages available>"
 
-  const durationSeconds = input.trace.durationNs / 1_000_000_000
+  const durationSeconds = input.summary.durationNs / 1_000_000_000
 
   const prompt = `Provided inputs only — use these facts and the conversation below; do not invent details.
 
 Trace summary (telemetry aggregates; cite only when relevant):
 - Approximate duration: ${durationSeconds.toFixed(durationSeconds < 10 ? 2 : 1)}s
-- Span count: ${input.trace.spanCount}
-- Error count: ${input.trace.errorCount}
-- Trace messages (raw): ${input.trace.allMessages.length}
+- Span count: ${input.summary.spanCount}
+- Error count: ${input.summary.errorCount}
+- Trace messages (raw): ${input.conversation.allMessages.length}
 
 Conversation transcript for annotation:
 - This is a compact, normalized rendering of the trace.
@@ -307,37 +279,48 @@ Return structured data with a single "feedback" field per the system instruction
       project: LATITUDE_TELEMETRY_PROJECT_SLUGS.flaggers,
       // Same recursion break as classify: a draft for a flagger-generated trace
       // must not itself be flagged.
-      tags: [...AI_GENERATE_TELEMETRY_TAGS.flaggerDraft, ...reflagSuppressionTags(input.trace.tags)],
+      tags: [...AI_GENERATE_TELEMETRY_TAGS.flaggerDraft, ...reflagSuppressionTags(input.conversation.tags)],
       metadata: buildProjectScopedAiMetadata(
         { organizationId: input.organizationId, projectId: input.projectId },
-        { traceId: input.traceId, flaggerSlug: input.flaggerSlug, scoreId: input.scoreId },
+        {
+          ...(input.traceId ? { traceId: input.traceId } : {}),
+          ...(input.sessionId ? { sessionId: input.sessionId } : {}),
+          flaggerSlug: input.flaggerSlug,
+          scoreId: input.scoreId,
+        },
       ),
     },
   })
 
   return {
     feedback: result.object.feedback,
-    traceCreatedAt: input.trace.startTime.toISOString(),
-    sessionId: input.trace.sessionId,
-    simulationId: input.trace.simulationId === "" ? null : input.trace.simulationId,
     messageIndex: result.object.messageIndex,
   }
 })
 
-/**
- * Load the trace via the repository, then draft its annotation.
- *
- * Production entry point — used by the Temporal activity in
- * `flaggerWorkflow` after a match.
- */
-export const runFlaggerAnnotatorUseCase = Effect.fn("flaggers.runFlaggerAnnotator")(function* (
-  input: RunFlaggerAnnotatorInput,
+// Trace-shaped adapter for eval harnesses and tests.
+export const annotateTraceForFlaggerUseCase = Effect.fn("flaggers.annotateTraceForFlagger")(function* (
+  input: AnnotateTraceForFlaggerInput,
 ) {
-  yield* Effect.annotateCurrentSpan("flagger.organizationId", input.organizationId)
-  yield* Effect.annotateCurrentSpan("flagger.projectId", input.projectId)
-  yield* Effect.annotateCurrentSpan("flagger.traceId", input.traceId)
-  yield* Effect.annotateCurrentSpan("flagger.flaggerSlug", input.flaggerSlug)
+  const result = yield* annotateConversationForFlaggerUseCase({
+    organizationId: input.organizationId,
+    projectId: input.projectId,
+    flaggerSlug: input.flaggerSlug,
+    scoreId: input.scoreId,
+    conversation: input.trace,
+    summary: {
+      durationNs: input.trace.durationNs,
+      spanCount: input.trace.spanCount,
+      errorCount: input.trace.errorCount,
+    },
+    traceId: input.traceId,
+  })
 
-  const trace = yield* loadTraceDetail(input)
-  return yield* annotateTraceForFlaggerUseCase({ ...input, trace })
+  return {
+    feedback: result.feedback,
+    traceCreatedAt: input.trace.startTime.toISOString(),
+    sessionId: input.trace.sessionId,
+    simulationId: input.trace.simulationId === "" ? null : input.trace.simulationId,
+    messageIndex: result.messageIndex,
+  }
 })

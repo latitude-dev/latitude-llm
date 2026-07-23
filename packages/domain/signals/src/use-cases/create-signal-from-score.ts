@@ -1,13 +1,15 @@
 import { resolveEmbeddingConfig } from "@domain/ai"
 import { OutboxEventWriter } from "@domain/events"
+import { ProjectRepository } from "@domain/projects"
 import { type Score, ScoreRepository } from "@domain/scores"
-import { generateId, generateSlug, ProjectId, type RepositoryError, ScoreId, SqlClient } from "@domain/shared"
+import { generateId, type NotFoundError, ProjectId, type RepositoryError, ScoreId, SqlClient } from "@domain/shared"
 import { Effect } from "effect"
 import type { Signal, SignalSource } from "../entities/signal.ts"
 import type { CheckEligibilityError } from "../errors.ts"
 import { ScoreAlreadyOwnedBySignalError } from "../errors.ts"
 import { createSignalCentroid, updateSignalCentroid } from "../helpers.ts"
 import { SignalRepository } from "../ports/signal-repository.ts"
+import { generateSignalSlug, type SignalSlugGenerationError } from "../slug.ts"
 import { checkEligibilityUseCase } from "./check-eligibility.ts"
 import type { GenerateSignalDetailsError } from "./generate-signal-details.ts"
 import { generateSignalDetailsUseCase } from "./generate-signal-details.ts"
@@ -24,7 +26,12 @@ export type CreateSignalFromScoreResult = {
   readonly action: "created" | "already-assigned"
 }
 
-export type CreateSignalFromScoreError = CheckEligibilityError | GenerateSignalDetailsError | RepositoryError
+export type CreateSignalFromScoreError =
+  | CheckEligibilityError
+  | GenerateSignalDetailsError
+  | RepositoryError
+  | NotFoundError
+  | SignalSlugGenerationError
 
 type LoadedEligibleScoreResult =
   | {
@@ -110,6 +117,9 @@ const buildNewSignalFromScore = ({
     priority: null,
     centroid,
     clusteredAt: centroid.clusteredAt,
+    resolvedAt: null,
+    ignoredAt: null,
+    regressedAt: null,
     mutedAt: null,
     createdAt: assignedAt,
     updatedAt: assignedAt,
@@ -147,6 +157,7 @@ export const createSignalFromScoreUseCase = (input: CreateSignalFromScoreInput) 
         const signalRepository = yield* SignalRepository
         const scoreRepository = yield* ScoreRepository
         const outboxEventWriter = yield* OutboxEventWriter
+        const projectRepository = yield* ProjectRepository
 
         const scoreResult = yield* loadEligibleScoreOrCurrentOwner(input)
         if (scoreResult.action === "already-assigned") {
@@ -158,12 +169,13 @@ export const createSignalFromScoreUseCase = (input: CreateSignalFromScoreInput) 
 
         const score = scoreResult.score
         const assignedAt = new Date()
-        // Slug must be unique per (org, project). Re-derived inside the
+        // Slug must be unique per (org, project). Generated inside the
         // transaction so it's contention-aware (previous slugs in this project
         // are visible to the existence check) and so we don't have to retry on
         // a unique-constraint conflict.
-        const slug = yield* generateSlug({
-          name: signalDetails.name,
+        const project = yield* projectRepository.findById(score.projectId)
+        const slug = yield* generateSignalSlug({
+          projectSlug: project.slug,
           count: (slug) => signalRepository.countBySlug({ projectId: ProjectId(score.projectId), slug }),
         })
         const issue = buildNewSignalFromScore({
@@ -221,5 +233,6 @@ export const createSignalFromScoreUseCase = (input: CreateSignalFromScoreInput) 
     return assignment
   }).pipe(Effect.withSpan("issues.createSignalFromScore")) as Effect.Effect<
     CreateSignalFromScoreResult,
-    CreateSignalFromScoreError
+    CreateSignalFromScoreError,
+    ProjectRepository
   >

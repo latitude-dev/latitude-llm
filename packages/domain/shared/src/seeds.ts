@@ -124,6 +124,8 @@ export const SEED_WARRANTY_ARCHIVED_EVALUATION_HASH = "bb11cc22dd33ee44ff55aa66b
 export const SEED_COMBINATION_EVALUATION_HASH = "cc11dd22ee33ff44aa55bb66cc77dd88ee99ff00"
 export const SEED_RETURNS_EVALUATION_HASH = "dd11ee22ff33aa44bb55cc66dd77ee88ff99aa00"
 export const SEED_ACCESS_EVALUATION_HASH = "ee11ff22aa33bb44cc55dd66ee77ff88aa99bb00"
+export const SEED_GROUNDING_EVALUATION_HASH = "ff11aa22bb33cc44dd55ee66ff77aa88bb99cc00"
+export const SEED_RECALL_EVALUATION_HASH = "ab12cd34ef56ab78cd90ef12ab34cd56ef78ab90"
 
 // ---------------------------------------------------------------------------
 // Simulations
@@ -285,6 +287,15 @@ export const SEED_OWNER_EMAIL = "owner@acme.com"
 export const SEED_ADMIN_EMAIL = "admin@acme.com"
 export const SEED_PROJECT_NAME = "Support Agent"
 export const SEED_PROJECT_SLUG = "default-project"
+
+// QA fixture: a project whose traces are ALL older than the 30-day default window, so it has
+// `first_trace_at` set but zero recent spans — the exact shape that used to trip the "Waiting for
+// your first trace" onboarding. Seed it (`pnpm seed`) and open `/projects/old-traces-qa`.
+export const SEED_OLD_TRACES_QA_PROJECT_ID = ProjectId("oldtracesqaproject000001")
+export const SEED_OLD_TRACES_QA_PROJECT_NAME = "Old traces (QA)"
+export const SEED_OLD_TRACES_QA_PROJECT_SLUG = "old-traces-qa"
+export const SEED_OLD_TRACES_QA_FROM_DAYS_AGO = 45
+export const SEED_OLD_TRACES_QA_TO_DAYS_AGO = 31
 export const SEED_API_KEY_TOKEN = "lat_seed_default_api_key_token"
 
 // Dogfood projects — one per internal AI feature, mirroring
@@ -320,6 +331,11 @@ export const SEED_LATITUDE_TAXONOMY_PROJECT_SLUG = LATITUDE_TELEMETRY_PROJECT_SL
 export const SEED_LATITUDE_SIGNAL_GENERATION_PROJECT_ID = ProjectId("signalgen008afjbcb7gzwlh")
 export const SEED_LATITUDE_SIGNAL_GENERATION_PROJECT_NAME = "Latitude Signal Generation"
 export const SEED_LATITUDE_SIGNAL_GENERATION_PROJECT_SLUG = LATITUDE_TELEMETRY_PROJECT_SLUGS.signalGeneration
+
+export const SEED_LATITUDE_CONVERSATION_INTELLIGENCE_PROJECT_ID = ProjectId("convintel009afjbcb7gzwli")
+export const SEED_LATITUDE_CONVERSATION_INTELLIGENCE_PROJECT_NAME = "Latitude Conversation Intelligence"
+export const SEED_LATITUDE_CONVERSATION_INTELLIGENCE_PROJECT_SLUG =
+  LATITUDE_TELEMETRY_PROJECT_SLUGS.conversationIntelligence
 
 // ---------------------------------------------------------------------------
 // Test Mode — second org (empty-sandbox state) and Acme sandboxes

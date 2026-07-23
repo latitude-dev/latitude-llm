@@ -6,16 +6,20 @@ import {
   Icon,
   Input,
   Modal,
+  Switch,
   Tabs,
+  Text,
   Tooltip,
   toast,
   useMountEffect,
   useValueWithDefault,
 } from "@repo/ui"
 import { eq } from "@tanstack/react-db"
-import { createFileRoute, redirect, useParams } from "@tanstack/react-router"
+import { createFileRoute, useParams } from "@tanstack/react-router"
 import { useProjectFlaggers } from "../../../../../domains/flaggers/flaggers.collection.ts"
+import { defaultProjectTimeWindowDays } from "../../../../../domains/projects/default-time-window.ts"
 import { useProjectsCollection } from "../../../../../domains/projects/projects.collection.ts"
+import { useAnalyticsTimeWindow } from "../../../../../domains/projects/use-analytics-time-window.ts"
 import { BreadcrumbText } from "../../../-components/breadcrumb-ui.tsx"
 
 function SignalsBreadcrumb() {
@@ -47,7 +51,87 @@ function SignalsBreadcrumb() {
   )
 }
 
-import { ActivityIcon, ArchiveIcon, DownloadIcon, PauseIcon, PlayIcon, PlusIcon, SearchIcon } from "lucide-react"
+import {
+  ActivityIcon,
+  ArchiveIcon,
+  BellIcon,
+  BellOffIcon,
+  CheckIcon,
+  DownloadIcon,
+  EyeIcon,
+  EyeOffIcon,
+  PlusIcon,
+  SearchIcon,
+  UndoIcon,
+} from "lucide-react"
+
+type BulkLifecycleAction = "resolve" | "unresolve" | "ignore" | "unignore" | "mute" | "unmute"
+
+const BULK_LIFECYCLE_VERBS: Record<BulkLifecycleAction, string> = {
+  resolve: "resolved",
+  unresolve: "reopened",
+  ignore: "ignored",
+  unignore: "unignored",
+  mute: "muted",
+  unmute: "unmuted",
+}
+
+const BULK_LIFECYCLE_MODAL: Record<
+  BulkLifecycleAction,
+  {
+    readonly title: string
+    readonly label: string
+    readonly icon: typeof CheckIcon
+    readonly destructive: boolean
+    readonly description: (target: string) => string
+  }
+> = {
+  resolve: {
+    title: "Resolve signals",
+    label: "Resolve",
+    icon: CheckIcon,
+    destructive: false,
+    description: (target) =>
+      `Mark ${target} as resolved. If a signal starts occurring again we will alert you and promote it as regressed.`,
+  },
+  unresolve: {
+    title: "Unresolve signals",
+    label: "Unresolve",
+    icon: UndoIcon,
+    destructive: false,
+    description: (target) => `Reopen ${target}. New occurrences won't mark them as regressed.`,
+  },
+  ignore: {
+    title: "Ignore signals",
+    label: "Ignore",
+    icon: EyeOffIcon,
+    destructive: true,
+    description: (target) => `Mark ${target} as ignored. We won't monitor or alert you about new occurrences anymore.`,
+  },
+  unignore: {
+    title: "Unignore signals",
+    label: "Unignore",
+    icon: EyeIcon,
+    destructive: false,
+    description: (target) => `Stop ignoring ${target}. New occurrences will surface them again.`,
+  },
+  mute: {
+    title: "Mute signals",
+    label: "Mute",
+    icon: BellOffIcon,
+    destructive: true,
+    description: (target) =>
+      `Silence ${target}. New occurrences still start incidents, but they won't send notifications.`,
+  },
+  unmute: {
+    title: "Unmute signals",
+    label: "Unmute",
+    icon: BellIcon,
+    destructive: false,
+    description: (target) => `Unmute ${target}. New occurrences will be notified again.`,
+  },
+}
+
 import { useCallback, useEffect, useMemo, useState } from "react"
 import { invalidateSignalQueries, useSignals } from "../../../../../domains/signals/signals.collection.ts"
 import {
@@ -72,7 +156,6 @@ import { type SignalsTableSorting, SignalsView } from "./-components/signals-vie
 
 const DEFAULT_SORTING: SignalsTableSorting = { column: "lastSeen", direction: "desc" }
 const SIGNAL_SEARCH_DEBOUNCE_MS = 300
-const DEFAULT_SIGNALS_RANGE_SECONDS = 30 * 24 * 60 * 60
 const SORT_COLUMNS = [
   "lastSeen",
   "occurrences",
@@ -121,21 +204,9 @@ function serializeAssignees(tokens: readonly string[]): string {
 }
 
 export const Route = createFileRoute("/_authenticated/projects/$projectSlug/signals/")({
-  // Preserve every list search param (lifecycle/time/search/sort live in the URL via
-  // `useParamState`, not here); we only inspect `signalId`/legacy `issueId` so the drawer
-  // deep link — still live in already-sent emails/Slack messages — redirects to the full page.
+  // List search params (lifecycle/time/search/sort) live in the URL via `useParamState`,
+  // so keep a permissive passthrough rather than a typed schema.
   validateSearch: (search: Record<string, unknown>): Record<string, unknown> => search,
-  beforeLoad: ({ params, search }) => {
-    const signalId = search.signalId ?? search.issueId
-    if (typeof signalId === "string" && signalId.length > 0) {
-      const example = search.example
-      throw redirect({
-        to: "/projects/$projectSlug/signals/$signalId",
-        params: { projectSlug: params.projectSlug, signalId },
-        ...(typeof example === "string" && example.length > 0 ? { search: { example } } : {}),
-      })
-    }
-  },
   staticData: {
     breadcrumb: SignalsBreadcrumb,
   },
@@ -147,8 +218,11 @@ function SignalsPage() {
   const [lifecycleGroup, setLifecycleGroup] = useParamState("signalsLifecycle", "active", {
     validate: (value): value is "active" | "archived" => value === "active" || value === "archived",
   })
-  const [timeFrom, setTimeFrom] = useParamState("signalsTimeFrom", "")
-  const [timeTo, setTimeTo] = useParamState("signalsTimeTo", "")
+  const tw = useAnalyticsTimeWindow({
+    project,
+    fromKey: "signalsTimeFrom",
+    toKey: "signalsTimeTo",
+  })
   const [assigneesParam, setAssigneesParam] = useParamState("signalsAssignees", "")
   const [searchQuery, setSearchQuery] = useParamState("signalsSearch", "")
   const [searchInput, setSearchInput] = useValueWithDefault(searchQuery)
@@ -161,7 +235,8 @@ function SignalsPage() {
   const [selectionState, setSelectionState] = useState<SelectionState<string>>(EMPTY_SELECTION)
   const [exportModalOpen, setExportModalOpen] = useState(false)
   const [exporting, setExporting] = useState(false)
-  const [bulkMuteModalOpen, setBulkMuteModalOpen] = useState(false)
+  const [bulkLifecycleAction, setBulkLifecycleAction] = useState<BulkLifecycleAction | null>(null)
+  const [bulkKeepMonitoring, setBulkKeepMonitoring] = useState(true)
   const [bulkActionLoading, setBulkActionLoading] = useState(false)
   const [builderOpen, setBuilderOpen] = useState(false)
   const [builderInitialFilters, setBuilderInitialFilters] = useState<FilterSet | null>(null)
@@ -194,18 +269,9 @@ function SignalsPage() {
     [searchInput, searchQuery, setSearchQuery],
   )
 
-  const timeRange = useMemo(() => {
-    const toMs = timeTo ? Date.parse(timeTo) : Date.now()
-    const fromMs = timeFrom ? Date.parse(timeFrom) : toMs - DEFAULT_SIGNALS_RANGE_SECONDS * 1000
-    return {
-      fromIso: new Date(fromMs).toISOString(),
-      toIso: new Date(toMs).toISOString(),
-    }
-  }, [timeFrom, timeTo])
-
   useEffect(() => {
     setFocusedSignalId(undefined)
-  }, [lifecycleGroup, searchQuery, rawSorting, assigneesParam, timeFrom, timeTo])
+  }, [lifecycleGroup, searchQuery, rawSorting, assigneesParam, tw.timeFrom, tw.timeTo])
 
   const assigneeIds = useMemo(() => parseAssignees(assigneesParam), [assigneesParam])
   const setAssigneeIds = useCallback(
@@ -231,7 +297,8 @@ function SignalsPage() {
     sorting,
     ...(assigneeIds.length > 0 ? { assigneeIds } : {}),
     ...(searchQuery ? { searchQuery } : {}),
-    ...(timeRange ? { timeRange } : {}),
+    timeRange: tw.listRange,
+    histogramMaxSpanDays: defaultProjectTimeWindowDays(project),
   })
 
   // While a filter/sort change is in flight we hide the (now stale) previous
@@ -266,7 +333,7 @@ function SignalsPage() {
           },
           ...(assigneeIds.length > 0 ? { assigneeIds: [...assigneeIds] } : {}),
           ...(searchQuery ? { searchQuery } : {}),
-          ...(timeRange ? { timeRange } : {}),
+          timeRange: tw.listRange,
         },
       })
       toast({
@@ -283,54 +350,58 @@ function SignalsPage() {
     } finally {
       setExporting(false)
     }
-  }, [lifecycleGroup, project.id, searchQuery, selection, sorting.column, sorting.direction, timeRange])
+  }, [lifecycleGroup, project.id, searchQuery, selection, sorting.column, sorting.direction, tw.listRange])
 
-  const handleBulkMute = useCallback(async () => {
-    const bulkSelection = selection.bulkSelection
-    if (!bulkSelection) return
+  const handleBulkLifecycle = useCallback(
+    async (command: BulkLifecycleAction, keepMonitoring?: boolean) => {
+      const bulkSelection = selection.bulkSelection
+      if (!bulkSelection) return
 
-    setBulkActionLoading(true)
-    try {
-      const result = await applyBulkSignalLifecycleAction({
-        data: {
-          projectId: project.id,
-          selection: bulkSelection,
-          command: archived ? "unmute" : "mute",
-          lifecycleGroup,
-          sort: {
-            field: sorting.column,
-            direction: sorting.direction,
+      setBulkActionLoading(true)
+      try {
+        const result = await applyBulkSignalLifecycleAction({
+          data: {
+            projectId: project.id,
+            selection: bulkSelection,
+            command,
+            ...(command === "resolve" && keepMonitoring !== undefined ? { keepMonitoring } : {}),
+            lifecycleGroup,
+            sort: {
+              field: sorting.column,
+              direction: sorting.direction,
+            },
+            ...(assigneeIds.length > 0 ? { assigneeIds: [...assigneeIds] } : {}),
+            ...(searchQuery ? { searchQuery } : {}),
+            timeRange: tw.listRange,
           },
-          ...(assigneeIds.length > 0 ? { assigneeIds: [...assigneeIds] } : {}),
-          ...(searchQuery ? { searchQuery } : {}),
-          ...(timeRange ? { timeRange } : {}),
-        },
-      })
-      const changedCount = result.items.filter((item) => item.changed).length
-      const verb = archived ? "unmuted" : "muted"
-      await invalidateSignalQueries(project.id)
-      toast({
-        description:
-          changedCount === 0
-            ? `No signals were ${verb}.`
-            : changedCount === 1
-              ? `1 signal ${verb}.`
-              : `${changedCount} signals ${verb}.`,
-      })
-      selection.clearSelections()
-      setBulkMuteModalOpen(false)
-    } catch (error) {
-      toast({
-        variant: "destructive",
-        description: toUserMessage(error),
-      })
-    } finally {
-      setBulkActionLoading(false)
-    }
-  }, [archived, lifecycleGroup, project.id, searchQuery, selection, sorting.column, sorting.direction, timeRange])
+        })
+        const changedCount = result.items.filter((item) => item.changed).length
+        const verb = BULK_LIFECYCLE_VERBS[command]
+        await invalidateSignalQueries(project.id)
+        toast({
+          description:
+            changedCount === 0
+              ? `No signals were ${verb}.`
+              : changedCount === 1
+                ? `1 signal ${verb}.`
+                : `${changedCount} signals ${verb}.`,
+        })
+        selection.clearSelections()
+        setBulkLifecycleAction(null)
+      } catch (error) {
+        toast({
+          variant: "destructive",
+          description: toUserMessage(error),
+        })
+      } finally {
+        setBulkActionLoading(false)
+      }
+    },
+    [assigneeIds, lifecycleGroup, project.id, searchQuery, selection, sorting.column, sorting.direction, tw.listRange],
+  )
 
   const hasActiveFilters =
-    lifecycleGroup !== "active" || searchQuery !== "" || Boolean(timeFrom || timeTo) || assigneeIds.length > 0
+    lifecycleGroup !== "active" || searchQuery !== "" || tw.hasExplicitRange || assigneeIds.length > 0
   // Derived from the un-substituted data so a placeholder reload (which forces
   // `issues` to []) does not falsely trigger the empty state.
   const hasNoSignals = !hasAnySignals && !hasActiveFilters
@@ -372,12 +443,9 @@ function SignalsPage() {
           <Layout.ActionsRow>
             <Layout.ActionRowItem>
               <TimeFilterDropdown
-                startTimeFrom={timeFrom || timeRange.fromIso}
-                {...(timeTo ? { startTimeTo: timeTo } : {})}
-                onChange={(from, to) => {
-                  setTimeFrom(from ?? "")
-                  setTimeTo(to ?? "")
-                }}
+                {...(tw.pickerStartFrom ? { startTimeFrom: tw.pickerStartFrom } : {})}
+                {...(tw.pickerStartTo ? { startTimeTo: tw.pickerStartTo } : {})}
+                onChange={tw.onTimeChange}
               />
             </Layout.ActionRowItem>
             <Layout.ActionRowItem>
@@ -410,17 +478,37 @@ function SignalsPage() {
                 active={lifecycleGroup}
                 onSelect={(value) => setLifecycleGroup(value)}
               />
-              <Button size="sm" onClick={() => openCreate(null)}>
+              <Button onClick={() => openCreate(null)}>
                 <Icon icon={PlusIcon} size="sm" />
-                New signal
+                Signal
               </Button>
             </Layout.ActionRowItem>
           </Layout.ActionsRow>
         </Layout.Actions>
         {selection.selectedCount > 0 && (
           <div className="flex items-center gap-2 px-6">
-            <Button variant="outline" size="sm" onClick={() => setBulkMuteModalOpen(true)} disabled={bulkActionLoading}>
-              <Icon icon={archived ? PlayIcon : PauseIcon} size="sm" />
+            {(archived ? (["unresolve", "unignore"] as const) : (["resolve", "ignore"] as const)).map((action) => (
+              <Button
+                key={action}
+                variant="outline"
+                size="sm"
+                onClick={() => {
+                  if (action === "resolve") setBulkKeepMonitoring(true)
+                  setBulkLifecycleAction(action)
+                }}
+                disabled={bulkActionLoading}
+              >
+                <Icon icon={BULK_LIFECYCLE_MODAL[action].icon} size="sm" />
+                {BULK_LIFECYCLE_MODAL[action].label} ({selection.selectedCount.toLocaleString()})
+              </Button>
+            ))}
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setBulkLifecycleAction(archived ? "unmute" : "mute")}
+              disabled={bulkActionLoading}
+            >
+              <Icon icon={archived ? BellIcon : BellOffIcon} size="sm" />
               {archived ? "Unmute" : "Mute"} ({selection.selectedCount.toLocaleString()})
             </Button>
             <Button variant="outline" size="sm" onClick={() => setExportModalOpen(true)} disabled={exporting}>
@@ -435,10 +523,8 @@ function SignalsPage() {
             projectSlug={project.slug}
             analytics={analytics}
             isLoading={isAnalyticsLoading}
-            onRangeSelect={(range) => {
-              setTimeFrom(range?.from ?? "")
-              setTimeTo(range?.to ?? "")
-            }}
+            isAllTime={tw.isAllTime}
+            onRangeSelect={tw.onBrushSelect}
           />
         </div>
         <SignalsView
@@ -454,7 +540,7 @@ function SignalsPage() {
           projectSlug={project.slug}
           focusedSignalId={focusedSignalId}
           onFocusedSignalChange={setFocusedSignalId}
-          keyboardNavEnabled={!builderOpen && !exportModalOpen && !bulkMuteModalOpen}
+          keyboardNavEnabled={!builderOpen && !exportModalOpen && bulkLifecycleAction === null}
         />
         {selection.bulkSelection && (
           <ExportConfirmationModal
@@ -467,31 +553,58 @@ function SignalsPage() {
           />
         )}
 
-        <Modal
-          open={bulkMuteModalOpen}
-          onOpenChange={setBulkMuteModalOpen}
-          dismissible
-          title={archived ? "Unmute signals" : "Mute signals"}
-          description={
-            archived
-              ? `Unmute ${selection.selectedCount === 1 ? "this signal" : `${selection.selectedCount} signals`}. New occurrences can trigger notifications again.`
-              : `Mute ${selection.selectedCount === 1 ? "this signal" : `${selection.selectedCount} signals`}. New occurrences will not trigger signal notifications.`
-          }
-          footer={
-            <>
-              <CloseTrigger />
-              <Button
-                {...(archived ? {} : { variant: "destructive" as const })}
-                onClick={() => void handleBulkMute()}
-                disabled={bulkActionLoading}
-              >
-                <Icon icon={archived ? PlayIcon : PauseIcon} size="sm" />
-                {archived ? "Unmute" : "Mute"}{" "}
-                {selection.selectedCount === 1 ? "Signal" : `${selection.selectedCount} Signals`}
-              </Button>
-            </>
-          }
-        />
+        {bulkLifecycleAction !== null ? (
+          <Modal
+            open
+            onOpenChange={(open) => {
+              if (!open) setBulkLifecycleAction(null)
+            }}
+            dismissible
+            title={BULK_LIFECYCLE_MODAL[bulkLifecycleAction].title}
+            description={BULK_LIFECYCLE_MODAL[bulkLifecycleAction].description(
+              selection.selectedCount === 1 ? "this signal" : `${selection.selectedCount} signals`,
+            )}
+            footer={
+              <>
+                <CloseTrigger />
+                <Button
+                  {...(BULK_LIFECYCLE_MODAL[bulkLifecycleAction].destructive
+                    ? { variant: "destructive" as const }
+                    : {})}
+                  onClick={() =>
+                    void handleBulkLifecycle(
+                      bulkLifecycleAction,
+                      bulkLifecycleAction === "resolve" ? bulkKeepMonitoring : undefined,
+                    )
+                  }
+                  disabled={bulkActionLoading}
+                >
+                  <Icon icon={BULK_LIFECYCLE_MODAL[bulkLifecycleAction].icon} size="sm" />
+                  {BULK_LIFECYCLE_MODAL[bulkLifecycleAction].label}{" "}
+                  {selection.selectedCount === 1 ? "Signal" : `${selection.selectedCount} Signals`}
+                </Button>
+              </>
+            }
+          >
+            {bulkLifecycleAction === "resolve" ? (
+              <div className="flex items-start gap-3">
+                <Switch
+                  checked={bulkKeepMonitoring}
+                  onCheckedChange={setBulkKeepMonitoring}
+                  disabled={bulkActionLoading}
+                />
+                <div className="flex flex-col gap-1">
+                  <Text.H6>Keep evaluating these signals</Text.H6>
+                  <Text.H6 color="foregroundMuted">
+                    {bulkKeepMonitoring
+                      ? "Their evaluations keep running so regressions reopen them."
+                      : "Their evaluations will be archived; regressions won't be detected."}
+                  </Text.H6>
+                </div>
+              </div>
+            ) : null}
+          </Modal>
+        ) : null}
 
         {builderOpen ? (
           <SignalBuilderModal

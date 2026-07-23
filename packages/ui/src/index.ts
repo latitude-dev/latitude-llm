@@ -5,6 +5,7 @@ export {
   AgentTextarea,
   type AgentTextareaProps,
 } from "./components/agent-textarea/agent-textarea.tsx"
+export { AnimatedBorder } from "./components/agent-textarea/animated-border.tsx"
 export { useStagedStatus } from "./components/agent-textarea/use-staged-status.ts"
 export { Alert } from "./components/alert/index.tsx"
 export {
@@ -27,6 +28,7 @@ export {
   GitHubIcon,
   GoogleIcon,
   LatitudeLogo,
+  LatitudeWordmark,
 } from "./components/brand-icons/index.tsx"
 export {
   Button,
@@ -94,6 +96,10 @@ export {
   type CodeBlockControlsProps,
 } from "./components/code-block/code-block-controls.tsx"
 export {
+  CodeDiff,
+  type CodeDiffProps,
+} from "./components/code-block/code-diff.tsx"
+export {
   Combobox,
   ComboboxChip,
   ComboboxChips,
@@ -101,6 +107,8 @@ export {
   ComboboxCollection,
   ComboboxContent,
   ComboboxEmpty,
+  ComboboxFooterAction,
+  type ComboboxFooterActionProps,
   ComboboxGroup,
   ComboboxInput,
   ComboboxItem,
@@ -174,9 +182,11 @@ export { Message } from "./components/genai-conversation/message.tsx"
 export {
   Part,
   ReasoningGroup,
+  type SubagentToolCallInfo,
   type ToolCallResult,
 } from "./components/genai-conversation/part.tsx"
 export { CollapsibleBlock } from "./components/genai-conversation/parts/collapsible-block.tsx"
+export { SubagentCard, type SubagentCardProps } from "./components/genai-conversation/parts/subagent-card.tsx"
 export {
   type FirstMatchHint,
   type HighlightRange,
@@ -205,6 +215,11 @@ export type {
 } from "./components/infinite-table/types.ts"
 export { Input, type InputProps } from "./components/input/input.tsx"
 export { Label } from "./components/label/label.tsx"
+export {
+  MasterDetail,
+  type MasterDetailItem,
+  type MasterDetailProps,
+} from "./components/master-detail/master-detail.tsx"
 export {
   CloseTrigger,
   Modal,

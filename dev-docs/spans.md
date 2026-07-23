@@ -12,6 +12,17 @@ Today the repo already has:
 
 Reliability builds on top of that telemetry base rather than introducing a second trace store.
 
+## Ingest Admission And Memory Safety
+
+The ingest HTTP boundary protects each process before decoding OTLP payloads:
+
+- `Content-Length` is validated before authentication or body buffering; malformed values receive `400`, and declared payloads above `LAT_INGEST_TRACE_MAX_PAYLOAD_BYTES` receive `413`
+- body streaming enforces the same payload cap for chunked requests and clients whose observed body does not match the declared length
+- a process-local admission controller limits both active payload count and reserved payload bytes; admission remains held through decoding, object-storage persistence, and queue publication because the raw payload stays live for that full path
+- admission exhaustion receives `503` with `Retry-After: 1`; this protects process memory and is independent from the authenticated organization/API-key rate limiter, which continues to return `429`
+
+The defaults are a 32 MiB request cap, a 64 MiB in-flight payload budget, and 16 concurrent payloads per ingest process. The in-flight budget must be at least twice the request cap because assembling a chunked body briefly retains its streamed chunks and exact-sized output buffer together. Operators can tune the limits with `LAT_INGEST_TRACE_MAX_PAYLOAD_BYTES`, `LAT_INGEST_TRACE_MAX_IN_FLIGHT_BYTES`, and `LAT_INGEST_TRACE_MAX_CONCURRENT_PAYLOADS`. The request span records observed and declared payload size, normalized content type, body-read duration, admission outcome, RSS, and ArrayBuffer memory before and after processing.
+
 ## Reliability Additions
 
 Reliability adds:
@@ -134,3 +145,16 @@ Span ingestion is the canonical trace-billing boundary.
 Span persistence also stamps `retention_days` onto each stored span using the effective organization billing plan at write time.
 
 The `traces` materialized view carries forward `max(retention_days)` from its source spans, and ClickHouse TTL applies a storage grace buffer of `30` additional days beyond the stamped retention value before physically deleting `spans` and `traces`. See `./billing.md` for the billing-period and downgrade semantics behind that rule.
+
+## OTLP Attribute Resolution
+
+Incoming OTLP spans are normalized into the canonical span model by the resolvers under `packages/domain/spans/src/otlp/`. Metadata (operation, provider, model, token usage, cost, identity) resolves from a prioritized list of attribute candidates spanning the conventions each supported source emits (OTEL GenAI semconv, OpenInference, OpenLLMetry/Traceloop, Vercel AI SDK, Claude Code, and others). Message content is parsed by a first-match chain of content parsers keyed on the attributes a source uses.
+
+### Cloudflare AI Gateway
+
+Cloudflare AI Gateway is ingested as a plain OTLP GenAI source; there is no SDK. Its spans carry standard `gen_ai.*` metadata (`gen_ai.provider.name` or `gen_ai.model.provider`, `gen_ai.request.model`, `gen_ai.usage.input_tokens`/`output_tokens`, `gen_ai.usage.cost`, `gen_ai.operation.name`), so provider, model, tokens, and cost resolve through the normal candidate lists. Two source-specific behaviors are deliberate:
+
+- **Content lives in non-standard envelopes under the standard keys.** The gateway puts the raw request body in `gen_ai.input.messages` (`{messages:[…]}`, or `{text}` for embeddings) and the upstream provider's native response in `gen_ai.output.messages` (the OpenAI-compatible `{choices:[{message}]}`, the Anthropic `{state,result:{role,content[]}}` wrapper, or an embeddings `{data,shape}` body); its documented OTEL export names these `gen_ai.prompt_json` / `gen_ai.completion_json`, which resolve the same way. The standard array parser yields nothing for these, so `parseGenAICurrent` recovers them by **structural detection of the response shape** — not by trusting the provider name, whose value (for example `internal-workers-ai`) does not reliably identify the response schema. Unrecognized shapes resolve metadata only and leave messages empty rather than rendering non-conversational data such as embedding vectors.
+- **The gateway hardcodes `gen_ai.operation.name=chat` for every request, including embeddings.** Spans whose response is an embedding body (`{data,shape}` with no chat envelope) are reclassified from `chat` to `embeddings` so they are categorized and rolled up correctly.
+
+The `internal-workers-ai` provider name is aliased to `cloudflare-workers-ai`.

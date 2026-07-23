@@ -1,14 +1,17 @@
 import { boxShadow, Text } from "@repo/ui"
 import { createFileRoute } from "@tanstack/react-router"
-import { ComponentDemoSection } from "./-components/demo-frame.tsx"
+import { DemoFrame } from "./-components/demo-frame.tsx"
 import { DesignSystemPage } from "./-components/design-system-page.tsx"
+import { TypographySection } from "./-components/typography-table.tsx"
 import { UsageCode, UsageSection } from "./-components/usage-section.tsx"
 
 export const Route = createFileRoute("/shadows")({
   component: ShadowsPage,
 })
 
-const SHADOW_SAMPLES = Object.entries(boxShadow) as [keyof typeof boxShadow, string][]
+const SHADOW_SAMPLES = (Object.entries(boxShadow) as [keyof typeof boxShadow, string][]).filter(
+  ([token]) => token !== "none",
+)
 
 function ShadowsPage() {
   return (
@@ -29,13 +32,18 @@ function ShadowsPage() {
         />
       </UsageSection>
 
-      {SHADOW_SAMPLES.map(([token, className]) => (
-        <ComponentDemoSection key={token} title={token} description={`boxShadow.${token} — ${className}`}>
-          <div className={`rounded-lg border border-border/60 bg-card px-8 py-6 ${className}`}>
-            <Text.H5 weight="semibold">{token}</Text.H5>
-          </div>
-        </ComponentDemoSection>
-      ))}
+      <TypographySection title="Scale" description="Every elevation token, from lowest to highest.">
+        <DemoFrame className="flex-wrap gap-6">
+          {SHADOW_SAMPLES.map(([token, className]) => (
+            <div key={token} className="flex flex-col items-center gap-3">
+              <div
+                className={`flex h-16 w-16 items-center justify-center rounded-lg border border-border/60 bg-card ${className}`}
+              />
+              <Text.H7 color="foregroundMuted">{token}</Text.H7>
+            </div>
+          ))}
+        </DemoFrame>
+      </TypographySection>
     </DesignSystemPage>
   )
 }

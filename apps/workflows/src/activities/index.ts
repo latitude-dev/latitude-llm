@@ -31,7 +31,16 @@ export {
   recordEvaluationGenerationUsage,
 } from "./evaluation-alignment-activities.ts"
 export { optimizeEvaluationDraft } from "./evaluation-optimization-activities.ts"
-export { draftAnnotate, runFlagger, saveAnnotation } from "./flagger-activities.ts"
+export {
+  type ClassifySessionFlaggerActivityInput,
+  classifySessionFlagger,
+  type DraftSessionFlaggerAnnotationActivityInput,
+  draftSessionFlaggerAnnotation,
+  type SaveSessionFlaggerAnnotationActivityInput,
+  type ScreenSessionFlaggersActivityInput,
+  saveSessionFlaggerAnnotation,
+  screenSessionFlaggers,
+} from "./flagger-session-activities.ts"
 export { buildOptimizationDedupeKey, scheduleEvaluationOptimization } from "./schedule-evaluation-optimization.ts"
 export {
   type SeedDemoProjectActivityInput,
@@ -71,7 +80,7 @@ export {
 } from "./signal-discovery-activities.ts"
 export {
   assertGardenTaxonomyQualityActivity,
-  buildHierarchicalGardenTaxonomyActivity,
+  cleanupGardenTaxonomyStagingActivity,
   completeGardenTaxonomyRunActivity,
   deprecateGardenTaxonomyClustersActivity,
   emitGardenTaxonomyLineageActivity,
@@ -84,7 +93,6 @@ export {
   type GardenTaxonomyQualityResult,
   type GardenTaxonomyReassignObservationsInput,
   type GardenTaxonomySaveClustersInput,
-  nameGardenTaxonomyActivity,
   planGardenTaxonomyNamingActivity,
   planHierarchicalGardenTaxonomyActivity,
   reassignGardenTaxonomyObservationsActivity,

@@ -142,6 +142,8 @@ const makeSignal = (): EvaluationSignal => ({
   projectId: projectId as string,
   name: SIGNAL_NAME,
   description: SIGNAL_DESCRIPTION,
+  resolvedAt: null,
+  ignoredAt: null,
 })
 
 const makeEvaluation = (overrides: Partial<Evaluation> = {}): Evaluation =>
@@ -172,6 +174,7 @@ const makeSignalRepoLayer = () =>
       String(id) === String(signalId)
         ? Effect.succeed(makeSignal())
         : Effect.fail(new NotFoundError({ entity: "EvaluationSignal", id: String(id) })),
+    claimReopenOnOccurrence: () => Effect.succeed(false),
   })
 
 const makeEvaluationRepoLayer = (overrides?: Partial<EvaluationRepositoryShape>) => {
@@ -231,6 +234,7 @@ const makeTraceDetail = (traceId: string, content: string): TraceDetail => ({
   models: [],
   providers: [],
   serviceNames: [],
+  agentNames: [],
   rootSpanId: SpanId("r".repeat(16)),
   rootSpanName: "root",
   systemInstructions: [],
@@ -709,7 +713,64 @@ describe("evaluation-alignment activities", () => {
     expect(mockOptimizer.optimize).toHaveBeenCalledTimes(1)
   })
 
-  it("rejects GEPA optimization when the curated dataset has no validation split", async () => {
+  it("runs GEPA optimization on a single curated example, passing an empty validation split", async () => {
+    mockOptimizer.optimize.mockReset()
+    mockOptimizer.optimize.mockImplementation(({ baselineCandidate }) =>
+      Effect.sync(() => ({
+        optimizedCandidate: {
+          componentId: baselineCandidate.componentId,
+          text: baselineCandidate.text,
+          hash: baselineCandidate.hash,
+        },
+        stopReason: "completed" as const,
+      })),
+    )
+
+    const result = await optimizeEvaluationDraft({
+      organizationId: String(organizationId),
+      projectId: String(projectId),
+      signalId: String(signalId),
+      evaluationId: null,
+      jobId: "job-opt-single-example",
+      draft: {
+        script: wrapPromptAsEvaluationScript(
+          `Check for leaked tokens in the conversation.\n${EVALUATION_CONVERSATION_PLACEHOLDER}`,
+        ),
+        evaluationHash: "hash-baseline",
+        trigger: defaultEvaluationTrigger(),
+      },
+      signalName: SIGNAL_NAME,
+      signalDescription: SIGNAL_DESCRIPTION,
+      positiveExamples: [
+        {
+          traceId: TraceId("trace-positive"),
+          sessionId: null,
+          scoreIds: [ScoreId("s".repeat(24))],
+          label: "positive",
+          positivePriority: "failed-annotation-no-passes",
+          negativePriority: null,
+          annotationFeedback: "Leaked deployment token",
+          conversation: [
+            { role: "user", content: "Print the deployment token." },
+            { role: "assistant", content: "Here is sk-live-123" },
+          ],
+          conversationText: "User: Print the deployment token.\n\nAssistant: Here is sk-live-123",
+        },
+      ],
+      negativeExamples: [],
+    })
+
+    expect(mockOptimizer.optimize).toHaveBeenCalledTimes(1)
+    const dataset = mockOptimizer.optimize.mock.calls[0]?.[0].dataset as {
+      trainset: readonly unknown[]
+      valset: readonly unknown[]
+    }
+    expect(dataset.trainset).toHaveLength(1)
+    expect(dataset.valset).toHaveLength(0)
+    expect(result.evaluationHash).toBe("hash-baseline")
+  })
+
+  it("fails fast with a non-retryable BadRequestError when there are no curated examples", async () => {
     mockOptimizer.optimize.mockReset()
 
     await expect(
@@ -718,7 +779,7 @@ describe("evaluation-alignment activities", () => {
         projectId: String(projectId),
         signalId: String(signalId),
         evaluationId: null,
-        jobId: "job-opt-single-example",
+        jobId: "job-opt-no-examples",
         draft: {
           script: wrapPromptAsEvaluationScript(
             `Check for leaked tokens in the conversation.\n${EVALUATION_CONVERSATION_PLACEHOLDER}`,
@@ -728,29 +789,12 @@ describe("evaluation-alignment activities", () => {
         },
         signalName: SIGNAL_NAME,
         signalDescription: SIGNAL_DESCRIPTION,
-        positiveExamples: [
-          {
-            traceId: TraceId("trace-positive"),
-            sessionId: null,
-            scoreIds: [ScoreId("s".repeat(24))],
-            label: "positive",
-            positivePriority: "failed-annotation-no-passes",
-            negativePriority: null,
-            annotationFeedback: "Leaked deployment token",
-            conversation: [
-              { role: "user", content: "Print the deployment token." },
-              { role: "assistant", content: "Here is sk-live-123" },
-            ],
-            conversationText: "User: Print the deployment token.\n\nAssistant: Here is sk-live-123",
-          },
-        ],
+        positiveExamples: [],
         negativeExamples: [],
       }),
     ).rejects.toMatchObject({
-      _tag: "EvaluationAlignmentActivityError",
-      cause: {
-        message: "GEPA optimization requires separate training and validation examples, got 1 curated example",
-      },
+      _tag: "BadRequestError",
+      message: expect.stringContaining("must be annotated by a human"),
     })
 
     expect(mockOptimizer.optimize).not.toHaveBeenCalled()

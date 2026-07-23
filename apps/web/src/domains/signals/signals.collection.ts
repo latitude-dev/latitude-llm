@@ -30,6 +30,7 @@ import {
   getSignalDetail,
   getSignalDimensions,
   getSignalGenerationResult,
+  getSignalIdBySlug,
   getSignalImpact,
   getSignalOccurrences,
   getSignalPreviewResult,
@@ -56,6 +57,8 @@ const EMPTY_ISSUES_ANALYTICS: SignalsListResultRecord["analytics"] = {
     newSignals: 0,
     escalatingSignals: 0,
     ongoingSignals: 0,
+    resolvedSignals: 0,
+    ignoredSignals: 0,
     seenOccurrences: 0,
   },
   histogram: [],
@@ -92,6 +95,7 @@ interface SignalsKeyInput {
   readonly sorting: SignalsSorting
   readonly searchQuery: string | undefined
   readonly timeRange: SignalsTimeRange | undefined
+  readonly histogramMaxSpanDays: number | undefined
 }
 
 const getSignalsQueryKey = (input: SignalsKeyInput) =>
@@ -152,6 +156,7 @@ const buildListSignalsRequest = (input: SignalsKeyInput, offset: number) => ({
   ...(input.assigneeIds?.length ? { assigneeIds: [...input.assigneeIds] } : {}),
   ...(input.searchQuery ? { searchQuery: input.searchQuery } : {}),
   ...(input.timeRange?.fromIso || input.timeRange?.toIso ? { timeRange: input.timeRange } : {}),
+  ...(input.histogramMaxSpanDays ? { histogramMaxSpanDays: input.histogramMaxSpanDays } : {}),
 })
 
 export function useSignals(input: {
@@ -161,6 +166,7 @@ export function useSignals(input: {
   readonly sorting?: SignalsSorting
   readonly searchQuery?: string
   readonly timeRange?: SignalsTimeRange
+  readonly histogramMaxSpanDays?: number
   readonly limit?: number
   readonly enabled?: boolean
 }) {
@@ -175,6 +181,7 @@ export function useSignals(input: {
     sorting,
     searchQuery: normalizedSearchQuery,
     timeRange: input.timeRange,
+    histogramMaxSpanDays: input.histogramMaxSpanDays,
   }
 
   const queryKey = useMemo(
@@ -362,6 +369,29 @@ export function useSignalDetail({
     queryKey: getSignalDetailQueryKey(projectId, signalId),
     queryFn: (): Promise<SignalDetailRecord | null> => getSignalDetail({ data: { projectId, signalId } }),
     enabled: enabled && projectId.length > 0 && signalId.length > 0,
+  })
+}
+
+/**
+ * Resolves the URL's signal `slug` to its stable CUID id. The detail route is
+ * addressed by slug, but every downstream query is keyed by id — so the route
+ * resolves once through this hook and passes the id to its children.
+ */
+export function useSignalIdBySlug({
+  projectId,
+  signalSlug,
+  enabled = true,
+}: {
+  readonly projectId: string
+  readonly signalSlug: string
+  readonly enabled?: boolean
+}) {
+  return useQuery({
+    queryKey: ["issue-id-by-slug", projectId, signalSlug] as const,
+    queryFn: (): Promise<{ readonly signalId: string } | null> =>
+      getSignalIdBySlug({ data: { projectId, signalSlug } }),
+    enabled: enabled && projectId.length > 0 && signalSlug.length > 0,
+    staleTime: ISSUES_QUERY_STALE_TIME_MS,
   })
 }
 

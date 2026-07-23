@@ -6,14 +6,34 @@ import { describe, expect, it } from "vitest"
 import { z } from "zod"
 import { FLAGGER_DEFAULT_CLASSIFIER_MODEL } from "../../constants.ts"
 
-const REGRESSION_DATASET_PROJECT_SLUG = "latitude"
-const MALFORMED_JSON_OUTPUT_REGRESSION_DATASET_SLUG = "malformed-json-output-regression-test"
+const REGRESSION_DATASET_PROJECT_SLUG = "latitude-flaggers"
+const MALFORMED_JSON_OUTPUT_REGRESSION_DATASET_SLUG = "malformed-structured-output"
 const REGRESSION_DATASET_PAGE_SIZE = 200
 
 const OLD_MESSAGE_INDEX_CONTRACT =
   "- Include messageIndex only when one transcript line is clearly the best evidence; it must be a non-negative integer no larger than 10000."
-const NEW_MESSAGE_INDEX_CONTRACT =
+const OLD_MESSAGE_INDEX_STRING_CONTRACT =
   '- Include messageIndex only when one transcript line is clearly the best evidence. messageIndex must be exactly one quoted integer string like "0" or "12"; never output it as a JSON number, decimal, exponent, comma-separated list, range, or unquoted value.'
+const NEW_MESSAGE_INDEX_CONTRACT =
+  '- Include messageIndex only when one transcript line is clearly the best evidence. messageIndex must be a quoted integer string naming an existing transcript line, e.g. "0" or "12"; pick one of the offered indices, and never output it as a JSON number, decimal, exponent, list, or range.'
+
+// Bedrock rejects grammars that are too large, so bound the enum of offered indices.
+const MESSAGE_INDEX_ENUM_LIMIT = 200
+
+// Mirror of the production generation schema: messageIndex is an enum of the
+// trace's real indices, which structurally prevents the digit runaway that
+// truncated output at the token cap.
+function buildRegressionClassifierSchema(messageCount: number) {
+  const base = {
+    matched: z.boolean().optional().default(false),
+    feedback: z.string().min(1).nullable().optional(),
+  }
+  const usable = Math.min(Math.max(messageCount, 0), MESSAGE_INDEX_ENUM_LIMIT)
+  if (usable === 0) return z.object(base)
+
+  const indices = Array.from({ length: usable }, (_, index) => String(index)) as [string, ...string[]]
+  return z.object({ ...base, messageIndex: z.enum(indices).optional() })
+}
 
 const regressionMessagePartSchema = z
   .object({
@@ -130,16 +150,22 @@ function extractClassifierPrompt(row: MalformedJsonOutputRegressionRow): string 
   return userMessage ? textFromParts(userMessage.parts) : undefined
 }
 
-function patchMessageIndexContract(systemPrompt: string): string {
-  return systemPrompt.replace(OLD_MESSAGE_INDEX_CONTRACT, NEW_MESSAGE_INDEX_CONTRACT)
+function patchClassifierOutputContract(systemPrompt: string): string {
+  return systemPrompt
+    .replace(OLD_MESSAGE_INDEX_CONTRACT, NEW_MESSAGE_INDEX_CONTRACT)
+    .replace(OLD_MESSAGE_INDEX_STRING_CONTRACT, NEW_MESSAGE_INDEX_CONTRACT)
 }
 
 function identifyFlaggerSlug(systemPrompt: string): string | undefined {
   const directCategory = /matches the ([A-Za-z-]+) issue category\b/.exec(systemPrompt)?.[1]
   if (directCategory) return categoryToFlaggerSlug[directCategory.toLowerCase()]
 
+  const annotationQueueCategory = /belongs in the ([A-Za-z-]+) annotation queue\b/.exec(systemPrompt)?.[1]
+  if (annotationQueueCategory) return categoryToFlaggerSlug[annotationQueueCategory.toLowerCase()]
+
   for (const [category, slug] of Object.entries(categoryToFlaggerSlug)) {
     if (systemPrompt.toLowerCase().includes(`${category} issue category`)) return slug
+    if (systemPrompt.toLowerCase().includes(`${category} annotation queue`)) return slug
   }
 
   return undefined
@@ -174,9 +200,11 @@ describe("flagger malformed JSON output regression dataset", () => {
           throw new Error(`row ${index} should include the captured classifier user prompt`)
         }
 
-        const system = patchMessageIndexContract(capturedSystem)
+        const system = patchClassifierOutputContract(capturedSystem)
         const flaggerSlug = identifyFlaggerSlug(system)
         expect(flaggerSlug, `row ${index} should identify the classifier from the system prompt`).toBeTruthy()
+
+        const generationSchema = buildRegressionClassifierSchema(row.allMessages.length)
 
         return Effect.exit(
           Effect.gen(function* () {
@@ -186,7 +214,7 @@ describe("flagger malformed JSON output regression dataset", () => {
               maxTokens: FLAGGER_DEFAULT_CLASSIFIER_MODEL.maxTokens,
               system,
               prompt,
-              schema: classifierOutputSchema,
+              schema: generationSchema,
             })
 
             return result.object
@@ -217,7 +245,7 @@ describe("flagger malformed JSON output regression dataset", () => {
           throw new Error(`row ${index} (${flaggerSlug}) should generate structured classifier output:\n${cause}`)
         }
 
-        if (exit.value.matched) {
+        if (exit.value.matched && exit.value.messageIndex !== undefined) {
           expect(
             exit.value.messageIndex,
             `row ${index} (${flaggerSlug}) should preserve a quoted messageIndex`,

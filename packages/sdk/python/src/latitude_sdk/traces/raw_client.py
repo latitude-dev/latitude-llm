@@ -19,12 +19,14 @@ from ..errors.unauthorized_error import UnauthorizedError
 from ..types.annotation import Annotation
 from ..types.error import Error
 from ..types.export_traces_response import ExportTracesResponse
-from ..types.filter_set import FilterSet
 from ..types.paginated_trace_annotations import PaginatedTraceAnnotations
 from ..types.paginated_traces import PaginatedTraces
+from ..types.session_memory_changes import SessionMemoryChanges
+from ..types.session_memory_summary import SessionMemorySummary
 from ..types.span_detail import SpanDetail
 from ..types.trace_analytics_response import TraceAnalyticsResponse
 from ..types.trace_detail import TraceDetail
+from ..types.trace_filter_set import TraceFilterSet
 from ..types.trace_spans import TraceSpans
 from ..types.traces_ref import TracesRef
 from .types.list_traces_body_sort_by import ListTracesBodySortBy
@@ -48,7 +50,7 @@ class RawTracesClient:
         sort_by: typing.Optional[ListTracesBodySortBy] = OMIT,
         sort_direction: typing.Optional[ListTracesBodySortDirection] = OMIT,
         query: typing.Optional[str] = OMIT,
-        filters: typing.Optional[FilterSet] = OMIT,
+        filters: typing.Optional[TraceFilterSet] = OMIT,
         request_options: typing.Optional[RequestOptions] = None,
     ) -> HttpResponse[PaginatedTraces]:
         """
@@ -74,7 +76,7 @@ class RawTracesClient:
         query : typing.Optional[str]
             Free-text semantic search across the trace's input and output messages. Combined with `filters` via AND.
 
-        filters : typing.Optional[FilterSet]
+        filters : typing.Optional[TraceFilterSet]
 
         request_options : typing.Optional[RequestOptions]
             Request-specific configuration.
@@ -94,7 +96,7 @@ class RawTracesClient:
                 "sortDirection": sort_direction,
                 "query": query,
                 "filters": convert_and_respect_annotation_metadata(
-                    object_=filters, annotation=FilterSet, direction="write"
+                    object_=filters, annotation=TraceFilterSet, direction="write"
                 ),
             },
             headers={
@@ -668,6 +670,164 @@ class RawTracesClient:
             )
         raise ApiError(status_code=_response.status_code, headers=dict(_response.headers), body=_response_json)
 
+    def get_memory(
+        self, project_slug: str, trace_id: str, *, request_options: typing.Optional[RequestOptions] = None
+    ) -> HttpResponse[SessionMemorySummary]:
+        """
+        Returns the trace's memory footprint: per-record read, added, and removed token metrics plus totals, scoped to this trace.
+
+        Parameters
+        ----------
+        project_slug : str
+            Project slug (human-readable identifier)
+
+        trace_id : str
+            32-character trace identifier.
+
+        request_options : typing.Optional[RequestOptions]
+            Request-specific configuration.
+
+        Returns
+        -------
+        HttpResponse[SessionMemorySummary]
+            Trace memory footprint
+        """
+        _response = self._client_wrapper.httpx_client.request(
+            f"v1/projects/{encode_path_param(project_slug)}/traces/{encode_path_param(trace_id)}/memory",
+            method="GET",
+            request_options=request_options,
+        )
+        try:
+            if 200 <= _response.status_code < 300:
+                _data = typing.cast(
+                    SessionMemorySummary,
+                    parse_obj_as(
+                        type_=SessionMemorySummary,  # type: ignore
+                        object_=_response.json(),
+                    ),
+                )
+                return HttpResponse(response=_response, data=_data)
+            if _response.status_code == 400:
+                raise BadRequestError(
+                    headers=dict(_response.headers),
+                    body=typing.cast(
+                        Error,
+                        parse_obj_as(
+                            type_=Error,  # type: ignore
+                            object_=_response.json(),
+                        ),
+                    ),
+                )
+            if _response.status_code == 401:
+                raise UnauthorizedError(
+                    headers=dict(_response.headers),
+                    body=typing.cast(
+                        Error,
+                        parse_obj_as(
+                            type_=Error,  # type: ignore
+                            object_=_response.json(),
+                        ),
+                    ),
+                )
+            if _response.status_code == 404:
+                raise NotFoundError(
+                    headers=dict(_response.headers),
+                    body=typing.cast(
+                        Error,
+                        parse_obj_as(
+                            type_=Error,  # type: ignore
+                            object_=_response.json(),
+                        ),
+                    ),
+                )
+            _response_json = _response.json()
+        except JSONDecodeError:
+            raise ApiError(status_code=_response.status_code, headers=dict(_response.headers), body=_response.text)
+        except ValidationError as e:
+            raise ParsingError(
+                status_code=_response.status_code, headers=dict(_response.headers), body=_response.json(), cause=e
+            )
+        raise ApiError(status_code=_response.status_code, headers=dict(_response.headers), body=_response_json)
+
+    def get_memory_changes(
+        self, project_slug: str, trace_id: str, *, request_options: typing.Optional[RequestOptions] = None
+    ) -> HttpResponse[SessionMemoryChanges]:
+        """
+        Returns the memory writes the trace made as per-record before/after diffs, scoped to this trace.
+
+        Parameters
+        ----------
+        project_slug : str
+            Project slug (human-readable identifier)
+
+        trace_id : str
+            32-character trace identifier.
+
+        request_options : typing.Optional[RequestOptions]
+            Request-specific configuration.
+
+        Returns
+        -------
+        HttpResponse[SessionMemoryChanges]
+            Trace memory changes
+        """
+        _response = self._client_wrapper.httpx_client.request(
+            f"v1/projects/{encode_path_param(project_slug)}/traces/{encode_path_param(trace_id)}/memory/changes",
+            method="GET",
+            request_options=request_options,
+        )
+        try:
+            if 200 <= _response.status_code < 300:
+                _data = typing.cast(
+                    SessionMemoryChanges,
+                    parse_obj_as(
+                        type_=SessionMemoryChanges,  # type: ignore
+                        object_=_response.json(),
+                    ),
+                )
+                return HttpResponse(response=_response, data=_data)
+            if _response.status_code == 400:
+                raise BadRequestError(
+                    headers=dict(_response.headers),
+                    body=typing.cast(
+                        Error,
+                        parse_obj_as(
+                            type_=Error,  # type: ignore
+                            object_=_response.json(),
+                        ),
+                    ),
+                )
+            if _response.status_code == 401:
+                raise UnauthorizedError(
+                    headers=dict(_response.headers),
+                    body=typing.cast(
+                        Error,
+                        parse_obj_as(
+                            type_=Error,  # type: ignore
+                            object_=_response.json(),
+                        ),
+                    ),
+                )
+            if _response.status_code == 404:
+                raise NotFoundError(
+                    headers=dict(_response.headers),
+                    body=typing.cast(
+                        Error,
+                        parse_obj_as(
+                            type_=Error,  # type: ignore
+                            object_=_response.json(),
+                        ),
+                    ),
+                )
+            _response_json = _response.json()
+        except JSONDecodeError:
+            raise ApiError(status_code=_response.status_code, headers=dict(_response.headers), body=_response.text)
+        except ValidationError as e:
+            raise ParsingError(
+                status_code=_response.status_code, headers=dict(_response.headers), body=_response.json(), cause=e
+            )
+        raise ApiError(status_code=_response.status_code, headers=dict(_response.headers), body=_response_json)
+
     def export(
         self,
         project_slug: str,
@@ -778,7 +938,7 @@ class AsyncRawTracesClient:
         sort_by: typing.Optional[ListTracesBodySortBy] = OMIT,
         sort_direction: typing.Optional[ListTracesBodySortDirection] = OMIT,
         query: typing.Optional[str] = OMIT,
-        filters: typing.Optional[FilterSet] = OMIT,
+        filters: typing.Optional[TraceFilterSet] = OMIT,
         request_options: typing.Optional[RequestOptions] = None,
     ) -> AsyncHttpResponse[PaginatedTraces]:
         """
@@ -804,7 +964,7 @@ class AsyncRawTracesClient:
         query : typing.Optional[str]
             Free-text semantic search across the trace's input and output messages. Combined with `filters` via AND.
 
-        filters : typing.Optional[FilterSet]
+        filters : typing.Optional[TraceFilterSet]
 
         request_options : typing.Optional[RequestOptions]
             Request-specific configuration.
@@ -824,7 +984,7 @@ class AsyncRawTracesClient:
                 "sortDirection": sort_direction,
                 "query": query,
                 "filters": convert_and_respect_annotation_metadata(
-                    object_=filters, annotation=FilterSet, direction="write"
+                    object_=filters, annotation=TraceFilterSet, direction="write"
                 ),
             },
             headers={
@@ -1352,6 +1512,164 @@ class AsyncRawTracesClient:
                     Annotation,
                     parse_obj_as(
                         type_=Annotation,  # type: ignore
+                        object_=_response.json(),
+                    ),
+                )
+                return AsyncHttpResponse(response=_response, data=_data)
+            if _response.status_code == 400:
+                raise BadRequestError(
+                    headers=dict(_response.headers),
+                    body=typing.cast(
+                        Error,
+                        parse_obj_as(
+                            type_=Error,  # type: ignore
+                            object_=_response.json(),
+                        ),
+                    ),
+                )
+            if _response.status_code == 401:
+                raise UnauthorizedError(
+                    headers=dict(_response.headers),
+                    body=typing.cast(
+                        Error,
+                        parse_obj_as(
+                            type_=Error,  # type: ignore
+                            object_=_response.json(),
+                        ),
+                    ),
+                )
+            if _response.status_code == 404:
+                raise NotFoundError(
+                    headers=dict(_response.headers),
+                    body=typing.cast(
+                        Error,
+                        parse_obj_as(
+                            type_=Error,  # type: ignore
+                            object_=_response.json(),
+                        ),
+                    ),
+                )
+            _response_json = _response.json()
+        except JSONDecodeError:
+            raise ApiError(status_code=_response.status_code, headers=dict(_response.headers), body=_response.text)
+        except ValidationError as e:
+            raise ParsingError(
+                status_code=_response.status_code, headers=dict(_response.headers), body=_response.json(), cause=e
+            )
+        raise ApiError(status_code=_response.status_code, headers=dict(_response.headers), body=_response_json)
+
+    async def get_memory(
+        self, project_slug: str, trace_id: str, *, request_options: typing.Optional[RequestOptions] = None
+    ) -> AsyncHttpResponse[SessionMemorySummary]:
+        """
+        Returns the trace's memory footprint: per-record read, added, and removed token metrics plus totals, scoped to this trace.
+
+        Parameters
+        ----------
+        project_slug : str
+            Project slug (human-readable identifier)
+
+        trace_id : str
+            32-character trace identifier.
+
+        request_options : typing.Optional[RequestOptions]
+            Request-specific configuration.
+
+        Returns
+        -------
+        AsyncHttpResponse[SessionMemorySummary]
+            Trace memory footprint
+        """
+        _response = await self._client_wrapper.httpx_client.request(
+            f"v1/projects/{encode_path_param(project_slug)}/traces/{encode_path_param(trace_id)}/memory",
+            method="GET",
+            request_options=request_options,
+        )
+        try:
+            if 200 <= _response.status_code < 300:
+                _data = typing.cast(
+                    SessionMemorySummary,
+                    parse_obj_as(
+                        type_=SessionMemorySummary,  # type: ignore
+                        object_=_response.json(),
+                    ),
+                )
+                return AsyncHttpResponse(response=_response, data=_data)
+            if _response.status_code == 400:
+                raise BadRequestError(
+                    headers=dict(_response.headers),
+                    body=typing.cast(
+                        Error,
+                        parse_obj_as(
+                            type_=Error,  # type: ignore
+                            object_=_response.json(),
+                        ),
+                    ),
+                )
+            if _response.status_code == 401:
+                raise UnauthorizedError(
+                    headers=dict(_response.headers),
+                    body=typing.cast(
+                        Error,
+                        parse_obj_as(
+                            type_=Error,  # type: ignore
+                            object_=_response.json(),
+                        ),
+                    ),
+                )
+            if _response.status_code == 404:
+                raise NotFoundError(
+                    headers=dict(_response.headers),
+                    body=typing.cast(
+                        Error,
+                        parse_obj_as(
+                            type_=Error,  # type: ignore
+                            object_=_response.json(),
+                        ),
+                    ),
+                )
+            _response_json = _response.json()
+        except JSONDecodeError:
+            raise ApiError(status_code=_response.status_code, headers=dict(_response.headers), body=_response.text)
+        except ValidationError as e:
+            raise ParsingError(
+                status_code=_response.status_code, headers=dict(_response.headers), body=_response.json(), cause=e
+            )
+        raise ApiError(status_code=_response.status_code, headers=dict(_response.headers), body=_response_json)
+
+    async def get_memory_changes(
+        self, project_slug: str, trace_id: str, *, request_options: typing.Optional[RequestOptions] = None
+    ) -> AsyncHttpResponse[SessionMemoryChanges]:
+        """
+        Returns the memory writes the trace made as per-record before/after diffs, scoped to this trace.
+
+        Parameters
+        ----------
+        project_slug : str
+            Project slug (human-readable identifier)
+
+        trace_id : str
+            32-character trace identifier.
+
+        request_options : typing.Optional[RequestOptions]
+            Request-specific configuration.
+
+        Returns
+        -------
+        AsyncHttpResponse[SessionMemoryChanges]
+            Trace memory changes
+        """
+        _response = await self._client_wrapper.httpx_client.request(
+            f"v1/projects/{encode_path_param(project_slug)}/traces/{encode_path_param(trace_id)}/memory/changes",
+            method="GET",
+            request_options=request_options,
+        )
+        try:
+            if 200 <= _response.status_code < 300:
+                _data = typing.cast(
+                    SessionMemoryChanges,
+                    parse_obj_as(
+                        type_=SessionMemoryChanges,  # type: ignore
                         object_=_response.json(),
                     ),
                 )

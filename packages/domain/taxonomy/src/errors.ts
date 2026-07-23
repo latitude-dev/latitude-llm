@@ -21,3 +21,32 @@ export class TaxonomyQualityGateError extends Data.TaggedError("TaxonomyQualityG
   readonly httpStatus = 500
   readonly httpMessage = "Taxonomy quality gate failed"
 }
+
+export class CustomBehaviorNameInvalidError extends Data.TaggedError("CustomBehaviorNameInvalidError")<{
+  readonly field: string
+  readonly message: string
+}> {
+  readonly httpStatus = 400
+  get httpMessage() {
+    return this.message
+  }
+}
+
+export class CustomBehaviorFilterInvalidError extends Data.TaggedError("CustomBehaviorFilterInvalidError")<{
+  readonly message: string
+}> {
+  readonly httpStatus = 400
+  get httpMessage() {
+    return this.message
+  }
+}
+
+export class CustomBehaviorLimitReachedError extends Data.TaggedError("CustomBehaviorLimitReachedError")<{
+  readonly projectId: string
+  readonly limit: number
+}> {
+  readonly httpStatus = 422
+  get httpMessage() {
+    return `This project already has the maximum of ${this.limit} custom behaviors`
+  }
+}

@@ -144,3 +144,74 @@ describe("matchTaxonomyLineage", () => {
     expect(result.matchedOldIds.size).toBe(1)
   })
 })
+
+describe("matchTaxonomyLineage shape-aware naming", () => {
+  // Identical centroids so the topic is unchanged (carryName eligible on cosine);
+  // only the structural shape differs between passes.
+  const carriesName = (input: {
+    readonly newShape: { readonly isLeaf: boolean; readonly childCount: number }
+    readonly oldShape: { readonly isLeaf: boolean; readonly childCount: number }
+    readonly shapeAwareNaming: boolean
+  }): boolean => {
+    const result = matchTaxonomyLineage({
+      newNodes: [{ tempId: "a", depth: 0, centroid: unit(0), ...input.newShape }],
+      oldClusters: [{ id: "X", depth: 0, centroid: unit(0), ...input.oldShape }],
+      continuationThreshold: CONTINUATION_THRESHOLD,
+      nameReuseThreshold: NAME_REUSE_THRESHOLD,
+      shapeAwareNaming: input.shapeAwareNaming,
+    })
+    const decision = result.decisions[0]
+    expect(decision?.transition).toBe("continuation")
+    return decision?.transition === "continuation" ? decision.carryName : false
+  }
+
+  it("forces a rename when a leaf becomes interior", () => {
+    expect(
+      carriesName({
+        newShape: { isLeaf: false, childCount: 3 },
+        oldShape: { isLeaf: true, childCount: 0 },
+        shapeAwareNaming: true,
+      }),
+    ).toBe(false)
+  })
+
+  it("forces a rename when interior becomes a leaf", () => {
+    expect(
+      carriesName({
+        newShape: { isLeaf: true, childCount: 0 },
+        oldShape: { isLeaf: false, childCount: 2 },
+        shapeAwareNaming: true,
+      }),
+    ).toBe(false)
+  })
+
+  it("forces a rename when the child count changes", () => {
+    expect(
+      carriesName({
+        newShape: { isLeaf: false, childCount: 4 },
+        oldShape: { isLeaf: false, childCount: 2 },
+        shapeAwareNaming: true,
+      }),
+    ).toBe(false)
+  })
+
+  it("keeps the name on a same-shape high-similarity continuation", () => {
+    expect(
+      carriesName({
+        newShape: { isLeaf: false, childCount: 3 },
+        oldShape: { isLeaf: false, childCount: 3 },
+        shapeAwareNaming: true,
+      }),
+    ).toBe(true)
+  })
+
+  it("off keeps the pre-change centroid-only rule: a shape flip still carries the name", () => {
+    expect(
+      carriesName({
+        newShape: { isLeaf: false, childCount: 3 },
+        oldShape: { isLeaf: true, childCount: 0 },
+        shapeAwareNaming: false,
+      }),
+    ).toBe(true)
+  })
+})

@@ -46,13 +46,18 @@ export const Route = createFileRoute("/_authenticated/projects/$projectSlug/sett
   component: MembersSettingsPage,
 })
 
+const INVITE_ROLE_OPTIONS: { label: string; value: "admin" | "member" }[] = [
+  { label: "Member", value: "member" },
+  { label: "Admin", value: "admin" },
+]
+
 function InviteMemberModal({ open, setOpen }: { open: boolean; setOpen: (open: boolean) => void }) {
   const { toast } = useToast()
   const form = useForm({
-    defaultValues: { email: "" },
+    defaultValues: { email: "", role: "member" as "admin" | "member" },
     onSubmit: createFormSubmitHandler(
       async (value) => {
-        await inviteMemberMutation(value.email)
+        await inviteMemberMutation(value.email, value.role)
       },
       {
         onSuccess: async () => {
@@ -88,6 +93,18 @@ function InviteMemberModal({ open, setOpen }: { open: boolean; setOpen: (open: b
                     onChange={(e) => field.handleChange(e.target.value)}
                     errors={fieldErrorsAsStrings(field.state.meta.errors)}
                     placeholder="jon@latitude.so"
+                  />
+                )}
+              </form.Field>
+              <form.Field name="role">
+                {(field) => (
+                  <Select
+                    name="role"
+                    label="Role"
+                    options={INVITE_ROLE_OPTIONS}
+                    value={field.state.value}
+                    onChange={(value) => field.handleChange(value)}
+                    errors={fieldErrorsAsStrings(field.state.meta.errors)}
                   />
                 )}
               </form.Field>

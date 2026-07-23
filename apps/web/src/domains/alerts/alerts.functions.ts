@@ -5,23 +5,18 @@ import {
   type IncidentNotificationKey,
   type IncidentSourceType,
   incidentSourceTypeSchema,
-  OrganizationId,
   ProjectId,
   SignalId,
 } from "@domain/shared"
 import { SignalRepository, type SignalWithLifecycle } from "@domain/signals"
-import {
-  IncidentMonitorReaderLive,
-  IncidentRepositoryLive,
-  SignalRepositoryLive,
-  withPostgres,
-} from "@platform/db-postgres"
+import { IncidentMonitorReaderLive, IncidentRepositoryLive, SignalRepositoryLive } from "@platform/db-postgres"
 import { withTracing } from "@repo/observability"
 import { createServerFn } from "@tanstack/react-start"
 import { Effect, Layer } from "effect"
 import { z } from "zod"
-import { requireSession } from "../../server/auth.ts"
 import { getPostgresClient } from "../../server/clients.ts"
+import { resolveOrgScope } from "../../server/resolve-org-scope.ts"
+import { withScopedPostgres } from "../../server/scoped-postgres.ts"
 
 export const listProjectAlertIncidentsInRangeInputSchema = z.object({
   projectId: z.string(),
@@ -43,6 +38,8 @@ export interface AlertIncidentRecord {
   readonly endedAt: string | null
   /** Resolved name of the issue tied to the incident; `null` if not found (e.g., deleted). */
   readonly signalName: string | null
+  /** Resolved slug of the issue tied to the incident, for the deep link; `null` if not found. */
+  readonly signalSlug: string | null
   /** Resolved name of the saved search tied to the monitor, when available. */
   readonly savedSearchName: string | null
   /** Owning monitor name + slug for the attribution line + deep link; `null` on legacy or issue rows. */
@@ -78,6 +75,7 @@ const toRecord = (
     startedAt: incident.startedAt.toISOString(),
     endedAt: incident.endedAt?.toISOString() ?? null,
     signalName: issue?.name ?? null,
+    signalSlug: issue?.slug ?? null,
     savedSearchName: savedSearchName ?? null,
     monitorName: monitor?.name ?? null,
     monitorSlug: monitor?.slug ?? null,
@@ -100,9 +98,8 @@ export const listProjectAlertIncidentsInRange = createServerFn({
   method: "GET",
 })
   .inputValidator(listProjectAlertIncidentsInRangeInputSchema)
-  .handler(async ({ data }): Promise<{ readonly items: readonly AlertIncidentRecord[] }> => {
-    const { organizationId } = await requireSession()
-    const orgId = OrganizationId(organizationId)
+  .handler(async ({ data, context }): Promise<{ readonly items: readonly AlertIncidentRecord[] }> => {
+    const orgId = await resolveOrgScope(context)
     const projectId = ProjectId(data.projectId)
     const pgClient = getPostgresClient()
 
@@ -147,7 +144,7 @@ export const listProjectAlertIncidentsInRange = createServerFn({
           ),
         )
       }).pipe(
-        withPostgres(
+        withScopedPostgres(
           Layer.mergeAll(IncidentRepositoryLive, SignalRepositoryLive, IncidentMonitorReaderLive),
           pgClient,
           orgId,

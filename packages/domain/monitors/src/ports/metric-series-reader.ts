@@ -7,6 +7,7 @@ import type {
   OrganizationId,
   ProjectId,
   RepositoryError,
+  ValidationError,
 } from "@domain/shared"
 import { SEASONAL_HISTORY_WEEKS } from "@domain/signals"
 import { Context, Effect } from "effect"
@@ -48,18 +49,24 @@ export interface MetricSeriesBucketInput extends MetricSeriesWindowInput {
  */
 export interface MetricSeriesReaderShape {
   /** The metric over rows whose time axis falls in `[from, to)`. */
-  valueInWindow(input: MetricSeriesWindowInput): Effect.Effect<number, RepositoryError, ChSqlClient>
+  valueInWindow(input: MetricSeriesWindowInput): Effect.Effect<number, RepositoryError | ValidationError, ChSqlClient>
   /** Earliest matching-row time in `[from, to)`, or `null` when none match. Backs the incident's backtraced `started_at`. */
-  firstEventAt(input: MetricSeriesWindowInput): Effect.Effect<Date | null, RepositoryError, ChSqlClient>
+  firstEventAt(
+    input: MetricSeriesWindowInput,
+  ): Effect.Effect<Date | null, RepositoryError | ValidationError, ChSqlClient>
   /** Latest matching-row time in `[from, to)`, or `null` when none match. Backs the sustained incident's backtraced `ended_at`. */
-  lastEventAt(input: MetricSeriesWindowInput): Effect.Effect<Date | null, RepositoryError, ChSqlClient>
+  lastEventAt(
+    input: MetricSeriesWindowInput,
+  ): Effect.Effect<Date | null, RepositoryError | ValidationError, ChSqlClient>
   /**
    * Per-bucket metric over `[from, to)`, tiled into `N = floor((to - from) / bucketMs)`
    * fixed-width buckets aligned to `to`. Returns exactly `N` values, **newest-first**
    * (index `0` = the bucket ending at `to`), zero-filled for empty buckets. Backs the
    * `metric.escalating` sustained-gate and prompt close.
    */
-  seriesPerBucket(input: MetricSeriesBucketInput): Effect.Effect<readonly number[], RepositoryError, ChSqlClient>
+  seriesPerBucket(
+    input: MetricSeriesBucketInput,
+  ): Effect.Effect<readonly number[], RepositoryError | ValidationError, ChSqlClient>
 }
 
 export class MetricSeriesReader extends Context.Service<MetricSeriesReader, MetricSeriesReaderShape>()(

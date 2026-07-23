@@ -24,7 +24,7 @@ import { withTracing } from "@repo/observability"
 import { Effect, Layer } from "effect"
 import { defineOperation } from "../core/define-operation.ts"
 import type { OperationModule } from "../core/mount.ts"
-import { jsonBody, openApiNoContentResponses, openApiResponses, PROTECTED_SECURITY } from "../openapi/schemas.ts"
+import { jsonBody, openApiNoContentResponses, PROTECTED_SECURITY, typedResponses } from "../openapi/schemas.ts"
 import type { OrganizationScopedEnv } from "../types.ts"
 import { requireOAuthUserId } from "../utils/require-oauth.ts"
 
@@ -136,23 +136,23 @@ const listMembers = memberEndpoint({
     summary: "List members",
     description: "Returns every active member of the caller's organization with their role and user details.",
     security: PROTECTED_SECURITY,
-    responses: openApiResponses({ status: 200, schema: ListResponseSchema, description: "List of members" }),
+    responses: typedResponses({ status: 200, schema: ListResponseSchema, description: "List of members" }),
   }),
   access: "read-only",
   rateLimitTier: "low",
-  handler: async (c) => {
-    const { members, invitations } = await Effect.runPromise(
-      listMembersUseCase({ organizationId: c.var.organization.id }).pipe(
-        withPostgres(
-          Layer.mergeAll(MembershipRepositoryLive, InvitationRepositoryLive),
-          c.var.postgresClient,
-          c.var.organization.id,
-        ),
-        withTracing,
+  execute: (_input, ctx) =>
+    Effect.gen(function* () {
+      const { members, invitations } = yield* listMembersUseCase({ organizationId: ctx.organization.id })
+      const memberList = [...members.map(toActiveMember), ...invitations.map(toInvitedMember)]
+      return { status: 200, body: { members: memberList } } as const
+    }).pipe(
+      withPostgres(
+        Layer.mergeAll(MembershipRepositoryLive, InvitationRepositoryLive),
+        ctx.postgresClient,
+        ctx.organization.id,
       ),
-    )
-    return c.json({ members: [...members.map(toActiveMember), ...invitations.map(toInvitedMember)] }, 200)
-  },
+      withTracing,
+    ),
 })
 
 const getMember = memberEndpoint({
@@ -167,20 +167,15 @@ const getMember = memberEndpoint({
     description: "Returns a single member of the caller's organization, including their role and user details.",
     security: PROTECTED_SECURITY,
     request: { params: MemberIdParamsSchema },
-    responses: openApiResponses({ status: 200, schema: ActiveMemberSchema, description: "Member" }),
+    responses: typedResponses({ status: 200, schema: ActiveMemberSchema, description: "Member" }),
   }),
   access: "read-only",
   rateLimitTier: "low",
-  handler: async (c) => {
-    const { memberId } = c.req.valid("param")
-    const member = await Effect.runPromise(
-      getMemberUseCase({ membershipId: MembershipId(memberId) }).pipe(
-        withPostgres(MembershipRepositoryLive, c.var.postgresClient, c.var.organization.id),
-        withTracing,
-      ),
-    )
-    return c.json(toActiveMember(member), 200)
-  },
+  execute: (input, ctx) =>
+    Effect.gen(function* () {
+      const member = yield* getMemberUseCase({ membershipId: MembershipId(input.params.memberId) })
+      return { status: 200, body: toActiveMember(member) } as const
+    }).pipe(withPostgres(MembershipRepositoryLive, ctx.postgresClient, ctx.organization.id), withTracing),
 })
 
 const inviteMember = memberEndpoint({
@@ -196,48 +191,45 @@ const inviteMember = memberEndpoint({
       "Signals an invitation to join the caller's organization. The invitee receives an accept link by email and becomes a member once they accept. The response is the pending invitation record. Requires OAuth authentication (API-key callers can't act on behalf of a specific user).",
     security: PROTECTED_SECURITY,
     request: { body: jsonBody(InviteRequestSchema) },
-    responses: openApiResponses({ status: 201, schema: InvitedMemberSchema, description: "Invitation created" }),
+    responses: typedResponses({ status: 201, schema: InvitedMemberSchema, description: "Invitation created" }),
   }),
   access: "write",
   rateLimitTier: "high",
-  handler: async (c) => {
-    const inviterUserId = requireOAuthUserId(c)
-    const { email, role } = c.req.valid("json")
+  execute: (input, ctx) =>
+    Effect.gen(function* () {
+      const inviterUserId = yield* requireOAuthUserId(ctx.auth)
+      const { email, role } = input.body
 
-    const webUrl = await Effect.runPromise(parseEnv("LAT_WEB_URL", "string"))
+      const webUrl = yield* parseEnv("LAT_WEB_URL", "string")
 
-    const invitation = await Effect.runPromise(
-      Effect.gen(function* () {
-        const userRepo = yield* UserRepository
-        const inviter = yield* userRepo.findById(inviterUserId)
-        const inviterName =
-          typeof inviter.name === "string" && inviter.name.trim().length > 0 ? inviter.name.trim() : "A teammate"
+      const userRepo = yield* UserRepository
+      const inviter = yield* userRepo.findById(inviterUserId)
+      const inviterName =
+        typeof inviter.name === "string" && inviter.name.trim().length > 0 ? inviter.name.trim() : "A teammate"
 
-        return yield* inviteMemberUseCase({
-          organizationId: c.var.organization.id,
-          email,
-          ...(role ? { role } : {}),
-          inviterUserId,
-          inviterName,
-          webUrl,
-        })
-      }).pipe(
-        withPostgres(
-          Layer.mergeAll(
-            MembershipRepositoryLive,
-            OrganizationRepositoryLive,
-            InvitationRepositoryLive,
-            UserRepositoryLive,
-            OutboxEventWriterLive,
-          ),
-          c.var.postgresClient,
-          c.var.organization.id,
+      const invitation = yield* inviteMemberUseCase({
+        organizationId: ctx.organization.id,
+        email,
+        ...(role ? { role } : {}),
+        inviterUserId,
+        inviterName,
+        webUrl,
+      })
+      return { status: 201, body: toInvitedMember(invitation) } as const
+    }).pipe(
+      withPostgres(
+        Layer.mergeAll(
+          MembershipRepositoryLive,
+          OrganizationRepositoryLive,
+          InvitationRepositoryLive,
+          UserRepositoryLive,
+          OutboxEventWriterLive,
         ),
-        withTracing,
+        ctx.postgresClient,
+        ctx.organization.id,
       ),
-    )
-    return c.json(toInvitedMember(invitation), 201)
-  },
+      withTracing,
+    ),
 })
 
 const updateMemberRole = memberEndpoint({
@@ -253,7 +245,7 @@ const updateMemberRole = memberEndpoint({
       "Updates a member of the caller's organization. Today only the role is mutable. The caller must be an admin or owner; owners cannot be demoted via this endpoint. Requires OAuth authentication.",
     security: PROTECTED_SECURITY,
     request: { params: MemberIdParamsSchema, body: jsonBody(UpdateRoleRequestSchema) },
-    responses: openApiResponses({
+    responses: typedResponses({
       status: 200,
       schema: ActiveMemberSchema,
       description: "Member with the updated role",
@@ -261,30 +253,26 @@ const updateMemberRole = memberEndpoint({
   }),
   access: "destructive",
   rateLimitTier: "low",
-  handler: async (c) => {
-    const requestingUserId = requireOAuthUserId(c)
-    const { memberId } = c.req.valid("param")
-    const { role } = c.req.valid("json")
+  execute: (input, ctx) =>
+    Effect.gen(function* () {
+      const requestingUserId = yield* requireOAuthUserId(ctx.auth)
+      const { memberId } = input.params
+      const { role } = input.body
 
-    const member = await Effect.runPromise(
-      Effect.gen(function* () {
-        // Resolve the target user's id from the membership id. The existing
-        // `updateMemberRoleUseCase` takes `targetUserId` (legacy from the web
-        // path where roles are addressed by user); the API addresses members
-        // by membership id, so we translate here.
-        const target = yield* getMemberUseCase({ membershipId: MembershipId(memberId) })
-        yield* updateMemberRoleUseCase({
-          organizationId: c.var.organization.id,
-          requestingUserId,
-          targetUserId: UserId(target.userId),
-          newRole: role,
-        })
-        return yield* getMemberUseCase({ membershipId: MembershipId(memberId) })
-      }).pipe(withPostgres(MembershipRepositoryLive, c.var.postgresClient, c.var.organization.id), withTracing),
-    )
-
-    return c.json(toActiveMember(member), 200)
-  },
+      // Resolve the target user's id from the membership id. The existing
+      // `updateMemberRoleUseCase` takes `targetUserId` (legacy from the web
+      // path where roles are addressed by user); the API addresses members
+      // by membership id, so we translate here.
+      const target = yield* getMemberUseCase({ membershipId: MembershipId(memberId) })
+      yield* updateMemberRoleUseCase({
+        organizationId: ctx.organization.id,
+        requestingUserId,
+        targetUserId: UserId(target.userId),
+        newRole: role,
+      })
+      const member = yield* getMemberUseCase({ membershipId: MembershipId(memberId) })
+      return { status: 200, body: toActiveMember(member) } as const
+    }).pipe(withPostgres(MembershipRepositoryLive, ctx.postgresClient, ctx.organization.id), withTracing),
 })
 
 const removeMember = memberEndpoint({
@@ -304,18 +292,12 @@ const removeMember = memberEndpoint({
   }),
   access: "destructive",
   rateLimitTier: "low",
-  handler: async (c) => {
-    const requestingUserId = requireOAuthUserId(c)
-    const { memberId } = c.req.valid("param")
-
-    await Effect.runPromise(
-      removeMemberUseCase({ membershipId: MembershipId(memberId), requestingUserId }).pipe(
-        withPostgres(MembershipRepositoryLive, c.var.postgresClient, c.var.organization.id),
-        withTracing,
-      ),
-    )
-    return c.body(null, 204)
-  },
+  execute: (input, ctx) =>
+    Effect.gen(function* () {
+      const requestingUserId = yield* requireOAuthUserId(ctx.auth)
+      yield* removeMemberUseCase({ membershipId: MembershipId(input.params.memberId), requestingUserId })
+      return { status: 204 } as const
+    }).pipe(withPostgres(MembershipRepositoryLive, ctx.postgresClient, ctx.organization.id), withTracing),
 })
 
 export const membersModule: OperationModule = {

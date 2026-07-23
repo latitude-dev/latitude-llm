@@ -1,4 +1,5 @@
 import {
+  CustomBehaviorId,
   NotFoundError,
   OrganizationId,
   ProjectId,
@@ -56,6 +57,7 @@ const makeCluster = (overrides: Partial<TaxonomyCluster> = {}): TaxonomyCluster 
   id: TaxonomyClusterId("c".repeat(24)),
   organizationId,
   projectId,
+  customBehaviorId: null,
   dimension: "topic",
   parentClusterId: null,
   depth: 0,
@@ -211,6 +213,86 @@ describe("taxonomy Postgres repositories", () => {
         expect((yield* repository.findById(first.id)).state).toBe("deprecated")
       }).pipe(provideRepos(database)),
     )
+  })
+
+  it.each([
+    ["global", null as null],
+    ["scoped", CustomBehaviorId("b".repeat(24))],
+  ])("atomically swaps the staged tree in and never surfaces staging (%s)", async (_label, customBehaviorId) => {
+    const oldActive = makeCluster({
+      id: TaxonomyClusterId("a".repeat(24)),
+      customBehaviorId,
+      centroid: centroidFrom(vector({ 0: 1 })),
+    })
+    const staging = makeCluster({
+      id: TaxonomyClusterId("e".repeat(24)),
+      customBehaviorId,
+      state: "staging",
+      centroid: centroidFrom(vector({ 1: 1 })),
+    })
+
+    await Effect.runPromise(
+      Effect.gen(function* () {
+        const repository = yield* TaxonomyClusterRepository
+        yield* repository.save(oldActive)
+        yield* repository.save(staging)
+
+        // Before the swap: staging is invisible to active reads and to list.
+        const activeBefore = yield* repository.listActiveByProject({ projectId, dimension: "topic", customBehaviorId })
+        expect(activeBefore.map((cluster) => cluster.id)).toEqual([oldActive.id])
+        const listBefore = yield* repository.list({
+          projectId,
+          dimension: "topic",
+          customBehaviorId,
+          limit: 10,
+          offset: 0,
+        })
+        expect(listBefore.items.some((cluster) => cluster.state === "staging")).toBe(false)
+
+        yield* repository.swapActiveTree({
+          supersededClusterIds: [oldActive.id],
+          stagingClusterIds: [staging.id],
+          timestamp: now,
+        })
+
+        // After the swap: exactly one active tree, and it is the staged one.
+        expect((yield* repository.findById(oldActive.id)).state).toBe("deprecated")
+        expect((yield* repository.findById(staging.id)).state).toBe("active")
+        const activeAfter = yield* repository.listActiveByProject({ projectId, dimension: "topic", customBehaviorId })
+        expect(activeAfter.map((cluster) => cluster.id)).toEqual([staging.id])
+
+        // Idempotent: a retry re-runs safely and never resurrects the old tree.
+        yield* repository.swapActiveTree({
+          supersededClusterIds: [oldActive.id],
+          stagingClusterIds: [staging.id],
+          timestamp: now,
+        })
+        expect((yield* repository.findById(oldActive.id)).state).toBe("deprecated")
+        expect((yield* repository.findById(staging.id)).state).toBe("active")
+      }).pipe(provideRepos(database)),
+    )
+  })
+
+  it("cleans up abandoned staging rows without touching the active tree", async () => {
+    const active = makeCluster({ id: TaxonomyClusterId("a".repeat(24)) })
+    const staging = makeCluster({ id: TaxonomyClusterId("e".repeat(24)), state: "staging" })
+
+    await Effect.runPromise(
+      Effect.gen(function* () {
+        const repository = yield* TaxonomyClusterRepository
+        yield* repository.save(active)
+        yield* repository.save(staging)
+
+        yield* repository.deleteStaging({ clusterIds: [active.id, staging.id] })
+
+        // Guarded to state='staging': the active row survives, the orphan is gone.
+        expect((yield* repository.findById(active.id)).state).toBe("active")
+        return yield* repository.findById(staging.id).pipe(
+          Effect.map(() => "found" as const),
+          Effect.orElseSucceed(() => "deleted" as const),
+        )
+      }).pipe(provideRepos(database)),
+    ).then((result) => expect(result).toBe("deleted"))
   })
 
   it("persists runs and append-only lineage rows", async () => {

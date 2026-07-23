@@ -11,10 +11,19 @@ export type GardenTaxonomyWorkflowResult = activities.GardenTaxonomyActivityResu
  * tree, then per-cluster naming fills in human-readable names. There is no
  * sweep / merge / recurse loop — the build pass is internally hierarchical
  * and sibling-similarity-aware.
+ *
+ * One workflow, two scopes. Global gardening (no `customBehaviorId`) rebuilds
+ * the project-wide tree and writes membership to
+ * `taxonomy_observations.assigned_cluster_id`; a scoped run (a custom behavior's
+ * `customBehaviorId`) rebuilds that behavior's sub-tree and writes the
+ * `taxonomy_view_assignments` slice. Scope is threaded as an optional field
+ * global omits, and every branch lives inside the activities/use-cases, so the
+ * global activity sequence, names, and serialized inputs are byte-identical to
+ * the pre-unification workflow.
  */
 const {
   assertGardenTaxonomyQualityActivity,
-  buildHierarchicalGardenTaxonomyActivity,
+  cleanupGardenTaxonomyStagingActivity,
   completeGardenTaxonomyRunActivity,
   deprecateGardenTaxonomyClustersActivity,
   emitGardenTaxonomyLineageActivity,
@@ -71,18 +80,46 @@ const errorMessage = (error: unknown): string => {
 export const gardenTaxonomyWorkflow = async (
   input: GardenTaxonomyWorkflowInput,
 ): Promise<GardenTaxonomyWorkflowResult> => {
-  const started = await startGardenTaxonomyRunActivity({ ...input, workflowRunId: workflowInfo().runId })
+  // The staging + atomic-swap publish shape (the mode-gated reassign/deprecate
+  // activities and the failure-path staging cleanup) is a new activity shape.
+  // The command SEQUENCE stays mode-independent — activities branch on mode
+  // internally — so this single marker reconciles an in-flight pre-change
+  // history at a fixed position. Read once, before the try, so the catch path
+  // sees the same deterministic value.
+  let useStagingSwap = false
+  // Adaptive reassignment repoints the live window's observations onto the staging
+  // leaves BEFORE the swap. Once that has run, deleting staging would orphan those
+  // observations, so staging cleanup is only safe up to (and including) a failed
+  // reassignment — a later failure leaves staging for the swap retry / next pass.
+  let reassignmentStarted = false
   try {
-    const useSplitBuild = patched("taxonomy-gardening-split-build-v1")
-    const built = useSplitBuild
-      ? await (async () => {
-          const plan = await planHierarchicalGardenTaxonomyActivity(started)
-          await saveGardenTaxonomyClustersActivity({ ...started, planKey: plan.planKey })
-          await reassignGardenTaxonomyObservationsActivity({ ...started, planKey: plan.planKey })
-          await deprecateGardenTaxonomyClustersActivity({ ...started, planKey: plan.planKey })
-          return plan
-        })()
-      : await buildHierarchicalGardenTaxonomyActivity(started)
+    const started = await startGardenTaxonomyRunActivity({ ...input, workflowRunId: workflowInfo().runId })
+    useStagingSwap = patched("taxonomy-gardening-staging-swap-v1")
+    const built = await planHierarchicalGardenTaxonomyActivity(started)
+    // Scoped cold-start: the plan sampled below the gardening minimum and built
+    // no tree, so complete the run empty and leave any prior scoped tree serving
+    // (never reaching save/deprecate). Global stays on the full sequence — the
+    // sweep gates it on the same minimum before it ever starts.
+    if (started.customBehaviorId !== undefined && built.clustersBorn === 0 && built.clustersContinued === 0) {
+      return await completeGardenTaxonomyRunActivity({
+        ...started,
+        observationsScanned: built.observationsScanned,
+        observationsAvailable: built.observationsAvailable,
+        observationsSampled: built.observationsSampled,
+        sampleStrategy: built.sampleStrategy,
+        sampleCap: built.sampleCap,
+        noiseScanned: 0,
+        clustersBorn: 0,
+        clustersMerged: 0,
+        clustersDeprecated: 0,
+      })
+    }
+    await saveGardenTaxonomyClustersActivity({ ...started, planKey: built.planKey })
+    // Mark before the call: a partial/failed reassignment may already have
+    // repointed some observations onto staging, so cleanup must not delete it.
+    reassignmentStarted = true
+    await reassignGardenTaxonomyObservationsActivity({ ...started, planKey: built.planKey })
+    await deprecateGardenTaxonomyClustersActivity({ ...started, planKey: built.planKey })
     const lineage: TaxonomyClusterLineage[] = [...built.lineage]
     const namingPlan = await planGardenTaxonomyNamingActivity({ ...started, lineage })
     // Name depth by depth, deepest first, and sequentially within a depth
@@ -94,12 +131,13 @@ export const gardenTaxonomyWorkflow = async (
           organizationId: started.organizationId,
           projectId: started.projectId,
           clusterId,
+          ...(started.customBehaviorId ? { customBehaviorId: started.customBehaviorId } : {}),
         }),
       )
     }
     await assertGardenTaxonomyQualityActivity(started)
     await emitGardenTaxonomyLineageActivity({ ...started, lineage })
-    return completeGardenTaxonomyRunActivity({
+    return await completeGardenTaxonomyRunActivity({
       ...started,
       observationsScanned: built.observationsAvailable ?? built.observationsScanned ?? 0,
       observationsAvailable: built.observationsAvailable ?? built.observationsScanned ?? 0,
@@ -112,9 +150,20 @@ export const gardenTaxonomyWorkflow = async (
       clustersDeprecated: built.clustersDeprecated,
     })
   } catch (error) {
-    await CancellationScope.nonCancellable(() =>
-      failGardenTaxonomyRunActivity({ ...started, error: errorMessage(error) }),
-    )
+    // Fail from the raw input, not `started`: the scoped start activity flips the
+    // behavior to `generating` up front, so a start-activity failure must still
+    // mark it failed instead of leaving it stuck generating. The fail activity
+    // re-derives the (deterministic) run id from the input.
+    await CancellationScope.nonCancellable(async () => {
+      // Clean up an orphaned staging tree ONLY when reassignment never ran, so no
+      // observation can already point at a staging leaf we would delete. Once
+      // reassignment has started, the staging tree is left for the swap retry /
+      // next pass. No-op on off runs (guarded to state='staging').
+      if (useStagingSwap && !reassignmentStarted) {
+        await cleanupGardenTaxonomyStagingActivity({ ...input, workflowRunId: workflowInfo().runId })
+      }
+      await failGardenTaxonomyRunActivity({ ...input, workflowRunId: workflowInfo().runId, error: errorMessage(error) })
+    })
     throw error
   }
 }

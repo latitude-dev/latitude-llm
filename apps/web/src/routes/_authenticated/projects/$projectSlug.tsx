@@ -1,15 +1,21 @@
 import { ProjectRepository } from "@domain/projects"
 import { ProjectRepositoryLive, withPostgres } from "@platform/db-postgres"
 import { withTracing } from "@repo/observability"
-import { ClaudeCodeIcon, CopyableText, cn, Text, useMountEffect } from "@repo/ui"
+import { ClaudeCodeIcon, cn, Icon, Text, Tooltip, useMountEffect } from "@repo/ui"
 import { eq } from "@tanstack/react-db"
 import { useQuery } from "@tanstack/react-query"
-import { createFileRoute, Outlet, redirect, useRouterState } from "@tanstack/react-router"
+import { createFileRoute, getRouteApi, Outlet, redirect, useRouterState } from "@tanstack/react-router"
 import { createServerFn } from "@tanstack/react-start"
 import { Effect } from "effect"
+import { SearchIcon } from "lucide-react"
 import { z } from "zod"
+import { useCommandPalette } from "../../../components/command-palette/command-palette-provider.tsx"
 import { CHANGELOG_UI_ENABLED } from "../../../domains/changelog/changelog.collection.ts"
-import { ProjectScopeProvider, SHOWCASE_SCOPE } from "../../../domains/projects/project-scope.tsx"
+import {
+  ProjectScopeProvider,
+  SHOWCASE_SCOPE,
+  useIsReadOnlyProjectScope,
+} from "../../../domains/projects/project-scope.tsx"
 import { PROJECT_SETTINGS_SECTION, useVisibleProjectSectionGroups } from "../../../domains/projects/project-sections.ts"
 import { useProjectsCollection } from "../../../domains/projects/projects.collection.ts"
 import { type ProjectRecord, rememberLastProjectSlug, toRecord } from "../../../domains/projects/projects.functions.ts"
@@ -17,12 +23,18 @@ import { loadProjectRouteData } from "../../../domains/projects/showcase-project
 import { getShowcaseProjectRecord } from "../../../domains/showcase/showcase.functions.ts"
 import { getLatestWrappedReportForProject } from "../../../domains/wrapped/wrapped.functions.ts"
 import { AppSidebar, NavItem } from "../../../layouts/AppSidebar/index.tsx"
+import { SidebarCollapseProvider } from "../../../layouts/AppSidebar/sidebar-collapse.tsx"
 import { ContentErrorBoundary } from "../../../lib/client-error-reporting.tsx"
 import { requireSession } from "../../../server/auth.ts"
 import { getPostgresClient } from "../../../server/clients.ts"
+import { BillingCreditCounter } from "../-components/billing-credit-counter.tsx"
 import { ChangelogSidebarEntry } from "../-components/changelog/changelog-sidebar-entry.tsx"
+import { NavHeader } from "../-components/nav-header.tsx"
 import { ProjectBreadcrumbSegment } from "../-components/project-breadcrumb-segment.tsx"
 import { SandboxSwitcher } from "../-components/sandbox-switcher.tsx"
+import { ShowcaseBanner } from "./-components/showcase-banner.tsx"
+
+const authenticatedRouteApi = getRouteApi("/_authenticated")
 
 const getProjectBySlug = createServerFn({ method: "GET" })
   .inputValidator(z.object({ slug: z.string() }))
@@ -74,9 +86,55 @@ export const Route = createFileRoute("/_authenticated/projects/$projectSlug")({
  */
 const WRAPPED_REPORT_STALE_TIME_MS = 10 * 60 * 1000
 
+function SidebarSearchButton({ collapsed }: { collapsed: boolean }) {
+  const commandPalette = useCommandPalette()
+
+  const button = (
+    <button
+      type="button"
+      onClick={() => commandPalette.setOpen(true)}
+      aria-label="Search"
+      className={cn(
+        "flex cursor-pointer items-center rounded-lg bg-secondary transition-colors hover:bg-secondary/80",
+        {
+          "h-10 w-10 justify-center": collapsed,
+          "w-full gap-2 px-2 py-2": !collapsed,
+        },
+      )}
+    >
+      <Icon icon={SearchIcon} size="sm" color="foregroundMuted" />
+      {!collapsed ? (
+        <>
+          <Text.H5 color="foregroundMuted" className="min-w-0 flex-1 text-left">
+            Search
+          </Text.H5>
+          <kbd className="rounded bg-muted px-1 font-mono text-xs text-muted-foreground">⌘K</kbd>
+        </>
+      ) : null}
+    </button>
+  )
+
+  if (!collapsed) return button
+
+  return (
+    <Tooltip asChild trigger={button} side="right">
+      Search
+    </Tooltip>
+  )
+}
+
 function ProjectSidebar({ project, projectSlug }: { project: ProjectRecord; projectSlug: string }) {
   const pathname = useRouterState({ select: (state) => state.location.pathname })
   const sectionGroups = useVisibleProjectSectionGroups()
+  const organizationId = authenticatedRouteApi.useLoaderData({ select: (data) => data.organizationId })
+  const organizationBilling = authenticatedRouteApi.useLoaderData({ select: (data) => data.organizationBilling })
+
+  // The footer extras (Wrapped shortcut, sandbox switcher, Settings) are all
+  // full-product chrome that makes no sense in the read-only demo: the sandbox
+  // mirrors the *current* project (a foreign showcase-org project here),
+  // Settings would be the showcase org's settings, and a Wrapped report on the
+  // demo isn't the viewer's. One scope check hides all three.
+  const isReadOnly = useIsReadOnlyProjectScope()
 
   // Fire-and-forget client-side fetch: surfaces a sidebar shortcut to this
   // week's Wrapped report when one exists. Returns null for the typical
@@ -86,37 +144,49 @@ function ProjectSidebar({ project, projectSlug }: { project: ProjectRecord; proj
     queryFn: () => getLatestWrappedReportForProject({ data: { projectId: project.id, type: "claude_code" } }),
     staleTime: WRAPPED_REPORT_STALE_TIME_MS,
     retry: false,
+    enabled: !isReadOnly,
   })
 
   return (
     <AppSidebar
-      title={project.name}
-      subtitle={<CopyableText value={project.slug} size="sm" tooltip="Copy project slug" ellipsis />}
+      brand
       footer={({ collapsed }) => (
         <>
           {CHANGELOG_UI_ENABLED ? <ChangelogSidebarEntry collapsed={collapsed} /> : null}
-          {latestWrapped ? (
-            <NavItem
-              icon={ClaudeCodeIcon}
-              label="Claude Code Wrapped"
-              to={`/wrapped/${latestWrapped.id}`}
-              external
-              collapsed={collapsed}
-            />
-          ) : null}
-          <SandboxSwitcher collapsed={collapsed} projectId={project.id} />
-          <NavItem
-            icon={PROJECT_SETTINGS_SECTION.icon}
-            label={PROJECT_SETTINGS_SECTION.label}
-            to={PROJECT_SETTINGS_SECTION.path(projectSlug)}
-            active={PROJECT_SETTINGS_SECTION.isActive(pathname, projectSlug)}
-            collapsed={collapsed}
-          />
+          {isReadOnly ? null : (
+            <>
+              {latestWrapped ? (
+                <NavItem
+                  icon={ClaudeCodeIcon}
+                  label="Claude Code Wrapped"
+                  to={`/wrapped/${latestWrapped.id}`}
+                  external
+                  collapsed={collapsed}
+                />
+              ) : null}
+              <SandboxSwitcher collapsed={collapsed} projectId={project.id} />
+              <NavItem
+                icon={PROJECT_SETTINGS_SECTION.icon}
+                label={PROJECT_SETTINGS_SECTION.label}
+                to={PROJECT_SETTINGS_SECTION.path(projectSlug)}
+                active={PROJECT_SETTINGS_SECTION.isActive(pathname, projectSlug)}
+                collapsed={collapsed}
+              />
+              {!collapsed && (
+                <div className="mt-2 border-t border-border pt-3">
+                  <BillingCreditCounter organizationId={organizationId} initialOverview={organizationBilling} />
+                </div>
+              )}
+            </>
+          )}
         </>
       )}
     >
       {({ collapsed }) => (
         <>
+          <div className="mb-4">
+            <SidebarSearchButton collapsed={collapsed} />
+          </div>
           {sectionGroups.map((group, index) => (
             <div key={group.key} className={cn("flex flex-col gap-1", index > 0 && "mt-4")}>
               {collapsed ? (
@@ -124,7 +194,7 @@ function ProjectSidebar({ project, projectSlug }: { project: ProjectRecord; proj
                   <div className="mb-2 h-px w-6 self-center bg-border" />
                 ) : null
               ) : (
-                <Text.H6 color="foregroundMuted" weight="medium" className="px-2 uppercase tracking-wide">
+                <Text.H6 color="foregroundMuted" textOpacity={60} weight="medium" className="px-2">
                   {group.label}
                 </Text.H6>
               )}
@@ -157,19 +227,35 @@ function SampleProjectStrip() {
   )
 }
 
+function ProjectMainArea({ project, projectSlug }: { project: ProjectRecord; projectSlug: string }) {
+  return (
+    <SidebarCollapseProvider>
+      <ProjectSidebar project={project} projectSlug={projectSlug} />
+      <div className="flex flex-1 min-w-0 flex-col">
+        <NavHeader />
+        <main className="flex-1 min-w-0 overflow-y-auto">
+          <ContentErrorBoundary>
+            <Outlet />
+          </ContentErrorBoundary>
+        </main>
+      </div>
+    </SidebarCollapseProvider>
+  )
+}
+
 function ProjectLayout() {
   const isShowcase = Route.useLoaderData({ select: (data) => data.isShowcase })
   if (isShowcase) {
     return (
       <ProjectScopeProvider scope={SHOWCASE_SCOPE}>
-        <ProjectLayoutContent />
+        <ProjectLayoutContent isShowcase />
       </ProjectScopeProvider>
     )
   }
-  return <ProjectLayoutContent />
+  return <ProjectLayoutContent isShowcase={false} />
 }
 
-function ProjectLayoutContent() {
+function ProjectLayoutContent({ isShowcase }: { isShowcase: boolean }) {
   const { projectSlug } = Route.useParams()
   const projectFromLoader = Route.useLoaderData({ select: (data) => data.project })
   const { data: projectFromCollection } = useProjectsCollection(
@@ -192,17 +278,23 @@ function ProjectLayoutContent() {
     )
   }
 
+  if (isShowcase) {
+    return (
+      <div className="flex h-full min-h-0 flex-col overflow-hidden bg-primary">
+        <ShowcaseBanner />
+        <div className="relative flex min-h-0 flex-1 overflow-hidden rounded-t-2xl bg-background">
+          <ProjectMainArea project={project} projectSlug={projectSlug} />
+        </div>
+      </div>
+    )
+  }
+
   if (project.settings.isSample) {
     return (
       <div className="flex h-full min-h-0 flex-col overflow-hidden bg-primary">
         <SampleProjectStrip />
         <div className="relative flex min-h-0 flex-1 overflow-hidden rounded-t-2xl bg-background">
-          <ProjectSidebar project={project} projectSlug={projectSlug} />
-          <main className="flex-1 min-w-0 overflow-y-auto">
-            <ContentErrorBoundary>
-              <Outlet />
-            </ContentErrorBoundary>
-          </main>
+          <ProjectMainArea project={project} projectSlug={projectSlug} />
         </div>
       </div>
     )
@@ -210,12 +302,7 @@ function ProjectLayoutContent() {
 
   return (
     <div className="flex h-full">
-      <ProjectSidebar project={project} projectSlug={projectSlug} />
-      <main className="flex-1 min-w-0 overflow-y-auto">
-        <ContentErrorBoundary>
-          <Outlet />
-        </ContentErrorBoundary>
-      </main>
+      <ProjectMainArea project={project} projectSlug={projectSlug} />
     </div>
   )
 }

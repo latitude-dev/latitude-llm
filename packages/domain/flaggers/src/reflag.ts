@@ -44,3 +44,8 @@ export const isReflagSuppressed = (tags: readonly string[]): boolean => tags.inc
  */
 export const reflagSuppressionTags = (inputTraceTags: readonly string[]): readonly string[] =>
   isFlaggerGeneratedTrace(inputTraceTags) ? AI_GENERATE_TELEMETRY_TAGS.flaggerNoReflag : []
+
+export const isUserCentricReflagInapplicable = (
+  tags: readonly string[],
+  classifiesAssistantResponseOnly: boolean | undefined,
+): boolean => isFlaggerGeneratedTrace(tags) && classifiesAssistantResponseOnly === false

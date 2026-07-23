@@ -217,6 +217,18 @@ export function parseCHDate(value: string, { fallback }: { readonly fallback?: D
   return Number.isNaN(parsed.getTime()) ? (fallback ?? parsed) : parsed
 }
 
+/**
+ * Serialize a `Date` for a ClickHouse `DateTime`/`DateTime64` column, which
+ * store naive UTC and reject the ISO `Z` suffix. Inverse of {@link parseCHDate}.
+ * Overloaded so an optional date round-trips to `undefined` for callers that
+ * conditionally include the column.
+ */
+export function formatCHDate(date: Date): string
+export function formatCHDate(date: Date | undefined): string | undefined
+export function formatCHDate(date: Date | undefined): string | undefined {
+  return date === undefined ? undefined : date.toISOString().replace("Z", "")
+}
+
 const ZWSP_AND_BOM = /[\u200B-\u200D\uFEFF]/g
 
 /**
@@ -249,4 +261,24 @@ export function safeStringifyJson(value: unknown, fallback = ""): string {
 /** Deterministic JSON serialization with sorted keys, so equal values stringify equal regardless of key order. */
 export function stableStringify(value: unknown): string {
   return stringify(value)
+}
+
+/**
+ * Human caption for a chart's rendered time window, e.g. `"Jun 25 – Jul 1, 2026"`. Shown under
+ * histograms so a bounded window (e.g. the All-time charts, which render a recent slice anchored to
+ * the latest activity) reads clearly instead of being mistaken for the full selected scope. The year
+ * is omitted from the start when both ends fall in the same year. Returns `""` for unparseable input.
+ */
+export function formatChartWindowCaption(fromIso: string, toIso: string): string {
+  const from = new Date(fromIso)
+  const to = new Date(toIso)
+  if (Number.isNaN(from.getTime()) || Number.isNaN(to.getTime())) return ""
+  const sameYear = from.getFullYear() === to.getFullYear()
+  const fromLabel = from.toLocaleDateString(undefined, {
+    month: "short",
+    day: "numeric",
+    ...(sameYear ? {} : { year: "numeric" }),
+  })
+  const toLabel = to.toLocaleDateString(undefined, { month: "short", day: "numeric", year: "numeric" })
+  return `${fromLabel} – ${toLabel}`
 }

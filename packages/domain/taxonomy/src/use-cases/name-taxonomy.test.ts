@@ -33,6 +33,7 @@ const cluster = (overrides: Partial<TaxonomyCluster> = {}): TaxonomyCluster => (
   id: clusterId,
   organizationId,
   projectId,
+  customBehaviorId: null,
   dimension: "topic",
   parentClusterId: null,
   depth: 0,

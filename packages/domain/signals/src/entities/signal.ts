@@ -27,6 +27,9 @@ export const SignalState = {
   New: "new",
   Escalating: "escalating",
   Ongoing: "ongoing",
+  Resolved: "resolved",
+  Regressed: "regressed",
+  Ignored: "ignored",
 } as const satisfies Record<string, SignalState>
 
 // ---------------------------------------------------------------------------
@@ -57,7 +60,10 @@ export const signalSchema = z.object({
   priority: signalPrioritySchema.nullable(), // manual triage priority; null when unset
   centroid: signalCentroidSchema.nullable(), // running weighted sum of clustered score feedback embeddings (discovered signals only); null for user-created evaluation-backed signals
   clusteredAt: z.date().nullable(), // last time the centroid/cluster state was refreshed (discovered signals only); authoritative decay anchor (not updatedAt)
-  mutedAt: z.date().nullable(),
+  resolvedAt: z.date().nullable(), // manual resolve; archived, detector keeps running unless keepMonitoring was declined
+  ignoredAt: z.date().nullable(), // manual ignore; archived + auto-muted, detector archived
+  regressedAt: z.date().nullable(), // set when a new occurrence reopens a resolved signal; cleared by resolve/ignore
+  mutedAt: z.date().nullable(), // notification barrier only; incidents still open while muted
   deletedAt: z.date().nullish(), // soft-delete timestamp; deleted signals are excluded read-side
   createdAt: z.date(), // issue creation time
   updatedAt: z.date(), // issue update time

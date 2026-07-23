@@ -15,15 +15,28 @@ import { type TraceDetail, TraceRepository } from "@domain/spans"
 import { createFakeTraceRepository } from "@domain/spans/testing"
 import { Cause, Effect, Layer } from "effect"
 import { describe, expect, it } from "vitest"
-import { type RunFlaggerAnnotatorInput, runFlaggerAnnotatorUseCase } from "./run-flagger-annotator.ts"
+import { annotateTraceForFlaggerUseCase } from "./run-flagger-annotator.ts"
 
-const INPUT: RunFlaggerAnnotatorInput = {
+const INPUT = {
   organizationId: "a".repeat(24),
   projectId: "b".repeat(24),
   flaggerSlug: "jailbreaking",
   traceId: "c".repeat(32),
   scoreId: "s".repeat(24),
 }
+
+// Stand-in for the deleted trace-based entry point (drain path): resolve the
+// trace through the provided TraceRepository layer, then annotate it.
+const runFlaggerAnnotatorUseCase = (input: typeof INPUT) =>
+  Effect.gen(function* () {
+    const traceRepository = yield* TraceRepository
+    const trace = yield* traceRepository.findByTraceId({
+      organizationId: OrganizationId(input.organizationId),
+      projectId: ProjectId(input.projectId),
+      traceId: TraceId(input.traceId),
+    })
+    return yield* annotateTraceForFlaggerUseCase({ ...input, trace })
+  })
 
 function makeTraceDetail(allMessages: TraceDetail["allMessages"]): TraceDetail {
   return {
@@ -54,6 +67,7 @@ function makeTraceDetail(allMessages: TraceDetail["allMessages"]): TraceDetail {
     models: [],
     providers: [],
     serviceNames: [],
+    agentNames: [],
     rootSpanId: SpanId("r".repeat(16)),
     rootSpanName: "root",
     systemInstructions: [],

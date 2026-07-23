@@ -16,13 +16,16 @@ if typing.TYPE_CHECKING:
     from .annotations.client import AnnotationsClient, AsyncAnnotationsClient
     from .api_keys.client import ApiKeysClient, AsyncApiKeysClient
     from .datasets.client import AsyncDatasetsClient, DatasetsClient
+    from .experiments.client import AsyncExperimentsClient, ExperimentsClient
     from .incidents.client import AsyncIncidentsClient, IncidentsClient
     from .members.client import AsyncMembersClient, MembersClient
+    from .memory.client import AsyncMemoryClient, MemoryClient
     from .monitors.client import AsyncMonitorsClient, MonitorsClient
     from .oauth_keys.client import AsyncOauthKeysClient, OauthKeysClient
     from .projects.client import AsyncProjectsClient, ProjectsClient
     from .saved_searches.client import AsyncSavedSearchesClient, SavedSearchesClient
     from .scores.client import AsyncScoresClient, ScoresClient
+    from .sessions.client import AsyncSessionsClient, SessionsClient
     from .signals.client import AsyncSignalsClient, SignalsClient
     from .spans.client import AsyncSpansClient, SpansClient
     from .tools.client import AsyncToolsClient, ToolsClient
@@ -133,6 +136,9 @@ class LatitudeClient:
         self._monitors: typing.Optional[MonitorsClient] = None
         self._analytics: typing.Optional[AnalyticsClient] = None
         self._spans: typing.Optional[SpansClient] = None
+        self._experiments: typing.Optional[ExperimentsClient] = None
+        self._sessions: typing.Optional[SessionsClient] = None
+        self._memory: typing.Optional[MemoryClient] = None
 
     @property
     def account(self):
@@ -270,6 +276,30 @@ class LatitudeClient:
             self._spans = SpansClient(client_wrapper=self._client_wrapper)
         return self._spans
 
+    @property
+    def experiments(self):
+        if self._experiments is None:
+            from .experiments.client import ExperimentsClient  # noqa: E402
+
+            self._experiments = ExperimentsClient(client_wrapper=self._client_wrapper)
+        return self._experiments
+
+    @property
+    def sessions(self):
+        if self._sessions is None:
+            from .sessions.client import SessionsClient  # noqa: E402
+
+            self._sessions = SessionsClient(client_wrapper=self._client_wrapper)
+        return self._sessions
+
+    @property
+    def memory(self):
+        if self._memory is None:
+            from .memory.client import MemoryClient  # noqa: E402
+
+            self._memory = MemoryClient(client_wrapper=self._client_wrapper)
+        return self._memory
+
 
 def _make_default_async_client(
     timeout: typing.Optional[float],
@@ -395,6 +425,9 @@ class AsyncLatitudeClient:
         self._monitors: typing.Optional[AsyncMonitorsClient] = None
         self._analytics: typing.Optional[AsyncAnalyticsClient] = None
         self._spans: typing.Optional[AsyncSpansClient] = None
+        self._experiments: typing.Optional[AsyncExperimentsClient] = None
+        self._sessions: typing.Optional[AsyncSessionsClient] = None
+        self._memory: typing.Optional[AsyncMemoryClient] = None
 
     @property
     def account(self):
@@ -531,6 +564,30 @@ class AsyncLatitudeClient:
 
             self._spans = AsyncSpansClient(client_wrapper=self._client_wrapper)
         return self._spans
+
+    @property
+    def experiments(self):
+        if self._experiments is None:
+            from .experiments.client import AsyncExperimentsClient  # noqa: E402
+
+            self._experiments = AsyncExperimentsClient(client_wrapper=self._client_wrapper)
+        return self._experiments
+
+    @property
+    def sessions(self):
+        if self._sessions is None:
+            from .sessions.client import AsyncSessionsClient  # noqa: E402
+
+            self._sessions = AsyncSessionsClient(client_wrapper=self._client_wrapper)
+        return self._sessions
+
+    @property
+    def memory(self):
+        if self._memory is None:
+            from .memory.client import AsyncMemoryClient  # noqa: E402
+
+            self._memory = AsyncMemoryClient(client_wrapper=self._client_wrapper)
+        return self._memory
 
 
 def _get_base_url(*, base_url: typing.Optional[str] = None, environment: LatitudeEnvironment) -> str:

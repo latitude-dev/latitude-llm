@@ -343,6 +343,7 @@ export const getUserUsage = createServerFn({ method: "GET" })
 
 export interface UserSignalRecord {
   readonly signalId: string
+  readonly slug: string
   readonly name: string
   readonly description: string
   readonly states: readonly string[]
@@ -375,6 +376,7 @@ export const listUserSignals = createServerFn({ method: "GET" })
     return items.map(
       (item): UserSignalRecord => ({
         signalId: item.issue.id,
+        slug: item.issue.slug,
         name: item.issue.name,
         description: item.issue.description,
         states: item.states,

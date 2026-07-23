@@ -119,6 +119,8 @@ describe("domain-events dispatcher", () => {
     expect(traceEnd?.options).toEqual({
       dedupeKey: "trace-end:run:org-1:proj-1:trace-abc",
       debounceMs: TRACE_END_DEBOUNCE_MS,
+      attempts: 10,
+      backoff: { type: "exponential", delayMs: 1_000 },
     })
     expect(published.some((p) => p.queue === "signals")).toBe(false)
     expect(firstTrace?.options?.dedupeKey).toBe("projects:first-trace:proj-1")
@@ -216,33 +218,6 @@ describe("domain-events dispatcher", () => {
     })
     expect(projectsPublish?.options?.dedupeKey).toBe("projects:provision:proj-1")
     // ProjectCreated is whitelisted for PostHog.
-    expect(published.some((p) => p.queue === "posthog-analytics")).toBe(true)
-  })
-
-  it("routes SampleProjectCreated to the demo seed project task", async () => {
-    const { consumer, published } = setupDispatcher()
-
-    const payload = {
-      organizationId: "org-1",
-      projectId: "sample-1",
-      apiKeyId: "key-1",
-      timelineAnchorIso: "2026-06-16T00:00:00.000Z",
-    }
-    const envelope = makeEnvelope("SampleProjectCreated", payload, "org-1")
-
-    await consumer.dispatchTask("domain-events", "dispatch", envelopeToDispatchPayload(envelope))
-
-    const seedDemoPublish = published.find((p) => p.queue === "projects" && p.task === "seedDemo")
-    expect(seedDemoPublish).toMatchObject({
-      queue: "projects",
-      task: "seedDemo",
-      payload,
-      options: {
-        dedupeKey: "projects:seed-demo:sample-1",
-        attempts: 10,
-        backoff: { type: "exponential", delayMs: 1_000 },
-      },
-    })
     expect(published.some((p) => p.queue === "posthog-analytics")).toBe(true)
   })
 

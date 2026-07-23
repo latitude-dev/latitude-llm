@@ -41,7 +41,7 @@ There is exactly **one** project, named with its final name from the start (no t
 
 The unauthenticated bootstrap surface is the crown-jewel risk. Mitigations:
 
-- **Rate limiting, two layers** (`apps/api/src/middleware/rate-limiter.ts`): the per-IP **`max` tier** (`createTierRateLimiter("max")`, 1 req/min, keyed by org → IP → `unknown`) runs first, then a tenant-agnostic **global cap** (`createGlobalRateLimiter({ key: "account-bootstrap", maxRequests: 1000, windowSeconds: 60 })`) bounds total creation rate against a botnet spread across many IPs (there is no CAPTCHA on the API). Both fail open on Redis errors.
+- **Rate limiting, two layers** (`apps/api/src/middleware/rate-limiter.ts`): the per-IP **`max` tier** (`createTierRateLimiter("max")`, 10 req/min, keyed by org → IP → `unknown`) runs first, then a tenant-agnostic **global cap** (`createGlobalRateLimiter({ key: "account-bootstrap", maxRequests: 1000, windowSeconds: 60 })`) bounds total creation rate against a botnet spread across many IPs (there is no CAPTCHA on the API). Both fail open on Redis errors.
 - **TTL + auto-expiry.** Bootstrap sets `expires_at = now() + 1 week`. A daily cleanup worker hard-deletes still-unclaimed orgs past their deadline (org + projects + keys). Unclaimed temp orgs are never sample-seeded, billed, or enrolled in automations — **sample seeding happens only at claim time**.
 - **No user enumeration.** Bootstrap always creates a fresh org and never looks up users by email; the optional email only addresses the claim link.
 - **Don't leak the key.** The API key is returned once; skills store it in `.env`/secret managers, never chat.

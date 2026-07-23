@@ -8,11 +8,12 @@ import pydantic
 import typing_extensions
 from ..core.pydantic_utilities import UniversalBaseModel
 from ..core.serialization import FieldMetadata
+from .signal_monitoring_state_failed_phase import SignalMonitoringStateFailedPhase
 
 
 class SignalMonitoringState_Automatic(UniversalBaseModel):
     """
-    Whether the signal is currently being monitored: `automatic`, `idle`, `generating`, or `realigning`.
+    Whether the signal is currently being monitored: `automatic`, `idle`, `generating`, `realigning`, or `failed`.
     """
 
     kind: typing.Literal["automatic"] = "automatic"
@@ -22,7 +23,7 @@ class SignalMonitoringState_Automatic(UniversalBaseModel):
 
 class SignalMonitoringState_Idle(UniversalBaseModel):
     """
-    Whether the signal is currently being monitored: `automatic`, `idle`, `generating`, or `realigning`.
+    Whether the signal is currently being monitored: `automatic`, `idle`, `generating`, `realigning`, or `failed`.
     """
 
     kind: typing.Literal["idle"] = "idle"
@@ -32,7 +33,7 @@ class SignalMonitoringState_Idle(UniversalBaseModel):
 
 class SignalMonitoringState_Generating(UniversalBaseModel):
     """
-    Whether the signal is currently being monitored: `automatic`, `idle`, `generating`, or `realigning`.
+    Whether the signal is currently being monitored: `automatic`, `idle`, `generating`, `realigning`, or `failed`.
     """
 
     kind: typing.Literal["generating"] = "generating"
@@ -42,7 +43,7 @@ class SignalMonitoringState_Generating(UniversalBaseModel):
 
 class SignalMonitoringState_Realigning(UniversalBaseModel):
     """
-    Whether the signal is currently being monitored: `automatic`, `idle`, `generating`, or `realigning`.
+    Whether the signal is currently being monitored: `automatic`, `idle`, `generating`, `realigning`, or `failed`.
     """
 
     kind: typing.Literal["realigning"] = "realigning"
@@ -53,12 +54,28 @@ class SignalMonitoringState_Realigning(UniversalBaseModel):
     model_config: typing.ClassVar[pydantic.ConfigDict] = pydantic.ConfigDict(extra="allow", frozen=True)
 
 
+class SignalMonitoringState_Failed(UniversalBaseModel):
+    """
+    Whether the signal is currently being monitored: `automatic`, `idle`, `generating`, `realigning`, or `failed`.
+    """
+
+    kind: typing.Literal["failed"] = "failed"
+    phase: SignalMonitoringStateFailedPhase
+    evaluation_id: typing_extensions.Annotated[
+        typing.Optional[str], FieldMetadata(alias="evaluationId"), pydantic.Field(alias="evaluationId", default=None)
+    ]
+    reason: typing.Optional[str] = None
+
+    model_config: typing.ClassVar[pydantic.ConfigDict] = pydantic.ConfigDict(extra="allow", frozen=True)
+
+
 SignalMonitoringState = typing_extensions.Annotated[
     typing.Union[
         SignalMonitoringState_Automatic,
         SignalMonitoringState_Idle,
         SignalMonitoringState_Generating,
         SignalMonitoringState_Realigning,
+        SignalMonitoringState_Failed,
     ],
     pydantic.Field(discriminator="kind"),
 ]

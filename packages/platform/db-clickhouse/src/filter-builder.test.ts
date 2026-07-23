@@ -1,6 +1,8 @@
 import type { FilterCondition, FilterSet } from "@domain/shared"
+import { ValidationError } from "@domain/shared"
+import { Effect } from "effect"
 import { describe, expect, it } from "vitest"
-import { buildClickHouseWhere, type ChFieldRegistry } from "./filter-builder.ts"
+import { buildClickHouseWhere, type ChFieldRegistry, runFilterBuild } from "./filter-builder.ts"
 
 function mapStatus(v: FilterCondition["value"]): FilterCondition["value"] {
   const map: Record<string, number> = { error: 2, ok: 1, unset: 0 }
@@ -49,6 +51,24 @@ describe("buildClickHouseWhere", () => {
     expect(clauses[1]).toBe("cost_total_microcents <= {f_1:UInt64}")
     expect(params.f_0).toBe(100)
     expect(params.f_1).toBe(500)
+  })
+
+  it("rejects fractional values on integer-typed fields", () => {
+    const filters: FilterSet = { cost: [{ op: "gte", value: 0.25 }] }
+    expect(() => buildClickHouseWhere(filters, registry)).toThrow(ValidationError)
+    expect(() => buildClickHouseWhere(filters, registry)).toThrow(/must be an integer/)
+  })
+
+  it("rejects fractional values in in/notIn arrays on integer-typed fields", () => {
+    const filters: FilterSet = { cost: [{ op: "in", value: [1, 0.5, 3] }] }
+    expect(() => buildClickHouseWhere(filters, registry)).toThrow(ValidationError)
+  })
+
+  it("surfaces ValidationError through runFilterBuild as an Effect failure", async () => {
+    const filters: FilterSet = { cost: [{ op: "gte", value: 0.25 }] }
+    await expect(
+      Effect.runPromise(runFilterBuild(() => buildClickHouseWhere(filters, registry))),
+    ).rejects.toBeInstanceOf(ValidationError)
   })
 
   it("handles in operator on scalar field", () => {
@@ -201,6 +221,25 @@ describe("buildClickHouseWhere", () => {
     const values = Object.values(params)
     expect(values).toContain("env")
     expect(values).toContainEqual([])
+  })
+})
+
+describe("buildClickHouseWhere with float fields", () => {
+  const floatRegistry: ChFieldRegistry = {
+    "score.value": { column: "value", chType: "Float32" },
+    duration: { column: "duration_ns", chType: "Int64" },
+  }
+
+  it("allows fractional values on Float32 fields", () => {
+    const filters: FilterSet = { "score.value": [{ op: "gte", value: 0.25 }] }
+    const { clauses, params } = buildClickHouseWhere(filters, floatRegistry)
+    expect(clauses[0]).toBe("value >= {f_0:Float32}")
+    expect(params.f_0).toBe(0.25)
+  })
+
+  it("rejects fractional values on Int64 fields", () => {
+    const filters: FilterSet = { duration: [{ op: "gte", value: 0.1 }] }
+    expect(() => buildClickHouseWhere(filters, floatRegistry)).toThrow(ValidationError)
   })
 })
 

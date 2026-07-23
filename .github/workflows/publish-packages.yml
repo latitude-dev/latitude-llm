@@ -83,6 +83,14 @@ jobs:
       ref: ${{ github.sha }}
     secrets: inherit
 
+  publish-prime-intellect-telemetry:
+    permissions:
+      contents: write
+    uses: ./.github/workflows/publish-prime-intellect-telemetry.yml
+    with:
+      ref: ${{ github.sha }}
+    secrets: inherit
+
   publish-python-sdk:
     permissions:
       contents: write

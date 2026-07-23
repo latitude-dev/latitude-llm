@@ -34,7 +34,6 @@ import { MonitorMatchingTraces } from "../-components/monitor-matching-traces.ts
 import { MonitorMetricChart } from "../-components/monitor-metric-chart.tsx"
 import { MonitorMuteConfirmModal } from "../-components/monitor-mute-confirm-modal.tsx"
 import { MonitorRuleEditModal } from "../-components/monitor-rule-edit-modal.tsx"
-import { MonitorSensitivityEditModal } from "../-components/monitor-sensitivity-edit-modal.tsx"
 
 const monitorRoute = getRouteApi("/_authenticated/projects/$projectSlug/monitors/$monitorSlug/")
 
@@ -108,7 +107,6 @@ function MonitorDetailPage() {
   const [muteConfirmOpen, setMuteConfirmOpen] = useState(false)
   const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false)
   const [ruleModal, setRuleModal] = useState<MonitorRuleRecord | null>(null)
-  const [sensitivityRule, setSensitivityRule] = useState<MonitorRuleRecord | null>(null)
 
   const window = useMemo(() => {
     const spec = RANGE_SPEC[range]
@@ -151,12 +149,11 @@ function MonitorDetailPage() {
         ...(sessionTarget.query ? { query: sessionTarget.query } : {}),
       }
     : null
-  const canEditRule = monitor ? !monitor.system || rule?.kind === "monitor.escalating" : false
+  const canEditRule = Boolean(monitor && rule)
   const canDeleteMonitor = monitor ? !monitor.system : false
   const onEditRule = () => {
     if (!rule) return
-    if (rule.kind === "monitor.escalating") setSensitivityRule(rule)
-    else setRuleModal(rule)
+    setRuleModal(rule)
   }
 
   return (
@@ -278,10 +275,10 @@ function MonitorDetailPage() {
                     ) : null}
                     {rule ? (
                       <ConfigField label="Trigger">
-                        <SeverityStatus
-                          severity={rule.severity}
-                          label={`${INCIDENT_NOTIFICATION_KEY_LABEL[rule.kind]} · ${rule.severity}`}
-                        />
+                        <div className="flex items-center gap-2">
+                          <Text.H5 color="foreground">{INCIDENT_NOTIFICATION_KEY_LABEL[rule.kind]}</Text.H5>
+                          <SeverityStatus severity={rule.severity} />
+                        </div>
                       </ConfigField>
                     ) : null}
                     <ConfigField label="Incidents">
@@ -340,15 +337,6 @@ function MonitorDetailPage() {
             rule={ruleModal}
             target={monitor.target}
             onClose={() => setRuleModal(null)}
-          />
-        ) : null}
-
-        {sensitivityRule && monitor ? (
-          <MonitorSensitivityEditModal
-            projectId={project.id}
-            monitorId={monitor.id}
-            alert={sensitivityRule}
-            onClose={() => setSensitivityRule(null)}
           />
         ) : null}
       </Layout.Content>

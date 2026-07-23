@@ -79,9 +79,12 @@ function setup(
   const organizationRepo = OrganizationRepository.of({
     findById: (id) =>
       id === orgId ? Effect.succeed(organization) : Effect.fail(new NotFoundError({ entity: "Organization", id })),
+    findByIdForUpdate: (id) =>
+      id === orgId ? Effect.succeed(organization) : Effect.fail(new NotFoundError({ entity: "Organization", id })),
     listByUserId: () => Effect.die("not used"),
     save: () => Effect.die("not used"),
     delete: () => Effect.die("not used"),
+    deleteIfExpiredUnclaimed: () => Effect.die("not used"),
     countBySlug: () => Effect.die("not used"),
     listExpiredUnclaimed: () => Effect.die("not used"),
   })

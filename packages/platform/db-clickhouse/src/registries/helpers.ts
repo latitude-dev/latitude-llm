@@ -1,15 +1,9 @@
 import type { FilterCondition } from "@domain/shared"
 
-/**
- * ClickHouse `DateTime64(9, 'UTC')` bound parameters reject typical JS `toISOString()` output with a
- * trailing `Z` (BAD_QUERY_PARAMETER: parsed incompletely — the `Z` is an extra byte). Normalize to
- * `YYYY-MM-DD HH:MM:SS.sss...` without a timezone suffix so parameterized queries bind correctly.
- */
-export function mapDateTime64UtcQueryParam(value: FilterCondition["value"]): FilterCondition["value"] {
-  if (typeof value !== "string") return value
-  const t = value.trim()
-  const withoutZ = t.endsWith("Z") ? t.slice(0, -1) : t
-  return withoutZ.replace("T", " ")
+export function dateTime64BestEffortExpression(paramName: string, options: { readonly array: boolean }): string {
+  const parse = (value: string) => `parseDateTime64BestEffort(${value}, 9, 'UTC')`
+  if (options.array) return `arrayMap(x -> ${parse("x")}, {${paramName}:Array(String)})`
+  return parse(`{${paramName}:String}`)
 }
 
 type StatusEnum = "ok" | "error" | "unset"

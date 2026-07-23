@@ -30,7 +30,7 @@ function AggregationItem({
       className={cn(
         "flex basis-[176px] min-w-[176px] shrink-0 cursor-pointer flex-col gap-2 rounded-md p-2 text-left",
         "transition-colors hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
-        isSelected && "bg-muted ring-1 ring-border",
+        isSelected && "bg-muted",
       )}
     >
       <Text.H6 color="foregroundMuted">{label}</Text.H6>

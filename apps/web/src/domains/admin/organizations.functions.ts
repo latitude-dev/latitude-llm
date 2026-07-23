@@ -5,16 +5,15 @@ import {
   type AdminOrganizationUsageSummary,
   adminOrganizationUsageCursorSchema,
   clearBillingOverrideUseCase,
-  createDemoProjectUseCase,
   getOrganizationBillingUseCase,
   getOrganizationDetailsUseCase,
   type ListOrganizationsByUsageOutput,
   listOrganizationsByUsageUseCase,
   ORGANIZATION_USAGE_MAX_LIMIT,
   resetSystemMonitorsUseCase,
+  setOrganizationShowcaseUseCase,
   upsertBillingOverrideUseCase,
 } from "@domain/admin"
-import { WorkflowStarter } from "@domain/queue"
 import { OrganizationId, UserId } from "@domain/shared"
 import { RedisCacheStoreLive } from "@platform/cache-redis"
 import { AdminOrganizationUsageRepositoryLive, withClickHouse } from "@platform/db-clickhouse"
@@ -25,8 +24,6 @@ import {
   invalidateEffectivePlanCache,
   MonitorRepositoryLive,
   OrganizationRepositoryLive,
-  OutboxEventWriterLive,
-  ProjectRepositoryLive,
   resolveEffectivePlanCached,
   SettingsReaderLive,
   StripeSubscriptionLookupLive,
@@ -37,12 +34,7 @@ import { createServerFn } from "@tanstack/react-start"
 import { Effect, Layer } from "effect"
 import { z } from "zod"
 import { adminMiddleware } from "../../server/admin-middleware.ts"
-import {
-  getAdminPostgresClient,
-  getClickhouseClient,
-  getRedisClient,
-  getWorkflowStarter,
-} from "../../server/clients.ts"
+import { getAdminPostgresClient, getClickhouseClient, getRedisClient } from "../../server/clients.ts"
 
 export interface AdminOrganizationMemberDto {
   membershipId: string
@@ -83,6 +75,7 @@ interface AdminOrganizationDetailsDto {
   name: string
   slug: string
   stripeCustomerId: string | null
+  wantsShowcase: boolean
   members: AdminOrganizationMemberDto[]
   projects: AdminOrganizationProjectDto[]
   sandboxes: AdminOrganizationSandboxDto[]
@@ -119,6 +112,7 @@ const toDto = (details: AdminOrganizationDetails): AdminOrganizationDetailsDto =
   name: details.name,
   slug: details.slug,
   stripeCustomerId: details.stripeCustomerId,
+  wantsShowcase: details.wantsShowcase,
   members: details.members.map((m) => ({
     membershipId: m.membershipId,
     role: m.role,
@@ -380,67 +374,32 @@ export const adminListOrganizationsByUsage = createServerFn({ method: "GET" })
     return toUsagePageDto(page)
   })
 
-// ───────────────────────────────────────────────────────────────────
-// Create demo project (backoffice action)
-// ───────────────────────────────────────────────────────────────────
-
-/**
- * Exported for input-schema tests.
- */
-export const adminCreateDemoProjectInputSchema = z.object({
+export const adminSetOrganizationShowcaseInputSchema = z.object({
   organizationId: z.string().min(1).max(256),
-  /** User-typed name from the modal. Trimmed and validated server-side. */
-  projectName: z.string().min(1).max(256),
+  enabled: z.boolean(),
 })
 
-interface AdminCreateDemoProjectResultDto {
-  projectId: string
-  projectSlug: string
-}
-
 /**
- * Create a "demo project" on the target organization and kick off the
- * Temporal workflow that seeds it with full bootstrap content (datasets,
- * evaluations, issues, scores, ~30 days of telemetry).
- *
- * Three-guard discipline mirroring the rest of the backoffice:
- *  - {@link adminMiddleware} rejects non-admins with `NotFoundError`
- *    (indistinguishable from a non-existent server function).
- *  - Use-case enforces the name-collision invariant before any side effect.
- *  - Postgres reads/writes go through {@link getAdminPostgresClient}
- *    (the only sanctioned RLS-bypass signal).
- *
- * The server function returns as soon as the project row + audit event
- * commit and Temporal accepts the workflow handle. Seeding runs in the
- * background — the UI just `router.invalidate()`s and lets the staff
- * refresh to watch the project's content fill in.
+ * Toggle an org's `wantsShowcase` flag from the backoffice — the staff
+ * counterpart to the user-facing "Remove demo" dismiss. Enabling re-surfaces
+ * the shared read-only Showcase for an org that dismissed it (or one created
+ * before the feature). Same three-guard discipline as the rest of the
+ * backoffice; the write merges into `settings` under the admin (RLS-bypass)
+ * client at the `"system"` scope.
  */
-export const adminCreateDemoProject = createServerFn({ method: "POST" })
+export const adminSetOrganizationShowcase = createServerFn({ method: "POST" })
   .middleware([adminMiddleware])
-  .inputValidator(adminCreateDemoProjectInputSchema)
-  .handler(async ({ data, context }): Promise<AdminCreateDemoProjectResultDto> => {
+  .inputValidator(adminSetOrganizationShowcaseInputSchema)
+  .handler(async ({ data, context }): Promise<void> => {
     const client = getAdminPostgresClient()
-    const workflowStarter = await getWorkflowStarter()
 
-    const result = await Effect.runPromise(
-      createDemoProjectUseCase({
+    await Effect.runPromise(
+      setOrganizationShowcaseUseCase({
         organizationId: OrganizationId(data.organizationId),
-        projectName: data.projectName,
+        enabled: data.enabled,
         actorAdminUserId: UserId(context.adminUserId),
-      }).pipe(
-        withPostgres(
-          Layer.mergeAll(AdminOrganizationRepositoryLive, ProjectRepositoryLive, OutboxEventWriterLive),
-          client,
-        ),
-        Effect.provideService(WorkflowStarter, workflowStarter),
-        withTracing,
-      ),
+      }).pipe(withPostgres(AdminOrganizationRepositoryLive, client), withTracing),
     )
-
-    return {
-      projectId: result.projectId,
-      projectSlug: result.projectSlug,
-    }
   })
 
 interface AdminResetSystemMonitorsResultDto {

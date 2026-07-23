@@ -16,15 +16,17 @@ import { QueuePublisherLive } from "@platform/queue-bullmq"
 import { StorageDiskLive } from "@platform/storage-object"
 import { withTracing } from "@repo/observability"
 import { Cause, Effect, Exit, Layer, Option } from "effect"
-import type { Hono } from "hono"
+import type { Handler, Hono } from "hono"
 import { getPostgresClient, getQueuePublisher, getRedisClient, getStorageDisk } from "../clients.ts"
 import { authMiddleware } from "../middleware/auth.ts"
 import { projectMiddleware } from "../middleware/project.ts"
 import { checkTraceIngestionRateLimit } from "../rate-limit/trace-ingestion.ts"
+import type { TracePayloadProtection } from "../trace-payload.ts"
 import type { IngestEnv } from "../types.ts"
 
 interface TracesRouteContext {
   app: Hono<IngestEnv>
+  tracePayloadProtection: TracePayloadProtection
 }
 
 const traceIngestionBillingLayers = Layer.mergeAll(
@@ -42,10 +44,9 @@ const buildRejectionMessage = (rejected: number): string =>
   "OTEL resource attribute, or the `X-Latitude-Project` export header. If you already set one, " +
   "check that the slug exists in this Latitude organization."
 
-export const registerTracesRoute = ({ app }: TracesRouteContext) => {
-  app.post("/v1/traces", authMiddleware, projectMiddleware, async (c) => {
-    const contentType = c.req.header("Content-Type") ?? "application/json"
-    const body = await c.req.arrayBuffer()
+export const registerTracesRoute = ({ app, tracePayloadProtection }: TracesRouteContext) => {
+  const handleTraceRequest: Handler<IngestEnv> = async (c) => {
+    const { payload: body, contentType } = c.get("tracePayload")
     if (!body.byteLength) return c.json({}, 202)
 
     const organizationId = c.get("organizationId")
@@ -86,7 +87,7 @@ export const registerTracesRoute = ({ app }: TracesRouteContext) => {
       organizationId: organization,
       apiKeyId,
       isSandbox,
-      payload: new Uint8Array(body),
+      payload: body,
       contentType,
       ...(defaultProjectSlug ? { defaultProjectSlug } : {}),
     }).pipe(
@@ -147,5 +148,14 @@ export const registerTracesRoute = ({ app }: TracesRouteContext) => {
     }
 
     return c.json({})
-  })
+  }
+
+  app.post(
+    "/v1/traces",
+    tracePayloadProtection.rejectOversizedHeaders,
+    authMiddleware,
+    projectMiddleware,
+    tracePayloadProtection.readPayload,
+    handleTraceRequest,
+  )
 }

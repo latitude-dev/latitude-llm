@@ -57,11 +57,14 @@ export type FlaggerId = Id<"FlaggerId">
 export type SavedSearchId = Id<"SavedSearchId">
 export type AlertIncidentId = Id<"AlertIncidentId">
 export type MonitorId = Id<"MonitorId">
+export type ExperimentId = Id<"ExperimentId">
 export type NotificationId = Id<"NotificationId">
 export type WrappedReportId = Id<"WrappedReportId">
 export type TaxonomyClusterId = Id<"TaxonomyClusterId">
 export type TaxonomyRunId = Id<"TaxonomyRunId">
 export type TaxonomyLineageId = Id<"TaxonomyLineageId">
+export type CustomBehaviorId = Id<"CustomBehaviorId">
+export type FacetId = Id<"FacetId">
 
 // Integration-related IDs
 export type SlackIntegrationId = Id<"SlackIntegrationId">
@@ -100,11 +103,14 @@ export const FlaggerId = (value: string): FlaggerId => value as FlaggerId
 export const SavedSearchId = (value: string): SavedSearchId => value as SavedSearchId
 export const AlertIncidentId = (value: string): AlertIncidentId => value as AlertIncidentId
 export const MonitorId = (value: string): MonitorId => value as MonitorId
+export const ExperimentId = (value: string): ExperimentId => value as ExperimentId
 export const NotificationId = (value: string): NotificationId => value as NotificationId
 export const WrappedReportId = (value: string): WrappedReportId => value as WrappedReportId
 export const TaxonomyClusterId = (value: string): TaxonomyClusterId => value as TaxonomyClusterId
 export const TaxonomyRunId = (value: string): TaxonomyRunId => value as TaxonomyRunId
 export const TaxonomyLineageId = (value: string): TaxonomyLineageId => value as TaxonomyLineageId
+export const CustomBehaviorId = (value: string): CustomBehaviorId => value as CustomBehaviorId
+export const FacetId = (value: string): FacetId => value as FacetId
 export const SlackIntegrationId = (value: string): SlackIntegrationId => value as SlackIntegrationId
 export const SlackDeliveryId = (value: string): SlackDeliveryId => value as SlackDeliveryId
 export const DestinationId = (value: string): DestinationId => value as DestinationId
@@ -137,11 +143,14 @@ export const simulationIdSchema = cuidSchema.transform(SimulationId)
 export const savedSearchIdSchema = cuidSchema.transform(SavedSearchId)
 export const alertIncidentIdSchema = cuidSchema.transform(AlertIncidentId)
 export const monitorIdSchema = cuidSchema.transform(MonitorId)
+export const experimentIdSchema = cuidSchema.transform(ExperimentId)
 export const notificationIdSchema = cuidSchema.transform(NotificationId)
 export const wrappedReportIdSchema = cuidSchema.transform(WrappedReportId)
 export const taxonomyClusterIdSchema = cuidSchema.transform(TaxonomyClusterId)
 export const taxonomyRunIdSchema = cuidSchema.transform(TaxonomyRunId)
 export const taxonomyLineageIdSchema = cuidSchema.transform(TaxonomyLineageId)
+export const customBehaviorIdSchema = cuidSchema.transform(CustomBehaviorId)
+export const facetIdSchema = cuidSchema.transform(FacetId)
 export const slackIntegrationIdSchema = cuidSchema.transform(SlackIntegrationId)
 export const slackDeliveryIdSchema = cuidSchema.transform(SlackDeliveryId)
 export const destinationIdSchema = cuidSchema.transform(DestinationId)

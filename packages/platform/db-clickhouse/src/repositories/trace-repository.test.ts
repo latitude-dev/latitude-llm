@@ -85,6 +85,7 @@ function makeSpanRow({
     operation: "chat",
     provider: "",
     model: "",
+    agent_name: "",
     response_model: "",
     tokens_input: tokensInput,
     tokens_output: tokensOutput,
@@ -479,6 +480,24 @@ describe("TraceRepository", () => {
     })
   })
 
+  describe("findSummaryByTraceId", () => {
+    it("loads trace orchestration fields without conversation content", async () => {
+      const summary = await runCh(
+        repo.findSummaryByTraceId({
+          organizationId: ORG_ID,
+          projectId: PROJECT_ID,
+          traceId: TraceId(SEED_ANNOTATION_DEMO_TRACE_ID),
+        }),
+      )
+
+      expect(summary.traceId).toBe(SEED_ANNOTATION_DEMO_TRACE_ID)
+      expect(summary.projectId).toBe(PROJECT_ID)
+      expect(summary.startTime).toBeInstanceOf(Date)
+      expect(summary.rootSpanName).toBeTypeOf("string")
+      expect("outputMessages" in summary).toBe(false)
+    })
+  })
+
   describe("findByTraceId", () => {
     it("prepends system instructions as first message in allMessages", async () => {
       const detail = await runCh(
@@ -514,6 +533,128 @@ describe("TraceRepository", () => {
           expect(detail.allMessages[0]?.role).not.toBe("system")
         }
       }
+    })
+
+    it("loads conversation chunks with the same message assembly as trace detail", async () => {
+      const [detail, chunk] = await Promise.all([
+        runCh(
+          repo.findByTraceId({
+            organizationId: ORG_ID,
+            projectId: PROJECT_ID,
+            traceId: TraceId(SEED_ANNOTATION_DEMO_TRACE_ID),
+          }),
+        ),
+        runCh(
+          repo.findConversationChunk({
+            organizationId: ORG_ID,
+            projectId: PROJECT_ID,
+            traceId: TraceId(SEED_ANNOTATION_DEMO_TRACE_ID),
+            offset: 0,
+            limit: 100,
+          }),
+        ),
+      ])
+
+      expect(chunk.messages).toEqual(detail.allMessages)
+      expect(chunk.totalMessages).toBe(detail.allMessages.length)
+      expect(chunk.hasMore).toBe(false)
+    })
+
+    it("uses the newest ingested_at row when the same span_id is re-ingested", async () => {
+      const REINGEST_TRACE_ID = TraceId("99999999999999999999999999999999")
+      const startTime = new Date("2026-03-01T00:00:00.000Z")
+      const spanBase = makeSpanRow({
+        traceId: REINGEST_TRACE_ID as string,
+        spanId: "reingestspan1111",
+        startTime,
+        costTotalMicrocents: 0,
+        tokensInput: 0,
+        tokensOutput: 0,
+      })
+
+      await runCh(
+        insertJsonEachRow(ch.client, "spans", [
+          {
+            ...spanBase,
+            operation: "chat",
+            input_messages: '[{"role":"user","parts":[{"type":"text","content":"hi"}]}]',
+            output_messages: '[{"role":"assistant","parts":[{"type":"text","content":"older"}]}]',
+            ingested_at: "2026-03-01 00:00:00.000",
+          },
+          {
+            ...spanBase,
+            operation: "chat",
+            input_messages: '[{"role":"user","parts":[{"type":"text","content":"hi"}]}]',
+            output_messages: '[{"role":"assistant","parts":[{"type":"text","content":"newer"}]}]',
+            ingested_at: "2026-03-01 00:00:01.000",
+          },
+        ]),
+      )
+
+      const detail = await runCh(
+        repo.findByTraceId({
+          organizationId: ORG_ID,
+          projectId: PROJECT_ID,
+          traceId: REINGEST_TRACE_ID,
+        }),
+      )
+
+      const assistantMessage = detail.outputMessages.find((message) => message.role === "assistant")
+      expect(assistantMessage?.parts?.[0]).toMatchObject({ content: "newer" })
+    })
+
+    it("keeps same span_id rows from different traces when listing by trace ids", async () => {
+      const TRACE_A = TraceId("aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa")
+      const TRACE_B = TraceId("bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb")
+      const SHARED_SPAN_ID = "sharedspan000001"
+      const startTime = new Date("2026-03-02T00:00:00.000Z")
+
+      await runCh(
+        insertJsonEachRow(ch.client, "spans", [
+          {
+            ...makeSpanRow({
+              traceId: TRACE_A as string,
+              spanId: SHARED_SPAN_ID,
+              startTime,
+              costTotalMicrocents: 0,
+              tokensInput: 0,
+              tokensOutput: 0,
+            }),
+            operation: "chat",
+            input_messages: '[{"role":"user","parts":[{"type":"text","content":"from-a"}]}]',
+            output_messages: '[{"role":"assistant","parts":[{"type":"text","content":"reply-a"}]}]',
+            ingested_at: "2026-03-02 00:00:00.000",
+          },
+          {
+            ...makeSpanRow({
+              traceId: TRACE_B as string,
+              spanId: SHARED_SPAN_ID,
+              startTime: new Date(startTime.getTime() + 1_000),
+              costTotalMicrocents: 0,
+              tokensInput: 0,
+              tokensOutput: 0,
+            }),
+            operation: "chat",
+            input_messages: '[{"role":"user","parts":[{"type":"text","content":"from-b"}]}]',
+            output_messages: '[{"role":"assistant","parts":[{"type":"text","content":"reply-b"}]}]',
+            ingested_at: "2026-03-02 00:00:01.000",
+          },
+        ]),
+      )
+
+      const details = await runCh(
+        repo.listByTraceIds({
+          organizationId: ORG_ID,
+          projectId: PROJECT_ID,
+          traceIds: [TRACE_A, TRACE_B],
+        }),
+      )
+
+      const byTraceId = new Map(details.map((detail) => [detail.traceId, detail] as const))
+      expect(byTraceId.get(TRACE_A)?.inputMessages[0]?.parts?.[0]).toMatchObject({ content: "from-a" })
+      expect(byTraceId.get(TRACE_A)?.outputMessages[0]?.parts?.[0]).toMatchObject({ content: "reply-a" })
+      expect(byTraceId.get(TRACE_B)?.inputMessages[0]?.parts?.[0]).toMatchObject({ content: "from-b" })
+      expect(byTraceId.get(TRACE_B)?.outputMessages[0]?.parts?.[0]).toMatchObject({ content: "reply-b" })
     })
   })
 

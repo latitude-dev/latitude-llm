@@ -1,8 +1,10 @@
 import type { FilterSet } from "@domain/shared"
 import { Button, CloseTrigger, FormWrapper, Icon, Input, Modal, Switch, Text, Tooltip, useToast } from "@repo/ui"
 import { useForm } from "@tanstack/react-form"
-import { BellRingIcon, ChevronRightIcon, ShieldAlertIcon } from "lucide-react"
+import { useNavigate } from "@tanstack/react-router"
+import { BellRingIcon, ChevronRightIcon, FlaskConicalIcon, ShieldAlertIcon } from "lucide-react"
 import { useState } from "react"
+import { useCreateExperimentFromSearch } from "../../../../../domains/experiments/experiments.collection.ts"
 import {
   useCreateSavedSearch,
   useUpdateSavedSearch,
@@ -75,8 +77,11 @@ function CreateModal({
   onCreateSignal,
 }: CreateProps) {
   const { toast } = useToast()
+  const navigate = useNavigate()
   const createMutation = useCreateSavedSearch(projectId)
+  const createExperimentMutation = useCreateExperimentFromSearch(projectId)
   const [withMonitor, setWithMonitor] = useState(false)
+  const [withExperiment, setWithExperiment] = useState(false)
   const [alertDraft, setAlertDraft] = useState<AlertDraft>(() => emptyAlertDraft({ sourceId: "pending" }))
   const [alertErrors, setAlertErrors] = useState<AlertFieldErrors>({})
 
@@ -115,13 +120,35 @@ function CreateModal({
         }
       },
       {
-        onSuccess: (record) => {
+        onSuccess: async (record) => {
           toast({
             title: "Search saved",
             description: createMonitor
               ? `"${record.name}" was saved and a monitor is now watching it.`
               : `"${record.name}" is now available in your saved searches.`,
           })
+          if (withExperiment) {
+            try {
+              const experiment = await createExperimentMutation.mutateAsync({
+                name: record.name,
+                filterSet,
+                query,
+              })
+              onClose()
+              void navigate({
+                to: "/projects/$projectSlug/experiments/$experimentSlug",
+                params: { projectSlug, experimentSlug: experiment.slug },
+                search: { created: true },
+              })
+              return
+            } catch (error) {
+              toast({
+                variant: "destructive",
+                title: "Could not create experiment",
+                description: toUserMessage(error),
+              })
+            }
+          }
           onCreated(record)
           onClose()
         },
@@ -238,6 +265,25 @@ function CreateModal({
                 ) : null}
               </div>
             )}
+            <div className="flex flex-col rounded-lg border border-border">
+              <label
+                htmlFor="save-search-experiment-toggle"
+                className="flex cursor-pointer items-center justify-between gap-3 p-3"
+              >
+                <div className="flex items-start gap-2">
+                  <Icon icon={FlaskConicalIcon} size="sm" color="foregroundMuted" className="mt-0.5 shrink-0" />
+                  <div className="flex flex-col gap-0.5">
+                    <Text.H5M>Compare this search</Text.H5M>
+                    <Text.H6 color="foregroundMuted">Create a new experiment with this search as the baseline</Text.H6>
+                  </div>
+                </div>
+                <Switch
+                  id="save-search-experiment-toggle"
+                  checked={withExperiment}
+                  onCheckedChange={setWithExperiment}
+                />
+              </label>
+            </div>
             {canCreateSignal ? (
               <button
                 type="button"

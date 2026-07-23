@@ -44,6 +44,7 @@ const span = (n: number, startTime: Date, tags: readonly string[] = [TAG], durat
     operation: "",
     provider: "",
     model: "",
+    agent_name: "",
     response_model: "",
     tokens_input: 0,
     tokens_output: 0,

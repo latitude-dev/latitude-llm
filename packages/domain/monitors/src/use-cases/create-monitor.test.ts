@@ -181,6 +181,48 @@ describe("createMonitorUseCase", () => {
     expect(error.message).toBe("Condition trigger must match monitor trigger")
   })
 
+  it("creates a threshold monitor with errorRate and expected baseline", async () => {
+    const { repo } = createFakeMonitorRepository()
+
+    const result = await run(
+      createMonitorUseCase({
+        organizationId,
+        projectId,
+        name: "Tool is failing",
+        target: {
+          type: "tool",
+          id: null,
+          filterSet: {
+            operation: [{ op: "eq", value: "execute_tool" }],
+            toolName: [{ op: "eq", value: "searchWeb" }],
+          },
+        },
+        rule: {
+          trigger: "threshold",
+          severity: "high",
+          config: {
+            metric: { kind: "errorRate" },
+            condition: {
+              trigger: "threshold",
+              metric: { kind: "errorRate" },
+              threshold: { mode: "expected", sensitivity: 3 },
+              direction: "above",
+            },
+          },
+        },
+      }),
+      repo,
+    )
+
+    expect(result.rule.trigger).toBe("threshold")
+    expect(result.target.metric).toEqual({ kind: "errorRate" })
+    expect(result.rule.config.condition).toMatchObject({
+      trigger: "threshold",
+      metric: { kind: "errorRate" },
+      threshold: { mode: "expected", sensitivity: 3 },
+    })
+  })
+
   it("rejects unsupported escalating metric and threshold shapes", async () => {
     const { repo } = createFakeMonitorRepository()
 
@@ -227,5 +269,37 @@ describe("createMonitorUseCase", () => {
     )
     expect(thresholdError).toBeInstanceOf(ValidationError)
     expect(thresholdError.message).toBe("Escalating monitors only support expected thresholds")
+  })
+
+  it("rejects gtePercentile on tool monitor span filters", async () => {
+    const { repo } = createFakeMonitorRepository()
+    const error = await runError(
+      createMonitorUseCase({
+        organizationId,
+        projectId,
+        name: "Slow tool monitor",
+        target: {
+          type: "tool",
+          id: null,
+          filterSet: { duration: [{ op: "gtePercentile", value: 90 }] },
+        },
+        rule: {
+          trigger: "threshold",
+          severity: "high",
+          config: {
+            metric: { kind: "count" },
+            condition: {
+              trigger: "threshold",
+              metric: { kind: "count" },
+              threshold: { mode: "absolute", value: 10 },
+              direction: "above",
+            },
+          },
+        },
+      }),
+      repo,
+    )
+    expect(error).toBeInstanceOf(ValidationError)
+    expect(error.message).toContain("gtePercentile is not supported on span row filters")
   })
 })

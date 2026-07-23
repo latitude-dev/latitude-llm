@@ -44,6 +44,9 @@ const makeSignal = (overrides: Partial<Signal> = {}): Signal => {
       weights: { annotation: 1, custom: 0, evaluation: 0 },
     },
     clusteredAt: now,
+    resolvedAt: null,
+    ignoredAt: null,
+    regressedAt: null,
     mutedAt: null,
     createdAt: now,
     updatedAt: now,
@@ -72,7 +75,7 @@ const input = {
 }
 
 describe("requestSignalDiscoveredNotificationsUseCase", () => {
-  it("fans out one discovery request per org member", async () => {
+  it("fans out one discovery request per org member when unassigned", async () => {
     const result = await Effect.runPromise(
       requestSignalDiscoveredNotificationsUseCase(input).pipe(Effect.provide(makeLayer({ signal: makeSignal() }))),
     )
@@ -85,8 +88,24 @@ describe("requestSignalDiscoveredNotificationsUseCase", () => {
     if (!first) throw new Error("expected a request")
     expect(first.kind).toBe("signal.discovered")
     expect(first.projectId).toBe(projectId)
+    expect(first.slackEligible).toBe(true)
     expect(first.idempotencyKey).toBe(`signal.discovered:${signalId}`)
     expect(first.payload).toEqual({ signalId, discoveredAt })
+  })
+
+  it("sends discovery requests only to the assignee when assigned", async () => {
+    const assigneeId = UserId(cuid("u2"))
+    const result = await Effect.runPromise(
+      requestSignalDiscoveredNotificationsUseCase(input).pipe(
+        Effect.provide(makeLayer({ signal: makeSignal({ assigneeId }) })),
+      ),
+    )
+
+    expect(result.status).toBe("ok")
+    if (result.status !== "ok") throw new Error("expected ok")
+    expect(result.requests).toHaveLength(1)
+    expect(result.requests[0]?.userId).toBe(assigneeId)
+    expect(result.requests[0]?.slackEligible).toBe(false)
   })
 
   it("skips when the signal is missing", async () => {
@@ -95,5 +114,17 @@ describe("requestSignalDiscoveredNotificationsUseCase", () => {
     )
 
     expect(result).toEqual({ status: "skipped", reason: "signal-not-found" })
+  })
+
+  it("skips user-origin signals", async () => {
+    const result = await Effect.runPromise(
+      requestSignalDiscoveredNotificationsUseCase(input).pipe(
+        Effect.provide(
+          makeLayer({ signal: makeSignal({ origin: "user", source: "custom", centroid: null, clusteredAt: null }) }),
+        ),
+      ),
+    )
+
+    expect(result).toEqual({ status: "skipped", reason: "user-origin-signal" })
   })
 })

@@ -56,7 +56,12 @@ const renderDefaultPrompt = (context: AgentDispatchContext): string => {
     return lines.join("\n")
   }
 
-  const lines: string[] = [`A Latitude signal needs investigation in project "${context.projectName}".`, ""]
+  const lines: string[] = [
+    context.trigger === "signal.regressed"
+      ? `A previously resolved Latitude signal has regressed in project "${context.projectName}".`
+      : `A Latitude signal needs investigation in project "${context.projectName}".`,
+    "",
+  ]
 
   if (context.signal) {
     lines.push(`Signal: ${context.signal.name} (${context.signal.source})   ID: ${context.signal.id}`)
@@ -93,9 +98,11 @@ const renderDefaultPrompt = (context: AgentDispatchContext): string => {
 
   lines.push(
     "",
-    "If Latitude MCP tools are available in your environment, use them to inspect the signal and additional member traces. If they are not available, use the Latitude URL, trace IDs, and excerpts above as your starting evidence.",
+    "If Latitude MCP tools are available in your environment, use them to inspect the signal and additional member traces. If they are not available, use the Latitude URL, trace IDs, and excerpts above as your starting evidence, and suggest installing the Latitude MCP server to improve future signal root-cause debugging.",
     "",
     "Identify the most likely root cause in this repository, implement the smallest correct fix, add a regression test if applicable, and open a PR describing the signal and the fix.",
+    "",
+    "If you cannot determine a concrete repo-level root cause, do not make speculative code changes and do not open a PR. Instead, return a concise investigation summary with the evidence reviewed, the best-supported explanation, remaining hypotheses, and the next data needed to confirm the cause.",
     "",
     "Do not mute or resolve the signal — a human verifies after deploy.",
   )

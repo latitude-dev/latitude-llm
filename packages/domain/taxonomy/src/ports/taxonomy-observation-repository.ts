@@ -1,6 +1,7 @@
 import type {
   ChSqlClient,
   ExternalUserId,
+  FilterSet,
   OrganizationId,
   ProjectId,
   RepositoryError,
@@ -51,10 +52,38 @@ export interface TaxonomyClusteringObservation {
   readonly startTime: Date
 }
 
+/**
+ * A slim live-window row for full-window reassignment: carries the current
+ * `assignedClusterId` so the invariant-confirm and catch-up passes can tell
+ * which observations still point at a soon-to-deprecate cluster.
+ */
+export interface TaxonomyReassignmentWindowObservation {
+  readonly observationId: string
+  readonly sessionId: SessionId
+  readonly embedding: readonly number[]
+  readonly startTime: Date
+  readonly assignedClusterId: string | null
+}
+
+/**
+ * A clustering-sample observation carrying its `sessionId`, so scoped custom
+ * behavior assignments (which live in the `taxonomy_view_assignments` slice,
+ * keyed by session) can be written without a second lookup.
+ */
+export interface TaxonomyScopedClusteringObservation extends TaxonomyClusteringObservation {
+  readonly sessionId: SessionId
+}
+
 export interface TaxonomyObservationCounts {
   readonly total: number
   readonly assigned: number
   readonly noise: number
+}
+
+/** Eligible session + observation totals for a custom behavior's FilterSet over the lookback window. */
+export interface CustomBehaviorSampleCounts {
+  readonly sessionCount: number
+  readonly observationCount: number
 }
 
 export interface TaxonomyObservationClusterOccurrence {
@@ -119,6 +148,64 @@ export interface TaxonomyObservationRepositoryShape {
     readonly since: Date
     readonly limit: number
   }) => Effect.Effect<readonly TaxonomyClusteringObservation[], RepositoryError, ChSqlClient>
+  /**
+   * Scoped clustering sample for a custom behavior: the day-stratified sample
+   * of `listForClusteringSample`, additionally restricted to observations whose
+   * session matches `filterSet` (compiled via the shared session filter). Reads
+   * global `taxonomy_observations` but never mutates it. `since` is the lookback
+   * lower bound the caller derives from `TAXONOMY_GARDENING_SAMPLE_LOOKBACK_DAYS`
+   * — the same gardening window global uses, so the two can't drift.
+   */
+  readonly listForCustomBehaviorSample: (input: {
+    readonly organizationId: OrganizationId
+    readonly projectId: ProjectId
+    readonly since: Date
+    readonly limit: number
+    readonly filterSet: FilterSet
+  }) => Effect.Effect<readonly TaxonomyScopedClusteringObservation[], RepositoryError, ChSqlClient>
+  /**
+   * The complete bounded live window (newest ≤ `limit`, no day-stratified
+   * sampling) as slim rows carrying the current assignment — the read the
+   * adaptive full-window reassignment and catch-up passes operate over. Optional
+   * `filterSet` scopes it to a custom behavior's sessions (the scoped write
+   * target); omit it for the global window. `excludeAssignedClusterIds` narrows
+   * the read to rows NOT already pointing at one of those clusters — the catch-up
+   * pass passes the current leaf ids so it only pays to pull embeddings for the
+   * stragglers indexed during reassignment, not the whole window.
+   */
+  readonly listWindowForReassignment: (input: {
+    readonly organizationId: OrganizationId
+    readonly projectId: ProjectId
+    readonly limit: number
+    readonly filterSet?: FilterSet
+    readonly excludeAssignedClusterIds?: readonly TaxonomyClusterId[]
+  }) => Effect.Effect<readonly TaxonomyReassignmentWindowObservation[], RepositoryError, ChSqlClient>
+  /**
+   * Server-side invariant-confirm counter: over the same bounded live window,
+   * how many rows still point at one of `clusterIds` (the soon-to-deprecate
+   * tree) and the window `total`. Aggregates in ClickHouse so the confirm never
+   * ships embeddings back to the activity.
+   */
+  readonly countWindowAssignedToClusters: (input: {
+    readonly organizationId: OrganizationId
+    readonly projectId: ProjectId
+    readonly limit: number
+    readonly clusterIds: readonly TaxonomyClusterId[]
+    readonly filterSet?: FilterSet
+  }) => Effect.Effect<{ readonly total: number; readonly matching: number }, RepositoryError, ChSqlClient>
+  /**
+   * True eligible totals for a custom behavior preview: the unsampled analogue
+   * of `listForCustomBehaviorSample` (same `filterSet`/window scoping) counting
+   * every matching observation and its distinct sessions. `observationCount` is
+   * what the <15 not-ready gate compares against; `since` is the same gardening
+   * sample window (`TAXONOMY_GARDENING_SAMPLE_LOOKBACK_DAYS`) the run itself uses.
+   */
+  readonly countForCustomBehaviorSample: (input: {
+    readonly organizationId: OrganizationId
+    readonly projectId: ProjectId
+    readonly since: Date
+    readonly filterSet: FilterSet
+  }) => Effect.Effect<CustomBehaviorSampleCounts, RepositoryError, ChSqlClient>
   readonly listByCluster: (
     input: ListTaxonomyObservationClusterInput,
   ) => Effect.Effect<readonly TaxonomyMomentObservation[], RepositoryError, ChSqlClient>

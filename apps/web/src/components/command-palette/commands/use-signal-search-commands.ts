@@ -20,7 +20,7 @@ const SEMANTIC_DEBOUNCE_MS = 250
  *
  * Only active issues are returned. Lexical hits rank first, then semantic hits not already shown
  * (dedupe by id). Each result shows its owning project (plus current states) and selecting one
- * opens that project's issue drawer.
+ * opens that signal's detail page.
  */
 export function useSignalSearchCommands(query: string): {
   readonly commands: readonly PaletteCommand[]
@@ -68,7 +68,11 @@ export function useSignalSearchCommands(query: string): {
         section: "search",
         subtitle,
         keywords: `${issue.name} ${issue.projectName}`,
-        perform: () => navigate({ to: `/projects/${issue.projectSlug}/signals`, search: { signalId: issue.id } }),
+        perform: () =>
+          navigate({
+            to: "/projects/$projectSlug/signals/$signalSlug",
+            params: { projectSlug: issue.projectSlug, signalSlug: issue.slug },
+          }),
       }
     })
   }, [liveQuery, lexicalSignals, semanticSignals, navigate])
