@@ -15,12 +15,10 @@ import {
   CustomBehaviorStatus,
   customBehaviorFilterSetHasConditions,
   emitLineageUseCase,
-  extractFacetProjectionsUseCase,
-  type FacetExtractionSample,
-  FacetRepository,
   type HierarchicalTaxonomyPlan,
   isDisplayableTaxonomyName,
   parseTaxonomyAdaptiveModeBaseline,
+  planFacetGardenUseCase,
   planHierarchicalTaxonomyUseCase,
   type ReassignmentLeaf,
   type ReassignTaxonomyObservationByIdInput,
@@ -44,7 +42,6 @@ import {
   TaxonomyObservationRepository,
   type TaxonomyRun,
   TaxonomyRunRepository,
-  type TaxonomyScopedClusteringObservation,
   type TaxonomyViewAssignment,
   TaxonomyViewAssignmentRepository,
 } from "@domain/taxonomy"
@@ -716,58 +713,25 @@ const finalizeGardenPlan = (input: GardenTaxonomyStepInput, plan: HierarchicalTa
     } satisfies GardenTaxonomyBuildPlanResult
   })
 
-// Facet planning: gate-check, then sample sessions → extract facet projections
-// (Phase 2 cache) → cluster the non-unclear projection embeddings. Always the
-// off/static publish path — the facet clusters live in the projection embedding
-// space, so the adaptive full-window reassignment (which routes the observation
-// window) is meaningless here; `mode: "off"` keeps facets on the well-tested
-// sample-only view-slice write regardless of the org's adaptive rollout.
+// Facet planning: sample → extract projections → cluster the non-unclear ones,
+// all in `planFacetGardenUseCase` (tested with fakes). This activity only wires
+// the live layers and offloads the k-means build to the worker thread (like the
+// topic path) so a large facet sample never blocks the Temporal activity worker.
 const planFacetGarden = (input: GardenTaxonomyStepInput) =>
-  Effect.gen(function* () {
-    const facetId = FacetId(input.facetId as string)
-    const scoped = input.customBehaviorId ? { customBehaviorId: CustomBehaviorId(input.customBehaviorId) } : {}
-    const filter = input.filterSet ? { filterSet: input.filterSet } : {}
-
-    const facets = yield* FacetRepository
-    const facet = yield* facets.findById(facetId)
-    const observations = yield* TaxonomyObservationRepository
-    const samples = yield* observations.listForFacetSample({
-      organizationId: OrganizationId(input.organizationId),
-      projectId: ProjectId(input.projectId),
-      since: gardeningLookbackStart(new Date(input.now)),
-      limit: TAXONOMY_CLUSTERING_PROPOSAL_SAMPLE_MAX,
-      ...filter,
-    })
-    const extractionSamples: FacetExtractionSample[] = samples.map((sample) => ({
-      sessionObservationId: sample.sessionObservationId,
-      sessionId: sample.sessionId,
-      transcript: sample.transcript,
-      startTime: sample.startTime,
-    }))
-    const extraction = yield* extractFacetProjectionsUseCase({ facet, samples: extractionSamples })
-    // Unclear projections carry an empty extractedText + no embedding; exclude
-    // them from clustering (the noise path).
-    const lensObservations: readonly TaxonomyScopedClusteringObservation[] = extraction.projections
-      .filter((projection) => projection.extractedText.length > 0 && projection.embedding.length > 0)
-      .map((projection) => ({
-        observationId: projection.sessionObservationId,
-        sessionId: projection.sessionId,
-        startTime: projection.startTime,
-        embedding: projection.embedding,
-      }))
-
-    return yield* planHierarchicalTaxonomyUseCase({
-      organizationId: OrganizationId(input.organizationId),
-      projectId: ProjectId(input.projectId),
-      runId: TaxonomyRunId(input.runId),
-      dimension: input.dimension,
-      now: new Date(input.now),
-      mode: "off",
-      facetId,
-      ...scoped,
-      ...filter,
-      lensObservations,
-    })
+  planFacetGardenUseCase({
+    organizationId: OrganizationId(input.organizationId),
+    projectId: ProjectId(input.projectId),
+    runId: TaxonomyRunId(input.runId),
+    dimension: input.dimension,
+    now: new Date(input.now),
+    facetId: FacetId(input.facetId as string),
+    ...(input.customBehaviorId ? { customBehaviorId: CustomBehaviorId(input.customBehaviorId) } : {}),
+    ...(input.filterSet ? { filterSet: input.filterSet } : {}),
+    clusterBuilder: (builderInput) =>
+      Effect.tryPromise({
+        try: () => buildHierarchicalClustersInWorker(builderInput),
+        catch: (error) => (error instanceof Error ? error : new Error(String(error))),
+      }),
   }).pipe(
     (effect) => withFacetPostgres(effect, input.organizationId),
     (effect) => withFacetClickHouse(effect, input.organizationId),

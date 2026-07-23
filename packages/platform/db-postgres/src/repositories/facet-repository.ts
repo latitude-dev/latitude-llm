@@ -100,8 +100,7 @@ export const FacetRepositoryLive = Layer.effect(
       save: (facet) =>
         Effect.gen(function* () {
           const sqlClient = (yield* SqlClient) as SqlClientShape<Operator>
-          // `instructions` is write-once, so it stays out of the conflict update set;
-          // only presentation + status + timestamp change on an update.
+          // `instructions` is write-once, so only presentation fields + updatedAt change on conflict.
           yield* sqlClient.query((db, organizationId) =>
             db
               .insert(taxonomyFacets)

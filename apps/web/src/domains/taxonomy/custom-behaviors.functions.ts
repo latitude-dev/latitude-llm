@@ -12,10 +12,10 @@ import {
   updateCustomBehavior,
 } from "@domain/taxonomy"
 import { TaxonomyObservationRepositoryLive } from "@platform/db-clickhouse"
-import { CustomBehaviorRepositoryLive } from "@platform/db-postgres"
+import { CustomBehaviorRepositoryLive, FacetRepositoryLive } from "@platform/db-postgres"
 import { withTracing } from "@repo/observability"
 import { createServerFn } from "@tanstack/react-start"
-import { Effect } from "effect"
+import { Effect, Layer } from "effect"
 import { z } from "zod"
 import { getClickhouseClient, getPostgresClient, getQueuePublisher } from "../../server/clients.ts"
 import { resolveOrgScope } from "../../server/resolve-org-scope.ts"
@@ -100,7 +100,11 @@ export const createCustomBehaviorFn = createServerFn({ method: "POST" })
         filterSet: data.filterSet,
       }).pipe(
         Effect.provideService(QueuePublisher, publisher),
-        withScopedPostgres(CustomBehaviorRepositoryLive, getPostgresClient(), orgId),
+        withScopedPostgres(
+          Layer.mergeAll(CustomBehaviorRepositoryLive, FacetRepositoryLive),
+          getPostgresClient(),
+          orgId,
+        ),
         withTracing,
       ),
     )

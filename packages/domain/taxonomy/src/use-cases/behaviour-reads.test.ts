@@ -23,8 +23,15 @@ const CUSTOM_BEHAVIOR_ID = CustomBehaviorId("b".repeat(24))
 
 // The fake cluster repo's listSubtreeIds keys off id / project / state / path
 // only, so a minimal cast is enough — these use-cases never touch the rest.
-const cluster = (id: string, path: string): TaxonomyCluster =>
-  ({ id: TaxonomyClusterId(id), projectId: PROJECT_ID, state: "active", path }) as unknown as TaxonomyCluster
+const cluster = (id: string, path: string, customBehaviorId: CustomBehaviorId | null = null): TaxonomyCluster =>
+  ({
+    id: TaxonomyClusterId(id),
+    projectId: PROJECT_ID,
+    state: "active",
+    path,
+    customBehaviorId,
+    facetId: null,
+  }) as unknown as TaxonomyCluster
 
 const trajectoryRow = (bucket: string, frequency: number): ClusterTrajectoryRow => ({
   bucket,
@@ -63,7 +70,10 @@ describe("listBehaviourSessionsUseCase", () => {
   const CHILD = "c".repeat(24)
 
   it("resolves the whole subtree and forwards it (plus filters + scope) to the intelligence repo", async () => {
-    const clusters = createFakeTaxonomyClusterRepository([cluster(ROOT, ""), cluster(CHILD, `${ROOT}/`)])
+    const clusters = createFakeTaxonomyClusterRepository([
+      cluster(ROOT, "", CUSTOM_BEHAVIOR_ID),
+      cluster(CHILD, `${ROOT}/`, CUSTOM_BEHAVIOR_ID),
+    ])
     const page: ClusterSessionsPage = {
       sessions: [
         {

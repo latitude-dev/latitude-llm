@@ -79,14 +79,7 @@ export const customBehaviorFilterSetHasConditions = (filterSet: FilterSet): bool
 // CustomBehavior
 // ---------------------------------------------------------------------------
 
-/**
- * A named, project-scoped view = (lens × filterSet). `filterSet` selects the
- * sessions the workflow samples; `facetId` picks the lens: NULL = topic (cluster
- * observation embeddings), non-null = a facet (cluster its extracted
- * projections). Both are mirrored by `custom_behavior_id`/`facet_id`-tagged rows
- * in Postgres and the ClickHouse `taxonomy_view_assignments` slice. The only
- * invalid shape is a topic lens with an empty filter (that's the live global tree).
- */
+/** A named, project-scoped view = (lens × filterSet); `facetId` null = topic lens, set = a facet lens. */
 export const customBehaviorSchema = z.object({
   id: customBehaviorIdSchema,
   organizationId: organizationIdSchema,

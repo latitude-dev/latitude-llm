@@ -374,6 +374,7 @@ export {
   nameClusterUseCase,
   TOPIC_NAMING_POLICY,
 } from "./use-cases/name-taxonomy.ts"
+export { type PlanFacetGardenInput, planFacetGardenUseCase } from "./use-cases/plan-facet-garden.ts"
 export {
   type PreviewCustomBehaviorSampleInput,
   type PreviewCustomBehaviorSampleResult,

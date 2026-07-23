@@ -84,10 +84,11 @@ const observation = (overrides: Partial<TaxonomyMomentObservation> = {}): Taxono
 
 const runNameCluster = (input: {
   readonly seedCluster?: TaxonomyCluster
+  readonly seedClusters?: readonly TaxonomyCluster[]
   readonly seedObservations: readonly TaxonomyMomentObservation[]
   readonly ai: AIShape
 }) => {
-  const clusters = createFakeTaxonomyClusterRepository([input.seedCluster ?? cluster()])
+  const clusters = createFakeTaxonomyClusterRepository(input.seedClusters ?? [input.seedCluster ?? cluster()])
   const observations = createFakeTaxonomyObservationRepository(input.seedObservations)
   const effect = nameClusterUseCase({ organizationId, projectId, clusterId, now }).pipe(
     Effect.provide(Layer.succeed(TaxonomyClusterRepository, clusters.repository)),
@@ -185,6 +186,74 @@ describe("nameClusterUseCase", () => {
     expect(systems).toEqual([
       `proposeCandidateThemes: propose concise candidate conversation TOPIC themes for this cluster. ${TOPIC_POLICY} ${leafModeContext} Return only schema-valid JSON.`,
       `Collapse candidate themes into ONE conversation TOPIC name (2-5 words) and a one-sentence description of what the user is trying to do. ${TOPIC_POLICY} ${leafModeContext} The name MUST be clearly distinct from any forbidden names provided. Return only schema-valid JSON with BOTH required string keys: name and description.`,
+    ])
+  })
+
+  // Interior + root modes are named from already-named children (no direct
+  // members), and their modeContext is also parameterized/hardcoded — cover them
+  // too so an edit to the interior `umbrella` string or the root prompt can't
+  // silently change live topic naming.
+  const TOPIC_POLICY_TEXT =
+    "Conversation topic clusters describe what users come to do (e.g. 'Order Status', 'Returns and Refunds', 'Account Billing'). They are NOT conversational rituals (no 'user greets', 'user thanks', 'user says hello'), NOT model behaviours (no 'agent apologizes'), and NOT generic dispositions ('frustrated user'). If samples disagree, name the dominant topic of the conversation transcripts."
+
+  const namedChild = (id: string, parentClusterId: TaxonomyCluster["id"]): TaxonomyCluster =>
+    cluster({
+      id: TaxonomyClusterId(id.repeat(24).slice(0, 24)),
+      parentClusterId,
+      depth: 1,
+      path: `${clusterId}/`,
+      name: `Child ${id}`,
+      description: `Child topic ${id}.`,
+      observationCount: 5,
+    })
+
+  const captureInteriorSystems = async (
+    target: TaxonomyCluster,
+    extraClusters: readonly TaxonomyCluster[] = [],
+  ): Promise<string[]> => {
+    const systems: string[] = []
+    // No observations → members empty → the interior/root branch (name from children).
+    const { effect } = runNameCluster({
+      seedClusters: [target, namedChild("x", target.id), namedChild("y", target.id), ...extraClusters],
+      seedObservations: [],
+      ai: {
+        generate: <T>(input: GenerateInput<T>) => {
+          systems.push(input.system ?? "")
+          const object = input.prompt.includes("Candidates:")
+            ? { name: "Umbrella Label", description: "A broad umbrella over the child topics." }
+            : { candidates: [{ theme: "umbrella", examples: [0] }] }
+          return Effect.succeed({ object: object as T, tokens: 10, duration: 1 } satisfies GenerateResult<T>)
+        },
+        embed: () => Effect.die("embed not used"),
+        rerank: () => Effect.die("rerank not used"),
+      },
+    })
+    await Effect.runPromise(effect)
+    return systems
+  }
+
+  it("keeps interior-mode topic prompts byte-identical (umbrella TOPIC)", async () => {
+    const parentId = TaxonomyClusterId("e".repeat(24))
+    // Seed the named parent so the target resolves to interior mode (not root).
+    const parent = cluster({ id: parentId, name: "Parent Umbrella", description: "Parent.", observationCount: 20 })
+    const interior = cluster({ parentClusterId: parentId, depth: 1, path: `${parentId}/`, observationCount: 10 })
+    const systems = await captureInteriorSystems(interior, [parent])
+    const interiorModeContext =
+      "These are NOT raw conversation samples — they are the names and descriptions of THIS cluster's CHILD topics. Your job is to find a single short umbrella TOPIC that subsumes all of them and is BROADER than every child. The umbrella must not be identical or near-identical to any child."
+    expect(systems).toEqual([
+      `proposeCandidateThemes: propose concise candidate conversation TOPIC themes for this cluster. ${TOPIC_POLICY_TEXT} ${interiorModeContext} Return only schema-valid JSON.`,
+      `Collapse candidate themes into ONE conversation TOPIC name (2-5 words) and a one-sentence description of what the user is trying to do. ${TOPIC_POLICY_TEXT} ${interiorModeContext} The name MUST be clearly distinct from any forbidden names provided. Return only schema-valid JSON with BOTH required string keys: name and description.`,
+    ])
+  })
+
+  it("keeps root-mode topic prompts byte-identical", async () => {
+    const root = cluster({ parentClusterId: null, depth: 0, path: "", observationCount: 10 })
+    const systems = await captureInteriorSystems(root)
+    const rootModeContext =
+      "These are NOT raw conversation samples — they are the names and descriptions of the TOP-LEVEL categories in this entire project's taxonomy. Your job is to produce a SHORT umbrella label that captures the WHOLE project. It MUST cover EVERY listed top-level category — never name something that fits one branch but excludes the others. A correct label feels like 'Customer Support Conversations', 'Internal Helpdesk Tickets', or '<Company> Customer Interactions' — broad and category-neutral. The label must not be identical to or paraphrase any listed category."
+    expect(systems).toEqual([
+      `proposeCandidateThemes: propose concise candidate conversation TOPIC themes for this cluster. ${TOPIC_POLICY_TEXT} ${rootModeContext} Return only schema-valid JSON.`,
+      `Collapse candidate themes into ONE conversation TOPIC name (2-5 words) and a one-sentence description of what the user is trying to do. ${TOPIC_POLICY_TEXT} ${rootModeContext} The name MUST be clearly distinct from any forbidden names provided. Return only schema-valid JSON with BOTH required string keys: name and description.`,
     ])
   })
 })

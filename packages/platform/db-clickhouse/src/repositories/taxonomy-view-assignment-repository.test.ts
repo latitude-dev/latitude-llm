@@ -244,8 +244,6 @@ describe("TaxonomyViewAssignmentRepositoryLive", () => {
         yield* repo.deleteByBehavior({ organizationId, projectId, customBehaviorId: cb })
       }),
     )
-    // Count across ALL facet_ids for the behavior: the fix drops the `facet_id = ''`
-    // filter so a facet-lens edge is purged with its cohort, never orphaned.
     const result = await ch.client.query({
       query: `SELECT count() AS c FROM taxonomy_view_assignments FINAL WHERE custom_behavior_id = {cb:String}`,
       query_params: { cb: cb as string },
@@ -293,8 +291,6 @@ describe("TaxonomyViewAssignmentRepositoryLive", () => {
     )
 
     expect(members).toHaveLength(1)
-    // The facet member's "summary" is its extracted one-sentence answer, and its
-    // embedding is the facet-projection embedding — not the observation's.
     expect(members[0]?.projectionMetadata.summary).toBe("the user wants to cancel a subscription")
     expect(members[0]?.embedding).toEqual([0, 1, 0])
   })

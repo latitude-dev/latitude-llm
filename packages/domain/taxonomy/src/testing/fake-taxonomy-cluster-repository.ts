@@ -36,13 +36,15 @@ export const createFakeTaxonomyClusterRepository = (
         ),
       ),
 
-    listSubtreeIds: ({ projectId, clusterId }) =>
+    listSubtreeIds: ({ projectId, clusterId, customBehaviorId, facetId }) =>
       Effect.sync(() =>
         [...clusters.values()]
           .filter(
             (cluster) =>
               cluster.projectId === projectId &&
               cluster.state === "active" &&
+              (cluster.customBehaviorId ?? null) === (customBehaviorId ?? null) &&
+              (cluster.facetId ?? null) === (facetId ?? null) &&
               (cluster.id === clusterId || cluster.path.split("/").includes(clusterId as string)),
           )
           .map((cluster) => cluster.id),

@@ -60,8 +60,7 @@ export const createFakeTaxonomyViewAssignmentRepository = (
     listClusterMemberObservations: ({ clusterId, limit }) =>
       Effect.sync(() => (members.get(clusterId as string) ?? []).slice(0, limit)),
 
-    // Purge across BOTH lenses (no facet_id filter): deleting a cohort drops its
-    // topic slice AND every facet-lens slice applied to it.
+    // Purge across BOTH lenses (no facet_id filter), matching the real repo.
     deleteByBehavior: ({ customBehaviorId }) =>
       Effect.sync(() => {
         for (let index = assignments.length - 1; index >= 0; index--) {

@@ -1,6 +1,11 @@
 import { FacetId, generateId, generateSlug, type ProjectId, SqlClient, toSlug } from "@domain/shared"
 import { Effect } from "effect"
-import { FACET_INSTRUCTIONS_MAX_LENGTH, FACET_NAME_MAX_LENGTH, MAX_FACETS_PER_PROJECT } from "../constants.ts"
+import {
+  FACET_DESCRIPTION_MAX_LENGTH,
+  FACET_INSTRUCTIONS_MAX_LENGTH,
+  FACET_NAME_MAX_LENGTH,
+  MAX_FACETS_PER_PROJECT,
+} from "../constants.ts"
 import type { TaxonomyFacet } from "../entities/facet.ts"
 import { FacetInvalidError, FacetLimitReachedError } from "../errors.ts"
 import { FacetRepository } from "../ports/facet-repository.ts"
@@ -14,12 +19,7 @@ export interface CreateFacetInput {
   readonly instructions: string
 }
 
-/**
- * Create a facet — a reusable, immutable lens DEFINITION (name, description,
- * write-once instructions). A facet does not garden on its own; a lens produces a
- * tree only when a custom behavior selects it (see `createCustomBehavior`'s
- * `facetId`), so this use-case just persists the definition.
- */
+/** Persist a facet — an immutable lens definition. It gardens only when a custom behavior selects it. */
 export const createFacet = Effect.fn("taxonomy.createFacet")(function* (input: CreateFacetInput) {
   yield* Effect.annotateCurrentSpan("projectId", input.projectId)
 
@@ -49,6 +49,12 @@ export const createFacet = Effect.fn("taxonomy.createFacet")(function* (input: C
   const trimmedDescription = input.description.trim()
   if (trimmedDescription.length === 0) {
     return yield* new FacetInvalidError({ field: "description", message: "Description cannot be empty" })
+  }
+  if (trimmedDescription.length > FACET_DESCRIPTION_MAX_LENGTH) {
+    return yield* new FacetInvalidError({
+      field: "description",
+      message: `Description exceeds ${FACET_DESCRIPTION_MAX_LENGTH} characters`,
+    })
   }
 
   const sqlClient = yield* SqlClient
