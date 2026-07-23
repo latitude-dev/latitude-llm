@@ -872,6 +872,7 @@ const exportDatasetRowsEndpoint = datasetEndpoint({
       400: errorResponse("Validation error"),
       401: errorResponse("Unauthorized"),
       404: errorResponse("Not found"),
+      429: errorResponse("Export rate limit exceeded"),
       413: jsonResponse(
         ExportTooLargeResponseSchema,
         "Export exceeds the synchronous threshold and no `recipient` was provided",

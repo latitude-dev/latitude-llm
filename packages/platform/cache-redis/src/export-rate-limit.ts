@@ -15,11 +15,17 @@ interface EnforceExportRequestRateLimitInput {
 }
 
 export async function enforceExportRequestRateLimit(input: EnforceExportRequestRateLimitInput): Promise<void> {
-  await waitForRedisClientReady(input.redis)
+  try {
+    await waitForRedisClientReady(input.redis)
+  } catch {
+    return
+  }
+
+  const recipientEmail = input.recipientEmail.trim().toLowerCase()
 
   const result = await Effect.runPromise(
     checkRedisRateLimit(input.redis, {
-      key: `org:${input.organizationId}:export:rate_limit:${input.projectId}:${input.recipientEmail}`,
+      key: `org:${input.organizationId}:export:rate_limit:${input.projectId}:${recipientEmail}`,
       maxRequests: EXPORT_RATE_LIMIT_REQUESTS,
       windowSeconds: EXPORT_RATE_LIMIT_WINDOW_SECONDS,
     }),

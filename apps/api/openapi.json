@@ -16222,6 +16222,16 @@
                 }
               }
             }
+          },
+          "429": {
+            "description": "Export rate limit exceeded",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
           }
         }
       }
@@ -17487,6 +17497,16 @@
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/ExportDatasetRowsTooLargeResponse"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Export rate limit exceeded",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
                 }
               }
             }

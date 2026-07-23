@@ -62,8 +62,10 @@ import { SignalAnalyticsResponseSchema, toSignalAnalyticsResponse } from "../ope
 import { fetchTraceIndicators, PaginatedTracesSchema, toTraceResponse } from "../openapi/entities/trace.ts"
 import { PaginatedQueryParamsSchema } from "../openapi/pagination.ts"
 import {
+  errorResponse,
   FilterSetSchema,
   jsonBody,
+  jsonResponse,
   PROTECTED_SECURITY,
   ProjectParamsSchema,
   typedResponses,
@@ -606,7 +608,13 @@ const exportSignals = signalEndpoint({
       "Enqueues an asynchronous CSV export. The response returns immediately; the download link is emailed to `recipient` when the file is ready. The recipient must be a member of the requesting organization.",
     security: PROTECTED_SECURITY,
     request: { params: ProjectParamsSchema, body: jsonBody(ExportBodySchema) },
-    responses: typedResponses({ status: 202, schema: ExportResponseSchema, description: "Export enqueued" }),
+    responses: {
+      202: jsonResponse(ExportResponseSchema, "Export enqueued"),
+      400: errorResponse("Validation error"),
+      401: errorResponse("Unauthorized"),
+      404: errorResponse("Not found"),
+      429: errorResponse("Export rate limit exceeded"),
+    },
   }),
   access: "write",
   rateLimitTier: "ultra",

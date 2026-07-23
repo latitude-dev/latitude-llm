@@ -44,13 +44,13 @@ class FakeRedis {
 }
 
 describe("enforceExportRequestRateLimit", () => {
-  it("uses an organization-prefixed key and rejects requests after the window quota", async () => {
+  it("uses an organization-prefixed normalized key and rejects requests after the window quota", async () => {
     const redis = new FakeRedis()
     const input = {
       redis: redis as unknown as RedisClient,
       organizationId: "org_123",
       projectId: "proj_456",
-      recipientEmail: "owner@example.com",
+      recipientEmail: "Owner@Example.COM",
     }
 
     for (let i = 0; i < 30; i += 1) {
@@ -61,5 +61,24 @@ describe("enforceExportRequestRateLimit", () => {
     expect(redis.keys).toEqual(
       Array.from({ length: 31 }, () => "org:org_123:export:rate_limit:proj_456:owner@example.com"),
     )
+  })
+
+  it("fails open when Redis is not ready", async () => {
+    const redis = {
+      status: "end",
+      off: () => {},
+      once: (event: string, callback: () => void) => {
+        if (event === "close") queueMicrotask(callback)
+      },
+    } as unknown as RedisClient
+
+    await expect(
+      enforceExportRequestRateLimit({
+        redis,
+        organizationId: "org_123",
+        projectId: "proj_456",
+        recipientEmail: "owner@example.com",
+      }),
+    ).resolves.toBeUndefined()
   })
 })

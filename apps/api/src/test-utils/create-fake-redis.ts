@@ -17,7 +17,9 @@ export const createFakeRedis = (): RedisClient => {
     del: async (...keys: string[]) => {
       let count = 0
       for (const key of keys) {
-        if (store.delete(key)) count++
+        const deleted = store.delete(key)
+        ttls.delete(key)
+        if (deleted) count++
       }
       return count
     },
