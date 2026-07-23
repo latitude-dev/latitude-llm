@@ -1,5 +1,6 @@
 import {
   CustomBehaviorId,
+  type FacetId,
   type FilterSet,
   generateId,
   generateSlug,
@@ -29,6 +30,12 @@ export interface CreateCustomBehaviorInput {
   readonly projectId: ProjectId
   readonly name: string
   readonly filterSet: FilterSet
+  /**
+   * The lens. Omit/null = topic (clusters observation embeddings, requires a
+   * non-empty filter). An id = a facet lens (clusters that facet's extracted
+   * projections), which makes an empty filter valid (whole-project through the lens).
+   */
+  readonly facetId?: FacetId | null
 }
 
 export const createCustomBehavior = Effect.fn("taxonomy.createCustomBehavior")(function* (
@@ -60,7 +67,10 @@ export const createCustomBehavior = Effect.fn("taxonomy.createCustomBehavior")(f
       message: parsedFilterSet.error.issues[0]?.message ?? "Invalid filter set",
     })
   }
-  if (!customBehaviorFilterSetHasConditions(parsedFilterSet.data)) {
+  // A facet lens makes an empty filter valid (whole-project through the lens). The
+  // only invalid shape is the topic lens with no filter — that's just the live
+  // global tree, not a distinct view.
+  if (input.facetId == null && !customBehaviorFilterSetHasConditions(parsedFilterSet.data)) {
     return yield* new CustomBehaviorFilterInvalidError({ message: CUSTOM_BEHAVIOR_EMPTY_FILTER_MESSAGE })
   }
 
@@ -91,6 +101,7 @@ export const createCustomBehavior = Effect.fn("taxonomy.createCustomBehavior")(f
         slug,
         name: trimmedName,
         filterSet: parsedFilterSet.data,
+        facetId: input.facetId ?? null,
         status: CustomBehaviorStatus.Pending,
         createdAt: now,
         updatedAt: now,

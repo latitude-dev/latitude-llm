@@ -74,6 +74,20 @@ export interface TaxonomyScopedClusteringObservation extends TaxonomyClusteringO
   readonly sessionId: SessionId
 }
 
+/**
+ * One sampled session for facet extraction: the ids + start time the caller
+ * needs to build a `FacetExtractionSample`, plus the stored transcript summary
+ * (`projection_metadata.summary`) the extractor reads instead of refetching
+ * spans. `sessionObservationId` is the session's `taxonomy_observations`
+ * observation id — the facet-projection cache key.
+ */
+export interface TaxonomyFacetSample {
+  readonly sessionObservationId: string
+  readonly sessionId: SessionId
+  readonly startTime: Date
+  readonly transcript: string
+}
+
 export interface TaxonomyObservationCounts {
   readonly total: number
   readonly assigned: number
@@ -163,6 +177,20 @@ export interface TaxonomyObservationRepositoryShape {
     readonly limit: number
     readonly filterSet: FilterSet
   }) => Effect.Effect<readonly TaxonomyScopedClusteringObservation[], RepositoryError, ChSqlClient>
+  /**
+   * Facet-extraction sample over the same day-stratified `(since, limit)` window
+   * `listForCustomBehaviorSample` uses, returning each session's ids, start time,
+   * and stored transcript summary so the caller can build `FacetExtractionSample`
+   * records. An optional `filterSet` scopes it to a cohort's sessions; omit it for
+   * a whole-project facet. Reads global `taxonomy_observations`, never mutates it.
+   */
+  readonly listForFacetSample: (input: {
+    readonly organizationId: OrganizationId
+    readonly projectId: ProjectId
+    readonly since: Date
+    readonly limit: number
+    readonly filterSet?: FilterSet
+  }) => Effect.Effect<readonly TaxonomyFacetSample[], RepositoryError, ChSqlClient>
   /**
    * The complete bounded live window (newest ≤ `limit`, no day-stratified
    * sampling) as slim rows carrying the current assignment — the read the

@@ -24,13 +24,14 @@ export const createFakeTaxonomyClusterRepository = (
         ids.map((id) => clusters.get(id)).filter((cluster): cluster is TaxonomyCluster => cluster !== undefined),
       ),
 
-    listActiveByProject: ({ projectId, parentClusterId, customBehaviorId }) =>
+    listActiveByProject: ({ projectId, parentClusterId, customBehaviorId, facetId }) =>
       Effect.sync(() =>
         [...clusters.values()].filter(
           (cluster) =>
             cluster.projectId === projectId &&
             cluster.state === "active" &&
             (cluster.customBehaviorId ?? null) === (customBehaviorId ?? null) &&
+            (cluster.facetId ?? null) === (facetId ?? null) &&
             (parentClusterId === undefined || cluster.parentClusterId === parentClusterId),
         ),
       ),
@@ -86,13 +87,14 @@ export const createFakeTaxonomyClusterRepository = (
           })),
       ),
 
-    list: ({ projectId, state, sort, limit, offset, customBehaviorId }) =>
+    list: ({ projectId, state, sort, limit, offset, customBehaviorId, facetId }) =>
       Effect.sync(() => {
         const filtered = [...clusters.values()]
           .filter(
             (cluster) =>
               cluster.projectId === projectId &&
               (cluster.customBehaviorId ?? null) === (customBehaviorId ?? null) &&
+              (cluster.facetId ?? null) === (facetId ?? null) &&
               // `staging` is internal to the publish swap; never surface it unless
               // explicitly requested (mirrors the Live repository).
               (state ? cluster.state === state : cluster.state !== "staging"),

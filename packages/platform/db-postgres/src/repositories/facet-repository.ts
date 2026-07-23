@@ -1,33 +1,24 @@
-import {
-  CustomBehaviorId,
-  FacetId,
-  NotFoundError,
-  OrganizationId,
-  ProjectId,
-  SqlClient,
-  type SqlClientShape,
-} from "@domain/shared"
-import { type CustomBehavior, CustomBehaviorRepository } from "@domain/taxonomy"
+import { FacetId, NotFoundError, OrganizationId, ProjectId, SqlClient, type SqlClientShape } from "@domain/shared"
+import { FacetRepository, type TaxonomyFacet } from "@domain/taxonomy"
 import { and, desc, eq, sql } from "drizzle-orm"
 import { Effect, Layer } from "effect"
 import type { Operator } from "../client.ts"
-import { customBehaviors } from "../schema/custom-behaviors.ts"
+import { taxonomyFacets } from "../schema/taxonomy-facets.ts"
 
-const toCustomBehavior = (row: typeof customBehaviors.$inferSelect): CustomBehavior => ({
-  id: CustomBehaviorId(row.id),
+const toFacet = (row: typeof taxonomyFacets.$inferSelect): TaxonomyFacet => ({
+  id: FacetId(row.id),
   organizationId: OrganizationId(row.organizationId),
   projectId: ProjectId(row.projectId),
   slug: row.slug,
   name: row.name,
-  filterSet: row.filterSet,
-  facetId: row.facetId === null ? null : FacetId(row.facetId),
-  status: row.status,
+  description: row.description,
+  instructions: row.instructions,
   createdAt: row.createdAt,
   updatedAt: row.updatedAt,
 })
 
-export const CustomBehaviorRepositoryLive = Layer.effect(
-  CustomBehaviorRepository,
+export const FacetRepositoryLive = Layer.effect(
+  FacetRepository,
   Effect.gen(function* () {
     return {
       findById: (id) =>
@@ -36,14 +27,12 @@ export const CustomBehaviorRepositoryLive = Layer.effect(
           const [row] = yield* sqlClient.query((db, organizationId) =>
             db
               .select()
-              .from(customBehaviors)
-              .where(and(eq(customBehaviors.organizationId, organizationId), eq(customBehaviors.id, id)))
+              .from(taxonomyFacets)
+              .where(and(eq(taxonomyFacets.organizationId, organizationId), eq(taxonomyFacets.id, id)))
               .limit(1),
           )
-          if (!row) {
-            return yield* new NotFoundError({ entity: "CustomBehavior", id })
-          }
-          return toCustomBehavior(row)
+          if (!row) return yield* new NotFoundError({ entity: "TaxonomyFacet", id })
+          return toFacet(row)
         }),
 
       findBySlug: ({ projectId, slug }) =>
@@ -52,17 +41,17 @@ export const CustomBehaviorRepositoryLive = Layer.effect(
           const [row] = yield* sqlClient.query((db, organizationId) =>
             db
               .select()
-              .from(customBehaviors)
+              .from(taxonomyFacets)
               .where(
                 and(
-                  eq(customBehaviors.organizationId, organizationId),
-                  eq(customBehaviors.projectId, projectId),
-                  eq(customBehaviors.slug, slug),
+                  eq(taxonomyFacets.organizationId, organizationId),
+                  eq(taxonomyFacets.projectId, projectId),
+                  eq(taxonomyFacets.slug, slug),
                 ),
               )
               .limit(1),
           )
-          return row ? toCustomBehavior(row) : null
+          return row ? toFacet(row) : null
         }),
 
       listByProject: ({ projectId }) =>
@@ -71,11 +60,11 @@ export const CustomBehaviorRepositoryLive = Layer.effect(
           const rows = yield* sqlClient.query((db, organizationId) =>
             db
               .select()
-              .from(customBehaviors)
-              .where(and(eq(customBehaviors.organizationId, organizationId), eq(customBehaviors.projectId, projectId)))
-              .orderBy(desc(customBehaviors.createdAt)),
+              .from(taxonomyFacets)
+              .where(and(eq(taxonomyFacets.organizationId, organizationId), eq(taxonomyFacets.projectId, projectId)))
+              .orderBy(desc(taxonomyFacets.createdAt)),
           )
-          return rows.map(toCustomBehavior)
+          return rows.map(toFacet)
         }),
 
       countByProject: ({ projectId }) =>
@@ -84,8 +73,8 @@ export const CustomBehaviorRepositoryLive = Layer.effect(
           const [row] = yield* sqlClient.query((db, organizationId) =>
             db
               .select({ count: sql<number>`count(*)::int` })
-              .from(customBehaviors)
-              .where(and(eq(customBehaviors.organizationId, organizationId), eq(customBehaviors.projectId, projectId))),
+              .from(taxonomyFacets)
+              .where(and(eq(taxonomyFacets.organizationId, organizationId), eq(taxonomyFacets.projectId, projectId))),
           )
           return row?.count ?? 0
         }),
@@ -96,44 +85,43 @@ export const CustomBehaviorRepositoryLive = Layer.effect(
           const [row] = yield* sqlClient.query((db, organizationId) =>
             db
               .select({ count: sql<number>`count(*)::int` })
-              .from(customBehaviors)
+              .from(taxonomyFacets)
               .where(
                 and(
-                  eq(customBehaviors.organizationId, organizationId),
-                  eq(customBehaviors.projectId, projectId),
-                  eq(customBehaviors.slug, slug),
+                  eq(taxonomyFacets.organizationId, organizationId),
+                  eq(taxonomyFacets.projectId, projectId),
+                  eq(taxonomyFacets.slug, slug),
                 ),
               ),
           )
           return row?.count ?? 0
         }),
 
-      save: (behavior) =>
+      save: (facet) =>
         Effect.gen(function* () {
           const sqlClient = (yield* SqlClient) as SqlClientShape<Operator>
+          // `instructions` is write-once, so it stays out of the conflict update set;
+          // only presentation + status + timestamp change on an update.
           yield* sqlClient.query((db, organizationId) =>
             db
-              .insert(customBehaviors)
+              .insert(taxonomyFacets)
               .values({
-                id: behavior.id,
+                id: facet.id,
                 organizationId,
-                projectId: behavior.projectId,
-                name: behavior.name,
-                slug: behavior.slug,
-                filterSet: behavior.filterSet,
-                facetId: behavior.facetId,
-                status: behavior.status,
-                createdAt: behavior.createdAt,
-                updatedAt: behavior.updatedAt,
+                projectId: facet.projectId,
+                slug: facet.slug,
+                name: facet.name,
+                description: facet.description,
+                instructions: facet.instructions,
+                createdAt: facet.createdAt,
+                updatedAt: facet.updatedAt,
               })
               .onConflictDoUpdate({
-                target: customBehaviors.id,
+                target: taxonomyFacets.id,
                 set: {
-                  name: behavior.name,
-                  slug: behavior.slug,
-                  filterSet: behavior.filterSet,
-                  status: behavior.status,
-                  updatedAt: behavior.updatedAt,
+                  name: facet.name,
+                  description: facet.description,
+                  updatedAt: facet.updatedAt,
                 },
               }),
           )
@@ -144,9 +132,9 @@ export const CustomBehaviorRepositoryLive = Layer.effect(
           const sqlClient = (yield* SqlClient) as SqlClientShape<Operator>
           yield* sqlClient.query((db, organizationId) =>
             db
-              .update(customBehaviors)
+              .update(taxonomyFacets)
               .set({ lastGardenedAt: gardenedAt })
-              .where(and(eq(customBehaviors.organizationId, organizationId), eq(customBehaviors.id, id))),
+              .where(and(eq(taxonomyFacets.organizationId, organizationId), eq(taxonomyFacets.id, id))),
           )
         }),
 
@@ -155,8 +143,8 @@ export const CustomBehaviorRepositoryLive = Layer.effect(
           const sqlClient = (yield* SqlClient) as SqlClientShape<Operator>
           yield* sqlClient.query((db, organizationId) =>
             db
-              .delete(customBehaviors)
-              .where(and(eq(customBehaviors.organizationId, organizationId), eq(customBehaviors.id, id))),
+              .delete(taxonomyFacets)
+              .where(and(eq(taxonomyFacets.organizationId, organizationId), eq(taxonomyFacets.id, id))),
           )
         }),
     }

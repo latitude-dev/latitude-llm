@@ -225,8 +225,77 @@ describe("TaxonomyViewAssignmentRepositoryLive", () => {
     // Only clusterA members of THIS behavior, newest-first — excludes clusterB (m3)
     // and the other behavior's clusterA assignment (m4). The joined rows carry the
     // global observation's embedding + summary the naming step reads.
-    expect(observations.map((o) => o.observationId)).toEqual([m2, m1])
-    expect(observations[0]?.projectionMetadata).toEqual({ summary: "user asks about refunds" })
+    expect(observations.map((o) => o.projectionMetadata.summary)).toEqual([
+      "user asks about refunds",
+      "user asks about billing",
+    ])
     expect(observations[0]?.embedding).toEqual([1, 0, 0])
+  })
+
+  it("deleteByBehavior purges the cohort's edges across BOTH lenses (topic + facet)", async () => {
+    const cb = CustomBehaviorId("del".padEnd(24, "0"))
+    await run(
+      Effect.gen(function* () {
+        const repo = yield* TaxonomyViewAssignmentRepository
+        yield* repo.upsertMany([
+          makeAssignment({ observationId: "dt".padEnd(24, "0"), customBehaviorId: cb, facetId: null }),
+          makeAssignment({ observationId: "df".padEnd(24, "0"), customBehaviorId: cb, facetId }),
+        ])
+        yield* repo.deleteByBehavior({ organizationId, projectId, customBehaviorId: cb })
+      }),
+    )
+    // Count across ALL facet_ids for the behavior: the fix drops the `facet_id = ''`
+    // filter so a facet-lens edge is purged with its cohort, never orphaned.
+    const result = await ch.client.query({
+      query: `SELECT count() AS c FROM taxonomy_view_assignments FINAL WHERE custom_behavior_id = {cb:String}`,
+      query_params: { cb: cb as string },
+      format: "JSONEachRow",
+    })
+    const [row] = await result.json<{ c: string | number }>()
+    expect(Number(row?.c ?? -1)).toBe(0)
+  })
+
+  it("reads facet-lens cluster members from taxonomy_facet_projections (not taxonomy_observations)", async () => {
+    const fp = "fp".padEnd(24, "0")
+    await ch.client.insert({
+      table: "taxonomy_facet_projections",
+      values: [
+        {
+          organization_id: organizationId as string,
+          project_id: projectId as string,
+          facet_id: facetId as string,
+          session_observation_id: fp,
+          session_id: "session-fp",
+          extracted_text: "the user wants to cancel a subscription",
+          analysis_hash: "a".repeat(64),
+          embedding: [0, 1, 0],
+          start_time: toCh(now),
+          retention_days: 90,
+          indexed_at: toCh(now),
+        },
+      ],
+      format: "JSONEachRow",
+    })
+
+    const members = await run(
+      Effect.gen(function* () {
+        const repo = yield* TaxonomyViewAssignmentRepository
+        yield* repo.upsertMany([makeAssignment({ observationId: fp, assignedClusterId: clusterA, facetId })])
+        return yield* repo.listClusterMemberObservations({
+          organizationId,
+          projectId,
+          customBehaviorId,
+          facetId,
+          clusterId: clusterA,
+          limit: 100,
+        })
+      }),
+    )
+
+    expect(members).toHaveLength(1)
+    // The facet member's "summary" is its extracted one-sentence answer, and its
+    // embedding is the facet-projection embedding — not the observation's.
+    expect(members[0]?.projectionMetadata.summary).toBe("the user wants to cancel a subscription")
+    expect(members[0]?.embedding).toEqual([0, 1, 0])
   })
 })

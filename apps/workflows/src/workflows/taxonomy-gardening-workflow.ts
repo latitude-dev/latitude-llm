@@ -132,6 +132,7 @@ export const gardenTaxonomyWorkflow = async (
           projectId: started.projectId,
           clusterId,
           ...(started.customBehaviorId ? { customBehaviorId: started.customBehaviorId } : {}),
+          ...(started.facetId ? { facetId: started.facetId } : {}),
         }),
       )
     }

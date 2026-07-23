@@ -28,13 +28,9 @@ export {
   FACET_DESCRIPTION_MAX_LENGTH,
   FACET_EXTRACTION_CONCURRENCY,
   FACET_EXTRACTION_INPUT_CHAR_CAP,
-  FACET_GARDENING_CRON_KEY,
-  FACET_GARDENING_CRON_PATTERN,
-  FACET_GARDENING_MIN_INTERVAL_MS,
   FACET_INSTRUCTIONS_MAX_LENGTH,
   FACET_NAME_MAX_LENGTH,
   FACET_PROJECTION_TEXT_MAX_LENGTH,
-  FACET_STATUSES,
   MAX_CUSTOM_BEHAVIORS_PER_PROJECT,
   MAX_FACETS_PER_PROJECT,
   TAXONOMY_ADAPTIVE_CLUSTERING_MODE_ENV,
@@ -113,8 +109,6 @@ export {
 } from "./entities/custom-behavior.ts"
 export { TaxonomyDimension, taxonomyDimensionSchema } from "./entities/dimension.ts"
 export {
-  FacetStatus,
-  facetStatusSchema,
   type TaxonomyFacet,
   taxonomyFacetSchema,
 } from "./entities/facet.ts"
@@ -150,6 +144,8 @@ export {
   CustomBehaviorFilterInvalidError,
   CustomBehaviorLimitReachedError,
   CustomBehaviorNameInvalidError,
+  FacetInvalidError,
+  FacetLimitReachedError,
   TaxonomyClusterLockUnavailableError,
   TaxonomyClusterNotFoundError,
   TaxonomyQualityGateError,
@@ -223,6 +219,7 @@ export {
   type ReassignTaxonomyObservationByIdInput,
   type ReassignTaxonomyObservationInput,
   type TaxonomyClusteringObservation,
+  type TaxonomyFacetSample,
   type TaxonomyObservationClusterAssignmentCount,
   type TaxonomyObservationClusterOccurrence,
   type TaxonomyObservationClusterTrendCounts,
@@ -237,7 +234,9 @@ export {
   type TaxonomyRunRepositoryShape,
 } from "./ports/taxonomy-run-repository.ts"
 export {
+  type TaxonomyClusterNamingMember,
   type TaxonomyViewAssignmentClusterCount,
+  type TaxonomyViewAssignmentClusterTrendCount,
   TaxonomyViewAssignmentRepository,
   type TaxonomyViewAssignmentRepositoryShape,
 } from "./ports/taxonomy-view-assignment-repository.ts"
@@ -297,6 +296,7 @@ export {
   type TaxonomyClusterBuildResult,
 } from "./use-cases/build-hierarchical-taxonomy.ts"
 export { type CreateCustomBehaviorInput, createCustomBehavior } from "./use-cases/create-custom-behavior.ts"
+export { type CreateFacetInput, createFacet } from "./use-cases/create-facet.ts"
 export {
   type ClusterAssignmentDecision,
   decideClusterAssignment,
@@ -365,10 +365,14 @@ export {
   type NameCustomBehaviorClusterInput,
   nameCustomBehaviorClusterUseCase,
 } from "./use-cases/name-custom-behavior-cluster.ts"
+export { type NameFacetClusterInput, nameFacetClusterUseCase } from "./use-cases/name-facet-cluster.ts"
 export {
+  type ClusterNamingPolicy,
+  facetNamingPolicy,
   type NameClusterInput,
   type NameTaxonomyResult,
   nameClusterUseCase,
+  TOPIC_NAMING_POLICY,
 } from "./use-cases/name-taxonomy.ts"
 export {
   type PreviewCustomBehaviorSampleInput,

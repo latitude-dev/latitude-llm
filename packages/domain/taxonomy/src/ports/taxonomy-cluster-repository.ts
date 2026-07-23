@@ -1,5 +1,6 @@
 import type {
   CustomBehaviorId,
+  FacetId,
   NotFoundError,
   ProjectId,
   RepositoryError,
@@ -32,8 +33,10 @@ export interface ListClustersInput {
   readonly sort?: TaxonomyClusterSort
   readonly limit: number
   readonly offset: number
-  /** Omit/null = global taxonomy (custom_behavior_id IS NULL); an id scopes to that behavior's sub-tree. */
+  /** Omit/null = whole-project scope (custom_behavior_id IS NULL); an id scopes to that behavior's sub-tree. */
   readonly customBehaviorId?: CustomBehaviorId | null
+  /** Omit/null = topic lens (facet_id IS NULL); an id scopes to that facet's tree. */
+  readonly facetId?: FacetId | null
 }
 
 export interface TaxonomyClusterListPage {
@@ -57,15 +60,19 @@ export interface TaxonomyClusterRepositoryShape {
     readonly dimension: TaxonomyDimension
     /** Omit for all nodes; null for roots; an id for that node's children. */
     readonly parentClusterId?: TaxonomyClusterId | null
-    /** Omit/null = global taxonomy (custom_behavior_id IS NULL); an id scopes to that behavior's sub-tree. */
+    /** Omit/null = whole-project scope (custom_behavior_id IS NULL); an id scopes to that behavior's sub-tree. */
     readonly customBehaviorId?: CustomBehaviorId | null
+    /** Omit/null = topic lens (facet_id IS NULL); an id scopes to that facet's tree. */
+    readonly facetId?: FacetId | null
   }): Effect.Effect<readonly TaxonomyCluster[], RepositoryError, SqlClient>
   /** Active ids of the node plus all its descendants (path prefix match). */
   listSubtreeIds(input: {
     readonly projectId: ProjectId
     readonly clusterId: TaxonomyClusterId
-    /** Omit/null = global taxonomy (custom_behavior_id IS NULL); an id scopes to that behavior's sub-tree. */
+    /** Omit/null = whole-project scope (custom_behavior_id IS NULL); an id scopes to that behavior's sub-tree. */
     readonly customBehaviorId?: CustomBehaviorId | null
+    /** Omit/null = topic lens (facet_id IS NULL); an id scopes to that facet's tree. */
+    readonly facetId?: FacetId | null
   }): Effect.Effect<readonly TaxonomyClusterId[], RepositoryError, SqlClient>
   /**
    * Exact pgvector cosine over `(organization_id, project_id)` for state =

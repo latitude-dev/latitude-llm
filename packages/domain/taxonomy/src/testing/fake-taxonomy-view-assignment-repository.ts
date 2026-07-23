@@ -60,10 +60,19 @@ export const createFakeTaxonomyViewAssignmentRepository = (
     listClusterMemberObservations: ({ clusterId, limit }) =>
       Effect.sync(() => (members.get(clusterId as string) ?? []).slice(0, limit)),
 
+    // Purge across BOTH lenses (no facet_id filter): deleting a cohort drops its
+    // topic slice AND every facet-lens slice applied to it.
     deleteByBehavior: ({ customBehaviorId }) =>
       Effect.sync(() => {
         for (let index = assignments.length - 1; index >= 0; index--) {
           if (assignments[index]?.customBehaviorId === customBehaviorId) assignments.splice(index, 1)
+        }
+      }),
+
+    deleteByFacet: ({ facetId }) =>
+      Effect.sync(() => {
+        for (let index = assignments.length - 1; index >= 0; index--) {
+          if (assignments[index]?.facetId === facetId) assignments.splice(index, 1)
         }
       }),
 

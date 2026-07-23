@@ -1,6 +1,6 @@
 import { QueuePublisher } from "@domain/queue"
 import { createFakeQueuePublisher } from "@domain/queue/testing"
-import { CustomBehaviorId, type FilterSet, OrganizationId, ProjectId, SqlClient } from "@domain/shared"
+import { CustomBehaviorId, FacetId, type FilterSet, OrganizationId, ProjectId, SqlClient } from "@domain/shared"
 import { createFakeSqlClient } from "@domain/shared/testing"
 import { Effect, Exit, Layer } from "effect"
 import { describe, expect, it } from "vitest"
@@ -31,6 +31,7 @@ const makeBehavior = (overrides: Partial<CustomBehavior> = {}): CustomBehavior =
   slug: "refunds",
   name: "Refunds",
   filterSet: FILTER,
+  facetId: null,
   status: CustomBehaviorStatus.Pending,
   createdAt: new Date("2026-01-01T00:00:00.000Z"),
   updatedAt: new Date("2026-01-01T00:00:00.000Z"),
@@ -97,6 +98,20 @@ describe("createCustomBehavior", () => {
         createCustomBehavior({ projectId: PROJECT_ID, name: "Everything", filterSet: {} }).pipe(Effect.provide(layer)),
       ),
     ).rejects.toBeInstanceOf(CustomBehaviorFilterInvalidError)
+  })
+
+  it("allows an empty filter when a facet lens is chosen (a whole-project facet view) and stores the lens", async () => {
+    const { layer, rows } = makeLayer()
+    const facetId = FacetId("f".repeat(24))
+    const result = await Effect.runPromise(
+      createCustomBehavior({ projectId: PROJECT_ID, name: "User goal", filterSet: {}, facetId }).pipe(
+        Effect.provide(layer),
+      ),
+    )
+    expect(result.facetId).toBe(facetId)
+    expect(rows.get(result.id)?.facetId).toBe(facetId)
+    // Still auto-starts gardening — the lens gardens through the custom-behavior sweep.
+    expect(result.status).toBe(CustomBehaviorStatus.Generating)
   })
 
   it("rejects an empty name", async () => {

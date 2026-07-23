@@ -1,6 +1,7 @@
 import { hasFeatureFlagUseCase } from "@domain/feature-flags"
 import {
   CustomBehaviorId,
+  FacetId,
   type FilterSet,
   OrganizationId,
   ProjectId,
@@ -12,7 +13,11 @@ import {
   boundedPercentiles,
   CustomBehaviorRepository,
   CustomBehaviorStatus,
+  customBehaviorFilterSetHasConditions,
   emitLineageUseCase,
+  extractFacetProjectionsUseCase,
+  type FacetExtractionSample,
+  FacetRepository,
   type HierarchicalTaxonomyPlan,
   isDisplayableTaxonomyName,
   parseTaxonomyAdaptiveModeBaseline,
@@ -39,16 +44,20 @@ import {
   TaxonomyObservationRepository,
   type TaxonomyRun,
   TaxonomyRunRepository,
+  type TaxonomyScopedClusteringObservation,
   type TaxonomyViewAssignment,
   TaxonomyViewAssignmentRepository,
 } from "@domain/taxonomy"
+import { AIEmbedLive, AIGenerateLive, withAi } from "@platform/ai"
 import {
+  FacetProjectionRepositoryLive,
   TaxonomyObservationRepositoryLive,
   TaxonomyViewAssignmentRepositoryLive,
   withClickHouse,
 } from "@platform/db-clickhouse"
 import {
   CustomBehaviorRepositoryLive,
+  FacetRepositoryLive,
   FeatureFlagRepositoryLive,
   TaxonomyClusterRepositoryLive,
   TaxonomyLineageRepositoryLive,
@@ -97,8 +106,9 @@ export interface GardenTaxonomyActivityInput {
   readonly workflowRunId?: string
   readonly taxonomyRunId?: string
   /**
-   * Scope. Absent ⇒ global gardening (project-wide, byte-identical to the
-   * pre-unification workflow). Present ⇒ a custom behavior's scoped sub-tree.
+   * Scope. Absent ⇒ whole-project topic tree (byte-identical to the pre-facets
+   * workflow). Present ⇒ a custom behavior — the caller only knows its id; the
+   * behavior's lens (`facet_id`) + `filterSet` are loaded in the start activity.
    */
   readonly customBehaviorId?: string
 }
@@ -106,8 +116,10 @@ export interface GardenTaxonomyActivityInput {
 export interface GardenTaxonomyStepInput extends GardenTaxonomyActivityInput {
   readonly runId: string
   readonly now: string
-  /** Populated by the start step for the scoped path; the FilterSet the plan samples. */
+  /** Populated by the start step for a custom behavior; the FilterSet the plan samples (absent ⇒ whole-project). */
   readonly filterSet?: FilterSet
+  /** Populated by the start step from the behavior's `facet_id`; the lens this run gardens through. */
+  readonly facetId?: string
 }
 
 export interface GardenTaxonomyCompleteInput extends GardenTaxonomyStepInput {
@@ -163,10 +175,13 @@ export type GardenTaxonomyDeprecateClustersInput = GardenTaxonomyPlanReferenceIn
 interface StoredGardenTaxonomyPlan {
   readonly clusters: readonly TaxonomyCluster[]
   readonly observationAssignments: readonly ReassignTaxonomyObservationByIdInput[]
-  /** Scoped write target; empty on the global path. */
+  /** Scoped write target; empty on the whole-project topic path. */
   readonly customAssignments: readonly TaxonomyViewAssignment[]
-  /** Non-null ⇒ the plan is scoped to this custom behavior (drives the reassign write target). */
+  /** Non-null ⇒ the plan's scope is this cohort. */
   readonly customBehaviorId: string | null
+  /** Non-null ⇒ the plan's lens is this facet. A non-null customBehaviorId OR facetId
+   * routes the reassign to the view-assignment slice instead of the inline column. */
+  readonly facetId?: string | null
   readonly deprecatedClusterIds: readonly string[]
   /**
    * Rollout mode resolved at plan time. Downstream activities branch on THIS
@@ -373,6 +388,30 @@ const withScopedReassignClickHouse = <A, E, R>(effect: Effect.Effect<A, E, R>, o
     ),
   )
 
+const withFacetPostgres = <A, E, R>(effect: Effect.Effect<A, E, R>, organizationId: string) =>
+  effect.pipe(
+    withPostgres(
+      Layer.mergeAll(TaxonomyClusterRepositoryLive, FacetRepositoryLive),
+      getPostgresClient(),
+      OrganizationId(organizationId),
+    ),
+  )
+
+// Facet planning samples sessions + reads the projection cache (ClickHouse), and
+// extraction embeds/generates via AI; the plan use-case also needs the taxonomy
+// observation repo in context even though the facet path clusters projections.
+const withFacetClickHouse = <A, E, R>(effect: Effect.Effect<A, E, R>, organizationId: string) =>
+  effect.pipe(
+    withClickHouse(
+      Layer.mergeAll(TaxonomyObservationRepositoryLive, FacetProjectionRepositoryLive),
+      getClickhouseClient(),
+      OrganizationId(organizationId),
+    ),
+  )
+
+const withFacetAi = <A, E, R>(effect: Effect.Effect<A, E, R>) =>
+  effect.pipe(withAi(Layer.mergeAll(AIEmbedLive, AIGenerateLive), getRedisClient()))
+
 const runGardenStep = <A, E>(
   name: string,
   input: GardenTaxonomyStepInput | GardenTaxonomyActivityInput,
@@ -469,7 +508,10 @@ const startGlobalRun = (step: GardenTaxonomyStepInput) => {
 
 // Scoped start: mark the behavior Generating and stamp the cadence anchor at run
 // start (so the scoped sweep throttles on it and it survives a crash mid-run),
-// carrying the behavior's FilterSet into the step so the plan can sample it.
+// carrying the behavior's FilterSet AND its lens (`facet_id`) into the step so
+// the plan samples the right sessions and clusters through the right lens. A
+// facet-lens behavior with no filter is whole-project through that lens, so an
+// empty filter is threaded as absent.
 const startCustomBehaviorRun = (step: GardenTaxonomyStepInput) =>
   runGardenStep(
     "GardenTaxonomyWorkflow start run",
@@ -480,9 +522,11 @@ const startCustomBehaviorRun = (step: GardenTaxonomyStepInput) =>
       const startedAt = new Date(step.now)
       yield* behaviors.save({ ...behavior, status: CustomBehaviorStatus.Generating, updatedAt: startedAt })
       yield* behaviors.markGardened({ id: behavior.id, gardenedAt: startedAt })
+      const hasFilter = customBehaviorFilterSetHasConditions(behavior.filterSet)
       return {
         ...step,
-        filterSet: behavior.filterSet,
+        ...(hasFilter ? { filterSet: behavior.filterSet } : {}),
+        ...(behavior.facetId ? { facetId: behavior.facetId } : {}),
         observationsScanned: 0,
         observationsAvailable: 0,
         observationsSampled: 0,
@@ -637,61 +681,128 @@ const annotateAdaptiveTelemetrySpan = (input: GardenTaxonomyStepInput, plan: Hie
         }
       }).pipe(Effect.withSpan("taxonomy.gardenTaxonomyWorkflow.shadow"))
 
+// Telemetry + persist the staged plan artifact + shape the activity result. No
+// repository requirements (Redis + sync only), so both the topic and facet
+// planning paths reuse it after computing the plan under their own layers.
+const finalizeGardenPlan = (input: GardenTaxonomyStepInput, plan: HierarchicalTaxonomyPlan) =>
+  Effect.gen(function* () {
+    yield* Effect.sync(() => emitAdaptivePlanTelemetry(input, plan))
+    yield* annotateAdaptiveTelemetrySpan(input, plan)
+    const planKey = yield* storeGardenTaxonomyPlan(input, {
+      clusters: plan.clusters,
+      observationAssignments: plan.observationAssignments,
+      customAssignments: plan.customAssignments,
+      customBehaviorId: plan.customBehaviorId,
+      facetId: plan.facetId,
+      deprecatedClusterIds: plan.deprecatedClusterIds.map((clusterId) => clusterId as string),
+      mode: plan.mode,
+      fallbackReason: plan.fallbackReason,
+      leafClusters: plan.leafClusters,
+      supersededClusterIds: plan.supersededClusterIds.map((clusterId) => clusterId as string),
+    })
+    return {
+      observationsScanned: plan.observationsScanned,
+      observationsAvailable: plan.observationsAvailable,
+      observationsSampled: plan.observationsSampled,
+      sampleStrategy: plan.sampleStrategy,
+      sampleCap: plan.sampleCap,
+      clustersBorn: plan.clustersBorn,
+      clustersContinued: plan.clustersContinued,
+      clustersDeprecated: plan.clustersDeprecated,
+      leavesAssigned: plan.leavesAssigned,
+      maxDepthReached: plan.maxDepthReached,
+      lineage: plan.lineage,
+      planKey,
+    } satisfies GardenTaxonomyBuildPlanResult
+  })
+
+// Facet planning: gate-check, then sample sessions → extract facet projections
+// (Phase 2 cache) → cluster the non-unclear projection embeddings. Always the
+// off/static publish path — the facet clusters live in the projection embedding
+// space, so the adaptive full-window reassignment (which routes the observation
+// window) is meaningless here; `mode: "off"` keeps facets on the well-tested
+// sample-only view-slice write regardless of the org's adaptive rollout.
+const planFacetGarden = (input: GardenTaxonomyStepInput) =>
+  Effect.gen(function* () {
+    const facetId = FacetId(input.facetId as string)
+    const scoped = input.customBehaviorId ? { customBehaviorId: CustomBehaviorId(input.customBehaviorId) } : {}
+    const filter = input.filterSet ? { filterSet: input.filterSet } : {}
+
+    const facets = yield* FacetRepository
+    const facet = yield* facets.findById(facetId)
+    const observations = yield* TaxonomyObservationRepository
+    const samples = yield* observations.listForFacetSample({
+      organizationId: OrganizationId(input.organizationId),
+      projectId: ProjectId(input.projectId),
+      since: gardeningLookbackStart(new Date(input.now)),
+      limit: TAXONOMY_CLUSTERING_PROPOSAL_SAMPLE_MAX,
+      ...filter,
+    })
+    const extractionSamples: FacetExtractionSample[] = samples.map((sample) => ({
+      sessionObservationId: sample.sessionObservationId,
+      sessionId: sample.sessionId,
+      transcript: sample.transcript,
+      startTime: sample.startTime,
+    }))
+    const extraction = yield* extractFacetProjectionsUseCase({ facet, samples: extractionSamples })
+    // Unclear projections carry an empty extractedText + no embedding; exclude
+    // them from clustering (the noise path).
+    const lensObservations: readonly TaxonomyScopedClusteringObservation[] = extraction.projections
+      .filter((projection) => projection.extractedText.length > 0 && projection.embedding.length > 0)
+      .map((projection) => ({
+        observationId: projection.sessionObservationId,
+        sessionId: projection.sessionId,
+        startTime: projection.startTime,
+        embedding: projection.embedding,
+      }))
+
+    return yield* planHierarchicalTaxonomyUseCase({
+      organizationId: OrganizationId(input.organizationId),
+      projectId: ProjectId(input.projectId),
+      runId: TaxonomyRunId(input.runId),
+      dimension: input.dimension,
+      now: new Date(input.now),
+      mode: "off",
+      facetId,
+      ...scoped,
+      ...filter,
+      lensObservations,
+    })
+  }).pipe(
+    (effect) => withFacetPostgres(effect, input.organizationId),
+    (effect) => withFacetClickHouse(effect, input.organizationId),
+    withFacetAi,
+  )
+
+const planTopicGarden = (input: GardenTaxonomyStepInput) =>
+  Effect.gen(function* () {
+    const mode = yield* resolveAdaptiveMode(input.organizationId)
+    return yield* planHierarchicalTaxonomyUseCase({
+      organizationId: OrganizationId(input.organizationId),
+      projectId: ProjectId(input.projectId),
+      runId: TaxonomyRunId(input.runId),
+      dimension: input.dimension,
+      now: new Date(input.now),
+      mode,
+      clusterBuilder: (builderInput) =>
+        Effect.tryPromise({
+          try: () => buildHierarchicalClustersInWorker(builderInput),
+          catch: (error) => (error instanceof Error ? error : new Error(String(error))),
+        }),
+      ...(input.customBehaviorId ? { customBehaviorId: CustomBehaviorId(input.customBehaviorId) } : {}),
+      ...(input.filterSet ? { filterSet: input.filterSet } : {}),
+    })
+  }).pipe(
+    (effect) => withTaxonomyPostgres(effect, input.organizationId),
+    (effect) => withTaxonomyClickHouse(effect, input.organizationId),
+  )
+
 export const planHierarchicalGardenTaxonomyActivity = (input: GardenTaxonomyStepInput) =>
   runGardenStep(
     "GardenTaxonomyWorkflow plan hierarchical tree",
     input,
-    Effect.gen(function* () {
-      const mode = yield* resolveAdaptiveMode(input.organizationId)
-      return yield* planHierarchicalTaxonomyUseCase({
-        organizationId: OrganizationId(input.organizationId),
-        projectId: ProjectId(input.projectId),
-        runId: TaxonomyRunId(input.runId),
-        dimension: input.dimension,
-        now: new Date(input.now),
-        mode,
-        clusterBuilder: (builderInput) =>
-          Effect.tryPromise({
-            try: () => buildHierarchicalClustersInWorker(builderInput),
-            catch: (error) => (error instanceof Error ? error : new Error(String(error))),
-          }),
-        ...(input.customBehaviorId ? { customBehaviorId: CustomBehaviorId(input.customBehaviorId) } : {}),
-        ...(input.filterSet ? { filterSet: input.filterSet } : {}),
-      })
-    }).pipe(
-      Effect.flatMap((plan) =>
-        Effect.gen(function* () {
-          yield* Effect.sync(() => emitAdaptivePlanTelemetry(input, plan))
-          yield* annotateAdaptiveTelemetrySpan(input, plan)
-          const planKey = yield* storeGardenTaxonomyPlan(input, {
-            clusters: plan.clusters,
-            observationAssignments: plan.observationAssignments,
-            customAssignments: plan.customAssignments,
-            customBehaviorId: plan.customBehaviorId,
-            deprecatedClusterIds: plan.deprecatedClusterIds.map((clusterId) => clusterId as string),
-            mode: plan.mode,
-            fallbackReason: plan.fallbackReason,
-            leafClusters: plan.leafClusters,
-            supersededClusterIds: plan.supersededClusterIds.map((clusterId) => clusterId as string),
-          })
-          return {
-            observationsScanned: plan.observationsScanned,
-            observationsAvailable: plan.observationsAvailable,
-            observationsSampled: plan.observationsSampled,
-            sampleStrategy: plan.sampleStrategy,
-            sampleCap: plan.sampleCap,
-            clustersBorn: plan.clustersBorn,
-            clustersContinued: plan.clustersContinued,
-            clustersDeprecated: plan.clustersDeprecated,
-            leavesAssigned: plan.leavesAssigned,
-            maxDepthReached: plan.maxDepthReached,
-            lineage: plan.lineage,
-            planKey,
-          } satisfies GardenTaxonomyBuildPlanResult
-        }),
-      ),
-      (effect) => withTaxonomyPostgres(effect, input.organizationId),
-      (effect) => withTaxonomyClickHouse(effect, input.organizationId),
+    (input.facetId ? planFacetGarden(input) : planTopicGarden(input)).pipe(
+      Effect.flatMap((plan) => finalizeGardenPlan(input, plan)),
     ),
   )
 
@@ -841,14 +952,16 @@ export const reassignGardenTaxonomyObservationsActivity = (input: GardenTaxonomy
     // full bounded live window to the staging leaves.
     Effect.gen(function* () {
       const plan = yield* loadGardenTaxonomyPlan(input)
+      // Any view (a cohort OR a facet lens) writes the view-assignment slice; only
+      // the whole-project topic tree reassigns the inline column. Facet plans are
+      // always off-mode (no staging leaves), so they take the sample-only branch.
+      const isView = plan.customBehaviorId != null || plan.facetId != null
       if (planPersistsAdaptive(plan)) {
         return yield* plan.customBehaviorId
           ? reassignFullWindowScoped(input, plan)
           : reassignFullWindowGlobal(input, plan)
       }
-      return yield* plan.customBehaviorId
-        ? reassignScopedAssignments(input, plan)
-        : reassignGlobalObservations(input, plan)
+      return yield* isView ? reassignScopedAssignments(input, plan) : reassignGlobalObservations(input, plan)
     }),
   )
 
@@ -943,6 +1056,7 @@ export const assertGardenTaxonomyQualityActivity = (input: GardenTaxonomyStepInp
       projectId: ProjectId(input.projectId),
       dimension: input.dimension,
       ...(input.customBehaviorId ? { customBehaviorId: CustomBehaviorId(input.customBehaviorId) } : {}),
+      ...(input.facetId ? { facetId: FacetId(input.facetId) } : {}),
     }).pipe(
       (effect) => withTaxonomyPostgres(effect, input.organizationId),
       (effect) => withTaxonomyClickHouse(effect, input.organizationId),
@@ -967,6 +1081,7 @@ export const planGardenTaxonomyNamingActivity = (input: GardenTaxonomyStepInput 
         projectId,
         dimension: input.dimension,
         ...(input.customBehaviorId ? { customBehaviorId: CustomBehaviorId(input.customBehaviorId) } : {}),
+        ...(input.facetId ? { facetId: FacetId(input.facetId) } : {}),
       })
       // Name deepest clusters first. Interior naming falls back to its
       // children's already-assigned names; if we name top-down the interior

@@ -246,6 +246,46 @@ export const createFakeTaxonomyObservationRepository = (
           }))
       }),
 
+    // Facet-extraction sample: same day-stratified window as
+    // listForCustomBehaviorSample, projecting each row's ids/startTime and the
+    // stored transcript summary. The fake does not compile `filterSet`.
+    listForFacetSample: ({ organizationId, projectId, since, limit }) =>
+      Effect.sync(() => {
+        const eligible = [...rows.values()].filter(
+          (observation) =>
+            observation.organizationId === organizationId &&
+            observation.projectId === projectId &&
+            observation.embedding.length > 0 &&
+            observation.startTime >= since,
+        )
+        const dayBuckets = new Map<string, TaxonomyMomentObservation[]>()
+        for (const observation of eligible) {
+          const day = observation.startTime.toISOString().slice(0, 10)
+          const bucket = dayBuckets.get(day) ?? []
+          bucket.push(observation)
+          dayBuckets.set(day, bucket)
+        }
+        const ranked = [...dayBuckets.values()].flatMap((bucket) =>
+          [...bucket]
+            .sort((a, b) => deterministicHash(a.observationId) - deterministicHash(b.observationId))
+            .map((observation, rank) => ({ observation, rank })),
+        )
+        return ranked
+          .sort((a, b) => a.rank - b.rank || a.observation.observationId.localeCompare(b.observation.observationId))
+          .slice(0, limit)
+          .map((entry) => entry.observation)
+          .sort(
+            (a, b) => b.startTime.getTime() - a.startTime.getTime() || a.observationId.localeCompare(b.observationId),
+          )
+          .map((observation) => ({
+            sessionObservationId: observation.observationId,
+            sessionId: observation.sessionId,
+            startTime: observation.startTime,
+            transcript:
+              typeof observation.projectionMetadata.summary === "string" ? observation.projectionMetadata.summary : "",
+          }))
+      }),
+
     // Like listForCustomBehaviorSample, the fake does not compile `filterSet`;
     // it returns the unsampled eligible totals over the window.
     countForCustomBehaviorSample: ({ organizationId, projectId, since }) =>

@@ -1,25 +1,6 @@
 import { facetIdSchema, organizationIdSchema, projectIdSchema, SLUG_MAX_LENGTH } from "@domain/shared"
 import { z } from "zod"
-import {
-  FACET_DESCRIPTION_MAX_LENGTH,
-  FACET_INSTRUCTIONS_MAX_LENGTH,
-  FACET_NAME_MAX_LENGTH,
-  FACET_STATUSES,
-} from "../constants.ts"
-
-// ---------------------------------------------------------------------------
-// FacetStatus
-// ---------------------------------------------------------------------------
-
-export const facetStatusSchema = z.enum(FACET_STATUSES)
-export type FacetStatus = z.infer<typeof facetStatusSchema>
-
-export const FacetStatus = {
-  Pending: "pending",
-  Generating: "generating",
-  Ready: "ready",
-  Failed: "failed",
-} as const satisfies Record<string, FacetStatus>
+import { FACET_DESCRIPTION_MAX_LENGTH, FACET_INSTRUCTIONS_MAX_LENGTH, FACET_NAME_MAX_LENGTH } from "../constants.ts"
 
 // ---------------------------------------------------------------------------
 // TaxonomyFacet
@@ -46,7 +27,6 @@ export const taxonomyFacetSchema = z.object({
   name: z.string().trim().min(1).max(FACET_NAME_MAX_LENGTH),
   description: z.string().trim().min(1).max(FACET_DESCRIPTION_MAX_LENGTH),
   instructions: z.string().trim().min(1).max(FACET_INSTRUCTIONS_MAX_LENGTH),
-  status: facetStatusSchema,
   createdAt: z.date(),
   updatedAt: z.date(),
 })

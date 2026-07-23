@@ -34,6 +34,7 @@ const cluster = (overrides: Partial<TaxonomyCluster> = {}): TaxonomyCluster => (
   organizationId,
   projectId,
   customBehaviorId: null,
+  facetId: null,
   dimension: "topic",
   parentClusterId: null,
   depth: 0,
@@ -150,5 +151,40 @@ describe("nameClusterUseCase", () => {
     expect(prompts.join("\n")).toContain(summary)
     expect(prompts.join("\n")).not.toContain(momentId)
     expect(clusters.clusters.get(clusterId)?.name).toBe("Roaming Troubleshooting")
+  })
+
+  // Golden guard: the per-tree naming-policy refactor must leave the TOPIC tree's
+  // prompts byte-identical (the default policy === the previously hard-coded
+  // strings). This is the always-on production naming path; any drift here changes
+  // live topic names. If the topic wording is intentionally changed, update these
+  // literals in the same commit.
+  it("emits byte-identical topic naming prompts under the default policy (golden)", async () => {
+    const systems: string[] = []
+    const summary = "Assistant: reset the roaming settings and explained the next step."
+    const { effect } = runNameCluster({
+      seedObservations: [observation({ projectionMetadata: { summary } })],
+      ai: {
+        generate: <T>(input: GenerateInput<T>) => {
+          systems.push(input.system ?? "")
+          const object = input.prompt.includes("Candidates:")
+            ? { name: "Order Status", description: "Users check on the status of an order they placed." }
+            : { candidates: [{ theme: "order status", examples: [0] }] }
+          return Effect.succeed({ object: object as T, tokens: 10, duration: 1 } satisfies GenerateResult<T>)
+        },
+        embed: () => Effect.die("embed not used"),
+        rerank: () => Effect.die("rerank not used"),
+      },
+    })
+
+    await Effect.runPromise(effect)
+
+    const TOPIC_POLICY =
+      "Conversation topic clusters describe what users come to do (e.g. 'Order Status', 'Returns and Refunds', 'Account Billing'). They are NOT conversational rituals (no 'user greets', 'user thanks', 'user says hello'), NOT model behaviours (no 'agent apologizes'), and NOT generic dispositions ('frustrated user'). If samples disagree, name the dominant topic of the conversation transcripts."
+    const leafModeContext = "These are raw conversation samples. Find the dominant topic across them."
+
+    expect(systems).toEqual([
+      `proposeCandidateThemes: propose concise candidate conversation TOPIC themes for this cluster. ${TOPIC_POLICY} ${leafModeContext} Return only schema-valid JSON.`,
+      `Collapse candidate themes into ONE conversation TOPIC name (2-5 words) and a one-sentence description of what the user is trying to do. ${TOPIC_POLICY} ${leafModeContext} The name MUST be clearly distinct from any forbidden names provided. Return only schema-valid JSON with BOTH required string keys: name and description.`,
+    ])
   })
 })

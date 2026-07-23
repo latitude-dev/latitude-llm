@@ -29,7 +29,6 @@ const makeFacet = (overrides: Partial<TaxonomyFacet> = {}): TaxonomyFacet =>
     name: "Apparent user goal",
     description: "Clusters sessions by what the user was trying to accomplish, surfacing the top goals and unmet ones.",
     instructions: "In one sentence, what was the end user ultimately trying to accomplish? Ignore pleasantries.",
-    status: "pending",
     createdAt: now,
     updatedAt: now,
     ...overrides,

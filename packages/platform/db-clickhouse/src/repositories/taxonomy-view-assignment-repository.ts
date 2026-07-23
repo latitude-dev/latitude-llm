@@ -2,6 +2,7 @@ import type { ClickHouseClient } from "@clickhouse/client"
 import {
   ChSqlClient,
   type ChSqlClientShape,
+  CustomBehaviorId,
   FacetId,
   OrganizationId,
   ProjectId,
@@ -76,7 +77,7 @@ const toDomain = (row: TaxonomyViewAssignmentRow): TaxonomyViewAssignment =>
   taxonomyViewAssignmentSchema.parse({
     organizationId: OrganizationId(row.organization_id),
     projectId: ProjectId(row.project_id),
-    customBehaviorId: row.custom_behavior_id,
+    customBehaviorId: CustomBehaviorId(row.custom_behavior_id),
     facetId: row.facet_id === "" ? null : FacetId(row.facet_id),
     observationId: row.observation_id,
     sessionId: SessionId(row.session_id),
@@ -237,42 +238,70 @@ export const TaxonomyViewAssignmentRepositoryLive = Layer.effect(
             )
         }),
 
-      // Resolve a scoped cluster's members back to the global taxonomy_observations
-      // rows for the embeddings + summaries the naming step needs. Read-only on the
-      // global table.
-      listClusterMemberObservations: ({ organizationId, projectId, customBehaviorId, clusterId, limit }) =>
+      // Resolve a scoped cluster's members for the naming step. The topic lens
+      // (facetId null) joins the slice back to `taxonomy_observations` for the
+      // transcript summaries; a facet lens joins to `taxonomy_facet_projections`
+      // for the extracted one-sentence answers. Read-only on both source tables.
+      listClusterMemberObservations: ({ organizationId, projectId, customBehaviorId, facetId, clusterId, limit }) =>
         Effect.gen(function* () {
           const chSqlClient = (yield* ChSqlClient) as ChSqlClientShape<ClickHouseClient>
+          const customBehaviorParam = customBehaviorId as string
+          const facetParam = (facetId ?? "") as string
+          const memberIds = `
+            SELECT observation_id
+            FROM taxonomy_view_assignments FINAL
+            WHERE organization_id = {organizationId:String}
+              AND project_id = {projectId:String}
+              AND custom_behavior_id = {customBehaviorId:String}
+              AND facet_id = {facetId:String}
+              AND assigned_cluster_id = {clusterId:String}`
           return yield* chSqlClient
             .query(async (client) => {
+              const query =
+                facetParam === ""
+                  ? `SELECT ${taxonomyObservationSelectColumns}
+                     FROM taxonomy_observations FINAL
+                     WHERE organization_id = {organizationId:String}
+                       AND project_id = {projectId:String}
+                       AND ${validObservationIdClause}
+                       AND observation_id IN (${memberIds})
+                     ORDER BY start_time DESC, observation_id ASC
+                     LIMIT {limit:UInt32}`
+                  : `SELECT embedding, extracted_text, start_time
+                     FROM taxonomy_facet_projections FINAL
+                     WHERE organization_id = {organizationId:String}
+                       AND project_id = {projectId:String}
+                       AND facet_id = {facetId:String}
+                       AND length(extracted_text) > 0
+                       AND session_observation_id IN (${memberIds})
+                     ORDER BY start_time DESC, session_observation_id ASC
+                     LIMIT {limit:UInt32}`
               const result = await client.query({
-                query: `SELECT ${taxonomyObservationSelectColumns}
-                        FROM taxonomy_observations FINAL
-                        WHERE organization_id = {organizationId:String}
-                          AND project_id = {projectId:String}
-                          AND ${validObservationIdClause}
-                          AND observation_id IN (
-                            SELECT observation_id
-                            FROM taxonomy_view_assignments FINAL
-                            WHERE organization_id = {organizationId:String}
-                              AND project_id = {projectId:String}
-                              AND custom_behavior_id = {customBehaviorId:String}
-                              AND facet_id = ''
-                              AND assigned_cluster_id = {clusterId:String}
-                          )
-                        ORDER BY start_time DESC, observation_id ASC
-                        LIMIT {limit:UInt32}`,
+                query,
                 query_params: {
                   organizationId: organizationId as string,
                   projectId: projectId as string,
-                  customBehaviorId: customBehaviorId as string,
+                  customBehaviorId: customBehaviorParam,
+                  facetId: facetParam,
                   clusterId: clusterId as string,
                   limit,
                 },
                 format: "JSONEachRow",
               })
-              const rows = await result.json<TaxonomyObservationRow>()
-              return rows.map(toDomainObservation)
+              if (facetParam === "") {
+                const rows = await result.json<TaxonomyObservationRow>()
+                return rows.map(toDomainObservation)
+              }
+              const rows = await result.json<{
+                embedding: readonly number[]
+                extracted_text: string
+                start_time: string
+              }>()
+              return rows.map((row) => ({
+                embedding: row.embedding,
+                startTime: parseCHDate(row.start_time),
+                projectionMetadata: { summary: row.extracted_text },
+              }))
             })
             .pipe(
               Effect.mapError((error) =>
@@ -281,6 +310,9 @@ export const TaxonomyViewAssignmentRepositoryLive = Layer.effect(
             )
         }),
 
+      // Purge a cohort's edges across BOTH lenses — its topic slice AND every
+      // facet-lens slice applied to it — so deleting a cohort never orphans
+      // facet-lens edges (no `facet_id = ''` filter here).
       deleteByBehavior: ({ organizationId, projectId, customBehaviorId }) =>
         Effect.gen(function* () {
           const chSqlClient = (yield* ChSqlClient) as ChSqlClientShape<ClickHouseClient>
@@ -290,8 +322,7 @@ export const TaxonomyViewAssignmentRepositoryLive = Layer.effect(
                 query: `DELETE FROM taxonomy_view_assignments
                         WHERE organization_id = {organizationId:String}
                           AND project_id = {projectId:String}
-                          AND custom_behavior_id = {customBehaviorId:String}
-                          AND facet_id = ''`,
+                          AND custom_behavior_id = {customBehaviorId:String}`,
                 query_params: {
                   organizationId: organizationId as string,
                   projectId: projectId as string,
@@ -301,6 +332,29 @@ export const TaxonomyViewAssignmentRepositoryLive = Layer.effect(
             })
             .pipe(
               Effect.mapError((error) => toRepositoryError(error, "TaxonomyViewAssignmentRepository.deleteByBehavior")),
+            )
+        }),
+
+      // Purge a facet's edges across every scope (whole-project + each cohort).
+      deleteByFacet: ({ organizationId, projectId, facetId }) =>
+        Effect.gen(function* () {
+          const chSqlClient = (yield* ChSqlClient) as ChSqlClientShape<ClickHouseClient>
+          yield* chSqlClient
+            .query(async (client) => {
+              await client.command({
+                query: `DELETE FROM taxonomy_view_assignments
+                        WHERE organization_id = {organizationId:String}
+                          AND project_id = {projectId:String}
+                          AND facet_id = {facetId:String}`,
+                query_params: {
+                  organizationId: organizationId as string,
+                  projectId: projectId as string,
+                  facetId: facetId as string,
+                },
+              })
+            })
+            .pipe(
+              Effect.mapError((error) => toRepositoryError(error, "TaxonomyViewAssignmentRepository.deleteByFacet")),
             )
         }),
     }

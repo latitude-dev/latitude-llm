@@ -49,6 +49,7 @@
 import { resolveEmbeddingConfig } from "@domain/ai"
 import {
   type CustomBehaviorId,
+  type FacetId,
   type FilterSet,
   generateId,
   type OrganizationId,
@@ -102,6 +103,7 @@ import { type LineageDecision, matchTaxonomyLineage } from "../lineage.ts"
 import { TaxonomyClusterRepository } from "../ports/taxonomy-cluster-repository.ts"
 import {
   type ReassignTaxonomyObservationByIdInput,
+  type TaxonomyClusteringObservation,
   TaxonomyObservationRepository,
   type TaxonomyScopedClusteringObservation,
 } from "../ports/taxonomy-observation-repository.ts"
@@ -181,14 +183,32 @@ export const runTaxonomyClusterBuild = (input: TaxonomyClusterBuildRequest): Tax
 export interface PlanHierarchicalTaxonomyInput extends BuildHierarchicalTaxonomyInput {
   readonly clusterBuilder?: TaxonomyClusterBuilder
   /**
-   * Scope. Absent ⇒ global gardening (project-wide sample, membership written to
-   * `taxonomy_observations.assigned_cluster_id`). Present ⇒ a custom behavior's
-   * scoped sub-tree (FilterSet session slice, membership written to the
-   * `taxonomy_view_assignments` slice). Global callers omit both so their
-   * serialized payloads are byte-identical to the pre-unification workflow.
+   * A view is (scope × lens); scope and lens are resolved orthogonally.
+   *
+   * SCOPE — `customBehaviorId` absent ⇒ whole-project; present ⇒ a cohort's
+   * FilterSet session slice (requires a non-empty `filterSet` on the topic lens).
+   *
+   * LENS — `facetId` absent ⇒ the topic lens (cluster the sampled observation
+   * embeddings); present ⇒ a facet lens, where the caller has already sampled +
+   * extracted the facet projections and passes them as `lensObservations` (this
+   * use-case does not sample or extract on the facet path).
+   *
+   * WRITE TARGET — only (whole-project, topic) writes inline to
+   * `taxonomy_observations.assigned_cluster_id`; every other combination writes
+   * the `taxonomy_view_assignments` slice keyed by `(customBehaviorId, facetId)`.
+   * The (whole-project, topic) caller omits all three fields so its serialized
+   * payload stays byte-identical to the pre-facets workflow.
    */
   readonly customBehaviorId?: CustomBehaviorId
+  readonly facetId?: FacetId
   readonly filterSet?: FilterSet
+  /**
+   * Facet-lens embeddings to cluster: the non-unclear facet projections the
+   * caller extracted for the sampled sessions (each carries the session's
+   * `observationId`/`sessionId`/`startTime`). Required on the facet path, ignored
+   * on the topic path.
+   */
+  readonly lensObservations?: readonly TaxonomyScopedClusteringObservation[]
   /**
    * Rollout mode, resolved in the planning activity. `off` (default) is a
    * byte-identical no-op: static builder, sample-only reassignment, active
@@ -217,8 +237,11 @@ export interface HierarchicalTaxonomyPlan extends BuildHierarchicalTaxonomyResul
   readonly customAssignments: readonly TaxonomyViewAssignment[]
   /** Leaf id + centroid for adaptive full-window routing. Empty on the off path. */
   readonly leafClusters: readonly StagingLeafCluster[]
-  /** Non-null ⇒ the plan is scoped to this custom behavior (drives the write target). */
+  /** Non-null ⇒ the plan's scope is this cohort. */
   readonly customBehaviorId: CustomBehaviorId | null
+  /** Non-null ⇒ the plan's lens is this facet. Any non-null id here — or a non-null
+   * `customBehaviorId` — means the plan writes the `taxonomy_view_assignments` slice. */
+  readonly facetId: FacetId | null
   /**
    * Death lineage targets — previously-active clusters no node continued. On the
    * off path this is exactly what gets deprecated.
@@ -264,8 +287,10 @@ const buildPersistedCluster = (input: {
   readonly id: string
   readonly organizationId: OrganizationId
   readonly projectId: ProjectId
-  /** NULL = global taxonomy; non-null scopes the row to a custom behavior's sub-tree. */
+  /** NULL = whole-project scope; non-null scopes the row to a cohort's sub-tree. */
   readonly customBehaviorId?: CustomBehaviorId | null
+  /** NULL = topic lens; non-null scopes the row to a facet's tree. */
+  readonly facetId?: FacetId | null
   readonly dimension: TaxonomyDimensionType
   readonly parentId: string | null
   readonly path: string
@@ -313,6 +338,7 @@ const buildPersistedCluster = (input: {
     organizationId: input.organizationId,
     projectId: input.projectId,
     customBehaviorId: input.customBehaviorId ?? null,
+    facetId: input.facetId ?? null,
     dimension: input.dimension,
     parentClusterId: input.parentId === null ? null : TaxonomyClusterId(input.parentId),
     depth: input.depth,
@@ -493,31 +519,49 @@ export const planHierarchicalTaxonomyUseCase = (input: PlanHierarchicalTaxonomyI
     const observationsRepo = yield* TaxonomyObservationRepository
     const clustersRepo = yield* TaxonomyClusterRepository
     const scopedBehaviorId = input.customBehaviorId ?? null
-    // A scoped run without a filter would sample the whole project yet tag the
-    // clusters/assignments to the behavior — silently wrong. Custom behaviors
-    // always carry a non-empty filter, so fail fast rather than fall back to `{}`.
-    if (scopedBehaviorId !== null && (!input.filterSet || Object.keys(input.filterSet).length === 0)) {
+    const facetLensId = input.facetId ?? null
+    const isFacetLens = facetLensId !== null
+    // Every view is a custom behavior, so a facet lens is always cohort-wrapped —
+    // its edges key on that behavior's id. A facet lens without a behavior would
+    // have nowhere to write (whole-project topic is the only behavior-less tree,
+    // and it is the inline online tree), so fail fast.
+    if (isFacetLens && scopedBehaviorId === null) {
+      return yield* Effect.die(
+        new Error(`planHierarchicalTaxonomy: facet lens ${facetLensId} requires a customBehaviorId`),
+      )
+    }
+    // A cohort on the TOPIC lens samples the observation window through its
+    // filter, so it needs a non-empty filter (sampling the whole project yet
+    // tagging the cohort would be silently wrong). A facet lens samples +
+    // extracts in the caller, so it needs no filter here even when cohort-scoped.
+    if (!isFacetLens && scopedBehaviorId !== null && (!input.filterSet || Object.keys(input.filterSet).length === 0)) {
       return yield* Effect.die(
         new Error(`planHierarchicalTaxonomy: scoped run for ${scopedBehaviorId} requires a non-empty filterSet`),
       )
     }
     const since = lookbackStart(now)
-    // Scoped gardening samples the behavior's FilterSet session slice (rows carry
-    // sessionId for the assignment write); global samples the project-wide window.
-    const observations = scopedBehaviorId
-      ? yield* observationsRepo.listForCustomBehaviorSample({
-          organizationId: input.organizationId,
-          projectId: input.projectId,
-          since,
-          limit: TAXONOMY_CLUSTERING_PROPOSAL_SAMPLE_MAX,
-          filterSet: input.filterSet ?? {},
-        })
-      : yield* observationsRepo.listForClusteringSample({
-          organizationId: input.organizationId,
-          projectId: input.projectId,
-          since,
-          limit: TAXONOMY_CLUSTERING_PROPOSAL_SAMPLE_MAX,
-        })
+    // Lens picks the embeddings to cluster: the facet lens clusters the
+    // caller-supplied facet projections; the topic lens samples observation
+    // embeddings — scoped to the cohort's FilterSet session slice, or the whole
+    // project window. Scoped/facet rows carry sessionId for the view-slice write.
+    const observations: readonly TaxonomyClusteringObservation[] = isFacetLens
+      ? (input.lensObservations ?? [])
+      : scopedBehaviorId
+        ? yield* observationsRepo.listForCustomBehaviorSample({
+            organizationId: input.organizationId,
+            projectId: input.projectId,
+            since,
+            limit: TAXONOMY_CLUSTERING_PROPOSAL_SAMPLE_MAX,
+            filterSet: input.filterSet ?? {},
+          })
+        : yield* observationsRepo.listForClusteringSample({
+            organizationId: input.organizationId,
+            projectId: input.projectId,
+            since,
+            limit: TAXONOMY_CLUSTERING_PROPOSAL_SAMPLE_MAX,
+          })
+    // Any view (cohort topic or facet, both behavior-wrapped) reports its own
+    // sample size; only the whole-project topic tree reads project-wide counts.
     const observationsAvailable = scopedBehaviorId
       ? observations.length
       : (yield* observationsRepo.getCounts({ organizationId: input.organizationId, projectId: input.projectId, since }))
@@ -545,6 +589,7 @@ export const planHierarchicalTaxonomyUseCase = (input: PlanHierarchicalTaxonomyI
         customAssignments: [],
         leafClusters: [],
         customBehaviorId: scopedBehaviorId,
+        facetId: facetLensId,
         deprecatedClusterIds: [],
         supersededClusterIds: [],
         mode,
@@ -560,7 +605,11 @@ export const planHierarchicalTaxonomyUseCase = (input: PlanHierarchicalTaxonomyI
     const clusterBuilder =
       input.clusterBuilder ??
       ((request: TaxonomyClusterBuildRequest) => Effect.sync(() => runTaxonomyClusterBuild(request)))
-    const seed = seedFromProjectId(scopedBehaviorId ? `${input.projectId}:${scopedBehaviorId}` : input.projectId)
+    // Seed is deterministic per view (project × scope × lens) so a pass replays
+    // identically under Temporal and different views never share a seed.
+    const seed = seedFromProjectId(
+      `${input.projectId}${scopedBehaviorId ? `:${scopedBehaviorId}` : ""}${facetLensId ? `:facet:${facetLensId}` : ""}`,
+    )
 
     // Static is always built: it is the tree we persist for off/shadow (and for an
     // enforced run that falls back), and the comparison baseline for shadow.
@@ -624,6 +673,7 @@ export const planHierarchicalTaxonomyUseCase = (input: PlanHierarchicalTaxonomyI
       projectId: input.projectId,
       dimension,
       ...(input.customBehaviorId ? { customBehaviorId: input.customBehaviorId } : {}),
+      ...(input.facetId ? { facetId: input.facetId } : {}),
     })
     const { oldById, decisionByTempId, finalIdByTempId, matchedOldIds } = resolveTaxonomyLineage({
       descriptors,
@@ -658,6 +708,7 @@ export const planHierarchicalTaxonomyUseCase = (input: PlanHierarchicalTaxonomyI
         organizationId: input.organizationId,
         projectId: input.projectId,
         customBehaviorId: input.customBehaviorId ?? null,
+        facetId: input.facetId ?? null,
         dimension,
         parentId: parentFinalId,
         path,
@@ -730,9 +781,10 @@ export const planHierarchicalTaxonomyUseCase = (input: PlanHierarchicalTaxonomyI
       ? bornLeaves.map((leaf) => ({ clusterId: leaf.clusterId, centroid: [...leaf.centroid] }))
       : []
 
-    // Two write targets, picked by scope: global reassigns the observation's
-    // `assigned_cluster_id`; a scoped run writes the `taxonomy_view_assignments`
-    // slice (carrying sessionId + customBehaviorId), never the global column.
+    // Two write targets, picked by view: only the whole-project topic tree
+    // reassigns the observation's `assigned_cluster_id`; every behavior-wrapped
+    // view (cohort topic or facet) writes the `taxonomy_view_assignments` slice
+    // (keyed by customBehaviorId × facetId, carrying sessionId), never the column.
     const observationAssignments: ReassignTaxonomyObservationByIdInput[] =
       adaptive || scopedBehaviorId
         ? []
@@ -747,10 +799,9 @@ export const planHierarchicalTaxonomyUseCase = (input: PlanHierarchicalTaxonomyI
     const customAssignments: TaxonomyViewAssignment[] =
       !adaptive && scopedBehaviorId
         ? leafMembers.flatMap(({ leaf, observation, confidence }) => {
-            // Scoped samples come from listForCustomBehaviorSample and carry a
-            // sessionId; guard at runtime (via a widening cast, not an unchecked
-            // one) so a non-scoped observation can never yield a `sessionId:
-            // undefined` assignment.
+            // Scoped/facet samples carry a sessionId; guard at runtime (via a
+            // widening cast, not an unchecked one) so a whole-project topic
+            // observation can never yield a `sessionId: undefined` assignment.
             const sessionId = (observation as Partial<TaxonomyScopedClusteringObservation>).sessionId
             if (sessionId === undefined) return []
             return [
@@ -758,7 +809,7 @@ export const planHierarchicalTaxonomyUseCase = (input: PlanHierarchicalTaxonomyI
                 organizationId: input.organizationId,
                 projectId: input.projectId,
                 customBehaviorId: scopedBehaviorId,
-                facetId: null,
+                facetId: facetLensId,
                 observationId: observation.observationId,
                 sessionId,
                 assignedClusterId: leaf.clusterId,
@@ -807,6 +858,7 @@ export const planHierarchicalTaxonomyUseCase = (input: PlanHierarchicalTaxonomyI
       customAssignments,
       leafClusters,
       customBehaviorId: scopedBehaviorId,
+      facetId: facetLensId,
       deprecatedClusterIds,
       supersededClusterIds: adaptive ? previouslyActive.map((cluster) => cluster.id) : [],
       mode,

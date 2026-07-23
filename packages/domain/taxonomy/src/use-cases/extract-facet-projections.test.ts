@@ -23,7 +23,6 @@ const facet = (overrides: Partial<TaxonomyFacet> = {}): TaxonomyFacet => ({
   name: "Apparent user goal",
   description: "What the user is ultimately trying to accomplish.",
   instructions: "Summarize, in one sentence, what the user is ultimately trying to accomplish.",
-  status: "ready",
   createdAt: now,
   updatedAt: now,
   ...overrides,

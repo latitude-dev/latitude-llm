@@ -1,6 +1,7 @@
 import {
   customBehaviorIdSchema,
   type FilterSet,
+  facetIdSchema,
   filterSetSchema,
   organizationIdSchema,
   projectIdSchema,
@@ -79,10 +80,12 @@ export const customBehaviorFilterSetHasConditions = (filterSet: FilterSet): bool
 // ---------------------------------------------------------------------------
 
 /**
- * A named, project-scoped exploration scope. Its `filterSet` selects the
- * sessions the Phase 2 workflow samples and clusters into a scoped behavior
- * sub-tree (mirrored by `custom_behavior_id`-tagged rows in Postgres and the
- * ClickHouse `taxonomy_view_assignments` slice).
+ * A named, project-scoped view = (lens × filterSet). `filterSet` selects the
+ * sessions the workflow samples; `facetId` picks the lens: NULL = topic (cluster
+ * observation embeddings), non-null = a facet (cluster its extracted
+ * projections). Both are mirrored by `custom_behavior_id`/`facet_id`-tagged rows
+ * in Postgres and the ClickHouse `taxonomy_view_assignments` slice. The only
+ * invalid shape is a topic lens with an empty filter (that's the live global tree).
  */
 export const customBehaviorSchema = z.object({
   id: customBehaviorIdSchema,
@@ -91,6 +94,7 @@ export const customBehaviorSchema = z.object({
   slug: z.string().min(1).max(SLUG_MAX_LENGTH),
   name: z.string().min(1).max(CUSTOM_BEHAVIOR_NAME_MAX_LENGTH),
   filterSet: customBehaviorFilterSetSchema,
+  facetId: facetIdSchema.nullable().default(null),
   status: customBehaviorStatusSchema,
   createdAt: z.date(),
   updatedAt: z.date(),
