@@ -46,6 +46,7 @@ import {
   TaxonomyViewAssignmentRepository,
 } from "@domain/taxonomy"
 import { AIEmbedLive, AIGenerateLive, withAi } from "@platform/ai"
+import { RedisBillingSpendReservationLive } from "@platform/cache-redis"
 import {
   FacetProjectionRepositoryLive,
   TaxonomyObservationRepositoryLive,
@@ -65,6 +66,7 @@ import { parseEnv } from "@platform/env"
 import { createLogger, withTracing } from "@repo/observability"
 import { Data, Effect, Layer } from "effect"
 import { getClickhouseClient, getPostgresClient, getRedisClient } from "../clients.ts"
+import { billingMeteringRepositoriesLive, withActivityAIMetering } from "./ai-metering.ts"
 import { buildHierarchicalClustersInWorker } from "./taxonomy-clustering-worker.ts"
 
 /**
@@ -105,7 +107,7 @@ export interface GardenTaxonomyActivityInput {
   /**
    * Scope. Absent ⇒ whole-project topic tree (byte-identical to the pre-facets
    * workflow). Present ⇒ a custom behavior — the caller only knows its id; the
-   * behavior's lens (`facet_id`) + `filterSet` are loaded in the start activity.
+   * behavior's facet (`facet_id`) + `filterSet` are loaded in the start activity.
    */
   readonly customBehaviorId?: string
 }
@@ -115,7 +117,7 @@ export interface GardenTaxonomyStepInput extends GardenTaxonomyActivityInput {
   readonly now: string
   /** Populated by the start step for a custom behavior; the FilterSet the plan samples (absent ⇒ whole-project). */
   readonly filterSet?: FilterSet
-  /** Populated by the start step from the behavior's `facet_id`; the lens this run gardens through. */
+  /** Populated by the start step from the behavior's `facet_id`; the facet this run gardens through. */
   readonly facetId?: string
 }
 
@@ -176,7 +178,7 @@ interface StoredGardenTaxonomyPlan {
   readonly customAssignments: readonly TaxonomyViewAssignment[]
   /** Non-null ⇒ the plan's scope is this cohort. */
   readonly customBehaviorId: string | null
-  /** Non-null ⇒ the plan's lens is this facet. A non-null customBehaviorId OR facetId
+  /** Non-null ⇒ the plan's facet is this facet. A non-null customBehaviorId OR facetId
    * routes the reassign to the view-assignment slice instead of the inline column. */
   readonly facetId?: string | null
   readonly deprecatedClusterIds: readonly string[]
@@ -388,10 +390,11 @@ const withScopedReassignClickHouse = <A, E, R>(effect: Effect.Effect<A, E, R>, o
 const withFacetPostgres = <A, E, R>(effect: Effect.Effect<A, E, R>, organizationId: string) =>
   effect.pipe(
     withPostgres(
-      Layer.mergeAll(TaxonomyClusterRepositoryLive, FacetRepositoryLive),
+      Layer.mergeAll(TaxonomyClusterRepositoryLive, FacetRepositoryLive, billingMeteringRepositoriesLive),
       getPostgresClient(),
       OrganizationId(organizationId),
     ),
+    Effect.provide(RedisBillingSpendReservationLive(getRedisClient())),
   )
 
 // Facet planning samples sessions + reads the projection cache (ClickHouse), and
@@ -505,9 +508,9 @@ const startGlobalRun = (step: GardenTaxonomyStepInput) => {
 
 // Scoped start: mark the behavior Generating and stamp the cadence anchor at run
 // start (so the scoped sweep throttles on it and it survives a crash mid-run),
-// carrying the behavior's FilterSet AND its lens (`facet_id`) into the step so
-// the plan samples the right sessions and clusters through the right lens. A
-// facet-lens behavior with no filter is whole-project through that lens, so an
+// carrying the behavior's FilterSet AND its facet (`facet_id`) into the step so
+// the plan samples the right sessions and clusters through the right facet. A
+// facet-scoped behavior with no filter is whole-project through that facet, so an
 // empty filter is threaded as absent.
 const startCustomBehaviorRun = (step: GardenTaxonomyStepInput) =>
   runGardenStep(
@@ -713,10 +716,21 @@ const finalizeGardenPlan = (input: GardenTaxonomyStepInput, plan: HierarchicalTa
     } satisfies GardenTaxonomyBuildPlanResult
   })
 
-// Facet planning: sample → extract projections → cluster the non-unclear ones,
-// all in `planFacetGardenUseCase` (tested with fakes). This activity only wires
-// the live layers and offloads the k-means build to the worker thread (like the
-// topic path) so a large facet sample never blocks the Temporal activity worker.
+/**
+ * Facet planning: sample → extract projections → cluster the non-unclear ones,
+ * all in `planFacetGardenUseCase` (tested with fakes). This activity only wires
+ * the live layers and offloads the k-means build to the worker thread (like the
+ * topic path) so a large facet sample never blocks the Temporal activity worker.
+ *
+ * Extraction is the taxonomy's heaviest AI spend — one generation per sampled
+ * session, up to the proposal sample cap — so the activity carries a metering
+ * scope. Its per-call idempotency keys come from a counter, while extraction runs
+ * `FACET_EXTRACTION_CONCURRENCY` calls at a time, so a retry can reuse a key for a
+ * different call than the first attempt did. That direction is safe: a reused key
+ * dedupes to "already charged", so a retry undercharges the unflushed tail rather
+ * than double-charging it, and everything already flushed to the projection cache
+ * is skipped instead of re-extracted.
+ */
 const planFacetGarden = (input: GardenTaxonomyStepInput) =>
   planFacetGardenUseCase({
     organizationId: OrganizationId(input.organizationId),
@@ -733,6 +747,11 @@ const planFacetGarden = (input: GardenTaxonomyStepInput) =>
         catch: (error) => (error instanceof Error ? error : new Error(String(error))),
       }),
   }).pipe(
+    withActivityAIMetering({
+      organizationId: input.organizationId,
+      projectId: input.projectId,
+      label: "taxonomy-facet-extract",
+    }),
     (effect) => withFacetPostgres(effect, input.organizationId),
     (effect) => withFacetClickHouse(effect, input.organizationId),
     withFacetAi,
@@ -916,7 +935,7 @@ export const reassignGardenTaxonomyObservationsActivity = (input: GardenTaxonomy
     // full bounded live window to the staging leaves.
     Effect.gen(function* () {
       const plan = yield* loadGardenTaxonomyPlan(input)
-      // Any view (a cohort OR a facet lens) writes the view-assignment slice; only
+      // Any view (a cohort OR a facet) writes the view-assignment slice; only
       // the whole-project topic tree reassigns the inline column. Facet plans are
       // always off-mode (no staging leaves), so they take the sample-only branch.
       const isView = plan.customBehaviorId != null || plan.facetId != null

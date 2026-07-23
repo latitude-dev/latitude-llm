@@ -35,7 +35,7 @@ export interface ListClustersInput {
   readonly offset: number
   /** Omit/null = whole-project scope (custom_behavior_id IS NULL); an id scopes to that behavior's sub-tree. */
   readonly customBehaviorId?: CustomBehaviorId | null
-  /** Omit/null = topic lens (facet_id IS NULL); an id scopes to that facet's tree. */
+  /** Omit/null = topic (facet_id IS NULL); an id scopes to that facet's tree. */
   readonly facetId?: FacetId | null
 }
 
@@ -62,7 +62,7 @@ export interface TaxonomyClusterRepositoryShape {
     readonly parentClusterId?: TaxonomyClusterId | null
     /** Omit/null = whole-project scope (custom_behavior_id IS NULL); an id scopes to that behavior's sub-tree. */
     readonly customBehaviorId?: CustomBehaviorId | null
-    /** Omit/null = topic lens (facet_id IS NULL); an id scopes to that facet's tree. */
+    /** Omit/null = topic (facet_id IS NULL); an id scopes to that facet's tree. */
     readonly facetId?: FacetId | null
   }): Effect.Effect<readonly TaxonomyCluster[], RepositoryError, SqlClient>
   /** Active ids of the node plus all its descendants (path prefix match). */
@@ -71,7 +71,7 @@ export interface TaxonomyClusterRepositoryShape {
     readonly clusterId: TaxonomyClusterId
     /** Omit/null = whole-project scope (custom_behavior_id IS NULL); an id scopes to that behavior's sub-tree. */
     readonly customBehaviorId?: CustomBehaviorId | null
-    /** Omit/null = topic lens (facet_id IS NULL); an id scopes to that facet's tree. */
+    /** Omit/null = topic (facet_id IS NULL); an id scopes to that facet's tree. */
     readonly facetId?: FacetId | null
   }): Effect.Effect<readonly TaxonomyClusterId[], RepositoryError, SqlClient>
   /**
@@ -140,6 +140,17 @@ export interface TaxonomyClusterRepositoryShape {
    */
   deleteStaging(input: {
     readonly clusterIds: readonly TaxonomyClusterId[]
+  }): Effect.Effect<void, RepositoryError, SqlClient>
+  /**
+   * Drop a scoped tree outright when its behavior is deleted, whatever state its
+   * nodes are in. Takes a required `customBehaviorId` rather than the usual
+   * omit-for-whole-project optional: the `(NULL, NULL)` tree is the live
+   * online-routed one, and this is the only method here that deletes active rows,
+   * so it must be impossible to aim at it.
+   */
+  deleteByBehavior(input: {
+    readonly projectId: ProjectId
+    readonly customBehaviorId: CustomBehaviorId
   }): Effect.Effect<void, RepositoryError, SqlClient>
 }
 

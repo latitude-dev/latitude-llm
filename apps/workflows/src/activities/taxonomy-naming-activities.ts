@@ -27,7 +27,7 @@ export interface NameTaxonomyClusterActivityInput {
   readonly clusterId: string
   /** Present ⇒ name within a custom behavior's scoped member source; absent ⇒ the whole-project tree. */
   readonly customBehaviorId?: string
-  /** Present ⇒ a facet lens: read members from `taxonomy_facet_projections` and name in the facet's voice. */
+  /** Present ⇒ a facet-scoped view: read members from `taxonomy_facet_projections` and name in the facet's voice. */
   readonly facetId?: string
 }
 
@@ -58,11 +58,17 @@ export const nameTaxonomyClusterActivity = (input: NameTaxonomyClusterActivityIn
         })
       }).pipe(
         Effect.asVoid,
+        withActivityAIMetering({
+          organizationId: input.organizationId,
+          projectId: input.projectId,
+          label: "taxonomy-name",
+        }),
         withPostgres(
-          Layer.mergeAll(TaxonomyClusterRepositoryLive, FacetRepositoryLive),
+          Layer.mergeAll(TaxonomyClusterRepositoryLive, FacetRepositoryLive, billingMeteringRepositoriesLive),
           getPostgresClient(),
           organizationId,
         ),
+        Effect.provide(RedisBillingSpendReservationLive(getRedisClient())),
         withClickHouse(clickHouse, getClickhouseClient(), organizationId),
         withAi(Layer.mergeAll(AIEmbedLive, AIGenerateLive), getRedisClient()),
         Effect.provide(cache),

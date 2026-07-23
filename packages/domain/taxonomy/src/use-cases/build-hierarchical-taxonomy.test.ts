@@ -390,7 +390,7 @@ describe("planHierarchicalTaxonomyUseCase scoped to a custom behavior", () => {
   })
 })
 
-describe("planHierarchicalTaxonomyUseCase facet lens (scope × lens)", () => {
+describe("planHierarchicalTaxonomyUseCase facet-scoped (scope × facet)", () => {
   const customBehaviorId = CustomBehaviorId("b".repeat(24))
   const facetId = FacetId("f".repeat(24))
 
@@ -402,7 +402,7 @@ describe("planHierarchicalTaxonomyUseCase facet lens (scope × lens)", () => {
   })
 
   const runFacetPlan = (input: {
-    readonly lensObservations: ReadonlyArray<ReturnType<typeof makeProjection>>
+    readonly facetObservations: ReadonlyArray<ReturnType<typeof makeProjection>>
     readonly seededClusters?: readonly TaxonomyCluster[]
     readonly customBehaviorId?: CustomBehaviorId
     readonly filterSet?: Record<string, unknown>
@@ -419,7 +419,7 @@ describe("planHierarchicalTaxonomyUseCase facet lens (scope × lens)", () => {
         dimension: "topic",
         now: input.now,
         facetId,
-        lensObservations: input.lensObservations,
+        facetObservations: input.facetObservations,
         ...(input.customBehaviorId ? { customBehaviorId: input.customBehaviorId } : {}),
         ...(input.filterSet ? { filterSet: input.filterSet as never } : {}),
       }).pipe(
@@ -434,7 +434,7 @@ describe("planHierarchicalTaxonomyUseCase facet lens (scope × lens)", () => {
   it("cohort × facet: clusters the projections and keys clusters + edges by BOTH the cohort and the facet", async () => {
     const now = new Date("2026-05-24T12:00:00.000Z")
     const plan = await runFacetPlan({
-      lensObservations: Array.from({ length: 20 }, (_, index) => makeProjection(index, E1, now)),
+      facetObservations: Array.from({ length: 20 }, (_, index) => makeProjection(index, E1, now)),
       customBehaviorId,
       filterSet: { userId: [{ op: "in", value: ["usr-cohort"] }] },
       now,
@@ -456,7 +456,7 @@ describe("planHierarchicalTaxonomyUseCase facet lens (scope × lens)", () => {
   it("whole-project facet (behavior, no filter): still writes facet-keyed view edges, never the global column", async () => {
     const now = new Date("2026-05-24T12:00:00.000Z")
     const plan = await runFacetPlan({
-      lensObservations: Array.from({ length: 20 }, (_, index) => makeProjection(index, E1, now)),
+      facetObservations: Array.from({ length: 20 }, (_, index) => makeProjection(index, E1, now)),
       customBehaviorId,
       now,
     })
@@ -469,11 +469,11 @@ describe("planHierarchicalTaxonomyUseCase facet lens (scope × lens)", () => {
     )
   })
 
-  it("fails fast on a facet lens with no wrapping behavior (facet edges have nowhere to write)", async () => {
+  it("fails fast on a facet-scoped run with no wrapping behavior (facet edges have nowhere to write)", async () => {
     const now = new Date("2026-05-24T12:00:00.000Z")
     await expect(
       runFacetPlan({
-        lensObservations: Array.from({ length: 20 }, (_, index) => makeProjection(index, E1, now)),
+        facetObservations: Array.from({ length: 20 }, (_, index) => makeProjection(index, E1, now)),
         now,
       }),
     ).rejects.toThrow()
@@ -491,7 +491,7 @@ describe("planHierarchicalTaxonomyUseCase facet lens (scope × lens)", () => {
       centroid: centroidFrom(E1, new Date("2026-01-01T00:00:00.000Z")),
     })
     const plan = await runFacetPlan({
-      lensObservations: Array.from({ length: 20 }, (_, index) => makeProjection(index, E2, now)),
+      facetObservations: Array.from({ length: 20 }, (_, index) => makeProjection(index, E2, now)),
       customBehaviorId,
       seededClusters: [priorTopicCohort],
       now,
@@ -499,8 +499,8 @@ describe("planHierarchicalTaxonomyUseCase facet lens (scope × lens)", () => {
 
     expect(plan.clustersBorn).toBe(1)
     expect(plan.clustersContinued).toBe(0)
-    // The topic cohort cluster belongs to a different lens, so the facet run
-    // leaves it untouched (no cross-lens deprecation).
+    // The topic cohort cluster belongs to a different facet, so the facet run
+    // leaves it untouched (no cross-facet deprecation).
     expect(plan.deprecatedClusterIds).toEqual([])
   })
 })

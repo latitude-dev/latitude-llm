@@ -1,4 +1,4 @@
-import type { TaxonomyClusterId } from "@domain/shared"
+import type { CustomBehaviorId, TaxonomyClusterId } from "@domain/shared"
 import { Effect } from "effect"
 import type { TaxonomyMomentObservation } from "../entities/observation.ts"
 import type { TaxonomyViewAssignment } from "../entities/taxonomy-view-assignment.ts"
@@ -10,6 +10,8 @@ export const createFakeTaxonomyViewAssignmentRepository = (
   overrides?: Partial<TaxonomyViewAssignmentRepositoryShape>,
 ) => {
   const assignments: TaxonomyViewAssignment[] = []
+  // Purges are asserted on directly: an empty slice is indistinguishable from one that was never purged.
+  const deletedBehaviorIds: CustomBehaviorId[] = []
   const members = new Map<string, readonly TaxonomyMomentObservation[]>(Object.entries(membersByClusterId))
 
   const repository: TaxonomyViewAssignmentRepositoryShape = {
@@ -23,11 +25,15 @@ export const createFakeTaxonomyViewAssignmentRepository = (
         assignments.filter((assignment) => assignment.customBehaviorId === customBehaviorId).slice(0, limit),
       ),
 
-    getClusterAssignmentCounts: ({ customBehaviorId, startTimeFrom, startTimeTo }) =>
+    // The topic slice is `facet_id = ''` in ClickHouse, so both a null and an empty
+    // facet id name it; normalize before comparing or a row stored the storage way
+    // drops out of a topic-scoped read here but not in the live repository.
+    getClusterAssignmentCounts: ({ customBehaviorId, facetId, startTimeFrom, startTimeTo }) =>
       Effect.sync(() => {
         const counts = new Map<string, number>()
         for (const assignment of assignments) {
           if (assignment.customBehaviorId !== customBehaviorId) continue
+          if ((assignment.facetId ?? "") !== (facetId ?? "")) continue
           if (assignment.assignedClusterId == null) continue
           if (startTimeFrom && assignment.startTime < startTimeFrom) continue
           if (startTimeTo && assignment.startTime >= startTimeTo) continue
@@ -37,13 +43,14 @@ export const createFakeTaxonomyViewAssignmentRepository = (
         return [...counts].map(([clusterId, count]) => ({ clusterId: clusterId as TaxonomyClusterId, count }))
       }),
 
-    getClusterTrendCounts: ({ customBehaviorId, clusterIds, currentSince, baselineSince, baselineDays }) =>
+    getClusterTrendCounts: ({ customBehaviorId, facetId, clusterIds, currentSince, baselineSince, baselineDays }) =>
       Effect.sync(() => {
         const wanted = new Set(clusterIds.map((id) => id as string))
         const current = new Map<string, number>()
         const baseline = new Map<string, number>()
         for (const assignment of assignments) {
           if (assignment.customBehaviorId !== customBehaviorId) continue
+          if ((assignment.facetId ?? "") !== (facetId ?? "")) continue
           const key = assignment.assignedClusterId as string
           if (!wanted.has(key)) continue
           if (assignment.startTime >= currentSince) current.set(key, (current.get(key) ?? 0) + 1)
@@ -60,9 +67,10 @@ export const createFakeTaxonomyViewAssignmentRepository = (
     listClusterMemberObservations: ({ clusterId, limit }) =>
       Effect.sync(() => (members.get(clusterId as string) ?? []).slice(0, limit)),
 
-    // Purge across BOTH lenses (no facet_id filter), matching the real repo.
+    // Purge across BOTH the topic and facet edges (no facet_id filter), matching the real repo.
     deleteByBehavior: ({ customBehaviorId }) =>
       Effect.sync(() => {
+        deletedBehaviorIds.push(customBehaviorId)
         for (let index = assignments.length - 1; index >= 0; index--) {
           if (assignments[index]?.customBehaviorId === customBehaviorId) assignments.splice(index, 1)
         }
@@ -78,5 +86,5 @@ export const createFakeTaxonomyViewAssignmentRepository = (
     ...overrides,
   }
 
-  return { repository, assignments, members }
+  return { repository, assignments, members, deletedBehaviorIds }
 }

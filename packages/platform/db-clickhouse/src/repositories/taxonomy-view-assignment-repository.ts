@@ -139,7 +139,14 @@ export const TaxonomyViewAssignmentRepositoryLive = Layer.effect(
             )
         }),
 
-      getClusterAssignmentCounts: ({ organizationId, projectId, customBehaviorId, startTimeFrom, startTimeTo }) =>
+      getClusterAssignmentCounts: ({
+        organizationId,
+        projectId,
+        customBehaviorId,
+        facetId,
+        startTimeFrom,
+        startTimeTo,
+      }) =>
         Effect.gen(function* () {
           const chSqlClient = (yield* ChSqlClient) as ChSqlClientShape<ClickHouseClient>
           return yield* chSqlClient
@@ -150,7 +157,7 @@ export const TaxonomyViewAssignmentRepositoryLive = Layer.effect(
                         WHERE organization_id = {organizationId:String}
                           AND project_id = {projectId:String}
                           AND custom_behavior_id = {customBehaviorId:String}
-                          AND facet_id = ''
+                          AND facet_id = {facetId:String}
                           AND assigned_cluster_id != ''
                           ${startTimeFrom ? "AND start_time >= {startTimeFrom:DateTime64(9, 'UTC')}" : ""}
                           ${startTimeTo ? "AND start_time < {startTimeTo:DateTime64(9, 'UTC')}" : ""}
@@ -160,6 +167,7 @@ export const TaxonomyViewAssignmentRepositoryLive = Layer.effect(
                   organizationId: organizationId as string,
                   projectId: projectId as string,
                   customBehaviorId: customBehaviorId as string,
+                  facetId: (facetId ?? "") as string,
                   ...(startTimeFrom ? { startTimeFrom: formatCHDate(startTimeFrom) } : {}),
                   ...(startTimeTo ? { startTimeTo: formatCHDate(startTimeTo) } : {}),
                 },
@@ -182,6 +190,7 @@ export const TaxonomyViewAssignmentRepositoryLive = Layer.effect(
         organizationId,
         projectId,
         customBehaviorId,
+        facetId,
         clusterIds,
         currentSince,
         baselineSince,
@@ -201,7 +210,7 @@ export const TaxonomyViewAssignmentRepositoryLive = Layer.effect(
                         WHERE organization_id = {organizationId:String}
                           AND project_id = {projectId:String}
                           AND custom_behavior_id = {customBehaviorId:String}
-                          AND facet_id = ''
+                          AND facet_id = {facetId:String}
                           AND assigned_cluster_id IN {clusterIds:Array(String)}
                           AND start_time >= {baselineSince:DateTime64(9, 'UTC')}
                         GROUP BY assigned_cluster_id`,
@@ -209,6 +218,7 @@ export const TaxonomyViewAssignmentRepositoryLive = Layer.effect(
                   organizationId: organizationId as string,
                   projectId: projectId as string,
                   customBehaviorId: customBehaviorId as string,
+                  facetId: (facetId ?? "") as string,
                   clusterIds: clusterIds as readonly string[],
                   currentSince: formatCHDate(currentSince),
                   baselineSince: formatCHDate(baselineSince),
@@ -238,9 +248,9 @@ export const TaxonomyViewAssignmentRepositoryLive = Layer.effect(
             )
         }),
 
-      // Resolve a scoped cluster's members for the naming step. The topic lens
+      // Resolve a scoped cluster's members for the naming step. The topic path
       // (facetId null) joins the slice back to `taxonomy_observations` for the
-      // transcript summaries; a facet lens joins to `taxonomy_facet_projections`
+      // transcript summaries; a facet-scoped path joins to `taxonomy_facet_projections`
       // for the extracted one-sentence answers. Read-only on both source tables.
       listClusterMemberObservations: ({ organizationId, projectId, customBehaviorId, facetId, clusterId, limit }) =>
         Effect.gen(function* () {
@@ -310,9 +320,9 @@ export const TaxonomyViewAssignmentRepositoryLive = Layer.effect(
             )
         }),
 
-      // Purge a cohort's edges across BOTH lenses — its topic slice AND every
-      // facet-lens slice applied to it — so deleting a cohort never orphans
-      // facet-lens edges (no `facet_id = ''` filter here).
+      // Purge a cohort's edges across its topic slice AND every facet-scoped
+      // slice applied to it, so deleting a cohort never orphans facet-scoped
+      // edges (no `facet_id = ''` filter here).
       deleteByBehavior: ({ organizationId, projectId, customBehaviorId }) =>
         Effect.gen(function* () {
           const chSqlClient = (yield* ChSqlClient) as ChSqlClientShape<ClickHouseClient>

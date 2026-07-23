@@ -1,4 +1,12 @@
-import { FacetId, NotFoundError, OrganizationId, ProjectId, SqlClient, type SqlClientShape } from "@domain/shared"
+import {
+  FacetId,
+  NotFoundError,
+  OrganizationId,
+  ProjectId,
+  RepositoryError,
+  SqlClient,
+  type SqlClientShape,
+} from "@domain/shared"
 import { FacetRepository, type TaxonomyFacet } from "@domain/taxonomy"
 import { and, desc, eq, sql } from "drizzle-orm"
 import { Effect, Layer } from "effect"
@@ -67,18 +75,6 @@ export const FacetRepositoryLive = Layer.effect(
           return rows.map(toFacet)
         }),
 
-      countByProject: ({ projectId }) =>
-        Effect.gen(function* () {
-          const sqlClient = (yield* SqlClient) as SqlClientShape<Operator>
-          const [row] = yield* sqlClient.query((db, organizationId) =>
-            db
-              .select({ count: sql<number>`count(*)::int` })
-              .from(taxonomyFacets)
-              .where(and(eq(taxonomyFacets.organizationId, organizationId), eq(taxonomyFacets.projectId, projectId))),
-          )
-          return row?.count ?? 0
-        }),
-
       countBySlug: ({ projectId, slug }) =>
         Effect.gen(function* () {
           const sqlClient = (yield* SqlClient) as SqlClientShape<Operator>
@@ -123,6 +119,55 @@ export const FacetRepositoryLive = Layer.effect(
                   updatedAt: facet.updatedAt,
                 },
               }),
+          )
+        }),
+
+      findOrCreateBySlug: (facet) =>
+        Effect.gen(function* () {
+          const sqlClient = (yield* SqlClient) as SqlClientShape<Operator>
+          // `doNothing` on the slug index rather than letting the insert raise: this
+          // runs inside the create-behavior transaction, and a unique violation there
+          // aborts the whole transaction instead of failing just this statement.
+          const [inserted] = yield* sqlClient.query((db, organizationId) =>
+            db
+              .insert(taxonomyFacets)
+              .values({
+                id: facet.id,
+                organizationId,
+                projectId: facet.projectId,
+                slug: facet.slug,
+                name: facet.name,
+                description: facet.description,
+                instructions: facet.instructions,
+                createdAt: facet.createdAt,
+                updatedAt: facet.updatedAt,
+              })
+              .onConflictDoNothing({
+                target: [taxonomyFacets.organizationId, taxonomyFacets.projectId, taxonomyFacets.slug],
+              })
+              .returning(),
+          )
+          if (inserted) return toFacet(inserted)
+          // Lost the race: read the row the winner inserted.
+          const [existing] = yield* sqlClient.query((db, organizationId) =>
+            db
+              .select()
+              .from(taxonomyFacets)
+              .where(
+                and(
+                  eq(taxonomyFacets.organizationId, organizationId),
+                  eq(taxonomyFacets.projectId, facet.projectId),
+                  eq(taxonomyFacets.slug, facet.slug),
+                ),
+              )
+              .limit(1),
+          )
+          if (existing) return toFacet(existing)
+          return yield* Effect.fail(
+            new RepositoryError({
+              cause: new Error(`Facet slug ${facet.slug} conflicted but no row holds it`),
+              operation: "facetRepository.findOrCreateBySlug",
+            }),
           )
         }),
 
