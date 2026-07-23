@@ -3,11 +3,16 @@ import {
   computeRecordHistoryUseCase,
   computeSessionMemoryDiffUseCase,
   computeSessionMemorySummaryUseCase,
-  listMemoryStoresUseCase,
+  getMemoryActivityHistogramUseCase,
+  getMemoryAnalyticsOverviewUseCase,
+  isMemoryStoreMetricsSortField,
   listRecordUsersUseCase,
+  listStoresWithMetricsUseCase,
   listStoreUsersUseCase,
   listUserStoresUseCase,
+  listZeroHitQueriesUseCase,
   type MemoryChangeKind,
+  type MemoryStoreMetricsSortField,
   type RecordChangeDiff,
   readRecordReadsUseCase,
   reconstructSnapshotUseCase,
@@ -15,7 +20,7 @@ import {
   type SessionMemorySummary,
 } from "@domain/memories"
 import { ExternalUserId, ProjectId, SessionId, SpanId, TraceId } from "@domain/shared"
-import { MemoryRepositoryLive } from "@platform/db-clickhouse"
+import { MemoryAnalyticsRepositoryLive, MemoryRepositoryLive } from "@platform/db-clickhouse"
 import { withTracing } from "@repo/observability"
 import { createServerFn } from "@tanstack/react-start"
 import { Effect } from "effect"
@@ -38,12 +43,51 @@ export interface MemoryStoreRecord {
   readonly userCount: number
 }
 
-interface MemoryStoresPageRecord {
-  readonly items: readonly MemoryStoreRecord[]
+export interface MemoryAnalyticsOverviewRecord {
+  readonly liveRecords: number
+  readonly liveTokens: number
+  readonly neverReadLiveTokens: number
+  readonly readSessions: number
+  readonly retrievedTokens: number
+  readonly searchCount: number
+  readonly zeroHitSearchCount: number
+  readonly contentWrites: number
+  readonly noopWrites: number
+  readonly completedVersions: number
+  readonly consumedVersions: number
+}
+
+export interface MemoryActivityBucketRecord {
+  readonly bucketStart: string
+  readonly adds: number
+  readonly updates: number
+  readonly removes: number
+  readonly reads: number
+}
+
+export interface MemoryStoreMetricsRecord extends MemoryStoreRecord {
+  readonly readSessions: number
+  readonly contentWrites: number
+  readonly completedVersions: number
+  readonly consumedVersions: number
+  readonly netTokenGrowth: number
+  readonly trend: readonly { readonly bucketStart: string; readonly writes: number; readonly reads: number }[]
+}
+
+interface MemoryStoreMetricsPageRecord {
+  readonly items: readonly MemoryStoreMetricsRecord[]
   readonly totalCount: number
   readonly hasMore: boolean
   readonly limit: number
   readonly offset: number
+}
+
+export interface MemoryZeroHitQueryRecord {
+  readonly queryText: string
+  readonly searchCount: number
+  readonly storeCount: number
+  readonly anyStoreId: string
+  readonly lastSeenAt: string
 }
 
 export interface MemoryStoreSnapshotRecord {
@@ -137,49 +181,6 @@ export const getSessionMemoryDiff = createServerFn({ method: "GET" })
         sessionId: SessionId(data.sessionId),
         ...(data.traceId ? { traceId: TraceId(data.traceId) } : {}),
       }).pipe(withScopedClickHouse(MemoryRepositoryLive, getClickhouseClient(), orgId), withTracing),
-    )
-  })
-
-/** The project's memory stores, one roll-up row each, server-sorted and paginated. */
-export const listMemoryStores = createServerFn({ method: "GET" })
-  .inputValidator(
-    z.object({
-      projectId: z.string(),
-      sort: z.enum(["lastUpdated", "lastRead", "records", "tokens", "sessions", "users"]).default("lastUpdated"),
-      direction: z.enum(["asc", "desc"]).default("desc"),
-      limit: z.number().int().min(1).max(200).default(50),
-      offset: z.number().int().min(0).default(0),
-    }),
-  )
-  .handler(async ({ data, context }): Promise<MemoryStoresPageRecord> => {
-    const orgId = await resolveOrgScope(context)
-
-    return Effect.runPromise(
-      listMemoryStoresUseCase({
-        organizationId: orgId,
-        projectId: ProjectId(data.projectId),
-        options: { sortBy: data.sort, sortDirection: data.direction, limit: data.limit, offset: data.offset },
-      }).pipe(
-        Effect.map(
-          (page): MemoryStoresPageRecord => ({
-            items: page.items.map((store) => ({
-              storeId: store.storeId,
-              recordCount: store.recordCount,
-              tokenCount: store.tokenCount,
-              lastUpdatedAt: store.lastUpdatedAt.toISOString(),
-              lastReadAt: store.lastReadAt ? store.lastReadAt.toISOString() : null,
-              sessionCount: store.sessionCount,
-              userCount: store.userCount,
-            })),
-            totalCount: page.totalCount,
-            hasMore: page.hasMore,
-            limit: page.limit,
-            offset: page.offset,
-          }),
-        ),
-        withScopedClickHouse(MemoryRepositoryLive, getClickhouseClient(), orgId),
-        withTracing,
-      ),
     )
   })
 
@@ -371,6 +372,153 @@ export const listUserMemoryStores = createServerFn({ method: "GET" })
           ),
         ),
         withScopedClickHouse(MemoryRepositoryLive, getClickhouseClient(), orgId),
+        withTracing,
+      ),
+    )
+  })
+
+const analyticsScopeSchema = z.object({
+  projectId: z.string(),
+  storeId: z.string().optional(),
+  fromIso: z.string().datetime(),
+  toIso: z.string().datetime(),
+})
+
+const MAX_BUCKET_SECONDS = 90 * 24 * 60 * 60
+
+/** The Memory-page (or store-scoped) analytics tile roll-up over the ledger. */
+export const getMemoryAnalyticsOverview = createServerFn({ method: "GET" })
+  .inputValidator(analyticsScopeSchema)
+  .handler(async ({ data, context }): Promise<MemoryAnalyticsOverviewRecord> => {
+    const orgId = await resolveOrgScope(context)
+
+    return Effect.runPromise(
+      getMemoryAnalyticsOverviewUseCase({
+        organizationId: orgId,
+        projectId: ProjectId(data.projectId),
+        ...(data.storeId !== undefined ? { storeId: data.storeId } : {}),
+        range: { from: new Date(data.fromIso), to: new Date(data.toIso) },
+      }).pipe(withScopedClickHouse(MemoryAnalyticsRepositoryLive, getClickhouseClient(), orgId), withTracing),
+    )
+  })
+
+/** Bucketed mutation/read activity for the Memory analytics chart. */
+export const getMemoryActivityHistogram = createServerFn({ method: "GET" })
+  .inputValidator(analyticsScopeSchema.extend({ bucketSeconds: z.number().int().positive().max(MAX_BUCKET_SECONDS) }))
+  .handler(async ({ data, context }): Promise<readonly MemoryActivityBucketRecord[]> => {
+    const orgId = await resolveOrgScope(context)
+
+    return Effect.runPromise(
+      getMemoryActivityHistogramUseCase({
+        organizationId: orgId,
+        projectId: ProjectId(data.projectId),
+        ...(data.storeId !== undefined ? { storeId: data.storeId } : {}),
+        range: { from: new Date(data.fromIso), to: new Date(data.toIso) },
+        bucketSeconds: data.bucketSeconds,
+      }).pipe(
+        Effect.map((buckets) =>
+          buckets.map(
+            (bucket): MemoryActivityBucketRecord => ({
+              bucketStart: bucket.bucketStart.toISOString(),
+              adds: bucket.adds,
+              updates: bucket.updates,
+              removes: bucket.removes,
+              reads: bucket.reads,
+            }),
+          ),
+        ),
+        withScopedClickHouse(MemoryAnalyticsRepositoryLive, getClickhouseClient(), orgId),
+        withTracing,
+      ),
+    )
+  })
+
+/** The project's memory stores with range-scoped insight metrics and trend sparklines. */
+export const listMemoryStoresWithMetrics = createServerFn({ method: "GET" })
+  .inputValidator(
+    analyticsScopeSchema.extend({
+      sort: z.string().default("lastUpdated"),
+      direction: z.enum(["asc", "desc"]).default("desc"),
+      limit: z.number().int().min(1).max(200).default(50),
+      offset: z.number().int().min(0).default(0),
+      trendBucketSeconds: z.number().int().positive().max(MAX_BUCKET_SECONDS),
+    }),
+  )
+  .handler(async ({ data, context }): Promise<MemoryStoreMetricsPageRecord> => {
+    const orgId = await resolveOrgScope(context)
+    const sortBy: MemoryStoreMetricsSortField = isMemoryStoreMetricsSortField(data.sort) ? data.sort : "lastUpdated"
+
+    return Effect.runPromise(
+      listStoresWithMetricsUseCase({
+        organizationId: orgId,
+        projectId: ProjectId(data.projectId),
+        range: { from: new Date(data.fromIso), to: new Date(data.toIso) },
+        options: { sortBy, sortDirection: data.direction, limit: data.limit, offset: data.offset },
+        trendBucketSeconds: data.trendBucketSeconds,
+      }).pipe(
+        Effect.map(({ page, trends }): MemoryStoreMetricsPageRecord => {
+          const trendByStore = new Map<string, { bucketStart: string; writes: number; reads: number }[]>()
+          for (const bucket of trends) {
+            const list = trendByStore.get(bucket.storeId) ?? []
+            list.push({ bucketStart: bucket.bucketStart.toISOString(), writes: bucket.writes, reads: bucket.reads })
+            trendByStore.set(bucket.storeId, list)
+          }
+          return {
+            items: page.items.map(
+              (store): MemoryStoreMetricsRecord => ({
+                storeId: store.storeId,
+                recordCount: store.recordCount,
+                tokenCount: store.tokenCount,
+                lastUpdatedAt: store.lastUpdatedAt.toISOString(),
+                lastReadAt: store.lastReadAt ? store.lastReadAt.toISOString() : null,
+                sessionCount: store.sessionCount,
+                userCount: store.userCount,
+                readSessions: store.readSessions,
+                contentWrites: store.contentWrites,
+                completedVersions: store.completedVersions,
+                consumedVersions: store.consumedVersions,
+                netTokenGrowth: store.netTokenGrowth,
+                trend: trendByStore.get(store.storeId) ?? [],
+              }),
+            ),
+            totalCount: page.totalCount,
+            hasMore: page.hasMore,
+            limit: page.limit,
+            offset: page.offset,
+          }
+        }),
+        withScopedClickHouse(MemoryAnalyticsRepositoryLive, getClickhouseClient(), orgId),
+        withTracing,
+      ),
+    )
+  })
+
+/** Searches that returned nothing, grouped by query text — the "what to add" report. */
+export const listMemoryZeroHitQueries = createServerFn({ method: "GET" })
+  .inputValidator(analyticsScopeSchema.extend({ limit: z.number().int().min(1).max(100).optional() }))
+  .handler(async ({ data, context }): Promise<readonly MemoryZeroHitQueryRecord[]> => {
+    const orgId = await resolveOrgScope(context)
+
+    return Effect.runPromise(
+      listZeroHitQueriesUseCase({
+        organizationId: orgId,
+        projectId: ProjectId(data.projectId),
+        ...(data.storeId !== undefined ? { storeId: data.storeId } : {}),
+        range: { from: new Date(data.fromIso), to: new Date(data.toIso) },
+        ...(data.limit !== undefined ? { limit: data.limit } : {}),
+      }).pipe(
+        Effect.map((groups) =>
+          groups.map(
+            (group): MemoryZeroHitQueryRecord => ({
+              queryText: group.queryText,
+              searchCount: group.searchCount,
+              storeCount: group.storeCount,
+              anyStoreId: group.anyStoreId,
+              lastSeenAt: group.lastSeenAt.toISOString(),
+            }),
+          ),
+        ),
+        withScopedClickHouse(MemoryAnalyticsRepositoryLive, getClickhouseClient(), orgId),
         withTracing,
       ),
     )

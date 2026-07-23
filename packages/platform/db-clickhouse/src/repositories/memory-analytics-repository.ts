@@ -165,7 +165,12 @@ const RANGE_FILTER = "AND end_time >= {from:DateTime64(6, 'UTC')} AND end_time <
 export const MemoryAnalyticsRepositoryLive = Layer.effect(
   MemoryAnalyticsRepository,
   Effect.gen(function* () {
-    const getOverview: MemoryAnalyticsRepositoryShape["getOverview"] = ({ organizationId, projectId, storeId, range }) =>
+    const getOverview: MemoryAnalyticsRepositoryShape["getOverview"] = ({
+      organizationId,
+      projectId,
+      storeId,
+      range,
+    }) =>
       Effect.gen(function* () {
         const chSqlClient = (yield* ChSqlClient) as ChSqlClientShape<ClickHouseClient>
         const storeFilter = storeId !== undefined ? "AND store_id = {storeId:String}" : ""

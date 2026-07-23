@@ -14,8 +14,8 @@ import { setupTestClickHouse } from "@platform/testkit"
 import { Effect } from "effect"
 import { beforeEach, describe, expect, it } from "vitest"
 import { withClickHouse } from "../with-clickhouse.ts"
-import { MemoryRepositoryLive } from "./memory-repository.ts"
 import { MemoryAnalyticsRepositoryLive } from "./memory-analytics-repository.ts"
+import { MemoryRepositoryLive } from "./memory-repository.ts"
 
 const organizationId = OrganizationId("o".repeat(24))
 const projectId = ProjectId("p".repeat(24))
@@ -115,9 +115,31 @@ describe("MemoryAnalyticsRepository", () => {
     it("counts searches and zero-hit searches distinctly, summing retrieved tokens", async () => {
       await seedEvents([
         // one search returning two records (shared span) + one zero-hit search
-        makeEvent({ changeKind: "read", recordId: "rec1", recordCount: 2, tokenCount: 10, spanId: spanN(100), endTime: at(2) }),
-        makeEvent({ changeKind: "read", recordId: "rec2", recordCount: 2, tokenCount: 15, spanId: spanN(100), endTime: at(2) }),
-        makeEvent({ changeKind: "read", recordId: "", recordCount: 0, tokenCount: 0, spanId: spanN(101), queryText: "missing", endTime: at(3) }),
+        makeEvent({
+          changeKind: "read",
+          recordId: "rec1",
+          recordCount: 2,
+          tokenCount: 10,
+          spanId: spanN(100),
+          endTime: at(2),
+        }),
+        makeEvent({
+          changeKind: "read",
+          recordId: "rec2",
+          recordCount: 2,
+          tokenCount: 15,
+          spanId: spanN(100),
+          endTime: at(2),
+        }),
+        makeEvent({
+          changeKind: "read",
+          recordId: "",
+          recordCount: 0,
+          tokenCount: 0,
+          spanId: spanN(101),
+          queryText: "missing",
+          endTime: at(3),
+        }),
       ])
 
       const overview = await withRepo((repo) => repo.getOverview({ organizationId, projectId, range }))
@@ -158,7 +180,15 @@ describe("MemoryAnalyticsRepository", () => {
     })
 
     it("dedups retried projection rows in additive aggregates", async () => {
-      const dup = makeEvent({ changeKind: "read", recordId: "rec1", recordCount: 1, tokenCount: 10, spanId: spanN(200), traceId: traceN(200), endTime: at(2) })
+      const dup = makeEvent({
+        changeKind: "read",
+        recordId: "rec1",
+        recordCount: 1,
+        tokenCount: 10,
+        spanId: spanN(200),
+        traceId: traceN(200),
+        endTime: at(2),
+      })
       await seedEvents([dup, { ...dup }, { ...dup }])
 
       const overview = await withRepo((repo) => repo.getOverview({ organizationId, projectId, range }))
@@ -201,11 +231,40 @@ describe("MemoryAnalyticsRepository", () => {
       ])
       await seedEvents([
         // alpha: add@0 (10 tok) → update@4 (40 tok); the add is completed, read@1 → consumed
-        makeEvent({ storeId: "alpha", recordId: "r1", changeKind: "add", contentHash: "a0", tokenCount: 10, endTime: at(0) }),
-        makeEvent({ storeId: "alpha", recordId: "r1", changeKind: "read", contentHash: "a0", tokenCount: 10, sessionId: SessionId("sA"), endTime: at(1) }),
-        makeEvent({ storeId: "alpha", recordId: "r1", changeKind: "update", contentHash: "a1", tokenCount: 40, endTime: at(4) }),
+        makeEvent({
+          storeId: "alpha",
+          recordId: "r1",
+          changeKind: "add",
+          contentHash: "a0",
+          tokenCount: 10,
+          endTime: at(0),
+        }),
+        makeEvent({
+          storeId: "alpha",
+          recordId: "r1",
+          changeKind: "read",
+          contentHash: "a0",
+          tokenCount: 10,
+          sessionId: SessionId("sA"),
+          endTime: at(1),
+        }),
+        makeEvent({
+          storeId: "alpha",
+          recordId: "r1",
+          changeKind: "update",
+          contentHash: "a1",
+          tokenCount: 40,
+          endTime: at(4),
+        }),
         // beta: single add, pending (no successor), 10 tok
-        makeEvent({ storeId: "beta", recordId: "r1", changeKind: "add", contentHash: "b0", tokenCount: 10, endTime: at(2) }),
+        makeEvent({
+          storeId: "beta",
+          recordId: "r1",
+          changeKind: "add",
+          contentHash: "b0",
+          tokenCount: 10,
+          endTime: at(2),
+        }),
       ])
 
       const page = await withRepo((repo) =>
@@ -247,11 +306,40 @@ describe("MemoryAnalyticsRepository", () => {
   describe("listZeroHitQueries", () => {
     it("groups zero-hit searches by query text, most frequent first", async () => {
       await seedEvents([
-        makeEvent({ changeKind: "read", recordId: "", recordCount: 0, queryText: "how to X", spanId: spanN(1), endTime: at(1) }),
-        makeEvent({ changeKind: "read", recordId: "", recordCount: 0, queryText: "how to X", spanId: spanN(2), endTime: at(2) }),
-        makeEvent({ changeKind: "read", recordId: "", recordCount: 0, queryText: "rare", spanId: spanN(3), endTime: at(3) }),
+        makeEvent({
+          changeKind: "read",
+          recordId: "",
+          recordCount: 0,
+          queryText: "how to X",
+          spanId: spanN(1),
+          endTime: at(1),
+        }),
+        makeEvent({
+          changeKind: "read",
+          recordId: "",
+          recordCount: 0,
+          queryText: "how to X",
+          spanId: spanN(2),
+          endTime: at(2),
+        }),
+        makeEvent({
+          changeKind: "read",
+          recordId: "",
+          recordCount: 0,
+          queryText: "rare",
+          spanId: spanN(3),
+          endTime: at(3),
+        }),
         // a hit search must NOT appear
-        makeEvent({ changeKind: "read", recordId: "rec1", recordCount: 1, queryText: "found", tokenCount: 5, spanId: spanN(4), endTime: at(4) }),
+        makeEvent({
+          changeKind: "read",
+          recordId: "rec1",
+          recordCount: 1,
+          queryText: "found",
+          tokenCount: 5,
+          spanId: spanN(4),
+          endTime: at(4),
+        }),
       ])
       const groups = await withRepo((repo) => repo.listZeroHitQueries({ organizationId, projectId, range }))
       expect(groups.map((g) => [g.queryText, g.searchCount])).toEqual([

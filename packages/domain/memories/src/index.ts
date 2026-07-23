@@ -88,6 +88,13 @@ export {
   type SessionMemoryRecordDiff,
 } from "./use-cases/compute-session-memory-diff.ts"
 export {
+  type ComputeSessionMemorySummaryInput,
+  computeSessionMemorySummaryUseCase,
+  type MemoryRecordSummary,
+  type MemorySummaryTotals,
+  type SessionMemorySummary,
+} from "./use-cases/compute-session-memory-summary.ts"
+export {
   type GetMemoryActivityHistogramInput,
   getMemoryActivityHistogramUseCase,
 } from "./use-cases/get-memory-activity-histogram.ts"
@@ -95,21 +102,6 @@ export {
   type GetMemoryAnalyticsOverviewInput,
   getMemoryAnalyticsOverviewUseCase,
 } from "./use-cases/get-memory-analytics-overview.ts"
-export {
-  type ListStoresWithMetricsInput,
-  listStoresWithMetricsUseCase,
-} from "./use-cases/list-stores-with-metrics.ts"
-export {
-  type ListZeroHitQueriesInput,
-  listZeroHitQueriesUseCase,
-} from "./use-cases/list-zero-hit-queries.ts"
-export {
-  type ComputeSessionMemorySummaryInput,
-  computeSessionMemorySummaryUseCase,
-  type MemoryRecordSummary,
-  type MemorySummaryTotals,
-  type SessionMemorySummary,
-} from "./use-cases/compute-session-memory-summary.ts"
 export {
   type ListMemoryStoresInput,
   listMemoryStoresUseCase,
@@ -123,9 +115,17 @@ export {
   listStoreUsersUseCase,
 } from "./use-cases/list-store-users.ts"
 export {
+  type ListStoresWithMetricsInput,
+  listStoresWithMetricsUseCase,
+} from "./use-cases/list-stores-with-metrics.ts"
+export {
   type ListUserStoresInput,
   listUserStoresUseCase,
 } from "./use-cases/list-user-stores.ts"
+export {
+  type ListZeroHitQueriesInput,
+  listZeroHitQueriesUseCase,
+} from "./use-cases/list-zero-hit-queries.ts"
 export {
   type MaterializeTraceMemoryInput,
   type MaterializeTraceMemoryResult,
