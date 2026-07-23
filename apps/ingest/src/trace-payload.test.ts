@@ -4,6 +4,7 @@ import { describe, expect, it } from "vitest"
 import {
   createTracePayloadProtection,
   DEFAULT_TRACE_PAYLOAD_LIMITS,
+  loadTracePayloadLimits,
   parseTraceContentLength,
   readTracePayload,
   TracePayloadAdmission,
@@ -37,6 +38,32 @@ const testLimits = {
   maxInFlightBytes: 16,
   maxConcurrentPayloads: 2,
 } as const
+
+describe("loadTracePayloadLimits", () => {
+  it("requires enough capacity to assemble a maximum-size chunked payload", () => {
+    const names = [
+      "LAT_INGEST_TRACE_MAX_PAYLOAD_BYTES",
+      "LAT_INGEST_TRACE_MAX_IN_FLIGHT_BYTES",
+      "LAT_INGEST_TRACE_MAX_CONCURRENT_PAYLOADS",
+    ] as const
+    const previous = Object.fromEntries(names.map((name) => [name, process.env[name]]))
+    process.env.LAT_INGEST_TRACE_MAX_PAYLOAD_BYTES = "8"
+    process.env.LAT_INGEST_TRACE_MAX_IN_FLIGHT_BYTES = "8"
+    process.env.LAT_INGEST_TRACE_MAX_CONCURRENT_PAYLOADS = "2"
+
+    try {
+      expect(loadTracePayloadLimits).toThrow(
+        "LAT_INGEST_TRACE_MAX_IN_FLIGHT_BYTES must be at least twice LAT_INGEST_TRACE_MAX_PAYLOAD_BYTES",
+      )
+    } finally {
+      for (const name of names) {
+        const value = previous[name]
+        if (value === undefined) delete process.env[name]
+        else process.env[name] = value
+      }
+    }
+  })
+})
 
 describe("parseTraceContentLength", () => {
   it.each(["-1", "1.5", "Infinity", "1, 2", "", "9007199254740992"])("rejects invalid Content-Length %s", (value) => {
@@ -72,7 +99,7 @@ describe("readTracePayload", () => {
     }
   })
 
-  it("uses one capped buffer for an unknown-length payload", async () => {
+  it("returns an exact-sized buffer for an unknown-length payload", async () => {
     const result = await readTracePayload({
       stream: streamFrom(["ok"]),
       maxPayloadBytes: 8,
@@ -81,7 +108,7 @@ describe("readTracePayload", () => {
     expect(result.kind).toBe("success")
     if (result.kind === "success") {
       expect(result.payload.byteLength).toBe(2)
-      expect(result.payload.buffer.byteLength).toBe(8)
+      expect(result.payload.buffer.byteLength).toBe(2)
     }
   })
 
@@ -138,6 +165,22 @@ describe("TracePayloadAdmission", () => {
     if (second.kind === "acquired") second.lease.release()
     expect(admission.usage()).toEqual({ activePayloads: 0, reservedBytes: 0 })
   })
+
+  it("adjusts a lease as an unknown-length payload grows", () => {
+    const admission = new TracePayloadAdmission(testLimits)
+    const acquired = admission.tryAcquire(0)
+    expect(acquired.kind).toBe("acquired")
+    if (acquired.kind !== "acquired") return
+
+    expect(acquired.lease.reserve(6)).toBe(true)
+    expect(acquired.lease.reserve(11)).toBe(false)
+    expect(admission.usage()).toEqual({ activePayloads: 1, reservedBytes: 6 })
+
+    acquired.lease.releaseReserved(2)
+    expect(acquired.lease.reserve(12)).toBe(true)
+    acquired.lease.release()
+    expect(admission.usage()).toEqual({ activePayloads: 0, reservedBytes: 0 })
+  })
 })
 
 describe("createTracePayloadProtection", () => {
@@ -163,6 +206,14 @@ describe("createTracePayloadProtection", () => {
     const response = await app.fetch(requestWithStream(streamFrom(["oversized"]), { "Content-Length": "9" }))
 
     expect(response.status).toBe(413)
+  })
+
+  it("rejects an invalid Content-Length in the header guard", async () => {
+    const { app } = createApp()
+
+    const response = await app.fetch(requestWithStream(streamFrom(["ok"]), { "Content-Length": "1, 2" }))
+
+    expect(response.status).toBe(400)
   })
 
   it("returns 413 and releases admission when a streamed payload crosses the limit", async () => {
@@ -197,6 +248,19 @@ describe("createTracePayloadProtection", () => {
     if (acquired.kind === "acquired") acquired.lease.release()
   })
 
+  it("returns 503 when a chunked payload cannot reserve assembly capacity", async () => {
+    const { admission, app } = createApp()
+    const existing = admission.tryAcquire(14)
+    expect(existing.kind).toBe("acquired")
+
+    const response = await app.fetch(requestWithStream(streamFrom(["ok"])))
+
+    expect(response.status).toBe(503)
+    expect(response.headers.get("Retry-After")).toBe("1")
+    expect(admission.usage()).toEqual({ activePayloads: 1, reservedBytes: 14 })
+    if (existing.kind === "acquired") existing.lease.release()
+  })
+
   it("releases admission when body reading fails", async () => {
     const { admission, app } = createApp()
     const stream = new ReadableStream<Uint8Array>({
@@ -211,13 +275,47 @@ describe("createTracePayloadProtection", () => {
     expect(admission.usage()).toEqual({ activePayloads: 0, reservedBytes: 0 })
   })
 
-  it("releases admission when downstream handling throws", async () => {
-    const { admission, app } = createApp({ handlerThrows: true })
+  it("releases admission when telemetry collection throws", async () => {
+    let memoryUsageCalls = 0
+    const runtime: TracePayloadRuntime = {
+      now: () => 0,
+      memoryUsage: () => {
+        memoryUsageCalls++
+        if (memoryUsageCalls === 2) throw new Error("telemetry failed")
+        return { rss: 100, arrayBuffers: 25 }
+      },
+      getActiveSpan: () => ({ setAttributes: () => undefined }),
+    }
+    const { admission, app } = createApp({ runtime })
 
     const response = await app.fetch(requestWithStream(streamFrom(["ok"]), { "Content-Length": "2" }))
 
     expect(response.status).toBe(500)
     expect(admission.usage()).toEqual({ activePayloads: 0, reservedBytes: 0 })
+  })
+
+  it("releases admission without overwriting telemetry when downstream handling throws", async () => {
+    const attributes: Record<string, unknown> = {}
+    const runtime: TracePayloadRuntime = {
+      now: (() => {
+        const values = [10, 15]
+        return () => values.shift() ?? 15
+      })(),
+      memoryUsage: () => ({ rss: 100, arrayBuffers: 25 }),
+      getActiveSpan: () => ({
+        setAttributes: (values) => Object.assign(attributes, values),
+      }),
+    }
+    const { admission, app } = createApp({ handlerThrows: true, runtime })
+
+    const response = await app.fetch(requestWithStream(streamFrom(["ok"]), { "Content-Length": "2" }))
+
+    expect(response.status).toBe(500)
+    expect(admission.usage()).toEqual({ activePayloads: 0, reservedBytes: 0 })
+    expect(attributes).toMatchObject({
+      "latitude.ingest.payload.outcome": "accepted",
+      "latitude.ingest.payload.size_bytes": 2,
+    })
   })
 
   it("records payload and memory attributes on the active request span", async () => {
@@ -272,6 +370,7 @@ describe("createTracePayloadProtection", () => {
       } as RequestInit & { duplex: "half" })
 
       expect(response.status).toBe(413)
+      await response.body?.cancel()
     } finally {
       await new Promise<void>((resolve, reject) => {
         server.close((error) => (error ? reject(error) : resolve()))

@@ -137,7 +137,7 @@ These wire Latitude to its datastores, depending on your chosen [deployment opti
 | `LAT_OSS_TELEMETRY_ENABLED` | Anonymous OSS deployment heartbeat sent to Latitude's PostHog project (default `true` in production, `false` in development). Set `false` to opt out. |
 | `LAT_EXPORT_RATE_LIMIT_*`, `LAT_INGEST_TRACE_RATE_LIMIT_*` | Rate-limit tuning for exports and per-organization/API-key trace ingestion. |
 | `LAT_INGEST_TRACE_MAX_PAYLOAD_BYTES` | Maximum trace request body size in bytes (default `33554432`, or 32 MiB). Larger declared or streamed payloads receive `413`. |
-| `LAT_INGEST_TRACE_MAX_IN_FLIGHT_BYTES` | Per-process budget for trace payloads being read or processed (default `67108864`, or 64 MiB). |
+| `LAT_INGEST_TRACE_MAX_IN_FLIGHT_BYTES` | Per-process budget for trace payloads being read or processed (default `67108864`, or 64 MiB). This must be at least twice `LAT_INGEST_TRACE_MAX_PAYLOAD_BYTES` to cover chunked-body assembly. |
 | `LAT_INGEST_TRACE_MAX_CONCURRENT_PAYLOADS` | Maximum trace payloads being read or processed concurrently per ingest process (default `16`). |
 
 ### Postgres
