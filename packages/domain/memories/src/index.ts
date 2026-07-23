@@ -1,3 +1,18 @@
+export type {
+  MemoryActivityBucket,
+  MemoryAnalyticsOverview,
+  MemoryAnalyticsRange,
+  MemoryStoreMetricsItem,
+  MemoryStoreMetricsOptions,
+  MemoryStoreMetricsPage,
+  MemoryStoreMetricsSortField,
+  MemoryStoreTrendBucket,
+  MemoryZeroHitQueryGroup,
+} from "./entities/memory-analytics.ts"
+export {
+  isMemoryStoreMetricsSortField,
+  MEMORY_STORE_METRIC_SORT_FIELDS,
+} from "./entities/memory-analytics.ts"
 export {
   type MemoryBlob,
   memoryBlobSchema,
@@ -44,6 +59,10 @@ export {
   type MemoryUserStore,
 } from "./entities/memory-store.ts"
 export {
+  MemoryAnalyticsRepository,
+  type MemoryAnalyticsRepositoryShape,
+} from "./ports/memory-analytics-repository.ts"
+export {
   MemoryRepository,
   type MemoryRepositoryShape,
 } from "./ports/memory-repository.ts"
@@ -68,6 +87,22 @@ export {
   type SessionMemoryDiff,
   type SessionMemoryRecordDiff,
 } from "./use-cases/compute-session-memory-diff.ts"
+export {
+  type GetMemoryActivityHistogramInput,
+  getMemoryActivityHistogramUseCase,
+} from "./use-cases/get-memory-activity-histogram.ts"
+export {
+  type GetMemoryAnalyticsOverviewInput,
+  getMemoryAnalyticsOverviewUseCase,
+} from "./use-cases/get-memory-analytics-overview.ts"
+export {
+  type ListStoresWithMetricsInput,
+  listStoresWithMetricsUseCase,
+} from "./use-cases/list-stores-with-metrics.ts"
+export {
+  type ListZeroHitQueriesInput,
+  listZeroHitQueriesUseCase,
+} from "./use-cases/list-zero-hit-queries.ts"
 export {
   type ComputeSessionMemorySummaryInput,
   computeSessionMemorySummaryUseCase,
