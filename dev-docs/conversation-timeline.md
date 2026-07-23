@@ -22,7 +22,7 @@ The timeline is reconstructed entirely from recorded span timing — nothing ext
 
 - Spans carry `startTime`/`endTime` (ns precision in ClickHouse, ms after ISO serialization), `timeToFirstTokenNs`, `isStreaming`, `operation`, and `statusCode`.
 - Message↔span attribution uses `buildConversationSpanMaps` (`packages/domain/spans/src/use-cases/map-conversation-to-spans.ts`), which fingerprints assistant message content against span `output_messages` and disambiguates duplicates by preceding-context score. It only maps **assistant** messages; user/system/tool messages get derived times (see scheduling rules).
-- Per-trace maps come from the `mapConversationToSpans` server function. Session-wide maps come from `mapSessionConversationToSpans` (`apps/web/src/domains/spans/spans.functions.ts`), backed by `SpanRepository.findMessagesForSession` — the same projection as `findMessagesForTrace` but with the `sessions_mv` membership predicate `coalesce(nullIf(session_id, ''), toString(trace_id)) = {sessionId}`, so orphan single-trace sessions work. Keys index into the **latest output trace's `allMessages`** (the canonical session conversation, same source as the session Conversation tab); values are span ids from any trace in the session.
+- Per-trace message spans come from `listConversationMessageSpans` → `SpanRepository.findMessagesForTrace`, cached under `conversationMessageSpans`. Session attribution (`useSessionConversationSpanMaps`) does **not** load every session message payload: it fetches that same per-trace projection for an oldest-first window of traces that grows with the loaded conversation prefix (`selectTracesForLoadedConversation`), then runs `buildConversationSpanMaps` against the loaded messages only. Tool-call → span links also come from lightweight `listSpansBySession` rows (`toolCallId`), so execute_tool navigation works before message spans arrive. Keys index into the **latest output trace's loaded conversation chunks**; values are span refs (`traceId` + `spanId`) from any fetched trace in the window.
 
 ## Core model
 
@@ -92,5 +92,5 @@ The shared `@repo/ui` `genai-conversation` component carries two timeline-generi
 ## Testing
 
 - The pure model is unit-tested with colocated vitest files in `apps/web/src/lib/conversation-timeline/` (`timeline-scale`, `build-conversation-timeline`, `build-activity-track`, `message-windows`, `cluster-markers`) against a shared fixture session (`timeline-fixture.ts`: two turns, streaming + non-streaming spans, a tool loop, an idle gap, annotations, a moment). Key covered properties: coordinate round-trips, gap compression, scheduling rules and fallbacks, marker placement and anchors, time→message resolution (including gap clicks), and band math.
-- `findMessagesForSession` has a chdb integration test in `packages/platform/db-clickhouse/src/repositories/span-repository.test.ts` (orphan-session membership, ReplacingMergeTree dedupe).
+- Trace-window selection for session attribution is unit-tested in `apps/web/src/domains/spans/select-traces-for-loaded-conversation.test.ts`.
 - Bar/track components are verified manually; they intentionally have no unit tests.
