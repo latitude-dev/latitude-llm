@@ -102,7 +102,13 @@ function StoreDetailPage() {
               onSelectChange={(spanId) => setChangeParam(spanId ?? "")}
             />
           ) : (
-            <StoreHomeView storeId={storeId} />
+            <StoreHomeView
+              storeId={storeId}
+              onSelectRecord={(recordId) => {
+                setRecordParam(encodeRecordParam(recordId))
+                setChangeParam("")
+              }}
+            />
           )}
         </div>
       </Layout.Body>

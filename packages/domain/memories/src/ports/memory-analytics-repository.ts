@@ -6,6 +6,8 @@ import type {
   MemoryOverview,
   MemoryStoreMetricsListOptions,
   MemoryStoreMetricsPage,
+  StoreInsights,
+  StoreInsightsOptions,
 } from "../entities/memory-analytics.ts"
 
 /**
@@ -39,6 +41,11 @@ export interface MemoryAnalyticsRepositoryShape {
   listStoresWithMetrics(
     input: MemoryAnalyticsScope & MemoryStoreMetricsListOptions,
   ): Effect.Effect<MemoryStoreMetricsPage, RepositoryError, ChSqlClient>
+
+  /** One store's Home-dashboard insight lists (retrieval, queries, footprint) over the window. */
+  getStoreInsights(
+    input: MemoryAnalyticsScope & StoreInsightsOptions,
+  ): Effect.Effect<StoreInsights, RepositoryError, ChSqlClient>
 }
 
 export class MemoryAnalyticsRepository extends Context.Service<

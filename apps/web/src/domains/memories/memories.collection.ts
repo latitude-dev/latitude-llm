@@ -12,6 +12,7 @@ import {
   getMemoryStoreSnapshot,
   getSessionMemoryDiff,
   getSessionMemorySummary,
+  getStoreInsights,
   listMemoryRecordUsers,
   listMemoryStoresWithMetrics,
   listMemoryStoreUsers,
@@ -20,6 +21,8 @@ import {
   type SessionMemoryDiffRecord,
   type SessionMemorySummaryRecord,
 } from "./memories.functions.ts"
+
+const STORE_INSIGHTS_LIST_LIMIT = 25
 
 /**
  * Memory footprint for a session's summary chip; pass `traceId` to restrict it
@@ -144,6 +147,38 @@ export function useMemoryActivityHistogram({
           toIso: range.toIso,
           bucketSeconds,
           ...(storeId !== undefined ? { storeId } : {}),
+        },
+      }),
+    placeholderData: keepPreviousData,
+    staleTime: 30_000,
+    enabled: enabled && projectId.length > 0,
+  })
+}
+
+/** One store's Home-dashboard insight lists (retrieval, queries, footprint) over the window. */
+export function useStoreInsights({
+  projectId,
+  storeId,
+  range,
+  enabled = true,
+}: {
+  readonly projectId: string
+  readonly storeId: string
+  readonly range: { readonly fromIso: string; readonly toIso: string }
+  readonly enabled?: boolean
+}) {
+  const scope = useProjectScope()
+  return useQuery({
+    queryKey: [...projectScopeKey(scope), "store-insights", projectId, storeId, range.fromIso, range.toIso],
+    queryFn: () =>
+      getStoreInsights({
+        data: {
+          ...projectScopeData(scope),
+          projectId,
+          storeId,
+          fromIso: range.fromIso,
+          toIso: range.toIso,
+          listLimit: STORE_INSIGHTS_LIST_LIMIT,
         },
       }),
     placeholderData: keepPreviousData,

@@ -5,6 +5,7 @@ import {
   computeSessionMemorySummaryUseCase,
   getMemoryActivityHistogramUseCase,
   getMemoryOverviewUseCase,
+  getStoreInsightsUseCase,
   listRecordUsersUseCase,
   listStoresWithMetricsUseCase,
   listStoreUsersUseCase,
@@ -17,6 +18,7 @@ import {
   reconstructSnapshotUseCase,
   type SessionMemoryDiff,
   type SessionMemorySummary,
+  type StoreInsights,
 } from "@domain/memories"
 import { ExternalUserId, ProjectId, SessionId, SpanId, TraceId } from "@domain/shared"
 import { MemoryAnalyticsRepositoryLive, MemoryRepositoryLive } from "@platform/db-clickhouse"
@@ -33,6 +35,8 @@ export type SessionMemorySummaryRecord = SessionMemorySummary
 export type SessionMemoryDiffRecord = SessionMemoryDiff
 
 export type MemoryOverviewRecord = MemoryOverview
+
+export type StoreInsightsRecord = StoreInsights
 
 export type MemoryActivityBucketRecord = MemoryActivityBucket
 
@@ -207,6 +211,32 @@ export const getMemoryActivityHistogram = createServerFn({ method: "GET" })
         to: new Date(data.toIso),
         bucketSeconds: data.bucketSeconds,
         ...(data.storeId !== undefined ? { storeId: data.storeId } : {}),
+      }).pipe(withScopedClickHouse(MemoryAnalyticsRepositoryLive, getClickhouseClient(), orgId), withTracing),
+    )
+  })
+
+/** One store's Home-dashboard insight lists (retrieval, queries, footprint) over the window. */
+export const getStoreInsights = createServerFn({ method: "GET" })
+  .inputValidator(
+    z.object({
+      projectId: z.string(),
+      storeId: z.string(),
+      fromIso: z.string().datetime(),
+      toIso: z.string().datetime(),
+      listLimit: z.number().int().min(1).max(100),
+    }),
+  )
+  .handler(async ({ data, context }): Promise<StoreInsightsRecord> => {
+    const orgId = await resolveOrgScope(context)
+
+    return Effect.runPromise(
+      getStoreInsightsUseCase({
+        organizationId: orgId,
+        projectId: ProjectId(data.projectId),
+        storeId: data.storeId,
+        from: new Date(data.fromIso),
+        to: new Date(data.toIso),
+        listLimit: data.listLimit,
       }).pipe(withScopedClickHouse(MemoryAnalyticsRepositoryLive, getClickhouseClient(), orgId), withTracing),
     )
   })

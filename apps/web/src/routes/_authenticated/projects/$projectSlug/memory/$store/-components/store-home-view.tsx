@@ -1,16 +1,28 @@
-import { formatCount } from "@repo/utils"
+import { Chart, type ChartSeries, HistogramSkeleton, Text } from "@repo/ui"
+import { formatCount, relativeTime } from "@repo/utils"
 import { useMemo } from "react"
 import {
   useMemoryActivityHistogram,
   useMemoryOverview,
+  useStoreInsights,
 } from "../../../../../../../domains/memories/memories.collection.ts"
+import type { StoreInsightsRecord } from "../../../../../../../domains/memories/memories.functions.ts"
 import { defaultProjectTimeWindowSeconds } from "../../../../../../../domains/projects/default-time-window.ts"
 import { useAnalyticsTimeWindow } from "../../../../../../../domains/projects/use-analytics-time-window.ts"
 import { useProjectFirstTraceAt, useProjectLastTraceAt } from "../../../../../../../domains/traces/traces.collection.ts"
 import { TimeFilterDropdown } from "../../../-components/time-filter-dropdown.tsx"
 import { useRouteProject } from "../../../-route-data.ts"
 import { MemoryAnalyticsPanel, type MemoryTile } from "../../-components/memory-analytics-panel.tsx"
-import { formatPercent, formatRatio, pickMemoryTrendBucketSeconds } from "../../-components/memory-formatters.ts"
+import {
+  formatPercent,
+  formatRatio,
+  formatSignedCount,
+  pickMemoryTrendBucketSeconds,
+} from "../../-components/memory-formatters.ts"
+import { recordDisplayLabel } from "../../-components/store-encoding.ts"
+import { StoreInsightList } from "./store-insight-list.tsx"
+
+const SIZE_BAR_COLOR = "hsl(217 91% 60%)"
 
 function storeOverviewTiles(
   overview:
@@ -24,6 +36,7 @@ function storeOverviewTiles(
         readonly recordsRetrieved: number
       }
     | undefined,
+  netGrowthTokens: number | undefined,
 ): readonly MemoryTile[] {
   const o = overview
   return [
@@ -41,10 +54,69 @@ function storeOverviewTiles(
       value: formatCount(o?.searches ?? 0),
       ...(o && o.searches > 0 ? { subtext: `${formatPercent(o.zeroHitSearches / o.searches)} zero-hit` } : {}),
     },
+    { key: "netGrowth", label: "Net growth", value: `${formatSignedCount(netGrowthTokens ?? 0)} tok` },
   ]
 }
 
-export function StoreHomeView({ storeId }: { readonly storeId: string }) {
+function mostReadItems(insights: StoreInsightsRecord | undefined) {
+  const rows = insights?.mostReadRecords ?? []
+  const max = rows[0]?.reads ?? 0
+  return rows.map((row) => ({
+    key: row.recordId,
+    label: recordDisplayLabel(row.recordId),
+    value: `${formatCount(row.reads)} reads`,
+    fraction: max > 0 ? row.reads / max : 0,
+    recordId: row.recordId,
+  }))
+}
+
+function coldItems(insights: StoreInsightsRecord | undefined, nowMs: number) {
+  const rows = insights?.coldRecords ?? []
+  const idleOf = (lastReadAt: string | null) => (lastReadAt ? nowMs - Date.parse(lastReadAt) : Number.POSITIVE_INFINITY)
+  const readIdles = rows.filter((row) => !row.neverRead).map((row) => idleOf(row.lastReadAt))
+  const maxReadIdle = readIdles.length > 0 ? Math.max(...readIdles) : 0
+  return rows.map((row) => ({
+    key: row.recordId,
+    label: recordDisplayLabel(row.recordId),
+    value: row.neverRead ? "never read" : relativeTime(row.lastReadAt),
+    fraction: row.neverRead ? 1 : maxReadIdle > 0 ? idleOf(row.lastReadAt) / maxReadIdle : 0,
+    recordId: row.recordId,
+  }))
+}
+
+function queryItems(rows: readonly { readonly queryText: string; readonly searches: number }[]) {
+  const max = rows[0]?.searches ?? 0
+  return rows.map((row, index) => ({
+    key: `${index}:${row.queryText}`,
+    label: row.queryText,
+    value: `${formatCount(row.searches)} searches`,
+    fraction: max > 0 ? row.searches / max : 0,
+  }))
+}
+
+function largestItems(insights: StoreInsightsRecord | undefined) {
+  const rows = insights?.largestRecords ?? []
+  const max = rows[0]?.tokenCount ?? 0
+  return rows.map((row) => ({
+    key: row.recordId,
+    label: recordDisplayLabel(row.recordId),
+    value: `${formatCount(row.tokenCount)} tok`,
+    fraction: max > 0 ? row.tokenCount / max : 0,
+    recordId: row.recordId,
+  }))
+}
+
+function SectionHeading({ children }: { readonly children: string }) {
+  return <Text.H5>{children}</Text.H5>
+}
+
+export function StoreHomeView({
+  storeId,
+  onSelectRecord,
+}: {
+  readonly storeId: string
+  readonly onSelectRecord: (recordId: string) => void
+}) {
   const project = useRouteProject()
   const { firstTraceAt } = useProjectFirstTraceAt({ projectId: project.id })
   const { lastTraceAt } = useProjectLastTraceAt({ projectId: project.id })
@@ -82,12 +154,32 @@ export function StoreHomeView({ storeId }: { readonly storeId: string }) {
     range: histogramRange,
     bucketSeconds: histogramBucketSeconds,
   })
+  const { data: insights, isLoading: insightsLoading } = useStoreInsights({ projectId: project.id, storeId, range })
 
-  const tiles = useMemo(() => storeOverviewTiles(overview), [overview])
+  const tiles = useMemo(() => storeOverviewTiles(overview, insights?.netGrowthTokens), [overview, insights])
+  const mostRead = useMemo(() => mostReadItems(insights), [insights])
+  const cold = useMemo(() => coldItems(insights, Date.now()), [insights])
+  const topQueries = useMemo(() => queryItems(insights?.topQueries ?? []), [insights])
+  const zeroHit = useMemo(() => queryItems(insights?.zeroHitQueries ?? []), [insights])
+  const largest = useMemo(() => largestItems(insights), [insights])
+
+  const sizeSeries = useMemo<readonly ChartSeries[]>(
+    () => [
+      {
+        kind: "bar",
+        name: "Records",
+        values: (insights?.sizeDistribution ?? []).map((bucket) => bucket.count),
+        color: SIZE_BAR_COLOR,
+      },
+    ],
+    [insights],
+  )
+  const sizeCategories = useMemo(() => (insights?.sizeDistribution ?? []).map((bucket) => bucket.label), [insights])
+  const sizeEmpty = (insights?.sizeDistribution ?? []).every((bucket) => bucket.count === 0)
 
   return (
     <div className="flex min-h-0 flex-1 flex-col overflow-y-auto bg-background">
-      <div className="flex flex-col gap-4 p-6">
+      <div className="flex flex-col gap-6 p-6">
         <div className="flex items-center justify-end">
           <TimeFilterDropdown
             {...(tw.pickerStartFrom ? { startTimeFrom: tw.pickerStartFrom } : {})}
@@ -105,6 +197,78 @@ export function StoreHomeView({ storeId }: { readonly storeId: string }) {
           isAllTime={tw.isAllTime}
           isLoading={overviewLoading || histogramLoading}
         />
+
+        <div className="flex flex-col gap-3">
+          <SectionHeading>What's used</SectionHeading>
+          <div className="grid grid-cols-1 gap-4 xl:grid-cols-2">
+            <StoreInsightList
+              title="Most-read records"
+              items={mostRead}
+              isLoading={insightsLoading}
+              emptyText="No records retrieved in this window"
+              mono
+              onSelectRecord={onSelectRecord}
+            />
+            <StoreInsightList
+              title="Cold storage"
+              items={cold}
+              isLoading={insightsLoading}
+              emptyText="No live records"
+              mono
+              onSelectRecord={onSelectRecord}
+            />
+          </div>
+        </div>
+
+        <div className="flex flex-col gap-3">
+          <SectionHeading>What agents look for</SectionHeading>
+          <div className="grid grid-cols-1 gap-4 xl:grid-cols-2">
+            <StoreInsightList
+              title="Top queries"
+              items={topQueries}
+              isLoading={insightsLoading}
+              emptyText="No searches in this window"
+            />
+            <StoreInsightList
+              title="Zero-hit queries"
+              items={zeroHit}
+              isLoading={insightsLoading}
+              emptyText="No zero-hit searches in this window"
+              tone="destructive"
+            />
+          </div>
+        </div>
+
+        <div className="flex flex-col gap-3">
+          <SectionHeading>Footprint</SectionHeading>
+          <div className="grid grid-cols-1 gap-4 xl:grid-cols-2">
+            <StoreInsightList
+              title="Largest records"
+              items={largest}
+              isLoading={insightsLoading}
+              emptyText="No live records"
+              mono
+              onSelectRecord={onSelectRecord}
+            />
+            <div className="flex min-w-0 flex-col gap-3 rounded-lg bg-secondary p-4">
+              <Text.H6 color="foregroundMuted">Size distribution</Text.H6>
+              {insightsLoading ? (
+                <HistogramSkeleton height={160} />
+              ) : sizeEmpty ? (
+                <div className="flex min-h-[120px] items-center justify-center">
+                  <Text.H6 color="foregroundMuted">No live records</Text.H6>
+                </div>
+              ) : (
+                <Chart
+                  categories={sizeCategories}
+                  series={sizeSeries}
+                  height={160}
+                  ariaLabel="Record size distribution"
+                />
+              )}
+            </div>
+          </div>
+        </div>
       </div>
     </div>
   )

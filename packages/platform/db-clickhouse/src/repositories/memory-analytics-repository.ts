@@ -7,8 +7,10 @@ import type {
   MemoryOverview,
   MemoryStoreMetricSortField,
   MemoryStoreMetricsItem,
+  StoreInsights,
+  StoreSizeBucket,
 } from "@domain/memories"
-import { MemoryAnalyticsRepository } from "@domain/memories"
+import { MemoryAnalyticsRepository, STORE_SIZE_BUCKETS } from "@domain/memories"
 import { ChSqlClient, type ChSqlClientShape, toRepositoryError } from "@domain/shared"
 import { formatCHDate, parseCHDate } from "@repo/utils"
 import { Effect, Layer } from "effect"
@@ -91,9 +93,31 @@ type ActivityRow = {
   readonly records_retrieved: string | number
 }
 
+type MostReadRow = { readonly record_id: string; readonly reads: string | number }
+type ColdRow = {
+  readonly record_id: string
+  readonly token_count: string | number
+  readonly never_read: number | boolean
+  readonly last_updated: string
+  readonly last_read: string
+}
+type QueryCountRow = { readonly query_text: string; readonly searches: string | number }
+type LargestRow = { readonly record_id: string; readonly token_count: string | number }
+type SizeRow = Record<string, string | number>
+type TokensRow = { readonly tokens: string | number }
+
+// countIf per shared size bucket, aliased b0..bN so the mapper can index by position.
+const sizeDistributionSelect = STORE_SIZE_BUCKETS.map((bucket, index) => {
+  const condition =
+    bucket.max === null
+      ? `token_count >= ${bucket.min}`
+      : `token_count >= ${bucket.min} AND token_count < ${bucket.max}`
+  return `countIf(${condition}) AS b${index}`
+}).join(", ")
+
 // Latest non-removed record per (store, record) from `memory_current`, flagged `never_read` against all-time reads that returned a record.
 const liveRecords = (storeScoped: boolean) => `
-  SELECT store_id, record_id, content_hash, token_count,
+  SELECT store_id, record_id, content_hash, token_count, end_time,
          (store_id, record_id) NOT IN (
            SELECT store_id, record_id FROM memory_events
            WHERE ${SCOPE} ${storeScoped ? STORE_FILTER : ""} AND change_kind = 'read' AND record_count > 0
@@ -392,6 +416,149 @@ export const MemoryAnalyticsRepositoryLive = Layer.effect(
         return { items, totalCount, hasMore, limit, offset }
       })
 
-    return { getMemoryOverview, getMemoryActivityHistogram, listStoresWithMetrics }
+    const getStoreInsights: MemoryAnalyticsRepositoryShape["getStoreInsights"] = ({
+      organizationId,
+      projectId,
+      from,
+      to,
+      storeId,
+      listLimit,
+    }) =>
+      Effect.gen(function* () {
+        const chSqlClient = (yield* ChSqlClient) as ChSqlClientShape<ClickHouseClient>
+        const scope = { organizationId, projectId, from, to }
+        const windowParams = { ...rangeParams(scope), storeId, listLimit }
+        const currentParams = { ...scopeParams(scope), storeId }
+        // Live-token footprint at an instant: latest add/update/remove per record up to `at`, dropping records last removed.
+        const tokensAtQuery = `
+          SELECT sum(token_count) AS tokens
+          FROM (
+            SELECT record_id, argMax(token_count, end_time) AS token_count, argMax(change_kind, end_time) AS change_kind
+            FROM (
+              SELECT record_id, token_count, change_kind, end_time
+              FROM memory_events
+              WHERE ${SCOPE} ${STORE_FILTER} AND change_kind IN ('add', 'update', 'remove') AND end_time <= {at:DateTime64(6, 'UTC')}
+            )
+            GROUP BY record_id
+            HAVING change_kind != 'remove'
+          )`
+        return yield* chSqlClient
+          .query(async (client) => {
+            const [mostReadR, coldR, topQueriesR, zeroHitR, largestR, sizeR, fromR, toR] = await Promise.all([
+              client.query({
+                query: `SELECT record_id, count() AS reads
+                        FROM ( ${dedupedWindow(true)} )
+                        WHERE change_kind = 'read' AND record_count > 0 AND record_id != ''
+                        GROUP BY record_id
+                        ORDER BY reads DESC, record_id ASC
+                        LIMIT {listLimit:UInt32}`,
+                query_params: windowParams,
+                format: "JSONEachRow",
+              }),
+              client.query({
+                query: `SELECT lr.record_id AS record_id, lr.token_count AS token_count, lr.never_read AS never_read,
+                               lr.end_time AS last_updated, r.last_read AS last_read
+                        FROM ( ${liveRecords(true)} ) AS lr
+                        LEFT JOIN (
+                          SELECT record_id, max(end_time) AS last_read
+                          FROM memory_events
+                          WHERE ${SCOPE} ${STORE_FILTER} AND change_kind = 'read' AND record_count > 0
+                          GROUP BY record_id
+                        ) AS r ON lr.record_id = r.record_id
+                        ORDER BY lr.never_read DESC, r.last_read ASC, lr.end_time DESC, lr.record_id ASC
+                        LIMIT {listLimit:UInt32}`,
+                query_params: { ...currentParams, listLimit },
+                format: "JSONEachRow",
+              }),
+              client.query({
+                query: `SELECT query_text, uniqExact(span_id) AS searches
+                        FROM ( ${dedupedWindow(true)} )
+                        WHERE change_kind = 'read' AND query_text != ''
+                        GROUP BY query_text
+                        ORDER BY searches DESC, query_text ASC
+                        LIMIT {listLimit:UInt32}`,
+                query_params: windowParams,
+                format: "JSONEachRow",
+              }),
+              client.query({
+                query: `SELECT query_text, uniqExact(span_id) AS searches
+                        FROM ( ${dedupedWindow(true)} )
+                        WHERE change_kind = 'read' AND record_count = 0 AND query_text != ''
+                        GROUP BY query_text
+                        ORDER BY searches DESC, query_text ASC
+                        LIMIT {listLimit:UInt32}`,
+                query_params: windowParams,
+                format: "JSONEachRow",
+              }),
+              client.query({
+                query: `SELECT record_id, token_count
+                        FROM ( ${liveRecords(true)} )
+                        ORDER BY token_count DESC, record_id ASC
+                        LIMIT {listLimit:UInt32}`,
+                query_params: { ...currentParams, listLimit },
+                format: "JSONEachRow",
+              }),
+              client.query({
+                query: `SELECT ${sizeDistributionSelect} FROM ( ${liveRecords(true)} )`,
+                query_params: currentParams,
+                format: "JSONEachRow",
+              }),
+              client.query({
+                query: tokensAtQuery,
+                query_params: { ...currentParams, at: formatCHDate(from) },
+                format: "JSONEachRow",
+              }),
+              client.query({
+                query: tokensAtQuery,
+                query_params: { ...currentParams, at: formatCHDate(to) },
+                format: "JSONEachRow",
+              }),
+            ])
+            return {
+              mostRead: await mostReadR.json<MostReadRow>(),
+              cold: await coldR.json<ColdRow>(),
+              topQueries: await topQueriesR.json<QueryCountRow>(),
+              zeroHit: await zeroHitR.json<QueryCountRow>(),
+              largest: await largestR.json<LargestRow>(),
+              size: (await sizeR.json<SizeRow>())[0],
+              tokensFrom: (await fromR.json<TokensRow>())[0],
+              tokensTo: (await toR.json<TokensRow>())[0],
+            }
+          })
+          .pipe(
+            Effect.map(
+              ({ mostRead, cold, topQueries, zeroHit, largest, size, tokensFrom, tokensTo }): StoreInsights => {
+                const mapQueries = (rows: readonly QueryCountRow[]) =>
+                  rows.map((row) => ({ queryText: row.query_text, searches: num(row.searches) }))
+                const sizeDistribution: StoreSizeBucket[] = STORE_SIZE_BUCKETS.map((bucket, index) => ({
+                  label: bucket.label,
+                  count: size ? num(size[`b${index}`]) : 0,
+                }))
+                return {
+                  mostReadRecords: mostRead.map((row) => ({ recordId: row.record_id, reads: num(row.reads) })),
+                  coldRecords: cold.map((row) => {
+                    const neverRead = Number(row.never_read) === 1
+                    const lastRead = parseCHDate(row.last_read)
+                    return {
+                      recordId: row.record_id,
+                      tokenCount: num(row.token_count),
+                      neverRead,
+                      lastReadAt: neverRead || lastRead.getTime() <= 0 ? null : lastRead.toISOString(),
+                      lastUpdatedAt: parseCHDate(row.last_updated).toISOString(),
+                    }
+                  }),
+                  topQueries: mapQueries(topQueries),
+                  zeroHitQueries: mapQueries(zeroHit),
+                  largestRecords: largest.map((row) => ({ recordId: row.record_id, tokenCount: num(row.token_count) })),
+                  sizeDistribution,
+                  netGrowthTokens: num(tokensTo?.tokens) - num(tokensFrom?.tokens),
+                }
+              },
+            ),
+            Effect.mapError((error) => toRepositoryError(error, "MemoryAnalyticsRepository.getStoreInsights")),
+          )
+      })
+
+    return { getMemoryOverview, getMemoryActivityHistogram, listStoresWithMetrics, getStoreInsights }
   }),
 )
