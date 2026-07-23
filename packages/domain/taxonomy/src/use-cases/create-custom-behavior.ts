@@ -1,5 +1,6 @@
 import {
   CustomBehaviorId,
+  type FacetId,
   type FilterSet,
   generateId,
   generateSlug,
@@ -20,8 +21,10 @@ import {
   CustomBehaviorFilterInvalidError,
   CustomBehaviorLimitReachedError,
   CustomBehaviorNameInvalidError,
+  FacetInvalidError,
 } from "../errors.ts"
 import { CustomBehaviorRepository } from "../ports/custom-behavior-repository.ts"
+import { FacetRepository } from "../ports/facet-repository.ts"
 import { generateCustomBehavior } from "./generate-custom-behavior.ts"
 
 export interface CreateCustomBehaviorInput {
@@ -29,6 +32,8 @@ export interface CreateCustomBehaviorInput {
   readonly projectId: ProjectId
   readonly name: string
   readonly filterSet: FilterSet
+  /** The lens: omit/null = topic (needs a filter); an id = a facet (empty filter allowed). */
+  readonly facetId?: FacetId | null
 }
 
 export const createCustomBehavior = Effect.fn("taxonomy.createCustomBehavior")(function* (
@@ -60,7 +65,8 @@ export const createCustomBehavior = Effect.fn("taxonomy.createCustomBehavior")(f
       message: parsedFilterSet.error.issues[0]?.message ?? "Invalid filter set",
     })
   }
-  if (!customBehaviorFilterSetHasConditions(parsedFilterSet.data)) {
+  // Only invalid shape is a topic lens with no filter (that's the live global tree).
+  if (input.facetId == null && !customBehaviorFilterSetHasConditions(parsedFilterSet.data)) {
     return yield* new CustomBehaviorFilterInvalidError({ message: CUSTOM_BEHAVIOR_EMPTY_FILTER_MESSAGE })
   }
 
@@ -68,6 +74,18 @@ export const createCustomBehavior = Effect.fn("taxonomy.createCustomBehavior")(f
   const created = yield* sqlClient.transaction(
     Effect.gen(function* () {
       const repo = yield* CustomBehaviorRepository
+
+      // A facet-backed view must reference a lens that exists in THIS project, or its
+      // auto-started garden would fail at `FacetRepository.findById` and a same-org
+      // cross-project facet would garden under mismatched project ids. findById is
+      // org-scoped (RLS), so a missing/cross-org id already surfaces as null here.
+      if (input.facetId != null) {
+        const facets = yield* FacetRepository
+        const facet = yield* facets.findById(input.facetId).pipe(Effect.orElseSucceed(() => null))
+        if (facet === null || facet.projectId !== input.projectId) {
+          return yield* new FacetInvalidError({ field: "facetId", message: "Facet not found in this project" })
+        }
+      }
 
       // Soft cost guard (MVP): count-based, not locked, so concurrent creates may briefly overshoot by a few. Intentional — see LAT-748.
       const existing = yield* repo.countByProject({ projectId: input.projectId })
@@ -91,6 +109,7 @@ export const createCustomBehavior = Effect.fn("taxonomy.createCustomBehavior")(f
         slug,
         name: trimmedName,
         filterSet: parsedFilterSet.data,
+        facetId: input.facetId ?? null,
         status: CustomBehaviorStatus.Pending,
         createdAt: now,
         updatedAt: now,

@@ -1,18 +1,32 @@
 import type {
   ChSqlClient,
   CustomBehaviorId,
+  FacetId,
   OrganizationId,
   ProjectId,
   RepositoryError,
   TaxonomyClusterId,
 } from "@domain/shared"
 import { Context, type Effect } from "effect"
-import type { TaxonomyMomentObservation } from "../entities/observation.ts"
 import type { TaxonomyViewAssignment } from "../entities/taxonomy-view-assignment.ts"
 
 export interface TaxonomyViewAssignmentClusterCount {
   readonly clusterId: TaxonomyClusterId
   readonly count: number
+}
+
+/**
+ * The slim member row cluster naming needs: an embedding for farthest-point
+ * sampling, a `startTime` for recency ranking, and the readable text in
+ * `projectionMetadata.summary`. Topic members carry the full transcript summary
+ * from `taxonomy_observations`; facet members carry the extracted one-sentence
+ * answer from `taxonomy_facet_projections`. `TaxonomyMomentObservation` is
+ * structurally assignable, so the topic read returns full rows unchanged.
+ */
+export interface TaxonomyClusterNamingMember {
+  readonly embedding: readonly number[]
+  readonly startTime: Date
+  readonly projectionMetadata: Readonly<Record<string, unknown>>
 }
 
 /**
@@ -69,22 +83,35 @@ export interface TaxonomyViewAssignmentRepositoryShape {
     readonly baselineDays: number
   }) => Effect.Effect<readonly TaxonomyViewAssignmentClusterTrendCount[], RepositoryError, ChSqlClient>
   /**
-   * Full observation rows assigned to one scoped cluster, resolved by joining
-   * the view's assignment slice back to global `taxonomy_observations` for the
-   * embeddings + summaries the naming step needs. Read-only on the global table.
+   * Member rows of one scoped cluster for the naming step, resolved by joining
+   * the view's assignment slice back to the projection source: the topic lens
+   * (`facetId` omitted/null) reads global `taxonomy_observations`; a facet lens
+   * reads `taxonomy_facet_projections`. Read-only on both source tables.
    */
   readonly listClusterMemberObservations: (input: {
     readonly organizationId: OrganizationId
     readonly projectId: ProjectId
     readonly customBehaviorId: CustomBehaviorId
+    /** Omit/null = topic lens (members from `taxonomy_observations`); an id reads `taxonomy_facet_projections`. */
+    readonly facetId?: FacetId | null
     readonly clusterId: TaxonomyClusterId
     readonly limit: number
-  }) => Effect.Effect<readonly TaxonomyMomentObservation[], RepositoryError, ChSqlClient>
-  /** Purge a behavior's slice when the behavior is deleted (lightweight delete). */
+  }) => Effect.Effect<readonly TaxonomyClusterNamingMember[], RepositoryError, ChSqlClient>
+  /**
+   * Purge a scope's edges when the entity is deleted. `deleteByBehavior` drops
+   * every edge for a cohort across BOTH lenses — its topic slice AND each facet
+   * lens applied to it — so deleting a cohort never orphans facet-lens edges.
+   */
   readonly deleteByBehavior: (input: {
     readonly organizationId: OrganizationId
     readonly projectId: ProjectId
     readonly customBehaviorId: CustomBehaviorId
+  }) => Effect.Effect<void, RepositoryError, ChSqlClient>
+  /** Purge a facet's edges across every scope when the facet is deleted. */
+  readonly deleteByFacet: (input: {
+    readonly organizationId: OrganizationId
+    readonly projectId: ProjectId
+    readonly facetId: FacetId
   }) => Effect.Effect<void, RepositoryError, ChSqlClient>
 }
 

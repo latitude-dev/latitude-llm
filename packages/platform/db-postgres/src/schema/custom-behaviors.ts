@@ -14,6 +14,8 @@ export const customBehaviors = latitudeSchema.table(
     name: varchar("name", { length: CUSTOM_BEHAVIOR_NAME_MAX_LENGTH }).notNull(),
     slug: varchar("slug", { length: SLUG_MAX_LENGTH }).notNull(),
     filterSet: jsonb("filter_set").$type<FilterSet>().notNull(),
+    // The lens this behavior gardens through: NULL = topic, non-null = a facet.
+    facetId: cuid("facet_id", { default: false }),
     status: varchar("status", { length: 16 }).$type<CustomBehaviorStatus>().notNull().default("pending"),
     // Gardening throttle anchor, stamped at each run start; null = never gardened.
     lastGardenedAt: tzTimestamp("last_gardened_at"),

@@ -2,6 +2,7 @@ import { EMBEDDING_DIMENSIONS } from "@domain/ai"
 import {
   ChSqlClient,
   CustomBehaviorId,
+  FacetId,
   OrganizationId,
   ProjectId,
   SessionId,
@@ -101,6 +102,7 @@ const makeCluster = (overrides: Partial<TaxonomyCluster>): TaxonomyCluster => ({
   organizationId,
   projectId,
   customBehaviorId: null,
+  facetId: null,
   dimension: "topic",
   parentClusterId: null,
   depth: 0,
@@ -384,6 +386,121 @@ describe("planHierarchicalTaxonomyUseCase scoped to a custom behavior", () => {
     expect(plan.clustersContinued).toBe(0)
     expect(plan.clusters).toEqual([])
     expect(plan.customAssignments).toEqual([])
+    expect(plan.deprecatedClusterIds).toEqual([])
+  })
+})
+
+describe("planHierarchicalTaxonomyUseCase facet lens (scope × lens)", () => {
+  const customBehaviorId = CustomBehaviorId("b".repeat(24))
+  const facetId = FacetId("f".repeat(24))
+
+  const makeProjection = (index: number, embedding: readonly number[], at: Date) => ({
+    observationId: String(index).padStart(24, "o").slice(0, 24),
+    sessionId: SessionId(`session-${index}`),
+    startTime: new Date(at.getTime() + index * 1000),
+    embedding: [...embedding],
+  })
+
+  const runFacetPlan = (input: {
+    readonly lensObservations: ReadonlyArray<ReturnType<typeof makeProjection>>
+    readonly seededClusters?: readonly TaxonomyCluster[]
+    readonly customBehaviorId?: CustomBehaviorId
+    readonly filterSet?: Record<string, unknown>
+    readonly now: Date
+  }) => {
+    const clusters = createFakeTaxonomyClusterRepository(input.seededClusters ?? [])
+    // Facet clustering never reads the observation repo (the caller pre-extracts).
+    const observations = createFakeTaxonomyObservationRepository([])
+    return Effect.runPromise(
+      planHierarchicalTaxonomyUseCase({
+        organizationId,
+        projectId,
+        runId: TaxonomyRunId("r".repeat(24)),
+        dimension: "topic",
+        now: input.now,
+        facetId,
+        lensObservations: input.lensObservations,
+        ...(input.customBehaviorId ? { customBehaviorId: input.customBehaviorId } : {}),
+        ...(input.filterSet ? { filterSet: input.filterSet as never } : {}),
+      }).pipe(
+        Effect.provide(Layer.succeed(TaxonomyObservationRepository, observations.repository)),
+        Effect.provide(Layer.succeed(TaxonomyClusterRepository, clusters.repository)),
+        Effect.provide(Layer.succeed(SqlClient, createFakeSqlClient())),
+        Effect.provide(Layer.succeed(ChSqlClient, createFakeChSqlClient())),
+      ),
+    )
+  }
+
+  it("cohort × facet: clusters the projections and keys clusters + edges by BOTH the cohort and the facet", async () => {
+    const now = new Date("2026-05-24T12:00:00.000Z")
+    const plan = await runFacetPlan({
+      lensObservations: Array.from({ length: 20 }, (_, index) => makeProjection(index, E1, now)),
+      customBehaviorId,
+      filterSet: { userId: [{ op: "in", value: ["usr-cohort"] }] },
+      now,
+    })
+
+    expect(plan.facetId).toBe(facetId)
+    expect(plan.customBehaviorId).toBe(customBehaviorId)
+    expect(plan.clustersBorn).toBe(1)
+    // Facet edges go to the view slice, never the inline global column.
+    expect(plan.observationAssignments).toEqual([])
+    expect(plan.customAssignments).toHaveLength(20)
+    expect(plan.customAssignments.every((a) => a.customBehaviorId === customBehaviorId && a.facetId === facetId)).toBe(
+      true,
+    )
+    expect(plan.customAssignments.every((a) => (a.sessionId as string).startsWith("session-"))).toBe(true)
+    expect(plan.clusters.every((c) => c.customBehaviorId === customBehaviorId && c.facetId === facetId)).toBe(true)
+  })
+
+  it("whole-project facet (behavior, no filter): still writes facet-keyed view edges, never the global column", async () => {
+    const now = new Date("2026-05-24T12:00:00.000Z")
+    const plan = await runFacetPlan({
+      lensObservations: Array.from({ length: 20 }, (_, index) => makeProjection(index, E1, now)),
+      customBehaviorId,
+      now,
+    })
+
+    expect(plan.facetId).toBe(facetId)
+    expect(plan.observationAssignments).toEqual([])
+    expect(plan.customAssignments).toHaveLength(20)
+    expect(plan.customAssignments.every((a) => a.customBehaviorId === customBehaviorId && a.facetId === facetId)).toBe(
+      true,
+    )
+  })
+
+  it("fails fast on a facet lens with no wrapping behavior (facet edges have nowhere to write)", async () => {
+    const now = new Date("2026-05-24T12:00:00.000Z")
+    await expect(
+      runFacetPlan({
+        lensObservations: Array.from({ length: 20 }, (_, index) => makeProjection(index, E1, now)),
+        now,
+      }),
+    ).rejects.toThrow()
+  })
+
+  it("isolates the facet tree from a same-cohort TOPIC tree (facet run never sees topic clusters)", async () => {
+    const now = new Date("2026-05-24T12:00:00.000Z")
+    // A prior TOPIC cohort cluster (facetId null) on the SAME behavior, on a
+    // different topic (E1) than the facet projections (E2). A facet run must not
+    // treat it as prior-active, so it is neither continued nor deprecated.
+    const priorTopicCohort = makeCluster({
+      id: "a".repeat(24) as TaxonomyClusterId,
+      customBehaviorId,
+      facetId: null,
+      centroid: centroidFrom(E1, new Date("2026-01-01T00:00:00.000Z")),
+    })
+    const plan = await runFacetPlan({
+      lensObservations: Array.from({ length: 20 }, (_, index) => makeProjection(index, E2, now)),
+      customBehaviorId,
+      seededClusters: [priorTopicCohort],
+      now,
+    })
+
+    expect(plan.clustersBorn).toBe(1)
+    expect(plan.clustersContinued).toBe(0)
+    // The topic cohort cluster belongs to a different lens, so the facet run
+    // leaves it untouched (no cross-lens deprecation).
     expect(plan.deprecatedClusterIds).toEqual([])
   })
 })

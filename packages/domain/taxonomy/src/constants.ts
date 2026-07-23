@@ -126,8 +126,6 @@ export const FACET_DESCRIPTION_MAX_LENGTH = 300
  */
 export const FACET_INSTRUCTIONS_MAX_LENGTH = 4_000
 
-export const FACET_STATUSES = ["pending", "generating", "ready", "failed"] as const
-
 /**
  * Per-project cap on facets, enforced in the create use-case. Each facet spawns
  * its own `taxonomy_facet_projections` slice (one extraction + embedding per
@@ -171,16 +169,6 @@ export const TAXONOMY_DEFAULT_FACET_EXTRACTION_MODEL = {
 
 /** Bounded concurrency for the per-session extraction fan-out (misses only). */
 export const FACET_EXTRACTION_CONCURRENCY = 8
-
-/**
- * Facet-gardening sweep: the periodic enqueue that keeps every created facet
- * view a living taxonomy, the facet analogue of `gardenCustomBehaviorSweep`.
- * Same 6h cadence; a facet gardened within `FACET_GARDENING_MIN_INTERVAL_MS` is
- * skipped so a create-time run or a prior sweep isn't redone every tick.
- */
-export const FACET_GARDENING_CRON_KEY = "taxonomy:garden-facet-sweep"
-export const FACET_GARDENING_CRON_PATTERN = "0 */6 * * *"
-export const FACET_GARDENING_MIN_INTERVAL_MS = 5 * 60 * 60_000
 
 // ---------------------------------------------------------------------------
 // Embedding + summary

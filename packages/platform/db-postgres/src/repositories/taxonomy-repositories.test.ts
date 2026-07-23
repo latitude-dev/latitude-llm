@@ -58,6 +58,7 @@ const makeCluster = (overrides: Partial<TaxonomyCluster> = {}): TaxonomyCluster 
   organizationId,
   projectId,
   customBehaviorId: null,
+  facetId: null,
   dimension: "topic",
   parentClusterId: null,
   depth: 0,

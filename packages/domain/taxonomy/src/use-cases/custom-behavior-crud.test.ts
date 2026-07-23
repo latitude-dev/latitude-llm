@@ -1,18 +1,22 @@
 import { QueuePublisher } from "@domain/queue"
 import { createFakeQueuePublisher } from "@domain/queue/testing"
-import { CustomBehaviorId, type FilterSet, OrganizationId, ProjectId, SqlClient } from "@domain/shared"
+import { CustomBehaviorId, FacetId, type FilterSet, OrganizationId, ProjectId, SqlClient } from "@domain/shared"
 import { createFakeSqlClient } from "@domain/shared/testing"
 import { Effect, Exit, Layer } from "effect"
 import { describe, expect, it } from "vitest"
 import { CUSTOM_BEHAVIOR_GARDENING_MIN_INTERVAL_MS, MAX_CUSTOM_BEHAVIORS_PER_PROJECT } from "../constants.ts"
 import { type CustomBehavior, CustomBehaviorStatus } from "../entities/custom-behavior.ts"
+import type { TaxonomyFacet } from "../entities/facet.ts"
 import {
   CustomBehaviorFilterInvalidError,
   CustomBehaviorLimitReachedError,
   CustomBehaviorNameInvalidError,
+  FacetInvalidError,
 } from "../errors.ts"
 import { CustomBehaviorRepository } from "../ports/custom-behavior-repository.ts"
+import { FacetRepository } from "../ports/facet-repository.ts"
 import { createFakeCustomBehaviorRepository } from "../testing/fake-custom-behavior-repository.ts"
+import { createFakeFacetRepository } from "../testing/fake-facet-repository.ts"
 import { createCustomBehavior } from "./create-custom-behavior.ts"
 import { deleteCustomBehavior } from "./delete-custom-behavior.ts"
 import { generateCustomBehavior } from "./generate-custom-behavior.ts"
@@ -31,17 +35,20 @@ const makeBehavior = (overrides: Partial<CustomBehavior> = {}): CustomBehavior =
   slug: "refunds",
   name: "Refunds",
   filterSet: FILTER,
+  facetId: null,
   status: CustomBehaviorStatus.Pending,
   createdAt: new Date("2026-01-01T00:00:00.000Z"),
   updatedAt: new Date("2026-01-01T00:00:00.000Z"),
   ...overrides,
 })
 
-function makeLayer() {
+function makeLayer(facets: readonly TaxonomyFacet[] = []) {
   const { repository, rows } = createFakeCustomBehaviorRepository()
+  const facetRepo = createFakeFacetRepository(facets)
   const queue = createFakeQueuePublisher()
   const layer = Layer.mergeAll(
     Layer.succeed(CustomBehaviorRepository, repository),
+    Layer.succeed(FacetRepository, facetRepo.repository),
     Layer.succeed(QueuePublisher, queue.publisher),
     Layer.succeed(SqlClient, createFakeSqlClient()),
   )
@@ -97,6 +104,59 @@ describe("createCustomBehavior", () => {
         createCustomBehavior({ projectId: PROJECT_ID, name: "Everything", filterSet: {} }).pipe(Effect.provide(layer)),
       ),
     ).rejects.toBeInstanceOf(CustomBehaviorFilterInvalidError)
+  })
+
+  const makeFacet = (overrides: Partial<TaxonomyFacet> = {}): TaxonomyFacet => ({
+    id: FacetId("f".repeat(24)),
+    organizationId: ORG_ID,
+    projectId: PROJECT_ID,
+    slug: "user-goal",
+    name: "User goal",
+    description: "What the user is trying to accomplish.",
+    instructions: "In one sentence, what was the user trying to accomplish?",
+    createdAt: new Date("2026-01-01T00:00:00.000Z"),
+    updatedAt: new Date("2026-01-01T00:00:00.000Z"),
+    ...overrides,
+  })
+
+  it("allows an empty filter when a facet lens is chosen (a whole-project facet view) and stores the lens", async () => {
+    const facetId = FacetId("f".repeat(24))
+    const { layer, rows } = makeLayer([makeFacet({ id: facetId })])
+    const result = await Effect.runPromise(
+      createCustomBehavior({ projectId: PROJECT_ID, name: "User goal", filterSet: {}, facetId }).pipe(
+        Effect.provide(layer),
+      ),
+    )
+    expect(result.facetId).toBe(facetId)
+    expect(rows.get(result.id)?.facetId).toBe(facetId)
+    // Still auto-starts gardening — the lens gardens through the custom-behavior sweep.
+    expect(result.status).toBe(CustomBehaviorStatus.Generating)
+  })
+
+  it("rejects a facetId that does not exist in the project", async () => {
+    const { layer } = makeLayer() // no facets seeded
+    await expect(
+      Effect.runPromise(
+        createCustomBehavior({
+          projectId: PROJECT_ID,
+          name: "Dangling lens",
+          filterSet: {},
+          facetId: FacetId("f".repeat(24)),
+        }).pipe(Effect.provide(layer)),
+      ),
+    ).rejects.toBeInstanceOf(FacetInvalidError)
+  })
+
+  it("rejects a facetId that belongs to another project (same org)", async () => {
+    const facetId = FacetId("f".repeat(24))
+    const { layer } = makeLayer([makeFacet({ id: facetId, projectId: OTHER_PROJECT_ID })])
+    await expect(
+      Effect.runPromise(
+        createCustomBehavior({ projectId: PROJECT_ID, name: "Cross-project lens", filterSet: {}, facetId }).pipe(
+          Effect.provide(layer),
+        ),
+      ),
+    ).rejects.toBeInstanceOf(FacetInvalidError)
   })
 
   it("rejects an empty name", async () => {

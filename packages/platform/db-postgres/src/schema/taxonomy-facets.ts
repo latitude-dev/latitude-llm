@@ -1,10 +1,5 @@
 import { SLUG_MAX_LENGTH } from "@domain/shared"
-import {
-  FACET_DESCRIPTION_MAX_LENGTH,
-  FACET_INSTRUCTIONS_MAX_LENGTH,
-  FACET_NAME_MAX_LENGTH,
-  type FacetStatus,
-} from "@domain/taxonomy"
+import { FACET_DESCRIPTION_MAX_LENGTH, FACET_INSTRUCTIONS_MAX_LENGTH, FACET_NAME_MAX_LENGTH } from "@domain/taxonomy"
 import { index, unique, varchar } from "drizzle-orm/pg-core"
 import { cuid, latitudeSchema, organizationRLSPolicy, timestamps, tzTimestamp } from "../schemaHelpers.ts"
 
@@ -25,7 +20,6 @@ export const taxonomyFacets = latitudeSchema.table(
     name: varchar("name", { length: FACET_NAME_MAX_LENGTH }).notNull(),
     description: varchar("description", { length: FACET_DESCRIPTION_MAX_LENGTH }).notNull(),
     instructions: varchar("instructions", { length: FACET_INSTRUCTIONS_MAX_LENGTH }).notNull(),
-    status: varchar("status", { length: 16 }).$type<FacetStatus>().notNull().default("pending"),
     // Gardening throttle anchor, stamped at each run start; null = never gardened.
     lastGardenedAt: tzTimestamp("last_gardened_at"),
     ...timestamps(),
