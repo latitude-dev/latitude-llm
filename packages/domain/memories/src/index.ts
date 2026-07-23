@@ -1,4 +1,14 @@
 export {
+  isMemoryStoreMetricSortField,
+  MEMORY_STORE_METRIC_SORT_FIELDS,
+  type MemoryActivityWriteBucket,
+  type MemoryAnalyticsScope,
+  type MemoryStoreMetricSortField,
+  type MemoryStoreMetricsItem,
+  type MemoryStoreMetricsListOptions,
+  type MemoryStoreMetricsPage,
+} from "./entities/memory-analytics.ts"
+export {
   type MemoryBlob,
   memoryBlobSchema,
 } from "./entities/memory-blob.ts"
@@ -44,6 +54,10 @@ export {
   type MemoryUserStore,
 } from "./entities/memory-store.ts"
 export {
+  MemoryAnalyticsRepository,
+  type MemoryAnalyticsRepositoryShape,
+} from "./ports/memory-analytics-repository.ts"
+export {
   MemoryRepository,
   type MemoryRepositoryShape,
 } from "./ports/memory-repository.ts"
@@ -87,6 +101,10 @@ export {
   type ListStoreUsersInput,
   listStoreUsersUseCase,
 } from "./use-cases/list-store-users.ts"
+export {
+  type ListStoresWithMetricsInput,
+  listStoresWithMetricsUseCase,
+} from "./use-cases/list-stores-with-metrics.ts"
 export {
   type ListUserStoresInput,
   listUserStoresUseCase,
