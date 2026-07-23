@@ -4,6 +4,7 @@ import { keepPreviousData, useInfiniteQuery, useQuery } from "@tanstack/react-qu
 import { useMemo } from "react"
 import { projectScopeData, projectScopeKey, useProjectScope } from "../projects/project-scope.tsx"
 import {
+  getMemoryOverview,
   getMemoryRecord,
   getMemoryRecordChangeDiff,
   getMemoryRecordReads,
@@ -74,6 +75,29 @@ export function useSessionMemoryDiff({
     },
     staleTime: 30_000,
     enabled: enabled && projectId.length > 0 && sessionId.length > 0,
+  })
+}
+
+/** Project-wide memory roll-up for the analytics tiles. */
+export function useMemoryOverview({
+  projectId,
+  range,
+  enabled = true,
+}: {
+  readonly projectId: string
+  readonly range: { readonly fromIso: string; readonly toIso: string }
+  readonly enabled?: boolean
+}) {
+  const scope = useProjectScope()
+  return useQuery({
+    queryKey: [...projectScopeKey(scope), "memory-overview", projectId, range.fromIso, range.toIso],
+    queryFn: () =>
+      getMemoryOverview({
+        data: { ...projectScopeData(scope), projectId, fromIso: range.fromIso, toIso: range.toIso },
+      }),
+    placeholderData: keepPreviousData,
+    staleTime: 30_000,
+    enabled: enabled && projectId.length > 0,
   })
 }
 

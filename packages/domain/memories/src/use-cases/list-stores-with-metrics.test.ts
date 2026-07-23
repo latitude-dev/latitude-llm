@@ -7,6 +7,7 @@ import type { MemoryCurrentEntry } from "../entities/memory-current.ts"
 import type { MemoryEvent } from "../entities/memory-event.ts"
 import { MemoryAnalyticsRepository } from "../ports/memory-analytics-repository.ts"
 import { createFakeMemoryAnalyticsRepository } from "../testing/index.ts"
+import { getMemoryOverviewUseCase } from "./get-memory-overview.ts"
 import { listStoresWithMetricsUseCase } from "./list-stores-with-metrics.ts"
 
 const organizationId = OrganizationId("o".repeat(24))
@@ -240,5 +241,40 @@ describe("listStoresWithMetrics", () => {
     expect(p0.items.map((s) => s.storeId)).toEqual(["C", "B"])
     expect(p0.hasMore).toBe(true)
     expect(p0.totalCount).toBe(3)
+  })
+})
+
+describe("getMemoryOverview", () => {
+  const overview = (memory: Fake) =>
+    Effect.runPromise(
+      getMemoryOverviewUseCase({ organizationId, projectId, from, to }).pipe(Effect.provide(layerFor(memory))),
+    )
+
+  it("rolls up project-wide live/dead tokens and window activity", async () => {
+    const memory = createFakeMemoryAnalyticsRepository()
+    seed(
+      memory,
+      [
+        makeEvent({ storeId: "A", recordId: "r1", changeKind: "add", endTime: at(10) }),
+        makeEvent({ storeId: "A", recordId: "r1", changeKind: "read", recordCount: 1, endTime: at(20) }),
+        makeEvent({ storeId: "B", recordId: "r1", changeKind: "add", endTime: at(30) }),
+        // a zero-hit search bumps searches but not records retrieved
+        makeEvent({ storeId: "B", recordId: "", changeKind: "read", recordCount: 0, endTime: at(40) }),
+        // out of window → excluded from window activity
+        makeEvent({ storeId: "A", recordId: "r1", changeKind: "update", endTime: at(500) }),
+      ],
+      [
+        makeCurrent({ storeId: "A", recordId: "r1", tokenCount: 100, endTime: at(10) }), // read → live, not dead
+        makeCurrent({ storeId: "B", recordId: "r1", tokenCount: 40, endTime: at(30) }), // never read → dead
+      ],
+    )
+    const o = await overview(memory)
+    expect(o.liveRecords).toBe(2)
+    expect(o.liveTokens).toBe(140)
+    expect(o.deadTokens).toBe(40)
+    expect(o.searches).toBe(2)
+    expect(o.zeroHitSearches).toBe(1)
+    expect(o.writes).toBe(2) // two in-window adds; the at(500) update is excluded
+    expect(o.recordsRetrieved).toBe(1)
   })
 })

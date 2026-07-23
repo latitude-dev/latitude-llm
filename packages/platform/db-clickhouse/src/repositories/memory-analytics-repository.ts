@@ -3,6 +3,7 @@ import type {
   MemoryActivityWriteBucket,
   MemoryAnalyticsRepositoryShape,
   MemoryAnalyticsScope,
+  MemoryOverview,
   MemoryStoreMetricSortField,
   MemoryStoreMetricsItem,
 } from "@domain/memories"
@@ -72,6 +73,37 @@ type TokensAtRow = {
   readonly tokens: string | number
 }
 
+type OverviewCurrentRow = {
+  readonly live_records: string | number
+  readonly live_tokens: string | number
+  readonly dead_tokens: string | number
+}
+
+type OverviewWindowRow = {
+  readonly searches: string | number
+  readonly zero_hit_searches: string | number
+  readonly writes: string | number
+  readonly records_retrieved: string | number
+}
+
+// Latest live (non-removed) record per (store, record) from `memory_current`,
+// with a `never_read` flag against all-time reads that returned a record.
+const LIVE_RECORDS = `
+  SELECT store_id, record_id, token_count,
+         (store_id, record_id) NOT IN (
+           SELECT store_id, record_id FROM memory_events
+           WHERE ${SCOPE} AND change_kind = 'read' AND record_count > 0
+         ) AS never_read
+  FROM (
+    SELECT store_id, record_id, token_count, change_kind, end_time
+    FROM memory_current
+    WHERE ${SCOPE}
+    ORDER BY store_id, record_id, end_time DESC
+    LIMIT 1 BY store_id, record_id
+  )
+  WHERE change_kind != 'remove'
+`
+
 const scopeParams = (scope: MemoryAnalyticsScope) => ({
   organizationId: scope.organizationId as string,
   projectId: scope.projectId as string,
@@ -86,6 +118,49 @@ const rangeParams = (scope: MemoryAnalyticsScope) => ({
 export const MemoryAnalyticsRepositoryLive = Layer.effect(
   MemoryAnalyticsRepository,
   Effect.gen(function* () {
+    const getMemoryOverview: MemoryAnalyticsRepositoryShape["getMemoryOverview"] = (scope) =>
+      Effect.gen(function* () {
+        const chSqlClient = (yield* ChSqlClient) as ChSqlClientShape<ClickHouseClient>
+        return yield* chSqlClient
+          .query(async (client) => {
+            const [currentResult, windowResult] = await Promise.all([
+              client.query({
+                query: `SELECT count() AS live_records, sum(token_count) AS live_tokens, sumIf(token_count, never_read) AS dead_tokens
+                        FROM ( ${LIVE_RECORDS} )`,
+                query_params: scopeParams(scope),
+                format: "JSONEachRow",
+              }),
+              client.query({
+                query: `SELECT
+                          uniqExactIf(span_id, change_kind = 'read')                      AS searches,
+                          uniqExactIf(span_id, change_kind = 'read' AND record_count = 0)  AS zero_hit_searches,
+                          countIf(change_kind IN ('add', 'update', 'remove'))             AS writes,
+                          countIf(change_kind = 'read' AND record_count > 0)              AS records_retrieved
+                        FROM ( ${DEDUPED_WINDOW} )`,
+                query_params: rangeParams(scope),
+                format: "JSONEachRow",
+              }),
+            ])
+            const current = (await currentResult.json<OverviewCurrentRow>())[0]
+            const activity = (await windowResult.json<OverviewWindowRow>())[0]
+            return { current, activity }
+          })
+          .pipe(
+            Effect.map(
+              ({ current, activity }): MemoryOverview => ({
+                liveRecords: num(current?.live_records),
+                liveTokens: num(current?.live_tokens),
+                deadTokens: num(current?.dead_tokens),
+                searches: num(activity?.searches),
+                zeroHitSearches: num(activity?.zero_hit_searches),
+                writes: num(activity?.writes),
+                recordsRetrieved: num(activity?.records_retrieved),
+              }),
+            ),
+            Effect.mapError((error) => toRepositoryError(error, "MemoryAnalyticsRepository.getMemoryOverview")),
+          )
+      })
+
     const listStoresWithMetrics: MemoryAnalyticsRepositoryShape["listStoresWithMetrics"] = ({
       organizationId,
       projectId,
@@ -126,23 +201,7 @@ export const MemoryAnalyticsRepositoryLive = Layer.effect(
                   ),
                   cs AS (
                     SELECT store_id, count() AS live_records, sum(token_count) AS live_tokens, countIf(never_read) AS dead_records
-                    FROM (
-                      SELECT
-                        store_id,
-                        token_count,
-                        (store_id, record_id) NOT IN (
-                          SELECT store_id, record_id FROM memory_events
-                          WHERE ${SCOPE} AND change_kind = 'read' AND record_count > 0
-                        ) AS never_read
-                      FROM (
-                        SELECT store_id, record_id, token_count, change_kind, end_time
-                        FROM memory_current
-                        WHERE ${SCOPE}
-                        ORDER BY store_id, record_id, end_time DESC
-                        LIMIT 1 BY store_id, record_id
-                      )
-                      WHERE change_kind != 'remove'
-                    )
+                    FROM ( ${LIVE_RECORDS} )
                     GROUP BY store_id
                   )
                   SELECT
@@ -283,6 +342,6 @@ export const MemoryAnalyticsRepositoryLive = Layer.effect(
         return { items, totalCount, hasMore, limit, offset }
       })
 
-    return { listStoresWithMetrics }
+    return { getMemoryOverview, listStoresWithMetrics }
   }),
 )

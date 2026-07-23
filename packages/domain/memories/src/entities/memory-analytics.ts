@@ -8,6 +8,21 @@ export interface MemoryAnalyticsScope {
   readonly to: Date
 }
 
+/**
+ * Project-wide roll-up for the analytics tiles. `live*`/`deadTokens` are
+ * current-state (window-independent); the rest are window-scoped. Rates
+ * (dead-token %, zero-hit, read:write) are derived by the consumer.
+ */
+export interface MemoryOverview {
+  readonly liveRecords: number
+  readonly liveTokens: number
+  readonly deadTokens: number
+  readonly searches: number
+  readonly zeroHitSearches: number
+  readonly writes: number
+  readonly recordsRetrieved: number
+}
+
 /** One write-activity bucket for a store's per-row trend sparkline. */
 export interface MemoryActivityWriteBucket {
   /** Bucket start instant (UTC ISO string). */

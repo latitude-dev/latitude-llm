@@ -2,6 +2,7 @@ import type { ChSqlClient, RepositoryError } from "@domain/shared"
 import { Context, type Effect } from "effect"
 import type {
   MemoryAnalyticsScope,
+  MemoryOverview,
   MemoryStoreMetricsListOptions,
   MemoryStoreMetricsPage,
 } from "../entities/memory-analytics.ts"
@@ -13,6 +14,9 @@ import type {
  * Every method is org+project+window scoped.
  */
 export interface MemoryAnalyticsRepositoryShape {
+  /** Project-wide roll-up for the analytics tiles (current-state live/dead + window activity). */
+  getMemoryOverview(input: MemoryAnalyticsScope): Effect.Effect<MemoryOverview, RepositoryError, ChSqlClient>
+
   /**
    * Stores with any add/update/remove/read event in the window, one insight row
    * each, server-sorted and offset-paginated. Each row carries a per-store

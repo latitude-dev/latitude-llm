@@ -1,6 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router"
 import { useCallback, useMemo } from "react"
-import { useMemoryStoresWithMetrics } from "../../../../../domains/memories/memories.collection.ts"
+import { useMemoryOverview, useMemoryStoresWithMetrics } from "../../../../../domains/memories/memories.collection.ts"
 import { useAnalyticsTimeWindow } from "../../../../../domains/projects/use-analytics-time-window.ts"
 import { useProjectFirstTraceAt, useProjectLastTraceAt } from "../../../../../domains/traces/traces.collection.ts"
 import { ListingLayout as Layout } from "../../../../../layouts/ListingLayout/index.tsx"
@@ -10,6 +10,7 @@ import { ColumnsSelector } from "../-components/columns-selector.tsx"
 import { useTableColumnSettings } from "../-components/table-column-settings.ts"
 import { TimeFilterDropdown } from "../-components/time-filter-dropdown.tsx"
 import { useRouteProject } from "../-route-data.ts"
+import { MemoryAnalyticsPanel } from "./-components/memory-analytics-panel.tsx"
 import { MemoryEmptyState } from "./-components/memory-empty-state.tsx"
 import { pickMemoryTrendBucketSeconds } from "./-components/memory-formatters.ts"
 import {
@@ -103,6 +104,7 @@ function MemoryPage() {
     direction: sorting.direction,
     trendBucketSeconds,
   })
+  const { data: overview, isLoading: overviewLoading } = useMemoryOverview({ projectId: project.id, range })
 
   // Empty over All time means the project has never had memory activity — a
   // real empty state (a picked window that's empty just shows the table's blank slate).
@@ -134,18 +136,23 @@ function MemoryPage() {
       {showEmptyState ? (
         <MemoryEmptyState />
       ) : (
-        <MemoryStoresView
-          stores={stores}
-          isLoading={isLoading}
-          sorting={sorting}
-          visibleColumnIds={columnSettings.visibleColumnIds}
-          onSortChange={setSorting}
-          infiniteScroll={infiniteScroll}
-          projectSlug={projectSlug}
-          rangeFromIso={range.fromIso}
-          rangeToIso={range.toIso}
-          trendBucketSeconds={trendBucketSeconds}
-        />
+        <>
+          <div className="px-6">
+            <MemoryAnalyticsPanel overview={overview} isLoading={overviewLoading} />
+          </div>
+          <MemoryStoresView
+            stores={stores}
+            isLoading={isLoading}
+            sorting={sorting}
+            visibleColumnIds={columnSettings.visibleColumnIds}
+            onSortChange={setSorting}
+            infiniteScroll={infiniteScroll}
+            projectSlug={projectSlug}
+            rangeFromIso={range.fromIso}
+            rangeToIso={range.toIso}
+            trendBucketSeconds={trendBucketSeconds}
+          />
+        </>
       )}
     </Layout>
   )

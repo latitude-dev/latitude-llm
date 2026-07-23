@@ -3,11 +3,13 @@ import {
   computeRecordHistoryUseCase,
   computeSessionMemoryDiffUseCase,
   computeSessionMemorySummaryUseCase,
+  getMemoryOverviewUseCase,
   listRecordUsersUseCase,
   listStoresWithMetricsUseCase,
   listStoreUsersUseCase,
   listUserStoresUseCase,
   type MemoryChangeKind,
+  type MemoryOverview,
   type RecordChangeDiff,
   readRecordReadsUseCase,
   reconstructSnapshotUseCase,
@@ -27,6 +29,8 @@ import { withScopedClickHouse } from "../../server/scoped-clickhouse.ts"
 
 export type SessionMemorySummaryRecord = SessionMemorySummary
 export type SessionMemoryDiffRecord = SessionMemoryDiff
+
+export type MemoryOverviewRecord = MemoryOverview
 
 export interface MemoryActivityWriteBucketRecord {
   readonly bucketStart: string
@@ -150,6 +154,22 @@ export const getSessionMemoryDiff = createServerFn({ method: "GET" })
         sessionId: SessionId(data.sessionId),
         ...(data.traceId ? { traceId: TraceId(data.traceId) } : {}),
       }).pipe(withScopedClickHouse(MemoryRepositoryLive, getClickhouseClient(), orgId), withTracing),
+    )
+  })
+
+/** Project-wide memory roll-up for the analytics tiles, over the selected window. */
+export const getMemoryOverview = createServerFn({ method: "GET" })
+  .inputValidator(z.object({ projectId: z.string(), fromIso: z.string().datetime(), toIso: z.string().datetime() }))
+  .handler(async ({ data, context }): Promise<MemoryOverviewRecord> => {
+    const orgId = await resolveOrgScope(context)
+
+    return Effect.runPromise(
+      getMemoryOverviewUseCase({
+        organizationId: orgId,
+        projectId: ProjectId(data.projectId),
+        from: new Date(data.fromIso),
+        to: new Date(data.toIso),
+      }).pipe(withScopedClickHouse(MemoryAnalyticsRepositoryLive, getClickhouseClient(), orgId), withTracing),
     )
   })
 

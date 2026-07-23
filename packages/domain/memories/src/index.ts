@@ -3,6 +3,7 @@ export {
   MEMORY_STORE_METRIC_SORT_FIELDS,
   type MemoryActivityWriteBucket,
   type MemoryAnalyticsScope,
+  type MemoryOverview,
   type MemoryStoreMetricSortField,
   type MemoryStoreMetricsItem,
   type MemoryStoreMetricsListOptions,
@@ -89,6 +90,10 @@ export {
   type MemorySummaryTotals,
   type SessionMemorySummary,
 } from "./use-cases/compute-session-memory-summary.ts"
+export {
+  type GetMemoryOverviewInput,
+  getMemoryOverviewUseCase,
+} from "./use-cases/get-memory-overview.ts"
 export {
   type ListMemoryStoresInput,
   listMemoryStoresUseCase,

@@ -252,3 +252,32 @@ describe("MemoryAnalyticsRepository.listStoresWithMetrics", () => {
     expect(desc.totalCount).toBe(2)
   })
 })
+
+describe("MemoryAnalyticsRepository.getMemoryOverview", () => {
+  it("rolls up project-wide live/dead tokens and window activity", async () => {
+    await seed((repo) =>
+      repo.insertEvents([
+        makeEvent({ storeId: "A", recordId: "r1", changeKind: "add", endTime: at(10) }),
+        makeEvent({ storeId: "A", recordId: "r1", changeKind: "read", recordCount: 1, endTime: at(20) }),
+        makeEvent({ storeId: "B", recordId: "r1", changeKind: "add", endTime: at(30) }),
+        makeEvent({ storeId: "B", recordId: "", changeKind: "read", recordCount: 0, endTime: at(40) }),
+        makeEvent({ storeId: "A", recordId: "r1", changeKind: "update", endTime: at(500) }),
+      ]),
+    )
+    await seed((repo) =>
+      repo.upsertCurrent([
+        makeCurrent({ storeId: "A", recordId: "r1", tokenCount: 100, endTime: at(10) }),
+        makeCurrent({ storeId: "B", recordId: "r1", tokenCount: 40, endTime: at(30) }),
+      ]),
+    )
+
+    const o = await query((repo) => repo.getMemoryOverview({ organizationId, projectId, from, to }))
+    expect(o.liveRecords).toBe(2)
+    expect(o.liveTokens).toBe(140)
+    expect(o.deadTokens).toBe(40)
+    expect(o.searches).toBe(2)
+    expect(o.zeroHitSearches).toBe(1)
+    expect(o.writes).toBe(2)
+    expect(o.recordsRetrieved).toBe(1)
+  })
+})
