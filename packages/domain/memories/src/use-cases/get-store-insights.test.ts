@@ -147,4 +147,53 @@ describe("getStoreInsightsUseCase", () => {
     const insights = await run(memory, "A")
     expect(insights.largestRecords.map((row) => row.recordId)).not.toContain("other")
   })
+
+  const writeHealthStore = (): Fake => {
+    const memory = createFakeMemoryAnalyticsRepository()
+    const t1 = TraceId("1".repeat(32))
+    const t2 = TraceId("2".repeat(32))
+    const t3 = TraceId("3".repeat(32))
+    const t4 = TraceId("4".repeat(32))
+    memory.events.push(
+      // "hot": thrashed 3× in one trace, updated once more in another (distinct hashes → no revert)
+      makeEvent({ recordId: "hot", contentHash: "h1", changeKind: "add", traceId: t1, endTime: at(0) }),
+      makeEvent({ recordId: "hot", contentHash: "h2", changeKind: "update", traceId: t1, endTime: at(1) }),
+      makeEvent({ recordId: "hot", contentHash: "h3", changeKind: "update", traceId: t1, endTime: at(2) }),
+      makeEvent({ recordId: "hot", contentHash: "h4", changeKind: "update", traceId: t2, endTime: at(10) }),
+      // "flip": A → B → A (reverted)
+      makeEvent({ recordId: "flip", contentHash: "A", changeKind: "add", traceId: t3, endTime: at(3) }),
+      makeEvent({ recordId: "flip", contentHash: "B", changeKind: "update", traceId: t3, endTime: at(4) }),
+      makeEvent({ recordId: "flip", contentHash: "A", changeKind: "update", traceId: t3, endTime: at(5) }),
+      // "noop": an update that did not change the body
+      makeEvent({ recordId: "noop", contentHash: "N", changeKind: "add", traceId: t4, endTime: at(6) }),
+      makeEvent({ recordId: "noop", contentHash: "N", changeKind: "update", traceId: t4, endTime: at(7) }),
+      // two live records sharing one content hash (duplicates)
+      makeEvent({ recordId: "dupA", contentHash: "shared", changeKind: "add", traceId: t4, endTime: at(8) }),
+      makeEvent({ recordId: "dupB", contentHash: "shared", changeKind: "add", traceId: t4, endTime: at(9) }),
+    )
+    memory.current.push(
+      makeCurrent({ recordId: "hot", contentHash: "h4", endTime: at(10) }),
+      makeCurrent({ recordId: "flip", contentHash: "A", endTime: at(5) }),
+      makeCurrent({ recordId: "noop", contentHash: "N", endTime: at(7) }),
+      makeCurrent({ recordId: "dupA", contentHash: "shared", endTime: at(8) }),
+      makeCurrent({ recordId: "dupB", contentHash: "shared", endTime: at(9) }),
+    )
+    return memory
+  }
+
+  it("reports write-health signals: writes, rewrites, per-trace peak, revert", async () => {
+    const insights = await run(writeHealthStore())
+    const byId = Object.fromEntries(insights.writeHealth.map((row) => [row.recordId, row]))
+    expect(insights.writeHealth[0]?.recordId).toBe("hot")
+    expect(byId.hot).toMatchObject({ writes: 4, rewrites: 3, peakWritesPerTrace: 3, reverted: false })
+    expect(byId.flip).toMatchObject({ writes: 3, rewrites: 2, peakWritesPerTrace: 3, reverted: true })
+    expect(byId.noop).toMatchObject({ writes: 2, rewrites: 1, reverted: false })
+  })
+
+  it("counts no-op rewrites and duplicate records", async () => {
+    const insights = await run(writeHealthStore())
+    expect(insights.noOpRewrites).toBe(1)
+    expect(insights.duplicateGroups).toBe(1)
+    expect(insights.duplicateRecords).toBe(2)
+  })
 })

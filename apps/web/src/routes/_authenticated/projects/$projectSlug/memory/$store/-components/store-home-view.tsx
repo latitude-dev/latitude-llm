@@ -21,6 +21,7 @@ import {
 } from "../../-components/memory-formatters.ts"
 import { recordDisplayLabel } from "../../-components/store-encoding.ts"
 import { StoreInsightList } from "./store-insight-list.tsx"
+import { StoreWriteHealthTable } from "./store-write-health-table.tsx"
 
 const SIZE_BAR_COLOR = "hsl(217 91% 60%)"
 
@@ -108,6 +109,24 @@ function largestItems(insights: StoreInsightsRecord | undefined) {
 
 function SectionHeading({ children }: { readonly children: string }) {
   return <Text.H5>{children}</Text.H5>
+}
+
+function StatCallout({
+  label,
+  value,
+  subtext,
+}: {
+  readonly label: string
+  readonly value: string
+  readonly subtext: string | undefined
+}) {
+  return (
+    <div className="flex min-w-[120px] flex-col gap-1">
+      <Text.H6 color="foregroundMuted">{label}</Text.H6>
+      <Text.H5 className="tabular-nums">{value}</Text.H5>
+      {subtext ? <Text.H6 color="foregroundMuted">{subtext}</Text.H6> : null}
+    </div>
+  )
 }
 
 export function StoreHomeView({
@@ -237,6 +256,27 @@ export function StoreHomeView({
               tone="destructive"
             />
           </div>
+        </div>
+
+        <div className="flex flex-col gap-3">
+          <SectionHeading>Write health</SectionHeading>
+          <div className="flex flex-wrap gap-8 rounded-lg bg-secondary p-4">
+            <StatCallout label="No-op rewrites" value={formatCount(insights?.noOpRewrites ?? 0)} subtext={undefined} />
+            <StatCallout
+              label="Duplicate records"
+              value={formatCount(insights?.duplicateRecords ?? 0)}
+              subtext={
+                insights && insights.duplicateGroups > 0
+                  ? `across ${formatCount(insights.duplicateGroups)} contents`
+                  : undefined
+              }
+            />
+          </div>
+          <StoreWriteHealthTable
+            records={insights?.writeHealth ?? []}
+            isLoading={insightsLoading}
+            onSelectRecord={onSelectRecord}
+          />
         </div>
 
         <div className="flex flex-col gap-3">

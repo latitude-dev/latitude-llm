@@ -105,6 +105,15 @@ type QueryCountRow = { readonly query_text: string; readonly searches: string | 
 type LargestRow = { readonly record_id: string; readonly token_count: string | number }
 type SizeRow = Record<string, string | number>
 type TokensRow = { readonly tokens: string | number }
+type WriteHealthRow = {
+  readonly record_id: string
+  readonly writes: string | number
+  readonly rewrites: string | number
+  readonly peak_writes_per_trace: string | number
+}
+type RevertedRow = { readonly record_id: string }
+type NoOpRow = { readonly noop: string | number }
+type DuplicatesRow = { readonly groups: string | number; readonly records: string | number }
 
 // countIf per shared size bucket, aliased b0..bN so the mapper can index by position.
 const sizeDistributionSelect = STORE_SIZE_BUCKETS.map((bucket, index) => {
@@ -444,7 +453,20 @@ export const MemoryAnalyticsRepositoryLive = Layer.effect(
           )`
         return yield* chSqlClient
           .query(async (client) => {
-            const [mostReadR, coldR, topQueriesR, zeroHitR, largestR, sizeR, fromR, toR] = await Promise.all([
+            const [
+              mostReadR,
+              coldR,
+              topQueriesR,
+              zeroHitR,
+              largestR,
+              sizeR,
+              fromR,
+              toR,
+              writeHealthR,
+              revertedR,
+              noOpR,
+              duplicatesR,
+            ] = await Promise.all([
               client.query({
                 query: `SELECT record_id, count() AS reads
                         FROM ( ${dedupedWindow(true)} )
@@ -513,6 +535,65 @@ export const MemoryAnalyticsRepositoryLive = Layer.effect(
                 query_params: { ...currentParams, at: formatCHDate(to) },
                 format: "JSONEachRow",
               }),
+              client.query({
+                query: `SELECT record_id,
+                               sum(writes_in_trace)              AS writes,
+                               sum(updates_in_trace)             AS rewrites,
+                               max(writes_in_trace)              AS peak_writes_per_trace
+                        FROM (
+                          SELECT record_id, trace_id,
+                                 count()                          AS writes_in_trace,
+                                 countIf(change_kind = 'update')  AS updates_in_trace
+                          FROM ( ${dedupedWindow(true)} )
+                          WHERE change_kind IN ('add', 'update', 'remove')
+                          GROUP BY record_id, trace_id
+                        )
+                        GROUP BY record_id
+                        ORDER BY writes DESC, record_id ASC
+                        LIMIT {listLimit:UInt32}`,
+                query_params: windowParams,
+                format: "JSONEachRow",
+              }),
+              // A content hash that returns to an earlier value: runs (consecutive-dedup length) exceed distinct hashes.
+              client.query({
+                query: `SELECT record_id
+                        FROM (
+                          SELECT record_id,
+                                 content_hash != lagInFrame(content_hash)
+                                   OVER (PARTITION BY record_id ORDER BY end_time) AS changed
+                          FROM ( ${dedupedWindow(true)} )
+                          WHERE change_kind IN ('add', 'update') AND content_hash != ''
+                        )
+                        GROUP BY record_id
+                        HAVING sum(changed) > uniqExact(content_hash)`,
+                query_params: windowParams,
+                format: "JSONEachRow",
+              }),
+              // Updates whose body is byte-identical to the record's previous version (wasted writes).
+              client.query({
+                query: `SELECT countIf(change_kind = 'update' AND content_hash = prev_hash AND prev_hash != '') AS noop
+                        FROM (
+                          SELECT change_kind, content_hash,
+                                 lagInFrame(content_hash)
+                                   OVER (PARTITION BY record_id ORDER BY end_time) AS prev_hash
+                          FROM ( ${dedupedWindow(true)} )
+                          WHERE change_kind IN ('add', 'update')
+                        )`,
+                query_params: windowParams,
+                format: "JSONEachRow",
+              }),
+              client.query({
+                query: `SELECT count() AS groups, sum(cnt) AS records
+                        FROM (
+                          SELECT content_hash, count() AS cnt
+                          FROM ( ${liveRecords(true)} )
+                          WHERE content_hash != ''
+                          GROUP BY content_hash
+                          HAVING cnt > 1
+                        )`,
+                query_params: currentParams,
+                format: "JSONEachRow",
+              }),
             ])
             return {
               mostRead: await mostReadR.json<MostReadRow>(),
@@ -523,38 +604,53 @@ export const MemoryAnalyticsRepositoryLive = Layer.effect(
               size: (await sizeR.json<SizeRow>())[0],
               tokensFrom: (await fromR.json<TokensRow>())[0],
               tokensTo: (await toR.json<TokensRow>())[0],
+              writeHealth: await writeHealthR.json<WriteHealthRow>(),
+              reverted: await revertedR.json<RevertedRow>(),
+              noOp: (await noOpR.json<NoOpRow>())[0],
+              duplicates: (await duplicatesR.json<DuplicatesRow>())[0],
             }
           })
           .pipe(
-            Effect.map(
-              ({ mostRead, cold, topQueries, zeroHit, largest, size, tokensFrom, tokensTo }): StoreInsights => {
-                const mapQueries = (rows: readonly QueryCountRow[]) =>
-                  rows.map((row) => ({ queryText: row.query_text, searches: num(row.searches) }))
-                const sizeDistribution: StoreSizeBucket[] = STORE_SIZE_BUCKETS.map((bucket, index) => ({
-                  label: bucket.label,
-                  count: size ? num(size[`b${index}`]) : 0,
-                }))
-                return {
-                  mostReadRecords: mostRead.map((row) => ({ recordId: row.record_id, reads: num(row.reads) })),
-                  coldRecords: cold.map((row) => {
-                    const neverRead = Number(row.never_read) === 1
-                    const lastRead = parseCHDate(row.last_read)
-                    return {
-                      recordId: row.record_id,
-                      tokenCount: num(row.token_count),
-                      neverRead,
-                      lastReadAt: neverRead || lastRead.getTime() <= 0 ? null : lastRead.toISOString(),
-                      lastUpdatedAt: parseCHDate(row.last_updated).toISOString(),
-                    }
-                  }),
-                  topQueries: mapQueries(topQueries),
-                  zeroHitQueries: mapQueries(zeroHit),
-                  largestRecords: largest.map((row) => ({ recordId: row.record_id, tokenCount: num(row.token_count) })),
-                  sizeDistribution,
-                  netGrowthTokens: num(tokensTo?.tokens) - num(tokensFrom?.tokens),
-                }
-              },
-            ),
+            Effect.map((result): StoreInsights => {
+              const { mostRead, cold, topQueries, zeroHit, largest, size, tokensFrom, tokensTo } = result
+              const { writeHealth, reverted, noOp, duplicates } = result
+              const mapQueries = (rows: readonly QueryCountRow[]) =>
+                rows.map((row) => ({ queryText: row.query_text, searches: num(row.searches) }))
+              const sizeDistribution: StoreSizeBucket[] = STORE_SIZE_BUCKETS.map((bucket, index) => ({
+                label: bucket.label,
+                count: size ? num(size[`b${index}`]) : 0,
+              }))
+              const revertedIds = new Set(reverted.map((row) => row.record_id))
+              return {
+                mostReadRecords: mostRead.map((row) => ({ recordId: row.record_id, reads: num(row.reads) })),
+                coldRecords: cold.map((row) => {
+                  const neverRead = Number(row.never_read) === 1
+                  const lastRead = parseCHDate(row.last_read)
+                  return {
+                    recordId: row.record_id,
+                    tokenCount: num(row.token_count),
+                    neverRead,
+                    lastReadAt: neverRead || lastRead.getTime() <= 0 ? null : lastRead.toISOString(),
+                    lastUpdatedAt: parseCHDate(row.last_updated).toISOString(),
+                  }
+                }),
+                topQueries: mapQueries(topQueries),
+                zeroHitQueries: mapQueries(zeroHit),
+                largestRecords: largest.map((row) => ({ recordId: row.record_id, tokenCount: num(row.token_count) })),
+                sizeDistribution,
+                writeHealth: writeHealth.map((row) => ({
+                  recordId: row.record_id,
+                  writes: num(row.writes),
+                  rewrites: num(row.rewrites),
+                  peakWritesPerTrace: num(row.peak_writes_per_trace),
+                  reverted: revertedIds.has(row.record_id),
+                })),
+                noOpRewrites: num(noOp?.noop),
+                duplicateGroups: num(duplicates?.groups),
+                duplicateRecords: num(duplicates?.records),
+                netGrowthTokens: num(tokensTo?.tokens) - num(tokensFrom?.tokens),
+              }
+            }),
             Effect.mapError((error) => toRepositoryError(error, "MemoryAnalyticsRepository.getStoreInsights")),
           )
       })

@@ -102,6 +102,19 @@ export interface StoreSizeBucket {
   readonly count: number
 }
 
+/**
+ * A record's write-instability signals over the window. `peakWritesPerTrace` is
+ * the most writes it took in a single trace (thrashing); `reverted` marks a
+ * content hash that returned to an earlier value (A→B→A).
+ */
+export interface StoreWriteHealthRecord {
+  readonly recordId: string
+  readonly writes: number
+  readonly rewrites: number
+  readonly peakWritesPerTrace: number
+  readonly reverted: boolean
+}
+
 /** Token-size buckets for the store size distribution; `min` inclusive, `max` exclusive (null = open-ended top). */
 export const STORE_SIZE_BUCKETS: readonly {
   readonly label: string
@@ -116,8 +129,9 @@ export const STORE_SIZE_BUCKETS: readonly {
 ]
 
 /**
- * Per-store Home-dashboard insights. Retrieval/query lists and `netGrowthTokens`
- * are window-scoped; `coldRecords`, `largestRecords` and `sizeDistribution` are
+ * Per-store Home-dashboard insights. Retrieval/query lists, `writeHealth`,
+ * `noOpRewrites` and `netGrowthTokens` are window-scoped; `coldRecords`,
+ * `largestRecords`, `sizeDistribution` and the duplicate counts are
  * current-state (window-independent), matching the overview tiles.
  */
 export interface StoreInsights {
@@ -127,6 +141,10 @@ export interface StoreInsights {
   readonly zeroHitQueries: readonly StoreQueryCount[]
   readonly largestRecords: readonly StoreLargestRecord[]
   readonly sizeDistribution: readonly StoreSizeBucket[]
+  readonly writeHealth: readonly StoreWriteHealthRecord[]
+  readonly noOpRewrites: number
+  readonly duplicateGroups: number
+  readonly duplicateRecords: number
   readonly netGrowthTokens: number
 }
 
