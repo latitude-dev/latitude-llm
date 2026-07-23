@@ -118,7 +118,8 @@ function isCloudflareEmbeddingsSpan(attrs: readonly OtlpKeyValue[], spanName: st
   if (!out) return false
   try {
     const parsed = JSON.parse(out) as Record<string, unknown>
-    const body = (parsed.result && typeof parsed.result === "object" ? parsed.result : parsed) as Record<string, unknown>
+    const result = parsed.result
+    const body = (result && typeof result === "object" ? result : parsed) as Record<string, unknown>
     return Array.isArray(body.data) && Array.isArray(body.shape) && !("choices" in body) && !("content" in body)
   } catch {
     return false
