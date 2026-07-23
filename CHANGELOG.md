@@ -2,6 +2,12 @@
 
 ## Unreleased
 
+## v0.3.65 - 2026-07-23
+
+### Ingestion
+
+- Protected trace ingestion memory by rejecting payloads over 32 MiB and limiting each ingest process to 64 MiB across 16 in-flight payloads; capacity exhaustion now returns a retryable response (ref: #4195).
+
 ## v0.3.64 - 2026-07-22
 
 ### Taxonomy
