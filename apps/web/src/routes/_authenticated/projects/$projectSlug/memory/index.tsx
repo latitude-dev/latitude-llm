@@ -40,8 +40,8 @@ const SORT_COLUMNS = [
   "lastActivity",
 ] as const satisfies readonly MemoryStoresSorting["column"][]
 const SORT_DIRECTIONS = ["asc", "desc"] as const satisfies readonly MemoryStoresSorting["direction"][]
-const SORT_PARAM_PATTERN =
-  /^(records|tokens|sessions|users|writes|reads|ratio|dead|zeroHit|churn|lastActivity):(asc|desc)$/
+// Built from the column/direction allowlists so a new sort field can't silently fall out of the URL validator.
+const SORT_PARAM_PATTERN = new RegExp(`^(${SORT_COLUMNS.join("|")}):(${SORT_DIRECTIONS.join("|")})$`)
 
 function serializeSorting(sorting: MemoryStoresSorting): string {
   return `${sorting.column}:${sorting.direction}`
