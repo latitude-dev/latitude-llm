@@ -174,12 +174,17 @@ function ConversationContent({
   const autoLoadingMoreRef = useRef(false)
   const hasScrolledToSearchRef = useRef<string | null>(null)
 
+  const pendingFocusLoad = focusMessageIndex !== undefined && focusMessageIndex >= messages.length
+
   const { data: spanMaps } = useConversationSpanMaps({
     projectId,
     traceId: traceDetail.traceId,
     startTime: traceDetail.startTime,
     allMessages: messages,
-    enabled: messages.length > 0 && (annotationsEnabled || (navigateToSpan !== undefined && sessionSpanScope == null)),
+    enabled:
+      messages.length > 0 &&
+      !pendingFocusLoad &&
+      (annotationsEnabled || (navigateToSpan !== undefined && sessionSpanScope == null)),
   })
 
   const { data: sessionSpanMaps } = useSessionConversationSpanMaps({
@@ -189,7 +194,7 @@ function ConversationContent({
     sessionStartTime: sessionSpanScope?.sessionStartTime ?? "",
     sessionEndTime: sessionSpanScope?.sessionEndTime ?? "",
     allMessages: messages,
-    enabled: sessionSpanScope != null && messages.length > 0 && navigateToSpan !== undefined,
+    enabled: sessionSpanScope != null && messages.length > 0 && navigateToSpan !== undefined && !pendingFocusLoad,
   })
 
   const navSpanMaps = sessionSpanScope ? sessionSpanMaps : spanMaps
@@ -525,9 +530,10 @@ function ConversationContent({
       target: searchScrollTarget,
     })
     if (hasScrolledToSearchRef.current === scrollKey) return
-    hasScrolledToSearchRef.current = scrollKey
 
-    return scrollToSearchMatch(container, searchScrollTarget)
+    return scrollToSearchMatch(container, searchScrollTarget, "smooth", () => {
+      hasScrolledToSearchRef.current = scrollKey
+    })
   }, [activeMatchIndex, activeSearchQuery, messages.length, scrollRef, searchScrollTarget])
 
   if (textSelectionPopoverControlsRef) {

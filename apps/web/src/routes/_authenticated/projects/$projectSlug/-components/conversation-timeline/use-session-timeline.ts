@@ -17,6 +17,7 @@ import {
 import { useAgentGraph } from "../session-detail-drawer/agents-breakdown/use-agent-graph.ts"
 import {
   annotatorNameFor,
+  toolCallSpanMapFromSpans,
   toTimelineAnnotation,
   toTimelineSpan,
   toTimelineSubagents,
@@ -52,6 +53,8 @@ export function useSessionTimeline({
     startTimeFrom: session.startTime,
     startTimeTo: session.endTime,
   })
+  // Cache-only: conversation tab owns the heavy findMessagesForSession fetch.
+  // Timeline must not wait on (or trigger) that payload for long sessions.
   const { data: spanMaps } = useSessionConversationSpanMaps({
     projectId,
     sessionId: session.sessionId,
@@ -59,7 +62,7 @@ export function useSessionTimeline({
     sessionStartTime: session.startTime,
     sessionEndTime: session.endTime,
     allMessages: conversation.messages,
-    enabled: conversation.messages.length > 0,
+    enabled: false,
   })
   const { data: annotationsData } = useAnnotationsBySession({
     projectId,
@@ -70,12 +73,12 @@ export function useSessionTimeline({
   const agentGraph = useAgentGraph(spans)
 
   return useMemo(() => {
-    if (!traceDetail || !spanMaps || conversation.messages.length === 0) return null
+    if (!traceDetail || conversation.messages.length === 0) return null
     return buildConversationTimeline({
       messages: conversation.messages,
       spans: (spans ?? []).map(toTimelineSpan),
-      messageSpanMap: toSpanIdMap(spanMaps.messageSpanMap),
-      toolCallSpanMap: toSpanIdMap(spanMaps.toolCallSpanMap),
+      messageSpanMap: spanMaps ? toSpanIdMap(spanMaps.messageSpanMap) : {},
+      toolCallSpanMap: spanMaps ? toSpanIdMap(spanMaps.toolCallSpanMap) : toolCallSpanMapFromSpans(spans),
       traces: traces.map(toTimelineTrace),
       annotations: (annotationsData?.items ?? []).map((a) =>
         toTimelineAnnotation(a, annotatorNameFor(a, memberByUserId)),

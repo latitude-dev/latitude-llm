@@ -5,7 +5,10 @@ import { type RefObject, useCallback, useEffect, useMemo, useRef, useState, useS
 import { useProjectScope } from "../../../../../../domains/projects/project-scope.tsx"
 import type { SessionDetailRecord } from "../../../../../../domains/sessions/sessions.functions.ts"
 import { useSpansBySessionCollection } from "../../../../../../domains/spans/spans.collection.ts"
-import { useSessionMomentIntelligence } from "../../../../../../domains/traces/traces.collection.ts"
+import {
+  useSessionMomentIntelligence,
+  useTraceConversationMessages,
+} from "../../../../../../domains/traces/traces.collection.ts"
 import type { SessionMomentIntelligenceRecord, TraceRecord } from "../../../../../../domains/traces/traces.functions.ts"
 import { useParamState } from "../../../../../../lib/hooks/useParamState.ts"
 import { useConversationAnnotationFocus } from "../annotations/hooks/use-conversation-annotation-focus.ts"
@@ -186,6 +189,7 @@ function useScrollToFocusedMoment({
   moments,
   isActive,
   isConversationReady,
+  loadedMessageCount,
   onFocused,
 }: {
   readonly scrollRef: RefObject<HTMLDivElement | null>
@@ -196,6 +200,8 @@ function useScrollToFocusedMoment({
   readonly isActive: boolean
   /** The conversation has rendered, so the scroll container ref is attached. */
   readonly isConversationReady: boolean
+  /** How many conversation messages are currently mounted (chunked load). */
+  readonly loadedMessageCount: number
   readonly onFocused: (labelId: string) => void
 }): void {
   const lastScrolledKey = useRef<string | null>(null)
@@ -215,6 +221,10 @@ function useScrollToFocusedMoment({
       !targetLabel && focusMomentId ? moments.find((row) => row.moment.momentId === focusMomentId) : undefined
     const anchorIndex = targetLabel?.lastMessageIndex ?? momentTarget?.moment.firstMessageIndex
     if (anchorIndex === undefined) return
+
+    // Chunked conversations load 25 messages at a time — wait for the target
+    // index to exist before arming the short DOM timeout.
+    if (anchorIndex >= loadedMessageCount) return
 
     let done = false
 
@@ -252,7 +262,17 @@ function useScrollToFocusedMoment({
       observer.disconnect()
       window.clearTimeout(timeout)
     }
-  }, [focusMomentId, focusMomentKind, isActive, isConversationReady, moments, onFocused, scrollRef, sessionId])
+  }, [
+    focusMomentId,
+    focusMomentKind,
+    isActive,
+    isConversationReady,
+    loadedMessageCount,
+    moments,
+    onFocused,
+    scrollRef,
+    sessionId,
+  ])
 }
 
 /**
@@ -341,6 +361,11 @@ export function ConversationTab({
       onFocusConsumed: () => setFocusAnnotationId(""),
       annotationsEnabled,
     })
+  const conversation = useTraceConversationMessages({
+    projectId,
+    traceId: latestTraceId,
+    enabled: traceDetail != null,
+  })
 
   // Labels are scored per turn, so each badge anchors to the exact message
   // that triggered the detection (label.lastMessageIndex), not the end of the
@@ -378,6 +403,7 @@ export function ConversationTab({
     moments,
     isActive,
     isConversationReady: !isDetailLoading && traceDetail != null,
+    loadedMessageCount: conversation.messages.length,
     onFocused: selectedLabelStore.set,
   })
 
