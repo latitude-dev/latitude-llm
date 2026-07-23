@@ -377,10 +377,7 @@ function CodingMachineInstructions({
   )
 }
 
-/**
- * Cloudflare AI Gateway exports OTLP itself — no SDK. Set up the exporter in the Cloudflare
- * dashboard pointing at Latitude, so this panel shows the config to paste rather than code.
- */
+// Cloudflare AI Gateway exports OTLP itself (no SDK); this panel shows the exporter config to paste.
 function CloudflareAiGatewayInstructions({
   slug,
   defaultApiKeyToken,

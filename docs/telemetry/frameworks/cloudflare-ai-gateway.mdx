@@ -51,9 +51,10 @@ token usage, cost, and prompt/response messages.
     `<PROJECT_SLUG>` with your project's slug.
 
     <Note>
-      To keep the API key out of the destination config, store it in Cloudflare
-      [Secrets Store](https://developers.cloudflare.com/secrets-store/) and reference it from the
-      `Authorization` header.
+      To keep the API key out of the destination config, store the full `Bearer <LATITUDE_API_KEY>`
+      value in Cloudflare [Secrets Store](https://developers.cloudflare.com/secrets-store/) and
+      reference it from the `Authorization` header — Cloudflare injects the secret as the entire
+      header value, so it must include the `Bearer` prefix.
     </Note>
   </Step>
 

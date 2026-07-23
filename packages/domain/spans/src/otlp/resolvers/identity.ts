@@ -64,6 +64,7 @@ function providerFromOpenInferenceMetadata(attrs: readonly OtlpKeyValue[]): stri
 
 const providerCandidates: Candidate<string>[] = [
   fromString("gen_ai.provider.name", aliasProvider), // OTEL GenAI v1.37+
+  fromString("gen_ai.model.provider", aliasProvider), // Cloudflare AI Gateway OTEL export
   fromString("gen_ai.system", aliasProvider), // OTEL GenAI v1.36 deprecated
   fromString("llm.system", aliasProvider), // OpenInference / Arize Phoenix
   fromString("llm.provider", aliasProvider), // OpenInference (DSPy, LiteLLM) — no llm.system

@@ -112,20 +112,22 @@ function parseMessages(attrs: readonly OtlpKeyValue[], key: string): GenAIMessag
 }
 
 // Cloudflare AI Gateway sends the raw request body under gen_ai.input.messages
-// (`{messages:[...], ...}`); pull the messages array and translate as OpenAI-compatible input.
+// (`{messages:[...], ...}`), or under gen_ai.prompt_json in its documented OTEL export; pull the
+// messages array and translate as OpenAI-compatible input.
 function parseCloudflareInput(attrs: readonly OtlpKeyValue[]): GenAIMessage[] {
-  const raw = extractJsonAttr(attrs, "gen_ai.input.messages")
-  const messages = (raw as { messages?: unknown } | undefined)?.messages
+  const raw = extractJsonAttr(attrs, "gen_ai.input.messages") ?? extractJsonAttr(attrs, "gen_ai.prompt_json")
+  const messages = Array.isArray(raw) ? raw : (raw as { messages?: unknown } | undefined)?.messages
   if (!Array.isArray(messages)) return []
   const result = safeTranslate(messages as object[], { from: Provider.OpenAICompletions, direction: "input" })
   return result.error ? [] : (result.messages as GenAIMessage[])
 }
 
 // Cloudflare AI Gateway sends the upstream provider's native response under
-// gen_ai.output.messages, optionally wrapped in `{state, result}`. Dispatch on the response
-// shape: `choices` → OpenAI-compatible, `content[]`+role → Anthropic, embeddings/unknown → none.
+// gen_ai.output.messages (or gen_ai.completion_json in its documented OTEL export), optionally
+// wrapped in `{state, result}`. Dispatch on the response shape: `choices` → OpenAI-compatible,
+// `content[]`+role → Anthropic, embeddings/unknown → none.
 function parseCloudflareOutput(attrs: readonly OtlpKeyValue[]): GenAIMessage[] {
-  const raw = extractJsonAttr(attrs, "gen_ai.output.messages")
+  const raw = extractJsonAttr(attrs, "gen_ai.output.messages") ?? extractJsonAttr(attrs, "gen_ai.completion_json")
   if (!raw || typeof raw !== "object") return []
   const body = raw as Record<string, unknown>
   const obj = (body.result && typeof body.result === "object" ? body.result : body) as Record<string, unknown>

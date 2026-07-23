@@ -63,8 +63,7 @@ interface OnboardingProviderSnippetConfig {
 const crossTsPy = { supportsTypescript: true, supportsPython: true } as const
 const tsOnly = { supportsTypescript: true, supportsPython: false } as const
 const pyOnly = { supportsTypescript: false, supportsPython: true } as const
-// Gateways / proxies with no Latitude SDK — they export OTLP directly, so only the
-// OpenTelemetry panel applies.
+// Gateways/proxies with no Latitude SDK — they export OTLP directly, so only the OpenTelemetry panel applies.
 const otelOnly = { supportsTypescript: false, supportsPython: false } as const
 
 export const ONBOARDING_PROVIDER_SNIPPET_CONFIG: Record<OnboardingProviderId, OnboardingProviderSnippetConfig> = {
@@ -1805,12 +1804,7 @@ export function getOtelExporterLanguageSnippet(
   }
 }
 
-/**
- * Cloudflare AI Gateway is configured in its dashboard via the "Add Otel Destination" dialog
- * (Settings → OpenTelemetry), not in code. These map field-for-field onto that dialog: the OTLP
- * Traces Endpoint, the Content Type, and the two Custom Headers. Header keys are lowercased to
- * match how the dialog displays them. Prefilled with the project slug and API key.
- */
+// Field values for Cloudflare's "Add Otel Destination" dialog: endpoint, content type, and the two custom headers.
 export function cloudflareAiGatewayConfig(projectSlug: string, apiKey: string | null) {
   return {
     endpoint: OTLP_TRACES_ENDPOINT,

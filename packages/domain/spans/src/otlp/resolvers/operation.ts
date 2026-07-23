@@ -114,9 +114,15 @@ const CLOUDFLARE_AIG_SPAN_NAME = "cf.aig.request"
 // reclassify so it isn't miscounted as a generation.
 function isCloudflareEmbeddingsSpan(attrs: readonly OtlpKeyValue[], spanName: string): boolean {
   if (spanName !== CLOUDFLARE_AIG_SPAN_NAME) return false
-  const out = stringAttr(attrs, "gen_ai.output.messages")
+  const out = stringAttr(attrs, "gen_ai.output.messages") ?? stringAttr(attrs, "gen_ai.completion_json")
   if (!out) return false
-  return out.includes('"data"') && out.includes('"shape"') && !out.includes('"choices"') && !out.includes('"content"')
+  try {
+    const parsed = JSON.parse(out) as Record<string, unknown>
+    const body = (parsed.result && typeof parsed.result === "object" ? parsed.result : parsed) as Record<string, unknown>
+    return Array.isArray(body.data) && Array.isArray(body.shape) && !("choices" in body) && !("content" in body)
+  } catch {
+    return false
+  }
 }
 
 // CrewAI's OpenInference instrumentor carries the whole conversation on the AGENT span (no
