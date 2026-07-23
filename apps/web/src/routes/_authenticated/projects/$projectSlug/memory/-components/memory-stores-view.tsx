@@ -156,6 +156,7 @@ export function MemoryStoresView({
     {
       key: "ratio",
       header: "Read:write",
+      headerTooltip: "Records read for every record written in this window.",
       width: 100,
       minWidth: 90,
       align: "end",
@@ -170,6 +171,7 @@ export function MemoryStoresView({
     {
       key: "dead",
       header: "Dead %",
+      headerTooltip: "Share of records not read in the last ~120 days.",
       width: 92,
       minWidth: 80,
       align: "end",
@@ -186,6 +188,7 @@ export function MemoryStoresView({
     {
       key: "zeroHit",
       header: "Zero-hit %",
+      headerTooltip: "Share of searches that returned no records in this window.",
       width: 96,
       minWidth: 84,
       align: "end",
@@ -210,6 +213,7 @@ export function MemoryStoresView({
     {
       key: "churn",
       header: "Churn",
+      headerTooltip: "Average number of updates per record in this window.",
       width: 90,
       minWidth: 80,
       align: "end",
@@ -230,6 +234,7 @@ export function MemoryStoresView({
     {
       key: "netGrowth",
       header: "Net growth",
+      headerTooltip: "Tokens gained or lost in this window.",
       width: 100,
       minWidth: 90,
       align: "end",

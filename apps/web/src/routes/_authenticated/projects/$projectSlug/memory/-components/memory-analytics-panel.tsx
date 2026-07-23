@@ -16,6 +16,34 @@ const UPDATE_COLOR = "hsl(217 91% 60%)"
 const REMOVE_COLOR = "hsl(0 70% 55%)"
 const READS_COLOR = "hsl(199 89% 48%)"
 
+// Fills every bucket over [fromMs, toMs] so quiet days render as zero bars
+// instead of being dropped from the timeline. Bucket keys align with the
+// backend's epoch-floored intervals, so present buckets match on start.
+function denseHistogram(
+  buckets: readonly MemoryActivityBucketRecord[],
+  fromMs: number,
+  toMs: number,
+  bucketSeconds: number,
+): readonly MemoryActivityBucketRecord[] {
+  const bucketMs = bucketSeconds * 1000
+  if (!Number.isFinite(fromMs) || !Number.isFinite(toMs) || toMs <= fromMs) return buckets
+  const byStart = new Map(buckets.map((bucket) => [Date.parse(bucket.bucketStart), bucket]))
+  const firstBucketMs = Math.floor(fromMs / bucketMs) * bucketMs
+  const result: MemoryActivityBucketRecord[] = []
+  for (let startMs = firstBucketMs; startMs <= toMs; startMs += bucketMs) {
+    result.push(
+      byStart.get(startMs) ?? {
+        bucketStart: new Date(startMs).toISOString(),
+        creations: 0,
+        updates: 0,
+        deletions: 0,
+        recordsRetrieved: 0,
+      },
+    )
+  }
+  return result
+}
+
 function AggregationItem({
   label,
   value,
@@ -97,9 +125,14 @@ export function MemoryAnalyticsPanel({
   const [showLeftFade, setShowLeftFade] = useState(false)
   const tiles = useMemo(() => memoryTiles(overview), [overview])
 
+  const denseHistogramBuckets = useMemo(
+    () => denseHistogram(histogram, Date.parse(rangeFromIso), Date.parse(rangeToIso), bucketSeconds),
+    [histogram, rangeFromIso, rangeToIso, bucketSeconds],
+  )
+
   const categories = useMemo(
-    () => histogram.map((bucket) => formatBucketLabel(bucket.bucketStart, bucketSeconds)),
-    [histogram, bucketSeconds],
+    () => denseHistogramBuckets.map((bucket) => formatBucketLabel(bucket.bucketStart, bucketSeconds)),
+    [denseHistogramBuckets, bucketSeconds],
   )
 
   const series = useMemo<readonly ChartSeries[]>(
@@ -107,7 +140,7 @@ export function MemoryAnalyticsPanel({
       {
         kind: "bar",
         name: "Created",
-        values: histogram.map((b) => b.creations),
+        values: denseHistogramBuckets.map((b) => b.creations),
         color: ADD_COLOR,
         axis: "left",
         stack: "changes",
@@ -115,7 +148,7 @@ export function MemoryAnalyticsPanel({
       {
         kind: "bar",
         name: "Updated",
-        values: histogram.map((b) => b.updates),
+        values: denseHistogramBuckets.map((b) => b.updates),
         color: UPDATE_COLOR,
         axis: "left",
         stack: "changes",
@@ -123,7 +156,7 @@ export function MemoryAnalyticsPanel({
       {
         kind: "bar",
         name: "Deleted",
-        values: histogram.map((b) => b.deletions),
+        values: denseHistogramBuckets.map((b) => b.deletions),
         color: REMOVE_COLOR,
         axis: "left",
         stack: "changes",
@@ -131,13 +164,13 @@ export function MemoryAnalyticsPanel({
       {
         kind: "line",
         name: "Records retrieved",
-        values: histogram.map((b) => b.recordsRetrieved),
+        values: denseHistogramBuckets.map((b) => b.recordsRetrieved),
         color: READS_COLOR,
         axis: "right",
         smooth: true,
       },
     ],
-    [histogram],
+    [denseHistogramBuckets],
   )
 
   const isEmpty =
