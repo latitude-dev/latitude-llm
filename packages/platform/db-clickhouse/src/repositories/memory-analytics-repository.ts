@@ -21,6 +21,11 @@ const SCOPE = `organization_id = {organizationId:String} AND project_id = {proje
 const WINDOW = `AND end_time >= {from:DateTime64(6, 'UTC')} AND end_time <= {to:DateTime64(6, 'UTC')}`
 const STORE_FILTER = `AND store_id = {storeId:String}`
 
+// Bounded below the client's connection-pool size (max_open_connections). Fanning every insight
+// query out at once exhausts the pool; a single reset then abandons the batch's undrained response
+// streams, poisoning pooled sockets and cascading into ECONNRESET storms.
+const STORE_INSIGHTS_QUERY_CONCURRENCY = 4
+
 // Retry dedup: collapse re-run duplicate rows to newest per (trace, span, store, record); only data-op kinds count as activity.
 const dedupedWindow = (storeScoped: boolean) => `
   SELECT store_id, record_id, change_kind, content_hash, token_count, record_count, query_text, span_id, session_id, user_id, trace_id, end_time
@@ -451,169 +456,140 @@ export const MemoryAnalyticsRepositoryLive = Layer.effect(
             GROUP BY record_id
             HAVING change_kind != 'remove'
           )`
-        return yield* chSqlClient
-          .query(async (client) => {
-            const [
-              mostReadR,
-              coldR,
-              topQueriesR,
-              zeroHitR,
-              largestR,
-              sizeR,
-              fromR,
-              toR,
-              writeHealthR,
-              revertedR,
-              noOpR,
-              duplicatesR,
-            ] = await Promise.all([
-              client.query({
-                query: `SELECT record_id, count() AS reads
-                        FROM ( ${dedupedWindow(true)} )
-                        WHERE change_kind = 'read' AND record_count > 0 AND record_id != ''
-                        GROUP BY record_id
-                        ORDER BY reads DESC, record_id ASC
-                        LIMIT {listLimit:UInt32}`,
-                query_params: windowParams,
-                format: "JSONEachRow",
-              }),
-              client.query({
-                query: `SELECT lr.record_id AS record_id, lr.token_count AS token_count, lr.never_read AS never_read,
-                               lr.end_time AS last_updated, r.last_read AS last_read
-                        FROM ( ${liveRecords(true)} ) AS lr
-                        LEFT JOIN (
-                          SELECT record_id, max(end_time) AS last_read
-                          FROM memory_events
-                          WHERE ${SCOPE} ${STORE_FILTER} AND change_kind = 'read' AND record_count > 0
-                          GROUP BY record_id
-                        ) AS r ON lr.record_id = r.record_id
-                        ORDER BY lr.never_read DESC, r.last_read ASC, lr.end_time DESC, lr.record_id ASC
-                        LIMIT {listLimit:UInt32}`,
-                query_params: { ...currentParams, listLimit },
-                format: "JSONEachRow",
-              }),
-              client.query({
-                query: `SELECT query_text, uniqExact(span_id) AS searches
-                        FROM ( ${dedupedWindow(true)} )
-                        WHERE change_kind = 'read' AND query_text != ''
-                        GROUP BY query_text
-                        ORDER BY searches DESC, query_text ASC
-                        LIMIT {listLimit:UInt32}`,
-                query_params: windowParams,
-                format: "JSONEachRow",
-              }),
-              client.query({
-                query: `SELECT query_text, uniqExact(span_id) AS searches
-                        FROM ( ${dedupedWindow(true)} )
-                        WHERE change_kind = 'read' AND record_count = 0 AND query_text != ''
-                        GROUP BY query_text
-                        ORDER BY searches DESC, query_text ASC
-                        LIMIT {listLimit:UInt32}`,
-                query_params: windowParams,
-                format: "JSONEachRow",
-              }),
-              client.query({
-                query: `SELECT record_id, token_count
-                        FROM ( ${liveRecords(true)} )
-                        ORDER BY token_count DESC, record_id ASC
-                        LIMIT {listLimit:UInt32}`,
-                query_params: { ...currentParams, listLimit },
-                format: "JSONEachRow",
-              }),
-              client.query({
-                query: `SELECT ${sizeDistributionSelect} FROM ( ${liveRecords(true)} )`,
-                query_params: currentParams,
-                format: "JSONEachRow",
-              }),
-              client.query({
-                query: tokensAtQuery,
-                query_params: { ...currentParams, at: formatCHDate(from) },
-                format: "JSONEachRow",
-              }),
-              client.query({
-                query: tokensAtQuery,
-                query_params: { ...currentParams, at: formatCHDate(to) },
-                format: "JSONEachRow",
-              }),
-              client.query({
-                query: `SELECT record_id,
-                               sum(writes_in_trace)              AS writes,
-                               sum(updates_in_trace)             AS rewrites,
-                               max(writes_in_trace)              AS peak_writes_per_trace
-                        FROM (
-                          SELECT record_id, trace_id,
-                                 count()                          AS writes_in_trace,
-                                 countIf(change_kind = 'update')  AS updates_in_trace
-                          FROM ( ${dedupedWindow(true)} )
-                          WHERE change_kind IN ('add', 'update', 'remove')
-                          GROUP BY record_id, trace_id
-                        )
-                        GROUP BY record_id
-                        ORDER BY writes DESC, record_id ASC
-                        LIMIT {listLimit:UInt32}`,
-                query_params: windowParams,
-                format: "JSONEachRow",
-              }),
-              // A content hash that returns to an earlier value: runs (consecutive-dedup length) exceed distinct hashes.
-              client.query({
-                query: `SELECT record_id
-                        FROM (
-                          SELECT record_id,
-                                 content_hash != lagInFrame(content_hash)
-                                   OVER (PARTITION BY record_id ORDER BY end_time) AS changed
-                          FROM ( ${dedupedWindow(true)} )
-                          WHERE change_kind IN ('add', 'update') AND content_hash != ''
-                        )
-                        GROUP BY record_id
-                        HAVING sum(changed) > uniqExact(content_hash)`,
-                query_params: windowParams,
-                format: "JSONEachRow",
-              }),
-              // Updates whose body is byte-identical to the record's previous version (wasted writes).
-              client.query({
-                query: `SELECT countIf(change_kind = 'update' AND content_hash = prev_hash AND prev_hash != '') AS noop
-                        FROM (
-                          SELECT change_kind, content_hash,
-                                 lagInFrame(content_hash)
-                                   OVER (PARTITION BY record_id ORDER BY end_time) AS prev_hash
-                          FROM ( ${dedupedWindow(true)} )
-                          WHERE change_kind IN ('add', 'update')
-                        )`,
-                query_params: windowParams,
-                format: "JSONEachRow",
-              }),
-              client.query({
-                query: `SELECT count() AS groups, sum(cnt) AS records
-                        FROM (
-                          SELECT content_hash, count() AS cnt
-                          FROM ( ${liveRecords(true)} )
-                          WHERE content_hash != ''
-                          GROUP BY content_hash
-                          HAVING cnt > 1
-                        )`,
-                query_params: currentParams,
-                format: "JSONEachRow",
-              }),
-            ])
-            return {
-              mostRead: await mostReadR.json<MostReadRow>(),
-              cold: await coldR.json<ColdRow>(),
-              topQueries: await topQueriesR.json<QueryCountRow>(),
-              zeroHit: await zeroHitR.json<QueryCountRow>(),
-              largest: await largestR.json<LargestRow>(),
-              size: (await sizeR.json<SizeRow>())[0],
-              tokensFrom: (await fromR.json<TokensRow>())[0],
-              tokensTo: (await toR.json<TokensRow>())[0],
-              writeHealth: await writeHealthR.json<WriteHealthRow>(),
-              reverted: await revertedR.json<RevertedRow>(),
-              noOp: (await noOpR.json<NoOpRow>())[0],
-              duplicates: (await duplicatesR.json<DuplicatesRow>())[0],
-            }
+        const queryRows = <T>(query: string, params: Record<string, unknown>) =>
+          chSqlClient.query(async (client) => {
+            const result = await client.query({ query, query_params: params, format: "JSONEachRow" })
+            return result.json<T>()
           })
-          .pipe(
-            Effect.map((result): StoreInsights => {
-              const { mostRead, cold, topQueries, zeroHit, largest, size, tokensFrom, tokensTo } = result
-              const { writeHealth, reverted, noOp, duplicates } = result
+        const queryRow = <T>(query: string, params: Record<string, unknown>) =>
+          queryRows<T>(query, params).pipe(Effect.map((rows) => rows[0]))
+
+        return yield* Effect.all(
+          [
+            queryRows<MostReadRow>(
+              `SELECT record_id, count() AS reads
+               FROM ( ${dedupedWindow(true)} )
+               WHERE change_kind = 'read' AND record_count > 0 AND record_id != ''
+               GROUP BY record_id
+               ORDER BY reads DESC, record_id ASC
+               LIMIT {listLimit:UInt32}`,
+              windowParams,
+            ),
+            queryRows<ColdRow>(
+              `SELECT lr.record_id AS record_id, lr.token_count AS token_count, lr.never_read AS never_read,
+                      lr.end_time AS last_updated, r.last_read AS last_read
+               FROM ( ${liveRecords(true)} ) AS lr
+               LEFT JOIN (
+                 SELECT record_id, max(end_time) AS last_read
+                 FROM memory_events
+                 WHERE ${SCOPE} ${STORE_FILTER} AND change_kind = 'read' AND record_count > 0
+                 GROUP BY record_id
+               ) AS r ON lr.record_id = r.record_id
+               ORDER BY lr.never_read DESC, r.last_read ASC, lr.end_time DESC, lr.record_id ASC
+               LIMIT {listLimit:UInt32}`,
+              { ...currentParams, listLimit },
+            ),
+            queryRows<QueryCountRow>(
+              `SELECT query_text, uniqExact(span_id) AS searches
+               FROM ( ${dedupedWindow(true)} )
+               WHERE change_kind = 'read' AND query_text != ''
+               GROUP BY query_text
+               ORDER BY searches DESC, query_text ASC
+               LIMIT {listLimit:UInt32}`,
+              windowParams,
+            ),
+            queryRows<QueryCountRow>(
+              `SELECT query_text, uniqExact(span_id) AS searches
+               FROM ( ${dedupedWindow(true)} )
+               WHERE change_kind = 'read' AND record_count = 0 AND query_text != ''
+               GROUP BY query_text
+               ORDER BY searches DESC, query_text ASC
+               LIMIT {listLimit:UInt32}`,
+              windowParams,
+            ),
+            queryRows<LargestRow>(
+              `SELECT record_id, token_count
+               FROM ( ${liveRecords(true)} )
+               ORDER BY token_count DESC, record_id ASC
+               LIMIT {listLimit:UInt32}`,
+              { ...currentParams, listLimit },
+            ),
+            queryRow<SizeRow>(`SELECT ${sizeDistributionSelect} FROM ( ${liveRecords(true)} )`, currentParams),
+            queryRow<TokensRow>(tokensAtQuery, { ...currentParams, at: formatCHDate(from) }),
+            queryRow<TokensRow>(tokensAtQuery, { ...currentParams, at: formatCHDate(to) }),
+            queryRows<WriteHealthRow>(
+              `SELECT record_id,
+                      sum(writes_in_trace)              AS writes,
+                      sum(updates_in_trace)             AS rewrites,
+                      max(writes_in_trace)              AS peak_writes_per_trace
+               FROM (
+                 SELECT record_id, trace_id,
+                        count()                          AS writes_in_trace,
+                        countIf(change_kind = 'update')  AS updates_in_trace
+                 FROM ( ${dedupedWindow(true)} )
+                 WHERE change_kind IN ('add', 'update', 'remove')
+                 GROUP BY record_id, trace_id
+               )
+               GROUP BY record_id
+               ORDER BY writes DESC, record_id ASC
+               LIMIT {listLimit:UInt32}`,
+              windowParams,
+            ),
+            // A content hash that returns to an earlier value: runs (consecutive-dedup length) exceed distinct hashes.
+            queryRows<RevertedRow>(
+              `SELECT record_id
+               FROM (
+                 SELECT record_id, content_hash,
+                        content_hash != lagInFrame(content_hash)
+                          OVER (PARTITION BY record_id ORDER BY end_time) AS changed
+                 FROM ( ${dedupedWindow(true)} )
+                 WHERE change_kind IN ('add', 'update') AND content_hash != ''
+               )
+               GROUP BY record_id
+               HAVING sum(changed) > uniqExact(content_hash)`,
+              windowParams,
+            ),
+            // Updates whose body is byte-identical to the record's previous version (wasted writes).
+            queryRow<NoOpRow>(
+              `SELECT countIf(change_kind = 'update' AND content_hash = prev_hash AND prev_hash != '') AS noop
+               FROM (
+                 SELECT change_kind, content_hash,
+                        lagInFrame(content_hash)
+                          OVER (PARTITION BY record_id ORDER BY end_time) AS prev_hash
+                 FROM ( ${dedupedWindow(true)} )
+                 WHERE change_kind IN ('add', 'update')
+               )`,
+              windowParams,
+            ),
+            queryRow<DuplicatesRow>(
+              `SELECT count() AS groups, sum(cnt) AS records
+               FROM (
+                 SELECT content_hash, count() AS cnt
+                 FROM ( ${liveRecords(true)} )
+                 WHERE content_hash != ''
+                 GROUP BY content_hash
+                 HAVING cnt > 1
+               )`,
+              currentParams,
+            ),
+          ],
+          { concurrency: STORE_INSIGHTS_QUERY_CONCURRENCY },
+        ).pipe(
+          Effect.map(
+            ([
+              mostRead,
+              cold,
+              topQueries,
+              zeroHit,
+              largest,
+              size,
+              tokensFrom,
+              tokensTo,
+              writeHealth,
+              reverted,
+              noOp,
+              duplicates,
+            ]): StoreInsights => {
               const mapQueries = (rows: readonly QueryCountRow[]) =>
                 rows.map((row) => ({ queryText: row.query_text, searches: num(row.searches) }))
               const sizeDistribution: StoreSizeBucket[] = STORE_SIZE_BUCKETS.map((bucket, index) => ({
@@ -650,9 +626,10 @@ export const MemoryAnalyticsRepositoryLive = Layer.effect(
                 duplicateRecords: num(duplicates?.records),
                 netGrowthTokens: num(tokensTo?.tokens) - num(tokensFrom?.tokens),
               }
-            }),
-            Effect.mapError((error) => toRepositoryError(error, "MemoryAnalyticsRepository.getStoreInsights")),
-          )
+            },
+          ),
+          Effect.mapError((error) => toRepositoryError(error, "MemoryAnalyticsRepository.getStoreInsights")),
+        )
       })
 
     return { getMemoryOverview, getMemoryActivityHistogram, listStoresWithMetrics, getStoreInsights }
