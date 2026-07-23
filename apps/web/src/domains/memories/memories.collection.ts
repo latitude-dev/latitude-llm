@@ -79,22 +79,30 @@ export function useSessionMemoryDiff({
   })
 }
 
-/** Project-wide memory roll-up for the analytics tiles. */
+/** Memory roll-up for the analytics tiles. Project-wide, or a single store when `storeId` is passed. */
 export function useMemoryOverview({
   projectId,
+  storeId,
   range,
   enabled = true,
 }: {
   readonly projectId: string
+  readonly storeId?: string
   readonly range: { readonly fromIso: string; readonly toIso: string }
   readonly enabled?: boolean
 }) {
   const scope = useProjectScope()
   return useQuery({
-    queryKey: [...projectScopeKey(scope), "memory-overview", projectId, range.fromIso, range.toIso],
+    queryKey: [...projectScopeKey(scope), "memory-overview", projectId, storeId ?? null, range.fromIso, range.toIso],
     queryFn: () =>
       getMemoryOverview({
-        data: { ...projectScopeData(scope), projectId, fromIso: range.fromIso, toIso: range.toIso },
+        data: {
+          ...projectScopeData(scope),
+          projectId,
+          fromIso: range.fromIso,
+          toIso: range.toIso,
+          ...(storeId !== undefined ? { storeId } : {}),
+        },
       }),
     placeholderData: keepPreviousData,
     staleTime: 30_000,
@@ -102,24 +110,41 @@ export function useMemoryOverview({
   })
 }
 
-/** Bucketed memory activity for the activity chart, over the anchored window. */
+/** Bucketed memory activity for the activity chart, over the anchored window. Project-wide, or a single store when `storeId` is passed. */
 export function useMemoryActivityHistogram({
   projectId,
+  storeId,
   range,
   bucketSeconds,
   enabled = true,
 }: {
   readonly projectId: string
+  readonly storeId?: string
   readonly range: { readonly fromIso: string; readonly toIso: string }
   readonly bucketSeconds: number
   readonly enabled?: boolean
 }) {
   const scope = useProjectScope()
   return useQuery({
-    queryKey: [...projectScopeKey(scope), "memory-activity", projectId, range.fromIso, range.toIso, bucketSeconds],
+    queryKey: [
+      ...projectScopeKey(scope),
+      "memory-activity",
+      projectId,
+      storeId ?? null,
+      range.fromIso,
+      range.toIso,
+      bucketSeconds,
+    ],
     queryFn: () =>
       getMemoryActivityHistogram({
-        data: { ...projectScopeData(scope), projectId, fromIso: range.fromIso, toIso: range.toIso, bucketSeconds },
+        data: {
+          ...projectScopeData(scope),
+          projectId,
+          fromIso: range.fromIso,
+          toIso: range.toIso,
+          bucketSeconds,
+          ...(storeId !== undefined ? { storeId } : {}),
+        },
       }),
     placeholderData: keepPreviousData,
     staleTime: 30_000,

@@ -6,6 +6,7 @@ import {
   FileTextIcon,
   FolderIcon,
   FolderOpenIcon,
+  HouseIcon,
 } from "lucide-react"
 import { useMemo, useState } from "react"
 import type { MemoryStoreSnapshotRecord } from "../../../../../../../domains/memories/memories.functions.ts"
@@ -19,11 +20,15 @@ export function RecordTreeSidebar({
   isLoading,
   selectedRecordId,
   onSelect,
+  onSelectHome,
+  homeActive,
 }: {
   readonly records: MemoryStoreSnapshotRecord["records"]
   readonly isLoading: boolean
   readonly selectedRecordId?: string | undefined
   readonly onSelect: (recordId: string) => void
+  readonly onSelectHome: () => void
+  readonly homeActive: boolean
 }) {
   const tree = useMemo(() => buildRecordTree(records), [records])
   const folderPaths = useMemo(() => collectFolderPaths(tree), [tree])
@@ -56,6 +61,32 @@ export function RecordTreeSidebar({
           </button>
         ) : null}
       </div>
+
+      <button
+        type="button"
+        aria-current={homeActive ? "page" : undefined}
+        onClick={onSelectHome}
+        className={cn(
+          "group flex h-7 w-full shrink-0 cursor-pointer items-center gap-1.5 px-2 text-left transition-colors",
+          "focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-inset focus-visible:ring-ring",
+          homeActive ? "bg-accent" : "hover:bg-muted",
+        )}
+      >
+        <Icon
+          icon={HouseIcon}
+          size="sm"
+          color={homeActive ? "accentForeground" : "foregroundMuted"}
+          className="shrink-0"
+        />
+        <Text.H6
+          color={homeActive ? "accentForeground" : "foreground"}
+          className={cn("min-w-0 flex-1", homeActive && "font-medium")}
+          noWrap
+          ellipsis
+        >
+          Home
+        </Text.H6>
+      </button>
 
       {isLoading ? (
         <div className="flex flex-col gap-1 p-3">

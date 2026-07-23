@@ -17,12 +17,13 @@ const num = (value: string | number | null | undefined): number => Number(value 
 
 const SCOPE = `organization_id = {organizationId:String} AND project_id = {projectId:String}`
 const WINDOW = `AND end_time >= {from:DateTime64(6, 'UTC')} AND end_time <= {to:DateTime64(6, 'UTC')}`
+const STORE_FILTER = `AND store_id = {storeId:String}`
 
 // Retry dedup: collapse re-run duplicate rows to newest per (trace, span, store, record); only data-op kinds count as activity.
-const DEDUPED_WINDOW = `
-  SELECT store_id, record_id, change_kind, token_count, record_count, span_id, session_id, user_id, trace_id, end_time
+const dedupedWindow = (storeScoped: boolean) => `
+  SELECT store_id, record_id, change_kind, content_hash, token_count, record_count, query_text, span_id, session_id, user_id, trace_id, end_time
   FROM memory_events
-  WHERE ${SCOPE} ${WINDOW} AND change_kind IN ('add', 'update', 'remove', 'read')
+  WHERE ${SCOPE} ${WINDOW} ${storeScoped ? STORE_FILTER : ""} AND change_kind IN ('add', 'update', 'remove', 'read')
   ORDER BY trace_id, span_id, store_id, record_id, ingested_at DESC
   LIMIT 1 BY trace_id, span_id, store_id, record_id
 `
@@ -91,16 +92,16 @@ type ActivityRow = {
 }
 
 // Latest non-removed record per (store, record) from `memory_current`, flagged `never_read` against all-time reads that returned a record.
-const LIVE_RECORDS = `
-  SELECT store_id, record_id, token_count,
+const liveRecords = (storeScoped: boolean) => `
+  SELECT store_id, record_id, content_hash, token_count,
          (store_id, record_id) NOT IN (
            SELECT store_id, record_id FROM memory_events
-           WHERE ${SCOPE} AND change_kind = 'read' AND record_count > 0
+           WHERE ${SCOPE} ${storeScoped ? STORE_FILTER : ""} AND change_kind = 'read' AND record_count > 0
          ) AS never_read
   FROM (
-    SELECT store_id, record_id, token_count, change_kind, end_time
+    SELECT store_id, record_id, content_hash, token_count, change_kind, end_time
     FROM memory_current
-    WHERE ${SCOPE}
+    WHERE ${SCOPE} ${storeScoped ? STORE_FILTER : ""}
     ORDER BY store_id, record_id, end_time DESC
     LIMIT 1 BY store_id, record_id
   )
@@ -124,13 +125,15 @@ export const MemoryAnalyticsRepositoryLive = Layer.effect(
     const getMemoryOverview: MemoryAnalyticsRepositoryShape["getMemoryOverview"] = (scope) =>
       Effect.gen(function* () {
         const chSqlClient = (yield* ChSqlClient) as ChSqlClientShape<ClickHouseClient>
+        const storeScoped = scope.storeId !== undefined
+        const storeParams = scope.storeId !== undefined ? { storeId: scope.storeId } : {}
         return yield* chSqlClient
           .query(async (client) => {
             const [currentResult, windowResult] = await Promise.all([
               client.query({
                 query: `SELECT count() AS live_records, sum(token_count) AS live_tokens, sumIf(token_count, never_read) AS dead_tokens
-                        FROM ( ${LIVE_RECORDS} )`,
-                query_params: scopeParams(scope),
+                        FROM ( ${liveRecords(storeScoped)} )`,
+                query_params: { ...scopeParams(scope), ...storeParams },
                 format: "JSONEachRow",
               }),
               client.query({
@@ -139,8 +142,8 @@ export const MemoryAnalyticsRepositoryLive = Layer.effect(
                           uniqExactIf(span_id, change_kind = 'read' AND record_count = 0)  AS zero_hit_searches,
                           countIf(change_kind IN ('add', 'update', 'remove'))             AS writes,
                           countIf(change_kind = 'read' AND record_count > 0)              AS records_retrieved
-                        FROM ( ${DEDUPED_WINDOW} )`,
-                query_params: rangeParams(scope),
+                        FROM ( ${dedupedWindow(storeScoped)} )`,
+                query_params: { ...rangeParams(scope), ...storeParams },
                 format: "JSONEachRow",
               }),
             ])
@@ -170,10 +173,13 @@ export const MemoryAnalyticsRepositoryLive = Layer.effect(
       from,
       to,
       bucketSeconds,
+      storeId,
     }) =>
       Effect.gen(function* () {
         const chSqlClient = (yield* ChSqlClient) as ChSqlClientShape<ClickHouseClient>
         const scope = { organizationId, projectId, from, to }
+        const storeScoped = storeId !== undefined
+        const storeParams = storeId !== undefined ? { storeId } : {}
         return yield* chSqlClient
           .query(async (client) => {
             const result = await client.query({
@@ -183,10 +189,10 @@ export const MemoryAnalyticsRepositoryLive = Layer.effect(
                         countIf(change_kind = 'update')                     AS updates,
                         countIf(change_kind = 'remove')                     AS deletions,
                         countIf(change_kind = 'read' AND record_count > 0)  AS records_retrieved
-                      FROM ( ${DEDUPED_WINDOW} )
+                      FROM ( ${dedupedWindow(storeScoped)} )
                       GROUP BY bucket_start
                       ORDER BY bucket_start ASC`,
-              query_params: { ...rangeParams(scope), bucketSeconds },
+              query_params: { ...rangeParams(scope), bucketSeconds, ...storeParams },
               format: "JSONEachRow",
             })
             return result.json<ActivityRow>()
@@ -244,12 +250,12 @@ export const MemoryAnalyticsRepositoryLive = Layer.effect(
                       uniqExactIf(session_id, session_id != '')                           AS session_count,
                       uniqExactIf(user_id, user_id != '')                                 AS user_count,
                       max(end_time)                                                       AS last_activity_at
-                    FROM ( ${DEDUPED_WINDOW} )
+                    FROM ( ${dedupedWindow(false)} )
                     GROUP BY store_id
                   ),
                   cs AS (
                     SELECT store_id, count() AS live_records, sum(token_count) AS live_tokens, countIf(never_read) AS dead_records
-                    FROM ( ${LIVE_RECORDS} )
+                    FROM ( ${liveRecords(false)} )
                     GROUP BY store_id
                   )
                   SELECT
@@ -274,7 +280,7 @@ export const MemoryAnalyticsRepositoryLive = Layer.effect(
                 format: "JSONEachRow",
               }),
               client.query({
-                query: `SELECT uniqExact(store_id) AS total FROM ( ${DEDUPED_WINDOW} )`,
+                query: `SELECT uniqExact(store_id) AS total FROM ( ${dedupedWindow(false)} )`,
                 query_params: rangeParams(scope),
                 format: "JSONEachRow",
               }),
@@ -324,7 +330,7 @@ export const MemoryAnalyticsRepositoryLive = Layer.effect(
                                 count() AS writes
                               FROM (
                                 SELECT store_id, end_time
-                                FROM ( ${DEDUPED_WINDOW} )
+                                FROM ( ${dedupedWindow(false)} )
                                 WHERE change_kind IN ('add', 'update', 'remove') AND store_id IN {storeIds:Array(String)}
                               )
                               GROUP BY store_id, bucket_start

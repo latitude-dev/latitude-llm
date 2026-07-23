@@ -15,12 +15,20 @@ import type {
  * Every method is org+project+window scoped.
  */
 export interface MemoryAnalyticsRepositoryShape {
-  /** Project-wide roll-up for the analytics tiles (current-state live/dead + window activity). */
-  getMemoryOverview(input: MemoryAnalyticsScope): Effect.Effect<MemoryOverview, RepositoryError, ChSqlClient>
+  /**
+   * Roll-up for the analytics tiles (current-state live/dead + window activity).
+   * Project-wide by default; pass `storeId` to scope it to a single store.
+   */
+  getMemoryOverview(
+    input: MemoryAnalyticsScope & { readonly storeId?: string },
+  ): Effect.Effect<MemoryOverview, RepositoryError, ChSqlClient>
 
-  /** Daily (bucketed) mutation counts by kind + records retrieved, for the activity chart. */
+  /**
+   * Daily (bucketed) mutation counts by kind + records retrieved, for the activity chart.
+   * Project-wide by default; pass `storeId` to scope it to a single store.
+   */
   getMemoryActivityHistogram(
-    input: MemoryAnalyticsScope & { readonly bucketSeconds: number },
+    input: MemoryAnalyticsScope & { readonly bucketSeconds: number; readonly storeId?: string },
   ): Effect.Effect<readonly MemoryActivityBucket[], RepositoryError, ChSqlClient>
 
   /**

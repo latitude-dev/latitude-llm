@@ -14,6 +14,7 @@ import {
 } from "../-components/store-encoding.ts"
 import { RecordContentView } from "./-components/record-content-view.tsx"
 import { RecordTreeSidebar } from "./-components/record-tree-sidebar.tsx"
+import { StoreHomeView } from "./-components/store-home-view.tsx"
 import { StoreUsersList } from "./-components/store-users-list.tsx"
 
 function StoreBreadcrumb() {
@@ -83,6 +84,11 @@ function StoreDetailPage() {
               setRecordParam(encodeRecordParam(recordId))
               setChangeParam("")
             }}
+            onSelectHome={() => {
+              setRecordParam("")
+              setChangeParam("")
+            }}
+            homeActive={selectedRecordId === undefined}
           />
         </Layout.Sidebar>
         <div className="flex min-h-0 min-w-0 flex-1 flex-col">
@@ -96,9 +102,7 @@ function StoreDetailPage() {
               onSelectChange={(spanId) => setChangeParam(spanId ?? "")}
             />
           ) : (
-            <div className="flex flex-1 items-center justify-center p-6">
-              <Text.H5 color="foregroundMuted">Select a record to view its contents.</Text.H5>
-            </div>
+            <StoreHomeView storeId={storeId} />
           )}
         </div>
       </Layout.Body>

@@ -161,9 +161,16 @@ export const getSessionMemoryDiff = createServerFn({ method: "GET" })
     )
   })
 
-/** Project-wide memory roll-up for the analytics tiles, over the selected window. */
+/** Memory roll-up for the analytics tiles, over the selected window. Project-wide, or a single store when `storeId` is given. */
 export const getMemoryOverview = createServerFn({ method: "GET" })
-  .inputValidator(z.object({ projectId: z.string(), fromIso: z.string().datetime(), toIso: z.string().datetime() }))
+  .inputValidator(
+    z.object({
+      projectId: z.string(),
+      fromIso: z.string().datetime(),
+      toIso: z.string().datetime(),
+      storeId: z.string().optional(),
+    }),
+  )
   .handler(async ({ data, context }): Promise<MemoryOverviewRecord> => {
     const orgId = await resolveOrgScope(context)
 
@@ -173,11 +180,12 @@ export const getMemoryOverview = createServerFn({ method: "GET" })
         projectId: ProjectId(data.projectId),
         from: new Date(data.fromIso),
         to: new Date(data.toIso),
+        ...(data.storeId !== undefined ? { storeId: data.storeId } : {}),
       }).pipe(withScopedClickHouse(MemoryAnalyticsRepositoryLive, getClickhouseClient(), orgId), withTracing),
     )
   })
 
-/** Bucketed memory activity (creations/updates/deletions + records retrieved) for the chart. */
+/** Bucketed memory activity (creations/updates/deletions + records retrieved) for the chart. Project-wide, or a single store when `storeId` is given. */
 export const getMemoryActivityHistogram = createServerFn({ method: "GET" })
   .inputValidator(
     z.object({
@@ -185,6 +193,7 @@ export const getMemoryActivityHistogram = createServerFn({ method: "GET" })
       fromIso: z.string().datetime(),
       toIso: z.string().datetime(),
       bucketSeconds: z.number().int().min(1).max(86_400),
+      storeId: z.string().optional(),
     }),
   )
   .handler(async ({ data, context }): Promise<readonly MemoryActivityBucketRecord[]> => {
@@ -197,6 +206,7 @@ export const getMemoryActivityHistogram = createServerFn({ method: "GET" })
         from: new Date(data.fromIso),
         to: new Date(data.toIso),
         bucketSeconds: data.bucketSeconds,
+        ...(data.storeId !== undefined ? { storeId: data.storeId } : {}),
       }).pipe(withScopedClickHouse(MemoryAnalyticsRepositoryLive, getClickhouseClient(), orgId), withTracing),
     )
   })
