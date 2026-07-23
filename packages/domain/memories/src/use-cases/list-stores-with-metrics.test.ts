@@ -7,6 +7,7 @@ import type { MemoryCurrentEntry } from "../entities/memory-current.ts"
 import type { MemoryEvent } from "../entities/memory-event.ts"
 import { MemoryAnalyticsRepository } from "../ports/memory-analytics-repository.ts"
 import { createFakeMemoryAnalyticsRepository } from "../testing/index.ts"
+import { getMemoryActivityHistogramUseCase } from "./get-memory-activity-histogram.ts"
 import { getMemoryOverviewUseCase } from "./get-memory-overview.ts"
 import { listStoresWithMetricsUseCase } from "./list-stores-with-metrics.ts"
 
@@ -276,5 +277,32 @@ describe("getMemoryOverview", () => {
     expect(o.zeroHitSearches).toBe(1)
     expect(o.writes).toBe(2) // two in-window adds; the at(500) update is excluded
     expect(o.recordsRetrieved).toBe(1)
+  })
+})
+
+describe("getMemoryActivityHistogram", () => {
+  it("buckets mutations by kind and counts records retrieved, excluding zero-hit reads", async () => {
+    const memory = createFakeMemoryAnalyticsRepository()
+    seed(
+      memory,
+      [
+        makeEvent({ recordId: "r1", changeKind: "add", endTime: at(10) }),
+        makeEvent({ recordId: "r1", changeKind: "update", endTime: at(20) }),
+        makeEvent({ recordId: "r2", changeKind: "remove", endTime: at(30) }),
+        makeEvent({ recordId: "r1", changeKind: "read", recordCount: 2, endTime: at(40) }),
+        makeEvent({ recordId: "", changeKind: "read", recordCount: 0, endTime: at(45) }),
+        // out of window → excluded
+        makeEvent({ recordId: "r3", changeKind: "add", endTime: at(500) }),
+      ],
+      [],
+    )
+    const buckets = await Effect.runPromise(
+      getMemoryActivityHistogramUseCase({ organizationId, projectId, from, to, bucketSeconds: 3600 }).pipe(
+        Effect.provide(layerFor(memory)),
+      ),
+    )
+    // Every in-window event falls in the same hourly bucket.
+    expect(buckets).toHaveLength(1)
+    expect(buckets[0]).toMatchObject({ creations: 1, updates: 1, deletions: 1, recordsRetrieved: 1 })
   })
 })

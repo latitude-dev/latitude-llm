@@ -1,6 +1,7 @@
 export {
   isMemoryStoreMetricSortField,
   MEMORY_STORE_METRIC_SORT_FIELDS,
+  type MemoryActivityBucket,
   type MemoryActivityWriteBucket,
   type MemoryAnalyticsScope,
   type MemoryOverview,
@@ -90,6 +91,10 @@ export {
   type MemorySummaryTotals,
   type SessionMemorySummary,
 } from "./use-cases/compute-session-memory-summary.ts"
+export {
+  type GetMemoryActivityHistogramInput,
+  getMemoryActivityHistogramUseCase,
+} from "./use-cases/get-memory-activity-histogram.ts"
 export {
   type GetMemoryOverviewInput,
   getMemoryOverviewUseCase,

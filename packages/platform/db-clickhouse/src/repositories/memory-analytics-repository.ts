@@ -1,5 +1,6 @@
 import type { ClickHouseClient } from "@clickhouse/client"
 import type {
+  MemoryActivityBucket,
   MemoryActivityWriteBucket,
   MemoryAnalyticsRepositoryShape,
   MemoryAnalyticsScope,
@@ -86,6 +87,14 @@ type OverviewWindowRow = {
   readonly records_retrieved: string | number
 }
 
+type ActivityRow = {
+  readonly bucket_start: string
+  readonly creations: string | number
+  readonly updates: string | number
+  readonly deletions: string | number
+  readonly records_retrieved: string | number
+}
+
 // Latest live (non-removed) record per (store, record) from `memory_current`,
 // with a `never_read` flag against all-time reads that returned a record.
 const LIVE_RECORDS = `
@@ -158,6 +167,51 @@ export const MemoryAnalyticsRepositoryLive = Layer.effect(
               }),
             ),
             Effect.mapError((error) => toRepositoryError(error, "MemoryAnalyticsRepository.getMemoryOverview")),
+          )
+      })
+
+    const getMemoryActivityHistogram: MemoryAnalyticsRepositoryShape["getMemoryActivityHistogram"] = ({
+      organizationId,
+      projectId,
+      from,
+      to,
+      bucketSeconds,
+    }) =>
+      Effect.gen(function* () {
+        const chSqlClient = (yield* ChSqlClient) as ChSqlClientShape<ClickHouseClient>
+        const scope = { organizationId, projectId, from, to }
+        return yield* chSqlClient
+          .query(async (client) => {
+            const result = await client.query({
+              query: `SELECT
+                        toDateTime(intDiv(toUnixTimestamp(end_time), {bucketSeconds:UInt32}) * {bucketSeconds:UInt32}, 'UTC') AS bucket_start,
+                        countIf(change_kind = 'add')                        AS creations,
+                        countIf(change_kind = 'update')                     AS updates,
+                        countIf(change_kind = 'remove')                     AS deletions,
+                        countIf(change_kind = 'read' AND record_count > 0)  AS records_retrieved
+                      FROM ( ${DEDUPED_WINDOW} )
+                      GROUP BY bucket_start
+                      ORDER BY bucket_start ASC`,
+              query_params: { ...rangeParams(scope), bucketSeconds },
+              format: "JSONEachRow",
+            })
+            return result.json<ActivityRow>()
+          })
+          .pipe(
+            Effect.map((rows) =>
+              rows.map(
+                (row): MemoryActivityBucket => ({
+                  bucketStart: parseCHDate(row.bucket_start).toISOString(),
+                  creations: num(row.creations),
+                  updates: num(row.updates),
+                  deletions: num(row.deletions),
+                  recordsRetrieved: num(row.records_retrieved),
+                }),
+              ),
+            ),
+            Effect.mapError((error) =>
+              toRepositoryError(error, "MemoryAnalyticsRepository.getMemoryActivityHistogram"),
+            ),
           )
       })
 
@@ -342,6 +396,6 @@ export const MemoryAnalyticsRepositoryLive = Layer.effect(
         return { items, totalCount, hasMore, limit, offset }
       })
 
-    return { getMemoryOverview, listStoresWithMetrics }
+    return { getMemoryOverview, getMemoryActivityHistogram, listStoresWithMetrics }
   }),
 )

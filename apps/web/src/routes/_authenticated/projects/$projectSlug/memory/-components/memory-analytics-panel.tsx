@@ -1,28 +1,37 @@
-import { Button, Icon, Skeleton, Text } from "@repo/ui"
+import { Button, Chart, type ChartSeries, HistogramSkeleton, Icon, Skeleton, Text } from "@repo/ui"
 import { formatCount } from "@repo/utils"
 import { BarChart2, ChevronDown, ChevronUp } from "lucide-react"
 import { useMemo, useState } from "react"
-import type { MemoryOverviewRecord } from "../../../../../../domains/memories/memories.functions.ts"
-import { formatPercent, formatRatio } from "./memory-formatters.ts"
+import type {
+  MemoryActivityBucketRecord,
+  MemoryOverviewRecord,
+} from "../../../../../../domains/memories/memories.functions.ts"
+import { ChartHeader } from "../../-components/chart-header.tsx"
+import { formatBucketLabel, formatPercent, formatRatio } from "./memory-formatters.ts"
+
+// Creations/updates/deletions follow the record-diff colors used elsewhere;
+// records retrieved rides the right axis as a line against write volume.
+const ADD_COLOR = "hsl(142 71% 45%)"
+const UPDATE_COLOR = "hsl(217 91% 60%)"
+const REMOVE_COLOR = "hsl(0 70% 55%)"
+const READS_COLOR = "hsl(199 89% 48%)"
 
 function AggregationItem({
   label,
   value,
   subtext,
   isLoading,
-  skeletonWidthClassName = "w-16",
 }: {
   readonly label: string
   readonly value: string
   readonly subtext?: string | undefined
   readonly isLoading?: boolean
-  readonly skeletonWidthClassName?: string
 }) {
   return (
     <div className="flex basis-[176px] min-w-[176px] shrink-0 flex-col gap-2">
       <Text.H6 color="foregroundMuted">{label}</Text.H6>
       {isLoading ? (
-        <Skeleton className={`h-5 ${skeletonWidthClassName}`} />
+        <Skeleton className="h-5 w-16" />
       ) : (
         <div className="flex flex-col gap-0.5">
           <Text.H5 color="foreground" className="tabular-nums">
@@ -69,14 +78,70 @@ function memoryTiles(overview: MemoryOverviewRecord | undefined): readonly Memor
 
 export function MemoryAnalyticsPanel({
   overview,
+  histogram,
+  bucketSeconds,
+  rangeFromIso,
+  rangeToIso,
+  isAllTime,
   isLoading,
 }: {
   readonly overview: MemoryOverviewRecord | undefined
+  readonly histogram: readonly MemoryActivityBucketRecord[]
+  readonly bucketSeconds: number
+  readonly rangeFromIso: string
+  readonly rangeToIso: string
+  readonly isAllTime: boolean
   readonly isLoading: boolean
 }) {
   const [collapsed, setCollapsed] = useState(false)
   const [showLeftFade, setShowLeftFade] = useState(false)
   const tiles = useMemo(() => memoryTiles(overview), [overview])
+
+  const categories = useMemo(
+    () => histogram.map((bucket) => formatBucketLabel(bucket.bucketStart, bucketSeconds)),
+    [histogram, bucketSeconds],
+  )
+
+  const series = useMemo<readonly ChartSeries[]>(
+    () => [
+      {
+        kind: "bar",
+        name: "Created",
+        values: histogram.map((b) => b.creations),
+        color: ADD_COLOR,
+        axis: "left",
+        stack: "changes",
+      },
+      {
+        kind: "bar",
+        name: "Updated",
+        values: histogram.map((b) => b.updates),
+        color: UPDATE_COLOR,
+        axis: "left",
+        stack: "changes",
+      },
+      {
+        kind: "bar",
+        name: "Deleted",
+        values: histogram.map((b) => b.deletions),
+        color: REMOVE_COLOR,
+        axis: "left",
+        stack: "changes",
+      },
+      {
+        kind: "line",
+        name: "Records retrieved",
+        values: histogram.map((b) => b.recordsRetrieved),
+        color: READS_COLOR,
+        axis: "right",
+        smooth: true,
+      },
+    ],
+    [histogram],
+  )
+
+  const isEmpty =
+    histogram.length === 0 || histogram.every((b) => b.creations + b.updates + b.deletions + b.recordsRetrieved === 0)
 
   if (collapsed) {
     return (
@@ -128,6 +193,34 @@ export function MemoryAnalyticsPanel({
             <Icon icon={ChevronUp} size="sm" />
           </Button>
         </div>
+
+        {isLoading ? (
+          <div className="px-4 py-3">
+            <HistogramSkeleton height={160} />
+          </div>
+        ) : isEmpty ? (
+          <div className="flex w-full min-h-[80px] items-center justify-center px-4 py-3">
+            <Text.H6 color="foregroundMuted">No memory activity in this time window</Text.H6>
+          </div>
+        ) : (
+          <>
+            <ChartHeader
+              title="Memory activity over time"
+              fromIso={rangeFromIso}
+              toIso={rangeToIso}
+              isAllTime={isAllTime}
+            />
+            <div className="px-4 py-3">
+              <Chart
+                categories={categories}
+                series={series}
+                height={160}
+                xAxisLabelFontSize={10}
+                ariaLabel="Memory activity over time"
+              />
+            </div>
+          </>
+        )}
       </div>
     </div>
   )

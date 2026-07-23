@@ -1,6 +1,7 @@
 import type { ChSqlClient, RepositoryError } from "@domain/shared"
 import { Context, type Effect } from "effect"
 import type {
+  MemoryActivityBucket,
   MemoryAnalyticsScope,
   MemoryOverview,
   MemoryStoreMetricsListOptions,
@@ -16,6 +17,11 @@ import type {
 export interface MemoryAnalyticsRepositoryShape {
   /** Project-wide roll-up for the analytics tiles (current-state live/dead + window activity). */
   getMemoryOverview(input: MemoryAnalyticsScope): Effect.Effect<MemoryOverview, RepositoryError, ChSqlClient>
+
+  /** Daily (bucketed) mutation counts by kind + records retrieved, for the activity chart. */
+  getMemoryActivityHistogram(
+    input: MemoryAnalyticsScope & { readonly bucketSeconds: number },
+  ): Effect.Effect<readonly MemoryActivityBucket[], RepositoryError, ChSqlClient>
 
   /**
    * Stores with any add/update/remove/read event in the window, one insight row

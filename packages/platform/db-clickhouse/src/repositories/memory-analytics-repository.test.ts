@@ -281,3 +281,23 @@ describe("MemoryAnalyticsRepository.getMemoryOverview", () => {
     expect(o.recordsRetrieved).toBe(1)
   })
 })
+
+describe("MemoryAnalyticsRepository.getMemoryActivityHistogram", () => {
+  it("buckets mutations by kind and records retrieved, excluding zero-hit and out-of-window events", async () => {
+    await seed((repo) =>
+      repo.insertEvents([
+        makeEvent({ recordId: "r1", changeKind: "add", endTime: at(10) }),
+        makeEvent({ recordId: "r1", changeKind: "update", endTime: at(20) }),
+        makeEvent({ recordId: "r2", changeKind: "remove", endTime: at(30) }),
+        makeEvent({ recordId: "r1", changeKind: "read", recordCount: 2, endTime: at(40) }),
+        makeEvent({ recordId: "", changeKind: "read", recordCount: 0, endTime: at(45) }),
+        makeEvent({ recordId: "r3", changeKind: "add", endTime: at(500) }),
+      ]),
+    )
+    const buckets = await query((repo) =>
+      repo.getMemoryActivityHistogram({ organizationId, projectId, from, to, bucketSeconds: 3600 }),
+    )
+    expect(buckets).toHaveLength(1)
+    expect(buckets[0]).toMatchObject({ creations: 1, updates: 1, deletions: 1, recordsRetrieved: 1 })
+  })
+})

@@ -1,6 +1,10 @@
 import { createFileRoute } from "@tanstack/react-router"
 import { useCallback, useMemo } from "react"
-import { useMemoryOverview, useMemoryStoresWithMetrics } from "../../../../../domains/memories/memories.collection.ts"
+import {
+  useMemoryActivityHistogram,
+  useMemoryOverview,
+  useMemoryStoresWithMetrics,
+} from "../../../../../domains/memories/memories.collection.ts"
 import { useAnalyticsTimeWindow } from "../../../../../domains/projects/use-analytics-time-window.ts"
 import { useProjectFirstTraceAt, useProjectLastTraceAt } from "../../../../../domains/traces/traces.collection.ts"
 import { ListingLayout as Layout } from "../../../../../layouts/ListingLayout/index.tsx"
@@ -96,6 +100,13 @@ function MemoryPage() {
     () => pickMemoryTrendBucketSeconds(Date.parse(range.toIso) - Date.parse(range.fromIso)),
     [range],
   )
+  // The chart clamps to the anchored window (≤ project window, latest-activity
+  // anchored when All time) so it never scans the full history per bucket.
+  const histogramRange = useMemo(() => (tw.isAllTime ? tw.trendRange : range), [tw.isAllTime, tw.trendRange, range])
+  const histogramBucketSeconds = useMemo(
+    () => pickMemoryTrendBucketSeconds(Date.parse(histogramRange.toIso) - Date.parse(histogramRange.fromIso)),
+    [histogramRange],
+  )
 
   const { stores, isLoading, infiniteScroll } = useMemoryStoresWithMetrics({
     projectId: project.id,
@@ -105,6 +116,11 @@ function MemoryPage() {
     trendBucketSeconds,
   })
   const { data: overview, isLoading: overviewLoading } = useMemoryOverview({ projectId: project.id, range })
+  const { data: histogram = [], isLoading: histogramLoading } = useMemoryActivityHistogram({
+    projectId: project.id,
+    range: histogramRange,
+    bucketSeconds: histogramBucketSeconds,
+  })
 
   // Empty over All time means the project has never had memory activity — a
   // real empty state (a picked window that's empty just shows the table's blank slate).
@@ -138,7 +154,15 @@ function MemoryPage() {
       ) : (
         <>
           <div className="px-6">
-            <MemoryAnalyticsPanel overview={overview} isLoading={overviewLoading} />
+            <MemoryAnalyticsPanel
+              overview={overview}
+              histogram={histogram}
+              bucketSeconds={histogramBucketSeconds}
+              rangeFromIso={histogramRange.fromIso}
+              rangeToIso={histogramRange.toIso}
+              isAllTime={tw.isAllTime}
+              isLoading={overviewLoading || histogramLoading}
+            />
           </div>
           <MemoryStoresView
             stores={stores}

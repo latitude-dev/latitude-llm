@@ -4,6 +4,7 @@ import { keepPreviousData, useInfiniteQuery, useQuery } from "@tanstack/react-qu
 import { useMemo } from "react"
 import { projectScopeData, projectScopeKey, useProjectScope } from "../projects/project-scope.tsx"
 import {
+  getMemoryActivityHistogram,
   getMemoryOverview,
   getMemoryRecord,
   getMemoryRecordChangeDiff,
@@ -94,6 +95,31 @@ export function useMemoryOverview({
     queryFn: () =>
       getMemoryOverview({
         data: { ...projectScopeData(scope), projectId, fromIso: range.fromIso, toIso: range.toIso },
+      }),
+    placeholderData: keepPreviousData,
+    staleTime: 30_000,
+    enabled: enabled && projectId.length > 0,
+  })
+}
+
+/** Bucketed memory activity for the activity chart, over the anchored window. */
+export function useMemoryActivityHistogram({
+  projectId,
+  range,
+  bucketSeconds,
+  enabled = true,
+}: {
+  readonly projectId: string
+  readonly range: { readonly fromIso: string; readonly toIso: string }
+  readonly bucketSeconds: number
+  readonly enabled?: boolean
+}) {
+  const scope = useProjectScope()
+  return useQuery({
+    queryKey: [...projectScopeKey(scope), "memory-activity", projectId, range.fromIso, range.toIso, bucketSeconds],
+    queryFn: () =>
+      getMemoryActivityHistogram({
+        data: { ...projectScopeData(scope), projectId, fromIso: range.fromIso, toIso: range.toIso, bucketSeconds },
       }),
     placeholderData: keepPreviousData,
     staleTime: 30_000,

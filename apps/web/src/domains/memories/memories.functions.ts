@@ -3,11 +3,13 @@ import {
   computeRecordHistoryUseCase,
   computeSessionMemoryDiffUseCase,
   computeSessionMemorySummaryUseCase,
+  getMemoryActivityHistogramUseCase,
   getMemoryOverviewUseCase,
   listRecordUsersUseCase,
   listStoresWithMetricsUseCase,
   listStoreUsersUseCase,
   listUserStoresUseCase,
+  type MemoryActivityBucket,
   type MemoryChangeKind,
   type MemoryOverview,
   type RecordChangeDiff,
@@ -31,6 +33,8 @@ export type SessionMemorySummaryRecord = SessionMemorySummary
 export type SessionMemoryDiffRecord = SessionMemoryDiff
 
 export type MemoryOverviewRecord = MemoryOverview
+
+export type MemoryActivityBucketRecord = MemoryActivityBucket
 
 export interface MemoryActivityWriteBucketRecord {
   readonly bucketStart: string
@@ -169,6 +173,30 @@ export const getMemoryOverview = createServerFn({ method: "GET" })
         projectId: ProjectId(data.projectId),
         from: new Date(data.fromIso),
         to: new Date(data.toIso),
+      }).pipe(withScopedClickHouse(MemoryAnalyticsRepositoryLive, getClickhouseClient(), orgId), withTracing),
+    )
+  })
+
+/** Bucketed memory activity (creations/updates/deletions + records retrieved) for the chart. */
+export const getMemoryActivityHistogram = createServerFn({ method: "GET" })
+  .inputValidator(
+    z.object({
+      projectId: z.string(),
+      fromIso: z.string().datetime(),
+      toIso: z.string().datetime(),
+      bucketSeconds: z.number().int().min(1).max(86_400),
+    }),
+  )
+  .handler(async ({ data, context }): Promise<readonly MemoryActivityBucketRecord[]> => {
+    const orgId = await resolveOrgScope(context)
+
+    return Effect.runPromise(
+      getMemoryActivityHistogramUseCase({
+        organizationId: orgId,
+        projectId: ProjectId(data.projectId),
+        from: new Date(data.fromIso),
+        to: new Date(data.toIso),
+        bucketSeconds: data.bucketSeconds,
       }).pipe(withScopedClickHouse(MemoryAnalyticsRepositoryLive, getClickhouseClient(), orgId), withTracing),
     )
   })

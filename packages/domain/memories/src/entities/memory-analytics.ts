@@ -30,6 +30,16 @@ export interface MemoryActivityWriteBucket {
   readonly writes: number
 }
 
+/** One time bucket for the activity chart: mutation counts by kind + records retrieved. */
+export interface MemoryActivityBucket {
+  /** Bucket start instant (UTC ISO string). */
+  readonly bucketStart: string
+  readonly creations: number
+  readonly updates: number
+  readonly deletions: number
+  readonly recordsRetrieved: number
+}
+
 /**
  * One store row with insight metrics. `live*`/`deadRecords` come from
  * `memory_current` and ignore the window (current state); every other count is
