@@ -1,4 +1,4 @@
-import { ProjectId, SessionId, SpanId, TraceId } from "@domain/shared"
+import { ProjectId, SpanId, TraceId } from "@domain/shared"
 import type { Operation, Span, SpanDetail, SpanKind, SpanMessagesData, SpanStatusCode } from "@domain/spans"
 import { SpanRepository } from "@domain/spans"
 import { SpanRepositoryLive } from "@platform/db-clickhouse"
@@ -248,32 +248,6 @@ export const listConversationMessageSpans = createServerFn({ method: "GET" })
           traceId: TraceId(data.traceId),
           startTimeFrom: new Date(data.startTime.getTime() - 60 * 1000),
           startTimeTo: new Date(data.startTime.getTime() + 24 * 60 * 60 * 1000),
-        })
-      }).pipe(withScopedClickHouse(SpanRepositoryLive, getClickhouseClient(), orgId), withTracing),
-    )
-    return spans.map(serializeSpanMessages)
-  })
-
-export const listSessionConversationMessageSpans = createServerFn({ method: "GET" })
-  .inputValidator(
-    z.object({
-      projectId: z.string(),
-      sessionId: z.string(),
-      sessionStartTime: dateTimeParamSchema,
-      sessionEndTime: dateTimeParamSchema,
-    }),
-  )
-  .handler(async ({ data, context }): Promise<SpanMessagesRecord[]> => {
-    const orgId = await resolveOrgScope(context)
-    const spans = await Effect.runPromise(
-      Effect.gen(function* () {
-        const spanRepo = yield* SpanRepository
-        return yield* spanRepo.findMessagesForSession({
-          organizationId: orgId,
-          projectId: ProjectId(data.projectId),
-          sessionId: SessionId(data.sessionId),
-          startTimeFrom: new Date(data.sessionStartTime.getTime() - 60 * 1000),
-          startTimeTo: new Date(data.sessionEndTime.getTime() + 24 * 60 * 60 * 1000),
         })
       }).pipe(withScopedClickHouse(SpanRepositoryLive, getClickhouseClient(), orgId), withTracing),
     )

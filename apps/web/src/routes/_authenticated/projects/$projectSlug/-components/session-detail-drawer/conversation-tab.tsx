@@ -443,9 +443,8 @@ export function ConversationTab({
       timeline={timeline}
       focusMessageIndex={focusMessageIndex}
       sessionSpanScope={{
-        sessionId,
-        sessionStartTime: session.startTime,
-        sessionEndTime: session.endTime,
+        traces,
+        sessionSpans: sessionSpans ?? [],
       }}
       agentGraph={agentGraph}
       {...(navigateToSpan ? { navigateToSpan } : {})}

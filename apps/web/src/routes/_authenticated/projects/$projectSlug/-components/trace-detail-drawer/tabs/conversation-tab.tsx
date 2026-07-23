@@ -31,6 +31,7 @@ import {
   useSessionConversationSpanMaps,
   useSpansByTraceCollection,
 } from "../../../../../../../domains/spans/spans.collection.ts"
+import type { SpanRecord } from "../../../../../../../domains/spans/spans.functions.ts"
 import {
   useTraceConversationMessages,
   useTraceSearchHighlights,
@@ -134,13 +135,12 @@ function ConversationContent({
   readonly traceDetail: TraceDetailRecord
   readonly messages: readonly GenAIMessage[]
   readonly navigateToSpan?: ((spanId: string, traceId?: string) => void) | undefined
-  /** When set, message/tool-call navigation links resolve against ALL session spans
+  /** When set, message/tool-call navigation links resolve against session spans
    *  (not just this trace); annotations still anchor to this trace. */
   readonly sessionSpanScope?:
     | {
-        readonly sessionId: string
-        readonly sessionStartTime: string
-        readonly sessionEndTime: string
+        readonly traces: readonly { readonly traceId: string; readonly startTime: string }[]
+        readonly sessionSpans?: readonly SpanRecord[]
       }
     | undefined
   readonly projectId: string
@@ -189,11 +189,10 @@ function ConversationContent({
 
   const { data: sessionSpanMaps } = useSessionConversationSpanMaps({
     projectId,
-    sessionId: sessionSpanScope?.sessionId ?? "",
-    latestTraceId: traceDetail.traceId,
-    sessionStartTime: sessionSpanScope?.sessionStartTime ?? "",
-    sessionEndTime: sessionSpanScope?.sessionEndTime ?? "",
-    allMessages: messages,
+    traces: sessionSpanScope?.traces ?? [],
+    loadedMessages: messages,
+    totalMessages,
+    sessionSpans: sessionSpanScope?.sessionSpans,
     enabled: sessionSpanScope != null && messages.length > 0 && navigateToSpan !== undefined && !pendingFocusLoad,
   })
 
@@ -733,13 +732,12 @@ export function ConversationTab({
   readonly isDetailLoading: boolean
   /** Optional callback to navigate to a span. If not provided, message/tool call actions are hidden. */
   readonly navigateToSpan?: ((spanId: string, traceId?: string) => void) | undefined
-  /** When set, message/tool-call navigation links resolve against ALL session spans
+  /** When set, message/tool-call navigation links resolve against session spans
    *  (not just this trace); annotations still anchor to this trace. */
   readonly sessionSpanScope?:
     | {
-        readonly sessionId: string
-        readonly sessionStartTime: string
-        readonly sessionEndTime: string
+        readonly traces: readonly { readonly traceId: string; readonly startTime: string }[]
+        readonly sessionSpans?: readonly SpanRecord[]
       }
     | undefined
   readonly projectId: string

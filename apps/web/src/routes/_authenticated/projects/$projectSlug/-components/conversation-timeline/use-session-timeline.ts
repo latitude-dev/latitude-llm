@@ -53,16 +53,13 @@ export function useSessionTimeline({
     startTimeFrom: session.startTime,
     startTimeTo: session.endTime,
   })
-  // Cache-only: conversation tab owns the heavy findMessagesForSession fetch.
-  // Timeline must not wait on (or trigger) that payload for long sessions.
   const { data: spanMaps } = useSessionConversationSpanMaps({
     projectId,
-    sessionId: session.sessionId,
-    latestTraceId,
-    sessionStartTime: session.startTime,
-    sessionEndTime: session.endTime,
-    allMessages: conversation.messages,
-    enabled: false,
+    traces,
+    loadedMessages: conversation.messages,
+    totalMessages: conversation.totalMessages,
+    sessionSpans: spans,
+    enabled: conversation.messages.length > 0,
   })
   const { data: annotationsData } = useAnnotationsBySession({
     projectId,
