@@ -1,4 +1,16 @@
 export {
+  isMemoryStoreMetricSortField,
+  MEMORY_STORE_METRIC_SORT_FIELDS,
+  type MemoryActivityBucket,
+  type MemoryActivityWriteBucket,
+  type MemoryAnalyticsScope,
+  type MemoryOverview,
+  type MemoryStoreMetricSortField,
+  type MemoryStoreMetricsItem,
+  type MemoryStoreMetricsListOptions,
+  type MemoryStoreMetricsPage,
+} from "./entities/memory-analytics.ts"
+export {
   type MemoryBlob,
   memoryBlobSchema,
 } from "./entities/memory-blob.ts"
@@ -44,6 +56,10 @@ export {
   type MemoryUserStore,
 } from "./entities/memory-store.ts"
 export {
+  MemoryAnalyticsRepository,
+  type MemoryAnalyticsRepositoryShape,
+} from "./ports/memory-analytics-repository.ts"
+export {
   MemoryRepository,
   type MemoryRepositoryShape,
 } from "./ports/memory-repository.ts"
@@ -76,6 +92,14 @@ export {
   type SessionMemorySummary,
 } from "./use-cases/compute-session-memory-summary.ts"
 export {
+  type GetMemoryActivityHistogramInput,
+  getMemoryActivityHistogramUseCase,
+} from "./use-cases/get-memory-activity-histogram.ts"
+export {
+  type GetMemoryOverviewInput,
+  getMemoryOverviewUseCase,
+} from "./use-cases/get-memory-overview.ts"
+export {
   type ListMemoryStoresInput,
   listMemoryStoresUseCase,
 } from "./use-cases/list-memory-stores.ts"
@@ -87,6 +111,10 @@ export {
   type ListStoreUsersInput,
   listStoreUsersUseCase,
 } from "./use-cases/list-store-users.ts"
+export {
+  type ListStoresWithMetricsInput,
+  listStoresWithMetricsUseCase,
+} from "./use-cases/list-stores-with-metrics.ts"
 export {
   type ListUserStoresInput,
   listUserStoresUseCase,

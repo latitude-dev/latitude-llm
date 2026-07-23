@@ -1,8 +1,11 @@
+import type { MemoryStoreMetricSortField } from "@domain/memories"
 import type { InfiniteTableInfiniteScroll } from "@repo/ui"
 import { keepPreviousData, useInfiniteQuery, useQuery } from "@tanstack/react-query"
 import { useMemo } from "react"
 import { projectScopeData, projectScopeKey, useProjectScope } from "../projects/project-scope.tsx"
 import {
+  getMemoryActivityHistogram,
+  getMemoryOverview,
   getMemoryRecord,
   getMemoryRecordChangeDiff,
   getMemoryRecordReads,
@@ -10,15 +13,13 @@ import {
   getSessionMemoryDiff,
   getSessionMemorySummary,
   listMemoryRecordUsers,
-  listMemoryStores,
+  listMemoryStoresWithMetrics,
   listMemoryStoreUsers,
   listUserMemoryStores,
-  type MemoryStoreRecord,
+  type MemoryStoreMetricsRecord,
   type SessionMemoryDiffRecord,
   type SessionMemorySummaryRecord,
 } from "./memories.functions.ts"
-
-type MemoryStoreSortField = "lastUpdated" | "lastRead" | "records" | "tokens" | "sessions" | "users"
 
 /**
  * Memory footprint for a session's summary chip; pass `traceId` to restrict it
@@ -78,28 +79,103 @@ export function useSessionMemoryDiff({
   })
 }
 
-/** The project's memory stores, server-sorted and paginated for the store-list table. */
-export function useMemoryStores({
+/** Project-wide memory roll-up for the analytics tiles. */
+export function useMemoryOverview({
   projectId,
+  range,
+  enabled = true,
+}: {
+  readonly projectId: string
+  readonly range: { readonly fromIso: string; readonly toIso: string }
+  readonly enabled?: boolean
+}) {
+  const scope = useProjectScope()
+  return useQuery({
+    queryKey: [...projectScopeKey(scope), "memory-overview", projectId, range.fromIso, range.toIso],
+    queryFn: () =>
+      getMemoryOverview({
+        data: { ...projectScopeData(scope), projectId, fromIso: range.fromIso, toIso: range.toIso },
+      }),
+    placeholderData: keepPreviousData,
+    staleTime: 30_000,
+    enabled: enabled && projectId.length > 0,
+  })
+}
+
+/** Bucketed memory activity for the activity chart, over the anchored window. */
+export function useMemoryActivityHistogram({
+  projectId,
+  range,
+  bucketSeconds,
+  enabled = true,
+}: {
+  readonly projectId: string
+  readonly range: { readonly fromIso: string; readonly toIso: string }
+  readonly bucketSeconds: number
+  readonly enabled?: boolean
+}) {
+  const scope = useProjectScope()
+  return useQuery({
+    queryKey: [...projectScopeKey(scope), "memory-activity", projectId, range.fromIso, range.toIso, bucketSeconds],
+    queryFn: () =>
+      getMemoryActivityHistogram({
+        data: { ...projectScopeData(scope), projectId, fromIso: range.fromIso, toIso: range.toIso, bucketSeconds },
+      }),
+    placeholderData: keepPreviousData,
+    staleTime: 30_000,
+    enabled: enabled && projectId.length > 0,
+  })
+}
+
+/** The project's memory stores with window-scoped insight metrics, for the analytics table. */
+export function useMemoryStoresWithMetrics({
+  projectId,
+  range,
   sort,
   direction,
+  trendBucketSeconds,
   limit = 50,
   enabled = true,
 }: {
   readonly projectId: string
-  readonly sort: MemoryStoreSortField
+  readonly range: { readonly fromIso: string; readonly toIso: string }
+  readonly sort: MemoryStoreMetricSortField
   readonly direction: "asc" | "desc"
+  readonly trendBucketSeconds: number
   readonly limit?: number
   readonly enabled?: boolean
 }) {
   const scope = useProjectScope()
   const { data, isLoading, fetchNextPage, hasNextPage, isFetchingNextPage } = useInfiniteQuery({
-    queryKey: [...projectScopeKey(scope), "memory-stores", projectId, sort, direction, limit],
+    queryKey: [
+      ...projectScopeKey(scope),
+      "memory-stores-metrics",
+      projectId,
+      range.fromIso,
+      range.toIso,
+      sort,
+      direction,
+      trendBucketSeconds,
+      limit,
+    ],
     queryFn: ({ pageParam }) =>
-      listMemoryStores({ data: { ...projectScopeData(scope), projectId, sort, direction, limit, offset: pageParam } }),
+      listMemoryStoresWithMetrics({
+        data: {
+          ...projectScopeData(scope),
+          projectId,
+          fromIso: range.fromIso,
+          toIso: range.toIso,
+          sort,
+          direction,
+          trendBucketSeconds,
+          limit,
+          offset: pageParam,
+        },
+      }),
     initialPageParam: 0,
     getNextPageParam: (lastPage) => (lastPage.hasMore ? lastPage.offset + lastPage.limit : undefined),
     placeholderData: keepPreviousData,
+    staleTime: 30_000,
     enabled: enabled && projectId.length > 0,
   })
 
@@ -110,7 +186,7 @@ export function useMemoryStores({
   const stores = useMemo(() => data?.pages.flatMap((page) => page.items) ?? [], [data])
 
   return {
-    stores: stores as readonly MemoryStoreRecord[],
+    stores: stores as readonly MemoryStoreMetricsRecord[],
     totalCount: data?.pages[0]?.totalCount ?? 0,
     isLoading,
     infiniteScroll,
