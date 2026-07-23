@@ -151,11 +151,14 @@ provider tokens — are never charged.
 
 Without a scope in context, AI calls run unbilled. That is the intended default for
 platform-internal work (demo seeding, backoffice tooling); every org-serving AI entry
-point must provide a scope. Flows that carry one today: flagger runs and draft
-annotations, live evaluations (judge scripts and semantic-similarity rules), and
-evaluation alignment/optimization (baseline/incremental judging, GEPA proposals and
-candidate evaluation). Web-interactive semantic search (`planSearch` query embeds) meters
-automatically once its server functions provide a scope — pending follow-up.
+point must provide a scope. Flows that carry one today: flagger classification and
+draft annotations, live evaluations, evaluation alignment/optimization (baseline/
+incremental judging, GEPA proposals and candidate evaluation), session analysis,
+signal discovery/refresh, taxonomy cluster naming, and annotation publication
+enrichment. Known unbilled follow-ups: web/API semantic search (`planSearch` query
+embeds — needs out-of-credits UX; the planner already falls back to lexical-only),
+the signal-generation agent (`AIAgent` bypasses `withAIMetering`; needs metering on
+the agent service itself), and eval/signal previews (free by design for now).
 
 Scope idempotency keys are `{action}:{organizationId}:{...keyParts}:{sequence}` with the
 sequence assigned in call order. Retries of an operation whose calls replay
@@ -169,6 +172,9 @@ Canonical charge points:
 - LLM flagger classification and annotation: `apps/workflows/src/activities/flagger-session-activities.ts` meters the classifier per call under a `flagger-classify` activity scope; `draftSessionFlaggerAnnotation` runs the anchor dedup first so a re-detected issue never authorizes, then meters the fallback annotator per call under a `flagger:{flaggerSlug}:{sessionId}:{contentHash}` scope
 - live evaluations: `packages/domain/evaluations/src/use-cases/live/run-live-evaluation.ts` — every scan records the baseline `eval-scan` credit after execution; `llm()`-capable scripts authorize one `llm-call` (the larger estimate) and meter each generation and query embed on top under a `live-eval` scope
 - evaluation alignment and GEPA optimization: `apps/workflows/src/activities/evaluation-alignment-activities.ts` and `evaluation-optimization-activities.ts`, metered per call under per-activity scopes
+- session analysis: `apps/workflows/src/activities/analyze-session-activities.ts` (`analyzeSessionActivity`), metered under a `session-analysis` activity scope
+- signal discovery, refresh, and taxonomy naming: `signal-discovery-activities.ts` (`signal-create`, `signal-assign`), `apps/workers/src/workers/signals.ts` refresh handler (`signal-refresh`), `taxonomy-naming-activities.ts` (`taxonomy-name`)
+- annotation publication enrichment: `annotation-publication-activities.ts` (`annotation-enrich`)
 
 Expensive flows still authorize (and cap-reserve) **one** flat-estimate `llm-call` at
 the boundary before any AI work starts; per-call metering then records the exact

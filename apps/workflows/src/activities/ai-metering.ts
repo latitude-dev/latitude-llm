@@ -5,8 +5,26 @@ import {
   provideAIMeteringScope,
 } from "@domain/billing"
 import { BadRequestError, OrganizationId, ProjectId } from "@domain/shared"
+import {
+  BillingOverrideRepositoryLive,
+  BillingUsageEventRepositoryLive,
+  BillingUsagePeriodRepositoryLive,
+  OutboxEventWriterLive,
+  SettingsReaderLive,
+  StripeSubscriptionLookupLive,
+} from "@platform/db-postgres"
 import { Context as ActivityContext } from "@temporalio/activity"
-import { Effect } from "effect"
+import { Effect, Layer } from "effect"
+
+/** Postgres repository set required by `withActivityAIMetering`; merge into the activity's `withPostgres` layer. */
+export const billingMeteringRepositoriesLive = Layer.mergeAll(
+  BillingOverrideRepositoryLive,
+  BillingUsageEventRepositoryLive,
+  BillingUsagePeriodRepositoryLive,
+  OutboxEventWriterLive,
+  SettingsReaderLive,
+  StripeSubscriptionLookupLive,
+)
 
 /**
  * Idempotency identity for per-call AI metering inside a Temporal activity: unique per

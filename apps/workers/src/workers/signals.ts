@@ -1,4 +1,10 @@
 import {
+  authorizeBillableAction,
+  buildBillingIdempotencyKey,
+  makeAIMeteringScope,
+  provideAIMeteringScope,
+} from "@domain/billing"
+import {
   type QueueConsumer,
   QueuePublisher,
   type QueuePublisherShape,
@@ -6,7 +12,7 @@ import {
   type WorkflowStarterShape,
 } from "@domain/queue"
 import type { ScoreSourceType } from "@domain/scores"
-import { OrganizationId } from "@domain/shared"
+import { OrganizationId, ProjectId } from "@domain/shared"
 import {
   checkSignalEscalationUseCase,
   type DiscoverSignalResult,
@@ -16,10 +22,13 @@ import {
   sweepEscalatingSignalsUseCase,
 } from "@domain/signals"
 import { AIEmbedLive, AIGenerateLive, withAi } from "@platform/ai"
-import type { RedisClient } from "@platform/cache-redis"
+import { RedisBillingSpendReservationLive, type RedisClient } from "@platform/cache-redis"
 import type { ClickHouseClient } from "@platform/db-clickhouse"
 import { ScoreAnalyticsRepositoryLive, withClickHouse } from "@platform/db-clickhouse"
 import {
+  BillingOverrideRepositoryLive,
+  BillingUsageEventRepositoryLive,
+  BillingUsagePeriodRepositoryLive,
   EvaluationRepositoryLive,
   IncidentRepositoryLive,
   MonitorRepositoryLive,
@@ -28,6 +37,7 @@ import {
   ScoreRepositoryLive,
   SettingsReaderLive,
   SignalRepositoryLive,
+  StripeSubscriptionLookupLive,
   withPostgres,
 } from "@platform/db-postgres"
 import { createLogger, withTracing } from "@repo/observability"
@@ -101,12 +111,46 @@ export const createSignalsWorker = async ({
         Effect.asVoid,
       ),
     refresh: (payload) =>
-      refreshSignalDetailsUseCase(payload).pipe(
+      Effect.gen(function* () {
+        const organizationId = OrganizationId(payload.organizationId)
+        // No stable per-refresh identity exists in the payload; the random suffix
+        // makes each refresh bill separately, while a retried job's generate hits
+        // the 24h AI cache and is never re-charged.
+        const keyParts = ["signal-refresh", payload.signalId, crypto.randomUUID()]
+        const authorization = yield* authorizeBillableAction({
+          organizationId,
+          action: "llm-call",
+          skipIfBlocked: true,
+          idempotencyKey: buildBillingIdempotencyKey("llm-call", [payload.organizationId, ...keyParts, "authorize"]),
+        })
+        if (!authorization.allowed) {
+          logger.info(`Signal refresh skipped for ${payload.projectId}/${payload.signalId} — billing blocked`)
+          return
+        }
+        const meteringScope = yield* makeAIMeteringScope({
+          organizationId,
+          projectId: ProjectId(payload.projectId),
+          keyParts,
+          context: authorization.context,
+        })
+        return yield* refreshSignalDetailsUseCase(payload).pipe(provideAIMeteringScope(meteringScope))
+      }).pipe(
         withPostgres(
-          Layer.mergeAll(EvaluationRepositoryLive, SignalRepositoryLive, ScoreRepositoryLive),
+          Layer.mergeAll(
+            EvaluationRepositoryLive,
+            SignalRepositoryLive,
+            ScoreRepositoryLive,
+            BillingOverrideRepositoryLive,
+            BillingUsageEventRepositoryLive,
+            BillingUsagePeriodRepositoryLive,
+            OutboxEventWriterLive,
+            SettingsReaderLive,
+            StripeSubscriptionLookupLive,
+          ),
           pgClient,
           OrganizationId(payload.organizationId),
         ),
+        Effect.provide(RedisBillingSpendReservationLive(rdClient)),
         withAi(AIGenerateLive, rdClient),
         withTracing,
         Effect.provide(Layer.succeed(QueuePublisher, publisher)),

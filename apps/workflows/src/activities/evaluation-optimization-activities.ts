@@ -23,15 +23,7 @@ import {
 import { BadRequestError, OrganizationId } from "@domain/shared"
 import { AIGenerateLive, withAi } from "@platform/ai"
 import { RedisBillingSpendReservationLive } from "@platform/cache-redis"
-import {
-  BillingOverrideRepositoryLive,
-  BillingUsageEventRepositoryLive,
-  BillingUsagePeriodRepositoryLive,
-  OutboxEventWriterLive,
-  SettingsReaderLive,
-  StripeSubscriptionLookupLive,
-  withPostgres,
-} from "@platform/db-postgres"
+import { withPostgres } from "@platform/db-postgres"
 import {
   buildGepaProposalPrompt,
   GEPA_DEFAULT_PROPOSER_MODEL,
@@ -42,10 +34,10 @@ import {
 } from "@platform/op-gepa"
 import { QuickJsScriptRuntimeLive } from "@platform/sandbox-quickjs"
 import { withTracing } from "@repo/observability"
-import { Data, Effect, Layer, Option } from "effect"
+import { Data, Effect, Option } from "effect"
 import { getPostgresClient, getRedisClient } from "../clients.ts"
 import { describeActivityCause, logActivityFailure } from "./activity-error.ts"
-import { withActivityAIMetering } from "./ai-metering.ts"
+import { billingMeteringRepositoriesLive, withActivityAIMetering } from "./ai-metering.ts"
 
 class EvaluationOptimizationActivityError extends Data.TaggedError("EvaluationOptimizationActivityError")<{
   readonly activity: string
@@ -253,18 +245,7 @@ export const optimizeEvaluationDraft = (input: {
         projectId: input.projectId,
         label: "eval-optimize",
       }),
-      withPostgres(
-        Layer.mergeAll(
-          BillingOverrideRepositoryLive,
-          BillingUsageEventRepositoryLive,
-          BillingUsagePeriodRepositoryLive,
-          OutboxEventWriterLive,
-          SettingsReaderLive,
-          StripeSubscriptionLookupLive,
-        ),
-        getPostgresClient(),
-        OrganizationId(input.organizationId),
-      ),
+      withPostgres(billingMeteringRepositoriesLive, getPostgresClient(), OrganizationId(input.organizationId)),
       Effect.provide(RedisBillingSpendReservationLive(getRedisClient())),
       Effect.provide(GepaOptimizerLive),
       withTracing,
