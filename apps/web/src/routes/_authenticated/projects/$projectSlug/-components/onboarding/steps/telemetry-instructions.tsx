@@ -16,7 +16,7 @@ import { useLayoutEffect, useMemo, useState } from "react"
 import { useApiKeysCollection } from "../../../../../../../domains/api-keys/api-keys.collection.ts"
 import {
   type CodingMachineAgentId,
-  cloudflareAiGatewayConfigSnippet,
+  cloudflareAiGatewayConfig,
   getCodingAgentTelemetryPrompt,
   getCodingMachineInstallDescription,
   getCodingMachineTelemetryInstallCommand,
@@ -388,26 +388,48 @@ function CloudflareAiGatewayInstructions({
   readonly slug: string
   readonly defaultApiKeyToken: string | null
 }) {
+  const config = cloudflareAiGatewayConfig(slug, defaultApiKeyToken)
   return (
     <div className="flex flex-col gap-4">
       <div className="flex flex-col gap-2">
         <Text.H5M>Cloudflare AI Gateway</Text.H5M>
         <Text.H5 color="foregroundMuted">
           Cloudflare AI Gateway exports OpenTelemetry spans for every request it proxies — no SDK needed. In your
-          gateway's <span className="font-medium">Settings → OpenTelemetry</span>, add an exporter pointing at Latitude.{" "}
+          gateway's <span className="font-medium">Settings → OpenTelemetry</span>, click{" "}
+          <span className="font-medium">Add Otel Destination</span> and fill in the fields below.{" "}
           {defaultApiKeyToken ? (
-            "The header below is prefilled with your default Latitude API key."
+            "The Authorization header is prefilled with your default Latitude API key."
           ) : (
             <>
-              Replace <code className="text-xs">YOUR_API_KEY</code> with a Latitude API key from Settings.
+              Replace <code className="text-xs">YOUR_API_KEY</code> in the Authorization header with a Latitude API key
+              from Settings.
             </>
           )}
         </Text.H5>
       </div>
 
       <div className="flex flex-col gap-2">
-        <Text.H5M>Exporter configuration</Text.H5M>
-        <CodeBlock value={cloudflareAiGatewayConfigSnippet(slug, defaultApiKeyToken)} copyable />
+        <Text.H5M>OTLP Traces Endpoint</Text.H5M>
+        <CodeBlock value={config.endpoint} copyable />
+      </div>
+
+      <div className="flex flex-col gap-1">
+        <Text.H5M>Content Type</Text.H5M>
+        <Text.H5 color="foregroundMuted">
+          Select <span className="font-medium">{config.contentType}</span>.
+        </Text.H5>
+      </div>
+
+      <div className="flex flex-col gap-2">
+        <Text.H5M>Custom Headers</Text.H5M>
+        {config.headers.map((header) => (
+          <div key={header.key} className="flex flex-col gap-1">
+            <Text.H5 color="foregroundMuted">
+              Header name: <code className="text-xs">{header.key}</code>
+            </Text.H5>
+            <CodeBlock value={header.value} copyable />
+          </div>
+        ))}
       </div>
 
       <Text.H5 color="foregroundMuted">
@@ -420,7 +442,7 @@ function CloudflareAiGatewayInstructions({
         >
           Cloudflare's OpenTelemetry docs
         </a>{" "}
-        for where to add the exporter. Traces appear in Latitude within a few seconds of your next request.
+        for where to add the destination. Traces appear in Latitude within a few seconds of your next request.
       </Text.H5>
     </div>
   )

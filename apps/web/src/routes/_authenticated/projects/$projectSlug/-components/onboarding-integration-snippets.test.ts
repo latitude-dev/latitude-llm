@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest"
 import {
-  cloudflareAiGatewayConfigSnippet,
+  cloudflareAiGatewayConfig,
   getOnboardingSnippet,
   getProviderSdkPyInstallCommand,
   ONBOARDING_PROVIDER_SNIPPET_CONFIG,
@@ -68,20 +68,27 @@ describe("Cloudflare AI Gateway onboarding integration", () => {
     expect(getOnboardingSnippet("cloudflare-ai-gateway", "python", "my-project", "lat-key")).toBeNull()
   })
 
-  describe("exporter config snippet", () => {
-    const snippet = cloudflareAiGatewayConfigSnippet("my-project", "lat-key")
+  describe("exporter config", () => {
+    const config = cloudflareAiGatewayConfig("my-project", "lat-key")
 
     it("points at the Latitude OTLP traces endpoint", () => {
-      expect(snippet).toContain("https://ingest.latitude.so/v1/traces")
+      expect(config.endpoint).toBe("https://ingest.latitude.so/v1/traces")
     })
 
-    it("injects the API key and project slug into the headers", () => {
-      expect(snippet).toContain("Authorization: Bearer lat-key")
-      expect(snippet).toContain("X-Latitude-Project: my-project")
+    it("uses a JSON content type", () => {
+      expect(config.contentType).toBe("JSON")
+    })
+
+    it("injects the API key and project slug into the custom headers", () => {
+      expect(config.headers).toContainEqual({ key: "Authorization", value: "Bearer lat-key" })
+      expect(config.headers).toContainEqual({ key: "x-latitude-project", value: "my-project" })
     })
 
     it("falls back to a placeholder when no API key is available", () => {
-      expect(cloudflareAiGatewayConfigSnippet("my-project", null)).toContain("Authorization: Bearer YOUR_API_KEY")
+      expect(cloudflareAiGatewayConfig("my-project", null).headers).toContainEqual({
+        key: "Authorization",
+        value: "Bearer YOUR_API_KEY",
+      })
     })
   })
 })

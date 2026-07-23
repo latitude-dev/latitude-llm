@@ -1806,14 +1806,20 @@ export function getOtelExporterLanguageSnippet(
 }
 
 /**
- * Cloudflare AI Gateway is configured in the Cloudflare dashboard (Settings → OpenTelemetry),
- * not in code — so its onboarding shows the exporter URL + headers to paste there rather than
- * an SDK snippet. Values prefilled with the project slug and API key.
+ * Cloudflare AI Gateway is configured in its dashboard via the "Add Otel Destination" dialog
+ * (Settings → OpenTelemetry), not in code. These map field-for-field onto that dialog: the OTLP
+ * Traces Endpoint, the Content Type, and the two Custom Headers. Header keys are lowercased to
+ * match how the dialog displays them. Prefilled with the project slug and API key.
  */
-export function cloudflareAiGatewayConfigSnippet(projectSlug: string, apiKey: string | null): string {
-  return `URL: ${OTLP_TRACES_ENDPOINT}
-Authorization: Bearer ${apiKey ?? "YOUR_API_KEY"}
-X-Latitude-Project: ${projectSlug}`
+export function cloudflareAiGatewayConfig(projectSlug: string, apiKey: string | null) {
+  return {
+    endpoint: OTLP_TRACES_ENDPOINT,
+    contentType: "JSON",
+    headers: [
+      { key: "x-latitude-project", value: projectSlug },
+      { key: "Authorization", value: `Bearer ${apiKey ?? "YOUR_API_KEY"}` },
+    ],
+  }
 }
 
 /**

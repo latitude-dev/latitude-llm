@@ -32,23 +32,28 @@ token usage, cost, and prompt/response messages.
     **Settings → OpenTelemetry**.
   </Step>
 
-  <Step title="Add a Latitude exporter">
-    Add an OTLP exporter with the following URL and headers:
+  <Step title="Add a Latitude destination">
+    Click **Add Otel Destination** and fill in the dialog:
 
-    ```text
-    URL: https://ingest.latitude.so/v1/traces
-    Authorization: Bearer <LATITUDE_API_KEY>
-    X-Latitude-Project: <PROJECT_SLUG>
-    ```
+    | Field | Value |
+    | --- | --- |
+    | **OTLP Traces Endpoint** | `https://ingest.latitude.so/v1/traces` |
+    | **Content Type** | `JSON` (OTLP/protobuf also works) |
+
+    Then add two **Custom Headers**:
+
+    | Header name | Value |
+    | --- | --- |
+    | `x-latitude-project` | `<PROJECT_SLUG>` |
+    | `Authorization` | `Bearer <LATITUDE_API_KEY>` |
 
     Replace `<LATITUDE_API_KEY>` with a Latitude API key (Settings → API Keys) and
-    `<PROJECT_SLUG>` with your project's slug. AI Gateway supports both OTLP/JSON and
-    OTLP/protobuf; either works.
+    `<PROJECT_SLUG>` with your project's slug.
 
     <Note>
-      To keep the API key out of the exporter config, store it in Cloudflare
+      To keep the API key out of the destination config, store it in Cloudflare
       [Secrets Store](https://developers.cloudflare.com/secrets-store/) and reference it from the
-      exporter's authorization field.
+      `Authorization` header.
     </Note>
   </Step>
 
