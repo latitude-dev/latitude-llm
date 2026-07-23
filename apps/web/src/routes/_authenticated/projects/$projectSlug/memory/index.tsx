@@ -5,6 +5,7 @@ import {
   useMemoryOverview,
   useMemoryStoresWithMetrics,
 } from "../../../../../domains/memories/memories.collection.ts"
+import { defaultProjectTimeWindowSeconds } from "../../../../../domains/projects/default-time-window.ts"
 import { useAnalyticsTimeWindow } from "../../../../../domains/projects/use-analytics-time-window.ts"
 import { useProjectFirstTraceAt, useProjectLastTraceAt } from "../../../../../domains/traces/traces.collection.ts"
 import { ListingLayout as Layout } from "../../../../../layouts/ListingLayout/index.tsx"
@@ -100,9 +101,19 @@ function MemoryPage() {
     () => pickMemoryTrendBucketSeconds(Date.parse(range.toIso) - Date.parse(range.fromIso)),
     [range],
   )
-  // The chart clamps to the anchored window (≤ project window, latest-activity
-  // anchored when All time) so it never scans the full history per bucket.
-  const histogramRange = useMemo(() => (tw.isAllTime ? tw.trendRange : range), [tw.isAllTime, tw.trendRange, range])
+  // The chart's right edge is "today" under All time (else the selected end),
+  // with the All-time span clamped to the project window so it never scans the
+  // full history per bucket. Unlike the shared trend range (anchored to the
+  // last activity), this keeps every day up to today on the axis, trailing
+  // empty ones included.
+  const histogramRange = useMemo(() => {
+    if (!tw.isAllTime) return range
+    const endMs = Date.parse(range.toIso)
+    const spanMs = defaultProjectTimeWindowSeconds(project) * 1000
+    const lowerBoundMs = Date.parse(range.fromIso)
+    const startMs = Math.max(endMs - spanMs, Number.isFinite(lowerBoundMs) ? lowerBoundMs : endMs - spanMs)
+    return { fromIso: new Date(startMs).toISOString(), toIso: range.toIso }
+  }, [tw.isAllTime, range, project])
   const histogramBucketSeconds = useMemo(
     () => pickMemoryTrendBucketSeconds(Date.parse(histogramRange.toIso) - Date.parse(histogramRange.fromIso)),
     [histogramRange],
