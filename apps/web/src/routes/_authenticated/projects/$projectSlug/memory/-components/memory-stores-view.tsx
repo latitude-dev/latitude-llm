@@ -23,7 +23,7 @@ export const MEMORY_COLUMN_OPTIONS = [
   { id: "dead", label: "Dead %" },
   { id: "zeroHit", label: "Zero-hit %" },
   { id: "lastActivity", label: "Last activity" },
-  { id: "churn", label: "Churn", defaultHidden: true },
+  { id: "churn", label: "Rewrites", defaultHidden: true },
   { id: "netGrowth", label: "Net growth", defaultHidden: true },
   { id: "tokens", label: "Live tokens", defaultHidden: true },
   { id: "sessions", label: "Sessions", defaultHidden: true },
@@ -212,7 +212,7 @@ export function MemoryStoresView({
     },
     {
       key: "churn",
-      header: "Churn",
+      header: "Rewrites",
       headerTooltip: "Average number of updates per record in this window.",
       width: 90,
       minWidth: 80,
