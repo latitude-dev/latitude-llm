@@ -36,15 +36,15 @@ is one `semantic-query`, wherever they are produced.
 One credit is worth `2` mills at the Pro overage rate (`$20` per `10,000` credits =
 `$0.002/credit`, `CREDIT_VALUE_MILLS`).
 
-- `llm-call`: each generation bills its **estimated provider cost with a `1.2x`
+- `llm-call`: each generation bills its **estimated provider cost with a `1.3x`
   margin** (`LLM_GENERATION_BILLING_MARGIN`), converted at the overage credit value
   and rounded **up** to an integer with a 1-credit floor:
-  `credits = max(1, ceil(costUsd * 1000 * 1.2 / 2))` (`creditsForLlmGenerationCost`).
+  `credits = max(1, ceil(costUsd * 1000 * 1.3 / 2))` (`creditsForLlmGenerationCost`).
   Cost is estimated from the provider-reported token usage priced through the
   `@domain/models` registry (the same catalog that prices customer spans), covering
   input/output/reasoning/cache token rates. Examples: a typical MiniMax M2.5 judge
-  call (~`$0.005`) bills 3 credits; a 100k-token-session judge call (~`$0.04`) bills
-  24; a Sonnet-tier GEPA proposal (~`$0.30`) bills 180.
+  call (~`$0.005`) bills 4 credits; a 100k-token-session judge call (~`$0.04`) bills
+  26; a Sonnet-tier GEPA proposal (~`$0.30`) bills 195.
   **Fallback**: when the registry has no pricing for the configured model or the
   provider reported no usage (including errored calls), the flat
   `ACTION_CREDITS["llm-call"] = 30` applies and a warning is logged — keep the
@@ -127,7 +127,7 @@ LLM calls and semantic queries are metered at the AI layer, not per feature. The
 `withAIMetering`, which charges against the ambient `AIMeteringScope`
 (`@domain/billing/src/ai-metering.ts`) when one is present in context:
 
-- `generate` → one `llm-call` billed at estimated cost x 1.2 (flat 30-credit fallback
+- `generate` → one `llm-call` billed at estimated cost x 1.3 (flat 30-credit fallback
   when registry pricing or provider usage is unavailable), recorded on success and on
   `AIError` (the provider call was attempted, tokens may have been consumed — flat
   price, no usage to bill) but not on `AICredentialError`

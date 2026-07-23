@@ -100,12 +100,12 @@ export const OverageCreditUnit = PRO_PLAN_CONFIG.overageCreditsPerUnit
 export const CREDIT_VALUE_MILLS =
   (PRO_PLAN_CONFIG.overagePriceCentsPerUnit * CENT_TO_MILLS) / PRO_PLAN_CONFIG.overageCreditsPerUnit
 
-export const LLM_GENERATION_BILLING_MARGIN = 1.2
+export const LLM_GENERATION_BILLING_MARGIN = 1.3
 
 const USD_TO_MILLS = 1_000
 
 /**
- * Credits billed for one LLM generation from its estimated provider cost: a 1.2x
+ * Credits billed for one LLM generation from its estimated provider cost: a 1.3x
  * margin over cost, converted at the overage credit value, rounded up to an integer
  * with a 1-credit floor.
  */

@@ -58,7 +58,7 @@ const generateInput = (provider: string, model: string) => ({
 })
 
 describe("withAIMetering", () => {
-  it("bills a generation its estimated cost with a 1.2x margin when usage and pricing are known", async () => {
+  it("bills a generation its estimated cost with a 1.3x margin when usage and pricing are known", async () => {
     const usage = { input: 100_000, output: 4_000 }
     const costSpec = getCostSpec("openai", "gpt-4o")
     expect(costSpec.costImplemented).toBe(true)
@@ -182,13 +182,13 @@ describe("withAIMetering", () => {
 })
 
 describe("creditsForLlmGenerationCost", () => {
-  it("applies a 1.2x margin at the overage credit value, rounding up", () => {
-    // $0.005 x 1.2 = $0.006 = 3 mills-pairs → 3 credits exactly
-    expect(creditsForLlmGenerationCost(0.005)).toBe(3)
-    // $0.04 x 1.2 = $0.048 → 24 credits
-    expect(creditsForLlmGenerationCost(0.04)).toBe(24)
-    // rounds up
-    expect(creditsForLlmGenerationCost(0.0051)).toBe(4)
+  it("applies a 1.3x margin at the overage credit value, rounding up", () => {
+    // $0.005 x 1.3 = $0.0065 → 3.25 → rounds up to 4 credits
+    expect(creditsForLlmGenerationCost(0.005)).toBe(4)
+    // $0.04 x 1.3 = $0.052 → 26 credits exactly
+    expect(creditsForLlmGenerationCost(0.04)).toBe(26)
+    // $0.30 x 1.3 = $0.39 → 195 credits exactly
+    expect(creditsForLlmGenerationCost(0.3)).toBe(195)
   })
 
   it("floors at one credit for near-zero costs", () => {
