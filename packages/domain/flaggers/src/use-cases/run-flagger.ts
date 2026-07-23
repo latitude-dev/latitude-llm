@@ -839,10 +839,16 @@ const parseFlaggerOutput = (input: unknown): Effect.Effect<RunFlaggerResult> => 
 
 // The Vercel AI SDK raises `NoObjectGeneratedError` / `NoOutputGeneratedError`
 // when the model returns output that does not materialize as the requested schema,
-// and `AI_APICallError` with a "prompt is too long" message when the trace evidence
-// exceeds the model's context window. The flagger treats both as a "no match" signal
-// instead of propagating the failure — the model effectively failed to classify,
-// which for a triage flagger is indistinguishable from matched=false.
+// `AI_APICallError` with a "prompt is too long" message when the trace evidence
+// exceeds the model's context window, and `AI_APICallError` with a "Grammar
+// compilation timed out" message when Bedrock's constrained decoder fails to
+// compile the structured-output grammar in time (the classify schema's
+// `messageIndex` enum grows with the trace's message count, up to
+// `FLAGGER_MESSAGE_INDEX_ENUM_LIMIT`). All three are deterministic on the
+// input for a given call, so retries don't help. The flagger treats all of
+// them as a "no match" signal instead of propagating the failure — the model
+// effectively failed to classify, which for a triage flagger is
+// indistinguishable from matched=false.
 const isSchemaMismatchCause = (cause: unknown): boolean => {
   if (!(cause instanceof Error)) return false
   if (cause.name === "AI_NoObjectGeneratedError" || cause.name === "AI_NoOutputGeneratedError") return true
@@ -852,8 +858,11 @@ const isSchemaMismatchCause = (cause: unknown): boolean => {
 const isPromptTooLongCause = (cause: unknown): boolean =>
   cause instanceof Error && typeof cause.message === "string" && cause.message.includes("prompt is too long")
 
+const isGrammarCompilationTimeoutCause = (cause: unknown): boolean =>
+  cause instanceof Error && typeof cause.message === "string" && cause.message.includes("Grammar compilation timed out")
+
 const isUnclassifiableModelFailureCause = (cause: unknown): boolean =>
-  isSchemaMismatchCause(cause) || isPromptTooLongCause(cause)
+  isSchemaMismatchCause(cause) || isPromptTooLongCause(cause) || isGrammarCompilationTimeoutCause(cause)
 
 /**
  * Pure LLM classification for an already-loaded conversation — the screening
