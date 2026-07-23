@@ -9,8 +9,6 @@ import type {
 import { ChartHeader } from "../../-components/chart-header.tsx"
 import { formatBucketLabel, formatPercent, formatRatio } from "./memory-formatters.ts"
 
-// Creations/updates/deletions follow the record-diff colors used elsewhere;
-// records retrieved rides the right axis as a line against write volume.
 const ADD_COLOR = "hsl(142 71% 45%)"
 const UPDATE_COLOR = "hsl(217 91% 60%)"
 const REMOVE_COLOR = "hsl(0 70% 55%)"

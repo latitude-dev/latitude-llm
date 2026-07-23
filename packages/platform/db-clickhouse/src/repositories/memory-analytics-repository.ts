@@ -18,10 +18,7 @@ const num = (value: string | number | null | undefined): number => Number(value 
 const SCOPE = `organization_id = {organizationId:String} AND project_id = {projectId:String}`
 const WINDOW = `AND end_time >= {from:DateTime64(6, 'UTC')} AND end_time <= {to:DateTime64(6, 'UTC')}`
 
-// Retry dedup: `memory_events` is append-only, so a re-run projection can write
-// duplicate rows. Collapse to one per (trace, span, store, record) — newest
-// ingested wins — before any additive count. Only the four data-op kinds drive
-// the store set (store lifecycle events are not "activity").
+// Retry dedup: collapse re-run duplicate rows to newest per (trace, span, store, record); only data-op kinds count as activity.
 const DEDUPED_WINDOW = `
   SELECT store_id, record_id, change_kind, token_count, record_count, span_id, session_id, user_id, trace_id, end_time
   FROM memory_events
@@ -30,9 +27,7 @@ const DEDUPED_WINDOW = `
   LIMIT 1 BY trace_id, span_id, store_id, record_id
 `
 
-// Fixed map — never interpolate the sort input into ORDER BY. Values are output
-// aliases / expressions of the store-metrics query. Ratio/dead/zeroHit/churn
-// divide by `greatest(_, 1)` so a zero denominator sorts as 0 (no NULLs).
+// Fixed map — never interpolate sort input into ORDER BY; `greatest(_, 1)` makes a zero denominator sort as 0 (no NULLs).
 const METRIC_SORT_EXPRS: Record<MemoryStoreMetricSortField, string> = {
   records: "live_records",
   tokens: "live_tokens",
@@ -95,8 +90,7 @@ type ActivityRow = {
   readonly records_retrieved: string | number
 }
 
-// Latest live (non-removed) record per (store, record) from `memory_current`,
-// with a `never_read` flag against all-time reads that returned a record.
+// Latest non-removed record per (store, record) from `memory_current`, flagged `never_read` against all-time reads that returned a record.
 const LIVE_RECORDS = `
   SELECT store_id, record_id, token_count,
          (store_id, record_id) NOT IN (
@@ -295,9 +289,7 @@ export const MemoryAnalyticsRepositoryLive = Layer.effect(
         const rows = hasMore ? pageRows.slice(0, limit) : pageRows
         const storeIds = rows.map((row) => row.store_id)
 
-        // Net growth and the per-row trend are page-scoped — computed only for
-        // the returned store ids, so the two ledger boundary reconstructions
-        // stay O(page) instead of scanning every store.
+        // Net growth + per-row trend are page-scoped (returned store ids only) so the two ledger boundary scans stay O(page).
         const { trendByStore, tokensFrom, tokensTo } =
           storeIds.length === 0
             ? {
@@ -307,9 +299,7 @@ export const MemoryAnalyticsRepositoryLive = Layer.effect(
               }
             : yield* chSqlClient
                 .query(async (client) => {
-                  // Inner subquery so `change_kind`/`end_time` in WHERE bind to
-                  // the columns, not the `argMax(...) AS change_kind` alias
-                  // (ILLEGAL_AGGREGATION otherwise) — same shape as readManifestAt.
+                  // Inner subquery so WHERE binds the change_kind/end_time columns, not the argMax alias (ILLEGAL_AGGREGATION) — like readManifestAt.
                   const tokensAtQuery = `
                     SELECT store_id, sum(token_count) AS tokens
                     FROM (
