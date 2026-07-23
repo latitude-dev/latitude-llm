@@ -150,6 +150,10 @@ const scopeCondition = (scope: {
     scope.facetId == null ? isNull(taxonomyClusters.facetId) : eq(taxonomyClusters.facetId, scope.facetId),
   )
 
+// The one online-routed tree. `listNearestActive`/`hybridSearch` pin this so the
+// live router and cluster search never see a cohort or facet cluster.
+const GLOBAL_TOPIC_SCOPE = { customBehaviorId: null, facetId: null } as const
+
 export const TaxonomyClusterRepositoryLive = Layer.effect(
   TaxonomyClusterRepository,
   Effect.gen(function* () {
@@ -247,8 +251,7 @@ export const TaxonomyClusterRepositoryLive = Layer.effect(
                   eq(taxonomyClusters.organizationId, organizationId),
                   eq(taxonomyClusters.projectId, projectId),
                   eq(taxonomyClusters.state, "active"),
-                  isNull(taxonomyClusters.customBehaviorId),
-                  isNull(taxonomyClusters.facetId),
+                  scopeCondition(GLOBAL_TOPIC_SCOPE),
                   isNotNull(taxonomyClusters.centroidEmbedding),
                   ...(parentClusterId === undefined
                     ? []
@@ -280,8 +283,7 @@ export const TaxonomyClusterRepositoryLive = Layer.effect(
             eq(taxonomyClusters.organizationId, sqlClient.organizationId),
             eq(taxonomyClusters.projectId, projectId),
             eq(taxonomyClusters.state, state ?? "active"),
-            isNull(taxonomyClusters.customBehaviorId),
-            isNull(taxonomyClusters.facetId),
+            scopeCondition(GLOBAL_TOPIC_SCOPE),
             isNotNull(taxonomyClusters.centroidEmbedding),
             or(gte(score, TAXONOMY_SEARCH_MIN_SCORE), gte(vectorScore, TAXONOMY_SEARCH_MIN_VECTOR_SIMILARITY)),
           ]

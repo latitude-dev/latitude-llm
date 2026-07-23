@@ -75,6 +75,12 @@ export interface TaxonomyClusterRepositoryShape {
     readonly facetId?: FacetId | null
   }): Effect.Effect<readonly TaxonomyClusterId[], RepositoryError, SqlClient>
   /**
+   * WHOLE-PROJECT TOPIC TREE ONLY (`custom_behavior_id IS NULL AND facet_id IS
+   * NULL`). This is the online router's read: only that one tree is
+   * live-assigned, so it must never return a cohort or facet cluster — those are
+   * gardening-only and their membership is written to `taxonomy_view_assignments`
+   * at garden time, never by online routing.
+   *
    * Exact pgvector cosine over `(organization_id, project_id)` for state =
    * 'active' clusters with a non-null `centroid_embedding`. Sub-ms at the
    * cluster counts this product runs at (hundreds to low-thousands per
@@ -89,6 +95,11 @@ export interface TaxonomyClusterRepositoryShape {
     /** Omit for all nodes; null for roots; an id for that node's children. */
     readonly parentClusterId?: TaxonomyClusterId | null
   }): Effect.Effect<readonly NearestClusterMatch[], RepositoryError, SqlClient>
+  /**
+   * WHOLE-PROJECT TOPIC TREE ONLY (`custom_behavior_id IS NULL AND facet_id IS
+   * NULL`) — cluster search over the online-routed tree. Cohort and facet trees
+   * are not searchable through this method; scope-aware browse goes through `list`.
+   */
   hybridSearch(input: {
     readonly projectId: ProjectId
     readonly dimension: TaxonomyDimension
