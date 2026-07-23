@@ -611,7 +611,7 @@ const _registry = {
     recordBillableAction: {
       readonly organizationId: string
       readonly projectId: string
-      readonly action: "trace" | "deterministic-eval-scan" | "semantic-query" | "llm-call"
+      readonly action: "trace" | "eval-scan" | "semantic-query" | "llm-call"
       readonly idempotencyKey: string
       readonly context: {
         readonly planSlug: "free" | "pro" | "enterprise"

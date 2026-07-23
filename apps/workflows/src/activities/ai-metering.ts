@@ -2,10 +2,9 @@ import {
   authorizeBillableAction,
   buildBillingIdempotencyKey,
   makeAIMeteringScope,
-  NoCreditsRemainingError,
   provideAIMeteringScope,
 } from "@domain/billing"
-import { OrganizationId, ProjectId } from "@domain/shared"
+import { BadRequestError, OrganizationId, ProjectId } from "@domain/shared"
 import { Context as ActivityContext } from "@temporalio/activity"
 import { Effect } from "effect"
 
@@ -29,7 +28,9 @@ export const activityMeteringKeyParts = (label: string): readonly string[] => {
 /**
  * Gates the wrapped effect on one authorized `llm-call`, then meters every LLM call and
  * query-time embedding it produces through an `AIMeteringScope`. Fails with
- * `NoCreditsRemainingError` when the organization is out of credits or over its cap.
+ * `BadRequestError` when the organization is out of credits or over its cap — the
+ * workflow retry policy marks that error non-retryable, so blocked activities fail
+ * fast instead of burning Temporal retries against a billing state that won't change.
  */
 export const withActivityAIMetering =
   (input: { readonly organizationId: string; readonly projectId: string; readonly label: string }) =>
@@ -46,10 +47,8 @@ export const withActivityAIMetering =
 
       if (!authorization.allowed) {
         return yield* Effect.fail(
-          new NoCreditsRemainingError({
-            organizationId,
-            planSlug: authorization.context.planSlug,
-            action: "llm-call",
+          new BadRequestError({
+            message: `Organization ${input.organizationId} has no credits remaining for AI work (plan ${authorization.context.planSlug})`,
           }),
         )
       }

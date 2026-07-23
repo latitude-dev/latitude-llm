@@ -23,15 +23,16 @@ Plan semantics:
 Chargeable actions:
 
 - `trace = 1 credit`
-- `deterministic-eval-scan = 1 credit`
+- `eval-scan = 1 credit`
 - `semantic-query = cost-based` (flat `15 credits` as authorization estimate and fallback)
 - `llm-call = cost-based` (flat `30 credits` as authorization estimate and fallback)
 
 AI work is billed per primitive produced, not per feature-level scan: every hosted LLM
 generation is one `llm-call` and every query-time semantic embedding (a query embed
 against the search index) is one `semantic-query`, wherever they are produced.
-Rules-only evaluation scans, which cost no provider tokens beyond ingest-time
-embeddings, bill the flat `deterministic-eval-scan` credit per scan instead.
+Every live evaluation scan additionally bills the baseline `eval-scan` credit,
+regardless of whether the script uses `llm()`, `semanticSimilarity()`, or only
+deterministic rules — the AI charges stack on top of it.
 
 ### Credit price grounding
 
@@ -61,8 +62,9 @@ One credit is worth `2` mills at the Pro overage rate (`$20` per `10,000` credit
   query embed ≈ `$0.004` plus a rerank pass ≈ `$0.01`). Reranking and document-side
   embeddings ride on this charge (document embeds are part of trace ingest and are
   covered by the `trace` credit).
-- `deterministic-eval-scan`: flat 1 credit per rules-only evaluation scan — no
-  provider tokens are consumed at scan time, so the credit prices orchestration.
+- `eval-scan`: flat 1 credit baseline for every evaluation scan — it prices the
+  orchestration (queueing, session loading, sandbox execution, score writes) that
+  every scan consumes even when it makes no AI calls.
 - `trace`: unchanged; ingest-side document embedding for a typical trace costs well
   under one credit's overage value.
 
@@ -165,7 +167,7 @@ Canonical charge points:
 
 - trace ingest metering: `apps/workers/src/workers/span-ingestion.ts` emits `TracesIngested`, `apps/workers/src/workers/domain-events.ts` routes billing work, and `apps/workers/src/workers/billing.ts` records once per distinct trace id using `trace:{organizationId}:{projectId}:{traceId}`
 - LLM flagger classification and annotation: `apps/workflows/src/activities/flagger-session-activities.ts` meters the classifier per call under a `flagger-classify` activity scope; `draftSessionFlaggerAnnotation` runs the anchor dedup first so a re-detected issue never authorizes, then meters the fallback annotator per call under a `flagger:{flaggerSlug}:{sessionId}:{contentHash}` scope
-- live evaluations: `packages/domain/evaluations/src/use-cases/live/run-live-evaluation.ts` — script capabilities select the action: `llm()`-capable scripts authorize one `llm-call` and meter each generation and query embed under a `live-eval` scope; rules-only scripts record one flat `deterministic-eval-scan`
+- live evaluations: `packages/domain/evaluations/src/use-cases/live/run-live-evaluation.ts` — every scan records the baseline `eval-scan` credit after execution; `llm()`-capable scripts authorize one `llm-call` (the larger estimate) and meter each generation and query embed on top under a `live-eval` scope
 - evaluation alignment and GEPA optimization: `apps/workflows/src/activities/evaluation-alignment-activities.ts` and `evaluation-optimization-activities.ts`, metered per call under per-activity scopes
 
 Expensive flows still authorize (and cap-reserve) **one** flat-estimate `llm-call` at
@@ -182,7 +184,7 @@ Free organizations are hard capped.
 
 Enforcement rules:
 
-- chargeable scan and AI work (`llm-call`, `semantic-query`, `deterministic-eval-scan`) is skipped before execution once no credits remain: expensive flows authorize one `llm-call` at their boundary and bail before doing AI work
+- chargeable scan and AI work (`llm-call`, `semantic-query`, `eval-scan`) is skipped before execution once no credits remain: expensive flows authorize one `llm-call` at their boundary and bail before doing AI work
 - ingest: the **ingest HTTP route** rejects over-limit payloads with **`402`**. Accepted payloads persist first; metering runs afterward inside the ingest worker (`402` semantics use `NoCreditsRemainingError` aligned with metering domain errors).
 
 The system never partially accepts only part of one ingest payload. Do **not** bypass the ingest billing gate—other producers must enqueue `span-ingestion` only after applying the **same credit checks**.

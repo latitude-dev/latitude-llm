@@ -56,6 +56,14 @@ export const recordUsageEventUseCase = Effect.fn("billing.recordUsageEvent")(fun
   yield* Effect.annotateCurrentSpan("billing.action", input.action)
   yield* Effect.annotateCurrentSpan("billing.idempotencyKey", input.idempotencyKey)
 
+  // A credits override outside the ledger's invariants (positive integer) is a caller
+  // bug, never a runtime condition — die instead of widening every caller's error union.
+  if (input.credits !== undefined && (!Number.isInteger(input.credits) || input.credits < 1)) {
+    return yield* Effect.die(
+      new Error(`recordUsageEvent: credits override must be a positive integer (got ${input.credits})`),
+    )
+  }
+
   const eventRepo = yield* BillingUsageEventRepository
   const outboxEventWriter = yield* OutboxEventWriter
   const periodRepo = yield* BillingUsagePeriodRepository

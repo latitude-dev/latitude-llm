@@ -49,9 +49,11 @@ export const withAIMetering = (ai: AIShape): AIShape => ({
           metadata: { provider: input.provider, model: input.model },
         })
 
+        // tapError attaches before tap so it only sees provider failures — a
+        // failed recordGeneration must not also commit the flat fallback record.
         return ai.generate(input).pipe(
-          Effect.tap((result) => recordGeneration(scope.value, input, result)),
           Effect.tapError((error) => (error._tag === "AIError" ? recordFlat : Effect.void)),
+          Effect.tap((result) => recordGeneration(scope.value, input, result)),
         )
       }),
     ),

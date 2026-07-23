@@ -800,8 +800,12 @@ describe("runLiveEvaluationUseCase", () => {
     })
     expect(duplicateCheckCalls).toBe(2)
     expect(scriptRuntime.calls.run).toHaveLength(1)
-    expect(outboxEvents).toEqual([])
-    expect(operations).toEqual(["score-save"])
+    // The baseline scan credit is still recorded — work ran; the idempotency key
+    // dedupes against the winning worker's record.
+    expect(outboxEvents.map((event) => (event as { eventName: string }).eventName)).toEqual([
+      "BillingUsagePeriodUpdated",
+    ])
+    expect(operations).toEqual(["billing-outbox-write", "score-save"])
   })
 
   it("re-claims the regression reopen when a retry finds the score already persisted", async () => {
@@ -971,7 +975,7 @@ describe("runLiveEvaluationUseCase", () => {
     expect(calls.generate).toHaveLength(0)
   })
 
-  it("writes no flat billing record — usage is metered per AI call by the AI layer", async () => {
+  it("records the baseline eval-scan credit for an LLM script — AI calls are metered on top by the AI layer", async () => {
     const evaluation = makeEvaluation({ script: VALID_SCRIPT })
     const issue = makeSignal({ id: SignalId(evaluation.signalId) })
     const traceDetail = makeTraceDetail()
@@ -1023,8 +1027,10 @@ describe("runLiveEvaluationUseCase", () => {
     )
 
     expect(result.action).toBe("persisted")
-    expect(operations).toEqual(["script-run", "score-outbox-write"])
-    expect([...eventsByPeriodAndIdempotencyKey.values()]).toEqual([])
+    expect(operations).toEqual(["script-run", "billing-outbox-write", "score-outbox-write"])
+    expect([...eventsByPeriodAndIdempotencyKey.values()]).toEqual([
+      expect.objectContaining({ action: "eval-scan", credits: 1 }),
+    ])
     expect(scriptRuntime.calls.run).toHaveLength(1)
   })
 
@@ -1308,7 +1314,10 @@ describe("runLiveEvaluationUseCase", () => {
     })
     expect(persistedScores.get(result.context.score.id)).toEqual(result.context.score)
     expect(inserted).toEqual([result.context.score.id])
-    expect(outboxEvents.map((event) => (event as { eventName: string }).eventName)).toEqual(["ScoreCreated"])
+    expect(outboxEvents.map((event) => (event as { eventName: string }).eventName)).toEqual([
+      "BillingUsagePeriodUpdated",
+      "ScoreCreated",
+    ])
     expect(scriptRuntime.calls.run).toHaveLength(1)
     expectImmutableAnalyticsSyncOrder(operations)
   })
@@ -1535,7 +1544,10 @@ describe("runLiveEvaluationUseCase", () => {
     })
     expect(persistedScores.get(result.context.score.id)).toEqual(result.context.score)
     expect(inserted).toEqual([result.context.score.id])
-    expect(outboxEvents.map((event) => (event as { eventName: string }).eventName)).toEqual(["ScoreCreated"])
+    expect(outboxEvents.map((event) => (event as { eventName: string }).eventName)).toEqual([
+      "BillingUsagePeriodUpdated",
+      "ScoreCreated",
+    ])
     expectImmutableAnalyticsSyncOrder(operations)
   })
 
@@ -1616,7 +1628,10 @@ describe("runLiveEvaluationUseCase", () => {
     })
     expect(persistedScores.get(result.context.score.id)).toEqual(result.context.score)
     expect(inserted).toEqual([result.context.score.id])
-    expect(outboxEvents.map((event) => (event as { eventName: string }).eventName)).toEqual(["ScoreCreated"])
+    expect(outboxEvents.map((event) => (event as { eventName: string }).eventName)).toEqual([
+      "BillingUsagePeriodUpdated",
+      "ScoreCreated",
+    ])
     expect(scriptRuntime.calls.run).toHaveLength(1)
     expectImmutableAnalyticsSyncOrder(operations)
   })
@@ -1670,7 +1685,7 @@ describe("runLiveEvaluationUseCase", () => {
     expect(scriptRuntime.calls.run[0]?.script.source).toBe(evaluation.script)
     expect(calls.generate).toHaveLength(0)
     expect([...eventsByPeriodAndIdempotencyKey.values()]).toEqual([
-      expect.objectContaining({ action: "deterministic-eval-scan", credits: 1 }),
+      expect.objectContaining({ action: "eval-scan", credits: 1 }),
     ])
   })
 

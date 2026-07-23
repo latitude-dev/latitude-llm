@@ -12,7 +12,7 @@ import {
 import { OutboxEventWriter } from "@domain/events"
 import { OrganizationId, ProjectId, SqlClient, TraceId } from "@domain/shared"
 import { createFakeSqlClient } from "@domain/shared/testing"
-import { Effect, Layer } from "effect"
+import { Cause, Effect, Layer } from "effect"
 import { describe, expect, it } from "vitest"
 
 const ORGANIZATION_ID = OrganizationId("o".repeat(24))
@@ -66,6 +66,32 @@ describe("recordUsageEventUseCase", () => {
       consumedCredits: 1,
       overageCredits: 0,
     })
+  })
+
+  it("dies on a credits override that is not a positive integer", async () => {
+    const { layer, eventsByPeriodAndIdempotencyKey } = createLayer()
+
+    for (const credits of [0, -5, 1.5, Number.NaN, Number.POSITIVE_INFINITY]) {
+      const exit = await Effect.runPromiseExit(
+        recordUsageEventUseCase({
+          organizationId: ORGANIZATION_ID,
+          projectId: PROJECT_ID,
+          action: "llm-call",
+          credits,
+          idempotencyKey: `llm-call:${credits}`,
+          planSlug: "free",
+          planSource: "free-fallback",
+          periodStart: PERIOD_START,
+          periodEnd: PERIOD_END,
+          includedCredits: 20_000,
+          overageAllowed: false,
+        }).pipe(Effect.provide(layer)),
+      )
+
+      expect(exit._tag).toBe("Failure")
+      expect(exit._tag === "Failure" && Cause.hasDies(exit.cause)).toBe(true)
+    }
+    expect(eventsByPeriodAndIdempotencyKey.size).toBe(0)
   })
 
   it("returns the existing period snapshot when the idempotency key was already recorded", async () => {

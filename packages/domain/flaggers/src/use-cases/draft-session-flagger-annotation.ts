@@ -54,39 +54,41 @@ export const draftSessionFlaggerAnnotationWithBillingUseCase = Effect.fn("flagge
       return { status: "duplicate", scoreId: existing.id } satisfies DraftSessionFlaggerAnnotationResult
     }
 
-    const billing = yield* authorizeBillableAction({
-      organizationId,
-      action: "llm-call",
-      skipIfBlocked: true,
-      idempotencyKey: buildBillingIdempotencyKey("llm-call", [
-        input.organizationId,
-        "flagger",
-        input.flaggerSlug,
-        input.sessionId,
-        input.contentHash,
-        "authorize",
-      ]),
-    })
-
-    if (!billing.allowed) {
-      return yield* Effect.fail(
-        new NoCreditsRemainingError({
-          organizationId,
-          planSlug: billing.context.planSlug,
-          action: "llm-call",
-        }),
-      )
-    }
-
     const scoreId = generateId<"ScoreId">()
 
     // The classifier's feedback is normally final; the annotator is the fallback
-    // for a match that somehow arrived without feedback text. Its LLM calls bill
-    // at cost through the metering scope, keyed by the flagged anchor so a
-    // retried workflow replays the same idempotency keys.
+    // for a match that somehow arrived without feedback text. Only that fallback
+    // makes an LLM call, so billing gates that branch alone: saving already-drafted
+    // feedback costs no provider tokens and must succeed even out of credits. The
+    // annotator's calls bill at cost through the metering scope, keyed by the
+    // flagged anchor so a retried workflow replays the same idempotency keys.
     let feedback = input.feedback
     let messageIndex = input.messageIndex
     if (feedback === undefined) {
+      const billing = yield* authorizeBillableAction({
+        organizationId,
+        action: "llm-call",
+        skipIfBlocked: true,
+        idempotencyKey: buildBillingIdempotencyKey("llm-call", [
+          input.organizationId,
+          "flagger",
+          input.flaggerSlug,
+          input.sessionId,
+          input.contentHash,
+          "authorize",
+        ]),
+      })
+
+      if (!billing.allowed) {
+        return yield* Effect.fail(
+          new NoCreditsRemainingError({
+            organizationId,
+            planSlug: billing.context.planSlug,
+            action: "llm-call",
+          }),
+        )
+      }
+
       const meteringScope = yield* makeAIMeteringScope({
         organizationId,
         projectId,
