@@ -89,16 +89,11 @@ function memoryTiles(overview: MemoryOverviewRecord | undefined): readonly Memor
     { key: "records", label: "Records", value: formatCount(o?.liveRecords ?? 0) },
     {
       key: "tokens",
-      label: "Live tokens",
+      label: "Total tokens",
       value: formatCount(o?.liveTokens ?? 0),
       ...(o && o.liveTokens > 0 ? { subtext: `${formatPercent(o.deadTokens / o.liveTokens)} dead` } : {}),
     },
     { key: "searches", label: "Searches", value: formatCount(o?.searches ?? 0) },
-    {
-      key: "zeroHit",
-      label: "Zero-hit rate",
-      value: o && o.searches > 0 ? formatPercent(o.zeroHitSearches / o.searches) : "-",
-    },
     { key: "writes", label: "Writes", value: formatCount(o?.writes ?? 0) },
     { key: "ratio", label: "Read:write", value: formatRatio(o?.recordsRetrieved ?? 0, o?.writes ?? 0) },
   ]

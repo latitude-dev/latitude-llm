@@ -25,7 +25,7 @@ export const MEMORY_COLUMN_OPTIONS = [
   { id: "lastActivity", label: "Last activity" },
   { id: "churn", label: "Rewrites", defaultHidden: true },
   { id: "netGrowth", label: "Net growth", defaultHidden: true },
-  { id: "tokens", label: "Live tokens", defaultHidden: true },
+  { id: "tokens", label: "Total tokens", defaultHidden: true },
   { id: "sessions", label: "Sessions", defaultHidden: true },
   { id: "users", label: "Users", defaultHidden: true },
 ] as const satisfies readonly TableColumnOption[]
@@ -259,7 +259,7 @@ export function MemoryStoresView({
     },
     {
       key: "tokens",
-      header: "Live tokens",
+      header: "Total tokens",
       width: 100,
       minWidth: 90,
       align: "end",
