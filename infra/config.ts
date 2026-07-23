@@ -238,8 +238,8 @@ export const productionConfig: EnvironmentConfig = {
         memory: 1024,
         port: 8080,
         healthCheckPath: "/health",
-        desiredCount: 1,
-        minCount: 1,
+        desiredCount: 2,
+        minCount: 2,
         maxCount: 4,
       },
       {
