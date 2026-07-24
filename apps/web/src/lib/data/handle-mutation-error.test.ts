@@ -1,4 +1,5 @@
-import { beforeEach, describe, expect, it, vi } from "vitest"
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
+import { STALE_SERVER_FN_ERROR_TAG, STALE_SERVER_FN_USER_MESSAGE } from "../stale-server-fn.ts"
 
 const toastMock = vi.hoisted(() => vi.fn())
 vi.mock("@repo/ui", () => ({ toast: toastMock }))
@@ -9,7 +10,17 @@ const serverError = (payload: { _tag?: string; message: string; status?: number 
   new Error(JSON.stringify({ status: 500, ...payload }))
 
 describe("handleMutationError", () => {
-  beforeEach(() => toastMock.mockClear())
+  const reload = vi.fn()
+
+  beforeEach(() => {
+    toastMock.mockClear()
+    reload.mockClear()
+    vi.stubGlobal("window", { location: { reload } })
+  })
+
+  afterEach(() => {
+    vi.unstubAllGlobals()
+  })
 
   it("toasts the decoded message for a generic server error", () => {
     handleMutationError(serverError({ message: "Something broke" }))
@@ -42,5 +53,23 @@ describe("handleMutationError", () => {
     })
 
     expect(toastMock).not.toHaveBeenCalled()
+  })
+
+  it("reloads the page for a stale server-fn error instead of toasting", () => {
+    handleMutationError(
+      serverError({ _tag: STALE_SERVER_FN_ERROR_TAG, message: STALE_SERVER_FN_USER_MESSAGE, status: 404 }),
+    )
+
+    expect(toastMock).not.toHaveBeenCalled()
+    expect(reload).toHaveBeenCalledTimes(1)
+  })
+
+  it("reloads when the client still sees TanStack's raw missing-hash message", () => {
+    handleMutationError(
+      new Error("Server function info not found for 8ae8498b6e8c600abff6cc7c428fc166b1bb45613094b806f08105bfc6f1344d"),
+    )
+
+    expect(toastMock).not.toHaveBeenCalled()
+    expect(reload).toHaveBeenCalledTimes(1)
   })
 })

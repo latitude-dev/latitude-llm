@@ -2,7 +2,12 @@ import { NotFoundError, RepositoryError, UnauthorizedError } from "@domain/share
 import type { Span } from "@repo/observability"
 import { isHttpError } from "@repo/utils"
 import { describe, expect, it, vi } from "vitest"
-import { recordRequestError, recordServerFnError } from "./server-fn-error.ts"
+import { STALE_SERVER_FN_ERROR_TAG, STALE_SERVER_FN_USER_MESSAGE } from "../lib/stale-server-fn.ts"
+import { asStaleServerFnError, recordRequestError, recordServerFnError } from "./server-fn-error.ts"
+
+const MISSING_SERVER_FN = new Error(
+  "Server function info not found for 8ae8498b6e8c600abff6cc7c428fc166b1bb45613094b806f08105bfc6f1344d",
+)
 
 const fakeSpan = () => {
   const span = {
@@ -118,5 +123,35 @@ describe("recordRequestError", () => {
     recordRequestError(span, new Error("boom"))
 
     expect(span.recordException).toHaveBeenCalledTimes(1)
+  })
+
+  it("does NOT report a raw missing server-fn hash (deploy skew) to Datadog", () => {
+    const span = fakeSpan()
+    recordRequestError(span, MISSING_SERVER_FN)
+
+    expect(span.recordException).not.toHaveBeenCalled()
+    expect(span.setStatus).not.toHaveBeenCalled()
+  })
+
+  it("does NOT report the reshaped stale server-fn 404 to Datadog", () => {
+    const span = fakeSpan()
+    recordRequestError(span, asStaleServerFnError(MISSING_SERVER_FN))
+
+    expect(span.recordException).not.toHaveBeenCalled()
+    expect(span.setStatus).not.toHaveBeenCalled()
+  })
+})
+
+describe("asStaleServerFnError", () => {
+  it("shapes a client-bound 404 payload and preserves HttpError classification", () => {
+    const shaped = asStaleServerFnError(MISSING_SERVER_FN)
+
+    expect(JSON.parse(shaped.message)).toEqual({
+      _tag: STALE_SERVER_FN_ERROR_TAG,
+      message: STALE_SERVER_FN_USER_MESSAGE,
+      status: 404,
+    })
+    expect(isHttpError(shaped)).toBe(true)
+    expect(shaped.stack).toBe(MISSING_SERVER_FN.stack)
   })
 })

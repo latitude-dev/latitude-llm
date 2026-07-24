@@ -7,6 +7,12 @@
  * These helpers decode that payload back into structured data.
  */
 
+import {
+  isMissingServerFnErrorMessage,
+  STALE_SERVER_FN_ERROR_TAG,
+  STALE_SERVER_FN_USER_MESSAGE,
+} from "./stale-server-fn.ts"
+
 /**
  * Structured error returned by `parseServerError`.
  */
@@ -35,6 +41,9 @@ export function parseServerError(err: unknown): ServerError {
     }
   } catch {
     // not JSON — fall through
+  }
+  if (isMissingServerFnErrorMessage(raw)) {
+    return { _tag: STALE_SERVER_FN_ERROR_TAG, message: STALE_SERVER_FN_USER_MESSAGE, status: 404 }
   }
   return { _tag: undefined, message: raw, status: 500 }
 }

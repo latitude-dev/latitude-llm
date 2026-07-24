@@ -1,7 +1,8 @@
 import type { Span, Tracer } from "@repo/observability"
 import { SpanStatusCode } from "@repo/observability"
 import { createMiddleware } from "@tanstack/react-start"
-import { recordRequestError } from "./server-fn-error.ts"
+import { isMissingServerFnError } from "../lib/stale-server-fn.ts"
+import { asStaleServerFnError, recordRequestError } from "./server-fn-error.ts"
 
 export const tracingRequestMiddleware = ({ tracer }: { tracer: Tracer }) =>
   createMiddleware({ type: "request" }).server(async ({ next, request }) => {
@@ -23,8 +24,9 @@ export const tracingRequestMiddleware = ({ tracer }: { tracer: Tracer }) =>
         }
         return result
       } catch (error) {
-        recordRequestError(span, error)
-        throw error
+        const normalized = isMissingServerFnError(error) && error instanceof Error ? asStaleServerFnError(error) : error
+        recordRequestError(span, normalized)
+        throw normalized
       } finally {
         span.end()
       }
