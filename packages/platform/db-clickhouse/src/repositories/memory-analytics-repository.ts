@@ -109,7 +109,7 @@ type ColdRow = {
 type QueryCountRow = { readonly query_text: string; readonly searches: string | number }
 type LargestRow = { readonly record_id: string; readonly token_count: string | number }
 type SizeRow = Record<string, string | number>
-type TokensRow = { readonly tokens: string | number }
+type TokenHistoryRow = { readonly bucket_start: string; readonly tokens: string | number }
 type WriteHealthRow = {
   readonly record_id: string
   readonly writes: string | number
@@ -437,25 +437,35 @@ export const MemoryAnalyticsRepositoryLive = Layer.effect(
       to,
       storeId,
       listLimit,
+      bucketSeconds,
     }) =>
       Effect.gen(function* () {
         const chSqlClient = (yield* ChSqlClient) as ChSqlClientShape<ClickHouseClient>
         const scope = { organizationId, projectId, from, to }
         const windowParams = { ...rangeParams(scope), storeId, listLimit }
         const currentParams = { ...scopeParams(scope), storeId }
-        // Live-token footprint at an instant: latest add/update/remove per record up to `at`, dropping records last removed.
-        const tokensAtQuery = `
-          SELECT sum(token_count) AS tokens
+        // Live-token footprint over time: per-event token delta (add:+tokens, update:±diff vs the
+        // record's previous version, remove:−previous), bucketed then cumulatively summed. Absolute
+        // only when the window starts at inception (the dashboard runs it all-time).
+        const tokenHistoryQuery = `
+          SELECT bucket_start,
+                 sum(bucket_delta) OVER (ORDER BY bucket_start ROWS BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW) AS tokens
           FROM (
-            SELECT record_id, argMax(token_count, end_time) AS token_count, argMax(change_kind, end_time) AS change_kind
+            SELECT toDateTime(intDiv(toUnixTimestamp(end_time), {bucketSeconds:UInt32}) * {bucketSeconds:UInt32}, 'UTC') AS bucket_start,
+                   sum(multiIf(
+                     change_kind = 'add', toInt64(token_count),
+                     change_kind = 'remove', -toInt64(prev_token),
+                     toInt64(token_count) - toInt64(prev_token)
+                   )) AS bucket_delta
             FROM (
-              SELECT record_id, token_count, change_kind, end_time
-              FROM memory_events
-              WHERE ${SCOPE} ${STORE_FILTER} AND change_kind IN ('add', 'update', 'remove') AND end_time <= {at:DateTime64(6, 'UTC')}
+              SELECT change_kind, token_count, end_time,
+                     lagInFrame(token_count) OVER (PARTITION BY record_id ORDER BY end_time) AS prev_token
+              FROM ( ${dedupedWindow(true)} )
+              WHERE change_kind IN ('add', 'update', 'remove')
             )
-            GROUP BY record_id
-            HAVING change_kind != 'remove'
-          )`
+            GROUP BY bucket_start
+          )
+          ORDER BY bucket_start ASC`
         const queryRows = <T>(query: string, params: Record<string, unknown>) =>
           chSqlClient.query(async (client) => {
             const result = await client.query({ query, query_params: params, format: "JSONEachRow" })
@@ -515,8 +525,7 @@ export const MemoryAnalyticsRepositoryLive = Layer.effect(
               { ...currentParams, listLimit },
             ),
             queryRow<SizeRow>(`SELECT ${sizeDistributionSelect} FROM ( ${liveRecords(true)} )`, currentParams),
-            queryRow<TokensRow>(tokensAtQuery, { ...currentParams, at: formatCHDate(from) }),
-            queryRow<TokensRow>(tokensAtQuery, { ...currentParams, at: formatCHDate(to) }),
+            queryRows<TokenHistoryRow>(tokenHistoryQuery, { ...windowParams, bucketSeconds }),
             queryRows<WriteHealthRow>(
               `SELECT record_id,
                       sum(writes_in_trace)              AS writes,
@@ -583,8 +592,7 @@ export const MemoryAnalyticsRepositoryLive = Layer.effect(
               zeroHit,
               largest,
               size,
-              tokensFrom,
-              tokensTo,
+              tokenHistory,
               writeHealth,
               reverted,
               noOp,
@@ -624,7 +632,10 @@ export const MemoryAnalyticsRepositoryLive = Layer.effect(
                 noOpRewrites: num(noOp?.noop),
                 duplicateGroups: num(duplicates?.groups),
                 duplicateRecords: num(duplicates?.records),
-                netGrowthTokens: num(tokensTo?.tokens) - num(tokensFrom?.tokens),
+                tokenHistory: tokenHistory.map((row) => ({
+                  bucketStart: parseCHDate(row.bucket_start).toISOString(),
+                  tokens: num(row.tokens),
+                })),
               }
             },
           ),

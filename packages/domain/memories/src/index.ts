@@ -17,6 +17,7 @@ export {
   type StoreMostReadRecord,
   type StoreQueryCount,
   type StoreSizeBucket,
+  type StoreTokenPoint,
   type StoreWriteHealthRecord,
 } from "./entities/memory-analytics.ts"
 export {

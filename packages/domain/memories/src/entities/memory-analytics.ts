@@ -102,6 +102,12 @@ export interface StoreSizeBucket {
   readonly count: number
 }
 
+/** One point of a store's live-token footprint over time (UTC ISO bucket start). */
+export interface StoreTokenPoint {
+  readonly bucketStart: string
+  readonly tokens: number
+}
+
 /**
  * A record's write-instability signals over the window. `peakWritesPerTrace` is
  * the most writes it took in a single trace (thrashing); `reverted` marks a
@@ -130,9 +136,12 @@ export const STORE_SIZE_BUCKETS: readonly {
 
 /**
  * Per-store Home-dashboard insights. Retrieval/query lists, `writeHealth`,
- * `noOpRewrites` and `netGrowthTokens` are window-scoped; `coldRecords`,
+ * `noOpRewrites` and `tokenHistory` are window-scoped; `coldRecords`,
  * `largestRecords`, `sizeDistribution` and the duplicate counts are
  * current-state (window-independent), matching the overview tiles.
+ * `tokenHistory` is the cumulative live-token footprint per bucket — correct as
+ * an absolute line only when the window starts at the store's inception (the
+ * Home dashboard runs it all-time).
  */
 export interface StoreInsights {
   readonly mostReadRecords: readonly StoreMostReadRecord[]
@@ -145,12 +154,13 @@ export interface StoreInsights {
   readonly noOpRewrites: number
   readonly duplicateGroups: number
   readonly duplicateRecords: number
-  readonly netGrowthTokens: number
+  readonly tokenHistory: readonly StoreTokenPoint[]
 }
 
 export interface StoreInsightsOptions {
   readonly storeId: string
   readonly listLimit: number
+  readonly bucketSeconds: number
 }
 
 // `netGrowth` is deliberately absent — it is page-scoped (computed only for the

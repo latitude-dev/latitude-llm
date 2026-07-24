@@ -7,16 +7,14 @@ import {
   useStoreInsights,
 } from "../../../../../../../domains/memories/memories.collection.ts"
 import type { StoreInsightsRecord } from "../../../../../../../domains/memories/memories.functions.ts"
-import { defaultProjectTimeWindowSeconds } from "../../../../../../../domains/projects/default-time-window.ts"
 import { useAnalyticsTimeWindow } from "../../../../../../../domains/projects/use-analytics-time-window.ts"
 import { useProjectFirstTraceAt, useProjectLastTraceAt } from "../../../../../../../domains/traces/traces.collection.ts"
-import { TimeFilterDropdown } from "../../../-components/time-filter-dropdown.tsx"
 import { useRouteProject } from "../../../-route-data.ts"
 import { MemoryAnalyticsPanel, type MemoryTile } from "../../-components/memory-analytics-panel.tsx"
 import {
+  formatBucketLabel,
   formatPercent,
   formatRatio,
-  formatSignedCount,
   pickMemoryTrendBucketSeconds,
 } from "../../-components/memory-formatters.ts"
 import { recordDisplayLabel } from "../../-components/store-encoding.ts"
@@ -24,6 +22,33 @@ import { StoreInsightList } from "./store-insight-list.tsx"
 import { StoreWriteHealthTable } from "./store-write-health-table.tsx"
 
 const SIZE_BAR_COLOR = "hsl(217 91% 60%)"
+const TOKENS_COLOR = "hsl(199 89% 48%)"
+
+type StoreTokenPointRecord = StoreInsightsRecord["tokenHistory"][number]
+
+// Fill every bucket over [fromMs, toMs], carrying the last cumulative footprint forward across
+// quiet buckets (a footprint holds flat when nothing is written, unlike zero-filled counts).
+function denseTokenSeries(
+  points: readonly StoreTokenPointRecord[],
+  fromMs: number,
+  toMs: number,
+  bucketSeconds: number,
+): readonly { readonly startMs: number; readonly tokens: number }[] {
+  const bucketMs = bucketSeconds * 1000
+  if (!Number.isFinite(fromMs) || !Number.isFinite(toMs) || toMs < fromMs) {
+    return points.map((point) => ({ startMs: Date.parse(point.bucketStart), tokens: point.tokens }))
+  }
+  const byStart = new Map(points.map((point) => [Date.parse(point.bucketStart), point.tokens]))
+  const firstBucketMs = Math.floor(fromMs / bucketMs) * bucketMs
+  const result: { startMs: number; tokens: number }[] = []
+  let last = 0
+  for (let startMs = firstBucketMs; startMs <= toMs; startMs += bucketMs) {
+    const bucketTokens = byStart.get(startMs)
+    if (bucketTokens !== undefined) last = bucketTokens
+    result.push({ startMs, tokens: last })
+  }
+  return result
+}
 
 function storeOverviewTiles(
   overview:
@@ -37,7 +62,6 @@ function storeOverviewTiles(
         readonly recordsRetrieved: number
       }
     | undefined,
-  netGrowthTokens: number | undefined,
 ): readonly MemoryTile[] {
   const o = overview
   return [
@@ -55,7 +79,6 @@ function storeOverviewTiles(
       value: formatCount(o?.searches ?? 0),
       ...(o && o.searches > 0 ? { subtext: `${formatPercent(o.zeroHitSearches / o.searches)} zero-hit` } : {}),
     },
-    { key: "netGrowth", label: "Net growth", value: `${formatSignedCount(netGrowthTokens ?? 0)} tok` },
   ]
 }
 
@@ -147,40 +170,59 @@ export function StoreHomeView({
     lastActivityIso: lastTraceAt,
   })
 
+  // The Home dashboard is always all-time (no picker); the range spans the store's full history.
   const range = useMemo(
     () => ({ fromIso: tw.listRange.fromIso ?? tw.trendRange.fromIso, toIso: tw.listRange.toIso }),
     [tw.listRange, tw.trendRange],
   )
-  // Mirror the Memory page: under All time, anchor the chart's right edge to
-  // today and clamp the span to the project window so every day up to now shows.
-  const histogramRange = useMemo(() => {
-    if (!tw.isAllTime) return range
-    const endMs = Date.parse(range.toIso)
-    const spanMs = defaultProjectTimeWindowSeconds(project) * 1000
-    const lowerBoundMs = Date.parse(range.fromIso)
-    const startMs = Math.max(endMs - spanMs, Number.isFinite(lowerBoundMs) ? lowerBoundMs : endMs - spanMs)
-    return { fromIso: new Date(startMs).toISOString(), toIso: range.toIso }
-  }, [tw.isAllTime, range, project])
-  const histogramBucketSeconds = useMemo(
-    () => pickMemoryTrendBucketSeconds(Date.parse(histogramRange.toIso) - Date.parse(histogramRange.fromIso)),
-    [histogramRange],
+  const bucketSeconds = useMemo(
+    () => pickMemoryTrendBucketSeconds(Date.parse(range.toIso) - Date.parse(range.fromIso)),
+    [range],
   )
 
   const { data: overview, isLoading: overviewLoading } = useMemoryOverview({ projectId: project.id, storeId, range })
   const { data: histogram = [], isLoading: histogramLoading } = useMemoryActivityHistogram({
     projectId: project.id,
     storeId,
-    range: histogramRange,
-    bucketSeconds: histogramBucketSeconds,
+    range,
+    bucketSeconds,
   })
-  const { data: insights, isLoading: insightsLoading } = useStoreInsights({ projectId: project.id, storeId, range })
+  const { data: insights, isLoading: insightsLoading } = useStoreInsights({
+    projectId: project.id,
+    storeId,
+    range,
+    bucketSeconds,
+  })
 
-  const tiles = useMemo(() => storeOverviewTiles(overview, insights?.netGrowthTokens), [overview, insights])
+  const tiles = useMemo(() => storeOverviewTiles(overview), [overview])
   const mostRead = useMemo(() => mostReadItems(insights), [insights])
   const cold = useMemo(() => coldItems(insights, Date.now()), [insights])
   const topQueries = useMemo(() => queryItems(insights?.topQueries ?? []), [insights])
   const zeroHit = useMemo(() => queryItems(insights?.zeroHitQueries ?? []), [insights])
   const largest = useMemo(() => largestItems(insights), [insights])
+
+  const denseTokens = useMemo(
+    () =>
+      denseTokenSeries(insights?.tokenHistory ?? [], Date.parse(range.fromIso), Date.parse(range.toIso), bucketSeconds),
+    [insights, range, bucketSeconds],
+  )
+  const tokenCategories = useMemo(
+    () => denseTokens.map((point) => formatBucketLabel(new Date(point.startMs).toISOString(), bucketSeconds)),
+    [denseTokens, bucketSeconds],
+  )
+  const tokenSeries = useMemo<readonly ChartSeries[]>(
+    () => [
+      {
+        kind: "line",
+        name: "Total tokens",
+        values: denseTokens.map((point) => point.tokens),
+        color: TOKENS_COLOR,
+        area: true,
+      },
+    ],
+    [denseTokens],
+  )
+  const tokensEmpty = (insights?.tokenHistory ?? []).length === 0
 
   const sizeSeries = useMemo<readonly ChartSeries[]>(
     () => [
@@ -199,23 +241,35 @@ export function StoreHomeView({
   return (
     <div className="flex min-h-0 flex-1 flex-col overflow-y-auto bg-background">
       <div className="flex flex-col gap-6 p-6">
-        <div className="flex items-center justify-end">
-          <TimeFilterDropdown
-            {...(tw.pickerStartFrom ? { startTimeFrom: tw.pickerStartFrom } : {})}
-            {...(tw.pickerStartTo ? { startTimeTo: tw.pickerStartTo } : {})}
-            onChange={tw.onTimeChange}
-          />
-        </div>
         <MemoryAnalyticsPanel
           overview={overview}
           tiles={tiles}
           histogram={histogram}
-          bucketSeconds={histogramBucketSeconds}
-          rangeFromIso={histogramRange.fromIso}
-          rangeToIso={histogramRange.toIso}
+          bucketSeconds={bucketSeconds}
+          rangeFromIso={range.fromIso}
+          rangeToIso={range.toIso}
           isAllTime={tw.isAllTime}
           isLoading={overviewLoading || histogramLoading}
         />
+
+        <div className="flex min-w-0 flex-col gap-3 rounded-lg bg-secondary p-4">
+          <Text.H6 color="foregroundMuted">Total tokens over time</Text.H6>
+          {insightsLoading ? (
+            <HistogramSkeleton height={160} />
+          ) : tokensEmpty ? (
+            <div className="flex min-h-[120px] items-center justify-center">
+              <Text.H6 color="foregroundMuted">No writes yet</Text.H6>
+            </div>
+          ) : (
+            <Chart
+              categories={tokenCategories}
+              series={tokenSeries}
+              height={160}
+              xAxisLabelFontSize={10}
+              ariaLabel="Total tokens over time"
+            />
+          )}
+        </div>
 
         <div className="flex flex-col gap-3">
           <SectionHeading>What's used</SectionHeading>

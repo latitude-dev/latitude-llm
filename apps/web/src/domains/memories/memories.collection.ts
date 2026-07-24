@@ -160,16 +160,26 @@ export function useStoreInsights({
   projectId,
   storeId,
   range,
+  bucketSeconds,
   enabled = true,
 }: {
   readonly projectId: string
   readonly storeId: string
   readonly range: { readonly fromIso: string; readonly toIso: string }
+  readonly bucketSeconds: number
   readonly enabled?: boolean
 }) {
   const scope = useProjectScope()
   return useQuery({
-    queryKey: [...projectScopeKey(scope), "store-insights", projectId, storeId, range.fromIso, range.toIso],
+    queryKey: [
+      ...projectScopeKey(scope),
+      "store-insights",
+      projectId,
+      storeId,
+      range.fromIso,
+      range.toIso,
+      bucketSeconds,
+    ],
     queryFn: () =>
       getStoreInsights({
         data: {
@@ -179,6 +189,7 @@ export function useStoreInsights({
           fromIso: range.fromIso,
           toIso: range.toIso,
           listLimit: STORE_INSIGHTS_LIST_LIMIT,
+          bucketSeconds,
         },
       }),
     placeholderData: keepPreviousData,

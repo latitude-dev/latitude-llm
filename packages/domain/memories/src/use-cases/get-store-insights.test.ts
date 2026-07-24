@@ -69,9 +69,9 @@ const layerFor = (memory: Fake) =>
     Layer.succeed(ChSqlClient, createFakeChSqlClient({ organizationId })),
   )
 
-const run = (memory: Fake, storeId = "A", listLimit = 10) =>
+const run = (memory: Fake, storeId = "A", listLimit = 10, bucketSeconds = 1) =>
   Effect.runPromise(
-    getStoreInsightsUseCase({ organizationId, projectId, storeId, from, to, listLimit }).pipe(
+    getStoreInsightsUseCase({ organizationId, projectId, storeId, from, to, listLimit, bucketSeconds }).pipe(
       Effect.provide(layerFor(memory)),
     ),
   )
@@ -135,9 +135,9 @@ describe("getStoreInsightsUseCase", () => {
     expect(sizeByLabel["500–1k"]).toBe(1)
   })
 
-  it("computes net token growth from the window boundaries", async () => {
+  it("builds a cumulative token-footprint history", async () => {
     const insights = await run(seededStore())
-    expect(insights.netGrowthTokens).toBe(650)
+    expect(insights.tokenHistory.map((point) => point.tokens)).toEqual([10, 610, 660])
   })
 
   it("scopes to the requested store", async () => {

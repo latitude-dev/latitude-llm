@@ -224,6 +224,7 @@ export const getStoreInsights = createServerFn({ method: "GET" })
       fromIso: z.string().datetime(),
       toIso: z.string().datetime(),
       listLimit: z.number().int().min(1).max(100),
+      bucketSeconds: z.number().int().min(1).max(86_400),
     }),
   )
   .handler(async ({ data, context }): Promise<StoreInsightsRecord> => {
@@ -237,6 +238,7 @@ export const getStoreInsights = createServerFn({ method: "GET" })
         from: new Date(data.fromIso),
         to: new Date(data.toIso),
         listLimit: data.listLimit,
+        bucketSeconds: data.bucketSeconds,
       }).pipe(withScopedClickHouse(MemoryAnalyticsRepositoryLive, getClickhouseClient(), orgId), withTracing),
     )
   })
