@@ -64,7 +64,7 @@ export const NOTIFICATION_GROUP_META: Record<
   billing: {
     label: "Billing",
     description: "Alerts when your organization reaches its plan credit or spend limit.",
-    slackRoutable: true,
+    slackRoutable: false,
   },
 }
 

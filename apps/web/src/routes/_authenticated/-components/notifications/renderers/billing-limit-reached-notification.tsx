@@ -4,10 +4,6 @@ import { CircleDollarSignIcon } from "lucide-react"
 import type { NotificationRecord } from "../../../../../domains/notifications/notifications.functions.ts"
 import { BaseNotification } from "../base-notification.tsx"
 
-/**
- * "Billing limit reached" — owners/admins only. Deep-links to org billing
- * settings so recipients can upgrade or raise a spend cap.
- */
 export function BillingLimitReachedNotification({ notification }: { readonly notification: NotificationRecord }) {
   const parsed = billingLimitReachedPayloadSchema.safeParse(notification.payload)
   const seenAt = notification.seenAt ? new Date(notification.seenAt) : undefined

@@ -197,7 +197,7 @@ Enforcement rules:
 
 The system never partially accepts only part of one ingest payload. Do **not** bypass the ingest billing gate—other producers must enqueue `span-ingestion` only after applying the **same credit checks**.
 
-When a hard-capped period first reaches its included allotment (or a Pro period first reaches a configured spend cap), the usage write stamps `limitCrossed` on `BillingUsagePeriodUpdated`. The domain-events worker fans that out to `notifications:request-billing-limit-notifications`, which emails organization owners and admins once per period. Subsequent usage after the crossing does not re-notify.
+When a hard-capped period first reaches its included allotment (or a Pro period first reaches a configured spend cap), the usage write stamps `limitCrossed` on `BillingUsagePeriodUpdated`. The domain-events worker fans that out to `notifications:request-billing-limit-notifications`, which notifies organization owners and admins once per period via email and in-app. The billing group is not Slack-routable, so spend and credit status stay off shared channels. Subsequent usage after the crossing does not re-notify.
 
 ## Pro Spending Limits
 
