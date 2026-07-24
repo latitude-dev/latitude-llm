@@ -55,6 +55,10 @@ export const recordUsageEventUseCase = Effect.fn("billing.recordUsageEvent")(fun
   yield* Effect.annotateCurrentSpan("billing.organizationId", input.organizationId)
   yield* Effect.annotateCurrentSpan("billing.action", input.action)
   yield* Effect.annotateCurrentSpan("billing.idempotencyKey", input.idempotencyKey)
+  const pricing = input.metadata?.pricing
+  if (typeof pricing === "string") {
+    yield* Effect.annotateCurrentSpan("billing.pricing", pricing)
+  }
 
   // A credits override outside the ledger's invariants (positive integer) is a caller
   // bug, never a runtime condition — die instead of widening every caller's error union.

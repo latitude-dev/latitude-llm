@@ -15,16 +15,17 @@ export const CHARGEABLE_ACTIONS = ["trace", "eval-scan", "semantic-query", "llm-
 export type ChargeableAction = (typeof CHARGEABLE_ACTIONS)[number]
 
 /**
- * Flat credit prices at the Pro overage rate ($0.002/credit). `llm-call` is the
- * authorization estimate and the fallback when the model registry has no pricing —
- * actual generations bill their estimated provider cost through
- * `creditsForLlmGenerationCost`. Derivation lives in dev-docs/billing.md.
+ * Flat credit prices at the Pro overage rate ($0.002/credit). `llm-call` and
+ * `semantic-query` are authorization estimates and fallbacks when cost cannot be
+ * determined — actual generations/embeds bill estimated provider cost through
+ * `creditsForLlmGenerationCost` / `creditsForSemanticQueryCost`. Derivation lives
+ * in dev-docs/billing.md.
  */
 export const ACTION_CREDITS: Record<ChargeableAction, number> = {
   trace: 1,
   "eval-scan": 1,
-  "semantic-query": 15,
-  "llm-call": 30,
+  "semantic-query": 1,
+  "llm-call": 4,
 } as const
 
 export const FREE_PLAN_CONFIG = {

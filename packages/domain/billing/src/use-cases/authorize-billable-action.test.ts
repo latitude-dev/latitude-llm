@@ -102,7 +102,7 @@ describe("authorizeBillableAction", () => {
             periodStart: PERIOD_START,
             periodEnd: PERIOD_END,
             includedCredits: 20_000,
-            consumedCredits: 19_990,
+            consumedCredits: 20_000,
           }),
         )
         .pipe(Effect.provideService(SqlClient, SQL_CLIENT)),
@@ -118,7 +118,7 @@ describe("authorizeBillableAction", () => {
     )
 
     expect(result.allowed).toBe(false)
-    expect(result.period?.consumedCredits).toBe(19_990)
+    expect(result.period?.consumedCredits).toBe(20_000)
   })
 
   it("blocks a pro action when the snapshot projection already exceeds the spending cap", async () => {
@@ -202,7 +202,7 @@ describe("authorizeBillableAction", () => {
     expect(first.allowed).toBe(true)
     expect(second.allowed).toBe(true)
     expect(counters.size).toBe(1)
-    expect([...counters.values()][0]?.reservedCredits).toBe(100_015)
+    expect([...counters.values()][0]?.reservedCredits).toBe(100_001)
   })
 
   it("routes hard-capped free-plan authorization through the reservation port", async () => {
@@ -219,6 +219,6 @@ describe("authorizeBillableAction", () => {
 
     expect(result.allowed).toBe(true)
     expect(counters.size).toBe(1)
-    expect([...counters.values()][0]?.reservedCredits).toBe(15)
+    expect([...counters.values()][0]?.reservedCredits).toBe(1)
   })
 })
