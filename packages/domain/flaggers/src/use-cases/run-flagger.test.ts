@@ -1601,7 +1601,7 @@ ${"Detailed grounding, workflow, callout, and formatting rules. ".repeat(120)}`.
     const sdkError = new Error("The model returned the following errors: Grammar compilation timed out")
     sdkError.name = "AI_APICallError"
 
-    const { layer: aiLayer } = createFakeAI({
+    const { calls, layer: aiLayer } = createFakeAI({
       generate: () =>
         Effect.fail(
           new AIError({
@@ -1627,6 +1627,7 @@ ${"Detailed grounding, workflow, callout, and formatting rules. ".repeat(120)}`.
     )
 
     expect(result).toEqual({ matched: false })
+    expect(calls.generate).toHaveLength(1)
   })
 
   it("drops matched annotations when the reviewer call fails because Bedrock grammar compilation timed out", async () => {
