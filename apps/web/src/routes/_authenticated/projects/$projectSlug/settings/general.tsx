@@ -216,7 +216,7 @@ function TraceSamplingSection({
               {isDirty ? <DotIndicator variant="primary" aria-label="Unsaved changes" /> : null}
             </Label>
             <Text.H6 color="foregroundMuted">
-              Process and store only a fraction of the traces you send, to cut costs. Best for high-traffic projects
+              Choose how much of your traffic to process and store, to cut costs. Best for high-traffic projects
               where a sample is still enough to spot issues.
             </Text.H6>
           </div>

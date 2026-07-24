@@ -121,7 +121,7 @@ export function PromoteDemoteStaffButton({ userId, userEmail, currentRole }: Pro
           <div className="flex flex-col gap-4">
             <Alert
               variant="destructive"
-              description="This user loses backoffice access on their next request. Their active sessions stay signed in; they just stop seeing /backoffice routes."
+              description="This user loses backoffice access on their next request. Their active sessions stay signed in, but /backoffice routes become inaccessible."
             />
             <label className="flex cursor-pointer items-start gap-2" htmlFor="demote-acknowledge">
               <Checkbox
