@@ -156,6 +156,15 @@ describe("getStoreInsightsUseCase", () => {
     expect(insights.tokenHistory.map((point) => point.tokens)).toEqual([10, 610, 660])
   })
 
+  it("anchors token history to the current footprint, folding in untouched pre-window records", async () => {
+    const memory = seededStore()
+    // Live in current-state but with no event in the window (early history pruned / created earlier).
+    memory.current.push(makeCurrent({ recordId: "ancient", contentHash: "h-old", tokenCount: 200, endTime: at(0) }))
+    const insights = await run(memory)
+    // Offset = liveTokens(860) − in-window delta(660) = 200, lifting every point so the series ends at 860.
+    expect(insights.tokenHistory.map((point) => point.tokens)).toEqual([210, 810, 860])
+  })
+
   it("scopes to the requested store", async () => {
     const memory = seededStore()
     memory.events.push(makeEvent({ storeId: "B", recordId: "other", tokenCount: 999, endTime: at(3) }))

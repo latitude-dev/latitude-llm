@@ -446,25 +446,33 @@ export const MemoryAnalyticsRepositoryLive = Layer.effect(
         const windowParams = { ...rangeParams(scope), storeId, listLimit }
         const currentParams = { ...scopeParams(scope), storeId }
         // Live-token footprint over time: per-event token delta (add:+tokens, update:±diff vs the
-        // record's previous version, remove:−previous), bucketed then cumulatively summed. Absolute
-        // only when the window starts at inception (the dashboard runs it all-time).
+        // record's previous version, remove:−previous) bucketed and cumulatively summed, then
+        // shifted so the series ends at the current live-token total (running − total + live_tokens).
+        // The shift folds in records that are live in `memory_current` but have no event in the
+        // window — created before it, or with early history pruned by the events TTL — which a raw
+        // cumulative-from-zero would omit, so the chart's endpoint stays equal to the Total tokens tile.
         const tokenHistoryQuery = `
-          SELECT bucket_start,
-                 sum(bucket_delta) OVER (ORDER BY bucket_start ROWS BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW) AS tokens
+          SELECT bucket_start, running - total + live_tokens AS tokens
           FROM (
-            SELECT toDateTime(intDiv(toUnixTimestamp(end_time), {bucketSeconds:UInt32}) * {bucketSeconds:UInt32}, 'UTC') AS bucket_start,
-                   sum(multiIf(
-                     change_kind = 'add', toInt64(token_count),
-                     change_kind = 'remove', -toInt64(prev_token),
-                     toInt64(token_count) - toInt64(prev_token)
-                   )) AS bucket_delta
+            SELECT bucket_start,
+                   sum(bucket_delta) OVER (ORDER BY bucket_start ROWS BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW) AS running,
+                   sum(bucket_delta) OVER ()                                                                       AS total,
+                   toInt64((SELECT sum(token_count) FROM ( ${liveRecords(true)} )))                                AS live_tokens
             FROM (
-              SELECT change_kind, token_count, end_time,
-                     lagInFrame(token_count) OVER (PARTITION BY record_id ORDER BY end_time, trace_id, span_id ROWS BETWEEN 1 PRECEDING AND CURRENT ROW) AS prev_token
-              FROM ( ${dedupedWindow(true)} )
-              WHERE change_kind IN ('add', 'update', 'remove')
+              SELECT toDateTime(intDiv(toUnixTimestamp(end_time), {bucketSeconds:UInt32}) * {bucketSeconds:UInt32}, 'UTC') AS bucket_start,
+                     sum(multiIf(
+                       change_kind = 'add', toInt64(token_count),
+                       change_kind = 'remove', -toInt64(prev_token),
+                       toInt64(token_count) - toInt64(prev_token)
+                     )) AS bucket_delta
+              FROM (
+                SELECT change_kind, token_count, end_time,
+                       lagInFrame(token_count) OVER (PARTITION BY record_id ORDER BY end_time, trace_id, span_id ROWS BETWEEN 1 PRECEDING AND CURRENT ROW) AS prev_token
+                FROM ( ${dedupedWindow(true)} )
+                WHERE change_kind IN ('add', 'update', 'remove')
+              )
+              GROUP BY bucket_start
             )
-            GROUP BY bucket_start
           )
           ORDER BY bucket_start ASC`
         const queryRows = <T>(query: string, params: Record<string, unknown>) =>
