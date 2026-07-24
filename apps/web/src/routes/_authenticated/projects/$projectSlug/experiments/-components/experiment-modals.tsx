@@ -82,7 +82,7 @@ export function ExperimentCreateModal({
       dismissible
       onOpenChange={(next) => (!next ? onClose() : undefined)}
       title="New experiment"
-      description="Experiments compare sessions, users, tools, signals, and behaviours across variants of filters, search queries and time ranges."
+      description="Compare variants side by side, each with its own filters, search query, or time range. See how sessions, users, tools, signals, and behaviours differ across them."
       footer={
         <>
           <CloseTrigger />

@@ -89,7 +89,7 @@ export function EnrichmentPopover({ annotationId, rawFeedback }: EnrichmentPopov
 
             <div className="flex flex-col gap-2 pt-2 border-t border-border">
               <Text.H6 color="foregroundMuted">
-                Let Latitude know how this enrichment looks — your feedback helps us improve.
+                Does this enrichment look right? Your feedback helps us improve it.
               </Text.H6>
               <div className="flex items-center gap-2">
                 <Button

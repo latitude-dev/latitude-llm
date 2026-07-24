@@ -48,11 +48,11 @@ export function BackfillDestinationModal({
     onSuccess: (result) => {
       void queryClient.invalidateQueries({ queryKey: destinationsQueryKey(projectId) })
       if (result.failed > 0) {
-        toast({ variant: "destructive", description: "Backfill couldn't start for every source — try again." })
+        toast({ variant: "destructive", description: "Backfill couldn't start for some sources. Try again." })
       } else if (result.enqueued === 0) {
-        toast({ description: "Nothing to import — already backfilled as far back as your plan retains." })
+        toast({ description: "Nothing to import. You've already backfilled as far back as your plan retains." })
       } else {
-        toast({ description: "Backfill started — historical windows will appear in the run history." })
+        toast({ description: "Backfill started. Historical windows will show up in the run history." })
         onStarted?.()
       }
       onClose()
@@ -84,7 +84,7 @@ export function BackfillDestinationModal({
           label="Import history since"
           value={since}
           max={todayStr}
-          description="Leave empty to import as far back as your plan retains. Re-running is safe — duplicates are ignored at the destination."
+          description="Leave empty to import as far back as your plan retains. Re-running is safe; the destination ignores duplicates."
           onChange={(event) => setSince(event.target.value)}
         />
       </div>

@@ -27,7 +27,7 @@ export async function organizationClaimTemplate(data: OrganizationClaimEmailData
       />,
     ),
     subject: `Claim ${data.organizationName} on Latitude`,
-    text: `Your new ${data.organizationName} organization has been set up for you on Latitude. Claim it before ${expiresAtLabel}: ${data.claimUrl}`,
+    text: `Your ${data.organizationName} organization is set up on Latitude. Claim it before ${expiresAtLabel}: ${data.claimUrl}`,
   }
 }
 

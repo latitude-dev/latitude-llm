@@ -64,13 +64,13 @@ export function IncidentClosedEmail({
   const isMonitorIncident = incidentKind.startsWith("monitor.")
   const heading = "Resolved escalation"
   const subtitle = isMonitorIncident
-    ? "We notified everyone watching this project — the monitored target has returned below the threshold."
-    : "We notified everyone watching this project — the occurrence rate has returned to baseline."
+    ? "We notified everyone watching this project. The monitored target is back below its threshold."
+    : "We notified everyone watching this project. The occurrence rate is back to baseline."
   const scope = formatScope(organizationName, projectName)
   const duration = humanizeDurationMs(recovery.durationMs)
   const recoveryLine = isMonitorIncident
-    ? `Elevated for ${duration} — no further action needed unless the monitored target climbs again.`
-    : `Elevated for ${duration} — no further action needed unless the signal regresses again.`
+    ? `Elevated for ${duration}. No action needed unless the target climbs again.`
+    : `Elevated for ${duration}. No action needed unless the signal regresses again.`
   const ctaHref = isMonitorIncident ? monitor?.url : signalUrl
 
   const metadataRows = [

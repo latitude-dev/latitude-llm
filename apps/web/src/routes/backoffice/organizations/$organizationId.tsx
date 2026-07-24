@@ -294,7 +294,7 @@ function BillingSummarySection({ billing }: { billing: AdminOrganizationBillingD
       value: `${formatCredits(billing.includedCredits)} / ${numberFormatter.format(billing.consumedCredits)}`,
       muted:
         billing.includedCredits === null
-          ? "No fixed monthly bundle — entitlement scales with contract"
+          ? "No fixed monthly bundle. Entitlement scales with the contract."
           : `${numberFormatter.format(Math.max(billing.includedCredits - billing.consumedCredits, 0))} credits remaining`,
     },
     {

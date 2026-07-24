@@ -57,7 +57,7 @@ export const incidentOpenedRenderer: SlackNotificationRenderer<"incident.opened"
     }
 
     const breachLine = payload.breach
-      ? `Rate climbed to *${formatRate(payload.breach.triggerRate)}/hr* — ${formatMultiple(payload.breach.triggerRate, payload.breach.baselineRate)} the baseline of ${formatRate(payload.breach.baselineRate)}/hr`
+      ? `Rate climbed to *${formatRate(payload.breach.triggerRate)}/hr*, ${formatMultiple(payload.breach.triggerRate, payload.breach.baselineRate)} the baseline of ${formatRate(payload.breach.baselineRate)}/hr`
       : null
 
     const tags = payload.tags ?? []
