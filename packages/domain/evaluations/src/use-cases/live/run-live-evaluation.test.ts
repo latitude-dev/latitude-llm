@@ -939,7 +939,7 @@ describe("runLiveEvaluationUseCase", () => {
             periodStart: currentPeriodStart,
             periodEnd: currentPeriodEnd,
             includedCredits: 20_000,
-            consumedCredits: 19_980,
+            consumedCredits: 20_000,
           }),
         )
         .pipe(
