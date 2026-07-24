@@ -58,8 +58,9 @@ describe("requestBillingLimitNotificationsUseCase", () => {
     expect(result.requests[0]).toMatchObject({
       kind: "billing.limit-reached",
       projectId: null,
-      idempotencyKey: `billing.limit-reached:${periodStart}:included-credits`,
+      idempotencyKey: `billing.limit-reached:org:${orgId}:${periodStart}:included-credits`,
       payload: {
+        organizationId: orgId,
         limitKind: "included-credits",
         includedCredits: 20_000,
         consumedCredits: 20_000,
@@ -86,7 +87,9 @@ describe("requestBillingLimitNotificationsUseCase", () => {
     expect(spendCap.status).toBe("ok")
     if (included.status !== "ok" || spendCap.status !== "ok") throw new Error("unreachable")
 
-    expect(included.requests[0]?.idempotencyKey).toBe(`billing.limit-reached:${periodStart}:included-credits`)
-    expect(spendCap.requests[0]?.idempotencyKey).toBe(`billing.limit-reached:${periodStart}:spend-cap`)
+    expect(included.requests[0]?.idempotencyKey).toBe(
+      `billing.limit-reached:org:${orgId}:${periodStart}:included-credits`,
+    )
+    expect(spendCap.requests[0]?.idempotencyKey).toBe(`billing.limit-reached:org:${orgId}:${periodStart}:spend-cap`)
   })
 })

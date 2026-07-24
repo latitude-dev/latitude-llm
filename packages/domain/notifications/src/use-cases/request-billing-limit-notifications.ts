@@ -57,6 +57,7 @@ export const requestBillingLimitNotificationsUseCase = (input: RequestBillingLim
     }
 
     const payload: BillingLimitReachedPayload = {
+      organizationId: input.organizationId,
       limitKind: input.limitKind,
       periodStart: input.periodStart,
       periodEnd: input.periodEnd,

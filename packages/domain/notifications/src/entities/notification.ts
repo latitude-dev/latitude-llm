@@ -277,10 +277,13 @@ export type DestinationQuarantinedPayload = z.infer<typeof destinationQuarantine
  * Organization hit a hard billing limit for the current period — free
  * included credits exhausted, or a configured Pro spend cap reached.
  * Fans out to owners and admins only (members who cannot change billing
- * settings are excluded). Org-scoped (`projectId` null); period + limit
- * kind form the once-per-period idempotency anchor.
+ * settings are excluded). Org-scoped (`projectId` null); organization +
+ * period + limit kind form the once-per-period idempotency anchor (org is
+ * required because period bounds alone are not unique across tenants, and
+ * the create-notification queue dedupe key is built from this string).
  */
 export const billingLimitReachedPayloadSchema = z.object({
+  organizationId: cuidSchema,
   limitKind: z.enum(["included-credits", "spend-cap"]),
   periodStart: z.iso.datetime(),
   periodEnd: z.iso.datetime(),

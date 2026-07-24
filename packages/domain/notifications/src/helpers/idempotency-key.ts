@@ -73,8 +73,9 @@ export const buildIdempotencyKey = (input: BuildIdempotencyKeyInput): string => 
       // joins the id (mirrors issue.assigned).
       return `${input.kind}:${input.payload.destinationId}:${input.payload.quarantinedAt}`
     case "billing.limit-reached":
-      // Once per billing period per limit kind. Org + user are already in the
-      // unique index; period start + limit kind discriminate the occurrence.
-      return `${input.kind}:${input.payload.periodStart}:${input.payload.limitKind}`
+      // Once per billing period per limit kind. Period bounds alone collide
+      // across orgs for multi-org users, and create-notification BullMQ
+      // dedupe keys are built from this string (not the PG unique index).
+      return `${input.kind}:org:${input.payload.organizationId}:${input.payload.periodStart}:${input.payload.limitKind}`
   }
 }
