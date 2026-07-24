@@ -1,4 +1,13 @@
 export {
+  AIMeteringScope,
+  type AIMeteringScopeShape,
+  type MakeAIMeteringScopeInput,
+  type MeteredAIAction,
+  makeAIMeteringScope,
+  provideAIMeteringScope,
+  type RecordMeteredAIActionInput,
+} from "./ai-metering.ts"
+export {
   ACTION_CREDITS,
   BILLING_INCLUDED_CREDITS_PG_MAX,
   BILLING_OVERAGE_SYNC_THROTTLE_MS,
@@ -8,12 +17,16 @@ export {
   CENT_TO_MILLS,
   CHARGEABLE_ACTIONS,
   type ChargeableAction,
+  CREDIT_VALUE_MILLS,
   calculateMaxAllowedConsumedCreditsForCap,
   calculateMaxReportableOverageCreditsForCap,
   calculateOverageAmountMills,
   calculatePlanSpendMills,
+  creditsForLlmGenerationCost,
+  creditsForSemanticQueryCost,
   ENTERPRISE_PLAN_CONFIG,
   FREE_PLAN_CONFIG,
+  LLM_GENERATION_BILLING_MARGIN,
   OverageCreditUnit,
   PLAN_CONFIGS,
   PLAN_SLUGS,
@@ -24,6 +37,9 @@ export {
   SANDBOX_SPAN_RETENTION_DAYS,
   SELF_SERVE_PLAN_SLUG_TO_STRIPE_PLAN_NAME,
   SELF_SERVE_PLAN_SLUGS,
+  SEMANTIC_QUERY_BILLING_MARGIN,
+  SEMANTIC_QUERY_EMBED_USD_PER_MILLION_TOKENS,
+  semanticQueryEmbedCostUsd,
 } from "./constants.ts"
 export {
   type BillingOverride,
@@ -44,6 +60,7 @@ export {
   billingUsagePeriodSchema,
 } from "./entities/billing-usage-period.ts"
 export {
+  AIMeteringRecordError,
   InvalidBillingIdempotencyKeyError,
   NoCreditsRemainingError,
   NoSubscriptionFoundError,

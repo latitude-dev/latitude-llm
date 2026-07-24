@@ -11,6 +11,7 @@ import { SessionRepository, sessionConversationMessages } from "@domain/spans"
 import { AIEmbedLive, AIGenerateLive, withAi } from "@platform/ai"
 import {
   EmbedBudgetResolverLive,
+  RedisBillingSpendReservationLive,
   RedisDistributedLockRepositoryLive,
   TraceSearchBudgetLive,
 } from "@platform/cache-redis"
@@ -28,6 +29,7 @@ import { createLogger, withTracing } from "@repo/observability"
 import { hash } from "@repo/utils"
 import { Effect, Layer } from "effect"
 import { getClickhouseClient, getPostgresClient, getQueuePublisher, getRedisClient } from "../clients.ts"
+import { billingMeteringRepositoriesLive, withActivityAIMetering } from "./ai-metering.ts"
 
 const logger = createLogger("analyze-session-workflow")
 
@@ -279,6 +281,11 @@ export const analyzeSessionActivity = (input: AnalyzeSessionActivityInput) => {
   const startedAt = Date.now()
   return Effect.runPromise(
     analyzeSessionUseCase(input).pipe(
+      withActivityAIMetering({
+        organizationId: input.organizationId,
+        projectId: input.projectId,
+        label: "session-analysis",
+      }),
       withClickHouse(
         Layer.mergeAll(
           SessionRepositoryLive,
@@ -291,7 +298,12 @@ export const analyzeSessionActivity = (input: AnalyzeSessionActivityInput) => {
         getClickhouseClient(),
         OrganizationId(input.organizationId),
       ),
-      withPostgres(TaxonomyClusterRepositoryLive, getPostgresClient(), OrganizationId(input.organizationId)),
+      withPostgres(
+        Layer.mergeAll(TaxonomyClusterRepositoryLive, billingMeteringRepositoriesLive),
+        getPostgresClient(),
+        OrganizationId(input.organizationId),
+      ),
+      Effect.provide(RedisBillingSpendReservationLive(getRedisClient())),
       Effect.provide(RedisDistributedLockRepositoryLive(getRedisClient())),
       withAnalyzeSessionEmbeddingBudget,
       (effect) => withAnalyzeSessionAi(effect, input.organizationId),

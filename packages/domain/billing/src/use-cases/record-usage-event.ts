@@ -12,6 +12,8 @@ export interface RecordUsageEventInput {
   readonly organizationId: OrganizationId
   readonly projectId: ProjectId
   readonly action: ChargeableAction
+  /** Overrides the flat `ACTION_CREDITS` price, e.g. cost-based generation billing. */
+  readonly credits?: number | undefined
   readonly idempotencyKey: string
   readonly planSlug: BillingUsagePeriod["planSlug"]
   readonly planSource: "override" | "subscription" | "free-fallback"
@@ -54,6 +56,14 @@ export const recordUsageEventUseCase = Effect.fn("billing.recordUsageEvent")(fun
   yield* Effect.annotateCurrentSpan("billing.action", input.action)
   yield* Effect.annotateCurrentSpan("billing.idempotencyKey", input.idempotencyKey)
 
+  // A credits override outside the ledger's invariants (positive integer) is a caller
+  // bug, never a runtime condition — die instead of widening every caller's error union.
+  if (input.credits !== undefined && (!Number.isInteger(input.credits) || input.credits < 1)) {
+    return yield* Effect.die(
+      new Error(`recordUsageEvent: credits override must be a positive integer (got ${input.credits})`),
+    )
+  }
+
   const eventRepo = yield* BillingUsageEventRepository
   const outboxEventWriter = yield* OutboxEventWriter
   const periodRepo = yield* BillingUsagePeriodRepository
@@ -61,7 +71,7 @@ export const recordUsageEventUseCase = Effect.fn("billing.recordUsageEvent")(fun
 
   return yield* sqlClient.transaction(
     Effect.gen(function* () {
-      const credits = ACTION_CREDITS[input.action]
+      const credits = input.credits ?? ACTION_CREDITS[input.action]
       const now = new Date()
       const persistedIncludedCredits = persistedIncludedCreditsForPlan(input.planSlug, input.includedCredits)
 

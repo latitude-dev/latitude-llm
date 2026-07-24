@@ -1,4 +1,5 @@
 import { AI, resolveGenerationConfig } from "@domain/ai"
+import { AIMeteringScope, type AIMeteringScopeShape, provideAIMeteringScope } from "@domain/billing"
 import {
   ALIGNMENT_CURATED_DATASET_MAX_ROWS,
   ALIGNMENT_DEFAULT_SEED,
@@ -19,8 +20,10 @@ import {
   Optimizer,
   splitOptimizationExamples,
 } from "@domain/optimizations"
-import { BadRequestError } from "@domain/shared"
+import { BadRequestError, OrganizationId } from "@domain/shared"
 import { AIGenerateLive, withAi } from "@platform/ai"
+import { RedisBillingSpendReservationLive } from "@platform/cache-redis"
+import { withPostgres } from "@platform/db-postgres"
 import {
   buildGepaProposalPrompt,
   GEPA_DEFAULT_PROPOSER_MODEL,
@@ -31,9 +34,10 @@ import {
 } from "@platform/op-gepa"
 import { QuickJsScriptRuntimeLive } from "@platform/sandbox-quickjs"
 import { withTracing } from "@repo/observability"
-import { Data, Effect } from "effect"
-import { getRedisClient } from "../clients.ts"
+import { Data, Effect, Option } from "effect"
+import { getPostgresClient, getRedisClient } from "../clients.ts"
 import { describeActivityCause, logActivityFailure } from "./activity-error.ts"
+import { billingMeteringRepositoriesLive, withActivityAIMetering } from "./ai-metering.ts"
 
 class EvaluationOptimizationActivityError extends Data.TaggedError("EvaluationOptimizationActivityError")<{
   readonly activity: string
@@ -63,6 +67,8 @@ const proposeOptimizationCandidate = (input: {
   readonly signalName: string
   readonly signalDescription: string
   readonly context: readonly OptimizationTrajectory[]
+  /** Carried explicitly: this runs in its own Effect runtime, outside the activity's ambient context. */
+  readonly meteringScope: AIMeteringScopeShape | undefined
 }): Promise<OptimizationCandidate> =>
   Effect.runPromise(
     Effect.gen(function* () {
@@ -105,6 +111,7 @@ const proposeOptimizationCandidate = (input: {
         }),
       } satisfies OptimizationCandidate
     }).pipe(
+      (effect) => (input.meteringScope ? provideAIMeteringScope(input.meteringScope)(effect) : effect),
       withAi(AIGenerateLive, getRedisClient()),
       withTracing,
       Effect.withSpan("evaluations.proposeOptimizationCandidate"),
@@ -134,6 +141,9 @@ export const optimizeEvaluationDraft = (input: {
 
       const optimizer = yield* Optimizer
       const services = yield* Effect.context<never>()
+      // Provided by `withActivityAIMetering` below; carried by value into the `propose`
+      // callback, which runs in its own Effect runtime.
+      const meteringScope = Option.getOrUndefined(yield* Effect.serviceOption(AIMeteringScope))
       const allExamples = [...input.positiveExamples, ...input.negativeExamples]
       const examplesById = new Map<string, HydratedEvaluationAlignmentExample>(
         allExamples.map((example) => [example.traceId as string, example]),
@@ -217,6 +227,7 @@ export const optimizeEvaluationDraft = (input: {
             signalName: input.signalName,
             signalDescription: input.signalDescription,
             context,
+            meteringScope,
           }),
       })
 
@@ -229,6 +240,13 @@ export const optimizeEvaluationDraft = (input: {
         evaluationHash: optimized.optimizedCandidate.hash,
       }
     }).pipe(
+      withActivityAIMetering({
+        organizationId: input.organizationId,
+        projectId: input.projectId,
+        label: "eval-optimize",
+      }),
+      withPostgres(billingMeteringRepositoriesLive, getPostgresClient(), OrganizationId(input.organizationId)),
+      Effect.provide(RedisBillingSpendReservationLive(getRedisClient())),
       Effect.provide(GepaOptimizerLive),
       withTracing,
       Effect.withSpan("evaluations.optimizeEvaluationDraft"),

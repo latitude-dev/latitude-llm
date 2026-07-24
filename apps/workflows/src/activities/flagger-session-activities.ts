@@ -26,20 +26,11 @@ import {
   SpanRepositoryLive,
   withClickHouse,
 } from "@platform/db-clickhouse"
-import {
-  BillingOverrideRepositoryLive,
-  BillingUsageEventRepositoryLive,
-  BillingUsagePeriodRepositoryLive,
-  FlaggerRepositoryLive,
-  OutboxEventWriterLive,
-  ScoreRepositoryLive,
-  SettingsReaderLive,
-  StripeSubscriptionLookupLive,
-  withPostgres,
-} from "@platform/db-postgres"
+import { FlaggerRepositoryLive, OutboxEventWriterLive, ScoreRepositoryLive, withPostgres } from "@platform/db-postgres"
 import { createLogger, withTracing } from "@repo/observability"
 import { Effect, Layer } from "effect"
 import { getClickhouseClient, getPostgresClient, getRedisClient } from "../clients.ts"
+import { billingMeteringRepositoriesLive, withActivityAIMetering } from "./ai-metering.ts"
 
 const logger = createLogger("workflows-flagger-session")
 
@@ -136,7 +127,17 @@ export const classifySessionFlagger = async (
 ): Promise<ClassifySessionFlaggerResult> =>
   Effect.runPromise(
     classifySessionFlaggerUseCase(input).pipe(
-      withPostgres(FlaggerRepositoryLive, getPostgresClient(), OrganizationId(input.organizationId)),
+      withActivityAIMetering({
+        organizationId: input.organizationId,
+        projectId: input.projectId,
+        label: "flagger-classify",
+      }),
+      withPostgres(
+        Layer.mergeAll(FlaggerRepositoryLive, billingMeteringRepositoriesLive),
+        getPostgresClient(),
+        OrganizationId(input.organizationId),
+      ),
+      Effect.provide(RedisBillingSpendReservationLive(getRedisClient())),
       withClickHouse(
         Layer.mergeAll(SessionRepositoryLive, SpanRepositoryLive),
         getClickhouseClient(),
@@ -159,15 +160,6 @@ export const classifySessionFlagger = async (
     ),
   )
 
-const billingLayers = Layer.mergeAll(
-  BillingOverrideRepositoryLive,
-  BillingUsageEventRepositoryLive,
-  BillingUsagePeriodRepositoryLive,
-  OutboxEventWriterLive,
-  SettingsReaderLive,
-  StripeSubscriptionLookupLive,
-)
-
 export interface DraftSessionFlaggerAnnotationActivityInput {
   readonly organizationId: string
   readonly projectId: string
@@ -185,7 +177,7 @@ export const draftSessionFlaggerAnnotation = async (
   Effect.runPromise(
     draftSessionFlaggerAnnotationWithBillingUseCase(input).pipe(
       withPostgres(
-        Layer.mergeAll(billingLayers, ScoreRepositoryLive),
+        Layer.mergeAll(billingMeteringRepositoriesLive, ScoreRepositoryLive),
         getPostgresClient(),
         OrganizationId(input.organizationId),
       ),

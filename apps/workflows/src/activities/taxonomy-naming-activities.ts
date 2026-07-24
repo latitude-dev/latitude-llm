@@ -6,7 +6,11 @@ import {
   nameFacetClusterUseCase,
 } from "@domain/taxonomy"
 import { AIEmbedLive, AIGenerateLive, withAi } from "@platform/ai"
-import { RedisCacheStoreLive, RedisDistributedLockRepositoryLive } from "@platform/cache-redis"
+import {
+  RedisBillingSpendReservationLive,
+  RedisCacheStoreLive,
+  RedisDistributedLockRepositoryLive,
+} from "@platform/cache-redis"
 import {
   TaxonomyObservationRepositoryLive,
   TaxonomyViewAssignmentRepositoryLive,
@@ -15,6 +19,7 @@ import {
 import { FacetRepositoryLive, TaxonomyClusterRepositoryLive, withPostgres } from "@platform/db-postgres"
 import { Effect, Layer } from "effect"
 import { getClickhouseClient, getPostgresClient, getRedisClient } from "../clients.ts"
+import { billingMeteringRepositoriesLive, withActivityAIMetering } from "./ai-metering.ts"
 
 export interface NameTaxonomyClusterActivityInput {
   readonly organizationId: string
@@ -74,7 +79,17 @@ export const nameTaxonomyClusterActivity = (input: NameTaxonomyClusterActivityIn
         customBehaviorId: CustomBehaviorId(input.customBehaviorId),
       }).pipe(
         Effect.asVoid,
-        withPostgres(TaxonomyClusterRepositoryLive, getPostgresClient(), organizationId),
+        withActivityAIMetering({
+          organizationId: input.organizationId,
+          projectId: input.projectId,
+          label: "taxonomy-name",
+        }),
+        withPostgres(
+          Layer.mergeAll(TaxonomyClusterRepositoryLive, billingMeteringRepositoriesLive),
+          getPostgresClient(),
+          organizationId,
+        ),
+        Effect.provide(RedisBillingSpendReservationLive(getRedisClient())),
         withClickHouse(clickHouse, getClickhouseClient(), organizationId),
         withAi(Layer.mergeAll(AIEmbedLive, AIGenerateLive), getRedisClient()),
         Effect.provide(cache),
@@ -84,7 +99,17 @@ export const nameTaxonomyClusterActivity = (input: NameTaxonomyClusterActivityIn
   return Effect.runPromise(
     nameClusterUseCase({ organizationId, projectId, clusterId }).pipe(
       Effect.asVoid,
-      withPostgres(TaxonomyClusterRepositoryLive, getPostgresClient(), organizationId),
+      withActivityAIMetering({
+        organizationId: input.organizationId,
+        projectId: input.projectId,
+        label: "taxonomy-name",
+      }),
+      withPostgres(
+        Layer.mergeAll(TaxonomyClusterRepositoryLive, billingMeteringRepositoriesLive),
+        getPostgresClient(),
+        organizationId,
+      ),
+      Effect.provide(RedisBillingSpendReservationLive(getRedisClient())),
       withClickHouse(clickHouse, getClickhouseClient(), organizationId),
       withAi(Layer.mergeAll(AIEmbedLive, AIGenerateLive), getRedisClient()),
       Effect.provide(cache),

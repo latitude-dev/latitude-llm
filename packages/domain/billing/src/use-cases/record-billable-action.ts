@@ -8,6 +8,8 @@ export interface RecordBillableActionInput {
   readonly organizationId: OrganizationId
   readonly projectId: ProjectId
   readonly action: ChargeableAction
+  /** Overrides the flat `ACTION_CREDITS` price, e.g. cost-based generation billing. */
+  readonly credits?: number | undefined
   readonly idempotencyKey: string
   readonly context: AuthorizedBillableActionContext
   readonly traceId?: TraceId | undefined
@@ -24,6 +26,7 @@ export const recordBillableActionUseCase = Effect.fn("billing.recordBillableActi
     organizationId: input.organizationId,
     projectId: input.projectId,
     action: input.action,
+    credits: input.credits,
     idempotencyKey: input.idempotencyKey,
     planSlug: input.context.planSlug,
     planSource: input.context.planSource,
