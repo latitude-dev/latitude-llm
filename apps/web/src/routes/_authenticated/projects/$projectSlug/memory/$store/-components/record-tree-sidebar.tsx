@@ -6,7 +6,7 @@ import {
   FileTextIcon,
   FolderIcon,
   FolderOpenIcon,
-  HouseIcon,
+  LayoutDashboardIcon,
 } from "lucide-react"
 import { useMemo, useState } from "react"
 import type { MemoryStoreSnapshotRecord } from "../../../../../../../domains/memories/memories.functions.ts"
@@ -46,6 +46,36 @@ export function RecordTreeSidebar({
 
   return (
     <div className="flex h-full min-h-0 flex-col">
+      <div className="shrink-0 p-2">
+        <button
+          type="button"
+          aria-current={homeActive ? "page" : undefined}
+          onClick={onSelectHome}
+          className={cn(
+            "flex h-8 w-full cursor-pointer items-center gap-2 rounded-md border px-2 text-left transition-colors",
+            "focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring",
+            homeActive
+              ? "border-transparent bg-accent text-accent-foreground"
+              : "border-border text-foreground hover:bg-muted",
+          )}
+        >
+          <Icon
+            icon={LayoutDashboardIcon}
+            size="sm"
+            color={homeActive ? "accentForeground" : "foregroundMuted"}
+            className="shrink-0"
+          />
+          <Text.H6
+            color={homeActive ? "accentForeground" : "foreground"}
+            className={cn("min-w-0 flex-1", homeActive && "font-medium")}
+            noWrap
+            ellipsis
+          >
+            Dashboard
+          </Text.H6>
+        </button>
+      </div>
+
       <div className="flex h-9 shrink-0 items-center justify-between gap-2 border-b px-3">
         <Text.H6M color="foregroundMuted" noWrap ellipsis>
           Records{records.length > 0 ? ` · ${records.length}` : ""}
@@ -61,32 +91,6 @@ export function RecordTreeSidebar({
           </button>
         ) : null}
       </div>
-
-      <button
-        type="button"
-        aria-current={homeActive ? "page" : undefined}
-        onClick={onSelectHome}
-        className={cn(
-          "group flex h-7 w-full shrink-0 cursor-pointer items-center gap-1.5 px-2 text-left transition-colors",
-          "focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-inset focus-visible:ring-ring",
-          homeActive ? "bg-accent" : "hover:bg-muted",
-        )}
-      >
-        <Icon
-          icon={HouseIcon}
-          size="sm"
-          color={homeActive ? "accentForeground" : "foregroundMuted"}
-          className="shrink-0"
-        />
-        <Text.H6
-          color={homeActive ? "accentForeground" : "foreground"}
-          className={cn("min-w-0 flex-1", homeActive && "font-medium")}
-          noWrap
-          ellipsis
-        >
-          Home
-        </Text.H6>
-      </button>
 
       {isLoading ? (
         <div className="flex flex-col gap-1 p-3">
