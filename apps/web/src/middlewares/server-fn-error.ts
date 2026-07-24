@@ -48,6 +48,14 @@ export const asStaleServerFnError = (error: Error): Error => {
   return shaped
 }
 
+// getServerFnById throws outside Start's serializer; return a Response so the
+// client path still gets Error(text) instead of a host-level generic 500.
+export const staleServerFnResponse = (shaped: Error): Response =>
+  new Response(shaped.message, {
+    status: 404,
+    headers: { "Content-Type": "text/plain;charset=UTF-8" },
+  })
+
 /**
  * Records a request-level error onto its span unless it's an expected 4xx.
  * Used by the request middleware, which also sees the re-thrown server-fn error

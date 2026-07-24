@@ -3,7 +3,12 @@ import type { Span } from "@repo/observability"
 import { isHttpError } from "@repo/utils"
 import { describe, expect, it, vi } from "vitest"
 import { STALE_SERVER_FN_ERROR_TAG, STALE_SERVER_FN_USER_MESSAGE } from "../lib/stale-server-fn.ts"
-import { asStaleServerFnError, recordRequestError, recordServerFnError } from "./server-fn-error.ts"
+import {
+  asStaleServerFnError,
+  recordRequestError,
+  recordServerFnError,
+  staleServerFnResponse,
+} from "./server-fn-error.ts"
 
 const MISSING_SERVER_FN = new Error(
   "Server function info not found for 8ae8498b6e8c600abff6cc7c428fc166b1bb45613094b806f08105bfc6f1344d",
@@ -153,6 +158,20 @@ describe("asStaleServerFnError", () => {
     })
     expect(isHttpError(shaped)).toBe(true)
     expect(shaped.stack).toBe(MISSING_SERVER_FN.stack)
+  })
+})
+
+describe("staleServerFnResponse", () => {
+  it("returns a non-serialized 404 body the client turns into Error(message)", async () => {
+    const response = staleServerFnResponse(asStaleServerFnError(MISSING_SERVER_FN))
+
+    expect(response.status).toBe(404)
+    expect(response.headers.get("Content-Type")).toBe("text/plain;charset=UTF-8")
+    expect(JSON.parse(await response.text())).toEqual({
+      _tag: STALE_SERVER_FN_ERROR_TAG,
+      message: STALE_SERVER_FN_USER_MESSAGE,
+      status: 404,
+    })
   })
 })
 
