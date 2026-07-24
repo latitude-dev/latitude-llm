@@ -2,6 +2,37 @@
 
 ## Unreleased
 
+## v0.3.66 - 2026-07-24
+
+### Telemetry
+
+- Added Cloudflare AI Gateway onboarding and documentation, with OTLP ingestion support for model, token, cost, conversation, and embedding data (ref: #4179).
+
+### Memory
+
+- Added time-filtered activity charts and per-store analytics to the Memory page, including sortable usage, access, and health metrics (ref: #4202).
+
+### Taxonomy
+
+- Enabled gardening and facet-aware cluster naming for facet-backed custom behavior taxonomies (ref: #4199).
+
+### Sessions
+
+- Improved long-session rendering and navigation with paged trace loading, incremental conversation attribution, and bounded timeline handling (ref: #4200).
+
+### Billing
+
+- Metered hosted AI generations and query embeddings at estimated provider cost, with 4-credit generation and 1-credit embedding fallbacks; live evaluations now also record a 1-credit baseline scan (refs: #3915, #4211).
+
+### Exports
+
+- Rate-limited asynchronous dataset and signal exports to 10 requests per hour per organization, project, and recipient, and exposed typed HTTP 429 responses in API clients (refs: #4137, #4212).
+
+### Operations
+
+- Reduced CloudWatch volume by disabling ECS Container Insights, suppressing successful API health-check access logs, and lowering Datadog agent log verbosity (ref: 155a34b0a).
+- Refreshed the bundled model catalog, including newly recognized models and the Ofox provider (refs: #4194, #4201, #4208).
+
 ## v0.3.65 - 2026-07-23
 
 ### Ingestion
