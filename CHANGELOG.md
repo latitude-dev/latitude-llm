@@ -2,6 +2,20 @@
 
 ## Unreleased
 
+## v0.3.68 - 2026-07-24
+
+### GitHub
+
+- Added a least-privilege GitHub App integration that turns merged code into signal lifecycle transitions: when a PR or commit referencing a signal slug lands on a configured branch, Latitude links it and applies the matched action (resolve, unresolve, or reference), surfacing the referencing PRs and commits on the signal detail page. Includes an install/claim/disconnect flow, per-project sync-config overrides, a magic-words editor, a deliveries audit table, and org-unique signal slugs, with zero write permissions on the customer's repo (ref: #4213).
+
+### Billing
+
+- Notified organization owners and admins, once per billing period, when a hard limit is first crossed — free included credits exhausted, an uncapped Pro plan entering overage, or a configured Pro spend cap — via email, in-app, and Slack, with org-scoped idempotency (ref: #4214).
+
+### Web
+
+- Silenced stale server-fn hash errors after deploys: TanStack server-fn IDs from a prior deploy are now treated as expected deploy skew, mapped to a 404 client error that skips Datadog Error Tracking and reloads the page instead of surfacing a new issue after every release (ref: #4215).
+
 ## v0.3.67 - 2026-07-24
 
 ### Memory
