@@ -460,7 +460,7 @@ export const MemoryAnalyticsRepositoryLive = Layer.effect(
                    )) AS bucket_delta
             FROM (
               SELECT change_kind, token_count, end_time,
-                     lagInFrame(token_count) OVER (PARTITION BY record_id ORDER BY end_time) AS prev_token
+                     lagInFrame(token_count) OVER (PARTITION BY record_id ORDER BY end_time, trace_id, span_id ROWS BETWEEN 1 PRECEDING AND CURRENT ROW) AS prev_token
               FROM ( ${dedupedWindow(true)} )
               WHERE change_kind IN ('add', 'update', 'remove')
             )
@@ -543,7 +543,7 @@ export const MemoryAnalyticsRepositoryLive = Layer.effect(
                  FROM (
                    SELECT record_id, change_kind, content_hash,
                           lagInFrame(content_hash)
-                            OVER (PARTITION BY record_id ORDER BY end_time) AS prev_hash
+                            OVER (PARTITION BY record_id ORDER BY end_time, trace_id, span_id ROWS BETWEEN 1 PRECEDING AND CURRENT ROW) AS prev_hash
                    FROM ( ${dedupedWindow(true)} )
                    WHERE change_kind IN ('add', 'update')
                  )
@@ -570,7 +570,7 @@ export const MemoryAnalyticsRepositoryLive = Layer.effect(
                FROM (
                  SELECT record_id, content_hash,
                         content_hash != lagInFrame(content_hash)
-                          OVER (PARTITION BY record_id ORDER BY end_time) AS changed
+                          OVER (PARTITION BY record_id ORDER BY end_time, trace_id, span_id ROWS BETWEEN 1 PRECEDING AND CURRENT ROW) AS changed
                  FROM ( ${dedupedWindow(true)} )
                  WHERE change_kind IN ('add', 'update') AND content_hash != ''
                )
@@ -584,7 +584,7 @@ export const MemoryAnalyticsRepositoryLive = Layer.effect(
                FROM (
                  SELECT change_kind, content_hash,
                         lagInFrame(content_hash)
-                          OVER (PARTITION BY record_id ORDER BY end_time) AS prev_hash
+                          OVER (PARTITION BY record_id ORDER BY end_time, trace_id, span_id ROWS BETWEEN 1 PRECEDING AND CURRENT ROW) AS prev_hash
                  FROM ( ${dedupedWindow(true)} )
                  WHERE change_kind IN ('add', 'update')
                )`,
