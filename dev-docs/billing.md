@@ -199,9 +199,9 @@ The system never partially accepts only part of one ingest payload. Do **not** b
 
 When a billing period first crosses a notify-worthy threshold, the usage write stamps `limitsCrossed` on `BillingUsagePeriodUpdated`:
 
-- free / hard-capped: included credits exhausted (`included-credits`)
-- Pro (with or without a spend cap): included credits exhausted and overage begins (`overage-started`)
-- Pro with a spend cap: configured spend limit reached (`spend-cap`)
+- free / hard-capped: included credits exhausted — hard stop (`included-credits`)
+- Pro (with or without a spend cap): included allotment runs out and metered overage begins — one alert (`overage-started`)
+- Pro with a spend cap: configured spend limit reached — separate later alert (`spend-cap`)
 
 A single write may include both `overage-started` and `spend-cap` when the cap sits at the included-credit boundary. The domain-events worker publishes one `notifications:request-billing-limit-notifications` job per kind, which notifies organization owners and admins once per period and limit kind via email and in-app. The billing group is not Slack-routable, so spend and credit status stay off shared channels. Subsequent usage after each crossing does not re-notify.
 
