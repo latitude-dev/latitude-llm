@@ -31,6 +31,7 @@ import {
   useSessionConversationSpanMaps,
   useSpansByTraceCollection,
 } from "../../../../../../../domains/spans/spans.collection.ts"
+import type { SpanRecord } from "../../../../../../../domains/spans/spans.functions.ts"
 import {
   useTraceConversationMessages,
   useTraceSearchHighlights,
@@ -122,6 +123,7 @@ function ConversationContent({
   searchQuery,
   messageTrailingSlot,
   timeline,
+  timelineNotice,
   focusMessageIndex,
   totalMessages,
   payloadBytes,
@@ -134,13 +136,12 @@ function ConversationContent({
   readonly traceDetail: TraceDetailRecord
   readonly messages: readonly GenAIMessage[]
   readonly navigateToSpan?: ((spanId: string, traceId?: string) => void) | undefined
-  /** When set, message/tool-call navigation links resolve against ALL session spans
+  /** When set, message/tool-call navigation links resolve against session spans
    *  (not just this trace); annotations still anchor to this trace. */
   readonly sessionSpanScope?:
     | {
-        readonly sessionId: string
-        readonly sessionStartTime: string
-        readonly sessionEndTime: string
+        readonly traces: readonly { readonly traceId: string; readonly startTime: string }[]
+        readonly sessionSpans?: readonly SpanRecord[]
       }
     | undefined
   readonly projectId: string
@@ -155,6 +156,7 @@ function ConversationContent({
   readonly messageTrailingSlot?: ((messageIndex: number, role: string) => ReactNode) | undefined
   /** Timeline for the minimap bar: null while loading, undefined when the feature is off. */
   readonly timeline?: ConversationTimeline | null | undefined
+  readonly timelineNotice?: string | undefined
   readonly focusMessageIndex?: number | undefined
   readonly totalMessages: number
   readonly payloadBytes: number
@@ -174,22 +176,26 @@ function ConversationContent({
   const autoLoadingMoreRef = useRef(false)
   const hasScrolledToSearchRef = useRef<string | null>(null)
 
+  const pendingFocusLoad = focusMessageIndex !== undefined && focusMessageIndex >= messages.length
+
   const { data: spanMaps } = useConversationSpanMaps({
     projectId,
     traceId: traceDetail.traceId,
     startTime: traceDetail.startTime,
     allMessages: messages,
-    enabled: messages.length > 0 && (annotationsEnabled || (navigateToSpan !== undefined && sessionSpanScope == null)),
+    enabled:
+      messages.length > 0 &&
+      !pendingFocusLoad &&
+      (annotationsEnabled || (navigateToSpan !== undefined && sessionSpanScope == null)),
   })
 
   const { data: sessionSpanMaps } = useSessionConversationSpanMaps({
     projectId,
-    sessionId: sessionSpanScope?.sessionId ?? "",
-    latestTraceId: traceDetail.traceId,
-    sessionStartTime: sessionSpanScope?.sessionStartTime ?? "",
-    sessionEndTime: sessionSpanScope?.sessionEndTime ?? "",
-    allMessages: messages,
-    enabled: sessionSpanScope != null && messages.length > 0 && navigateToSpan !== undefined,
+    traces: sessionSpanScope?.traces ?? [],
+    loadedMessages: messages,
+    totalMessages,
+    sessionSpans: sessionSpanScope?.sessionSpans,
+    enabled: sessionSpanScope != null && messages.length > 0 && navigateToSpan !== undefined && !pendingFocusLoad,
   })
 
   const navSpanMaps = sessionSpanScope ? sessionSpanMaps : spanMaps
@@ -525,9 +531,10 @@ function ConversationContent({
       target: searchScrollTarget,
     })
     if (hasScrolledToSearchRef.current === scrollKey) return
-    hasScrolledToSearchRef.current = scrollKey
 
-    return scrollToSearchMatch(container, searchScrollTarget)
+    return scrollToSearchMatch(container, searchScrollTarget, "smooth", () => {
+      hasScrolledToSearchRef.current = scrollKey
+    })
   }, [activeMatchIndex, activeSearchQuery, messages.length, scrollRef, searchScrollTarget])
 
   if (textSelectionPopoverControlsRef) {
@@ -702,6 +709,11 @@ function ConversationContent({
           onMarkerClick={handleMarkerClick}
         />
       )}
+      {timeline === undefined && timelineNotice ? (
+        <div className="border-t border-border bg-background px-4 py-3">
+          <Text.H6 color="foregroundMuted">{timelineNotice}</Text.H6>
+        </div>
+      ) : null}
     </div>
   )
 }
@@ -720,6 +732,7 @@ export function ConversationTab({
   searchQuery,
   messageTrailingSlot,
   timeline,
+  timelineNotice,
   focusMessageIndex,
   agentGraph,
 }: {
@@ -727,13 +740,12 @@ export function ConversationTab({
   readonly isDetailLoading: boolean
   /** Optional callback to navigate to a span. If not provided, message/tool call actions are hidden. */
   readonly navigateToSpan?: ((spanId: string, traceId?: string) => void) | undefined
-  /** When set, message/tool-call navigation links resolve against ALL session spans
+  /** When set, message/tool-call navigation links resolve against session spans
    *  (not just this trace); annotations still anchor to this trace. */
   readonly sessionSpanScope?:
     | {
-        readonly sessionId: string
-        readonly sessionStartTime: string
-        readonly sessionEndTime: string
+        readonly traces: readonly { readonly traceId: string; readonly startTime: string }[]
+        readonly sessionSpans?: readonly SpanRecord[]
       }
     | undefined
   readonly projectId: string
@@ -750,6 +762,7 @@ export function ConversationTab({
   readonly messageTrailingSlot?: ((messageIndex: number, role: string) => ReactNode) | undefined
   /** Timeline for the minimap bar: null while loading, undefined when the feature is off. */
   readonly timeline?: ConversationTimeline | null | undefined
+  readonly timelineNotice?: string | undefined
   readonly focusMessageIndex?: number | undefined
   /** Session-wide agent graph for decoration; when omitted the conversation derives a trace-local one. */
   readonly agentGraph?: AgentGraph | undefined
@@ -841,6 +854,7 @@ export function ConversationTab({
               searchQuery={searchQuery}
               messageTrailingSlot={messageTrailingSlot}
               timeline={timeline}
+              timelineNotice={timelineNotice}
               focusMessageIndex={focusMessageIndex}
               totalMessages={conversation.totalMessages}
               payloadBytes={conversation.payloadBytes}

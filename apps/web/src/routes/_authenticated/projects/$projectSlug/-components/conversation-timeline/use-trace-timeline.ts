@@ -13,6 +13,7 @@ import {
 import { useAgentGraph } from "../session-detail-drawer/agents-breakdown/use-agent-graph.ts"
 import {
   annotatorNameFor,
+  toolCallSpanMapFromSpans,
   toTimelineAnnotation,
   toTimelineSpan,
   toTimelineSubagents,
@@ -56,12 +57,12 @@ export function useTraceTimeline({
   const agentGraph = useAgentGraph(spans)
 
   return useMemo(() => {
-    if (!traceDetail || !spanMaps || conversation.messages.length === 0) return null
+    if (!traceDetail || conversation.messages.length === 0) return null
     return buildConversationTimeline({
       messages: conversation.messages,
       spans: (spans ?? []).map(toTimelineSpan),
-      messageSpanMap: toSpanIdMap(spanMaps.messageSpanMap),
-      toolCallSpanMap: toSpanIdMap(spanMaps.toolCallSpanMap),
+      messageSpanMap: spanMaps ? toSpanIdMap(spanMaps.messageSpanMap) : {},
+      toolCallSpanMap: spanMaps ? toSpanIdMap(spanMaps.toolCallSpanMap) : toolCallSpanMapFromSpans(spans),
       traces: [toTimelineTrace(traceRecord ?? traceDetail)],
       annotations: (annotationsData?.items ?? []).map((a) =>
         toTimelineAnnotation(a, annotatorNameFor(a, memberByUserId)),

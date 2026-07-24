@@ -1,4 +1,4 @@
-import { ProjectId, SessionId, SpanId, TraceId } from "@domain/shared"
+import { ProjectId, SpanId, TraceId } from "@domain/shared"
 import type { Operation, Span, SpanDetail, SpanKind, SpanMessagesData, SpanStatusCode } from "@domain/spans"
 import { SpanRepository } from "@domain/spans"
 import { SpanRepositoryLive } from "@platform/db-clickhouse"
@@ -176,7 +176,8 @@ export const listSpansByTrace = createServerFn({ method: "GET" })
 // Reads by the session's authoritative `traceIds` rather than `session_id`
 // membership, so subagent spans that override `session_id` to the child's own
 // value still surface in the session's Spans tab and breakdowns.
-export const listSpansBySession = createServerFn({ method: "GET" })
+// POST keeps the up-to-500 trace-id payload below HTTP request-line limits.
+export const listSpansBySession = createServerFn({ method: "POST" })
   .inputValidator(
     z.object({
       projectId: z.string(),
@@ -248,32 +249,6 @@ export const listConversationMessageSpans = createServerFn({ method: "GET" })
           traceId: TraceId(data.traceId),
           startTimeFrom: new Date(data.startTime.getTime() - 60 * 1000),
           startTimeTo: new Date(data.startTime.getTime() + 24 * 60 * 60 * 1000),
-        })
-      }).pipe(withScopedClickHouse(SpanRepositoryLive, getClickhouseClient(), orgId), withTracing),
-    )
-    return spans.map(serializeSpanMessages)
-  })
-
-export const listSessionConversationMessageSpans = createServerFn({ method: "GET" })
-  .inputValidator(
-    z.object({
-      projectId: z.string(),
-      sessionId: z.string(),
-      sessionStartTime: dateTimeParamSchema,
-      sessionEndTime: dateTimeParamSchema,
-    }),
-  )
-  .handler(async ({ data, context }): Promise<SpanMessagesRecord[]> => {
-    const orgId = await resolveOrgScope(context)
-    const spans = await Effect.runPromise(
-      Effect.gen(function* () {
-        const spanRepo = yield* SpanRepository
-        return yield* spanRepo.findMessagesForSession({
-          organizationId: orgId,
-          projectId: ProjectId(data.projectId),
-          sessionId: SessionId(data.sessionId),
-          startTimeFrom: new Date(data.sessionStartTime.getTime() - 60 * 1000),
-          startTimeTo: new Date(data.sessionEndTime.getTime() + 24 * 60 * 60 * 1000),
         })
       }).pipe(withScopedClickHouse(SpanRepositoryLive, getClickhouseClient(), orgId), withTracing),
     )

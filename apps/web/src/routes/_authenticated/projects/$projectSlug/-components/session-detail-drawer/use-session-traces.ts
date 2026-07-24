@@ -1,6 +1,11 @@
-import { useQuery } from "@tanstack/react-query"
+import { keepPreviousData, useQuery } from "@tanstack/react-query"
 import { sandboxOrgIdForScope, useProjectScope } from "../../../../../../domains/projects/project-scope.tsx"
-import { listTracesByProject, type TraceRecord } from "../../../../../../domains/traces/traces.functions.ts"
+import { traceIdsSignature } from "../../../../../../domains/traces/trace-ids.ts"
+import {
+  listSessionTraces,
+  listTracesByProject,
+  type TraceRecord,
+} from "../../../../../../domains/traces/traces.functions.ts"
 
 const EMPTY: readonly TraceRecord[] = []
 
@@ -46,21 +51,24 @@ export const sessionTracesQueryOptions = (
     const ordered = traceIds.slice(0, SESSION_TRACES_HARD_CAP)
     if (ordered.length === 0) return [] as TraceRecord[]
 
-    const traces: TraceRecord[] = []
-    for (let i = 0; i < ordered.length; i += TRACE_ID_CHUNK_SIZE) {
-      const chunk = ordered.slice(i, i + TRACE_ID_CHUNK_SIZE)
-      const page = await listTracesByProject({
-        data: {
-          ...(sandboxOrgId ? { sandboxOrgId } : {}),
-          projectId,
-          limit: chunk.length,
-          sortBy: "startTime",
-          sortDirection: "desc",
-          filters: { traceId: [{ op: "in" as const, value: chunk }] },
-        },
-      })
-      if (page?.traces.length) traces.push(...page.traces)
-    }
+    const chunks = Array.from({ length: Math.ceil(ordered.length / TRACE_ID_CHUNK_SIZE) }, (_, index) =>
+      ordered.slice(index * TRACE_ID_CHUNK_SIZE, (index + 1) * TRACE_ID_CHUNK_SIZE),
+    )
+    const pages = await Promise.all(
+      chunks.map((chunk) =>
+        listTracesByProject({
+          data: {
+            ...(sandboxOrgId ? { sandboxOrgId } : {}),
+            projectId,
+            limit: chunk.length,
+            sortBy: "startTime",
+            sortDirection: "desc",
+            filters: { traceId: [{ op: "in" as const, value: chunk }] },
+          },
+        }),
+      ),
+    )
+    const traces = pages.flatMap((page) => page?.traces ?? [])
 
     // Child traces are shown newest-first, matching the sessions table's
     // last-activity ordering. Each chunk is fetched desc, but the chunks are
@@ -69,6 +77,48 @@ export const sessionTracesQueryOptions = (
     traces.sort((a, b) => b.startTime.localeCompare(a.startTime) || b.traceId.localeCompare(a.traceId))
     return traces
   },
+  staleTime: 30_000,
+})
+
+export const sessionTracePageQueryOptions = (
+  sandboxOrgId: string | undefined,
+  projectId: string,
+  sessionId: string,
+  traceIds: readonly string[],
+  limit: number,
+  options?: {
+    readonly cursor?: {
+      readonly sortValue: string
+      readonly secondaryValue?: string | undefined
+      readonly traceId: string
+    }
+    readonly sortDirection?: "asc" | "desc"
+  },
+) => ({
+  queryKey: [
+    "session-trace-page",
+    sandboxOrgId,
+    projectId,
+    sessionId,
+    traceIdsSignature(traceIds),
+    limit,
+    options?.cursor,
+    options?.sortDirection,
+  ] as const,
+  queryFn: async () => {
+    if (traceIds.length === 0) return { traces: [] as readonly TraceRecord[], hasMore: false }
+    return await listSessionTraces({
+      data: {
+        ...(sandboxOrgId ? { sandboxOrgId } : {}),
+        projectId,
+        traceIds: traceIds.slice(0, SESSION_TRACES_HARD_CAP),
+        limit: Math.min(limit, SESSION_TRACES_HARD_CAP),
+        ...(options?.cursor ? { cursor: options.cursor } : {}),
+        ...(options?.sortDirection ? { sortDirection: options.sortDirection } : {}),
+      },
+    })
+  },
+  placeholderData: keepPreviousData,
   staleTime: 30_000,
 })
 

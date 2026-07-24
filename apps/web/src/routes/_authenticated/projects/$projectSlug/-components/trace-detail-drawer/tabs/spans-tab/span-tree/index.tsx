@@ -197,11 +197,15 @@ export function GroupedSpanTree({
   selectedSpan,
   onSelectSpan,
   isActive,
+  footer,
+  onScrollEnd,
 }: {
   readonly groups: readonly SpanTreeGroup[]
   readonly selectedSpan: SpanTreeSelection | null
   readonly onSelectSpan: (selection: SpanTreeSelection | null) => void
   readonly isActive: boolean
+  readonly footer?: ReactNode | undefined
+  readonly onScrollEnd?: (() => void) | undefined
 }) {
   const containerRef = useRef<HTMLDivElement | null>(null)
   const [collapsed, setCollapsed] = useState<Set<string>>(new Set())
@@ -318,7 +322,15 @@ export function GroupedSpanTree({
 
   return (
     <div ref={containerRef} className="relative flex flex-1 flex-col overflow-hidden">
-      <div className="flex flex-1 flex-col overflow-y-auto">
+      <div
+        className="flex flex-1 flex-col overflow-y-auto"
+        onScroll={(event) => {
+          if (!onScrollEnd) return
+          const container = event.currentTarget
+          const distanceFromBottom = container.scrollHeight - container.scrollTop - container.clientHeight
+          if (distanceFromBottom <= ROW_HEIGHT * 5) onScrollEnd()
+        }}
+      >
         <TreeAxisHeader
           treeWidth={resolvedTreeWidth}
           timeRange={axisTimeRange}
@@ -354,6 +366,7 @@ export function GroupedSpanTree({
             </div>
           )
         })}
+        {footer}
       </div>
 
       {/* biome-ignore lint/a11y/useSemanticElements: resize handle requires div for drag events */}
