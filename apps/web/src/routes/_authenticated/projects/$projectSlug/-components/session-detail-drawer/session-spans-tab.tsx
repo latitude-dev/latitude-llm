@@ -5,6 +5,7 @@ import { useCallback, useEffect, useMemo, useRef } from "react"
 import { sandboxOrgIdForScope, useProjectScope } from "../../../../../../domains/projects/project-scope.tsx"
 import type { SessionDetailRecord } from "../../../../../../domains/sessions/sessions.functions.ts"
 import { useSpansBySessionPages } from "../../../../../../domains/spans/spans.collection.ts"
+import { traceIdsSignature } from "../../../../../../domains/traces/trace-ids.ts"
 import type { OpenTraceOptions } from "../session-detail-drawer.tsx"
 import { SpanDetail } from "../trace-detail-drawer/tabs/spans-tab/span-detail/index.tsx"
 import { SpanFiltersBar } from "../trace-detail-drawer/tabs/spans-tab/span-filters-bar.tsx"
@@ -39,7 +40,7 @@ function useSessionSpanTraces({
   const scope = useProjectScope()
   const sandboxOrgId = sandboxOrgIdForScope(scope)
   const query = useInfiniteQuery({
-    queryKey: ["session-span-traces", sandboxOrgId, projectId, sessionId, traceIds] as const,
+    queryKey: ["session-span-traces", sandboxOrgId, projectId, sessionId, traceIdsSignature(traceIds)] as const,
     queryFn: ({ pageParam }) =>
       sessionTracePageQueryOptions(sandboxOrgId, projectId, sessionId, traceIds, SESSION_SPAN_TRACE_PAGE_SIZE, {
         sortDirection: "asc",

@@ -1,5 +1,6 @@
 import { keepPreviousData, useQuery } from "@tanstack/react-query"
 import { sandboxOrgIdForScope, useProjectScope } from "../../../../../../domains/projects/project-scope.tsx"
+import { traceIdsSignature } from "../../../../../../domains/traces/trace-ids.ts"
 import {
   listSessionTraces,
   listTracesByProject,
@@ -99,7 +100,7 @@ export const sessionTracePageQueryOptions = (
     sandboxOrgId,
     projectId,
     sessionId,
-    traceIds,
+    traceIdsSignature(traceIds),
     limit,
     options?.cursor,
     options?.sortDirection,

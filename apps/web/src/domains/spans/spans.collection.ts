@@ -9,6 +9,7 @@ import type { GenAIMessage } from "rosetta-ai"
 import { createAppCollection } from "../../lib/data/create-app-collection.ts"
 import { getQueryClient } from "../../lib/data/query-client.tsx"
 import { projectScopeData, sandboxOrgIdForScope, useProjectScope } from "../projects/project-scope.tsx"
+import { traceIdsSignature } from "../traces/trace-ids.ts"
 import { selectTracesForLoadedConversation, type TraceTimeRef } from "./select-traces-for-loaded-conversation.ts"
 import {
   getSpanDetail,
@@ -88,11 +89,6 @@ export const useSpansByTraceCollection = ({
     [projectId, traceId, startTimeFrom, startTimeTo, sandboxOrgIdForScope(scope)],
   )
 }
-
-// Order-independent signature of the session's trace set, so the collection
-// cache/query refresh when a live session gains a trace (traceIds changes) but
-// stay stable across reorderings of the same set.
-const traceIdsSignature = (traceIds: readonly string[]): string => [...traceIds].sort().join(",")
 
 const makeSpansBySessionCollection = (
   projectId: string,

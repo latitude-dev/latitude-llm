@@ -8,7 +8,7 @@ import { useProjectScope } from "../../../../../domains/projects/project-scope.t
 import { useSessionDetail } from "../../../../../domains/sessions/sessions.collection.ts"
 import { useParamState } from "../../../../../lib/hooks/useParamState.ts"
 import { SignalLifecycleActions } from "../signals/-components/signal-lifecycle-actions.tsx"
-import { isLargeSession } from "./session-detail-drawer/session-size.ts"
+import { isLargeSession, MAX_SESSION_ANALYSIS_TRACE_COUNT } from "./session-detail-drawer/session-size.ts"
 import {
   isSessionTab,
   normalizeSessionTab,
@@ -95,7 +95,10 @@ export function SessionDetailDrawer({
     projectId,
     sessionId,
     traceIds: session?.traceIds ?? [],
-    enabled: session ? !isLargeSession(session) : false,
+    enabled: session
+      ? !isLargeSession(session) ||
+        (activeTab === "scores" && session.traceIds.length <= MAX_SESSION_ANALYSIS_TRACE_COUNT)
+      : false,
   })
 
   // The session search returns hits from the trace search index, which can
