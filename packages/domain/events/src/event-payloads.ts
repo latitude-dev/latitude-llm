@@ -346,6 +346,16 @@ export interface EventPayloads {
     readonly consumedCredits: number
     readonly overageCredits: number
     readonly reportedOverageCredits: number
+    /**
+     * Thresholds first crossed by this write (free included credits exhausted,
+     * Pro entering overage, and/or a configured Pro spend cap). Empty/omitted
+     * on ordinary increments so notification fan-out stays once-per-period
+     * per kind without re-deriving crossings from every subsequent usage
+     * event. Optional so in-flight outbox rows written before this field
+     * existed still parse. A single write may include both `overage-started`
+     * and `spend-cap` when the cap sits at the included-credit boundary.
+     */
+    readonly limitsCrossed?: readonly ("included-credits" | "overage-started" | "spend-cap")[]
   }
   /**
    * Emitted when a platform admin begins impersonating another user via

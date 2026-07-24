@@ -16,6 +16,7 @@ export const NOTIFICATION_GROUPS = [
   "custom_messages",
   "personal",
   "destinations",
+  "billing",
 ] as const
 export type NotificationGroup = (typeof NOTIFICATION_GROUPS)[number]
 export const notificationGroupSchema = z.enum(NOTIFICATION_GROUPS)
@@ -59,6 +60,11 @@ export const NOTIFICATION_GROUP_META: Record<
     label: "Data destinations",
     description: "Get notified when a data destination stops syncing (e.g. quarantined after repeated failures).",
     slackRoutable: true,
+  },
+  billing: {
+    label: "Billing",
+    description: "Alerts when your organization exhausts included credits, enters overage, or hits a spend limit.",
+    slackRoutable: false,
   },
 }
 
