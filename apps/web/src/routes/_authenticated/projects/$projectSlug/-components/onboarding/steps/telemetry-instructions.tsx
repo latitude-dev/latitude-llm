@@ -329,8 +329,8 @@ function CodingMachineInstructions({
         <div className="flex flex-col gap-2">
           <Text.H5M>Restart and verify</Text.H5M>
           <Text.H5 color="foregroundMuted">
-            Restart pi to load the extension, send a prompt that uses the model or a tool, then open Traces in
-            Latitude. Your first trace should appear within a few seconds.
+            Restart pi to load the extension, send a prompt that uses the model or a tool, then open Traces in Latitude.
+            Your first trace should appear within a few seconds.
           </Text.H5>
         </div>
       </>
@@ -391,8 +391,8 @@ function CloudflareAiGatewayInstructions({
       <div className="flex flex-col gap-2">
         <Text.H5M>Cloudflare AI Gateway</Text.H5M>
         <Text.H5 color="foregroundMuted">
-          Cloudflare AI Gateway exports OpenTelemetry spans for every request it proxies, so you don't need an SDK. In your
-          gateway's <span className="font-medium">Settings → OpenTelemetry</span>, click{" "}
+          Cloudflare AI Gateway exports OpenTelemetry spans for every request it proxies, so you don't need an SDK. In
+          your gateway's <span className="font-medium">Settings → OpenTelemetry</span>, click{" "}
           <span className="font-medium">Add Otel Destination</span> and fill in the fields below.{" "}
           {defaultApiKeyToken ? (
             "The Authorization header is prefilled with your default Latitude API key."
@@ -519,12 +519,12 @@ export function TelemetryInstructions({ projectSlug }: { readonly projectSlug: s
             <Badge variant="accent">Recommended</Badge>
           </span>
           <Text.H5 color="foregroundMuted">
-            Paste this into your coding agent's chat (Cursor, Claude Code, Codex, or anything else) to set up
-            Latitude telemetry in your project.
+            Paste this into your coding agent's chat (Cursor, Claude Code, Codex, or anything else) to set up Latitude
+            telemetry in your project.
           </Text.H5>
           <CodeBlock value={codingAgentPrompt} copyable wrapLines />
           <Text.H5 color="foregroundMuted">
-            For the smoothest experience, install both the{" "}
+            Install both the{" "}
             <a
               href="https://github.com/latitude-dev/skills"
               target="_blank"

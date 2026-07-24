@@ -216,9 +216,8 @@ function TraceSamplingSection({
               {isDirty ? <DotIndicator variant="primary" aria-label="Unsaved changes" /> : null}
             </Label>
             <Text.H6 color="foregroundMuted">
-              Process and store only a portion of the traces you send, instead of all of them. Useful for reducing
-              costs. Only recommended if you have really high traffic, where a smaller sample is still enough to spot
-              issues.
+              Process and store only a fraction of the traces you send, to cut costs. Best for high-traffic projects
+              where a sample is still enough to spot issues.
             </Text.H6>
           </div>
           <Switch id="trace-sampling-enabled" checked={enabled} onCheckedChange={onEnabledChange} />
@@ -397,7 +396,7 @@ function ChangeSlugForm({ projectId, currentSlug }: { projectId: string; current
           if (!v) closeAndReset()
           else setOpen(v)
         }}
-        title="⚠️ Change project slug"
+        title="Change project slug"
         description={`Changing the slug from "${currentSlug}" breaks ingestion until your app points at the new slug. Existing traces stay under the project; only newly ingested traces are affected.`}
         footer={
           <form.Subscribe selector={(s) => [s.values.slug, s.isSubmitting] as const}>

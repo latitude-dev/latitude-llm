@@ -28,8 +28,7 @@ const ALERT_KIND_TO_SUBTITLE: Record<IncidentNotificationKey, string> = {
   "signal.escalating":
     "We notified everyone watching this project. A signal is being detected more often than expected.",
   "monitor.match": "We notified everyone watching this project. A new match came in.",
-  "monitor.threshold":
-    "We notified everyone watching this project. A monitored metric crossed its threshold.",
+  "monitor.threshold": "We notified everyone watching this project. A monitored metric crossed its threshold.",
   "monitor.escalating":
     "We notified everyone watching this project. A monitored metric stayed over its threshold for the configured window.",
 }

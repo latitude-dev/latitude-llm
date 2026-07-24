@@ -19,7 +19,7 @@ export function Left({
   readonly onOpenSampleProject: () => void
 }) {
   const heading = traceReceived ? "Trace received. Redirecting…" : "Set up your first project"
-  const subheading = traceReceived ? "Taking you to your traces…" : "Initiate your first project on Latitude"
+  const subheading = traceReceived ? "Taking you to your traces…" : "Instrument your app so its traces show up here."
 
   return (
     <div className="mx-auto w-full max-w-[560px]">

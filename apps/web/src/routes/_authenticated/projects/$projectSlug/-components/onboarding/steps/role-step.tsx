@@ -20,7 +20,7 @@ export function Left({
           </div>
           <div className="flex flex-col gap-2">
             <Text.H2 weight="medium">Tell us about yourself</Text.H2>
-            <Text.H4 color="foregroundMuted">Help Latitude personalize your experience.</Text.H4>
+            <Text.H4 color="foregroundMuted">This helps us tailor Latitude to how you'll use it.</Text.H4>
           </div>
         </div>
         <form.Field

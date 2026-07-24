@@ -23,7 +23,7 @@ export function InviteMagicLinkEmail({ inviterName, organizationName, magicLinkU
         {`${inviterName} invited you to collaborate in the ${organizationName} organization on Latitude, the open-source AI agent monitoring platform.`}
       </EmailText>
       <EmailText variant="body" className={emailDesignTokens.spacing.contentGap}>
-        Tap the button below to join the team and start exploring.
+        Tap the button below to join the team.
       </EmailText>
 
       <Section className={emailDesignTokens.spacing.buttonTop}>
