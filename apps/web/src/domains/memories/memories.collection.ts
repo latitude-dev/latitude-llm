@@ -204,7 +204,6 @@ export function useMemoryStoresWithMetrics({
   range,
   sort,
   direction,
-  trendBucketSeconds,
   limit = 50,
   enabled = true,
 }: {
@@ -212,12 +211,11 @@ export function useMemoryStoresWithMetrics({
   readonly range: { readonly fromIso: string; readonly toIso: string }
   readonly sort: MemoryStoreMetricSortField
   readonly direction: "asc" | "desc"
-  readonly trendBucketSeconds: number
   readonly limit?: number
   readonly enabled?: boolean
 }) {
   const scope = useProjectScope()
-  const { data, isLoading, fetchNextPage, hasNextPage, isFetchingNextPage } = useInfiniteQuery({
+  const { data, isLoading, isError, fetchNextPage, hasNextPage, isFetchingNextPage } = useInfiniteQuery({
     queryKey: [
       ...projectScopeKey(scope),
       "memory-stores-metrics",
@@ -226,7 +224,6 @@ export function useMemoryStoresWithMetrics({
       range.toIso,
       sort,
       direction,
-      trendBucketSeconds,
       limit,
     ],
     queryFn: ({ pageParam }) =>
@@ -238,7 +235,6 @@ export function useMemoryStoresWithMetrics({
           toIso: range.toIso,
           sort,
           direction,
-          trendBucketSeconds,
           limit,
           offset: pageParam,
         },
@@ -260,6 +256,7 @@ export function useMemoryStoresWithMetrics({
     stores: stores as readonly MemoryStoreMetricsRecord[],
     totalCount: data?.pages[0]?.totalCount ?? 0,
     isLoading,
+    isError,
     infiniteScroll,
   }
 }

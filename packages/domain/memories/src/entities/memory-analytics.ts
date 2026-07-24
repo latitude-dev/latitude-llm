@@ -30,6 +30,27 @@ export interface MemoryActivityWriteBucket {
   readonly writes: number
 }
 
+/** Per-row trend sparklines always use one-day buckets... */
+export const MEMORY_TREND_BUCKET_SECONDS = 86_400
+/** ...capped to the most recent 30 of them, whatever the selected range. */
+export const MEMORY_TREND_MAX_BUCKETS = 30
+
+/**
+ * The window a store's trend sparkline spans: the most recent `MEMORY_TREND_MAX_BUCKETS`
+ * one-day buckets ending at `toMs`, never reaching before `fromMs`. Day-aligning the start
+ * caps the bucket count. Deterministic so the repository (query window) and the web sparkline
+ * (bar axis) derive the same window from the same range without passing it over the wire.
+ */
+export function resolveMemoryTrendWindow(
+  fromMs: number,
+  toMs: number,
+): { readonly fromMs: number; readonly toMs: number } {
+  const dayMs = MEMORY_TREND_BUCKET_SECONDS * 1000
+  const endDayStartMs = Math.floor(toMs / dayMs) * dayMs
+  const startMs = Math.max(fromMs, endDayStartMs - (MEMORY_TREND_MAX_BUCKETS - 1) * dayMs)
+  return { fromMs: startMs, toMs }
+}
+
 /** One time bucket for the activity chart: mutation counts by kind + records retrieved. */
 export interface MemoryActivityBucket {
   /** Bucket start instant (UTC ISO string). */
@@ -194,7 +215,6 @@ export interface MemoryStoreMetricsListOptions {
   readonly sortDirection: "asc" | "desc"
   readonly limit: number
   readonly offset: number
-  readonly trendBucketSeconds: number
 }
 
 export interface MemoryStoreMetricsPage {

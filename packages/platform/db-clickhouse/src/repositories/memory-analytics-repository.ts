@@ -10,7 +10,13 @@ import type {
   StoreInsights,
   StoreSizeBucket,
 } from "@domain/memories"
-import { COLD_STORAGE_MIN_IDLE_DAYS, MemoryAnalyticsRepository, STORE_SIZE_BUCKETS } from "@domain/memories"
+import {
+  COLD_STORAGE_MIN_IDLE_DAYS,
+  MEMORY_TREND_BUCKET_SECONDS,
+  MemoryAnalyticsRepository,
+  resolveMemoryTrendWindow,
+  STORE_SIZE_BUCKETS,
+} from "@domain/memories"
 import { ChSqlClient, type ChSqlClientShape, toRepositoryError } from "@domain/shared"
 import { formatCHDate, parseCHDate } from "@repo/utils"
 import { Effect, Layer } from "effect"
@@ -263,13 +269,14 @@ export const MemoryAnalyticsRepositoryLive = Layer.effect(
       sortDirection,
       limit,
       offset,
-      trendBucketSeconds,
     }) =>
       Effect.gen(function* () {
         const chSqlClient = (yield* ChSqlClient) as ChSqlClientShape<ClickHouseClient>
         const scope = { organizationId, projectId, from, to }
         const sortExpr = METRIC_SORT_EXPRS[sortBy]
         const orderDir = sortDirection === "asc" ? "ASC" : "DESC"
+        const trendWindow = resolveMemoryTrendWindow(from.getTime(), to.getTime())
+        const trendFrom = new Date(trendWindow.fromMs)
 
         const { pageRows, totalCount } = yield* chSqlClient
           .query(async (client) => {
@@ -371,10 +378,16 @@ export const MemoryAnalyticsRepositoryLive = Layer.effect(
                                 SELECT store_id, end_time
                                 FROM ( ${dedupedWindow(false)} )
                                 WHERE change_kind IN ('add', 'update', 'remove') AND store_id IN {storeIds:Array(String)}
+                                  AND end_time >= {trendFrom:DateTime64(6, 'UTC')}
                               )
                               GROUP BY store_id, bucket_start
                               ORDER BY store_id ASC, bucket_start ASC`,
-                      query_params: { ...rangeParams(scope), storeIds, bucketSeconds: trendBucketSeconds },
+                      query_params: {
+                        ...rangeParams(scope),
+                        storeIds,
+                        trendFrom: formatCHDate(trendFrom),
+                        bucketSeconds: MEMORY_TREND_BUCKET_SECONDS,
+                      },
                       format: "JSONEachRow",
                     }),
                     client.query({
