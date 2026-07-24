@@ -232,7 +232,7 @@ describe("checkCreditAvailabilityUseCase", () => {
             periodStart: PERIOD_START,
             periodEnd: PERIOD_END,
             includedCredits: 20_000,
-            consumedCredits: 19_990,
+            consumedCredits: 20_000,
           }),
         )
         .pipe(Effect.provideService(SqlClient, SQL_CLIENT)),
