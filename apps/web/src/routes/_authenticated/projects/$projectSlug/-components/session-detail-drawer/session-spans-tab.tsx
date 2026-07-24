@@ -150,13 +150,13 @@ export function SessionSpansTab({
   }, [groups, isLoading, onSelectSpan, selectedSpanId, selectedSpanTraceId])
 
   useEffect(() => {
-    if (!selectedSpan || isLoading) return
+    if (!selectedSpan || isLoading || isLoadingSpans) return
     const isVisible = filteredGroups.some(
       (group) =>
         group.traceId === selectedSpan.traceId && group.spans.some((span) => span.spanId === selectedSpan.spanId),
     )
     if (!isVisible) onSelectSpan(null)
-  }, [filteredGroups, isLoading, onSelectSpan, selectedSpan])
+  }, [filteredGroups, isLoading, isLoadingSpans, onSelectSpan, selectedSpan])
 
   useEffect(() => {
     if (!selectedSpan || groups.length === 0) return

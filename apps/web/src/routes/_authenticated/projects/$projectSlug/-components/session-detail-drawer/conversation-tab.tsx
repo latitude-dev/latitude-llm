@@ -196,6 +196,7 @@ export function ConversationTab({
   readonly navigateToSpan?: ((spanId: string, traceId?: string) => void) | undefined
 }) {
   const sessionId = session.sessionId
+  const largeSession = isLargeSession(session)
   // Annotations are an LLM-feedback feature — off under a sandbox scope.
   const annotationsEnabled = useProjectScope().kind === "live"
   const { data: moments } = useSessionMomentIntelligence({ projectId, sessionId })
@@ -304,12 +305,12 @@ export function ConversationTab({
     scrollContainerRef,
     textSelectionPopoverControlsRef,
     focusMessageIndex,
-    ...(navigateToSpan ? { navigateToSpan } : {}),
+    ...(navigateToSpan && !largeSession ? { navigateToSpan } : {}),
     ...(labelsByMessageIndex.size > 0 ? { messageTrailingSlot } : {}),
     ...(searchQuery ? { searchQuery } : {}),
   }
 
-  if (isLargeSession(session)) {
+  if (largeSession) {
     return (
       <TraceConversationTab
         {...conversationProps}
