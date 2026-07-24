@@ -11,9 +11,9 @@ import {
   type AIMeteringRecordError,
   AIMeteringScope,
   type AIMeteringScopeShape,
-  type MeteredAIAction,
   creditsForLlmGenerationCost,
   creditsForSemanticQueryCost,
+  type MeteredAIAction,
   semanticQueryEmbedCostUsd,
 } from "@domain/billing"
 import { estimateTotalCost, getCostSpec } from "@domain/models"
