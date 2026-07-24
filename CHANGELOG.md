@@ -2,6 +2,17 @@
 
 ## Unreleased
 
+## v0.3.69 - 2026-07-24
+
+### Memory
+
+- Fixed an empty Memory page by pinning store activity trends to 30 one-day buckets (ref: #4221).
+
+### Web
+
+- Rewrote AI-sounding UI and email copy across the app so it reads more naturally (ref: #4219).
+- Used `HotkeyBadge` for the sidebar search shortcut for consistent shortcut styling (ref: #4217).
+
 ## v0.3.68 - 2026-07-24
 
 ### GitHub
