@@ -140,8 +140,12 @@ describe("withAIMetering", () => {
     )
 
     expect(exit._tag).toBe("Failure")
-    expect(recorded.map((entry) => entry.action)).toEqual(["llm-call"])
-    expect(recorded[0]?.credits).toBeUndefined()
+    expect(recorded).toEqual([
+      {
+        action: "llm-call",
+        metadata: { provider: "p", model: "m", pricing: "flat-fallback" },
+      },
+    ])
   })
 
   it("passes through unbilled without a scope", async () => {

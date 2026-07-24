@@ -24,8 +24,8 @@ Chargeable actions:
 
 - `trace = 1 credit`
 - `eval-scan = 1 credit`
-- `semantic-query = cost-based` (flat `15 credits` as authorization estimate and fallback)
-- `llm-call = cost-based` (flat `30 credits` as authorization estimate and fallback)
+- `semantic-query = cost-based` (flat `1 credit` as authorization estimate and fallback)
+- `llm-call = cost-based` (flat `4 credits` as authorization estimate and fallback)
 
 AI work is billed per primitive produced, not per feature-level scan: every hosted LLM
 generation is one `llm-call` and every query-time semantic embedding (a query embed
@@ -50,7 +50,9 @@ One credit is worth `2` mills at the Pro overage rate (`$20` per `10,000` credit
   26; a Sonnet-tier GEPA proposal (~`$0.30`) bills 195.
   **Fallback**: when the registry has no pricing for the configured model or the
   provider reported no usage (including errored calls), the flat
-  `ACTION_CREDITS["llm-call"] = 30` applies and a warning is logged — keep the
+  `ACTION_CREDITS["llm-call"] = 4` applies. The metering layer logs a warning and
+  annotates the active OTel span with `billing.pricing=flat-fallback` (plus action,
+  provider, and model) so Datadog can alert on silent registry gaps — keep the
   registry data current for every model configured via `LAT_AI_*`.
 - `semantic-query`: each query embedding bills its **estimated provider cost with a
   `2x` margin** (`SEMANTIC_QUERY_BILLING_MARGIN`), converted and rounded the same way
@@ -58,8 +60,8 @@ One credit is worth `2` mills at the Pro overage rate (`$20` per `10,000` credit
   registry, so cost uses the adapter-reported token count priced at the hardcoded
   voyage-4-large rate (`$0.12` per 1M tokens, `SEMANTIC_QUERY_EMBED_USD_PER_TOKEN`).
   **Fallback**: when the adapter reports no token usage, the flat
-  `ACTION_CREDITS["semantic-query"] = 15` applies (2x the worst case: a 32k-token
-  query embed ≈ `$0.004` plus a rerank pass ≈ `$0.01`). Reranking and document-side
+  `ACTION_CREDITS["semantic-query"] = 1` applies, with the same warning +
+  `billing.pricing=flat-fallback` span annotation. Reranking and document-side
   embeddings ride on this charge (document embeds are part of trace ingest and are
   covered by the `trace` credit).
 - `eval-scan`: flat 1 credit baseline for every evaluation scan — it prices the
@@ -137,12 +139,12 @@ LLM calls and semantic queries are metered at the AI layer, not per feature. The
 `withAIMetering`, which charges against the ambient `AIMeteringScope`
 (`@domain/billing/src/ai-metering.ts`) when one is present in context:
 
-- `generate` → one `llm-call` billed at estimated cost x 1.3 (flat 30-credit fallback
+- `generate` → one `llm-call` billed at estimated cost x 1.3 (flat 4-credit fallback
   when registry pricing or provider usage is unavailable), recorded on success and on
   `AIError` (the provider call was attempted, tokens may have been consumed — flat
   price, no usage to bill) but not on `AICredentialError`
 - `embed` with `inputType: "query"` → one `semantic-query` billed at estimated cost x 2
-  (flat 15-credit fallback when the adapter reports no token usage); document embeds and
+  (flat 1-credit fallback when the adapter reports no token usage); document embeds and
   rerank are never charged directly — `semanticSimilarity()` in evaluation scripts embeds
   content-addressed documents, so its cost rides on the scan's flat credit
 

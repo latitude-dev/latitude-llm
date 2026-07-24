@@ -11,6 +11,7 @@ import {
   type AIMeteringRecordError,
   AIMeteringScope,
   type AIMeteringScopeShape,
+  type MeteredAIAction,
   creditsForLlmGenerationCost,
   creditsForSemanticQueryCost,
   semanticQueryEmbedCostUsd,
@@ -44,10 +45,19 @@ export const withAIMetering = (ai: AIShape): AIShape => ({
           return ai.generate(input)
         }
 
-        const recordFlat = recordScoped(scope.value, {
+        const recordFlat = reportPricingFallback({
           action: "llm-call",
-          metadata: { provider: input.provider, model: input.model },
-        })
+          provider: input.provider,
+          model: input.model,
+          reason: "provider call failed after attempt; no usage to price",
+        }).pipe(
+          Effect.andThen(
+            recordScoped(scope.value, {
+              action: "llm-call",
+              metadata: { provider: input.provider, model: input.model, pricing: "flat-fallback" },
+            }),
+          ),
+        )
 
         // tapError attaches before tap so it only sees provider failures — a
         // failed recordGeneration must not also commit the flat fallback record.
@@ -72,6 +82,25 @@ export const withAIMetering = (ai: AIShape): AIShape => ({
   rerank: ai.rerank,
 })
 
+const reportPricingFallback = (input: {
+  readonly action: MeteredAIAction
+  readonly provider: string
+  readonly model: string
+  readonly reason: string
+  readonly details?: Record<string, unknown>
+}): Effect.Effect<void> =>
+  Effect.gen(function* () {
+    yield* Effect.logWarning(`AI metering: ${input.reason}; billing flat ${input.action} price`, {
+      provider: input.provider,
+      model: input.model,
+      ...input.details,
+    })
+    yield* Effect.annotateCurrentSpan("billing.pricing", "flat-fallback")
+    yield* Effect.annotateCurrentSpan("billing.action", input.action)
+    yield* Effect.annotateCurrentSpan("billing.provider", input.provider)
+    yield* Effect.annotateCurrentSpan("billing.model", input.model)
+  })
+
 const recordGeneration = <T>(
   scope: AIMeteringScopeShape,
   input: GenerateInput<T>,
@@ -81,11 +110,12 @@ const recordGeneration = <T>(
   const costSpec = getCostSpec(input.provider, input.model)
 
   if (usage === undefined || !costSpec.costImplemented) {
-    return Effect.logWarning("AI metering: no usage or registry pricing for model; billing flat llm-call price", {
+    return reportPricingFallback({
+      action: "llm-call",
       provider: input.provider,
       model: input.model,
-      hasUsage: usage !== undefined,
-      costImplemented: costSpec.costImplemented,
+      reason: "no usage or registry pricing for model",
+      details: { hasUsage: usage !== undefined, costImplemented: costSpec.costImplemented },
     }).pipe(
       Effect.andThen(
         recordScoped(scope, {
@@ -120,9 +150,11 @@ const recordSemanticQuery = (
   result: EmbedResult,
 ): Effect.Effect<void, AIError> => {
   if (result.tokens === undefined) {
-    return Effect.logWarning("AI metering: embed adapter reported no token usage; billing flat semantic-query price", {
+    return reportPricingFallback({
+      action: "semantic-query",
       provider: input.provider,
       model: input.model,
+      reason: "embed adapter reported no token usage",
     }).pipe(
       Effect.andThen(
         recordScoped(scope, {

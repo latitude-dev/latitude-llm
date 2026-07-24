@@ -243,8 +243,8 @@ describe("billing runtime integration", () => {
       .where(eq(billingUsagePeriods.organizationId, organizationId))
 
     expect(events).toHaveLength(2)
-    expect(events.map((event) => event.credits).sort((a, b) => a - b)).toEqual([15, 30])
-    expect(period?.consumedCredits).toBe(45)
+    expect(events.map((event) => event.credits).sort((a, b) => a - b)).toEqual([1, 4])
+    expect(period?.consumedCredits).toBe(5)
   })
 
   it("treats concurrent duplicate record deliveries as one billed action", async () => {
@@ -291,10 +291,10 @@ describe("billing runtime integration", () => {
       .where(eq(billingUsagePeriods.organizationId, organizationId))
     const outbox = await pg.db.select().from(outboxEvents).where(eq(outboxEvents.organizationId, organizationId))
 
-    expect(first.consumedCredits).toBe(15)
-    expect(second.consumedCredits).toBe(15)
+    expect(first.consumedCredits).toBe(1)
+    expect(second.consumedCredits).toBe(1)
     expect(events).toHaveLength(1)
-    expect(period?.consumedCredits).toBe(15)
+    expect(period?.consumedCredits).toBe(1)
     expect(outbox).toHaveLength(1)
   })
 
@@ -350,7 +350,7 @@ describe("billing runtime integration", () => {
 
     expect(events).toHaveLength(1)
     expect(events[0]?.action).toBe("semantic-query")
-    expect(period?.consumedCredits).toBe(15)
+    expect(period?.consumedCredits).toBe(1)
   })
 
   it("records trace usage batches idempotently across queue retries", async () => {
@@ -833,24 +833,24 @@ describe("billing runtime integration", () => {
      * Setup shared by both tests:
      *
      * - Pro org sitting at exactly 100% of included credits (consumed = includedCredits = 100_000).
-     * - Spending limit = base $99 + $0.15 of overage headroom = 9915 cents. The Pro overage rate
-     *   is $0.002/credit, so $0.15 buys exactly 75 overage credits.
-     * - Each `semantic-query` costs 15 credits → 5 reservations fit, the 6th overshoots.
+     * - Spending limit = base $99 + $0.01 of overage headroom = 9901 cents. The Pro overage rate
+     *   is $0.002/credit, so $0.01 buys exactly 5 overage credits.
+     * - Each `semantic-query` costs 1 credit → 5 reservations fit, the 6th overshoots.
      * - 10 concurrent authorizations.
      *
      * Without atomic reservation, every concurrent caller reads the same 100_000 snapshot, projects
-     * `100_015 ≤ 100_075 (cap)` and is allowed. All 10 then record → final consumed = 100_150, overage = 150,
-     * spend = $99.30, overshooting the $99.15 cap by 100% of available overage.
+     * `100_001 ≤ 100_005 (cap)` and is allowed. All 10 then record → final consumed = 100_010, overage = 10,
+     * spend = $99.02, overshooting the $99.01 cap by 100% of available overage.
      *
-     * With atomic reservation, exactly 5 succeed and the worker writes 5 records → final consumed = 100_075,
-     * overage = 75, spend = $99.15 = cap.
+     * With atomic reservation, exactly 5 succeed and the worker writes 5 records → final consumed = 100_005,
+     * overage = 5, spend = $99.01 = cap.
      */
     const PRO_BASE_CENTS = PLAN_CONFIGS.pro.priceCents as number
-    const SPENDING_LIMIT_CENTS = PRO_BASE_CENTS + 15
+    const SPENDING_LIMIT_CENTS = PRO_BASE_CENTS + 1
     const PERIOD_START = new Date("2026-08-01T00:00:00.000Z")
     const PERIOD_END = new Date("2026-09-01T00:00:00.000Z")
     const CONCURRENCY = 10
-    const ACTION_COST = 15
+    const ACTION_COST = 1
 
     const seedCappedProOrgAtIncludedLimit = async (organizationId: string) => {
       await pg.db.insert(organizations).values({
