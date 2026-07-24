@@ -60,6 +60,19 @@ export function pickMemoryTrendBucketSeconds(rangeMs: number): number {
   return Math.max(1, Math.round(rawSeconds / DAY_SECONDS)) * DAY_SECONDS
 }
 
+export const MEMORY_TREND_BUCKET_SECONDS = DAY_SECONDS
+const MEMORY_TREND_MAX_BUCKETS = 30
+
+// Mirrors resolveMemoryTrendWindow in @domain/memories (the server's query window); kept
+// web-local so the memory route's client bundle never pulls the domain package (and Effect).
+// Deterministic from the same range, so the sparkline axis matches the aggregated buckets.
+export function resolveMemoryTrendWindow(fromMs: number, toMs: number): { fromMs: number; toMs: number } {
+  const dayMs = MEMORY_TREND_BUCKET_SECONDS * 1000
+  const endDayStartMs = Math.floor(toMs / dayMs) * dayMs
+  const startMs = Math.max(fromMs, endDayStartMs - (MEMORY_TREND_MAX_BUCKETS - 1) * dayMs)
+  return { fromMs: startMs, toMs }
+}
+
 export function formatBucketLabel(bucketStartIso: string, bucketSeconds: number): string {
   const date = new Date(bucketStartIso)
   if (Number.isNaN(date.getTime())) return bucketStartIso

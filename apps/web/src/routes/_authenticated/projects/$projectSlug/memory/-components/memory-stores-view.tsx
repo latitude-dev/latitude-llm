@@ -1,4 +1,3 @@
-import { MEMORY_TREND_BUCKET_SECONDS, resolveMemoryTrendWindow } from "@domain/memories"
 import { cn, InfiniteTable, type InfiniteTableColumn, type InfiniteTableInfiniteScroll, Tooltip } from "@repo/ui"
 import { formatCount, relativeTime } from "@repo/utils"
 import { Link } from "@tanstack/react-router"
@@ -10,7 +9,13 @@ import {
   listingLayoutIntrinsicScroll,
 } from "../../../../../../layouts/ListingLayout/index.tsx"
 import type { TableColumnOption } from "../../-components/columns-selector.tsx"
-import { formatPercent, formatRatio, formatSignedCount } from "./memory-formatters.ts"
+import {
+  formatPercent,
+  formatRatio,
+  formatSignedCount,
+  MEMORY_TREND_BUCKET_SECONDS,
+  resolveMemoryTrendWindow,
+} from "./memory-formatters.ts"
 import { MemoryTrendBar } from "./memory-trend-bar.tsx"
 import { encodeStoreSegment, storeDisplayLabel } from "./store-encoding.ts"
 
