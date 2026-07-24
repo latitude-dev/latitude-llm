@@ -1,5 +1,6 @@
 import { generateId } from "@domain/shared"
 import type {
+  BillingLimitReachedPayload,
   CustomMessagePayload,
   DestinationQuarantinedPayload,
   IncidentClosedPayload,
@@ -41,6 +42,10 @@ export type BuildIdempotencyKeyInput =
       readonly kind: "destination.quarantined"
       readonly payload: DestinationQuarantinedPayload
     }
+  | {
+      readonly kind: "billing.limit-reached"
+      readonly payload: BillingLimitReachedPayload
+    }
 
 export const buildIdempotencyKey = (input: BuildIdempotencyKeyInput): string => {
   switch (input.kind) {
@@ -67,5 +72,9 @@ export const buildIdempotencyKey = (input: BuildIdempotencyKeyInput): string => 
       // event the permanent index must not suppress, so the flip timestamp
       // joins the id (mirrors issue.assigned).
       return `${input.kind}:${input.payload.destinationId}:${input.payload.quarantinedAt}`
+    case "billing.limit-reached":
+      // Once per billing period per limit kind. Org + user are already in the
+      // unique index; period start + limit kind discriminate the occurrence.
+      return `${input.kind}:${input.payload.periodStart}:${input.payload.limitKind}`
   }
 }

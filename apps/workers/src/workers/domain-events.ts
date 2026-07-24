@@ -434,37 +434,63 @@ export const createDomainEventsWorker = ({
       ),
 
     BillingUsagePeriodUpdated: (event) => {
-      if (
-        event.payload.planSource !== "subscription" ||
-        !event.payload.overageAllowed ||
-        event.payload.overageCredits <= event.payload.reportedOverageCredits
-      ) {
-        return Effect.void
+      const effects: Effect.Effect<void, unknown>[] = []
+
+      if (event.payload.limitCrossed !== null && event.payload.limitCrossed !== undefined) {
+        effects.push(
+          pub.publish(
+            "notifications",
+            "request-billing-limit-notifications",
+            {
+              organizationId: event.payload.organizationId,
+              periodStart: event.payload.periodStart,
+              periodEnd: event.payload.periodEnd,
+              limitKind: event.payload.limitCrossed,
+              includedCredits: event.payload.includedCredits,
+              consumedCredits: event.payload.consumedCredits,
+              overageCredits: event.payload.overageCredits,
+            },
+            {
+              dedupeKey: `notifications:request-billing-limit:${event.payload.organizationId}:${event.payload.periodStart}:${event.payload.limitCrossed}`,
+            },
+          ),
+        )
       }
 
-      const periodStart = new Date(event.payload.periodStart)
-      const periodEnd = new Date(event.payload.periodEnd)
+      if (
+        event.payload.planSource === "subscription" &&
+        event.payload.overageAllowed &&
+        event.payload.overageCredits > event.payload.reportedOverageCredits
+      ) {
+        const periodStart = new Date(event.payload.periodStart)
+        const periodEnd = new Date(event.payload.periodEnd)
 
-      return pub.publish(
-        "billing-overage",
-        "reportOverage",
-        {
-          organizationId: event.payload.organizationId,
-          periodStart: event.payload.periodStart,
-          periodEnd: event.payload.periodEnd,
-          snapshotOverageCredits: event.payload.overageCredits,
-        },
-        {
-          dedupeKey: buildBillingOverageDedupeKey({
-            organizationId: event.payload.organizationId,
-            periodStart,
-            periodEnd,
-          }),
-          latestThrottleMs: BILLING_OVERAGE_SYNC_THROTTLE_MS,
-          attempts: 10,
-          backoff: { type: "exponential", delayMs: 1_000 },
-        },
-      )
+        effects.push(
+          pub.publish(
+            "billing-overage",
+            "reportOverage",
+            {
+              organizationId: event.payload.organizationId,
+              periodStart: event.payload.periodStart,
+              periodEnd: event.payload.periodEnd,
+              snapshotOverageCredits: event.payload.overageCredits,
+            },
+            {
+              dedupeKey: buildBillingOverageDedupeKey({
+                organizationId: event.payload.organizationId,
+                periodStart,
+                periodEnd,
+              }),
+              latestThrottleMs: BILLING_OVERAGE_SYNC_THROTTLE_MS,
+              attempts: 10,
+              backoff: { type: "exponential", delayMs: 1_000 },
+            },
+          ),
+        )
+      }
+
+      if (effects.length === 0) return Effect.void
+      return Effect.all(effects, { concurrency: "unbounded" }).pipe(Effect.asVoid)
     },
 
     MemberJoined: () => Effect.void,

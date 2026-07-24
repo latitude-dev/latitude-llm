@@ -205,6 +205,21 @@ const _registry = {
       readonly failureMessage: string | null
     }
     /**
+     * Producer step for billing limit alerts. Fired by the domain-events
+     * router when `BillingUsagePeriodUpdated.limitCrossed` is set (free
+     * included credits or Pro spend cap). The consumer fans out to
+     * owners/admins only and emits one `create-notification` per recipient.
+     */
+    "request-billing-limit-notifications": {
+      readonly organizationId: string
+      readonly periodStart: string
+      readonly periodEnd: string
+      readonly limitKind: "included-credits" | "spend-cap"
+      readonly includedCredits: number
+      readonly consumedCredits: number
+      readonly overageCredits: number
+    }
+    /**
      * Creator step. One message per recipient. The consumer writes the
      * in-app row idempotently via the `(org_id, user_id, idempotency_key)`
      * unique index and then fans out to channel-specific delivery jobs

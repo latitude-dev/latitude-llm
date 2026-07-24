@@ -10,8 +10,8 @@ Multi-channel notification system. Producers fan out to channel-specific workers
 
 | Concept | Where | What it is |
 | --- | --- | --- |
-| **Kind** | `NOTIFICATION_KIND_META` in `@domain/notifications` | Flat enum identifying the event-type (`incident.event`, `incident.opened`, `incident.closed`, `wrapped.report`, `custom.message`, ...). Each kind declares its group and its payload Zod schema. Incidents fan out across three delivery kinds: `incident.event` for point incidents (`endedAt = startedAt`), `incident.opened` for sustained incident entry, and `incident.closed` for sustained incident recovery. `issue.assigned` is the first **personal** (single-recipient) kind — it targets the new assignee only, not the org fan-out. `signal.regressed` (group `incidents`) fires when a new occurrence reopens a resolved signal: assignee-first recipients, muted signals skipped, idempotency keyed per regression cycle on `signalId` + `triggerScoreId`. |
-| **Group** | `NOTIFICATION_GROUPS` + `NOTIFICATION_GROUP_META` in `@domain/shared` | User-visible category (`incidents`, `wrapped_reports`, `custom_messages`, `personal`). The preferences UI surfaces one toggle per group; adding a kind to an existing group inherits the user's setting automatically. Each group also declares `slackRoutable` — non-routable groups (`personal`) are hidden from the Slack routes settings, rejected by the route-config server fns, and skipped by the worker's Slack fan-out. |
+| **Kind** | `NOTIFICATION_KIND_META` in `@domain/notifications` | Flat enum identifying the event-type (`incident.event`, `incident.opened`, `incident.closed`, `wrapped.report`, `custom.message`, `billing.limit-reached`, ...). Each kind declares its group and its payload Zod schema. Incidents fan out across three delivery kinds: `incident.event` for point incidents (`endedAt = startedAt`), `incident.opened` for sustained incident entry, and `incident.closed` for sustained incident recovery. `issue.assigned` is the first **personal** (single-recipient) kind — it targets the new assignee only, not the org fan-out. `signal.regressed` (group `incidents`) fires when a new occurrence reopens a resolved signal: assignee-first recipients, muted signals skipped, idempotency keyed per regression cycle on `signalId` + `triggerScoreId`. `billing.limit-reached` (group `billing`) fires once per billing period when a hard limit is first crossed — free included credits exhausted or a configured Pro spend cap — and targets owners/admins only. |
+| **Group** | `NOTIFICATION_GROUPS` + `NOTIFICATION_GROUP_META` in `@domain/shared` | User-visible category (`incidents`, `wrapped_reports`, `custom_messages`, `personal`, `destinations`, `billing`). The preferences UI surfaces one toggle per group; adding a kind to an existing group inherits the user's setting automatically. Each group also declares `slackRoutable` — non-routable groups (`personal`) are hidden from the Slack routes settings, rejected by the route-config server fns, and skipped by the worker's Slack fan-out. |
 | **Channel** | `apps/workers/src/workers/notification-*.ts` + per-channel registries | Delivery surface (in-app, email; Slack and others later). Each channel is one queue topic + one worker + one renderer registry keyed on `NotificationKind`. |
 | **Idempotency key** | `idempotency_key` column on `notifications` | Producer-computed (`buildIdempotencyKey` in `@domain/notifications`). The unique index `(organization_id, user_id, idempotency_key)` absorbs at-least-once redelivery from the outbox + queue layers. |
 | **Project anchor** | `project_id` column on `notifications` (nullable) | Cascade anchor for kinds tied to a project (`incident.*`, `wrapped.report`). On `ProjectDeleted` the domain-events worker fires `notifications:delete-by-project`, which removes every row anchored to the deleted project. Per the platform's no-FK rule, referential integrity is application-layer. |
@@ -25,7 +25,7 @@ Source domain event (IncidentCreated / IncidentClosed / WrappedReady / ...)
   → routed by apps/workers/src/workers/domain-events.ts
      (incidents: forwards a transition hint — "created" / "closed" —
       not a hardcoded notification kind)
-notifications:request-{incident,wrapped-report,signal-assigned,signal-discovered,signal-regressed}-notifications
+notifications:request-{incident,wrapped-report,signal-assigned,signal-discovered,signal-regressed,destination-quarantined,billing-limit}-notifications
   → apps/workers/src/workers/notifications.ts
      – incidents: derive kind from incident.endedAt
        (endedAt = startedAt → incident.event;
@@ -38,6 +38,7 @@ notifications:request-{incident,wrapped-report,signal-assigned,signal-discovered
      – signal-related notifications target the signal assignee when present;
        unassigned signals and non-signal notifications use the existing
        project-member fan-out
+     – billing.limit-reached: owners/admins only (no project anchor)
      – assignee-targeted signal notifications do not fan out to shared Slack routes
      – signal-assigned: single recipient (the new assignee); router +
        producer both skip cleared assignments and self-assignments

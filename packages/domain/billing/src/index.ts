@@ -8,6 +8,11 @@ export {
   type RecordMeteredAIActionInput,
 } from "./ai-metering.ts"
 export {
+  BILLING_LIMIT_KINDS,
+  type BillingLimitKind,
+  detectBillingLimitCrossed,
+} from "./helpers/detect-billing-limit-crossed.ts"
+export {
   ACTION_CREDITS,
   BILLING_INCLUDED_CREDITS_PG_MAX,
   BILLING_OVERAGE_SYNC_THROTTLE_MS,

@@ -274,6 +274,23 @@ export const destinationQuarantinedPayloadSchema = z.object({
 export type DestinationQuarantinedPayload = z.infer<typeof destinationQuarantinedPayloadSchema>
 
 /**
+ * Organization hit a hard billing limit for the current period — free
+ * included credits exhausted, or a configured Pro spend cap reached.
+ * Fans out to owners and admins only (members who cannot change billing
+ * settings are excluded). Org-scoped (`projectId` null); period + limit
+ * kind form the once-per-period idempotency anchor.
+ */
+export const billingLimitReachedPayloadSchema = z.object({
+  limitKind: z.enum(["included-credits", "spend-cap"]),
+  periodStart: z.iso.datetime(),
+  periodEnd: z.iso.datetime(),
+  includedCredits: z.number().int().nonnegative(),
+  consumedCredits: z.number().int().nonnegative(),
+  overageCredits: z.number().int().nonnegative(),
+})
+export type BillingLimitReachedPayload = z.infer<typeof billingLimitReachedPayloadSchema>
+
+/**
  * Single source of truth for notification kinds. Every kind declares its
  * group (drives the user-visible preferences toggle) and its payload schema
  * (used to validate jsonb at read time). Adding a new kind = adding one
@@ -304,6 +321,10 @@ export const NOTIFICATION_KIND_META = {
   "destination.quarantined": {
     group: "destinations",
     payload: destinationQuarantinedPayloadSchema,
+  },
+  "billing.limit-reached": {
+    group: "billing",
+    payload: billingLimitReachedPayloadSchema,
   },
 } as const satisfies Record<string, { readonly group: NotificationGroup; readonly payload: z.ZodTypeAny }>
 
