@@ -783,7 +783,7 @@ export function SessionsView({
         data: traces.map((trace): SessionTableRow => ({ kind: "trace", trace })),
         isLoading: entry.isLoading,
         blankSlate: "No traces in this session",
-        ...(footer ? { footer } : {}),
+        ...(footer ? { header: footer } : {}),
       }
     }
 

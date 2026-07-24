@@ -184,13 +184,11 @@ export function SessionSpansTab({
   }
 
   const paginationStatus = (
-    <div className="flex shrink-0 flex-col items-center gap-0.5 border-t px-4 py-3">
+    <div className="flex shrink-0 items-center justify-center border-t px-4 py-3">
       <Text.H6 color="foregroundMuted">
         Showing spans from {loadedTraceIds.length} of {session.traceCount} traces
         {!traceQuery.hasNextPage && loadedTraceIds.length < session.traceCount ? " (display limit reached)" : ""}
-      </Text.H6>
-      <Text.H6 color="foregroundMuted">
-        {isLoadingMore ? "Loading more spans…" : "Filters apply to loaded traces."}
+        {isLoadingMore ? " · Loading…" : ""}
       </Text.H6>
     </div>
   )
