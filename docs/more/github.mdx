@@ -1,0 +1,136 @@
+---
+title: GitHub integration
+description: Auto-resolve a Latitude signal when the pull request or commit that fixes it merges, and see the linked PRs and commits on the signal page.
+---
+
+The GitHub integration closes the loop that [agent dispatch](/agent-dispatch/overview) opens. When a
+pull request or commit that mentions a signal's slug merges into a branch you monitor, Latitude
+**links** it to the signal and applies the matched action: resolve, reopen, or just reference. It
+works exactly like GitHub's own `Fixes #123`, but for Latitude signals.
+
+Latitude asks for **three read-only permissions and nothing else** — Pull requests, Contents, and
+Metadata. The app never comments on your PRs, pushes code, or changes anything in your repositories.
+
+## How it works
+
+1. You connect the Latitude GitHub App to your GitHub account and pick the repositories it can see.
+2. You tell Latitude which repository and branch to watch (an organization default, optionally
+   overridden per project).
+3. When someone opens a PR whose title, description, or branch name references a signal slug, the PR
+   shows up on that signal's page.
+4. When the PR **merges into the monitored branch**, Latitude resolves the signal automatically (or
+   reopens it, for a revert). A commit pushed directly to the branch does the same on landing.
+
+Latitude only ever *reacts* to what merges — the merge itself (which needs write access to your repo)
+is the trust boundary, so nobody outside your team can move your signals by typing a slug.
+
+## Connect
+
+Under **Settings → Integrations**, open the GitHub card and click **Connect**. GitHub asks you to
+install the Latitude app and choose **All repositories** or a selected subset, then sends you back to
+Latitude, which verifies you own the installation and binds it to your organization. One GitHub
+installation maps to one Latitude organization.
+
+To disconnect, use **Disconnect** on the same card (Latitude stops processing events; your linked
+PRs and commits are kept for history) or uninstall the app on GitHub — either does the same thing.
+
+## Configure what to watch
+
+On the GitHub manage page (**Settings → Integrations → GitHub**):
+
+- **Default repository & branch** — the repo/branch every project watches by default.
+- **What to watch** — toggle pull requests and commits, and which text sources are scanned (PR
+  title, PR description, branch name, commit message).
+- **Magic words** — the keyword lists that decide the action (below).
+
+A single project can point at a different repository/branch from **its** signals settings; projects
+without an override inherit the organization default. A monorepo is first-class — point several
+projects at the same repository.
+
+## Magic words
+
+Latitude scans the enabled text sources for a **keyword plus a signal slug** in the same sentence or
+line. The keyword can come before or after the slug, and an optional `#` prefix is allowed.
+
+| Action | Default keywords | Effect on merge |
+| --- | --- | --- |
+| **Resolve** | close, fix, resolve, complete, implement, address, solve (and their inflections) | Resolves the signal |
+| **Reopen** | reopen, revert, roll back, back out (and inflections) | Reopens (unresolves) the signal |
+| **Reference** | ref, references, part of, related to, contributes to, toward | Links only, no lifecycle change |
+
+All of these link `LAT-XY9Z` and resolve it on merge:
+
+```
+Fixes LAT-XY9Z
+fixes: #LAT-XY9Z
+LAT-XY9Z is fixed
+Resolves LAT-XY9Z and LAT-AB12        (applies to both slugs)
+branch: fix/lat-xy9z-timeout-handling  (branch names are lowercase by convention)
+```
+
+A slug on its own never does anything — there must be a keyword. When a sentence matches both a
+reopen and a resolve keyword, reopen wins (so `Revert "Fix LAT-XY9Z"` reopens). You can edit each
+keyword list, or reset it to the defaults, on the manage page. (Custom regular expressions are not
+supported.)
+
+Use the slug shown on the signal page (for example `LAT-XY9Z`) — the three-letter prefix is derived
+from your project, and slugs are unique across your organization, so one reference always points at
+exactly one signal.
+
+### Let dispatched agents write it for you
+
+If you use [agent dispatch](/agent-dispatch/overview), the default prompt already tells the agent to
+name its branch `fix/<slug>-…` and title its PR `Resolves <SLUG>: …`. An agent-authored fix then
+links on open and resolves the signal on merge with nobody typing a slug by hand.
+
+## See the links on a signal
+
+A signal with linked PRs or commits shows a **GitHub pill** at the top of its detail page: the most
+relevant reference (a merged PR, the latest open PR, or the most recent commit) with its status. When
+there is more than one, the pill opens a list of them all, each linking out to GitHub, and shows
+which one resolved or reopened the signal.
+
+## Troubleshooting
+
+The manage page has a **Recent deliveries** table — every webhook GitHub sent, newest first, with its
+event, repository, status, and a detail column. If a merge didn't resolve a signal, check here:
+
+- **skipped `no-config`** — the repository or branch isn't the one you're watching.
+- **skipped `suspended`** — the GitHub app is suspended for your account; unsuspend it on GitHub.
+- **processed** but the signal didn't move — the text had no matching keyword next to the slug, or the
+  slug doesn't exist / was deleted. Re-check the magic words above.
+
+If a delivery never arrived at all (for example during a Latitude outage — GitHub does not retry
+failed deliveries automatically), you can re-send it from your GitHub App's **Advanced → Recent
+Deliveries** page; Latitude processes redeliveries safely.
+
+## Self-hosting
+
+Latitude Cloud runs the GitHub App for you. Self-hosters register **their own** GitHub App and provide
+its credentials, so there is no dependency on Latitude's app and no data leaves your control. When the
+credentials are unset, the integration stays hidden.
+
+Register a new GitHub App under **GitHub → Settings → Developer settings → GitHub Apps → New GitHub
+App** with:
+
+- **Callback URL** and **Setup URL**: `https://<your-web-host>/integrations/github/setup/callback`,
+  with "Request user authorization (OAuth) during installation" and "Redirect on update" checked.
+- **Webhook URL**: `https://<your-api-host>/v1/webhooks/github`, and a high-entropy **secret**.
+- **Repository permissions** (read-only): Pull requests, Contents, Metadata.
+- **Subscribe to events**: Pull request, Push.
+
+Then set these environment variables:
+
+```
+LAT_GITHUB_APP_ID              # the App ID
+LAT_GITHUB_APP_SLUG            # from github.com/apps/<slug>
+LAT_GITHUB_APP_PRIVATE_KEY     # the generated .pem, base64-encoded
+LAT_GITHUB_WEBHOOK_SECRET      # the webhook secret you generated
+LAT_GITHUB_APP_CLIENT_ID       # the App's own OAuth client id
+LAT_GITHUB_APP_CLIENT_SECRET   # the App's own OAuth client secret
+LAT_GITHUB_BASE_URL            # optional — set to your GitHub Enterprise Server host
+```
+
+`LAT_GITHUB_APP_CLIENT_ID`/`_SECRET` are the GitHub **App's own** OAuth client, not your GitHub
+single-sign-on credentials. For **GitHub Enterprise Server**, set `LAT_GITHUB_BASE_URL` to your GHES
+host; every URL and API base is derived from it (best-effort support).

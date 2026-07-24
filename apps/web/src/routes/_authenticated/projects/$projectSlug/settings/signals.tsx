@@ -5,6 +5,7 @@ import { useState } from "react"
 import { updateProjectMutation, useProjectsCollection } from "../../../../../domains/projects/projects.collection.ts"
 import { toUserMessage } from "../../../../../lib/errors.ts"
 import { useRouteProject } from "../-route-data.ts"
+import { GithubProjectSyncSettings } from "./-components/github-project-sync.tsx"
 import { ProjectDispatchOverrides } from "./-components/project-dispatch-overrides.tsx"
 import { SettingsPage } from "./-components/settings-page.tsx"
 
@@ -62,6 +63,7 @@ function ProjectSignalsSettingsPage() {
         </div>
       </div>
       <ProjectDispatchOverrides projectId={currentProject.id} />
+      <GithubProjectSyncSettings projectId={currentProject.id} />
     </SettingsPage>
   )
 }

@@ -36,6 +36,7 @@
     "@domain/events": "workspace:*",
     "@domain/exports": "workspace:*",
     "@domain/flaggers": "workspace:*",
+    "@domain/github": "workspace:*",
     "@domain/integrations": "workspace:*",
     "@domain/memories": "workspace:*",
     "@domain/organizations": "workspace:*",

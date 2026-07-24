@@ -1,3 +1,4 @@
+export { GithubIcon } from "./brands/icons/github.tsx"
 export { OpentelemetryIcon } from "./brands/icons/opentelemetry.tsx"
 export { SlackIcon } from "./brands/icons/slack.tsx"
 export { DatabaseAddIcon } from "./database-add.tsx"

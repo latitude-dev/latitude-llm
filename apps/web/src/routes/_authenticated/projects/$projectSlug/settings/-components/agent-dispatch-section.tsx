@@ -27,7 +27,7 @@ import { relativeTime } from "@repo/utils"
 import { useForm } from "@tanstack/react-form"
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 import { Link } from "@tanstack/react-router"
-import { BookOpen, Copy, ExternalLink, FileText, type LucideProps, Plus, Webhook } from "lucide-react"
+import { BookOpen, Copy, ExternalLink, FileText, type LucideProps, Plus, Settings, Webhook } from "lucide-react"
 import { type ReactNode, useState } from "react"
 import { z } from "zod"
 import {
@@ -342,6 +342,7 @@ function AgentDispatchKindCard({
               to="/projects/$projectSlug/settings/integrations/$integrationKind"
               params={{ projectSlug, integrationKind: kind }}
             >
+              <Icon icon={Settings} size="sm" />
               Manage
             </Link>
           </Button>
@@ -1162,6 +1163,11 @@ function ConnectAgentDispatchModal({
               </Text.H6>
               <Text.H6 display="block" color="foregroundMuted">
                 4. Paste both values here. Latitude will extract the routine ID from the page URL.
+              </Text.H6>
+              <Text.H6 display="block" color="foregroundMuted">
+                Latitude's dispatch prompt asks the agent to brand its branch and PR with the signal reference (e.g.
+                "Resolves LAT-XY9Z"), so merging the PR resolves the signal automatically when the GitHub integration is
+                connected.
               </Text.H6>
             </div>
             <div className="flex flex-col gap-2 pt-1">

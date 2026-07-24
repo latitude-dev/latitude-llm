@@ -2,7 +2,7 @@ import { resolveEmbeddingConfig } from "@domain/ai"
 import { OutboxEventWriter } from "@domain/events"
 import { ProjectRepository } from "@domain/projects"
 import { type Score, ScoreRepository } from "@domain/scores"
-import { generateId, type NotFoundError, ProjectId, type RepositoryError, ScoreId, SqlClient } from "@domain/shared"
+import { generateId, type NotFoundError, type RepositoryError, ScoreId, SqlClient } from "@domain/shared"
 import { Effect } from "effect"
 import type { Signal, SignalSource } from "../entities/signal.ts"
 import type { CheckEligibilityError } from "../errors.ts"
@@ -169,14 +169,14 @@ export const createSignalFromScoreUseCase = (input: CreateSignalFromScoreInput) 
 
         const score = scoreResult.score
         const assignedAt = new Date()
-        // Slug must be unique per (org, project). Generated inside the
-        // transaction so it's contention-aware (previous slugs in this project
-        // are visible to the existence check) and so we don't have to retry on
-        // a unique-constraint conflict.
+        // Slug must be unique per organization (D15). Generated inside the
+        // transaction so it's contention-aware (previous slugs in this org are
+        // visible to the count) and so we don't have to retry on a
+        // unique-constraint conflict.
         const project = yield* projectRepository.findById(score.projectId)
         const slug = yield* generateSignalSlug({
           projectSlug: project.slug,
-          count: (slug) => signalRepository.countBySlug({ projectId: ProjectId(score.projectId), slug }),
+          count: (slug) => signalRepository.countBySlug({ slug }),
         })
         const issue = buildNewSignalFromScore({
           score,

@@ -55,6 +55,13 @@ export {
   listGardenableCustomBehaviors,
 } from "./repositories/gardenable-custom-behaviors.ts"
 export { type GardenableProjectRef, listGardenableProjectRefs } from "./repositories/gardenable-projects.ts"
+export { GithubDeliveryRepositoryLive } from "./repositories/github-delivery-repository.ts"
+export {
+  findActiveGithubInstallationAcrossOrgs,
+  GithubIntegrationRepositoryLive,
+} from "./repositories/github-integration-repository.ts"
+export { GithubSignalReferenceRepositoryLive } from "./repositories/github-signal-reference-repository.ts"
+export { GithubSyncConfigRepositoryLive } from "./repositories/github-sync-config-repository.ts"
 export { IncidentMonitorReaderLive } from "./repositories/incident-monitor-reader.ts"
 export { InvitationRepositoryLive } from "./repositories/invitation-repository.ts"
 export { MembershipRepositoryLive } from "./repositories/membership-repository.ts"

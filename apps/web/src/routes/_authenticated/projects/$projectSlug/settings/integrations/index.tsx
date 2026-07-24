@@ -16,6 +16,7 @@ import { useProjectsCollection } from "../../../../../../domains/projects/projec
 import { toUserMessage } from "../../../../../../lib/errors.ts"
 import { useRouteProject } from "../../-route-data.ts"
 import { AgentDispatchSection } from "../-components/agent-dispatch-section.tsx"
+import { GithubIntegrationSection } from "../-components/github-integration-section.tsx"
 import { IntegrationCard } from "../-components/integration-card.tsx"
 import { SettingsPage } from "../-components/settings-page.tsx"
 import { SLACK_INTEGRATION_QUERY_KEY, SlackRouteRow } from "../-components/slack-route-row.tsx"
@@ -23,6 +24,9 @@ import { SLACK_INTEGRATION_QUERY_KEY, SlackRouteRow } from "../-components/slack
 const searchSchema = z.object({
   installed: z.literal("ok").optional(),
   error: z.string().optional(),
+  githubInstalled: z.literal("ok").optional(),
+  githubPending: z.literal("approval").optional(),
+  githubError: z.string().optional(),
 })
 
 export const Route = createFileRoute("/_authenticated/projects/$projectSlug/settings/integrations/")({
@@ -56,7 +60,28 @@ function IntegrationsSettingsPage() {
         description: "Couldn't complete the Slack install. Please try again.",
       })
     }
-    if (search.installed || search.error) {
+    if (search.githubInstalled === "ok") {
+      toast({ description: "GitHub connected" })
+    } else if (search.githubPending === "approval") {
+      toast({
+        variant: "warning",
+        description:
+          "GitHub installation needs approval from an organization admin. Once approved, connect again to finish.",
+      })
+    } else if (search.githubError === "installation_taken") {
+      toast({
+        variant: "destructive",
+        description: "This GitHub installation is already connected to another Latitude organization.",
+      })
+    } else if (search.githubError === "verification_failed") {
+      toast({
+        variant: "destructive",
+        description: "Couldn't verify the GitHub installation. Please start the install from Latitude and try again.",
+      })
+    } else if (search.githubError === "oauth_failed") {
+      toast({ variant: "destructive", description: "Couldn't complete the GitHub install. Please try again." })
+    }
+    if (search.installed || search.error || search.githubInstalled || search.githubPending || search.githubError) {
       void router.navigate({ to: Route.fullPath, search: {}, replace: true })
     }
   })
@@ -65,6 +90,7 @@ function IntegrationsSettingsPage() {
     <SettingsPage title="Integrations" description="Connect Latitude to the tools your team already uses.">
       <div className="flex flex-col gap-3">
         <SlackIntegrationSection />
+        <GithubIntegrationSection projectSlug={projectSlug} />
         {currentProject ? (
           <AgentDispatchSection projectId={currentProject.id} projectSlug={currentProject.slug} />
         ) : null}
