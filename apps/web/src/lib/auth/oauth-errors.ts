@@ -12,7 +12,7 @@ const SIGN_IN_EXPIRED_MESSAGE = "That sign-in attempt expired or was interrupted
 
 const OAUTH_ERROR_MESSAGES: Record<string, string> = {
   account_not_linked:
-    "This email already has an account that isn't connected to that provider. Continue with email below to sign in — you can then connect it under Settings → Account.",
+    "This email already has an account that isn't linked to that provider. Sign in with your email below, then link the provider under Settings → Account.",
   access_denied: "Sign-in was cancelled before it completed. Please try again.",
   please_restart_the_process: SIGN_IN_EXPIRED_MESSAGE,
   state_mismatch: SIGN_IN_EXPIRED_MESSAGE,

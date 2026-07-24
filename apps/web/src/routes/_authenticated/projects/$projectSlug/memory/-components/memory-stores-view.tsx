@@ -163,8 +163,8 @@ export function MemoryStoresView({
       sortKey: "ratio",
       render: (store) => (
         <Tooltip asChild trigger={endValue(formatRatio(store.reads, store.writes))}>
-          {formatCount(store.reads)} reads per {formatCount(store.writes)} writes — how much this store is used versus
-          maintained.
+          {formatCount(store.reads)} reads per {formatCount(store.writes)} writes. Shows how often the store is read
+          versus updated.
         </Tooltip>
       ),
     },
@@ -224,8 +224,8 @@ export function MemoryStoresView({
             asChild
             trigger={endValue(`${(store.updateEvents / store.recordsTouched).toFixed(1).replace(/\.0$/, "")}×`)}
           >
-            {formatCount(store.updateEvents)} updates across {formatCount(store.recordsTouched)} records touched — how
-            often records are rewritten.
+            {formatCount(store.updateEvents)} updates across {formatCount(store.recordsTouched)} records. Shows how
+            often records get rewritten.
           </Tooltip>
         ) : (
           endValue("-")

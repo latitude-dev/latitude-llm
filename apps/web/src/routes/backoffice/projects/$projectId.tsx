@@ -131,7 +131,7 @@ function BackofficeProjectDetailPage() {
 
       <ActionsSection
         title="Project actions"
-        description="Operational actions for this project — manually trigger background jobs, etc."
+        description="Operational actions for this project, like manually triggering background jobs."
       >
         <ActionRow
           icon={ClaudeCodeIcon}

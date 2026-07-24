@@ -83,8 +83,8 @@ function ScopeTitle({ current }: { readonly current: CustomBehaviorRecord | null
       <div className="flex flex-row items-center gap-1.5">
         <Text.H4M>{GLOBAL_LABEL}</Text.H4M>
         <Tooltip asChild trigger={<Icon icon={InfoIcon} size="sm" color="foregroundMuted" />}>
-          Shown by default — captures every behavior in this project. You can also create your own custom behavior to
-          discover the patterns within a filtered set of sessions.
+          Shown by default. It captures every behavior in this project. Create a custom behavior to surface patterns
+          within a filtered set of sessions.
         </Tooltip>
       </div>
       <Text.H6 color="foregroundMuted">No filters applied</Text.H6>

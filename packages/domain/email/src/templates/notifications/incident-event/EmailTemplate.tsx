@@ -26,12 +26,12 @@ import {
 
 const ALERT_KIND_TO_SUBTITLE: Record<IncidentNotificationKey, string> = {
   "signal.escalating":
-    "We notified everyone watching this project — an ongoing signal is being detected more than expected.",
-  "monitor.match": "We notified everyone watching this project — a new match was detected.",
+    "We notified everyone watching this project. A signal is being detected more often than expected.",
+  "monitor.match": "We notified everyone watching this project. A new match came in.",
   "monitor.threshold":
-    "We notified everyone watching this project — a monitored metric crossed its configured threshold.",
+    "We notified everyone watching this project. A monitored metric crossed its threshold.",
   "monitor.escalating":
-    "We notified everyone watching this project — a monitored metric stayed over its threshold for the configured window.",
+    "We notified everyone watching this project. A monitored metric stayed over its threshold for the configured window.",
 }
 
 interface IncidentEventEmailProps {
@@ -139,7 +139,7 @@ IncidentEventEmail.PreviewProps = {
   assigneeName: "Anna Bosch",
   tags: ["env:prod", "model:claude-3.5-sonnet", "service:agents"],
   sampleExcerpt: {
-    text: "Reviewer flagged a tool-call loop after the third retry — model kept invoking `search` with the same query.",
+    text: "Reviewer flagged a tool-call loop after the third retry. The model kept calling `search` with the same query.",
     truncated: false,
     author: { kind: "user", name: "Anna Bosch", imageUrl: null },
   },

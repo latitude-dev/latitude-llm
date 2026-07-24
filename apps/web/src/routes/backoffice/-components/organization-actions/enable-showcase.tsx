@@ -80,7 +80,7 @@ export function EnableShowcaseButton({ organizationId, wantsShowcase }: EnableSh
           variant={next ? "default" : "warning"}
           description={
             next
-              ? "Sets wantsShowcase = true for the whole org. The 'Latitude Demo' entry appears in every member's project switcher — but only once a showcase has actually been built. Use this to re-enable the demo for an org that dismissed it, or to opt in an org created before the feature existed."
+              ? "Sets wantsShowcase = true for the whole org. The 'Latitude Demo' entry then appears in every member's project switcher, but only once a showcase has been built. Use this to re-enable the demo for an org that dismissed it, or to opt in an org created before the feature existed."
               : "Sets wantsShowcase = false for the whole org. The demo entry disappears from every member's switcher and /projects/lat-demo 404s. Same effect as a member using 'Remove demo'."
           }
         />

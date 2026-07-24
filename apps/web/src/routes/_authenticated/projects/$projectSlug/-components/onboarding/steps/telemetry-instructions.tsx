@@ -300,8 +300,8 @@ function CodingMachineInstructions({
         <div className="flex flex-col gap-2">
           <Text.H5M>Enable in `~/.hermes/config.yaml`</Text.H5M>
           <Text.H5 color="foregroundMuted">
-            Add <code className="text-xs">latitude</code> under <code className="text-xs">plugins.enabled</code> — do
-            not use <code className="text-xs">hermes plugins enable</code> for pip-installed plugins.
+            Add <code className="text-xs">latitude</code> under <code className="text-xs">plugins.enabled</code>. Don't
+            use <code className="text-xs">hermes plugins enable</code> for pip-installed plugins.
           </Text.H5>
           <CodeBlock value={getHermesConfigYamlBlock()} copyable />
         </div>
@@ -329,8 +329,8 @@ function CodingMachineInstructions({
         <div className="flex flex-col gap-2">
           <Text.H5M>Restart and verify</Text.H5M>
           <Text.H5 color="foregroundMuted">
-            Restart pi so it loads the extension, send a prompt that uses the model or a tool, then open Traces in
-            Latitude — the new trace should appear within a few seconds.
+            Restart pi to load the extension, send a prompt that uses the model or a tool, then open Traces in
+            Latitude. Your first trace should appear within a few seconds.
           </Text.H5>
         </div>
       </>
@@ -349,7 +349,7 @@ function CodingMachineInstructions({
         <div className="flex flex-col gap-2">
           <Text.H5M>Latitude API key</Text.H5M>
           <Text.H5 color="foregroundMuted">
-            Default organization key (<code className="text-xs">{DEFAULT_API_KEY_NAME}</code>) — paste when the
+            Default organization key (<code className="text-xs">{DEFAULT_API_KEY_NAME}</code>). Paste it when the
             installer asks for your API key.
           </Text.H5>
           {defaultApiKeyToken ? (
@@ -391,7 +391,7 @@ function CloudflareAiGatewayInstructions({
       <div className="flex flex-col gap-2">
         <Text.H5M>Cloudflare AI Gateway</Text.H5M>
         <Text.H5 color="foregroundMuted">
-          Cloudflare AI Gateway exports OpenTelemetry spans for every request it proxies — no SDK needed. In your
+          Cloudflare AI Gateway exports OpenTelemetry spans for every request it proxies, so you don't need an SDK. In your
           gateway's <span className="font-medium">Settings → OpenTelemetry</span>, click{" "}
           <span className="font-medium">Add Otel Destination</span> and fill in the fields below.{" "}
           {defaultApiKeyToken ? (
@@ -519,7 +519,7 @@ export function TelemetryInstructions({ projectSlug }: { readonly projectSlug: s
             <Badge variant="accent">Recommended</Badge>
           </span>
           <Text.H5 color="foregroundMuted">
-            Paste this into the chat with your coding agent — Cursor, Claude Code, Codex, or any other — to set up
+            Paste this into your coding agent's chat (Cursor, Claude Code, Codex, or anything else) to set up
             Latitude telemetry in your project.
           </Text.H5>
           <CodeBlock value={codingAgentPrompt} copyable wrapLines />

@@ -202,7 +202,7 @@ function ConnectCard({
 
   const headline = orgHasConnectedProjects ? "Send traces to this project" : "Waiting for your first trace"
   const subcopy = orgHasConnectedProjects
-    ? "Your organization already sends traces to Latitude. Point some of your traffic to this project's slug — or set it up from scratch."
+    ? "Your organization already sends traces to Latitude. Point some traffic at this project's slug, or set it up from scratch."
     : "This is where your traces will appear. Instrument your app with Latitude to start streaming them in."
   const ctaLabel = orgHasConnectedProjects ? "Full setup instructions" : "Set up tracing"
 

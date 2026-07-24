@@ -419,7 +419,7 @@ function DomainVerificationCard({
     try {
       const result = await verifySsoDomainMutation()
       if (result.verified) {
-        toast({ description: `${provider.domain} verified — SSO sign-in is now active` })
+        toast({ description: `${provider.domain} is verified. SSO sign-in is now active.` })
       } else {
         toast({ variant: "destructive", description: result.message ?? "Domain verification failed" })
       }

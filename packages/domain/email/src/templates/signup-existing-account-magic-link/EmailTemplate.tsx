@@ -27,7 +27,7 @@ export function SignupExistingAccountMagicLinkEmail({
         Latitude workspace.
       </EmailText>
       <EmailText variant="body" className={emailDesignTokens.spacing.contentGap}>
-        No worries — just tap the button below to sign in directly.
+        No problem. Tap the button below to sign in directly.
       </EmailText>
 
       <Section className={emailDesignTokens.spacing.buttonTop}>

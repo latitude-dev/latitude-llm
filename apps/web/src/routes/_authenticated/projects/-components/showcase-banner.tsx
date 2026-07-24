@@ -15,7 +15,7 @@ export function ShowcaseBanner() {
       <div className="pointer-events-none absolute inset-0 flex items-center justify-center gap-2">
         <Icon icon={EyeIcon} size="sm" color="white" className="opacity-90" />
         <Text.H6 color="white" className="opacity-95">
-          Demo project — read-only
+          Read-only demo
         </Text.H6>
       </div>
       <div className="pointer-events-auto shrink-0">
@@ -62,7 +62,7 @@ function RemoveDemoButton() {
               if (!next && !isSubmitting) setOpen(false)
             }}
             title="Remove the demo?"
-            description="This removes the demo for your whole team, not just you — every member of your organization will lose access to it. Support can restore it later if you need it back."
+            description="This removes the demo for everyone on your team, not just you. Every member of your organization loses access to it. Support can restore it later if you need it back."
             footer={
               <div className="flex justify-end gap-2">
                 <Button variant="outline" disabled={isSubmitting} onClick={() => setOpen(false)}>

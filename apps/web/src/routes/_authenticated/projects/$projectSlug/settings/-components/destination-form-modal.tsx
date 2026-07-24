@@ -156,7 +156,7 @@ export function DestinationFormModal({
         setConnectionTest({
           phase: "error",
           message: result.retryable
-            ? `Connection failed (${result.reason ?? "unknown"}). This may be transient — try again.`
+            ? `Connection failed (${result.reason ?? "unknown"}). This is often temporary, so try again.`
             : `Connection rejected (${result.reason ?? "unknown"}). Check the configuration and credentials.`,
         })
       }
@@ -224,7 +224,7 @@ export function DestinationFormModal({
           <div className="flex flex-col gap-3 rounded-lg border border-border p-3">
             <SwitchInput
               label="Import past traces"
-              description="Backfill your retained history after connecting (up to your plan's retention). Off by default — new destinations sync going forward."
+              description="After connecting, backfill your retained history (up to your plan's limit). Off by default, so new destinations sync only going forward."
               checked={importSince !== null}
               onCheckedChange={(checked) => setImportSince(checked ? "" : null)}
             />

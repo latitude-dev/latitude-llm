@@ -108,7 +108,7 @@ export function DestinationCard({
       if (result.backfillsFailed > 0) {
         toast({
           variant: "destructive",
-          description: "Resumed, but the gap backfill couldn't start for every source — retry from Backfill.",
+          description: "Resumed, but the gap backfill couldn't start for some sources. Retry it from Backfill.",
         })
       } else if (result.backfillsStarted > 0) {
         toast({ description: "Resumed. Backfilling the window it missed while paused." })
