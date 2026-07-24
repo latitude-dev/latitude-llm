@@ -74,7 +74,7 @@ function AggregationItem({
   )
 }
 
-interface MemoryTile {
+export interface MemoryTile {
   readonly key: string
   readonly label: string
   readonly value: string
@@ -99,6 +99,7 @@ function memoryTiles(overview: MemoryOverviewRecord | undefined): readonly Memor
 
 export function MemoryAnalyticsPanel({
   overview,
+  tiles: tilesProp,
   histogram,
   bucketSeconds,
   rangeFromIso,
@@ -107,6 +108,7 @@ export function MemoryAnalyticsPanel({
   isLoading,
 }: {
   readonly overview: MemoryOverviewRecord | undefined
+  readonly tiles?: readonly MemoryTile[]
   readonly histogram: readonly MemoryActivityBucketRecord[]
   readonly bucketSeconds: number
   readonly rangeFromIso: string
@@ -116,7 +118,8 @@ export function MemoryAnalyticsPanel({
 }) {
   const [collapsed, setCollapsed] = useState(false)
   const [showLeftFade, setShowLeftFade] = useState(false)
-  const tiles = useMemo(() => memoryTiles(overview), [overview])
+  const defaultTiles = useMemo(() => memoryTiles(overview), [overview])
+  const tiles = tilesProp ?? defaultTiles
 
   const denseHistogramBuckets = useMemo(
     () => denseHistogram(histogram, Date.parse(rangeFromIso), Date.parse(rangeToIso), bucketSeconds),
