@@ -106,11 +106,27 @@ describe("getStoreInsightsUseCase", () => {
     ])
   })
 
-  it("orders cold storage never-read first, then oldest last-read", async () => {
-    const insights = await run(seededStore())
-    expect(insights.coldRecords.map((row) => row.recordId)).toEqual(["rec2", "rec3", "rec1"])
-    expect(insights.coldRecords[0]).toMatchObject({ recordId: "rec2", neverRead: true, lastReadAt: null })
-    expect(insights.coldRecords[2]).toMatchObject({ recordId: "rec1", neverRead: false })
+  it("orders cold storage by oldest activity — read or write — ignoring never-read", async () => {
+    const memory = createFakeMemoryAnalyticsRepository()
+    memory.events.push(
+      makeEvent({ recordId: "stale", contentHash: "h-stale", tokenCount: 10, endTime: at(10) }),
+      makeEvent({ recordId: "old-read", contentHash: "h-oldread", tokenCount: 20, endTime: at(0) }),
+      makeEvent({ recordId: "fresh-write", contentHash: "h-fresh", tokenCount: 30, endTime: at(80) }),
+      read({ recordId: "old-read", tokenCount: 20, recordCount: 1, queryText: "q", endTime: at(40) }),
+    )
+    memory.current.push(
+      makeCurrent({ recordId: "stale", contentHash: "h-stale", tokenCount: 10, endTime: at(10) }),
+      makeCurrent({ recordId: "old-read", contentHash: "h-oldread", tokenCount: 20, endTime: at(0) }),
+      makeCurrent({ recordId: "fresh-write", contentHash: "h-fresh", tokenCount: 30, endTime: at(80) }),
+    )
+    const insights = await run(memory)
+    expect(insights.coldRecords.map((row) => row.recordId)).toEqual(["stale", "old-read", "fresh-write"])
+    expect(insights.coldRecords[1]).toMatchObject({
+      recordId: "old-read",
+      neverRead: false,
+      lastReadAt: at(40).toISOString(),
+    })
+    expect(insights.coldRecords[2]).toMatchObject({ recordId: "fresh-write", neverRead: true })
   })
 
   it("counts top and zero-hit queries by distinct search span", async () => {
@@ -181,17 +197,18 @@ describe("getStoreInsightsUseCase", () => {
     return memory
   }
 
-  it("reports write-health signals: writes, rewrites, per-trace peak, revert", async () => {
+  it("reports write-health signals: writes, last write, no-ops, revert", async () => {
     const insights = await run(writeHealthStore())
     const byId = Object.fromEntries(insights.writeHealth.map((row) => [row.recordId, row]))
     expect(insights.writeHealth[0]?.recordId).toBe("hot")
-    expect(byId.hot).toMatchObject({ writes: 4, rewrites: 3, peakWritesPerTrace: 3, reverted: false })
-    expect(byId.flip).toMatchObject({ writes: 3, rewrites: 2, peakWritesPerTrace: 3, reverted: true })
-    expect(byId.noop).toMatchObject({ writes: 2, rewrites: 1, reverted: false })
+    expect(byId.hot).toMatchObject({ writes: 4, lastWriteAt: at(10).toISOString(), noOps: 0, reverted: false })
+    expect(byId.flip).toMatchObject({ writes: 3, lastWriteAt: at(5).toISOString(), noOps: 0, reverted: true })
+    expect(byId.noop).toMatchObject({ writes: 2, lastWriteAt: at(7).toISOString(), noOps: 1, reverted: false })
   })
 
-  it("counts no-op rewrites and duplicate records", async () => {
+  it("counts thrash writes, no-op rewrites and duplicate records", async () => {
     const insights = await run(writeHealthStore())
+    expect(insights.thrashWrites).toBe(5)
     expect(insights.noOpRewrites).toBe(1)
     expect(insights.duplicateGroups).toBe(1)
     expect(insights.duplicateRecords).toBe(2)

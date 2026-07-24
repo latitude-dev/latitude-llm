@@ -1,5 +1,5 @@
 import { Chart, type ChartSeries, HistogramSkeleton, Text } from "@repo/ui"
-import { formatCount, relativeTime } from "@repo/utils"
+import { formatCount } from "@repo/utils"
 import { useMemo } from "react"
 import {
   useMemoryActivityHistogram,
@@ -13,6 +13,7 @@ import { useRouteProject } from "../../../-route-data.ts"
 import { MemoryAnalyticsPanel, type MemoryTile } from "../../-components/memory-analytics-panel.tsx"
 import {
   formatBucketLabel,
+  formatElapsed,
   formatPercent,
   formatRatio,
   pickMemoryTrendBucketSeconds,
@@ -94,16 +95,19 @@ function mostReadItems(insights: StoreInsightsRecord | undefined) {
   }))
 }
 
+type StoreColdRecordRow = StoreInsightsRecord["coldRecords"][number]
+
 function coldItems(insights: StoreInsightsRecord | undefined, nowMs: number) {
   const rows = insights?.coldRecords ?? []
-  const idleOf = (lastReadAt: string | null) => (lastReadAt ? nowMs - Date.parse(lastReadAt) : Number.POSITIVE_INFINITY)
-  const readIdles = rows.filter((row) => !row.neverRead).map((row) => idleOf(row.lastReadAt))
-  const maxReadIdle = readIdles.length > 0 ? Math.max(...readIdles) : 0
+  const lastActivityMs = (row: StoreColdRecordRow) =>
+    Math.max(Date.parse(row.lastUpdatedAt), row.lastReadAt ? Date.parse(row.lastReadAt) : 0)
+  const idleOf = (row: StoreColdRecordRow) => nowMs - lastActivityMs(row)
+  const maxIdle = rows.length > 0 ? Math.max(...rows.map(idleOf)) : 0
   return rows.map((row) => ({
     key: row.recordId,
     label: recordDisplayLabel(row.recordId),
-    value: row.neverRead ? "never read" : relativeTime(row.lastReadAt),
-    fraction: row.neverRead ? 1 : maxReadIdle > 0 ? idleOf(row.lastReadAt) / maxReadIdle : 0,
+    value: `${formatElapsed(idleOf(row))} without activity`,
+    fraction: maxIdle > 0 ? idleOf(row) / maxIdle : 0,
     recordId: row.recordId,
   }))
 }
@@ -252,25 +256,6 @@ export function StoreHomeView({
           isLoading={overviewLoading || histogramLoading}
         />
 
-        <div className="flex min-w-0 flex-col gap-3 rounded-lg bg-secondary p-4">
-          <Text.H6 color="foregroundMuted">Total tokens over time</Text.H6>
-          {insightsLoading ? (
-            <HistogramSkeleton height={160} />
-          ) : tokensEmpty ? (
-            <div className="flex min-h-[120px] items-center justify-center">
-              <Text.H6 color="foregroundMuted">No writes yet</Text.H6>
-            </div>
-          ) : (
-            <Chart
-              categories={tokenCategories}
-              series={tokenSeries}
-              height={160}
-              xAxisLabelFontSize={10}
-              ariaLabel="Total tokens over time"
-            />
-          )}
-        </div>
-
         <div className="flex flex-col gap-3">
           <SectionHeading>What's used</SectionHeading>
           <div className="grid grid-cols-1 gap-4 xl:grid-cols-2">
@@ -288,6 +273,7 @@ export function StoreHomeView({
               isLoading={insightsLoading}
               emptyText="No live records"
               mono
+              tone="destructive"
               onSelectRecord={onSelectRecord}
             />
           </div>
@@ -315,6 +301,11 @@ export function StoreHomeView({
         <div className="flex flex-col gap-3">
           <SectionHeading>Write health</SectionHeading>
           <div className="flex flex-wrap gap-8 rounded-lg bg-secondary p-4">
+            <StatCallout
+              label="Thrash writes"
+              value={formatCount(insights?.thrashWrites ?? 0)}
+              subtext="repeats within a run"
+            />
             <StatCallout label="No-op rewrites" value={formatCount(insights?.noOpRewrites ?? 0)} subtext={undefined} />
             <StatCallout
               label="Duplicate records"
@@ -335,6 +326,24 @@ export function StoreHomeView({
 
         <div className="flex flex-col gap-3">
           <SectionHeading>Footprint</SectionHeading>
+          <div className="flex min-w-0 flex-col gap-3 rounded-lg bg-secondary p-4">
+            <Text.H6 color="foregroundMuted">Total tokens over time</Text.H6>
+            {insightsLoading ? (
+              <HistogramSkeleton height={160} />
+            ) : tokensEmpty ? (
+              <div className="flex min-h-[120px] items-center justify-center">
+                <Text.H6 color="foregroundMuted">No writes yet</Text.H6>
+              </div>
+            ) : (
+              <Chart
+                categories={tokenCategories}
+                series={tokenSeries}
+                height={160}
+                xAxisLabelFontSize={10}
+                ariaLabel="Total tokens over time"
+              />
+            )}
+          </div>
           <div className="grid grid-cols-1 gap-4 xl:grid-cols-2">
             <StoreInsightList
               title="Largest records"

@@ -2,6 +2,7 @@ import { InfiniteTable, type InfiniteTableColumn, type InfiniteTableSorting, Sta
 import { formatCount } from "@repo/utils"
 import { useMemo, useState } from "react"
 import type { StoreInsightsRecord } from "../../../../../../../domains/memories/memories.functions.ts"
+import { formatElapsed } from "../../-components/memory-formatters.ts"
 import { recordDisplayLabel } from "../../-components/store-encoding.ts"
 
 type StoreWriteHealthRecord = StoreInsightsRecord["writeHealth"][number]
@@ -10,10 +11,10 @@ const DEFAULT_SORTING: InfiniteTableSorting = { column: "writes", direction: "de
 
 const sortValue = (row: StoreWriteHealthRecord, column: string): number => {
   switch (column) {
-    case "rewrites":
-      return row.rewrites
-    case "peak":
-      return row.peakWritesPerTrace
+    case "lastWrite":
+      return Date.parse(row.lastWriteAt)
+    case "noOps":
+      return row.noOps
     case "reverted":
       return row.reverted ? 1 : 0
     default:
@@ -33,6 +34,7 @@ export function StoreWriteHealthTable({
   readonly onSelectRecord: (recordId: string) => void
 }) {
   const [sorting, setSorting] = useState<InfiniteTableSorting>(DEFAULT_SORTING)
+  const nowMs = Date.now()
   const sorted = useMemo(() => {
     const direction = sorting.direction === "asc" ? 1 : -1
     return [...records].sort((a, b) => {
@@ -56,27 +58,28 @@ export function StoreWriteHealthTable({
       key: "writes",
       header: "Writes",
       align: "end",
-      width: 92,
+      width: 88,
       sortKey: "writes",
+      headerTooltip: "Total add/update/remove events for this record in the window.",
       render: (row) => end(formatCount(row.writes)),
     },
     {
-      key: "rewrites",
-      header: "Rewrites",
+      key: "lastWrite",
+      header: "Last update",
       align: "end",
-      width: 96,
-      sortKey: "rewrites",
-      headerTooltip: "Updates to an existing record (create excluded).",
-      render: (row) => end(formatCount(row.rewrites)),
+      width: 128,
+      sortKey: "lastWrite",
+      headerTooltip: "How long ago this record was last written (add/update/remove).",
+      render: (row) => end(`${formatElapsed(nowMs - Date.parse(row.lastWriteAt))} ago`),
     },
     {
-      key: "peak",
-      header: "Peak/trace",
+      key: "noOps",
+      header: "No-op",
       align: "end",
-      width: 108,
-      sortKey: "peak",
-      headerTooltip: "Most writes this record took in a single trace — repeated rewrites in one run (thrashing).",
-      render: (row) => end(formatCount(row.peakWritesPerTrace)),
+      width: 92,
+      sortKey: "noOps",
+      headerTooltip: "Rewrites that saved byte-identical content (wasted writes).",
+      render: (row) => end(formatCount(row.noOps)),
     },
     {
       key: "reverted",

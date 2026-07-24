@@ -109,15 +109,16 @@ export interface StoreTokenPoint {
 }
 
 /**
- * A record's write-instability signals over the window. `peakWritesPerTrace` is
- * the most writes it took in a single trace (thrashing); `reverted` marks a
- * content hash that returned to an earlier value (A→B→A).
+ * A record's write-instability signals over the window. `lastWriteAt` is the most
+ * recent write instant (UTC ISO); `noOps` counts rewrites that saved byte-identical
+ * content (wasted writes); `reverted` marks a content hash that returned to an
+ * earlier value (A→B→A).
  */
 export interface StoreWriteHealthRecord {
   readonly recordId: string
   readonly writes: number
-  readonly rewrites: number
-  readonly peakWritesPerTrace: number
+  readonly lastWriteAt: string
+  readonly noOps: number
   readonly reverted: boolean
 }
 
@@ -136,7 +137,7 @@ export const STORE_SIZE_BUCKETS: readonly {
 
 /**
  * Per-store Home-dashboard insights. Retrieval/query lists, `writeHealth`,
- * `noOpRewrites` and `tokenHistory` are window-scoped; `coldRecords`,
+ * `thrashWrites`, `noOpRewrites` and `tokenHistory` are window-scoped; `coldRecords`,
  * `largestRecords`, `sizeDistribution` and the duplicate counts are
  * current-state (window-independent), matching the overview tiles.
  * `tokenHistory` is the cumulative live-token footprint per bucket — correct as
@@ -151,6 +152,7 @@ export interface StoreInsights {
   readonly largestRecords: readonly StoreLargestRecord[]
   readonly sizeDistribution: readonly StoreSizeBucket[]
   readonly writeHealth: readonly StoreWriteHealthRecord[]
+  readonly thrashWrites: number
   readonly noOpRewrites: number
   readonly duplicateGroups: number
   readonly duplicateRecords: number

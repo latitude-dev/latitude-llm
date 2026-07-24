@@ -113,10 +113,11 @@ type TokenHistoryRow = { readonly bucket_start: string; readonly tokens: string 
 type WriteHealthRow = {
   readonly record_id: string
   readonly writes: string | number
-  readonly rewrites: string | number
-  readonly peak_writes_per_trace: string | number
+  readonly last_write: string
+  readonly no_ops: string | number
 }
 type RevertedRow = { readonly record_id: string }
+type ThrashRow = { readonly thrash: string | number }
 type NoOpRow = { readonly noop: string | number }
 type DuplicatesRow = { readonly groups: string | number; readonly records: string | number }
 
@@ -495,7 +496,7 @@ export const MemoryAnalyticsRepositoryLive = Layer.effect(
                  WHERE ${SCOPE} ${STORE_FILTER} AND change_kind = 'read' AND record_count > 0
                  GROUP BY record_id
                ) AS r ON lr.record_id = r.record_id
-               ORDER BY lr.never_read DESC, r.last_read ASC, lr.end_time DESC, lr.record_id ASC
+               ORDER BY greatest(r.last_read, lr.end_time) ASC, lr.record_id ASC
                LIMIT {listLimit:UInt32}`,
               { ...currentParams, listLimit },
             ),
@@ -527,21 +528,40 @@ export const MemoryAnalyticsRepositoryLive = Layer.effect(
             queryRow<SizeRow>(`SELECT ${sizeDistributionSelect} FROM ( ${liveRecords(true)} )`, currentParams),
             queryRows<TokenHistoryRow>(tokenHistoryQuery, { ...windowParams, bucketSeconds }),
             queryRows<WriteHealthRow>(
-              `SELECT record_id,
-                      sum(writes_in_trace)              AS writes,
-                      sum(updates_in_trace)             AS rewrites,
-                      max(writes_in_trace)              AS peak_writes_per_trace
+              `SELECT w.record_id AS record_id, w.writes AS writes, w.last_write AS last_write, coalesce(n.no_ops, 0) AS no_ops
                FROM (
-                 SELECT record_id, trace_id,
-                        count()                          AS writes_in_trace,
-                        countIf(change_kind = 'update')  AS updates_in_trace
+                 SELECT record_id,
+                        count()        AS writes,
+                        max(end_time)  AS last_write
+                 FROM ( ${dedupedWindow(true)} )
+                 WHERE change_kind IN ('add', 'update', 'remove')
+                 GROUP BY record_id
+               ) AS w
+               LEFT JOIN (
+                 SELECT record_id,
+                        countIf(change_kind = 'update' AND content_hash = prev_hash AND prev_hash != '') AS no_ops
+                 FROM (
+                   SELECT record_id, change_kind, content_hash,
+                          lagInFrame(content_hash)
+                            OVER (PARTITION BY record_id ORDER BY end_time) AS prev_hash
+                   FROM ( ${dedupedWindow(true)} )
+                   WHERE change_kind IN ('add', 'update')
+                 )
+                 GROUP BY record_id
+               ) AS n ON w.record_id = n.record_id
+               ORDER BY writes DESC, record_id ASC
+               LIMIT {listLimit:UInt32}`,
+              windowParams,
+            ),
+            // Store-wide thrash: writes beyond the first per (record, run) — redundant same-run rewrites.
+            queryRow<ThrashRow>(
+              `SELECT sum(writes_in_trace) - count() AS thrash
+               FROM (
+                 SELECT record_id, trace_id, count() AS writes_in_trace
                  FROM ( ${dedupedWindow(true)} )
                  WHERE change_kind IN ('add', 'update', 'remove')
                  GROUP BY record_id, trace_id
-               )
-               GROUP BY record_id
-               ORDER BY writes DESC, record_id ASC
-               LIMIT {listLimit:UInt32}`,
+               )`,
               windowParams,
             ),
             // A content hash that returns to an earlier value: runs (consecutive-dedup length) exceed distinct hashes.
@@ -594,6 +614,7 @@ export const MemoryAnalyticsRepositoryLive = Layer.effect(
               size,
               tokenHistory,
               writeHealth,
+              thrash,
               reverted,
               noOp,
               duplicates,
@@ -625,10 +646,11 @@ export const MemoryAnalyticsRepositoryLive = Layer.effect(
                 writeHealth: writeHealth.map((row) => ({
                   recordId: row.record_id,
                   writes: num(row.writes),
-                  rewrites: num(row.rewrites),
-                  peakWritesPerTrace: num(row.peak_writes_per_trace),
+                  lastWriteAt: parseCHDate(row.last_write).toISOString(),
+                  noOps: num(row.no_ops),
                   reverted: revertedIds.has(row.record_id),
                 })),
+                thrashWrites: num(thrash?.thrash),
                 noOpRewrites: num(noOp?.noop),
                 duplicateGroups: num(duplicates?.groups),
                 duplicateRecords: num(duplicates?.records),
