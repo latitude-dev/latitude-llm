@@ -216,8 +216,8 @@ function TraceSamplingSection({
               {isDirty ? <DotIndicator variant="primary" aria-label="Unsaved changes" /> : null}
             </Label>
             <Text.H6 color="foregroundMuted">
-              Choose how much of your traffic to process and store, to cut costs. Best for high-traffic projects
-              where a sample is still enough to spot issues.
+              Choose how much of your traffic to process and store, to cut costs. Best for high-traffic projects where a
+              sample is still enough to spot issues.
             </Text.H6>
           </div>
           <Switch id="trace-sampling-enabled" checked={enabled} onCheckedChange={onEnabledChange} />
