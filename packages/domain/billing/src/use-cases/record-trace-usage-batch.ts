@@ -101,7 +101,7 @@ const writeBillingUsagePeriodUpdatedEvent = Effect.fn("billing.writeTraceUsagePe
   readonly updated: BillingUsagePeriod
 }) {
   const spendingLimitCents = yield* resolveSpendingLimitCents(input.recordInput.overageAllowed)
-  const limitCrossed = detectBillingLimitCrossed({
+  const limitsCrossed = detectBillingLimitCrossed({
     previousConsumedCredits: input.previousConsumedCredits,
     consumedCredits: input.updated.consumedCredits,
     includedCredits: input.updated.includedCredits,
@@ -127,7 +127,7 @@ const writeBillingUsagePeriodUpdatedEvent = Effect.fn("billing.writeTraceUsagePe
         consumedCredits: input.updated.consumedCredits,
         overageCredits: input.updated.overageCredits,
         reportedOverageCredits: input.updated.reportedOverageCredits,
-        limitCrossed,
+        limitsCrossed,
       },
     })
     .pipe(Effect.mapError((error) => toRepositoryError(error, "outbox.writeBillingUsagePeriodUpdated")))

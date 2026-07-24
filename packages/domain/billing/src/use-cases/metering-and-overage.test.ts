@@ -105,7 +105,7 @@ describe("recordBillableActionUseCase", () => {
         overageAllowed: true,
         overageCredits: 1,
         reportedOverageCredits: 0,
-        limitCrossed: null,
+        limitsCrossed: [],
       },
     })
   })

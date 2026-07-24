@@ -436,7 +436,7 @@ export const createDomainEventsWorker = ({
     BillingUsagePeriodUpdated: (event) => {
       const effects: Effect.Effect<void, unknown>[] = []
 
-      if (event.payload.limitCrossed !== null && event.payload.limitCrossed !== undefined) {
+      for (const limitKind of event.payload.limitsCrossed ?? []) {
         effects.push(
           pub.publish(
             "notifications",
@@ -445,13 +445,13 @@ export const createDomainEventsWorker = ({
               organizationId: event.payload.organizationId,
               periodStart: event.payload.periodStart,
               periodEnd: event.payload.periodEnd,
-              limitKind: event.payload.limitCrossed,
+              limitKind,
               includedCredits: event.payload.includedCredits,
               consumedCredits: event.payload.consumedCredits,
               overageCredits: event.payload.overageCredits,
             },
             {
-              dedupeKey: `notifications:request-billing-limit:${event.payload.organizationId}:${event.payload.periodStart}:${event.payload.limitCrossed}`,
+              dedupeKey: `notifications:request-billing-limit:${event.payload.organizationId}:${event.payload.periodStart}:${limitKind}`,
             },
           ),
         )

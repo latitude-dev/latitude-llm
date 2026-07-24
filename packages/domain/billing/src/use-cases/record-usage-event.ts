@@ -117,7 +117,7 @@ export const recordUsageEventUseCase = Effect.fn("billing.recordUsageEvent")(fun
       })
 
       const spendingLimitCents = yield* resolveSpendingLimitCents(input.overageAllowed)
-      const limitCrossed = detectBillingLimitCrossed({
+      const limitsCrossed = detectBillingLimitCrossed({
         previousConsumedCredits: previous.consumedCredits,
         consumedCredits: updated.consumedCredits,
         includedCredits: updated.includedCredits,
@@ -142,7 +142,7 @@ export const recordUsageEventUseCase = Effect.fn("billing.recordUsageEvent")(fun
             consumedCredits: updated.consumedCredits,
             overageCredits: updated.overageCredits,
             reportedOverageCredits: updated.reportedOverageCredits,
-            limitCrossed,
+            limitsCrossed,
           },
         })
         .pipe(Effect.mapError((error) => toRepositoryError(error, "outbox.writeBillingUsagePeriodUpdated")))

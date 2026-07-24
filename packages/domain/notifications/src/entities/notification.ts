@@ -275,13 +275,12 @@ export type DestinationQuarantinedPayload = z.infer<typeof destinationQuarantine
 
 /**
  * Organization crossed a billing threshold for the current period — free
- * included credits exhausted, uncapped Pro entered overage, or a configured
- * Pro spend cap reached. Fans out to owners and admins only (members who
- * cannot change billing settings are excluded). Org-scoped (`projectId`
- * null); organization + period + limit kind form the once-per-period
- * idempotency anchor (org is required because period bounds alone are not
- * unique across tenants, and the create-notification queue dedupe key is
- * built from this string).
+ * included credits exhausted, Pro entered overage, or a configured Pro spend
+ * cap reached. Fans out to owners and admins only (members who cannot change
+ * billing settings are excluded). Org-scoped (`projectId` null); organization
+ * + period + limit kind form the once-per-period idempotency anchor (org is
+ * required because period bounds alone are not unique across tenants, and
+ * the create-notification queue dedupe key is built from this string).
  */
 export const billingLimitReachedPayloadSchema = z.object({
   organizationId: cuidSchema,

@@ -308,7 +308,7 @@ describe("checkCreditAvailabilityUseCase", () => {
 })
 
 describe("recordUsageEventUseCase limit crossing", () => {
-  it("emits limitCrossed=included-credits when a free plan first exhausts its allotment", async () => {
+  it("emits limitsCrossed=[included-credits] when a free plan first exhausts its allotment", async () => {
     const { layer, periods, outboxEvents } = createLayer()
 
     await Effect.runPromise(
@@ -343,11 +343,11 @@ describe("recordUsageEventUseCase limit crossing", () => {
 
     expect(outboxEvents[0]?.payload).toMatchObject({
       consumedCredits: 20_000,
-      limitCrossed: "included-credits",
+      limitsCrossed: ["included-credits"],
     })
   })
 
-  it("emits limitCrossed=null on subsequent free usage after the allotment is already exhausted", async () => {
+  it("emits limitsCrossed=[] on subsequent free usage after the allotment is already exhausted", async () => {
     const { layer, periods, outboxEvents } = createLayer()
 
     await Effect.runPromise(
@@ -382,11 +382,11 @@ describe("recordUsageEventUseCase limit crossing", () => {
 
     expect(outboxEvents[0]?.payload).toMatchObject({
       consumedCredits: 20_001,
-      limitCrossed: null,
+      limitsCrossed: [],
     })
   })
 
-  it("emits limitCrossed=overage-started when an uncapped Pro plan first exceeds included credits", async () => {
+  it("emits limitsCrossed=[overage-started] when an uncapped Pro plan first exceeds included credits", async () => {
     const { layer, periods, outboxEvents } = createLayer()
 
     await Effect.runPromise(
@@ -422,7 +422,7 @@ describe("recordUsageEventUseCase limit crossing", () => {
     expect(outboxEvents[0]?.payload).toMatchObject({
       consumedCredits: 100_000,
       overageCredits: 0,
-      limitCrossed: "overage-started",
+      limitsCrossed: ["overage-started"],
     })
   })
 })

@@ -206,8 +206,8 @@ const _registry = {
     }
     /**
      * Producer step for billing limit alerts. Fired by the domain-events
-     * router when `BillingUsagePeriodUpdated.limitCrossed` is set (free
-     * included credits, uncapped Pro overage entry, or Pro spend cap). The
+     * router once per entry in `BillingUsagePeriodUpdated.limitsCrossed`
+     * (free included credits, Pro overage entry, or Pro spend cap). The
      * consumer fans out to owners/admins only and emits one
      * `create-notification` per recipient.
      */

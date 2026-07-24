@@ -4,9 +4,10 @@ export const BILLING_LIMIT_KINDS = ["included-credits", "overage-started", "spen
 export type BillingLimitKind = (typeof BILLING_LIMIT_KINDS)[number]
 
 /**
- * Detects the first crossing of a billing threshold within a usage write.
- * Returns null when the period was already at/over the threshold before this
- * increment (so downstream notification fan-out stays once-per-period).
+ * Detects billing thresholds first crossed within a usage write. Returns an
+ * empty array when nothing new was crossed (so notification fan-out stays
+ * once-per-period per kind). A single write may cross both overage entry and
+ * a spend cap when the cap sits at the included-credit boundary.
  */
 export const detectBillingLimitCrossed = (input: {
   readonly previousConsumedCredits: number
@@ -15,20 +16,23 @@ export const detectBillingLimitCrossed = (input: {
   readonly overageAllowed: boolean
   readonly planSlug: PlanSlug
   readonly spendingLimitCents: number | null
-}): BillingLimitKind | null => {
+}): BillingLimitKind[] => {
+  const crossed: BillingLimitKind[] = []
+
   if (!input.overageAllowed) {
     if (input.previousConsumedCredits < input.includedCredits && input.consumedCredits >= input.includedCredits) {
-      return "included-credits"
+      crossed.push("included-credits")
     }
-    return null
+    return crossed
+  }
+
+  if (input.previousConsumedCredits < input.includedCredits && input.consumedCredits >= input.includedCredits) {
+    crossed.push("overage-started")
   }
 
   const priceCents = PLAN_CONFIGS[input.planSlug].priceCents
   if (input.spendingLimitCents === null || priceCents === null) {
-    if (input.previousConsumedCredits < input.includedCredits && input.consumedCredits >= input.includedCredits) {
-      return "overage-started"
-    }
-    return null
+    return crossed
   }
 
   const maxAllowed = calculateMaxAllowedConsumedCreditsForCap(
@@ -39,8 +43,8 @@ export const detectBillingLimitCrossed = (input: {
   )
 
   if (input.previousConsumedCredits < maxAllowed && input.consumedCredits >= maxAllowed) {
-    return "spend-cap"
+    crossed.push("spend-cap")
   }
 
-  return null
+  return crossed
 }
