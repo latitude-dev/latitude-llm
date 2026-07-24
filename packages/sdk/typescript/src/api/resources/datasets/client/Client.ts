@@ -937,6 +937,7 @@ export class DatasetsClient {
      * @throws {@link Latitude.UnauthorizedError}
      * @throws {@link Latitude.NotFoundError}
      * @throws {@link Latitude.ContentTooLargeError}
+     * @throws {@link Latitude.TooManyRequestsError}
      *
      * @example
      *     await client.datasets.exportRows("projectSlug", "datasetSlug")
@@ -1004,6 +1005,11 @@ export class DatasetsClient {
                 case 413:
                     throw new Latitude.ContentTooLargeError(
                         _response.error.body as Latitude.ExportDatasetRowsTooLargeResponse,
+                        _response.rawResponse,
+                    );
+                case 429:
+                    throw new Latitude.TooManyRequestsError(
+                        _response.error.body as Latitude.Error_,
                         _response.rawResponse,
                     );
                 default:
