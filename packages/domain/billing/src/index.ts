@@ -8,11 +8,6 @@ export {
   type RecordMeteredAIActionInput,
 } from "./ai-metering.ts"
 export {
-  BILLING_LIMIT_KINDS,
-  type BillingLimitKind,
-  detectBillingLimitCrossed,
-} from "./helpers/detect-billing-limit-crossed.ts"
-export {
   ACTION_CREDITS,
   BILLING_INCLUDED_CREDITS_PG_MAX,
   BILLING_OVERAGE_SYNC_THROTTLE_MS,
@@ -73,6 +68,11 @@ export {
   UnknownStripePlanError,
   UsageEventAlreadyRecordedError,
 } from "./errors.ts"
+export {
+  BILLING_LIMIT_KINDS,
+  type BillingLimitKind,
+  detectBillingLimitCrossed,
+} from "./helpers/detect-billing-limit-crossed.ts"
 export { BillingOverrideRepository } from "./ports/billing-override-repository.ts"
 export {
   BillingSpendReservation,

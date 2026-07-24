@@ -45,11 +45,7 @@ describe("requestBillingLimitNotificationsUseCase", () => {
     const result = await Effect.runPromise(
       requestBillingLimitNotificationsUseCase(input).pipe(
         Effect.provide(
-          makeLayer([
-            membership("owner", "owner"),
-            membership("admin", "admin"),
-            membership("member", "member"),
-          ]),
+          makeLayer([membership("owner", "owner"), membership("admin", "admin"), membership("member", "member")]),
         ),
       ),
     )
@@ -73,9 +69,7 @@ describe("requestBillingLimitNotificationsUseCase", () => {
 
   it("skips when the organization has no owners or admins", async () => {
     const result = await Effect.runPromise(
-      requestBillingLimitNotificationsUseCase(input).pipe(
-        Effect.provide(makeLayer([membership("member", "member")])),
-      ),
+      requestBillingLimitNotificationsUseCase(input).pipe(Effect.provide(makeLayer([membership("member", "member")]))),
     )
 
     expect(result).toEqual({ status: "skipped", reason: "no-recipients" })
@@ -83,9 +77,7 @@ describe("requestBillingLimitNotificationsUseCase", () => {
 
   it("keys idempotency per period and limit kind", async () => {
     const layer = makeLayer([membership("owner", "owner")])
-    const included = await Effect.runPromise(
-      requestBillingLimitNotificationsUseCase(input).pipe(Effect.provide(layer)),
-    )
+    const included = await Effect.runPromise(requestBillingLimitNotificationsUseCase(input).pipe(Effect.provide(layer)))
     const spendCap = await Effect.runPromise(
       requestBillingLimitNotificationsUseCase({ ...input, limitKind: "spend-cap" }).pipe(Effect.provide(layer)),
     )
