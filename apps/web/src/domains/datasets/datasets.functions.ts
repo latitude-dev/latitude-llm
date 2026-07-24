@@ -45,6 +45,7 @@ import {
 } from "@domain/shared"
 import { listClusterSessionTraceIdsUseCase } from "@domain/taxonomy"
 import { AIEmbedLive, withAi } from "@platform/ai"
+import { enforceExportRequestRateLimit } from "@platform/cache-redis"
 import {
   DatasetRowRepositoryLive,
   ScoreAnalyticsRepositoryLive,
@@ -56,7 +57,6 @@ import { withTracing } from "@repo/observability"
 import { createServerFn } from "@tanstack/react-start"
 import { Effect, Layer } from "effect"
 import { z } from "zod"
-import { enforceExportRequestRateLimit } from "../../domains/exports/export-rate-limit.ts"
 import { ensureSession } from "../../domains/sessions/session.functions.ts"
 import { getSessionOrganizationId, requireSession } from "../../server/auth.ts"
 import {

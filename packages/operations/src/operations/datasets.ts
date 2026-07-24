@@ -33,6 +33,7 @@ import {
 } from "@domain/shared"
 import { resolveTraceIdsFromRef, type TracesRef } from "@domain/spans"
 import { createRoute, z } from "@hono/zod-openapi"
+import { enforceExportRequestRateLimit } from "@platform/cache-redis"
 import {
   DatasetRowRepositoryLive,
   ScoreAnalyticsRepositoryLive,
@@ -871,6 +872,7 @@ const exportDatasetRowsEndpoint = datasetEndpoint({
       400: errorResponse("Validation error"),
       401: errorResponse("Unauthorized"),
       404: errorResponse("Not found"),
+      429: errorResponse("Export rate limit exceeded"),
       413: jsonResponse(
         ExportTooLargeResponseSchema,
         "Export exceeds the synchronous threshold and no `recipient` was provided",
@@ -958,13 +960,26 @@ const exportDatasetRowsEndpoint = datasetEndpoint({
         } as const
       }
 
+      const recipient = body.recipient
+
+      yield* Effect.tryPromise({
+        try: () =>
+          enforceExportRequestRateLimit({
+            redis: ctx.redis,
+            organizationId: ctx.organization.id as string,
+            projectId: projectId as string,
+            recipientEmail: recipient,
+          }),
+        catch: (cause) => cause,
+      })
+
       yield* ctx.queuePublisher
         .publish("exports", "generate", {
           kind: "dataset",
           organizationId: ctx.organization.id as string,
           projectId: projectId as string,
           datasetId: datasetId as string,
-          recipientEmail: body.recipient,
+          recipientEmail: recipient,
           selection,
         })
         .pipe(withTracing)

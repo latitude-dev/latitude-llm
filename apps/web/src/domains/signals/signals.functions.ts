@@ -62,6 +62,7 @@ import {
 } from "@domain/signals"
 import { SessionRepository } from "@domain/spans"
 import { AIEmbedLive, withAi } from "@platform/ai"
+import { enforceExportRequestRateLimit } from "@platform/cache-redis"
 import { ScoreAnalyticsRepositoryLive, SessionRepositoryLive, TraceRepositoryLive } from "@platform/db-clickhouse"
 import {
   EvaluationRepositoryLive,
@@ -77,7 +78,6 @@ import { withTracing } from "@repo/observability"
 import { createServerFn } from "@tanstack/react-start"
 import { Effect, Layer } from "effect"
 import { z } from "zod"
-import { enforceExportRequestRateLimit } from "../../domains/exports/export-rate-limit.ts"
 import { ensureSession } from "../../domains/sessions/session.functions.ts"
 import { getSessionOrganizationId, requireSession } from "../../server/auth.ts"
 import { getClickhouseClient, getPostgresClient, getQueuePublisher, getRedisClient } from "../../server/clients.ts"
