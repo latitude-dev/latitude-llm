@@ -63,7 +63,7 @@ export const NOTIFICATION_GROUP_META: Record<
   },
   billing: {
     label: "Billing",
-    description: "Alerts when your organization reaches its plan credit or spend limit.",
+    description: "Alerts when your organization exhausts included credits, enters overage, or hits a spend limit.",
     slackRoutable: false,
   },
 }

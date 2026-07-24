@@ -385,4 +385,44 @@ describe("recordUsageEventUseCase limit crossing", () => {
       limitCrossed: null,
     })
   })
+
+  it("emits limitCrossed=overage-started when an uncapped Pro plan first exceeds included credits", async () => {
+    const { layer, periods, outboxEvents } = createLayer()
+
+    await Effect.runPromise(
+      periods
+        .upsert(
+          seedBillingUsagePeriod({
+            organizationId: ORGANIZATION_ID,
+            planSlug: "pro",
+            periodStart: PERIOD_START,
+            periodEnd: PERIOD_END,
+            includedCredits: 100_000,
+            consumedCredits: 99_999,
+          }),
+        )
+        .pipe(Effect.provideService(SqlClient, SQL_CLIENT)),
+    )
+
+    await Effect.runPromise(
+      recordUsageEventUseCase({
+        organizationId: ORGANIZATION_ID,
+        projectId: PROJECT_ID,
+        action: "trace",
+        idempotencyKey: "trace:cross-pro-overage",
+        planSlug: "pro",
+        planSource: "subscription",
+        periodStart: PERIOD_START,
+        periodEnd: PERIOD_END,
+        includedCredits: 100_000,
+        overageAllowed: true,
+      }).pipe(Effect.provide(layer)),
+    )
+
+    expect(outboxEvents[0]?.payload).toMatchObject({
+      consumedCredits: 100_000,
+      overageCredits: 0,
+      limitCrossed: "overage-started",
+    })
+  })
 })

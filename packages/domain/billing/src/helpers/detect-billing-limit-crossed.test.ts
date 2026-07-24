@@ -29,7 +29,7 @@ describe("detectBillingLimitCrossed", () => {
     ).toBeNull()
   })
 
-  it("ignores included-credit exhaustion on overage-allowed plans", () => {
+  it("returns overage-started when an uncapped Pro plan first exceeds included credits", () => {
     expect(
       detectBillingLimitCrossed({
         previousConsumedCredits: 99_999,
@@ -38,6 +38,33 @@ describe("detectBillingLimitCrossed", () => {
         overageAllowed: true,
         planSlug: "pro",
         spendingLimitCents: null,
+      }),
+    ).toBe("overage-started")
+  })
+
+  it("returns null when an uncapped Pro plan was already in overage", () => {
+    expect(
+      detectBillingLimitCrossed({
+        previousConsumedCredits: 100_000,
+        consumedCredits: 100_001,
+        includedCredits: 100_000,
+        overageAllowed: true,
+        planSlug: "pro",
+        spendingLimitCents: null,
+      }),
+    ).toBeNull()
+  })
+
+  it("does not emit overage-started when a Pro spend cap is configured", () => {
+    const spendingLimitCents = PRO_PLAN_CONFIG.priceCents + 2_000
+    expect(
+      detectBillingLimitCrossed({
+        previousConsumedCredits: 99_999,
+        consumedCredits: 100_001,
+        includedCredits: 100_000,
+        overageAllowed: true,
+        planSlug: "pro",
+        spendingLimitCents,
       }),
     ).toBeNull()
   })

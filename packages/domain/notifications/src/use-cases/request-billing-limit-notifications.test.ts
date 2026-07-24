@@ -79,16 +79,25 @@ describe("requestBillingLimitNotificationsUseCase", () => {
   it("keys idempotency per period and limit kind", async () => {
     const layer = makeLayer([membership("owner", "owner")])
     const included = await Effect.runPromise(requestBillingLimitNotificationsUseCase(input).pipe(Effect.provide(layer)))
+    const overageStarted = await Effect.runPromise(
+      requestBillingLimitNotificationsUseCase({ ...input, limitKind: "overage-started" }).pipe(Effect.provide(layer)),
+    )
     const spendCap = await Effect.runPromise(
       requestBillingLimitNotificationsUseCase({ ...input, limitKind: "spend-cap" }).pipe(Effect.provide(layer)),
     )
 
     expect(included.status).toBe("ok")
+    expect(overageStarted.status).toBe("ok")
     expect(spendCap.status).toBe("ok")
-    if (included.status !== "ok" || spendCap.status !== "ok") throw new Error("unreachable")
+    if (included.status !== "ok" || overageStarted.status !== "ok" || spendCap.status !== "ok") {
+      throw new Error("unreachable")
+    }
 
     expect(included.requests[0]?.idempotencyKey).toBe(
       `billing.limit-reached:org:${orgId}:${periodStart}:included-credits`,
+    )
+    expect(overageStarted.requests[0]?.idempotencyKey).toBe(
+      `billing.limit-reached:org:${orgId}:${periodStart}:overage-started`,
     )
     expect(spendCap.requests[0]?.idempotencyKey).toBe(`billing.limit-reached:org:${orgId}:${periodStart}:spend-cap`)
   })

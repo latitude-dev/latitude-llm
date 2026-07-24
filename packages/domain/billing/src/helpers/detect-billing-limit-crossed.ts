@@ -1,11 +1,11 @@
 import { calculateMaxAllowedConsumedCreditsForCap, PLAN_CONFIGS, type PlanSlug } from "../constants.ts"
 
-export const BILLING_LIMIT_KINDS = ["included-credits", "spend-cap"] as const
+export const BILLING_LIMIT_KINDS = ["included-credits", "overage-started", "spend-cap"] as const
 export type BillingLimitKind = (typeof BILLING_LIMIT_KINDS)[number]
 
 /**
- * Detects the first crossing of a hard billing limit within a usage write.
- * Returns null when the period was already at/over the limit before this
+ * Detects the first crossing of a billing threshold within a usage write.
+ * Returns null when the period was already at/over the threshold before this
  * increment (so downstream notification fan-out stays once-per-period).
  */
 export const detectBillingLimitCrossed = (input: {
@@ -25,6 +25,9 @@ export const detectBillingLimitCrossed = (input: {
 
   const priceCents = PLAN_CONFIGS[input.planSlug].priceCents
   if (input.spendingLimitCents === null || priceCents === null) {
+    if (input.previousConsumedCredits < input.includedCredits && input.consumedCredits >= input.includedCredits) {
+      return "overage-started"
+    }
     return null
   }
 

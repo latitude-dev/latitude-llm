@@ -207,14 +207,15 @@ const _registry = {
     /**
      * Producer step for billing limit alerts. Fired by the domain-events
      * router when `BillingUsagePeriodUpdated.limitCrossed` is set (free
-     * included credits or Pro spend cap). The consumer fans out to
-     * owners/admins only and emits one `create-notification` per recipient.
+     * included credits, uncapped Pro overage entry, or Pro spend cap). The
+     * consumer fans out to owners/admins only and emits one
+     * `create-notification` per recipient.
      */
     "request-billing-limit-notifications": {
       readonly organizationId: string
       readonly periodStart: string
       readonly periodEnd: string
-      readonly limitKind: "included-credits" | "spend-cap"
+      readonly limitKind: "included-credits" | "overage-started" | "spend-cap"
       readonly includedCredits: number
       readonly consumedCredits: number
       readonly overageCredits: number

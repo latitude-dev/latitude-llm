@@ -20,15 +20,21 @@ export const billingLimitReachedRenderer: NotificationEmailRenderer<"billing.lim
       const billingUrl = `${ctx.webAppUrl.replace(/\/$/, "")}/settings/billing`
       const included = formatCredits(payload.includedCredits)
 
-      const title =
+      const { title, body } =
         payload.limitKind === "spend-cap"
-          ? "Your monthly spend limit has been reached"
-          : "Your plan credit limit has been reached"
-
-      const body =
-        payload.limitKind === "spend-cap"
-          ? `${orgName} has reached its configured monthly spend limit for this billing period. Raise the limit or wait for the period to reset to continue billable AI work and overage usage.`
-          : `${orgName} has used all ${included} credits included in its plan for this billing period. Upgrade your plan or wait for the period to reset to continue ingesting traces and running AI features.`
+          ? {
+              title: "Your monthly spend limit has been reached",
+              body: `${orgName} has reached its configured monthly spend limit for this billing period. Raise the limit or wait for the period to reset to continue billable AI work and overage usage.`,
+            }
+          : payload.limitKind === "overage-started"
+            ? {
+                title: "Your plan has entered overage billing",
+                body: `${orgName} has used all ${included} credits included in its plan for this billing period. Additional usage is now billed as overage. Review usage or set a spend limit in billing settings.`,
+              }
+            : {
+                title: "Your plan credit limit has been reached",
+                body: `${orgName} has used all ${included} credits included in its plan for this billing period. Upgrade your plan or wait for the period to reset to continue ingesting traces and running AI features.`,
+              }
 
       const html = await renderEmail(
         <BillingLimitReachedEmail

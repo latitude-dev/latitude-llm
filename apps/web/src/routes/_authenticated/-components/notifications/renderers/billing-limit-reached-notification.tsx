@@ -17,8 +17,22 @@ export function BillingLimitReachedNotification({ notification }: { readonly not
     )
   }
 
-  const isSpendCap = parsed.data.limitKind === "spend-cap"
   const included = parsed.data.includedCredits.toLocaleString("en-US")
+  const { title, description } =
+    parsed.data.limitKind === "spend-cap"
+      ? {
+          title: "Monthly spend limit reached",
+          description: "Your organization has reached its configured monthly spend limit.",
+        }
+      : parsed.data.limitKind === "overage-started"
+        ? {
+            title: "Overage billing started",
+            description: `Your organization has used all ${included} included credits. Additional usage is billed as overage.`,
+          }
+        : {
+            title: "Plan credit limit reached",
+            description: `Your organization has used all ${included} included credits for this billing period.`,
+          }
 
   return (
     <BaseNotification
@@ -26,12 +40,8 @@ export function BillingLimitReachedNotification({ notification }: { readonly not
       seenAt={seenAt}
       createdAt={createdAt}
       icon={<CircleDollarSignIcon className="h-4 w-4 text-foreground-muted" />}
-      title={isSpendCap ? "Monthly spend limit reached" : "Plan credit limit reached"}
-      description={
-        isSpendCap
-          ? "Your organization has reached its configured monthly spend limit."
-          : `Your organization has used all ${included} included credits for this billing period.`
-      }
+      title={title}
+      description={description}
       url="/settings/billing"
     />
   )
