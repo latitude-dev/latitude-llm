@@ -86,3 +86,72 @@ describe("transformOtlpToSpans — memory operations", () => {
     expect(span?.attrInt["gen_ai.memory.record.count"]).toBe(3)
   })
 })
+
+describe("transformOtlpToSpans — lone UTF-16 surrogates", () => {
+  const loneHighSurrogate = "before\uD83Dafter"
+  const sanitized = "before�after"
+
+  it("strips a lone surrogate from a direct string attribute value", () => {
+    const { spans } = transformOtlpToSpans(
+      requestWithSpanAttributes([{ key: "custom.note", value: { stringValue: loneHighSurrogate } }]),
+      context,
+    )
+
+    expect(spans[0]?.attrString["custom.note"]).toBe(sanitized)
+  })
+
+  it("strips a lone surrogate nested inside a structured (array/kvlist) attribute value", () => {
+    const { spans } = transformOtlpToSpans(
+      requestWithSpanAttributes([
+        {
+          key: "gen_ai.memory.records",
+          value: {
+            arrayValue: {
+              values: [
+                {
+                  kvlistValue: {
+                    values: [{ key: "content", value: { stringValue: loneHighSurrogate } }],
+                  },
+                },
+              ],
+            },
+          },
+        },
+      ]),
+      context,
+    )
+
+    const records = spans[0]?.attrString["gen_ai.memory.records"]
+    expect(records).toBeDefined()
+    expect(JSON.parse(records as string)).toEqual([{ content: sanitized }])
+  })
+
+  it("strips a lone surrogate from a resource attribute value", () => {
+    const request: OtlpExportTraceServiceRequest = {
+      resourceSpans: [
+        {
+          resource: { attributes: [{ key: "deployment.note", value: { stringValue: loneHighSurrogate } }] },
+          scopeSpans: [
+            {
+              scope: { name: "test-scope", version: "1" },
+              spans: [
+                {
+                  traceId: "0".repeat(32),
+                  spanId: "0".repeat(16),
+                  name: "some_span",
+                  startTimeUnixNano: "1",
+                  endTimeUnixNano: "2",
+                  attributes: [],
+                },
+              ],
+            },
+          ],
+        },
+      ],
+    }
+
+    const { spans } = transformOtlpToSpans(request, context)
+
+    expect(spans[0]?.resourceString["deployment.note"]).toBe(sanitized)
+  })
+})

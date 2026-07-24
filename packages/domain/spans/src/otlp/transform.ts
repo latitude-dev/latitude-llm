@@ -10,6 +10,7 @@ import {
   TraceId,
 } from "@domain/shared"
 import type { SpanDetail, SpanKind, SpanStatusCode } from "../entities/span.ts"
+import { stripLoneSurrogates } from "../helpers/normalize-literal-phrase.ts"
 import { anyValueToPlain } from "./any-value.ts"
 import { attrArray, stringAttr } from "./attributes.ts"
 import { parseContent } from "./content/index.ts"
@@ -45,7 +46,7 @@ function resolveAnyValue(
   value: OtlpAnyValue | undefined,
 ): { type: "string" | "int" | "float" | "bool"; value: string | number | boolean } | null {
   if (!value) return null
-  if (value.stringValue !== undefined) return { type: "string", value: value.stringValue }
+  if (value.stringValue !== undefined) return { type: "string", value: stripLoneSurrogates(value.stringValue) }
   if (value.boolValue !== undefined) return { type: "bool", value: value.boolValue }
   if (value.intValue !== undefined) return { type: "int", value: Number(value.intValue) }
   if (value.doubleValue !== undefined) return { type: "float", value: value.doubleValue }
@@ -60,7 +61,7 @@ function extractResourceString(resource: OtlpResource | undefined): Record<strin
   const result: Record<string, string> = {}
   for (const attr of attrArray(resource?.attributes)) {
     if (attr.value?.stringValue !== undefined) {
-      result[attr.key] = attr.value.stringValue
+      result[attr.key] = stripLoneSurrogates(attr.value.stringValue)
     }
   }
   return result
