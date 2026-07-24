@@ -72,6 +72,9 @@ export interface StoreMostReadRecord {
   readonly reads: number
 }
 
+/** A record is only "cold" once its last activity (read or write) is at least this many days ago. */
+export const COLD_STORAGE_MIN_IDLE_DAYS = 7
+
 /**
  * A live record with its last-read/last-updated instants (UTC ISO). `neverRead`
  * marks records never returned by a search all-time; `lastReadAt` is null then.
@@ -139,7 +142,9 @@ export const STORE_SIZE_BUCKETS: readonly {
  * Per-store Home-dashboard insights. Retrieval/query lists, `writeHealth`,
  * `thrashWrites`, `noOpRewrites` and `tokenHistory` are window-scoped; `coldRecords`,
  * `largestRecords`, `sizeDistribution` and the duplicate counts are
- * current-state (window-independent), matching the overview tiles.
+ * current-state (window-independent), matching the overview tiles. `coldRecords`
+ * holds only records idle for at least `COLD_STORAGE_MIN_IDLE_DAYS`; `zeroHitQueries`
+ * holds only queries whose most recent search still returned nothing.
  * `tokenHistory` is the cumulative live-token footprint per bucket — correct as
  * an absolute line only when the window starts at the store's inception (the
  * Home dashboard runs it all-time).

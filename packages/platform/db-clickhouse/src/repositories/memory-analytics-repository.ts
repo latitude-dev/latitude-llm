@@ -10,7 +10,7 @@ import type {
   StoreInsights,
   StoreSizeBucket,
 } from "@domain/memories"
-import { MemoryAnalyticsRepository, STORE_SIZE_BUCKETS } from "@domain/memories"
+import { COLD_STORAGE_MIN_IDLE_DAYS, MemoryAnalyticsRepository, STORE_SIZE_BUCKETS } from "@domain/memories"
 import { ChSqlClient, type ChSqlClientShape, toRepositoryError } from "@domain/shared"
 import { formatCHDate, parseCHDate } from "@repo/utils"
 import { Effect, Layer } from "effect"
@@ -504,6 +504,7 @@ export const MemoryAnalyticsRepositoryLive = Layer.effect(
                  WHERE ${SCOPE} ${STORE_FILTER} AND change_kind = 'read' AND record_count > 0
                  GROUP BY record_id
                ) AS r ON lr.record_id = r.record_id
+               WHERE greatest(r.last_read, lr.end_time) <= now() - INTERVAL ${COLD_STORAGE_MIN_IDLE_DAYS} DAY
                ORDER BY greatest(r.last_read, lr.end_time) ASC, lr.record_id ASC
                LIMIT {listLimit:UInt32}`,
               { ...currentParams, listLimit },
@@ -517,11 +518,15 @@ export const MemoryAnalyticsRepositoryLive = Layer.effect(
                LIMIT {listLimit:UInt32}`,
               windowParams,
             ),
+            // Zero-hit gap: count the zero-record searches, but only for queries whose most recent
+            // search still returned nothing (argMax over end_time) — a query that later found a
+            // record is no longer an open gap.
             queryRows<QueryCountRow>(
-              `SELECT query_text, uniqExact(span_id) AS searches
+              `SELECT query_text, uniqExactIf(span_id, record_count = 0) AS searches
                FROM ( ${dedupedWindow(true)} )
-               WHERE change_kind = 'read' AND record_count = 0 AND query_text != ''
+               WHERE change_kind = 'read' AND query_text != ''
                GROUP BY query_text
+               HAVING argMax(record_count, end_time) = 0
                ORDER BY searches DESC, query_text ASC
                LIMIT {listLimit:UInt32}`,
               windowParams,

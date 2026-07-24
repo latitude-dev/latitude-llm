@@ -271,7 +271,7 @@ export function StoreHomeView({
               title="Cold storage"
               items={cold}
               isLoading={insightsLoading}
-              emptyText="No live records"
+              emptyText="No records idle over 7 days"
               mono
               tone="destructive"
               onSelectRecord={onSelectRecord}

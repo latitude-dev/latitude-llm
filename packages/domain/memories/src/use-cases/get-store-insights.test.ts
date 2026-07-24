@@ -129,6 +129,18 @@ describe("getStoreInsightsUseCase", () => {
     expect(insights.coldRecords[2]).toMatchObject({ recordId: "fresh-write", neverRead: true })
   })
 
+  it("limits cold storage to records idle for at least 7 days", async () => {
+    const memory = createFakeMemoryAnalyticsRepository()
+    const daysAgo = (days: number) => new Date(Date.now() - days * 24 * 60 * 60 * 1000)
+    memory.current.push(
+      makeCurrent({ recordId: "fresh", contentHash: "h-fresh", tokenCount: 10, endTime: daysAgo(2) }),
+      makeCurrent({ recordId: "old", contentHash: "h-old", tokenCount: 20, endTime: daysAgo(30) }),
+      makeCurrent({ recordId: "week", contentHash: "h-week", tokenCount: 30, endTime: daysAgo(10) }),
+    )
+    const insights = await run(memory)
+    expect(insights.coldRecords.map((row) => row.recordId)).toEqual(["old", "week"])
+  })
+
   it("counts top and zero-hit queries by distinct search span", async () => {
     const insights = await run(seededStore())
     expect(insights.topQueries).toEqual([
@@ -137,6 +149,19 @@ describe("getStoreInsightsUseCase", () => {
       { queryText: "old query", searches: 1 },
     ])
     expect(insights.zeroHitQueries).toEqual([{ queryText: "missing", searches: 2 }])
+  })
+
+  it("drops zero-hit queries whose most recent search found a record", async () => {
+    const memory = createFakeMemoryAnalyticsRepository()
+    memory.events.push(
+      read({ recordId: "", recordCount: 0, queryText: "recovered", endTime: at(10) }),
+      read({ recordId: "rec1", recordCount: 1, queryText: "recovered", endTime: at(20) }),
+      read({ recordId: "rec2", recordCount: 2, queryText: "still-missing", endTime: at(30) }),
+      read({ recordId: "", recordCount: 0, queryText: "still-missing", endTime: at(40) }),
+      read({ recordId: "", recordCount: 0, queryText: "still-missing", endTime: at(50) }),
+    )
+    const insights = await run(memory)
+    expect(insights.zeroHitQueries).toEqual([{ queryText: "still-missing", searches: 2 }])
   })
 
   it("ranks largest records and buckets the size distribution", async () => {
