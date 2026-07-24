@@ -2,6 +2,16 @@
 
 ## Unreleased
 
+## v0.3.67 - 2026-07-24
+
+### Memory
+
+- Added a per-store Home dashboard with store-scoped overview tiles, an activity chart, and insight cards for most-read and cold records, top and zero-hit queries, largest records, token-size distribution, and net token growth, plus a sortable write-health table surfacing rewrites, thrashing, content reverts, and duplicate records (ref: #4209).
+
+### Flaggers
+
+- Soft-failed Bedrock grammar compilation timeouts so the session classifier recovers with an unmatched result instead of failing the Temporal activity (ref: #4216).
+
 ## v0.3.66 - 2026-07-24
 
 ### Telemetry

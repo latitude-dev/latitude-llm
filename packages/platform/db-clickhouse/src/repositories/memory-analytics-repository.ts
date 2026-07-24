@@ -7,8 +7,10 @@ import type {
   MemoryOverview,
   MemoryStoreMetricSortField,
   MemoryStoreMetricsItem,
+  StoreInsights,
+  StoreSizeBucket,
 } from "@domain/memories"
-import { MemoryAnalyticsRepository } from "@domain/memories"
+import { COLD_STORAGE_MIN_IDLE_DAYS, MemoryAnalyticsRepository, STORE_SIZE_BUCKETS } from "@domain/memories"
 import { ChSqlClient, type ChSqlClientShape, toRepositoryError } from "@domain/shared"
 import { formatCHDate, parseCHDate } from "@repo/utils"
 import { Effect, Layer } from "effect"
@@ -17,12 +19,18 @@ const num = (value: string | number | null | undefined): number => Number(value 
 
 const SCOPE = `organization_id = {organizationId:String} AND project_id = {projectId:String}`
 const WINDOW = `AND end_time >= {from:DateTime64(6, 'UTC')} AND end_time <= {to:DateTime64(6, 'UTC')}`
+const STORE_FILTER = `AND store_id = {storeId:String}`
+
+// Bounded below the client's connection-pool size (max_open_connections). Fanning every insight
+// query out at once exhausts the pool; a single reset then abandons the batch's undrained response
+// streams, poisoning pooled sockets and cascading into ECONNRESET storms.
+const STORE_INSIGHTS_QUERY_CONCURRENCY = 4
 
 // Retry dedup: collapse re-run duplicate rows to newest per (trace, span, store, record); only data-op kinds count as activity.
-const DEDUPED_WINDOW = `
-  SELECT store_id, record_id, change_kind, token_count, record_count, span_id, session_id, user_id, trace_id, end_time
+const dedupedWindow = (storeScoped: boolean) => `
+  SELECT store_id, record_id, change_kind, content_hash, token_count, record_count, query_text, span_id, session_id, user_id, trace_id, end_time
   FROM memory_events
-  WHERE ${SCOPE} ${WINDOW} AND change_kind IN ('add', 'update', 'remove', 'read')
+  WHERE ${SCOPE} ${WINDOW} ${storeScoped ? STORE_FILTER : ""} AND change_kind IN ('add', 'update', 'remove', 'read')
   ORDER BY trace_id, span_id, store_id, record_id, ingested_at DESC
   LIMIT 1 BY trace_id, span_id, store_id, record_id
 `
@@ -90,17 +98,49 @@ type ActivityRow = {
   readonly records_retrieved: string | number
 }
 
+type MostReadRow = { readonly record_id: string; readonly reads: string | number }
+type ColdRow = {
+  readonly record_id: string
+  readonly token_count: string | number
+  readonly never_read: number | boolean
+  readonly last_updated: string
+  readonly last_read: string
+}
+type QueryCountRow = { readonly query_text: string; readonly searches: string | number }
+type LargestRow = { readonly record_id: string; readonly token_count: string | number }
+type SizeRow = Record<string, string | number>
+type TokenHistoryRow = { readonly bucket_start: string; readonly tokens: string | number }
+type WriteHealthRow = {
+  readonly record_id: string
+  readonly writes: string | number
+  readonly last_write: string
+  readonly no_ops: string | number
+}
+type RevertedRow = { readonly record_id: string }
+type ThrashRow = { readonly thrash: string | number }
+type NoOpRow = { readonly noop: string | number }
+type DuplicatesRow = { readonly groups: string | number; readonly records: string | number }
+
+// countIf per shared size bucket, aliased b0..bN so the mapper can index by position.
+const sizeDistributionSelect = STORE_SIZE_BUCKETS.map((bucket, index) => {
+  const condition =
+    bucket.max === null
+      ? `token_count >= ${bucket.min}`
+      : `token_count >= ${bucket.min} AND token_count < ${bucket.max}`
+  return `countIf(${condition}) AS b${index}`
+}).join(", ")
+
 // Latest non-removed record per (store, record) from `memory_current`, flagged `never_read` against all-time reads that returned a record.
-const LIVE_RECORDS = `
-  SELECT store_id, record_id, token_count,
+const liveRecords = (storeScoped: boolean) => `
+  SELECT store_id, record_id, content_hash, token_count, end_time,
          (store_id, record_id) NOT IN (
            SELECT store_id, record_id FROM memory_events
-           WHERE ${SCOPE} AND change_kind = 'read' AND record_count > 0
+           WHERE ${SCOPE} ${storeScoped ? STORE_FILTER : ""} AND change_kind = 'read' AND record_count > 0
          ) AS never_read
   FROM (
-    SELECT store_id, record_id, token_count, change_kind, end_time
+    SELECT store_id, record_id, content_hash, token_count, change_kind, end_time
     FROM memory_current
-    WHERE ${SCOPE}
+    WHERE ${SCOPE} ${storeScoped ? STORE_FILTER : ""}
     ORDER BY store_id, record_id, end_time DESC
     LIMIT 1 BY store_id, record_id
   )
@@ -124,13 +164,15 @@ export const MemoryAnalyticsRepositoryLive = Layer.effect(
     const getMemoryOverview: MemoryAnalyticsRepositoryShape["getMemoryOverview"] = (scope) =>
       Effect.gen(function* () {
         const chSqlClient = (yield* ChSqlClient) as ChSqlClientShape<ClickHouseClient>
+        const storeScoped = scope.storeId !== undefined
+        const storeParams = scope.storeId !== undefined ? { storeId: scope.storeId } : {}
         return yield* chSqlClient
           .query(async (client) => {
             const [currentResult, windowResult] = await Promise.all([
               client.query({
                 query: `SELECT count() AS live_records, sum(token_count) AS live_tokens, sumIf(token_count, never_read) AS dead_tokens
-                        FROM ( ${LIVE_RECORDS} )`,
-                query_params: scopeParams(scope),
+                        FROM ( ${liveRecords(storeScoped)} )`,
+                query_params: { ...scopeParams(scope), ...storeParams },
                 format: "JSONEachRow",
               }),
               client.query({
@@ -139,8 +181,8 @@ export const MemoryAnalyticsRepositoryLive = Layer.effect(
                           uniqExactIf(span_id, change_kind = 'read' AND record_count = 0)  AS zero_hit_searches,
                           countIf(change_kind IN ('add', 'update', 'remove'))             AS writes,
                           countIf(change_kind = 'read' AND record_count > 0)              AS records_retrieved
-                        FROM ( ${DEDUPED_WINDOW} )`,
-                query_params: rangeParams(scope),
+                        FROM ( ${dedupedWindow(storeScoped)} )`,
+                query_params: { ...rangeParams(scope), ...storeParams },
                 format: "JSONEachRow",
               }),
             ])
@@ -170,10 +212,13 @@ export const MemoryAnalyticsRepositoryLive = Layer.effect(
       from,
       to,
       bucketSeconds,
+      storeId,
     }) =>
       Effect.gen(function* () {
         const chSqlClient = (yield* ChSqlClient) as ChSqlClientShape<ClickHouseClient>
         const scope = { organizationId, projectId, from, to }
+        const storeScoped = storeId !== undefined
+        const storeParams = storeId !== undefined ? { storeId } : {}
         return yield* chSqlClient
           .query(async (client) => {
             const result = await client.query({
@@ -183,10 +228,10 @@ export const MemoryAnalyticsRepositoryLive = Layer.effect(
                         countIf(change_kind = 'update')                     AS updates,
                         countIf(change_kind = 'remove')                     AS deletions,
                         countIf(change_kind = 'read' AND record_count > 0)  AS records_retrieved
-                      FROM ( ${DEDUPED_WINDOW} )
+                      FROM ( ${dedupedWindow(storeScoped)} )
                       GROUP BY bucket_start
                       ORDER BY bucket_start ASC`,
-              query_params: { ...rangeParams(scope), bucketSeconds },
+              query_params: { ...rangeParams(scope), bucketSeconds, ...storeParams },
               format: "JSONEachRow",
             })
             return result.json<ActivityRow>()
@@ -244,12 +289,12 @@ export const MemoryAnalyticsRepositoryLive = Layer.effect(
                       uniqExactIf(session_id, session_id != '')                           AS session_count,
                       uniqExactIf(user_id, user_id != '')                                 AS user_count,
                       max(end_time)                                                       AS last_activity_at
-                    FROM ( ${DEDUPED_WINDOW} )
+                    FROM ( ${dedupedWindow(false)} )
                     GROUP BY store_id
                   ),
                   cs AS (
                     SELECT store_id, count() AS live_records, sum(token_count) AS live_tokens, countIf(never_read) AS dead_records
-                    FROM ( ${LIVE_RECORDS} )
+                    FROM ( ${liveRecords(false)} )
                     GROUP BY store_id
                   )
                   SELECT
@@ -274,7 +319,7 @@ export const MemoryAnalyticsRepositoryLive = Layer.effect(
                 format: "JSONEachRow",
               }),
               client.query({
-                query: `SELECT uniqExact(store_id) AS total FROM ( ${DEDUPED_WINDOW} )`,
+                query: `SELECT uniqExact(store_id) AS total FROM ( ${dedupedWindow(false)} )`,
                 query_params: rangeParams(scope),
                 format: "JSONEachRow",
               }),
@@ -324,7 +369,7 @@ export const MemoryAnalyticsRepositoryLive = Layer.effect(
                                 count() AS writes
                               FROM (
                                 SELECT store_id, end_time
-                                FROM ( ${DEDUPED_WINDOW} )
+                                FROM ( ${dedupedWindow(false)} )
                                 WHERE change_kind IN ('add', 'update', 'remove') AND store_id IN {storeIds:Array(String)}
                               )
                               GROUP BY store_id, bucket_start
@@ -386,6 +431,253 @@ export const MemoryAnalyticsRepositoryLive = Layer.effect(
         return { items, totalCount, hasMore, limit, offset }
       })
 
-    return { getMemoryOverview, getMemoryActivityHistogram, listStoresWithMetrics }
+    const getStoreInsights: MemoryAnalyticsRepositoryShape["getStoreInsights"] = ({
+      organizationId,
+      projectId,
+      from,
+      to,
+      storeId,
+      listLimit,
+      bucketSeconds,
+    }) =>
+      Effect.gen(function* () {
+        const chSqlClient = (yield* ChSqlClient) as ChSqlClientShape<ClickHouseClient>
+        const scope = { organizationId, projectId, from, to }
+        const windowParams = { ...rangeParams(scope), storeId, listLimit }
+        const currentParams = { ...scopeParams(scope), storeId }
+        // Live-token footprint over time: per-event token delta (add:+tokens, update:±diff vs the
+        // record's previous version, remove:−previous) bucketed and cumulatively summed, then
+        // shifted so the series ends at the current live-token total (running − total + live_tokens).
+        // The shift folds in records that are live in `memory_current` but have no event in the
+        // window — created before it, or with early history pruned by the events TTL — which a raw
+        // cumulative-from-zero would omit, so the chart's endpoint stays equal to the Total tokens tile.
+        const tokenHistoryQuery = `
+          SELECT bucket_start, running - total + live_tokens AS tokens
+          FROM (
+            SELECT bucket_start,
+                   sum(bucket_delta) OVER (ORDER BY bucket_start ROWS BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW) AS running,
+                   sum(bucket_delta) OVER ()                                                                       AS total,
+                   toInt64((SELECT sum(token_count) FROM ( ${liveRecords(true)} )))                                AS live_tokens
+            FROM (
+              SELECT toDateTime(intDiv(toUnixTimestamp(end_time), {bucketSeconds:UInt32}) * {bucketSeconds:UInt32}, 'UTC') AS bucket_start,
+                     sum(multiIf(
+                       change_kind = 'add', toInt64(token_count),
+                       change_kind = 'remove', -toInt64(prev_token),
+                       toInt64(token_count) - toInt64(prev_token)
+                     )) AS bucket_delta
+              FROM (
+                SELECT change_kind, token_count, end_time,
+                       lagInFrame(token_count) OVER (PARTITION BY record_id ORDER BY end_time, trace_id, span_id ROWS BETWEEN 1 PRECEDING AND CURRENT ROW) AS prev_token
+                FROM ( ${dedupedWindow(true)} )
+                WHERE change_kind IN ('add', 'update', 'remove')
+              )
+              GROUP BY bucket_start
+            )
+          )
+          ORDER BY bucket_start ASC`
+        const queryRows = <T>(query: string, params: Record<string, unknown>) =>
+          chSqlClient.query(async (client) => {
+            const result = await client.query({ query, query_params: params, format: "JSONEachRow" })
+            return result.json<T>()
+          })
+        const queryRow = <T>(query: string, params: Record<string, unknown>) =>
+          queryRows<T>(query, params).pipe(Effect.map((rows) => rows[0]))
+
+        return yield* Effect.all(
+          [
+            queryRows<MostReadRow>(
+              `SELECT record_id, count() AS reads
+               FROM ( ${dedupedWindow(true)} )
+               WHERE change_kind = 'read' AND record_count > 0 AND record_id != ''
+               GROUP BY record_id
+               ORDER BY reads DESC, record_id ASC
+               LIMIT {listLimit:UInt32}`,
+              windowParams,
+            ),
+            queryRows<ColdRow>(
+              `SELECT lr.record_id AS record_id, lr.token_count AS token_count, lr.never_read AS never_read,
+                      lr.end_time AS last_updated, r.last_read AS last_read
+               FROM ( ${liveRecords(true)} ) AS lr
+               LEFT JOIN (
+                 SELECT record_id, max(end_time) AS last_read
+                 FROM memory_events
+                 WHERE ${SCOPE} ${STORE_FILTER} AND change_kind = 'read' AND record_count > 0
+                 GROUP BY record_id
+               ) AS r ON lr.record_id = r.record_id
+               WHERE greatest(r.last_read, lr.end_time) <= now() - INTERVAL ${COLD_STORAGE_MIN_IDLE_DAYS} DAY
+               ORDER BY greatest(r.last_read, lr.end_time) ASC, lr.record_id ASC
+               LIMIT {listLimit:UInt32}`,
+              { ...currentParams, listLimit },
+            ),
+            queryRows<QueryCountRow>(
+              `SELECT query_text, uniqExact(span_id) AS searches
+               FROM ( ${dedupedWindow(true)} )
+               WHERE change_kind = 'read' AND query_text != ''
+               GROUP BY query_text
+               ORDER BY searches DESC, query_text ASC
+               LIMIT {listLimit:UInt32}`,
+              windowParams,
+            ),
+            // Zero-hit gap: count the zero-record searches, but only for queries whose most recent
+            // search still returned nothing (argMax over end_time) — a query that later found a
+            // record is no longer an open gap.
+            queryRows<QueryCountRow>(
+              `SELECT query_text, uniqExactIf(span_id, record_count = 0) AS searches
+               FROM ( ${dedupedWindow(true)} )
+               WHERE change_kind = 'read' AND query_text != ''
+               GROUP BY query_text
+               HAVING argMax(record_count, end_time) = 0
+               ORDER BY searches DESC, query_text ASC
+               LIMIT {listLimit:UInt32}`,
+              windowParams,
+            ),
+            queryRows<LargestRow>(
+              `SELECT record_id, token_count
+               FROM ( ${liveRecords(true)} )
+               ORDER BY token_count DESC, record_id ASC
+               LIMIT {listLimit:UInt32}`,
+              { ...currentParams, listLimit },
+            ),
+            queryRow<SizeRow>(`SELECT ${sizeDistributionSelect} FROM ( ${liveRecords(true)} )`, currentParams),
+            queryRows<TokenHistoryRow>(tokenHistoryQuery, { ...windowParams, bucketSeconds }),
+            queryRows<WriteHealthRow>(
+              `SELECT w.record_id AS record_id, w.writes AS writes, w.last_write AS last_write, coalesce(n.no_ops, 0) AS no_ops
+               FROM (
+                 SELECT record_id,
+                        count()        AS writes,
+                        max(end_time)  AS last_write
+                 FROM ( ${dedupedWindow(true)} )
+                 WHERE change_kind IN ('add', 'update', 'remove')
+                 GROUP BY record_id
+               ) AS w
+               LEFT JOIN (
+                 SELECT record_id,
+                        countIf(change_kind = 'update' AND content_hash = prev_hash AND prev_hash != '') AS no_ops
+                 FROM (
+                   SELECT record_id, change_kind, content_hash,
+                          lagInFrame(content_hash)
+                            OVER (PARTITION BY record_id ORDER BY end_time, trace_id, span_id ROWS BETWEEN 1 PRECEDING AND CURRENT ROW) AS prev_hash
+                   FROM ( ${dedupedWindow(true)} )
+                   WHERE change_kind IN ('add', 'update')
+                 )
+                 GROUP BY record_id
+               ) AS n ON w.record_id = n.record_id
+               ORDER BY writes DESC, record_id ASC
+               LIMIT {listLimit:UInt32}`,
+              windowParams,
+            ),
+            // Store-wide thrash: writes beyond the first per (record, run) — redundant same-run rewrites.
+            queryRow<ThrashRow>(
+              `SELECT sum(writes_in_trace) - count() AS thrash
+               FROM (
+                 SELECT record_id, trace_id, count() AS writes_in_trace
+                 FROM ( ${dedupedWindow(true)} )
+                 WHERE change_kind IN ('add', 'update', 'remove')
+                 GROUP BY record_id, trace_id
+               )`,
+              windowParams,
+            ),
+            // A content hash that returns to an earlier value: runs (consecutive-dedup length) exceed distinct hashes.
+            queryRows<RevertedRow>(
+              `SELECT record_id
+               FROM (
+                 SELECT record_id, content_hash,
+                        content_hash != lagInFrame(content_hash)
+                          OVER (PARTITION BY record_id ORDER BY end_time, trace_id, span_id ROWS BETWEEN 1 PRECEDING AND CURRENT ROW) AS changed
+                 FROM ( ${dedupedWindow(true)} )
+                 WHERE change_kind IN ('add', 'update') AND content_hash != ''
+               )
+               GROUP BY record_id
+               HAVING sum(changed) > uniqExact(content_hash)`,
+              windowParams,
+            ),
+            // Updates whose body is byte-identical to the record's previous version (wasted writes).
+            queryRow<NoOpRow>(
+              `SELECT countIf(change_kind = 'update' AND content_hash = prev_hash AND prev_hash != '') AS noop
+               FROM (
+                 SELECT change_kind, content_hash,
+                        lagInFrame(content_hash)
+                          OVER (PARTITION BY record_id ORDER BY end_time, trace_id, span_id ROWS BETWEEN 1 PRECEDING AND CURRENT ROW) AS prev_hash
+                 FROM ( ${dedupedWindow(true)} )
+                 WHERE change_kind IN ('add', 'update')
+               )`,
+              windowParams,
+            ),
+            queryRow<DuplicatesRow>(
+              `SELECT count() AS groups, sum(cnt) AS records
+               FROM (
+                 SELECT content_hash, count() AS cnt
+                 FROM ( ${liveRecords(true)} )
+                 WHERE content_hash != ''
+                 GROUP BY content_hash
+                 HAVING cnt > 1
+               )`,
+              currentParams,
+            ),
+          ],
+          { concurrency: STORE_INSIGHTS_QUERY_CONCURRENCY },
+        ).pipe(
+          Effect.map(
+            ([
+              mostRead,
+              cold,
+              topQueries,
+              zeroHit,
+              largest,
+              size,
+              tokenHistory,
+              writeHealth,
+              thrash,
+              reverted,
+              noOp,
+              duplicates,
+            ]): StoreInsights => {
+              const mapQueries = (rows: readonly QueryCountRow[]) =>
+                rows.map((row) => ({ queryText: row.query_text, searches: num(row.searches) }))
+              const sizeDistribution: StoreSizeBucket[] = STORE_SIZE_BUCKETS.map((bucket, index) => ({
+                label: bucket.label,
+                count: size ? num(size[`b${index}`]) : 0,
+              }))
+              const revertedIds = new Set(reverted.map((row) => row.record_id))
+              return {
+                mostReadRecords: mostRead.map((row) => ({ recordId: row.record_id, reads: num(row.reads) })),
+                coldRecords: cold.map((row) => {
+                  const neverRead = Number(row.never_read) === 1
+                  const lastRead = parseCHDate(row.last_read)
+                  return {
+                    recordId: row.record_id,
+                    tokenCount: num(row.token_count),
+                    neverRead,
+                    lastReadAt: neverRead || lastRead.getTime() <= 0 ? null : lastRead.toISOString(),
+                    lastUpdatedAt: parseCHDate(row.last_updated).toISOString(),
+                  }
+                }),
+                topQueries: mapQueries(topQueries),
+                zeroHitQueries: mapQueries(zeroHit),
+                largestRecords: largest.map((row) => ({ recordId: row.record_id, tokenCount: num(row.token_count) })),
+                sizeDistribution,
+                writeHealth: writeHealth.map((row) => ({
+                  recordId: row.record_id,
+                  writes: num(row.writes),
+                  lastWriteAt: parseCHDate(row.last_write).toISOString(),
+                  noOps: num(row.no_ops),
+                  reverted: revertedIds.has(row.record_id),
+                })),
+                thrashWrites: num(thrash?.thrash),
+                noOpRewrites: num(noOp?.noop),
+                duplicateGroups: num(duplicates?.groups),
+                duplicateRecords: num(duplicates?.records),
+                tokenHistory: tokenHistory.map((row) => ({
+                  bucketStart: parseCHDate(row.bucket_start).toISOString(),
+                  tokens: num(row.tokens),
+                })),
+              }
+            },
+          ),
+          Effect.mapError((error) => toRepositoryError(error, "MemoryAnalyticsRepository.getStoreInsights")),
+        )
+      })
+
+    return { getMemoryOverview, getMemoryActivityHistogram, listStoresWithMetrics, getStoreInsights }
   }),
 )

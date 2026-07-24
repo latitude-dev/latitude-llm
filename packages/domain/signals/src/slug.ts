@@ -12,7 +12,7 @@ const SUFFIX_LENGTH = 4
 
 /**
  * Defensive cap on suffix redraws. Each attempt draws a fresh 4-char cuid
- * (~1.2M values) and checks it against the per-project namespace, so a real
+ * (~1.2M values) and checks it against the org-wide namespace (D15), so a real
  * collision past the first attempt is astronomically unlikely; the cap only
  * stops a misbehaving `count` callback from looping forever.
  */
@@ -45,7 +45,7 @@ interface GenerateSignalSlugInput<E, R> {
   /**
    * Uniqueness check: receives a candidate slug and returns the number of
    * existing rows already using it (0 when free). Pairs with
-   * `SignalRepository.countBySlug`.
+   * `SignalRepository.countBySlug`, which counts org-wide (D15).
    */
   readonly count: (slug: string) => Effect.Effect<number, E, R>
 }

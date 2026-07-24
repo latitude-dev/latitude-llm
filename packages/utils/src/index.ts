@@ -7,7 +7,17 @@ export {
   hexDecode,
   hexEncode,
 } from "./base64.ts"
-export { CryptoError, decrypt, encodeUtf8, encrypt, hash, randomToken, toBuffer } from "./crypto.ts"
+export {
+  CryptoError,
+  decrypt,
+  encodeUtf8,
+  encrypt,
+  hash,
+  hmacSha256Hex,
+  randomToken,
+  toBuffer,
+  verifyHmacSha256Hex,
+} from "./crypto.ts"
 export { extractLeadingEmoji } from "./extractLeadingEmoji.ts"
 export {
   cacheHitRate,

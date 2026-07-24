@@ -322,6 +322,71 @@ const _registry = {
     }
   }>(),
 
+  // Inbound GitHub App webhook events, slim-extracted by the receiver (5.7). Never carries a raw
+  // payload — the receiver caps commit messages and count before enqueueing. Routed to the org by
+  // `installationId`; `pull-request`/`push` are stubbed in Phase 1 to ledger-claim + skip.
+  "github-events": payloads<{
+    "pull-request": {
+      readonly deliveryId: string
+      readonly installationId: number
+      readonly repoId: number
+      readonly repoFullName: string
+      readonly action: string
+      readonly prNumber: number
+      readonly title: string
+      readonly body: string | null
+      readonly state: string
+      readonly draft: boolean
+      readonly merged: boolean
+      readonly mergeCommitSha: string | null
+      readonly mergedAt: string | null
+      readonly headRef: string
+      readonly headSha: string
+      readonly headRepoId: number | null
+      readonly baseRef: string
+      readonly htmlUrl: string
+      readonly userLogin: string
+      readonly authorAssociation: string
+      /** Present only on `edited` retargets — the previous base ref. */
+      readonly changesBaseRef: string | null
+    }
+    push: {
+      readonly deliveryId: string
+      readonly installationId: number
+      readonly repoId: number
+      readonly repoFullName: string
+      readonly defaultBranch: string
+      readonly ref: string
+      readonly before: string
+      readonly after: string
+      readonly created: boolean
+      readonly deleted: boolean
+      readonly forced: boolean
+      readonly commits: readonly {
+        readonly id: string
+        readonly message: string
+        readonly timestamp: string
+        readonly authorUsername: string | null
+        readonly url: string
+      }[]
+      /** commits[] hit the per-push cap or GitHub's truncation; the API walk (Phase 5) completes it. */
+      readonly truncated: boolean
+    }
+    installation: {
+      readonly deliveryId: string
+      readonly installationId: number
+      readonly event: "installation" | "installation_repositories"
+      readonly action: string
+      readonly accountLogin: string
+      readonly accountType: string
+      readonly repositorySelection: string
+    }
+    "delete-by-project": {
+      readonly organizationId: string
+      readonly projectId: string
+    }
+  }>(),
+
   "alert-incidents": payloads<{
     "signal-escalated": {
       readonly organizationId: string

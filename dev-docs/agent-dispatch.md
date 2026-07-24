@@ -59,6 +59,10 @@ Once a signal has any ledger rows (`AgentDispatchRepository.listBySource` via th
 
 Guardrails: `maxDispatchesPerDay`, `cooldownMinutes` per config. The current UI uses defaults and does not expose these controls.
 
+## GitHub handshake
+
+The dispatch prompt closes the loop with the GitHub integration (`dev-docs/github-integration.md`). On the signal-trigger branches (`signal.discovered`/`incident.opened`, `signal.regressed`), `renderDefaultPrompt` renders the signal's slug (`Ref: {slug}`) and a convention block instructing the agent to name its branch `fix/{slug-lowercase}-…` and title/describe the PR with `Resolves {SLUG}`. Those exact forms yield a `resolve` intent under the default matcher rules — the cross-check lives in the matcher golden suite (`@domain/github` `match-texts.test.ts`), so a merged agent PR auto-links on open and auto-resolves the signal on merge with no human typing a slug. The block is **unconditional** (rendered whether or not GitHub is connected — slug-branded branches help human reviewers regardless, and the producer stays decoupled from `@domain/github`). Custom `promptTemplate` overrides keep their text; the exported `defaultDispatchPromptTemplate` seed carries `{{signal.slug}}` + the block. The closing guard is "Do not resolve the signal via Latitude tools — merging the PR resolves it automatically; a human verifies after deploy." Monitor prompts have no signal lifecycle, so they get neither the slug nor the block.
+
 ## Data model
 
 - `integrations` — parent row per connected target (`kind ∈ {cursor, claude_code, linear, webhook}`)

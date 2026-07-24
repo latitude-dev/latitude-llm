@@ -152,14 +152,12 @@ export const createFakeSignalRepository = (
         if (issue) issues.set(id, { ...issue, deletedAt: new Date(), updatedAt: new Date() })
       }),
 
-    countBySlug: ({ projectId, slug, excludeSignalId }) =>
+    countBySlug: ({ slug, excludeSignalId }) =>
       Effect.sync(
         () =>
           [...issues.values()].filter(
             (issue) =>
-              issue.projectId === projectId &&
-              issue.slug === slug &&
-              (!excludeSignalId || issue.id !== excludeSignalId),
+              issue.slug === slug && issue.deletedAt == null && (!excludeSignalId || issue.id !== excludeSignalId),
           ).length,
       ),
 

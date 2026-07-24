@@ -27,6 +27,7 @@ const toastVariants =
 
 const variantStyles = {
   default: "border bg-background text-foreground",
+  warning: "border-warning-muted-foreground/10 bg-warning-muted text-warning-muted-foreground",
   destructive: "destructive group border-destructive bg-destructive text-destructive-foreground",
 }
 

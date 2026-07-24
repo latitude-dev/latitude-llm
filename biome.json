@@ -154,6 +154,7 @@
         "!apps/web/src/domains/billing/**",
         "!apps/web/src/domains/destinations/**",
         "!apps/web/src/domains/feature-flags/**",
+        "!apps/web/src/domains/github/**",
         "!apps/web/src/domains/integrations/**",
         "!apps/web/src/domains/members/**",
         "!apps/web/src/domains/notifications/**",

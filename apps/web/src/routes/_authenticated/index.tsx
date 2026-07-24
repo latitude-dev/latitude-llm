@@ -16,11 +16,21 @@ const searchSchema = z.object({
   next: z.literal("integrations").optional(),
   installed: z.literal("ok").optional(),
   error: z.string().optional(),
+  githubInstalled: z.literal("ok").optional(),
+  githubPending: z.literal("approval").optional(),
+  githubError: z.string().optional(),
 })
 
 export const Route = createFileRoute("/_authenticated/")({
   validateSearch: searchSchema,
-  loaderDeps: ({ search }) => ({ next: search.next, installed: search.installed, error: search.error }),
+  loaderDeps: ({ search }) => ({
+    next: search.next,
+    installed: search.installed,
+    error: search.error,
+    githubInstalled: search.githubInstalled,
+    githubPending: search.githubPending,
+    githubError: search.githubError,
+  }),
   loader: async ({ deps }) => {
     const slug = await resolveDefaultProjectSlug()
     if (!slug) return null
@@ -32,6 +42,9 @@ export const Route = createFileRoute("/_authenticated/")({
         search: {
           ...(deps.installed ? { installed: deps.installed } : {}),
           ...(deps.error ? { error: deps.error } : {}),
+          ...(deps.githubInstalled ? { githubInstalled: deps.githubInstalled } : {}),
+          ...(deps.githubPending ? { githubPending: deps.githubPending } : {}),
+          ...(deps.githubError ? { githubError: deps.githubError } : {}),
         },
       })
     }
