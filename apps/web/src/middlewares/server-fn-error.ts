@@ -70,6 +70,16 @@ export const recordRequestError = (span: Span, error: unknown): void => {
  * so the request middleware can recognise a 4xx and likewise skip recording it.
  */
 export const recordServerFnError = (span: Span, e: unknown): ServerFnErrorInfo => {
+  if (isMissingServerFnError(e) && e instanceof Error) {
+    return {
+      error: asStaleServerFnError(e),
+      tag: STALE_SERVER_FN_ERROR_TAG,
+      message: STALE_SERVER_FN_USER_MESSAGE,
+      status: 404,
+      isClientError: true,
+    }
+  }
+
   const httpError = isHttpError(e)
   const tag = errorTag(e)
   const message = httpError ? e.httpMessage : e instanceof Error ? e.message : "Unknown error occurred"

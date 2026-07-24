@@ -72,4 +72,15 @@ describe("handleMutationError", () => {
     expect(toastMock).not.toHaveBeenCalled()
     expect(reload).toHaveBeenCalledTimes(1)
   })
+
+  it("reloads when the missing-hash text is nested inside a recordServerFnError JSON payload", () => {
+    handleMutationError(
+      serverError({
+        message: "Server function info not found for 8ae8498b6e8c600abff6cc7c428fc166b1bb45613094b806f08105bfc6f1344d",
+      }),
+    )
+
+    expect(toastMock).not.toHaveBeenCalled()
+    expect(reload).toHaveBeenCalledTimes(1)
+  })
 })

@@ -33,9 +33,14 @@ export function parseServerError(err: unknown): ServerError {
   try {
     const parsed = JSON.parse(raw)
     if (typeof parsed === "object" && parsed !== null && "message" in parsed) {
+      const message = typeof parsed.message === "string" ? parsed.message : String(parsed.message)
+      // Nested payload from recordServerFnError may still carry TanStack's raw text.
+      if (parsed._tag === STALE_SERVER_FN_ERROR_TAG || isMissingServerFnErrorMessage(message)) {
+        return { _tag: STALE_SERVER_FN_ERROR_TAG, message: STALE_SERVER_FN_USER_MESSAGE, status: 404 }
+      }
       return {
         _tag: parsed._tag,
-        message: parsed.message,
+        message,
         status: typeof parsed.status === "number" ? parsed.status : 500,
       }
     }

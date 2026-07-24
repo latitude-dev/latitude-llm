@@ -155,3 +155,20 @@ describe("asStaleServerFnError", () => {
     expect(shaped.stack).toBe(MISSING_SERVER_FN.stack)
   })
 })
+
+describe("recordServerFnError stale server-fn", () => {
+  it("maps a missing server-fn hash to StaleServerFnError without recording", () => {
+    const span = fakeSpan()
+    const info = recordServerFnError(span, MISSING_SERVER_FN)
+
+    expect(span.recordException).not.toHaveBeenCalled()
+    expect(info.isClientError).toBe(true)
+    expect(info.status).toBe(404)
+    expect(info.tag).toBe(STALE_SERVER_FN_ERROR_TAG)
+    expect(JSON.parse(info.error.message)).toEqual({
+      _tag: STALE_SERVER_FN_ERROR_TAG,
+      message: STALE_SERVER_FN_USER_MESSAGE,
+      status: 404,
+    })
+  })
+})
