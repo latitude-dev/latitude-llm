@@ -8,6 +8,7 @@ import { useProjectScope } from "../../../../../domains/projects/project-scope.t
 import { useSessionDetail } from "../../../../../domains/sessions/sessions.collection.ts"
 import { useParamState } from "../../../../../lib/hooks/useParamState.ts"
 import { SignalLifecycleActions } from "../signals/-components/signal-lifecycle-actions.tsx"
+import { isLargeSession } from "./session-detail-drawer/session-size.ts"
 import {
   isSessionTab,
   normalizeSessionTab,
@@ -90,7 +91,12 @@ export function SessionDetailDrawer({
     projectId,
     sessionId,
   })
-  const { traces } = useSessionTraces({ projectId, sessionId, traceIds: session?.traceIds ?? [] })
+  const { traces } = useSessionTraces({
+    projectId,
+    sessionId,
+    traceIds: session?.traceIds ?? [],
+    enabled: session ? !isLargeSession(session) : false,
+  })
 
   // The session search returns hits from the trace search index, which can
   // reference traces that have no row in the `sessions` table. Two cases

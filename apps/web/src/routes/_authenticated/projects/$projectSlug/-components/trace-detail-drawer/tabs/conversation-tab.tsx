@@ -123,6 +123,7 @@ function ConversationContent({
   searchQuery,
   messageTrailingSlot,
   timeline,
+  timelineNotice,
   focusMessageIndex,
   totalMessages,
   payloadBytes,
@@ -155,6 +156,7 @@ function ConversationContent({
   readonly messageTrailingSlot?: ((messageIndex: number, role: string) => ReactNode) | undefined
   /** Timeline for the minimap bar: null while loading, undefined when the feature is off. */
   readonly timeline?: ConversationTimeline | null | undefined
+  readonly timelineNotice?: string | undefined
   readonly focusMessageIndex?: number | undefined
   readonly totalMessages: number
   readonly payloadBytes: number
@@ -707,6 +709,11 @@ function ConversationContent({
           onMarkerClick={handleMarkerClick}
         />
       )}
+      {timeline === undefined && timelineNotice ? (
+        <div className="border-t border-border bg-background px-4 py-3">
+          <Text.H6 color="foregroundMuted">{timelineNotice}</Text.H6>
+        </div>
+      ) : null}
     </div>
   )
 }
@@ -725,6 +732,7 @@ export function ConversationTab({
   searchQuery,
   messageTrailingSlot,
   timeline,
+  timelineNotice,
   focusMessageIndex,
   agentGraph,
 }: {
@@ -754,6 +762,7 @@ export function ConversationTab({
   readonly messageTrailingSlot?: ((messageIndex: number, role: string) => ReactNode) | undefined
   /** Timeline for the minimap bar: null while loading, undefined when the feature is off. */
   readonly timeline?: ConversationTimeline | null | undefined
+  readonly timelineNotice?: string | undefined
   readonly focusMessageIndex?: number | undefined
   /** Session-wide agent graph for decoration; when omitted the conversation derives a trace-local one. */
   readonly agentGraph?: AgentGraph | undefined
@@ -845,6 +854,7 @@ export function ConversationTab({
               searchQuery={searchQuery}
               messageTrailingSlot={messageTrailingSlot}
               timeline={timeline}
+              timelineNotice={timelineNotice}
               focusMessageIndex={focusMessageIndex}
               totalMessages={conversation.totalMessages}
               payloadBytes={conversation.payloadBytes}

@@ -59,6 +59,8 @@ export interface ExpandedRows<T> {
    * like "show hidden rows" toggles that don't fit cleanly as a data row.
    */
   header?: ReactNode
+  /** Rendered BELOW the expanded `data` rows (when present and not loading). */
+  footer?: ReactNode
 }
 
 export interface InfiniteTableSharedProps<T> {

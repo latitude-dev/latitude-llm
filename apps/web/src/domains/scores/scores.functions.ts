@@ -111,7 +111,8 @@ export const listScoresByTrace = createServerFn({ method: "GET" })
  * `trace_id IN (...)` rather than `session_id` so orphan sessions still surface
  * their scores.
  */
-export const listScoresBySession = createServerFn({ method: "GET" })
+// POST keeps the up-to-500 trace-id payload below HTTP request-line limits.
+export const listScoresBySession = createServerFn({ method: "POST" })
   .inputValidator(
     z.object({
       projectId: z.string(),

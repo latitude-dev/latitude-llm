@@ -176,7 +176,8 @@ export const listSpansByTrace = createServerFn({ method: "GET" })
 // Reads by the session's authoritative `traceIds` rather than `session_id`
 // membership, so subagent spans that override `session_id` to the child's own
 // value still surface in the session's Spans tab and breakdowns.
-export const listSpansBySession = createServerFn({ method: "GET" })
+// POST keeps the up-to-500 trace-id payload below HTTP request-line limits.
+export const listSpansBySession = createServerFn({ method: "POST" })
   .inputValidator(
     z.object({
       projectId: z.string(),

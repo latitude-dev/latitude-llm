@@ -182,6 +182,56 @@ export const useSpansBySessionCollection = ({
   )
 }
 
+export const useSpansBySessionPages = ({
+  projectId,
+  sessionId,
+  traceIdPages,
+  startTimeFrom,
+  startTimeTo,
+}: {
+  readonly projectId: string
+  readonly sessionId: string
+  readonly traceIdPages: readonly (readonly string[])[]
+  readonly startTimeFrom?: string | undefined
+  readonly startTimeTo?: string | undefined
+}) => {
+  const scope = useProjectScope()
+  const sandboxOrgId = sandboxOrgIdForScope(scope)
+  const pages = traceIdPages.filter((traceIds) => traceIds.length > 0)
+  const queries = useQueries({
+    queries: pages.map((traceIds) => ({
+      queryKey: [
+        "spans",
+        "session-page",
+        sandboxOrgId,
+        projectId,
+        sessionId,
+        traceIdsSignature(traceIds),
+        startTimeFrom,
+        startTimeTo,
+      ],
+      queryFn: () =>
+        listSpansBySession({
+          data: {
+            ...(sandboxOrgId ? { sandboxOrgId } : {}),
+            projectId,
+            traceIds: [...traceIds],
+            startTimeFrom,
+            startTimeTo,
+          },
+        }),
+      staleTime: Infinity,
+    })),
+  })
+  const data = useMemo(() => queries.flatMap((query) => query.data ?? []), [queries])
+
+  return {
+    data,
+    isLoading: queries.some((query) => query.isPending),
+    isError: queries.some((query) => query.isError),
+  }
+}
+
 export const useSpanDetail = ({
   projectId,
   traceId,

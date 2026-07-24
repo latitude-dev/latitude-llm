@@ -51,6 +51,23 @@ describe("selectTracesForLoadedConversation", () => {
     expect(selected[7]?.traceId).toBe("t007")
   })
 
+  it.each([
+    { traceCount: 121, totalMessages: 242 },
+    { traceCount: 241, totalMessages: 482 },
+    { traceCount: 421, totalMessages: 842 },
+  ])("selects 17 traces for the first page of the $totalMessages-message large conversation", ({
+    traceCount,
+    totalMessages,
+  }) => {
+    const selected = selectTracesForLoadedConversation({
+      traces: traces(traceCount),
+      loadedMessageCount: 25,
+      totalMessages,
+    })
+
+    expect(selected).toHaveLength(17)
+  })
+
   it("grows the window as more of the conversation is loaded", () => {
     const all = traces(100)
     const early = selectTracesForLoadedConversation({
