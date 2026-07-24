@@ -36,6 +36,7 @@ import { Route as BackofficeFeatureFlagsIndexRouteImport } from './routes/backof
 import { Route as ApiObservabilityTestIndexRouteImport } from './routes/api/observability-test/index'
 import { Route as SandboxSandboxOrgIdManageRouteImport } from './routes/sandbox/$sandboxOrgId/manage'
 import { Route as IntegrationsSlackInstallRouteImport } from './routes/integrations/slack/install'
+import { Route as IntegrationsGithubInstallRouteImport } from './routes/integrations/github/install'
 import { Route as BackofficeUsersUserIdRouteImport } from './routes/backoffice/users/$userId'
 import { Route as BackofficeProjectsProjectIdRouteImport } from './routes/backoffice/projects/$projectId'
 import { Route as BackofficeOrganizationsOrganizationIdRouteImport } from './routes/backoffice/organizations/$organizationId'
@@ -49,6 +50,7 @@ import { Route as AuthenticatedProjectsProjectSlugIndexRouteImport } from './rou
 import { Route as WrappedIdOgPngRouteImport } from './routes/wrapped/$id.og.png'
 import { Route as SandboxSandboxOrgIdProjectsProjectSlugRouteImport } from './routes/sandbox/$sandboxOrgId/projects/$projectSlug'
 import { Route as IntegrationsSlackOauthCallbackRouteImport } from './routes/integrations/slack/oauth/callback'
+import { Route as IntegrationsGithubSetupCallbackRouteImport } from './routes/integrations/github/setup/callback'
 import { Route as CcWrappedIdOgPngRouteImport } from './routes/cc-wrapped/$id.og.png'
 import { Route as ApiNotificationsNidIncidentTrendDotpngRouteImport } from './routes/api/notifications/$nid/incident-trend[.]png'
 import { Route as ApiAuthMcpAuthorizeRouteImport } from './routes/api/auth/mcp/authorize'
@@ -90,6 +92,7 @@ import { Route as AuthenticatedProjectsProjectSlugMemoryStoreIndexRouteImport } 
 import { Route as AuthenticatedProjectsProjectSlugExperimentsExperimentSlugIndexRouteImport } from './routes/_authenticated/projects/$projectSlug/experiments/$experimentSlug/index'
 import { Route as AuthenticatedProjectsProjectSlugCustomBehavioursBehaviourSlugIndexRouteImport } from './routes/_authenticated/projects/$projectSlug/custom-behaviours/$behaviourSlug/index'
 import { Route as AuthenticatedProjectsProjectSlugBehavioursBehaviourSlugIndexRouteImport } from './routes/_authenticated/projects/$projectSlug/behaviours/$behaviourSlug/index'
+import { Route as AuthenticatedProjectsProjectSlugSettingsIntegrationsGithubRouteImport } from './routes/_authenticated/projects/$projectSlug/settings/integrations/github'
 import { Route as AuthenticatedProjectsProjectSlugSettingsIntegrationsIntegrationKindRouteImport } from './routes/_authenticated/projects/$projectSlug/settings/integrations/$integrationKind'
 import { Route as AuthenticatedProjectsProjectSlugSettingsDataDestinationsDestinationIdRouteImport } from './routes/_authenticated/projects/$projectSlug/settings/data-destinations/$destinationId'
 import { Route as AuthenticatedProjectsProjectSlugBehavioursBehaviourSlugEditRouteImport } from './routes/_authenticated/projects/$projectSlug/behaviours/$behaviourSlug/edit'
@@ -237,6 +240,12 @@ const IntegrationsSlackInstallRoute =
     path: '/integrations/slack/install',
     getParentRoute: () => rootRouteImport,
   } as any)
+const IntegrationsGithubInstallRoute =
+  IntegrationsGithubInstallRouteImport.update({
+    id: '/integrations/github/install',
+    path: '/integrations/github/install',
+    getParentRoute: () => rootRouteImport,
+  } as any)
 const BackofficeUsersUserIdRoute = BackofficeUsersUserIdRouteImport.update({
   id: '/users/$userId',
   path: '/users/$userId',
@@ -310,6 +319,12 @@ const IntegrationsSlackOauthCallbackRoute =
   IntegrationsSlackOauthCallbackRouteImport.update({
     id: '/integrations/slack/oauth/callback',
     path: '/integrations/slack/oauth/callback',
+    getParentRoute: () => rootRouteImport,
+  } as any)
+const IntegrationsGithubSetupCallbackRoute =
+  IntegrationsGithubSetupCallbackRouteImport.update({
+    id: '/integrations/github/setup/callback',
+    path: '/integrations/github/setup/callback',
     getParentRoute: () => rootRouteImport,
   } as any)
 const CcWrappedIdOgPngRoute = CcWrappedIdOgPngRouteImport.update({
@@ -563,6 +578,12 @@ const AuthenticatedProjectsProjectSlugBehavioursBehaviourSlugIndexRoute =
       getParentRoute: () => AuthenticatedProjectsProjectSlugRoute,
     } as any,
   )
+const AuthenticatedProjectsProjectSlugSettingsIntegrationsGithubRoute =
+  AuthenticatedProjectsProjectSlugSettingsIntegrationsGithubRouteImport.update({
+    id: '/integrations/github',
+    path: '/integrations/github',
+    getParentRoute: () => AuthenticatedProjectsProjectSlugSettingsRoute,
+  } as any)
 const AuthenticatedProjectsProjectSlugSettingsIntegrationsIntegrationKindRoute =
   AuthenticatedProjectsProjectSlugSettingsIntegrationsIntegrationKindRouteImport.update(
     {
@@ -617,6 +638,7 @@ export interface FileRoutesByFullPath {
   '/backoffice/organizations/$organizationId': typeof BackofficeOrganizationsOrganizationIdRoute
   '/backoffice/projects/$projectId': typeof BackofficeProjectsProjectIdRoute
   '/backoffice/users/$userId': typeof BackofficeUsersUserIdRoute
+  '/integrations/github/install': typeof IntegrationsGithubInstallRoute
   '/integrations/slack/install': typeof IntegrationsSlackInstallRoute
   '/sandbox/$sandboxOrgId/manage': typeof SandboxSandboxOrgIdManageRoute
   '/api/observability-test/': typeof ApiObservabilityTestIndexRoute
@@ -631,6 +653,7 @@ export interface FileRoutesByFullPath {
   '/api/auth/mcp/authorize': typeof ApiAuthMcpAuthorizeRoute
   '/api/notifications/$nid/incident-trend.png': typeof ApiNotificationsNidIncidentTrendDotpngRoute
   '/cc-wrapped/$id/og/png': typeof CcWrappedIdOgPngRoute
+  '/integrations/github/setup/callback': typeof IntegrationsGithubSetupCallbackRoute
   '/integrations/slack/oauth/callback': typeof IntegrationsSlackOauthCallbackRoute
   '/sandbox/$sandboxOrgId/projects/$projectSlug': typeof SandboxSandboxOrgIdProjectsProjectSlugRoute
   '/wrapped/$id/og/png': typeof WrappedIdOgPngRoute
@@ -662,6 +685,7 @@ export interface FileRoutesByFullPath {
   '/projects/$projectSlug/behaviours/$behaviourSlug/edit': typeof AuthenticatedProjectsProjectSlugBehavioursBehaviourSlugEditRoute
   '/projects/$projectSlug/settings/data-destinations/$destinationId': typeof AuthenticatedProjectsProjectSlugSettingsDataDestinationsDestinationIdRoute
   '/projects/$projectSlug/settings/integrations/$integrationKind': typeof AuthenticatedProjectsProjectSlugSettingsIntegrationsIntegrationKindRoute
+  '/projects/$projectSlug/settings/integrations/github': typeof AuthenticatedProjectsProjectSlugSettingsIntegrationsGithubRoute
   '/projects/$projectSlug/behaviours/$behaviourSlug/': typeof AuthenticatedProjectsProjectSlugBehavioursBehaviourSlugIndexRoute
   '/projects/$projectSlug/custom-behaviours/$behaviourSlug/': typeof AuthenticatedProjectsProjectSlugCustomBehavioursBehaviourSlugIndexRoute
   '/projects/$projectSlug/experiments/$experimentSlug/': typeof AuthenticatedProjectsProjectSlugExperimentsExperimentSlugIndexRoute
@@ -699,6 +723,7 @@ export interface FileRoutesByTo {
   '/backoffice/organizations/$organizationId': typeof BackofficeOrganizationsOrganizationIdRoute
   '/backoffice/projects/$projectId': typeof BackofficeProjectsProjectIdRoute
   '/backoffice/users/$userId': typeof BackofficeUsersUserIdRoute
+  '/integrations/github/install': typeof IntegrationsGithubInstallRoute
   '/integrations/slack/install': typeof IntegrationsSlackInstallRoute
   '/sandbox/$sandboxOrgId/manage': typeof SandboxSandboxOrgIdManageRoute
   '/api/observability-test': typeof ApiObservabilityTestIndexRoute
@@ -712,6 +737,7 @@ export interface FileRoutesByTo {
   '/api/auth/mcp/authorize': typeof ApiAuthMcpAuthorizeRoute
   '/api/notifications/$nid/incident-trend.png': typeof ApiNotificationsNidIncidentTrendDotpngRoute
   '/cc-wrapped/$id/og/png': typeof CcWrappedIdOgPngRoute
+  '/integrations/github/setup/callback': typeof IntegrationsGithubSetupCallbackRoute
   '/integrations/slack/oauth/callback': typeof IntegrationsSlackOauthCallbackRoute
   '/sandbox/$sandboxOrgId/projects/$projectSlug': typeof SandboxSandboxOrgIdProjectsProjectSlugRoute
   '/wrapped/$id/og/png': typeof WrappedIdOgPngRoute
@@ -743,6 +769,7 @@ export interface FileRoutesByTo {
   '/projects/$projectSlug/behaviours/$behaviourSlug/edit': typeof AuthenticatedProjectsProjectSlugBehavioursBehaviourSlugEditRoute
   '/projects/$projectSlug/settings/data-destinations/$destinationId': typeof AuthenticatedProjectsProjectSlugSettingsDataDestinationsDestinationIdRoute
   '/projects/$projectSlug/settings/integrations/$integrationKind': typeof AuthenticatedProjectsProjectSlugSettingsIntegrationsIntegrationKindRoute
+  '/projects/$projectSlug/settings/integrations/github': typeof AuthenticatedProjectsProjectSlugSettingsIntegrationsGithubRoute
   '/projects/$projectSlug/behaviours/$behaviourSlug': typeof AuthenticatedProjectsProjectSlugBehavioursBehaviourSlugIndexRoute
   '/projects/$projectSlug/custom-behaviours/$behaviourSlug': typeof AuthenticatedProjectsProjectSlugCustomBehavioursBehaviourSlugIndexRoute
   '/projects/$projectSlug/experiments/$experimentSlug': typeof AuthenticatedProjectsProjectSlugExperimentsExperimentSlugIndexRoute
@@ -785,6 +812,7 @@ export interface FileRoutesById {
   '/backoffice/organizations/$organizationId': typeof BackofficeOrganizationsOrganizationIdRoute
   '/backoffice/projects/$projectId': typeof BackofficeProjectsProjectIdRoute
   '/backoffice/users/$userId': typeof BackofficeUsersUserIdRoute
+  '/integrations/github/install': typeof IntegrationsGithubInstallRoute
   '/integrations/slack/install': typeof IntegrationsSlackInstallRoute
   '/sandbox/$sandboxOrgId/manage': typeof SandboxSandboxOrgIdManageRoute
   '/api/observability-test/': typeof ApiObservabilityTestIndexRoute
@@ -799,6 +827,7 @@ export interface FileRoutesById {
   '/api/auth/mcp/authorize': typeof ApiAuthMcpAuthorizeRoute
   '/api/notifications/$nid/incident-trend.png': typeof ApiNotificationsNidIncidentTrendDotpngRoute
   '/cc-wrapped/$id/og/png': typeof CcWrappedIdOgPngRoute
+  '/integrations/github/setup/callback': typeof IntegrationsGithubSetupCallbackRoute
   '/integrations/slack/oauth/callback': typeof IntegrationsSlackOauthCallbackRoute
   '/sandbox/$sandboxOrgId/projects/$projectSlug': typeof SandboxSandboxOrgIdProjectsProjectSlugRoute
   '/wrapped/$id/og/png': typeof WrappedIdOgPngRoute
@@ -830,6 +859,7 @@ export interface FileRoutesById {
   '/_authenticated/projects/$projectSlug/behaviours/$behaviourSlug/edit': typeof AuthenticatedProjectsProjectSlugBehavioursBehaviourSlugEditRoute
   '/_authenticated/projects/$projectSlug/settings/data-destinations/$destinationId': typeof AuthenticatedProjectsProjectSlugSettingsDataDestinationsDestinationIdRoute
   '/_authenticated/projects/$projectSlug/settings/integrations/$integrationKind': typeof AuthenticatedProjectsProjectSlugSettingsIntegrationsIntegrationKindRoute
+  '/_authenticated/projects/$projectSlug/settings/integrations/github': typeof AuthenticatedProjectsProjectSlugSettingsIntegrationsGithubRoute
   '/_authenticated/projects/$projectSlug/behaviours/$behaviourSlug/': typeof AuthenticatedProjectsProjectSlugBehavioursBehaviourSlugIndexRoute
   '/_authenticated/projects/$projectSlug/custom-behaviours/$behaviourSlug/': typeof AuthenticatedProjectsProjectSlugCustomBehavioursBehaviourSlugIndexRoute
   '/_authenticated/projects/$projectSlug/experiments/$experimentSlug/': typeof AuthenticatedProjectsProjectSlugExperimentsExperimentSlugIndexRoute
@@ -872,6 +902,7 @@ export interface FileRouteTypes {
     | '/backoffice/organizations/$organizationId'
     | '/backoffice/projects/$projectId'
     | '/backoffice/users/$userId'
+    | '/integrations/github/install'
     | '/integrations/slack/install'
     | '/sandbox/$sandboxOrgId/manage'
     | '/api/observability-test/'
@@ -886,6 +917,7 @@ export interface FileRouteTypes {
     | '/api/auth/mcp/authorize'
     | '/api/notifications/$nid/incident-trend.png'
     | '/cc-wrapped/$id/og/png'
+    | '/integrations/github/setup/callback'
     | '/integrations/slack/oauth/callback'
     | '/sandbox/$sandboxOrgId/projects/$projectSlug'
     | '/wrapped/$id/og/png'
@@ -917,6 +949,7 @@ export interface FileRouteTypes {
     | '/projects/$projectSlug/behaviours/$behaviourSlug/edit'
     | '/projects/$projectSlug/settings/data-destinations/$destinationId'
     | '/projects/$projectSlug/settings/integrations/$integrationKind'
+    | '/projects/$projectSlug/settings/integrations/github'
     | '/projects/$projectSlug/behaviours/$behaviourSlug/'
     | '/projects/$projectSlug/custom-behaviours/$behaviourSlug/'
     | '/projects/$projectSlug/experiments/$experimentSlug/'
@@ -954,6 +987,7 @@ export interface FileRouteTypes {
     | '/backoffice/organizations/$organizationId'
     | '/backoffice/projects/$projectId'
     | '/backoffice/users/$userId'
+    | '/integrations/github/install'
     | '/integrations/slack/install'
     | '/sandbox/$sandboxOrgId/manage'
     | '/api/observability-test'
@@ -967,6 +1001,7 @@ export interface FileRouteTypes {
     | '/api/auth/mcp/authorize'
     | '/api/notifications/$nid/incident-trend.png'
     | '/cc-wrapped/$id/og/png'
+    | '/integrations/github/setup/callback'
     | '/integrations/slack/oauth/callback'
     | '/sandbox/$sandboxOrgId/projects/$projectSlug'
     | '/wrapped/$id/og/png'
@@ -998,6 +1033,7 @@ export interface FileRouteTypes {
     | '/projects/$projectSlug/behaviours/$behaviourSlug/edit'
     | '/projects/$projectSlug/settings/data-destinations/$destinationId'
     | '/projects/$projectSlug/settings/integrations/$integrationKind'
+    | '/projects/$projectSlug/settings/integrations/github'
     | '/projects/$projectSlug/behaviours/$behaviourSlug'
     | '/projects/$projectSlug/custom-behaviours/$behaviourSlug'
     | '/projects/$projectSlug/experiments/$experimentSlug'
@@ -1039,6 +1075,7 @@ export interface FileRouteTypes {
     | '/backoffice/organizations/$organizationId'
     | '/backoffice/projects/$projectId'
     | '/backoffice/users/$userId'
+    | '/integrations/github/install'
     | '/integrations/slack/install'
     | '/sandbox/$sandboxOrgId/manage'
     | '/api/observability-test/'
@@ -1053,6 +1090,7 @@ export interface FileRouteTypes {
     | '/api/auth/mcp/authorize'
     | '/api/notifications/$nid/incident-trend.png'
     | '/cc-wrapped/$id/og/png'
+    | '/integrations/github/setup/callback'
     | '/integrations/slack/oauth/callback'
     | '/sandbox/$sandboxOrgId/projects/$projectSlug'
     | '/wrapped/$id/og/png'
@@ -1084,6 +1122,7 @@ export interface FileRouteTypes {
     | '/_authenticated/projects/$projectSlug/behaviours/$behaviourSlug/edit'
     | '/_authenticated/projects/$projectSlug/settings/data-destinations/$destinationId'
     | '/_authenticated/projects/$projectSlug/settings/integrations/$integrationKind'
+    | '/_authenticated/projects/$projectSlug/settings/integrations/github'
     | '/_authenticated/projects/$projectSlug/behaviours/$behaviourSlug/'
     | '/_authenticated/projects/$projectSlug/custom-behaviours/$behaviourSlug/'
     | '/_authenticated/projects/$projectSlug/experiments/$experimentSlug/'
@@ -1115,11 +1154,13 @@ export interface RootRouteChildren {
   WelcomeIndexRoute: typeof WelcomeIndexRoute
   ApiAuthSplatRoute: typeof ApiAuthSplatRoute
   ApiObservabilityTestErrorRoute: typeof ApiObservabilityTestErrorRoute
+  IntegrationsGithubInstallRoute: typeof IntegrationsGithubInstallRoute
   IntegrationsSlackInstallRoute: typeof IntegrationsSlackInstallRoute
   ApiObservabilityTestIndexRoute: typeof ApiObservabilityTestIndexRoute
   ApiAuthProviderStartRoute: typeof ApiAuthProviderStartRoute
   ApiAuthMcpAuthorizeRoute: typeof ApiAuthMcpAuthorizeRoute
   ApiNotificationsNidIncidentTrendDotpngRoute: typeof ApiNotificationsNidIncidentTrendDotpngRoute
+  IntegrationsGithubSetupCallbackRoute: typeof IntegrationsGithubSetupCallbackRoute
   IntegrationsSlackOauthCallbackRoute: typeof IntegrationsSlackOauthCallbackRoute
 }
 
@@ -1314,6 +1355,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof IntegrationsSlackInstallRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/integrations/github/install': {
+      id: '/integrations/github/install'
+      path: '/integrations/github/install'
+      fullPath: '/integrations/github/install'
+      preLoaderRoute: typeof IntegrationsGithubInstallRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/backoffice/users/$userId': {
       id: '/backoffice/users/$userId'
       path: '/users/$userId'
@@ -1403,6 +1451,13 @@ declare module '@tanstack/react-router' {
       path: '/integrations/slack/oauth/callback'
       fullPath: '/integrations/slack/oauth/callback'
       preLoaderRoute: typeof IntegrationsSlackOauthCallbackRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/integrations/github/setup/callback': {
+      id: '/integrations/github/setup/callback'
+      path: '/integrations/github/setup/callback'
+      fullPath: '/integrations/github/setup/callback'
+      preLoaderRoute: typeof IntegrationsGithubSetupCallbackRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/cc-wrapped/$id/og/png': {
@@ -1692,6 +1747,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedProjectsProjectSlugBehavioursBehaviourSlugIndexRouteImport
       parentRoute: typeof AuthenticatedProjectsProjectSlugRoute
     }
+    '/_authenticated/projects/$projectSlug/settings/integrations/github': {
+      id: '/_authenticated/projects/$projectSlug/settings/integrations/github'
+      path: '/integrations/github'
+      fullPath: '/projects/$projectSlug/settings/integrations/github'
+      preLoaderRoute: typeof AuthenticatedProjectsProjectSlugSettingsIntegrationsGithubRouteImport
+      parentRoute: typeof AuthenticatedProjectsProjectSlugSettingsRoute
+    }
     '/_authenticated/projects/$projectSlug/settings/integrations/$integrationKind': {
       id: '/_authenticated/projects/$projectSlug/settings/integrations/$integrationKind'
       path: '/integrations/$integrationKind'
@@ -1758,6 +1820,7 @@ interface AuthenticatedProjectsProjectSlugSettingsRouteChildren {
   AuthenticatedProjectsProjectSlugSettingsIndexRoute: typeof AuthenticatedProjectsProjectSlugSettingsIndexRoute
   AuthenticatedProjectsProjectSlugSettingsDataDestinationsDestinationIdRoute: typeof AuthenticatedProjectsProjectSlugSettingsDataDestinationsDestinationIdRoute
   AuthenticatedProjectsProjectSlugSettingsIntegrationsIntegrationKindRoute: typeof AuthenticatedProjectsProjectSlugSettingsIntegrationsIntegrationKindRoute
+  AuthenticatedProjectsProjectSlugSettingsIntegrationsGithubRoute: typeof AuthenticatedProjectsProjectSlugSettingsIntegrationsGithubRoute
   AuthenticatedProjectsProjectSlugSettingsDataDestinationsIndexRoute: typeof AuthenticatedProjectsProjectSlugSettingsDataDestinationsIndexRoute
   AuthenticatedProjectsProjectSlugSettingsIntegrationsIndexRoute: typeof AuthenticatedProjectsProjectSlugSettingsIntegrationsIndexRoute
 }
@@ -1788,6 +1851,8 @@ const AuthenticatedProjectsProjectSlugSettingsRouteChildren: AuthenticatedProjec
       AuthenticatedProjectsProjectSlugSettingsDataDestinationsDestinationIdRoute,
     AuthenticatedProjectsProjectSlugSettingsIntegrationsIntegrationKindRoute:
       AuthenticatedProjectsProjectSlugSettingsIntegrationsIntegrationKindRoute,
+    AuthenticatedProjectsProjectSlugSettingsIntegrationsGithubRoute:
+      AuthenticatedProjectsProjectSlugSettingsIntegrationsGithubRoute,
     AuthenticatedProjectsProjectSlugSettingsDataDestinationsIndexRoute:
       AuthenticatedProjectsProjectSlugSettingsDataDestinationsIndexRoute,
     AuthenticatedProjectsProjectSlugSettingsIntegrationsIndexRoute:
@@ -2003,12 +2068,14 @@ const rootRouteChildren: RootRouteChildren = {
   WelcomeIndexRoute: WelcomeIndexRoute,
   ApiAuthSplatRoute: ApiAuthSplatRoute,
   ApiObservabilityTestErrorRoute: ApiObservabilityTestErrorRoute,
+  IntegrationsGithubInstallRoute: IntegrationsGithubInstallRoute,
   IntegrationsSlackInstallRoute: IntegrationsSlackInstallRoute,
   ApiObservabilityTestIndexRoute: ApiObservabilityTestIndexRoute,
   ApiAuthProviderStartRoute: ApiAuthProviderStartRoute,
   ApiAuthMcpAuthorizeRoute: ApiAuthMcpAuthorizeRoute,
   ApiNotificationsNidIncidentTrendDotpngRoute:
     ApiNotificationsNidIncidentTrendDotpngRoute,
+  IntegrationsGithubSetupCallbackRoute: IntegrationsGithubSetupCallbackRoute,
   IntegrationsSlackOauthCallbackRoute: IntegrationsSlackOauthCallbackRoute,
 }
 export const routeTree = rootRouteImport

@@ -45,6 +45,7 @@
     "@domain/experiments": "workspace:*",
     "@domain/feature-flags": "workspace:*",
     "@domain/flaggers": "workspace:*",
+    "@domain/github": "workspace:*",
     "@domain/integrations": "workspace:*",
     "@domain/signals": "workspace:*",
     "@domain/monitors": "workspace:*",

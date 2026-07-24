@@ -66,7 +66,7 @@ export const createSignalUseCase = (input: CreateSignalInput) =>
         const project = yield* projectRepository.findById(parsed.projectId)
         const slug = yield* generateSignalSlug({
           projectSlug: project.slug,
-          count: (slug) => signalRepository.countBySlug({ projectId: parsed.projectId, slug }),
+          count: (slug) => signalRepository.countBySlug({ slug }),
         })
 
         const signal = signalSchema.parse({

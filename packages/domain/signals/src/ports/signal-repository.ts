@@ -135,8 +135,9 @@ export interface SignalRepositoryShape {
     readonly limit: number
   }): Effect.Effect<readonly OrgSignalSearchHit[], RepositoryError, SqlClient>
   /**
-   * Point-lookup by `(projectId, slug)`. Slugs are unique within a project,
-   * so this is the natural read path for slug-keyed API endpoints.
+   * Point-lookup by `(projectId, slug)`. Slugs are org-unique (D15), so a slug
+   * lives in at most one project; resolution stays project-scoped so a match is
+   * only ever the caller's own project's signal.
    */
   findBySlug(input: {
     readonly projectId: ProjectId
@@ -148,12 +149,11 @@ export interface SignalRepositoryShape {
     readonly slug: string
   }): Effect.Effect<boolean, RepositoryError, SqlClient>
   /**
-   * Returns the number of non-deleted signals with this slug in the project,
-   * scoped to the active organization. Powers the `exists` callback of
-   * `generateSlug`; a soft-deleted signal frees its slug for reuse.
+   * Returns the number of non-deleted signals with this slug in the active
+   * organization — org-wide, spanning every project (D15). Powers the `count`
+   * callback of `generateSignalSlug`; a soft-deleted signal frees its slug.
    */
   countBySlug(input: {
-    readonly projectId: ProjectId
     readonly slug: string
     readonly excludeSignalId?: SignalId
   }): Effect.Effect<number, RepositoryError, SqlClient>

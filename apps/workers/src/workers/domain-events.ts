@@ -514,6 +514,17 @@ export const createDomainEventsWorker = ({
               dedupeKey: `destinations:delete-by-project:${event.payload.projectId}`,
             },
           ),
+          pub.publish(
+            "github-events",
+            "delete-by-project",
+            {
+              organizationId: event.payload.organizationId,
+              projectId: event.payload.projectId,
+            },
+            {
+              dedupeKey: `github-events:delete-by-project:${event.payload.projectId}`,
+            },
+          ),
         ],
         { concurrency: "unbounded" },
       ).pipe(Effect.asVoid),

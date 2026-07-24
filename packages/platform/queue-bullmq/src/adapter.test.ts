@@ -68,6 +68,24 @@ describe("buildBullMqJobOptions", () => {
     expect(opts.backoff).toEqual({ type: "exponential", delay: 1_000 })
   })
 
+  it("maps a plain delayMs to a bare delay with no deduplication marker", () => {
+    const opts = buildBullMqJobOptions(LABEL, { delayMs: 10_000 })
+    expect(opts.delay).toBe(10_000)
+    expect(opts.deduplication).toBeUndefined()
+    expect(opts.jobId).toBeUndefined()
+  })
+
+  it("keeps the dedupeKey jobId for an idempotent deferred job (delayMs + dedupeKey)", () => {
+    const opts = buildBullMqJobOptions(LABEL, { delayMs: 10_000, dedupeKey: "github:delivery-guid" })
+    expect(opts.delay).toBe(10_000)
+    expect(opts.jobId).toBe(base64urlEncode("github:delivery-guid"))
+    expect(opts.deduplication).toBeUndefined()
+  })
+
+  it("rejects delayMs combined with a coalescing option", () => {
+    expect(() => buildBullMqJobOptions(LABEL, { delayMs: 1, debounceMs: 1 })).toThrow(/mutually exclusive/)
+  })
+
   it("rejects mutually-exclusive coalescing options", () => {
     expect(() => buildBullMqJobOptions(LABEL, { dedupeKey: "k", throttleMs: 1, debounceMs: 1 })).toThrow(
       /mutually exclusive/,

@@ -159,6 +159,15 @@ export interface PublishOptions {
    */
   readonly leadingThrottleMs?: number
   /**
+   * Fixed one-shot delay in ms before the job becomes eligible to run. Unlike
+   * the coalescing options above it applies no dedupe/replace semantics — it
+   * only defers a single publish. Combine with `dedupeKey` to get a deferred
+   * job that is still idempotent by job id (the GitHub push grace delay, 5.9).
+   *
+   * Mutually exclusive with `debounceMs`, `throttleMs`, `latestThrottleMs` and `leadingThrottleMs`.
+   */
+  readonly delayMs?: number
+  /**
    * Total attempts BullMQ should make before the job is considered failed
    * (inclusive of the first try). Set alongside `backoff` to get bounded
    * exponential retry for transient dependency failures (e.g. Temporal

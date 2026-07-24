@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest"
 import { buildDispatchIdempotencyKey } from "./idempotency-key.ts"
-import { renderDispatchPrompt } from "./render-prompt.ts"
+import { defaultDispatchPromptTemplate, renderDispatchPrompt } from "./render-prompt.ts"
 
 describe("buildDispatchIdempotencyKey", () => {
   it("keys by vendor, config, trigger, source id, and dispatch window", () => {
@@ -44,7 +44,12 @@ describe("renderDispatchPrompt", () => {
     expect(prompt).toContain("If Latitude MCP tools are available")
     expect(prompt).toContain("suggest installing the Latitude MCP server")
     expect(prompt).toContain("do not make speculative code changes")
-    expect(prompt).toContain("Do not mute or resolve the signal")
+    // GitHub handshake (5.16): slug reference + branch/title convention + sharpened guard.
+    expect(prompt).toContain("Ref: timeout-errors")
+    expect(prompt).toContain("fix/timeout-errors-<short-description>")
+    expect(prompt).toContain('Title the PR "Resolves timeout-errors:')
+    expect(prompt).toContain('include the line "Resolves timeout-errors"')
+    expect(prompt).toContain("Do not resolve the signal via Latitude tools — merging the PR resolves it automatically")
   })
 
   it("includes sample conversation excerpts", () => {
@@ -102,7 +107,9 @@ describe("renderDispatchPrompt", () => {
     expect(prompt).toContain("Using the Latitude MCP")
     expect(prompt).toContain("do not make speculative code changes")
     expect(prompt).not.toContain("queryAnalytics")
-    expect(prompt).not.toContain("Do not mute or resolve the signal")
+    // Monitor prompts have no signal lifecycle, so no slug handshake / convention block.
+    expect(prompt).not.toContain("Do not resolve the signal via Latitude tools")
+    expect(prompt).not.toContain("Work on a branch named")
     expect(prompt).toContain("Do not mute or resolve the monitor")
   })
 
@@ -141,5 +148,29 @@ describe("renderDispatchPrompt", () => {
       template: "Tags: {{tags}} | Traces: {{sampleTraceIds}} | Signal: {{signal.name}}",
     })
     expect(prompt).toBe("Tags: latency, timeout | Traces: tr_1, tr_2 | Signal: ")
+  })
+
+  it("renders the handshake on the regressed trigger with a lowercased branch slug", () => {
+    const prompt = renderDispatchPrompt({
+      context: {
+        trigger: "signal.regressed",
+        organizationName: "Acme",
+        projectName: "My App",
+        projectSlug: "my-app",
+        signal: { id: "sig1", slug: "LAT-XY9Z", name: "Timeout errors", source: "flagger", priority: null },
+        deepLinkUrl: "https://console.latitude.so/projects/my-app/signals/LAT-XY9Z",
+      },
+    })
+    expect(prompt).toContain("has regressed")
+    expect(prompt).toContain("Ref: LAT-XY9Z")
+    expect(prompt).toContain("fix/lat-xy9z-<short-description>")
+    expect(prompt).toContain('Title the PR "Resolves LAT-XY9Z:')
+    expect(prompt).toContain("Do not resolve the signal via Latitude tools")
+  })
+
+  it("seeds the customizable template with the slug + resolve keyword", () => {
+    expect(defaultDispatchPromptTemplate).toContain("Ref: {{signal.slug}}")
+    expect(defaultDispatchPromptTemplate).toContain("Resolves {{signal.slug}}")
+    expect(defaultDispatchPromptTemplate).toContain("Do not resolve the signal via Latitude tools")
   })
 })
