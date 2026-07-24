@@ -268,7 +268,6 @@ export const listMemoryStoresWithMetrics = createServerFn({ method: "GET" })
       direction: z.enum(["asc", "desc"]).default("desc"),
       limit: z.number().int().min(1).max(200).default(50),
       offset: z.number().int().min(0).default(0),
-      trendBucketSeconds: z.number().int().min(1).max(86_400).default(86_400),
     }),
   )
   .handler(async ({ data, context }): Promise<MemoryStoreMetricsPageRecord> => {
@@ -284,7 +283,6 @@ export const listMemoryStoresWithMetrics = createServerFn({ method: "GET" })
         sortDirection: data.direction,
         limit: data.limit,
         offset: data.offset,
-        trendBucketSeconds: data.trendBucketSeconds,
       }).pipe(
         Effect.map(
           (page): MemoryStoreMetricsPageRecord => ({

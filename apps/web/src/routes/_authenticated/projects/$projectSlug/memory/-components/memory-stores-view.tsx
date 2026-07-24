@@ -9,7 +9,13 @@ import {
   listingLayoutIntrinsicScroll,
 } from "../../../../../../layouts/ListingLayout/index.tsx"
 import type { TableColumnOption } from "../../-components/columns-selector.tsx"
-import { formatPercent, formatRatio, formatSignedCount } from "./memory-formatters.ts"
+import {
+  formatPercent,
+  formatRatio,
+  formatSignedCount,
+  MEMORY_TREND_BUCKET_SECONDS,
+  resolveMemoryTrendWindow,
+} from "./memory-formatters.ts"
 import { MemoryTrendBar } from "./memory-trend-bar.tsx"
 import { encodeStoreSegment, storeDisplayLabel } from "./store-encoding.ts"
 
@@ -62,7 +68,6 @@ export function MemoryStoresView({
   projectSlug,
   rangeFromIso,
   rangeToIso,
-  trendBucketSeconds,
 }: {
   readonly stores: readonly MemoryStoreMetricsRecord[]
   readonly isLoading: boolean
@@ -73,8 +78,12 @@ export function MemoryStoresView({
   readonly projectSlug: string
   readonly rangeFromIso: string
   readonly rangeToIso: string
-  readonly trendBucketSeconds: number
 }) {
+  // Same window the repository buckets the trend over, derived from the same range.
+  const trendWindow = resolveMemoryTrendWindow(Date.parse(rangeFromIso), Date.parse(rangeToIso))
+  const trendFromIso = new Date(trendWindow.fromMs).toISOString()
+  const trendToIso = new Date(trendWindow.toMs).toISOString()
+
   const allColumns: readonly InfiniteTableColumn<MemoryStoreMetricsRecord>[] = [
     {
       key: "store",
@@ -114,9 +123,9 @@ export function MemoryStoresView({
         >
           <MemoryTrendBar
             buckets={store.trend}
-            fromIso={rangeFromIso}
-            toIso={rangeToIso}
-            bucketSeconds={trendBucketSeconds}
+            fromIso={trendFromIso}
+            toIso={trendToIso}
+            bucketSeconds={MEMORY_TREND_BUCKET_SECONDS}
             height={36}
           />
         </Link>

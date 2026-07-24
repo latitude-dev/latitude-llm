@@ -109,7 +109,6 @@ const list = (
       sortDirection: opts.sortDirection ?? "desc",
       limit: opts.limit ?? 50,
       offset: opts.offset ?? 0,
-      trendBucketSeconds: 3600,
     }),
   )
 
