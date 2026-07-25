@@ -22,6 +22,7 @@ import {
   type MessageEmbeddingUpsert,
   SessionRepository,
   sessionConversationMessages,
+  stripLoneSurrogates,
   TRACE_SEARCH_CHARS_PER_TOKEN_ESTIMATE,
   TraceSearchBudget,
 } from "@domain/spans"
@@ -128,11 +129,13 @@ const TRUNCATION_MARKER = "\n[...truncated...]\n"
 
 const middleTruncate = (value: string, maxLength: number): string => {
   if (value.length <= maxLength) return value
-  if (maxLength <= TRUNCATION_MARKER.length) return value.slice(0, maxLength)
+  if (maxLength <= TRUNCATION_MARKER.length) return stripLoneSurrogates(value.slice(0, maxLength))
   const head = Math.floor((maxLength - TRUNCATION_MARKER.length) / 2)
   const tail = maxLength - TRUNCATION_MARKER.length - head
-  return `${value.slice(0, head)}${TRUNCATION_MARKER}${value.slice(value.length - tail)}`
+  return `${stripLoneSurrogates(value.slice(0, head))}${TRUNCATION_MARKER}${stripLoneSurrogates(value.slice(value.length - tail))}`
 }
+
+export const middleTruncateForTesting = middleTruncate
 
 const escapePromptDelimiters = (value: string): string => value.replaceAll("<", "\\u003c").replaceAll(">", "\\u003e")
 

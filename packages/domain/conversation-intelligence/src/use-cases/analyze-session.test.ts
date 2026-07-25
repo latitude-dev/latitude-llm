@@ -57,7 +57,10 @@ import {
 import {
   analyzeSessionUseCase,
   clearConversationIntelligenceAnchorEmbeddingCacheForTesting,
+  middleTruncateForTesting,
 } from "./analyze-session.ts"
+
+const LONE_SURROGATE_PATTERN = /[\uD800-\uDBFF](?![\uDC00-\uDFFF])|(?<![\uD800-\uDBFF])[\uDC00-\uDFFF]/
 
 const organizationId = OrganizationId("o".repeat(24))
 const projectId = ProjectId("p".repeat(24))
@@ -1301,5 +1304,24 @@ describe("analyzeSessionUseCase", () => {
     const prompt = generated[0]?.prompt ?? ""
     expect(prompt.match(/<\/conversation_data>/g)).toHaveLength(1)
     expect(prompt).toContain("\\u003c/conversation_data\\u003e")
+  })
+})
+
+describe("middleTruncate", () => {
+  it("never leaves an unpaired UTF-16 surrogate at a truncation boundary", () => {
+    const value = "😀".repeat(50)
+    for (let maxLength = 0; maxLength <= value.length + 5; maxLength++) {
+      expect(middleTruncateForTesting(value, maxLength)).not.toMatch(LONE_SURROGATE_PATTERN)
+    }
+  })
+
+  it("still bounds the output length when truncating", () => {
+    const value = "😀".repeat(50)
+    expect(middleTruncateForTesting(value, 40).length).toBeLessThanOrEqual(40)
+  })
+
+  it("returns the original value unchanged when it already fits", () => {
+    const value = "😀".repeat(10)
+    expect(middleTruncateForTesting(value, value.length)).toBe(value)
   })
 })
