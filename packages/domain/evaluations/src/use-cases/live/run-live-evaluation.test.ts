@@ -916,6 +916,43 @@ describe("runLiveEvaluationUseCase", () => {
     })
   })
 
+  it("skips before billing when the linked signal is ignored", async () => {
+    const evaluation = makeEvaluation({ script: VALID_SCRIPT })
+    const issue = makeSignal({
+      id: SignalId(evaluation.signalId),
+      ignoredAt: new Date("2026-07-20T12:00:00.000Z"),
+    })
+    const traceDetail = makeTraceDetail()
+    const { repository: traceRepository } = createFakeTraceRepository({
+      findByTraceId: () => Effect.succeed(traceDetail),
+    })
+    const evaluationRepository = createEvaluationRepository(() => Effect.succeed(evaluation))
+    const signalRepository = createSignalRepository(() => Effect.succeed(issue))
+    const { repository: billingUsageEventRepository, eventsByPeriodAndIdempotencyKey } =
+      createFakeBillingUsageEventRepository()
+
+    const result = await Effect.runPromise(
+      runLiveEvaluationUseCase(INPUT).pipe(
+        Effect.provide(
+          createUseCaseLayer({
+            traceRepository,
+            evaluationRepository,
+            signalRepository,
+            billingLayer: createBillingLayer({ billingUsageEventRepository }),
+          }),
+        ),
+      ),
+    )
+
+    expect(result).toEqual({
+      action: "skipped",
+      reason: "signal-ignored",
+      evaluationId: evaluation.id,
+      traceId: traceDetail.traceId,
+    })
+    expect([...eventsByPeriodAndIdempotencyKey.values()]).toEqual([])
+  })
+
   it("skips before AI execution when billing blocks the live evaluation", async () => {
     const evaluation = makeEvaluation({ script: VALID_SCRIPT })
     const issue = makeSignal({ id: SignalId(evaluation.signalId) })

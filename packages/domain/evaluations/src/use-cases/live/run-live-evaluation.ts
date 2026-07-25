@@ -133,6 +133,7 @@ export type RunLiveEvaluationResult =
         | "billing-blocked"
         | "awaiting-embeddings"
         | "embeddings-unavailable"
+        | "signal-ignored"
       readonly evaluationId: string
       readonly traceId: string
     }
@@ -346,6 +347,15 @@ export const runLiveEvaluationUseCase = (input: RunLiveEvaluationInput) =>
       return {
         action: "skipped",
         reason: "issue-not-found",
+        evaluationId: input.evaluationId,
+        traceId: input.traceId,
+      } satisfies RunLiveEvaluationResult
+    }
+
+    if (issue.ignoredAt !== null) {
+      return {
+        action: "skipped",
+        reason: "signal-ignored",
         evaluationId: input.evaluationId,
         traceId: input.traceId,
       } satisfies RunLiveEvaluationResult
