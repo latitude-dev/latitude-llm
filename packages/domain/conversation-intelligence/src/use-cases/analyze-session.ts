@@ -577,7 +577,9 @@ const detectEmbeddingAnchorMoments = (input: {
           }
         }
         if (!best) continue
-        const evidence = (messagesByIndex.get(best.turn.index)?.text ?? best.turn.content).slice(0, 240)
+        const evidence = stripLoneSurrogates(
+          (messagesByIndex.get(best.turn.index)?.text ?? best.turn.content).slice(0, 240),
+        )
         labels.push({
           kind: config.kind,
           firstMessageIndex: best.turn.index,

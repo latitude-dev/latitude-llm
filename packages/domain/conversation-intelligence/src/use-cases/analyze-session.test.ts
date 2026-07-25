@@ -751,6 +751,41 @@ describe("analyzeSessionUseCase", () => {
     expect(momentLabels.rows.every((moment) => moment.evidence.length > 0 && moment.confidence >= 0.65)).toBe(true)
   })
 
+  it("sanitizes evidence when the 240-character slice splits a surrogate pair", async () => {
+    const frustratedUserMessage = `${"a".repeat(239)}😀 and this is still frustrating and unresolved.`
+    const { effect, momentLabels } = runUseCase({
+      session: makeSessionWithMessages([
+        message("user", "Can you help me update my billing email?"),
+        message("assistant", "Sure, open account settings and choose Profile."),
+        message("user", frustratedUserMessage),
+        message("assistant", "I'm sorry, I will correct that now."),
+      ]),
+      ai: {
+        generate: <T>(request: GenerateInput<T>) =>
+          Effect.succeed({
+            object: {
+              acceptedCandidateIds: candidatesFromPrompt(request.prompt).map((candidate) => candidate.id),
+            } as T,
+            tokens: 0,
+            duration: 0,
+          }) as Effect.Effect<GenerateResult<T>, never>,
+        embed: (input) => {
+          const text = input.text.toLowerCase()
+          if (text.includes("frustrat")) return Effect.succeed({ embedding: [1, 0] })
+          return Effect.succeed({ embedding: [-1, 0] })
+        },
+        rerank: () => Effect.die("rerank not used"),
+      },
+    })
+
+    await Effect.runPromise(effect)
+
+    const frustration = momentLabels.rows.find((label) => label.kind === "user_frustration")
+    expect(frustration).toBeDefined()
+    expect(frustration?.evidence.length).toBeLessThanOrEqual(240)
+    expect(frustration?.evidence).not.toMatch(LONE_SURROGATE_PATTERN)
+  })
+
   it("anchors user frustration labels to the rendered user message index", async () => {
     const frustratedUserMessage = "This is incredibly frustrating, you keep giving me the wrong answer."
     const renderedMessages = [
