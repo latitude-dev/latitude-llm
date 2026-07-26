@@ -11,9 +11,10 @@ describe("deepStripLoneSurrogates", () => {
   })
 
   it("disambiguates rather than overwrites when two distinct keys sanitize to the same string", () => {
-    const input: Record<string, string> = {}
-    input["\uD800"] = "first"
-    input["�"] = "second"
+    const input = Object.fromEntries([
+      ["\uD800", "first"],
+      ["�", "second"],
+    ]) as Record<string, string>
 
     const result = deepStripLoneSurrogates(input) as Record<string, string>
 
