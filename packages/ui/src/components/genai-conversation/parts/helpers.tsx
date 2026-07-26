@@ -1,4 +1,4 @@
-import { isJsonBlock, resolveContentModality } from "@repo/utils"
+import { isJsonBlock } from "@repo/utils"
 import { AudioContent, ImageContent, VideoContent } from "./media-content.tsx"
 
 export function getKnownField<T>(metadata: Record<string, unknown> | undefined, field: string): T | undefined {
@@ -39,17 +39,15 @@ export function renderMediaByModality({
   /** Original openable URL (uri parts). When set, media renders an "open in new tab" affordance. */
   href?: string | undefined
 }) {
-  const effectiveModality = resolveContentModality(modality, mimeType)
-
-  if (effectiveModality === "image") {
+  if (modality === "image") {
     return <ImageContent src={src} mimeType={mimeType} href={href} />
   }
 
-  if (effectiveModality === "audio") {
+  if (modality === "audio") {
     return <AudioContent src={src} mimeType={mimeType} href={href} />
   }
 
-  if (effectiveModality === "video") {
+  if (modality === "video") {
     return <VideoContent src={src} mimeType={mimeType} href={href} />
   }
 

@@ -88,13 +88,10 @@ function fileExtensionForMime(mimeType?: string | null): string | undefined {
 function dataUriToObjectUrl(dataUri: string): string | undefined {
   try {
     const comma = dataUri.indexOf(",")
-    if (!dataUri.startsWith("data:") || comma < 0) return undefined
     const meta = dataUri.slice(5, comma)
-    const payload = dataUri.slice(comma + 1)
+    if (!dataUri.startsWith("data:") || comma < 0 || !meta.includes(";base64")) return undefined
     const mime = meta.split(";")[0] || "application/octet-stream"
-    const bytes = meta.includes(";base64")
-      ? Uint8Array.from(atob(payload), (c) => c.charCodeAt(0))
-      : new TextEncoder().encode(decodeURIComponent(payload))
+    const bytes = Uint8Array.from(atob(dataUri.slice(comma + 1)), (c) => c.charCodeAt(0))
     return URL.createObjectURL(new Blob([bytes], { type: mime }))
   } catch {
     return undefined
@@ -154,7 +151,7 @@ export function FileCard({
   const extension = fileExtensionForMime(mimeType)
   const downloadName = fileName ?? `attachment${extension ? `.${extension}` : ""}`
 
-  // data: URLs can't be opened as top-level navigations in modern browsers — use a blob: URL for preview.
+  // Top-level navigation to data: is blocked — preview via blob:.
   const [blobPreviewUrl] = useState(() =>
     downloadDataUri?.startsWith("data:") ? dataUriToObjectUrl(downloadDataUri) : undefined,
   )
@@ -179,8 +176,7 @@ export function FileCard({
   } else if (downloadDataUri) {
     actions = <ActionLink href={downloadDataUri} label="Download file" download={downloadName} icon={DownloadIcon} />
   } else {
-    // No resolvable source — keep the affordance but disable it and explain why on hover.
-    // `aria-disabled` (not the native `disabled` attr) so the tooltip still fires.
+    // aria-disabled (not disabled) so the tooltip still fires.
     actions = (
       <Tooltip
         asChild
