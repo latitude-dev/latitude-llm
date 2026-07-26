@@ -84,21 +84,6 @@ function fileExtensionForMime(mimeType?: string | null): string | undefined {
   return subtype && /^[a-z0-9]+$/.test(subtype) ? subtype : undefined
 }
 
-function openDataUriPreview(dataUri: string) {
-  try {
-    const comma = dataUri.indexOf(",")
-    const meta = dataUri.slice(5, comma)
-    if (!dataUri.startsWith("data:") || comma < 0 || !meta.includes(";base64")) return
-    const mime = meta.split(";")[0] || "application/octet-stream"
-    const bytes = Uint8Array.from(atob(dataUri.slice(comma + 1)), (c) => c.charCodeAt(0))
-    const url = URL.createObjectURL(new Blob([bytes], { type: mime }))
-    window.open(url, "_blank", "noopener,noreferrer")
-    window.setTimeout(() => URL.revokeObjectURL(url), 60_000)
-  } catch {
-    // ignore malformed data URIs
-  }
-}
-
 function ActionLink({
   href,
   label,
@@ -163,7 +148,11 @@ export function FileCard({
             type="button"
             aria-label="Preview PDF"
             className={ACTION_CLASS}
-            onClick={() => openDataUriPreview(downloadDataUri)}
+            onClick={() => {
+              void import("./open-data-uri-preview.ts").then(({ openDataUriPreview }) => {
+                openDataUriPreview(downloadDataUri)
+              })
+            }}
           >
             <Icon icon={ExternalLinkIcon} size="sm" />
           </button>
