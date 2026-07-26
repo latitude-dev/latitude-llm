@@ -2,6 +2,7 @@
  * Content parser for OTEL GenAI semconv v1.37+ (gen_ai.{input,output}.messages,
  * gen_ai.system_instructions, gen_ai.tool.definitions — structured or JSON string).
  */
+import { resolveContentModality } from "@repo/utils"
 import type { GenAIMessage, GenAISystem } from "rosetta-ai"
 import { Provider, safeTranslate } from "rosetta-ai"
 import type { ToolDefinition } from "../../entities/span.ts"
@@ -105,10 +106,28 @@ function hoistToolResults(messages: readonly GenAIMessage[]): GenAIMessage[] {
   return out
 }
 
+function normalizePartModality(part: unknown): unknown {
+  if (!part || typeof part !== "object") return part
+  const p = part as Record<string, unknown>
+  if (p.type !== "blob" && p.type !== "uri" && p.type !== "file") return part
+  if (typeof p.modality !== "string") return part
+  const mime = typeof p.mime_type === "string" ? p.mime_type : null
+  const modality = resolveContentModality(p.modality, mime)
+  if (modality === p.modality) return part
+  return { ...p, modality }
+}
+
+function normalizeMessagePartModalities(msg: unknown): unknown {
+  if (!msg || typeof msg !== "object") return msg
+  const m = msg as Record<string, unknown>
+  if (!Array.isArray(m.parts)) return msg
+  return { ...m, parts: m.parts.map(normalizePartModality) }
+}
+
 function parseMessages(attrs: readonly OtlpKeyValue[], key: string): GenAIMessage[] {
   const raw = extractJsonAttr(attrs, key)
   if (!Array.isArray(raw)) return []
-  return hoistToolResults(raw.map(normalizeSemconvMessage) as GenAIMessage[])
+  return hoistToolResults(raw.map(normalizeSemconvMessage).map(normalizeMessagePartModalities) as GenAIMessage[])
 }
 
 // Cloudflare AI Gateway sends the raw request body under gen_ai.input.messages

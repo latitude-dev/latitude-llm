@@ -13,6 +13,9 @@ const IMAGE_BLOB_B64 =
   "PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIyNDAiIGhlaWdodD0iMTQwIj48ZGVmcz48bGluZWFyR3JhZGllbnQgaWQ9ImciIHgxPSIwIiB5MT0iMCIgeDI9IjEiIHkyPSIxIj48c3RvcCBvZmZzZXQ9IjAlIiBzdG9wLWNvbG9yPSIjNjM2NmYxIi8+PHN0b3Agb2Zmc2V0PSIxMDAlIiBzdG9wLWNvbG9yPSIjZWM0ODk5Ii8+PC9saW5lYXJHcmFkaWVudD48L2RlZnM+PHJlY3Qgd2lkdGg9IjI0MCIgaGVpZ2h0PSIxNDAiIHJ4PSIxMiIgZmlsbD0idXJsKCNnKSIvPjx0ZXh0IHg9IjEyMCIgeT0iNzgiIGZvbnQtZmFtaWx5PSJzYW5zLXNlcmlmIiBmb250LXNpemU9IjIwIiBmaWxsPSJ3aGl0ZSIgdGV4dC1hbmNob3I9Im1pZGRsZSI+aW1hZ2UgYmxvYjwvdGV4dD48L3N2Zz4="
 // A small CSV (base64) used to demonstrate downloading an inline blob document.
 const CSV_BLOB_B64 = "bmFtZSxzY29yZQpBbGljZSw5CkJvYiw3CkNhcm9sLDgK"
+// Minimal PDF (base64). Also used with a wrong producer modality (`image`) to show mime-aware UX.
+const PDF_BLOB_B64 =
+  "JVBERi0xLjAKMSAwIG9iago8PC9UeXBlL0NhdGFsb2cvUGFnZXMgMiAwIFI+PgplbmRvYmoKMiAwIG9iago8PC9UeXBlL1BhZ2VzL0tpZHNbMyAwIF0vQ291bnQgMT4+CmVuZG9iagozIDAgb2JqCjw8L1R5cGUvUGFnZS9QYXJlbnQgMiAwIFI+PgplbmRvYmoKeHJlZgowIDQKMDAwMDAwMDAwMCA2NTUzNSBmCjAwMDAwMDAwMDkgMDAwMDAgbgowMDAwMDAwMDU2IDAwMDAwIG4KMDAwMDAwMDExNSAwMDAwMCBuCnRyYWlsZXIKPDwvU2l6ZSA0L1Jvb3QgMSAwIFI+PgpzdGFydHhyZWYKMTUzCiUlRU9G"
 
 // Remote sample media (renders when online; the broken URLs below show the
 // fallback behavior when a source is missing / inaccessible).
@@ -112,9 +115,20 @@ const FILE_MESSAGES = [
   {
     role: "user",
     parts: [
-      { type: "text", content: "A linked document (uri → Open) and an inline one (blob → Download):" },
+      { type: "text", content: "A linked document (uri → Preview + Download) and an inline CSV (blob → Download):" },
       { type: "uri", modality: "document", mime_type: "application/pdf", uri: "https://docs.latitude.so/guide.pdf" },
       { type: "blob", modality: "document", mime_type: "text/csv", content: CSV_BLOB_B64 },
+    ],
+  },
+  {
+    role: "user",
+    parts: [
+      {
+        type: "text",
+        content:
+          "Inline PDF blob mis-tagged as image (as emitted by @ai-sdk/otel) — mime wins: FileCard with Preview + Download:",
+      },
+      { type: "blob", modality: "image", mime_type: "application/pdf", content: PDF_BLOB_B64 },
     ],
   },
 ] as GenAIMessage[]

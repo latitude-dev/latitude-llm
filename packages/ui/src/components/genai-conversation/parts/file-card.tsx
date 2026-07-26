@@ -13,6 +13,7 @@ import {
   FileVideoIcon,
   type LucideIcon,
 } from "lucide-react"
+import type { ReactNode } from "react"
 import { cn } from "../../../utils/cn.ts"
 import { Icon } from "../../icons/icons.tsx"
 import { Text } from "../../text/text.tsx"
@@ -45,9 +46,13 @@ const MIME_EXTENSIONS: Record<string, string> = {
   "application/zip": "zip",
 }
 
+function normalizeMime(mimeType?: string | null): string {
+  return (mimeType ?? "").toLowerCase().split(";")[0]?.trim() ?? ""
+}
+
 /** Picks a type-aware (monochrome) lucide icon from the mime type, falling back to modality then generic. */
 function fileIconForMime(mimeType?: string | null, modality?: string): LucideIcon {
-  const mime = (mimeType ?? "").toLowerCase().split(";")[0] ?? ""
+  const mime = normalizeMime(mimeType)
   if (mime === "application/pdf") return FileTextIcon
   if (mime === "application/json") return FileJsonIcon
   if (mime.includes("csv") || mime.includes("spreadsheet") || mime.includes("excel")) return FileSpreadsheetIcon
@@ -66,7 +71,7 @@ function fileIconForMime(mimeType?: string | null, modality?: string): LucideIco
 
 /** Human-readable type label, e.g. "PDF document"; derives from the mime subtype, then modality. */
 function fileTypeLabel(mimeType?: string | null, modality?: string): string {
-  const mime = (mimeType ?? "").toLowerCase().split(";")[0] ?? ""
+  const mime = normalizeMime(mimeType)
   if (MIME_LABELS[mime]) return MIME_LABELS[mime]
   const subtype = mime.includes("/") ? mime.split("/")[1] : undefined
   if (subtype) return subtype.replace(/^x-/, "").replace(/[-.]/g, " ").toUpperCase()
@@ -76,17 +81,40 @@ function fileTypeLabel(mimeType?: string | null, modality?: string): string {
 
 /** File extension for the download filename, e.g. "application/pdf" -> "pdf". */
 function fileExtensionForMime(mimeType?: string | null): string | undefined {
-  const mime = (mimeType ?? "").toLowerCase().split(";")[0] ?? ""
+  const mime = normalizeMime(mimeType)
   if (MIME_EXTENSIONS[mime]) return MIME_EXTENSIONS[mime]
   const subtype = mime.includes("/") ? mime.split("/")[1] : undefined
   return subtype && /^[a-z0-9]+$/.test(subtype) ? subtype : undefined
+}
+
+function ActionLink({
+  href,
+  label,
+  download,
+  icon: ActionIcon,
+}: {
+  readonly href: string
+  readonly label: string
+  readonly download?: string | undefined
+  readonly icon: LucideIcon
+}) {
+  return (
+    <a
+      href={href}
+      {...(download ? { download } : { target: "_blank" as const, rel: "noopener noreferrer" })}
+      aria-label={label}
+      className={ACTION_CLASS}
+    >
+      <Icon icon={ActionIcon} size="sm" />
+    </a>
+  )
 }
 
 /**
  * Renders a non-previewable attachment (document/file) as a card: type-aware icon + label + optional size.
  * The action depends on the source — `href` (uri) opens in a new tab, `downloadDataUri` (blob) downloads,
  * and a bare `fileId` (no resolvable source) renders a disabled action with an explanatory tooltip while
- * surfacing the id as the secondary line.
+ * surfacing the id as the secondary line. PDFs with a resolvable source get both preview and download.
  */
 export function FileCard({
   fileName,
@@ -108,6 +136,7 @@ export function FileCard({
   const FileTypeIcon = fileIconForMime(mimeType, modality)
   const typeLabel = fileTypeLabel(mimeType, modality)
   const primary = fileName ?? typeLabel
+  const isPdf = normalizeMime(mimeType) === "application/pdf"
 
   const secondaryBits: string[] = []
   if (fileName) secondaryBits.push(typeLabel)
@@ -116,34 +145,42 @@ export function FileCard({
 
   const extension = fileExtensionForMime(mimeType)
   const downloadName = fileName ?? `attachment${extension ? `.${extension}` : ""}`
+  const previewUri = href ?? downloadDataUri
+  const downloadUri = downloadDataUri ?? href
 
-  const action = href ? (
-    <a href={href} target="_blank" rel="noopener noreferrer" aria-label="Open file in new tab" className={ACTION_CLASS}>
-      <Icon icon={ExternalLinkIcon} size="sm" />
-    </a>
-  ) : downloadDataUri ? (
-    <a href={downloadDataUri} download={downloadName} aria-label="Download file" className={ACTION_CLASS}>
-      <Icon icon={DownloadIcon} size="sm" />
-    </a>
-  ) : (
+  let actions: ReactNode
+  if (isPdf && previewUri && downloadUri) {
+    actions = (
+      <div className="flex shrink-0 items-center gap-1.5">
+        <ActionLink href={previewUri} label="Preview PDF" icon={ExternalLinkIcon} />
+        <ActionLink href={downloadUri} label="Download PDF" download={downloadName} icon={DownloadIcon} />
+      </div>
+    )
+  } else if (href) {
+    actions = <ActionLink href={href} label="Open file in new tab" icon={ExternalLinkIcon} />
+  } else if (downloadDataUri) {
+    actions = <ActionLink href={downloadDataUri} label="Download file" download={downloadName} icon={DownloadIcon} />
+  } else {
     // No resolvable source — keep the affordance but disable it and explain why on hover.
     // `aria-disabled` (not the native `disabled` attr) so the tooltip still fires.
-    <Tooltip
-      asChild
-      trigger={
-        <button
-          type="button"
-          aria-disabled="true"
-          aria-label="No downloadable source"
-          className={cn(ACTION_CLASS, "cursor-not-allowed opacity-50")}
-        >
-          <Icon icon={DownloadIcon} size="sm" />
-        </button>
-      }
-    >
-      This attachment has no downloadable source.
-    </Tooltip>
-  )
+    actions = (
+      <Tooltip
+        asChild
+        trigger={
+          <button
+            type="button"
+            aria-disabled="true"
+            aria-label="No downloadable source"
+            className={cn(ACTION_CLASS, "cursor-not-allowed opacity-50")}
+          >
+            <Icon icon={DownloadIcon} size="sm" />
+          </button>
+        }
+      >
+        This attachment has no downloadable source.
+      </Tooltip>
+    )
+  }
 
   return (
     <div className="flex max-w-md items-center gap-3 rounded-lg border border-border bg-card px-3 py-2">
@@ -163,7 +200,7 @@ export function FileCard({
           </Text.Mono>
         ) : null}
       </div>
-      {action}
+      {actions}
     </div>
   )
 }

@@ -1,4 +1,4 @@
-import { base64ByteLength } from "@repo/utils"
+import { base64ByteLength, resolveContentModality } from "@repo/utils"
 import { CheckIcon, FileIcon, TerminalIcon, TriangleAlertIcon, XIcon } from "lucide-react"
 import { type ReactNode, use } from "react"
 import type { GenAIPart } from "rosetta-ai"
@@ -114,17 +114,18 @@ export function Part({
 
     case "blob": {
       const p = part as BlobPart
+      const modality = resolveContentModality(p.modality, p.mime_type)
       // Fall back to a valid concrete MIME — `${modality}/*` (e.g. "document/*") is not a real
       // type and would produce an invalid data URI, breaking the FileCard download below.
-      const mimeType = p.mime_type ?? (p.modality === "image" ? "image/png" : "application/octet-stream")
+      const mimeType = p.mime_type ?? (modality === "image" ? "image/png" : "application/octet-stream")
       const dataUri = `data:${mimeType};base64,${p.content}`
-      const media = renderMediaByModality({ modality: p.modality, src: dataUri, mimeType })
+      const media = renderMediaByModality({ modality, src: dataUri, mimeType })
       if (media) return media
       // Non-media blob (e.g. a document): show a file card with a download from the inline data.
       return (
         <FileCard
           mimeType={p.mime_type ?? undefined}
-          modality={p.modality}
+          modality={modality}
           sizeBytes={base64ByteLength(p.content)}
           downloadDataUri={dataUri}
         />
@@ -133,13 +134,15 @@ export function Part({
 
     case "file": {
       const p = part as FilePart
-      return <FileCard mimeType={p.mime_type ?? undefined} modality={p.modality} fileId={p.file_id} />
+      const modality = resolveContentModality(p.modality, p.mime_type)
+      return <FileCard mimeType={p.mime_type ?? undefined} modality={modality} fileId={p.file_id} />
     }
 
     case "uri": {
       const p = part as UriPart
+      const modality = resolveContentModality(p.modality, p.mime_type)
       const media = renderMediaByModality({
-        modality: p.modality,
+        modality,
         src: p.uri,
         mimeType: p.mime_type ?? undefined,
         href: p.uri,
@@ -151,7 +154,7 @@ export function Part({
         <FileCard
           fileName={fileNameFromUri(p.uri)}
           mimeType={p.mime_type ?? undefined}
-          modality={p.modality}
+          modality={modality}
           href={p.uri}
         />
       )
