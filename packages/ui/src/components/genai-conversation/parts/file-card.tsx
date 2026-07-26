@@ -13,7 +13,8 @@ import {
   FileVideoIcon,
   type LucideIcon,
 } from "lucide-react"
-import type { ReactNode } from "react"
+import { type ReactNode, useState } from "react"
+import { useMountEffect } from "../../../hooks/use-mount-effect.ts"
 import { cn } from "../../../utils/cn.ts"
 import { Icon } from "../../icons/icons.tsx"
 import { Text } from "../../text/text.tsx"
@@ -50,7 +51,6 @@ function normalizeMime(mimeType?: string | null): string {
   return (mimeType ?? "").toLowerCase().split(";")[0]?.trim() ?? ""
 }
 
-/** Picks a type-aware (monochrome) lucide icon from the mime type, falling back to modality then generic. */
 function fileIconForMime(mimeType?: string | null, modality?: string): LucideIcon {
   const mime = normalizeMime(mimeType)
   if (mime === "application/pdf") return FileTextIcon
@@ -69,7 +69,6 @@ function fileIconForMime(mimeType?: string | null, modality?: string): LucideIco
   return FileIcon
 }
 
-/** Human-readable type label, e.g. "PDF document"; derives from the mime subtype, then modality. */
 function fileTypeLabel(mimeType?: string | null, modality?: string): string {
   const mime = normalizeMime(mimeType)
   if (MIME_LABELS[mime]) return MIME_LABELS[mime]
@@ -79,12 +78,27 @@ function fileTypeLabel(mimeType?: string | null, modality?: string): string {
   return "File"
 }
 
-/** File extension for the download filename, e.g. "application/pdf" -> "pdf". */
 function fileExtensionForMime(mimeType?: string | null): string | undefined {
   const mime = normalizeMime(mimeType)
   if (MIME_EXTENSIONS[mime]) return MIME_EXTENSIONS[mime]
   const subtype = mime.includes("/") ? mime.split("/")[1] : undefined
   return subtype && /^[a-z0-9]+$/.test(subtype) ? subtype : undefined
+}
+
+function dataUriToObjectUrl(dataUri: string): string | undefined {
+  try {
+    const comma = dataUri.indexOf(",")
+    if (!dataUri.startsWith("data:") || comma < 0) return undefined
+    const meta = dataUri.slice(5, comma)
+    const payload = dataUri.slice(comma + 1)
+    const mime = meta.split(";")[0] || "application/octet-stream"
+    const bytes = meta.includes(";base64")
+      ? Uint8Array.from(atob(payload), (c) => c.charCodeAt(0))
+      : new TextEncoder().encode(decodeURIComponent(payload))
+    return URL.createObjectURL(new Blob([bytes], { type: mime }))
+  } catch {
+    return undefined
+  }
 }
 
 function ActionLink({
@@ -110,12 +124,6 @@ function ActionLink({
   )
 }
 
-/**
- * Renders a non-previewable attachment (document/file) as a card: type-aware icon + label + optional size.
- * The action depends on the source — `href` (uri) opens in a new tab, `downloadDataUri` (blob) downloads,
- * and a bare `fileId` (no resolvable source) renders a disabled action with an explanatory tooltip while
- * surfacing the id as the secondary line. PDFs with a resolvable source get both preview and download.
- */
 export function FileCard({
   fileName,
   mimeType,
@@ -145,15 +153,25 @@ export function FileCard({
 
   const extension = fileExtensionForMime(mimeType)
   const downloadName = fileName ?? `attachment${extension ? `.${extension}` : ""}`
-  const previewUri = href ?? downloadDataUri
-  const downloadUri = downloadDataUri ?? href
+
+  // data: URLs can't be opened as top-level navigations in modern browsers — use a blob: URL for preview.
+  const [blobPreviewUrl] = useState(() =>
+    downloadDataUri?.startsWith("data:") ? dataUriToObjectUrl(downloadDataUri) : undefined,
+  )
+  useMountEffect(() => () => {
+    if (blobPreviewUrl) URL.revokeObjectURL(blobPreviewUrl)
+  })
+
+  const previewUri = href ?? blobPreviewUrl
 
   let actions: ReactNode
-  if (isPdf && previewUri && downloadUri) {
+  if (isPdf && (previewUri || downloadDataUri)) {
     actions = (
       <div className="flex shrink-0 items-center gap-1.5">
-        <ActionLink href={previewUri} label="Preview PDF" icon={ExternalLinkIcon} />
-        <ActionLink href={downloadUri} label="Download PDF" download={downloadName} icon={DownloadIcon} />
+        {previewUri ? <ActionLink href={previewUri} label="Preview PDF" icon={ExternalLinkIcon} /> : null}
+        {downloadDataUri ? (
+          <ActionLink href={downloadDataUri} label="Download PDF" download={downloadName} icon={DownloadIcon} />
+        ) : null}
       </div>
     )
   } else if (href) {

@@ -115,7 +115,7 @@ const FILE_MESSAGES = [
   {
     role: "user",
     parts: [
-      { type: "text", content: "A linked document (uri → Preview + Download) and an inline CSV (blob → Download):" },
+      { type: "text", content: "A linked PDF (uri → Preview) and an inline CSV (blob → Download):" },
       { type: "uri", modality: "document", mime_type: "application/pdf", uri: "https://docs.latitude.so/guide.pdf" },
       { type: "blob", modality: "document", mime_type: "text/csv", content: CSV_BLOB_B64 },
     ],
@@ -241,7 +241,8 @@ const SECTIONS: { title: string; description: string; messages: GenAIMessage[] }
   },
   {
     title: "Files & documents",
-    description: "file_id references, a linked document (Open), and an inline one (Download).",
+    description:
+      "file_id references, a linked PDF (Preview), an inline CSV (Download), and a mis-tagged PDF blob (Preview + Download).",
     messages: FILE_MESSAGES,
   },
   {

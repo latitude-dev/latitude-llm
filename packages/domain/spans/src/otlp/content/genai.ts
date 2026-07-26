@@ -124,10 +124,14 @@ function normalizeMessagePartModalities(msg: unknown): unknown {
   return { ...m, parts: m.parts.map(normalizePartModality) }
 }
 
+function normalizeMessagesModalities(messages: readonly GenAIMessage[]): GenAIMessage[] {
+  return messages.map((msg) => normalizeMessagePartModalities(msg) as GenAIMessage)
+}
+
 function parseMessages(attrs: readonly OtlpKeyValue[], key: string): GenAIMessage[] {
   const raw = extractJsonAttr(attrs, key)
   if (!Array.isArray(raw)) return []
-  return hoistToolResults(raw.map(normalizeSemconvMessage).map(normalizeMessagePartModalities) as GenAIMessage[])
+  return hoistToolResults(raw.map(normalizeSemconvMessage) as GenAIMessage[])
 }
 
 // Cloudflare AI Gateway sends the raw request body under gen_ai.input.messages
@@ -231,5 +235,10 @@ export function parseGenAICurrent(attrs: readonly OtlpKeyValue[]): ParsedContent
     if (!result.error) outputMessages = result.messages as GenAIMessage[]
   }
 
-  return { inputMessages, outputMessages, systemInstructions, toolDefinitions }
+  return {
+    inputMessages: normalizeMessagesModalities(inputMessages),
+    outputMessages: normalizeMessagesModalities(outputMessages),
+    systemInstructions,
+    toolDefinitions,
+  }
 }

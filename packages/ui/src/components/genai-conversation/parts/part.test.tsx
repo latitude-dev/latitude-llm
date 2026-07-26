@@ -40,7 +40,7 @@ describe("Part media / file rendering", () => {
     expect(markup).not.toContain("PDF document")
   })
 
-  it("renders a linked PDF uri with preview and download actions", () => {
+  it("renders a linked PDF uri with preview only (cross-origin download is unreliable)", () => {
     const markup = renderToStaticMarkup(
       <Part
         part={{
@@ -54,6 +54,6 @@ describe("Part media / file rendering", () => {
 
     expect(markup).toContain("guide.pdf")
     expect(markup).toContain('aria-label="Preview PDF"')
-    expect(markup).toContain('aria-label="Download PDF"')
+    expect(markup).not.toContain('aria-label="Download PDF"')
   })
 })
