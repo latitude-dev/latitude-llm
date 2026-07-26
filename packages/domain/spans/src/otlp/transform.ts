@@ -159,10 +159,7 @@ function transformSpan({
   const otelStatusCode = INT_TO_STATUS_CODE[span.status?.code ?? 0] ?? "unset"
   const statusCode = resolveStatusCode(spanAttrs, otelStatusCode, scopeName)
 
-  // `resolved.tags`/`.metadata` and `content` can flow through a JSON.parse of an OTLP string
-  // attribute (e.g. a JSON-encoded `gen_ai.input.messages` or `tags` value); a lone surrogate
-  // that the OTLP-level sanitization escaped as literal `\uXXXX` text becomes a real unpaired
-  // surrogate again once parsed, so sanitize the parsed result too.
+  // JSON.parse of an OTLP string (e.g. `gen_ai.input.messages`) can reintroduce a surrogate the OTLP-level pass escaped.
   const resolvedRaw = resolveAttributes({
     spanAttrs,
     statusCode,

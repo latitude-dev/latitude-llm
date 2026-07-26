@@ -12,24 +12,12 @@ import type {
   OtlpStatus,
 } from "./types.ts"
 
-/**
- * OTLP payloads carry arbitrary LLM/user-generated text, which can contain a lone UTF-16
- * surrogate (e.g. truncated mid-emoji by an upstream exporter). Wherever that string ends up —
- * an attribute value, a span/event name, a status message — ClickHouse's JSON insert rejects the
- * whole batch ("missing second part of surrogate pair"). Sanitizing every consumer that reads an
- * OTLP string (resolvers, content parsers, attrString/resourceString/metadata capture) would be
- * sprawling and easy to miss a call site, so sanitize once here, immediately after decoding,
- * before any of those readers see the request.
- */
+/** Strips lone UTF-16 surrogates from every OTLP string once, before any consumer reads the request. */
 export function sanitizeOtlpRequest(request: OtlpExportTraceServiceRequest): OtlpExportTraceServiceRequest {
   return { ...optional("resourceSpans", request.resourceSpans?.map(sanitizeResourceSpans)) }
 }
 
-/**
- * Spreads `{ [key]: value }` only when `value` isn't `undefined`. `exactOptionalPropertyTypes`
- * treats an explicit `{ key: undefined }` as a different (invalid) type from omitting an optional
- * key entirely, so a plain ternary/`??` assignment doesn't type-check here.
- */
+/** Spreads `{ [key]: value }` only when defined — `exactOptionalPropertyTypes` rejects an explicit `undefined`. */
 function optional<K extends string, V>(key: K, value: V | undefined): { [P in K]?: V } {
   return (value !== undefined ? { [key]: value } : {}) as { [P in K]?: V }
 }
@@ -47,6 +35,14 @@ function sanitizeResourceSpans(resourceSpans: OtlpResourceSpans): OtlpResourceSp
       "scopeSpans",
       resourceSpans.scopeSpans?.map((scopeSpans) => ({
         ...scopeSpans,
+        ...optional(
+          "scope",
+          scopeSpans.scope && {
+            ...scopeSpans.scope,
+            ...optional("name", sanitizeStr(scopeSpans.scope.name)),
+            ...optional("version", sanitizeStr(scopeSpans.scope.version)),
+          },
+        ),
         ...optional("spans", scopeSpans.spans?.map(sanitizeSpan)),
       })),
     ),

@@ -211,4 +211,34 @@ describe("transformOtlpToSpans — lone UTF-16 surrogates", () => {
     expect(spans[0]?.attrString["custom.�note"]).toBe("fine")
     expect(spans[0]?.attrString[keyWithSurrogate]).toBeUndefined()
   })
+
+  it("strips a lone surrogate from the instrumentation scope name and version", () => {
+    const request: OtlpExportTraceServiceRequest = {
+      resourceSpans: [
+        {
+          resource: { attributes: [] },
+          scopeSpans: [
+            {
+              scope: { name: loneHighSurrogate, version: loneHighSurrogate },
+              spans: [
+                {
+                  traceId: "0".repeat(32),
+                  spanId: "0".repeat(16),
+                  name: "some_span",
+                  startTimeUnixNano: "1",
+                  endTimeUnixNano: "2",
+                  attributes: [],
+                },
+              ],
+            },
+          ],
+        },
+      ],
+    }
+
+    const { spans } = transformOtlpToSpans(request, context)
+
+    expect(spans[0]?.scopeName).toBe(sanitized)
+    expect(spans[0]?.scopeVersion).toBe(sanitized)
+  })
 })

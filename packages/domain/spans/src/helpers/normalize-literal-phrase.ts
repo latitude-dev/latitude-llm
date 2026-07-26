@@ -23,14 +23,7 @@ export function normalizeLiteralPhrase(text: string): string {
   return stripLoneSurrogates(text.trim().replace(/\s+/g, " "))
 }
 
-/**
- * Recursively strip lone surrogates from every string in a JSON-shaped value (object keys
- * included). A JSON-encoded OTLP attribute (e.g. `gen_ai.input.messages`, a JSON `tags`/`metadata`
- * string) re-escapes a lone surrogate as literal `\uD83D` text, which only becomes a real unpaired
- * surrogate again once something downstream calls `JSON.parse` on it — after the OTLP-level
- * sanitization pass has already run. Apply this to the parsed result so no reparsed content sink
- * (GenAI messages, tool definitions, tags, metadata) can reintroduce one.
- */
+/** Recursively strips lone surrogates from every string (object keys included) in a JSON-shaped value. */
 export function deepStripLoneSurrogates<T>(value: T): T {
   if (typeof value === "string") return stripLoneSurrogates(value) as T
   if (Array.isArray(value)) return value.map(deepStripLoneSurrogates) as T
