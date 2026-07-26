@@ -15,8 +15,7 @@ describe("deepStripLoneSurrogates", () => {
 
     const result = deepStripLoneSurrogates(input) as Record<string, string>
 
-    expect(Object.keys(result)).toHaveLength(2)
-    expect(Object.values(result).sort()).toEqual(["first", "second"])
+    expect(result).toEqual({ "�": "first", "��": "second" })
   })
 
   it("leaves non-JSON-shaped values (numbers, booleans, null) untouched", () => {
