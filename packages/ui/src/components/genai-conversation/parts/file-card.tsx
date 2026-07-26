@@ -150,9 +150,7 @@ export function FileCard({
   } else if (isPdf && href) {
     actions = <ActionLink href={href} label="Preview PDF" icon={ExternalLinkIcon} />
   } else if (isPdf && downloadDataUri) {
-    actions = (
-      <ActionLink href={downloadDataUri} label="Download PDF" download={downloadName} icon={DownloadIcon} />
-    )
+    actions = <ActionLink href={downloadDataUri} label="Download PDF" download={downloadName} icon={DownloadIcon} />
   } else if (href) {
     actions = <ActionLink href={href} label="Open file in new tab" icon={ExternalLinkIcon} />
   } else if (downloadDataUri) {
