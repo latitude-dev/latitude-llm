@@ -14674,6 +14674,16 @@
                 }
               }
             }
+          },
+          "429": {
+            "description": "Export rate limit exceeded",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
           }
         }
       }
