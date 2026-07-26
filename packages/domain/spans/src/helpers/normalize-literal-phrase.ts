@@ -30,7 +30,10 @@ export function deepStripLoneSurrogates<T>(value: T): T {
   if (value !== null && typeof value === "object") {
     const result: Record<string, unknown> = {}
     for (const [key, val] of Object.entries(value as Record<string, unknown>)) {
-      result[stripLoneSurrogates(key)] = deepStripLoneSurrogates(val)
+      let sanitizedKey = stripLoneSurrogates(key)
+      // Two distinct raw keys can sanitize to the same string; disambiguate instead of overwriting.
+      while (sanitizedKey in result) sanitizedKey += "�"
+      result[sanitizedKey] = deepStripLoneSurrogates(val)
     }
     return result as T
   }
