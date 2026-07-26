@@ -1,15 +1,12 @@
-import { stripLoneSurrogates } from "../helpers/normalize-literal-phrase.ts"
 import type { OtlpAnyValue } from "./types.ts"
 
 /**
  * Flatten an OTLP `AnyValue` into plain JS, recursing through `arrayValue`/`kvlistValue`.
  * Shared by the transform (attr_string capture), the metadata enricher, and the GenAI content parser.
- * String leaves are stripped of lone UTF-16 surrogates (arbitrary LLM/user I/O can contain them) —
- * ClickHouse's JSON insert rejects an unpaired surrogate and fails the whole batch otherwise.
  */
 export function anyValueToPlain(value: OtlpAnyValue | undefined): unknown {
   if (!value) return undefined
-  if (value.stringValue !== undefined) return stripLoneSurrogates(value.stringValue)
+  if (value.stringValue !== undefined) return value.stringValue
   if (value.boolValue !== undefined) return value.boolValue
   if (value.intValue !== undefined) return Number(value.intValue)
   if (value.doubleValue !== undefined) return value.doubleValue

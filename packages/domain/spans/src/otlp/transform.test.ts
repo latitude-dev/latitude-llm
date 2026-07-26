@@ -154,4 +154,61 @@ describe("transformOtlpToSpans — lone UTF-16 surrogates", () => {
 
     expect(spans[0]?.resourceString["deployment.note"]).toBe(sanitized)
   })
+
+  it("strips a lone surrogate from GenAI message content read by the content parsers", () => {
+    const { spans } = transformOtlpToSpans(
+      requestWithSpanAttributes([
+        {
+          key: "gen_ai.input.messages",
+          value: {
+            stringValue: JSON.stringify([{ role: "user", parts: [{ type: "text", content: loneHighSurrogate }] }]),
+          },
+        },
+      ]),
+      context,
+    )
+
+    const part = spans[0]?.inputMessages[0]?.parts[0] as { content?: unknown } | undefined
+    expect(part?.content).toBe(sanitized)
+  })
+
+  it("strips a lone surrogate from the promoted service.name resource attribute", () => {
+    const request: OtlpExportTraceServiceRequest = {
+      resourceSpans: [
+        {
+          resource: { attributes: [{ key: "service.name", value: { stringValue: loneHighSurrogate } }] },
+          scopeSpans: [
+            {
+              scope: { name: "test-scope", version: "1" },
+              spans: [
+                {
+                  traceId: "0".repeat(32),
+                  spanId: "0".repeat(16),
+                  name: "some_span",
+                  startTimeUnixNano: "1",
+                  endTimeUnixNano: "2",
+                  attributes: [],
+                },
+              ],
+            },
+          ],
+        },
+      ],
+    }
+
+    const { spans } = transformOtlpToSpans(request, context)
+
+    expect(spans[0]?.serviceName).toBe(sanitized)
+  })
+
+  it("strips a lone surrogate from an attribute key", () => {
+    const keyWithSurrogate = "custom.\uD83Dnote"
+    const { spans } = transformOtlpToSpans(
+      requestWithSpanAttributes([{ key: keyWithSurrogate, value: { stringValue: "fine" } }]),
+      context,
+    )
+
+    expect(spans[0]?.attrString["custom.�note"]).toBe("fine")
+    expect(spans[0]?.attrString[keyWithSurrogate]).toBeUndefined()
+  })
 })

@@ -10,7 +10,7 @@ import {
   TraceId,
 } from "@domain/shared"
 import type { SpanDetail, SpanKind, SpanStatusCode } from "../entities/span.ts"
-import { stripLoneSurrogates } from "../helpers/normalize-literal-phrase.ts"
+import { deepStripLoneSurrogates } from "../helpers/normalize-literal-phrase.ts"
 import { anyValueToPlain } from "./any-value.ts"
 import { attrArray, stringAttr } from "./attributes.ts"
 import { parseContent } from "./content/index.ts"
@@ -19,6 +19,7 @@ import { resolveAttributes } from "./resolvers/index.ts"
 import { resolvePerformance } from "./resolvers/performance.ts"
 import { resolveStatusCode } from "./resolvers/status.ts"
 import { resolveToolExecution } from "./resolvers/tool-execution.ts"
+import { sanitizeOtlpRequest } from "./sanitize.ts"
 import type { OtlpAnyValue, OtlpExportTraceServiceRequest, OtlpKeyValue, OtlpResource, OtlpSpan } from "./types.ts"
 
 const INT_TO_SPAN_KIND: Record<number, SpanKind> = {
@@ -46,7 +47,7 @@ function resolveAnyValue(
   value: OtlpAnyValue | undefined,
 ): { type: "string" | "int" | "float" | "bool"; value: string | number | boolean } | null {
   if (!value) return null
-  if (value.stringValue !== undefined) return { type: "string", value: stripLoneSurrogates(value.stringValue) }
+  if (value.stringValue !== undefined) return { type: "string", value: value.stringValue }
   if (value.boolValue !== undefined) return { type: "bool", value: value.boolValue }
   if (value.intValue !== undefined) return { type: "int", value: Number(value.intValue) }
   if (value.doubleValue !== undefined) return { type: "float", value: value.doubleValue }
@@ -61,7 +62,7 @@ function extractResourceString(resource: OtlpResource | undefined): Record<strin
   const result: Record<string, string> = {}
   for (const attr of attrArray(resource?.attributes)) {
     if (attr.value?.stringValue !== undefined) {
-      result[attr.key] = stripLoneSurrogates(attr.value.stringValue)
+      result[attr.key] = attr.value.stringValue
     }
   }
   return result
@@ -158,14 +159,23 @@ function transformSpan({
   const otelStatusCode = INT_TO_STATUS_CODE[span.status?.code ?? 0] ?? "unset"
   const statusCode = resolveStatusCode(spanAttrs, otelStatusCode, scopeName)
 
-  const resolved = resolveAttributes({
+  // `resolved.tags`/`.metadata` and `content` can flow through a JSON.parse of an OTLP string
+  // attribute (e.g. a JSON-encoded `gen_ai.input.messages` or `tags` value); a lone surrogate
+  // that the OTLP-level sanitization escaped as literal `\uXXXX` text becomes a real unpaired
+  // surrogate again once parsed, so sanitize the parsed result too.
+  const resolvedRaw = resolveAttributes({
     spanAttrs,
     statusCode,
     spanName: span.name ?? "",
     scopeName,
     hasParent: hasParentSpan(span.parentSpanId),
   })
-  const content = parseContent(spanAttrs)
+  const resolved = {
+    ...resolvedRaw,
+    tags: deepStripLoneSurrogates(resolvedRaw.tags),
+    metadata: deepStripLoneSurrogates(resolvedRaw.metadata),
+  }
+  const content = deepStripLoneSurrogates(parseContent(spanAttrs))
   const serviceName = stringAttr(resourceAttrs, "service.name") ?? ""
   const performance = resolvePerformance({
     spanAttrs,
@@ -262,9 +272,10 @@ function transformSpan({
 }
 
 export function transformOtlpToSpans(
-  request: OtlpExportTraceServiceRequest,
+  rawRequest: OtlpExportTraceServiceRequest,
   context: TransformContext,
 ): TransformResult {
+  const request = sanitizeOtlpRequest(rawRequest)
   const spans: SpanDetail[] = []
   let rejectedSpans = 0
   const { ingestedAt } = context
