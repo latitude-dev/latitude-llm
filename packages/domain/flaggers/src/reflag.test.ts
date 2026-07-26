@@ -74,11 +74,7 @@ describe("isUserCentricReflagInapplicable", () => {
       ),
     ).toBe(true)
     expect(
-      isUserCentricReflagInapplicable(
-        ["taxonomy:facet-extract"],
-        false,
-        AI_GENERATE_TELEMETRY_SPAN_NAMES.facetExtract,
-      ),
+      isUserCentricReflagInapplicable(["taxonomy:facet-extract"], false, AI_GENERATE_TELEMETRY_SPAN_NAMES.facetExtract),
     ).toBe(true)
   })
 

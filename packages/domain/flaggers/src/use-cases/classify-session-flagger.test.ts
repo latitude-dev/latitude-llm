@@ -108,60 +108,60 @@ describe("classifySessionFlaggerUseCase gating", () => {
       rootSpanName: AI_GENERATE_TELEMETRY_SPAN_NAMES.taxonomyProposeThemes,
       label: "taxonomy:propose-themes",
     },
-  ])(
-    "returns { matched: false } for frustration on a $label session without calling AI",
-    async ({ tags, rootSpanName }) => {
-      const session = makeSessionDetail(
-        [
-          user("I just honestly don't understand why you couldn't get this done for me — nested sample wording"),
-          assistant('{"matched":true,"feedback":"task not completed","messageIndex":"2"}'),
-        ],
-        { tags, rootSpanName },
-      )
-      const { repository: sessionRepo } = createFakeSessionRepository({
-        findBySessionId: () => Effect.succeed(session),
-      })
-      const { repository: spanRepo } = createFakeSpanRepository({
-        findLatestOutputTraceId: () => Effect.die("spans must not be queried for single-trace sessions"),
-      })
-      const { repository: flaggerRepo } = createFakeFlaggerRepository([], {
-        findByProjectAndSlug: () =>
-          Effect.succeed({
-            id: FlaggerId(generateId()),
-            organizationId: INPUT.organizationId,
-            projectId: INPUT.projectId,
-            slug: "frustration",
-            enabled: true,
-            sampling: 100,
-            createdAt: new Date(),
-            updatedAt: new Date(),
-          } as Flagger),
-      })
-      const { layer: aiLayer } = createFakeAI({
-        generate: () => Effect.die("AI must not be called for user-centric nested-sample traces"),
-      })
+  ])("returns { matched: false } for frustration on a $label session without calling AI", async ({
+    tags,
+    rootSpanName,
+  }) => {
+    const session = makeSessionDetail(
+      [
+        user("I just honestly don't understand why you couldn't get this done for me — nested sample wording"),
+        assistant('{"matched":true,"feedback":"task not completed","messageIndex":"2"}'),
+      ],
+      { tags, rootSpanName },
+    )
+    const { repository: sessionRepo } = createFakeSessionRepository({
+      findBySessionId: () => Effect.succeed(session),
+    })
+    const { repository: spanRepo } = createFakeSpanRepository({
+      findLatestOutputTraceId: () => Effect.die("spans must not be queried for single-trace sessions"),
+    })
+    const { repository: flaggerRepo } = createFakeFlaggerRepository([], {
+      findByProjectAndSlug: () =>
+        Effect.succeed({
+          id: FlaggerId(generateId()),
+          organizationId: INPUT.organizationId,
+          projectId: INPUT.projectId,
+          slug: "frustration",
+          enabled: true,
+          sampling: 100,
+          createdAt: new Date(),
+          updatedAt: new Date(),
+        } as Flagger),
+    })
+    const { layer: aiLayer } = createFakeAI({
+      generate: () => Effect.die("AI must not be called for user-centric nested-sample traces"),
+    })
 
-      const result = await Effect.runPromise(
-        classifySessionFlaggerUseCase({ ...INPUT, flaggerSlug: "frustration" }).pipe(
-          Effect.provide(
-            Layer.mergeAll(
-              Layer.succeed(SessionRepository, sessionRepo),
-              Layer.succeed(SpanRepository, spanRepo),
-              Layer.succeed(FlaggerRepository, flaggerRepo),
-              Layer.succeed(CacheStore, {
-                get: () => Effect.succeed(null),
-                set: () => Effect.void,
-                delete: () => Effect.void,
-              }),
-              Layer.succeed(ChSqlClient, createFakeChSqlClient({ organizationId: OrganizationId(INPUT.organizationId) })),
-              Layer.succeed(SqlClient, createFakeSqlClient({ organizationId: OrganizationId(INPUT.organizationId) })),
-              aiLayer,
-            ),
+    const result = await Effect.runPromise(
+      classifySessionFlaggerUseCase({ ...INPUT, flaggerSlug: "frustration" }).pipe(
+        Effect.provide(
+          Layer.mergeAll(
+            Layer.succeed(SessionRepository, sessionRepo),
+            Layer.succeed(SpanRepository, spanRepo),
+            Layer.succeed(FlaggerRepository, flaggerRepo),
+            Layer.succeed(CacheStore, {
+              get: () => Effect.succeed(null),
+              set: () => Effect.void,
+              delete: () => Effect.void,
+            }),
+            Layer.succeed(ChSqlClient, createFakeChSqlClient({ organizationId: OrganizationId(INPUT.organizationId) })),
+            Layer.succeed(SqlClient, createFakeSqlClient({ organizationId: OrganizationId(INPUT.organizationId) })),
+            aiLayer,
           ),
         ),
-      )
+      ),
+    )
 
-      expect(result).toEqual({ matched: false })
-    },
-  )
+    expect(result).toEqual({ matched: false })
+  })
 })
