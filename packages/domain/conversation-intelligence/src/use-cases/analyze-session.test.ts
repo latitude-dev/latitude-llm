@@ -1302,4 +1302,68 @@ describe("analyzeSessionUseCase", () => {
     expect(prompt.match(/<\/conversation_data>/g)).toHaveLength(1)
     expect(prompt).toContain("\\u003c/conversation_data\\u003e")
   })
+
+  // Bedrock/Anthropic reject a lone UTF-16 surrogate in the request body with
+  // "unexpected end of hex escape" while deserializing JSON. A short transcript
+  // takes the no-truncation early-return path, which must sanitize on its own.
+  it("sanitizes a raw lone surrogate in the classifier prompt even without truncation", async () => {
+    const frustratedMessage = "This is incredibly frustrating \uD83D, you keep giving me the wrong answer."
+    const { ai, generated } = createAdjudicationAi({
+      embeddingForText: (text) =>
+        text.includes("frustration annoyance or anger") || text.startsWith("user: This is incredibly frustrating")
+          ? [1, 0]
+          : [-1, 0],
+      acceptedCandidateIds: (prompt) => candidatesFromPrompt(prompt).map((candidate) => candidate.id),
+    })
+    const { effect } = runUseCase({
+      session: makeSessionWithMessages([
+        message("user", "Can you help me update my billing email?"),
+        message("assistant", "Sure, open account settings and choose Profile."),
+        message("user", frustratedMessage),
+        message("assistant", "I'm sorry, I will correct that now."),
+      ]),
+      ai,
+    })
+
+    await Effect.runPromise(effect)
+
+    const prompt = generated[0]?.prompt ?? ""
+    expect(prompt).toContain("frustrating")
+    expect(hasLoneSurrogate(prompt)).toBe(false)
+  })
+
+  // Same failure mode reaches the taxonomy projection embedding: `middleTruncate`
+  // slices by UTF-16 code unit, which can split a surrogate pair in half. The
+  // head cut here lands cleanly (even offset) but the tail cut lands mid-pair
+  // (odd offset), reproducing the exact truncation-split bug from production.
+  it("does not leave a lone surrogate when projection-text truncation splits a surrogate pair", async () => {
+    const embeds: string[] = []
+    const ai: AIShape = {
+      generate: <T>() =>
+        Effect.succeed({ object: { acceptedCandidateIds: [] } as T, tokens: 0, duration: 0 }) as Effect.Effect<
+          GenerateResult<T>,
+          never
+        >,
+      embed: (input) => {
+        embeds.push(input.text)
+        return Effect.succeed({ embedding: [1, 0] })
+      },
+      rerank: () => Effect.die("rerank not used"),
+    }
+    const { effect } = runUseCase({
+      session: makeSessionWithMessages([message("user", "😀".repeat(20_000)), message("assistant", "ok!")]),
+      ai,
+    })
+
+    await Effect.runPromise(effect)
+
+    const projectionText = embeds.find((text) => text.includes("[...truncated...]"))
+    expect(projectionText).toBeDefined()
+    expect(projectionText?.length).toBeLessThanOrEqual(24_000)
+    expect(hasLoneSurrogate(projectionText ?? "")).toBe(false)
+  })
 })
+
+function hasLoneSurrogate(text: string): boolean {
+  return /[\uD800-\uDBFF](?![\uDC00-\uDFFF])|(?<![\uD800-\uDBFF])[\uDC00-\uDFFF]/.test(text)
+}
