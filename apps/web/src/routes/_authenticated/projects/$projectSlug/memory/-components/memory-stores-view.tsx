@@ -9,7 +9,13 @@ import {
   listingLayoutIntrinsicScroll,
 } from "../../../../../../layouts/ListingLayout/index.tsx"
 import type { TableColumnOption } from "../../-components/columns-selector.tsx"
-import { formatPercent, formatRatio, formatSignedCount } from "./memory-formatters.ts"
+import {
+  formatPercent,
+  formatRatio,
+  formatSignedCount,
+  MEMORY_TREND_BUCKET_SECONDS,
+  resolveMemoryTrendWindow,
+} from "./memory-formatters.ts"
 import { MemoryTrendBar } from "./memory-trend-bar.tsx"
 import { encodeStoreSegment, storeDisplayLabel } from "./store-encoding.ts"
 
@@ -62,7 +68,6 @@ export function MemoryStoresView({
   projectSlug,
   rangeFromIso,
   rangeToIso,
-  trendBucketSeconds,
 }: {
   readonly stores: readonly MemoryStoreMetricsRecord[]
   readonly isLoading: boolean
@@ -73,8 +78,12 @@ export function MemoryStoresView({
   readonly projectSlug: string
   readonly rangeFromIso: string
   readonly rangeToIso: string
-  readonly trendBucketSeconds: number
 }) {
+  // Same window the repository buckets the trend over, derived from the same range.
+  const trendWindow = resolveMemoryTrendWindow(Date.parse(rangeFromIso), Date.parse(rangeToIso))
+  const trendFromIso = new Date(trendWindow.fromMs).toISOString()
+  const trendToIso = new Date(trendWindow.toMs).toISOString()
+
   const allColumns: readonly InfiniteTableColumn<MemoryStoreMetricsRecord>[] = [
     {
       key: "store",
@@ -114,9 +123,9 @@ export function MemoryStoresView({
         >
           <MemoryTrendBar
             buckets={store.trend}
-            fromIso={rangeFromIso}
-            toIso={rangeToIso}
-            bucketSeconds={trendBucketSeconds}
+            fromIso={trendFromIso}
+            toIso={trendToIso}
+            bucketSeconds={MEMORY_TREND_BUCKET_SECONDS}
             height={36}
           />
         </Link>
@@ -163,8 +172,8 @@ export function MemoryStoresView({
       sortKey: "ratio",
       render: (store) => (
         <Tooltip asChild trigger={endValue(formatRatio(store.reads, store.writes))}>
-          {formatCount(store.reads)} reads per {formatCount(store.writes)} writes — how much this store is used versus
-          maintained.
+          {formatCount(store.reads)} reads per {formatCount(store.writes)} writes. Shows how often the store is read
+          versus updated.
         </Tooltip>
       ),
     },
@@ -224,8 +233,8 @@ export function MemoryStoresView({
             asChild
             trigger={endValue(`${(store.updateEvents / store.recordsTouched).toFixed(1).replace(/\.0$/, "")}×`)}
           >
-            {formatCount(store.updateEvents)} updates across {formatCount(store.recordsTouched)} records touched — how
-            often records are rewritten.
+            {formatCount(store.updateEvents)} updates across {formatCount(store.recordsTouched)} records. Shows how
+            often records get rewritten.
           </Tooltip>
         ) : (
           endValue("-")

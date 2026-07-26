@@ -96,7 +96,7 @@ export function SignalsTab({
   if (isError) {
     return (
       <div className="flex flex-1 items-center justify-center px-6 py-10">
-        <Text.H5 color="foregroundMuted">Couldn't load signals — retry.</Text.H5>
+        <Text.H5 color="foregroundMuted">Couldn't load signals. Please try again.</Text.H5>
       </div>
     )
   }

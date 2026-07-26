@@ -234,7 +234,8 @@ export const listAnnotationsByTrace = createServerFn({ method: "GET" })
  * than `session_id` so orphan sessions — whose scores carry no `session_id` —
  * still surface their annotations.
  */
-export const listAnnotationsBySession = createServerFn({ method: "GET" })
+// POST keeps the up-to-500 trace-id payload below HTTP request-line limits.
+export const listAnnotationsBySession = createServerFn({ method: "POST" })
   .inputValidator(
     z.object({
       projectId: z.string(),

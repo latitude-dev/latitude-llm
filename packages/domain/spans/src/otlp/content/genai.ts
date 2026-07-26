@@ -2,6 +2,7 @@
  * Content parser for OTEL GenAI semconv v1.37+ (gen_ai.{input,output}.messages,
  * gen_ai.system_instructions, gen_ai.tool.definitions — structured or JSON string).
  */
+import { resolveContentModality } from "@repo/utils"
 import type { GenAIMessage, GenAISystem } from "rosetta-ai"
 import { Provider, safeTranslate } from "rosetta-ai"
 import type { ToolDefinition } from "../../entities/span.ts"
@@ -103,6 +104,28 @@ function hoistToolResults(messages: readonly GenAIMessage[]): GenAIMessage[] {
     if (otherParts.length > 0) out.push({ ...msg, parts: otherParts })
   }
   return out
+}
+
+function normalizePartModality(part: unknown): unknown {
+  if (!part || typeof part !== "object") return part
+  const p = part as Record<string, unknown>
+  if (p.type !== "blob" && p.type !== "uri" && p.type !== "file") return part
+  if (typeof p.modality !== "string") return part
+  const mime = typeof p.mime_type === "string" ? p.mime_type : null
+  const modality = resolveContentModality(p.modality, mime)
+  if (modality === p.modality) return part
+  return { ...p, modality }
+}
+
+function normalizeMessagePartModalities(msg: unknown): unknown {
+  if (!msg || typeof msg !== "object") return msg
+  const m = msg as Record<string, unknown>
+  if (!Array.isArray(m.parts)) return msg
+  return { ...m, parts: m.parts.map(normalizePartModality) }
+}
+
+function normalizeMessagesModalities(messages: readonly GenAIMessage[]): GenAIMessage[] {
+  return messages.map((msg) => normalizeMessagePartModalities(msg) as GenAIMessage)
 }
 
 function parseMessages(attrs: readonly OtlpKeyValue[], key: string): GenAIMessage[] {
@@ -212,5 +235,10 @@ export function parseGenAICurrent(attrs: readonly OtlpKeyValue[]): ParsedContent
     if (!result.error) outputMessages = result.messages as GenAIMessage[]
   }
 
-  return { inputMessages, outputMessages, systemInstructions, toolDefinitions }
+  return {
+    inputMessages: normalizeMessagesModalities(inputMessages),
+    outputMessages: normalizeMessagesModalities(outputMessages),
+    systemInstructions,
+    toolDefinitions,
+  }
 }

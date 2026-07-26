@@ -40,6 +40,41 @@ export const hash = (value: unknown): Effect.Effect<string, CryptoError> =>
 export const randomToken = (length: number): string =>
   hexEncode(crypto.getRandomValues(new Uint8Array(Math.ceil(length / 2)))).slice(0, length)
 
+/** Lowercase-hex HMAC-SHA256 of `message` keyed by `secret`, via Web Crypto (browser-safe). */
+export const hmacSha256Hex = (secret: string, message: string): Effect.Effect<string, never> =>
+  Effect.promise(async () => {
+    const key = await crypto.subtle.importKey("raw", encodeUtf8(secret), { name: "HMAC", hash: "SHA-256" }, false, [
+      "sign",
+    ])
+    const signature = await crypto.subtle.sign("HMAC", key, encodeUtf8(message))
+    return hexEncode(new Uint8Array(signature))
+  })
+
+/**
+ * Verifies a lowercase-hex `X-*-Signature`-style HMAC-SHA256 in constant time:
+ * recomputes the HMAC of `message` under `secret` and compares it to
+ * `signatureHex`. Shared by the Slack and GitHub webhook verifiers.
+ *
+ * `crypto.timingSafeEqual` (`node:crypto`) is loaded via a dynamic import so
+ * this module keeps NO static `node:crypto` dependency and stays safe to load
+ * in browser bundles (the compare only runs server-side, where webhooks live).
+ */
+export const verifyHmacSha256Hex = (input: {
+  readonly secret: string
+  readonly message: string
+  readonly signatureHex: string
+}): Effect.Effect<boolean, never> =>
+  Effect.gen(function* () {
+    const expected = yield* hmacSha256Hex(input.secret, input.message)
+    return yield* Effect.promise(async () => {
+      const expectedBytes = encodeUtf8(expected)
+      const providedBytes = encodeUtf8(input.signatureHex)
+      if (expectedBytes.length !== providedBytes.length) return false
+      const { timingSafeEqual } = await import("node:crypto")
+      return timingSafeEqual(expectedBytes, providedBytes)
+    })
+  })
+
 const ALGORITHM = "AES-GCM"
 const IV_LENGTH = 12
 const AUTH_TAG_LENGTH = 16

@@ -610,6 +610,7 @@ describe("domain-events dispatcher", () => {
       consumedCredits: 100_030,
       overageCredits: 30,
       reportedOverageCredits: 0,
+      limitsCrossed: [],
     })
 
     await consumer.dispatchTask("domain-events", "dispatch", envelopeToDispatchPayload(envelope))
@@ -631,6 +632,103 @@ describe("domain-events dispatcher", () => {
     })
   })
 
+  it("routes BillingUsagePeriodUpdated to request-billing-limit-notifications when a limit is crossed", async () => {
+    const { consumer, published } = setupDispatcher()
+
+    const envelope = makeEnvelope("BillingUsagePeriodUpdated", {
+      organizationId: "org-1",
+      periodStart: "2026-01-01T00:00:00.000Z",
+      periodEnd: "2026-02-01T00:00:00.000Z",
+      planSource: "free-fallback",
+      overageAllowed: false,
+      includedCredits: 20_000,
+      consumedCredits: 20_000,
+      overageCredits: 0,
+      reportedOverageCredits: 0,
+      limitsCrossed: ["included-credits"],
+    })
+
+    await consumer.dispatchTask("domain-events", "dispatch", envelopeToDispatchPayload(envelope))
+
+    expect(published).toEqual([
+      expect.objectContaining({
+        queue: "notifications",
+        task: "request-billing-limit-notifications",
+        payload: {
+          organizationId: "org-1",
+          periodStart: "2026-01-01T00:00:00.000Z",
+          periodEnd: "2026-02-01T00:00:00.000Z",
+          limitKind: "included-credits",
+          includedCredits: 20_000,
+          consumedCredits: 20_000,
+          overageCredits: 0,
+        },
+        options: {
+          dedupeKey: "notifications:request-billing-limit:org-1:2026-01-01T00:00:00.000Z:included-credits",
+        },
+      }),
+    ])
+  })
+
+  it("publishes one billing-limit notification request per crossed threshold", async () => {
+    const { consumer, published } = setupDispatcher()
+
+    const envelope = makeEnvelope("BillingUsagePeriodUpdated", {
+      organizationId: "org-1",
+      periodStart: "2026-01-01T00:00:00.000Z",
+      periodEnd: "2026-02-01T00:00:00.000Z",
+      planSource: "subscription",
+      overageAllowed: true,
+      includedCredits: 100_000,
+      consumedCredits: 100_000,
+      overageCredits: 0,
+      reportedOverageCredits: 0,
+      limitsCrossed: ["overage-started", "spend-cap"],
+    })
+
+    await consumer.dispatchTask("domain-events", "dispatch", envelopeToDispatchPayload(envelope))
+
+    expect(published).toEqual([
+      expect.objectContaining({
+        queue: "notifications",
+        task: "request-billing-limit-notifications",
+        payload: expect.objectContaining({ limitKind: "overage-started" }),
+        options: {
+          dedupeKey: "notifications:request-billing-limit:org-1:2026-01-01T00:00:00.000Z:overage-started",
+        },
+      }),
+      expect.objectContaining({
+        queue: "notifications",
+        task: "request-billing-limit-notifications",
+        payload: expect.objectContaining({ limitKind: "spend-cap" }),
+        options: {
+          dedupeKey: "notifications:request-billing-limit:org-1:2026-01-01T00:00:00.000Z:spend-cap",
+        },
+      }),
+    ])
+  })
+
+  it("does not request billing-limit notifications when limitsCrossed is empty", async () => {
+    const { consumer, published } = setupDispatcher()
+
+    const envelope = makeEnvelope("BillingUsagePeriodUpdated", {
+      organizationId: "org-1",
+      periodStart: "2026-01-01T00:00:00.000Z",
+      periodEnd: "2026-02-01T00:00:00.000Z",
+      planSource: "free-fallback",
+      overageAllowed: false,
+      includedCredits: 20_000,
+      consumedCredits: 20_001,
+      overageCredits: 0,
+      reportedOverageCredits: 0,
+      limitsCrossed: [],
+    })
+
+    await consumer.dispatchTask("domain-events", "dispatch", envelopeToDispatchPayload(envelope))
+
+    expect(published).toEqual([])
+  })
+
   it("coalesces BillingUsagePeriodUpdated overage reports to the latest snapshot without sliding the window", async () => {
     const { consumer, queue } = setupDispatcher()
 
@@ -644,6 +742,7 @@ describe("domain-events dispatcher", () => {
       consumedCredits: 100_030,
       overageCredits: 30,
       reportedOverageCredits: 0,
+      limitsCrossed: [],
     })
     const secondEnvelope = makeEnvelope("BillingUsagePeriodUpdated", {
       organizationId: "org-1",
@@ -655,6 +754,7 @@ describe("domain-events dispatcher", () => {
       consumedCredits: 105_000,
       overageCredits: 5_000,
       reportedOverageCredits: 0,
+      limitsCrossed: [],
     })
 
     await consumer.dispatchTask("domain-events", "dispatch", envelopeToDispatchPayload(firstEnvelope))

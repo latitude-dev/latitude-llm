@@ -399,7 +399,7 @@ function ToolMixSection({ rows }: { readonly rows: ReadonlyArray<ToolMixCheckRow
       <CardContent className="flex flex-col gap-0 px-4 pb-4 pt-0">
         <Text.H6 color="foregroundMuted" className="mb-4 italic">
           Types of Claude Code tool calls this week, compared against our expected baselines. Large drift means
-          personalities may be mis-assigned — a "Retune" row is the clearest signal to update the baseline.
+          personalities may be mis-assigned. A "Retune" row is the clearest sign to update the baseline.
         </Text.H6>
         <div className="flex flex-col gap-2">
           {sorted.map((row) => {
@@ -505,8 +505,8 @@ function ConfidenceSection({
         {/* 4B: Always-fires fallbacks */}
         <div className="flex flex-col gap-2">
           <Text.H6 color="foregroundMuted" className="italic">
-            Fallback archetypes win when no conditional gate clears. A weak score here is healthy — it means the
-            conditional archetypes are well-calibrated and winning cleanly.
+            Fallback archetypes win when no conditional gate clears. A weak score here is healthy: the conditional
+            archetypes are well-calibrated and winning cleanly.
           </Text.H6>
           {alwaysFired.length === 0 ? (
             <Text.H6 color="foregroundMuted">No fallback archetypes fired this week.</Text.H6>

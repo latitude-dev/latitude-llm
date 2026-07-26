@@ -1,6 +1,8 @@
 export {
+  COLD_STORAGE_MIN_IDLE_DAYS,
   isMemoryStoreMetricSortField,
   MEMORY_STORE_METRIC_SORT_FIELDS,
+  MEMORY_TREND_BUCKET_SECONDS,
   type MemoryActivityBucket,
   type MemoryActivityWriteBucket,
   type MemoryAnalyticsScope,
@@ -9,6 +11,17 @@ export {
   type MemoryStoreMetricsItem,
   type MemoryStoreMetricsListOptions,
   type MemoryStoreMetricsPage,
+  resolveMemoryTrendWindow,
+  STORE_SIZE_BUCKETS,
+  type StoreColdRecord,
+  type StoreInsights,
+  type StoreInsightsOptions,
+  type StoreLargestRecord,
+  type StoreMostReadRecord,
+  type StoreQueryCount,
+  type StoreSizeBucket,
+  type StoreTokenPoint,
+  type StoreWriteHealthRecord,
 } from "./entities/memory-analytics.ts"
 export {
   type MemoryBlob,
@@ -99,6 +112,10 @@ export {
   type GetMemoryOverviewInput,
   getMemoryOverviewUseCase,
 } from "./use-cases/get-memory-overview.ts"
+export {
+  type GetStoreInsightsInput,
+  getStoreInsightsUseCase,
+} from "./use-cases/get-store-insights.ts"
 export {
   type ListMemoryStoresInput,
   listMemoryStoresUseCase,

@@ -1,17 +1,19 @@
 import { SpanId, TraceId } from "@domain/shared"
-import type { SpanMessagesData } from "@domain/spans"
+import type { ConversationSpanRef, SpanMessagesData } from "@domain/spans"
 import { buildConversationSpanMaps } from "@domain/spans"
 import { queryCollectionOptions } from "@tanstack/query-db-collection"
 import { useLiveQuery } from "@tanstack/react-db"
-import { useQuery } from "@tanstack/react-query"
+import { useQueries, useQuery } from "@tanstack/react-query"
+import { useMemo } from "react"
 import type { GenAIMessage } from "rosetta-ai"
 import { createAppCollection } from "../../lib/data/create-app-collection.ts"
 import { getQueryClient } from "../../lib/data/query-client.tsx"
 import { projectScopeData, sandboxOrgIdForScope, useProjectScope } from "../projects/project-scope.tsx"
+import { traceIdsSignature } from "../traces/trace-ids.ts"
+import { selectTracesForLoadedConversation, type TraceTimeRef } from "./select-traces-for-loaded-conversation.ts"
 import {
   getSpanDetail,
   listConversationMessageSpans,
-  listSessionConversationMessageSpans,
   listSpansBySession,
   listSpansByTrace,
   type SpanDetailRecord,
@@ -87,11 +89,6 @@ export const useSpansByTraceCollection = ({
     [projectId, traceId, startTimeFrom, startTimeTo, sandboxOrgIdForScope(scope)],
   )
 }
-
-// Order-independent signature of the session's trace set, so the collection
-// cache/query refresh when a live session gains a trace (traceIds changes) but
-// stay stable across reorderings of the same set.
-const traceIdsSignature = (traceIds: readonly string[]): string => [...traceIds].sort().join(",")
 
 const makeSpansBySessionCollection = (
   projectId: string,
@@ -181,6 +178,56 @@ export const useSpansBySessionCollection = ({
   )
 }
 
+export const useSpansBySessionPages = ({
+  projectId,
+  sessionId,
+  traceIdPages,
+  startTimeFrom,
+  startTimeTo,
+}: {
+  readonly projectId: string
+  readonly sessionId: string
+  readonly traceIdPages: readonly (readonly string[])[]
+  readonly startTimeFrom?: string | undefined
+  readonly startTimeTo?: string | undefined
+}) => {
+  const scope = useProjectScope()
+  const sandboxOrgId = sandboxOrgIdForScope(scope)
+  const pages = traceIdPages.filter((traceIds) => traceIds.length > 0)
+  const queries = useQueries({
+    queries: pages.map((traceIds) => ({
+      queryKey: [
+        "spans",
+        "session-page",
+        sandboxOrgId,
+        projectId,
+        sessionId,
+        traceIdsSignature(traceIds),
+        startTimeFrom,
+        startTimeTo,
+      ],
+      queryFn: () =>
+        listSpansBySession({
+          data: {
+            ...(sandboxOrgId ? { sandboxOrgId } : {}),
+            projectId,
+            traceIds: [...traceIds],
+            startTimeFrom,
+            startTimeTo,
+          },
+        }),
+      staleTime: Infinity,
+    })),
+  })
+  const data = useMemo(() => queries.flatMap((query) => query.data ?? []), [queries])
+
+  return {
+    data,
+    isLoading: queries.some((query) => query.isPending),
+    isError: queries.some((query) => query.isError),
+  }
+}
+
 export const useSpanDetail = ({
   projectId,
   traceId,
@@ -221,49 +268,89 @@ const asMessageSpans = (records: readonly SpanMessagesRecord[]): readonly SpanMe
     outputMessages: record.outputMessages as readonly GenAIMessage[],
   }))
 
+const conversationMessageSpansQueryKey = (sandboxOrgId: string | undefined, projectId: string, traceId: string) =>
+  ["conversationMessageSpans", sandboxOrgId, projectId, traceId] as const
+
+function toolCallSpanRefsFromSpans(spans: readonly SpanRecord[] | undefined): Record<string, ConversationSpanRef> {
+  const map: Record<string, ConversationSpanRef> = {}
+  for (const span of spans ?? []) {
+    if (!span.toolCallId) continue
+    map[span.toolCallId] = { traceId: span.traceId, spanId: span.spanId }
+  }
+  return map
+}
+
+/**
+ * Session conversation → span attribution for the *loaded* message prefix.
+ * Fetches per-trace message spans (same cache as the single-trace path) for an
+ * oldest-first window that grows with pagination — never the full-session
+ * findMessagesForSession payload. Tool-call links also come from lightweight
+ * session spans so execute_tool navigation works before message spans arrive.
+ */
 export function useSessionConversationSpanMaps({
   projectId,
-  sessionId,
-  latestTraceId,
-  sessionStartTime,
-  sessionEndTime,
-  allMessages,
+  traces,
+  loadedMessages,
+  totalMessages,
+  sessionSpans,
   enabled = true,
 }: {
   readonly projectId: string
-  readonly sessionId: string
-  readonly latestTraceId: string
-  readonly sessionStartTime: string
-  readonly sessionEndTime: string
-  readonly allMessages: readonly GenAIMessage[] | undefined
+  readonly traces: readonly TraceTimeRef[]
+  readonly loadedMessages: readonly GenAIMessage[] | undefined
+  readonly totalMessages: number
+  readonly sessionSpans?: readonly SpanRecord[] | undefined
   readonly enabled?: boolean
 }) {
   const scope = useProjectScope()
-  return useQuery({
-    queryKey: [
-      "sessionConversationSpanMaps",
-      sandboxOrgIdForScope(scope),
-      projectId,
-      sessionId,
-      latestTraceId,
-      sessionStartTime,
-      sessionEndTime,
-    ],
-    queryFn: async () => {
-      const spans = await listSessionConversationMessageSpans({
-        data: {
-          ...projectScopeData(scope),
-          projectId,
-          sessionId,
-          sessionStartTime,
-          sessionEndTime,
-        },
-      })
-      return buildConversationSpanMaps(allMessages ?? [], asMessageSpans(spans))
-    },
-    enabled:
-      enabled && projectId.length > 0 && sessionId.length > 0 && latestTraceId.length > 0 && allMessages !== undefined,
+  const sandboxOrgId = sandboxOrgIdForScope(scope)
+  const selectedTraces = useMemo(
+    () =>
+      selectTracesForLoadedConversation({
+        traces,
+        loadedMessageCount: loadedMessages?.length ?? 0,
+        totalMessages,
+      }),
+    [traces, loadedMessages?.length, totalMessages],
+  )
+
+  const spanQueries = useQueries({
+    queries: selectedTraces.map((trace) => ({
+      queryKey: conversationMessageSpansQueryKey(sandboxOrgId, projectId, trace.traceId),
+      queryFn: () =>
+        listConversationMessageSpans({
+          data: {
+            ...projectScopeData(scope),
+            projectId,
+            traceId: trace.traceId,
+            startTime: trace.startTime,
+          },
+        }),
+      enabled:
+        enabled &&
+        projectId.length > 0 &&
+        trace.traceId.length > 0 &&
+        trace.startTime.length > 0 &&
+        loadedMessages !== undefined,
+      staleTime: Number.POSITIVE_INFINITY,
+    })),
   })
+
+  const messageSpanPages = spanQueries.map((query) => query.data)
+  const isPending = spanQueries.some((query) => query.isPending)
+  const isFetching = spanQueries.some((query) => query.isFetching)
+
+  const data = useMemo(() => {
+    if (loadedMessages === undefined) return undefined
+    const spans = messageSpanPages.flatMap((page) => (page ? asMessageSpans(page) : []))
+    const maps = buildConversationSpanMaps(loadedMessages, spans)
+    return {
+      messageSpanMap: maps.messageSpanMap,
+      toolCallSpanMap: { ...toolCallSpanRefsFromSpans(sessionSpans), ...maps.toolCallSpanMap },
+    }
+  }, [loadedMessages, messageSpanPages, sessionSpans])
+
+  return { data, isPending, isFetching, isLoading: isPending }
 }
 
 export function useConversationSpanMaps({
@@ -280,20 +367,26 @@ export function useConversationSpanMaps({
   readonly enabled?: boolean
 }) {
   const scope = useProjectScope()
-  return useQuery({
-    queryKey: ["conversationSpanMaps", sandboxOrgIdForScope(scope), projectId, traceId],
-    queryFn: async () => {
-      const spans = await listConversationMessageSpans({
+  const spansQuery = useQuery({
+    queryKey: conversationMessageSpansQueryKey(sandboxOrgIdForScope(scope), projectId, traceId),
+    queryFn: () =>
+      listConversationMessageSpans({
         data: {
           ...projectScopeData(scope),
           projectId,
           traceId,
           startTime: startTime ?? "",
         },
-      })
-      return buildConversationSpanMaps(allMessages ?? [], asMessageSpans(spans))
-    },
+      }),
     enabled:
       enabled && projectId.length > 0 && traceId.length > 0 && startTime !== undefined && allMessages !== undefined,
+    staleTime: Number.POSITIVE_INFINITY,
   })
+
+  const data = useMemo(() => {
+    if (!spansQuery.data || allMessages === undefined) return undefined
+    return buildConversationSpanMaps(allMessages, asMessageSpans(spansQuery.data))
+  }, [spansQuery.data, allMessages])
+
+  return { ...spansQuery, data }
 }

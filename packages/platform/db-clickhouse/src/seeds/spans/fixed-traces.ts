@@ -422,7 +422,8 @@ export function buildCompatibilitySupportSpans(scope: SeedScope): SpanRow[] {
 
 type LargeConversationSpec = {
   readonly traceKey: string
-  readonly index: number
+  readonly conversationIndex: number
+  readonly terminalTraceSlot: number
   readonly sessionId: string
   readonly daysAgo: number
   readonly turnCount: number
@@ -454,10 +455,10 @@ function largeConversationText(spec: LargeConversationSpec, turnIndex: number, r
   }).join("; ")
 
   if (role === "user") {
-    return `Large conversation seed ${spec.index + 1}, user turn ${checkpoint}. I need the assistant to keep every previous detail in mind while we test streamed conversation loading. ${context}. Please cross-check these facts before changing the recommendation.`
+    return `Large conversation seed ${spec.conversationIndex + 1}, user turn ${checkpoint}. I need the assistant to keep every previous detail in mind while we test streamed conversation loading. ${context}. Please cross-check these facts before changing the recommendation.`
   }
 
-  return `Large conversation seed ${spec.index + 1}, assistant turn ${checkpoint}. I am retaining the running case state, separating verified facts from pending checks, and keeping the recommendation conditional until the required evidence is complete. ${context}. Next I would verify the newest customer statement against the tool-backed record before committing to an outcome.`
+  return `Large conversation seed ${spec.conversationIndex + 1}, assistant turn ${checkpoint}. I am retaining the running case state, separating verified facts from pending checks, and keeping the recommendation conditional until the required evidence is complete. ${context}. Next I would verify the newest customer statement against the tool-backed record before committing to an outcome.`
 }
 
 function buildLargeConversationMessages(spec: LargeConversationSpec): Tau2Message[] {
@@ -470,27 +471,34 @@ function buildLargeConversationMessages(spec: LargeConversationSpec): Tau2Messag
   ])
 }
 
-function createLargeConversationChatSpan(opts: { scope: SeedScope; spec: LargeConversationSpec }): SpanRow {
-  const { scope, spec } = opts
-  const start = scope.dateDaysAgo(spec.daysAgo, 13 + spec.index, 15)
-  const traceId = scope.traceHex(spec.traceKey, spec.index)
-  const spanId = scope.spanHex(spec.traceKey, spec.index)
-  const inputMessages = buildLargeConversationMessages(spec)
-  const renderedMessageCount = inputMessages.length + 2
-  const outputMessages: Tau2Message[] = [
-    {
-      role: "assistant",
-      parts: [
-        {
-          type: "text",
-          content: `Large conversation seed ${spec.index + 1} final answer. This trace intentionally contains ${renderedMessageCount} rendered messages so the conversation drawer must page through chunks instead of returning the whole payload at once.`,
-        },
-      ],
-    },
-  ]
+function largeConversationFinalAnswer(spec: LargeConversationSpec): Tau2Message {
+  const renderedMessageCount = spec.turnCount * 2 + 2
+  return {
+    role: "assistant",
+    parts: [
+      {
+        type: "text",
+        content: `Large conversation seed ${spec.conversationIndex + 1} final answer. This trace intentionally contains ${renderedMessageCount} rendered messages so the conversation drawer must page through chunks instead of returning the whole payload at once.`,
+      },
+    ],
+  }
+}
+
+function createLargeConversationChatSpan(opts: {
+  scope: SeedScope
+  spec: LargeConversationSpec
+  traceSlot: number
+  startTime: Date
+  inputMessages: readonly Tau2Message[]
+  outputMessage: Tau2Message
+}): SpanRow {
+  const { scope, spec, traceSlot, startTime, inputMessages, outputMessage } = opts
+  const traceId = scope.traceHex(spec.traceKey, traceSlot)
+  const spanId = scope.spanHex(spec.traceKey, traceSlot)
+  const outputMessages = [outputMessage]
   const inputTokens = estimateTau2Tokens(inputMessages)
   const outputTokens = estimateTau2Tokens(outputMessages)
-  const durationMs = spec.turnCount * 1200
+  const durationMs = 1200
 
   return {
     organization_id: scope.organizationId,
@@ -503,8 +511,8 @@ function createLargeConversationChatSpan(opts: { scope: SeedScope; spec: LargeCo
     parent_span_id: "",
     api_key_id: scope.apiKeyId,
     simulation_id: "",
-    start_time: formatClickHouseTimestamp(start),
-    end_time: formatClickHouseTimestamp(new Date(start.getTime() + durationMs)),
+    start_time: formatClickHouseTimestamp(startTime),
+    end_time: formatClickHouseTimestamp(new Date(startTime.getTime() + durationMs)),
     name: "chat gpt-4.1 large conversation",
     service_name: spec.serviceName,
     kind: 1,
@@ -563,7 +571,8 @@ function createLargeConversationChatSpan(opts: { scope: SeedScope; spec: LargeCo
 const LARGE_CONVERSATION_SPECS: readonly LargeConversationSpec[] = [
   {
     traceKey: "large-conversation",
-    index: 0,
+    conversationIndex: 0,
+    terminalTraceSlot: 0,
     sessionId: "seed-large-conversation-1",
     daysAgo: 1,
     turnCount: 120,
@@ -573,7 +582,8 @@ const LARGE_CONVERSATION_SPECS: readonly LargeConversationSpec[] = [
   },
   {
     traceKey: "large-conversation",
-    index: 1,
+    conversationIndex: 1,
+    terminalTraceSlot: 1,
     sessionId: "seed-large-conversation-2",
     daysAgo: 1,
     turnCount: 240,
@@ -583,7 +593,8 @@ const LARGE_CONVERSATION_SPECS: readonly LargeConversationSpec[] = [
   },
   {
     traceKey: "large-conversation",
-    index: 2,
+    conversationIndex: 2,
+    terminalTraceSlot: 2,
     sessionId: "seed-large-conversation-3",
     daysAgo: 1,
     turnCount: 420,
@@ -593,8 +604,48 @@ const LARGE_CONVERSATION_SPECS: readonly LargeConversationSpec[] = [
   },
 ]
 
-function buildLargeConversationSpans(scope: SeedScope): SpanRow[] {
-  return LARGE_CONVERSATION_SPECS.map((spec) => createLargeConversationChatSpan({ scope, spec }))
+const LARGE_CONVERSATION_TRACE_INTERVAL_MS = 2000
+const LARGE_CONVERSATION_TURN_TRACE_SLOT_START = LARGE_CONVERSATION_SPECS.length
+const LARGE_CONVERSATION_TRACE_SLOT_COUNT = LARGE_CONVERSATION_SPECS.reduce(
+  (count, spec) => count + spec.turnCount + 1,
+  0,
+)
+
+export function buildLargeConversationSpans(scope: SeedScope): SpanRow[] {
+  let turnTraceSlot = LARGE_CONVERSATION_TURN_TRACE_SLOT_START
+
+  return LARGE_CONVERSATION_SPECS.flatMap((spec) => {
+    const start = scope.dateDaysAgo(spec.daysAgo, 13 + spec.conversationIndex, 15)
+    const turnSpans = Array.from({ length: spec.turnCount }, (_, turnIndex) => {
+      const inputMessage: Tau2Message = {
+        role: "user",
+        parts: [{ type: "text", content: largeConversationText(spec, turnIndex, "user") }],
+      }
+      const outputMessage: Tau2Message = {
+        role: "assistant",
+        parts: [{ type: "text", content: largeConversationText(spec, turnIndex, "assistant") }],
+      }
+      const span = createLargeConversationChatSpan({
+        scope,
+        spec,
+        traceSlot: turnTraceSlot++,
+        startTime: new Date(start.getTime() + turnIndex * LARGE_CONVERSATION_TRACE_INTERVAL_MS),
+        inputMessages: [inputMessage],
+        outputMessage,
+      })
+      return span
+    })
+    const terminalSpan = createLargeConversationChatSpan({
+      scope,
+      spec,
+      traceSlot: spec.terminalTraceSlot,
+      startTime: new Date(start.getTime() + spec.turnCount * LARGE_CONVERSATION_TRACE_INTERVAL_MS),
+      inputMessages: buildLargeConversationMessages(spec),
+      outputMessage: largeConversationFinalAnswer(spec),
+    })
+
+    return [...turnSpans, terminalSpan]
+  })
 }
 
 export function buildTau2TrajectorySpans(scope: SeedScope, maxTrajectories = TAU2_SEED_TRAJECTORIES.length): SpanRow[] {
@@ -842,6 +893,9 @@ export const fixedTraceSeeders: readonly Seeder[] = [seedFixedTraces, seedLargeC
  */
 export const fixedTraceSlots: readonly TraceSlot[] = [
   ...TAU2_SEED_TRAJECTORIES.map((_, index) => ({ traceKey: "tau2-trajectory", index })),
-  ...LARGE_CONVERSATION_SPECS.map((spec) => ({ traceKey: spec.traceKey, index: spec.index })),
+  ...Array.from({ length: LARGE_CONVERSATION_TRACE_SLOT_COUNT }, (_, index) => ({
+    traceKey: "large-conversation",
+    index,
+  })),
   ...COMPATIBILITY_TRACE_SPECS.map((spec) => ({ traceKey: spec.traceKey, index: spec.index })),
 ]

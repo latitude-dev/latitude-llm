@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [9.6.1] - 2026-07-24
+
+### Changed
+
+- `client.datasets.exportRows` and `client.signals.export` now throw `TooManyRequestsError` when the export is rate-limited (HTTP 429), instead of a generic error.
+
 ## [9.6.0] - 2026-07-22
 
 ### Added

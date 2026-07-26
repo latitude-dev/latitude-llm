@@ -319,6 +319,7 @@
           "getting-started/cli",
           "getting-started/skills",
           "more/slack",
+          "more/github",
           {
             "group": "Data destinations",
             "pages": [

@@ -268,7 +268,7 @@ export function SignalLifecycleActions({
             </div>
           ) : lifecycleConfirmAction === "ignore" && issue?.origin === "user" ? (
             <Text.H6 color="foregroundMuted">
-              This signal's evaluation will be archived. Unignoring won't restore it — re-create it from Edit.
+              This signal's evaluation will be archived. Unignoring won't bring it back; re-create it from Edit.
             </Text.H6>
           ) : null}
         </Modal>

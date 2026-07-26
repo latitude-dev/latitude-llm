@@ -1,3 +1,4 @@
+import { verifyHmacSha256Hex } from "@repo/utils"
 import { Effect } from "effect"
 import { InvalidSlackSignatureError } from "./errors.ts"
 
@@ -34,32 +35,14 @@ export const verifySlackSignature = (input: {
     if (!input.signature.startsWith(prefix)) {
       return yield* Effect.fail(new InvalidSlackSignatureError({ reason: "format" }))
     }
-    const provided = input.signature.slice(prefix.length)
+    const signatureHex = input.signature.slice(prefix.length)
 
-    const expected = yield* computeHmacHex(input.signingSecret, `${SIGNATURE_VERSION}:${input.timestamp}:${input.body}`)
-
-    if (!constantTimeEqual(expected, provided)) {
+    const valid = yield* verifyHmacSha256Hex({
+      secret: input.signingSecret,
+      message: `${SIGNATURE_VERSION}:${input.timestamp}:${input.body}`,
+      signatureHex,
+    })
+    if (!valid) {
       return yield* Effect.fail(new InvalidSlackSignatureError({ reason: "mismatch" }))
     }
   })
-
-const computeHmacHex = (secret: string, message: string): Effect.Effect<string, never> =>
-  Effect.promise(async () => {
-    const encoder = new TextEncoder()
-    const key = await crypto.subtle.importKey("raw", encoder.encode(secret), { name: "HMAC", hash: "SHA-256" }, false, [
-      "sign",
-    ])
-    const signature = await crypto.subtle.sign("HMAC", key, encoder.encode(message))
-    return Array.from(new Uint8Array(signature))
-      .map((byte) => byte.toString(16).padStart(2, "0"))
-      .join("")
-  })
-
-const constantTimeEqual = (a: string, b: string): boolean => {
-  if (a.length !== b.length) return false
-  let result = 0
-  for (let i = 0; i < a.length; i++) {
-    result |= a.charCodeAt(i) ^ b.charCodeAt(i)
-  }
-  return result === 0
-}

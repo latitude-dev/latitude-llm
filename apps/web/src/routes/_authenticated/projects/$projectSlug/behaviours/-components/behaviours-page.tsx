@@ -50,7 +50,7 @@ function ScopedTreeWaiting({ behaviour }: { readonly behaviour: CustomBehaviorRe
         <Loader2Icon className="h-6 w-6 animate-spin text-muted-foreground" />
         <Text.H4>Building this behavior</Text.H4>
         <Text.H5 color="foregroundMuted" centered className="max-w-md">
-          Analyzing the matching sessions now — it'll appear here when it's ready.
+          We're analyzing the matching sessions now. This behavior will appear here once it's ready.
         </Text.H5>
       </div>
     )
@@ -64,8 +64,7 @@ function ScopedTreeWaiting({ behaviour }: { readonly behaviour: CustomBehaviorRe
       <Text.H4>Waiting for the next run</Text.H4>
       <Text.H5 color="foregroundMuted" centered className="max-w-md">
         {count !== undefined ? `${count.toLocaleString()} matching sessions found. ` : ""}
-        This behavior is built automatically on a schedule — it'll appear after the next run, which can take a few
-        hours.
+        This behavior is built on a schedule. It'll appear after the next run, which can take a few hours.
       </Text.H5>
     </div>
   )
@@ -85,7 +84,7 @@ function GlobalEmptyState({ isDemoProject }: { readonly isDemoProject: boolean }
         <Text.H3>{isDemoProject ? "Sample behaviors are loading" : "No behaviors yet"}</Text.H3>
         <Text.H5 color="foregroundMuted" centered className="max-w-md">
           {isDemoProject
-            ? "We found the sample traces and signals. The behavior taxonomy is still being prepared — check back in about a minute."
+            ? "We found the sample traces and signals. The behavior taxonomy is still being prepared, so check back in about a minute."
             : "Live taxonomy behaviors will appear here after sessions have been clustered."}
         </Text.H5>
       </div>

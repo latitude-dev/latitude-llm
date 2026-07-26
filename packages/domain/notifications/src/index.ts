@@ -1,6 +1,7 @@
 // Entities
 
 export type {
+  BillingLimitReachedPayload,
   CustomMessagePayload,
   DestinationQuarantinedPayload,
   IncidentBreach,
@@ -20,6 +21,7 @@ export type {
   WrappedReportPayload,
 } from "./entities/notification.ts"
 export {
+  billingLimitReachedPayloadSchema,
   customMessagePayloadSchema,
   destinationQuarantinedPayloadSchema,
   groupOf,
@@ -47,6 +49,8 @@ export { shouldSendEmail } from "./entities/notification-preferences.ts"
 // Helpers
 export type { BuildIdempotencyKeyInput } from "./helpers/idempotency-key.ts"
 export { buildIdempotencyKey } from "./helpers/idempotency-key.ts"
+export type { ResolveAdminRecipientsInput } from "./helpers/resolve-admin-recipients.ts"
+export { resolveAdminRecipients } from "./helpers/resolve-admin-recipients.ts"
 export type { ResolveRecipientsInput } from "./helpers/resolve-recipients.ts"
 export { resolveRecipients } from "./helpers/resolve-recipients.ts"
 
@@ -93,6 +97,13 @@ export type {
   MarkNotificationSeenInput,
 } from "./use-cases/mark-notification-seen.ts"
 export { markNotificationSeenUseCase } from "./use-cases/mark-notification-seen.ts"
+export type {
+  BillingLimitNotificationRequest,
+  RequestBillingLimitNotificationsError,
+  RequestBillingLimitNotificationsInput,
+  RequestBillingLimitNotificationsResult,
+} from "./use-cases/request-billing-limit-notifications.ts"
+export { requestBillingLimitNotificationsUseCase } from "./use-cases/request-billing-limit-notifications.ts"
 export type {
   DestinationQuarantinedNotificationRequest,
   RequestDestinationQuarantinedNotificationsError,

@@ -1,6 +1,7 @@
 import type { NotificationKind } from "@domain/notifications"
 import type { ComponentType } from "react"
 import type { NotificationRecord } from "../../../../domains/notifications/notifications.functions.ts"
+import { BillingLimitReachedNotification } from "./renderers/billing-limit-reached-notification.tsx"
 import { CustomMessageNotification } from "./renderers/custom-message-notification.tsx"
 import { DestinationQuarantinedNotification } from "./renderers/destination-quarantined-notification.tsx"
 import { IncidentNotification } from "./renderers/incident/index.tsx"
@@ -19,6 +20,7 @@ const RENDERERS: Record<NotificationKind, ComponentType<{ readonly notification:
   "signal.discovered": SignalDiscoveredNotification,
   "signal.regressed": SignalRegressedNotification,
   "destination.quarantined": DestinationQuarantinedNotification,
+  "billing.limit-reached": BillingLimitReachedNotification,
 }
 
 export function NotificationItem({ notification }: { readonly notification: NotificationRecord }) {

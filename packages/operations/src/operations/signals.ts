@@ -28,6 +28,7 @@ import {
 } from "@domain/signals"
 import { createRoute, z } from "@hono/zod-openapi"
 import { AIEmbedLive, withAi } from "@platform/ai"
+import { enforceExportRequestRateLimit } from "@platform/cache-redis"
 import {
   ScoreAnalyticsRepositoryLive,
   SessionRepositoryLive,
@@ -61,8 +62,10 @@ import { SignalAnalyticsResponseSchema, toSignalAnalyticsResponse } from "../ope
 import { fetchTraceIndicators, PaginatedTracesSchema, toTraceResponse } from "../openapi/entities/trace.ts"
 import { PaginatedQueryParamsSchema } from "../openapi/pagination.ts"
 import {
+  errorResponse,
   FilterSetSchema,
   jsonBody,
+  jsonResponse,
   PROTECTED_SECURITY,
   ProjectParamsSchema,
   typedResponses,
@@ -685,7 +688,13 @@ const exportSignals = signalEndpoint({
       "Enqueues an asynchronous CSV export. The response returns immediately; the download link is emailed to `recipient` when the file is ready. The recipient must be a member of the requesting organization.",
     security: PROTECTED_SECURITY,
     request: { params: ProjectParamsSchema, body: jsonBody(ExportBodySchema) },
-    responses: typedResponses({ status: 202, schema: ExportResponseSchema, description: "Export enqueued" }),
+    responses: {
+      202: jsonResponse(ExportResponseSchema, "Export enqueued"),
+      400: errorResponse("Validation error"),
+      401: errorResponse("Unauthorized"),
+      404: errorResponse("Not found"),
+      429: errorResponse("Export rate limit exceeded"),
+    },
   }),
   access: "write",
   rateLimitTier: "ultra",
@@ -704,6 +713,17 @@ const exportSignals = signalEndpoint({
           message: "`recipient` must belong to a member of this organization.",
         })
       }
+
+      yield* Effect.tryPromise({
+        try: () =>
+          enforceExportRequestRateLimit({
+            redis: ctx.redis,
+            organizationId: ctx.organization.id as string,
+            projectId: project.id as string,
+            recipientEmail: body.recipient,
+          }),
+        catch: (cause) => cause,
+      })
 
       yield* ctx.queuePublisher.publish("exports", "generate", {
         // KEEP: the export queue kind is a wire token retained until Phase 9.

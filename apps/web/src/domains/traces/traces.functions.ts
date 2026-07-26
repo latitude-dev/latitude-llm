@@ -27,7 +27,7 @@ import {
   TraceRepository,
 } from "@domain/spans"
 import { AIEmbedLive, withAi } from "@platform/ai"
-import { RedisCacheStoreLive } from "@platform/cache-redis"
+import { enforceExportRequestRateLimit, RedisCacheStoreLive } from "@platform/cache-redis"
 import {
   SessionAnalysisRepositoryLive,
   SessionMomentLabelRepositoryLive,
@@ -43,7 +43,6 @@ import { createServerFn } from "@tanstack/react-start"
 import { Effect, Layer } from "effect"
 import type { GenAIMessage, GenAISystem } from "rosetta-ai"
 import { z } from "zod"
-import { enforceExportRequestRateLimit } from "../../domains/exports/export-rate-limit.ts"
 import { ensureSession } from "../../domains/sessions/session.functions.ts"
 import { getSessionOrganizationId } from "../../server/auth.ts"
 import { getClickhouseClient, getQueuePublisher, getRedisClient } from "../../server/clients.ts"
@@ -228,6 +227,47 @@ export const listTracesByProject = createServerFn({ method: "GET" })
       traces: page.items.map(toTraceRecord),
       hasMore: page.hasMore,
       nextCursor: page.nextCursor,
+    }
+  })
+
+export const listSessionTraces = createServerFn({ method: "POST" })
+  .inputValidator(
+    z.object({
+      projectId: z.string(),
+      traceIds: z.array(traceIdSchema).max(500),
+      limit: z.number().int().min(1).max(500),
+      cursor: traceListCursorSchema.optional(),
+      sortDirection: z.enum(["asc", "desc"]).optional(),
+    }),
+  )
+  .handler(async ({ data, context }): Promise<TraceListResult> => {
+    const orgId = await resolveOrgScope(context)
+
+    const page = await Effect.runPromise(
+      Effect.gen(function* () {
+        const repo = yield* TraceRepository
+        return yield* repo.listByProjectId({
+          organizationId: orgId,
+          projectId: ProjectId(data.projectId),
+          options: {
+            limit: data.limit,
+            ...(data.cursor ? { cursor: data.cursor } : {}),
+            sortBy: "startTime",
+            sortDirection: data.sortDirection ?? "desc",
+            filters: { traceId: [{ op: "in", value: data.traceIds }] },
+          },
+        })
+      }).pipe(
+        withScopedClickHouse(TraceRepositoryLive, getClickhouseClient(), orgId),
+        withAi(AIEmbedLive, getRedisClient()),
+        withTracing,
+      ),
+    )
+
+    return {
+      traces: page.items.map(toTraceRecord),
+      hasMore: page.hasMore,
+      ...(page.nextCursor ? { nextCursor: page.nextCursor } : {}),
     }
   })
 

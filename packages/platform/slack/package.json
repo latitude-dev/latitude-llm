@@ -15,6 +15,7 @@
   "dependencies": {
     "@domain/integrations": "workspace:*",
     "@platform/env": "workspace:*",
+    "@repo/utils": "workspace:*",
     "@slack/oauth": "3.0.5",
     "@slack/web-api": "7.18.0",
     "effect": "catalog:"
@@ -22,7 +23,6 @@
   "devDependencies": {
     "@domain/shared": "workspace:*",
     "@platform/db-postgres": "workspace:*",
-    "@repo/utils": "workspace:*",
     "@repo/vitest-config": "workspace:*",
     "tsx": "catalog:",
     "vitest": "catalog:"

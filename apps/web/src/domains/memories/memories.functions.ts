@@ -5,6 +5,7 @@ import {
   computeSessionMemorySummaryUseCase,
   getMemoryActivityHistogramUseCase,
   getMemoryOverviewUseCase,
+  getStoreInsightsUseCase,
   listRecordUsersUseCase,
   listStoresWithMetricsUseCase,
   listStoreUsersUseCase,
@@ -17,6 +18,7 @@ import {
   reconstructSnapshotUseCase,
   type SessionMemoryDiff,
   type SessionMemorySummary,
+  type StoreInsights,
 } from "@domain/memories"
 import { ExternalUserId, ProjectId, SessionId, SpanId, TraceId } from "@domain/shared"
 import { MemoryAnalyticsRepositoryLive, MemoryRepositoryLive } from "@platform/db-clickhouse"
@@ -33,6 +35,8 @@ export type SessionMemorySummaryRecord = SessionMemorySummary
 export type SessionMemoryDiffRecord = SessionMemoryDiff
 
 export type MemoryOverviewRecord = MemoryOverview
+
+export type StoreInsightsRecord = StoreInsights
 
 export type MemoryActivityBucketRecord = MemoryActivityBucket
 
@@ -161,9 +165,16 @@ export const getSessionMemoryDiff = createServerFn({ method: "GET" })
     )
   })
 
-/** Project-wide memory roll-up for the analytics tiles, over the selected window. */
+/** Memory roll-up for the analytics tiles, over the selected window. Project-wide, or a single store when `storeId` is given. */
 export const getMemoryOverview = createServerFn({ method: "GET" })
-  .inputValidator(z.object({ projectId: z.string(), fromIso: z.string().datetime(), toIso: z.string().datetime() }))
+  .inputValidator(
+    z.object({
+      projectId: z.string(),
+      fromIso: z.string().datetime(),
+      toIso: z.string().datetime(),
+      storeId: z.string().optional(),
+    }),
+  )
   .handler(async ({ data, context }): Promise<MemoryOverviewRecord> => {
     const orgId = await resolveOrgScope(context)
 
@@ -173,11 +184,12 @@ export const getMemoryOverview = createServerFn({ method: "GET" })
         projectId: ProjectId(data.projectId),
         from: new Date(data.fromIso),
         to: new Date(data.toIso),
+        ...(data.storeId !== undefined ? { storeId: data.storeId } : {}),
       }).pipe(withScopedClickHouse(MemoryAnalyticsRepositoryLive, getClickhouseClient(), orgId), withTracing),
     )
   })
 
-/** Bucketed memory activity (creations/updates/deletions + records retrieved) for the chart. */
+/** Bucketed memory activity (creations/updates/deletions + records retrieved) for the chart. Project-wide, or a single store when `storeId` is given. */
 export const getMemoryActivityHistogram = createServerFn({ method: "GET" })
   .inputValidator(
     z.object({
@@ -185,6 +197,7 @@ export const getMemoryActivityHistogram = createServerFn({ method: "GET" })
       fromIso: z.string().datetime(),
       toIso: z.string().datetime(),
       bucketSeconds: z.number().int().min(1).max(86_400),
+      storeId: z.string().optional(),
     }),
   )
   .handler(async ({ data, context }): Promise<readonly MemoryActivityBucketRecord[]> => {
@@ -196,6 +209,35 @@ export const getMemoryActivityHistogram = createServerFn({ method: "GET" })
         projectId: ProjectId(data.projectId),
         from: new Date(data.fromIso),
         to: new Date(data.toIso),
+        bucketSeconds: data.bucketSeconds,
+        ...(data.storeId !== undefined ? { storeId: data.storeId } : {}),
+      }).pipe(withScopedClickHouse(MemoryAnalyticsRepositoryLive, getClickhouseClient(), orgId), withTracing),
+    )
+  })
+
+/** One store's Home-dashboard insight lists (retrieval, queries, footprint) over the window. */
+export const getStoreInsights = createServerFn({ method: "GET" })
+  .inputValidator(
+    z.object({
+      projectId: z.string(),
+      storeId: z.string(),
+      fromIso: z.string().datetime(),
+      toIso: z.string().datetime(),
+      listLimit: z.number().int().min(1).max(100),
+      bucketSeconds: z.number().int().min(1).max(86_400),
+    }),
+  )
+  .handler(async ({ data, context }): Promise<StoreInsightsRecord> => {
+    const orgId = await resolveOrgScope(context)
+
+    return Effect.runPromise(
+      getStoreInsightsUseCase({
+        organizationId: orgId,
+        projectId: ProjectId(data.projectId),
+        storeId: data.storeId,
+        from: new Date(data.fromIso),
+        to: new Date(data.toIso),
+        listLimit: data.listLimit,
         bucketSeconds: data.bucketSeconds,
       }).pipe(withScopedClickHouse(MemoryAnalyticsRepositoryLive, getClickhouseClient(), orgId), withTracing),
     )
@@ -226,7 +268,6 @@ export const listMemoryStoresWithMetrics = createServerFn({ method: "GET" })
       direction: z.enum(["asc", "desc"]).default("desc"),
       limit: z.number().int().min(1).max(200).default(50),
       offset: z.number().int().min(0).default(0),
-      trendBucketSeconds: z.number().int().min(1).max(86_400).default(86_400),
     }),
   )
   .handler(async ({ data, context }): Promise<MemoryStoreMetricsPageRecord> => {
@@ -242,7 +283,6 @@ export const listMemoryStoresWithMetrics = createServerFn({ method: "GET" })
         sortDirection: data.direction,
         limit: data.limit,
         offset: data.offset,
-        trendBucketSeconds: data.trendBucketSeconds,
       }).pipe(
         Effect.map(
           (page): MemoryStoreMetricsPageRecord => ({

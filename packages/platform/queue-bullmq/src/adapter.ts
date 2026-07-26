@@ -46,6 +46,9 @@ export const buildBullMqJobOptions = (label: string, options?: PublishOptions): 
   if (coalescingOptions.length > 1) {
     throw new Error(`${label}: debounceMs, throttleMs, latestThrottleMs and leadingThrottleMs are mutually exclusive`)
   }
+  if (options?.delayMs !== undefined && coalescingOptions.length > 0) {
+    throw new Error(`${label}: delayMs is mutually exclusive with the coalescing options`)
+  }
   if (
     (options?.throttleMs !== undefined ||
       options?.latestThrottleMs !== undefined ||
@@ -70,23 +73,23 @@ export const buildBullMqJobOptions = (label: string, options?: PublishOptions): 
   //     but with NO delay — the first publish fires immediately and the TTL
   //     marker drops re-adds for the window. The run lands at the *start* of the
   //     window, so a trailing-window evaluation still covers the triggering activity.
-  const delayMs = options?.debounceMs ?? options?.throttleMs ?? options?.latestThrottleMs
-  const isCoalescing = delayMs !== undefined || options?.leadingThrottleMs !== undefined
-  // Custom jobId is for bare-dedupeKey idempotency only. Coalescing relies on the
-  // TTL-based `deduplication` marker instead — a jobId would be retained by
-  // removeOnComplete and shadow later publishes, so a recurring throttle/debounce would
-  // fire once and go dormant.
+  const coalesceDelayMs = options?.debounceMs ?? options?.throttleMs ?? options?.latestThrottleMs
+  const isCoalescing = coalesceDelayMs !== undefined || options?.leadingThrottleMs !== undefined
+  // Custom jobId is for bare-dedupeKey idempotency only (including a plain `delayMs`
+  // deferred job). Coalescing relies on the TTL-based `deduplication` marker instead — a
+  // jobId would be retained by removeOnComplete and shadow later publishes, so a recurring
+  // throttle/debounce would fire once and go dormant.
   if (options?.dedupeKey && !isCoalescing) {
     bullmqOptions.jobId = toSafeJobId(options.dedupeKey)
   }
-  if (delayMs !== undefined) {
-    bullmqOptions.delay = delayMs
+  if (coalesceDelayMs !== undefined) {
+    bullmqOptions.delay = coalesceDelayMs
     if (options?.dedupeKey) {
       const extendsWindow = options.debounceMs !== undefined
       const replacesPayload = options.throttleMs === undefined
       bullmqOptions.deduplication = {
         id: options.dedupeKey,
-        ttl: delayMs,
+        ttl: coalesceDelayMs,
         extend: extendsWindow,
         replace: replacesPayload,
       }
@@ -98,6 +101,8 @@ export const buildBullMqJobOptions = (label: string, options?: PublishOptions): 
       extend: false,
       replace: false,
     }
+  } else if (options?.delayMs !== undefined) {
+    bullmqOptions.delay = options.delayMs
   }
   if (options?.attempts !== undefined && options.attempts > 0) {
     bullmqOptions.attempts = options.attempts

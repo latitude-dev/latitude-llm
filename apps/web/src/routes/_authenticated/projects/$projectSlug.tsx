@@ -10,6 +10,7 @@ import { Effect } from "effect"
 import { SearchIcon } from "lucide-react"
 import { z } from "zod"
 import { useCommandPalette } from "../../../components/command-palette/command-palette-provider.tsx"
+import { HotkeyBadge } from "../../../components/hotkey-badge.tsx"
 import { CHANGELOG_UI_ENABLED } from "../../../domains/changelog/changelog.collection.ts"
 import {
   ProjectScopeProvider,
@@ -108,7 +109,9 @@ function SidebarSearchButton({ collapsed }: { collapsed: boolean }) {
           <Text.H5 color="foregroundMuted" className="min-w-0 flex-1 text-left">
             Search
           </Text.H5>
-          <kbd className="rounded bg-muted px-1 font-mono text-xs text-muted-foreground">⌘K</kbd>
+          <span className="text-muted-foreground">
+            <HotkeyBadge hotkey="Mod+K" />
+          </span>
         </>
       ) : null}
     </button>

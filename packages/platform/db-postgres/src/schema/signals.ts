@@ -16,7 +16,7 @@ export const signals = latitudeSchema.table(
     uuid: uuid("uuid").notNull().unique().defaultRandom(), // legacy stable UUID retained for backwards compatibility; issue search uses the canonical id. New rows get the value from the DB default so the application layer never has to populate it.
     organizationId: cuid("organization_id").notNull(),
     projectId: cuid("project_id").notNull(),
-    slug: varchar("slug", { length: 128 }).notNull(), // url-safe identifier derived from name; regenerated on rename. Unique per (organization_id, project_id). Length matches `SLUG_MAX_LENGTH` in `@domain/shared/slug`. Backfilled from `name` in the M1 migration cascade; new rows get a slug from `createSignalFromScoreUseCase` (and `refreshSignalDetailsUseCase` regenerates on rename).
+    slug: varchar("slug", { length: 128 }).notNull(), // url-safe identifier assigned once at creation; never regenerated on rename. Unique per organization (D15), spanning projects, so a GitHub reference resolves to one signal org-wide. Length matches `SLUG_MAX_LENGTH` in `@domain/shared/slug`. Backfilled from `name` in the M1 migration cascade; new rows get a slug from `createSignalFromScoreUseCase`.
     name: varchar("name", { length: 128 }).notNull(), // generated from clustered score feedback and related context; generic enough to represent the shared failure pattern across different backgrounds
     description: text("description").notNull(), // generated from clustered score feedback; focused on the underlying problem rather than one specific conversation
     source: varchar("source", { length: 32 }).$type<SignalSource>().notNull(), // provenance of the first creating score
@@ -57,9 +57,7 @@ export const signals = latitudeSchema.table(
       t.createdAt,
     ),
     index("signals_search_document_idx").using("gin", t.searchDocument),
-    // Soft-delete-aware: a deleted signal frees its slug for reuse.
-    uniqueIndex("signals_unique_slug_per_project_idx")
-      .on(t.organizationId, t.projectId, t.slug)
-      .where(sql`${t.deletedAt} IS NULL`),
+    // Organization-unique (D15), spanning projects. Soft-delete-aware: a deleted signal frees its slug for reuse.
+    uniqueIndex("signals_unique_slug_per_org_idx").on(t.organizationId, t.slug).where(sql`${t.deletedAt} IS NULL`),
   ],
 )

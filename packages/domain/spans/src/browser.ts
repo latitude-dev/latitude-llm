@@ -46,6 +46,7 @@ export {
   type MessageEmbeddingInput,
   type MessageEmbeddingRole,
 } from "./helpers/message-embedding.ts"
+export { normalizeLiteralPhrase, stripLoneSurrogates } from "./helpers/normalize-literal-phrase.ts"
 export {
   isLlmCompletionOperation,
   resolveLastLlmCompletionSpanId,

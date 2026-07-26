@@ -12,7 +12,7 @@ import {
 } from "@repo/ui"
 import { formatCount, formatDuration, relativeTime } from "@repo/utils"
 import { ArrowDownRightIcon, ArrowUpRightIcon, BrainIcon, FingerprintIcon, TextIcon, WrenchIcon } from "lucide-react"
-import { useMemo } from "react"
+import { type ReactNode, useMemo } from "react"
 import type { SessionDetailRecord } from "../../../../../../domains/sessions/sessions.functions.ts"
 import { useSpansBySessionCollection } from "../../../../../../domains/spans/spans.collection.ts"
 import { MemoryChangesSection } from "../memory-changes/memory-changes-section.tsx"
@@ -25,6 +25,7 @@ import { ModelFilterLink } from "../trace-detail-drawer/tabs/spans-tab/model-fil
 import { UsageSummary } from "../trace-detail-drawer/tabs/spans-tab/span-detail/usage-summary.tsx"
 import { AgentsBreakdown } from "./agents-breakdown/agents-breakdown.tsx"
 import { useAgentGraph } from "./agents-breakdown/use-agent-graph.ts"
+import { isLargeSession } from "./session-size.ts"
 
 // Sessions only expose percentile filters for duration/TTFT/cost
 // (`PERCENTILE_SESSION_FILTER_FIELDS`), so the tokens badge stays informational
@@ -38,6 +39,71 @@ const METRIC_FILTER_FIELD: Partial<Record<SessionOutlierMetric, string>> = {
 function JsonBlock({ value }: { readonly value: unknown }) {
   const formatted = useMemo(() => JSON.stringify(value, null, 2), [value])
   return <CodeBlock value={formatted} className="bg-secondary" />
+}
+
+function MetadataSpanBreakdown({
+  session,
+  durationBadge,
+  costBadges,
+}: {
+  readonly session: SessionDetailRecord
+  readonly durationBadge: ReactNode
+  readonly costBadges: ReactNode
+}) {
+  const { data: spans, isLoading } = useSpansBySessionCollection({
+    projectId: session.projectId,
+    sessionId: session.sessionId,
+    traceIds: session.traceIds,
+    startTimeFrom: session.startTime,
+    startTimeTo: session.endTime,
+  })
+  const durationBreakdown = useMemo(() => computeSessionDurationBreakdown(spans ?? []), [spans])
+  const agentGraph = useAgentGraph(spans)
+  const fallbackDurationMs = session.durationNs / 1_000_000
+  const durationWallClockMs = durationBreakdown.wallClockMs > 0 ? durationBreakdown.wallClockMs : fallbackDurationMs
+
+  return (
+    <>
+      <div className="flex flex-col gap-2">
+        <DurationBar
+          segments={durationBreakdown.segments}
+          wallClockMs={durationWallClockMs}
+          badges={durationBadge}
+          isLoading={isLoading}
+        />
+        <UsageSummary data={session} costBadges={costBadges} />
+        <MemorySummary projectId={session.projectId} sessionId={session.sessionId} />
+      </div>
+      <AgentsBreakdown graph={agentGraph} />
+    </>
+  )
+}
+
+function MetadataToolsSection({ session }: { readonly session: SessionDetailRecord }) {
+  const { data: spans, isLoading } = useSpansBySessionCollection({
+    projectId: session.projectId,
+    sessionId: session.sessionId,
+    traceIds: session.traceIds,
+    startTimeFrom: session.startTime,
+    startTimeTo: session.endTime,
+  })
+  const toolPills = useMemo(() => aggregateToolPills(spans), [spans])
+
+  return (
+    <DetailSection icon={<WrenchIcon className="h-4 w-4" />} label="Tools" defaultOpen={false}>
+      {() =>
+        isLoading ? (
+          <Skeleton className="h-7 w-48" />
+        ) : toolPills.length > 0 ? (
+          <ToolPillList tools={toolPills} scopeLabel="session" />
+        ) : (
+          <Text.H6 color="foregroundMuted" italic>
+            No tools
+          </Text.H6>
+        )
+      }
+    </DetailSection>
+  )
 }
 
 export function MetadataTab({
@@ -84,18 +150,7 @@ export function MetadataTab({
     />
   )
 
-  const { data: spans, isLoading: isSpansLoading } = useSpansBySessionCollection({
-    projectId: session.projectId,
-    sessionId: session.sessionId,
-    traceIds: session.traceIds,
-    startTimeFrom: session.startTime,
-    startTimeTo: session.endTime,
-  })
-  const durationBreakdown = useMemo(() => computeSessionDurationBreakdown(spans ?? []), [spans])
-  const agentGraph = useAgentGraph(spans)
-  const toolPills = useMemo(() => aggregateToolPills(spans), [spans])
-  const fallbackDurationMs = session.durationNs / 1_000_000
-  const durationWallClockMs = durationBreakdown.wallClockMs > 0 ? durationBreakdown.wallClockMs : fallbackDurationMs
+  const largeSession = isLargeSession(session)
   const durationBadge = renderBadge("durationNs", session.durationNs)
 
   const ttftValue = (
@@ -159,18 +214,18 @@ export function MetadataTab({
         </div>
       )}
 
-      <div className="flex flex-col gap-2">
-        <DurationBar
-          segments={durationBreakdown.segments}
-          wallClockMs={durationWallClockMs}
-          badges={durationBadge}
-          isLoading={isSpansLoading}
-        />
-        <UsageSummary data={session} costBadges={costBadgesNode} />
-        <MemorySummary projectId={session.projectId} sessionId={session.sessionId} />
-      </div>
-
-      <AgentsBreakdown graph={agentGraph} />
+      {largeSession ? (
+        <div className="flex flex-col gap-2">
+          <DurationBar segments={[]} wallClockMs={session.durationNs / 1_000_000} badges={durationBadge} />
+          <UsageSummary data={session} costBadges={costBadgesNode} />
+          <MemorySummary projectId={session.projectId} sessionId={session.sessionId} />
+          <Text.H6 color="foregroundMuted">
+            Duration, agent, and tool breakdowns are deferred for large sessions. Open Spans to inspect details.
+          </Text.H6>
+        </div>
+      ) : (
+        <MetadataSpanBreakdown session={session} durationBadge={durationBadge} costBadges={costBadgesNode} />
+      )}
 
       <div className="flex flex-col gap-1">
         <Text.H6 color="foregroundMuted">Tags</Text.H6>
@@ -183,19 +238,7 @@ export function MetadataTab({
         )}
       </div>
 
-      <DetailSection icon={<WrenchIcon className="h-4 w-4" />} label="Tools" defaultOpen={false}>
-        {() =>
-          isSpansLoading ? (
-            <Skeleton className="h-7 w-48" />
-          ) : toolPills.length > 0 ? (
-            <ToolPillList tools={toolPills} scopeLabel="session" />
-          ) : (
-            <Text.H6 color="foregroundMuted" italic>
-              No tools
-            </Text.H6>
-          )
-        }
-      </DetailSection>
+      {largeSession ? null : <MetadataToolsSection session={session} />}
 
       <MemoryChangesSection projectId={session.projectId} sessionId={session.sessionId} />
 
@@ -239,7 +282,7 @@ export function MetadataTab({
         }
       </DetailSection>
 
-      <DetailSection icon={<ArrowUpRightIcon className="h-4 w-4" />} label="Output" defaultOpen={true}>
+      <DetailSection icon={<ArrowUpRightIcon className="h-4 w-4" />} label="Output" defaultOpen={!largeSession}>
         {() =>
           session.outputMessages.length ? (
             <div className="flex flex-col rounded-lg bg-secondary p-4">

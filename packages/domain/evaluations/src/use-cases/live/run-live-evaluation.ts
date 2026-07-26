@@ -1,11 +1,14 @@
-import type { AI } from "@domain/ai"
+import type { AI, AIError } from "@domain/ai"
 import {
+  AIMeteringRecordError,
   authorizeBillableAction,
   type BillingOverrideRepository,
   type BillingSpendReservation,
   type BillingUsageEventRepository,
   type BillingUsagePeriodRepository,
   buildBillingIdempotencyKey,
+  makeAIMeteringScope,
+  provideAIMeteringScope,
   recordBillableActionUseCase,
   type StripeSubscriptionLookup,
   type UnknownStripePlanError,
@@ -139,7 +142,12 @@ export type RunLiveEvaluationResult =
       readonly context: RunLiveEvaluationPersistedContext
     }
 
-export type RunLiveEvaluationError = RepositoryError | WriteScoreError | UnknownStripePlanError | QueuePublishError
+export type RunLiveEvaluationError =
+  | RepositoryError
+  | WriteScoreError
+  | UnknownStripePlanError
+  | QueuePublishError
+  | AIError
 
 const isRecord = (value: unknown): value is Record<string, unknown> => typeof value === "object" && value !== null
 const isRepositoryError = (error: unknown): error is RepositoryError =>
@@ -349,17 +357,22 @@ export const runLiveEvaluationUseCase = (input: RunLiveEvaluationInput) =>
     } satisfies LiveEvaluationSignalContext
 
     const billingOrganizationId = OrganizationId(input.organizationId)
-    const billingAction = hasLlmCapability(scriptCapabilities) ? "live-eval-scan" : "deterministic-eval-scan"
-    const idempotencyKey = buildBillingIdempotencyKey(billingAction, [
-      input.organizationId,
-      evaluation.id,
-      input.traceId,
-    ])
+    // Every scan bills a baseline 1-credit `eval-scan`; LLM-capable scripts
+    // additionally bill each generation (and query embed) at cost through the
+    // metering scope. Authorization uses the larger estimate for LLM scripts so
+    // the free-cap/spend-cap gate reflects the expensive path.
+    const authorizeAction = hasLlmCapability(scriptCapabilities) ? ("llm-call" as const) : ("eval-scan" as const)
     const authorization = yield* authorizeBillableAction({
       organizationId: billingOrganizationId,
-      action: billingAction,
+      action: authorizeAction,
       skipIfBlocked: true,
-      idempotencyKey,
+      idempotencyKey: buildBillingIdempotencyKey(authorizeAction, [
+        input.organizationId,
+        "live-eval",
+        evaluation.id,
+        input.traceId,
+        "authorize",
+      ]),
     })
 
     if (!authorization.allowed) {
@@ -377,6 +390,17 @@ export const runLiveEvaluationUseCase = (input: RunLiveEvaluationInput) =>
       traceDetail,
     })
 
+    // Per-primitive metering: every LLM call and query-time embedding the script
+    // produces is recorded through this scope by the AI layer, in call order, so a
+    // retried job replays the same idempotency keys instead of double-charging.
+    const meteringScope = yield* makeAIMeteringScope({
+      organizationId: billingOrganizationId,
+      projectId: ProjectId(input.projectId),
+      keyParts: ["live-eval", evaluation.id, input.traceId],
+      context: authorization.context,
+      traceId: TraceId(input.traceId),
+    })
+
     const executionStartedAt = performance.now()
     const execution = yield* executeLiveEvaluationUseCase({
       organizationId: input.organizationId,
@@ -392,6 +416,7 @@ export const runLiveEvaluationUseCase = (input: RunLiveEvaluationInput) =>
         traceId: input.traceId,
       }),
     }).pipe(
+      provideAIMeteringScope(meteringScope),
       Effect.map(
         (result) =>
           ({
@@ -400,24 +425,28 @@ export const runLiveEvaluationUseCase = (input: RunLiveEvaluationInput) =>
           }) satisfies RunLiveEvaluationCompletedExecution,
       ),
       Effect.catchTags({
-        AIError: (error) => Effect.succeed(toErroredExecution(error.message, executionStartedAt)),
+        // A metering-record failure is a billing persistence problem, not a judge
+        // failure: re-fail so the worker retries (idempotency keys dedupe the replay)
+        // instead of persisting a false errored score and losing the usage event.
+        AIError: (error) =>
+          error.cause instanceof AIMeteringRecordError
+            ? Effect.fail(error)
+            : Effect.succeed(toErroredExecution(error.message, executionStartedAt)),
         AICredentialError: (error) => Effect.succeed(toErroredExecution(error.message, executionStartedAt)),
         LiveEvaluationExecutionError: (error) => Effect.succeed(toErroredExecution(error.message, executionStartedAt)),
       }),
     )
 
-    // Record billing AFTER the AI work has been attempted so a crash between
-    // authorization and execution does not charge the customer for work that
-    // never ran. The Redis spend reservation taken during `authorizeBillableAction`
-    // protects the spending cap; the Postgres usage event written here is the
-    // truth-of-record that ultimately drives Stripe overage. Both completed and
-    // errored executions are recorded — work was attempted and AI tokens may
-    // have been consumed — but not skips that returned earlier.
+    // The baseline scan credit is recorded AFTER the work has been attempted so a
+    // crash between authorization and execution does not charge the customer for
+    // work that never ran. Both completed and errored executions are recorded —
+    // work was attempted — but not skips that returned earlier. AI calls the
+    // script made were already billed on top through the metering scope.
     yield* recordBillableActionUseCase({
       organizationId: billingOrganizationId,
       projectId: ProjectId(input.projectId),
-      action: billingAction,
-      idempotencyKey,
+      action: "eval-scan",
+      idempotencyKey: buildBillingIdempotencyKey("eval-scan", [input.organizationId, evaluation.id, input.traceId]),
       context: authorization.context,
       traceId: TraceId(input.traceId),
       metadata: {

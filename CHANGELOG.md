@@ -2,6 +2,82 @@
 
 ## Unreleased
 
+## v0.3.70 - 2026-07-26
+
+### Traces
+
+- Fixed PDF conversation attachments mislabeled as images so they render as document cards, with previews for linked files and downloads for inline files (ref: #4231).
+
+### Models
+
+- Refreshed the bundled model catalog with new providers and models, including Claude Opus 5 availability, plus updated capabilities, limits, and pricing (ref: #4223).
+
+## v0.3.69 - 2026-07-24
+
+### Memory
+
+- Fixed an empty Memory page by pinning store activity trends to 30 one-day buckets (ref: #4221).
+
+### Web
+
+- Rewrote AI-sounding UI and email copy across the app so it reads more naturally (ref: #4219).
+- Used `HotkeyBadge` for the sidebar search shortcut for consistent shortcut styling (ref: #4217).
+
+## v0.3.68 - 2026-07-24
+
+### GitHub
+
+- Added a least-privilege GitHub App integration that turns merged code into signal lifecycle transitions: when a PR or commit referencing a signal slug lands on a configured branch, Latitude links it and applies the matched action (resolve, unresolve, or reference), surfacing the referencing PRs and commits on the signal detail page. Includes an install/claim/disconnect flow, per-project sync-config overrides, a magic-words editor, a deliveries audit table, and org-unique signal slugs, with zero write permissions on the customer's repo (ref: #4213).
+
+### Billing
+
+- Notified organization owners and admins, once per billing period, when a hard limit is first crossed — free included credits exhausted, an uncapped Pro plan entering overage, or a configured Pro spend cap — via email, in-app, and Slack, with org-scoped idempotency (ref: #4214).
+
+### Web
+
+- Silenced stale server-fn hash errors after deploys: TanStack server-fn IDs from a prior deploy are now treated as expected deploy skew, mapped to a 404 client error that skips Datadog Error Tracking and reloads the page instead of surfacing a new issue after every release (ref: #4215).
+
+## v0.3.67 - 2026-07-24
+
+### Memory
+
+- Added a per-store Home dashboard with store-scoped overview tiles, an activity chart, and insight cards for most-read and cold records, top and zero-hit queries, largest records, token-size distribution, and net token growth, plus a sortable write-health table surfacing rewrites, thrashing, content reverts, and duplicate records (ref: #4209).
+
+### Flaggers
+
+- Soft-failed Bedrock grammar compilation timeouts so the session classifier recovers with an unmatched result instead of failing the Temporal activity (ref: #4216).
+
+## v0.3.66 - 2026-07-24
+
+### Telemetry
+
+- Added Cloudflare AI Gateway onboarding and documentation, with OTLP ingestion support for model, token, cost, conversation, and embedding data (ref: #4179).
+
+### Memory
+
+- Added time-filtered activity charts and per-store analytics to the Memory page, including sortable usage, access, and health metrics (ref: #4202).
+
+### Taxonomy
+
+- Enabled gardening and facet-aware cluster naming for facet-backed custom behavior taxonomies (ref: #4199).
+
+### Sessions
+
+- Improved long-session rendering and navigation with paged trace loading, incremental conversation attribution, and bounded timeline handling (ref: #4200).
+
+### Billing
+
+- Metered hosted AI generations and query embeddings at estimated provider cost, with 4-credit generation and 1-credit embedding fallbacks; live evaluations now also record a 1-credit baseline scan (refs: #3915, #4211).
+
+### Exports
+
+- Rate-limited asynchronous dataset and signal exports to 10 requests per hour per organization, project, and recipient, and exposed typed HTTP 429 responses in API clients (refs: #4137, #4212).
+
+### Operations
+
+- Reduced CloudWatch volume by disabling ECS Container Insights, suppressing successful API health-check access logs, and lowering Datadog agent log verbosity (ref: 155a34b0a).
+- Refreshed the bundled model catalog, including newly recognized models and the Ofox provider (refs: #4194, #4201, #4208).
+
 ## v0.3.65 - 2026-07-23
 
 ### Ingestion

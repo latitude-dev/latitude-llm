@@ -1,3 +1,4 @@
+import { billingLimitReachedRenderer } from "./billing-limit-reached/index.tsx"
 import { customMessageRenderer } from "./custom-message/index.tsx"
 import { destinationQuarantinedRenderer } from "./destination-quarantined/index.tsx"
 import { incidentClosedRenderer } from "./incident-closed/index.tsx"
@@ -24,4 +25,5 @@ export const NOTIFICATION_EMAIL_RENDERERS: NotificationEmailRendererRegistry = {
   "signal.discovered": signalDiscoveredRenderer,
   "signal.regressed": signalRegressedRenderer,
   "destination.quarantined": destinationQuarantinedRenderer,
+  "billing.limit-reached": billingLimitReachedRenderer,
 }

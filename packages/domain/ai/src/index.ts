@@ -112,6 +112,8 @@ export interface EmbedInput {
 
 export interface EmbedResult {
   readonly embedding: number[]
+  /** Provider-reported token count for the embedded text; drives cost-based `semantic-query` billing. */
+  readonly tokens?: number
 }
 
 // ---------------------------------------------------------------------------

@@ -203,7 +203,7 @@ describe("billing runtime integration", () => {
       periodEnd: BILLING_PERIOD_END,
     })
 
-    const run = async (action: "live-eval-scan" | "eval-generation", idempotencyKey: string) => {
+    const run = async (action: "semantic-query" | "llm-call", idempotencyKey: string) => {
       const authorization = await Effect.runPromise(
         authorizeBillableAction({
           organizationId: OrganizationId(organizationId),
@@ -228,10 +228,10 @@ describe("billing runtime integration", () => {
       )
     }
 
-    await run("live-eval-scan", `live-eval-scan:${organizationId}:evaluation-a:trace-a`)
-    await run("live-eval-scan", `live-eval-scan:${organizationId}:evaluation-a:trace-a`)
-    await run("eval-generation", `eval-generation:${organizationId}:billing-op-a`)
-    await run("eval-generation", `eval-generation:${organizationId}:billing-op-a`)
+    await run("semantic-query", `semantic-query:${organizationId}:evaluation-a:trace-a`)
+    await run("semantic-query", `semantic-query:${organizationId}:evaluation-a:trace-a`)
+    await run("llm-call", `llm-call:${organizationId}:billing-op-a`)
+    await run("llm-call", `llm-call:${organizationId}:billing-op-a`)
 
     const events = await pg.db
       .select()
@@ -243,14 +243,14 @@ describe("billing runtime integration", () => {
       .where(eq(billingUsagePeriods.organizationId, organizationId))
 
     expect(events).toHaveLength(2)
-    expect(events.map((event) => event.credits).sort((a, b) => a - b)).toEqual([30, 1000])
-    expect(period?.consumedCredits).toBe(1030)
+    expect(events.map((event) => event.credits).sort((a, b) => a - b)).toEqual([1, 4])
+    expect(period?.consumedCredits).toBe(5)
   })
 
   it("treats concurrent duplicate record deliveries as one billed action", async () => {
     const organizationId = generateId()
     const projectId = generateId()
-    const idempotencyKey = `flagger-scan:${organizationId}:flagger-a:trace-a`
+    const idempotencyKey = `semantic-query:${organizationId}:flagger-a:trace-a`
     const context = {
       planSlug: "free" as const,
       planSource: "free-fallback" as const,
@@ -271,7 +271,7 @@ describe("billing runtime integration", () => {
         recordBillableActionUseCase({
           organizationId: OrganizationId(organizationId),
           projectId: ProjectId(projectId),
-          action: "flagger-scan",
+          action: "semantic-query",
           idempotencyKey,
           context,
           traceId: TraceId("aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa1"),
@@ -291,10 +291,10 @@ describe("billing runtime integration", () => {
       .where(eq(billingUsagePeriods.organizationId, organizationId))
     const outbox = await pg.db.select().from(outboxEvents).where(eq(outboxEvents.organizationId, organizationId))
 
-    expect(first.consumedCredits).toBe(30)
-    expect(second.consumedCredits).toBe(30)
+    expect(first.consumedCredits).toBe(1)
+    expect(second.consumedCredits).toBe(1)
     expect(events).toHaveLength(1)
-    expect(period?.consumedCredits).toBe(30)
+    expect(period?.consumedCredits).toBe(1)
     expect(outbox).toHaveLength(1)
   })
 
@@ -311,9 +311,9 @@ describe("billing runtime integration", () => {
     const authorization = await Effect.runPromise(
       authorizeBillableAction({
         organizationId: OrganizationId(organizationId),
-        action: "flagger-scan",
+        action: "semantic-query",
         skipIfBlocked: true,
-        idempotencyKey: `flagger-scan:${organizationId}:trace-authorize`,
+        idempotencyKey: `semantic-query:${organizationId}:trace-authorize`,
       }).pipe(
         withPostgres(billingLayers, pg.appPostgresClient, OrganizationId(organizationId)),
         provideAlwaysAllowReservation,
@@ -333,8 +333,8 @@ describe("billing runtime integration", () => {
       recordBillableActionUseCase({
         organizationId: OrganizationId(organizationId),
         projectId: ProjectId(projectId),
-        action: "flagger-scan",
-        idempotencyKey: `flagger-scan:${organizationId}:flagger-a:trace-a`,
+        action: "semantic-query",
+        idempotencyKey: `semantic-query:${organizationId}:flagger-a:trace-a`,
         context: authorization.context,
       }).pipe(withPostgres(billingLayers, pg.appPostgresClient, OrganizationId(organizationId)), withTracing),
     )
@@ -349,8 +349,8 @@ describe("billing runtime integration", () => {
       .where(eq(billingUsagePeriods.organizationId, organizationId))
 
     expect(events).toHaveLength(1)
-    expect(events[0]?.action).toBe("flagger-scan")
-    expect(period?.consumedCredits).toBe(30)
+    expect(events[0]?.action).toBe("semantic-query")
+    expect(period?.consumedCredits).toBe(1)
   })
 
   it("records trace usage batches idempotently across queue retries", async () => {
@@ -576,9 +576,9 @@ describe("billing runtime integration", () => {
       const freeResult = await Effect.runPromise(
         authorizeBillableAction({
           organizationId: OrganizationId(freeOrgId),
-          action: "flagger-scan",
+          action: "semantic-query",
           skipIfBlocked: true,
-          idempotencyKey: `flagger-scan:${freeOrgId}:trace-free`,
+          idempotencyKey: `semantic-query:${freeOrgId}:trace-free`,
         }).pipe(
           withPostgres(billingLayers, pg.appPostgresClient, OrganizationId(freeOrgId)),
           provideAtomicReservation,
@@ -833,24 +833,24 @@ describe("billing runtime integration", () => {
      * Setup shared by both tests:
      *
      * - Pro org sitting at exactly 100% of included credits (consumed = includedCredits = 100_000).
-     * - Spending limit = base $99 + $0.30 of overage headroom = 9930 cents. The Pro overage rate
-     *   is $0.002/credit, so $0.30 buys exactly 150 overage credits.
-     * - Each `live-eval-scan` costs 30 credits → 5 reservations fit, the 6th overshoots.
+     * - Spending limit = base $99 + $0.01 of overage headroom = 9901 cents. The Pro overage rate
+     *   is $0.002/credit, so $0.01 buys exactly 5 overage credits.
+     * - Each `semantic-query` costs 1 credit → 5 reservations fit, the 6th overshoots.
      * - 10 concurrent authorizations.
      *
      * Without atomic reservation, every concurrent caller reads the same 100_000 snapshot, projects
-     * `100_030 ≤ 100_150 (cap)` and is allowed. All 10 then record → final consumed = 100_300, overage = 300,
-     * spend = $99.60, overshooting the $99.30 cap by 100% of available overage.
+     * `100_001 ≤ 100_005 (cap)` and is allowed. All 10 then record → final consumed = 100_010, overage = 10,
+     * spend = $99.02, overshooting the $99.01 cap by 100% of available overage.
      *
-     * With atomic reservation, exactly 5 succeed and the worker writes 5 records → final consumed = 100_150,
-     * overage = 150, spend = $99.30 = cap.
+     * With atomic reservation, exactly 5 succeed and the worker writes 5 records → final consumed = 100_005,
+     * overage = 5, spend = $99.01 = cap.
      */
     const PRO_BASE_CENTS = PLAN_CONFIGS.pro.priceCents as number
-    const SPENDING_LIMIT_CENTS = PRO_BASE_CENTS + 30
+    const SPENDING_LIMIT_CENTS = PRO_BASE_CENTS + 1
     const PERIOD_START = new Date("2026-08-01T00:00:00.000Z")
     const PERIOD_END = new Date("2026-09-01T00:00:00.000Z")
     const CONCURRENCY = 10
-    const ACTION_COST = 30
+    const ACTION_COST = 1
 
     const seedCappedProOrgAtIncludedLimit = async (organizationId: string) => {
       await pg.db.insert(organizations).values({
@@ -893,7 +893,7 @@ describe("billing runtime integration", () => {
 
       const authorizations = await Promise.all(
         requests.map((index) => {
-          const idempotencyKey = buildBillingIdempotencyKey("live-eval-scan", [
+          const idempotencyKey = buildBillingIdempotencyKey("semantic-query", [
             organizationId,
             "evaluation-a",
             `trace-${index}`,
@@ -915,7 +915,7 @@ describe("billing runtime integration", () => {
           recordBillableActionUseCase({
             organizationId: OrganizationId(organizationId),
             projectId: ProjectId(projectId),
-            action: "live-eval-scan",
+            action: "semantic-query",
             idempotencyKey: authorization.idempotencyKey,
             context: {
               planSlug: "pro",
@@ -947,7 +947,7 @@ describe("billing runtime integration", () => {
       const result = await runConcurrentAuthorizeAndRecord(organizationId, projectId, (idempotencyKey) =>
         authorizeBillableAction({
           organizationId: OrganizationId(organizationId),
-          action: "live-eval-scan",
+          action: "semantic-query",
           skipIfBlocked: true,
           idempotencyKey,
         }).pipe(
@@ -963,7 +963,7 @@ describe("billing runtime integration", () => {
 
       expect(result.allowedCount).toBe(CONCURRENCY)
       expect(finalConsumed).toBe(PLAN_CONFIGS.pro.includedCredits + CONCURRENCY * ACTION_COST)
-      // Cap is $99.30; without reservation, final spend reaches $99.60 — $0.30 over the cap, i.e. 100%
+      // Cap is $99.15; without reservation, final spend reaches $99.30 — $0.15 over the cap, i.e. 100%
       // of the available overage budget gets spent on top of what was already allowed.
       expect(finalSpendCents).toBeGreaterThan(SPENDING_LIMIT_CENTS)
     })
@@ -978,7 +978,7 @@ describe("billing runtime integration", () => {
       const result = await runConcurrentAuthorizeAndRecord(organizationId, projectId, (idempotencyKey) =>
         authorizeBillableAction({
           organizationId: OrganizationId(organizationId),
-          action: "live-eval-scan",
+          action: "semantic-query",
           skipIfBlocked: true,
           idempotencyKey,
         }).pipe(
@@ -1004,7 +1004,7 @@ describe("billing runtime integration", () => {
       await seedCappedProOrgAtIncludedLimit(organizationId)
 
       const { reservation } = createFakeBillingSpendReservation("atomic")
-      const idempotencyKey = buildBillingIdempotencyKey("live-eval-scan", [
+      const idempotencyKey = buildBillingIdempotencyKey("semantic-query", [
         organizationId,
         "evaluation-a",
         "trace-retry",
@@ -1014,7 +1014,7 @@ describe("billing runtime integration", () => {
         Effect.runPromise(
           authorizeBillableAction({
             organizationId: OrganizationId(organizationId),
-            action: "live-eval-scan",
+            action: "semantic-query",
             skipIfBlocked: true,
             idempotencyKey,
           }).pipe(
@@ -1032,7 +1032,7 @@ describe("billing runtime integration", () => {
 
       // Five distinct other actions should still fit (1 retried + 5 fresh = 6 distinct → 6th would exceed).
       const otherKeys = ["a", "b", "c", "d", "e"].map((suffix) =>
-        buildBillingIdempotencyKey("live-eval-scan", [organizationId, "evaluation-a", `trace-${suffix}`]),
+        buildBillingIdempotencyKey("semantic-query", [organizationId, "evaluation-a", `trace-${suffix}`]),
       )
       const otherResults = []
       for (const key of otherKeys) {
@@ -1040,7 +1040,7 @@ describe("billing runtime integration", () => {
           await Effect.runPromise(
             authorizeBillableAction({
               organizationId: OrganizationId(organizationId),
-              action: "live-eval-scan",
+              action: "semantic-query",
               skipIfBlocked: true,
               idempotencyKey: key,
             }).pipe(

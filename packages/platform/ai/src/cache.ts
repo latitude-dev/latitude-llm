@@ -35,6 +35,7 @@ const generateResultSchema = Schema.Struct({
 })
 const embedResultSchema = Schema.Struct({
   embedding: Schema.Array(Schema.Number),
+  tokens: Schema.optional(Schema.Number),
 })
 const rerankResultSchema = Schema.Array(
   Schema.Struct({
@@ -174,7 +175,10 @@ export const withAICache = (ai: AIShape, cache: CacheStoreShape, options?: AICac
           try: () => Schema.decodeUnknownSync(embedResultFromJsonStringSchema)(cached),
           catch: toAIError("read"),
         })
-        return { embedding: [...decoded.embedding] } satisfies EmbedResult
+        return {
+          embedding: [...decoded.embedding],
+          ...(decoded.tokens === undefined ? {} : { tokens: decoded.tokens }),
+        } satisfies EmbedResult
       }
 
       const result = yield* ai.embed(input)

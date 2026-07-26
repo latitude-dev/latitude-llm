@@ -6,7 +6,7 @@ import { GALLERY_DWELL_MS, usePrefersReducedMotion } from "./motion.ts"
 const INTRO_GALLERY: ReadonlyArray<{ readonly title: string; readonly description: string; readonly image: string }> = [
   {
     title: "See every request your AI makes",
-    description: "Each call captured with full context — inputs, outputs, timing, and cost.",
+    description: "Inputs, outputs, timing, and cost, captured for every call.",
     image: "/onboarding/traces.png",
   },
   {
@@ -16,7 +16,7 @@ const INTRO_GALLERY: ReadonlyArray<{ readonly title: string; readonly descriptio
   },
   {
     title: "Catch problems before your users do",
-    description: "Latitude flags refusals, errors, and hallucinations — and groups them into issues.",
+    description: "Latitude flags refusals, errors, and hallucinations, then groups them into issues.",
     image: "/onboarding/issues.png",
   },
 ]
