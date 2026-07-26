@@ -22,6 +22,7 @@ import {
   type MessageEmbeddingUpsert,
   SessionRepository,
   sessionConversationMessages,
+  stripLoneSurrogates,
   TRACE_SEARCH_CHARS_PER_TOKEN_ESTIMATE,
   TraceSearchBudget,
 } from "@domain/spans"
@@ -126,12 +127,19 @@ const MOMENT_CLASSIFIER_CONTEXT_RADIUS = 3
 const TAXONOMY_DIRECT_PROJECTION_MAX_LENGTH = CONVERSATION_INTELLIGENCE_LLM_MAX_DOCUMENT_CHARS
 const TRUNCATION_MARKER = "\n[...truncated...]\n"
 
+// JS strings are UTF-16 and may contain unpaired surrogates — either from
+// malformed input or from a code-unit slice that splits a surrogate pair.
+// Bedrock/Anthropic reject them ("unexpected end of hex escape" while
+// deserializing the request body), so every lone surrogate is replaced with
+// U+FFFD before the text leaves this module — mirrors the identical
+// constraint handled by `stripLoneSurrogates` in `@domain/spans`'s trace
+// search document builder.
 const middleTruncate = (value: string, maxLength: number): string => {
-  if (value.length <= maxLength) return value
-  if (maxLength <= TRUNCATION_MARKER.length) return value.slice(0, maxLength)
+  if (value.length <= maxLength) return stripLoneSurrogates(value)
+  if (maxLength <= TRUNCATION_MARKER.length) return stripLoneSurrogates(value.slice(0, maxLength))
   const head = Math.floor((maxLength - TRUNCATION_MARKER.length) / 2)
   const tail = maxLength - TRUNCATION_MARKER.length - head
-  return `${value.slice(0, head)}${TRUNCATION_MARKER}${value.slice(value.length - tail)}`
+  return stripLoneSurrogates(`${value.slice(0, head)}${TRUNCATION_MARKER}${value.slice(value.length - tail)}`)
 }
 
 const escapePromptDelimiters = (value: string): string => value.replaceAll("<", "\\u003c").replaceAll(">", "\\u003e")
@@ -152,7 +160,7 @@ const renderMomentClassifierTranscript = (
 ): string | null => {
   const promptMessages = messages.map((message) => ({ ...message, text: escapePromptDelimiters(message.text) }))
   const fullTranscript = documentFromMessages(promptMessages)
-  if (fullTranscript.length <= maxLength) return fullTranscript
+  if (fullTranscript.length <= maxLength) return stripLoneSurrogates(fullTranscript)
 
   const contextIndexes = new Set<number>()
   for (const candidate of candidates) {
