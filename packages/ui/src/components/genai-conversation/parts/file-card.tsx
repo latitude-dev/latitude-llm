@@ -13,8 +13,7 @@ import {
   FileVideoIcon,
   type LucideIcon,
 } from "lucide-react"
-import { type ReactNode, useState } from "react"
-import { useMountEffect } from "../../../hooks/use-mount-effect.ts"
+import type { ReactNode } from "react"
 import { cn } from "../../../utils/cn.ts"
 import { Icon } from "../../icons/icons.tsx"
 import { Text } from "../../text/text.tsx"
@@ -85,16 +84,18 @@ function fileExtensionForMime(mimeType?: string | null): string | undefined {
   return subtype && /^[a-z0-9]+$/.test(subtype) ? subtype : undefined
 }
 
-function dataUriToObjectUrl(dataUri: string): string | undefined {
+function openDataUriPreview(dataUri: string) {
   try {
     const comma = dataUri.indexOf(",")
     const meta = dataUri.slice(5, comma)
-    if (!dataUri.startsWith("data:") || comma < 0 || !meta.includes(";base64")) return undefined
+    if (!dataUri.startsWith("data:") || comma < 0 || !meta.includes(";base64")) return
     const mime = meta.split(";")[0] || "application/octet-stream"
     const bytes = Uint8Array.from(atob(dataUri.slice(comma + 1)), (c) => c.charCodeAt(0))
-    return URL.createObjectURL(new Blob([bytes], { type: mime }))
+    const url = URL.createObjectURL(new Blob([bytes], { type: mime }))
+    window.open(url, "_blank", "noopener,noreferrer")
+    window.setTimeout(() => URL.revokeObjectURL(url), 60_000)
   } catch {
-    return undefined
+    // ignore malformed data URIs
   }
 }
 
@@ -151,21 +152,22 @@ export function FileCard({
   const extension = fileExtensionForMime(mimeType)
   const downloadName = fileName ?? `attachment${extension ? `.${extension}` : ""}`
 
-  // Top-level navigation to data: is blocked — preview via blob:.
-  const [blobPreviewUrl] = useState(() =>
-    downloadDataUri?.startsWith("data:") ? dataUriToObjectUrl(downloadDataUri) : undefined,
-  )
-  useMountEffect(() => () => {
-    if (blobPreviewUrl) URL.revokeObjectURL(blobPreviewUrl)
-  })
-
-  const previewUri = href ?? blobPreviewUrl
-
   let actions: ReactNode
-  if (isPdf && (previewUri || downloadDataUri)) {
+  if (isPdf && (href || downloadDataUri)) {
     actions = (
       <div className="flex shrink-0 items-center gap-1.5">
-        {previewUri ? <ActionLink href={previewUri} label="Preview PDF" icon={ExternalLinkIcon} /> : null}
+        {href ? (
+          <ActionLink href={href} label="Preview PDF" icon={ExternalLinkIcon} />
+        ) : downloadDataUri ? (
+          <button
+            type="button"
+            aria-label="Preview PDF"
+            className={ACTION_CLASS}
+            onClick={() => openDataUriPreview(downloadDataUri)}
+          >
+            <Icon icon={ExternalLinkIcon} size="sm" />
+          </button>
+        ) : null}
         {downloadDataUri ? (
           <ActionLink href={downloadDataUri} label="Download PDF" download={downloadName} icon={DownloadIcon} />
         ) : null}
