@@ -1,4 +1,4 @@
-import { AI_GENERATE_TELEMETRY_TAGS } from "@domain/ai"
+import { AI_GENERATE_TELEMETRY_SPAN_NAMES, AI_GENERATE_TELEMETRY_TAGS } from "@domain/ai"
 import {
   SessionAnalysisRepository,
   type SessionMomentLabel,
@@ -251,7 +251,10 @@ describe("screenSessionFlaggersUseCase", () => {
     ].join("\n")
     const session = makeSessionDetail(
       [user(clusterSamples), assistant('{"themes":[{"name":"Project delivery failures"}]}')],
-      { tags: [...AI_GENERATE_TELEMETRY_TAGS.taxonomyProposeThemes] },
+      {
+        tags: [...AI_GENERATE_TELEMETRY_TAGS.taxonomyProposeThemes],
+        rootSpanName: AI_GENERATE_TELEMETRY_SPAN_NAMES.taxonomyProposeThemes,
+      },
     )
     const { result, scores } = await runScreening({
       session,

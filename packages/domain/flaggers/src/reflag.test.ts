@@ -1,4 +1,4 @@
-import { AI_GENERATE_TELEMETRY_TAGS } from "@domain/ai"
+import { AI_GENERATE_TELEMETRY_SPAN_NAMES, AI_GENERATE_TELEMETRY_TAGS } from "@domain/ai"
 import { describe, expect, it } from "vitest"
 import {
   isFlaggerGeneratedTrace,
@@ -10,6 +10,8 @@ import {
 const CLASSIFY = AI_GENERATE_TELEMETRY_TAGS.flaggerClassify[0]
 const DRAFT = AI_GENERATE_TELEMETRY_TAGS.flaggerDraft[0]
 const NO_REFLAG = AI_GENERATE_TELEMETRY_TAGS.flaggerNoReflag[0]
+const TAXONOMY_PROPOSE = AI_GENERATE_TELEMETRY_TAGS.taxonomyProposeThemes[0]
+const TAXONOMY_PROPOSE_SPAN = AI_GENERATE_TELEMETRY_SPAN_NAMES.taxonomyProposeThemes
 
 describe("isFlaggerGeneratedTrace", () => {
   it("is true for traces emitted by a flagger classify call", () => {
@@ -62,16 +64,34 @@ describe("isUserCentricReflagInapplicable", () => {
     expect(isUserCentricReflagInapplicable([DRAFT], false)).toBe(true)
   })
 
-  it("skips user-centric strategies on taxonomy nested-sample traces", () => {
-    expect(isUserCentricReflagInapplicable(["taxonomy:propose-themes"], false)).toBe(true)
-    expect(isUserCentricReflagInapplicable(["taxonomy:name-cluster"], false)).toBe(true)
-    expect(isUserCentricReflagInapplicable(["taxonomy:facet-extract"], false)).toBe(true)
+  it("skips user-centric strategies on taxonomy traces with matching tag and root span name", () => {
+    expect(isUserCentricReflagInapplicable([TAXONOMY_PROPOSE], false, TAXONOMY_PROPOSE_SPAN)).toBe(true)
+    expect(
+      isUserCentricReflagInapplicable(
+        ["taxonomy:name-cluster"],
+        false,
+        AI_GENERATE_TELEMETRY_SPAN_NAMES.taxonomyNameCluster,
+      ),
+    ).toBe(true)
+    expect(
+      isUserCentricReflagInapplicable(
+        ["taxonomy:facet-extract"],
+        false,
+        AI_GENERATE_TELEMETRY_SPAN_NAMES.facetExtract,
+      ),
+    ).toBe(true)
+  })
+
+  it("does not treat free-form taxonomy tags alone as nested-sample provenance", () => {
+    expect(isUserCentricReflagInapplicable([TAXONOMY_PROPOSE], false)).toBe(false)
+    expect(isUserCentricReflagInapplicable([TAXONOMY_PROPOSE], false, "customer.root")).toBe(false)
+    expect(isUserCentricReflagInapplicable([], false, TAXONOMY_PROPOSE_SPAN)).toBe(false)
   })
 
   it("still allows assistant-response-centric strategies on nested-sample traces", () => {
     expect(isUserCentricReflagInapplicable([CLASSIFY], true)).toBe(false)
     expect(isUserCentricReflagInapplicable([CLASSIFY], undefined)).toBe(false)
-    expect(isUserCentricReflagInapplicable(["taxonomy:propose-themes"], true)).toBe(false)
+    expect(isUserCentricReflagInapplicable([TAXONOMY_PROPOSE], true, TAXONOMY_PROPOSE_SPAN)).toBe(false)
   })
 
   it("does not skip user-centric strategies on ordinary production traces", () => {
