@@ -16,8 +16,8 @@ describe("Part media / file rendering", () => {
     )
 
     expect(markup).toContain("PDF document")
-    expect(markup).toContain('aria-label="Preview PDF"')
     expect(markup).toContain('aria-label="Download PDF"')
+    expect(markup).not.toContain('aria-label="Preview PDF"')
     expect(markup).toContain("data:application/pdf;base64,JVBERi0=")
     expect(markup).not.toContain("Image unavailable")
     expect(markup).not.toContain("<img")

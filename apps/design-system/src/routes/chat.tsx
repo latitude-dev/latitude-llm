@@ -126,7 +126,7 @@ const FILE_MESSAGES = [
       {
         type: "text",
         content:
-          "Inline PDF blob mis-tagged as image (as emitted by @ai-sdk/otel) — mime wins: FileCard with Preview + Download:",
+          "Inline PDF blob mis-tagged as image (as emitted by @ai-sdk/otel) — mime wins: FileCard with Download:",
       },
       { type: "blob", modality: "image", mime_type: "application/pdf", content: PDF_BLOB_B64 },
     ],
@@ -242,7 +242,7 @@ const SECTIONS: { title: string; description: string; messages: GenAIMessage[] }
   {
     title: "Files & documents",
     description:
-      "file_id references, a linked PDF (Preview), an inline CSV (Download), and a mis-tagged PDF blob (Preview + Download).",
+      "file_id references, a linked PDF (Preview), an inline CSV (Download), and a mis-tagged PDF blob (Download).",
     messages: FILE_MESSAGES,
   },
   {

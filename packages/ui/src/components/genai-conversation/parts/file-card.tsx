@@ -138,29 +138,20 @@ export function FileCard({
   const downloadName = fileName ?? `attachment${extension ? `.${extension}` : ""}`
 
   let actions: ReactNode
-  if (isPdf && (href || downloadDataUri)) {
+  // Top-level data: navigation is blocked; Preview only when we have an http(s)/blob href.
+  // Download is only offered for same-origin data URIs (cross-origin `download` is ignored).
+  if (isPdf && href && downloadDataUri) {
     actions = (
       <div className="flex shrink-0 items-center gap-1.5">
-        {href ? (
-          <ActionLink href={href} label="Preview PDF" icon={ExternalLinkIcon} />
-        ) : downloadDataUri ? (
-          <button
-            type="button"
-            aria-label="Preview PDF"
-            className={ACTION_CLASS}
-            onClick={() => {
-              void import("./open-data-uri-preview.ts").then(({ openDataUriPreview }) => {
-                openDataUriPreview(downloadDataUri)
-              })
-            }}
-          >
-            <Icon icon={ExternalLinkIcon} size="sm" />
-          </button>
-        ) : null}
-        {downloadDataUri ? (
-          <ActionLink href={downloadDataUri} label="Download PDF" download={downloadName} icon={DownloadIcon} />
-        ) : null}
+        <ActionLink href={href} label="Preview PDF" icon={ExternalLinkIcon} />
+        <ActionLink href={downloadDataUri} label="Download PDF" download={downloadName} icon={DownloadIcon} />
       </div>
+    )
+  } else if (isPdf && href) {
+    actions = <ActionLink href={href} label="Preview PDF" icon={ExternalLinkIcon} />
+  } else if (isPdf && downloadDataUri) {
+    actions = (
+      <ActionLink href={downloadDataUri} label="Download PDF" download={downloadName} icon={DownloadIcon} />
     )
   } else if (href) {
     actions = <ActionLink href={href} label="Open file in new tab" icon={ExternalLinkIcon} />
