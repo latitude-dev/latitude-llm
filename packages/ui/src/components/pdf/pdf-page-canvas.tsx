@@ -37,33 +37,55 @@ export function PdfPageCanvas({
       await taskRef.current?.promise.catch(() => {})
       if (cancelled) return
 
-      page = await doc.getPage(pageNumber)
-      const canvas = canvasRef.current
-      if (cancelled || !canvas) return
+      let loadedPage: PDFPageProxy
+      try {
+        loadedPage = await doc.getPage(pageNumber)
+      } catch {
+        if (!cancelled) setIsRendering(false)
+        return
+      }
 
-      const unscaled = page.getViewport({ scale: 1 })
+      if (cancelled) {
+        loadedPage.cleanup()
+        return
+      }
+
+      page = loadedPage
+      const canvas = canvasRef.current
+      if (!canvas) {
+        loadedPage.cleanup()
+        page = null
+        setIsRendering(false)
+        return
+      }
+
+      const unscaled = loadedPage.getViewport({ scale: 1 })
       onMeasured?.(pageNumber, { width: unscaled.width, height: unscaled.height })
 
-      const base = page.getViewport({ scale })
+      const base = loadedPage.getViewport({ scale })
       const ratio = computePixelRatio({
         cssWidth: base.width,
         cssHeight: base.height,
         devicePixelRatio: globalThis.devicePixelRatio ?? 1,
       })
-      const viewport = page.getViewport({ scale: scale * ratio })
+      const viewport = loadedPage.getViewport({ scale: scale * ratio })
 
       canvas.width = Math.floor(viewport.width)
       canvas.height = Math.floor(viewport.height)
       canvas.style.width = `${Math.floor(base.width)}px`
       canvas.style.height = `${Math.floor(base.height)}px`
 
-      const task = page.render({ canvas, viewport })
-      taskRef.current = task
+      let task: RenderTask | null = null
       try {
+        task = loadedPage.render({ canvas, viewport })
+        taskRef.current = task
         await task.promise
-        if (!cancelled) setIsRendering(false)
       } catch {
         // Cancellation is normal teardown; a real failure leaves the blank canvas in place.
+      } finally {
+        if (task && taskRef.current === task) taskRef.current = null
+        if (cancelled) loadedPage.cleanup()
+        else setIsRendering(false)
       }
     }
 
