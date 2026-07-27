@@ -136,6 +136,12 @@ function parseOutput(attrs: readonly OtlpKeyValue[]): GenAIMessage[] {
   return message ? [message] : []
 }
 
+/** Attribute keys this parser reads. Consumed by `isContentAttributeKey` so ingest redaction can drop the raw copies. */
+export const FLUE_CONTENT_ATTRIBUTE_KEYS = {
+  exact: ["flue.turn.input", "flue.turn.output"],
+  prefixes: [],
+} as const
+
 export function parseFlue(attrs: readonly OtlpKeyValue[]): ParsedContent {
   const { inputMessages, systemInstructions, toolDefinitions } = parseInput(attrs)
 

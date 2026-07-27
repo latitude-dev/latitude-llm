@@ -2,14 +2,14 @@ import type { GenAIMessage, GenAISystem } from "rosetta-ai"
 import type { ToolDefinition } from "../../entities/span.ts"
 import { stringAttr } from "../attributes.ts"
 import type { OtlpKeyValue } from "../types.ts"
-import { parseClaudeCode } from "./claude-code.ts"
-import { parseFlue } from "./flue.ts"
-import { parseGenAICurrent } from "./genai.ts"
-import { parseGenAIDeprecated } from "./genai_deprecated.ts"
-import { parseJsonValue } from "./json-value.ts"
-import { parseLiveKit } from "./livekit.ts"
-import { parseOpenInference } from "./openinference.ts"
-import { parseVercel } from "./vercel.ts"
+import { CLAUDE_CODE_CONTENT_ATTRIBUTE_KEYS, parseClaudeCode } from "./claude-code.ts"
+import { FLUE_CONTENT_ATTRIBUTE_KEYS, parseFlue } from "./flue.ts"
+import { GENAI_CONTENT_ATTRIBUTE_KEYS, parseGenAICurrent } from "./genai.ts"
+import { GENAI_DEPRECATED_CONTENT_ATTRIBUTE_KEYS, parseGenAIDeprecated } from "./genai_deprecated.ts"
+import { JSON_VALUE_CONTENT_ATTRIBUTE_KEYS, parseJsonValue } from "./json-value.ts"
+import { LIVEKIT_CONTENT_ATTRIBUTE_KEYS, parseLiveKit } from "./livekit.ts"
+import { OPENINFERENCE_CONTENT_ATTRIBUTE_KEYS, parseOpenInference } from "./openinference.ts"
+import { parseVercel, VERCEL_CONTENT_ATTRIBUTE_KEYS } from "./vercel.ts"
 
 export interface ParsedContent {
   readonly inputMessages: readonly GenAIMessage[]
@@ -93,4 +93,43 @@ export function parseContent(attrs: readonly OtlpKeyValue[]): ParsedContent {
     }
   }
   return EMPTY_CONTENT
+}
+
+interface ContentAttributeKeys {
+  readonly exact: readonly string[]
+  readonly prefixes: readonly string[]
+}
+
+/**
+ * Every parser declares the keys it reads, and they are composed here rather than
+ * restated in the redaction module. `transformSpan` copies each of these raw
+ * attributes into `attr_string` alongside the parsed content columns, so ingest
+ * redaction has to drop them or a verbatim plaintext copy survives in the same
+ * ClickHouse row. Keeping the declaration next to each parser means a new vendor
+ * parser gets redaction coverage when it is added, instead of silently drifting.
+ */
+const CONTENT_ATTRIBUTE_KEY_SOURCES: readonly ContentAttributeKeys[] = [
+  GENAI_CONTENT_ATTRIBUTE_KEYS,
+  GENAI_DEPRECATED_CONTENT_ATTRIBUTE_KEYS,
+  OPENINFERENCE_CONTENT_ATTRIBUTE_KEYS,
+  VERCEL_CONTENT_ATTRIBUTE_KEYS,
+  LIVEKIT_CONTENT_ATTRIBUTE_KEYS,
+  FLUE_CONTENT_ATTRIBUTE_KEYS,
+  CLAUDE_CODE_CONTENT_ATTRIBUTE_KEYS,
+  JSON_VALUE_CONTENT_ATTRIBUTE_KEYS,
+]
+
+const CONTENT_ATTRIBUTE_EXACT_KEYS: ReadonlySet<string> = new Set(
+  CONTENT_ATTRIBUTE_KEY_SOURCES.flatMap((source) => source.exact),
+)
+
+const CONTENT_ATTRIBUTE_KEY_PREFIXES: readonly string[] = CONTENT_ATTRIBUTE_KEY_SOURCES.flatMap(
+  (source) => source.prefixes,
+)
+
+/** True when a span attribute holds conversation content that a typed column already carries. */
+export function isContentAttributeKey(key: string): boolean {
+  if (CONTENT_ATTRIBUTE_EXACT_KEYS.has(key)) return true
+
+  return CONTENT_ATTRIBUTE_KEY_PREFIXES.some((prefix) => key.startsWith(prefix))
 }

@@ -135,6 +135,20 @@ function parseToolDefinitions(attrs: readonly OtlpKeyValue[]): ToolDefinition[] 
     .filter(Boolean) as ToolDefinition[]
 }
 
+/** Attribute keys this parser reads. Consumed by `isContentAttributeKey` so ingest redaction can drop the raw copies. */
+export const VERCEL_CONTENT_ATTRIBUTE_KEYS = {
+  exact: [
+    "ai.prompt",
+    "ai.prompt.messages",
+    "ai.prompt.tools",
+    "ai.prompt.toolDefinitions",
+    "ai.response.text",
+    "ai.response.object",
+    "ai.response.toolCalls",
+  ],
+  prefixes: ["ai.prompt.tools.", "ai.response.toolCalls."],
+} as const
+
 export function parseVercel(attrs: readonly OtlpKeyValue[]): ParsedContent {
   // Fall back to call-level for messages, but keep a top-level system prompt (call-level carries none).
   let input = parseInputFromTopLevel(attrs)

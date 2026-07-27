@@ -649,7 +649,7 @@ Follow the layering in the testing skill: pure unit tests in the domain, PGlite/
 - [x] **P1-2**: `redaction/labels.ts` and `redaction/detectors.ts` per [§5](#5-detector-specification), including Luhn and IBAN mod-97 helpers. No generic entropy detector.
 - [x] **P1-3**: `redaction/redact-text.ts` with overlap resolution per [§4.3](#43-policy-model).
 - [x] **P1-4**: `redaction/redact-json.ts` structure-aware walk with skip-keys, `blob`/`file` skipping, and stringified-JSON handling.
-- [ ] **P1-5**: Per-parser content-key matchers in `packages/domain/spans/src/otlp/content/*`, composed into `isContentAttributeKey` in `content/index.ts` next to the existing dispatch table. Cover all eight vendor families.
+- [x] **P1-5**: Per-parser content-key matchers in `packages/domain/spans/src/otlp/content/*`, composed into `isContentAttributeKey` in `content/index.ts` next to the existing dispatch table. Cover all eight vendor families.
 - [ ] **P1-6**: `redaction/redact-span.ts` implementing the full field surface in [§4.2](#42-the-complete-field-surface), and `redaction/redact-spans.ts` batch entry point with pseudonym memoization, stat aggregation, and the size cap.
 - [ ] **P1-7**: `RedactionError` in `packages/domain/spans/src/errors.ts`.
 - [ ] **P1-8**: Unit tests per [§9](#9-testing-plan), including the coding-agent negative vector corpus.

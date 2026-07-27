@@ -34,6 +34,12 @@ function extractMessages(raw: string | undefined): Record<string, unknown>[] | u
   return arr as Record<string, unknown>[]
 }
 
+/** Attribute keys this parser reads. Consumed by `isContentAttributeKey` so ingest redaction can drop the raw copies. */
+export const JSON_VALUE_CONTENT_ATTRIBUTE_KEYS = {
+  exact: ["input.value", "output.value"],
+  prefixes: [],
+} as const
+
 export function parseJsonValue(attrs: readonly OtlpKeyValue[]): ParsedContent {
   const inVal = extractMessages(stringAttr(attrs, "input.value"))
   const outVal = extractMessages(stringAttr(attrs, "output.value"))
