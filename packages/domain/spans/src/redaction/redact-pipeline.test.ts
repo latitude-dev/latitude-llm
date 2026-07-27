@@ -131,7 +131,7 @@ describe("redaction over the real OTLP transform", () => {
     const { before, after } = await transformAndRedact(buildRequest(attributes))
 
     // Guard against a vacuous pass: the payload must have contained PII to begin with.
-    expect(before).toMatch(new RegExp(`${EMAIL}|\\${PHONE}|${CARD}|${SECRET}`))
+    expect([EMAIL, PHONE, CARD, SECRET].some((pii) => before.includes(pii))).toBe(true)
 
     expect(after).not.toContain(EMAIL)
     expect(after).not.toContain(PHONE)
