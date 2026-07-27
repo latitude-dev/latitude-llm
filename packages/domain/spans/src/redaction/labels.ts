@@ -32,30 +32,3 @@ export const REDACTED_IDENTITY_PLACEHOLDER = "[REDACTED_USER]"
 export const REDACTION_MAX_FIELD_CHARS = 1_000_000
 
 export const REDACTION_BATCH_TIMEOUT_MS = 30_000
-
-/**
- * Keys whose values are structural and never worth scanning. This list is an
- * optimization, not a safety mechanism: every detector is high-precision, so
- * scanning a structural value costs CPU but cannot corrupt it. Do not grow this
- * list defensively — if a value needs protecting from a detector, the detector is
- * the bug.
- */
-export const REDACTION_SKIP_KEYS: ReadonlySet<string> = new Set([
-  "id",
-  "type",
-  "index",
-  "messageIndex",
-  "message_index",
-  "mimeType",
-  "mime_type",
-  "tool_call_id",
-  "toolCallId",
-  "tool_use_id",
-  "toolUseId",
-  "isError",
-  "is_error",
-  "isRefusal",
-  "is_refusal",
-  "originalType",
-  "original_type",
-])

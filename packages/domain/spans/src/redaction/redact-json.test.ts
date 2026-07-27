@@ -53,11 +53,30 @@ describe("redactJsonValue", () => {
     expect(input.a).toBe("john@example.com")
   })
 
-  it("does not redact values under skip keys", () => {
-    const result = redactJsonValue({ tool_call_id: "a@b.co", content: "a@b.co" }, ENFORCE)
+  it("redacts values under structural-looking keys, which customer JSON uses for content", () => {
+    const result = redactJsonValue({ id: "john@example.com", tool_call_id: "a@b.co" }, ENFORCE)
 
-    expect(result.value).toEqual({ tool_call_id: "a@b.co", content: "[REDACTED_EMAIL]" })
-    expect(result.counts).toEqual({ email: 1 })
+    expect(result.value).toEqual({ id: "[REDACTED_EMAIL]", tool_call_id: "[REDACTED_EMAIL]" })
+    expect(result.counts).toEqual({ email: 2 })
+  })
+
+  it.each([
+    "call_weather_1",
+    "toolu_01A09q90qw4Lq5Bx",
+    "gem_call_1",
+    "018f2a1e-6c7b-7f3a-9d21-3b6a2e0c1d44",
+    "tc1",
+  ])("leaves the real vendor tool-call id %s alone, so tool pairing survives", (id) => {
+    const parts = [
+      { type: "tool_call", id, name: "get_weather", arguments: { to: "john@example.com" } },
+      { type: "tool_call_response", id, response: "ok" },
+    ]
+    const result = redactJsonValue(parts, ENFORCE)
+
+    expect(result.value).toEqual([
+      { type: "tool_call", id, name: "get_weather", arguments: { to: "[REDACTED_EMAIL]" } },
+      { type: "tool_call_response", id, response: "ok" },
+    ])
   })
 
   it("skips blob parts because their content is base64 binary", () => {
@@ -159,7 +178,7 @@ describe("redactJsonValue in dry run", () => {
   })
 
   it("does not count values it would not have redacted", () => {
-    const input = { tool_call_id: "a@b.co", blob: { type: "blob", content: "a@b.co" } }
+    const input = { blob: { type: "blob", content: "a@b.co" }, file: { type: "file", content: "a@b.co" } }
 
     expect(redactJsonValue(input, DRY_RUN).counts).toEqual({})
   })

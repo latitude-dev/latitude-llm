@@ -1,5 +1,4 @@
 import type { RedactionEntity } from "@domain/shared"
-import { REDACTION_SKIP_KEYS } from "./labels.ts"
 import { mergeRedactionCounts, type RedactionCounts, redactLeaf } from "./redact-text.ts"
 
 interface JsonRedactionResult<T> {
@@ -68,8 +67,8 @@ const isSkippedPart = (value: Record<string, unknown>): boolean =>
  * `messageIndex` references depend on it), object keys, and every non-string
  * leaf. Only string values change, and only in `mutate` mode.
  *
- * Skip-keys are an optimization. Every detector is high-precision, so scanning a
- * structural value costs CPU but cannot corrupt it.
+ * Every string leaf is scanned regardless of its key. Skipping structural keys
+ * would silently exempt customer JSON that stores PII under names like `id`.
  */
 export function redactJsonValue<T>(value: T, options: JsonRedactionOptions): JsonRedactionResult<T> {
   const counts: RedactionCounts = {}
@@ -110,11 +109,6 @@ function walk(value: unknown, options: JsonRedactionOptions, counts: RedactionCo
     let changed = false
     const next: Record<string, unknown> = {}
     for (const [key, entry] of Object.entries(value)) {
-      if (REDACTION_SKIP_KEYS.has(key)) {
-        next[key] = entry
-        continue
-      }
-
       const walkedEntry = walk(entry, options, counts, scan)
       if (walkedEntry !== entry) changed = true
       next[key] = walkedEntry

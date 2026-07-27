@@ -5,7 +5,6 @@ import {
   REDACTED_IDENTITY_PLACEHOLDER,
   REDACTION_BATCH_TIMEOUT_MS,
   REDACTION_MAX_FIELD_CHARS,
-  REDACTION_SKIP_KEYS,
   redactionPlaceholder,
 } from "./labels.ts"
 
@@ -48,17 +47,5 @@ describe("redaction constants", () => {
 
   it("allows a batch far longer than a synchronous export path would", () => {
     expect(REDACTION_BATCH_TIMEOUT_MS).toBeGreaterThan(1_000)
-  })
-
-  it("skips structural keys in both snake and camel spellings", () => {
-    for (const key of ["tool_call_id", "toolCallId", "tool_use_id", "toolUseId", "mime_type", "mimeType"]) {
-      expect(REDACTION_SKIP_KEYS.has(key)).toBe(true)
-    }
-  })
-
-  it("does not skip keys whose values are customer text", () => {
-    for (const key of ["content", "text", "name", "arguments", "response", "uri", "description"]) {
-      expect(REDACTION_SKIP_KEYS.has(key)).toBe(false)
-    }
   })
 })

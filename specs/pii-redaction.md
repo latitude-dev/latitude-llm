@@ -248,7 +248,9 @@ Every part type also carries a loose (`z.core.$loose`, i.e. passthrough) `_provi
 
 Also redact `message.name` (the participant name field). It is text a customer controls, and no high-precision detector will match a tool name.
 
-**Skip-keys are an optimization, not a safety mechanism.** Because every detector is high-precision ([§5](#5-detector-specification)), running them over a structural value costs CPU but does not corrupt data. Keep the skip list short and honest: `id`, `type`, `index`, `messageIndex`, `mimeType`, `mime_type`, `tool_call_id`, `toolCallId`, `tool_use_id`, `toolUseId`, `isError`, `isRefusal`, `originalType`. Do not grow it defensively; if a value needs protecting, that means a detector is imprecise and the detector is the bug.
+**There is no key-based skip list.** Phase 1 shipped one (`id`, `tool_call_id`, `mimeType`, and similar) on the reasoning that those values are structural and not worth scanning. That reasoning does not survive contact with `toolInput`/`toolOutput`/`eventsJson`, which are arbitrary customer JSON at every depth: `{"id": "john@example.com"}` is an ordinary payload, and skipping it silently exempts exactly the content the feature exists to remove. Because every detector is high-precision ([§5](#5-detector-specification)), scanning a genuinely structural value costs CPU but cannot corrupt it, so the list bought nothing and leaked. Every string leaf is scanned regardless of its key.
+
+The risk this trades into is redacting a tool-call id and breaking the tool-call↔response pairing the conversation view depends on. No id format any vendor in `otlp/content/` emits matches a detector, and that is asserted rather than assumed. If one ever does, the detector is the bug.
 
 **Structural invariants the walk must preserve:** array lengths and ordering (message pairing and `messageIndex` references depend on it), object keys, non-string leaves unchanged, and `JSON.stringify` round-trip stability for stringified-JSON fields.
 
@@ -410,7 +412,7 @@ Additional rules:
 
 Ingestion is the hot path of the entire product, so this is a capacity question, not a footnote. "Sub-ms and deterministic" is meaningless without a size.
 
-- `REDACTION_MAX_FIELD_BYTES = 1_000_000` (1 MB). A field above the cap is **not scanned**. In `enforce` mode it is replaced wholesale with `[REDACTED_OVERSIZED_FIELD]` and counted; in `dryRun` it is counted and left alone. Passing it through unscanned would break the promise, and partial scanning would leak the tail. Per the design invariant, degrade toward more redaction. 1 MB is generous: the realistic trigger is multi-MB file content in coding-agent tool outputs.
+- `REDACTION_MAX_FIELD_CHARS = 1_000_000` (1 M UTF-16 code units). A field above the cap is **not scanned**. In `enforce` mode it is replaced wholesale with `[REDACTED_OVERSIZED_FIELD]` and counted; in `dryRun` it is counted and left alone. Passing it through unscanned would break the promise, and partial scanning would leak the tail. Per the design invariant, degrade toward more redaction. 1 MB is generous: the realistic trigger is multi-MB file content in coding-agent tool outputs.
 - `REDACTION_BATCH_TIMEOUT_MS = 30_000`. `Effect.timeout` around the batch pass; timeout is a failure, so it retries ([§4.6](#46-failure-policy)).
 - **Benchmark acceptance criterion:** measure and record added wall-clock per span at p50 and p99 for a representative batch, and the total CPU delta at concurrency 50. Target ≤ 5 ms per span at 32 KB of scanned content. If the measured number misses the target, the finding goes in the PR description and the cap gets revisited; do not silently ship a regression on the ingest path.
 
@@ -427,7 +429,7 @@ Without these, nobody can answer "is it working" or "why did my content disappea
 | `redaction.matches` | total accepted matches |
 | `redaction.matches.<entity>` | per-entity counts, one annotation per enabled entity with a nonzero count |
 | `redaction.droppedAttributeKeys` | content attribute keys removed from `attr_string` |
-| `redaction.oversizedFields` | fields over `REDACTION_MAX_FIELD_BYTES` |
+| `redaction.oversizedFields` | fields over `REDACTION_MAX_FIELD_CHARS` |
 | `redaction.pseudonymizedIdentities` | identity values replaced |
 | `redaction.durationMs` | pass duration |
 
@@ -507,10 +509,10 @@ Remap by `path`, never by index. Chunk requests by byte count with a cap; do not
 
 | File | Contents |
 | --- | --- |
-| `labels.ts` | `REDACTION_ENTITIES`, entity → label mapping, `[REDACTED_<LABEL>]` formatter, `SKIP_KEYS`, `REDACTION_MAX_FIELD_BYTES` |
+| `labels.ts` | entity → label mapping, `[REDACTED_<LABEL>]` formatter, `REDACTION_MAX_FIELD_CHARS`, `REDACTION_BATCH_TIMEOUT_MS` |
 | `detectors.ts` | One detector per entity per [§5](#5-detector-specification), plus Luhn and IBAN mod-97 helpers |
 | `redact-text.ts` | `redactText(text, policy) => { text, matchesByEntity }`, including overlap resolution |
-| `redact-json.ts` | Structure-aware walk over unknown JSON, skip-keys, string-leaf redaction |
+| `redact-json.ts` | Structure-aware walk over unknown JSON, string-leaf redaction, number-literal preservation |
 | `redact-span.ts` | `redactSpanDetail(span, policy, pseudonyms) => { span, stats }` implementing [§4.2](#42-the-complete-field-surface) |
 | `redact-spans.ts` | Batch entry point: per-project policy dispatch, pseudonym memoization, stat aggregation, timeout |
 | `errors.ts` addition | `RedactionError extends Data.TaggedError("RedactionError")` in the existing `packages/domain/spans/src/errors.ts` (which currently holds only `SpanDecodingError`) |
