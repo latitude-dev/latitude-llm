@@ -2,8 +2,12 @@ import { Effect, Layer } from "effect"
 import { describe, expect, it } from "vitest"
 import { OrganizationId, type ProjectId } from "./id.ts"
 import {
+  DEFAULT_REDACTION_ENTITIES,
+  organizationSettingsSchema,
   type OrganizationSettings,
+  projectSettingsSchema,
   type ProjectSettings,
+  resolveRedactionPolicy,
   resolveSettings,
   resolveSettingsCascade,
   SettingsReader,
@@ -122,5 +126,164 @@ describe("resolveSettings", () => {
       resolveSettings({ projectId: "proj1" as ProjectId }).pipe(Effect.provide(Layer.mergeAll(layer, fakeSqlClient))),
     )
     expect(result).toEqual({ keepMonitoring: true })
+  })
+})
+
+describe("resolveRedactionPolicy", () => {
+  it("defaults to off with the default entity set when nothing is configured", () => {
+    const policy = resolveRedactionPolicy({ organization: null, project: null })
+
+    expect(policy.mode).toBe("off")
+    expect([...policy.entities].sort()).toEqual([...DEFAULT_REDACTION_ENTITIES].sort())
+    expect(policy.redactMetadata).toBe(false)
+    expect(policy.identities).toBe("keep")
+    expect(policy.source).toBe("default")
+  })
+
+  it("excludes ip_address and crypto_wallet from the defaults", () => {
+    const policy = resolveRedactionPolicy({ organization: null, project: null })
+
+    expect(policy.entities.has("ip_address")).toBe(false)
+    expect(policy.entities.has("crypto_wallet")).toBe(false)
+  })
+
+  it("uses the project policy when only the project configures redaction", () => {
+    const policy = resolveRedactionPolicy({
+      organization: null,
+      project: { redaction: { mode: "enforce", entities: ["email"], identities: "pseudonymize" } },
+    })
+
+    expect(policy.mode).toBe("enforce")
+    expect([...policy.entities]).toEqual(["email"])
+    expect(policy.identities).toBe("pseudonymize")
+    expect(policy.source).toBe("project")
+  })
+
+  it("inherits the org policy when the project configures nothing", () => {
+    const policy = resolveRedactionPolicy({
+      organization: { redaction: { mode: "dryRun", entities: ["secret"] } },
+      project: {},
+    })
+
+    expect(policy.mode).toBe("dryRun")
+    expect([...policy.entities]).toEqual(["secret"])
+    expect(policy.source).toBe("organization")
+  })
+
+  it("resolves field by field so a project can override one field and inherit the rest", () => {
+    const policy = resolveRedactionPolicy({
+      organization: {
+        redaction: { mode: "dryRun", entities: ["secret"], identities: "pseudonymize", scopes: { metadata: true } },
+      },
+      project: { redaction: { mode: "enforce" } },
+    })
+
+    expect(policy.mode).toBe("enforce")
+    expect([...policy.entities]).toEqual(["secret"])
+    expect(policy.identities).toBe("pseudonymize")
+    expect(policy.redactMetadata).toBe(true)
+    expect(policy.source).toBe("project")
+  })
+
+  it("lets a project turn redaction off when the org policy is not locked", () => {
+    const policy = resolveRedactionPolicy({
+      organization: { redaction: { mode: "enforce" } },
+      project: { redaction: { mode: "off" } },
+    })
+
+    expect(policy.mode).toBe("off")
+  })
+
+  it("ignores the project policy entirely when the org policy is locked", () => {
+    const policy = resolveRedactionPolicy({
+      organization: { redaction: { mode: "enforce", entities: ["email"], locked: true } },
+      project: { redaction: { mode: "off", entities: ["secret"], identities: "pseudonymize" } },
+    })
+
+    expect(policy.mode).toBe("enforce")
+    expect([...policy.entities]).toEqual(["email"])
+    expect(policy.identities).toBe("keep")
+    expect(policy.source).toBe("organization")
+  })
+
+  it("falls back to system defaults for fields the locked org policy omits", () => {
+    const policy = resolveRedactionPolicy({
+      organization: { redaction: { locked: true } },
+      project: { redaction: { mode: "enforce" } },
+    })
+
+    expect(policy.mode).toBe("off")
+    expect([...policy.entities].sort()).toEqual([...DEFAULT_REDACTION_ENTITIES].sort())
+    expect(policy.source).toBe("organization")
+  })
+
+  it("reports the default source when both sides carry an empty redaction object", () => {
+    const policy = resolveRedactionPolicy({ organization: { redaction: {} }, project: { redaction: {} } })
+
+    expect(policy.source).toBe("default")
+  })
+
+  it("treats an explicitly false metadata scope as configured", () => {
+    const policy = resolveRedactionPolicy({
+      organization: { redaction: { scopes: { metadata: true } } },
+      project: { redaction: { scopes: { metadata: false } } },
+    })
+
+    expect(policy.redactMetadata).toBe(false)
+    expect(policy.source).toBe("project")
+  })
+
+  it("returns an independent entity set per call so callers cannot mutate shared state", () => {
+    const first = resolveRedactionPolicy({ organization: null, project: null })
+    const second = resolveRedactionPolicy({ organization: null, project: null })
+
+    expect(first.entities).not.toBe(second.entities)
+  })
+})
+
+describe("redaction settings schemas", () => {
+  it("accepts a full project redaction setting", () => {
+    const parsed = projectSettingsSchema.parse({
+      redaction: {
+        mode: "enforce",
+        entities: ["email", "secret"],
+        scopes: { metadata: true },
+        identities: "pseudonymize",
+      },
+    })
+
+    expect(parsed.redaction?.mode).toBe("enforce")
+  })
+
+  it("rejects an unknown entity", () => {
+    expect(() => projectSettingsSchema.parse({ redaction: { entities: ["passport"] } })).toThrow()
+  })
+
+  it("rejects an unknown mode", () => {
+    expect(() => projectSettingsSchema.parse({ redaction: { mode: "on" } })).toThrow()
+  })
+
+  it("drops locked from a project redaction setting", () => {
+    const parsed = projectSettingsSchema.parse({ redaction: { locked: true } })
+
+    expect(parsed.redaction).not.toHaveProperty("locked")
+  })
+
+  it("accepts locked on an organization redaction setting", () => {
+    const parsed = organizationSettingsSchema.parse({ redaction: { mode: "enforce", locked: true } })
+
+    expect(parsed.redaction?.locked).toBe(true)
+  })
+
+  it("preserves the sibling organization settings it must not clobber", () => {
+    const parsed = organizationSettingsSchema.parse({
+      billing: { spendingLimitCents: 5000 },
+      wantsShowcase: true,
+      redaction: { mode: "dryRun" },
+    })
+
+    expect(parsed.billing?.spendingLimitCents).toBe(5000)
+    expect(parsed.wantsShowcase).toBe(true)
+    expect(parsed.redaction?.mode).toBe("dryRun")
   })
 })
