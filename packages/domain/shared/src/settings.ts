@@ -5,6 +5,57 @@ import type { RepositoryError } from "./errors.ts"
 import type { ProjectId } from "./id.ts"
 import type { SqlClient } from "./sql-client.ts"
 
+export const REDACTION_MODES = ["off", "dryRun", "enforce"] as const
+export const redactionModeSchema = z.enum(REDACTION_MODES)
+export type RedactionMode = z.infer<typeof redactionModeSchema>
+
+export const REDACTION_ENTITIES = [
+  "email",
+  "phone",
+  "credit_card",
+  "iban",
+  "us_ssn",
+  "ip_address",
+  "secret",
+  "crypto_wallet",
+] as const
+export const redactionEntitySchema = z.enum(REDACTION_ENTITIES)
+export type RedactionEntity = z.infer<typeof redactionEntitySchema>
+
+// `ip_address` and `crypto_wallet` are omitted: they collide with version strings and hex hashes.
+export const DEFAULT_REDACTION_ENTITIES: readonly RedactionEntity[] = [
+  "email",
+  "phone",
+  "credit_card",
+  "iban",
+  "us_ssn",
+  "secret",
+]
+
+export const REDACTION_IDENTITY_HANDLINGS = ["keep", "pseudonymize"] as const
+export const redactionIdentityHandlingSchema = z.enum(REDACTION_IDENTITY_HANDLINGS)
+export type RedactionIdentityHandling = z.infer<typeof redactionIdentityHandlingSchema>
+
+/** `metadata` covers both the `metadata` map and `tags`. */
+export const redactionScopesSettingSchema = z.object({
+  metadata: z.boolean().optional(),
+})
+export type RedactionScopesSetting = z.infer<typeof redactionScopesSettingSchema>
+
+export const redactionSettingSchema = z.object({
+  mode: redactionModeSchema.optional(),
+  entities: z.array(redactionEntitySchema).optional(),
+  scopes: redactionScopesSettingSchema.optional(),
+  identities: redactionIdentityHandlingSchema.optional(),
+})
+export type RedactionSetting = z.infer<typeof redactionSettingSchema>
+
+/** `locked` makes the org policy authoritative: project redaction settings are ignored, not merged. */
+export const organizationRedactionSettingSchema = redactionSettingSchema.extend({
+  locked: z.boolean().optional(),
+})
+export type OrganizationRedactionSetting = z.infer<typeof organizationRedactionSettingSchema>
+
 export const organizationSettingsSchema = z.object({
   keepMonitoring: z.boolean().optional(), // default for resolve's "keep evaluating" choice; cascaded project → org → system
   billing: z
@@ -13,6 +64,7 @@ export const organizationSettingsSchema = z.object({
     })
     .optional(),
   wantsShowcase: z.boolean().optional(),
+  redaction: organizationRedactionSettingSchema.optional(),
 })
 
 const incidentNotificationsKindShape = Object.fromEntries(
@@ -78,6 +130,7 @@ export const projectSettingsSchema = z.object({
    */
   isShowcase: z.boolean().optional(),
   sampling: samplingSettingSchema.optional(),
+  redaction: redactionSettingSchema.optional(),
 })
 
 export const isIncidentNotificationEnabled = (
@@ -110,6 +163,60 @@ export function resolveSettingsCascade(input: {
 
   return {
     keepMonitoring: proj.keepMonitoring ?? org.keepMonitoring ?? SYSTEM_DEFAULTS.keepMonitoring,
+  }
+}
+
+/** `source` is display only: which layer the policy the user is looking at came from. */
+export interface ResolvedRedactionPolicy {
+  readonly mode: RedactionMode
+  readonly entities: ReadonlySet<RedactionEntity>
+  readonly redactMetadata: boolean
+  readonly identities: RedactionIdentityHandling
+  readonly source: "organization" | "project" | "default"
+}
+
+const REDACTION_SYSTEM_DEFAULTS: {
+  readonly mode: RedactionMode
+  readonly entities: readonly RedactionEntity[]
+  readonly redactMetadata: boolean
+  readonly identities: RedactionIdentityHandling
+} = {
+  mode: "off",
+  entities: DEFAULT_REDACTION_ENTITIES,
+  redactMetadata: false,
+  identities: "keep",
+}
+
+const hasRedactionField = (setting: RedactionSetting | undefined): boolean =>
+  setting !== undefined &&
+  (setting.mode !== undefined ||
+    setting.entities !== undefined ||
+    setting.scopes?.metadata !== undefined ||
+    setting.identities !== undefined)
+
+export function resolveRedactionPolicy(input: {
+  organization: OrganizationSettings | null | undefined
+  project: ProjectSettings | null | undefined
+}): ResolvedRedactionPolicy {
+  const org = input.organization?.redaction
+  const project = input.project?.redaction
+
+  if (org?.locked) {
+    return {
+      mode: org.mode ?? REDACTION_SYSTEM_DEFAULTS.mode,
+      entities: new Set(org.entities ?? REDACTION_SYSTEM_DEFAULTS.entities),
+      redactMetadata: org.scopes?.metadata ?? REDACTION_SYSTEM_DEFAULTS.redactMetadata,
+      identities: org.identities ?? REDACTION_SYSTEM_DEFAULTS.identities,
+      source: "organization",
+    }
+  }
+
+  return {
+    mode: project?.mode ?? org?.mode ?? REDACTION_SYSTEM_DEFAULTS.mode,
+    entities: new Set(project?.entities ?? org?.entities ?? REDACTION_SYSTEM_DEFAULTS.entities),
+    redactMetadata: project?.scopes?.metadata ?? org?.scopes?.metadata ?? REDACTION_SYSTEM_DEFAULTS.redactMetadata,
+    identities: project?.identities ?? org?.identities ?? REDACTION_SYSTEM_DEFAULTS.identities,
+    source: hasRedactionField(project) ? "project" : hasRedactionField(org) ? "organization" : "default",
   }
 }
 

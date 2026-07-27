@@ -152,6 +152,12 @@ function parseToolDefinitions(attrs: readonly OtlpKeyValue[]): ToolDefinition[] 
   return tools.map(toToolDefinition).filter(Boolean) as ToolDefinition[]
 }
 
+/** Keys this parser reads, composed into `isContentAttributeKey`. */
+export const LIVEKIT_CONTENT_ATTRIBUTE_KEYS = {
+  exact: ["lk.chat_ctx", "lk.function_tools", "lk.response.text", "lk.response.function_calls"],
+  prefixes: [],
+} as const
+
 export function parseLiveKit(attrs: readonly OtlpKeyValue[]): ParsedContent {
   const { inputMessages, systemInstructions } = parseChatContext(attrs)
 

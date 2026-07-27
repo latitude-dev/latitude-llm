@@ -12,6 +12,12 @@ import { stringAttr } from "../attributes.ts"
 import type { OtlpKeyValue } from "../types.ts"
 import type { ParsedContent } from "./index.ts"
 
+/** Keys this parser reads, composed into `isContentAttributeKey`. */
+export const CLAUDE_CODE_CONTENT_ATTRIBUTE_KEYS = {
+  exact: ["user_prompt"],
+  prefixes: [],
+} as const
+
 export function parseClaudeCode(attrs: readonly OtlpKeyValue[]): ParsedContent {
   const prompt = stringAttr(attrs, "user_prompt")
   const inputMessages: GenAIMessage[] =

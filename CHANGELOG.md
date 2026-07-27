@@ -2,6 +2,16 @@
 
 ## Unreleased
 
+## v0.3.70 - 2026-07-26
+
+### Traces
+
+- Fixed PDF conversation attachments mislabeled as images so they render as document cards, with previews for linked files and downloads for inline files (ref: #4231).
+
+### Models
+
+- Refreshed the bundled model catalog with new providers and models, including Claude Opus 5 availability, plus updated capabilities, limits, and pricing (ref: #4223).
+
 ## v0.3.69 - 2026-07-24
 
 ### Memory
