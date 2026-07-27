@@ -1,13 +1,7 @@
-import { ScanEyeIcon } from "lucide-react"
-import { useEffect, useState } from "react"
-import { Icon } from "../../icons/icons.tsx"
+import { useCallback, useEffect, useState } from "react"
 import { LazyPdfPreview } from "../../pdf/lazy-pdf-preview.tsx"
 import { shouldAutoRenderThumbnail } from "../../pdf/pdf-source.ts"
-import { Tooltip } from "../../tooltip/tooltip.tsx"
 import { FileCard } from "./file-card.tsx"
-
-const ACTION_CLASS =
-  "flex h-7 w-7 shrink-0 items-center justify-center rounded-md border border-border bg-background text-muted-foreground transition-colors hover:text-foreground"
 
 /**
  * Wraps {@link FileCard} for PDFs with an inline first-page thumbnail and an expandable viewer.
@@ -31,6 +25,12 @@ export function PdfAttachment({
 }) {
   const [objectUrl, setObjectUrl] = useState<string | null>(null)
   const [open, setOpen] = useState(false)
+  const [unavailable, setUnavailable] = useState(false)
+
+  const handleUnavailable = useCallback(() => {
+    setUnavailable(true)
+    setOpen(false)
+  }, [])
 
   useEffect(() => {
     if (!base64) return
@@ -57,19 +57,6 @@ export function PdfAttachment({
   const autoPreview = shouldAutoRenderThumbnail(sizeBytes)
   const title = fileName ?? "PDF document"
 
-  const expandAction = (
-    <Tooltip
-      asChild
-      trigger={
-        <button type="button" onClick={() => setOpen(true)} aria-label="Open PDF preview" className={ACTION_CLASS}>
-          <Icon icon={ScanEyeIcon} size="sm" />
-        </button>
-      }
-    >
-      {autoPreview ? "Open PDF preview" : "Large file — open the preview to render it"}
-    </Tooltip>
-  )
-
   // Mounted before `url` resolves so the band reserves its height from the first paint.
   const previewNode =
     autoPreview || open ? (
@@ -79,6 +66,7 @@ export function PdfAttachment({
         showThumbnail={autoPreview}
         open={open}
         onOpenChange={setOpen}
+        onUnavailable={handleUnavailable}
         {...(downloadDataUri ? { downloadHref: downloadDataUri, downloadName: title } : {})}
         {...(base64 && objectUrl ? { openHref: objectUrl } : href ? { openHref: href } : {})}
       />
@@ -93,8 +81,8 @@ export function PdfAttachment({
         {...(sizeBytes != null ? { sizeBytes } : {})}
         {...(href ? { href } : {})}
         {...(downloadDataUri ? { downloadDataUri } : {})}
-        extraActions={expandAction}
         preview={autoPreview ? previewNode : null}
+        {...(unavailable ? {} : { onActivate: () => setOpen(true), activateLabel: "Open PDF preview" })}
       />
       {/* Past the size guard there is no inline band, but the modal still has to mount somewhere. */}
       {autoPreview ? null : previewNode}

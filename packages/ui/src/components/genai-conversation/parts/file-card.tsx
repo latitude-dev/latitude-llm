@@ -115,8 +115,9 @@ export function FileCard({
   sizeBytes,
   href,
   downloadDataUri,
-  extraActions,
   preview,
+  onActivate,
+  activateLabel,
 }: {
   readonly fileName?: string | undefined
   readonly mimeType?: string | null | undefined
@@ -125,10 +126,11 @@ export function FileCard({
   readonly sizeBytes?: number | undefined
   readonly href?: string | undefined
   readonly downloadDataUri?: string | undefined
-  /** Rendered ahead of the built-in actions, for behaviour the card itself doesn't own. */
-  readonly extraActions?: ReactNode | undefined
   /** Optional visual header above the metadata row, for formats that can render their content. */
   readonly preview?: ReactNode | undefined
+  /** Makes the whole card a click target. The built-in actions still take precedence. */
+  readonly onActivate?: (() => void) | undefined
+  readonly activateLabel?: string | undefined
 }) {
   const FileTypeIcon = fileIconForMime(mimeType, modality)
   const typeLabel = fileTypeLabel(mimeType, modality)
@@ -183,7 +185,12 @@ export function FileCard({
   }
 
   return (
-    <div className="flex max-w-md flex-col overflow-hidden rounded-lg border border-border bg-card">
+    <div
+      className={cn(
+        "relative flex max-w-md flex-col overflow-hidden rounded-lg border border-border bg-card",
+        onActivate && "cursor-pointer transition-colors hover:bg-muted",
+      )}
+    >
       {preview ? <div className="border-border border-b">{preview}</div> : null}
       <div className="flex items-center gap-3 px-3 py-2">
         <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-md bg-muted">
@@ -202,11 +209,16 @@ export function FileCard({
             </Text.Mono>
           ) : null}
         </div>
-        <div className="flex shrink-0 items-center gap-1.5">
-          {extraActions}
-          {actions}
-        </div>
+        <div className={cn("flex shrink-0 items-center gap-1.5", onActivate && "relative z-1")}>{actions}</div>
       </div>
+      {onActivate ? (
+        <button
+          type="button"
+          onClick={onActivate}
+          aria-label={activateLabel}
+          className="absolute inset-0 rounded-lg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-inset"
+        />
+      ) : null}
     </div>
   )
 }

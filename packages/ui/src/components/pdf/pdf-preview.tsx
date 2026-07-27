@@ -30,6 +30,7 @@ export function PdfPreview({
   showThumbnail,
   open,
   onOpenChange,
+  onUnavailable,
   downloadHref,
   downloadName,
   openHref,
@@ -40,6 +41,8 @@ export function PdfPreview({
   readonly showThumbnail: boolean
   readonly open: boolean
   readonly onOpenChange: (open: boolean) => void
+  /** Fired when the document can't be read, so the caller can drop the open affordance. */
+  readonly onUnavailable?: (() => void) | undefined
   readonly downloadHref?: string | undefined
   readonly downloadName?: string | undefined
   readonly openHref?: string | undefined
@@ -49,11 +52,15 @@ export function PdfPreview({
     setMounted(true)
   })
 
-  const bandRef = useRef<HTMLButtonElement | null>(null)
+  const bandRef = useRef<HTMLDivElement | null>(null)
   const bandWidth = useElementWidth(bandRef, PREVIEW_PADDING)
 
   const { doc, status, error } = usePdfDocument(mounted ? url : null)
   const [firstPageSize, setFirstPageSize] = useState<PageSize | null>(null)
+
+  useEffect(() => {
+    if (status === "error") onUnavailable?.()
+  }, [status, onUnavailable])
 
   useEffect(() => {
     if (!doc) return
@@ -74,27 +81,11 @@ export function PdfPreview({
       ? Math.min(bandWidth / firstPageSize.width, (PREVIEW_HEIGHT - PREVIEW_PADDING) / firstPageSize.height)
       : null
 
-  const viewer = doc ? (
-    <PdfViewer
-      doc={doc}
-      title={title}
-      {...(downloadHref ? { downloadHref } : {})}
-      {...(downloadName ? { downloadName } : {})}
-      {...(openHref ? { openHref } : {})}
-    />
-  ) : null
-
   return (
     <>
       {showThumbnail ? (
-        // Redundant click target for the card's "Open PDF preview" action, so it stays out of the
-        // tab order and is not announced twice.
-        <button
+        <div
           ref={bandRef}
-          type="button"
-          onClick={() => onOpenChange(true)}
-          tabIndex={-1}
-          aria-hidden="true"
           className="flex w-full items-center justify-center overflow-hidden bg-muted"
           style={{ height: PREVIEW_HEIGHT }}
         >
@@ -110,20 +101,33 @@ export function PdfPreview({
           ) : (
             <Skeleton className="h-full w-full rounded-none" />
           )}
-        </button>
+        </div>
       ) : null}
 
-      <Modal
-        open={open}
-        onOpenChange={onOpenChange}
-        dismissible
-        size="full"
-        height="screen"
-        scrollable={false}
-        title={title}
-      >
-        {status === "error" ? <PreviewMessage label={error?.label ?? "PDF unavailable"} /> : viewer}
-      </Modal>
+      {/* An unreadable document is not previewable at all, so the modal never opens for it. */}
+      {status === "error" ? null : (
+        <Modal
+          open={open}
+          onOpenChange={onOpenChange}
+          dismissible
+          size="full"
+          height="screen"
+          scrollable={false}
+          title={title}
+        >
+          {doc ? (
+            <PdfViewer
+              doc={doc}
+              title={title}
+              {...(downloadHref ? { downloadHref } : {})}
+              {...(downloadName ? { downloadName } : {})}
+              {...(openHref ? { openHref } : {})}
+            />
+          ) : (
+            <Skeleton className="min-h-0 flex-1" />
+          )}
+        </Modal>
+      )}
     </>
   )
 }
