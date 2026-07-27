@@ -167,6 +167,19 @@ function parseCloudflareOutput(attrs: readonly OtlpKeyValue[]): GenAIMessage[] {
   return []
 }
 
+/** Keys this parser reads, composed into `isContentAttributeKey`. */
+export const GENAI_CONTENT_ATTRIBUTE_KEYS = {
+  exact: [
+    "gen_ai.input.messages",
+    "gen_ai.output.messages",
+    "gen_ai.system_instructions",
+    "gen_ai.tool.definitions",
+    "gen_ai.prompt_json",
+    "gen_ai.completion_json",
+  ],
+  prefixes: [],
+} as const
+
 export function parseGenAICurrent(attrs: readonly OtlpKeyValue[]): ParsedContent {
   let inputMessages = parseMessages(attrs, "gen_ai.input.messages")
   let outputMessages = parseMessages(attrs, "gen_ai.output.messages")
