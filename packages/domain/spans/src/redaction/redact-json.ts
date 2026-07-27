@@ -35,6 +35,26 @@ export interface JsonRedactionOptions {
  */
 const SKIPPED_PART_TYPES: ReadonlySet<string> = new Set(["blob", "file"])
 
+// `JSON.rawJSON` and the reviver's source context ship in Node 25 (workspace engines) but are absent from the ES2022 lib.
+const rawJson = JSON as unknown as {
+  parse(
+    text: string,
+    reviver: (key: string, value: unknown, context: { readonly source?: string } | undefined) => unknown,
+  ): unknown
+  rawJSON(literal: string): object
+  isRawJSON(value: unknown): boolean
+}
+
+/**
+ * A plain parse rounds every integer past 2^53 and rewrites `3.10` as `3.1`, so
+ * re-serializing a payload we only meant to scan for strings would silently
+ * corrupt int64 ids. Reparsing numbers as raw literals keeps them byte-exact.
+ */
+const parsePreservingNumbers = (text: string): unknown =>
+  rawJson.parse(text, (_key, value, context) =>
+    context?.source !== undefined && typeof value === "number" ? rawJson.rawJSON(context.source) : value,
+  )
+
 const isPlainObject = (value: unknown): value is Record<string, unknown> =>
   typeof value === "object" && value !== null && !Array.isArray(value)
 
@@ -69,6 +89,9 @@ function walk(value: unknown, options: JsonRedactionOptions, counts: RedactionCo
 
     return outcome.text
   }
+
+  // A raw number literal is an object, so it would otherwise be walked as one and its digits scanned.
+  if (rawJson.isRawJSON(value)) return value
 
   if (Array.isArray(value)) {
     let changed = false
@@ -127,7 +150,8 @@ export function redactJsonString(value: string, options: JsonRedactionOptions): 
   }
 
   const walked = redactJsonValue(parsed, options)
-  if (!options.mutate) return { value, counts: walked.counts, scan: walked.scan }
+  // The walk returns the same reference when no leaf changed, so the original bytes survive an unmatched scan.
+  if (!options.mutate || walked.value === parsed) return { value, counts: walked.counts, scan: walked.scan }
 
   return { value: JSON.stringify(walked.value), counts: walked.counts, scan: walked.scan }
 }
@@ -137,7 +161,7 @@ const tryParseJsonContainer = (value: string): unknown => {
   if (!trimmed.startsWith("{") && !trimmed.startsWith("[")) return undefined
 
   try {
-    const parsed = JSON.parse(value) as unknown
+    const parsed = parsePreservingNumbers(value)
     return isPlainObject(parsed) || Array.isArray(parsed) ? parsed : undefined
   } catch {
     return undefined

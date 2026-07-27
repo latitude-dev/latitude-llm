@@ -185,6 +185,38 @@ describe("redactJsonString", () => {
     expect(JSON.parse(result.value)).toEqual({ n: 1.5, b: true, z: null, s: "[REDACTED_EMAIL]" })
   })
 
+  it("preserves integers beyond 2^53 while redacting a sibling", () => {
+    const result = redactJsonString('{"id":9007199254740993,"to":"john@example.com"}', ENFORCE)
+
+    expect(result.value).toBe('{"id":9007199254740993,"to":"[REDACTED_EMAIL]"}')
+  })
+
+  it.each([
+    ['{"n":3.14000,"to":"a@b.co"}', '{"n":3.14000,"to":"[REDACTED_EMAIL]"}'],
+    ['{"n":1e2,"to":"a@b.co"}', '{"n":1e2,"to":"[REDACTED_EMAIL]"}'],
+    ['{"n":-0,"to":"a@b.co"}', '{"n":-0,"to":"[REDACTED_EMAIL]"}'],
+    [
+      '{"n":123456789012345678901234567890,"to":"a@b.co"}',
+      '{"n":123456789012345678901234567890,"to":"[REDACTED_EMAIL]"}',
+    ],
+  ])("preserves the number literal in %s", (input, expected) => {
+    expect(redactJsonString(input, ENFORCE).value).toBe(expected)
+  })
+
+  it("does not scan the digits of a preserved number literal", () => {
+    const cardShaped = '{"orderNumber":4532015112830366,"to":"john@example.com"}'
+    const result = redactJsonString(cardShaped, ENFORCE)
+
+    expect(result.value).toBe('{"orderNumber":4532015112830366,"to":"[REDACTED_EMAIL]"}')
+    expect(result.counts).toEqual({ email: 1 })
+  })
+
+  it("returns the original bytes when the scan matched nothing", () => {
+    const text = '{ "b" : 1,\n  "a" : "clean",  "big": 9007199254740993 }'
+
+    expect(redactJsonString(text, ENFORCE).value).toBe(text)
+  })
+
   it("handles JSON nested as a string inside JSON", () => {
     const inner = JSON.stringify({ email: "john@example.com" })
     const result = redactJsonString(JSON.stringify({ payload: inner }), ENFORCE)
