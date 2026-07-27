@@ -167,7 +167,7 @@ function parseCloudflareOutput(attrs: readonly OtlpKeyValue[]): GenAIMessage[] {
   return []
 }
 
-/** Attribute keys this parser reads. Consumed by `isContentAttributeKey` so ingest redaction can drop the raw copies. */
+/** Keys this parser reads, composed into `isContentAttributeKey`. */
 export const GENAI_CONTENT_ATTRIBUTE_KEYS = {
   exact: [
     "gen_ai.input.messages",

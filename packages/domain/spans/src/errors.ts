@@ -9,13 +9,7 @@ export class SpanDecodingError extends Data.TaggedError("SpanDecodingError")<{
   }
 }
 
-/**
- * Redaction failed for a batch. This must stay fatal to the ingest job: the
- * alternative is writing unredacted content for a project that asked us not to,
- * and because redaction is non-retroactive and there is no delete path, such a
- * write is permanent. Retrying and ultimately dropping the batch is the correct
- * trade for a compliance control.
- */
+/** Must stay fatal to the ingest job: inserting unredacted content is permanent, since redaction has no delete path. */
 export class RedactionError extends Data.TaggedError("RedactionError")<{
   readonly reason: string
   readonly cause?: unknown

@@ -20,11 +20,7 @@ interface SpanRedactionStats {
   readonly pseudonymizedIdentities: number
 }
 
-/**
- * Distinct identity value → replacement, computed once per batch. Pseudonyms need
- * an HMAC, which is async, so they are resolved before the synchronous per-span
- * walk rather than inside it.
- */
+/** Resolved before the synchronous walk, because deriving a pseudonym needs an async HMAC. */
 export type PseudonymLookup = ReadonlyMap<string, string>
 
 export function redactSpanDetail(
@@ -58,10 +54,7 @@ export function redactSpanDetail(
   scan.chars += statusMessageOutcome.scannedChars
   if (statusMessageOutcome.oversized) scan.oversized += 1
 
-  // `attr_string` carries a verbatim copy of the attributes the content parsers
-  // read, so the known content keys are dropped outright: exact key matching has
-  // no false positives and the UI reads the parsed columns. The value pass behind
-  // it is the backstop for vendors whose keys we have not enumerated.
+  // Dropping is not redundant with the value pass behind it: it also removes the prose no detector matches.
   const contentKeys = Object.keys(span.attrString).filter(isContentAttributeKey)
   droppedAttributeKeys = contentKeys.length
   const attrStringSource =
@@ -122,7 +115,6 @@ const replaceIdentity = (value: string, pseudonyms: PseudonymLookup): string => 
   return pseudonyms.get(value) ?? REDACTED_IDENTITY_PLACEHOLDER
 }
 
-/** Every identity value in the batch that needs a pseudonym, deduplicated. */
 export function collectIdentityValues(
   spans: readonly SpanDetail[],
   policyFor: (span: SpanDetail) => ResolvedRedactionPolicy | undefined,

@@ -100,14 +100,7 @@ interface ContentAttributeKeys {
   readonly prefixes: readonly string[]
 }
 
-/**
- * Every parser declares the keys it reads, and they are composed here rather than
- * restated in the redaction module. `transformSpan` copies each of these raw
- * attributes into `attr_string` alongside the parsed content columns, so ingest
- * redaction has to drop them or a verbatim plaintext copy survives in the same
- * ClickHouse row. Keeping the declaration next to each parser means a new vendor
- * parser gets redaction coverage when it is added, instead of silently drifting.
- */
+// A new parser must be added here, or ingest redaction leaves its raw attributes in `attr_string`.
 const CONTENT_ATTRIBUTE_KEY_SOURCES: readonly ContentAttributeKeys[] = [
   GENAI_CONTENT_ATTRIBUTE_KEYS,
   GENAI_DEPRECATED_CONTENT_ATTRIBUTE_KEYS,

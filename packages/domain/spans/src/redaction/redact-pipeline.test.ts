@@ -7,12 +7,8 @@ import type { OtlpExportTraceServiceRequest, OtlpKeyValue, OtlpSpan } from "../o
 import { redactSpans } from "./redact-spans.ts"
 
 /**
- * End-to-end over the real transform rather than a hand-built span.
- *
- * A fixture can be made to pass while the pipeline still leaks, because
- * `transformSpan` copies every raw content attribute into `attr_string` next to
- * the parsed columns. These tests assert against the transform's actual output for
- * each vendor shape, so a parser whose keys are not declared shows up here.
+ * Runs the real transform, because a hand-built span cannot catch the leak these tests exist for:
+ * `transformSpan` copies every raw content attribute into `attr_string` next to the parsed columns.
  */
 
 const ORG = OrganizationId("org_test")
@@ -162,11 +158,6 @@ describe("redaction over the real OTLP transform", () => {
     expect(summary.droppedAttributeKeys).toBeGreaterThan(0)
   })
 
-  /**
-   * The value pass cannot do this. Dropping the key removes the whole duplicate
-   * copy, including conversation text that no pattern detector matches, which is
-   * most of what a conversation actually contains.
-   */
   it("removes duplicated conversation text that no detector would have matched", async () => {
     const prose = "Margaret Hale lives on Crampton Terrace and prefers afternoon appointments"
     const attributes = [
@@ -182,8 +173,7 @@ describe("redaction over the real OTLP transform", () => {
     )
 
     expect(JSON.stringify(result.spans[0]?.attrString)).not.toContain(prose)
-    // The parsed column still carries it: pattern detectors do not catch names or
-    // addresses, and claiming otherwise is exactly what the docs must not do.
+    // Pattern detectors do not catch names, so the parsed column still carries it.
     expect(JSON.stringify(result.spans[0]?.inputMessages)).toContain(prose)
   })
 

@@ -27,11 +27,7 @@ export interface JsonRedactionOptions {
   readonly mutate: boolean
 }
 
-/**
- * Part types whose `content` is base64-encoded binary rather than text. Scanning
- * them wastes CPU proportional to the payload and can only produce noise. PII
- * inside an image is out of scope, not overlooked.
- */
+/** Their `content` is base64 binary, so PII inside one is out of scope rather than overlooked. */
 const SKIPPED_PART_TYPES: ReadonlySet<string> = new Set(["blob", "file"])
 
 // `JSON.rawJSON` and the reviver's source context ship in Node 25 (workspace engines) but are absent from the ES2022 lib.
@@ -44,11 +40,7 @@ const rawJson = JSON as unknown as {
   isRawJSON(value: unknown): boolean
 }
 
-/**
- * A plain parse rounds every integer past 2^53 and rewrites `3.10` as `3.1`, so
- * re-serializing a payload we only meant to scan for strings would silently
- * corrupt int64 ids. Reparsing numbers as raw literals keeps them byte-exact.
- */
+// A plain parse rounds integers past 2^53 and rewrites `3.10` as `3.1`, corrupting ids we only meant to scan past.
 const parsePreservingNumbers = (text: string): unknown =>
   rawJson.parse(text, (_key, value, context) =>
     context?.source !== undefined && typeof value === "number" ? rawJson.rawJSON(context.source) : value,
@@ -61,14 +53,8 @@ const isSkippedPart = (value: Record<string, unknown>): boolean =>
   typeof value.type === "string" && SKIPPED_PART_TYPES.has(value.type)
 
 /**
- * Walk arbitrary JSON and redact string leaves.
- *
- * Structure is preserved exactly: array length and order (message pairing and
- * `messageIndex` references depend on it), object keys, and every non-string
- * leaf. Only string values change, and only in `mutate` mode.
- *
- * Every string leaf is scanned regardless of its key. Skipping structural keys
- * would silently exempt customer JSON that stores PII under names like `id`.
+ * Array length and order, object keys, and non-string leaves are all preserved; only strings change.
+ * Every string leaf is scanned whatever its key, since customer JSON stores content under names like `id`.
  */
 export function redactJsonValue<T>(value: T, options: JsonRedactionOptions): JsonRedactionResult<T> {
   const counts: RedactionCounts = {}
@@ -120,15 +106,7 @@ function walk(value: unknown, options: JsonRedactionOptions, counts: RedactionCo
   return value
 }
 
-/**
- * Redact a string that may itself hold serialized JSON, which is how `tool_input`,
- * `tool_output`, and `events_json` arrive.
- *
- * A parsed payload is walked structurally and re-serialized, so keys and
- * non-string leaves survive. Anything that is not JSON, or that parses to a bare
- * scalar, is treated as plain text: re-serializing a scalar would rewrite `"hi"`
- * as `"\"hi\""` and corrupt the field.
- */
+/** A bare scalar is treated as text rather than re-serialized, which would rewrite `"hi"` as `"\"hi\""`. */
 export function redactJsonString(value: string, options: JsonRedactionOptions): JsonRedactionResult<string> {
   if (value === "" || options.entities.size === 0) return { value, counts: {}, scan: emptyScanTally() }
 
@@ -162,7 +140,6 @@ const tryParseJsonContainer = (value: string): unknown => {
   }
 }
 
-/** Redact the values of a string map, preserving every key. */
 export function redactStringMap(
   map: Readonly<Record<string, string>>,
   options: JsonRedactionOptions,

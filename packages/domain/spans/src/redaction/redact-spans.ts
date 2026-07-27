@@ -17,11 +17,7 @@ interface SpanRedactionSummary {
   readonly droppedAttributeKeys: number
   readonly oversizedFields: number
   readonly pseudonymizedIdentities: number
-  /**
-   * True when a project asked for pseudonymized identities but no secret was
-   * configured, so identities were fully redacted instead. Surfaced so the worker
-   * can log it: the fallback is safe but silently changes what is stored.
-   */
+  /** A project asked for pseudonyms but no secret was configured, so identities were redacted instead. */
   readonly identityFallback: boolean
 }
 
@@ -46,14 +42,7 @@ interface RedactSpansInput {
   readonly timeoutMs?: number
 }
 
-/**
- * Redact a decoded batch before it is persisted.
- *
- * Fails closed. Any error, including a timeout, fails the effect so the ingest job
- * retries rather than inserting content a project asked us to strip. Because
- * redaction is non-retroactive and there is no delete path, a fail-open write here
- * would be permanent.
- */
+/** Fails closed: any error fails the effect so the job retries rather than inserting content a project asked us to strip. */
 export const redactSpans = (
   input: RedactSpansInput,
 ): Effect.Effect<{ spans: readonly SpanDetail[]; summary: SpanRedactionSummary }, RedactionError> =>
@@ -140,13 +129,7 @@ function applyRedaction(
   }
 }
 
-/**
- * One HMAC per distinct identity value in the batch, not per span.
- *
- * A missing secret degrades to full redaction rather than failing the job or
- * passing plaintext through: degrade toward more privacy, and never block a
- * self-hoster's ingestion on an unset variable.
- */
+/** A missing secret degrades to full redaction rather than blocking ingestion or passing plaintext through. */
 const buildPseudonyms = (input: {
   readonly values: ReadonlySet<string>
   readonly organizationId: OrganizationId

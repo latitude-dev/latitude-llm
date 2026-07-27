@@ -259,7 +259,7 @@ function translateReassembled(messages: ReassembledMessage[], direction: "input"
   return result.messages as GenAIMessage[]
 }
 
-/** Attribute keys this parser reads. Consumed by `isContentAttributeKey` so ingest redaction can drop the raw copies. */
+/** Keys this parser reads, composed into `isContentAttributeKey`. */
 export const OPENINFERENCE_CONTENT_ATTRIBUTE_KEYS = {
   exact: [],
   prefixes: ["llm.input_messages.", "llm.output_messages.", "llm.tools.", "llm.prompts."],

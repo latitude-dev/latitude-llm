@@ -12,7 +12,7 @@ import { stringAttr } from "../attributes.ts"
 import type { OtlpKeyValue } from "../types.ts"
 import type { ParsedContent } from "./index.ts"
 
-/** Attribute keys this parser reads. Consumed by `isContentAttributeKey` so ingest redaction can drop the raw copies. */
+/** Keys this parser reads, composed into `isContentAttributeKey`. */
 export const CLAUDE_CODE_CONTENT_ATTRIBUTE_KEYS = {
   exact: ["user_prompt"],
   prefixes: [],

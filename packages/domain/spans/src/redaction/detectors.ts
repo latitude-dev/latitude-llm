@@ -12,27 +12,14 @@ interface Detector {
   readonly validate?: (value: string) => boolean
 }
 
-/**
- * Every pattern here avoids nested quantifiers. Span content is attacker
- * controlled, so a pattern that backtracks exponentially on a crafted string is a
- * denial-of-service vector in the ingest worker. Structural checks that would
- * need nesting live in `validate` instead.
- */
+// No nested quantifiers: span content is attacker controlled, so exponential backtracking here is a DoS vector.
+// Structural checks that would need nesting live in `validate` instead.
 
-/**
- * The local-part class is narrower than RFC 5322 allows on purpose. `/`, `=`, `?`
- * and `&` are legal in a local part and effectively never issued, but they appear
- * immediately before an address constantly, in URLs, file paths, and query
- * strings. Including them makes the match run left through the whole URL path and
- * redact it along with the address.
- */
+// The local part excludes RFC-legal `/`, `=`, `?` and `&`: they precede addresses in URLs, so allowing them
+// runs the match left through the whole path.
 const EMAIL_PATTERN = /[A-Za-z0-9._+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,24}/g
 
-/**
- * Rejects the `package@1.2.beta` shape, which is otherwise email-shaped, by
- * requiring the label before the TLD to contain a letter. Also rejects malformed
- * local parts and domains that a single character class cannot exclude.
- */
+// Requires a letter in the label before the TLD, which is what rejects the email-shaped `package@1.2.beta`.
 const isEmail = (value: string): boolean => {
   const at = value.lastIndexOf("@")
   const local = value.slice(0, at)
@@ -49,11 +36,7 @@ const isEmail = (value: string): boolean => {
 
 const E164_PHONE_PATTERN = /(?<![\w+])\+[1-9]\d{7,14}(?!\d)/g
 
-/**
- * Separated NANP forms only. Bare ten-digit runs are excluded because they are
- * indistinguishable from the numeric ids that saturate tool output. The 3-3-4
- * shape also naturally excludes ISO dates (4-2-2) and dotted quads.
- */
+// Separated NANP forms only: a bare ten-digit run is indistinguishable from the numeric ids in tool output.
 const NANP_PHONE_PATTERN = /(?<![\w.-])(?:\(\d{3}\) ?|\d{3}[-. ])\d{3}[-. ]\d{4}(?![\d.-])/g
 
 const CREDIT_CARD_PATTERN = /(?<![\d.])\d(?:[ -]?\d){11,18}(?![\d.])/g
@@ -77,11 +60,7 @@ const passesLuhn = (digits: string): boolean => {
   return sum % 10 === 0
 }
 
-/**
- * Luhn alone accepts roughly one in ten random digit runs of card length, which
- * would eat numeric ids. Requiring a real issuer prefix at a length that issuer
- * actually uses is what makes this detector safe to enable by default.
- */
+// Luhn alone accepts about one in ten random digit runs of card length, so a real issuer prefix is also required.
 const hasKnownIssuerPrefix = (digits: string): boolean => {
   const length = digits.length
   const prefix2 = Number.parseInt(digits.slice(0, 2), 10)
@@ -108,15 +87,8 @@ const isCreditCard = (value: string): boolean => {
   return hasKnownIssuerPrefix(digits) && passesLuhn(digits)
 }
 
-/**
- * Compact and four-group forms are separate patterns rather than one pattern with
- * optional spaces. A single permissive pattern matches greedily across a space
- * into whatever follows, and because the checksum runs after matching, the failed
- * long match discards the real IBAN instead of backtracking to it.
- *
- * The documented recall limit: an IBAN written in four-character groups and
- * followed immediately by another four-character uppercase token is missed.
- */
+// Two patterns, not one with optional spaces: a permissive pattern matches greedily past a space and, because
+// the checksum runs after matching, the failed long match discards the real IBAN instead of backtracking.
 const IBAN_COMPACT_PATTERN = /(?<![A-Za-z0-9])[A-Z]{2}\d{2}[A-Z0-9]{11,30}(?![A-Za-z0-9])/g
 const IBAN_GROUPED_PATTERN = /(?<![A-Za-z0-9])[A-Z]{2}\d{2}(?: [A-Z0-9]{4}){2,7}(?: [A-Z0-9]{1,4})?(?![A-Za-z0-9])/g
 
@@ -147,11 +119,7 @@ const IPV6_PATTERN = /(?<![\w:.])(?:[A-Fa-f0-9]{1,4}:){7}[A-Fa-f0-9]{1,4}(?![\w:
 const IPV6_COMPRESSED_PATTERN =
   /(?<![\w:.])(?:[A-Fa-f0-9]{1,4}:){1,6}:(?:[A-Fa-f0-9]{1,4}:){0,5}[A-Fa-f0-9]{1,4}(?![\w:.])/g
 
-/**
- * `sk-` prefixed CSS class names (SpinKit and friends) are common enough in real
- * traffic to matter, so the variable-length token forms additionally require the
- * length and character mix of a real credential.
- */
+// Variable-length token forms also require credential length and character mix, because `sk-` CSS class names are common.
 const looksLikeLongToken = (value: string): boolean => {
   const tail = value.slice(value.indexOf("-") + 1)
 
@@ -200,14 +168,7 @@ const DETECTORS: readonly Detector[] = [
   { entity: "crypto_wallet", pattern: ETHEREUM_PATTERN },
 ]
 
-/**
- * All matches from the enabled detectors, unsorted and possibly overlapping.
- * Overlap resolution belongs to the caller (`redact-text.ts`) so counting and
- * replacement agree on exactly one set of accepted matches.
- *
- * Uses `matchAll` rather than `exec` loops: it does not mutate `lastIndex` on the
- * shared module-level patterns.
- */
+/** Unsorted and possibly overlapping; the caller resolves overlaps so counting and replacement share one accepted set. */
 export function findRedactionMatches(text: string, entities: ReadonlySet<RedactionEntity>): RedactionMatch[] {
   const matches: RedactionMatch[] = []
 

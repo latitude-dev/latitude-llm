@@ -21,8 +21,6 @@ const VENDORS = {
 } as const
 
 describe("isContentAttributeKey", () => {
-  // Vectors come from the parsers' own declarations, so a parser that gains a key
-  // without declaring it is the only way this can drift.
   it.each(Object.entries(VENDORS))("covers every exact key declared by %s", (_vendor, keys) => {
     for (const key of keys.exact) {
       expect(isContentAttributeKey(key)).toBe(true)

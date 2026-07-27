@@ -53,8 +53,7 @@ describe("email detector", () => {
     expect(detects("installed foo@1.2.beta", "email")).toBe(false)
   })
 
-  // Regression: a local-part class containing `/`, `=`, `?` or `&` runs the match
-  // left through the whole URL path or file path and redacts it with the address.
+  // Regression: an RFC-complete local-part class runs the match left through the whole URL or file path.
   it.each([
     ["https://api.example.com/v1/users/john@example.com", "john@example.com"],
     ["/home/user/mail@example.com.txt", "mail@example.com.txt"],
@@ -241,12 +240,7 @@ describe("entities disabled by default", () => {
     expect(findRedactionMatches("commit 0a1b2c3d4e5f60718293a4b5c6d7e8f901234567", ALL_ENTITIES)).toEqual([])
   })
 
-  /**
-   * These are the reason `ip_address` is off by default. It is not immune to these
-   * collisions and cannot be made immune: a dotted quad and a four-part version
-   * string are the same string. Pinning the collision keeps the default honest
-   * rather than merely asserted.
-   */
+  // A dotted quad and a four-part version string are the same string, so immunity is impossible, not missing.
   it.each([
     "upgraded to 1.2.3.4",
     "schema version 10.0.0.1",

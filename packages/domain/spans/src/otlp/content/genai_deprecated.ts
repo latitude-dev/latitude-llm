@@ -226,7 +226,7 @@ function resolveMessages(attrs: readonly OtlpKeyValue[], prefix: string): Record
   return messages
 }
 
-/** Attribute keys this parser reads. Consumed by `isContentAttributeKey` so ingest redaction can drop the raw copies. */
+/** Keys this parser reads, composed into `isContentAttributeKey`. */
 export const GENAI_DEPRECATED_CONTENT_ATTRIBUTE_KEYS = {
   exact: ["gen_ai.prompt", "gen_ai.completion", "llm.request.functions"],
   prefixes: ["gen_ai.prompt.", "gen_ai.completion.", "llm.request.functions."],

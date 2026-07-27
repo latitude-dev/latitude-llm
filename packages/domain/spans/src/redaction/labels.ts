@@ -18,17 +18,7 @@ export const OVERSIZED_FIELD_PLACEHOLDER = "[REDACTED_OVERSIZED_FIELD]"
 
 export const REDACTED_IDENTITY_PLACEHOLDER = "[REDACTED_USER]"
 
-/**
- * String leaves above this are replaced wholesale rather than scanned. Passing
- * them through unscanned would break the redaction promise and scanning only a
- * prefix would leak the tail, so the only option consistent with "degrade toward
- * more redaction" is to drop the leaf. The realistic trigger is multi-megabyte
- * file content in coding-agent tool output.
- *
- * Measured in UTF-16 code units rather than bytes: `String.length` is exact and
- * allocation-free, where a byte count would mean encoding every leaf just to
- * size it.
- */
+// UTF-16 code units, not bytes: `String.length` is exact and needs no encoding pass to size a leaf.
 export const REDACTION_MAX_FIELD_CHARS = 1_000_000
 
 export const REDACTION_BATCH_TIMEOUT_MS = 30_000

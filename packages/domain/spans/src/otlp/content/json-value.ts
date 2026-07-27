@@ -34,7 +34,7 @@ function extractMessages(raw: string | undefined): Record<string, unknown>[] | u
   return arr as Record<string, unknown>[]
 }
 
-/** Attribute keys this parser reads. Consumed by `isContentAttributeKey` so ingest redaction can drop the raw copies. */
+/** Keys this parser reads, composed into `isContentAttributeKey`. */
 export const JSON_VALUE_CONTENT_ATTRIBUTE_KEYS = {
   exact: ["input.value", "output.value"],
   prefixes: [],

@@ -9,15 +9,7 @@ interface TextRedactionResult {
   readonly counts: RedactionCounts
 }
 
-/**
- * Leftmost-longest, non-overlapping. Detectors run independently and can report
- * overlapping candidates for the same span of text (a JWT is also `eyJ`-prefixed
- * base64, an Anthropic key also matches the generic `sk-` form), so exactly one
- * winner per region has to be picked before either counting or replacing.
- *
- * Counting and replacement both consume this same accepted set, which is why
- * `dryRun` totals are guaranteed to describe what `enforce` would actually do.
- */
+/** Leftmost-longest. Detectors overlap (an Anthropic key matches the generic `sk-` form too), so one winner per region. */
 function resolveOverlaps(matches: readonly RedactionMatch[]): RedactionMatch[] {
   const ordered = [...matches].sort((a, b) => a.start - b.start || b.end - a.end)
   const accepted: RedactionMatch[] = []
@@ -42,20 +34,12 @@ const countByEntity = (matches: readonly RedactionMatch[]): RedactionCounts => {
   return counts
 }
 
-/**
- * Count what redaction would remove from `text` without modifying it. This is the
- * `dryRun` path.
- */
 export function countRedactions(text: string, entities: ReadonlySet<RedactionEntity>): RedactionCounts {
   if (text === "" || entities.size === 0) return {}
 
   return countByEntity(resolveOverlaps(findRedactionMatches(text, entities)))
 }
 
-/**
- * Replace every accepted match with its entity placeholder. Replacement runs
- * right to left so earlier offsets stay valid as the string is rewritten.
- */
 export function redactText(text: string, entities: ReadonlySet<RedactionEntity>): TextRedactionResult {
   if (text === "" || entities.size === 0) return { text, counts: {} }
 
@@ -79,11 +63,7 @@ interface LeafRedactionOutcome {
   readonly scannedChars: number
 }
 
-/**
- * The single leaf-level primitive. Every path that touches a string (the JSON
- * walk, attribute and metadata maps, plain string columns) goes through this, so
- * the size cap and the dry-run contract cannot diverge between them.
- */
+/** Every path that touches a string goes through this, so the size cap and dry-run contract cannot diverge. */
 export function redactLeaf(
   text: string,
   entities: ReadonlySet<RedactionEntity>,

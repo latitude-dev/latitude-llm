@@ -5,11 +5,6 @@ import type { RepositoryError } from "./errors.ts"
 import type { ProjectId } from "./id.ts"
 import type { SqlClient } from "./sql-client.ts"
 
-/**
- * `dryRun` runs every detector and reports match counts without mutating the
- * span. It exists because redaction is destructive, non-retroactive, and has no
- * undo, so measuring a policy before enforcing it is the only safe rollout.
- */
 export const REDACTION_MODES = ["off", "dryRun", "enforce"] as const
 export const redactionModeSchema = z.enum(REDACTION_MODES)
 export type RedactionMode = z.infer<typeof redactionModeSchema>
@@ -27,11 +22,7 @@ export const REDACTION_ENTITIES = [
 export const redactionEntitySchema = z.enum(REDACTION_ENTITIES)
 export type RedactionEntity = z.infer<typeof redactionEntitySchema>
 
-/**
- * `ip_address` and `crypto_wallet` are off by default: dotted quads collide with
- * version strings and wallet forms collide with hex hashes, both of which
- * saturate coding-agent tool output.
- */
+// `ip_address` and `crypto_wallet` are omitted: they collide with version strings and hex hashes.
 export const DEFAULT_REDACTION_ENTITIES: readonly RedactionEntity[] = [
   "email",
   "phone",
@@ -41,16 +32,11 @@ export const DEFAULT_REDACTION_ENTITIES: readonly RedactionEntity[] = [
   "secret",
 ]
 
-/** `pseudonymize` replaces identity fields with a stable org-scoped digest, so equality filters and group-bys survive. */
 export const REDACTION_IDENTITY_HANDLINGS = ["keep", "pseudonymize"] as const
 export const redactionIdentityHandlingSchema = z.enum(REDACTION_IDENTITY_HANDLINGS)
 export type RedactionIdentityHandling = z.infer<typeof redactionIdentityHandlingSchema>
 
-/**
- * Opt-in scopes beyond span content. `metadata` covers `metadata` values and
- * `tags`, both customer-supplied filtering dimensions, so redacting them breaks
- * saved searches and analytics.
- */
+/** `metadata` covers both the `metadata` map and `tags`. */
 export const redactionScopesSettingSchema = z.object({
   metadata: z.boolean().optional(),
 })
@@ -180,12 +166,7 @@ export function resolveSettingsCascade(input: {
   }
 }
 
-/**
- * Effective ingest-redaction policy for one project, after the org → project
- * cascade. `source` is for display only: it tells the UI whether the policy the
- * user is looking at came from the project, was inherited from the org, or is
- * the system default.
- */
+/** `source` is display only: which layer the policy the user is looking at came from. */
 export interface ResolvedRedactionPolicy {
   readonly mode: RedactionMode
   readonly entities: ReadonlySet<RedactionEntity>
@@ -213,13 +194,6 @@ const hasRedactionField = (setting: RedactionSetting | undefined): boolean =>
     setting.scopes?.metadata !== undefined ||
     setting.identities !== undefined)
 
-/**
- * Cascade the ingest-redaction policy: organization → project → system default.
- *
- * A `locked` org policy wins outright rather than merging field by field. Partial
- * locking produces a policy no UI can explain, and the requirement it serves is
- * "projects cannot weaken this", which all-or-nothing already satisfies.
- */
 export function resolveRedactionPolicy(input: {
   organization: OrganizationSettings | null | undefined
   project: ProjectSettings | null | undefined
