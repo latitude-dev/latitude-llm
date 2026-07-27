@@ -4,6 +4,7 @@ import {
   computePixelRatio,
   fitWidthScale,
   MAX_CANVAS_PIXELS,
+  mostVisiblePage,
   nextZoom,
   quantizeWidth,
 } from "./pdf-render-math.ts"
@@ -70,6 +71,32 @@ describe("clampPage", () => {
   it("handles an unloaded document", () => {
     expect(clampPage(3, 0)).toBe(1)
     expect(clampPage(Number.NaN, 12)).toBe(1)
+  })
+})
+
+describe("mostVisiblePage", () => {
+  it("tracks the page occupying the largest share of the viewport", () => {
+    expect(
+      mostVisiblePage(
+        new Map([
+          [3, 0.2],
+          [4, 0.8],
+          [5, 0],
+        ]),
+      ),
+    ).toBe(4)
+  })
+
+  it("uses the earlier page for equal intersections and ignores non-visible pages", () => {
+    expect(
+      mostVisiblePage(
+        new Map([
+          [4, 0.5],
+          [3, 0.5],
+        ]),
+      ),
+    ).toBe(3)
+    expect(mostVisiblePage(new Map([[1, 0]]))).toBeUndefined()
   })
 })
 

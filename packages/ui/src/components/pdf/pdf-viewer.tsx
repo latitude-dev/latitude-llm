@@ -2,7 +2,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react"
 import { cn } from "../../utils/cn.ts"
 import type { PDFDocumentProxy } from "./configure-pdfjs.ts"
 import { type PageSize, PdfPageCanvas } from "./pdf-page-canvas.tsx"
-import { clampPage, fitWidthScale, MAX_ZOOM, MIN_ZOOM, nextZoom } from "./pdf-render-math.ts"
+import { clampPage, fitWidthScale, MAX_ZOOM, MIN_ZOOM, mostVisiblePage, nextZoom } from "./pdf-render-math.ts"
 import { PdfViewerToolbar } from "./pdf-viewer-toolbar.tsx"
 import { useElementWidth } from "./use-element-width.ts"
 
@@ -56,7 +56,7 @@ export function PdfViewer({
     const root = scrollRef.current
     if (!root || typeof IntersectionObserver === "undefined") return
 
-    const observer = new IntersectionObserver(
+    const renderObserver = new IntersectionObserver(
       (entries) => {
         setVisiblePages((previous) => {
           const next = new Set(previous)
@@ -73,14 +73,31 @@ export function PdfViewer({
       { root, rootMargin: "100% 0px" },
     )
 
-    for (const element of pageRefs.current.values()) observer.observe(element)
-    return () => observer.disconnect()
-  }, [numPages])
+    const viewportIntersections = new Map<number, number>()
+    const viewportObserver = new IntersectionObserver(
+      (entries) => {
+        for (const entry of entries) {
+          const pageNumber = Number(entry.target.getAttribute("data-page"))
+          if (!pageNumber) continue
+          if (entry.isIntersecting) viewportIntersections.set(pageNumber, entry.intersectionRatio)
+          else viewportIntersections.delete(pageNumber)
+        }
 
-  useEffect(() => {
-    const first = visiblePages[0]
-    if (first) setCurrentPage(first)
-  }, [visiblePages])
+        const pageNumber = mostVisiblePage(viewportIntersections)
+        if (pageNumber) setCurrentPage(pageNumber)
+      },
+      { root },
+    )
+
+    for (const element of pageRefs.current.values()) {
+      renderObserver.observe(element)
+      viewportObserver.observe(element)
+    }
+    return () => {
+      renderObserver.disconnect()
+      viewportObserver.disconnect()
+    }
+  }, [numPages])
 
   // Bounded window centred on the current page — at low zoom the visible set alone can be large.
   const renderWindow = useMemo(() => {

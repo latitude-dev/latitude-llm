@@ -48,6 +48,21 @@ export function clampPage(page: number, numPages: number): number {
   return Math.min(Math.max(Math.round(page), 1), numPages)
 }
 
+export function mostVisiblePage(intersections: ReadonlyMap<number, number>): number | undefined {
+  let selected: number | undefined
+  let largestRatio = 0
+
+  for (const [pageNumber, ratio] of intersections) {
+    if (ratio <= 0) continue
+    if (ratio > largestRatio || (ratio === largestRatio && (selected == null || pageNumber < selected))) {
+      selected = pageNumber
+      largestRatio = ratio
+    }
+  }
+
+  return selected
+}
+
 /** Quantized so a resize drag re-renders a handful of times instead of once per observer tick. */
 export function quantizeWidth(width: number, step = 16): number {
   if (width <= 0) return 0
