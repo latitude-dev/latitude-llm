@@ -52,6 +52,17 @@ describe("email detector", () => {
   it("rejects the package@1.2.beta shape by requiring a letter before the TLD", () => {
     expect(detects("installed foo@1.2.beta", "email")).toBe(false)
   })
+
+  // Regression: a local-part class containing `/`, `=`, `?` or `&` runs the match
+  // left through the whole URL path or file path and redacts it with the address.
+  it.each([
+    ["https://api.example.com/v1/users/john@example.com", "john@example.com"],
+    ["/home/user/mail@example.com.txt", "mail@example.com.txt"],
+    ["?email=john@example.com&x=1", "john@example.com"],
+    ["GET /users?filter=a&email=john@example.com HTTP/1.1", "john@example.com"],
+  ])("matches only the address inside %s", (text, expected) => {
+    expect(found(text, "email")).toEqual([expected])
+  })
 })
 
 describe("phone detector", () => {

@@ -19,7 +19,14 @@ interface Detector {
  * need nesting live in `validate` instead.
  */
 
-const EMAIL_PATTERN = /[A-Za-z0-9!#$%&'*+/=?^_`{|}~.-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,24}/g
+/**
+ * The local-part class is narrower than RFC 5322 allows on purpose. `/`, `=`, `?`
+ * and `&` are legal in a local part and effectively never issued, but they appear
+ * immediately before an address constantly, in URLs, file paths, and query
+ * strings. Including them makes the match run left through the whole URL path and
+ * redact it along with the address.
+ */
+const EMAIL_PATTERN = /[A-Za-z0-9._+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,24}/g
 
 /**
  * Rejects the `package@1.2.beta` shape, which is otherwise email-shaped, by
