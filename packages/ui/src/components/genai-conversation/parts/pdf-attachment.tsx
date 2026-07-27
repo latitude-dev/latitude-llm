@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from "react"
+import { useMountEffect } from "../../../hooks/use-mount-effect.ts"
 import { LazyPdfPreview } from "../../pdf/lazy-pdf-preview.tsx"
-import { shouldAutoRenderThumbnail } from "../../pdf/pdf-source.ts"
+import { isInlineRenderableUrl, shouldAutoRenderThumbnail } from "../../pdf/pdf-source.ts"
 import { FileCard } from "./file-card.tsx"
 
 /**
@@ -88,4 +89,28 @@ export function PdfAttachment({
       {autoPreview ? null : previewNode}
     </>
   )
+}
+
+export function PdfUriAttachment({
+  fileName,
+  mimeType,
+  href,
+}: {
+  readonly fileName?: string | undefined
+  readonly mimeType?: string | null | undefined
+  readonly href: string
+}) {
+  const [inlinePreview, setInlinePreview] = useState(false)
+
+  useMountEffect(() => {
+    setInlinePreview(isInlineRenderableUrl(href, globalThis.location?.origin))
+  })
+
+  if (!inlinePreview) {
+    return (
+      <FileCard {...(fileName ? { fileName } : {})} mimeType={mimeType ?? undefined} modality="document" href={href} />
+    )
+  }
+
+  return <PdfAttachment {...(fileName ? { fileName } : {})} mimeType={mimeType ?? undefined} href={href} />
 }

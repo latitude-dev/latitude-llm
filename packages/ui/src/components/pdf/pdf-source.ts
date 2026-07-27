@@ -14,7 +14,7 @@ export function isPdfMime(mimeType?: string | null): boolean {
 }
 
 export function shouldAutoRenderThumbnail(sizeBytes?: number): boolean {
-  if (sizeBytes == null) return true
+  if (sizeBytes == null) return false
   return sizeBytes <= AUTO_PREVIEW_MAX_BYTES
 }
 

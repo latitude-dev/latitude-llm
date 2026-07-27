@@ -65,8 +65,7 @@ describe("Part media / file rendering", () => {
     expect(markup).not.toContain('aria-label="Open PDF preview"')
   })
 
-  it("offers an inline preview for a same-origin PDF uri", () => {
-    // `location` is absent in the default node environment; the origin is what gates the preview.
+  it("keeps same-origin PDF uri markup stable until hydration completes", () => {
     const globals = globalThis as { location?: { origin: string } | undefined }
     const original = globals.location
     globals.location = { origin: "https://app.latitude.so" }
@@ -83,7 +82,8 @@ describe("Part media / file rendering", () => {
         />,
       )
 
-      expect(markup).toContain('aria-label="Open PDF preview"')
+      expect(markup).toContain('aria-label="Preview PDF"')
+      expect(markup).not.toContain('aria-label="Open PDF preview"')
     } finally {
       globals.location = original
     }

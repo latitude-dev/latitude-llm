@@ -4,7 +4,7 @@ import { type ReactNode, use } from "react"
 import type { GenAIPart } from "rosetta-ai"
 import { cn } from "../../utils/cn.ts"
 import { CodeBlockControls } from "../code-block/code-block-controls.tsx"
-import { isInlineRenderableUrl, isPdfMime } from "../pdf/pdf-source.ts"
+import { isPdfMime } from "../pdf/pdf-source.ts"
 import { Text } from "../text/text.tsx"
 import { Tooltip } from "../tooltip/tooltip.tsx"
 import { CollapsibleBlock } from "./parts/collapsible-block.tsx"
@@ -12,7 +12,7 @@ import { FileCard } from "./parts/file-card.tsx"
 import { formatJson, getKnownField, renderMediaByModality } from "./parts/helpers.tsx"
 import { isLexicalSearchHighlight } from "./parts/highlight-segments.ts"
 import { MarkdownContent } from "./parts/lazy-markdown-content.tsx"
-import { PdfAttachment } from "./parts/pdf-attachment.tsx"
+import { PdfAttachment, PdfUriAttachment } from "./parts/pdf-attachment.tsx"
 import { SubagentCard } from "./parts/subagent-card.tsx"
 import { ToolCallBlock } from "./parts/tool-call-block.tsx"
 import type {
@@ -159,9 +159,15 @@ export function Part({
       })
       if (media) return media
 
-      // Cross-origin PDFs can't be fetched by pdf.js, so they keep the open-in-new-tab card.
-      if (isPdfMime(p.mime_type) && isInlineRenderableUrl(p.uri, globalThis.location?.origin)) {
-        return <PdfAttachment fileName={fileNameFromUri(p.uri)} mimeType={p.mime_type ?? undefined} href={p.uri} />
+      if (isPdfMime(p.mime_type)) {
+        return (
+          <PdfUriAttachment
+            key={p.uri}
+            fileName={fileNameFromUri(p.uri)}
+            mimeType={p.mime_type ?? undefined}
+            href={p.uri}
+          />
+        )
       }
 
       return (

@@ -21,8 +21,8 @@ describe("shouldAutoRenderThumbnail", () => {
     expect(shouldAutoRenderThumbnail(11_000_000)).toBe(false)
   })
 
-  it("renders when the size is unknown", () => {
-    expect(shouldAutoRenderThumbnail(undefined)).toBe(true)
+  it("defers when the size is unknown", () => {
+    expect(shouldAutoRenderThumbnail(undefined)).toBe(false)
   })
 })
 
