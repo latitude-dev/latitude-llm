@@ -23,6 +23,52 @@ The ingest HTTP boundary protects each process before decoding OTLP payloads:
 
 The defaults are a 32 MiB request cap, a 64 MiB in-flight payload budget, and 16 concurrent payloads per ingest process. The in-flight budget must be at least twice the request cap because assembling a chunked body briefly retains its streamed chunks and exact-sized output buffer together. Operators can tune the limits with `LAT_INGEST_TRACE_MAX_PAYLOAD_BYTES`, `LAT_INGEST_TRACE_MAX_IN_FLIGHT_BYTES`, and `LAT_INGEST_TRACE_MAX_CONCURRENT_PAYLOADS`. The request span records observed and declared payload size, normalized content type, body-read duration, admission outcome, RSS, and ArrayBuffer memory before and after processing.
 
+## Ingest PII Redaction
+
+Latitude supports opt-in, per-project **value-level PII redaction** applied in the span-ingestion worker before spans are written to ClickHouse. This is separate from **SDK attribute redaction**, which masks matching attribute *keys* client-side before export (see `docs/security/pii-redaction.mdx`).
+
+The redaction engine lives in `packages/domain/spans/src/redaction/`. Settings and policy resolution live in `packages/domain/shared/src/settings.ts` (`resolveRedactionPolicy`). The full design and rollout plan are in `specs/pii-redaction.md`.
+
+### Pipeline placement
+
+Redaction runs inside `processIngestedSpansUseCase`, **after** `decodeAndTransform` and **before** retention stamping and `SpanRepository.insert`. That position is upstream of every content sink: `traces`/`sessions` materialized views, trace search, memory projection, conversation intelligence, taxonomy projections, dataset rows, and PostHog data destinations all read from `spans` (or from tables materialized from `spans`), so one insertion-point redaction pass covers them transitively.
+
+Policy is resolved at the HTTP ingest boundary from the already-loaded `Project` rows plus a cached org-settings read, then stamped onto the `span-ingestion:ingest` queue payload. The worker applies the stamped policy and does not re-fetch settings.
+
+### Modes and entities
+
+| Mode | Behavior |
+| --- | --- |
+| `off` (default) | No scanning. Projects in this mode are absent from the queue policy map. |
+| `dryRun` | Run every enabled detector, count matches, annotate telemetry, **mutate nothing**. |
+| `enforce` | Replace matches with `[REDACTED_<LABEL>]` placeholders. |
+
+Detectable entities (configured per project/org): `email`, `phone`, `credit_card`, `iban`, `us_ssn`, `secret`, plus opt-in `ip_address` and `crypto_wallet`. Defaults exclude `ip_address` and `crypto_wallet` because they collide with version strings and hex hashes on coding-agent traffic. Detection is pattern-based and precision-first: structured identifiers and prefixed secrets, not names or free-form personal detail.
+
+### Field surface
+
+When `mode != "off"`, the redaction walk covers:
+
+- parsed message content (`inputMessages`, `outputMessages`, `systemInstructions`, tool definitions/inputs/outputs)
+- `statusMessage`, `eventsJson` (string leaves), `resourceString` values
+- `attrString`: drop known content attribute keys (composed from each OTLP content parser's key matcher), then value-redact remaining values
+
+Metadata scope (`metadata`, `tags`) is opt-in via `scopes.metadata`. Identity fields (`userId`, `userEmail`) support `keep` (default) or `pseudonymize` (deterministic HMAC via `LAT_REDACTION_PSEUDONYM_SECRET`; missing secret degrades to `[REDACTED_USER]`).
+
+Oversized leaves above `REDACTION_MAX_FIELD_CHARS` (1 M UTF-16 code units) or subtrees deeper than `REDACTION_MAX_DEPTH` (256) are replaced wholesale in `enforce` mode rather than partially scanned.
+
+### Failure policy
+
+The deterministic tier **fails closed**: a detector throw, timeout, or batch budget overrun fails the effect, nothing is inserted, and BullMQ retries. Partial inserts are forbidden — one span's failure fails the whole batch. This is intentional: there is no delete path for ingested content, so a fail-open write would permanently leak PII a customer asked us to strip.
+
+### Side effects of enabling redaction
+
+- `content_hash` values change after redaction, so `message_embeddings` dedup does not span a policy change.
+- `trace_search_documents.search_text` is built from redacted content once redaction is on, which changes lexical and semantic search recall.
+- Redaction applies only to spans ingested after enablement; already-stored spans are untouched.
+
+Raw OTLP bytes are buffered in Redis (inline payloads) and object storage (`tmp-ingest/…`) before the worker runs. Redaction does not retroactively scrub those buffers; pipeline wiring includes deleting the object-storage blob after a successful insert.
+
 ## Reliability Additions
 
 Reliability adds:

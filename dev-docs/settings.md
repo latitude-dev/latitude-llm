@@ -29,14 +29,29 @@ These payloads are stored directly on the owner row when they exist. They are no
 ## MVP Owner Settings
 
 ```typescript
+type RedactionSetting = {
+  mode?: "off" | "dryRun" | "enforce"
+  entities?: Array<
+    "email" | "phone" | "credit_card" | "iban" | "us_ssn" | "secret" | "ip_address" | "crypto_wallet"
+  >
+  scopes?: {
+    metadata?: boolean // when true, redact metadata map values and tag values
+  }
+  identities?: "keep" | "pseudonymize" // userId and userEmail handling
+}
+
 type ProjectSettings = {
   keepMonitoring?: boolean // if true, issue-linked evaluations keep running after resolution; if false they are archived
+  redaction?: RedactionSetting
 }
 
 type OrganizationSettings = {
   keepMonitoring?: boolean // organization-wide default for post-resolution monitoring behavior
   billing?: {
     spendingLimitCents?: number // optional Pro-only spend cap including base subscription and metered overage
+  }
+  redaction?: RedactionSetting & {
+    locked?: boolean // when true, org policy is authoritative and project redaction settings are ignored
   }
 }
 ```
@@ -179,6 +194,20 @@ Its role, when concrete fields are approved, is:
 
 1. project settings
 2. organization settings
+
+### Redaction policy
+
+`resolveRedactionPolicy` in `packages/domain/shared/src/settings.ts` resolves the effective ingest PII redaction policy. It is a parallel resolver — not part of `resolveSettingsCascade` / `ResolvedSettings`.
+
+Rules:
+
+1. When `organization.redaction.locked === true`, the org policy is used outright and project settings are ignored (not merged). `source: "organization"`.
+2. Otherwise resolve field by field: project value, else org value, else system default. `source` is `"project"` if any project field was present, else `"organization"` if any org field was, else `"default"`.
+3. System defaults: `mode: "off"`, entities = `DEFAULT_REDACTION_ENTITIES` (`email`, `phone`, `credit_card`, `iban`, `us_ssn`, `secret`), `redactMetadata: false`, `identities: "keep"`.
+
+Authorization (when UI surfaces ship): project-level redaction requires `admin` or `owner`; org-level redaction including `locked` requires `owner`.
+
+See [`spans.md`](./spans.md) §"Ingest PII Redaction" for the pipeline behavior this policy drives.
 
 ### Provider And Model Resolution
 

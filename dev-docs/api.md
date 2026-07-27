@@ -89,6 +89,24 @@ Public routes are bodyless metadata documents — never product data. Everything
 
 Default to `low`. Pick a tighter tier only when an endpoint genuinely warrants it.
 
+## Async export rate limiting
+
+Dataset, signal, and trace exports enqueue a background job and email a download link. Beyond the per-route `ultra` tier (3 requests/min per org), exports also carry a **separate hourly quota** keyed on `(organizationId, projectId, recipientEmail)`:
+
+| Setting | Production default | Dev default |
+| --- | --- | --- |
+| Max requests | 10 / hour | 30 / hour |
+| Window | 3600 s | 3600 s |
+
+Redis key: `org:${organizationId}:export:rate_limit:${projectId}:${recipientEmail}` (recipient normalized to lowercase). Enforcement is in `enforceExportRequestRateLimit` (`packages/platform/cache-redis/src/export-rate-limit.ts`). A breach throws `RateLimitError` → HTTP **429** with `Retry-After`.
+
+Wired today on:
+
+- `POST /v1/datasets/:projectSlug/export-rows` and `POST /v1/signals/:projectSlug/export` (public API)
+- the matching web server fns for datasets, signals, and traces
+
+The public traces export endpoint (`POST /v1/traces/:projectSlug/export`) does not yet call the export rate limiter — only the web traces export path does. Limits are currently hardcoded in `export-rate-limit.ts` (not yet env-configurable despite `.env.example` placeholders). Redis unavailability fails open (export proceeds).
+
 ## Manifests on disk
 
 `apps/api/openapi.json` and `apps/api/mcp.json` are checked into the repo. They're the contract the SDK and MCP server consume, so they need to stay in sync with the route source.
