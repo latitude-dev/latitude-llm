@@ -10,8 +10,7 @@ import { mergeRedactionCounts, type RedactionCounts } from "./redact-text.ts"
 
 export interface SpanRedactionSummary {
   readonly counts: RedactionCounts
-  readonly enforceSpans: number
-  readonly dryRunSpans: number
+  readonly redactedSpans: number
   readonly leavesScanned: number
   readonly charsScanned: number
   readonly droppedAttributeKeys: number
@@ -23,8 +22,7 @@ export interface SpanRedactionSummary {
 
 const EMPTY_SUMMARY: SpanRedactionSummary = {
   counts: {},
-  enforceSpans: 0,
-  dryRunSpans: 0,
+  redactedSpans: 0,
   leavesScanned: 0,
   charsScanned: 0,
   droppedAttributeKeys: 0,
@@ -54,11 +52,9 @@ export const redactSpans = (
     const budgetMs = input.timeoutMs ?? REDACTION_BATCH_TIMEOUT_MS
     const deadline = performance.now() + budgetMs
 
-    const policyFor = (span: SpanDetail): RedactionPolicy | undefined => {
-      const policy = input.policyByProjectId.get(span.projectId as string)
-
-      return policy?.mode === "off" ? undefined : policy
-    }
+    // A policy exists only for a project that redacts, so presence is the decision.
+    const policyFor = (span: SpanDetail): RedactionPolicy | undefined =>
+      input.policyByProjectId.get(span.projectId as string)
 
     const identityValues = collectIdentityValues(input.spans, policyFor)
     const { pseudonyms, identityFallback } = yield* buildPseudonyms({
@@ -88,8 +84,7 @@ function applyRedaction(
 ): { spans: readonly SpanDetail[]; summary: SpanRedactionSummary } {
   const counts: RedactionCounts = {}
   const scan = emptyScanTally()
-  let enforceSpans = 0
-  let dryRunSpans = 0
+  let redactedSpans = 0
   let droppedAttributeKeys = 0
   let pseudonymizedIdentities = 0
 
@@ -107,8 +102,7 @@ function applyRedaction(
     mergeScanTally(scan, result.stats.scan)
     droppedAttributeKeys += result.stats.droppedAttributeKeys
     pseudonymizedIdentities += result.stats.pseudonymizedIdentities
-    if (policy.mode === "enforce") enforceSpans += 1
-    else dryRunSpans += 1
+    redactedSpans += 1
 
     return result.span
   })
@@ -117,8 +111,7 @@ function applyRedaction(
     spans: redacted,
     summary: {
       counts,
-      enforceSpans,
-      dryRunSpans,
+      redactedSpans,
       leavesScanned: scan.leaves,
       charsScanned: scan.chars,
       droppedAttributeKeys,

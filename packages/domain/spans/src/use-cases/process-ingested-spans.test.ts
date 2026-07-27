@@ -134,7 +134,6 @@ const payloadFor = (spans: unknown[]) =>
   ).toString("base64")
 
 const enforcePolicy = {
-  mode: "enforce" as const,
   entities: ["email" as const],
   redactMetadata: false,
   identities: "keep" as const,
@@ -220,16 +219,6 @@ describe("processIngestedSpansUseCase redaction", () => {
     expect(JSON.stringify(secondary?.inputMessages)).toContain(EMAIL)
   })
 
-  it("leaves rows untouched in dry run while still inserting them", async () => {
-    const { effect, inserted } = runRedaction({
-      redaction: { [PROJECT_ID]: { ...enforcePolicy, mode: "dryRun" } },
-    })
-    await Effect.runPromise(effect)
-
-    expect(JSON.stringify(inserted)).toContain(EMAIL)
-    expect(inserted[0]?.[0]?.attrString).toHaveProperty("gen_ai.input.messages")
-  })
-
   it("still publishes TracesIngested after redacting, so downstream consumers see redacted content", async () => {
     const { effect, eventsPublisher } = runRedaction({ redaction: { [PROJECT_ID]: enforcePolicy } })
     await Effect.runPromise(effect)
@@ -238,7 +227,7 @@ describe("processIngestedSpansUseCase redaction", () => {
   })
 
   it("fails without inserting when a policy is present but malformed", async () => {
-    const { effect, inserted } = runRedaction({ redaction: { [PROJECT_ID]: { mode: "bogus" } } })
+    const { effect, inserted } = runRedaction({ redaction: { [PROJECT_ID]: { entities: "not-an-array" } } })
     const exit = await Effect.runPromiseExit(effect)
 
     expect(exit._tag).toBe("Failure")

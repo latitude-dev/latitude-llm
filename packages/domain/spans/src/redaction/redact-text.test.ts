@@ -1,12 +1,6 @@
 import { DEFAULT_REDACTION_ENTITIES, REDACTION_ENTITIES, type RedactionEntity } from "@domain/shared"
 import { describe, expect, it } from "vitest"
-import {
-  countRedactions,
-  mergeRedactionCounts,
-  type RedactionCounts,
-  redactText,
-  totalRedactionCount,
-} from "./redact-text.ts"
+import { mergeRedactionCounts, type RedactionCounts, redactText, totalRedactionCount } from "./redact-text.ts"
 
 const DEFAULTS: ReadonlySet<RedactionEntity> = new Set(DEFAULT_REDACTION_ENTITIES)
 const ALL: ReadonlySet<RedactionEntity> = new Set(REDACTION_ENTITIES)
@@ -110,12 +104,6 @@ describe("overlap resolution", () => {
     }
   })
 
-  it("counts overlapping candidates once, so dry run reports what enforce would do", () => {
-    for (const text of [PHONE_IN_EMAIL, GOOGLE_KEY_IN_EMAIL]) {
-      expect(countRedactions(text, ALL)).toEqual(redactText(text, ALL).counts)
-    }
-  })
-
   it("emits a single placeholder for a whole JWT rather than one per dot-separated segment", () => {
     const jwt =
       "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMjM0NTY3ODkwIn0.dozjgNryP4J3jVmNHl0w5N_XgL0n3I9PlFUP0THsR8U"
@@ -133,24 +121,26 @@ describe("overlap resolution", () => {
   })
 })
 
-describe("countRedactions", () => {
-  it("reports counts without touching the text", () => {
-    expect(countRedactions("a@b.co and c@d.co", DEFAULTS)).toEqual({ email: 2 })
-  })
-
-  it("agrees with redactText on every count", () => {
+describe("redactText counts", () => {
+  it("counts one per accepted match across entities", () => {
     const text = "john@example.com +14155552671 4111111111111111 123-45-6789 GB82WEST12345698765432"
 
-    expect(countRedactions(text, DEFAULTS)).toEqual(redactText(text, DEFAULTS).counts)
+    expect(redactText(text, DEFAULTS).counts).toEqual({
+      email: 1,
+      phone: 1,
+      credit_card: 1,
+      us_ssn: 1,
+      iban: 1,
+    })
   })
 
-  it("returns an empty object for empty input", () => {
-    expect(countRedactions("", DEFAULTS)).toEqual({})
-    expect(countRedactions("clean", DEFAULTS)).toEqual({})
+  it("returns an empty object when nothing matched", () => {
+    expect(redactText("", DEFAULTS).counts).toEqual({})
+    expect(redactText("clean", DEFAULTS).counts).toEqual({})
   })
 
   it("omits entities with no matches rather than reporting zero", () => {
-    expect(countRedactions("a@b.co", DEFAULTS)).toEqual({ email: 1 })
+    expect(redactText("a@b.co", DEFAULTS).counts).toEqual({ email: 1 })
   })
 })
 

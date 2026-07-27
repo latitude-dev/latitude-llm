@@ -4,7 +4,6 @@ import { isContentAttributeKey } from "../otlp/content/index.ts"
 import { REDACTED_IDENTITY_PLACEHOLDER } from "./labels.ts"
 import {
   emptyScanTally,
-  type JsonRedactionOptions,
   mergeScanTally,
   redactJsonString,
   redactJsonValue,
@@ -28,7 +27,7 @@ export function redactSpanDetail(
   policy: RedactionPolicy,
   pseudonyms: PseudonymLookup,
 ): { span: SpanDetail; stats: SpanRedactionStats } {
-  const options: JsonRedactionOptions = { entities: policy.entities, mutate: policy.mode === "enforce" }
+  const entities = policy.entities
   const counts: RedactionCounts = {}
   const scan = emptyScanTally()
   let droppedAttributeKeys = 0
@@ -40,15 +39,15 @@ export function redactSpanDetail(
     return result.value
   }
 
-  const inputMessages = take(redactJsonValue(span.inputMessages, options))
-  const outputMessages = take(redactJsonValue(span.outputMessages, options))
-  const systemInstructions = take(redactJsonValue(span.systemInstructions, options))
-  const toolDefinitions = take(redactJsonValue(span.toolDefinitions, options))
-  const toolInput = take(redactJsonString(span.toolInput, options))
-  const toolOutput = take(redactJsonString(span.toolOutput, options))
-  const eventsJson = take(redactJsonString(span.eventsJson, options))
+  const inputMessages = take(redactJsonValue(span.inputMessages, entities))
+  const outputMessages = take(redactJsonValue(span.outputMessages, entities))
+  const systemInstructions = take(redactJsonValue(span.systemInstructions, entities))
+  const toolDefinitions = take(redactJsonValue(span.toolDefinitions, entities))
+  const toolInput = take(redactJsonString(span.toolInput, entities))
+  const toolOutput = take(redactJsonString(span.toolOutput, entities))
+  const eventsJson = take(redactJsonString(span.eventsJson, entities))
 
-  const statusMessageOutcome = redactLeaf(span.statusMessage, policy.entities, options.mutate)
+  const statusMessageOutcome = redactLeaf(span.statusMessage, entities)
   mergeRedactionCounts(counts, statusMessageOutcome.counts)
   scan.leaves += 1
   scan.chars += statusMessageOutcome.scannedChars
@@ -58,16 +57,16 @@ export function redactSpanDetail(
   const contentKeys = Object.keys(span.attrString).filter(isContentAttributeKey)
   droppedAttributeKeys = contentKeys.length
   const attrStringSource =
-    options.mutate && contentKeys.length > 0
+    contentKeys.length > 0
       ? Object.fromEntries(Object.entries(span.attrString).filter(([key]) => !isContentAttributeKey(key)))
       : span.attrString
-  const attrString = take(redactStringMap(attrStringSource, options))
-  const resourceString = take(redactStringMap(span.resourceString, options))
+  const attrString = take(redactStringMap(attrStringSource, entities))
+  const resourceString = take(redactStringMap(span.resourceString, entities))
 
-  const metadata = policy.redactMetadata ? take(redactStringMap(span.metadata, options)) : span.metadata
+  const metadata = policy.redactMetadata ? take(redactStringMap(span.metadata, entities)) : span.metadata
   const tags = policy.redactMetadata
     ? span.tags.map((tag) => {
-        const outcome = redactLeaf(tag, policy.entities, options.mutate)
+        const outcome = redactLeaf(tag, entities)
         mergeRedactionCounts(counts, outcome.counts)
         scan.leaves += 1
         scan.chars += outcome.scannedChars
@@ -77,7 +76,7 @@ export function redactSpanDetail(
 
   let userId = span.userId
   let userEmail = span.userEmail
-  if (policy.identities === "pseudonymize" && options.mutate) {
+  if (policy.identities === "pseudonymize") {
     const nextUserId = replaceIdentity(span.userId, pseudonyms)
     const nextUserEmail = replaceIdentity(span.userEmail, pseudonyms)
     if (nextUserId !== span.userId) pseudonymizedIdentities += 1
@@ -123,7 +122,7 @@ export function collectIdentityValues(
 
   for (const span of spans) {
     const policy = policyFor(span)
-    if (policy?.mode !== "enforce" || policy.identities !== "pseudonymize") continue
+    if (policy?.identities !== "pseudonymize") continue
     if (span.userId !== "") values.add(span.userId)
     if (span.userEmail !== "") values.add(span.userEmail)
   }

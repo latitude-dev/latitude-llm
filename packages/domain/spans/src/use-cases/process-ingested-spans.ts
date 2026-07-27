@@ -131,11 +131,10 @@ function decodeAndTransform(
  * answer "is it working" or "why did my content disappear" after the fact.
  */
 function annotateRedaction(summary: SpanRedactionSummary): Effect.Effect<void> {
-  if (summary.enforceSpans === 0 && summary.dryRunSpans === 0) return Effect.void
+  if (summary.redactedSpans === 0) return Effect.void
 
   return Effect.gen(function* () {
-    yield* Effect.annotateCurrentSpan("redaction.enforceSpans", summary.enforceSpans)
-    yield* Effect.annotateCurrentSpan("redaction.dryRunSpans", summary.dryRunSpans)
+    yield* Effect.annotateCurrentSpan("redaction.spans", summary.redactedSpans)
     yield* Effect.annotateCurrentSpan("redaction.leavesScanned", summary.leavesScanned)
     yield* Effect.annotateCurrentSpan("redaction.charsScanned", summary.charsScanned)
     yield* Effect.annotateCurrentSpan("redaction.matches", totalRedactionCount(summary.counts))

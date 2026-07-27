@@ -5,7 +5,7 @@ import type { RepositoryError } from "./errors.ts"
 import type { ProjectId } from "./id.ts"
 import type { SqlClient } from "./sql-client.ts"
 
-export const REDACTION_MODES = ["off", "dryRun", "enforce"] as const
+export const REDACTION_MODES = ["off", "enforce"] as const
 export const redactionModeSchema = z.enum(REDACTION_MODES)
 export type RedactionMode = z.infer<typeof redactionModeSchema>
 
@@ -166,26 +166,27 @@ export function resolveSettingsCascade(input: {
   }
 }
 
-/** Everything the redaction engine needs. Deliberately excludes `source`, which only the UI reads. */
+/**
+ * Everything the redaction engine needs.
+ *
+ * Carries no mode: a policy exists only for a project that redacts, so its presence
+ * is the decision. `off` projects have no policy at all, which is why the engine
+ * never has to ask.
+ */
 export interface RedactionPolicy {
-  readonly mode: RedactionMode
   readonly entities: ReadonlySet<RedactionEntity>
   readonly redactMetadata: boolean
   readonly identities: RedactionIdentityHandling
 }
 
-/** `source` is display only: which layer the policy the user is looking at came from. */
+/** The settings view: `mode` is the user-facing toggle and `source` says which layer set it. */
 export interface ResolvedRedactionPolicy extends RedactionPolicy {
+  readonly mode: RedactionMode
   readonly source: "organization" | "project" | "default"
 }
 
-/**
- * Wire form for the queue payload. `entities` becomes an array because a `Set`
- * does not survive JSON, and `off` is unrepresentable because such projects are
- * omitted from the map entirely.
- */
+/** Wire form for the queue payload: `entities` becomes an array because a `Set` does not survive JSON. */
 export const serializedRedactionPolicySchema = z.object({
-  mode: z.enum(["dryRun", "enforce"]),
   entities: z.array(redactionEntitySchema),
   redactMetadata: z.boolean(),
   identities: redactionIdentityHandlingSchema,
@@ -193,11 +194,10 @@ export const serializedRedactionPolicySchema = z.object({
 export type SerializedRedactionPolicy = z.infer<typeof serializedRedactionPolicySchema>
 
 /** `null` for an `off` policy, so callers omit it from the map rather than encoding a no-op. */
-export const serializeRedactionPolicy = (policy: RedactionPolicy): SerializedRedactionPolicy | null =>
+export const serializeRedactionPolicy = (policy: ResolvedRedactionPolicy): SerializedRedactionPolicy | null =>
   policy.mode === "off"
     ? null
     : {
-        mode: policy.mode,
         entities: [...policy.entities],
         redactMetadata: policy.redactMetadata,
         identities: policy.identities,

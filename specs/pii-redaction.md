@@ -263,14 +263,10 @@ The risk this trades into is redacting a tool-call id and breaking the tool-call
 
 `isContentAttributeKey` must **not** be a hand-maintained list in the redaction module. Each parser in `packages/domain/spans/src/otlp/content/` already knows its own keys; have each module export a key matcher and compose them in `content/index.ts` next to the existing vendor dispatch table (`content/index.ts:41-87`). A new vendor parser then gets redaction coverage automatically. Known families to cover: `genai`, `genai_deprecated`, `openinference`, `vercel`, `livekit`, `flue`, `claude-code`, `json-value`.
 
-In `dryRun` mode, count what pass 1 *would* drop; do not drop it.
-
 ### 4.3 Policy model
 
-Not a boolean. A boolean cannot express "let me validate this before it destroys my data," which is the single biggest adoption blocker for a destructive, non-retroactive, unrecoverable transform.
-
 ```ts
-export const REDACTION_MODES = ["off", "dryRun", "enforce"] as const
+export const REDACTION_MODES = ["off", "enforce"] as const
 
 export const REDACTION_ENTITIES = [
   "email",
@@ -296,10 +292,18 @@ export const DEFAULT_REDACTION_ENTITIES = [
 **Modes:**
 
 - `off` (default) — no scanning, zero cost. Projects in this mode never appear in the queue policy map.
-- `dryRun` — run every detector, count matches per entity and per field, annotate the trace, **mutate nothing**. Costs the same CPU as `enforce`.
 - `enforce` — replace matches with `[REDACTED_<LABEL>]`.
 
-`dryRun` is not a nice-to-have. It is how a customer answers "will this eat my tool outputs" before it does, and it is the only non-destructive way to tune `entities`.
+**There is deliberately no dry-run mode.** An earlier draft had one, on the reasoning that a destructive, non-retroactive, unrecoverable transform needs a way to validate a policy before it destroys data. That reasoning is sound; a dry-run *mode* was the wrong answer to it. It redacted nothing and surfaced nothing a customer could read — its only output was the [§4.8](#48-observability) span annotations, which land in Latitude's own telemetry — so from the outside it was indistinguishable from `off` while still costing a full scan and still able to fail closed on a deadline overrun. A mode that stores what `off` stores and can lose spans that `off` would keep is worse than not having it.
+
+Two consequences worth stating, because removing it removed a safety net:
+
+- **A false negative is now invisible to everyone.** Nothing reports what redaction did *not* catch. That raises the stakes on detector precision being right by construction ([§5](#5-detector-specification)) and makes per-entity toggles and the visible placeholder the only feedback a customer gets.
+- **Detector tuning needs a script, not a product mode.** Measuring how a detector behaves against real traffic is an offline question: read spans from ClickHouse and run the detectors over them. That answers [open question 5](#10-open-questions) without shipping a customer-visible surface that does nothing.
+
+Giving customers a real answer to "will this eat my tool outputs" needs a preview that runs the detectors on demand over spans already in ClickHouse and returns counts plus before/after samples. That is a genuine feature, out of scope here, and it is the thing a dry-run mode was pretending to be.
+
+Because `off` projects are omitted from the queue map entirely, a policy's *presence* is the decision. The engine-facing `RedactionPolicy` therefore carries no mode at all, and the wire format has no `mode` field: only the settings-facing `ResolvedRedactionPolicy` has one, for the UI toggle.
 
 **Placeholder format:** `[REDACTED_EMAIL]`, `[REDACTED_CREDIT_CARD]`, and so on. Uppercased entity label, no counters or ordinals (keeps `content_hash` deterministic for identical inputs). The placeholder is visible in the UI, which is intentional: users must be able to see *why* content is missing.
 
@@ -328,7 +332,7 @@ export const organizationRedactionSettingSchema = redactionSettingSchema.extend(
 
 ```ts
 export interface ResolvedRedactionPolicy {
-  readonly mode: "off" | "dryRun" | "enforce"
+  readonly mode: "off" | "enforce"
   readonly entities: ReadonlySet<RedactionEntity>
   readonly redactMetadata: boolean
   readonly identities: "keep" | "pseudonymize"
@@ -380,7 +384,6 @@ readonly redaction?: Readonly<Record<string, SerializedRedactionPolicy>> // proj
 
 ```ts
 interface SerializedRedactionPolicy {
-  readonly mode: "dryRun" | "enforce"
   readonly entities: readonly RedactionEntity[]
   readonly redactMetadata: boolean
   readonly identities: "keep" | "pseudonymize"
@@ -401,7 +404,7 @@ Justification, and this is a deliberate divergence from both competitors:
 2. For the in-process deterministic tier, "failure" means a code bug, so fail-open reduces to *silently writing plaintext PII for a customer who explicitly asked us not to*.
 3. There is no delete path ([§2.5](#25-what-does-not-exist)) and redaction is non-retroactive, so a fail-open write is permanent and unremediable.
 
-**The cost is explicit and accepted:** a persistent redaction bug loses spans for opted-in projects rather than leaking their PII. That is the correct trade for a compliance control, it is loud (failed jobs, error logs, retry exhaustion), and the customer has two self-service escapes: set `mode` back to `off`, or to `dryRun`.
+**The cost is explicit and accepted:** a persistent redaction bug loses spans for opted-in projects rather than leaking their PII. That is the correct trade for a compliance control, it is loud (failed jobs, error logs, retry exhaustion), and the customer has a self-service escape: set `mode` back to `off`.
 
 Additional rules:
 
@@ -413,7 +416,7 @@ Additional rules:
 
 Ingestion is the hot path of the entire product, so this is a capacity question, not a footnote. "Sub-ms and deterministic" is meaningless without a size.
 
-- `REDACTION_MAX_FIELD_CHARS = 1_000_000` (1 M UTF-16 code units). A field above the cap is **not scanned**. In `enforce` mode it is replaced wholesale with `[REDACTED_OVERSIZED_FIELD]` and counted; in `dryRun` it is counted and left alone. Passing it through unscanned would break the promise, and partial scanning would leak the tail. Per the design invariant, degrade toward more redaction. 1 MB is generous: the realistic trigger is multi-MB file content in coding-agent tool outputs.
+- `REDACTION_MAX_FIELD_CHARS = 1_000_000` (1 M UTF-16 code units). A field above the cap is **not scanned**: it is replaced wholesale with `[REDACTED_OVERSIZED_FIELD]` and counted. Passing it through unscanned would break the promise, and partial scanning would leak the tail. Per the design invariant, degrade toward more redaction. 1 MB is generous: the realistic trigger is multi-MB file content in coding-agent tool outputs.
 - `REDACTION_MAX_DEPTH = 256`. The walk is recursive and `JSON.parse` accepts nesting tens of thousands deep, so a crafted `tool_input` overflows the stack; fail-closed then turns one hostile span into a dropped batch for every project in it. A subtree at the cap is treated exactly like an oversized leaf, which keeps the failure local. Payloads too deep for `JSON.parse` itself fall back to a plain-text scan, so they are still scanned rather than skipped.
 - `REDACTION_BATCH_TIMEOUT_MS = 30_000`, enforced as a **deadline checked before each span**, not as an `Effect.timeout` around the whole pass. The walk is synchronous, so a fiber-level timeout cannot fire until the work it was meant to bound has already finished; wrapping the pass in one would advertise a limit that never applies. Overrun is therefore bounded by a single span's walk, which the field cap bounds in turn. The async pseudonym phase does yield, so that one keeps a real `Effect.timeoutOrElse`. Either way the pass fails and the job retries ([§4.6](#46-failure-policy)).
 - **Benchmark acceptance criterion:** measure and record added wall-clock per span at p50 and p99 for a representative batch, and the total CPU delta at concurrency 50. Target ≤ 5 ms per span at 32 KB of scanned content. If the measured number misses the target, the finding goes in the PR description and the cap gets revisited; do not silently ship a regression on the ingest path.
@@ -424,8 +427,7 @@ Without these, nobody can answer "is it working" or "why did my content disappea
 
 | Annotation | Meaning |
 | --- | --- |
-| `redaction.enforceSpans` | spans processed in `enforce` |
-| `redaction.dryRunSpans` | spans processed in `dryRun` |
+| `redaction.spans` | spans redacted |
 | `redaction.fields` | fields scanned |
 | `redaction.bytes` | bytes scanned |
 | `redaction.matches` | total accepted matches |
@@ -484,7 +486,7 @@ Remap by `path`, never by index. Chunk requests by byte count with a cap; do not
 
 ## 5. Detector specification
 
-`packages/domain/spans/src/redaction/detectors.ts`. Every detector returns `{ start, end, label }` matches. Precision is the design goal, not recall: a false negative is a missed redaction the customer can catch in `dryRun`, while a false positive is permanent silent data corruption with no delete path.
+`packages/domain/spans/src/redaction/detectors.ts`. Every detector returns `{ start, end, label }` matches. Precision is the design goal, not recall: a false negative leaves content visible, which the customer can see and report, while a false positive is permanent silent data corruption with no delete path.
 
 **The traffic that decides these defaults is coding-agent telemetry** (`packages/telemetry/claude-code`, `openclaw`, `pi`). Any detector must survive git SHAs, semver strings, ports, timestamps, UUIDs, base64 in diffs, long numeric JSON ids, and file paths appearing in `tool_output`.
 
@@ -542,11 +544,11 @@ Remap by `path`, never by index. Chunk requests by byte count with a cap; do not
 
 Project section, in `apps/web/src/routes/_authenticated/projects/$projectSlug/settings/general.tsx`, following the existing `Draft`/`pending`/`dirtyFields` pattern (`:34-106`) and the `rounded-lg bg-muted/30` card shape of `TraceSamplingSection` (`:196-257`):
 
-- Mode selector (`Off` / `Dry run` / `Enforce`), not a `Switch`, because there are three states.
-- Entity checkboxes, revealed when mode is not `Off`, in a `border-t` sub-row.
+- A `Switch`: redaction is on or off ([§4.3](#43-policy-model)).
+- Entity checkboxes, revealed when redaction is on, in a `border-t` sub-row.
 - Metadata-and-tags toggle and identity-handling selector in the same sub-row.
 - `DotIndicator` on dirty, participating in the existing `dirtyCount` / Apply / Discard / cmd-S / `useBlocker` machinery.
-- Copy must state: applies only to spans ingested from now on, takes effect within a minute, redacted content cannot be recovered, and dry run changes nothing.
+- Copy must state: applies only to spans ingested from now on, takes effect within a minute, and redacted content cannot be recovered.
 - When the org policy is `locked`, render the whole section read-only with an explanation naming the org policy.
 
 Org section in `settings/organization.tsx`: same controls plus `locked`, owner-only, with copy explaining that locking prevents projects from weakening it.
@@ -607,14 +609,13 @@ Follow the layering in the testing skill: pure unit tests in the domain, PGlite/
 - JSON walk: array length and order preserved, object keys preserved, non-string leaves untouched, `blob`/`file` parts skipped, nested stringified JSON handled, `JSON.stringify` round-trip stable, unknown part types fall through to the generic walk.
 - `resolveRedactionPolicy`: every cascade combination, `locked` overriding a project policy entirely, `source` correctness, defaults when both sides are empty.
 - Pseudonymization: determinism, cross-org divergence for the same input, empty values stay empty, missing secret degrades to `[REDACTED_USER]`.
-- Oversized field: `enforce` replaces and counts, `dryRun` counts and leaves alone.
+- Oversized field: replaced wholesale and counted.
 
 **Integration, `packages/domain/spans/src/use-cases/process-ingested-spans.test.ts` (extend the existing file):**
 
 - `enforce` project: content redacted, **`attr_string` content keys dropped**, `events_json` redacted, `resource_string` values redacted.
 - Project absent from the policy map: byte-identical to today's output. Add this as a regression guard against accidental unconditional redaction.
 - Mixed batch: one `enforce` project and one absent project in the same OTLP batch, each handled correctly.
-- `dryRun`: inserted rows are byte-identical to unredacted, and match counts are annotated.
 - `metadata` scope off by default and applied when on.
 - Detector throw: no insert happens and the effect fails ([§4.6](#46-failure-policy)).
 - Timeout: fails rather than inserting.
@@ -638,8 +639,8 @@ Follow the layering in the testing skill: pure unit tests in the domain, PGlite/
 1. **Latitude's own API key format** for the `secret` detector. Derive it from `packages/domain/*/api-keys` rather than guessing, or drop it from the detector.
 2. **Should the UI surface a per-span "content was redacted" indicator** beyond the inline placeholder? Placeholders alone may read as data loss on a trace a user did not know was redacted.
 3. **ClickHouse deletion mechanics for Phase 5.** Lightweight `DELETE FROM` versus `ALTER TABLE … DELETE`, cost at our partition sizes, and how `traces`/`sessions` aggregate state is corrected. Needs its own design pass before that phase is scoped.
-4. **Is `dryRun` worth exposing through the public API**, or is it a UI-only affordance? Leaning expose, since a platform team rolling this out across many projects wants it scripted.
-5. **Should `phone` default off** rather than on? It is the highest-FP on-by-default detector. Resolve with a `dryRun` measurement against real coding-agent traffic before Phase 3 ships.
+4. **Should `phone` default off** rather than on? It is the highest-false-positive detector that is on by default. Answer it offline: a script that reads a sample of real spans from ClickHouse and runs `findRedactionMatches` over them, reporting matches per entity with surrounding context. That needs no product surface, and it is the general answer for tuning any detector default. Worth doing before Phase 3 ships the toggle to customers.
+5. **Is a customer-facing redaction preview worth building?** Running the detectors on demand over spans already in ClickHouse, returning counts plus before/after samples, is the only honest way to answer "will this eat my tool outputs" before enabling it. It is out of scope here ([§4.3](#43-policy-model)) but it is the feature a dry-run mode was standing in for, and without it a customer's first enforce is their validation.
 
 ---
 
@@ -712,7 +713,9 @@ The benchmark was run as a throwaway script and not committed. The repository ha
 
 **Findings from Phase 2** (fold into the relevant sections when promoting to `dev-docs/`):
 
-- `RedactionPolicy` was split out of `ResolvedRedactionPolicy`. The engine never needed `source`, which exists only so the UI can say "inherited from organization", and keeping it out of the wire format avoids either shipping a display field through the queue or inventing a fake value on deserialize.
+- **A separator-bridging pattern loses the value it was meant to catch.** The credit-card candidate allowed an optional space or dash between *any* two digits, so in `+14155552671 4111111111111111` it consumed both numbers as one over-long run, failed the issuer check, and never reconsidered the real card inside — a silent missed redaction. Fixed the way IBAN already was: separate compact and grouped patterns, with the grouped ones backreferencing their own separator so a match cannot span two numbers. The class is easy to reintroduce and invisible without an adjacency test, so every multi-part detector needs one.
+- **Removing dry run removed the only feedback on false negatives.** Nothing now reports what redaction missed, which is why detector precision has to be right by construction and why detector tuning belongs in an offline script rather than a product mode ([§4.3](#43-policy-model)).
+- `RedactionPolicy` was split out of `ResolvedRedactionPolicy`. The engine never needed `source`, which exists only so the UI can say "inherited from organization", and keeping it out of the wire format avoids either shipping a display field through the queue or inventing a fake value on deserialize. With one active mode, presence in the policy map *is* the decision, so `RedactionPolicy` carries no mode and the wire format has no `mode` field.
 - A malformed wire policy must fail the job. The obvious reading of "degrade toward more redaction" would skip it, but skipping is the *less* redacting choice: it resolves a corrupt policy on a project that opted in to a plaintext write. Absent and malformed are therefore handled differently, which is worth stating because they look interchangeable.
 - `@domain/queue` gained a dependency on `@domain/shared` for the wire type. No cycle, since `@domain/shared` has no workspace dependencies beyond `@repo/utils`.
 - Effect `4.0.0-beta.57` has no `Effect.catchAll`. Use `Effect.ignore` for "discard any failure"; the available surface is `catchCause`, `catchTag`, `catchIf`, `catchDefect`, `ignore`, `orElseSucceed`.
@@ -730,7 +733,7 @@ The benchmark was run as a throwaway script and not committed. The repository ha
 - [ ] **P3-3**: Widen the local `organizationSettingsSchema` in `organizations.functions.ts` to preserve every existing field, with a round-trip test ([T-5](#8-traps)).
 - [ ] **P3-4**: Role checks: project section requires `admin`/`owner`, org section requires `owner`. Log actor plus before/after on every change.
 - [ ] **P3-5**: `RedactionSettingSchema` in `packages/operations/src/operations/projects.ts` with a `.describe()` on every field, added to `ProjectSettingsSchema`; regenerate `openapi.json` and `mcp.json` per the api-endpoints skill.
-- [ ] **P3-6**: Extend `docs/security/pii-redaction.mdx` with the ingest-redaction section: the exact promise from [§1](#1-purpose-and-the-exact-promise), the entity coverage matrix, mode semantics, the 60 s propagation window, non-retroactivity, buffer lifetime ([T-3](#8-traps)), and the search/dedup notes ([T-9](#8-traps), [T-10](#8-traps)). Rename the existing section to "SDK attribute redaction."
+- [ ] **P3-6**: Extend `docs/security/pii-redaction.mdx` with the ingest-redaction section: the exact promise from [§1](#1-purpose-and-the-exact-promise), the entity coverage matrix, the 60 s propagation window, non-retroactivity, buffer lifetime ([T-3](#8-traps)), and the search/dedup notes ([T-9](#8-traps), [T-10](#8-traps)). Rename the existing section to "SDK attribute redaction."
 - [ ] **P3-7**: Write `dev-docs/spans.md` and `dev-docs/settings.md` sections for the redaction stage and the settings cascade.
 
 **Exit gate**:

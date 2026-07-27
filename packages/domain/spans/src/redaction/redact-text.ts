@@ -34,12 +34,6 @@ const countByEntity = (matches: readonly RedactionMatch[]): RedactionCounts => {
   return counts
 }
 
-export function countRedactions(text: string, entities: ReadonlySet<RedactionEntity>): RedactionCounts {
-  if (text === "" || entities.size === 0) return {}
-
-  return countByEntity(resolveOverlaps(findRedactionMatches(text, entities)))
-}
-
 export function redactText(text: string, entities: ReadonlySet<RedactionEntity>): TextRedactionResult {
   if (text === "" || entities.size === 0) return { text, counts: {} }
 
@@ -65,25 +59,12 @@ interface LeafRedactionOutcome {
   readonly scannedChars: number
 }
 
-/** Every path that touches a string goes through this, so the size cap and dry-run contract cannot diverge. */
-export function redactLeaf(
-  text: string,
-  entities: ReadonlySet<RedactionEntity>,
-  mutate: boolean,
-): LeafRedactionOutcome {
+/** Every path that touches a string goes through this, so the size cap applies uniformly. */
+export function redactLeaf(text: string, entities: ReadonlySet<RedactionEntity>): LeafRedactionOutcome {
   if (text === "" || entities.size === 0) return { text, counts: {}, oversized: false, scannedChars: 0 }
 
   if (text.length > REDACTION_MAX_FIELD_CHARS) {
-    return {
-      text: mutate ? OVERSIZED_FIELD_PLACEHOLDER : text,
-      counts: {},
-      oversized: true,
-      scannedChars: 0,
-    }
-  }
-
-  if (!mutate) {
-    return { text, counts: countRedactions(text, entities), oversized: false, scannedChars: text.length }
+    return { text: OVERSIZED_FIELD_PLACEHOLDER, counts: {}, oversized: true, scannedChars: 0 }
   }
 
   const result = redactText(text, entities)

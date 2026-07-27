@@ -161,11 +161,11 @@ describe("resolveRedactionPolicy", () => {
 
   it("inherits the org policy when the project configures nothing", () => {
     const policy = resolveRedactionPolicy({
-      organization: { redaction: { mode: "dryRun", entities: ["secret"] } },
+      organization: { redaction: { mode: "enforce", entities: ["secret"] } },
       project: {},
     })
 
-    expect(policy.mode).toBe("dryRun")
+    expect(policy.mode).toBe("enforce")
     expect([...policy.entities]).toEqual(["secret"])
     expect(policy.source).toBe("organization")
   })
@@ -173,13 +173,13 @@ describe("resolveRedactionPolicy", () => {
   it("resolves field by field so a project can override one field and inherit the rest", () => {
     const policy = resolveRedactionPolicy({
       organization: {
-        redaction: { mode: "dryRun", entities: ["secret"], identities: "pseudonymize", scopes: { metadata: true } },
+        redaction: { mode: "enforce", entities: ["secret"], identities: "pseudonymize", scopes: { metadata: true } },
       },
-      project: { redaction: { mode: "enforce" } },
+      project: { redaction: { entities: ["email"] } },
     })
 
+    expect([...policy.entities]).toEqual(["email"])
     expect(policy.mode).toBe("enforce")
-    expect([...policy.entities]).toEqual(["secret"])
     expect(policy.identities).toBe("pseudonymize")
     expect(policy.redactMetadata).toBe(true)
     expect(policy.source).toBe("project")
@@ -279,11 +279,11 @@ describe("redaction settings schemas", () => {
     const parsed = organizationSettingsSchema.parse({
       billing: { spendingLimitCents: 5000 },
       wantsShowcase: true,
-      redaction: { mode: "dryRun" },
+      redaction: { mode: "enforce" },
     })
 
     expect(parsed.billing?.spendingLimitCents).toBe(5000)
     expect(parsed.wantsShowcase).toBe(true)
-    expect(parsed.redaction?.mode).toBe("dryRun")
+    expect(parsed.redaction?.mode).toBe("enforce")
   })
 })

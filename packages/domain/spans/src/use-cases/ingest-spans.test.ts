@@ -909,18 +909,11 @@ describe("ingestSpansUseCase redaction policy stamping", () => {
 
     expect(redaction).toEqual({
       [PRIMARY_PROJECT_ID]: {
-        mode: "enforce",
         entities: [...DEFAULT_REDACTION_ENTITIES],
         redactMetadata: false,
         identities: "keep",
       },
     })
-  })
-
-  it("stamps a dry-run policy", async () => {
-    const { redaction } = await stamp({ settingsBySlug: { primary: { redaction: { mode: "dryRun" } } } })
-
-    expect(redaction?.[PRIMARY_PROJECT_ID]).toMatchObject({ mode: "dryRun" })
   })
 
   it("serializes the configured entity set and scopes", async () => {
@@ -938,7 +931,6 @@ describe("ingestSpansUseCase redaction policy stamping", () => {
     })
 
     expect(redaction?.[PRIMARY_PROJECT_ID]).toEqual({
-      mode: "enforce",
       entities: ["email", "secret"],
       redactMetadata: true,
       identities: "pseudonymize",
@@ -948,7 +940,7 @@ describe("ingestSpansUseCase redaction policy stamping", () => {
   it("applies an organization policy to a project that configured nothing", async () => {
     const { redaction } = await stamp({ organizationRedaction: { mode: "enforce" } })
 
-    expect(redaction?.[PRIMARY_PROJECT_ID]).toMatchObject({ mode: "enforce" })
+    expect(redaction?.[PRIMARY_PROJECT_ID]).toMatchObject({ entities: [...DEFAULT_REDACTION_ENTITIES] })
   })
 
   it("lets a project override an unlocked organization policy", async () => {
@@ -966,7 +958,7 @@ describe("ingestSpansUseCase redaction policy stamping", () => {
       settingsBySlug: { primary: { redaction: { mode: "off" } } },
     })
 
-    expect(redaction?.[PRIMARY_PROJECT_ID]).toMatchObject({ mode: "enforce" })
+    expect(redaction?.[PRIMARY_PROJECT_ID]).toMatchObject({ entities: [...DEFAULT_REDACTION_ENTITIES] })
   })
 
   it("stamps one entry per opted-in project in a multi-project batch", async () => {

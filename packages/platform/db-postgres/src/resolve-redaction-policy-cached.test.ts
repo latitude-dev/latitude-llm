@@ -123,7 +123,7 @@ describe("resolveOrganizationRedactionCached", () => {
   })
 
   it("uses an organization-prefixed cache key", async () => {
-    const organizationId = await seedOrg({ redaction: { mode: "dryRun" } })
+    const organizationId = await seedOrg({ redaction: { mode: "enforce" } })
     const probe: CacheProbe = { store: new Map(), gets: 0, sets: 0 }
 
     await run(organizationId, cacheLayer(probe))
@@ -132,7 +132,7 @@ describe("resolveOrganizationRedactionCached", () => {
   })
 
   it("re-reads after invalidation", async () => {
-    const organizationId = await seedOrg({ redaction: { mode: "dryRun" } })
+    const organizationId = await seedOrg({ redaction: { mode: "enforce" } })
     const probe: CacheProbe = { store: new Map(), gets: 0, sets: 0 }
     const cache = cacheLayer(probe)
 
