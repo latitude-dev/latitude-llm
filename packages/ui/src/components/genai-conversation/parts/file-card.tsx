@@ -115,6 +115,7 @@ export function FileCard({
   sizeBytes,
   href,
   downloadDataUri,
+  extraActions,
 }: {
   readonly fileName?: string | undefined
   readonly mimeType?: string | null | undefined
@@ -123,6 +124,8 @@ export function FileCard({
   readonly sizeBytes?: number | undefined
   readonly href?: string | undefined
   readonly downloadDataUri?: string | undefined
+  /** Rendered ahead of the built-in actions, for behaviour the card itself doesn't own. */
+  readonly extraActions?: ReactNode | undefined
 }) {
   const FileTypeIcon = fileIconForMime(mimeType, modality)
   const typeLabel = fileTypeLabel(mimeType, modality)
@@ -142,10 +145,10 @@ export function FileCard({
   // Download is only offered for same-origin data URIs (cross-origin `download` is ignored).
   if (isPdf && href && downloadDataUri) {
     actions = (
-      <div className="flex shrink-0 items-center gap-1.5">
+      <>
         <ActionLink href={href} label="Preview PDF" icon={ExternalLinkIcon} />
         <ActionLink href={downloadDataUri} label="Download PDF" download={downloadName} icon={DownloadIcon} />
-      </div>
+      </>
     )
   } else if (isPdf && href) {
     actions = <ActionLink href={href} label="Preview PDF" icon={ExternalLinkIcon} />
@@ -194,7 +197,10 @@ export function FileCard({
           </Text.Mono>
         ) : null}
       </div>
-      {actions}
+      <div className="flex shrink-0 items-center gap-1.5">
+        {extraActions}
+        {actions}
+      </div>
     </div>
   )
 }

@@ -5,8 +5,21 @@ import { existsSync } from "node:fs"
 const MAX_SIZE_BYTES = 500 * 1024
 const assetsDir = path.resolve(process.cwd(), ".output/public/assets")
 
+// Rolldown emits chunks as `.js`, but assets pulled in with `?url` keep their source extension,
+// and those are still client JS we ship. Both count against the budget.
+const CLIENT_SCRIPT_EXTENSIONS = [".js", ".mjs"]
+
 // Chunks that are known to exceed the limit and are lazy-loaded on demand.
-const ALLOWED_OVERSIZE = new Set(["echarts"])
+const ALLOWED_OVERSIZE = new Set([
+  "echarts",
+  // pdf.js ships a 1.2 MB pre-minified worker, copied verbatim by `?url`. It is fetched only when
+  // a PDF is opened and runs off the main thread, so it never enters the entry graph.
+  "pdf.worker.min",
+])
+
+function scriptExtension(basename) {
+  return CLIENT_SCRIPT_EXTENSIONS.find((extension) => basename.endsWith(extension)) ?? null
+}
 
 /**
  * Recover the codeSplitting group name from a rolldown chunk filename
@@ -19,8 +32,9 @@ const ALLOWED_OVERSIZE = new Set(["echarts"])
  * matches.
  */
 function matchAllowedChunkName(basename) {
-  if (!basename.endsWith(".js")) return null
-  const stem = basename.slice(0, -".js".length)
+  const extension = scriptExtension(basename)
+  if (extension === null) return null
+  const stem = basename.slice(0, -extension.length)
   const segments = stem.split("-")
   for (let i = segments.length - 1; i >= 1; i--) {
     const candidate = segments.slice(0, i).join("-")
@@ -62,11 +76,11 @@ async function main() {
   const oversized = []
 
   for (const file of files) {
-    if (!file.endsWith(".js")) {
+    const basename = path.basename(file)
+    if (scriptExtension(basename) === null) {
       continue
     }
 
-    const basename = path.basename(file)
     if (matchAllowedChunkName(basename) !== null) {
       continue
     }

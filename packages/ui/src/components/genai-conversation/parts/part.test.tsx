@@ -21,6 +21,10 @@ describe("Part media / file rendering", () => {
     expect(markup).toContain("data:application/pdf;base64,JVBERi0=")
     expect(markup).not.toContain("Image unavailable")
     expect(markup).not.toContain("<img")
+    // The expand control is eager so it survives SSR; the viewer behind it must not.
+    expect(markup).toContain('aria-label="Open PDF preview"')
+    expect(markup).not.toContain("<canvas")
+    expect(markup).not.toContain("blob:")
   })
 
   it("still renders real image blobs as images", () => {
@@ -55,5 +59,31 @@ describe("Part media / file rendering", () => {
     expect(markup).toContain("guide.pdf")
     expect(markup).toContain('aria-label="Preview PDF"')
     expect(markup).not.toContain('aria-label="Download PDF"')
+    // pdf.js could not fetch a cross-origin PDF, so no inline preview is offered.
+    expect(markup).not.toContain('aria-label="Open PDF preview"')
+  })
+
+  it("offers an inline preview for a same-origin PDF uri", () => {
+    // `location` is absent in the default node environment; the origin is what gates the preview.
+    const globals = globalThis as { location?: { origin: string } | undefined }
+    const original = globals.location
+    globals.location = { origin: "https://app.latitude.so" }
+
+    try {
+      const markup = renderToStaticMarkup(
+        <Part
+          part={{
+            type: "uri",
+            modality: "document",
+            mime_type: "application/pdf",
+            uri: "/attachments/guide.pdf",
+          }}
+        />,
+      )
+
+      expect(markup).toContain('aria-label="Open PDF preview"')
+    } finally {
+      globals.location = original
+    }
   })
 })

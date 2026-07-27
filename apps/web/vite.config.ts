@@ -9,6 +9,7 @@ import { Effect } from "effect"
 import { nitro } from "nitro/vite"
 import { visualizer } from "rollup-plugin-visualizer"
 import { defineConfig } from "vite"
+import { pdfjsAssets } from "./vite-plugins/pdfjs-assets.ts"
 
 const nodeEnv = Effect.runSync(parseEnv("NODE_ENV", "string", "development"))
 const envFilePath = fileURLToPath(new URL(`../../.env.${nodeEnv}`, import.meta.url))
@@ -75,12 +76,19 @@ export default defineConfig({
             "Content-Security-Policy": oauthConsentContentSecurityPolicy,
           },
         },
+        // Version-scoped path, so the pdf.js font/cmap/wasm payloads never go stale.
+        "/pdfjs/**": {
+          headers: {
+            "cache-control": "public, max-age=31536000, immutable",
+          },
+        },
       },
       rollupConfig: { external: ssrExternal },
       rolldownConfig: { external: ssrExternal },
     }),
     tailwindcss(),
     react(),
+    pdfjsAssets(),
   ],
   ssr: {
     external: [
@@ -129,6 +137,18 @@ export default defineConfig({
               name: "tanstack-router",
             },
             {
+              // Base UI and Radix are the two largest vendors inside the `@repo/ui` barrel chunk,
+              // which sits within a few hundred bytes of the client-asset size budget. Peeling them
+              // into their own stable chunks keeps the barrel well under the limit and caches the
+              // primitives across deploys.
+              test: /node_modules\/@base-ui\//,
+              name: "base-ui",
+            },
+            {
+              test: /node_modules\/@radix-ui\//,
+              name: "radix-ui",
+            },
+            {
               test: /node_modules\/codemirror/,
               name: "codemirror",
             },
@@ -139,6 +159,12 @@ export default defineConfig({
             {
               test: /node_modules\/echarts\//,
               name: "echarts",
+            },
+            {
+              // Only reachable through the lazily-imported PDF viewer. Pinned to a stable chunk
+              // name so the bundle-size allowlist key never tracks a component filename.
+              test: /node_modules\/pdfjs-dist\//,
+              name: "pdfjs",
             },
             {
               test: /node_modules\/react/,
