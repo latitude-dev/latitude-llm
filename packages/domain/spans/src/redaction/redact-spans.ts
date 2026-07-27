@@ -43,6 +43,7 @@ interface RedactSpansInput {
   /** Projects resolving to `off` are absent, so an empty map means redact nothing. */
   readonly policyByProjectId: ReadonlyMap<string, ResolvedRedactionPolicy>
   readonly pseudonymSecret: string | undefined
+  readonly timeoutMs?: number
 }
 
 /**
@@ -61,6 +62,9 @@ export const redactSpans = (
       return { spans: input.spans, summary: EMPTY_SUMMARY }
     }
 
+    const budgetMs = input.timeoutMs ?? REDACTION_BATCH_TIMEOUT_MS
+    const deadline = performance.now() + budgetMs
+
     const policyFor = (span: SpanDetail): ResolvedRedactionPolicy | undefined => {
       const policy = input.policyByProjectId.get(span.projectId as string)
 
@@ -72,25 +76,26 @@ export const redactSpans = (
       values: identityValues,
       organizationId: input.organizationId,
       secret: input.pseudonymSecret,
-    })
+    }).pipe(
+      Effect.timeoutOrElse({
+        duration: budgetMs,
+        orElse: () => Effect.fail(new RedactionError({ reason: "pseudonym derivation timed out" })),
+      }),
+    )
 
     return yield* Effect.try({
-      try: () => applyRedaction(input.spans, policyFor, pseudonyms, identityFallback),
-      catch: (cause) => new RedactionError({ reason: "redaction pass failed", cause }),
+      try: () => applyRedaction(input.spans, policyFor, pseudonyms, identityFallback, deadline),
+      catch: (cause) =>
+        cause instanceof RedactionError ? cause : new RedactionError({ reason: "redaction pass failed", cause }),
     })
-  }).pipe(
-    Effect.timeoutOrElse({
-      duration: REDACTION_BATCH_TIMEOUT_MS,
-      orElse: () => Effect.fail(new RedactionError({ reason: "redaction pass timed out" })),
-    }),
-    Effect.withSpan("spans.redactSpans"),
-  )
+  }).pipe(Effect.withSpan("spans.redactSpans"))
 
 function applyRedaction(
   spans: readonly SpanDetail[],
   policyFor: (span: SpanDetail) => ResolvedRedactionPolicy | undefined,
   pseudonyms: PseudonymLookup,
   identityFallback: boolean,
+  deadline: number,
 ): { spans: readonly SpanDetail[]; summary: SpanRedactionSummary } {
   const counts: RedactionCounts = {}
   const scan = emptyScanTally()
@@ -102,6 +107,11 @@ function applyRedaction(
   const redacted = spans.map((span) => {
     const policy = policyFor(span)
     if (!policy) return span
+
+    // The walk is synchronous, so an Effect timeout around it could not fire until it already finished.
+    if (performance.now() >= deadline) {
+      throw new RedactionError({ reason: "redaction pass exceeded its deadline" })
+    }
 
     const result = redactSpanDetail(span, policy, pseudonyms)
     mergeRedactionCounts(counts, result.stats.counts)

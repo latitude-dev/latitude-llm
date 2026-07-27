@@ -456,3 +456,35 @@ describe("redactSpans size cap", () => {
     expect(result.summary.oversizedFields).toBe(0)
   })
 })
+
+describe("redactSpans deadline", () => {
+  const spans = [makeSpan({ toolOutput: "mail john@example.com" }), makeSpan({ spanId: SpanId("b".repeat(16)) })]
+
+  it("fails closed when the batch budget is already spent", async () => {
+    const failure = await Effect.runPromise(
+      Effect.flip(
+        redactSpans({
+          spans,
+          organizationId: ORG,
+          policyByProjectId: enforceFor(),
+          pseudonymSecret: undefined,
+          timeoutMs: 0,
+        }),
+      ),
+    )
+
+    expect(failure._tag).toBe("RedactionError")
+    expect(failure.reason).toBe("redaction pass exceeded its deadline")
+  })
+
+  it("completes normally within the default budget", async () => {
+    const result = await run({
+      spans,
+      organizationId: ORG,
+      policyByProjectId: enforceFor(),
+      pseudonymSecret: undefined,
+    })
+
+    expect(result.spans[0]?.toolOutput).toBe("mail [REDACTED_EMAIL]")
+  })
+})
