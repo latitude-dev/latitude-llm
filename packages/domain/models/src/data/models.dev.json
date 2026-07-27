@@ -2751,9 +2751,9 @@
           "output": 262144
         },
         "cost": {
-          "input": 0.12,
-          "output": 0.35,
-          "cache_read": 0.09
+          "input": 0.1,
+          "output": 0.34,
+          "cache_read": 0.1
         }
       },
       "zai-org/GLM-5.2": {
@@ -2787,9 +2787,9 @@
           "output": 262144
         },
         "cost": {
-          "input": 1.39,
-          "output": 4.4,
-          "cache_read": 0.26
+          "input": 0.76,
+          "output": 2.42,
+          "cache_read": 0.14
         }
       },
       "zai-org/GLM-5.1": {
@@ -3197,9 +3197,9 @@
           "output": 262144
         },
         "cost": {
-          "input": 0.29,
-          "output": 1.2,
-          "cache_read": 0.06
+          "input": 0.23,
+          "output": 0.96,
+          "cache_read": 0.05
         }
       },
       "ibm-granite/granite-4.1-8b": {
@@ -3398,9 +3398,9 @@
           "output": 262144
         },
         "cost": {
-          "input": 0.95,
-          "output": 4,
-          "cache_read": 0.16
+          "input": 0.65,
+          "output": 3.41,
+          "cache_read": 0.15
         }
       },
       "moonshotai/Kimi-K2.5": {
@@ -3466,9 +3466,9 @@
           "output": 262144
         },
         "cost": {
-          "input": 0.94,
-          "output": 4,
-          "cache_read": 0.19
+          "input": 0.71,
+          "output": 3.5,
+          "cache_read": 0.15
         }
       },
       "openai/gpt-oss-20b": {
@@ -3530,9 +3530,9 @@
           "output": 131072
         },
         "cost": {
-          "input": 0.04,
-          "output": 0.14,
-          "cache_read": 0.04
+          "input": 0.03,
+          "output": 0.17,
+          "cache_read": 0.03
         }
       },
       "meta-llama/Llama-3.3-70B-Instruct": {
@@ -70836,7 +70836,7 @@
           "output": 262144
         },
         "cost": {
-          "input": 0.78,
+          "input": 0.75,
           "output": 3.5,
           "cache_read": 0.15,
           "cache_write": 0
@@ -158362,51 +158362,6 @@
           "output": 9
         }
       },
-      "google/gemini-3.1-flash-lite-preview": {
-        "id": "google/gemini-3.1-flash-lite-preview",
-        "name": "Gemini 3.1 Flash Lite Preview",
-        "description": "Low-latency Gemini model for high-volume multimodal and agent workloads",
-        "family": "gemini",
-        "attachment": true,
-        "reasoning": true,
-        "reasoning_options": [
-          {
-            "type": "effort",
-            "values": [
-              "minimal",
-              "low",
-              "medium",
-              "high"
-            ]
-          }
-        ],
-        "tool_call": true,
-        "structured_output": true,
-        "temperature": true,
-        "knowledge": "2025-01",
-        "release_date": "2026-03-03",
-        "last_updated": "2026-03-03",
-        "modalities": {
-          "input": [
-            "text",
-            "image",
-            "pdf"
-          ],
-          "output": [
-            "text"
-          ]
-        },
-        "open_weights": false,
-        "limit": {
-          "context": 1000000,
-          "output": 65000
-        },
-        "cost": {
-          "input": 0.25,
-          "output": 1.5,
-          "cache_read": 0.03
-        }
-      },
       "google/gemini-3-flash": {
         "id": "google/gemini-3-flash",
         "name": "Gemini 3 Flash",
@@ -164811,54 +164766,6 @@
           "cache_write": 6.25
         }
       },
-      "anthropic/claude-opus-4.7-fast": {
-        "id": "anthropic/claude-opus-4.7-fast",
-        "name": "Claude Opus 4.7 (Fast)",
-        "description": "Stronger Opus tier for advanced software work and high-stakes reasoning",
-        "family": "claude-opus",
-        "attachment": true,
-        "reasoning": true,
-        "reasoning_options": [
-          {
-            "type": "toggle"
-          },
-          {
-            "type": "effort",
-            "values": [
-              "low",
-              "medium",
-              "high",
-              "xhigh"
-            ]
-          }
-        ],
-        "tool_call": true,
-        "temperature": true,
-        "knowledge": "2026-01-31",
-        "release_date": "2026-04-16",
-        "last_updated": "2026-04-16",
-        "modalities": {
-          "input": [
-            "text",
-            "image",
-            "pdf"
-          ],
-          "output": [
-            "text"
-          ]
-        },
-        "open_weights": false,
-        "limit": {
-          "context": 1000000,
-          "output": 128000
-        },
-        "cost": {
-          "input": 30,
-          "output": 150,
-          "cache_read": 3,
-          "cache_write": 37.5
-        }
-      },
       "anthropic/claude-sonnet-4.5": {
         "id": "anthropic/claude-sonnet-4.5",
         "name": "Claude Sonnet 4.5",
@@ -165462,42 +165369,6 @@
         "cost": {
           "input": 30,
           "output": 180
-        }
-      },
-      "openai/gpt-5-chat": {
-        "id": "openai/gpt-5-chat",
-        "name": "GPT-5 Chat",
-        "description": "Image model for prompt-driven generation, editing, and visual design workflows",
-        "family": "gpt",
-        "attachment": true,
-        "reasoning": true,
-        "reasoning_options": [],
-        "tool_call": true,
-        "temperature": true,
-        "knowledge": "2024-10",
-        "release_date": "2025-08-07",
-        "last_updated": "2025-08-07",
-        "modalities": {
-          "input": [
-            "text",
-            "image",
-            "pdf"
-          ],
-          "output": [
-            "text",
-            "image"
-          ]
-        },
-        "open_weights": false,
-        "limit": {
-          "context": 128000,
-          "input": 111616,
-          "output": 16384
-        },
-        "cost": {
-          "input": 1.25,
-          "output": 10,
-          "cache_read": 0.125
         }
       },
       "openai/gpt-5.4-pro": {
@@ -166249,40 +166120,6 @@
         "limit": {
           "context": 0,
           "output": 0
-        }
-      },
-      "openai/gpt-5.2-chat": {
-        "id": "openai/gpt-5.2-chat",
-        "name": "GPT-5.2 Chat",
-        "description": "Chat-tuned GPT model for conversational assistance, writing, and tool workflows",
-        "family": "gpt",
-        "attachment": true,
-        "reasoning": false,
-        "tool_call": true,
-        "temperature": true,
-        "knowledge": "2024-10",
-        "release_date": "2025-12-11",
-        "last_updated": "2025-08-07",
-        "modalities": {
-          "input": [
-            "text",
-            "image",
-            "pdf"
-          ],
-          "output": [
-            "text"
-          ]
-        },
-        "open_weights": false,
-        "limit": {
-          "context": 128000,
-          "input": 111616,
-          "output": 16384
-        },
-        "cost": {
-          "input": 1.75,
-          "output": 14,
-          "cache_read": 0.175
         }
       },
       "openai/gpt-image-1.5": {
@@ -177564,11 +177401,12 @@
         "open_weights": true,
         "limit": {
           "context": 262144,
-          "output": 131072
+          "output": 65536
         },
         "cost": {
-          "input": 0.289,
-          "output": 2.4
+          "input": 0.3,
+          "output": 2,
+          "cache_read": 0.15
         }
       },
       "qwen/qwen3.5-35b-a3b": {
@@ -178214,8 +178052,8 @@
           "output": 32000
         },
         "cost": {
-          "input": 0.1,
-          "output": 0.3
+          "input": 0.04815,
+          "output": 0.19305
         }
       },
       "qwen/qwen3-vl-30b-a3b-instruct": {
@@ -181000,12 +180838,12 @@
         "open_weights": true,
         "limit": {
           "context": 1048576,
-          "output": 65536
+          "output": 393216
         },
         "cost": {
-          "input": 0.0938,
-          "output": 0.1876,
-          "cache_read": 0.01876
+          "input": 0.14,
+          "output": 0.28,
+          "cache_read": 0.028
         }
       },
       "deepseek/deepseek-chat-v3-0324": {
@@ -183714,9 +183552,9 @@
           "output": 131072
         },
         "cost": {
-          "input": 0.7966,
-          "output": 2.5036,
-          "cache_read": 0.14794
+          "input": 0.7182,
+          "output": 2.2572,
+          "cache_read": 0.13338
         }
       },
       "z-ai/glm-4.6": {
@@ -184159,9 +183997,9 @@
           "output": 262144
         },
         "cost": {
-          "input": 0.684,
-          "output": 3.42,
-          "cache_read": 0.144
+          "input": 0.646,
+          "output": 2.72,
+          "cache_read": 0.1088
         }
       },
       "moonshotai/kimi-k2.7-code": {
@@ -184876,8 +184714,7 @@
         },
         "cost": {
           "input": 0.03,
-          "output": 0.13,
-          "cache_read": 0.03
+          "output": 0.14
         }
       },
       "openai/gpt-oss-safeguard-20b": {
@@ -187334,11 +187171,11 @@
         "open_weights": true,
         "limit": {
           "context": 262144,
-          "output": 80000
+          "output": 262144
         },
         "cost": {
-          "input": 0.25,
-          "output": 0.8,
+          "input": 0.22,
+          "output": 0.85,
           "cache_read": 0.06
         }
       },
@@ -196447,6 +196284,52 @@
           "output": 10,
           "cache_read": 0.2,
           "cache_write": 2.5
+        }
+      },
+      "anthropic/claude-opus-5": {
+        "id": "anthropic/claude-opus-5",
+        "name": "Claude Opus 5",
+        "description": "Strongest Claude Opus model for coding, agents, and professional work",
+        "family": "claude-opus",
+        "attachment": true,
+        "reasoning": true,
+        "reasoning_options": [
+          {
+            "type": "effort",
+            "values": [
+              "low",
+              "medium",
+              "high",
+              "xhigh",
+              "max"
+            ]
+          }
+        ],
+        "tool_call": true,
+        "temperature": false,
+        "knowledge": "2026-05",
+        "release_date": "2026-07-24",
+        "last_updated": "2026-07-24",
+        "modalities": {
+          "input": [
+            "text",
+            "image",
+            "pdf"
+          ],
+          "output": [
+            "text"
+          ]
+        },
+        "open_weights": false,
+        "limit": {
+          "context": 1000000,
+          "output": 128000
+        },
+        "cost": {
+          "input": 5,
+          "output": 25,
+          "cache_read": 0.5,
+          "cache_write": 6.25
         }
       },
       "moonshotai/kimi-k3": {
