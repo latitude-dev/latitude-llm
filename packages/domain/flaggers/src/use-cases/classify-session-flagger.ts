@@ -106,7 +106,11 @@ export const classifySessionFlaggerUseCase = Effect.fn("flaggers.classifySession
   }
 
   if (
-    isUserCentricReflagInapplicable(context.conversation.tags, strategy.classifiesAssistantResponseOnly) ||
+    isUserCentricReflagInapplicable(
+      context.conversation.tags,
+      strategy.classifiesAssistantResponseOnly,
+      context.session.rootSpanName,
+    ) ||
     !strategy.hasRequiredContext(context.conversation)
   ) {
     yield* Effect.annotateCurrentSpan("flagger.skipped", "missing-context")

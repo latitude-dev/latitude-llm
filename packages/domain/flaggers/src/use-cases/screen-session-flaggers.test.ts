@@ -1,4 +1,4 @@
-import { AI_GENERATE_TELEMETRY_TAGS } from "@domain/ai"
+import { AI_GENERATE_TELEMETRY_SPAN_NAMES, AI_GENERATE_TELEMETRY_TAGS } from "@domain/ai"
 import {
   SessionAnalysisRepository,
   type SessionMomentLabel,
@@ -239,6 +239,43 @@ describe("screenSessionFlaggersUseCase", () => {
     expect(result.classifications.some((c) => c.flaggerSlug === "frustration")).toBe(false)
     expect(result.classifications.some((c) => c.flaggerSlug === "jailbreaking")).toBe(false)
     expect(result.classifications.some((c) => c.flaggerSlug === "nsfw")).toBe(false)
+    expect(result.classifications.some((c) => c.flaggerSlug === "laziness")).toBe(true)
+    expect(scores.size).toBe(0)
+  })
+
+  it("drops user-centric strategies on taxonomy:propose-themes (cluster samples are not a real user)", async () => {
+    const clusterSamples = [
+      "Samples:",
+      "0: User: I just honestly don't understand why you couldn't get this done for me.",
+      "Clearly there is something broke about you. Do not bother giving me a bunch of excuses.",
+    ].join("\n")
+    const session = makeSessionDetail(
+      [user(clusterSamples), assistant('{"themes":[{"name":"Project delivery failures"}]}')],
+      {
+        tags: [...AI_GENERATE_TELEMETRY_TAGS.taxonomyProposeThemes],
+        rootSpanName: AI_GENERATE_TELEMETRY_SPAN_NAMES.taxonomyProposeThemes,
+      },
+    )
+    const { result, scores } = await runScreening({
+      session,
+      flaggers: [makeFlagger("frustration", 100), makeFlagger("laziness", 100)],
+      momentLabels: [makeMomentLabel("user_frustration"), makeMomentLabel("stalling")],
+      analyses: [analyzedAnalysis()],
+      deps: fakeDeps.deps,
+    })
+
+    expect(decisionFor(result.decisions, "frustration")).toEqual({
+      slug: "frustration",
+      action: "dropped",
+      reason: "missing-context",
+    })
+    expect(decisionFor(result.decisions, "laziness")).toEqual({
+      slug: "laziness",
+      action: "classify",
+      reason: "hinted",
+      hintKinds: ["moment:stalling"],
+    })
+    expect(result.classifications.some((c) => c.flaggerSlug === "frustration")).toBe(false)
     expect(result.classifications.some((c) => c.flaggerSlug === "laziness")).toBe(true)
     expect(scores.size).toBe(0)
   })

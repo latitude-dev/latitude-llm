@@ -1,4 +1,4 @@
-import { AI_GENERATE_TELEMETRY_TAGS } from "@domain/ai"
+import { AI_GENERATE_TELEMETRY_SPAN_NAMES, AI_GENERATE_TELEMETRY_TAGS } from "@domain/ai"
 import { createFakeAI } from "@domain/ai/testing"
 import { CacheStore, ChSqlClient, FlaggerId, generateId, OrganizationId, SqlClient } from "@domain/shared"
 import { createFakeChSqlClient, createFakeSqlClient } from "@domain/shared/testing"
@@ -97,13 +97,27 @@ describe("classifySessionFlaggerUseCase gating", () => {
     expect(result).toEqual({ matched: false })
   })
 
-  it("returns { matched: false } for frustration on a flagger.classify session without calling AI", async () => {
+  it.each([
+    {
+      tags: [...AI_GENERATE_TELEMETRY_TAGS.flaggerClassify],
+      rootSpanName: "root",
+      label: "flagger.classify",
+    },
+    {
+      tags: [...AI_GENERATE_TELEMETRY_TAGS.taxonomyProposeThemes],
+      rootSpanName: AI_GENERATE_TELEMETRY_SPAN_NAMES.taxonomyProposeThemes,
+      label: "taxonomy:propose-themes",
+    },
+  ])("returns { matched: false } for frustration on a $label session without calling AI", async ({
+    tags,
+    rootSpanName,
+  }) => {
     const session = makeSessionDetail(
       [
-        user("no but read the memory first — nested correction inside classify evidence"),
+        user("I just honestly don't understand why you couldn't get this done for me — nested sample wording"),
         assistant('{"matched":true,"feedback":"task not completed","messageIndex":"2"}'),
       ],
-      { tags: [...AI_GENERATE_TELEMETRY_TAGS.flaggerClassify] },
+      { tags, rootSpanName },
     )
     const { repository: sessionRepo } = createFakeSessionRepository({
       findBySessionId: () => Effect.succeed(session),
@@ -125,7 +139,7 @@ describe("classifySessionFlaggerUseCase gating", () => {
         } as Flagger),
     })
     const { layer: aiLayer } = createFakeAI({
-      generate: () => Effect.die("AI must not be called for user-centric reflag"),
+      generate: () => Effect.die("AI must not be called for user-centric nested-sample traces"),
     })
 
     const result = await Effect.runPromise(

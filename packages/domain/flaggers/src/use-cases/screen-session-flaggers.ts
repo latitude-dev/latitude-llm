@@ -288,7 +288,11 @@ const screenOneStrategy = (args: ScreenOneStrategyInput) =>
     }
 
     if (
-      isUserCentricReflagInapplicable(args.context.conversation.tags, strategy.classifiesAssistantResponseOnly) ||
+      isUserCentricReflagInapplicable(
+        args.context.conversation.tags,
+        strategy.classifiesAssistantResponseOnly,
+        args.context.session.rootSpanName,
+      ) ||
       !strategy.hasRequiredContext(args.context.conversation)
     ) {
       return { slug: args.slug, action: "dropped", reason: "missing-context" } satisfies SessionFlaggerDecision
