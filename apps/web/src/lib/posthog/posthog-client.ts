@@ -148,13 +148,16 @@ interface SyncSessionInput {
  * org group, then opt in.
  *
  * Ordering matters: `register()` runs first so `organizationId` rides on every
- * subsequent event (including the opt-in event and first pageview). Then
- * `opt_in_capturing()` runs BEFORE `identify()` — while opted out every
- * capture() is dropped, so an identify sent while opted out never transmits the
- * `$identify` merge event, orphaning the anonymous latitude.so visitor from the
- * signed-up user. Opting in first lets identify stitch the pre-signup landing
- * session to the user. `group()` runs last; the super property from `register()`
- * keeps org-based breakdowns correct even before `$group_0` is set.
+ * subsequent event (including the opt-in event and first pageview). The org
+ * group is then associated (without properties) BEFORE `opt_in_capturing()` —
+ * `group()`'s `$groups` registration is an opt-out-agnostic persistence write,
+ * so `$group_0` rides on the opt-in event and first pageview; the paired
+ * `$groupidentify` capture is dropped while opted out, so org properties are
+ * sent by a second `group()` call after opting in. `opt_in_capturing()` runs
+ * BEFORE `identify()` — while opted out every capture() is dropped, so an
+ * identify sent while opted out never transmits the `$identify` merge event,
+ * orphaning the anonymous latitude.so visitor from the signed-up user. Opting
+ * in first lets identify stitch the pre-signup landing session to the user.
  */
 export const syncPostHogSession = async (input: SyncSessionInput): Promise<void> => {
   if (input.excludeFromAnalytics) {
@@ -179,6 +182,12 @@ export const syncPostHogSession = async (input: SyncSessionInput): Promise<void>
   // including the opt-in event and first pageview fired below.
   posthog.register({ organizationId: input.organizationId })
 
+  // Associate the org group BEFORE opting in so $group_0 rides on the opt-in
+  // event and first pageview. $groups is a persistence write with no opt-out
+  // gate; the paired $groupidentify capture is dropped while opted out, so
+  // properties are sent by the second group() call once opted in below.
+  posthog.group("organization", input.organizationId)
+
   // Opt in BEFORE identify. The SDK inits with opt_out_capturing_by_default,
   // so while opted out every capture() — including the $identify event that
   // merges the anonymous latitude.so visitor into this user — is silently
@@ -195,12 +204,15 @@ export const syncPostHogSession = async (input: SyncSessionInput): Promise<void>
   })
 
   // Group properties power org-named cells in group-aggregated insights and
-  // plan/slug breakdowns. Only send keys we actually have.
+  // plan/slug breakdowns. Sent now (opted in) so the $groupidentify transmits;
+  // the association itself was already set before opt-in above.
   const orgProps: Record<string, string> = {}
   if (input.organizationName) orgProps.name = input.organizationName
   if (input.organizationSlug) orgProps.slug = input.organizationSlug
   if (input.organizationPlan) orgProps.plan = input.organizationPlan
-  posthog.group("organization", input.organizationId, Object.keys(orgProps).length > 0 ? orgProps : undefined)
+  if (Object.keys(orgProps).length > 0) {
+    posthog.group("organization", input.organizationId, orgProps)
+  }
 }
 
 /**
