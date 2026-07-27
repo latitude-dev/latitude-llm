@@ -366,8 +366,9 @@ Why not resolve in the worker: it would add an uncached `SettingsReader` Postgre
 **Org settings do need a read at the boundary.** `SettingsReaderLive` is already in `traceIngestionBillingLayers` (`apps/ingest/src/routes/traces.ts:32-39`), so `getOrganizationSettings()` is reachable, but an uncached query on the hottest path in the product is not acceptable. Add a Redis-cached resolver modeled exactly on `packages/platform/db-postgres/src/resolve-effective-plan-cached.ts`:
 
 - Key `org:${organizationId}:settings:redaction` (org prefix first, per the repo-wide rule in `CLAUDE.md`).
-- 60 s TTL, Zod-validated cached payload, `cache.hit` span annotation, and an `invalidateRedactionPolicyCache(organizationId)` export mirroring `invalidateEffectivePlanCache` (`:95-101`).
-- Failure to read the cache or the row resolves to "no org policy," which per the design invariant means the project policy applies unchanged. This is the one place the invariant permits a non-tightening default, because the org layer can only *raise* strictness and treating an unavailable org row as `locked` would halt ingestion cluster-wide on a Redis blip. Say so in a one-line comment at the call site, since it looks like a bug otherwise.
+- 60 s TTL, Zod-validated cached payload, `cache.hit` span annotation, and an `invalidateOrganizationRedactionCache(organizationId)` export mirroring `invalidateEffectivePlanCache` (`:95-101`).
+- **A cache failure degrades to a database read. A database failure propagates.** An earlier draft of this spec had the row read degrade to "no org policy" on the theory that the org layer can only raise strictness. That was wrong: degrading lets a `locked` org policy fall back to a weaker project policy and write plaintext, which is the exact failure the design invariant exists to prevent. It also buys no availability, because project resolution on this path already hard-depends on Postgres (`ingest-spans.ts:146-149`; `RepositoryError` is already in the use case's error union) and the request fails regardless.
+- Cache the *absence* of a policy explicitly rather than as a bare `null`. Almost every organization has no policy, and if a cached absence were indistinguishable from a miss the cache would never serve the common case.
 
 **60 s of staleness is a documented behavior, not a defect.** Enabling redaction takes effect within a minute. Say it in the UI copy.
 
@@ -675,9 +676,9 @@ Follow the layering in the testing skill: pure unit tests in the domain, PGlite/
 ### Phase 2 - Pipeline wiring
 
 - [x] **P2-1**: `packages/platform/db-postgres/src/resolve-redaction-policy-cached.ts`, modeled on `resolve-effective-plan-cached.ts`: key `org:${organizationId}:settings:redaction`, 60 s TTL, Zod-validated payload, `cache.hit` annotation, `invalidateRedactionPolicyCache`.
-- [ ] **P2-2**: Add `redaction?: Record<string, SerializedRedactionPolicy>` to `span-ingestion:ingest` in `packages/domain/queue/src/topic-registry.ts`.
-- [ ] **P2-3**: In `ingestSpansUseCase`, resolve the per-project policy from the already-loaded `projectBySlug` plus the cached org settings, and stamp the map onto the published job. Omit `off` projects and omit the field entirely when the map is empty.
-- [ ] **P2-4**: Provide the Redis cache layer the resolver needs in `apps/ingest/src/routes/traces.ts`.
+- [x] **P2-2**: Add `redaction?: Record<string, SerializedRedactionPolicy>` to `span-ingestion:ingest` in `packages/domain/queue/src/topic-registry.ts`.
+- [x] **P2-3**: In `ingestSpansUseCase`, resolve the per-project policy from the already-loaded `projectBySlug` plus the cached org settings, and stamp the map onto the published job. Omit `off` projects and omit the field entirely when the map is empty.
+- [x] **P2-4**: Provide the Redis cache layer the resolver needs in `apps/ingest/src/routes/traces.ts`.
 - [ ] **P2-5**: In `processIngestedSpansUseCase`, accept `redaction`, apply the pass between `decodeAndTransform` and `repo.insert`, fail closed, and wrap in `Effect.timeout(REDACTION_BATCH_TIMEOUT_MS)`.
 - [ ] **P2-6**: Pass `wire.redaction` through `apps/workers/src/workers/span-ingestion.ts`; parse `LAT_REDACTION_PSEUDONYM_SECRET` with `parseEnvOptional` at the use site; add it to `.env.example` in the workers block.
 - [ ] **P2-7**: Emit every annotation in [§4.8](#48-observability), plus the `warn`/`error` logs.
