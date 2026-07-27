@@ -39,7 +39,16 @@ const E164_PHONE_PATTERN = /(?<![\w+])\+[1-9]\d{7,14}(?!\d)/g
 // Separated NANP forms only: a bare ten-digit run is indistinguishable from the numeric ids in tool output.
 const NANP_PHONE_PATTERN = /(?<![\w.-])(?:\(\d{3}\) ?|\d{3}[-. ])\d{3}[-. ]\d{4}(?![\d.-])/g
 
-const CREDIT_CARD_PATTERN = /(?<![\d.])\d(?:[ -]?\d){11,18}(?![\d.])/g
+/**
+ * Compact and grouped forms are separate patterns, and the grouped ones backreference
+ * their separator, for the same reason the IBAN detector does: a single pattern
+ * allowing an optional space between any two digits bridges two adjacent numbers,
+ * consumes both greedily, fails the checksum, and never reconsiders the real card
+ * inside. `+14155552671 4111111111111111` lost the card that way.
+ */
+const CREDIT_CARD_COMPACT_PATTERN = /(?<![\d.])\d{13,19}(?![\d.])/g
+const CREDIT_CARD_GROUPED_PATTERN = /(?<![\d.])\d{4}([ -])\d{4}\1\d{4}\1\d{1,7}(?![\d.])/g
+const CREDIT_CARD_AMEX_GROUPED_PATTERN = /(?<![\d.])\d{4}([ -])\d{6}\1\d{5}(?![\d.])/g
 
 const digitsOf = (value: string): string => value.replace(/[^\d]/g, "")
 
@@ -147,7 +156,9 @@ const DETECTORS: readonly Detector[] = [
   { entity: "email", pattern: EMAIL_PATTERN, validate: isEmail },
   { entity: "phone", pattern: E164_PHONE_PATTERN },
   { entity: "phone", pattern: NANP_PHONE_PATTERN },
-  { entity: "credit_card", pattern: CREDIT_CARD_PATTERN, validate: isCreditCard },
+  { entity: "credit_card", pattern: CREDIT_CARD_COMPACT_PATTERN, validate: isCreditCard },
+  { entity: "credit_card", pattern: CREDIT_CARD_GROUPED_PATTERN, validate: isCreditCard },
+  { entity: "credit_card", pattern: CREDIT_CARD_AMEX_GROUPED_PATTERN, validate: isCreditCard },
   { entity: "iban", pattern: IBAN_COMPACT_PATTERN, validate: isIban },
   { entity: "iban", pattern: IBAN_GROUPED_PATTERN, validate: isIban },
   { entity: "us_ssn", pattern: US_SSN_PATTERN },

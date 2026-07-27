@@ -108,6 +108,40 @@ describe("credit_card detector", () => {
     expect(detects("card 4111111111111112 charged", "credit_card")).toBe(false)
   })
 
+  /**
+   * Regression: a pattern allowing an optional separator between any two digits
+   * bridges a card into the number that follows it, matches the combined run at a
+   * length some issuer does permit, fails Luhn, and consumes the real card with it.
+   *
+   * The trailing number is what makes these reproduce. `16 + 3` digits is a valid
+   * Visa length, so the bridged match looks legitimate to the length gate; a longer
+   * neighbour would simply overflow and backtrack to the card.
+   */
+  it.each([
+    "4111111111111111 123",
+    "4111111111111111 123-45-6789",
+    "+14155552671 4111111111111111 123-45-6789",
+    "card 4111111111111111 exp 12-26",
+  ])("still finds the card in %s", (text) => {
+    expect(found(text, "credit_card")).toContain("4111111111111111")
+  })
+
+  it.each([
+    "+14155552671 4111111111111111",
+    "order 987654321 4111111111111111",
+    "4111111111111111 987654321",
+  ])("finds the card beside an unrelated number in %s", (text) => {
+    expect(found(text, "credit_card")).toContain("4111111111111111")
+  })
+
+  it("finds both cards when two are adjacent", () => {
+    expect(found("4111111111111111 5500005555555559", "credit_card")).toEqual(["4111111111111111", "5500005555555559"])
+  })
+
+  it("does not bridge a separator that is not part of the grouping", () => {
+    expect(found("4111 1111 1111 1111 2222", "credit_card")).toEqual(["4111 1111 1111 1111"])
+  })
+
   it("rejects a Luhn-valid digit run with no issuer prefix", () => {
     expect(detects("id 9999999999999995", "credit_card")).toBe(false)
   })
