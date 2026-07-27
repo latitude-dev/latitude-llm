@@ -2,8 +2,9 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react"
 import { cn } from "../../utils/cn.ts"
 import type { PDFDocumentProxy } from "./configure-pdfjs.ts"
 import { type PageSize, PdfPageCanvas } from "./pdf-page-canvas.tsx"
-import { clampPage, fitWidthScale, MAX_ZOOM, MIN_ZOOM, nextZoom, quantizeWidth } from "./pdf-render-math.ts"
+import { clampPage, fitWidthScale, MAX_ZOOM, MIN_ZOOM, nextZoom } from "./pdf-render-math.ts"
 import { PdfViewerToolbar } from "./pdf-viewer-toolbar.tsx"
+import { useElementWidth } from "./use-element-width.ts"
 
 /**
  * A full-width page at DPR 2 is roughly 25 MB of backing store, so an unbounded render window
@@ -13,24 +14,6 @@ const MAX_RENDERED_PAGES = 5
 
 const PAGE_GAP = 16
 const HORIZONTAL_PADDING = 32
-
-function useContainerWidth(ref: React.RefObject<HTMLElement | null>): number {
-  const [width, setWidth] = useState(0)
-
-  useEffect(() => {
-    const element = ref.current
-    if (!element || typeof ResizeObserver === "undefined") return
-
-    const observer = new ResizeObserver((entries) => {
-      const measured = entries[0]?.contentRect.width ?? 0
-      setWidth(quantizeWidth(Math.max(measured - HORIZONTAL_PADDING, 0)))
-    })
-    observer.observe(element)
-    return () => observer.disconnect()
-  }, [ref])
-
-  return width
-}
 
 export function PdfViewer({
   doc,
@@ -47,7 +30,7 @@ export function PdfViewer({
 }) {
   const scrollRef = useRef<HTMLDivElement | null>(null)
   const pageRefs = useRef(new Map<number, HTMLElement>())
-  const containerWidth = useContainerWidth(scrollRef)
+  const containerWidth = useElementWidth(scrollRef, HORIZONTAL_PADDING)
 
   const numPages = doc.numPages
   const [zoom, setZoom] = useState<number | null>(null)

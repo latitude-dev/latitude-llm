@@ -116,6 +116,7 @@ export function FileCard({
   href,
   downloadDataUri,
   extraActions,
+  preview,
 }: {
   readonly fileName?: string | undefined
   readonly mimeType?: string | null | undefined
@@ -126,6 +127,8 @@ export function FileCard({
   readonly downloadDataUri?: string | undefined
   /** Rendered ahead of the built-in actions, for behaviour the card itself doesn't own. */
   readonly extraActions?: ReactNode | undefined
+  /** Optional visual header above the metadata row, for formats that can render their content. */
+  readonly preview?: ReactNode | undefined
 }) {
   const FileTypeIcon = fileIconForMime(mimeType, modality)
   const typeLabel = fileTypeLabel(mimeType, modality)
@@ -180,26 +183,29 @@ export function FileCard({
   }
 
   return (
-    <div className="flex max-w-md items-center gap-3 rounded-lg border border-border bg-card px-3 py-2">
-      <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-md bg-muted">
-        <Icon icon={FileTypeIcon} size="default" color="foregroundMuted" />
-      </div>
-      <div className="flex min-w-0 flex-1 flex-col">
-        <Text.H6 ellipsis>{primary}</Text.H6>
-        {secondary ? (
-          <Text.H6 color="foregroundMuted" ellipsis>
-            {secondary}
-          </Text.H6>
-        ) : null}
-        {fileId ? (
-          <Text.Mono size="h6" color="foregroundMuted" ellipsis>
-            {fileId}
-          </Text.Mono>
-        ) : null}
-      </div>
-      <div className="flex shrink-0 items-center gap-1.5">
-        {extraActions}
-        {actions}
+    <div className="flex max-w-md flex-col overflow-hidden rounded-lg border border-border bg-card">
+      {preview ? <div className="border-border border-b">{preview}</div> : null}
+      <div className="flex items-center gap-3 px-3 py-2">
+        <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-md bg-muted">
+          <Icon icon={FileTypeIcon} size="default" color="foregroundMuted" />
+        </div>
+        <div className="flex min-w-0 flex-1 flex-col">
+          <Text.H6 ellipsis>{primary}</Text.H6>
+          {secondary ? (
+            <Text.H6 color="foregroundMuted" ellipsis>
+              {secondary}
+            </Text.H6>
+          ) : null}
+          {fileId ? (
+            <Text.Mono size="h6" color="foregroundMuted" ellipsis>
+              {fileId}
+            </Text.Mono>
+          ) : null}
+        </div>
+        <div className="flex shrink-0 items-center gap-1.5">
+          {extraActions}
+          {actions}
+        </div>
       </div>
     </div>
   )

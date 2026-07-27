@@ -70,19 +70,22 @@ export function PdfAttachment({
     </Tooltip>
   )
 
+  // Mounted before `url` resolves so the band reserves its height from the first paint.
+  const previewNode =
+    autoPreview || open ? (
+      <LazyPdfPreview
+        url={url}
+        title={title}
+        showThumbnail={autoPreview}
+        open={open}
+        onOpenChange={setOpen}
+        {...(downloadDataUri ? { downloadHref: downloadDataUri, downloadName: title } : {})}
+        {...(base64 && objectUrl ? { openHref: objectUrl } : href ? { openHref: href } : {})}
+      />
+    ) : null
+
   return (
-    <div className="flex flex-col gap-2">
-      {url && (autoPreview || open) ? (
-        <LazyPdfPreview
-          url={url}
-          title={title}
-          showThumbnail={autoPreview}
-          open={open}
-          onOpenChange={setOpen}
-          {...(downloadDataUri ? { downloadHref: downloadDataUri, downloadName: title } : {})}
-          {...(base64 && objectUrl ? { openHref: objectUrl } : href ? { openHref: href } : {})}
-        />
-      ) : null}
+    <>
       <FileCard
         {...(fileName ? { fileName } : {})}
         mimeType={mimeType ?? undefined}
@@ -91,7 +94,10 @@ export function PdfAttachment({
         {...(href ? { href } : {})}
         {...(downloadDataUri ? { downloadDataUri } : {})}
         extraActions={expandAction}
+        preview={autoPreview ? previewNode : null}
       />
-    </div>
+      {/* Past the size guard there is no inline band, but the modal still has to mount somewhere. */}
+      {autoPreview ? null : previewNode}
+    </>
   )
 }

@@ -1,5 +1,5 @@
 import { FileTextIcon } from "lucide-react"
-import { useEffect, useState } from "react"
+import { useEffect, useRef, useState } from "react"
 import { useMountEffect } from "../../hooks/use-mount-effect.ts"
 import { Icon } from "../icons/icons.tsx"
 import { Modal } from "../modal/modal.tsx"
@@ -8,21 +8,16 @@ import { Text } from "../text/text.tsx"
 import type { PageSize } from "./pdf-page-canvas.tsx"
 import { PdfPageCanvas } from "./pdf-page-canvas.tsx"
 import { PdfViewer } from "./pdf-viewer.tsx"
+import { useElementWidth } from "./use-element-width.ts"
 import { usePdfDocument } from "./use-pdf-document.ts"
 
-const THUMBNAIL_WIDTH = 240
-const THUMBNAIL_HEIGHT = 320
-const THUMBNAIL_BOX = "h-80 w-60"
+/** Fixed so the card footprint is identical before and after the page resolves. */
+const PREVIEW_HEIGHT = 224
+const PREVIEW_PADDING = 24
 
-function ThumbnailFrame({ children }: { readonly children: React.ReactNode }) {
-  return <div className={`flex ${THUMBNAIL_BOX} items-center justify-center rounded-lg bg-muted p-2`}>{children}</div>
-}
-
-function ThumbnailError({ label }: { readonly label: string }) {
+function PreviewMessage({ label }: { readonly label: string }) {
   return (
-    <div
-      className={`flex ${THUMBNAIL_BOX} flex-col items-center justify-center gap-1.5 rounded-lg border border-border border-dashed bg-card p-4 text-center`}
-    >
+    <div className="flex flex-col items-center justify-center gap-1.5 text-center">
       <Icon icon={FileTextIcon} size="md" color="foregroundMuted" />
       <Text.H6 color="foregroundMuted">{label}</Text.H6>
     </div>
@@ -39,7 +34,8 @@ export function PdfPreview({
   downloadName,
   openHref,
 }: {
-  readonly url: string
+  /** Null until an inline blob has been turned into an object URL. */
+  readonly url: string | null
   readonly title: string
   readonly showThumbnail: boolean
   readonly open: boolean
@@ -52,6 +48,9 @@ export function PdfPreview({
   useMountEffect(() => {
     setMounted(true)
   })
+
+  const bandRef = useRef<HTMLButtonElement | null>(null)
+  const bandWidth = useElementWidth(bandRef, PREVIEW_PADDING)
 
   const { doc, status, error } = usePdfDocument(mounted ? url : null)
   const [firstPageSize, setFirstPageSize] = useState<PageSize | null>(null)
@@ -69,9 +68,11 @@ export function PdfPreview({
     }
   }, [doc])
 
-  const thumbnailScale = firstPageSize
-    ? Math.min(THUMBNAIL_WIDTH / firstPageSize.width, THUMBNAIL_HEIGHT / firstPageSize.height)
-    : null
+  // Contain rather than fill: a landscape page must not be cropped to the band height.
+  const previewScale =
+    firstPageSize && bandWidth > 0
+      ? Math.min(bandWidth / firstPageSize.width, (PREVIEW_HEIGHT - PREVIEW_PADDING) / firstPageSize.height)
+      : null
 
   const viewer = doc ? (
     <PdfViewer
@@ -89,27 +90,25 @@ export function PdfPreview({
         // Redundant click target for the card's "Open PDF preview" action, so it stays out of the
         // tab order and is not announced twice.
         <button
+          ref={bandRef}
           type="button"
           onClick={() => onOpenChange(true)}
           tabIndex={-1}
           aria-hidden="true"
-          className="rounded-lg"
+          className="flex w-full items-center justify-center overflow-hidden bg-muted"
+          style={{ height: PREVIEW_HEIGHT }}
         >
           {status === "error" ? (
-            <ThumbnailError label={error?.label ?? "PDF unavailable"} />
+            <PreviewMessage label={error?.label ?? "PDF unavailable"} />
+          ) : doc && previewScale ? (
+            <div className="relative">
+              <PdfPageCanvas doc={doc} pageNumber={1} scale={previewScale} label={`First page of ${title}`} />
+              <span className="absolute right-1 bottom-1 rounded bg-background/90 px-1.5 py-0.5 backdrop-blur">
+                <Text.H6 color="foregroundMuted">{`1 / ${doc.numPages}`}</Text.H6>
+              </span>
+            </div>
           ) : (
-            <ThumbnailFrame>
-              {doc && thumbnailScale ? (
-                <div className="relative">
-                  <PdfPageCanvas doc={doc} pageNumber={1} scale={thumbnailScale} label={`First page of ${title}`} />
-                  <span className="absolute right-1 bottom-1 rounded bg-background/90 px-1.5 py-0.5 backdrop-blur">
-                    <Text.H6 color="foregroundMuted">{`1 / ${doc.numPages}`}</Text.H6>
-                  </span>
-                </div>
-              ) : (
-                <Skeleton className="h-full w-full" />
-              )}
-            </ThumbnailFrame>
+            <Skeleton className="h-full w-full rounded-none" />
           )}
         </button>
       ) : null}
@@ -123,7 +122,7 @@ export function PdfPreview({
         scrollable={false}
         title={title}
       >
-        {status === "error" ? <ThumbnailError label={error?.label ?? "PDF unavailable"} /> : viewer}
+        {status === "error" ? <PreviewMessage label={error?.label ?? "PDF unavailable"} /> : viewer}
       </Modal>
     </>
   )

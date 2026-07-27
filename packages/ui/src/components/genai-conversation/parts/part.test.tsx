@@ -25,6 +25,8 @@ describe("Part media / file rendering", () => {
     expect(markup).toContain('aria-label="Open PDF preview"')
     expect(markup).not.toContain("<canvas")
     expect(markup).not.toContain("blob:")
+    // The preview is a header inside the file card, not a second card beside it.
+    expect(markup.match(/max-w-md/g)).toHaveLength(1)
   })
 
   it("still renders real image blobs as images", () => {
