@@ -34,6 +34,7 @@ import {
   buildProviderFlaggerOutputSchema,
   classifyTraceForFlaggerUseCase,
   normalizeSystemPromptForCacheKey,
+  redactPersonalDataFromText,
 } from "./run-flagger.ts"
 
 const INPUT = {
@@ -202,6 +203,20 @@ describe("normalizeSystemPromptForCacheKey", () => {
     const prompt = "Ticket 4821 assigned to case a1b2c3d4e5f60718."
 
     expect(normalizeSystemPromptForCacheKey(prompt)).toBe("Ticket <num> assigned to case <hex>.")
+  })
+})
+
+describe("redactPersonalDataFromText", () => {
+  it("redacts emails and E.164 / NANP phone numbers from extractor input", () => {
+    const text = "AgentMail vlad-ai@agentmail.to; BUSINESS number ONLY +17322174739; also call (732) 217-4739"
+
+    expect(redactPersonalDataFromText(text)).toBe("AgentMail <email>; BUSINESS number ONLY <phone>; also call <phone>")
+  })
+
+  it("leaves non-contact agent role text intact", () => {
+    const text = "Hermes Agent with persistent memory and mandatory tool use."
+
+    expect(redactPersonalDataFromText(text)).toBe(text)
   })
 })
 
@@ -437,6 +452,62 @@ describe("runFlaggerUseCase", () => {
     expect(calls.generate[1].prompt).toContain("EVALUATED AGENT CONTEXT")
     expect(calls.generate[1].prompt).toContain("dashboard design assistant")
     expect(calls.generate[1].prompt).not.toContain("Detailed rubric")
+  })
+
+  it("redacts personal data from instruction-extractor input and leaked agentContext", async () => {
+    const longSystemPrompt = [
+      "You are Hermes Agent with persistent memory and mandatory tool use.",
+      "Agent channels: AgentMail vlad-ai@agentmail.to; BUSINESS number ONLY +17322174739.",
+      "Configured for user Vlad Tseytkin.",
+      "Detailed rubric. ".repeat(400),
+    ].join(" ")
+    const systemInstructions = [{ type: "text", content: longSystemPrompt }] satisfies TraceDetail["systemInstructions"]
+    const { calls, layer: aiLayer } = createFakeAI({
+      generate: <T>(input: GenerateInput<T>) => {
+        if (input.system.includes("You extract agent context")) {
+          return Effect.succeed({
+            object: {
+              understood: true,
+              agentContext:
+                "Hermes Agent configured for Vlad Tseytkin with AgentMail (vlad-ai@agentmail.to) and AgentPhone (+17322174739).",
+            } as T,
+            tokens: 20,
+            duration: 90_000_000,
+          })
+        }
+
+        return Effect.succeed({ object: { matched: false } as T, tokens: 20, duration: 90_000_000 })
+      },
+    })
+
+    const result = await Effect.runPromise(
+      classifyTraceForFlaggerUseCase({
+        organizationId: INPUT.organizationId,
+        projectId: INPUT.projectId,
+        traceId: INPUT.traceId,
+        flaggerSlug: "laziness",
+        trace: makeTraceDetail(
+          [
+            { role: "user", parts: [{ type: "text", content: "Finish the task." }] },
+            { role: "assistant", parts: [{ type: "text", content: "Done." }] },
+          ],
+          [],
+          systemInstructions,
+        ),
+      }).pipe(Effect.provide(Layer.mergeAll(aiLayer, defaultCacheLayer))),
+    )
+
+    expect(result).toEqual({ matched: false })
+    expect(calls.generate[0].system).toContain("Do not copy personal identifiers")
+    expect(calls.generate[0].prompt).toContain("<email>")
+    expect(calls.generate[0].prompt).toContain("<phone>")
+    expect(calls.generate[0].prompt).not.toContain("vlad-ai@agentmail.to")
+    expect(calls.generate[0].prompt).not.toContain("+17322174739")
+    expect(calls.generate[1].prompt).toContain("Hermes Agent")
+    expect(calls.generate[1].prompt).toContain("<email>")
+    expect(calls.generate[1].prompt).toContain("<phone>")
+    expect(calls.generate[1].prompt).not.toContain("vlad-ai@agentmail.to")
+    expect(calls.generate[1].prompt).not.toContain("+17322174739")
   })
 
   it("falls back to prompt excerpts when the extractor returns understood=true without context", async () => {
