@@ -440,7 +440,7 @@ Plus `logger.warn` when `oversizedFields > 0` or when pseudonymization degraded 
 
 When `identities === "pseudonymize"`, replace `userId` and `userEmail` with:
 
-```
+```text
 anon_${hmacSha256Hex(secret, `${organizationId}:${value}`).slice(0, 16)}
 ```
 
@@ -642,7 +642,7 @@ Follow the layering in the testing skill: pure unit tests in the domain, PGlite/
 
 ---
 
-## Tasks
+## 11. Tasks
 
 > **Status legend**: `[ ] pending`, `[~] in progress`, `[x] complete`
 
