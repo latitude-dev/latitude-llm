@@ -15,12 +15,12 @@ import {
 import { Effect } from "effect"
 import type { SpanDetail } from "../entities/span.ts"
 import { RedactionError, SpanDecodingError } from "../errors.ts"
-import { redactSpans, type SpanRedactionSummary } from "../redaction/redact-spans.ts"
-import { totalRedactionCount } from "../redaction/redact-text.ts"
 import { decodeOtlpProtobuf } from "../otlp/proto.ts"
 import { transformOtlpToSpans } from "../otlp/transform.ts"
 import type { OtlpExportTraceServiceRequest } from "../otlp/types.ts"
 import { SpanRepository } from "../ports/span-repository.ts"
+import { redactSpans, type SpanRedactionSummary } from "../redaction/redact-spans.ts"
+import { totalRedactionCount } from "../redaction/redact-text.ts"
 
 export interface ProcessIngestedSpansInput {
   readonly organizationId: OrganizationId

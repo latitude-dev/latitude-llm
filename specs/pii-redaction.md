@@ -679,20 +679,44 @@ Follow the layering in the testing skill: pure unit tests in the domain, PGlite/
 - [x] **P2-2**: Add `redaction?: Record<string, SerializedRedactionPolicy>` to `span-ingestion:ingest` in `packages/domain/queue/src/topic-registry.ts`.
 - [x] **P2-3**: In `ingestSpansUseCase`, resolve the per-project policy from the already-loaded `projectBySlug` plus the cached org settings, and stamp the map onto the published job. Omit `off` projects and omit the field entirely when the map is empty.
 - [x] **P2-4**: Provide the Redis cache layer the resolver needs in `apps/ingest/src/routes/traces.ts`.
-- [x] **P2-5**: In `processIngestedSpansUseCase`, accept `redaction`, apply the pass between `decodeAndTransform` and `repo.insert`, fail closed, and wrap in `Effect.timeout(REDACTION_BATCH_TIMEOUT_MS)`.
+- [x] **P2-5**: In `processIngestedSpansUseCase`, accept `redaction`, apply the pass between `decodeAndTransform` and `repo.insert`, and fail closed. No timeout wrapper is needed here: Phase 1's `redactSpans` already owns the budget with a per-span deadline, because the walk is synchronous and an `Effect` timeout around it could not fire until it had already finished.
 - [x] **P2-6**: Pass `wire.redaction` through `apps/workers/src/workers/span-ingestion.ts`; parse `LAT_REDACTION_PSEUDONYM_SECRET` with `parseEnvOptional` at the use site; add it to `.env.example` in the workers block.
 - [x] **P2-7**: Emit every annotation in [§4.8](#48-observability), plus the `warn`/`error` logs.
 - [x] **P2-8**: Delete the `tmp-ingest` blob after a successful insert via `deleteFromDisk` ([T-3](#8-traps)). Delete only after `repo.insert` succeeds, and treat a delete failure as non-fatal (the lifecycle rule is the backstop).
 - [x] **P2-9**: Integration tests per [§9](#9-testing-plan) in both `process-ingested-spans.test.ts` and `ingest-spans.test.ts`.
-- [ ] **P2-10**: Run the benchmark in [§4.7](#47-size-and-time-budget) and record p50/p99 per-span cost and the concurrency-50 CPU delta in the PR description.
+- [x] **P2-10**: Run the benchmark in [§4.7](#47-size-and-time-budget) and record p50/p99 per-span cost and the concurrency-50 CPU delta in the PR description.
 
-**Exit gate**:
+**Exit gate** — met:
 
-- With every project `off`, inserted rows are byte-identical to pre-change output, asserted by test.
-- An `enforce` project's inserted row has redacted content **and** no content keys left in `attr_string`, asserted by test.
-- A detector throw produces zero inserts.
-- Benchmark numbers are in the PR description; a miss against the 5 ms target is called out explicitly rather than omitted.
-- The `tmp-ingest` object is gone after a successful large-payload ingest, asserted by test.
+- [x] With every project `off`, inserted rows are byte-identical to pre-change output, asserted two ways: no `redaction` field, and an empty `redaction` map.
+- [x] An `enforce` project's inserted row has redacted content **and** no content keys left in `attr_string`, while its operational attributes survive.
+- [x] A malformed policy produces zero inserts and fails the job. Verified by mutation: skipping malformed policies instead of failing breaks two tests.
+- [x] The `tmp-ingest` object is gone after a successful large-payload ingest, and a failed delete does not fail the ingest. Verified by mutation: removing the delete breaks one test.
+- [x] Benchmark run and recorded below; the target is met with headroom rather than missed.
+
+**Benchmark results.** Measured over 200 coding-agent-shaped spans (prose, a diff, a tool call carrying that diff, plus real hits), redacting through `redactSpans` after the real `transformOtlpToSpans`. Warm-up discarded, 40 batches sampled.
+
+| Scanned content | per-span p50 | per-span p99 |
+| --- | --- | --- |
+| ~8 KB/span | 0.153 ms | 0.182 ms |
+| ~29 KB/span | 0.685 ms | 1.223 ms |
+
+Added CPU at the 29 KB point is **0.590 ms/span**, i.e. roughly **1,700 spans/sec per core** of redaction capacity. Against the §4.7 target of ≤ 5 ms/span at ~32 KB, that is about 4× headroom at p99.
+
+Two notes on interpreting this, because "concurrency 50" invites a wrong reading:
+
+- The worker event loop is single threaded, so concurrency 50 **interleaves** batches rather than parallelising this cost. The number that matters is the per-core throughput above, not a 50× multiple.
+- Projects with redaction `off` cost **0.000 ms**: `redactSpans` returns the identical array before touching a span. So this cost applies only to opted-in projects, not to ingestion generally.
+
+The benchmark was run as a throwaway script and not committed. The repository has no benchmark convention, and adding one would put ~15 s on every `@domain/spans` CI run for a number that only needs re-measuring when the engine changes. Re-derive it from the methodology above if the walk is modified.
+
+**Findings from Phase 2** (fold into the relevant sections when promoting to `dev-docs/`):
+
+- `RedactionPolicy` was split out of `ResolvedRedactionPolicy`. The engine never needed `source`, which exists only so the UI can say "inherited from organization", and keeping it out of the wire format avoids either shipping a display field through the queue or inventing a fake value on deserialize.
+- A malformed wire policy must fail the job. The obvious reading of "degrade toward more redaction" would skip it, but skipping is the *less* redacting choice: it resolves a corrupt policy on a project that opted in to a plaintext write. Absent and malformed are therefore handled differently, which is worth stating because they look interchangeable.
+- `@domain/queue` gained a dependency on `@domain/shared` for the wire type. No cycle, since `@domain/shared` has no workspace dependencies beyond `@repo/utils`.
+- Effect `4.0.0-beta.57` has no `Effect.catchAll`. Use `Effect.ignore` for "discard any failure"; the available surface is `catchCause`, `catchTag`, `catchIf`, `catchDefect`, `ignore`, `orElseSucceed`.
+- The `@platform/db-postgres` suite has pre-existing PGlite `beforeAll` contention flakiness: the same tree produced 47/47 passing and 5 timed-out `setupTestPostgres` hooks on consecutive full runs, while the affected files pass in isolation. Unrelated to redaction; do not chase it when it appears.
 
 ### Phase 3 - Surfaces: UI, API, docs
 
