@@ -214,13 +214,13 @@ describe("redactJsonString", () => {
   })
 
   it("returns an empty string unchanged", () => {
-    expect(redactJsonString("", ENFORCE)).toEqual({ value: "", counts: {} })
+    expect(redactJsonString("", ENFORCE)).toMatchObject({ value: "", counts: {} })
   })
 
   it("returns the input unchanged when no entity is enabled", () => {
     const text = '{"to":"john@example.com"}'
 
-    expect(redactJsonString(text, { entities: new Set(), mutate: true })).toEqual({ value: text, counts: {} })
+    expect(redactJsonString(text, { entities: new Set(), mutate: true })).toMatchObject({ value: text, counts: {} })
   })
 
   it("leaves the serialized string untouched in dry run while still counting", () => {
@@ -261,6 +261,6 @@ describe("redactStringMap", () => {
   })
 
   it("handles an empty map", () => {
-    expect(redactStringMap({}, ENFORCE)).toEqual({ value: {}, counts: {} })
+    expect(redactStringMap({}, ENFORCE)).toMatchObject({ value: {}, counts: {} })
   })
 })

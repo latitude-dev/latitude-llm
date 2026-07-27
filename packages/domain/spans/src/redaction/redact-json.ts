@@ -1,10 +1,25 @@
 import type { RedactionEntity } from "@domain/shared"
 import { REDACTION_SKIP_KEYS } from "./labels.ts"
-import { countRedactions, mergeRedactionCounts, type RedactionCounts, redactText } from "./redact-text.ts"
+import { mergeRedactionCounts, type RedactionCounts, redactLeaf } from "./redact-text.ts"
 
 interface JsonRedactionResult<T> {
   readonly value: T
   readonly counts: RedactionCounts
+  readonly scan: ScanTally
+}
+
+export interface ScanTally {
+  leaves: number
+  chars: number
+  oversized: number
+}
+
+export const emptyScanTally = (): ScanTally => ({ leaves: 0, chars: 0, oversized: 0 })
+
+export const mergeScanTally = (target: ScanTally, source: ScanTally): void => {
+  target.leaves += source.leaves
+  target.chars += source.chars
+  target.oversized += source.oversized
 }
 
 export interface JsonRedactionOptions {
@@ -38,27 +53,27 @@ const isSkippedPart = (value: Record<string, unknown>): boolean =>
  */
 export function redactJsonValue<T>(value: T, options: JsonRedactionOptions): JsonRedactionResult<T> {
   const counts: RedactionCounts = {}
-  const walked = walk(value, options, counts)
+  const scan = emptyScanTally()
+  const walked = walk(value, options, counts, scan)
 
-  return { value: walked as T, counts }
+  return { value: walked as T, counts, scan }
 }
 
-function walk(value: unknown, options: JsonRedactionOptions, counts: RedactionCounts): unknown {
+function walk(value: unknown, options: JsonRedactionOptions, counts: RedactionCounts, scan: ScanTally): unknown {
   if (typeof value === "string") {
-    if (!options.mutate) {
-      mergeRedactionCounts(counts, countRedactions(value, options.entities))
-      return value
-    }
+    const outcome = redactLeaf(value, options.entities, options.mutate)
+    mergeRedactionCounts(counts, outcome.counts)
+    scan.leaves += 1
+    scan.chars += outcome.scannedChars
+    if (outcome.oversized) scan.oversized += 1
 
-    const result = redactText(value, options.entities)
-    mergeRedactionCounts(counts, result.counts)
-    return result.text
+    return outcome.text
   }
 
   if (Array.isArray(value)) {
     let changed = false
     const next = value.map((item) => {
-      const walkedItem = walk(item, options, counts)
+      const walkedItem = walk(item, options, counts, scan)
       if (walkedItem !== item) changed = true
       return walkedItem
     })
@@ -77,7 +92,7 @@ function walk(value: unknown, options: JsonRedactionOptions, counts: RedactionCo
         continue
       }
 
-      const walkedEntry = walk(entry, options, counts)
+      const walkedEntry = walk(entry, options, counts, scan)
       if (walkedEntry !== entry) changed = true
       next[key] = walkedEntry
     }
@@ -98,20 +113,23 @@ function walk(value: unknown, options: JsonRedactionOptions, counts: RedactionCo
  * as `"\"hi\""` and corrupt the field.
  */
 export function redactJsonString(value: string, options: JsonRedactionOptions): JsonRedactionResult<string> {
-  if (value === "" || options.entities.size === 0) return { value, counts: {} }
+  if (value === "" || options.entities.size === 0) return { value, counts: {}, scan: emptyScanTally() }
 
   const parsed = tryParseJsonContainer(value)
   if (parsed === undefined) {
-    if (!options.mutate) return { value, counts: countRedactions(value, options.entities) }
+    const outcome = redactLeaf(value, options.entities, options.mutate)
 
-    const result = redactText(value, options.entities)
-    return { value: result.text, counts: result.counts }
+    return {
+      value: outcome.text,
+      counts: outcome.counts,
+      scan: { leaves: 1, chars: outcome.scannedChars, oversized: outcome.oversized ? 1 : 0 },
+    }
   }
 
   const walked = redactJsonValue(parsed, options)
-  if (!options.mutate) return { value, counts: walked.counts }
+  if (!options.mutate) return { value, counts: walked.counts, scan: walked.scan }
 
-  return { value: JSON.stringify(walked.value), counts: walked.counts }
+  return { value: JSON.stringify(walked.value), counts: walked.counts, scan: walked.scan }
 }
 
 const tryParseJsonContainer = (value: string): unknown => {
@@ -132,19 +150,17 @@ export function redactStringMap(
   options: JsonRedactionOptions,
 ): JsonRedactionResult<Record<string, string>> {
   const counts: RedactionCounts = {}
+  const scan = emptyScanTally()
   const next: Record<string, string> = {}
 
   for (const [key, value] of Object.entries(map)) {
-    if (!options.mutate) {
-      mergeRedactionCounts(counts, countRedactions(value, options.entities))
-      next[key] = value
-      continue
-    }
-
-    const result = redactText(value, options.entities)
-    mergeRedactionCounts(counts, result.counts)
-    next[key] = result.text
+    const outcome = redactLeaf(value, options.entities, options.mutate)
+    mergeRedactionCounts(counts, outcome.counts)
+    scan.leaves += 1
+    scan.chars += outcome.scannedChars
+    if (outcome.oversized) scan.oversized += 1
+    next[key] = outcome.text
   }
 
-  return { value: next, counts }
+  return { value: next, counts, scan }
 }

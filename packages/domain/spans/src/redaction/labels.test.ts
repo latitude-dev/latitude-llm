@@ -4,7 +4,7 @@ import {
   OVERSIZED_FIELD_PLACEHOLDER,
   REDACTED_IDENTITY_PLACEHOLDER,
   REDACTION_BATCH_TIMEOUT_MS,
-  REDACTION_MAX_FIELD_BYTES,
+  REDACTION_MAX_FIELD_CHARS,
   REDACTION_SKIP_KEYS,
   redactionPlaceholder,
 } from "./labels.ts"
@@ -42,8 +42,8 @@ describe("redaction constants", () => {
     expect(OVERSIZED_FIELD_PLACEHOLDER).not.toBe(REDACTED_IDENTITY_PLACEHOLDER)
   })
 
-  it("caps field size generously enough that only outsized payloads trip it", () => {
-    expect(REDACTION_MAX_FIELD_BYTES).toBe(1_000_000)
+  it("caps leaf size generously enough that only outsized payloads trip it", () => {
+    expect(REDACTION_MAX_FIELD_CHARS).toBe(1_000_000)
   })
 
   it("allows a batch far longer than a synchronous export path would", () => {

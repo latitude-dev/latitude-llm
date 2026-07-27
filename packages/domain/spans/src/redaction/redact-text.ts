@@ -1,6 +1,6 @@
 import type { RedactionEntity } from "@domain/shared"
 import { findRedactionMatches, type RedactionMatch } from "./detectors.ts"
-import { redactionPlaceholder } from "./labels.ts"
+import { OVERSIZED_FIELD_PLACEHOLDER, REDACTION_MAX_FIELD_CHARS, redactionPlaceholder } from "./labels.ts"
 
 export type RedactionCounts = Partial<Record<RedactionEntity, number>>
 
@@ -70,6 +70,43 @@ export function redactText(text: string, entities: ReadonlySet<RedactionEntity>)
   }
 
   return { text: redacted, counts: countByEntity(accepted) }
+}
+
+interface LeafRedactionOutcome {
+  readonly text: string
+  readonly counts: RedactionCounts
+  readonly oversized: boolean
+  readonly scannedChars: number
+}
+
+/**
+ * The single leaf-level primitive. Every path that touches a string (the JSON
+ * walk, attribute and metadata maps, plain string columns) goes through this, so
+ * the size cap and the dry-run contract cannot diverge between them.
+ */
+export function redactLeaf(
+  text: string,
+  entities: ReadonlySet<RedactionEntity>,
+  mutate: boolean,
+): LeafRedactionOutcome {
+  if (text === "" || entities.size === 0) return { text, counts: {}, oversized: false, scannedChars: 0 }
+
+  if (text.length > REDACTION_MAX_FIELD_CHARS) {
+    return {
+      text: mutate ? OVERSIZED_FIELD_PLACEHOLDER : text,
+      counts: {},
+      oversized: true,
+      scannedChars: 0,
+    }
+  }
+
+  if (!mutate) {
+    return { text, counts: countRedactions(text, entities), oversized: false, scannedChars: text.length }
+  }
+
+  const result = redactText(text, entities)
+
+  return { text: result.text, counts: result.counts, oversized: false, scannedChars: text.length }
 }
 
 export function mergeRedactionCounts(target: RedactionCounts, source: RedactionCounts): void {
