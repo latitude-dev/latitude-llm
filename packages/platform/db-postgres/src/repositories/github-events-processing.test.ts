@@ -282,6 +282,60 @@ describe("processGithubPullRequestUseCase", () => {
     )
     expect((await signalRow("LAT-AB12"))?.resolvedAt).toBeNull()
   })
+
+  it("unresolves via revert convention when push absorbs an applied commit reference first", async () => {
+    await inOrg(
+      processGithubPullRequestUseCase(
+        prInput({
+          integrationId,
+          deliveryId: "d-merge",
+          action: "closed",
+          state: "closed",
+          merged: true,
+          mergeCommitSha: "merge-sha-1",
+        }),
+      ),
+    )
+    expect((await signalRow("LAT-AB12"))?.resolvedAt).not.toBeNull()
+
+    await inOrg(
+      processGithubPushUseCase(
+        pushInput({
+          integrationId,
+          deliveryId: "push-revert",
+          after: "merge-sha-2",
+          commits: [
+            {
+              id: "merge-sha-2",
+              message: 'Revert "Fixes LAT-AB12"',
+              timestamp: "2026-06-01T02:00:00.000Z",
+              authorUsername: "octocat",
+              url: "https://github.com/acme/app/commit/merge-sha-2",
+            },
+          ],
+        }),
+      ),
+    )
+
+    await inOrg(
+      processGithubPullRequestUseCase(
+        prInput({
+          integrationId,
+          deliveryId: "d-revert",
+          prNumber: 8,
+          title: "Revert the fix",
+          body: "Reverts acme/app#7",
+          action: "closed",
+          state: "closed",
+          merged: true,
+          mergeCommitSha: "merge-sha-2",
+          headSha: "head-sha-2",
+          htmlUrl: "https://github.com/acme/app/pull/8",
+        }),
+      ),
+    )
+    expect((await signalRow("LAT-AB12"))?.resolvedAt).toBeNull()
+  })
 })
 
 describe("processGithubPushUseCase", () => {
