@@ -717,6 +717,11 @@ The benchmark was run as a throwaway script and not committed. The repository ha
 - `@domain/queue` gained a dependency on `@domain/shared` for the wire type. No cycle, since `@domain/shared` has no workspace dependencies beyond `@repo/utils`.
 - Effect `4.0.0-beta.57` has no `Effect.catchAll`. Use `Effect.ignore` for "discard any failure"; the available surface is `catchCause`, `catchTag`, `catchIf`, `catchDefect`, `ignore`, `orElseSucceed`.
 - The `@platform/db-postgres` suite has pre-existing PGlite `beforeAll` contention flakiness: the same tree produced 47/47 passing and 5 timed-out `setupTestPostgres` hooks on consecutive full runs, while the affected files pass in isolation. Unrelated to redaction; do not chase it when it appears.
+- **The single-write-path claim is verified structurally, not just by test.** `spans` has exactly one writer (`SpanRepository.insert`, called only from `processIngestedSpansUseCase`), the table is written from exactly one place in the ClickHouse adapter, and `span-ingestion:ingest` has exactly one publisher and one consumer. Seed tooling POSTs to `/v1/traces` rather than writing directly, so it traverses the same path. Re-check these four facts if redaction ever appears to be bypassed:
+  - `grep -rn 'table: "spans"'` → only `span-repository.ts`
+  - `grep -rn 'repo.insert'` → only `process-ingested-spans.ts`
+  - `grep -rn '"span-ingestion"'` → only `ingest-spans.ts` (publish) and the worker (subscribe)
+  - `grep -rn 'v1/traces' tools/live-seeds` → seeds use the HTTP boundary
 
 ### Phase 3 - Surfaces: UI, API, docs
 
