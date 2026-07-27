@@ -656,7 +656,7 @@ Follow the layering in the testing skill: pure unit tests in the domain, PGlite/
 
 **Exit gate** — met:
 
-- [x] `pnpm --filter @domain/spans test` (1206 tests) and `pnpm --filter @domain/shared test` (168) pass. `pnpm typecheck` clean across all 90 packages. `pnpm knip` and `pnpm format` clean.
+- [x] `pnpm --filter @domain/spans test` (1208 tests) and `pnpm --filter @domain/shared test` (168) pass. `pnpm typecheck` clean across all 90 packages. `pnpm knip` and `pnpm format` clean.
 - [x] Every entity in `REDACTION_ENTITIES` has positive vectors and, where immunity is achievable, negative vectors. `ip_address` is the exception and is pinned as such: a test asserts it *does* match version strings, which is the reason it is off by default. Asserting immunity there would have been false.
 - [x] `isContentAttributeKey` covered for all eight vendor parsers, with vectors derived from the parsers' own declarations rather than restated in the test.
 - [x] Diff is inert: no non-test file outside `src/redaction/` imports the module, verified by grep.
