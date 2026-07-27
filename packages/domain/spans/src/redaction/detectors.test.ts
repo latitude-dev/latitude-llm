@@ -247,13 +247,13 @@ describe("entities disabled by default", () => {
    * string are the same string. Pinning the collision keeps the default honest
    * rather than merely asserted.
    */
-  it.each(["upgraded to 1.2.3.4", "schema version 10.0.0.1"])(
-    "would redact the version string in %s if ip_address were enabled",
-    (text) => {
-      expect(detects(text, "ip_address")).toBe(true)
-      expect(findRedactionMatches(text, only("email", "phone", "credit_card", "iban", "us_ssn", "secret"))).toEqual([])
-    },
-  )
+  it.each([
+    "upgraded to 1.2.3.4",
+    "schema version 10.0.0.1",
+  ])("would redact the version string in %s if ip_address were enabled", (text) => {
+    expect(detects(text, "ip_address")).toBe(true)
+    expect(findRedactionMatches(text, only("email", "phone", "credit_card", "iban", "us_ssn", "secret"))).toEqual([])
+  })
 })
 
 describe("coding agent tool output", () => {
