@@ -9,10 +9,10 @@ import {
   type RepositoryError,
   resolveRedactionPolicy,
   type SerializedRedactionPolicy,
-  serializeRedactionPolicy,
   type SqlClient,
   StorageDisk,
   type StorageError,
+  serializeRedactionPolicy,
 } from "@domain/shared"
 import { base64Encode } from "@repo/utils"
 import { Effect } from "effect"
@@ -126,9 +126,7 @@ function buildRedactionPolicies(
   const policies: Record<string, SerializedRedactionPolicy> = {}
 
   for (const project of projects) {
-    const serialized = serializeRedactionPolicy(
-      resolveRedactionPolicy({ organization, project: project.settings }),
-    )
+    const serialized = serializeRedactionPolicy(resolveRedactionPolicy({ organization, project: project.settings }))
     if (serialized) policies[project.id as string] = serialized
   }
 

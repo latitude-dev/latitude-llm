@@ -8,7 +8,7 @@ import { emptyScanTally, mergeScanTally } from "./redact-json.ts"
 import { collectIdentityValues, type PseudonymLookup, redactSpanDetail } from "./redact-span.ts"
 import { mergeRedactionCounts, type RedactionCounts } from "./redact-text.ts"
 
-interface SpanRedactionSummary {
+export interface SpanRedactionSummary {
   readonly counts: RedactionCounts
   readonly enforceSpans: number
   readonly dryRunSpans: number

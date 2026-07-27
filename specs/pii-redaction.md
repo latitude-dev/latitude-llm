@@ -679,11 +679,11 @@ Follow the layering in the testing skill: pure unit tests in the domain, PGlite/
 - [x] **P2-2**: Add `redaction?: Record<string, SerializedRedactionPolicy>` to `span-ingestion:ingest` in `packages/domain/queue/src/topic-registry.ts`.
 - [x] **P2-3**: In `ingestSpansUseCase`, resolve the per-project policy from the already-loaded `projectBySlug` plus the cached org settings, and stamp the map onto the published job. Omit `off` projects and omit the field entirely when the map is empty.
 - [x] **P2-4**: Provide the Redis cache layer the resolver needs in `apps/ingest/src/routes/traces.ts`.
-- [ ] **P2-5**: In `processIngestedSpansUseCase`, accept `redaction`, apply the pass between `decodeAndTransform` and `repo.insert`, fail closed, and wrap in `Effect.timeout(REDACTION_BATCH_TIMEOUT_MS)`.
-- [ ] **P2-6**: Pass `wire.redaction` through `apps/workers/src/workers/span-ingestion.ts`; parse `LAT_REDACTION_PSEUDONYM_SECRET` with `parseEnvOptional` at the use site; add it to `.env.example` in the workers block.
-- [ ] **P2-7**: Emit every annotation in [§4.8](#48-observability), plus the `warn`/`error` logs.
-- [ ] **P2-8**: Delete the `tmp-ingest` blob after a successful insert via `deleteFromDisk` ([T-3](#8-traps)). Delete only after `repo.insert` succeeds, and treat a delete failure as non-fatal (the lifecycle rule is the backstop).
-- [ ] **P2-9**: Integration tests per [§9](#9-testing-plan) in both `process-ingested-spans.test.ts` and `ingest-spans.test.ts`.
+- [x] **P2-5**: In `processIngestedSpansUseCase`, accept `redaction`, apply the pass between `decodeAndTransform` and `repo.insert`, fail closed, and wrap in `Effect.timeout(REDACTION_BATCH_TIMEOUT_MS)`.
+- [x] **P2-6**: Pass `wire.redaction` through `apps/workers/src/workers/span-ingestion.ts`; parse `LAT_REDACTION_PSEUDONYM_SECRET` with `parseEnvOptional` at the use site; add it to `.env.example` in the workers block.
+- [x] **P2-7**: Emit every annotation in [§4.8](#48-observability), plus the `warn`/`error` logs.
+- [x] **P2-8**: Delete the `tmp-ingest` blob after a successful insert via `deleteFromDisk` ([T-3](#8-traps)). Delete only after `repo.insert` succeeds, and treat a delete failure as non-fatal (the lifecycle rule is the backstop).
+- [x] **P2-9**: Integration tests per [§9](#9-testing-plan) in both `process-ingested-spans.test.ts` and `ingest-spans.test.ts`.
 - [ ] **P2-10**: Run the benchmark in [§4.7](#47-size-and-time-budget) and record p50/p99 per-span cost and the concurrency-50 CPU delta in the PR description.
 
 **Exit gate**:

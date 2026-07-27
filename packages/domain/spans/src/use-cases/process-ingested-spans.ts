@@ -1,16 +1,22 @@
 import type { DomainEvent, EventsPublisher } from "@domain/events"
 import {
   type ChSqlClient,
+  deleteFromDisk,
+  deserializeRedactionPolicy,
   getFromDisk,
   type OrganizationId,
   ProjectId,
+  type RedactionPolicy,
   type RepositoryError,
+  type SerializedRedactionPolicy,
   StorageDisk,
   type StorageError,
 } from "@domain/shared"
 import { Effect } from "effect"
 import type { SpanDetail } from "../entities/span.ts"
-import { SpanDecodingError } from "../errors.ts"
+import { RedactionError, SpanDecodingError } from "../errors.ts"
+import { redactSpans, type SpanRedactionSummary } from "../redaction/redact-spans.ts"
+import { totalRedactionCount } from "../redaction/redact-text.ts"
 import { decodeOtlpProtobuf } from "../otlp/proto.ts"
 import { transformOtlpToSpans } from "../otlp/transform.ts"
 import type { OtlpExportTraceServiceRequest } from "../otlp/types.ts"
@@ -23,6 +29,13 @@ export interface ProcessIngestedSpansInput {
   readonly ingestedAt: Date
   readonly isSandbox?: boolean
   readonly retentionDays?: number
+  /**
+   * Per-project redaction policy stamped at the ingest boundary. Absent, or absent
+   * for a given project, means that project opted out.
+   */
+  readonly redaction?: Readonly<Record<string, SerializedRedactionPolicy>>
+  /** Absent degrades pseudonymized identities to full redaction rather than blocking ingestion. */
+  readonly pseudonymSecret?: string
   readonly traceUsage?: {
     readonly context?: {
       readonly planSlug: "free" | "pro" | "enterprise"
@@ -113,6 +126,66 @@ function decodeAndTransform(
   })
 }
 
+/**
+ * Redaction is destructive and non-retroactive, so these counts are the only way to
+ * answer "is it working" or "why did my content disappear" after the fact.
+ */
+function annotateRedaction(summary: SpanRedactionSummary): Effect.Effect<void> {
+  if (summary.enforceSpans === 0 && summary.dryRunSpans === 0) return Effect.void
+
+  return Effect.gen(function* () {
+    yield* Effect.annotateCurrentSpan("redaction.enforceSpans", summary.enforceSpans)
+    yield* Effect.annotateCurrentSpan("redaction.dryRunSpans", summary.dryRunSpans)
+    yield* Effect.annotateCurrentSpan("redaction.leavesScanned", summary.leavesScanned)
+    yield* Effect.annotateCurrentSpan("redaction.charsScanned", summary.charsScanned)
+    yield* Effect.annotateCurrentSpan("redaction.matches", totalRedactionCount(summary.counts))
+    yield* Effect.annotateCurrentSpan("redaction.droppedAttributeKeys", summary.droppedAttributeKeys)
+
+    for (const [entity, count] of Object.entries(summary.counts)) {
+      yield* Effect.annotateCurrentSpan(`redaction.matches.${entity}`, count)
+    }
+
+    if (summary.oversizedFields > 0) {
+      yield* Effect.annotateCurrentSpan("redaction.oversizedFields", summary.oversizedFields)
+      yield* Effect.logWarning("Redaction replaced oversized fields wholesale", {
+        oversizedFields: summary.oversizedFields,
+      })
+    }
+
+    if (summary.pseudonymizedIdentities > 0) {
+      yield* Effect.annotateCurrentSpan("redaction.pseudonymizedIdentities", summary.pseudonymizedIdentities)
+    }
+
+    if (summary.identityFallback) {
+      yield* Effect.annotateCurrentSpan("redaction.identityFallback", true)
+      yield* Effect.logError("Redaction fell back to redacting identities: no pseudonym secret is configured")
+    }
+  })
+}
+
+/**
+ * A present but malformed policy fails the job rather than being skipped. Skipping
+ * would resolve a corrupt policy on a project that opted in to a plaintext write,
+ * which is the one outcome redaction exists to prevent. An absent field is
+ * different and legitimate: it means no project opted in.
+ */
+function decodeRedactionPolicies(
+  wire: Readonly<Record<string, SerializedRedactionPolicy>> | undefined,
+): Effect.Effect<ReadonlyMap<string, RedactionPolicy>, RedactionError> {
+  if (!wire) return Effect.succeed(new Map())
+
+  const policies = new Map<string, RedactionPolicy>()
+  for (const [projectId, serialized] of Object.entries(wire)) {
+    const policy = deserializeRedactionPolicy(serialized)
+    if (!policy) {
+      return Effect.fail(new RedactionError({ reason: `malformed redaction policy for project ${projectId}` }))
+    }
+    policies.set(projectId, policy)
+  }
+
+  return Effect.succeed(policies)
+}
+
 export interface ProcessIngestedSpansDeps<TPublishError = unknown> {
   readonly eventsPublisher: EventsPublisher<TPublishError>
 }
@@ -123,14 +196,29 @@ export const processIngestedSpansUseCase =
     input: ProcessIngestedSpansInput,
   ): Effect.Effect<
     void,
-    SpanDecodingError | StorageError | RepositoryError | TPublishError,
+    SpanDecodingError | StorageError | RepositoryError | RedactionError | TPublishError,
     ChSqlClient | SpanRepository | StorageDisk
   > =>
     Effect.gen(function* () {
       yield* Effect.annotateCurrentSpan("organizationId", input.organizationId)
 
       const payload = yield* resolvePayload(input)
-      const spans = yield* decodeAndTransform(payload, input)
+      const transformed = yield* decodeAndTransform(payload, input)
+
+      // Redaction runs before the retention stamp and the insert, which makes it the
+      // single choke point for every content sink: `traces` and `sessions` are
+      // materialized views on `spans`, every other derived table re-reads `spans`,
+      // and `TracesIngested` has not fired yet.
+      const policyByProjectId = yield* decodeRedactionPolicies(input.redaction)
+      const redaction = yield* redactSpans({
+        spans: transformed,
+        organizationId: input.organizationId,
+        policyByProjectId,
+        pseudonymSecret: input.pseudonymSecret,
+      })
+      yield* annotateRedaction(redaction.summary)
+
+      const spans = redaction.spans
       const persistedSpans =
         input.retentionDays === undefined
           ? spans
@@ -145,6 +233,15 @@ export const processIngestedSpansUseCase =
 
       const repo = yield* SpanRepository
       yield* repo.insert(persistedSpans)
+
+      // The buffered payload holds unredacted content. It is dropped as soon as the
+      // spans are durable, so the object-store lifecycle rule is a backstop rather
+      // than the only bound — self-hosted disk backends have no lifecycle rule at
+      // all. A failed delete must not fail an already-successful ingest.
+      if (input.fileKey) {
+        const disk = yield* StorageDisk
+        yield* Effect.ignore(deleteFromDisk(disk, input.fileKey))
+      }
 
       // Spans in a single OTLP batch may now belong to different projects (per-span scoping).
       // Group by projectId so each TracesIngested event addresses one project at a time —
