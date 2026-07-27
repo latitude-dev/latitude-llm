@@ -240,8 +240,7 @@ export function resolveRedactionPolicy(input: {
   return {
     mode: project?.mode ?? org?.mode ?? REDACTION_SYSTEM_DEFAULTS.mode,
     entities: new Set(project?.entities ?? org?.entities ?? REDACTION_SYSTEM_DEFAULTS.entities),
-    redactMetadata:
-      project?.scopes?.metadata ?? org?.scopes?.metadata ?? REDACTION_SYSTEM_DEFAULTS.redactMetadata,
+    redactMetadata: project?.scopes?.metadata ?? org?.scopes?.metadata ?? REDACTION_SYSTEM_DEFAULTS.redactMetadata,
     identities: project?.identities ?? org?.identities ?? REDACTION_SYSTEM_DEFAULTS.identities,
     source: hasRedactionField(project) ? "project" : hasRedactionField(org) ? "organization" : "default",
   }

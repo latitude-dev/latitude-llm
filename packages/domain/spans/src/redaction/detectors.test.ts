@@ -1,0 +1,296 @@
+import { REDACTION_ENTITIES, type RedactionEntity } from "@domain/shared"
+import { describe, expect, it } from "vitest"
+import { findRedactionMatches, type RedactionMatch } from "./detectors.ts"
+
+const ALL_ENTITIES: ReadonlySet<RedactionEntity> = new Set(REDACTION_ENTITIES)
+
+const only = (...entities: RedactionEntity[]): ReadonlySet<RedactionEntity> => new Set(entities)
+
+const byPosition = (a: RedactionMatch, b: RedactionMatch): number => a.start - b.start || b.end - a.end
+
+/** Matched substrings for one entity, in document order. */
+const found = (text: string, entity: RedactionEntity): string[] =>
+  findRedactionMatches(text, only(entity))
+    .filter((match) => match.entity === entity)
+    .sort(byPosition)
+    .map((match) => text.slice(match.start, match.end))
+
+const detects = (text: string, entity: RedactionEntity): boolean => found(text, entity).length > 0
+
+describe("email detector", () => {
+  it.each([
+    "john.doe@example.com",
+    "a@b.co",
+    "user+tag@sub.domain.example.org",
+    "user_name@example-host.com",
+    "USER@EXAMPLE.COM",
+  ])("detects %s", (value) => {
+    expect(found(`contact ${value} today`, "email")).toEqual([value])
+  })
+
+  it("detects an email inside a git author line", () => {
+    expect(found("Author: John Doe <john@example.com>", "email")).toEqual(["john@example.com"])
+  })
+
+  it("does not swallow a trailing sentence period", () => {
+    expect(found("Email john@example.com.", "email")).toEqual(["john@example.com"])
+  })
+
+  it.each([
+    "@types/node",
+    "@babel/core is installed",
+    "run npm i @scope/pkg",
+    "react@18.2.0",
+    "eslint@8.0.0-alpha",
+    "node@lts",
+    "user@1.2.3.4",
+    "foo@bar",
+  ])("does not match %s", (value) => {
+    expect(detects(value, "email")).toBe(false)
+  })
+
+  it("rejects the package@1.2.beta shape by requiring a letter before the TLD", () => {
+    expect(detects("installed foo@1.2.beta", "email")).toBe(false)
+  })
+})
+
+describe("phone detector", () => {
+  it.each(["+14155552671", "+442071838750", "+919876543210"])("detects E.164 %s", (value) => {
+    expect(found(`call ${value} now`, "phone")).toEqual([value])
+  })
+
+  it.each(["(415) 555-2671", "415-555-2671", "415.555.2671", "415 555 2671"])("detects NANP %s", (value) => {
+    expect(found(`call ${value} now`, "phone")).toEqual([value])
+  })
+
+  it.each([
+    "2024-01-15",
+    "2024-01-15T10:30:00Z",
+    "192.168.1.100",
+    "1.2.3.4",
+    "10.0.0.255",
+    "localhost:3000",
+    "5551234567",
+    "order 1234567890 shipped",
+    "exit code 127",
+  ])("does not match %s", (value) => {
+    expect(detects(value, "phone")).toBe(false)
+  })
+
+  it("does not match a bare ten-digit id because it is indistinguishable from a numeric key", () => {
+    expect(detects('{"userId": 4155552671}', "phone")).toBe(false)
+  })
+})
+
+describe("credit_card detector", () => {
+  it.each([
+    "4111111111111111",
+    "4111 1111 1111 1111",
+    "4111-1111-1111-1111",
+    "5500005555555559",
+    "378282246310005",
+    "6011111111111117",
+  ])("detects %s", (value) => {
+    expect(found(`card ${value} charged`, "credit_card")).toEqual([value])
+  })
+
+  it("rejects a Luhn-invalid card number", () => {
+    expect(detects("card 4111111111111112 charged", "credit_card")).toBe(false)
+  })
+
+  it("rejects a Luhn-valid digit run with no issuer prefix", () => {
+    expect(detects("id 9999999999999995", "credit_card")).toBe(false)
+  })
+
+  // Both vectors are Luhn-valid, so only the issuer length gate can reject them.
+  it.each([
+    "41111111111111113",
+    "411111111111116",
+  ])("rejects Luhn-valid %s at a length Visa does not issue", (value) => {
+    expect(detects(`id ${value}`, "credit_card")).toBe(false)
+  })
+
+  it.each([
+    "1234567890123456789012",
+    "timestamp 1710590400200000000",
+    "3.14159265358979",
+    "0.000000000000001",
+  ])("does not match %s", (value) => {
+    expect(detects(value, "credit_card")).toBe(false)
+  })
+})
+
+describe("iban detector", () => {
+  it.each([
+    "GB82WEST12345698765432",
+    "DE89370400440532013000",
+    "FR1420041010050500013M02606",
+  ])("detects compact %s", (value) => {
+    expect(found(`iban ${value} ok`, "iban")).toEqual([value])
+  })
+
+  it("detects the four-group form", () => {
+    expect(found("iban GB82 WEST 1234 5698 7654 32 ok", "iban")).toEqual(["GB82 WEST 1234 5698 7654 32"])
+  })
+
+  it("rejects a checksum-invalid candidate", () => {
+    expect(detects("iban GB82WEST12345698765433 ok", "iban")).toBe(false)
+  })
+
+  it.each(["AWSACCESSKEYID123456", "CONSTANT_NAME_HERE", "ABCD1234EFGH5678IJKL"])("does not match %s", (value) => {
+    expect(detects(value, "iban")).toBe(false)
+  })
+})
+
+describe("us_ssn detector", () => {
+  it.each(["123-45-6789", "123 45 6789"])("detects %s", (value) => {
+    expect(found(`ssn ${value} ok`, "us_ssn")).toEqual([value])
+  })
+
+  it.each([
+    "000-45-6789",
+    "666-45-6789",
+    "900-45-6789",
+    "123-00-6789",
+    "123-45-0000",
+    "123456789",
+    "2024-01-15",
+    "1234-56-7890",
+  ])("does not match %s", (value) => {
+    expect(detects(value, "us_ssn")).toBe(false)
+  })
+})
+
+describe("secret detector", () => {
+  it("detects an OpenAI style key", () => {
+    const key = "sk-proj-abc123DEF456ghi789JKL012mno345PQR678stu"
+    expect(found(`export OPENAI_API_KEY=${key}`, "secret")).toEqual([key])
+  })
+
+  it("detects an Anthropic style key", () => {
+    const key = "sk-ant-api03-abc123DEF456ghi789JKL012mno345PQR678stu"
+    expect(found(`key ${key} here`, "secret")).toEqual([key])
+  })
+
+  it.each([
+    "AKIAIOSFODNN7EXAMPLE",
+    "ASIAIOSFODNN7EXAMPLE",
+    "AIzaSyD-abc123DEF456ghi789JKL012mno345p",
+    "sk_live_abc123DEF456ghi789",
+    "xoxb-123456789012-abcDEF123456",
+    "ghp_abc123DEF456ghi789JKL012mno345PQR678stu9",
+    "github_pat_abc123DEF456ghi789JKL0",
+  ])("detects %s", (value) => {
+    expect(detects(`token ${value} end`, "secret")).toBe(true)
+  })
+
+  it("detects a JWT", () => {
+    const jwt =
+      "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMjM0NTY3ODkwIn0.dozjgNryP4J3jVmNHl0w5N_XgL0n3I9PlFUP0THsR8U"
+    expect(found(`Authorization: Bearer ${jwt}`, "secret")).toEqual([jwt])
+  })
+
+  it("detects a PEM private key block including its body", () => {
+    const pem = "-----BEGIN RSA PRIVATE KEY-----\nMIIBOgIBAAJBAKj34\nGkxFhD90vcNLYLI\n-----END RSA PRIVATE KEY-----"
+    expect(found(`config:\n${pem}\ndone`, "secret")).toEqual([pem])
+  })
+
+  it("does not match sk- prefixed CSS class names", () => {
+    expect(detects('<div class="sk-spinner-double-bounce-child">', "secret")).toBe(false)
+  })
+
+  it.each([
+    "sk-short",
+    "commit 0a1b2c3d4e5f60718293a4b5c6d7e8f901234567",
+    "npm install @scope/some-really-long-package-name-here",
+    "https://example.com/a/very/long/path/segment/that/goes/on",
+  ])("does not match %s", (value) => {
+    expect(detects(value, "secret")).toBe(false)
+  })
+})
+
+describe("entities disabled by default", () => {
+  it("detects ipv4 only when ip_address is enabled", () => {
+    expect(detects("host 192.168.1.100 up", "ip_address")).toBe(true)
+    expect(findRedactionMatches("host 192.168.1.100 up", only("email", "secret"))).toEqual([])
+  })
+
+  it("detects ipv6 in full and compressed forms", () => {
+    expect(detects("addr 2001:0db8:85a3:0000:0000:8a2e:0370:7334 up", "ip_address")).toBe(true)
+    expect(detects("addr 2001:db8::8a2e:370:7334 up", "ip_address")).toBe(true)
+  })
+
+  it("detects an ethereum address only when crypto_wallet is enabled", () => {
+    const address = "0x52908400098527886E0F7030069857D2E4169EE7"
+    expect(detects(`to ${address}`, "crypto_wallet")).toBe(true)
+    expect(findRedactionMatches(`to ${address}`, only("secret"))).toEqual([])
+  })
+
+  it("does not treat a git sha as a wallet when crypto_wallet is off", () => {
+    expect(findRedactionMatches("commit 0a1b2c3d4e5f60718293a4b5c6d7e8f901234567", ALL_ENTITIES)).toEqual([])
+  })
+})
+
+describe("coding agent tool output", () => {
+  const TOOL_OUTPUT = `
+diff --git a/src/index.ts b/src/index.ts
+index 0a1b2c3d4e5f60718293a4b5c6d7e8f901234567..f1e2d3c4b5a69788796a5b4c3d2e1f0987654321 100644
+--- a/src/index.ts
++++ b/src/index.ts
+@@ -1,4 +1,4 @@
+-import { version } from "./v1.2.3.js"
++import { version } from "./v1.2.4.js"
+ const PORT = 3000
+ const TIMEOUT_MS = 1710590400200
+ const HASH = "d41d8cd98f00b204e9800998ecf8427e"
+ const UUID = "3f2504e0-4f89-11d3-9a0c-0305e82c3301"
+ const BASE64 = "SGVsbG8gd29ybGQsIHRoaXMgaXMgYSB0ZXN0IHN0cmluZyE="
+ // released 2024-01-15, see semver 10.0.0.1
+`
+
+  it("finds nothing with the default entity set", () => {
+    const matches = findRedactionMatches(TOOL_OUTPUT, only("email", "phone", "credit_card", "iban", "us_ssn", "secret"))
+
+    expect(matches).toEqual([])
+  })
+
+  it("still finds a real secret embedded in the same output", () => {
+    const key = "sk-proj-abc123DEF456ghi789JKL012mno345PQR678stu"
+    expect(found(`${TOOL_OUTPUT}\nOPENAI_API_KEY=${key}\n`, "secret")).toEqual([key])
+  })
+})
+
+describe("findRedactionMatches", () => {
+  it("returns nothing when no entity is enabled", () => {
+    expect(findRedactionMatches("john@example.com +14155552671", new Set())).toEqual([])
+  })
+
+  it("returns matches from several entities in one pass", () => {
+    const matches = findRedactionMatches("john@example.com and +14155552671", ALL_ENTITIES)
+    const entities = new Set(matches.map((match) => match.entity))
+
+    expect(entities.has("email")).toBe(true)
+    expect(entities.has("phone")).toBe(true)
+  })
+
+  it("reports offsets that slice back to the matched text", () => {
+    const text = "reach me at john@example.com please"
+    const [match] = findRedactionMatches(text, only("email"))
+
+    expect(match).toBeDefined()
+    expect(text.slice(match?.start ?? 0, match?.end ?? 0)).toBe("john@example.com")
+  })
+
+  it("is repeatable across calls, so shared patterns keep no lastIndex state", () => {
+    const text = "a@b.co c@d.co"
+    const first = findRedactionMatches(text, only("email"))
+    const second = findRedactionMatches(text, only("email"))
+
+    expect(second).toEqual(first)
+    expect(first).toHaveLength(2)
+  })
+
+  it("finds every occurrence, not just the first", () => {
+    expect(found("a@b.co, c@d.co, e@f.co", "email")).toEqual(["a@b.co", "c@d.co", "e@f.co"])
+  })
+})

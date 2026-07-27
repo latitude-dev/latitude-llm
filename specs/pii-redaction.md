@@ -646,7 +646,7 @@ Follow the layering in the testing skill: pure unit tests in the domain, PGlite/
 ### Phase 1 - Redaction core (pure, unwired)
 
 - [x] **P1-1**: Add `redactionSettingSchema`, `organizationRedactionSettingSchema`, `REDACTION_MODES`, `REDACTION_ENTITIES`, `DEFAULT_REDACTION_ENTITIES`, `ResolvedRedactionPolicy`, and `resolveRedactionPolicy` to `packages/domain/shared/src/settings.ts`. Wire the new keys into `projectSettingsSchema` and `organizationSettingsSchema`. Do not touch `resolveSettingsCascade`.
-- [ ] **P1-2**: `redaction/labels.ts` and `redaction/detectors.ts` per [§5](#5-detector-specification), including Luhn and IBAN mod-97 helpers. No generic entropy detector.
+- [x] **P1-2**: `redaction/labels.ts` and `redaction/detectors.ts` per [§5](#5-detector-specification), including Luhn and IBAN mod-97 helpers. No generic entropy detector.
 - [ ] **P1-3**: `redaction/redact-text.ts` with overlap resolution per [§4.3](#43-policy-model).
 - [ ] **P1-4**: `redaction/redact-json.ts` structure-aware walk with skip-keys, `blob`/`file` skipping, and stringified-JSON handling.
 - [ ] **P1-5**: Per-parser content-key matchers in `packages/domain/spans/src/otlp/content/*`, composed into `isContentAttributeKey` in `content/index.ts` next to the existing dispatch table. Cover all eight vendor families.

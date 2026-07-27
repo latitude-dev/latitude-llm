@@ -3,10 +3,10 @@ import { describe, expect, it } from "vitest"
 import { OrganizationId, type ProjectId } from "./id.ts"
 import {
   DEFAULT_REDACTION_ENTITIES,
-  organizationSettingsSchema,
   type OrganizationSettings,
-  projectSettingsSchema,
+  organizationSettingsSchema,
   type ProjectSettings,
+  projectSettingsSchema,
   resolveRedactionPolicy,
   resolveSettings,
   resolveSettingsCascade,
