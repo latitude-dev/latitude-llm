@@ -5,15 +5,13 @@ import { existsSync } from "node:fs"
 const MAX_SIZE_BYTES = 500 * 1024
 const assetsDir = path.resolve(process.cwd(), ".output/public/assets")
 
-// Rolldown emits chunks as `.js`, but assets pulled in with `?url` keep their source extension,
-// and those are still client JS we ship. Both count against the budget.
+// `?url` script assets keep their source extension and still count against the client budget.
 const CLIENT_SCRIPT_EXTENSIONS = [".js", ".mjs"]
 
 // Chunks that are known to exceed the limit and are lazy-loaded on demand.
 const ALLOWED_OVERSIZE = new Set([
   "echarts",
-  // pdf.js ships a 1.2 MB pre-minified worker, copied verbatim by `?url`. It is fetched only when
-  // a PDF is opened and runs off the main thread, so it never enters the entry graph.
+  // The 1.2 MB pre-minified worker loads on demand and stays outside the entry graph.
   "pdf.worker.min",
 ])
 

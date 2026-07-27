@@ -7,11 +7,7 @@ const require_ = createRequire(import.meta.url)
 const pdfjsDir = path.dirname(require_.resolve("pdfjs-dist/package.json"))
 const pdfjsVersion = (require_("pdfjs-dist/package.json") as { version: string }).version
 
-/**
- * pdf.js fetches these by URL at render time (`cMapUrl`, `standardFontDataUrl`, `wasmUrl`,
- * `iccUrl`). Self-hosting has to work air-gapped, so they are served from our own origin rather
- * than the pdf.js CDN. Keep in sync with `documentAssetOptions` in @repo/ui.
- */
+// Keep these air-gapped assets in sync with `documentAssetOptions` in @repo/ui.
 const ASSET_DIRS = ["cmaps", "standard_fonts", "wasm", "iccs"] as const
 
 const MOUNT = `/pdfjs/${pdfjsVersion}/`

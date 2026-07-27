@@ -137,10 +137,7 @@ export default defineConfig({
               name: "tanstack-router",
             },
             {
-              // Base UI and Radix are the two largest vendors inside the `@repo/ui` barrel chunk,
-              // which sits within a few hundred bytes of the client-asset size budget. Peeling them
-              // into their own stable chunks keeps the barrel well under the limit and caches the
-              // primitives across deploys.
+              // Keep UI primitives out of the near-limit @repo/ui barrel chunk.
               test: /node_modules\/@base-ui\//,
               name: "base-ui",
             },
@@ -161,8 +158,7 @@ export default defineConfig({
               name: "echarts",
             },
             {
-              // Only reachable through the lazily-imported PDF viewer. Pinned to a stable chunk
-              // name so the bundle-size allowlist key never tracks a component filename.
+              // Keep the lazy pdf.js vendor under a stable name for bundle accounting.
               test: /node_modules\/pdfjs-dist\//,
               name: "pdfjs",
             },

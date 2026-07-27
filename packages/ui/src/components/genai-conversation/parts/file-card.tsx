@@ -107,6 +107,26 @@ function ActionLink({
   )
 }
 
+type FileCardProps = {
+  readonly fileName?: string | undefined
+  readonly mimeType?: string | null | undefined
+  readonly modality?: string | undefined
+  readonly fileId?: string | undefined
+  readonly sizeBytes?: number | undefined
+  readonly href?: string | undefined
+  readonly downloadDataUri?: string | undefined
+  readonly preview?: ReactNode | undefined
+} & (
+  | {
+      readonly onActivate: () => void
+      readonly activateLabel: string
+    }
+  | {
+      readonly onActivate?: undefined
+      readonly activateLabel?: undefined
+    }
+)
+
 export function FileCard({
   fileName,
   mimeType,
@@ -118,20 +138,7 @@ export function FileCard({
   preview,
   onActivate,
   activateLabel,
-}: {
-  readonly fileName?: string | undefined
-  readonly mimeType?: string | null | undefined
-  readonly modality?: string | undefined
-  readonly fileId?: string | undefined
-  readonly sizeBytes?: number | undefined
-  readonly href?: string | undefined
-  readonly downloadDataUri?: string | undefined
-  /** Optional visual header above the metadata row, for formats that can render their content. */
-  readonly preview?: ReactNode | undefined
-  /** Makes the whole card a click target. The built-in actions still take precedence. */
-  readonly onActivate?: (() => void) | undefined
-  readonly activateLabel?: string | undefined
-}) {
+}: FileCardProps) {
   const FileTypeIcon = fileIconForMime(mimeType, modality)
   const typeLabel = fileTypeLabel(mimeType, modality)
   const primary = fileName ?? typeLabel
@@ -186,10 +193,9 @@ export function FileCard({
 
   return (
     <div
-      className={cn(
-        "relative flex max-w-md flex-col overflow-hidden rounded-lg border border-border bg-card",
-        onActivate && "cursor-pointer transition-colors hover:bg-muted",
-      )}
+      className={cn("relative flex max-w-md flex-col overflow-hidden rounded-lg border border-border bg-card", {
+        "cursor-pointer transition-colors hover:bg-muted": Boolean(onActivate),
+      })}
     >
       {preview ? <div className="border-border border-b">{preview}</div> : null}
       <div className="flex items-center gap-3 px-3 py-2">
@@ -209,7 +215,9 @@ export function FileCard({
             </Text.Mono>
           ) : null}
         </div>
-        <div className={cn("flex shrink-0 items-center gap-1.5", onActivate && "relative z-1")}>{actions}</div>
+        <div className={cn("flex shrink-0 items-center gap-1.5", { "relative z-1": Boolean(onActivate) })}>
+          {actions}
+        </div>
       </div>
       {onActivate ? (
         <button

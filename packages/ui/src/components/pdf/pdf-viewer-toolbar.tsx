@@ -91,7 +91,7 @@ export function PdfViewerToolbar({
             target="_blank"
             rel="noopener noreferrer"
             aria-label="Open PDF in new tab"
-            className="flex h-7 w-7 items-center justify-center rounded-md text-muted-foreground hover:text-foreground"
+            className="flex h-7 w-7 items-center justify-center rounded-md text-muted-foreground hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
           >
             <Icon icon={ExternalLinkIcon} size="sm" />
           </a>
@@ -101,7 +101,7 @@ export function PdfViewerToolbar({
             href={downloadHref}
             download={downloadName}
             aria-label="Download PDF"
-            className="flex h-7 w-7 items-center justify-center rounded-md text-muted-foreground hover:text-foreground"
+            className="flex h-7 w-7 items-center justify-center rounded-md text-muted-foreground hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
           >
             <Icon icon={DownloadIcon} size="sm" />
           </a>

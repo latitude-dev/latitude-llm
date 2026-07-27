@@ -7,10 +7,7 @@ GlobalWorkerOptions.workerSrc = workerSrc
 // Served by the pdfjs-assets vite plugin. Version-scoped so the URLs can be cached immutably.
 const assetBase = `/pdfjs/${version}/`
 
-/**
- * Without these pdf.js silently degrades: CJK documents throw from `CMapFactory`, scanned
- * (JBIG2/JPX) pages decode to blank, and base-14 fonts fall back to system metrics.
- */
+// These assets are required for CJK maps, scanned-page decoders and base-14 font metrics.
 export const documentAssetOptions = {
   cMapUrl: `${assetBase}cmaps/`,
   cMapPacked: true,

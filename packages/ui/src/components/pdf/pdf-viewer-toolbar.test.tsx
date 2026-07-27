@@ -59,5 +59,7 @@ describe("PdfViewerToolbar", () => {
     )
     expect(withActions).toContain('aria-label="Download PDF"')
     expect(withActions).toContain('aria-label="Open PDF in new tab"')
+    expect(withActions).toMatch(/aria-label="Download PDF"[^>]*focus-visible:ring-2/)
+    expect(withActions).toMatch(/aria-label="Open PDF in new tab"[^>]*focus-visible:ring-2/)
   })
 })
