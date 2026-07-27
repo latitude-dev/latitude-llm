@@ -46,14 +46,16 @@ export function redactText(text: string, entities: ReadonlySet<RedactionEntity>)
   const accepted = resolveOverlaps(findRedactionMatches(text, entities))
   if (accepted.length === 0) return { text, counts: {} }
 
-  let redacted = text
-  for (let index = accepted.length - 1; index >= 0; index--) {
-    const match = accepted[index]
-    if (!match) continue
-    redacted = redacted.slice(0, match.start) + redactionPlaceholder(match.entity) + redacted.slice(match.end)
+  // Built left to right in one pass: rewriting the accumulated string per match copies it once per match.
+  const pieces: string[] = []
+  let cursor = 0
+  for (const match of accepted) {
+    pieces.push(text.slice(cursor, match.start), redactionPlaceholder(match.entity))
+    cursor = match.end
   }
+  pieces.push(text.slice(cursor))
 
-  return { text: redacted, counts: countByEntity(accepted) }
+  return { text: pieces.join(""), counts: countByEntity(accepted) }
 }
 
 interface LeafRedactionOutcome {

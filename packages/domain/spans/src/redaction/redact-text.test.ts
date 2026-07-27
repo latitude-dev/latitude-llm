@@ -177,6 +177,20 @@ describe("mergeRedactionCounts", () => {
   })
 })
 
+describe("redactText on match-dense text", () => {
+  it("replaces every match in a densely packed leaf", () => {
+    const addresses = Array.from({ length: 2_000 }, (_, index) => `user${index}@example.com`)
+    const result = redactText(addresses.join(" "), DEFAULTS)
+
+    expect(result.counts).toEqual({ email: 2_000 })
+    expect(result.text).toBe(Array.from({ length: 2_000 }, () => "[REDACTED_EMAIL]").join(" "))
+  })
+
+  it("keeps the text around a match at both ends", () => {
+    expect(redactText("a@b.co middle c@d.co", DEFAULTS).text).toBe("[REDACTED_EMAIL] middle [REDACTED_EMAIL]")
+  })
+})
+
 describe("totalRedactionCount", () => {
   it("sums across entities", () => {
     expect(totalRedactionCount({ email: 2, secret: 3 })).toBe(5)
