@@ -240,6 +240,20 @@ describe("entities disabled by default", () => {
   it("does not treat a git sha as a wallet when crypto_wallet is off", () => {
     expect(findRedactionMatches("commit 0a1b2c3d4e5f60718293a4b5c6d7e8f901234567", ALL_ENTITIES)).toEqual([])
   })
+
+  /**
+   * These are the reason `ip_address` is off by default. It is not immune to these
+   * collisions and cannot be made immune: a dotted quad and a four-part version
+   * string are the same string. Pinning the collision keeps the default honest
+   * rather than merely asserted.
+   */
+  it.each(["upgraded to 1.2.3.4", "schema version 10.0.0.1"])(
+    "would redact the version string in %s if ip_address were enabled",
+    (text) => {
+      expect(detects(text, "ip_address")).toBe(true)
+      expect(findRedactionMatches(text, only("email", "phone", "credit_card", "iban", "us_ssn", "secret"))).toEqual([])
+    },
+  )
 })
 
 describe("coding agent tool output", () => {

@@ -652,14 +652,22 @@ Follow the layering in the testing skill: pure unit tests in the domain, PGlite/
 - [x] **P1-5**: Per-parser content-key matchers in `packages/domain/spans/src/otlp/content/*`, composed into `isContentAttributeKey` in `content/index.ts` next to the existing dispatch table. Cover all eight vendor families.
 - [x] **P1-6**: `redaction/redact-span.ts` implementing the full field surface in [§4.2](#42-the-complete-field-surface), and `redaction/redact-spans.ts` batch entry point with pseudonym memoization, stat aggregation, and the size cap.
 - [x] **P1-7**: `RedactionError` in `packages/domain/spans/src/errors.ts`.
-- [ ] **P1-8**: Unit tests per [§9](#9-testing-plan), including the coding-agent negative vector corpus.
+- [x] **P1-8**: Unit tests per [§9](#9-testing-plan), including the coding-agent negative vector corpus.
 
-**Exit gate**:
+**Exit gate** — met:
 
-- `pnpm --filter @domain/spans test` and `pnpm --filter @domain/shared test` pass; `pnpm typecheck` clean.
-- Every entity in `REDACTION_ENTITIES` has both positive and negative vectors.
-- `isContentAttributeKey` returns true for at least one real key from each of the eight vendor parsers, asserted in a test that reads the parsers' own matchers.
-- Nothing in the ingest or worker path imports the new module yet; the diff is inert.
+- [x] `pnpm --filter @domain/spans test` (1206 tests) and `pnpm --filter @domain/shared test` (168) pass. `pnpm typecheck` clean across all 90 packages. `pnpm knip` and `pnpm format` clean.
+- [x] Every entity in `REDACTION_ENTITIES` has positive vectors and, where immunity is achievable, negative vectors. `ip_address` is the exception and is pinned as such: a test asserts it *does* match version strings, which is the reason it is off by default. Asserting immunity there would have been false.
+- [x] `isContentAttributeKey` covered for all eight vendor parsers, with vectors derived from the parsers' own declarations rather than restated in the test.
+- [x] Diff is inert: no non-test file outside `src/redaction/` imports the module, verified by grep.
+- [x] Validators, overlap resolution, and `attr_string` key-dropping each mutation-tested — disabling them fails 9, 2, and 2 tests respectively, so none are decorative.
+
+**Findings from Phase 1** (fold into the relevant sections when promoting to `dev-docs/`):
+
+- The email local-part class must exclude `/`, `=`, `?` and `&`. They are RFC-legal and effectively never issued, but they precede addresses constantly in URLs, paths, and query strings, and including them ran the match left through the whole path: `https://api.example.com/v1/users/john@example.com` collapsed to `https:[REDACTED_EMAIL]`.
+- Dropping content attribute keys is **not** redundant with the `attr_string` value pass, which was the original justification. The value pass only removes what a pattern matches; the duplicate copy also holds names, addresses, and ordinary prose. Dropping is the only thing that removes those.
+- `REDACTION_MAX_FIELD_BYTES` became `REDACTION_MAX_FIELD_CHARS`. A byte count would mean encoding every leaf just to size it; UTF-16 code units are exact and allocation-free.
+- Effect in this repo is `4.0.0-beta.57`, which has no `Effect.timeoutFail`. Use `Effect.timeoutOrElse`, as `semantic-similarity.ts` and `name-taxonomy.ts` already do.
 
 ### Phase 2 - Pipeline wiring
 
